@@ -1,0 +1,27 @@
+name: Bug Report
+description: File a bug report
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      placeholder: 1. Go to... 2. Click...
+    validations:
+      required: true
+  - type: dropdown
+    id: model-tier
+    attributes:
+      label: Suggested Model Tier for Fix
+      options:
+        - LIGHT
+        - PRO
+        - HEAVY

@@ -1,0 +1,23 @@
+profiles:
+  MVP_FAST:
+    default_model_tier: PRO
+    allowed_model_tiers: [LIGHT, PRO, HEAVY]
+    temperature: 0.35
+    top_p: 0.95
+    autonomy: high
+    pr_policy: small_prs_frequent_merge
+    ci_gate: basic
+    notes:
+      - "Lowest sufficient model; record tier in Issue+PR."
+      - "Focus: end-to-end vertical slice ASAP."
+  RC_HARDEN:
+    default_model_tier: PRO
+    allowed_model_tiers: [LIGHT, PRO, HEAVY]
+    temperature: 0.15
+    top_p: 0.90
+    autonomy: medium
+    pr_policy: strict_ci_no_green_no_merge
+    ci_gate: strict
+    notes:
+      - "Risk-based escalation; record tier in Issue+PR."
+      - "Focus: reliability, determinism, packaging."
