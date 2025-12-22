@@ -1,13 +1,15 @@
 # Architecture
 
 ## Overview
-RoboTwin Studio is a Windows standalone simulation environment for building and testing Arduino-based robots.
+RoboTwin Studio is a Windows standalone simulation platform for building and testing custom Arduino-based systems (Circuits, Robots, Mechatronics).
+It is template-based and supports a wide range of user-defined configurations.
 
 ## Core Components
 
 ### CoreSim (Pure C#)
 The deterministic heart of the simulation. Contains:
-- Data Models (`CircuitSpec`, `RobotSpec`, `WorldSpec`, `FirmwareSpec`)
+- Data Models (`CircuitSpec`, `RobotSpec`, `WorldSpec`, `FirmwareSpec`, `TestSpec`)
+- Catalogs (`ComponentCatalog`, `BoardCatalog`, `SensorActuatorCatalog`, `TemplateCatalog`)
 - Simulation Engine (`RunSession`, `TelemetryBus`)
 - Failure Models (Math-based thermal/power logic)
 
