@@ -7,3 +7,7 @@
   - Adopted Main-First Workflow.
   - Cleaned up `feature/11-coresim-scaffold` and `chore/toolchain-upgrade-latest-stable`.
   - Created Reporting Policy documents.
+  - Performed Branch Consolidation (2025-12-23 22:55):
+    - Identified conflicts in PR #17, #19.
+    - Updated Issue #13 with conflict details.
+    - Skipped PR #13 (CI unknown).
