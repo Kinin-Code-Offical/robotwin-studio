@@ -1,27 +1,33 @@
-using System.Collections.Generic;
-
-namespace CoreSim.Specs
+namespace RobotTwin.CoreSim.Specs
 {
     /// <summary>
-    /// Defines a project template used to initialize a new user session.
-    /// Bundles all necessary specs (Circuit, Robot, Firmware, World).
+    /// Defines a Project Template, which is a pre-configured system archetype.
+    /// Used to initialize a new Session.
     /// </summary>
     public class TemplateSpec
     {
-        public string? ID { get; set; }
-        public string? Name { get; set; }
-        public string? Description { get; set; }
-        public string? Version { get; set; } = "1.0";
+        public string TemplateId { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
 
-        // Paths or inline definitions for default specs
-        // We use strings (JSON or IDs) to keep it loose for now, 
-        // or we could embed the Spec objects directly if they are lightweight.
-        // For portability, let's assume this Spec contains the actual initial configurations.
-        
-        public CircuitSpec DefaultCircuit { get; set; }
-        public RobotSpec DefaultRobot { get; set; }
-        public WorldSpec DefaultWorld { get; set; }
-        
-        public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
+        /// <summary>
+        /// The type of system: "CircuitOnly", "Robot", "Mechatronic", etc.
+        /// </summary>
+        public string SystemType { get; set; } = "CircuitOnly";
+
+        /// <summary>
+        /// Default Circuit Specification (JSON or ID).
+        /// </summary>
+        public string? DefaultCircuitId { get; set; }
+
+        /// <summary>
+        /// Default Robot Specification (JSON or ID).
+        /// </summary>
+        public string? DefaultRobotId { get; set; }
+
+        /// <summary>
+        /// Default World environment ID.
+        /// </summary>
+        public string? DefaultWorldId { get; set; }
     }
 }
