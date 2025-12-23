@@ -20,6 +20,13 @@ body:
       required: true
 
   - type: textarea
+    id: modules
+    attributes:
+      label: Modules Affected
+      description: Which catalogs, editors, or runtime components are affected?
+      placeholder: CoreSim/TemplateCatalog, RobotStudio...
+
+  - type: textarea
     id: tasks
     attributes:
       label: Child Tasks
