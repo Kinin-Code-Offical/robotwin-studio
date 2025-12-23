@@ -27,12 +27,8 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    # CoreSim Tests
     - name: Restore CoreSim
       run: dotnet restore CoreSim/CoreSim.sln
       
     - name: Test CoreSim
       run: dotnet test CoreSim/CoreSim.sln --no-restore --verbosity normal
-
-    # Note: Unity builds require a license or a specific runner setup.
-    # For MVP-0 bootstrap, we simply verify the CoreSim logic cleanly.

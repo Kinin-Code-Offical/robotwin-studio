@@ -10,6 +10,7 @@ It is template-based and supports a wide range of user-defined configurations.
 The deterministic heart of the simulation. Contains:
 - Data Models (`CircuitSpec`, `RobotSpec`, `WorldSpec`, `FirmwareSpec`, `TestSpec`, `TemplateSpec`)
 - Catalogs (`ComponentCatalog`, `BoardCatalog`, `SensorActuatorCatalog`, `TemplateCatalog`)
+- Contracts (`IOContract` - generic signal definitions)
 - Simulation Engine (`RunSession`, `TelemetryBus`)
 - Failure Models (Math-based thermal/power logic)
 
