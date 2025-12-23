@@ -1,6 +1,17 @@
 # Activity Log
 
-## 2025-12-23
+## 2025-12-24
+- **Run Summary**:
+  - Model used: PRO
+  - **Governance**: Fixed `MVP_SCOPE` location and reconciled log metadata.
+  - **Planning**: Created Epic #26 (MVP-0) and issues #27-32.
+  - **Circuit Studio MVP-0 (#27)**:
+    - Implemented `CircuitValidator` (CoreSim) + Tests.
+    - Implemented Unity UI (`CircuitStudioController`, UXML).
+    - Fixed broken Unity-CoreSim dependency (added `Plugins/RobotTwin.CoreSim.dll`).
+    - Merged to `main` via PR #33.
+
+## 2025-12-23 (Previous)
 - **Run Summary**:
   - Model used: LIGHT (Docs & Reporting)
   - Merged PR #12 (CoreSim Scaffold + Toolchain).
