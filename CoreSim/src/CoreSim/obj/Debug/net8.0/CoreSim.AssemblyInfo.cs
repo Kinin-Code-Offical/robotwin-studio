@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RobotTwin.CoreSim")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+40a4709aee38839d7e5e45c36b19cf55471f1c0d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3b213b4e5779c33f511fc07a4b603053696e0264")]
 [assembly: System.Reflection.AssemblyProductAttribute("RobotTwin.CoreSim")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RobotTwin.CoreSim")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

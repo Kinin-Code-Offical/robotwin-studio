@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using CoreSim.Specs;
+using RobotTwin.CoreSim.Specs; // Assuming BoardSpec is/will be here
 
-namespace CoreSim.Catalogs
+namespace RobotTwin.CoreSim.Catalogs
 {
     public class BoardCatalog
     {
