@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using CoreSim.Specs;
+using RobotTwin.CoreSim.Specs;
 
-namespace CoreSim.Catalogs
+namespace RobotTwin.CoreSim.Catalogs
 {
     public class TemplateCatalog
     {
@@ -9,12 +9,12 @@ namespace CoreSim.Catalogs
 
         public TemplateSpec? Find(string id)
         {
-            return Templates.Find(t => t.ID == id);
+            return Templates.Find(t => t.TemplateId == id);
         }
 
         public void Register(TemplateSpec template)
         {
-            if (Find(template.ID) == null)
+            if (Find(template.TemplateId) == null)
             {
                 Templates.Add(template);
             }

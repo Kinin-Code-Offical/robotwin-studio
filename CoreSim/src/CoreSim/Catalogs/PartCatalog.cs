@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace CoreSim.Catalogs
+namespace RobotTwin.CoreSim.Catalogs
 {
     public enum PartType
     {
