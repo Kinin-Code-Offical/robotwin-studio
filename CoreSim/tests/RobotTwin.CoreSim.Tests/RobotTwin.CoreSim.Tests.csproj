@@ -18,4 +18,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RobotTwin.CoreSim\RobotTwin.CoreSim.csproj" />
+  </ItemGroup>
+
 </Project>

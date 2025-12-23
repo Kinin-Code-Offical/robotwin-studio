@@ -1,5 +1,5 @@
 using UnityEngine;
-using CoreSim.Specs;
+using RobotTwin.CoreSim.Specs;
 
 namespace RobotTwin.Core
 {

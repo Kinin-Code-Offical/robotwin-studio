@@ -1,6 +1,6 @@
 using UnityEngine;
-using CoreSim.Specs;
-using CoreSim.Catalogs;
+using RobotTwin.CoreSim.Specs;
+using RobotTwin.CoreSim.Catalogs;
 
 namespace RobotTwin.Game
 {
