@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace CoreSim.Specs
+namespace RobotTwin.CoreSim.Specs
 {
     public class WorldSpec
     {
