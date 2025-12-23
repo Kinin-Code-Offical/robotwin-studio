@@ -1,7 +1,7 @@
 # Toolchain Version Policy
 
 ## Core Versions
-- **.NET SDK**: Latest **8.0 LTS** (pinned in `global.json`).
+- **.NET SDK**: Latest **9.0 Stable** (pinned in `global.json`).
 - **Target Framework**: `net8.0` LTS for CoreSim.
 - **Unity**: Latest **2022.3 LTS** (required when UnityApp is initialized).
 
