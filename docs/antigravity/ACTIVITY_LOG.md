@@ -16,3 +16,12 @@
     - Implemented `IOContract`, `TemplateSpec`, `SimulationSerializer`.
     - Unified namespaces to `RobotTwin.CoreSim.*`.
     - Tests passed (Serialization).
+
+## 2024-05-23
+- **Run Summary**:
+  - Model used: PRO
+  - **Repo Hygiene**: Restructured `CoreSim` to `src/tests` layout, fixed missing `csproj`, fixed `.sln`.
+  - **CI Enforcement**: Fixed `ci.yml` paths. CI now runs 6 real tests and passes.
+  - **Unity Alignment**: Updated `UnityApp` scripts (`SessionManager`, `Wizard`) to use `RobotTwin.CoreSim` namespaces.
+  - **Contracts**: Updated `TemplateSpec` with backward-compatible aliases (`ID`, `Name`) and embedded objects (`DefaultCircuit`).
+  - **Sync**: Merged PR #24. Main is synchronized and clean.
