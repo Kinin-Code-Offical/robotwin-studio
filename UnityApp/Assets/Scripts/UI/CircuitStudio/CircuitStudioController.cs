@@ -3,6 +3,7 @@ using UnityEngine.UIElements;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Validation;
 using RobotTwin.CoreSim.Catalogs;
+using RobotTwin.Game;
 using System.Collections.Generic;
 using System.IO;
 
@@ -14,6 +15,13 @@ namespace RobotTwin.UI
         private VisualElement _paletteContainer;
         private VisualElement _canvasContainer;
         private Label _statusLabel;
+        
+        // Connections UI
+        private DropdownField _fromCompDropdown;
+        private DropdownField _toCompDropdown;
+        private TextField _fromPinField;
+        private TextField _toPinField;
+        private Label _connectionListLabel;
 
         private CircuitSpec _currentCircuit;
         private ComponentCatalog _catalog;
@@ -27,10 +35,18 @@ namespace RobotTwin.UI
             _paletteContainer = root.Q("PaletteContainer");
             _canvasContainer = root.Q("CanvasContainer");
             _statusLabel = root.Q<Label>("StatusLabel");
+            
+            _fromCompDropdown = root.Q<DropdownField>("FromCompDropdown");
+            _toCompDropdown = root.Q<DropdownField>("ToCompDropdown");
+            _fromPinField = root.Q<TextField>("FromPinField");
+            _toPinField = root.Q<TextField>("ToPinField");
+            _connectionListLabel = root.Q<Label>("ConnectionListLabel");
 
             root.Q<Button>("InternalSaveBtn")?.RegisterCallback<ClickEvent>(OnSave);
+            root.Q<Button>("InternalLoadBtn")?.RegisterCallback<ClickEvent>(OnLoad);
             root.Q<Button>("InternalValidateBtn")?.RegisterCallback<ClickEvent>(OnValidate);
             root.Q<Button>("BackBtn")?.RegisterCallback<ClickEvent>(OnBack);
+            root.Q<Button>("ConnectBtn")?.RegisterCallback<ClickEvent>(OnConnect);
 
             InitializeSession();
             PopulatePalette();
@@ -38,14 +54,22 @@ namespace RobotTwin.UI
 
         private void InitializeSession()
         {
-            // For MVP, create a new blank circuit or load from session
-            _currentCircuit = new CircuitSpec { Name = "New Circuit" };
+            // Try to get from SessionManager
+            if (SessionManager.Instance != null && SessionManager.Instance.CurrentCircuit != null)
+            {
+                _currentCircuit = SessionManager.Instance.CurrentCircuit;
+                UpdateStatus($"Loaded session: {_currentCircuit.Name}");
+            }
+            else
+            {
+                _currentCircuit = new CircuitSpec { Name = "New Circuit" };
+                UpdateStatus("Session/CurrentCircuit null, created new.");
+            }
+
             _catalog = new ComponentCatalog(); 
-            
-            // Use defaults from CoreSim
             _catalog.Components = ComponentCatalog.GetDefaults();
             
-            UpdateStatus("Session Ready.");
+            RefreshCanvas();
         }
 
         private void PopulatePalette()
@@ -76,30 +100,98 @@ namespace RobotTwin.UI
 
         private void RefreshCanvas()
         {
-            if (_canvasContainer == null) return;
-            _canvasContainer.Clear();
-            foreach (var c in _currentCircuit.Components)
+            // Canvas
+            if (_canvasContainer != null)
             {
-                var lbl = new Label($"{c.InstanceID} ({c.CatalogID})");
-                lbl.style.borderWidth = 1;
-                lbl.style.borderColor = Color.gray;
-                lbl.style.paddingTop = 5;
-                lbl.style.paddingBottom = 5;
-                lbl.style.marginBottom = 2;
-                _canvasContainer.Add(lbl);
+                _canvasContainer.Clear();
+                foreach (var c in _currentCircuit.Components)
+                {
+                    var lbl = new Label($"{c.InstanceID} ({c.CatalogID})");
+                    lbl.style.borderWidth = 1;
+                    lbl.style.borderColor = Color.gray;
+                    lbl.style.paddingTop = 5;
+                    lbl.style.paddingBottom = 5;
+                    lbl.style.marginBottom = 2;
+                    _canvasContainer.Add(lbl);
+                }
             }
+
+            // Dropdowns
+            var choices = new List<string>();
+            foreach (var c in _currentCircuit.Components) choices.Add(c.InstanceID);
+            
+            if (_fromCompDropdown != null) _fromCompDropdown.choices = choices;
+            if (_toCompDropdown != null) _toCompDropdown.choices = choices;
+
+            // Connections List
+            if (_connectionListLabel != null)
+            {
+                if (_currentCircuit.Connections == null || _currentCircuit.Connections.Count == 0)
+                {
+                    _connectionListLabel.text = "No connections.";
+                }
+                else
+                {
+                    var lines = new List<string>();
+                    foreach(var conn in _currentCircuit.Connections)
+                    {
+                        lines.Add($"{conn.FromComponentID}:{conn.FromPin} -> {conn.ToComponentID}:{conn.ToPin}");
+                    }
+                    _connectionListLabel.text = string.Join("\n", lines);
+                }
+            }
+        }
+
+        private void OnConnect(ClickEvent evt)
+        {
+            string fromID = _fromCompDropdown.value;
+            string toID = _toCompDropdown.value;
+            string fromPin = _fromPinField.value;
+            string toPin = _toPinField.value;
+
+            if (string.IsNullOrEmpty(fromID) || string.IsNullOrEmpty(toID))
+            {
+                UpdateStatus("Select components properly.");
+                return;
+            }
+
+            var conn = new Connection 
+            { 
+                FromComponentID = fromID, 
+                FromPin = fromPin, 
+                ToComponentID = toID, 
+                ToPin = toPin 
+            };
+            
+            if (_currentCircuit.Connections == null) _currentCircuit.Connections = new List<Connection>();
+            _currentCircuit.Connections.Add(conn);
+            RefreshCanvas();
+            UpdateStatus("Connection added.");
         }
 
         private void OnSave(ClickEvent evt)
         {
-            // Serialize
-            // var json = RobotTwin.CoreSim.Serialization.SimulationSerializer.Serialize(_currentCircuit); // If implemented
-            // Fallback for MVP
             string json = JsonUtility.ToJson(_currentCircuit, true);
             string path = Path.Combine(Application.persistentDataPath, "circuit_mvp.json");
             File.WriteAllText(path, json);
             UpdateStatus($"Saved to {path}");
             Debug.Log($"Circuit Saved: {json}");
+        }
+
+         private void OnLoad(ClickEvent evt)
+        {
+            string path = Path.Combine(Application.persistentDataPath, "circuit_mvp.json");
+            if (File.Exists(path))
+            {
+                string json = File.ReadAllText(path);
+                _currentCircuit = JsonUtility.FromJson<CircuitSpec>(json);
+                RefreshCanvas();
+                UpdateStatus($"Loaded from {path}");
+            }
+            else
+            {
+                UpdateStatus("No save file found.");
+            }
         }
 
         private void OnValidate(ClickEvent evt)

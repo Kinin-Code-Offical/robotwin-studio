@@ -8,12 +8,27 @@
         <!-- Center Canvas -->
         <ui:VisualElement style="flex-grow: 1; background-color: rgb(30, 30, 30);">
             <ui:VisualElement name="CanvasContainer" style="flex-grow: 1; padding: 20px;" />
+            
+            <!-- Connections Panel (Bottom) -->
+            <ui:VisualElement name="ConnectionsContainer" style="height: 150px; background-color: rgb(50, 50, 50); border-top-width: 2px; border-color: white; padding: 10px;">
+                <ui:Label text="Wiring" style="color: white; font-weight: bold; margin-bottom: 5px;" />
+                <ui:VisualElement style="flex-direction: row; margin-bottom: 5px;">
+                     <ui:DropdownField name="FromCompDropdown" label="From" style="width: 150px; margin-right: 5px;" />
+                     <ui:TextField name="FromPinField" label="Pin" style="width: 50px; margin-right: 15px;" />
+                     <ui:DropdownField name="ToCompDropdown" label="To" style="width: 150px; margin-right: 5px;" />
+                     <ui:TextField name="ToPinField" label="Pin" style="width: 50px; margin-right: 15px;" />
+                     <ui:Button name="ConnectBtn" text="Connect" style="width: 80px;" />
+                </ui:VisualElement>
+                <ui:Label name="ConnectionListLabel" text="No connections." style="color: grey; white-space: normal;" />
+            </ui:VisualElement>
+
             <ui:Label name="StatusLabel" text="Ready" style="height: 30px; background-color: black; color: yellow; padding: 5px;" />
         </ui:VisualElement>
 
         <!-- Right Inspector / Actions -->
         <ui:VisualElement style="width: 200px; background-color: rgb(40, 40, 40); padding: 10px;">
             <ui:Button name="InternalSaveBtn" text="Save JSON" style="height: 30px; margin-bottom: 5px;" />
+            <ui:Button name="InternalLoadBtn" text="Load JSON" style="height: 30px; margin-bottom: 5px;" />
             <ui:Button name="InternalValidateBtn" text="Validate" style="height: 30px; margin-bottom: 5px;" />
             <ui:Button name="BackBtn" text="Back to Wizard" style="height: 30px; margin-top: 20px;" />
         </ui:VisualElement>
