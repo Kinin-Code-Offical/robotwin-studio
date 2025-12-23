@@ -1,7 +1,8 @@
 using Xunit;
-using CoreSim.Catalogs;
-using CoreSim.Specs;
+using RobotTwin.CoreSim.Catalogs;
+using RobotTwin.CoreSim.Specs;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace RobotTwin.CoreSim.Tests
 {
@@ -16,7 +17,7 @@ namespace RobotTwin.CoreSim.Tests
                 ID = "resistor-1k", 
                 Name = "1k Resistor", 
                 Type = ComponentType.Passive,
-                Pins = new System.Collections.Generic.List<string> { "1", "2" }
+                Pins = new List<string> { "1", "2" }
             });
 
             var json = JsonSerializer.Serialize(catalog);
