@@ -3,8 +3,12 @@
 ## 2025-12-24
 - **Run (Refinement)**:
     - Model used: PRO
-    - Started Circuit Studio Refinement (Catalogs, Tests).
-    - Reconciled logs.
+    - **Implementation**:
+      - Added `GetDefaults()` to `ComponentCatalog` and `BoardCatalog`.
+      - Added `CatalogDefaultsTests` (Verified passing).
+      - Updated `CircuitStudioController` to use real catalog data.
+    - **Toolchain**: Published updated `RobotTwin.CoreSim.dll` to Unity Plugins.
+    - **Sync**: Merged PR #36.
 - **Run (MVP-0 Initial)**:
   - Model used: PRO
   - **Governance**: Fixed `MVP_SCOPE` location and reconciled log metadata.
