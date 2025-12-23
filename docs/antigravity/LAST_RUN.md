@@ -1,26 +1,20 @@
 # Run Summary
 **Date**: 2025-12-24
-**Model Used**: PRO (Gemini 1.5 Pro)
-**Status**: SUCCESS (All phases complete)
+**Model Used**: PRO (Gemini 3 Pro)
+**Status**: IN_PROGRESS (Refining Circuit Studio MVP)
 
 ## Achievements
-- **Governance**:
-  - Moved `MVP_SCOPE.md` to `docs/antigravity/MVP_SCOPE.md` (canonical).
-  - Reconciled `LAST_RUN.md` date and model tier.
-- **Planning**:
-  - Created MVP-0 Epic: "MVP-0 End-to-end vertical slice" (#26).
-  - Created 6 breakdown issues (#27-#32).
-- **Circuit Studio MVP-0 (#27)**:
-  - Implemented `CircuitValidator` in CoreSim.
-  - Implemented Unity UI scripts (`CircuitStudioController`, `CircuitStudio.uxml`).
-  - Fixed Unity compilation by building/copying `RobotTwin.CoreSim.dll` to `Assets/Plugins`.
-  - Merged to `main`.
+- **Preflight**: Verified Sync.
+- **Circuit Studio**:
+  - [In Progress] Moving mocks to `CoreSim.Catalogs` defaults.
+  - [In Progress] Unit tests for catalogs.
+  - [In Progress] Updating Unity UI to use real defaults.
 
 ## Current State
-- **Branch**: `main` (synced).
-- **CI**: Passing (CoreSim tests).
-- **Unity**: Scripts present and compilable.
+- **Branch**: `chore/governance-alignment` (WIP)
+- **CI**: Passing.
 
 ## Next Steps
-- Open Unity Editor and wire up `CircuitStudioController` to the scene.
-- Proceed with Issue #28 (CoreSim Validation Rules) or #29 (Firmware Lab).
+1. Refactor Catalogs.
+2. Verify UnityApp.
+3. Sync Main.

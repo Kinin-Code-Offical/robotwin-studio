@@ -1,7 +1,11 @@
 # Activity Log
 
 ## 2025-12-24
-- **Run Summary**:
+- **Run (Refinement)**:
+    - Model used: PRO
+    - Started Circuit Studio Refinement (Catalogs, Tests).
+    - Reconciled logs.
+- **Run (MVP-0 Initial)**:
   - Model used: PRO
   - **Governance**: Fixed `MVP_SCOPE` location and reconciled log metadata.
   - **Planning**: Created Epic #26 (MVP-0) and issues #27-32.
