@@ -1,0 +1,12 @@
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\bin\Debug\net8.0\CoreSim.deps.json
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\bin\Debug\net8.0\CoreSim.dll
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\bin\Debug\net8.0\CoreSim.pdb
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.GeneratedMSBuildEditorConfig.editorconfig
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.AssemblyInfoInputs.cache
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.AssemblyInfo.cs
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.csproj.CoreCompileInputs.cache
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.sourcelink.json
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.dll
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\refint\CoreSim.dll
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\CoreSim.pdb
+C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\CoreSim\src\CoreSim\obj\Debug\net8.0\ref\CoreSim.dll

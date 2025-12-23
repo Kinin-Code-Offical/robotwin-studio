@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "hRJ1X51zNGI=",
+  "success": true,
+  "projectFilePath": "C:\\BASE\\ROBOTWIN-STUDIO\\robotwin-studio\\CoreSim\\src\\CoreSim\\CoreSim.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ymc\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.22\\microsoft.netcore.app.ref.8.0.22.nupkg.sha512",
+    "C:\\Users\\ymc\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.22\\microsoft.windowsdesktop.app.ref.8.0.22.nupkg.sha512",
+    "C:\\Users\\ymc\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.22\\microsoft.aspnetcore.app.ref.8.0.22.nupkg.sha512"
+  ],
+  "logs": []
+}

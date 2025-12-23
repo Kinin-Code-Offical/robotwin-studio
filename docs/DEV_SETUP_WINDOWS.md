@@ -11,4 +11,8 @@
 - `/UnityApp`: Open this folder in Unity Hub.
 
 ## Build Instructions
-(To be added)
+## Build Instructions
+1. Open terminal at repo root.
+2. Run `dotnet restore CoreSim/CoreSim.sln`.
+3. Run `dotnet build CoreSim/CoreSim.sln`.
+4. Run `dotnet test CoreSim/CoreSim.sln`.

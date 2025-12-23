@@ -8,7 +8,7 @@ It is template-based and supports a wide range of user-defined configurations.
 
 ### CoreSim (Pure C#)
 The deterministic heart of the simulation. Contains:
-- Data Models (`CircuitSpec`, `RobotSpec`, `WorldSpec`, `FirmwareSpec`, `TestSpec`)
+- Data Models (`CircuitSpec`, `RobotSpec`, `WorldSpec`, `FirmwareSpec`, `TestSpec`, `TemplateSpec`)
 - Catalogs (`ComponentCatalog`, `BoardCatalog`, `SensorActuatorCatalog`, `TemplateCatalog`)
 - Simulation Engine (`RunSession`, `TelemetryBus`)
 - Failure Models (Math-based thermal/power logic)

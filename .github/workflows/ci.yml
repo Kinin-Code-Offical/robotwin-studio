@@ -22,11 +22,9 @@ jobs:
     # CoreSim Tests
     - name: Restore CoreSim
       run: dotnet restore CoreSim/CoreSim.sln
-      continue-on-error: true # Allow failing if solution doesn't exist yet (bootstrap phase)
       
     - name: Test CoreSim
       run: dotnet test CoreSim/CoreSim.sln --no-restore --verbosity normal
-      continue-on-error: true # Allow failing if solution doesn't exist yet (bootstrap phase)
 
     # Note: Unity builds require a license or a specific runner setup.
     # For MVP-0 bootstrap, we simply verify the CoreSim logic cleanly.

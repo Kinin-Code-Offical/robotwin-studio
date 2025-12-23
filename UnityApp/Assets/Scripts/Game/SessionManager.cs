@@ -13,7 +13,7 @@ namespace RobotTwin.Game
         public CircuitSpec CurrentCircuit { get; private set; }
         public RobotSpec CurrentRobot { get; private set; }
         public WorldSpec CurrentWorld { get; private set; }
-        public TemplateDefinition ActiveTemplate { get; private set; }
+        public TemplateSpec ActiveTemplate { get; private set; }
 
         private void Awake()
         {
@@ -28,7 +28,7 @@ namespace RobotTwin.Game
             }
         }
 
-        public void InitializeSession(TemplateDefinition template)
+        public void InitializeSession(TemplateSpec template)
         {
             ActiveTemplate = template;
             CurrentCircuit = template.DefaultCircuit;
