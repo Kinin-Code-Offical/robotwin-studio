@@ -41,10 +41,9 @@ namespace RobotTwin.UI
             // For MVP, create a new blank circuit or load from session
             _currentCircuit = new CircuitSpec { Name = "New Circuit" };
             _catalog = new ComponentCatalog(); 
-            // Mock catalog for MVP
-            _catalog.Components.Add(new ComponentDefinition { ID = "resistor", Name = "Resistor", Type = ComponentType.Passive });
-            _catalog.Components.Add(new ComponentDefinition { ID = "led", Name = "LED", Type = ComponentType.Active });
-            _catalog.Components.Add(new ComponentDefinition { ID = "uno", Name = "Arduino Uno", Type = ComponentType.IC });
+            
+            // Use defaults from CoreSim
+            _catalog.Components = ComponentCatalog.GetDefaults();
             
             UpdateStatus("Session Ready.");
         }
