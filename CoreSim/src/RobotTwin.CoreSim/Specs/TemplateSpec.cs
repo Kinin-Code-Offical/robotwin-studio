@@ -37,5 +37,10 @@ namespace RobotTwin.CoreSim.Specs
         /// Default World environment ID.
         /// </summary>
         public string? DefaultWorldId { get; set; }
+
+        // Backward compatibility / Embedded specs
+        public CircuitSpec? DefaultCircuit { get; set; }
+        public RobotSpec? DefaultRobot { get; set; }
+        public WorldSpec? DefaultWorld { get; set; }
     }
 }
