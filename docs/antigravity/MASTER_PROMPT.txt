@@ -96,6 +96,7 @@ GitHub workflow (mandatory):
   - Unity editmode/playmode smoke tests (as feasible; do not block MVP if Unity license is unavailable)
   - Build artifact (zip) on main merges
 - Use gh CLI with GH_TOKEN for issue/PR operations.
+- **Always Sync to Main**: Every task MUST conclude with merging the active branch to `main` and pushing to GitHub. `main` branch must always reflect the latest integrated state of the repository.
 
 Repository bootstrap (MANDATORY; do this first, automatically):
 A) Ensure Git + GitHub repo is wired:
