@@ -14,5 +14,7 @@
 
 ## Checklist
 - [ ] Linked to an Issue?
+- [ ] I have updated the CHANGELOG.md (if applicable)
+- [ ] Toolchain versions unchanged unless this PR is a toolchain upgrade.
 - [ ] Docs updated?
 - [ ] CI passing?

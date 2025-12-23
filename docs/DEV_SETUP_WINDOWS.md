@@ -11,4 +11,10 @@
 - `/UnityApp`: Open this folder in Unity Hub.
 
 ## Build Instructions
-(To be added)
+1. Open terminal at repo root.
+
+## Building CoreSim
+```powershell
+dotnet restore CoreSim/CoreSim.sln
+dotnet test CoreSim/CoreSim.sln
+```
