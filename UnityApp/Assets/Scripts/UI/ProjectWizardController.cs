@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
-using CoreSim.Catalogs;
+using RobotTwin.CoreSim.Catalogs;
+using RobotTwin.CoreSim.Specs;
 using System.Collections.Generic;
 using RobotTwin.Game;
 
@@ -14,8 +15,8 @@ namespace RobotTwin.UI
         private Button _createButton;
         private Label _descriptionLabel;
 
-        private List<TemplateDefinition> _templates;
-        private TemplateDefinition _selectedTemplate;
+        private List<TemplateSpec> _templates;
+        private TemplateSpec _selectedTemplate;
 
         private void OnEnable()
         {
@@ -46,7 +47,7 @@ namespace RobotTwin.UI
             }
         }
 
-        public void SelectTemplate(TemplateDefinition template)
+        public void SelectTemplate(TemplateSpec template)
         {
             _selectedTemplate = template;
             if (_descriptionLabel != null)

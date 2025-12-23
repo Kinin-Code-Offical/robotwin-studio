@@ -1,6 +1,6 @@
 using Xunit;
-using CoreSim.Specs;
-using CoreSim.Catalogs;
+using RobotTwin.CoreSim.Specs;
+using RobotTwin.CoreSim.Catalogs;
 using System.Text.Json;
 using System.Collections.Generic;
 
@@ -15,33 +15,23 @@ namespace RobotTwin.CoreSim.Tests
             {
                 ID = "mvp.linefollower.2servo",
                 Name = "Line Follower Kit",
-                DefaultCircuit = new CircuitSpec
-                {
-                    Name = "LF Circuit",
-                    Components = new List<ComponentInstance>
-                    {
-                        new ComponentInstance { InstanceID = "u1", CatalogID = "arduino-uno" }
-                    }
-                },
-                DefaultRobot = new RobotSpec
-                {
-                    Name = "LF Robot",
-                    Parts = new List<PartInstance>
-                    {
-                        new PartInstance { InstanceID = "chassis", CatalogID = "2wd-chassis" }
-                    }
-                }
+                DefaultCircuitId = "circuit-lf-1",
+                DefaultRobotId = "robot-lf-1"
             };
 
             var json = JsonSerializer.Serialize(template);
             var deserialized = JsonSerializer.Deserialize<TemplateSpec>(json);
 
             Assert.NotNull(deserialized);
+            // Verify aliases work
             Assert.Equal("mvp.linefollower.2servo", deserialized.ID);
-            Assert.NotNull(deserialized.DefaultCircuit);
-            Assert.Equal("LF Circuit", deserialized.DefaultCircuit.Name);
-            Assert.NotNull(deserialized.DefaultRobot);
-            Assert.Equal("LF Robot", deserialized.DefaultRobot.Name);
+            Assert.Equal("mvp.linefollower.2servo", deserialized.TemplateId);
+            
+            Assert.Equal("Line Follower Kit", deserialized.Name);
+            Assert.Equal("Line Follower Kit", deserialized.DisplayName);
+            
+            Assert.Equal("circuit-lf-1", deserialized.DefaultCircuitId);
+            Assert.Equal("robot-lf-1", deserialized.DefaultRobotId);
         }
 
         [Fact]
