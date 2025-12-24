@@ -14,6 +14,30 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: Verify Context Pack (Shell Check)
+      shell: pwsh
+      run: |
+        $OutDir = Join-Path $env:GITHUB_WORKSPACE "docs/antigravity/context_exports"
+        Write-Host "Context export directory: $OutDir"
+        # Just verification that path construction works in pwsh
+
+    - name: Guardrail - Check Ignored Files
+      shell: pwsh
+      run: |
+        # Fail if .gpt is tracked
+        $gpt = git ls-files .gpt
+        if ($gpt) {
+            Write-Error "CRITICAL: .gpt folder is tracked! It must be gitignored. Found: $gpt"
+            exit 1
+        }
+        # Fail if workspace_snapshot is tracked
+        $snap = git ls-files workspace_snapshot.txt
+        if ($snap) {
+            Write-Error "CRITICAL: workspace_snapshot.txt is tracked!"
+            exit 1
+        }
+        Write-Host "Guardrail passed: No forbidden files tracked."
+
     - name: Verify context pack script
       shell: pwsh
       run: |
