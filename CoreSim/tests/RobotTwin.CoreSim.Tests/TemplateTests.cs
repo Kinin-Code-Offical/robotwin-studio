@@ -3,6 +3,7 @@ using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Catalogs;
 using System.Text.Json;
 using System.Collections.Generic;
+using RobotTwin.CoreSim.Validation;
 
 namespace RobotTwin.CoreSim.Tests
 {
@@ -45,6 +46,31 @@ namespace RobotTwin.CoreSim.Tests
             var found = catalog.Find("t1");
             Assert.NotNull(found);
             Assert.Equal("Test Template", found.Name);
+        }
+
+        [Fact]
+        public void ExampleTemplate01_Blinky_ShouldBeValidAndRunnable()
+        {
+            var defaults = TemplateCatalog.GetDefaults();
+            var blinky = defaults.Find(t => t.ID == "mvp.exampletemplate-01");
+            
+            Assert.NotNull(blinky);
+            Assert.Equal("ExampleTemplate-01: Blinky", blinky.Name);
+            Assert.NotNull(blinky.DefaultCircuit);
+            
+            // Validate the circuit composition
+            var result = CircuitValidator.Validate(blinky.DefaultCircuit);
+            
+            // Should be valid with 0 errors
+            Assert.True(result.IsValid, $"Blinky template invalid: {string.Join(", ", result.Errors)}");
+            Assert.Empty(result.Errors);
+            
+            // Check essential components exist
+            Assert.Contains(blinky.DefaultCircuit.Components, c => c.InstanceID == "uno");
+            Assert.Contains(blinky.DefaultCircuit.Components, c => c.InstanceID == "led1");
+            
+            // Check wiring
+            Assert.Contains(blinky.DefaultCircuit.Connections, c => c.FromComponentID == "uno" && c.FromPin == "D13");
         }
     }
 }
