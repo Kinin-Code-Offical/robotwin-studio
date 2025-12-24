@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-24T03:28:51Z
-# Commit: 935d080
-# FileCount: 278
+﻿# GeneratedUtc: 2025-12-24T04:22:19Z
+# Commit: 88aec7c
+# FileCount: 272
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -227,12 +227,6 @@ CoreSim/tests/RobotTwin.CoreSim.Tests/ValidationRulesTests.cs
 CoreSim/tests/RobotTwin.CoreSim.Tests/ValidationTests.cs
 CoreSim/tests/RobotTwin.CoreSim.Tests/WaveformTests.cs
 docs/antigravity/ACTIVITY_LOG.md
-docs/antigravity/context_exports/latest/actions_runs_recent.json
-docs/antigravity/context_exports/latest/issues_open_mvp.json
-docs/antigravity/context_exports/latest/manifest.json
-docs/antigravity/context_exports/latest/prs_merged_recent.json
-docs/antigravity/context_exports/latest/prs_open_list.json
-docs/antigravity/context_exports/latest/status_log_issue_15.json
 docs/antigravity/CONTEXT_PACK.md
 docs/antigravity/LAST_RUN.md
 docs/antigravity/MASTER_PROMPT.txt

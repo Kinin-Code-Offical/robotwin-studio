@@ -245,8 +245,9 @@ Suggested comment template:
 - [ ] Rebase/merge main into WORK_BRANCH; resolve conflicts now
 - [ ] Merge WORK_BRANCH into main; push main
 - [ ] Parity loop: integrate any branch ahead of main; push main
+- [ ] Run `pwsh ./tools/update_repo_files.ps1` (commit if changed)
 - [ ] Run `pwsh ./tools/update_workspace_snapshot.ps1` (verify ignored)
-- [ ] Recommended: Run `pwsh ./tools/export_context_pack.ps1` (output is ignored)
+- [ ] Run `pwsh ./tools/export_context_pack.ps1 -Mode MIN` (output ignored)
 - [ ] Delete WORK_BRANCH (recommended)
 - [ ] Update LAST_RUN + ACTIVITY_LOG; commit to main; push main
 - [ ] Comment on “Status Log – Run Reports”
