@@ -1,5 +1,15 @@
 # Activity Log
 
+## 2025-12-24 (Repo Files Automation)
+- **Run (Automation)**
+    - Model used: PRO
+    - **Automation**:
+      - Implemented `tools/update_repo_files.ps1`.
+      - Added CI stale check for `repo_files.txt`.
+    - **Governance**:
+      - Updated Workflow, PR Template, and Prompt to enforce file indexing.
+    - **Sync**: Merged PR #40 (`feature/repo-files-index`).
+
 ## 2025-12-24 (Firmware Lab)
 - **Run (Firmware Lab MVP-0)**
     - Model used: PRO
