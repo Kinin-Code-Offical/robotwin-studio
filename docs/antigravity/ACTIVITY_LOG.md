@@ -1,5 +1,13 @@
 # Activity Log
 
+## 2025-12-24 (Gitignore Fix)
+- **Run (Governance)**
+    - Model used: PRO
+    - **Fix**:
+      - Corrected `.gitignore` logic for `context_exports`.
+      - Untracked accidentally committed export files.
+    - **Sync**: Merged PR #49 (`fix/gitignore-context-exports`).
+
 ## 2025-12-24 (Governance Hotfix)
 - **Run (Governance)**
     - Model used: PRO
