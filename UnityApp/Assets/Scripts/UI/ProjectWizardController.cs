@@ -37,13 +37,41 @@ namespace RobotTwin.UI
         {
             _templates = TemplateCatalog.GetDefaults();
             
-            // For MVP: Simple list populate (or just debug log if UI isn't built yet)
+            // Populate ListView
+            if (_imgList != null)
+            {
+                _imgList.makeItem = () => new Label();
+                _imgList.bindItem = (element, index) => 
+                {
+                    (element as Label).text = _templates[index].Name;
+                };
+                
+                _imgList.itemsSource = _templates;
+                _imgList.selectionChanged += OnSelectionChanged;
+
+                // Refresh
+                _imgList.Rebuild();
+            }
+            
             Debug.Log($"Loaded {_templates.Count} templates.");
             
-            // Auto-select first
+            // Auto-select first if available
             if (_templates.Count > 0)
             {
-                SelectTemplate(_templates[0]);
+                if (_imgList != null) _imgList.SetSelection(0);
+                else SelectTemplate(_templates[0]);
+            }
+        }
+
+        private void OnSelectionChanged(IEnumerable<object> selection)
+        {
+            foreach(var item in selection)
+            {
+                if (item is TemplateSpec t)
+                {
+                    SelectTemplate(t);
+                    return; // Single select
+                }
             }
         }
 
