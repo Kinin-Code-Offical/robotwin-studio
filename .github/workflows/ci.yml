@@ -14,6 +14,11 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: Verify context pack script
+      run: |
+        powershell -ExecutionPolicy Bypass -File ./tools/export_context_pack.ps1 -Mode MIN -OutDir $env:RUNNER_TEMP/context_pack -SkipGh
+      shell: bash
+
     - name: Verify docs/repo_files.txt freshness
       run: |
         powershell -ExecutionPolicy Bypass -File ./tools/update_repo_files.ps1 -Check
