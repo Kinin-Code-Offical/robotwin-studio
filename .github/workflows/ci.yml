@@ -24,6 +24,22 @@ jobs:
         ./tools/update_repo_files.ps1 -Check
       shell: pwsh
 
+    - name: Verify no tracked build artifacts
+      run: |
+        $artifacts = git ls-files | Select-String -Pattern "(\\bin\\)|(\\obj\\)|(TestResults)" -AllMatches
+        if ($artifacts) {
+          Write-Error "Found tracked build artifacts. These must be gitignored:`n$artifacts"
+        }
+      shell: pwsh
+
+    - name: Verify no tracked context exports
+      run: |
+        $exports = git ls-files docs/antigravity/context_exports
+        if ($exports) {
+          Write-Error "Found tracked context exports. These must be gitignored:`n$exports"
+        }
+      shell: pwsh
+
     - name: Verify global.json existence
       run: |
         if (!(Test-Path "global.json")) {

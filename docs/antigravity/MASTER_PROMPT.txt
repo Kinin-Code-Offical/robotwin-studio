@@ -75,8 +75,9 @@ Rules:
 2) Keep snapshots current.
    - Run: pwsh ./tools/update_repo_files.ps1 (updates docs/repo_files.txt)
    - Run: pwsh ./tools/update_workspace_snapshot.ps1 (updates workspace_snapshot.txt)
+   - Run: pwsh ./tools/export_context_pack.ps1 -Mode MIN (updates docs/antigravity/context_exports)
    - Commit docs/repo_files.txt if changed.
-   - NEVER commit workspace_snapshot.txt (it is gitignored).
+   - NEVER commit workspace_snapshot.txt or context_exports (they are gitignored).
    - CI will fail if docs/repo_files.txt is stale.
 3) Always record the chosen tier in:
    - the Issue description (or a first comment), and
