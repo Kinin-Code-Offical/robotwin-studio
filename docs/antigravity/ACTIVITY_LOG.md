@@ -1,5 +1,14 @@
 # Activity Log
 
+## 2025-12-24 (Governance Hotfix)
+- **Run (Governance)**
+    - Model used: PRO
+    - **Fix**:
+      - Updated `.gitignore` to explicitly ignore snapshot files.
+      - Fixed CI script execution shell (`pwsh`).
+      - Removed ambiguous root `repo_files.txt` (if any), mandated `docs/repo_files.txt`.
+    - **Sync**: Merged PR #47 (`fix/snapshot-governance-hotfix`).
+
 ## 2025-12-24 (Context Pack Tooling)
 - **Run (Tooling)**
     - Model used: PRO
