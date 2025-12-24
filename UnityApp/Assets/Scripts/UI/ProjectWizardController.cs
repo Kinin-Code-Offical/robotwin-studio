@@ -65,6 +65,7 @@ namespace RobotTwin.UI
 
         private void OnSelectionChanged(IEnumerable<object> selection)
         {
+            if (selection == null) return;
             foreach(var item in selection)
             {
                 if (item is TemplateSpec t)
