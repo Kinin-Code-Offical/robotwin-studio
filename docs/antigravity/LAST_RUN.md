@@ -1,16 +1,17 @@
 # Run Summary
 **Date**: 2025-12-24
 **Model Used**: PRO
-**Status**: SUCCESS (Shared Info Pipeline Implemented)
+**Status**: SUCCESS (Shared Info Hardened)
 
 ## Achievements
-- **Feature**: Automated End-of-Session Shared Info Pipeline.
-  - Implemented `tools/end_session_shared_info.ps1` (Zip `docs/` -> Drive).
-  - Updated .gitignore to exclude `.gpt/`.
-  - Updated Governance (Workflow, Master Prompt, PR Template).
+- **Feature**: Hardened Shared Info Pipeline.
+  - Added [SHARED_INFO_PIPELINE.md](docs/antigravity/SHARED_INFO_PIPELINE.md) documentation.
+  - Added `tools/get_latest_shared_info.ps1` for easy retrieval.
+  - Added CI Guardrail to ban `.gpt` folder tracking.
 - **Verification**:
-  - Script passed dry run (upload verified).
-  - CoreSim tests passed.
+  - `end_session_shared_info.ps1` verified (Upload).
+  - `get_latest_shared_info.ps1` verified (Download).
+  - Guardrails verified.
 - **Governance**:
   - CI Green.
   - Parity Clean.
