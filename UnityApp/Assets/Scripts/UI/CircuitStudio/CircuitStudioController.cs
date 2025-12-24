@@ -108,8 +108,14 @@ namespace RobotTwin.UI
                 foreach (var c in _currentCircuit.Components)
                 {
                     var lbl = new Label($"{c.InstanceID} ({c.CatalogID})");
-                    lbl.style.borderWidth = 1;
-                    lbl.style.borderColor = Color.gray;
+                    lbl.style.borderLeftWidth = 1;
+                    lbl.style.borderRightWidth = 1;
+                    lbl.style.borderTopWidth = 1;
+                    lbl.style.borderBottomWidth = 1;
+                    lbl.style.borderLeftColor = Color.gray;
+                    lbl.style.borderRightColor = Color.gray;
+                    lbl.style.borderTopColor = Color.gray;
+                    lbl.style.borderBottomColor = Color.gray;
                     lbl.style.paddingTop = 5;
                     lbl.style.paddingBottom = 5;
                     lbl.style.marginBottom = 2;
