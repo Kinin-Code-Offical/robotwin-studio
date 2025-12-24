@@ -84,3 +84,16 @@
       - Integrated "Run" button in Circuit Studio.
       - Added EditMode Smoke Test.
     - **Sync**: Merged PR #40 (`feature/30-run-mode-telemetry-logging`).
+
+## 2025-12-24 (Stabilization Run)
+- **Run (Governance)**
+    - Model used: PRO
+    - **Fixes**:
+      - Enforced strict .gitignore for context_exports and bin/obj.
+      - Removed accidentally tracked build artifacts (hotfix).
+      - Updated docs/repo_files.txt canonical list.
+      - Added CI guards for tracked artifacts.
+    - **Docs**:
+      - Updated main_force_sync_workflow.md and MASTER_PROMPT.txt.
+    - **Sync**: Merged PR #51 and #52.
+
