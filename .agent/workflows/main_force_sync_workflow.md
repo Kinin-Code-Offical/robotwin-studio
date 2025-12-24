@@ -33,9 +33,6 @@ After every task session (even if work is incomplete), you MUST:
    - `docs/antigravity/LAST_RUN.md` (overwrite)
    - `docs/antigravity/ACTIVITY_LOG.md` (append)
 
-Note: This workflow prioritizes “always integrated main” over “always clean main”.
-Main may contain WIP. If something breaks, fix or revert forward in the next session.
-
 ---
 
 ## 2) Commit often (required)
