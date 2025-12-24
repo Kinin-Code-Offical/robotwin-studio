@@ -79,6 +79,7 @@ Rules:
    - Commit docs/repo_files.txt if changed.
    - NEVER commit workspace_snapshot.txt or context_exports (they are gitignored).
    - CI will fail if docs/repo_files.txt is stale.
+   - End-of-Session: Run `pwsh ./tools/end_session_shared_info.ps1 -Mode FULL` (Zip docs -> Drive).
 3) Always record the chosen tier in:
    - the Issue description (or a first comment), and
    - the PR description under a section "Model used: <LIGHT|PRO|HEAVY> (why)".

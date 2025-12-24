@@ -86,3 +86,6 @@ crashlytics-build.properties
 # RoboTwin Specific
 workspace_snapshot.txt
 docs/antigravity/context_exports/
+
+# Shared Info & Temp
+.gpt/
