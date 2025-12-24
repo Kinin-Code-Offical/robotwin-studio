@@ -238,7 +238,7 @@ Suggested comment template:
 ## 8) End-of-session checklist (Strict & Sequential)
 
 - [ ] **Sync Main**: `git pull origin main`
-- [ ] **Context Export**: `pwsh ./tools/export_context_pack.ps1 -Mode MIN`
+- [ ] **Context Export**: `pwsh ./tools/export_context_pack.ps1 -Mode MAX`
 - [ ] **Log Identity**: Ensure `docs/antigravity/*.md` matches `docs/antigravity/context_exports/latest/*.md` (Copy/Sync).
 - [ ] **Repo Index**: `pwsh ./tools/update_repo_files.ps1` (commit if changed)
 - [ ] **Snapshot**: `pwsh ./tools/update_workspace_snapshot.ps1` (must remain gitignored)
