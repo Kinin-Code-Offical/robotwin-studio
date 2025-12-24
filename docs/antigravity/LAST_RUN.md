@@ -1,23 +1,17 @@
 # Run Summary
 **Date**: 2025-12-24
-**Model Used**: PRO
-**Status**: SUCCESS (Feature #31)
+**Model Used**: LIGHT
+**Status**: SUCCESS (CI Fix)
 
 ## Achievements
-- **Feature #31 (Example Template)**:
-  - Added `ExampleTemplate-01: Blinky` (Arduino + LED) to CoreSim catalog.
-  - Added `Blank Template` to CoreSim catalog.
-  - Verified valid wiring via `CircuitValidator` unit tests.
-  - Updated Unity Wizard to populate selection list (UI binding).
-  - Updated `USER_QUICKSTART.md`.
-- **Governance**:
-  - CI Green on Main.
-  - Parity Clean.
+- **CI**: Fixed context pack verification step by switching to `pwsh` shell in workflow.
+- **Governance**: Verified untracked artifacts.
 
 ## Current State
 - **Branch**: `main` (clean, par).
-- **CI**: Passing.
+- **CI**: Passing (Green).
 - **Parity**: Clean.
 
 ## Next Steps
-- #32 Unity CI: Configure GitHub Actions (Smoke tests).
+- #31 Example Template: "Blinky" (Merged previously, ready for #32).
+- #32 Unity CI: Configure GitHub Actions.
