@@ -1,5 +1,17 @@
 # Activity Log
 
+## 2025-12-24 (Snapshot Governance)
+- **Run (Governance)**
+    - Model used: PRO
+    - **Architecture**:
+      - Moved `repo_files.txt` to `docs/repo_files.txt`.
+      - Excluded `workspace_snapshot.txt` (root) from git.
+    - **Automation**:
+      - Updated `tools/update_repo_files.ps1` (Added `-Check` mode).
+      - Added `tools/update_workspace_snapshot.ps1`.
+      - Updated `.github/workflows/ci.yml` to verify docs index.
+    - **Sync**: Merged PR #41 (`feature/snapshot-governance`).
+
 ## 2025-12-24 (Repo Files Automation)
 - **Run (Automation)**
     - Model used: PRO
