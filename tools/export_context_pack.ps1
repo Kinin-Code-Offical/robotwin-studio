@@ -75,7 +75,7 @@ if (-not $SkipGh) {
         Export-Gh "gh issue view 15 --repo $RepoString --json number,title,url,updatedAt,body,comments,labels" "status_log_issue_15"
         
         # Open MVP Issues
-        Export-Gh "gh issue list --repo $RepoString --label mvp --state open --limit 200 --json number,title,url,updatedAt,labels,milestone,body" "issues_open_mvp"
+        Export-Gh "gh issue list --repo $RepoString --label mvp --state open --limit 200 --json number,title,url,updatedAt,labels,milestone,body,comments" "issues_open_mvp"
         
         # Open PRs
         Export-Gh "gh pr list --repo $RepoString --state open --limit 200 --json number,title,url,updatedAt,headRefName,baseRefName,author,labels" "prs_open_list"
