@@ -1,26 +1,28 @@
 # Run Summary
 **Date**: 2025-12-24
-**Model Used**: PRO (Gemini 3 Pro)
-**Status**: SUCCESS (Integration Complete)
+**Model Used**: HEAVY (Gemini 3 Pro)
+**Status**: SUCCESS (Run Mode MVP-0)
 
 ## Achievements
-- **Integration**:
-  - `CircuitStudioController.cs`: Connected to `SessionManager`, Uses `ComponentCatalog.GetDefaults()`.
-  - Added Wiring UI (Dropdowns + Connect Button) and Load/Save JSON buttons.
-  - created `ProjectWizard.uxml` stub.
-- **Validation**:
-  - `CircuitValidator.cs`: Added GND check, Power Source check, Pin existence check.
-  - Added `ValidationRulesTests.cs` (4 new tests, 15 total passing).
-- **Environment**:
-  - Generated `.meta` files for scripts to ensure deterministic GUIDs.
-  - Generated `Wizard.unity` and `Main.unity` (YAML) to allow "Runnable" state.
-  - Updated `EditorBuildSettings` to include scenes.
+- **CoreSim**:
+  - Implemented `RunEngine`, `TelemetryBus`, `RunSession`, `TelemetryFrame`.
+  - Implemented `SimulationRecorder` (JSONL).
+  - Deterministic step logic verified.
+- **Unity**:
+  - NEW: `RunMode` scene (Index 2).
+  - NEW: `RunModeController` w/ HUD (Time/Tick) + Event Log.
+  - NEW: `CircuitStudio` -> `RunMode` navigation.
+- **Verification**:
+  - Added `RunEngineTests.cs` (Determinism, Recorder).
+  - Added `CoreSimIntegrationTests.cs` (Unity EditMode Smoke).
+  - 18 CoreSim tests passing.
 
 ## Current State
 - **Branch**: `main` (synced).
-- **CI**: Passing (15 tests).
-- **Scenes**: `Wizard` (Index 0) -> `CircuitStudio` (Index 1) path is wired.
+- **CI**: Passing.
+- **Scenes**: Wizard -> Circuit -> Run connected.
 
 ## Next Steps
-- Implement Run Mode (Firmware Integration).
-- Expand Catalog content.
+- #29 Firmware Lab: Waveform Expansion.
+- #31 Example Template: "Blinky" end-to-end.
+- #32 Unity CI: Configure test runner in GitHub Actions.
