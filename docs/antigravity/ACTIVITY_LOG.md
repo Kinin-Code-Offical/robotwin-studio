@@ -1,5 +1,15 @@
 # Activity Log
 
+## 2025-12-24 (Context Pack Tooling)
+- **Run (Tooling)**
+    - Model used: PRO
+    - **Tooling**:
+      - Implemented `export_context_pack.ps1` (MIN/FULL).
+      - Wired CI verification for script.
+    - **Governance**:
+      - Updated `CONTEXT_PACK.md` and workflow docs.
+    - **Sync**: Merged PR #45 (`feature/context-pack-tooling`).
+
 ## 2025-12-24 (Context Pack Export)
 - **Run (Tooling)**
     - Model used: PRO
