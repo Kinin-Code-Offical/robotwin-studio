@@ -135,3 +135,9 @@
     - **Status**: Fixed Unity compilation (CoreSim TFM, UI API). Added plugin sync.
     - **CI**: Updated to check plugin sync.
 
+
+## 2025-12-24 (Doc/Context Sync)
+- **Run (Docs)**
+    - Model used: PRO
+    - **Status**: Updated README, verified issues closed, ran full context export.
+
