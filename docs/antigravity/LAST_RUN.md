@@ -1,17 +1,16 @@
 # Run Summary
 **Date**: 2025-12-24
-**Model Used**: LIGHT
-**Status**: SUCCESS (Unity Compile Fix & Merge Repair)
+**Model Used**: PRO
+**Status**: SUCCESS (Shared Info Pipeline Implemented)
 
 ## Achievements
-- **Unity Fixes**:
-  - Replaced unsupported `IStyle` shorthand properties in `CircuitStudioController.cs`.
-  - Added `com.unity.test-framework` to `manifest.json`.
-- **Merge Repair**:
-  - Resolved conflict in `docs/repo_files.txt`.
+- **Feature**: Automated End-of-Session Shared Info Pipeline.
+  - Implemented `tools/end_session_shared_info.ps1` (Zip `docs/` -> Drive).
+  - Updated .gitignore to exclude `.gpt/`.
+  - Updated Governance (Workflow, Master Prompt, PR Template).
 - **Verification**:
-  - Unity Smoke Test: Pass.
-  - CoreSim Tests: Pass.
+  - Script passed dry run (upload verified).
+  - CoreSim tests passed.
 - **Governance**:
   - CI Green.
   - Parity Clean.
@@ -22,4 +21,4 @@
 - **Parity**: Clean.
 
 ## Next Steps
-- #32 Unity CI Action (Automate smoke test).
+- #32 Unity CI Action.
