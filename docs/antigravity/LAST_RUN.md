@@ -1,21 +1,22 @@
 # Run Summary
 **Date**: 2025-12-24
 **Model Used**: PRO
-**Status**: SUCCESS (Snapshot Governance)
+**Status**: SUCCESS (Context Pack Export)
 
 ## Achievements
+- **Tooling**:
+  - Implemented `tools/export_context_pack_min.ps1`.
+  - Generated `docs/antigravity/context_pack_min.json` (Context Snapshot).
+- **Documentation**:
+  - Added `docs/antigravity/CONTEXT_PACK.md`.
 - **Governance**:
-  - Implemented `workspace_snapshot.txt` (root, untracked).
-  - Moved repo index to `docs/repo_files.txt` (tracked, CI-verified).
-  - Updated `main_force_sync_workflow`, `MASTER_PROMPT`, and `PR Template`.
-- **Automation**:
-  - Updated `update_repo_files.ps1` with `-Check` mode.
-  - Added `update_workspace_snapshot.ps1`.
-  - Updated `.gitignore` and `ci.yml`.
+  - Updated `main_force_sync_workflow.md` to recommend export.
+  - Updated `MASTER_PROMPT` to mention context pack.
 
 ## Current State
 - **Branch**: `main` (synced).
-- **CI**: Passing (Verifies `docs/repo_files.txt`).
+- **CI**: Passing.
+- **Context Pack**: Available in `docs/antigravity/context_pack_min.json`.
 
 ## Next Steps
 - #31 Example Template: "Blinky".
