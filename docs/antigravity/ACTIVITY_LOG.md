@@ -1,5 +1,17 @@
 # Activity Log
 
+## 2025-12-24 (Firmware Lab)
+- **Run (Firmware Lab MVP-0)**
+    - Model used: PRO
+    - **CoreSim**: 
+      - Implemented Waveforms (Step, Ramp, Sine).
+      - Added Waveform Unit Tests.
+    - **Unity**:
+      - Expanded `RunMode` UI for Multi-Signal Injection.
+      - Implemented Waveform Sampling in `RunModeController`.
+      - Added Serial Log Stub.
+    - **Sync**: Merged PR #41 (`feature/29-waveform-expansion`).
+
 ## 2025-12-24 (Run Mode)
 - **Run (Run Mode MVP-0)**
     - Model used: HEAVY
@@ -12,19 +24,3 @@
       - Integrated "Run" button in Circuit Studio.
       - Added EditMode Smoke Test.
     - **Sync**: Merged PR #40 (`feature/30-run-mode-telemetry-logging`).
-
-## 2025-12-24 (Integration)
-- **Run (Integration)**
-    - Model used: PRO
-    - **Integration**:
-      - Connected `CircuitStudio` to `SessionManager` and Defaults Catalog.
-      - Added "Connections" UI panel and wiring logic.
-      - Generated missing `ProjectWizard.uxml`.
-    - **Validation**:
-      - Upgraded `CircuitValidator` with GND, Power, Pin checks.
-      - Added `ValidationRulesTests` (Verified passing).
-    - **Toolchain**:
-      - Generated deterministic `.meta` files for key scripts.
-      - Generated Minimal YAML Scenes (`Wizard.unity`, `Main.unity`) to ensure runnability.
-      - Configured `EditorBuildSettings`.
-    - **Sync**: Merged PR #38.

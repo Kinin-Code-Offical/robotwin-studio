@@ -1,28 +1,23 @@
 # Run Summary
 **Date**: 2025-12-24
-**Model Used**: HEAVY (Gemini 3 Pro)
-**Status**: SUCCESS (Run Mode MVP-0)
+**Model Used**: PRO (Gemini 3 Pro)
+**Status**: SUCCESS (Firmware Lab MVP-0)
 
 ## Achievements
 - **CoreSim**:
-  - Implemented `RunEngine`, `TelemetryBus`, `RunSession`, `TelemetryFrame`.
-  - Implemented `SimulationRecorder` (JSONL).
-  - Deterministic step logic verified.
+  - Implemented `IWaveform` and `Constant`, `Step`, `Ramp`, `Sine`.
+  - Added `WaveformTests` (Verified).
 - **Unity**:
-  - NEW: `RunMode` scene (Index 2).
-  - NEW: `RunModeController` w/ HUD (Time/Tick) + Event Log.
-  - NEW: `CircuitStudio` -> `RunMode` navigation.
-- **Verification**:
-  - Added `RunEngineTests.cs` (Determinism, Recorder).
-  - Added `CoreSimIntegrationTests.cs` (Unity EditMode Smoke).
-  - 18 CoreSim tests passing.
+  - Updated `RunMode` UI with Multi-Signal Injection Panel.
+  - Added "Serial Console" Stub.
+  - Implemented `RunModeController` logic for sampling waveforms.
+  - Added `injection_config.json` persistence.
 
 ## Current State
 - **Branch**: `main` (synced).
 - **CI**: Passing.
-- **Scenes**: Wizard -> Circuit -> Run connected.
+- **Run Mode**: Supports determining multi-signal injection.
 
 ## Next Steps
-- #29 Firmware Lab: Waveform Expansion.
-- #31 Example Template: "Blinky" end-to-end.
-- #32 Unity CI: Configure test runner in GitHub Actions.
+- #31 Example Template: "Blinky".
+- #32 Unity CI: Configure GitHub Actions.
