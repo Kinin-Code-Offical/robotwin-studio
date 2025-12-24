@@ -141,3 +141,10 @@
     - Model used: PRO
     - **Status**: Updated README, verified issues closed, ran full context export.
 
+
+## 2025-12-24 (Unity UI Fix & Merge)
+- **Run (Fix/Repair)**
+    - Model used: LIGHT
+    - **Status**: Fixed CircuitStudio UI and manifest. Resolved merge conflict.
+    - **Verification**: Unity smoke test pass.
+
