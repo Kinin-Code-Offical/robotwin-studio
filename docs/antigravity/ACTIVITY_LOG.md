@@ -115,3 +115,10 @@
     - **Docs**: Updated Quickstart.
     - **Sync**: Merged PR #55.
 
+
+## 2025-12-24 (CI Context Pack Fix)
+- **Run (CI Fix)**
+    - Model used: LIGHT
+    - **Fix**: Updated CI workflow to use pwsh for context pack verification step.
+    - **Sync**: Merged PR #57.
+
