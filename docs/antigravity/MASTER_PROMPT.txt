@@ -72,14 +72,13 @@ Model Selection Policy (mandatory):
 
 Rules:
 1) Start with the lowest tier sufficient for the task. Escalate only when needed.
-2) Also: keep repo_files.txt always current.
-Run: pwsh ./tools/update_repo_files.ps1
-If repo_files.txt changed, commit it and include it in the PR.
-CI will fail if repo_files.txt is stale.ction "Model used: <LIGHT|PRO|HEAVY> (why)".
-3) If you make two consecutive failed attempts to solve a problem (e.g., build/CI failing, unclear architecture, repeated bug),
+2) Always record the chosen tier in:
+   - the Issue description (or a first comment), and
+   - the PR description under a section "Model used: <LIGHT|PRO|HEAVY> (why)".
+4) If you make two consecutive failed attempts to solve a problem (e.g., build/CI failing, unclear architecture, repeated bug),
    escalate one tier for the next attempt.
-4) Test writing: use PRO for routine unit tests and basic Unity EditMode/PlayMode smoke tests.
-5) Test writing: use HEAVY for determinism/replay correctness tests and for debugging flaky/non-trivial test/CI failures.
+5) Test writing: use PRO for routine unit tests and basic Unity EditMode/PlayMode smoke tests.
+6) Test writing: use HEAVY for determinism/replay correctness tests and for debugging flaky/non-trivial test/CI failures.
 
 Recommended tier by work type:
 - LIGHT:
