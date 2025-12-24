@@ -1,20 +1,24 @@
-## Description
-<!-- What does this PR do? Why is it needed? -->
+# Pull Request
 
-## Model used
-<!-- REQUIRED: LIGHT, PRO, or HEAVY. Explanation for choice. -->
-**Model**: PRO
-**Reason**: Standard feature implementation.
+## Context
+<!-- Link relevant issues: Fixes #123 -->
+Fixes #
 
-## Changes
-<!-- Bullet points or checkbox list of changes -->
+## Proposed Changes
+<!-- What did you do? -->
+- 
+
+## Model Tier
+- [ ] PRO (Standard/Fast)
+- [ ] HEAVY (Architecture/Complex)
+- **Why?**: 
 
 ## Verification
-<!-- How did you test this? Screenshots, logs, or test output. -->
+<!-- How did you verify this? -->
+- [ ] Automated Tests Passed
+- [ ] Manual Verification
 
-## Checklist
-- [ ] Linked to an Issue?
-- [ ] I have updated the CHANGELOG.md (if applicable)
-- [ ] Toolchain versions unchanged unless this PR is a toolchain upgrade.
-- [ ] Docs updated?
-- [ ] CI passing?
+## Governance Checklist
+- [ ] `repo_files.txt` updated (`tools/update_repo_files.ps1`) if file tree changed
+- [ ] Minimal scope (no unrelated changes)
+- [ ] CI is Green

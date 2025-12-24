@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-24T02:24:03Z
-# Commit: c5e8675
-# FileCount: 83
+﻿# GeneratedUtc: 2025-12-24T02:25:02Z
+# Commit: 2f1ed04
+# FileCount: 84
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -58,6 +58,7 @@ docs/VERSIONS.md
 global.json
 README.md
 repo_files.txt
+tools/update_repo_files.ps1
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.deps.json
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.dll
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.pdb
