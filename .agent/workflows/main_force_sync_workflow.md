@@ -244,4 +244,5 @@ Suggested comment template:
 - [ ] **Snapshot**: `pwsh ./tools/update_workspace_snapshot.ps1` (must remain gitignored)
 - [ ] **Final Sync**: `git pull origin main` (resolve conflicts immediately)
 - [ ] **Push**: `git push origin main`
+- [ ] **Shared Info**: `pwsh ./tools/end_session_shared_info.ps1` (Zip + Drive Upload)
 - [ ] **Status Log**: Comment on "Status Log – Run Reports" issue.
