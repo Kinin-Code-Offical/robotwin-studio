@@ -1,5 +1,16 @@
 # Activity Log
 
+## 2025-12-24 (Context Pack Export)
+- **Run (Tooling)**
+    - Model used: PRO
+    - **Tooling**:
+      - Created `export_context_pack_min.ps1`.
+      - Generated initial context pack JSON.
+    - **Governance**:
+      - Documented usage in `CONTEXT_PACK.md`.
+      - Wired export into workflow.
+    - **Sync**: Merged PR #43 (`feature/context-pack-export`).
+
 ## 2025-12-24 (Snapshot Governance)
 - **Run (Governance)**
     - Model used: PRO
