@@ -1,16 +1,16 @@
 # Run Summary
 **Date**: 2025-12-24
 **Model Used**: PRO
-**Status**: SUCCESS (Governance Hotfix)
+**Status**: SUCCESS (Gitignore Fix)
 
 ## Achievements
 - **Governance**:
-  - Enforced ignored `workspace_snapshot.txt` in `.gitignore`.
-  - Canonicalized `docs/repo_files.txt` as the single tracked index.
-  - Updated CI to use `pwsh` for stricter script verification.
+  - Fixed encoding/corruption in `.gitignore`.
+  - Enforced strict ignore of `docs/antigravity/context_exports/`.
+  - Removed accidentally tracked context files.
 - **Verification**:
-  - Validated clean git status after snapshot generation.
-  - Validated CI script execution locally.
+  - Validated exporter output is ignored by git.
+  - Verified governance docs integrity.
 
 ## Current State
 - **Branch**: `main` (synced).
