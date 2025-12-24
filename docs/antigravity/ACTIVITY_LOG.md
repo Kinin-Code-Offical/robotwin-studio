@@ -105,3 +105,13 @@
     - **Verification**: update_repo_files.ps1 -Check passed; CI passing.
     - **Sync**: Merged PR #54.
 
+
+## 2025-12-24 (Feature #31 - Example Template)
+- **Run (Feature)**
+    - Model used: PRO
+    - **Feature**: Implemented 'ExampleTemplate-01: Blinky' and 'Blank Template'.
+    - **CoreSim**: Added TemplateCatalog entries and unit tests.
+    - **UI**: Wired Project Wizard list.
+    - **Docs**: Updated Quickstart.
+    - **Sync**: Merged PR #55.
+

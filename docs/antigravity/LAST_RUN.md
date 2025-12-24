@@ -1,16 +1,18 @@
 # Run Summary
 **Date**: 2025-12-24
 **Model Used**: PRO
-**Status**: SUCCESS (CI Fix)
+**Status**: SUCCESS (Feature #31)
 
 ## Achievements
-- **CI**:
-  - Fixed `repo_files.txt` mismatch (stale index vs untracked files).
-  - CI is now GREEN on main.
+- **Feature #31 (Example Template)**:
+  - Added `ExampleTemplate-01: Blinky` (Arduino + LED) to CoreSim catalog.
+  - Added `Blank Template` to CoreSim catalog.
+  - Verified valid wiring via `CircuitValidator` unit tests.
+  - Updated Unity Wizard to populate selection list (UI binding).
+  - Updated `USER_QUICKSTART.md`.
 - **Governance**:
-  - Verified `context_exports` are untracked.
-  - Verified `workspace_snapshot.txt` is untracked.
-  - Verified parity (no branches ahead).
+  - CI Green on Main.
+  - Parity Clean.
 
 ## Current State
 - **Branch**: `main` (clean, par).
@@ -18,5 +20,4 @@
 - **Parity**: Clean.
 
 ## Next Steps
-- #31 Example Template: "Blinky".
-- #32 Unity CI: Configure GitHub Actions.
+- #32 Unity CI: Configure GitHub Actions (Smoke tests).
