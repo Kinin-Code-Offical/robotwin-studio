@@ -128,3 +128,10 @@
     - Model used: PRO
     - **Status**: Verified all features and CI fixes merged. Parity clean. Governance scripts run.
 
+
+## 2025-12-24 (Unity Compile Fix)
+- **Run (Fix)**
+    - Model used: PRO
+    - **Status**: Fixed Unity compilation (CoreSim TFM, UI API). Added plugin sync.
+    - **CI**: Updated to check plugin sync.
+

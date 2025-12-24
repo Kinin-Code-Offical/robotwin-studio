@@ -1,11 +1,14 @@
-# Toolchain Version Policy
+# Versions and Dependencies
 
-## Core Versions
-- **.NET SDK**: Latest **9.0 Stable** (pinned in `global.json`).
-- **Target Framework**: `net8.0` LTS for CoreSim.
-- **Unity**: Latest **2022.3 LTS** (required when UnityApp is initialized).
+## Unity
+- **Version**: 2022.3.62f3
+- **Scripting Backend**: Mono / .NET Standard 2.1
+- **Plugins**: `Assets/Plugins/RobotTwin.CoreSim.dll` (Managed externally)
 
-## Policies
-- **No Prerelease**: Use only stable versions for NuGet and Unity packages.
-- **Update Strategy**: Toolchain upgrades only via dedicated PRs.
-- **CI**: Must verify `global.json` and use stable major versions for Actions.
+## CoreSim
+- **Target Frameworks**: `net9.0` (Tests/CLI), `netstandard2.1` (Unity Plugin)
+- **Sync**: Run `./tools/update_unity_plugins.ps1` to build and copy the plugin to UnityApp.
+- **CI**: Enforces plugin synchronization.
+
+## PowerShell
+- Scripts typically require PowerShell 7 (`pwsh`), but basic tooling is compatible with Windows PowerShell 5.1.

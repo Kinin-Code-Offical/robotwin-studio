@@ -20,6 +20,11 @@ jobs:
         $outDir = Join-Path $env:RUNNER_TEMP "context_pack"
         pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/export_context_pack.ps1 -Mode MIN -OutDir $outDir -SkipGh
 
+    - name: Verify Unity plugins sync
+      shell: pwsh
+      run: |
+        pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/update_unity_plugins.ps1 -Check
+
     - name: Verify docs/repo_files.txt freshness
       run: |
         ./tools/update_repo_files.ps1 -Check
