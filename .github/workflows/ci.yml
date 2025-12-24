@@ -21,8 +21,8 @@ jobs:
 
     - name: Verify docs/repo_files.txt freshness
       run: |
-        powershell -ExecutionPolicy Bypass -File ./tools/update_repo_files.ps1 -Check
-      shell: bash
+        ./tools/update_repo_files.ps1 -Check
+      shell: pwsh
 
     - name: Verify global.json existence
       run: |
