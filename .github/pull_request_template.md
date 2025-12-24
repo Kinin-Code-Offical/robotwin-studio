@@ -19,6 +19,7 @@ Fixes #
 - [ ] Manual Verification
 
 ## Governance Checklist
-- [ ] `repo_files.txt` updated (`tools/update_repo_files.ps1`) if file tree changed
+- [ ] `docs/repo_files.txt` updated (`tools/update_repo_files.ps1`)
+- [ ] `workspace_snapshot.txt` is gitignored (not included in PR)
 - [ ] Minimal scope (no unrelated changes)
 - [ ] CI is Green

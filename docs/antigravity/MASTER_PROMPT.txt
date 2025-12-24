@@ -72,7 +72,13 @@ Model Selection Policy (mandatory):
 
 Rules:
 1) Start with the lowest tier sufficient for the task. Escalate only when needed.
-2) Always record the chosen tier in:
+2) Keep snapshots current.
+   - Run: pwsh ./tools/update_repo_files.ps1 (updates docs/repo_files.txt)
+   - Run: pwsh ./tools/update_workspace_snapshot.ps1 (updates workspace_snapshot.txt)
+   - Commit docs/repo_files.txt if changed.
+   - NEVER commit workspace_snapshot.txt (it is gitignored).
+   - CI will fail if docs/repo_files.txt is stale.
+3) Always record the chosen tier in:
    - the Issue description (or a first comment), and
    - the PR description under a section "Model used: <LIGHT|PRO|HEAVY> (why)".
 4) If you make two consecutive failed attempts to solve a problem (e.g., build/CI failing, unclear architecture, repeated bug),

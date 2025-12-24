@@ -14,10 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Verify repo_files.txt freshness
+    - name: Verify docs/repo_files.txt freshness
       run: |
-        powershell -ExecutionPolicy Bypass -File ./tools/update_repo_files.ps1
-        git diff --exit-code repo_files.txt
+        powershell -ExecutionPolicy Bypass -File ./tools/update_repo_files.ps1 -Check
       shell: bash
 
     - name: Verify global.json existence

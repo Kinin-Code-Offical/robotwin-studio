@@ -14,7 +14,8 @@ After every task session (even if work is incomplete), you MUST:
 - merge into `main` (always),
 - push `main` to GitHub (always),
 - resolve conflicts during the session (always),
-- update `repo_files.txt` using tools script (always),
+- generate `workspace_snapshot.txt` (untracked) (always),
+- update `docs/repo_files.txt` and commit if changed (always),
 - ensure `origin/main` is not behind any other remote branch (always),
 - update and commit run logs on `main` (always),
 - and comment on the GitHub Issue: “Status Log – Run Reports” (always).
@@ -244,7 +245,8 @@ Suggested comment template:
 - [ ] Rebase/merge main into WORK_BRANCH; resolve conflicts now
 - [ ] Merge WORK_BRANCH into main; push main
 - [ ] Parity loop: integrate any branch ahead of main; push main
-- [ ] Run `pwsh ./tools/update_repo_files.ps1` and commit if changed
+- [ ] Run `pwsh ./tools/update_repo_files.ps1` and commit `docs/repo_files.txt`
+- [ ] Run `pwsh ./tools/update_workspace_snapshot.ps1` (verify ignored)
 - [ ] Delete WORK_BRANCH (recommended)
 - [ ] Update LAST_RUN + ACTIVITY_LOG; commit to main; push main
 - [ ] Comment on “Status Log – Run Reports”
