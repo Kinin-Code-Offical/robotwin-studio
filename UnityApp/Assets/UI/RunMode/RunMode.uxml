@@ -1,0 +1,34 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement style="flex-grow: 1; background-color: rgb(20, 20, 20);">
+        <!-- Top HUD -->
+        <ui:VisualElement style="flex-direction: row; height: 50px; background-color: rgb(40, 40, 40); align-items: center; padding-left: 10px;">
+            <ui:Label text="RUN MODE" style="color: white; font-weight: bold; font-size: 18px; margin-right: 20px;" />
+            
+            <ui:Label name="TimeLabel" text="Time: 0.00s" style="color: yellow; margin-right: 15px;" />
+            <ui:Label name="TickLabel" text="Tick: 0" style="color: grey; margin-right: 15px;" />
+            <ui:Button name="StopButton" text="Stop Simulation" style="background-color: rgb(180, 50, 50); color: white; width: 120px;" />
+        </ui:VisualElement>
+
+        <!-- Main Area -->
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
+            
+            <!-- Injection Panel (Stub) -->
+            <ui:VisualElement style="width: 250px; background-color: rgb(30, 30, 30); padding: 10px; border-right-width: 1px;">
+                <ui:Label text="Inputs (Stub)" style="color: white; font-weight: bold; margin-bottom: 10px;" />
+                <ui:TextField name="SignalNameField" label="Signal" value="input_1" />
+                <ui:FloatField name="SignalValueField" label="Value" value="1.0" />
+                <ui:Toggle name="InjectionActiveToggle" label="Active" value="false" />
+            </ui:VisualElement>
+
+            <!-- Logs Panel -->
+            <ui:VisualElement style="flex-grow: 1; padding: 10px;">
+                <ui:Label text="Event Log" style="color: white; margin-bottom: 5px;" />
+                <ui:ScrollView name="LogScroll" style="flex-grow: 1; background-color: black; border-width: 1px; border-color: grey;">
+                    <ui:Label name="LogContentLabel" text="" style="color: white; padding: 5px;" />
+                </ui:ScrollView>
+                <ui:Label name="TelemetryPathLabel" text="Log Path: ..." style="color: grey; font-size: 10px; margin-top: 5px;" />
+            </ui:VisualElement>
+        
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

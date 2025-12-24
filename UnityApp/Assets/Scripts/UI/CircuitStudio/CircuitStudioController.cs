@@ -47,6 +47,7 @@ namespace RobotTwin.UI
             root.Q<Button>("InternalValidateBtn")?.RegisterCallback<ClickEvent>(OnValidate);
             root.Q<Button>("BackBtn")?.RegisterCallback<ClickEvent>(OnBack);
             root.Q<Button>("ConnectBtn")?.RegisterCallback<ClickEvent>(OnConnect);
+            root.Q<Button>("RunBtn")?.RegisterCallback<ClickEvent>(OnRun); // Added Run Btn
 
             InitializeSession();
             PopulatePalette();
@@ -206,6 +207,12 @@ namespace RobotTwin.UI
         private void OnBack(ClickEvent evt)
         {
              UnityEngine.SceneManagement.SceneManager.LoadScene(0); // Wizard
+        }
+
+        private void OnRun(ClickEvent evt)
+        {
+            // Validate first? MVP: Just go.
+            UnityEngine.SceneManagement.SceneManager.LoadScene(2); // Index 2 = RunMode
         }
 
         private void UpdateStatus(string msg)
