@@ -26,11 +26,12 @@
         </ui:VisualElement>
 
         <!-- Right Inspector / Actions -->
-        <ui:VisualElement style="width: 200px; background-color: rgb(40, 40, 40); padding: 10px;">
-            <ui:Button name="InternalSaveBtn" text="Save JSON" style="height: 30px; margin-bottom: 5px;" />
-            <ui:Button name="InternalLoadBtn" text="Load JSON" style="height: 30px; margin-bottom: 5px;" />
-            <ui:Button name="InternalValidateBtn" text="Validate" style="height: 30px; margin-bottom: 5px;" />
-            <ui:Button name="BackBtn" text="Back to Wizard" style="height: 30px; margin-top: 20px;" />
+        <ui:VisualElement style="flex-direction: row; height: 50px; background-color: rgb(40, 40, 40); align-items: center; padding-left: 10px;">
+            <ui:Button name="BackBtn" text="< Back" style="width: 60px; margin-right: 10px;" />
+            <ui:Label text="CIRCUIT STUDIO" style="color: white; font-weight: bold; font-size: 18px;" />
+            <ui:VisualElement style="flex-grow: 1;" />
+            <ui:Label name="StatusLabel" text="Ready" style="color: grey; margin-right: 10px;" />
+            <ui:Button name="RunBtn" text="RUN >" style="background-color: rgb(50, 180, 50); color: white; width: 80px; margin-right: 10px;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
