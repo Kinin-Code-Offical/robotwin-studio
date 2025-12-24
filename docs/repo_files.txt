@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-24T07:23:47Z
-# Commit: e94bffb
-# FileCount: 88
+﻿# GeneratedUtc: 2025-12-24T07:34:43Z
+# Commit: 0cabee3
+# FileCount: 123
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -63,30 +63,65 @@ tools/export_context_pack.ps1
 tools/export_context_pack_min.ps1
 tools/update_repo_files.ps1
 tools/update_workspace_snapshot.ps1
+UnityApp/Assets/Plugins.meta
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.deps.json
+UnityApp/Assets/Plugins/RobotTwin.CoreSim.deps.json.meta
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.dll
+UnityApp/Assets/Plugins/RobotTwin.CoreSim.dll.meta
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.pdb
+UnityApp/Assets/Scenes.meta
 UnityApp/Assets/Scenes/Main.unity
 UnityApp/Assets/Scenes/Main.unity.meta
 UnityApp/Assets/Scenes/RunMode.unity
 UnityApp/Assets/Scenes/RunMode.unity.meta
 UnityApp/Assets/Scenes/Wizard.unity
 UnityApp/Assets/Scenes/Wizard.unity.meta
+UnityApp/Assets/Scripts.meta
+UnityApp/Assets/Scripts/Editor.meta
 UnityApp/Assets/Scripts/Editor/CoreSimIntegrationTests.cs
 UnityApp/Assets/Scripts/Editor/CoreSimIntegrationTests.cs.meta
+UnityApp/Assets/Scripts/Game.meta
 UnityApp/Assets/Scripts/Game/CoreSimAdapter.cs
+UnityApp/Assets/Scripts/Game/CoreSimAdapter.cs.meta
 UnityApp/Assets/Scripts/Game/SessionManager.cs
 UnityApp/Assets/Scripts/Game/SessionManager.cs.meta
+UnityApp/Assets/Scripts/UI.meta
+UnityApp/Assets/Scripts/UI/CircuitStudio.meta
 UnityApp/Assets/Scripts/UI/CircuitStudio/CircuitStudioController.cs
 UnityApp/Assets/Scripts/UI/CircuitStudio/CircuitStudioController.cs.meta
 UnityApp/Assets/Scripts/UI/ProjectWizardController.cs
 UnityApp/Assets/Scripts/UI/ProjectWizardController.cs.meta
+UnityApp/Assets/Scripts/UI/RunMode.meta
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs.meta
+UnityApp/Assets/UI.meta
+UnityApp/Assets/UI/CircuitStudio.meta
 UnityApp/Assets/UI/CircuitStudio/CircuitStudio.uxml
 UnityApp/Assets/UI/CircuitStudio/CircuitStudio.uxml.meta
 UnityApp/Assets/UI/ProjectWizard.uxml
 UnityApp/Assets/UI/ProjectWizard.uxml.meta
+UnityApp/Assets/UI/RunMode.meta
 UnityApp/Assets/UI/RunMode/RunMode.uxml
 UnityApp/Assets/UI/RunMode/RunMode.uxml.meta
+UnityApp/Packages/manifest.json
+UnityApp/Packages/packages-lock.json
+UnityApp/ProjectSettings/AudioManager.asset
+UnityApp/ProjectSettings/ClusterInputManager.asset
+UnityApp/ProjectSettings/DynamicsManager.asset
 UnityApp/ProjectSettings/EditorBuildSettings.asset
+UnityApp/ProjectSettings/EditorSettings.asset
+UnityApp/ProjectSettings/GraphicsSettings.asset
+UnityApp/ProjectSettings/InputManager.asset
+UnityApp/ProjectSettings/MemorySettings.asset
+UnityApp/ProjectSettings/NavMeshAreas.asset
+UnityApp/ProjectSettings/PackageManagerSettings.asset
+UnityApp/ProjectSettings/Physics2DSettings.asset
+UnityApp/ProjectSettings/PresetManager.asset
+UnityApp/ProjectSettings/ProjectSettings.asset
+UnityApp/ProjectSettings/ProjectVersion.txt
+UnityApp/ProjectSettings/QualitySettings.asset
+UnityApp/ProjectSettings/TagManager.asset
+UnityApp/ProjectSettings/TimeManager.asset
+UnityApp/ProjectSettings/UnityConnectSettings.asset
+UnityApp/ProjectSettings/VersionControlSettings.asset
+UnityApp/ProjectSettings/VFXManager.asset
