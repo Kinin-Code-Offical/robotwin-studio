@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-24T08:20:45Z
-# Commit: 14c743e
-# FileCount: 125
+﻿# GeneratedUtc: 2025-12-24T08:33:50Z
+# Commit: 4768f0a
+# FileCount: 127
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -53,6 +53,8 @@ docs/ARCHITECTURE.md
 docs/branch_cleanup_report.md
 docs/DEV_SETUP_WINDOWS.md
 docs/MVP_SCOPE.md
+docs/repo_files.txt
+docs/repo_files.txt
 docs/repo_files.txt
 docs/toolchain_audit.md
 docs/USER_QUICKSTART.md
