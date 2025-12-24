@@ -235,16 +235,13 @@ Suggested comment template:
 
 ---
 
-## 8) End-of-session checklist (quick)
+## 8) End-of-session checklist (Strict & Sequential)
 
-- [ ] Commit often; working tree clean
-- [ ] Pull main
-- [ ] Rebase/merge main into WORK_BRANCH; resolve conflicts now
-- [ ] Merge WORK_BRANCH into main; push main
-- [ ] Parity loop: integrate any branch ahead of main; push main
-- [ ] Run `pwsh ./tools/update_repo_files.ps1` (commit if changed)
-- [ ] Run `pwsh ./tools/update_workspace_snapshot.ps1` (verify ignored)
-- [ ] Run `pwsh ./tools/export_context_pack.ps1 -Mode MIN` (output ignored)
-- [ ] Delete WORK_BRANCH (recommended)
-- [ ] Update LAST_RUN + ACTIVITY_LOG; commit to main; push main
-- [ ] Comment on “Status Log – Run Reports”
+- [ ] **Sync Main**: `git pull origin main`
+- [ ] **Context Export**: `pwsh ./tools/export_context_pack.ps1 -Mode MIN`
+- [ ] **Log Identity**: Ensure `docs/antigravity/*.md` matches `docs/antigravity/context_exports/latest/*.md` (Copy/Sync).
+- [ ] **Repo Index**: `pwsh ./tools/update_repo_files.ps1` (commit if changed)
+- [ ] **Snapshot**: `pwsh ./tools/update_workspace_snapshot.ps1` (must remain gitignored)
+- [ ] **Final Sync**: `git pull origin main` (resolve conflicts immediately)
+- [ ] **Push**: `git push origin main`
+- [ ] **Status Log**: Comment on "Status Log – Run Reports" issue.
