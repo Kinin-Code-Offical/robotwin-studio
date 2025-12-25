@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-25T20:43:06Z
-# Commit: a64cbc0
-# FileCount: 137
+﻿# GeneratedUtc: 2025-12-25T20:56:09Z
+# Commit: 2f0ee0b
+# FileCount: 138
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -71,6 +71,7 @@ tools/run_unity_smoke.ps1
 tools/update_repo_files.ps1
 tools/update_unity_plugins.ps1
 tools/update_workspace_snapshot.ps1
+tools/validate_uxml.ps1
 UnityApp/Assets/Plugins.meta
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll.meta
