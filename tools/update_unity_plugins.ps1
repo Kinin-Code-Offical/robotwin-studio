@@ -22,13 +22,29 @@ $UnityPluginsDir = "UnityApp/Assets/Plugins"
 Write-Host "Building CoreSim (netstandard2.1) for Unity..." -ForegroundColor Cyan
 dotnet build $ProjectDir -c Release -f netstandard2.1
 
-$SourceDll = "$ProjectDir/bin/Release/netstandard2.1/RobotTwin.CoreSim.dll"
-$SourcePdb = "$ProjectDir/bin/Release/netstandard2.1/RobotTwin.CoreSim.pdb"
-$DestDll = Join-Path $UnityPluginsDir "RobotTwin.CoreSim.dll"
-$DestPdb = Join-Path $UnityPluginsDir "RobotTwin.CoreSim.pdb"
+# Files to sync (Core + Deps)
+# Note: System.Text.Json 8.x brings in:
+# - System.Text.Json.dll
+# - System.Text.Encodings.Web.dll
+# - Microsoft.Bcl.AsyncInterfaces.dll
+# - System.Runtime.CompilerServices.Unsafe.dll
+$FilesToSync = @(
+    "RobotTwin.CoreSim.dll",
+    "RobotTwin.CoreSim.pdb",
+    "System.Text.Json.dll",
+    "System.Text.Encodings.Web.dll",
+    "Microsoft.Bcl.AsyncInterfaces.dll",
+    "System.Runtime.CompilerServices.Unsafe.dll"
+)
 
-if (-not (Test-Path $SourceDll)) {
-    Write-Error "Build failed or output missing: $SourceDll"
+$SourceBase = "$ProjectDir/bin/Release/netstandard2.1"
+
+# Validation Phase
+foreach ($File in $FilesToSync) {
+    $Src = Join-Path $SourceBase $File
+    if (-not (Test-Path $Src)) {
+        Write-Error "Build output missing required dependency: $Src"
+    }
 }
 
 # Create Plugins dir if missing
@@ -45,8 +61,18 @@ function Test-FileDiff($src, $dst) {
 }
 
 if ($Check) {
-    if (Test-FileDiff $SourceDll $DestDll) {
-        Write-Host "Error: Unity plugin is out of sync!" -ForegroundColor Red
+    $OutOfSync = $false
+    foreach ($File in $FilesToSync) {
+        $Src = Join-Path $SourceBase $File
+        $Dst = Join-Path $UnityPluginsDir $File
+        if (Test-FileDiff $Src $Dst) {
+            Write-Host "Mismatch: $File" -ForegroundColor Red
+            $OutOfSync = $true
+        }
+    }
+    
+    if ($OutOfSync) {
+        Write-Host "Error: Unity plugins are out of sync!" -ForegroundColor Red
         Write-Host "Run './tools/update_unity_plugins.ps1' to fix."
         exit 1
     }
@@ -55,7 +81,14 @@ if ($Check) {
 }
 
 Write-Host "Copying to $UnityPluginsDir..."
-Copy-Item $SourceDll $DestDll -Force
-Copy-Item $SourcePdb $DestPdb -Force
+foreach ($File in $FilesToSync) {
+    $Src = Join-Path $SourceBase $File
+    $Dst = Join-Path $UnityPluginsDir $File
+    Copy-Item $Src $Dst -Force
+    Write-Host "  $File" -ForegroundColor Gray
+}
+
+# Cleanup optional annoying files if they exist (deps, etc)
+if (Test-Path "$UnityPluginsDir/RobotTwin.CoreSim.deps.json") { Remove-Item "$UnityPluginsDir/RobotTwin.CoreSim.deps.json" }
 
 Write-Host "Success." -ForegroundColor Green
