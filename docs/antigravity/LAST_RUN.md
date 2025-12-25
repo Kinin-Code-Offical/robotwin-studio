@@ -1,17 +1,18 @@
 # Run Summary
 **Date**: 2025-12-25
 **Model Used**: PRO
-**Status**: SUCCESS (Shared Info Pointers Added)
+**Status**: SUCCESS (Unity CI Implemented)
 
 ## Achievements
-- **Feature**: Shared Info Pointers.
-  - Added [SHARED_INFO_LATEST.json](docs/antigravity/SHARED_INFO_LATEST.json) and [SHARED_INFO_LATEST_SUMMARY.md](docs/antigravity/SHARED_INFO_LATEST_SUMMARY.md).
-  - Updated `end_session_shared_info.ps1` to generate them.
+- **Feature**: Unity CI Action (#32).
+  - Added `.github/workflows/unity_ci.yml` (Windows).
+  - Conditional execution: Probes `UNITY_LICENSE` secret.
+  - Auto-versioning: Reads `ProjectVersion.txt`.
 - **Governance**:
-  - Updated `main_force_sync_workflow` to include pointer commit.
-  - Updated `SHARED_INFO_PIPELINE.md`.
+  - Updated `MVP_SCOPE.md` with Unity CI details.
+  - Followed strict Shared Info workflow.
 - **Pipeline**:
-  - Verified pointer generation and fallback logic.
+  - Validated using Shared Info pointers from previous run.
 
 ## Current State
 - **Branch**: `main` (clean).
@@ -19,4 +20,4 @@
 - **Parity**: Clean.
 
 ## Next Steps
-- #32 Unity CI Action.
+- Implement Wizard UI logic.
