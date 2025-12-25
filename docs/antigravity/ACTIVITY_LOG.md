@@ -225,3 +225,10 @@
     - **Status**: Wired Unity scenes with Camera and UIDocument via automation.
     - **Outcome**: Scenes are now runtime-ready; Build Settings corrected.
 
+
+## 2025-12-26 (Wizard UI Fix & Hygiene)
+- **Run (Fixes)**
+    - Model used: PRO
+    - **Status**: Fixed Wizard UI binding errors and repo hygiene warnings.
+    - **Outcome**: UXML structure aligned with controller expectations; CI/Tooling cleaner.
+
