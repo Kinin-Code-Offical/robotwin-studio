@@ -44,7 +44,7 @@ namespace RobotTwin.UI
 
             root.Q<Button>("InternalSaveBtn")?.RegisterCallback<ClickEvent>(OnSave);
             root.Q<Button>("InternalLoadBtn")?.RegisterCallback<ClickEvent>(OnLoad);
-            root.Q<Button>("InternalValidateBtn")?.RegisterCallback<ClickEvent>(OnValidate);
+            root.Q<Button>("InternalValidateBtn")?.RegisterCallback<ClickEvent>(OnValidateClicked);
             root.Q<Button>("BackBtn")?.RegisterCallback<ClickEvent>(OnBack);
             root.Q<Button>("ConnectBtn")?.RegisterCallback<ClickEvent>(OnConnect);
             root.Q<Button>("RunBtn")?.RegisterCallback<ClickEvent>(OnRun); // Added Run Btn
@@ -201,7 +201,7 @@ namespace RobotTwin.UI
             }
         }
 
-        private void OnValidate(ClickEvent evt)
+        private void OnValidateClicked(ClickEvent evt)
         {
             var result = CircuitValidator.Validate(_currentCircuit);
             string msg = result.IsValid ? "Valid" : "Invalid!";
