@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-25T20:22:41Z
-# Commit: 70df2cb
-# FileCount: 135
+﻿# GeneratedUtc: 2025-12-25T20:42:41Z
+# Commit: b093717
+# FileCount: 137
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -73,14 +73,16 @@ tools/update_unity_plugins.ps1
 tools/update_workspace_snapshot.ps1
 UnityApp/Assets/Plugins.meta
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll
-UnityApp/Assets/Plugins/RobotTwin.CoreSim.deps.json
-UnityApp/Assets/Plugins/RobotTwin.CoreSim.deps.json.meta
+UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll.meta
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.dll
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.dll.meta
 UnityApp/Assets/Plugins/RobotTwin.CoreSim.pdb
 UnityApp/Assets/Plugins/System.Runtime.CompilerServices.Unsafe.dll
+UnityApp/Assets/Plugins/System.Runtime.CompilerServices.Unsafe.dll.meta
 UnityApp/Assets/Plugins/System.Text.Encodings.Web.dll
+UnityApp/Assets/Plugins/System.Text.Encodings.Web.dll.meta
 UnityApp/Assets/Plugins/System.Text.Json.dll
+UnityApp/Assets/Plugins/System.Text.Json.dll.meta
 UnityApp/Assets/Scenes.meta
 UnityApp/Assets/Scenes/Main.unity
 UnityApp/Assets/Scenes/Main.unity.meta

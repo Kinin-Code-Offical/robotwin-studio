@@ -40,7 +40,20 @@ namespace RobotTwin.UI
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
+            if (_doc == null)
+            {
+                Debug.LogError("[RunModeController] UIDocument component missing! Disabling.");
+                enabled = false;
+                return;
+            }
+
             var root = _doc.rootVisualElement;
+            if (root == null)
+            {
+                Debug.LogError("[RunModeController] RootVisualElement is null! Disabling.");
+                enabled = false;
+                return;
+            }
 
             _timeLabel = root.Q<Label>("TimeLabel");
             _tickLabel = root.Q<Label>("TickLabel");
@@ -57,6 +70,9 @@ namespace RobotTwin.UI
             _signalList = root.Q<ScrollView>("SignalList");
             _injectionActiveToggle = root.Q<Toggle>("InjectionActiveToggle");
 
+            // Validate critical controls
+            if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
+            
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
             _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal);
 

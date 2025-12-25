@@ -21,14 +21,31 @@ namespace RobotTwin.UI
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
-            var root = _doc.rootVisualElement;
+            if (_doc == null)
+            {
+                 Debug.LogError("[ProjectWizardController] UIDocument component missing! Disabling.");
+                 enabled = false;
+                 return;
+            }
 
-            // Assuming standard names for now
+            var root = _doc.rootVisualElement;
+            if (root == null)
+            {
+                 Debug.LogError("[ProjectWizardController] RootVisualElement is null! Disabling.");
+                 enabled = false;
+                 return;
+            }
+
+            // Query elements with strict checks
             _imgList = root.Q<ListView>("TemplateList");
             _createButton = root.Q<Button>("CreateButton");
             _descriptionLabel = root.Q<Label>("DescriptionLabel");
 
-            _createButton.clicked += OnCreateClicked;
+            if (_imgList == null) Debug.LogError("[ProjectWizardController] 'TemplateList' (ListView) not found in UXML.");
+            if (_createButton == null) Debug.LogError("[ProjectWizardController] 'CreateButton' (Button) not found in UXML.");
+            if (_descriptionLabel == null) Debug.LogError("[ProjectWizardController] 'DescriptionLabel' (Label) not found in UXML.");
+
+            if (_createButton != null) _createButton.clicked += OnCreateClicked;
 
             LoadTemplates();
         }
