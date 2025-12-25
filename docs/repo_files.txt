@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-25T16:23:25Z
-# Commit: afa4105
-# FileCount: 128
+﻿# GeneratedUtc: 2025-12-25T16:24:10Z
+# Commit: c7558a2
+# FileCount: 130
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -49,6 +49,8 @@ docs/antigravity/MASTER_PROMPT.txt
 docs/antigravity/MODEL_POLICY.md
 docs/antigravity/MVP_SCOPE.md
 docs/antigravity/PROFILES.yml
+docs/antigravity/SHARED_INFO_LATEST.json
+docs/antigravity/SHARED_INFO_LATEST_SUMMARY.md
 docs/antigravity/SHARED_INFO_PIPELINE.md
 docs/ARCHITECTURE.md
 docs/branch_cleanup_report.md
