@@ -90,5 +90,6 @@ foreach ($File in $FilesToSync) {
 
 # Cleanup optional annoying files if they exist (deps, etc)
 if (Test-Path "$UnityPluginsDir/RobotTwin.CoreSim.deps.json") { Remove-Item "$UnityPluginsDir/RobotTwin.CoreSim.deps.json" }
+if (Test-Path "$UnityPluginsDir/RobotTwin.CoreSim.deps.json.meta") { Remove-Item "$UnityPluginsDir/RobotTwin.CoreSim.deps.json.meta" }
 
 Write-Host "Success." -ForegroundColor Green
