@@ -231,6 +231,7 @@ Suggested comment template:
 - Parity: main not behind any branch (yes):
 - Other branches integrated into main:
 - Branches deleted:
+- Shared Info Zip:
 - Next 1–3 actions:
 
 ---

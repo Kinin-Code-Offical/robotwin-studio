@@ -162,3 +162,10 @@
     - **Status**: Hardened pipeline. Added docs, retrieval script, CI guardrails.
     - **Verification**: Full Upload/Download cycle verified.
 
+
+## 2025-12-25 (Governance Validation)
+- **Run (Governance)**
+    - Model used: PRO
+    - **Status**: Verified Shared Info pipeline and updated workflow template.
+    - **Verification**: Upload/Download cycle verified.
+
