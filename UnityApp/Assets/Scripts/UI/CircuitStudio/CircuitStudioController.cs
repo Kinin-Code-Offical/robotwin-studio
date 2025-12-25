@@ -35,6 +35,8 @@ namespace RobotTwin.UI
             _paletteContainer = root.Q("PaletteContainer");
             _canvasContainer = root.Q("CanvasContainer");
             _statusLabel = root.Q<Label>("StatusLabel");
+            // Optional: Bind header status too if needed
+            // var headerStatus = root.Q<Label>("StatusBarLabel");
             
             _fromCompDropdown = root.Q<DropdownField>("FromCompDropdown");
             _toCompDropdown = root.Q<DropdownField>("ToCompDropdown");

@@ -44,6 +44,11 @@ jobs:
         $outDir = Join-Path $env:RUNNER_TEMP "context_pack"
         pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/export_context_pack.ps1 -Mode MIN -OutDir $outDir -SkipGh
 
+    - name: Verify UXML validity
+      shell: pwsh
+      run: |
+        ./tools/validate_uxml.ps1
+
     - name: Verify Unity plugins sync
       shell: pwsh
       run: |
