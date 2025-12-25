@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-25T21:43:27Z
-# Commit: 423cb33
-# FileCount: 147
+﻿# GeneratedUtc: 2025-12-25T22:25:50Z
+# Commit: 6cc2900
+# FileCount: 149
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -73,6 +73,7 @@ tools/update_unity_plugins.ps1
 tools/update_workspace_snapshot.ps1
 tools/validate_uxml.ps1
 UnityApp/Assets/Editor.meta
+UnityApp/Assets/Editor/SceneWireup.cs.meta
 UnityApp/Assets/Plugins.meta
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll.meta
@@ -121,8 +122,9 @@ UnityApp/Assets/UI/CircuitStudio/CircuitStudio.uxml.meta
 UnityApp/Assets/UI/PanelSettings.meta
 UnityApp/Assets/UI/PanelSettings/DefaultPanelSettings.asset
 UnityApp/Assets/UI/PanelSettings/DefaultPanelSettings.asset.meta
-UnityApp/Assets/UI/ProjectWizard.uxml
-UnityApp/Assets/UI/ProjectWizard.uxml.meta
+UnityApp/Assets/UI/ProjectWizard.meta
+UnityApp/Assets/UI/ProjectWizard/ProjectWizard.uxml
+UnityApp/Assets/UI/ProjectWizard/ProjectWizard.uxml.meta
 UnityApp/Assets/UI/RunMode.meta
 UnityApp/Assets/UI/RunMode/RunMode.uxml
 UnityApp/Assets/UI/RunMode/RunMode.uxml.meta
