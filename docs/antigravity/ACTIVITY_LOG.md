@@ -204,3 +204,10 @@
     - **Status**: Fixed Unity compilation error in CircuitStudioController.
     - **Outcome**: Renamed conflicting method signature.
 
+
+## 2025-12-25 (Unity NRE & Meta Fix)
+- **Run (Bugfix)**
+    - Model used: PRO
+    - **Status**: Fixed NREs in UI Controllers and orphan .meta warning.
+    - **Outcome**: Improved runtime stability and clean console.
+
