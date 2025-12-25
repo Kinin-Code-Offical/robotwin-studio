@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <RootNamespace>RobotTwin.CoreSim</RootNamespace>
     <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <PathMap>$(MSBuildProjectDirectory)=/repo/CoreSim/src/RobotTwin.CoreSim</PathMap>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">

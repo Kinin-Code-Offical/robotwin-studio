@@ -47,7 +47,10 @@ namespace RobotTwin.UI
                  return;
             }
             
-            // Debug.Log($"[ProjectWizardController] Root child count: {root.childCount}");
+            Debug.Log($"[ProjectWizardController] Root child count: {root.childCount}");
+            List<string> childNames = new List<string>();
+            foreach (var child in root.Children()) childNames.Add(child.name);
+            Debug.Log($"[ProjectWizardController] Root children: {string.Join(", ", childNames)}");
 
             // Query elements with strict checks
             _imgList = root.Q<ListView>("TemplateList");
