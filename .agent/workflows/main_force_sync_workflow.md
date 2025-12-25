@@ -243,7 +243,8 @@ Suggested comment template:
 - [ ] **Log Identity**: Ensure `docs/antigravity/*.md` matches `docs/antigravity/context_exports/latest/*.md` (Copy/Sync).
 - [ ] **Repo Index**: `pwsh ./tools/update_repo_files.ps1` (commit if changed)
 - [ ] **Snapshot**: `pwsh ./tools/update_workspace_snapshot.ps1` (must remain gitignored)
+- [ ] **Shared Info**: `pwsh ./tools/end_session_shared_info.ps1` (Zip + Pointers)
+- [ ] **Commit Pointers**: `git add docs/antigravity/SHARED_INFO_LATEST* && git commit -m "chore: update shared info pointers" || echo "No changes"`
 - [ ] **Final Sync**: `git pull origin main` (resolve conflicts immediately)
 - [ ] **Push**: `git push origin main`
-- [ ] **Shared Info**: `pwsh ./tools/end_session_shared_info.ps1` (Zip + Drive Upload)
 - [ ] **Status Log**: Comment on "Status Log – Run Reports" issue.
