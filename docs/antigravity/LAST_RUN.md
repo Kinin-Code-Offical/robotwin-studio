@@ -1,16 +1,16 @@
 # Run Summary
-**Date**: 2025-12-25 (late) / 26 (early)
+**Date**: 2025-12-26
 **Model Used**: PRO
-**Status**: SUCCESS (Wired Scenes)
+**Status**: SUCCESS (UI Wiring & Repo Hygiene)
 
 ## Achievements
-- **Unity Scenes**: Wired `Wizard`, `Main`, `RunMode` with `MainCamera` and `UIDocument`.
-- **Automation**: Used `Editor/SceneWireup.cs` in batch mode to apply changes safely without hand-editing YAML.
-- **Config**: Created `DefaultPanelSettings` and updated `EditorBuildSettings` scene order.
+- **UI Fix**: Resolved `ProjectWizardController` binding errors by moving UXML to correct path (`Assets/UI/ProjectWizard/`) and re-wiring scenes via automation.
+- **Diagnostics**: Added robust logging to `ProjectWizardController` to prevent silent failures or spam.
+- **Repo Hygiene**: Fixed PSScriptAnalyzer warning in `update_unity_plugins.ps1` and removed unused secrets from `unity_ci.yml`.
 
 ## Verification
-- **Automated**: Batch mode script ran successfully. `update_repo_files.ps1` shows updated scenes.
-- **Manual**: Pending user smoke test (GUI visibility).
+- **Automated**: `validate_uxml.ps1` passed. Repo scripts passed `-Check` mode.
+- **Manual**: Pending user smoke test (confirm Wizard UI loads).
 
 ## Current State
 - **Branch**: `main` (clean).
