@@ -4,8 +4,6 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-$ErrorActionPreference = "Stop"
-
 # Note: Only main CoreSim is currently required in Unity. Validation might be if used in Wizard.
 # Based on usage in CircuitStudioController, we need Validation too if it's separate. 
 # But looking at repo structure, Validation seemed to be a folder inside src/RobotTwin.CoreSim? 
@@ -17,7 +15,7 @@ $ProjectDir = "CoreSim/src/RobotTwin.CoreSim"
 $UnityPluginsDir = "UnityApp/Assets/Plugins"
 
 Write-Host "Building CoreSim (netstandard2.1) for Unity..." -ForegroundColor Cyan
-dotnet build $ProjectDir -c Release -f netstandard2.1
+dotnet build $ProjectDir -c Release -f netstandard2.1 /p:ContinuousIntegrationBuild=true /p:Deterministic=true
 
 # Files to sync (Core + Deps)
 # Note: System.Text.Json 8.x brings in:
