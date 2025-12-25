@@ -1,22 +1,23 @@
 ﻿# Latest Shared Info Summary
-**Generated**: 20251225_195851Z (UTC)
-**Zip**: session_20251225_195851Z.zip
-**SHA256**: AD74E85FEC2A5D1B50F651164EF0D6858A0998D8CC7B2A68848CC7761870D3F1
-**Link**: https://drive.google.com/open?id=1w-0q0ZWfso_PJFS-O2tfVOwqRrDis66r
+**Generated**: 20251225_200705Z (UTC)
+**Zip**: session_20251225_200705Z.zip
+**SHA256**: 659B443F6CB80FB1C413603CC9618E5F367D82C9BCC9241A2C175C209DBF707A
+**Link**: https://drive.google.com/open?id=1rf7WXl7SwvJLN2CvOON85pk_8j0xNIn9
 
 ## Last Run Status
 # Run Summary
 **Date**: 2025-12-25
 **Model Used**: PRO
-**Status**: SUCCESS (Unity CI Logic Verified)
+**Status**: SUCCESS (Unity Plugin Deps Fixed)
 
 ## Achievements
-- **Feature**: Unity CI Action (#32).
-  - Verified presence and correctness of `.github/workflows/unity_ci.yml`.
-  - Content matches requirements (Conditional execution, Version probing).
-- **Governance**:
-  - Validated consistency of `main` and `MVP_SCOPE.md`.
-  - Executed governance loop (Shared Info, Repo Index, Tests).
+- **Fix**: Bundled `System.Text.Json` (8.0.5) and dependencies for Unity.
+  - Updated `RobotTwin.CoreSim.csproj` to `CopyLocalLockFileAssemblies`.
+  - Updated `update_unity_plugins.ps1` to copy required DLLs.
+- **Verification**:
+  - Validated build output contains dependencies.
+  - Validated script copies them to `Assets/Plugins`.
+  - CoreSim tests passed.
 
 ## Current State
 - **Branch**: `main` (clean).
@@ -28,13 +29,6 @@
 
 
 ## Recent Activity (Tail)
-## 2025-12-25 (Shared Info Pointers)
-- **Run (Feature)**
-    - Model used: PRO
-    - **Status**: Added tracked pointer files for Shared Info artifacts.
-    - **Verification**: Verified pointer generation and fallback.
-
-
 ## 2025-12-25 (Unity CI)
 - **Run (Feature)**
     - Model used: PRO
@@ -47,5 +41,12 @@
     - Model used: PRO
     - **Status**: Verified existing implementation of Unity CI (#32).
     - **Outcome**: Confirmed logic matches requirements.
+
+
+## 2025-12-25 (Unity Plugin Fix)
+- **Run (Fix)**
+    - Model used: PRO
+    - **Status**: Fixed Unity plugin runtime error by bundling dependencies.
+    - **Outcome**: Assets/Plugins now includes System.Text.Json and deps.
 
 
