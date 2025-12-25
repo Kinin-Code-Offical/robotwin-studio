@@ -190,3 +190,10 @@
     - **Status**: Verified existing implementation of Unity CI (#32).
     - **Outcome**: Confirmed logic matches requirements.
 
+
+## 2025-12-25 (Unity Plugin Fix)
+- **Run (Fix)**
+    - Model used: PRO
+    - **Status**: Fixed Unity plugin runtime error by bundling dependencies.
+    - **Outcome**: Assets/Plugins now includes System.Text.Json and deps.
+
