@@ -4,10 +4,7 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-$ProjectDirs = @(
-    "CoreSim/src/RobotTwin.CoreSim",
-    "CoreSim/src/RobotTwin.CoreSim.Validation" 
-)
+$ErrorActionPreference = "Stop"
 
 # Note: Only main CoreSim is currently required in Unity. Validation might be if used in Wizard.
 # Based on usage in CircuitStudioController, we need Validation too if it's separate. 

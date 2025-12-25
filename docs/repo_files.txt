@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-25T20:56:09Z
-# Commit: 2f0ee0b
-# FileCount: 138
+﻿# GeneratedUtc: 2025-12-25T21:43:27Z
+# Commit: 423cb33
+# FileCount: 147
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -72,6 +72,7 @@ tools/update_repo_files.ps1
 tools/update_unity_plugins.ps1
 tools/update_workspace_snapshot.ps1
 tools/validate_uxml.ps1
+UnityApp/Assets/Editor.meta
 UnityApp/Assets/Plugins.meta
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll
 UnityApp/Assets/Plugins/Microsoft.Bcl.AsyncInterfaces.dll.meta
@@ -109,10 +110,17 @@ UnityApp/Assets/Scripts/UI/ProjectWizardController.cs.meta
 UnityApp/Assets/Scripts/UI/RunMode.meta
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs.meta
+UnityApp/Assets/UI Toolkit.meta
+UnityApp/Assets/UI Toolkit/UnityThemes.meta
+UnityApp/Assets/UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss
+UnityApp/Assets/UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss.meta
 UnityApp/Assets/UI.meta
 UnityApp/Assets/UI/CircuitStudio.meta
 UnityApp/Assets/UI/CircuitStudio/CircuitStudio.uxml
 UnityApp/Assets/UI/CircuitStudio/CircuitStudio.uxml.meta
+UnityApp/Assets/UI/PanelSettings.meta
+UnityApp/Assets/UI/PanelSettings/DefaultPanelSettings.asset
+UnityApp/Assets/UI/PanelSettings/DefaultPanelSettings.asset.meta
 UnityApp/Assets/UI/ProjectWizard.uxml
 UnityApp/Assets/UI/ProjectWizard.uxml.meta
 UnityApp/Assets/UI/RunMode.meta
@@ -135,6 +143,7 @@ UnityApp/ProjectSettings/PresetManager.asset
 UnityApp/ProjectSettings/ProjectSettings.asset
 UnityApp/ProjectSettings/ProjectVersion.txt
 UnityApp/ProjectSettings/QualitySettings.asset
+UnityApp/ProjectSettings/SceneTemplateSettings.json
 UnityApp/ProjectSettings/TagManager.asset
 UnityApp/ProjectSettings/TimeManager.asset
 UnityApp/ProjectSettings/UnityConnectSettings.asset
