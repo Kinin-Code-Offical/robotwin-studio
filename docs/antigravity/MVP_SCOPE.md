@@ -165,10 +165,19 @@ Example contents (illustrative):
 ## 7) Realistic Failures (MVP Subset)
 
 MVP must demonstrate at least one deterministic failure scenario, visible live and in report:
-
 - Power: battery sag / brownout reset
 - Actuation: torque saturation
 - Thermal: thermal derating (simple)
+
+### CI/CD
+- **Platform**: GitHub Actions (Windows Runners).
+- **Core Checks**: `dotnet test` (CoreSim), Governance checks (Repo Index, Ignore Rules).
+- **Unity Validation**:
+  - Workflow: `.github/workflows/unity_ci.yml`
+  - Scope: EditMode logic tests, Compilation.
+  - **Conditional**: Runs ONLY if `UNITY_LICENSE` secret is present. Skips gracefully on forks/PRs without secrets.
+  - Version: Auto-detected from `ProjectVersion.txt` (`2022.3.62f3`).
+- **Artifacts**: Shared Info Zip (Drive), Test Results (GitHub Artifacts).
 
 ## 8) Exclusions for MVP (Initial)
 
