@@ -176,3 +176,10 @@
     - **Status**: Added tracked pointer files for Shared Info artifacts.
     - **Verification**: Verified pointer generation and fallback.
 
+
+## 2025-12-25 (Unity CI)
+- **Run (Feature)**
+    - Model used: PRO
+    - **Status**: Implemented conditional Unity CI workflow (#32).
+    - **Artifacts**: New workflow file, updated MVP scope.
+
