@@ -28,6 +28,17 @@ namespace RobotTwin.UI
                  return;
             }
 
+            if (_doc.visualTreeAsset == null)
+            {
+                 Debug.LogError($"[ProjectWizardController] UIDocument has no VisualTreeAsset assigned! GameObject: {gameObject.name}");
+                 enabled = false;
+                 return;
+            }
+            else
+            {
+                 Debug.Log($"[ProjectWizardController] Bound VisualTreeAsset: {_doc.visualTreeAsset.name}");
+            }
+
             var root = _doc.rootVisualElement;
             if (root == null)
             {
@@ -35,15 +46,25 @@ namespace RobotTwin.UI
                  enabled = false;
                  return;
             }
+            
+            // Debug.Log($"[ProjectWizardController] Root child count: {root.childCount}");
 
             // Query elements with strict checks
             _imgList = root.Q<ListView>("TemplateList");
             _createButton = root.Q<Button>("CreateButton");
             _descriptionLabel = root.Q<Label>("DescriptionLabel");
 
-            if (_imgList == null) Debug.LogError("[ProjectWizardController] 'TemplateList' (ListView) not found in UXML.");
-            if (_createButton == null) Debug.LogError("[ProjectWizardController] 'CreateButton' (Button) not found in UXML.");
-            if (_descriptionLabel == null) Debug.LogError("[ProjectWizardController] 'DescriptionLabel' (Label) not found in UXML.");
+            bool missing = false;
+            if (_imgList == null) { Debug.LogError($"[ProjectWizardController] 'TemplateList' (ListView) not found. Asset: {_doc.visualTreeAsset.name}."); missing = true; }
+            if (_createButton == null) { Debug.LogError($"[ProjectWizardController] 'CreateButton' (Button) not found. Asset: {_doc.visualTreeAsset.name}."); missing = true; }
+            if (_descriptionLabel == null) { Debug.LogError($"[ProjectWizardController] 'DescriptionLabel' (Label) not found. Asset: {_doc.visualTreeAsset.name}."); missing = true; }
+
+            if (missing)
+            {
+                Debug.LogError("[ProjectWizardController] UI Binding Failed. Disabling Component.");
+                enabled = false;
+                return;
+            }
 
             if (_createButton != null) _createButton.clicked += OnCreateClicked;
 

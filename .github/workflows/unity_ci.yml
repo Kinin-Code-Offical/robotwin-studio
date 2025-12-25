@@ -21,8 +21,10 @@ jobs:
       - name: Check for Unity License
         id: check_secret
         shell: pwsh
+        env:
+          HAS_LICENSE: ${{ secrets.UNITY_LICENSE != '' }}
         run: |
-          if ("${{ secrets.UNITY_LICENSE }}" -ne "") {
+          if ($env:HAS_LICENSE -eq 'true') {
             Write-Host "UNITY_LICENSE secret found. Unity tests will run."
             "run_unity=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           } else {
@@ -75,8 +77,6 @@ jobs:
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: UnityApp
           unityVersion: ${{ needs.probe.outputs.unity_version }}
