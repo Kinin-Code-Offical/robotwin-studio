@@ -169,3 +169,10 @@
     - **Status**: Verified Shared Info pipeline and updated workflow template.
     - **Verification**: Upload/Download cycle verified.
 
+
+## 2025-12-25 (Shared Info Pointers)
+- **Run (Feature)**
+    - Model used: PRO
+    - **Status**: Added tracked pointer files for Shared Info artifacts.
+    - **Verification**: Verified pointer generation and fallback.
+
