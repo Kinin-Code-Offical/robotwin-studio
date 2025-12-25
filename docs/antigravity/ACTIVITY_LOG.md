@@ -1,5 +1,17 @@
 # Activity Log
 
+## 2025-12-26 (M0 Stability)
+- **Run (Maintenance)**
+    - Model used: PRO
+    - **CI**:
+      - Enforced deterministic builds for CoreSim (path mapping, build flags).
+      - Fixed `update_unity_plugins.ps1` to prevent hash mismatches.
+    - **Unity**:
+      - Fixed `PanelSettings` wiring in all scenes (Wizard, Main, RunMode).
+      - Added `WiringTests.cs` (EditMode) to verify UIDocument connections.
+      - Improved `ProjectWizardController` logging.
+    - **Sync**: Merged PR (`fix/m0-stability-ci-ui`).
+
 ## 2025-12-24 (Gitignore Fix)
 - **Run (Governance)**
     - Model used: PRO
@@ -84,151 +96,3 @@
       - Integrated "Run" button in Circuit Studio.
       - Added EditMode Smoke Test.
     - **Sync**: Merged PR #40 (`feature/30-run-mode-telemetry-logging`).
-
-## 2025-12-24 (Stabilization Run)
-- **Run (Governance)**
-    - Model used: PRO
-    - **Fixes**:
-      - Enforced strict .gitignore for context_exports and bin/obj.
-      - Removed accidentally tracked build artifacts (hotfix).
-      - Updated docs/repo_files.txt canonical list.
-      - Added CI guards for tracked artifacts.
-    - **Docs**:
-      - Updated main_force_sync_workflow.md and MASTER_PROMPT.txt.
-    - **Sync**: Merged PR #51 and #52.
-
-
-## 2025-12-24 (CI Fix)
-- **Run (CI Repair)**
-    - Model used: PRO
-    - **Fix**: Synced docs/repo_files.txt with actual untracked state (removed ~200 stale entries).
-    - **Verification**: update_repo_files.ps1 -Check passed; CI passing.
-    - **Sync**: Merged PR #54.
-
-
-## 2025-12-24 (Feature #31 - Example Template)
-- **Run (Feature)**
-    - Model used: PRO
-    - **Feature**: Implemented 'ExampleTemplate-01: Blinky' and 'Blank Template'.
-    - **CoreSim**: Added TemplateCatalog entries and unit tests.
-    - **UI**: Wired Project Wizard list.
-    - **Docs**: Updated Quickstart.
-    - **Sync**: Merged PR #55.
-
-
-## 2025-12-24 (CI Context Pack Fix)
-- **Run (CI Fix)**
-    - Model used: LIGHT
-    - **Fix**: Updated CI workflow to use pwsh for context pack verification step.
-    - **Sync**: Merged PR #57.
-
-
-## 2025-12-24 (Session Closeout)
-- **Run (Closeout)**
-    - Model used: PRO
-    - **Status**: Verified all features and CI fixes merged. Parity clean. Governance scripts run.
-
-
-## 2025-12-24 (Unity Compile Fix)
-- **Run (Fix)**
-    - Model used: PRO
-    - **Status**: Fixed Unity compilation (CoreSim TFM, UI API). Added plugin sync.
-    - **CI**: Updated to check plugin sync.
-
-
-## 2025-12-24 (Doc/Context Sync)
-- **Run (Docs)**
-    - Model used: PRO
-    - **Status**: Updated README, verified issues closed, ran full context export.
-
-
-## 2025-12-24 (Unity UI Fix & Merge)
-- **Run (Fix/Repair)**
-    - Model used: LIGHT
-    - **Status**: Fixed CircuitStudio UI and manifest. Resolved merge conflict.
-    - **Verification**: Unity smoke test pass.
-
-
-## 2025-12-24 (Shared Info Pipeline)
-- **Run (Feature)**
-    - Model used: PRO
-    - **Status**: Implemented automated Drive upload pipeline.
-    - **Verification**: Script upload verified.
-
-
-## 2025-12-24 (Shared Info Hardening)
-- **Run (Feature)**
-    - Model used: PRO
-    - **Status**: Hardened pipeline. Added docs, retrieval script, CI guardrails.
-    - **Verification**: Full Upload/Download cycle verified.
-
-
-## 2025-12-25 (Governance Validation)
-- **Run (Governance)**
-    - Model used: PRO
-    - **Status**: Verified Shared Info pipeline and updated workflow template.
-    - **Verification**: Upload/Download cycle verified.
-
-
-## 2025-12-25 (Shared Info Pointers)
-- **Run (Feature)**
-    - Model used: PRO
-    - **Status**: Added tracked pointer files for Shared Info artifacts.
-    - **Verification**: Verified pointer generation and fallback.
-
-
-## 2025-12-25 (Unity CI)
-- **Run (Feature)**
-    - Model used: PRO
-    - **Status**: Implemented conditional Unity CI workflow (#32).
-    - **Artifacts**: New workflow file, updated MVP scope.
-
-
-## 2025-12-25 (Unity CI Verification)
-- **Run (Verification)**
-    - Model used: PRO
-    - **Status**: Verified existing implementation of Unity CI (#32).
-    - **Outcome**: Confirmed logic matches requirements.
-
-
-## 2025-12-25 (Unity Plugin Fix)
-- **Run (Fix)**
-    - Model used: PRO
-    - **Status**: Fixed Unity plugin runtime error by bundling dependencies.
-    - **Outcome**: Assets/Plugins now includes System.Text.Json and deps.
-
-
-## 2025-12-25 (Unity OnValidate Fix)
-- **Run (Fix)**
-    - Model used: PRO
-    - **Status**: Fixed Unity compilation error in CircuitStudioController.
-    - **Outcome**: Renamed conflicting method signature.
-
-
-## 2025-12-25 (Unity NRE & Meta Fix)
-- **Run (Bugfix)**
-    - Model used: PRO
-    - **Status**: Fixed NREs in UI Controllers and orphan .meta warning.
-    - **Outcome**: Improved runtime stability and clean console.
-
-
-## 2025-12-25 (UXML Fix & Validation)
-- **Run (Fix & Infra)**
-    - Model used: PRO
-    - **Status**: Fixed invalid UXML syntax and wired validation to CI.
-    - **Outcome**: UXML now parses correctly; CI prevents future syntax regressions.
-
-
-## 2025-12-26 (Unity Scene Wireup)
-- **Run (Feature/Fix)**
-    - Model used: PRO
-    - **Status**: Wired Unity scenes with Camera and UIDocument via automation.
-    - **Outcome**: Scenes are now runtime-ready; Build Settings corrected.
-
-
-## 2025-12-26 (Wizard UI Fix & Hygiene)
-- **Run (Fixes)**
-    - Model used: PRO
-    - **Status**: Fixed Wizard UI binding errors and repo hygiene warnings.
-    - **Outcome**: UXML structure aligned with controller expectations; CI/Tooling cleaner.
-
