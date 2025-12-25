@@ -218,3 +218,10 @@
     - **Status**: Fixed invalid UXML syntax and wired validation to CI.
     - **Outcome**: UXML now parses correctly; CI prevents future syntax regressions.
 
+
+## 2025-12-26 (Unity Scene Wireup)
+- **Run (Feature/Fix)**
+    - Model used: PRO
+    - **Status**: Wired Unity scenes with Camera and UIDocument via automation.
+    - **Outcome**: Scenes are now runtime-ready; Build Settings corrected.
+
