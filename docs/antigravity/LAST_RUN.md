@@ -1,16 +1,14 @@
 # Run Summary
 **Date**: 2025-12-25
 **Model Used**: PRO
-**Status**: SUCCESS (Unity Plugin Deps Fixed)
+**Status**: SUCCESS (Unity OnValidate Fixed)
 
 ## Achievements
-- **Fix**: Bundled `System.Text.Json` (8.0.5) and dependencies for Unity.
-  - Updated `RobotTwin.CoreSim.csproj` to `CopyLocalLockFileAssemblies`.
-  - Updated `update_unity_plugins.ps1` to copy required DLLs.
+- **Fix**: Renamed `OnValidate` to `OnValidateClicked` in `CircuitStudioController.cs`.
+  - Resolves Unity compilation error due to magic method collision.
 - **Verification**:
-  - Validated build output contains dependencies.
-  - Validated script copies them to `Assets/Plugins`.
-  - CoreSim tests passed.
+  - Grep confirmed no conflict.
+  - Repo and Plugins checks passed.
 
 ## Current State
 - **Branch**: `main` (clean).

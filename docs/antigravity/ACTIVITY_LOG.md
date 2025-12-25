@@ -197,3 +197,10 @@
     - **Status**: Fixed Unity plugin runtime error by bundling dependencies.
     - **Outcome**: Assets/Plugins now includes System.Text.Json and deps.
 
+
+## 2025-12-25 (Unity OnValidate Fix)
+- **Run (Fix)**
+    - Model used: PRO
+    - **Status**: Fixed Unity compilation error in CircuitStudioController.
+    - **Outcome**: Renamed conflicting method signature.
+
