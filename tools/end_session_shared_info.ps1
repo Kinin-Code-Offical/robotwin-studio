@@ -36,20 +36,75 @@ Compress-Archive -Path "$DocsDir/*" -DestinationPath $ZipPath -Force
 $RemotePath = "$DriveRemote$DriveFolder/$ZipName"
 Write-Host ">>> Uploading to $RemotePath..." -ForegroundColor Cyan
 
+$UploadSuccess = $false
+$ShareLink = $null
+$FileHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
+
 if (Get-Command rclone -ErrorAction SilentlyContinue) {
     try {
         rclone copyto $ZipPath $RemotePath
         Write-Host ">>> Upload Success: $RemotePath" -ForegroundColor Green
+        $UploadSuccess = $true
         
-        # 5. Cleanup
-        Remove-Item $ZipPath -Force
-        Write-Host ">>> Local cleanup complete." -ForegroundColor Gray
+        # Try to get link (best effort)
+        try {
+            $ShareLink = rclone link $RemotePath 2>$null
+        }
+        catch {
+            Write-Warning "Could not generate share link."
+        }
     }
     catch {
         Write-Error "Upload failed: $_"
-        exit 1
+        Write-Warning "Local zip preserved at $ZipPath"
     }
 }
 else {
     Write-Warning "rclone not found. Skipping upload. Zip remains at $ZipPath"
+}
+
+# 5. Generate Tracked Pointers (Always run if zip exists)
+$PointerJsonPath = Join-Path "$DocsDir/antigravity" "SHARED_INFO_LATEST.json"
+$PointerMdPath = Join-Path "$DocsDir/antigravity" "SHARED_INFO_LATEST_SUMMARY.md"
+
+$PointerData = [Ordered]@{
+    "created_at_utc"    = $Timestamp
+    "zip_name"          = $ZipName
+    "drive_remote_path" = $RemotePath
+    "share_link"        = $ShareLink
+    "sha256"            = $FileHash
+    "git_sha"           = $(git rev-parse HEAD)
+    "upload_success"    = $UploadSuccess
+}
+$PointerData | ConvertTo-Json | Set-Content $PointerJsonPath -Encoding utf8
+
+# Generate MD Summary
+$LastRunContent = Get-Content (Join-Path "$DocsDir/antigravity" "LAST_RUN.md") -Raw -ErrorAction SilentlyContinue
+$ActivityLogPath = Join-Path "$DocsDir/antigravity" "ACTIVITY_LOG.md"
+$ActivityTail = if (Test-Path $ActivityLogPath) { Get-Content $ActivityLogPath -Tail 20 | Out-String } else { "No activity log found." }
+
+$SummaryContent = @"
+# Latest Shared Info Summary
+**Generated**: $Timestamp (UTC)
+**Zip**: $ZipName
+**SHA256**: $FileHash
+**Link**: $(if ($ShareLink) { $ShareLink } else { "N/A" })
+
+## Last Run Status
+$LastRunContent
+
+## Recent Activity (Tail)
+$ActivityTail
+"@
+$SummaryContent | Set-Content $PointerMdPath -Encoding utf8
+
+Write-Host ">>> Created tracked pointers: SHARED_INFO_LATEST.json, SHARED_INFO_LATEST_SUMMARY.md" -ForegroundColor Cyan
+
+# 6. Cleanup (Only if upload success)
+if ($UploadSuccess) {
+    Remove-Item $ZipPath -Force
+    Write-Host ">>> Local cleanup complete." -ForegroundColor Gray
+}
+else {
+    Write-Warning "Skipping cleanup because upload failed or was skipped."
 }

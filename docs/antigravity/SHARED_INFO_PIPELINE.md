@@ -21,6 +21,13 @@ To participate in this pipeline (upload or download), the machine must have `rcl
 
 *No secrets are stored in this repository.*
 
+## Pointer Files
+In addition to the uploaded zip, the pipeline updates two tracked files in this repo:
+1. `docs/antigravity/SHARED_INFO_LATEST.json`: Machine-readable metadata (timestamp, zip name, sha256, link).
+2. `docs/antigravity/SHARED_INFO_LATEST_SUMMARY.md`: Human-readable summary of the last session's status and activity.
+
+These serve as a fallback if the Drive download fails or for quick reference without downloading.
+
 ## Retrieving Context
 To pull the latest session context into your local environment:
 
