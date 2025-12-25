@@ -1,23 +1,23 @@
 ﻿# Latest Shared Info Summary
-**Generated**: 20251225_214352Z (UTC)
-**Zip**: session_20251225_214352Z.zip
-**SHA256**: 5E55A4DD4624BB810A363F129E533E142E65E4249DFD5E0C4232BA3DD4D66FAD
-**Link**: https://drive.google.com/open?id=13wILDnLyz64UnZSMZaZLlaCMAPOAUkj2
+**Generated**: 20251225_222620Z (UTC)
+**Zip**: session_20251225_222620Z.zip
+**SHA256**: DED22ABAF6A356A086EAD8CD5FF82CAE39973FC9FE082EFC53979A4E5869594C
+**Link**: https://drive.google.com/open?id=12DRs0_3kD4tC0h3kUnrI_8SACFn9JX06
 
 ## Last Run Status
 # Run Summary
-**Date**: 2025-12-25 (late) / 26 (early)
+**Date**: 2025-12-26
 **Model Used**: PRO
-**Status**: SUCCESS (Wired Scenes)
+**Status**: SUCCESS (UI Wiring & Repo Hygiene)
 
 ## Achievements
-- **Unity Scenes**: Wired `Wizard`, `Main`, `RunMode` with `MainCamera` and `UIDocument`.
-- **Automation**: Used `Editor/SceneWireup.cs` in batch mode to apply changes safely without hand-editing YAML.
-- **Config**: Created `DefaultPanelSettings` and updated `EditorBuildSettings` scene order.
+- **UI Fix**: Resolved `ProjectWizardController` binding errors by moving UXML to correct path (`Assets/UI/ProjectWizard/`) and re-wiring scenes via automation.
+- **Diagnostics**: Added robust logging to `ProjectWizardController` to prevent silent failures or spam.
+- **Repo Hygiene**: Fixed PSScriptAnalyzer warning in `update_unity_plugins.ps1` and removed unused secrets from `unity_ci.yml`.
 
 ## Verification
-- **Automated**: Batch mode script ran successfully. `update_repo_files.ps1` shows updated scenes.
-- **Manual**: Pending user smoke test (GUI visibility).
+- **Automated**: `validate_uxml.ps1` passed. Repo scripts passed `-Check` mode.
+- **Manual**: Pending user smoke test (confirm Wizard UI loads).
 
 ## Current State
 - **Branch**: `main` (clean).
@@ -29,13 +29,6 @@
 
 
 ## Recent Activity (Tail)
-## 2025-12-25 (Unity NRE & Meta Fix)
-- **Run (Bugfix)**
-    - Model used: PRO
-    - **Status**: Fixed NREs in UI Controllers and orphan .meta warning.
-    - **Outcome**: Improved runtime stability and clean console.
-
-
 ## 2025-12-25 (UXML Fix & Validation)
 - **Run (Fix & Infra)**
     - Model used: PRO
@@ -48,5 +41,12 @@
     - Model used: PRO
     - **Status**: Wired Unity scenes with Camera and UIDocument via automation.
     - **Outcome**: Scenes are now runtime-ready; Build Settings corrected.
+
+
+## 2025-12-26 (Wizard UI Fix & Hygiene)
+- **Run (Fixes)**
+    - Model used: PRO
+    - **Status**: Fixed Wizard UI binding errors and repo hygiene warnings.
+    - **Outcome**: UXML structure aligned with controller expectations; CI/Tooling cleaner.
 
 
