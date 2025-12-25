@@ -1,0 +1,91 @@
+name: Unity CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    name: Probe Unity Environment
+    runs-on: windows-latest
+    outputs:
+      run_unity: ${{ steps.check_secret.outputs.run_unity }}
+      unity_version: ${{ steps.get_version.outputs.unity_version }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for Unity License
+        id: check_secret
+        shell: pwsh
+        run: |
+          if ("${{ secrets.UNITY_LICENSE }}" -ne "") {
+            Write-Host "UNITY_LICENSE secret found. Unity tests will run."
+            "run_unity=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            Write-Warning "UNITY_LICENSE secret missing. Unity tests will be SKIPPED."
+            "run_unity=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      - name: Get Unity Version
+        id: get_version
+        shell: pwsh
+        run: |
+          $verFile = "UnityApp/ProjectSettings/ProjectVersion.txt"
+          if (Test-Path $verFile) {
+            $content = Get-Content $verFile
+            # Parse 'm_EditorVersion: 2022.3.62f3'
+            $versionLine = $content | Select-String "m_EditorVersion:\s*(.*)"
+            if ($versionLine) {
+                $version = $versionLine.Matches.Groups[1].Value.Trim()
+                Write-Host "Detected Unity Version: $version"
+                "unity_version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            } else {
+                Write-Error "Could not parse m_EditorVersion from $verFile"
+                exit 1
+            }
+          } else {
+            Write-Error "$verFile not found!"
+            exit 1
+          }
+
+  unity-tests:
+    name: Unity EditMode Tests
+    needs: probe
+    if: needs.probe.outputs.run_unity == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v3
+        with:
+          path: UnityApp/Library
+          key: Library-${{ runner.os }}-${{ needs.probe.outputs.unity_version }}-${{ hashFiles('UnityApp/Packages/manifest.json', 'UnityApp/Packages/packages-lock.json') }}
+          restore-keys: |
+            Library-${{ runner.os }}-${{ needs.probe.outputs.unity_version }}-
+            Library-${{ runner.os }}-
+      
+      - name: Run EditMode Tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: UnityApp
+          unityVersion: ${{ needs.probe.outputs.unity_version }}
+          testMode: editmode
+          artifactsPath: artifacts
+          
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test Results
+          path: artifacts
