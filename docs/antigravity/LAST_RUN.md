@@ -1,23 +1,22 @@
 # Run Summary
-**Date**: 2025-12-24
+**Date**: 2025-12-25
 **Model Used**: PRO
-**Status**: SUCCESS (Shared Info Hardened)
+**Status**: SUCCESS (Shared Info Verification)
 
 ## Achievements
-- **Feature**: Hardened Shared Info Pipeline.
-  - Added [SHARED_INFO_PIPELINE.md](docs/antigravity/SHARED_INFO_PIPELINE.md) documentation.
-  - Added `tools/get_latest_shared_info.ps1` for easy retrieval.
-  - Added CI Guardrail to ban `.gpt` folder tracking.
-- **Verification**:
-  - `end_session_shared_info.ps1` verified (Upload).
-  - `get_latest_shared_info.ps1` verified (Download).
-  - Guardrails verified.
 - **Governance**:
-  - CI Green.
-  - Parity Clean.
+  - Updated `main_force_sync_workflow.md` comment template to include Zip Info.
+  - Verified `.gpt/` and `context_exports` are correctly gitignored.
+- **Verification**:
+  - `repo_files.txt` check: Pass.
+  - CoreSim Tests: Pass.
+  - `end_session_shared_info.ps1` (Dry Run): Pass.
+  - `get_latest_shared_info.ps1` (Retrieval): Pass.
+- **Pipeline**:
+  - Verified full Shared Info upload/download cycle.
 
 ## Current State
-- **Branch**: `main` (clean, par).
+- **Branch**: `main` (clean).
 - **CI**: Passing.
 - **Parity**: Clean.
 

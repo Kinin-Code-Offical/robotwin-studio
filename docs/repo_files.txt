@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-24T16:12:14Z
-# Commit: e16bf13
-# FileCount: 126
+﻿# GeneratedUtc: 2025-12-24T16:13:04Z
+# Commit: d623048
+# FileCount: 128
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -49,6 +49,7 @@ docs/antigravity/MASTER_PROMPT.txt
 docs/antigravity/MODEL_POLICY.md
 docs/antigravity/MVP_SCOPE.md
 docs/antigravity/PROFILES.yml
+docs/antigravity/SHARED_INFO_PIPELINE.md
 docs/ARCHITECTURE.md
 docs/branch_cleanup_report.md
 docs/DEV_SETUP_WINDOWS.md
@@ -62,6 +63,7 @@ README.md
 tools/end_session_shared_info.ps1
 tools/export_context_pack.ps1
 tools/export_context_pack_min.ps1
+tools/get_latest_shared_info.ps1
 tools/run_unity_smoke.ps1
 tools/update_repo_files.ps1
 tools/update_unity_plugins.ps1
