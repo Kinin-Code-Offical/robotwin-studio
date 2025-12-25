@@ -211,3 +211,10 @@
     - **Status**: Fixed NREs in UI Controllers and orphan .meta warning.
     - **Outcome**: Improved runtime stability and clean console.
 
+
+## 2025-12-25 (UXML Fix & Validation)
+- **Run (Fix & Infra)**
+    - Model used: PRO
+    - **Status**: Fixed invalid UXML syntax and wired validation to CI.
+    - **Outcome**: UXML now parses correctly; CI prevents future syntax regressions.
+

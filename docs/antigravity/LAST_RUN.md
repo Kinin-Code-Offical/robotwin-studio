@@ -1,17 +1,15 @@
 # Run Summary
 **Date**: 2025-12-25
 **Model Used**: PRO
-**Status**: SUCCESS (Fixed Unity NREs + Orphan Meta)
+**Status**: SUCCESS (Fixed UXML & Added Validation)
 
 ## Achievements
-- **Fix**: Resolved `NullReferenceException` in `ProjectWizardController` and `RunModeController`.
-  - Added robust initialization and null checks for UI elements.
-- **Fix**: Cleaned up `RobotTwin.CoreSim.deps.json.meta` warning.
-  - Updated `update_unity_plugins.ps1` to remove orphan meta files.
+- **Fix**: Resolved invalid XML (`<` character) in `CircuitStudio.uxml`.
+  - Also resolved duplicate `StatusLabel` naming.
+- **Tooling**: Added `tools/validate_uxml.ps1` for CI validation.
 - **Verification**:
-  - Validated plugin sync tool behavior.
-  - Validated code correctness via review.
-  - Repo checks passed.
+  - Validated UXML files locally.
+  - Verified no plugin meta orphans.
 
 ## Current State
 - **Branch**: `main` (clean).
