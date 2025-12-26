@@ -129,4 +129,12 @@
 - **Run (Feature)**
     - Model used: HEAVY
     - **Status**: Implemented Issue #32.
-    - **Outcome**: Added PlayMode tests and enabled in CI.
+- **Outcome**: Added PlayMode tests and enabled in CI.
+
+
+## 2025-12-26 (Code Hygiene & Determinism)
+- **Run (Maintenance)**
+    - Model used: HEAVY
+    - **Status**: Enforced C# 11 `required` properties and fixed CS8618 warnings.
+    - **Outcome**: Added `Polyfills.cs` for netstandard2.1 support. Synced Unity plugins (hash match).
+

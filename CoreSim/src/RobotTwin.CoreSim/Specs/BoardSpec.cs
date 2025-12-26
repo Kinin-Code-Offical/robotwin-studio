@@ -4,9 +4,9 @@ namespace RobotTwin.CoreSim.Specs
 {
     public class BoardSpec
     {
-        public string? ID { get; set; }
-        public string? Name { get; set; } // "Arduino Uno R3"
-        public string? MCU { get; set; } // "ATmega328P"
+        public required string ID { get; set; }
+        public required string Name { get; set; }
+        public required string MCU { get; set; }
         public List<PinDef> Pins { get; set; } = new List<PinDef>();
     }
 
