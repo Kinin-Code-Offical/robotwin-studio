@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Specs;
+using BlinkyTpl = RobotTwin.CoreSim.Catalogs.Templates.BlinkyTemplate;
 
 namespace RobotTwin.CoreSim.Catalogs
 {
@@ -25,8 +26,7 @@ namespace RobotTwin.CoreSim.Catalogs
             return new List<TemplateSpec>
             {
                 // Verification Template (Feature #31)
-                // Verification Template (Feature #31)
-                RobotTwin.CoreSim.Catalogs.Templates.BlinkyTemplate.GetSpec(),
+                BlinkyTpl.GetSpec(),
                 // Blank Template
                 new TemplateSpec
                 {

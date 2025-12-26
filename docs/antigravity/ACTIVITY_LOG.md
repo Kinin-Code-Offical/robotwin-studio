@@ -110,3 +110,10 @@
     - **Status**: Fixed CS8618 Hygiene, Enforced Deterministic Builds, Restored Unity CI Secrets.
     - **Outcome**: CI and local validation green. Merged PR #73.
 
+
+## 2025-12-26 (Blinky Template)
+- **Run (Feature)**
+    - Model used: HEAVY
+    - **Status**: Implemented Blinky Template (Issue #31).
+    - **Outcome**: Clean architecture for templates (BlinkyTemplate.cs). Plugins synced.
+
