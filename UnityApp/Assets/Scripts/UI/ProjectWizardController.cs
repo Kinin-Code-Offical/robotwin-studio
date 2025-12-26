@@ -1,3 +1,6 @@
+using UnityEngine;
+using UnityEngine.UIElements;
+using System.Collections.Generic;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Catalogs.Templates;
 using RobotTwin.CoreSim.Serialization;
