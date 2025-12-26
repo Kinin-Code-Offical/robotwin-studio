@@ -4,13 +4,13 @@ namespace RobotTwin.CoreSim.Specs
 {
     public class WorldSpec
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public double Width { get; set; }
         public double Depth { get; set; }
         
         // MVP: Track spline or bitmap
         public List<TrackPoint> TrackPath { get; set; } = new List<TrackPoint>();
-        public string FloorTexturePath { get; set; }
+        public string FloorTexturePath { get; set; } = string.Empty;
     }
 
     public class TrackPoint
