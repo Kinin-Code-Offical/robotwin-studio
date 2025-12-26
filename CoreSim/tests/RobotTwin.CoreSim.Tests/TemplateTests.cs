@@ -52,10 +52,10 @@ namespace RobotTwin.CoreSim.Tests
         public void ExampleTemplate01_Blinky_ShouldBeValidAndRunnable()
         {
             var defaults = TemplateCatalog.GetDefaults();
-            var blinky = defaults.Find(t => t.ID == "mvp.exampletemplate-01");
+            var blinky = defaults.Find(t => t.ID == "mvp.blinky");
             
             Assert.NotNull(blinky);
-            Assert.Equal("ExampleTemplate-01: Blinky", blinky.Name);
+            Assert.Equal("Blinky: Arduino + LED", blinky.Name);
             Assert.NotNull(blinky.DefaultCircuit);
             
             // Validate the circuit composition

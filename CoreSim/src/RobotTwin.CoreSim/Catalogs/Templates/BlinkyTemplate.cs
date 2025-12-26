@@ -9,9 +9,9 @@ namespace RobotTwin.CoreSim.Catalogs.Templates
         {
             return new TemplateSpec
             {
-                ID = "mvp.exampletemplate-01",
-                Name = "ExampleTemplate-01: Blinky",
-                Description = "Hello World: Arduino Uno + Resistor + LED on D13.",
+                ID = "mvp.blinky",
+                Name = "Blinky: Arduino + LED",
+                Description = "Standard Hello World: Arduino Uno blinking an LED on Pin 13.",
                 SystemType = "CircuitOnly",
                 DefaultCircuit = new CircuitSpec
                 {
