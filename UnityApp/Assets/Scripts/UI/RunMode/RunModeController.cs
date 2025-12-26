@@ -233,7 +233,7 @@ namespace RobotTwin.UI
             _componentList.Clear();
             _componentLabels.Clear();
 
-            foreach (var comp in _engine.Session.Circuit.Components)
+            foreach (var comp in _engine.Circuit.Components)
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
