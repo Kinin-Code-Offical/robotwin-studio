@@ -1,8 +1,8 @@
 {
     "name": "RobotTwin.Tests.EditMode",
-    "references": [
         "UnityEngine.UIElementsModule",
-        "Unity.UIElements"
+        "Unity.UIElements",
+        "RobotTwin.Runtime"
     ],
     "includePlatforms": [
         "Editor"
