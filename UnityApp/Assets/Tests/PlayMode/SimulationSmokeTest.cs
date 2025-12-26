@@ -15,7 +15,7 @@ namespace RobotTwin.Tests.PlayMode
         public IEnumerator RunMode_GeneratesTelemetry_In100Ticks()
         {
             // Setup minimal Session
-            var circuit = new CircuitSpec { Id = "SmokeTestCircuit", Mode = SimulationMode.Fast };
+            var circuit = new CircuitSpec { Id = "SmokeTestCircuit", Mode = RobotTwin.CoreSim.Specs.SimulationMode.Fast };
             SessionManager.Instance.StartSession(circuit);
 
             // Load RunMode Scene (or just create controller if isolated)

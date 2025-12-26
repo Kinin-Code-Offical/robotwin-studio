@@ -33,10 +33,11 @@ namespace RobotTwin.MockFirmware
 
                             while (server.IsConnected)
                             {
-                                string line = await reader.ReadLineAsync();
+                                string? line = await reader.ReadLineAsync();
                                 if (line == null) break;
 
                                 var request = JsonSerializer.Deserialize<FirmwareStepRequest>(line);
+                                if (request == null) continue;
                                 
                                 // --- MOCK BLINK LOGIC ---
                                 simTime += dt;
@@ -46,7 +47,7 @@ namespace RobotTwin.MockFirmware
                                 var result = new FirmwareStepResult
                                 {
                                     PinStates = new int[] { pin13State }, // Assuming Index 0 is Pin 13 for mock
-                                    SerialOutput = simTime < 0.02 ? "Booting..." : null
+                                    SerialOutput = simTime < 0.02 ? "Booting..." : ""
                                 };
 
                                 string response = JsonSerializer.Serialize(result);
