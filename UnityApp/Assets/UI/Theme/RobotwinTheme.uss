@@ -1,55 +1,45 @@
-:root {
-    --unity-base: #383838;
-    --unity-dark: #2d2d2d;
-    --unity-darker: #252525;
-    --unity-accent: #4f80f8;
-    --unity-text-high: #ffffff;
-    --unity-text-dim: #a0a0a0;
-    --unity-border: #232323;
-}
-
 .unity-text-default {
-    color: var(--unity-text-dim);
+    color: #a0a0a0;
     font-size: 14px;
 }
 
 .unity-header-large {
-    color: var(--unity-text-high);
+    color: #ffffff;
     font-size: 24px;
     -unity-font-style: bold;
 }
 
 .unity-button-action {
-    background-color: var(--unity-dark);
-    border-color: var(--unity-border);
+    background-color: #2d2d2d;
+    border-color: #232323;
     border-width: 1px;
     border-radius: 6px;
     padding: 20px;
     margin: 8px;
-    color: var(--unity-text-high);
+    color: #ffffff;
     -unity-font-style: bold;
     transition: all 0.2s;
 }
 
 .unity-button-action:hover {
-    border-color: var(--unity-accent);
+    border-color: #4f80f8;
     background-color: #333333;
 }
 
 .sidebar-button {
     background-color: transparent;
     border-width: 0;
-    color: var(--unity-text-dim);
+    color: #a0a0a0;
     padding: 10px;
     -unity-text-align: middle-left;
 }
 
 .sidebar-button:hover {
-    color: var(--unity-text-high);
-    background-color: var(--unity-base);
+    color: #ffffff;
+    background-color: #383838;
 }
 
 .sidebar-button.active {
-    background-color: var(--unity-accent);
+    background-color: #4f80f8;
     color: white;
 }

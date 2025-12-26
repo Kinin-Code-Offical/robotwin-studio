@@ -1,10 +1,10 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <ui:Style src="../Theme/RobotwinTheme.uss" />
-    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: var(--unity-base);">
+    <ui:Style src="project://database/Assets/UI/Theme/RobotwinTheme.uss" />
+    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: #383838;">
         
         <!-- Left Panel: Library -->
-        <ui:VisualElement name="LeftPanel" style="width: 250px; background-color: var(--unity-dark); border-right-width: 1px; border-right-color: var(--unity-border);">
-            <ui:Label text="Components" style="color: var(--unity-text-high); padding: 10px; -unity-font-style: bold;" />
+        <ui:VisualElement name="LeftPanel" style="width: 250px; background-color: #2d2d2d; border-right-width: 1px; border-right-color: #232323;">
+            <ui:Label text="Components" style="color: #ffffff; padding: 10px; -unity-font-style: bold;" />
             <ui:ScrollView name="LibraryList" style="flex-grow: 1; padding: 5px;">
                 <!-- Items will be instantiated here -->
             </ui:ScrollView>
@@ -16,12 +16,12 @@
         </ui:VisualElement>
 
         <!-- Right Panel: Inspector -->
-        <ui:VisualElement name="RightPanel" style="width: 300px; background-color: var(--unity-dark); border-left-width: 1px; border-left-color: var(--unity-border);">
-            <ui:Label text="Inspector" style="color: var(--unity-text-high); padding: 10px; -unity-font-style: bold; border-bottom-width: 1px; border-bottom-color: var(--unity-border);" />
+        <ui:VisualElement name="RightPanel" style="width: 300px; background-color: #2d2d2d; border-left-width: 1px; border-left-color: #232323;">
+            <ui:Label text="Inspector" style="color: #ffffff; padding: 10px; -unity-font-style: bold; border-bottom-width: 1px; border-bottom-color: #232323;" />
             <ui:ScrollView name="InspectorContent" style="flex-grow: 1; padding: 10px;">
-                <ui:Label text="No Selection" style="color: var(--unity-text-dim);" />
+                <ui:Label text="No Selection" style="color: #a0a0a0;" />
             </ui:ScrollView>
-            <ui:Button name="SimulateBtn" text="RUN SIMULATION" style="height: 40px; margin: 10px; background-color: var(--unity-accent); color: white; -unity-font-style: bold;" />
+            <ui:Button name="SimulateBtn" text="RUN SIMULATION" style="height: 40px; margin: 10px; background-color: #4f80f8; color: white; -unity-font-style: bold;" />
         </ui:VisualElement>
 
     </ui:VisualElement>

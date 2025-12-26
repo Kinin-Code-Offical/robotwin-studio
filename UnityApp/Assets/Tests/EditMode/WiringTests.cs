@@ -25,9 +25,9 @@ namespace RobotTwin.Tests.EditMode
 
             // Verify content (emulating instantiation)
             var root = uiDoc.visualTreeAsset.CloneTree();
-            Assert.IsNotNull(root.Q<ListView>("TemplateList"), "ListView 'TemplateList' missing from VisualTree.");
-            Assert.IsNotNull(root.Q<Button>("CreateButton"), "Button 'CreateButton' missing from VisualTree.");
-            Assert.IsNotNull(root.Q<Label>("DescriptionLabel"), "Label 'DescriptionLabel' missing from VisualTree.");
+            Assert.IsNotNull(root.Q<Button>("NewProjectBtn"), "Button 'NewProjectBtn' missing from VisualTree.");
+            Assert.IsNotNull(root.Q<Button>("OpenProjectBtn"), "Button 'OpenProjectBtn' missing from VisualTree.");
+            Assert.IsNotNull(root.Q<ScrollView>("RecentProjectsList"), "ScrollView 'RecentProjectsList' missing from VisualTree.");
         }
 
         [Test]
