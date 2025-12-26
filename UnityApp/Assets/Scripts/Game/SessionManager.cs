@@ -37,5 +37,14 @@ namespace RobotTwin.Game
 
             Debug.Log($"Session Initialized: {template.Name}");
         }
+
+        public void StartSession(CircuitSpec circuit)
+        {
+            CurrentCircuit = circuit;
+            CurrentRobot = new RobotSpec { Name = "TestRobot" };
+            CurrentWorld = new WorldSpec { Name = "TestWorld" };
+            ActiveTemplate = null;
+            Debug.Log($"Session Started explicitly: {circuit.Name}");
+        }
     }
 }
