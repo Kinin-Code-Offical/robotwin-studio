@@ -1,45 +1,280 @@
+/* =========================================
+   ROBOTWIN STUDIO - ULTIMATE DARK THEME
+   ========================================= */
+
+:root {
+    --color-bg-app: #09090b;       /* Deepest Black-Blue */
+    --color-bg-surface: #141417;   /* Card Background */
+    --color-bg-surface-hover: #1c1c1f;
+    --color-bg-accent: #252529;    /* Lighter Surface */
+    
+    --color-border-subtle: rgba(255, 255, 255, 0.08);
+    --color-border-hover: rgba(255, 255, 255, 0.2);
+    --color-primary: #3b82f6;      /* Modern Blue */
+    --color-primary-glow: rgba(59, 130, 246, 0.3);
+    
+    --color-text-main: #f3f4f6;
+    --color-text-dim: #9ca3af;
+    --color-text-muted: #4b5563;
+}
+
+/* =========================================
+   CORE TYPOGRAPHY
+   ========================================= */
+/* Ensure you have a font asset at this path or remove the line */
+/* .unity-text-default, Label, Button {
+    -unity-font-definition: resource("Fonts/Inter-Regular SDF"); 
+} */
+
 .unity-text-default {
-    color: #a0a0a0;
-    font-size: 14px;
-}
-
-.unity-header-large {
-    color: #ffffff;
-    font-size: 24px;
-    -unity-font-style: bold;
-}
-
-.unity-button-action {
-    background-color: #2d2d2d;
-    border-color: #232323;
-    border-width: 1px;
-    border-radius: 6px;
-    padding: 20px;
-    margin: 8px;
-    color: #ffffff;
-    -unity-font-style: bold;
-    transition: all 0.2s;
-}
-
-.unity-button-action:hover {
-    border-color: #4f80f8;
-    background-color: #333333;
-}
-
-.sidebar-button {
-    background-color: transparent;
-    border-width: 0;
-    color: #a0a0a0;
-    padding: 10px;
+    color: #9ca3af;
+    font-size: 13px;
     -unity-text-align: middle-left;
 }
 
-.sidebar-button:hover {
+.unity-header-xl {
     color: #ffffff;
-    background-color: #383838;
+    font-size: 32px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+    -unity-text-align: middle-left;
+}
+
+.unity-header-lg {
+    color: #ffffff;
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.unity-header-md {
+    color: #ffffff;
+    font-size: 15px;
+    -unity-font-style: bold;
+}
+
+.text-subtle {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+/* =========================================
+   MODERN SIDEBAR
+   ========================================= */
+.sidebar-container {
+    width: 260px;
+    height: 100%;
+    background-color: #0c0c0e;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    height: 70px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 24px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-logo-text {
+    color: #ffffff;
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-left: 12px;
+}
+
+.sidebar-nav {
+    padding-top: 24px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.sidebar-button {
+    flex-direction: row;
+    align-items: center;
+    height: 48px;
+    margin-bottom: 4px;
+    padding-left: 16px;
+    border-radius: 8px;
+    background-color: transparent;
+    border-width: 0;
+    transition-duration: 0.2s;
+}
+
+.sidebar-button:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-button.active {
-    background-color: #4f80f8;
+    background-color: rgba(59, 130, 246, 0.15); /* Low opacity blue */
+    border-left-width: 3px;
+    border-left-color: #3b82f6;
+    color: #ffffff;
+}
+
+.sidebar-button Label {
+    margin-left: 12px;
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.sidebar-button:hover Label {
+    color: #ffffff;
+}
+
+.sidebar-button.active Label {
+    color: #ffffff;
+    -unity-font-style: bold;
+}
+
+.sidebar-icon {
+    width: 20px;
+    height: 20px;
+    -unity-background-image-tint-color: #6b7280;
+    opacity: 0.7;
+}
+
+.sidebar-button:hover .sidebar-icon,
+.sidebar-button.active .sidebar-icon {
+    -unity-background-image-tint-color: #ffffff;
+    opacity: 1;
+}
+
+/* =========================================
+   PREMIUM CARDS (The "Box Design")
+   ========================================= */
+.card-container {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 40px;
+}
+
+.action-card {
+    width: 32%;
+    height: 180px;
+    background-color: #141417; /* Surface */
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 24px;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition-duration: 0.2s;
+}
+
+.action-card:hover {
+    background-color: #1c1c1f;
+    border-color: rgba(59, 130, 246, 0.5); /* Blue border glow */
+    scale: 1.02;
+}
+
+.action-card-icon {
+    width: 48px;
+    height: 48px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.action-card:hover .action-card-icon {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.action-card-label-lg {
+    color: #ffffff;
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.action-card-desc {
+    color: #9ca3af;
+    font-size: 12px;
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+/* =========================================
+   TABLE & LISTS
+   ========================================= */
+.search-field {
+    height: 42px;
+    background-color: #141417;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    padding-left: 12px;
+    font-size: 13px;
+    flex-grow: 1;
+}
+
+.search-field:focus {
+    border-color: #3b82f6;
+}
+
+.list-item {
+    flex-direction: row;
+    align-items: center;
+    height: 64px;
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-bottom: 8px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: transparent;
+    transition-duration: 0.1s;
+}
+
+.list-item:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.list-item-title {
+    color: #f3f4f6;
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.list-item-sub {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.avatar-md {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    margin-right: 16px;
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
+.btn-primary {
+    background-color: #3b82f6;
     color: white;
+    border-radius: 6px;
+    border-width: 0;
+    padding: 10px 20px;
+    -unity-font-style: bold;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
 }

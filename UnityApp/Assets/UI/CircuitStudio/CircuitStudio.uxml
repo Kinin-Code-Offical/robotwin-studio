@@ -1,82 +1,235 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:Style src="CircuitStudio.uss" />
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
 
     <ui:VisualElement class="studio-container">
-        <!-- Toolbar -->
-        <ui:VisualElement class="studio-toolbar">
-            <ui:Button text="▶ Run" name="toolbar-run" class="toolbar-button play-button" />
-            <ui:Button text="■ Stop" name="toolbar-stop" class="toolbar-button stop-button" />
-            <ui:VisualElement style="width: 20px;" /> <!-- Spacer -->
-            <ui:Button text="Save" name="toolbar-save" class="toolbar-button" />
-            <ui:Button text="Export Spec" name="toolbar-export" class="toolbar-button" />
+        <!-- 1. Top Menubar (File, Edit, etc.) -->
+        <ui:VisualElement class="top-menubar">
+            <ui:VisualElement style="flex-direction: row; align-items: center;">
+                <ui:Label text="ROBOTWIN" class="branding-text" />
+                <ui:Label text="STUDIO" class="branding-sub" />
+                
+                <!-- Menu Items -->
+                <ui:VisualElement class="menu-item"><ui:Label text="File" /></ui:VisualElement>
+                <ui:VisualElement class="menu-item"><ui:Label text="Edit" /></ui:VisualElement>
+                <ui:VisualElement class="menu-item"><ui:Label text="View" /></ui:VisualElement>
+                <ui:VisualElement class="menu-item"><ui:Label text="Design" /></ui:VisualElement>
+                <ui:VisualElement class="menu-item"><ui:Label text="Tools" /></ui:VisualElement>
+                <ui:VisualElement class="menu-item"><ui:Label text="Route" /></ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Status Indicators -->
+            <ui:VisualElement style="flex-direction: row; align-items: center;">
+                <ui:VisualElement class="status-indicator">
+                    <ui:VisualElement class="status-dot" />
+                    <ui:Label text="LOCAL SYS" />
+                </ui:VisualElement>
+                <ui:Label text="v2.4.1-offline" class="version-text" />
+            </ui:VisualElement>
         </ui:VisualElement>
 
-        <!-- Main Workspace -->
-        <ui:VisualElement class="workspace-split">
-            
-            <!-- Left Palette -->
-            <ui:VisualElement class="palette-panel">
-                <ui:VisualElement class="palette-header">
-                    <ui:Label text="COMPONENTS" class="palette-header-label" />
-                </ui:VisualElement>
+        <!-- 2. Toolbar -->
+        <ui:VisualElement class="studio-toolbar">
+            <ui:VisualElement style="flex-direction: row; align-items: center;">
+                <ui:Button name="tool-select" class="toolbar-icon-btn active">
+                    <ui:Label text="➤" />
+                </ui:Button>
+                <ui:Button name="tool-move" class="toolbar-icon-btn"><ui:Label text="✥" /></ui:Button>
+                <ui:Button name="tool-wire" class="toolbar-icon-btn"><ui:Label text="☍" /></ui:Button>
+                <ui:Button name="tool-text" class="toolbar-icon-btn"><ui:Label text="T" /></ui:Button>
                 
-                <ui:ScrollView>
-                    <!-- MCU Category -->
-                    <ui:Label text="Microcontrollers" style="color:#808080; font-size:10px; margin: 4px 8px;" />
-                    <ui:VisualElement class="component-item" name="comp-uno">
-                        <ui:VisualElement class="component-icon" style="background-color: #00979C;" />
-                        <ui:Label text="Arduino Uno" style="color: white; font-size: 12px;" />
-                    </ui:VisualElement>
+                <ui:VisualElement class="toolbar-divider" />
+                
+                <ui:Button name="tool-sim" class="toolbar-icon-btn"><ui:Label text="⚡" /></ui:Button>
+            </ui:VisualElement>
 
-                    <!-- Basics Category -->
-                     <ui:Label text="Basics" style="color:#808080; font-size:10px; margin: 4px 8px;" />
-                    <ui:VisualElement class="component-item" name="comp-led">
-                        <ui:VisualElement class="component-icon" style="background-color: #cc3333;" />
-                        <ui:Label text="LED (Red)" style="color: white; font-size: 12px;" />
-                    </ui:VisualElement>
-                    <ui:VisualElement class="component-item" name="comp-resistor">
-                         <ui:VisualElement class="component-icon" style="background-color: #ae8b58;" />
-                        <ui:Label text="Resistor" style="color: white; font-size: 12px;" />
+            <ui:VisualElement style="flex-direction: row; align-items: center;">
+                <ui:VisualElement class="toolbar-input-group">
+                    <ui:Label text="0.1mm" style="color: #9ca3af; font-size: 11px;" />
+                </ui:VisualElement>
+                <ui:Button text="DRC CHECK" class="btn-secondary-outline" />
+                <ui:Button text="▶ SIMULATE" class="btn-primary" style="margin-left: 8px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 3. Main Split View -->
+        <ui:VisualElement class="workspace-area">
+            
+            <!-- Left Panel (Project / Layers / Library) -->
+            <ui:VisualElement class="panel-left">
+                <!-- Tabs -->
+                <ui:VisualElement class="panel-tabs">
+                     <ui:Button text="Project" class="tab-btn active" />
+                     <ui:Button text="Layers" class="tab-btn" />
+                </ui:VisualElement>
+
+                <!-- Project Tree -->
+                <ui:ScrollView class="panel-content" style="flex-grow: 1;">
+                    <ui:VisualElement class="tree-root">
+                        <ui:Label text="📂 Main_PCB_Rev1" class="tree-item root-item" />
+                        <ui:Label text="   ⚙ U1 STM32F405RGT6" class="tree-item" />
+                        <ui:Label text="   ⚡ R1 R_10k_0603" class="tree-item" />
+                        <ui:Label text="   ⏚ C1 C_100nF_0402" class="tree-item" />
                     </ui:VisualElement>
                 </ui:ScrollView>
+
+                <!-- Component Library (Bottom Left) -->
+                <ui:VisualElement class="library-panel">
+                    <ui:VisualElement class="panel-header-sm">
+                        <ui:Label text="COMPONENT LIBRARY" />
+                        <ui:Button text="+" class="btn-icon-sm" />
+                    </ui:VisualElement>
+                    
+                    <ui:TextField value="Search components..." class="search-field-sm" />
+
+                    <ui:ScrollView style="flex-grow: 1; margin-top: 8px;">
+                        <!-- Lib Item 1 -->
+                        <ui:VisualElement class="lib-item">
+                            <ui:VisualElement class="lib-icon-box"><ui:Label text="IC" /></ui:VisualElement>
+                            <ui:VisualElement>
+                                <ui:Label text="STM32F405" class="lib-item-title" />
+                                <ui:Label text="ARM Cortex-M4 High Perf" class="lib-item-sub" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                         <!-- Lib Item 2 -->
+                        <ui:VisualElement class="lib-item">
+                            <ui:VisualElement class="lib-icon-box"><ui:Label text="R" /></ui:VisualElement>
+                            <ui:VisualElement>
+                                <ui:Label text="Resistor 10k" class="lib-item-title" />
+                                <ui:Label text="10k Ohm 1% Tolerance" class="lib-item-sub" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <!-- Lib Item 3 -->
+                        <ui:VisualElement class="lib-item">
+                            <ui:VisualElement class="lib-icon-box"><ui:Label text="C" /></ui:VisualElement>
+                            <ui:VisualElement>
+                                <ui:Label text="Capacitor 100nF" class="lib-item-title" />
+                                <ui:Label text="MLCC X7R 16V" class="lib-item-sub" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:ScrollView>
+                </ui:VisualElement>
+
             </ui:VisualElement>
 
             <!-- Center Canvas -->
-            <ui:VisualElement class="canvas-area">
-                <ui:Label text="Circuit Canvas (Placeholder)" style="position: absolute; top: 10px; left: 10px; color: #505050; font-size: 20px; font-weight: bold;" />
-                
-                <!-- Dropped Components Container (for visualization) -->
-                <ui:VisualElement name="CanvasContainer" style="width: 100%; height: 100%;">
-                    <!-- Example of a placed component -->
-                    <ui:VisualElement style="position: absolute; left: 300px; top: 200px; width: 100px; height: 140px; background-color: #00979C; border-radius: 4px; justify-content: center; align-items: center; border-width: 2px; border-color: #ffffff;">
-                        <ui:Label text="UNO" style="color: white; font-weight: bold;" />
-                    </ui:VisualElement>
-                     
-                     <!-- Example Wire -->
-                     <ui:VisualElement style="position: absolute; left: 400px; top: 250px; width: 100px; height: 2px; background-color: #00ff00;" />
-
-                     <ui:VisualElement style="position: absolute; left: 500px; top: 240px; width: 20px; height: 20px; background-color: #cc3333; border-radius: 10px; border-width: 1px; border-color: white;" />
-                </ui:VisualElement>
+            <ui:VisualElement class="canvas-view">
+                 <!-- Grid Background handled by Camera/Shader usually, but placeholder grid here -->
+                 <ui:VisualElement style="position: absolute; width: 100%; height: 100%; opacity: 0.1;">
+                    <!-- CSS Grid Repeat Placeholder -->
+                 </ui:VisualElement>
+                 
+                 <!-- Canvas Overlay UI (e.g., selection box, HUD) -->
+                 <ui:VisualElement style="position: absolute; right: 10px; bottom: 10px; background-color: #141417; padding: 4px 8px; border-radius: 4px;">
+                     <ui:Label text="X: 0mm  Y: 222mm  Scale: 140%" style="color: #6b7280; font-size: 10px;" />
+                 </ui:VisualElement>
             </ui:VisualElement>
 
-            <!-- Right Inspector -->
-            <ui:VisualElement class="inspector-panel">
-                <ui:VisualElement class="inspector-header">
-                     <ui:Label text="PROPERTIES" class="palette-header-label" />
+            <!-- Right Panel (Properties) -->
+            <ui:VisualElement class="panel-right">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="PROPERTIES" />
                 </ui:VisualElement>
 
-                <ui:ScrollView>
-                    <ui:VisualElement class="property-row">
-                        <ui:Label text="Name" style="color: #a0a0a0; font-size: 12px;" />
-                        <ui:Label text="Arduino Uno" style="color: white; font-size: 12px;" />
+                <!-- Component Header Card -->
+                <ui:VisualElement class="prop-card-header">
+                     <ui:VisualElement class="prop-icon-lg"><ui:Label text="IC" /></ui:VisualElement>
+                     <ui:VisualElement style="flex-grow: 1;">
+                         <ui:Label text="U1" class="prop-title-lg" />
+                         <ui:Label text="STM32F405RGT6" class="prop-sub-lg" />
+                     </ui:VisualElement>
+                     <ui:Label text="Active" class="badge-success" />
+                </ui:VisualElement>
+
+                <ui:ScrollView style="padding: 12px;">
+                    <!-- Transform Section -->
+                    <ui:VisualElement class="prop-section">
+                        <ui:Label text="⚙ TRANSFORM" class="prop-section-header" />
+                        <ui:VisualElement class="prop-row-double">
+                            <ui:VisualElement class="prop-field">
+                                <ui:Label text="Position X" class="prop-label" />
+                                <ui:TextField value="400 mm" class="input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="prop-field">
+                                <ui:Label text="Position Y" class="prop-label" />
+                                <ui:TextField value="300 mm" class="input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                         <ui:VisualElement class="prop-field" style="margin-top: 8px;">
+                            <ui:Label text="Rotation" class="prop-label" />
+                            <ui:TextField value="0 deg" class="input-dark" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
-                     <ui:VisualElement class="property-row">
-                        <ui:Label text="Voltage" style="color: #a0a0a0; font-size: 12px;" />
-                        <ui:Label text="5V" style="color: white; font-size: 12px;" />
+
+                    <!-- Electrical Specs -->
+                    <ui:VisualElement class="prop-section">
+                        <ui:Label text="⚡ ELECTRICAL SPECS" class="prop-section-header" />
+                        
+                        <ui:VisualElement class="prop-row">
+                            <ui:Label text="Clock Freq" class="prop-label-row" />
+                            <ui:TextField value="168MHz" class="input-dark input-right" />
+                        </ui:VisualElement>
+                        
+                        <ui:VisualElement class="prop-row">
+                            <ui:Label text="Voltage (VCC)" class="prop-label-row" />
+                            <ui:TextField value="3.3V" class="input-dark input-right" />
+                        </ui:VisualElement>
+
+                         <ui:VisualElement class="prop-row">
+                            <ui:Label text="Max Current" class="prop-label-row" />
+                            <ui:TextField value="150mA" class="input-dark input-right" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
+
+                    <!-- Pin Map Table -->
+                    <ui:VisualElement class="prop-section">
+                        <ui:VisualElement style="flex-direction: row; justify-content: space-between; margin-bottom: 8px;">
+                            <ui:Label text="# PIN MAPPING" class="prop-section-header" />
+                            <ui:Label text="Read-Only" class="badge-neutral" />
+                        </ui:VisualElement>
+                        
+                        <ui:VisualElement class="pin-table">
+                            <ui:VisualElement class="pin-row header">
+                                <ui:Label text="Pin" style="width: 20px;" />
+                                <ui:Label text="Net Name" style="flex-grow: 1;" />
+                                <ui:Label text="Function" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="pin-row">
+                                <ui:Label text="1" style="width: 20px;" />
+                                <ui:Label text="NET_SIG_1" style="flex-grow: 1; color: #4CAF50;" />
+                                <ui:Label text="I/O" />
+                            </ui:VisualElement>
+                             <ui:VisualElement class="pin-row">
+                                <ui:Label text="2" style="width: 20px;" />
+                                <ui:Label text="NET_SIG_2" style="flex-grow: 1; color: #4CAF50;" />
+                                <ui:Label text="GND" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
                 </ui:ScrollView>
             </ui:VisualElement>
 
+        </ui:VisualElement>
+
+        <!-- 4. Bottom Panel (Output/Logs) -->
+        <ui:VisualElement class="bottom-panel">
+            <ui:VisualElement class="bottom-bar-header">
+                <ui:VisualElement style="flex-direction: row;">
+                    <ui:Label text="UNITY CONNECTED" class="status-tab active-blue" />
+                    <ui:Label text="U1 X:400 Y:300" class="status-tab" />
+                </ui:VisualElement>
+                <ui:VisualElement style="flex-direction: row;">
+                     <ui:Label text="Storage: Local" class="status-pill" />
+                     <ui:Label text="2 Errors" class="status-pill error" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            
+            <ui:VisualElement class="output-console">
+                 <ui:Label text="[Log] [UnityBridge] Sending AppReady { version: 2.4.1 }" style="color: #9ca3af; font-family: monospace; font-size: 11px;" />
+                 <ui:Label text="[Log] [UnityBridge] SelectComponent { id: c1 }" style="color: #9ca3af; font-family: monospace; font-size: 11px;" />
+                 <ui:Label text="[Warning] Chart width(-1) invalid, defaulting to auto." style="color: #FF9800; font-family: monospace; font-size: 11px;" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

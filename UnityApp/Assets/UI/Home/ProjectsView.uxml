@@ -1,0 +1,69 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+
+    <ui:VisualElement name="ProjectsView" style="flex-grow: 1; padding: 40px; background-color: #1a1a1a;">
+        
+        <!-- Header -->
+        <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <ui:Label text="Projects" class="unity-header-large" />
+            <ui:Button text="Create Project" class="sidebar-button active" style="width: 120px; justify-content: center;" />
+        </ui:VisualElement>
+
+        <!-- Toolbar -->
+        <ui:VisualElement style="flex-direction: row; margin-bottom: 20px;">
+            <ui:TextField value="Search projects..." style="flex-grow: 1; background-color: #202020; border-width: 1px; border-color: #303030; height: 36px; border-radius: 4px; padding-left: 8px; color: #e0e0e0; margin-right: 12px;" />
+            <ui:Button text="Filter" style="width: 80px; background-color: #252525; border-width: 1px; border-color: #303030; color: #a0a0a0; border-radius: 4px;" />
+        </ui:VisualElement>
+
+        <!-- Table Header -->
+        <ui:VisualElement style="flex-direction: row; padding: 10px; background-color: #202020; border-bottom-width: 1px; border-bottom-color: #303030;">
+            <ui:Label text="NAME" style="flex-grow: 1; width: 30%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="PATH" style="flex-grow: 1; width: 30%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="TYPE" style="width: 15%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="MODIFIED" style="width: 15%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="ACTIONS" style="width: 10%; color: #606060; font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-right;" />
+        </ui:VisualElement>
+
+        <!-- Table Body -->
+        <ui:ScrollView style="flex-grow: 1;">
+            
+            <!-- Row 1 -->
+            <ui:VisualElement class="recent-row" style="background-color: #1e1e1e; margin-bottom: 1px;">
+                <ui:VisualElement style="flex-grow: 1; width: 30%; flex-direction: row; align-items: center;">
+                    <ui:VisualElement style="width: 20px; height: 20px; background-color: #2a3b2a; margin-right: 8px; border-radius: 4px;" />
+                    <ui:Label text="Mars_Rover_PCB_Rev2" class="recent-name" style="font-size: 13px;" />
+                </ui:VisualElement>
+                
+                <ui:Label text="/projects/mars-rover/pcb-main.rw" style="flex-grow: 1; width: 30%; color: #808080; font-size: 12px;" />
+                
+                <ui:VisualElement style="width: 15%;">
+                    <ui:Label text="PCB Design" style="background-color: #252525; padding: 4px 8px; border-radius: 4px; color: #a0a0a0; font-size: 10px; align-self: flex-start;" />
+                </ui:VisualElement>
+                
+                <ui:Label text="2 hours ago" style="width: 15%; color: #a0a0a0; font-size: 12px;" />
+                
+                <ui:Label text="..." style="width: 10%; color: #a0a0a0; -unity-text-align: middle-right; -unity-font-style: bold;" />
+            </ui:VisualElement>
+
+            <!-- Row 2 -->
+             <ui:VisualElement class="recent-row" style="margin-bottom: 1px;">
+                <ui:VisualElement style="flex-grow: 1; width: 30%; flex-direction: row; align-items: center;">
+                    <ui:VisualElement style="width: 20px; height: 20px; background-color: #3b2a2a; margin-right: 8px; border-radius: 4px;" />
+                    <ui:Label text="Hydraulic_Arm_Sim_v4" class="recent-name" style="font-size: 13px;" />
+                </ui:VisualElement>
+                
+                <ui:Label text="/projects/industrial/arm-v4.rw" style="flex-grow: 1; width: 30%; color: #808080; font-size: 12px;" />
+                
+                <ui:VisualElement style="width: 15%;">
+                     <ui:Label text="Robotics Arm" style="background-color: #252525; padding: 4px 8px; border-radius: 4px; color: #a0a0a0; font-size: 10px; align-self: flex-start;" />
+                </ui:VisualElement>
+                
+                <ui:Label text="Yesterday" style="width: 15%; color: #a0a0a0; font-size: 12px;" />
+                
+                <ui:Label text="..." style="width: 10%; color: #a0a0a0; -unity-text-align: middle-right; -unity-font-style: bold;" />
+            </ui:VisualElement>
+
+        </ui:ScrollView>
+
+    </ui:VisualElement>
+</ui:UXML>

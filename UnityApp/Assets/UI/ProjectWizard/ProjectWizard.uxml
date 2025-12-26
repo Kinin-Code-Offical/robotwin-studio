@@ -1,43 +1,61 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <ui:Style src="project://database/Assets/UI/Theme/RobotwinTheme.uss" />
-    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: #383838;">
-        
-        <!-- Sidebar -->
-        <ui:VisualElement name="Sidebar" style="width: 250px; background-color: #2d2d2d; border-right-width: 1px; border-right-color: #232323;">
-            <ui:Label text="ROBOTWIN" style="color: #ffffff; -unity-font-style: bold; font-size: 16px; padding: 15px; border-bottom-width: 1px; border-bottom-color: #232323;" />
-            <ui:VisualElement style="padding-top: 10px;">
-                <ui:Button name="NavHome" text="Home" class="sidebar-button active" />
-                <ui:Button name="NavProjects" text="Projects" class="sidebar-button" />
-                <ui:Button name="NavTemplates" text="Templates" class="sidebar-button" />
-                <ui:Button name="NavSettings" text="Settings" class="sidebar-button" />
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+    <ui:Style src="ProjectWizard.uss" />
+    <ui:VisualElement class="wizard-root" style="flex-direction: row; height: 100%;">
+        <ui:VisualElement name="Sidebar" class="sidebar" style="width: 230px; flex-direction: column; flex-shrink: 0;">
+            <ui:Label text="ROBOTWIN" class="sidebar-logo" />
+            <ui:VisualElement class="sidebar-nav">
+                <ui:Button name="NavHome" text="Home" class="nav-button active" />
+                <ui:Button name="NavProjects" text="Projects" class="nav-button" />
+                <ui:Button name="NavTemplates" text="Templates" class="nav-button" />
+                <ui:Button name="NavSettings" text="Settings" class="nav-button" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sidebar-footer">
+                <ui:Label text="v1.0.4 - Stable" class="sidebar-version" />
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <!-- Main Content -->
-        <ui:VisualElement style="flex-grow: 1; padding: 40px;">
-            <ui:Label text="Welcome to Robotwin Studio" class="unity-header-large" />
-            <ui:Label text="Version 1.0.4 (Stable)" style="color: #a0a0a0; font-size: 12px; margin-bottom: 30px;" />
+        <ui:VisualElement class="content">
+            <ui:Label text="Welcome to Robotwin Studio" class="page-title" />
+            <ui:Label text="Version 1.0.4 (Stable)" class="page-subtitle" />
+            <ui:VisualElement class="divider" />
 
-            <!-- Action Grid -->
-            <ui:VisualElement style="flex-direction: row; justify-content: space-between; height: 150px; margin-bottom: 40px;">
-                <ui:Button name="NewProjectBtn" text="New Project" class="unity-button-action" style="flex-grow: 1; margin-right: 10px;">
-                    <ui:Label text="Create a new empty simulation workspace." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+            <ui:VisualElement class="card-row">
+                <ui:Button name="NewProjectBtn" class="card-button primary">
+                    <ui:VisualElement class="card-icon">
+                        <ui:Label text="+" class="card-icon-text" />
+                    </ui:VisualElement>
+                    <ui:Label text="New Project" class="card-title" />
+                    <ui:Label text="Create a new empty simulation workspace." class="card-desc" />
                 </ui:Button>
-                <ui:Button name="OpenProjectBtn" text="Open Project" class="unity-button-action" style="flex-grow: 1; margin-right: 10px; margin-left: 10px;">
-                    <ui:Label text="Browse for .rw files on disk." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+                <ui:Button name="OpenProjectBtn" class="card-button">
+                    <ui:VisualElement class="card-icon">
+                        <ui:Label text="O" class="card-icon-text" />
+                    </ui:VisualElement>
+                    <ui:Label text="Open Project" class="card-title" />
+                    <ui:Label text="Browse for .rw files on disk." class="card-desc" />
                 </ui:Button>
-                <ui:Button name="ImportCadBtn" text="Import CAD/EDA" class="unity-button-action" style="flex-grow: 1; margin-left: 10px;">
-                    <ui:Label text="Import Altium, KiCad, or STEP." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
-                </ui:Button>
-                <ui:Button name="WatchReplayBtn" text="Watch Replay" class="unity-button-action" style="flex-grow: 1; margin-left: 10px;">
-                    <ui:Label text="Load JSONL log and playback." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+                <ui:Button name="ImportCadBtn" class="card-button last">
+                    <ui:VisualElement class="card-icon">
+                        <ui:Label text="I" class="card-icon-text" />
+                    </ui:VisualElement>
+                    <ui:Label text="Import CAD/EDA" class="card-title" />
+                    <ui:Label text="Import Altium, KiCad, or STEP." class="card-desc" />
                 </ui:Button>
             </ui:VisualElement>
 
-            <!-- Recent Projects -->
-            <ui:Label text="Recent Projects" style="font-size: 18px; color: #ffffff; margin-bottom: 10px;" />
-            <ui:ScrollView name="RecentProjectsList" style="flex-grow: 1; background-color: #2d2d2d; border-radius: 4px; padding: 10px;" />
-        </ui:VisualElement>
+            <ui:VisualElement class="divider" />
 
+            <ui:VisualElement class="recent-header">
+                <ui:Label text="Recent Projects" class="section-title" />
+                <ui:Button name="ViewAllBtn" text="VIEW ALL" class="link-button" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="search-row">
+                <ui:TextField name="RecentSearchField" class="search-field" label="" value="Filter recent projects..." />
+            </ui:VisualElement>
+
+            <ui:ScrollView name="RecentProjectsList" class="recent-list" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

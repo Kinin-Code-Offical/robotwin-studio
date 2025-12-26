@@ -127,9 +127,22 @@ namespace RobotTwin.UI
             {
                 var name = Path.GetFileNameWithoutExtension(file);
                 var time = File.GetLastWriteTime(file).ToString("g");
+                var displayPath = "/projects/" + Path.GetFileName(file);
 
                 var row = new VisualElement();
                 row.AddToClassList("recent-project-item");
+
+                var left = new VisualElement();
+                left.AddToClassList("recent-left");
+
+                var icon = new VisualElement();
+                icon.AddToClassList("recent-icon");
+                var iconText = new Label("P");
+                iconText.AddToClassList("recent-icon-text");
+                icon.Add(iconText);
+
+                var textStack = new VisualElement();
+                textStack.AddToClassList("recent-text");
                 // Allow clicking row to open
                 row.RegisterCallback<ClickEvent>(e => 
                 {
@@ -142,14 +155,22 @@ namespace RobotTwin.UI
                 });
 
                 var labelName = new Label(name);
-                labelName.style.unityFontStyleAndWeight = FontStyle.Bold;
-                
-                var labelDate = new Label(time);
-                labelDate.style.fontSize = 10;
-                labelDate.style.color = new Color(0.6f, 0.6f, 0.6f); 
+                labelName.AddToClassList("recent-project-title");
 
-                row.Add(labelName);
-                row.Add(labelDate);
+                var labelMeta = new Label(time);
+                labelMeta.AddToClassList("recent-project-meta");
+
+                textStack.Add(labelName);
+                textStack.Add(labelMeta);
+
+                left.Add(icon);
+                left.Add(textStack);
+
+                var pathLabel = new Label(displayPath);
+                pathLabel.AddToClassList("recent-project-path");
+
+                row.Add(left);
+                row.Add(pathLabel);
                 
                 _recentList.Add(row);
             }

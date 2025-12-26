@@ -9,9 +9,6 @@
 
         <!-- Main Content Area -->
         <ui:VisualElement name="ContentArea" style="flex-grow: 1; padding: 24px; background-color: #1a1a1a;">
-            <!-- Background Pattern Placeholder -->
-            <ui:VisualElement style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.05; background-color: #000000;" />
-            
             <!-- Dynamic Content Container -->
             <ui:VisualElement name="RouterOutlet" style="flex-grow: 1; z-index: 1;">
                <!-- Home View will be instantiated here by default -->
