@@ -80,6 +80,7 @@ namespace RobotTwin.UI
             _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal);
 
             StartSimulation();
+            InitVisualization(root);
         }
 
         private void OnDisable() => StopSimulation();
@@ -175,6 +176,8 @@ namespace RobotTwin.UI
              if (!_isRunning || _engine == null) return;
              if (_timeLabel != null) _timeLabel.text = $"Time: {_engine.Session.TimeSeconds:F2}s";
              if (_tickLabel != null) _tickLabel.text = $"Tick: {_engine.Session.TickIndex}";
+             
+             UpdateVisualization();
         }
 
         private void OnAddSignal(ClickEvent evt)
@@ -204,6 +207,10 @@ namespace RobotTwin.UI
             RefreshSignalList();
         }
 
+            _activeWaveforms[name] = wf;
+            RefreshSignalList();
+        }
+
         private void RefreshSignalList()
         {
             if (_signalList == null) return;
@@ -213,6 +220,67 @@ namespace RobotTwin.UI
                 var row = new Label($"{kvp.Key} ({kvp.Value.GetType().Name})");
                 row.style.color = Color.cyan;
                 _signalList.Add(row);
+            }
+        }
+
+        // --- Visualization Logic ---
+        private ScrollView _componentList;
+        private Dictionary<string, Label> _componentLabels = new Dictionary<string, Label>();
+
+        private void InitVisualization(VisualElement root)
+        {
+            _componentList = root.Q<ScrollView>("ComponentList");
+            if (_componentList == null) return;
+            
+            _componentList.Clear();
+            _componentLabels.Clear();
+
+            foreach(var comp in _engine.Session.Circuit.Components)
+            {
+                var row = new VisualElement();
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.justifyContent = Justify.SpaceBetween;
+                
+                var nameLbl = new Label($"{comp.InstanceID} ({comp.CatalogID})");
+                nameLbl.style.color = Color.white;
+                
+                var statusLbl = new Label("OFF");
+                statusLbl.style.color = Color.gray;
+                statusLbl.style.unityFontStyleAndWeight = FontStyle.Bold;
+
+                row.Add(nameLbl);
+                row.Add(statusLbl);
+                _componentList.Add(row);
+
+                _componentLabels[comp.InstanceID] = statusLbl;
+            }
+        }
+
+        private void UpdateVisualization()
+        {
+            if (_engine == null) return;
+            
+            // MVP: Simple heuristic for LEDs (hardcoded for demo effect, real net lookup is todo in CoreSim)
+            // Ideally: _engine.GetPinVoltage(compId, pinName)
+            
+            foreach(var kvp in _componentLabels)
+            {
+                string id = kvp.Key;
+                Label lbl = kvp.Value;
+                
+                // Demo Logic: If it's an LED and we have active injection or time > 0, flicker it
+                // This is a PLACEHOLDER for real net-list lookup
+                if (id.ToLower().Contains("led"))
+                {
+                   bool isOn = (_engine.Session.TimeSeconds % 1.0) < 0.5; // Simulate 1Hz blink
+                   lbl.text = isOn ? "ON" : "OFF";
+                   lbl.style.color = isOn ? Color.green : Color.gray;
+                }
+                else
+                {
+                   lbl.text = "OK";
+                   lbl.style.color = Color.white;
+                }
             }
         }
 
