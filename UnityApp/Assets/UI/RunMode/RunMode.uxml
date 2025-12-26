@@ -58,6 +58,12 @@
                      </ui:ScrollView>
                 </ui:VisualElement>
                 
+                <!-- Component States -->
+                <ui:VisualElement style="flex-grow: 1; padding: 10px; border-bottom-width: 1px; border-color: white;">
+                     <ui:Label text="Circuit State" style="color: white; margin-bottom: 5px; font-weight: bold;" />
+                     <ui:ScrollView name="ComponentList" style="flex-grow: 1; background-color: rgb(30,30,30);" />
+                </ui:VisualElement>
+
                 <ui:Label name="TelemetryPathLabel" text="Log Path: ..." style="color: white; font-size: 10px; padding: 5px;" />
             </ui:VisualElement>
         
