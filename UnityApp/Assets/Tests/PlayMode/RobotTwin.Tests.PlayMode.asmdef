@@ -1,9 +1,9 @@
-{
     "name": "RobotTwin.Tests.PlayMode",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "RobotTwin.Runtime"
+        "RobotTwin.Runtime",
+        "Assembly-CSharp"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

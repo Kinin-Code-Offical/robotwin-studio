@@ -1,99 +1,55 @@
 :root {
     --unity-base: #383838;
     --unity-dark: #2d2d2d;
-    --unity-darker: #222222;
-    --unity-light: #424242;
-    --unity-border: #1e1e1e;
-    --unity-text: #d1d1d1;
-    --unity-text-high: #ffffff;
-    --unity-text-dim: #9ca3af;
+    --unity-darker: #252525;
     --unity-accent: #4f80f8;
-    --unity-accent-hover: #3e66c7;
-    
-    /* Font from source */
+    --unity-text-high: #ffffff;
+    --unity-text-dim: #a0a0a0;
+    --unity-border: #232323;
 }
 
-/* Utility Classes */
-.flex-row {
-    flex-direction: row;
-}
-
-.flex-col {
-    flex-direction: column;
-}
-
-.h-full {
-    height: 100%;
-}
-
-.w-full {
-    width: 100%;
-}
-
-.w-64 {
-    width: 256px;
-}
-
-.flex-grow {
-    flex-grow: 1;
-}
-
-.p-4 {
-    padding: 16px;
-}
-
-.p-6 {
-    padding: 24px;
-}
-
-.px-4 {
-    padding-left: 16px;
-    padding-right: 16px;
-}
-
-.bg-dark {
-    background-color: var(--unity-dark);
-}
-
-.bg-base {
-    background-color: var(--unity-base);
-}
-
-.bg-darker {
-    background-color: var(--unity-darker);
-}
-
-.border-r {
-    border-right-width: 1px;
-    border-color: var(--unity-border);
-}
-
-.border-t {
-    border-top-width: 1px;
-    border-color: var(--unity-border);
-}
-
-.text-high {
-    color: var(--unity-text-high);
-}
-
-.text-dim {
+.unity-text-default {
     color: var(--unity-text-dim);
-}
-
-.border-b {
-    border-bottom-width: 1px;
-    border-color: var(--unity-border);
-}
-
-.text-bold {
-    -unity-font-style: bold;
-}
-
-.text-sm {
     font-size: 14px;
 }
 
-.text-xs {
-    font-size: 12px;
+.unity-header-large {
+    color: var(--unity-text-high);
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.unity-button-action {
+    background-color: var(--unity-dark);
+    border-color: var(--unity-border);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 20px;
+    margin: 8px;
+    color: var(--unity-text-high);
+    -unity-font-style: bold;
+    transition: all 0.2s;
+}
+
+.unity-button-action:hover {
+    border-color: var(--unity-accent);
+    background-color: #333333;
+}
+
+.sidebar-button {
+    background-color: transparent;
+    border-width: 0;
+    color: var(--unity-text-dim);
+    padding: 10px;
+    -unity-text-align: middle-left;
+}
+
+.sidebar-button:hover {
+    color: var(--unity-text-high);
+    background-color: var(--unity-base);
+}
+
+.sidebar-button.active {
+    background-color: var(--unity-accent);
+    color: white;
 }

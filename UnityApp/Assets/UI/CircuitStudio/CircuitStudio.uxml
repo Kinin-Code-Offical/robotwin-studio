@@ -1,37 +1,28 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:VisualElement style="flex-direction: row; height: 100%;">
-        <!-- Left Palette -->
-        <ui:VisualElement name="PaletteContainer" style="width: 200px; background-color: rgb(40, 40, 40); padding: 10px;">
-            <ui:Label text="Tools" style="font-size: 18px; margin-bottom: 10px; color: white;" />
-        </ui:VisualElement>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: var(--unity-base);">
         
-        <!-- Center Canvas -->
-        <ui:VisualElement style="flex-grow: 1; background-color: rgb(30, 30, 30);">
-            <ui:VisualElement name="CanvasContainer" style="flex-grow: 1; padding: 20px;" />
-            
-            <!-- Connections Panel (Bottom) -->
-            <ui:VisualElement name="ConnectionsContainer" style="height: 150px; background-color: rgb(50, 50, 50); border-top-width: 2px; border-color: white; padding: 10px;">
-                <ui:Label text="Wiring" style="color: white; font-weight: bold; margin-bottom: 5px;" />
-                <ui:VisualElement style="flex-direction: row; margin-bottom: 5px;">
-                     <ui:DropdownField name="FromCompDropdown" label="From" style="width: 150px; margin-right: 5px;" />
-                     <ui:TextField name="FromPinField" label="Pin" style="width: 50px; margin-right: 15px;" />
-                     <ui:DropdownField name="ToCompDropdown" label="To" style="width: 150px; margin-right: 5px;" />
-                     <ui:TextField name="ToPinField" label="Pin" style="width: 50px; margin-right: 15px;" />
-                     <ui:Button name="ConnectBtn" text="Connect" style="width: 80px;" />
-                </ui:VisualElement>
-                <ui:Label name="ConnectionListLabel" text="No connections." style="color: grey; white-space: normal;" />
-            </ui:VisualElement>
-
-            <ui:Label name="StatusLabel" text="Ready" style="height: 30px; background-color: black; color: yellow; padding: 5px;" />
+        <!-- Left Panel: Library -->
+        <ui:VisualElement name="LeftPanel" style="width: 250px; background-color: var(--unity-dark); border-right-width: 1px; border-right-color: var(--unity-border);">
+            <ui:Label text="Components" style="color: var(--unity-text-high); padding: 10px; -unity-font-style: bold;" />
+            <ui:ScrollView name="LibraryList" style="flex-grow: 1; padding: 5px;">
+                <!-- Items will be instantiated here -->
+            </ui:ScrollView>
         </ui:VisualElement>
 
-        <!-- Right Inspector / Actions -->
-        <ui:VisualElement style="flex-direction: row; height: 50px; background-color: rgb(40, 40, 40); align-items: center; padding-left: 10px;">
-            <ui:Button name="BackBtn" text="&lt; Back" style="width: 60px; margin-right: 10px;" />
-            <ui:Label text="CIRCUIT STUDIO" style="color: white; font-weight: bold; font-size: 18px;" />
-            <ui:VisualElement style="flex-grow: 1;" />
-            <ui:Label name="StatusBarLabel" text="Ready" style="color: grey; margin-right: 10px;" />
-            <ui:Button name="RunBtn" text="RUN >" style="background-color: rgb(50, 180, 50); color: white; width: 80px; margin-right: 10px;" />
+        <!-- Center: Canvas -->
+        <ui:VisualElement name="Canvas" style="flex-grow: 1; background-color: #222222; overflow: hidden;">
+            <ui:Label text="Infinite Grid Canvas" style="color: #444444; font-size: 50px; -unity-text-align: middle-center; height: 100%;" />
         </ui:VisualElement>
+
+        <!-- Right Panel: Inspector -->
+        <ui:VisualElement name="RightPanel" style="width: 300px; background-color: var(--unity-dark); border-left-width: 1px; border-left-color: var(--unity-border);">
+            <ui:Label text="Inspector" style="color: var(--unity-text-high); padding: 10px; -unity-font-style: bold; border-bottom-width: 1px; border-bottom-color: var(--unity-border);" />
+            <ui:ScrollView name="InspectorContent" style="flex-grow: 1; padding: 10px;">
+                <ui:Label text="No Selection" style="color: var(--unity-text-dim);" />
+            </ui:ScrollView>
+            <ui:Button name="SimulateBtn" text="RUN SIMULATION" style="height: 40px; margin: 10px; background-color: var(--unity-accent); color: white; -unity-font-style: bold;" />
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>

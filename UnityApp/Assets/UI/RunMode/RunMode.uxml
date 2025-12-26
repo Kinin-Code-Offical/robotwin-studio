@@ -3,6 +3,16 @@
         <!-- Top HUD -->
         <ui:VisualElement style="flex-direction: row; height: 50px; background-color: rgb(40, 40, 40); align-items: center; padding-left: 10px;">
             <ui:Label text="RUN MODE" style="color: white; font-weight: bold; font-size: 18px; margin-right: 20px;" />
+            
+            <!-- Health Status -->
+            <ui:VisualElement style="flex-direction: row; margin-right: 20px; align-items: center;">
+                <ui:Label text="BAT:" style="color: #AAAAAA; font-size: 12px; margin-right: 5px;" />
+                <ui:ProgressBar name="BatteryBar" title="100%" value="100" high-value="100" style="width: 80px; height: 15px; margin-right: 15px;" />
+                
+                <ui:Label text="TMP:" style="color: #AAAAAA; font-size: 12px; margin-right: 5px;" />
+                <ui:ProgressBar name="TempBar" title="25°C" value="25" high-value="100" style="width: 80px; height: 15px;" />
+            </ui:VisualElement>
+
             <ui:Label name="TimeLabel" text="Time: 0.00s" style="color: yellow; margin-right: 15px;" />
             <ui:Label name="TickLabel" text="Tick: 0" style="color: white; margin-right: 15px;" />
             <ui:Button name="OpenLogsBtn" text="Open Folder" style="background-color: rgb(100, 100, 100); color: white; margin-right: 10px;" />

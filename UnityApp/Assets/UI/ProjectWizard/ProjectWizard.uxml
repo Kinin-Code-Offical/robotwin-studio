@@ -1,72 +1,42 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:Style src="../Theme/RobotwinTheme.uss" />
-    <ui:Style src="ProjectWizard.uss" />
-
-    <!-- Root -->
-    <ui:VisualElement name="Root" class="flex-row h-full w-full">
+    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: var(--unity-base);">
         
         <!-- Sidebar -->
-        <ui:VisualElement name="Sidebar" class="w-64 bg-dark border-r flex-col">
-            <!-- Header -->
-            <ui:VisualElement class="h-12 flex-row items-center px-4 bg-darker border-b">
-                <ui:Label text="ROBOTWIN" class="text-bold text-sm text-high" />
-            </ui:VisualElement>
-
-            <!-- Menu -->
-            <ui:VisualElement class="flex-col mt-2" style="margin-top: 8px;">
-                <ui:Button name="NavHome" text="Home" class="sidebar-btn" />
-                <ui:Button name="NavProjects" text="Projects" class="sidebar-btn" />
-                <ui:Button name="NavTemplates" text="Templates" class="sidebar-btn" />
-            </ui:VisualElement>
-            
-            <ui:VisualElement class="flex-grow" />
-
-            <!-- Footer -->
-            <ui:VisualElement class="p-4 border-t">
-                <ui:Label text="v1.0.4 - Stable" class="text-xs text-dim" />
+        <ui:VisualElement name="Sidebar" style="width: 250px; background-color: var(--unity-dark); border-right-width: 1px; border-right-color: var(--unity-border);">
+            <ui:Label text="ROBOTWIN" style="color: var(--unity-text-high); -unity-font-style: bold; font-size: 16px; padding: 15px; border-bottom-width: 1px; border-bottom-color: var(--unity-border);" />
+            <ui:VisualElement style="padding-top: 10px;">
+                <ui:Button name="NavHome" text="Home" class="sidebar-button active" />
+                <ui:Button name="NavProjects" text="Projects" class="sidebar-button" />
+                <ui:Button name="NavTemplates" text="Templates" class="sidebar-button" />
+                <ui:Button name="NavSettings" text="Settings" class="sidebar-button" />
             </ui:VisualElement>
         </ui:VisualElement>
 
         <!-- Main Content -->
-        <ui:VisualElement name="Content" class="flex-grow bg-base p-6">
-            
-            <!-- Hero Header -->
-            <ui:VisualElement class="border-b pb-4" style="padding-bottom: 16px;">
-                <ui:Label text="Welcome to Robotwin Studio" class="hero-title" />
-            </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; padding: 40px;">
+            <ui:Label text="Welcome to Robotwin Studio" class="unity-header-large" />
+            <ui:Label text="Version 1.0.4 (Stable)" style="color: var(--unity-text-dim); font-size: 12px; margin-bottom: 30px;" />
 
-            <!-- Action Cards Grid -->
-            <ui:VisualElement class="grid-cols-3 mt-6 flex-row" style="margin-top: 24px; justify-content: flex-start; flex-wrap: wrap;">
-                
-                <!-- New Project Card -->
-                <ui:Button name="NewProjectBtn" class="action-card">
-                    <ui:Label text="+" class="card-icon" />
-                    <ui:Label text="New Project" class="card-title" />
-                    <ui:Label text="Create from template" class="card-desc" />
+            <!-- Action Grid -->
+            <ui:VisualElement style="flex-direction: row; justify-content: space-between; height: 150px; margin-bottom: 40px;">
+                <ui:Button name="NewProjectBtn" text="New Project" class="unity-button-action" style="flex-grow: 1; margin-right: 10px;">
+                    <ui:Label text="Create a new empty simulation workspace." style="font-size: 10px; white-space: normal; color: var(--unity-text-dim); margin-top: 5px;" />
                 </ui:Button>
-
-                <!-- Open Project Card (Stub) -->
-                <ui:Button name="OpenProjectBtn" class="action-card">
-                    <ui:Label text="O" class="card-icon" />
-                    <ui:Label text="Open Project" class="card-title" />
-                    <ui:Label text="Load existing .rtwin" class="card-desc" />
+                <ui:Button name="OpenProjectBtn" text="Open Project" class="unity-button-action" style="flex-grow: 1; margin-right: 10px; margin-left: 10px;">
+                    <ui:Label text="Browse for .rw files on disk." style="font-size: 10px; white-space: normal; color: var(--unity-text-dim); margin-top: 5px;" />
                 </ui:Button>
-
-                 <!-- Import CAD Card (Stub) -->
-                <ui:Button name="ImportCadBtn" class="action-card">
-                    <ui:Label text="I" class="card-icon" />
-                    <ui:Label text="Import CAD" class="card-title" />
-                    <ui:Label text="Convert STEP/OBJ" class="card-desc" />
+                <ui:Button name="ImportCadBtn" text="Import CAD/EDA" class="unity-button-action" style="flex-grow: 1; margin-left: 10px;">
+                    <ui:Label text="Import Altium, KiCad, or STEP." style="font-size: 10px; white-space: normal; color: var(--unity-text-dim); margin-top: 5px;" />
                 </ui:Button>
-
+                <ui:Button name="WatchReplayBtn" text="Watch Replay" class="unity-button-action" style="flex-grow: 1; margin-left: 10px;">
+                    <ui:Label text="Load JSONL log and playback." style="font-size: 10px; white-space: normal; color: var(--unity-text-dim); margin-top: 5px;" />
+                </ui:Button>
             </ui:VisualElement>
 
             <!-- Recent Projects -->
-            <ui:VisualElement class="mt-8" style="margin-top: 32px; flex-grow: 1;">
-                <ui:Label text="Recent Projects" class="section-title" />
-                <ui:ScrollView name="RecentProjectsList" class="flex-grow mt-4" />
-            </ui:VisualElement>
-
+            <ui:Label text="Recent Projects" style="font-size: 18px; color: var(--unity-text-high); margin-bottom: 10px;" />
+            <ui:ScrollView name="RecentProjectsList" style="flex-grow: 1; background-color: var(--unity-dark); border-radius: 4px; padding: 10px;" />
         </ui:VisualElement>
 
     </ui:VisualElement>
