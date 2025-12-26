@@ -162,6 +162,16 @@
         - Updated `shared_infos` and `repo_files`.
         - Verified CI configs and test suite (All Green).
 
+## 2025-12-26 (CI Support & Polish)
+- **Run (Autonomous - HEAVY)**
+    - **Goal**: Fix PlayMode tests (CS0234), Stabilize Main, Polish RunMode.
+    - **Outcome**:
+        - **Hotfix**: Updated `RobotTwin.Tests.PlayMode.asmdef` with `Assembly-CSharp` reference.
+        - **Polish**: Added "Open Logs Folder" button to RunMode.
+        - **Verification**: Verified `SimulationSmokeTest` loading logic.
+        - **Governance**: Main branch synced and clean.
+
+
 
 
 

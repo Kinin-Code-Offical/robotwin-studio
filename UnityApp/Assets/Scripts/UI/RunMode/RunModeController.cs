@@ -73,7 +73,10 @@ namespace RobotTwin.UI
             // Validate critical controls
             if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
             
+            if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
+            
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
+            root.Q<Button>("OpenLogsBtn")?.RegisterCallback<ClickEvent>(OnOpenLogsClicked);
             _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal);
 
             StartSimulation();
@@ -128,6 +131,14 @@ namespace RobotTwin.UI
         private void OnStopClicked(ClickEvent evt)
         {
              UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Back to CircuitStudio
+        }
+
+        private void OnOpenLogsClicked(ClickEvent evt)
+        {
+            if (!string.IsNullOrEmpty(_runOutputPath))
+            {
+                Application.OpenURL(_runOutputPath);
+            }
         }
 
         private void FixedUpdate()

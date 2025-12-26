@@ -5,6 +5,7 @@
             <ui:Label text="RUN MODE" style="color: white; font-weight: bold; font-size: 18px; margin-right: 20px;" />
             <ui:Label name="TimeLabel" text="Time: 0.00s" style="color: yellow; margin-right: 15px;" />
             <ui:Label name="TickLabel" text="Tick: 0" style="color: white; margin-right: 15px;" />
+            <ui:Button name="OpenLogsBtn" text="Open Folder" style="background-color: rgb(100, 100, 100); color: white; margin-right: 10px;" />
             <ui:Button name="StopButton" text="Stop Simulation" style="background-color: rgb(180, 50, 50); color: white; width: 120px;" />
         </ui:VisualElement>
 
