@@ -1,12 +1,12 @@
 ﻿{
-    "created_at_utc":  "20251226_031130Z",
+    "created_at_utc":  "20251226_042053Z",
     "artifact_type":  "dir",
     "zip_name":  null,
     "dir_mode":  "COPY",
     "drive_remote_path":  "gdrive:robotwin_studio/shared_infos/latest_docs/docs",
     "share_link":  "https://drive.google.com/open?id=1k_E-cCtaCnO28-9TpG0UCKa9AOIEd7kk",
     "sha256":  "N/A",
-    "git_sha":  "b8b002735cb5aff22403aa908b7d9941a71108bf",
+    "git_sha":  "4a8c0442d68215fa06f8e150fa454099f199cf3a",
     "upload_success":  true,
     "upload_mode":  "DIR"
 }

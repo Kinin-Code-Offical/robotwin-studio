@@ -11,7 +11,6 @@
     --unity-accent-hover: #3e66c7;
     
     /* Font from source */
-    -unity-font-definition: resource('Fonts/Inter-Regular SDF'); /* Assumption, falling back to default if missing */
 }
 
 /* Utility Classes */
