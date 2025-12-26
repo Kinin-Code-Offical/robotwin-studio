@@ -1,5 +1,6 @@
 {
     "name": "RobotTwin.Tests.EditMode",
+    "references": [
         "UnityEngine.UIElementsModule",
         "Unity.UIElements",
         "RobotTwin.Runtime"
