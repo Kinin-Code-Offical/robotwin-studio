@@ -1,0 +1,17 @@
+area:core:
+  - changed-files:
+    - any-glob-to-any-file: 'CoreSim/**'
+
+area:unity:
+  - changed-files:
+    - any-glob-to-any-file: 'UnityApp/**'
+
+area:docs:
+  - changed-files:
+    - any-glob-to-any-file: 'docs/**'
+    - any-glob-to-any-file: '*.md'
+
+area:tooling:
+  - changed-files:
+    - any-glob-to-any-file: 'tools/**'
+    - any-glob-to-any-file: '.github/**'
