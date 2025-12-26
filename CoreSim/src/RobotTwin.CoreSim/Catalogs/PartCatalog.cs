@@ -13,8 +13,8 @@ namespace RobotTwin.CoreSim.Catalogs
 
     public class PartDefinition
     {
-        public string ID { get; set; } // e.g., "servo-mg996r", "chassis-plate-a"
-        public string Name { get; set; }
+        public string ID { get; set; } = string.Empty; // e.g., "servo-mg996r", "chassis-plate-a"
+        public string Name { get; set; } = string.Empty;
         public PartType Type { get; set; }
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>(); // Mass, Torque, Dimensions
         public List<string> MountingPoints { get; set; } = new List<string>();

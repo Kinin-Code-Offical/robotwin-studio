@@ -14,8 +14,8 @@ namespace RobotTwin.CoreSim.Catalogs
 
     public class ComponentDefinition
     {
-        public string ID { get; set; }
-        public string Name { get; set; }
+        public string ID { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public ComponentType Type { get; set; }
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
         public List<string> Pins { get; set; } = new List<string>();
