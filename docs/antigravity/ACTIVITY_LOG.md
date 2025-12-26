@@ -170,6 +170,7 @@
         - **Polish**: Added "Open Logs Folder" button to RunMode.
         - **Verification**: Verified `SimulationSmokeTest` loading logic.
         - **Governance**: Main branch synced and clean.
+        - **Hotfix**: Repaired `RobotTwin.Tests.PlayMode.asmdef` JSON syntax error.
 
 
 
