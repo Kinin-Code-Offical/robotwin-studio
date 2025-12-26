@@ -7,7 +7,7 @@ namespace RobotTwin.CoreSim.Infrastructure
 {
     public class ReplayEngine
     {
-        private List<string> _logLines;
+        private List<string> _logLines = new List<string>();
         private int _currentTick;
         public bool IsPlaying { get; private set; }
         public int TotalTicks => _logLines?.Count ?? 0;
@@ -23,13 +23,13 @@ namespace RobotTwin.CoreSim.Infrastructure
             IsPlaying = false;
         }
 
-        public string GetStateAtTick(int tick)
+        public string? GetStateAtTick(int tick)
         {
             if (_logLines == null || tick < 0 || tick >= _logLines.Count) return null;
             return _logLines[tick];
         }
 
-        public string Tick()
+        public string? Tick()
         {
             if (!IsPlaying) return null;
             

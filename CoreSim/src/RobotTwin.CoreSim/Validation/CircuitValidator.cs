@@ -32,8 +32,7 @@ namespace RobotTwin.CoreSim.Validation
             if (spec.Components == null || spec.Components.Count == 0)
             {
                 result.Warnings.Add("Circuit is empty (no components).");
-                // Start early return or continue? Old one returned.
-                // But let's let it run (loops won't execute).
+                return result; 
             }
 
             // Check for duplicates
