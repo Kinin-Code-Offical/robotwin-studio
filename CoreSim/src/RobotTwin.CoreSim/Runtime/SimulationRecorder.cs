@@ -19,6 +19,18 @@ namespace RobotTwin.CoreSim.Runtime
             _eventWriter = new StreamWriter(Path.Combine(_outputPath, "events.jsonl"));
         }
 
+        public void Attach(TelemetryBus bus)
+        {
+            bus.OnFrame += RecordFrame;
+            bus.OnEvent += RecordEvent;
+        }
+
+        public void Detach(TelemetryBus bus)
+        {
+            bus.OnFrame -= RecordFrame;
+            bus.OnEvent -= RecordEvent;
+        }
+
         public void RecordFrame(TelemetryFrame frame)
         {
             var json = JsonSerializer.Serialize(frame);

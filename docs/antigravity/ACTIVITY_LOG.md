@@ -148,6 +148,17 @@
         - Implemented `.rtwin` ProjectManifest and Serialization.
         - Merged/Synced to main.
 
+## 2025-12-26 (MVP-0 Completion)
+- **Run (Autonomous - HEAVY)**
+    - **Goal**: Resolve Issues #28, #29, #30, #32, #35, #39.
+    - **Outcome**:
+        - **Infra**: Fixed `update_repo_files.ps1` and CI check.
+        - **Core**: Implemented `CircuitValidator` (Net/Power) & `BoardCatalog`.
+        - **Feature**: `RunEngine` JSONL output, `RunMode` HUD binding, Waveforms.
+        - **Verification**: Added `UISmokeTests` (EditMode) and `SimulationSmokeTest` (PlayMode).
+        - **Sync**: Updated Unity Plugins with latest CoreSim.
+
+
 
 
 ## 2025-12-26 (Code Hygiene & Determinism)
