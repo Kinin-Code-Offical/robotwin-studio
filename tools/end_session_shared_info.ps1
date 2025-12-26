@@ -3,7 +3,11 @@ param (
     [string]$Mode = "FULL",
     [switch]$SkipGh,
     [string]$DriveRemote = "gdrive:",
-    [string]$DriveFolder = "robotwin_studio/shared_infos"
+    [ValidateSet("ZIP", "DIR")]
+    [string]$UploadMode = "DIR",
+    [ValidateSet("COPY", "MIRROR")]
+    [string]$DirMode = "COPY",
+    [string]$DriveDocsSubfolder = "robotwin_studio/shared_infos/latest_docs"
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,57 +28,85 @@ else {
 if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force | Out-Null }
 New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
 
-# 3. Create Zip
 $Timestamp = [DateTime]::UtcNow.ToString("yyyyMMdd_HHmmssZ")
-$ZipName = "session_$Timestamp.zip"
-$ZipPath = Join-Path $TempDir $ZipName
-
-Write-Host ">>> Zipping docs folder to $ZipPath..." -ForegroundColor Cyan
-Compress-Archive -Path "$DocsDir/*" -DestinationPath $ZipPath -Force
-
-# 4. Upload to Drive
-$RemotePath = "$DriveRemote$DriveFolder/$ZipName"
-Write-Host ">>> Uploading to $RemotePath..." -ForegroundColor Cyan
-
+$ZipName = $null
+$FileHash = "N/A"
+$RemotePath = $null
 $UploadSuccess = $false
 $ShareLink = $null
-$FileHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
+$ArtifactType = $null
 
-if (Get-Command rclone -ErrorAction SilentlyContinue) {
-    try {
-        rclone copyto $ZipPath $RemotePath
-        Write-Host ">>> Upload Success: $RemotePath" -ForegroundColor Green
-        $UploadSuccess = $true
-        
-        # Try to get link (best effort)
+if ($UploadMode -eq "ZIP") {
+    $ArtifactType = "zip"
+    $ZipName = "session_$Timestamp.zip"
+    $ZipPath = Join-Path $TempDir $ZipName
+    $RemotePath = "$DriveRemote`robotwin_studio/shared_infos/$ZipName"
+
+    Write-Host ">>> Zipping docs folder to $ZipPath..." -ForegroundColor Cyan
+    Compress-Archive -Path "$DocsDir/*" -DestinationPath $ZipPath -Force
+    $FileHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
+
+    if (Get-Command rclone -ErrorAction SilentlyContinue) {
         try {
+            Write-Host ">>> Uploading to $RemotePath..." -ForegroundColor Cyan
+            rclone copyto $ZipPath $RemotePath
+            Write-Host ">>> Upload Success: $RemotePath" -ForegroundColor Green
+            $UploadSuccess = $true
             $ShareLink = rclone link $RemotePath 2>$null
         }
         catch {
-            Write-Warning "Could not generate share link."
+            Write-Error "Upload failed: $_"
+            Write-Warning "Local zip preserved at $ZipPath"
         }
     }
-    catch {
-        Write-Error "Upload failed: $_"
-        Write-Warning "Local zip preserved at $ZipPath"
+}
+elseif ($UploadMode -eq "DIR") {
+    $ArtifactType = "dir"
+    $RemoteDocsRoot = "$DriveRemote$DriveDocsSubfolder"
+    $RemotePath = "$RemoteDocsRoot/docs"
+    
+    if (Get-Command rclone -ErrorAction SilentlyContinue) {
+        try {
+            Write-Host ">>> Syncing docs to $RemotePath (Mode: $DirMode)..." -ForegroundColor Cyan
+            
+            if ($DirMode -eq "MIRROR") {
+                # Sync matches destination to source, deleting extras
+                rclone sync "$DocsDir" $RemotePath --checksum --create-empty-src-dirs
+            }
+            else {
+                # Copy updates changed files, keeping extras
+                rclone copy "$DocsDir" $RemotePath --checksum --create-empty-src-dirs
+            }
+            
+            Write-Host ">>> Upload Success: $RemotePath" -ForegroundColor Green
+            $UploadSuccess = $true
+            $ShareLink = rclone link $RemotePath 2>$null
+        }
+        catch {
+            Write-Error "Upload failed: $_"
+        }
     }
 }
-else {
-    Write-Warning "rclone not found. Skipping upload. Zip remains at $ZipPath"
+
+if (-not (Get-Command rclone -ErrorAction SilentlyContinue)) {
+    Write-Warning "rclone not found. Skipping upload."
 }
 
-# 5. Generate Tracked Pointers (Always run if zip exists)
+# 5. Generate Tracked Pointers (Always run)
 $PointerJsonPath = Join-Path "$DocsDir/antigravity" "SHARED_INFO_LATEST.json"
 $PointerMdPath = Join-Path "$DocsDir/antigravity" "SHARED_INFO_LATEST_SUMMARY.md"
 
 $PointerData = [Ordered]@{
     "created_at_utc"    = $Timestamp
+    "artifact_type"     = $ArtifactType
     "zip_name"          = $ZipName
+    "dir_mode"          = if ($ArtifactType -eq "dir") { $DirMode } else { $null }
     "drive_remote_path" = $RemotePath
     "share_link"        = $ShareLink
     "sha256"            = $FileHash
     "git_sha"           = $(git rev-parse HEAD)
     "upload_success"    = $UploadSuccess
+    "upload_mode"       = $UploadMode
 }
 $PointerData | ConvertTo-Json | Set-Content $PointerJsonPath -Encoding utf8
 
@@ -86,9 +118,12 @@ $ActivityTail = if (Test-Path $ActivityLogPath) { Get-Content $ActivityLogPath -
 $SummaryContent = @"
 # Latest Shared Info Summary
 **Generated**: $Timestamp (UTC)
-**Zip**: $ZipName
-**SHA256**: $FileHash
+**Type**: $ArtifactType
+**Mode**: $DirMode
+**Remote Path**: $RemotePath
+**Zip**: $(if ($ZipName) { $ZipName } else { "N/A" })
 **Link**: $(if ($ShareLink) { $ShareLink } else { "N/A" })
+**Success**: $UploadSuccess
 
 ## Last Run Status
 $LastRunContent
@@ -100,11 +135,9 @@ $SummaryContent | Set-Content $PointerMdPath -Encoding utf8
 
 Write-Host ">>> Created tracked pointers: SHARED_INFO_LATEST.json, SHARED_INFO_LATEST_SUMMARY.md" -ForegroundColor Cyan
 
-# 6. Cleanup (Only if upload success)
-if ($UploadSuccess) {
+# 6. Cleanup
+if ($UploadMode -eq "ZIP" -and $UploadSuccess) {
     Remove-Item $ZipPath -Force
     Write-Host ">>> Local cleanup complete." -ForegroundColor Gray
 }
-else {
-    Write-Warning "Skipping cleanup because upload failed or was skipped."
-}
+

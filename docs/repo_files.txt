@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-25T23:12:14Z
-# Commit: d77300c
-# FileCount: 148
+﻿# GeneratedUtc: 2025-12-26T00:19:28Z
+# Commit: c6cdb52
+# FileCount: 150
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -110,6 +110,8 @@ UnityApp/Assets/Scripts/UI/ProjectWizardController.cs.meta
 UnityApp/Assets/Scripts/UI/RunMode.meta
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs.meta
+UnityApp/Assets/Tests/EditMode/RobotTwin.Tests.EditMode.asmdef
+UnityApp/Assets/Tests/EditMode/WiringTests.cs
 UnityApp/Assets/UI Toolkit.meta
 UnityApp/Assets/UI Toolkit/UnityThemes.meta
 UnityApp/Assets/UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss

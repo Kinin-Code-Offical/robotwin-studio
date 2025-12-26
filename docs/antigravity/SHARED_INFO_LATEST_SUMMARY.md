@@ -1,8 +1,11 @@
 ﻿# Latest Shared Info Summary
-**Generated**: 20251225_233040Z (UTC)
-**Zip**: session_20251225_233040Z.zip
-**SHA256**: C7F6B3612F0F5100ECD40A50AD46FD68EDBC027CB99F7836BC27EBB562C658B9
-**Link**: https://drive.google.com/open?id=1HpSZ686fHb5fR2gxxA_oweFEiNK-yPPl
+**Generated**: 20251226_001841Z (UTC)
+**Type**: dir
+**Mode**: COPY
+**Remote Path**: gdrive:robotwin_studio/shared_infos/latest_docs/docs
+**Zip**: N/A
+**Link**: https://drive.google.com/open?id=1k_E-cCtaCnO28-9TpG0UCKa9AOIEd7kk
+**Success**: True
 
 ## Last Run Status
 # Run Summary

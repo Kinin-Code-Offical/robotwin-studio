@@ -96,3 +96,10 @@
       - Integrated "Run" button in Circuit Studio.
       - Added EditMode Smoke Test.
     - **Sync**: Merged PR #40 (`feature/30-run-mode-telemetry-logging`).
+
+## 2025-12-26 (Shared Info Migration)
+- **Run (Feature)**
+    - Model used: PRO
+    - **Status**: Migrated Shared Info pipeline to Direct Drive Sync (Folder Mirror).
+    - **Outcome**: Faster/cleaner context persistence without zip artifacts in Drive root.
+
