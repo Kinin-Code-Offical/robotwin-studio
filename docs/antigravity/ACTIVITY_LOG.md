@@ -130,4 +130,3 @@
     - Model used: HEAVY
     - **Status**: Implemented Issue #32.
     - **Outcome**: Added PlayMode tests and enabled in CI.
-
