@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-26T02:39:38Z
-# Commit: 80cffa7
-# FileCount: 166
+﻿# GeneratedUtc: 2025-12-26T02:48:55Z
+# Commit: 24c2f62
+# FileCount: 164
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -11,7 +11,6 @@
 .github/workflows/ci.yml
 .github/workflows/unity_ci.yml
 .gitignore
-build_error.log
 build_log.txt
 CoreSim/CoreSim.sln
 CoreSim/src/RobotTwin.CoreSim/Catalogs/BoardCatalog.cs
@@ -34,6 +33,7 @@ CoreSim/src/RobotTwin.CoreSim/Runtime/Waveforms.cs
 CoreSim/src/RobotTwin.CoreSim/Serialization/SimulationSerializer.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/BoardSpec.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/CircuitSpec.cs
+CoreSim/src/RobotTwin.CoreSim/Specs/ProjectManifest.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/RobotSpec.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/TemplateSpec.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/WorldSpec.cs
@@ -67,9 +67,7 @@ docs/toolchain_audit.md
 docs/USER_QUICKSTART.md
 docs/VERSIONS.md
 global.json
-msbuild.log
 README.md
-tests_build.log
 tools/end_session_shared_info.ps1
 tools/export_context_pack.ps1
 tools/export_context_pack_min.ps1
