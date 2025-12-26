@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-26T00:19:28Z
-# Commit: c6cdb52
-# FileCount: 150
+﻿# GeneratedUtc: 2025-12-26T02:39:38Z
+# Commit: 80cffa7
+# FileCount: 166
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -11,20 +11,25 @@
 .github/workflows/ci.yml
 .github/workflows/unity_ci.yml
 .gitignore
+build_error.log
+build_log.txt
 CoreSim/CoreSim.sln
 CoreSim/src/RobotTwin.CoreSim/Catalogs/BoardCatalog.cs
 CoreSim/src/RobotTwin.CoreSim/Catalogs/ComponentCatalog.cs
 CoreSim/src/RobotTwin.CoreSim/Catalogs/PartCatalog.cs
 CoreSim/src/RobotTwin.CoreSim/Catalogs/TemplateCatalog.cs
+CoreSim/src/RobotTwin.CoreSim/Catalogs/Templates/BlinkyTemplate.cs
 CoreSim/src/RobotTwin.CoreSim/Contracts/IOContract.cs
 CoreSim/src/RobotTwin.CoreSim/Contracts/SignalType.cs
 CoreSim/src/RobotTwin.CoreSim/CoreSimInstance.cs
+CoreSim/src/RobotTwin.CoreSim/Infrastructure/Polyfills.cs
 CoreSim/src/RobotTwin.CoreSim/RobotTwin.CoreSim.csproj
 CoreSim/src/RobotTwin.CoreSim/Runtime/RunEngine.cs
 CoreSim/src/RobotTwin.CoreSim/Runtime/RunSession.cs
 CoreSim/src/RobotTwin.CoreSim/Runtime/SimulationRecorder.cs
 CoreSim/src/RobotTwin.CoreSim/Runtime/Telemetry.cs
 CoreSim/src/RobotTwin.CoreSim/Runtime/TelemetryBus.cs
+CoreSim/src/RobotTwin.CoreSim/Runtime/TelemetryFrame.cs
 CoreSim/src/RobotTwin.CoreSim/Runtime/Waveforms.cs
 CoreSim/src/RobotTwin.CoreSim/Serialization/SimulationSerializer.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/BoardSpec.cs
@@ -62,7 +67,9 @@ docs/toolchain_audit.md
 docs/USER_QUICKSTART.md
 docs/VERSIONS.md
 global.json
+msbuild.log
 README.md
+tests_build.log
 tools/end_session_shared_info.ps1
 tools/export_context_pack.ps1
 tools/export_context_pack_min.ps1
@@ -110,8 +117,17 @@ UnityApp/Assets/Scripts/UI/ProjectWizardController.cs.meta
 UnityApp/Assets/Scripts/UI/RunMode.meta
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs
 UnityApp/Assets/Scripts/UI/RunMode/RunModeController.cs.meta
+UnityApp/Assets/Tests.meta
+UnityApp/Assets/Tests/EditMode.meta
 UnityApp/Assets/Tests/EditMode/RobotTwin.Tests.EditMode.asmdef
+UnityApp/Assets/Tests/EditMode/RobotTwin.Tests.EditMode.asmdef.meta
 UnityApp/Assets/Tests/EditMode/WiringTests.cs
+UnityApp/Assets/Tests/EditMode/WiringTests.cs.meta
+UnityApp/Assets/Tests/PlayMode.meta
+UnityApp/Assets/Tests/PlayMode/RobotTwin.Tests.PlayMode.asmdef
+UnityApp/Assets/Tests/PlayMode/RobotTwin.Tests.PlayMode.asmdef.meta
+UnityApp/Assets/Tests/PlayMode/SmokeTest.cs
+UnityApp/Assets/Tests/PlayMode/SmokeTest.cs.meta
 UnityApp/Assets/UI Toolkit.meta
 UnityApp/Assets/UI Toolkit/UnityThemes.meta
 UnityApp/Assets/UI Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss

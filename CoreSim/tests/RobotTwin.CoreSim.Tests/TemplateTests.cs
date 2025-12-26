@@ -15,8 +15,9 @@ namespace RobotTwin.CoreSim.Tests
             var template = new TemplateSpec
             {
                 TemplateId = "mvp.linefollower.2servo",
-                Name = "Line Follower Kit",
+                DisplayName = "Line Follower Kit",
                 SystemType = "Robot",
+                Description = "Test Description",
                 DefaultCircuitId = "circuit-lf-1",
                 DefaultRobotId = "robot-lf-1"
             };
@@ -29,7 +30,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal("mvp.linefollower.2servo", deserialized.ID);
             Assert.Equal("mvp.linefollower.2servo", deserialized.TemplateId);
             
-            Assert.Equal("Line Follower Kit", deserialized.Name);
+            Assert.Equal("Line Follower Kit", deserialized.DisplayName);
             Assert.Equal("Line Follower Kit", deserialized.DisplayName);
             
             Assert.Equal("circuit-lf-1", deserialized.DefaultCircuitId);
