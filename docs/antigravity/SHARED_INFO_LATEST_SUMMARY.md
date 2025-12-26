@@ -1,5 +1,5 @@
 ﻿# Latest Shared Info Summary
-**Generated**: 20251226_025247Z (UTC)
+**Generated**: 20251226_031130Z (UTC)
 **Type**: dir
 **Mode**: COPY
 **Remote Path**: gdrive:robotwin_studio/shared_infos/latest_docs/docs
@@ -10,27 +10,28 @@
 ## Last Run Status
 # Last Run Status
 **Date**: 2025-12-26
-**Session**: Supreme Autonomous Ascension & Persistence
+**Session**: MVP-0 Completion & RC-1 Ascension
+**Tier**: HEAVY
 **Outcome**: SUCCESS
-**Tests**: All Green (CoreSim)
-**UI**: Overhauled (White Text, Flexbox)
-**Persistence**: Implemented (.rtwin, ProjectManifest)
-**Branch**: feat/m0-supreme-stability -> main
+**Validation**: CoreSim Validator & Catalogs Implemented.
+**Feature**: JSONL Telemetry & Waveforms (Sine/Step/Ramp).
+**Verification**: UISmokeTests & PlayMode SimulationSmokeTest Added.
+**Infra**: Scripts Autonomous.
 
 
 ## Recent Activity (Tail)
-    - **2025-12-26**: Fixed CS9035 build errors in tests, improved UI contrast in UXML, and implemented `.rtwin` persistence (ProjectManifest).
-    - Status: Build stabilized (mostly), Persistence logic added.
-    - Active Issues: #31 (Blinky Template), #30 (UI Readability), #15 (Infra) - All Resolved/Addressed.
-
-## 2025-12-26 (Supreme Autonomous Ascension)
-- **Run (Autonomous)**
-    - **Goal**: Full M0 Stability, UI/UX Overhaul, Persistence Layer.
-    - **Outcome**: 
-        - Fixed 4 Test Failures (CS9035 & Validation Logic).
-        - Overbaled UI (RunMode, Wizard) for high contrast and responsiveness.
-        - Implemented `.rtwin` ProjectManifest and Serialization.
         - Merged/Synced to main.
+
+## 2025-12-26 (MVP-0 Completion)
+- **Run (Autonomous - HEAVY)**
+    - **Goal**: Resolve Issues #28, #29, #30, #32, #35, #39.
+    - **Outcome**:
+        - **Infra**: Fixed `update_repo_files.ps1` and CI check.
+        - **Core**: Implemented `CircuitValidator` (Net/Power) & `BoardCatalog`.
+        - **Feature**: `RunEngine` JSONL output, `RunMode` HUD binding, Waveforms.
+        - **Verification**: Added `UISmokeTests` (EditMode) and `SimulationSmokeTest` (PlayMode).
+        - **Sync**: Updated Unity Plugins with latest CoreSim.
+
 
 
 
