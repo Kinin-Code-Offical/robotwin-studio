@@ -30,26 +30,28 @@ namespace RobotTwin.CoreSim.Catalogs
                 // Blank Template
                 new TemplateSpec
                 {
-                    ID = "mvp.blank",
-                    Name = "Blank Template",
+                    TemplateId = "mvp.blank",
+                    DisplayName = "Blank Template",
                     Description = "Start from an empty circuit-only project.",
                     SystemType = "CircuitOnly",
                     DefaultCircuit = new CircuitSpec { Name = "New Circuit" }
                 },
                 new TemplateSpec 
                 { 
-                    ID = "mvp.linefollower", 
-                    Name = "Line Follower Kit", 
+                    TemplateId = "mvp.linefollower", 
+                    DisplayName = "Line Follower Kit", 
                     Description = "Basic 2-servo robot with line sensors.",
+                    SystemType = "Robot",
                     DefaultCircuit = new CircuitSpec { Name = "Line Follower Circuit" },
                     DefaultRobot = new RobotSpec { Name = "Line Follower Robot" }
                 },
                 new TemplateSpec 
                 { 
-                    ID = "mvp.arm", 
-                    Name = "Robotic Arm Kit", 
+                    TemplateId = "mvp.arm", 
+                    DisplayName = "Robotic Arm Kit", 
                     Description = "3-DOF robotic arm.",
-                     DefaultCircuit = new CircuitSpec { Name = "Arm Circuit" },
+                    SystemType = "Robot",
+                    DefaultCircuit = new CircuitSpec { Name = "Arm Circuit" },
                     DefaultRobot = new RobotSpec { Name = "Arm Robot" }
                 }
             };
