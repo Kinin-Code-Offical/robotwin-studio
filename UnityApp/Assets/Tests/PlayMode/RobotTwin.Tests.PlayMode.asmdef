@@ -1,5 +1,6 @@
 {
     "name": "RobotTwin.Tests.PlayMode",
+    "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Assembly-CSharp"
