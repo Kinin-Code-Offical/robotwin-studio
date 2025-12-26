@@ -1,12 +1,9 @@
 {
-    "name": "RobotTwin.Tests.EditMode",
-        "UnityEngine.UIElementsModule",
-        "Unity.UIElements",
-        "RobotTwin.Runtime"
+    "name": "RobotTwin.Runtime",
+    "references": [
+        "Unity.TextMeshPro"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
