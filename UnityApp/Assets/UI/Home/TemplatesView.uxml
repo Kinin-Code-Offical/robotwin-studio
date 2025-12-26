@@ -1,0 +1,54 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+
+    <ui:VisualElement name="TemplatesView" style="flex-grow: 1; padding: 40px; background-color: #1a1a1a;">
+        
+        <ui:VisualElement style="margin-bottom: 30px;">
+            <ui:Label text="Templates" class="unity-header-large" />
+            <ui:Label text="Select a starting point for your new project." class="text-subtle" />
+        </ui:VisualElement>
+
+        <ui:ScrollView>
+            <ui:VisualElement style="flex-direction: row; flex-wrap: wrap; justify-content: flex-start;">
+                
+                <!-- Template Card 1 -->
+                <ui:VisualElement style="width: 300px; height: 180px; background-color: #202020; border-width: 1px; border-color: #303030; border-radius: 8px; margin-right: 20px; margin-bottom: 20px; padding: 16px; justify-content: space-between;">
+                    <ui:VisualElement style="flex-direction: row; justify-content: space-between;">
+                         <ui:VisualElement style="width: 32px; height: 32px; background-color: #3b2a2a; border-radius: 4px;" />
+                         <ui:Label text="ROBOTICS" style="font-size: 10px; color: #606060; background-color: #1a1a1a; padding: 4px; border-radius: 4px;" />
+                    </ui:VisualElement>
+                    
+                    <ui:VisualElement>
+                        <ui:Label text="6-DOF Robot Arm" style="color: white; -unity-font-style: bold; font-size: 14px; margin-bottom: 8px;" />
+                        <ui:Label text="Standard industrial robot arm configuration with inverse kinematics solver setup." style="color: #808080; font-size: 11px; white-space: normal;" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; border-top-width: 1px; border-top-color: #252525; padding-top: 12px;">
+                        <ui:Label text="Intermediate" style="color: #606060; font-size: 11px;" />
+                        <ui:Label text="CREATE ->" style="color: #3a6df0; font-size: 11px; -unity-font-style: bold;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                 <!-- Template Card 2 -->
+                <ui:VisualElement style="width: 300px; height: 180px; background-color: #202020; border-width: 1px; border-color: #303030; border-radius: 8px; margin-right: 20px; margin-bottom: 20px; padding: 16px; justify-content: space-between;">
+                    <ui:VisualElement style="flex-direction: row; justify-content: space-between;">
+                         <ui:VisualElement style="width: 32px; height: 32px; background-color: #2a3b2a; border-radius: 4px;" />
+                         <ui:Label text="PCB DESIGN" style="font-size: 10px; color: #606060; background-color: #1a1a1a; padding: 4px; border-radius: 4px;" />
+                    </ui:VisualElement>
+                    
+                    <ui:VisualElement>
+                        <ui:Label text="STM32 Flight Controller" style="color: white; -unity-font-style: bold; font-size: 14px; margin-bottom: 8px;" />
+                        <ui:Label text="PCB layout and schematic template for F405 based flight controllers." style="color: #808080; font-size: 11px; white-space: normal;" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; border-top-width: 1px; border-top-color: #252525; padding-top: 12px;">
+                        <ui:Label text="Advanced" style="color: #606060; font-size: 11px;" />
+                        <ui:Label text="CREATE ->" style="color: #3a6df0; font-size: 11px; -unity-font-style: bold;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+        </ui:ScrollView>
+
+    </ui:VisualElement>
+</ui:UXML>

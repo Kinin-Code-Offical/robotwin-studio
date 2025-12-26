@@ -1,144 +1,407 @@
-/* CircuitStudio.uss */
+/* =========================================
+   CIRCUIT STUDIO LAYOUT
+   ========================================= */
 
 .studio-container {
-    flex-direction: column;
     flex-grow: 1;
-    background-color: #151515;
+    background-color: #0c0c0e;
+    flex-direction: column;
 }
 
-/* Toolbar */
-.studio-toolbar {
-    height: 40px;
-    background-color: #252525;
-    border-bottom-width: 1px;
-    border-bottom-color: #303030;
+/* 1. TOP MENUBAR */
+.top-menubar {
+    height: 36px;
+    background-color: #0c0c0e;
     flex-direction: row;
     align-items: center;
-    padding-left: 10px;
-    padding-right: 10px;
+    justify-content: space-between;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
-.toolbar-button {
-    background-color: #353535;
-    border-radius: 4px;
-    padding: 6px 12px;
-    margin-right: 8px;
-    color: #cccccc;
-    font-size: 12px;
+.branding-text {
+    color: #ffffff;
+    font-size: 14px;
     -unity-font-style: bold;
-    border-width: 0;
+    margin-right: 4px;
 }
 
-.toolbar-button:hover {
-    background-color: #454545;
+.branding-sub {
+    color: #9ca3af;
+    font-size: 14px;
+    margin-right: 24px;
+}
+
+.menu-item {
+    padding: 0 12px;
+}
+.menu-item Label {
+    color: #d1d5db;
+    font-size: 12px;
+}
+.menu-item:hover Label {
     color: #ffffff;
 }
 
-.toolbar-button.play-button {
-    background-color: #2e5c3e;
-    color: #a3e6b1;
-}
-
-.toolbar-button.stop-button {
-    background-color: #6e2e2e;
-    color: #e6a3a3;
-}
-
-/* Main Workspace */
-.workspace-split {
-    flex-grow: 1;
+.status-indicator {
     flex-direction: row;
+    align-items: center;
+    margin-right: 16px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
 }
 
-/* Left Palette */
-.palette-panel {
-    width: 200px;
-    background-color: #1e1e1e;
-    border-right-width: 1px;
-    border-right-color: #303030;
-    flex-direction: column;
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #10b981;
+    border-radius: 3px;
+    margin-right: 6px;
 }
 
-.palette-header {
-    height: 30px;
-    background-color: #252525;
-    justify-content: center;
-    padding-left: 10px;
-    border-bottom-width: 1px;
-    border-bottom-color: #303030;
-}
-
-.palette-header-label {
-    color: #a0a0a0;
-    font-size: 12px;
+.status-indicator Label {
+    color: #9ca3af;
+    font-size: 10px;
     -unity-font-style: bold;
 }
 
-.component-item {
+.version-text {
+    color: #4b5563;
+    font-size: 10px;
+}
+
+/* 2. TOOLBAR */
+.studio-toolbar {
+    height: 48px;
+    background-color: #141417;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
     flex-direction: row;
     align-items: center;
-    padding: 8px;
-    margin: 4px;
-    background-color: #2a2a2a;
-    border-radius: 4px;
+    justify-content: space-between;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.toolbar-icon-btn {
+    width: 36px;
+    height: 36px;
+    background-color: transparent;
     border-width: 1px;
-    border-color: #353535;
+    border-color: transparent;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+}
+.toolbar-icon-btn Label {
+    color: #9ca3af;
+    font-size: 16px;
+}
+.toolbar-icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.toolbar-icon-btn.active {
+    background-color: #3b82f6;
+}
+.toolbar-icon-btn.active Label {
+    color: #ffffff;
 }
 
-.component-item:hover {
-    border-color: #4f80f8;
-    background-color: #333333;
-}
-
-.component-icon {
-    width: 24px;
+.toolbar-divider {
+    width: 1px;
     height: 24px;
-    background-color: #444;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin-left: 8px;
     margin-right: 8px;
-    border-radius: 2px;
 }
 
-/* Center Canvas */
-.canvas-area {
+.toolbar-input-group {
+    background-color: #0c0c0e;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-right: 12px;
+}
+
+.btn-secondary-outline {
+    background-color: transparent;
+    border-width: 1px;
+    border-color: #3b82f6;
+    color: #3b82f6;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+/* 3. WORKSPACE */
+.workspace-area {
     flex-grow: 1;
-    background-color: #101010;
-    overflow: hidden;
-    position: relative;
+    flex-direction: row;
 }
 
-.grid-background {
-    /* Rough simulation of a grid till we have a custom shader or texture */
-    width: 10000px;
-    height: 10000px;
-    top: -5000px;
-    left: -5000px;
-    /* In UXML/Unity, repeating backgrounds are tricky without custom styling/drawing. 
-       Using color for now. */
-}
-
-/* Right Inspector */
-.inspector-panel {
-    width: 250px;
-    background-color: #1e1e1e;
-    border-left-width: 1px;
-    border-left-color: #303030;
+/* LEFT PANEL */
+.panel-left {
+    width: 300px;
+    background-color: #141417; /* Matches screenshot dark blue/gray */
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.05);
+    padding: 0;
     flex-direction: column;
 }
 
-.inspector-header {
-    height: 30px;
-    background-color: #252525;
-    justify-content: center;
-    padding-left: 10px;
+.panel-tabs {
+    flex-direction: row;
+    height: 40px;
     border-bottom-width: 1px;
-    border-bottom-color: #303030;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
-.property-row {
+.tab-btn {
+    flex-grow: 1;
+    background-color: transparent;
+    color: #9ca3af;
+    font-size: 12px;
+    -unity-font-style: bold;
+    border-width: 0;
+    border-bottom-width: 2px;
+    border-bottom-color: transparent;
+}
+.tab-btn.active {
+    color: #ffffff;
+    border-bottom-color: #3b82f6;
+}
+
+.tree-root { padding: 10px; }
+.tree-item {
+    color: #9ca3af;
+    font-size: 12px;
+    padding: 4px;
+}
+.root-item {
+    color: #ffffff;
+    -unity-font-style: bold;
+}
+
+/* LIBRARY */
+.library-panel {
+    height: 50%;
+    border-top-width: 1px;
+    border-top-color: #3b82f6; /* Blue Accent Line */
+    background-color: #0c0c0e;
+    padding: 12px;
+}
+
+.panel-header-sm {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 10px;
+    margin-bottom: 8px;
+}
+.panel-header-sm Label {
+    color: #ffffff;
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+.btn-icon-sm {
+    width: 20px;
+    height: 20px;
+    background-color: #3b82f6;
+    color: white;
+    border-radius: 3px;
+    -unity-text-align: middle-center;
+    font-size: 16px;
+    padding: 0;
+}
+
+.search-field-sm {
+    height: 28px;
+    background-color: #1a1a1f;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    font-size: 11px;
+    color: #d1d5db;
+}
+
+.lib-item {
+    flex-direction: row;
+    padding: 8px;
+    margin-bottom: 4px;
+    background-color: #141417;
+    border-radius: 6px;
+    align-items: center;
+}
+.lib-item:hover { background-color: #1f1f23; }
+
+.lib-icon-box {
+    width: 32px;
+    height: 32px;
+    background-color: #1f1f23;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+}
+.lib-icon-box Label { color: #6b7280; font-size: 10px; -unity-font-style: bold; }
+
+.lib-item-title { color: #ffffff; font-size: 12px; -unity-font-style: bold; }
+.lib-item-sub { color: #6b7280; font-size: 10px; }
+
+/* CENTER CANVAS */
+.canvas-view {
+    flex-grow: 1;
+    background-color: #161616; /* Canvas Grid BG */
+    overflow: hidden;
+}
+
+/* RIGHT PANEL */
+.panel-right {
+    width: 320px;
+    background-color: #0c0c0e;
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+}
+
+.panel-header {
+    height: 32px;
+    padding-left: 12px;
+    justify-content: center;
+    background-color: rgba(59, 130, 246, 0.1);
+    margin-bottom: 12px;
+}
+.panel-header Label {
+    color: #3b82f6;
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+.prop-card-header {
+    background-color: #141417;
+    margin: 0 12px 16px 12px;
+    padding: 12px;
+    border-radius: 6px;
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.prop-icon-lg {
+    width: 40px;
+    height: 40px;
+    background-color: #000;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: #3b82f6;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+}
+.prop-icon-lg Label { color: #3b82f6; font-size: 14px; -unity-font-style: bold; }
+
+.prop-title-lg { color: #ffffff; font-size: 14px; -unity-font-style: bold; }
+.prop-sub-lg { color: #9ca3af; font-size: 11px; }
+
+.badge-success {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.prop-section { margin-bottom: 24px; }
+.prop-section-header {
+    color: #9ca3af;
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.prop-row-double {
+    flex-direction: row;
+    justify-content: space-between;
+}
+.prop-field { flex-grow: 1; margin-right: 8px; }
+.prop-label { color: #6b7280; font-size: 10px; margin-bottom: 4px; }
+.prop-label-row { color: #9ca3af; font-size: 11px; margin-top: 4px; flex-grow: 1; }
+
+.input-dark {
+    background-color: #141417;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 12px;
+    height: 28px;
+    border-radius: 4px;
+}
+.input-right { -unity-text-align: middle-right; }
+
+.prop-row { flex-direction: row; margin-bottom: 8px; align-items: center; }
+
+.badge-neutral { background-color: #262626; color: #9ca3af; font-size: 9px; padding: 2px 6px; border-radius: 2px; }
+
+.pin-table {
+    background-color: #141417;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.pin-row {
+    flex-direction: row;
+    padding: 6px;
     border-bottom-width: 1px;
-    border-bottom-color: #2a2a2a;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+.pin-row.header { background-color: #1c1c1f; }
+.pin-row Label { font-size: 10px; color: #d1d5db; }
+
+/* 4. BOTTOM PANEL */
+.bottom-panel {
+    height: 140px;
+    background-color: #141417;
+    border-top-width: 1px;
+    border-top-color: #3b82f6; /* Blue top border from screenshot */
+}
+
+.bottom-bar-header {
+    height: 28px;
+    background-color: #00add8; /* Cyan bar */
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-tab {
+    padding: 0 12px;
+    color: #ffffff;
+    font-size: 11px;
+    -unity-font-style: bold;
+    height: 100%;
+    -unity-text-align: middle-center;
+}
+.status-tab.active-blue { color: white; background-color: rgba(0,0,0,0.1); }
+
+.status-pill {
+    margin-right: 8px;
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    padding: 2px 8px;
+    color: white;
+    font-size: 10px;
+}
+.status-pill.error { background-color: #ef4444; }
+
+.output-console {
+    padding: 8px;
+    background-color: #141417;
+    flex-grow: 1;
 }

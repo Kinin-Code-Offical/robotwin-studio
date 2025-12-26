@@ -20,6 +20,9 @@ namespace RobotTwin.UI
         private Label _logContentLabel;
         private Label _serialContentLabel;
         private Label _pathLabel;
+        
+        [Header("Configuration")]
+        [SerializeField] private string _firmwarePath;
 
         // Creation UI
         private TextField _newSignalName;
@@ -124,7 +127,10 @@ namespace RobotTwin.UI
             }
 
             _host = new SimHost(circuit, _client);
-            // _host.StartFirmwareProcess("..."); // Optional: Path to MockFirmware if needed
+            if (!string.IsNullOrEmpty(_firmwarePath))
+            {
+                 _host.StartFirmwareProcess(_firmwarePath);
+            }
             
             _host.OnTickComplete += HandleHostTick;
             _host.Start();
