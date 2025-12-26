@@ -10,7 +10,7 @@ namespace RobotTwin.CoreSim.Specs
 
     public class CircuitSpec
     {
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public SimulationMode Mode { get; set; }
         public List<ComponentSpec> Components { get; set; } = new List<ComponentSpec>();
         public List<NetSpec> Nets { get; set; } = new List<NetSpec>();
@@ -18,14 +18,14 @@ namespace RobotTwin.CoreSim.Specs
 
     public class ComponentSpec
     {
-        public string Id { get; set; }
-        public string Type { get; set; } // e.g. "ArduinoUno", "LED", "Resistor"
+        public string Id { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty; // e.g. "ArduinoUno", "LED", "Resistor"
         public Dictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
     }
 
     public class NetSpec
     {
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public List<string> Nodes { get; set; } = new List<string>(); // "ComponentId.PinName"
     }
 }

@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:Style src="../Theme/RobotwinTheme.uss" />
+    <ui:Template name="Sidebar" src="../Shared/Sidebar.uxml" />
     <ui:Style src="../Shared/Sidebar.uss" />
 
     <ui:VisualElement style="flex-direction: row; height: 100%; width: 100%; background-color: #1a1a1a;">

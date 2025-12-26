@@ -9,13 +9,13 @@ namespace RobotTwin.CoreSim.Host
     public class SimHost
     {
         private volatile bool _running = false;
-        private Thread _simThread;
+        private Thread? _simThread;
         private readonly double _dt; // Timestep in seconds
         private readonly CircuitSpec _spec;
         public CircuitSpec Circuit => _spec;
         private readonly IFirmwareClient _firmwareClient;
 
-        public event Action<double> OnTickComplete; // Notify UI of updates
+        public event Action<double>? OnTickComplete; // Notify UI of updates
 
         public double SimTime { get; private set; } = 0.0;
         public long TickCount { get; private set; } = 0;

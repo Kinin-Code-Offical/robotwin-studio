@@ -22,15 +22,15 @@ namespace RobotTwin.CoreSim.IPC
     public class FirmwareStepResult
     {
         public int[] PinStates { get; set; } = new int[0]; // Output/PWM pins
-        public string SerialOutput { get; set; }
+        public string SerialOutput { get; set; } = string.Empty;
     }
 
     public class FirmwareClient : IFirmwareClient
     {
         private const string PIPE_NAME = "RoboTwin.FirmwareEngine.v1";
-        private NamedPipeClientStream _client;
-        private StreamReader _reader;
-        private StreamWriter _writer;
+        private NamedPipeClientStream? _client;
+        private StreamReader? _reader;
+        private StreamWriter? _writer;
 
         public bool IsConnected => _client != null && _client.IsConnected;
 
@@ -49,22 +49,25 @@ namespace RobotTwin.CoreSim.IPC
                 _writer = new StreamWriter(_client) { AutoFlush = true };
                 // Console.WriteLine("Connected to Firmware Engine Pipe."); 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Console.WriteLine($"Failed to connect to firmware pipe: {ex.Message}");
                 throw; // Rethrow to let caller handle
             }
         }
 
         public void Disconnect()
         {
+            _writer?.Dispose();
+            _writer = null;
+            _reader?.Dispose();
+            _reader = null;
             _client?.Dispose();
             _client = null;
         }
 
         public FirmwareStepResult Step(FirmwareStepRequest request)
         {
-            if (!IsConnected) return new FirmwareStepResult();
+            if (!IsConnected || _writer == null || _reader == null) return new FirmwareStepResult();
 
             try
             {
@@ -72,10 +75,10 @@ namespace RobotTwin.CoreSim.IPC
                 string jsonReq = JsonSerializer.Serialize(request);
                 _writer.WriteLine(jsonReq);
 
-                string jsonRes = _reader.ReadLine();
+                string? jsonRes = _reader.ReadLine();
                 if (string.IsNullOrEmpty(jsonRes)) return new FirmwareStepResult();
 
-                return JsonSerializer.Deserialize<FirmwareStepResult>(jsonRes);
+                return JsonSerializer.Deserialize<FirmwareStepResult>(jsonRes) ?? new FirmwareStepResult();
             }
             catch (Exception ex)
             {
