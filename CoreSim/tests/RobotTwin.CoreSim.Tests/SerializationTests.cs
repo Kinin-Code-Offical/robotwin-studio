@@ -11,6 +11,11 @@ namespace RobotTwin.CoreSim.Tests
         {
             var contract = new IOContract
             {
+                Name = "Test Circuit", // Assuming IOContract now has a Name property
+                Components = new List<ComponentInstance> // Assuming IOContract now has a Components property
+                {
+                    new ComponentInstance { InstanceID = "r1", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() }
+                },
                 SignalId = "TEST_SIG",
                 Type = SignalType.PwmOutput,
                 Unit = "Hz",
