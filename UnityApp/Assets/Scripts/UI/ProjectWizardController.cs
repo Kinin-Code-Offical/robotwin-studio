@@ -30,6 +30,7 @@ namespace RobotTwin.UI
             root.Q<Button>("NewProjectBtn")?.RegisterCallback<ClickEvent>(OnNewProjectClicked);
             root.Q<Button>("OpenProjectBtn")?.RegisterCallback<ClickEvent>(OnOpenProjectClicked);
             root.Q<Button>("ImportCadBtn")?.RegisterCallback<ClickEvent>(e => Debug.Log("Import CAD Clicked (Stub)"));
+            root.Q<Button>("WatchReplayBtn")?.RegisterCallback<ClickEvent>(e => Debug.Log("Watch Replay Clicked (Stub)"));
 
             // Wire Nav (Stub)
             root.Q<Button>("NavHome")?.RegisterCallback<ClickEvent>(e => Debug.Log("Nav: Home"));
