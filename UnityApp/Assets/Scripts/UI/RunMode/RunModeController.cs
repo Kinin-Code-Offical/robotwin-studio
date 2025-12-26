@@ -4,7 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Runtime;
 using RobotTwin.CoreSim.Specs;
-using RobotTwin.Game; 
+using RobotTwin.Game;
 using System.Linq;
 
 namespace RobotTwin.UI
@@ -17,7 +17,7 @@ namespace RobotTwin.UI
         private Label _logContentLabel;
         private Label _serialContentLabel;
         private Label _pathLabel;
-        
+
         // Creation UI
         private TextField _newSignalName;
         private DropdownField _waveformType;
@@ -33,7 +33,7 @@ namespace RobotTwin.UI
         private SimulationRecorder _recorder;
         private bool _isRunning = false;
         private string _runOutputPath;
-        
+
         // Active Waveforms
         private Dictionary<string, IWaveform> _activeWaveforms = new Dictionary<string, IWaveform>();
 
@@ -60,7 +60,7 @@ namespace RobotTwin.UI
             _logContentLabel = root.Q<Label>("LogContentLabel");
             _serialContentLabel = root.Q<Label>("SerialContentLabel");
             _pathLabel = root.Q<Label>("TelemetryPathLabel");
-            
+
             _newSignalName = root.Q<TextField>("NewSignalName");
             _waveformType = root.Q<DropdownField>("WaveformTypeDropdown");
             _param1 = root.Q<FloatField>("Param1");
@@ -72,9 +72,9 @@ namespace RobotTwin.UI
 
             // Validate critical controls
             if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
-            
+
             if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
-            
+
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
             root.Q<Button>("OpenLogsBtn")?.RegisterCallback<ClickEvent>(OnOpenLogsClicked);
             _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal);
@@ -106,7 +106,7 @@ namespace RobotTwin.UI
 
             _isRunning = true;
             Debug.Log($"RunMode started. Logs: {_runOutputPath}");
-            
+
             // Default Injection (Example)
             AddWaveform("default_sine", new SineWaveform(1.0, 5.0, 0.0));
         }
@@ -115,7 +115,7 @@ namespace RobotTwin.UI
         {
             if (!_isRunning) return;
             _isRunning = false;
-            
+
             // Persist Config
             SaveInjectionConfig();
 
@@ -131,7 +131,7 @@ namespace RobotTwin.UI
 
         private void OnStopClicked(ClickEvent evt)
         {
-             UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Back to CircuitStudio
+            UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Back to CircuitStudio
         }
 
         private void OnOpenLogsClicked(ClickEvent evt)
@@ -173,11 +173,11 @@ namespace RobotTwin.UI
 
         private void Update()
         {
-             if (!_isRunning || _engine == null) return;
-             if (_timeLabel != null) _timeLabel.text = $"Time: {_engine.Session.TimeSeconds:F2}s";
-             if (_tickLabel != null) _tickLabel.text = $"Tick: {_engine.Session.TickIndex}";
-             
-             UpdateVisualization();
+            if (!_isRunning || _engine == null) return;
+            if (_timeLabel != null) _timeLabel.text = $"Time: {_engine.Session.TimeSeconds:F2}s";
+            if (_tickLabel != null) _tickLabel.text = $"Tick: {_engine.Session.TickIndex}";
+
+            UpdateVisualization();
         }
 
         private void OnAddSignal(ClickEvent evt)
@@ -189,7 +189,7 @@ namespace RobotTwin.UI
             double p3 = _param3.value;
 
             IWaveform wf = null;
-            switch(type)
+            switch (type)
             {
                 case "Constant": wf = new ConstantWaveform(p1); break;
                 case "Step": wf = new StepWaveform(p1, p2, p3); break; // Init, Final, Time
@@ -207,9 +207,7 @@ namespace RobotTwin.UI
             RefreshSignalList();
         }
 
-            _activeWaveforms[name] = wf;
-            RefreshSignalList();
-        }
+
 
         private void RefreshSignalList()
         {
@@ -231,19 +229,19 @@ namespace RobotTwin.UI
         {
             _componentList = root.Q<ScrollView>("ComponentList");
             if (_componentList == null) return;
-            
+
             _componentList.Clear();
             _componentLabels.Clear();
 
-            foreach(var comp in _engine.Session.Circuit.Components)
+            foreach (var comp in _engine.Session.Circuit.Components)
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.justifyContent = Justify.SpaceBetween;
-                
+
                 var nameLbl = new Label($"{comp.InstanceID} ({comp.CatalogID})");
                 nameLbl.style.color = Color.white;
-                
+
                 var statusLbl = new Label("OFF");
                 statusLbl.style.color = Color.gray;
                 statusLbl.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -259,27 +257,27 @@ namespace RobotTwin.UI
         private void UpdateVisualization()
         {
             if (_engine == null) return;
-            
+
             // MVP: Simple heuristic for LEDs (hardcoded for demo effect, real net lookup is todo in CoreSim)
             // Ideally: _engine.GetPinVoltage(compId, pinName)
-            
-            foreach(var kvp in _componentLabels)
+
+            foreach (var kvp in _componentLabels)
             {
                 string id = kvp.Key;
                 Label lbl = kvp.Value;
-                
+
                 // Demo Logic: If it's an LED and we have active injection or time > 0, flicker it
                 // This is a PLACEHOLDER for real net-list lookup
                 if (id.ToLower().Contains("led"))
                 {
-                   bool isOn = (_engine.Session.TimeSeconds % 1.0) < 0.5; // Simulate 1Hz blink
-                   lbl.text = isOn ? "ON" : "OFF";
-                   lbl.style.color = isOn ? Color.green : Color.gray;
+                    bool isOn = (_engine.Session.TimeSeconds % 1.0) < 0.5; // Simulate 1Hz blink
+                    lbl.text = isOn ? "ON" : "OFF";
+                    lbl.style.color = isOn ? Color.green : Color.gray;
                 }
                 else
                 {
-                   lbl.text = "OK";
-                   lbl.style.color = Color.white;
+                    lbl.text = "OK";
+                    lbl.style.color = Color.white;
                 }
             }
         }
@@ -288,12 +286,12 @@ namespace RobotTwin.UI
         {
             // MVP: minimal JSON dump of active keys
             var config = new Dictionary<string, string>();
-            foreach(var kvp in _activeWaveforms) config[kvp.Key] = kvp.Value.GetType().Name;
-            
+            foreach (var kvp in _activeWaveforms) config[kvp.Key] = kvp.Value.GetType().Name;
+
             string json = JsonUtility.ToJson(new SerializationWrapper { keys = config.Keys.ToList(), types = config.Values.ToList() }, true);
             File.WriteAllText(Path.Combine(_runOutputPath, "injection_config.json"), json);
         }
-        
+
         [System.Serializable]
         private class SerializationWrapper { public List<string> keys; public List<string> types; }
     }
