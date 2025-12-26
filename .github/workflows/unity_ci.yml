@@ -82,7 +82,7 @@ jobs:
         with:
           projectPath: UnityApp
           unityVersion: ${{ needs.probe.outputs.unity_version }}
-          testMode: editmode
+          testMode: all
           artifactsPath: artifacts
           
       - name: Upload Test Results
