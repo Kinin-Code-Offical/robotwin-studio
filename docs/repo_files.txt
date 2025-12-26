@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-26T03:11:05Z
-# Commit: b8b0027
-# FileCount: 167
+﻿# GeneratedUtc: 2025-12-26T03:25:20Z
+# Commit: bf9ebc4
+# FileCount: 169
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -121,12 +121,14 @@ UnityApp/Assets/Tests/EditMode.meta
 UnityApp/Assets/Tests/EditMode/RobotTwin.Tests.EditMode.asmdef
 UnityApp/Assets/Tests/EditMode/RobotTwin.Tests.EditMode.asmdef.meta
 UnityApp/Assets/Tests/EditMode/UISmokeTests.cs
+UnityApp/Assets/Tests/EditMode/UISmokeTests.cs.meta
 UnityApp/Assets/Tests/EditMode/WiringTests.cs
 UnityApp/Assets/Tests/EditMode/WiringTests.cs.meta
 UnityApp/Assets/Tests/PlayMode.meta
 UnityApp/Assets/Tests/PlayMode/RobotTwin.Tests.PlayMode.asmdef
 UnityApp/Assets/Tests/PlayMode/RobotTwin.Tests.PlayMode.asmdef.meta
 UnityApp/Assets/Tests/PlayMode/SimulationSmokeTest.cs
+UnityApp/Assets/Tests/PlayMode/SimulationSmokeTest.cs.meta
 UnityApp/Assets/Tests/PlayMode/SmokeTest.cs
 UnityApp/Assets/Tests/PlayMode/SmokeTest.cs.meta
 UnityApp/Assets/UI Toolkit.meta
