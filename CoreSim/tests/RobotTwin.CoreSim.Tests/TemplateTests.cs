@@ -61,7 +61,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.NotNull(blinky.DefaultCircuit);
             
             // Validate the circuit composition
-            var result = CircuitValidator.Validate(blinky.DefaultCircuit);
+            var result = CircuitValidator.ValidateCircuit(blinky.DefaultCircuit);
             
             // Should be valid with 0 errors
             Assert.True(result.IsValid, $"Blinky template invalid: {string.Join(", ", result.Errors)}");

@@ -6,6 +6,7 @@
 - **Instant Access**: No project name or file creation required initially.
 - **Infinite Canvas**: Unlimited workspace components.
 - **Live Injection**: Real-time signal overrides (RunMode).
+- **Physics Engine**: Active Thermal and Battery simulation (3S LiPo + Overheating visuals).
 - **Transient State**: Changes persist only in memory until explicitly saved.
 - **Debug Tools**: Full access to Telemetry Bus inspection.
 

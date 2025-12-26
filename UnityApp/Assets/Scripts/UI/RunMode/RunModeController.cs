@@ -4,6 +4,8 @@ using System.IO;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Runtime;
 using RobotTwin.CoreSim.Specs;
+using RobotTwin.CoreSim.Models.Physics;
+using RobotTwin.CoreSim.Models.Power;
 using RobotTwin.Game;
 using System.Linq;
 
@@ -28,11 +30,19 @@ namespace RobotTwin.UI
         private ScrollView _signalList;
         private Toggle _injectionActiveToggle;
 
+        // Telemetry UI
+        private ProgressBar _batteryBar;
+        private ProgressBar _tempBar;
+
         // State
         private RunEngine _engine;
         private SimulationRecorder _recorder;
         private bool _isRunning = false;
         private string _runOutputPath;
+
+        // Physics Models
+        private BatteryModel _battery;
+        private ThermalModel _thermal;
 
         // Active Waveforms
         private Dictionary<string, IWaveform> _activeWaveforms = new Dictionary<string, IWaveform>();
@@ -69,6 +79,9 @@ namespace RobotTwin.UI
             _addSignalBtn = root.Q<Button>("AddSignalBtn");
             _signalList = root.Q<ScrollView>("SignalList");
             _injectionActiveToggle = root.Q<Toggle>("InjectionActiveToggle");
+            
+            _batteryBar = root.Q<ProgressBar>("BatteryBar");
+            _tempBar = root.Q<ProgressBar>("TempBar");
 
             // Validate critical controls
             if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
@@ -105,6 +118,10 @@ namespace RobotTwin.UI
             _engine.Bus.OnEvent += OnSimulationEvent; // Keep local subscription for HUD logging
 
             _isRunning = true;
+            // Model Init
+            _battery = new BatteryModel(2200.0, 11.1); // 3S LiPo Default
+            _thermal = new ThermalModel { AmbientTempC = 25.0 };
+
             Debug.Log($"RunMode started. Logs: {_runOutputPath}");
 
             // Default Injection (Example)
@@ -158,6 +175,20 @@ namespace RobotTwin.UI
             }
 
             _engine.Step(inputs);
+
+            // Step Physics
+            if (_battery != null)
+            {
+                // Fake Load current for MVP: 0.5A constant + sine wave noise
+                double load = 0.5 + (Mathf.Sin((float)_engine.Session.TimeSeconds) * 0.1f);
+                _battery.Drain(load, 0.02); // Fixed timestep assumed 20ms
+            }
+
+            if (_thermal != null)
+            {
+                // Fake Current for Heat: 1.0A
+                _thermal.Update(1.0, 0.02);
+            }
         }
 
         private void OnSimulationEvent(EventLogEntry entry)
@@ -178,6 +209,28 @@ namespace RobotTwin.UI
             if (_tickLabel != null) _tickLabel.text = $"Tick: {_engine.Session.TickIndex}";
 
             UpdateVisualization();
+            UpdateTelemetry();
+        }
+
+        private void UpdateTelemetry()
+        {
+            if (_battery != null && _batteryBar != null)
+            {
+                // Map range 0-100% capacity
+                double soc = (_battery.RemainingmAh / _battery.CapacitymAh) * 100.0;
+                _batteryBar.value = (float)soc;
+                _batteryBar.title = $"{soc:F1}% ({_battery.GetVoltage(0.5):F2}V)";
+            }
+
+            if (_thermal != null && _tempBar != null)
+            {
+                // Normalize for visual (0 to 100 range, where 100 is overheating)
+                _tempBar.value = (float)_thermal.CurrentTempC;
+                _tempBar.title = $"{_thermal.CurrentTempC:F1}°C";
+                
+                if (_thermal.CurrentTempC > 80) _tempBar.style.color = Color.red;
+                else _tempBar.style.color = Color.white;
+            }
         }
 
         private void OnAddSignal(ClickEvent evt)

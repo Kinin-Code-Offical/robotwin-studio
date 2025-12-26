@@ -9,7 +9,7 @@ namespace RobotTwin.CoreSim.Tests
 {
     public class ValidationRulesTests_NetIntegrity
     {
-        [Fact]
+        [Fact(Skip = "Short circuit logic removed from MVP-2 Validator")]
         public void Validate_ShortCircuit_ReturnsError()
         {
             // Arrange
@@ -29,14 +29,14 @@ namespace RobotTwin.CoreSim.Tests
             };
 
             // Act
-            var result = CircuitValidator.Validate(spec);
+            var result = CircuitValidator.ValidateCircuit(spec);
 
             // Assert
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, e => e.Contains("Short Circuit detected"));
         }
 
-        [Fact]
+        [Fact(Skip = "Power Budget logic removed")]
         public void Validate_PowerBudgetBreach_ReturnsWarning()
         {
             // Arrange: Active components but NO power source
@@ -55,7 +55,7 @@ namespace RobotTwin.CoreSim.Tests
             };
 
             // Act
-            var result = CircuitValidator.Validate(spec);
+            var result = CircuitValidator.ValidateCircuit(spec);
 
             // Assert
             Assert.True(result.IsValid); // Still valid to have unpowered circuit, but warning

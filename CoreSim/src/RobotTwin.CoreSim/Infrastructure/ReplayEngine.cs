@@ -48,7 +48,8 @@ namespace RobotTwin.CoreSim.Infrastructure
         public void Pause() => IsPlaying = false;
         public void Seek(int tick)
         {
-            _currentTick = Math.Clamp(tick, 0, TotalTicks - 1);
+            if (TotalTicks == 0) _currentTick = 0;
+            else _currentTick = Math.Max(0, Math.Min(tick, TotalTicks - 1));
         }
     }
 }
