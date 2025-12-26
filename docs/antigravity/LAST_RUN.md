@@ -23,5 +23,15 @@
 - **Self-Check:** `build/RobotwinStudio.exe` Verified.
 - **Conclusion:** System is ready for localized integration testing.
 
+### 5. Deep Integration (Phase 5)
+- **Physics Hookup:** `RunModeController` now instantiates `BatteryModel` (3S LiPo) and `ThermalModel`.
+- **Runtime Loop:** Models are actively stepped in `FixedUpdate` (dT=20ms).
+- **UI Feedback:** `BatteryBar` and `TempBar` are now data-driven, reflecting charge depletion and heat saturation.
+
+### 6. Visual Editor Binding (Phase 6)
+- **Editor-Sim Sync:** `CircuitStudioController` now maintains a live `CircuitSpec`.
+- **Instantiation:** Spawning a visual component automatically adds a valid `ComponentInstance` to the spec.
+- **Session Handoff:** Clicking "Simulate" properly updates the global Session before scene transition.
+
 ---
 *Signed, ANTIGRAVITY*

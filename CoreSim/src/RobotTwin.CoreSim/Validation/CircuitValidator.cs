@@ -29,6 +29,24 @@ namespace RobotTwin.CoreSim.Validation
                 return result;
             }
 
+            if (spec.Components == null || spec.Components.Count == 0)
+            {
+                result.Warnings.Add("Circuit is empty (no components).");
+                // Start early return or continue? Old one returned.
+                // But let's let it run (loops won't execute).
+            }
+
+            // Check for duplicates
+            var idSet = new HashSet<string>();
+            foreach (var c in spec.Components)
+            {
+                if (!idSet.Add(c.InstanceID))
+                {
+                    result.Errors.Add($"Duplicate Component InstanceID: {c.InstanceID}");
+                    result.IsValid = false;
+                }
+            }
+
             // 1. Check for Power (VCC) and Ground (GND)
             // Assuming components with specific types or IDs serve as power sources
             bool hasPower = false;
@@ -41,24 +59,45 @@ namespace RobotTwin.CoreSim.Validation
             if (spec.Components.Any(c => c.CatalogID.ToLower().Contains("battery") || c.CatalogID.ToLower().Contains("power") || c.CatalogID.ToLower().Contains("source")))
             {
                 hasPower = true;
-                hasGround = true; // Assume battery has both
+                hasGround = true; 
             }
             
-            // Check Nets for named VCC/GND if no explicit component found (abstract representation)
-            if (!hasPower) hasPower = spec.Nets.Any(n => n.Id.ToUpper().Contains("VCC") || n.Id.ToUpper().Contains("5V") || n.Id.ToUpper().Contains("3V3"));
-            if (!hasGround) hasGround = spec.Nets.Any(n => n.Id.ToUpper().Contains("GND"));
+            // Check connections for VCC/GND hints
+            if (spec.Connections != null)
+            {
+                foreach (var conn in spec.Connections)
+                {
+                    var p1 = conn.FromPin.ToUpper();
+                    var p2 = conn.ToPin.ToUpper();
+                    if (p1.Contains("VCC") || p2.Contains("VCC") || p1.Contains("5V") || p2.Contains("5V")) hasPower = true;
+                    if (p1.Contains("GND") || p2.Contains("GND")) hasGround = true;
+                }
+            }
 
             if (!hasPower) result.Warnings.Add("No obvious Power Source detected (VCC/Battery).");
             if (!hasGround) result.Warnings.Add("No obvious Ground reference detected (GND).");
 
-            // 2. Connectivity Check (Floating Pins)
-            // Just warn if a component exists but isn't connected to any net
+            // 2. Connectivity Check (Floating Pins & Integrity)
+            var componentIds = spec.Components.Select(c => c.InstanceID).ToHashSet();
             var connectedComponentIds = new HashSet<string>();
-            foreach (var net in spec.Nets)
+            
+            if (spec.Connections != null)
             {
-                foreach (var pin in net.Pins)
+                foreach (var conn in spec.Connections)
                 {
-                    connectedComponentIds.Add(pin.ComponentId);
+                    if (!componentIds.Contains(conn.FromComponentID))
+                    {
+                        result.Errors.Add($"Connection references missing component: '{conn.FromComponentID}'");
+                        result.IsValid = false;
+                    }
+                    if (!componentIds.Contains(conn.ToComponentID))
+                    {
+                        result.Errors.Add($"Connection references missing component: '{conn.ToComponentID}'");
+                        result.IsValid = false;
+                    }
+
+                    connectedComponentIds.Add(conn.FromComponentID);
+                    connectedComponentIds.Add(conn.ToComponentID);
                 }
             }
 
