@@ -1,0 +1,43 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="project://database/Assets/UI/Theme/RobotwinTheme.uss" />
+    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: #383838;">
+        
+        <!-- Sidebar -->
+        <ui:VisualElement name="Sidebar" style="width: 250px; background-color: #2d2d2d; border-right-width: 1px; border-right-color: #232323;">
+            <ui:Label text="ROBOTWIN" style="color: #ffffff; -unity-font-style: bold; font-size: 16px; padding: 15px; border-bottom-width: 1px; border-bottom-color: #232323;" />
+            <ui:VisualElement style="padding-top: 10px;">
+                <ui:Button name="NavHome" text="Home" class="sidebar-button active" />
+                <ui:Button name="NavProjects" text="Projects" class="sidebar-button" />
+                <ui:Button name="NavTemplates" text="Templates" class="sidebar-button" />
+                <ui:Button name="NavSettings" text="Settings" class="sidebar-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Main Content -->
+        <ui:VisualElement style="flex-grow: 1; padding: 40px;">
+            <ui:Label text="Welcome to Robotwin Studio" class="unity-header-large" />
+            <ui:Label text="Version 1.0.4 (Stable)" style="color: #a0a0a0; font-size: 12px; margin-bottom: 30px;" />
+
+            <!-- Action Grid -->
+            <ui:VisualElement style="flex-direction: row; justify-content: space-between; height: 150px; margin-bottom: 40px;">
+                <ui:Button name="NewProjectBtn" text="New Project" class="unity-button-action" style="flex-grow: 1; margin-right: 10px;">
+                    <ui:Label text="Create a new empty simulation workspace." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+                </ui:Button>
+                <ui:Button name="OpenProjectBtn" text="Open Project" class="unity-button-action" style="flex-grow: 1; margin-right: 10px; margin-left: 10px;">
+                    <ui:Label text="Browse for .rw files on disk." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+                </ui:Button>
+                <ui:Button name="ImportCadBtn" text="Import CAD/EDA" class="unity-button-action" style="flex-grow: 1; margin-left: 10px;">
+                    <ui:Label text="Import Altium, KiCad, or STEP." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+                </ui:Button>
+                <ui:Button name="WatchReplayBtn" text="Watch Replay" class="unity-button-action" style="flex-grow: 1; margin-left: 10px;">
+                    <ui:Label text="Load JSONL log and playback." style="font-size: 10px; white-space: normal; color: #a0a0a0; margin-top: 5px;" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Recent Projects -->
+            <ui:Label text="Recent Projects" style="font-size: 18px; color: #ffffff; margin-bottom: 10px;" />
+            <ui:ScrollView name="RecentProjectsList" style="flex-grow: 1; background-color: #2d2d2d; border-radius: 4px; padding: 10px;" />
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

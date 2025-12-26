@@ -1,0 +1,51 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="HomeView" style="flex-grow: 1; max-width: 900px; margin-left: auto; margin-right: auto; width: 100%;">
+        
+        <!-- Header -->
+        <ui:VisualElement style="padding-top: 8px; padding-bottom: 16px; border-bottom-width: 1px; border-bottom-color: #303030; margin-bottom: 24px;">
+            <ui:Label text="Welcome to Robotwin Studio" style="color: #ffffff; font-size: 24px; -unity-font-style: bold; margin-bottom: 4px;" />
+            <ui:Label text="Version 1.0.4 (Stable)" style="color: #a0a0a0; font-size: 14px;" />
+        </ui:VisualElement>
+
+        <!-- Quick Actions Grid -->
+        <ui:VisualElement style="flex-direction: row; justify-content: space-between; margin-bottom: 32px;">
+            
+            <!-- New Project -->
+            <ui:Button name="BtnNewProject" style="width: 32%; height: 120px; background-color: #202020; border-color: #303030; border-width: 1px; border-radius: 6px; align-items: center; justify-content: center;">
+                <ui:VisualElement style="width: 40px; height: 40px; background-color: #1a1a1a; border-radius: 4px; border-color: #303030; border-width: 1px; justify-content: center; align-items: center; margin-bottom: 12px;">
+                    <ui:Label text="+" style="font-size: 24px; color: #ffffff;" />
+                </ui:VisualElement>
+                <ui:Label text="New Project" style="color: #ffffff; -unity-font-style: bold; font-size: 14px;" />
+                <ui:Label text="Create a new empty simulation workspace." style="color: #a0a0a0; font-size: 10px; white-space: normal; text-align: center; margin-top: 4px;" />
+            </ui:Button>
+
+            <!-- Open Project -->
+             <ui:Button name="BtnOpenProject" style="width: 32%; height: 120px; background-color: #202020; border-color: #303030; border-width: 1px; border-radius: 6px; align-items: center; justify-content: center;">
+                <ui:VisualElement style="width: 40px; height: 40px; background-color: #1a1a1a; border-radius: 4px; border-color: #303030; border-width: 1px; justify-content: center; align-items: center; margin-bottom: 12px;">
+                     <ui:Label text="O" style="font-size: 20px; color: #a0a0a0;" />
+                </ui:VisualElement>
+                <ui:Label text="Open Project" style="color: #ffffff; -unity-font-style: bold; font-size: 14px;" />
+                <ui:Label text="Browse for .rw files on disk." style="color: #a0a0a0; font-size: 10px; white-space: normal; text-align: center; margin-top: 4px;" />
+            </ui:Button>
+
+            <!-- Import -->
+             <ui:Button name="BtnImport" style="width: 32%; height: 120px; background-color: #202020; border-color: #303030; border-width: 1px; border-radius: 6px; align-items: center; justify-content: center;">
+                <ui:VisualElement style="width: 40px; height: 40px; background-color: #1a1a1a; border-radius: 4px; border-color: #303030; border-width: 1px; justify-content: center; align-items: center; margin-bottom: 12px;">
+                     <ui:Label text="I" style="font-size: 20px; color: #a0a0a0;" />
+                </ui:VisualElement>
+                <ui:Label text="Import CAD/EDA" style="color: #ffffff; -unity-font-style: bold; font-size: 14px;" />
+                <ui:Label text="Import Altium, KiCad, or STEP." style="color: #a0a0a0; font-size: 10px; white-space: normal; text-align: center; margin-top: 4px;" />
+            </ui:Button>
+
+        </ui:VisualElement>
+
+        <!-- Recent Projects -->
+        <ui:VisualElement>
+            <ui:Label text="Recent Projects" style="color: #ffffff; font-size: 16px; -unity-font-style: bold; margin-bottom: 16px;" />
+            <ui:ScrollView style="height: 200px;">
+                <ui:Label text="No recent projects." style="color: #a0a0a0; font-size: 12px; font-style: italic;" />
+            </ui:ScrollView>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

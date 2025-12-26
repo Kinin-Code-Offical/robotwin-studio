@@ -1,0 +1,41 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="Sidebar.uss" />
+
+    <ui:VisualElement class="sidebar-container">
+        <!-- Header -->
+        <ui:VisualElement class="sidebar-header">
+            <!-- Icon placeholder, ideally replace with actual SVG/Texture later -->
+            <ui:VisualElement class="sidebar-logo-icon" style="background-color: #4f80f8; border-radius: 3px;" /> 
+            <ui:Label text="ROBOTWIN" class="sidebar-title" />
+        </ui:VisualElement>
+
+        <!-- Navigation -->
+        <ui:VisualElement class="sidebar-nav">
+            <ui:Button name="nav-home" class="nav-button active">
+                <ui:VisualElement class="nav-icon" style="background-color: #a0a0a0; mask-image: none;" /> <!-- Placeholder icon logic -->
+                <ui:Label text="Home" class="nav-label" />
+            </ui:Button>
+
+            <ui:Button name="nav-projects" class="nav-button">
+                 <ui:VisualElement class="nav-icon" style="background-color: #a0a0a0;" />
+                <ui:Label text="Projects" class="nav-label" />
+            </ui:Button>
+
+            <ui:Button name="nav-templates" class="nav-button">
+                 <ui:VisualElement class="nav-icon" style="background-color: #a0a0a0;" />
+                <ui:Label text="Templates" class="nav-label" />
+            </ui:Button>
+
+            <ui:Button name="nav-settings" class="nav-button">
+                 <ui:VisualElement class="nav-icon" style="background-color: #a0a0a0;" />
+                <ui:Label text="Settings" class="nav-label" />
+            </ui:Button>
+        </ui:VisualElement>
+
+        <!-- Footer -->
+        <ui:VisualElement class="sidebar-footer">
+            <ui:Label text="v1.0.4 - Stable" class="footer-version" />
+            <ui:Label text="Build 2938.f1" class="footer-build" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

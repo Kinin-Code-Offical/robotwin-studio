@@ -1,28 +1,82 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <ui:Style src="project://database/Assets/UI/Theme/RobotwinTheme.uss" />
-    <ui:VisualElement style="flex-direction: row; height: 100%; background-color: #383838;">
-        
-        <!-- Left Panel: Library -->
-        <ui:VisualElement name="LeftPanel" style="width: 250px; background-color: #2d2d2d; border-right-width: 1px; border-right-color: #232323;">
-            <ui:Label text="Components" style="color: #ffffff; padding: 10px; -unity-font-style: bold;" />
-            <ui:ScrollView name="LibraryList" style="flex-grow: 1; padding: 5px;">
-                <!-- Items will be instantiated here -->
-            </ui:ScrollView>
+    <ui:Style src="CircuitStudio.uss" />
+
+    <ui:VisualElement class="studio-container">
+        <!-- Toolbar -->
+        <ui:VisualElement class="studio-toolbar">
+            <ui:Button text="▶ Run" name="toolbar-run" class="toolbar-button play-button" />
+            <ui:Button text="■ Stop" name="toolbar-stop" class="toolbar-button stop-button" />
+            <ui:VisualElement style="width: 20px;" /> <!-- Spacer -->
+            <ui:Button text="Save" name="toolbar-save" class="toolbar-button" />
+            <ui:Button text="Export Spec" name="toolbar-export" class="toolbar-button" />
         </ui:VisualElement>
 
-        <!-- Center: Canvas -->
-        <ui:VisualElement name="Canvas" style="flex-grow: 1; background-color: #222222; overflow: hidden;">
-            <ui:Label text="Infinite Grid Canvas" style="color: #444444; font-size: 50px; -unity-text-align: middle-center; height: 100%;" />
-        </ui:VisualElement>
+        <!-- Main Workspace -->
+        <ui:VisualElement class="workspace-split">
+            
+            <!-- Left Palette -->
+            <ui:VisualElement class="palette-panel">
+                <ui:VisualElement class="palette-header">
+                    <ui:Label text="COMPONENTS" class="palette-header-label" />
+                </ui:VisualElement>
+                
+                <ui:ScrollView>
+                    <!-- MCU Category -->
+                    <ui:Label text="Microcontrollers" style="color:#808080; font-size:10px; margin: 4px 8px;" />
+                    <ui:VisualElement class="component-item" name="comp-uno">
+                        <ui:VisualElement class="component-icon" style="background-color: #00979C;" />
+                        <ui:Label text="Arduino Uno" style="color: white; font-size: 12px;" />
+                    </ui:VisualElement>
 
-        <!-- Right Panel: Inspector -->
-        <ui:VisualElement name="RightPanel" style="width: 300px; background-color: #2d2d2d; border-left-width: 1px; border-left-color: #232323;">
-            <ui:Label text="Inspector" style="color: #ffffff; padding: 10px; -unity-font-style: bold; border-bottom-width: 1px; border-bottom-color: #232323;" />
-            <ui:ScrollView name="InspectorContent" style="flex-grow: 1; padding: 10px;">
-                <ui:Label text="No Selection" style="color: #a0a0a0;" />
-            </ui:ScrollView>
-            <ui:Button name="SimulateBtn" text="RUN SIMULATION" style="height: 40px; margin: 10px; background-color: #4f80f8; color: white; -unity-font-style: bold;" />
-        </ui:VisualElement>
+                    <!-- Basics Category -->
+                     <ui:Label text="Basics" style="color:#808080; font-size:10px; margin: 4px 8px;" />
+                    <ui:VisualElement class="component-item" name="comp-led">
+                        <ui:VisualElement class="component-icon" style="background-color: #cc3333;" />
+                        <ui:Label text="LED (Red)" style="color: white; font-size: 12px;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="component-item" name="comp-resistor">
+                         <ui:VisualElement class="component-icon" style="background-color: #ae8b58;" />
+                        <ui:Label text="Resistor" style="color: white; font-size: 12px;" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
 
+            <!-- Center Canvas -->
+            <ui:VisualElement class="canvas-area">
+                <ui:Label text="Circuit Canvas (Placeholder)" style="position: absolute; top: 10px; left: 10px; color: #505050; font-size: 20px; font-weight: bold;" />
+                
+                <!-- Dropped Components Container (for visualization) -->
+                <ui:VisualElement name="CanvasContainer" style="width: 100%; height: 100%;">
+                    <!-- Example of a placed component -->
+                    <ui:VisualElement style="position: absolute; left: 300px; top: 200px; width: 100px; height: 140px; background-color: #00979C; border-radius: 4px; justify-content: center; align-items: center; border-width: 2px; border-color: #ffffff;">
+                        <ui:Label text="UNO" style="color: white; font-weight: bold;" />
+                    </ui:VisualElement>
+                     
+                     <!-- Example Wire -->
+                     <ui:VisualElement style="position: absolute; left: 400px; top: 250px; width: 100px; height: 2px; background-color: #00ff00;" />
+
+                     <ui:VisualElement style="position: absolute; left: 500px; top: 240px; width: 20px; height: 20px; background-color: #cc3333; border-radius: 10px; border-width: 1px; border-color: white;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Right Inspector -->
+            <ui:VisualElement class="inspector-panel">
+                <ui:VisualElement class="inspector-header">
+                     <ui:Label text="PROPERTIES" class="palette-header-label" />
+                </ui:VisualElement>
+
+                <ui:ScrollView>
+                    <ui:VisualElement class="property-row">
+                        <ui:Label text="Name" style="color: #a0a0a0; font-size: 12px;" />
+                        <ui:Label text="Arduino Uno" style="color: white; font-size: 12px;" />
+                    </ui:VisualElement>
+                     <ui:VisualElement class="property-row">
+                        <ui:Label text="Voltage" style="color: #a0a0a0; font-size: 12px;" />
+                        <ui:Label text="5V" style="color: white; font-size: 12px;" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

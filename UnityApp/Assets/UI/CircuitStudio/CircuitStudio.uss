@@ -1,0 +1,144 @@
+/* CircuitStudio.uss */
+
+.studio-container {
+    flex-direction: column;
+    flex-grow: 1;
+    background-color: #151515;
+}
+
+/* Toolbar */
+.studio-toolbar {
+    height: 40px;
+    background-color: #252525;
+    border-bottom-width: 1px;
+    border-bottom-color: #303030;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.toolbar-button {
+    background-color: #353535;
+    border-radius: 4px;
+    padding: 6px 12px;
+    margin-right: 8px;
+    color: #cccccc;
+    font-size: 12px;
+    -unity-font-style: bold;
+    border-width: 0;
+}
+
+.toolbar-button:hover {
+    background-color: #454545;
+    color: #ffffff;
+}
+
+.toolbar-button.play-button {
+    background-color: #2e5c3e;
+    color: #a3e6b1;
+}
+
+.toolbar-button.stop-button {
+    background-color: #6e2e2e;
+    color: #e6a3a3;
+}
+
+/* Main Workspace */
+.workspace-split {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+/* Left Palette */
+.palette-panel {
+    width: 200px;
+    background-color: #1e1e1e;
+    border-right-width: 1px;
+    border-right-color: #303030;
+    flex-direction: column;
+}
+
+.palette-header {
+    height: 30px;
+    background-color: #252525;
+    justify-content: center;
+    padding-left: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: #303030;
+}
+
+.palette-header-label {
+    color: #a0a0a0;
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.component-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+    margin: 4px;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #353535;
+}
+
+.component-item:hover {
+    border-color: #4f80f8;
+    background-color: #333333;
+}
+
+.component-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #444;
+    margin-right: 8px;
+    border-radius: 2px;
+}
+
+/* Center Canvas */
+.canvas-area {
+    flex-grow: 1;
+    background-color: #101010;
+    overflow: hidden;
+    position: relative;
+}
+
+.grid-background {
+    /* Rough simulation of a grid till we have a custom shader or texture */
+    width: 10000px;
+    height: 10000px;
+    top: -5000px;
+    left: -5000px;
+    /* In UXML/Unity, repeating backgrounds are tricky without custom styling/drawing. 
+       Using color for now. */
+}
+
+/* Right Inspector */
+.inspector-panel {
+    width: 250px;
+    background-color: #1e1e1e;
+    border-left-width: 1px;
+    border-left-color: #303030;
+    flex-direction: column;
+}
+
+.inspector-header {
+    height: 30px;
+    background-color: #252525;
+    justify-content: center;
+    padding-left: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: #303030;
+}
+
+.property-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: #2a2a2a;
+}

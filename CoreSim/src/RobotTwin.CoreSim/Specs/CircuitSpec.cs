@@ -2,27 +2,30 @@ using System.Collections.Generic;
 
 namespace RobotTwin.CoreSim.Specs
 {
+    public enum SimulationMode
+    {
+        Fast, // Behavioral, C# calculated
+        Accurate // Netlist, SPICE based
+    }
+
     public class CircuitSpec
     {
-        public required string Name { get; set; }
-        public List<ComponentInstance> Components { get; set; } = new List<ComponentInstance>();
-        public List<Connection> Connections { get; set; } = new List<Connection>();
+        public string Id { get; set; }
+        public SimulationMode Mode { get; set; }
+        public List<ComponentSpec> Components { get; set; } = new List<ComponentSpec>();
+        public List<NetSpec> Nets { get; set; } = new List<NetSpec>();
     }
 
-    public class ComponentInstance
+    public class ComponentSpec
     {
-        public required string InstanceID { get; set; }
-        public required string CatalogID { get; set; }
-        public double X { get; set; }
-        public double Y { get; set; }
-        public Dictionary<string, object> ParameterOverrides { get; set; } = new Dictionary<string, object>();
+        public string Id { get; set; }
+        public string Type { get; set; } // e.g. "ArduinoUno", "LED", "Resistor"
+        public Dictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
     }
 
-    public class Connection
+    public class NetSpec
     {
-        public required string FromComponentID { get; set; }
-        public required string FromPin { get; set; }
-        public required string ToComponentID { get; set; }
-        public required string ToPin { get; set; }
+        public string Id { get; set; }
+        public List<string> Nodes { get; set; } = new List<string>(); // "ComponentId.PinName"
     }
 }

@@ -1,6 +1,6 @@
 using UnityEngine;
 using RobotTwin.CoreSim.Specs;
-using RobotTwin.CoreSim.Catalogs;
+
 
 namespace RobotTwin.Game
 {
@@ -48,7 +48,8 @@ namespace RobotTwin.Game
             CurrentWorld = new WorldSpec { Name = "TestWorld" };
             ActiveTemplate = null;
             CurrentProject = null;
-            Debug.Log($"Session Started explicitly: {circuit.Name}");
+            var circuitId = string.IsNullOrWhiteSpace(circuit.Id) ? "<unnamed>" : circuit.Id;
+            Debug.Log($"Session Started explicitly: {circuitId}");
         }
 
         public void StartSession(ProjectManifest project)

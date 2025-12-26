@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Specs;
-using RobotTwin.CoreSim.Catalogs.Templates;
+// using RobotTwin.CoreSim.Specs; // Removed Duplicate
 using RobotTwin.CoreSim.Serialization;
 using RobotTwin.Game;
 using System.Linq;
@@ -52,7 +52,17 @@ namespace RobotTwin.UI
             Debug.Log("Creating New Project...");
             
             // 1. Get Template Spec (Blinky for now)
-            var template = EmptyTemplate.GetSpec();
+            // 1. Get Template Spec (Blinky for now)
+            var template = new TemplateSpec 
+            { 
+                TemplateId = "Empty",
+                DisplayName = "Empty Project",
+                Description = "A clean slate",
+                SystemType = "Generic",
+                DefaultCircuit = new CircuitSpec { Id = "Default", Mode = RobotTwin.CoreSim.Specs.SimulationMode.Fast }, // Resolved Ambiguity
+                DefaultRobot = new RobotSpec { Name = "DefaultBot" },
+                DefaultWorld = new WorldSpec { Name = "DefaultWorld" }
+            };
             
             // 2. Create Manifest
             string projectName = $"Project_{System.DateTime.Now:MMdd_HHmm}";
@@ -75,7 +85,7 @@ namespace RobotTwin.UI
             if (SessionManager.Instance != null)
             {
                 SessionManager.Instance.StartSession(manifest);
-                UnityEngine.SceneManagement.SceneManager.LoadScene(2); // Jump to RunMode
+                UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Jump to CircuitStudio
             }
         }
 
@@ -96,7 +106,7 @@ namespace RobotTwin.UI
             if (manifest != null && SessionManager.Instance != null)
             {
                 SessionManager.Instance.StartSession(manifest);
-                UnityEngine.SceneManagement.SceneManager.LoadScene(2);
+                UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Jump to CircuitStudio
             }
         }
 
@@ -127,7 +137,7 @@ namespace RobotTwin.UI
                     if (m != null && SessionManager.Instance != null)
                     {
                         SessionManager.Instance.StartSession(m);
-                        UnityEngine.SceneManagement.SceneManager.LoadScene(2);
+                        UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Jump to CircuitStudio
                     }
                 });
 

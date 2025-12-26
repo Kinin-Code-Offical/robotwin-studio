@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+    <ui:Style src="../Shared/Sidebar.uss" />
+
+    <ui:VisualElement style="flex-direction: row; height: 100%; width: 100%; background-color: #1a1a1a;">
+        <!-- Sidebar Instance -->
+        <ui:Instance template="Sidebar" src="../Shared/Sidebar.uxml" name="MainSidebar" />
+
+        <!-- Main Content Area -->
+        <ui:VisualElement name="ContentArea" style="flex-grow: 1; padding: 24px; background-color: #1a1a1a;">
+            <!-- Background Pattern Placeholder -->
+            <ui:VisualElement style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.05; background-color: #000000;" />
+            
+            <!-- Dynamic Content Container -->
+            <ui:VisualElement name="RouterOutlet" style="flex-grow: 1; z-index: 1;">
+               <!-- Home View will be instantiated here by default -->
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

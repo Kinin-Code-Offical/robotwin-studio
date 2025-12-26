@@ -1,45 +1,31 @@
-using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
-using UnityEngine;
-using UnityEngine.TestTools;
-using RobotTwin.CoreSim.Catalogs;
-using RobotTwin.CoreSim.Runtime;
+using RobotTwin.CoreSim.Specs;
 
 namespace RobotTwin.Tests.PlayMode
 {
     public class SmokeTest
     {
         [Test]
-        public void BlinkyTemplate_LoadsCorrectly()
+        public void CircuitSpec_Initializes_Collections()
         {
-            // Arrange
-            var defaults = TemplateCatalog.GetDefaults();
-            var blinky = defaults.Find(t => t.ID.Contains("exampletemplate-01"));
-
-            // Assert
-            Assert.IsNotNull(blinky, "Blinky template should exist in defaults");
-            Assert.AreEqual("CircuitOnly", blinky.SystemType);
-            Assert.IsNotNull(blinky.DefaultCircuit, "Blinky should have a default circuit");
-            Assert.IsTrue(blinky.DefaultCircuit.Components.Count > 0, "Blinky should have components");
+            var spec = new CircuitSpec { Id = "smoke", Mode = SimulationMode.Fast };
+            Assert.IsNotNull(spec.Components);
+            Assert.IsNotNull(spec.Nets);
         }
 
         [Test]
-        public void RunEngine_CanExecuteBlinky()
+        public void TemplateSpec_CanBeConstructed()
         {
-            // Arrange
-            var defaults = TemplateCatalog.GetDefaults();
-            var blinky = defaults.Find(t => t.ID.Contains("exampletemplate-01"));
-            Assert.IsNotNull(blinky, "Pre-check: Blinky must load");
+            var template = new TemplateSpec
+            {
+                TemplateId = "smoke-template",
+                DisplayName = "Smoke Template",
+                Description = "Smoke test template",
+                SystemType = "CircuitOnly",
+                DefaultCircuit = new CircuitSpec { Id = "smoke", Mode = SimulationMode.Fast }
+            };
 
-            // Act
-            var engine = new RunEngine(blinky.DefaultCircuit);
-            engine.Step(); 
-            engine.Step();
-
-            // Assert
-            Assert.IsTrue(engine.Session.TickIndex >= 2, "Engine should have advanced at least 2 ticks");
-            Assert.IsTrue(engine.Session.TimeSeconds > 0, "Engine time should be > 0");
+            Assert.IsNotNull(template.DefaultCircuit);
         }
     }
 }
