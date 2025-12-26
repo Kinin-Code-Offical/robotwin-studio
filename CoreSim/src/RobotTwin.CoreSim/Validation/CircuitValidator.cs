@@ -80,7 +80,9 @@ namespace RobotTwin.CoreSim.Validation
                 if (!hasPower) result.Warnings.Add("Active circuit missing Power Source.");
             }
 
-            // Rule 3: Connections integrity
+            // Rule 3: Connections integrity & Net Analysis
+            var adjacency = new Dictionary<string, List<string>>(); // CompID -> connected CompIDs
+            
             if (spec.Connections != null)
             {
                 foreach (var conn in spec.Connections)
@@ -97,10 +99,55 @@ namespace RobotTwin.CoreSim.Validation
                     // Validate Pins if components exist
                     if (fromExists) ValidatePin(conn.FromComponentID, conn.FromPin, spec, definitions, result);
                     if (toExists) ValidatePin(conn.ToComponentID, conn.ToPin, spec, definitions, result);
+
+                    // Short Circuit Check (Direct Power to GND)
+                    if (fromExists && toExists)
+                    {
+                        var fromDef = GetDefinition(spec, definitions, conn.FromComponentID);
+                        var toDef = GetDefinition(spec, definitions, conn.ToComponentID);
+
+                        if (fromDef != null && toDef != null)
+                        {
+                            if ((fromDef.ID == "gnd" && toDef.Type == ComponentType.Source) ||
+                                (toDef.ID == "gnd" && fromDef.Type == ComponentType.Source))
+                            {
+                                // Check if it's actually the positive rail
+                                var sourcePin = (fromDef.Type == ComponentType.Source) ? conn.FromPin : conn.ToPin;
+                                if (IsPositiveRail(sourcePin))
+                                {
+                                    result.Errors.Add($"Short Circuit detected between {conn.FromComponentID} (Power) and {conn.ToComponentID} (GND).");
+                                    result.IsValid = false;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
+            // Rule 4: Basic Power Budget
+            // Simple logic: If we have active components, ensure we have at least one source.
+            // (Already covered by existing logic, but let's make it more explicit about "Budget")
+            if (hasActive && !hasPower) 
+            {
+                 // ensure we didn't double add
+                 if (!result.Warnings.Any(w => w.Contains("missing Power Source")))
+                    result.Warnings.Add("Power Budget Breach: Active components present but no Power Source.");
+            }
+
             return result;
+        }
+
+        private static bool IsPositiveRail(string pinName)
+        {
+            var p = pinName.ToUpperInvariant();
+            return p.Contains("VCC") || p.Contains("5V") || p.Contains("3.3V") || p.Contains("VIN") || p.Contains("VDD");
+        }
+
+        private static ComponentDefinition? GetDefinition(CircuitSpec spec, List<ComponentDefinition> defs, string instId)
+        {
+            var comp = spec.Components.FirstOrDefault(c => c.InstanceID == instId);
+            if (comp == null) return null;
+            return defs.FirstOrDefault(d => d.ID == comp.CatalogID);
         }
 
         private static bool ComponentExists(CircuitSpec spec, string id)

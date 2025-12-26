@@ -1,8 +1,9 @@
 # Last Run Status
 **Date**: 2025-12-26
-**Session**: Supreme Autonomous Ascension & Persistence
+**Session**: MVP-0 Completion & RC-1 Ascension
+**Tier**: HEAVY
 **Outcome**: SUCCESS
-**Tests**: All Green (CoreSim)
-**UI**: Overhauled (White Text, Flexbox)
-**Persistence**: Implemented (.rtwin, ProjectManifest)
-**Branch**: feat/m0-supreme-stability -> main
+**Validation**: CoreSim Validator & Catalogs Implemented.
+**Feature**: JSONL Telemetry & Waveforms (Sine/Step/Ramp).
+**Verification**: UISmokeTests & PlayMode SimulationSmokeTest Added.
+**Infra**: Scripts Autonomous.

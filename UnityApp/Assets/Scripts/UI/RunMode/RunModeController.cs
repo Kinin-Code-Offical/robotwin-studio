@@ -97,8 +97,8 @@ namespace RobotTwin.UI
             _engine = new RunEngine(SessionManager.Instance.CurrentCircuit);
             _recorder = new SimulationRecorder(_runOutputPath);
 
-            _engine.Bus.OnEvent += OnSimulationEvent;
-            _engine.Bus.OnFrame += _recorder.RecordFrame;
+            _recorder.Attach(_engine.Bus);
+            _engine.Bus.OnEvent += OnSimulationEvent; // Keep local subscription for HUD logging
 
             _isRunning = true;
             Debug.Log($"RunMode started. Logs: {_runOutputPath}");

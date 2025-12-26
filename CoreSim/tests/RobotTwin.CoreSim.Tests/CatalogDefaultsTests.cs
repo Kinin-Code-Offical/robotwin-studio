@@ -27,7 +27,7 @@ namespace RobotTwin.CoreSim.Tests
             
             Assert.NotEmpty(defaults);
             
-            var uno = defaults.FirstOrDefault(b => b.ID == "uno");
+            var uno = defaults.FirstOrDefault(b => b.ID == "uno_board");
             Assert.NotNull(uno);
             Assert.Equal("Arduino Uno R3", uno.Name);
             
