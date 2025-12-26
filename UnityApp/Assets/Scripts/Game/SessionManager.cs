@@ -15,6 +15,8 @@ namespace RobotTwin.Game
         public WorldSpec CurrentWorld { get; private set; }
         public TemplateSpec ActiveTemplate { get; private set; }
 
+        public ProjectManifest CurrentProject { get; private set; }
+
         private void Awake()
         {
             if (Instance == null)
@@ -34,6 +36,7 @@ namespace RobotTwin.Game
             CurrentCircuit = template.DefaultCircuit;
             CurrentRobot = template.DefaultRobot;
             CurrentWorld = template.DefaultWorld;
+            CurrentProject = null; // Template mode, not project mode
 
             Debug.Log($"Session Initialized: {template.Name}");
         }
@@ -44,7 +47,19 @@ namespace RobotTwin.Game
             CurrentRobot = new RobotSpec { Name = "TestRobot" };
             CurrentWorld = new WorldSpec { Name = "TestWorld" };
             ActiveTemplate = null;
+            CurrentProject = null;
             Debug.Log($"Session Started explicitly: {circuit.Name}");
+        }
+
+        public void StartSession(ProjectManifest project)
+        {
+            CurrentProject = project;
+            CurrentCircuit = project.Circuit;
+            CurrentRobot = project.Robot;
+            CurrentWorld = project.World;
+            ActiveTemplate = null;
+            
+            Debug.Log($"Session Started from Project: {project.ProjectName}");
         }
     }
 }
