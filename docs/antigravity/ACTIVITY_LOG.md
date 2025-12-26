@@ -103,3 +103,10 @@
     - **Status**: Migrated Shared Info pipeline to Direct Drive Sync (Folder Mirror).
     - **Outcome**: Faster/cleaner context persistence without zip artifacts in Drive root.
 
+
+## 2025-12-26 (CI Stability Fixes)
+- **Run (Fixes)**
+    - Model used: HEAVY
+    - **Status**: Fixed CS8618 Hygiene, Enforced Deterministic Builds, Restored Unity CI Secrets.
+    - **Outcome**: CI and local validation green. Merged PR #73.
+
