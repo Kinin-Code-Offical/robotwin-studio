@@ -1,10 +1,73 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement style="flex-grow: 1; background-color: rgb(40, 40, 40); padding: 20px; align-items: center; justify-content: center;">
-        <ui:VisualElement style="width: 80%; height: 80%; max-width: 1000px;">
-            <ui:Label text="New Project" style="font-size: 24px; color: white; margin-bottom: 20px; -unity-font-style: bold;" />
-            <ui:ListView name="TemplateList" style="flex-grow: 1; background-color: rgb(30, 30, 30); margin-bottom: 20px; border-width: 1px; border-color: white;" />
-            <ui:Label name="DescriptionLabel" text="Description..." style="color: white; margin-bottom: 10px; font-size: 14px;" />
-            <ui:Button name="CreateButton" text="Create Circuit" style="height: 50px; font-size: 16px; background-color: #4CAF50; color: white;" />
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+    <ui:Style src="ProjectWizard.uss" />
+
+    <!-- Root -->
+    <ui:VisualElement name="Root" class="flex-row h-full w-full">
+        
+        <!-- Sidebar -->
+        <ui:VisualElement name="Sidebar" class="w-64 bg-dark border-r flex-col">
+            <!-- Header -->
+            <ui:VisualElement class="h-12 flex-row items-center px-4 bg-darker border-b" style="height: 48px; align-items: center; background-color: var(--unity-darker);">
+                <ui:Label text="ROBOTWIN" class="text-bold text-sm" style="color: var(--unity-text-high);" />
+            </ui:VisualElement>
+
+            <!-- Menu -->
+            <ui:VisualElement class="flex-col mt-2" style="margin-top: 8px;">
+                <ui:Button name="NavHome" text="Home" class="sidebar-btn" />
+                <ui:Button name="NavProjects" text="Projects" class="sidebar-btn" />
+                <ui:Button name="NavTemplates" text="Templates" class="sidebar-btn" />
+            </ui:VisualElement>
+            
+            <ui:VisualElement class="flex-grow" />
+
+            <!-- Footer -->
+            <ui:VisualElement class="p-4 border-t" style="border-top-width: 1px; border-color: var(--unity-border);">
+                <ui:Label text="v1.0.4 - Stable" class="text-xs" style="color: var(--unity-text-dim);" />
+            </ui:VisualElement>
         </ui:VisualElement>
+
+        <!-- Main Content -->
+        <ui:VisualElement name="Content" class="flex-grow bg-base p-6">
+            
+            <!-- Hero Header -->
+            <ui:VisualElement class="border-b pb-4" style="padding-bottom: 16px;">
+                <ui:Label text="Welcome to Robotwin Studio" class="hero-title" />
+            </ui:VisualElement>
+
+            <!-- Action Cards Grid -->
+            <ui:VisualElement class="grid-cols-3 mt-6 flex-row" style="margin-top: 24px; justify-content: flex-start; flex-wrap: wrap;">
+                
+                <!-- New Project Card -->
+                <ui:Button name="NewProjectBtn" class="action-card">
+                    <ui:Label text="+" class="card-icon" />
+                    <ui:Label text="New Project" class="card-title" />
+                    <ui:Label text="Create from template" class="card-desc" />
+                </ui:Button>
+
+                <!-- Open Project Card (Stub) -->
+                <ui:Button name="OpenProjectBtn" class="action-card">
+                    <ui:Label text="O" class="card-icon" />
+                    <ui:Label text="Open Project" class="card-title" />
+                    <ui:Label text="Load existing .rtwin" class="card-desc" />
+                </ui:Button>
+
+                 <!-- Import CAD Card (Stub) -->
+                <ui:Button name="ImportCadBtn" class="action-card">
+                    <ui:Label text="I" class="card-icon" />
+                    <ui:Label text="Import CAD" class="card-title" />
+                    <ui:Label text="Convert STEP/OBJ" class="card-desc" />
+                </ui:Button>
+
+            </ui:VisualElement>
+
+            <!-- Recent Projects -->
+            <ui:VisualElement class="mt-8" style="margin-top: 32px; flex-grow: 1;">
+                <ui:Label text="Recent Projects" class="section-title" />
+                <ui:ScrollView name="RecentProjectsList" class="flex-grow mt-4" />
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>

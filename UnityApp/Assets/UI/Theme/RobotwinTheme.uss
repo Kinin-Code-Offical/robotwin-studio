@@ -1,0 +1,83 @@
+:root {
+    --unity-base: #383838;
+    --unity-dark: #2d2d2d;
+    --unity-darker: #222222;
+    --unity-light: #424242;
+    --unity-border: #1e1e1e;
+    --unity-text: #d1d1d1;
+    --unity-text-high: #ffffff;
+    --unity-text-dim: #9ca3af;
+    --unity-accent: #4f80f8;
+    --unity-accent-hover: #3e66c7;
+    
+    /* Font from source */
+    -unity-font-definition: resource('Fonts/Inter-Regular SDF'); /* Assumption, falling back to default if missing */
+}
+
+/* Utility Classes */
+.flex-row {
+    flex-direction: row;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.w-64 {
+    width: 256px;
+}
+
+.flex-grow {
+    flex-grow: 1;
+}
+
+.p-4 {
+    padding: 16px;
+}
+
+.p-6 {
+    padding: 24px;
+}
+
+.px-4 {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.bg-dark {
+    background-color: var(--unity-dark);
+}
+
+.bg-base {
+    background-color: var(--unity-base);
+}
+
+.border-r {
+    border-right-width: 1px;
+    border-color: var(--unity-border);
+}
+
+.border-b {
+    border-bottom-width: 1px;
+    border-color: var(--unity-border);
+}
+
+.text-bold {
+    -unity-font-style: bold;
+}
+
+.text-sm {
+    font-size: 14px;
+}
+
+.text-xs {
+    font-size: 12px;
+}
