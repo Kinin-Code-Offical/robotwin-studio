@@ -1,3 +1,4 @@
+{
     "name": "RobotTwin.Tests.PlayMode",
     "references": [
         "UnityEngine.TestRunner",

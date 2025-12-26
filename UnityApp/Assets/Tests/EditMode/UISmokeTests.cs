@@ -37,9 +37,9 @@ namespace RobotTwin.Tests.EditMode
 
             var root = tree.CloneTree();
             
-            Assert.IsNotNull(root.Q<ListView>("TemplateList"), "TemplateList missing");
-            Assert.IsNotNull(root.Q<Button>("CreateButton"), "CreateButton missing");
-            Assert.IsNotNull(root.Q<Label>("DescriptionLabel"), "DescriptionLabel missing");
+            Assert.IsNotNull(root.Q<Button>("NewProjectBtn"), "NewProjectBtn missing");
+            Assert.IsNotNull(root.Q<Button>("OpenProjectBtn"), "OpenProjectBtn missing");
+            Assert.IsNotNull(root.Q<ScrollView>("RecentProjectsList"), "RecentProjectsList missing");
         }
     }
 }

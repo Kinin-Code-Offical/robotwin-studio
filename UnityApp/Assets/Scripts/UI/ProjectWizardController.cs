@@ -25,6 +25,11 @@ namespace RobotTwin.UI
             Directory.CreateDirectory(_projectsDir);
 
             var root = _doc.rootVisualElement;
+            if (root == null)
+            {
+                Debug.LogError("[ProjectWizardController] RootVisualElement is NULL! Check UXML/USS for errors.");
+                return;
+            }
 
             // Wire Actions
             root.Q<Button>("NewProjectBtn")?.RegisterCallback<ClickEvent>(OnNewProjectClicked);
@@ -47,7 +52,7 @@ namespace RobotTwin.UI
             Debug.Log("Creating New Project...");
             
             // 1. Get Template Spec (Blinky for now)
-            var template = BlinkyTemplate.GetSpec();
+            var template = EmptyTemplate.GetSpec();
             
             // 2. Create Manifest
             string projectName = $"Project_{System.DateTime.Now:MMdd_HHmm}";
@@ -119,7 +124,7 @@ namespace RobotTwin.UI
                 row.RegisterCallback<ClickEvent>(e => 
                 {
                     var m = SimulationSerializer.LoadProject(file);
-                    if (m != null)
+                    if (m != null && SessionManager.Instance != null)
                     {
                         SessionManager.Instance.StartSession(m);
                         UnityEngine.SceneManagement.SceneManager.LoadScene(2);

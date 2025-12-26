@@ -1,4 +1,4 @@
-$unityPath = "C:\Program Files\Unity\Hub\Editor\2022.3.10f1\Editor\Unity.exe" # Adjust as needed or use Env Var
+$unityPath = "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" # Adjust as needed or use Env Var
 $projectPath = "C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\UnityApp"
 $buildPath = "C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\build\RobotwinStudio.exe"
 
@@ -39,11 +39,13 @@ if ($unityExe) {
     $process = Start-Process -FilePath $unityExe -ArgumentList "-quit", "-batchmode", "-projectPath", "`"$projectPath`"", "-buildWindowsPlayer", "`"$buildPath`"", "-logFile", "`"build_log.txt`"" -Wait -PassThru
     if ($process.ExitCode -eq 0) {
         Write-Host "Build Success!"
-    } else {
+    }
+    else {
         Write-Host "Build Failed with Exit Code $($process.ExitCode). Check build_log.txt."
         exit 1
     }
-} else {
+}
+else {
     Write-Host "Unity Editor not found in standard paths. Creating MOCK build artifact for simulation continuity."
     Set-Content -Path $buildPath -Value "Mock Executable Content"
     Write-Host "Mock Build Created: $buildPath"

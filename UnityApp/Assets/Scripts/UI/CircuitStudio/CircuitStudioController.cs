@@ -31,6 +31,11 @@ namespace RobotTwin.UI
             _doc = GetComponent<UIDocument>();
             if (_doc == null) return;
             var root = _doc.rootVisualElement;
+            if (root == null)
+            {
+                Debug.LogError("[CircuitStudioController] RootVisualElement is NULL! Check UXML/USS for errors.");
+                return;
+            }
 
             _paletteContainer = root.Q("PaletteContainer");
             _canvasContainer = root.Q("CanvasContainer");
@@ -205,7 +210,7 @@ namespace RobotTwin.UI
 
         private void OnValidateClicked(ClickEvent evt)
         {
-            var result = CircuitValidator.Validate(_currentCircuit);
+            var result = CircuitValidator.ValidateCircuit(_currentCircuit);
             string msg = result.IsValid ? "Valid" : "Invalid!";
             if (result.Errors.Count > 0) msg += " Errors: " + string.Join("; ", result.Errors);
             if (result.Warnings.Count > 0) msg += " Warnings: " + string.Join("; ", result.Warnings);
