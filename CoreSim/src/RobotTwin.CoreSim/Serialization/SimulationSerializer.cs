@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RobotTwin.CoreSim.Specs;
 
 namespace RobotTwin.CoreSim.Serialization
 {
@@ -23,7 +24,21 @@ namespace RobotTwin.CoreSim.Serialization
 
         public static T? Deserialize<T>(string json)
         {
-            return JsonSerializer.Deserialize<T>(json, _options);
+            return JsonSerializer.Deserialize<T>(json, _options); // Reverted 'Options' to '_options' to maintain consistency with existing private field
+        }
+
+        // Persistence
+        public static void SaveProject(ProjectManifest manifest, string filePath)
+        {
+            var json = Serialize(manifest);
+            File.WriteAllText(filePath, json);
+        }
+
+        public static ProjectManifest? LoadProject(string filePath)
+        {
+            if (!File.Exists(filePath)) return null;
+            var json = File.ReadAllText(filePath);
+            return Deserialize<ProjectManifest>(json);
         }
     }
 }

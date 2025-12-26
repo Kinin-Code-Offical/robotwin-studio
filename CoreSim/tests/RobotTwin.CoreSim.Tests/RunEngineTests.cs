@@ -12,7 +12,7 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void Step_AdvancesTimeAndTick()
         {
-            var engine = new RunEngine(new CircuitSpec());
+            var engine = new RunEngine(new CircuitSpec { Name = "TestCircuit" });
             Assert.Equal(0, engine.Session.TickIndex);
             Assert.Equal(0f, engine.Session.TimeSeconds);
 
@@ -25,8 +25,8 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void Determinism_SameSeed_ProducesSameFrames()
         {
-            var engine1 = new RunEngine(new CircuitSpec(), seed: 12345);
-            var engine2 = new RunEngine(new CircuitSpec(), seed: 12345);
+            var engine1 = new RunEngine(new CircuitSpec { Name = "TestCircuit" }, seed: 12345);
+            var engine2 = new RunEngine(new CircuitSpec { Name = "TestCircuit" }, seed: 12345);
 
             engine1.Step();
             engine2.Step();
@@ -54,6 +54,14 @@ namespace RobotTwin.CoreSim.Tests
         public void Recorder_WritesFiles()
         {
             var tempDir = Path.Combine(Path.GetTempPath(), "CoreSimTest_" + System.Guid.NewGuid());
+            var spec = new CircuitSpec 
+            { 
+                Name = "Test Circuit", 
+                Components = new List<ComponentInstance>
+                {
+                    new ComponentInstance { InstanceID = "led1", CatalogID = "led", ParameterOverrides = new Dictionary<string, object>() }
+                }
+            };
             try
             {
                 using (var recorder = new SimulationRecorder(tempDir))

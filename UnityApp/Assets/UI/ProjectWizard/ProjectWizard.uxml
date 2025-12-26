@@ -1,8 +1,10 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement style="flex-grow: 1; background-color: rgb(40, 40, 40); padding: 20px;">
-        <ui:Label text="New Project" style="font-size: 24px; color: white; margin-bottom: 20px;" />
-        <ui:ListView name="TemplateList" style="flex-grow: 1; background-color: rgb(30, 30, 30); margin-bottom: 20px;" />
-        <ui:Label name="DescriptionLabel" text="Description..." style="color: grey; margin-bottom: 10px;" />
-        <ui:Button name="CreateButton" text="Create Circuit" style="height: 40px;" />
+    <ui:VisualElement style="flex-grow: 1; background-color: rgb(40, 40, 40); padding: 20px; align-items: center; justify-content: center;">
+        <ui:VisualElement style="width: 80%; height: 80%; max-width: 1000px;">
+            <ui:Label text="New Project" style="font-size: 24px; color: white; margin-bottom: 20px; -unity-font-style: bold;" />
+            <ui:ListView name="TemplateList" style="flex-grow: 1; background-color: rgb(30, 30, 30); margin-bottom: 20px; border-width: 1px; border-color: white;" />
+            <ui:Label name="DescriptionLabel" text="Description..." style="color: white; margin-bottom: 10px; font-size: 14px;" />
+            <ui:Button name="CreateButton" text="Create Circuit" style="height: 50px; font-size: 16px; background-color: #4CAF50; color: white;" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
