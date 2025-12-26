@@ -25,8 +25,8 @@ namespace RobotTwin.CoreSim.Tests
                 Name = "Dupes",
                 Components = new List<ComponentInstance>
                 {
-                    new ComponentInstance { InstanceID = "c1", CatalogID = "resistor" },
-                    new ComponentInstance { InstanceID = "c1", CatalogID = "led" }
+                    new ComponentInstance { InstanceID = "c1", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() },
+                    new ComponentInstance { InstanceID = "c1", CatalogID = "led", ParameterOverrides = new Dictionary<string, object>() }
                 }
             };
             var result = CircuitValidator.Validate(spec);
@@ -43,11 +43,11 @@ namespace RobotTwin.CoreSim.Tests
                 Name = "BadConn",
                 Components = new List<ComponentInstance>
                 {
-                    new ComponentInstance { InstanceID = "c1", CatalogID = "resistor" }
+                    new ComponentInstance { InstanceID = "c1", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() }
                 },
                 Connections = new List<Connection>
                 {
-                    new Connection { FromComponentID = "c1", ToComponentID = "GHOST" }
+                    new Connection { FromComponentID = "c1", FromPin = "1", ToComponentID = "GHOST", ToPin = "GHOST" }
                 }
             };
             var result = CircuitValidator.Validate(spec);

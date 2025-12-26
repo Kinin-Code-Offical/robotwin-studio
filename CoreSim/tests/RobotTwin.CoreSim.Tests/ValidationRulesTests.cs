@@ -33,8 +33,8 @@ namespace RobotTwin.CoreSim.Tests
                 Name = "NoPower",
                 Components = new List<ComponentInstance>
                 {
-                    new ComponentInstance { InstanceID = "led1", CatalogID = "led" },
-                    new ComponentInstance { InstanceID = "gnd", CatalogID = "gnd" }
+                     new ComponentInstance { InstanceID = "c1", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() },
+                     new ComponentInstance { InstanceID = "c2", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() }
                 }
             };
 
@@ -47,16 +47,15 @@ namespace RobotTwin.CoreSim.Tests
         {
             var spec = new CircuitSpec
             {
-                Name = "BadPin",
-                Components = new List<ComponentInstance>
-                {
-                    new ComponentInstance { InstanceID = "r1", CatalogID = "resistor" },
-                    new ComponentInstance { InstanceID = "r2", CatalogID = "resistor" }
-                },
-                Connections = new List<Connection>
-                {
-                    new Connection { FromComponentID = "r1", FromPin = "1", ToComponentID = "r2", ToPin = "999" } // 999 invalid
-                }
+                 Name = "Dangling",
+                 Components = new List<ComponentInstance>
+                 {
+                     new ComponentInstance { InstanceID = "c1", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() }
+                 },
+                 Connections = new List<Connection>
+                 {
+                     new Connection { FromComponentID = "c1", FromPin = "99", ToComponentID = "c2", ToPin = "1" }
+                 }
             };
 
             var result = CircuitValidator.Validate(spec);
