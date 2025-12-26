@@ -15,8 +15,8 @@ namespace RobotTwin.CoreSim.Tests
                 Name = "NoGND",
                 Components = new List<ComponentInstance>
                 {
-                    new ComponentInstance { InstanceID = "led1", CatalogID = "led" },
-                    new ComponentInstance { InstanceID = "pwr", CatalogID = "source_5v" }
+                    new ComponentInstance { InstanceID = "led1", CatalogID = "led", ParameterOverrides = new Dictionary<string, object>() },
+                    new ComponentInstance { InstanceID = "pwr", CatalogID = "source_5v", ParameterOverrides = new Dictionary<string, object>() }
                 }
             };
 
@@ -33,8 +33,8 @@ namespace RobotTwin.CoreSim.Tests
                 Name = "NoPower",
                 Components = new List<ComponentInstance>
                 {
-                     new ComponentInstance { InstanceID = "c1", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() },
-                     new ComponentInstance { InstanceID = "c2", CatalogID = "resistor", ParameterOverrides = new Dictionary<string, object>() }
+                     new ComponentInstance { InstanceID = "c1", CatalogID = "led", ParameterOverrides = new Dictionary<string, object>() },
+                     new ComponentInstance { InstanceID = "c2", CatalogID = "led", ParameterOverrides = new Dictionary<string, object>() }
                 }
             };
 
@@ -71,9 +71,9 @@ namespace RobotTwin.CoreSim.Tests
                 Name = "Good",
                 Components = new List<ComponentInstance>
                 {
-                    new ComponentInstance { InstanceID = "pwr", CatalogID = "source_5v" },
-                    new ComponentInstance { InstanceID = "gnd", CatalogID = "gnd" },
-                    new ComponentInstance { InstanceID = "led1", CatalogID = "led" }
+                    new ComponentInstance { InstanceID = "pwr", CatalogID = "source_5v", ParameterOverrides = new Dictionary<string, object>() },
+                    new ComponentInstance { InstanceID = "gnd", CatalogID = "gnd", ParameterOverrides = new Dictionary<string, object>() },
+                    new ComponentInstance { InstanceID = "led1", CatalogID = "led", ParameterOverrides = new Dictionary<string, object>() }
                 },
                 Connections = new List<Connection>
                 {
