@@ -117,3 +117,17 @@
     - **Status**: Implemented Blinky Template (Issue #31).
     - **Outcome**: Clean architecture for templates (BlinkyTemplate.cs). Plugins synced.
 
+
+## 2025-12-26 (Engine & Telemetry)
+- **Run (Feature)**
+    - Model used: HEAVY
+    - **Status**: Implemented Issue #30.
+    - **Outcome**: Restored legacy RunEngine/Recorder. Passed Unity Plugin Sync.
+
+
+## 2025-12-26 (Smoke Tests)
+- **Run (Feature)**
+    - Model used: HEAVY
+    - **Status**: Implemented Issue #32.
+    - **Outcome**: Added PlayMode tests and enabled in CI.
+

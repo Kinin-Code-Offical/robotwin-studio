@@ -10,7 +10,7 @@ on:
 jobs:
   probe:
     name: Probe Unity Environment
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     outputs:
       run_unity: ${{ steps.check_secret.outputs.run_unity }}
       unity_version: ${{ steps.get_version.outputs.unity_version }}
@@ -58,7 +58,7 @@ jobs:
     name: Unity EditMode Tests
     needs: probe
     if: needs.probe.outputs.run_unity == 'true'
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
