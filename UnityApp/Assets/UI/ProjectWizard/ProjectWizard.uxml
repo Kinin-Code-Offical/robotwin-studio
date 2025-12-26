@@ -9,7 +9,7 @@
         <ui:VisualElement name="Sidebar" class="w-64 bg-dark border-r flex-col">
             <!-- Header -->
             <ui:VisualElement class="h-12 flex-row items-center px-4 bg-darker border-b">
-                <ui:Label text="ROBOTWIN" class="text-bold text-sm" style="color: var(--unity-text-high);" />
+                <ui:Label text="ROBOTWIN" class="text-bold text-sm text-high" />
             </ui:VisualElement>
 
             <!-- Menu -->
@@ -22,8 +22,8 @@
             <ui:VisualElement class="flex-grow" />
 
             <!-- Footer -->
-            <ui:VisualElement class="p-4 border-t" style="border-top-width: 1px; border-color: var(--unity-border);">
-                <ui:Label text="v1.0.4 - Stable" class="text-xs" style="color: var(--unity-text-dim);" />
+            <ui:VisualElement class="p-4 border-t">
+                <ui:Label text="v1.0.4 - Stable" class="text-xs text-dim" />
             </ui:VisualElement>
         </ui:VisualElement>
 
