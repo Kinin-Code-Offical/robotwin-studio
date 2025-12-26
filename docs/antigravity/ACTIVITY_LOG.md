@@ -136,5 +136,5 @@
 - **Run (Maintenance)**
     - Model used: HEAVY
     - **Status**: Enforced C# 11 `required` properties and fixed CS8618 warnings.
-    - **Outcome**: Added `Polyfills.cs` for netstandard2.1 support. Synced Unity plugins (hash match).
+    - **Outcome**: Added `Polyfills.cs` for netstandard2.1 support. Synced Unity plugins (hash match). Fixed `ci.yml` SDK setup order.
 
