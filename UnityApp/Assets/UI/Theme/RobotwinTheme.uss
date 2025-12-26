@@ -60,6 +60,10 @@
     background-color: var(--unity-base);
 }
 
+.bg-darker {
+    background-color: var(--unity-darker);
+}
+
 .border-r {
     border-right-width: 1px;
     border-color: var(--unity-border);

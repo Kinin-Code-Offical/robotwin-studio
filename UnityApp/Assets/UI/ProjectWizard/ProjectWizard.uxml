@@ -8,7 +8,7 @@
         <!-- Sidebar -->
         <ui:VisualElement name="Sidebar" class="w-64 bg-dark border-r flex-col">
             <!-- Header -->
-            <ui:VisualElement class="h-12 flex-row items-center px-4 bg-darker border-b" style="height: 48px; align-items: center; background-color: var(--unity-darker);">
+            <ui:VisualElement class="h-12 flex-row items-center px-4 bg-darker border-b">
                 <ui:Label text="ROBOTWIN" class="text-bold text-sm" style="color: var(--unity-text-high);" />
             </ui:VisualElement>
 
