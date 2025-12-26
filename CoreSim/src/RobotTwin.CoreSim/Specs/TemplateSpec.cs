@@ -6,22 +6,22 @@ namespace RobotTwin.CoreSim.Specs
     /// </summary>
     public class TemplateSpec
     {
-        public string TemplateId { get; set; } = string.Empty;
+        public required string TemplateId { get; set; }
         
         // Backward compatibility for UnityApp / Tests
         public string ID { get => TemplateId; set => TemplateId = value; }
 
-        public string DisplayName { get; set; } = string.Empty;
+        public required string DisplayName { get; set; }
         
         // Backward compatibility for UnityApp / Tests
         public string Name { get => DisplayName; set => DisplayName = value; }
 
-        public string Description { get; set; } = string.Empty;
+        public required string Description { get; set; }
 
         /// <summary>
         /// The type of system: "CircuitOnly", "Robot", "Mechatronic", etc.
         /// </summary>
-        public string SystemType { get; set; } = "CircuitOnly";
+        public required string SystemType { get; set; }
 
         /// <summary>
         /// Default Circuit Specification (JSON or ID).
