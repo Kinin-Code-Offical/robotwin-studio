@@ -1,0 +1,117 @@
+/* Sidebar.uss */
+
+.sidebar-container {
+    width: 250px;
+    height: 100%;
+    background-color: #202020;
+    border-right-width: 1px;
+    border-right-color: #303030;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.sidebar-header {
+    height: 48px;
+    background-color: #1a1a1a;
+    border-bottom-width: 1px;
+    border-bottom-color: #303030;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.sidebar-logo-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    -unity-background-image-tint-color: #4f80f8;
+    /* Icon placeholder usually handled by background-image in UXML or code */
+}
+
+.sidebar-title {
+    color: #ffffff;
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+/* Navigation */
+.sidebar-nav {
+    flex-grow: 1;
+    padding-top: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.nav-button {
+    flex-direction: row;
+    align-items: center;
+    height: 36px;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    background-color: transparent;
+    border-width: 0;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-button:hover {
+    background-color: #2a2a2a;
+}
+
+.nav-button.active {
+    background-color: #4f80f8;
+}
+
+.nav-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    -unity-background-image-tint-color: #a0a0a0;
+}
+
+.nav-button:hover .nav-icon {
+    -unity-background-image-tint-color: #ffffff;
+}
+
+.nav-button.active .nav-icon {
+    -unity-background-image-tint-color: #ffffff;
+}
+
+.nav-label {
+    color: #a0a0a0;
+    font-size: 12px;
+    -unity-font-style: normal;
+}
+
+.nav-button:hover .nav-label {
+    color: #ffffff;
+}
+
+.nav-button.active .nav-label {
+    color: #ffffff;
+    -unity-font-style: bold;
+}
+
+/* Footer */
+.sidebar-footer {
+    padding: 16px;
+    background-color: rgba(26, 26, 26, 0.5);
+    border-top-width: 1px;
+    border-top-color: #303030;
+}
+
+.footer-version {
+    color: #a0a0a0;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.footer-build {
+    color: #606060;
+    font-size: 9px;
+    margin-top: 4px;
+}

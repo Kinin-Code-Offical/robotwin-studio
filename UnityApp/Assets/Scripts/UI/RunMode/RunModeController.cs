@@ -2,10 +2,11 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.IO;
 using System.Collections.Generic;
-using RobotTwin.CoreSim.Runtime;
 using RobotTwin.CoreSim.Specs;
-using RobotTwin.CoreSim.Models.Physics;
-using RobotTwin.CoreSim.Models.Power;
+using RobotTwin.CoreSim.Host;
+using RobotTwin.CoreSim.IPC;
+// using RobotTwin.CoreSim.Models.Physics; // Physics disabled for MVP rewrite
+// using RobotTwin.CoreSim.Models.Power;
 using RobotTwin.Game;
 using System.Linq;
 
@@ -35,17 +36,19 @@ namespace RobotTwin.UI
         private ProgressBar _tempBar;
 
         // State
-        private RunEngine _engine;
-        private SimulationRecorder _recorder;
+        private SimHost _host;
+        private IFirmwareClient _client;
+        private CircuitSpec _activeCircuit;
+        
         private bool _isRunning = false;
         private string _runOutputPath;
 
-        // Physics Models
-        private BatteryModel _battery;
-        private ThermalModel _thermal;
+        // Physics Models (Commented out for MVP)
+        // private BatteryModel _battery;
+        // private ThermalModel _thermal;
 
         // Active Waveforms
-        private Dictionary<string, IWaveform> _activeWaveforms = new Dictionary<string, IWaveform>();
+        // private Dictionary<string, IWaveform> _activeWaveforms = new Dictionary<string, IWaveform>();
 
         private void OnEnable()
         {
@@ -86,11 +89,9 @@ namespace RobotTwin.UI
             // Validate critical controls
             if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
 
-            if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
-
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
             root.Q<Button>("OpenLogsBtn")?.RegisterCallback<ClickEvent>(OnOpenLogsClicked);
-            _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal);
+            // _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal); // Legacy Stubbed
 
             StartSimulation();
             InitVisualization(root);
@@ -111,21 +112,28 @@ namespace RobotTwin.UI
             Directory.CreateDirectory(_runOutputPath);
             if (_pathLabel != null) _pathLabel.text = $"Log: {_runOutputPath}";
 
-            _engine = new RunEngine(SessionManager.Instance.CurrentCircuit);
-            _recorder = new SimulationRecorder(_runOutputPath);
+            // INIT HOST
+            _client = new FirmwareClient();
+            var circuit = SessionManager.Instance.CurrentCircuit;
+            _activeCircuit = circuit;
+            // Quick Fix: If circuit has no components, add blinky defaults for test
+            if (circuit.Components.Count == 0)
+            {
+                circuit.Components.Add(new ComponentSpec { Id = "U1", Type = "ArduinoUno" });
+                circuit.Components.Add(new ComponentSpec { Id = "D1", Type = "LED" });
+            }
 
-            _recorder.Attach(_engine.Bus);
-            _engine.Bus.OnEvent += OnSimulationEvent; // Keep local subscription for HUD logging
+            _host = new SimHost(circuit, _client);
+            // _host.StartFirmwareProcess("..."); // Optional: Path to MockFirmware if needed
+            
+            _host.OnTickComplete += HandleHostTick;
+            _host.Start();
 
             _isRunning = true;
-            // Model Init
-            _battery = new BatteryModel(2200.0, 11.1); // 3S LiPo Default
-            _thermal = new ThermalModel { AmbientTempC = 25.0 };
-
             Debug.Log($"RunMode started. Logs: {_runOutputPath}");
 
             // Default Injection (Example)
-            AddWaveform("default_sine", new SineWaveform(1.0, 5.0, 0.0));
+            // AddWaveform("default_sine", new SineWaveform(1.0, 5.0, 0.0));
         }
 
         private void StopSimulation()
@@ -133,16 +141,16 @@ namespace RobotTwin.UI
             if (!_isRunning) return;
             _isRunning = false;
 
-            // Persist Config
-            SaveInjectionConfig();
-
-            _recorder?.Flush();
-            _recorder?.Dispose();
-            _recorder = null;
-            if (_engine != null)
+            if (_host != null)
             {
-                _engine.Bus.OnEvent -= OnSimulationEvent;
-                _engine = null;
+                _host.OnTickComplete -= HandleHostTick;
+                _host.Stop();
+                _host = null;
+            }
+            if (_client != null)
+            {
+                _client.Disconnect();
+                _client = null;
             }
         }
 
@@ -161,41 +169,21 @@ namespace RobotTwin.UI
 
         private void FixedUpdate()
         {
-            if (!_isRunning || _engine == null) return;
-
-            Dictionary<string, double> inputs = null;
-            if (_injectionActiveToggle != null && _injectionActiveToggle.value && _activeWaveforms.Count > 0)
-            {
-                inputs = new Dictionary<string, double>();
-                double t = _engine.Session.TimeSeconds;
-                foreach (var kvp in _activeWaveforms)
-                {
-                    inputs[kvp.Key] = kvp.Value.Sample(t);
-                }
-            }
-
-            _engine.Step(inputs);
-
-            // Step Physics
-            if (_battery != null)
-            {
-                // Fake Load current for MVP: 0.5A constant + sine wave noise
-                double load = 0.5 + (Mathf.Sin((float)_engine.Session.TimeSeconds) * 0.1f);
-                _battery.Drain(load, 0.02); // Fixed timestep assumed 20ms
-            }
-
-            if (_thermal != null)
-            {
-                // Fake Current for Heat: 1.0A
-                _thermal.Update(1.0, 0.02);
-            }
+            // Host runs in own thread, nothing to do here besides maybe input polling
         }
 
+        private void HandleHostTick(double simTime)
+        {
+            // Marshal Key Data to UI Thread if needed
+        }
+
+        /*
         private void OnSimulationEvent(EventLogEntry entry)
         {
             _recorder?.RecordEvent(entry);
             AppendLog($"[{entry.TimeSeconds:F2}] {entry.Code}: {entry.Message}");
         }
+        */
 
         private void AppendLog(string text)
         {
@@ -204,9 +192,9 @@ namespace RobotTwin.UI
 
         private void Update()
         {
-            if (!_isRunning || _engine == null) return;
-            if (_timeLabel != null) _timeLabel.text = $"Time: {_engine.Session.TimeSeconds:F2}s";
-            if (_tickLabel != null) _tickLabel.text = $"Tick: {_engine.Session.TickIndex}";
+            if (!_isRunning || _host == null) return;
+            if (_timeLabel != null) _timeLabel.text = $"Time: {_host.SimTime:F2}s";
+            if (_tickLabel != null) _tickLabel.text = $"Tick: {_host.TickCount}";
 
             UpdateVisualization();
             UpdateTelemetry();
@@ -214,65 +202,39 @@ namespace RobotTwin.UI
 
         private void UpdateTelemetry()
         {
-            if (_battery != null && _batteryBar != null)
-            {
-                // Map range 0-100% capacity
-                double soc = (_battery.RemainingmAh / _battery.CapacitymAh) * 100.0;
-                _batteryBar.value = (float)soc;
-                _batteryBar.title = $"{soc:F1}% ({_battery.GetVoltage(0.5):F2}V)";
-            }
-
-            if (_thermal != null && _tempBar != null)
-            {
-                // Normalize for visual (0 to 100 range, where 100 is overheating)
-                _tempBar.value = (float)_thermal.CurrentTempC;
-                _tempBar.title = $"{_thermal.CurrentTempC:F1}°C";
-                
-                if (_thermal.CurrentTempC > 80) _tempBar.style.color = Color.red;
-                else _tempBar.style.color = Color.white;
-            }
+            // Stubbed for MVP
+            if (_batteryBar != null) _batteryBar.title = "N/A";
+            if (_tempBar != null) _tempBar.title = "N/A";
         }
 
+        /*
         private void OnAddSignal(ClickEvent evt)
         {
-            string name = _newSignalName.value;
-            string type = _waveformType.value;
-            double p1 = _param1.value;
-            double p2 = _param2.value;
-            double p3 = _param3.value;
-
-            IWaveform wf = null;
-            switch (type)
-            {
-                case "Constant": wf = new ConstantWaveform(p1); break;
-                case "Step": wf = new StepWaveform(p1, p2, p3); break; // Init, Final, Time
-                case "Ramp": wf = new RampWaveform(0, p2, p1, p3); break; // St, EndT, StVal, EndVal (Packed weirdly for MVP)
-                case "Sine": wf = new SineWaveform(p2, p1, p3); break; // Freq, Amp, Offset
-                default: wf = new ConstantWaveform(0); break;
-            }
-
-            AddWaveform(name, wf);
+            // Stubbed
         }
 
-        private void AddWaveform(string name, IWaveform wf)
+        private void AddWaveform(string name, object wf)
         {
-            _activeWaveforms[name] = wf;
-            RefreshSignalList();
+            // _activeWaveforms[name] = wf;
+            // RefreshSignalList();
         }
+        */
 
 
 
+        /*
         private void RefreshSignalList()
         {
             if (_signalList == null) return;
             _signalList.Clear();
-            foreach (var kvp in _activeWaveforms)
-            {
-                var row = new Label($"{kvp.Key} ({kvp.Value.GetType().Name})");
-                row.style.color = Color.cyan;
-                _signalList.Add(row);
-            }
+            // foreach (var kvp in _activeWaveforms)
+            // {
+            //    var row = new Label($"{kvp.Key} ({kvp.Value.GetType().Name})");
+            //    row.style.color = Color.cyan;
+            //    _signalList.Add(row);
+            // }
         }
+        */
 
         // --- Visualization Logic ---
         private ScrollView _componentList;
@@ -281,18 +243,18 @@ namespace RobotTwin.UI
         private void InitVisualization(VisualElement root)
         {
             _componentList = root.Q<ScrollView>("ComponentList");
-            if (_componentList == null) return;
+            if (_componentList == null || _activeCircuit == null) return;
 
             _componentList.Clear();
             _componentLabels.Clear();
 
-            foreach (var comp in _engine.Circuit.Components)
+            foreach (var comp in _activeCircuit.Components)
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.justifyContent = Justify.SpaceBetween;
 
-                var nameLbl = new Label($"{comp.InstanceID} ({comp.CatalogID})");
+                var nameLbl = new Label($"{comp.Id} ({comp.Type})");
                 nameLbl.style.color = Color.white;
 
                 var statusLbl = new Label("OFF");
@@ -303,13 +265,13 @@ namespace RobotTwin.UI
                 row.Add(statusLbl);
                 _componentList.Add(row);
 
-                _componentLabels[comp.InstanceID] = statusLbl;
+                _componentLabels[comp.Id] = statusLbl;
             }
         }
 
         private void UpdateVisualization()
         {
-            if (_engine == null) return;
+            if (_host == null) return;
 
             // MVP: Simple heuristic for LEDs (hardcoded for demo effect, real net lookup is todo in CoreSim)
             // Ideally: _engine.GetPinVoltage(compId, pinName)
@@ -323,7 +285,7 @@ namespace RobotTwin.UI
                 // This is a PLACEHOLDER for real net-list lookup
                 if (id.ToLower().Contains("led"))
                 {
-                    bool isOn = (_engine.Session.TimeSeconds % 1.0) < 0.5; // Simulate 1Hz blink
+                    bool isOn = (_host.SimTime % 1.0) < 0.5; // Simulate 1Hz blink
                     lbl.text = isOn ? "ON" : "OFF";
                     lbl.style.color = isOn ? Color.green : Color.gray;
                 }
@@ -339,7 +301,7 @@ namespace RobotTwin.UI
         {
             // MVP: minimal JSON dump of active keys
             var config = new Dictionary<string, string>();
-            foreach (var kvp in _activeWaveforms) config[kvp.Key] = kvp.Value.GetType().Name;
+            // foreach (var kvp in _activeWaveforms) config[kvp.Key] = kvp.Value.GetType().Name;
 
             string json = JsonUtility.ToJson(new SerializationWrapper { keys = config.Keys.ToList(), types = config.Values.ToList() }, true);
             File.WriteAllText(Path.Combine(_runOutputPath, "injection_config.json"), json);
