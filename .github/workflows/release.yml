@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build CoreSim
+        run: dotnet publish CoreSim/CoreSim.sln -c Release -o ./publish/CoreSim
+
+      - name: Build MockFirmware
+        run: dotnet publish CoreSim/src/MockFirmware/MockFirmware.csproj -c Release -r win-x64 --self-contained false -o ./publish/MockFirmware
+
+      - name: Archive artifacts
+        run: Compress-Archive -Path ./publish/* -DestinationPath ./release_artifacts.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release_artifacts.zip
+          generate_release_notes: true
