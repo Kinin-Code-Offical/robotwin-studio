@@ -4,7 +4,7 @@ namespace RobotTwin.CoreSim.Specs
 {
     public class WorldSpec
     {
-        public string Name { get; set; } = string.Empty;
+        public required string Name { get; set; }
         public double Width { get; set; }
         public double Depth { get; set; }
         

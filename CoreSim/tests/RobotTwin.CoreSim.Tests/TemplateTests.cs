@@ -14,8 +14,9 @@ namespace RobotTwin.CoreSim.Tests
         {
             var template = new TemplateSpec
             {
-                ID = "mvp.linefollower.2servo",
+                TemplateId = "mvp.linefollower.2servo",
                 Name = "Line Follower Kit",
+                SystemType = "Robot",
                 DefaultCircuitId = "circuit-lf-1",
                 DefaultRobotId = "robot-lf-1"
             };
@@ -39,7 +40,7 @@ namespace RobotTwin.CoreSim.Tests
         public void CanRegisterTemplateInCatalog()
         {
             var catalog = new TemplateCatalog();
-            var template = new TemplateSpec { ID = "t1", Name = "Test Template" };
+            var template = new TemplateSpec { TemplateId = "t1", DisplayName = "Test Template", Description = "Desc", SystemType = "CircuitOnly" };
 
             catalog.Register(template);
 
