@@ -156,7 +156,11 @@
         - **Core**: Implemented `CircuitValidator` (Net/Power) & `BoardCatalog`.
         - **Feature**: `RunEngine` JSONL output, `RunMode` HUD binding, Waveforms.
         - **Verification**: Added `UISmokeTests` (EditMode) and `SimulationSmokeTest` (PlayMode).
+        - **Verification**: Added `UISmokeTests` (EditMode) and `SimulationSmokeTest` (PlayMode).
         - **Sync**: Updated Unity Plugins with latest CoreSim.
+    - **Final Polish**:
+        - Updated `shared_infos` and `repo_files`.
+        - Verified CI configs and test suite (All Green).
 
 
 
