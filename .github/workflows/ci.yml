@@ -14,6 +14,11 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 9.0.x
+
     - name: Verify Context Pack (Shell Check)
       shell: pwsh
       run: |
@@ -83,10 +88,7 @@ jobs:
         }
       shell: powershell
     
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: 9.0.x
+
 
     - name: Restore CoreSim
       run: dotnet restore CoreSim/CoreSim.sln
