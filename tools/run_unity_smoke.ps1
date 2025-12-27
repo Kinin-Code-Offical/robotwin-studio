@@ -1,5 +1,5 @@
 param (
-    [string]$UnityPath = "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe"
+    [string]$UnityPath = "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe"
 )
 
 if (-not (Test-Path $UnityPath)) {

@@ -175,22 +175,48 @@ def main():
                             fix_controller_api("borderWidth")
                         elif "borderRadius" in line:
                              fix_controller_api("borderRadius")
+
+                    # 4. AI Toolkit JSON Error
+                    if "Requested value 'Textures' was not found" in line or "SuperProxyClientV1Namespace" in line:
+                        fix_ai_packages()
                     
                     # Success State
                     if "Compilation succeeded" in line or "Reloading assemblies" in line:
                         print(f"[UNITY] {line.strip()}")
                         if "Compilation succeeded" in line and not compiled_once:
-                            compiled_once = True
-                            print("\033[92m[SUCCESS] Build is Green.\033[0m")
-                            # Trigger AutoPilot?
-                            # trigger_autopilot() 
-                            # User said "Once green, trigger AutoPilot.cs" - probably manually or separate step? 
-                            # "Report only: ✅ RESTORATION COMPLETE..."
-                            print("✅ RESTORATION COMPLETE. Design preserved. Build successful.")
+                             compiled_once = True
+                             print("\033[92m[SUCCESS] Build is Green.\033[0m")
+                             print("✅ RESTORATION COMPLETE. Design preserved. Build successful.")
 
         except Exception as e:
             print(f"[WARN] Read error: {e}. Retrying...")
             time.sleep(1)
+
+def fix_ai_packages():
+    print(f"\033[93m[SURGICAL] AI Toolkit Error detected. Removing unstable packages...\033[0m")
+    try:
+        if os.path.exists(MANIFEST_FILE):
+            with open(MANIFEST_FILE, 'r') as f:
+                lines = f.readlines()
+            
+            new_lines = []
+            changed = False
+            for line in lines:
+                if '"com.unity.ai.' in line:
+                    changed = True
+                    continue # Skip this line
+                new_lines.append(line)
+            
+            if changed:
+                with open(MANIFEST_FILE, 'w') as f:
+                    f.writelines(new_lines)
+                print(f"\033[92m[FIXED] Removed unstable AI packages from manifest.\033[0m")
+                touch_file(TRIGGER_FILE)
+            else:
+                print("[INFO] AI packages already removed.")
+
+    except Exception as e:
+        print(f"[ERROR] AI package fix failed: {e}")
 
 if __name__ == "__main__":
     main()

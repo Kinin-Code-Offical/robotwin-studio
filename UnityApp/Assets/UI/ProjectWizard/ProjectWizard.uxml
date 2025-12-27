@@ -64,11 +64,6 @@
                     <ui:Button name="BtnViewAll" text="VIEW ALL" class="link-button" />
                 </ui:VisualElement>
 
-                <ui:VisualElement class="search-row">
-                    <ui:VisualElement class="search-icon icon icon-search" />
-                    <ui:TextField name="RecentSearchField" class="search-field" placeholder-text="Search..." />
-                </ui:VisualElement>
-
                 <ui:ScrollView name="RecentProjectsList" class="recent-list" />
             </ui:VisualElement>
 
@@ -80,14 +75,26 @@
                         <ui:Label text="Create Project" class="button-label" />
                     </ui:Button>
                 </ui:VisualElement>
+
+                <ui:VisualElement class="projects-root-row">
+                    <ui:Label text="Project Root" class="root-label" />
+                    <ui:TextField name="ProjectRootField" class="root-field" placeholder-text="Select a project root folder..." />
+                    <ui:Button name="ProjectRootApplyBtn" class="ghost-button">
+                        <ui:Label text="Set Root" class="button-label" />
+                    </ui:Button>
+                    <ui:Button name="ProjectRootOpenBtn" class="ghost-button">
+                        <ui:Label text="Open Folder" class="button-label" />
+                    </ui:Button>
+                </ui:VisualElement>
                 
                 <ui:VisualElement class="projects-toolbar">
                     <ui:VisualElement class="search-row projects-search" style="flex-grow: 1;">
                         <ui:VisualElement class="search-icon icon icon-search" />
                         <ui:TextField name="ProjectsSearchField" class="search-field" placeholder-text="Search projects..." />
                     </ui:VisualElement>
-                    <ui:Button text="Filter" class="filter-button">
-                        <ui:VisualElement class="icon icon-menu" style="width: 12px; height: 12px; margin-right: 5px;" />
+                    <ui:Button name="ProjectsFilterBtn" class="filter-button">
+                        <ui:VisualElement class="icon icon-menu filter-icon" />
+                        <ui:Label name="ProjectsFilterLabel" text="Modified" class="filter-label" />
                     </ui:Button>
                 </ui:VisualElement>
 
@@ -106,11 +113,8 @@
             <!-- VIEW: TEMPLATES -->
             <ui:VisualElement name="TemplatesView" class="view" style="display: none;">
                 <ui:Label text="Templates" class="page-title" />
-                <ui:Label text="Select a starting point." class="page-subtitle" />
-                <ui:VisualElement class="divider" />
-                <ui:ScrollView name="TemplateListContainer" class="templates-grid">
-                    <!-- Template Items populated by Controller -->
-                </ui:ScrollView>
+                <ui:Label text="Select a starting point for your new project." class="page-subtitle" style="margin-bottom: 20px; color: #888;" />
+                <ui:ScrollView name="TemplateListContainer" class="templates-list" />
             </ui:VisualElement>
 
         </ui:VisualElement>
@@ -129,6 +133,31 @@
                 <ui:VisualElement class="context-icon icon icon-trash-2" />
                 <ui:Label text="Remove" class="context-text" />
             </ui:Button>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="DetailsOverlay" class="details-overlay" style="display: none;">
+            <ui:VisualElement class="details-card">
+                <ui:VisualElement class="details-header">
+                    <ui:Label text="Project Details" class="details-title" />
+                    <ui:Button name="DetailsCloseBtn" class="details-close-btn">
+                        <ui:Label text="X" class="details-close-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+
+                <ui:Label name="DetailsName" class="details-item" />
+                <ui:Label name="DetailsPath" class="details-item" />
+                <ui:Label name="DetailsType" class="details-item" />
+                <ui:Label name="DetailsModified" class="details-item" />
+
+                <ui:VisualElement class="details-actions">
+                    <ui:Button name="DetailsOpenFolderBtn" class="ghost-button">
+                        <ui:Label text="Open Folder" class="button-label" />
+                    </ui:Button>
+                    <ui:Button name="DetailsOpenProjectBtn" class="primary-button">
+                        <ui:Label text="Open Project" class="button-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
 
     </ui:VisualElement>
