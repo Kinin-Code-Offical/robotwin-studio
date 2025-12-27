@@ -7,140 +7,142 @@ namespace RobotTwin.UI
     public class ProjectWizardController : MonoBehaviour
     {
         private UIDocument _doc;
-        private VisualElement _projectListContainer;
+        private VisualElement _root;
 
-        private const string SearchRowFocusedClass = "search-row--focused";
-
-        // MOCK DATA (Guarantees UI is never empty)
-        public struct ProjectData { public string Name; public string Type; public string Date; }
-        private readonly List<ProjectData> _mockData = new List<ProjectData>
+        public struct UserProject
         {
-            new ProjectData { Name = "Mars Rover v2", Type = "Robotics", Date = "2h ago" },
-            new ProjectData { Name = "Drone Flight Controller", Type = "PCB", Date = "Yesterday" },
-            new ProjectData { Name = "Home Automation Hub", Type = "IoT", Date = "Oct 22" },
-            new ProjectData { Name = "Bipedal Walker AI", Type = "Sim", Date = "Sep 15" },
-            new ProjectData { Name = "Mini Sumo Robot", Type = "Robotics", Date = "Aug 01" }
-        };
+            public string Name;
+            public string Date;
+            public string Type;
+        }
+
+        public struct Template
+        {
+            public string Title;
+            public string Description;
+            public string IconName;
+        }
+
+        private List<UserProject> _mockProjects;
+        private List<Template> _mockTemplates;
 
         void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
-            if (_doc == null) return;
+            if (_doc == null) { Debug.LogError("Missing UIDocument"); return; }
+            _root = _doc.rootVisualElement;
+            if (_root == null) return;
 
-            var root = _doc.rootVisualElement;
-
-            WireSearchRowFocus(root);
-
-            // 1. Navigation Binding
-            var btnProjects = root.Q<Button>("BtnProjects");
-            var btnHome = root.Q<Button>("BtnHome");
-            var homeView = root.Q("HomeView");
-            var projectsView = root.Q("ProjectsView");
-
-            if (btnProjects != null) btnProjects.clicked += () =>
+            // Mock Data
+            _mockProjects = new List<UserProject>
             {
-                if (homeView != null) homeView.style.display = DisplayStyle.None;
-                if (projectsView != null) projectsView.style.display = DisplayStyle.Flex;
-                PopulateProjects(root);
+                new UserProject { Name = "Mars Rover", Date = "2h ago", Type = "Robotics" },
+                new UserProject { Name = "Home IoT", Date = "Yesterday", Type = "IoT" },
+                new UserProject { Name = "Factory Sim", Date = "Mon", Type = "Industrial" },
+                new UserProject { Name = "Drone Flight", Date = "Oct 22", Type = "Embedded" },
+                new UserProject { Name = "Smart City", Date = "Sep 15", Type = "Sim" }
             };
 
-            if (btnHome != null) btnHome.clicked += () =>
+            _mockTemplates = new List<Template>
             {
-                if (homeView != null) homeView.style.display = DisplayStyle.Flex;
-                if (projectsView != null) projectsView.style.display = DisplayStyle.None;
+                new Template { Title = "Empty", Description = "Clean Slate", IconName = "plus" },
+                new Template { Title = "Blinky", Description = "LED Demo", IconName = "zap" },
+                new Template { Title = "Sensor", Description = "Data Inputs", IconName = "cpu" }
             };
 
-            // 2. Initial Population
-            PopulateProjects(root);
+            InitializeUI();
         }
 
-        private void WireSearchRowFocus(VisualElement root)
+        private void InitializeUI()
         {
-            WireSearchRowFocus(root, "RecentSearchField");
-            WireSearchRowFocus(root, "ProjectsSearchField");
+            BindNavButton("BtnHome", "HomeView");
+            BindNavButton("BtnProjects", "ProjectsView");
+            BindNavButton("BtnTemplates", "TemplatesView");
+            
+            var btnViewAll = _root.Q<Button>("BtnViewAll");
+            if (btnViewAll != null) btnViewAll.clicked += () => SwitchTab("ProjectsView");
+
+            var btnNew = _root.Q<Button>("NewProjectBtn");
+            if (btnNew != null) btnNew.clicked += () => SwitchTab("TemplatesView");
+
+            PopulateProjects();
+            PopulateTemplates();
         }
 
-        private void WireSearchRowFocus(VisualElement root, string textFieldName)
+        private void SwitchTab(string tabName)
         {
-            var field = root.Q<TextField>(textFieldName);
-            if (field == null) return;
-
-            var searchRow = field.parent;
-            if (searchRow == null) return;
-
-            field.RegisterCallback<FocusInEvent>(_ => searchRow.AddToClassList(SearchRowFocusedClass));
-            field.RegisterCallback<FocusOutEvent>(_ => searchRow.RemoveFromClassList(SearchRowFocusedClass));
+            SetDisplay("HomeView", tabName == "HomeView");
+            SetDisplay("ProjectsView", tabName == "ProjectsView");
+            SetDisplay("TemplatesView", tabName == "TemplatesView");
         }
 
-        void PopulateProjects(VisualElement root)
+        private void SetDisplay(string elemName, bool visible)
         {
-            // Try to find container by ID, fallback to creating it if missing
-            _projectListContainer = root.Q<VisualElement>("ProjectListContainer");
+            var elem = _root.Q(elemName);
+            if (elem != null) elem.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
 
-            // Fallback for missing container in UXML
-            if (_projectListContainer == null)
+        private void BindNavButton(string btnName, string targetView)
+        {
+            var btn = _root.Q<Button>(btnName);
+            if (btn != null) btn.clicked += () => SwitchTab(targetView);
+        }
+
+        private void PopulateProjects()
+        {
+            var list = _root.Q<ScrollView>("ProjectListContainer");
+            if (list == null) return;
+            list.Clear();
+
+            foreach (var proj in _mockProjects)
             {
-                var projectsView = root.Q("ProjectsView");
-                if (projectsView != null)
-                {
-                    _projectListContainer = new VisualElement();
-                    _projectListContainer.name = "ProjectListContainer";
-                    projectsView.Add(_projectListContainer);
-                }
-                else
-                {
-                    Debug.LogError("CRITICAL: Neither 'ProjectListContainer' nor 'ProjectsView' found in UXML.");
-                    return;
-                }
-            }
-
-            _projectListContainer.Clear();
-
-            foreach (var data in _mockData)
-            {
-                // Create Card Container Programmatically (Bypass UXML templates for safety)
                 var card = new VisualElement();
-                card.AddToClassList("project-card");
-                card.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
-                card.style.marginBottom = 10;
-                card.style.paddingTop = 10; card.style.paddingBottom = 10; card.style.paddingLeft = 10;
-                card.style.height = 60;
-                card.style.flexDirection = FlexDirection.Row;
-                card.style.justifyContent = Justify.SpaceBetween;
+                card.style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
+                card.style.marginBottom = 5;
+                card.style.paddingLeft = 10;
+                card.style.paddingTop = 10;
+                card.style.paddingBottom = 10;
+                
+                card.style.borderTopLeftRadius = 4;
+                card.style.borderTopRightRadius = 4;
+                card.style.borderBottomLeftRadius = 4;
+                card.style.borderBottomRightRadius = 4;
+
+                var label = new Label($"{proj.Name} ({proj.Type})");
+                label.style.color = Color.white;
+                label.style.unityFontStyleAndWeight = FontStyle.Bold;
+                
+                card.Add(label);
+                list.Add(card);
+            }
+        }
+
+        private void PopulateTemplates()
+        {
+            var list = _root.Q<ScrollView>("TemplateListContainer");
+            if (list == null) return;
+            list.Clear();
+
+            foreach (var tmpl in _mockTemplates)
+            {
+                var card = new VisualElement();
+                card.style.backgroundColor = new StyleColor(new Color(0.25f, 0.25f, 0.25f));
+                card.style.marginRight = 10;
+                card.style.width = 120;
+                card.style.height = 120;
                 card.style.alignItems = Align.Center;
+                card.style.justifyContent = Justify.Center;
 
-                // Info Stack
-                var info = new VisualElement();
-                var nameLbl = new Label(data.Name);
-                nameLbl.style.fontSize = 14;
-                nameLbl.style.unityFontStyleAndWeight = FontStyle.Bold;
-                nameLbl.style.color = new StyleColor(Color.white);
+                card.style.borderTopLeftRadius = 8;
+                card.style.borderTopRightRadius = 8;
+                card.style.borderBottomLeftRadius = 8;
+                card.style.borderBottomRightRadius = 8;
 
-                var typeLbl = new Label($"{data.Type} • {data.Date}");
-                typeLbl.style.fontSize = 11;
-                typeLbl.style.color = new StyleColor(Color.gray);
-
-                info.Add(nameLbl);
-                info.Add(typeLbl);
-
-                // Menu Button
-                var menuBtn = new Button(() => Debug.Log($"Menu: {data.Name}"));
-                menuBtn.text = ""; // No text, just icon
-                menuBtn.AddToClassList("icon-menu"); // Use USS class for PNG icon
-                menuBtn.style.width = 30;
-                menuBtn.style.height = 30;
-                menuBtn.style.backgroundColor = StyleKeyword.None;
-
-                menuBtn.style.borderTopWidth = 0;
-                menuBtn.style.borderBottomWidth = 0;
-                menuBtn.style.borderLeftWidth = 0;
-                menuBtn.style.borderRightWidth = 0;
-                menuBtn.style.alignSelf = Align.Center;
-
-                card.Add(info);
-                card.Add(menuBtn);
-
-                _projectListContainer.Add(card);
+                var lbl = new Label(tmpl.Title);
+                lbl.style.color = Color.white;
+                
+                card.Add(lbl);
+                list.Add(card);
             }
         }
     }

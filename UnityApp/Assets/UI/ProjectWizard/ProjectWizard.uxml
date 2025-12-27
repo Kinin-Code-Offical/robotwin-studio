@@ -11,23 +11,17 @@
             </ui:VisualElement>
             
             <ui:VisualElement class="sidebar-nav">
-                <!-- ID Mismatch Fix: NavHome -> BtnHome -->
                 <ui:Button name="BtnHome" class="nav-button active">
                     <ui:VisualElement class="nav-icon icon-home" />
                     <ui:Label text="Home" class="nav-label" />
                 </ui:Button>
-                <!-- ID Mismatch Fix: NavProjects -> BtnProjects -->
                 <ui:Button name="BtnProjects" class="nav-button">
                     <ui:VisualElement class="nav-icon icon-projects" />
                     <ui:Label text="Projects" class="nav-label" />
                 </ui:Button>
-                <ui:Button name="NavTemplates" class="nav-button">
+                <ui:Button name="BtnTemplates" class="nav-button">
                     <ui:VisualElement class="nav-icon icon-templates" />
                     <ui:Label text="Templates" class="nav-label" />
-                </ui:Button>
-                <ui:Button name="NavSettings" class="nav-button">
-                    <ui:VisualElement class="nav-icon icon-settings" />
-                    <ui:Label text="Settings" class="nav-label" />
                 </ui:Button>
             </ui:VisualElement>
             
@@ -67,7 +61,7 @@
 
                 <ui:VisualElement class="recent-header">
                     <ui:Label text="Recent Projects" class="section-title" />
-                    <ui:Button name="ViewAllBtn" text="VIEW ALL" class="link-button" />
+                    <ui:Button name="BtnViewAll" text="VIEW ALL" class="link-button" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="search-row">
@@ -95,7 +89,6 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
 
-                <!-- ID Mismatch Fix: ProjectsList -> ProjectListContainer -->
                 <ui:ScrollView name="ProjectListContainer" class="projects-list projects-grid" />
             </ui:VisualElement>
 
@@ -104,8 +97,8 @@
                 <ui:Label text="Templates" class="page-title" />
                 <ui:Label text="Select a starting point." class="page-subtitle" />
                 <ui:VisualElement class="divider" />
-                <ui:ScrollView class="templates-grid">
-                    <!-- Template Items would go here -->
+                <ui:ScrollView name="TemplateListContainer" class="templates-grid">
+                    <!-- Template Items populated by Controller -->
                 </ui:ScrollView>
             </ui:VisualElement>
 

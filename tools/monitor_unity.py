@@ -1,56 +1,45 @@
-import requests
 import time
+import os
 import sys
-from datetime import datetime
 
-UNITY_URL = "http://localhost:8085"
-
-def get_status():
-    try:
-        t0 = time.time()
-        requests.get(f"{UNITY_URL}/query?target=ping", timeout=0.5)
-        latency = (time.time() - t0) * 1000
-        return True, latency
-    except requests.exceptions.ConnectionError:
-        return False, 0
-    except Exception:
-        return False, 0
+# Paths
+PROJECT_ROOT = r"c:\BASE\ROBOTWIN-STUDIO\robotwin-studio"
+LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "unity_live_error.log")
 
 def main():
-    print(f"Monitoring Unity at {UNITY_URL}...")
-    print("Press Ctrl+C to stop.")
-    
-    last_status = None
-    
-    try:
+    print(f"Neural Link Active. Monitoring: {LOG_FILE}")
+    print("Waiting for Unity Errors...")
+
+    # Ensure file exists
+    if not os.path.exists(LOG_FILE):
+        try:
+            os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+            with open(LOG_FILE, 'w') as f:
+                f.write("[MONITOR START]\n")
+        except:
+            pass
+
+    # Tail logic
+    with open(LOG_FILE, 'r') as f:
+        # Go to end
+        f.seek(0, 2)
+        
         while True:
-            online, latency = get_status()
+            line = f.readline()
+            if not line:
+                time.sleep(0.1)
+                continue
             
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            
-            if online:
-                status_str = f"ONLINE ({latency:.1f}ms)"
-                color = "\033[92m" # Green
-            else:
-                status_str = "OFFLINE"
-                color = "\033[91m" # Red
-                
-            reset = "\033[0m"
-            
-            # Print status line (overwrite same line if possible, or just log)
-            # Simple logging for now
-            if last_status != online:
-                print(f"[{timestamp}] Status Change: {color}{status_str}{reset}")
-            else:
-                # Optional: specific heartbeat every 10s?
-                # Just sleep fast
-                pass
-                
-            last_status = online
-            time.sleep(1)
-            
-    except KeyboardInterrupt:
-        print("\nStopped.")
+            # Print everything that comes in, highlighting errors
+            val = line.strip()
+            if "[ERROR]" in val or "[EXCEPTION]" in val or "[ASSERT]" in val:
+                print("\n\033[91m================ RED ALERT ================\033[0m")
+                print(f"\033[96m{line.strip()}\033[0m")
+            elif len(val) > 0:
+                 print(line.strip())
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nLink Terminated.")

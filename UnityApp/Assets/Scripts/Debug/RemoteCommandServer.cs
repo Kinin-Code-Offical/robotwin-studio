@@ -101,10 +101,14 @@ namespace RobotTwin.Debugging
                         });
                         break;
 
-                    case "run-tests":
+                     case "run-tests":
                          Enqueue(() =>
                          {
                              Debug.Log("[RemoteCommandServer] Triggering Tests...");
+                             if (AutoPilot.Instance != null)
+                                 AutoPilot.Instance.StartSmokeTest();
+                             else
+                                 Debug.LogError("[RemoteCommandServer] AutoPilot Instance is NULL");
                          });
                         break;
                     
