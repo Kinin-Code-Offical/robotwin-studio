@@ -1,218 +1,146 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace RobotTwin.UI
 {
     public class ProjectWizardController : MonoBehaviour
     {
         private UIDocument _doc;
-        private VisualElement _root;
-        
-        // Views
-        private VisualElement _homeView;
-        private VisualElement _projectsView;
-        private VisualElement _templatesView;
-        private VisualElement[] _allViews;
+        private VisualElement _projectListContainer;
 
-        // Nav
-        private Dictionary<string, Button> _navButtons;
+        private const string SearchRowFocusedClass = "search-row--focused";
 
-        // Data
-        private struct MockProject { public string Id; public string Name; public string Date; public string Type; }
-        private List<MockProject> _projects = new List<MockProject>();
+        // MOCK DATA (Guarantees UI is never empty)
+        public struct ProjectData { public string Name; public string Type; public string Date; }
+        private readonly List<ProjectData> _mockData = new List<ProjectData>
+        {
+            new ProjectData { Name = "Mars Rover v2", Type = "Robotics", Date = "2h ago" },
+            new ProjectData { Name = "Drone Flight Controller", Type = "PCB", Date = "Yesterday" },
+            new ProjectData { Name = "Home Automation Hub", Type = "IoT", Date = "Oct 22" },
+            new ProjectData { Name = "Bipedal Walker AI", Type = "Sim", Date = "Sep 15" },
+            new ProjectData { Name = "Mini Sumo Robot", Type = "Robotics", Date = "Aug 01" }
+        };
 
-        // Context Menu
-        private VisualElement _contextMenu;
-        private string _activeContextItemId;
-
-        private void OnEnable()
+        void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
             if (_doc == null) return;
-            _root = _doc.rootVisualElement;
 
-            GenerateMockData();
-            InitializeUI();
-        }
+            var root = _doc.rootVisualElement;
 
-        private void InitializeUI()
-        {
-            // 1. Resolve Views
-            _homeView = _root.Q<VisualElement>("HomeView");
-            _projectsView = _root.Q<VisualElement>("ProjectsView");
-            _templatesView = _root.Q<VisualElement>("TemplatesView");
-            _allViews = new[] { _homeView, _projectsView, _templatesView };
+            WireSearchRowFocus(root);
 
-            // 2. Resolve Navigation
-            _navButtons = new Dictionary<string, Button> {
-                { "Home", _root.Q<Button>("NavHome") },
-                { "Projects", _root.Q<Button>("NavProjects") },
-                { "Templates", _root.Q<Button>("NavTemplates") },
-                { "Settings", _root.Q<Button>("NavSettings") }
+            // 1. Navigation Binding
+            var btnProjects = root.Q<Button>("BtnProjects");
+            var btnHome = root.Q<Button>("BtnHome");
+            var homeView = root.Q("HomeView");
+            var projectsView = root.Q("ProjectsView");
+
+            if (btnProjects != null) btnProjects.clicked += () =>
+            {
+                if (homeView != null) homeView.style.display = DisplayStyle.None;
+                if (projectsView != null) projectsView.style.display = DisplayStyle.Flex;
+                PopulateProjects(root);
             };
 
-            // Bind Nav Clicks
-            if (_navButtons["Home"] != null) _navButtons["Home"].clicked += () => SwitchView(_homeView, "Home");
-            if (_navButtons["Projects"] != null) _navButtons["Projects"].clicked += () => SwitchView(_projectsView, "Projects");
-            if (_navButtons["Templates"] != null) _navButtons["Templates"].clicked += () => SwitchView(_templatesView, "Templates");
-
-            // 3. Bind Actions
-            _root.Q<Button>("ViewAllBtn")?.RegisterCallback<ClickEvent>(e => SwitchView(_projectsView, "Projects"));
-
-            // 4. Bind Search
-            var searchHome = _root.Q<TextField>("RecentSearchField");
-            var searchProj = _root.Q<TextField>("ProjectsSearchField");
-            
-            searchHome?.RegisterValueChangedCallback(e => RenderList(_root.Q<ScrollView>("RecentProjectsList"), e.newValue, 5));
-            searchProj?.RegisterValueChangedCallback(e => RenderList(_root.Q<ScrollView>("ProjectsList"), e.newValue, 100));
-
-            // 5. Context Menu
-            _contextMenu = _root.Q<VisualElement>("ContextMenu");
-            // Click anywhere on root to close menu
-            _root.RegisterCallback<MouseDownEvent>(e => 
+            if (btnHome != null) btnHome.clicked += () =>
             {
-                // Simple hit test check could go here, but blindly closing is okay if we re-open on specific clicks
-                // However, blocking the menu click itself is needed.
-                if (_contextMenu.style.display == DisplayStyle.Flex)
-                    HideContextMenu();
-            }, TrickleDown.NoTrickleDown);
-
-             _root.Q<Button>("ContextRemoveBtn")?.RegisterCallback<ClickEvent>(e => RemoveProject(_activeContextItemId));
-
-            // Initial Render
-            SwitchView(_homeView, "Home");
-        }
-
-        private void GenerateMockData()
-        {
-            _projects = new List<MockProject> {
-                new MockProject { Id="1", Name = "Mars Rover Rev2", Date = "2h ago", Type = "Robotics" },
-                new MockProject { Id="2", Name = "Drone Flight Controller", Date = "Yesterday", Type = "PCB" },
-                new MockProject { Id="3", Name = "Bipedal Walker AI", Date = "Oct 20", Type = "Simulation" },
-                new MockProject { Id="4", Name = "Home Automation Hub", Date = "Sep 15", Type = "IoT" },
-                new MockProject { Id="5", Name = "Mini Sumo Robot", Date = "Aug 01", Type = "Robotics" },
-                new MockProject { Id="6", Name = "Warehouse Twin", Date = "Jul 22", Type = "Logistics" }
+                if (homeView != null) homeView.style.display = DisplayStyle.Flex;
+                if (projectsView != null) projectsView.style.display = DisplayStyle.None;
             };
+
+            // 2. Initial Population
+            PopulateProjects(root);
         }
 
-        private void SwitchView(VisualElement target, string navKey)
+        private void WireSearchRowFocus(VisualElement root)
         {
-            if (target == null) return;
+            WireSearchRowFocus(root, "RecentSearchField");
+            WireSearchRowFocus(root, "ProjectsSearchField");
+        }
 
-            // Hide all
-            foreach(var v in _allViews) if(v!=null) v.style.display = DisplayStyle.None;
-            
-            // Show target
-            target.style.display = DisplayStyle.Flex;
+        private void WireSearchRowFocus(VisualElement root, string textFieldName)
+        {
+            var field = root.Q<TextField>(textFieldName);
+            if (field == null) return;
 
-            // Update Nav State
-            foreach(var kvp in _navButtons) 
+            var searchRow = field.parent;
+            if (searchRow == null) return;
+
+            field.RegisterCallback<FocusInEvent>(_ => searchRow.AddToClassList(SearchRowFocusedClass));
+            field.RegisterCallback<FocusOutEvent>(_ => searchRow.RemoveFromClassList(SearchRowFocusedClass));
+        }
+
+        void PopulateProjects(VisualElement root)
+        {
+            // Try to find container by ID, fallback to creating it if missing
+            _projectListContainer = root.Q<VisualElement>("ProjectListContainer");
+
+            // Fallback for missing container in UXML
+            if (_projectListContainer == null)
             {
-                if(kvp.Value == null) continue;
-                if(kvp.Key == navKey) kvp.Value.AddToClassList("active");
-                else kvp.Value.RemoveFromClassList("active");
+                var projectsView = root.Q("ProjectsView");
+                if (projectsView != null)
+                {
+                    _projectListContainer = new VisualElement();
+                    _projectListContainer.name = "ProjectListContainer";
+                    projectsView.Add(_projectListContainer);
+                }
+                else
+                {
+                    Debug.LogError("CRITICAL: Neither 'ProjectListContainer' nor 'ProjectsView' found in UXML.");
+                    return;
+                }
             }
 
-            // Refresh Lists
-            if (navKey == "Home") RenderList(_root.Q<ScrollView>("RecentProjectsList"), "", 5);
-            if (navKey == "Projects") RenderList(_root.Q<ScrollView>("ProjectsList"), "", 100);
-        }
+            _projectListContainer.Clear();
 
-        private void RenderList(ScrollView container, string filter, int limit)
-        {
-            if (container == null) return;
-            container.Clear();
-
-            var filtered = _projects
-                .Where(p => string.IsNullOrEmpty(filter) || p.Name.ToLower().Contains(filter.ToLower()))
-                .Take(limit);
-
-            foreach (var proj in filtered)
+            foreach (var data in _mockData)
             {
-                var card = CreateProjectCard(proj);
-                container.Add(card);
-            }
-        }
+                // Create Card Container Programmatically (Bypass UXML templates for safety)
+                var card = new VisualElement();
+                card.AddToClassList("project-card");
+                card.style.backgroundColor = new StyleColor(new Color(0.18f, 0.18f, 0.18f));
+                card.style.marginBottom = 10;
+                card.style.paddingTop = 10; card.style.paddingBottom = 10; card.style.paddingLeft = 10;
+                card.style.height = 60;
+                card.style.flexDirection = FlexDirection.Row;
+                card.style.justifyContent = Justify.SpaceBetween;
+                card.style.alignItems = Align.Center;
 
-        private VisualElement CreateProjectCard(MockProject proj)
-        {
-            // .project-card-item
-            var card = new VisualElement();
-            card.AddToClassList("project-card-item");
+                // Info Stack
+                var info = new VisualElement();
+                var nameLbl = new Label(data.Name);
+                nameLbl.style.fontSize = 14;
+                nameLbl.style.unityFontStyleAndWeight = FontStyle.Bold;
+                nameLbl.style.color = new StyleColor(Color.white);
 
-            // Header
-            var header = new VisualElement();
-            header.AddToClassList("p-header");
-            
-            var icon = new VisualElement();
-            icon.AddToClassList("p-icon");
-            // Vary icon based on type for fun
-            if (proj.Type == "PCB") icon.AddToClassList("icon-cpu");
-            else icon.AddToClassList("icon-box");
+                var typeLbl = new Label($"{data.Type} • {data.Date}");
+                typeLbl.style.fontSize = 11;
+                typeLbl.style.color = new StyleColor(Color.gray);
 
-            var menuBtn = new Button();
-            menuBtn.AddToClassList("p-menu-btn");
-            menuBtn.AddToClassList("icon-more-vertical");
-            menuBtn.RegisterCallback<ClickEvent>(e => 
-            {
-                e.StopPropagation(); // Prevent root closing immediately
-                ShowContextMenu(e, proj.Id);
-            });
+                info.Add(nameLbl);
+                info.Add(typeLbl);
 
-            header.Add(icon);
-            header.Add(menuBtn);
+                // Menu Button
+                var menuBtn = new Button(() => Debug.Log($"Menu: {data.Name}"));
+                menuBtn.text = ""; // No text, just icon
+                menuBtn.AddToClassList("icon-menu"); // Use USS class for PNG icon
+                menuBtn.style.width = 30;
+                menuBtn.style.height = 30;
+                menuBtn.style.backgroundColor = StyleKeyword.None;
 
-            // Info
-            var title = new Label(proj.Name);
-            title.AddToClassList("p-title");
-            
-            var date = new Label(proj.Date);
-            date.AddToClassList("p-date");
+                menuBtn.style.borderTopWidth = 0;
+                menuBtn.style.borderBottomWidth = 0;
+                menuBtn.style.borderLeftWidth = 0;
+                menuBtn.style.borderRightWidth = 0;
+                menuBtn.style.alignSelf = Align.Center;
 
-            var typeBadge = new Label(proj.Type);
-            typeBadge.AddToClassList("p-type-badge");
+                card.Add(info);
+                card.Add(menuBtn);
 
-            card.Add(header);
-            card.Add(title);
-            card.Add(date);
-            card.Add(typeBadge);
-
-            return card;
-        }
-
-        private void ShowContextMenu(ClickEvent evt, string projId)
-        {
-            _activeContextItemId = projId;
-            if (_contextMenu == null) return;
-
-            _contextMenu.style.display = DisplayStyle.Flex;
-            _contextMenu.BringToFront();
-            
-            // Position
-            Vector2 localPos = evt.position; 
-            if (_root != null) localPos = _root.WorldToLocal(evt.position);
-            
-            _contextMenu.style.left = localPos.x - 140; // Shift left to align
-            _contextMenu.style.top = localPos.y + 10;
-        }
-
-        private void HideContextMenu()
-        {
-            if (_contextMenu != null) _contextMenu.style.display = DisplayStyle.None;
-        }
-
-        private void RemoveProject(string id)
-        {
-            var item = _projects.FirstOrDefault(p => p.Id == id);
-            if (!string.IsNullOrEmpty(item.Id))
-            {
-                _projects.Remove(item);
-                HideContextMenu();
-                // Refresh active view
-                if (_homeView.style.display == DisplayStyle.Flex) RenderList(_root.Q<ScrollView>("RecentProjectsList"), "", 5);
-                if (_projectsView.style.display == DisplayStyle.Flex) RenderList(_root.Q<ScrollView>("ProjectsList"), "", 100);
+                _projectListContainer.Add(card);
             }
         }
     }

@@ -11,11 +11,13 @@
             </ui:VisualElement>
             
             <ui:VisualElement class="sidebar-nav">
-                <ui:Button name="NavHome" class="nav-button active">
+                <!-- ID Mismatch Fix: NavHome -> BtnHome -->
+                <ui:Button name="BtnHome" class="nav-button active">
                     <ui:VisualElement class="nav-icon icon-home" />
                     <ui:Label text="Home" class="nav-label" />
                 </ui:Button>
-                <ui:Button name="NavProjects" class="nav-button">
+                <!-- ID Mismatch Fix: NavProjects -> BtnProjects -->
+                <ui:Button name="BtnProjects" class="nav-button">
                     <ui:VisualElement class="nav-icon icon-projects" />
                     <ui:Label text="Projects" class="nav-label" />
                 </ui:Button>
@@ -93,7 +95,8 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
 
-                <ui:ScrollView name="ProjectsList" class="projects-list projects-grid" />
+                <!-- ID Mismatch Fix: ProjectsList -> ProjectListContainer -->
+                <ui:ScrollView name="ProjectListContainer" class="projects-list projects-grid" />
             </ui:VisualElement>
 
             <!-- VIEW: TEMPLATES -->
