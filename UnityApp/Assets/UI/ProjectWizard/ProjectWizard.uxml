@@ -77,8 +77,7 @@
                 <ui:VisualElement class="projects-header">
                     <ui:Label text="Projects" class="page-title" />
                     <ui:Button name="CreateProjectBtn" class="primary-button">
-                        <ui:VisualElement class="button-icon icon icon-plus" />
-                        <ui:Label text="Create New" class="button-label" />
+                        <ui:Label text="Create Project" class="button-label" />
                     </ui:Button>
                 </ui:VisualElement>
                 
@@ -87,9 +86,21 @@
                         <ui:VisualElement class="search-icon icon icon-search" />
                         <ui:TextField name="ProjectsSearchField" class="search-field" placeholder-text="Search projects..." />
                     </ui:VisualElement>
+                    <ui:Button text="Filter" class="filter-button">
+                        <ui:VisualElement class="icon icon-menu" style="width: 12px; height: 12px; margin-right: 5px;" />
+                    </ui:Button>
                 </ui:VisualElement>
 
-                <ui:ScrollView name="ProjectListContainer" class="projects-list projects-grid" />
+                <!-- TABLE HEADER -->
+                <ui:VisualElement class="table-header">
+                    <ui:Label text="NAME" class="col-name header-label" />
+                    <ui:Label text="PATH" class="col-path header-label" />
+                    <ui:Label text="TYPE" class="col-type header-label" />
+                    <ui:Label text="MODIFIED" class="col-date header-label" />
+                    <ui:Label text="ACTIONS" class="col-actions header-label" />
+                </ui:VisualElement>
+
+                <ui:ScrollView name="ProjectListContainer" class="projects-list projects-table" />
             </ui:VisualElement>
 
             <!-- VIEW: TEMPLATES -->
