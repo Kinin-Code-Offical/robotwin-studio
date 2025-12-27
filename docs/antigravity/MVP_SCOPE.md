@@ -179,6 +179,11 @@ MVP must demonstrate at least one deterministic failure scenario, visible live a
   - Version: Auto-detected from `ProjectVersion.txt` (`2022.3.62f3`).
 - **Artifacts**: Shared Info Zip (Drive), Test Results (GitHub Artifacts).
 
+### Tooling & Mission Control
+- **Mission Control**: Web-based Dashboard (Node.js) for remote control and screenshot management.
+- **Python SDK**: `tools/python_console.py` and `tools/monitor_unity.py` for external automation.
+- **HTTP API**: Unity exposes port 8085 for generic `/action` and `/query` commands, enabling language-agnostic testing.
+
 ## 8) Exclusions for MVP (Initial)
 
 - Full SPICE / analog-accurate electronics simulation (behavioral first; architecture ready for plugin later)
