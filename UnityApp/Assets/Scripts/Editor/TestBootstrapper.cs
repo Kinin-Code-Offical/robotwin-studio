@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using System.IO;
 
 namespace RobotTwin.Editor
@@ -27,7 +28,12 @@ namespace RobotTwin.Editor
                 try
                 {
                     File.Delete(TriggerPath);
-                    Debug.Log("[TestBootstrapper] Trigger detected! Starting Play Mode...");
+                    Debug.Log("[TestBootstrapper] Trigger detected! Loading Wizard scene and starting Play Mode...");
+                    EditorSceneManager.OpenScene("Assets/Scenes/Wizard.unity");
+                    
+                    var go = new GameObject("AutoPilot");
+                    go.AddComponent<RobotTwin.Debugging.AutoPilot>();
+                    
                     EditorApplication.isPlaying = true;
                 }
                 catch (System.Exception e)

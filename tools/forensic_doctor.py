@@ -10,9 +10,9 @@ USS_FILE = os.path.join(PROJECT_ROOT, "UnityApp", "Assets", "UI", "ProjectWizard
 CONTROLLER_FILE = os.path.join(PROJECT_ROOT, "UnityApp", "Assets", "Scripts", "UI", "ProjectWizardController.cs")
 TRIGGER_FILE = os.path.join(PROJECT_ROOT, "UnityApp", "Assets", "Scripts", "UI", "ProjectWizardController.cs") # Touching script forces recompile
 
-# Locate Unity Log
+# Locate Unity Log (Default)
 local_app_data = os.environ.get('LOCALAPPDATA', '')
-UNITY_LOG = os.path.join(local_app_data, "Unity", "Editor", "Editor.log")
+DEFAULT_LOG = os.path.join(local_app_data, "Unity", "Editor", "Editor.log")
 
 # Golden Manifest
 GOLDEN_MANIFEST = """{
@@ -71,7 +71,6 @@ def fix_controller():
             with open(CONTROLLER_FILE, 'r') as f:
                 content = f.read()
             
-            # Simple string replace for robustness
             if "style.borderRadius =" in content:
                  new_content = content.replace("style.borderRadius =", "// style.borderRadius replaced\n                style.borderTopLeftRadius = 8;\n                style.borderTopRightRadius = 8;\n                style.borderBottomLeftRadius = 8;\n                style.borderBottomRightRadius =")
                  
@@ -85,31 +84,31 @@ def fix_controller():
 
 def main():
     print("--- FORENSIC DOCTOR [DEEP SCAN ACTIVE] ---")
-    print(f"Targeting Native Log: {UNITY_LOG}")
-
-    if not os.path.exists(UNITY_LOG):
-        # Fallback attempt
+    
+    target_log = DEFAULT_LOG
+    
+    # Path resolution logic
+    if not os.path.exists(target_log):
+        # Fallback
         alt_log = os.path.expandvars(r"C:\Users\%USERNAME%\AppData\Local\Unity\Editor\Editor.log")
         if os.path.exists(alt_log):
-             UNITY_LOG = alt_log
+             target_log = alt_log
         else:
-            print(f"\033[91m[ERROR] Unity Editor log not found at {UNITY_LOG}.\033[0m")
+            print(f"Targeting Native Log: {target_log}")
+            print(f"\033[91m[ERROR] Unity Editor log not found at default locations.\033[0m")
             print("Please open Unity once to generate the log.")
-            # Don't exit, just wait or warn
-            
-    # Polling Loop
+            # We will try to loop anyway in case it appears
+    
+    print(f"Targeting Native Log: {target_log}")
     print("Scanning for compilation errors... (Ctrl+C to stop)")
     
     while True:
-        if not os.path.exists(UNITY_LOG):
+        if not os.path.exists(target_log):
              time.sleep(2)
              continue
 
         try:
-            with open(UNITY_LOG, 'r', encoding='utf-8', errors='ignore') as f:
-                # Go to end initially? Or read all? 
-                # If we read all, we might process old errors. 
-                # Better to tail from *now*.
+            with open(target_log, 'r', encoding='utf-8', errors='ignore') as f:
                 f.seek(0, 2) 
                 
                 while True:
@@ -118,7 +117,6 @@ def main():
                         time.sleep(0.5)
                         continue
                     
-                    # Output for visibility
                     if "error CS" in line or "Exception" in line or "Error" in line:
                          print(f"[UNITY RAW] {line.strip()}")
 
@@ -134,7 +132,6 @@ def main():
                     if "CS1061" in line and ("borderWidth" in line or "borderRadius" in line):
                          fix_controller()
                     
-                    # Auto-Success check
                     if "Reloading assemblies" in line:
                         print("\033[96m[INFO] Unity is reloading assemblies...\033[0m")
         

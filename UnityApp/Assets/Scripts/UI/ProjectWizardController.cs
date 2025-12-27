@@ -103,6 +103,16 @@ namespace RobotTwin.UI
                 card.style.paddingTop = 10;
                 card.style.paddingBottom = 10;
                 
+                // Explicit border widths to avoid ambiguities or old API issues
+                card.style.borderTopWidth = 1;
+                card.style.borderBottomWidth = 1;
+                card.style.borderLeftWidth = 1;
+                card.style.borderRightWidth = 1;
+                card.style.borderTopColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
+                card.style.borderBottomColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
+                card.style.borderLeftColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
+                card.style.borderRightColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
+
                 card.style.borderTopLeftRadius = 4;
                 card.style.borderTopRightRadius = 4;
                 card.style.borderBottomLeftRadius = 4;
@@ -132,6 +142,16 @@ namespace RobotTwin.UI
                 card.style.height = 120;
                 card.style.alignItems = Align.Center;
                 card.style.justifyContent = Justify.Center;
+
+                // Explicit border widths
+                card.style.borderTopWidth = 1;
+                card.style.borderBottomWidth = 1;
+                card.style.borderLeftWidth = 1;
+                card.style.borderRightWidth = 1;
+                card.style.borderTopColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
+                card.style.borderBottomColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
+                card.style.borderLeftColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
+                card.style.borderRightColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
 
                 card.style.borderTopLeftRadius = 8;
                 card.style.borderTopRightRadius = 8;
