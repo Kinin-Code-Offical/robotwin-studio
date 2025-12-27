@@ -91,3 +91,6 @@ docs/antigravity/context_exports/
 .gpt/
 templates/
 /tests/integration/node_modules/
+/tools/dashboard/node_modules/
+/Screenshots/
+/logs/
