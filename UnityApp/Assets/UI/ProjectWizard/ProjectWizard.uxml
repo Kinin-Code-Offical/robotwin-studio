@@ -52,7 +52,7 @@
             </ui:VisualElement>
 
             <ui:VisualElement class="search-row">
-                <ui:TextField name="RecentSearchField" class="search-field" label="" value="Filter recent projects..." />
+                <ui:TextField name="RecentSearchField" class="search-field" label="" value="" />
             </ui:VisualElement>
 
             <ui:ScrollView name="RecentProjectsList" class="recent-list" />

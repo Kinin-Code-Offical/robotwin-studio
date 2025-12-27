@@ -7,7 +7,7 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace RobotTwin.Debug
+namespace RobotTwin.Debugging
 {
     public class RemoteCommandServer : MonoBehaviour
     {
@@ -133,6 +133,14 @@ namespace RobotTwin.Debug
                             Debug.Log("[RemoteCommandServer] Resetting Scene...");
                             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
                         });
+                        break;
+
+                    case "status":
+                        int engineVer = -1;
+                        try { engineVer = RobotTwin.Core.NativeBridge.GetVersion(); } catch {}
+                        
+                        string engineStatus = (engineVer > 0) ? "connected" : "disconnected";
+                        responseString = $"{{\"engine\": \"{engineStatus}\", \"version\": {engineVer}}}";
                         break;
 
                     default:

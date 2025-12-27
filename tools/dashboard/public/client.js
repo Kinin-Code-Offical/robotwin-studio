@@ -34,10 +34,10 @@ async function checkStatus() {
         const data = await res.json();
         
         if (data.connected) {
-            if(!isOnline) {
-                // transitioned to online
+            const engineState = data.engine === 'connected' ? `(v${data.version})` : '(No Engine)';
+            if(!isOnline || statusText.textContent.indexOf(engineState) === -1) {
                 statusDot.className = 'status-dot online';
-                statusText.textContent = "Unity Online";
+                statusText.textContent = `Unity Online ${engineState}`;
                 statusText.style.color = "#4caf50";
                 isOnline = true;
             }

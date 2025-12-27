@@ -29,12 +29,19 @@ app.use('/screenshots', express.static(SCREENSHOT_DIR));
 app.use('/report', express.static(TEST_DIR));
 
 // Check Unity Status
+// Check Unity Status
 app.get('/api/status', async (req, res) => {
     try {
-        // Fast timeout ping
-        await axios.get(`${UNITY_URL}/query?target=ping`, { timeout: 1000 });
-        res.json({ connected: true });
+        // Use the new /status endpoint
+        const response = await axios.get(`${UNITY_URL}/status`, { timeout: 1000 });
+        // response.data should be { engine: "connected", version: 100 }
+        res.json({ 
+            connected: true, 
+            engine: response.data.engine, 
+            version: response.data.version 
+        });
     } catch (e) {
+        // If 404/500/Timeout
         res.json({ connected: false, error: e.code || e.message });
     }
 });

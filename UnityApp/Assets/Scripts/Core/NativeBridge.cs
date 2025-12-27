@@ -19,6 +19,9 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "GetEngineVersion")]
         private static extern int _GetEngineVersion();
 
+        [DllImport(PLUGIN_NAME, EntryPoint = "CalculateCurrent")]
+        private static extern float _CalculateCurrent(float voltage, float resistance);
+
         /// <summary>
         /// Steps the physics/circuit simulation by dt seconds.
         /// </summary>
@@ -44,6 +47,19 @@ namespace RobotTwin.Core
             catch (DllNotFoundException)
             {
                 return -1;
+            }
+        }
+
+        public static float CalculateCurrent(float voltage, float resistance)
+        {
+            try
+            {
+                return _CalculateCurrent(voltage, resistance);
+            }
+            catch (DllNotFoundException)
+            {
+                Debug.LogWarning("[NativeBridge] DLL not found.");
+                return 0.0f;
             }
         }
 

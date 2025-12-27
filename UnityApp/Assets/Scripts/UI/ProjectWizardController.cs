@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+using System;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Specs;
 // using RobotTwin.CoreSim.Specs; // Removed Duplicate
@@ -15,6 +16,12 @@ namespace RobotTwin.UI
         private UIDocument _doc;
         private VisualElement _recentList;
         private string _projectsDir;
+        private TextField _recentSearchField;
+        private Button _viewAllButton;
+        private bool _showAllRecents;
+        private string _recentFilter = string.Empty;
+        private bool _suppressSearchChange;
+        private const string RecentSearchPlaceholder = "Filter recent projects...";
 
         private void OnEnable()
         {
@@ -44,6 +51,19 @@ namespace RobotTwin.UI
 
             // Populate Recents
             _recentList = root.Q<ScrollView>("RecentProjectsList");
+            _recentSearchField = root.Q<TextField>("RecentSearchField");
+            _viewAllButton = root.Q<Button>("ViewAllBtn");
+
+            _viewAllButton?.RegisterCallback<ClickEvent>(OnViewAllClicked);
+            if (_recentSearchField != null)
+            {
+                _recentSearchField.RegisterValueChangedCallback(OnSearchChanged);
+                _recentSearchField.RegisterCallback<FocusInEvent>(OnSearchFocusIn);
+                _recentSearchField.RegisterCallback<FocusOutEvent>(OnSearchFocusOut);
+                SetSearchPlaceholder();
+            }
+
+            UpdateViewAllLabel();
             PopulateRecentProjects();
         }
 
@@ -120,8 +140,31 @@ namespace RobotTwin.UI
             if (!Directory.Exists(_projectsDir)) Directory.CreateDirectory(_projectsDir);
             var files = Directory.GetFiles(_projectsDir, "*.rtwin")
                                  .OrderByDescending(f => File.GetLastWriteTime(f))
-                                 .Take(5)
                                  .ToList();
+
+            if (!string.IsNullOrWhiteSpace(_recentFilter))
+            {
+                files = files.Where(f =>
+                    Path.GetFileNameWithoutExtension(f)
+                        .IndexOf(_recentFilter, StringComparison.OrdinalIgnoreCase) >= 0)
+                    .ToList();
+            }
+
+            if (!_showAllRecents)
+            {
+                files = files.Take(5).ToList();
+            }
+
+            if (files.Count == 0)
+            {
+                var emptyText = string.IsNullOrWhiteSpace(_recentFilter)
+                    ? "No recent projects yet."
+                    : "No projects match your search.";
+                var empty = new Label(emptyText);
+                empty.AddToClassList("recent-empty");
+                _recentList.Add(empty);
+                return;
+            }
 
             foreach (var file in files)
             {
@@ -174,6 +217,67 @@ namespace RobotTwin.UI
                 
                 _recentList.Add(row);
             }
+        }
+
+        private void OnViewAllClicked(ClickEvent evt)
+        {
+            _showAllRecents = !_showAllRecents;
+            UpdateViewAllLabel();
+            PopulateRecentProjects();
+        }
+
+        private void UpdateViewAllLabel()
+        {
+            if (_viewAllButton != null)
+            {
+                _viewAllButton.text = _showAllRecents ? "SHOW LESS" : "VIEW ALL";
+            }
+        }
+
+        private void OnSearchChanged(ChangeEvent<string> evt)
+        {
+            if (_suppressSearchChange) return;
+
+            _recentFilter = NormalizeFilter(evt.newValue);
+            PopulateRecentProjects();
+        }
+
+        private void OnSearchFocusIn(FocusInEvent evt)
+        {
+            if (_recentSearchField == null) return;
+            if (_recentSearchField.value == RecentSearchPlaceholder)
+            {
+                _suppressSearchChange = true;
+                _recentSearchField.value = string.Empty;
+                _recentSearchField.RemoveFromClassList("is-placeholder");
+                _suppressSearchChange = false;
+            }
+        }
+
+        private void OnSearchFocusOut(FocusOutEvent evt)
+        {
+            if (_recentSearchField == null) return;
+            if (string.IsNullOrWhiteSpace(_recentSearchField.value))
+            {
+                SetSearchPlaceholder();
+            }
+        }
+
+        private void SetSearchPlaceholder()
+        {
+            if (_recentSearchField == null) return;
+            _suppressSearchChange = true;
+            _recentSearchField.value = RecentSearchPlaceholder;
+            _recentSearchField.AddToClassList("is-placeholder");
+            _recentFilter = string.Empty;
+            _suppressSearchChange = false;
+        }
+
+        private static string NormalizeFilter(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+            if (string.Equals(value, RecentSearchPlaceholder, StringComparison.OrdinalIgnoreCase)) return string.Empty;
+            return value.Trim();
         }
     }
 }
