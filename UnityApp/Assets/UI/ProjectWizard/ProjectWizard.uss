@@ -207,6 +207,10 @@
     padding-left: 4px;
 }
 
+.search-field.is-placeholder > .unity-text-field__input {
+    color: #6f6f6f;
+}
+
 .recent-list {
     flex-grow: 1;
     background-color: #2f2f2f;
@@ -214,6 +218,12 @@
     border-color: #222222;
     border-radius: 4px;
     padding: 4px;
+}
+
+.recent-empty {
+    color: #8e8e8e;
+    font-size: 11px;
+    padding: 12px;
 }
 
 .recent-project-item {
@@ -235,6 +245,7 @@
 .recent-left {
     flex-direction: row;
     align-items: center;
+    flex-grow: 1;
 }
 
 .recent-icon {
@@ -272,4 +283,6 @@
 .recent-project-path {
     color: #7f7f7f;
     font-size: 10px;
+    -unity-text-align: middle-right;
+    white-space: nowrap;
 }

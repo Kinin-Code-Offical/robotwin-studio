@@ -205,6 +205,16 @@ namespace RobotTwin.UI
         private void Update()
         {
             if (!_isRunning || _host == null) return;
+
+            // Native Integration Verification (Ohm's Law)
+            if (Time.frameCount % 120 == 0) // Every 2s roughly
+            {
+                float v = 5.0f;
+                float r = 220.0f;
+                float i = RobotTwin.Core.NativeBridge.CalculateCurrent(v, r);
+                Debug.Log($"[NativeEngine] 5V / 220R = {i * 1000f:F2}mA");
+            }
+
             if (_timeLabel != null) _timeLabel.text = $"Time: {_host.SimTime:F2}s";
             if (_tickLabel != null) _tickLabel.text = $"Tick: {_host.TickCount}";
 

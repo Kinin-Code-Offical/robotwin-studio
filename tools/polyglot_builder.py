@@ -1,95 +1,72 @@
-    import os
+import os
 import sys
 import subprocess
-
-# Polyglot Architecture Orchestrator
-# Responsibility: Scaffold Folders, Trigger Sub-tools, Verify Environment
+import shutil
 
 ROOT = os.getcwd()
 NATIVE_DIR = os.path.join(ROOT, "NativeEngine")
 SRC_DIR = os.path.join(NATIVE_DIR, "src")
-INCLUDE_DIR = os.path.join(NATIVE_DIR, "include")
 BUILD_DIR = os.path.join(NATIVE_DIR, "build")
+UNITY_PLUGINS_DIR = os.path.join(ROOT, "UnityApp", "Assets", "Plugins", "x86_64")
 
-CPP_STUB_CONTENT = """/*
- * RoboTwin NativeEngine
- * Optimized C++ Core for Circuit Solving and Physics
- */
+def ensure_dirs():
+    if not os.path.exists(BUILD_DIR):
+        os.makedirs(BUILD_DIR)
+    if not os.path.exists(UNITY_PLUGINS_DIR):
+        os.makedirs(UNITY_PLUGINS_DIR)
 
-#include <cmath>
-#include <cstdio>
+def build_dll():
+    print("[Polyglot] Building Native Engine DLL...")
+    ensure_dirs()
+    
+    source = os.path.join(SRC_DIR, "main.cpp")
+    output_dll = os.path.join(BUILD_DIR, "RoboTwinCore.dll")
+    
+    # Try generic compilation with g++ (MinGW) first as it's common in cross-platform dev envs
+    # If not found, user might need to run this in VS Dev Cmd
+    
+    cmd = []
+    # Check if we can just use cl (MSVC)
+    # Using 'where' to check availability is tricky in python without shell=True, 
+    # so we just try/except
+    
+    built = False
+    
+    # Attempt 1: g++
+    try:
+        print("  > Attempting build with g++...")
+        # g++ -shared -o RoboTwinCore.dll main.cpp
+        subprocess.check_call(["g++", "-shared", "-o", output_dll, source])
+        print("  > g++ build successful.")
+        built = True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        print("  > g++ failed or not found.")
+    
+    # Attempt 2: cl (MSVC)
+    if not built:
+        try:
+            print("  > Attempting build with MSVC (cl.exe)...")
+            # cl /LD main.cpp /Fe:RoboTwinCore.dll
+            subprocess.check_call(["cl", "/LD", source, f"/Fe:{output_dll}"], cwd=BUILD_DIR) 
+            # Note: cwd=BUILD_DIR to keep .obj files there
+            print("  > MSVC build successful.")
+            built = True
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            print("  > cl.exe failed or not found. Ensure you are in a Developer Command Prompt.")
 
-// Macro to export symbols for DLL/SO
-#if defined(_MSC_VER)
-    #define EXPORT __declspec(dllexport)
-#else
-    #define EXPORT
-#endif
-
-extern "C" {
-
-    /*
-     * Steps the heavy simulation logic.
-     * dt: Delta Time in seconds
-     */
-    EXPORT void StepSimulation(float dt) {
-        // Mock heavy computation: Matrix ops, Solver iterations
-        static float internal_time = 0.0f;
-        internal_time += dt;
-
-        // In a real engine, this would call into the Spice Solver or Physics World
-        // For now, we print to stdout to prove the link (Unity captures stdout in Editor)
-        // fprintf(stdout, "[NativeEngine] Stepping Simulation... T=%.4f\\n", internal_time);
-    }
-
-    EXPORT int GetEngineVersion() {
-        return 100; // v1.0.0
-    }
-}
-"""
-
-def create_directory(path):
-    if not os.path.exists(path):
-        print(f"[Polyglot] Creating directory: {path}")
-        os.makedirs(path)
+    if built:
+        print("[Polyglot] Copying DLL to Unity Plugins...")
+        dest = os.path.join(UNITY_PLUGINS_DIR, "RoboTwinCore.dll")
+        shutil.copy2(output_dll, dest)
+        print(f"  > Copied to {dest}")
     else:
-        print(f"[Polyglot] Directory exists: {path}")
-
-def create_cpp_files():
-    main_cpp = os.path.join(SRC_DIR, "main.cpp")
-    if not os.path.exists(main_cpp):
-        print(f"[Polyglot] Generating C++ Stub: {main_cpp}")
-        with open(main_cpp, "w") as f:
-            f.write(CPP_STUB_CONTENT)
-    else:
-        print(f"[Polyglot] C++ Stub already exists.")
-
-def run_icon_fetcher():
-    fetcher_path = os.path.join(ROOT, "tools", "fetch_icons.py")
-    if os.path.exists(fetcher_path):
-        print("[Polyglot] Running Icon Fetcher...")
-        subprocess.run([sys.executable, fetcher_path], check=False)
-    else:
-        print("[Polyglot] Warning: tools/fetch_icons.py not found.")
+        print("[Polyglot] ERROR: Could not build DLL. No valid compiler found.")
 
 def main():
     print("=== RoboTwin Polyglot Builder ===")
-    
-    # 1. Scaffold NativeEngine
-    create_directory(NATIVE_DIR)
-    create_directory(SRC_DIR)
-    create_directory(INCLUDE_DIR)
-    create_directory(BUILD_DIR)
-
-    # 2. Generate Code
-    create_cpp_files()
-
-    # 3. Run Automation Tools
-    run_icon_fetcher()
-    
-    print("\n=== Architecture Ready ===")
-    print("NativeEngine/src/main.cpp created.")
-    print("Ready to implement NativeBridge.cs in Unity.")
+    ensure_dirs()
+    build_dll()
+    print("\n=== Build Process Finished ===")
 
 if __name__ == "__main__":
     main()

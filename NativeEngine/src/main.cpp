@@ -23,13 +23,21 @@ extern "C" {
         // Mock heavy computation: Matrix ops, Solver iterations
         static float internal_time = 0.0f;
         internal_time += dt;
-
-        // In a real engine, this would call into the Spice Solver or Physics World
-        // For now, we print to stdout to prove the link (Unity captures stdout in Editor)
-        // fprintf(stdout, "[NativeEngine] Stepping Simulation... T=%.4f\n", internal_time);
+        // Check connectivity by printing occasionally? Or mostly just run.
     }
 
     EXPORT int GetEngineVersion() {
         return 100; // v1.0.0
+    }
+
+    /*
+     * OHM'S LAW SOLVER (Phase 3 Requirement)
+     * Calculates Current (I) = V / R
+     */
+    EXPORT float CalculateCurrent(float voltage, float resistance) {
+        if (std::abs(resistance) < 1e-6f) {
+            return 0.0f; // Short circuit protection / limit
+        }
+        return voltage / resistance;
     }
 }
