@@ -4,6 +4,12 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+# Log destination
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$LogDir = Join-Path $RepoRoot "logs"
+$LogFile = Join-Path $LogDir "update_unity_plugins_build.log"
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
 # Note: Only main CoreSim is currently required in Unity. Validation might be if used in Wizard.
 # Based on usage in CircuitStudioController, we need Validation too if it's separate. 
 # But looking at repo structure, Validation seemed to be a folder inside src/RobotTwin.CoreSim? 
@@ -15,7 +21,8 @@ $ProjectDir = "CoreSim/src/RobotTwin.CoreSim"
 $UnityPluginsDir = "UnityApp/Assets/Plugins"
 
 Write-Host "Building CoreSim (netstandard2.1) for Unity..." -ForegroundColor Cyan
-dotnet build $ProjectDir -c Release -f netstandard2.1 /p:ContinuousIntegrationBuild=true /p:Deterministic=true
+dotnet build $ProjectDir -c Release -f netstandard2.1 /p:ContinuousIntegrationBuild=true /p:Deterministic=true "/flp:LogFile=$LogFile"
+Write-Host "Build log: $LogFile" -ForegroundColor DarkGray
 
 # Files to sync (Core + Deps)
 # Note: System.Text.Json 8.x brings in:

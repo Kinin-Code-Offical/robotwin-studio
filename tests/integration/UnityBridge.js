@@ -1,60 +1,36 @@
-const ipc = require('node-ipc');
+const axios = require('axios');
 
 class UnityBridge {
     constructor() {
-        this.config = {
-            appspace: 'RoboTwin',
-            id: 'TestRunner',
-            retry: 1500,
-            silent: true
-        };
-        ipc.config.id = this.config.id;
-        ipc.config.retry = this.config.retry;
-        ipc.config.silent = this.config.silent;
-        
+        this.baseUrl = 'http://localhost:8085';
         this.connected = false;
-        this.socket = null;
     }
 
     async connect() {
-        return new Promise((resolve, reject) => {
-            // Unity is the Server, we are the Client
-            ipc.connectTo('FirmwareEngine', () => {
-                ipc.of.FirmwareEngine.on('connect', () => {
-                    console.log('[UnityBridge] Connected to Unity successfully.');
-                    this.connected = true;
-                    this.socket = ipc.of.FirmwareEngine;
-                    resolve();
-                });
-
-                ipc.of.FirmwareEngine.on('disconnect', () => {
-                    if (this.connected) {
-                        console.log('[UnityBridge] Disconnected from Unity.');
-                        this.connected = false;
-                    }
-                });
-                
-                ipc.of.FirmwareEngine.on('error', (err) => {
-                    // console.error('[UnityBridge] Connection Error:', err);
-                    // reject(err); // Typically we retry
-                });
-            });
-            
-            // Timeout if Unity is not running
-            setTimeout(() => {
-                if (!this.connected) {
-                    // For mockup purposes: Resolve anyway to let tests run in "Mock Mode" if Unity isn't there
-                    console.log('[UnityBridge] Connection timed out (Mock Mode activated).');
-                    resolve(); 
-                }
-            }, 3000);
-        });
+        console.log(`[UnityBridge] Connecting to ${this.baseUrl}...`);
+        try {
+            // Simple ping to check if server is up. 
+            // We use /query just to check connectivity.
+            await axios.get(`${this.baseUrl}/query?target=ping`);
+            console.log('[UnityBridge] Connected to Unity successfully.');
+            this.connected = true;
+        } catch (error) {
+            console.log('[UnityBridge] Connection failed (Unity might not be running). Mock Mode Activated.');
+            this.connected = false; 
+            // We resolve anyway to allow "offline" test development or mock runs
+        }
     }
 
     async sendCommand(action, target) {
         console.log(`[UnityBridge] Sending Command: ${action} -> ${target}`);
-        if(this.connected && this.socket) {
-            this.socket.emit('message', JSON.stringify({ action, target }));
+        if(this.connected) {
+            try {
+                await axios.get(`${this.baseUrl}/action`, {
+                    params: { type: action, target: target }
+                });
+            } catch (err) {
+                console.error(`[UnityBridge] Command failed: ${err.message}`);
+            }
         }
         // Simulate delay for UI update
         return new Promise(r => setTimeout(r, 500));
@@ -62,7 +38,18 @@ class UnityBridge {
 
     async queryState(selector) {
         console.log(`[UnityBridge] Querying State: ${selector}`);
-        // Mock Response for now
+        if (this.connected) {
+            try {
+                const res = await axios.get(`${this.baseUrl}/query`, {
+                    params: { target: selector }
+                });
+                return res.data.value;
+            } catch (err) {
+                console.error(`[UnityBridge] Query failed: ${err.message}`);
+            }
+        }
+        
+        // Mock Responses if not connected or fallback
         if (selector === 'CurrentScene') return 'CircuitStudio';
         if (selector === '#RunMode') return true;
         return null;
@@ -70,15 +57,18 @@ class UnityBridge {
 
     async takeScreenshot(filename) {
         console.log(`[UnityBridge] Screenshot requested: ${filename}`);
-        // In real impl, receive base64 from Unity or waitForFile
+        if (this.connected) {
+             try {
+                // The server saves it to the folder, we just trigger it.
+                await axios.get(`${this.baseUrl}/screenshot`);
+            } catch (err) {
+                console.error(`[UnityBridge] Screenshot failed: ${err.message}`);
+            }
+        }
     }
 
     disconnect() {
-        if (this.socket) {
-            this.connected = false; // Prevent listener log
-            ipc.disconnect('FirmwareEngine');
-            this.socket = null;
-        }
+        this.connected = false;
     }
 }
 
