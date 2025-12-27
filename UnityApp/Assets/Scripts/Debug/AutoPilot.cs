@@ -69,7 +69,7 @@ namespace RobotTwin.Debugging
             }
 
             // Step 3: Snapshot
-            TakeSnapshot("AutoPilot_Success");
+            TakeSnapshot("Final_Wizard_Build");
             
             Debug.Log("[AUTOPILOT] SUCCESS");
 

@@ -5,7 +5,7 @@ import time
 
 UNITY_PATH = r"C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe"
 PROJECT_PATH = os.path.abspath("UnityApp")
-LOG_PATH = os.path.abspath("logs/build_check.log")
+LOG_PATH = os.path.abspath("logs/build_iteration.log")
 
 def run_unity():
     print(f"Starting Unity Build Check... Logs: {LOG_PATH}")

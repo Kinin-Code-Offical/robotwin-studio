@@ -16,283 +16,38 @@
 
 
 
+/* ICONS MAPPING - PNG PROTOCOL */
+.icon-home { background-image: url('/Assets/UI/Icons/home.png'); }
+.icon-projects { background-image: url('/Assets/UI/Icons/folder.png'); }
+.icon-templates { background-image: url('/Assets/UI/Icons/box.png'); }
+.icon-settings { background-image: url('/Assets/UI/Icons/settings.png'); }
+.icon-plus { background-image: url('/Assets/UI/Icons/plus.png'); }
+.icon-folder-open { background-image: url('/Assets/UI/Icons/folder.png'); }
+.icon-import { background-image: url('/Assets/UI/Icons/import.png'); }
+.icon-activity { background-image: url('/Assets/UI/Icons/activity.png'); }
+.icon-copy { background-image: url('/Assets/UI/Icons/copy.png'); }
+.icon-trash-2 { background-image: url('/Assets/UI/Icons/trash-2.png'); }
+.icon-menu { background-image: url('/Assets/UI/Icons/filter.png'); }
+.icon-search { background-image: url('/Assets/UI/Icons/search.png'); }
+.icon-hexagon { background-image: url('/Assets/UI/Icons/hexagon.png'); }
+.icon-cpu { background-image: url('/Assets/UI/Icons/cpu.png'); }
+.icon-zap { background-image: url('/Assets/UI/Icons/zap.png'); }
+
 .nav-icon {
     width: 20px;
     height: 20px;
     margin-right: 12px;
-    -unity-background-image-tint-color: var(--color-text-secondary);
+    -unity-background-image-tint-color: var(--color-text-secondary); /* Fixed tint */
     -unity-background-scale-mode: scale-to-fit;
 }
 
 .nav-button.active .nav-icon {
-    -unity-background-image-tint-color: white;
+    -unity-background-image-tint-color: white; /* Fixed tint */
 }
 
-.wizard-root {
+/* Grids */
+.grid-container {
     flex-direction: row;
-    flex-grow: 1;
-    background-color: var(--color-bg-dark);
+    flex-wrap: wrap; /* Ensure wrapping */
 }
-
-/* SIDEBAR */
-.sidebar {
-    width: 250px;
-    background-color: var(--color-bg-medium);
-    border-right-width: 1px;
-    border-right-color: var(--color-border);
-    padding: 20px;
-    flex-direction: column;
-}
-
-.brand-row {
-    flex-direction: row;
-    align-items: center;
-    margin-bottom: 40px;
-    opacity: 0.9;
-}
-
-.brand-icon {
-    width: 32px;
-    height: 32px;
-    background-image: url('../Icons/hexagon.png');
-    -unity-background-scale-mode: scale-to-fit;
-    margin-right: 10px;
-}
-
-.sidebar-logo {
-    font-size: 18px;
-    -unity-font-style: bold;
-    color: var(--color-text-primary);
-}
-
-.nav-button {
-    flex-direction: row;
-    align-items: center;
-    background-color: transparent;
-    border-width: 0;
-    padding: 10px;
-    border-radius: 6px;
-    margin-bottom: 5px;
-    transition: background-color 0.2s;
-}
-
-.nav-button:hover {
-    background-color: var(--color-bg-light);
-}
-
-.nav-button.active {
-    background-color: var(--color-accent);
-}
-
-
-
-.nav-label {
-    font-size: 14px;
-    color: var(--color-text-secondary);
-}
-
-.nav-button.active .nav-label {
-    color: white;
-}
-
-.sidebar-footer {
-    margin-top: auto;
-    opacity: 0.5;
-}
-
-.sidebar-version {
-    font-size: 10px;
-}
-
-/* CONTENT AREA */
-.main-content {
-    flex-grow: 1;
-    padding: 40px;
-    background-color: var(--color-bg-dark);
-}
-
-.view {
-    flex-grow: 1;
-    display: flex;
-}
-
-.view-active {
-    display: flex;
-}
-
-.page-title {
-    font-size: 32px;
-    -unity-font-style: bold;
-    margin-bottom: 5px;
-}
-
-.page-subtitle {
-    font-size: 14px;
-    color: var(--color-text-secondary);
-    margin-bottom: 20px;
-}
-
-.divider {
-    height: 1px;
-    background-color: var(--color-border);
-    margin-bottom: 25px;
-}
-
-/* HOME VIEW CARDS */
-.card-row {
-    flex-direction: row;
-    margin-bottom: 40px;
-}
-
-.card-button {
-    flex-grow: 1;
-    height: 140px;
-    background-color: var(--color-bg-medium);
-    border-width: 1px;
-    border-color: var(--color-border);
-    border-radius: 8px;
-    margin-right: 20px;
-    align-items: center;
-    justify-content: center;
-    transition: scale 0.1s;
-}
-
-.card-button.last {
-    margin-right: 0; /* Remove margin for the last item */
-}
-
-.card-button:hover {
-    background-color: var(--color-bg-light);
-    scale: 1.02;
-}
-
-.card-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 15px;
-    -unity-background-scale-mode: scale-to-fit;
-}
-
-.card-title {
-    font-size: 16px;
-    -unity-font-style: bold;
-    margin-bottom: 5px;
-}
-
-.card-desc {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-}
-
-/* RECENT PROJECTS */
-.recent-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.section-title {
-    font-size: 18px;
-    -unity-font-style: bold;
-}
-
-.link-button {
-    background-color: transparent;
-    color: var(--color-accent);
-    border-width: 0;
-    font-size: 12px;
-    cursor: link;
-}
-
-.search-row {
-    flex-direction: row;
-    background-color: var(--color-bg-medium);
-    border-radius: 20px;
-    padding: 8px 15px;
-    align-items: center;
-    margin-bottom: 20px;
-    border-width: 1px;
-    border-color: transparent;
-}
-
-.search-row.search-row--focused {
-    border-color: var(--color-accent);
-}
-
-.search-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 10px;
-    opacity: 0.5;
-    background-image: url('../Icons/search.png');
-    -unity-background-scale-mode: scale-to-fit;
-}
-
-.search-field {
-    flex-grow: 1;
-    background-color: transparent;
-    border-width: 0;
-    margin: 0;
-    padding: 0;
-    color: white;
-}
-
-.search-field > .unity-base-text-field__input {
-    background-color: transparent;
-    border-width: 0;
-}
-
-/* PROJECTS LIST */
-.projects-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.primary-button {
-    flex-direction: row;
-    background-color: var(--color-accent);
-    padding: 8px 16px;
-    border-radius: 4px;
-    border-width: 0;
-    align-items: center;
-}
-
-.primary-button:hover {
-    background-color: #0069b0;
-}
-
-.button-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-    background-image: url('../Icons/plus.png');
-    -unity-background-scale-mode: scale-to-fit;
-}
-
-.button-label {
-    color: white;
-    -unity-font-style: bold;
-}
-
-.project-card {
-    border-radius: 6px;
-}
-
-/* ICONS MAPPING - PNG PROTOCOL */
-.icon-home { background-image: url('../Icons/home.png'); }
-.icon-projects { background-image: url('../Icons/folder.png'); }
-.icon-templates { background-image: url('../Icons/box.png'); }
-.icon-settings { background-image: url('../Icons/settings.png'); }
-.icon-plus { background-image: url('../Icons/plus.png'); }
-.icon-folder-open { background-image: url('../Icons/folder.png'); } /* fallback or duplicate */
-.icon-import { background-image: url('../Icons/import.png'); }
-.icon-activity { background-image: url('../Icons/activity.png'); }
-.icon-copy { background-image: url('../Icons/copy.png'); }
-.icon-trash-2 { background-image: url('../Icons/trash-2.png'); }
-.icon-menu { background-image: url('../Icons/filter.png'); }
-.icon-search { background-image: url('../Icons/search.png'); }
-.icon-hexagon { background-image: url('../Icons/hexagon.png'); }
 
