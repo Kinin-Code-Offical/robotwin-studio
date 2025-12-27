@@ -24,7 +24,7 @@ namespace RobotTwin.Tests.PlayMode
             
             yield return null; // Wait for load
 
-            var controller = GameObject.FindObjectOfType<RunModeController>();
+            var controller = GameObject.FindFirstObjectByType<RunModeController>();
             Assert.IsNotNull(controller, "RunModeController not found in scene");
 
             // Wait 100 frames (approx 2 seconds at 50fps fixed)

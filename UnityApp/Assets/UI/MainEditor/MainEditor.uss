@@ -90,94 +90,12 @@
     flex-grow: 1;
     flex-direction: row;
 }
-
-.activity-bar {
-    width: var(--activity-bar-width);
-    background-color: var(--col-bg-darkest);
-    flex-direction: column;
-    padding-top: 10px;
-    align-items: center;
-}
-
-.activity-button {
-    width: 40px;
-    height: 40px;
-    background-color: transparent;
-    border-width: 0;
-    margin-bottom: 5px;
-    border-left-width: 2px;
-    border-left-color: transparent;
-}
-
-.activity-button.active {
-    border-left-color: var(--col-accent);
-}
-
-.activity-icon {
-    width: 24px;
-    height: 24px;
-    -unity-background-scale-mode: scale-to-fit;
-    opacity: 0.5;
-}
-
-.activity-button.active .activity-icon {
-    opacity: 1.0;
-    -unity-background-image-tint-color: white;
-}
-
-.panel {
-    width: var(--panel-width);
-    background-color: var(--col-bg-panel);
-    border-right-width: 1px;
-    border-right-color: var(--col-border);
-    flex-direction: column;
-}
-
-.panel-header {
-    height: 30px;
-    padding-left: 10px;
-    padding-top: 5px;
-    font-size: 11px;
-    -unity-font-style: bold;
-    color: #BBBBBB;
-    background-color: var(--col-bg-panel);
-}
-
-.left-panel { border-right-width: 1px; }
-.right-panel { border-left-width: 1px; border-right-width: 0; }
-
-.viewport-area {
-    flex-grow: 1;
-    background-color: transparent; /* Lets Camera render through */
-}
-
-/* HIERARCHY TREE */
-.tree-view {
-    flex-grow: 1;
-    padding: 5px;
-}
-
-.tree-item {
-    flex-direction: row;
-    height: 24px;
-    align-items: center;
-    padding-left: 5px;
-    border-radius: 2px;
-}
-
-.tree-item:hover {
-    background-color: #2A2D2E;
-}
-
-.tree-item.selected {
-    background-color: #37373D;
-}
-
+/* ... skipped lines ... */
 .tree-icon {
     width: 14px;
     height: 14px;
     margin-right: 6px;
-    background-image: url('../../Icons/box.png'); /* Default cube icon */
+    background-image: url('/Assets/UI/Icons/box.png'); /* Default cube icon */
     -unity-background-scale-mode: scale-to-fit;
     opacity: 0.8;
 }
@@ -202,7 +120,6 @@
 
 .sim-time {
     margin-left: 10px;
-    font-family: monospace;
     color: #CCCCCC;
 }
 
@@ -222,11 +139,11 @@
 }
 
 /* ICONS */
-.icon-play { background-image: url('../../Icons/play.png'); }
-.icon-pause { background-image: url('../../Icons/pause.png'); }
-.icon-stop { background-image: url('../../Icons/stop.png'); }
-.icon-step { background-image: url('../../Icons/step.png'); }
-.icon-settings { background-image: url('../../Icons/settings.png'); }
-.icon-hierarchy { background-image: url('../../Icons/hierarchy.png'); }
-.icon-console { background-image: url('../../Icons/console.png'); }
-.icon-inspector { background-image: url('../../Icons/inspector.png'); }
+.icon-play { background-image: url('/Assets/UI/Icons/play.png'); }
+.icon-pause { background-image: url('/Assets/UI/Icons/pause.png'); }
+.icon-stop { background-image: url('/Assets/UI/Icons/stop.png'); }
+.icon-step { background-image: url('/Assets/UI/Icons/step.png'); }
+.icon-settings { background-image: url('/Assets/UI/Icons/settings.png'); }
+.icon-hierarchy { background-image: url('/Assets/UI/Icons/hierarchy.png'); }
+.icon-console { background-image: url('/Assets/UI/Icons/console.png'); }
+.icon-inspector { background-image: url('/Assets/UI/Icons/inspector.png'); }

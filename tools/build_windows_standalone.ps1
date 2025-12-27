@@ -1,4 +1,4 @@
-$unityPath = "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" # Adjust as needed or use Env Var
+$unityPath = "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" # Adjust as needed or use Env Var
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $projectPath = Join-Path $repoRoot "UnityApp"
 $buildDir = Join-Path $repoRoot "build"
@@ -28,6 +28,9 @@ Write-Host "Log: $logFile"
 # I will write a script that TRIES to find Unity. If not found, it warns.
 
 $possiblePaths = @(
+    "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe",
+    "C:\Program Files\Unity\Hub\Editor\6000.3.1f1\Editor\Unity.exe",
+    "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe",
     "C:\Program Files\Unity\Hub\Editor\2022.3.10f1\Editor\Unity.exe",
     "C:\Program Files\Unity\Hub\Editor\2021.3.10f1\Editor\Unity.exe"
 )

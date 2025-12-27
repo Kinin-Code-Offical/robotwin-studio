@@ -2,9 +2,9 @@ name: Unity CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -14,10 +14,10 @@ jobs:
     outputs:
       run_unity: ${{ steps.check_secret.outputs.run_unity }}
       unity_version: ${{ steps.get_version.outputs.unity_version }}
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check for Unity License
         id: check_secret
         shell: pwsh
@@ -39,7 +39,7 @@ jobs:
           $verFile = "UnityApp/ProjectSettings/ProjectVersion.txt"
           if (Test-Path $verFile) {
             $content = Get-Content $verFile
-            # Parse 'm_EditorVersion: 2022.3.62f3'
+            # Parse 'm_EditorVersion: 6000.3.2f1'
             $versionLine = $content | Select-String "m_EditorVersion:\s*(.*)"
             if ($versionLine) {
                 $version = $versionLine.Matches.Groups[1].Value.Trim()
@@ -72,7 +72,7 @@ jobs:
           restore-keys: |
             Library-${{ runner.os }}-${{ needs.probe.outputs.unity_version }}-
             Library-${{ runner.os }}-
-      
+
       - name: Run EditMode Tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -84,7 +84,7 @@ jobs:
           unityVersion: ${{ needs.probe.outputs.unity_version }}
           testMode: all
           artifactsPath: artifacts
-          
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4

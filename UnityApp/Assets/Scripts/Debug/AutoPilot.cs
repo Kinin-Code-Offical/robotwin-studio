@@ -34,7 +34,7 @@ namespace RobotTwin.Debugging
         
         private VisualElement FindElement(string name)
         {
-             if (_doc == null) _doc = FindObjectOfType<UIDocument>();
+             if (_doc == null) _doc = FindFirstObjectByType<UIDocument>();
              if (_doc == null || _doc.rootVisualElement == null) return null;
              return _doc.rootVisualElement.Q(name);
         }
