@@ -1,283 +1,219 @@
 using UnityEngine;
 using UnityEngine.UIElements;
-using System;
 using System.Collections.Generic;
-using RobotTwin.CoreSim.Specs;
-// using RobotTwin.CoreSim.Specs; // Removed Duplicate
-using RobotTwin.CoreSim.Serialization;
-using RobotTwin.Game;
 using System.Linq;
-using System.IO;
 
 namespace RobotTwin.UI
 {
     public class ProjectWizardController : MonoBehaviour
     {
         private UIDocument _doc;
-        private VisualElement _recentList;
-        private string _projectsDir;
-        private TextField _recentSearchField;
-        private Button _viewAllButton;
-        private bool _showAllRecents;
-        private string _recentFilter = string.Empty;
-        private bool _suppressSearchChange;
-        private const string RecentSearchPlaceholder = "Filter recent projects...";
+        private VisualElement _root;
+        
+        // Views
+        private VisualElement _homeView;
+        private VisualElement _projectsView;
+        private VisualElement _templatesView;
+        private VisualElement[] _allViews;
+
+        // Nav
+        private Dictionary<string, Button> _navButtons;
+
+        // Data
+        private struct MockProject { public string Id; public string Name; public string Date; public string Type; }
+        private List<MockProject> _projects = new List<MockProject>();
+
+        // Context Menu
+        private VisualElement _contextMenu;
+        private string _activeContextItemId;
 
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
             if (_doc == null) return;
+            _root = _doc.rootVisualElement;
 
-            _projectsDir = Path.Combine(Application.persistentDataPath, "Projects");
-            Directory.CreateDirectory(_projectsDir);
-
-            var root = _doc.rootVisualElement;
-            if (root == null)
-            {
-                Debug.LogError("[ProjectWizardController] RootVisualElement is NULL! Check UXML/USS for errors.");
-                return;
-            }
-
-            // Wire Actions
-            root.Q<Button>("NewProjectBtn")?.RegisterCallback<ClickEvent>(OnNewProjectClicked);
-            root.Q<Button>("OpenProjectBtn")?.RegisterCallback<ClickEvent>(OnOpenProjectClicked);
-            root.Q<Button>("ImportCadBtn")?.RegisterCallback<ClickEvent>(e => Debug.Log("Import CAD Clicked (Stub)"));
-            root.Q<Button>("WatchReplayBtn")?.RegisterCallback<ClickEvent>(e => Debug.Log("Watch Replay Clicked (Stub)"));
-
-            // Wire Nav (Stub)
-            root.Q<Button>("NavHome")?.RegisterCallback<ClickEvent>(e => Debug.Log("Nav: Home"));
-            root.Q<Button>("NavProjects")?.RegisterCallback<ClickEvent>(e => Debug.Log("Nav: Projects"));
-            root.Q<Button>("NavTemplates")?.RegisterCallback<ClickEvent>(e => Debug.Log("Nav: Templates"));
-
-            // Populate Recents
-            _recentList = root.Q<ScrollView>("RecentProjectsList");
-            _recentSearchField = root.Q<TextField>("RecentSearchField");
-            _viewAllButton = root.Q<Button>("ViewAllBtn");
-
-            _viewAllButton?.RegisterCallback<ClickEvent>(OnViewAllClicked);
-            if (_recentSearchField != null)
-            {
-                _recentSearchField.RegisterValueChangedCallback(OnSearchChanged);
-                _recentSearchField.RegisterCallback<FocusInEvent>(OnSearchFocusIn);
-                _recentSearchField.RegisterCallback<FocusOutEvent>(OnSearchFocusOut);
-                SetSearchPlaceholder();
-            }
-
-            UpdateViewAllLabel();
-            PopulateRecentProjects();
+            GenerateMockData();
+            InitializeUI();
         }
 
-        private void OnNewProjectClicked(ClickEvent evt)
+        private void InitializeUI()
         {
-            Debug.Log("Creating New Project...");
-            
-            // 1. Get Template Spec (Blinky for now)
-            // 1. Get Template Spec (Blinky for now)
-            var template = new TemplateSpec 
-            { 
-                TemplateId = "Empty",
-                DisplayName = "Empty Project",
-                Description = "A clean slate",
-                SystemType = "Generic",
-                DefaultCircuit = new CircuitSpec { Id = "Default", Mode = RobotTwin.CoreSim.Specs.SimulationMode.Fast }, // Resolved Ambiguity
-                DefaultRobot = new RobotSpec { Name = "DefaultBot" },
-                DefaultWorld = new WorldSpec { Name = "DefaultWorld" }
-            };
-            
-            // 2. Create Manifest
-            string projectName = $"Project_{System.DateTime.Now:MMdd_HHmm}";
-            var manifest = new ProjectManifest
-            {
-                ProjectName = projectName,
-                Description = "Created via Wizard",
-                Version = "0.1.0",
-                Circuit = template.DefaultCircuit,
-                Robot = template.DefaultRobot ?? new RobotSpec { Name = "DefaultRobot" },
-                World = template.DefaultWorld ?? new WorldSpec { Name = "DefaultWorld" }
+            // 1. Resolve Views
+            _homeView = _root.Q<VisualElement>("HomeView");
+            _projectsView = _root.Q<VisualElement>("ProjectsView");
+            _templatesView = _root.Q<VisualElement>("TemplatesView");
+            _allViews = new[] { _homeView, _projectsView, _templatesView };
+
+            // 2. Resolve Navigation
+            _navButtons = new Dictionary<string, Button> {
+                { "Home", _root.Q<Button>("NavHome") },
+                { "Projects", _root.Q<Button>("NavProjects") },
+                { "Templates", _root.Q<Button>("NavTemplates") },
+                { "Settings", _root.Q<Button>("NavSettings") }
             };
 
-            // 3. Save
-            string path = Path.Combine(_projectsDir, $"{projectName}.rtwin");
-            SimulationSerializer.SaveProject(manifest, path);
-            Debug.Log($"Project saved to: {path}");
+            // Bind Nav Clicks
+            if (_navButtons["Home"] != null) _navButtons["Home"].clicked += () => SwitchView(_homeView, "Home");
+            if (_navButtons["Projects"] != null) _navButtons["Projects"].clicked += () => SwitchView(_projectsView, "Projects");
+            if (_navButtons["Templates"] != null) _navButtons["Templates"].clicked += () => SwitchView(_templatesView, "Templates");
 
-            // 4. Start Session
-            if (SessionManager.Instance != null)
+            // 3. Bind Actions
+            _root.Q<Button>("ViewAllBtn")?.RegisterCallback<ClickEvent>(e => SwitchView(_projectsView, "Projects"));
+
+            // 4. Bind Search
+            var searchHome = _root.Q<TextField>("RecentSearchField");
+            var searchProj = _root.Q<TextField>("ProjectsSearchField");
+            
+            searchHome?.RegisterValueChangedCallback(e => RenderList(_root.Q<ScrollView>("RecentProjectsList"), e.newValue, 5));
+            searchProj?.RegisterValueChangedCallback(e => RenderList(_root.Q<ScrollView>("ProjectsList"), e.newValue, 100));
+
+            // 5. Context Menu
+            _contextMenu = _root.Q<VisualElement>("ContextMenu");
+            // Click anywhere on root to close menu
+            _root.RegisterCallback<MouseDownEvent>(e => 
             {
-                SessionManager.Instance.StartSession(manifest);
-                UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Jump to CircuitStudio
+                // Simple hit test check could go here, but blindly closing is okay if we re-open on specific clicks
+                // However, blocking the menu click itself is needed.
+                if (_contextMenu.style.display == DisplayStyle.Flex)
+                    HideContextMenu();
+            }, TrickleDown.NoTrickleDown);
+
+             _root.Q<Button>("ContextRemoveBtn")?.RegisterCallback<ClickEvent>(e => RemoveProject(_activeContextItemId));
+
+            // Initial Render
+            SwitchView(_homeView, "Home");
+        }
+
+        private void GenerateMockData()
+        {
+            _projects = new List<MockProject> {
+                new MockProject { Id="1", Name = "Mars Rover Rev2", Date = "2h ago", Type = "Robotics" },
+                new MockProject { Id="2", Name = "Drone Flight Controller", Date = "Yesterday", Type = "PCB" },
+                new MockProject { Id="3", Name = "Bipedal Walker AI", Date = "Oct 20", Type = "Simulation" },
+                new MockProject { Id="4", Name = "Home Automation Hub", Date = "Sep 15", Type = "IoT" },
+                new MockProject { Id="5", Name = "Mini Sumo Robot", Date = "Aug 01", Type = "Robotics" },
+                new MockProject { Id="6", Name = "Warehouse Twin", Date = "Jul 22", Type = "Logistics" }
+            };
+        }
+
+        private void SwitchView(VisualElement target, string navKey)
+        {
+            if (target == null) return;
+
+            // Hide all
+            foreach(var v in _allViews) if(v!=null) v.style.display = DisplayStyle.None;
+            
+            // Show target
+            target.style.display = DisplayStyle.Flex;
+
+            // Update Nav State
+            foreach(var kvp in _navButtons) 
+            {
+                if(kvp.Value == null) continue;
+                if(kvp.Key == navKey) kvp.Value.AddToClassList("active");
+                else kvp.Value.RemoveFromClassList("active");
+            }
+
+            // Refresh Lists
+            if (navKey == "Home") RenderList(_root.Q<ScrollView>("RecentProjectsList"), "", 5);
+            if (navKey == "Projects") RenderList(_root.Q<ScrollView>("ProjectsList"), "", 100);
+        }
+
+        private void RenderList(ScrollView container, string filter, int limit)
+        {
+            if (container == null) return;
+            container.Clear();
+
+            var filtered = _projects
+                .Where(p => string.IsNullOrEmpty(filter) || p.Name.ToLower().Contains(filter.ToLower()))
+                .Take(limit);
+
+            foreach (var proj in filtered)
+            {
+                var card = CreateProjectCard(proj);
+                container.Add(card);
             }
         }
 
-        private void OnOpenProjectClicked(ClickEvent evt)
+        private VisualElement CreateProjectCard(MockProject proj)
         {
-            // MVP: Load the most recent project found
-            var files = Directory.GetFiles(_projectsDir, "*.rtwin");
-            if (files.Length == 0)
-            {
-                Debug.LogWarning("No projects found to open.");
-                return;
-            }
+            // .project-card-item
+            var card = new VisualElement();
+            card.AddToClassList("project-card-item");
 
-            var recent = files.OrderByDescending(f => File.GetLastWriteTime(f)).First();
-            Debug.Log($"Opening recent project: {recent}");
+            // Header
+            var header = new VisualElement();
+            header.AddToClassList("p-header");
+            
+            var icon = new VisualElement();
+            icon.AddToClassList("p-icon");
+            // Vary icon based on type for fun
+            if (proj.Type == "PCB") icon.AddToClassList("icon-cpu");
+            else icon.AddToClassList("icon-box");
 
-            var manifest = SimulationSerializer.LoadProject(recent);
-            if (manifest != null && SessionManager.Instance != null)
+            var menuBtn = new Button();
+            menuBtn.AddToClassList("p-menu-btn");
+            menuBtn.AddToClassList("icon-more-vertical");
+            menuBtn.RegisterCallback<ClickEvent>(e => 
             {
-                SessionManager.Instance.StartSession(manifest);
-                UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Jump to CircuitStudio
-            }
+                e.StopPropagation(); // Prevent root closing immediately
+                ShowContextMenu(e, proj.Id);
+            });
+
+            header.Add(icon);
+            header.Add(menuBtn);
+
+            // Info
+            var title = new Label(proj.Name);
+            title.AddToClassList("p-title");
+            
+            var date = new Label(proj.Date);
+            date.AddToClassList("p-date");
+
+            var typeBadge = new Label(proj.Type);
+            typeBadge.AddToClassList("p-type-badge");
+
+            card.Add(header);
+            card.Add(title);
+            card.Add(date);
+            card.Add(typeBadge);
+
+            return card;
         }
 
-
-        private void PopulateRecentProjects()
+        private void ShowContextMenu(ClickEvent evt, string projId)
         {
-            if (_recentList == null) return;
-            _recentList.Clear();
+            _activeContextItemId = projId;
+            if (_contextMenu == null) return;
 
-            // Real Scan
-            if (!Directory.Exists(_projectsDir)) Directory.CreateDirectory(_projectsDir);
-            var files = Directory.GetFiles(_projectsDir, "*.rtwin")
-                                 .OrderByDescending(f => File.GetLastWriteTime(f))
-                                 .ToList();
-
-            if (!string.IsNullOrWhiteSpace(_recentFilter))
-            {
-                files = files.Where(f =>
-                    Path.GetFileNameWithoutExtension(f)
-                        .IndexOf(_recentFilter, StringComparison.OrdinalIgnoreCase) >= 0)
-                    .ToList();
-            }
-
-            if (!_showAllRecents)
-            {
-                files = files.Take(5).ToList();
-            }
-
-            if (files.Count == 0)
-            {
-                var emptyText = string.IsNullOrWhiteSpace(_recentFilter)
-                    ? "No recent projects yet."
-                    : "No projects match your search.";
-                var empty = new Label(emptyText);
-                empty.AddToClassList("recent-empty");
-                _recentList.Add(empty);
-                return;
-            }
-
-            foreach (var file in files)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                var time = File.GetLastWriteTime(file).ToString("g");
-                var displayPath = "/projects/" + Path.GetFileName(file);
-
-                var row = new VisualElement();
-                row.AddToClassList("recent-project-item");
-
-                var left = new VisualElement();
-                left.AddToClassList("recent-left");
-
-                var icon = new VisualElement();
-                icon.AddToClassList("recent-icon");
-                var iconText = new Label("P");
-                iconText.AddToClassList("recent-icon-text");
-                icon.Add(iconText);
-
-                var textStack = new VisualElement();
-                textStack.AddToClassList("recent-text");
-                // Allow clicking row to open
-                row.RegisterCallback<ClickEvent>(e => 
-                {
-                    var m = SimulationSerializer.LoadProject(file);
-                    if (m != null && SessionManager.Instance != null)
-                    {
-                        SessionManager.Instance.StartSession(m);
-                        UnityEngine.SceneManagement.SceneManager.LoadScene(1); // Jump to CircuitStudio
-                    }
-                });
-
-                var labelName = new Label(name);
-                labelName.AddToClassList("recent-project-title");
-
-                var labelMeta = new Label(time);
-                labelMeta.AddToClassList("recent-project-meta");
-
-                textStack.Add(labelName);
-                textStack.Add(labelMeta);
-
-                left.Add(icon);
-                left.Add(textStack);
-
-                var pathLabel = new Label(displayPath);
-                pathLabel.AddToClassList("recent-project-path");
-
-                row.Add(left);
-                row.Add(pathLabel);
-                
-                _recentList.Add(row);
-            }
+            _contextMenu.style.display = DisplayStyle.Flex;
+            _contextMenu.BringToFront();
+            
+            // Position
+            Vector2 localPos = evt.position; 
+            if (_root != null) localPos = _root.WorldToLocal(evt.position);
+            
+            _contextMenu.style.left = localPos.x - 140; // Shift left to align
+            _contextMenu.style.top = localPos.y + 10;
         }
 
-        private void OnViewAllClicked(ClickEvent evt)
+        private void HideContextMenu()
         {
-            _showAllRecents = !_showAllRecents;
-            UpdateViewAllLabel();
-            PopulateRecentProjects();
+            if (_contextMenu != null) _contextMenu.style.display = DisplayStyle.None;
         }
 
-        private void UpdateViewAllLabel()
+        private void RemoveProject(string id)
         {
-            if (_viewAllButton != null)
+            var item = _projects.FirstOrDefault(p => p.Id == id);
+            if (!string.IsNullOrEmpty(item.Id))
             {
-                _viewAllButton.text = _showAllRecents ? "SHOW LESS" : "VIEW ALL";
+                _projects.Remove(item);
+                HideContextMenu();
+                // Refresh active view
+                if (_homeView.style.display == DisplayStyle.Flex) RenderList(_root.Q<ScrollView>("RecentProjectsList"), "", 5);
+                if (_projectsView.style.display == DisplayStyle.Flex) RenderList(_root.Q<ScrollView>("ProjectsList"), "", 100);
             }
-        }
-
-        private void OnSearchChanged(ChangeEvent<string> evt)
-        {
-            if (_suppressSearchChange) return;
-
-            _recentFilter = NormalizeFilter(evt.newValue);
-            PopulateRecentProjects();
-        }
-
-        private void OnSearchFocusIn(FocusInEvent evt)
-        {
-            if (_recentSearchField == null) return;
-            if (_recentSearchField.value == RecentSearchPlaceholder)
-            {
-                _suppressSearchChange = true;
-                _recentSearchField.value = string.Empty;
-                _recentSearchField.RemoveFromClassList("is-placeholder");
-                _suppressSearchChange = false;
-            }
-        }
-
-        private void OnSearchFocusOut(FocusOutEvent evt)
-        {
-            if (_recentSearchField == null) return;
-            if (string.IsNullOrWhiteSpace(_recentSearchField.value))
-            {
-                SetSearchPlaceholder();
-            }
-        }
-
-        private void SetSearchPlaceholder()
-        {
-            if (_recentSearchField == null) return;
-            _suppressSearchChange = true;
-            _recentSearchField.value = RecentSearchPlaceholder;
-            _recentSearchField.AddToClassList("is-placeholder");
-            _recentFilter = string.Empty;
-            _suppressSearchChange = false;
-        }
-
-        private static string NormalizeFilter(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
-            if (string.Equals(value, RecentSearchPlaceholder, StringComparison.OrdinalIgnoreCase)) return string.Empty;
-            return value.Trim();
         }
     }
 }

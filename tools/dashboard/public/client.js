@@ -93,6 +93,8 @@ async function sendCommand(url, name) {
     setTimeout(refreshGallery, 1000);
 }
 
+let lastImageHead = ""; 
+
 async function refreshGallery() {
     try {
         const res = await fetch(apiValues.images);
@@ -103,8 +105,13 @@ async function refreshGallery() {
             return;
         }
 
-        // Only update if changed (simple optimization) to avoid flashing could be added here
-        // For now, just rebuild
+        // Optimization: Check if top image is same. Simplistic but works for appending.
+        const currentHead = images.length > 0 ? images[0].name : "";
+        if (currentHead === lastImageHead && galleryEl.childElementCount === images.length) {
+             return; // No change
+        }
+        lastImageHead = currentHead;
+
         galleryEl.innerHTML = '';
         images.forEach(img => {
             const div = document.createElement('div');
@@ -157,7 +164,13 @@ document.getElementById('btn-report').addEventListener('click', async () => {
 document.getElementById('btn-reset').addEventListener('click', () => sendCommand(apiValues.reset, "Reset Scene"));
 
 // Initial Load & Polling
+// Initial Load & Polling
 refreshGallery();
 checkStatus();
-setInterval(refreshGallery, 5000); // Poll images every 5s
-setInterval(checkStatus, 2000);    // Poll status every 2s
+
+// Recursive Polling (Prevents pileup)
+function scheduleGallery() { setTimeout(() => refreshGallery().finally(scheduleGallery), 5000); }
+function scheduleStatus() { setTimeout(() => checkStatus().finally(scheduleStatus), 2000); }
+
+scheduleGallery();
+scheduleStatus();
