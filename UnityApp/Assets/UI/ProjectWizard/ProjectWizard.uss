@@ -1,20 +1,201 @@
+```css
 /* VARIABLES */
 :root {
-    --color-bg-dark: #1E1E1E;
-    --color-bg-medium: #252526;
-    --color-bg-light: #333333;
+    --color-bg-dark: #121212;
+    --color-bg-medium: #1E1E1E;
+    --color-bg-light: #2A2A2A;
     --color-accent: #007ACC;
-    --color-text-primary: #FFFFFF;
-    --color-text-secondary: #AAAAAA;
-    --color-border: #3E3E42;
+    --color-text-primary: #E0E0E0;
+    --color-text-secondary: #909090;
+    --color-border: #333333;
+    --color-hover: #2C2C2C;
 }
 
 /* GLOBAL RESET */
 * {
     color: var(--color-text-primary);
+    -unity-font: url("project://database/Assets/UI/Fonts/Inter-Regular.ttf"); /* Ensure this exists or fallback */
 }
 
+/* SIDEBAR & NAV - Preserved from previous iteration, tweaked colors */
+.sidebar {
+    background-color: var(--color-bg-dark);
+    border-right-width: 1px;
+    border-right-color: var(--color-border);
+}
 
+.nav-button:hover { background-color: var(--color-bg-light); }
+.nav-button.active { background-color: var(--color-accent); }
+
+/* --- PROJECTS VIEW: TABLE LAYOUT --- */
+.projects-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.projects-toolbar {
+    flex-direction: row;
+    margin-bottom: 20px;
+}
+
+/* Search Field styling override */
+.search-field {
+    background-color: var(--color-bg-medium);
+    border-radius: 4px;
+    padding: 5px;
+    /* Simulate border via explicit properties to avoid compiler errors */
+    border-top-width: 1px; border-bottom-width: 1px;
+    border-left-width: 1px; border-right-width: 1px;
+    border-top-color: var(--color-border); border-bottom-color: var(--color-border);
+    border-left-color: var(--color-border); border-right-color: var(--color-border);
+}
+
+/* Table Header */
+.table-header {
+    flex-direction: row;
+    padding-left: 10px; padding-right: 10px;
+    padding-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+    margin-bottom: 10px;
+    opacity: 0.7;
+}
+
+.header-label {
+    -unity-font-style: bold;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+/* Table Columns */
+.col-name { flex-grow: 2; width: 300px; }
+.col-path { flex-grow: 1; width: 250px; }
+.col-type { width: 120px; }
+.col-date { width: 120px; }
+.col-actions { width: 60px; align-items: flex-end; }
+
+/* Table Row */
+.project-row {
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--color-bg-medium);
+    padding: 12px;
+    margin-bottom: 8px;
+    border-top-left-radius: 6px; border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
+    
+    border-top-width: 1px; border-bottom-width: 1px;
+    border-left-width: 1px; border-right-width: 1px;
+    border-top-color: var(--color-border); border-bottom-color: var(--color-border);
+    border-left-color: var(--color-border); border-right-color: var(--color-border);
+    transition: background-color 0.1s;
+}
+
+.project-row:hover {
+    background-color: var(--color-hover);
+}
+
+.row-icon {
+    width: 20px; height: 20px;
+    margin-right: 12px;
+    -unity-background-image-tint-color: var(--color-text-secondary);
+}
+
+.row-label-name {
+    -unity-font-style: bold;
+    font-size: 13px;
+}
+
+.row-text-dim {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+/* --- TEMPLATES VIEW: RICH CARDS --- */
+.template-card-rich {
+    width: 300px;
+    height: 180px;
+    background-color: var(--color-bg-medium);
+    margin-right: 20px;
+    margin-bottom: 20px;
+    padding: 20px;
+    
+    border-top-left-radius: 8px; border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
+
+    border-top-width: 1px; border-bottom-width: 1px;
+    border-left-width: 1px; border-right-width: 1px;
+    border-top-color: var(--color-border); border-bottom-color: var(--color-border);
+    border-left-color: var(--color-border); border-right-color: var(--color-border);
+}
+
+.template-card-rich:hover {
+    border-top-color: var(--color-accent); border-bottom-color: var(--color-accent);
+    border-left-color: var(--color-accent); border-right-color: var(--color-accent);
+}
+
+.template-icon-box {
+    width: 32px; height: 32px;
+    /* Icon color handled in code via style.color for tint? No, tint applies to bg image. */
+    /* Code sets style.color on box. We use that for tint. */
+}
+
+.template-icon {
+    width: 100%; height: 100%;
+    /* Usage: if parent has color, does image tint inherit? No. */
+    /* For simplicity, we stick to white icons or use the code logic to set tint directly. */
+    /* Let's trust the tint class or code. */
+    -unity-background-image-tint-color: white; 
+}
+
+.template-tag {
+    font-size: 10px;
+    -unity-font-style: bold;
+    padding: 4px 8px;
+    background-color: #333;
+    border-top-left-radius: 4px; border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;
+    color: #CCC;
+}
+
+.template-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.template-desc {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    white-space: normal;
+    height: 40px; /* limit height */
+}
+
+.template-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto; /* Push to bottom */
+}
+
+.template-class {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+}
+
+.template-create-link {
+    background-color: transparent;
+    border-width: 0;
+    color: var(--color-accent);
+    -unity-font-style: bold;
+    cursor: link;
+}
+
+.template-create-link:hover {
+    color: #40A6FF;
+}
 
 /* ICONS MAPPING - PNG PROTOCOL */
 .icon-home { background-image: url('/Assets/UI/Icons/home.png'); }
@@ -34,20 +215,11 @@
 .icon-zap { background-image: url('/Assets/UI/Icons/zap.png'); }
 
 .nav-icon {
-    width: 20px;
-    height: 20px;
-    margin-right: 12px;
-    -unity-background-image-tint-color: var(--color-text-secondary); /* Fixed tint */
+    width: 20px; height: 20px; margin-right: 12px;
+    -unity-background-image-tint-color: var(--color-text-secondary);
     -unity-background-scale-mode: scale-to-fit;
 }
-
 .nav-button.active .nav-icon {
-    -unity-background-image-tint-color: white; /* Fixed tint */
+    -unity-background-image-tint-color: white;
 }
-
-/* Grids */
-.grid-container {
-    flex-direction: row;
-    flex-wrap: wrap; /* Ensure wrapping */
-}
-
+```

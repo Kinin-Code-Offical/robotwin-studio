@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq; // Added for Linq
+using System.Linq;
 
 namespace RobotTwin.UI
 {
@@ -16,15 +16,17 @@ namespace RobotTwin.UI
         public struct UserProject
         {
             public string Name;
-            public string Date;
-            public string Type;
             public string Path;
+            public string Type;
+            public string Modified;
         }
 
         public struct Template
         {
             public string Title;
             public string Description;
+            public string Tag;
+            public string Difficulty;
             public string IconClass;
         }
 
@@ -107,7 +109,7 @@ namespace RobotTwin.UI
             if (list == null) return;
             list.Clear();
 
-            // Scan Directory
+            // 1. Real Projects
             var projects = new List<UserProject>();
             if (Directory.Exists(_projectsPath))
             {
@@ -117,54 +119,91 @@ namespace RobotTwin.UI
                     projects.Add(new UserProject 
                     { 
                         Name = Path.GetFileNameWithoutExtension(file),
-                        Date = File.GetLastWriteTime(file).ToString("MMM dd"),
+                        Path = $"/projects/user/{Path.GetFileName(file)}",
                         Type = "Custom",
-                        Path = file
+                        Modified = File.GetLastWriteTime(file).ToString("MMM dd")
                     });
                 }
             }
-            
-            // Add Mock if empty for visuals
+
+            // 2. Mock Projects (Premium Demo Data from Screenshot)
             if (projects.Count == 0)
             {
-                projects.Add(new UserProject { Name = "Example Project", Date = "Now", Type = "Demo", Path = "" });
+                projects.Add(new UserProject { Name = "Mars_Rover_PCB_Rev2", Path = "/projects/mars-rover/pcb-main.rw", Type = "PCB Design", Modified = "2 hours ago" });
+                projects.Add(new UserProject { Name = "Hydraulic_Arm_Sim_v4", Path = "/projects/industrial/arm-v4.rw", Type = "Robotics Arm", Modified = "Yesterday" });
+                projects.Add(new UserProject { Name = "Drone_Flight_Controller", Path = "/projects/aero/f405-controller.rw", Type = "Simulation", Modified = "Oct 24, 2023" });
+                projects.Add(new UserProject { Name = "Bipedal_Walker_AI", Path = "/projects/ml/bipedal.rw", Type = "Simulation", Modified = "Oct 20, 2023" });
+                projects.Add(new UserProject { Name = "Autonomous_Logistics_Bot", Path = "/projects/logistics/bot-v1.rw", Type = "Robotics Arm", Modified = "Sep 15" });
+                projects.Add(new UserProject { Name = "Smart_Home_Hub_PCB", Path = "/projects/iot/hub-main.rw", Type = "PCB Design", Modified = "Aug 30" });
             }
 
             foreach (var proj in projects)
             {
-                var card = CreateCard(proj);
-                list.Add(card);
+                var row = CreateProjectRow(proj);
+                list.Add(row);
             }
         }
 
-        private VisualElement CreateCard(UserProject proj)
+        private VisualElement CreateProjectRow(UserProject proj)
         {
-            var card = new VisualElement();
-            card.AddToClassList("project-card"); // Check USS for this
+            var row = new VisualElement();
+            row.AddToClassList("project-row");
             
-            // Styling fallback if class missing
-            card.style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f));
-            card.style.marginBottom = 5;
-            card.style.paddingLeft = 10;
-            card.style.paddingTop = 10;
-            card.style.paddingBottom = 10;
+            // Name Column (Icon + Text)
+            var colName = new VisualElement();
+            colName.AddToClassList("col-name");
+            colName.style.flexDirection = FlexDirection.Row;
+            colName.style.alignItems = Align.Center;
+
+            var icon = new VisualElement();
+            // Assign icon based on type
+            if (proj.Type.Contains("PCB")) icon.AddToClassList("icon-cpu");
+            else if (proj.Type.Contains("Robotics")) icon.AddToClassList("icon-hexagon");
+            else icon.AddToClassList("icon-activity");
             
-            // API Compliance: Explicit Borders
-            card.style.borderTopWidth = 1; card.style.borderBottomWidth = 1;
-            card.style.borderLeftWidth = 1; card.style.borderRightWidth = 1;
-            card.style.borderTopColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
-            card.style.borderBottomColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
-            card.style.borderLeftColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
-            card.style.borderRightColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
-            card.style.borderTopLeftRadius = 4; card.style.borderBottomRightRadius = 4;
-            card.style.borderTopRightRadius = 4; card.style.borderBottomLeftRadius = 4;
+            icon.AddToClassList("row-icon");
+            colName.Add(icon);
 
-            var label = new Label($"{proj.Name} ({proj.Type})");
-            label.style.color = Color.white;
-            label.style.unityFontStyleAndWeight = FontStyle.Bold;
-            card.Add(label);
+            var lblName = new Label(proj.Name);
+            lblName.AddToClassList("row-label-name");
+            colName.Add(lblName);
+            row.Add(colName);
+            
+            // Path Column
+            var lblPath = new Label(proj.Path);
+            lblPath.AddToClassList("col-path");
+            lblPath.AddToClassList("row-text-dim");
+            row.Add(lblPath);
 
-            return card;
+            // Type Column
+            var lblType = new Label(proj.Type);
+            lblType.AddToClassList("col-type");
+            // Badge style?
+            lblType.style.backgroundColor = new StyleColor(new Color(0.15f, 0.15f, 0.15f));
+            lblType.style.borderTopLeftRadius = 4; lblType.style.borderTopRightRadius = 4;
+            lblType.style.borderBottomLeftRadius = 4; lblType.style.borderBottomRightRadius = 4;
+            lblType.style.paddingLeft = 8; lblType.style.paddingRight = 8;
+            lblType.style.paddingTop = 2; lblType.style.paddingBottom = 2;
+            lblType.style.fontSize = 10;
+            lblType.style.alignSelf = Align.FlexStart;
+            row.Add(lblType);
+
+            // Modified Column
+            var lblDate = new Label(proj.Modified);
+            lblDate.AddToClassList("col-date");
+            lblDate.AddToClassList("row-text-dim");
+            row.Add(lblDate);
+
+            // Actions Column
+            var colActions = new VisualElement();
+            colActions.AddToClassList("col-actions");
+            var btnMenu = new Button(); // More vertical dots usually
+            btnMenu.text = ":"; // Placeholder for icon
+            btnMenu.AddToClassList("row-action-btn");
+            colActions.Add(btnMenu);
+            row.Add(colActions);
+
+            return row;
         }
 
         private void PopulateTemplates()
@@ -173,79 +212,92 @@ namespace RobotTwin.UI
             if (list == null) return;
             list.Clear();
 
-            // Set grid layout on container if possible via code or ensure it is in UXML/USS
             list.contentContainer.style.flexDirection = FlexDirection.Row;
             list.contentContainer.style.flexWrap = Wrap.Wrap;
 
             var templates = new List<Template>
             {
-                new Template { Title = "Empty", Description = "Clean Slate", IconClass = "icon-plus" },
-                new Template { Title = "Robotics", Description = "Arm & Gripper", IconClass = "icon-hexagon" },
-                new Template { Title = "IoT", Description = "Sensors Network", IconClass = "icon-activity" },
-                new Template { Title = "Simulation", Description = "Physics Sandbox", IconClass = "icon-cpu" }
+                new Template { Title = "6-DOF Robot Arm", Description = "Standard industrial robot arm configuration with inverse kinematics solver setup.", Tag="ROBOTICS", Difficulty="Intermediate", IconClass = "icon-hexagon" },
+                new Template { Title = "STM32 Flight Controller", Description = "PCB layout and schematic template for F405 based flight controllers.", Tag="PCB DESIGN", Difficulty="Advanced", IconClass = "icon-cpu" },
+                new Template { Title = "Warehouse Digital Twin", Description = "Simulation environment with AGV paths, shelving units, and physics constraints.", Tag="SIMULATION", Difficulty="Beginner", IconClass = "icon-activity" },
+                new Template { Title = "Bipedal Walker RL", Description = "Reinforcement learning environment for bipedal locomotion training with PyTorch integration.", Tag="AI / ML", Difficulty="Advanced", IconClass = "icon-zap" }
             };
 
             foreach (var tmpl in templates)
             {
-                var card = new Button(() => OnTemplateClicked(tmpl));
-                card.AddToClassList("template-card");
-                
-                // Styling
-                card.style.backgroundColor = new StyleColor(new Color(0.25f, 0.25f, 0.25f));
-                card.style.marginRight = 10;
-                card.style.marginBottom = 10;
-                card.style.width = 140;
-                card.style.height = 140;
-                card.style.alignItems = Align.Center;
-                card.style.justifyContent = Justify.Center;
-                
-                // API Compliance
-                card.style.borderTopWidth = 1; card.style.borderBottomWidth = 1;
-                card.style.borderLeftWidth = 1; card.style.borderRightWidth = 1;
-                card.style.borderTopColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
-                card.style.borderBottomColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
-                card.style.borderLeftColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
-                card.style.borderRightColor = new StyleColor(new Color(0.4f, 0.4f, 0.4f)); 
-                card.style.borderTopLeftRadius = 8; card.style.borderBottomRightRadius = 8;
-                card.style.borderTopRightRadius = 8; card.style.borderBottomLeftRadius = 8;
-
-                // Icon
-                var icon = new VisualElement();
-                icon.AddToClassList(tmpl.IconClass);
-                icon.style.width = 32; icon.style.height = 32;
-                icon.style.marginBottom = 10;
-                card.Add(icon);
-
-                var lbl = new Label(tmpl.Title);
-                lbl.style.color = Color.white;
-                lbl.style.unityFontStyleAndWeight = FontStyle.Bold;
-                card.Add(lbl);
-
+                var card = CreateTemplateCard(tmpl);
                 list.Add(card);
             }
+        }
+
+        private VisualElement CreateTemplateCard(Template tmpl)
+        {
+            var card = new VisualElement();
+            card.AddToClassList("template-card-rich");
+
+            // --- Header: Icon + Tag ---
+            var header = new VisualElement();
+            header.style.flexDirection = FlexDirection.Row;
+            header.style.justifyContent = Justify.SpaceBetween;
+            header.style.alignItems = Align.Center;
+            header.style.marginBottom = 15;
+
+            var iconBox = new VisualElement();
+            iconBox.AddToClassList("template-icon-box");
+            if (tmpl.Tag == "ROBOTICS") iconBox.style.color = new StyleColor(new Color(1f, 0.6f, 0f)); // Orange
+            if (tmpl.Tag == "PCB DESIGN") iconBox.style.color = new StyleColor(new Color(0f, 0.8f, 0.5f)); // Green
+            if (tmpl.Tag == "SIMULATION") iconBox.style.color = new StyleColor(new Color(0.2f, 0.6f, 1f)); // Blue
+            if (tmpl.Tag == "AI / ML") iconBox.style.color = new StyleColor(new Color(0.7f, 0.3f, 1f)); // Purple
+
+            var icon = new VisualElement();
+            icon.AddToClassList(tmpl.IconClass);
+            icon.AddToClassList("template-icon");
+            iconBox.Add(icon);
+            header.Add(iconBox);
+
+            var tag = new Label(tmpl.Tag);
+            tag.AddToClassList("template-tag");
+            header.Add(tag);
+            card.Add(header);
+
+            // --- Body: Title + Desc ---
+            var title = new Label(tmpl.Title);
+            title.AddToClassList("template-title");
+            card.Add(title);
+
+            var desc = new Label(tmpl.Description);
+            desc.AddToClassList("template-desc");
+            card.Add(desc);
+
+            // --- Footer: Difficulty + Link ---
+            var footer = new VisualElement();
+            footer.AddToClassList("template-footer");
+            
+            var diff = new Label(tmpl.Difficulty);
+            diff.AddToClassList("template-difficulty");
+            footer.Add(diff);
+
+            var createBtn = new Button(() => OnTemplateClicked(tmpl));
+            createBtn.text = "CREATE ->";
+            createBtn.AddToClassList("template-create-link");
+            footer.Add(createBtn);
+
+            card.Add(footer);
+
+            return card;
         }
 
         private void OnTemplateClicked(Template tmpl)
         {
             Debug.Log($"[ProjectWizard] Creating new project: {tmpl.Title}");
             
-            // Create Manifest
             string fileName = $"Project_{System.DateTime.Now.Ticks}.rtwin";
             string fullPath = Path.Combine(_projectsPath, fileName);
             File.WriteAllText(fullPath, $"{{\"template\": \"{tmpl.Title}\"}}");
 
-            // Transition
-            // Assuming Scene 1 is the main scene. Using BuildIndex 1 or Name.
-            // Be safe: Load Scene by Name if possible, else Index 1.
             int sceneCount = SceneManager.sceneCountInBuildSettings;
-            if (sceneCount > 1) 
-            {
-                SceneManager.LoadScene(1); 
-            }
-            else
-            {
-                Debug.LogWarning("[ProjectWizard] Scene 1 not found in Build Settings. Staying here.");
-            }
+            if (sceneCount > 1) SceneManager.LoadScene(1);
+            else Debug.LogWarning("[ProjectWizard] Scene 1 not found.");
         }
     }
 }

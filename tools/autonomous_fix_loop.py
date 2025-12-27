@@ -82,7 +82,7 @@ def analyze_and_fix():
          fixed = True
          
     # Check Success
-    if "Compilation succeeded" in log_content or "Scripts have been reloaded" in log_content:
+    if "Compilation succeeded" in log_content or "Scripts have been reloaded" in log_content or "Exiting batchmode successfully now" in log_content:
         return "SUCCESS"
         
     if fixed:
