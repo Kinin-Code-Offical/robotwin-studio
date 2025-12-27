@@ -28,6 +28,17 @@ app.use('/screenshots', express.static(SCREENSHOT_DIR));
 // Serve test report
 app.use('/report', express.static(TEST_DIR));
 
+// Check Unity Status
+app.get('/api/status', async (req, res) => {
+    try {
+        // Fast timeout ping
+        await axios.get(`${UNITY_URL}/query?target=ping`, { timeout: 1000 });
+        res.json({ connected: true });
+    } catch (e) {
+        res.json({ connected: false, error: e.code || e.message });
+    }
+});
+
 // Proxy commands / Execute Tests
 app.get('/api/command/:action', async (req, res) => {
     const action = req.params.action; // screenshot, run-tests, reset, generate-report
@@ -69,11 +80,12 @@ app.get('/api/command/:action', async (req, res) => {
     }
 
     try {
-        const response = await axios.get(`${UNITY_URL}/${action}`);
+        const response = await axios.get(`${UNITY_URL}/${action}`, { timeout: 5000 });
         res.status(response.status).send(response.data);
     } catch (error) {
-        console.error(`[Dashboard] Error communicating with Unity: ${error.message}`);
-        res.status(502).json({ error: 'Unity not reachable or returned error', details: error.message });
+        console.error(`[Dashboard] Unity Proxy Error: ${error.message}`);
+        const code = error.code === 'ECONNREFUSED' ? 'UNITY_OFFLINE' : 'UNITY_ERROR';
+        res.status(502).json({ error: code, details: error.message });
     }
 });
 

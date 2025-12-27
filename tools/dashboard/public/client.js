@@ -3,48 +3,94 @@ const apiValues = {
     runTests: '/api/command/run-tests',
     report: '/api/command/generate-report',
     reset: '/api/command/reset',
-    images: '/api/images'
+    images: '/api/images',
+    status: '/api/status'
 };
 
-const statusEl = document.getElementById('status-message');
+const toastEl = document.getElementById('toast');
 const galleryEl = document.getElementById('gallery');
 const modal = document.getElementById('modal');
 const modalImg = document.getElementById('modal-img');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
 
-function setStatus(msg) {
-    statusEl.textContent = msg;
-    // Clear after 3 seconds
-    setTimeout(() => {
-        if (statusEl.textContent === msg) {
-            statusEl.textContent = 'Ready.';
+let isOnline = false;
+
+function showToast(msg, type = 'info') {
+    toastEl.textContent = msg;
+    toastEl.className = 'show';
+    
+    // Reset borders based on type
+    if(type === 'error') toastEl.style.borderLeftColor = '#f44336';
+    else if(type === 'success') toastEl.style.borderLeftColor = '#4caf50';
+    else toastEl.style.borderLeftColor = '#2196f3';
+
+    setTimeout(() => { toastEl.className = toastEl.className.replace('show', ''); }, 3000);
+}
+
+async function checkStatus() {
+    try {
+        const res = await fetch(apiValues.status);
+        const data = await res.json();
+        
+        if (data.connected) {
+            if(!isOnline) {
+                // transitioned to online
+                statusDot.className = 'status-dot online';
+                statusText.textContent = "Unity Online";
+                statusText.style.color = "#4caf50";
+                isOnline = true;
+            }
+        } else {
+            if(isOnline || statusText.textContent === "Checking...") {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = "Unity Offline (Press Play)";
+                statusText.style.color = "#aaa";
+                isOnline = false;
+            }
         }
-    }, 3000);
+    } catch (e) {
+        statusDot.className = 'status-dot offline';
+        statusText.textContent = "Server Error";
+        isOnline = false;
+    }
 }
 
 async function sendCommand(url, name) {
-    setStatus(`Executing ${name}...`);
+    if (!isOnline && name !== "Smoke Test") { // Smoke test runs on node server
+        showToast("Unity is Offline! Please Start Play Mode.", "error");
+        return; 
+    }
+
+    showToast(`Executing ${name}...`);
     try {
         const res = await fetch(url);
-        const data = await res.json(); // Treat everything as JSON now
+        const data = await res.json(); 
         
         if (res.ok) {
             if (data.output) {
-                // It's a test run result
+                // Test Result
                 console.log(data.output);
-                setStatus(data.status === 'success' ? 'Tests Passed!' : 'Tests Failed!');
-                alert(data.output); // Simple output for now
+                const isSuccess = data.status === 'success';
+                showToast(isSuccess ? `${name} Passed!` : `${name} Failed!`, isSuccess ? 'success' : 'error');
+                if(!isSuccess) alert(data.output);
             } else {
-                setStatus(`${name} Success!`);
+                showToast(`${name} Success!`, 'success');
             }
         } else {
-            setStatus(`${name} Failed: ${res.statusText}`);
+            // Handle specific Unity errors
+            if (data.error === 'UNITY_OFFLINE') {
+                showToast("Unity is Offline!", 'error');
+                checkStatus(); // Force check
+            } else {
+                showToast(`${name} Failed: ${data.details || res.statusText}`, 'error');
+            }
         }
     } catch (err) {
-        setStatus(`${name} Error: ${err.message}`);
+        showToast(`${name} Network Error`, 'error');
     }
-    // Refresh gallery immediately after a command (especially for screenshots)
-    setTimeout(refreshGallery, 500);
-    setTimeout(refreshGallery, 2000);
+    
+    setTimeout(refreshGallery, 1000);
 }
 
 async function refreshGallery() {
@@ -52,6 +98,13 @@ async function refreshGallery() {
         const res = await fetch(apiValues.images);
         const images = await res.json();
         
+        if (images.length === 0) {
+            galleryEl.innerHTML = '<div style="color:#666; width:100%; margin-top:20px; text-align:center;">No screenshots yet. Captures will appear here.</div>';
+            return;
+        }
+
+        // Only update if changed (simple optimization) to avoid flashing could be added here
+        // For now, just rebuild
         galleryEl.innerHTML = '';
         images.forEach(img => {
             const div = document.createElement('div');
@@ -64,7 +117,9 @@ async function refreshGallery() {
             
             const caption = document.createElement('div');
             caption.className = 'caption';
-            caption.textContent = new Date(img.time).toLocaleTimeString() + " - " + img.name;
+            
+            const timeStr = new Date(img.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            caption.innerHTML = `<span>${timeStr}</span> <span>${img.name}</span>`;
             
             div.appendChild(image);
             div.appendChild(caption);
@@ -84,23 +139,25 @@ function openModal(url) {
 document.getElementById('btn-screenshot').addEventListener('click', () => sendCommand(apiValues.screenshot, "Screenshot"));
 document.getElementById('btn-run-tests').addEventListener('click', () => sendCommand(apiValues.runTests, "Smoke Test"));
 document.getElementById('btn-report').addEventListener('click', async () => {
-    setStatus("Generating Report...");
+    showToast("Generating Report...");
     try {
         const res = await fetch(apiValues.report);
         const data = await res.json();
         if (data.status === 'success') {
-            setStatus("Report Ready!");
+            showToast("Opening Report...", 'success');
             window.open(data.url, '_blank');
         } else {
-            setStatus("Report Failed!");
+            showToast("Report Generation Failed", 'error');
             alert(data.output);
         }
     } catch (e) {
-        setStatus("Error: " + e.message);
+        showToast("Error: " + e.message, 'error');
     }
 });
 document.getElementById('btn-reset').addEventListener('click', () => sendCommand(apiValues.reset, "Reset Scene"));
 
 // Initial Load & Polling
 refreshGallery();
-setInterval(refreshGallery, 3000); // Poll every 3 seconds
+checkStatus();
+setInterval(refreshGallery, 5000); // Poll images every 5s
+setInterval(checkStatus, 2000);    // Poll status every 2s
