@@ -1,30 +1,37 @@
 import os
 import urllib.request
 import shutil
-
+ICONS_EIGHT_BASE = "https://img.icons8.com/ios-glyphs/64/ffffff/"
 # Config
 ICONS_DIR = r"c:\BASE\ROBOTWIN-STUDIO\robotwin-studio\UnityApp\Assets\UI\Icons"
 ICON_MAP = {
-    "home.png": "https://img.icons8.com/ios-glyphs/64/ffffff/home.png",
-    "folder.png": "https://img.icons8.com/ios-glyphs/64/ffffff/folder-invoices.png",
-    "settings.png": "https://img.icons8.com/ios-glyphs/64/ffffff/gear.png",
-    "plus.png": "https://img.icons8.com/ios-glyphs/64/ffffff/plus-math.png",
-    "search.png": "https://img.icons8.com/ios-glyphs/64/ffffff/search--v1.png",
-    "menu.png": "https://img.icons8.com/ios-glyphs/64/ffffff/menu-vertical.png",
-    "cpu.png": "https://img.icons8.com/ios-glyphs/64/ffffff/processor.png",
-    "box.png": "https://img.icons8.com/ios-glyphs/64/ffffff/box.png",
-    "activity.png": "https://img.icons8.com/ios-glyphs/64/ffffff/activity-history.png",
-    "import.png": "https://img.icons8.com/ios-glyphs/64/ffffff/import.png",
-    "copy.png": "https://img.icons8.com/ios-glyphs/64/ffffff/copy.png",
-    "trash-2.png": "https://img.icons8.com/ios-glyphs/64/ffffff/trash.png",
-    "filter.png": "https://img.icons8.com/ios-glyphs/64/ffffff/filter.png",
-    "layout-template.png": "https://img.icons8.com/ios-glyphs/64/ffffff/layout.png",
-    "more-vertical.png": "https://img.icons8.com/ios-glyphs/64/ffffff/menu-vertical.png",
-    "arrow-right.png": "https://img.icons8.com/ios-glyphs/64/ffffff/arrow.png",
-    "hexagon.png": "https://img.icons8.com/ios-glyphs/64/ffffff/hexagon.png",
-    "zap.png": "https://img.icons8.com/ios-glyphs/64/ffffff/lightning-bolt.png",
-    "clock.png": "https://img.icons8.com/ios-glyphs/64/ffffff/clock.png",
-    "external-link.png": "https://img.icons8.com/ios-glyphs/64/ffffff/external-link.png"
+    "home.png": ICONS_EIGHT_BASE + "home.png",
+    "folder.png": ICONS_EIGHT_BASE + "folder-invoices.png",
+    "settings.png": ICONS_EIGHT_BASE + "gear.png",
+    "plus.png": ICONS_EIGHT_BASE + "plus-math.png",
+    "search.png": ICONS_EIGHT_BASE + "search--v1.png",
+    "menu.png": ICONS_EIGHT_BASE + "menu-vertical.png",
+    "cpu.png": ICONS_EIGHT_BASE + "processor.png",
+    "box.png": ICONS_EIGHT_BASE + "box.png",
+    "activity.png": ICONS_EIGHT_BASE + "activity-history.png",
+    "import.png": ICONS_EIGHT_BASE + "import.png",
+    "copy.png": ICONS_EIGHT_BASE + "copy.png",
+    "trash-2.png": ICONS_EIGHT_BASE + "trash.png",
+    "filter.png": ICONS_EIGHT_BASE + "filter.png",
+    "layout-template.png": ICONS_EIGHT_BASE + "layout.png",
+    "more-vertical.png": ICONS_EIGHT_BASE + "menu-vertical.png",
+    "arrow-right.png": ICONS_EIGHT_BASE + "arrow.png",
+    "hexagon.png": ICONS_EIGHT_BASE + "hexagon.png",
+    "zap.png": ICONS_EIGHT_BASE + "lightning-bolt.png",
+    "clock.png": ICONS_EIGHT_BASE + "clock.png",
+    "external-link.png": ICONS_EIGHT_BASE + "external-link.png",
+    "play.png": ICONS_EIGHT_BASE + "play--v1.png",
+    "pause.png": ICONS_EIGHT_BASE + "pause--v1.png",
+    "stop.png": ICONS_EIGHT_BASE + "stop.png",
+    "step.png": ICONS_EIGHT_BASE + "end.png",
+    "console.png": ICONS_EIGHT_BASE + "console.png",
+    "inspector.png": ICONS_EIGHT_BASE + "info.png",
+    "hierarchy.png": ICONS_EIGHT_BASE + "list.png"
 }
 
 def clean_and_fetch():
