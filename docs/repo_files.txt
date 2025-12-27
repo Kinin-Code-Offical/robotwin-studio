@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-27T15:52:41Z
-# Commit: 57d68e4
-# FileCount: 265
+﻿# GeneratedUtc: 2025-12-27T16:51:12Z
+# Commit: 6b32c3e
+# FileCount: 268
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -42,11 +42,10 @@ CoreSim/src/RobotTwin.CoreSim/Specs/TemplateSpec.cs
 CoreSim/src/RobotTwin.CoreSim/Specs/WorldSpec.cs
 CoreSim/tests/RobotTwin.CoreSim.Tests/RobotTwin.CoreSim.Tests.csproj
 CoreSim/tests/RobotTwin.CoreSim.Tests/TemplateTests.cs
-docs/antigravity/ACTIVITY_LOG.md
+docs/ACTIVITY_LOG.md
 docs/antigravity/CONTEXT_PACK.md
 docs/antigravity/LAST_RUN.md
 docs/antigravity/MASTER_PROMPT.txt
-docs/antigravity/MODEL_POLICY.md
 docs/antigravity/MVP_SCOPE.md
 docs/antigravity/PROFILES.yml
 docs/antigravity/SHARED_INFO_LATEST.json
@@ -55,6 +54,7 @@ docs/antigravity/SHARED_INFO_PIPELINE.md
 docs/branch_cleanup_report.md
 docs/DEV_LOG_MISSION_CONTROL.md
 docs/DEV_SETUP_WINDOWS.md
+docs/MODEL_POLICY.md
 docs/MVP_SCOPE.md
 docs/repo_files.txt
 docs/toolchain_audit.md
@@ -104,6 +104,9 @@ UnityApp/Assets/Plugins/System.Text.Encodings.Web.dll
 UnityApp/Assets/Plugins/System.Text.Encodings.Web.dll.meta
 UnityApp/Assets/Plugins/System.Text.Json.dll
 UnityApp/Assets/Plugins/System.Text.Json.dll.meta
+UnityApp/Assets/Plugins/x86_64.meta
+UnityApp/Assets/Plugins/x86_64/RoboTwinCore.dll
+UnityApp/Assets/Plugins/x86_64/RoboTwinCore.dll.meta
 UnityApp/Assets/Resources.meta
 UnityApp/Assets/Resources/UI.meta
 UnityApp/Assets/Resources/UI/ProjectWizard.uxml

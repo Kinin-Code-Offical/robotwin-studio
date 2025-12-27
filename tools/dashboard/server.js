@@ -4,10 +4,14 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const chokidar = require('chokidar');
+const http = require('http');
 
 const app = express();
 const PORT = 3000;
 const UNITY_URL = 'http://localhost:8085';
+
+// Keep-Alive Agent to prevent socket exhaustion
+const keepAliveAgent = new http.Agent({ keepAlive: true });
 
 // Path to Unity Project Root (Up two levels from tools/dashboard)
 const PROJECT_ROOT = path.resolve(__dirname, '../../');
@@ -29,19 +33,20 @@ app.use('/screenshots', express.static(SCREENSHOT_DIR));
 app.use('/report', express.static(TEST_DIR));
 
 // Check Unity Status
-// Check Unity Status
 app.get('/api/status', async (req, res) => {
     try {
-        // Use the new /status endpoint
-        const response = await axios.get(`${UNITY_URL}/status`, { timeout: 1000 });
-        // response.data should be { engine: "connected", version: 100 }
+        // Use the new /status endpoint with keepAlive agent
+        const response = await axios.get(`${UNITY_URL}/status`, { 
+            timeout: 1000,
+            httpAgent: keepAliveAgent
+        });
+        
         res.json({ 
             connected: true, 
             engine: response.data.engine, 
             version: response.data.version 
         });
     } catch (e) {
-        // If 404/500/Timeout
         res.json({ connected: false, error: e.code || e.message });
     }
 });
@@ -87,7 +92,10 @@ app.get('/api/command/:action', async (req, res) => {
     }
 
     try {
-        const response = await axios.get(`${UNITY_URL}/${action}`, { timeout: 5000 });
+        const response = await axios.get(`${UNITY_URL}/${action}`, { 
+            timeout: 5000,
+            httpAgent: keepAliveAgent
+        });
         res.status(response.status).send(response.data);
     } catch (error) {
         console.error(`[Dashboard] Unity Proxy Error: ${error.message}`);
@@ -96,27 +104,35 @@ app.get('/api/command/:action', async (req, res) => {
     }
 });
 
-// List images
+// List images (Optimized)
 app.get('/api/images', (req, res) => {
     fs.readdir(SCREENSHOT_DIR, (err, files) => {
         if (err) {
             return res.status(500).json({ error: 'Failed to read screenshot directory' });
         }
-        // Filter for images and sort by modification time (newest first)
-        const images = files
-            .filter(file => /\.(png|jpg|jpeg)$/i.test(file))
-            .map(file => {
-                const filePath = path.join(SCREENSHOT_DIR, file);
-                const stats = fs.statSync(filePath);
-                return {
-                    name: file,
-                    url: `/screenshots/${file}`,
-                    time: stats.mtime
-                };
-            })
-            .sort((a, b) => b.time - a.time); // Newest first
-            
-        res.json(images);
+        
+        try {
+            const images = files
+                .filter(file => /\.(png|jpg|jpeg)$/i.test(file))
+                .map(file => {
+                    const filePath = path.join(SCREENSHOT_DIR, file);
+                    try {
+                        const stats = fs.statSync(filePath);
+                        return {
+                            name: file,
+                            url: `/screenshots/${file}`,
+                            time: stats.mtime.getTime()
+                        };
+                    } catch (e) { return null; }
+                })
+                .filter(x => x !== null)
+                .sort((a, b) => b.time - a.time)
+                .slice(0, 20); // LIMIT to top 20
+                
+            res.json(images);
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
     });
 });
 

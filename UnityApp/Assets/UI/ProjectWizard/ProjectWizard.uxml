@@ -1,61 +1,128 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:Style src="../Theme/RobotwinTheme.uss" />
     <ui:Style src="ProjectWizard.uss" />
-    <ui:VisualElement class="wizard-root" style="flex-direction: row; height: 100%;">
-        <ui:VisualElement name="Sidebar" class="sidebar" style="width: 230px; flex-direction: column; flex-shrink: 0;">
-            <ui:Label text="ROBOTWIN" class="sidebar-logo" />
-            <ui:VisualElement class="sidebar-nav">
-                <ui:Button name="NavHome" text="Home" class="nav-button active" />
-                <ui:Button name="NavProjects" text="Projects" class="nav-button" />
-                <ui:Button name="NavTemplates" text="Templates" class="nav-button" />
-                <ui:Button name="NavSettings" text="Settings" class="nav-button" />
+    
+    <ui:VisualElement class="wizard-root">
+        <!-- Sidebar -->
+        <ui:VisualElement name="Sidebar" class="sidebar">
+            <ui:VisualElement class="brand-row">
+                <ui:VisualElement class="brand-icon icon-hexagon" />
+                <ui:Label text="ROBOTWIN" class="sidebar-logo" />
             </ui:VisualElement>
+            
+            <ui:VisualElement class="sidebar-nav">
+                <ui:Button name="NavHome" class="nav-button active">
+                    <ui:VisualElement class="nav-icon icon-home" />
+                    <ui:Label text="Home" class="nav-label" />
+                </ui:Button>
+                <ui:Button name="NavProjects" class="nav-button">
+                    <ui:VisualElement class="nav-icon icon-projects" />
+                    <ui:Label text="Projects" class="nav-label" />
+                </ui:Button>
+                <ui:Button name="NavTemplates" class="nav-button">
+                    <ui:VisualElement class="nav-icon icon-templates" />
+                    <ui:Label text="Templates" class="nav-label" />
+                </ui:Button>
+                <ui:Button name="NavSettings" class="nav-button">
+                    <ui:VisualElement class="nav-icon icon-settings" />
+                    <ui:Label text="Settings" class="nav-label" />
+                </ui:Button>
+            </ui:VisualElement>
+            
             <ui:VisualElement class="sidebar-footer">
                 <ui:Label text="v1.0.4 - Stable" class="sidebar-version" />
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement class="content">
-            <ui:Label text="Welcome to Robotwin Studio" class="page-title" />
-            <ui:Label text="Version 1.0.4 (Stable)" class="page-subtitle" />
-            <ui:VisualElement class="divider" />
+        <!-- Content -->
+        <ui:VisualElement class="content main-content">
+            
+            <!-- VIEW: HOME -->
+            <ui:VisualElement name="HomeView" class="view view-active">
+                <ui:Label text="Welcome to Robotwin Studio" class="page-title" />
+                <ui:Label text="Version 1.0.4 (Stable)" class="page-subtitle" />
+                <ui:VisualElement class="divider" />
 
-            <ui:VisualElement class="card-row">
-                <ui:Button name="NewProjectBtn" class="card-button primary">
-                    <ui:VisualElement class="card-icon">
-                        <ui:Label text="+" class="card-icon-text" />
-                    </ui:VisualElement>
-                    <ui:Label text="New Project" class="card-title" />
-                    <ui:Label text="Create a new empty simulation workspace." class="card-desc" />
-                </ui:Button>
-                <ui:Button name="OpenProjectBtn" class="card-button">
-                    <ui:VisualElement class="card-icon">
-                        <ui:Label text="O" class="card-icon-text" />
-                    </ui:VisualElement>
-                    <ui:Label text="Open Project" class="card-title" />
-                    <ui:Label text="Browse for .rw files on disk." class="card-desc" />
-                </ui:Button>
-                <ui:Button name="ImportCadBtn" class="card-button last">
-                    <ui:VisualElement class="card-icon">
-                        <ui:Label text="I" class="card-icon-text" />
-                    </ui:VisualElement>
-                    <ui:Label text="Import CAD/EDA" class="card-title" />
-                    <ui:Label text="Import Altium, KiCad, or STEP." class="card-desc" />
-                </ui:Button>
+                <ui:VisualElement class="card-row">
+                    <ui:Button name="NewProjectBtn" class="card-button primary">
+                        <ui:VisualElement class="card-icon icon icon-plus" />
+                        <ui:Label text="New Project" class="card-title" />
+                        <ui:Label text="Empty Sim" class="card-desc" />
+                    </ui:Button>
+                    <ui:Button name="OpenProjectBtn" class="card-button">
+                        <ui:VisualElement class="card-icon icon icon-folder-open" />
+                        <ui:Label text="Open Project" class="card-title" />
+                        <ui:Label text="Browse Disk" class="card-desc" />
+                    </ui:Button>
+                    <ui:Button name="ImportCadBtn" class="card-button last">
+                        <ui:VisualElement class="card-icon icon icon-import" />
+                        <ui:Label text="Import CAD" class="card-title" />
+                        <ui:Label text="STEP / EDA" class="card-desc" />
+                    </ui:Button>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="divider" />
+
+                <ui:VisualElement class="recent-header">
+                    <ui:Label text="Recent Projects" class="section-title" />
+                    <ui:Button name="ViewAllBtn" text="VIEW ALL" class="link-button" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="search-row">
+                    <ui:VisualElement class="search-icon icon icon-search" />
+                    <ui:TextField name="RecentSearchField" class="search-field" placeholder-text="Search..." />
+                </ui:VisualElement>
+
+                <ui:ScrollView name="RecentProjectsList" class="recent-list" />
             </ui:VisualElement>
 
-            <ui:VisualElement class="divider" />
+            <!-- VIEW: PROJECTS -->
+            <ui:VisualElement name="ProjectsView" class="view" style="display: none;">
+                <ui:VisualElement class="projects-header">
+                    <ui:Label text="Projects" class="page-title" />
+                    <ui:Button name="CreateProjectBtn" class="primary-button">
+                        <ui:VisualElement class="button-icon icon icon-plus" />
+                        <ui:Label text="Create New" class="button-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+                
+                <ui:VisualElement class="projects-toolbar">
+                    <ui:VisualElement class="search-row projects-search" style="flex-grow: 1;">
+                        <ui:VisualElement class="search-icon icon icon-search" />
+                        <ui:TextField name="ProjectsSearchField" class="search-field" placeholder-text="Search projects..." />
+                    </ui:VisualElement>
+                </ui:VisualElement>
 
-            <ui:VisualElement class="recent-header">
-                <ui:Label text="Recent Projects" class="section-title" />
-                <ui:Button name="ViewAllBtn" text="VIEW ALL" class="link-button" />
+                <ui:ScrollView name="ProjectsList" class="projects-list projects-grid" />
             </ui:VisualElement>
 
-            <ui:VisualElement class="search-row">
-                <ui:TextField name="RecentSearchField" class="search-field" label="" value="" />
+            <!-- VIEW: TEMPLATES -->
+            <ui:VisualElement name="TemplatesView" class="view" style="display: none;">
+                <ui:Label text="Templates" class="page-title" />
+                <ui:Label text="Select a starting point." class="page-subtitle" />
+                <ui:VisualElement class="divider" />
+                <ui:ScrollView class="templates-grid">
+                    <!-- Template Items would go here -->
+                </ui:ScrollView>
             </ui:VisualElement>
 
-            <ui:ScrollView name="RecentProjectsList" class="recent-list" />
         </ui:VisualElement>
+
+        <!-- Context Menu Overlay -->
+        <ui:VisualElement name="ContextMenu" class="context-menu" style="display: none; position: absolute;">
+            <ui:Button name="ContextDetailsBtn" class="context-item">
+                <ui:VisualElement class="context-icon icon icon-activity" />
+                <ui:Label text="Details" class="context-text" />
+            </ui:Button>
+            <ui:Button name="ContextDuplicateBtn" class="context-item">
+                <ui:VisualElement class="context-icon icon icon-copy" />
+                <ui:Label text="Duplicate" class="context-text" />
+            </ui:Button>
+            <ui:Button name="ContextRemoveBtn" class="context-item danger">
+                <ui:VisualElement class="context-icon icon icon-trash-2" />
+                <ui:Label text="Remove" class="context-text" />
+            </ui:Button>
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>
