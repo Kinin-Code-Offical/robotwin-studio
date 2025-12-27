@@ -160,5 +160,64 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
+        <ui:VisualElement name="TemplateCreateOverlay" class="template-overlay" style="display: none;">
+            <ui:VisualElement class="template-create-card">
+                <ui:VisualElement class="template-create-header">
+                    <ui:Label text="Create Project" class="details-title" />
+                    <ui:Button name="TemplateCreateCloseBtn" class="details-close-btn">
+                        <ui:Label text="X" class="details-close-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+
+                <ui:Label name="TemplateCreateTemplateLabel" text="Template" class="page-subtitle" />
+
+                <ui:VisualElement class="form-row">
+                    <ui:Label text="Project Name" class="form-label" />
+                    <ui:TextField name="TemplateProjectNameField" class="form-field" placeholder-text="Enter project name..." />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="form-row">
+                    <ui:Label text="Location" class="form-label" />
+                    <ui:VisualElement class="form-row-inline location-row">
+                        <ui:TextField name="TemplateProjectPathField" class="form-field form-field-grow" placeholder-text="Select location..." />
+                        <ui:Button name="TemplateProjectBrowseBtn" class="ghost-button form-browse-button">
+                            <ui:Label text="Select Location" class="button-label" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="details-actions">
+                    <ui:Button name="TemplateCreateCancelBtn" class="ghost-button">
+                        <ui:Label text="Cancel" class="button-label" />
+                    </ui:Button>
+                    <ui:Button name="TemplateCreateConfirmBtn" class="primary-button">
+                        <ui:Label text="Create Project" class="button-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="DeleteConfirmOverlay" class="confirm-overlay" style="display: none;">
+            <ui:VisualElement class="confirm-card">
+                <ui:VisualElement class="confirm-header">
+                    <ui:Label text="Delete Project" class="details-title" />
+                    <ui:Button name="DeleteConfirmCloseBtn" class="details-close-btn">
+                        <ui:Label text="X" class="details-close-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+
+                <ui:Label name="DeleteConfirmMessage" class="details-item" />
+
+                <ui:VisualElement class="details-actions">
+                    <ui:Button name="DeleteConfirmCancelBtn" class="ghost-button">
+                        <ui:Label text="Cancel" class="button-label" />
+                    </ui:Button>
+                    <ui:Button name="DeleteConfirmBtn" class="primary-button">
+                        <ui:Label text="Delete" class="button-label" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>

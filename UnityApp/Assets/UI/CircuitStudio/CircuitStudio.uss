@@ -90,8 +90,14 @@
     width: 36px;
     height: 36px;
     background-color: transparent;
-    border-width: 1px;
-    border-color: transparent;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    border-right-color: transparent;
     border-radius: 4px;
     align-items: center;
     justify-content: center;
@@ -121,8 +127,14 @@
 
 .toolbar-input-group {
     background-color: #0c0c0e;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     padding: 6px 10px;
     margin-right: 12px;
@@ -130,8 +142,14 @@
 
 .btn-secondary-outline {
     background-color: transparent;
-    border-width: 1px;
-    border-color: #3b82f6;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    border-left-color: #3b82f6;
+    border-right-color: #3b82f6;
     color: #3b82f6;
     border-radius: 4px;
     padding: 8px 12px;
@@ -168,7 +186,9 @@
     color: #9ca3af;
     font-size: 12px;
     -unity-font-style: bold;
-    border-width: 0;
+    border-top-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
     border-bottom-width: 2px;
     border-bottom-color: transparent;
 }
@@ -223,8 +243,14 @@
 .search-field-sm {
     height: 28px;
     background-color: #1a1a1f;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.15);
+    border-bottom-color: rgba(255, 255, 255, 0.15);
+    border-left-color: rgba(255, 255, 255, 0.15);
+    border-right-color: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
     font-size: 11px;
     color: #d1d5db;
@@ -245,8 +271,14 @@
     height: 32px;
     background-color: #1f1f23;
     border-radius: 4px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
     align-items: center;
     justify-content: center;
     margin-right: 12px;
@@ -291,8 +323,14 @@
     border-radius: 6px;
     flex-direction: row;
     align-items: center;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.05);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
 }
 
 .prop-icon-lg {
@@ -300,8 +338,14 @@
     height: 40px;
     background-color: #000;
     border-radius: 6px;
-    border-width: 1px;
-    border-color: #3b82f6;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    border-left-color: #3b82f6;
+    border-right-color: #3b82f6;
     align-items: center;
     justify-content: center;
     margin-right: 12px;
@@ -337,8 +381,14 @@
 
 .input-dark {
     background-color: #141417;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
     font-size: 12px;
     height: 28px;

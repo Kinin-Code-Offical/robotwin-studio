@@ -82,6 +82,25 @@ namespace RobotTwin.UI
         private UserProject _detailsProject;
         private bool _hasDetailsProject;
 
+        private VisualElement _createOverlay;
+        private Label _createTemplateLabel;
+        private TextField _createNameField;
+        private TextField _createPathField;
+        private Button _createBrowseBtn;
+        private Button _createCancelBtn;
+        private Button _createConfirmBtn;
+        private Button _createCloseBtn;
+        private Template _pendingTemplate;
+        private bool _hasPendingTemplate;
+
+        private VisualElement _deleteOverlay;
+        private Label _deleteMessage;
+        private Button _deleteCancelBtn;
+        private Button _deleteConfirmBtn;
+        private Button _deleteCloseBtn;
+        private UserProject _deleteProject;
+        private bool _hasDeleteProject;
+
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
@@ -131,9 +150,15 @@ namespace RobotTwin.UI
             _projectsSearchField = _root.Q<TextField>("ProjectsSearchField");
             if (_projectsSearchField != null)
             {
+                _projectsSearchField.isDelayed = false;
                 _projectsSearchField.RegisterValueChangedCallback(evt =>
                 {
                     _projectFilter = evt.newValue ?? string.Empty;
+                    ApplyProjectFilter();
+                });
+                _projectsSearchField.RegisterCallback<KeyUpEvent>(_ =>
+                {
+                    _projectFilter = _projectsSearchField.value ?? string.Empty;
                     ApplyProjectFilter();
                 });
             }
@@ -190,6 +215,46 @@ namespace RobotTwin.UI
                 });
             }
 
+            _createOverlay = _root.Q<VisualElement>("TemplateCreateOverlay");
+            _createTemplateLabel = _root.Q<Label>("TemplateCreateTemplateLabel");
+            _createNameField = _root.Q<TextField>("TemplateProjectNameField");
+            _createPathField = _root.Q<TextField>("TemplateProjectPathField");
+            _createBrowseBtn = _root.Q<Button>("TemplateProjectBrowseBtn");
+            _createCancelBtn = _root.Q<Button>("TemplateCreateCancelBtn");
+            _createConfirmBtn = _root.Q<Button>("TemplateCreateConfirmBtn");
+            _createCloseBtn = _root.Q<Button>("TemplateCreateCloseBtn");
+
+            if (_createBrowseBtn != null) _createBrowseBtn.clicked += BrowseForTemplateLocation;
+            if (_createCancelBtn != null) _createCancelBtn.clicked += HideCreateOverlay;
+            if (_createCloseBtn != null) _createCloseBtn.clicked += HideCreateOverlay;
+            if (_createConfirmBtn != null) _createConfirmBtn.clicked += CreateProjectFromTemplate;
+
+            if (_createOverlay != null)
+            {
+                _createOverlay.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.target == _createOverlay) HideCreateOverlay();
+                });
+            }
+
+            _deleteOverlay = _root.Q<VisualElement>("DeleteConfirmOverlay");
+            _deleteMessage = _root.Q<Label>("DeleteConfirmMessage");
+            _deleteCancelBtn = _root.Q<Button>("DeleteConfirmCancelBtn");
+            _deleteConfirmBtn = _root.Q<Button>("DeleteConfirmBtn");
+            _deleteCloseBtn = _root.Q<Button>("DeleteConfirmCloseBtn");
+
+            if (_deleteCancelBtn != null) _deleteCancelBtn.clicked += HideDeleteConfirm;
+            if (_deleteCloseBtn != null) _deleteCloseBtn.clicked += HideDeleteConfirm;
+            if (_deleteConfirmBtn != null) _deleteConfirmBtn.clicked += ConfirmDeleteProject;
+
+            if (_deleteOverlay != null)
+            {
+                _deleteOverlay.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.target == _deleteOverlay) HideDeleteConfirm();
+                });
+            }
+
             _root.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.button != 0) return;
@@ -214,6 +279,8 @@ namespace RobotTwin.UI
                 if (evt.keyCode != KeyCode.Escape) return;
                 HideContextMenu();
                 HideDetails();
+                HideCreateOverlay();
+                HideDeleteConfirm();
                 _root.Focus();
                 evt.StopPropagation();
             }, TrickleDown.TrickleDown);
@@ -244,6 +311,8 @@ namespace RobotTwin.UI
 
             HideContextMenu();
             HideDetails();
+            HideCreateOverlay();
+            HideDeleteConfirm();
         }
 
         private void SetDisplay(string elemName, bool visible)
@@ -467,7 +536,7 @@ namespace RobotTwin.UI
         private void HandleContextRemove()
         {
             if (!_hasContextProject) return;
-            RemoveProject(_contextProject);
+            ShowDeleteConfirm(_contextProject);
             HideContextMenu();
         }
 
@@ -479,8 +548,11 @@ namespace RobotTwin.UI
             _hasContextProject = true;
             SetSelectedRow(row);
             HideDetails();
+            HideCreateOverlay();
+            HideDeleteConfirm();
 
             _contextMenu.style.display = DisplayStyle.Flex;
+            _contextMenu.BringToFront();
             Vector2 local = _root.WorldToLocal(worldPosition);
 
             float menuWidth = _contextMenu.resolvedStyle.width;
@@ -534,7 +606,13 @@ namespace RobotTwin.UI
         {
             _detailsProject = proj;
             _hasDetailsProject = true;
-            if (_detailsOverlay != null) _detailsOverlay.style.display = DisplayStyle.Flex;
+            HideCreateOverlay();
+            HideDeleteConfirm();
+            if (_detailsOverlay != null)
+            {
+                _detailsOverlay.style.display = DisplayStyle.Flex;
+                _detailsOverlay.BringToFront();
+            }
 
             if (_detailsName != null) _detailsName.text = $"Name: {proj.Name}";
             if (_detailsPath != null) _detailsPath.text = $"Path: {proj.FullPath}";
@@ -546,6 +624,68 @@ namespace RobotTwin.UI
         {
             if (_detailsOverlay != null) _detailsOverlay.style.display = DisplayStyle.None;
             _hasDetailsProject = false;
+        }
+
+        private void ShowCreateOverlay(Template tmpl)
+        {
+            _pendingTemplate = tmpl;
+            _hasPendingTemplate = true;
+            HideContextMenu();
+            HideDetails();
+
+            if (_createOverlay != null)
+            {
+                _createOverlay.style.display = DisplayStyle.Flex;
+                _createOverlay.BringToFront();
+            }
+
+            if (_createTemplateLabel != null) _createTemplateLabel.text = $"Template: {tmpl.Title}";
+            if (_createNameField != null)
+            {
+                _createNameField.SetValueWithoutNotify(tmpl.Title);
+                _createNameField.Focus();
+                _createNameField.SelectAll();
+            }
+
+            if (_createPathField != null)
+            {
+                _createPathField.SetValueWithoutNotify(_projectsPath);
+            }
+        }
+
+        private void HideCreateOverlay()
+        {
+            if (_createOverlay != null) _createOverlay.style.display = DisplayStyle.None;
+            _hasPendingTemplate = false;
+        }
+
+        private void ShowDeleteConfirm(UserProject proj)
+        {
+            _deleteProject = proj;
+            _hasDeleteProject = true;
+            HideContextMenu();
+            HideDetails();
+            HideCreateOverlay();
+
+            if (_deleteMessage != null) _deleteMessage.text = $"Delete \"{proj.Name}\"?";
+            if (_deleteOverlay != null)
+            {
+                _deleteOverlay.style.display = DisplayStyle.Flex;
+                _deleteOverlay.BringToFront();
+            }
+        }
+
+        private void HideDeleteConfirm()
+        {
+            if (_deleteOverlay != null) _deleteOverlay.style.display = DisplayStyle.None;
+            _hasDeleteProject = false;
+        }
+
+        private void ConfirmDeleteProject()
+        {
+            if (!_hasDeleteProject) return;
+            RemoveProject(_deleteProject);
+            HideDeleteConfirm();
         }
 
         private void DuplicateProject(UserProject proj)
@@ -766,7 +906,18 @@ namespace RobotTwin.UI
                 return;
             }
 
-            var project = SimulationSerializer.LoadProject(filePath);
+            ProjectManifest project = null;
+            try
+            {
+                project = SimulationSerializer.LoadProject(filePath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ProjectWizard] Failed to load project: {ex.Message}");
+                OpenInBrowser(filePath);
+                return;
+            }
+
             if (project == null)
             {
                 Debug.LogWarning("[ProjectWizard] Failed to load project.");
@@ -980,9 +1131,11 @@ namespace RobotTwin.UI
             var row = new VisualElement();
             row.AddToClassList("project-row");
             UserProject currentProject = proj;
+            bool isEditing = false;
+            bool cancelCommit = false;
             row.RegisterCallback<ClickEvent>(evt =>
             {
-                if (evt.button != 0 || evt.target is Button) return;
+                if (evt.button != 0 || evt.target is Button || isEditing) return;
                 OpenProjectFile(currentProject.FullPath);
             });
             row.RegisterCallback<ContextClickEvent>(evt =>
@@ -1000,7 +1153,7 @@ namespace RobotTwin.UI
             var lblPath = new Label(currentProject.DisplayPath);
             lblPath.AddToClassList("col-path");
             lblPath.AddToClassList("row-text-dim");
-            
+
             // Name Column (Icon + Text)
             var colName = new VisualElement();
             colName.AddToClassList("col-name");
@@ -1012,16 +1165,42 @@ namespace RobotTwin.UI
             if (proj.Type.Contains("PCB")) icon.AddToClassList("icon-cpu");
             else if (proj.Type.Contains("Robotics")) icon.AddToClassList("icon-hexagon");
             else icon.AddToClassList("icon-activity");
-            
+
             icon.AddToClassList("row-icon");
             colName.Add(icon);
 
-            var nameField = new TextField();
+            TextField nameField = null;
+            var nameLabel = new Label(currentProject.Name);
+            nameLabel.AddToClassList("row-label-name");
+            nameLabel.AddToClassList("project-name-label");
+            nameLabel.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button == 1 || evt.button == 2)
+                {
+                    ShowContextMenu(currentProject, nameLabel.LocalToWorld(evt.localPosition), row);
+                    evt.StopPropagation();
+                    return;
+                }
+            });
+            nameLabel.RegisterCallback<ClickEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                if (evt.clickCount == 2)
+                {
+                    StartInlineEdit();
+                }
+                evt.StopPropagation();
+            });
+            colName.Add(nameLabel);
+
+            nameField = new TextField();
             nameField.value = currentProject.Name;
-            nameField.isDelayed = true;
-            nameField.AddToClassList("row-label-name");
+            nameField.isDelayed = false;
+            nameField.isPasswordField = false;
             nameField.AddToClassList("project-name-field");
-            nameField.RegisterCallback<FocusInEvent>(_ => nameField.SelectAll());
+            nameField.style.flexGrow = 1;
+            nameField.style.minWidth = 0;
+            nameField.style.display = DisplayStyle.None;
             nameField.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.button == 1 || evt.button == 2)
@@ -1033,31 +1212,32 @@ namespace RobotTwin.UI
 
                 evt.StopPropagation();
             });
+            nameField.RegisterCallback<FocusOutEvent>(_ =>
+            {
+                if (!isEditing) return;
+                if (cancelCommit)
+                {
+                    cancelCommit = false;
+                    return;
+                }
+                EndInlineEdit(true);
+            });
             nameField.RegisterCallback<KeyDownEvent>(evt =>
             {
-                if (evt.keyCode != KeyCode.Escape) return;
-                nameField.SetValueWithoutNotify(currentProject.Name);
-                _root.Focus();
-                evt.StopPropagation();
-            });
-            nameField.RegisterValueChangedCallback(evt =>
-            {
-                string nextName = evt.newValue?.Trim();
-                if (string.IsNullOrWhiteSpace(nextName))
+                if (evt.keyCode == KeyCode.Escape)
                 {
-                    nameField.SetValueWithoutNotify(currentProject.Name);
+                    cancelCommit = true;
+                    EndInlineEdit(false);
+                    _root.Focus();
+                    evt.StopPropagation();
                     return;
                 }
 
-                if (TryRenameProject(currentProject, nextName, out var updated))
+                if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
                 {
-                    currentProject = updated;
-                    nameField.SetValueWithoutNotify(updated.Name);
-                    lblPath.text = updated.DisplayPath;
-                }
-                else
-                {
-                    nameField.SetValueWithoutNotify(currentProject.Name);
+                    EndInlineEdit(true);
+                    _root.Focus();
+                    evt.StopPropagation();
                 }
             });
             nameField.RegisterCallback<ContextClickEvent>(evt =>
@@ -1066,8 +1246,56 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
             });
             colName.Add(nameField);
+
+            void StartInlineEdit()
+            {
+                if (isEditing) return;
+                isEditing = true;
+                cancelCommit = false;
+                nameLabel.style.display = DisplayStyle.None;
+                nameField.AddToClassList("editing");
+                nameField.style.display = DisplayStyle.Flex;
+                nameField.SetValueWithoutNotify(currentProject.Name);
+                nameField.Focus();
+                nameField.SelectAll();
+                nameField.schedule.Execute(() => nameField.SelectAll());
+            }
+
+            void EndInlineEdit(bool commit)
+            {
+                if (!isEditing) return;
+                isEditing = false;
+
+                if (commit)
+                {
+                    string nextName = nameField.value?.Trim();
+                    if (string.IsNullOrWhiteSpace(nextName))
+                    {
+                        nameField.SetValueWithoutNotify(currentProject.Name);
+                    }
+                    else if (TryRenameProject(currentProject, nextName, out var updated))
+                    {
+                        currentProject = updated;
+                        nameField.SetValueWithoutNotify(updated.Name);
+                        nameLabel.text = updated.Name;
+                        lblPath.text = updated.DisplayPath;
+                    }
+                    else
+                    {
+                        nameField.SetValueWithoutNotify(currentProject.Name);
+                    }
+                }
+                else
+                {
+                    nameField.SetValueWithoutNotify(currentProject.Name);
+                }
+
+                nameField.style.display = DisplayStyle.None;
+                nameField.RemoveFromClassList("editing");
+                nameLabel.style.display = DisplayStyle.Flex;
+            }
             row.Add(colName);
-            
+
             // Path Column
             row.Add(lblPath);
 
@@ -1195,7 +1423,7 @@ namespace RobotTwin.UI
             // --- Footer: Difficulty + Link ---
             var footer = new VisualElement();
             footer.AddToClassList("template-footer");
-            
+
             var diff = new Label(tmpl.Difficulty);
             diff.AddToClassList("template-difficulty");
             if (string.IsNullOrWhiteSpace(tmpl.Difficulty)) diff.style.display = DisplayStyle.None;
@@ -1213,26 +1441,84 @@ namespace RobotTwin.UI
 
         private void OnTemplateClicked(Template tmpl)
         {
-            Debug.Log($"[ProjectWizard] Creating new project: {tmpl.Title}");
-            
-            string fileName = $"Project_{System.DateTime.Now.Ticks}.rtwin";
-            string fullPath = Path.Combine(_projectsPath, fileName);
+            ShowCreateOverlay(tmpl);
+        }
+
+        private void BrowseForTemplateLocation()
+        {
+#if UNITY_EDITOR
+            string folder = EditorUtility.OpenFolderPanel("Select Project Location", _projectsPath, string.Empty);
+            if (!string.IsNullOrWhiteSpace(folder) && _createPathField != null)
+            {
+                _createPathField.SetValueWithoutNotify(folder);
+            }
+#else
+            OpenInFileBrowser(_projectsPath);
+#endif
+        }
+
+        private void CreateProjectFromTemplate()
+        {
+            if (!_hasPendingTemplate) return;
+
+            string rawName = _createNameField?.value ?? string.Empty;
+            string safeName = SanitizeProjectName(rawName);
+            if (string.IsNullOrWhiteSpace(safeName))
+            {
+                safeName = SanitizeProjectName(_pendingTemplate.Title);
+            }
+
+            if (string.IsNullOrWhiteSpace(safeName))
+            {
+                safeName = "NewProject";
+            }
+
+            string targetDir = _createPathField?.value?.Trim();
+            if (string.IsNullOrWhiteSpace(targetDir)) targetDir = _projectsPath;
+
+            try
+            {
+                targetDir = Path.GetFullPath(targetDir);
+                Directory.CreateDirectory(targetDir);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ProjectWizard] Failed to use project folder: {ex.Message}");
+                targetDir = _projectsPath;
+                Directory.CreateDirectory(targetDir);
+            }
+
+            string targetPath = Path.Combine(targetDir, $"{safeName}.rtwin");
+            targetPath = EnsureUniqueProjectPath(targetPath);
 
             var manifest = new ProjectManifest
             {
-                ProjectName = tmpl.Title,
-                Description = string.IsNullOrWhiteSpace(tmpl.Description) ? "New project" : tmpl.Description,
+                ProjectName = safeName,
+                Description = string.IsNullOrWhiteSpace(_pendingTemplate.Description) ? "New project" : _pendingTemplate.Description,
                 Version = "1.0.0",
                 Circuit = new CircuitSpec(),
                 Robot = new RobotSpec { Name = "DefaultRobot" },
                 World = new WorldSpec { Name = "DefaultWorld", Width = 0, Depth = 0 }
             };
 
-            SimulationSerializer.SaveProject(manifest, fullPath);
+            try
+            {
+                SimulationSerializer.SaveProject(manifest, targetPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ProjectWizard] Failed to create project: {ex.Message}");
+                return;
+            }
+
             if (SessionManager.Instance != null)
             {
                 SessionManager.Instance.StartSession(manifest);
             }
+
+            HideCreateOverlay();
+            PopulateHome();
+            PopulateProjects();
 
             int sceneCount = SceneManager.sceneCountInBuildSettings;
             if (sceneCount > 1) SceneManager.LoadScene(1);
