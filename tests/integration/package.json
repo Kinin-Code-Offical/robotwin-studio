@@ -1,0 +1,17 @@
+{
+  "name": "robotwin-integration-tests",
+  "version": "1.0.0",
+  "description": "Integration tests for RoboTwin Studio using Jest and IPC",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "report": "node reporter.js"
+  },
+  "dependencies": {
+    "node-ipc": "^9.2.1",
+    "open": "^8.4.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
