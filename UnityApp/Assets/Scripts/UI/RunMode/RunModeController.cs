@@ -175,6 +175,12 @@ namespace RobotTwin.UI
 
         private void FixedUpdate()
         {
+            // Polyglot Architecture: Delegate heavy physics/solving to C++ NativeEngine
+            if (_isRunning)
+            {
+                RobotTwin.Core.NativeBridge.StepSimulation(Time.fixedDeltaTime);
+            }
+
             // Host runs in own thread, nothing to do here besides maybe input polling
         }
 
