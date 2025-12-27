@@ -1,5 +1,16 @@
 # Activity Log
 
+## 2025-12-28 (ProjectWizard UI Polish)
+- **Run (UI/UX)**
+    - Model used: PRO
+    - **ProjectWizard**:
+      - Refined inline rename UX (label + double-click edit, ESC/Enter handling).
+      - Added template create modal (name + location selection).
+      - Added delete confirmation modal.
+      - Improved search responsiveness and input styling.
+      - Iterated custom scrollbar styling and layout fixes.
+    - **Docs**: Logged UI polish run.
+
 ## 2025-12-26 (M0 Stability)
 - **Run (Maintenance)**
     - Model used: PRO
