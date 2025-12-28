@@ -12,6 +12,7 @@ namespace RobotTwin.CoreSim.Engine
         private const double DefaultLedForwardV = 2.0;
         private const double DefaultLedOnResistance = 15.0;
         private const double HighResistance = 1e9;
+        private const double DefaultSwitchClosedResistance = 0.05;
         private const double ShortCircuitCurrentA = 2.0;
 
         private readonly Dictionary<string, string> _pinToNet = new Dictionary<string, string>();
@@ -167,6 +168,10 @@ namespace RobotTwin.CoreSim.Engine
                     case "Battery":
                         AddVoltageSource(comp, "+", "-", ParseVoltage(comp, 9.0), voltageSources, frame);
                         break;
+                    case "Button":
+                    case "Switch":
+                        AddButton(comp, resistors, frame);
+                        break;
                     case "ArduinoUno":
                     case "ArduinoNano":
                     case "ArduinoProMini":
@@ -230,6 +235,14 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             voltageSources.Add(new VoltageSourceElement(comp.Id, netPlus, netMinus, voltage));
+        }
+
+        private void AddButton(ComponentSpec comp, List<ResistorElement> resistors, TelemetryFrame frame)
+        {
+            bool closed = IsSwitchClosed(comp);
+            double closedResistance = ParseResistance(comp, DefaultSwitchClosedResistance);
+            double resistance = closed ? closedResistance : HighResistance;
+            AddTwoPinResistor(comp, "A", "B", resistors, frame, resistance);
         }
 
         private void AddArduinoSources(
@@ -692,6 +705,39 @@ namespace RobotTwin.CoreSim.Engine
                 }
             }
             return fallback;
+        }
+
+        private static bool IsSwitchClosed(ComponentSpec comp)
+        {
+            if (comp?.Properties == null) return false;
+            if (TryGetBool(comp.Properties, "closed", out var closed)) return closed;
+            if (TryGetBool(comp.Properties, "pressed", out var pressed)) return pressed;
+            if (comp.Properties.TryGetValue("state", out var state))
+            {
+                string value = (state ?? string.Empty).Trim().ToLowerInvariant();
+                return value == "closed" || value == "on" || value == "pressed" || value == "true";
+            }
+            return false;
+        }
+
+        private static bool TryGetBool(Dictionary<string, string> props, string key, out bool value)
+        {
+            value = false;
+            if (props == null || string.IsNullOrWhiteSpace(key)) return false;
+            if (!props.TryGetValue(key, out var raw)) return false;
+            if (string.IsNullOrWhiteSpace(raw)) return false;
+            string s = raw.Trim().ToLowerInvariant();
+            if (s == "true" || s == "1" || s == "yes" || s == "on" || s == "closed" || s == "pressed")
+            {
+                value = true;
+                return true;
+            }
+            if (s == "false" || s == "0" || s == "no" || s == "off" || s == "open")
+            {
+                value = false;
+                return true;
+            }
+            return false;
         }
 
         private static double ParseVoltage(ComponentSpec comp, double fallback, string key = "voltage")

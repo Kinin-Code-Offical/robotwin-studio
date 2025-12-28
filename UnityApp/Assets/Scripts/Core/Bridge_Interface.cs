@@ -13,6 +13,12 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "SetComponentXY")]
         private static extern void _SetComponentXY(uint index, uint x, uint y);
 
+        [DllImport(PLUGIN_NAME, EntryPoint = "GetAvrCount")]
+        private static extern int _GetAvrCount();
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "GetPinVoltageForAvr")]
+        private static extern float _GetPinVoltageForAvr(int avrIndex, int pinIndex);
+
         [DllImport(PLUGIN_NAME, EntryPoint = "LoadHexFromText")]
         private static extern int _LoadHexFromText([MarshalAs(UnmanagedType.LPStr)] string hexText);
 
@@ -25,17 +31,27 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "LoadBvmFromFile")]
         private static extern int _LoadBvmFromFile([MarshalAs(UnmanagedType.LPStr)] string path);
 
+        [DllImport(PLUGIN_NAME, EntryPoint = "LoadHexForAvr")]
+        private static extern int _LoadHexForAvr(int index, [MarshalAs(UnmanagedType.LPStr)] string path);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "LoadHexTextForAvr")]
+        private static extern int _LoadHexTextForAvr(int index, [MarshalAs(UnmanagedType.LPStr)] string hexText);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "LoadBvmForAvrMemory")]
+        private static extern int _LoadBvmForAvrMemory(int index, IntPtr buffer, uint size);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "LoadBvmForAvrFile")]
+        private static extern int _LoadBvmForAvrFile(int index, [MarshalAs(UnmanagedType.LPStr)] string path);
+
         public const int ComponentCount = 3;
         public const int NodeCount = 4;
         public const int CurrentCount = 2;
-        public const int PinCount = 20;
 
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
         public unsafe struct SharedState
         {
             public fixed uint ComponentPositions[ComponentCount * 2];
             public fixed float NodeVoltages[NodeCount];
-            public fixed float PinVoltages[PinCount];
             public fixed float Currents[CurrentCount];
             public uint ErrorFlags;
             public ulong Tick;
@@ -63,22 +79,18 @@ namespace RobotTwin.Core
             return true;
         }
 
-        public static float GetPinVoltage(ref SharedState state, int pinIndex)
-        {
-            if (pinIndex < 0 || pinIndex >= PinCount) return 0f;
-            unsafe
-            {
-                fixed (float* pins = state.PinVoltages)
-                {
-                    return pins[pinIndex];
-                }
-            }
-        }
 
         public static void SetComponentXY(int index, uint x, uint y)
         {
             if (index < 0 || index >= ComponentCount) return;
             _SetComponentXY((uint)index, x, y);
+        }
+
+        public static int GetAvrCount() => _GetAvrCount();
+
+        public static float GetPinVoltageForAvr(int avrIndex, int pinIndex)
+        {
+            return _GetPinVoltageForAvr(avrIndex, pinIndex);
         }
 
         public static bool LoadHexText(string hexText)
@@ -107,6 +119,36 @@ namespace RobotTwin.Core
                 fixed (byte* ptr = data)
                 {
                     return _LoadBvmFromMemory((IntPtr)ptr, (uint)data.Length) != 0;
+                }
+            }
+        }
+
+        public static bool LoadHexFileForAvr(int index, string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            return _LoadHexForAvr(index, path) != 0;
+        }
+
+        public static bool LoadHexTextForAvr(int index, string hexText)
+        {
+            if (string.IsNullOrWhiteSpace(hexText)) return false;
+            return _LoadHexTextForAvr(index, hexText) != 0;
+        }
+
+        public static bool LoadBvmFileForAvr(int index, string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            return _LoadBvmForAvrFile(index, path) != 0;
+        }
+
+        public static bool LoadBvmBytesForAvr(int index, byte[] data)
+        {
+            if (data == null || data.Length == 0) return false;
+            unsafe
+            {
+                fixed (byte* ptr = data)
+                {
+                    return _LoadBvmForAvrMemory(index, (IntPtr)ptr, (uint)data.Length) != 0;
                 }
             }
         }

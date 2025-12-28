@@ -771,6 +771,10 @@
     -unity-font-style: bold;
     height: 100%;
     -unity-text-align: middle-center;
+    border-width: 0;
+    background-color: transparent;
+    justify-content: center;
+    align-items: center;
 }
 .status-tab.active-blue { color: white; background-color: rgba(0,0,0,0.1); }
 
@@ -788,6 +792,109 @@
     padding: 8px;
     background-color: #141417;
     flex-grow: 1;
+}
+
+.output-panel {
+    flex-grow: 1;
+}
+
+.code-panel {
+    flex-grow: 1;
+    background-color: #141417;
+}
+
+.code-toolbar {
+    height: 28px;
+    background-color: #0f0f12;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    flex-direction: row;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.code-target {
+    flex-direction: row;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.code-target-label {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-right: 6px;
+}
+
+.code-target-dropdown {
+    min-width: 160px;
+    height: 20px;
+    background-color: #111827;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e5e7eb;
+    font-size: 10px;
+}
+
+.code-file-label {
+    font-size: 11px;
+    color: #cbd5f5;
+}
+
+.code-btn {
+    height: 20px;
+    margin-left: 6px;
+    padding: 0 8px;
+    font-size: 10px;
+    border-radius: 4px;
+    background-color: #1f2937;
+    color: #e2e8f0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.code-btn:hover {
+    background-color: #2b3647;
+}
+
+.code-body {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.code-file-list {
+    width: 180px;
+    background-color: #111116;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.08);
+    padding: 6px;
+}
+
+.code-file-item {
+    padding: 4px 6px;
+    font-size: 11px;
+    color: #e5e7eb;
+    border-radius: 4px;
+}
+
+.code-file-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.code-file-item.active {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+.code-editor {
+    flex-grow: 1;
+    background-color: #0f0f12;
+    color: #e5e7eb;
+    border-width: 0;
+    padding: 8px;
+    font-size: 11px;
+    -unity-text-align: upper-left;
+    white-space: nowrap;
 }
 
 .panel-resizer {
