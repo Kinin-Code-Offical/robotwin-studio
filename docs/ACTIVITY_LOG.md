@@ -78,8 +78,8 @@
       - Moved `repo_files.txt` to `docs/repo_files.txt`.
       - Excluded `workspace_snapshot.txt` (root) from git.
     - **Automation**:
-      - Updated `tools/update_repo_files.ps1` (Added `-Check` mode).
-      - Added `tools/update_workspace_snapshot.ps1`.
+      - Updated `tools/rt_tool.py update-repo-files` (Added `-Check` mode).
+      - Added `tools/rt_tool.py workspace-snapshot`.
       - Updated `.github/workflows/ci.yml` to verify docs index.
     - **Sync**: Merged PR #41 (`feature/snapshot-governance`).
 
@@ -87,7 +87,7 @@
 - **Run (Automation)**
     - Model used: PRO
     - **Automation**:
-      - Implemented `tools/update_repo_files.ps1`.
+      - Implemented `tools/rt_tool.py update-repo-files`.
       - Added CI stale check for `repo_files.txt`.
     - **Governance**:
       - Updated Workflow, PR Template, and Prompt to enforce file indexing.
@@ -173,7 +173,7 @@
 - **Run (Autonomous - HEAVY)**
     - **Goal**: Resolve Issues #28, #29, #30, #32, #35, #39.
     - **Outcome**:
-        - **Infra**: Fixed `update_repo_files.ps1` and CI check.
+        - **Infra**: Fixed `rt_tool.py update-repo-files` and CI check.
         - **Core**: Implemented `CircuitValidator` (Net/Power) & `BoardCatalog`.
         - **Feature**: `RunEngine` JSONL output, `RunMode` HUD binding, Waveforms.
         - **Verification**: Added `UISmokeTests` (EditMode) and `SimulationSmokeTest` (PlayMode).

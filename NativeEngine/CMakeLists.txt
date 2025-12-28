@@ -8,6 +8,7 @@ add_library(NativeEngineCore OBJECT
     src/NativeEngine_Core.cpp
     src/MCU/ATmega328P_ISA.c
     src/Core/NodalSolver.cpp
+    src/Core/BvmFormat.cpp
 )
 
 add_library(NativeEngine SHARED

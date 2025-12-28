@@ -6,7 +6,9 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
+#include <vector>
 #include "Core/MemoryMap.hpp"
+#include "Core/BvmFormat.hpp"
 #include "Core/NodalSolver.hpp"
 #include "MCU/ATmega328P_ISA.h"
 #include "Bridge/UnityInterface.h"
@@ -114,6 +116,35 @@ namespace
         state.shared.error_flags = errors;
     }
 
+    void UpdatePinVoltages(EngineState& state)
+    {
+        for (std::size_t i = 0; i < MAX_PINS; ++i)
+        {
+            state.shared.pin_voltages[i] = 0.0f;
+        }
+
+        for (int i = 0; i <= 7; ++i)
+        {
+            bool is_output = AVR_IoGetBit(&state.cpu, AVR_DDRD, static_cast<uint8_t>(i)) != 0;
+            bool is_high = AVR_IoGetBit(&state.cpu, AVR_PORTD, static_cast<uint8_t>(i)) != 0;
+            state.shared.pin_voltages[i] = (is_output && is_high) ? static_cast<float>(LOGIC_HIGH) : static_cast<float>(LOGIC_LOW);
+        }
+
+        for (int i = 0; i <= 5; ++i)
+        {
+            bool is_output = AVR_IoGetBit(&state.cpu, AVR_DDRB, static_cast<uint8_t>(i)) != 0;
+            bool is_high = AVR_IoGetBit(&state.cpu, AVR_PORTB, static_cast<uint8_t>(i)) != 0;
+            state.shared.pin_voltages[8 + i] = (is_output && is_high) ? static_cast<float>(LOGIC_HIGH) : static_cast<float>(LOGIC_LOW);
+        }
+
+        for (int i = 0; i <= 5; ++i)
+        {
+            bool is_output = AVR_IoGetBit(&state.cpu, AVR_DDRC, static_cast<uint8_t>(i)) != 0;
+            bool is_high = AVR_IoGetBit(&state.cpu, AVR_PORTC, static_cast<uint8_t>(i)) != 0;
+            state.shared.pin_voltages[14 + i] = (is_output && is_high) ? static_cast<float>(LOGIC_HIGH) : static_cast<float>(LOGIC_LOW);
+        }
+    }
+
     void SolveCircuit(EngineState& state)
     {
         bool ddrb5 = AVR_IoGetBit(&state.cpu, AVR_DDRB, 5) != 0;
@@ -125,6 +156,7 @@ namespace
         params.logic_low = LOGIC_LOW;
         auto result = solver::SolveBlink(vpin, params);
         UpdateSharedState(state, result);
+        UpdatePinVoltages(state);
     }
 
     void InitEngine(EngineState& state)
@@ -154,6 +186,10 @@ namespace
         state.shared.node_voltages[NODE_VCC] = static_cast<float>(LOGIC_HIGH);
         state.shared.node_voltages[NODE_D13] = static_cast<float>(LOGIC_LOW);
         state.shared.node_voltages[NODE_LED] = static_cast<float>(LOGIC_LOW);
+        for (std::size_t i = 0; i < MAX_PINS; ++i)
+        {
+            state.shared.pin_voltages[i] = 0.0f;
+        }
         state.shared.currents[0] = 0.0f;
         state.shared.currents[1] = 0.0f;
         state.shared.error_flags = 0;
@@ -259,6 +295,66 @@ namespace
         return LoadHexText(mem, content.c_str());
     }
 
+    bool LoadRawBinary(core::VirtualMemory& mem, const std::uint8_t* data, std::size_t size)
+    {
+        if (!data || size == 0) return false;
+        if (size > core::FLASH_SIZE) return false;
+        std::fill(mem.flash.begin(), mem.flash.end(), 0);
+        std::memcpy(mem.flash.data(), data, size);
+        return true;
+    }
+
+    bool LoadBvmBuffer(EngineState& state, const std::uint8_t* buffer, std::size_t size)
+    {
+        bvm::BvmView view;
+        const char* error = nullptr;
+        if (!bvm::Open(buffer, size, view, &error))
+        {
+            return false;
+        }
+
+        bvm::SectionView text{};
+        if (!bvm::FindSection(view, ".text", text))
+        {
+            return false;
+        }
+
+        bool loaded = false;
+        if ((text.flags & bvm::SectionTextHex) != 0)
+        {
+            const char* text_data = reinterpret_cast<const char*>(text.data);
+            loaded = LoadHexText(state.memory, text_data);
+        }
+        else
+        {
+            loaded = LoadRawBinary(state.memory, text.data, static_cast<std::size_t>(text.size));
+        }
+
+        if (!loaded) return false;
+
+        bvm::SectionView data{};
+        if (bvm::FindSection(view, ".data", data))
+        {
+            std::size_t count = static_cast<std::size_t>(data.size);
+            if (count > core::SRAM_SIZE) count = core::SRAM_SIZE;
+            std::memcpy(state.memory.sram.data(), data.data, count);
+        }
+
+        state.cpu.pc = static_cast<std::uint16_t>(view.header->entry_offset / 2u);
+        state.cpu.zero_flag = 0;
+        return true;
+    }
+
+    bool LoadBvmFile(EngineState& state, const char* path)
+    {
+        if (path == nullptr || path[0] == '\0') return false;
+        std::ifstream file(path, std::ios::in | std::ios::binary);
+        if (!file.is_open()) return false;
+        std::vector<std::uint8_t> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        if (buffer.empty()) return false;
+        return LoadBvmBuffer(state, buffer.data(), buffer.size());
+    }
+
     void ExecuteCycles(EngineState& state, std::uint64_t cycles)
     {
         while (cycles > 0)
@@ -287,6 +383,16 @@ extern "C"
         std::uint64_t cycles = static_cast<std::uint64_t>(dt * 16000000.0);
         if (cycles == 0) cycles = 1;
         ExecuteCycles(g_engine, cycles);
+    }
+
+    UNITY_EXPORT void StepSimulationTicks(std::uint64_t ticks)
+    {
+        if (!g_engine.initialized)
+        {
+            InitEngine(g_engine);
+        }
+        if (ticks == 0) return;
+        ExecuteCycles(g_engine, ticks);
     }
 
     UNITY_EXPORT int GetEngineVersion(void)
@@ -348,5 +454,24 @@ extern "C"
             g_engine.cpu.zero_flag = 0;
         }
         return loaded ? 1 : 0;
+    }
+
+    UNITY_EXPORT int LoadBvmFromMemory(const std::uint8_t* buffer, std::uint32_t size)
+    {
+        if (!g_engine.initialized)
+        {
+            InitEngine(g_engine);
+        }
+        if (!buffer || size == 0) return 0;
+        return LoadBvmBuffer(g_engine, buffer, size) ? 1 : 0;
+    }
+
+    UNITY_EXPORT int LoadBvmFromFile(const char* path)
+    {
+        if (!g_engine.initialized)
+        {
+            InitEngine(g_engine);
+        }
+        return LoadBvmFile(g_engine, path) ? 1 : 0;
     }
 }

@@ -1,0 +1,19 @@
+{
+  "id": "led-red",
+  "name": "LED Red",
+  "description": "5mm Diffused Red",
+  "type": "LED",
+  "symbol": "D",
+  "iconChar": "D",
+  "order": 30,
+  "pins": ["Anode", "Cathode"],
+  "specs": [
+    { "key": "Forward V", "value": "2.0V" },
+    { "key": "Current", "value": "20mA" }
+  ],
+  "defaults": [
+    { "key": "forwardV", "value": "2.0V" },
+    { "key": "current", "value": "20mA" },
+    { "key": "nativeConfig", "value": "{\"Vf\":\"2.0V\",\"If_max\":\"20mA\"}" }
+  ]
+}

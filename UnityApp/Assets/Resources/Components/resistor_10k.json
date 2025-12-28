@@ -1,0 +1,19 @@
+{
+  "id": "resistor-10k",
+  "name": "Resistor 10k",
+  "description": "10k Ohm 1/4W",
+  "type": "Resistor",
+  "symbol": "R",
+  "iconChar": "R",
+  "order": 20,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "Resistance", "value": "10k" },
+    { "key": "Power", "value": "0.25W" },
+    { "key": "Tolerance", "value": "1%" }
+  ],
+  "defaults": [
+    { "key": "resistance", "value": "10000" },
+    { "key": "nativeConfig", "value": "{\"Value\":\"10000\",\"Tolerance\":\"1%\"}" }
+  ]
+}

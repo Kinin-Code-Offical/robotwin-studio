@@ -30,6 +30,7 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, List<PinState>> _pinStatesByComponent = new Dictionary<string, List<PinState>>();
         private readonly Dictionary<string, double> _pullupResistances = new Dictionary<string, double>();
         private bool _loggedTelemetry;
+        private bool _loggedNativeFallback;
 
         public float SimTime => Time.time;
         public int TickCount { get; private set; }
@@ -58,6 +59,7 @@ namespace RobotTwin.Game
             if (_isRunning) return;
             _isRunning = true;
             _loggedTelemetry = false;
+            _loggedNativeFallback = false;
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
 
@@ -128,12 +130,16 @@ namespace RobotTwin.Game
                 _pinVoltages.Clear();
                 _pinStatesByComponent.Clear();
                 _pullupResistances.Clear();
-                foreach (var arduino in _virtualArduinos.Values)
+                bool usedNativePins = TryApplyNativePins();
+                if (!usedNativePins)
                 {
-                    arduino.Step(TICK_RATE);
-                    arduino.CopyVoltages(_pinVoltages);
-                    _pinStatesByComponent[arduino.Id] = arduino.Hal.GetPinStates();
-                    _pullupResistances[arduino.Id] = arduino.Hal.GetPullupResistance();
+                    foreach (var arduino in _virtualArduinos.Values)
+                    {
+                        arduino.Step(TICK_RATE);
+                        arduino.CopyVoltages(_pinVoltages);
+                        _pinStatesByComponent[arduino.Id] = arduino.Hal.GetPinStates();
+                        _pullupResistances[arduino.Id] = arduino.Hal.GetPullupResistance();
+                    }
                 }
                 LastTelemetry = _coreSim.Step(_circuit, _pinVoltages, _pinStatesByComponent, _pullupResistances, TICK_RATE);
                 if (LastTelemetry != null)
@@ -149,6 +155,49 @@ namespace RobotTwin.Game
             }
 
             OnTickComplete?.Invoke(SimTime);
+        }
+
+        private bool TryApplyNativePins()
+        {
+            if (SessionManager.Instance == null || !SessionManager.Instance.UseNativeEnginePins)
+            {
+                return false;
+            }
+
+            if (!BridgeInterface.TryReadState(out var state))
+            {
+                if (!_loggedNativeFallback)
+                {
+                    _loggedNativeFallback = true;
+                    Debug.LogWarning("[SimHost] NativeEngine bridge not available. Falling back to VirtualArduino.");
+                }
+                return false;
+            }
+
+            if (_circuit == null || _circuit.Components == null) return false;
+            foreach (var comp in _circuit.Components)
+            {
+                if (!IsArduinoType(comp.Type)) continue;
+                ApplyPinGroup(comp.Id, ref state);
+            }
+
+            return true;
+        }
+
+        private void ApplyPinGroup(string componentId, ref BridgeInterface.SharedState state)
+        {
+            for (int i = 0; i <= 7; i++)
+            {
+                _pinVoltages[$"{componentId}.D{i}"] = BridgeInterface.GetPinVoltage(ref state, i);
+            }
+            for (int i = 0; i <= 5; i++)
+            {
+                _pinVoltages[$"{componentId}.D{8 + i}"] = BridgeInterface.GetPinVoltage(ref state, 8 + i);
+            }
+            for (int i = 0; i <= 5; i++)
+            {
+                _pinVoltages[$"{componentId}.A{i}"] = BridgeInterface.GetPinVoltage(ref state, 14 + i);
+            }
         }
 
         public void SetPinVoltage(string componentId, string pinName, float voltage)
@@ -170,7 +219,7 @@ namespace RobotTwin.Game
 
             foreach (var comp in _circuit.Components)
             {
-                if (comp.Type != "ArduinoUno") continue;
+                if (!IsArduinoType(comp.Type)) continue;
                 var board = new VirtualArduino(comp.Id);
                 if (comp.Properties != null)
                 {
@@ -183,6 +232,13 @@ namespace RobotTwin.Game
                 Debug.Log($"[SimHost] VirtualArduino Active: {board.Id} ({board.FirmwareSource})");
                 _virtualArduinos[comp.Id] = board;
             }
+        }
+
+        private bool IsArduinoType(string type)
+        {
+            return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
         }
 
         private void OnDestroy()

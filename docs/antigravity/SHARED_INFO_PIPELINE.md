@@ -32,7 +32,7 @@ These serve as the source of truth for the *next* session to locate and retrieve
 To pull the latest session context into your local environment:
 
 ```powershell
-./tools/get_latest_shared_info.ps1
+python tools/rt_tool.py shared-info
 ```
 
 This will:

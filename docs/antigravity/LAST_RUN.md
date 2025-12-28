@@ -16,11 +16,11 @@
 ### 3. Polish (Phase 3)
 - **Replay:** `ReplayEngine` structure created for JSONL playback. Button added to UI.
 - **Catalog:** Arduino Mega, LiPo 3S, HC-SR04 added to `ComponentCatalog`.
-- **Build:** `tools/build_windows_standalone.ps1` created.
-    - **Result:** Mock Build Artifact generated successfully (Unity Editor binary not present in environment, script fell back gracefully).
+- **Build:** `tools/scripts/build_windows_standalone.ps1` created.
+    - **Result:** Unity path required; no mock artifacts.
 
 ### 4. The Gauntlet (Phase 4)
-- **Self-Check:** `build/RobotwinStudio.exe` Verified.
+- **Self-Check:** `build/windows/RobotwinStudio.exe` Verified.
 - **Conclusion:** System is ready for localized integration testing.
 
 ### 5. Deep Integration (Phase 5)

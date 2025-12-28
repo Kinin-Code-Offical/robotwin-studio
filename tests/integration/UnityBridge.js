@@ -15,9 +15,8 @@ class UnityBridge {
             console.log('[UnityBridge] Connected to Unity successfully.');
             this.connected = true;
         } catch (error) {
-            console.log('[UnityBridge] Connection failed (Unity might not be running). Mock Mode Activated.');
-            this.connected = false; 
-            // We resolve anyway to allow "offline" test development or mock runs
+            this.connected = false;
+            throw new Error('Unity connection failed. Start the editor and ensure RemoteCommandServer is running.');
         }
     }
 
@@ -38,32 +37,33 @@ class UnityBridge {
 
     async queryState(selector) {
         console.log(`[UnityBridge] Querying State: ${selector}`);
-        if (this.connected) {
-            try {
-                const res = await axios.get(`${this.baseUrl}/query`, {
-                    params: { target: selector }
-                });
-                return res.data.value;
-            } catch (err) {
-                console.error(`[UnityBridge] Query failed: ${err.message}`);
-            }
+        if (!this.connected) {
+            throw new Error('Unity connection not established.');
         }
-        
-        // Mock Responses if not connected or fallback
-        if (selector === 'CurrentScene') return 'CircuitStudio';
-        if (selector === '#RunMode') return true;
+
+        try {
+            const res = await axios.get(`${this.baseUrl}/query`, {
+                params: { target: selector }
+            });
+            return res.data.value;
+        } catch (err) {
+            console.error(`[UnityBridge] Query failed: ${err.message}`);
+        }
+
         return null;
     }
 
     async takeScreenshot(filename) {
         console.log(`[UnityBridge] Screenshot requested: ${filename}`);
-        if (this.connected) {
-             try {
-                // The server saves it to the folder, we just trigger it.
-                await axios.get(`${this.baseUrl}/screenshot`);
-            } catch (err) {
-                console.error(`[UnityBridge] Screenshot failed: ${err.message}`);
-            }
+        if (!this.connected) {
+            throw new Error('Unity connection not established.');
+        }
+
+        try {
+            // The server saves it to the folder, we just trigger it.
+            await axios.get(`${this.baseUrl}/screenshot`);
+        } catch (err) {
+            console.error(`[UnityBridge] Screenshot failed: ${err.message}`);
         }
     }
 

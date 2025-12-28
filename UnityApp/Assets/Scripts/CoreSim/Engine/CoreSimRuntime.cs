@@ -168,6 +168,8 @@ namespace RobotTwin.CoreSim.Engine
                         AddVoltageSource(comp, "+", "-", ParseVoltage(comp, 9.0), voltageSources, frame);
                         break;
                     case "ArduinoUno":
+                    case "ArduinoNano":
+                    case "ArduinoProMini":
                         AddArduinoSources(comp, pinVoltages, voltageSources, frame);
                         AddArduinoPullups(comp, pinStatesByComponent, pullupResistances, resistors, frame);
                         break;
@@ -239,6 +241,7 @@ namespace RobotTwin.CoreSim.Engine
             AddArduinoPinSource(comp, "5V", 5.0, voltageSources);
             AddArduinoPinSource(comp, "3V3", 3.3, voltageSources);
             AddArduinoPinSource(comp, "IOREF", 5.0, voltageSources);
+            AddArduinoPinSource(comp, "VCC", 5.0, voltageSources);
 
             if (pinVoltages == null) return;
 

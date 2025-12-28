@@ -9,7 +9,7 @@
 ## CoreSim
 
 - **Target Frameworks**: `net9.0` (Tests/CLI), `netstandard2.1` (Unity Plugin)
-- **Sync**: Run `./tools/update_unity_plugins.ps1` to build and copy the plugin to UnityApp.
+- **Sync**: Run `python tools/rt_tool.py update-unity-plugins` to build and copy the plugin to UnityApp.
 - **CI**: Enforces plugin synchronization.
 
 ## PowerShell

@@ -14,7 +14,7 @@ Successfully implemented **RoboTwin Mission Control**, a web-based dashboard for
     -   `GET /action?type=<CMD>&target=<selector>`: Simulation hook (Stubbed).
     -   `GET /reset`: Reloads scene.
 
-### 2. Node.js Middleware (`tools/dashboard`)
+### 2. Node.js Middleware (`tools/mission_control/dashboard`)
 -   **Role**: Web Server & Orchestrator (Port 3000).
 -   **Stack**: Express, Axios, ChildProcess.
 -   **Features**:
@@ -24,7 +24,7 @@ Successfully implemented **RoboTwin Mission Control**, a web-based dashboard for
     -   Serves static screenshots.
     -   Health check (`/api/status`).
 
-### 3. Web UI (`tools/dashboard/public`)
+### 3. Web UI (`tools/mission_control/dashboard/public`)
 -   **Design**: Premium Dark Mode (#121212), Material-inspired.
 -   **Features**:
     -   Real-time Online/Offline Indicator (Polling).
@@ -36,13 +36,13 @@ Successfully implemented **RoboTwin Mission Control**, a web-based dashboard for
 -   **Integration**: `tests/integration/` (Jest/Node) now talks to Unity via HTTP.
 -   **Python**: `tests/python/` containing `test_remote_server.py`.
 -   **Tools**:
-    -   `python_console.py`: Interactive CLI.
-    -   `monitor_unity.py`: Uptime watcher.
+    -   `rt_tool.py console`: Interactive CLI.
+    -   `rt_tool.py monitor-unity`: Uptime watcher.
 
 ## Changes to Repository
 -   Added `UnityApp/Assets/Scripts/Debug/RemoteCommandServer.cs`.
--   Added `tools/dashboard/` (Node project).
--   Added `tools/launch_mission_control.ps1`.
+-   Added `tools/mission_control/dashboard/` (Node project).
+-   Added `tools/mission_control/launch_mission_control.ps1`.
 -   Added `tests/python/`.
 -   Modifed `tests/integration/UnityBridge.js` to drop IPC for HTTP.
 -   Updated `.gitignore` to exclude `node_modules` and `Screenshots`.

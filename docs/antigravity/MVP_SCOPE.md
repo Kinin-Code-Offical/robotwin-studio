@@ -184,7 +184,7 @@ MVP must demonstrate at least one deterministic failure scenario, visible live a
 ### Tooling & Mission Control
 
 - **Mission Control**: Web-based Dashboard (Node.js) for remote control and screenshot management.
-- **Python SDK**: `tools/python_console.py` and `tools/monitor_unity.py` for external automation.
+- **Python SDK**: `tools/rt_tool.py console` and `tools/rt_tool.py monitor-unity` for external automation.
 - **HTTP API**: Unity exposes port 8085 for generic `/action` and `/query` commands, enabling language-agnostic testing.
 
 ## 8) Exclusions for MVP (Initial)

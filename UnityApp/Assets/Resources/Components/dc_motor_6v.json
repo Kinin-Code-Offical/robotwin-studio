@@ -1,0 +1,18 @@
+{
+  "id": "dc-motor-6v",
+  "name": "DC Motor",
+  "description": "6V Hobby Motor",
+  "type": "DCMotor",
+  "symbol": "M",
+  "iconChar": "M",
+  "order": 60,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "Voltage", "value": "6V" },
+    { "key": "No Load", "value": "150mA" },
+    { "key": "RPM", "value": "200" }
+  ],
+  "defaults": [
+    { "key": "nativeConfig", "value": "{\"Voltage\":\"6V\"}" }
+  ]
+}

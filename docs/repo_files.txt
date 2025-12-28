@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2025-12-28T15:32:25Z
-# Commit: 73b8dca
-# FileCount: 318
+﻿# GeneratedUtc: 2025-12-28T20:47:41Z
+# Commit: 9021421
+# FileCount: 359
 
 .agent/workflows/main_force_sync_workflow.md
 .github/dependabot.yml
@@ -60,7 +60,16 @@ docs/repo_files.txt
 docs/toolchain_audit.md
 docs/VERSIONS.md
 global.json
+NativeEngine/CMakeLists.txt
+NativeEngine/include/Bridge/UnityInterface.h
+NativeEngine/include/Core/MemoryMap.hpp
+NativeEngine/include/Core/NodalSolver.hpp
+NativeEngine/include/MCU/ATmega328P_ISA.h
+NativeEngine/Project_Manifest.json
+NativeEngine/src/Core/NodalSolver.cpp
 NativeEngine/src/main.cpp
+NativeEngine/src/MCU/ATmega328P_ISA.c
+NativeEngine/src/NativeEngine_Core.cpp
 Projects/TestProject.rtwin
 README.md
 tests/integration/package.json
@@ -74,6 +83,8 @@ tests/python/test_remote_server.py
 tools/autonomous_fix_loop.py
 tools/autonomous_fixer.py
 tools/autonomous_iteration.py
+tools/build_firmware.ps1
+tools/build_native.ps1
 tools/build_windows_standalone.ps1
 tools/dashboard/package.json
 tools/dashboard/package-lock.json
@@ -86,6 +97,7 @@ tools/export_context_pack.ps1
 tools/export_context_pack_min.ps1
 tools/fetch_icons.py
 tools/fetch_png_icons.py
+tools/final_circuit_fixer.py
 tools/fix_svg_colors.py
 tools/forensic_doctor.py
 tools/get_latest_shared_info.ps1
@@ -119,6 +131,8 @@ UnityApp/Assets/Plugins/System.Text.Encodings.Web.dll.meta
 UnityApp/Assets/Plugins/System.Text.Json.dll
 UnityApp/Assets/Plugins/System.Text.Json.dll.meta
 UnityApp/Assets/Plugins/x86_64.meta
+UnityApp/Assets/Plugins/x86_64/NativeEngine.dll
+UnityApp/Assets/Plugins/x86_64/NativeEngine.dll.meta
 UnityApp/Assets/Plugins/x86_64/RoboTwinCore.dll
 UnityApp/Assets/Plugins/x86_64/RoboTwinCore.dll.meta
 UnityApp/Assets/Resources.meta
@@ -148,8 +162,33 @@ UnityApp/Assets/Scripts/Circuit.meta
 UnityApp/Assets/Scripts/Circuit/CircuitController.cs
 UnityApp/Assets/Scripts/Circuit/CircuitController.cs.meta
 UnityApp/Assets/Scripts/Core.meta
+UnityApp/Assets/Scripts/Core/Bridge_Interface.cs
+UnityApp/Assets/Scripts/Core/Bridge_Interface.cs.meta
 UnityApp/Assets/Scripts/Core/NativeBridge.cs
 UnityApp/Assets/Scripts/Core/NativeBridge.cs.meta
+UnityApp/Assets/Scripts/CoreSim.meta
+UnityApp/Assets/Scripts/CoreSim/Engine.meta
+UnityApp/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs
+UnityApp/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs.meta
+UnityApp/Assets/Scripts/CoreSim/FirmwareClient.cs
+UnityApp/Assets/Scripts/CoreSim/FirmwareClient.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduino.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduino.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduinoCpu.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduinoCpu.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduinoHal.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduinoHal.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduinoProgram.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualArduinoProgram.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualClock.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualClock.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualHexLoader.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualHexLoader.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualMemory.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualMemory.cs.meta
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualRegisterFile.cs
+UnityApp/Assets/Scripts/CoreSim/Runtime/VirtualRegisterFile.cs.meta
 UnityApp/Assets/Scripts/Debug.meta
 UnityApp/Assets/Scripts/Debug/AutoPilot.cs
 UnityApp/Assets/Scripts/Debug/AutoPilot.cs.meta
@@ -171,6 +210,8 @@ UnityApp/Assets/Scripts/Game/CoreSimAdapter.cs
 UnityApp/Assets/Scripts/Game/CoreSimAdapter.cs.meta
 UnityApp/Assets/Scripts/Game/SessionManager.cs
 UnityApp/Assets/Scripts/Game/SessionManager.cs.meta
+UnityApp/Assets/Scripts/Game/SimHost.cs
+UnityApp/Assets/Scripts/Game/SimHost.cs.meta
 UnityApp/Assets/Scripts/RobotTwin.Runtime.asmdef
 UnityApp/Assets/Scripts/RobotTwin.Runtime.asmdef.meta
 UnityApp/Assets/Scripts/UI.meta

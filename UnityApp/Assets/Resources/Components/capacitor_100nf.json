@@ -1,0 +1,18 @@
+{
+  "id": "capacitor-100nf",
+  "name": "Capacitor 100nF",
+  "description": "Ceramic Decoupling",
+  "type": "Capacitor",
+  "symbol": "C",
+  "iconChar": "C",
+  "order": 50,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "Capacitance", "value": "100nF" },
+    { "key": "Voltage", "value": "50V" },
+    { "key": "Dielectric", "value": "X7R" }
+  ],
+  "defaults": [
+    { "key": "capacitance", "value": "100nF" }
+  ]
+}
