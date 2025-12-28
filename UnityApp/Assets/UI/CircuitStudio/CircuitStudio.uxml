@@ -218,6 +218,8 @@
             <ui:VisualElement class="bottom-bar-header">
                 <ui:VisualElement style="flex-direction: row;">
                     <ui:Label text="UNITY CONNECTED" class="status-tab active-blue" />
+                    <ui:Button name="TabOutput" text="OUTPUT" class="status-tab active-blue" />
+                    <ui:Button name="TabCode" text="CODE" class="status-tab" />
                     <ui:Label text="U1 X:400 Y:300" class="status-tab" />
                 </ui:VisualElement>
                 <ui:VisualElement style="flex-direction: row;">
@@ -226,10 +228,33 @@
                 </ui:VisualElement>
             </ui:VisualElement>
             
-            <ui:VisualElement class="output-console">
-                 <ui:Label text="[Log] [UnityBridge] Sending AppReady { version: 2.4.1 }" style="color: #9ca3af; font-family: monospace; font-size: 11px;" />
-                 <ui:Label text="[Log] [UnityBridge] SelectComponent { id: c1 }" style="color: #9ca3af; font-family: monospace; font-size: 11px;" />
-                 <ui:Label text="[Warning] Chart width(-1) invalid, defaulting to auto." style="color: #FF9800; font-family: monospace; font-size: 11px;" />
+            <ui:VisualElement name="OutputPanel" class="output-panel">
+                <ui:VisualElement class="output-console">
+                     <ui:Label text="[Log] [UnityBridge] Sending AppReady { version: 2.4.1 }" style="color: #9ca3af; font-family: monospace; font-size: 11px;" />
+                     <ui:Label text="[Log] [UnityBridge] SelectComponent { id: c1 }" style="color: #9ca3af; font-family: monospace; font-size: 11px;" />
+                     <ui:Label text="[Warning] Chart width(-1) invalid, defaulting to auto." style="color: #FF9800; font-family: monospace; font-size: 11px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="CodePanel" class="code-panel" style="display: none;">
+                <ui:VisualElement class="code-toolbar">
+                    <ui:Label name="CodeFileLabel" text="No file loaded" class="code-file-label" />
+                    <ui:VisualElement class="code-target">
+                        <ui:Label text="Target" class="code-target-label" />
+                        <ui:DropdownField name="CodeTargetBoard" class="code-target-dropdown" />
+                    </ui:VisualElement>
+                    <ui:VisualElement style="flex-grow: 1;" />
+                    <ui:Button name="CodeOpenBtn" text="Open" class="code-btn" />
+                    <ui:Button name="CodeSaveBtn" text="Save" class="code-btn" />
+                    <ui:Button name="CodeSaveAsBtn" text="Save As" class="code-btn" />
+                    <ui:Button name="CodeBuildBtn" text="Build" class="code-btn" />
+                    <ui:Button name="CodeBuildRunBtn" text="Build+Run" class="code-btn" />
+                    <ui:Button name="CodeBuildAllBtn" text="Build All" class="code-btn" />
+                </ui:VisualElement>
+                <ui:VisualElement class="code-body">
+                    <ui:ScrollView name="CodeFileList" class="code-file-list" />
+                    <ui:TextField name="CodeEditor" class="code-editor" multiline="true" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

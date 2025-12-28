@@ -25,6 +25,20 @@ namespace RobotTwin.UI
         private VisualElement _canvasHud;
         private VisualElement _propertiesPanel;
         private VisualElement _outputConsole;
+        private VisualElement _outputPanel;
+        private VisualElement _codePanel;
+        private ScrollView _codeFileList;
+        private TextField _codeEditor;
+        private Label _codeFileLabel;
+        private DropdownField _codeTargetDropdown;
+        private Button _codeOpenBtn;
+        private Button _codeSaveBtn;
+        private Button _codeSaveAsBtn;
+        private Button _codeBuildBtn;
+        private Button _codeBuildRunBtn;
+        private Button _codeBuildAllBtn;
+        private Button _tabOutput;
+        private Button _tabCode;
         private Label _errorCountLabel;
         private TextField _transformInputX;
         private TextField _transformInputY;
@@ -79,6 +93,9 @@ namespace RobotTwin.UI
         private string _wireStartPin;
         private VisualElement _wireLayer;
         private readonly List<WireSegment> _wireSegments = new List<WireSegment>();
+        private string _activeCodePath;
+        private string _codeTargetComponentId;
+        private readonly Dictionary<string, string> _codeTargetLabels = new Dictionary<string, string>();
 
         private const float GridSnap = 10f;
         private const float ComponentWidth = 120f;
@@ -155,6 +172,8 @@ namespace RobotTwin.UI
         // Tools
         private enum ToolMode { Select, Move, Wire }
         private ToolMode _currentTool = ToolMode.Select;
+        private enum BottomPanelMode { Output, Code }
+        private BottomPanelMode _bottomMode = BottomPanelMode.Output;
 
         private void OnEnable()
         {
@@ -261,6 +280,22 @@ namespace RobotTwin.UI
 
             _outputConsole = _root.Q(className: "output-console");
             _outputConsole?.Clear(); // Clear placeholder logs
+            _outputPanel = _root.Q<VisualElement>("OutputPanel");
+            _codePanel = _root.Q<VisualElement>("CodePanel");
+            _codeFileList = _root.Q<ScrollView>("CodeFileList");
+            _codeEditor = _root.Q<TextField>("CodeEditor");
+            _codeFileLabel = _root.Q<Label>("CodeFileLabel");
+            _codeTargetDropdown = _root.Q<DropdownField>("CodeTargetBoard");
+            _codeOpenBtn = _root.Q<Button>("CodeOpenBtn");
+            _codeSaveBtn = _root.Q<Button>("CodeSaveBtn");
+            _codeSaveAsBtn = _root.Q<Button>("CodeSaveAsBtn");
+            _codeBuildBtn = _root.Q<Button>("CodeBuildBtn");
+            _codeBuildRunBtn = _root.Q<Button>("CodeBuildRunBtn");
+            _codeBuildAllBtn = _root.Q<Button>("CodeBuildAllBtn");
+            _tabOutput = _root.Q<Button>("TabOutput");
+            _tabCode = _root.Q<Button>("TabCode");
+
+            InitializeCodePanel();
 
             // Global Drag Events
             _root.RegisterCallback<PointerMoveEvent>(OnGlobalDragMove);
@@ -270,6 +305,37 @@ namespace RobotTwin.UI
             _root.RegisterCallback<KeyDownEvent>(OnKeyDown);
 
             InitializeResizers();
+        }
+
+        private void InitializeCodePanel()
+        {
+            if (_codeEditor != null)
+            {
+                _codeEditor.multiline = true;
+                _codeEditor.isDelayed = false;
+            }
+
+            _tabOutput?.RegisterCallback<ClickEvent>(_ => SetBottomPanelMode(BottomPanelMode.Output));
+            _tabCode?.RegisterCallback<ClickEvent>(_ => SetBottomPanelMode(BottomPanelMode.Code));
+            _codeOpenBtn?.RegisterCallback<ClickEvent>(_ => OpenCodeFileDialog());
+            _codeSaveBtn?.RegisterCallback<ClickEvent>(_ => SaveCodeFile(false));
+            _codeSaveAsBtn?.RegisterCallback<ClickEvent>(_ => SaveCodeFile(true));
+            _codeBuildBtn?.RegisterCallback<ClickEvent>(_ => RunCodeBuild());
+            _codeBuildRunBtn?.RegisterCallback<ClickEvent>(_ => RunCodeBuildAndRun());
+            _codeBuildAllBtn?.RegisterCallback<ClickEvent>(_ => RunBuildAll());
+            if (_codeTargetDropdown != null)
+            {
+                _codeTargetDropdown.RegisterValueChangedCallback(evt =>
+                {
+                    if (evt == null) return;
+                    if (_codeTargetLabels.TryGetValue(evt.newValue, out var id))
+                    {
+                        HandleCodeTargetChanged(id);
+                    }
+                });
+            }
+
+            SetBottomPanelMode(BottomPanelMode.Output);
         }
 
         private void InitializeSession()
@@ -297,6 +363,478 @@ namespace RobotTwin.UI
             RefreshCanvas();
             PopulateProjectTree();
             UpdateErrorCount();
+        }
+
+        private void SetBottomPanelMode(BottomPanelMode mode)
+        {
+            _bottomMode = mode;
+            if (_outputPanel != null)
+            {
+                _outputPanel.style.display = mode == BottomPanelMode.Output ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            if (_codePanel != null)
+            {
+                _codePanel.style.display = mode == BottomPanelMode.Code ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            _tabOutput?.RemoveFromClassList("active-blue");
+            _tabCode?.RemoveFromClassList("active-blue");
+            if (mode == BottomPanelMode.Output) _tabOutput?.AddToClassList("active-blue");
+            if (mode == BottomPanelMode.Code) _tabCode?.AddToClassList("active-blue");
+
+            if (mode == BottomPanelMode.Code)
+            {
+                EnsureCodeWorkspace();
+                RefreshCodeTargets();
+                RefreshCodeFileList();
+            }
+        }
+
+        private void EnsureCodeWorkspace()
+        {
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root)) return;
+            Directory.CreateDirectory(root);
+
+            bool hasFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.TopDirectoryOnly)
+                .Any(path => IsCodeFile(path));
+            if (!hasFiles)
+            {
+                string path = Path.Combine(root, "sketch.ino");
+                File.WriteAllText(path, GetDefaultSketch(_codeTargetComponentId));
+            }
+        }
+
+        private void RefreshCodeFileList()
+        {
+            if (_codeFileList == null) return;
+            _codeFileList.Clear();
+
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return;
+
+            var files = Directory.EnumerateFiles(root, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(IsCodeFile)
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var file in files)
+            {
+                var btn = new Button(() => LoadCodeFile(file));
+                btn.text = Path.GetFileName(file);
+                btn.AddToClassList("code-file-item");
+                if (string.Equals(file, _activeCodePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    btn.AddToClassList("active");
+                }
+                _codeFileList.Add(btn);
+            }
+        }
+
+        private void OpenCodeFileDialog()
+        {
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root)) return;
+#if UNITY_EDITOR
+            string path = UnityEditor.EditorUtility.OpenFilePanel("Open Sketch", root, "ino,cpp,h,hpp");
+#else
+            string path = Directory.EnumerateFiles(root, "*.*", SearchOption.TopDirectoryOnly)
+                .FirstOrDefault(IsCodeFile);
+#endif
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                LoadCodeFile(path);
+            }
+        }
+
+        private void LoadCodeFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+            string content = File.ReadAllText(path);
+            _activeCodePath = path;
+            if (_codeEditor != null)
+            {
+                _codeEditor.SetValueWithoutNotify(content);
+            }
+            UpdateCodeFileLabel();
+            RefreshCodeFileList();
+        }
+
+        private void SaveCodeFile(bool saveAs)
+        {
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root)) return;
+
+            string target = _activeCodePath;
+            if (saveAs || string.IsNullOrWhiteSpace(target))
+            {
+#if UNITY_EDITOR
+                target = UnityEditor.EditorUtility.SaveFilePanel("Save Sketch", root, "sketch", "ino");
+#else
+                string stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+                target = Path.Combine(root, $"sketch_{stamp}.ino");
+#endif
+            }
+
+            if (string.IsNullOrWhiteSpace(target)) return;
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            string content = _codeEditor?.value ?? string.Empty;
+            File.WriteAllText(target, content);
+            _activeCodePath = target;
+            UpdateCodeFileLabel();
+            RefreshCodeFileList();
+            Debug.Log($"[CodeStudio] Saved: {target}");
+        }
+
+        private void UpdateCodeFileLabel()
+        {
+            if (_codeFileLabel == null) return;
+            if (string.IsNullOrWhiteSpace(_activeCodePath))
+            {
+                _codeFileLabel.text = "No file loaded";
+                return;
+            }
+            _codeFileLabel.text = Path.GetFileName(_activeCodePath);
+        }
+
+        private string GetCodeRoot(string componentId)
+        {
+            string root = string.Empty;
+            if (SessionManager.Instance != null && !string.IsNullOrWhiteSpace(SessionManager.Instance.CurrentProjectPath))
+            {
+                string projectDir = Path.GetDirectoryName(SessionManager.Instance.CurrentProjectPath);
+                if (!string.IsNullOrWhiteSpace(projectDir))
+                {
+                    root = string.IsNullOrWhiteSpace(componentId)
+                        ? Path.Combine(projectDir, "Code")
+                        : Path.Combine(projectDir, "Code", componentId);
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                root = string.IsNullOrWhiteSpace(componentId)
+                    ? Path.Combine(Application.persistentDataPath, "CodeStudio")
+                    : Path.Combine(Application.persistentDataPath, "CodeStudio", componentId);
+            }
+            return root;
+        }
+
+        private static bool IsCodeFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext == ".ino" || ext == ".cpp" || ext == ".h" || ext == ".hpp";
+        }
+
+        private static string GetDefaultSketch(string componentId)
+        {
+            string id = string.IsNullOrWhiteSpace(componentId) ? "U1" : componentId;
+            return $"// Target: {id}\\n\\nvoid setup()\\n{{\\n  pinMode(13, OUTPUT);\\n}}\\n\\nvoid loop()\\n{{\\n  digitalWrite(13, HIGH);\\n  delay(500);\\n  digitalWrite(13, LOW);\\n  delay(500);\\n}}\\n";
+        }
+
+        private void RunCodeBuild()
+        {
+            RunCodeBuild(false);
+        }
+
+        private void RunCodeBuildAndRun()
+        {
+            RunCodeBuild(true);
+        }
+
+        private bool RunCodeBuild(bool runAfter)
+        {
+            EnsureCodeWorkspace();
+            if (string.IsNullOrWhiteSpace(_activeCodePath))
+            {
+                SaveCodeFile(true);
+            }
+
+            string inoPath = ResolveSketchPath();
+            if (string.IsNullOrWhiteSpace(inoPath))
+            {
+                Debug.LogWarning("[CodeStudio] No .ino file found to build.");
+                return false;
+            }
+
+            var targetBoard = ResolveTargetBoard();
+            if (targetBoard == null)
+            {
+                Debug.LogWarning("[CodeStudio] No Arduino target found.");
+                return false;
+            }
+
+            string repoRoot = ResolveRepoRoot();
+            if (string.IsNullOrWhiteSpace(repoRoot))
+            {
+                Debug.LogWarning("[CodeStudio] Repo root not found. Build cancelled.");
+                return false;
+            }
+
+            string toolPath = Path.Combine(repoRoot, "tools", "scripts", "build_bvm.py");
+            if (!File.Exists(toolPath))
+            {
+                Debug.LogWarning($"[CodeStudio] build_bvm.py not found at {toolPath}");
+                return false;
+            }
+
+            string fqbn = ResolveFqbn(targetBoard);
+            string codeRoot = GetCodeRoot(_codeTargetComponentId);
+            string outDir = Path.Combine(codeRoot, "build");
+            Directory.CreateDirectory(outDir);
+            string outPath = Path.Combine(outDir, $"{Path.GetFileNameWithoutExtension(inoPath)}.bvm");
+
+            string pythonExe = ResolvePythonExecutable(out string prefixArgs);
+            string args = $"{prefixArgs} \"{toolPath}\" --ino \"{inoPath}\" --fqbn {fqbn} --out \"{outPath}\"";
+            string includeRoot = codeRoot;
+            string includeLib = Path.Combine(codeRoot, "lib");
+            if (Directory.Exists(includeRoot)) args += $" --include \"{includeRoot}\"";
+            if (Directory.Exists(includeLib)) args += $" --include \"{includeLib}\"";
+
+            Debug.Log($"[CodeStudio] Build start: {Path.GetFileName(inoPath)} ({fqbn})");
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = pythonExe,
+                Arguments = args,
+                WorkingDirectory = repoRoot,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using (var proc = new System.Diagnostics.Process { StartInfo = startInfo })
+            {
+                proc.OutputDataReceived += (_, evt) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(evt.Data))
+                    {
+                        Debug.Log($"[CodeStudio] {evt.Data}");
+                    }
+                };
+                proc.ErrorDataReceived += (_, evt) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(evt.Data))
+                    {
+                        Debug.LogWarning($"[CodeStudio] {evt.Data}");
+                    }
+                };
+
+                try
+                {
+                    proc.Start();
+                    proc.BeginOutputReadLine();
+                    proc.BeginErrorReadLine();
+                    proc.WaitForExit();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[CodeStudio] Build failed to start: {ex.Message}");
+                    return false;
+                }
+
+                if (proc.ExitCode != 0)
+                {
+                    Debug.LogWarning($"[CodeStudio] Build failed (exit {proc.ExitCode}).");
+                    return false;
+                }
+            }
+
+            string hexPath = FindLatestHex(Path.Combine(outDir, "bvm_build"));
+            if (string.IsNullOrWhiteSpace(hexPath))
+            {
+                Debug.LogWarning("[CodeStudio] Build completed but no .hex was found.");
+                return false;
+            }
+
+            ApplyFirmwarePaths(targetBoard, hexPath, outPath, fqbn);
+            SaveCurrentProject();
+            Debug.Log($"[CodeStudio] Build ok. Hex: {hexPath}");
+            if (runAfter)
+            {
+                StartRunMode();
+            }
+            return true;
+        }
+
+        private void RunBuildAll()
+        {
+            if (_currentCircuit == null || _currentCircuit.Components == null) return;
+            var targets = _currentCircuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            if (targets.Count == 0)
+            {
+                Debug.LogWarning("[CodeStudio] No Arduino targets to build.");
+                return;
+            }
+
+            string previousTarget = _codeTargetComponentId;
+            int success = 0;
+            foreach (var target in targets)
+            {
+                HandleCodeTargetChanged(target.Id);
+                bool built = RunCodeBuild(false);
+                if (built) success++;
+            }
+
+            HandleCodeTargetChanged(previousTarget);
+            Debug.Log($"[CodeStudio] Build All complete: {success}/{targets.Count} targets.");
+        }
+
+        private string ResolveSketchPath()
+        {
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return null;
+
+            if (!string.IsNullOrWhiteSpace(_activeCodePath) &&
+                _activeCodePath.EndsWith(".ino", StringComparison.OrdinalIgnoreCase))
+            {
+                return _activeCodePath;
+            }
+
+            return Directory.EnumerateFiles(root, "*.ino", SearchOption.TopDirectoryOnly)
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+        }
+
+        private ComponentSpec ResolveTargetBoard()
+        {
+            if (_currentCircuit == null || _currentCircuit.Components == null) return null;
+            if (!string.IsNullOrWhiteSpace(_codeTargetComponentId))
+            {
+                var match = _currentCircuit.Components.FirstOrDefault(c => c.Id == _codeTargetComponentId);
+                if (match != null && IsArduinoType(match.Type)) return match;
+            }
+            return _currentCircuit.Components.FirstOrDefault(c => IsArduinoType(c.Type));
+        }
+
+        private string ResolveFqbn(ComponentSpec board)
+        {
+            if (board != null && board.Properties != null && board.Properties.TryGetValue("virtualBoard", out var id))
+            {
+                string key = (id ?? string.Empty).Trim().ToLowerInvariant();
+                if (key.Contains("nano")) return "arduino:avr:nano";
+                if (key.Contains("pro-mini") || key.Contains("pro_mini") || key.Contains("promini")) return "arduino:avr:pro";
+            }
+
+            if (board != null && board.Type != null)
+            {
+                string type = board.Type.Trim().ToLowerInvariant();
+                if (type.Contains("nano")) return "arduino:avr:nano";
+                if (type.Contains("pro")) return "arduino:avr:pro";
+            }
+
+            return "arduino:avr:uno";
+        }
+
+        private string ResolveRepoRoot()
+        {
+            try
+            {
+                var dataDir = new DirectoryInfo(Application.dataPath);
+                return dataDir.Parent?.Parent?.FullName;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private string ResolvePythonExecutable(out string prefixArgs)
+        {
+            prefixArgs = string.Empty;
+            if (Application.platform == RuntimePlatform.WindowsEditor ||
+                Application.platform == RuntimePlatform.WindowsPlayer)
+            {
+                prefixArgs = "-3";
+                return "py";
+            }
+            return "python3";
+        }
+
+        private string FindLatestHex(string buildDir)
+        {
+            if (string.IsNullOrWhiteSpace(buildDir) || !Directory.Exists(buildDir)) return null;
+            var hex = Directory.EnumerateFiles(buildDir, "*.hex", SearchOption.TopDirectoryOnly)
+                .Select(p => new FileInfo(p))
+                .OrderByDescending(f => f.LastWriteTimeUtc)
+                .FirstOrDefault();
+            return hex?.FullName;
+        }
+
+        private void ApplyFirmwarePaths(ComponentSpec board, string hexPath, string bvmPath, string fqbn)
+        {
+            if (board == null) return;
+
+            EnsureComponentProperties(board);
+            board.Properties["firmwarePath"] = hexPath;
+            board.Properties["firmware"] = hexPath;
+            board.Properties["bvmPath"] = bvmPath;
+            board.Properties["fqbn"] = fqbn;
+        }
+
+        private void RefreshCodeTargets()
+        {
+            if (_codeTargetDropdown == null) return;
+            _codeTargetLabels.Clear();
+            var choices = new List<string>();
+            if (_currentCircuit != null && _currentCircuit.Components != null)
+            {
+                foreach (var comp in _currentCircuit.Components)
+                {
+                    if (!IsArduinoType(comp.Type)) continue;
+                    string label = $"{comp.Id} ({comp.Type})";
+                    _codeTargetLabels[label] = comp.Id;
+                    choices.Add(label);
+                }
+            }
+
+            if (choices.Count == 0)
+            {
+                choices.Add("No Arduino found");
+                _codeTargetComponentId = null;
+                _codeTargetDropdown.SetEnabled(false);
+                _codeTargetDropdown.choices = choices;
+                _codeTargetDropdown.SetValueWithoutNotify(choices[0]);
+                return;
+            }
+
+            _codeTargetDropdown.SetEnabled(true);
+            _codeTargetDropdown.choices = choices;
+            string selected = choices[0];
+            if (!string.IsNullOrWhiteSpace(_codeTargetComponentId))
+            {
+                string match = choices.FirstOrDefault(c => _codeTargetLabels[c] == _codeTargetComponentId);
+                if (!string.IsNullOrWhiteSpace(match))
+                {
+                    selected = match;
+                }
+            }
+            HandleCodeTargetChanged(_codeTargetLabels[selected]);
+            _codeTargetDropdown.SetValueWithoutNotify(selected);
+        }
+
+        private void HandleCodeTargetChanged(string componentId)
+        {
+            _codeTargetComponentId = componentId;
+            _activeCodePath = null;
+            UpdateCodeFileLabel();
+            EnsureCodeWorkspace();
+            RefreshCodeFileList();
+            AutoLoadFirstSketch();
+        }
+
+        private void AutoLoadFirstSketch()
+        {
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return;
+            string first = Directory.EnumerateFiles(root, "*.ino", SearchOption.TopDirectoryOnly)
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(first))
+            {
+                LoadCodeFile(first);
+            }
         }
 
         private void EnsureDefaultDemoCircuit()
@@ -976,6 +1514,10 @@ namespace RobotTwin.UI
                     break;
                 case "Battery":
                     BuildTwoPinComponentVisual(root, spec, item, SymbolKind.Battery);
+                    break;
+                case "Button":
+                case "Switch":
+                    BuildTwoPinComponentVisual(root, spec, item, SymbolKind.Generic);
                     break;
                 default:
                     BuildGenericComponentVisual(root, spec, item);
@@ -1698,14 +2240,18 @@ namespace RobotTwin.UI
 
         private void OnRunSimulation(ClickEvent evt)
         {
-             Debug.Log("[CircuitStudio] Transitioning to RunMode...");
-             if (SessionManager.Instance != null)
-             {
-                 _currentCircuit.Mode = RobotTwin.CoreSim.Specs.SimulationMode.Fast;
-                 SessionManager.Instance.StartSession(_currentCircuit);
-             }
-             // Simple scene load
-             UnityEngine.SceneManagement.SceneManager.LoadScene(2);
+             StartRunMode();
+        }
+
+        private void StartRunMode()
+        {
+            Debug.Log("[CircuitStudio] Transitioning to RunMode...");
+            if (SessionManager.Instance != null)
+            {
+                _currentCircuit.Mode = RobotTwin.CoreSim.Specs.SimulationMode.Fast;
+                SessionManager.Instance.StartSession(_currentCircuit);
+            }
+            UnityEngine.SceneManagement.SceneManager.LoadScene(2);
         }
 
         private void SaveCurrentProject()

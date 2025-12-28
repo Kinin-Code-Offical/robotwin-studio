@@ -1,0 +1,82 @@
+{
+  "projectName": "Arduino LED Starter",
+  "version": "1.0.0",
+  "description": "UNO + LED + Resistor + Battery starter circuit.",
+  "circuit": {
+    "id": "arduino-led-starter",
+    "mode": "fast",
+    "components": [
+      {
+        "id": "U1",
+        "type": "ArduinoUno",
+        "properties": {
+          "posX": "100",
+          "posY": "200",
+          "virtualBoard": "arduino-uno",
+          "firmware": "blink:D13:500",
+          "catalogId": "arduino-uno"
+        }
+      },
+      {
+        "id": "R1",
+        "type": "Resistor",
+        "properties": {
+          "posX": "380",
+          "posY": "210",
+          "resistance": "220",
+          "catalogId": "resistor-220"
+        }
+      },
+      {
+        "id": "D1",
+        "type": "LED",
+        "properties": {
+          "posX": "520",
+          "posY": "210",
+          "forwardV": "2.0V",
+          "current": "20mA",
+          "catalogId": "led-red"
+        }
+      },
+      {
+        "id": "B1",
+        "type": "Battery",
+        "properties": {
+          "posX": "100",
+          "posY": "420",
+          "voltage": "9V",
+          "catalogId": "battery-9v"
+        }
+      }
+    ],
+    "nets": [
+      {
+        "id": "NET_D13",
+        "nodes": ["U1.D13", "R1.A"]
+      },
+      {
+        "id": "NET_LED",
+        "nodes": ["R1.B", "D1.Anode"]
+      },
+      {
+        "id": "GND",
+        "nodes": ["D1.Cathode", "U1.GND1", "B1.-"]
+      },
+      {
+        "id": "VIN",
+        "nodes": ["B1.+", "U1.VIN"]
+      }
+    ]
+  },
+  "robot": {
+    "name": "DefaultRobot"
+  },
+  "world": {
+    "name": "DefaultWorld",
+    "width": 0,
+    "depth": 0
+  },
+  "metadata": {
+    "template": "arduino-led-starter"
+  }
+}

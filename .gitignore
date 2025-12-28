@@ -90,6 +90,8 @@ docs/antigravity/context_exports/
 # Shared Info & Temp
 .gpt/
 templates/
+!UnityApp/Assets/Templates/
+!UnityApp/Assets/Templates/**
 /tests/integration/node_modules/
 /tests/integration/test-report.html
 /tools/**/node_modules/

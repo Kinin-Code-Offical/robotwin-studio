@@ -77,6 +77,7 @@ namespace RobotTwin.UI
             }
             
             _activeCircuit = SessionManager.Instance.CurrentCircuit;
+            InitVisualization(_doc.rootVisualElement);
 
             // Ensure FirmwareClient exists
             if (RobotTwin.CoreSim.FirmwareClient.Instance == null)
@@ -257,6 +258,15 @@ namespace RobotTwin.UI
                 Label lbl = kvp.Value;
                 _componentTypes.TryGetValue(id, out var type);
 
+                if (IsArduinoType(type))
+                {
+                    var comp = _activeCircuit?.Components?.FirstOrDefault(c => c.Id == id);
+                    bool hasFirmware = TryGetFirmwareLabel(comp, out var fwLabel);
+                    lbl.text = fwLabel;
+                    lbl.style.color = hasFirmware ? new Color(0.3f, 0.9f, 0.6f) : Color.gray;
+                    continue;
+                }
+
                 if (string.Equals(type, "LED", System.StringComparison.OrdinalIgnoreCase))
                 {
                     if (telemetry.Signals.TryGetValue($"COMP:{id}:I", out var current))
@@ -285,6 +295,42 @@ namespace RobotTwin.UI
                     }
                 }
             }
+        }
+
+        private static bool IsArduinoType(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return false;
+            return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool TryGetFirmwareLabel(ComponentSpec comp, out string label)
+        {
+            label = "FW: none";
+            if (comp == null || comp.Properties == null) return false;
+
+            if (comp.Properties.TryGetValue("bvmPath", out var bvmPath) && !string.IsNullOrWhiteSpace(bvmPath))
+            {
+                label = $"FW: {Path.GetFileName(bvmPath)}";
+                return true;
+            }
+
+            if (comp.Properties.TryGetValue("firmwarePath", out var hexPath) && !string.IsNullOrWhiteSpace(hexPath))
+            {
+                label = $"FW: {Path.GetFileName(hexPath)}";
+                return true;
+            }
+
+            if (comp.Properties.TryGetValue("firmware", out var firmware) &&
+                !string.IsNullOrWhiteSpace(firmware) &&
+                firmware.EndsWith(".hex", System.StringComparison.OrdinalIgnoreCase))
+            {
+                label = $"FW: {Path.GetFileName(firmware)}";
+                return true;
+            }
+
+            return false;
         }
 
         private void SaveInjectionConfig()

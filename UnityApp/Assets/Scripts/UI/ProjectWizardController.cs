@@ -1491,15 +1491,13 @@ namespace RobotTwin.UI
             string targetPath = Path.Combine(targetDir, $"{safeName}.rtwin");
             targetPath = EnsureUniqueProjectPath(targetPath);
 
-            var manifest = new ProjectManifest
-            {
-                ProjectName = safeName,
-                Description = string.IsNullOrWhiteSpace(_pendingTemplate.Description) ? "New project" : _pendingTemplate.Description,
-                Version = "1.0.0",
-                Circuit = new CircuitSpec(),
-                Robot = new RobotSpec { Name = "DefaultRobot" },
-                World = new WorldSpec { Name = "DefaultWorld", Width = 0, Depth = 0 }
-            };
+            string description = string.IsNullOrWhiteSpace(_pendingTemplate.Description) ? "New project" : _pendingTemplate.Description;
+            var manifest = LoadTemplateManifest(_pendingTemplate.SourcePath) ?? BuildDefaultManifest(safeName, description);
+            manifest.ProjectName = safeName;
+            manifest.Description = description;
+            if (manifest.Circuit == null) manifest.Circuit = new CircuitSpec();
+            if (manifest.Robot == null) manifest.Robot = new RobotSpec { Name = "DefaultRobot" };
+            if (manifest.World == null) manifest.World = new WorldSpec { Name = "DefaultWorld", Width = 0, Depth = 0 };
 
             try
             {
@@ -1523,6 +1521,53 @@ namespace RobotTwin.UI
             int sceneCount = SceneManager.sceneCountInBuildSettings;
             if (sceneCount > 1) SceneManager.LoadScene(1);
             else Debug.LogWarning("[ProjectWizard] Scene 1 not found.");
+        }
+
+        private ProjectManifest BuildDefaultManifest(string name, string description)
+        {
+            return new ProjectManifest
+            {
+                ProjectName = name,
+                Description = description,
+                Version = "1.0.0",
+                Circuit = new CircuitSpec(),
+                Robot = new RobotSpec { Name = "DefaultRobot" },
+                World = new WorldSpec { Name = "DefaultWorld", Width = 0, Depth = 0 }
+            };
+        }
+
+        private ProjectManifest LoadTemplateManifest(string templatePath)
+        {
+            if (string.IsNullOrWhiteSpace(templatePath)) return null;
+
+            string rtwinPath = Path.Combine(templatePath, "project.rtwin");
+            if (File.Exists(rtwinPath))
+            {
+                try
+                {
+                    return SimulationSerializer.LoadProject(rtwinPath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ProjectWizard] Failed to load template rtwin: {ex.Message}");
+                }
+            }
+
+            string jsonPath = Path.Combine(templatePath, "project.json");
+            if (File.Exists(jsonPath))
+            {
+                try
+                {
+                    string json = File.ReadAllText(jsonPath);
+                    return SimulationSerializer.Deserialize<ProjectManifest>(json);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ProjectWizard] Failed to load template json: {ex.Message}");
+                }
+            }
+
+            return null;
         }
     }
 }

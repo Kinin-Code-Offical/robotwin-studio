@@ -1,0 +1,18 @@
+{
+  "id": "button-momentary",
+  "name": "Button (Momentary)",
+  "description": "Momentary push button switch",
+  "type": "Button",
+  "symbol": "SW",
+  "iconChar": "B",
+  "order": 25,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "State", "value": "Open" },
+    { "key": "Closed Resistance", "value": "0.05 Ohm" }
+  ],
+  "defaults": [
+    { "key": "state", "value": "open" },
+    { "key": "resistance", "value": "0.05" }
+  ]
+}
