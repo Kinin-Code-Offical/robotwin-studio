@@ -25,10 +25,10 @@ public class CircuitManagerTest : MonoBehaviour
         GameObject arduObj = new GameObject("ArduinoUno");
         var ardu = arduObj.AddComponent<Arduino>();
         ardu.PinNets = new string[20];
-        for(int i=0; i<20; ++i) ardu.PinNets[i] = "NC"; // Not Connected
+        for(int i=0; i<20; ++i) ardu.PinNets[i] = ""; // Not Connected
         ardu.PinNets[13] = "Net_Pin13"; // Connect Pin 13
-        ardu.HexFilePath = "C:/Temp/blink.hex"; // Hardcoded for test
-        ardu.AutoLoad = false; // We will load manually or rely on manager?
+        ardu.HexFilePath = "C:/Temp/blink.hex"; 
+        ardu.AutoLoad = false; 
 
         // 2. Resistor
         GameObject rObj = new GameObject("Resistor");
@@ -48,15 +48,5 @@ public class CircuitManagerTest : MonoBehaviour
         CircuitManager.Instance.RunSimulation();
         
         Debug.Log("Simulation Running...");
-    }
-
-    void Update()
-    {
-        if (Time.frameCount % 60 == 0)
-        {
-             // Log status?
-             // We can't easily probe voltages unless we expose Debug Probe from Manager.
-             // But valid console errors are good enough.
-        }
     }
 }

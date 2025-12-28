@@ -71,12 +71,21 @@ namespace RobotTwin.CoreSim.Runtime
             // For MVP: Components define "Net IDs" (integers) publically.
             // A global Net 0 is Ground.
             
-            // Map NetID (User) -> NodeID (Native)
-            Dictionary<int, int> netToNodeMap = new Dictionary<int, int>();
-            netToNodeMap[0] = 0; // Ground is always 0
+            // Map NetID (String) -> NodeID (Native)
+            Dictionary<string, int> netToNodeMap = new Dictionary<string, int>();
+            
+            // Common Ground Aliases
+            int groundNode = 0; // Native Node 0 is always Ground
+            netToNodeMap["0"] = groundNode;
+            netToNodeMap["GND"] = groundNode;
+            netToNodeMap["Ground"] = groundNode;
 
-            int GetNativeNode(int netId)
+            int GetNativeNode(string netId)
             {
+                if (string.IsNullOrEmpty(netId)) return 0; // Floating? Or Ground? Let's say floating (unconnected) but Native Connect needs ID. 
+                // Actually floating pins shouldn't be connected. 
+                // But simplified: map to new node if not found.
+                
                 if (!netToNodeMap.ContainsKey(netId))
                 {
                     netToNodeMap[netId] = NativeBridge.Native_AddNode();

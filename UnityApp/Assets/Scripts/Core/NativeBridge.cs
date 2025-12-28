@@ -36,10 +36,17 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "Native_GetVoltage")]
         public static extern float Native_GetVoltage(int nodeId);
 
+        [DllImport(PLUGIN_NAME, EntryPoint = "LoadHexFromFile")]
+        public static extern int LoadHexFromFile(string path);
+
         // --- Legacy / Helper API ---
 
         [DllImport(PLUGIN_NAME, EntryPoint = "GetEngineVersion")]
         public static extern int GetEngineVersion();
+
+        // Legacy Wrapper
+        public static int GetVersion() => GetEngineVersion();
+        public static void StepSimulation(float dt) => Native_Step(dt); // Wrapper for old StepSimulation
 
 
         // Enum mirroring Core/CircuitComponent.h
@@ -49,7 +56,9 @@ namespace RobotTwin.Core
             VoltageSource = 1,
             Ground = 2,
             Diode = 3,
-            LED = 4
+            LED = 4,
+            Switch = 5,
+            IC_Pin = 6
         }
     }
 }
