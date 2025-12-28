@@ -10,10 +10,12 @@ namespace RobotTwin.CoreSim.Runtime.Components
 
         private void Reset()
         {
-            PinNets = new int[2]; // 2 Pins
+            PinNets = new string[2];
+            PinNets[0] = "VCC";
+            PinNets[1] = "GND";
         }
 
-        public override void OnBuildCircuit(Func<int, int> resolver)
+        public override void OnBuildCircuit(Func<string, int> resolver)
         {
             float[] params_ = new float[] { Voltage };
             NativeId = NativeBridge.Native_AddComponent((int)NativeBridge.ComponentType.VoltageSource, 1, params_);

@@ -142,5 +142,11 @@ namespace RobotTwin.CoreSim.Runtime
             FirmwareLoaded = true;
             return true;
         }
+
+        public void SetVoltage(string pin, float voltage)
+        {
+             // Legacy Stub to fix compilation
+             // ideally this routes to HAL
+        }
     }
 }

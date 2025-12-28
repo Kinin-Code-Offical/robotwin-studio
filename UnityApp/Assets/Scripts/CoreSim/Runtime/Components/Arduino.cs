@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using RobotTwin.Core;
 
 namespace RobotTwin.CoreSim.Runtime.Components
 {

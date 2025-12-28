@@ -7,7 +7,6 @@
 #include <cstring>
 #include <vector>
 
-
 namespace NativeEngine::Circuit {
 class AvrComponent : public Component {
 public:
