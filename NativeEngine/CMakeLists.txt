@@ -9,6 +9,7 @@ add_library(NativeEngineCore OBJECT
     src/MCU/ATmega328P_ISA.c
     src/Core/NodalSolver.cpp
     src/Core/BvmFormat.cpp
+    src/Core/CircuitContext.cpp
 )
 
 add_library(NativeEngine SHARED
