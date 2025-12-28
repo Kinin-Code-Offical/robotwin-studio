@@ -30,9 +30,7 @@ Write-Host "Log: $logFile"
 $possiblePaths = @(
     "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe",
     "C:\Program Files\Unity\Hub\Editor\6000.3.1f1\Editor\Unity.exe",
-    "C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe",
-    "C:\Program Files\Unity\Hub\Editor\2022.3.10f1\Editor\Unity.exe",
-    "C:\Program Files\Unity\Hub\Editor\2021.3.10f1\Editor\Unity.exe"
+    "C:\Program Files\Unity\Hub\Editor\6000.2.0f1\Editor\Unity.exe"
 )
 
 $unityExe = $null

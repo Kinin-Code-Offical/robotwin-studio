@@ -927,7 +927,7 @@ namespace RobotTwin.UI
 
             if (SessionManager.Instance != null)
             {
-                SessionManager.Instance.StartSession(project);
+                SessionManager.Instance.StartSession(project, filePath);
             }
 
             HideContextMenu();
@@ -1513,7 +1513,7 @@ namespace RobotTwin.UI
 
             if (SessionManager.Instance != null)
             {
-                SessionManager.Instance.StartSession(manifest);
+                SessionManager.Instance.StartSession(manifest, targetPath);
             }
 
             HideCreateOverlay();

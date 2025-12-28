@@ -3,12 +3,10 @@ using UnityEngine.UIElements;
 using System.IO;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Specs;
-using RobotTwin.CoreSim.Host;
-using RobotTwin.CoreSim.IPC;
-// using RobotTwin.CoreSim.Models.Physics; // Physics disabled for MVP rewrite
-// using RobotTwin.CoreSim.Models.Power;
 using RobotTwin.Game;
+// using RobotTwin.CoreSim.Host;
 using System.Linq;
+using RobotTwin.CoreSim.Runtime;
 
 namespace RobotTwin.UI
 {
@@ -39,125 +37,75 @@ namespace RobotTwin.UI
         private ProgressBar _tempBar;
 
         // State
-        private SimHost _host;
-        private IFirmwareClient _client;
+        private RobotTwin.Game.SimHost _host;
+        private RobotTwin.CoreSim.FirmwareClient _client;
         private CircuitSpec _activeCircuit;
         
         private bool _isRunning = false;
         private string _runOutputPath;
 
-        // Physics Models (Commented out for MVP)
-        // private BatteryModel _battery;
-        // private ThermalModel _thermal;
-
-        // Active Waveforms
-        // private Dictionary<string, IWaveform> _activeWaveforms = new Dictionary<string, IWaveform>();
-
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
-            if (_doc == null)
-            {
-                Debug.LogError("[RunModeController] UIDocument component missing! Disabling.");
-                enabled = false;
-                return;
-            }
-
+            if (_doc == null) { enabled = false; return; }
             var root = _doc.rootVisualElement;
-            if (root == null)
-            {
-                Debug.LogError("[RunModeController] RootVisualElement is null! Disabling.");
-                enabled = false;
-                return;
-            }
+            if (root == null) { enabled = false; return; }
 
+            // Bind UI
             _timeLabel = root.Q<Label>("TimeLabel");
             _tickLabel = root.Q<Label>("TickLabel");
             _logContentLabel = root.Q<Label>("LogContentLabel");
             _serialContentLabel = root.Q<Label>("SerialContentLabel");
             _pathLabel = root.Q<Label>("TelemetryPathLabel");
-
-            _newSignalName = root.Q<TextField>("NewSignalName");
-            _waveformType = root.Q<DropdownField>("WaveformTypeDropdown");
-            _param1 = root.Q<FloatField>("Param1");
-            _param2 = root.Q<FloatField>("Param2");
-            _param3 = root.Q<FloatField>("Param3");
-            _addSignalBtn = root.Q<Button>("AddSignalBtn");
-            _signalList = root.Q<ScrollView>("SignalList");
-            _injectionActiveToggle = root.Q<Toggle>("InjectionActiveToggle");
             
-            _batteryBar = root.Q<ProgressBar>("BatteryBar");
-            _tempBar = root.Q<ProgressBar>("TempBar");
+            // Buttons
+             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
+             root.Q<Button>("OpenLogsBtn")?.RegisterCallback<ClickEvent>(OnOpenLogsClicked);
 
-            // Validate critical controls
-            if (_addSignalBtn == null) Debug.LogWarning("[RunModeController] 'AddSignalBtn' not found.");
-
-            root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
-            root.Q<Button>("OpenLogsBtn")?.RegisterCallback<ClickEvent>(OnOpenLogsClicked);
-            // _addSignalBtn?.RegisterCallback<ClickEvent>(OnAddSignal); // Legacy Stubbed
-
-            StartSimulation();
-            InitVisualization(root);
+             InitVisualization(root);
+             StartSimulation(); // Start Loop
         }
 
         private void OnDisable() => StopSimulation();
 
         private void StartSimulation()
         {
-            if (SessionManager.Instance == null || SessionManager.Instance.CurrentCircuit == null)
+             if (SessionManager.Instance == null || SessionManager.Instance.CurrentCircuit == null)
             {
-                Debug.LogError("No Session/Circuit found!");
+                Debug.LogError("[RunMode] No Session/Circuit found!");
                 return;
             }
-
-            string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            _runOutputPath = Path.Combine(Application.persistentDataPath, "Runs", timestamp);
-            Directory.CreateDirectory(_runOutputPath);
-            if (_pathLabel != null) _pathLabel.text = $"Log: {_runOutputPath}";
-
-            // INIT HOST
-            _client = new FirmwareClient();
-            var circuit = SessionManager.Instance.CurrentCircuit;
-            _activeCircuit = circuit;
-            // Quick Fix: If circuit has no components, add blinky defaults for test
-            if (circuit.Components.Count == 0)
-            {
-                circuit.Components.Add(new ComponentSpec { Id = "U1", Type = "ArduinoUno" });
-                circuit.Components.Add(new ComponentSpec { Id = "D1", Type = "LED" });
-            }
-
-            _host = new SimHost(circuit, _client);
-            if (!string.IsNullOrEmpty(_firmwarePath))
-            {
-                 _host.StartFirmwareProcess(_firmwarePath);
-            }
             
-            _host.OnTickComplete += HandleHostTick;
-            _host.Start();
+            _activeCircuit = SessionManager.Instance.CurrentCircuit;
 
+            // Ensure FirmwareClient exists
+            if (RobotTwin.CoreSim.FirmwareClient.Instance == null)
+            {
+                var go = new GameObject("FirmwareHost");
+                _client = go.AddComponent<RobotTwin.CoreSim.FirmwareClient>();
+            }
+            else _client = RobotTwin.CoreSim.FirmwareClient.Instance;
+
+            // Ensure SimHost exists
+            if (RobotTwin.Game.SimHost.Instance == null)
+            {
+                 var go = _client.gameObject; // Click on same obj
+                 _host = go.AddComponent<RobotTwin.Game.SimHost>();
+            }
+            else _host = RobotTwin.Game.SimHost.Instance;
+
+            // Start
+            _host.BeginSimulation();
             _isRunning = true;
-            Debug.Log($"RunMode started. Logs: {_runOutputPath}");
-
-            // Default Injection (Example)
-            // AddWaveform("default_sine", new SineWaveform(1.0, 5.0, 0.0));
         }
 
         private void StopSimulation()
         {
-            if (!_isRunning) return;
-            _isRunning = false;
-
             if (_host != null)
             {
-                _host.OnTickComplete -= HandleHostTick;
-                _host.Stop();
-                _host = null;
+                _host.StopSimulation();
             }
-            if (_client != null)
-            {
-                _client.Disconnect();
-                _client = null;
-            }
+            _isRunning = false;
         }
 
         private void OnStopClicked(ClickEvent evt)
@@ -215,8 +163,8 @@ namespace RobotTwin.UI
                 Debug.Log($"[NativeEngine] 5V / 220R = {i * 1000f:F2}mA");
             }
 
-            if (_timeLabel != null) _timeLabel.text = $"Time: {_host.SimTime:F2}s";
-            if (_tickLabel != null) _tickLabel.text = $"Tick: {_host.TickCount}";
+            if (_timeLabel != null) _timeLabel.text = $"Time: {Time.time:F2}s"; // _host.SimTime in simple mode
+            if (_tickLabel != null) _tickLabel.text = "Running";
 
             UpdateVisualization();
             UpdateTelemetry();
@@ -261,6 +209,7 @@ namespace RobotTwin.UI
         // --- Visualization Logic ---
         private ScrollView _componentList;
         private Dictionary<string, Label> _componentLabels = new Dictionary<string, Label>();
+        private Dictionary<string, string> _componentTypes = new Dictionary<string, string>();
 
         private void InitVisualization(VisualElement root)
         {
@@ -269,6 +218,7 @@ namespace RobotTwin.UI
 
             _componentList.Clear();
             _componentLabels.Clear();
+            _componentTypes.Clear();
 
             foreach (var comp in _activeCircuit.Components)
             {
@@ -288,6 +238,7 @@ namespace RobotTwin.UI
                 _componentList.Add(row);
 
                 _componentLabels[comp.Id] = statusLbl;
+                _componentTypes[comp.Id] = comp.Type;
             }
         }
 
@@ -295,28 +246,78 @@ namespace RobotTwin.UI
         {
             if (_host == null) return;
 
-            // MVP: Simple heuristic for LEDs (hardcoded for demo effect, real net lookup is todo in CoreSim)
-            // Ideally: _engine.GetPinVoltage(compId, pinName)
+            var telemetry = _host.LastTelemetry;
+            if (telemetry == null)
+            {
+                // MVP: Simple net-based LED heuristic using CircuitSpec nets.
+                foreach (var kvp in _componentLabels)
+                {
+                    string id = kvp.Key;
+                    Label lbl = kvp.Value;
+
+                    if (id.ToLower().Contains("led"))
+                    {
+                        bool isOn = IsLedDriven(id);
+                        lbl.text = isOn ? "ON" : "OFF";
+                        lbl.style.color = isOn ? Color.green : Color.gray;
+                    }
+                    else
+                    {
+                        lbl.text = "OK";
+                        lbl.style.color = Color.white;
+                    }
+                }
+                return;
+            }
 
             foreach (var kvp in _componentLabels)
             {
                 string id = kvp.Key;
                 Label lbl = kvp.Value;
+                _componentTypes.TryGetValue(id, out var type);
 
-                // Demo Logic: If it's an LED and we have active injection or time > 0, flicker it
-                // This is a PLACEHOLDER for real net-list lookup
-                if (id.ToLower().Contains("led"))
+                if (string.Equals(type, "LED", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    bool isOn = (_host.SimTime % 1.0) < 0.5; // Simulate 1Hz blink
-                    lbl.text = isOn ? "ON" : "OFF";
-                    lbl.style.color = isOn ? Color.green : Color.gray;
+                    if (telemetry.Signals.TryGetValue($"COMP:{id}:I", out var current))
+                    {
+                        bool isOn = current > 0.002;
+                        lbl.text = isOn ? "ON" : "OFF";
+                        lbl.style.color = isOn ? Color.green : Color.gray;
+                    }
+                    else
+                    {
+                        lbl.text = "OFF";
+                        lbl.style.color = Color.gray;
+                    }
                 }
                 else
                 {
-                    lbl.text = "OK";
-                    lbl.style.color = Color.white;
+                    if (telemetry.Signals.TryGetValue($"COMP:{id}:I", out var current))
+                    {
+                        lbl.text = $"{current * 1000.0f:F1}mA";
+                        lbl.style.color = Color.white;
+                    }
+                    else
+                    {
+                        lbl.text = "OK";
+                        lbl.style.color = Color.white;
+                    }
                 }
             }
+        }
+
+        private bool IsLedDriven(string ledId)
+        {
+            if (_activeCircuit == null) return false;
+            var nets = _activeCircuit.Nets ?? new List<NetSpec>();
+            if (nets.Count == 0) return false;
+
+            bool hasAnode = nets.Any(n => n.Nodes.Contains($"{ledId}.Anode") && n.Nodes.Any(node => node.EndsWith(".D13") || node.EndsWith(".VCC")));
+            bool hasCathode = nets.Any(n => n.Nodes.Contains($"{ledId}.Cathode") && n.Nodes.Any(node => node.EndsWith(".GND")));
+
+            if (!hasAnode || !hasCathode) return false;
+
+            return (_host.SimTime % 1.0) < 0.5;
         }
 
         private void SaveInjectionConfig()
