@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 public class CircuitController : MonoBehaviour
 {
-    [Tooltip("Path to MockFirmware.exe if not in PATH")]
+    [Tooltip("Path to VirtualArduinoFirmware.exe if not in PATH")]
     public string MockEnginePath = "Default"; // Logic to find it relative to project
 
     private SimHost _simHost;
@@ -41,7 +41,7 @@ public class CircuitController : MonoBehaviour
                 // In CanvasContainer: <VisualElement ... background-color: #cc3333 ... > 
                 // We didn't give the canvas LED a name in UXML, so let's find it by style or modify UXML later.
                 // For now, let's query children.
-                if (canvas.childCount > 2) 
+                if (canvas.childCount > 2)
                     _ledVisual = canvas[2]; // 3rd child was the LED circle in UXML
             }
         }
@@ -73,7 +73,7 @@ public class CircuitController : MonoBehaviour
         // SimulationManager.LaunchEngine(MockEnginePath); 
 
         _simHost = new SimHost(spec, _firmwareClient);
-        
+
         // MVP: Launch Mock Engine if path is provided and valid
         if (!string.IsNullOrEmpty(MockEnginePath) && MockEnginePath != "Default" && System.IO.File.Exists(MockEnginePath))
         {
@@ -110,8 +110,9 @@ public class CircuitController : MonoBehaviour
         // Thread safety: This callback comes from SimHost thread.
         // We need to dispatch to Unity Main Thread.
         // Simple MainThreadDispatcher pattern or just standard Queue.
-        // Unity 2023+ might handle this, but for safety:
-        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+        // Unity doesn't marshal this automatically; keep main-thread dispatch.
+        UnityMainThreadDispatcher.Instance().Enqueue(() =>
+        {
             UpdateUI(simTime);
         });
     }
@@ -123,11 +124,11 @@ public class CircuitController : MonoBehaviour
         // OR rely on FastSolver logic if we implemented it.
         // FastSolver.Solve was empty MVP.
         // Let's cheat for Vertical Slice: Toggle LED every second.
-        
+
         // Wait, SimHost calls Tick() -> FirmwareClient -> returns Result.
         // We should expose Result in SimHost to read it here?
         // Or store sim state in SimHost.
-        
+
         if (_ledVisual != null)
         {
             // Visual feedback

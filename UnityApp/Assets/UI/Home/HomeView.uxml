@@ -57,7 +57,7 @@
         <ui:VisualElement style="flex-grow: 1;">
             <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <ui:Label text="Recent Projects" class="unity-header-md" />
-                <ui:Label text="VIEW ALL" style="color: #3b82f6; font-size: 11px; -unity-font-style: bold; cursor: link; letter-spacing: 0.5px;" />
+                <ui:Label text="VIEW ALL" style="color: #3b82f6; font-size: 11px; -unity-font-style: bold; letter-spacing: 0.5px;" />
             </ui:VisualElement>
 
             <!-- Search Filter -->

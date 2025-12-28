@@ -167,7 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99999999999999999999999999999999, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _firmwarePath: C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\build\MockFirmware\MockFirmware.exe
+  _firmwarePath: C:\BASE\ROBOTWIN-STUDIO\robotwin-studio\build\firmware\VirtualArduinoFirmware.exe
 --- !u!114 &103
 MonoBehaviour:
   m_ObjectHideFlags: 0
