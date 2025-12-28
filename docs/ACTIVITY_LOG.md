@@ -11,6 +11,16 @@
       - Iterated custom scrollbar styling and layout fixes.
     - **Docs**: Logged UI polish run.
 
+## 2025-12-28 (CircuitStudio Functional Pass)
+- **Run (UI/Sim)**
+    - Model used: PRO
+    - **CircuitStudio**:
+      - Bound library search/tree/error UI and enabled DRC trigger.
+      - Implemented component placement persistence (posX/posY) with redraw.
+      - Added wire tool, net model, and visual wire layer.
+      - Added save shortcut (Ctrl+S) and project persistence.
+      - Added virtual Arduino properties and net-driven LED visualization.
+
 ## 2025-12-26 (M0 Stability)
 - **Run (Maintenance)**
     - Model used: PRO
