@@ -64,7 +64,7 @@
                 </ui:VisualElement>
 
                 <!-- Project Tree -->
-                <ui:ScrollView class="panel-content" style="flex-grow: 1;">
+                <ui:ScrollView name="ProjectTreeList" class="panel-content" style="flex-grow: 1;">
                     <ui:VisualElement class="tree-root">
                         <ui:Label text="📂 Main_PCB_Rev1" class="tree-item root-item" />
                         <ui:Label text="   ⚙ U1 STM32F405RGT6" class="tree-item" />
@@ -80,9 +80,9 @@
                         <ui:Button text="+" class="btn-icon-sm" />
                     </ui:VisualElement>
                     
-                    <ui:TextField value="Search components..." class="search-field-sm" />
+                    <ui:TextField name="LibrarySearchField" class="search-field-sm" placeholder-text="Search components..." />
 
-                    <ui:ScrollView style="flex-grow: 1; margin-top: 8px;">
+                    <ui:ScrollView name="LibraryList" style="flex-grow: 1; margin-top: 8px;">
                         <!-- Lib Item 1 -->
                         <ui:VisualElement class="lib-item">
                             <ui:VisualElement class="lib-icon-box"><ui:Label text="IC" /></ui:VisualElement>
@@ -112,18 +112,17 @@
 
             </ui:VisualElement>
 
+            <ui:VisualElement class="panel-resizer vertical-resizer left-resizer" />
+
             <!-- Center Canvas -->
             <ui:VisualElement class="canvas-view">
-                 <!-- Grid Background handled by Camera/Shader usually, but placeholder grid here -->
-                 <ui:VisualElement style="position: absolute; width: 100%; height: 100%; opacity: 0.1;">
-                    <!-- CSS Grid Repeat Placeholder -->
-                 </ui:VisualElement>
-                 
                  <!-- Canvas Overlay UI (e.g., selection box, HUD) -->
-                 <ui:VisualElement style="position: absolute; right: 10px; bottom: 10px; background-color: #141417; padding: 4px 8px; border-radius: 4px;">
+                 <ui:VisualElement class="canvas-hud" picking-mode="Ignore" style="position: absolute; right: 10px; bottom: 10px; background-color: #141417; padding: 4px 8px; border-radius: 4px;">
                      <ui:Label text="X: 0mm  Y: 222mm  Scale: 140%" style="color: #6b7280; font-size: 10px;" />
                  </ui:VisualElement>
             </ui:VisualElement>
+
+            <ui:VisualElement class="panel-resizer vertical-resizer right-resizer" />
 
             <!-- Right Panel (Properties) -->
             <ui:VisualElement class="panel-right">
@@ -141,7 +140,7 @@
                      <ui:Label text="Active" class="badge-success" />
                 </ui:VisualElement>
 
-                <ui:ScrollView style="padding: 12px;">
+                <ui:ScrollView class="panel-scroll" style="padding: 12px;">
                     <!-- Transform Section -->
                     <ui:VisualElement class="prop-section">
                         <ui:Label text="⚙ TRANSFORM" class="prop-section-header" />
@@ -212,6 +211,8 @@
 
         </ui:VisualElement>
 
+        <ui:VisualElement class="panel-resizer horizontal-resizer bottom-resizer" />
+
         <!-- 4. Bottom Panel (Output/Logs) -->
         <ui:VisualElement class="bottom-panel">
             <ui:VisualElement class="bottom-bar-header">
@@ -221,7 +222,7 @@
                 </ui:VisualElement>
                 <ui:VisualElement style="flex-direction: row;">
                      <ui:Label text="Storage: Local" class="status-pill" />
-                     <ui:Label text="2 Errors" class="status-pill error" />
+                     <ui:Label name="ErrorCountLabel" text="2 Errors" class="status-pill error" />
                 </ui:VisualElement>
             </ui:VisualElement>
             

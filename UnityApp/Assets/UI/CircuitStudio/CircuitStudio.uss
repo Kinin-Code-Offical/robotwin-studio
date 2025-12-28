@@ -161,6 +161,7 @@
 .workspace-area {
     flex-grow: 1;
     flex-direction: row;
+    min-height: 0;
 }
 
 /* LEFT PANEL */
@@ -171,6 +172,9 @@
     border-right-color: rgba(255, 255, 255, 0.05);
     padding: 0;
     flex-direction: column;
+    min-width: 220px;
+    max-width: 520px;
+    flex-shrink: 0;
 }
 
 .panel-tabs {
@@ -208,6 +212,11 @@
     -unity-font-style: bold;
 }
 
+.panel-content {
+    flex-grow: 1;
+    min-height: 0;
+}
+
 /* LIBRARY */
 .library-panel {
     height: 50%;
@@ -242,15 +251,11 @@
 
 .search-field-sm {
     height: 28px;
-    background-color: #1a1a1f;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.15);
-    border-bottom-color: rgba(255, 255, 255, 0.15);
-    border-left-color: rgba(255, 255, 255, 0.15);
-    border-right-color: rgba(255, 255, 255, 0.15);
+    background-color: #3a3a3a;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
     border-radius: 4px;
     font-size: 11px;
     color: #d1d5db;
@@ -293,6 +298,330 @@
     flex-grow: 1;
     background-color: #161616; /* Canvas Grid BG */
     overflow: hidden;
+    min-width: 0;
+}
+
+.canvas-board {
+    background-color: #101116;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(59, 130, 246, 0.25);
+    border-bottom-color: rgba(59, 130, 246, 0.25);
+    border-left-color: rgba(59, 130, 246, 0.25);
+    border-right-color: rgba(59, 130, 246, 0.25);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.canvas-grid {
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.circuit-component {
+    background-color: #121218;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.circuit-component.selected {
+    background-color: #151c28;
+    border-top-color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    border-left-color: #3b82f6;
+    border-right-color: #3b82f6;
+}
+
+.component-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.component-icon {
+    width: 18px;
+    height: 18px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.2);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    border-left-color: rgba(255, 255, 255, 0.2);
+    border-right-color: rgba(255, 255, 255, 0.2);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+}
+
+.component-icon Label {
+    font-size: 9px;
+    -unity-font-style: bold;
+}
+
+.component-title {
+    color: #ffffff;
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+.component-subtitle {
+    color: #9ca3af;
+    font-size: 9px;
+}
+
+.schematic-component {
+    align-items: center;
+    justify-content: center;
+}
+
+.schematic-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    flex-grow: 1;
+}
+
+.schematic-symbol {
+    flex-grow: 1;
+    height: 26px;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+.schematic-label {
+    color: #9ca3af;
+    font-size: 9px;
+    margin-top: 4px;
+    align-self: center;
+}
+
+.block-component {
+    align-items: center;
+    justify-content: center;
+}
+
+.block-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    flex-grow: 1;
+}
+
+.block-pin {
+    flex-direction: row;
+    align-items: center;
+}
+
+.block-pin-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #d1d5db;
+    border-radius: 3px;
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+.block-pin-label {
+    color: #9ca3af;
+    font-size: 8px;
+}
+
+.block-body {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f1117;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    padding: 4px 8px;
+    min-width: 64px;
+}
+
+.block-title {
+    color: #ffffff;
+    font-size: 9px;
+    -unity-font-style: bold;
+}
+
+.block-subtitle {
+    color: #9ca3af;
+    font-size: 8px;
+}
+
+.pin-dot,
+.schematic-pin-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #d1d5db;
+    border-radius: 3px;
+}
+
+.arduino-component {
+    background-color: transparent;
+    padding: 6px;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+}
+
+.arduino-body {
+    flex-direction: row;
+    align-items: stretch;
+    background-color: #101216;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    padding: 6px;
+    width: 100%;
+    height: 100%;
+}
+
+.arduino-pin-column {
+    flex-direction: column;
+    justify-content: space-between;
+    width: 64px;
+}
+
+.arduino-pin-column.left {
+    align-items: flex-start;
+}
+
+.arduino-pin-column.right {
+    align-items: flex-end;
+}
+
+.arduino-pin-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.arduino-pin-row.right {
+    justify-content: flex-end;
+}
+
+.arduino-pin-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #9ca3af;
+    border-radius: 3px;
+    margin-right: 4px;
+    margin-left: 4px;
+}
+
+.arduino-pin-label {
+    color: #cbd5f5;
+    font-size: 8px;
+}
+
+.arduino-center {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    margin-right: 4px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(59, 130, 246, 0.25);
+    border-bottom-color: rgba(59, 130, 246, 0.25);
+    border-left-color: rgba(59, 130, 246, 0.25);
+    border-right-color: rgba(59, 130, 246, 0.25);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    padding: 6px;
+}
+
+.arduino-title {
+    color: #ffffff;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.arduino-subtitle {
+    color: #9ca3af;
+    font-size: 9px;
+    margin-bottom: 6px;
+}
+
+.arduino-ports {
+    flex-direction: row;
+    margin-top: 4px;
+}
+
+.arduino-port {
+    background-color: #0c0c0e;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 2px 4px;
+    margin-left: 4px;
+}
+
+.arduino-port Label {
+    color: #9ca3af;
+    font-size: 8px;
 }
 
 /* RIGHT PANEL */
@@ -301,6 +630,14 @@
     background-color: #0c0c0e;
     border-left-width: 1px;
     border-left-color: rgba(255, 255, 255, 0.05);
+    min-width: 260px;
+    max-width: 520px;
+    flex-shrink: 0;
+}
+
+.panel-scroll {
+    flex-grow: 1;
+    min-height: 0;
 }
 
 .panel-header {
@@ -380,15 +717,11 @@
 .prop-label-row { color: #9ca3af; font-size: 11px; margin-top: 4px; flex-grow: 1; }
 
 .input-dark {
-    background-color: #141417;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.1);
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-    border-left-color: rgba(255, 255, 255, 0.1);
-    border-right-color: rgba(255, 255, 255, 0.1);
+    background-color: #3a3a3a;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
     color: #ffffff;
     font-size: 12px;
     height: 28px;
@@ -420,6 +753,7 @@
     background-color: #141417;
     border-top-width: 1px;
     border-top-color: #3b82f6; /* Blue top border from screenshot */
+    min-height: 100px;
 }
 
 .bottom-bar-header {
@@ -454,4 +788,166 @@
     padding: 8px;
     background-color: #141417;
     flex-grow: 1;
+}
+
+.panel-resizer {
+    background-color: #0f0f12;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+}
+
+.panel-resizer:hover {
+    background-color: #1a1a1f;
+}
+
+.vertical-resizer {
+    width: 6px;
+    flex-shrink: 0;
+}
+
+.horizontal-resizer {
+    height: 6px;
+    flex-shrink: 0;
+}
+
+/* INPUT + SCROLLER (ProjectWizard parity) */
+.studio-container .unity-text-input {
+    background-color: #3a3a3a;
+    color: #ffffff;
+    border-width: 0;
+    font-size: 12px;
+}
+
+.studio-container .unity-text-field,
+.studio-container .unity-text-field__input,
+.studio-container .unity-text-field__input--single-line,
+.studio-container .unity-text-field__input--multiline,
+.studio-container .unity-base-text-field,
+.studio-container .unity-base-text-field__input,
+.studio-container .unity-base-text-field__input--single-line,
+.studio-container .unity-base-text-field__input--multiline {
+    background-color: #3a3a3a;
+    color: #ffffff;
+    border-width: 0;
+}
+
+.studio-container .unity-scroll-view__vertical-scroller,
+.studio-container .unity-scroll-view__horizontal-scroller {
+    background-color: transparent;
+    width: 10px;
+    border-radius: 8px;
+    margin-top: 0;
+    margin-bottom: 0;
+    align-self: stretch;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.studio-container .unity-scroller,
+.studio-container .unity-scroller--vertical,
+.studio-container .unity-scroller--horizontal {
+    background-color: transparent;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.studio-container .unity-scroll-view__vertical-scroller .unity-base-slider__track,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-base-slider__track {
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    flex-grow: 1;
+    border-width: 0;
+    margin: 2px;
+}
+
+.studio-container .unity-scroller .unity-base-slider__track,
+.studio-container .unity-scroller__slider,
+.studio-container .unity-scroller__track {
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    flex-grow: 1;
+    border-width: 0;
+    margin: 2px;
+}
+
+.studio-container .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-base-slider__dragger {
+    background-color: #3d3d3d;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.studio-container .unity-scroller .unity-base-slider__dragger,
+.studio-container .unity-scroller__dragger {
+    background-color: #3d3d3d;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.studio-container .unity-scroller__thumb {
+    background-color: #3d3d3d;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.studio-container .unity-scroller__buttons,
+.studio-container .unity-scroller__arrow,
+.studio-container .unity-scroller__button,
+.studio-container .unity-scroller__low-button,
+.studio-container .unity-scroller__high-button,
+.studio-container .unity-scroll-view__vertical-scroller .unity-scroller__low-button,
+.studio-container .unity-scroll-view__vertical-scroller .unity-scroller__high-button,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-scroller__low-button,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-scroller__high-button,
+.studio-container .unity-scroller__button--low,
+.studio-container .unity-scroller__button--high,
+.studio-container .unity-scroller__button--vertical,
+.studio-container .unity-scroller__button--horizontal,
+.studio-container .unity-scroller__button--start,
+.studio-container .unity-scroller__button--end,
+.studio-container .unity-scroller__arrow-button,
+.studio-container .unity-scroller__arrow-button--horizontal,
+.studio-container .unity-scroller__arrow-button--vertical,
+.studio-container .unity-scroller__arrow-button--low,
+.studio-container .unity-scroller__arrow-button--high,
+.studio-container .unity-scroll-view__vertical-scroller .unity-base-slider__low-button,
+.studio-container .unity-scroll-view__vertical-scroller .unity-base-slider__high-button,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-base-slider__low-button,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-base-slider__high-button {
+    display: none;
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    background-image: none;
+    -unity-background-image-tint-color: transparent;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.studio-container .unity-scroller__arrow,
+.studio-container .unity-scroller__button,
+.studio-container .unity-scroll-view__vertical-scroller .unity-base-slider__low-button,
+.studio-container .unity-scroll-view__vertical-scroller .unity-base-slider__high-button,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-base-slider__low-button,
+.studio-container .unity-scroll-view__horizontal-scroller .unity-base-slider__high-button {
+    width: 0;
+    height: 0;
+}
+
+.studio-container .unity-scroll-view__vertical-scroller:hover .unity-base-slider__dragger,
+.studio-container .unity-scroll-view__horizontal-scroller:hover .unity-base-slider__dragger {
+    background-color: #4a4a4a;
+}
+
+.studio-container .unity-scroller:hover .unity-base-slider__dragger,
+.studio-container .unity-scroller:hover .unity-scroller__dragger {
+    background-color: #4a4a4a;
 }
