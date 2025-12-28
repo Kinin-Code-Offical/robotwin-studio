@@ -12,7 +12,8 @@ namespace RobotTwin.Debugging
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Initialize()
         {
-            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            string projectRoot = Directory.GetParent(Application.dataPath)?.Parent?.FullName
+                                 ?? Directory.GetParent(Application.dataPath).FullName;
             string logDir = Path.Combine(projectRoot, "logs", "unity");
             if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
             _logPath = Path.Combine(logDir, "unity_live_error.log");

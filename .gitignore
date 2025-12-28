@@ -92,7 +92,7 @@ docs/antigravity/context_exports/
 templates/
 /tests/integration/node_modules/
 /tests/integration/test-report.html
-/tools/dashboard/node_modules/
+/tools/**/node_modules/
 /Screenshots/
 /logs/
 /Reference_Design/

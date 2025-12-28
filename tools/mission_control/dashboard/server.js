@@ -13,8 +13,8 @@ const UNITY_URL = 'http://localhost:8085';
 // Keep-Alive Agent to prevent socket exhaustion
 const keepAliveAgent = new http.Agent({ keepAlive: true });
 
-// Path to Unity Project Root (Up two levels from tools/dashboard)
-const PROJECT_ROOT = path.resolve(__dirname, '../../');
+// Path to Unity Project Root (Up three levels from tools/mission_control/dashboard)
+const PROJECT_ROOT = path.resolve(__dirname, '../../../');
 const SCREENSHOT_DIR = path.join(PROJECT_ROOT, 'Screenshots');
 
 app.use(cors());
@@ -25,7 +25,7 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
     fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 }
 
-const TEST_DIR = path.resolve(__dirname, '../../tests/integration');
+const TEST_DIR = path.resolve(__dirname, '../../../tests/integration');
 
 // Serve screenshots statically
 app.use('/screenshots', express.static(SCREENSHOT_DIR));

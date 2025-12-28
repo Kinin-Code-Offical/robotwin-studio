@@ -9,7 +9,9 @@ if (-not (Test-Path $UnityPath)) {
 
 $ProjectDir = Join-Path $RepoRoot "UnityApp"
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
-$LogFile = Join-Path $RepoRoot "logs\\unity\\smoke.log"
+$LogDir = Join-Path $RepoRoot "logs\\unity"
+$LogFile = Join-Path $LogDir "smoke.log"
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 
 Write-Host "Running Unity Smoke Tests (Batchmode)..." -ForegroundColor Cyan
 

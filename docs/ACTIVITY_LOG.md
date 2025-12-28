@@ -54,7 +54,7 @@
 - **Run (Tooling)**
     - Model used: PRO
     - **Tooling**:
-      - Implemented `export_context_pack.ps1` (MIN/FULL).
+      - Implemented `rt_tool.py export-context` (MIN/FULL).
       - Wired CI verification for script.
     - **Governance**:
       - Updated `CONTEXT_PACK.md` and workflow docs.

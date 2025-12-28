@@ -30,7 +30,7 @@
     - **Result:** Unity path required; no mock artifacts.
 
 ### 4. The Gauntlet (Phase 4)
-- **Self-Check:** `build/RobotwinStudio.exe` Verified.
+- **Self-Check:** `build/windows/RobotwinStudio.exe` Verified.
 - **Conclusion:** System is ready for localized integration testing.
 
 ### 5. Deep Integration (Phase 5)
