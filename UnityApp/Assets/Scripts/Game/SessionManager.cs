@@ -73,6 +73,7 @@ namespace RobotTwin.Game
         }
         public string FirmwarePath { get; private set; }
         public bool UseVirtualArduino { get; set; } = true;
+        public bool UseNativeEnginePins { get; set; } = true;
 
         public void FindFirmware()
         {

@@ -1,0 +1,18 @@
+{
+  "id": "battery-9v",
+  "name": "Battery 9V",
+  "description": "PP3 9V Battery",
+  "type": "Battery",
+  "symbol": "B",
+  "iconChar": "B",
+  "order": 40,
+  "pins": ["+", "-"],
+  "specs": [
+    { "key": "Voltage", "value": "9V" },
+    { "key": "Capacity", "value": "500mAh" }
+  ],
+  "defaults": [
+    { "key": "voltage", "value": "9V" },
+    { "key": "capacity", "value": "500mAh" }
+  ]
+}

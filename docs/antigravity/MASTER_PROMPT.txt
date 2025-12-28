@@ -73,13 +73,13 @@ Model Selection Policy (mandatory):
 Rules:
 1) Start with the lowest tier sufficient for the task. Escalate only when needed.
 2) Keep snapshots current.
-   - Run: pwsh ./tools/update_repo_files.ps1 (updates docs/repo_files.txt)
-   - Run: pwsh ./tools/update_workspace_snapshot.ps1 (updates workspace_snapshot.txt)
-   - Run: pwsh ./tools/export_context_pack.ps1 -Mode MIN (updates docs/antigravity/context_exports)
+   - Run: python tools/rt_tool.py update-repo-files (updates docs/repo_files.txt)
+   - Run: python tools/rt_tool.py workspace-snapshot (updates logs/tools/workspace_snapshot.txt)
+   - Run: python tools/rt_tool.py export-context-min (updates docs/antigravity/context_exports)
    - Commit docs/repo_files.txt if changed.
    - NEVER commit workspace_snapshot.txt or context_exports (they are gitignored).
    - CI will fail if docs/repo_files.txt is stale.
-   - End-of-Session: Run `pwsh ./tools/end_session_shared_info.ps1 -Mode FULL` (Zip docs -> Drive).
+   - End-of-Session: Run `python tools/rt_tool.py end-session -- -Mode FULL` (Zip docs -> Drive).
 3) Always record the chosen tier in:
    - the Issue description (or a first comment), and
    - the PR description under a section "Model used: <LIGHT|PRO|HEAVY> (why)".

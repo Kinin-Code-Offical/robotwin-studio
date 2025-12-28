@@ -12,9 +12,13 @@ namespace RobotTwin.Core
     {
         // Name of the DLL (NativeEngine.dll on Windows, libNativeEngine.so on Linux)
         private const string PLUGIN_NAME = "NativeEngine";
+        private const double CpuHz = 16000000.0;
 
         [DllImport(PLUGIN_NAME, EntryPoint = "StepSimulation")]
         private static extern void _StepSimulation(float dt);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "StepSimulationTicks")]
+        private static extern void _StepSimulationTicks(ulong ticks);
 
         [DllImport(PLUGIN_NAME, EntryPoint = "GetEngineVersion")]
         private static extern int _GetEngineVersion();
@@ -29,6 +33,11 @@ namespace RobotTwin.Core
         {
             try
             {
+                var ticks = SecondsToTicks(dt);
+                _StepSimulationTicks(ticks);
+            }
+            catch (EntryPointNotFoundException)
+            {
                 _StepSimulation(dt);
             }
             catch (DllNotFoundException)
@@ -36,6 +45,33 @@ namespace RobotTwin.Core
                 // Fallback for Editor without compiled Plugin
                 Debug.LogWarning("[NativeBridge] NativeEngine DLL not found. Simulation stepping skipped.");
             }
+        }
+
+        /// <summary>
+        /// Steps the simulation by a fixed number of CPU ticks.
+        /// </summary>
+        public static void StepSimulationTicks(ulong ticks)
+        {
+            try
+            {
+                if (ticks == 0) return;
+                _StepSimulationTicks(ticks);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                _StepSimulation((float)(ticks / CpuHz));
+            }
+            catch (DllNotFoundException)
+            {
+                Debug.LogWarning("[NativeBridge] NativeEngine DLL not found. Simulation stepping skipped.");
+            }
+        }
+
+        public static ulong SecondsToTicks(float seconds)
+        {
+            if (seconds <= 0f) return 1;
+            var ticks = (ulong)System.Math.Round(seconds * CpuHz);
+            return ticks == 0 ? 1u : ticks;
         }
 
         public static int GetVersion()

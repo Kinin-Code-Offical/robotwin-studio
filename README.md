@@ -39,5 +39,5 @@ See [DEV_SETUP_WINDOWS.md](docs/DEV_SETUP_WINDOWS.md) for detailed configuration
 CoreSim is built as a plugin for Unity. When changing CoreSim code, sync the plugin:
 
 ```powershell
-./tools/update_unity_plugins.ps1
+python tools/rt_tool.py update-unity-plugins
 ```

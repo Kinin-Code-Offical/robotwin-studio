@@ -1,0 +1,19 @@
+{
+  "id": "resistor-220",
+  "name": "Resistor 220",
+  "description": "220 Ohm 1/4W",
+  "type": "Resistor",
+  "symbol": "R",
+  "iconChar": "R",
+  "order": 10,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "Resistance", "value": "220" },
+    { "key": "Power", "value": "0.25W" },
+    { "key": "Tolerance", "value": "5%" }
+  ],
+  "defaults": [
+    { "key": "resistance", "value": "220" },
+    { "key": "nativeConfig", "value": "{\"Value\":\"220\",\"Tolerance\":\"5%\"}" }
+  ]
+}

@@ -29,10 +29,10 @@ Run the following command from the repo root:
 
 ```powershell
 # Default (MIN mode)
-pwsh ./tools/export_context_pack.ps1
+python tools/rt_tool.py export-context
 
 # Full Export
-pwsh ./tools/export_context_pack.ps1 -Mode FULL
+python tools/rt_tool.py export-context -- -Mode FULL
 ```
 
 ## How to Share

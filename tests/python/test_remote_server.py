@@ -32,7 +32,6 @@ class TestRemoteServer(unittest.TestCase):
         response = requests.get(f"{UNITY_URL}/query?target=%23RunMode") # %23 is #
         self.assertEqual(response.status_code, 200)
         json_data = response.json()
-        # Mock returns {"value": true}
         self.assertIn("value", json_data)
 
     def test_04_unknown_command(self):

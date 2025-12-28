@@ -1,0 +1,22 @@
+{
+  "id": "arduino-pro-mini",
+  "name": "Arduino Pro Mini",
+  "description": "ATmega328P Minimal Board",
+  "type": "ArduinoProMini",
+  "symbol": "U",
+  "iconChar": "IC",
+  "order": 3,
+  "pins": ["RAW", "GND1", "RST", "VCC", "A7", "A6", "A5", "A4", "A3", "A2", "A1", "A0", "AREF", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0", "GND2"],
+  "specs": [
+    { "key": "Voltage", "value": "5V" },
+    { "key": "Flash", "value": "32KB" },
+    { "key": "Clock", "value": "16MHz" }
+  ],
+  "defaults": [
+    { "key": "virtualBoard", "value": "arduino-pro-mini" },
+    { "key": "clock", "value": "16MHz" },
+    { "key": "vcc", "value": "5V" },
+    { "key": "firmware", "value": "blink:D13:500" },
+    { "key": "nativeConfig", "value": "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}" }
+  ]
+}

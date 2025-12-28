@@ -91,7 +91,9 @@ docs/antigravity/context_exports/
 .gpt/
 templates/
 /tests/integration/node_modules/
+/tests/integration/test-report.html
 /tools/dashboard/node_modules/
 /Screenshots/
 /logs/
 /Reference_Design/
+/tools/arduino-cli/

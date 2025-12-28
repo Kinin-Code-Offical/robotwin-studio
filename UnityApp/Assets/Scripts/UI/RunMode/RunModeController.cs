@@ -154,15 +154,6 @@ namespace RobotTwin.UI
         {
             if (!_isRunning || _host == null) return;
 
-            // Native Integration Verification (Ohm's Law)
-            if (Time.frameCount % 120 == 0) // Every 2s roughly
-            {
-                float v = 5.0f;
-                float r = 220.0f;
-                float i = RobotTwin.Core.NativeBridge.CalculateCurrent(v, r);
-                Debug.Log($"[NativeEngine] 5V / 220R = {i * 1000f:F2}mA");
-            }
-
             if (_timeLabel != null) _timeLabel.text = $"Time: {Time.time:F2}s"; // _host.SimTime in simple mode
             if (_tickLabel != null) _tickLabel.text = "Running";
 
@@ -249,23 +240,13 @@ namespace RobotTwin.UI
             var telemetry = _host.LastTelemetry;
             if (telemetry == null)
             {
-                // MVP: Simple net-based LED heuristic using CircuitSpec nets.
                 foreach (var kvp in _componentLabels)
                 {
                     string id = kvp.Key;
                     Label lbl = kvp.Value;
 
-                    if (id.ToLower().Contains("led"))
-                    {
-                        bool isOn = IsLedDriven(id);
-                        lbl.text = isOn ? "ON" : "OFF";
-                        lbl.style.color = isOn ? Color.green : Color.gray;
-                    }
-                    else
-                    {
-                        lbl.text = "OK";
-                        lbl.style.color = Color.white;
-                    }
+                    lbl.text = "NO DATA";
+                    lbl.style.color = Color.gray;
                 }
                 return;
             }
@@ -304,20 +285,6 @@ namespace RobotTwin.UI
                     }
                 }
             }
-        }
-
-        private bool IsLedDriven(string ledId)
-        {
-            if (_activeCircuit == null) return false;
-            var nets = _activeCircuit.Nets ?? new List<NetSpec>();
-            if (nets.Count == 0) return false;
-
-            bool hasAnode = nets.Any(n => n.Nodes.Contains($"{ledId}.Anode") && n.Nodes.Any(node => node.EndsWith(".D13") || node.EndsWith(".VCC")));
-            bool hasCathode = nets.Any(n => n.Nodes.Contains($"{ledId}.Cathode") && n.Nodes.Any(node => node.EndsWith(".GND")));
-
-            if (!hasAnode || !hasCathode) return false;
-
-            return (_host.SimTime % 1.0) < 0.5;
         }
 
         private void SaveInjectionConfig()

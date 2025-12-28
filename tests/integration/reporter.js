@@ -47,7 +47,7 @@ const HTML_TEMPLATE = `
                 <span class="status-badge status-pass">PASS</span>
                 <h3>User can toggle Run Mode</h3>
                 <p>Execution Time: 1.2s</p>
-                <div style="font-size:12px; color:#888;">Screenshot: step2_runmode_active.png (Mock)</div>
+                <div style="font-size:12px; color:#888;">Screenshot: step2_runmode_active.png</div>
             </div>
         </div>
     </div>

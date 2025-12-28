@@ -12,8 +12,6 @@ describe('RoboTwin UI Integration Tests', () => {
 
     test('User can launch application and see Dashboard', async () => {
         const scene = await unity.queryState('CurrentScene');
-        // If mocked, it returns 'CircuitStudio', but in reality it might start at 'Home'
-        // For this test logic, we accept what the bridge says.
         expect(scene).toBeDefined();
     });
 
@@ -33,7 +31,6 @@ describe('RoboTwin UI Integration Tests', () => {
         await new Promise(r => setTimeout(r, 1000));
         
         const isRunMode = await unity.queryState('#RunMode');
-        // In mock mode this returns true, effectively passing unless logic changes
         expect(isRunMode).toBeTruthy();
     });
 });

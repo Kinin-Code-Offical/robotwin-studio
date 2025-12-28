@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 using RobotTwin.CoreSim.Specs;
@@ -106,6 +107,50 @@ namespace RobotTwin.UI
             "A0", "A1", "A2", "A3", "A4", "A5",
             "GND1", "GND2", "GND3", "5V", "3V3", "VIN"
         };
+        private static readonly string[] ArduinoNanoLeftPins =
+        {
+            "VIN", "GND1", "RST", "5V", "3V3", "A7", "A6", "A5", "A4", "A3", "A2", "A1", "A0"
+        };
+        private static readonly string[] ArduinoNanoRightPins =
+        {
+            "AREF", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0", "GND2"
+        };
+        private static readonly string[] ArduinoNanoPreferredPins =
+        {
+            "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D0", "D1",
+            "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
+            "GND1", "GND2", "5V", "3V3", "VIN", "RST", "AREF"
+        };
+        private static readonly string[] ArduinoProMiniLeftPins =
+        {
+            "RAW", "GND1", "RST", "VCC", "A7", "A6", "A5", "A4", "A3", "A2", "A1", "A0"
+        };
+        private static readonly string[] ArduinoProMiniRightPins =
+        {
+            "AREF", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0", "GND2"
+        };
+        private static readonly string[] ArduinoProMiniPreferredPins =
+        {
+            "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D0", "D1",
+            "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
+            "GND1", "GND2", "VCC", "RAW", "RST", "AREF"
+        };
+
+        private readonly struct ArduinoProfile
+        {
+            public string Title { get; }
+            public IReadOnlyList<string> LeftPins { get; }
+            public IReadOnlyList<string> RightPins { get; }
+            public IReadOnlyList<string> PreferredPins { get; }
+
+            public ArduinoProfile(string title, IReadOnlyList<string> leftPins, IReadOnlyList<string> rightPins, IReadOnlyList<string> preferredPins)
+            {
+                Title = title;
+                LeftPins = leftPins;
+                RightPins = rightPins;
+                PreferredPins = preferredPins;
+            }
+        }
 
         // Tools
         private enum ToolMode { Select, Move, Wire }
@@ -267,9 +312,9 @@ namespace RobotTwin.UI
             _currentCircuit.Components.Add(resistor);
             _currentCircuit.Components.Add(led);
 
-            ApplyDefaultProperties(arduino, ResolveCatalogItem(arduino.Type));
-            ApplyDefaultProperties(resistor, ResolveCatalogItem(resistor.Type));
-            ApplyDefaultProperties(led, ResolveCatalogItem(led.Type));
+            ApplyDefaultProperties(arduino, ResolveCatalogItem(arduino));
+            ApplyDefaultProperties(resistor, ResolveCatalogItem(resistor));
+            ApplyDefaultProperties(led, ResolveCatalogItem(led));
 
             SetComponentPosition(arduino, new Vector2(100, 200));
             SetComponentPosition(resistor, new Vector2(300, 200));
@@ -913,6 +958,8 @@ namespace RobotTwin.UI
             switch (item.Type)
             {
                 case "ArduinoUno":
+                case "ArduinoNano":
+                case "ArduinoProMini":
                     BuildArduinoComponentVisual(root, spec);
                     break;
                 case "Resistor":
@@ -1014,9 +1061,10 @@ namespace RobotTwin.UI
             var body = new VisualElement();
             body.AddToClassList("arduino-body");
 
-            var leftColumn = BuildArduinoPinColumn(spec, ArduinoLeftPins, true);
-            var center = BuildArduinoCenter(spec);
-            var rightColumn = BuildArduinoPinColumn(spec, ArduinoRightPins, false);
+            var profile = GetArduinoProfile(spec.Type);
+            var leftColumn = BuildArduinoPinColumn(spec, profile.LeftPins, true);
+            var center = BuildArduinoCenter(spec, profile.Title);
+            var rightColumn = BuildArduinoPinColumn(spec, profile.RightPins, false);
 
             body.Add(leftColumn);
             body.Add(center);
@@ -1060,12 +1108,12 @@ namespace RobotTwin.UI
             return column;
         }
 
-        private VisualElement BuildArduinoCenter(ComponentSpec spec)
+        private VisualElement BuildArduinoCenter(ComponentSpec spec, string boardTitle)
         {
             var center = new VisualElement();
             center.AddToClassList("arduino-center");
 
-            var title = new Label("ARDUINO UNO");
+            var title = new Label(boardTitle);
             title.AddToClassList("arduino-title");
             center.Add(title);
 
@@ -1093,6 +1141,26 @@ namespace RobotTwin.UI
             center.Add(ports);
 
             return center;
+        }
+
+        private ArduinoProfile GetArduinoProfile(string type)
+        {
+            if (string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return new ArduinoProfile("ARDUINO NANO", ArduinoNanoLeftPins, ArduinoNanoRightPins, ArduinoNanoPreferredPins);
+            }
+            if (string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return new ArduinoProfile("ARDUINO PRO MINI", ArduinoProMiniLeftPins, ArduinoProMiniRightPins, ArduinoProMiniPreferredPins);
+            }
+            return new ArduinoProfile("ARDUINO UNO", ArduinoLeftPins, ArduinoRightPins, ArduinoPreferredPins);
+        }
+
+        private bool IsArduinoType(string type)
+        {
+            return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
         }
 
         private VisualElement CreatePinDot(string componentId, string pinName)
@@ -1134,6 +1202,8 @@ namespace RobotTwin.UI
             switch (type)
             {
                 case "ArduinoUno": return new Color(0.23f, 0.51f, 0.96f);
+                case "ArduinoNano": return new Color(0.16f, 0.61f, 0.55f);
+                case "ArduinoProMini": return new Color(0.55f, 0.38f, 0.92f);
                 case "Resistor": return new Color(0.94f, 0.76f, 0.28f);
                 case "Capacitor": return new Color(0.34f, 0.77f, 0.75f);
                 case "DCMotor": return new Color(0.94f, 0.52f, 0.36f);
@@ -1246,7 +1316,7 @@ namespace RobotTwin.UI
             PopulateProjectTree();
             if (_selectedVisual != null && _selectedComponent == a)
             {
-                UpdatePropertiesPanel(a, ResolveCatalogItem(a.Type), _selectedVisual);
+                UpdatePropertiesPanel(a, ResolveCatalogItem(a), _selectedVisual);
             }
         }
 
@@ -1270,11 +1340,12 @@ namespace RobotTwin.UI
             }
 
             IEnumerable<string> orderedPins = info.Pins;
-            if (info.Type == "ArduinoUno")
+            if (IsArduinoType(info.Type))
             {
-                var preferred = new HashSet<string>(ArduinoPreferredPins);
+                var profile = GetArduinoProfile(info.Type);
+                var preferred = new HashSet<string>(profile.PreferredPins);
                 var available = new HashSet<string>(info.Pins);
-                orderedPins = ArduinoPreferredPins.Where(available.Contains).Concat(info.Pins.Where(p => !preferred.Contains(p)));
+                orderedPins = profile.PreferredPins.Where(available.Contains).Concat(info.Pins.Where(p => !preferred.Contains(p)));
             }
 
             foreach (var pin in orderedPins)
@@ -1288,40 +1359,74 @@ namespace RobotTwin.UI
         {
             EnsureComponentProperties(spec);
             spec.Properties["label"] = item.Name;
-            if (item.Type == "ArduinoUno")
+            if (!string.IsNullOrWhiteSpace(item.Id))
             {
-                spec.Properties["virtualBoard"] = "arduino-uno";
-                spec.Properties["clock"] = "16MHz";
-                spec.Properties["vcc"] = "5V";
-                spec.Properties["firmware"] = "blink:D13:500";
-                spec.Properties["nativeConfig"] = "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}";
+                spec.Properties["catalogId"] = item.Id;
+            }
+
+            if (item.DefaultProperties != null && item.DefaultProperties.Count > 0)
+            {
+                foreach (var kvp in item.DefaultProperties)
+                {
+                    if (string.IsNullOrWhiteSpace(kvp.Key)) continue;
+                    spec.Properties[kvp.Key] = kvp.Value;
+                }
+            }
+
+            if (IsArduinoType(item.Type))
+            {
+                SetDefaultIfMissing(spec, "virtualBoard", item.Type == "ArduinoNano"
+                    ? "arduino-nano"
+                    : item.Type == "ArduinoProMini"
+                        ? "arduino-pro-mini"
+                        : "arduino-uno");
+                SetDefaultIfMissing(spec, "clock", "16MHz");
+                SetDefaultIfMissing(spec, "vcc", "5V");
+                SetDefaultIfMissing(spec, "firmware", "blink:D13:500");
+                SetDefaultIfMissing(spec, "nativeConfig", "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}");
             }
             else if (item.Type == "Resistor")
             {
-                spec.Properties["resistance"] = "220";
-                spec.Properties["nativeConfig"] = "{\"Value\":\"220\",\"Tolerance\":\"1%\"}";
+                SetDefaultIfMissing(spec, "resistance", "220");
+                SetDefaultIfMissing(spec, "nativeConfig", "{\"Value\":\"220\",\"Tolerance\":\"5%\"}");
             }
             else if (item.Type == "LED")
             {
-                spec.Properties["forwardV"] = "2.0V";
-                spec.Properties["current"] = "20mA";
-                spec.Properties["nativeConfig"] = "{\"Vf\":\"2.0V\",\"If_max\":\"20mA\"}";
+                SetDefaultIfMissing(spec, "forwardV", "2.0V");
+                SetDefaultIfMissing(spec, "current", "20mA");
+                SetDefaultIfMissing(spec, "nativeConfig", "{\"Vf\":\"2.0V\",\"If_max\":\"20mA\"}");
             }
             else if (item.Type == "Battery")
             {
-                spec.Properties["voltage"] = "9V";
-                spec.Properties["capacity"] = "500mAh";
+                SetDefaultIfMissing(spec, "voltage", "9V");
+                SetDefaultIfMissing(spec, "capacity", "500mAh");
             }
         }
 
         private ComponentCatalog.Item ResolveCatalogItem(string type)
         {
-            var item = ComponentCatalog.Items.FirstOrDefault(i => i.Type == type);
-            if (string.IsNullOrWhiteSpace(item.Type))
-            {
-                return ComponentCatalog.CreateFallback(type);
-            }
+            var item = ComponentCatalog.GetByType(type);
+            if (string.IsNullOrWhiteSpace(item.Type)) return ComponentCatalog.CreateFallback(type);
             return item;
+        }
+
+        private ComponentCatalog.Item ResolveCatalogItem(ComponentSpec spec)
+        {
+            if (spec != null && spec.Properties != null && spec.Properties.TryGetValue("catalogId", out var id))
+            {
+                var byId = ComponentCatalog.GetById(id);
+                if (!string.IsNullOrWhiteSpace(byId.Type)) return byId;
+            }
+            return ResolveCatalogItem(spec?.Type ?? string.Empty);
+        }
+
+        private void SetDefaultIfMissing(ComponentSpec spec, string key, string value)
+        {
+            if (spec == null || string.IsNullOrWhiteSpace(key)) return;
+            if (!spec.Properties.ContainsKey(key))
+            {
+                spec.Properties[key] = value;
+            }
         }
 
         private Vector2 GetComponentSize(ComponentCatalog.Item item)
@@ -1334,6 +1439,8 @@ namespace RobotTwin.UI
             switch (type)
             {
                 case "ArduinoUno": return new Vector2(260f, 240f);
+                case "ArduinoNano": return new Vector2(240f, 200f);
+                case "ArduinoProMini": return new Vector2(240f, 200f);
                 case "Resistor": return new Vector2(140f, 50f);
                 case "Capacitor": return new Vector2(120f, 50f);
                 case "LED": return new Vector2(120f, 50f);
@@ -1669,7 +1776,7 @@ namespace RobotTwin.UI
                     pos = new Vector2(40 + (i * 30), 40 + (i * 20));
                 }
 
-                var item = ResolveCatalogItem(comp.Type);
+                var item = ResolveCatalogItem(comp);
                 pos = ClampToViewport(pos, GetComponentSize(item));
                 pos = ClampToBoard(pos, GetComponentSize(item));
                 SetComponentPosition(comp, pos);
@@ -2004,96 +2111,190 @@ namespace RobotTwin.UI
     {
         public struct Item
         {
+            public string Id;
             public string Name;
             public string Description;
             public string Type;
             public string Symbol;
             public string IconChar;
             public Dictionary<string, string> ElectricalSpecs;
+            public Dictionary<string, string> DefaultProperties;
             public List<string> Pins;
+            public int Order;
         }
 
-        public static List<Item> Items = new List<Item>
+        private const string ResourceFolder = "Components";
+        private static readonly StringComparer IdComparer = StringComparer.OrdinalIgnoreCase;
+        private static readonly StringComparer TypeComparer = StringComparer.OrdinalIgnoreCase;
+        private static List<Item> _items = new List<Item>();
+        private static Dictionary<string, Item> _byId = new Dictionary<string, Item>(IdComparer);
+        private static bool _loaded;
+
+        public static List<Item> Items
         {
-            new Item
+            get
             {
-                Name = "Arduino Uno",
-                Description = "Microcontroller Board",
-                Type = "ArduinoUno",
-                Symbol = "U",
-                IconChar = "IC",
-                ElectricalSpecs = new Dictionary<string, string> { {"Voltage", "5V"}, {"Flash", "32KB"}, {"Clock", "16MHz"} },
-                Pins = new List<string>
-                {
-                    "IOREF", "RESET", "3V3", "5V", "GND1", "GND2", "VIN",
-                    "A0", "A1", "A2", "A3", "A4", "A5",
-                    "SCL", "SDA", "AREF", "GND3",
-                    "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0"
-                }
-            },
-            new Item
-            {
-                Name = "Resistor 10k",
-                Description = "10k Ohm 1/4W",
-                Type = "Resistor",
-                Symbol = "R",
-                IconChar = "R",
-                ElectricalSpecs = new Dictionary<string, string> { {"Resistance", "10k"}, {"Power", "0.25W"}, {"Tolerance", "1%"} },
-                Pins = new List<string> { "A", "B" }
-            },
-            new Item
-            {
-                Name = "Capacitor 100nF",
-                Description = "Ceramic Decoupling",
-                Type = "Capacitor",
-                Symbol = "C",
-                IconChar = "C",
-                ElectricalSpecs = new Dictionary<string, string> { {"Capacitance", "100nF"}, {"Voltage", "50V"}, {"Dielectric", "X7R"} },
-                Pins = new List<string> { "A", "B" }
-            },
-            new Item
-            {
-                Name = "DC Motor",
-                Description = "6V Hobby Motor",
-                Type = "DCMotor",
-                Symbol = "M",
-                IconChar = "M",
-                ElectricalSpecs = new Dictionary<string, string> { {"Voltage", "6V"}, {"No Load", "150mA"}, {"RPM", "200"} },
-                Pins = new List<string> { "A", "B" }
-            },
-            new Item
-            {
-                Name = "LED Red",
-                Description = "5mm Diffused Red",
-                Type = "LED",
-                Symbol = "D",
-                IconChar = "D",
-                ElectricalSpecs = new Dictionary<string, string> { {"Forward V", "2.0V"}, {"Current", "20mA"} },
-                Pins = new List<string> { "Anode", "Cathode" }
-            },
-            new Item
-            {
-                Name = "Battery 9V",
-                Description = "PP3 9V Battery",
-                Type = "Battery",
-                Symbol = "B",
-                IconChar = "B",
-                ElectricalSpecs = new Dictionary<string, string> { {"Voltage", "9V"}, {"Capacity", "500mAh"} },
-                Pins = new List<string> { "+", "-" }
+                EnsureLoaded();
+                return _items;
             }
-        };
+        }
+
+        public static void EnsureLoaded()
+        {
+            if (_loaded) return;
+            _items = new List<Item>();
+            _byId = new Dictionary<string, Item>(IdComparer);
+
+            LoadFromResources();
+            LoadFromStreamingAssets();
+
+            if (_items.Count == 0)
+            {
+                Debug.LogWarning("[ComponentCatalog] No component JSON files found. Using fallback definitions.");
+                _items.Add(CreateFallback("ArduinoUno"));
+                _items.Add(CreateFallback("Resistor"));
+            }
+
+            _items = _items.OrderBy(i => i.Order).ThenBy(i => i.Name).ToList();
+            _loaded = true;
+        }
+
+        public static Item GetById(string id)
+        {
+            EnsureLoaded();
+            if (string.IsNullOrWhiteSpace(id)) return default;
+            if (_byId.TryGetValue(id, out var item)) return item;
+            return default;
+        }
+
+        public static Item GetByType(string type)
+        {
+            EnsureLoaded();
+            if (string.IsNullOrWhiteSpace(type)) return default;
+            return _items.Where(i => TypeComparer.Equals(i.Type, type)).OrderBy(i => i.Order).FirstOrDefault();
+        }
+
+        private static void RegisterOrUpdate(Item item)
+        {
+            if (string.IsNullOrWhiteSpace(item.Id))
+            {
+                item.Id = item.Type;
+            }
+
+            if (_byId.TryGetValue(item.Id, out var existing))
+            {
+                _items.Remove(existing);
+                _byId[item.Id] = item;
+                _items.Add(item);
+                return;
+            }
+
+            _byId[item.Id] = item;
+            _items.Add(item);
+        }
+
+        private static void LoadFromResources()
+        {
+            var assets = Resources.LoadAll<TextAsset>(ResourceFolder);
+            if (assets == null || assets.Length == 0) return;
+
+            foreach (var asset in assets)
+            {
+                if (asset == null || string.IsNullOrWhiteSpace(asset.text)) continue;
+                if (TryParseDefinition(asset.text, out var item))
+                {
+                    RegisterOrUpdate(item);
+                }
+            }
+        }
+
+        private static void LoadFromStreamingAssets()
+        {
+            string root = Path.Combine(Application.streamingAssetsPath, ResourceFolder);
+            if (!Directory.Exists(root)) return;
+
+            var files = Directory.GetFiles(root, "*.json", SearchOption.AllDirectories);
+            foreach (var file in files)
+            {
+                string json = File.ReadAllText(file);
+                if (string.IsNullOrWhiteSpace(json)) continue;
+                if (TryParseDefinition(json, out var item))
+                {
+                    RegisterOrUpdate(item);
+                }
+            }
+        }
+
+        private static bool TryParseDefinition(string json, out Item item)
+        {
+            item = default;
+            var def = JsonUtility.FromJson<ComponentDefinition>(json);
+            if (def == null || string.IsNullOrWhiteSpace(def.type)) return false;
+
+            item = new Item
+            {
+                Id = string.IsNullOrWhiteSpace(def.id) ? def.type : def.id,
+                Name = string.IsNullOrWhiteSpace(def.name) ? def.type : def.name,
+                Description = def.description ?? string.Empty,
+                Type = def.type,
+                Symbol = string.IsNullOrWhiteSpace(def.symbol) ? "?" : def.symbol,
+                IconChar = string.IsNullOrWhiteSpace(def.iconChar) ? "?" : def.iconChar,
+                ElectricalSpecs = ToDictionary(def.specs),
+                DefaultProperties = ToDictionary(def.defaults),
+                Pins = def.pins != null ? def.pins.ToList() : new List<string>(),
+                Order = def.order <= 0 ? 1000 : def.order
+            };
+            return true;
+        }
+
+        private static Dictionary<string, string> ToDictionary(KeyValue[] entries)
+        {
+            var dict = new Dictionary<string, string>();
+            if (entries == null) return dict;
+            foreach (var entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry.key)) continue;
+                dict[entry.key] = entry.value ?? string.Empty;
+            }
+            return dict;
+        }
+
+        [System.Serializable]
+        private class ComponentDefinition
+        {
+            public string id;
+            public string name;
+            public string description;
+            public string type;
+            public string symbol;
+            public string iconChar;
+            public int order;
+            public string[] pins;
+            public KeyValue[] specs;
+            public KeyValue[] defaults;
+        }
+
+        [System.Serializable]
+        private class KeyValue
+        {
+            public string key;
+            public string value;
+        }
 
         public static Item CreateFallback(string type)
         {
             return new Item
             {
+                Id = type,
                 Name = type,
                 Description = type,
                 Type = type,
                 Symbol = "U",
                 IconChar = "U",
                 ElectricalSpecs = new Dictionary<string, string>(),
-                Pins = new List<string> { "P1", "P2" }
+                DefaultProperties = new Dictionary<string, string>(),
+                Pins = new List<string> { "P1", "P2" },
+                Order = 1000
             };
         }
     }

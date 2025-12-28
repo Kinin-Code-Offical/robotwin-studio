@@ -3,6 +3,7 @@
 #include <cstring>
 #include <chrono>
 #include <thread>
+#include <inttypes.h>
 
 #include "Bridge/UnityInterface.h"
 #include "Core/MemoryMap.hpp"
@@ -12,9 +13,11 @@ namespace
     void PrintUsage()
     {
         std::printf("NativeEngineStandalone options:\n");
+        std::printf("  --bvm <path>     Load BVM file\n");
         std::printf("  --hex <path>     Load Intel HEX file\n");
         std::printf("  --seconds <n>    Run time in seconds (default 1.0)\n");
         std::printf("  --tick-hz <n>    Target tick rate (default 1000)\n");
+        std::printf("  --ticks <n>      Run exact number of CPU ticks\n");
         std::printf("  --forever        Run until terminated\n");
         std::printf("  --quiet          Suppress periodic output\n");
     }
@@ -31,9 +34,12 @@ namespace
 
 int main(int argc, char** argv)
 {
+    const char* bvm_path = nullptr;
     const char* hex_path = nullptr;
     double seconds = 1.0;
     double tick_hz = 1000.0;
+    std::uint64_t tick_limit = 0;
+    bool use_tick_limit = false;
     bool quiet = false;
     bool forever = false;
 
@@ -44,6 +50,10 @@ int main(int argc, char** argv)
         {
             hex_path = value;
         }
+        else if (ParseArg(i, argc, argv, "--bvm", &value))
+        {
+            bvm_path = value;
+        }
         else if (ParseArg(i, argc, argv, "--seconds", &value))
         {
             seconds = std::atof(value);
@@ -51,6 +61,11 @@ int main(int argc, char** argv)
         else if (ParseArg(i, argc, argv, "--tick-hz", &value))
         {
             tick_hz = std::atof(value);
+        }
+        else if (ParseArg(i, argc, argv, "--ticks", &value))
+        {
+            tick_limit = static_cast<std::uint64_t>(std::strtoull(value, nullptr, 10));
+            use_tick_limit = true;
         }
         else if (std::strcmp(argv[i], "--quiet") == 0)
         {
@@ -76,7 +91,13 @@ int main(int argc, char** argv)
     std::size_t mem_bytes = sizeof(core::VirtualMemory) + sizeof(SharedState);
     std::printf("VM static memory: %zu bytes\n", mem_bytes);
 
-    if (hex_path != nullptr)
+    if (bvm_path != nullptr)
+    {
+        int ok = LoadBvmFromFile(bvm_path);
+        std::printf("BVM load: %s\n", ok ? "OK" : "FAILED");
+        if (!ok) return 2;
+    }
+    else if (hex_path != nullptr)
     {
         int ok = LoadHexFromFile(hex_path);
         std::printf("HEX load: %s\n", ok ? "OK" : "FAILED");
@@ -86,14 +107,17 @@ int main(int argc, char** argv)
     if (seconds <= 0.0) seconds = 1.0;
     if (tick_hz <= 0.0) tick_hz = 1000.0;
 
+    constexpr double kCpuHz = 16000000.0;
     double elapsed = 0.0;
     double next_print = 0.0;
     double tick_interval = 1.0 / tick_hz;
+    double ticks_per_step = kCpuHz / tick_hz;
+    double tick_accum = 0.0;
     auto start = std::chrono::steady_clock::now();
-    auto last_tick = start;
     auto next_tick = start;
+    std::uint64_t ticks_executed = 0;
 
-    while (forever || elapsed < seconds)
+    while (forever || (!use_tick_limit && elapsed < seconds) || (use_tick_limit && ticks_executed < tick_limit))
     {
         next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(tick_interval));
@@ -110,9 +134,16 @@ int main(int argc, char** argv)
         }
 
         now = std::chrono::steady_clock::now();
-        double dt = std::chrono::duration<double>(now - last_tick).count();
-        last_tick = now;
-        StepSimulation(static_cast<float>(dt));
+        tick_accum += ticks_per_step;
+        std::uint64_t step_ticks = static_cast<std::uint64_t>(tick_accum);
+        if (step_ticks == 0) step_ticks = 1;
+        tick_accum -= static_cast<double>(step_ticks);
+        if (use_tick_limit && ticks_executed + step_ticks > tick_limit)
+        {
+            step_ticks = tick_limit - ticks_executed;
+        }
+        StepSimulationTicks(step_ticks);
+        ticks_executed += step_ticks;
         elapsed = std::chrono::duration<double>(now - start).count();
 
         if (!quiet && elapsed >= next_print)
@@ -120,7 +151,7 @@ int main(int argc, char** argv)
             const SharedState* state = GetSharedState();
             if (state != nullptr)
             {
-                std::printf("t=%.3fs tick=%u D13=%.2fV LED=%.2fV I=%.3fA errors=0x%X\n",
+                std::printf("t=%.3fs tick=%" PRIu64 " D13=%.2fV LED=%.2fV I=%.3fA errors=0x%X\n",
                     elapsed,
                     state->tick,
                     state->node_voltages[2],
