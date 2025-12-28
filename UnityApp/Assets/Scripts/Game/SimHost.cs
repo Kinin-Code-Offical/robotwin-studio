@@ -29,6 +29,7 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, VirtualArduino> _virtualArduinos = new Dictionary<string, VirtualArduino>();
         private readonly Dictionary<string, List<PinState>> _pinStatesByComponent = new Dictionary<string, List<PinState>>();
         private readonly Dictionary<string, double> _pullupResistances = new Dictionary<string, double>();
+        private bool _loggedTelemetry;
 
         public float SimTime => Time.time;
         public int TickCount { get; private set; }
@@ -56,6 +57,7 @@ namespace RobotTwin.Game
         {
             if (_isRunning) return;
             _isRunning = true;
+            _loggedTelemetry = false;
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
 
@@ -138,6 +140,11 @@ namespace RobotTwin.Game
                 {
                     LastTelemetry.TimeSeconds = SimTime;
                     LastTelemetry.TickIndex = TickCount;
+                    if (!_loggedTelemetry)
+                    {
+                        _loggedTelemetry = true;
+                        Debug.Log($"[SimHost] CoreSim solved {LastTelemetry.Signals.Count} signals.");
+                    }
                 }
             }
 
@@ -173,6 +180,7 @@ namespace RobotTwin.Game
                 {
                     board.LoadProgram(VirtualArduinoProgramFactory.FromFirmwareString("blink:D13:500", board.Hal));
                 }
+                Debug.Log($"[SimHost] VirtualArduino Active: {board.Id} ({board.FirmwareSource})");
                 _virtualArduinos[comp.Id] = board;
             }
         }
