@@ -1,167 +1,62 @@
+#include "../include/Bridge/UnityInterface.h"
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <chrono>
-#include <thread>
-#include <inttypes.h>
+#include <vector>
 
-#include "Bridge/UnityInterface.h"
-#include "Core/MemoryMap.hpp"
+int main(int argc, char **argv) {
+  std::printf("NativeEngine Standalone - AVR Blinky Test\n");
 
-namespace
-{
-    void PrintUsage()
-    {
-        std::printf("NativeEngineStandalone options:\n");
-        std::printf("  --bvm <path>     Load BVM file\n");
-        std::printf("  --hex <path>     Load Intel HEX file\n");
-        std::printf("  --seconds <n>    Run time in seconds (default 1.0)\n");
-        std::printf("  --tick-hz <n>    Target tick rate (default 1000)\n");
-        std::printf("  --ticks <n>      Run exact number of CPU ticks\n");
-        std::printf("  --forever        Run until terminated\n");
-        std::printf("  --quiet          Suppress periodic output\n");
-    }
+  Native_CreateContext();
 
-    bool ParseArg(int& i, int argc, char** argv, const char* flag, const char** value)
-    {
-        if (std::strcmp(argv[i], flag) != 0) return false;
-        if (i + 1 >= argc) return false;
-        *value = argv[i + 1];
-        i++;
-        return true;
-    }
-}
+  // Circuit: AVR (Pin 13) -- Resistor (220) -- LED -- GND
+  int nodePin13 = Native_AddNode(); // Node 1
+  int nodeAnode = Native_AddNode(); // Node 2
 
-int main(int argc, char** argv)
-{
-    const char* bvm_path = nullptr;
-    const char* hex_path = nullptr;
-    double seconds = 1.0;
-    double tick_hz = 1000.0;
-    std::uint64_t tick_limit = 0;
-    bool use_tick_limit = false;
-    bool quiet = false;
-    bool forever = false;
+  // Components
+  // AVR (Type 6 = IC_Pin/AVR)
+  int avr = Native_AddComponent(6, 0, nullptr);
 
-    for (int i = 1; i < argc; ++i)
-    {
-        const char* value = nullptr;
-        if (ParseArg(i, argc, argv, "--hex", &value))
-        {
-            hex_path = value;
-        }
-        else if (ParseArg(i, argc, argv, "--bvm", &value))
-        {
-            bvm_path = value;
-        }
-        else if (ParseArg(i, argc, argv, "--seconds", &value))
-        {
-            seconds = std::atof(value);
-        }
-        else if (ParseArg(i, argc, argv, "--tick-hz", &value))
-        {
-            tick_hz = std::atof(value);
-        }
-        else if (ParseArg(i, argc, argv, "--ticks", &value))
-        {
-            tick_limit = static_cast<std::uint64_t>(std::strtoull(value, nullptr, 10));
-            use_tick_limit = true;
-        }
-        else if (std::strcmp(argv[i], "--quiet") == 0)
-        {
-            quiet = true;
-        }
-        else if (std::strcmp(argv[i], "--forever") == 0)
-        {
-            forever = true;
-        }
-        else if (std::strcmp(argv[i], "--help") == 0)
-        {
-            PrintUsage();
-            return 0;
-        }
-        else
-        {
-            std::printf("Unknown argument: %s\n", argv[i]);
-            PrintUsage();
-            return 1;
-        }
-    }
+  // Resistor
+  float rParams[] = {220.0f};
+  int r1 = Native_AddComponent(0, 1, rParams);
 
-    std::size_t mem_bytes = sizeof(core::VirtualMemory) + sizeof(SharedState);
-    std::printf("VM static memory: %zu bytes\n", mem_bytes);
+  // Diode (LED)
+  int d1 = Native_AddComponent(3, 0, nullptr);
 
-    if (bvm_path != nullptr)
-    {
-        int ok = LoadBvmFromFile(bvm_path);
-        std::printf("BVM load: %s\n", ok ? "OK" : "FAILED");
-        if (!ok) return 2;
-    }
-    else if (hex_path != nullptr)
-    {
-        int ok = LoadHexFromFile(hex_path);
-        std::printf("HEX load: %s\n", ok ? "OK" : "FAILED");
-        if (!ok) return 2;
-    }
+  std::printf("Components Created.\n");
 
-    if (seconds <= 0.0) seconds = 1.0;
-    if (tick_hz <= 0.0) tick_hz = 1000.0;
+  // Connections
+  // AVR Pin 13 -> NodePin13
+  Native_Connect(avr, 13, nodePin13);
 
-    constexpr double kCpuHz = 16000000.0;
-    double elapsed = 0.0;
-    double next_print = 0.0;
-    double tick_interval = 1.0 / tick_hz;
-    double ticks_per_step = kCpuHz / tick_hz;
-    double tick_accum = 0.0;
-    auto start = std::chrono::steady_clock::now();
-    auto next_tick = start;
-    std::uint64_t ticks_executed = 0;
+  // R1: NodePin13 -> NodeAnode
+  Native_Connect(r1, 0, nodePin13);
+  Native_Connect(r1, 1, nodeAnode);
 
-    while (forever || (!use_tick_limit && elapsed < seconds) || (use_tick_limit && ticks_executed < tick_limit))
-    {
-        next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-            std::chrono::duration<double>(tick_interval));
+  // Diode: NodeAnode -> GND
+  Native_Connect(d1, 0, nodeAnode);
+  Native_Connect(d1, 1, 0);
 
-        auto now = std::chrono::steady_clock::now();
-        if (now < next_tick)
-        {
-            auto sleep_for = next_tick - now;
-            if (sleep_for > std::chrono::microseconds(200))
-            {
-                std::this_thread::sleep_for(sleep_for - std::chrono::microseconds(100));
-            }
-            while (std::chrono::steady_clock::now() < next_tick) { }
-        }
+  // Load Firmware
+  // Hardcode Hex
+  // :06000000259A2D9AFFCF70
+  FILE *f = std::fopen("blink_test.hex", "w");
+  if (f) {
+    std::fprintf(f, ":06000000259A2D9AFFCF70\n:00000001FF\n");
+    std::fclose(f);
+  }
 
-        now = std::chrono::steady_clock::now();
-        tick_accum += ticks_per_step;
-        std::uint64_t step_ticks = static_cast<std::uint64_t>(tick_accum);
-        if (step_ticks == 0) step_ticks = 1;
-        tick_accum -= static_cast<double>(step_ticks);
-        if (use_tick_limit && ticks_executed + step_ticks > tick_limit)
-        {
-            step_ticks = tick_limit - ticks_executed;
-        }
-        StepSimulationTicks(step_ticks);
-        ticks_executed += step_ticks;
-        elapsed = std::chrono::duration<double>(now - start).count();
+  LoadHexFromFile("blink_test.hex");
 
-        if (!quiet && elapsed >= next_print)
-        {
-            const SharedState* state = GetSharedState();
-            if (state != nullptr)
-            {
-                std::printf("t=%.3fs tick=%" PRIu64 " D13=%.2fV LED=%.2fV I=%.3fA errors=0x%X\n",
-                    elapsed,
-                    state->tick,
-                    state->node_voltages[2],
-                    state->node_voltages[3],
-                    state->currents[0],
-                    state->error_flags);
-            }
-            next_print += 0.5;
-        }
-    }
+  // Simulate
+  std::printf("Stepping simulation...\n");
+  for (int i = 0; i < 20; ++i) {
+    Native_Step(0.001f);
 
-    return 0;
+    float vPin = Native_GetVoltage(nodePin13);
+    float vAnode = Native_GetVoltage(nodeAnode);
+    std::printf("Step %d: Pin13=%.2f V, Anode=%.2f V\n", i, vPin, vAnode);
+  }
+
+  Native_DestroyContext();
+  return 0;
 }
