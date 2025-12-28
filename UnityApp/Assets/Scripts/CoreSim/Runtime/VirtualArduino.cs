@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace RobotTwin.CoreSim.Runtime
 {
@@ -13,6 +14,9 @@ namespace RobotTwin.CoreSim.Runtime
         public VirtualRegisterFile Registers { get; }
         public VirtualArduinoHal Hal { get; }
         public VirtualArduinoCpu Cpu { get; }
+        public VirtualMemory Memory { get; }
+        public string FirmwareSource { get; private set; } = "blink:D13:500";
+        public bool FirmwareLoaded { get; private set; }
 
         public VirtualArduino(string id)
         {
@@ -21,11 +25,13 @@ namespace RobotTwin.CoreSim.Runtime
             Registers = new VirtualRegisterFile();
             Hal = new VirtualArduinoHal(Registers);
             Cpu = new VirtualArduinoCpu(Registers);
+            Memory = new VirtualMemory();
         }
 
         public void LoadProgram(VirtualArduinoProgram program)
         {
             Cpu.LoadProgram(program);
+            FirmwareLoaded = true;
         }
 
         public void Step(float dtSeconds)
@@ -46,7 +52,26 @@ namespace RobotTwin.CoreSim.Runtime
             }
             if (string.Equals(key, "firmware", StringComparison.OrdinalIgnoreCase))
             {
+                if (TryLoadHexValue(value))
+                {
+                    return;
+                }
                 LoadProgram(VirtualArduinoProgramFactory.FromFirmwareString(value, Hal));
+                FirmwareSource = value;
+                FirmwareLoaded = true;
+                return;
+            }
+            if (string.Equals(key, "firmwareHex", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, "hex", StringComparison.OrdinalIgnoreCase))
+            {
+                TryLoadHexText(value);
+                return;
+            }
+            if (string.Equals(key, "firmwarePath", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, "hexPath", StringComparison.OrdinalIgnoreCase))
+            {
+                TryLoadHexPath(value);
+                return;
             }
         }
 
@@ -66,6 +91,56 @@ namespace RobotTwin.CoreSim.Runtime
             {
                 target[$"{Id}.{kvp.Key}"] = kvp.Value;
             }
+        }
+
+        private bool TryLoadHexValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            string trimmed = value.Trim();
+            if (trimmed.StartsWith(":", StringComparison.Ordinal))
+            {
+                return TryLoadHexText(trimmed);
+            }
+            if (trimmed.EndsWith(".hex", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.EndsWith(".ihx", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryLoadHexPath(trimmed);
+            }
+            return false;
+        }
+
+        private bool TryLoadHexPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            if (!File.Exists(path)) return false;
+            string text = File.ReadAllText(path);
+            bool loaded = TryLoadHexText(text);
+            if (loaded)
+            {
+                FirmwareSource = path;
+            }
+            return loaded;
+        }
+
+        private bool TryLoadHexText(string hexText)
+        {
+            var image = new VirtualHexImage(VirtualMemory.FlashSizeBytes);
+            if (!VirtualHexLoader.TryLoad(hexText, image, out var error))
+            {
+                FirmwareSource = $"hex:invalid ({error})";
+                return false;
+            }
+
+            Memory.ClearFlash();
+            Array.Copy(image.Data, Memory.Flash, Memory.Flash.Length);
+
+            int decoded;
+            int unknown;
+            var program = VirtualArduinoProgramFactory.FromHexImage(image, out decoded, out unknown);
+            Cpu.LoadProgram(program);
+            FirmwareSource = $"hex:{decoded} decoded, {unknown} unknown";
+            FirmwareLoaded = true;
+            return true;
         }
     }
 }

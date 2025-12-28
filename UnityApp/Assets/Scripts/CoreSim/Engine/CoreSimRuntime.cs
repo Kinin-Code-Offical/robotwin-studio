@@ -17,6 +17,7 @@ namespace RobotTwin.CoreSim.Engine
         private readonly Dictionary<string, string> _pinToNet = new Dictionary<string, string>();
         private readonly Dictionary<string, int> _netToNode = new Dictionary<string, int>();
         private readonly HashSet<string> _groundNets = new HashSet<string>();
+        private bool _hasExplicitGround;
 
         public TelemetryFrame Step(
             CircuitSpec spec,
@@ -63,6 +64,7 @@ namespace RobotTwin.CoreSim.Engine
         {
             _netToNode.Clear();
             _groundNets.Clear();
+            _hasExplicitGround = false;
 
             foreach (var net in spec.Nets)
             {
@@ -75,6 +77,7 @@ namespace RobotTwin.CoreSim.Engine
                     if (IsGroundPin(pin))
                     {
                         _groundNets.Add(net.Id);
+                        _hasExplicitGround = true;
                     }
                 }
             }
@@ -85,6 +88,7 @@ namespace RobotTwin.CoreSim.Engine
                 if (firstNet != null)
                 {
                     _groundNets.Add(firstNet.Id);
+                    frame.ValidationMessages.Add("Missing GND reference (no net contains GND pins).");
                     frame.ValidationMessages.Add($"Disconnected GND. Using net '{firstNet.Id}' as reference.");
                 }
             }
@@ -318,6 +322,7 @@ namespace RobotTwin.CoreSim.Engine
                 if (!TrySolve(matrix, rhs, out var solution))
                 {
                     frame.ValidationMessages.Add("Circuit solver failed (singular matrix).");
+                    ReportSolverFailure(frame, voltageSources);
                     return null;
                 }
 
@@ -516,6 +521,33 @@ namespace RobotTwin.CoreSim.Engine
                     }
                 }
             }
+        }
+
+        private void ReportSolverFailure(TelemetryFrame frame, List<VoltageSourceElement> sources)
+        {
+            if (!_hasExplicitGround)
+            {
+                frame.ValidationMessages.Add("Solver error: missing GND reference (connect U1.GND1/GND2/GND3 to a net).");
+            }
+
+            if (!HasSupplySource(sources))
+            {
+                frame.ValidationMessages.Add("Solver error: missing VCC supply (connect U1.5V/3V3/IOREF or Battery.+).");
+            }
+        }
+
+        private bool HasSupplySource(List<VoltageSourceElement> sources)
+        {
+            if (sources == null) return false;
+            foreach (var source in sources)
+            {
+                if (source == null || string.IsNullOrWhiteSpace(source.Id)) continue;
+                if (source.Id.EndsWith(".5V", StringComparison.OrdinalIgnoreCase)) return true;
+                if (source.Id.EndsWith(".3V3", StringComparison.OrdinalIgnoreCase)) return true;
+                if (source.Id.EndsWith(".IOREF", StringComparison.OrdinalIgnoreCase)) return true;
+                if (source.Id.StartsWith("Battery", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
 
         private bool TrySolve(double[,] matrix, double[] rhs, out double[] solution)
