@@ -16,7 +16,7 @@ jobs:
       unity_version: ${{ steps.get_version.outputs.unity_version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check for Unity License
         id: check_secret
@@ -60,7 +60,7 @@ jobs:
     if: needs.probe.outputs.run_unity == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           lfs: true
 
