@@ -1,7 +1,7 @@
 {
   "projectName": "Arduino Button Starter",
   "version": "1.0.0",
-  "description": "UNO + LED + Button + Battery starter circuit.",
+  "description": "UNO + LED + Button + Battery + Switch starter circuit.",
   "circuit": {
     "id": "arduino-button-starter",
     "mode": "fast",
@@ -13,7 +13,6 @@
           "posX": "100",
           "posY": "200",
           "virtualBoard": "arduino-uno",
-          "firmware": "blink:D13:500",
           "catalogId": "arduino-uno"
         }
       },
@@ -57,6 +56,16 @@
           "voltage": "9V",
           "catalogId": "battery-9v"
         }
+      },
+      {
+        "id": "SW1",
+        "type": "Switch",
+        "properties": {
+          "posX": "240",
+          "posY": "420",
+          "state": "closed",
+          "catalogId": "switch-on-off"
+        }
       }
     ],
     "nets": [
@@ -78,7 +87,11 @@
       },
       {
         "id": "VIN",
-        "nodes": ["B1.+", "U1.VIN"]
+        "nodes": ["SW1.B", "U1.VIN"]
+      },
+      {
+        "id": "VIN_SRC",
+        "nodes": ["B1.+", "SW1.A"]
       }
     ]
   },

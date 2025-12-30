@@ -77,19 +77,16 @@ namespace RobotTwin.Game
 
         public void FindFirmware()
         {
-            if (UseVirtualArduino)
-            {
-                FirmwarePath = string.Empty;
-                Debug.Log("[SessionManager] VirtualArduino enabled. External firmware disabled.");
-                return;
-            }
+            string resolvedPath = string.Empty;
 #if UNITY_EDITOR
             // Relative to project path: ../build/firmware/VirtualArduinoFirmware.exe
             var projectRoot = Directory.GetParent(Application.dataPath).Parent.FullName;
-            var path = Path.Combine(projectRoot, "build", "firmware", "VirtualArduinoFirmware.exe");
+            var buildsPath = Path.Combine(projectRoot, "builds", "firmware", "VirtualArduinoFirmware.exe");
+            var legacyPath = Path.Combine(projectRoot, "build", "firmware", "VirtualArduinoFirmware.exe");
+            var path = File.Exists(buildsPath) ? buildsPath : legacyPath;
             if (File.Exists(path))
             {
-                FirmwarePath = path;
+                resolvedPath = path;
                 Debug.Log($"[SessionManager] Firmware found: {path}");
             }
             else
@@ -98,8 +95,13 @@ namespace RobotTwin.Game
             }
 #else
             // In build, expect next to executable or in data
-            FirmwarePath = Path.Combine(Application.streamingAssetsPath, "VirtualArduinoFirmware.exe");
+            resolvedPath = Path.Combine(Application.streamingAssetsPath, "VirtualArduinoFirmware.exe");
 #endif
+            FirmwarePath = resolvedPath;
+            if (UseVirtualArduino)
+            {
+                Debug.Log("[SessionManager] VirtualArduino enabled. External firmware will be ignored.");
+            }
         }
 
         private void OnApplicationQuit()

@@ -1,0 +1,305 @@
+#include "PipeManager.h"
+
+#include <cstdio>
+#include <cstring>
+#include <thread>
+
+namespace firmware
+{
+    namespace
+    {
+        std::wstring BuildPipePath(const std::wstring& name)
+        {
+            if (name.rfind(L"\\\\.\\pipe\\", 0) == 0)
+            {
+                return name;
+            }
+            return L"\\\\.\\pipe\\" + name;
+        }
+    }
+
+    PipeManager::PipeManager() = default;
+
+    PipeManager::~PipeManager()
+    {
+        Stop();
+    }
+
+    bool PipeManager::Start(const std::wstring& pipeName)
+    {
+        if (_running) return false;
+        _pipeName = BuildPipePath(pipeName);
+        _running = true;
+        _threadHandle = CreateThread(nullptr, 0, [](LPVOID param) -> DWORD {
+            auto* self = static_cast<PipeManager*>(param);
+            self->ThreadMain();
+            return 0;
+        }, this, 0, nullptr);
+        return _threadHandle != nullptr;
+    }
+
+    void PipeManager::Stop()
+    {
+        _running = false;
+        if (_threadHandle)
+        {
+            WaitForSingleObject(_threadHandle, 2000);
+            CloseHandle(_threadHandle);
+            _threadHandle = nullptr;
+        }
+        DisconnectPipe();
+        _connected = false;
+    }
+
+    bool PipeManager::IsConnected() const
+    {
+        return _connected.load();
+    }
+
+    bool PipeManager::PopCommand(PipeCommand& outCommand)
+    {
+        std::lock_guard<std::mutex> guard(_queueMutex);
+        if (_queue.empty()) return false;
+        outCommand = _queue.front();
+        _queue.pop();
+        return true;
+    }
+
+    void PipeManager::SendHelloAck(std::uint32_t flags)
+    {
+        HelloAckPayload payload{};
+        payload.flags = flags;
+        payload.pin_count = static_cast<std::uint32_t>(kPinCount);
+        WritePacket(MessageType::HelloAck, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
+    }
+
+    void PipeManager::SendOutputState(std::uint64_t tickCount, const std::uint8_t* pins, std::size_t count)
+    {
+        if (!pins || count < kPinCount) return;
+        OutputStatePayload payload{};
+        payload.tick_count = tickCount;
+        std::memcpy(payload.pins, pins, kPinCount);
+        WritePacket(MessageType::OutputState, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
+    }
+
+    void PipeManager::SendSerial(const std::uint8_t* data, std::size_t size)
+    {
+        if (!data || size == 0) return;
+        WritePacket(MessageType::Serial, data, size);
+    }
+
+    void PipeManager::SendStatus(std::uint64_t tickCount)
+    {
+        StatusPayload payload{};
+        payload.tick_count = tickCount;
+        WritePacket(MessageType::Status, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
+    }
+
+    void PipeManager::SendLog(LogLevel level, const std::string& text)
+    {
+        if (text.empty()) return;
+        std::vector<std::uint8_t> payload;
+        payload.resize(sizeof(LogPayload) + text.size());
+        auto* header = reinterpret_cast<LogPayload*>(payload.data());
+        header->level = static_cast<std::uint8_t>(level);
+        std::memcpy(payload.data() + sizeof(LogPayload), text.data(), text.size());
+        WritePacket(MessageType::Log, payload.data(), payload.size());
+    }
+
+    void PipeManager::SendError(std::uint32_t code, const std::string& text)
+    {
+        std::vector<std::uint8_t> payload;
+        payload.resize(sizeof(ErrorPayload) + text.size());
+        auto* header = reinterpret_cast<ErrorPayload*>(payload.data());
+        header->code = code;
+        if (!text.empty())
+        {
+            std::memcpy(payload.data() + sizeof(ErrorPayload), text.data(), text.size());
+        }
+        WritePacket(MessageType::Error, payload.data(), payload.size());
+    }
+
+    void PipeManager::ThreadMain()
+    {
+        while (_running)
+        {
+            if (!EnsurePipe())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                continue;
+            }
+
+            PacketHeader header{};
+            std::vector<std::uint8_t> payload;
+            if (!ReadPacket(header, payload))
+            {
+                DisconnectPipe();
+                continue;
+            }
+
+            if (header.magic != kProtocolMagic)
+            {
+                SendError(1, "Invalid protocol magic");
+                continue;
+            }
+
+            auto type = static_cast<MessageType>(header.type);
+            if (type == MessageType::Hello)
+            {
+                SendHelloAck(0);
+                continue;
+            }
+
+            if (type == MessageType::LoadBvm)
+            {
+                PipeCommand cmd;
+                cmd.type = PipeCommand::Type::Load;
+                cmd.data = std::move(payload);
+                Enqueue(cmd);
+                continue;
+            }
+
+            if (type == MessageType::Step)
+            {
+                if (payload.size() < sizeof(StepPayload))
+                {
+                    SendError(2, "Invalid step payload");
+                    continue;
+                }
+                const auto* step = reinterpret_cast<const StepPayload*>(payload.data());
+                PipeCommand cmd;
+                cmd.type = PipeCommand::Type::Step;
+                cmd.deltaMicros = step->delta_micros;
+                std::memcpy(cmd.pins, step->pins, kPinCount);
+                Enqueue(cmd);
+                continue;
+            }
+        }
+    }
+
+    bool PipeManager::EnsurePipe()
+    {
+        if (_connected) return true;
+        if (_pipeHandle != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(_pipeHandle);
+            _pipeHandle = INVALID_HANDLE_VALUE;
+        }
+
+        _pipeHandle = CreateNamedPipeW(
+            _pipeName.c_str(),
+            PIPE_ACCESS_DUPLEX,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+            1,
+            65536,
+            65536,
+            0,
+            nullptr);
+
+        if (_pipeHandle == INVALID_HANDLE_VALUE)
+        {
+            return false;
+        }
+
+        BOOL connected = ConnectNamedPipe(_pipeHandle, nullptr);
+        if (!connected)
+        {
+            DWORD err = GetLastError();
+            if (err != ERROR_PIPE_CONNECTED)
+            {
+                CloseHandle(_pipeHandle);
+                _pipeHandle = INVALID_HANDLE_VALUE;
+                return false;
+            }
+        }
+
+        _connected = true;
+        std::puts("Pipe Connected");
+        return true;
+    }
+
+    void PipeManager::DisconnectPipe()
+    {
+        if (_pipeHandle != INVALID_HANDLE_VALUE)
+        {
+            FlushFileBuffers(_pipeHandle);
+            DisconnectNamedPipe(_pipeHandle);
+            CloseHandle(_pipeHandle);
+            _pipeHandle = INVALID_HANDLE_VALUE;
+        }
+        _connected = false;
+        _sequence = 1;
+    }
+
+    bool PipeManager::ReadPacket(PacketHeader& header, std::vector<std::uint8_t>& payload)
+    {
+        if (!ReadExact(reinterpret_cast<std::uint8_t*>(&header), sizeof(header)))
+        {
+            return false;
+        }
+        if (header.payload_size > 0)
+        {
+            payload.resize(header.payload_size);
+            if (!ReadExact(payload.data(), payload.size()))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            payload.clear();
+        }
+        return true;
+    }
+
+    bool PipeManager::ReadExact(std::uint8_t* buffer, std::size_t size)
+    {
+        std::size_t total = 0;
+        while (total < size && _running)
+        {
+            DWORD bytesRead = 0;
+            DWORD want = static_cast<DWORD>(size - total);
+            BOOL ok = ReadFile(_pipeHandle, buffer + total, want, &bytesRead, nullptr);
+            if (!ok || bytesRead == 0)
+            {
+                return false;
+            }
+            total += bytesRead;
+        }
+        return total == size;
+    }
+
+    bool PipeManager::WritePacket(MessageType type, const std::uint8_t* payload, std::size_t size)
+    {
+        if (!IsConnected() || _pipeHandle == INVALID_HANDLE_VALUE) return false;
+
+        PacketHeader header{};
+        header.magic = kProtocolMagic;
+        header.version_major = kProtocolMajor;
+        header.version_minor = kProtocolMinor;
+        header.type = static_cast<std::uint16_t>(type);
+        header.flags = 0;
+        header.payload_size = static_cast<std::uint32_t>(size);
+        header.sequence = _sequence++;
+
+        DWORD written = 0;
+        if (!WriteFile(_pipeHandle, &header, sizeof(header), &written, nullptr) || written != sizeof(header))
+        {
+            return false;
+        }
+        if (size > 0 && payload)
+        {
+            if (!WriteFile(_pipeHandle, payload, static_cast<DWORD>(size), &written, nullptr) || written != size)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void PipeManager::Enqueue(const PipeCommand& command)
+    {
+        std::lock_guard<std::mutex> guard(_queueMutex);
+        _queue.push(command);
+    }
+}

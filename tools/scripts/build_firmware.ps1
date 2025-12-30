@@ -1,0 +1,61 @@
+param(
+    [string]$Configuration = "Release"
+)
+
+$ErrorActionPreference = "Stop"
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
+$OutDir = Join-Path $RepoRoot "builds/firmware"
+$LegacyOutDir = Join-Path $RepoRoot "build/firmware"
+$LogDir = Join-Path $RepoRoot "logs/firmware"
+$LogPath = Join-Path $LogDir "build.log"
+
+if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
+if (-not (Test-Path $LegacyOutDir)) { New-Item -ItemType Directory -Force -Path $LegacyOutDir | Out-Null }
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
+"" | Set-Content -Path $LogPath
+
+$Sources = @(
+    "FirmwareEngine/main.cpp",
+    "FirmwareEngine/PipeManager.cpp",
+    "FirmwareEngine/VirtualArduino.cpp",
+    "NativeEngine/src/MCU/ATmega328P_ISA.c"
+)
+
+$OutputExe = Join-Path $OutDir "VirtualArduinoFirmware.exe"
+$ResourceFile = "FirmwareEngine/VirtualArduinoFirmware.rc"
+$ResourceObj = Join-Path $OutDir "VirtualArduinoFirmware.res.o"
+$IncludeDirs = @(
+    "FirmwareEngine",
+    "NativeEngine/include"
+)
+
+$IncludeArgs = $IncludeDirs | ForEach-Object { "-I$($_)" }
+
+Push-Location $RepoRoot
+Write-Host "[Firmware] Building VirtualArduinoFirmware.exe ($Configuration)..." -ForegroundColor Cyan
+
+$Flags = @("-std=c++17", "-O2")
+if ($Configuration -eq "Debug") { $Flags = @("-std=c++17", "-O0", "-g") }
+
+$Windres = Get-Command windres -ErrorAction SilentlyContinue
+if (-not $Windres) { $Windres = Get-Command x86_64-w64-mingw32-windres -ErrorAction SilentlyContinue }
+if ($Windres -and (Test-Path $ResourceFile)) {
+    & $Windres $ResourceFile -O coff -o $ResourceObj 2>&1 | Tee-Object -FilePath $LogPath -Append
+}
+elseif (Test-Path $ResourceFile) {
+    Write-Warning "windres not found; firmware metadata/icon resources will be skipped."
+}
+
+$ResourceArgs = @()
+if (Test-Path $ResourceObj) { $ResourceArgs = @($ResourceObj) }
+
+$cmd = @("g++") + $Flags + @("-o", $OutputExe) + $Sources + $IncludeArgs + $ResourceArgs + @("-static-libgcc", "-static-libstdc++")
+($cmd -join " ") | Tee-Object -FilePath $LogPath
+& $cmd[0] @($cmd[1..($cmd.Length - 1)]) 2>&1 | Tee-Object -FilePath $LogPath -Append
+if ($LASTEXITCODE -ne 0) { Write-Error "Firmware build failed. See $LogPath"; exit 1 }
+
+Copy-Item -Path $OutputExe -Destination (Join-Path $LegacyOutDir "VirtualArduinoFirmware.exe") -Force
+
+Write-Host "[Firmware] Output: $OutputExe" -ForegroundColor Green
+Write-Host "[Firmware] Log: $LogPath" -ForegroundColor Green
+Pop-Location

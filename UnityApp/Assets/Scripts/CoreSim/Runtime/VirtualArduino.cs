@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 namespace RobotTwin.CoreSim.Runtime
@@ -15,7 +16,7 @@ namespace RobotTwin.CoreSim.Runtime
         public VirtualArduinoHal Hal { get; }
         public VirtualArduinoCpu Cpu { get; }
         public VirtualMemory Memory { get; }
-        public string FirmwareSource { get; private set; } = "blink:D13:500";
+        public string FirmwareSource { get; private set; } = string.Empty;
         public bool FirmwareLoaded { get; private set; }
 
         public VirtualArduino(string id)
@@ -44,6 +45,19 @@ namespace RobotTwin.CoreSim.Runtime
         public void ApplyProperty(string key, string value)
         {
             if (string.IsNullOrWhiteSpace(key)) return;
+            if (string.Equals(key, "virtualFirmware", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    FirmwareSource = string.Empty;
+                    FirmwareLoaded = false;
+                    return;
+                }
+                LoadProgram(VirtualArduinoProgramFactory.FromFirmwareString(value, Hal));
+                FirmwareSource = value;
+                FirmwareLoaded = true;
+                return;
+            }
             if (key.StartsWith("pin:", StringComparison.OrdinalIgnoreCase))
             {
                 string pin = key.Substring(4);
@@ -52,6 +66,12 @@ namespace RobotTwin.CoreSim.Runtime
             }
             if (string.Equals(key, "firmware", StringComparison.OrdinalIgnoreCase))
             {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    FirmwareSource = string.Empty;
+                    FirmwareLoaded = false;
+                    return;
+                }
                 if (TryLoadHexValue(value))
                 {
                     return;
@@ -78,6 +98,17 @@ namespace RobotTwin.CoreSim.Runtime
         public void ConfigureFromProperties(Dictionary<string, string> properties)
         {
             if (properties == null) return;
+            if (properties.TryGetValue("virtualFirmware", out var virtualFirmware))
+            {
+                foreach (var kvp in properties)
+                {
+                    if (string.Equals(kvp.Key, "virtualFirmware", StringComparison.OrdinalIgnoreCase)) continue;
+                    ApplyProperty(kvp.Key, kvp.Value);
+                }
+                ApplyProperty("virtualFirmware", virtualFirmware);
+                return;
+            }
+
             foreach (var kvp in properties)
             {
                 ApplyProperty(kvp.Key, kvp.Value);
@@ -145,8 +176,8 @@ namespace RobotTwin.CoreSim.Runtime
 
         public void SetVoltage(string pin, float voltage)
         {
-             // Legacy Stub to fix compilation
-             // ideally this routes to HAL
+            if (string.IsNullOrWhiteSpace(pin)) return;
+            Hal.SetPinOverride(pin, voltage.ToString(CultureInfo.InvariantCulture));
         }
     }
 }

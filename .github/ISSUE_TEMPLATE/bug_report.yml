@@ -18,6 +18,19 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - UnityApp
+        - CoreSim
+        - FirmwareEngine
+        - NativeEngine
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
     id: model-tier
     attributes:
       label: Suggested Model Tier for Fix

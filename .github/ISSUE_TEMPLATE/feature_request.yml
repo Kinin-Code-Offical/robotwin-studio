@@ -15,3 +15,16 @@ body:
     attributes:
       label: Benefit
       placeholder: This will allow...
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - UnityApp
+        - CoreSim
+        - FirmwareEngine
+        - NativeEngine
+        - Documentation
+        - Other
+    validations:
+      required: false

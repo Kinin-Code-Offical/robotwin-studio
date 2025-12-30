@@ -26,6 +26,66 @@
     background-color: var(--color-bg-app);
 }
 
+.wizard-compact {
+    flex-direction: column;
+}
+
+.wizard-compact .sidebar {
+    width: 100%;
+    border-right-width: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+}
+
+.wizard-compact .brand-row {
+    height: 48px;
+    padding-left: 12px;
+}
+
+.wizard-compact .content.main-content {
+    padding: 18px;
+}
+
+.wizard-compact .page-title {
+    font-size: 16px;
+}
+
+.wizard-compact .card-row {
+    flex-direction: column;
+}
+
+.wizard-compact .card-button {
+    min-width: 0;
+    width: 100%;
+    margin-right: 0;
+}
+
+.wizard-compact .projects-header {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.wizard-compact .projects-toolbar {
+    flex-direction: column;
+}
+
+.wizard-compact .projects-search {
+    width: 100%;
+    min-width: 0;
+}
+
+.wizard-medium .content.main-content {
+    padding: 24px;
+}
+
+.wizard-medium .page-title {
+    font-size: 18px;
+}
+
+.wizard-medium .card-button {
+    min-width: 200px;
+}
+
 .content.main-content {
     flex-grow: 1;
     padding: 36px;
@@ -292,6 +352,9 @@
     background-color: var(--color-bg-medium);
     border-radius: 8px;
     padding: 8px;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-right: 16px;
     border-top-width: 1px;
     border-bottom-width: 1px;
     border-left-width: 1px;
@@ -307,6 +370,7 @@
     flex-direction: row;
     align-items: center;
     padding: 10px;
+    padding-right: 6px;
     border-radius: 6px;
     margin-bottom: 6px;
     background-color: #2b2b2b;
@@ -418,6 +482,7 @@
 .sidebar {
     background-color: var(--color-bg-dark);
     border-right-width: 1px;
+    min-width: 200px;
     border-right-color: var(--color-border);
 }
 

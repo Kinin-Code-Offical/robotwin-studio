@@ -28,6 +28,9 @@ enum
     AVR_PIND     = 0x29,
     AVR_DDRD     = 0x2A,
     AVR_PORTD    = 0x2B,
+    AVR_SPL      = 0x3D,
+    AVR_SPH      = 0x3E,
+    AVR_SREG     = 0x3F,
     AVR_ADMUX    = 0x7A,
     AVR_ADCSRA   = 0x7A
 };
@@ -44,6 +47,8 @@ typedef struct
     size_t regs_size;
     uint16_t pc;
     uint8_t zero_flag;
+    uint8_t carry_flag;
+    uint16_t sp;
 } AvrCore;
 
 void AVR_Init(AvrCore* core,
