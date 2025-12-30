@@ -466,7 +466,7 @@ namespace RobotTwin.UI
                 _canvasView.RegisterCallback<PointerMoveEvent>(OnCanvasPanMove);
                 _canvasView.RegisterCallback<PointerUpEvent>(OnCanvasPanEnd);
                 _canvasView.RegisterCallback<WheelEvent>(OnCanvasWheel, TrickleDown.TrickleDown);
-                _canvasView.RegisterCallback<PointerMoveEvent>(OnCanvasPointerMove);
+                _canvasView.RegisterCallback<PointerMoveEvent>(OnCanvasPointerMove, TrickleDown.TrickleDown);
                 _canvasView.RegisterCallback<GeometryChangedEvent>(_ => UpdateBoardLayout());
                 EnsureCanvasDecorations();
                 // Grid/Background is absolute, components added on top
@@ -2997,7 +2997,11 @@ namespace RobotTwin.UI
         {
             RequestBreadboardRebuild();
             if (_canvasView == null || _wireLayer == null || _currentCircuit == null) return;
-            if (_currentCircuit.Nets == null) return;
+            if (_currentCircuit.Nets == null)
+            {
+                UpdatePinDotColors(null);
+                return;
+            }
             _wireSegments.Clear();
 
             var boardRect = GetBoardRect();
@@ -3054,6 +3058,33 @@ namespace RobotTwin.UI
 
             ((WireLayer)_wireLayer).SetSegments(_wireSegments);
             _wireLayer.BringToFront();
+            UpdatePinDotColors(paletteMap);
+        }
+
+        private void UpdatePinDotColors(Dictionary<string, int> paletteMap)
+        {
+            var defaultColor = new Color(0.22f, 0.75f, 0.95f, 0.95f);
+            foreach (var pin in _pinVisuals.Values)
+            {
+                if (pin != null) pin.style.backgroundColor = defaultColor;
+            }
+
+            if (_currentCircuit?.Nets == null) return;
+            foreach (var net in _currentCircuit.Nets)
+            {
+                if (net?.Nodes == null || net.Nodes.Count == 0) continue;
+                int paletteIndex;
+                Color color = (!string.IsNullOrWhiteSpace(net.Id) && paletteMap != null && paletteMap.TryGetValue(net.Id, out paletteIndex))
+                    ? WirePalette[paletteIndex]
+                    : GetNetColor(net.Id);
+                foreach (var node in net.Nodes)
+                {
+                    if (_pinVisuals.TryGetValue(node, out var pinEl) && pinEl != null)
+                    {
+                        pinEl.style.backgroundColor = color;
+                    }
+                }
+            }
         }
 
         private void AddOrthogonalSegments(Vector2 start, Vector2 end, string netId)
@@ -3203,6 +3234,16 @@ namespace RobotTwin.UI
             var size = GetComponentSize(string.IsNullOrWhiteSpace(spec.Type) ? string.Empty : spec.Type);
             var pos = GetComponentPosition(compId);
             var rect = new Rect(pos.x, pos.y, size.x, size.y);
+            if (_pinVisuals.ContainsKey(node))
+            {
+                var boardRect = GetBoardRect();
+                if (boardRect.width > 0f && boardRect.height > 0f)
+                {
+                    point.x = Mathf.Clamp(point.x, boardRect.xMin, boardRect.xMax);
+                    point.y = Mathf.Clamp(point.y, boardRect.yMin, boardRect.yMax);
+                }
+                return point;
+            }
             if (!rect.Contains(point)) return point;
 
             float leftDist = point.x - rect.xMin;
@@ -5847,10 +5888,17 @@ namespace RobotTwin.UI
         {
             var dot = new VisualElement();
             dot.AddToClassList("pin-dot");
-            dot.pickingMode = PickingMode.Ignore;
+            dot.pickingMode = PickingMode.Position;
             string key = $"{componentId}.{pinName}";
             dot.name = key;
             _pinVisuals[key] = dot;
+            dot.RegisterCallback<ClickEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                if (_currentTool != ToolMode.Wire) return;
+                HandleWirePinClick(componentId, pinName, evt.clickCount);
+                evt.StopPropagation();
+            });
             return dot;
         }
 
@@ -5952,12 +6000,171 @@ namespace RobotTwin.UI
             CreateNet(_wireStartComponent, _wireStartPin, spec, endPin);
             _wireStartComponent = null;
             _wireStartPin = string.Empty;
+            ClearWirePreview();
+        }
+
+        private void HandleWirePinClick(string componentId, string pinName, int clickCount)
+        {
+            if (_currentCircuit == null) return;
+            var spec = _currentCircuit.Components.FirstOrDefault(c => c.Id == componentId);
+            if (spec == null) return;
+            string node = $"{componentId}.{pinName}";
+
+            if (clickCount >= 2)
+            {
+                if (IsPinConnected(node))
+                {
+                    RemoveConnectionsForPin(componentId, pinName);
+                }
+                CancelWireMode();
+                return;
+            }
+
+            if (_wireStartComponent == null)
+            {
+                _wireStartComponent = spec;
+                _wireStartPin = pinName;
+                UpdateWirePreview(_lastCanvasWorldPos);
+                return;
+            }
+
+            if (_wireStartComponent == spec && string.Equals(_wireStartPin, pinName, StringComparison.OrdinalIgnoreCase))
+            {
+                CancelWireMode();
+                return;
+            }
+
+            CreateNet(_wireStartComponent, _wireStartPin, spec, pinName);
+            _wireStartComponent = null;
+            _wireStartPin = string.Empty;
+            ClearWirePreview();
+        }
+
+        private bool IsPinConnected(string node)
+        {
+            if (_currentCircuit?.Nets == null || string.IsNullOrWhiteSpace(node)) return false;
+            foreach (var net in _currentCircuit.Nets)
+            {
+                if (net?.Nodes == null) continue;
+                if (net.Nodes.Contains(node)) return true;
+            }
+            return false;
+        }
+
+        private void RemoveConnectionsForPin(string componentId, string pinName)
+        {
+            if (_currentCircuit?.Nets == null) return;
+            string node = $"{componentId}.{pinName}";
+            bool changed = false;
+            for (int i = _currentCircuit.Nets.Count - 1; i >= 0; i--)
+            {
+                var net = _currentCircuit.Nets[i];
+                if (net?.Nodes == null) continue;
+                if (net.Nodes.Remove(node))
+                {
+                    changed = true;
+                }
+                if (net.Nodes.Count < 2)
+                {
+                    _currentCircuit.Nets.RemoveAt(i);
+                }
+            }
+
+            if (!changed) return;
+            RebuildPinUsage();
+            UpdateWireLayer();
+            UpdateErrorCount();
+            PopulateProjectTree();
+            if (_selectedComponent != null && string.Equals(_selectedComponent.Id, componentId, StringComparison.OrdinalIgnoreCase))
+            {
+                var item = ResolveCatalogItem(_selectedComponent);
+                if (_selectedVisual != null && item.Type != null)
+                {
+                    UpdatePropertiesPanel(_selectedComponent, item, _selectedVisual);
+                }
+            }
         }
 
         private void CancelWireMode()
         {
             _wireStartComponent = null;
             _wireStartPin = string.Empty;
+            ClearWirePreview();
+        }
+
+        private void UpdateWirePreview(Vector2 worldPos)
+        {
+            if (_canvasView == null) return;
+            EnsureWirePreviewLayer();
+            if (_wirePreviewLayer == null) return;
+            if (_wireStartComponent == null || string.IsNullOrWhiteSpace(_wireStartPin))
+            {
+                ClearWirePreview();
+                return;
+            }
+
+            string startNode = $"{_wireStartComponent.Id}.{_wireStartPin}";
+            var rawStart = GetNodePosition(startNode);
+            if (!rawStart.HasValue)
+            {
+                ClearWirePreview();
+                return;
+            }
+            var startAnchor = GetWireAnchor(startNode, rawStart);
+            if (!startAnchor.HasValue)
+            {
+                ClearWirePreview();
+                return;
+            }
+
+            var canvasLocal = _canvasView.WorldToLocal(worldPos);
+            var end = CanvasToBoard(canvasLocal);
+            end.x = Mathf.Round(end.x / GridSnap) * GridSnap;
+            end.y = Mathf.Round(end.y / GridSnap) * GridSnap;
+
+            _wirePreviewSegments.Clear();
+            AddPreviewSegments(startAnchor.Value, end);
+            ((WireLayer)_wirePreviewLayer).SetSegments(_wirePreviewSegments);
+            _wirePreviewLayer.BringToFront();
+        }
+
+        private void ClearWirePreview()
+        {
+            if (_wirePreviewSegments.Count == 0) return;
+            _wirePreviewSegments.Clear();
+            if (_wirePreviewLayer != null)
+            {
+                ((WireLayer)_wirePreviewLayer).SetSegments(_wirePreviewSegments);
+            }
+        }
+
+        private void AddPreviewSegments(Vector2 start, Vector2 end)
+        {
+            if ((end - start).sqrMagnitude < 0.25f) return;
+            if (Mathf.Approximately(start.x, end.x) || Mathf.Approximately(start.y, end.y))
+            {
+                AddPreviewSegmentRaw(start, end);
+                return;
+            }
+
+            bool horizontalFirst = (StableHash(_wireStartPin ?? string.Empty) & 1u) == 0u;
+            Vector2 mid = horizontalFirst
+                ? new Vector2(end.x, start.y)
+                : new Vector2(start.x, end.y);
+            AddPreviewSegmentRaw(start, mid);
+            AddPreviewSegmentRaw(mid, end);
+        }
+
+        private void AddPreviewSegmentRaw(Vector2 start, Vector2 end)
+        {
+            if ((end - start).sqrMagnitude < 0.25f) return;
+            _wirePreviewSegments.Add(new WireSegment
+            {
+                Start = start,
+                End = end,
+                NetId = string.Empty,
+                Color = WirePreviewColor
+            });
         }
 
         private void CancelLibraryDrag()
@@ -6305,6 +6512,14 @@ namespace RobotTwin.UI
             var canvasLocal = _canvasView.WorldToLocal(evt.position);
             var boardPos = CanvasToBoard(canvasLocal);
             UpdateCanvasHud(boardPos);
+            if (_currentTool == ToolMode.Wire && _wireStartComponent != null && !string.IsNullOrWhiteSpace(_wireStartPin))
+            {
+                UpdateWirePreview(evt.position);
+            }
+            else
+            {
+                ClearWirePreview();
+            }
         }
 
         private void OnCanvasWheel(WheelEvent evt)
@@ -6837,6 +7052,7 @@ namespace RobotTwin.UI
             {
                 _wireStartComponent = null;
                 _wireStartPin = string.Empty;
+                ClearWirePreview();
             }
             // Update UI State (Task 24)
             _btnSelect?.RemoveFromClassList("active");
@@ -6857,6 +7073,15 @@ namespace RobotTwin.UI
         {
             bool targetIsText = evt.target is TextField || evt.target is TextElement;
             bool codeContextActive = _centerMode == CenterPanelMode.Code;
+            if (evt.keyCode == KeyCode.Escape)
+            {
+                if (_currentTool == ToolMode.Wire)
+                {
+                    CancelWireMode();
+                    evt.StopPropagation();
+                    return;
+                }
+            }
             if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.S)
             {
                 if (codeContextActive) SaveCodeFile(true);
