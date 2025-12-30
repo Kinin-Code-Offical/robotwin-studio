@@ -1,0 +1,18 @@
+{
+  "id": "switch-on-off",
+  "name": "Switch (On/Off)",
+  "description": "Toggle switch for battery power",
+  "type": "Switch",
+  "symbol": "SW",
+  "iconChar": "S",
+  "order": 26,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "State", "value": "Open" },
+    { "key": "Closed Resistance", "value": "0.05 Ohm" }
+  ],
+  "defaults": [
+    { "key": "state", "value": "open" },
+    { "key": "resistance", "value": "0.05" }
+  ]
+}

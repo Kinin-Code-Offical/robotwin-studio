@@ -46,14 +46,13 @@ def run_powershell(script_path: Path, args: list[str]) -> int:
         "Bypass",
         "-File",
         str(script_path),
+        *args,
     ]
-    cmd.extend(args)
     return subprocess.call(cmd, cwd=str(REPO_ROOT))
 
 
 def run_python(script_path: Path, args: list[str]) -> int:
-    cmd = [sys.executable, str(script_path)]
-    cmd.extend(args)
+    cmd = [sys.executable, str(script_path), *args]
     return subprocess.call(cmd, cwd=str(REPO_ROOT))
 
 
@@ -147,6 +146,7 @@ def console(url: str) -> int:
 
 COMMAND_HELP = {
     "build-bvm": "Build a .bvm from .hex or .ino. For .ino, pass --fqbn arduino:avr:uno.",
+    "build-firmware": "Build VirtualArduinoFirmware.exe into builds/firmware (logs to logs/firmware).",
     "build-native": "Build NativeEngine DLL and standalone (g++). Outputs to build/native.",
     "build-standalone": "Build Unity Windows player via batchmode.",
     "update-unity-plugins": "Build CoreSim .NET plugin and sync into UnityApp/Assets/Plugins.",
@@ -181,6 +181,7 @@ def main() -> int:
         sub.set_defaults(_script=script)
 
     add_script_command("build-bvm", "tools/scripts/build_bvm.py", "Build a .bvm from .hex or .ino")
+    add_script_command("build-firmware", "tools/scripts/build_firmware.ps1", "Build VirtualArduinoFirmware.exe")
     add_script_command("build-native", "tools/scripts/build_native.ps1", "Build NativeEngine DLL + standalone")
     add_script_command("build-standalone", "tools/scripts/build_windows_standalone.ps1", "Build Unity Windows player")
     add_script_command("update-unity-plugins", "tools/scripts/update_unity_plugins.ps1", "Build CoreSim and sync Unity plugins")

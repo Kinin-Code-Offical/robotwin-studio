@@ -1,0 +1,667 @@
+.run-root {
+    flex-grow: 1;
+    background-color: #12161d;
+    color: #e6edf3;
+    --field-bg: #3a3a3a;
+    --field-border: #3a3a3a;
+}
+
+.run-compact .topbar {
+    height: 52px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.run-compact .title {
+    font-size: 14px;
+}
+
+.run-compact .branding-text {
+    font-size: 11px;
+}
+
+.run-compact .branding-sub {
+    font-size: 9px;
+}
+
+.run-compact .body {
+    flex-direction: column;
+    padding: 8px;
+}
+
+.run-compact .body .panel {
+    margin-right: 0;
+    margin-bottom: 12px;
+}
+
+.run-compact .left-panel,
+.run-compact .center-panel,
+.run-compact .right-panel {
+    width: 100%;
+    min-width: 0;
+}
+
+.run-compact .log-card {
+    height: 160px;
+}
+
+.run-compact .power-card {
+    height: 140px;
+}
+
+.run-compact .telemetry-card {
+    height: 170px;
+}
+
+.run-compact .serial-card {
+    height: 200px;
+}
+
+.run-compact .board-card {
+    min-height: 220px;
+}
+
+.run-compact .board-view {
+    min-height: 200px;
+}
+
+.run-medium .topbar {
+    height: 58px;
+}
+
+.run-medium .body {
+    padding: 10px;
+}
+
+.run-medium .title {
+    font-size: 16px;
+}
+
+.run-medium .left-panel {
+    width: 28%;
+    min-width: 220px;
+}
+
+.run-medium .right-panel {
+    width: 28%;
+    min-width: 240px;
+}
+
+.topbar {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 18px;
+    padding-right: 18px;
+    background-color: #1a1f27;
+    border-bottom-width: 1px;
+    border-bottom-color: #283241;
+}
+
+.topbar-left {
+    flex-direction: column;
+    justify-content: center;
+}
+
+.topbar-center {
+    flex-direction: row;
+    align-items: center;
+}
+
+.topbar-right {
+    flex-direction: row;
+    align-items: center;
+}
+
+.title {
+    font-size: 18px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: #f1f5f9;
+}
+
+.brand-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.brand-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    -unity-background-image-tint-color: white;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.icon-hexagon {
+    background-image: url('/Assets/UI/Icons/hexagon.png');
+}
+
+.branding-text {
+    color: #f8fafc;
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-overflow-position: end;
+}
+
+.branding-sub {
+    color: #38bdf8;
+    font-size: 10px;
+    margin-left: 10px;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-overflow-position: end;
+}
+
+.subtle {
+    font-size: 12px;
+    color: #93a4b5;
+}
+
+.metric {
+    font-size: 13px;
+    color: #f2c07b;
+}
+
+.topbar-center .metric {
+    margin-right: 16px;
+}
+
+.topbar-right .btn {
+    margin-left: 8px;
+}
+
+.btn {
+    height: 30px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 6px;
+    background-color: #3a4658;
+    color: #ffffff;
+}
+
+.btn.ghost {
+    background-color: #2a3443;
+    color: #d7e0ea;
+}
+
+.btn.danger {
+    background-color: #b74c4c;
+    color: #ffffff;
+}
+
+.body {
+    flex-grow: 1;
+    flex-direction: row;
+    padding: 12px;
+}
+
+.panel {
+    background-color: #161c24;
+    border-width: 1px;
+    border-color: #283241;
+    border-radius: 10px;
+    padding: 12px;
+    flex-direction: column;
+}
+
+.body .panel {
+    margin-right: 12px;
+}
+
+.body .right-panel {
+    margin-right: 0;
+}
+
+.left-panel {
+    width: 24%;
+    min-width: 240px;
+    flex-shrink: 0;
+}
+
+.center-panel {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.right-panel {
+    width: 24%;
+    min-width: 260px;
+    flex-shrink: 0;
+}
+
+.panel-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: #e6edf3;
+    margin-bottom: 8px;
+}
+
+.input {
+    margin-bottom: 8px;
+}
+
+.run-root .input-dark {
+    background-color: var(--field-bg);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--field-border);
+    border-bottom-color: var(--field-border);
+    border-left-color: var(--field-border);
+    border-right-color: var(--field-border);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 10px;
+    padding: 4px 6px;
+}
+
+.run-root .input-dark .unity-text-input {
+    color: #ffffff;
+    background-color: transparent;
+}
+
+.run-root .input-dark .unity-text-field__input,
+.run-root .input-dark .unity-base-text-field__input,
+.run-root .input-dark .unity-text-field__input--single-line,
+.run-root .input-dark .unity-base-text-field__input--single-line,
+.run-root .input-dark .unity-text-field__input--multiline,
+.run-root .input-dark .unity-base-text-field__input--multiline {
+    background-color: transparent;
+    color: #ffffff;
+    border-width: 0;
+}
+
+.run-root .input-dark.unity-text-field,
+.run-root .input-dark.unity-base-text-field {
+    background-color: var(--field-bg);
+}
+
+.component-list {
+    flex-grow: 1;
+    background-color: #0f141b;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.component-row {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: #1f2733;
+}
+
+.component-name {
+    color: #dfe7ef;
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+.component-status {
+    color: #9fb1c4;
+    font-size: 10px;
+    -unity-text-align: middle-right;
+    min-width: 80px;
+}
+
+.component-controls {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 6px;
+}
+
+.component-toggle {
+    margin-right: 6px;
+    height: 20px;
+    min-width: 40px;
+    align-items: center;
+    justify-content: center;
+}
+
+.component-toggle-switch Label {
+    display: none;
+}
+
+.component-toggle-switch .unity-toggle__label,
+.component-toggle-switch .unity-toggle__text {
+    display: none;
+}
+
+.component-toggle-mode Label,
+.component-toggle-mode .unity-toggle__label,
+.component-toggle-mode .unity-toggle__text {
+    display: none;
+}
+
+.component-toggle-switch {
+    min-width: 24px;
+    height: 18px;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.component-toggle-mode {
+    min-width: 24px;
+    width: 24px;
+    height: 18px;
+    margin-right: 6px;
+}
+
+.component-press {
+    height: 20px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 9px;
+    border-radius: 4px;
+    background-color: #273344;
+    color: #e6edf3;
+}
+
+.component-press:hover {
+    background-color: #324053;
+}
+
+.component-toggle-switch .unity-toggle__checkmark {
+    background-color: #1f2733;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: #344155;
+    border-bottom-color: #344155;
+    border-left-color: #344155;
+    border-right-color: #344155;
+    border-radius: 4px;
+    width: 16px;
+    height: 16px;
+}
+
+.component-toggle-switch.toggle-open .unity-toggle__checkmark {
+    background-color: rgba(52, 211, 153, 0.2);
+    border-top-color: #34d399;
+    border-bottom-color: #34d399;
+    border-left-color: #34d399;
+    border-right-color: #34d399;
+    -unity-background-image-tint-color: #34d399;
+}
+
+.component-toggle-switch.toggle-closed .unity-toggle__checkmark {
+    background-color: #1f2733;
+    border-top-color: #3a4658;
+    border-bottom-color: #3a4658;
+    border-left-color: #3a4658;
+    border-right-color: #3a4658;
+    -unity-background-image-tint-color: #687588;
+}
+
+.card {
+    background-color: #0f141b;
+    border-radius: 10px;
+    padding: 10px;
+    border-width: 1px;
+    border-color: #202a36;
+}
+
+.center-panel .card {
+    margin-bottom: 12px;
+}
+
+.right-panel .card {
+    margin-bottom: 12px;
+}
+
+.right-panel .serial-card {
+    margin-bottom: 0;
+}
+
+.card-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #c8d2de;
+    margin-bottom: 6px;
+}
+
+.board-card {
+    flex-grow: 1;
+    min-height: 280px;
+}
+
+.board-view {
+    flex-grow: 1;
+    min-height: 240px;
+    border-radius: 8px;
+    background-color: #0b1016;
+}
+
+.log-card {
+    flex-grow: 0;
+    height: 190px;
+    flex-shrink: 0;
+}
+
+.log-scroll {
+    flex-grow: 1;
+    background-color: #06080b;
+    border-radius: 6px;
+    min-height: 0;
+}
+
+.log-text {
+    color: #d7e0ea;
+    font-size: 11px;
+    padding: 6px;
+    white-space: normal;
+    overflow: visible;
+    -unity-text-align: upper-left;
+}
+
+.path-label {
+    font-size: 10px;
+    color: #6f8092;
+    margin-top: 6px;
+}
+
+.power-card,
+.telemetry-card,
+.serial-card {
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.power-card {
+    height: 160px;
+}
+
+.telemetry-card {
+    height: 180px;
+}
+
+.serial-card {
+    height: 220px;
+}
+
+.usb-list {
+    flex-grow: 1;
+    min-height: 80px;
+    background-color: #0f141b;
+    border-radius: 8px;
+    padding: 6px;
+    margin-bottom: 6px;
+}
+
+.usb-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: #1f2733;
+}
+
+.usb-name {
+    color: #dfe7ef;
+    font-size: 11px;
+}
+
+.usb-toggle {
+    margin-left: 6px;
+}
+
+.telemetry-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.telemetry-scroll {
+    flex-grow: 1;
+    min-height: 0;
+    background-color: #0b1016;
+    border-radius: 6px;
+    padding: 6px;
+}
+
+.telemetry-bar {
+    flex-grow: 1;
+    height: 14px;
+    margin-left: 8px;
+}
+
+.serial-scroll {
+    flex-grow: 1;
+    min-height: 140px;
+    background-color: #06080b;
+    border-radius: 6px;
+    min-height: 0;
+}
+
+.serial-text {
+    color: #7ce4b4;
+    font-size: 11px;
+    padding: 6px;
+    white-space: normal;
+    overflow: visible;
+    -unity-text-align: upper-left;
+}
+
+.run-root .unity-scroll-view__vertical-scroller,
+.run-root .unity-scroll-view__horizontal-scroller {
+    background-color: transparent;
+    width: 10px;
+    border-radius: 8px;
+    margin-top: 0;
+    margin-bottom: 0;
+    align-self: stretch;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.run-root .unity-scroller,
+.run-root .unity-scroller--vertical,
+.run-root .unity-scroller--horizontal {
+    background-color: transparent;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.run-root .unity-scroll-view__vertical-scroller .unity-base-slider__track,
+.run-root .unity-scroll-view__horizontal-scroller .unity-base-slider__track {
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    flex-grow: 1;
+    border-width: 0;
+    margin: 2px;
+}
+
+.run-root .unity-scroller .unity-base-slider__track,
+.run-root .unity-scroller__slider,
+.run-root .unity-scroller__track {
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    flex-grow: 1;
+    border-width: 0;
+    margin: 2px;
+}
+
+.run-root .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,
+.run-root .unity-scroll-view__horizontal-scroller .unity-base-slider__dragger {
+    background-color: #3d3d3d;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.run-root .unity-scroller .unity-base-slider__dragger,
+.run-root .unity-scroller__dragger {
+    background-color: #3d3d3d;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.run-root .unity-scroller__thumb {
+    background-color: #3d3d3d;
+    border-radius: 8px;
+    border-width: 0;
+}
+
+.run-root .unity-scroller__buttons,
+.run-root .unity-scroller__arrow,
+.run-root .unity-scroller__button,
+.run-root .unity-scroller__low-button,
+.run-root .unity-scroller__high-button,
+.run-root .unity-scroll-view__vertical-scroller .unity-scroller__low-button,
+.run-root .unity-scroll-view__vertical-scroller .unity-scroller__high-button,
+.run-root .unity-scroll-view__horizontal-scroller .unity-scroller__low-button,
+.run-root .unity-scroll-view__horizontal-scroller .unity-scroller__high-button,
+.run-root .unity-scroller__button--low,
+.run-root .unity-scroller__button--high,
+.run-root .unity-scroller__button--vertical,
+.run-root .unity-scroller__button--horizontal,
+.run-root .unity-scroller__button--start,
+.run-root .unity-scroller__button--end,
+.run-root .unity-scroller__arrow-button,
+.run-root .unity-scroller__arrow-button--horizontal,
+.run-root .unity-scroller__arrow-button--vertical,
+.run-root .unity-scroller__arrow-button--low,
+.run-root .unity-scroller__arrow-button--high,
+.run-root .unity-scroll-view__vertical-scroller .unity-base-slider__low-button,
+.run-root .unity-scroll-view__vertical-scroller .unity-base-slider__high-button,
+.run-root .unity-scroll-view__horizontal-scroller .unity-base-slider__low-button,
+.run-root .unity-scroll-view__horizontal-scroller .unity-base-slider__high-button {
+    display: none;
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    background-image: none;
+    -unity-background-image-tint-color: transparent;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.run-root .unity-scroller__arrow,
+.run-root .unity-scroller__button,
+.run-root .unity-scroll-view__vertical-scroller .unity-base-slider__low-button,
+.run-root .unity-scroll-view__vertical-scroller .unity-base-slider__high-button,
+.run-root .unity-scroll-view__horizontal-scroller .unity-base-slider__low-button,
+.run-root .unity-scroll-view__horizontal-scroller .unity-base-slider__high-button {
+    width: 0;
+    height: 0;
+}
+
+.run-root .unity-scroll-view__vertical-scroller:hover .unity-base-slider__dragger,
+.run-root .unity-scroll-view__horizontal-scroller:hover .unity-base-slider__dragger {
+    background-color: #4a4a4a;
+}

@@ -7,6 +7,7 @@ namespace RobotTwin.UI
     public class MainEditorController : MonoBehaviour
     {
         private UIDocument _doc;
+        private VisualElement _root;
         private Label _statusLabel;
         private Label _timeLabel;
         
@@ -26,6 +27,8 @@ namespace RobotTwin.UI
             _doc = GetComponent<UIDocument>();
             if (_doc == null) return;
             var root = _doc.rootVisualElement;
+            _root = root;
+            UiResponsive.Bind(_root, 1200f, 1600f, "editor-compact", "editor-medium", "editor-wide");
 
             // Bind Toolbar
             _statusLabel = root.Q<Label>("SimStatusLabel");

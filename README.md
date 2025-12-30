@@ -23,6 +23,8 @@ RoboTwin Studio empowers users to build and test Arduino circuits, firmware, and
 
 - `/CoreSim`: Pure C# simulation core (deterministic, no Unity dependencies).
 - `/UnityApp`: Unity-based visualization and UI layer.
+- `/FirmwareEngine`: C++ based virtual firmware execution environment.
+- `/NativeEngine`: Native simulation components and build system (CMake).
 - `/docs`: Technical documentation and architecture.
 
 ## Getting Started (User)

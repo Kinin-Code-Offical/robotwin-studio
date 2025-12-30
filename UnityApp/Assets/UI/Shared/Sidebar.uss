@@ -26,8 +26,9 @@
     width: 18px;
     height: 18px;
     margin-right: 8px;
-    -unity-background-image-tint-color: #4f80f8;
-    /* Icon placeholder usually handled by background-image in UXML or code */
+    background-image: url('/Assets/UI/Icons/hexagon.png');
+    -unity-background-image-tint-color: #ffffff;
+    -unity-background-scale-mode: scale-to-fit;
 }
 
 .sidebar-title {

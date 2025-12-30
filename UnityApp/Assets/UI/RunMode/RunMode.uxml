@@ -1,83 +1,76 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:Style src="../Theme/RobotwinTheme.uss" />
-    <ui:VisualElement style="flex-grow: 1; background-color: rgb(20, 20, 20);">
-        <!-- Top HUD -->
-        <ui:VisualElement style="flex-direction: row; height: 50px; background-color: rgb(40, 40, 40); align-items: center; padding-left: 10px;">
-            <ui:Label text="RUN MODE" style="color: white; font-weight: bold; font-size: 18px; margin-right: 20px;" />
-            
-            <!-- Health Status -->
-            <ui:VisualElement style="flex-direction: row; margin-right: 20px; align-items: center;">
-                <ui:Label text="BAT:" style="color: #AAAAAA; font-size: 12px; margin-right: 5px;" />
-                <ui:ProgressBar name="BatteryBar" title="100%" value="100" high-value="100" style="width: 80px; height: 15px; margin-right: 15px;" />
-                
-                <ui:Label text="TMP:" style="color: #AAAAAA; font-size: 12px; margin-right: 5px;" />
-                <ui:ProgressBar name="TempBar" title="25°C" value="25" high-value="100" style="width: 80px; height: 15px;" />
+    <ui:Style src="RunMode.uss" />
+    <ui:VisualElement class="run-root">
+        <ui:VisualElement class="topbar">
+            <ui:VisualElement class="topbar-left">
+                <ui:VisualElement class="brand-row">
+                    <ui:VisualElement class="brand-icon icon-hexagon" />
+                    <ui:Label text="ROBOTWIN" class="branding-text" />
+                    <ui:Label text="RUN MODE" class="branding-sub" />
+                </ui:VisualElement>
+                <ui:Label name="ProjectLabel" text="Project: -" class="subtle" />
             </ui:VisualElement>
-
-            <ui:Label name="TimeLabel" text="Time: 0.00s" style="color: yellow; margin-right: 15px;" />
-            <ui:Label name="TickLabel" text="Tick: 0" style="color: white; margin-right: 15px;" />
-            <ui:Button name="OpenLogsBtn" text="Open Folder" style="background-color: rgb(100, 100, 100); color: white; margin-right: 10px;" />
-            <ui:Button name="StopButton" text="Stop Simulation" style="background-color: rgb(180, 50, 50); color: white; width: 120px;" />
+            <ui:VisualElement class="topbar-center">
+                <ui:Label name="TimeLabel" text="Time: 0.00s" class="metric" />
+                <ui:Label name="TickLabel" text="Tick: 0" class="metric" />
+            </ui:VisualElement>
+            <ui:VisualElement class="topbar-right">
+                <ui:Button name="StopButton" text="Stop Simulation" class="btn danger" />
+            </ui:VisualElement>
         </ui:VisualElement>
 
-        <!-- Main Area -->
-        <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
-            
-            <!-- Left: Injection Panel -->
-            <ui:VisualElement style="width: 25%; min-width: 250px; background-color: rgb(30, 30, 30); padding: 10px; border-right-width: 1px; border-color: white;">
-                <ui:Label text="Signal Injection" style="color: white; font-weight: bold; margin-bottom: 10px; font-size: 14px;" />
-                
-                <!-- Creator -->
-                <ui:VisualElement style="background-color: rgb(40, 40, 40); padding: 5px; margin-bottom: 10px; border-radius: 4px;">
-                    <ui:Label text="Add Signal" style="color: white; margin-bottom: 5px;" />
-                    <ui:TextField name="NewSignalName" label="Name" value="input_1" style="color: white;" />
-                    <ui:DropdownField name="WaveformTypeDropdown" label="Type" choices="Constant,Step,Ramp,Sine" index="0" style="color: white;" />
-                    
-                    <!-- Params Container (Generic for MVP) -->
-                    <ui:VisualElement name="ParamsContainer" style="margin-top: 5px;">
-                        <ui:FloatField name="Param1" label="Value/Amp" value="1.0" style="color: white;" />
-                        <ui:FloatField name="Param2" label="Freq/EndVal" value="0.0" style="color: white;" />
-                        <ui:FloatField name="Param3" label="Offset" value="0.0" style="color: white;" />
-                    </ui:VisualElement>
-
-                    <ui:Button name="AddSignalBtn" text="+ Add Signal" style="margin-top: 5px; background-color: rgb(60, 60, 100); color: white;" />
-                </ui:VisualElement>
-
-                <!-- List -->
-                <ui:Label text="Active Signals" style="color: white; margin-bottom: 5px;" />
-                <ui:ScrollView name="SignalList" style="flex-grow: 1; background-color: rgb(25, 25, 25);" />
-                
-                <ui:Toggle name="InjectionActiveToggle" label="Master Injection Enable" value="true" style="margin-top: 10px; color: white;" />
+        <ui:VisualElement class="body">
+            <ui:VisualElement class="panel left-panel">
+                <ui:Label text="Circuit Elements" class="panel-title" />
+                <ui:TextField name="ComponentSearchField" label="Search" class="input input-dark" />
+                <ui:ScrollView name="ComponentList" class="component-list" />
             </ui:VisualElement>
 
-            <!-- Center/Right: Logs & Serial -->
-            <ui:VisualElement style="flex-grow: 1; flex-direction: column; width: 75%;">
-                
-                <!-- Event Log -->
-                <ui:VisualElement style="flex-grow: 1; padding: 10px; border-bottom-width: 1px; border-color: white;">
-                     <ui:Label text="Event Log" style="color: white; margin-bottom: 5px;" />
-                     <ui:ScrollView name="LogScroll" style="flex-grow: 1; background-color: black;">
-                        <ui:Label name="LogContentLabel" text="" style="color: white; padding: 5px;" />
-                     </ui:ScrollView>
+            <ui:VisualElement class="panel center-panel">
+                <ui:VisualElement class="card board-card">
+                    <ui:Label text="Live Circuit View" class="card-title" />
+                    <ui:VisualElement name="Circuit3DView" class="board-view" />
                 </ui:VisualElement>
 
-                <!-- Serial Stub -->
-                <ui:VisualElement style="height: 30%; min-height: 150px; padding: 10px; background-color: rgb(25, 25, 25);">
-                    <ui:Label text="Serial Console (Stub)" style="color: #4CAF50; font-family: monospace; margin-bottom: 5px;" />
-                     <ui:ScrollView name="SerialScroll" style="flex-grow: 1; background-color: black;">
-                        <ui:Label name="SerialContentLabel" text="Serial port initialized..." style="color: #4CAF50; padding: 5px; font-family: monospace;" />
-                     </ui:ScrollView>
-                </ui:VisualElement>
-                
-                <!-- Component States -->
-                <ui:VisualElement style="flex-grow: 1; padding: 10px; border-bottom-width: 1px; border-color: white;">
-                     <ui:Label text="Circuit State" style="color: white; margin-bottom: 5px; font-weight: bold;" />
-                     <ui:ScrollView name="ComponentList" style="flex-grow: 1; background-color: rgb(30,30,30);" />
+                <ui:VisualElement class="card log-card">
+                    <ui:Label text="Event Log" class="card-title" />
+                    <ui:ScrollView name="LogScroll" class="log-scroll">
+                        <ui:Label name="LogContentLabel" text="" class="log-text" />
+                    </ui:ScrollView>
                 </ui:VisualElement>
 
-                <ui:Label name="TelemetryPathLabel" text="Log Path: ..." style="color: white; font-size: 10px; padding: 5px;" />
+                <ui:Label name="TelemetryPathLabel" text="Log Path: ..." class="path-label" />
             </ui:VisualElement>
-        
+
+            <ui:VisualElement class="panel right-panel">
+                <ui:VisualElement class="card power-card">
+                    <ui:Label text="Power / USB" class="card-title" />
+                    <ui:ScrollView name="UsbBoardList" class="usb-list" />
+                    <ui:Label name="UsbStatusLabel" text="USB: N/A" class="subtle" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="card telemetry-card">
+                    <ui:Label text="Telemetry" class="card-title" />
+                    <ui:ScrollView name="TelemetryScroll" class="telemetry-scroll">
+                        <ui:VisualElement class="telemetry-row">
+                            <ui:Label text="Battery" class="subtle" />
+                            <ui:ProgressBar name="BatteryBar" title="N/A" value="0" high-value="100" class="telemetry-bar" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="telemetry-row">
+                            <ui:Label text="Temp" class="subtle" />
+                            <ui:ProgressBar name="TempBar" title="N/A" value="0" high-value="100" class="telemetry-bar" />
+                        </ui:VisualElement>
+                    </ui:ScrollView>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="card serial-card">
+                    <ui:Label text="Serial Console" class="card-title mono" />
+                    <ui:ScrollView name="SerialScroll" class="serial-scroll">
+                        <ui:Label name="SerialContentLabel" text="Serial ready." class="serial-text" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

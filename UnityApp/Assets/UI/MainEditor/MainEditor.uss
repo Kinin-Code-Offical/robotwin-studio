@@ -24,6 +24,68 @@
     background-color: var(--col-bg-dark);
 }
 
+.editor-compact {
+    --toolbar-height: 40px;
+    --activity-bar-width: 40px;
+    --panel-width: 220px;
+    --status-bar-height: 20px;
+}
+
+.editor-compact .top-toolbar {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.editor-compact .control-button {
+    width: 28px;
+    height: 28px;
+    margin: 0 2px;
+}
+
+.editor-compact .control-button.large {
+    width: 32px;
+    height: 32px;
+}
+
+.editor-compact .control-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.editor-compact .control-button.large .control-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.editor-compact .app-title {
+    font-size: 12px;
+}
+
+.editor-compact .tree-label {
+    font-size: 11px;
+}
+
+.editor-compact .status-item {
+    font-size: 10px;
+}
+
+.editor-medium {
+    --toolbar-height: 44px;
+    --activity-bar-width: 44px;
+    --panel-width: 250px;
+    --status-bar-height: 22px;
+}
+
+.editor-medium .control-button {
+    width: 30px;
+    height: 30px;
+}
+
+.editor-medium .control-button.large {
+    width: 36px;
+    height: 36px;
+}
+
 /* TOOLBAR */
 .top-toolbar {
     height: var(--toolbar-height);

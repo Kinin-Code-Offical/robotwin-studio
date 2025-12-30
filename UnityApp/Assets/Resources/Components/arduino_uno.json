@@ -16,7 +16,6 @@
     { "key": "virtualBoard", "value": "arduino-uno" },
     { "key": "clock", "value": "16MHz" },
     { "key": "vcc", "value": "5V" },
-    { "key": "firmware", "value": "blink:D13:500" },
     { "key": "nativeConfig", "value": "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}" }
   ]
 }

@@ -108,6 +108,8 @@ namespace RobotTwin.UI
             _root = _doc.rootVisualElement;
             if (_root == null) return;
 
+            UiResponsive.Bind(_root, 1200f, 1600f, "wizard-compact", "wizard-medium", "wizard-wide");
+
             LoadProjectRoot();
 
             InitializeUI();
@@ -696,16 +698,17 @@ namespace RobotTwin.UI
             string name = Path.GetFileNameWithoutExtension(proj.FullPath);
             string ext = Path.GetExtension(proj.FullPath);
             string copyPath = Path.Combine(dir, $"{name}_copy{ext}");
-            int index = 1;
-            while (File.Exists(copyPath))
-            {
-                copyPath = Path.Combine(dir, $"{name}_copy{index}{ext}");
-                index++;
-            }
+            copyPath = EnsureUniqueProjectPath(copyPath);
+            string workspaceSource = ResolveProjectWorkspaceRoot(proj.FullPath);
+            string workspaceTarget = ResolveProjectWorkspaceRoot(copyPath);
 
             try
             {
                 File.Copy(proj.FullPath, copyPath);
+                if (!string.IsNullOrWhiteSpace(workspaceSource) && Directory.Exists(workspaceSource))
+                {
+                    CopyDirectoryRecursive(workspaceSource, workspaceTarget);
+                }
             }
             catch (Exception ex)
             {
@@ -724,6 +727,11 @@ namespace RobotTwin.UI
             try
             {
                 File.Delete(proj.FullPath);
+                string workspaceRoot = ResolveProjectWorkspaceRoot(proj.FullPath);
+                if (!string.IsNullOrWhiteSpace(workspaceRoot) && Directory.Exists(workspaceRoot))
+                {
+                    Directory.Delete(workspaceRoot, true);
+                }
             }
             catch (Exception ex)
             {
@@ -753,10 +761,16 @@ namespace RobotTwin.UI
             }
 
             targetPath = EnsureUniqueProjectPath(targetPath);
+            string sourceWorkspace = ResolveProjectWorkspaceRoot(project.FullPath);
+            string targetWorkspace = ResolveProjectWorkspaceRoot(targetPath);
 
             try
             {
                 File.Move(project.FullPath, targetPath);
+                if (!string.IsNullOrWhiteSpace(sourceWorkspace) && Directory.Exists(sourceWorkspace))
+                {
+                    Directory.Move(sourceWorkspace, targetWorkspace);
+                }
             }
             catch (Exception ex)
             {
@@ -790,7 +804,7 @@ namespace RobotTwin.UI
 
         private string EnsureUniqueProjectPath(string targetPath)
         {
-            if (!File.Exists(targetPath)) return targetPath;
+            if (!File.Exists(targetPath) && !Directory.Exists(ResolveProjectWorkspaceRoot(targetPath))) return targetPath;
 
             string dir = Path.GetDirectoryName(targetPath) ?? _projectsPath;
             string name = Path.GetFileNameWithoutExtension(targetPath);
@@ -798,7 +812,7 @@ namespace RobotTwin.UI
             int index = 1;
             string candidate = targetPath;
 
-            while (File.Exists(candidate))
+            while (File.Exists(candidate) || Directory.Exists(ResolveProjectWorkspaceRoot(candidate)))
             {
                 candidate = Path.Combine(dir, $"{name}_{index}{ext}");
                 index++;
@@ -1501,6 +1515,7 @@ namespace RobotTwin.UI
 
             try
             {
+                ImportTemplateResources(_pendingTemplate.SourcePath, targetPath);
                 SimulationSerializer.SaveProject(manifest, targetPath);
             }
             catch (Exception ex)
@@ -1545,7 +1560,7 @@ namespace RobotTwin.UI
             {
                 try
                 {
-                    return SimulationSerializer.LoadProject(rtwinPath);
+                    return SimulationSerializer.LoadProject(rtwinPath, false);
                 }
                 catch (Exception ex)
                 {
@@ -1568,6 +1583,64 @@ namespace RobotTwin.UI
             }
 
             return null;
+        }
+
+        private void ImportTemplateResources(string templatePath, string projectPath)
+        {
+            if (string.IsNullOrWhiteSpace(templatePath) || string.IsNullOrWhiteSpace(projectPath)) return;
+
+            string workspaceRoot = ResolveProjectWorkspaceRoot(projectPath);
+            if (string.IsNullOrWhiteSpace(workspaceRoot)) return;
+
+            string codeSource = Path.Combine(templatePath, "Code");
+            string codeTarget = Path.Combine(workspaceRoot, "Code");
+            if (Directory.Exists(codeSource))
+            {
+                CopyDirectoryRecursive(codeSource, codeTarget);
+            }
+        }
+
+        private static void CopyDirectoryRecursive(string sourceDir, string targetDir)
+        {
+            Directory.CreateDirectory(targetDir);
+
+            foreach (var dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(sourceDir, dir);
+                Directory.CreateDirectory(Path.Combine(targetDir, rel));
+            }
+
+            foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(sourceDir, file);
+                string dest = Path.Combine(targetDir, rel);
+                string destDir = Path.GetDirectoryName(dest);
+                if (!string.IsNullOrWhiteSpace(destDir))
+                {
+                    Directory.CreateDirectory(destDir);
+                }
+                File.Copy(file, dest, true);
+            }
+        }
+
+        private static string ResolveProjectWorkspaceRoot(string projectPath)
+        {
+            if (string.IsNullOrWhiteSpace(projectPath)) return string.Empty;
+            if (Directory.Exists(projectPath)) return projectPath;
+
+            string projectDir = Path.GetDirectoryName(projectPath);
+            if (string.IsNullOrWhiteSpace(projectDir)) return string.Empty;
+
+            if (projectPath.EndsWith(".rtwin", StringComparison.OrdinalIgnoreCase))
+            {
+                string baseName = Path.GetFileNameWithoutExtension(projectPath);
+                if (!string.IsNullOrWhiteSpace(baseName))
+                {
+                    return Path.Combine(projectDir, baseName);
+                }
+            }
+
+            return projectDir;
         }
     }
 }

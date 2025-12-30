@@ -36,7 +36,7 @@ namespace RobotTwin.CoreSim.Runtime
         {
             if (string.IsNullOrWhiteSpace(firmware))
             {
-                return BuildBlinkProgram("D13", DefaultBlinkMs, hal);
+                return new VirtualArduinoProgram();
             }
 
             string[] parts = firmware.Split(':');
@@ -51,7 +51,7 @@ namespace RobotTwin.CoreSim.Runtime
                 return BuildBlinkProgram(pin, ms, hal);
             }
 
-            return BuildBlinkProgram("D13", DefaultBlinkMs, hal);
+            return new VirtualArduinoProgram();
         }
 
         public static VirtualArduinoProgram FromHexImage(VirtualHexImage image, out int decoded, out int unknown)

@@ -14,18 +14,41 @@ namespace RobotTwin.CoreSim.Engine
         private const double HighResistance = 1e9;
         private const double DefaultSwitchClosedResistance = 0.05;
         private const double ShortCircuitCurrentA = 2.0;
+        private const double DefaultContactResistance = 0.02;
+        private const double DefaultAmbientTempC = 25.0;
+        private const double DefaultResistorTempCoeff = 0.0004;
+        private const double DefaultResistorThermalResistance = 150.0;
+        private const double DefaultResistorThermalMass = 0.5;
+        private const double DefaultLedThermalResistance = 200.0;
+        private const double DefaultLedThermalMass = 0.2;
+        private const double DefaultDiodeIs = 1e-12;
+        private const double DefaultDiodeIdeality = 2.0;
+        private const double DefaultDiodeThermalVoltage = 0.02585;
+        private const double DefaultBatteryCapacityAh = 1.5;
+        private const double DefaultBatteryInternalResistance = 0.2;
+        private const double DefaultBatteryVoltageMin = 6.0;
+        private const double DefaultBatteryVoltageMax = 9.0;
 
-        private readonly Dictionary<string, string> _pinToNet = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _pinToNet =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int> _netToNode = new Dictionary<string, int>();
         private readonly HashSet<string> _groundNets = new HashSet<string>();
         private bool _hasExplicitGround;
+        private int _nextVirtualNodeIndex;
+        private readonly HashSet<string> _virtualNets = new HashSet<string>();
+        private readonly Dictionary<string, ThermalState> _resistorThermal = new Dictionary<string, ThermalState>();
+        private readonly Dictionary<string, ThermalState> _ledThermal = new Dictionary<string, ThermalState>();
+        private readonly Dictionary<string, BatteryState> _batteryStates = new Dictionary<string, BatteryState>();
+        private readonly Dictionary<string, string> _usbVirtualSupplyNets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         public TelemetryFrame Step(
             CircuitSpec spec,
             Dictionary<string, float> pinVoltages,
             Dictionary<string, List<PinState>> pinStatesByComponent,
             Dictionary<string, double> pullupResistances,
-            float dtSeconds)
+            float dtSeconds,
+            Dictionary<string, bool> boardPowerById = null,
+            Dictionary<string, bool> usbConnectedById = null)
         {
             var frame = new TelemetryFrame
             {
@@ -45,7 +68,7 @@ namespace RobotTwin.CoreSim.Engine
             var diodes = new List<DiodeElement>();
             var voltageSources = new List<VoltageSourceElement>();
 
-            BuildComponentElements(spec, pinVoltages, pinStatesByComponent, pullupResistances, resistors, diodes, voltageSources, frame);
+            BuildComponentElements(spec, pinVoltages, pinStatesByComponent, pullupResistances, resistors, diodes, voltageSources, frame, boardPowerById, usbConnectedById);
             var poweredNets = ValidateConnectivity(spec, voltageSources, frame);
             ValidateInputPins(pinStatesByComponent, poweredNets, frame);
 
@@ -56,7 +79,7 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             var nodeVoltages = ExtractNodeVoltages(solution, voltageSources.Count);
-            PopulateTelemetry(frame, spec, resistors, diodes, voltageSources, nodeVoltages, solution);
+            PopulateTelemetry(frame, spec, resistors, diodes, voltageSources, nodeVoltages, solution, dtSeconds);
 
             return frame;
         }
@@ -66,6 +89,8 @@ namespace RobotTwin.CoreSim.Engine
             _netToNode.Clear();
             _groundNets.Clear();
             _hasExplicitGround = false;
+            _virtualNets.Clear();
+            _nextVirtualNodeIndex = 0;
 
             foreach (var net in spec.Nets)
             {
@@ -102,6 +127,7 @@ namespace RobotTwin.CoreSim.Engine
                 if (_netToNode.ContainsKey(net.Id)) continue;
                 _netToNode[net.Id] = index++;
             }
+            _nextVirtualNodeIndex = index;
         }
 
         private void BuildPinToNetMap(CircuitSpec spec)
@@ -146,7 +172,9 @@ namespace RobotTwin.CoreSim.Engine
             List<ResistorElement> resistors,
             List<DiodeElement> diodes,
             List<VoltageSourceElement> voltageSources,
-            TelemetryFrame frame)
+            TelemetryFrame frame,
+            Dictionary<string, bool> boardPowerById,
+            Dictionary<string, bool> usbConnectedById)
         {
             foreach (var comp in spec.Components)
             {
@@ -157,7 +185,7 @@ namespace RobotTwin.CoreSim.Engine
                         AddTwoPinResistor(comp, "A", "B", resistors, frame);
                         break;
                     case "Capacitor":
-                        AddTwoPinResistor(comp, "A", "B", resistors, frame, HighResistance);
+                        AddTwoPinResistor(comp, "A", "B", resistors, frame, HighResistance, false);
                         break;
                     case "LED":
                         AddLed(comp, diodes, frame);
@@ -166,7 +194,7 @@ namespace RobotTwin.CoreSim.Engine
                         AddTwoPinResistor(comp, "A", "B", resistors, frame, ParseResistance(comp, 10.0));
                         break;
                     case "Battery":
-                        AddVoltageSource(comp, "+", "-", ParseVoltage(comp, 9.0), voltageSources, frame);
+                        AddBattery(comp, voltageSources, frame);
                         break;
                     case "Button":
                     case "Switch":
@@ -175,8 +203,8 @@ namespace RobotTwin.CoreSim.Engine
                     case "ArduinoUno":
                     case "ArduinoNano":
                     case "ArduinoProMini":
-                        AddArduinoSources(comp, pinVoltages, voltageSources, frame);
-                        AddArduinoPullups(comp, pinStatesByComponent, pullupResistances, resistors, frame);
+                        AddArduinoSources(comp, pinVoltages, voltageSources, frame, boardPowerById, usbConnectedById);
+                        AddArduinoPullups(comp, pinStatesByComponent, pullupResistances, resistors, frame, usbConnectedById);
                         break;
                 }
             }
@@ -188,7 +216,8 @@ namespace RobotTwin.CoreSim.Engine
             string pinB,
             List<ResistorElement> resistors,
             TelemetryFrame frame,
-            double resistanceOverride = -1.0)
+            double resistanceOverride = -1.0,
+            bool trackThermal = true)
         {
             var netA = GetNetFor(comp.Id, pinA);
             var netB = GetNetFor(comp.Id, pinB);
@@ -198,8 +227,17 @@ namespace RobotTwin.CoreSim.Engine
                 return;
             }
 
-            double resistance = resistanceOverride > 0 ? resistanceOverride : ParseResistance(comp, 1000.0);
-            resistors.Add(new ResistorElement(comp.Id, netA, netB, resistance));
+            double baseResistance = resistanceOverride > 0 ? resistanceOverride : ParseResistance(comp, 1000.0);
+            double contactResistance = TryGetDouble(comp, "contactResistance", out var contact) ? contact : DefaultContactResistance;
+            ThermalState thermal = null;
+            double resistance = baseResistance;
+            if (trackThermal)
+            {
+                thermal = GetOrCreateThermalState(_resistorThermal, comp, DefaultResistorTempCoeff, DefaultResistorThermalResistance, DefaultResistorThermalMass);
+                resistance = ApplyTempCoeff(baseResistance, thermal);
+            }
+            resistance += contactResistance * 2.0;
+            resistors.Add(new ResistorElement(comp.Id, netA, netB, resistance, baseResistance, contactResistance, thermal, trackThermal));
         }
 
         private void AddLed(ComponentSpec comp, List<DiodeElement> diodes, TelemetryFrame frame)
@@ -215,7 +253,26 @@ namespace RobotTwin.CoreSim.Engine
             double forwardV = ParseVoltage(comp, DefaultLedForwardV, "forwardV");
             double maxCurrent = ParseCurrent(comp, 0.02, "If_max");
             if (maxCurrent <= 0) maxCurrent = ParseCurrent(comp, 0.02, "current");
-            diodes.Add(new DiodeElement(comp.Id, anodeNet, cathodeNet, forwardV, maxCurrent));
+            double saturationCurrent = TryGetDouble(comp, "Is", out var isVal) ? isVal : DefaultDiodeIs;
+            double ideality = TryGetDouble(comp, "ideality", out var nVal) ? nVal : DefaultDiodeIdeality;
+            if (TryGetDouble(comp, "n", out var nAlt)) ideality = nAlt;
+            double seriesResistance = TryGetDouble(comp, "seriesResistance", out var rsVal) ? rsVal : 0.0;
+            double contactResistance = TryGetDouble(comp, "contactResistance", out var contact) ? contact : DefaultContactResistance;
+            var thermal = GetOrCreateThermalState(_ledThermal, comp, 0.0, DefaultLedThermalResistance, DefaultLedThermalMass);
+
+            diodes.Add(new DiodeElement(
+                comp.Id,
+                anodeNet,
+                cathodeNet,
+                forwardV,
+                maxCurrent,
+                saturationCurrent,
+                ideality,
+                DefaultDiodeThermalVoltage,
+                seriesResistance,
+                contactResistance,
+                thermal,
+                true));
         }
 
         private void AddVoltageSource(
@@ -234,7 +291,27 @@ namespace RobotTwin.CoreSim.Engine
                 return;
             }
 
-            voltageSources.Add(new VoltageSourceElement(comp.Id, netPlus, netMinus, voltage));
+            voltageSources.Add(new VoltageSourceElement(comp.Id, netPlus, netMinus, voltage, false, null));
+        }
+
+        private void AddBattery(
+            ComponentSpec comp,
+            List<VoltageSourceElement> voltageSources,
+            TelemetryFrame frame)
+        {
+            var netPlus = GetNetFor(comp.Id, "+");
+            var netMinus = GetNetFor(comp.Id, "-");
+            if (!IsConnected(netPlus) || !IsConnected(netMinus))
+            {
+                frame.ValidationMessages.Add($"Source '{comp.Id}' missing pin connection.");
+                return;
+            }
+
+            var state = GetOrCreateBatteryState(comp);
+            double ocv = ComputeBatteryOpenCircuitVoltage(state);
+            double voltage = ocv - state.LastCurrent * state.InternalResistance;
+            voltage = Clamp(voltage, state.VoltageMin, state.VoltageMax);
+            voltageSources.Add(new VoltageSourceElement(comp.Id, netPlus, netMinus, voltage, true, state));
         }
 
         private void AddButton(ComponentSpec comp, List<ResistorElement> resistors, TelemetryFrame frame)
@@ -242,15 +319,31 @@ namespace RobotTwin.CoreSim.Engine
             bool closed = IsSwitchClosed(comp);
             double closedResistance = ParseResistance(comp, DefaultSwitchClosedResistance);
             double resistance = closed ? closedResistance : HighResistance;
-            AddTwoPinResistor(comp, "A", "B", resistors, frame, resistance);
+            AddTwoPinResistor(comp, "A", "B", resistors, frame, resistance, false);
         }
 
         private void AddArduinoSources(
             ComponentSpec comp,
             Dictionary<string, float> pinVoltages,
             List<VoltageSourceElement> voltageSources,
-            TelemetryFrame frame)
+            TelemetryFrame frame,
+            Dictionary<string, bool> boardPowerById,
+            Dictionary<string, bool> usbConnectedById)
         {
+            if (!IsBoardPowered(comp, boardPowerById))
+            {
+                return;
+            }
+            if (IsUsbConnected(comp, usbConnectedById) && !HasAnySupplyNet(comp))
+            {
+                string usbNet = GetUsbSupplyNet(comp);
+                RegisterVirtualNet(usbNet);
+                var gndNet = GetGroundNet();
+                if (IsConnected(gndNet))
+                {
+                    voltageSources.Add(new VoltageSourceElement($"{comp.Id}.USB", usbNet, gndNet, 5.0, false, null));
+                }
+            }
             AddArduinoPinSource(comp, "5V", 5.0, voltageSources);
             AddArduinoPinSource(comp, "3V3", 3.3, voltageSources);
             AddArduinoPinSource(comp, "IOREF", 5.0, voltageSources);
@@ -267,11 +360,41 @@ namespace RobotTwin.CoreSim.Engine
             }
         }
 
+        private static bool IsBoardPowered(ComponentSpec comp, Dictionary<string, bool> boardPowerById)
+        {
+            if (boardPowerById == null || comp == null || string.IsNullOrWhiteSpace(comp.Id)) return true;
+            return !boardPowerById.TryGetValue(comp.Id, out var powered) || powered;
+        }
+
+        private static bool IsUsbConnected(ComponentSpec comp, Dictionary<string, bool> usbConnectedById)
+        {
+            if (usbConnectedById == null || comp == null || string.IsNullOrWhiteSpace(comp.Id)) return true;
+            return !usbConnectedById.TryGetValue(comp.Id, out var connected) || connected;
+        }
+
+        private bool HasAnySupplyNet(ComponentSpec comp)
+        {
+            return IsConnected(GetNetFor(comp.Id, "5V")) ||
+                   IsConnected(GetNetFor(comp.Id, "3V3")) ||
+                   IsConnected(GetNetFor(comp.Id, "IOREF")) ||
+                   IsConnected(GetNetFor(comp.Id, "VCC")) ||
+                   IsConnected(GetNetFor(comp.Id, "VIN"));
+        }
+
+        private string GetUsbSupplyNet(ComponentSpec comp)
+        {
+            if (comp == null || string.IsNullOrWhiteSpace(comp.Id)) return "USB5V";
+            if (_usbVirtualSupplyNets.TryGetValue(comp.Id, out var netId)) return netId;
+            netId = $"USB5V_{comp.Id}";
+            _usbVirtualSupplyNets[comp.Id] = netId;
+            return netId;
+        }
+
         private void AddArduinoPinSource(ComponentSpec comp, string pin, double voltage, List<VoltageSourceElement> voltageSources)
         {
             var net = GetNetFor(comp.Id, pin);
             if (!IsConnected(net)) return;
-            voltageSources.Add(new VoltageSourceElement($"{comp.Id}.{pin}", net, GetGroundNet(), voltage));
+            voltageSources.Add(new VoltageSourceElement($"{comp.Id}.{pin}", net, GetGroundNet(), voltage, false, null));
         }
 
         private void AddArduinoPullups(
@@ -279,7 +402,8 @@ namespace RobotTwin.CoreSim.Engine
             Dictionary<string, List<PinState>> pinStatesByComponent,
             Dictionary<string, double> pullupResistances,
             List<ResistorElement> resistors,
-            TelemetryFrame frame)
+            TelemetryFrame frame,
+            Dictionary<string, bool> usbConnectedById)
         {
             if (pinStatesByComponent == null || comp == null) return;
             if (!pinStatesByComponent.TryGetValue(comp.Id, out var states) || states == null) return;
@@ -291,6 +415,11 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             var vccNet = GetNetFor(comp.Id, "5V");
+            if (!IsConnected(vccNet) && IsUsbConnected(comp, usbConnectedById))
+            {
+                vccNet = GetUsbSupplyNet(comp);
+                RegisterVirtualNet(vccNet);
+            }
             if (!IsConnected(vccNet))
             {
                 frame.ValidationMessages.Add($"Pull-up supply missing for '{comp.Id}' (5V not connected).");
@@ -306,7 +435,7 @@ namespace RobotTwin.CoreSim.Engine
                     frame.ValidationMessages.Add($"Pull-up pin '{comp.Id}.{state.Pin}' missing net.");
                     continue;
                 }
-                resistors.Add(new ResistorElement($"{comp.Id}.{state.Pin}:PULLUP", pinNet, vccNet, pullupResistance));
+                resistors.Add(new ResistorElement($"{comp.Id}.{state.Pin}:PULLUP", pinNet, vccNet, pullupResistance, pullupResistance, 0.0, null, false));
             }
         }
 
@@ -325,14 +454,14 @@ namespace RobotTwin.CoreSim.Engine
                 return null;
             }
 
-            var diodeStates = new Dictionary<string, double>();
+            var diodeStates = new Dictionary<string, DiodeState>();
             for (int i = 0; i < 3; i++)
             {
                 var matrix = new double[size, size];
                 var rhs = new double[size];
 
                 AddResistors(matrix, resistors);
-                AddDiodes(matrix, diodes, diodeStates);
+                AddDiodes(matrix, rhs, diodes, diodeStates);
                 AddVoltageSources(matrix, rhs, voltageSources, nodeCount);
 
                 if (!TrySolve(matrix, rhs, out var solution))
@@ -342,7 +471,7 @@ namespace RobotTwin.CoreSim.Engine
                     return null;
                 }
 
-                UpdateDiodeStates(diodeStates, diodes, voltageSources, solution, nodeCount);
+                UpdateDiodeStates(diodeStates, diodes, solution, nodeCount);
                 if (i == 2) return solution;
             }
 
@@ -367,15 +496,17 @@ namespace RobotTwin.CoreSim.Engine
             }
         }
 
-        private void AddDiodes(double[,] matrix, List<DiodeElement> diodes, Dictionary<string, double> diodeStates)
+        private void AddDiodes(double[,] matrix, double[] rhs, List<DiodeElement> diodes, Dictionary<string, DiodeState> diodeStates)
         {
             foreach (var diode in diodes)
             {
-                if (!diodeStates.TryGetValue(diode.Id, out var resistance))
+                if (!diodeStates.TryGetValue(diode.Id, out var state))
                 {
-                    resistance = HighResistance;
+                    state = new DiodeState { IsOn = false };
+                    diodeStates[diode.Id] = state;
                 }
 
+                double resistance = state.IsOn ? GetDiodeOnResistance(diode) : HighResistance;
                 double g = 1.0 / Math.Max(resistance, 1e-6);
                 int a = GetNodeIndex(diode.AnodeNet);
                 int c = GetNodeIndex(diode.CathodeNet);
@@ -386,6 +517,13 @@ namespace RobotTwin.CoreSim.Engine
                 {
                     matrix[a, c] -= g;
                     matrix[c, a] -= g;
+                }
+
+                if (state.IsOn)
+                {
+                    double vf = GetDiodeForwardVoltage(diode);
+                    double biasCurrent = -vf / Math.Max(resistance, 1e-6);
+                    AddCurrentSource(rhs, diode.AnodeNet, diode.CathodeNet, biasCurrent);
                 }
             }
         }
@@ -413,10 +551,17 @@ namespace RobotTwin.CoreSim.Engine
             }
         }
 
+        private void AddCurrentSource(double[] rhs, string netA, string netB, double current)
+        {
+            int a = GetNodeIndex(netA);
+            int b = GetNodeIndex(netB);
+            if (a != -1) rhs[a] -= current;
+            if (b != -1) rhs[b] += current;
+        }
+
         private void UpdateDiodeStates(
-            Dictionary<string, double> diodeStates,
+            Dictionary<string, DiodeState> diodeStates,
             List<DiodeElement> diodes,
-            List<VoltageSourceElement> sources,
             double[] solution,
             int nodeCount)
         {
@@ -425,8 +570,47 @@ namespace RobotTwin.CoreSim.Engine
                 var vA = GetNodeVoltage(diode.AnodeNet, solution, nodeCount);
                 var vC = GetNodeVoltage(diode.CathodeNet, solution, nodeCount);
                 double vDiff = vA - vC;
-                diodeStates[diode.Id] = vDiff >= diode.ForwardVoltage ? DefaultLedOnResistance : HighResistance;
+                double vf = GetDiodeForwardVoltage(diode);
+                double onThreshold = vf * 0.95;
+                double offThreshold = vf * 0.85;
+
+                if (!diodeStates.TryGetValue(diode.Id, out var state))
+                {
+                    state = new DiodeState();
+                    diodeStates[diode.Id] = state;
+                }
+
+                if (state.IsOn)
+                {
+                    if (vDiff < offThreshold) state.IsOn = false;
+                }
+                else
+                {
+                    if (vDiff > onThreshold) state.IsOn = true;
+                }
             }
+        }
+
+        private double ComputeDiodeCurrent(DiodeElement diode, double vDiff)
+        {
+            double vf = GetDiodeForwardVoltage(diode);
+            if (vDiff <= vf) return 0.0;
+            double rOn = GetDiodeOnResistance(diode);
+            return (vDiff - vf) / rOn;
+        }
+
+        private double GetDiodeOnResistance(DiodeElement diode)
+        {
+            double rOn = diode.SeriesResistance + diode.ContactResistance;
+            if (rOn <= 0.0) rOn = DefaultLedOnResistance;
+            return Math.Max(rOn, 0.001);
+        }
+
+        private double GetDiodeForwardVoltage(DiodeElement diode)
+        {
+            double vf = diode.ForwardVoltage;
+            if (vf <= 0.0) vf = DefaultLedForwardV;
+            return vf;
         }
 
         private Dictionary<string, double> ExtractNodeVoltages(double[] solution, int sourceCount)
@@ -451,7 +635,8 @@ namespace RobotTwin.CoreSim.Engine
             List<DiodeElement> diodes,
             List<VoltageSourceElement> sources,
             Dictionary<string, double> voltages,
-            double[] solution)
+            double[] solution,
+            float dtSeconds)
         {
             foreach (var net in voltages)
             {
@@ -462,9 +647,20 @@ namespace RobotTwin.CoreSim.Engine
             {
                 double vA = GetNodeVoltage(res.NetA, voltages);
                 double vB = GetNodeVoltage(res.NetB, voltages);
-                double current = (vA - vB) / Math.Max(res.Resistance, 1e-6);
+                double vDiff = vA - vB;
+                double current = vDiff / Math.Max(res.Resistance, 1e-6);
+                double power = current * current * res.Resistance;
                 frame.Signals[$"COMP:{res.Id}:I"] = current;
-                frame.Signals[$"COMP:{res.Id}:P"] = current * current * res.Resistance;
+                frame.Signals[$"COMP:{res.Id}:V"] = vDiff;
+                frame.Signals[$"COMP:{res.Id}:P"] = power;
+                frame.Signals[$"COMP:{res.Id}:R"] = res.Resistance;
+
+                if (res.TrackThermal && res.Thermal != null)
+                {
+                    UpdateThermalState(res.Thermal, Math.Abs(power), dtSeconds);
+                    frame.Signals[$"COMP:{res.Id}:T"] = res.Thermal.TempC;
+                    res.Resistance = ApplyTempCoeff(res.BaseResistance, res.Thermal) + res.ContactResistance * 2.0;
+                }
             }
 
             foreach (var diode in diodes)
@@ -472,11 +668,22 @@ namespace RobotTwin.CoreSim.Engine
                 double vA = GetNodeVoltage(diode.AnodeNet, voltages);
                 double vB = GetNodeVoltage(diode.CathodeNet, voltages);
                 double vDiff = vA - vB;
-                double resistance = vDiff >= diode.ForwardVoltage ? DefaultLedOnResistance : HighResistance;
-                double current = vDiff / Math.Max(resistance, 1e-6);
+                double current = ComputeDiodeCurrent(diode, vDiff);
+                double power = Math.Abs(current * vDiff);
                 frame.Signals[$"COMP:{diode.Id}:I"] = current;
-                frame.Signals[$"COMP:{diode.Id}:P"] = Math.Abs(current * vDiff);
-                if (diode.MaxCurrent > 0 && current > diode.MaxCurrent)
+                frame.Signals[$"COMP:{diode.Id}:V"] = vDiff;
+                frame.Signals[$"COMP:{diode.Id}:P"] = power;
+                if (diode.MaxCurrent > 0)
+                {
+                    double intensity = Clamp(Math.Abs(current) / diode.MaxCurrent, 0.0, 1.0);
+                    frame.Signals[$"COMP:{diode.Id}:L"] = intensity;
+                }
+                if (diode.TrackThermal && diode.Thermal != null)
+                {
+                    UpdateThermalState(diode.Thermal, power, dtSeconds);
+                    frame.Signals[$"COMP:{diode.Id}:T"] = diode.Thermal.TempC;
+                }
+                if (diode.MaxCurrent > 0 && Math.Abs(current) > diode.MaxCurrent)
                 {
                     frame.ValidationMessages.Add($"Component Blown: {diode.Id} overcurrent {current * 1000.0:F1}mA");
                 }
@@ -490,6 +697,15 @@ namespace RobotTwin.CoreSim.Engine
                 {
                     double current = solution[idx];
                     frame.Signals[$"SRC:{sources[i].Id}:I"] = current;
+                    frame.Signals[$"SRC:{sources[i].Id}:V"] = sources[i].Voltage;
+                    frame.Signals[$"SRC:{sources[i].Id}:P"] = current * sources[i].Voltage;
+                    if (sources[i].IsBattery && sources[i].Battery != null)
+                    {
+                        UpdateBatteryState(sources[i].Battery, current, dtSeconds);
+                        sources[i].Battery.LastCurrent = current;
+                        frame.Signals[$"SRC:{sources[i].Id}:SOC"] = sources[i].Battery.Soc;
+                        frame.Signals[$"SRC:{sources[i].Id}:RINT"] = sources[i].Battery.InternalResistance;
+                    }
                     if (Math.Abs(current) > ShortCircuitCurrentA)
                     {
                         frame.ValidationMessages.Add($"High current on {sources[i].Id}: {current:F2}A");
@@ -646,6 +862,15 @@ namespace RobotTwin.CoreSim.Engine
             return _pinToNet.TryGetValue(key, out var net) ? net : string.Empty;
         }
 
+        private void RegisterVirtualNet(string netId)
+        {
+            if (string.IsNullOrWhiteSpace(netId)) return;
+            if (_groundNets.Contains(netId)) return;
+            if (_netToNode.ContainsKey(netId)) return;
+            _netToNode[netId] = _nextVirtualNodeIndex++;
+            _virtualNets.Add(netId);
+        }
+
         private int GetNodeIndex(string netId)
         {
             if (string.IsNullOrWhiteSpace(netId)) return -1;
@@ -691,6 +916,112 @@ namespace RobotTwin.CoreSim.Engine
         private static bool IsDigitalPin(string pin)
         {
             return pin.StartsWith("D", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private ThermalState GetOrCreateThermalState(
+            Dictionary<string, ThermalState> map,
+            ComponentSpec comp,
+            double defaultTempCoeff,
+            double defaultThermalResistance,
+            double defaultThermalMass)
+        {
+            if (comp == null) return null;
+            if (map.TryGetValue(comp.Id, out var state)) return state;
+
+            double ambient = TryGetDouble(comp, "ambientTemp", out var amb) ? amb : DefaultAmbientTempC;
+            double tempCoeff = TryGetDouble(comp, "tempCoeff", out var tc) ? tc : defaultTempCoeff;
+            if (TryGetDouble(comp, "tc", out var tcAlt)) tempCoeff = tcAlt;
+            double thermalResistance = TryGetDouble(comp, "thermalResistance", out var rth) ? rth : defaultThermalResistance;
+            if (TryGetDouble(comp, "rth", out var rthAlt)) thermalResistance = rthAlt;
+            double thermalMass = TryGetDouble(comp, "thermalMass", out var cth) ? cth : defaultThermalMass;
+            if (TryGetDouble(comp, "cth", out var cthAlt)) thermalMass = cthAlt;
+
+            state = new ThermalState
+            {
+                TempC = ambient,
+                AmbientTempC = ambient,
+                ThermalResistance = Math.Max(thermalResistance, 0.001),
+                ThermalMass = Math.Max(thermalMass, 0.001),
+                TempCoeff = tempCoeff
+            };
+            map[comp.Id] = state;
+            return state;
+        }
+
+        private static double ApplyTempCoeff(double baseResistance, ThermalState thermal)
+        {
+            if (thermal == null) return baseResistance;
+            double delta = thermal.TempC - thermal.AmbientTempC;
+            return baseResistance * (1.0 + thermal.TempCoeff * delta);
+        }
+
+        private BatteryState GetOrCreateBatteryState(ComponentSpec comp)
+        {
+            if (comp == null) return null;
+            if (_batteryStates.TryGetValue(comp.Id, out var state)) return state;
+
+            double nominal = ParseVoltage(comp, 9.0);
+            double capacityAh = TryGetDouble(comp, "capacityAh", out var cap) ? cap : DefaultBatteryCapacityAh;
+            double internalResistance = TryGetDouble(comp, "internalResistance", out var rint) ? rint : DefaultBatteryInternalResistance;
+            double voltageMin = TryGetDouble(comp, "voltageMin", out var vmin) ? vmin : Math.Min(DefaultBatteryVoltageMin, nominal);
+            double voltageMax = TryGetDouble(comp, "voltageMax", out var vmax) ? vmax : Math.Max(DefaultBatteryVoltageMax, nominal);
+            double soc = TryGetDouble(comp, "soc", out var socVal) ? socVal : 1.0;
+            if (soc > 1.0 && soc <= 100.0) soc /= 100.0;
+            soc = Clamp(soc, 0.0, 1.0);
+
+            state = new BatteryState
+            {
+                Soc = soc,
+                CapacityAh = Math.Max(capacityAh, 0.001),
+                InternalResistance = Math.Max(internalResistance, 0.0),
+                VoltageMin = voltageMin,
+                VoltageMax = voltageMax,
+                NominalVoltage = nominal,
+                LastCurrent = 0.0
+            };
+            _batteryStates[comp.Id] = state;
+            return state;
+        }
+
+        private static double ComputeBatteryOpenCircuitVoltage(BatteryState state)
+        {
+            if (state == null) return 0.0;
+            double soc = Clamp(state.Soc, 0.0, 1.0);
+            return state.VoltageMin + (state.VoltageMax - state.VoltageMin) * soc;
+        }
+
+        private static void UpdateBatteryState(BatteryState state, double current, float dtSeconds)
+        {
+            if (state == null || dtSeconds <= 0) return;
+            double capacityC = state.CapacityAh * 3600.0;
+            if (capacityC <= 0) return;
+            double deltaSoc = (current * dtSeconds) / capacityC;
+            state.Soc = Clamp(state.Soc - deltaSoc, 0.0, 1.0);
+        }
+
+        private static void UpdateThermalState(ThermalState state, double power, float dtSeconds)
+        {
+            if (state == null || dtSeconds <= 0) return;
+            double rth = Math.Max(state.ThermalResistance, 0.001);
+            double cth = Math.Max(state.ThermalMass, 0.001);
+            double delta = state.TempC - state.AmbientTempC;
+            double dTdt = (power - (delta / rth)) / cth;
+            state.TempC += dTdt * dtSeconds;
+        }
+
+        private static bool TryGetDouble(ComponentSpec comp, string key, out double value)
+        {
+            value = 0.0;
+            if (comp?.Properties == null || string.IsNullOrWhiteSpace(key)) return false;
+            if (!comp.Properties.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw)) return false;
+            return TryParseValue(raw, out value);
+        }
+
+        private static double Clamp(double value, double min, double max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
         }
 
         private static double ParseResistance(ComponentSpec comp, double fallback)
@@ -833,19 +1164,52 @@ namespace RobotTwin.CoreSim.Engine
             return true;
         }
 
+        private class ThermalState
+        {
+            public double TempC;
+            public double AmbientTempC;
+            public double ThermalResistance;
+            public double ThermalMass;
+            public double TempCoeff;
+        }
+
+        private class BatteryState
+        {
+            public double Soc;
+            public double CapacityAh;
+            public double InternalResistance;
+            public double VoltageMin;
+            public double VoltageMax;
+            public double NominalVoltage;
+            public double LastCurrent;
+        }
+
+        private class DiodeState
+        {
+            public bool IsOn;
+        }
+
         private class ResistorElement
         {
             public string Id { get; }
             public string NetA { get; }
             public string NetB { get; }
-            public double Resistance { get; }
+            public double Resistance { get; set; }
+            public double BaseResistance { get; }
+            public double ContactResistance { get; }
+            public ThermalState Thermal { get; }
+            public bool TrackThermal { get; }
 
-            public ResistorElement(string id, string netA, string netB, double resistance)
+            public ResistorElement(string id, string netA, string netB, double resistance, double baseResistance, double contactResistance, ThermalState thermal, bool trackThermal)
             {
                 Id = id;
                 NetA = netA;
                 NetB = netB;
                 Resistance = resistance;
+                BaseResistance = baseResistance;
+                ContactResistance = contactResistance;
+                Thermal = thermal;
+                TrackThermal = trackThermal;
             }
         }
 
@@ -856,14 +1220,40 @@ namespace RobotTwin.CoreSim.Engine
             public string CathodeNet { get; }
             public double ForwardVoltage { get; }
             public double MaxCurrent { get; }
+            public double SaturationCurrent { get; }
+            public double Ideality { get; }
+            public double ThermalVoltage { get; }
+            public double SeriesResistance { get; }
+            public double ContactResistance { get; }
+            public ThermalState Thermal { get; }
+            public bool TrackThermal { get; }
 
-            public DiodeElement(string id, string anodeNet, string cathodeNet, double forwardVoltage, double maxCurrent)
+            public DiodeElement(
+                string id,
+                string anodeNet,
+                string cathodeNet,
+                double forwardVoltage,
+                double maxCurrent,
+                double saturationCurrent,
+                double ideality,
+                double thermalVoltage,
+                double seriesResistance,
+                double contactResistance,
+                ThermalState thermal,
+                bool trackThermal)
             {
                 Id = id;
                 AnodeNet = anodeNet;
                 CathodeNet = cathodeNet;
                 ForwardVoltage = forwardVoltage;
                 MaxCurrent = maxCurrent;
+                SaturationCurrent = saturationCurrent;
+                Ideality = ideality;
+                ThermalVoltage = thermalVoltage;
+                SeriesResistance = seriesResistance;
+                ContactResistance = contactResistance;
+                Thermal = thermal;
+                TrackThermal = trackThermal;
             }
         }
 
@@ -872,14 +1262,18 @@ namespace RobotTwin.CoreSim.Engine
             public string Id { get; }
             public string NetPlus { get; }
             public string NetMinus { get; }
-            public double Voltage { get; }
+            public double Voltage { get; set; }
+            public bool IsBattery { get; }
+            public BatteryState Battery { get; }
 
-            public VoltageSourceElement(string id, string netPlus, string netMinus, double voltage)
+            public VoltageSourceElement(string id, string netPlus, string netMinus, double voltage, bool isBattery, BatteryState battery)
             {
                 Id = id;
                 NetPlus = netPlus;
                 NetMinus = netMinus;
                 Voltage = voltage;
+                IsBattery = isBattery;
+                Battery = battery;
             }
         }
     }
