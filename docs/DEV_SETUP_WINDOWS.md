@@ -13,6 +13,21 @@
 ## Build Instructions
 1. Open terminal at repo root.
 
+## Building Native Components (C++)
+Required for FirmwareEngine and NativeEngine.
+
+**Prerequisites:**
+- **CMake**: 3.20 or later.
+- **Compiler**: MSVC (Visual Studio 2022 Build Tools) or MinGW-w64.
+
+```powershell
+# Build FirmwareEngine (VirtualArduino)
+python tools/rt_tool.py build-firmware
+
+# Build NativeEngine (DLL)
+python tools/rt_tool.py build-native
+```
+
 ## Building CoreSim
 ```powershell
 dotnet restore CoreSim/CoreSim.sln
