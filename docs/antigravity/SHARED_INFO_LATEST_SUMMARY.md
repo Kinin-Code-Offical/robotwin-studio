@@ -1,6 +1,6 @@
 ﻿# Latest Shared Info Summary
 
-**Generated**: 20251230_120000Z (UTC)
+**Generated**: 20251230_121500Z (UTC)
 **Type**: dir
 **Mode**: COPY
 **Remote Path**: gdrive:robotwin_studio/shared_infos/latest_docs/docs
@@ -65,7 +65,8 @@
 
 - **FirmwareEngine:** C++ Virtual Arduino implementation added.
 - **NativeEngine:** CMake build system and native simulation host structure initialized.
-- **Documentation:** Updated README and VERSIONS to reflect native components.
+- **Documentation:** Added `ARCHITECTURE_NATIVE.md` and updated setup guides.
+- **IPC:** Named Pipe protocol defined and documented.
 
 _Signed, ANTIGRAVITY_
 

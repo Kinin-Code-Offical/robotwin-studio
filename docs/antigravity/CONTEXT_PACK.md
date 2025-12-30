@@ -13,7 +13,7 @@ The Context Pack allows you to generate a comprehensive snapshot of the reposito
 - **Open MVP Issues**: List of active MVP items.
 - **Open/Merged PRs**: Recent pull request activity.
 - **Branch Parity**: Status of local branches vs origin/main.
-- **Logs**: Copies of `LAST_RUN.md` and `ACTIVITY_LOG.md`.
+- **Logs**: Copies of `LAST_RUN.md`, `ACTIVITY_LOG.md`, and `SHARED_INFO_LATEST_SUMMARY.md`.
 
 ### FULL
 - **MIN Pack** contents.
@@ -22,6 +22,7 @@ The Context Pack allows you to generate a comprehensive snapshot of the reposito
 - **Labels**: Repo labels.
 - **File Index**: `git_ls_files.txt`.
 - **Commit History**: Last 50 commits (`main_commits_50.txt`).
+- **Docs**: Key architecture documents (`ARCHITECTURE_NATIVE.md`, `MVP_SCOPE.md`).
 
 ## How to Generate
 
