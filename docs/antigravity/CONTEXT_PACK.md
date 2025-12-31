@@ -3,11 +3,13 @@
 **Output Directory**: `docs/antigravity/context_exports/latest` (git-ignored)
 
 ## Purpose
+
 The Context Pack allows you to generate a comprehensive snapshot of the repository's state, including GitHub issues, PRs, runs, and local logs. This is essential for sharing context with external LLMs or support teams.
 
 ## Content Modes
 
 ### MIN (Default)
+
 - **Manifest**: Generation timestamp, branch, SHA.
 - **Status Log**: Issue #15 state.
 - **Open MVP Issues**: List of active MVP items.
@@ -16,6 +18,7 @@ The Context Pack allows you to generate a comprehensive snapshot of the reposito
 - **Logs**: Copies of `LAST_RUN.md`, `ACTIVITY_LOG.md`, and `SHARED_INFO_LATEST_SUMMARY.md`.
 
 ### FULL
+
 - **MIN Pack** contents.
 - **Repo Meta**: Description, default branch, etc.
 - **Milestones**: Active milestones.
@@ -37,5 +40,6 @@ python tools/rt_tool.py export-context -- -Mode FULL
 ```
 
 ## How to Share
+
 1. Navigate to `docs/antigravity/context_exports/latest`.
 2. Zip the folder contents or upload specific JSON files (e.g., `status_log_issue_15.json`, `manifest.json`) to the chat context.

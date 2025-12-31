@@ -28,6 +28,7 @@ namespace RobotTwin.CoreSim.Engine
         private const double DefaultBatteryInternalResistance = 0.2;
         private const double DefaultBatteryVoltageMin = 6.0;
         private const double DefaultBatteryVoltageMax = 9.0;
+        private const double GminConductance = 1e-8;
 
         private readonly Dictionary<string, string> _pinToNet =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -72,14 +73,26 @@ namespace RobotTwin.CoreSim.Engine
             var poweredNets = ValidateConnectivity(spec, voltageSources, frame);
             ValidateInputPins(pinStatesByComponent, poweredNets, frame);
 
-            var solution = SolveCircuit(resistors, diodes, voltageSources, frame);
-            if (solution == null)
+            var explicitGroundNets = new HashSet<string>(_groundNets, StringComparer.OrdinalIgnoreCase);
+            var islands = BuildIslands(resistors, diodes, voltageSources, explicitGroundNets);
+            foreach (var island in islands)
             {
-                return frame;
-            }
+                if (!island.HasElements)
+                {
+                    PopulateIsolatedNetVoltages(frame, island);
+                    continue;
+                }
 
-            var nodeVoltages = ExtractNodeVoltages(solution, voltageSources.Count);
-            PopulateTelemetry(frame, spec, resistors, diodes, voltageSources, nodeVoltages, solution, dtSeconds);
+                SetIslandContext(island, explicitGroundNets, frame);
+                var solution = SolveCircuit(island.Resistors, island.Diodes, island.Sources, frame);
+                if (solution == null)
+                {
+                    continue;
+                }
+
+                var nodeVoltages = ExtractNodeVoltages(solution, island.Sources.Count);
+                PopulateTelemetry(frame, spec, island.Resistors, island.Diodes, island.Sources, nodeVoltages, solution, dtSeconds);
+            }
 
             return frame;
         }
@@ -210,6 +223,171 @@ namespace RobotTwin.CoreSim.Engine
             }
         }
 
+        private List<IslandData> BuildIslands(
+            List<ResistorElement> resistors,
+            List<DiodeElement> diodes,
+            List<VoltageSourceElement> sources,
+            HashSet<string> explicitGroundNets)
+        {
+            var allNets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var net in _netToNode.Keys)
+            {
+                allNets.Add(net);
+            }
+            foreach (var net in _groundNets)
+            {
+                allNets.Add(net);
+            }
+
+            var parents = BuildNetParents(allNets);
+            foreach (var res in resistors)
+            {
+                UnionNets(parents, res.NetA, res.NetB);
+            }
+            foreach (var diode in diodes)
+            {
+                UnionNets(parents, diode.AnodeNet, diode.CathodeNet);
+            }
+            foreach (var source in sources)
+            {
+                UnionNets(parents, source.NetPlus, source.NetMinus);
+            }
+
+            var islands = new Dictionary<string, IslandData>(StringComparer.OrdinalIgnoreCase);
+            foreach (var net in allNets)
+            {
+                var root = FindNetParent(parents, net);
+                if (!islands.TryGetValue(root, out var island))
+                {
+                    island = new IslandData();
+                    islands[root] = island;
+                }
+                island.Nets.Add(net);
+            }
+
+            foreach (var res in resistors)
+            {
+                var root = GetIslandRoot(parents, res.NetA, res.NetB);
+                if (root == null) continue;
+                islands[root].Resistors.Add(res);
+            }
+            foreach (var diode in diodes)
+            {
+                var root = GetIslandRoot(parents, diode.AnodeNet, diode.CathodeNet);
+                if (root == null) continue;
+                islands[root].Diodes.Add(diode);
+            }
+            foreach (var source in sources)
+            {
+                var root = GetIslandRoot(parents, source.NetPlus, source.NetMinus);
+                if (root == null) continue;
+                islands[root].Sources.Add(source);
+            }
+
+            foreach (var island in islands.Values)
+            {
+                island.HasExplicitGround = explicitGroundNets != null &&
+                    island.Nets.Any(net => explicitGroundNets.Contains(net));
+            }
+
+            return islands.Values.ToList();
+        }
+
+        private void SetIslandContext(IslandData island, HashSet<string> explicitGroundNets, TelemetryFrame frame)
+        {
+            _netToNode.Clear();
+            _groundNets.Clear();
+            _hasExplicitGround = island != null && island.HasExplicitGround;
+
+            if (island == null || island.Nets.Count == 0) return;
+
+            if (explicitGroundNets != null)
+            {
+                foreach (var net in island.Nets)
+                {
+                    if (explicitGroundNets.Contains(net))
+                    {
+                        _groundNets.Add(net);
+                    }
+                }
+            }
+
+            if (_groundNets.Count == 0)
+            {
+                var fallbackNet = island.Nets.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(fallbackNet))
+                {
+                    _groundNets.Add(fallbackNet);
+                    frame.ValidationMessages.Add("Missing GND reference (no net contains GND pins).");
+                    frame.ValidationMessages.Add($"Disconnected GND. Using net '{fallbackNet}' as reference.");
+                }
+            }
+
+            int index = 0;
+            foreach (var net in island.Nets)
+            {
+                if (_groundNets.Contains(net)) continue;
+                _netToNode[net] = index++;
+            }
+        }
+
+        private void PopulateIsolatedNetVoltages(TelemetryFrame frame, IslandData island)
+        {
+            if (frame == null || island == null) return;
+            foreach (var net in island.Nets)
+            {
+                if (string.IsNullOrWhiteSpace(net)) continue;
+                frame.Signals[$"NET:{net}"] = 0.0;
+            }
+        }
+
+        private static Dictionary<string, string> BuildNetParents(HashSet<string> nets)
+        {
+            var parents = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (nets == null) return parents;
+            foreach (var net in nets)
+            {
+                if (string.IsNullOrWhiteSpace(net)) continue;
+                parents[net] = net;
+            }
+            return parents;
+        }
+
+        private static string FindNetParent(Dictionary<string, string> parents, string net)
+        {
+            if (string.IsNullOrWhiteSpace(net) || parents == null) return string.Empty;
+            if (!parents.TryGetValue(net, out var parent)) return string.Empty;
+            if (parent == net) return net;
+            var root = FindNetParent(parents, parent);
+            parents[net] = root;
+            return root;
+        }
+
+        private static void UnionNets(Dictionary<string, string> parents, string netA, string netB)
+        {
+            if (string.IsNullOrWhiteSpace(netA) || string.IsNullOrWhiteSpace(netB)) return;
+            if (parents == null || !parents.ContainsKey(netA) || !parents.ContainsKey(netB)) return;
+            var rootA = FindNetParent(parents, netA);
+            var rootB = FindNetParent(parents, netB);
+            if (!string.Equals(rootA, rootB, StringComparison.OrdinalIgnoreCase))
+            {
+                parents[rootB] = rootA;
+            }
+        }
+
+        private static string GetIslandRoot(Dictionary<string, string> parents, string netA, string netB)
+        {
+            if (!string.IsNullOrWhiteSpace(netA) && parents != null && parents.ContainsKey(netA))
+            {
+                return FindNetParent(parents, netA);
+            }
+            if (!string.IsNullOrWhiteSpace(netB) && parents != null && parents.ContainsKey(netB))
+            {
+                return FindNetParent(parents, netB);
+            }
+            return null;
+        }
+
         private void AddTwoPinResistor(
             ComponentSpec comp,
             string pinA,
@@ -334,20 +512,20 @@ namespace RobotTwin.CoreSim.Engine
             {
                 return;
             }
+            string gndNet = GetGroundNetForComponent(comp);
             if (IsUsbConnected(comp, usbConnectedById) && !HasAnySupplyNet(comp))
             {
                 string usbNet = GetUsbSupplyNet(comp);
                 RegisterVirtualNet(usbNet);
-                var gndNet = GetGroundNet();
                 if (IsConnected(gndNet))
                 {
                     voltageSources.Add(new VoltageSourceElement($"{comp.Id}.USB", usbNet, gndNet, 5.0, false, null));
                 }
             }
-            AddArduinoPinSource(comp, "5V", 5.0, voltageSources);
-            AddArduinoPinSource(comp, "3V3", 3.3, voltageSources);
-            AddArduinoPinSource(comp, "IOREF", 5.0, voltageSources);
-            AddArduinoPinSource(comp, "VCC", 5.0, voltageSources);
+            AddArduinoPinSource(comp, "5V", 5.0, voltageSources, gndNet);
+            AddArduinoPinSource(comp, "3V3", 3.3, voltageSources, gndNet);
+            AddArduinoPinSource(comp, "IOREF", 5.0, voltageSources, gndNet);
+            AddArduinoPinSource(comp, "VCC", 5.0, voltageSources, gndNet);
 
             if (pinVoltages == null) return;
 
@@ -356,7 +534,7 @@ namespace RobotTwin.CoreSim.Engine
                 if (!kvp.Key.StartsWith(comp.Id + ".", StringComparison.Ordinal)) continue;
                 string pin = kvp.Key.Substring(comp.Id.Length + 1);
                 if (!IsDigitalPin(pin)) continue;
-                AddArduinoPinSource(comp, pin, kvp.Value, voltageSources);
+                AddArduinoPinSource(comp, pin, kvp.Value, voltageSources, gndNet);
             }
         }
 
@@ -390,11 +568,26 @@ namespace RobotTwin.CoreSim.Engine
             return netId;
         }
 
-        private void AddArduinoPinSource(ComponentSpec comp, string pin, double voltage, List<VoltageSourceElement> voltageSources)
+        private string GetGroundNetForComponent(ComponentSpec comp)
+        {
+            if (comp == null || string.IsNullOrWhiteSpace(comp.Id)) return GetGroundNet();
+            string prefix = comp.Id + ".";
+            foreach (var kvp in _pinToNet)
+            {
+                if (!kvp.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                string pin = GetPinName(kvp.Key);
+                if (!IsGroundPin(pin)) continue;
+                if (IsConnected(kvp.Value)) return kvp.Value;
+            }
+            return GetGroundNet();
+        }
+
+        private void AddArduinoPinSource(ComponentSpec comp, string pin, double voltage, List<VoltageSourceElement> voltageSources, string groundNet)
         {
             var net = GetNetFor(comp.Id, pin);
             if (!IsConnected(net)) return;
-            voltageSources.Add(new VoltageSourceElement($"{comp.Id}.{pin}", net, GetGroundNet(), voltage, false, null));
+            string gndNet = IsConnected(groundNet) ? groundNet : GetGroundNet();
+            voltageSources.Add(new VoltageSourceElement($"{comp.Id}.{pin}", net, gndNet, voltage, false, null));
         }
 
         private void AddArduinoPullups(
@@ -463,6 +656,11 @@ namespace RobotTwin.CoreSim.Engine
                 AddResistors(matrix, resistors);
                 AddDiodes(matrix, rhs, diodes, diodeStates);
                 AddVoltageSources(matrix, rhs, voltageSources, nodeCount);
+                // Add tiny leakage to ground to prevent singular matrices from floating nets.
+                for (int n = 0; n < nodeCount; n++)
+                {
+                    matrix[n, n] += GminConductance;
+                }
 
                 if (!TrySolve(matrix, rhs, out var solution))
                 {
@@ -1187,6 +1385,17 @@ namespace RobotTwin.CoreSim.Engine
         private class DiodeState
         {
             public bool IsOn;
+        }
+
+        private class IslandData
+        {
+            public HashSet<string> Nets { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            public List<ResistorElement> Resistors { get; } = new List<ResistorElement>();
+            public List<DiodeElement> Diodes { get; } = new List<DiodeElement>();
+            public List<VoltageSourceElement> Sources { get; } = new List<VoltageSourceElement>();
+            public bool HasExplicitGround { get; set; }
+
+            public bool HasElements => Resistors.Count > 0 || Diodes.Count > 0 || Sources.Count > 0;
         }
 
         private class ResistorElement

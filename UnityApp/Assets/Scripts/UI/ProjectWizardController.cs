@@ -40,10 +40,24 @@ namespace RobotTwin.UI
             public Color AccentColor;
         }
 
+        [Serializable]
+        private class RecentProjectEntry
+        {
+            public string Path;
+            public long OpenedTicks;
+        }
+
+        [Serializable]
+        private class RecentProjectList
+        {
+            public List<RecentProjectEntry> Items = new List<RecentProjectEntry>();
+        }
+
         // Logic State
         private string _projectsPath;
         private const string ProjectRootKey = "ProjectWizard.ProjectRootPath";
         private const int RecentProjectLimit = 5;
+        private const string RecentProjectsKey = "ProjectWizard.RecentProjects";
 
         private enum ProjectSortMode
         {
@@ -437,6 +451,139 @@ namespace RobotTwin.UI
             return projects;
         }
 
+        private string NormalizeProjectPath(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath)) return string.Empty;
+            try
+            {
+                return Path.GetFullPath(filePath);
+            }
+            catch
+            {
+                return filePath;
+            }
+        }
+
+        private List<RecentProjectEntry> LoadRecentEntries()
+        {
+            string raw = PlayerPrefs.GetString(RecentProjectsKey, string.Empty);
+            if (string.IsNullOrWhiteSpace(raw)) return new List<RecentProjectEntry>();
+
+            try
+            {
+                var list = JsonUtility.FromJson<RecentProjectList>(raw);
+                return list?.Items ?? new List<RecentProjectEntry>();
+            }
+            catch
+            {
+                return new List<RecentProjectEntry>();
+            }
+        }
+
+        private void SaveRecentEntries(List<RecentProjectEntry> entries)
+        {
+            if (entries == null) entries = new List<RecentProjectEntry>();
+            var cleaned = new List<RecentProjectEntry>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entry in entries.OrderByDescending(e => e?.OpenedTicks ?? 0))
+            {
+                if (entry == null || string.IsNullOrWhiteSpace(entry.Path)) continue;
+                string path = NormalizeProjectPath(entry.Path);
+                if (!seen.Add(path)) continue;
+                cleaned.Add(new RecentProjectEntry
+                {
+                    Path = path,
+                    OpenedTicks = entry.OpenedTicks
+                });
+                if (cleaned.Count >= RecentProjectLimit) break;
+            }
+
+            var payload = new RecentProjectList { Items = cleaned };
+            string json = JsonUtility.ToJson(payload);
+            PlayerPrefs.SetString(RecentProjectsKey, json);
+            PlayerPrefs.Save();
+        }
+
+        private void RecordRecentProject(string filePath)
+        {
+            string path = NormalizeProjectPath(filePath);
+            if (string.IsNullOrWhiteSpace(path)) return;
+
+            var entries = LoadRecentEntries();
+            entries.RemoveAll(e => e == null || string.IsNullOrWhiteSpace(e.Path) ||
+                                   string.Equals(NormalizeProjectPath(e.Path), path, StringComparison.OrdinalIgnoreCase));
+            entries.Insert(0, new RecentProjectEntry
+            {
+                Path = path,
+                OpenedTicks = DateTime.UtcNow.Ticks
+            });
+            SaveRecentEntries(entries);
+        }
+
+        private void RemoveRecentProject(string filePath)
+        {
+            string path = NormalizeProjectPath(filePath);
+            if (string.IsNullOrWhiteSpace(path)) return;
+            var entries = LoadRecentEntries();
+            entries.RemoveAll(e => e == null || string.IsNullOrWhiteSpace(e.Path) ||
+                                   string.Equals(NormalizeProjectPath(e.Path), path, StringComparison.OrdinalIgnoreCase));
+            SaveRecentEntries(entries);
+        }
+
+        private void UpdateRecentProjectPath(string oldPath, string newPath)
+        {
+            string oldNormalized = NormalizeProjectPath(oldPath);
+            string newNormalized = NormalizeProjectPath(newPath);
+            if (string.IsNullOrWhiteSpace(oldNormalized) || string.IsNullOrWhiteSpace(newNormalized)) return;
+
+            var entries = LoadRecentEntries();
+            bool updated = false;
+            foreach (var entry in entries)
+            {
+                if (entry == null || string.IsNullOrWhiteSpace(entry.Path)) continue;
+                if (!string.Equals(NormalizeProjectPath(entry.Path), oldNormalized, StringComparison.OrdinalIgnoreCase)) continue;
+                entry.Path = newNormalized;
+                updated = true;
+            }
+
+            if (updated) SaveRecentEntries(entries);
+        }
+
+        private List<UserProject> LoadRecentProjects()
+        {
+            var entries = LoadRecentEntries();
+            if (entries.Count == 0) return new List<UserProject>();
+
+            var ordered = entries.OrderByDescending(e => e?.OpenedTicks ?? 0).ToList();
+            var cleaned = new List<RecentProjectEntry>();
+            var projects = new List<UserProject>();
+
+            foreach (var entry in ordered)
+            {
+                if (entry == null || string.IsNullOrWhiteSpace(entry.Path)) continue;
+                string path = NormalizeProjectPath(entry.Path);
+                if (!File.Exists(path)) continue;
+
+                var info = new FileInfo(path);
+                string name = Path.GetFileNameWithoutExtension(path);
+                projects.Add(new UserProject
+                {
+                    Name = name,
+                    DisplayPath = GetDisplayPath(path),
+                    FullPath = path,
+                    Type = GuessProjectType(name),
+                    ModifiedAt = info.LastWriteTime
+                });
+
+                cleaned.Add(new RecentProjectEntry { Path = path, OpenedTicks = entry.OpenedTicks });
+                if (projects.Count >= RecentProjectLimit) break;
+            }
+
+            SaveRecentEntries(cleaned);
+            return projects;
+        }
+
         private string GetDisplayPath(string filePath)
         {
             try
@@ -739,6 +886,7 @@ namespace RobotTwin.UI
                 return;
             }
 
+            RemoveRecentProject(proj.FullPath);
             HideDetails();
             PopulateHome();
             PopulateProjects();
@@ -783,6 +931,7 @@ namespace RobotTwin.UI
             updated.DisplayPath = GetDisplayPath(targetPath);
             updated.ModifiedAt = File.GetLastWriteTime(targetPath);
 
+            UpdateRecentProjectPath(project.FullPath, targetPath);
             HideDetails();
             PopulateHome();
             PopulateProjects();
@@ -943,6 +1092,8 @@ namespace RobotTwin.UI
             {
                 SessionManager.Instance.StartSession(project, filePath);
             }
+
+            RecordRecentProject(filePath);
 
             HideContextMenu();
             HideDetails();
@@ -1342,10 +1493,14 @@ namespace RobotTwin.UI
 
         private void PopulateHome()
         {
-            _recentProjects = LoadProjects()
-                .OrderByDescending(p => p.ModifiedAt)
-                .Take(RecentProjectLimit)
-                .ToList();
+            _recentProjects = LoadRecentProjects();
+            if (_recentProjects.Count == 0)
+            {
+                _recentProjects = LoadProjects()
+                    .OrderByDescending(p => p.ModifiedAt)
+                    .Take(RecentProjectLimit)
+                    .ToList();
+            }
 
             ApplyRecentFilter();
         }

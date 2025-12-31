@@ -27,6 +27,7 @@ namespace RobotTwin.CoreSim
     {
         private const string DefaultPipeName = "RoboTwin.FirmwareEngine.v1";
         private const float ConnectRetrySeconds = 1.0f;
+        private const int PipeConnectTimeoutMs = 250;
         private const uint ProtocolMagic = 0x57465452; // "RTFW"
         private const ushort ProtocolMajor = 1;
         private const ushort ProtocolMinor = 0;
@@ -111,7 +112,7 @@ namespace RobotTwin.CoreSim
             {
                 _pipeClient = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut);
                 UnityEngine.Debug.Log("[FirmwareClient] Connecting to firmware pipe...");
-                _pipeClient.Connect(1500);
+                _pipeClient.Connect(PipeConnectTimeoutMs);
                 try
                 {
                     _pipeClient.ReadTimeout = 1000;
