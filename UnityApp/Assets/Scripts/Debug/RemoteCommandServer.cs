@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,36 +12,76 @@ namespace RobotTwin.Debugging
 {
     public class RemoteCommandServer : MonoBehaviour
     {
+        private static RemoteCommandServer _instance;
         private HttpListener _listener;
         private Thread _listenerThread;
         private readonly ConcurrentQueue<Action> _mainThreadActions = new ConcurrentQueue<Action>();
         private bool _isRunning = true;
-        private const string Url = "http://localhost:8085/";
+        private const int BasePort = 8085;
+        private const int MaxPortAttempts = 10;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
         {
+            if (_instance != null) return;
             var go = new GameObject("RemoteCommandServer");
             go.AddComponent<RemoteCommandServer>();
             DontDestroyOnLoad(go);
         }
 
+        private void Awake()
+        {
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
         private void Start()
         {
-            _listener = new HttpListener();
-            _listener.Prefixes.Add(Url);
-            _listener.Start();
-            Debug.Log($"[RemoteCommandServer] Listening on {Url}");
+            if (_listener != null) return;
 
-            _listenerThread = new Thread(ListenLoop);
-            _listenerThread.Start();
+            for (int i = 0; i < MaxPortAttempts; i++)
+            {
+                int port = BasePort + i;
+                string url = $"http://localhost:{port}/";
+                _listener = new HttpListener();
+                _listener.Prefixes.Add(url);
+                try
+                {
+                    _listener.Start();
+                    Debug.Log($"[RemoteCommandServer] Listening on {url}");
+                    _listenerThread = new Thread(ListenLoop);
+                    _listenerThread.Start();
+                    return;
+                }
+                catch (Exception)
+                {
+                    _listener.Close();
+                    _listener = null;
+                }
+            }
+
+            Debug.LogWarning($"[RemoteCommandServer] Could not bind to any port between {BasePort} and {BasePort + MaxPortAttempts - 1}. Server disabled.");
+            _isRunning = false;
         }
 
         private void OnDestroy()
         {
             _isRunning = false;
             _listener?.Stop();
-            _listenerThread?.Abort();
+            _listener?.Close();
+            if (_listenerThread != null && _listenerThread.IsAlive)
+            {
+                _listenerThread.Join(500);
+            }
+            if (_instance == this)
+            {
+                _instance = null;
+            }
         }
 
         private void Update()
@@ -82,7 +123,7 @@ namespace RobotTwin.Debugging
 
             try
             {
-                string rawUrl = context.Request.RawUrl; 
+                string rawUrl = context.Request.RawUrl;
                 string command = rawUrl.Split('?')[0].Trim('/');
                 var queryParams = System.Web.HttpUtility.ParseQueryString(context.Request.Url.Query);
 
@@ -92,26 +133,26 @@ namespace RobotTwin.Debugging
                         Enqueue(() =>
                         {
                             string filename = $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png";
-                             string path = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Screenshots");
-                             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-                             
-                             string fullPath = Path.Combine(path, filename);
-                             ScreenCapture.CaptureScreenshot(Path.Combine("Screenshots", filename));
-                             Debug.Log($"[RemoteCommandServer] Screenshot captured: {fullPath}");
+                            string path = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Screenshots");
+                            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+
+                            string fullPath = Path.Combine(path, filename);
+                            ScreenCapture.CaptureScreenshot(Path.Combine("Screenshots", filename));
+                            Debug.Log($"[RemoteCommandServer] Screenshot captured: {fullPath}");
                         });
                         break;
 
-                     case "run-tests":
-                         Enqueue(() =>
-                         {
-                             Debug.Log("[RemoteCommandServer] Triggering Tests...");
-                             if (AutoPilot.Instance != null)
-                                 AutoPilot.Instance.StartSmokeTest();
-                             else
-                                 Debug.LogError("[RemoteCommandServer] AutoPilot Instance is NULL");
-                         });
+                    case "run-tests":
+                        Enqueue(() =>
+                        {
+                            Debug.Log("[RemoteCommandServer] Triggering Tests...");
+                            if (AutoPilot.Instance != null)
+                                AutoPilot.Instance.StartSmokeTest();
+                            else
+                                Debug.LogError("[RemoteCommandServer] AutoPilot Instance is NULL");
+                        });
                         break;
-                    
+
                     case "action":
                         string actionType = queryParams["type"];
                         string target = queryParams["target"];
@@ -141,8 +182,8 @@ namespace RobotTwin.Debugging
 
                     case "status":
                         int engineVer = -1;
-                        try { engineVer = RobotTwin.Core.NativeBridge.GetVersion(); } catch {}
-                        
+                        try { engineVer = RobotTwin.Core.NativeBridge.GetVersion(); } catch { }
+
                         string engineStatus = (engineVer > 0) ? "connected" : "disconnected";
                         responseString = $"{{\"engine\": \"{engineStatus}\", \"version\": {engineVer}}}";
                         break;

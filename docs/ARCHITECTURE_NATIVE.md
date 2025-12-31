@@ -7,6 +7,7 @@ RoboTwin Studio uses a hybrid architecture where the UI and high-level simulatio
 ## Components
 
 ### 1. FirmwareEngine (Virtual Arduino)
+
 **Location:** `/FirmwareEngine`
 
 A standalone C++ executable (`VirtualArduinoFirmware.exe`) that acts as a virtual microcontroller.
@@ -17,6 +18,7 @@ A standalone C++ executable (`VirtualArduinoFirmware.exe`) that acts as a virtua
 - **State:** Maintains the internal state of the microcontroller (Registers, RAM, GPIO).
 
 ### 2. NativeEngine (Simulation Host)
+
 **Location:** `/NativeEngine`
 
 A shared library (`NativeEngine.dll`) loaded by Unity.
@@ -32,9 +34,9 @@ The `FirmwareClient.cs` in Unity manages the lifecycle of the `FirmwareEngine` p
 1. **Launch:** Unity starts `VirtualArduinoFirmware.exe` with a specific pipe name.
 2. **Handshake:** Unity sends `Hello`, Firmware responds with `HelloAck`.
 3. **Loop:**
-    - Unity sends `Step` (time delta, input pin states).
-    - Firmware executes cycles.
-    - Firmware responds with `OutputState` (output pin states).
+   - Unity sends `Step` (time delta, input pin states).
+   - Firmware executes cycles.
+   - Firmware responds with `OutputState` (output pin states).
 
 ## Build Pipeline
 
