@@ -173,6 +173,7 @@ namespace RobotTwin.UI
         private PinSide _wireStartSide;
         private VisualElement _wireLayer;
         private readonly List<WireSegment> _wireSegments = new List<WireSegment>();
+        private WireRouter _lastRouter;
         private VisualElement _wirePreviewLayer;
         private readonly List<WireSegment> _wirePreviewSegments = new List<WireSegment>();
         private string _activeCodePath;
@@ -3019,6 +3020,7 @@ namespace RobotTwin.UI
 
             var obstacles = GetWireObstacles();
             var router = new WireRouter(boardRect, Mathf.Max(6f, GridSnap * 0.5f), obstacles);
+            _lastRouter = router;
             var netIds = new List<string>();
 
             foreach (var net in _currentCircuit.Nets.OrderBy(n => n.Id ?? string.Empty, StringComparer.OrdinalIgnoreCase))
@@ -3075,6 +3077,30 @@ namespace RobotTwin.UI
             _wireLayer.BringToFront();
             UpdatePinDotColors(paletteMap);
             _wirePreviewLayer?.BringToFront();
+        }
+
+        public void ExportWireMatrix()
+        {
+            if (_lastRouter == null)
+            {
+                Debug.LogWarning("No wire router available. Please update wires first.");
+                return;
+            }
+
+            string matrix = _lastRouter.GetDebugMatrix();
+            Debug.Log(matrix);
+
+            // Also write to a file for easier viewing if it's large
+            try
+            {
+                string path = Path.Combine(Application.persistentDataPath, "wire_matrix_debug.txt");
+                File.WriteAllText(path, matrix);
+                Debug.Log($"Wire matrix saved to: {path}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to save wire matrix to file: {ex.Message}");
+            }
         }
 
         private void UpdatePinDotColors(Dictionary<string, int> paletteMap)
@@ -6935,6 +6961,11 @@ namespace RobotTwin.UI
                 ZoomCanvasStep(0.92f, GetCanvasViewCenterWorld());
                 evt.StopPropagation();
             }
+            else if (evt.keyCode == KeyCode.D)
+            {
+                ExportWireMatrix();
+                evt.StopPropagation();
+            }
         }
 
         private Vector2 GetZoomPivot()
@@ -7985,7 +8016,7 @@ namespace RobotTwin.UI
 
     internal sealed class WireRouter
     {
-        private const int MaxIterations = 50000;
+        private const int MaxIterations = 100000;
         private const int CostStep = 10;
         private const int CostTurn = 50;
         private const int CostBuffer = 20;
@@ -8123,6 +8154,41 @@ namespace RobotTwin.UI
             var conflicts = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             // Implementation omitted for brevity as it's visual only
             return conflicts;
+        }
+
+        public string GetDebugMatrix()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Grid Size: {_cols}x{_rows}, Step: {_step}");
+
+            // Header
+            sb.Append("   ");
+            for (int x = 0; x < _cols; x++) sb.Append((x % 10).ToString());
+            sb.AppendLine();
+
+            for (int y = 0; y < _rows; y++)
+            {
+                sb.Append($"{y,3} ");
+                for (int x = 0; x < _cols; x++)
+                {
+                    var pos = new Vector2Int(x, y);
+                    if (_obstacles.Contains(pos))
+                    {
+                        sb.Append("X");
+                    }
+                    else if (_wireOccupancy.TryGetValue(pos, out var netId))
+                    {
+                        // Use first char of netId or specific symbol
+                        sb.Append(string.IsNullOrEmpty(netId) ? "?" : netId.Substring(0, 1));
+                    }
+                    else
+                    {
+                        sb.Append(".");
+                    }
+                }
+                sb.AppendLine();
+            }
+            return sb.ToString();
         }
 
         private bool FindPath(Vector2Int start, Vector2Int goal, string netId, WireRoutePass pass, out List<Vector2Int> path)
