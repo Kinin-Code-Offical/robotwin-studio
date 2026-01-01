@@ -8,7 +8,7 @@ if (-not (Test-Path $OutputDir)) { New-Item -ItemType Directory -Force -Path $Ou
 # Exclusion patterns (simple string containment for directories, or exact match)
 $ExcludedDirs = @(
     ".git",
-    "build",
+    "builds",
     "logs",
     "UnityApp\Library",
     "UnityApp\Temp",

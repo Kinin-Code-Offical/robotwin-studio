@@ -5,7 +5,7 @@ param(
 $envUnityPath = $env:UNITY_PATH
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
 $projectPath = Join-Path $repoRoot "UnityApp"
-$buildDir = Join-Path $repoRoot "build\\windows"
+$buildDir = Join-Path $repoRoot "builds\\windows"
 $buildPath = Join-Path $buildDir "RobotwinStudio.exe"
 $logDir = Join-Path $repoRoot "logs\\unity"
 $logFile = Join-Path $logDir "build.log"

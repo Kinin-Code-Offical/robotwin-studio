@@ -1684,6 +1684,8 @@ namespace RobotTwin.UI
                 SessionManager.Instance.StartSession(manifest, targetPath);
             }
 
+            RecordRecentProject(targetPath);
+
             HideCreateOverlay();
             PopulateHome();
             PopulateProjects();

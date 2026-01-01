@@ -135,6 +135,7 @@ namespace RobotTwin.UI
         private VisualElement _moveTarget;
         private ComponentSpec _moveTargetSpec;
         private Vector2 _moveOffset;
+        private Vector2 _moveLastValidPos;
         private bool _wireUpdatePending;
         private float _wireUpdateAt;
         private Vector2 _lastCanvasWorldPos;
@@ -179,7 +180,7 @@ namespace RobotTwin.UI
         private string _activeCodePath;
         private string _codeTargetComponentId;
         private readonly Dictionary<string, string> _codeTargetLabels = new Dictionary<string, string>();
-        private Breadboard3DView _breadboardView;
+        private Circuit3DView _circuit3DRenderer;
 
         private enum OutputFilterMode
         {
@@ -207,7 +208,7 @@ namespace RobotTwin.UI
 
         private readonly List<LogEntry> _logEntries = new List<LogEntry>();
         private readonly ConcurrentQueue<LogEntry> _pendingLogs = new ConcurrentQueue<LogEntry>();
-        private bool _breadboardDirty;
+        private bool _circuit3DDirty;
         private readonly List<CodeEditorSnapshot> _codeHistory = new List<CodeEditorSnapshot>();
         private int _codeHistoryIndex = -1;
         private bool _suppressCodeHistory;
@@ -625,7 +626,7 @@ namespace RobotTwin.UI
             }
 
             InitializeCodePanel();
-            InitializeBreadboardPreview();
+            InitializeCircuit3DPreview();
             Initialize3DInput();
 
             // Global Drag Events
@@ -1063,7 +1064,7 @@ namespace RobotTwin.UI
             HideNetEditor();
             PopulateProjectTree();
             UpdateWireLayer();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
         }
 
         private HashSet<string> BuildValidNodes()
@@ -1225,7 +1226,7 @@ namespace RobotTwin.UI
             ResetCanvasView();
             PopulateProjectTree();
             UpdateErrorCount();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
             SessionManager.Instance?.StartSession(_currentCircuit);
             SetCenterPanelMode(CenterPanelMode.Circuit);
         }
@@ -1293,7 +1294,7 @@ namespace RobotTwin.UI
             ResetCanvasView();
             PopulateProjectTree();
             UpdateErrorCount();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
             SessionManager.Instance?.StartSession(project, path);
             SetCenterPanelMode(CenterPanelMode.Circuit);
         }
@@ -1392,31 +1393,31 @@ namespace RobotTwin.UI
             if (_bottomResizer != null) _bottomResizer.style.display = DisplayStyle.Flex;
         }
 
-        private void InitializeBreadboardPreview()
+        private void InitializeCircuit3DPreview()
         {
             if (_circuit3DView == null) return;
-            if (_breadboardView == null)
+            if (_circuit3DRenderer == null)
             {
                 var go = new GameObject("CircuitStudio3DView");
                 go.transform.SetParent(transform, false);
-                _breadboardView = go.AddComponent<Breadboard3DView>();
+                _circuit3DRenderer = go.AddComponent<Circuit3DView>();
             }
 
             _circuit3DView.RegisterCallback<GeometryChangedEvent>(evt =>
             {
-                if (_breadboardView == null) return;
+                if (_circuit3DRenderer == null) return;
                 int width = Mathf.RoundToInt(evt.newRect.width);
                 int height = Mathf.RoundToInt(evt.newRect.height);
                 if (width <= 0 || height <= 0) return;
 
-                _breadboardView.Initialize(width, height);
-                if (_breadboardView.TargetTexture != null)
+                _circuit3DRenderer.Initialize(width, height);
+                if (_circuit3DRenderer.TargetTexture != null)
                 {
-                    _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_breadboardView.TargetTexture));
+                    _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
                     var label = _circuit3DView.Q<Label>(className: "circuit-3d-label");
                     if (label != null) label.style.display = DisplayStyle.None;
                 }
-                RequestBreadboardRebuild();
+                RequestCircuit3DRebuild();
             });
         }
 
@@ -1429,39 +1430,39 @@ namespace RobotTwin.UI
             _circuit3DView.RegisterCallback<WheelEvent>(On3DWheel);
         }
 
-        private void RequestBreadboardRebuild()
+        private void RequestCircuit3DRebuild()
         {
-            _breadboardDirty = true;
+            _circuit3DDirty = true;
         }
 
         private void LateUpdate()
         {
-            if (!_breadboardDirty) return;
+            if (!_circuit3DDirty) return;
             if (_centerMode != CenterPanelMode.Preview3D) return;
-            RebuildBreadboardPreview();
+            RebuildCircuit3DPreview();
         }
 
-        private void RebuildBreadboardPreview()
+        private void RebuildCircuit3DPreview()
         {
-            if (_breadboardView == null || _currentCircuit == null || _circuit3DView == null) return;
-            if (_breadboardView.TargetTexture == null)
+            if (_circuit3DRenderer == null || _currentCircuit == null || _circuit3DView == null) return;
+            if (_circuit3DRenderer.TargetTexture == null)
             {
                 var rect = _circuit3DView.contentRect;
                 int width = Mathf.RoundToInt(rect.width);
                 int height = Mathf.RoundToInt(rect.height);
                 if (width > 0 && height > 0)
                 {
-                    _breadboardView.Initialize(width, height);
+                    _circuit3DRenderer.Initialize(width, height);
                 }
             }
 
-            if (_breadboardView.TargetTexture == null) return;
+            if (_circuit3DRenderer.TargetTexture == null) return;
 
-            _breadboardView.Build(_currentCircuit);
-            _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_breadboardView.TargetTexture));
+            _circuit3DRenderer.Build(_currentCircuit);
+            _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
             var label = _circuit3DView.Q<Label>(className: "circuit-3d-label");
             if (label != null) label.style.display = DisplayStyle.None;
-            _breadboardDirty = false;
+            _circuit3DDirty = false;
         }
 
         private void InitializeSession()
@@ -1533,7 +1534,7 @@ namespace RobotTwin.UI
             }
             else if (mode == CenterPanelMode.Preview3D)
             {
-                RequestBreadboardRebuild();
+                RequestCircuit3DRebuild();
             }
             else
             {
@@ -3006,7 +3007,7 @@ namespace RobotTwin.UI
 
         private void UpdateWireLayer()
         {
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
             if (_canvasView == null || _wireLayer == null || _currentCircuit == null) return;
             if (_currentCircuit.Nets == null)
             {
@@ -3019,11 +3020,12 @@ namespace RobotTwin.UI
             if (boardRect.width <= 0f || boardRect.height <= 0f) return;
 
             var obstacles = GetWireObstacles();
-            var router = new WireRouter(boardRect, Mathf.Max(6f, GridSnap * 0.5f), obstacles);
+            // Use GridSnap * 0.5f (5f) to align perfectly with the 10f grid
+            var router = new WireRouter(boardRect, GridSnap * 0.5f, obstacles);
             _lastRouter = router;
             var netIds = new List<string>();
 
-            foreach (var net in _currentCircuit.Nets.OrderBy(n => n.Id ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            foreach (var net in _currentCircuit.Nets.OrderBy(n => GetNetBoundingBoxSize(n)))
             {
                 if (net == null || net.Nodes == null || net.Nodes.Count < 2) continue;
                 var points = new List<WirePoint>();
@@ -3129,6 +3131,27 @@ namespace RobotTwin.UI
             }
         }
 
+        private float GetNetBoundingBoxSize(NetSpec net)
+        {
+            if (net == null || net.Nodes == null || net.Nodes.Count == 0) return float.MaxValue;
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+
+            foreach (var node in net.Nodes)
+            {
+                var pos = GetNodePosition(node);
+                if (pos.HasValue)
+                {
+                    minX = Mathf.Min(minX, pos.Value.x);
+                    minY = Mathf.Min(minY, pos.Value.y);
+                    maxX = Mathf.Max(maxX, pos.Value.x);
+                    maxY = Mathf.Max(maxY, pos.Value.y);
+                }
+            }
+            return (maxX - minX) + (maxY - minY);
+        }
+
+
         private readonly struct WirePoint
         {
             public string Node { get; }
@@ -3223,6 +3246,8 @@ namespace RobotTwin.UI
 
         private bool TryAddOrthogonalSegmentsAvoidingObstacles(Vector2 start, Vector2 end, string netId, List<Rect> obstacles, WireRouter router)
         {
+            bool horizontalFirst = (StableHash(netId) & 1u) == 0u;
+
             if (obstacles == null || obstacles.Count == 0)
             {
                 if (router != null && !router.IsSegmentClear(start, end, netId, WireRoutePass.AllowCrossing))
@@ -3230,6 +3255,12 @@ namespace RobotTwin.UI
                     return false;
                 }
                 AddOrthogonalSegments(start, end, netId);
+                if (router != null)
+                {
+                    Vector2 mid = horizontalFirst ? new Vector2(end.x, start.y) : new Vector2(start.x, end.y);
+                    router.MarkOccupancy(start, mid, netId);
+                    router.MarkOccupancy(mid, end, netId);
+                }
                 return true;
             }
 
@@ -3242,11 +3273,12 @@ namespace RobotTwin.UI
                         return false;
                     }
                     AddWireSegment(start, end, netId);
+                    router?.MarkOccupancy(start, end, netId);
                     return true;
                 }
             }
 
-            bool horizontalFirst = (StableHash(netId) & 1u) == 0u;
+            // horizontalFirst is already defined at the top of the method
             Vector2 midA = horizontalFirst ? new Vector2(end.x, start.y) : new Vector2(start.x, end.y);
             Vector2 midB = horizontalFirst ? new Vector2(start.x, end.y) : new Vector2(end.x, start.y);
 
@@ -3260,6 +3292,11 @@ namespace RobotTwin.UI
                 }
                 AddWireSegment(start, midA, netId);
                 AddWireSegment(midA, end, netId);
+                if (router != null)
+                {
+                    router.MarkOccupancy(start, midA, netId);
+                    router.MarkOccupancy(midA, end, netId);
+                }
                 return true;
             }
             if (IsOrthogonalPathClear(start, midB, end, obstacles))
@@ -3272,6 +3309,11 @@ namespace RobotTwin.UI
                 }
                 AddWireSegment(start, midB, netId);
                 AddWireSegment(midB, end, netId);
+                if (router != null)
+                {
+                    router.MarkOccupancy(start, midB, netId);
+                    router.MarkOccupancy(midB, end, netId);
+                }
                 return true;
             }
 
@@ -3292,6 +3334,11 @@ namespace RobotTwin.UI
                         }
                         AddWireSegment(start, mid, netId);
                         AddWireSegment(mid, end, netId);
+                        if (router != null)
+                        {
+                            router.MarkOccupancy(start, mid, netId);
+                            router.MarkOccupancy(mid, end, netId);
+                        }
                         return true;
                     }
                 }
@@ -3308,6 +3355,11 @@ namespace RobotTwin.UI
                         }
                         AddWireSegment(start, mid, netId);
                         AddWireSegment(mid, end, netId);
+                        if (router != null)
+                        {
+                            router.MarkOccupancy(start, mid, netId);
+                            router.MarkOccupancy(mid, end, netId);
+                        }
                         return true;
                     }
                 }
@@ -3334,17 +3386,26 @@ namespace RobotTwin.UI
                 mid.x = Mathf.Clamp(mid.x, boardRect.xMin, boardRect.xMax);
                 mid.y = Mathf.Clamp(mid.y, boardRect.yMin, boardRect.yMax);
             }
-            return IsOrthogonalPathClear(start, mid, end, obstacles);
+            return IsOrthogonalPathClear(start, mid, end, obstacles, netId);
         }
 
-        private static bool IsOrthogonalPathClear(Vector2 start, Vector2 mid, Vector2 end, List<Rect> obstacles)
+        private static bool IsOrthogonalPathClear(Vector2 start, Vector2 mid, Vector2 end, List<Rect> obstacles, string netId = null)
         {
-            return !SegmentIntersectsObstacles(start, mid, obstacles) &&
-                   !SegmentIntersectsObstacles(mid, end, obstacles);
+            return !SegmentIntersectsObstacles(start, mid, obstacles, netId) &&
+                   !SegmentIntersectsObstacles(mid, end, obstacles, netId);
         }
 
-        private static bool SegmentIntersectsObstacles(Vector2 start, Vector2 end, List<Rect> obstacles)
+        private static bool SegmentIntersectsObstacles(Vector2 start, Vector2 end, List<Rect> obstacles, string netId = null)
         {
+            // If diagonal, split and check L-shape
+            if (!Mathf.Approximately(start.x, end.x) && !Mathf.Approximately(start.y, end.y))
+            {
+                bool horizontalFirst = (StableHash(netId ?? string.Empty) & 1u) == 0u;
+                Vector2 corner = horizontalFirst ? new Vector2(end.x, start.y) : new Vector2(start.x, end.y);
+                return SegmentIntersectsObstacles(start, corner, obstacles, netId) ||
+                       SegmentIntersectsObstacles(corner, end, obstacles, netId);
+            }
+
             foreach (var rect in obstacles)
             {
                 if (SegmentIntersectsRect(start, end, rect)) return true;
@@ -3551,6 +3612,7 @@ namespace RobotTwin.UI
                 var rect = _boardView.layout;
                 if (rect.width > 0f && rect.height > 0f)
                 {
+                    // Return local rect (0,0 based) because all component positions are relative to _boardView
                     return new Rect(0f, 0f, rect.width, rect.height);
                 }
             }
@@ -3610,36 +3672,25 @@ namespace RobotTwin.UI
                 points.Add(router.CellToPoint(cell));
             }
 
+            // Connect pin to first grid point
             if ((startPin - points[0]).sqrMagnitude > 0.25f)
             {
-                AddOrthogonalSegments(startPin, points[0], netId);
+                AddWireSegment(startPin, points[0], netId);
+                router?.MarkOccupancy(startPin, points[0], netId);
             }
 
-            Vector2 segmentStart = points[0];
-            Vector2 direction = Vector2.zero;
+            // Draw each path segment exactly as the router planned
             for (int i = 1; i < points.Count; i++)
             {
-                var delta = points[i] - points[i - 1];
-                var newDir = new Vector2(Mathf.Sign(delta.x), Mathf.Sign(delta.y));
-                if (direction == Vector2.zero)
-                {
-                    direction = newDir;
-                    continue;
-                }
-
-                if (newDir != direction)
-                {
-                    AddWireSegment(segmentStart, points[i - 1], netId);
-                    segmentStart = points[i - 1];
-                    direction = newDir;
-                }
+                AddWireSegment(points[i - 1], points[i], netId);
+                router?.MarkOccupancy(points[i - 1], points[i], netId);
             }
 
-            AddWireSegment(segmentStart, points[points.Count - 1], netId);
-
+            // Connect last grid point to pin
             if ((endPin - points[points.Count - 1]).sqrMagnitude > 0.25f)
             {
-                AddOrthogonalSegments(points[points.Count - 1], endPin, netId);
+                AddWireSegment(points[points.Count - 1], endPin, netId);
+                router?.MarkOccupancy(points[points.Count - 1], endPin, netId);
             }
         }
 
@@ -5027,7 +5078,7 @@ namespace RobotTwin.UI
             UpdateWireLayer();
             PopulateProjectTree();
             UpdateErrorCount();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
         }
 
         private void DeleteNet(NetSpec net)
@@ -5037,7 +5088,7 @@ namespace RobotTwin.UI
             UpdateWireLayer();
             PopulateProjectTree();
             UpdateErrorCount();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
         }
 
         private void UpdateErrorCount()
@@ -5675,7 +5726,7 @@ namespace RobotTwin.UI
             PopulateProjectTree();
             UpdateErrorCount();
             UpdateWireLayer();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
             return spec;
         }
 
@@ -5761,10 +5812,21 @@ namespace RobotTwin.UI
                     p = ClampToViewport(p, size);
                     p = ClampToBoard(p, size);
                 }
-                el.style.left = p.x;
-                el.style.top = p.y;
-                SetComponentPosition(spec, p);
-                UpdateTransformFields(p);
+                var resolved = ResolvePlacement(p, size, spec.Id);
+                if (IsOverlapping(resolved, size, spec.Id))
+                {
+                    // If still overlapping after search, snap back to last valid position
+                    resolved = _moveLastValidPos;
+                }
+                else
+                {
+                    _moveLastValidPos = resolved;
+                }
+
+                el.style.left = resolved.x;
+                el.style.top = resolved.y;
+                SetComponentPosition(spec, resolved);
+                UpdateTransformFields(resolved);
                 RequestWireUpdateThrottled();
             });
 
@@ -5795,6 +5857,7 @@ namespace RobotTwin.UI
             var canvasLocal = _canvasView.WorldToLocal(evt.position);
             var boardPos = CanvasToBoard(canvasLocal);
             _moveOffset = boardPos - GetComponentPosition(spec.Id);
+            _moveLastValidPos = GetComponentPosition(spec.Id);
             element.CapturePointer(_movePointerId);
             evt.StopPropagation();
         }
@@ -7618,7 +7681,7 @@ namespace RobotTwin.UI
             UpdateWireLayer();
             PopulateProjectTree();
             UpdateErrorCount();
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
             Debug.Log("[CircuitStudio] Component Deleted.");
             return true;
         }
@@ -7898,7 +7961,7 @@ namespace RobotTwin.UI
         private void On3DPointerDown(PointerDownEvent evt)
         {
             if (_centerMode != CenterPanelMode.Preview3D) return;
-            if (_circuit3DView == null || _breadboardView == null) return;
+            if (_circuit3DView == null || _circuit3DRenderer == null) return;
             if (evt.button == 0)
             {
                 _3dDragMode = ThreeDDragMode.Pan;
@@ -7922,16 +7985,16 @@ namespace RobotTwin.UI
         private void On3DPointerMove(PointerMoveEvent evt)
         {
             if (_centerMode != CenterPanelMode.Preview3D) return;
-            if (!_is3DDragging || evt.pointerId != _3dPointerId || _breadboardView == null) return;
+            if (!_is3DDragging || evt.pointerId != _3dPointerId || _circuit3DRenderer == null) return;
             var delta = (Vector2)evt.position - _3dLastPos;
             _3dLastPos = (Vector2)evt.position;
             if (_3dDragMode == ThreeDDragMode.Pan)
             {
-                _breadboardView.Pan(delta);
+                _circuit3DRenderer.Pan(delta);
             }
             else if (_3dDragMode == ThreeDDragMode.Orbit)
             {
-                _breadboardView.Orbit(delta);
+                _circuit3DRenderer.Orbit(delta);
             }
             evt.StopPropagation();
         }
@@ -7952,7 +8015,7 @@ namespace RobotTwin.UI
         private void On3DWheel(WheelEvent evt)
         {
             if (_centerMode != CenterPanelMode.Preview3D) return;
-            _breadboardView?.Zoom(evt.delta.y);
+            _circuit3DRenderer?.Zoom(evt.delta.y);
             evt.StopPropagation();
         }
 
@@ -8003,7 +8066,7 @@ namespace RobotTwin.UI
             {
                 UpdateWireLayer();
             }
-            RequestBreadboardRebuild();
+            RequestCircuit3DRebuild();
         }
     }
 
@@ -8018,9 +8081,10 @@ namespace RobotTwin.UI
     {
         private const int MaxIterations = 100000;
         private const int CostStep = 10;
-        private const int CostTurn = 50;
-        private const int CostBuffer = 20;
-        private const int CostCross = 100;
+        private const int CostTurn = 100; // Increased from 50 to prefer straight lines
+        private const int CostBuffer = 100; // Increased from 20 to avoid hugging obstacles
+        private const int CostWireBuffer = 50; // Cost for hugging other wires
+        private const int CostCross = 500; // Increased from 100 to strongly avoid crossing
         private const int CostOverlap = 10000;
 
         private readonly Rect _board;
@@ -8041,6 +8105,20 @@ namespace RobotTwin.UI
             new Vector2Int(0, -1)  // Down
         };
 
+        private static uint StableHash(string text)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (var ch in text)
+                {
+                    hash ^= ch;
+                    hash *= 16777619;
+                }
+                return hash;
+            }
+        }
+
         public WireRouter(Rect board, float step, IEnumerable<Rect> obstacles)
         {
             _board = board;
@@ -8059,10 +8137,15 @@ namespace RobotTwin.UI
 
         private void MarkObstacle(Rect rect)
         {
-            int minX = Mathf.Clamp(Mathf.FloorToInt(rect.xMin / _step), 0, _cols);
-            int maxX = Mathf.Clamp(Mathf.CeilToInt(rect.xMax / _step), 0, _cols);
-            int minY = Mathf.Clamp(Mathf.FloorToInt(rect.yMin / _step), 0, _rows);
-            int maxY = Mathf.Clamp(Mathf.CeilToInt(rect.yMax / _step), 0, _rows);
+            // Shrink by one step to ensure the boundary cells (where anchors are) are free.
+            // Rect includes padding (16). Step is 5.
+            // Shrinking by 5 leaves 11 padding. Safe.
+            float shrink = _step;
+
+            int minX = Mathf.Clamp(Mathf.CeilToInt((rect.xMin + shrink) / _step), 0, _cols);
+            int maxX = Mathf.Clamp(Mathf.FloorToInt((rect.xMax - shrink) / _step), 0, _cols);
+            int minY = Mathf.Clamp(Mathf.CeilToInt((rect.yMin + shrink) / _step), 0, _rows);
+            int maxY = Mathf.Clamp(Mathf.FloorToInt((rect.yMax - shrink) / _step), 0, _rows);
 
             for (int x = minX; x <= maxX; x++)
             {
@@ -8073,16 +8156,60 @@ namespace RobotTwin.UI
             }
         }
 
+        public void MarkOccupancy(Vector2 startPoint, Vector2 endPoint, string netId)
+        {
+            // If the segment is diagonal, split it into orthogonal segments to match AddWireSegment logic
+            if (!Mathf.Approximately(startPoint.x, endPoint.x) && !Mathf.Approximately(startPoint.y, endPoint.y))
+            {
+                bool horizontalFirst = (StableHash(netId) & 1u) == 0u;
+                Vector2 mid = horizontalFirst
+                    ? new Vector2(endPoint.x, startPoint.y)
+                    : new Vector2(startPoint.x, endPoint.y);
+
+                MarkOccupancyRaw(startPoint, mid, netId);
+                MarkOccupancyRaw(mid, endPoint, netId);
+                return;
+            }
+            MarkOccupancyRaw(startPoint, endPoint, netId);
+        }
+
+        private void MarkOccupancyRaw(Vector2 startPoint, Vector2 endPoint, string netId)
+        {
+            var start = PointToCell(startPoint);
+            var end = PointToCell(endPoint);
+
+            int dx = Math.Sign(end.x - start.x);
+            int dy = Math.Sign(end.y - start.y);
+            int steps = Mathf.Max(Mathf.Abs(end.x - start.x), Mathf.Abs(end.y - start.y));
+
+            var current = start;
+            for (int i = 0; i <= steps; i++)
+            {
+                if (!_netCells.TryGetValue(netId, out var cells))
+                {
+                    cells = new HashSet<Vector2Int>();
+                    _netCells[netId] = cells;
+                }
+                cells.Add(current);
+                _wireOccupancy[current] = netId;
+
+                current.x += dx;
+                current.y += dy;
+            }
+        }
+
         public Vector2Int PointToCell(Vector2 point)
         {
-            int x = Mathf.Clamp(Mathf.RoundToInt(point.x / _step), 0, _cols);
-            int y = Mathf.Clamp(Mathf.RoundToInt(point.y / _step), 0, _rows);
+            // Use FloorToInt to ensure consistent mapping with MarkObstacle
+            int x = Mathf.Clamp(Mathf.FloorToInt((point.x + _step * 0.5f) / _step), 0, _cols);
+            int y = Mathf.Clamp(Mathf.FloorToInt((point.y + _step * 0.5f) / _step), 0, _rows);
             return new Vector2Int(x, y);
         }
 
         public Vector2 CellToPoint(Vector2Int cell)
         {
-            return new Vector2(cell.x * _step, cell.y * _step);
+            // Use cell center to render wires in the same space the router searches
+            return new Vector2((cell.x * _step) + (_step * 0.5f), (cell.y * _step) + (_step * 0.5f));
         }
 
         public bool TryRoute(Vector2 startPoint, Vector2 endPoint, string netId, out List<Vector2Int> path)
@@ -8285,6 +8412,15 @@ namespace RobotTwin.UI
                 cost += CostBuffer;
             }
 
+            // Wire spacing (near other nets)
+            if (IsNearWire(cell, netId))
+            {
+                cost += CostWireBuffer;
+            }
+
+            // Prefer continuing in same direction as start/goal alignment
+            // If we are moving horizontally and goal is horizontal from us, good.
+
             return cost;
         }
 
@@ -8297,6 +8433,26 @@ namespace RobotTwin.UI
                 {
                     if (dx == 0 && dy == 0) continue;
                     if (_obstacles.Contains(new Vector2Int(cell.x + dx, cell.y + dy))) return true;
+                }
+            }
+            return false;
+        }
+
+        private bool IsNearWire(Vector2Int cell, string myNetId)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    if (dx == 0 && dy == 0) continue;
+                    var pos = new Vector2Int(cell.x + dx, cell.y + dy);
+                    if (_wireOccupancy.TryGetValue(pos, out var otherNet))
+                    {
+                        if (!string.Equals(otherNet, myNetId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
             return false;
