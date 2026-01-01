@@ -1,0 +1,6 @@
+{
+  "name": "Arduino Fault Effects",
+  "description": "Intentional faults to preview 3D error, spark, and smoke effects.",
+  "tag": "Simulation",
+  "difficulty": "Beginner"
+}

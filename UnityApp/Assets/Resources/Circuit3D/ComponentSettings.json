@@ -1,0 +1,59 @@
+{
+  "Components": [
+    {
+      "Type": "ArduinoUno",
+      "Euler": { "x": 0.0, "y": 180.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    },
+    {
+      "Type": "ArduinoNano",
+      "Euler": { "x": 0.0, "y": 0.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    },
+    {
+      "Type": "ArduinoProMini",
+      "Euler": { "x": 0.0, "y": 0.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    },
+    {
+      "Type": "Battery",
+      "Euler": { "x": 0.0, "y": 0.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    },
+    {
+      "Type": "Resistor",
+      "Euler": { "x": 0.0, "y": 0.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+      "ResistorHotStartTemp": 60.0,
+      "ResistorHotFullTemp": 140.0,
+      "ResistorSmokeStartTemp": 110.0,
+      "ResistorSmokeFullTemp": 170.0
+    },
+    {
+      "Type": "LED",
+      "Euler": { "x": 0.0, "y": 90.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+      "UseLedColor": true,
+      "LedColor": { "r": 1.0, "g": 0.2, "b": 0.2, "a": 1.0 },
+      "LedGlowRange": 0.08,
+      "LedGlowIntensity": 2.5,
+      "LedBlowCurrent": 0.08,
+      "LedBlowTemp": 140.0
+    },
+    {
+      "Type": "Button",
+      "Euler": { "x": 0.0, "y": 90.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    },
+    {
+      "Type": "Switch",
+      "Euler": { "x": 0.0, "y": 90.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    },
+    {
+      "Type": "Servo",
+      "Euler": { "x": 0.0, "y": 90.0, "z": 180.0 },
+      "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    }
+  ]
+}

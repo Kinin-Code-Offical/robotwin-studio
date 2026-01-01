@@ -7,6 +7,7 @@ using RobotTwin.Game;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.IO;
 using System.Reflection;
@@ -56,6 +57,9 @@ namespace RobotTwin.UI
         private Button _centerTabCode;
         private Button _centerTab3D;
         private Label _centerStatusLabel;
+        private Slider _circuit3DFovSlider;
+        private Toggle _circuit3DPerspectiveToggle;
+        private Toggle _circuit3DFollowToggle;
         private Button _outputErrorsBtn;
         private Button _outputAllBtn;
         private Button _outputWarningsBtn;
@@ -119,6 +123,7 @@ namespace RobotTwin.UI
         private int _3dPointerId = -1;
         private Vector2 _3dLastPos;
         private ThreeDDragMode _3dDragMode = ThreeDDragMode.None;
+        private string _last3dPickedComponentId;
         private float _canvasZoom = 1f;
         private Vector2 _canvasPan = Vector2.zero;
         private bool _isPanningCanvas;
@@ -221,8 +226,8 @@ namespace RobotTwin.UI
         private string _lastHighlightText = string.Empty;
 
         private const float GridSnap = 10f;
-        private const float ComponentWidth = 120f;
-        private const float ComponentHeight = 56f;
+        private const float ComponentWidth = CircuitLayoutSizing.DefaultComponentWidth;
+        private const float ComponentHeight = CircuitLayoutSizing.DefaultComponentHeight;
         private const float BoardPadding = 24f;
         private const float MinBoardWidth = 320f;
         private const float MinBoardHeight = 220f;
@@ -235,13 +240,17 @@ namespace RobotTwin.UI
         private const float WireObstaclePadding = 16f;
         private const float WireLaneSpacing = 10f;
         private const float AutoLayoutMinGap = 80f;
+        private const float ManualOverlapPadding = 4f;
         private const float PinObstaclePadding = 6f;
         private bool _constrainComponentsToBoard = true;
-        private const float BoardWorldWidth = 4000f;
-        private const float BoardWorldHeight = 2400f;
+        private const float BoardWorldWidth = CircuitLayoutSizing.BoardWorldWidth;
+        private const float BoardWorldHeight = CircuitLayoutSizing.BoardWorldHeight;
         private const float AutoLayoutSpacing = 200f;
         private const float WireExitPadding = 6f;
         private const float WireUpdateInterval = 0.06f;
+        private const float CameraKeyPanPixels = 28f;
+        private const float CameraKeyOrbitPixels = 18f;
+        private const float CameraKeyZoomDelta = 120f;
         private static readonly Color WirePreviewColor = new Color(0.45f, 0.82f, 1f, 0.8f);
         private static readonly Color[] WirePalette =
         {
@@ -263,7 +272,7 @@ namespace RobotTwin.UI
         private const int CodeIndentSpaces = 4;
         private const int HighlightMaxChars = 20000;
         private const float MinCanvasZoom = 0.35f;
-        private const float MaxCanvasZoom = 3f;
+        private const float MaxCanvasZoom = 8f;
         private static readonly Vector2 ViewportSize = new Vector2(1920f, 1080f);
         private static readonly Regex CompilerMessageWithColumn = new Regex(
             @"^(?<file>.+?):(?<line>\d+):(?<col>\d+):\s*(?<type>error|warning|note):\s*(?<message>.+)$",
@@ -547,6 +556,9 @@ namespace RobotTwin.UI
             _codePanel = _root.Q<VisualElement>("CodePanel");
             _circuit3DPanel = _root.Q<VisualElement>("Circuit3DPanel");
             _circuit3DView = _root.Q<VisualElement>("Circuit3DView");
+            _circuit3DFovSlider = _root.Q<Slider>("Circuit3DFovSlider");
+            _circuit3DPerspectiveToggle = _root.Q<Toggle>("Circuit3DPerspectiveToggle");
+            _circuit3DFollowToggle = _root.Q<Toggle>("Circuit3DFollowToggle");
             _codeFileList = _root.Q<ScrollView>("CodeFileList");
             _codeEditor = _root.Q<TextField>("CodeEditor");
             if (_codeEditor == null) Debug.LogError("[CircuitStudio] TextField 'CodeEditor' not found in UI!");
@@ -628,6 +640,7 @@ namespace RobotTwin.UI
             InitializeCodePanel();
             InitializeCircuit3DPreview();
             Initialize3DInput();
+            Initialize3DCameraControls();
 
             // Global Drag Events
             _root.RegisterCallback<PointerMoveEvent>(OnGlobalDragMove);
@@ -1330,6 +1343,7 @@ namespace RobotTwin.UI
             };
 
             project.Circuit = _currentCircuit;
+            _circuit3DRenderer?.ApplyAnchorOverrides(_currentCircuit);
             SyncCodeWorkspace(path);
             SimulationSerializer.SaveProject(project, path);
             session?.StartSession(project, path);
@@ -1401,6 +1415,7 @@ namespace RobotTwin.UI
                 var go = new GameObject("CircuitStudio3DView");
                 go.transform.SetParent(transform, false);
                 _circuit3DRenderer = go.AddComponent<Circuit3DView>();
+                Apply3DCameraSettings();
             }
 
             _circuit3DView.RegisterCallback<GeometryChangedEvent>(evt =>
@@ -1428,6 +1443,58 @@ namespace RobotTwin.UI
             _circuit3DView.RegisterCallback<PointerMoveEvent>(On3DPointerMove);
             _circuit3DView.RegisterCallback<PointerUpEvent>(On3DPointerUp);
             _circuit3DView.RegisterCallback<WheelEvent>(On3DWheel);
+        }
+
+        private void Initialize3DCameraControls()
+        {
+            if (_circuit3DFovSlider != null)
+            {
+                _circuit3DFovSlider.RegisterValueChangedCallback(evt =>
+                {
+                    _circuit3DRenderer?.SetFieldOfView(evt.newValue);
+                });
+            }
+
+            if (_circuit3DPerspectiveToggle != null)
+            {
+                _circuit3DPerspectiveToggle.RegisterValueChangedCallback(evt =>
+                {
+                    _circuit3DRenderer?.SetPerspective(evt.newValue);
+                });
+            }
+
+            if (_circuit3DFollowToggle != null)
+            {
+                _circuit3DFollowToggle.RegisterValueChangedCallback(evt =>
+                {
+                    if (!evt.newValue)
+                    {
+                        _circuit3DRenderer?.SetFollowComponent(null, false);
+                        return;
+                    }
+
+                    string focusId = _selectedComponent?.Id ?? _last3dPickedComponentId;
+                    if (!string.IsNullOrWhiteSpace(focusId))
+                    {
+                        _circuit3DRenderer?.SetFollowComponent(focusId, true);
+                    }
+                });
+            }
+
+            Apply3DCameraSettings();
+        }
+
+        private void Apply3DCameraSettings()
+        {
+            if (_circuit3DRenderer == null) return;
+            if (_circuit3DFovSlider != null)
+            {
+                _circuit3DRenderer.SetFieldOfView(_circuit3DFovSlider.value);
+            }
+            if (_circuit3DPerspectiveToggle != null)
+            {
+                _circuit3DRenderer.SetPerspective(_circuit3DPerspectiveToggle.value);
+            }
         }
 
         private void RequestCircuit3DRebuild()
@@ -2681,8 +2748,18 @@ namespace RobotTwin.UI
             foreach (var comp in _currentCircuit.Components)
             {
                 EnsureComponentProperties(comp);
+                EnsureComponentSizeProperties(comp);
             }
             AutoLayoutComponentsIfNeeded();
+        }
+
+        private void EnsureComponentSizeProperties(ComponentSpec comp)
+        {
+            if (comp?.Properties == null) return;
+            if (comp.Properties.ContainsKey("sizeX") && comp.Properties.ContainsKey("sizeY")) return;
+            var size = GetComponentSize(string.IsNullOrWhiteSpace(comp.Type) ? string.Empty : comp.Type);
+            comp.Properties["sizeX"] = size.x.ToString("F2", CultureInfo.InvariantCulture);
+            comp.Properties["sizeY"] = size.y.ToString("F2", CultureInfo.InvariantCulture);
         }
 
         private void AutoLayoutComponentsIfNeeded()
@@ -2699,31 +2776,8 @@ namespace RobotTwin.UI
                 else missingPosition.Add(comp);
             }
 
-            if (missingPosition.Count == 0 && withPosition.Count == components.Count)
-            {
-                bool allZero = true;
-                var unique = new HashSet<Vector2Int>();
-                foreach (var comp in withPosition)
-                {
-                    if (!TryGetStoredPosition(comp, out var pos) || pos.sqrMagnitude > 0.01f)
-                    {
-                        allZero = false;
-                    }
-                    unique.Add(new Vector2Int(Mathf.RoundToInt(pos.x / GridSnap), Mathf.RoundToInt(pos.y / GridSnap)));
-                }
-                bool mostlyOverlapping = unique.Count <= Mathf.Max(1, components.Count / 3);
-                bool hasOverlap = HasOverlappingComponents(withPosition);
-                if (allZero || mostlyOverlapping || hasOverlap)
-                {
-                    withPosition.Clear();
-                    missingPosition.Clear();
-                    missingPosition.AddRange(components);
-                }
-            }
-
             if (missingPosition.Count == 0)
             {
-                MaybeRecenterComponents(components);
                 return;
             }
 
@@ -3831,9 +3885,12 @@ namespace RobotTwin.UI
             var size = GetComponentSize(string.IsNullOrWhiteSpace(spec.Type) ? string.Empty : spec.Type);
             pos = ClampToViewport(pos, size);
             pos = ClampToBoard(pos, size);
-            spec.Properties["posX"] = pos.x.ToString("F2");
-            spec.Properties["posY"] = pos.y.ToString("F2");
+            spec.Properties["posX"] = pos.x.ToString("F2", CultureInfo.InvariantCulture);
+            spec.Properties["posY"] = pos.y.ToString("F2", CultureInfo.InvariantCulture);
+            spec.Properties["sizeX"] = size.x.ToString("F2", CultureInfo.InvariantCulture);
+            spec.Properties["sizeY"] = size.y.ToString("F2", CultureInfo.InvariantCulture);
             _componentPositions[spec.Id] = pos;
+            RequestCircuit3DRebuild();
         }
 
         private void EnsureComponentProperties(ComponentSpec spec)
@@ -3947,6 +4004,7 @@ namespace RobotTwin.UI
                 {
                     if (evt.button != 0 || evt.clickCount < 2) return;
                     SelectComponentFromTree(comp);
+                    Focus3DOnComponent(comp.Id);
                     evt.StopPropagation();
                 });
             }
@@ -3971,6 +4029,17 @@ namespace RobotTwin.UI
             var item = ResolveCatalogItem(comp);
             SelectComponent(visual, comp, item);
             CenterAndZoomOnSelection();
+        }
+
+        private void Focus3DOnComponent(string componentId)
+        {
+            if (string.IsNullOrWhiteSpace(componentId) || _circuit3DRenderer == null) return;
+            _last3dPickedComponentId = componentId;
+            _circuit3DRenderer.FocusOnComponent(componentId);
+            if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value)
+            {
+                _circuit3DRenderer.SetFollowComponent(componentId, true);
+            }
         }
 
         private void PopulateConnectionsList()
@@ -5929,7 +5998,7 @@ namespace RobotTwin.UI
 
         private bool IsOverlapping(Vector2 pos, Vector2 size, string ignoreId)
         {
-            float pad = AutoLayoutMinGap * 0.5f;
+            float pad = ManualOverlapPadding;
             var rect = new Rect(pos.x - pad, pos.y - pad, size.x + pad * 2f, size.y + pad * 2f);
             foreach (var kvp in _componentVisuals)
             {
@@ -6289,6 +6358,10 @@ namespace RobotTwin.UI
             visual.AddToClassList("selected");
 
             UpdatePropertiesPanel(spec, catalogInfo, visual);
+            if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value && spec != null)
+            {
+                _circuit3DRenderer?.SetFollowComponent(spec.Id, true);
+            }
         }
 
         private void ResetPropertyBindings()
@@ -6808,19 +6881,7 @@ namespace RobotTwin.UI
 
         private Vector2 GetComponentSize(string type)
         {
-            switch (type)
-            {
-                case "ArduinoUno": return new Vector2(260f, 240f);
-                case "ArduinoNano": return new Vector2(240f, 200f);
-                case "ArduinoProMini": return new Vector2(240f, 200f);
-                case "Resistor": return new Vector2(140f, 50f);
-                case "Capacitor": return new Vector2(120f, 50f);
-                case "LED": return new Vector2(120f, 50f);
-                case "DCMotor": return new Vector2(140f, 60f);
-                case "Battery": return new Vector2(140f, 60f);
-                case "TextNote": return new Vector2(200f, 80f);
-                default: return new Vector2(ComponentWidth, ComponentHeight);
-            }
+            return CircuitLayoutSizing.GetComponentSize2D(type);
         }
 
         private void OnCanvasClick(PointerDownEvent evt)
@@ -7556,6 +7617,14 @@ namespace RobotTwin.UI
         {
             bool targetIsText = evt.target is TextField || evt.target is TextElement;
             bool codeContextActive = _centerMode == CenterPanelMode.Code;
+            if (_centerMode == CenterPanelMode.Preview3D && !targetIsText)
+            {
+                if (Handle3DKeyInput(evt))
+                {
+                    evt.StopPropagation();
+                    return;
+                }
+            }
             if (evt.keyCode == KeyCode.Escape)
             {
                 if (_currentTool == ToolMode.Wire)
@@ -7667,6 +7736,10 @@ namespace RobotTwin.UI
         private bool DeleteSelectedComponent()
         {
             if (_selectedComponent == null || _selectedVisual == null || _currentCircuit == null) return false;
+            if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value)
+            {
+                _circuit3DRenderer?.SetFollowComponent(null, false);
+            }
             _currentCircuit.Components.Remove(_selectedComponent);
             _selectedVisual.RemoveFromHierarchy();
             _componentVisuals.Remove(_selectedComponent.Id);
@@ -8017,6 +8090,96 @@ namespace RobotTwin.UI
             if (_centerMode != CenterPanelMode.Preview3D) return;
             _circuit3DRenderer?.Zoom(evt.delta.y);
             evt.StopPropagation();
+        }
+
+        private bool TryPick3DComponent(Vector2 panelPos, out string componentId, out string componentType)
+        {
+            componentId = null;
+            componentType = null;
+            if (_circuit3DRenderer == null) return false;
+            if (!TryGetCircuit3DViewport(panelPos, out var viewportPoint)) return false;
+            return _circuit3DRenderer.TryPickComponent(viewportPoint, out componentId, out componentType);
+        }
+
+        private bool TryGetCircuit3DViewport(Vector2 panelPos, out Vector2 viewportPoint)
+        {
+            viewportPoint = Vector2.zero;
+            if (_circuit3DView == null) return false;
+            var rect = _circuit3DView.worldBound;
+            if (rect.width <= 0f || rect.height <= 0f) return false;
+            float x = (panelPos.x - rect.xMin) / rect.width;
+            float y = (panelPos.y - rect.yMin) / rect.height;
+            viewportPoint = new Vector2(Mathf.Clamp01(x), Mathf.Clamp01(1f - y));
+            return true;
+        }
+
+        private bool Handle3DKeyInput(KeyDownEvent evt)
+        {
+            if (_circuit3DRenderer == null) return false;
+            if (evt.keyCode == KeyCode.R || evt.keyCode == KeyCode.Home)
+            {
+                _circuit3DRenderer.ResetView();
+                return true;
+            }
+            if (evt.keyCode == KeyCode.F)
+            {
+                string focusId = _selectedComponent?.Id ?? _last3dPickedComponentId;
+                if (!string.IsNullOrWhiteSpace(focusId))
+                {
+                    _circuit3DRenderer.FocusOnComponent(focusId);
+                    return true;
+                }
+            }
+            if (evt.keyCode == KeyCode.PageUp || evt.keyCode == KeyCode.E)
+            {
+                float step = _circuit3DRenderer.GetKeyboardPanStep();
+                _circuit3DRenderer.NudgePanWorld(Vector3.up * step);
+                return true;
+            }
+            if (evt.keyCode == KeyCode.PageDown || evt.keyCode == KeyCode.Q)
+            {
+                float step = _circuit3DRenderer.GetKeyboardPanStep();
+                _circuit3DRenderer.NudgePanWorld(Vector3.down * step);
+                return true;
+            }
+
+            bool isArrow = evt.keyCode == KeyCode.LeftArrow || evt.keyCode == KeyCode.RightArrow ||
+                           evt.keyCode == KeyCode.UpArrow || evt.keyCode == KeyCode.DownArrow;
+            if (!isArrow) return false;
+
+            if (evt.ctrlKey)
+            {
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    _circuit3DRenderer.Zoom(-CameraKeyZoomDelta);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    _circuit3DRenderer.Zoom(CameraKeyZoomDelta);
+                    return true;
+                }
+                return false;
+            }
+
+            if (evt.shiftKey)
+            {
+                var pan = Vector2.zero;
+                if (evt.keyCode == KeyCode.LeftArrow) pan = new Vector2(CameraKeyPanPixels, 0f);
+                if (evt.keyCode == KeyCode.RightArrow) pan = new Vector2(-CameraKeyPanPixels, 0f);
+                if (evt.keyCode == KeyCode.UpArrow) pan = new Vector2(0f, CameraKeyPanPixels);
+                if (evt.keyCode == KeyCode.DownArrow) pan = new Vector2(0f, -CameraKeyPanPixels);
+                _circuit3DRenderer.Pan(pan);
+                return true;
+            }
+
+            var orbit = Vector2.zero;
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
+            if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
+            _circuit3DRenderer.Orbit(orbit);
+            return true;
         }
 
         private void RefreshCanvas()
