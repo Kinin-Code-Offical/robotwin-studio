@@ -5,12 +5,10 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
 $OutDir = Join-Path $RepoRoot "builds/firmware"
-$LegacyOutDir = Join-Path $RepoRoot "build/firmware"
 $LogDir = Join-Path $RepoRoot "logs/firmware"
 $LogPath = Join-Path $LogDir "build.log"
 
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
-if (-not (Test-Path $LegacyOutDir)) { New-Item -ItemType Directory -Force -Path $LegacyOutDir | Out-Null }
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 "" | Set-Content -Path $LogPath
 
@@ -53,8 +51,6 @@ $cmd = @("g++") + $Flags + @("-o", $OutputExe) + $Sources + $IncludeArgs + $Reso
 ($cmd -join " ") | Tee-Object -FilePath $LogPath
 & $cmd[0] @($cmd[1..($cmd.Length - 1)]) 2>&1 | Tee-Object -FilePath $LogPath -Append
 if ($LASTEXITCODE -ne 0) { Write-Error "Firmware build failed. See $LogPath"; exit 1 }
-
-Copy-Item -Path $OutputExe -Destination (Join-Path $LegacyOutDir "VirtualArduinoFirmware.exe") -Force
 
 Write-Host "[Firmware] Output: $OutputExe" -ForegroundColor Green
 Write-Host "[Firmware] Log: $LogPath" -ForegroundColor Green

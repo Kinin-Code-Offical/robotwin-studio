@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 # Ensure Output Dir
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
 $DllDir = Join-Path $RepoRoot "UnityApp/Assets/Plugins/x86_64"
-$OutDir = Join-Path $RepoRoot "build/native"
+$OutDir = Join-Path $RepoRoot "builds/native"
 if (-not (Test-Path $DllDir)) { New-Item -ItemType Directory -Force -Path $DllDir | Out-Null }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
 

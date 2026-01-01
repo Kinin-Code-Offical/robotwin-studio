@@ -147,7 +147,7 @@ def console(url: str) -> int:
 COMMAND_HELP = {
     "build-bvm": "Build a .bvm from .hex or .ino. For .ino, pass --fqbn arduino:avr:uno.",
     "build-firmware": "Build VirtualArduinoFirmware.exe into builds/firmware (logs to logs/firmware).",
-    "build-native": "Build NativeEngine DLL and standalone (g++). Outputs to build/native.",
+    "build-native": "Build NativeEngine DLL and standalone (g++). Outputs to builds/native.",
     "build-standalone": "Build Unity Windows player via batchmode.",
     "update-unity-plugins": "Build CoreSim .NET plugin and sync into UnityApp/Assets/Plugins.",
     "update-repo-files": "Refresh docs/repo_files.txt inventory.",

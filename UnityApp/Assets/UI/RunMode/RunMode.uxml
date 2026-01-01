@@ -40,13 +40,19 @@
                     </ui:ScrollView>
                 </ui:VisualElement>
 
-                <ui:Label name="TelemetryPathLabel" text="Log Path: ..." class="path-label" />
+                <ui:VisualElement class="path-row">
+                    <ui:Label name="TelemetryPathLabel" text="Log Path: ..." class="path-label" />
+                    <ui:Button name="OpenLogFileBtn" text="Open Log File" class="btn ghost path-btn" />
+                </ui:VisualElement>
             </ui:VisualElement>
 
             <ui:VisualElement class="panel right-panel">
                 <ui:VisualElement class="card power-card">
                     <ui:Label text="Power / USB" class="card-title" />
                     <ui:ScrollView name="UsbBoardList" class="usb-list" />
+                    <ui:Label name="UsbHintLabel" text="IDE portunu secin (IDE'de Unknown gorunebilir)." class="subtle usb-hint" />
+                    <ui:Label name="ComStatusLabel" text="Virtual COM: N/A" class="subtle" />
+                    <ui:Button name="ComDriverInstallBtn" text="Install Virtual COM Driver" class="btn ghost com-btn" />
                     <ui:Label name="UsbStatusLabel" text="USB: N/A" class="subtle" />
                 </ui:VisualElement>
 

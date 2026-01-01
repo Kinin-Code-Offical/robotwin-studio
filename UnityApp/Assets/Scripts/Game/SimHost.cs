@@ -4,6 +4,7 @@ using RobotTwin.Core;
 using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Engine;
 using RobotTwin.CoreSim.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -20,6 +21,7 @@ namespace RobotTwin.Game
         public static SimHost Instance { get; private set; }
         public delegate void TickHandler(double time);
         public event TickHandler OnTickComplete;
+        public event Action<string, string> OnSerialOutput;
 
         private CircuitSpec _circuit;
         private bool _isRunning = false;
@@ -823,6 +825,7 @@ namespace RobotTwin.Game
 
             string prefix = string.IsNullOrWhiteSpace(boardId) ? "[SYS]" : $"[{boardId}]";
             string normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
+            OnSerialOutput?.Invoke(boardId, normalized);
             bool endsWithNewline = text.EndsWith("\n") || text.EndsWith("\r");
             string[] lines = normalized.Split('\n');
 

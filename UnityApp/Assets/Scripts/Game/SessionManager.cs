@@ -79,19 +79,17 @@ namespace RobotTwin.Game
         {
             string resolvedPath = string.Empty;
 #if UNITY_EDITOR
-            // Relative to project path: ../build/firmware/VirtualArduinoFirmware.exe
+            // Relative to project path: ../builds/firmware/VirtualArduinoFirmware.exe
             var projectRoot = Directory.GetParent(Application.dataPath).Parent.FullName;
-            var buildsPath = Path.Combine(projectRoot, "builds", "firmware", "VirtualArduinoFirmware.exe");
-            var legacyPath = Path.Combine(projectRoot, "build", "firmware", "VirtualArduinoFirmware.exe");
-            var path = File.Exists(buildsPath) ? buildsPath : legacyPath;
-            if (File.Exists(path))
+            var firmwarePath = Path.Combine(projectRoot, "builds", "firmware", "VirtualArduinoFirmware.exe");
+            if (File.Exists(firmwarePath))
             {
-                resolvedPath = path;
-                Debug.Log($"[SessionManager] Firmware found: {path}");
+                resolvedPath = firmwarePath;
+                Debug.Log($"[SessionManager] Firmware found: {firmwarePath}");
             }
             else
             {
-                Debug.LogWarning($"[SessionManager] Firmware NOT found at {path}");
+                Debug.LogWarning($"[SessionManager] Firmware NOT found at {firmwarePath}");
             }
 #else
             // In build, expect next to executable or in data

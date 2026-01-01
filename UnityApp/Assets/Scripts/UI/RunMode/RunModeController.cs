@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using System;
+using Diagnostics = System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,6 +15,7 @@ namespace RobotTwin.UI
 {
     public class RunModeController : MonoBehaviour
     {
+        private const int MinimumComBasePort = 3;
         private UIDocument _doc;
         private VisualElement _root;
         private Label _timeLabel;
@@ -25,16 +27,28 @@ namespace RobotTwin.UI
         private bool _logAutoFollow = true;
         private bool _serialAutoFollow = true;
         private Label _pathLabel;
+        private Button _openLogBtn;
         private Label _projectLabel;
         private Label _usbStatusLabel;
+        private Label _usbHintLabel;
         private ScrollView _usbBoardList;
+        private Label _comStatusLabel;
+        private Button _comInstallBtn;
         private TextField _componentSearchField;
         private VisualElement _circuit3DView;
-        private Breadboard3DView _breadboardView;
+        private Circuit3DView _circuit3DRenderer;
+        private bool _is3DDragging;
+        private int _3dPointerId = -1;
+        private Vector2 _3dLastPos;
+        private ThreeDDragMode _3dDragMode = ThreeDDragMode.None;
+        private string _pressed3DButtonId;
         private string _layoutClass = string.Empty;
         
         [Header("Configuration")]
         [SerializeField] private string _firmwarePath;
+        [SerializeField] private string _com0comSetupcPath;
+        [SerializeField] private int _virtualComBasePort = 30;
+        [SerializeField] private bool _autoInstallVirtualCom = true;
 
         // Creation UI
         private TextField _newSignalName;
@@ -64,10 +78,15 @@ namespace RobotTwin.UI
         
         private bool _isRunning = false;
         private string _runOutputPath;
+        private string _eventLogPath;
+        private StreamWriter _eventLogWriter;
         private readonly Dictionary<string, bool> _usbConnectedByBoard = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Toggle> _usbToggles = new Dictionary<string, Toggle>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Label> _usbPortLabels = new Dictionary<string, Label>(StringComparer.OrdinalIgnoreCase);
         private string _lastValidationSummary = string.Empty;
         private string _lastPowerSummary = string.Empty;
+        private bool _comInstallAttempted;
+        private VirtualComPortManager _comPortManager;
         private readonly Dictionary<string, SwitchStateSnapshot> _switchStateSnapshots =
             new Dictionary<string, SwitchStateSnapshot>(StringComparer.OrdinalIgnoreCase);
 
@@ -88,6 +107,13 @@ namespace RobotTwin.UI
             public Label Value;
         }
 
+        private enum ThreeDDragMode
+        {
+            None,
+            Pan,
+            Orbit
+        }
+
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
@@ -106,9 +132,13 @@ namespace RobotTwin.UI
             _serialScroll = root.Q<ScrollView>("SerialScroll");
             InitializeAutoScroll();
             _pathLabel = root.Q<Label>("TelemetryPathLabel");
+            _openLogBtn = root.Q<Button>("OpenLogFileBtn");
             _projectLabel = root.Q<Label>("ProjectLabel");
             _usbStatusLabel = root.Q<Label>("UsbStatusLabel");
+            _usbHintLabel = root.Q<Label>("UsbHintLabel");
             _usbBoardList = root.Q<ScrollView>("UsbBoardList");
+            _comStatusLabel = root.Q<Label>("ComStatusLabel");
+            _comInstallBtn = root.Q<Button>("ComDriverInstallBtn");
             _telemetryScroll = root.Q<ScrollView>("TelemetryScroll");
             _telemetryList = root.Q<VisualElement>("TelemetryList");
             _componentSearchField = root.Q<TextField>("ComponentSearchField");
@@ -116,6 +146,8 @@ namespace RobotTwin.UI
             
             // Buttons
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
+            if (_openLogBtn != null) _openLogBtn.clicked += OnOpenLogFileClicked;
+            if (_comInstallBtn != null) _comInstallBtn.clicked += OnInstallVirtualComClicked;
             InitVisualization(root);
             StartSimulation(); // Start Loop
         }
@@ -178,8 +210,9 @@ namespace RobotTwin.UI
                 }
                 _projectLabel.text = string.IsNullOrWhiteSpace(name) ? "Project: -" : $"Project: {name}";
             }
+            InitEventLog();
             InitVisualization(_doc.rootVisualElement);
-            InitBreadboardView(_doc.rootVisualElement);
+            InitCircuit3DView(_doc.rootVisualElement);
 
             // Ensure SimHost exists
             if (RobotTwin.Game.SimHost.Instance == null)
@@ -192,6 +225,13 @@ namespace RobotTwin.UI
                 _host = RobotTwin.Game.SimHost.Instance;
             }
 
+            if (_host != null)
+            {
+                _host.OnSerialOutput -= HandleSerialOutput;
+                _host.OnSerialOutput += HandleSerialOutput;
+            }
+
+            _comInstallAttempted = false;
             _telemetryBuilt = false;
             BuildUsbList();
             BuildTelemetryEntries();
@@ -206,9 +246,12 @@ namespace RobotTwin.UI
             if (_host != null)
             {
                 _host.StopSimulation();
+                _host.OnSerialOutput -= HandleSerialOutput;
             }
+            _comPortManager?.CloseAll();
             RestoreSwitchDefaults();
             _isRunning = false;
+            CloseEventLog();
         }
 
         private void OnStopClicked(ClickEvent evt)
@@ -245,9 +288,128 @@ namespace RobotTwin.UI
         {
             if (_logContentLabel != null)
             {
-                _logContentLabel.text = (text + "\n" + _logContentLabel.text)
-                    .Substring(0, Mathf.Min(_logContentLabel.text.Length + text.Length + 1, 2000));
+                string combined = string.IsNullOrEmpty(_logContentLabel.text)
+                    ? text
+                    : _logContentLabel.text + "\n" + text;
+                if (combined.Length > 2000)
+                {
+                    combined = combined.Substring(combined.Length - 2000);
+                }
+                _logContentLabel.text = combined;
                 AutoScroll(_logScroll, _logAutoFollow);
+            }
+            WriteEventLogLine(text);
+        }
+
+        private void InitEventLog()
+        {
+            CloseEventLog();
+            try
+            {
+                string name = SessionManager.Instance?.CurrentProject?.ProjectName;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = _activeCircuit?.Id;
+                }
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = "session";
+                }
+                string safeName = SanitizeFileName(name);
+                string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
+                _runOutputPath = Path.Combine(Application.persistentDataPath, "Logs", "RunMode", $"{safeName}_{stamp}");
+                Directory.CreateDirectory(_runOutputPath);
+
+                _eventLogPath = Path.Combine(_runOutputPath, "event_log.txt");
+                _eventLogWriter = new StreamWriter(_eventLogPath, false) { AutoFlush = true };
+                _eventLogWriter.WriteLine($"Session Start: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                _eventLogWriter.WriteLine($"Project: {name}");
+                if (!string.IsNullOrWhiteSpace(_activeCircuit?.Id))
+                {
+                    _eventLogWriter.WriteLine($"Circuit: {_activeCircuit.Id}");
+                }
+                _eventLogWriter.WriteLine(new string('-', 48));
+
+                if (_pathLabel != null)
+                {
+                    _pathLabel.text = $"Log Path: {_eventLogPath}";
+                }
+                _openLogBtn?.SetEnabled(true);
+                AppendLog($"[RunMode] Logging to {_eventLogPath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[RunMode] Failed to create event log: {ex.Message}");
+                _eventLogWriter = null;
+                _eventLogPath = string.Empty;
+                _runOutputPath = string.Empty;
+                if (_pathLabel != null)
+                {
+                    _pathLabel.text = "Log Path: unavailable";
+                }
+                _openLogBtn?.SetEnabled(false);
+            }
+        }
+
+        private void CloseEventLog()
+        {
+            if (_eventLogWriter == null) return;
+            try
+            {
+                _eventLogWriter.Flush();
+                _eventLogWriter.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[RunMode] Failed to close event log: {ex.Message}");
+            }
+            finally
+            {
+                _eventLogWriter = null;
+            }
+        }
+
+        private void WriteEventLogLine(string text)
+        {
+            if (_eventLogWriter == null) return;
+            try
+            {
+                _eventLogWriter.WriteLine($"{DateTime.Now:HH:mm:ss.fff} {text}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[RunMode] Failed to write event log: {ex.Message}");
+                CloseEventLog();
+            }
+        }
+
+        private static string SanitizeFileName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "session";
+            char[] invalid = Path.GetInvalidFileNameChars();
+            var cleaned = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
+            return string.IsNullOrWhiteSpace(cleaned) ? "session" : cleaned;
+        }
+
+        private void OnOpenLogFileClicked()
+        {
+            if (string.IsNullOrWhiteSpace(_eventLogPath) || !File.Exists(_eventLogPath))
+            {
+                AppendLog("[RunMode] Log file not available yet.");
+                return;
+            }
+
+            try
+            {
+                Diagnostics.Process.Start(new Diagnostics.ProcessStartInfo
+                {
+                    FileName = _eventLogPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[RunMode] Failed to open log file: {ex.Message}");
             }
         }
 
@@ -347,11 +509,14 @@ namespace RobotTwin.UI
         {
             _usbConnectedByBoard.Clear();
             _usbToggles.Clear();
+            _usbPortLabels.Clear();
 
             if (_usbBoardList == null || _activeCircuit?.Components == null) return;
 
             _usbBoardList.Clear();
             var boards = _activeCircuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            bool wantsAdmin = _autoInstallVirtualCom && !_comInstallAttempted;
+            ConfigureVirtualComPorts(boards, wantsAdmin, true);
             foreach (var board in boards)
             {
                 var row = new VisualElement();
@@ -360,26 +525,313 @@ namespace RobotTwin.UI
                 var name = new Label(board.Id);
                 name.AddToClassList("usb-name");
 
+                var typeLabel = new Label(GetBoardDisplayType(board.Type));
+                typeLabel.AddToClassList("usb-type");
+
+                var portLabel = new Label("COM: -");
+                portLabel.AddToClassList("usb-port");
+
                 var toggle = new Toggle();
                 toggle.AddToClassList("usb-toggle");
                 toggle.value = true;
 
                 row.Add(name);
+                row.Add(typeLabel);
+                row.Add(portLabel);
                 row.Add(toggle);
                 _usbBoardList.Add(row);
 
-                _usbConnectedByBoard[board.Id] = true;
                 _usbToggles[board.Id] = toggle;
-                if (_host != null)
-                {
-                    _host.SetUsbConnected(board.Id, true);
-                }
+                _usbPortLabels[board.Id] = portLabel;
+                SetUsbConnected(board.Id, true);
 
                 string captured = board.Id;
                 toggle.RegisterValueChangedCallback(evt => SetUsbConnected(captured, evt.newValue));
             }
 
+            UpdateUsbPortLabels();
             UpdateUsbStatus();
+        }
+
+        private void ConfigureVirtualComPorts(List<ComponentSpec> boards, bool requestAdmin, bool allowFallback)
+        {
+            if (_comPortManager == null)
+            {
+                _comPortManager = new VirtualComPortManager(AppendLog);
+            }
+
+            int basePort = MinimumComBasePort;
+            if (_virtualComBasePort != basePort)
+            {
+                _virtualComBasePort = basePort;
+            }
+            _comPortManager.PortBase = basePort;
+            bool wantsAdmin = requestAdmin;
+            if (wantsAdmin) _comInstallAttempted = true;
+
+            string setupcPath = ResolveCom0ComSetupcPath();
+            AppendLog(string.IsNullOrWhiteSpace(setupcPath)
+                ? "[VirtualCOM] setupc.exe not found."
+                : $"[VirtualCOM] setupc.exe: {setupcPath}");
+            if (string.IsNullOrWhiteSpace(setupcPath) && wantsAdmin)
+            {
+                if (TryInstallCom0ComDriver())
+                {
+                    setupcPath = ResolveCom0ComSetupcPath();
+                }
+            }
+
+            _comPortManager.SetupcPath = setupcPath;
+            _comPortManager.InstallScriptPath = ResolveCom0ComInstallScriptPath();
+            _comPortManager.ConfigureBoards(boards.Select(b => b.Id));
+
+            bool portsReady = _comPortManager.EnsurePortsInstalled(wantsAdmin);
+            if (portsReady) _comPortManager.RefreshConnections();
+            if (!portsReady) AppendLog($"[VirtualCOM] {(_comPortManager?.StatusMessage ?? "not ready")}");
+
+            if (allowFallback)
+            {
+                ApplyFallbackComBaseIfNeeded(boards);
+            }
+            UpdateUsbHint();
+            UpdateComStatus();
+        }
+
+        private void UpdateUsbPortLabels()
+        {
+            if (_comPortManager == null) return;
+            foreach (var kvp in _usbPortLabels)
+            {
+                if (kvp.Value == null) continue;
+                if (_comPortManager.TryGetPorts(kvp.Key, out var appPort, out var idePort))
+                {
+                    bool connected = _usbConnectedByBoard.TryGetValue(kvp.Key, out var isOn) && isOn;
+                    kvp.Value.text = connected
+                        ? $"IDE: {idePort} / APP: {appPort}"
+                        : $"IDE: {idePort} / APP: {appPort} (USB:off)";
+                }
+                else
+                {
+                    kvp.Value.text = "COM: -";
+                }
+            }
+        }
+
+        private void UpdateComStatus()
+        {
+            if (_comStatusLabel == null) return;
+            _comStatusLabel.text = _comPortManager?.StatusMessage ?? "Virtual COM: N/A";
+        }
+
+        private void UpdateUsbHint()
+        {
+            if (_usbHintLabel == null) return;
+            int basePort = _comPortManager?.PortBase ?? _virtualComBasePort;
+            _usbHintLabel.text = $"IDE portunu secin (COM{basePort}/COM{basePort + 1}, IDE'de Unknown gorunebilir).";
+        }
+
+        private void ApplyFallbackComBaseIfNeeded(List<ComponentSpec> boards)
+        {
+            if (_comPortManager == null || boards == null || boards.Count == 0) return;
+            var ports = _comPortManager.GetAvailablePorts();
+            if (ports.Length == 0) return;
+            AppendLog($"[VirtualCOM] Available ports: {string.Join(", ", ports)}");
+
+            if (ArePortsAvailable(ports, MinimumComBasePort, boards.Count)) return;
+
+            int candidate = FindCandidateBasePort(ports, boards.Count);
+            if (candidate <= 0 || candidate == MinimumComBasePort) return;
+
+            AppendLog($"[VirtualCOM] Falling back to COM{candidate}/COM{candidate + 1}.");
+            _virtualComBasePort = candidate;
+            _comPortManager.PortBase = candidate;
+            _comPortManager.ConfigureBoards(boards.Select(b => b.Id));
+            _comPortManager.RefreshConnections();
+        }
+
+        private void OnInstallVirtualComClicked()
+        {
+            AppendLog("[VirtualCOM] Install requested.");
+            if (_activeCircuit?.Components == null)
+            {
+                AppendLog("[VirtualCOM] No active circuit.");
+                return;
+            }
+
+            var boards = _activeCircuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            if (boards.Count == 0)
+            {
+                AppendLog("[VirtualCOM] No Arduino boards.");
+                return;
+            }
+
+            if (_comPortManager == null)
+            {
+                _comPortManager = new VirtualComPortManager(AppendLog);
+            }
+
+            _virtualComBasePort = MinimumComBasePort;
+            _comPortManager.PortBase = MinimumComBasePort;
+            _comPortManager.ConfigureBoards(boards.Select(b => b.Id));
+
+            string setupcPath = ResolveCom0ComSetupcPath();
+            AppendLog(string.IsNullOrWhiteSpace(setupcPath)
+                ? "[VirtualCOM] setupc.exe not found."
+                : $"[VirtualCOM] setupc.exe: {setupcPath}");
+            if (string.IsNullOrWhiteSpace(setupcPath))
+            {
+                if (!TryInstallCom0ComDriver())
+                {
+                    UpdateComStatus();
+                    return;
+                }
+                setupcPath = ResolveCom0ComSetupcPath();
+            }
+
+            _comPortManager.SetupcPath = setupcPath;
+            _comPortManager.InstallScriptPath = ResolveCom0ComInstallScriptPath();
+
+            bool installed = _comPortManager.ForceInstallPorts(true);
+            if (installed)
+            {
+                _comPortManager.RefreshConnections();
+                UpdateUsbPortLabels();
+            }
+            else
+            {
+                var ports = _comPortManager.GetAvailablePorts();
+                if (!ArePortsAvailable(ports, _comPortManager.PortBase, boards.Count))
+                {
+                    AppendLog("[VirtualCOM] COM30/COM31 not available. Check driver/admin.");
+                }
+            }
+            UpdateUsbHint();
+            AppendLog($"[VirtualCOM] {_comPortManager.StatusMessage}");
+            UpdateComStatus();
+        }
+
+        private void HandleSerialOutput(string boardId, string text)
+        {
+            _comPortManager?.PublishSerial(boardId, text);
+        }
+
+        private string ResolveCom0ComSetupcPath()
+        {
+            if (!string.IsNullOrWhiteSpace(_com0comSetupcPath) && File.Exists(_com0comSetupcPath))
+            {
+                return _com0comSetupcPath;
+            }
+
+            string repoRoot = TryGetRepoRoot();
+            if (!string.IsNullOrWhiteSpace(repoRoot))
+            {
+                string buildsCandidate = Path.Combine(repoRoot, "builds", "com0com", "setupc.exe");
+                if (File.Exists(buildsCandidate)) return buildsCandidate;
+
+                string candidate = Path.Combine(repoRoot, "External", "Drivers", "com0com", "setupc.exe");
+                if (File.Exists(candidate)) return candidate;
+            }
+
+            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            if (!string.IsNullOrWhiteSpace(programFilesX86))
+            {
+                string pfCandidate = Path.Combine(programFilesX86, "com0com", "setupc.exe");
+                if (File.Exists(pfCandidate)) return pfCandidate;
+            }
+
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (!string.IsNullOrWhiteSpace(programFiles))
+            {
+                string pfCandidate = Path.Combine(programFiles, "com0com", "setupc.exe");
+                if (File.Exists(pfCandidate)) return pfCandidate;
+            }
+
+            string streaming = Path.Combine(Application.streamingAssetsPath, "com0com", "setupc.exe");
+            if (File.Exists(streaming)) return streaming;
+
+            string dataPath = Path.Combine(Application.dataPath, "com0com", "setupc.exe");
+            if (File.Exists(dataPath)) return dataPath;
+
+            return string.Empty;
+        }
+
+        private string ResolveCom0ComInstallerPath()
+        {
+            string repoRoot = TryGetRepoRoot();
+            if (string.IsNullOrWhiteSpace(repoRoot)) return string.Empty;
+            string x64 = Path.Combine(repoRoot, "builds", "com0com", "Setup_com0com_v3.0.0.0_W7_x64_signed.exe");
+            if (File.Exists(x64)) return x64;
+            string x86 = Path.Combine(repoRoot, "builds", "com0com", "Setup_com0com_v3.0.0.0_W7_x86_signed.exe");
+            if (File.Exists(x86)) return x86;
+            return string.Empty;
+        }
+
+        private bool TryInstallCom0ComDriver()
+        {
+            string installer = ResolveCom0ComInstallerPath();
+            if (string.IsNullOrWhiteSpace(installer))
+            {
+                AppendLog("[VirtualCOM] Installer not found in builds/com0com.");
+                _comPortManager?.SetStatus("Virtual COM: installer missing");
+                return false;
+            }
+
+            try
+            {
+                AppendLog("[VirtualCOM] Launching installer (admin required)...");
+                var psi = new Diagnostics.ProcessStartInfo
+                {
+                    FileName = installer,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+                var process = Diagnostics.Process.Start(psi);
+                if (process == null)
+                {
+                    AppendLog("[VirtualCOM] Driver install canceled.");
+                    return false;
+                }
+                process.WaitForExit();
+                if (process.ExitCode != 0)
+                {
+                    AppendLog($"[VirtualCOM] Driver install failed (ExitCode {process.ExitCode}).");
+                    return false;
+                }
+                return true;
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223 || ex.NativeErrorCode == 5)
+            {
+                AppendLog("[VirtualCOM] Admin permission denied.");
+                _comPortManager?.SetStatus("Virtual COM: admin denied");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[VirtualCOM] Driver install failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        private string ResolveCom0ComInstallScriptPath()
+        {
+            string repoRoot = TryGetRepoRoot();
+            if (string.IsNullOrWhiteSpace(repoRoot)) return string.Empty;
+            string candidate = Path.Combine(repoRoot, "tools", "scripts", "install_com0com_ports.ps1");
+            return File.Exists(candidate) ? candidate : string.Empty;
+        }
+
+        private static string TryGetRepoRoot()
+        {
+            try
+            {
+                var assetsRoot = Directory.GetParent(Application.dataPath);
+                var repoRoot = assetsRoot?.Parent;
+                return repoRoot?.FullName ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private void SetUsbConnected(string boardId, bool isConnected)
@@ -390,6 +842,12 @@ namespace RobotTwin.UI
             {
                 _host.SetUsbConnected(boardId, isConnected);
             }
+            if (_comPortManager != null)
+            {
+                _comPortManager.SetUsbConnected(boardId, isConnected);
+                UpdateComStatus();
+            }
+            UpdateUsbPortLabels();
             UpdateUsbStatus();
         }
 
@@ -408,6 +866,11 @@ namespace RobotTwin.UI
                 return;
             }
             int connected = _usbConnectedByBoard.Values.Count(v => v);
+            if (connected == 0)
+            {
+                _usbStatusLabel.text = "USB: off";
+                return;
+            }
             _usbStatusLabel.text = $"USB: {connected}/{_usbConnectedByBoard.Count} connected";
         }
 
@@ -1067,25 +1530,30 @@ namespace RobotTwin.UI
             return Mathf.Max(0f, contentHeight - viewportHeight);
         }
 
-        private void InitBreadboardView(VisualElement root)
+        private void InitCircuit3DView(VisualElement root)
         {
             if (_circuit3DView == null || _activeCircuit == null) return;
-            if (_breadboardView == null)
+            if (_circuit3DRenderer == null)
             {
-                var go = new GameObject("Breadboard3DView");
+                var go = new GameObject("Circuit3DView");
                 go.transform.SetParent(transform, false);
-                _breadboardView = go.AddComponent<Breadboard3DView>();
+                _circuit3DRenderer = go.AddComponent<Circuit3DView>();
             }
+
+            _circuit3DView.RegisterCallback<PointerDownEvent>(On3DPointerDown);
+            _circuit3DView.RegisterCallback<PointerMoveEvent>(On3DPointerMove);
+            _circuit3DView.RegisterCallback<PointerUpEvent>(On3DPointerUp);
+            _circuit3DView.RegisterCallback<WheelEvent>(On3DWheel);
 
             _circuit3DView.RegisterCallback<GeometryChangedEvent>(evt =>
             {
                 int width = Mathf.RoundToInt(evt.newRect.width);
                 int height = Mathf.RoundToInt(evt.newRect.height - 18f);
-                _breadboardView.Initialize(width, height);
-                _breadboardView.Build(_activeCircuit);
-                if (_breadboardView.TargetTexture != null)
+                _circuit3DRenderer.Initialize(width, height);
+                _circuit3DRenderer.Build(_activeCircuit);
+                if (_circuit3DRenderer.TargetTexture != null)
                 {
-                    _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_breadboardView.TargetTexture));
+                    _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
                 }
             });
         }
@@ -1095,6 +1563,7 @@ namespace RobotTwin.UI
             if (_host == null) return;
 
             var telemetry = _host.LastTelemetry;
+            _circuit3DRenderer?.UpdateTelemetry(_activeCircuit, telemetry, _usbConnectedByBoard);
             if (telemetry == null)
             {
                 foreach (var kvp in _componentLabels)
@@ -1223,12 +1692,216 @@ namespace RobotTwin.UI
             }
         }
 
+        private void On3DPointerDown(PointerDownEvent evt)
+        {
+            if (_circuit3DView == null || _circuit3DRenderer == null) return;
+            if (evt.button == 0)
+            {
+                if (TryHandle3DPointerDown(evt.position, evt.pointerId))
+                {
+                    evt.StopPropagation();
+                    return;
+                }
+                _3dDragMode = ThreeDDragMode.Pan;
+            }
+            else if (evt.button == 1)
+            {
+                _3dDragMode = ThreeDDragMode.Orbit;
+            }
+            else
+            {
+                return;
+            }
+
+            _is3DDragging = true;
+            _3dPointerId = evt.pointerId;
+            _3dLastPos = (Vector2)evt.position;
+            _circuit3DView.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+
+        private void On3DPointerMove(PointerMoveEvent evt)
+        {
+            if (!_is3DDragging || evt.pointerId != _3dPointerId || _circuit3DRenderer == null) return;
+            var delta = (Vector2)evt.position - _3dLastPos;
+            _3dLastPos = (Vector2)evt.position;
+            if (_3dDragMode == ThreeDDragMode.Pan)
+            {
+                _circuit3DRenderer.Pan(delta);
+            }
+            else if (_3dDragMode == ThreeDDragMode.Orbit)
+            {
+                _circuit3DRenderer.Orbit(delta);
+            }
+            evt.StopPropagation();
+        }
+
+        private void On3DPointerUp(PointerUpEvent evt)
+        {
+            if (_pressed3DButtonId != null && _activeCircuit?.Components != null)
+            {
+                var comp = _activeCircuit.Components.FirstOrDefault(c => c.Id == _pressed3DButtonId);
+                if (comp != null)
+                {
+                    SetSwitchState(comp, false);
+                }
+                _pressed3DButtonId = null;
+                if (_circuit3DView != null && _circuit3DView.HasPointerCapture(evt.pointerId))
+                {
+                    _circuit3DView.ReleasePointer(evt.pointerId);
+                }
+                _3dPointerId = -1;
+            }
+
+            if (_is3DDragging && evt.pointerId == _3dPointerId)
+            {
+                _is3DDragging = false;
+                _3dDragMode = ThreeDDragMode.None;
+                if (_circuit3DView != null && _circuit3DView.HasPointerCapture(evt.pointerId))
+                {
+                    _circuit3DView.ReleasePointer(evt.pointerId);
+                }
+                _3dPointerId = -1;
+            }
+            evt.StopPropagation();
+        }
+
+        private void On3DWheel(WheelEvent evt)
+        {
+            _circuit3DRenderer?.Zoom(evt.delta.y);
+            evt.StopPropagation();
+        }
+
+        private bool TryHandle3DPointerDown(Vector2 panelPos, int pointerId)
+        {
+            if (!TryPick3DComponent(panelPos, out var compId, out _)) return false;
+            if (_activeCircuit?.Components == null) return false;
+            var comp = _activeCircuit.Components.FirstOrDefault(c => c.Id == compId);
+            if (comp == null) return false;
+
+            if (IsButtonType(comp.Type))
+            {
+                SetSwitchState(comp, true);
+                _pressed3DButtonId = comp.Id;
+                _3dPointerId = pointerId;
+                if (_circuit3DView != null && !_circuit3DView.HasPointerCapture(pointerId))
+                {
+                    _circuit3DView.CapturePointer(pointerId);
+                }
+                return true;
+            }
+
+            if (IsSwitchComponent(comp.Type))
+            {
+                bool nextClosed = !IsSwitchClosed(comp);
+                SetSwitchState(comp, nextClosed);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryPick3DComponent(Vector2 panelPos, out string componentId, out string componentType)
+        {
+            componentId = null;
+            componentType = null;
+            if (_circuit3DRenderer == null) return false;
+            if (!TryGetCircuit3DViewport(panelPos, out var viewportPoint)) return false;
+            return _circuit3DRenderer.TryPickComponent(viewportPoint, out componentId, out componentType);
+        }
+
+        private bool TryGetCircuit3DViewport(Vector2 panelPos, out Vector2 viewportPoint)
+        {
+            viewportPoint = Vector2.zero;
+            if (_circuit3DView == null) return false;
+            var rect = _circuit3DView.worldBound;
+            if (rect.width <= 0f || rect.height <= 0f) return false;
+            float x = (panelPos.x - rect.xMin) / rect.width;
+            float y = (panelPos.y - rect.yMin) / rect.height;
+            viewportPoint = new Vector2(Mathf.Clamp01(x), Mathf.Clamp01(1f - y));
+            return true;
+        }
+
         private static bool IsArduinoType(string type)
         {
             if (string.IsNullOrWhiteSpace(type)) return false;
             return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetBoardDisplayType(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return "Arduino";
+            switch (type.Trim().ToLowerInvariant())
+            {
+                case "arduinouno":
+                    return "Arduino Uno";
+                case "arduinonano":
+                    return "Arduino Nano";
+                case "arduinopromini":
+                    return "Arduino Pro Mini";
+                default:
+                    return type;
+            }
+        }
+
+        private static bool ArePortsAvailable(IEnumerable<string> ports, int basePort, int boardCount)
+        {
+            if (ports == null || boardCount <= 0) return false;
+            int needed = boardCount * 2;
+            var numbers = new HashSet<int>();
+            foreach (var port in ports)
+            {
+                if (TryParseComNumber(port, out var number))
+                {
+                    numbers.Add(number);
+                }
+            }
+            for (int offset = 0; offset < needed; offset++)
+            {
+                if (!numbers.Contains(basePort + offset)) return false;
+            }
+            return true;
+        }
+
+        private static int FindCandidateBasePort(IEnumerable<string> ports, int boardCount)
+        {
+            if (ports == null || boardCount <= 0) return -1;
+            int needed = boardCount * 2;
+            var numbers = new HashSet<int>();
+            foreach (var port in ports)
+            {
+                if (TryParseComNumber(port, out var number))
+                {
+                    numbers.Add(number);
+                }
+            }
+
+            for (int basePort = 3; basePort <= 256; basePort++)
+            {
+                bool ok = true;
+                for (int offset = 0; offset < needed; offset++)
+                {
+                    if (!numbers.Contains(basePort + offset))
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok) return basePort;
+            }
+            return -1;
+        }
+
+        private static bool TryParseComNumber(string port, out int number)
+        {
+            number = 0;
+            if (string.IsNullOrWhiteSpace(port)) return false;
+            string trimmed = port.Trim();
+            if (!trimmed.StartsWith("COM", StringComparison.OrdinalIgnoreCase)) return false;
+            string suffix = trimmed.Substring(3);
+            return int.TryParse(suffix, NumberStyles.Integer, CultureInfo.InvariantCulture, out number);
         }
 
         private static bool TryGetFirmwareLabel(ComponentSpec comp, out string label)
@@ -1383,3 +2056,5 @@ namespace RobotTwin.UI
         private class SerializationWrapper { public List<string> keys; public List<string> types; }
     }
 }
+
+
