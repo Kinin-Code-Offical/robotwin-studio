@@ -53,14 +53,7 @@
                 <ui:VisualElement class="card telemetry-card">
                     <ui:Label text="Telemetry" class="card-title" />
                     <ui:ScrollView name="TelemetryScroll" class="telemetry-scroll">
-                        <ui:VisualElement class="telemetry-row">
-                            <ui:Label text="Battery" class="subtle" />
-                            <ui:ProgressBar name="BatteryBar" title="N/A" value="0" high-value="100" class="telemetry-bar" />
-                        </ui:VisualElement>
-                        <ui:VisualElement class="telemetry-row">
-                            <ui:Label text="Temp" class="subtle" />
-                            <ui:ProgressBar name="TempBar" title="N/A" value="0" high-value="100" class="telemetry-bar" />
-                        </ui:VisualElement>
+                        <ui:VisualElement name="TelemetryList" class="telemetry-list" />
                     </ui:ScrollView>
                 </ui:VisualElement>
 

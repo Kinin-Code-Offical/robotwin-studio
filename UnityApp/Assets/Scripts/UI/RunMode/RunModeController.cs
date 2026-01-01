@@ -47,8 +47,16 @@ namespace RobotTwin.UI
         private Toggle _injectionActiveToggle;
 
         // Telemetry UI
-        private ProgressBar _batteryBar;
-        private ProgressBar _tempBar;
+        private ScrollView _telemetryScroll;
+        private VisualElement _telemetryList;
+        private bool _telemetryBuilt;
+        private readonly Dictionary<string, TelemetryEntry> _boardTelemetry =
+            new Dictionary<string, TelemetryEntry>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, TelemetryEntry> _batteryTelemetry =
+            new Dictionary<string, TelemetryEntry>(StringComparer.OrdinalIgnoreCase);
+        private TelemetryEntry _summaryTelemetry;
+        private TelemetryEntry _validationTelemetry;
+        private TelemetryEntry _thermalTelemetry;
 
         // State
         private RobotTwin.Game.SimHost _host;
@@ -73,6 +81,13 @@ namespace RobotTwin.UI
             public string Pressed;
         }
 
+        private sealed class TelemetryEntry
+        {
+            public VisualElement Row;
+            public Label Title;
+            public Label Value;
+        }
+
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
@@ -94,6 +109,8 @@ namespace RobotTwin.UI
             _projectLabel = root.Q<Label>("ProjectLabel");
             _usbStatusLabel = root.Q<Label>("UsbStatusLabel");
             _usbBoardList = root.Q<ScrollView>("UsbBoardList");
+            _telemetryScroll = root.Q<ScrollView>("TelemetryScroll");
+            _telemetryList = root.Q<VisualElement>("TelemetryList");
             _componentSearchField = root.Q<TextField>("ComponentSearchField");
             _circuit3DView = root.Q<VisualElement>("Circuit3DView");
             
@@ -175,7 +192,9 @@ namespace RobotTwin.UI
                 _host = RobotTwin.Game.SimHost.Instance;
             }
 
+            _telemetryBuilt = false;
             BuildUsbList();
+            BuildTelemetryEntries();
 
             // Start
             _host.BeginSimulation();
@@ -395,46 +414,253 @@ namespace RobotTwin.UI
         private void UpdateTelemetry()
         {
             var telemetry = _host?.LastTelemetry;
-            if (_batteryBar != null)
+            if (_telemetryScroll == null || _telemetryList == null) return;
+            if (!_telemetryBuilt)
             {
-                string batteryText = "N/A";
-                if (_activeCircuit?.Components != null && telemetry != null)
-                {
-                    var battery = _activeCircuit.Components.FirstOrDefault(c => string.Equals(c.Type, "Battery", System.StringComparison.OrdinalIgnoreCase));
-                    if (battery != null)
-                    {
-                        double voltage = TryGetBatteryVoltage(_activeCircuit, battery.Id, 9.0);
-                        if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:V", out var srcV))
-                        {
-                            voltage = srcV;
-                        }
-                        if (TryGetPinVoltageDelta(_activeCircuit, telemetry, battery.Id, "+", "-", out var vDiff))
-                        {
-                            voltage = vDiff;
-                        }
-                        if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:I", out var current))
-                        {
-                            double power = voltage * current;
-                            batteryText = $"{voltage:F2}V {(current * 1000.0):F1}mA {System.Math.Abs(power) * 1000.0:F1}mW";
-                        }
-                        else
-                        {
-                            batteryText = $"{voltage:F2}V";
-                        }
-
-                        if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:SOC", out var soc))
-                        {
-                            _batteryBar.value = Mathf.Clamp((float)(soc * 100.0), 0f, 100f);
-                        }
-                    }
-                }
-                _batteryBar.title = batteryText;
+                BuildTelemetryEntries();
             }
 
-            if (_tempBar != null)
+            UpdateBoardTelemetry(telemetry);
+            UpdateBatteryTelemetry(telemetry);
+            UpdateDiagnosticsTelemetry(telemetry);
+
+            LogValidationSummary(telemetry);
+            LogPowerSummary();
+        }
+
+        private void BuildTelemetryEntries()
+        {
+            if (_telemetryList == null) return;
+            _telemetryList.Clear();
+            _boardTelemetry.Clear();
+            _batteryTelemetry.Clear();
+            _summaryTelemetry = null;
+            _validationTelemetry = null;
+            _thermalTelemetry = null;
+
+            AddTelemetrySection("Boards");
+            if (_activeCircuit?.Components != null)
+            {
+                foreach (var board in _activeCircuit.Components.Where(c => IsArduinoType(c.Type)))
+                {
+                    var entry = CreateTelemetryEntry($"{board.Id} ({board.Type})");
+                    _boardTelemetry[board.Id] = entry;
+                }
+            }
+            if (_boardTelemetry.Count == 0)
+            {
+                AddTelemetryPlaceholder("No Arduino boards.");
+            }
+
+            AddTelemetrySection("Sources");
+            if (_activeCircuit?.Components != null)
+            {
+                foreach (var battery in _activeCircuit.Components.Where(c =>
+                             string.Equals(c.Type, "Battery", System.StringComparison.OrdinalIgnoreCase)))
+                {
+                    var entry = CreateTelemetryEntry($"{battery.Id} (Battery)");
+                    _batteryTelemetry[battery.Id] = entry;
+                }
+            }
+            if (_batteryTelemetry.Count == 0)
+            {
+                AddTelemetryPlaceholder("No batteries.");
+            }
+
+            AddTelemetrySection("Diagnostics");
+            _summaryTelemetry = CreateTelemetryEntry("Signals");
+            _validationTelemetry = CreateTelemetryEntry("Validation");
+            _thermalTelemetry = CreateTelemetryEntry("Thermal");
+
+            _telemetryBuilt = true;
+        }
+
+        private void AddTelemetrySection(string title)
+        {
+            if (_telemetryList == null) return;
+            var label = new Label(title);
+            label.AddToClassList("telemetry-section");
+            _telemetryList.Add(label);
+        }
+
+        private void AddTelemetryPlaceholder(string message)
+        {
+            if (_telemetryList == null) return;
+            var label = new Label(message);
+            label.AddToClassList("telemetry-empty");
+            _telemetryList.Add(label);
+        }
+
+        private TelemetryEntry CreateTelemetryEntry(string title)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("telemetry-item");
+
+            var titleLabel = new Label(title);
+            titleLabel.AddToClassList("telemetry-title");
+
+            var valueLabel = new Label("N/A");
+            valueLabel.AddToClassList("telemetry-value");
+
+            row.Add(titleLabel);
+            row.Add(valueLabel);
+            _telemetryList.Add(row);
+
+            return new TelemetryEntry
+            {
+                Row = row,
+                Title = titleLabel,
+                Value = valueLabel
+            };
+        }
+
+        private void UpdateBoardTelemetry(TelemetryFrame telemetry)
+        {
+            if (_activeCircuit?.Components == null) return;
+            foreach (var kvp in _boardTelemetry)
+            {
+                var entry = kvp.Value;
+                var board = _activeCircuit.Components.FirstOrDefault(c =>
+                    string.Equals(c.Id, kvp.Key, StringComparison.OrdinalIgnoreCase));
+                if (board == null)
+                {
+                    entry.Value.text = "Board not found.";
+                    continue;
+                }
+
+                string usbText = "USB:unknown";
+                if (_usbConnectedByBoard.TryGetValue(board.Id, out var usb))
+                {
+                    usbText = usb ? "USB:on" : "USB:off";
+                }
+
+                string powerText = "Power:unknown";
+                if (_host?.BoardPowerById != null && _host.BoardPowerById.TryGetValue(board.Id, out var powered))
+                {
+                    powerText = powered ? "Power:on" : "Power:off";
+                }
+
+                if (telemetry == null)
+                {
+                    entry.Value.text = $"{usbText} {powerText}\nTelemetry: N/A";
+                    continue;
+                }
+
+                var lines = new List<string> { $"{usbText} {powerText}" };
+                if (TryGetFirmwareLabel(board, out var fwLabel))
+                {
+                    lines.Add(fwLabel);
+                }
+                else
+                {
+                    lines.Add("FW: none");
+                }
+                lines.Add(BuildArduinoRailSummary(board, telemetry));
+                lines.Add(BuildArduinoPinSummary(board, telemetry));
+                entry.Value.text = string.Join("\n", lines);
+            }
+        }
+
+        private void UpdateBatteryTelemetry(TelemetryFrame telemetry)
+        {
+            if (_activeCircuit?.Components == null) return;
+            foreach (var kvp in _batteryTelemetry)
+            {
+                var entry = kvp.Value;
+                var battery = _activeCircuit.Components.FirstOrDefault(c =>
+                    string.Equals(c.Id, kvp.Key, StringComparison.OrdinalIgnoreCase));
+                if (battery == null)
+                {
+                    entry.Value.text = "Battery not found.";
+                    continue;
+                }
+
+                double voltage = TryGetBatteryVoltage(_activeCircuit, battery.Id, 9.0);
+                if (telemetry == null)
+                {
+                    entry.Value.text = $"{voltage:F2}V\nTelemetry: N/A";
+                    continue;
+                }
+
+                if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:V", out var srcV))
+                {
+                    voltage = srcV;
+                }
+                if (TryGetPinVoltageDelta(_activeCircuit, telemetry, battery.Id, "+", "-", out var vDiff))
+                {
+                    voltage = vDiff;
+                }
+
+                string line1 = $"{voltage:F2}V";
+                string line2 = string.Empty;
+                string line3 = string.Empty;
+
+                if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:I", out var current))
+                {
+                    double power = voltage * current;
+                    line1 = $"{voltage:F2}V {(current * 1000.0):F1}mA";
+                    line2 = $"P:{Math.Abs(power) * 1000.0:F1}mW";
+                }
+
+                if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:SOC", out var soc))
+                {
+                    line3 = $"SOC:{soc * 100.0:F0}%";
+                }
+                if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:RINT", out var rint))
+                {
+                    string rintText = $"Rint:{rint:F2}";
+                    line3 = string.IsNullOrWhiteSpace(line3) ? rintText : $"{line3} {rintText}";
+                }
+
+                var lines = new List<string> { line1 };
+                if (!string.IsNullOrWhiteSpace(line2)) lines.Add(line2);
+                if (!string.IsNullOrWhiteSpace(line3)) lines.Add(line3);
+                entry.Value.text = string.Join("\n", lines);
+            }
+        }
+
+        private void UpdateDiagnosticsTelemetry(TelemetryFrame telemetry)
+        {
+            if (_summaryTelemetry != null)
+            {
+                if (telemetry?.Signals == null)
+                {
+                    _summaryTelemetry.Value.text = "Signals: N/A";
+                }
+                else
+                {
+                    int total = telemetry.Signals.Count;
+                    int netCount = CountTelemetryByPrefix(telemetry, "NET:");
+                    int compCount = CountTelemetryByPrefix(telemetry, "COMP:");
+                    int srcCount = CountTelemetryByPrefix(telemetry, "SRC:");
+                    int usbConnected = _usbConnectedByBoard.Values.Count(value => value);
+                    int usbTotal = _usbConnectedByBoard.Count;
+                    _summaryTelemetry.Value.text =
+                        $"Signals: {total} (NET:{netCount} COMP:{compCount} SRC:{srcCount})\nUSB: {usbConnected}/{usbTotal}";
+                }
+            }
+
+            if (_validationTelemetry != null)
+            {
+                if (telemetry?.ValidationMessages == null)
+                {
+                    _validationTelemetry.Value.text = "Validation: N/A";
+                }
+                else if (telemetry.ValidationMessages.Count == 0)
+                {
+                    _validationTelemetry.Value.text = "Validation: none";
+                }
+                else
+                {
+                    string sample = string.Join(" | ", telemetry.ValidationMessages.Take(2));
+                    _validationTelemetry.Value.text = $"Validation: {telemetry.ValidationMessages.Count} - {sample}";
+                }
+            }
+
+            if (_thermalTelemetry != null)
             {
                 double maxTemp = double.NaN;
-                if (telemetry != null)
+                if (telemetry?.Signals != null)
                 {
                     foreach (var kvp in telemetry.Signals)
                     {
@@ -442,21 +668,55 @@ namespace RobotTwin.UI
                         if (double.IsNaN(maxTemp) || kvp.Value > maxTemp) maxTemp = kvp.Value;
                     }
                 }
+                _thermalTelemetry.Value.text = double.IsNaN(maxTemp) ? "Max temp: N/A" : $"Max temp: {maxTemp:F1}C";
+            }
+        }
 
-                if (double.IsNaN(maxTemp))
+        private string BuildArduinoRailSummary(ComponentSpec comp, TelemetryFrame telemetry)
+        {
+            if (comp == null || telemetry == null) return "Rails: N/A";
+            var rails = new List<string>();
+            AppendPinVoltage(comp, telemetry, "5V", "5V", rails);
+            AppendPinVoltage(comp, telemetry, "3V3", "3V3", rails);
+            AppendPinVoltage(comp, telemetry, "IOREF", "IOREF", rails);
+            AppendPinVoltage(comp, telemetry, "VIN", "VIN", rails);
+            AppendPinVoltage(comp, telemetry, "VCC", "VCC", rails);
+            if (rails.Count == 0) return "Rails: N/A";
+            return "Rails: " + string.Join(" ", rails);
+        }
+
+        private string BuildArduinoPinSummary(ComponentSpec comp, TelemetryFrame telemetry)
+        {
+            if (comp == null || telemetry == null) return "Pin: N/A";
+            if (!TryGetPrimaryArduinoPin(comp, out var pin) || string.IsNullOrWhiteSpace(pin)) return "Pin: N/A";
+            if (TryGetPinVoltage(comp, pin, telemetry, out var voltage))
+            {
+                return $"Pin {pin}: {voltage:F2}V";
+            }
+            return $"Pin {pin}: N/A";
+        }
+
+        private static void AppendPinVoltage(ComponentSpec comp, TelemetryFrame telemetry, string pin, string label, List<string> parts)
+        {
+            if (comp == null || telemetry == null || parts == null) return;
+            if (TryGetPinVoltage(comp, pin, telemetry, out var voltage))
+            {
+                parts.Add($"{label}={voltage:F2}V");
+            }
+        }
+
+        private static int CountTelemetryByPrefix(TelemetryFrame telemetry, string prefix)
+        {
+            if (telemetry?.Signals == null || string.IsNullOrWhiteSpace(prefix)) return 0;
+            int count = 0;
+            foreach (var key in telemetry.Signals.Keys)
+            {
+                if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    _tempBar.title = "N/A";
-                    _tempBar.value = 0;
-                }
-                else
-                {
-                    _tempBar.title = $"{maxTemp:F1}C";
-                    _tempBar.value = Mathf.Clamp((float)maxTemp, 0f, 150f);
+                    count++;
                 }
             }
-
-            LogValidationSummary(telemetry);
-            LogPowerSummary();
+            return count;
         }
 
         private void LogValidationSummary(TelemetryFrame telemetry)

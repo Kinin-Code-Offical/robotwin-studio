@@ -533,6 +533,45 @@
     padding: 6px;
 }
 
+.telemetry-list {
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.telemetry-section {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: #8ea1b3;
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+.telemetry-item {
+    flex-direction: column;
+    padding: 6px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: #1f2733;
+}
+
+.telemetry-title {
+    font-size: 11px;
+    color: #e6edf3;
+    margin-bottom: 2px;
+}
+
+.telemetry-value {
+    font-size: 10px;
+    color: #9fb1c4;
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+.telemetry-empty {
+    font-size: 10px;
+    color: #6f8092;
+    margin-bottom: 6px;
+}
+
 .telemetry-bar {
     flex-grow: 1;
     height: 14px;
