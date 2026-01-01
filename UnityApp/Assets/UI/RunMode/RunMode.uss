@@ -439,6 +439,7 @@
 .board-card {
     flex-grow: 1;
     min-height: 280px;
+    position: relative;
 }
 
 .board-view {
@@ -446,6 +447,53 @@
     min-height: 240px;
     border-radius: 8px;
     background-color: #0b1016;
+}
+
+.board-3d-controls {
+    position: absolute;
+    top: 34px;
+    right: 12px;
+    width: 220px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background-color: rgba(14, 18, 24, 0.78);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+.board-3d-controls-title {
+    font-size: 10px;
+    color: #93a4b5;
+    margin-bottom: 6px;
+}
+
+.board-3d-controls-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.board-3d-controls-label {
+    font-size: 10px;
+    color: #93a4b5;
+    width: 28px;
+}
+
+.board-3d-slider {
+    flex-grow: 1;
+    height: 12px;
+}
+
+.board-3d-toggle {
+    font-size: 10px;
+    color: #e6edf3;
+    margin-top: 4px;
 }
 
 .log-card {

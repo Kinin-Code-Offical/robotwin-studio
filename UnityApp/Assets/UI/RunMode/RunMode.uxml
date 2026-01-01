@@ -31,6 +31,15 @@
                 <ui:VisualElement class="card board-card">
                     <ui:Label text="Live Circuit View" class="card-title" />
                     <ui:VisualElement name="Circuit3DView" class="board-view" />
+                    <ui:VisualElement name="Circuit3DControls" class="board-3d-controls">
+                        <ui:Label text="Camera" class="board-3d-controls-title" />
+                        <ui:VisualElement class="board-3d-controls-row">
+                            <ui:Label text="FOV" class="board-3d-controls-label" />
+                            <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="board-3d-slider" />
+                        </ui:VisualElement>
+                        <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="board-3d-toggle" value="true" />
+                        <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="board-3d-toggle" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
 
                 <ui:VisualElement class="card log-card">

@@ -131,6 +131,15 @@
 
                     <ui:VisualElement name="Circuit3DPanel" class="circuit-3d-panel" style="display: none;">
                         <ui:VisualElement name="Circuit3DView" class="circuit-3d-view">
+                            <ui:VisualElement name="Circuit3DControls" class="circuit-3d-controls">
+                                <ui:Label text="Camera" class="circuit-3d-controls-title" />
+                                <ui:VisualElement class="circuit-3d-controls-row">
+                                    <ui:Label text="FOV" class="circuit-3d-controls-label" />
+                                    <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="circuit-3d-slider" />
+                                </ui:VisualElement>
+                                <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="circuit-3d-toggle" value="true" />
+                                <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="circuit-3d-toggle" />
+                            </ui:VisualElement>
                             <ui:Label text="3D Circuit Preview" class="circuit-3d-label" />
                         </ui:VisualElement>
                     </ui:VisualElement>

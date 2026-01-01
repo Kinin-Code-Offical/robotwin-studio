@@ -16,6 +16,9 @@ namespace RobotTwin.UI
     public class RunModeController : MonoBehaviour
     {
         private const int MinimumComBasePort = 3;
+        private const float CameraKeyPanPixels = 28f;
+        private const float CameraKeyOrbitPixels = 18f;
+        private const float CameraKeyZoomDelta = 120f;
         private UIDocument _doc;
         private VisualElement _root;
         private Label _timeLabel;
@@ -36,12 +39,16 @@ namespace RobotTwin.UI
         private Button _comInstallBtn;
         private TextField _componentSearchField;
         private VisualElement _circuit3DView;
+        private Slider _circuit3DFovSlider;
+        private Toggle _circuit3DPerspectiveToggle;
+        private Toggle _circuit3DFollowToggle;
         private Circuit3DView _circuit3DRenderer;
         private bool _is3DDragging;
         private int _3dPointerId = -1;
         private Vector2 _3dLastPos;
         private ThreeDDragMode _3dDragMode = ThreeDDragMode.None;
         private string _pressed3DButtonId;
+        private string _last3dPickedComponentId;
         private string _layoutClass = string.Empty;
         
         [Header("Configuration")]
@@ -122,6 +129,8 @@ namespace RobotTwin.UI
             if (root == null) { enabled = false; return; }
             _root = root;
             InitializeResponsiveLayout(root);
+            _root.focusable = true;
+            _root.RegisterCallback<KeyDownEvent>(OnKeyDown);
 
             // Bind UI
             _timeLabel = root.Q<Label>("TimeLabel");
@@ -143,12 +152,16 @@ namespace RobotTwin.UI
             _telemetryList = root.Q<VisualElement>("TelemetryList");
             _componentSearchField = root.Q<TextField>("ComponentSearchField");
             _circuit3DView = root.Q<VisualElement>("Circuit3DView");
+            _circuit3DFovSlider = root.Q<Slider>("Circuit3DFovSlider");
+            _circuit3DPerspectiveToggle = root.Q<Toggle>("Circuit3DPerspectiveToggle");
+            _circuit3DFollowToggle = root.Q<Toggle>("Circuit3DFollowToggle");
             
             // Buttons
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
             if (_openLogBtn != null) _openLogBtn.clicked += OnOpenLogFileClicked;
             if (_comInstallBtn != null) _comInstallBtn.clicked += OnInstallVirtualComClicked;
             InitVisualization(root);
+            Initialize3DCameraControls();
             StartSimulation(); // Start Loop
         }
 
@@ -1265,6 +1278,12 @@ namespace RobotTwin.UI
                 var nameLbl = new Label($"{comp.Id} ({comp.Type})");
                 nameLbl.style.color = Color.white;
                 nameLbl.AddToClassList("component-name");
+                nameLbl.RegisterCallback<ClickEvent>(evt =>
+                {
+                    if (evt.button != 0 || evt.clickCount < 2) return;
+                    Focus3DOnComponent(comp.Id);
+                    evt.StopPropagation();
+                });
 
                 VisualElement controls = null;
                 if (IsSwitchComponent(comp.Type))
@@ -1303,6 +1322,17 @@ namespace RobotTwin.UI
                     ApplyComponentFilter(evt.newValue);
                 });
                 ApplyComponentFilter(_componentSearchField.value);
+            }
+        }
+
+        private void Focus3DOnComponent(string componentId)
+        {
+            if (string.IsNullOrWhiteSpace(componentId) || _circuit3DRenderer == null) return;
+            _last3dPickedComponentId = componentId;
+            _circuit3DRenderer.FocusOnComponent(componentId);
+            if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value)
+            {
+                _circuit3DRenderer.SetFollowComponent(componentId, true);
             }
         }
 
@@ -1538,6 +1568,7 @@ namespace RobotTwin.UI
                 var go = new GameObject("Circuit3DView");
                 go.transform.SetParent(transform, false);
                 _circuit3DRenderer = go.AddComponent<Circuit3DView>();
+                Apply3DCameraSettings();
             }
 
             _circuit3DView.RegisterCallback<PointerDownEvent>(On3DPointerDown);
@@ -1556,6 +1587,57 @@ namespace RobotTwin.UI
                     _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
                 }
             });
+        }
+
+        private void Initialize3DCameraControls()
+        {
+            if (_circuit3DFovSlider != null)
+            {
+                _circuit3DFovSlider.RegisterValueChangedCallback(evt =>
+                {
+                    _circuit3DRenderer?.SetFieldOfView(evt.newValue);
+                });
+            }
+
+            if (_circuit3DPerspectiveToggle != null)
+            {
+                _circuit3DPerspectiveToggle.RegisterValueChangedCallback(evt =>
+                {
+                    _circuit3DRenderer?.SetPerspective(evt.newValue);
+                });
+            }
+
+            if (_circuit3DFollowToggle != null)
+            {
+                _circuit3DFollowToggle.RegisterValueChangedCallback(evt =>
+                {
+                    if (!evt.newValue)
+                    {
+                        _circuit3DRenderer?.SetFollowComponent(null, false);
+                        return;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(_last3dPickedComponentId))
+                    {
+                        _circuit3DRenderer?.SetFollowComponent(_last3dPickedComponentId, true);
+                    }
+                });
+            }
+
+            Apply3DCameraSettings();
+        }
+
+        private void Apply3DCameraSettings()
+        {
+            if (_circuit3DRenderer == null) return;
+            if (_circuit3DFovSlider != null)
+            {
+                _circuit3DRenderer.SetFieldOfView(_circuit3DFovSlider.value);
+            }
+            if (_circuit3DPerspectiveToggle != null)
+            {
+                _circuit3DRenderer.SetPerspective(_circuit3DPerspectiveToggle.value);
+            }
         }
 
         private void UpdateVisualization()
@@ -1772,12 +1854,95 @@ namespace RobotTwin.UI
             evt.StopPropagation();
         }
 
+        private void OnKeyDown(KeyDownEvent evt)
+        {
+            bool targetIsText = evt.target is TextField || evt.target is TextElement;
+            if (targetIsText) return;
+            if (Handle3DKeyInput(evt))
+            {
+                evt.StopPropagation();
+            }
+        }
+
+        private bool Handle3DKeyInput(KeyDownEvent evt)
+        {
+            if (_circuit3DRenderer == null) return false;
+            if (evt.keyCode == KeyCode.R || evt.keyCode == KeyCode.Home)
+            {
+                _circuit3DRenderer.ResetView();
+                return true;
+            }
+            if (evt.keyCode == KeyCode.F)
+            {
+                if (!string.IsNullOrWhiteSpace(_last3dPickedComponentId))
+                {
+                    _circuit3DRenderer.FocusOnComponent(_last3dPickedComponentId);
+                    return true;
+                }
+            }
+            if (evt.keyCode == KeyCode.PageUp || evt.keyCode == KeyCode.E)
+            {
+                float step = _circuit3DRenderer.GetKeyboardPanStep();
+                _circuit3DRenderer.NudgePanWorld(Vector3.up * step);
+                return true;
+            }
+            if (evt.keyCode == KeyCode.PageDown || evt.keyCode == KeyCode.Q)
+            {
+                float step = _circuit3DRenderer.GetKeyboardPanStep();
+                _circuit3DRenderer.NudgePanWorld(Vector3.down * step);
+                return true;
+            }
+
+            bool isArrow = evt.keyCode == KeyCode.LeftArrow || evt.keyCode == KeyCode.RightArrow ||
+                           evt.keyCode == KeyCode.UpArrow || evt.keyCode == KeyCode.DownArrow;
+            if (!isArrow) return false;
+
+            if (evt.ctrlKey)
+            {
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    _circuit3DRenderer.Zoom(-CameraKeyZoomDelta);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    _circuit3DRenderer.Zoom(CameraKeyZoomDelta);
+                    return true;
+                }
+                return false;
+            }
+
+            if (evt.shiftKey)
+            {
+                var pan = Vector2.zero;
+                if (evt.keyCode == KeyCode.LeftArrow) pan = new Vector2(CameraKeyPanPixels, 0f);
+                if (evt.keyCode == KeyCode.RightArrow) pan = new Vector2(-CameraKeyPanPixels, 0f);
+                if (evt.keyCode == KeyCode.UpArrow) pan = new Vector2(0f, CameraKeyPanPixels);
+                if (evt.keyCode == KeyCode.DownArrow) pan = new Vector2(0f, -CameraKeyPanPixels);
+                _circuit3DRenderer.Pan(pan);
+                return true;
+            }
+
+            var orbit = Vector2.zero;
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
+            if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
+            _circuit3DRenderer.Orbit(orbit);
+            return true;
+        }
+
         private bool TryHandle3DPointerDown(Vector2 panelPos, int pointerId)
         {
             if (!TryPick3DComponent(panelPos, out var compId, out _)) return false;
             if (_activeCircuit?.Components == null) return false;
             var comp = _activeCircuit.Components.FirstOrDefault(c => c.Id == compId);
             if (comp == null) return false;
+            _last3dPickedComponentId = compId;
+            if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value)
+            {
+                _circuit3DRenderer?.SetFollowComponent(compId, true);
+            }
 
             if (IsButtonType(comp.Type))
             {

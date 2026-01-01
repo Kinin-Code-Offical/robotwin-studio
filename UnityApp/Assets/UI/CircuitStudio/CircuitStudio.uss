@@ -1803,6 +1803,7 @@
 .circuit-3d-view {
     flex-grow: 1;
     background-color: var(--bg-0);
+    position: relative;
     border-radius: 8px;
     border-top-width: 1px;
     border-bottom-width: 1px;
@@ -1820,6 +1821,53 @@
 .circuit-3d-label {
     color: var(--text-2);
     font-size: 11px;
+}
+
+.circuit-3d-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 220px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background-color: rgba(9, 12, 18, 0.72);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+}
+
+.circuit-3d-controls-title {
+    font-size: 10px;
+    color: var(--text-2);
+    margin-bottom: 6px;
+}
+
+.circuit-3d-controls-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.circuit-3d-controls-label {
+    font-size: 10px;
+    color: var(--text-2);
+    width: 28px;
+}
+
+.circuit-3d-slider {
+    flex-grow: 1;
+    height: 12px;
+}
+
+.circuit-3d-toggle {
+    font-size: 10px;
+    color: var(--text-1);
+    margin-top: 4px;
 }
 
 .connections-panel {

@@ -1,0 +1,81 @@
+{
+  "projectName": "Arduino Fault Effects",
+  "version": "1.0.0",
+  "description": "Intentional overcurrent + floating net to preview 3D error effects.",
+  "circuit": {
+    "id": "arduino-fault-effects",
+    "mode": "fast",
+    "components": [
+      {
+        "id": "U1",
+        "type": "ArduinoUno",
+        "properties": {
+          "posX": "100",
+          "posY": "200",
+          "virtualBoard": "arduino-uno",
+          "catalogId": "arduino-uno"
+        }
+      },
+      {
+        "id": "R1",
+        "type": "Resistor",
+        "properties": {
+          "posX": "380",
+          "posY": "210",
+          "resistance": "10",
+          "catalogId": "resistor-220"
+        }
+      },
+      {
+        "id": "D1",
+        "type": "LED",
+        "properties": {
+          "posX": "520",
+          "posY": "210",
+          "forwardV": "2.0V",
+          "current": "20mA",
+          "catalogId": "led-red"
+        }
+      },
+      {
+        "id": "R2",
+        "type": "Resistor",
+        "properties": {
+          "posX": "380",
+          "posY": "340",
+          "resistance": "1000",
+          "catalogId": "resistor-220"
+        }
+      }
+    ],
+    "nets": [
+      {
+        "id": "NET_D13",
+        "nodes": ["U1.D13", "R1.A"]
+      },
+      {
+        "id": "NET_LED",
+        "nodes": ["R1.B", "D1.Anode"]
+      },
+      {
+        "id": "GND",
+        "nodes": ["D1.Cathode", "U1.GND1"]
+      },
+      {
+        "id": "R2_FLOAT",
+        "nodes": ["R2.A"]
+      }
+    ]
+  },
+  "robot": {
+    "name": "DefaultRobot"
+  },
+  "world": {
+    "name": "DefaultWorld",
+    "width": 0,
+    "depth": 0
+  },
+  "metadata": {
+    "template": "arduino-fault-effects"
+  }
+}
