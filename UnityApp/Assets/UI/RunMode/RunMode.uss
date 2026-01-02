@@ -449,9 +449,61 @@
     background-color: #0b1016;
 }
 
+.board-3d-help {
+    position: absolute;
+    top: 48px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(8, 12, 18, 0.85);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 4px;
+    display: flex;
+}
+
+.board-3d-help-icon {
+    color: #f1f5f9;
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+.board-3d-help-tooltip {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    width: 220px;
+    padding: 8px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgba(148, 163, 184, 0.4);
+    background-color: rgba(5, 7, 12, 0.95);
+    flex-direction: column;
+    display: none;
+    /* Unity USS does not recognize z-index or pointer-events */
+}
+
+.board-3d-help-title {
+    color: #38bdf8;
+    font-size: 10px;
+    margin-bottom: 4px;
+    -unity-font-style: bold;
+}
+
+.board-3d-help-line {
+    color: #cbd5f5;
+    font-size: 10px;
+    margin-bottom: 2px;
+}
+
 .board-3d-controls {
     position: absolute;
-    top: 34px;
+    top: 50px;
     right: 12px;
     width: 220px;
     padding: 8px 10px;
@@ -496,6 +548,73 @@
     margin-top: 4px;
 }
 
+.board-wiring-tools {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    background-color: rgba(6, 10, 16, 0.8);
+    border-width: 1px;
+    border-color: rgba(148, 163, 184, 0.2);
+    flex-direction: column;
+    display: flex;
+}
+
+.board-wiring-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.board-section-title {
+    font-size: 10px;
+    color: #cbd5f5;
+    letter-spacing: 0.5px;
+}
+
+.board-wiring-toggle {
+    height: 20px;
+    min-width: 48px;
+    font-size: 9px;
+    background-color: transparent;
+    border-width: 1px;
+    border-color: rgba(148, 163, 184, 0.3);
+    color: #9ca3af;
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+.board-wiring-body {
+    flex-direction: column;
+    display: flex;
+    margin-top: 6px;
+}
+
+.board-wiring-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    display: flex;
+}
+
+.wire-btn {
+    height: 28px;
+    min-width: 110px;
+    background-color: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #e6edf3;
+    font-size: 10px;
+    border-radius: 6px;
+    padding: 4px 8px;
+    -unity-font-style: bold;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.wire-btn.secondary {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #9ca3af;
+}
+
 .log-card {
     flex-grow: 0;
     height: 190px;
@@ -522,6 +641,12 @@
     font-size: 10px;
     color: #6f8092;
     margin-top: 6px;
+    flex-grow: 1;
+    min-width: 0;
+    margin-right: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-overflow-position: end;
 }
 
 .path-row {
@@ -535,6 +660,7 @@
     height: 22px;
     font-size: 10px;
     margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .power-card,
@@ -594,7 +720,7 @@
 
 .usb-port {
     color: #9fb1c4;
-    font-size: 10px;
+    font-size: 8px;
     margin-left: 8px;
     flex-shrink: 0;
 }
@@ -800,4 +926,30 @@
 .run-root .unity-scroll-view__vertical-scroller:hover .unity-base-slider__dragger,
 .run-root .unity-scroll-view__horizontal-scroller:hover .unity-base-slider__dragger {
     background-color: #4a4a4a;
+}
+.board-3d-controls-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.board-3d-controls-body {
+    flex-direction: column;
+}
+
+.board-3d-controls-toggle {
+    font-size: 9px;
+    color: #e6edf3;
+    background-color: rgba(16, 20, 28, 0.7);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.2);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    border-left-color: rgba(255, 255, 255, 0.2);
+    border-right-color: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 6px;
 }

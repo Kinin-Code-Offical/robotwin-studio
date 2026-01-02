@@ -42,8 +42,24 @@ namespace RobotTwin.UI
         private Slider _circuit3DFovSlider;
         private Toggle _circuit3DPerspectiveToggle;
         private Toggle _circuit3DFollowToggle;
+        private Toggle _circuit3DLabelsToggle;
+        private Toggle _circuit3DErrorFxToggle;
+        private Button _circuit3DControlsToggle;
+        private VisualElement _circuit3DControlsBody;
+        private bool _circuit3DControlsCollapsed;
+        private VisualElement _circuit3DHelpIcon;
+        private VisualElement _circuit3DHelpTooltip;
+        private Button _wiringToolsToggle;
+        private VisualElement _wiringToolsBody;
+        private bool _wiringToolsCollapsed;
+        private Button _wiringHeatmapBtn;
+        private Button _wiringReportBtn;
+        private bool _wireHeatmapActive;
         private Circuit3DView _circuit3DRenderer;
         private bool _is3DDragging;
+        private bool _did3DResetOnOpen;
+        private bool _circuit3DLabelsVisible = true;
+        private bool _circuit3DErrorFxEnabled = true;
         private int _3dPointerId = -1;
         private Vector2 _3dLastPos;
         private ThreeDDragMode _3dDragMode = ThreeDDragMode.None;
@@ -130,7 +146,7 @@ namespace RobotTwin.UI
             _root = root;
             InitializeResponsiveLayout(root);
             _root.focusable = true;
-            _root.RegisterCallback<KeyDownEvent>(OnKeyDown);
+            _root.RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
 
             // Bind UI
             _timeLabel = root.Q<Label>("TimeLabel");
@@ -155,13 +171,38 @@ namespace RobotTwin.UI
             _circuit3DFovSlider = root.Q<Slider>("Circuit3DFovSlider");
             _circuit3DPerspectiveToggle = root.Q<Toggle>("Circuit3DPerspectiveToggle");
             _circuit3DFollowToggle = root.Q<Toggle>("Circuit3DFollowToggle");
-            
+            _circuit3DLabelsToggle = root.Q<Toggle>("Circuit3DLabelsToggle");
+            _circuit3DErrorFxToggle = root.Q<Toggle>("Circuit3DErrorFxToggle");
+            _circuit3DControlsToggle = root.Q<Button>("Circuit3DControlsToggle");
+            _circuit3DControlsBody = root.Q<VisualElement>("Circuit3DControlsBody");
+            _circuit3DHelpIcon = root.Q<VisualElement>("Circuit3DHelpIcon");
+            _circuit3DHelpTooltip = root.Q<VisualElement>("Circuit3DHelpTooltip");
+            _wiringToolsToggle = root.Q<Button>("WiringToolsToggle");
+            _wiringToolsBody = root.Q<VisualElement>("WiringToolsBody");
+            _wiringHeatmapBtn = root.Q<Button>("WiringHeatmapBtn");
+            _wiringReportBtn = root.Q<Button>("WiringReportBtn");
+
             // Buttons
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
             if (_openLogBtn != null) _openLogBtn.clicked += OnOpenLogFileClicked;
             if (_comInstallBtn != null) _comInstallBtn.clicked += OnInstallVirtualComClicked;
+            if (_wiringHeatmapBtn != null)
+            {
+                _wiringHeatmapBtn.clicked += ToggleWireHeatmap;
+                UpdateHeatmapButtonText();
+            }
+            if (_wiringReportBtn != null)
+            {
+                _wiringReportBtn.clicked += DumpWireSnapshot;
+            }
+            if (_wiringToolsToggle != null)
+            {
+                _wiringToolsToggle.clicked += ToggleWiringToolsLayout;
+            }
+            SetWiringToolsLayoutCollapsed(true);
             InitVisualization(root);
             Initialize3DCameraControls();
+            Initialize3DHelp();
             StartSimulation(); // Start Loop
         }
 
@@ -546,7 +587,8 @@ namespace RobotTwin.UI
 
                 var toggle = new Toggle();
                 toggle.AddToClassList("usb-toggle");
-                toggle.value = true;
+                bool defaultUsb = !IsBatterySupplyingBoard(board.Id);
+                toggle.value = defaultUsb;
 
                 row.Add(name);
                 row.Add(typeLabel);
@@ -556,7 +598,7 @@ namespace RobotTwin.UI
 
                 _usbToggles[board.Id] = toggle;
                 _usbPortLabels[board.Id] = portLabel;
-                SetUsbConnected(board.Id, true);
+                SetUsbConnected(board.Id, defaultUsb);
 
                 string captured = board.Id;
                 toggle.RegisterValueChangedCallback(evt => SetUsbConnected(captured, evt.newValue));
@@ -640,7 +682,7 @@ namespace RobotTwin.UI
         {
             if (_usbHintLabel == null) return;
             int basePort = _comPortManager?.PortBase ?? _virtualComBasePort;
-            _usbHintLabel.text = $"IDE portunu secin (COM{basePort}/COM{basePort + 1}, IDE'de Unknown gorunebilir).";
+            _usbHintLabel.text = $"Select the IDE port (COM{basePort}/COM{basePort + 1}; IDE may show it as Unknown).";
         }
 
         private void ApplyFallbackComBaseIfNeeded(List<ComponentSpec> boards)
@@ -1084,7 +1126,7 @@ namespace RobotTwin.UI
                 }
                 if (telemetry.Signals.TryGetValue($"SRC:{battery.Id}:RINT", out var rint))
                 {
-                    string rintText = $"Rint:{rint:F2}";
+                    string rintText = $"Rint:{rint:F2}ohm";
                     line3 = string.IsNullOrWhiteSpace(line3) ? rintText : $"{line3} {rintText}";
                 }
 
@@ -1487,6 +1529,90 @@ namespace RobotTwin.UI
             return false;
         }
 
+        private bool IsBatterySupplyingBoard(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId) || _activeCircuit?.Components == null || _activeCircuit.Nets == null)
+            {
+                return false;
+            }
+
+            var supplyNets = GetBoardSupplyNets(boardId);
+            if (supplyNets.Count == 0) return false;
+
+            var batteryNets = GetBatteryPlusNets();
+            if (batteryNets.Count == 0) return false;
+
+            if (supplyNets.Overlaps(batteryNets)) return true;
+
+            foreach (var comp in _activeCircuit.Components)
+            {
+                if (comp == null || (!IsSwitchComponent(comp.Type) && !IsButtonType(comp.Type))) continue;
+                if (!IsSwitchClosed(comp)) continue;
+                string netA = GetNetFor(comp.Id, "A");
+                string netB = GetNetFor(comp.Id, "B");
+                if (string.IsNullOrWhiteSpace(netA) || string.IsNullOrWhiteSpace(netB)) continue;
+                if ((supplyNets.Contains(netA) && batteryNets.Contains(netB)) ||
+                    (supplyNets.Contains(netB) && batteryNets.Contains(netA)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private HashSet<string> GetBoardSupplyNets(string boardId)
+        {
+            var nets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string[] pins = { "VIN", "5V", "3V3", "IOREF", "VCC", "RAW" };
+            foreach (var pin in pins)
+            {
+                string net = GetNetFor(boardId, pin);
+                if (!string.IsNullOrWhiteSpace(net))
+                {
+                    nets.Add(net);
+                }
+            }
+            return nets;
+        }
+
+        private HashSet<string> GetBatteryPlusNets()
+        {
+            var nets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var comp in _activeCircuit.Components)
+            {
+                if (comp == null || !string.Equals(comp.Type, "Battery", StringComparison.OrdinalIgnoreCase)) continue;
+                string net = GetNetFor(comp.Id, "+");
+                if (!string.IsNullOrWhiteSpace(net))
+                {
+                    nets.Add(net);
+                }
+            }
+            return nets;
+        }
+
+        private string GetNetFor(string compId, string pin)
+        {
+            if (string.IsNullOrWhiteSpace(compId) || string.IsNullOrWhiteSpace(pin) || _activeCircuit?.Nets == null)
+            {
+                return string.Empty;
+            }
+            string node = $"{compId}.{pin}";
+            foreach (var net in _activeCircuit.Nets)
+            {
+                if (net?.Nodes == null || string.IsNullOrWhiteSpace(net.Id)) continue;
+                foreach (var n in net.Nodes)
+                {
+                    if (string.IsNullOrWhiteSpace(n)) continue;
+                    if (string.Equals(n, node, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return net.Id;
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
         private void ApplyComponentFilter(string query)
         {
             string needle = string.IsNullOrWhiteSpace(query) ? string.Empty : query.Trim().ToLowerInvariant();
@@ -1582,6 +1708,11 @@ namespace RobotTwin.UI
                 int height = Mathf.RoundToInt(evt.newRect.height - 18f);
                 _circuit3DRenderer.Initialize(width, height);
                 _circuit3DRenderer.Build(_activeCircuit);
+                if (!_did3DResetOnOpen)
+                {
+                    _circuit3DRenderer.ResetView();
+                    _did3DResetOnOpen = true;
+                }
                 if (_circuit3DRenderer.TargetTexture != null)
                 {
                     _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
@@ -1624,7 +1755,134 @@ namespace RobotTwin.UI
                 });
             }
 
+            if (_circuit3DLabelsToggle != null)
+            {
+                _circuit3DLabelsToggle.RegisterValueChangedCallback(evt =>
+                {
+                    _circuit3DLabelsVisible = evt.newValue;
+                    _circuit3DRenderer?.SetLabelsVisible(evt.newValue);
+                });
+            }
+
+            if (_circuit3DErrorFxToggle != null)
+            {
+                _circuit3DErrorFxToggle.RegisterValueChangedCallback(evt =>
+                {
+                    _circuit3DErrorFxEnabled = evt.newValue;
+                    _circuit3DRenderer?.SetErrorFxEnabled(evt.newValue);
+                });
+            }
+
+            if (_circuit3DControlsToggle != null)
+            {
+                _circuit3DControlsToggle.clicked += () => Toggle3DControlsLayout();
+            }
+            Set3DControlsLayoutCollapsed(false);
+
             Apply3DCameraSettings();
+        }
+
+        private void Initialize3DHelp()
+        {
+            if (_circuit3DHelpTooltip != null)
+            {
+                _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+            }
+            if (_circuit3DHelpIcon == null || _circuit3DHelpTooltip == null) return;
+            _circuit3DHelpIcon.RegisterCallback<ClickEvent>(evt =>
+            {
+                bool isVisible = _circuit3DHelpTooltip.style.display == DisplayStyle.Flex;
+                _circuit3DHelpTooltip.style.display = isVisible ? DisplayStyle.None : DisplayStyle.Flex;
+                evt.StopPropagation();
+            });
+            if (_root != null)
+            {
+                _root.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (Is3DHelpPointerTarget(evt)) return;
+                    if (_circuit3DHelpTooltip?.style.display == DisplayStyle.Flex)
+                    {
+                        _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+                    }
+                }, TrickleDown.TrickleDown);
+            }
+        }
+
+        private bool Is3DHelpPointerTarget(PointerDownEvent evt)
+        {
+            if (evt.target is VisualElement target)
+            {
+                if (_circuit3DHelpIcon != null && (_circuit3DHelpIcon == target || _circuit3DHelpIcon.Contains(target)))
+                {
+                    return true;
+                }
+                if (_circuit3DHelpTooltip != null && (_circuit3DHelpTooltip == target || _circuit3DHelpTooltip.Contains(target)))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void ToggleWireHeatmap()
+        {
+            _wireHeatmapActive = !_wireHeatmapActive;
+            _circuit3DRenderer?.SetWireHeatmapEnabled(_wireHeatmapActive);
+            UpdateHeatmapButtonText();
+            AppendLog($"[Wiring] Net heatmap {(_wireHeatmapActive ? "enabled" : "disabled")}.");
+            if (_wireHeatmapActive)
+            {
+                _circuit3DRenderer?.ApplyWireHeatmap(_host?.LastTelemetry);
+            }
+        }
+
+        private void UpdateHeatmapButtonText()
+        {
+            if (_wiringHeatmapBtn == null) return;
+            _wiringHeatmapBtn.text = _wireHeatmapActive ? "Net Heatmap ON" : "Net Heatmap OFF";
+        }
+
+        private void DumpWireSnapshot()
+        {
+            var telemetry = _host?.LastTelemetry;
+            if (telemetry?.Signals == null)
+            {
+                AppendLog("[Wiring] Telemetry not ready.");
+                return;
+            }
+            var netIds = _activeCircuit?.Nets?
+                .Where(net => net != null && !string.IsNullOrWhiteSpace(net.Id))
+                .Select(net => net.Id)
+                .ToList();
+            if (netIds == null || netIds.Count == 0)
+            {
+                AppendLog("[Wiring] Circuit has no nets.");
+                return;
+            }
+            var readings = new List<(string Net, double Voltage)>();
+            foreach (var netId in netIds)
+            {
+                if (telemetry.Signals.TryGetValue($"NET:{netId}", out var voltage))
+                {
+                    readings.Add((netId, voltage));
+                }
+            }
+            if (readings.Count == 0)
+            {
+                AppendLog("[Wiring] No net voltages captured yet.");
+                return;
+            }
+            AppendLog("[Wiring] Net snapshot:");
+            foreach (var entry in readings.OrderByDescending(e => Math.Abs(e.Voltage)).ThenBy(e => e.Net).Take(4))
+            {
+                AppendLog($"[Wiring] - {entry.Net} -> {entry.Voltage:F2}V");
+            }
+        }
+
+        private void UpdateWireHeatmap(TelemetryFrame telemetry)
+        {
+            if (!_wireHeatmapActive) return;
+            _circuit3DRenderer?.ApplyWireHeatmap(telemetry);
         }
 
         private void Apply3DCameraSettings()
@@ -1638,6 +1896,36 @@ namespace RobotTwin.UI
             {
                 _circuit3DRenderer.SetPerspective(_circuit3DPerspectiveToggle.value);
             }
+            bool labelsVisible = _circuit3DLabelsToggle != null ? _circuit3DLabelsToggle.value : _circuit3DLabelsVisible;
+            _circuit3DRenderer.SetLabelsVisible(labelsVisible);
+            bool errorFxEnabled = _circuit3DErrorFxToggle != null ? _circuit3DErrorFxToggle.value : _circuit3DErrorFxEnabled;
+            _circuit3DRenderer.SetErrorFxEnabled(errorFxEnabled);
+        }
+
+        private void Toggle3DControlsLayout()
+        {
+            Set3DControlsLayoutCollapsed(!_circuit3DControlsCollapsed);
+        }
+
+        private void Set3DControlsLayoutCollapsed(bool collapsed)
+        {
+            _circuit3DControlsCollapsed = collapsed;
+            if (_circuit3DControlsBody == null || _circuit3DControlsToggle == null) return;
+            _circuit3DControlsBody.style.display = collapsed ? DisplayStyle.None : DisplayStyle.Flex;
+            _circuit3DControlsToggle.text = collapsed ? "Show" : "Hide";
+        }
+
+        private void ToggleWiringToolsLayout()
+        {
+            SetWiringToolsLayoutCollapsed(!_wiringToolsCollapsed);
+        }
+
+        private void SetWiringToolsLayoutCollapsed(bool collapsed)
+        {
+            _wiringToolsCollapsed = collapsed;
+            if (_wiringToolsBody == null || _wiringToolsToggle == null) return;
+            _wiringToolsBody.style.display = collapsed ? DisplayStyle.None : DisplayStyle.Flex;
+            _wiringToolsToggle.text = collapsed ? "Show" : "Hide";
         }
 
         private void UpdateVisualization()
@@ -1772,6 +2060,7 @@ namespace RobotTwin.UI
                     }
                 }
             }
+            UpdateWireHeatmap(telemetry);
         }
 
         private void On3DPointerDown(PointerDownEvent evt)
@@ -1857,6 +2146,14 @@ namespace RobotTwin.UI
         private void OnKeyDown(KeyDownEvent evt)
         {
             bool targetIsText = evt.target is TextField || evt.target is TextElement;
+            if (evt.keyCode == KeyCode.Escape)
+            {
+                if (HandleEscapeKey())
+                {
+                    evt.StopPropagation();
+                    return;
+                }
+            }
             if (targetIsText) return;
             if (Handle3DKeyInput(evt))
             {
@@ -1864,9 +2161,46 @@ namespace RobotTwin.UI
             }
         }
 
+        private bool HandleEscapeKey()
+        {
+            bool handled = false;
+            if (_circuit3DHelpTooltip != null && _circuit3DHelpTooltip.style.display == DisplayStyle.Flex)
+            {
+                _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+                handled = true;
+            }
+            if (_is3DDragging)
+            {
+                Cancel3DDrag();
+                handled = true;
+            }
+            return handled;
+        }
+
+        private void Cancel3DDrag()
+        {
+            _is3DDragging = false;
+            _3dDragMode = ThreeDDragMode.None;
+            if (_circuit3DView != null && _circuit3DView.HasPointerCapture(_3dPointerId))
+            {
+                _circuit3DView.ReleasePointer(_3dPointerId);
+            }
+            _3dPointerId = -1;
+        }
+
         private bool Handle3DKeyInput(KeyDownEvent evt)
         {
             if (_circuit3DRenderer == null) return false;
+            if (evt.keyCode == KeyCode.L)
+            {
+                _circuit3DLabelsVisible = !_circuit3DLabelsVisible;
+                if (_circuit3DLabelsToggle != null)
+                {
+                    _circuit3DLabelsToggle.SetValueWithoutNotify(_circuit3DLabelsVisible);
+                }
+                _circuit3DRenderer.SetLabelsVisible(_circuit3DLabelsVisible);
+                return true;
+            }
             if (evt.keyCode == KeyCode.R || evt.keyCode == KeyCode.Home)
             {
                 _circuit3DRenderer.ResetView();
@@ -1882,14 +2216,12 @@ namespace RobotTwin.UI
             }
             if (evt.keyCode == KeyCode.PageUp || evt.keyCode == KeyCode.E)
             {
-                float step = _circuit3DRenderer.GetKeyboardPanStep();
-                _circuit3DRenderer.NudgePanWorld(Vector3.up * step);
+                _circuit3DRenderer.NudgePanCameraVertical(1f);
                 return true;
             }
             if (evt.keyCode == KeyCode.PageDown || evt.keyCode == KeyCode.Q)
             {
-                float step = _circuit3DRenderer.GetKeyboardPanStep();
-                _circuit3DRenderer.NudgePanWorld(Vector3.down * step);
+                _circuit3DRenderer.NudgePanCameraVertical(-1f);
                 return true;
             }
 
@@ -1901,12 +2233,22 @@ namespace RobotTwin.UI
             {
                 if (evt.keyCode == KeyCode.UpArrow)
                 {
-                    _circuit3DRenderer.Zoom(-CameraKeyZoomDelta);
+                    _circuit3DRenderer.Zoom(CameraKeyZoomDelta);
                     return true;
                 }
                 if (evt.keyCode == KeyCode.DownArrow)
                 {
-                    _circuit3DRenderer.Zoom(CameraKeyZoomDelta);
+                    _circuit3DRenderer.Zoom(-CameraKeyZoomDelta);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.LeftArrow)
+                {
+                    _circuit3DRenderer.AdjustLightingBlend(-0.1f);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.RightArrow)
+                {
+                    _circuit3DRenderer.AdjustLightingBlend(0.1f);
                     return true;
                 }
                 return false;
@@ -1914,18 +2256,18 @@ namespace RobotTwin.UI
 
             if (evt.shiftKey)
             {
-                var pan = Vector2.zero;
-                if (evt.keyCode == KeyCode.LeftArrow) pan = new Vector2(CameraKeyPanPixels, 0f);
-                if (evt.keyCode == KeyCode.RightArrow) pan = new Vector2(-CameraKeyPanPixels, 0f);
-                if (evt.keyCode == KeyCode.UpArrow) pan = new Vector2(0f, CameraKeyPanPixels);
-                if (evt.keyCode == KeyCode.DownArrow) pan = new Vector2(0f, -CameraKeyPanPixels);
-                _circuit3DRenderer.Pan(pan);
+                var axes = Vector2.zero;
+                if (evt.keyCode == KeyCode.LeftArrow) axes = new Vector2(-1f, 0f);
+                if (evt.keyCode == KeyCode.RightArrow) axes = new Vector2(1f, 0f);
+                if (evt.keyCode == KeyCode.UpArrow) axes = new Vector2(0f, 1f);
+                if (evt.keyCode == KeyCode.DownArrow) axes = new Vector2(0f, -1f);
+                _circuit3DRenderer.NudgePanCamera(axes);
                 return true;
             }
 
             var orbit = Vector2.zero;
-            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
-            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
             if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
             if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
             _circuit3DRenderer.Orbit(orbit);

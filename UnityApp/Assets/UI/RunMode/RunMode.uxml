@@ -32,13 +32,44 @@
                     <ui:Label text="Live Circuit View" class="card-title" />
                     <ui:VisualElement name="Circuit3DView" class="board-view" />
                     <ui:VisualElement name="Circuit3DControls" class="board-3d-controls">
-                        <ui:Label text="Camera" class="board-3d-controls-title" />
-                        <ui:VisualElement class="board-3d-controls-row">
-                            <ui:Label text="FOV" class="board-3d-controls-label" />
-                            <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="board-3d-slider" />
+                        <ui:VisualElement class="board-3d-controls-header">
+                            <ui:Label text="Camera" class="board-3d-controls-title" />
+                            <ui:Button name="Circuit3DControlsToggle" text="Hide" class="board-3d-controls-toggle" />
                         </ui:VisualElement>
-                        <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="board-3d-toggle" value="true" />
-                        <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="board-3d-toggle" />
+                        <ui:VisualElement name="Circuit3DControlsBody" class="board-3d-controls-body">
+                            <ui:VisualElement class="board-3d-controls-row">
+                                <ui:Label text="FOV" class="board-3d-controls-label" />
+                                <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="board-3d-slider" />
+                            </ui:VisualElement>
+                            <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="board-3d-toggle" value="true" />
+                            <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="board-3d-toggle" />
+                            <ui:Toggle name="Circuit3DLabelsToggle" text="Labels" class="board-3d-toggle" value="true" />
+                            <ui:Toggle name="Circuit3DErrorFxToggle" text="Error FX" class="board-3d-toggle" value="true" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="board-wiring-tools">
+                        <ui:VisualElement class="board-wiring-header">
+                            <ui:Label text="Wiring Tools" class="board-section-title" />
+                            <ui:Button name="WiringToolsToggle" text="Hide" class="board-wiring-toggle" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="WiringToolsBody" class="board-wiring-body">
+                            <ui:VisualElement class="board-wiring-buttons">
+                                <ui:Button name="WiringHeatmapBtn" text="Net Heatmap OFF" class="btn ghost wire-btn" />
+                                <ui:Button name="WiringReportBtn" text="Log Net Snapshot" class="btn ghost wire-btn secondary" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Circuit3DHelpIcon" class="board-3d-help">
+                        <ui:Label text="?" class="board-3d-help-icon" />
+                        <ui:VisualElement name="Circuit3DHelpTooltip" class="board-3d-help-tooltip" style="display: none;">
+                            <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
+                            <ui:Label text="R / Home: Reset view" class="board-3d-help-line" />
+                            <ui:Label text="F: Focus selection" class="board-3d-help-line" />
+                            <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
+                            <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
+                            <ui:Label text="Ctrl + Arrows: Zoom / Lighting" class="board-3d-help-line" />
+                            <ui:Label text="PageUp / PageDown or E / Q: Nudge" class="board-3d-help-line" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
 
@@ -59,7 +90,7 @@
                 <ui:VisualElement class="card power-card">
                     <ui:Label text="Power / USB" class="card-title" />
                     <ui:ScrollView name="UsbBoardList" class="usb-list" />
-                    <ui:Label name="UsbHintLabel" text="IDE portunu secin (IDE'de Unknown gorunebilir)." class="subtle usb-hint" />
+                    <ui:Label name="UsbHintLabel" text="Select the IDE port (IDE may show it as Unknown)." class="subtle usb-hint" />
                     <ui:Label name="ComStatusLabel" text="Virtual COM: N/A" class="subtle" />
                     <ui:Button name="ComDriverInstallBtn" text="Install Virtual COM Driver" class="btn ghost com-btn" />
                     <ui:Label name="UsbStatusLabel" text="USB: N/A" class="subtle" />

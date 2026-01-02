@@ -1,0 +1,66 @@
+{
+  "projectName": "Resistor Overload Demo",
+  "version": "1.0.0",
+  "description": "Forces a low-ohm resistor to overheat so you can see smoke and burn states in Run Mode.",
+  "circuit": {
+    "id": "resistor-overload-demo",
+    "mode": "fast",
+    "components": [
+      {
+        "id": "B1",
+        "type": "Battery",
+        "properties": {
+          "posX": "200",
+          "posY": "220",
+          "voltage": "9V",
+          "catalogId": "battery-9v"
+        }
+      },
+      {
+        "id": "SW1",
+        "type": "Switch",
+        "properties": {
+          "posX": "260",
+          "posY": "220",
+          "state": "closed",
+          "catalogId": "switch-on-off"
+        }
+      },
+      {
+        "id": "R1",
+        "type": "Resistor",
+        "properties": {
+          "posX": "320",
+          "posY": "220",
+          "resistance": "5",
+          "catalogId": "resistor-220"
+        }
+      }
+    ],
+    "nets": [
+      {
+        "id": "NET_POWER",
+        "nodes": ["B1.+", "SW1.A"]
+      },
+      {
+        "id": "NET_OVERLOAD",
+        "nodes": ["SW1.B", "R1.A"]
+      },
+      {
+        "id": "NET_GROUND",
+        "nodes": ["R1.B", "B1.-"]
+      }
+    ]
+  },
+  "robot": {
+    "name": "DefaultRobot"
+  },
+  "world": {
+    "name": "DefaultWorld",
+    "width": 0,
+    "depth": 0
+  },
+  "metadata": {
+    "template": "resistor-overload-demo"
+  }
+}

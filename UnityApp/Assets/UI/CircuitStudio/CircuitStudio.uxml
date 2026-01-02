@@ -16,6 +16,7 @@
                 <ui:Button name="MenuDesign" text="Design" class="menu-btn" />
                 <ui:Button name="MenuTools" text="Tools" class="menu-btn" />
                 <ui:Button name="MenuRoute" text="Route" class="menu-btn" />
+                <ui:Button name="MenuHelp" text="Help" class="menu-btn" />
             </ui:VisualElement>
             <ui:VisualElement class="menubar-right">
                 <ui:Label text="v2.4.1-offline" class="version-text" />
@@ -23,13 +24,15 @@
         </ui:VisualElement>
 
         <ui:VisualElement class="studio-toolbar">
-            <ui:VisualElement class="tool-cluster">
-                <ui:Button name="tool-select" text="SEL" class="toolbar-btn active" />
-                <ui:Button name="tool-move" text="MOVE" class="toolbar-btn" />
-                <ui:Button name="tool-wire" text="WIRE" class="toolbar-btn" />
-                <ui:Button name="tool-text" text="TEXT" class="toolbar-btn" />
-                <ui:Button name="tool-sim" text="SIM" class="toolbar-btn" />
-            </ui:VisualElement>
+                <ui:VisualElement class="tool-cluster">
+                    <ui:Button name="tool-select" text="SEL" class="toolbar-btn active" />
+                    <ui:Button name="tool-move" text="MOVE" class="toolbar-btn" />
+                    <ui:Button name="tool-wire" text="WIRE" class="toolbar-btn" />
+                    <ui:Button name="tool-text" text="TEXT" class="toolbar-btn" />
+                    <ui:Button name="tool-sim" text="SIM" class="toolbar-btn" />
+                    <ui:Button name="tool-drc" text="DRC" class="toolbar-btn" />
+                    <ui:Button name="tool-net" text="NET" class="toolbar-btn" />
+                </ui:VisualElement>
             <ui:VisualElement class="toolbar-actions">
                 <ui:Label text="GRID 0.1mm" class="toolbar-chip" />
                 <ui:Button text="DRC" class="btn-secondary" />
@@ -112,13 +115,8 @@
                                 <ui:DropdownField name="CodeTargetBoard" class="code-target-dropdown" />
                             </ui:VisualElement>
                             <ui:VisualElement style="flex-grow: 1;" />
-                            <ui:Button name="CodeNewBtn" text="New" class="code-btn" />
-                            <ui:Button name="CodeOpenBtn" text="Open" class="code-btn" />
-                            <ui:Button name="CodeSaveBtn" text="Save" class="code-btn" />
-                            <ui:Button name="CodeSaveAsBtn" text="Save As" class="code-btn" />
-                            <ui:Button name="CodeBuildBtn" text="Build" class="code-btn" />
-                            <ui:Button name="CodeBuildRunBtn" text="Build+Run" class="code-btn" />
-                            <ui:Button name="CodeBuildAllBtn" text="Build All" class="code-btn" />
+                            <ui:Button name="CodeFileMenuBtn" text="File" class="code-btn" />
+                            <ui:Button name="CodeBuildMenuBtn" text="Build" class="code-btn" />
                         </ui:VisualElement>
                         <ui:VisualElement name="CodeBuildProgressWrap" class="code-build-progress">
                             <ui:ProgressBar name="CodeBuildProgress" class="code-build-progress-bar" title="Building..." value="0" />
@@ -132,15 +130,34 @@
                     <ui:VisualElement name="Circuit3DPanel" class="circuit-3d-panel" style="display: none;">
                         <ui:VisualElement name="Circuit3DView" class="circuit-3d-view">
                             <ui:VisualElement name="Circuit3DControls" class="circuit-3d-controls">
-                                <ui:Label text="Camera" class="circuit-3d-controls-title" />
-                                <ui:VisualElement class="circuit-3d-controls-row">
-                                    <ui:Label text="FOV" class="circuit-3d-controls-label" />
-                                    <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="circuit-3d-slider" />
+                                <ui:VisualElement class="circuit-3d-controls-header">
+                                    <ui:Label text="Layout" class="circuit-3d-controls-title" />
+                                    <ui:Button name="Circuit3DControlsToggle" text="Hide" class="circuit-3d-controls-toggle" />
                                 </ui:VisualElement>
-                                <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="circuit-3d-toggle" value="true" />
-                                <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="circuit-3d-toggle" />
+                                <ui:VisualElement name="Circuit3DControlsBody" class="circuit-3d-controls-body">
+                                    <ui:Label text="Camera" class="circuit-3d-controls-subtitle" />
+                            <ui:VisualElement class="circuit-3d-controls-row">
+                                <ui:Label text="FOV" class="circuit-3d-controls-label" />
+                                <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="circuit-3d-slider" />
                             </ui:VisualElement>
+                            <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="circuit-3d-toggle" value="true" />
+                            <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="circuit-3d-toggle" />
+                            <ui:Button name="Circuit3DRebuildBtn" text="Rebuild 3D" class="circuit-3d-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
                             <ui:Label text="3D Circuit Preview" class="circuit-3d-label" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Circuit3DHelpIcon" class="board-3d-help">
+                            <ui:Label text="?" class="board-3d-help-icon" />
+                            <ui:VisualElement name="Circuit3DHelpTooltip" class="board-3d-help-tooltip" style="display: none;">
+                                <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
+                                <ui:Label text="R / Home: Reset view" class="board-3d-help-line" />
+                                <ui:Label text="F: Focus selection" class="board-3d-help-line" />
+                                <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
+                                <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
+                                <ui:Label text="Ctrl + Arrows: Zoom / Lighting" class="board-3d-help-line" />
+                                <ui:Label text="PageUp / PageDown or E / Q: Nudge" class="board-3d-help-line" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
@@ -163,6 +180,10 @@
                 <ui:ScrollView class="panel-scroll">
                     <ui:VisualElement class="prop-section">
                         <ui:Label text="TRANSFORM" class="prop-section-header" />
+                        <ui:VisualElement class="prop-row">
+                            <ui:Label text="Name" class="prop-label-row" />
+                            <ui:TextField name="ComponentNameField" value="U1" class="input-dark input-right" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="prop-row-double">
                             <ui:VisualElement class="prop-field">
                                 <ui:Label text="Position X" class="prop-label" />
@@ -271,6 +292,68 @@
                     <ui:VisualElement style="flex-grow: 1;" />
                     <ui:Button name="NetEditorCancelBtn" text="Cancel" class="btn-secondary" />
                     <ui:Button name="NetEditorSaveBtn" text="Save" class="btn-primary" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="WireExportOverlay" class="modal-overlay" style="display: none;">
+            <ui:VisualElement class="modal-card wire-export-card">
+                <ui:Label text="Exporting Wire Matrix" class="modal-title" />
+                <ui:Label name="WireExportStatus" text="Preparing..." class="modal-label" />
+                <ui:ProgressBar name="WireExportProgress" class="wire-export-progress" title="Exporting..." value="0" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="HelpOverlay" class="modal-overlay" style="display: none;">
+            <ui:VisualElement class="modal-card help-card">
+                <ui:Label text="Help &amp; Shortcuts" class="modal-title" />
+                <ui:ScrollView name="HelpScroll" class="help-scroll">
+                    <ui:Label text="Getting Started" class="help-section" />
+                    <ui:Label text="Drag parts from Library onto the canvas." class="help-line" />
+                    <ui:Label text="Right click on canvas for Center Selection / Reset View." class="help-line" />
+                    <ui:Label text="SIMULATE button switches to Run Mode." class="help-line" />
+
+                    <ui:Label text="Tools" class="help-section" />
+                    <ui:Label text="V Select, M Move, W Wire, T Text." class="help-line" />
+                    <ui:Label text="DRC button or Design menu runs checks." class="help-line" />
+                    <ui:Label text="NET button opens Net Editor (rename nets / assign nodes)." class="help-line" />
+                    <ui:Label text="Route menu = wire utilities (rebuild, report, prune, highlight, export)." class="help-line" />
+                    <ui:Label text="Tools menu = auto layout selection/all, select connected." class="help-line" />
+                    <ui:Label text="View menu = show/hide grid." class="help-line" />
+
+                    <ui:Label text="Canvas Navigation" class="help-section" />
+                    <ui:Label text="MMB drag or Ctrl+LMB drag = pan." class="help-line" />
+                    <ui:Label text="Mouse wheel = zoom." class="help-line" />
+                    <ui:Label text="Ctrl+Up/Down = zoom step, Ctrl+0 = reset view." class="help-line" />
+                    <ui:Label text="Arrow keys = pan." class="help-line" />
+                    <ui:Label text="LMB drag empty canvas = box select." class="help-line" />
+                    <ui:Label text="Delete/Backspace = delete selection." class="help-line" />
+                    <ui:Label text="Ctrl+C = copy selection, Ctrl+V = paste." class="help-line" />
+
+                    <ui:Label text="Wiring" class="help-section" />
+                    <ui:Label text="Wire tool: click pin then click another pin to connect." class="help-line" />
+                    <ui:Label text="Double click pin = remove connections." class="help-line" />
+                    <ui:Label text="Esc = cancel wiring or drag." class="help-line" />
+                    <ui:Label text="Ctrl+D = export wire matrix." class="help-line" />
+
+                    <ui:Label text="3D Preview Camera" class="help-section" />
+                    <ui:Label text="LMB drag = pan, RMB drag = orbit, wheel = zoom." class="help-line" />
+                    <ui:Label text="R or Home = reset view." class="help-line" />
+                    <ui:Label text="F = focus selected component." class="help-line" />
+                    <ui:Label text="Shift + Arrows = pan." class="help-line" />
+                    <ui:Label text="Arrows = orbit." class="help-line" />
+                    <ui:Label text="Ctrl + Up/Down = zoom." class="help-line" />
+                    <ui:Label text="Ctrl + Left/Right = lighting." class="help-line" />
+                    <ui:Label text="PageUp/PageDown or E/Q = nudge vertical." class="help-line" />
+                    <ui:Label text="Run Mode 3D uses the same camera shortcuts." class="help-line" />
+
+                    <ui:Label text="Project / Code" class="help-section" />
+                    <ui:Label text="Ctrl+S Save (project or code based on tab)." class="help-line" />
+                    <ui:Label text="Ctrl+Shift+S Save As (project)." class="help-line" />
+                    <ui:Label text="Ctrl+N New code file, Ctrl+O Open code file." class="help-line" />
+                    <ui:Label text="Ctrl+B Build, Ctrl+R Build+Run." class="help-line" />
+                    <ui:Label text="Ctrl+Z Undo, Ctrl+Y or Ctrl+Shift+Z Redo." class="help-line" />
+                </ui:ScrollView>
+                <ui:VisualElement class="modal-actions">
+                    <ui:Button name="HelpCloseBtn" text="Close" class="btn-primary" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

@@ -19,15 +19,20 @@ namespace RobotTwin.CoreSim.Engine
         private const double DefaultResistorTempCoeff = 0.0004;
         private const double DefaultResistorThermalResistance = 150.0;
         private const double DefaultResistorThermalMass = 0.5;
+        private const double DefaultResistorBlowTemp = 180.0;
         private const double DefaultLedThermalResistance = 200.0;
         private const double DefaultLedThermalMass = 0.2;
         private const double DefaultDiodeIs = 1e-12;
         private const double DefaultDiodeIdeality = 2.0;
         private const double DefaultDiodeThermalVoltage = 0.02585;
-        private const double DefaultBatteryCapacityAh = 1.5;
-        private const double DefaultBatteryInternalResistance = 0.2;
+        private const double DefaultBatteryCapacityAh = 0.5;
+        private const double DefaultBatteryInternalResistance = 1.5;
         private const double DefaultBatteryVoltageMin = 6.0;
         private const double DefaultBatteryVoltageMax = 9.0;
+        private const double DefaultBatteryDepletionSoc = 0.01;
+        private const double DefaultBatteryDrainScale = 1.0;
+        private const double DefaultArduinoIdleCurrent = 0.03;
+        private const double UsbAutoSelectThresholdVin = 6.6;
         private const double GminConductance = 1e-8;
 
         private readonly Dictionary<string, string> _pinToNet =
@@ -41,6 +46,9 @@ namespace RobotTwin.CoreSim.Engine
         private readonly Dictionary<string, ThermalState> _ledThermal = new Dictionary<string, ThermalState>();
         private readonly Dictionary<string, BatteryState> _batteryStates = new Dictionary<string, BatteryState>();
         private readonly Dictionary<string, string> _usbVirtualSupplyNets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _regulatorVirtualSupplyNets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _blownResistors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _blownDiodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public TelemetryFrame Step(
             CircuitSpec spec,
@@ -91,7 +99,27 @@ namespace RobotTwin.CoreSim.Engine
                 }
 
                 var nodeVoltages = ExtractNodeVoltages(solution, island.Sources.Count);
-                PopulateTelemetry(frame, spec, island.Resistors, island.Diodes, island.Sources, nodeVoltages, solution, dtSeconds);
+                PopulateTelemetry(frame, spec, island.Resistors, island.Diodes, island.Sources, nodeVoltages, solution, dtSeconds, usbConnectedById);
+            }
+
+            if (frame.Signals != null && _batteryStates.Count > 0)
+            {
+                foreach (var kvp in _batteryStates)
+                {
+                    string socKey = $"SRC:{kvp.Key}:SOC";
+                    if (!frame.Signals.ContainsKey(socKey))
+                    {
+                        frame.Signals[socKey] = kvp.Value.Soc;
+                    }
+                    if (kvp.Value.IsDepleted)
+                    {
+                        string vKey = $"SRC:{kvp.Key}:V";
+                        if (!frame.Signals.ContainsKey(vKey))
+                        {
+                            frame.Signals[vKey] = 0.0;
+                        }
+                    }
+                }
             }
 
             return frame;
@@ -216,8 +244,9 @@ namespace RobotTwin.CoreSim.Engine
                     case "ArduinoUno":
                     case "ArduinoNano":
                     case "ArduinoProMini":
-                        AddArduinoSources(comp, pinVoltages, voltageSources, frame, boardPowerById, usbConnectedById);
-                        AddArduinoPullups(comp, pinStatesByComponent, pullupResistances, resistors, frame, usbConnectedById);
+                        AddArduinoSources(comp, spec, pinVoltages, voltageSources, frame, boardPowerById, usbConnectedById);
+                        AddArduinoIdleLoad(comp, spec, resistors, boardPowerById, usbConnectedById);
+                        AddArduinoPullups(comp, spec, pinStatesByComponent, pullupResistances, resistors, frame, usbConnectedById);
                         break;
                 }
             }
@@ -406,7 +435,27 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             double baseResistance = resistanceOverride > 0 ? resistanceOverride : ParseResistance(comp, 1000.0);
+            double blowTemp = DefaultResistorBlowTemp;
+            if (TryGetDouble(comp, "blowTemp", out var blowTempVal) && blowTempVal > 0)
+            {
+                blowTemp = blowTempVal;
+            }
+            else if (TryGetDouble(comp, "maxTemp", out var maxTempVal) && maxTempVal > 0)
+            {
+                blowTemp = maxTempVal;
+            }
+            else if (TryGetDouble(comp, "burnTemp", out var burnTempVal) && burnTempVal > 0)
+            {
+                blowTemp = burnTempVal;
+            }
             double contactResistance = TryGetDouble(comp, "contactResistance", out var contact) ? contact : DefaultContactResistance;
+            if (_blownResistors.Contains(comp.Id))
+            {
+                frame.ValidationMessages.Add($"Component Blown: {comp.Id}");
+                var blownThermal = GetOrCreateThermalState(_resistorThermal, comp, DefaultResistorTempCoeff, DefaultResistorThermalResistance, DefaultResistorThermalMass);
+                resistors.Add(new ResistorElement(comp.Id, netA, netB, HighResistance, baseResistance, contactResistance, blownThermal, true, blowTemp));
+                return;
+            }
             ThermalState thermal = null;
             double resistance = baseResistance;
             if (trackThermal)
@@ -415,11 +464,16 @@ namespace RobotTwin.CoreSim.Engine
                 resistance = ApplyTempCoeff(baseResistance, thermal);
             }
             resistance += contactResistance * 2.0;
-            resistors.Add(new ResistorElement(comp.Id, netA, netB, resistance, baseResistance, contactResistance, thermal, trackThermal));
+            resistors.Add(new ResistorElement(comp.Id, netA, netB, resistance, baseResistance, contactResistance, thermal, trackThermal, blowTemp));
         }
 
         private void AddLed(ComponentSpec comp, List<DiodeElement> diodes, TelemetryFrame frame)
         {
+            if (_blownDiodes.Contains(comp.Id))
+            {
+                frame.ValidationMessages.Add($"Component Blown: {comp.Id}");
+                return;
+            }
             var anodeNet = GetNetFor(comp.Id, "Anode");
             var cathodeNet = GetNetFor(comp.Id, "Cathode");
             if (!IsConnected(anodeNet) || !IsConnected(cathodeNet))
@@ -486,6 +540,11 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             var state = GetOrCreateBatteryState(comp);
+            if (state.IsDepleted)
+            {
+                frame.ValidationMessages.Add($"Battery depleted: {comp.Id}");
+                return;
+            }
             double ocv = ComputeBatteryOpenCircuitVoltage(state);
             double voltage = ocv - state.LastCurrent * state.InternalResistance;
             voltage = Clamp(voltage, state.VoltageMin, state.VoltageMax);
@@ -502,6 +561,7 @@ namespace RobotTwin.CoreSim.Engine
 
         private void AddArduinoSources(
             ComponentSpec comp,
+            CircuitSpec spec,
             Dictionary<string, float> pinVoltages,
             List<VoltageSourceElement> voltageSources,
             TelemetryFrame frame,
@@ -513,7 +573,8 @@ namespace RobotTwin.CoreSim.Engine
                 return;
             }
             string gndNet = GetGroundNetForComponent(comp);
-            if (IsUsbConnected(comp, usbConnectedById) && !HasAnySupplyNet(comp))
+            bool batterySupply = IsBatterySupplyingBoard(comp, spec, usbConnectedById);
+            if (IsUsbConnected(comp, usbConnectedById) && !HasAnySupplyNet(comp) && !batterySupply)
             {
                 string usbNet = GetUsbSupplyNet(comp);
                 RegisterVirtualNet(usbNet);
@@ -522,6 +583,7 @@ namespace RobotTwin.CoreSim.Engine
                     voltageSources.Add(new VoltageSourceElement($"{comp.Id}.USB", usbNet, gndNet, 5.0, false, null));
                 }
             }
+            AddArduinoRegulatorSource(comp, spec, voltageSources, gndNet, usbConnectedById);
             AddArduinoPinSource(comp, "5V", 5.0, voltageSources, gndNet);
             AddArduinoPinSource(comp, "3V3", 3.3, voltageSources, gndNet);
             AddArduinoPinSource(comp, "IOREF", 5.0, voltageSources, gndNet);
@@ -556,7 +618,8 @@ namespace RobotTwin.CoreSim.Engine
                    IsConnected(GetNetFor(comp.Id, "3V3")) ||
                    IsConnected(GetNetFor(comp.Id, "IOREF")) ||
                    IsConnected(GetNetFor(comp.Id, "VCC")) ||
-                   IsConnected(GetNetFor(comp.Id, "VIN"));
+                   IsConnected(GetNetFor(comp.Id, "VIN")) ||
+                   IsConnected(GetNetFor(comp.Id, "RAW"));
         }
 
         private string GetUsbSupplyNet(ComponentSpec comp)
@@ -590,8 +653,284 @@ namespace RobotTwin.CoreSim.Engine
             voltageSources.Add(new VoltageSourceElement($"{comp.Id}.{pin}", net, gndNet, voltage, false, null));
         }
 
+        private void AddArduinoRegulatorSource(
+            ComponentSpec comp,
+            CircuitSpec spec,
+            List<VoltageSourceElement> voltageSources,
+            string groundNet,
+            Dictionary<string, bool> usbConnectedById)
+        {
+            if (comp == null || voltageSources == null) return;
+            if (IsConnected(GetNetFor(comp.Id, "5V")) ||
+                IsConnected(GetNetFor(comp.Id, "VCC")) ||
+                IsConnected(GetNetFor(comp.Id, "IOREF")) ||
+                IsConnected(GetNetFor(comp.Id, "3V3")))
+            {
+                return;
+            }
+            if (!IsBatterySupplyingBoard(comp, spec, usbConnectedById)) return;
+
+            string regNet = GetRegulatorSupplyNet(comp);
+            if (string.IsNullOrWhiteSpace(regNet)) return;
+
+            string gndNet = IsConnected(groundNet) ? groundNet : GetGroundNet();
+            if (!IsConnected(gndNet)) return;
+
+            RegisterVirtualNet(regNet);
+            voltageSources.Add(new VoltageSourceElement($"{comp.Id}.REG5V", regNet, gndNet, 5.0, false, null));
+        }
+
+        private string GetRegulatorSupplyNet(ComponentSpec comp)
+        {
+            if (comp == null || string.IsNullOrWhiteSpace(comp.Id)) return string.Empty;
+            if (_regulatorVirtualSupplyNets.TryGetValue(comp.Id, out var netId)) return netId;
+            netId = $"REG5V_{comp.Id}";
+            _regulatorVirtualSupplyNets[comp.Id] = netId;
+            return netId;
+        }
+
+        private double GetArduinoIdleCurrent(ComponentSpec comp)
+        {
+            if (comp?.Properties != null && comp.Properties.TryGetValue("idleCurrent", out var raw))
+            {
+                if (TryParseCurrent(raw, out var parsed))
+                {
+                    return Math.Max(parsed, 0.0);
+                }
+            }
+            return GetArduinoDefaultIdleCurrent(comp);
+        }
+
+        private static double GetArduinoDefaultIdleCurrent(ComponentSpec comp)
+        {
+            if (comp == null) return DefaultArduinoIdleCurrent;
+            if (string.Equals(comp.Type, "ArduinoUno", StringComparison.OrdinalIgnoreCase)) return 0.05;
+            if (string.Equals(comp.Type, "ArduinoNano", StringComparison.OrdinalIgnoreCase)) return 0.03;
+            if (string.Equals(comp.Type, "ArduinoProMini", StringComparison.OrdinalIgnoreCase)) return 0.02;
+            return DefaultArduinoIdleCurrent;
+        }
+
+        private bool TryGetArduinoIdleSupply(
+            ComponentSpec comp,
+            CircuitSpec spec,
+            Dictionary<string, bool> usbConnectedById,
+            out string supplyNet,
+            out double nominalVoltage)
+        {
+            supplyNet = string.Empty;
+            nominalVoltage = 0.0;
+            if (comp == null) return false;
+
+            if (TryGetActiveBatterySupply(comp, spec, usbConnectedById, out supplyNet, out nominalVoltage, out _))
+            {
+                return true;
+            }
+
+            if (IsUsbConnected(comp, usbConnectedById))
+            {
+                supplyNet = GetUsbSupplyNet(comp);
+                RegisterVirtualNet(supplyNet);
+                nominalVoltage = 5.0;
+                return true;
+            }
+
+            if (IsConnected(GetNetFor(comp.Id, "5V")))
+            {
+                supplyNet = GetNetFor(comp.Id, "5V");
+                nominalVoltage = 5.0;
+                return true;
+            }
+            if (IsConnected(GetNetFor(comp.Id, "VCC")))
+            {
+                supplyNet = GetNetFor(comp.Id, "VCC");
+                nominalVoltage = 5.0;
+                return true;
+            }
+            if (IsConnected(GetNetFor(comp.Id, "IOREF")))
+            {
+                supplyNet = GetNetFor(comp.Id, "IOREF");
+                nominalVoltage = 5.0;
+                return true;
+            }
+            if (IsConnected(GetNetFor(comp.Id, "3V3")))
+            {
+                supplyNet = GetNetFor(comp.Id, "3V3");
+                nominalVoltage = 3.3;
+                return true;
+            }
+            if (IsConnected(GetNetFor(comp.Id, "VIN")))
+            {
+                supplyNet = GetNetFor(comp.Id, "VIN");
+                nominalVoltage = 9.0;
+                return true;
+            }
+            if (IsConnected(GetNetFor(comp.Id, "RAW")))
+            {
+                supplyNet = GetNetFor(comp.Id, "RAW");
+                nominalVoltage = 9.0;
+                return true;
+            }
+            return false;
+        }
+
+        private bool IsBatterySupplyingBoard(ComponentSpec board, CircuitSpec spec, Dictionary<string, bool> usbConnectedById)
+        {
+            return TryGetActiveBatterySupply(board, spec, usbConnectedById, out _, out _, out _);
+        }
+
+        private bool TryGetActiveBatterySupply(
+            ComponentSpec board,
+            CircuitSpec spec,
+            Dictionary<string, bool> usbConnectedById,
+            out string supplyNet,
+            out double nominalVoltage,
+            out ComponentSpec battery)
+        {
+            supplyNet = string.Empty;
+            nominalVoltage = 0.0;
+            battery = null;
+            if (!TryGetBatteryForBoard(board, spec, out battery, out _, out supplyNet, out nominalVoltage)) return false;
+            if (battery == null) return false;
+            var state = GetOrCreateBatteryState(battery);
+            if (state == null || state.IsDepleted) return false;
+
+            if (usbConnectedById != null && IsUsbConnected(board, usbConnectedById) && nominalVoltage >= UsbAutoSelectThresholdVin)
+            {
+                double ocv = ComputeBatteryOpenCircuitVoltage(state);
+                if (ocv < UsbAutoSelectThresholdVin)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private bool TryGetBatteryForBoard(
+            ComponentSpec board,
+            CircuitSpec spec,
+            out ComponentSpec battery,
+            out string batteryNet,
+            out string boardSupplyNet,
+            out double nominalVoltage)
+        {
+            battery = null;
+            batteryNet = string.Empty;
+            boardSupplyNet = string.Empty;
+            nominalVoltage = 0.0;
+            if (board == null || spec?.Components == null) return false;
+
+            foreach (var comp in spec.Components)
+            {
+                if (comp == null || !string.Equals(comp.Type, "Battery", StringComparison.OrdinalIgnoreCase)) continue;
+                string netPlus = GetNetFor(comp.Id, "+");
+                if (string.IsNullOrWhiteSpace(netPlus)) continue;
+
+                if (TryGetBoardSupplyNetFor(board, netPlus, out boardSupplyNet, out nominalVoltage))
+                {
+                    battery = comp;
+                    batteryNet = netPlus;
+                    return true;
+                }
+
+                foreach (var sw in spec.Components)
+                {
+                    if (!IsSwitchComponent(sw)) continue;
+                    if (!IsSwitchClosed(sw)) continue;
+                    string netA = GetNetFor(sw.Id, "A");
+                    string netB = GetNetFor(sw.Id, "B");
+                    if (string.IsNullOrWhiteSpace(netA) || string.IsNullOrWhiteSpace(netB)) continue;
+                    if (string.Equals(netA, netPlus, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (TryGetBoardSupplyNetFor(board, netB, out boardSupplyNet, out nominalVoltage))
+                        {
+                            battery = comp;
+                            batteryNet = netPlus;
+                            return true;
+                        }
+                    }
+                    else if (string.Equals(netB, netPlus, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (TryGetBoardSupplyNetFor(board, netA, out boardSupplyNet, out nominalVoltage))
+                        {
+                            battery = comp;
+                            batteryNet = netPlus;
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool IsSwitchComponent(ComponentSpec comp)
+        {
+            if (comp == null) return false;
+            return string.Equals(comp.Type, "Switch", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(comp.Type, "Button", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool TryGetBoardSupplyNetFor(ComponentSpec board, string netId, out string supplyNet, out double nominalVoltage)
+        {
+            supplyNet = string.Empty;
+            nominalVoltage = 0.0;
+            if (board == null || string.IsNullOrWhiteSpace(netId)) return false;
+            string[] pins = { "VIN", "RAW", "5V", "VCC", "IOREF", "3V3" };
+            foreach (var pin in pins)
+            {
+                string net = GetNetFor(board.Id, pin);
+                if (string.Equals(netId, net, StringComparison.OrdinalIgnoreCase))
+                {
+                    supplyNet = netId;
+                    nominalVoltage = GetNominalVoltageForPin(pin);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static double GetNominalVoltageForPin(string pin)
+        {
+            if (string.IsNullOrWhiteSpace(pin)) return 5.0;
+            switch (pin.Trim().ToUpperInvariant())
+            {
+                case "3V3":
+                    return 3.3;
+                case "VIN":
+                case "RAW":
+                    return 9.0;
+                default:
+                    return 5.0;
+            }
+        }
+
+        private void AddArduinoIdleLoad(
+            ComponentSpec comp,
+            CircuitSpec spec,
+            List<ResistorElement> resistors,
+            Dictionary<string, bool> boardPowerById,
+            Dictionary<string, bool> usbConnectedById)
+        {
+            if (comp == null || resistors == null) return;
+            if (!IsBoardPowered(comp, boardPowerById)) return;
+            if (!TryGetArduinoIdleSupply(comp, spec, usbConnectedById, out var supplyNet, out var nominalVoltage))
+            {
+                return;
+            }
+
+            string gndNet = GetGroundNetForComponent(comp);
+            if (!IsConnected(gndNet)) gndNet = GetGroundNet();
+            if (!IsConnected(gndNet)) return;
+
+            double idleCurrent = GetArduinoIdleCurrent(comp);
+            if (idleCurrent <= 0.0) return;
+
+            double resistance = nominalVoltage / Math.Max(idleCurrent, 1e-6);
+            resistors.Add(new ResistorElement($"{comp.Id}.IDLE", supplyNet, gndNet, resistance, resistance, 0.0, null, false, 0.0));
+        }
+
         private void AddArduinoPullups(
             ComponentSpec comp,
+            CircuitSpec spec,
             Dictionary<string, List<PinState>> pinStatesByComponent,
             Dictionary<string, double> pullupResistances,
             List<ResistorElement> resistors,
@@ -607,11 +946,24 @@ namespace RobotTwin.CoreSim.Engine
                 if (overrideResistance > 0) pullupResistance = overrideResistance;
             }
 
-            var vccNet = GetNetFor(comp.Id, "5V");
-            if (!IsConnected(vccNet) && IsUsbConnected(comp, usbConnectedById))
+            string vccNet = GetNetFor(comp.Id, "5V");
+            if (!IsConnected(vccNet)) vccNet = GetNetFor(comp.Id, "VCC");
+            if (!IsConnected(vccNet)) vccNet = GetNetFor(comp.Id, "IOREF");
+            if (!IsConnected(vccNet)) vccNet = GetNetFor(comp.Id, "3V3");
+            if (!IsConnected(vccNet))
             {
-                vccNet = GetUsbSupplyNet(comp);
-                RegisterVirtualNet(vccNet);
+                if (IsBatterySupplyingBoard(comp, spec, usbConnectedById))
+                {
+                    vccNet = GetRegulatorSupplyNet(comp);
+                }
+                else if (IsUsbConnected(comp, usbConnectedById))
+                {
+                    vccNet = GetUsbSupplyNet(comp);
+                }
+                if (IsConnected(vccNet))
+                {
+                    RegisterVirtualNet(vccNet);
+                }
             }
             if (!IsConnected(vccNet))
             {
@@ -628,7 +980,7 @@ namespace RobotTwin.CoreSim.Engine
                     frame.ValidationMessages.Add($"Pull-up pin '{comp.Id}.{state.Pin}' missing net.");
                     continue;
                 }
-                resistors.Add(new ResistorElement($"{comp.Id}.{state.Pin}:PULLUP", pinNet, vccNet, pullupResistance, pullupResistance, 0.0, null, false));
+                resistors.Add(new ResistorElement($"{comp.Id}.{state.Pin}:PULLUP", pinNet, vccNet, pullupResistance, pullupResistance, 0.0, null, false, 0.0));
             }
         }
 
@@ -834,7 +1186,8 @@ namespace RobotTwin.CoreSim.Engine
             List<VoltageSourceElement> sources,
             Dictionary<string, double> voltages,
             double[] solution,
-            float dtSeconds)
+            float dtSeconds,
+            Dictionary<string, bool> usbConnectedById)
         {
             foreach (var net in voltages)
             {
@@ -858,6 +1211,11 @@ namespace RobotTwin.CoreSim.Engine
                     UpdateThermalState(res.Thermal, Math.Abs(power), dtSeconds);
                     frame.Signals[$"COMP:{res.Id}:T"] = res.Thermal.TempC;
                     res.Resistance = ApplyTempCoeff(res.BaseResistance, res.Thermal) + res.ContactResistance * 2.0;
+                    if (!_blownResistors.Contains(res.Id) && res.BlowTemp > 0 && res.Thermal.TempC >= res.BlowTemp)
+                    {
+                        _blownResistors.Add(res.Id);
+                        frame.ValidationMessages.Add($"Component Blown: {res.Id} overtemp {res.Thermal.TempC:F1}C");
+                    }
                 }
             }
 
@@ -883,17 +1241,36 @@ namespace RobotTwin.CoreSim.Engine
                 }
                 if (diode.MaxCurrent > 0 && Math.Abs(current) > diode.MaxCurrent)
                 {
-                    frame.ValidationMessages.Add($"Component Blown: {diode.Id} overcurrent {current * 1000.0:F1}mA");
+                    if (!_blownDiodes.Contains(diode.Id))
+                    {
+                        _blownDiodes.Add(diode.Id);
+                        frame.ValidationMessages.Add($"Component Blown: {diode.Id} overcurrent {current * 1000.0:F1}mA");
+                    }
                 }
             }
 
             int nodeCount = _netToNode.Count;
+            var sourceCurrents = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < sources.Count; i++)
             {
                 int idx = nodeCount + i;
                 if (idx >= 0 && idx < solution.Length)
                 {
-                    double current = solution[idx];
+                    sourceCurrents[sources[i].Id] = solution[idx];
+                }
+            }
+            var batteryExtraCurrent = ComputeBatteryDerivedLoads(spec, sources, sourceCurrents, usbConnectedById);
+
+            for (int i = 0; i < sources.Count; i++)
+            {
+                int idx = nodeCount + i;
+                if (idx >= 0 && idx < solution.Length)
+                {
+                    double current = sourceCurrents.TryGetValue(sources[i].Id, out var value) ? value : 0.0;
+                    if (sources[i].IsBattery && batteryExtraCurrent.TryGetValue(sources[i].Id, out var extra))
+                    {
+                        current += extra;
+                    }
                     frame.Signals[$"SRC:{sources[i].Id}:I"] = current;
                     frame.Signals[$"SRC:{sources[i].Id}:V"] = sources[i].Voltage;
                     frame.Signals[$"SRC:{sources[i].Id}:P"] = current * sources[i].Voltage;
@@ -964,6 +1341,51 @@ namespace RobotTwin.CoreSim.Engine
             {
                 frame.ValidationMessages.Add("Solver error: missing VCC supply (connect U1.5V/3V3/IOREF or Battery.+).");
             }
+        }
+
+        private Dictionary<string, double> ComputeBatteryDerivedLoads(
+            CircuitSpec spec,
+            List<VoltageSourceElement> sources,
+            Dictionary<string, double> sourceCurrents,
+            Dictionary<string, bool> usbConnectedById)
+        {
+            var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            if (spec?.Components == null || sources == null || sourceCurrents == null) return result;
+
+            var boardCurrents = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var source in sources)
+            {
+                if (source == null || string.IsNullOrWhiteSpace(source.Id)) continue;
+                int dot = source.Id.IndexOf('.');
+                if (dot <= 0) continue;
+                string boardId = source.Id.Substring(0, dot);
+                if (!sourceCurrents.TryGetValue(source.Id, out var current)) continue;
+                if (current <= 0.0) continue;
+                boardCurrents[boardId] = boardCurrents.TryGetValue(boardId, out var total) ? total + current : current;
+            }
+
+            if (boardCurrents.Count == 0) return result;
+
+            foreach (var comp in spec.Components)
+            {
+                if (comp == null) continue;
+                if (!string.Equals(comp.Type, "ArduinoUno", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(comp.Type, "ArduinoNano", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(comp.Type, "ArduinoProMini", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                if (!boardCurrents.TryGetValue(comp.Id, out var boardCurrent)) continue;
+                if (!TryGetBatteryForBoard(comp, spec, out var battery, out var batteryNet, out var boardSupplyNet, out _)) continue;
+                if (!TryGetActiveBatterySupply(comp, spec, usbConnectedById, out _, out _, out _)) continue;
+                if (battery == null || string.IsNullOrWhiteSpace(battery.Id)) continue;
+
+                if (string.Equals(batteryNet, boardSupplyNet, StringComparison.OrdinalIgnoreCase)) continue;
+
+                result[battery.Id] = result.TryGetValue(battery.Id, out var total) ? total + boardCurrent : boardCurrent;
+            }
+
+            return result;
         }
 
         private bool HasSupplySource(List<VoltageSourceElement> sources)
@@ -1159,13 +1581,17 @@ namespace RobotTwin.CoreSim.Engine
             if (_batteryStates.TryGetValue(comp.Id, out var state)) return state;
 
             double nominal = ParseVoltage(comp, 9.0);
-            double capacityAh = TryGetDouble(comp, "capacityAh", out var cap) ? cap : DefaultBatteryCapacityAh;
-            double internalResistance = TryGetDouble(comp, "internalResistance", out var rint) ? rint : DefaultBatteryInternalResistance;
+            double capacityAh = ParseCapacityAh(comp, DefaultBatteryCapacityAh);
+            double internalResistance = TryGetDouble(comp, "internalResistance", out var rint)
+                ? rint
+                : (TryGetDouble(comp, "rint", out var rintAlt) ? rintAlt : DefaultBatteryInternalResistance);
             double voltageMin = TryGetDouble(comp, "voltageMin", out var vmin) ? vmin : Math.Min(DefaultBatteryVoltageMin, nominal);
             double voltageMax = TryGetDouble(comp, "voltageMax", out var vmax) ? vmax : Math.Max(DefaultBatteryVoltageMax, nominal);
             double soc = TryGetDouble(comp, "soc", out var socVal) ? socVal : 1.0;
+            double drainScale = TryGetDouble(comp, "drainScale", out var scaleVal) ? scaleVal : DefaultBatteryDrainScale;
             if (soc > 1.0 && soc <= 100.0) soc /= 100.0;
             soc = Clamp(soc, 0.0, 1.0);
+            drainScale = Math.Max(0.01, drainScale);
 
             state = new BatteryState
             {
@@ -1175,7 +1601,8 @@ namespace RobotTwin.CoreSim.Engine
                 VoltageMin = voltageMin,
                 VoltageMax = voltageMax,
                 NominalVoltage = nominal,
-                LastCurrent = 0.0
+                LastCurrent = 0.0,
+                DrainScale = drainScale
             };
             _batteryStates[comp.Id] = state;
             return state;
@@ -1191,10 +1618,21 @@ namespace RobotTwin.CoreSim.Engine
         private static void UpdateBatteryState(BatteryState state, double current, float dtSeconds)
         {
             if (state == null || dtSeconds <= 0) return;
+            if (state.IsDepleted)
+            {
+                state.Soc = 0.0;
+                return;
+            }
             double capacityC = state.CapacityAh * 3600.0;
             if (capacityC <= 0) return;
-            double deltaSoc = (current * dtSeconds) / capacityC;
+            double scaledDt = dtSeconds * Math.Max(0.01, state.DrainScale);
+            double deltaSoc = (Math.Abs(current) * scaledDt) / capacityC;
             state.Soc = Clamp(state.Soc - deltaSoc, 0.0, 1.0);
+            if (state.Soc <= DefaultBatteryDepletionSoc)
+            {
+                state.Soc = 0.0;
+                state.IsDepleted = true;
+            }
         }
 
         private static void UpdateThermalState(ThermalState state, double power, float dtSeconds)
@@ -1295,6 +1733,43 @@ namespace RobotTwin.CoreSim.Engine
             return fallback;
         }
 
+        private static double ParseCapacityAh(ComponentSpec comp, double fallback)
+        {
+            if (comp?.Properties == null) return fallback;
+            if (comp.Properties.TryGetValue("capacityAh", out var raw) ||
+                comp.Properties.TryGetValue("capacity", out raw))
+            {
+                if (TryParseCapacity(raw, out var val))
+                {
+                    return val;
+                }
+            }
+            return fallback;
+        }
+
+        private static bool TryParseCapacity(string raw, out double value)
+        {
+            value = 0.0;
+            if (string.IsNullOrWhiteSpace(raw)) return false;
+            string s = raw.Trim().ToLowerInvariant().Replace(" ", string.Empty);
+            double multiplier = 1.0;
+            if (s.EndsWith("mah", StringComparison.Ordinal))
+            {
+                multiplier = 1e-3;
+                s = s.Substring(0, s.Length - 3);
+            }
+            else if (s.EndsWith("ah", StringComparison.Ordinal))
+            {
+                s = s.Substring(0, s.Length - 2);
+            }
+            if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var baseValue))
+            {
+                return false;
+            }
+            value = baseValue * multiplier;
+            return true;
+        }
+
         private static bool TryParseCurrent(string raw, out double value)
         {
             value = 0.0;
@@ -1380,6 +1855,8 @@ namespace RobotTwin.CoreSim.Engine
             public double VoltageMax;
             public double NominalVoltage;
             public double LastCurrent;
+            public double DrainScale;
+            public bool IsDepleted;
         }
 
         private class DiodeState
@@ -1406,10 +1883,20 @@ namespace RobotTwin.CoreSim.Engine
             public double Resistance { get; set; }
             public double BaseResistance { get; }
             public double ContactResistance { get; }
+            public double BlowTemp { get; }
             public ThermalState Thermal { get; }
             public bool TrackThermal { get; }
 
-            public ResistorElement(string id, string netA, string netB, double resistance, double baseResistance, double contactResistance, ThermalState thermal, bool trackThermal)
+            public ResistorElement(
+                string id,
+                string netA,
+                string netB,
+                double resistance,
+                double baseResistance,
+                double contactResistance,
+                ThermalState thermal,
+                bool trackThermal,
+                double blowTemp)
             {
                 Id = id;
                 NetA = netA;
@@ -1417,6 +1904,7 @@ namespace RobotTwin.CoreSim.Engine
                 Resistance = resistance;
                 BaseResistance = baseResistance;
                 ContactResistance = contactResistance;
+                BlowTemp = blowTemp;
                 Thermal = thermal;
                 TrackThermal = trackThermal;
             }

@@ -13,6 +13,10 @@ namespace RobotTwin.UI
         private const float DefaultScale = 0.01f;
         private const float WireHeight = 0.02f;
         private const float ComponentHeight = 0.03f;
+        private const float LabelScaleBoost = 1.25f;
+        private const float LedLightRangeBoost = 4.5f;
+        private const float LedLightIntensityBoost = 2.0f;
+        private const float LedGlowFxRangeBoost = 0.9f;
         private const float BoardWorldWidth = CircuitLayoutSizing.BoardWorldWidth;
         private const float BoardWorldHeight = CircuitLayoutSizing.BoardWorldHeight;
         private const float DefaultAnchorRadius = 0.006f;
@@ -46,6 +50,7 @@ namespace RobotTwin.UI
         private Light _fillLight;
         private Light _rimLight;
         private Light _headLight;
+        private float _lightingBlend;
         private readonly Dictionary<string, AnchorState> _anchorStateCache = new Dictionary<string, AnchorState>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ComponentVisual> _componentVisuals = new Dictionary<string, ComponentVisual>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<WireRope>> _wiresByNet = new Dictionary<string, List<WireRope>>(StringComparer.OrdinalIgnoreCase);
@@ -56,6 +61,11 @@ namespace RobotTwin.UI
         private static bool ComponentTuningsLoaded;
         private static Mesh _usbShellMesh;
         private static Mesh _usbTongueMesh;
+        private static Material _barMaterial;
+        private static Material _smokeMaterial;
+        private static Material _ledGlowMaterial;
+        private static Texture2D _ledGlowTexture;
+        private static Texture2D _smokeTexture;
 
         [Header("Prefabs (optional)")]
         [SerializeField] private GameObject _arduinoPrefab;
@@ -86,6 +96,9 @@ namespace RobotTwin.UI
         private Transform _followTransform;
         private Vector3 _followOffset;
         private string _followComponentId;
+        private bool _labelsVisible = true;
+        private bool _errorFxEnabled = true;
+        private bool _wireHeatmapEnabled;
 
         private static readonly Vector3 DefaultPrefabEuler = Vector3.zero;
         private static readonly Dictionary<string, Vector3> PrefabEulerOverrides =
@@ -157,6 +170,54 @@ namespace RobotTwin.UI
             }
         }
 
+        public void SetLabelsVisible(bool visible)
+        {
+            _labelsVisible = visible;
+            foreach (var visual in _componentVisuals.Values)
+            {
+                if (visual?.StatusLabel == null) continue;
+                bool hasText = !string.IsNullOrWhiteSpace(visual.StatusLabel.text);
+                ApplyLabelVisibility(visual, hasText);
+            }
+        }
+
+        public void SetErrorFxEnabled(bool enabled)
+        {
+            _errorFxEnabled = enabled;
+            if (!enabled)
+            {
+                foreach (var visual in _componentVisuals.Values)
+                {
+                    if (visual?.ErrorFx == null) continue;
+                    SetFxActive(visual.ErrorFx, false);
+                }
+                foreach (var kvp in _wiresByNet)
+                {
+                    var list = kvp.Value;
+                    if (list == null) continue;
+                    foreach (var wire in list)
+                    {
+                        if (wire == null) continue;
+                        wire.SetError(false);
+                    }
+                }
+            }
+        }
+
+        public void SetWireHeatmapEnabled(bool enabled)
+        {
+            _wireHeatmapEnabled = enabled;
+            if (!enabled)
+            {
+                ResetWireColors();
+            }
+        }
+
+        public void ClearAnchorCache()
+        {
+            _anchorStateCache.Clear();
+        }
+
         public void ResetView()
         {
             FrameCamera();
@@ -198,6 +259,40 @@ namespace RobotTwin.UI
             UpdateCameraTransform();
         }
 
+        public void NudgePanCamera(Vector2 axes)
+        {
+            if (_camera == null) return;
+            Vector3 right = _camera.transform.right;
+            if (right.sqrMagnitude < 0.001f) right = Vector3.right;
+            right.Normalize();
+
+            Vector3 forward = _camera.transform.forward;
+            if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+            forward.Normalize();
+
+            float step = GetKeyboardPanStep();
+            Vector3 delta = (right * axes.x + forward * axes.y) * step;
+            _panOffset += delta;
+            if (_followTarget) _followOffset += delta;
+            _hasUserCamera = true;
+            UpdateCameraTransform();
+        }
+
+        public void NudgePanCameraVertical(float axis)
+        {
+            if (_camera == null) return;
+            Vector3 up = _camera.transform.up;
+            if (up.sqrMagnitude < 0.001f) up = Vector3.up;
+            up.Normalize();
+
+            float step = GetKeyboardPanStep();
+            Vector3 delta = up * (axis * step);
+            _panOffset += delta;
+            if (_followTarget) _followOffset += delta;
+            _hasUserCamera = true;
+            UpdateCameraTransform();
+        }
+
         public float GetKeyboardPanStep()
         {
             if (_usePerspective)
@@ -226,18 +321,25 @@ namespace RobotTwin.UI
                 foreach (var visual in _componentVisuals.Values)
                 {
                     if (visual == null) continue;
-                    UpdateBillboardRotation(visual.StatusLabel?.transform);
+                    if (_labelsVisible)
+                    {
+                        UpdateBillboardRotation(visual.StatusLabel?.transform, true);
+                    }
                     UpdateBillboardRotation(visual.BatteryBar?.Root);
                     UpdateBillboardRotation(visual.TempBar?.Root);
                 }
             }
         }
 
-        private void UpdateBillboardRotation(Transform target)
+        private void UpdateBillboardRotation(Transform target, bool flipForward = false)
         {
             if (target == null || _camera == null) return;
             var toCamera = _camera.transform.position - target.position;
             if (toCamera.sqrMagnitude < 0.0001f) return;
+            if (flipForward)
+            {
+                toCamera = -toCamera;
+            }
             target.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
         }
 
@@ -326,17 +428,18 @@ namespace RobotTwin.UI
             go.transform.SetParent(transform, false);
             _lightRoot = go.transform;
 
-            _keyLight = CreateDirectionalLight("Circuit3D_KeyLight", new Vector3(50f, -30f, 0f), 0.85f, new Color(0.98f, 0.95f, 0.92f));
-            _fillLight = CreateDirectionalLight("Circuit3D_FillLight", new Vector3(20f, 160f, 0f), 0.35f, new Color(0.78f, 0.84f, 0.95f));
-            _rimLight = CreateDirectionalLight("Circuit3D_RimLight", new Vector3(75f, 40f, 0f), 0.25f, new Color(0.7f, 0.78f, 0.95f));
-            _headLight = CreateHeadLight("Circuit3D_HeadLight");
+            _keyLight = CreateDirectionalLight("Circuit3D_KeyLight", new Vector3(50f, -30f, 0f), 0.85f, new Color(0.98f, 0.95f, 0.92f), LightRenderMode.ForcePixel);
+            _fillLight = CreateDirectionalLight("Circuit3D_FillLight", new Vector3(20f, 160f, 0f), 0.35f, new Color(0.78f, 0.84f, 0.95f), LightRenderMode.Auto);
+            _rimLight = CreateDirectionalLight("Circuit3D_RimLight", new Vector3(75f, 40f, 0f), 0.25f, new Color(0.7f, 0.78f, 0.95f), LightRenderMode.Auto);
+            _headLight = CreateHeadLight("Circuit3D_HeadLight", LightRenderMode.ForcePixel);
             if (_camera != null)
             {
                 _headLight.transform.SetParent(_camera.transform, false);
             }
+            ApplyLightingBlend();
         }
 
-        private Light CreateDirectionalLight(string name, Vector3 euler, float intensity, Color color)
+        private Light CreateDirectionalLight(string name, Vector3 euler, float intensity, Color color, LightRenderMode renderMode)
         {
             var lightGo = new GameObject(name);
             lightGo.transform.SetParent(_lightRoot, false);
@@ -345,11 +448,12 @@ namespace RobotTwin.UI
             light.type = LightType.Directional;
             light.intensity = intensity;
             light.color = color;
+            light.renderMode = renderMode;
             light.shadows = LightShadows.None;
             return light;
         }
 
-        private Light CreateHeadLight(string name)
+        private Light CreateHeadLight(string name, LightRenderMode renderMode)
         {
             var lightGo = new GameObject(name);
             lightGo.transform.SetParent(_lightRoot, false);
@@ -361,8 +465,33 @@ namespace RobotTwin.UI
             light.range = 2f;
             light.spotAngle = 70f;
             light.color = new Color(0.95f, 0.96f, 1f);
+            light.renderMode = renderMode;
             light.shadows = LightShadows.None;
             return light;
+        }
+
+        public void AdjustLightingBlend(float delta)
+        {
+            _lightingBlend = Mathf.Clamp01(_lightingBlend + delta);
+            ApplyLightingBlend();
+        }
+
+        private void ApplyLightingBlend()
+        {
+            if (_keyLight == null || _fillLight == null || _rimLight == null || _headLight == null) return;
+            var studio = LightingProfile.Studio;
+            var realistic = LightingProfile.Realistic;
+            float t = _lightingBlend;
+
+            _keyLight.intensity = Mathf.Lerp(studio.KeyIntensity, realistic.KeyIntensity, t);
+            _keyLight.color = Color.Lerp(studio.KeyColor, realistic.KeyColor, t);
+            _fillLight.intensity = Mathf.Lerp(studio.FillIntensity, realistic.FillIntensity, t);
+            _fillLight.color = Color.Lerp(studio.FillColor, realistic.FillColor, t);
+            _rimLight.intensity = Mathf.Lerp(studio.RimIntensity, realistic.RimIntensity, t);
+            _rimLight.color = Color.Lerp(studio.RimColor, realistic.RimColor, t);
+            _headLight.intensity = Mathf.Lerp(studio.HeadIntensity, realistic.HeadIntensity, t);
+            _headLight.color = Color.Lerp(studio.HeadColor, realistic.HeadColor, t);
+            _headLight.range = Mathf.Lerp(studio.HeadRange, realistic.HeadRange, t);
         }
 
         private void ClearRoot()
@@ -495,17 +624,6 @@ namespace RobotTwin.UI
                 }
 
                 RegisterComponentVisual(comp, part, allowTint);
-
-                var label = new GameObject($"{comp.Id}_Label");
-                label.transform.SetParent(part.transform, false);
-                label.transform.localPosition = new Vector3(0, 0.03f, 0);
-                var text = label.AddComponent<TextMesh>();
-                text.text = comp.Id;
-                text.fontSize = 32;
-                text.characterSize = 0.02f;
-                text.color = Color.white;
-                text.alignment = TextAlignment.Center;
-                text.anchor = TextAnchor.MiddleCenter;
             }
 
             return positions;
@@ -633,10 +751,7 @@ namespace RobotTwin.UI
                 FindServoArm(visual);
             }
 
-            if (visual.IsArduino || visual.IsBattery || visual.IsResistor)
-            {
-                EnsureStatusLabel(visual);
-            }
+            EnsureStatusLabel(visual);
 
             if (visual.IsBattery)
             {
@@ -651,6 +766,20 @@ namespace RobotTwin.UI
             if (visual.IsResistor)
             {
                 visual.LegRenderers = FindLegRenderers(renderers);
+            }
+
+            if (visual.StatusLabel != null)
+            {
+                visual.StatusLabel.text = comp.Id;
+                ApplyLabelVisibility(visual, true);
+            }
+            if (visual.BatteryBar != null)
+            {
+                SetBillboardBarValue(visual.BatteryBar, 0f, true);
+            }
+            if (visual.TempBar != null)
+            {
+                SetBillboardBarValue(visual.TempBar, 0f, true);
             }
 
             _componentVisuals[comp.Id] = visual;
@@ -689,12 +818,55 @@ namespace RobotTwin.UI
             foreach (var filter in filters)
             {
                 if (filter == null || filter.sharedMesh == null) continue;
-                var collider = filter.GetComponent<Collider>();
-                if (collider != null && !collider.isTrigger) continue;
-                var meshCollider = filter.gameObject.AddComponent<MeshCollider>();
-                meshCollider.sharedMesh = filter.sharedMesh;
-                meshCollider.convex = CanUseConvexMesh(filter.sharedMesh);
+                bool hasSolid = false;
+                bool hasConvex = false;
+                var colliders = filter.GetComponents<Collider>();
+                foreach (var collider in colliders)
+                {
+                    if (collider == null || collider.isTrigger) continue;
+                    hasSolid = true;
+                    if (IsConvexCollider(collider))
+                    {
+                        hasConvex = true;
+                        break;
+                    }
+                }
+
+                if (hasConvex) continue;
+
+                bool canConvex = CanUseConvexMesh(filter.sharedMesh);
+                if (!hasSolid && canConvex)
+                {
+                    var meshCollider = filter.gameObject.AddComponent<MeshCollider>();
+                    meshCollider.sharedMesh = filter.sharedMesh;
+                    meshCollider.convex = true;
+                    continue;
+                }
+
+                EnsureBoundsBoxCollider(filter.gameObject, filter.sharedMesh);
             }
+        }
+
+        private static bool IsConvexCollider(Collider collider)
+        {
+            if (collider is BoxCollider || collider is SphereCollider || collider is CapsuleCollider) return true;
+            if (collider is MeshCollider meshCollider) return meshCollider.convex;
+            return false;
+        }
+
+        private static void EnsureBoundsBoxCollider(GameObject target, Mesh mesh)
+        {
+            if (target == null || mesh == null) return;
+            var box = target.GetComponent<BoxCollider>();
+            if (box == null) box = target.AddComponent<BoxCollider>();
+            var bounds = mesh.bounds;
+            if (bounds.size.sqrMagnitude < 0.0000001f)
+            {
+                bounds = new Bounds(Vector3.zero, Vector3.one * 0.001f);
+            }
+            box.center = bounds.center;
+            box.size = bounds.size;
+            box.isTrigger = false;
         }
 
         private static bool CanUseConvexMesh(Mesh mesh)
@@ -755,12 +927,31 @@ namespace RobotTwin.UI
             glow.transform.localPosition = new Vector3(0f, 0.01f, 0f);
             var light = glow.AddComponent<Light>();
             light.type = LightType.Point;
-            float range = visual.Tuning.LedGlowRange > 0f ? visual.Tuning.LedGlowRange : 0.08f;
+            float sizeFactor = GetEffectScaleFactor(visual, 3f, 14f);
+            float range = visual.Tuning.LedGlowRange > 0f ? visual.Tuning.LedGlowRange : 0.8f;
+            range *= sizeFactor * 1.6f;
             light.range = range;
             light.intensity = 0f;
             light.color = visual.BaseColor;
+            light.renderMode = LightRenderMode.ForcePixel;
             light.shadows = LightShadows.None;
             visual.GlowLight = light;
+        }
+
+        private void EnsureLedGlowFx(ComponentVisual visual)
+        {
+            if (visual == null || visual.Root == null || visual.LedGlowFx != null) return;
+            var fx = CreateFx("LedGlowFx", visual.Root, new Vector3(0f, 0.01f, 0f), visual.BaseColor,
+                visual.BaseColor, 0f, 0f, 0.01f);
+            if (fx?.Renderer != null)
+            {
+                var material = GetLedGlowMaterial();
+                if (material != null)
+                {
+                    fx.Renderer.sharedMaterial = material;
+                }
+            }
+            visual.LedGlowFx = fx;
         }
 
         private void EnsureStatusLabel(ComponentVisual visual)
@@ -771,13 +962,30 @@ namespace RobotTwin.UI
             labelGo.transform.localPosition = new Vector3(0f, 0.05f, 0f);
             var text = labelGo.AddComponent<TextMesh>();
             text.text = string.Empty;
-            text.fontSize = 48;
-            text.characterSize = 0.02f;
+            text.fontSize = 64;
+            text.characterSize = 0.03f;
             text.color = new Color(0.9f, 0.95f, 1f);
             text.alignment = TextAlignment.Center;
             text.anchor = TextAnchor.MiddleCenter;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             visual.StatusLabel = text;
             visual.LabelBaseScale = labelGo.transform.localScale;
+
+            var renderer = labelGo.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.sortingOrder = 20;
+                if (text.font != null && renderer.sharedMaterial == null)
+                {
+                    renderer.sharedMaterial = text.font.material;
+                }
+                if (renderer.sharedMaterial != null)
+                {
+                    renderer.sharedMaterial.renderQueue = 3000;
+                }
+            }
         }
 
         private void EnsureBatteryBar(ComponentVisual visual)
@@ -796,10 +1004,18 @@ namespace RobotTwin.UI
 
         private void EnsureSmokeFx(ComponentVisual visual)
         {
-            if (visual == null || visual.Root == null || visual.SmokeFx != null) return;
-            var fx = CreateFx("SmokeFx", visual.Root, new Vector3(0f, 0.02f, 0f), new Color(0.35f, 0.35f, 0.35f),
-                Color.black, 0f, 0f, 0.02f);
-            visual.SmokeFx = fx;
+            if (visual == null || visual.Root == null || visual.SmokeEmitter != null) return;
+            var root = new GameObject("SmokeFx");
+            root.transform.SetParent(visual.Root, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            visual.SmokeEmitter = new SmokeEmitter
+            {
+                Root = root.transform,
+                Material = GetSmokeMaterial(),
+                SpawnAccumulator = 0f,
+                Puffs = new List<SmokePuff>()
+            };
         }
 
         private void EnsureHeatFx(ComponentVisual visual)
@@ -814,7 +1030,7 @@ namespace RobotTwin.UI
         {
             if (visual == null || visual.Root == null || visual.SparkFx != null) return;
             var fx = CreateFx("SparkFx", visual.Root, new Vector3(0f, 0.02f, 0f), new Color(1f, 0.75f, 0.25f),
-                new Color(1f, 0.75f, 0.25f), 2.4f, 0.12f, 0.008f);
+                new Color(1f, 0.75f, 0.25f), 3.6f, 0.25f, 0.02f);
             visual.SparkFx = fx;
         }
 
@@ -946,6 +1162,11 @@ namespace RobotTwin.UI
                         position = new Vector3(0f, ComponentHeight, 0f);
                     }
 
+                    if (_componentVisuals.TryGetValue(compId, out var visual))
+                    {
+                        radius = Mathf.Max(radius, GetAnchorRadius(visual, DefaultAnchorRadius));
+                    }
+
                     var anchor = CreateAnchor(node, position, radius, useCache: !hasOverride);
                     anchors[node] = anchor;
                 }
@@ -1024,13 +1245,14 @@ namespace RobotTwin.UI
             {
                 var scale = pinTransform.lossyScale;
                 float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-                if (maxScale > 0.0001f && maxScale < 0.5f)
+                if (maxScale > 0.0001f)
                 {
                     radius = maxScale * 0.5f;
                 }
             }
 
             rootLocalPosition = _root.InverseTransformPoint(pinTransform.position);
+            radius = Mathf.Max(radius, GetAnchorRadius(visual, DefaultAnchorRadius));
             return true;
         }
 
@@ -1056,6 +1278,7 @@ namespace RobotTwin.UI
             if (_componentVisuals.TryGetValue(compId, out var visual) && visual?.Root != null && _root != null)
             {
                 rootLocalPosition = _root.InverseTransformPoint(visual.Root.TransformPoint(local));
+                radius = Mathf.Max(radius, GetAnchorRadius(visual, DefaultAnchorRadius));
             }
             else
             {
@@ -1154,9 +1377,10 @@ namespace RobotTwin.UI
             {
                 componentMap.TryGetValue(visual.Id, out var spec);
                 bool hasError = errorIds.Contains(visual.Id);
+                bool showError = _errorFxEnabled && hasError;
                 bool usbConnected = usbConnectedByBoard != null &&
                     usbConnectedByBoard.TryGetValue(visual.Id, out var connected) && connected;
-                ApplyComponentState(visual, spec, telemetry, usbConnected, hasError);
+                ApplyComponentState(visual, spec, circuit, telemetry, usbConnected, showError);
             }
 
             UpdateWireErrors(circuit, telemetry);
@@ -1209,19 +1433,89 @@ namespace RobotTwin.UI
             return errors;
         }
 
+        private static bool IsComponentBlown(TelemetryFrame telemetry, string compId)
+        {
+            if (string.IsNullOrWhiteSpace(compId) || telemetry?.ValidationMessages == null) return false;
+            foreach (var msg in telemetry.ValidationMessages)
+            {
+                if (string.IsNullOrWhiteSpace(msg)) continue;
+                if (msg.IndexOf("Component Blown", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    msg.IndexOf(compId, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private void UpdateWireErrors(CircuitSpec circuit, TelemetryFrame telemetry)
         {
             if (_wiresByNet.Count == 0) return;
-            var errorNets = BuildErrorNetSet(circuit?.Nets, telemetry);
+            var errorNets = _errorFxEnabled ? BuildErrorNetSet(circuit?.Nets, telemetry) : null;
             foreach (var kvp in _wiresByNet)
             {
-                bool hasError = errorNets.Contains(kvp.Key);
+                bool hasError = _errorFxEnabled && errorNets != null && errorNets.Contains(kvp.Key);
                 var list = kvp.Value;
                 if (list == null) continue;
                 foreach (var wire in list)
                 {
                     if (wire == null) continue;
                     wire.SetError(hasError);
+                }
+            }
+        }
+
+        public void ApplyWireHeatmap(TelemetryFrame telemetry)
+        {
+            if (!_wireHeatmapEnabled || telemetry?.Signals == null) return;
+            var netScores = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in telemetry.Signals)
+            {
+                if (string.IsNullOrWhiteSpace(kvp.Key)) continue;
+                if (!kvp.Key.StartsWith("NET:", StringComparison.OrdinalIgnoreCase)) continue;
+                string netId = kvp.Key.Substring(4);
+                if (string.IsNullOrWhiteSpace(netId)) continue;
+                netScores[netId] = Math.Abs(kvp.Value);
+            }
+            if (netScores.Count == 0)
+            {
+                ResetWireColors();
+                return;
+            }
+
+            double minValue = netScores.Values.Min();
+            double maxValue = netScores.Values.Max();
+            double range = Math.Max(1e-3, maxValue - minValue);
+
+            foreach (var kvp in _wiresByNet)
+            {
+                var list = kvp.Value;
+                if (list == null || list.Count == 0) continue;
+                float intensity = 0f;
+                if (netScores.TryGetValue(kvp.Key, out var value))
+                {
+                    intensity = (float)((value - minValue) / range);
+                    intensity = Mathf.Clamp01(intensity);
+                }
+                Color baseColor = GetNetColor(kvp.Key);
+                Color heatColor = Color.Lerp(baseColor, Color.red, intensity);
+                foreach (var wire in list)
+                {
+                    wire?.SetColor(heatColor);
+                }
+            }
+        }
+
+        private void ResetWireColors()
+        {
+            foreach (var kvp in _wiresByNet)
+            {
+                var list = kvp.Value;
+                if (list == null || list.Count == 0) continue;
+                Color baseColor = GetNetColor(kvp.Key);
+                foreach (var wire in list)
+                {
+                    wire?.SetColor(baseColor);
                 }
             }
         }
@@ -1233,6 +1527,7 @@ namespace RobotTwin.UI
             foreach (var msg in telemetry.ValidationMessages)
             {
                 if (string.IsNullOrWhiteSpace(msg)) continue;
+                if (msg.IndexOf("Floating", StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 foreach (var net in nets)
                 {
                     if (net == null || string.IsNullOrWhiteSpace(net.Id)) continue;
@@ -1245,7 +1540,7 @@ namespace RobotTwin.UI
             return result;
         }
 
-        private void ApplyComponentState(ComponentVisual visual, ComponentSpec spec, TelemetryFrame telemetry, bool usbConnected, bool hasError)
+        private void ApplyComponentState(ComponentVisual visual, ComponentSpec spec, CircuitSpec circuit, TelemetryFrame telemetry, bool usbConnected, bool hasError)
         {
             if (visual == null) return;
             Color baseColor = visual.BaseColor;
@@ -1258,14 +1553,23 @@ namespace RobotTwin.UI
             string labelText = null;
             Color labelColor = new Color(0.9f, 0.95f, 1f);
             float resistorHeat = 0f;
+            bool isBlown = IsComponentBlown(telemetry, visual.Id);
+            float ledIntensity = 0f;
+            bool hasLedIntensity = false;
 
-            if (telemetry != null && telemetry.Signals.TryGetValue($"COMP:{visual.Id}:T", out var tempRaw))
+            if (TryGetTelemetrySignalAny(telemetry, out var tempRaw,
+                    $"COMP:{visual.Id}:T",
+                    $"{visual.Id}.T",
+                    $"{visual.Id}:T"))
             {
                 tempC = (float)tempRaw;
                 hasTemp = true;
             }
 
-            if (telemetry != null && telemetry.Signals.TryGetValue($"COMP:{visual.Id}:I", out var currentRaw))
+            if (TryGetTelemetrySignalAny(telemetry, out var currentRaw,
+                    $"COMP:{visual.Id}:I",
+                    $"{visual.Id}.I",
+                    $"{visual.Id}:I"))
             {
                 currentA = Mathf.Abs((float)currentRaw);
                 hasCurrent = true;
@@ -1292,9 +1596,15 @@ namespace RobotTwin.UI
                 var tuning = visual.Tuning;
                 baseColor = tuning.UseLedColor ? tuning.LedColor : new Color(1f, 0.2f, 0.2f);
                 float intensity = 0f;
-                if (telemetry != null && telemetry.Signals.TryGetValue($"COMP:{visual.Id}:L", out var lum))
+                float effectScale = GetEffectScaleFactor(visual, 3f, 14f);
+                bool hasLedLum = false;
+                if (TryGetTelemetrySignalAny(telemetry, out var lum,
+                        $"COMP:{visual.Id}:L",
+                        $"{visual.Id}.L",
+                        $"{visual.Id}:L"))
                 {
                     intensity = Mathf.Clamp01((float)lum);
+                    hasLedLum = true;
                 }
                 else if (hasCurrent)
                 {
@@ -1325,6 +1635,8 @@ namespace RobotTwin.UI
 
                 displayColor = Color.Lerp(baseColor * 0.7f, baseColor, intensity);
                 emissionColor += baseColor * (intensity * 3.2f);
+                ledIntensity = intensity;
+                hasLedIntensity = hasLedLum || hasCurrent;
                 if (ledBlown)
                 {
                     displayColor = Color.Lerp(displayColor, new Color(0.12f, 0.12f, 0.12f), 0.6f);
@@ -1333,12 +1645,16 @@ namespace RobotTwin.UI
                 if (visual.GlowLight != null)
                 {
                     visual.GlowLight.color = baseColor;
-                    float glowRange = tuning.LedGlowRange > 0f ? tuning.LedGlowRange : visual.GlowLight.range;
+                    float glowRange = tuning.LedGlowRange > 0f ? tuning.LedGlowRange : 0.8f;
+                    glowRange *= effectScale * 1.6f * LedLightRangeBoost;
                     visual.GlowLight.range = glowRange;
-                    float glowIntensity = tuning.LedGlowIntensity > 0f ? tuning.LedGlowIntensity : 2.5f;
-                    visual.GlowLight.intensity = intensity * glowIntensity;
-                    visual.GlowLight.enabled = intensity > 0.01f;
+                    float glowIntensity = tuning.LedGlowIntensity > 0f ? tuning.LedGlowIntensity : 12f;
+                    glowIntensity *= LedLightIntensityBoost;
+                    float lit = Mathf.Pow(Mathf.Clamp01(intensity), 0.6f);
+                    visual.GlowLight.intensity = lit * glowIntensity;
+                    visual.GlowLight.enabled = lit > 0.01f;
                 }
+                UpdateLedGlowFx(visual, baseColor, intensity, effectScale);
             }
 
             if (visual.IsArduino)
@@ -1402,19 +1718,27 @@ namespace RobotTwin.UI
                     double voltage = double.NaN;
                     double current = double.NaN;
                     double soc = double.NaN;
-                    if (TryGetTelemetrySignal(telemetry, $"SRC:{visual.Id}:V", out var v))
+                    if (TryGetTelemetrySignalAny(telemetry, out var v,
+                            $"SRC:{visual.Id}:V",
+                            $"COMP:{visual.Id}:V",
+                            $"{visual.Id}.V",
+                            $"{visual.Id}:V"))
                     {
                         voltage = v;
                     }
-                    else if (TryGetTelemetrySignal(telemetry, $"COMP:{visual.Id}:V", out var vAlt))
-                    {
-                        voltage = vAlt;
-                    }
-                    if (TryGetTelemetrySignal(telemetry, $"SRC:{visual.Id}:I", out var i))
+                    if (TryGetTelemetrySignalAny(telemetry, out var i,
+                            $"SRC:{visual.Id}:I",
+                            $"COMP:{visual.Id}:I",
+                            $"{visual.Id}.I",
+                            $"{visual.Id}:I"))
                     {
                         current = i;
                     }
-                    if (TryGetTelemetrySignal(telemetry, $"SRC:{visual.Id}:SOC", out var socVal))
+                    if (TryGetTelemetrySignalAny(telemetry, out var socVal,
+                            $"SRC:{visual.Id}:SOC",
+                            $"COMP:{visual.Id}:SOC",
+                            $"{visual.Id}.SOC",
+                            $"{visual.Id}:SOC"))
                     {
                         soc = socVal;
                     }
@@ -1424,6 +1748,31 @@ namespace RobotTwin.UI
                     if (!double.IsNaN(current)) lines.Add($"{current * 1000.0:F0}mA");
                     if (!double.IsNaN(soc)) lines.Add($"SOC {soc * 100.0:F0}%");
                     labelText = lines.Count > 0 ? string.Join("\n", lines) : "BATTERY";
+                    labelColor = Color.white;
+                }
+                else if (visual.IsLed)
+                {
+                    var lines = new List<string>();
+                    if (hasLedIntensity)
+                    {
+                        lines.Add($"L:{ledIntensity * 100f:F0}%");
+                    }
+                    if (hasCurrent)
+                    {
+                        lines.Add($"I:{currentA * 1000f:F1}mA");
+                    }
+                    if (TryGetTelemetrySignalAny(telemetry, out var v,
+                            $"COMP:{visual.Id}:V",
+                            $"{visual.Id}.V",
+                            $"{visual.Id}:V"))
+                    {
+                        lines.Add($"V:{Mathf.Abs((float)v):F2}V");
+                    }
+                    if (hasTemp)
+                    {
+                        lines.Add($"T:{tempC:F0}C");
+                    }
+                    labelText = lines.Count > 0 ? string.Join("\n", lines) : "LED";
                     labelColor = Color.white;
                 }
                 else if (visual.IsResistor)
@@ -1447,6 +1796,10 @@ namespace RobotTwin.UI
                 labelColor = new Color(1f, 0.25f, 0.2f);
                 labelText = string.IsNullOrWhiteSpace(labelText) ? "ERROR" : $"{labelText}\nERROR";
             }
+            else if (string.IsNullOrWhiteSpace(labelText))
+            {
+                labelText = visual.Id;
+            }
 
             ApplyRendererColors(visual, displayColor, emissionColor);
             if (visual.IsResistor)
@@ -1455,6 +1808,14 @@ namespace RobotTwin.UI
             }
             UpdateErrorFx(visual, hasError);
             UpdateSparkFx(visual);
+            if (isBlown && ShouldSparkBlownComponent(visual, spec, circuit, telemetry))
+            {
+                float interval = 0.1f + 0.2f * Mathf.Abs(Mathf.Sin(Time.time * 7f + visual.ErrorSeed));
+                if (Time.time - visual.LastSparkFxTime > interval)
+                {
+                    TriggerSparkFx(visual);
+                }
+            }
             UpdateStatusLabel(visual, labelText, labelColor);
             UpdateBillboardBars(visual, tempC, hasTemp, telemetry);
         }
@@ -1466,14 +1827,38 @@ namespace RobotTwin.UI
             foreach (var renderer in visual.Renderers)
             {
                 if (renderer == null) continue;
+                bool hasEmission = emissionColor.maxColorComponent > 0.0001f;
+                if (!visual.AllowTint)
+                {
+                    if (hasEmission && renderer.sharedMaterial != null &&
+                        (renderer.sharedMaterial.HasProperty("_EmissionColor") || renderer.sharedMaterial.HasProperty("_EmissiveColor")))
+                    {
+                        EnableEmission(renderer);
+                        block.Clear();
+                        block.SetColor("_EmissionColor", emissionColor);
+                        block.SetColor("_EmissiveColor", emissionColor);
+                        renderer.SetPropertyBlock(block);
+                    }
+                    else
+                    {
+                        renderer.SetPropertyBlock(null);
+                    }
+                    continue;
+                }
+
                 bool hasTexture = RendererHasTexture(renderer);
                 block.Clear();
-                if (visual.AllowTint && !hasTexture)
+                if (!hasTexture)
                 {
                     block.SetColor("_Color", baseColor);
                     block.SetColor("_BaseColor", baseColor);
                 }
+                if (hasEmission)
+                {
+                    EnableEmission(renderer);
+                }
                 block.SetColor("_EmissionColor", emissionColor);
+                block.SetColor("_EmissiveColor", emissionColor);
                 renderer.SetPropertyBlock(block);
             }
         }
@@ -1483,7 +1868,7 @@ namespace RobotTwin.UI
             if (visual == null) return;
             if (float.IsNaN(tempC))
             {
-                SetFxActive(visual.SmokeFx, false);
+                ClearSmokeEmitter(visual);
                 return;
             }
 
@@ -1492,17 +1877,190 @@ namespace RobotTwin.UI
             float smokeAmount = Mathf.InverseLerp(smokeStart, smokeFull, tempC);
             if (smokeAmount <= 0.01f)
             {
-                SetFxActive(visual.SmokeFx, false);
+                ClearSmokeEmitter(visual);
                 return;
             }
 
             EnsureSmokeFx(visual);
-            if (visual.SmokeFx == null) return;
-            SetFxActive(visual.SmokeFx, true);
-            float scale = Mathf.Lerp(0.6f, 1.6f, smokeAmount);
-            visual.SmokeFx.Root.transform.localScale = visual.SmokeFx.BaseScale * scale;
-            var color = Color.Lerp(new Color(0.25f, 0.25f, 0.25f), new Color(0.45f, 0.45f, 0.45f), smokeAmount);
-            ApplyFxColor(visual.SmokeFx, color, Color.black, 0f);
+            UpdateSmokeEmitter(visual, smokeAmount, tempC);
+        }
+
+        private void ClearSmokeEmitter(ComponentVisual visual)
+        {
+            if (visual?.SmokeEmitter == null) return;
+            foreach (var puff in visual.SmokeEmitter.Puffs)
+            {
+                if (puff?.Transform == null) continue;
+                if (Application.isPlaying)
+                {
+                    Destroy(puff.Transform.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(puff.Transform.gameObject);
+                }
+            }
+            visual.SmokeEmitter.Puffs.Clear();
+            if (visual.SmokeEmitter.Root != null)
+            {
+                visual.SmokeEmitter.Root.gameObject.SetActive(false);
+            }
+        }
+
+        private void UpdateSmokeEmitter(ComponentVisual visual, float smokeAmount, float tempC)
+        {
+            if (visual?.SmokeEmitter == null || visual.SmokeEmitter.Root == null) return;
+            var emitter = visual.SmokeEmitter;
+            if (!emitter.Root.gameObject.activeSelf)
+            {
+                emitter.Root.gameObject.SetActive(true);
+            }
+
+            float effectScale = GetEffectScaleFactor(visual, 4f, 20f);
+            Vector3 localUp = visual.Root.InverseTransformDirection(Vector3.up);
+            if (localUp.sqrMagnitude < 0.001f) localUp = Vector3.up;
+            localUp.Normalize();
+            emitter.LocalUp = localUp;
+
+            if (TryGetWorldBounds(visual.Root, out var bounds))
+            {
+                var worldPos = bounds.center + Vector3.up * Mathf.Max(0.01f, bounds.extents.y * 0.6f);
+                emitter.Root.position = worldPos;
+            }
+
+            float spawnRate = Mathf.Lerp(2f, 10f, smokeAmount);
+            emitter.SpawnAccumulator += spawnRate * Time.deltaTime;
+            int maxPuffs = Mathf.RoundToInt(Mathf.Lerp(12f, 36f, smokeAmount));
+
+            while (emitter.SpawnAccumulator >= 1f && emitter.Puffs.Count < maxPuffs)
+            {
+                emitter.SpawnAccumulator -= 1f;
+                var puff = CreateSmokePuff(emitter, effectScale, smokeAmount);
+                if (puff != null)
+                {
+                    emitter.Puffs.Add(puff);
+                }
+            }
+
+            float dt = Time.deltaTime;
+            for (int i = emitter.Puffs.Count - 1; i >= 0; i--)
+            {
+                var puff = emitter.Puffs[i];
+                if (puff == null || puff.Transform == null)
+                {
+                    emitter.Puffs.RemoveAt(i);
+                    continue;
+                }
+                puff.Age += dt;
+                if (puff.Age >= puff.Lifetime)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(puff.Transform.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(puff.Transform.gameObject);
+                    }
+                    emitter.Puffs.RemoveAt(i);
+                    continue;
+                }
+
+                float buoyancy = Mathf.Lerp(0.02f, 0.06f, smokeAmount);
+                puff.Velocity += emitter.LocalUp * buoyancy * dt;
+                puff.LocalPos += puff.Velocity * dt;
+                puff.Transform.localPosition = puff.LocalPos;
+                float t = Mathf.Clamp01(puff.Age / puff.Lifetime);
+                float scale = Mathf.Lerp(puff.StartScale, puff.EndScale, t);
+                puff.Transform.localScale = Vector3.one * scale;
+                Color color = Color.Lerp(puff.StartColor, puff.EndColor, t);
+                ApplySmokeColor(puff.Renderer, color);
+                if (_camera != null)
+                {
+                    puff.Rotation += puff.AngularVelocity * dt;
+                    puff.Transform.rotation = _camera.transform.rotation * Quaternion.AngleAxis(puff.Rotation, Vector3.forward);
+                }
+            }
+        }
+
+        private SmokePuff CreateSmokePuff(SmokeEmitter emitter, float effectScale, float smokeAmount)
+        {
+            if (emitter?.Root == null) return null;
+            var puffGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            puffGo.name = "SmokePuff";
+            puffGo.transform.SetParent(emitter.Root, false);
+            puffGo.transform.localRotation = Quaternion.identity;
+            var collider = puffGo.GetComponent<Collider>();
+            if (collider != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(collider);
+                }
+                else
+                {
+                    DestroyImmediate(collider);
+                }
+            }
+
+            var renderer = puffGo.GetComponent<Renderer>();
+            if (renderer != null && emitter.Material != null)
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.sharedMaterial = emitter.Material;
+            }
+
+            float scaleFactor = Mathf.Sqrt(Mathf.Max(0.5f, effectScale));
+            Vector2 spread = UnityEngine.Random.insideUnitCircle * Mathf.Lerp(0.008f, 0.025f, smokeAmount) * scaleFactor;
+            Vector3 localPos = new Vector3(spread.x, 0f, spread.y);
+            float startScale = UnityEngine.Random.Range(0.022f, 0.05f) * scaleFactor;
+            float endScale = startScale * UnityEngine.Random.Range(2.6f, 4.6f);
+            float lifetime = Mathf.Lerp(1.6f, 4.2f, smokeAmount);
+            float speed = Mathf.Lerp(0.06f, 0.16f, smokeAmount) * scaleFactor;
+            Vector3 drift = new Vector3(
+                UnityEngine.Random.Range(-0.01f, 0.01f),
+                UnityEngine.Random.Range(-0.003f, 0.008f),
+                UnityEngine.Random.Range(-0.01f, 0.01f));
+            Vector3 velocity = emitter.LocalUp * speed + drift;
+            var startColor = new Color(0.28f, 0.28f, 0.28f, Mathf.Lerp(0.25f, 0.55f, smokeAmount));
+            var endColor = new Color(0.12f, 0.12f, 0.12f, 0f);
+            float rotation = UnityEngine.Random.Range(0f, 360f);
+            float angular = UnityEngine.Random.Range(-25f, 25f);
+
+            puffGo.transform.localPosition = localPos;
+            puffGo.transform.localScale = Vector3.one * startScale;
+
+            var puff = new SmokePuff
+            {
+                Transform = puffGo.transform,
+                Renderer = renderer,
+                LocalPos = localPos,
+                Velocity = velocity,
+                Age = 0f,
+                Lifetime = lifetime,
+                StartScale = startScale,
+                EndScale = endScale,
+                StartColor = startColor,
+                EndColor = endColor,
+                Rotation = rotation,
+                AngularVelocity = angular
+            };
+            ApplySmokeColor(renderer, startColor);
+            return puff;
+        }
+
+        private static void ApplySmokeColor(Renderer renderer, Color color)
+        {
+            if (renderer == null) return;
+            var block = new MaterialPropertyBlock();
+            block.SetColor("_Color", color);
+            block.SetColor("_BaseColor", color);
+            block.SetColor("_EmissionColor", color * 0.05f);
+            block.SetColor("_EmissiveColor", color * 0.05f);
+            block.SetColor("_TintColor", color);
+            EnableEmission(renderer);
+            renderer.SetPropertyBlock(block);
         }
 
         private void ApplyResistorLegColors(ComponentVisual visual, float heat01)
@@ -1516,10 +2074,12 @@ namespace RobotTwin.UI
             block.SetColor("_Color", legColor);
             block.SetColor("_BaseColor", legColor);
             block.SetColor("_EmissionColor", legColor * (0.15f + heat * 0.6f));
+            block.SetColor("_EmissiveColor", legColor * (0.15f + heat * 0.6f));
             foreach (var renderer in visual.LegRenderers)
             {
                 if (renderer == null) continue;
                 if (RendererHasTexture(renderer)) continue;
+                EnableEmission(renderer);
                 renderer.SetPropertyBlock(block);
             }
         }
@@ -1542,10 +2102,44 @@ namespace RobotTwin.UI
             if (visual.HeatFx == null) return;
             SetFxActive(visual.HeatFx, true);
             float scale = Mathf.Lerp(0.7f, 1.6f, heat);
-            visual.HeatFx.Root.transform.localScale = visual.HeatFx.BaseScale * scale;
+            float sizeFactor = GetEffectScaleFactor(visual, 3f, 14f);
+            visual.HeatFx.Root.transform.localScale = visual.HeatFx.BaseScale * (scale * sizeFactor);
             var heatColor = Color.Lerp(new Color(1f, 0.35f, 0.12f), new Color(1f, 0.1f, 0.05f), heat);
             float intensity = Mathf.Lerp(0.4f, 1.8f, heat);
             ApplyFxColor(visual.HeatFx, heatColor, heatColor, intensity);
+            if (visual.HeatFx.Light != null)
+            {
+                visual.HeatFx.Light.range = Mathf.Lerp(0.12f, 0.35f, heat) * sizeFactor;
+            }
+        }
+
+        private void UpdateLedGlowFx(ComponentVisual visual, Color color, float intensity, float sizeFactor)
+        {
+            if (visual == null) return;
+            if (intensity <= 0.01f)
+            {
+                SetFxActive(visual.LedGlowFx, false);
+                return;
+            }
+
+            EnsureLedGlowFx(visual);
+            if (visual.LedGlowFx == null) return;
+            SetFxActive(visual.LedGlowFx, true);
+            float t = Mathf.Pow(Mathf.Clamp01(intensity), 0.6f);
+            float glowRange = visual.GlowLight != null ? visual.GlowLight.range : sizeFactor * 0.2f;
+            float parentScale = 1f;
+            if (visual.Root != null)
+            {
+                var lossy = visual.Root.lossyScale;
+                parentScale = Mathf.Max(lossy.x, Mathf.Max(lossy.y, lossy.z));
+            }
+            float localRange = glowRange / Mathf.Max(0.001f, parentScale);
+            float radius = Mathf.Clamp(localRange * 0.22f, 0.008f, localRange);
+            float scale = Mathf.Lerp(radius * 0.5f, radius, t) * LedGlowFxRangeBoost;
+            visual.LedGlowFx.Root.transform.localScale = Vector3.one * scale;
+            var glowColor = Color.Lerp(color * 0.35f, color, t);
+            glowColor.a = Mathf.Lerp(0.02f, 0.12f, t);
+            ApplyFxColor(visual.LedGlowFx, glowColor, glowColor, 0f);
         }
 
         private void UpdateErrorFx(ComponentVisual visual, bool hasError)
@@ -1566,7 +2160,8 @@ namespace RobotTwin.UI
             visual.LastErrorFxTime = now;
             float pulse = 0.5f + 0.5f * Mathf.Sin(now * 6f + visual.ErrorSeed);
             float scale = Mathf.Lerp(0.8f, 1.3f, pulse);
-            visual.ErrorFx.Root.transform.localScale = visual.ErrorFx.BaseScale * scale;
+            float sizeFactor = GetEffectScaleFactor(visual, 3f, 14f);
+            visual.ErrorFx.Root.transform.localScale = visual.ErrorFx.BaseScale * (scale * sizeFactor);
             ApplyFxColor(visual.ErrorFx, new Color(1f, 0.2f, 0.2f), new Color(1f, 0.2f, 0.2f), 1.6f + pulse);
         }
 
@@ -1590,8 +2185,13 @@ namespace RobotTwin.UI
             }
             float t = Mathf.Clamp01(1f - elapsed / 0.35f);
             float scale = Mathf.Lerp(0.6f, 1.4f, t);
-            visual.SparkFx.Root.transform.localScale = visual.SparkFx.BaseScale * scale;
+            float sizeFactor = GetEffectScaleFactor(visual, 4f, 18f);
+            visual.SparkFx.Root.transform.localScale = visual.SparkFx.BaseScale * (scale * sizeFactor);
             ApplyFxColor(visual.SparkFx, new Color(1f, 0.75f, 0.25f), new Color(1f, 0.75f, 0.25f), 2.4f * t);
+            if (visual.SparkFx.Light != null)
+            {
+                visual.SparkFx.Light.range = Mathf.Lerp(0.15f, 0.4f, t) * sizeFactor;
+            }
         }
 
         private void UpdateStatusLabel(ComponentVisual visual, string text, Color color)
@@ -1600,13 +2200,17 @@ namespace RobotTwin.UI
             bool hasText = !string.IsNullOrWhiteSpace(text);
             visual.StatusLabel.text = hasText ? text : string.Empty;
             visual.StatusLabel.color = color;
-            visual.StatusLabel.gameObject.SetActive(hasText);
-            if (_camera == null) return;
+            ApplyLabelVisibility(visual, hasText);
+            if (!_labelsVisible || !hasText || _camera == null) return;
             var labelTransform = visual.StatusLabel.transform;
             UpdateLabelTransform(visual, labelTransform);
-            var toCamera = _camera.transform.position - labelTransform.position;
-            if (toCamera.sqrMagnitude < 0.0001f) return;
-            labelTransform.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
+            UpdateBillboardRotation(labelTransform, true);
+        }
+
+        private void ApplyLabelVisibility(ComponentVisual visual, bool hasText)
+        {
+            if (visual?.StatusLabel == null) return;
+            visual.StatusLabel.gameObject.SetActive(_labelsVisible && hasText);
         }
 
         private void UpdateLabelTransform(ComponentVisual visual, Transform labelTransform)
@@ -1614,11 +2218,20 @@ namespace RobotTwin.UI
             if (visual == null || labelTransform == null || visual.Root == null) return;
             if (TryGetWorldBounds(visual.Root, out var bounds))
             {
-                float heightOffset = Mathf.Max(0.02f, bounds.extents.y + 0.02f);
-                var worldPos = bounds.center + Vector3.up * heightOffset;
+                var worldPos = bounds.center;
+                if (_camera != null)
+                {
+                    float push = Mathf.Max(0.02f, bounds.size.magnitude * 0.04f);
+                    worldPos += -_camera.transform.forward * push;
+                    worldPos += _camera.transform.up * Mathf.Max(0.01f, bounds.size.y * 0.05f);
+                }
+                else
+                {
+                    worldPos += Vector3.up * Mathf.Max(0.01f, bounds.size.y * 0.05f);
+                }
                 labelTransform.position = worldPos;
                 float sizeBase = Mathf.Max(bounds.size.x, bounds.size.z);
-                visual.StatusLabel.characterSize = Mathf.Clamp(sizeBase * 0.12f, 0.01f, 0.05f);
+                visual.StatusLabel.characterSize = Mathf.Clamp(sizeBase * 0.28f, 0.035f, 0.18f);
             }
 
             var parentScale = visual.Root.lossyScale;
@@ -1626,6 +2239,8 @@ namespace RobotTwin.UI
             scale.x *= parentScale.x < 0f ? -1f : 1f;
             scale.y *= parentScale.y < 0f ? -1f : 1f;
             scale.z *= parentScale.z < 0f ? -1f : 1f;
+            float sizeFactor = GetVisualScaleFactor(visual, 0.9f, 3f);
+            scale *= sizeFactor * LabelScaleBoost;
             labelTransform.localScale = scale;
         }
 
@@ -1634,19 +2249,21 @@ namespace RobotTwin.UI
             if (visual == null) return;
             if (visual.BatteryBar != null)
             {
-                bool hasSoc = TryGetTelemetrySignal(telemetry, $"SRC:{visual.Id}:SOC", out var socVal);
+                bool hasSoc = TryGetTelemetrySignalAny(telemetry, out var socVal,
+                    $"SRC:{visual.Id}:SOC",
+                    $"COMP:{visual.Id}:SOC",
+                    $"{visual.Id}.SOC",
+                    $"{visual.Id}:SOC");
                 float value = hasSoc ? Mathf.Clamp01((float)socVal) : 0f;
                 UpdateBillboardBarTransform(visual, visual.BatteryBar, 0.012f);
-                bool visible = telemetry != null || hasSoc;
-                SetBillboardBarValue(visual.BatteryBar, value, visible);
+                SetBillboardBarValue(visual.BatteryBar, value, true);
             }
 
             if (visual.TempBar != null)
             {
                 float value = hasTemp ? Mathf.Clamp01(Mathf.InverseLerp(25f, 120f, tempC)) : 0f;
                 UpdateBillboardBarTransform(visual, visual.TempBar, 0.012f);
-                bool visible = telemetry != null || hasTemp;
-                SetBillboardBarValue(visual.TempBar, value, visible);
+                SetBillboardBarValue(visual.TempBar, value, true);
             }
         }
 
@@ -1654,8 +2271,19 @@ namespace RobotTwin.UI
         {
             if (visual == null || bar?.Root == null) return;
             if (!TryGetWorldBounds(visual.Root, out var bounds)) return;
-            var worldPos = bounds.center + Vector3.up * (bounds.extents.y + heightOffset);
+            var worldPos = bounds.center;
+            if (_camera != null)
+            {
+                float push = Mathf.Max(0.01f, bounds.size.magnitude * 0.02f);
+                worldPos += -_camera.transform.forward * push;
+            }
+            else
+            {
+                worldPos += Vector3.up * Mathf.Max(0.01f, bounds.size.y * 0.1f + heightOffset);
+            }
             bar.Root.position = worldPos;
+            float scaleFactor = GetVisualScaleFactor(visual);
+            bar.Root.localScale = Vector3.one * scaleFactor;
         }
 
         private BillboardBar CreateBillboardBar(string name, Transform parent, Vector3 localPosition, Color background, Color fillColor)
@@ -1707,7 +2335,8 @@ namespace RobotTwin.UI
             {
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
-                renderer.material = BuildFxMaterial() ?? renderer.material;
+                renderer.material = GetBarMaterial() ?? renderer.material;
+                renderer.sortingOrder = 15;
                 var block = new MaterialPropertyBlock();
                 block.SetColor("_Color", color);
                 block.SetColor("_BaseColor", color);
@@ -1736,6 +2365,32 @@ namespace RobotTwin.UI
         {
             if (string.IsNullOrWhiteSpace(type)) return false;
             return type.IndexOf("led", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private float GetAnchorRadius(ComponentVisual visual, float baseRadius)
+        {
+            float factor = GetVisualScaleFactor(visual, 0.8f, 4f);
+            return baseRadius * factor;
+        }
+
+        private float GetVisualScaleFactor(ComponentVisual visual, float min = 0.6f, float max = 3f)
+        {
+            if (visual?.Root == null) return 1f;
+            if (!TryGetWorldBounds(visual.Root, out var bounds)) return 1f;
+            float maxDim = Mathf.Max(bounds.size.x, bounds.size.z);
+            if (maxDim <= 0.0001f) return 1f;
+            float factor = maxDim * 12f;
+            return Mathf.Clamp(factor, min, max);
+        }
+
+        private float GetEffectScaleFactor(ComponentVisual visual, float min = 2f, float max = 8f)
+        {
+            if (visual?.Root == null) return 1f;
+            if (!TryGetWorldBounds(visual.Root, out var bounds)) return 1f;
+            float maxDim = Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z);
+            if (maxDim <= 0.0001f) return 1f;
+            float factor = maxDim * 50f;
+            return Mathf.Clamp(factor, min, max);
         }
 
         private static bool IsResistorType(string type)
@@ -1832,6 +2487,68 @@ namespace RobotTwin.UI
             return telemetry.Signals.TryGetValue(key, out value);
         }
 
+        private static bool TryGetTelemetrySignalAny(TelemetryFrame telemetry, out double value, params string[] keys)
+        {
+            value = 0.0;
+            if (telemetry?.Signals == null || keys == null || keys.Length == 0) return false;
+            foreach (var key in keys)
+            {
+                if (string.IsNullOrWhiteSpace(key)) continue;
+                if (telemetry.Signals.TryGetValue(key, out value)) return true;
+            }
+            return false;
+        }
+
+        private static bool TryGetNetId(CircuitSpec circuit, string compId, string pin, out string netId)
+        {
+            netId = null;
+            if (circuit?.Nets == null || string.IsNullOrWhiteSpace(compId) || string.IsNullOrWhiteSpace(pin)) return false;
+            string node = $"{compId}.{pin}";
+            foreach (var net in circuit.Nets)
+            {
+                if (net?.Nodes == null || string.IsNullOrWhiteSpace(net.Id)) continue;
+                foreach (var n in net.Nodes)
+                {
+                    if (string.IsNullOrWhiteSpace(n)) continue;
+                    if (string.Equals(n, node, StringComparison.OrdinalIgnoreCase))
+                    {
+                        netId = net.Id;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool TryGetPinVoltage(CircuitSpec circuit, TelemetryFrame telemetry, string compId, string pin, out double voltage)
+        {
+            voltage = 0.0;
+            if (!TryGetNetId(circuit, compId, pin, out var netId)) return false;
+            return TryGetTelemetrySignal(telemetry, $"NET:{netId}", out voltage);
+        }
+
+        private static bool ShouldSparkBlownComponent(ComponentVisual visual, ComponentSpec spec, CircuitSpec circuit, TelemetryFrame telemetry)
+        {
+            if (visual == null || spec == null || telemetry?.Signals == null) return false;
+            string pinA = null;
+            string pinB = null;
+            if (visual.IsResistor)
+            {
+                pinA = "A";
+                pinB = "B";
+            }
+            else if (visual.IsLed)
+            {
+                pinA = "Anode";
+                pinB = "Cathode";
+            }
+            if (pinA == null || pinB == null) return false;
+            if (!TryGetPinVoltage(circuit, telemetry, spec.Id, pinA, out var vA)) return false;
+            if (!TryGetPinVoltage(circuit, telemetry, spec.Id, pinB, out var vB)) return false;
+            double vDiff = Math.Abs(vA - vB);
+            return vDiff > 0.5;
+        }
+
         private static ComponentTuning GetComponentTuning(string type)
         {
             EnsureComponentTunings();
@@ -1869,8 +2586,8 @@ namespace RobotTwin.UI
                 Scale = Vector3.one,
                 UseLedColor = false,
                 LedColor = new Color(1f, 0.2f, 0.2f, 1f),
-                LedGlowRange = 0.08f,
-                LedGlowIntensity = 2.5f,
+                LedGlowRange = 0.8f,
+                LedGlowIntensity = 12f,
                 LedBlowCurrent = 0.08f,
                 LedBlowTemp = 140f,
                 ResistorSmokeStartTemp = 110f,
@@ -2451,15 +3168,203 @@ namespace RobotTwin.UI
             return material;
         }
 
+        private static Material GetSmokeMaterial()
+        {
+            if (_smokeMaterial != null) return _smokeMaterial;
+            var shader = Shader.Find("Legacy Shaders/Particles/Alpha Blended") ??
+                Shader.Find("Legacy Shaders/Particles/Soft Additive") ??
+                Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Legacy Shaders/Transparent/Diffuse") ??
+                Shader.Find("Unlit/Transparent") ??
+                Shader.Find("Standard");
+            if (shader == null) return null;
+            _smokeMaterial = new Material(shader)
+            {
+                name = "Circuit3D_SmokeMat"
+            };
+            var texture = GetSmokeTexture();
+            if (texture != null)
+            {
+                if (_smokeMaterial.HasProperty("_MainTex")) _smokeMaterial.SetTexture("_MainTex", texture);
+                if (_smokeMaterial.HasProperty("_BaseMap")) _smokeMaterial.SetTexture("_BaseMap", texture);
+            }
+            ConfigureTransparentMaterial(_smokeMaterial);
+            _smokeMaterial.renderQueue = 3000;
+            return _smokeMaterial;
+        }
+
+        private static Texture2D GetSmokeTexture()
+        {
+            if (_smokeTexture != null) return _smokeTexture;
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, mipChain: false, linear: true)
+            {
+                name = "Circuit3D_SmokeTex",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+
+            var center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+            float maxDist = center.magnitude;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center.x;
+                    float dy = y - center.y;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float t = Mathf.Clamp01(dist / maxDist);
+                    float falloff = Mathf.Pow(1f - t, 2.6f);
+                    float alpha = Mathf.SmoothStep(0f, 1f, falloff);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply(false, true);
+            _smokeTexture = tex;
+            return _smokeTexture;
+        }
+
+        private static Material GetLedGlowMaterial()
+        {
+            if (_ledGlowMaterial != null) return _ledGlowMaterial;
+            var shader = Shader.Find("Legacy Shaders/Particles/Soft Additive") ??
+                Shader.Find("Legacy Shaders/Particles/Additive") ??
+                Shader.Find("Legacy Shaders/Particles/Alpha Blended") ??
+                Shader.Find("Unlit/Transparent") ??
+                Shader.Find("Unlit/Color") ??
+                Shader.Find("Standard");
+            if (shader == null) return null;
+            _ledGlowMaterial = new Material(shader)
+            {
+                name = "Circuit3D_LedGlowMat"
+            };
+            var texture = GetLedGlowTexture();
+            if (texture != null)
+            {
+                if (_ledGlowMaterial.HasProperty("_MainTex")) _ledGlowMaterial.SetTexture("_MainTex", texture);
+                if (_ledGlowMaterial.HasProperty("_BaseMap")) _ledGlowMaterial.SetTexture("_BaseMap", texture);
+            }
+            ConfigureTransparentMaterial(_ledGlowMaterial);
+            _ledGlowMaterial.renderQueue = 3000;
+            return _ledGlowMaterial;
+        }
+
+        private static Texture2D GetLedGlowTexture()
+        {
+            if (_ledGlowTexture != null) return _ledGlowTexture;
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, mipChain: false, linear: true)
+            {
+                name = "Circuit3D_LedGlowTex",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+
+            var center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+            float maxDist = center.magnitude;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center.x;
+                    float dy = y - center.y;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float t = Mathf.Clamp01(dist / maxDist);
+                    float falloff = Mathf.Pow(1f - t, 3.2f);
+                    float alpha = Mathf.SmoothStep(0f, 1f, falloff);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply(false, true);
+            _ledGlowTexture = tex;
+            return _ledGlowTexture;
+        }
+
+        private static void ConfigureTransparentMaterial(Material material)
+        {
+            if (material == null) return;
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_Mode")) material.SetFloat("_Mode", 3f);
+            if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
+            if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (material.HasProperty("_ZWrite")) material.SetFloat("_ZWrite", 0f);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
+
+        private static Material GetBarMaterial()
+        {
+            if (_barMaterial != null) return _barMaterial;
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Unlit/Color") ??
+                Shader.Find("Sprites/Default");
+            if (shader == null) return null;
+            _barMaterial = new Material(shader)
+            {
+                name = "Circuit3D_BarMat"
+            };
+            _barMaterial.renderQueue = 3000;
+            return _barMaterial;
+        }
+
+        private struct LightingProfile
+        {
+            public Color KeyColor;
+            public float KeyIntensity;
+            public Color FillColor;
+            public float FillIntensity;
+            public Color RimColor;
+            public float RimIntensity;
+            public Color HeadColor;
+            public float HeadIntensity;
+            public float HeadRange;
+
+            public static LightingProfile Studio => new LightingProfile
+            {
+                KeyColor = new Color(0.98f, 0.95f, 0.92f),
+                KeyIntensity = 0.85f,
+                FillColor = new Color(0.78f, 0.84f, 0.95f),
+                FillIntensity = 0.35f,
+                RimColor = new Color(0.7f, 0.78f, 0.95f),
+                RimIntensity = 0.25f,
+                HeadColor = new Color(0.95f, 0.96f, 1f),
+                HeadIntensity = 0.35f,
+                HeadRange = 2f
+            };
+
+            public static LightingProfile Realistic => new LightingProfile
+            {
+                KeyColor = new Color(0.95f, 0.90f, 0.85f),
+                KeyIntensity = 0.6f,
+                FillColor = new Color(0.65f, 0.7f, 0.78f),
+                FillIntensity = 0.2f,
+                RimColor = new Color(0.55f, 0.65f, 0.85f),
+                RimIntensity = 0.12f,
+                HeadColor = new Color(0.9f, 0.92f, 0.98f),
+                HeadIntensity = 0.22f,
+                HeadRange = 1.6f
+            };
+        }
+
         private static void ApplyFxColor(FxHandle handle, Color color, Color lightColor, float lightIntensity)
         {
             if (handle == null) return;
             if (handle.Renderer != null)
             {
                 var block = new MaterialPropertyBlock();
+                var mat = handle.Renderer.sharedMaterial;
                 block.SetColor("_Color", color);
                 block.SetColor("_BaseColor", color);
                 block.SetColor("_EmissionColor", color * 1.2f);
+                block.SetColor("_EmissiveColor", color * 1.2f);
+                if (mat != null)
+                {
+                    if (mat.HasProperty("_TintColor")) block.SetColor("_TintColor", color);
+                    if (mat.HasProperty("_MainColor")) block.SetColor("_MainColor", color);
+                }
+                EnableEmission(handle.Renderer);
                 handle.Renderer.SetPropertyBlock(block);
             }
             if (handle.Light != null)
@@ -2467,6 +3372,16 @@ namespace RobotTwin.UI
                 handle.Light.color = lightColor;
                 handle.Light.intensity = lightIntensity;
                 handle.Light.enabled = lightIntensity > 0.01f;
+            }
+        }
+
+        private static void EnableEmission(Renderer renderer)
+        {
+            if (renderer?.sharedMaterial == null) return;
+            var material = renderer.sharedMaterial;
+            if (material.HasProperty("_EmissionColor") || material.HasProperty("_EmissiveColor"))
+            {
+                material.EnableKeyword("_EMISSION");
             }
         }
 
@@ -2584,9 +3499,11 @@ namespace RobotTwin.UI
             public BillboardBar BatteryBar;
             public BillboardBar TempBar;
             public FxHandle SmokeFx;
+            public SmokeEmitter SmokeEmitter;
             public FxHandle HeatFx;
             public FxHandle SparkFx;
             public FxHandle ErrorFx;
+            public FxHandle LedGlowFx;
             public Renderer[] LegRenderers;
             public bool LedBlown;
             public float LedBlowTime;
@@ -2609,6 +3526,31 @@ namespace RobotTwin.UI
             public Light Light;
             public Vector3 BaseScale;
             public Color BaseColor;
+        }
+
+        private sealed class SmokeEmitter
+        {
+            public Transform Root;
+            public Material Material;
+            public Vector3 LocalUp;
+            public float SpawnAccumulator;
+            public List<SmokePuff> Puffs;
+        }
+
+        private sealed class SmokePuff
+        {
+            public Transform Transform;
+            public Renderer Renderer;
+            public Vector3 LocalPos;
+            public Vector3 Velocity;
+            public float Age;
+            public float Lifetime;
+            public float StartScale;
+            public float EndScale;
+            public Color StartColor;
+            public Color EndColor;
+            public float Rotation;
+            public float AngularVelocity;
         }
 
         private sealed class BillboardBar

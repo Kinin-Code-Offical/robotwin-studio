@@ -683,6 +683,15 @@
     min-height: 0;
 }
 
+.canvas-selection-box {
+    position: absolute;
+    border-width: 1px;
+    border-color: rgba(59, 130, 246, 0.9);
+    background-color: rgba(59, 130, 246, 0.18);
+    border-radius: 6px;
+    display: none;
+}
+
 .canvas-grid {
     position: absolute;
     left: 0;
@@ -1550,7 +1559,7 @@
 }
 
 .code-file-list {
-    width: 180px;
+    width: 160px;
     min-width: 160px;
     border-right-width: 1px;
     border-right-color: var(--line);
@@ -1621,6 +1630,7 @@
     color: #e8eef5;
     border-width: 0;
     padding: 10px 12px;
+    white-space: pre;
 }
 
 .code-highlight-overlay {
@@ -1798,6 +1808,7 @@
     flex-grow: 1;
     padding: 10px 12px;
     min-height: 0;
+    position: relative;
 }
 
 .circuit-3d-view {
@@ -1816,6 +1827,58 @@
     align-items: center;
     justify-content: center;
     -unity-background-scale-mode: scale-to-fit;
+}
+
+.board-3d-help {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(8, 12, 18, 0.85);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 4px;
+    display: flex;
+}
+
+.board-3d-help-icon {
+    color: #f1f5f9;
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+.board-3d-help-tooltip {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    width: 220px;
+    padding: 8px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgba(148, 163, 184, 0.4);
+    background-color: rgba(5, 7, 12, 0.95);
+    flex-direction: column;
+    display: none;
+    /* Unity USS does not recognize z-index or pointer-events */
+}
+
+.board-3d-help-title {
+    color: #38bdf8;
+    font-size: 10px;
+    margin-bottom: 4px;
+    -unity-font-style: bold;
+}
+
+.board-3d-help-line {
+    color: #cbd5f5;
+    font-size: 10px;
+    margin-bottom: 2px;
 }
 
 .circuit-3d-label {
@@ -1841,10 +1904,46 @@
     border-right-color: var(--line-strong);
 }
 
+.circuit-3d-controls-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
 .circuit-3d-controls-title {
     font-size: 10px;
     color: var(--text-2);
+}
+
+.circuit-3d-controls-toggle {
+    font-size: 9px;
+    color: var(--text-1);
+    background-color: rgba(16, 20, 28, 0.7);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+.circuit-3d-controls-body {
+    flex-direction: column;
+}
+
+.circuit-3d-controls-subtitle {
+    font-size: 10px;
+    color: var(--text-2);
     margin-bottom: 6px;
+}
+
+.circuit-3d-controls.controls-collapsed {
+    padding-bottom: 6px;
 }
 
 .circuit-3d-controls-row {
@@ -1868,6 +1967,23 @@
     font-size: 10px;
     color: var(--text-1);
     margin-top: 4px;
+}
+
+.circuit-3d-btn {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-1);
+    background-color: rgba(16, 20, 28, 0.7);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    padding: 4px 8px;
+    border-radius: 6px;
 }
 
 .connections-panel {
@@ -2027,6 +2143,58 @@
 
 .net-editor-card {
     width: 520px;
+}
+
+.wire-export-card {
+    width: 360px;
+}
+
+.wire-export-progress {
+    margin-top: 8px;
+    height: 10px;
+}
+
+.wire-export-progress .unity-progress-bar__background {
+    background-color: #1b222b;
+    border-width: 1px;
+    border-color: #2b3440;
+    border-radius: 6px;
+}
+
+.wire-export-progress .unity-progress-bar__progress {
+    background-color: #3a8ee6;
+    border-radius: 6px;
+}
+
+.wire-export-progress .unity-progress-bar__title {
+    color: #c9d4e1;
+    font-size: 10px;
+}
+
+.help-card {
+    width: 680px;
+}
+
+.help-scroll {
+    max-height: 380px;
+    background-color: #0f141b;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 6px;
+    margin-bottom: 8px;
+}
+
+.help-section {
+    color: #38bdf8;
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-top: 6px;
+}
+
+.help-line {
+    color: #cbd5f5;
+    font-size: 10px;
+    margin-top: 2px;
 }
 
 .net-editor-list {

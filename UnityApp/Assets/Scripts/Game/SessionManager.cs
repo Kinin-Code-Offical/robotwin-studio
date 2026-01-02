@@ -40,7 +40,7 @@ namespace RobotTwin.Game
             CurrentWorld = template.DefaultWorld;
             CurrentProject = null; // Template mode, not project mode
 
-            Debug.Log($"Session Initialized: {template.Name}");
+            LogNoStack(LogType.Log, $"Session Initialized: {template.Name}");
         }
 
         public void StartSession(CircuitSpec circuit)
@@ -51,7 +51,7 @@ namespace RobotTwin.Game
             ActiveTemplate = null;
             CurrentProject = null;
             var circuitId = string.IsNullOrWhiteSpace(circuit.Id) ? "<unnamed>" : circuit.Id;
-            Debug.Log($"Session Started explicitly: {circuitId}");
+            LogNoStack(LogType.Log, $"Session Started explicitly: {circuitId}");
         }
 
         public void StartSession(ProjectManifest project)
@@ -63,7 +63,7 @@ namespace RobotTwin.Game
             ActiveTemplate = null;
             CurrentProjectPath = null;
             
-            Debug.Log($"Session Started from Project: {project.ProjectName}");
+            LogNoStack(LogType.Log, $"Session Started from Project: {project.ProjectName}");
         }
 
         public void StartSession(ProjectManifest project, string projectPath)
@@ -105,6 +105,14 @@ namespace RobotTwin.Game
         private void OnApplicationQuit()
         {
              // Cleanup if needed
+        }
+
+        private static void LogNoStack(LogType type, string message)
+        {
+            var prev = Application.GetStackTraceLogType(type);
+            Application.SetStackTraceLogType(type, StackTraceLogType.None);
+            Debug.unityLogger.Log(type, message);
+            Application.SetStackTraceLogType(type, prev);
         }
     }
 }

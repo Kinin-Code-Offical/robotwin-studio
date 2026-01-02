@@ -1,0 +1,6 @@
+{
+  "name": "Resistor Overload Demo",
+  "description": "Forces a low-ohm resistor to overheat so you can see smoke and error states in Run Mode.",
+  "tag": "Simulation",
+  "difficulty": "Intermediate"
+}
