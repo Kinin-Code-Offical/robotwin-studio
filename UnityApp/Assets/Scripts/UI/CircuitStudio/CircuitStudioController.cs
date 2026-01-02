@@ -13,6 +13,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace RobotTwin.UI
 {
@@ -40,17 +41,15 @@ namespace RobotTwin.UI
         private VisualElement _codePanel;
         private VisualElement _circuit3DPanel;
         private VisualElement _circuit3DView;
+        private VisualElement _circuit3DControls;
+        private VisualElement _circuit3DControlsBody;
+        private Button _circuit3DControlsToggle;
         private ScrollView _codeFileList;
         private TextField _codeEditor;
         private Label _codeFileLabel;
         private DropdownField _codeTargetDropdown;
-        private Button _codeOpenBtn;
-        private Button _codeNewBtn;
-        private Button _codeSaveBtn;
-        private Button _codeSaveAsBtn;
-        private Button _codeBuildBtn;
-        private Button _codeBuildRunBtn;
-        private Button _codeBuildAllBtn;
+        private Button _codeFileMenuBtn;
+        private Button _codeBuildMenuBtn;
         private VisualElement _codeBuildProgressWrap;
         private ProgressBar _codeBuildProgress;
         private Button _centerTabCircuit;
@@ -60,6 +59,9 @@ namespace RobotTwin.UI
         private Slider _circuit3DFovSlider;
         private Toggle _circuit3DPerspectiveToggle;
         private Toggle _circuit3DFollowToggle;
+        private Button _circuit3DRebuildBtn;
+        private VisualElement _circuit3DHelpIcon;
+        private VisualElement _circuit3DHelpTooltip;
         private Button _outputErrorsBtn;
         private Button _outputAllBtn;
         private Button _outputWarningsBtn;
@@ -87,6 +89,13 @@ namespace RobotTwin.UI
         private Button _netEditorCancelBtn;
         private Label _netEditorErrorLabel;
         private readonly List<NetEditorRow> _netEditorRows = new List<NetEditorRow>();
+        private VisualElement _wireExportOverlay;
+        private ProgressBar _wireExportProgress;
+        private Label _wireExportStatus;
+        private Coroutine _wireExportRoutine;
+        private VisualElement _helpOverlay;
+        private Button _helpCloseBtn;
+        private CircuitClipboard _circuitClipboard;
 
         private class NetEditorRow
         {
@@ -101,18 +110,35 @@ namespace RobotTwin.UI
             public HashSet<string> Nodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
+        private sealed class CircuitClipboard
+        {
+            public readonly List<ComponentSpec> Components = new List<ComponentSpec>();
+            public readonly List<ClipboardNet> Nets = new List<ClipboardNet>();
+            public readonly Dictionary<string, Vector2> Positions = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
+            public Vector2 Center;
+        }
+
+        private sealed class ClipboardNet
+        {
+            public string Id;
+            public List<string> Nodes = new List<string>();
+        }
+
         // Toolbar
         private Button _btnSelect;
         private Button _btnMove;
         private Button _btnWire;
         private Button _btnSim;
         private Button _btnText;
+        private Button _btnDrc;
+        private Button _btnNet;
         private Button _menuFile;
         private Button _menuEdit;
         private Button _menuView;
         private Button _menuDesign;
         private Button _menuTools;
         private Button _menuRoute;
+        private Button _menuHelp;
 
         // Status
         private Label _statusLabel;
@@ -141,6 +167,7 @@ namespace RobotTwin.UI
         private ComponentSpec _moveTargetSpec;
         private Vector2 _moveOffset;
         private Vector2 _moveLastValidPos;
+        private Vector2 _moveStartPos;
         private bool _wireUpdatePending;
         private float _wireUpdateAt;
         private Vector2 _lastCanvasWorldPos;
@@ -151,6 +178,20 @@ namespace RobotTwin.UI
         private VisualElement _selectedVisual;
         private ComponentCatalog.Item _selectedCatalogItem;
         private Vector2 _selectedComponentSize = new Vector2(ComponentWidth, ComponentHeight);
+        private readonly HashSet<string> _selectedComponentIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private bool _isBoxSelecting;
+        private int _boxSelectionPointerId = -1;
+        private VisualElement _selectionBox;
+        private Vector2 _boxSelectionStartLocal;
+        private Vector2 _boxSelectionStartBoard;
+        private bool _isMovingSelection;
+        private int _groupMovePointerId = -1;
+        private Vector2 _groupMoveStartBoard;
+        private readonly Dictionary<string, Vector2> _groupMoveOriginalPositions = new Dictionary<string, Vector2>();
+        private readonly List<CircuitSpec> _undoHistory = new List<CircuitSpec>();
+        private readonly List<CircuitSpec> _redoHistory = new List<CircuitSpec>();
+        private const int MaxHistoryEntries = 32;
+        private bool _isRestoringState;
 
         // Dragging
         private bool _isDragging;
@@ -182,6 +223,7 @@ namespace RobotTwin.UI
         private WireRouter _lastRouter;
         private VisualElement _wirePreviewLayer;
         private readonly List<WireSegment> _wirePreviewSegments = new List<WireSegment>();
+        private bool _showFloatingPins;
         private string _activeCodePath;
         private string _codeTargetComponentId;
         private readonly Dictionary<string, string> _codeTargetLabels = new Dictionary<string, string>();
@@ -214,9 +256,14 @@ namespace RobotTwin.UI
         private readonly List<LogEntry> _logEntries = new List<LogEntry>();
         private readonly ConcurrentQueue<LogEntry> _pendingLogs = new ConcurrentQueue<LogEntry>();
         private bool _circuit3DDirty;
+        private bool _circuit3DControlsCollapsed;
+        private bool _pendingResetView;
+        private bool _resetViewOnNextLayout;
+        private bool _resetViewScheduled;
         private readonly List<CodeEditorSnapshot> _codeHistory = new List<CodeEditorSnapshot>();
         private int _codeHistoryIndex = -1;
         private bool _suppressCodeHistory;
+        private bool _gridVisible = true;
         private bool _suppressCodeEditorChanged;
         private Label _codeHighlightLabel;
         private TextElement _codeHighlightTarget;
@@ -248,6 +295,8 @@ namespace RobotTwin.UI
         private const float AutoLayoutSpacing = 200f;
         private const float WireExitPadding = 6f;
         private const float WireUpdateInterval = 0.06f;
+        private const int WireMatrixLogLimit = 8000;
+        private const float CanvasKeyPanPixels = 40f;
         private const float CameraKeyPanPixels = 28f;
         private const float CameraKeyOrbitPixels = 18f;
         private const float CameraKeyZoomDelta = 120f;
@@ -280,6 +329,7 @@ namespace RobotTwin.UI
         private static readonly Regex CompilerMessageNoColumn = new Regex(
             @"^(?<file>.+?):(?<line>\d+):\s*(?<type>error|warning|note):\s*(?<message>.+)$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex ComponentIdPattern = new Regex("^[A-Za-z0-9_-]+$", RegexOptions.Compiled);
         private static readonly HashSet<string> CodeKeywords = new HashSet<string>(StringComparer.Ordinal)
         {
             "auto", "bool", "break", "case", "catch", "char", "class", "const", "constexpr",
@@ -420,6 +470,7 @@ namespace RobotTwin.UI
                 _wireUpdatePending = false;
                 UpdateWireLayer();
             }
+            TryApplyPendingResetView();
         }
 
         private void InitializeUI()
@@ -474,12 +525,14 @@ namespace RobotTwin.UI
             _canvasView = _root.Q(className: "canvas-view");
             if (_canvasView != null)
             {
+                _canvasView.RegisterCallback<PointerDownEvent>(OnCanvasBoxSelectionStart);
                 _canvasView.RegisterCallback<PointerDownEvent>(OnCanvasClick);
                 _canvasView.RegisterCallback<PointerDownEvent>(OnCanvasRightClick);
                 _canvasView.RegisterCallback<ContextClickEvent>(OnCanvasContextClick);
                 _canvasView.RegisterCallback<PointerDownEvent>(OnCanvasPanStart);
                 _canvasView.RegisterCallback<PointerMoveEvent>(OnCanvasPanMove);
                 _canvasView.RegisterCallback<PointerUpEvent>(OnCanvasPanEnd);
+                _canvasView.RegisterCallback<PointerUpEvent>(OnCanvasPointerRelease);
                 _canvasView.RegisterCallback<WheelEvent>(OnCanvasWheel, TrickleDown.TrickleDown);
                 _canvasView.RegisterCallback<PointerMoveEvent>(OnCanvasPointerMove, TrickleDown.TrickleDown);
                 _canvasView.RegisterCallback<GeometryChangedEvent>(_ => UpdateBoardLayout());
@@ -517,18 +570,23 @@ namespace RobotTwin.UI
             _btnWire = _root.Q<Button>("tool-wire");
             _btnText = _root.Q<Button>("tool-text");
             _btnSim = _root.Q<Button>("tool-sim"); // Or SimulateBtn? UXML has logic.
+            _btnDrc = _root.Q<Button>("tool-drc");
+            _btnNet = _root.Q<Button>("tool-net");
             _menuFile = _root.Q<Button>("MenuFile");
             _menuEdit = _root.Q<Button>("MenuEdit");
             _menuView = _root.Q<Button>("MenuView");
             _menuDesign = _root.Q<Button>("MenuDesign");
             _menuTools = _root.Q<Button>("MenuTools");
             _menuRoute = _root.Q<Button>("MenuRoute");
+            _menuHelp = _root.Q<Button>("MenuHelp");
 
             _btnSelect?.RegisterCallback<ClickEvent>(_ => SetTool(ToolMode.Select));
             _btnMove?.RegisterCallback<ClickEvent>(_ => SetTool(ToolMode.Move));
             _btnWire?.RegisterCallback<ClickEvent>(_ => SetTool(ToolMode.Wire));
             _btnText?.RegisterCallback<ClickEvent>(_ => SetTool(ToolMode.Text));
             _btnSim?.RegisterCallback<ClickEvent>(_ => StartRunMode());
+            _btnDrc?.RegisterCallback<ClickEvent>(_ => RunDrcCheck());
+            _btnNet?.RegisterCallback<ClickEvent>(_ => ShowNetEditor());
             InitializeMenuBar();
 
             var btnSimulate = _root.Q<Button>(className: "btn-primary"); // SIMULATE button
@@ -556,21 +614,31 @@ namespace RobotTwin.UI
             _codePanel = _root.Q<VisualElement>("CodePanel");
             _circuit3DPanel = _root.Q<VisualElement>("Circuit3DPanel");
             _circuit3DView = _root.Q<VisualElement>("Circuit3DView");
+            _circuit3DControls = _root.Q<VisualElement>("Circuit3DControls");
+            _circuit3DControlsBody = _root.Q<VisualElement>("Circuit3DControlsBody");
+            _circuit3DControlsToggle = _root.Q<Button>("Circuit3DControlsToggle");
             _circuit3DFovSlider = _root.Q<Slider>("Circuit3DFovSlider");
             _circuit3DPerspectiveToggle = _root.Q<Toggle>("Circuit3DPerspectiveToggle");
             _circuit3DFollowToggle = _root.Q<Toggle>("Circuit3DFollowToggle");
+            _circuit3DRebuildBtn = _root.Q<Button>("Circuit3DRebuildBtn");
+            _circuit3DHelpIcon = _root.Q<VisualElement>("Circuit3DHelpIcon");
+            _circuit3DHelpTooltip = _root.Q<VisualElement>("Circuit3DHelpTooltip");
+            if (_circuit3DControlsToggle != null)
+            {
+                _circuit3DControlsToggle.clicked += Toggle3DControlsLayout;
+                Set3DControlsLayoutCollapsed(false);
+            }
+            if (_circuit3DRebuildBtn != null)
+            {
+                _circuit3DRebuildBtn.clicked += ForceRebuildCircuit3DPreview;
+            }
             _codeFileList = _root.Q<ScrollView>("CodeFileList");
             _codeEditor = _root.Q<TextField>("CodeEditor");
             if (_codeEditor == null) Debug.LogError("[CircuitStudio] TextField 'CodeEditor' not found in UI!");
             _codeFileLabel = _root.Q<Label>("CodeFileLabel");
             _codeTargetDropdown = _root.Q<DropdownField>("CodeTargetBoard");
-            _codeOpenBtn = _root.Q<Button>("CodeOpenBtn");
-            _codeNewBtn = _root.Q<Button>("CodeNewBtn");
-            _codeSaveBtn = _root.Q<Button>("CodeSaveBtn");
-            _codeSaveAsBtn = _root.Q<Button>("CodeSaveAsBtn");
-            _codeBuildBtn = _root.Q<Button>("CodeBuildBtn");
-            _codeBuildRunBtn = _root.Q<Button>("CodeBuildRunBtn");
-            _codeBuildAllBtn = _root.Q<Button>("CodeBuildAllBtn");
+            _codeFileMenuBtn = _root.Q<Button>("CodeFileMenuBtn");
+            _codeBuildMenuBtn = _root.Q<Button>("CodeBuildMenuBtn");
             _codeBuildProgressWrap = _root.Q<VisualElement>("CodeBuildProgressWrap");
             _codeBuildProgress = _root.Q<ProgressBar>("CodeBuildProgress");
             _centerTabCircuit = _root.Q<Button>("CenterTabCircuit");
@@ -612,6 +680,11 @@ namespace RobotTwin.UI
             _netEditorSaveBtn = _root.Q<Button>("NetEditorSaveBtn");
             _netEditorCancelBtn = _root.Q<Button>("NetEditorCancelBtn");
             _netEditorErrorLabel = _root.Q<Label>("NetEditorErrorLabel");
+            _wireExportOverlay = _root.Q<VisualElement>("WireExportOverlay");
+            _wireExportProgress = _root.Q<ProgressBar>("WireExportProgress");
+            _wireExportStatus = _root.Q<Label>("WireExportStatus");
+            _helpOverlay = _root.Q<VisualElement>("HelpOverlay");
+            _helpCloseBtn = _root.Q<Button>("HelpCloseBtn");
             if (_netEditorOverlay != null)
             {
                 _netEditorOverlay.RegisterCallback<PointerDownEvent>(evt =>
@@ -625,6 +698,23 @@ namespace RobotTwin.UI
             _netEditorCancelBtn?.RegisterCallback<ClickEvent>(_ => HideNetEditor());
             _netEditorSaveBtn?.RegisterCallback<ClickEvent>(_ => ApplyNetEdits());
             _netEditorAddBtn?.RegisterCallback<ClickEvent>(_ => AddNetEditorRow(null));
+            if (_wireExportOverlay != null)
+            {
+                _wireExportOverlay.style.display = DisplayStyle.None;
+            }
+            if (_helpOverlay != null)
+            {
+                _helpOverlay.style.display = DisplayStyle.None;
+                _helpOverlay.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.target == _helpOverlay)
+                    {
+                        HideHelpOverlay();
+                        evt.StopPropagation();
+                    }
+                });
+            }
+            _helpCloseBtn?.RegisterCallback<ClickEvent>(_ => HideHelpOverlay());
             if (_bottomPanel != null)
             {
                 _bottomPanel.RegisterCallback<GeometryChangedEvent>(evt =>
@@ -641,6 +731,7 @@ namespace RobotTwin.UI
             InitializeCircuit3DPreview();
             Initialize3DInput();
             Initialize3DCameraControls();
+            Initialize3DHelpOverlay();
 
             // Global Drag Events
             _root.RegisterCallback<PointerMoveEvent>(OnGlobalDragMove);
@@ -692,13 +783,8 @@ namespace RobotTwin.UI
             _outputErrorsBtn?.RegisterCallback<ClickEvent>(_ => SetOutputFilter(OutputFilterMode.Errors));
             _outputClearBtn?.RegisterCallback<ClickEvent>(_ => ClearOutputLogs());
             _bottomToggleBtn?.RegisterCallback<ClickEvent>(_ => ToggleBottomPanel());
-            _codeNewBtn?.RegisterCallback<ClickEvent>(_ => CreateNewCodeFile());
-            _codeOpenBtn?.RegisterCallback<ClickEvent>(_ => OpenCodeFileDialog());
-            _codeSaveBtn?.RegisterCallback<ClickEvent>(_ => SaveCodeFile(false));
-            _codeSaveAsBtn?.RegisterCallback<ClickEvent>(_ => SaveCodeFile(true));
-            _codeBuildBtn?.RegisterCallback<ClickEvent>(_ => RunCodeBuild());
-            _codeBuildRunBtn?.RegisterCallback<ClickEvent>(_ => RunCodeBuildAndRun());
-            _codeBuildAllBtn?.RegisterCallback<ClickEvent>(_ => RunBuildAll());
+            _codeFileMenuBtn?.RegisterCallback<ClickEvent>(_ => ShowCodeFileMenu());
+            _codeBuildMenuBtn?.RegisterCallback<ClickEvent>(_ => ShowCodeBuildMenu());
             if (_codeTargetDropdown != null)
             {
                 _codeTargetDropdown.RegisterValueChangedCallback(evt =>
@@ -757,6 +843,7 @@ namespace RobotTwin.UI
             if (_menuDesign != null) _menuDesign.clicked += ShowDesignMenu;
             if (_menuTools != null) _menuTools.clicked += ShowToolsMenu;
             if (_menuRoute != null) _menuRoute.clicked += ShowRouteMenu;
+            if (_menuHelp != null) _menuHelp.clicked += ShowHelpOverlay;
         }
 
         private void ShowFileMenu()
@@ -1073,6 +1160,12 @@ namespace RobotTwin.UI
                 }
             }
 
+            bool netsChanged = !AreNetCollectionsEqual(_currentCircuit.Nets, nextNets);
+            if (netsChanged)
+            {
+                RecordStateForUndo();
+            }
+
             _currentCircuit.Nets = nextNets;
             HideNetEditor();
             PopulateProjectTree();
@@ -1095,6 +1188,42 @@ namespace RobotTwin.UI
                 }
             }
             return nodes;
+        }
+
+        private static bool AreNetCollectionsEqual(List<NetSpec> first, List<NetSpec> second)
+        {
+            var left = NormalizeNetList(first);
+            var right = NormalizeNetList(second);
+            if (left.Count != right.Count) return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (!string.Equals(left[i].Id, right[i].Id, StringComparison.OrdinalIgnoreCase)) return false;
+                var leftNodes = left[i].Nodes;
+                var rightNodes = right[i].Nodes;
+                if (leftNodes.Count != rightNodes.Count) return false;
+                for (int j = 0; j < leftNodes.Count; j++)
+                {
+                    if (!string.Equals(leftNodes[j], rightNodes[j], StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private static List<(string Id, List<string> Nodes)> NormalizeNetList(List<NetSpec> nets)
+        {
+            return (nets ?? Enumerable.Empty<NetSpec>())
+                .Select(net =>
+                {
+                    var nodes = net?.Nodes != null
+                        ? net.Nodes.OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToList()
+                        : new List<string>();
+                    return (Id: net?.Id ?? string.Empty, Nodes: nodes);
+                })
+                .OrderBy(entry => entry.Id, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private void SetNetEditorError(string message)
@@ -1177,12 +1306,18 @@ namespace RobotTwin.UI
         {
             if (_root == null || _menuEdit == null) return;
             var menu = new GenericDropdownMenu();
+            menu.AddItem("Undo", false, Undo);
+            menu.AddItem("Redo", false, Redo);
+            menu.AddSeparator(string.Empty);
             menu.AddItem("Select Tool", false, () => SetTool(ToolMode.Select));
             menu.AddItem("Move Tool", false, () => SetTool(ToolMode.Move));
             menu.AddItem("Wire Tool", false, () => SetTool(ToolMode.Wire));
             menu.AddItem("Text Tool", false, () => SetTool(ToolMode.Text));
             menu.AddSeparator(string.Empty);
-            menu.AddItem("Delete Selected", false, () => DeleteSelectedComponent());
+            menu.AddItem("Copy", false, CopySelectionToClipboard);
+            menu.AddItem("Paste", false, PasteClipboard);
+            menu.AddSeparator(string.Empty);
+            menu.AddItem("Delete Selected", false, () => DeleteSelectedComponents());
             menu.DropDown(_menuEdit.worldBound, _root, DropdownMenuSizeMode.Auto);
         }
 
@@ -1193,6 +1328,8 @@ namespace RobotTwin.UI
             menu.AddItem("Toggle Left Panel", false, ToggleLeftPanel);
             menu.AddItem("Toggle Right Panel", false, ToggleRightPanel);
             menu.AddItem("Toggle Bottom Panel", false, ToggleBottomPanelVisibility);
+            menu.AddSeparator(string.Empty);
+            menu.AddItem("Show Grid", _gridVisible, ToggleGridVisibility);
             menu.AddSeparator(string.Empty);
             menu.AddItem("Reset Panel Layout", false, ResetPanelLayout);
             menu.DropDown(_menuView.worldBound, _root, DropdownMenuSizeMode.Auto);
@@ -1211,6 +1348,11 @@ namespace RobotTwin.UI
             if (_root == null || _menuTools == null) return;
             var menu = new GenericDropdownMenu();
             menu.AddItem("Simulate", false, StartRunMode);
+            menu.AddItem("Net Editor", false, ShowNetEditor);
+            menu.AddSeparator(string.Empty);
+            menu.AddItem("Auto Layout Selection", false, AutoLayoutSelection);
+            menu.AddItem("Auto Layout All", false, AutoLayoutAll);
+            menu.AddItem("Select Connected", false, SelectConnectedComponents);
             menu.DropDown(_menuTools.worldBound, _root, DropdownMenuSizeMode.Auto);
         }
 
@@ -1219,7 +1361,40 @@ namespace RobotTwin.UI
             if (_root == null || _menuRoute == null) return;
             var menu = new GenericDropdownMenu();
             menu.AddItem("Wire Tool", false, () => SetTool(ToolMode.Wire));
+            menu.AddSeparator(string.Empty);
+            menu.AddItem("Rebuild Wires", false, RebuildWires);
+            menu.AddItem("Wire Report", false, LogWireReport);
+            menu.AddItem("Prune Dangling Nets", false, PruneDanglingNets);
+            menu.AddItem("Highlight Floating Pins", _showFloatingPins, ToggleFloatingPinsHighlight);
+            menu.AddSeparator(string.Empty);
+            menu.AddItem("Export Wire Matrix", false, ExportWireMatrix);
             menu.DropDown(_menuRoute.worldBound, _root, DropdownMenuSizeMode.Auto);
+        }
+
+        private void ShowHelpOverlay()
+        {
+            if (_helpOverlay == null) return;
+            _helpOverlay.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideHelpOverlay()
+        {
+            if (_helpOverlay == null) return;
+            _helpOverlay.style.display = DisplayStyle.None;
+        }
+
+        private void ToggleGridVisibility()
+        {
+            SetGridVisibility(!_gridVisible);
+        }
+
+        private void SetGridVisibility(bool visible)
+        {
+            _gridVisible = visible;
+            if (_gridLayer != null)
+            {
+                _gridLayer.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            }
         }
 
         private void CreateNewProject()
@@ -1236,10 +1411,11 @@ namespace RobotTwin.UI
             NormalizeCircuit();
             RebuildPinUsage();
             RefreshCanvas();
-            ResetCanvasView();
+            RequestResetView();
             PopulateProjectTree();
             UpdateErrorCount();
             RequestCircuit3DRebuild();
+            ResetHistory();
             SessionManager.Instance?.StartSession(_currentCircuit);
             SetCenterPanelMode(CenterPanelMode.Circuit);
         }
@@ -1304,10 +1480,11 @@ namespace RobotTwin.UI
             NormalizeCircuit();
             RebuildPinUsage();
             RefreshCanvas();
-            ResetCanvasView();
+            RequestResetView();
             PopulateProjectTree();
             UpdateErrorCount();
             RequestCircuit3DRebuild();
+            ResetHistory();
             SessionManager.Instance?.StartSession(project, path);
             SetCenterPanelMode(CenterPanelMode.Circuit);
         }
@@ -1482,6 +1659,52 @@ namespace RobotTwin.UI
             }
 
             Apply3DCameraSettings();
+            if (_circuit3DControlsToggle != null)
+            {
+                Set3DControlsLayoutCollapsed(_circuit3DControlsCollapsed);
+            }
+        }
+
+        private void Initialize3DHelpOverlay()
+        {
+            if (_circuit3DHelpTooltip != null)
+            {
+                _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+            }
+            if (_circuit3DHelpIcon == null || _circuit3DHelpTooltip == null) return;
+            _circuit3DHelpIcon.RegisterCallback<ClickEvent>(evt =>
+            {
+                bool isVisible = _circuit3DHelpTooltip.style.display == DisplayStyle.Flex;
+                _circuit3DHelpTooltip.style.display = isVisible ? DisplayStyle.None : DisplayStyle.Flex;
+                evt.StopPropagation();
+            });
+            if (_root != null)
+            {
+                _root.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (Is3DHelpPointerTarget(evt)) return;
+                    if (_circuit3DHelpTooltip?.style.display == DisplayStyle.Flex)
+                    {
+                        _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+                    }
+                }, TrickleDown.TrickleDown);
+            }
+        }
+
+        private bool Is3DHelpPointerTarget(PointerDownEvent evt)
+        {
+            if (evt.target is VisualElement target)
+            {
+                if (_circuit3DHelpIcon != null && (_circuit3DHelpIcon == target || _circuit3DHelpIcon.Contains(target)))
+                {
+                    return true;
+                }
+                if (_circuit3DHelpTooltip != null && (_circuit3DHelpTooltip == target || _circuit3DHelpTooltip.Contains(target)))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void Apply3DCameraSettings()
@@ -1494,6 +1717,28 @@ namespace RobotTwin.UI
             if (_circuit3DPerspectiveToggle != null)
             {
                 _circuit3DRenderer.SetPerspective(_circuit3DPerspectiveToggle.value);
+            }
+        }
+
+        private void Toggle3DControlsLayout()
+        {
+            Set3DControlsLayoutCollapsed(!_circuit3DControlsCollapsed);
+        }
+
+        private void Set3DControlsLayoutCollapsed(bool collapsed)
+        {
+            _circuit3DControlsCollapsed = collapsed;
+            if (_circuit3DControlsBody != null)
+            {
+                _circuit3DControlsBody.style.display = collapsed ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+            if (_circuit3DControls != null)
+            {
+                _circuit3DControls.EnableInClassList("controls-collapsed", collapsed);
+            }
+            if (_circuit3DControlsToggle != null)
+            {
+                _circuit3DControlsToggle.text = collapsed ? "Show" : "Hide";
             }
         }
 
@@ -1525,11 +1770,19 @@ namespace RobotTwin.UI
 
             if (_circuit3DRenderer.TargetTexture == null) return;
 
+            _circuit3DRenderer.ClearAnchorCache();
             _circuit3DRenderer.Build(_currentCircuit);
             _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
             var label = _circuit3DView.Q<Label>(className: "circuit-3d-label");
             if (label != null) label.style.display = DisplayStyle.None;
             _circuit3DDirty = false;
+        }
+
+        private void ForceRebuildCircuit3DPreview()
+        {
+            _circuit3DDirty = true;
+            if (_centerMode != CenterPanelMode.Preview3D) return;
+            RebuildCircuit3DPreview();
         }
 
         private void InitializeSession()
@@ -1554,7 +1807,7 @@ namespace RobotTwin.UI
             NormalizeCircuit();
             RebuildPinUsage();
             RefreshCanvas();
-            ResetCanvasView();
+            RequestResetView();
             PopulateProjectTree();
             UpdateErrorCount();
         }
@@ -1759,6 +2012,49 @@ namespace RobotTwin.UI
             {
                 LoadCodeFile(path);
             }
+        }
+
+        private void OpenCodeFolder()
+        {
+            string root = GetCodeRoot(_codeTargetComponentId);
+            if (string.IsNullOrWhiteSpace(root)) return;
+            Directory.CreateDirectory(root);
+            try
+            {
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = root,
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CodeStudio] Failed to open code folder: {ex.Message}");
+            }
+        }
+
+        private void ShowCodeFileMenu()
+        {
+            if (_root == null || _codeFileMenuBtn == null) return;
+            var menu = new GenericDropdownMenu();
+            menu.AddItem("New File", false, CreateNewCodeFile);
+            menu.AddItem("Open File", false, OpenCodeFileDialog);
+            menu.AddItem("Open Folder", false, OpenCodeFolder);
+            menu.AddSeparator(string.Empty);
+            menu.AddItem("Save", false, () => SaveCodeFile(false));
+            menu.AddItem("Save As", false, () => SaveCodeFile(true));
+            menu.DropDown(_codeFileMenuBtn.worldBound, _root, DropdownMenuSizeMode.Auto);
+        }
+
+        private void ShowCodeBuildMenu()
+        {
+            if (_root == null || _codeBuildMenuBtn == null) return;
+            var menu = new GenericDropdownMenu();
+            menu.AddItem("Build", false, RunCodeBuild);
+            menu.AddItem("Build + Run", false, RunCodeBuildAndRun);
+            menu.AddItem("Build All", false, RunBuildAll);
+            menu.DropDown(_codeBuildMenuBtn.worldBound, _root, DropdownMenuSizeMode.Auto);
         }
 
         private void LoadCodeFile(string path)
@@ -2241,9 +2537,7 @@ namespace RobotTwin.UI
 
         private void SetBuildButtonsEnabled(bool enabled)
         {
-            _codeBuildBtn?.SetEnabled(enabled);
-            _codeBuildRunBtn?.SetEnabled(enabled);
-            _codeBuildAllBtn?.SetEnabled(enabled);
+            _codeBuildMenuBtn?.SetEnabled(enabled);
         }
 
         private IEnumerator HideBuildProgressAfterDelay(int token, float delaySeconds)
@@ -2994,6 +3288,7 @@ namespace RobotTwin.UI
                 _gridLayer.style.bottom = 0;
                 _canvasView.Insert(0, _gridLayer);
             }
+            SetGridVisibility(_gridVisible);
 
             UpdateBoardLayout();
         }
@@ -3022,6 +3317,13 @@ namespace RobotTwin.UI
                 _gridLayer.SetTransform(_canvasPan, _canvasZoom, GetBoardOrigin());
             }
             UpdateWireLayer();
+            if (_resetViewOnNextLayout)
+            {
+                ResetCanvasView();
+                _resetViewOnNextLayout = false;
+                _pendingResetView = false;
+            }
+            TryApplyPendingResetView();
         }
 
         private void EnsureWireLayer()
@@ -3135,6 +3437,409 @@ namespace RobotTwin.UI
             _wirePreviewLayer?.BringToFront();
         }
 
+        private void AutoLayoutSelection()
+        {
+            if (_currentCircuit?.Components == null) return;
+            var targets = _currentCircuit.Components
+                .Where(comp => comp != null && _selectedComponentIds.Contains(comp.Id))
+                .ToList();
+            if (targets.Count == 0)
+            {
+                LogNoStack(LogType.Log, "[Layout] No selected components to layout.");
+                return;
+            }
+            AutoLayoutComponents(targets);
+        }
+
+        private void AutoLayoutAll()
+        {
+            if (_currentCircuit?.Components == null) return;
+            var targets = _currentCircuit.Components.Where(comp => comp != null).ToList();
+            if (targets.Count == 0) return;
+            AutoLayoutComponents(targets);
+        }
+
+        private void AutoLayoutComponents(List<ComponentSpec> components)
+        {
+            if (components == null || components.Count == 0) return;
+            RecordStateForUndo();
+            var layoutCenter = GetAutoLayoutCenter();
+            var gridSize = GetAutoLayoutGridSize(components);
+            var origin = layoutCenter - gridSize * 0.5f;
+            ApplyAutoLayoutWithVisuals(components, origin);
+            RebuildWires();
+            UpdateErrorCount();
+            PopulateProjectTree();
+            RequestCircuit3DRebuild();
+            if (_selectedComponent != null && _selectedComponentIds.Contains(_selectedComponent.Id))
+            {
+                UpdateTransformFields(GetComponentPosition(_selectedComponent.Id));
+            }
+        }
+
+        private void ApplyAutoLayoutWithVisuals(List<ComponentSpec> components, Vector2 origin)
+        {
+            if (components == null || components.Count == 0) return;
+            float maxW = 0f;
+            float maxH = 0f;
+            foreach (var comp in components)
+            {
+                var size = GetComponentSize(string.IsNullOrWhiteSpace(comp.Type) ? string.Empty : comp.Type);
+                maxW = Mathf.Max(maxW, size.x);
+                maxH = Mathf.Max(maxH, size.y);
+            }
+
+            float cellW = maxW + AutoLayoutSpacing;
+            float cellH = maxH + AutoLayoutSpacing;
+            int cols = Mathf.CeilToInt(Mathf.Sqrt(components.Count));
+
+            for (int i = 0; i < components.Count; i++)
+            {
+                int col = i % cols;
+                int row = i / cols;
+                var comp = components[i];
+                var size = GetComponentSize(string.IsNullOrWhiteSpace(comp.Type) ? string.Empty : comp.Type);
+                var pos = new Vector2(origin.x + col * cellW, origin.y + row * cellH);
+                pos.x = Mathf.Round(pos.x / GridSnap) * GridSnap;
+                pos.y = Mathf.Round(pos.y / GridSnap) * GridSnap;
+                pos = ClampToBoard(pos, size);
+                SetComponentPosition(comp, pos, true);
+                if (_componentVisuals.TryGetValue(comp.Id, out var visual))
+                {
+                    visual.style.left = pos.x;
+                    visual.style.top = pos.y;
+                }
+            }
+        }
+
+        private void SelectConnectedComponents()
+        {
+            if (_currentCircuit?.Nets == null || _currentCircuit.Components == null) return;
+            if (_selectedComponentIds.Count == 0) return;
+
+            var connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var net in _currentCircuit.Nets)
+            {
+                if (net?.Nodes == null || net.Nodes.Count == 0) continue;
+                bool touchesSelection = false;
+                foreach (var node in net.Nodes)
+                {
+                    int dotIndex = node.IndexOf('.');
+                    if (dotIndex <= 0) continue;
+                    string compId = node.Substring(0, dotIndex);
+                    if (_selectedComponentIds.Contains(compId))
+                    {
+                        touchesSelection = true;
+                        break;
+                    }
+                }
+
+                if (!touchesSelection) continue;
+                foreach (var node in net.Nodes)
+                {
+                    int dotIndex = node.IndexOf('.');
+                    if (dotIndex <= 0) continue;
+                    connected.Add(node.Substring(0, dotIndex));
+                }
+            }
+
+            if (connected.Count == 0)
+            {
+                LogNoStack(LogType.Log, "[Selection] No connected components found.");
+                return;
+            }
+
+            ClearSelection();
+            ResetPropertyBindings();
+            bool primarySet = false;
+            foreach (var compId in connected)
+            {
+                var spec = _currentCircuit.Components.FirstOrDefault(c => c != null && string.Equals(c.Id, compId, StringComparison.OrdinalIgnoreCase));
+                if (spec == null) continue;
+                if (!_componentVisuals.TryGetValue(spec.Id, out var visual) || visual == null) continue;
+                var item = ResolveCatalogItem(spec);
+                AddComponentToSelection(visual, spec, item, !primarySet);
+                primarySet = true;
+            }
+        }
+
+        private void CopySelectionToClipboard()
+        {
+            if (_currentCircuit?.Components == null) return;
+            if (_selectedComponentIds.Count == 0)
+            {
+                LogNoStack(LogType.Log, "[Clipboard] No selection to copy.");
+                return;
+            }
+
+            var selected = _currentCircuit.Components
+                .Where(comp => comp != null && _selectedComponentIds.Contains(comp.Id))
+                .ToList();
+            if (selected.Count == 0)
+            {
+                LogNoStack(LogType.Log, "[Clipboard] No selection to copy.");
+                return;
+            }
+
+            var clipboard = new CircuitClipboard();
+            foreach (var comp in selected)
+            {
+                var clone = CloneComponent(comp);
+                if (clone == null) continue;
+                clipboard.Components.Add(clone);
+                clipboard.Positions[comp.Id] = GetComponentPosition(comp.Id);
+            }
+            var bounds = GetSelectionBounds(selected);
+            clipboard.Center = bounds.center;
+
+            if (_currentCircuit.Nets != null)
+            {
+                foreach (var net in _currentCircuit.Nets)
+                {
+                    if (net?.Nodes == null || net.Nodes.Count == 0) continue;
+                    var nodes = net.Nodes.Where(IsNodeInSelection).ToList();
+                    if (nodes.Count < 2) continue;
+                    clipboard.Nets.Add(new ClipboardNet
+                    {
+                        Id = net.Id,
+                        Nodes = nodes
+                    });
+                }
+            }
+
+            _circuitClipboard = clipboard;
+            LogNoStack(LogType.Log,
+                $"[Clipboard] Copied {clipboard.Components.Count} components, {clipboard.Nets.Count} nets.");
+        }
+
+        private void PasteClipboard()
+        {
+            if (_currentCircuit == null) return;
+            if (_circuitClipboard == null || _circuitClipboard.Components.Count == 0)
+            {
+                LogNoStack(LogType.Log, "[Clipboard] Clipboard is empty.");
+                return;
+            }
+
+            RecordStateForUndo();
+            if (_currentCircuit.Components == null) _currentCircuit.Components = new List<ComponentSpec>();
+            if (_currentCircuit.Nets == null) _currentCircuit.Nets = new List<NetSpec>();
+
+            var existingIds = new HashSet<string>(
+                _currentCircuit.Components.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Id))
+                    .Select(c => c.Id),
+                StringComparer.OrdinalIgnoreCase);
+
+            var idMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var newComponents = new List<ComponentSpec>();
+
+            Vector2 anchor = GetPasteAnchor();
+            Vector2 offset = anchor - _circuitClipboard.Center;
+
+            foreach (var comp in _circuitClipboard.Components)
+            {
+                if (comp == null) continue;
+                var clone = CloneComponent(comp);
+                if (clone == null) continue;
+
+                string newId = GetUniqueComponentId(comp.Id, existingIds);
+                clone.Id = newId;
+                EnsureComponentProperties(clone);
+
+                var item = ResolveCatalogItem(clone);
+                var size = GetComponentSize(string.IsNullOrWhiteSpace(clone.Type) ? string.Empty : clone.Type);
+
+                Vector2 pos = Vector2.zero;
+                if (_circuitClipboard.Positions.TryGetValue(comp.Id, out var storedPos))
+                {
+                    pos = storedPos;
+                }
+                pos += offset;
+                pos.x = Mathf.Round(pos.x / GridSnap) * GridSnap;
+                pos.y = Mathf.Round(pos.y / GridSnap) * GridSnap;
+                if (_constrainComponentsToBoard)
+                {
+                    pos = ClampToBoard(pos, size);
+                }
+
+                _currentCircuit.Components.Add(clone);
+                existingIds.Add(newId);
+                idMap[comp.Id] = newId;
+
+                CreateComponentVisuals(clone, item, pos);
+                newComponents.Add(clone);
+            }
+
+            int createdNets = 0;
+            foreach (var net in _circuitClipboard.Nets)
+            {
+                if (net?.Nodes == null || net.Nodes.Count == 0) continue;
+                var mappedNodes = new List<string>();
+                foreach (var node in net.Nodes)
+                {
+                    string oldCompId = GetComponentIdFromNode(node);
+                    if (string.IsNullOrWhiteSpace(oldCompId)) continue;
+                    if (!idMap.TryGetValue(oldCompId, out var newCompId)) continue;
+                    string pinName = node.Substring(oldCompId.Length + 1);
+                    mappedNodes.Add($"{newCompId}.{pinName}");
+                }
+                if (mappedNodes.Count < 2) continue;
+
+                string baseName = string.IsNullOrWhiteSpace(net.Id) ? "NET_COPY" : $"{net.Id}_COPY";
+                if (!IsValidNetId(baseName))
+                {
+                    baseName = "NET_COPY";
+                }
+                string newNetId = GetUniqueNetName(baseName);
+                _currentCircuit.Nets.Add(new NetSpec
+                {
+                    Id = newNetId,
+                    Nodes = mappedNodes
+                });
+                createdNets++;
+            }
+
+            RebuildPinUsage();
+            RebuildWires();
+            PopulateProjectTree();
+            UpdateErrorCount();
+            RequestCircuit3DRebuild();
+
+            ClearSelection();
+            ResetPropertyBindings();
+            bool primarySet = false;
+            foreach (var comp in newComponents)
+            {
+                if (!_componentVisuals.TryGetValue(comp.Id, out var visual) || visual == null) continue;
+                var item = ResolveCatalogItem(comp);
+                AddComponentToSelection(visual, comp, item, !primarySet);
+                primarySet = true;
+            }
+            if (_selectedComponent != null)
+            {
+                UpdateTransformFields(GetComponentPosition(_selectedComponent.Id));
+            }
+
+            LogNoStack(LogType.Log, $"[Clipboard] Pasted {newComponents.Count} components, {createdNets} nets.");
+        }
+
+        private Vector2 GetPasteAnchor()
+        {
+            if (_canvasView != null && _canvasView.worldBound.Contains(_lastCanvasWorldPos))
+            {
+                return GetBoardPositionAt(_lastCanvasWorldPos);
+            }
+            return GetCanvasCenter();
+        }
+
+        private Rect GetSelectionBounds(List<ComponentSpec> components)
+        {
+            if (components == null || components.Count == 0)
+            {
+                return new Rect(Vector2.zero, Vector2.zero);
+            }
+
+            float minX = float.MaxValue;
+            float minY = float.MaxValue;
+            float maxX = float.MinValue;
+            float maxY = float.MinValue;
+
+            foreach (var comp in components)
+            {
+                if (comp == null) continue;
+                var size = GetComponentSize(string.IsNullOrWhiteSpace(comp.Type) ? string.Empty : comp.Type);
+                var pos = GetComponentPosition(comp.Id);
+                minX = Mathf.Min(minX, pos.x);
+                minY = Mathf.Min(minY, pos.y);
+                maxX = Mathf.Max(maxX, pos.x + size.x);
+                maxY = Mathf.Max(maxY, pos.y + size.y);
+            }
+
+            if (minX == float.MaxValue || minY == float.MaxValue ||
+                maxX == float.MinValue || maxY == float.MinValue)
+            {
+                return new Rect(Vector2.zero, Vector2.zero);
+            }
+
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
+        }
+
+        private bool IsNodeInSelection(string node)
+        {
+            string compId = GetComponentIdFromNode(node);
+            return !string.IsNullOrWhiteSpace(compId) && _selectedComponentIds.Contains(compId);
+        }
+
+        private static string GetComponentIdFromNode(string node)
+        {
+            if (string.IsNullOrWhiteSpace(node)) return string.Empty;
+            int dotIndex = node.IndexOf('.');
+            if (dotIndex <= 0) return string.Empty;
+            return node.Substring(0, dotIndex);
+        }
+
+        private static string GetUniqueComponentId(string baseId, HashSet<string> existingIds)
+        {
+            string safeBase = string.IsNullOrWhiteSpace(baseId) ? "COMP" : baseId;
+            string candidate = $"{safeBase}_COPY";
+            int index = 1;
+            while (existingIds.Contains(candidate))
+            {
+                candidate = $"{safeBase}_COPY_{index++}";
+            }
+            return candidate;
+        }
+
+        private void RebuildWires()
+        {
+            UpdateWireLayer();
+            LogNoStack(LogType.Log, "[Wiring] Wires rebuilt.");
+        }
+
+        private void ToggleFloatingPinsHighlight()
+        {
+            _showFloatingPins = !_showFloatingPins;
+            UpdateWireLayer();
+            string state = _showFloatingPins ? "enabled" : "disabled";
+            LogNoStack(LogType.Log, $"[Wiring] Floating pin highlight {state}.");
+        }
+
+        private void LogWireReport()
+        {
+            int netCount = _currentCircuit?.Nets?.Count ?? 0;
+            int nodeCount = _currentCircuit?.Nets?.Where(net => net?.Nodes != null).Sum(net => net.Nodes.Count) ?? 0;
+            int segmentCount = _wireSegments.Count;
+            float totalLength = 0f;
+            foreach (var segment in _wireSegments)
+            {
+                totalLength += Vector2.Distance(segment.Start, segment.End);
+            }
+            LogNoStack(LogType.Log,
+                $"[Wiring] Nets:{netCount} Nodes:{nodeCount} Segments:{segmentCount} TotalLen:{totalLength:F1}mm");
+        }
+
+        private void PruneDanglingNets()
+        {
+            if (_currentCircuit?.Nets == null) return;
+            int before = _currentCircuit.Nets.Count;
+            var trimmed = _currentCircuit.Nets.Where(net => net?.Nodes != null && net.Nodes.Count >= 2).ToList();
+            int removed = before - trimmed.Count;
+            if (removed <= 0)
+            {
+                LogNoStack(LogType.Log, "[Wiring] No dangling nets to prune.");
+                return;
+            }
+
+            RecordStateForUndo();
+            _currentCircuit.Nets = trimmed;
+            RebuildPinUsage();
+            UpdateWireLayer();
+            UpdateErrorCount();
+            PopulateProjectTree();
+            RequestCircuit3DRebuild();
+            LogNoStack(LogType.Log, $"[Wiring] Pruned {removed} dangling net(s).");
+        }
+
         public void ExportWireMatrix()
         {
             if (_lastRouter == null)
@@ -3143,28 +3848,99 @@ namespace RobotTwin.UI
                 return;
             }
 
-            string matrix = _lastRouter.GetDebugMatrix();
-            Debug.Log(matrix);
+            if (_wireExportRoutine != null)
+            {
+                StopCoroutine(_wireExportRoutine);
+                _wireExportRoutine = null;
+            }
+            _wireExportRoutine = StartCoroutine(ExportWireMatrixRoutine());
+        }
 
-            // Also write to a file for easier viewing if it's large
+        private IEnumerator ExportWireMatrixRoutine()
+        {
+            ShowWireExportProgress("Exporting wire matrix...");
+            string path = Path.Combine(Application.persistentDataPath, "wire_matrix_debug.txt");
+            var router = _lastRouter;
+            var task = Task.Run(() =>
+            {
+                string matrix = router.GetDebugMatrix();
+                File.WriteAllText(path, matrix);
+                return matrix;
+            });
+
+            float timer = 0f;
+            while (!task.IsCompleted)
+            {
+                timer += Time.unscaledDeltaTime;
+                if (_wireExportProgress != null)
+                {
+                    _wireExportProgress.value = Mathf.PingPong(timer * 60f, 100f);
+                }
+                yield return null;
+            }
+
+            _wireExportRoutine = null;
+            HideWireExportProgress();
+
+            string matrix = null;
             try
             {
-                string path = Path.Combine(Application.persistentDataPath, "wire_matrix_debug.txt");
-                File.WriteAllText(path, matrix);
-                Debug.Log($"Wire matrix saved to: {path}");
+                matrix = task.Result;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Failed to save wire matrix to file: {ex.Message}");
+                Debug.LogError($"Failed to save wire matrix to file: {ex.GetBaseException().Message}");
+                yield break;
+            }
+
+            if (string.IsNullOrEmpty(matrix))
+            {
+                Debug.LogWarning("Wire matrix export returned no data.");
+                yield break;
+            }
+
+            if (matrix.Length <= WireMatrixLogLimit)
+            {
+                Debug.Log(matrix);
+            }
+            Debug.Log($"Wire matrix saved to: {path}");
+        }
+
+        private void ShowWireExportProgress(string status)
+        {
+            if (_wireExportOverlay != null)
+            {
+                _wireExportOverlay.style.display = DisplayStyle.Flex;
+            }
+            if (_wireExportStatus != null)
+            {
+                _wireExportStatus.text = status ?? string.Empty;
+            }
+            if (_wireExportProgress != null)
+            {
+                _wireExportProgress.title = "Exporting...";
+                _wireExportProgress.value = 0f;
+            }
+        }
+
+        private void HideWireExportProgress()
+        {
+            if (_wireExportOverlay != null)
+            {
+                _wireExportOverlay.style.display = DisplayStyle.None;
             }
         }
 
         private void UpdatePinDotColors(Dictionary<string, int> paletteMap)
         {
             var defaultColor = new Color(0.22f, 0.75f, 0.95f, 0.95f);
-            foreach (var pin in _pinVisuals.Values)
+            var floatingColor = new Color(0.98f, 0.72f, 0.18f, 0.95f);
+            foreach (var kvp in _pinVisuals)
             {
-                if (pin != null) pin.style.backgroundColor = defaultColor;
+                var pin = kvp.Value;
+                if (pin == null) continue;
+                bool floating = _showFloatingPins && !IsPinConnected(kvp.Key);
+                pin.style.backgroundColor = floating ? floatingColor : defaultColor;
             }
 
             if (_currentCircuit?.Nets == null) return;
@@ -3753,41 +4529,87 @@ namespace RobotTwin.UI
             var ordered = netIds
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(id => conflicts != null && conflicts.TryGetValue(id, out var neighbors) ? neighbors.Count : 0)
+                .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             var paletteMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var used = new HashSet<int>();
             foreach (var netId in ordered)
             {
                 int start = (int)(StableHash(netId) % (uint)WirePalette.Length);
                 int chosen = start;
+                float bestScore = float.NegativeInfinity;
+                bool hasAssignedNeighbor = HasAssignedNeighbor(netId, paletteMap, conflicts);
+
                 for (int i = 0; i < WirePalette.Length; i++)
                 {
                     int idx = (start + i) % WirePalette.Length;
-                    if (used.Contains(idx)) continue;
-                    if (!HasColorConflict(netId, idx, paletteMap, conflicts))
+                    if (HasColorConflict(netId, idx, paletteMap, conflicts)) continue;
+                    float score = hasAssignedNeighbor ? GetPaletteContrastScore(netId, idx, paletteMap, conflicts) : 0f;
+                    if (score > bestScore)
                     {
+                        bestScore = score;
                         chosen = idx;
-                        break;
                     }
                 }
-                if (used.Contains(chosen))
+
+                if (bestScore == float.NegativeInfinity)
                 {
                     for (int i = 0; i < WirePalette.Length; i++)
                     {
                         int idx = (start + i) % WirePalette.Length;
-                        if (!HasColorConflict(netId, idx, paletteMap, conflicts))
+                        float score = hasAssignedNeighbor ? GetPaletteContrastScore(netId, idx, paletteMap, conflicts) : 0f;
+                        if (score > bestScore)
                         {
+                            bestScore = score;
                             chosen = idx;
-                            break;
                         }
                     }
                 }
+
                 paletteMap[netId] = chosen;
-                used.Add(chosen);
             }
             return paletteMap;
+        }
+
+        private static bool HasAssignedNeighbor(string netId, Dictionary<string, int> paletteMap, Dictionary<string, HashSet<string>> conflicts)
+        {
+            if (paletteMap == null || conflicts == null) return false;
+            if (!conflicts.TryGetValue(netId, out var neighbors) || neighbors.Count == 0) return false;
+            foreach (var neighbor in neighbors)
+            {
+                if (paletteMap.ContainsKey(neighbor)) return true;
+            }
+            return false;
+        }
+
+        private float GetPaletteContrastScore(string netId, int paletteIndex, Dictionary<string, int> paletteMap, Dictionary<string, HashSet<string>> conflicts)
+        {
+            if (paletteMap == null || conflicts == null) return 0f;
+            if (!conflicts.TryGetValue(netId, out var neighbors) || neighbors.Count == 0) return 0f;
+
+            float minDistance = float.PositiveInfinity;
+            bool hasNeighbor = false;
+            foreach (var neighbor in neighbors)
+            {
+                if (!paletteMap.TryGetValue(neighbor, out var neighborIndex)) continue;
+                hasNeighbor = true;
+                float distance = GetColorDistance(WirePalette[paletteIndex], WirePalette[neighborIndex]);
+                if (distance < minDistance) minDistance = distance;
+            }
+
+            return hasNeighbor ? minDistance : 0f;
+        }
+
+        private static float GetColorDistance(Color a, Color b)
+        {
+            Color.RGBToHSV(a, out var h1, out var s1, out var v1);
+            Color.RGBToHSV(b, out var h2, out var s2, out var v2);
+            float hue = Mathf.Abs(h1 - h2);
+            hue = Mathf.Min(hue, 1f - hue);
+            float sat = Mathf.Abs(s1 - s2);
+            float val = Mathf.Abs(v1 - v2);
+            return (hue * 0.7f) + (sat * 0.2f) + (val * 0.1f);
         }
 
         private bool HasColorConflict(string netId, int paletteIndex, Dictionary<string, int> paletteMap, Dictionary<string, HashSet<string>> conflicts)
@@ -3859,7 +4681,11 @@ namespace RobotTwin.UI
                 comp.Properties.TryGetValue("posX", out var xRaw) &&
                 comp.Properties.TryGetValue("posY", out var yRaw))
             {
-                if (float.TryParse(xRaw, out var x) && float.TryParse(yRaw, out var y)) return new Vector2(x, y);
+                if (float.TryParse(xRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) &&
+                    float.TryParse(yRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+                {
+                    return new Vector2(x, y);
+                }
             }
             return Vector2.zero;
         }
@@ -3870,8 +4696,8 @@ namespace RobotTwin.UI
             if (comp == null || comp.Properties == null) return false;
             if (comp.Properties.TryGetValue("posX", out var xRaw) &&
                 comp.Properties.TryGetValue("posY", out var yRaw) &&
-                float.TryParse(xRaw, out var x) &&
-                float.TryParse(yRaw, out var y))
+                float.TryParse(xRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) &&
+                float.TryParse(yRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
             {
                 pos = new Vector2(x, y);
                 return true;
@@ -3879,7 +4705,7 @@ namespace RobotTwin.UI
             return false;
         }
 
-        private void SetComponentPosition(ComponentSpec spec, Vector2 pos)
+        private void SetComponentPosition(ComponentSpec spec, Vector2 pos, bool suppressRebuild = false)
         {
             EnsureComponentProperties(spec);
             var size = GetComponentSize(string.IsNullOrWhiteSpace(spec.Type) ? string.Empty : spec.Type);
@@ -3890,7 +4716,10 @@ namespace RobotTwin.UI
             spec.Properties["sizeX"] = size.x.ToString("F2", CultureInfo.InvariantCulture);
             spec.Properties["sizeY"] = size.y.ToString("F2", CultureInfo.InvariantCulture);
             _componentPositions[spec.Id] = pos;
-            RequestCircuit3DRebuild();
+            if (!suppressRebuild)
+            {
+                RequestCircuit3DRebuild();
+            }
         }
 
         private void EnsureComponentProperties(ComponentSpec spec)
@@ -3948,8 +4777,8 @@ namespace RobotTwin.UI
                 }
             }
 
-            float maxXFallback = Mathf.Max(0f, ViewportSize.x - size.x);
-            float maxYFallback = Mathf.Max(0f, ViewportSize.y - size.y);
+            float maxXFallback = Mathf.Max(0f, BoardWorldWidth - size.x);
+            float maxYFallback = Mathf.Max(0f, BoardWorldHeight - size.y);
             float clampX = Mathf.Clamp(pos.x, 0f, maxXFallback);
             float clampY = Mathf.Clamp(pos.y, 0f, maxYFallback);
             return new Vector2(clampX, clampY);
@@ -5128,7 +5957,7 @@ namespace RobotTwin.UI
             if (comp == null || _currentCircuit == null) return;
             if (_selectedComponent != null && _selectedComponent.Id == comp.Id)
             {
-                DeleteSelectedComponent();
+                DeleteSelectedComponents();
                 return;
             }
 
@@ -5479,33 +6308,41 @@ namespace RobotTwin.UI
             int warnCount = issues.Count(i => i.Severity == DrcSeverity.Warning);
             if (errorCount == 0 && warnCount == 0)
             {
-                Debug.Log("[CircuitStudio] DRC PASS");
+                LogNoStack(LogType.Log, "[CircuitStudio] DRC PASS");
             }
             else if (errorCount == 0)
             {
-                Debug.Log($"[CircuitStudio] DRC PASS ({warnCount} warnings)");
+                LogNoStack(LogType.Log, $"[CircuitStudio] DRC PASS ({warnCount} warnings)");
             }
             else
             {
-                Debug.Log($"[CircuitStudio] DRC FAIL ({errorCount} errors, {warnCount} warnings)");
+                LogNoStack(LogType.Log, $"[CircuitStudio] DRC FAIL ({errorCount} errors, {warnCount} warnings)");
             }
             foreach (var issue in issues)
             {
                 string prefix = $"[CircuitStudio] {issue.Code} {issue.Message}";
                 if (issue.Severity == DrcSeverity.Error)
                 {
-                    Debug.LogError(prefix);
+                    LogNoStack(LogType.Error, prefix);
                 }
                 else if (issue.Severity == DrcSeverity.Warning)
                 {
-                    Debug.LogWarning(prefix);
+                    LogNoStack(LogType.Warning, prefix);
                 }
                 else
                 {
-                    Debug.Log(prefix);
+                    LogNoStack(LogType.Log, prefix);
                 }
             }
             UpdateErrorCount();
+        }
+
+        private static void LogNoStack(LogType type, string message)
+        {
+            var prev = Application.GetStackTraceLogType(type);
+            Application.SetStackTraceLogType(type, StackTraceLogType.None);
+            Debug.unityLogger.Log(type, message);
+            Application.SetStackTraceLogType(type, prev);
         }
 
         private static bool TryGetNetId(Dictionary<string, string> map, string node, out string netId)
@@ -5762,6 +6599,7 @@ namespace RobotTwin.UI
         {
             if (string.IsNullOrWhiteSpace(item.Type)) return null;
             if (_currentCircuit == null) return null;
+            RecordStateForUndo();
             if (_currentCircuit.Components == null) _currentCircuit.Components = new List<ComponentSpec>();
             // Grid Snapping (Task 16: 10mm implicit grid)
             // Assuming 1 unit = 1mm for now, or just pixel snapping
@@ -5831,7 +6669,14 @@ namespace RobotTwin.UI
                 {
                     if (_currentTool == ToolMode.Move)
                     {
-                        BeginComponentMove(el, spec, catalogItem, e);
+                        if (_selectedComponentIds.Count > 1 && _selectedComponentIds.Contains(spec.Id))
+                        {
+                            BeginGroupMove(el, spec, catalogItem, e);
+                        }
+                        else
+                        {
+                            BeginComponentMove(el, spec, catalogItem, e);
+                        }
                         handled = true;
                     }
                     else
@@ -5918,6 +6763,7 @@ namespace RobotTwin.UI
         private void BeginComponentMove(VisualElement element, ComponentSpec spec, ComponentCatalog.Item catalogItem, PointerDownEvent evt)
         {
             if (_canvasView == null || element == null || spec == null) return;
+            RecordStateForUndo();
             SelectComponent(element, spec, catalogItem);
             _isMovingComponent = true;
             _movePointerId = evt.pointerId;
@@ -5925,6 +6771,7 @@ namespace RobotTwin.UI
             _moveTargetSpec = spec;
             var canvasLocal = _canvasView.WorldToLocal(evt.position);
             var boardPos = CanvasToBoard(canvasLocal);
+            _moveStartPos = GetComponentPosition(spec.Id);
             _moveOffset = boardPos - GetComponentPosition(spec.Id);
             _moveLastValidPos = GetComponentPosition(spec.Id);
             element.CapturePointer(_movePointerId);
@@ -6340,28 +7187,163 @@ namespace RobotTwin.UI
             }
         }
 
-        private void SelectComponent(VisualElement visual, ComponentSpec spec, ComponentCatalog.Item catalogInfo)
+        private void SelectComponent(VisualElement visual, ComponentSpec spec, ComponentCatalog.Item catalogInfo, bool additive = false)
         {
-            // Deselect old
-            if (_selectedVisual != null)
+            if (!additive)
             {
-                _selectedVisual.RemoveFromClassList("selected");
+                ClearSelection();
+                ResetPropertyBindings();
             }
+            AddComponentToSelection(visual, spec, catalogInfo, true);
+        }
 
-            _selectedComponent = spec;
-            _selectedVisual = visual;
-            _selectedCatalogItem = catalogInfo;
-            _selectedComponentSize = GetComponentSize(catalogInfo);
+        private void ClearSelection()
+        {
+            if (_selectedComponentIds.Count > 0)
+            {
+                foreach (var id in _selectedComponentIds.ToList())
+                {
+                    if (_componentVisuals.TryGetValue(id, out var visual))
+                    {
+                        visual?.RemoveFromClassList("selected");
+                    }
+                }
+                _selectedComponentIds.Clear();
+            }
+            _selectedComponent = null;
+            _selectedVisual = null;
+            _selectedCatalogItem = default;
+            _selectedComponentSize = new Vector2(ComponentWidth, ComponentHeight);
+        }
 
-            ResetPropertyBindings();
-
-            visual.AddToClassList("selected");
-
-            UpdatePropertiesPanel(spec, catalogInfo, visual);
+        private void AddComponentToSelection(VisualElement visual, ComponentSpec spec, ComponentCatalog.Item catalogInfo, bool makePrimary)
+        {
+            if (visual == null || spec == null) return;
+            if (!_selectedComponentIds.Contains(spec.Id))
+            {
+                _selectedComponentIds.Add(spec.Id);
+                visual.AddToClassList("selected");
+            }
+            if (makePrimary || _selectedComponent == null)
+            {
+                _selectedComponent = spec;
+                _selectedVisual = visual;
+                _selectedCatalogItem = catalogInfo;
+                _selectedComponentSize = GetComponentSize(catalogInfo);
+                UpdatePropertiesPanel(spec, catalogInfo, visual);
+            }
             if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value && spec != null)
             {
                 _circuit3DRenderer?.SetFollowComponent(spec.Id, true);
             }
+        }
+
+        private void RecordStateForUndo(bool clearRedo = true)
+        {
+            if (_isRestoringState || _currentCircuit == null) return;
+            var clone = CloneCircuitSpec(_currentCircuit);
+            _undoHistory.Add(clone);
+            if (_undoHistory.Count > MaxHistoryEntries)
+            {
+                _undoHistory.RemoveAt(0);
+            }
+            if (clearRedo)
+            {
+                _redoHistory.Clear();
+            }
+        }
+
+        private void SaveSnapshotForRedo()
+        {
+            if (_currentCircuit == null) return;
+            _redoHistory.Add(CloneCircuitSpec(_currentCircuit));
+            if (_redoHistory.Count > MaxHistoryEntries)
+            {
+                _redoHistory.RemoveAt(0);
+            }
+        }
+
+        private void Undo()
+        {
+            if (_undoHistory.Count == 0 || _currentCircuit == null) return;
+            var snapshot = _undoHistory[_undoHistory.Count - 1];
+            _undoHistory.RemoveAt(_undoHistory.Count - 1);
+            AddToHistory(_redoHistory, CloneCircuitSpec(_currentCircuit));
+            RestoreCircuitFromSnapshot(snapshot);
+        }
+
+        private void Redo()
+        {
+            if (_redoHistory.Count == 0 || _currentCircuit == null) return;
+            var snapshot = _redoHistory[_redoHistory.Count - 1];
+            _redoHistory.RemoveAt(_redoHistory.Count - 1);
+            AddToHistory(_undoHistory, CloneCircuitSpec(_currentCircuit));
+            RestoreCircuitFromSnapshot(snapshot);
+        }
+
+        private void RestoreCircuitFromSnapshot(CircuitSpec snapshot)
+        {
+            if (snapshot == null) return;
+            _isRestoringState = true;
+            _currentCircuit = CloneCircuitSpec(snapshot);
+            NormalizeCircuit();
+            RebuildPinUsage();
+            RefreshCanvas();
+            PopulateProjectTree();
+            UpdateErrorCount();
+            UpdateWireLayer();
+            RequestCircuit3DRebuild();
+            _isRestoringState = false;
+        }
+
+        private void ResetHistory()
+        {
+            _undoHistory.Clear();
+            _redoHistory.Clear();
+            if (_currentCircuit != null)
+            {
+                _undoHistory.Add(CloneCircuitSpec(_currentCircuit));
+            }
+        }
+
+        private void AddToHistory(List<CircuitSpec> history, CircuitSpec snapshot)
+        {
+            if (snapshot == null) return;
+            history.Add(snapshot);
+            if (history.Count > MaxHistoryEntries)
+            {
+                history.RemoveAt(0);
+            }
+        }
+
+        private static CircuitSpec CloneCircuitSpec(CircuitSpec spec)
+        {
+            if (spec == null) return null;
+            var clone = new CircuitSpec
+            {
+                Id = spec.Id,
+                Components = spec.Components?.Select(CloneComponent).ToList(),
+                Nets = spec.Nets?.Select(net => new NetSpec
+                {
+                    Id = net.Id,
+                    Nodes = net.Nodes != null ? new List<string>(net.Nodes) : null
+                }).ToList()
+            };
+            return clone;
+        }
+
+        private static ComponentSpec CloneComponent(ComponentSpec comp)
+        {
+            if (comp == null) return null;
+            var clone = new ComponentSpec
+            {
+                Id = comp.Id,
+                Type = comp.Type,
+                Properties = comp.Properties != null
+                    ? comp.Properties.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase)
+                    : null
+            };
+            return clone;
         }
 
         private void ResetPropertyBindings()
@@ -6680,6 +7662,134 @@ namespace RobotTwin.UI
             _dragItem = default;
         }
 
+        private bool HandleEscapeKey()
+        {
+            bool handled = false;
+
+            if (_helpOverlay != null && _helpOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HideHelpOverlay();
+                handled = true;
+            }
+            if (_preferencesOverlay != null && _preferencesOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HidePreferences();
+                handled = true;
+            }
+            if (_netEditorOverlay != null && _netEditorOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HideNetEditor();
+                handled = true;
+            }
+            if (_circuit3DHelpTooltip != null && _circuit3DHelpTooltip.style.display == DisplayStyle.Flex)
+            {
+                _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+                handled = true;
+            }
+            if (_isBoxSelecting)
+            {
+                CancelBoxSelection();
+                handled = true;
+            }
+            if (_isMovingSelection)
+            {
+                CancelGroupMove();
+                handled = true;
+            }
+            if (_isMovingComponent)
+            {
+                CancelComponentMove();
+                handled = true;
+            }
+            if (_isPanningCanvas)
+            {
+                CancelCanvasPan();
+                handled = true;
+            }
+            if (_currentTool == ToolMode.Wire)
+            {
+                CancelWireMode();
+                handled = true;
+            }
+            if (_isDragging)
+            {
+                CancelLibraryDrag();
+                handled = true;
+            }
+
+            return handled;
+        }
+
+        private void CancelBoxSelection()
+        {
+            _isBoxSelecting = false;
+            _boxSelectionPointerId = -1;
+            HideSelectionBox();
+        }
+
+        private void CancelGroupMove()
+        {
+            if (!_isMovingSelection || _currentCircuit == null) return;
+            foreach (var kvp in _groupMoveOriginalPositions)
+            {
+                var comp = _currentCircuit.Components.FirstOrDefault(c => c != null && c.Id == kvp.Key);
+                if (comp == null) continue;
+                var pos = kvp.Value;
+                if (_componentVisuals.TryGetValue(comp.Id, out var visual))
+                {
+                    visual.style.left = pos.x;
+                    visual.style.top = pos.y;
+                }
+                SetComponentPosition(comp, pos, true);
+            }
+            if (_selectedComponent != null)
+            {
+                UpdateTransformFields(GetComponentPosition(_selectedComponent.Id));
+            }
+            _isMovingSelection = false;
+            if (_canvasView != null && _groupMovePointerId != -1 && _canvasView.HasPointerCapture(_groupMovePointerId))
+            {
+                _canvasView.ReleasePointer(_groupMovePointerId);
+            }
+            _groupMovePointerId = -1;
+            _groupMoveOriginalPositions.Clear();
+            RequestWireUpdateThrottled();
+            RequestCircuit3DRebuild();
+        }
+
+        private void CancelComponentMove()
+        {
+            if (!_isMovingComponent) return;
+            _isMovingComponent = false;
+            if (_moveTarget != null && _moveTarget.HasPointerCapture(_movePointerId))
+            {
+                _moveTarget.ReleasePointer(_movePointerId);
+            }
+            if (_moveTarget != null && _moveTargetSpec != null)
+            {
+                _moveTarget.style.left = _moveStartPos.x;
+                _moveTarget.style.top = _moveStartPos.y;
+                SetComponentPosition(_moveTargetSpec, _moveStartPos, true);
+            }
+            _movePointerId = -1;
+            _moveTarget = null;
+            _moveTargetSpec = null;
+            UpdateTransformFields(_moveStartPos);
+            RequestWireUpdateThrottled();
+            RequestCircuit3DRebuild();
+        }
+
+        private void CancelCanvasPan()
+        {
+            if (!_isPanningCanvas) return;
+            _isPanningCanvas = false;
+            if (_canvasView != null && _panPointerId != -1 && _canvasView.HasPointerCapture(_panPointerId))
+            {
+                _canvasView.ReleasePointer(_panPointerId);
+            }
+            _panPointerId = -1;
+        }
+
         private void CreateNet(ComponentSpec a, string pinA, ComponentSpec b, string pinB)
         {
             if (_currentCircuit == null) return;
@@ -6902,12 +8012,7 @@ namespace RobotTwin.UI
                 {
                     CancelWireMode();
                 }
-                if (_selectedVisual != null)
-                {
-                    _selectedVisual.RemoveFromClassList("selected");
-                }
-                _selectedComponent = null;
-                _selectedVisual = null;
+                ClearSelection();
                 _selectedComponentSize = new Vector2(ComponentWidth, ComponentHeight);
                 // Clear Properties logic? or just leave last
             }
@@ -6919,17 +8024,14 @@ namespace RobotTwin.UI
             if (!IsCanvasBackgroundHit(evt.position, evt.target as VisualElement)) return;
             ShowContextMenu(evt.position, menu =>
             {
-                menu.AddItem("Add Text", false, () =>
-                {
-                    var local = _canvasView.WorldToLocal(evt.position);
-                    CreateTextNote(CanvasToBoard(local));
-                });
-                menu.AddSeparator(string.Empty);
                 menu.AddItem("Center Selection", false, CenterCanvasOnSelection);
                 menu.AddItem("Reset View", false, ResetCanvasView);
                 menu.AddSeparator(string.Empty);
                 menu.AddItem("Zoom In", false, () => ZoomCanvasStep(1.1f, GetCanvasViewCenterWorld()));
                 menu.AddItem("Zoom Out", false, () => ZoomCanvasStep(0.9f, GetCanvasViewCenterWorld()));
+                menu.AddSeparator(string.Empty);
+                menu.AddItem("Copy", false, CopySelectionToClipboard);
+                menu.AddItem("Paste", false, PasteClipboard);
                 menu.AddSeparator(string.Empty);
                 menu.AddItem("Run DRC", false, RunDrcCheck);
                 menu.AddItem("Save Project", false, SaveCurrentProject);
@@ -6945,17 +8047,14 @@ namespace RobotTwin.UI
             Vector2 rootPos = _root.WorldToLocal(worldPos);
             ShowContextMenu(rootPos, menu =>
             {
-                menu.AddItem("Add Text", false, () =>
-                {
-                    var local = _canvasView.WorldToLocal(worldPos);
-                    CreateTextNote(CanvasToBoard(local));
-                });
-                menu.AddSeparator(string.Empty);
                 menu.AddItem("Center Selection", false, CenterCanvasOnSelection);
                 menu.AddItem("Reset View", false, ResetCanvasView);
                 menu.AddSeparator(string.Empty);
                 menu.AddItem("Zoom In", false, () => ZoomCanvasStep(1.1f, GetCanvasViewCenterWorld()));
                 menu.AddItem("Zoom Out", false, () => ZoomCanvasStep(0.9f, GetCanvasViewCenterWorld()));
+                menu.AddSeparator(string.Empty);
+                menu.AddItem("Copy", false, CopySelectionToClipboard);
+                menu.AddItem("Paste", false, PasteClipboard);
                 menu.AddSeparator(string.Empty);
                 menu.AddItem("Run DRC", false, RunDrcCheck);
                 menu.AddItem("Save Project", false, SaveCurrentProject);
@@ -7046,7 +8145,18 @@ namespace RobotTwin.UI
         private void OnCanvasPointerMove(PointerMoveEvent evt)
         {
             if (_canvasView == null) return;
+            if (_isMovingSelection && evt.pointerId == _groupMovePointerId)
+            {
+                HandleGroupMove(evt);
+                evt.StopPropagation();
+                return;
+            }
             if (!_canvasView.worldBound.Contains(evt.position)) return;
+            if (_isBoxSelecting && evt.pointerId == _boxSelectionPointerId)
+            {
+                var currentLocal = _canvasView.WorldToLocal(evt.position);
+                UpdateSelectionBox(_boxSelectionStartLocal, currentLocal);
+            }
             _lastCanvasWorldPos = evt.position;
             var canvasLocal = _canvasView.WorldToLocal(evt.position);
             var boardPos = CanvasToBoard(canvasLocal);
@@ -7059,6 +8169,182 @@ namespace RobotTwin.UI
             {
                 ClearWirePreview();
             }
+        }
+
+        private void OnCanvasBoxSelectionStart(PointerDownEvent evt)
+        {
+            if (evt.button != 0 || _canvasView == null) return;
+            if (_currentTool != ToolMode.Select) return;
+            if (!IsCanvasBackgroundHit(evt.position, evt.target as VisualElement)) return;
+            _isBoxSelecting = true;
+            _boxSelectionPointerId = evt.pointerId;
+            _boxSelectionStartLocal = _canvasView.WorldToLocal(evt.position);
+            _boxSelectionStartBoard = CanvasToBoard(_boxSelectionStartLocal);
+            EnsureSelectionBox();
+            UpdateSelectionBox(_boxSelectionStartLocal, _boxSelectionStartLocal);
+        }
+
+        private void OnCanvasPointerRelease(PointerUpEvent evt)
+        {
+            if (_isBoxSelecting && evt.pointerId == _boxSelectionPointerId)
+            {
+                if (_canvasView != null)
+                {
+                    var endLocal = _canvasView.WorldToLocal(evt.position);
+                    var boardRect = BuildBoardSelectionRect(_boxSelectionStartBoard, CanvasToBoard(endLocal));
+                    ApplyBoxSelection(boardRect);
+                }
+                _isBoxSelecting = false;
+                _boxSelectionPointerId = -1;
+                HideSelectionBox();
+                evt.StopPropagation();
+            }
+            if (_isMovingSelection && evt.pointerId == _groupMovePointerId)
+            {
+                EndGroupMove();
+                evt.StopPropagation();
+            }
+        }
+
+        private Rect BuildBoardSelectionRect(Vector2 start, Vector2 end)
+        {
+            float minX = Mathf.Min(start.x, end.x);
+            float minY = Mathf.Min(start.y, end.y);
+            float width = Mathf.Abs(end.x - start.x);
+            float height = Mathf.Abs(end.y - start.y);
+            return new Rect(minX, minY, width, height);
+        }
+
+        private void ApplyBoxSelection(Rect boardRect)
+        {
+            ClearSelection();
+            ResetPropertyBindings();
+            var matches = GetComponentsInRect(boardRect);
+            if (matches.Count == 0) return;
+            bool primarySet = false;
+            foreach (var spec in matches)
+            {
+                if (spec == null) continue;
+                if (!_componentVisuals.TryGetValue(spec.Id, out var visual)) continue;
+                var item = ResolveCatalogItem(spec);
+                AddComponentToSelection(visual, spec, item, !primarySet);
+                primarySet = true;
+            }
+        }
+
+        private List<ComponentSpec> GetComponentsInRect(Rect boardRect)
+        {
+            var result = new List<ComponentSpec>();
+            if (_currentCircuit?.Components == null) return result;
+            if (boardRect.width <= 0f || boardRect.height <= 0f) return result;
+            foreach (var spec in _currentCircuit.Components)
+            {
+                if (spec == null) continue;
+                var pos = GetComponentPosition(spec.Id);
+                var size = GetComponentSize(spec.Type);
+                var compRect = new Rect(pos.x, pos.y, size.x, size.y);
+                if (boardRect.Overlaps(compRect))
+                {
+                    result.Add(spec);
+                }
+            }
+            return result;
+        }
+
+        private void EnsureSelectionBox()
+        {
+            if (_selectionBox != null) return;
+            if (_canvasView == null) return;
+            _selectionBox = new VisualElement();
+            _selectionBox.AddToClassList("canvas-selection-box");
+            _selectionBox.pickingMode = PickingMode.Ignore;
+            _canvasView.Add(_selectionBox);
+            _selectionBox.style.display = DisplayStyle.None;
+        }
+
+        private void UpdateSelectionBox(Vector2 startLocal, Vector2 currentLocal)
+        {
+            if (_selectionBox == null) return;
+            float left = Mathf.Min(startLocal.x, currentLocal.x);
+            float top = Mathf.Min(startLocal.y, currentLocal.y);
+            float width = Mathf.Abs(currentLocal.x - startLocal.x);
+            float height = Mathf.Abs(currentLocal.y - startLocal.y);
+            _selectionBox.style.left = left;
+            _selectionBox.style.top = top;
+            _selectionBox.style.width = width;
+            _selectionBox.style.height = height;
+            _selectionBox.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideSelectionBox()
+        {
+            if (_selectionBox == null) return;
+            _selectionBox.style.display = DisplayStyle.None;
+        }
+
+        private void BeginGroupMove(VisualElement element, ComponentSpec spec, ComponentCatalog.Item catalogItem, PointerDownEvent evt)
+        {
+            if (_canvasView == null || spec == null) return;
+            RecordStateForUndo();
+            AddComponentToSelection(element, spec, catalogItem, true);
+            _isMovingSelection = true;
+            _groupMovePointerId = evt.pointerId;
+            _groupMoveStartBoard = CanvasToBoard(_canvasView.WorldToLocal(evt.position));
+            _groupMoveOriginalPositions.Clear();
+            foreach (var compId in _selectedComponentIds)
+            {
+                _groupMoveOriginalPositions[compId] = GetComponentPosition(compId);
+            }
+            _canvasView.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+
+        private void HandleGroupMove(PointerMoveEvent evt)
+        {
+            if (_canvasView == null || _currentCircuit == null || _groupMoveOriginalPositions.Count == 0) return;
+            var canvasLocal = _canvasView.WorldToLocal(evt.position);
+            var boardPos = CanvasToBoard(canvasLocal);
+            var delta = boardPos - _groupMoveStartBoard;
+            foreach (var kvp in _groupMoveOriginalPositions)
+            {
+                var id = kvp.Key;
+                var startPos = kvp.Value;
+                var comp = _currentCircuit.Components.FirstOrDefault(c => c.Id == id);
+                if (comp == null) continue;
+                var size = GetComponentSize(comp.Type);
+                var target = startPos + delta;
+                target.x = Mathf.Round(target.x / GridSnap) * GridSnap;
+                target.y = Mathf.Round(target.y / GridSnap) * GridSnap;
+                if (_constrainComponentsToBoard)
+                {
+                    target = ClampToViewport(target, size);
+                    target = ClampToBoard(target, size);
+                }
+                if (_componentVisuals.TryGetValue(id, out var visual))
+                {
+                    visual.style.left = target.x;
+                    visual.style.top = target.y;
+                }
+                SetComponentPosition(comp, target, true);
+            }
+            if (_selectedComponent != null)
+            {
+                UpdateTransformFields(GetComponentPosition(_selectedComponent.Id));
+            }
+            RequestWireUpdateThrottled();
+        }
+
+        private void EndGroupMove()
+        {
+            _isMovingSelection = false;
+            if (_canvasView != null && _groupMovePointerId != -1 && _canvasView.HasPointerCapture(_groupMovePointerId))
+            {
+                _canvasView.ReleasePointer(_groupMovePointerId);
+            }
+            _groupMovePointerId = -1;
+            _groupMoveOriginalPositions.Clear();
+            RequestWireUpdateThrottled();
+            RequestCircuit3DRebuild();
         }
 
         private void OnCanvasWheel(WheelEvent evt)
@@ -7074,20 +8360,44 @@ namespace RobotTwin.UI
 
         private void OnCanvasKeyDown(KeyDownEvent evt)
         {
-            if (_canvasView == null || !evt.ctrlKey) return;
-            if (evt.keyCode == KeyCode.UpArrow)
+            if (_canvasView == null || _centerMode != CenterPanelMode.Circuit) return;
+            if (evt.target is TextField || evt.target is TextElement) return;
+
+            if (evt.ctrlKey)
             {
-                ZoomCanvasStep(1.08f, GetCanvasViewCenterWorld());
-                evt.StopPropagation();
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    ZoomCanvasStep(1.08f, GetCanvasViewCenterWorld());
+                    evt.StopPropagation();
+                }
+                else if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    ZoomCanvasStep(0.92f, GetCanvasViewCenterWorld());
+                    evt.StopPropagation();
+                }
+                else if (evt.keyCode == KeyCode.Alpha0 || evt.keyCode == KeyCode.Keypad0)
+                {
+                    ResetCanvasView();
+                    evt.StopPropagation();
+                }
+                else if (evt.keyCode == KeyCode.D)
+                {
+                    ExportWireMatrix();
+                    evt.StopPropagation();
+                }
+                return;
             }
-            else if (evt.keyCode == KeyCode.DownArrow)
+
+            var delta = Vector2.zero;
+            if (evt.keyCode == KeyCode.LeftArrow) delta = new Vector2(CanvasKeyPanPixels, 0f);
+            else if (evt.keyCode == KeyCode.RightArrow) delta = new Vector2(-CanvasKeyPanPixels, 0f);
+            else if (evt.keyCode == KeyCode.UpArrow) delta = new Vector2(0f, CanvasKeyPanPixels);
+            else if (evt.keyCode == KeyCode.DownArrow) delta = new Vector2(0f, -CanvasKeyPanPixels);
+
+            if (delta != Vector2.zero)
             {
-                ZoomCanvasStep(0.92f, GetCanvasViewCenterWorld());
-                evt.StopPropagation();
-            }
-            else if (evt.keyCode == KeyCode.D)
-            {
-                ExportWireMatrix();
+                _canvasPan += delta;
+                ApplyCanvasTransform();
                 evt.StopPropagation();
             }
         }
@@ -7180,6 +8490,43 @@ namespace RobotTwin.UI
             }
         }
 
+        private void RequestResetView()
+        {
+            _pendingResetView = true;
+            _resetViewOnNextLayout = true;
+            TryApplyPendingResetView();
+            ScheduleResetView();
+        }
+
+        private void TryApplyPendingResetView()
+        {
+            if (!_pendingResetView) return;
+            if (_canvasView == null || _boardView == null) return;
+            var rect = _canvasView.contentRect;
+            if (rect.width <= 0f || rect.height <= 0f) return;
+            var boardRect = _boardView.layout;
+            if (boardRect.width <= 0f || boardRect.height <= 0f) return;
+            ResetCanvasView();
+            _pendingResetView = false;
+            _resetViewOnNextLayout = false;
+        }
+
+        private void ScheduleResetView()
+        {
+            if (_resetViewScheduled || _canvasView == null) return;
+            _resetViewScheduled = true;
+            _canvasView.schedule.Execute(() =>
+            {
+                _resetViewScheduled = false;
+                if (!_pendingResetView) return;
+                TryApplyPendingResetView();
+                if (_pendingResetView)
+                {
+                    ScheduleResetView();
+                }
+            });
+        }
+
         private void ResetCanvasView()
         {
             if (_canvasView == null || _boardView == null || _currentCircuit == null || _currentCircuit.Components == null || _currentCircuit.Components.Count == 0)
@@ -7257,6 +8604,20 @@ namespace RobotTwin.UI
         {
             if (_boardView == null) return canvasLocal;
             return (canvasLocal - GetBoardOrigin() - _canvasPan) / _canvasZoom;
+        }
+
+        private Vector2 GetBoardPositionAt(Vector2 worldPos)
+        {
+            if (_boardView != null)
+            {
+                return _boardView.WorldToLocal(worldPos);
+            }
+            if (_canvasView != null)
+            {
+                var canvasLocal = _canvasView.WorldToLocal(worldPos);
+                return CanvasToBoard(canvasLocal);
+            }
+            return Vector2.zero;
         }
 
         private Vector2 GetBoardOrigin()
@@ -7350,10 +8711,38 @@ namespace RobotTwin.UI
             if (info.Pins == null) info.Pins = new List<string>();
 
             // Bind Header (Task 20)
-            var title = _propertiesPanel.Q<Label>(className: "prop-title-lg");
-            var sub = _propertiesPanel.Q<Label>(className: "prop-sub-lg");
+            var title = _propertiesPanel.Q<Label>(className: "prop-title-lg") ??
+                        _propertiesPanel.Q<Label>(className: "prop-title");
+            var sub = _propertiesPanel.Q<Label>(className: "prop-sub-lg") ??
+                      _propertiesPanel.Q<Label>(className: "prop-sub");
             if (title != null) title.text = spec.Id;
             if (sub != null) sub.text = info.Name;
+
+            var nameField = _propertiesPanel.Q<TextField>("ComponentNameField");
+            if (nameField != null)
+            {
+                nameField.SetValueWithoutNotify(spec.Id);
+                if (nameField.userData == null)
+                {
+                    nameField.userData = "bound";
+                    nameField.RegisterValueChangedCallback(e =>
+                    {
+                        if (_selectedComponent != spec) return;
+                        string next = e.newValue?.Trim() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(next))
+                        {
+                            nameField.SetValueWithoutNotify(spec.Id);
+                            return;
+                        }
+                        if (!TryRenameComponentId(spec, next))
+                        {
+                            nameField.SetValueWithoutNotify(spec.Id);
+                            return;
+                        }
+                        nameField.SetValueWithoutNotify(spec.Id);
+                    });
+                }
+            }
 
             // Bind Transforms (Task 21)
             // Assuming prop-section structure from UXML
@@ -7495,6 +8884,172 @@ namespace RobotTwin.UI
             }
         }
 
+        private bool TryRenameComponentId(ComponentSpec spec, string newId)
+        {
+            if (spec == null || _currentCircuit == null) return false;
+            string oldId = spec.Id ?? string.Empty;
+            string trimmed = newId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(trimmed)) return false;
+            if (!ComponentIdPattern.IsMatch(trimmed))
+            {
+                LogNoStack(LogType.Warning, $"[Rename] Invalid component id '{trimmed}'. Use letters, numbers, '_' or '-'.");
+                return false;
+            }
+            if (_currentCircuit.Components.Any(c => c != null && !ReferenceEquals(c, spec) &&
+                                                    string.Equals(c.Id, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                LogNoStack(LogType.Warning, $"[Rename] Component id '{trimmed}' already exists.");
+                return false;
+            }
+
+            if (string.Equals(oldId, trimmed, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            RecordStateForUndo();
+
+            var selectedIds = _selectedComponentIds.ToList();
+            string primaryId = _selectedComponent?.Id;
+            if (selectedIds.Remove(oldId))
+            {
+                selectedIds.Add(trimmed);
+            }
+            if (string.Equals(primaryId, oldId, StringComparison.OrdinalIgnoreCase))
+            {
+                primaryId = trimmed;
+            }
+
+            if (_currentCircuit.Nets != null)
+            {
+                foreach (var net in _currentCircuit.Nets)
+                {
+                    if (net?.Nodes == null) continue;
+                    for (int i = 0; i < net.Nodes.Count; i++)
+                    {
+                        string node = net.Nodes[i];
+                        if (string.IsNullOrWhiteSpace(node)) continue;
+                        if (!node.StartsWith(oldId + ".", StringComparison.OrdinalIgnoreCase)) continue;
+                        net.Nodes[i] = trimmed + node.Substring(oldId.Length);
+                    }
+                }
+            }
+
+            if (spec.Properties != null)
+            {
+                spec.Properties["label"] = trimmed;
+            }
+
+            if (string.Equals(_last3dPickedComponentId, oldId, StringComparison.OrdinalIgnoreCase))
+            {
+                _last3dPickedComponentId = trimmed;
+            }
+            if (string.Equals(_codeTargetComponentId, oldId, StringComparison.OrdinalIgnoreCase))
+            {
+                _codeTargetComponentId = trimmed;
+            }
+
+            if (IsArduinoType(spec.Type))
+            {
+                TryRenameCodeWorkspace(oldId, trimmed);
+            }
+
+            spec.Id = trimmed;
+            RefreshCanvas();
+            PopulateProjectTree();
+            UpdateErrorCount();
+            RefreshCodeTargets();
+
+            RestoreSelection(selectedIds, primaryId);
+            return true;
+        }
+
+        private void RestoreSelection(List<string> selectedIds, string primaryId)
+        {
+            if (selectedIds == null || selectedIds.Count == 0)
+            {
+                ClearSelection();
+                ResetPropertyBindings();
+                return;
+            }
+
+            ClearSelection();
+            ResetPropertyBindings();
+            bool primarySet = false;
+            foreach (var id in selectedIds)
+            {
+                var comp = _currentCircuit.Components.FirstOrDefault(c => c != null &&
+                                                                          string.Equals(c.Id, id, StringComparison.OrdinalIgnoreCase));
+                if (comp == null) continue;
+                if (!_componentVisuals.TryGetValue(comp.Id, out var visual) || visual == null) continue;
+                var item = ResolveCatalogItem(comp);
+                bool makePrimary = !primarySet && string.Equals(comp.Id, primaryId, StringComparison.OrdinalIgnoreCase);
+                AddComponentToSelection(visual, comp, item, makePrimary);
+                primarySet = primarySet || makePrimary;
+            }
+            if (!primarySet && _selectedComponent == null)
+            {
+                var firstId = selectedIds.FirstOrDefault();
+                var comp = _currentCircuit.Components.FirstOrDefault(c => c != null &&
+                                                                          string.Equals(c.Id, firstId, StringComparison.OrdinalIgnoreCase));
+                if (comp != null && _componentVisuals.TryGetValue(comp.Id, out var visual))
+                {
+                    AddComponentToSelection(visual, comp, ResolveCatalogItem(comp), true);
+                }
+            }
+            if (_selectedComponent != null)
+            {
+                UpdateTransformFields(GetComponentPosition(_selectedComponent.Id));
+            }
+        }
+
+        private void TryRenameCodeWorkspace(string oldId, string newId)
+        {
+            if (string.IsNullOrWhiteSpace(oldId) || string.IsNullOrWhiteSpace(newId)) return;
+            string projectPath = SessionManager.Instance?.CurrentProjectPath;
+            if (!string.IsNullOrWhiteSpace(projectPath))
+            {
+                string workspaceRoot = ResolveProjectWorkspaceRoot(projectPath);
+                if (!string.IsNullOrWhiteSpace(workspaceRoot))
+                {
+                    TryRenameCodeFolder(Path.Combine(workspaceRoot, "Code", oldId),
+                        Path.Combine(workspaceRoot, "Code", newId), oldId, newId);
+                }
+            }
+
+            string fallbackRoot = Path.Combine(Application.persistentDataPath, "CodeStudio");
+            TryRenameCodeFolder(Path.Combine(fallbackRoot, oldId), Path.Combine(fallbackRoot, newId), oldId, newId);
+        }
+
+        private void TryRenameCodeFolder(string source, string target, string oldId, string newId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target)) return;
+                if (!Directory.Exists(source)) return;
+                if (!Directory.Exists(target))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    Directory.Move(source, target);
+                }
+                string oldPrimary = Path.Combine(target, GetPrimarySketchFileName(oldId));
+                string newPrimary = Path.Combine(target, GetPrimarySketchFileName(newId));
+                if (File.Exists(oldPrimary) && !File.Exists(newPrimary))
+                {
+                    File.Move(oldPrimary, newPrimary);
+                    if (string.Equals(_activeCodePath, oldPrimary, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _activeCodePath = newPrimary;
+                        UpdateCodeFileLabel();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CodeStudio] Failed to rename code folder: {ex.Message}");
+            }
+        }
+
         private static bool IsSwitchType(string type)
         {
             return string.Equals(type, "Switch", StringComparison.OrdinalIgnoreCase) ||
@@ -7617,6 +9172,36 @@ namespace RobotTwin.UI
         {
             bool targetIsText = evt.target is TextField || evt.target is TextElement;
             bool codeContextActive = _centerMode == CenterPanelMode.Code;
+            if (!targetIsText)
+            {
+                if (evt.ctrlKey && evt.keyCode == KeyCode.Z)
+                {
+                    Undo();
+                    evt.StopPropagation();
+                    return;
+                }
+                if (evt.ctrlKey && (evt.keyCode == KeyCode.Y || (evt.shiftKey && evt.keyCode == KeyCode.Z)))
+                {
+                    Redo();
+                    evt.StopPropagation();
+                    return;
+                }
+                if (_centerMode == CenterPanelMode.Circuit)
+                {
+                    if (evt.ctrlKey && evt.keyCode == KeyCode.C)
+                    {
+                        CopySelectionToClipboard();
+                        evt.StopPropagation();
+                        return;
+                    }
+                    if (evt.ctrlKey && evt.keyCode == KeyCode.V)
+                    {
+                        PasteClipboard();
+                        evt.StopPropagation();
+                        return;
+                    }
+                }
+            }
             if (_centerMode == CenterPanelMode.Preview3D && !targetIsText)
             {
                 if (Handle3DKeyInput(evt))
@@ -7627,9 +9212,8 @@ namespace RobotTwin.UI
             }
             if (evt.keyCode == KeyCode.Escape)
             {
-                if (_currentTool == ToolMode.Wire)
+                if (HandleEscapeKey())
                 {
-                    CancelWireMode();
                     evt.StopPropagation();
                     return;
                 }
@@ -7691,13 +9275,6 @@ namespace RobotTwin.UI
                 }
                 return;
             }
-            if (evt.keyCode == KeyCode.Escape)
-            {
-                CancelWireMode();
-                CancelLibraryDrag();
-                evt.StopPropagation();
-                return;
-            }
             if (targetIsText) return;
             if (evt.keyCode == KeyCode.V)
             {
@@ -7726,36 +9303,46 @@ namespace RobotTwin.UI
             // Task 18: Deletion
             if (evt.keyCode == KeyCode.Delete || evt.keyCode == KeyCode.Backspace)
             {
-                if (DeleteSelectedComponent())
+                if (DeleteSelectedComponents())
                 {
                     evt.StopPropagation();
                 }
             }
         }
 
-        private bool DeleteSelectedComponent()
+        private bool DeleteSelectedComponents()
         {
-            if (_selectedComponent == null || _selectedVisual == null || _currentCircuit == null) return false;
+            if (_selectedComponentIds.Count == 0 || _currentCircuit == null || _currentCircuit.Components == null) return false;
+            RecordStateForUndo();
+            var toRemove = _currentCircuit.Components.Where(c => c != null && _selectedComponentIds.Contains(c.Id)).ToList();
+            if (toRemove.Count == 0) return false;
+            foreach (var comp in toRemove)
+            {
+                _currentCircuit.Components.Remove(comp);
+                if (_componentVisuals.TryGetValue(comp.Id, out var visual))
+                {
+                    visual.RemoveFromHierarchy();
+                    _componentVisuals.Remove(comp.Id);
+                }
+                RemovePinsForComponent(comp.Id);
+                _usedPins.Remove(comp.Id);
+            }
             if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value)
             {
                 _circuit3DRenderer?.SetFollowComponent(null, false);
             }
-            _currentCircuit.Components.Remove(_selectedComponent);
-            _selectedVisual.RemoveFromHierarchy();
-            _componentVisuals.Remove(_selectedComponent.Id);
-            RemovePinsForComponent(_selectedComponent.Id);
             if (_currentCircuit.Nets != null)
             {
-                _currentCircuit.Nets.RemoveAll(n => n.Nodes.Any(node => node.StartsWith(_selectedComponent.Id + ".")));
+                _currentCircuit.Nets.RemoveAll(net =>
+                    net?.Nodes != null && net.Nodes.Any(node =>
+                        _selectedComponentIds.Any(id => node.StartsWith(id + ".", StringComparison.OrdinalIgnoreCase))));
             }
-            _usedPins.Remove(_selectedComponent.Id);
-            _selectedVisual = null;
-            _selectedComponent = null;
+            ClearSelection();
             UpdateWireLayer();
             PopulateProjectTree();
             UpdateErrorCount();
             RequestCircuit3DRebuild();
-            Debug.Log("[CircuitStudio] Component Deleted.");
+            Debug.Log("[CircuitStudio] Components Deleted.");
             return true;
         }
 
@@ -7837,10 +9424,35 @@ namespace RobotTwin.UI
                 return;
             }
 
-            string fallbackRoot = Path.Combine(Application.persistentDataPath, "CodeStudio");
-            if (!Directory.Exists(fallbackRoot)) return;
+            string sourceRoot = string.Empty;
+            string sessionPath = SessionManager.Instance?.CurrentProjectPath;
+            if (!string.IsNullOrWhiteSpace(sessionPath))
+            {
+                string sessionDir = ResolveProjectWorkspaceRoot(sessionPath);
+                if (!string.IsNullOrWhiteSpace(sessionDir))
+                {
+                    string sessionRoot = Path.Combine(sessionDir, "Code");
+                    if (!string.Equals(sessionRoot, targetRoot, StringComparison.OrdinalIgnoreCase) &&
+                        Directory.Exists(sessionRoot) &&
+                        Directory.EnumerateFileSystemEntries(sessionRoot, "*", SearchOption.AllDirectories).Any())
+                    {
+                        sourceRoot = sessionRoot;
+                    }
+                }
+            }
 
-            CopyDirectoryRecursive(fallbackRoot, targetRoot);
+            if (string.IsNullOrWhiteSpace(sourceRoot))
+            {
+                string fallbackRoot = Path.Combine(Application.persistentDataPath, "CodeStudio");
+                if (Directory.Exists(fallbackRoot) &&
+                    Directory.EnumerateFileSystemEntries(fallbackRoot, "*", SearchOption.AllDirectories).Any())
+                {
+                    sourceRoot = fallbackRoot;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(sourceRoot)) return;
+            CopyDirectoryRecursive(sourceRoot, targetRoot);
         }
 
         private static void CopyDirectoryRecursive(string sourceDir, string targetDir)
@@ -8132,14 +9744,12 @@ namespace RobotTwin.UI
             }
             if (evt.keyCode == KeyCode.PageUp || evt.keyCode == KeyCode.E)
             {
-                float step = _circuit3DRenderer.GetKeyboardPanStep();
-                _circuit3DRenderer.NudgePanWorld(Vector3.up * step);
+                _circuit3DRenderer.NudgePanCameraVertical(1f);
                 return true;
             }
             if (evt.keyCode == KeyCode.PageDown || evt.keyCode == KeyCode.Q)
             {
-                float step = _circuit3DRenderer.GetKeyboardPanStep();
-                _circuit3DRenderer.NudgePanWorld(Vector3.down * step);
+                _circuit3DRenderer.NudgePanCameraVertical(-1f);
                 return true;
             }
 
@@ -8151,12 +9761,22 @@ namespace RobotTwin.UI
             {
                 if (evt.keyCode == KeyCode.UpArrow)
                 {
-                    _circuit3DRenderer.Zoom(-CameraKeyZoomDelta);
+                    _circuit3DRenderer.Zoom(CameraKeyZoomDelta);
                     return true;
                 }
                 if (evt.keyCode == KeyCode.DownArrow)
                 {
-                    _circuit3DRenderer.Zoom(CameraKeyZoomDelta);
+                    _circuit3DRenderer.Zoom(-CameraKeyZoomDelta);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.LeftArrow)
+                {
+                    _circuit3DRenderer.AdjustLightingBlend(-0.1f);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.RightArrow)
+                {
+                    _circuit3DRenderer.AdjustLightingBlend(0.1f);
                     return true;
                 }
                 return false;
@@ -8164,18 +9784,18 @@ namespace RobotTwin.UI
 
             if (evt.shiftKey)
             {
-                var pan = Vector2.zero;
-                if (evt.keyCode == KeyCode.LeftArrow) pan = new Vector2(CameraKeyPanPixels, 0f);
-                if (evt.keyCode == KeyCode.RightArrow) pan = new Vector2(-CameraKeyPanPixels, 0f);
-                if (evt.keyCode == KeyCode.UpArrow) pan = new Vector2(0f, CameraKeyPanPixels);
-                if (evt.keyCode == KeyCode.DownArrow) pan = new Vector2(0f, -CameraKeyPanPixels);
-                _circuit3DRenderer.Pan(pan);
+                var axes = Vector2.zero;
+                if (evt.keyCode == KeyCode.LeftArrow) axes = new Vector2(-1f, 0f);
+                if (evt.keyCode == KeyCode.RightArrow) axes = new Vector2(1f, 0f);
+                if (evt.keyCode == KeyCode.UpArrow) axes = new Vector2(0f, 1f);
+                if (evt.keyCode == KeyCode.DownArrow) axes = new Vector2(0f, -1f);
+                _circuit3DRenderer.NudgePanCamera(axes);
                 return true;
             }
 
             var orbit = Vector2.zero;
-            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
-            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
             if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
             if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
             _circuit3DRenderer.Orbit(orbit);

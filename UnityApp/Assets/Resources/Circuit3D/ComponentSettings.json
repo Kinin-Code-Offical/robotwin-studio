@@ -35,8 +35,8 @@
       "Scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
       "UseLedColor": true,
       "LedColor": { "r": 1.0, "g": 0.2, "b": 0.2, "a": 1.0 },
-      "LedGlowRange": 0.08,
-      "LedGlowIntensity": 2.5,
+      "LedGlowRange": 0.8,
+      "LedGlowIntensity": 12.0,
       "LedBlowCurrent": 0.08,
       "LedBlowTemp": 140.0
     },

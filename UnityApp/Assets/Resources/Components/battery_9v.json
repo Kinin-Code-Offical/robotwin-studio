@@ -13,6 +13,10 @@
   ],
   "defaults": [
     { "key": "voltage", "value": "9V" },
-    { "key": "capacity", "value": "500mAh" }
+    { "key": "capacity", "value": "500mAh" },
+    { "key": "internalResistance", "value": "1.5" },
+    { "key": "voltageMin", "value": "6V" },
+    { "key": "voltageMax", "value": "9V" },
+    { "key": "drainScale", "value": "1" }
   ]
 }

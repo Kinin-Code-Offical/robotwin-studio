@@ -16,6 +16,7 @@
     { "key": "virtualBoard", "value": "arduino-nano" },
     { "key": "clock", "value": "16MHz" },
     { "key": "vcc", "value": "5V" },
+    { "key": "idleCurrent", "value": "30mA" },
     { "key": "nativeConfig", "value": "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}" }
   ]
 }

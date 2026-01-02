@@ -518,7 +518,7 @@ namespace RobotTwin.Game
         private HashSet<string> GetBoardSupplyNets(string boardId)
         {
             var nets = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-            string[] pins = { "VIN", "5V", "3V3", "IOREF", "VCC" };
+            string[] pins = { "VIN", "5V", "3V3", "IOREF", "VCC", "RAW" };
             foreach (var pin in pins)
             {
                 string net = GetNetFor(boardId, pin);

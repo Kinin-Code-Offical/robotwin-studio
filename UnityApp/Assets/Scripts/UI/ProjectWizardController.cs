@@ -3,6 +3,7 @@ using UnityEngine.UIElements;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using RobotTwin.CoreSim.Serialization;
@@ -1667,6 +1668,7 @@ namespace RobotTwin.UI
             if (manifest.Circuit == null) manifest.Circuit = new CircuitSpec();
             if (manifest.Robot == null) manifest.Robot = new RobotSpec { Name = "DefaultRobot" };
             if (manifest.World == null) manifest.World = new WorldSpec { Name = "DefaultWorld", Width = 0, Depth = 0 };
+            CenterTemplateCircuit(manifest.Circuit);
 
             try
             {
@@ -1706,6 +1708,64 @@ namespace RobotTwin.UI
                 Robot = new RobotSpec { Name = "DefaultRobot" },
                 World = new WorldSpec { Name = "DefaultWorld", Width = 0, Depth = 0 }
             };
+        }
+
+        private static void CenterTemplateCircuit(CircuitSpec circuit)
+        {
+            if (circuit?.Components == null || circuit.Components.Count == 0) return;
+            float minX = float.MaxValue;
+            float minY = float.MaxValue;
+            float maxX = float.MinValue;
+            float maxY = float.MinValue;
+            bool hasPosition = false;
+            foreach (var comp in circuit.Components)
+            {
+                if (comp?.Properties == null) continue;
+                if (!comp.Properties.TryGetValue("posX", out var xRaw) ||
+                    !comp.Properties.TryGetValue("posY", out var yRaw))
+                {
+                    continue;
+                }
+                if (!float.TryParse(xRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
+                    !float.TryParse(yRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+                {
+                    continue;
+                }
+                var size = CircuitLayoutSizing.GetComponentSize2D(comp.Type ?? string.Empty);
+                minX = Mathf.Min(minX, x);
+                minY = Mathf.Min(minY, y);
+                maxX = Mathf.Max(maxX, x + size.x);
+                maxY = Mathf.Max(maxY, y + size.y);
+                hasPosition = true;
+            }
+
+            if (!hasPosition) return;
+            var bounds = Rect.MinMaxRect(minX, minY, maxX, maxY);
+            if (bounds.width <= 0f || bounds.height <= 0f) return;
+
+            var boardCenter = new Vector2(
+                CircuitLayoutSizing.BoardWorldWidth * 0.5f,
+                CircuitLayoutSizing.BoardWorldHeight * 0.5f);
+            var offset = boardCenter - bounds.center;
+            if (offset.sqrMagnitude < 1f) return;
+
+            foreach (var comp in circuit.Components)
+            {
+                if (comp?.Properties == null) continue;
+                if (!comp.Properties.TryGetValue("posX", out var xRaw) ||
+                    !comp.Properties.TryGetValue("posY", out var yRaw))
+                {
+                    continue;
+                }
+                if (!float.TryParse(xRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
+                    !float.TryParse(yRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+                {
+                    continue;
+                }
+                var shifted = new Vector2(x, y) + offset;
+                comp.Properties["posX"] = shifted.x.ToString("F2", CultureInfo.InvariantCulture);
+                comp.Properties["posY"] = shifted.y.ToString("F2", CultureInfo.InvariantCulture);
+            }
         }
 
         private ProjectManifest LoadTemplateManifest(string templatePath)

@@ -16,6 +16,7 @@
     { "key": "virtualBoard", "value": "arduino-pro-mini" },
     { "key": "clock", "value": "16MHz" },
     { "key": "vcc", "value": "5V" },
+    { "key": "idleCurrent", "value": "20mA" },
     { "key": "nativeConfig", "value": "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}" }
   ]
 }
