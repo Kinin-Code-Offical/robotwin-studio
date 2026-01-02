@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 # Ensure Output Dir
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
-$DllDir = Join-Path $RepoRoot "UnityApp/Assets/Plugins/x86_64"
+$DllDir = Join-Path $RepoRoot "RobotWin/Assets/Plugins/x86_64"
 $OutDir = Join-Path $RepoRoot "builds/native"
 if (-not (Test-Path $DllDir)) { New-Item -ItemType Directory -Force -Path $DllDir | Out-Null }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
@@ -28,3 +28,4 @@ Write-Host "[NativeEngine] Success!" -ForegroundColor Green
 Get-Item "$DllDir/NativeEngine.dll" | Select-Object Name, Length, LastWriteTime
 Get-Item "$OutDir/NativeEngine.exe" | Select-Object Name, Length, LastWriteTime
 Pop-Location
+

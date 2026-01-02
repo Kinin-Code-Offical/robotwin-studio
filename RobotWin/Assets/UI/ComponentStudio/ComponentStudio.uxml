@@ -1,0 +1,645 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:Style src="../CircuitStudio/CircuitStudio.uss" />
+    <ui:Style src="../Theme/RobotwinTheme.uss" />
+    <ui:Style src="ComponentStudio.uss" />
+    <ui:VisualElement class="studio-container component-studio-root">
+        <ui:VisualElement class="top-menubar">
+            <ui:VisualElement class="menubar-left">
+                <ui:VisualElement class="brand-icon icon-hexagon" />
+                <ui:Label text="ROBOTWIN" class="branding-text" />
+                <ui:Label text="COMPONENT STUDIO" class="branding-sub" />
+            </ui:VisualElement>
+            <ui:VisualElement class="menubar-center">
+                <ui:Button name="MenuFileBtn" text="File" class="menu-btn" />
+                <ui:Button name="MenuEditBtn" text="Edit" class="menu-btn" />
+                <ui:Button name="MenuViewBtn" text="View" class="menu-btn" />
+                <ui:Button name="MenuToolsBtn" text="Tools" class="menu-btn" />
+                <ui:Button name="MenuHelpBtn" text="Help" class="menu-btn" />
+            </ui:VisualElement>
+            <ui:VisualElement class="menubar-right">
+                <ui:Label text="v0.9.0" class="version-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="studio-toolbar">
+            <ui:VisualElement class="tool-cluster">
+                <ui:Button name="ToolSelectBtn" text="SELECT" class="toolbar-btn active" />
+                <ui:Button name="ToolAnchorBtn" text="ANCHOR" class="toolbar-btn" />
+                <ui:Button name="ToolPinBtn" text="PIN" class="toolbar-btn" />
+                <ui:Button name="ToolLabelBtn" text="LABEL" class="toolbar-btn" />
+                <ui:Button name="ToolStateBtn" text="STATE" class="toolbar-btn" />
+                <ui:Button name="ToolMaterialBtn" text="MATERIAL" class="toolbar-btn" />
+            </ui:VisualElement>
+            <ui:VisualElement class="toolbar-actions">
+                <ui:Button name="StudioOpenBtn" text="OPEN" class="btn-secondary" />
+                <ui:Button name="StudioSaveBtn" text="SAVE" class="btn-secondary" />
+                <ui:Button name="StudioSaveAsBtn" text="SAVE AS" class="btn-secondary" />
+                <ui:Button name="StudioSaveExitBtn" text="SAVE + EXIT" class="btn-primary" />
+                <ui:Button name="StudioBackBtn" text="BACK" class="btn-secondary" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement class="workspace-area">
+            <ui:VisualElement class="panel-left component-panel">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="Definition" class="panel-title" />
+                    <ui:Label text="Editor" class="badge-neutral" />
+                </ui:VisualElement>
+                <ui:ScrollView name="StudioInspectorScroll" class="panel-scroll component-scroll">
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Basics" class="panel-section-title" />
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Name" class="form-label" />
+                            <ui:TextField name="ComponentNameField" class="form-field input-dark" placeholder-text="Component name..." />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Id" class="form-label" />
+                            <ui:TextField name="ComponentIdField" class="form-field input-dark" placeholder-text="unique-id" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Type" class="form-label" />
+                            <ui:TextField name="ComponentTypeField" class="form-field input-dark" placeholder-text="Resistor, LED, Arduino..." />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Description" class="form-label" />
+                            <ui:TextField name="ComponentDescriptionField" class="form-field input-dark" multiline="true" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Physics Script" class="form-label" />
+                            <ui:TextField name="ComponentPhysicsScriptField" class="form-field input-dark" placeholder-text="optional script path..." />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Symbol" class="form-label" />
+                                <ui:TextField name="ComponentSymbolField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Icon" class="form-label" />
+                                <ui:TextField name="ComponentIconField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Order" class="form-label" />
+                                <ui:TextField name="ComponentOrderField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Import" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field editor-inline-grow">
+                                <ui:Label text="Model (.fbx/.glb)" class="form-label" />
+                                <ui:TextField name="ComponentModelField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:Button name="ComponentModelBrowseBtn" class="ghost-button editor-inline-button">
+                                <ui:Label text="Browse" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field editor-inline-grow">
+                                <ui:Label text="Config (.json / .rtcomp)" class="form-label" />
+                                <ui:TextField name="ComponentConfigField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:Button name="ComponentConfigBrowseBtn" class="ghost-button editor-inline-button">
+                                <ui:Label text="Browse" class="button-label" />
+                            </ui:Button>
+                            <ui:Button name="ComponentConfigLoadBtn" class="primary-button editor-inline-button">
+                                <ui:Label text="Load" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="2D Layout" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Size X" class="form-label" />
+                                <ui:TextField name="ComponentSizeXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Size Y" class="form-label" />
+                                <ui:TextField name="ComponentSizeYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Layout2DPreview" class="layout-preview" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="Pins" class="panel-section-title" />
+                            <ui:Button name="ComponentAddPinBtn" class="ghost-button">
+                                <ui:Label text="Add Pin" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="ComponentPinsContainer" class="editor-list" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="Labels" class="panel-section-title" />
+                            <ui:Button name="ComponentAddLabelBtn" class="ghost-button">
+                                <ui:Label text="Add Label" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="ComponentLabelsContainer" class="editor-list" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="Specs" class="panel-section-title" />
+                            <ui:Button name="ComponentAddSpecBtn" class="ghost-button">
+                                <ui:Label text="Add Spec" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="ComponentSpecsContainer" class="editor-list" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="Defaults" class="panel-section-title" />
+                            <ui:Button name="ComponentAddDefaultBtn" class="ghost-button">
+                                <ui:Label text="Add Default" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="ComponentDefaultsContainer" class="editor-list" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="panel-resizer vertical-resizer left-resizer" />
+
+            <ui:VisualElement class="center-area">
+                <ui:VisualElement class="center-header">
+                    <ui:VisualElement class="center-tabs">
+                        <ui:Button name="CenterTab3D" text="3D VIEW" class="center-tab-btn active" />
+                        <ui:Button name="CenterTab2D" text="2D VIEW" class="center-tab-btn" />
+                    </ui:VisualElement>
+                    <ui:Label name="StudioStatusLabel" text="Ready" class="center-chip" />
+                </ui:VisualElement>
+                <ui:VisualElement class="center-content">
+                    <ui:VisualElement name="Component3DPanel" class="studio-viewport-panel">
+                        <ui:VisualElement name="StudioViewport" class="studio-viewport" focusable="true" />
+                        <ui:VisualElement name="Circuit3DControls" class="circuit-3d-controls">
+                            <ui:VisualElement class="circuit-3d-controls-header">
+                                <ui:Label text="Camera" class="circuit-3d-controls-title" />
+                                <ui:Button name="Circuit3DControlsToggle" text="Hide" class="circuit-3d-controls-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="Circuit3DControlsBody" class="circuit-3d-controls-body">
+                                <ui:Label text="Controls" class="circuit-3d-controls-subtitle" />
+                                <ui:VisualElement class="circuit-3d-controls-row">
+                                    <ui:Label text="FOV" class="circuit-3d-controls-label" />
+                                    <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="circuit-3d-slider" />
+                                </ui:VisualElement>
+                                <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="circuit-3d-toggle" value="true" />
+                                <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="circuit-3d-toggle" />
+                                <ui:Button name="Circuit3DRebuildBtn" text="Rebuild 3D" class="circuit-3d-btn" />
+                                <ui:VisualElement class="circuit-3d-divider" />
+                                <ui:VisualElement class="circuit-3d-controls-row viewport-edit-toggle-row">
+                                    <ui:Label text="3D Edit" class="circuit-3d-controls-label wide" />
+                                    <ui:Toggle name="ViewportEditPanelToggle" text="Show" class="circuit-3d-toggle" value="true" />
+                                </ui:VisualElement>
+                                <ui:VisualElement name="ViewportEditPanel" class="viewport-edit-panel inline">
+                                    <ui:VisualElement class="viewport-edit-row">
+                                        <ui:Toggle name="ViewportEditAnchorsToggle" text="Anchors" class="viewport-edit-toggle" value="true" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="viewport-edit-row">
+                                        <ui:Toggle name="ViewportEditEffectsToggle" text="Effects" class="viewport-edit-toggle" value="true" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="viewport-edit-row">
+                                        <ui:Toggle name="ViewportEditPartsToggle" text="Parts" class="viewport-edit-toggle" value="true" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="viewport-edit-row">
+                                        <ui:Toggle name="ViewportEditStatesToggle" text="States" class="viewport-edit-toggle" value="false" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="viewport-edit-row mode-row">
+                                        <ui:Label text="Mode" class="viewport-edit-label" />
+                                        <ui:Button name="ViewportEditMoveBtn" text="M" class="viewport-edit-btn icon active" />
+                                        <ui:Button name="ViewportEditRotateBtn" text="R" class="viewport-edit-btn icon" />
+                                        <ui:Button name="ViewportEditScaleBtn" text="S" class="viewport-edit-btn icon last" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="viewport-edit-row">
+                                        <ui:Toggle name="ViewportEditSnapToggle" text="Snap" class="viewport-edit-toggle" />
+                                        <ui:TextField name="ViewportEditSnapField" value="0.01" class="viewport-edit-field input-dark" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="ViewportViewCube" class="view-cube">
+                            <ui:VisualElement name="ViewCubeSurface" class="view-cube-surface" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="StudioHelpIcon" class="board-3d-help">
+                            <ui:Label text="?" class="board-3d-help-icon" />
+                            <ui:VisualElement name="StudioHelpTooltip" class="board-3d-help-tooltip" style="display: none;">
+                                <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
+                                <ui:Label text="R / Home: Reset view" class="board-3d-help-line" />
+                                <ui:Label text="F: Frame model" class="board-3d-help-line" />
+                                <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
+                                <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
+                                <ui:Label text="W/A/S/D: Drone move" class="board-3d-help-line" />
+                                <ui:Label text="Q/E or PageUp/PageDown: Up/Down" class="board-3d-help-line" />
+                                <ui:Label text="Ctrl + Up/Down: Zoom" class="board-3d-help-line" />
+                                <ui:Label text="O: Toggle anchors" class="board-3d-help-line" />
+                                <ui:Label text="P: Add pin / L: Add label" class="board-3d-help-line" />
+                                <ui:Label text="3D Edit: Click markers to move" class="board-3d-help-line" />
+                                <ui:Label text="3D Edit: ROT/SCALE for rotate &amp; scale" class="board-3d-help-line" />
+                                <ui:Label text="Anchor radius: Scale mode + Shift Wheel" class="board-3d-help-line" />
+                                <ui:Label text="1/2/3: Edit Move/Rotate/Scale" class="board-3d-help-line" />
+                                <ui:Label text="G: Toggle Snap" class="board-3d-help-line" />
+                                <ui:Label text="Ctrl + Shift + M: Material/Texture" class="board-3d-help-line" />
+                                <ui:Label text="Ctrl + S: Save package" class="board-3d-help-line" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="StudioLoadingOverlay" class="studio-loading" style="display: none;">
+                            <ui:VisualElement class="studio-loading-card">
+                                <ui:Label name="StudioLoadingLabel" text="Loading model..." class="studio-loading-title" />
+                                <ui:Button name="StudioLoadingCancelBtn" class="ghost-button">
+                                    <ui:Label text="Cancel" class="button-label" />
+                                </ui:Button>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Component2DPanel" class="component-2d-panel" style="display: none;">
+                        <ui:VisualElement class="layout-editor-header">
+                            <ui:VisualElement class="layout-editor-info">
+                                <ui:Label text="2D Layout Editor" class="layout-editor-title" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="layout-toolbar">
+                            <ui:Button name="LayoutToolSelectBtn" text="SELECT" class="toolbar-btn active" />
+                            <ui:Button name="LayoutToolPanBtn" text="PAN" class="toolbar-btn" />
+                            <ui:Button name="LayoutToolPinBtn" text="PIN" class="toolbar-btn" />
+                            <ui:Button name="LayoutToolLabelBtn" text="LABEL" class="toolbar-btn" />
+                            <ui:Button name="LayoutGridToggleBtn" text="GRID" class="btn-secondary layout-grid-toggle" />
+                            <ui:VisualElement class="layout-toolbar-spacer" />
+                            <ui:Button name="Layout2DResetBtn" text="Reset View" class="btn-secondary layout-editor-reset" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="canvas-view">
+                            <ui:VisualElement class="canvas-surface">
+                                <ui:VisualElement name="Layout2DGrid" class="canvas-grid" picking-mode="Ignore" />
+                                <ui:VisualElement name="Layout2DPreviewLarge" class="layout-preview-large" />
+                                <ui:VisualElement name="Layout2DHelpIcon" class="layout-help layout-help-canvas">
+                                    <ui:Label text="?" class="layout-help-icon" />
+                                    <ui:VisualElement name="Layout2DHelpTooltip" class="layout-help-tooltip" style="display: none;">
+                                        <ui:Label text="2D Shortcuts" class="layout-help-title" />
+                                        <ui:Label text="W/A/S/D or Arrows: Pan" class="layout-help-line" />
+                                        <ui:Label text="+/- or Ctrl+Up/Down: Zoom" class="layout-help-line" />
+                                        <ui:Label text="R/F: Reset view" class="layout-help-line" />
+                                        <ui:Label text="G: Toggle grid" class="layout-help-line" />
+                                        <ui:Label text="V: Select, P: Pin, L: Label" class="layout-help-line" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="panel-resizer vertical-resizer right-resizer" />
+
+            <ui:VisualElement class="panel-right component-panel">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="3D + States" class="panel-title" />
+                    <ui:Label text="Tuning" class="badge-neutral" />
+                </ui:VisualElement>
+                <ui:ScrollView class="panel-scroll component-scroll">
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Anchor Tools" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:Toggle name="AnchorPickToggle" text="Pick Anchor" class="toggle-field" />
+                            <ui:Toggle name="AnchorShowToggle" text="Show Anchors" class="toggle-field" value="true" />
+                            <ui:Button name="AnchorFrameBtn" class="ghost-button">
+                                <ui:Label text="Frame Model" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="3D Tuning" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Euler X" class="form-label" />
+                                <ui:TextField name="ComponentEulerXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Euler Y" class="form-label" />
+                                <ui:TextField name="ComponentEulerYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Euler Z" class="form-label" />
+                                <ui:TextField name="ComponentEulerZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Scale X" class="form-label" />
+                                <ui:TextField name="ComponentScaleXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Scale Y" class="form-label" />
+                                <ui:TextField name="ComponentScaleYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Scale Z" class="form-label" />
+                                <ui:TextField name="ComponentScaleZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="LED Settings" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Color R" class="form-label" />
+                                <ui:TextField name="ComponentLedColorRField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Color G" class="form-label" />
+                                <ui:TextField name="ComponentLedColorGField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Color B" class="form-label" />
+                                <ui:TextField name="ComponentLedColorBField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Color A" class="form-label" />
+                                <ui:TextField name="ComponentLedColorAField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Glow Range" class="form-label" />
+                                <ui:TextField name="ComponentLedGlowRangeField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Glow Intensity" class="form-label" />
+                                <ui:TextField name="ComponentLedGlowIntensityField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Blow Current" class="form-label" />
+                                <ui:TextField name="ComponentLedBlowCurrentField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Blow Temp" class="form-label" />
+                                <ui:TextField name="ComponentLedBlowTempField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Resistor + Error FX" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Smoke Start" class="form-label" />
+                                <ui:TextField name="ComponentResistorSmokeStartField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Smoke Full" class="form-label" />
+                                <ui:TextField name="ComponentResistorSmokeFullField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Hot Start" class="form-label" />
+                                <ui:TextField name="ComponentResistorHotStartField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Hot Full" class="form-label" />
+                                <ui:TextField name="ComponentResistorHotFullField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Error FX Interval" class="form-label" />
+                            <ui:TextField name="ComponentErrorFxIntervalField" class="form-field input-dark" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Offsets" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Label Offset X" class="form-label" />
+                                <ui:TextField name="ComponentLabelOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Label Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentLabelOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Label Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentLabelOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Glow Offset X" class="form-label" />
+                                <ui:TextField name="ComponentLedGlowOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Glow Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentLedGlowOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="LED Glow Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentLedGlowOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Heat FX Offset X" class="form-label" />
+                                <ui:TextField name="ComponentHeatFxOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Heat FX Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentHeatFxOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Heat FX Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentHeatFxOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Spark FX Offset X" class="form-label" />
+                                <ui:TextField name="ComponentSparkFxOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Spark FX Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentSparkFxOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Spark FX Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentSparkFxOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Error FX Offset X" class="form-label" />
+                                <ui:TextField name="ComponentErrorFxOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Error FX Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentErrorFxOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Error FX Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentErrorFxOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Smoke Offset X" class="form-label" />
+                                <ui:TextField name="ComponentSmokeOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Smoke Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentSmokeOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="Smoke Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentSmokeOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="USB Offset X" class="form-label" />
+                                <ui:TextField name="ComponentUsbOffsetXField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="USB Offset Y" class="form-label" />
+                                <ui:TextField name="ComponentUsbOffsetYField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row editor-inline-field">
+                                <ui:Label text="USB Offset Z" class="form-label" />
+                                <ui:TextField name="ComponentUsbOffsetZField" class="form-field input-dark" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Parts" class="panel-section-title" />
+                        <ui:ScrollView name="PartListContainer" class="editor-list" />
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="Selected Part Transform" class="form-label" />
+                            <ui:VisualElement class="form-row-inline">
+                                <ui:TextField name="PartPosXField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartPosYField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartPosZField" class="form-field editor-field-small input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row-inline">
+                                <ui:TextField name="PartRotXField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartRotYField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartRotZField" class="form-field editor-field-small input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row-inline">
+                                <ui:TextField name="PartScaleXField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartScaleYField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartScaleZField" class="form-field editor-field-small input-dark" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row-inline">
+                                <ui:TextField name="PartColorRField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartColorGField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartColorBField" class="form-field editor-field-small input-dark" />
+                                <ui:TextField name="PartColorAField" class="form-field editor-field-small input-dark" />
+                                <ui:Toggle name="PartUseColorToggle" text="Use Color" class="toggle-field" />
+                            </ui:VisualElement>
+                            <ui:Button name="PartApplyBtn" class="primary-button">
+                                <ui:Label text="Apply Part Override" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="States" class="panel-section-title" />
+                        <ui:VisualElement class="form-row-inline">
+                            <ui:TextField name="StateNameField" class="form-field input-dark editor-inline-grow" placeholder-text="default / on / off" />
+                            <ui:Button name="StateAddBtn" class="ghost-button editor-inline-button">
+                                <ui:Label text="Add State" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="StateListContainer" class="editor-list" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="panel-resizer horizontal-resizer bottom-resizer" />
+        <ui:VisualElement name="StudioOutputPanel" class="bottom-panel">
+            <ui:VisualElement class="bottom-bar-header">
+                <ui:VisualElement class="bottom-tabs">
+                    <ui:Label text="OUTPUT" class="bottom-title" />
+                    <ui:Label text="LIVE" class="bottom-chip live" />
+                </ui:VisualElement>
+                <ui:VisualElement class="bottom-status">
+                    <ui:Button name="StudioOutputFilterAllBtn" text="All" class="filter-btn active" />
+                    <ui:Button name="StudioOutputFilterWarningsBtn" text="Warnings" class="filter-btn" />
+                    <ui:Button name="StudioOutputFilterErrorsBtn" text="Errors" class="filter-btn" />
+                    <ui:Button name="StudioOutputClearBtn" text="Clear" class="filter-btn clear-btn" />
+                    <ui:Label name="StudioOutputCountLabel" text="0 Issues" class="status-pill error" />
+                    <ui:Button name="StudioOutputToggleBtn" text="HIDE" class="bottom-toggle" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:ScrollView name="StudioOutputScroll" class="output-panel">
+                <ui:VisualElement name="StudioOutputConsole" class="output-console" />
+            </ui:ScrollView>
+        </ui:VisualElement>
+        <ui:VisualElement name="MenuDropdownLayer" class="menu-dropdown-layer" style="display: none;">
+            <ui:VisualElement name="MenuFileDropdown" class="menu-dropdown" style="display: none;">
+                <ui:Button name="MenuFileOpen" text="Open Package..." class="menu-item" />
+                <ui:Button name="MenuFileSave" text="Save" class="menu-item" />
+                <ui:Button name="MenuFileSaveAs" text="Save As..." class="menu-item" />
+                <ui:VisualElement class="menu-divider" />
+                <ui:Button name="MenuFileImportModel" text="Import Model..." class="menu-item" />
+                <ui:VisualElement class="menu-divider" />
+                <ui:Button name="MenuFileExit" text="Return to Wizard" class="menu-item" />
+            </ui:VisualElement>
+            <ui:VisualElement name="MenuEditDropdown" class="menu-dropdown" style="display: none;">
+                <ui:Button name="MenuEditAddPin" text="Add Pin" class="menu-item" />
+                <ui:Button name="MenuEditAddLabel" text="Add Label" class="menu-item" />
+                <ui:Button name="MenuEditAddState" text="Add State" class="menu-item" />
+                <ui:VisualElement class="menu-divider" />
+                <ui:Button name="MenuEditValidate" text="Run Validation" class="menu-item" />
+            </ui:VisualElement>
+            <ui:VisualElement name="MenuViewDropdown" class="menu-dropdown" style="display: none;">
+                <ui:Button name="MenuViewToggleOutput" text="Toggle Output Panel" class="menu-item" />
+                <ui:Button name="MenuViewToggleAnchors" text="Toggle Anchors" class="menu-item" />
+                <ui:Button name="MenuViewFrame" text="Frame Model" class="menu-item" />
+                <ui:Button name="MenuViewReset" text="Reset Camera" class="menu-item" />
+            </ui:VisualElement>
+            <ui:VisualElement name="MenuToolsDropdown" class="menu-dropdown" style="display: none;">
+                <ui:Button name="MenuToolsMaterial" text="Material / Texture" class="menu-item" />
+                <ui:Button name="MenuToolsReloadModel" text="Reload Model" class="menu-item" />
+                <ui:VisualElement class="menu-divider" />
+                <ui:Button name="MenuToolsExtractPins" text="Auto Add Pins" class="menu-item" />
+            </ui:VisualElement>
+            <ui:VisualElement name="MenuHelpDropdown" class="menu-dropdown" style="display: none;">
+                <ui:Button name="MenuHelpShortcuts" text="Keyboard Shortcuts" class="menu-item" />
+                <ui:Button name="MenuHelpAbout" text="About Component Studio" class="menu-item" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="MaterialOverlay" class="modal-overlay" style="display: none;">
+            <ui:VisualElement class="modal-card material-card">
+                <ui:Label text="Material + Texture" class="modal-title" />
+                <ui:Label name="MaterialTargetLabel" text="No part selected" class="modal-label" />
+                <ui:VisualElement class="modal-body">
+                    <ui:Label text="Texture" class="modal-label" />
+                    <ui:VisualElement class="form-row-inline">
+                        <ui:TextField name="MaterialTexturePathField" class="form-field input-dark editor-inline-grow" />
+                        <ui:Button name="MaterialTextureBrowseBtn" class="ghost-button editor-inline-button">
+                            <ui:Label text="Browse" class="button-label" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                    <ui:Toggle name="MaterialUseTextureToggle" text="Use Texture" class="toggle-field" />
+                    <ui:Label text="Tint Color" class="modal-label" />
+                    <ui:VisualElement class="form-row-inline">
+                        <ui:TextField name="MaterialColorRField" class="form-field editor-field-small input-dark" />
+                        <ui:TextField name="MaterialColorGField" class="form-field editor-field-small input-dark" />
+                        <ui:TextField name="MaterialColorBField" class="form-field editor-field-small input-dark" />
+                        <ui:TextField name="MaterialColorAField" class="form-field editor-field-small input-dark" />
+                    </ui:VisualElement>
+                    <ui:Toggle name="MaterialUseColorToggle" text="Use Color Tint" class="toggle-field" />
+                </ui:VisualElement>
+                <ui:VisualElement class="modal-actions">
+                    <ui:Button name="MaterialApplyBtn" text="Apply" class="btn-primary" />
+                    <ui:Button name="MaterialClearBtn" text="Clear" class="btn-secondary" />
+                    <ui:Button name="MaterialCloseBtn" text="Close" class="btn-secondary" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

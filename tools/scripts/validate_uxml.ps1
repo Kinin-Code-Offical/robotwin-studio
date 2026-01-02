@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
 if (-not $Path) {
-    $Path = Join-Path $RepoRoot "UnityApp/Assets"
+    $Path = Join-Path $RepoRoot "RobotWin/Assets"
 }
 Write-Host "Validating UXML files in $Path..." -ForegroundColor Cyan
 
@@ -31,3 +31,4 @@ if ($failed) {
 else {
     Write-Host "All UXML files are valid." -ForegroundColor Green
 }
+

@@ -37,6 +37,43 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal("robot-lf-1", deserialized.DefaultRobotId);
         }
 
+        [Fact]
+        public void CanDeserializeLegacyAliases()
+        {
+            var json = @"{
+                ""ID"": ""legacy.template.v1"",
+                ""Name"": ""Legacy Template"",
+                ""Description"": ""Legacy description"",
+                ""SystemType"": ""Robot"",
+                ""DefaultWorldId"": ""world-lab-1""
+            }";
+
+            var deserialized = JsonSerializer.Deserialize<TemplateSpec>(json);
+
+            Assert.NotNull(deserialized);
+            Assert.Equal("legacy.template.v1", deserialized.TemplateId);
+            Assert.Equal("Legacy Template", deserialized.DisplayName);
+            Assert.Equal("world-lab-1", deserialized.DefaultWorldId);
+        }
+
+        [Fact]
+        public void LegacyAliasSettersMirrorPrimaryFields()
+        {
+            var template = new TemplateSpec
+            {
+                TemplateId = "init.template",
+                DisplayName = "Init",
+                Description = "Desc",
+                SystemType = "Robot"
+            };
+
+            template.ID = "legacy.id";
+            template.Name = "Legacy Name";
+
+            Assert.Equal("legacy.id", template.TemplateId);
+            Assert.Equal("Legacy Name", template.DisplayName);
+        }
+
 
 
 

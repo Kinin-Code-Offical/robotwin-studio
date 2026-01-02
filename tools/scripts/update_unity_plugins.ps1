@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 # It seems it's all in one project 'RobotTwin.CoreSim'. 
 
 $ProjectDir = Join-Path $RepoRoot "CoreSim/src/RobotTwin.CoreSim"
-$UnityPluginsDir = Join-Path $RepoRoot "UnityApp/Assets/Plugins"
+$UnityPluginsDir = Join-Path $RepoRoot "RobotWin/Assets/Plugins"
 
 Push-Location $RepoRoot
 Write-Host "Building CoreSim (netstandard2.1) for Unity..." -ForegroundColor Cyan
@@ -97,3 +97,4 @@ if (Test-Path "$UnityPluginsDir/RobotTwin.CoreSim.deps.json.meta") { Remove-Item
 
 Write-Host "Success." -ForegroundColor Green
 Pop-Location
+

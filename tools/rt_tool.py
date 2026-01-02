@@ -1,42 +1,10 @@
 import argparse
-import os
 import subprocess
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-ICON_MAP = {
-    "home.png": "https://img.icons8.com/ios-glyphs/64/ffffff/home.png",
-    "folder.png": "https://img.icons8.com/ios-glyphs/64/ffffff/folder-invoices.png",
-    "settings.png": "https://img.icons8.com/ios-glyphs/64/ffffff/gear.png",
-    "plus.png": "https://img.icons8.com/ios-glyphs/64/ffffff/plus-math.png",
-    "search.png": "https://img.icons8.com/ios-glyphs/64/ffffff/search--v1.png",
-    "menu.png": "https://img.icons8.com/ios-glyphs/64/ffffff/menu-vertical.png",
-    "cpu.png": "https://img.icons8.com/ios-glyphs/64/ffffff/processor.png",
-    "box.png": "https://img.icons8.com/ios-glyphs/64/ffffff/box.png",
-    "activity.png": "https://img.icons8.com/ios-glyphs/64/ffffff/activity-history.png",
-    "import.png": "https://img.icons8.com/ios-glyphs/64/ffffff/import.png",
-    "copy.png": "https://img.icons8.com/ios-glyphs/64/ffffff/copy.png",
-    "trash-2.png": "https://img.icons8.com/ios-glyphs/64/ffffff/trash.png",
-    "filter.png": "https://img.icons8.com/ios-glyphs/64/ffffff/filter.png",
-    "layout-template.png": "https://img.icons8.com/ios-glyphs/64/ffffff/layout.png",
-    "more-vertical.png": "https://img.icons8.com/ios-glyphs/64/ffffff/menu-vertical.png",
-    "arrow-right.png": "https://img.icons8.com/ios-glyphs/64/ffffff/arrow.png",
-    "hexagon.png": "https://img.icons8.com/ios-glyphs/64/ffffff/hexagon.png",
-    "zap.png": "https://img.icons8.com/ios-glyphs/64/ffffff/lightning-bolt.png",
-    "clock.png": "https://img.icons8.com/ios-glyphs/64/ffffff/clock.png",
-    "external-link.png": "https://img.icons8.com/ios-glyphs/64/ffffff/external-link.png",
-    "play.png": "https://img.icons8.com/ios-glyphs/64/ffffff/play--v1.png",
-    "pause.png": "https://img.icons8.com/ios-glyphs/64/ffffff/pause--v1.png",
-    "stop.png": "https://img.icons8.com/ios-glyphs/64/ffffff/stop.png",
-    "step.png": "https://img.icons8.com/ios-glyphs/64/ffffff/end.png",
-    "console.png": "https://img.icons8.com/ios-glyphs/64/ffffff/console.png",
-    "inspector.png": "https://img.icons8.com/ios-glyphs/64/ffffff/info.png",
-    "hierarchy.png": "https://img.icons8.com/ios-glyphs/64/ffffff/list.png",
-}
 
 
 def run_powershell(script_path: Path, args: list[str]) -> int:
@@ -54,36 +22,6 @@ def run_powershell(script_path: Path, args: list[str]) -> int:
 def run_python(script_path: Path, args: list[str]) -> int:
     cmd = [sys.executable, str(script_path), *args]
     return subprocess.call(cmd, cwd=str(REPO_ROOT))
-
-
-def fetch_icons() -> int:
-    icons_dir = REPO_ROOT / "UnityApp" / "Assets" / "UI" / "Icons"
-    icons_dir.mkdir(parents=True, exist_ok=True)
-
-    opener = urllib.request.build_opener()
-    opener.addheaders = [("User-agent", "Mozilla/5.0")]
-    urllib.request.install_opener(opener)
-
-    for filename, url in ICON_MAP.items():
-        dest = icons_dir / filename
-        try:
-            print(f"Downloading {filename}...")
-            urllib.request.urlretrieve(url, dest)
-        except Exception as exc:
-            print(f"Failed: {filename} ({exc})")
-            return 1
-
-    print(f"Icons downloaded to {icons_dir}")
-    return 0
-
-
-def verify_assets() -> int:
-    icon_path = REPO_ROOT / "UnityApp" / "Assets" / "UI" / "Icons" / "home.png"
-    if icon_path.exists():
-        print("Icons verified.")
-        return 0
-    print("Icons missing. Run: python tools/rt_tool.py fetch-icons")
-    return 1
 
 
 def monitor_unity() -> int:
@@ -149,21 +87,14 @@ COMMAND_HELP = {
     "build-firmware": "Build VirtualArduinoFirmware.exe into builds/firmware (logs to logs/firmware).",
     "build-native": "Build NativeEngine DLL and standalone (g++). Outputs to builds/native.",
     "build-standalone": "Build Unity Windows player via batchmode.",
-    "update-unity-plugins": "Build CoreSim .NET plugin and sync into UnityApp/Assets/Plugins.",
-    "update-repo-files": "Refresh docs/repo_files.txt inventory.",
-    "workspace-snapshot": "Write a workspace snapshot to logs/tools/workspace_snapshot.txt.",
+    "update-unity-plugins": "Build CoreSim .NET plugin and sync into RobotWin/Assets/Plugins.",
+    "update-repo-snapshot": "Refresh docs/repo_files.txt, workspace snapshot, and README folder tree.",
     "validate-uxml": "Parse and validate all .uxml files.",
     "run-qa": "Run Node/Jest integration tests.",
     "run-unity-smoke": "Batchmode Unity compile smoke test.",
-    "fetch-icons": "Download UI icon PNGs into UnityApp/Assets/UI/Icons.",
-    "verify-assets": "Check required UI assets exist.",
     "monitor-unity": "Tail logs/unity/unity_live_error.log and highlight errors.",
     "console": "Interactive HTTP console for RemoteCommandServer.",
     "mission-control": "Launch the Mission Control dashboard.",
-    "export-context": "Create a full context export package.",
-    "export-context-min": "Create a minimal context export package.",
-    "shared-info": "Show latest shared info snapshot.",
-    "end-session": "Finalize and write shared info summary.",
 }
 
 
@@ -185,19 +116,15 @@ def main() -> int:
     add_script_command("build-native", "tools/scripts/build_native.ps1", "Build NativeEngine DLL + standalone")
     add_script_command("build-standalone", "tools/scripts/build_windows_standalone.ps1", "Build Unity Windows player")
     add_script_command("update-unity-plugins", "tools/scripts/update_unity_plugins.ps1", "Build CoreSim and sync Unity plugins")
-    add_script_command("update-repo-files", "tools/scripts/update_repo_files.ps1", "Refresh docs/repo_files.txt")
-    add_script_command("workspace-snapshot", "tools/scripts/update_workspace_snapshot.ps1", "Write workspace snapshot")
+    add_script_command(
+        "update-repo-snapshot",
+        "tools/scripts/update_repo_snapshot.ps1",
+        "Refresh repo files list, workspace snapshot, and README tree"
+    )
     add_script_command("validate-uxml", "tools/scripts/validate_uxml.ps1", "Validate UXML files")
     add_script_command("run-qa", "tools/scripts/run_qa.ps1", "Run integration tests (Node/Jest)")
     add_script_command("run-unity-smoke", "tools/scripts/run_unity_smoke.ps1", "Run Unity batchmode smoke test")
     add_script_command("mission-control", "tools/mission_control/launch_mission_control.ps1", "Launch Mission Control dashboard")
-    add_script_command("export-context", "tools/context/export_context_pack.ps1", "Export full context pack")
-    add_script_command("export-context-min", "tools/context/export_context_pack_min.ps1", "Export minimal context pack")
-    add_script_command("shared-info", "tools/context/get_latest_shared_info.ps1", "Print latest shared info")
-    add_script_command("end-session", "tools/context/end_session_shared_info.ps1", "Finalize session shared info")
-
-    subparsers.add_parser("fetch-icons", help="Download UI icon PNGs")
-    subparsers.add_parser("verify-assets", help="Verify required UI assets")
     subparsers.add_parser("monitor-unity", help="Tail Unity error log")
     subparsers.add_parser("help", help="Show detailed command help")
     console_parser = subparsers.add_parser("console", help="Unity HTTP console")
@@ -213,10 +140,6 @@ def main() -> int:
             print(f"{key}: {value}")
         return 0
 
-    if args.command == "fetch-icons":
-        return fetch_icons()
-    if args.command == "verify-assets":
-        return verify_assets()
     if args.command == "monitor-unity":
         return monitor_unity()
     if args.command == "console":
@@ -234,3 +157,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

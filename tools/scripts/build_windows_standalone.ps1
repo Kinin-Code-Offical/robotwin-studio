@@ -4,7 +4,7 @@ param(
 
 $envUnityPath = $env:UNITY_PATH
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
-$projectPath = Join-Path $repoRoot "UnityApp"
+$projectPath = Join-Path $repoRoot "RobotWin"
 $buildDir = Join-Path $repoRoot "builds\\windows"
 $buildPath = Join-Path $buildDir "RobotwinStudio.exe"
 $logDir = Join-Path $repoRoot "logs\\unity"
@@ -57,3 +57,4 @@ if ($unityExe) {
 else {
     Write-Error "Unity Editor not found. Set UNITY_PATH or pass -UnityPath to build."
 }
+

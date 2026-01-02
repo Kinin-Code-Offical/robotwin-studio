@@ -8,12 +8,12 @@ namespace RobotTwin.CoreSim.Specs
     {
         public required string TemplateId { get; set; }
         
-        // Backward compatibility for UnityApp / Tests
+        // Backward compatibility for RobotWin / Tests
         public string ID { get => TemplateId; set => TemplateId = value; }
 
         public required string DisplayName { get; set; }
         
-        // Backward compatibility for UnityApp / Tests
+        // Backward compatibility for RobotWin / Tests
         public string Name { get => DisplayName; set => DisplayName = value; }
 
         public required string Description { get; set; }
@@ -44,3 +44,4 @@ namespace RobotTwin.CoreSim.Specs
         public WorldSpec? DefaultWorld { get; set; }
     }
 }
+
