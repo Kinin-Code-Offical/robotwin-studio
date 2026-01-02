@@ -1,0 +1,1519 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+namespace RobotTwin.UI
+{
+    public class ComponentStudioView : MonoBehaviour
+    {
+        private const int ViewCubeLayer = 30;
+
+        public enum ViewPreset
+        {
+            Top,
+            Bottom,
+            Left,
+            Right,
+            Front,
+            Back
+        }
+
+        public enum GizmoMode
+        {
+            None,
+            Move,
+            Rotate,
+            Scale
+        }
+
+        public enum GizmoAxis
+        {
+            X,
+            Y,
+            Z,
+            Uniform
+        }
+
+        public enum GizmoHandleKind
+        {
+            MoveAxis,
+            RotateAxis,
+            ScaleAxis,
+            ScaleUniform
+        }
+
+        public sealed class GizmoHandle : MonoBehaviour
+        {
+            public GizmoHandleKind Kind;
+            public GizmoAxis Axis;
+            public float Radius;
+            public float Thickness;
+        }
+
+        private Camera _camera;
+        private RenderTexture _renderTexture;
+        private Camera _viewCubeCamera;
+        private RenderTexture _viewCubeTexture;
+        private Transform _viewCubeRoot;
+        private GameObject _viewCubeModel;
+        private int _viewCubeSize = 128;
+        private Transform _root;
+        private Transform _modelRoot;
+        private Transform _modelContent;
+        private GameObject _modelInstance;
+        private readonly List<Transform> _parts = new List<Transform>();
+        private readonly List<GameObject> _anchorGizmos = new List<GameObject>();
+        private readonly List<GameObject> _effectGizmos = new List<GameObject>();
+        private Transform _gizmoRoot;
+        private readonly List<GameObject> _gizmoObjects = new List<GameObject>();
+        private readonly List<LineRenderer> _gizmoLines = new List<LineRenderer>();
+        private readonly Dictionary<GizmoAxis, GizmoHandle> _rotateHandles = new Dictionary<GizmoAxis, GizmoHandle>();
+        private readonly Dictionary<GizmoAxis, LineRenderer> _rotateArcLines = new Dictionary<GizmoAxis, LineRenderer>();
+        private const int RotateArcSegments = 64;
+        private bool _lockRotateRebuild;
+        private GizmoMode _gizmoMode = GizmoMode.None;
+        private bool _gizmoVisible;
+        private Vector3 _gizmoWorldPos;
+        private Quaternion _gizmoWorldRot = Quaternion.identity;
+        private float _gizmoScale = 1f;
+        private Bounds _gizmoBounds;
+        private Vector2 _orbitAngles = new Vector2(28f, 30f);
+        private float _distance = 1.4f;
+        private Vector3 _panOffset = Vector3.zero;
+        private Vector2 _viewportSize;
+        private static readonly Color CameraBackgroundColor = new Color(0.34f, 0.36f, 0.46f);
+        private Color _background = CameraBackgroundColor;
+        private float _fieldOfView = 55f;
+        private bool _usePerspective = true;
+        private bool _followTarget;
+        private Transform _followTransform;
+        private Light _keyLight;
+        private Light _fillLight;
+        private Light _rimLight;
+        private Light _headLight;
+        private Transform _markerRoot;
+        private float _lightingBlend;
+
+        public struct AnchorGizmo
+        {
+            public string Name;
+            public Vector3 LocalPosition;
+            public float Radius;
+            public Color Color;
+        }
+
+        public RenderTexture TargetTexture => _renderTexture;
+        public RenderTexture ViewCubeTexture => _viewCubeTexture;
+        public IReadOnlyList<Transform> Parts => _parts;
+        public Transform Root => _root;
+        public Camera ViewCamera => _camera;
+
+        public enum EditMarkerKind
+        {
+            Anchor,
+            Effect
+        }
+
+        public sealed class EditMarker : MonoBehaviour
+        {
+            public EditMarkerKind Kind;
+            public string Id;
+        }
+
+        public void Initialize(int width, int height)
+        {
+            EnsureCamera();
+            EnsureRenderTexture(width, height);
+            EnsureViewCube(_viewCubeSize);
+            if (_modelRoot != null)
+            {
+                FrameModel();
+            }
+        }
+
+        public void SetBackground(Color color)
+        {
+            _background = color;
+            if (_camera != null) _camera.backgroundColor = color;
+        }
+
+        public void SetPerspective(bool enabled)
+        {
+            _usePerspective = enabled;
+            if (_camera != null) _camera.orthographic = !_usePerspective;
+            FrameModel();
+        }
+
+        public void SetFieldOfView(float value)
+        {
+            _fieldOfView = Mathf.Clamp(value, 30f, 95f);
+            if (_camera != null) _camera.fieldOfView = _fieldOfView;
+            if (_usePerspective)
+            {
+                FrameModel();
+            }
+            else
+            {
+                UpdateCameraTransform();
+            }
+        }
+
+        public void SetFollowTarget(Transform target, bool enabled)
+        {
+            _followTarget = enabled && target != null;
+            _followTransform = _followTarget ? target : null;
+            if (_followTransform != null && _root != null)
+            {
+                _panOffset = _root.InverseTransformPoint(_followTransform.position);
+                UpdateCameraTransform();
+            }
+        }
+
+        public void ApplyModelTuning(Vector3 euler, Vector3 scale)
+        {
+            if (_modelRoot == null) return;
+            _modelRoot.localRotation = Quaternion.Euler(euler);
+            _modelRoot.localScale = scale;
+            UpdateViewCubeOrientation();
+        }
+
+        public void SetModel(GameObject prefab)
+        {
+            ClearModel();
+            if (prefab == null) return;
+            if (_root == null) EnsureCamera();
+            var pivot = new GameObject("ComponentModel");
+            pivot.transform.SetParent(_root, false);
+            pivot.transform.localPosition = Vector3.zero;
+            pivot.transform.localRotation = Quaternion.identity;
+            pivot.transform.localScale = Vector3.one;
+
+            var content = Instantiate(prefab);
+            content.name = "ComponentContent";
+            content.transform.SetParent(pivot.transform, false);
+
+            _modelInstance = pivot;
+            _modelRoot = pivot.transform;
+            _modelContent = content.transform;
+
+            RecenterModelToBounds();
+            CacheParts();
+            EnsureModelColliders();
+            FrameModel();
+        }
+
+        public void SetModelInstance(GameObject instance)
+        {
+            ClearModel();
+            if (instance == null) return;
+            if (_root == null) EnsureCamera();
+            var pivot = new GameObject("ComponentModel");
+            pivot.transform.SetParent(_root, false);
+            pivot.transform.localPosition = Vector3.zero;
+            pivot.transform.localRotation = Quaternion.identity;
+            pivot.transform.localScale = Vector3.one;
+
+            instance.name = "ComponentContent";
+            instance.SetActive(true);
+            instance.transform.SetParent(pivot.transform, false);
+
+            _modelInstance = pivot;
+            _modelRoot = pivot.transform;
+            _modelContent = instance.transform;
+
+            RecenterModelToBounds();
+            CacheParts();
+            EnsureModelColliders();
+            FrameModel();
+        }
+
+        public void SetPlaceholderModel()
+        {
+            ClearModel();
+            if (_root == null) EnsureCamera();
+            var pivot = new GameObject("ComponentModel");
+            pivot.transform.SetParent(_root, false);
+            pivot.transform.localPosition = Vector3.zero;
+            pivot.transform.localRotation = Quaternion.identity;
+            pivot.transform.localScale = Vector3.one;
+
+            var content = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            content.name = "ComponentPlaceholder";
+            content.transform.SetParent(pivot.transform, false);
+            content.transform.localScale = new Vector3(0.2f, 0.05f, 0.12f);
+
+            _modelInstance = pivot;
+            _modelRoot = pivot.transform;
+            _modelContent = content.transform;
+            RecenterModelToBounds();
+            CacheParts();
+            EnsureModelColliders();
+            FrameModel();
+        }
+
+        public void ClearModel()
+        {
+            if (_modelInstance != null)
+            {
+                Destroy(_modelInstance);
+            }
+            _modelInstance = null;
+            _modelRoot = null;
+            _modelContent = null;
+            _parts.Clear();
+            ClearAnchors();
+            ClearEffects();
+            if (_markerRoot != null)
+            {
+                Destroy(_markerRoot.gameObject);
+                _markerRoot = null;
+            }
+            _followTarget = false;
+            _followTransform = null;
+        }
+
+        private void RecenterModelToBounds()
+        {
+            if (_modelRoot == null || _modelContent == null) return;
+            if (!TryGetBoundsRelativeTo(_modelRoot, _modelRoot, out var bounds)) return;
+            if (bounds.center.sqrMagnitude <= 0.000001f) return;
+            _modelContent.localPosition -= bounds.center;
+        }
+
+        public void FrameModel()
+        {
+            if (_camera == null) return;
+            if (!TryGetModelBounds(out var bounds))
+            {
+                _distance = 1.2f;
+                _panOffset = Vector3.zero;
+                UpdateCameraTransform();
+                return;
+            }
+
+            _panOffset = bounds.center;
+            _distance = _usePerspective
+                ? ComputePerspectiveDistance(bounds, 1.4f)
+                : ComputeOrthoSize(bounds, 1.15f);
+            UpdateCameraTransform();
+        }
+
+        public void ResetView()
+        {
+            _orbitAngles = new Vector2(28f, 30f);
+            FrameModel();
+        }
+
+        public void SnapView(ViewPreset preset)
+        {
+            if (_modelRoot != null)
+            {
+                var modelRotation = GetModelRotation();
+                var modelUp = modelRotation * Vector3.up;
+                var modelRight = modelRotation * Vector3.right;
+                var modelForward = modelRotation * Vector3.forward;
+                Vector3 desiredForward = modelForward;
+                Vector3 desiredUp = modelUp;
+
+                switch (preset)
+                {
+                    case ViewPreset.Top:
+                        desiredForward = -modelUp;
+                        desiredUp = modelForward;
+                        break;
+                    case ViewPreset.Bottom:
+                        desiredForward = modelUp;
+                        desiredUp = modelForward;
+                        break;
+                    case ViewPreset.Left:
+                        desiredForward = -modelRight;
+                        desiredUp = modelUp;
+                        break;
+                    case ViewPreset.Right:
+                        desiredForward = modelRight;
+                        desiredUp = modelUp;
+                        break;
+                    case ViewPreset.Front:
+                        desiredForward = modelForward;
+                        desiredUp = modelUp;
+                        break;
+                    case ViewPreset.Back:
+                        desiredForward = -modelForward;
+                        desiredUp = modelUp;
+                        break;
+                }
+
+                desiredForward.Normalize();
+                desiredUp.Normalize();
+                if (Mathf.Abs(Vector3.Dot(desiredForward, desiredUp)) > 0.95f)
+                {
+                    desiredUp = modelRight;
+                }
+
+                var rotation = Quaternion.LookRotation(desiredForward, desiredUp);
+                var euler = rotation.eulerAngles;
+                _orbitAngles = new Vector2(NormalizeAngle(euler.x), NormalizeAngle(euler.y));
+                UpdateCameraTransform();
+                return;
+            }
+
+            switch (preset)
+            {
+                case ViewPreset.Top:
+                    _orbitAngles = new Vector2(90f, 0f);
+                    break;
+                case ViewPreset.Bottom:
+                    _orbitAngles = new Vector2(-90f, 0f);
+                    break;
+                case ViewPreset.Left:
+                    _orbitAngles = new Vector2(0f, -90f);
+                    break;
+                case ViewPreset.Right:
+                    _orbitAngles = new Vector2(0f, 90f);
+                    break;
+                case ViewPreset.Front:
+                    _orbitAngles = new Vector2(0f, 0f);
+                    break;
+                case ViewPreset.Back:
+                    _orbitAngles = new Vector2(0f, 180f);
+                    break;
+            }
+            UpdateCameraTransform();
+        }
+
+        public void Orbit(Vector2 delta)
+        {
+            _orbitAngles.x -= delta.y;
+            _orbitAngles.y += delta.x;
+            UpdateCameraTransform();
+        }
+
+        public void Pan(Vector2 delta)
+        {
+            if (_camera == null) return;
+            float scale = _distance * 0.0025f;
+            var right = _camera.transform.right;
+            var up = _camera.transform.up;
+            _panOffset -= right * delta.x * scale;
+            _panOffset -= up * delta.y * scale;
+            UpdateCameraTransform();
+        }
+
+        public void NudgePanCamera(Vector2 axes)
+        {
+            if (_camera == null) return;
+            var right = _camera.transform.right;
+            if (right.sqrMagnitude < 0.001f) right = Vector3.right;
+            right.Normalize();
+
+            var forward = _camera.transform.forward;
+            if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+            forward.Normalize();
+
+            float step = GetKeyboardPanStep();
+            _panOffset += (right * axes.x + forward * axes.y) * step;
+            UpdateCameraTransform();
+        }
+
+        public void NudgePanCameraVertical(float axis)
+        {
+            if (_camera == null) return;
+            var up = _camera.transform.up;
+            if (up.sqrMagnitude < 0.001f) up = Vector3.up;
+            up.Normalize();
+
+            float step = GetKeyboardPanStep();
+            _panOffset += up * (axis * step);
+            UpdateCameraTransform();
+        }
+
+        public float GetKeyboardPanStep()
+        {
+            return Mathf.Max(0.02f, _distance * 0.05f);
+        }
+
+        public void Zoom(float amount)
+        {
+            _distance = Mathf.Max(0.001f, _distance * (1f - amount));
+            UpdateCameraTransform();
+        }
+
+        public void SetViewport(int width, int height)
+        {
+            EnsureRenderTexture(width, height);
+        }
+
+        public void SetAnchorGizmos(IReadOnlyList<AnchorGizmo> anchors)
+        {
+            ClearAnchors();
+            if (_modelRoot == null || anchors == null) return;
+
+            foreach (var anchor in anchors)
+            {
+                var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.name = $"Anchor_{anchor.Name}";
+                sphere.transform.SetParent(GetMarkerRoot(), false);
+                sphere.transform.localPosition = anchor.LocalPosition;
+                float radius = Mathf.Max(anchor.Radius, 0.005f);
+                sphere.transform.localScale = Vector3.one * radius * 2f;
+                var marker = sphere.AddComponent<EditMarker>();
+                marker.Kind = EditMarkerKind.Anchor;
+                marker.Id = anchor.Name ?? string.Empty;
+                var renderer = sphere.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    var block = new MaterialPropertyBlock();
+                    block.SetColor("_Color", anchor.Color);
+                    block.SetColor("_BaseColor", anchor.Color);
+                    renderer.SetPropertyBlock(block);
+                }
+                _anchorGizmos.Add(sphere);
+            }
+        }
+
+        public void ClearAnchors()
+        {
+            foreach (var gizmo in _anchorGizmos)
+            {
+                if (gizmo != null)
+                {
+                    Destroy(gizmo);
+                }
+            }
+            _anchorGizmos.Clear();
+        }
+
+        public struct EffectGizmo
+        {
+            public string Id;
+            public Vector3 LocalPosition;
+            public float Radius;
+            public Color Color;
+        }
+
+        public void SetEffectGizmos(IReadOnlyList<EffectGizmo> gizmos)
+        {
+            ClearEffects();
+            if (_modelRoot == null || gizmos == null) return;
+
+            foreach (var gizmo in gizmos)
+            {
+                var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.name = $"Effect_{gizmo.Id}";
+                sphere.transform.SetParent(GetMarkerRoot(), false);
+                sphere.transform.localPosition = gizmo.LocalPosition;
+                float radius = Mathf.Max(gizmo.Radius, 0.008f);
+                sphere.transform.localScale = Vector3.one * radius * 2f;
+                var marker = sphere.AddComponent<EditMarker>();
+                marker.Kind = EditMarkerKind.Effect;
+                marker.Id = gizmo.Id ?? string.Empty;
+                var renderer = sphere.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    var block = new MaterialPropertyBlock();
+                    block.SetColor("_Color", gizmo.Color);
+                    block.SetColor("_BaseColor", gizmo.Color);
+                    renderer.SetPropertyBlock(block);
+                }
+                _effectGizmos.Add(sphere);
+            }
+        }
+
+        public void ClearEffects()
+        {
+            foreach (var gizmo in _effectGizmos)
+            {
+                if (gizmo != null)
+                {
+                    Destroy(gizmo);
+                }
+            }
+            _effectGizmos.Clear();
+        }
+
+        public void SetPartTransform(Transform part, Vector3 position, Vector3 rotation, Vector3 scale)
+        {
+            if (part == null) return;
+            part.localPosition = position;
+            part.localRotation = Quaternion.Euler(rotation);
+            part.localScale = scale;
+        }
+
+        public void SetPartColor(Transform part, Color color)
+        {
+            if (part == null) return;
+            var renderers = part.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                var block = new MaterialPropertyBlock();
+                block.SetColor("_Color", color);
+                block.SetColor("_BaseColor", color);
+                renderer.SetPropertyBlock(block);
+            }
+        }
+
+        public void SetPartMaterial(Transform part, bool useColor, Color color, Texture2D texture)
+        {
+            if (part == null) return;
+            var renderers = part.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                var material = renderer.sharedMaterial != null
+                    ? new Material(renderer.sharedMaterial)
+                    : new Material(Shader.Find("Standard"));
+                if (texture != null)
+                {
+                    material.mainTexture = texture;
+                }
+                if (useColor)
+                {
+                    material.color = color;
+                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+                }
+                renderer.material = material;
+            }
+        }
+
+        public bool TryPickLocal(Vector2 viewportPoint, out Vector3 localPosition)
+        {
+            localPosition = Vector3.zero;
+            if (_camera == null || _modelRoot == null) return false;
+            var ray = _camera.ViewportPointToRay(viewportPoint);
+            var hits = Physics.RaycastAll(ray, 100f);
+            if (hits == null || hits.Length == 0) return false;
+            float best = float.MaxValue;
+            Vector3 bestPoint = Vector3.zero;
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null) continue;
+                if (hit.collider.GetComponentInParent<GizmoHandle>() != null) continue;
+                if (hit.collider.GetComponent<EditMarker>() != null) continue;
+                if (hit.distance < best)
+                {
+                    best = hit.distance;
+                    bestPoint = hit.point;
+                }
+            }
+            if (best == float.MaxValue) return false;
+            localPosition = _modelRoot.InverseTransformPoint(bestPoint);
+            return true;
+        }
+
+        public bool TryPickEditMarker(Vector2 viewportPoint, out EditMarker marker)
+        {
+            marker = null;
+            if (_camera == null) return false;
+            var ray = _camera.ViewportPointToRay(viewportPoint);
+            var hits = Physics.RaycastAll(ray, 100f);
+            if (hits == null || hits.Length == 0) return false;
+            float best = float.MaxValue;
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null) continue;
+                if (hit.collider.GetComponentInParent<GizmoHandle>() != null) continue;
+                var candidate = hit.collider.GetComponent<EditMarker>();
+                if (candidate == null) continue;
+                if (hit.distance < best)
+                {
+                    best = hit.distance;
+                    marker = candidate;
+                }
+            }
+            return marker != null;
+        }
+
+        public bool TryPickPart(Vector2 viewportPoint, out Transform part)
+        {
+            part = null;
+            if (_camera == null || _modelRoot == null) return false;
+            var ray = _camera.ViewportPointToRay(viewportPoint);
+            var hits = Physics.RaycastAll(ray, 100f);
+            if (hits == null || hits.Length == 0) return false;
+            float best = float.MaxValue;
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null) continue;
+                if (hit.collider.GetComponentInParent<GizmoHandle>() != null) continue;
+                if (hit.collider.GetComponent<EditMarker>() != null) continue;
+                var hitTransform = hit.collider.transform;
+                if (hitTransform == null) continue;
+                if (!hitTransform.IsChildOf(_modelRoot)) continue;
+                var candidate = hitTransform;
+                while (candidate != null && candidate.parent != _modelRoot)
+                {
+                    candidate = candidate.parent;
+                }
+                if (candidate == null) continue;
+                if (hit.distance < best)
+                {
+                    best = hit.distance;
+                    part = candidate;
+                }
+            }
+            return part != null;
+        }
+
+        public bool TryPickGizmoHandle(Vector2 viewportPoint, out GizmoHandle handle, out Vector3 worldPoint)
+        {
+            handle = null;
+            worldPoint = Vector3.zero;
+            if (!_gizmoVisible || _camera == null || _gizmoRoot == null) return false;
+            var ray = _camera.ViewportPointToRay(viewportPoint);
+            var hits = Physics.RaycastAll(ray, 200f);
+            if (hits == null || hits.Length == 0) return false;
+            float best = float.MaxValue;
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null) continue;
+                var candidate = hit.collider.GetComponentInParent<GizmoHandle>();
+                if (candidate == null) continue;
+                if (candidate.Kind == GizmoHandleKind.RotateAxis)
+                {
+                    var axis = candidate.transform.forward;
+                    var plane = new Plane(axis, candidate.transform.position);
+                    if (!plane.Raycast(ray, out var enter)) continue;
+                    var point = ray.GetPoint(enter);
+                    float handleScale = _gizmoRoot != null ? _gizmoRoot.localScale.x : _gizmoScale;
+                    float radius = candidate.Radius * handleScale;
+                    float thickness = Mathf.Max(candidate.Thickness * handleScale * 1.6f, 0.02f);
+                    float dist = Vector3.Distance(candidate.transform.position, point);
+                    if (Mathf.Abs(dist - radius) > thickness) continue;
+                    if (hit.distance < best)
+                    {
+                        best = hit.distance;
+                        handle = candidate;
+                        worldPoint = point;
+                    }
+                    continue;
+                }
+                if (hit.distance < best)
+                {
+                    best = hit.distance;
+                    handle = candidate;
+                    worldPoint = hit.point;
+                }
+            }
+            return handle != null;
+        }
+
+        public void SetTransformGizmo(Vector3 worldPosition, Quaternion worldRotation, Bounds bounds, GizmoMode mode, bool visible)
+        {
+            _gizmoVisible = visible;
+            if (!visible)
+            {
+                SetGizmoActive(false);
+                return;
+            }
+            EnsureGizmoRoot();
+            _gizmoWorldPos = worldPosition;
+            _gizmoWorldRot = worldRotation;
+            bool rebuild = _gizmoMode != mode || _gizmoObjects.Count == 0;
+            if (mode == GizmoMode.Scale || (mode == GizmoMode.Rotate && !_lockRotateRebuild))
+            {
+                if (_gizmoBounds.size != bounds.size || _gizmoBounds.center != bounds.center)
+                {
+                    rebuild = true;
+                }
+                _gizmoBounds = bounds;
+            }
+            if (rebuild)
+            {
+                BuildGizmo(mode, bounds);
+            }
+            UpdateGizmoTransform();
+            SetGizmoActive(true);
+        }
+
+        public void HideTransformGizmo()
+        {
+            _gizmoVisible = false;
+            SetGizmoActive(false);
+        }
+
+        public bool TryGetModelBoundsLocal(out Bounds bounds)
+        {
+            return TryGetModelBounds(out bounds);
+        }
+
+        public bool TryGetPartBoundsLocal(Transform part, out Bounds bounds)
+        {
+            bounds = new Bounds(Vector3.zero, Vector3.zero);
+            if (part == null) return false;
+            var reference = _root != null ? _root : part;
+            return TryGetBoundsRelativeTo(reference, part, out bounds);
+        }
+
+        public bool TryGetViewportRay(Vector2 viewportPoint, out Ray ray)
+        {
+            ray = new Ray();
+            if (_camera == null) return false;
+            ray = _camera.ViewportPointToRay(viewportPoint);
+            return true;
+        }
+
+        private void EnsureGizmoRoot()
+        {
+            if (_gizmoRoot != null) return;
+            var rootGo = new GameObject("ComponentStudioGizmo");
+            rootGo.transform.SetParent(transform, false);
+            _gizmoRoot = rootGo.transform;
+            _gizmoRoot.localPosition = Vector3.zero;
+            _gizmoRoot.localRotation = Quaternion.identity;
+        }
+
+        private void SetGizmoActive(bool active)
+        {
+            if (_gizmoRoot == null) return;
+            _gizmoRoot.gameObject.SetActive(active);
+        }
+
+        private void BuildGizmo(GizmoMode mode, Bounds bounds)
+        {
+            ClearGizmoObjects();
+            _gizmoMode = mode;
+            if (mode == GizmoMode.Move)
+            {
+                BuildMoveGizmo();
+            }
+            else if (mode == GizmoMode.Rotate)
+            {
+                BuildRotateGizmo(bounds);
+            }
+            else if (mode == GizmoMode.Scale)
+            {
+                BuildScaleGizmo(bounds);
+            }
+        }
+
+        private void ClearGizmoObjects()
+        {
+            foreach (var obj in _gizmoObjects)
+            {
+                if (obj != null) Destroy(obj);
+            }
+            _gizmoObjects.Clear();
+            foreach (var line in _gizmoLines)
+            {
+                if (line != null) Destroy(line.gameObject);
+            }
+            _gizmoLines.Clear();
+            _rotateHandles.Clear();
+            _rotateArcLines.Clear();
+        }
+
+        private void BuildMoveGizmo()
+        {
+            CreateAxisHandle("MoveAxisX", GizmoHandleKind.MoveAxis, GizmoAxis.X, Color.red, Vector3.right);
+            CreateAxisHandle("MoveAxisY", GizmoHandleKind.MoveAxis, GizmoAxis.Y, Color.green, Vector3.up);
+            CreateAxisHandle("MoveAxisZ", GizmoHandleKind.MoveAxis, GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward);
+        }
+
+        private void BuildRotateGizmo(Bounds bounds)
+        {
+            float extent = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+            float radius = Mathf.Max(extent * 1.2f, 0.3f);
+            float thickness = Mathf.Max(radius * 0.12f, 0.05f);
+            float width = Mathf.Max(radius * 0.035f, 0.015f);
+            CreateRotateHandle("RotateAxisX", GizmoAxis.X, Color.red, Vector3.right, radius, thickness, width);
+            CreateRotateHandle("RotateAxisY", GizmoAxis.Y, Color.green, Vector3.up, radius, thickness, width);
+            CreateRotateHandle("RotateAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward, radius, thickness, width);
+        }
+
+        private void BuildScaleGizmo(Bounds bounds)
+        {
+            var ext = bounds.extents;
+            float minExtent = 0.05f;
+            ext = new Vector3(
+                Mathf.Max(ext.x, minExtent),
+                Mathf.Max(ext.y, minExtent),
+                Mathf.Max(ext.z, minExtent));
+            bounds = new Bounds(bounds.center, ext * 2f);
+
+            float handleSize = Mathf.Clamp(bounds.size.magnitude * 0.065f, 0.18f, 0.42f);
+            float cornerSize = Mathf.Clamp(bounds.size.magnitude * 0.075f, 0.2f, 0.48f);
+            float minOffset = Mathf.Max(handleSize * 1.25f, 0.18f);
+
+            CreateScaleBox(bounds, new Color(0.6f, 0.66f, 0.78f, 0.6f));
+            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, new Vector3(Mathf.Max(ext.x, minOffset), 0f, 0f), handleSize);
+            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, new Vector3(0f, Mathf.Max(ext.y, minOffset), 0f), handleSize);
+            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), new Vector3(0f, 0f, Mathf.Max(ext.z, minOffset)), handleSize);
+
+            var center = bounds.center;
+            var cornerOffsets = new[]
+            {
+                new Vector3(ext.x, ext.y, ext.z),
+                new Vector3(ext.x, ext.y, -ext.z),
+                new Vector3(ext.x, -ext.y, ext.z),
+                new Vector3(ext.x, -ext.y, -ext.z),
+                new Vector3(-ext.x, ext.y, ext.z),
+                new Vector3(-ext.x, ext.y, -ext.z),
+                new Vector3(-ext.x, -ext.y, ext.z),
+                new Vector3(-ext.x, -ext.y, -ext.z)
+            };
+            foreach (var offset in cornerOffsets)
+            {
+                CreateCornerHandle(center + offset, new Color(0.82f, 0.88f, 0.98f), cornerSize);
+            }
+        }
+
+        private void CreateAxisHandle(string name, GizmoHandleKind kind, GizmoAxis axis, Color color, Vector3 direction)
+        {
+            if (_gizmoRoot == null) return;
+            var handle = new GameObject(name);
+            handle.transform.SetParent(_gizmoRoot, false);
+            handle.transform.localRotation = Quaternion.FromToRotation(Vector3.up, direction);
+            var handleComp = handle.AddComponent<GizmoHandle>();
+            handleComp.Kind = kind;
+            handleComp.Axis = axis;
+
+            float shaftRadius = 0.08f;
+            float shaftLength = 1.1f;
+            float headSize = 0.18f;
+
+            var shaft = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            shaft.transform.SetParent(handle.transform, false);
+            shaft.transform.localScale = new Vector3(shaftRadius, shaftLength * 0.5f, shaftRadius);
+            shaft.transform.localPosition = new Vector3(0f, shaftLength * 0.5f, 0f);
+            ApplyGizmoColor(shaft, color);
+
+            var head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            head.transform.SetParent(handle.transform, false);
+            head.transform.localScale = Vector3.one * headSize;
+            head.transform.localPosition = new Vector3(0f, shaftLength + headSize * 0.5f, 0f);
+            ApplyGizmoColor(head, color);
+
+            _gizmoObjects.Add(handle);
+        }
+
+        private void CreateRotateHandle(string name, GizmoAxis axis, Color color, Vector3 direction, float radius, float thickness, float width)
+        {
+            if (_gizmoRoot == null) return;
+            var handle = new GameObject(name);
+            handle.transform.SetParent(_gizmoRoot, false);
+            handle.transform.localRotation = Quaternion.FromToRotation(Vector3.forward, direction);
+            var handleComp = handle.AddComponent<GizmoHandle>();
+            handleComp.Kind = GizmoHandleKind.RotateAxis;
+            handleComp.Axis = axis;
+            handleComp.Radius = radius;
+            handleComp.Thickness = thickness;
+
+            var line = handle.AddComponent<LineRenderer>();
+            ConfigureLineRenderer(line, color, 80, handleComp.Radius, width);
+            _gizmoLines.Add(line);
+
+            var arcGo = new GameObject($"{name}_Arc");
+            arcGo.transform.SetParent(handle.transform, false);
+            var arc = arcGo.AddComponent<LineRenderer>();
+            ConfigureArcRenderer(arc, Color.Lerp(color, Color.white, 0.5f), width * 1.4f);
+            arc.enabled = false;
+            _rotateArcLines[axis] = arc;
+            _rotateHandles[axis] = handleComp;
+
+            var collider = handle.AddComponent<SphereCollider>();
+            collider.radius = handleComp.Radius + handleComp.Thickness * 2f;
+            collider.isTrigger = false;
+
+            _gizmoObjects.Add(handle);
+        }
+
+        private void CreateScaleAxisHandle(string name, GizmoAxis axis, Color color, Vector3 localOffset, float size)
+        {
+            if (_gizmoRoot == null) return;
+            var handle = new GameObject(name);
+            handle.transform.SetParent(_gizmoRoot, false);
+            handle.transform.localPosition = localOffset;
+            var handleComp = handle.AddComponent<GizmoHandle>();
+            handleComp.Kind = GizmoHandleKind.ScaleAxis;
+            handleComp.Axis = axis;
+
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.SetParent(handle.transform, false);
+            cube.transform.localScale = Vector3.one * size;
+            ApplyGizmoColor(cube, color);
+            _gizmoObjects.Add(handle);
+        }
+
+        private void CreateCornerHandle(Vector3 localPosition, Color color, float size)
+        {
+            if (_gizmoRoot == null) return;
+            var handle = new GameObject("ScaleCorner");
+            handle.transform.SetParent(_gizmoRoot, false);
+            handle.transform.localPosition = localPosition;
+            var handleComp = handle.AddComponent<GizmoHandle>();
+            handleComp.Kind = GizmoHandleKind.ScaleUniform;
+            handleComp.Axis = GizmoAxis.Uniform;
+
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.SetParent(handle.transform, false);
+            cube.transform.localScale = Vector3.one * size;
+            ApplyGizmoColor(cube, color);
+            _gizmoObjects.Add(handle);
+        }
+
+        private void CreateScaleBox(Bounds bounds, Color color)
+        {
+            var min = bounds.min;
+            var max = bounds.max;
+            var corners = new[]
+            {
+                new Vector3(min.x, min.y, min.z),
+                new Vector3(max.x, min.y, min.z),
+                new Vector3(max.x, max.y, min.z),
+                new Vector3(min.x, max.y, min.z),
+                new Vector3(min.x, min.y, max.z),
+                new Vector3(max.x, min.y, max.z),
+                new Vector3(max.x, max.y, max.z),
+                new Vector3(min.x, max.y, max.z)
+            };
+            int[,] edges =
+            {
+                {0,1},{1,2},{2,3},{3,0},
+                {4,5},{5,6},{6,7},{7,4},
+                {0,4},{1,5},{2,6},{3,7}
+            };
+            float lineWidth = Mathf.Clamp(bounds.size.magnitude * 0.01f, 0.03f, 0.06f);
+            for (int i = 0; i < edges.GetLength(0); i++)
+            {
+                var lineObj = new GameObject($"ScaleBoxEdge{i}");
+                lineObj.transform.SetParent(_gizmoRoot, false);
+                var line = lineObj.AddComponent<LineRenderer>();
+                line.positionCount = 2;
+                line.useWorldSpace = false;
+                line.startWidth = lineWidth;
+                line.endWidth = lineWidth;
+                line.material = new Material(Shader.Find("Sprites/Default"));
+                line.startColor = color;
+                line.endColor = color;
+                line.SetPosition(0, corners[edges[i, 0]]);
+                line.SetPosition(1, corners[edges[i, 1]]);
+                _gizmoLines.Add(line);
+            }
+        }
+
+        private void ConfigureLineRenderer(LineRenderer line, Color color, int segments, float radius, float width)
+        {
+            line.useWorldSpace = false;
+            line.loop = true;
+            line.positionCount = segments;
+            line.startWidth = width;
+            line.endWidth = width;
+            line.material = new Material(Shader.Find("Sprites/Default"));
+            line.startColor = color;
+            line.endColor = color;
+            float step = Mathf.PI * 2f / (segments - 1);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = step * i;
+                line.SetPosition(i, new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, 0f));
+            }
+        }
+
+        private void ConfigureArcRenderer(LineRenderer line, Color color, float width)
+        {
+            line.useWorldSpace = false;
+            line.loop = false;
+            line.positionCount = 0;
+            line.startWidth = width;
+            line.endWidth = width;
+            line.material = new Material(Shader.Find("Sprites/Default"));
+            line.startColor = color;
+            line.endColor = color;
+        }
+
+        public void SetRotateArc(GizmoAxis axis, float degrees, float startAngle)
+        {
+            if (_gizmoMode != GizmoMode.Rotate) return;
+            if (!_rotateArcLines.TryGetValue(axis, out var arc) || arc == null) return;
+            if (!_rotateHandles.TryGetValue(axis, out var handle) || handle == null) return;
+
+            float abs = Mathf.Abs(degrees);
+            if (abs < 0.5f)
+            {
+                arc.enabled = false;
+                return;
+            }
+
+            float displayAngle = Mathf.Clamp(degrees, -360f, 360f);
+            int segments = Mathf.Clamp(Mathf.CeilToInt(RotateArcSegments * Mathf.Clamp01(Mathf.Abs(displayAngle) / 360f)), 3, RotateArcSegments);
+            arc.positionCount = segments;
+            arc.enabled = true;
+
+            float step = displayAngle / (segments - 1);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = (startAngle + step * i) * Mathf.Deg2Rad;
+                arc.SetPosition(i, new Vector3(Mathf.Cos(angle) * handle.Radius, Mathf.Sin(angle) * handle.Radius, 0f));
+            }
+        }
+
+        public void ClearRotateArcs()
+        {
+            foreach (var arc in _rotateArcLines.Values)
+            {
+                if (arc != null) arc.enabled = false;
+            }
+        }
+
+        public void SetRotateRebuildLock(bool locked)
+        {
+            _lockRotateRebuild = locked;
+        }
+
+        private void ApplyGizmoColor(GameObject target, Color color)
+        {
+            var renderer = target.GetComponent<Renderer>();
+            if (renderer == null) return;
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Unlit/Color") ??
+                Shader.Find("Standard");
+            if (shader == null) return;
+            var mat = new Material(shader) { name = "ComponentStudioGizmoMat" };
+            mat.color = color;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+            renderer.sharedMaterial = mat;
+        }
+
+        private void UpdateGizmoTransform()
+        {
+            if (!_gizmoVisible || _gizmoRoot == null) return;
+            _gizmoRoot.position = _gizmoWorldPos;
+            _gizmoRoot.rotation = _gizmoWorldRot;
+            _gizmoScale = ComputeGizmoScale(_gizmoWorldPos);
+            if (_gizmoMode == GizmoMode.Scale || _gizmoMode == GizmoMode.Rotate)
+            {
+                _gizmoRoot.localScale = Vector3.one;
+            }
+            else
+            {
+                _gizmoRoot.localScale = Vector3.one * _gizmoScale;
+            }
+        }
+
+        private float ComputeGizmoScale(Vector3 worldPos)
+        {
+            if (_camera == null) return 1f;
+            float dist = Vector3.Distance(_camera.transform.position, worldPos);
+            return Mathf.Clamp(dist * 0.16f, 0.06f, 2f);
+        }
+
+        private Transform GetMarkerRoot()
+        {
+            if (_markerRoot != null) return _markerRoot;
+            var markerGo = new GameObject("ComponentStudioMarkers");
+            markerGo.transform.SetParent(_modelRoot != null ? _modelRoot : (_root != null ? _root : transform), false);
+            _markerRoot = markerGo.transform;
+            return _markerRoot;
+        }
+
+        private void EnsureCamera()
+        {
+            if (_camera != null) return;
+            var rootGo = new GameObject("ComponentStudioRoot");
+            rootGo.transform.SetParent(transform, false);
+            _root = rootGo.transform;
+
+            var camGo = new GameObject("ComponentStudioCamera");
+            camGo.transform.SetParent(transform, false);
+            _camera = camGo.AddComponent<Camera>();
+            _camera.clearFlags = CameraClearFlags.SolidColor;
+            _camera.backgroundColor = _background;
+            _camera.orthographic = !_usePerspective;
+            _camera.nearClipPlane = 0.01f;
+            _camera.farClipPlane = 5000f;
+            _camera.fieldOfView = _fieldOfView;
+            _camera.cullingMask &= ~(1 << ViewCubeLayer);
+
+            _keyLight = CreateLight("KeyLight", new Vector3(0.4f, 0.8f, 0.2f), 1.1f);
+            _fillLight = CreateLight("FillLight", new Vector3(-0.6f, 0.4f, -0.2f), 0.7f);
+            _rimLight = CreateLight("RimLight", new Vector3(0.2f, 0.2f, -0.8f), 0.35f);
+            _headLight = CreateHeadLight();
+            ApplyLightingBlend();
+            EnsureViewCube(_viewCubeSize);
+        }
+
+        private Light CreateHeadLight()
+        {
+            if (_camera == null || _headLight != null) return _headLight;
+            var lightGo = new GameObject("HeadLight");
+            lightGo.transform.SetParent(_camera.transform, false);
+            lightGo.transform.localRotation = Quaternion.identity;
+            _headLight = lightGo.AddComponent<Light>();
+            _headLight.type = LightType.Directional;
+            _headLight.intensity = 0.45f;
+            _headLight.color = Color.white;
+            _headLight.shadows = LightShadows.None;
+            return _headLight;
+        }
+
+        private Light CreateLight(string name, Vector3 dir, float intensity)
+        {
+            var lightGo = new GameObject(name);
+            lightGo.transform.SetParent(transform, false);
+            lightGo.transform.rotation = Quaternion.LookRotation(dir.normalized);
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = intensity;
+            light.color = Color.white;
+            light.shadows = LightShadows.None;
+            return light;
+        }
+
+        public void AdjustLightingBlend(float delta)
+        {
+            _lightingBlend = Mathf.Clamp01(_lightingBlend + delta);
+            ApplyLightingBlend();
+        }
+
+        private void ApplyLightingBlend()
+        {
+            if (_keyLight == null || _fillLight == null || _rimLight == null || _headLight == null) return;
+            var studio = LightingProfile.Studio;
+            var realistic = LightingProfile.Realistic;
+            float t = _lightingBlend;
+
+            _keyLight.intensity = Mathf.Lerp(studio.KeyIntensity, realistic.KeyIntensity, t);
+            _keyLight.color = Color.Lerp(studio.KeyColor, realistic.KeyColor, t);
+            _fillLight.intensity = Mathf.Lerp(studio.FillIntensity, realistic.FillIntensity, t);
+            _fillLight.color = Color.Lerp(studio.FillColor, realistic.FillColor, t);
+            _rimLight.intensity = Mathf.Lerp(studio.RimIntensity, realistic.RimIntensity, t);
+            _rimLight.color = Color.Lerp(studio.RimColor, realistic.RimColor, t);
+            _headLight.intensity = Mathf.Lerp(studio.HeadIntensity, realistic.HeadIntensity, t);
+            _headLight.color = Color.Lerp(studio.HeadColor, realistic.HeadColor, t);
+        }
+
+        private void EnsureRenderTexture(int width, int height)
+        {
+            width = Mathf.Max(16, width);
+            height = Mathf.Max(16, height);
+            if (_renderTexture != null && _renderTexture.width == width && _renderTexture.height == height) return;
+            if (_renderTexture != null)
+            {
+                _renderTexture.Release();
+            }
+            _renderTexture = new RenderTexture(width, height, 16)
+            {
+                name = "ComponentStudioRT",
+                antiAliasing = 2
+            };
+            if (_camera != null) _camera.targetTexture = _renderTexture;
+            _viewportSize = new Vector2(width, height);
+            UpdateCameraTransform();
+        }
+
+        private void EnsureViewCube(int size)
+        {
+            if (_viewCubeRoot == null)
+            {
+                var rootGo = new GameObject("ComponentStudioViewCubeRoot");
+                rootGo.transform.SetParent(transform, false);
+                _viewCubeRoot = rootGo.transform;
+                _viewCubeRoot.localPosition = Vector3.zero;
+                _viewCubeRoot.localRotation = Quaternion.identity;
+
+                _viewCubeModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                _viewCubeModel.name = "ViewCube";
+                _viewCubeModel.transform.SetParent(_viewCubeRoot, false);
+                _viewCubeModel.transform.localScale = Vector3.one;
+                SetLayerRecursively(_viewCubeModel.transform, ViewCubeLayer);
+                var renderer = _viewCubeModel.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    var shader = Shader.Find("Universal Render Pipeline/Lit") ??
+                        Shader.Find("Standard") ??
+                        Shader.Find("Universal Render Pipeline/Unlit") ??
+                        Shader.Find("Unlit/Color");
+                    if (shader != null)
+                    {
+                        var mat = new Material(shader) { name = "ViewCubeMat" };
+                        mat.color = new Color(0.7f, 0.74f, 0.8f);
+                        renderer.sharedMaterial = mat;
+                    }
+                }
+            }
+
+            if (_viewCubeCamera == null)
+            {
+                var camGo = new GameObject("ComponentStudioViewCubeCamera");
+                camGo.transform.SetParent(transform, false);
+                _viewCubeCamera = camGo.AddComponent<Camera>();
+                _viewCubeCamera.clearFlags = CameraClearFlags.SolidColor;
+                _viewCubeCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                _viewCubeCamera.orthographic = false;
+                _viewCubeCamera.fieldOfView = 26f;
+                _viewCubeCamera.nearClipPlane = 0.05f;
+                _viewCubeCamera.farClipPlane = 10f;
+                _viewCubeCamera.cullingMask = 1 << ViewCubeLayer;
+                camGo.transform.localPosition = new Vector3(0f, 0f, -3.6f);
+                camGo.transform.localRotation = Quaternion.identity;
+                camGo.transform.LookAt(Vector3.zero);
+            }
+
+            size = Mathf.Clamp(size, 64, 256);
+            if (_viewCubeTexture == null || _viewCubeTexture.width != size || _viewCubeTexture.height != size)
+            {
+                if (_viewCubeTexture != null)
+                {
+                    _viewCubeTexture.Release();
+                }
+                _viewCubeTexture = new RenderTexture(size, size, 16, RenderTextureFormat.ARGB32)
+                {
+                    name = "ComponentStudioViewCubeRT",
+                    antiAliasing = 2
+                };
+                _viewCubeTexture.Create();
+            }
+            if (_viewCubeCamera != null) _viewCubeCamera.targetTexture = _viewCubeTexture;
+            UpdateViewCubeOrientation();
+        }
+
+        private void UpdateViewCubeOrientation()
+        {
+            if (_viewCubeRoot == null) return;
+            if (_modelRoot == null)
+            {
+                if (_camera == null) return;
+                _viewCubeRoot.rotation = _camera.transform.rotation;
+                return;
+            }
+            _viewCubeRoot.rotation = GetModelRotation();
+        }
+
+        private Quaternion GetModelRotation()
+        {
+            if (_modelContent != null) return _modelContent.rotation;
+            if (_modelRoot != null) return _modelRoot.rotation;
+            return Quaternion.identity;
+        }
+
+        private static float NormalizeAngle(float angle)
+        {
+            angle %= 360f;
+            if (angle > 180f) angle -= 360f;
+            return angle;
+        }
+
+        private static void SetLayerRecursively(Transform target, int layer)
+        {
+            if (target == null) return;
+            target.gameObject.layer = layer;
+            for (int i = 0; i < target.childCount; i++)
+            {
+                SetLayerRecursively(target.GetChild(i), layer);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_followTarget || _followTransform == null || _root == null) return;
+            _panOffset = _root.InverseTransformPoint(_followTransform.position);
+            UpdateCameraTransform();
+        }
+
+        private void UpdateCameraTransform()
+        {
+            if (_camera == null) return;
+            var rotation = Quaternion.Euler(_orbitAngles.x, _orbitAngles.y, 0f);
+            float cameraDistance = _usePerspective ? _distance : Mathf.Max(0.1f, _distance * 2f);
+            var offset = rotation * new Vector3(0f, 0f, -cameraDistance);
+            _camera.transform.position = _panOffset + offset;
+            _camera.transform.rotation = rotation;
+            _camera.orthographic = !_usePerspective;
+            if (!_usePerspective)
+            {
+                _camera.orthographicSize = Mathf.Max(0.01f, _distance);
+            }
+            UpdateViewCubeOrientation();
+            UpdateGizmoTransform();
+        }
+
+        public void SetViewCubeSize(int size)
+        {
+            _viewCubeSize = Mathf.Clamp(size, 64, 256);
+            EnsureViewCube(_viewCubeSize);
+        }
+
+        public bool TryPickViewCubeFace(Vector2 viewportPoint, out ViewPreset preset)
+        {
+            preset = ViewPreset.Front;
+            if (_viewCubeCamera == null || _viewCubeRoot == null) return false;
+            var ray = _viewCubeCamera.ViewportPointToRay(new Vector3(viewportPoint.x, viewportPoint.y, 0f));
+            int mask = 1 << ViewCubeLayer;
+            if (!Physics.Raycast(ray, out var hit, 10f, mask)) return false;
+            var normal = _viewCubeRoot.InverseTransformDirection(hit.normal);
+            var abs = new Vector3(Mathf.Abs(normal.x), Mathf.Abs(normal.y), Mathf.Abs(normal.z));
+            if (abs.x > abs.y && abs.x > abs.z)
+            {
+                preset = normal.x > 0f ? ViewPreset.Right : ViewPreset.Left;
+            }
+            else if (abs.y > abs.x && abs.y > abs.z)
+            {
+                preset = normal.y > 0f ? ViewPreset.Top : ViewPreset.Bottom;
+            }
+            else
+            {
+                preset = normal.z > 0f ? ViewPreset.Front : ViewPreset.Back;
+            }
+            return true;
+        }
+
+        private void CacheParts()
+        {
+            _parts.Clear();
+            if (_modelRoot == null) return;
+            var renderers = _modelRoot.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                _parts.Add(renderer.transform);
+            }
+            _parts.Sort((a, b) => string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void EnsureModelColliders()
+        {
+            if (_modelRoot == null) return;
+            var meshFilters = _modelRoot.GetComponentsInChildren<MeshFilter>(true);
+            foreach (var filter in meshFilters)
+            {
+                if (filter == null || filter.sharedMesh == null) continue;
+                var collider = filter.GetComponent<MeshCollider>();
+                if (collider == null)
+                {
+                    collider = filter.gameObject.AddComponent<MeshCollider>();
+                }
+                collider.sharedMesh = filter.sharedMesh;
+            }
+        }
+
+        private bool TryGetBoundsRelativeTo(Transform reference, Transform scope, out Bounds bounds)
+        {
+            bounds = new Bounds(Vector3.zero, Vector3.zero);
+            if (reference == null || scope == null) return false;
+            var renderers = scope.GetComponentsInChildren<Renderer>(true);
+            bool hasBounds = false;
+            var referenceMatrix = reference.worldToLocalMatrix;
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                var matrix = referenceMatrix * renderer.transform.localToWorldMatrix;
+                if (!IsFinite(matrix)) continue;
+                var transformed = TransformBounds(renderer.localBounds, matrix);
+                if (!IsFinite(transformed.center) || !IsFinite(transformed.size)) continue;
+                if (!hasBounds)
+                {
+                    bounds = transformed;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(transformed);
+                }
+            }
+            return hasBounds;
+        }
+
+        private static Bounds TransformBounds(Bounds bounds, Matrix4x4 matrix)
+        {
+            var center = matrix.MultiplyPoint3x4(bounds.center);
+            var extents = bounds.extents;
+            var axisX = matrix.MultiplyVector(new Vector3(extents.x, 0f, 0f));
+            var axisY = matrix.MultiplyVector(new Vector3(0f, extents.y, 0f));
+            var axisZ = matrix.MultiplyVector(new Vector3(0f, 0f, extents.z));
+            extents = new Vector3(
+                Mathf.Abs(axisX.x) + Mathf.Abs(axisY.x) + Mathf.Abs(axisZ.x),
+                Mathf.Abs(axisX.y) + Mathf.Abs(axisY.y) + Mathf.Abs(axisZ.y),
+                Mathf.Abs(axisX.z) + Mathf.Abs(axisY.z) + Mathf.Abs(axisZ.z));
+            return new Bounds(center, extents * 2f);
+        }
+
+        private static bool IsFinite(Vector3 value)
+        {
+            return IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
+        }
+
+        private static bool IsFinite(Matrix4x4 value)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                if (!IsFinite(value[i])) return false;
+            }
+            return true;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private bool TryGetModelBounds(out Bounds bounds)
+        {
+            bounds = new Bounds(Vector3.zero, Vector3.zero);
+            if (_modelRoot == null) return false;
+            var reference = _root != null ? _root : _modelRoot;
+            return TryGetBoundsRelativeTo(reference, _modelRoot, out bounds);
+        }
+
+        private float ComputePerspectiveDistance(Bounds bounds, float padding)
+        {
+            float aspect = _viewportSize.y > 0f ? _viewportSize.x / _viewportSize.y : 1f;
+            float halfHeight = Mathf.Max(0.01f, bounds.extents.y);
+            float halfWidth = Mathf.Max(0.01f, bounds.extents.x);
+            float halfDepth = Mathf.Max(0.01f, bounds.extents.z);
+            float fovRad = Mathf.Deg2Rad * Mathf.Max(1f, _fieldOfView);
+            float tanFov = Mathf.Tan(fovRad * 0.5f);
+            float verticalDistance = halfHeight / tanFov;
+            float horizontalFov = 2f * Mathf.Atan(tanFov * Mathf.Max(0.2f, aspect));
+            float horizontalDistance = halfWidth / Mathf.Tan(horizontalFov * 0.5f);
+            float distance = Mathf.Max(verticalDistance, horizontalDistance) + halfDepth;
+            return Mathf.Max(0.02f, distance * padding);
+        }
+
+        private float ComputeOrthoSize(Bounds bounds, float padding)
+        {
+            float aspect = _viewportSize.y > 0f ? _viewportSize.x / _viewportSize.y : 1f;
+            float halfHeight = Mathf.Max(0.01f, bounds.extents.y);
+            float halfWidth = Mathf.Max(0.01f, bounds.extents.x);
+            float size = Mathf.Max(halfHeight, halfWidth / Mathf.Max(0.2f, aspect));
+            return Mathf.Max(0.02f, size * padding);
+        }
+
+        private struct LightingProfile
+        {
+            public Color KeyColor;
+            public float KeyIntensity;
+            public Color FillColor;
+            public float FillIntensity;
+            public Color RimColor;
+            public float RimIntensity;
+            public Color HeadColor;
+            public float HeadIntensity;
+
+            public static LightingProfile Studio => new LightingProfile
+            {
+                KeyColor = new Color(0.98f, 0.95f, 0.92f),
+                KeyIntensity = 1.1f,
+                FillColor = new Color(0.78f, 0.84f, 0.95f),
+                FillIntensity = 0.7f,
+                RimColor = new Color(0.7f, 0.78f, 0.95f),
+                RimIntensity = 0.35f,
+                HeadColor = new Color(0.95f, 0.96f, 1f),
+                HeadIntensity = 0.45f
+            };
+
+            public static LightingProfile Realistic => new LightingProfile
+            {
+                KeyColor = new Color(0.85f, 0.80f, 0.75f),
+                KeyIntensity = 0.45f,
+                FillColor = new Color(0.5f, 0.56f, 0.62f),
+                FillIntensity = 0.18f,
+                RimColor = new Color(0.45f, 0.52f, 0.68f),
+                RimIntensity = 0.12f,
+                HeadColor = new Color(0.75f, 0.78f, 0.86f),
+                HeadIntensity = 0.18f
+            };
+        }
+    }
+}

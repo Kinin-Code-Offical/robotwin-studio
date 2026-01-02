@@ -5,7 +5,7 @@
 #define VER_FILE_VERSION_STR "1.0.0.0"
 #define VER_PRODUCT_VERSION_STR "1.0.0.0"
 
-IDI_APP_ICON ICON "../UnityApp/Assets/UI/Icons/robotwin.ico"
+IDI_APP_ICON ICON "../RobotWin/Assets/UI/Icons/robotwin.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION VER_FILE_VERSION
@@ -35,3 +35,4 @@ BEGIN
     VALUE "Translation", 0x0409, 1200
   END
 END
+

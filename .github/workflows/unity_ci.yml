@@ -16,7 +16,7 @@ jobs:
       unity_version: ${{ steps.get_version.outputs.unity_version }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Check for Unity License
         id: check_secret
@@ -36,7 +36,7 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
-          $verFile = "UnityApp/ProjectSettings/ProjectVersion.txt"
+          $verFile = "RobotWin/ProjectSettings/ProjectVersion.txt"
           if (Test-Path $verFile) {
             $content = Get-Content $verFile
             # Parse 'm_EditorVersion: 6000.3.2f1'
@@ -54,21 +54,35 @@ jobs:
             exit 1
           }
 
+  dotnet-tests:
+    name: CoreSim .NET Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Run CoreSim Tests
+        run: dotnet test CoreSim
+
   unity-tests:
     name: Unity EditMode Tests
     needs: probe
     if: needs.probe.outputs.run_unity == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           lfs: true
 
       - name: Cache Library
         uses: actions/cache@v5
         with:
-          path: UnityApp/Library
-          key: Library-${{ runner.os }}-${{ needs.probe.outputs.unity_version }}-${{ hashFiles('UnityApp/Packages/manifest.json', 'UnityApp/Packages/packages-lock.json') }}
+          path: RobotWin/Library
+          key: Library-${{ runner.os }}-${{ needs.probe.outputs.unity_version }}-${{ hashFiles('RobotWin/Packages/manifest.json', 'RobotWin/Packages/packages-lock.json') }}
           restore-keys: |
             Library-${{ runner.os }}-${{ needs.probe.outputs.unity_version }}-
             Library-${{ runner.os }}-
@@ -80,7 +94,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          projectPath: UnityApp
+          projectPath: RobotWin
           unityVersion: ${{ needs.probe.outputs.unity_version }}
           testMode: all
           artifactsPath: artifacts
