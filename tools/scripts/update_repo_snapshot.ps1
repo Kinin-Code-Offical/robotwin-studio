@@ -159,11 +159,12 @@ function Update-ReadmeTree {
 
     $begin = "<!-- BEGIN FOLDER_TREE -->"
     $end = "<!-- END FOLDER_TREE -->"
-    $treeLines = Get-TreeLines -Files $Files -MaxDepth 2
+    $treeFiles = $Files | Where-Object { -not $_.EndsWith(".meta") }
+    $treeLines = Get-TreeLines -Files $treeFiles -MaxDepth 3
     $nl = [Environment]::NewLine
     $fence = '```'
     $treeBlock = @()
-    $treeBlock += "## Folder Tree"
+    $treeBlock += "## Project Tree"
     $treeBlock += ""
     $treeBlock += "$fence" + "text"
     $treeBlock += $treeLines
