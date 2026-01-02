@@ -32,3 +32,9 @@ RobotWin Studio is a multi-module system that combines a deterministic simulator
 ## Product Vision
 
 The long-term goal is a full-stack robotics simulator: build a robot and its world, simulate circuits in real time, and include servo/sensor physics so that running the real robot yields nearly identical behavior and telemetry to the simulated result.
+
+## Confirmed Roadmap Milestones
+
+- Raspberry Pi target support with on-device AI inference workflows and deployment tooling.
+- C++ physics simulator pipeline that extends CoreSim with higher-fidelity rigid-body and actuator modeling.
+- CAD post-processing for robotics parts: import, classify by function, and enable editable properties (mass, materials, tolerances, and mounting metadata).
