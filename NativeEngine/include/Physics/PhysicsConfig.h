@@ -20,6 +20,9 @@ struct PhysicsConfig {
   float ambient_temp_c{20.0f};
   float rain_intensity{0.0f};
   float thermal_exchange{0.08f};
+  float sleep_linear_threshold{0.05f};
+  float sleep_angular_threshold{0.05f};
+  float sleep_time{0.5f};
 };
 
 }  // namespace NativeEngine::Physics

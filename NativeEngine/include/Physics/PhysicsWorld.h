@@ -21,6 +21,10 @@ class PhysicsWorld {
   bool ApplyForce(std::uint32_t id, const Vec3 &force);
   bool ApplyForceAtPoint(std::uint32_t id, const Vec3 &force, const Vec3 &point);
   bool ApplyTorque(std::uint32_t id, const Vec3 &torque);
+  std::uint32_t AddDistanceConstraint(std::uint32_t body_a, std::uint32_t body_b,
+                                      const Vec3 &local_a, const Vec3 &local_b,
+                                      float rest_length, float stiffness, float damping,
+                                      float max_force, bool tension_only);
 
   void Step(float dt_override);
   std::size_t BodyCount() const { return bodies_.size(); }
@@ -32,6 +36,15 @@ class PhysicsWorld {
   void SetWheelInput(std::uint32_t vehicle_id, int wheel_index, float steer, float drive_torque, float brake_torque);
   void SetVehicleAero(std::uint32_t vehicle_id, float drag_coefficient, float downforce);
   void SetVehicleTireModel(std::uint32_t vehicle_id, float B, float C, float D, float E);
+
+  struct RaycastHit {
+    std::uint32_t body_id{0};
+    Vec3 point{};
+    Vec3 normal{};
+    float distance{0.0f};
+  };
+
+  bool Raycast(const Vec3 &origin, const Vec3 &direction, float max_distance, RaycastHit &out) const;
 
  private:
   void Integrate(RigidBody &body, float dt);
@@ -76,12 +89,57 @@ class PhysicsWorld {
 
   float Pacejka(float slip, float B, float C, float D, float E) const;
   void StepVehicle(VehicleState &vehicle, float dt);
+  void GenerateContacts();
+  void ResolveContacts(float dt);
+  void ApplyDistanceConstraints(float dt);
+
+  struct Aabb {
+    Vec3 min;
+    Vec3 max;
+  };
+
+  struct Contact {
+    std::uint32_t a{0};
+    std::uint32_t b{0};
+    Vec3 normal{};
+    Vec3 point{};
+    float penetration{0.0f};
+    float restitution{0.2f};
+    float friction{0.8f};
+  };
+
+  struct DistanceConstraint {
+    std::uint32_t id{0};
+    std::uint32_t body_a{0};
+    std::uint32_t body_b{0};
+    Vec3 local_a{};
+    Vec3 local_b{};
+    float rest_length{1.0f};
+    float stiffness{5000.0f};
+    float damping{120.0f};
+    float max_force{20000.0f};
+    bool tension_only{false};
+  };
+
+  Aabb ComputeAabb(const RigidBody &body) const;
+  bool AabbOverlap(const Aabb &a, const Aabb &b) const;
+  bool CollideSphereSphere(const RigidBody &a, const RigidBody &b, Contact &out) const;
+  bool CollideSphereBox(const RigidBody &sphere, const RigidBody &box, Contact &out) const;
+  bool CollideBoxBox(const RigidBody &a, const RigidBody &b, Contact &out) const;
+  void ResolveContact(Contact &contact, float dt);
+  bool RaycastSphere(const Vec3 &origin, const Vec3 &dir, float max_distance,
+                     const RigidBody &body, RaycastHit &out) const;
+  bool RaycastBox(const Vec3 &origin, const Vec3 &dir, float max_distance,
+                  const RigidBody &body, RaycastHit &out) const;
 
   PhysicsConfig config_{};
   DeterministicRng rng_{config_.noise_seed};
   std::uint32_t next_id_{1};
+  std::uint32_t next_constraint_id_{1};
   std::unordered_map<std::uint32_t, RigidBody> bodies_;
   std::unordered_map<std::uint32_t, VehicleState> vehicles_;
+  std::vector<Contact> contacts_;
+  std::vector<DistanceConstraint> distance_constraints_;
 };
 
 }  // namespace NativeEngine::Physics

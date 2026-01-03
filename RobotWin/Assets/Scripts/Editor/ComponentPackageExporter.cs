@@ -14,7 +14,7 @@ namespace RobotTwin.Editor
         private const string ResourcesFolder = "Resources/Components";
         private const string StreamingFolder = "StreamingAssets/Components";
 
-        [MenuItem("RobotTwin/Components/Export RTComp Packages")]
+        [MenuItem("RobotWin/Components/Export RTComp Packages")]
         public static void ExportPackages()
         {
             string dataPath = Application.dataPath;
@@ -27,8 +27,10 @@ namespace RobotTwin.Editor
             exported += ExportFolder(resourcesRoot, streamingRoot);
             exported += ExportFolder(streamingRoot, streamingRoot);
 
+            int copied = CopyPackagesToUserRoot(streamingRoot);
+
             AssetDatabase.Refresh();
-            Debug.Log($"[ComponentPackageExporter] Exported {exported} .rtcomp packages to {streamingRoot}.");
+            Debug.Log($"[ComponentPackageExporter] Exported {exported} .rtcomp packages to {streamingRoot}. Copied {copied} package(s) to user AppData.");
         }
 
         private static int ExportFolder(string sourceRoot, string outputRoot)
@@ -409,6 +411,32 @@ namespace RobotTwin.Editor
             var invalid = Path.GetInvalidFileNameChars();
             var safe = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
             return string.IsNullOrWhiteSpace(safe) ? "package" : safe;
+        }
+
+        private static int CopyPackagesToUserRoot(string sourceRoot)
+        {
+            if (string.IsNullOrWhiteSpace(sourceRoot) || !Directory.Exists(sourceRoot)) return 0;
+            string userRoot = ComponentCatalog.GetUserComponentRoot();
+            if (string.IsNullOrWhiteSpace(userRoot)) return 0;
+
+            Directory.CreateDirectory(userRoot);
+            int copied = 0;
+
+            var packages = Directory.GetFiles(sourceRoot, "*" + ComponentPackageUtility.PackageExtension, SearchOption.AllDirectories);
+            foreach (var package in packages)
+            {
+                string destPath = Path.Combine(userRoot, Path.GetFileName(package));
+                if (File.Exists(destPath))
+                {
+                    var srcTime = File.GetLastWriteTimeUtc(package);
+                    var destTime = File.GetLastWriteTimeUtc(destPath);
+                    if (destTime >= srcTime) continue;
+                }
+                File.Copy(package, destPath, true);
+                copied++;
+            }
+
+            return copied;
         }
 
         [Serializable]

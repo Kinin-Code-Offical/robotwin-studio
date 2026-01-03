@@ -46,6 +46,16 @@
                 </ui:VisualElement>
                 <ui:ScrollView name="StudioInspectorScroll" class="panel-scroll component-scroll">
                     <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="Catalog" class="panel-section-title" />
+                            <ui:Button name="CatalogRefreshBtn" class="ghost-button">
+                                <ui:Label text="Refresh" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="ComponentCatalogList" class="editor-list" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
                         <ui:Label text="Basics" class="panel-section-title" />
                         <ui:VisualElement class="form-row">
                             <ui:Label text="Name" class="form-label" />
@@ -162,6 +172,26 @@
                         </ui:VisualElement>
                         <ui:ScrollView name="ComponentDefaultsContainer" class="editor-list" />
                     </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="FX" class="panel-section-title" />
+                            <ui:Button name="ComponentAddFxBtn" class="ghost-button">
+                                <ui:Label text="Add FX" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="ComponentFxContainer" class="editor-list" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="panel-section">
+                        <ui:VisualElement class="panel-section-header">
+                            <ui:Label text="Hierarchy" class="panel-section-title" />
+                            <ui:Button name="HierarchyToggleBtn" class="ghost-button">
+                                <ui:Label text="Hide" class="button-label" />
+                            </ui:Button>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="HierarchyTreeContainer" class="editor-list hierarchy-tree" />
+                    </ui:VisualElement>
                 </ui:ScrollView>
             </ui:VisualElement>
 
@@ -178,6 +208,32 @@
                 <ui:VisualElement class="center-content">
                     <ui:VisualElement name="Component3DPanel" class="studio-viewport-panel">
                         <ui:VisualElement name="StudioViewport" class="studio-viewport" focusable="true" />
+                        <ui:VisualElement name="ViewportTools" class="viewport-tools">
+                            <ui:VisualElement class="viewport-tools-header">
+                                <ui:Label text="Viewport" class="viewport-tools-title" />
+                                <ui:Button name="ViewportToolsToggleBtn" text="Hide" class="viewport-tools-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="ViewportToolsBody" class="viewport-tools-body">
+                                <ui:VisualElement class="viewport-tools-row">
+                                    <ui:Button name="ViewportResetBtn" text="Reset" class="viewport-tool-btn" />
+                                    <ui:Button name="ViewportFrameBtn" text="Frame" class="viewport-tool-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-tools-row">
+                                    <ui:Button name="ViewportZoomInBtn" text="Zoom +" class="viewport-tool-btn" />
+                                    <ui:Button name="ViewportZoomOutBtn" text="Zoom -" class="viewport-tool-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-tools-row">
+                                    <ui:Button name="ViewportAnchorsBtn" text="Anchors" class="viewport-tool-btn" />
+                                    <ui:Button name="ViewportPickBtn" text="Pick" class="viewport-tool-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-tools-row">
+                                    <ui:Button name="ViewportPinBtn" text="Pin" class="viewport-tool-btn" />
+                                    <ui:Button name="ViewportLabelBtn" text="Label" class="viewport-tool-btn" />
+                                    <ui:Button name="ViewportMaterialBtn" text="Material" class="viewport-tool-btn" />
+                                    <ui:Button name="ViewportStateBtn" text="State" class="viewport-tool-btn" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
                         <ui:VisualElement name="Circuit3DControls" class="circuit-3d-controls">
                             <ui:VisualElement class="circuit-3d-controls-header">
                                 <ui:Label text="Camera" class="circuit-3d-controls-title" />
@@ -289,6 +345,12 @@
                                 </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
+                        <ui:VisualElement name="LayoutContextMenu" class="menu-dropdown layout-context-menu" style="display: none;">
+                            <ui:Button name="LayoutContextDeletePinBtn" text="Delete Pin" class="menu-item" />
+                            <ui:Button name="LayoutContextDeleteLabelBtn" text="Delete Label" class="menu-item" />
+                            <ui:VisualElement class="menu-divider" />
+                            <ui:Button name="LayoutContextResetViewBtn" text="Reset View" class="menu-item" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
@@ -301,6 +363,12 @@
                     <ui:Label text="Tuning" class="badge-neutral" />
                 </ui:VisualElement>
                 <ui:ScrollView class="panel-scroll component-scroll">
+                    <ui:VisualElement class="panel-section">
+                        <ui:Label text="Selection Inspector" class="panel-section-title" />
+                        <ui:Label name="InspectorTargetLabel" text="No selection" class="form-label" />
+                        <ui:VisualElement name="InspectorDetailsContainer" class="inspector-details" />
+                    </ui:VisualElement>
+
                     <ui:VisualElement class="panel-section">
                         <ui:Label text="Anchor Tools" class="panel-section-title" />
                         <ui:VisualElement class="form-row-inline">

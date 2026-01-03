@@ -73,6 +73,7 @@ namespace RobotTwin.UI
 
             LogInfo($"[RuntimeModelLoader] Instantiated {loadPath}");
             NormalizeRuntimeModel(root.transform);
+            EnsureRuntimeColliders(root.transform);
             return root;
         }
 
@@ -300,6 +301,111 @@ namespace RobotTwin.UI
             {
                 Debug.LogWarning("[RuntimeModelLoader] Normalized model transforms for stability.");
             }
+        }
+
+        private static void EnsureRuntimeColliders(Transform root)
+        {
+            if (root == null) return;
+            var content = EnsureContentRoot(root);
+            if (content == null) return;
+
+            ClearRuntimeColliders(content, root);
+            if (!TryGetLocalBounds(content, out var bounds)) return;
+
+            float minSize = Mathf.Max(0.0001f, Mathf.Min(bounds.size.x, Mathf.Min(bounds.size.y, bounds.size.z)));
+            float maxSize = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            float aspect = maxSize / minSize;
+            bool sphereLike = (maxSize - minSize) / maxSize < 0.15f;
+
+            int parts = 1;
+            if (!sphereLike)
+            {
+                parts = aspect > 2.5f ? 3 : (aspect > 1.4f ? 2 : 1);
+            }
+            parts = Mathf.Clamp(parts, 1, 3);
+
+            var autoRoot = new GameObject("__AutoColliders");
+            autoRoot.transform.SetParent(root, false);
+
+            if (sphereLike)
+            {
+                var sphere = autoRoot.AddComponent<SphereCollider>();
+                sphere.center = bounds.center;
+                sphere.radius = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+            }
+            else
+            {
+                var renderers = content.GetComponentsInChildren<Renderer>(true);
+                var entries = BuildRendererEntries(root, renderers);
+                if (entries.Count == 0) return;
+
+                int axis = GetLongestAxis(bounds.size);
+                entries.Sort((a, b) => a.center[axis].CompareTo(b.center[axis]));
+                int batchSize = Mathf.Max(1, Mathf.CeilToInt(entries.Count / (float)parts));
+                for (int i = 0; i < parts; i++)
+                {
+                    int start = i * batchSize;
+                    if (start >= entries.Count) break;
+                    int end = Mathf.Min(entries.Count, start + batchSize);
+                    var groupBounds = entries[start].bounds;
+                    for (int j = start + 1; j < end; j++)
+                    {
+                        groupBounds.Encapsulate(entries[j].bounds);
+                    }
+                    var box = autoRoot.AddComponent<BoxCollider>();
+                    box.center = groupBounds.center;
+                    box.size = groupBounds.size;
+                }
+            }
+        }
+
+        private static void ClearRuntimeColliders(Transform content, Transform root)
+        {
+            if (content == null || root == null) return;
+            var autoRoot = root.Find("__AutoColliders");
+            if (autoRoot != null)
+            {
+                UnityEngine.Object.Destroy(autoRoot.gameObject);
+            }
+            var colliders = content.GetComponentsInChildren<Collider>(true);
+            foreach (var collider in colliders)
+            {
+                if (collider == null) continue;
+                UnityEngine.Object.Destroy(collider);
+            }
+        }
+
+        private struct RendererEntry
+        {
+            public Vector3 center;
+            public Bounds bounds;
+        }
+
+        private static List<RendererEntry> BuildRendererEntries(Transform reference, Renderer[] renderers)
+        {
+            var entries = new List<RendererEntry>(renderers.Length);
+            var referenceMatrix = reference.worldToLocalMatrix;
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                var matrix = referenceMatrix * renderer.transform.localToWorldMatrix;
+                if (!IsFinite(matrix)) continue;
+                var transformed = TransformBounds(renderer.localBounds, matrix);
+                if (!IsFinite(transformed.center) || !IsFinite(transformed.size)) continue;
+                entries.Add(new RendererEntry
+                {
+                    center = transformed.center,
+                    bounds = transformed
+                });
+            }
+            return entries;
+        }
+
+        private static int GetLongestAxis(Vector3 size)
+        {
+            if (size.x >= size.y && size.x >= size.z) return 0;
+            if (size.y >= size.z) return 1;
+            return 2;
         }
 
         private static Transform EnsureContentRoot(Transform root)

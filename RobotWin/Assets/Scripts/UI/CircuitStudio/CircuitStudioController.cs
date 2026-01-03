@@ -11015,9 +11015,12 @@ namespace RobotTwin.UI
             _items = new List<Item>();
             _byId = new Dictionary<string, Item>(IdComparer);
 
-            LoadFromResources();
-            LoadFromStreamingAssets();
             LoadFromPersistentData();
+            if (_items.Count == 0)
+            {
+                LoadFromStreamingAssets();
+                LoadFromResources();
+            }
 
             if (_items.Count == 0)
             {

@@ -26,6 +26,9 @@ namespace RobotTwin.Game
         [SerializeField] private float _ambientTempC = 20f;
         [SerializeField] private float _rainIntensity = 0f;
         [SerializeField] private float _thermalExchange = 0.08f;
+        [SerializeField] private float _sleepLinearThreshold = 0.05f;
+        [SerializeField] private float _sleepAngularThreshold = 0.05f;
+        [SerializeField] private float _sleepTime = 0.5f;
 
         private readonly Dictionary<uint, NativePhysicsBody> _bodyById = new Dictionary<uint, NativePhysicsBody>();
         private readonly Dictionary<NativePhysicsBody, uint> _idByBody = new Dictionary<NativePhysicsBody, uint>();
@@ -106,7 +109,10 @@ namespace RobotTwin.Game
                 wind_z = _wind.z,
                 ambient_temp_c = _ambientTempC,
                 rain_intensity = _rainIntensity,
-                thermal_exchange = _thermalExchange
+                thermal_exchange = _thermalExchange,
+                sleep_linear_threshold = _sleepLinearThreshold,
+                sleep_angular_threshold = _sleepAngularThreshold,
+                sleep_time = _sleepTime
             };
             NativeBridge.Physics_SetConfig(ref cfg);
         }
@@ -146,6 +152,13 @@ namespace RobotTwin.Game
                 temperature_c = _ambientTempC,
                 material_strength = body.MaterialStrength,
                 fracture_toughness = body.FractureToughness,
+                shape_type = (int)body.Shape,
+                radius = body.Radius,
+                half_x = body.HalfExtents.x,
+                half_y = body.HalfExtents.y,
+                half_z = body.HalfExtents.z,
+                friction = body.Friction,
+                restitution = body.Restitution,
                 damage = 0f,
                 is_broken = 0,
                 is_static = body.IsStatic ? 1 : 0

@@ -72,6 +72,9 @@ typedef struct {
   float ambient_temp_c;
   float rain_intensity;
   float thermal_exchange;
+  float sleep_linear_threshold;
+  float sleep_angular_threshold;
+  float sleep_time;
 } PhysicsConfig_C;
 
 typedef struct {
@@ -89,10 +92,24 @@ typedef struct {
   float temperature_c;
   float material_strength;
   float fracture_toughness;
+  int shape_type;
+  float radius;
+  float half_x;
+  float half_y;
+  float half_z;
+  float friction;
+  float restitution;
   float damage;
   int is_broken;
   int is_static;
 } RigidBody_C;
+
+typedef struct {
+  uint32_t body_id;
+  float hit_x, hit_y, hit_z;
+  float normal_x, normal_y, normal_z;
+  float distance;
+} RaycastHit_C;
 
 UNITY_EXPORT void Physics_CreateWorld();
 UNITY_EXPORT void Physics_DestroyWorld();
@@ -119,6 +136,15 @@ UNITY_EXPORT int Physics_ApplyForce(uint32_t body_id, float fx, float fy, float 
 UNITY_EXPORT int Physics_ApplyForceAtPoint(uint32_t body_id, float fx, float fy, float fz,
                                            float px, float py, float pz);
 UNITY_EXPORT int Physics_ApplyTorque(uint32_t body_id, float tx, float ty, float tz);
+UNITY_EXPORT uint32_t Physics_AddDistanceConstraint(uint32_t body_a, uint32_t body_b,
+                                                    float ax, float ay, float az,
+                                                    float bx, float by, float bz,
+                                                    float rest_length, float stiffness,
+                                                    float damping, float max_force,
+                                                    int tension_only);
+UNITY_EXPORT int Physics_Raycast(float ox, float oy, float oz,
+                                 float dx, float dy, float dz,
+                                 float max_distance, RaycastHit_C *out_hit);
 
 #ifdef __cplusplus
 }

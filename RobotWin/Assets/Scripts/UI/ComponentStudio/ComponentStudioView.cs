@@ -70,6 +70,7 @@ namespace RobotTwin.UI
         private readonly List<LineRenderer> _gizmoLines = new List<LineRenderer>();
         private readonly Dictionary<GizmoAxis, GizmoHandle> _rotateHandles = new Dictionary<GizmoAxis, GizmoHandle>();
         private readonly Dictionary<GizmoAxis, LineRenderer> _rotateArcLines = new Dictionary<GizmoAxis, LineRenderer>();
+        private static Mesh _arrowHeadMesh;
         private const int RotateArcSegments = 64;
         private bool _lockRotateRebuild;
         private GizmoMode _gizmoMode = GizmoMode.None;
@@ -172,9 +173,15 @@ namespace RobotTwin.UI
 
         public void ApplyModelTuning(Vector3 euler, Vector3 scale)
         {
+            ApplyModelTuning(euler, scale, Vector3.zero);
+        }
+
+        public void ApplyModelTuning(Vector3 euler, Vector3 scale, Vector3 offset)
+        {
             if (_modelRoot == null) return;
             _modelRoot.localRotation = Quaternion.Euler(euler);
             _modelRoot.localScale = scale;
+            _modelRoot.localPosition = offset;
             UpdateViewCubeOrientation();
         }
 
@@ -581,7 +588,8 @@ namespace RobotTwin.UI
         {
             localPosition = Vector3.zero;
             if (_camera == null || _modelRoot == null) return false;
-            var ray = _camera.ViewportPointToRay(viewportPoint);
+            if (!IsViewportPointValid(viewportPoint)) return false;
+            if (!TryGetViewportRay(viewportPoint, out var ray)) return false;
             var hits = Physics.RaycastAll(ray, 100f);
             if (hits == null || hits.Length == 0) return false;
             float best = float.MaxValue;
@@ -606,7 +614,8 @@ namespace RobotTwin.UI
         {
             marker = null;
             if (_camera == null) return false;
-            var ray = _camera.ViewportPointToRay(viewportPoint);
+            if (!IsViewportPointValid(viewportPoint)) return false;
+            if (!TryGetViewportRay(viewportPoint, out var ray)) return false;
             var hits = Physics.RaycastAll(ray, 100f);
             if (hits == null || hits.Length == 0) return false;
             float best = float.MaxValue;
@@ -629,7 +638,8 @@ namespace RobotTwin.UI
         {
             part = null;
             if (_camera == null || _modelRoot == null) return false;
-            var ray = _camera.ViewportPointToRay(viewportPoint);
+            if (!IsViewportPointValid(viewportPoint)) return false;
+            if (!TryGetViewportRay(viewportPoint, out var ray)) return false;
             var hits = Physics.RaycastAll(ray, 100f);
             if (hits == null || hits.Length == 0) return false;
             float best = float.MaxValue;
@@ -661,7 +671,8 @@ namespace RobotTwin.UI
             handle = null;
             worldPoint = Vector3.zero;
             if (!_gizmoVisible || _camera == null || _gizmoRoot == null) return false;
-            var ray = _camera.ViewportPointToRay(viewportPoint);
+            if (!IsViewportPointValid(viewportPoint)) return false;
+            if (!TryGetViewportRay(viewportPoint, out var ray)) return false;
             var hits = Physics.RaycastAll(ray, 200f);
             if (hits == null || hits.Length == 0) return false;
             float best = float.MaxValue;
@@ -750,8 +761,15 @@ namespace RobotTwin.UI
         {
             ray = new Ray();
             if (_camera == null) return false;
-            ray = _camera.ViewportPointToRay(viewportPoint);
+            viewportPoint = new Vector2(Mathf.Clamp01(viewportPoint.x), Mathf.Clamp01(viewportPoint.y));
+            ray = _camera.ViewportPointToRay(new Vector3(viewportPoint.x, viewportPoint.y, 0f));
             return true;
+        }
+
+        private static bool IsViewportPointValid(Vector2 viewportPoint)
+        {
+            return viewportPoint.x >= 0f && viewportPoint.x <= 1f &&
+                   viewportPoint.y >= 0f && viewportPoint.y <= 1f;
         }
 
         private void EnsureGizmoRoot()
@@ -776,7 +794,7 @@ namespace RobotTwin.UI
             _gizmoMode = mode;
             if (mode == GizmoMode.Move)
             {
-                BuildMoveGizmo();
+                BuildMoveGizmo(bounds);
             }
             else if (mode == GizmoMode.Rotate)
             {
@@ -804,11 +822,16 @@ namespace RobotTwin.UI
             _rotateArcLines.Clear();
         }
 
-        private void BuildMoveGizmo()
+        private void BuildMoveGizmo(Bounds bounds)
         {
-            CreateAxisHandle("MoveAxisX", GizmoHandleKind.MoveAxis, GizmoAxis.X, Color.red, Vector3.right);
-            CreateAxisHandle("MoveAxisY", GizmoHandleKind.MoveAxis, GizmoAxis.Y, Color.green, Vector3.up);
-            CreateAxisHandle("MoveAxisZ", GizmoHandleKind.MoveAxis, GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward);
+            float extent = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+            float shaftLength = Mathf.Clamp(Mathf.Max(extent * 2.1f, 0.85f), 0.8f, 5.5f);
+            float shaftRadius = Mathf.Clamp(shaftLength * 0.075f, 0.035f, 0.2f);
+            float headSize = Mathf.Clamp(shaftLength * 0.3f, 0.18f, 0.65f);
+
+            CreateAxisHandle("MoveAxisX", GizmoHandleKind.MoveAxis, GizmoAxis.X, Color.red, Vector3.right, shaftLength, shaftRadius, headSize);
+            CreateAxisHandle("MoveAxisY", GizmoHandleKind.MoveAxis, GizmoAxis.Y, Color.green, Vector3.up, shaftLength, shaftRadius, headSize);
+            CreateAxisHandle("MoveAxisZ", GizmoHandleKind.MoveAxis, GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward, shaftLength, shaftRadius, headSize);
         }
 
         private void BuildRotateGizmo(Bounds bounds)
@@ -859,7 +882,7 @@ namespace RobotTwin.UI
             }
         }
 
-        private void CreateAxisHandle(string name, GizmoHandleKind kind, GizmoAxis axis, Color color, Vector3 direction)
+        private void CreateAxisHandle(string name, GizmoHandleKind kind, GizmoAxis axis, Color color, Vector3 direction, float shaftLength, float shaftRadius, float headSize)
         {
             if (_gizmoRoot == null) return;
             var handle = new GameObject(name);
@@ -869,23 +892,63 @@ namespace RobotTwin.UI
             handleComp.Kind = kind;
             handleComp.Axis = axis;
 
-            float shaftRadius = 0.08f;
-            float shaftLength = 1.1f;
-            float headSize = 0.18f;
-
             var shaft = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             shaft.transform.SetParent(handle.transform, false);
             shaft.transform.localScale = new Vector3(shaftRadius, shaftLength * 0.5f, shaftRadius);
             shaft.transform.localPosition = new Vector3(0f, shaftLength * 0.5f, 0f);
             ApplyGizmoColor(shaft, color);
 
-            var head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var head = new GameObject($"{name}_Head");
             head.transform.SetParent(handle.transform, false);
-            head.transform.localScale = Vector3.one * headSize;
-            head.transform.localPosition = new Vector3(0f, shaftLength + headSize * 0.5f, 0f);
+            head.transform.localPosition = new Vector3(0f, shaftLength, 0f);
+            head.transform.localScale = new Vector3(headSize, headSize * 1.4f, headSize);
+            var meshFilter = head.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = GetArrowHeadMesh();
+            var meshRenderer = head.AddComponent<MeshRenderer>();
             ApplyGizmoColor(head, color);
+            var meshCollider = head.AddComponent<MeshCollider>();
+            meshCollider.sharedMesh = meshFilter.sharedMesh;
+            meshCollider.convex = true;
+
+            if (kind == GizmoHandleKind.MoveAxis)
+            {
+                var hitbox = handle.AddComponent<BoxCollider>();
+                float totalLength = shaftLength + headSize * 1.1f;
+                float hitRadius = Mathf.Max(shaftRadius * 2.6f, headSize * 0.7f);
+                hitbox.size = new Vector3(hitRadius, totalLength, hitRadius);
+                hitbox.center = new Vector3(0f, totalLength * 0.5f, 0f);
+            }
 
             _gizmoObjects.Add(handle);
+        }
+
+        private static Mesh GetArrowHeadMesh()
+        {
+            if (_arrowHeadMesh != null) return _arrowHeadMesh;
+            var mesh = new Mesh { name = "GizmoArrowHead" };
+            var verts = new[]
+            {
+                new Vector3(-0.5f, 0f, -0.5f),
+                new Vector3(0.5f, 0f, -0.5f),
+                new Vector3(0.5f, 0f, 0.5f),
+                new Vector3(-0.5f, 0f, 0.5f),
+                new Vector3(0f, 1f, 0f)
+            };
+            var tris = new[]
+            {
+                0, 1, 4,
+                1, 2, 4,
+                2, 3, 4,
+                3, 0, 4,
+                0, 3, 2,
+                0, 2, 1
+            };
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            _arrowHeadMesh = mesh;
+            return _arrowHeadMesh;
         }
 
         private void CreateRotateHandle(string name, GizmoAxis axis, Color color, Vector3 direction, float radius, float thickness, float width)
@@ -1082,7 +1145,7 @@ namespace RobotTwin.UI
             _gizmoRoot.position = _gizmoWorldPos;
             _gizmoRoot.rotation = _gizmoWorldRot;
             _gizmoScale = ComputeGizmoScale(_gizmoWorldPos);
-            if (_gizmoMode == GizmoMode.Scale || _gizmoMode == GizmoMode.Rotate)
+            if (_gizmoMode == GizmoMode.Scale || _gizmoMode == GizmoMode.Rotate || _gizmoMode == GizmoMode.Move)
             {
                 _gizmoRoot.localScale = Vector3.one;
             }
@@ -1272,13 +1335,9 @@ namespace RobotTwin.UI
         private void UpdateViewCubeOrientation()
         {
             if (_viewCubeRoot == null) return;
-            if (_modelRoot == null)
-            {
-                if (_camera == null) return;
-                _viewCubeRoot.rotation = _camera.transform.rotation;
-                return;
-            }
-            _viewCubeRoot.rotation = GetModelRotation();
+            if (_camera == null) return;
+            var modelRotation = GetModelRotation();
+            _viewCubeRoot.rotation = _camera.transform.rotation * modelRotation;
         }
 
         private Quaternion GetModelRotation()
@@ -1374,18 +1433,131 @@ namespace RobotTwin.UI
 
         private void EnsureModelColliders()
         {
-            if (_modelRoot == null) return;
-            var meshFilters = _modelRoot.GetComponentsInChildren<MeshFilter>(true);
-            foreach (var filter in meshFilters)
+            if (_modelRoot == null || _modelContent == null) return;
+            RemoveModelColliders();
+
+            if (!TryGetBoundsRelativeTo(_modelRoot, _modelContent, out var bounds)) return;
+            var renderers = _modelContent.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0) return;
+
+            var entries = BuildRendererEntries(_modelRoot, renderers);
+            if (entries.Count == 0) return;
+
+            float minSize = Mathf.Max(0.0001f, Mathf.Min(bounds.size.x, Mathf.Min(bounds.size.y, bounds.size.z)));
+            float maxSize = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            float aspect = maxSize / minSize;
+            bool sphereLike = (maxSize - minSize) / maxSize < 0.15f;
+
+            int parts = 1;
+            if (!sphereLike)
             {
-                if (filter == null || filter.sharedMesh == null) continue;
-                var collider = filter.GetComponent<MeshCollider>();
-                if (collider == null)
-                {
-                    collider = filter.gameObject.AddComponent<MeshCollider>();
-                }
-                collider.sharedMesh = filter.sharedMesh;
+                parts = aspect > 2.5f ? 3 : (aspect > 1.4f ? 2 : 1);
             }
+            parts = Mathf.Clamp(parts, 1, 3);
+
+            var autoRoot = new GameObject("__AutoColliders");
+            autoRoot.transform.SetParent(_modelRoot, false);
+
+            if (sphereLike)
+            {
+                var sphere = autoRoot.AddComponent<SphereCollider>();
+                sphere.center = bounds.center;
+                sphere.radius = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+            }
+            else
+            {
+                int axis = GetLongestAxis(bounds.size);
+                entries.Sort((a, b) => a.center[axis].CompareTo(b.center[axis]));
+
+                int batchSize = Mathf.Max(1, Mathf.CeilToInt(entries.Count / (float)parts));
+                for (int i = 0; i < parts; i++)
+                {
+                    int start = i * batchSize;
+                    if (start >= entries.Count) break;
+                    int end = Mathf.Min(entries.Count, start + batchSize);
+                    var groupBounds = entries[start].bounds;
+                    for (int j = start + 1; j < end; j++)
+                    {
+                        groupBounds.Encapsulate(entries[j].bounds);
+                    }
+                    var box = autoRoot.AddComponent<BoxCollider>();
+                    box.center = groupBounds.center;
+                    box.size = groupBounds.size;
+                }
+            }
+
+            EnsureNativeBoundsCollider(bounds, sphereLike);
+        }
+
+        private void RemoveModelColliders()
+        {
+            if (_modelRoot == null || _modelContent == null) return;
+            var auto = _modelRoot.Find("__AutoColliders");
+            if (auto != null)
+            {
+                Destroy(auto.gameObject);
+            }
+            var colliders = _modelContent.GetComponentsInChildren<Collider>(true);
+            foreach (var collider in colliders)
+            {
+                if (collider == null) continue;
+                Destroy(collider);
+            }
+            foreach (var collider in _modelRoot.GetComponents<Collider>())
+            {
+                if (collider == null) continue;
+                Destroy(collider);
+            }
+        }
+
+        private void EnsureNativeBoundsCollider(Bounds bounds, bool sphereLike)
+        {
+            if (_modelRoot == null) return;
+            if (sphereLike)
+            {
+                var sphere = _modelRoot.gameObject.AddComponent<SphereCollider>();
+                sphere.center = bounds.center;
+                sphere.radius = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+            }
+            else
+            {
+                var box = _modelRoot.gameObject.AddComponent<BoxCollider>();
+                box.center = bounds.center;
+                box.size = bounds.size;
+            }
+        }
+
+        private struct RendererEntry
+        {
+            public Vector3 center;
+            public Bounds bounds;
+        }
+
+        private static List<RendererEntry> BuildRendererEntries(Transform reference, Renderer[] renderers)
+        {
+            var entries = new List<RendererEntry>(renderers.Length);
+            var referenceMatrix = reference.worldToLocalMatrix;
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                var matrix = referenceMatrix * renderer.transform.localToWorldMatrix;
+                if (!IsFinite(matrix)) continue;
+                var transformed = TransformBounds(renderer.localBounds, matrix);
+                if (!IsFinite(transformed.center) || !IsFinite(transformed.size)) continue;
+                entries.Add(new RendererEntry
+                {
+                    center = transformed.center,
+                    bounds = transformed
+                });
+            }
+            return entries;
+        }
+
+        private static int GetLongestAxis(Vector3 size)
+        {
+            if (size.x >= size.y && size.x >= size.z) return 0;
+            if (size.y >= size.z) return 1;
+            return 2;
         }
 
         private bool TryGetBoundsRelativeTo(Transform reference, Transform scope, out Bounds bounds)

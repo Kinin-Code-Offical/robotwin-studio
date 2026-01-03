@@ -47,9 +47,7 @@ namespace RobotTwin.UI
         {
             string root = ComponentCatalog.GetUserComponentRoot();
             if (string.IsNullOrWhiteSpace(root)) return;
-
-            string bundledRoot = Path.Combine(root, "Bundled");
-            Directory.CreateDirectory(bundledRoot);
+            MigrateLegacyBundledFolder(root);
 
             var resources = Resources.LoadAll<TextAsset>("Components");
             if (resources != null)
@@ -58,7 +56,7 @@ namespace RobotTwin.UI
                 {
                     if (asset == null || string.IsNullOrWhiteSpace(asset.text)) continue;
                     string packageName = SanitizeFileName(asset.name);
-                    string packagePath = Path.Combine(bundledRoot, packageName + PackageExtension);
+                    string packagePath = Path.Combine(root, packageName + PackageExtension);
                     if (File.Exists(packagePath)) continue;
                     SavePackage(packagePath, asset.text, null);
                 }
@@ -76,7 +74,7 @@ namespace RobotTwin.UI
                     if (string.Equals(Path.GetFileName(jsonFile), DefinitionFileName, StringComparison.OrdinalIgnoreCase)) continue;
 
                     string packageName = SanitizeFileName(Path.GetFileNameWithoutExtension(jsonFile));
-                    string packagePath = Path.Combine(bundledRoot, packageName + PackageExtension);
+                    string packagePath = Path.Combine(root, packageName + PackageExtension);
                     if (File.Exists(packagePath)) continue;
 
                     string json = File.ReadAllText(jsonFile);
@@ -93,6 +91,40 @@ namespace RobotTwin.UI
             catch (Exception ex)
             {
                 Debug.LogWarning($"[ComponentPackage] Failed to migrate bundled components: {ex.Message}");
+            }
+        }
+
+        private static void MigrateLegacyBundledFolder(string root)
+        {
+            string bundledRoot = Path.Combine(root, "Bundled");
+            if (!Directory.Exists(bundledRoot)) return;
+
+            try
+            {
+                var files = Directory.GetFiles(bundledRoot, "*" + PackageExtension, SearchOption.AllDirectories);
+                foreach (var file in files)
+                {
+                    string targetPath = Path.Combine(root, Path.GetFileName(file));
+                    if (File.Exists(targetPath)) continue;
+                    File.Copy(file, targetPath, true);
+                }
+
+                var jsonFiles = Directory.GetFiles(bundledRoot, "*.json", SearchOption.AllDirectories);
+                foreach (var jsonFile in jsonFiles)
+                {
+                    if (IsWithinPackageDir(jsonFile)) continue;
+                    if (string.Equals(Path.GetFileName(jsonFile), DefinitionFileName, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    string targetPath = Path.Combine(root, Path.GetFileName(jsonFile));
+                    if (File.Exists(targetPath)) continue;
+                    File.Copy(jsonFile, targetPath, true);
+                }
+
+                Directory.Delete(bundledRoot, true);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ComponentPackage] Failed to migrate legacy Bundled folder: {ex.Message}");
             }
         }
 
