@@ -21,6 +21,16 @@ struct Vec3 {
     return *this;
   }
 
+  Vec3 &operator-=(const Vec3 &rhs) {
+    x -= rhs.x; y -= rhs.y; z -= rhs.z;
+    return *this;
+  }
+
+  Vec3 &operator*=(float s) {
+    x *= s; y *= s; z *= s;
+    return *this;
+  }
+
   float Length() const { return std::sqrt(x * x + y * y + z * z); }
   float LengthSq() const { return x * x + y * y + z * z; }
 };
@@ -29,6 +39,8 @@ inline float Dot(const Vec3 &a, const Vec3 &b) { return a.x * b.x + a.y * b.y + 
 inline Vec3 Cross(const Vec3 &a, const Vec3 &b) {
   return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
+inline Vec3 Hadamard(const Vec3 &a, const Vec3 &b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
+inline Vec3 AbsVec(const Vec3 &v) { return {std::fabs(v.x), std::fabs(v.y), std::fabs(v.z)}; }
 inline Vec3 Normalize(const Vec3 &v) {
   float len = v.Length();
   if (len <= 1e-6f) return {0.0f, 0.0f, 0.0f};

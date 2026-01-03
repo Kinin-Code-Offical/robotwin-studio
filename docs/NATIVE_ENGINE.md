@@ -48,8 +48,13 @@ NativeEngine consumes a `ControlFrame` from CoreSim and emits a `PhysicsFrame`:
 - `RobotWin/Assets/Scripts/Game/NativePulleyConstraint.cs`: simple pulley ratio constraint.
 - `RobotWin/Assets/Scripts/Game/NativeServoMotor.cs`: PD servo torque around an axis.
 - `RobotWin/Assets/Scripts/Game/NativeThruster.cs`: directional thrust force (drones/propellers).
+- `RobotWin/Assets/Scripts/Game/NativeDistanceConstraint.cs`: native distance constraint (spring/rope).
+- `RobotWin/Assets/Scripts/Game/NativeRaycastSensor.cs`: native raycast sensor for Lidar-style hits.
 
 Notes:
-- Ground contact is currently a simple y=0 plane using `cross_section_area` as radius proxy.
+- Ground contact is currently a simple y=0 plane using sphere radius or box half-height.
 - Torque accumulation affects angular velocity; contact friction damps spin.
 - Torque can be applied directly via `Physics_ApplyTorque` for servo-style actuators.
+- Collision shapes are currently `Sphere` and `Box`, configured per `NativePhysicsBody` or auto-derived from Unity colliders.
+- Sleep thresholds can be tuned in `NativePhysicsWorld` and are enforced inside NativeEngine.
+- Box collisions currently use an axis-aligned solver; rotation is treated as AABB.

@@ -170,6 +170,10 @@
     max-height: 260px;
 }
 
+.hierarchy-tree {
+    max-height: 220px;
+}
+
 .editor-field-small {
     width: 68px;
     min-width: 68px;
@@ -787,6 +791,63 @@
     border-bottom-color: rgba(56, 189, 248, 0.6);
     border-left-color: rgba(56, 189, 248, 0.6);
     border-right-color: rgba(56, 189, 248, 0.6);
+}
+
+.layout-context-menu {
+    position: absolute;
+    min-width: 160px;
+    z-index: 10;
+}
+
+.inspector-details {
+    margin-top: 6px;
+    background-color: rgba(8, 12, 18, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line);
+    border-bottom-color: var(--line);
+    border-left-color: var(--line);
+    border-right-color: var(--line);
+    min-height: 40px;
+}
+
+.catalog-item,
+.hierarchy-item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    background-color: rgba(15, 23, 42, 0.4);
+}
+
+.catalog-item:hover,
+.hierarchy-item:hover {
+    background-color: rgba(56, 189, 248, 0.18);
+}
+
+.catalog-item.selected,
+.hierarchy-item.selected {
+    background-color: rgba(56, 189, 248, 0.25);
+}
+
+.catalog-item-label,
+.hierarchy-item-label {
+    font-size: 10px;
+    color: var(--text-0);
+    -unity-text-align: middle-left;
+    flex-grow: 1;
+}
+
+.hierarchy-item-kind {
+    font-size: 9px;
+    color: var(--text-2);
+    margin-left: 6px;
 }
 
 .component-studio-root .board-3d-help {

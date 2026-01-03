@@ -47,6 +47,12 @@ namespace RobotTwin.UI
         private ScrollView _labelsContainer;
         private ScrollView _specsContainer;
         private ScrollView _defaultsContainer;
+        private ScrollView _fxContainer;
+        private Button _addFxBtn;
+        private ScrollView _catalogList;
+        private Button _catalogRefreshBtn;
+        private ScrollView _hierarchyTree;
+        private Button _hierarchyToggleBtn;
         private ScrollView _partsContainer;
         private ScrollView _statesContainer;
         private VisualElement _layoutPreview;
@@ -196,6 +202,14 @@ namespace RobotTwin.UI
         private Button _materialApplyBtn;
         private Button _materialClearBtn;
         private Button _materialCloseBtn;
+        private Label _inspectorTargetLabel;
+        private VisualElement _inspectorDetailsContainer;
+        private VisualElement _layoutContextMenu;
+        private Button _layoutContextDeletePinBtn;
+        private Button _layoutContextDeleteLabelBtn;
+        private Button _layoutContextResetViewBtn;
+        private string _layoutContextPinName;
+        private VisualElement _layoutContextLabelEntry;
 
         private ComponentStudioView _studioView;
         private VisualElement _selectedPinEntry;
@@ -212,6 +226,7 @@ namespace RobotTwin.UI
         private string _packagePath;
         private string _modelSourcePath;
         private ComponentDefinitionPayload _payload;
+        private Vector3 _modelOffset = Vector3.zero;
 
         private bool _orbiting;
         private bool _panning;
@@ -308,6 +323,12 @@ namespace RobotTwin.UI
             _labelsContainer = _root.Q<ScrollView>("ComponentLabelsContainer");
             _specsContainer = _root.Q<ScrollView>("ComponentSpecsContainer");
             _defaultsContainer = _root.Q<ScrollView>("ComponentDefaultsContainer");
+            _fxContainer = _root.Q<ScrollView>("ComponentFxContainer");
+            _addFxBtn = _root.Q<Button>("ComponentAddFxBtn");
+            _catalogList = _root.Q<ScrollView>("ComponentCatalogList");
+            _catalogRefreshBtn = _root.Q<Button>("CatalogRefreshBtn");
+            _hierarchyTree = _root.Q<ScrollView>("HierarchyTreeContainer");
+            _hierarchyToggleBtn = _root.Q<Button>("HierarchyToggleBtn");
             _partsContainer = _root.Q<ScrollView>("PartListContainer");
             _statesContainer = _root.Q<ScrollView>("StateListContainer");
             _layoutPreview = _root.Q<VisualElement>("Layout2DPreview");
@@ -437,6 +458,12 @@ namespace RobotTwin.UI
             _materialApplyBtn = _root.Q<Button>("MaterialApplyBtn");
             _materialClearBtn = _root.Q<Button>("MaterialClearBtn");
             _materialCloseBtn = _root.Q<Button>("MaterialCloseBtn");
+            _inspectorTargetLabel = _root.Q<Label>("InspectorTargetLabel");
+            _inspectorDetailsContainer = _root.Q<VisualElement>("InspectorDetailsContainer");
+            _layoutContextMenu = _root.Q<VisualElement>("LayoutContextMenu");
+            _layoutContextDeletePinBtn = _root.Q<Button>("LayoutContextDeletePinBtn");
+            _layoutContextDeleteLabelBtn = _root.Q<Button>("LayoutContextDeleteLabelBtn");
+            _layoutContextResetViewBtn = _root.Q<Button>("LayoutContextResetViewBtn");
 
             if (_saveBtn != null) _saveBtn.clicked += SavePackageOnly;
             if (_saveExitBtn != null) _saveExitBtn.clicked += SavePackageAndReturn;
@@ -450,6 +477,7 @@ namespace RobotTwin.UI
             if (_addLabelBtn != null) _addLabelBtn.clicked += () => AddLabelRow(new LabelLayoutPayload { text = "{id}", x = 0.5f, y = 0.5f, size = 10, align = "center" });
             if (_addSpecBtn != null) _addSpecBtn.clicked += () => AddKeyValueRow(_specsContainer, string.Empty, string.Empty);
             if (_addDefaultBtn != null) _addDefaultBtn.clicked += () => AddKeyValueRow(_defaultsContainer, string.Empty, string.Empty);
+            if (_addFxBtn != null) _addFxBtn.clicked += () => AddFxRow(new FxPayload { id = $"fx_{Guid.NewGuid():N}".Substring(0, 6), type = "Glow" });
             if (_frameBtn != null) _frameBtn.clicked += () => _studioView?.FrameModel();
             if (_anchorShowToggle != null)
             {
@@ -608,6 +636,11 @@ namespace RobotTwin.UI
             if (_materialApplyBtn != null) _materialApplyBtn.clicked += ApplyMaterialFromModal;
             if (_materialClearBtn != null) _materialClearBtn.clicked += ClearMaterialOverrides;
             if (_materialCloseBtn != null) _materialCloseBtn.clicked += CloseMaterialModal;
+            if (_catalogRefreshBtn != null) _catalogRefreshBtn.clicked += RefreshCatalogAndHierarchy;
+            if (_hierarchyToggleBtn != null) _hierarchyToggleBtn.clicked += ToggleHierarchyPanel;
+            if (_layoutContextDeletePinBtn != null) _layoutContextDeletePinBtn.clicked += DeleteContextPin;
+            if (_layoutContextDeleteLabelBtn != null) _layoutContextDeleteLabelBtn.clicked += DeleteContextLabel;
+            if (_layoutContextResetViewBtn != null) _layoutContextResetViewBtn.clicked += ResetLayoutView;
 
             if (_layoutPreview != null)
             {
@@ -638,6 +671,8 @@ namespace RobotTwin.UI
             var sizeYField = GetField("ComponentSizeYField");
             if (sizeXField != null) sizeXField.RegisterValueChangedCallback(_ => RefreshLayoutPreview());
             if (sizeYField != null) sizeYField.RegisterValueChangedCallback(_ => RefreshLayoutPreview());
+            var typeField = GetField("ComponentTypeField");
+            if (typeField != null) typeField.RegisterValueChangedCallback(_ => EnsureRequiredStates());
 
             if (_viewport != null)
             {
@@ -663,6 +698,7 @@ namespace RobotTwin.UI
             RegisterValidationBindings();
             InitializeOutputPanel();
             RegisterMenuDismissHandler();
+            RefreshCatalogAndHierarchy();
         }
 
         private void RegisterMenuDismissHandler()
@@ -678,6 +714,10 @@ namespace RobotTwin.UI
         private void OnRootPointerDown(PointerDownEvent evt)
         {
             if (evt.target is not VisualElement target) return;
+            if (!IsLayoutContextTarget(target))
+            {
+                HideLayoutContextMenu();
+            }
             if (_is2dView)
             {
                 if (_component2DPanel != null && (_component2DPanel == target || _component2DPanel.Contains(target)))
@@ -1054,7 +1094,7 @@ namespace RobotTwin.UI
                     ReadFloat(GetField("ComponentScaleXField"), 1f),
                     ReadFloat(GetField("ComponentScaleYField"), 1f),
                     ReadFloat(GetField("ComponentScaleZField"), 1f));
-                _studioView?.ApplyModelTuning(euler, scale);
+                _studioView?.ApplyModelTuning(euler, scale, _modelOffset);
                 QueueValidation();
             });
         }
@@ -1608,26 +1648,13 @@ namespace RobotTwin.UI
 
         private void OnKeyDown(KeyDownEvent evt)
         {
+            if (TryHandleUndoRedo(evt))
+            {
+                evt.StopPropagation();
+                return;
+            }
             if (evt.target is VisualElement target && IsTextInputTarget(target))
             {
-                if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.Z)
-                {
-                    Redo();
-                    evt.StopPropagation();
-                    return;
-                }
-                if (evt.ctrlKey && evt.keyCode == KeyCode.Z)
-                {
-                    Undo();
-                    evt.StopPropagation();
-                    return;
-                }
-                if (evt.ctrlKey && evt.keyCode == KeyCode.Y)
-                {
-                    Redo();
-                    evt.StopPropagation();
-                    return;
-                }
                 return;
             }
             if (_is2dView && IsLayoutKeyTarget())
@@ -1675,24 +1702,6 @@ namespace RobotTwin.UI
                     evt.StopPropagation();
                     return;
                 }
-            }
-            if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.Z)
-            {
-                Redo();
-                evt.StopPropagation();
-                return;
-            }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.Z)
-            {
-                Undo();
-                evt.StopPropagation();
-                return;
-            }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.Y)
-            {
-                Redo();
-                evt.StopPropagation();
-                return;
             }
             if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.M)
             {
@@ -1749,6 +1758,27 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
+        }
+
+        private bool TryHandleUndoRedo(KeyDownEvent evt)
+        {
+            if (evt == null || !evt.ctrlKey) return false;
+            if (evt.shiftKey && evt.keyCode == KeyCode.Z)
+            {
+                Redo();
+                return true;
+            }
+            if (evt.keyCode == KeyCode.Z)
+            {
+                Undo();
+                return true;
+            }
+            if (evt.keyCode == KeyCode.Y)
+            {
+                Redo();
+                return true;
+            }
+            return false;
         }
 
         private void OnNavigationMove(NavigationMoveEvent evt)
@@ -1865,21 +1895,25 @@ namespace RobotTwin.UI
             float nudge = evt.shiftKey ? CameraKeyPanShift : CameraKeyPanBase;
             if (evt.keyCode == KeyCode.W)
             {
+                if (evt.ctrlKey) return false;
                 _studioView.NudgePanCamera(new Vector2(0f, nudge));
                 return true;
             }
             if (evt.keyCode == KeyCode.S)
             {
+                if (evt.ctrlKey) return false;
                 _studioView.NudgePanCamera(new Vector2(0f, -nudge));
                 return true;
             }
             if (evt.keyCode == KeyCode.A)
             {
+                if (evt.ctrlKey) return false;
                 _studioView.NudgePanCamera(new Vector2(-nudge, 0f));
                 return true;
             }
             if (evt.keyCode == KeyCode.D)
             {
+                if (evt.ctrlKey) return false;
                 _studioView.NudgePanCamera(new Vector2(nudge, 0f));
                 return true;
             }
@@ -1900,16 +1934,6 @@ namespace RobotTwin.UI
 
             if (evt.ctrlKey)
             {
-                if (evt.keyCode == KeyCode.UpArrow)
-                {
-                    _studioView.Zoom(CameraKeyZoomDelta * CameraKeyZoomScale);
-                    return true;
-                }
-                if (evt.keyCode == KeyCode.DownArrow)
-                {
-                    _studioView.Zoom(-CameraKeyZoomDelta * CameraKeyZoomScale);
-                    return true;
-                }
                 if (evt.keyCode == KeyCode.LeftArrow)
                 {
                     _studioView.AdjustLightingBlend(-0.1f);
@@ -1935,10 +1959,10 @@ namespace RobotTwin.UI
             }
 
             var orbit = Vector2.zero;
-            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
-            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
-            if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
-            if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
+            if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
             _studioView.Orbit(orbit);
             return true;
         }
@@ -1981,18 +2005,12 @@ namespace RobotTwin.UI
                 ApplyLayoutZoom(-LayoutKeyZoomStep, GetLayoutZoomCenter());
                 return true;
             }
-            if (evt.ctrlKey && (evt.keyCode == KeyCode.UpArrow || evt.keyCode == KeyCode.DownArrow))
-            {
-                float zoom = evt.keyCode == KeyCode.UpArrow ? LayoutKeyZoomStep : -LayoutKeyZoomStep;
-                ApplyLayoutZoom(zoom, GetLayoutZoomCenter());
-                return true;
-            }
 
             Vector2 pan = Vector2.zero;
-            if (evt.keyCode == KeyCode.W || evt.keyCode == KeyCode.UpArrow) pan = new Vector2(0f, LayoutKeyPanStep);
-            if (evt.keyCode == KeyCode.S || evt.keyCode == KeyCode.DownArrow) pan = new Vector2(0f, -LayoutKeyPanStep);
-            if (evt.keyCode == KeyCode.A || evt.keyCode == KeyCode.LeftArrow) pan = new Vector2(LayoutKeyPanStep, 0f);
-            if (evt.keyCode == KeyCode.D || evt.keyCode == KeyCode.RightArrow) pan = new Vector2(-LayoutKeyPanStep, 0f);
+            if (!evt.ctrlKey && (evt.keyCode == KeyCode.W || evt.keyCode == KeyCode.UpArrow)) pan = new Vector2(0f, LayoutKeyPanStep);
+            if (!evt.ctrlKey && (evt.keyCode == KeyCode.S || evt.keyCode == KeyCode.DownArrow)) pan = new Vector2(0f, -LayoutKeyPanStep);
+            if (!evt.ctrlKey && (evt.keyCode == KeyCode.A || evt.keyCode == KeyCode.LeftArrow)) pan = new Vector2(LayoutKeyPanStep, 0f);
+            if (!evt.ctrlKey && (evt.keyCode == KeyCode.D || evt.keyCode == KeyCode.RightArrow)) pan = new Vector2(-LayoutKeyPanStep, 0f);
             if (pan != Vector2.zero)
             {
                 _layoutPanOffset += pan * LayoutPanSpeed;
@@ -2117,6 +2135,7 @@ namespace RobotTwin.UI
                 if (prefab != null)
                 {
                     _studioView.SetModel(prefab);
+                    ApplyCurrentModelTuning();
                     RefreshPartsList();
                     RefreshAnchorGizmos();
                     RefreshEffectGizmos();
@@ -2168,6 +2187,7 @@ namespace RobotTwin.UI
             }
 
             _studioView.SetModelInstance(instance);
+            ApplyCurrentModelTuning();
             RefreshPartsList();
             RefreshAnchorGizmos();
             RefreshEffectGizmos();
@@ -2195,6 +2215,7 @@ namespace RobotTwin.UI
             _labelsContainer?.Clear();
             _specsContainer?.Clear();
             _defaultsContainer?.Clear();
+            _fxContainer?.Clear();
 
             if (payload.pinLayout != null)
             {
@@ -2228,12 +2249,71 @@ namespace RobotTwin.UI
                 }
             }
 
+            if (payload.fx != null)
+            {
+                foreach (var fx in payload.fx)
+                {
+                    AddFxRow(fx);
+                }
+            }
+
             ApplyTuning(payload.tuning);
             BuildOverrides(payload);
+            EnsureRequiredStates();
             RefreshPartsList();
             RefreshStatesList();
             RefreshEffectGizmos();
             QueueValidation();
+            RefreshCatalogAndHierarchy();
+        }
+
+        private void EnsureRequiredStates()
+        {
+            string type = GetField("ComponentTypeField")?.value?.Trim() ?? string.Empty;
+            var required = GetRequiredStatesForType(type);
+            if (required.Count == 0) return;
+            bool changed = false;
+            foreach (var stateId in required)
+            {
+                if (_stateOverrides.ContainsKey(stateId)) continue;
+                _stateOverrides[stateId] = new StateOverride(stateId);
+                changed = true;
+            }
+            if (changed)
+            {
+                RefreshStatesList();
+                RefreshCatalogAndHierarchy();
+            }
+        }
+
+        private static List<string> GetRequiredStatesForType(string type)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrWhiteSpace(type)) return list;
+            string key = type.Trim().ToLowerInvariant();
+            if (key.Contains("button") || key.Contains("momentary"))
+            {
+                list.Add("pressed");
+                list.Add("released");
+                return list;
+            }
+            if (key.Contains("switch") || key.Contains("toggle"))
+            {
+                list.Add("on");
+                list.Add("off");
+                return list;
+            }
+            if (key.Contains("led"))
+            {
+                list.Add("on");
+                list.Add("off");
+            }
+            if (key.Contains("servo") || key.Contains("motor"))
+            {
+                list.Add("idle");
+                list.Add("active");
+            }
+            return list;
         }
 
         private void BuildOverrides(ComponentDefinitionPayload payload)
@@ -2308,8 +2388,17 @@ namespace RobotTwin.UI
             SetField("ComponentUsbOffsetXField", FormatFloat(tuning.UsbOffset.x));
             SetField("ComponentUsbOffsetYField", FormatFloat(tuning.UsbOffset.y));
             SetField("ComponentUsbOffsetZField", FormatFloat(tuning.UsbOffset.z));
-            _studioView?.ApplyModelTuning(tuning.Euler, tuning.Scale);
+            _modelOffset = tuning.ModelOffset;
+            _studioView?.ApplyModelTuning(tuning.Euler, tuning.Scale, _modelOffset);
             RefreshEffectGizmos();
+        }
+
+        private void ApplyCurrentModelTuning()
+        {
+            if (_studioView == null) return;
+            var euler = ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField");
+            var scale = ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField");
+            _studioView.ApplyModelTuning(euler, scale, _modelOffset);
         }
 
         private void ClearTuning()
@@ -2354,7 +2443,8 @@ namespace RobotTwin.UI
             SetField("ComponentUsbOffsetXField", string.Empty);
             SetField("ComponentUsbOffsetYField", string.Empty);
             SetField("ComponentUsbOffsetZField", string.Empty);
-            _studioView?.ApplyModelTuning(Vector3.zero, Vector3.one);
+            _modelOffset = Vector3.zero;
+            _studioView?.ApplyModelTuning(Vector3.zero, Vector3.one, _modelOffset);
             RefreshEffectGizmos();
         }
 
@@ -2653,11 +2743,20 @@ namespace RobotTwin.UI
 
             var removeBtn = new Button(() =>
             {
-                if (_selectedPinEntry == entry) _selectedPinEntry = null;
-                _pinsContainer.Remove(entry);
-                RefreshAnchorGizmos();
-                RefreshLayoutPreview();
-                QueueValidation();
+                var name = nameField?.value?.Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    RemovePinEntryByName(name);
+                }
+                else
+                {
+                    if (_selectedPinEntry == entry) _selectedPinEntry = null;
+                    _pinsContainer.Remove(entry);
+                    RefreshAnchorGizmos();
+                    RefreshLayoutPreview();
+                    QueueValidation();
+                    RefreshCatalogAndHierarchy();
+                }
             });
             removeBtn.text = "X";
             removeBtn.AddToClassList("editor-remove-btn");
@@ -2698,7 +2797,25 @@ namespace RobotTwin.UI
             RegisterAnchorField(anchorRadiusField);
             RefreshLayoutPreview();
             QueueValidation();
+            RefreshCatalogAndHierarchy();
             return entry;
+        }
+
+        private void RemovePinEntryByName(string pinName)
+        {
+            if (_pinsContainer == null || string.IsNullOrWhiteSpace(pinName)) return;
+            foreach (var entry in _pinsContainer.Children())
+            {
+                var nameField = entry.Q<TextField>("PinNameField");
+                if (!string.Equals(nameField?.value?.Trim(), pinName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (_selectedPinEntry == entry) _selectedPinEntry = null;
+                _pinsContainer.Remove(entry);
+                RefreshAnchorGizmos();
+                RefreshLayoutPreview();
+                QueueValidation();
+                RefreshCatalogAndHierarchy();
+                return;
+            }
         }
 
         private void AddLabelRow(LabelLayoutPayload payload)
@@ -2723,10 +2840,7 @@ namespace RobotTwin.UI
 
             var removeBtn = new Button(() =>
             {
-                if (_selectedLabelEntry == entry) _selectedLabelEntry = null;
-                _labelsContainer.Remove(entry);
-                RefreshLayoutPreview();
-                QueueValidation();
+                RemoveLabelEntry(entry);
             });
             removeBtn.text = "X";
             removeBtn.AddToClassList("editor-remove-btn");
@@ -2746,6 +2860,82 @@ namespace RobotTwin.UI
             RegisterValidationField(labelAlignField);
             RefreshLayoutPreview();
             QueueValidation();
+            RefreshCatalogAndHierarchy();
+        }
+
+        private void AddFxRow(FxPayload payload)
+        {
+            if (_fxContainer == null) return;
+            if (payload == null) return;
+            if (string.IsNullOrWhiteSpace(payload.id))
+            {
+                payload.id = $"fx_{Guid.NewGuid():N}".Substring(0, 9);
+            }
+            var entry = new VisualElement();
+            entry.AddToClassList("editor-entry");
+            entry.userData = payload.id ?? string.Empty;
+
+            var row = new VisualElement();
+            row.AddToClassList("editor-row");
+            var idField = CreateField("FxIdField", payload.id, "editor-field-small");
+            var typeField = CreateField("FxTypeField", payload.type, "editor-field");
+            var anchorField = CreateField("FxAnchorField", payload.anchorId, "editor-field-small");
+            row.Add(idField);
+            row.Add(typeField);
+            row.Add(anchorField);
+
+            var removeBtn = new Button(() =>
+            {
+                _fxContainer.Remove(entry);
+                RefreshEffectGizmos();
+                QueueValidation();
+                RefreshCatalogAndHierarchy();
+            });
+            removeBtn.text = "X";
+            removeBtn.AddToClassList("editor-remove-btn");
+            row.Add(removeBtn);
+            entry.Add(row);
+
+            var row2 = new VisualElement();
+            row2.AddToClassList("editor-row");
+            var posXField = CreateField("FxPosXField", FormatFloat(payload.localPosition.x), "editor-field-small");
+            var posYField = CreateField("FxPosYField", FormatFloat(payload.localPosition.y), "editor-field-small");
+            var posZField = CreateField("FxPosZField", FormatFloat(payload.localPosition.z), "editor-field-small");
+            var triggerField = CreateField("FxTriggerField", payload.trigger, "editor-field");
+            row2.Add(posXField);
+            row2.Add(posYField);
+            row2.Add(posZField);
+            row2.Add(triggerField);
+            entry.Add(row2);
+
+            var row3 = new VisualElement();
+            row3.AddToClassList("editor-row");
+            var exprField = CreateField("FxExpressionField", payload.expression, "editor-field");
+            row3.Add(exprField);
+            entry.Add(row3);
+
+            _fxContainer.Add(entry);
+            RegisterValidationField(idField);
+            RegisterValidationField(typeField);
+            RegisterValidationField(anchorField);
+            RegisterValidationField(posXField);
+            RegisterValidationField(posYField);
+            RegisterValidationField(posZField);
+            RegisterValidationField(triggerField);
+            RegisterValidationField(exprField);
+            RefreshEffectGizmos();
+            QueueValidation();
+            RefreshCatalogAndHierarchy();
+        }
+
+        private void RemoveLabelEntry(VisualElement entry)
+        {
+            if (_labelsContainer == null || entry == null) return;
+            if (_selectedLabelEntry == entry) _selectedLabelEntry = null;
+            _labelsContainer.Remove(entry);
+            RefreshLayoutPreview();
+            QueueValidation();
+            RefreshCatalogAndHierarchy();
         }
 
         private void AddKeyValueRow(VisualElement container, string key, string value)
@@ -2778,6 +2968,7 @@ namespace RobotTwin.UI
             _selectedPinEntry = entry;
             if (_selectedPinEntry != null) _selectedPinEntry.AddToClassList("selected");
             RefreshTransformGizmo();
+            UpdateInspectorForSelection("Pin", entry);
         }
 
         private void SelectLabelEntry(VisualElement entry)
@@ -2786,6 +2977,351 @@ namespace RobotTwin.UI
             if (_selectedLabelEntry != null) _selectedLabelEntry.RemoveFromClassList("selected");
             _selectedLabelEntry = entry;
             if (_selectedLabelEntry != null) _selectedLabelEntry.AddToClassList("selected");
+            UpdateInspectorForSelection("Label", entry);
+        }
+
+        private void UpdateInspectorForSelection(string kind, VisualElement entry)
+        {
+            if (_inspectorTargetLabel != null)
+            {
+                string label = "No selection";
+                if (!string.IsNullOrWhiteSpace(kind))
+                {
+                    string name = entry?.userData as string;
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        var nameField = entry?.Q<TextField>("PinNameField") ?? entry?.Q<TextField>("LabelTextField");
+                        name = nameField?.value ?? string.Empty;
+                    }
+                    label = string.IsNullOrWhiteSpace(name) ? kind : $"{kind}: {name}";
+                }
+                _inspectorTargetLabel.text = label;
+            }
+
+            if (_inspectorDetailsContainer == null) return;
+            _inspectorDetailsContainer.Clear();
+            if (entry == null) return;
+            var detail = new Label($"Type: {kind}");
+            detail.AddToClassList("form-label");
+            _inspectorDetailsContainer.Add(detail);
+        }
+
+        private void RefreshCatalogAndHierarchy()
+        {
+            RefreshCatalog();
+            RefreshHierarchy();
+        }
+
+        private void RefreshCatalog()
+        {
+            if (_catalogList == null) return;
+            _catalogList.Clear();
+
+            AddCatalogHeader("Pins");
+            if (_pinsContainer != null)
+            {
+                foreach (var entry in _pinsContainer.Children())
+                {
+                    var nameField = entry.Q<TextField>("PinNameField");
+                    string name = nameField?.value?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    AddCatalogItem(name, "Pin", () => SelectPinEntry(entry));
+                }
+            }
+
+            AddCatalogHeader("Labels");
+            if (_labelsContainer != null)
+            {
+                foreach (var entry in _labelsContainer.Children())
+                {
+                    var textField = entry.Q<TextField>("LabelTextField");
+                    string text = textField?.value?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(text)) continue;
+                    AddCatalogItem(text, "Label", () => SelectLabelEntry(entry));
+                }
+            }
+
+            AddCatalogHeader("States");
+            foreach (var state in _stateOverrides.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+            {
+                string stateId = state;
+                AddCatalogItem(stateId, "State", () =>
+                {
+                    var entry = FindStateEntryById(stateId);
+                    if (entry != null) SelectStateEntry(entry);
+                });
+            }
+
+            AddCatalogHeader("Parts");
+            if (_partsContainer != null)
+            {
+                foreach (var entry in _partsContainer.Children())
+                {
+                    string name = entry.userData as string ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    AddCatalogItem(name, "Part", () => SelectPartEntry(entry));
+                }
+            }
+
+            AddCatalogHeader("Effects");
+            var effectNames = new[]
+            {
+                "LabelOffset", "LedGlowOffset", "HeatFxOffset", "SparkFxOffset", "ErrorFxOffset", "SmokeOffset", "UsbOffset"
+            };
+            foreach (var effect in effectNames)
+            {
+                AddCatalogItem(effect, "FX", null);
+            }
+            if (_fxContainer != null)
+            {
+                foreach (var entry in _fxContainer.Children())
+                {
+                    var idField = entry.Q<TextField>("FxIdField");
+                    string id = idField?.value?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(id)) continue;
+                    AddCatalogItem(id, "FX", null);
+                }
+            }
+
+            AddCatalogHeader("Scripts");
+            var physicsField = GetField("ComponentPhysicsScriptField");
+            string scriptPath = physicsField?.value?.Trim() ?? string.Empty;
+            AddCatalogItem(string.IsNullOrWhiteSpace(scriptPath) ? "Physics Script (none)" : scriptPath, "Script", null);
+        }
+
+        private void RefreshHierarchy()
+        {
+            if (_hierarchyTree == null) return;
+            _hierarchyTree.Clear();
+
+            AddHierarchyItem("2D View", "Root", 0, () => SetCenterView(false), () => SetCenterView(false));
+            if (_pinsContainer != null)
+            {
+                foreach (var entry in _pinsContainer.Children())
+                {
+                    var nameField = entry.Q<TextField>("PinNameField");
+                    string name = nameField?.value?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    AddHierarchyItem(name, "Pin", 1, () => SelectPinEntry(entry), () =>
+                    {
+                        SetCenterView(false);
+                        FocusLayoutOnEntry(entry, true);
+                    });
+                }
+            }
+            if (_labelsContainer != null)
+            {
+                foreach (var entry in _labelsContainer.Children())
+                {
+                    var textField = entry.Q<TextField>("LabelTextField");
+                    string text = textField?.value?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(text)) continue;
+                    AddHierarchyItem(text, "Label", 1, () => SelectLabelEntry(entry), () =>
+                    {
+                        SetCenterView(false);
+                        FocusLayoutOnEntry(entry, false);
+                    });
+                }
+            }
+
+            AddHierarchyItem("3D View", "Root", 0, () => SetCenterView(true), () => SetCenterView(true));
+            if (_partsContainer != null)
+            {
+                foreach (var entry in _partsContainer.Children())
+                {
+                    string name = entry.userData as string ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    AddHierarchyItem(name, "Part", 1, () => SelectPartEntry(entry), () =>
+                    {
+                        SetCenterView(true);
+                        FrameSelectedPart();
+                    });
+                }
+            }
+            if (_fxContainer != null)
+            {
+                foreach (var entry in _fxContainer.Children())
+                {
+                    var idField = entry.Q<TextField>("FxIdField");
+                    string id = idField?.value?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(id)) continue;
+                    AddHierarchyItem(id, "FX", 1, null, () => SetCenterView(true));
+                }
+            }
+        }
+
+        private void AddCatalogHeader(string title)
+        {
+            var label = new Label(title);
+            label.AddToClassList("panel-section-title");
+            _catalogList.Add(label);
+        }
+
+        private void AddCatalogItem(string name, string kind, Action onClick)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("catalog-item");
+            var label = new Label(name);
+            label.AddToClassList("catalog-item-label");
+            var kindLabel = new Label(kind);
+            kindLabel.AddToClassList("hierarchy-item-kind");
+            row.Add(label);
+            row.Add(kindLabel);
+            if (onClick != null)
+            {
+                row.RegisterCallback<PointerDownEvent>(_ => onClick());
+            }
+            _catalogList.Add(row);
+        }
+
+        private void AddHierarchyItem(string name, string kind, int indent, Action onClick, Action onDoubleClick)
+        {
+            if (_hierarchyTree == null) return;
+            var row = new VisualElement();
+            row.AddToClassList("hierarchy-item");
+            row.style.marginLeft = indent * 12;
+            var label = new Label(name);
+            label.AddToClassList("hierarchy-item-label");
+            var kindLabel = new Label(kind);
+            kindLabel.AddToClassList("hierarchy-item-kind");
+            row.Add(label);
+            row.Add(kindLabel);
+            row.RegisterCallback<ClickEvent>(evt =>
+            {
+                if (evt.clickCount > 1)
+                {
+                    onDoubleClick?.Invoke();
+                }
+                else
+                {
+                    onClick?.Invoke();
+                }
+            });
+            _hierarchyTree.Add(row);
+        }
+
+        private VisualElement FindStateEntryById(string id)
+        {
+            if (_statesContainer == null || string.IsNullOrWhiteSpace(id)) return null;
+            foreach (var entry in _statesContainer.Children())
+            {
+                if (entry.userData is string stateId && string.Equals(stateId, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    return entry;
+                }
+            }
+            return null;
+        }
+
+        private void ToggleHierarchyPanel()
+        {
+            if (_hierarchyTree == null || _hierarchyToggleBtn == null) return;
+            bool isVisible = _hierarchyTree.style.display != DisplayStyle.None;
+            _hierarchyTree.style.display = isVisible ? DisplayStyle.None : DisplayStyle.Flex;
+            _hierarchyToggleBtn.text = isVisible ? "Show" : "Hide";
+        }
+
+        private void DeleteContextPin()
+        {
+            if (string.IsNullOrWhiteSpace(_layoutContextPinName)) return;
+            RemovePinEntryByName(_layoutContextPinName);
+            HideLayoutContextMenu();
+        }
+
+        private void DeleteContextLabel()
+        {
+            if (_layoutContextLabelEntry == null) return;
+            RemoveLabelEntry(_layoutContextLabelEntry);
+            HideLayoutContextMenu();
+        }
+
+        private void ShowLayoutContextMenu(Vector2 panelPosition)
+        {
+            if (_layoutContextMenu == null || _root == null) return;
+            var rootRect = _root.worldBound;
+            float left = panelPosition.x - rootRect.xMin;
+            float top = panelPosition.y - rootRect.yMin;
+            _layoutContextMenu.style.left = left;
+            _layoutContextMenu.style.top = top;
+            _layoutContextMenu.style.display = DisplayStyle.Flex;
+        }
+
+        private void PrepareLayoutContextMenu(bool showPinDelete, bool showLabelDelete)
+        {
+            if (_layoutContextDeletePinBtn != null)
+            {
+                _layoutContextDeletePinBtn.style.display = showPinDelete ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            if (_layoutContextDeleteLabelBtn != null)
+            {
+                _layoutContextDeleteLabelBtn.style.display = showLabelDelete ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        private void HideLayoutContextMenu()
+        {
+            if (_layoutContextMenu == null) return;
+            _layoutContextMenu.style.display = DisplayStyle.None;
+            _layoutContextPinName = null;
+            _layoutContextLabelEntry = null;
+        }
+
+        private bool IsLayoutContextTarget(VisualElement target)
+        {
+            if (_layoutContextMenu == null || target == null) return false;
+            return _layoutContextMenu == target || _layoutContextMenu.Contains(target);
+        }
+
+        private void FocusLayoutOnEntry(VisualElement entry, bool isPin)
+        {
+            if (entry == null) return;
+            float nx;
+            float ny;
+            if (isPin)
+            {
+                nx = ReadFloat(entry.Q<TextField>("PinXField"));
+                ny = ReadFloat(entry.Q<TextField>("PinYField"));
+            }
+            else
+            {
+                nx = ReadFloat(entry.Q<TextField>("LabelXField"));
+                ny = ReadFloat(entry.Q<TextField>("LabelYField"));
+            }
+            FocusLayoutOnNormalized(nx, ny);
+        }
+
+        private void FocusLayoutOnNormalized(float nx, float ny)
+        {
+            if (_layoutPreviewLarge == null) return;
+            float previewWidth = _layoutPreviewLarge.resolvedStyle.width;
+            float previewHeight = _layoutPreviewLarge.resolvedStyle.height;
+            if (previewWidth <= 1f || previewHeight <= 1f) return;
+
+            float sizeX = ReadFloat(GetField("ComponentSizeXField"), CircuitLayoutSizing.DefaultComponentWidth);
+            float sizeY = ReadFloat(GetField("ComponentSizeYField"), CircuitLayoutSizing.DefaultComponentHeight);
+            if (sizeX <= 0f) sizeX = CircuitLayoutSizing.DefaultComponentWidth;
+            if (sizeY <= 0f) sizeY = CircuitLayoutSizing.DefaultComponentHeight;
+
+            float padding = 12f;
+            Vector2 averageSize = GetAverageComponentSize();
+            float maxX = Mathf.Max(sizeX, averageSize.x);
+            float maxY = Mathf.Max(sizeY, averageSize.y);
+            float scale = Mathf.Min((previewWidth - padding * 2f) / maxX, (previewHeight - padding * 2f) / maxY);
+            scale = Mathf.Clamp(scale, 0.1f, 100f);
+
+            float bodyWidth = sizeX * scale * _layoutZoom;
+            float bodyHeight = sizeY * scale * _layoutZoom;
+            _layoutPanOffset = new Vector2(
+                (previewWidth * 0.5f) - (bodyWidth * 0.5f) - (nx * bodyWidth),
+                (previewHeight * 0.5f) - (bodyHeight * 0.5f) - (ny * bodyHeight));
+            RefreshLayoutPreview();
+        }
+
+        private void FrameSelectedPart()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedPartName)) return;
+            if (_studioView == null) return;
+            _studioView.FrameModel();
         }
 
         private void RefreshAnchorGizmos()
@@ -2848,8 +3384,56 @@ namespace RobotTwin.UI
                 BuildEffectGizmo("UsbOffset", ReadVector3Field("ComponentUsbOffsetXField", "ComponentUsbOffsetYField", "ComponentUsbOffsetZField"), new Color(0.35f, 0.85f, 0.45f))
             };
 
+            if (_fxContainer != null)
+            {
+                foreach (var entry in _fxContainer.Children())
+                {
+                    var idField = entry.Q<TextField>("FxIdField");
+                    var typeField = entry.Q<TextField>("FxTypeField");
+                    string id = idField?.value?.Trim();
+                    if (string.IsNullOrWhiteSpace(id)) continue;
+                    string type = typeField?.value?.Trim() ?? "FX";
+                    string anchorId = entry.Q<TextField>("FxAnchorField")?.value?.Trim();
+                    Vector3 localPos = new Vector3(
+                        ReadFloat(entry.Q<TextField>("FxPosXField")),
+                        ReadFloat(entry.Q<TextField>("FxPosYField")),
+                        ReadFloat(entry.Q<TextField>("FxPosZField")));
+                    if (!string.IsNullOrWhiteSpace(anchorId) && TryGetAnchorLocalPosition(anchorId, out var anchorPos))
+                    {
+                        localPos = anchorPos;
+                    }
+                    gizmos.Add(BuildEffectGizmo(id, localPos, GetFxColor(type)));
+                }
+            }
+
             _studioView.SetEffectGizmos(gizmos);
             RefreshTransformGizmo();
+        }
+
+        private bool TryGetAnchorLocalPosition(string id, out Vector3 local)
+        {
+            local = Vector3.zero;
+            var entry = FindPinEntryByName(id);
+            if (entry == null) return false;
+            local = new Vector3(
+                ReadFloat(entry.Q<TextField>("PinAnchorXField")),
+                ReadFloat(entry.Q<TextField>("PinAnchorYField")),
+                ReadFloat(entry.Q<TextField>("PinAnchorZField")));
+            return true;
+        }
+
+        private static Color GetFxColor(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return new Color(0.8f, 0.8f, 0.8f);
+            string key = type.Trim().ToLowerInvariant();
+            if (key.Contains("glow") || key.Contains("led")) return new Color(0.95f, 0.85f, 0.25f);
+            if (key.Contains("heat")) return new Color(0.95f, 0.45f, 0.25f);
+            if (key.Contains("spark") || key.Contains("arc")) return new Color(0.95f, 0.55f, 0.85f);
+            if (key.Contains("smoke") || key.Contains("steam")) return new Color(0.7f, 0.75f, 0.8f);
+            if (key.Contains("error") || key.Contains("alarm")) return new Color(0.95f, 0.35f, 0.35f);
+            if (key.Contains("pulse")) return new Color(0.45f, 0.85f, 0.95f);
+            if (key.Contains("vibration")) return new Color(0.75f, 0.85f, 0.45f);
+            return new Color(0.7f, 0.85f, 0.6f);
         }
 
         private ComponentStudioView.EffectGizmo BuildEffectGizmo(string id, Vector3 local, Color color)
@@ -3051,6 +3635,17 @@ namespace RobotTwin.UI
             if (_layoutPreviewActive == null) return;
             if (_layoutTool == LayoutTool.Pan || _layoutTool == LayoutTool.Label) return;
             if (evt.target is not VisualElement pin) return;
+            if (evt.button == 1)
+            {
+                var entry = FindPinEntry(pin.userData as string);
+                if (entry != null) SelectPinEntry(entry);
+                _layoutContextPinName = pin.userData as string;
+                _layoutContextLabelEntry = null;
+                PrepareLayoutContextMenu(true, false);
+                ShowLayoutContextMenu(evt.position);
+                evt.StopPropagation();
+                return;
+            }
             _draggingPinName = pin.userData as string;
             if (string.IsNullOrWhiteSpace(_draggingPinName)) return;
             _draggingPin = true;
@@ -3069,6 +3664,16 @@ namespace RobotTwin.UI
             if (_layoutTool == LayoutTool.Pan || _layoutTool == LayoutTool.Pin) return;
             if (evt.target is not VisualElement label) return;
             if (label.userData is not VisualElement entry) return;
+            if (evt.button == 1)
+            {
+                SelectLabelEntry(entry);
+                _layoutContextPinName = null;
+                _layoutContextLabelEntry = entry;
+                PrepareLayoutContextMenu(false, true);
+                ShowLayoutContextMenu(evt.position);
+                evt.StopPropagation();
+                return;
+            }
             SelectLabelEntry(entry);
             _draggingLabel = true;
             _draggingLabelEntry = entry;
@@ -3085,6 +3690,45 @@ namespace RobotTwin.UI
         {
             if (_layoutPreviewLarge == null || _layoutPreviewActive != _layoutPreviewLarge) return;
             _layoutKeyFocus = true;
+            if (evt.button == 1)
+            {
+                _layoutContextPinName = null;
+                _layoutContextLabelEntry = null;
+                PrepareLayoutContextMenu(false, false);
+                ShowLayoutContextMenu(evt.position);
+                evt.StopPropagation();
+                return;
+            }
+            if (evt.button == 0 && evt.ctrlKey)
+            {
+                if (_selectedPinEntry != null)
+                {
+                    _draggingPinName = _selectedPinEntry.Q<TextField>("PinNameField")?.value?.Trim();
+                    if (!string.IsNullOrWhiteSpace(_draggingPinName))
+                    {
+                        _draggingPin = true;
+                        _dragPointerId = evt.pointerId;
+                        if (_layoutPreviewActive.HasPointerCapture(_dragPointerId) == false)
+                        {
+                            _layoutPreviewActive.CapturePointer(_dragPointerId);
+                        }
+                        evt.StopPropagation();
+                        return;
+                    }
+                }
+                if (_selectedLabelEntry != null)
+                {
+                    _draggingLabel = true;
+                    _draggingLabelEntry = _selectedLabelEntry;
+                    _dragPointerId = evt.pointerId;
+                    if (_layoutPreviewActive.HasPointerCapture(_dragPointerId) == false)
+                    {
+                        _layoutPreviewActive.CapturePointer(_dragPointerId);
+                    }
+                    evt.StopPropagation();
+                    return;
+                }
+            }
             if (evt.button == 0 && (_layoutTool == LayoutTool.Pin || _layoutTool == LayoutTool.Label))
             {
                 if (TryGetLayoutNormalizedPosition(new Vector2(evt.localPosition.x, evt.localPosition.y), out var nx, out var ny))
@@ -3312,6 +3956,7 @@ namespace RobotTwin.UI
                 var empty = new Label("No model parts loaded.");
                 empty.AddToClassList("empty-state");
                 _partsContainer.Add(empty);
+                RefreshCatalogAndHierarchy();
                 return;
             }
 
@@ -3334,6 +3979,7 @@ namespace RobotTwin.UI
                 }
             }
             ApplyStateOverridesToModel();
+            RefreshCatalogAndHierarchy();
         }
 
         private void ApplyStateOverridesToModel()
@@ -3388,6 +4034,7 @@ namespace RobotTwin.UI
                 }
                 _statesContainer.Add(row);
             }
+            RefreshCatalogAndHierarchy();
         }
 
         private void AddStateOverride()
@@ -3413,6 +4060,7 @@ namespace RobotTwin.UI
             _selectedStateId = entry?.userData as string;
             ApplyStateOverridesToModel();
             LoadSelectedPart();
+            UpdateInspectorForSelection("State", entry);
         }
 
         private void SelectPartEntry(VisualElement entry)
@@ -3428,6 +4076,7 @@ namespace RobotTwin.UI
             {
                 UpdateMaterialModalFromSelection();
             }
+            UpdateInspectorForSelection("Part", entry);
         }
 
         private void LoadSelectedPart()
@@ -3779,7 +4428,7 @@ namespace RobotTwin.UI
                 return true;
             }
 
-            if (mode != ComponentStudioView.GizmoMode.Move && _studioView.TryGetModelBoundsLocal(out bounds))
+            if (_studioView.TryGetModelBoundsLocal(out bounds))
             {
                 target = new EditTarget { Kind = EditTargetKind.Component, Id = "Component" };
                 if (_studioView.Root != null)
@@ -4024,6 +4673,7 @@ namespace RobotTwin.UI
 
         private enum ViewportEditMode
         {
+            None,
             Move,
             Rotate,
             Scale
@@ -4144,7 +4794,18 @@ namespace RobotTwin.UI
 
         private void SetViewportEditMode(ViewportEditMode mode)
         {
-            _viewportEditMode = mode;
+            if (_viewportEditMode == mode)
+            {
+                _viewportEditMode = ViewportEditMode.None;
+            }
+            else
+            {
+                _viewportEditMode = mode;
+            }
+            if (_isViewportEditDragging)
+            {
+                EndViewportEdit();
+            }
             UpdateViewportEditButtons();
             RefreshTransformGizmo();
         }
@@ -4209,6 +4870,7 @@ namespace RobotTwin.UI
 
         private bool IsViewportEditActive()
         {
+            if (_viewportEditMode == ViewportEditMode.None) return false;
             return (_viewportEditAnchorsToggle != null && _viewportEditAnchorsToggle.value) ||
                    (_viewportEditEffectsToggle != null && _viewportEditEffectsToggle.value) ||
                    (_viewportEditPartsToggle != null && _viewportEditPartsToggle.value) ||
@@ -4257,6 +4919,7 @@ namespace RobotTwin.UI
 
             if (_editTarget.Kind == EditTargetKind.Component)
             {
+                _editStartLocal = _modelOffset;
                 _editStartRotation = ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField");
                 _editStartScale = ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField");
                 SetEditPlaneForWorld(worldPos);
@@ -4445,7 +5108,6 @@ namespace RobotTwin.UI
 
             if (handle.Kind == ComponentStudioView.GizmoHandleKind.MoveAxis)
             {
-                if (_editTarget.Kind == EditTargetKind.Component) return;
                 var axisDir = GetAxisDirection(handle.Axis, basisRotation);
                 if (_studioView.TryGetViewportRay(viewportPoint, out var ray) && _editPlane.Raycast(ray, out var enter))
                 {
@@ -4472,6 +5134,10 @@ namespace RobotTwin.UI
                         else if (_editTarget.Kind == EditTargetKind.Effect)
                         {
                             ApplyEffectOffset(_editTarget.Id, localPos);
+                        }
+                        else if (_editTarget.Kind == EditTargetKind.Component)
+                        {
+                            ApplyComponentOffset(localPos);
                         }
                     }
                     RefreshTransformGizmo();
@@ -4694,7 +5360,7 @@ namespace RobotTwin.UI
         private void ApplyComponentEuler(Vector3 euler)
         {
             SetVector3Fields("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField", euler);
-            _studioView?.ApplyModelTuning(euler, ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField"));
+            _studioView?.ApplyModelTuning(euler, ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField"), _modelOffset);
             QueueValidation();
         }
 
@@ -4705,7 +5371,17 @@ namespace RobotTwin.UI
                 Mathf.Max(0.001f, scale.y),
                 Mathf.Max(0.001f, scale.z));
             SetVector3Fields("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField", clamped);
-            _studioView?.ApplyModelTuning(ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField"), clamped);
+            _studioView?.ApplyModelTuning(ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField"), clamped, _modelOffset);
+            QueueValidation();
+        }
+
+        private void ApplyComponentOffset(Vector3 localOffset)
+        {
+            _modelOffset = localOffset;
+            _studioView?.ApplyModelTuning(
+                ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField"),
+                ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField"),
+                _modelOffset);
             QueueValidation();
         }
 
@@ -4802,6 +5478,7 @@ namespace RobotTwin.UI
             payload.labels = CollectLabelLayout().ToArray();
             payload.specs = CollectKeyValues(_specsContainer);
             payload.defaults = CollectKeyValues(_defaultsContainer);
+            payload.fx = CollectFxPayloads();
             payload.tuning = BuildTuningFromEditor();
             payload.parts = _partOverrides.Values.Select(p => p.ToPayload()).ToArray();
             payload.states = _stateOverrides.Values.Select(s => s.ToPayload()).ToArray();
@@ -4944,6 +5621,12 @@ namespace RobotTwin.UI
                 hasAny = true;
             }
 
+            if (_modelOffset.sqrMagnitude > 0.000001f)
+            {
+                tuning.ModelOffset = _modelOffset;
+                hasAny = true;
+            }
+
             return hasAny ? tuning : null;
         }
         private List<PinLayoutPayload> CollectPinLayout()
@@ -4992,6 +5675,33 @@ namespace RobotTwin.UI
                 });
             }
             return list;
+        }
+
+        private FxPayload[] CollectFxPayloads()
+        {
+            if (_fxContainer == null) return Array.Empty<FxPayload>();
+            var list = new List<FxPayload>();
+            foreach (var entry in _fxContainer.Children())
+            {
+                var idField = entry.Q<TextField>("FxIdField");
+                var typeField = entry.Q<TextField>("FxTypeField");
+                string id = idField?.value?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(id)) continue;
+                var fx = new FxPayload
+                {
+                    id = id,
+                    type = typeField?.value?.Trim() ?? string.Empty,
+                    anchorId = entry.Q<TextField>("FxAnchorField")?.value?.Trim() ?? string.Empty,
+                    localPosition = new Vector3(
+                        ReadFloat(entry.Q<TextField>("FxPosXField")),
+                        ReadFloat(entry.Q<TextField>("FxPosYField")),
+                        ReadFloat(entry.Q<TextField>("FxPosZField"))),
+                    trigger = entry.Q<TextField>("FxTriggerField")?.value ?? string.Empty,
+                    expression = entry.Q<TextField>("FxExpressionField")?.value ?? string.Empty
+                };
+                list.Add(fx);
+            }
+            return list.ToArray();
         }
 
         private ComponentKeyValue[] CollectKeyValues(VisualElement container)
@@ -5525,6 +6235,7 @@ namespace RobotTwin.UI
             public string physicsScript;
             public PartOverridePayload[] parts;
             public StateOverridePayload[] states;
+            public FxPayload[] fx;
         }
 
         [Serializable]
@@ -5585,6 +6296,7 @@ namespace RobotTwin.UI
         {
             public Vector3 Euler;
             public Vector3 Scale;
+            public Vector3 ModelOffset;
             public bool UseLedColor;
             public Color LedColor;
             public float LedGlowRange;
@@ -5603,6 +6315,17 @@ namespace RobotTwin.UI
             public Vector3 ErrorFxOffset;
             public Vector3 SmokeOffset;
             public Vector3 UsbOffset;
+        }
+
+        [Serializable]
+        private class FxPayload
+        {
+            public string id;
+            public string type;
+            public string anchorId;
+            public Vector3 localPosition;
+            public string trigger;
+            public string expression;
         }
 
         private class PartOverride

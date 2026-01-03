@@ -168,6 +168,9 @@ UNITY_EXPORT void Physics_SetConfig(const PhysicsConfig_C *config) {
   cfg.ambient_temp_c = config->ambient_temp_c;
   cfg.rain_intensity = config->rain_intensity;
   cfg.thermal_exchange = config->thermal_exchange;
+  cfg.sleep_linear_threshold = config->sleep_linear_threshold;
+  cfg.sleep_angular_threshold = config->sleep_angular_threshold;
+  cfg.sleep_time = config->sleep_time;
   g_physics->SetConfig(cfg);
 }
 
@@ -190,9 +193,15 @@ UNITY_EXPORT uint32_t Physics_AddBody(const RigidBody_C *body) {
   rb.temperature_c = body->temperature_c;
   rb.material_strength = body->material_strength;
   rb.fracture_toughness = body->fracture_toughness;
+  rb.shape = static_cast<NativeEngine::Physics::ShapeType>(body->shape_type);
+  rb.radius = body->radius;
+  rb.half_extents = {body->half_x, body->half_y, body->half_z};
+  rb.friction = body->friction;
+  rb.restitution = body->restitution;
   rb.damage = body->damage;
   rb.is_broken = body->is_broken != 0;
   rb.is_static = body->is_static != 0;
+  rb.SetMass(rb.mass);
   return g_physics->AddBody(rb);
 }
 
@@ -227,6 +236,13 @@ UNITY_EXPORT int Physics_GetBody(uint32_t id, RigidBody_C *out) {
   out->temperature_c = rb.temperature_c;
   out->material_strength = rb.material_strength;
   out->fracture_toughness = rb.fracture_toughness;
+  out->shape_type = static_cast<int>(rb.shape);
+  out->radius = rb.radius;
+  out->half_x = rb.half_extents.x;
+  out->half_y = rb.half_extents.y;
+  out->half_z = rb.half_extents.z;
+  out->friction = rb.friction;
+  out->restitution = rb.restitution;
   out->damage = rb.damage;
   out->is_broken = rb.is_broken ? 1 : 0;
   out->is_static = rb.is_static ? 1 : 0;
@@ -302,6 +318,44 @@ UNITY_EXPORT int Physics_ApplyTorque(uint32_t body_id, float tx, float ty, float
     return 0;
   }
   return g_physics->ApplyTorque(body_id, {tx, ty, tz}) ? 1 : 0;
+}
+
+UNITY_EXPORT uint32_t Physics_AddDistanceConstraint(uint32_t body_a, uint32_t body_b,
+                                                    float ax, float ay, float az,
+                                                    float bx, float by, float bz,
+                                                    float rest_length, float stiffness,
+                                                    float damping, float max_force,
+                                                    int tension_only) {
+  if (!g_physics) {
+    return 0;
+  }
+  return g_physics->AddDistanceConstraint(
+      body_a, body_b,
+      {ax, ay, az},
+      {bx, by, bz},
+      rest_length, stiffness, damping, max_force,
+      tension_only != 0);
+}
+
+UNITY_EXPORT int Physics_Raycast(float ox, float oy, float oz,
+                                 float dx, float dy, float dz,
+                                 float max_distance, RaycastHit_C *out_hit) {
+  if (!g_physics || !out_hit) {
+    return 0;
+  }
+  NativeEngine::Physics::PhysicsWorld::RaycastHit hit{};
+  if (!g_physics->Raycast({ox, oy, oz}, {dx, dy, dz}, max_distance, hit)) {
+    return 0;
+  }
+  out_hit->body_id = hit.body_id;
+  out_hit->hit_x = hit.point.x;
+  out_hit->hit_y = hit.point.y;
+  out_hit->hit_z = hit.point.z;
+  out_hit->normal_x = hit.normal.x;
+  out_hit->normal_y = hit.normal.y;
+  out_hit->normal_z = hit.normal.z;
+  out_hit->distance = hit.distance;
+  return 1;
 }
 
 UNITY_EXPORT int Native_AddNode() {
