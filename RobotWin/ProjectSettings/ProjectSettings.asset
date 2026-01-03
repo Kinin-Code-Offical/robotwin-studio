@@ -691,7 +691,7 @@ PlayerSettings:
   cloudProjectId: 7a5bfc89-0e15-4676-953b-d4f9d44af89b
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: RobotWin
+  projectName: UnityApp
   organizationId: kinin0
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

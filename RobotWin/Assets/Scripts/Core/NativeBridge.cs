@@ -39,6 +39,104 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "LoadHexFromFile")]
         public static extern int LoadHexFromFile(string path);
 
+        // --- Physics Engine API ---
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PhysicsConfig
+        {
+            public float base_dt;
+            public float gravity_x;
+            public float gravity_y;
+            public float gravity_z;
+            public float gravity_jitter;
+            public float time_jitter;
+            public float solver_iterations;
+            public ulong noise_seed;
+            public float contact_slop;
+            public float restitution;
+            public float static_friction;
+            public float dynamic_friction;
+            public float air_density;
+            public float wind_x;
+            public float wind_y;
+            public float wind_z;
+            public float ambient_temp_c;
+            public float rain_intensity;
+            public float thermal_exchange;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RigidBody
+        {
+            public uint id;
+            public float mass;
+            public float pos_x;
+            public float pos_y;
+            public float pos_z;
+            public float vel_x;
+            public float vel_y;
+            public float vel_z;
+            public float rot_w;
+            public float rot_x;
+            public float rot_y;
+            public float rot_z;
+            public float ang_x;
+            public float ang_y;
+            public float ang_z;
+            public float linear_damping;
+            public float angular_damping;
+            public float drag_coefficient;
+            public float cross_section_area;
+            public float surface_area;
+            public float temperature_c;
+            public float material_strength;
+            public float fracture_toughness;
+            public float damage;
+            public int is_broken;
+            public int is_static;
+        }
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_CreateWorld")]
+        public static extern void Physics_CreateWorld();
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_DestroyWorld")]
+        public static extern void Physics_DestroyWorld();
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_SetConfig")]
+        public static extern void Physics_SetConfig(ref PhysicsConfig config);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_AddBody")]
+        public static extern uint Physics_AddBody(ref RigidBody body);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_GetBody")]
+        public static extern int Physics_GetBody(uint id, out RigidBody body);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_Step")]
+        public static extern void Physics_Step(float dt);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_AddVehicle")]
+        public static extern uint Physics_AddVehicle(uint body_id, int wheel_count,
+            [In] float[] wheel_positions, [In] float[] wheel_radius, [In] float[] suspension_rest,
+            [In] float[] suspension_k, [In] float[] suspension_damping, [In] int[] driven_wheels);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_SetWheelInput")]
+        public static extern void Physics_SetWheelInput(uint vehicle_id, int wheel_index, float steer, float drive_torque, float brake_torque);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_SetVehicleAero")]
+        public static extern void Physics_SetVehicleAero(uint vehicle_id, float drag_coefficient, float downforce);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_SetVehicleTireModel")]
+        public static extern void Physics_SetVehicleTireModel(uint vehicle_id, float B, float C, float D, float E);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_ApplyForce")]
+        public static extern int Physics_ApplyForce(uint body_id, float fx, float fy, float fz);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_ApplyForceAtPoint")]
+        public static extern int Physics_ApplyForceAtPoint(uint body_id, float fx, float fy, float fz, float px, float py, float pz);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_ApplyTorque")]
+        public static extern int Physics_ApplyTorque(uint body_id, float tx, float ty, float tz);
+
         // --- Legacy / Helper API ---
 
         [DllImport(PLUGIN_NAME, EntryPoint = "GetEngineVersion")]

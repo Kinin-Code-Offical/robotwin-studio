@@ -14,6 +14,7 @@ This folder contains the authoritative documentation for the RobotWin Studio cod
 - TOOLS.md: Tooling and automation commands.
 - BUILD_RELEASE.md: Build and packaging steps.
 - TESTING.md: Test strategy and how to run tests.
+- DEBUG_CONSOLE.md: Local web UI for tests and log inspection.
 - TROUBLESHOOTING.md: Common issues and fixes.
 
 ## Quick Start (Dev)

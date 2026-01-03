@@ -72,7 +72,7 @@ function Update-WorkspaceSnapshot {
 function Get-TreeLines {
     param (
         [string[]]$Files,
-        [int]$MaxDepth = 2
+        [int]$MaxDepth = [int]::MaxValue
     )
 
     $root = [ordered]@{}
@@ -160,7 +160,7 @@ function Update-ReadmeTree {
     $begin = "<!-- BEGIN FOLDER_TREE -->"
     $end = "<!-- END FOLDER_TREE -->"
     $treeFiles = $Files | Where-Object { -not $_.EndsWith(".meta") }
-    $treeLines = Get-TreeLines -Files $treeFiles -MaxDepth 3
+    $treeLines = Get-TreeLines -Files $treeFiles
     $nl = [Environment]::NewLine
     $fence = '```'
     $treeBlock = @()

@@ -72,6 +72,13 @@ namespace RobotTwin.Game
         public TelemetryFrame LastTelemetry { get; private set; }
         public string SerialOutput => _serialBuffer;
         public IReadOnlyDictionary<string, bool> BoardPowerById => _boardPowerById;
+        public bool IsRunning => _isRunning;
+        public bool UseNativeEngine => _useNativeEngine;
+        public bool UseExternalFirmware => _useExternalFirmware;
+        public bool NativePinsReady => _nativePinsReady;
+        public int ExternalFirmwareSessionCount => _externalFirmwareSessions.Count;
+        public int VirtualBoardCount => _virtualArduinos.Count;
+        public int PoweredBoardCount => _boardPowerById.Count;
 
         public void SetUsbConnected(string boardId, bool connected)
         {

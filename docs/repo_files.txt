@@ -1,6 +1,6 @@
-﻿# GeneratedUtc: 2026-01-02T23:59:11Z
-# Commit: 7445001
-# FileCount: 6989
+﻿# GeneratedUtc: 2026-01-03T00:58:44Z
+# Commit: b720b8b
+# FileCount: 6985
 
 .gitignore
 CoreSim\CoreSim.sln
@@ -29,9 +29,11 @@ CoreSim\src\RobotTwin.CoreSim\Specs\TemplateSpec.cs
 CoreSim\src\RobotTwin.CoreSim\Specs\WorldSpec.cs
 CoreSim\tests\RobotTwin.CoreSim.Tests\RobotTwin.CoreSim.Tests.csproj
 CoreSim\tests\RobotTwin.CoreSim.Tests\TemplateTests.cs
+CoreSim\tests\RobotTwin.CoreSim.Tests\ThermalModelTests.cs
 docs\ARCHITECTURE.md
 docs\BUILD_RELEASE.md
 docs\CORE_SIM.md
+docs\DEBUG_CONSOLE.md
 docs\FIRMWARE_ENGINE.md
 docs\NATIVE_ENGINE.md
 docs\PROJECT_STRUCTURE.md
@@ -187,12 +189,18 @@ NativeEngine\include\Core\HexLoader.h
 NativeEngine\include\Core\MemoryMap.hpp
 NativeEngine\include\Core\NodalSolver.hpp
 NativeEngine\include\MCU\ATmega328P_ISA.h
+NativeEngine\include\Physics\DeterministicRng.h
+NativeEngine\include\Physics\MathTypes.h
+NativeEngine\include\Physics\PhysicsConfig.h
+NativeEngine\include\Physics\PhysicsWorld.h
+NativeEngine\include\Physics\RigidBody.h
 NativeEngine\src\Core\BvmFormat.cpp
 NativeEngine\src\Core\CircuitContext.cpp
 NativeEngine\src\Core\NodalSolver.cpp
 NativeEngine\src\main.cpp
 NativeEngine\src\MCU\ATmega328P_ISA.c
 NativeEngine\src\NativeEngine_Core.cpp
+NativeEngine\src\Physics\PhysicsWorld.cpp
 README.md
 RobotWin\Assets\Editor.meta
 RobotWin\Assets\Plugins.meta
@@ -594,6 +602,10 @@ RobotWin\Assets\Scripts\Editor\TestBootstrapper.cs.meta
 RobotWin\Assets\Scripts\Game.meta
 RobotWin\Assets\Scripts\Game\CoreSimAdapter.cs
 RobotWin\Assets\Scripts\Game\CoreSimAdapter.cs.meta
+RobotWin\Assets\Scripts\Game\NativePhysicsBody.cs
+RobotWin\Assets\Scripts\Game\NativePhysicsBody.cs.meta
+RobotWin\Assets\Scripts\Game\NativePhysicsWorld.cs
+RobotWin\Assets\Scripts\Game\NativePhysicsWorld.cs.meta
 RobotWin\Assets\Scripts\Game\SessionManager.cs
 RobotWin\Assets\Scripts\Game\SessionManager.cs.meta
 RobotWin\Assets\Scripts\Game\SimHost.cs
@@ -1097,7 +1109,6 @@ RobotWin\Library\Artifacts\69\69f1eb5240db88298b8a8f36673229f0
 RobotWin\Library\Artifacts\6a\6a5030b0a618a98e7ac62f259fa1906d
 RobotWin\Library\Artifacts\6a\6ae3e6c1b800735d70f0016e0de87381
 RobotWin\Library\Artifacts\6b\6b3a5d091bbfa91b36c04f664ce2d9b6
-RobotWin\Library\Artifacts\6c\6c6ecc21b181dfcb9164a18d92c8357e
 RobotWin\Library\Artifacts\6d\6d3d16066dc7e1d7e7fac448213e3f8d
 RobotWin\Library\Artifacts\6d\6d515f199ac5c779ac3fad9285ee3696
 RobotWin\Library\Artifacts\6d\6d73dbf147554d63c615f1f7754949a9
@@ -6673,8 +6684,6 @@ RobotWin\Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d\UnityEngine.
 RobotWin\Library\PackageManager\ProjectCache
 RobotWin\Library\PackageManager\ProjectCache.md5
 RobotWin\Library\PackageManager\projectResolution.json
-RobotWin\Library\PreviousActionData.bin
-RobotWin\Library\PreviousActionStack.bin
 RobotWin\Library\SceneVisibilityState.asset
 RobotWin\Library\ScriptAssemblies\glTFast.dll
 RobotWin\Library\ScriptAssemblies\glTFast.dots.dll
@@ -6901,20 +6910,12 @@ RobotWin\Library\UIElements\EditorWindows\UnityEditor.InspectorWindow.pref
 RobotWin\Library\UIElements\EditorWindows\UnityEditor.ProjectSettingsWindow.pref
 RobotWin\Library\UIElements\EditorWindows\UnityEditor.Search.SearchPickerWindow.pref
 RobotWin\Library\UIElements\EditorWindows\UnityEditor.UIElements.Debugger.UIElementsDebugger.pref
-RobotWin\Logs\AssetImportWorker0.log
 RobotWin\Logs\AssetImportWorker0-prev.log
-RobotWin\Logs\AssetImportWorker1.log
 RobotWin\Logs\AssetImportWorker1-prev.log
-RobotWin\Logs\AssetImportWorker2.log
 RobotWin\Logs\AssetImportWorker2-prev.log
-RobotWin\Logs\AssetImportWorker3.log
-RobotWin\Logs\AssetImportWorker4.log
+RobotWin\Logs\AssetImportWorker3-prev.log
+RobotWin\Logs\AssetImportWorker4-prev.log
 RobotWin\Logs\native_engine.log
-RobotWin\Logs\shadercompiler-AssetImportWorker0-0.log
-RobotWin\Logs\shadercompiler-AssetImportWorker1-0.log
-RobotWin\Logs\shadercompiler-AssetImportWorker2-0.log
-RobotWin\Logs\shadercompiler-AssetImportWorker3-0.log
-RobotWin\Logs\shadercompiler-AssetImportWorker4-0.log
 RobotWin\Logs\shadercompiler-UnityShaderCompiler.exe-0.log
 RobotWin\Logs\unity_live_error.log
 RobotWin\Packages\manifest.json
@@ -6943,12 +6944,7 @@ RobotWin\ProjectSettings\UnityConnectSettings.asset
 RobotWin\ProjectSettings\VersionControlSettings.asset
 RobotWin\ProjectSettings\VFXManager.asset
 RobotWin\Temp\__Backupscenes\0.backup
-RobotWin\Temp\FSTimeGet-130688ccffb715d43b4ac2327ee7f737
-RobotWin\Temp\FSTimeGet-317876d4529a734439a00aa99db8d2fe
-RobotWin\Temp\FSTimeGet-7b9f3a2175ba6db4ca65be8af5d527c6
-RobotWin\Temp\FSTimeGet-a9ae810cd4151e24e933fece9af134a6
-RobotWin\Temp\FSTimeGet-c390b9ddbf5d39a43a0e791acc918b95
-RobotWin\Temp\FSTimeGet-f260198296c2eee408c66870b515b8ba
+RobotWin\Temp\FSTimeGet-c6f5a92b7be0aa34abd29ff98b9ea364
 RobotWin\Temp\UnityLockfile
 RobotWin\UserSettings\AI.Animate\AnimateGeneratorSettings.asset
 RobotWin\UserSettings\AI.Generators\DragAndDropCache.asset
@@ -6970,12 +6966,12 @@ tests\integration\UnityBridge.js
 tests\python\requirements.txt
 tests\python\test_remote_server.py
 tools\arduino-cli\arduino-cli.exe
-tools\mission_control\dashboard\package.json
-tools\mission_control\dashboard\package-lock.json
-tools\mission_control\dashboard\public\client.js
-tools\mission_control\dashboard\public\index.html
-tools\mission_control\dashboard\server.js
-tools\mission_control\launch_mission_control.ps1
+tools\debug_console\launch_debug_console.ps1
+tools\debug_console\public\app.js
+tools\debug_console\public\favicon.svg
+tools\debug_console\public\index.html
+tools\debug_console\public\styles.css
+tools\debug_console\server.py
 tools\rt_tool.py
 tools\scripts\__pycache__\tmp_freecad_import.cpython-311.pyc
 tools\scripts\blender_obj_to_fbx.py

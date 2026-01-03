@@ -10,6 +10,7 @@ add_library(NativeEngineCore OBJECT
     src/Core/NodalSolver.cpp
     src/Core/BvmFormat.cpp
     src/Core/CircuitContext.cpp
+    src/Physics/PhysicsWorld.cpp
 )
 
 add_library(NativeEngine SHARED

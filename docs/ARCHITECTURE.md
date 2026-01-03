@@ -23,6 +23,60 @@ RobotWin Studio is a multi-module system that combines a deterministic simulator
 - RobotWin communicates with CoreSim via serialized models and plugin APIs.
 - FirmwareEngine exchanges telemetry via file or IPC contracts defined in CoreSim.
 
+## Ownership Matrix (What Lives Where)
+
+- CoreSim: deterministic circuit solving, logic/telemetry, and simulation metadata (no physics).
+- NativeEngine: full rigid-body physics, constraints, collision, friction, aerodynamics, and actuator dynamics.
+- FirmwareEngine: real firmware execution (BVM/HEX), pin I/O, and serial flow.
+- RobotWin (Unity): UI, scene orchestration, visualization, and editor tools.
+
+## Determinism & Noise Model
+
+To reflect real-world imperfections, physics uses deterministic noise:
+
+- Gravity micro-jitter (configurable)
+- Time-step micro-jitter (configurable)
+- Material variance (planned)
+- Actuator response variance (planned)
+
+## CoreSim <-> NativeEngine Data Contract (Draft)
+
+CoreSim produces control intents; NativeEngine produces physical state + sensor feedback.
+
+### CoreSim → NativeEngine (ControlFrame)
+
+- tick_index: int
+- dt_seconds: float
+- actuators: list
+  - id: string
+  - type: servo | motor | thruster
+  - target: float (angle / rpm / thrust)
+  - pwm: float (0..1)
+  - torque_limit: float
+  - enabled: bool
+- power: list
+  - board_id: string
+  - rail_voltage: float
+
+### NativeEngine → CoreSim (PhysicsFrame)
+
+- tick_index: int
+- dt_seconds: float
+- bodies: list
+  - id: string
+  - position: vec3
+  - rotation: quat
+  - linear_velocity: vec3
+  - angular_velocity: vec3
+- sensors: list
+  - id: string
+  - type: imu | encoder | gyro | accel | distance
+  - value: float/vec3
+- constraints: list
+  - id: string
+  - error: float
+  - impulse: float
+
 ## Design Goals
 
 - Deterministic simulation (CoreSim).

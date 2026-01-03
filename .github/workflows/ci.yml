@@ -59,10 +59,11 @@ jobs:
       run: |
         pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/update_unity_plugins.ps1 -Check
 
-    - name: Verify docs/repo_files.txt freshness
-      run: |
-        ./tools/update_repo_files.ps1 -Check
+    - name: Verify repo snapshot (README tree + repo_files)
       shell: pwsh
+      run: |
+        pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/update_repo_snapshot.ps1
+        git diff --exit-code
 
     - name: Verify no tracked build artifacts
       run: |
