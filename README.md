@@ -67,6 +67,7 @@ python tools/rt_tool.py update-unity-plugins
 - With appreciation to the people and communities who make this possible :)
 - To the Unity team for the engine, tooling, and all the craft that powers this work.
 - com0com project for virtual COM port tooling.
-- GrabCAD models by Vin.X.Mod: https://grabcad.com/vin.x.mod-2 (You are a huge lifesaver, you wouldn't believe how much time you saved me. Thank you so much!)
+- GrabCAD models by Vin.X.Mod: https://grabcad.com/vin.x.mod-2 
+    (You are a huge lifesaver, you wouldn't believe how much time you saved me. Thank you so much!)
 - GLB model creators and asset authors whose work is referenced in this project.
 
