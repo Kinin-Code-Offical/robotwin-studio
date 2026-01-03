@@ -11,7 +11,7 @@ This project is Windows-first and expects Unity 6000.3.2f1.
 - Git
 - CMake 3.26+
 - Visual Studio 2022 Build Tools (Desktop C++ workload)
-- Node.js 20+ (for Mission Control dashboard tests)
+- Node.js 20+ (for integration tests)
 
 ## Clone and Bootstrap
 

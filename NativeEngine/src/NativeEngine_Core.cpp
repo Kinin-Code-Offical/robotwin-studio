@@ -16,6 +16,7 @@
 #include "../include/Core/CircuitContext.h"
 #include "../include/Core/Diode.h"
 #include "../include/Core/HexLoader.h"
+#include "../include/Physics/PhysicsWorld.h"
 
 #include "../include/MCU/ATmega328P_ISA.h"
 
@@ -24,6 +25,7 @@ using namespace NativeEngine::Circuit;
 namespace {
 std::unique_ptr<Context> g_context = nullptr;
 SharedState g_sharedState; // Legacy State
+std::unique_ptr<NativeEngine::Physics::PhysicsWorld> g_physics = nullptr;
 
 Context &GetContext() {
   if (!g_context) {
@@ -139,6 +141,168 @@ UNITY_EXPORT void Native_CreateContext() {
 }
 
 UNITY_EXPORT void Native_DestroyContext() { g_context.reset(); }
+
+UNITY_EXPORT void Physics_CreateWorld() {
+  g_physics = std::make_unique<NativeEngine::Physics::PhysicsWorld>();
+}
+
+UNITY_EXPORT void Physics_DestroyWorld() { g_physics.reset(); }
+
+UNITY_EXPORT void Physics_SetConfig(const PhysicsConfig_C *config) {
+  if (!g_physics || !config) {
+    return;
+  }
+  NativeEngine::Physics::PhysicsConfig cfg{};
+  cfg.base_dt = config->base_dt;
+  cfg.gravity = {config->gravity_x, config->gravity_y, config->gravity_z};
+  cfg.gravity_jitter = config->gravity_jitter;
+  cfg.time_jitter = config->time_jitter;
+  cfg.solver_iterations = config->solver_iterations;
+  cfg.noise_seed = config->noise_seed;
+  cfg.contact_slop = config->contact_slop;
+  cfg.restitution = config->restitution;
+  cfg.static_friction = config->static_friction;
+  cfg.dynamic_friction = config->dynamic_friction;
+  cfg.air_density = config->air_density;
+  cfg.wind = {config->wind_x, config->wind_y, config->wind_z};
+  cfg.ambient_temp_c = config->ambient_temp_c;
+  cfg.rain_intensity = config->rain_intensity;
+  cfg.thermal_exchange = config->thermal_exchange;
+  g_physics->SetConfig(cfg);
+}
+
+UNITY_EXPORT uint32_t Physics_AddBody(const RigidBody_C *body) {
+  if (!g_physics || !body) {
+    return 0;
+  }
+  NativeEngine::Physics::RigidBody rb{};
+  rb.id = body->id;
+  rb.mass = body->mass;
+  rb.position = {body->pos_x, body->pos_y, body->pos_z};
+  rb.velocity = {body->vel_x, body->vel_y, body->vel_z};
+  rb.rotation = {body->rot_w, body->rot_x, body->rot_y, body->rot_z};
+  rb.angular_velocity = {body->ang_x, body->ang_y, body->ang_z};
+  rb.linear_damping = body->linear_damping;
+  rb.angular_damping = body->angular_damping;
+  rb.drag_coefficient = body->drag_coefficient;
+  rb.cross_section_area = body->cross_section_area;
+  rb.surface_area = body->surface_area;
+  rb.temperature_c = body->temperature_c;
+  rb.material_strength = body->material_strength;
+  rb.fracture_toughness = body->fracture_toughness;
+  rb.damage = body->damage;
+  rb.is_broken = body->is_broken != 0;
+  rb.is_static = body->is_static != 0;
+  return g_physics->AddBody(rb);
+}
+
+UNITY_EXPORT int Physics_GetBody(uint32_t id, RigidBody_C *out) {
+  if (!g_physics || !out) {
+    return 0;
+  }
+  NativeEngine::Physics::RigidBody rb{};
+  if (!g_physics->GetBody(id, rb)) {
+    return 0;
+  }
+  out->id = rb.id;
+  out->mass = rb.mass;
+  out->pos_x = rb.position.x;
+  out->pos_y = rb.position.y;
+  out->pos_z = rb.position.z;
+  out->vel_x = rb.velocity.x;
+  out->vel_y = rb.velocity.y;
+  out->vel_z = rb.velocity.z;
+  out->rot_w = rb.rotation.w;
+  out->rot_x = rb.rotation.x;
+  out->rot_y = rb.rotation.y;
+  out->rot_z = rb.rotation.z;
+  out->ang_x = rb.angular_velocity.x;
+  out->ang_y = rb.angular_velocity.y;
+  out->ang_z = rb.angular_velocity.z;
+  out->linear_damping = rb.linear_damping;
+  out->angular_damping = rb.angular_damping;
+  out->drag_coefficient = rb.drag_coefficient;
+  out->cross_section_area = rb.cross_section_area;
+  out->surface_area = rb.surface_area;
+  out->temperature_c = rb.temperature_c;
+  out->material_strength = rb.material_strength;
+  out->fracture_toughness = rb.fracture_toughness;
+  out->damage = rb.damage;
+  out->is_broken = rb.is_broken ? 1 : 0;
+  out->is_static = rb.is_static ? 1 : 0;
+  return 1;
+}
+
+UNITY_EXPORT void Physics_Step(float dt) {
+  if (!g_physics) {
+    return;
+  }
+  g_physics->Step(dt);
+}
+
+UNITY_EXPORT uint32_t Physics_AddVehicle(uint32_t body_id, int wheel_count,
+                                         const float *wheel_positions,
+                                         const float *wheel_radius,
+                                         const float *suspension_rest,
+                                         const float *suspension_k,
+                                         const float *suspension_damping,
+                                         const int *driven_wheels) {
+  if (!g_physics) {
+    return 0;
+  }
+  return g_physics->AddVehicle(body_id, wheel_count, wheel_positions,
+                               wheel_radius, suspension_rest, suspension_k,
+                               suspension_damping, driven_wheels);
+}
+
+UNITY_EXPORT void Physics_SetWheelInput(uint32_t vehicle_id, int wheel_index,
+                                        float steer, float drive_torque,
+                                        float brake_torque) {
+  if (!g_physics) {
+    return;
+  }
+  g_physics->SetWheelInput(vehicle_id, wheel_index, steer, drive_torque,
+                           brake_torque);
+}
+
+UNITY_EXPORT void Physics_SetVehicleAero(uint32_t vehicle_id,
+                                         float drag_coefficient,
+                                         float downforce) {
+  if (!g_physics) {
+    return;
+  }
+  g_physics->SetVehicleAero(vehicle_id, drag_coefficient, downforce);
+}
+
+UNITY_EXPORT void Physics_SetVehicleTireModel(uint32_t vehicle_id, float B,
+                                              float C, float D, float E) {
+  if (!g_physics) {
+    return;
+  }
+  g_physics->SetVehicleTireModel(vehicle_id, B, C, D, E);
+}
+
+UNITY_EXPORT int Physics_ApplyForce(uint32_t body_id, float fx, float fy, float fz) {
+  if (!g_physics) {
+    return 0;
+  }
+  return g_physics->ApplyForce(body_id, {fx, fy, fz}) ? 1 : 0;
+}
+
+UNITY_EXPORT int Physics_ApplyForceAtPoint(uint32_t body_id, float fx, float fy, float fz,
+                                           float px, float py, float pz) {
+  if (!g_physics) {
+    return 0;
+  }
+  return g_physics->ApplyForceAtPoint(body_id, {fx, fy, fz}, {px, py, pz}) ? 1 : 0;
+}
+
+UNITY_EXPORT int Physics_ApplyTorque(uint32_t body_id, float tx, float ty, float tz) {
+  if (!g_physics) {
+    return 0;
+  }
+  return g_physics->ApplyTorque(body_id, {tx, ty, tz}) ? 1 : 0;
+}
 
 UNITY_EXPORT int Native_AddNode() {
   return static_cast<int>(GetContext().CreateNode());

@@ -5,7 +5,8 @@ CoreSim is the deterministic simulation engine implemented in pure C#.
 ## Responsibilities
 
 - Circuit graph modeling
-- Component behavior and physics-lite rules
+- Electrical behavior + deterministic logic
+- Telemetry generation (signals, validation, faults)
 - Time-step driven simulation
 - Serialization formats for RobotWin and FirmwareEngine
 

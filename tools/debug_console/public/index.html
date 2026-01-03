@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RobotWin Debug Console</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-inner">
+        <h1>RobotWin Debug Console</h1>
+        <p>Run tests, inspect logs, and capture system output from one local dashboard.</p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Simulation Status</h2>
+        <div class="status-grid">
+          <div class="status-card">
+            <span>Unity</span>
+            <strong id="unityConnected">Disconnected</strong>
+          </div>
+          <div class="status-card">
+            <span>Engine</span>
+            <strong id="engineStatus">Unknown</strong>
+          </div>
+          <div class="status-card">
+            <span>Scene</span>
+            <strong id="sceneName">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Run Mode</span>
+            <strong id="runMode">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Sim Running</span>
+            <strong id="simRunning">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Tick</span>
+            <strong id="simTick">0</strong>
+          </div>
+          <div class="status-card">
+            <span>Time (s)</span>
+            <strong id="simTime">0.00</strong>
+          </div>
+          <div class="status-card">
+            <span>Signals</span>
+            <strong id="signalCount">0</strong>
+          </div>
+          <div class="status-card">
+            <span>Validation</span>
+            <strong id="validationCount">0</strong>
+          </div>
+        </div>
+        <div class="telemetry-controls">
+          <label>
+            Filter
+            <input id="telemetryFilter" type="text" placeholder="Component id/type" />
+          </label>
+          <button id="refreshTelemetry">Refresh</button>
+        </div>
+        <div class="telemetry-list">
+          <ul id="telemetryList"></ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>CoreSim &lt;-&gt; NativeEngine Bridge</h2>
+        <div class="bridge-grid">
+          <div class="bridge-card">
+            <span>Ready</span>
+            <strong id="bridgeReady">false</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Running</span>
+            <strong id="bridgeRunning">false</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Native Enabled</span>
+            <strong id="bridgeNative">false</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Native Pins</span>
+            <strong id="bridgeNativePins">false</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Firmware Enabled</span>
+            <strong id="bridgeFirmware">false</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Firmware Sessions</span>
+            <strong id="bridgeFirmwareSessions">0</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Virtual Boards</span>
+            <strong id="bridgeVirtualBoards">0</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Powered Boards</span>
+            <strong id="bridgePoweredBoards">0</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Signals</span>
+            <strong id="bridgeSignals">0</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Validation</span>
+            <strong id="bridgeValidation">0</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Physics Running</span>
+            <strong id="bridgePhysicsRunning">false</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Physics Bodies</span>
+            <strong id="bridgePhysicsBodies">0</strong>
+          </div>
+        </div>
+        <div class="bridge-contract">
+          <div>
+            <h3>ControlFrame</h3>
+            <ul id="bridgeControlKeys"></ul>
+          </div>
+          <div>
+            <h3>PhysicsFrame</h3>
+            <ul id="bridgePhysicsKeys"></ul>
+          </div>
+        </div>
+        <div class="bridge-note" id="bridgeNote">Waiting for Unity bridge...</div>
+      </section>
+      <section class="panel">
+        <h2>Test Runner</h2>
+        <div id="testList" class="test-grid"></div>
+        <div class="output">
+          <div class="output-header">
+            <span>Latest Output</span>
+            <button id="clearOutput" class="ghost">Clear</button>
+          </div>
+          <pre id="testOutput">Select a test to run.</pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Log Browser</h2>
+        <div class="log-controls">
+          <label>
+            Area
+            <select id="logArea">
+              <option value="debug_console">debug_console</option>
+              <option value="unity">unity</option>
+              <option value="firmware">firmware</option>
+              <option value="native">native</option>
+              <option value="tools">tools</option>
+            </select>
+          </label>
+          <label>
+            Tail lines
+            <input id="logTail" type="number" min="50" max="2000" value="400" />
+          </label>
+          <button id="refreshLogs">Refresh</button>
+        </div>
+        <div class="log-list">
+          <ul id="logList"></ul>
+        </div>
+        <div class="output">
+          <div class="output-header">
+            <span>Log Preview</span>
+          </div>
+          <pre id="logOutput">Select a log file.</pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>COM Ports</h2>
+        <div class="log-controls">
+          <button id="refreshPorts">Refresh</button>
+        </div>
+        <div class="port-list">
+          <ul id="portList"></ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Local-only dashboard. Outputs are written to logs/debug_console.</span>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

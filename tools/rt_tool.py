@@ -16,7 +16,10 @@ def run_powershell(script_path: Path, args: list[str]) -> int:
         str(script_path),
         *args,
     ]
-    return subprocess.call(cmd, cwd=str(REPO_ROOT))
+    try:
+        return subprocess.call(cmd, cwd=str(REPO_ROOT))
+    except KeyboardInterrupt:
+        return 130
 
 
 def run_python(script_path: Path, args: list[str]) -> int:
@@ -94,7 +97,7 @@ COMMAND_HELP = {
     "run-unity-smoke": "Batchmode Unity compile smoke test.",
     "monitor-unity": "Tail logs/unity/unity_live_error.log and highlight errors.",
     "console": "Interactive HTTP console for RemoteCommandServer.",
-    "mission-control": "Launch the Mission Control dashboard.",
+    "debug-console": "Launch the Debug Console web dashboard.",
 }
 
 
@@ -124,7 +127,7 @@ def main() -> int:
     add_script_command("validate-uxml", "tools/scripts/validate_uxml.ps1", "Validate UXML files")
     add_script_command("run-qa", "tools/scripts/run_qa.ps1", "Run integration tests (Node/Jest)")
     add_script_command("run-unity-smoke", "tools/scripts/run_unity_smoke.ps1", "Run Unity batchmode smoke test")
-    add_script_command("mission-control", "tools/mission_control/launch_mission_control.ps1", "Launch Mission Control dashboard")
+    add_script_command("debug-console", "tools/debug_console/launch_debug_console.ps1", "Launch Debug Console dashboard")
     subparsers.add_parser("monitor-unity", help="Tail Unity error log")
     subparsers.add_parser("help", help="Show detailed command help")
     console_parser = subparsers.add_parser("console", help="Unity HTTP console")

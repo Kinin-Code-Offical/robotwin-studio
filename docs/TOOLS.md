@@ -21,8 +21,8 @@ python tools/rt_tool.py build-standalone
 - Writes a workspace snapshot to `logs/tools/workspace_snapshot.txt`.
 - Regenerates the README folder tree section.
 
-## Mission Control
+## Debug Console
 
 ```powershell
-python tools/rt_tool.py mission-control
+python tools/rt_tool.py debug-console
 ```
