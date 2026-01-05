@@ -28,6 +28,8 @@ namespace RobotTwin.Game
         private float _tickTimer = 0f;
         private const float TICK_RATE = 0.1f; // 10Hz Firmware Tick
         private CoreSimRuntime _coreSim;
+        [SerializeField] private RealtimeScheduleConfig _realtimeConfig = new RealtimeScheduleConfig();
+        private RealtimeSchedulerState _realtimeState;
         private readonly Dictionary<string, float> _pinVoltages = new Dictionary<string, float>();
         private readonly Dictionary<string, VirtualMcu> _virtualMcus = new Dictionary<string, VirtualMcu>();
         private readonly Dictionary<string, List<PinState>> _pinStatesByComponent = new Dictionary<string, List<PinState>>();
@@ -54,6 +56,17 @@ namespace RobotTwin.Game
         private readonly TickSample[] _tickTrace = new TickSample[TickTraceCapacity];
         private int _tickTraceIndex;
         private int _tickTraceCount;
+        private float _lastTickStartTime;
+        private bool _timingReady;
+        private TimingStats _timingStats;
+        private int _lastInputSignature;
+        private bool _hasInputSignature;
+        private float _lastSolveTimestamp;
+        private int _fastPathTicks;
+        private int _correctiveTicks;
+        private int _budgetOverruns;
+        private readonly Dictionary<string, FirmwareInputCache> _firmwareInputCache =
+            new Dictionary<string, FirmwareInputCache>(System.StringComparer.OrdinalIgnoreCase);
 
         private const int ExternalFirmwarePinLimit = 20;
         private const int SerialBufferLimit = 4000;
@@ -71,6 +84,40 @@ namespace RobotTwin.Game
             public bool LoggedFallback;
         }
 
+        private sealed class FirmwareInputCache
+        {
+            public readonly int[] Digital = new int[ExternalFirmwarePinLimit];
+            public readonly float[] Analog = new float[16];
+            public readonly Dictionary<string, float> LastVoltages =
+                new Dictionary<string, float>(System.StringComparer.OrdinalIgnoreCase);
+            public int ChangedPins;
+
+            public FirmwareInputCache()
+            {
+                Array.Fill(Digital, -1);
+            }
+        }
+
+        private sealed class RealtimeSchedulerState
+        {
+            public double AccumulatorSeconds;
+            public double MasterTimeSeconds;
+            public double NextFirmwareAt;
+            public double NextCircuitAt;
+            public double NextPhysicsAt;
+            public bool LastUsedNativePins;
+
+            public void Reset(RealtimeScheduleConfig config)
+            {
+                AccumulatorSeconds = 0.0;
+                MasterTimeSeconds = 0.0;
+                NextFirmwareAt = config.FirmwareDtSeconds;
+                NextCircuitAt = config.CircuitDtSeconds;
+                NextPhysicsAt = config.PhysicsDtSeconds;
+                LastUsedNativePins = false;
+            }
+        }
+
         public float SimTime => Time.time;
         public int TickCount { get; private set; }
         public CircuitSpec Circuit => _circuit;
@@ -84,6 +131,36 @@ namespace RobotTwin.Game
         public int ExternalFirmwareSessionCount => _externalFirmwareSessions.Count;
         public int VirtualBoardCount => _virtualMcus.Count;
         public int PoweredBoardCount => _boardPowerById.Count;
+
+        public struct TimingStats
+        {
+            public int TickSamples;
+            public int JitterSamples;
+            public int Overruns;
+            public float AvgTickMs;
+            public float MaxTickMs;
+            public float LastTickMs;
+            public float AvgJitterMs;
+            public float MaxJitterMs;
+            public float LastJitterMs;
+        }
+
+        public struct RealtimeBudgetStats
+        {
+            public int FastPathTicks;
+            public int CorrectiveTicks;
+            public int BudgetOverruns;
+        }
+
+        public struct FirmwareHostTelemetry
+        {
+            public string ExecutableName;
+            public string ResolvedPath;
+            public string OverridePath;
+            public string PipeName;
+            public string Mode;
+            public bool ExternalEnabled;
+        }
 
         public readonly struct TickSample
         {
@@ -115,6 +192,54 @@ namespace RobotTwin.Game
                 list.Add(_tickTrace[index]);
             }
             return list;
+        }
+
+        public TimingStats GetTimingStatsSnapshot()
+        {
+            return _timingStats;
+        }
+
+        public RealtimeBudgetStats GetRealtimeBudgetStatsSnapshot()
+        {
+            return new RealtimeBudgetStats
+            {
+                FastPathTicks = _fastPathTicks,
+                CorrectiveTicks = _correctiveTicks,
+                BudgetOverruns = _budgetOverruns
+            };
+        }
+
+        public FirmwareHostTelemetry GetFirmwareHostTelemetry()
+        {
+            var host = new FirmwareHostTelemetry
+            {
+                ExecutableName = string.Empty,
+                ResolvedPath = string.Empty,
+                OverridePath = string.Empty,
+                PipeName = _externalFirmwareClient != null ? _externalFirmwareClient.PipeName : string.Empty,
+                Mode = _externalFirmwareClient != null
+                    ? (_externalFirmwareClient.LaunchLockstep ? "lockstep" : "realtime")
+                    : "unknown",
+                ExternalEnabled = _useExternalFirmware
+            };
+
+            var session = SessionManager.Instance;
+            if (session != null)
+            {
+                host.ExecutableName = session.FirmwareHostExecutableName ?? string.Empty;
+                host.ResolvedPath = session.FirmwarePath ?? string.Empty;
+                host.OverridePath = session.ResolveFirmwareHostOverride() ?? string.Empty;
+            }
+
+            return host;
+        }
+
+        public void SetFirmwareHostMode(bool lockstep)
+        {
+            if (_externalFirmwareClient != null)
+            {
+                _externalFirmwareClient.LaunchLockstep = lockstep;
+            }
         }
 
         public void SetUsbConnected(string boardId, bool connected)
@@ -151,6 +276,21 @@ namespace RobotTwin.Game
             _externalFirmwarePinWarnings.Clear();
             _externalFirmwareExePath = null;
             _firmwarePerfByBoard.Clear();
+            _timingStats = new TimingStats();
+            _timingReady = false;
+            _lastTickStartTime = 0f;
+            _lastInputSignature = 0;
+            _hasInputSignature = false;
+            _lastSolveTimestamp = 0f;
+            _fastPathTicks = 0;
+            _correctiveTicks = 0;
+            _budgetOverruns = 0;
+            _firmwareInputCache.Clear();
+            if (_realtimeState == null)
+            {
+                _realtimeState = new RealtimeSchedulerState();
+            }
+            _realtimeState.Reset(_realtimeConfig);
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
 
@@ -212,6 +352,17 @@ namespace RobotTwin.Game
             _boardPowerById.Clear();
             _firmwarePerfByBoard.Clear();
             _serialBuffer = string.Empty;
+            _timingStats = new TimingStats();
+            _timingReady = false;
+            _lastTickStartTime = 0f;
+            _lastInputSignature = 0;
+            _hasInputSignature = false;
+            _lastSolveTimestamp = 0f;
+            _fastPathTicks = 0;
+            _correctiveTicks = 0;
+            _budgetOverruns = 0;
+            _firmwareInputCache.Clear();
+            _realtimeState?.Reset(_realtimeConfig);
             LastTelemetry = null;
             TickCount = 0;
             _tickTimer = 0f;
@@ -233,13 +384,19 @@ namespace RobotTwin.Game
         {
             if (!_isRunning) return;
 
+            if (_realtimeConfig != null && _realtimeConfig.Enabled)
+            {
+                RunRealtimeScheduler(Time.unscaledDeltaTime);
+                return;
+            }
+
             // Step Logic (Low Frequency / Tick)
             _tickTimer += Time.deltaTime;
             if (_tickTimer >= TICK_RATE)
             {
                 _tickTimer -= TICK_RATE;
                 TickCount++;
-                RunTick(TICK_RATE);
+                RunTick(TICK_RATE, true, TICK_RATE, false, 0f);
             }
         }
 
@@ -251,86 +408,288 @@ namespace RobotTwin.Game
                 BeginSimulation();
             }
             TickCount++;
-            RunTick(dtSeconds);
+            RunTick(dtSeconds, true, dtSeconds, false, 0f);
             return true;
         }
 
-        private void RunTick(float dtSeconds)
+        private void RunTick(float firmwareDtSeconds, bool solveCircuit, float circuitDtSeconds, bool allowFastPath, float circuitBudgetMs)
         {
-            // Sync with Firmware
-            // In full impl, we'd read pipe messages here
-            // _firmware.SendIOState("PIN_1", 1);
+            float tickStart = Time.realtimeSinceStartup;
+            if (_timingReady)
+            {
+                float intervalSeconds = tickStart - _lastTickStartTime;
+                UpdateJitterStats(intervalSeconds, firmwareDtSeconds);
+            }
+            _lastTickStartTime = tickStart;
+            _timingReady = true;
+
+            bool usedNativePins = CollectFirmwareOutputs(firmwareDtSeconds);
+            float solveMs = 0f;
+            if (solveCircuit)
+            {
+                solveMs = SolveCircuit(circuitDtSeconds, usedNativePins, allowFastPath, circuitBudgetMs);
+            }
+
             if (_coreSim != null && _circuit != null)
             {
-                _pinVoltages.Clear();
-                _pinStatesByComponent.Clear();
-                _pullupResistances.Clear();
-                RefreshBoardPowerStates();
-                bool usedNativePins = TryApplyNativePins(dtSeconds);
-                HashSet<string> handledBoards = null;
-                if (!usedNativePins && _useExternalFirmware)
+                _tickTrace[_tickTraceIndex] = new TickSample(TickCount, firmwareDtSeconds, solveMs, usedNativePins, _useExternalFirmware);
+                _tickTraceIndex = (_tickTraceIndex + 1) % _tickTrace.Length;
+                _tickTraceCount = Mathf.Min(_tickTraceCount + 1, _tickTrace.Length);
+            }
+
+            float tickMs = (Time.realtimeSinceStartup - tickStart) * 1000f;
+            UpdateTickStats(tickMs, firmwareDtSeconds);
+
+            OnTickComplete?.Invoke(SimTime);
+        }
+
+        private bool CollectFirmwareOutputs(float dtSeconds)
+        {
+            if (_coreSim == null || _circuit == null)
+            {
+                return false;
+            }
+
+            _pinVoltages.Clear();
+            _pinStatesByComponent.Clear();
+            _pullupResistances.Clear();
+            RefreshBoardPowerStates();
+
+            bool usedNativePins = TryApplyNativePins(dtSeconds);
+            HashSet<string> handledBoards = null;
+            if (!usedNativePins && _useExternalFirmware)
+            {
+                foreach (var session in _externalFirmwareSessions.Values)
                 {
-                    foreach (var session in _externalFirmwareSessions.Values)
+                    if (!IsBoardPowered(session.BoardId))
                     {
-                        if (!IsBoardPowered(session.BoardId))
+                        continue;
+                    }
+                    if (TryStepExternalFirmware(session, dtSeconds))
+                    {
+                        if (handledBoards == null)
                         {
-                            continue;
+                            handledBoards = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
                         }
-                        if (TryStepExternalFirmware(session, dtSeconds))
-                        {
-                            if (handledBoards == null)
-                            {
-                                handledBoards = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-                            }
-                            handledBoards.Add(session.BoardId);
-                        }
+                        handledBoards.Add(session.BoardId);
                     }
                 }
-                if (!usedNativePins)
+            }
+
+            if (!usedNativePins)
+            {
+                foreach (var mcu in _virtualMcus.Values)
                 {
-                    foreach (var mcu in _virtualMcus.Values)
+                    if (!IsBoardPowered(mcu.Id))
                     {
-                        if (!IsBoardPowered(mcu.Id))
-                        {
-                            continue;
-                        }
-                        if (handledBoards != null && handledBoards.Contains(mcu.Id))
-                        {
-                            continue;
-                        }
-                        mcu.Step(dtSeconds);
-                        mcu.CopyVoltages(_pinVoltages);
-                        _pinStatesByComponent[mcu.Id] = mcu.Hal.GetPinStates();
-                        _pullupResistances[mcu.Id] = mcu.Hal.GetPullupResistance();
-                        TryAppendVirtualSerial(mcu.Id);
+                        continue;
                     }
+                    if (handledBoards != null && handledBoards.Contains(mcu.Id))
+                    {
+                        continue;
+                    }
+                    mcu.Step(dtSeconds);
+                    mcu.CopyVoltages(_pinVoltages);
+                    _pinStatesByComponent[mcu.Id] = mcu.Hal.GetPinStates();
+                    _pullupResistances[mcu.Id] = mcu.Hal.GetPullupResistance();
+                    TryAppendVirtualSerial(mcu.Id);
                 }
-                float solveStart = Time.realtimeSinceStartup;
-                LastTelemetry = _coreSim.Step(_circuit, _pinVoltages, _pinStatesByComponent, _pullupResistances, dtSeconds, _boardPowerById, _usbConnectedByBoard);
-                float solveMs = (Time.realtimeSinceStartup - solveStart) * 1000f;
+            }
+
+            return usedNativePins;
+        }
+
+        private float SolveCircuit(float dtSeconds, bool usedNativePins, bool allowFastPath, float circuitBudgetMs)
+        {
+            if (_coreSim == null || _circuit == null)
+            {
+                return 0f;
+            }
+
+            int signature = ComputeInputSignature();
+            bool inputsUnchanged = _hasInputSignature && signature == _lastInputSignature;
+            bool canSkipSolve = allowFastPath && inputsUnchanged && LastTelemetry != null;
+            if (canSkipSolve && _realtimeConfig != null)
+            {
+                float sinceSolve = Time.realtimeSinceStartup - _lastSolveTimestamp;
+                canSkipSolve = sinceSolve <= _realtimeConfig.MaxSolveSkipSeconds;
+            }
+
+            if (canSkipSolve)
+            {
+                _fastPathTicks++;
                 if (LastTelemetry != null)
                 {
                     LastTelemetry.TimeSeconds = SimTime;
                     LastTelemetry.TickIndex = TickCount;
                     AppendFirmwarePerfSignals(LastTelemetry);
-                    if (!_loggedTelemetry)
-                    {
-                        _loggedTelemetry = true;
-                        Debug.Log($"[SimHost] CoreSim solved {LastTelemetry.Signals.Count} signals.");
-                    }
-                    if (!_loggedTelemetrySample)
-                    {
-                        _loggedTelemetrySample = true;
-                        LogTelemetrySample();
-                    }
                 }
-
-                _tickTrace[_tickTraceIndex] = new TickSample(TickCount, dtSeconds, solveMs, usedNativePins, _useExternalFirmware);
-                _tickTraceIndex = (_tickTraceIndex + 1) % _tickTrace.Length;
-                _tickTraceCount = Mathf.Min(_tickTraceCount + 1, _tickTrace.Length);
+                return 0f;
             }
 
-            OnTickComplete?.Invoke(SimTime);
+            float solveStart = Time.realtimeSinceStartup;
+            LastTelemetry = _coreSim.Step(_circuit, _pinVoltages, _pinStatesByComponent, _pullupResistances, dtSeconds, _boardPowerById, _usbConnectedByBoard);
+            float solveMs = (Time.realtimeSinceStartup - solveStart) * 1000f;
+
+            if (LastTelemetry != null)
+            {
+                LastTelemetry.TimeSeconds = SimTime;
+                LastTelemetry.TickIndex = TickCount;
+                AppendFirmwarePerfSignals(LastTelemetry);
+                if (!_loggedTelemetry)
+                {
+                    _loggedTelemetry = true;
+                    Debug.Log($"[SimHost] CoreSim solved {LastTelemetry.Signals.Count} signals.");
+                }
+                if (!_loggedTelemetrySample)
+                {
+                    _loggedTelemetrySample = true;
+                    LogTelemetrySample();
+                }
+            }
+
+            _lastInputSignature = signature;
+            _hasInputSignature = true;
+            _lastSolveTimestamp = Time.realtimeSinceStartup;
+            _correctiveTicks++;
+            if (circuitBudgetMs > 0f && solveMs > circuitBudgetMs)
+            {
+                _budgetOverruns++;
+            }
+
+            return solveMs;
+        }
+
+        private void RunRealtimeScheduler(float deltaSeconds)
+        {
+            if (_realtimeConfig == null || !_realtimeConfig.Enabled)
+            {
+                return;
+            }
+
+            if (_realtimeState == null)
+            {
+                _realtimeState = new RealtimeSchedulerState();
+                _realtimeState.Reset(_realtimeConfig);
+            }
+
+            float firmwareDt = Mathf.Max(0.0001f, _realtimeConfig.FirmwareDtSeconds);
+            float circuitDt = Mathf.Max(0.0001f, _realtimeConfig.CircuitDtSeconds);
+            float masterDt = Mathf.Max(0.0001f, _realtimeConfig.MasterDtSeconds);
+
+            _realtimeState.AccumulatorSeconds += deltaSeconds;
+            float frameStart = Time.realtimeSinceStartup;
+
+            int masterSteps = Math.Min(_realtimeConfig.MaxStepsPerFrame,
+                (int)Math.Floor(_realtimeState.AccumulatorSeconds / masterDt));
+            if (masterSteps <= 0)
+            {
+                return;
+            }
+
+            _realtimeState.AccumulatorSeconds -= masterSteps * masterDt;
+
+            for (int step = 0; step < masterSteps; step++)
+            {
+                _realtimeState.MasterTimeSeconds += masterDt;
+                int firmwareSteps = 0;
+                while (_realtimeState.MasterTimeSeconds >= _realtimeState.NextFirmwareAt &&
+                       firmwareSteps < _realtimeConfig.MaxStepsPerFrame)
+                {
+                    float elapsedMs = (Time.realtimeSinceStartup - frameStart) * 1000f;
+                    if (elapsedMs >= _realtimeConfig.FrameBudgetMs)
+                    {
+                        _budgetOverruns++;
+                        return;
+                    }
+
+                    bool solveCircuit = _realtimeState.MasterTimeSeconds >= _realtimeState.NextCircuitAt;
+                    bool allowFastPath = _realtimeConfig.AllowFastPath ||
+                                         (_realtimeConfig.FrameBudgetMs - elapsedMs) < _realtimeConfig.CircuitBudgetMs;
+
+                    float tickStart = Time.realtimeSinceStartup;
+                    TickCount++;
+                    RunTick(firmwareDt, solveCircuit, circuitDt, allowFastPath, _realtimeConfig.CircuitBudgetMs);
+                    float tickMs = (Time.realtimeSinceStartup - tickStart) * 1000f;
+
+                    if (!solveCircuit && tickMs > _realtimeConfig.FirmwareBudgetMs)
+                    {
+                        _budgetOverruns++;
+                    }
+                    if (solveCircuit && tickMs > (_realtimeConfig.FirmwareBudgetMs + _realtimeConfig.CircuitBudgetMs))
+                    {
+                        _budgetOverruns++;
+                    }
+
+                    _realtimeState.NextFirmwareAt += firmwareDt;
+                    if (solveCircuit)
+                    {
+                        _realtimeState.NextCircuitAt += circuitDt;
+                    }
+                    firmwareSteps++;
+                }
+            }
+        }
+
+        private int ComputeInputSignature()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (var kvp in _pinVoltages)
+                {
+                    hash = (hash * 31) ^ kvp.Key.GetHashCode();
+                    hash = (hash * 31) ^ kvp.Value.GetHashCode();
+                }
+                foreach (var kvp in _pinStatesByComponent)
+                {
+                    hash = (hash * 31) ^ kvp.Key.GetHashCode();
+                    var states = kvp.Value;
+                    if (states == null) continue;
+                    for (int i = 0; i < states.Count; i++)
+                    {
+                        var state = states[i];
+                        hash = (hash * 31) ^ (state.Pin?.GetHashCode() ?? 0);
+                        hash = (hash * 31) ^ (state.IsOutput ? 1 : 0);
+                        hash = (hash * 31) ^ (state.PullupEnabled ? 1 : 0);
+                    }
+                }
+                foreach (var kvp in _boardPowerById)
+                {
+                    hash = (hash * 31) ^ kvp.Key.GetHashCode();
+                    hash = (hash * 31) ^ (kvp.Value ? 1 : 0);
+                }
+                foreach (var kvp in _usbConnectedByBoard)
+                {
+                    hash = (hash * 31) ^ kvp.Key.GetHashCode();
+                    hash = (hash * 31) ^ (kvp.Value ? 1 : 0);
+                }
+                return hash;
+            }
+        }
+
+        private void UpdateJitterStats(float intervalSeconds, float expectedSeconds)
+        {
+            float jitterMs = (intervalSeconds - expectedSeconds) * 1000f;
+            float jitterAbs = Mathf.Abs(jitterMs);
+
+            _timingStats.LastJitterMs = jitterMs;
+            _timingStats.JitterSamples++;
+            _timingStats.AvgJitterMs += (jitterAbs - _timingStats.AvgJitterMs) / _timingStats.JitterSamples;
+            _timingStats.MaxJitterMs = Mathf.Max(_timingStats.MaxJitterMs, jitterAbs);
+        }
+
+        private void UpdateTickStats(float tickMs, float expectedSeconds)
+        {
+            _timingStats.LastTickMs = tickMs;
+            _timingStats.TickSamples++;
+            _timingStats.AvgTickMs += (tickMs - _timingStats.AvgTickMs) / _timingStats.TickSamples;
+            _timingStats.MaxTickMs = Mathf.Max(_timingStats.MaxTickMs, tickMs);
+
+            if (tickMs > expectedSeconds * 1000f)
+            {
+                _timingStats.Overruns++;
+            }
         }
 
         private void InitializeNativePins()
@@ -742,6 +1101,7 @@ namespace RobotTwin.Game
 
             var boards = _circuit.Components.Where(IsMcuBoard).ToList();
             if (boards.Count == 0) return false;
+            var supportedBoards = new List<ComponentSpec>();
 
             if (_externalFirmwareClient == null)
             {
@@ -756,6 +1116,18 @@ namespace RobotTwin.Game
                     Debug.LogWarning($"[SimHost] External firmware unsupported for {board.Id} ({profile.Id}).");
                     continue;
                 }
+                supportedBoards.Add(board);
+            }
+
+            if (supportedBoards.Count == 0)
+            {
+                Debug.LogWarning("[SimHost] External firmware disabled; no supported MCU profiles.");
+                return false;
+            }
+
+            foreach (var board in supportedBoards)
+            {
+                var profile = GetMcuProfile(board);
                 if (!TryGetBvmPath(board, out var bvmPath))
                 {
                     continue;
@@ -792,6 +1164,11 @@ namespace RobotTwin.Game
             go.transform.SetParent(transform);
             var client = go.AddComponent<FirmwareClient>();
             client.Configure(BuildPipeName());
+            var session = SessionManager.Instance;
+            if (session != null)
+            {
+                client.LaunchLockstep = session.FirmwareHostLockstep;
+            }
             return client;
         }
 
@@ -878,30 +1255,59 @@ namespace RobotTwin.Game
 
         private int[] BuildFirmwareInputStates(string boardId)
         {
-            var inputs = new int[ExternalFirmwarePinLimit];
+            var cache = GetFirmwareInputCache(boardId);
             var pins = GetExternalFirmwarePins(boardId);
             int count = Mathf.Min(pins.Length, ExternalFirmwarePinLimit);
             for (int i = 0; i < count; i++)
             {
                 string pin = pins[i];
                 float voltage = GetLastNetVoltage(boardId, pin);
-                inputs[i] = voltage >= 2.5f ? 1 : 0;
+                if (!cache.LastVoltages.TryGetValue(pin, out var last) ||
+                    Mathf.Abs(last - voltage) > 0.01f)
+                {
+                    cache.LastVoltages[pin] = voltage;
+                    cache.Digital[i] = voltage >= 2.5f ? 1 : 0;
+                    cache.ChangedPins++;
+                }
             }
-            return inputs;
+            return cache.Digital;
         }
 
         private float[] BuildFirmwareAnalogInputs(string boardId)
         {
-            var values = new float[16];
+            var cache = GetFirmwareInputCache(boardId);
             var pins = GetExternalFirmwarePins(boardId);
             int write = 0;
-            for (int i = 0; i < pins.Length && write < values.Length; i++)
+            for (int i = 0; i < pins.Length && write < cache.Analog.Length; i++)
             {
                 string pin = pins[i];
                 if (!pin.StartsWith("A", StringComparison.OrdinalIgnoreCase)) continue;
-                values[write++] = GetLastNetVoltage(boardId, pin);
+                float voltage = GetLastNetVoltage(boardId, pin);
+                if (!cache.LastVoltages.TryGetValue(pin, out var last) ||
+                    Mathf.Abs(last - voltage) > 0.01f)
+                {
+                    cache.LastVoltages[pin] = voltage;
+                    cache.Analog[write] = voltage;
+                    cache.ChangedPins++;
+                }
+                write++;
             }
-            return values;
+            return cache.Analog;
+        }
+
+        private FirmwareInputCache GetFirmwareInputCache(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId))
+            {
+                return new FirmwareInputCache();
+            }
+            if (!_firmwareInputCache.TryGetValue(boardId, out var cache))
+            {
+                cache = new FirmwareInputCache();
+                _firmwareInputCache[boardId] = cache;
+            }
+            cache.ChangedPins = 0;
+            return cache;
         }
 
         private float GetLastNetVoltage(string boardId, string pin)
@@ -970,6 +1376,7 @@ namespace RobotTwin.Game
                 frame.Signals[$"FW:{boardId}:spi_transfers"] = perf.SpiTransfers;
                 frame.Signals[$"FW:{boardId}:twi_transfers"] = perf.TwiTransfers;
                 frame.Signals[$"FW:{boardId}:wdt_resets"] = perf.WdtResets;
+                frame.Signals[$"FW:{boardId}:drops"] = perf.DroppedOutputs;
             }
         }
 

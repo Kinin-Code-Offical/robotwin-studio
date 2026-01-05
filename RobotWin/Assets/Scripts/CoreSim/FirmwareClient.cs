@@ -28,6 +28,7 @@ namespace RobotTwin.CoreSim
         public ulong SpiTransfers;
         public ulong TwiTransfers;
         public ulong WdtResets;
+        public ulong DroppedOutputs;
 
         public void CopyFrom(FirmwarePerfCounters other)
         {
@@ -51,6 +52,7 @@ namespace RobotTwin.CoreSim
             SpiTransfers = other.SpiTransfers;
             TwiTransfers = other.TwiTransfers;
             WdtResets = other.WdtResets;
+            DroppedOutputs = other.DroppedOutputs;
         }
 
         public FirmwarePerfCounters Clone()
@@ -68,6 +70,7 @@ namespace RobotTwin.CoreSim
         public int[] PinStates = new int[70];
         public string SerialOutput = string.Empty;
         public FirmwarePerfCounters PerfCounters = new FirmwarePerfCounters();
+        public ulong OutputTimestampMicros;
 
         public FirmwareStepResult()
         {
@@ -82,7 +85,7 @@ namespace RobotTwin.CoreSim
         private const int PipeConnectTimeoutMs = 250;
         private const uint ProtocolMagic = 0x57465452; // "RTFW"
         private const ushort ProtocolMajor = 1;
-        private const ushort ProtocolMinor = 0;
+        private const ushort ProtocolMinor = 1;
         private const int PinCount = 70;
         private const int AnalogCount = 16;
         private const int BoardIdSize = 64;
@@ -129,6 +132,7 @@ namespace RobotTwin.CoreSim
             public readonly int[] PinOutputs = new int[PinCount];
             public readonly StringBuilder SerialBuffer = new StringBuilder();
             public readonly FirmwarePerfCounters Perf = new FirmwarePerfCounters();
+            public ulong LastTimestampMicros;
 
             public BoardState()
             {
@@ -137,6 +141,10 @@ namespace RobotTwin.CoreSim
         }
 
         public string PipeName => _pipeName;
+        public bool LaunchLockstep { get; set; } = true;
+        public string LastLaunchArguments { get; private set; } = string.Empty;
+        public bool DropStaleOutputs { get; set; } = true;
+        public double MaxOutputAgeMs { get; set; } = 250.0;
 
         public void Configure(string pipeName)
         {
@@ -159,16 +167,18 @@ namespace RobotTwin.CoreSim
 
             try
             {
+                var modeArg = LaunchLockstep ? "--lockstep" : "--realtime";
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = executablePath,
-                    Arguments = $"--pipe {_pipeName} --lockstep",
+                    Arguments = $"--pipe {_pipeName} {modeArg}",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
 
+                LastLaunchArguments = startInfo.Arguments;
                 _firmwareProcess = Process.Start(startInfo);
                 UnityEngine.Debug.Log($"[FirmwareClient] Launched Firmware PID: {_firmwareProcess.Id}");
             }
@@ -263,6 +273,7 @@ namespace RobotTwin.CoreSim
                     state.SerialBuffer.Clear();
                 }
                 result.PerfCounters.CopyFrom(state.Perf);
+                result.OutputTimestampMicros = state.LastTimestampMicros;
             }
 
             return true;
@@ -387,6 +398,7 @@ namespace RobotTwin.CoreSim
                     string boardId = ReadFixedString(payload, 0, BoardIdSize);
                     var state = GetBoardState(boardId);
                     ulong seq = ReadUInt64(payload, BoardIdSize);
+                    ulong previous = state.LastSequence;
                     lock (state.SequenceLock)
                     {
                         if (seq >= state.LastSequence)
@@ -395,14 +407,10 @@ namespace RobotTwin.CoreSim
                         }
                         Monitor.PulseAll(state.SequenceLock);
                     }
-                    for (int i = 0; i < PinCount; i++)
-                    {
-                        byte raw = payload[BoardIdSize + 16 + i];
-                        state.PinOutputs[i] = raw == 0xFF ? FirmwareStepResult.PinUnknown : raw;
-                    }
                     int offset = BoardIdSize + 16 + PinCount;
-                    int needed = offset + (13 * 8);
-                    if (payload.Length >= needed)
+                    int perfSize = 13 * 8;
+                    int perfEnd = offset + perfSize;
+                    if (payload.Length >= perfEnd)
                     {
                         state.Perf.Cycles = ReadUInt64(payload, offset); offset += 8;
                         state.Perf.AdcSamples = ReadUInt64(payload, offset); offset += 8;
@@ -417,6 +425,31 @@ namespace RobotTwin.CoreSim
                         state.Perf.SpiTransfers = ReadUInt64(payload, offset); offset += 8;
                         state.Perf.TwiTransfers = ReadUInt64(payload, offset); offset += 8;
                         state.Perf.WdtResets = ReadUInt64(payload, offset);
+                    }
+
+                    if (previous > 0 && seq > previous + 1)
+                    {
+                        state.Perf.DroppedOutputs += seq - previous - 1;
+                    }
+
+                    if (payload.Length >= perfEnd + 8)
+                    {
+                        state.LastTimestampMicros = ReadUInt64(payload, perfEnd);
+                        if (DropStaleOutputs && state.LastTimestampMicros > 0)
+                        {
+                            long ageMicros = NowMicros() - (long)state.LastTimestampMicros;
+                            if (ageMicros > (long)(MaxOutputAgeMs * 1000.0))
+                            {
+                                state.Perf.DroppedOutputs += 1;
+                                return;
+                            }
+                        }
+                    }
+
+                    for (int i = 0; i < PinCount; i++)
+                    {
+                        byte raw = payload[BoardIdSize + 16 + i];
+                        state.PinOutputs[i] = raw == 0xFF ? FirmwareStepResult.PinUnknown : raw;
                     }
                 }
                 return;
@@ -461,7 +494,7 @@ namespace RobotTwin.CoreSim
         private bool SendStep(string boardId, ulong stepSequence, FirmwareStepRequest request)
         {
             if (request == null) return false;
-            var payload = new byte[BoardIdSize + 8 + 4 + PinCount + (AnalogCount * 2)];
+            var payload = new byte[BoardIdSize + 8 + 4 + PinCount + (AnalogCount * 2) + 8];
             WriteFixedString(payload, 0, BoardIdSize, boardId);
             WriteUInt64(payload, BoardIdSize, stepSequence);
             WriteUInt32(payload, BoardIdSize + 8, request.DeltaMicros);
@@ -482,6 +515,7 @@ namespace RobotTwin.CoreSim
                 ushort raw = (ushort)Mathf.RoundToInt((voltage / 5f) * 1023f);
                 WriteUInt16(payload, analogOffset + (i * 2), raw);
             }
+            WriteUInt64(payload, analogOffset + (AnalogCount * 2), (ulong)NowMicros());
             return WritePacket(MessageType.Step, payload);
         }
 
@@ -636,6 +670,11 @@ namespace RobotTwin.CoreSim
             var bytes = Encoding.UTF8.GetBytes(value);
             int count = Mathf.Min(bytes.Length, size - 1);
             Buffer.BlockCopy(bytes, 0, buffer, offset, count);
+        }
+
+        private static long NowMicros()
+        {
+            return (long)(Stopwatch.GetTimestamp() * 1_000_000.0 / Stopwatch.Frequency);
         }
 
         private static string ReadFixedString(byte[] buffer, int offset, int size)

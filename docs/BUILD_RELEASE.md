@@ -1,6 +1,6 @@
 ﻿# Build and Release
 
-This document covers local Windows builds.
+Quick commands for building the main artifacts on Windows.
 
 ## Unity Standalone Build
 

@@ -26,6 +26,7 @@ namespace firmware
         std::vector<std::uint8_t> data;
         std::uint64_t stepSequence = 0;
         std::uint32_t deltaMicros = 0;
+        std::uint64_t sentMicros = 0;
         std::uint8_t pins[kPinCount]{};
         std::uint16_t analog[kAnalogCount]{};
         std::size_t analogCount = 0;

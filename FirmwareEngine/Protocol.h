@@ -7,7 +7,7 @@ namespace firmware
 {
     constexpr std::uint32_t kProtocolMagic = 0x57465452; // "RTFW"
     constexpr std::uint16_t kProtocolMajor = 1;
-    constexpr std::uint16_t kProtocolMinor = 0;
+    constexpr std::uint16_t kProtocolMinor = 1;
     constexpr std::size_t kPinCount = 70;
     constexpr std::uint8_t kPinValueUnknown = 0xFF;
     constexpr std::size_t kAnalogCount = 16;
@@ -68,6 +68,7 @@ namespace firmware
         std::uint32_t delta_micros;
         std::uint8_t pins[kPinCount];
         std::uint16_t analog[kAnalogCount];
+        std::uint64_t sent_micros;
     };
 
     struct LoadBvmHeader
@@ -89,6 +90,7 @@ namespace firmware
         std::uint64_t spi_transfers;
         std::uint64_t twi_transfers;
         std::uint64_t wdt_resets;
+        std::uint64_t timestamp_micros;
     };
 
     struct StatusPayload

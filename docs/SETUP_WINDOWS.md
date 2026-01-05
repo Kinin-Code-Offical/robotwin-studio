@@ -1,6 +1,6 @@
 # Windows Development Setup
 
-This project requires a specific Windows configuration to support Hard Realtime execution and QEMU virtualization.
+This document lists the Windows setup we use for development. Some items are optional depending on what you’re building (Unity-only vs native/firmware/QEMU).
 
 ## Prerequisites
 
@@ -13,14 +13,14 @@ This project requires a specific Windows configuration to support Hard Realtime 
 
 ## 1. Realtime Kernel Configuration
 
-To achieve <10s jitter, we must configure Windows to prioritize the simulation threads.
+If you’re working on realtime behavior, you’ll want Windows to prioritize simulation threads and keep timer settings stable.
 
 1. **Enable High Performance Power Plan:**
-   `powershell
+   ```powershell
    powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
-   `
+   ```
 2. **Disable CPU Core Parking:**
-   Run 	ools/scripts/disable_core_parking.ps1 (Admin).
+   Run `tools/scripts/disable_core_parking.ps1` (Admin).
 3. **Set Timer Resolution:**
    The simulation engine will automatically request 0.5ms timer resolution at runtime.
 
@@ -36,15 +36,16 @@ RobotWin bundles a custom QEMU build, but you must enable the Windows Hypervisor
 ## 3. Clone and Bootstrap
 
 1. Clone the repo recursively (submodules are required for QEMU/SimAVR):
-   `powershell
+
+   ```powershell
    git clone --recursive https://github.com/robotwin-studio/robotwin-studio.git
    cd robotwin-studio
-   `
+   ```
 
 2. Run the automated setup script:
-   `powershell
+   ```powershell
    python tools/rt_tool.py setup
-   `
+   ```
    This will:
    - Download the QEMU binaries.
    - Compile the NativeEngine dependencies (PhysX/Jolt).
@@ -53,12 +54,14 @@ RobotWin bundles a custom QEMU build, but you must enable the Windows Hypervisor
 ## 4. Verify Installation
 
 Run the system health check:
-`powershell
+
+```powershell
 python tools/rt_tool.py check-env
-`
+```
+
 Expected output:
+
 - [OK] Realtime Kernel: Enabled
 - [OK] Hypervisor: Present
 - [OK] QEMU: Found (v8.2.0)
 - [OK] Unity: Found (2023.3.0f1)
-

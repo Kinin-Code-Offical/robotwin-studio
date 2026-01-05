@@ -1,8 +1,8 @@
 # Project Structure
 
-The repository is organized as a monorepo containing the four major subsystems.
+The repository is a monorepo. The top-level folders roughly map to the major subsystems.
 
-`
+```text
 /
  CoreSim/                  # [C#] The Deterministic Orchestrator
     src/                  # Source code for the .NET simulation kernel
@@ -36,11 +36,10 @@ The repository is organized as a monorepo containing the four major subsystems.
 
  docs/                     # Documentation
  builds/                   # [Ignored] Compiled binaries and artifacts
-`
+```
 
 ## Build Artifacts
 
-- uilds/native/: Contains NativeEngine.dll (Physics) and SharedMemory.dll.
-- uilds/firmware/: Contains RoboTwinFirmwareHost.exe and QEMU binaries.
-- uilds/unity/: Contains the exported Unity player (for release).
-
+- builds/native/: Contains NativeEngine.dll (Physics) and SharedMemory.dll.
+- builds/firmware/: Contains RoboTwinFirmwareHost.exe and QEMU binaries.
+- builds/unity/: Contains the exported Unity player (for release).

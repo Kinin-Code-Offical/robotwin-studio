@@ -55,6 +55,34 @@
             <span>Validation</span>
             <strong id="validationCount">0</strong>
           </div>
+          <div class="status-card">
+            <span>Avg Jitter (ms)</span>
+            <strong id="simAvgJitter">0.000</strong>
+          </div>
+          <div class="status-card">
+            <span>Max Jitter (ms)</span>
+            <strong id="simMaxJitter">0.000</strong>
+          </div>
+          <div class="status-card">
+            <span>Avg Tick (ms)</span>
+            <strong id="simAvgTick">0.000</strong>
+          </div>
+          <div class="status-card">
+            <span>Overruns</span>
+            <strong id="simOverruns">0</strong>
+          </div>
+          <div class="status-card">
+            <span>Fast Path</span>
+            <strong id="simFastPath">0</strong>
+          </div>
+          <div class="status-card">
+            <span>Corrective</span>
+            <strong id="simCorrective">0</strong>
+          </div>
+          <div class="status-card">
+            <span>Budget Overruns</span>
+            <strong id="simBudgetOverruns">0</strong>
+          </div>
         </div>
         <div class="telemetry-controls">
           <label>
@@ -97,7 +125,15 @@
           </div>
           <div class="bridge-card">
             <span>Firmware Host</span>
-            <strong>RoboTwinFirmwareHost.exe</strong>
+            <strong id="bridgeFirmwareHost">RoboTwinFirmwareHost.exe</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Firmware Mode</span>
+            <strong id="bridgeFirmwareMode">lockstep</strong>
+          </div>
+          <div class="bridge-card">
+            <span>Firmware Pipe</span>
+            <strong id="bridgeFirmwarePipe">RoboTwin.FirmwareEngine</strong>
           </div>
           <div class="bridge-card">
             <span>Firmware Sessions</span>
@@ -127,6 +163,17 @@
             <span>Physics Bodies</span>
             <strong id="bridgePhysicsBodies">0</strong>
           </div>
+        </div>
+        <div class="telemetry-controls">
+          <label>
+            Firmware Mode
+            <select id="firmwareModeSelect">
+              <option value="lockstep">lockstep</option>
+              <option value="realtime">realtime</option>
+            </select>
+          </label>
+          <button id="firmwareModeApply">Apply</button>
+          <span id="firmwareModeStatus" class="muted"></span>
         </div>
         <div class="bridge-contract">
           <div>

@@ -1,6 +1,6 @@
 # Mega Pin Map Plan
 
-Goal: provide real Arduino Mega2560 pin mapping and IO behavior without clamping to ATmega328P.
+Goal: provide correct Arduino Mega2560 pin mapping and IO behavior without clamping to ATmega328P.
 
 Phase 1: Core architecture
 Done:

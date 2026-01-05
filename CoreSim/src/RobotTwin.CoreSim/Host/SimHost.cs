@@ -11,6 +11,7 @@ namespace RobotTwin.CoreSim.Host
     {
         private volatile bool _running = false;
         private Thread? _simThread;
+        private IDisposable? _realtimeScope;
         private readonly double _dt; // Timestep in seconds
         private readonly CircuitSpec _spec;
         public CircuitSpec Circuit => _spec;
@@ -119,6 +120,8 @@ namespace RobotTwin.CoreSim.Host
         {
             if (_running) return;
             _running = true;
+            _realtimeScope?.Dispose();
+            _realtimeScope = RealtimeHardening.TryEnable(_options.Realtime);
             _simThread = new Thread(RunLoop);
             _simThread.IsBackground = true;
             _simThread.Name = "SimHostThread";
@@ -132,6 +135,8 @@ namespace RobotTwin.CoreSim.Host
             {
                 _simThread.Join(500);
             }
+            _realtimeScope?.Dispose();
+            _realtimeScope = null;
         }
 
         private void RunLoop()
@@ -142,15 +147,14 @@ namespace RobotTwin.CoreSim.Host
             while (_running)
             {
                 var startTime = Stopwatch.GetTimestamp();
+                var targetTicks = startTime + (long)(_dt * Stopwatch.Frequency);
 
                 Tick();
 
-                var elapsed = (Stopwatch.GetTimestamp() - startTime) / (double)Stopwatch.Frequency;
-                var sleepTime = _dt - elapsed;
-
-                if (sleepTime > 0)
+                var nowTicks = Stopwatch.GetTimestamp();
+                if (nowTicks < targetTicks)
                 {
-                    Thread.Sleep((int)(sleepTime * 1000));
+                    WaitUntil(targetTicks, nowTicks);
                 }
             }
 
@@ -161,6 +165,38 @@ namespace RobotTwin.CoreSim.Host
         {
             // Keep legacy threaded path behavior, but route through StepOnce() so both APIs stay consistent.
             StepOnce(null);
+        }
+
+        private void WaitUntil(long targetTicks, long nowTicks)
+        {
+            var realtime = _options.Realtime;
+            if (realtime == null || !realtime.UseSpinWait)
+            {
+                var sleepMs = (int)((targetTicks - nowTicks) * 1000 / Stopwatch.Frequency);
+                if (sleepMs > 0)
+                {
+                    Thread.Sleep(sleepMs);
+                }
+                return;
+            }
+
+            double remainingSeconds = (targetTicks - nowTicks) / (double)Stopwatch.Frequency;
+            double sleepThreshold = realtime.SleepThresholdSeconds;
+            double spinBuffer = realtime.SpinBufferSeconds;
+
+            if (remainingSeconds > sleepThreshold)
+            {
+                var sleepMs = (int)Math.Max(0, (remainingSeconds - spinBuffer) * 1000);
+                if (sleepMs > 0)
+                {
+                    Thread.Sleep(sleepMs);
+                }
+            }
+
+            while (Stopwatch.GetTimestamp() < targetTicks)
+            {
+                Thread.SpinWait(64);
+            }
         }
     }
 }

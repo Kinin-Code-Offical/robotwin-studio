@@ -1,5 +1,6 @@
 using UnityEngine;
 using RobotTwin.CoreSim.Specs;
+using System;
 using System.IO;
 
 
@@ -9,6 +10,8 @@ namespace RobotTwin.Game
     // Persists across scenes (DontDestroyOnLoad).
     public class SessionManager : MonoBehaviour
     {
+        private const string DefaultFirmwareHostExe = "RoboTwinFirmwareHost.exe";
+
         public static SessionManager Instance { get; private set; }
 
         public CircuitSpec CurrentCircuit { get; private set; }
@@ -73,28 +76,57 @@ namespace RobotTwin.Game
             CurrentProjectPath = projectPath;
         }
         public string FirmwarePath { get; private set; }
+        public string FirmwareHostExecutableName { get; set; } = DefaultFirmwareHostExe;
+        public string FirmwareHostPathOverride { get; set; }
         public bool UseVirtualMcu { get; set; } = true;
         public bool UseNativeEnginePins { get; set; } = true;
+        public bool FirmwareHostLockstep { get; set; } = true;
+
+        public string ResolveFirmwareHostOverride()
+        {
+            if (!string.IsNullOrWhiteSpace(FirmwareHostPathOverride))
+            {
+                return FirmwareHostPathOverride;
+            }
+
+            return Environment.GetEnvironmentVariable("ROBOTWIN_FIRMWARE_HOST");
+        }
 
         public void FindFirmware()
         {
             string resolvedPath = string.Empty;
+            var overridePath = ResolveFirmwareHostOverride();
+            if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
+            {
+                resolvedPath = overridePath;
+                Debug.Log($"[SessionManager] Firmware host override found: {resolvedPath}");
+                FirmwarePath = resolvedPath;
+                if (UseVirtualMcu)
+                {
+                    Debug.Log("[SessionManager] VirtualMcu enabled. External firmware will be ignored.");
+                }
+                return;
+            }
+
+            var hostExe = string.IsNullOrWhiteSpace(FirmwareHostExecutableName)
+                ? DefaultFirmwareHostExe
+                : FirmwareHostExecutableName;
 #if UNITY_EDITOR
-            // Relative to project path: ../builds/firmware/RoboTwinFirmwareHost.exe
+            // Relative to project path: ../builds/firmware/<firmware host exe>
             var projectRoot = Directory.GetParent(Application.dataPath).Parent.FullName;
-            var firmwarePath = Path.Combine(projectRoot, "builds", "firmware", "RoboTwinFirmwareHost.exe");
+            var firmwarePath = Path.Combine(projectRoot, "builds", "firmware", hostExe);
             if (File.Exists(firmwarePath))
             {
                 resolvedPath = firmwarePath;
-                Debug.Log($"[SessionManager] Firmware found: {firmwarePath}");
+                Debug.Log($"[SessionManager] Firmware host found: {firmwarePath}");
             }
             else
             {
-                Debug.LogWarning($"[SessionManager] Firmware NOT found at {firmwarePath}");
+                Debug.LogWarning($"[SessionManager] Firmware host NOT found at {firmwarePath}");
             }
 #else
             // In build, expect next to executable or in data
-            resolvedPath = Path.Combine(Application.streamingAssetsPath, "RoboTwinFirmwareHost.exe");
+            resolvedPath = Path.Combine(Application.streamingAssetsPath, hostExe);
 #endif
             FirmwarePath = resolvedPath;
             if (UseVirtualMcu)
@@ -102,6 +134,7 @@ namespace RobotTwin.Game
                 Debug.Log("[SessionManager] VirtualMcu enabled. External firmware will be ignored.");
             }
         }
+
 
         private void OnApplicationQuit()
         {
