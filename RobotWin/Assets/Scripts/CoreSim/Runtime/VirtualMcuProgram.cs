@@ -17,26 +17,26 @@ namespace RobotTwin.CoreSim.Runtime
     public struct VirtualInstruction
     {
         public VirtualOpCode Op;
-        public byte Arg0;
+        public ushort Arg0;
         public byte Arg1;
         public long Arg2;
     }
 
-    public class VirtualArduinoProgram
+    public class VirtualMcuProgram
     {
         public List<VirtualInstruction> Instructions { get; } = new List<VirtualInstruction>();
     }
 
-    public static class VirtualArduinoProgramFactory
+    public static class VirtualMcuProgramFactory
     {
         private const int DefaultBlinkMs = 500;
         private const int IoAddressOffset = 0x20;
 
-        public static VirtualArduinoProgram FromFirmwareString(string firmware, VirtualArduinoHal hal)
+        public static VirtualMcuProgram FromFirmwareString(string firmware, VirtualMcuHal hal)
         {
             if (string.IsNullOrWhiteSpace(firmware))
             {
-                return new VirtualArduinoProgram();
+                return new VirtualMcuProgram();
             }
 
             string[] parts = firmware.Split(':');
@@ -51,14 +51,14 @@ namespace RobotTwin.CoreSim.Runtime
                 return BuildBlinkProgram(pin, ms, hal);
             }
 
-            return new VirtualArduinoProgram();
+            return new VirtualMcuProgram();
         }
 
-        public static VirtualArduinoProgram FromHexImage(VirtualHexImage image, out int decoded, out int unknown)
+        public static VirtualMcuProgram FromHexImage(VirtualHexImage image, out int decoded, out int unknown)
         {
             decoded = 0;
             unknown = 0;
-            var program = new VirtualArduinoProgram();
+            var program = new VirtualMcuProgram();
             if (image == null || !image.HasData) return program;
 
             int start = image.MinAddress & ~1;
@@ -84,9 +84,9 @@ namespace RobotTwin.CoreSim.Runtime
             return program;
         }
 
-        public static VirtualArduinoProgram BuildBlinkProgram(string pin, int intervalMs, VirtualArduinoHal hal)
+        public static VirtualMcuProgram BuildBlinkProgram(string pin, int intervalMs, VirtualMcuHal hal)
         {
-            var program = new VirtualArduinoProgram();
+            var program = new VirtualMcuProgram();
             if (!hal.TryGetPortBit(pin, out var ddr, out var port, out var bit))
             {
                 return program;
@@ -144,7 +144,7 @@ namespace RobotTwin.CoreSim.Runtime
                 int a = (opcode & 0xF) | ((opcode >> 5) & 0x30);
                 int r = (opcode >> 4) & 0x1F;
                 instruction.Op = VirtualOpCode.Out;
-                instruction.Arg0 = (byte)(IoAddressOffset + a);
+                instruction.Arg0 = (ushort)(IoAddressOffset + a);
                 instruction.Arg1 = (byte)r;
                 return true;
             }
@@ -154,7 +154,7 @@ namespace RobotTwin.CoreSim.Runtime
                 int a = (opcode >> 3) & 0x1F;
                 int b = opcode & 0x7;
                 instruction.Op = VirtualOpCode.Sbi;
-                instruction.Arg0 = (byte)(IoAddressOffset + a);
+                instruction.Arg0 = (ushort)(IoAddressOffset + a);
                 instruction.Arg1 = (byte)b;
                 return true;
             }
@@ -164,7 +164,7 @@ namespace RobotTwin.CoreSim.Runtime
                 int a = (opcode >> 3) & 0x1F;
                 int b = opcode & 0x7;
                 instruction.Op = VirtualOpCode.Cbi;
-                instruction.Arg0 = (byte)(IoAddressOffset + a);
+                instruction.Arg0 = (ushort)(IoAddressOffset + a);
                 instruction.Arg1 = (byte)b;
                 return true;
             }

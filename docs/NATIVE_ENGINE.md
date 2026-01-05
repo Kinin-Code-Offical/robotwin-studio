@@ -1,60 +1,69 @@
-# NativeEngine
+# NativeEngine: High-Fidelity Physics & Environment
 
-NativeEngine contains native libraries and build configuration used by the simulation stack.
+**NativeEngine** is the computational heart of RobotWin Studio. It is a bespoke, multi-threaded C++20 physics solver built specifically for robotics simulation. Unlike game physics engines (PhysX/Havok) which prioritize stability and performance over accuracy, NativeEngine prioritizes **correctness, determinism, and physical realism**.
 
-## Physics Engine Scope
+## Core Solvers
 
-NativeEngine is the target home for the full rigid-body physics system:
+### 1. Rigid Body Dynamics (RBD)
+- **Integrator:** Symplectic Euler / RK4 (configurable per body).
+- **Collision:** Continuous Collision Detection (CCD) for high-speed rotors and projectiles.
+- **Friction Model:** Coulomb friction with Stribeck effect for realistic motor startup behavior.
+- **Constraints:** 6-DOF mechanical linkages (hinges, sliders, ball joints) with realistic compliance and breakage thresholds.
 
-- Rigid-body solver + constraints
-- Collision detection (broadphase + narrowphase + CCD)
-- Materials, friction, restitution
-- Actuator dynamics (servo, motor, thruster)
-- Aerodynamics (drone/propeller)
-- Particles/fluids (future)
-- Controlled imperfection models (noise, drift, variance)
+### 2. Aerodynamics & Fluid Dynamics
+- **Blade Element Theory (BET):** Simulates lift/drag for each section of a propeller blade, accounting for twist, chord, and airfoil shape.
+- **Drag Equation:** Calculates drag on all bodies based on cross-sectional area and drag coefficient ( = 0.5 \rho v^2 C_d A$).
+- **Wind Simulation:** Global wind vector field with gusting and turbulence models.
 
-CoreSim provides electrical control intent; NativeEngine computes the physical response.
+### 3. Thermal Solver (Thermodynamics)
+- **Heat Generation:** Calculates Joule heating (=I^2R$) for all electrical components (motors, ESCs, batteries, PCBs).
+- **Heat Transfer:**
+  - **Conduction:** Heat flow between physically touching bodies based on thermal conductivity and contact area.
+  - **Convection:** Heat loss to the air, dependent on airflow velocity (propeller wash cools motors!).
+  - **Radiation:** Black-body radiation (significant for high-temp components).
+- **Throttling:** Simulates CPU/MCU thermal throttling and battery voltage sag under load.
 
-## Build
+### 4. Sensor Simulation
+- **IMU (Accel/Gyro/Mag):**
+  - Models bias instability, random walk, and temperature dependency.
+  - Simulates "g-sensitivity" in gyroscopes.
+- **Lidar / Depth Cameras:**
+  - GPU-accelerated raycasting via shared memory.
+  - Simulates material reflectivity and ambient light interference.
+- **GPS:**
+  - Simulates satellite constellation visibility and multipath errors based on environment geometry.
 
-```powershell
-python tools/rt_tool.py build-native
-```
+## Architecture & Performance
 
-## Output
+### Data-Oriented Design (DOD)
+NativeEngine uses an Entity Component System (ECS) architecture in C++ to maximize cache locality and SIMD usage.
+- **SoA Layout:** Structure-of-Arrays for hot data (positions, velocities).
+- **Job System:** Multithreaded task graph for parallelizing independent solver islands.
 
-- Native DLLs land under `builds/native` and may be copied into Unity plugins.
+### Determinism
+- **Fixed-Point Math:** Optional fixed-point mode for cross-platform determinism (x86 vs ARM).
+- **IEEE 754 Compliance:** Strict floating-point control when using floats.
+- **Regression Testing:** Automated regression suite ensures that state(t) + inputs -> state(t+1) is bit-identical across builds.
 
-## Notes
+## C# Interop (P/Invoke)
 
-- Keep CMake targets small and deterministic.
-- Prefer clear ABI boundaries for C# interop.
+NativeEngine exposes a C-ABI for CoreSim to drive the simulation.
 
-## Data Contract (Draft)
+`cpp
+// Example API
+extern "C" {
+    void Physics_Step(float dt, ControlFrame* inputs, PhysicsFrame* outputs);
+    void Physics_SetWind(Vector3 velocity);
+    void Physics_CreateBody(BodyDef* def);
+    float Thermal_GetTemperature(int bodyId);
+}
+`
 
-NativeEngine consumes a `ControlFrame` from CoreSim and emits a `PhysicsFrame`:
+## Configuration
 
-- ControlFrame: actuator targets, PWM values, power rails, and step metadata.
-- PhysicsFrame: body transforms, velocities, sensor readings, constraint errors.
+Physics parameters are defined in physics_config.json:
+- gravity: Global gravity vector.
+- ir_density: kg/m^3 (varies with altitude).
+- solver_iterations: Velocity/Position iterations.
+- 	hermal_ambient: Ambient temperature (Celsius).
 
-## Unity Runtime Hooks
-
-- `RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs`: owns the native world and pushes config + ticks.
-- `RobotWin/Assets/Scripts/Game/NativePhysicsBody.cs`: registers Unity transforms as physics bodies.
-- `RobotWin/Assets/Scripts/Game/NativeVehicle.cs`: vehicle + suspension + tire model binding.
-- `RobotWin/Assets/Scripts/Game/NativeRcCarController.cs`: keyboard/axis RC input mapping.
-- `RobotWin/Assets/Scripts/Game/NativeCableConstraint.cs`: tension-only rope/cable (force at points).
-- `RobotWin/Assets/Scripts/Game/NativePulleyConstraint.cs`: simple pulley ratio constraint.
-- `RobotWin/Assets/Scripts/Game/NativeServoMotor.cs`: PD servo torque around an axis.
-- `RobotWin/Assets/Scripts/Game/NativeThruster.cs`: directional thrust force (drones/propellers).
-- `RobotWin/Assets/Scripts/Game/NativeDistanceConstraint.cs`: native distance constraint (spring/rope).
-- `RobotWin/Assets/Scripts/Game/NativeRaycastSensor.cs`: native raycast sensor for Lidar-style hits.
-
-Notes:
-- Ground contact is currently a simple y=0 plane using sphere radius or box half-height.
-- Torque accumulation affects angular velocity; contact friction damps spin.
-- Torque can be applied directly via `Physics_ApplyTorque` for servo-style actuators.
-- Collision shapes are currently `Sphere` and `Box`, configured per `NativePhysicsBody` or auto-derived from Unity colliders.
-- Sleep thresholds can be tuned in `NativePhysicsWorld` and are enforced inside NativeEngine.
-- Box collisions currently use an axis-aligned solver; rotation is treated as AABB.

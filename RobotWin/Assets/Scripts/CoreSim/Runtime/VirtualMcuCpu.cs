@@ -1,20 +1,20 @@
 namespace RobotTwin.CoreSim.Runtime
 {
-    public class VirtualArduinoCpu
+    public class VirtualMcuCpu
     {
         private readonly VirtualRegisterFile _registers;
-        private VirtualArduinoProgram _program = new VirtualArduinoProgram();
+        private VirtualMcuProgram _program = new VirtualMcuProgram();
         private int _pc;
         private long _delayCycles;
 
-        public VirtualArduinoCpu(VirtualRegisterFile registers)
+        public VirtualMcuCpu(VirtualRegisterFile registers)
         {
             _registers = registers;
         }
 
-        public void LoadProgram(VirtualArduinoProgram program)
+        public void LoadProgram(VirtualMcuProgram program)
         {
-            _program = program ?? new VirtualArduinoProgram();
+            _program = program ?? new VirtualMcuProgram();
             _pc = 0;
             _delayCycles = 0;
         }

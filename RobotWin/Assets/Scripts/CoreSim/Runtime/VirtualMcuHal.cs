@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using RobotTwin.CoreSim;
 
 namespace RobotTwin.CoreSim.Runtime
 {
@@ -18,7 +19,7 @@ namespace RobotTwin.CoreSim.Runtime
         }
     }
 
-    public class VirtualArduinoHal
+    public class VirtualMcuHal
     {
         private readonly VirtualRegisterFile _registers;
         private readonly Dictionary<string, PinMapping> _pinMap = new Dictionary<string, PinMapping>(StringComparer.OrdinalIgnoreCase);
@@ -26,13 +27,13 @@ namespace RobotTwin.CoreSim.Runtime
         private readonly Dictionary<string, float> _pinInputs = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         private const double DefaultPullupResistance = 20000.0;
 
-        public VirtualArduinoHal(VirtualRegisterFile registers, IReadOnlyList<string> pins = null)
+        public VirtualMcuHal(VirtualRegisterFile registers, BoardProfileInfo profile = null, IReadOnlyList<string> pins = null)
         {
             _registers = registers;
-            BuildPinMap(pins);
+            BuildPinMap(profile, pins);
         }
 
-        public bool TryGetPortBit(string pin, out byte ddr, out byte port, out int bit)
+        public bool TryGetPortBit(string pin, out ushort ddr, out ushort port, out int bit)
         {
             if (_pinMap.TryGetValue(pin, out var mapping))
             {
@@ -60,12 +61,12 @@ namespace RobotTwin.CoreSim.Runtime
             if (TryParseVoltage(value, out var voltage))
             {
                 _pinOverrides[pin] = voltage;
-                SetPinOutput(pin, voltage >= VirtualArduino.DefaultHighVoltage * 0.5f);
+                SetPinOutput(pin, voltage >= VirtualMcu.DefaultHighVoltage * 0.5f);
                 return;
             }
             if (IsHigh(value))
             {
-                _pinOverrides[pin] = VirtualArduino.DefaultHighVoltage;
+                _pinOverrides[pin] = VirtualMcu.DefaultHighVoltage;
                 SetPinOutput(pin, true);
                 return;
             }
@@ -99,13 +100,13 @@ namespace RobotTwin.CoreSim.Runtime
                 if (isOutput)
                 {
                     bool isHigh = _registers.GetBit(mapping.Port, mapping.Bit);
-                    voltages[pin] = isHigh ? VirtualArduino.DefaultHighVoltage : 0f;
+                    voltages[pin] = isHigh ? VirtualMcu.DefaultHighVoltage : 0f;
                     continue;
                 }
 
-                if (_pinOverrides.TryGetValue(pin, out var overrideVoltage))
+                if (_pinOverrides.TryGetValue(pin, out var overrideInputVoltage))
                 {
-                    voltages[pin] = overrideVoltage;
+                    voltages[pin] = overrideInputVoltage;
                     continue;
                 }
 
@@ -135,21 +136,27 @@ namespace RobotTwin.CoreSim.Runtime
             return DefaultPullupResistance;
         }
 
-        private void BuildPinMap(IReadOnlyList<string> pins)
+        private void BuildPinMap(BoardProfileInfo profile, IReadOnlyList<string> pins)
         {
+            var mapSource = BoardProfiles.GetPinMap(profile);
             if (pins == null || pins.Count == 0)
             {
-                var defaultPins = new List<string>();
-                for (int i = 0; i <= 13; i++) defaultPins.Add($"D{i}");
-                for (int i = 0; i <= 5; i++) defaultPins.Add($"A{i}");
-                pins = defaultPins;
+                pins = BoardProfiles.GetCorePins(profile);
             }
 
             foreach (var pin in pins)
             {
                 if (string.IsNullOrWhiteSpace(pin)) continue;
-                if (!TryMapPin(pin.Trim().ToUpperInvariant(), out var mapping)) continue;
-                _pinMap[pin] = mapping;
+                var key = pin.Trim();
+                if (mapSource.TryGetValue(key, out var mapping))
+                {
+                    _pinMap[key] = new PinMapping(mapping.Ddr, mapping.Port, mapping.Bit);
+                    continue;
+                }
+                if (TryMapPin(key.ToUpperInvariant(), out var fallback))
+                {
+                    _pinMap[key] = fallback;
+                }
             }
         }
 
@@ -204,11 +211,11 @@ namespace RobotTwin.CoreSim.Runtime
 
         private readonly struct PinMapping
         {
-            public byte Ddr { get; }
-            public byte Port { get; }
+            public ushort Ddr { get; }
+            public ushort Port { get; }
             public int Bit { get; }
 
-            public PinMapping(byte ddr, byte port, int bit)
+            public PinMapping(ushort ddr, ushort port, int bit)
             {
                 Ddr = ddr;
                 Port = port;

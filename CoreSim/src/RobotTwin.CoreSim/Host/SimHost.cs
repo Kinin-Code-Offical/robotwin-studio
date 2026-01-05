@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using RobotTwin.CoreSim.Specs;
@@ -14,31 +15,99 @@ namespace RobotTwin.CoreSim.Host
         private readonly CircuitSpec _spec;
         public CircuitSpec Circuit => _spec;
         private readonly IFirmwareClient _firmwareClient;
+        private readonly SimHostOptions _options;
 
         public event Action<double>? OnTickComplete; // Notify UI of updates
 
         public double SimTime { get; private set; } = 0.0;
         public long TickCount { get; private set; } = 0;
 
+        public FirmwareStepResult? LastFirmwareResult { get; private set; }
+
+        public SimHostOptions Options => _options;
+
         public SimHost(CircuitSpec spec, IFirmwareClient firmwareClient, double dt = 0.01) // 100Hz default
         {
             _spec = spec;
             _firmwareClient = firmwareClient;
+            _options = new SimHostOptions { DtSeconds = dt };
             _dt = dt;
+        }
+
+        public SimHost(CircuitSpec spec, IFirmwareClient firmwareClient, SimHostOptions? options)
+        {
+            _spec = spec;
+            _firmwareClient = firmwareClient;
+            _options = options ?? new SimHostOptions();
+
+            if (_options.Deterministic != null && _options.Deterministic.Enabled && _options.Deterministic.DtSeconds > 0)
+            {
+                _dt = _options.Deterministic.DtSeconds;
+            }
+            else
+            {
+                _dt = _options.DtSeconds;
+            }
+        }
+
+        /// <summary>
+        /// Synchronous connect helper for deterministic/headless stepping.
+        /// </summary>
+        public void ConnectFirmware()
+        {
+            int timeoutMs = _options.Deterministic?.FirmwareConnectTimeoutMs ?? 5000;
+            var task = _firmwareClient.ConnectAsync();
+            if (!task.Wait(timeoutMs))
+            {
+                throw new TimeoutException($"Firmware ConnectAsync timed out after {timeoutMs}ms.");
+            }
+        }
+
+        /// <summary>
+        /// Single synchronous simulation tick with no sleeping or background thread.
+        /// </summary>
+        public FirmwareStepResult StepOnce(FirmwareStepRequest? inputs = null)
+        {
+            inputs ??= new FirmwareStepRequest();
+
+            // Ensure a stable step sequence for deterministic replay.
+            if (inputs.StepSequence == 0)
+            {
+                inputs.StepSequence = (ulong)(TickCount + 1);
+            }
+
+            if (inputs.DeltaMicros == 0)
+            {
+                uint delta = (uint)Math.Max(1, (int)Math.Round(_dt * 1_000_000.0));
+                if (_options.Deterministic?.DeltaMicrosOverride is uint overrideMicros && overrideMicros > 0)
+                {
+                    delta = overrideMicros;
+                }
+                inputs.DeltaMicros = delta;
+            }
+
+            var result = _firmwareClient.Step(inputs);
+            LastFirmwareResult = result;
+
+            SimTime += _dt;
+            TickCount++;
+            OnTickComplete?.Invoke(SimTime);
+
+            return result;
         }
 
         public void StartFirmwareProcess(string executablePath)
         {
             try
             {
-                 var startInfo = new System.Diagnostics.ProcessStartInfo
-                 {
-                     FileName = executablePath,
-                     UseShellExecute = false,
-                     CreateNoWindow = true
-                 };
-                 System.Diagnostics.Process.Start(startInfo);
-                 Console.WriteLine($"Started Firmware Engine: {executablePath}");
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = executablePath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                System.Diagnostics.Process.Start(startInfo);
+                Console.WriteLine($"Started Firmware Engine: {executablePath}");
             }
             catch (Exception ex)
             {
@@ -72,11 +141,11 @@ namespace RobotTwin.CoreSim.Host
 
             while (_running)
             {
-                var startTime = DateTime.Now;
+                var startTime = Stopwatch.GetTimestamp();
 
                 Tick();
 
-                var elapsed = (DateTime.Now - startTime).TotalSeconds;
+                var elapsed = (Stopwatch.GetTimestamp() - startTime) / (double)Stopwatch.Frequency;
                 var sleepTime = _dt - elapsed;
 
                 if (sleepTime > 0)
@@ -90,24 +159,8 @@ namespace RobotTwin.CoreSim.Host
 
         private void Tick()
         {
-            // 1. Prepare Inputs for Firmware (e.g., from circuit sensors)
-            var inputs = new FirmwareStepRequest
-            {
-                DeltaMicros = (uint)Math.Max(1, (int)Math.Round(_dt * 1_000_000.0))
-            };
-            // TODO: Populate inputs from circuit state
-
-            // 2. Step Firmware
-            var result = _firmwareClient.Step(inputs);
-
-            // 3. Update Circuit Logic based on Firmware Outputs (Pins)
-            // TODO: Apply result.PinStates to circuit model
-            // FastSolver.Solve(_spec, result);
-
-            SimTime += _dt;
-            TickCount++;
-
-            OnTickComplete?.Invoke(SimTime);
+            // Keep legacy threaded path behavior, but route through StepOnce() so both APIs stay consistent.
+            StepOnce(null);
         }
     }
 }

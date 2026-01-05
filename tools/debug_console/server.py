@@ -103,7 +103,7 @@ TESTS = [
     {
         "name": "build-firmware",
         "label": "Build Firmware Engine",
-        "description": "Build VirtualArduinoFirmware.exe.",
+        "description": "Build RoboTwinFirmwareHost.exe.",
         "command": [sys.executable, "tools/rt_tool.py", "build-firmware"],
     },
     {

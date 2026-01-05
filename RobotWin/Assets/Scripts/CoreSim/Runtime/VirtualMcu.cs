@@ -6,7 +6,7 @@ using RobotTwin.CoreSim;
 
 namespace RobotTwin.CoreSim.Runtime
 {
-    public class VirtualArduino
+    public class VirtualMcu
     {
         public const float DefaultHighVoltage = 5.0f;
         private const double ClockHz = 16_000_000.0;
@@ -15,28 +15,26 @@ namespace RobotTwin.CoreSim.Runtime
         public string BoardProfileId { get; }
         public VirtualClock Clock { get; }
         public VirtualRegisterFile Registers { get; }
-        public VirtualArduinoHal Hal { get; }
-        public VirtualArduinoCpu Cpu { get; }
+        public VirtualMcuHal Hal { get; }
+        public VirtualMcuCpu Cpu { get; }
         public VirtualMemory Memory { get; }
         public string FirmwareSource { get; private set; } = string.Empty;
         public bool FirmwareLoaded { get; private set; }
 
-        public VirtualArduino(string id, BoardProfileInfo profile = null)
+        public VirtualMcu(string id, BoardProfileInfo profile = null)
         {
             Id = id;
-            var resolved = profile ?? BoardProfiles.Get("ArduinoUno");
+            var resolved = profile ?? BoardProfiles.GetDefault();
             BoardProfileId = resolved.Id;
             Clock = new VirtualClock(resolved.ClockHz > 0 ? resolved.ClockHz : ClockHz);
             Registers = new VirtualRegisterFile();
-            var pins = resolved.CoreLimited && resolved.Pins.Count > 20
-                ? new List<string>(resolved.Pins).GetRange(0, 20)
-                : resolved.Pins;
-            Hal = new VirtualArduinoHal(Registers, pins);
-            Cpu = new VirtualArduinoCpu(Registers);
+            var pins = BoardProfiles.GetCorePins(resolved);
+            Hal = new VirtualMcuHal(Registers, resolved, pins);
+            Cpu = new VirtualMcuCpu(Registers);
             Memory = new VirtualMemory();
         }
 
-        public void LoadProgram(VirtualArduinoProgram program)
+        public void LoadProgram(VirtualMcuProgram program)
         {
             Cpu.LoadProgram(program);
             FirmwareLoaded = true;
@@ -60,7 +58,7 @@ namespace RobotTwin.CoreSim.Runtime
                     FirmwareLoaded = false;
                     return;
                 }
-                LoadProgram(VirtualArduinoProgramFactory.FromFirmwareString(value, Hal));
+                LoadProgram(VirtualMcuProgramFactory.FromFirmwareString(value, Hal));
                 FirmwareSource = value;
                 FirmwareLoaded = true;
                 return;
@@ -83,7 +81,7 @@ namespace RobotTwin.CoreSim.Runtime
                 {
                     return;
                 }
-                LoadProgram(VirtualArduinoProgramFactory.FromFirmwareString(value, Hal));
+                LoadProgram(VirtualMcuProgramFactory.FromFirmwareString(value, Hal));
                 FirmwareSource = value;
                 FirmwareLoaded = true;
                 return;
@@ -179,7 +177,7 @@ namespace RobotTwin.CoreSim.Runtime
 
             int decoded;
             int unknown;
-            var program = VirtualArduinoProgramFactory.FromHexImage(image, out decoded, out unknown);
+            var program = VirtualMcuProgramFactory.FromHexImage(image, out decoded, out unknown);
             Cpu.LoadProgram(program);
             FirmwareSource = $"hex:{decoded} decoded, {unknown} unknown";
             FirmwareLoaded = true;

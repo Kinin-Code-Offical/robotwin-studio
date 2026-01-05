@@ -78,7 +78,8 @@ namespace RobotTwin.Editor
 
                 string packageName = SanitizeFileName(Path.GetFileNameWithoutExtension(jsonFile));
                 string packagePath = Path.Combine(outputRoot, packageName + ComponentPackageUtility.PackageExtension);
-                ComponentPackageUtility.SavePackage(packagePath, json, packagedModelSource);
+                var extraAssets = CollectDependencyAssets(packagedModelSource);
+                ComponentPackageUtility.SavePackage(packagePath, json, packagedModelSource, extraAssets);
                 count++;
             }
             return count;
@@ -117,22 +118,28 @@ namespace RobotTwin.Editor
         {
             if (string.IsNullOrWhiteSpace(type)) return string.Empty;
             string key = type.ToLowerInvariant();
-            string fileName = null;
-            if (key.Contains("arduinouno")) fileName = "ArduinoUno.fbx";
-            else if (key.Contains("arduinonano")) fileName = "ArduinoNano.fbx";
-            else if (key.Contains("arduinopromini")) fileName = "ArduinoProMini.fbx";
-            else if (key.Contains("arduinopromicro")) fileName = "ArduinoProMicro.fbx";
-            else if (key.Contains("arduino")) fileName = "Arduino.fbx";
-            else if (key.Contains("resistor")) fileName = "Resistor.fbx";
-            else if (key.Contains("led")) fileName = "LED.fbx";
-            else if (key.Contains("battery")) fileName = "Battery.fbx";
-            else if (key.Contains("button")) fileName = "Button.fbx";
-            else if (key.Contains("switch")) fileName = "Swirch_ON_OFF.fbx";
-            else if (key.Contains("servo")) fileName = "ServoSG90.fbx";
+            string baseName = null;
+            if (key.Contains("arduinomega")) baseName = "ArduinoMega";
+            else if (key.Contains("arduinouno")) baseName = "ArduinoUno";
+            else if (key.Contains("arduinonano")) baseName = "ArduinoNano";
+            else if (key.Contains("arduinopromini")) baseName = "ArduinoProMini";
+            else if (key.Contains("arduinopromicro")) baseName = "ArduinoProMicro";
+            else if (key.Contains("arduino")) baseName = "Arduino";
+            else if (key.Contains("resistor")) baseName = "Resistor";
+            else if (key.Contains("led")) baseName = "LED";
+            else if (key.Contains("battery")) baseName = "Battery";
+            else if (key.Contains("button")) baseName = "Button";
+            else if (key.Contains("switch")) baseName = "Swirch_ON_OFF";
+            else if (key.Contains("servo")) baseName = "ServoSG90";
 
-            if (string.IsNullOrWhiteSpace(fileName)) return string.Empty;
-            string path = Path.Combine(Application.dataPath, "Resources", "Prefabs", "Circuit3D", fileName);
-            return File.Exists(path) ? path : string.Empty;
+            if (string.IsNullOrWhiteSpace(baseName)) return string.Empty;
+            string root = Path.Combine(Application.dataPath, "Resources", "Prefabs", "Circuit3D");
+            string glb = Path.Combine(root, baseName + ".glb");
+            if (File.Exists(glb)) return glb;
+            string fbx = Path.Combine(root, baseName + ".fbx");
+            if (File.Exists(fbx)) return fbx;
+            string obj = Path.Combine(root, baseName + ".obj");
+            return File.Exists(obj) ? obj : string.Empty;
         }
 
         private static string UpdateModelFileInJson(string json, string entryName)
@@ -232,6 +239,33 @@ namespace RobotTwin.Editor
                 AssetDatabase.DeleteAsset(assetPath);
             }
             AssetDatabase.Refresh();
+        }
+
+        private static List<string> CollectDependencyAssets(string modelSourcePath)
+        {
+            var assets = new List<string>();
+            if (string.IsNullOrWhiteSpace(modelSourcePath) || !File.Exists(modelSourcePath)) return assets;
+            if (!TryGetAssetPath(modelSourcePath, out var assetPath)) return assets;
+
+            var deps = AssetDatabase.GetDependencies(assetPath, true);
+            foreach (var dep in deps)
+            {
+                if (string.IsNullOrWhiteSpace(dep) || string.Equals(dep, assetPath, StringComparison.OrdinalIgnoreCase)) continue;
+                string full = Path.Combine(Application.dataPath, dep.Substring("Assets".Length).TrimStart('/', '\\'));
+                if (!File.Exists(full)) continue;
+                if (!IsPackableDependency(full)) continue;
+                assets.Add(full);
+            }
+            return assets;
+        }
+
+        private static bool IsPackableDependency(string path)
+        {
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".tif" ||
+                   ext == ".tiff" || ext == ".bmp" || ext == ".gif" || ext == ".dds" || ext == ".exr" ||
+                   ext == ".hdr" || ext == ".mat" || ext == ".mtl" || ext == ".bin" || ext == ".glb" ||
+                   ext == ".gltf";
         }
 
         private static bool TryGetAssetPath(string fullPath, out string assetPath)

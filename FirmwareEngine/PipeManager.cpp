@@ -8,7 +8,7 @@ namespace firmware
 {
     namespace
     {
-        std::wstring BuildPipePath(const std::wstring& name)
+        std::wstring BuildPipePath(const std::wstring &name)
         {
             if (name.rfind(L"\\\\.\\pipe\\", 0) == 0)
             {
@@ -17,9 +17,10 @@ namespace firmware
             return L"\\\\.\\pipe\\" + name;
         }
 
-        std::string ReadFixedString(const char* data, std::size_t size)
+        std::string ReadFixedString(const char *data, std::size_t size)
         {
-            if (!data || size == 0) return {};
+            if (!data || size == 0)
+                return {};
             std::size_t len = 0;
             while (len < size && data[len] != '\0')
             {
@@ -28,13 +29,16 @@ namespace firmware
             return std::string(data, len);
         }
 
-        void WriteFixedString(char* dst, std::size_t size, const std::string& value)
+        void WriteFixedString(char *dst, std::size_t size, const std::string &value)
         {
-            if (!dst || size == 0) return;
+            if (!dst || size == 0)
+                return;
             std::memset(dst, 0, size);
-            if (value.empty()) return;
+            if (value.empty())
+                return;
             std::size_t copy = value.size();
-            if (copy >= size) copy = size - 1;
+            if (copy >= size)
+                copy = size - 1;
             std::memcpy(dst, value.data(), copy);
         }
     }
@@ -46,16 +50,17 @@ namespace firmware
         Stop();
     }
 
-    bool PipeManager::Start(const std::wstring& pipeName)
+    bool PipeManager::Start(const std::wstring &pipeName)
     {
-        if (_running) return false;
+        if (_running)
+            return false;
         _pipeName = BuildPipePath(pipeName);
         _running = true;
-        _threadHandle = CreateThread(nullptr, 0, [](LPVOID param) -> DWORD {
+        _threadHandle = CreateThread(nullptr, 0, [](LPVOID param) -> DWORD
+                                     {
             auto* self = static_cast<PipeManager*>(param);
             self->ThreadMain();
-            return 0;
-        }, this, 0, nullptr);
+            return 0; }, this, 0, nullptr);
         return _threadHandle != nullptr;
     }
 
@@ -77,10 +82,11 @@ namespace firmware
         return _connected.load();
     }
 
-    bool PipeManager::PopCommand(PipeCommand& outCommand)
+    bool PipeManager::PopCommand(PipeCommand &outCommand)
     {
         std::lock_guard<std::mutex> guard(_queueMutex);
-        if (_queue.empty()) return false;
+        if (_queue.empty())
+            return false;
         outCommand = _queue.front();
         _queue.pop();
         return true;
@@ -93,54 +99,74 @@ namespace firmware
         payload.pin_count = static_cast<std::uint32_t>(kPinCount);
         payload.board_id_size = static_cast<std::uint32_t>(kBoardIdSize);
         payload.analog_count = static_cast<std::uint32_t>(kAnalogCount);
-        WritePacket(MessageType::HelloAck, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
+        WritePacket(MessageType::HelloAck, reinterpret_cast<const std::uint8_t *>(&payload), sizeof(payload));
     }
 
-    void PipeManager::SendOutputState(const std::string& boardId, std::uint64_t tickCount, const std::uint8_t* pins, std::size_t count)
+    void PipeManager::SendOutputState(const std::string &boardId, std::uint64_t stepSequence, std::uint64_t tickCount, const std::uint8_t *pins, std::size_t count,
+                                      std::uint64_t cycles, std::uint64_t adcSamples,
+                                      const std::uint64_t *uartTxBytes, const std::uint64_t *uartRxBytes,
+                                      std::uint64_t spiTransfers, std::uint64_t twiTransfers, std::uint64_t wdtResets)
     {
-        if (!pins || count < kPinCount) return;
+        if (!pins || count < kPinCount)
+            return;
         OutputStatePayload payload{};
         WriteFixedString(payload.board_id, kBoardIdSize, boardId);
+        payload.step_sequence = stepSequence;
         payload.tick_count = tickCount;
         std::memcpy(payload.pins, pins, kPinCount);
-        WritePacket(MessageType::OutputState, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
+        payload.cycles = cycles;
+        payload.adc_samples = adcSamples;
+        if (uartTxBytes)
+        {
+            std::memcpy(payload.uart_tx_bytes, uartTxBytes, sizeof(payload.uart_tx_bytes));
+        }
+        if (uartRxBytes)
+        {
+            std::memcpy(payload.uart_rx_bytes, uartRxBytes, sizeof(payload.uart_rx_bytes));
+        }
+        payload.spi_transfers = spiTransfers;
+        payload.twi_transfers = twiTransfers;
+        payload.wdt_resets = wdtResets;
+        WritePacket(MessageType::OutputState, reinterpret_cast<const std::uint8_t *>(&payload), sizeof(payload));
     }
 
-    void PipeManager::SendSerial(const std::string& boardId, const std::uint8_t* data, std::size_t size)
+    void PipeManager::SendSerial(const std::string &boardId, const std::uint8_t *data, std::size_t size)
     {
-        if (!data || size == 0) return;
+        if (!data || size == 0)
+            return;
         std::vector<std::uint8_t> payload;
         payload.resize(kBoardIdSize + size);
-        WriteFixedString(reinterpret_cast<char*>(payload.data()), kBoardIdSize, boardId);
+        WriteFixedString(reinterpret_cast<char *>(payload.data()), kBoardIdSize, boardId);
         std::memcpy(payload.data() + kBoardIdSize, data, size);
         WritePacket(MessageType::Serial, payload.data(), payload.size());
     }
 
-    void PipeManager::SendStatus(const std::string& boardId, std::uint64_t tickCount)
+    void PipeManager::SendStatus(const std::string &boardId, std::uint64_t tickCount)
     {
         StatusPayload payload{};
         WriteFixedString(payload.board_id, kBoardIdSize, boardId);
         payload.tick_count = tickCount;
-        WritePacket(MessageType::Status, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
+        WritePacket(MessageType::Status, reinterpret_cast<const std::uint8_t *>(&payload), sizeof(payload));
     }
 
-    void PipeManager::SendLog(const std::string& boardId, LogLevel level, const std::string& text)
+    void PipeManager::SendLog(const std::string &boardId, LogLevel level, const std::string &text)
     {
-        if (text.empty()) return;
+        if (text.empty())
+            return;
         std::vector<std::uint8_t> payload;
         payload.resize(sizeof(LogPayload) + text.size());
-        auto* header = reinterpret_cast<LogPayload*>(payload.data());
+        auto *header = reinterpret_cast<LogPayload *>(payload.data());
         WriteFixedString(header->board_id, kBoardIdSize, boardId);
         header->level = static_cast<std::uint8_t>(level);
         std::memcpy(payload.data() + sizeof(LogPayload), text.data(), text.size());
         WritePacket(MessageType::Log, payload.data(), payload.size());
     }
 
-    void PipeManager::SendError(const std::string& boardId, std::uint32_t code, const std::string& text)
+    void PipeManager::SendError(const std::string &boardId, std::uint32_t code, const std::string &text)
     {
         std::vector<std::uint8_t> payload;
         payload.resize(sizeof(ErrorPayload) + text.size());
-        auto* header = reinterpret_cast<ErrorPayload*>(payload.data());
+        auto *header = reinterpret_cast<ErrorPayload *>(payload.data());
         WriteFixedString(header->board_id, kBoardIdSize, boardId);
         header->code = code;
         if (!text.empty())
@@ -188,7 +214,7 @@ namespace firmware
                     SendError("system", 2, "Invalid load payload");
                     continue;
                 }
-                auto* header = reinterpret_cast<const LoadBvmHeader*>(payload.data());
+                auto *header = reinterpret_cast<const LoadBvmHeader *>(payload.data());
                 PipeCommand cmd;
                 cmd.type = PipeCommand::Type::Load;
                 cmd.boardId = ReadFixedString(header->board_id, kBoardIdSize);
@@ -205,10 +231,11 @@ namespace firmware
                     SendError("system", 2, "Invalid step payload");
                     continue;
                 }
-                const auto* step = reinterpret_cast<const StepPayload*>(payload.data());
+                const auto *step = reinterpret_cast<const StepPayload *>(payload.data());
                 PipeCommand cmd;
                 cmd.type = PipeCommand::Type::Step;
                 cmd.boardId = ReadFixedString(step->board_id, kBoardIdSize);
+                cmd.stepSequence = step->step_sequence;
                 cmd.deltaMicros = step->delta_micros;
                 std::memcpy(cmd.pins, step->pins, kPinCount);
                 cmd.analogCount = kAnalogCount;
@@ -221,7 +248,8 @@ namespace firmware
 
     bool PipeManager::EnsurePipe()
     {
-        if (_connected) return true;
+        if (_connected)
+            return true;
         if (_pipeHandle != INVALID_HANDLE_VALUE)
         {
             CloseHandle(_pipeHandle);
@@ -273,9 +301,9 @@ namespace firmware
         _sequence = 1;
     }
 
-    bool PipeManager::ReadPacket(PacketHeader& header, std::vector<std::uint8_t>& payload)
+    bool PipeManager::ReadPacket(PacketHeader &header, std::vector<std::uint8_t> &payload)
     {
-        if (!ReadExact(reinterpret_cast<std::uint8_t*>(&header), sizeof(header)))
+        if (!ReadExact(reinterpret_cast<std::uint8_t *>(&header), sizeof(header)))
         {
             return false;
         }
@@ -294,7 +322,7 @@ namespace firmware
         return true;
     }
 
-    bool PipeManager::ReadExact(std::uint8_t* buffer, std::size_t size)
+    bool PipeManager::ReadExact(std::uint8_t *buffer, std::size_t size)
     {
         std::size_t total = 0;
         while (total < size && _running)
@@ -311,9 +339,10 @@ namespace firmware
         return total == size;
     }
 
-    bool PipeManager::WritePacket(MessageType type, const std::uint8_t* payload, std::size_t size)
+    bool PipeManager::WritePacket(MessageType type, const std::uint8_t *payload, std::size_t size)
     {
-        if (!IsConnected() || _pipeHandle == INVALID_HANDLE_VALUE) return false;
+        if (!IsConnected() || _pipeHandle == INVALID_HANDLE_VALUE)
+            return false;
 
         PacketHeader header{};
         header.magic = kProtocolMagic;
@@ -339,7 +368,7 @@ namespace firmware
         return true;
     }
 
-    void PipeManager::Enqueue(const PipeCommand& command)
+    void PipeManager::Enqueue(const PipeCommand &command)
     {
         std::lock_guard<std::mutex> guard(_queueMutex);
         _queue.push(command);

@@ -1,7 +1,7 @@
 #include "BoardProfile.h"
 #include "PipeManager.h"
 #include "Protocol.h"
-#include "VirtualArduino.h"
+#include "VirtualMcu.h"
 
 #include <chrono>
 #include <algorithm>
@@ -25,7 +25,8 @@ namespace
 
     double QueryNowSeconds()
     {
-        static LARGE_INTEGER frequency = []() {
+        static LARGE_INTEGER frequency = []()
+        {
             LARGE_INTEGER freq;
             QueryPerformanceFrequency(&freq);
             return freq;
@@ -35,12 +36,99 @@ namespace
         return static_cast<double>(now.QuadPart) / static_cast<double>(frequency.QuadPart);
     }
 
-    bool ParseArg(const char* arg, const char* key)
+    bool ParseArg(const char *arg, const char *key)
     {
         return std::strcmp(arg, key) == 0;
     }
 
-    std::string NormalizeId(const std::string& value)
+    bool RunSelfTest()
+    {
+        BoardProfile profile = GetDefaultBoardProfile();
+        VirtualMcu mcu(profile);
+
+        std::printf("[SelfTest] ADC...\n");
+        mcu.SetAnalogInput(0, 2.5f);
+        mcu.SetIo(AVR_ADMUX, 0);
+        mcu.SetIo(AVR_ADCSRA, static_cast<std::uint8_t>((1u << 7) | (1u << 6)));
+        mcu.StepCycles(2000);
+        std::uint8_t adcsra = mcu.GetIo(AVR_ADCSRA);
+        if ((adcsra & (1u << 4)) == 0)
+        {
+            std::printf("[SelfTest] ADC flag missing\n");
+            return false;
+        }
+
+        std::printf("[SelfTest] UART...\n");
+        mcu.SetIo(AVR_UBRR0L, 0);
+        mcu.SetIo(AVR_UBRR0H, 0);
+        mcu.SetIo(AVR_UCSR0B, static_cast<std::uint8_t>((1u << 4) | (1u << 3)));
+        mcu.QueueSerialInput('A');
+        mcu.StepCycles(2000);
+        std::uint8_t ucsra = mcu.GetIo(AVR_UCSR0A);
+        if ((ucsra & (1u << 7)) == 0)
+        {
+            std::printf("[SelfTest] UART RXC flag missing\n");
+            return false;
+        }
+        std::uint8_t udr = mcu.GetIo(AVR_UDR0);
+        if (udr != static_cast<std::uint8_t>('A'))
+        {
+            std::printf("[SelfTest] UART data mismatch\n");
+            return false;
+        }
+
+        std::printf("[SelfTest] Timer0...\n");
+        mcu.SetIo(AVR_TCCR0B, 1);
+        std::uint8_t before = mcu.GetIo(AVR_TCNT0);
+        mcu.StepCycles(200);
+        std::uint8_t after = mcu.GetIo(AVR_TCNT0);
+        if (after == before)
+        {
+            std::printf("[SelfTest] Timer0 did not tick\n");
+            return false;
+        }
+
+        std::printf("[SelfTest] Timer1...\n");
+        mcu.SetIo(AVR_TCCR1B, 1);
+        std::uint16_t t1Before = static_cast<std::uint16_t>(mcu.GetIo(AVR_TCNT1L)) |
+                                 (static_cast<std::uint16_t>(mcu.GetIo(AVR_TCNT1H)) << 8);
+        mcu.StepCycles(200);
+        std::uint16_t t1After = static_cast<std::uint16_t>(mcu.GetIo(AVR_TCNT1L)) |
+                                (static_cast<std::uint16_t>(mcu.GetIo(AVR_TCNT1H)) << 8);
+        if (t1After == t1Before)
+        {
+            std::printf("[SelfTest] Timer1 did not tick\n");
+            return false;
+        }
+
+        std::printf("[SelfTest] SPI...\n");
+        mcu.SetIo(AVR_SPCR, static_cast<std::uint8_t>((1u << 6) | (1u << 4)));
+        mcu.SetIo(AVR_SPDR, 0x5A);
+        mcu.StepCycles(64);
+        std::uint8_t spsr = mcu.GetIo(AVR_SPSR);
+        if ((spsr & (1u << 7)) == 0)
+        {
+            std::printf("[SelfTest] SPI transfer flag missing\n");
+            return false;
+        }
+
+        std::printf("[SelfTest] TWI...\n");
+        mcu.SetIo(AVR_TWBR, 0x20);
+        mcu.SetIo(AVR_TWCR, static_cast<std::uint8_t>(1u << 2));
+        mcu.SetIo(AVR_TWDR, 0x3C);
+        mcu.StepCycles(2000);
+        std::uint8_t twcr = mcu.GetIo(AVR_TWCR);
+        if ((twcr & (1u << 7)) == 0)
+        {
+            std::printf("[SelfTest] TWI flag missing\n");
+            return false;
+        }
+
+        std::printf("[SelfTest] OK\n");
+        return true;
+    }
+
+    std::string NormalizeId(const std::string &value)
     {
         std::string out;
         out.reserve(value.size());
@@ -57,14 +145,20 @@ namespace
         }
         return out;
     }
+
+    bool IsSupportedMcu(const BoardProfile &profile)
+    {
+        return profile.mcu == "ATmega328P" || profile.mcu == "ATmega2560";
+    }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     std::wstring pipeName = L"RoboTwin.FirmwareEngine";
     double cpuHz = DefaultCpuHz;
     bool lockstep = true;
-    const char* logPath = nullptr;
+    const char *logPath = nullptr;
+    bool selfTest = false;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -84,7 +178,8 @@ int main(int argc, char** argv)
         if (ParseArg(argv[i], "--hz") && i + 1 < argc)
         {
             cpuHz = std::atof(argv[i + 1]);
-            if (cpuHz <= 0.0) cpuHz = DefaultCpuHz;
+            if (cpuHz <= 0.0)
+                cpuHz = DefaultCpuHz;
             ++i;
             continue;
         }
@@ -104,15 +199,26 @@ int main(int argc, char** argv)
             ++i;
             continue;
         }
+        if (ParseArg(argv[i], "--self-test"))
+        {
+            selfTest = true;
+            continue;
+        }
     }
 
-    std::FILE* logFile = nullptr;
+    if (selfTest)
+    {
+        return RunSelfTest() ? 0 : 2;
+    }
+
+    std::FILE *logFile = nullptr;
     if (logPath != nullptr)
     {
         logFile = std::fopen(logPath, "a");
     }
 
-    auto Log = [&](const char* fmt, ...) {
+    auto Log = [&](const char *fmt, ...)
+    {
         char buffer[1024];
         va_list args;
         va_start(args, fmt);
@@ -126,7 +232,7 @@ int main(int argc, char** argv)
         }
     };
 
-    Log("VirtualArduinoFirmware - CoreSim Standalone");
+    Log("RoboTwinFirmwareHost - CoreSim Standalone");
 
     PipeManager pipe;
     if (!pipe.Start(pipeName))
@@ -139,7 +245,8 @@ int main(int argc, char** argv)
     {
         std::string id;
         BoardProfile profile;
-        std::unique_ptr<VirtualArduino> mcu;
+        std::unique_ptr<VirtualMcu> mcu;
+        bool supported = true;
         bool hasFirmware = false;
         std::uint64_t lastStatusTick = 0;
         double lastTime = 0.0;
@@ -155,7 +262,8 @@ int main(int argc, char** argv)
     std::mt19937 rng(static_cast<unsigned int>(GetTickCount()));
     std::uniform_real_distribution<double> driftDist(-50.0, 50.0);
 
-    auto GetBoardState = [&](const std::string& boardId, const std::string& profileId) -> BoardState& {
+    auto GetBoardState = [&](const std::string &boardId, const std::string &profileId) -> BoardState &
+    {
         std::string key = boardId.empty() ? "board" : boardId;
         auto it = boards.find(key);
         if (it == boards.end())
@@ -163,11 +271,16 @@ int main(int argc, char** argv)
             BoardState state{};
             state.id = key;
             state.profile = profileId.empty() ? GetDefaultBoardProfile() : GetBoardProfile(profileId);
+            state.supported = IsSupportedMcu(state.profile);
+            if (!state.supported)
+            {
+                Log("Board %s uses unsupported MCU profile %s.", key.c_str(), state.profile.mcu.c_str());
+            }
             if (state.profile.core_limited && state.profile.pin_count > static_cast<int>(kPinCount))
             {
                 Log("Board %s uses %s; pin count limited to %zu by core.", key.c_str(), state.profile.mcu.c_str(), kPinCount);
             }
-            state.mcu = std::make_unique<VirtualArduino>(state.profile);
+            state.mcu = std::make_unique<VirtualMcu>(state.profile);
             state.lastTime = QueryNowSeconds();
             state.driftPpm = driftDist(rng);
             if (!logPath)
@@ -195,7 +308,12 @@ int main(int argc, char** argv)
             if (!desired.empty() && current != desired)
             {
                 it->second.profile = GetBoardProfile(profileId);
-                it->second.mcu = std::make_unique<VirtualArduino>(it->second.profile);
+                it->second.supported = IsSupportedMcu(it->second.profile);
+                if (!it->second.supported)
+                {
+                    Log("Board %s switched to unsupported MCU profile %s.", key.c_str(), it->second.profile.mcu.c_str());
+                }
+                it->second.mcu = std::make_unique<VirtualMcu>(it->second.profile);
                 it->second.hasFirmware = false;
                 it->second.remainder = 0.0;
                 it->second.lastTime = QueryNowSeconds();
@@ -207,7 +325,8 @@ int main(int argc, char** argv)
         return it->second;
     };
 
-    auto UpdateOutputs = [&](BoardState& state) {
+    auto UpdateOutputs = [&](BoardState &state)
+    {
         std::uint8_t portb = 0;
         std::uint8_t portc = 0;
         std::uint8_t portd = 0;
@@ -224,7 +343,8 @@ int main(int argc, char** argv)
         for (int bit = 0; bit < 8; ++bit)
         {
             std::uint8_t mask = static_cast<std::uint8_t>(1u << bit);
-            if ((ddrd & mask) == 0) continue;
+            if ((ddrd & mask) == 0)
+                continue;
             bool value = (portd & mask) != 0;
             state.lastOutputs[bit] = value ? 1 : 0;
         }
@@ -232,7 +352,8 @@ int main(int argc, char** argv)
         for (int bit = 0; bit < 6; ++bit)
         {
             std::uint8_t mask = static_cast<std::uint8_t>(1u << bit);
-            if ((ddrb & mask) == 0) continue;
+            if ((ddrb & mask) == 0)
+                continue;
             bool value = (portb & mask) != 0;
             state.lastOutputs[8 + bit] = value ? 1 : 0;
         }
@@ -240,7 +361,8 @@ int main(int argc, char** argv)
         for (int bit = 0; bit < 6; ++bit)
         {
             std::uint8_t mask = static_cast<std::uint8_t>(1u << bit);
-            if ((ddrc & mask) == 0) continue;
+            if ((ddrc & mask) == 0)
+                continue;
             bool value = (portc & mask) != 0;
             state.lastOutputs[14 + bit] = value ? 1 : 0;
         }
@@ -253,7 +375,14 @@ int main(int argc, char** argv)
         {
             if (cmd.type == PipeCommand::Type::Load)
             {
-                auto& state = GetBoardState(cmd.boardId, cmd.boardProfile);
+                auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
+                if (!state.supported)
+                {
+                    std::string message = "Unsupported MCU profile.";
+                    Log("Load rejected for %s: %s", state.id.c_str(), message.c_str());
+                    pipe.SendError(state.id, 120, message);
+                    continue;
+                }
                 std::string error;
                 if (state.mcu->LoadBvm(cmd.data, error))
                 {
@@ -273,13 +402,19 @@ int main(int argc, char** argv)
             }
             if (cmd.type == PipeCommand::Type::Step)
             {
-                auto& state = GetBoardState(cmd.boardId, cmd.boardProfile);
+                auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
+                if (!state.supported)
+                {
+                    pipe.SendError(state.id, 121, "Step rejected for unsupported MCU profile.");
+                    continue;
+                }
                 for (std::size_t i = 0; i < kPinCount; ++i)
                 {
                     state.mcu->SetInputPin(static_cast<int>(i), cmd.pins[i] != 0 ? 1 : 0);
                 }
                 std::size_t analogCount = cmd.analogCount > 0 ? cmd.analogCount : kAnalogCount;
-                if (analogCount > kAnalogCount) analogCount = kAnalogCount;
+                if (analogCount > kAnalogCount)
+                    analogCount = kAnalogCount;
                 for (std::size_t i = 0; i < analogCount; ++i)
                 {
                     float voltage = static_cast<float>(cmd.analog[i]) * (5.0f / 1023.0f);
@@ -294,7 +429,11 @@ int main(int argc, char** argv)
                     state.mcu->SyncInputs();
                     state.mcu->StepCycles(cycles);
                     UpdateOutputs(state);
-                    pipe.SendOutputState(state.id, state.mcu->TickCount(), state.lastOutputs, kPinCount);
+                    const auto &perf = state.mcu->GetPerfCounters();
+                    pipe.SendOutputState(state.id, cmd.stepSequence, state.mcu->TickCount(), state.lastOutputs, kPinCount,
+                                         perf.cycles, perf.adcSamples,
+                                         perf.uartTxBytes, perf.uartRxBytes,
+                                         perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
                 }
                 continue;
             }
@@ -316,7 +455,7 @@ int main(int argc, char** argv)
         {
             boardOrder.clear();
             boardOrder.reserve(boards.size());
-            for (const auto& entry : boards)
+            for (const auto &entry : boards)
             {
                 boardOrder.push_back(entry.first);
             }
@@ -330,15 +469,18 @@ int main(int argc, char** argv)
         for (std::size_t i = 0; i < count; ++i)
         {
             std::size_t index = (boardOrderIndex + i) % count;
-            const auto& key = boardOrder[index];
+            const auto &key = boardOrder[index];
             auto it = boards.find(key);
-            if (it == boards.end()) continue;
-            auto& state = it->second;
-            if (!state.hasFirmware) continue;
+            if (it == boards.end())
+                continue;
+            auto &state = it->second;
+            if (!state.hasFirmware)
+                continue;
 
             double elapsed = now - state.lastTime;
             state.lastTime = now;
-            if (elapsed < 0.0) elapsed = 0.0;
+            if (elapsed < 0.0)
+                elapsed = 0.0;
 
             double driftScale = 1.0 + (state.driftPpm * 1e-6);
             double boardHz = state.profile.cpu_hz > 0.0 ? state.profile.cpu_hz : cpuHz;
@@ -364,7 +506,11 @@ int main(int argc, char** argv)
             std::uint64_t tick = state.mcu->TickCount();
             if (tick - state.lastStatusTick >= StatusInterval)
             {
-                pipe.SendOutputState(state.id, tick, state.lastOutputs, kPinCount);
+                const auto &perf = state.mcu->GetPerfCounters();
+                pipe.SendOutputState(state.id, 0, tick, state.lastOutputs, kPinCount,
+                                     perf.cycles, perf.adcSamples,
+                                     perf.uartTxBytes, perf.uartRxBytes,
+                                     perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
                 pipe.SendStatus(state.id, tick);
                 state.lastStatusTick = tick;
             }

@@ -1,33 +1,50 @@
-﻿# Tooling
+# Tooling & CLI
 
-The primary entry point is `tools/rt_tool.py`.
+The primary entry point for all development tasks is ools/rt_tool.py. This CLI wrapper manages the complex build environment, QEMU images, and deployment tasks.
 
 ## Common Commands
 
-```powershell
-python tools/rt_tool.py setup
-python tools/rt_tool.py update-repo-snapshot
-python tools/rt_tool.py update-unity-plugins
-python tools/rt_tool.py run-unity-smoke
-python tools/rt_tool.py build-native
-python tools/rt_tool.py build-firmware
-python tools/rt_tool.py build-standalone
-```
+### Build & Setup
 
-## Snapshot Automation
+`powershell
+python tools/rt_tool.py setup              # Install dependencies (CMake, Ninja, QEMU)
+python tools/rt_tool.py build-native       # Build Physics Engine (C++)
+python tools/rt_tool.py build-firmware     # Build Firmware Host & AVR Sim
+python tools/rt_tool.py build-all          # Build everything
+`
 
-`update-repo-snapshot` performs three actions:
+### QEMU & Images
 
-- Updates `docs/repo_files.txt` using `git ls-files`.
-- Writes a workspace snapshot to `logs/tools/workspace_snapshot.txt`.
-- Regenerates the README folder tree section.
+`powershell
+python tools/rt_tool.py qemu-download --distro ubuntu-22.04  # Download base image
+python tools/rt_tool.py qemu-create-img --size 32G           # Create blank SD card image
+python tools/rt_tool.py qemu-flash --image my_os.img         # Flash custom OS to virtual SD
+`
 
-## Contributing
+### Unity Integration
 
-See `CONTRIBUTING.md` for workflow and PR guidelines.
+`powershell
+python tools/rt_tool.py update-unity-plugins  # Copy native DLLs to Unity Assets
+python tools/rt_tool.py run-unity-smoke       # Run headless Unity smoke tests
+`
+
+### Snapshot & Maintenance
+
+`powershell
+python tools/rt_tool.py update-repo-snapshot  # Update file lists and docs
+python tools/rt_tool.py clean                 # Clean all build artifacts
+`
 
 ## Debug Console
 
-```powershell
+The Debug Console is a web-based dashboard for monitoring the simulation state in real-time, separate from the Unity UI.
+
+`powershell
 python tools/rt_tool.py debug-console
-```
+`
+
+- **Port:** http://localhost:8080
+- **Features:**
+  - Realtime log streaming (CoreSim, Physics, Firmware).
+  - Performance graphs (Frame time, Memory usage).
+  - QEMU Serial Console (VNC/Serial over WebSocket).

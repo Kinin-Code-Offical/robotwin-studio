@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -18,10 +19,60 @@ namespace RobotTwin.CoreSim
     }
 
     [Serializable]
+    public class FirmwarePerfCounters
+    {
+        public ulong Cycles;
+        public ulong AdcSamples;
+        public ulong[] UartTxBytes = new ulong[4];
+        public ulong[] UartRxBytes = new ulong[4];
+        public ulong SpiTransfers;
+        public ulong TwiTransfers;
+        public ulong WdtResets;
+
+        public void CopyFrom(FirmwarePerfCounters other)
+        {
+            if (other == null) return;
+            Cycles = other.Cycles;
+            AdcSamples = other.AdcSamples;
+            if (other.UartTxBytes != null)
+            {
+                for (int i = 0; i < UartTxBytes.Length && i < other.UartTxBytes.Length; i++)
+                {
+                    UartTxBytes[i] = other.UartTxBytes[i];
+                }
+            }
+            if (other.UartRxBytes != null)
+            {
+                for (int i = 0; i < UartRxBytes.Length && i < other.UartRxBytes.Length; i++)
+                {
+                    UartRxBytes[i] = other.UartRxBytes[i];
+                }
+            }
+            SpiTransfers = other.SpiTransfers;
+            TwiTransfers = other.TwiTransfers;
+            WdtResets = other.WdtResets;
+        }
+
+        public FirmwarePerfCounters Clone()
+        {
+            var copy = new FirmwarePerfCounters();
+            copy.CopyFrom(this);
+            return copy;
+        }
+    }
+
+    [Serializable]
     public class FirmwareStepResult
     {
-        public int[] PinStates = new int[20];
+        public const int PinUnknown = -1;
+        public int[] PinStates = new int[70];
         public string SerialOutput = string.Empty;
+        public FirmwarePerfCounters PerfCounters = new FirmwarePerfCounters();
+
+        public FirmwareStepResult()
+        {
+            Array.Fill(PinStates, PinUnknown);
+        }
     }
 
     public class FirmwareClient : MonoBehaviour
@@ -32,7 +83,7 @@ namespace RobotTwin.CoreSim
         private const uint ProtocolMagic = 0x57465452; // "RTFW"
         private const ushort ProtocolMajor = 1;
         private const ushort ProtocolMinor = 0;
-        private const int PinCount = 20;
+        private const int PinCount = 70;
         private const int AnalogCount = 16;
         private const int BoardIdSize = 64;
         private const int BoardProfileSize = 64;
@@ -55,18 +106,34 @@ namespace RobotTwin.CoreSim
         private NamedPipeClientStream _pipeClient;
         private Thread _readerThread;
         private volatile bool _readerRunning;
+        private volatile bool _readerHealthy;
         private float _nextConnectAttemptTime;
         private readonly object _writeLock = new object();
         private readonly object _stateLock = new object();
         private readonly int[] _lastInputs = new int[PinCount];
         private uint _sequence = 1;
+        private ulong _stepSequence = 1;
         private string _pipeName = DefaultPipeName;
         private readonly Dictionary<string, BoardState> _boardStates = new Dictionary<string, BoardState>(StringComparer.OrdinalIgnoreCase);
 
+        public bool IsConnected => _pipeClient != null && _pipeClient.IsConnected;
+        public bool ReaderHealthy => _readerHealthy;
+        public DateTime LastPacketUtc { get; private set; } = DateTime.MinValue;
+        public DateTime LastWriteUtc { get; private set; } = DateTime.MinValue;
+        public string LastError { get; private set; } = string.Empty;
+
         private sealed class BoardState
         {
+            public ulong LastSequence;
+            public readonly object SequenceLock = new object();
             public readonly int[] PinOutputs = new int[PinCount];
             public readonly StringBuilder SerialBuffer = new StringBuilder();
+            public readonly FirmwarePerfCounters Perf = new FirmwarePerfCounters();
+
+            public BoardState()
+            {
+                Array.Fill(PinOutputs, FirmwareStepResult.PinUnknown);
+            }
         }
 
         public string PipeName => _pipeName;
@@ -139,6 +206,7 @@ namespace RobotTwin.CoreSim
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 UnityEngine.Debug.LogWarning($"[FirmwareClient] Pipe connection failed: {ex.Message}");
                 return false;
             }
@@ -151,18 +219,50 @@ namespace RobotTwin.CoreSim
             if (string.IsNullOrWhiteSpace(boardId)) return false;
             if (!EnsureConnected()) return false;
 
-            if (!SendStep(boardId, request)) return false;
+            ulong expectedSeq;
+            lock (_stateLock)
+            {
+                expectedSeq = _stepSequence++;
+            }
+
+            if (!SendStep(boardId, expectedSeq, request)) return false;
+
+            BoardState state;
+            lock (_stateLock)
+            {
+                state = GetBoardState(boardId);
+            }
+
+            // Wait for a fresh OutputState matching this step.
+            lock (state.SequenceLock)
+            {
+                var deadline = Time.realtimeSinceStartup + 0.1f; // 100ms budget to avoid stalling Unity.
+                while (state.LastSequence < expectedSeq)
+                {
+                    float remaining = deadline - Time.realtimeSinceStartup;
+                    if (remaining <= 0f)
+                    {
+                        break;
+                    }
+                    Monitor.Wait(state.SequenceLock, Mathf.CeilToInt(remaining * 1000f));
+                }
+            }
 
             result.PinStates = new int[PinCount];
             lock (_stateLock)
             {
-                var state = GetBoardState(boardId);
+                // If we timed out waiting for the expected sequence, treat as failed step.
+                if (state.LastSequence < expectedSeq)
+                {
+                    return false;
+                }
                 Array.Copy(state.PinOutputs, result.PinStates, result.PinStates.Length);
                 if (state.SerialBuffer.Length > 0)
                 {
                     result.SerialOutput = state.SerialBuffer.ToString();
                     state.SerialBuffer.Clear();
                 }
+                result.PerfCounters.CopyFrom(state.Perf);
             }
 
             return true;
@@ -224,6 +324,7 @@ namespace RobotTwin.CoreSim
         {
             if (_readerThread != null && _readerThread.IsAlive) return;
             _readerRunning = true;
+            _readerHealthy = true;
             _readerThread = new Thread(ReadLoop) { IsBackground = true, Name = "FirmwarePipeReader" };
             _readerThread.Start();
         }
@@ -231,22 +332,40 @@ namespace RobotTwin.CoreSim
         private void StopReaderThread()
         {
             _readerRunning = false;
+            _readerHealthy = false;
             if (_readerThread != null && _readerThread.IsAlive)
             {
-                _readerThread.Join(500);
+                if (Thread.CurrentThread != _readerThread)
+                {
+                    _readerThread.Join(500);
+                }
             }
             _readerThread = null;
         }
 
         private void ReadLoop()
         {
-            while (_readerRunning && _pipeClient != null && _pipeClient.IsConnected)
+            try
             {
-                if (!ReadPacket(out var type, out var payload))
+                while (_readerRunning && _pipeClient != null && _pipeClient.IsConnected)
                 {
-                    break;
+                    if (!ReadPacket(out var type, out var payload))
+                    {
+                        break;
+                    }
+                    HandleMessage(type, payload);
                 }
-                HandleMessage(type, payload);
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                UnityEngine.Debug.LogWarning($"[FirmwareClient] Pipe reader exception: {ex.Message}");
+            }
+            finally
+            {
+                _readerHealthy = false;
+                // Ensure we don't keep returning stale state.
+                Disconnect();
             }
         }
 
@@ -254,20 +373,50 @@ namespace RobotTwin.CoreSim
         {
             if (type == MessageType.HelloAck)
             {
+                LastPacketUtc = DateTime.UtcNow;
                 UnityEngine.Debug.Log("[FirmwareClient] Firmware handshake complete.");
                 return;
             }
             if (type == MessageType.OutputState)
             {
-                if (payload == null || payload.Length < BoardIdSize + 8 + PinCount) return;
+                // OutputStatePayload: board_id (64) + step_sequence (8) + tick_count (8) + pins (70) + perf...
+                if (payload == null || payload.Length < BoardIdSize + 16 + PinCount) return;
                 lock (_stateLock)
                 {
+                    LastPacketUtc = DateTime.UtcNow;
                     string boardId = ReadFixedString(payload, 0, BoardIdSize);
                     var state = GetBoardState(boardId);
+                    ulong seq = ReadUInt64(payload, BoardIdSize);
+                    lock (state.SequenceLock)
+                    {
+                        if (seq >= state.LastSequence)
+                        {
+                            state.LastSequence = seq;
+                        }
+                        Monitor.PulseAll(state.SequenceLock);
+                    }
                     for (int i = 0; i < PinCount; i++)
                     {
-                        byte raw = payload[BoardIdSize + 8 + i];
-                        state.PinOutputs[i] = raw == 0xFF ? -1 : raw;
+                        byte raw = payload[BoardIdSize + 16 + i];
+                        state.PinOutputs[i] = raw == 0xFF ? FirmwareStepResult.PinUnknown : raw;
+                    }
+                    int offset = BoardIdSize + 16 + PinCount;
+                    int needed = offset + (13 * 8);
+                    if (payload.Length >= needed)
+                    {
+                        state.Perf.Cycles = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.AdcSamples = ReadUInt64(payload, offset); offset += 8;
+                        for (int i = 0; i < state.Perf.UartTxBytes.Length; i++)
+                        {
+                            state.Perf.UartTxBytes[i] = ReadUInt64(payload, offset); offset += 8;
+                        }
+                        for (int i = 0; i < state.Perf.UartRxBytes.Length; i++)
+                        {
+                            state.Perf.UartRxBytes[i] = ReadUInt64(payload, offset); offset += 8;
+                        }
+                        state.Perf.SpiTransfers = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.TwiTransfers = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.WdtResets = ReadUInt64(payload, offset);
                     }
                 }
                 return;
@@ -277,6 +426,7 @@ namespace RobotTwin.CoreSim
                 if (payload == null || payload.Length <= BoardIdSize) return;
                 lock (_stateLock)
                 {
+                    LastPacketUtc = DateTime.UtcNow;
                     string boardId = ReadFixedString(payload, 0, BoardIdSize);
                     var state = GetBoardState(boardId);
                     state.SerialBuffer.Append(Encoding.UTF8.GetString(payload, BoardIdSize, payload.Length - BoardIdSize));
@@ -286,6 +436,7 @@ namespace RobotTwin.CoreSim
             if (type == MessageType.Log)
             {
                 if (payload == null || payload.Length < BoardIdSize + 1) return;
+                LastPacketUtc = DateTime.UtcNow;
                 string boardId = ReadFixedString(payload, 0, BoardIdSize);
                 string text = payload.Length > BoardIdSize + 1
                     ? Encoding.UTF8.GetString(payload, BoardIdSize + 1, payload.Length - (BoardIdSize + 1))
@@ -296,28 +447,31 @@ namespace RobotTwin.CoreSim
             if (type == MessageType.Error)
             {
                 if (payload == null || payload.Length < BoardIdSize + 4) return;
+                LastPacketUtc = DateTime.UtcNow;
                 string boardId = ReadFixedString(payload, 0, BoardIdSize);
                 string text = payload.Length > BoardIdSize + 4
                     ? Encoding.UTF8.GetString(payload, BoardIdSize + 4, payload.Length - (BoardIdSize + 4))
                     : "Unknown firmware error";
+                LastError = $"Firmware error from {boardId}: {text}";
                 UnityEngine.Debug.LogWarning($"[Firmware:{boardId}] {text}");
                 return;
             }
         }
 
-        private bool SendStep(string boardId, FirmwareStepRequest request)
+        private bool SendStep(string boardId, ulong stepSequence, FirmwareStepRequest request)
         {
             if (request == null) return false;
-            var payload = new byte[BoardIdSize + 4 + PinCount + (AnalogCount * 2)];
+            var payload = new byte[BoardIdSize + 8 + 4 + PinCount + (AnalogCount * 2)];
             WriteFixedString(payload, 0, BoardIdSize, boardId);
-            WriteUInt32(payload, BoardIdSize, request.DeltaMicros);
+            WriteUInt64(payload, BoardIdSize, stepSequence);
+            WriteUInt32(payload, BoardIdSize + 8, request.DeltaMicros);
             for (int i = 0; i < PinCount; i++)
             {
                 int value = (request.PinStates != null && i < request.PinStates.Length && request.PinStates[i] > 0) ? 1 : 0;
-                payload[BoardIdSize + 4 + i] = (byte)value;
+                payload[BoardIdSize + 8 + 4 + i] = (byte)value;
                 _lastInputs[i] = value;
             }
-            int analogOffset = BoardIdSize + 4 + PinCount;
+            int analogOffset = BoardIdSize + 8 + 4 + PinCount;
             for (int i = 0; i < AnalogCount; i++)
             {
                 float voltage = (request.AnalogVoltages != null && i < request.AnalogVoltages.Length)
@@ -358,6 +512,7 @@ namespace RobotTwin.CoreSim
             {
                 try
                 {
+                    LastWriteUtc = DateTime.UtcNow;
                     _pipeClient.Write(header, 0, header.Length);
                     if (payload.Length > 0)
                     {
@@ -368,6 +523,7 @@ namespace RobotTwin.CoreSim
                 }
                 catch (Exception ex)
                 {
+                    LastError = ex.Message;
                     UnityEngine.Debug.LogWarning($"[FirmwareClient] Pipe write failed: {ex.Message}");
                     Disconnect();
                     return false;
@@ -404,11 +560,19 @@ namespace RobotTwin.CoreSim
         private bool ReadExact(byte[] buffer, int offset, int count)
         {
             int total = 0;
-            while (total < count && _pipeClient != null)
+            try
             {
-                int read = _pipeClient.Read(buffer, offset + total, count - total);
-                if (read <= 0) return false;
-                total += read;
+                while (total < count && _pipeClient != null)
+                {
+                    int read = _pipeClient.Read(buffer, offset + total, count - total);
+                    if (read <= 0) return false;
+                    total += read;
+                }
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                return false;
             }
             return total == count;
         }
@@ -419,6 +583,18 @@ namespace RobotTwin.CoreSim
             buffer[offset + 1] = (byte)(value >> 8);
             buffer[offset + 2] = (byte)(value >> 16);
             buffer[offset + 3] = (byte)(value >> 24);
+        }
+
+        private static void WriteUInt64(byte[] buffer, int offset, ulong value)
+        {
+            buffer[offset] = (byte)value;
+            buffer[offset + 1] = (byte)(value >> 8);
+            buffer[offset + 2] = (byte)(value >> 16);
+            buffer[offset + 3] = (byte)(value >> 24);
+            buffer[offset + 4] = (byte)(value >> 32);
+            buffer[offset + 5] = (byte)(value >> 40);
+            buffer[offset + 6] = (byte)(value >> 48);
+            buffer[offset + 7] = (byte)(value >> 56);
         }
 
         private static void WriteUInt16(byte[] buffer, int offset, ushort value)
@@ -433,6 +609,19 @@ namespace RobotTwin.CoreSim
                 | (buffer[offset + 1] << 8)
                 | (buffer[offset + 2] << 16)
                 | (buffer[offset + 3] << 24));
+        }
+
+        private static ulong ReadUInt64(byte[] buffer, int offset)
+        {
+            return (ulong)(
+                buffer[offset]
+                | ((ulong)buffer[offset + 1] << 8)
+                | ((ulong)buffer[offset + 2] << 16)
+                | ((ulong)buffer[offset + 3] << 24)
+                | ((ulong)buffer[offset + 4] << 32)
+                | ((ulong)buffer[offset + 5] << 40)
+                | ((ulong)buffer[offset + 6] << 48)
+                | ((ulong)buffer[offset + 7] << 56));
         }
 
         private static ushort ReadUInt16(byte[] buffer, int offset)

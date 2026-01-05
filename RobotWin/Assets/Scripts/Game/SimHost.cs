@@ -29,7 +29,7 @@ namespace RobotTwin.Game
         private const float TICK_RATE = 0.1f; // 10Hz Firmware Tick
         private CoreSimRuntime _coreSim;
         private readonly Dictionary<string, float> _pinVoltages = new Dictionary<string, float>();
-        private readonly Dictionary<string, VirtualArduino> _virtualArduinos = new Dictionary<string, VirtualArduino>();
+        private readonly Dictionary<string, VirtualMcu> _virtualMcus = new Dictionary<string, VirtualMcu>();
         private readonly Dictionary<string, List<PinState>> _pinStatesByComponent = new Dictionary<string, List<PinState>>();
         private readonly Dictionary<string, double> _pullupResistances = new Dictionary<string, double>();
         private bool _loggedTelemetry;
@@ -48,6 +48,8 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, double> _virtualSerialNextTime = new Dictionary<string, double>();
         private readonly Dictionary<string, bool> _usbConnectedByBoard = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, bool> _boardPowerById = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FirmwarePerfCounters> _firmwarePerfByBoard =
+            new Dictionary<string, FirmwarePerfCounters>(System.StringComparer.OrdinalIgnoreCase);
 
         private const int ExternalFirmwarePinLimit = 20;
         private const int SerialBufferLimit = 4000;
@@ -76,7 +78,7 @@ namespace RobotTwin.Game
         public bool UseExternalFirmware => _useExternalFirmware;
         public bool NativePinsReady => _nativePinsReady;
         public int ExternalFirmwareSessionCount => _externalFirmwareSessions.Count;
-        public int VirtualBoardCount => _virtualArduinos.Count;
+        public int VirtualBoardCount => _virtualMcus.Count;
         public int PoweredBoardCount => _boardPowerById.Count;
 
         public void SetUsbConnected(string boardId, bool connected)
@@ -112,6 +114,7 @@ namespace RobotTwin.Game
             _externalFirmwarePinsByBoard.Clear();
             _externalFirmwarePinWarnings.Clear();
             _externalFirmwareExePath = null;
+            _firmwarePerfByBoard.Clear();
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
 
@@ -127,12 +130,12 @@ namespace RobotTwin.Game
                     TryLoadExternalFirmware(session);
                 }
             }
-            BuildVirtualArduinos();
+            BuildVirtualMcus();
 
             _useNativeEngine = !_useExternalFirmware
                 && SessionManager.Instance != null
                 && SessionManager.Instance.UseNativeEnginePins
-                && !SessionManager.Instance.UseVirtualArduino;
+                && !SessionManager.Instance.UseVirtualMcu;
 
             // 3. Initialize Native Engine
             if (_useNativeEngine)
@@ -165,12 +168,13 @@ namespace RobotTwin.Game
             _useNativeEngine = false;
             _nativePinsReady = false;
             _nativeAvrIndex.Clear();
-            _virtualArduinos.Clear();
+            _virtualMcus.Clear();
             _pinVoltages.Clear();
             _pinStatesByComponent.Clear();
             _pullupResistances.Clear();
             _virtualSerialNextTime.Clear();
             _boardPowerById.Clear();
+            _firmwarePerfByBoard.Clear();
             _serialBuffer = string.Empty;
             LastTelemetry = null;
             TickCount = 0;
@@ -236,21 +240,21 @@ namespace RobotTwin.Game
                 }
                 if (!usedNativePins)
                 {
-                    foreach (var arduino in _virtualArduinos.Values)
+                    foreach (var mcu in _virtualMcus.Values)
                     {
-                        if (!IsBoardPowered(arduino.Id))
+                        if (!IsBoardPowered(mcu.Id))
                         {
                             continue;
                         }
-                        if (handledBoards != null && handledBoards.Contains(arduino.Id))
+                        if (handledBoards != null && handledBoards.Contains(mcu.Id))
                         {
                             continue;
                         }
-                        arduino.Step(TICK_RATE);
-                        arduino.CopyVoltages(_pinVoltages);
-                        _pinStatesByComponent[arduino.Id] = arduino.Hal.GetPinStates();
-                        _pullupResistances[arduino.Id] = arduino.Hal.GetPullupResistance();
-                        TryAppendVirtualSerial(arduino.Id);
+                        mcu.Step(TICK_RATE);
+                        mcu.CopyVoltages(_pinVoltages);
+                        _pinStatesByComponent[mcu.Id] = mcu.Hal.GetPinStates();
+                        _pullupResistances[mcu.Id] = mcu.Hal.GetPullupResistance();
+                        TryAppendVirtualSerial(mcu.Id);
                     }
                 }
                 LastTelemetry = _coreSim.Step(_circuit, _pinVoltages, _pinStatesByComponent, _pullupResistances, TICK_RATE, _boardPowerById, _usbConnectedByBoard);
@@ -258,6 +262,7 @@ namespace RobotTwin.Game
                 {
                     LastTelemetry.TimeSeconds = SimTime;
                     LastTelemetry.TickIndex = TickCount;
+                    AppendFirmwarePerfSignals(LastTelemetry);
                     if (!_loggedTelemetry)
                     {
                         _loggedTelemetry = true;
@@ -295,7 +300,13 @@ namespace RobotTwin.Game
             int index = 0;
             foreach (var comp in _circuit.Components)
             {
-                if (!IsArduinoType(comp.Type)) continue;
+                if (!IsMcuBoard(comp)) continue;
+                var profile = GetMcuProfile(comp);
+                if (!profile.CoreSupported)
+                {
+                    Debug.LogWarning($"[SimHost] Native pins unsupported for {comp.Id} ({profile.Id}).");
+                    continue;
+                }
                 int nativeId = NativeBridge.Native_AddComponent((int)NativeBridge.ComponentType.IC_Pin, 0, new float[0]);
                 if (nativeId <= 0)
                 {
@@ -315,7 +326,7 @@ namespace RobotTwin.Game
 
             if (_nativeAvrIndex.Count == 0)
             {
-                Debug.LogWarning("[SimHost] No Arduino components for native pins.");
+                Debug.LogWarning("[SimHost] No MCU board components for native pins.");
                 return;
             }
 
@@ -326,7 +337,7 @@ namespace RobotTwin.Game
             }
             else
             {
-                Debug.LogWarning("[SimHost] NativeEngine firmware missing; falling back to VirtualArduino.");
+                Debug.LogWarning("[SimHost] NativeEngine firmware missing; falling back to VirtualMcu.");
             }
         }
 
@@ -336,7 +347,7 @@ namespace RobotTwin.Game
             bool loadedAny = false;
             foreach (var comp in _circuit.Components)
             {
-                if (!IsArduinoType(comp.Type)) continue;
+                if (!IsMcuBoard(comp)) continue;
                 if (!_nativeAvrIndex.TryGetValue(comp.Id, out var index)) continue;
                 if (comp.Properties == null) continue;
 
@@ -382,7 +393,7 @@ namespace RobotTwin.Game
                 if (!_loggedNativeFallback)
                 {
                     _loggedNativeFallback = true;
-                    Debug.LogWarning("[SimHost] NativeEngine bridge not available. Falling back to VirtualArduino.");
+                    Debug.LogWarning("[SimHost] NativeEngine bridge not available. Falling back to VirtualMcu.");
                 }
                 return false;
             }
@@ -390,7 +401,7 @@ namespace RobotTwin.Game
             if (_circuit == null || _circuit.Components == null) return false;
             foreach (var comp in _circuit.Components)
             {
-                if (!IsArduinoType(comp.Type)) continue;
+                if (!IsMcuBoard(comp)) continue;
                 if (!_nativeAvrIndex.TryGetValue(comp.Id, out var index)) continue;
                 ApplyPinGroup(comp.Id, index);
             }
@@ -417,7 +428,7 @@ namespace RobotTwin.Game
         public void SetPinVoltage(string componentId, string pinName, float voltage)
         {
             if (string.IsNullOrWhiteSpace(componentId) || string.IsNullOrWhiteSpace(pinName)) return;
-            if (_virtualArduinos.TryGetValue(componentId, out var board))
+            if (_virtualMcus.TryGetValue(componentId, out var board))
             {
                 board.SetInputVoltage(pinName, voltage);
                 return;
@@ -425,17 +436,22 @@ namespace RobotTwin.Game
             _pinVoltages[$"{componentId}.{pinName}"] = voltage;
         }
 
-        private void BuildVirtualArduinos()
+        private void BuildVirtualMcus()
         {
-            _virtualArduinos.Clear();
+            _virtualMcus.Clear();
             _pinVoltages.Clear();
             if (_circuit == null || _circuit.Components == null) return;
 
             foreach (var comp in _circuit.Components)
             {
-                if (!IsArduinoType(comp.Type)) continue;
-                var profile = BoardProfiles.Get(ResolveBoardProfile(comp));
-                var board = new VirtualArduino(comp.Id, profile);
+                if (!IsMcuBoard(comp)) continue;
+                var profile = GetMcuProfile(comp);
+                if (!profile.CoreSupported)
+                {
+                    Debug.LogWarning($"[SimHost] Virtual MCU core unsupported for {comp.Id} ({profile.Id}).");
+                    continue;
+                }
+                var board = new VirtualMcu(comp.Id, profile);
                 if (comp.Properties != null)
                 {
                     board.ConfigureFromProperties(comp.Properties);
@@ -446,8 +462,8 @@ namespace RobotTwin.Game
                 {
                     Debug.LogError($"[SimHost] {board.Id} has no firmware loaded.");
                 }
-                Debug.Log($"[SimHost] VirtualArduino Active: {board.Id} ({(string.IsNullOrWhiteSpace(board.FirmwareSource) ? "none" : board.FirmwareSource)})");
-                _virtualArduinos[comp.Id] = board;
+                Debug.Log($"[SimHost] VirtualMcu Active: {board.Id} ({(string.IsNullOrWhiteSpace(board.FirmwareSource) ? "none" : board.FirmwareSource)})");
+                _virtualMcus[comp.Id] = board;
                 if (!_usbConnectedByBoard.ContainsKey(comp.Id))
                 {
                     _usbConnectedByBoard[comp.Id] = true;
@@ -455,41 +471,36 @@ namespace RobotTwin.Game
             }
         }
 
-        private bool IsArduinoType(string type)
+        private bool IsMcuBoard(ComponentSpec comp)
         {
-            return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoMega", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoMega2560", System.StringComparison.OrdinalIgnoreCase);
+            if (comp == null) return false;
+            if (comp.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                BoardProfiles.IsKnownProfileId(profile))
+            {
+                return true;
+            }
+            return BoardProfiles.IsKnownProfileId(comp.Type);
         }
 
-        private static string ResolveBoardProfile(ComponentSpec board)
+        private static string ResolveMcuProfileId(ComponentSpec board)
         {
-            if (board == null || string.IsNullOrWhiteSpace(board.Type))
-            {
-                return "ArduinoUno";
-            }
             if (board.Properties != null &&
                 board.Properties.TryGetValue("boardProfile", out var explicitProfile) &&
                 !string.IsNullOrWhiteSpace(explicitProfile))
             {
-                return explicitProfile;
+                return BoardProfiles.Get(explicitProfile).Id;
             }
-            if (string.Equals(board.Type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase))
+            if (board == null || string.IsNullOrWhiteSpace(board.Type))
             {
-                return "ArduinoNano";
+                return BoardProfiles.GetDefault().Id;
             }
-            if (string.Equals(board.Type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase))
-            {
-                return "ArduinoProMini";
-            }
-            if (string.Equals(board.Type, "ArduinoMega", System.StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(board.Type, "ArduinoMega2560", System.StringComparison.OrdinalIgnoreCase))
-            {
-                return "ArduinoMega";
-            }
-            return "ArduinoUno";
+            return BoardProfiles.Get(board.Type).Id;
+        }
+
+        private static BoardProfileInfo GetMcuProfile(ComponentSpec board)
+        {
+            return BoardProfiles.Get(ResolveMcuProfileId(board));
         }
 
         private string[] GetExternalFirmwarePins(string boardId)
@@ -497,7 +508,7 @@ namespace RobotTwin.Game
             if (string.IsNullOrWhiteSpace(boardId)) boardId = "board";
             if (_externalFirmwarePinsByBoard.TryGetValue(boardId, out var cached)) return cached;
 
-            string profileId = "ArduinoUno";
+            string profileId = BoardProfiles.GetDefault().Id;
             if (_externalFirmwareSessions.TryGetValue(boardId, out var session) &&
                 !string.IsNullOrWhiteSpace(session.BoardProfile))
             {
@@ -505,7 +516,8 @@ namespace RobotTwin.Game
             }
 
             var profile = BoardProfiles.Get(profileId);
-            int count = profile.Pins.Count;
+            var corePins = BoardProfiles.GetCorePins(profile);
+            int count = corePins.Count;
             if (profile.CoreLimited && count > ExternalFirmwarePinLimit)
             {
                 if (_externalFirmwarePinWarnings.Add(boardId))
@@ -523,7 +535,7 @@ namespace RobotTwin.Game
             var pins = new string[count];
             for (int i = 0; i < count; i++)
             {
-                pins[i] = i < profile.Pins.Count ? profile.Pins[i] : $"D{i}";
+                pins[i] = i < corePins.Count ? corePins[i] : $"D{i}";
             }
 
             _externalFirmwarePinsByBoard[boardId] = pins;
@@ -551,7 +563,7 @@ namespace RobotTwin.Game
             if (_circuit?.Components == null) return;
             foreach (var comp in _circuit.Components)
             {
-                if (!IsArduinoType(comp.Type)) continue;
+                if (!IsMcuBoard(comp)) continue;
                 _boardPowerById[comp.Id] = IsBoardPowered(comp.Id);
             }
         }
@@ -666,13 +678,13 @@ namespace RobotTwin.Game
             var firmwarePath = SessionManager.Instance.FirmwarePath;
             if (string.IsNullOrWhiteSpace(firmwarePath) || !File.Exists(firmwarePath)) return false;
 
-            if (SessionManager.Instance.UseVirtualArduino)
+            if (SessionManager.Instance.UseVirtualMcu)
             {
-                Debug.Log("[SimHost] VirtualArduino enabled; external firmware disabled.");
+                Debug.Log("[SimHost] VirtualMcu enabled; external firmware disabled.");
                 return false;
             }
 
-            var boards = _circuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            var boards = _circuit.Components.Where(IsMcuBoard).ToList();
             if (boards.Count == 0) return false;
 
             if (_externalFirmwareClient == null)
@@ -682,6 +694,12 @@ namespace RobotTwin.Game
 
             foreach (var board in boards)
             {
+                var profile = GetMcuProfile(board);
+                if (!profile.CoreSupported)
+                {
+                    Debug.LogWarning($"[SimHost] External firmware unsupported for {board.Id} ({profile.Id}).");
+                    continue;
+                }
                 if (!TryGetBvmPath(board, out var bvmPath))
                 {
                     continue;
@@ -696,7 +714,7 @@ namespace RobotTwin.Game
                 {
                     BoardId = board.Id,
                     BvmPath = bvmPath,
-                    BoardProfile = ResolveBoardProfile(board)
+                    BoardProfile = ResolveMcuProfileId(board)
                 };
                 _externalFirmwareSessions[board.Id] = session;
                 if (!_usbConnectedByBoard.ContainsKey(board.Id))
@@ -793,7 +811,7 @@ namespace RobotTwin.Game
                 if (!session.LoggedFallback)
                 {
                     session.LoggedFallback = true;
-                    Debug.LogWarning($"[SimHost] External firmware not responding for {session.BoardId}. Falling back to VirtualArduino.");
+                    Debug.LogWarning($"[SimHost] External firmware not responding for {session.BoardId}. Falling back to VirtualMcu.");
                 }
                 return false;
             }
@@ -856,7 +874,7 @@ namespace RobotTwin.Game
                 bool isOutput = state >= 0;
                 if (isOutput)
                 {
-                    _pinVoltages[$"{boardId}.{pin}"] = state > 0 ? VirtualArduino.DefaultHighVoltage : 0f;
+                    _pinVoltages[$"{boardId}.{pin}"] = state > 0 ? VirtualMcu.DefaultHighVoltage : 0f;
                 }
                 pinStates.Add(new PinState(pin, isOutput, false));
             }
@@ -867,6 +885,35 @@ namespace RobotTwin.Game
             if (result != null && !string.IsNullOrWhiteSpace(result.SerialOutput))
             {
                 AppendSerialOutput(boardId, result.SerialOutput);
+            }
+
+            if (result?.PerfCounters != null)
+            {
+                _firmwarePerfByBoard[boardId] = result.PerfCounters.Clone();
+            }
+        }
+
+        private void AppendFirmwarePerfSignals(TelemetryFrame frame)
+        {
+            if (frame?.Signals == null || _firmwarePerfByBoard.Count == 0) return;
+            foreach (var entry in _firmwarePerfByBoard)
+            {
+                string boardId = entry.Key;
+                var perf = entry.Value;
+                if (perf == null) continue;
+                frame.Signals[$"FW:{boardId}:cycles"] = perf.Cycles;
+                frame.Signals[$"FW:{boardId}:adc_samples"] = perf.AdcSamples;
+                for (int i = 0; i < perf.UartTxBytes.Length; i++)
+                {
+                    frame.Signals[$"FW:{boardId}:uart_tx{i}"] = perf.UartTxBytes[i];
+                }
+                for (int i = 0; i < perf.UartRxBytes.Length; i++)
+                {
+                    frame.Signals[$"FW:{boardId}:uart_rx{i}"] = perf.UartRxBytes[i];
+                }
+                frame.Signals[$"FW:{boardId}:spi_transfers"] = perf.SpiTransfers;
+                frame.Signals[$"FW:{boardId}:twi_transfers"] = perf.TwiTransfers;
+                frame.Signals[$"FW:{boardId}:wdt_resets"] = perf.WdtResets;
             }
         }
 
@@ -937,7 +984,7 @@ namespace RobotTwin.Game
         private void LogTelemetrySample()
         {
             if (_circuit?.Components == null || LastTelemetry?.Signals == null) return;
-            var board = _circuit.Components.FirstOrDefault(c => IsArduinoType(c.Type));
+            var board = _circuit.Components.FirstOrDefault(IsMcuBoard);
             string boardId = board?.Id ?? "U1";
             float d13 = _pinVoltages.TryGetValue($"{boardId}.D13", out var d13v) ? d13v : float.NaN;
             double r1i = LastTelemetry.Signals.TryGetValue("COMP:R1:I", out var r1Current) ? r1Current : double.NaN;

@@ -1,24 +1,53 @@
-﻿# CoreSim
+# CoreSim: The Realtime Orchestrator
 
-CoreSim is the deterministic simulation engine implemented in pure C#.
+**CoreSim** is the deterministic nervous system of RobotWin Studio. While NativeEngine handles the heavy physics and FirmwareEngine handles the code execution, CoreSim ensures they all dance to the exact same beat.
 
 ## Responsibilities
 
-- Circuit graph modeling
-- Electrical behavior + deterministic logic
-- Telemetry generation (signals, validation, faults)
-- Time-step driven simulation
-- Serialization formats for RobotWin and FirmwareEngine
+### 1. Deterministic Scheduling
+CoreSim manages the **Global Simulation Time (GST)**. It is responsible for advancing the simulation in discrete, fixed time steps (typically 1ms or 100us).
+- **Strict Ordering:** Ensures Input -> Physics -> Firmware -> Output happens in the exact same order every frame.
+- **Replayability:** By logging the inputs at each tick, CoreSim can replay a session with bit-perfect accuracy.
 
-## Key Areas
+### 2. Circuit & Signal Propagation
+CoreSim owns the "Electrical Graph" of the robot.
+- **Netlist Solving:** Resolves connections between components (e.g., Battery -> ESC -> Motor).
+- **Signal Routing:** Routes logical signals (PWM, UART, SPI) from FirmwareEngine to the appropriate component models.
+- **Fault Injection:** Can simulate broken wires, short circuits, or noisy connections on the fly.
 
-- `CoreSim/src/RobotTwin.CoreSim/Runtime`: simulation runtime and ticking.
-- `CoreSim/src/RobotTwin.CoreSim/Specs`: model specs and versioning.
-- `CoreSim/src/RobotTwin.CoreSim/Serialization`: save/load pipeline.
-- `CoreSim/src/RobotTwin.CoreSim/IPC`: firmware pipe client (binary protocol).
+### 3. Inter-Process Communication (IPC) Hub
+CoreSim manages the high-speed data highways between modules.
+- **Shared Memory:** Allocates and manages the ring buffers used for sensor data.
+- **Synchronization Barriers:** Uses named mutexes/semaphores to ensure the Physics engine doesn't run ahead of the Firmware.
+
+## Architecture
+
+CoreSim is a pure C# .NET 8 library, designed to be embedded into the Unity process but capable of running headless.
+
+### The Tick Loop
+`csharp
+public void Tick()
+{
+    // 1. Gather Inputs
+    var inputs = InputSystem.Poll();
+    
+    // 2. Step Physics (Native Interop)
+    NativeEngine.Step(dt, inputs);
+    
+    // 3. Step Firmware (IPC)
+    FirmwareEngine.Step(dt);
+    
+    // 4. Resolve Circuit Logic
+    CircuitSolver.Solve();
+    
+    // 5. Publish State
+    Telemetry.Publish();
+}
+`
 
 ## Integration Rules
 
-- No Unity types in CoreSim.
-- Keep deterministic state changes (avoid DateTime.Now, random without seeds).
-- Add unit tests for new simulation behavior.
+- **No Unity Dependencies:** CoreSim must remain engine-agnostic to support headless cloud simulation.
+- **Zero Allocation:** The hot path (Tick loop) must generate zero garbage (GC) to prevent latency spikes.
+- **Thread Safety:** All state access must be thread-safe or confined to the simulation thread.
+

@@ -9,19 +9,21 @@ def load_metadata(path: Path) -> dict:
 
 
 def first_non_empty(*values: str) -> str:
-    for value in values:
-        if value and str(value).strip():
-            return str(value).strip()
-    return ""
+    return next(
+        (
+            str(value).strip()
+            for value in values
+            if value and str(value).strip()
+        ),
+        "",
+    )
 
 
 def resolve_system_type(tag: str) -> str:
     tag_lower = (tag or "").lower()
     if "robot" in tag_lower:
         return "Robot"
-    if "mechatronic" in tag_lower:
-        return "Mechatronic"
-    return "CircuitOnly"
+    return "Mechatronic" if "mechatronic" in tag_lower else "CircuitOnly"
 
 
 def build_template_spec(folder: Path, metadata: dict) -> dict:

@@ -15,14 +15,14 @@ if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDi
 $Sources = @(
     "FirmwareEngine/main.cpp",
     "FirmwareEngine/PipeManager.cpp",
-    "FirmwareEngine/VirtualArduino.cpp",
+    "FirmwareEngine/VirtualMcu.cpp",
     "FirmwareEngine/BoardProfile.cpp",
     "NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 
-$OutputExe = Join-Path $OutDir "VirtualArduinoFirmware.exe"
-$ResourceFile = "FirmwareEngine/VirtualArduinoFirmware.rc"
-$ResourceObj = Join-Path $OutDir "VirtualArduinoFirmware.res.o"
+$OutputExe = Join-Path $OutDir "RoboTwinFirmwareHost.exe"
+$ResourceFile = "FirmwareEngine/RoboTwinFirmwareHost.rc"
+$ResourceObj = Join-Path $OutDir "RoboTwinFirmwareHost.res.o"
 $IncludeDirs = @(
     "FirmwareEngine",
     "NativeEngine/include"
@@ -31,7 +31,7 @@ $IncludeDirs = @(
 $IncludeArgs = $IncludeDirs | ForEach-Object { "-I$($_)" }
 
 Push-Location $RepoRoot
-Write-Host "[Firmware] Building VirtualArduinoFirmware.exe ($Configuration)..." -ForegroundColor Cyan
+Write-Host "[Firmware] Building RoboTwinFirmwareHost.exe ($Configuration)..." -ForegroundColor Cyan
 
 $Flags = @("-std=c++17", "-O2")
 if ($Configuration -eq "Debug") { $Flags = @("-std=c++17", "-O0", "-g") }

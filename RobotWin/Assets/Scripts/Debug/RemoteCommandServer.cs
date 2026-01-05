@@ -285,6 +285,7 @@ namespace RobotTwin.Debugging
             }
 
             sb.Append("]");
+            AppendFirmwarePerfPayload(sb, telemetry);
             sb.Append("}");
             return sb.ToString();
         }
@@ -331,6 +332,73 @@ namespace RobotTwin.Debugging
             if (telemetry?.Signals == null) return;
             if (!telemetry.Signals.TryGetValue(key, out var value)) return;
             sb.Append($"\"{label}\":{value.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)},");
+        }
+
+        private static void AppendFirmwarePerfPayload(StringBuilder sb, RobotTwin.CoreSim.Runtime.TelemetryFrame telemetry)
+        {
+            sb.Append(",\"firmware\":[");
+            if (telemetry?.Signals == null || telemetry.Signals.Count == 0)
+            {
+                sb.Append("]");
+                return;
+            }
+
+            var byBoard = new Dictionary<string, Dictionary<string, double>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in telemetry.Signals)
+            {
+                if (!entry.Key.StartsWith("FW:", StringComparison.OrdinalIgnoreCase)) continue;
+                var parts = entry.Key.Split(':');
+                if (parts.Length < 3) continue;
+                string boardId = parts[1];
+                string metric = parts[2];
+                if (!byBoard.TryGetValue(boardId, out var metrics))
+                {
+                    metrics = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                    byBoard[boardId] = metrics;
+                }
+                metrics[metric] = entry.Value;
+            }
+
+            bool firstBoard = true;
+            string[] orderedKeys =
+            {
+                "cycles",
+                "adc_samples",
+                "uart_tx0",
+                "uart_tx1",
+                "uart_tx2",
+                "uart_tx3",
+                "uart_rx0",
+                "uart_rx1",
+                "uart_rx2",
+                "uart_rx3",
+                "spi_transfers",
+                "twi_transfers",
+                "wdt_resets"
+            };
+
+            foreach (var board in byBoard)
+            {
+                if (!firstBoard) sb.Append(",");
+                firstBoard = false;
+                sb.Append("{");
+                sb.Append($"\"id\":\"{EscapeJson(board.Key)}\",");
+                sb.Append("\"metrics\":{");
+
+                bool firstMetric = true;
+                foreach (var key in orderedKeys)
+                {
+                    if (!board.Value.TryGetValue(key, out var value)) continue;
+                    if (!firstMetric) sb.Append(",");
+                    firstMetric = false;
+                    sb.Append($"\"{key}\":{value.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}");
+                }
+
+                sb.Append("}");
+                sb.Append("}");
+            }
+
+            sb.Append("]");
         }
 
         private static void TrimTrailingComma(StringBuilder sb)

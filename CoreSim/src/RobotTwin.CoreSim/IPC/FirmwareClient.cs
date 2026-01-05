@@ -18,16 +18,54 @@ namespace RobotTwin.CoreSim.IPC
 
     public class FirmwareStepRequest
     {
+        public ulong StepSequence { get; set; }
         public float RailVoltage { get; set; } = 5.0f;
         public uint DeltaMicros { get; set; } = 100000;
         public int[] PinStates { get; set; } = Array.Empty<int>();
         public float[] AnalogVoltages { get; set; } = Array.Empty<float>();
     }
 
+    public class FirmwarePerfCounters
+    {
+        public ulong Cycles { get; set; }
+        public ulong AdcSamples { get; set; }
+        public ulong[] UartTxBytes { get; set; } = new ulong[4];
+        public ulong[] UartRxBytes { get; set; } = new ulong[4];
+        public ulong SpiTransfers { get; set; }
+        public ulong TwiTransfers { get; set; }
+        public ulong WdtResets { get; set; }
+
+        public void CopyFrom(FirmwarePerfCounters other)
+        {
+            if (other == null) return;
+            Cycles = other.Cycles;
+            AdcSamples = other.AdcSamples;
+            if (other.UartTxBytes != null)
+            {
+                for (int i = 0; i < UartTxBytes.Length && i < other.UartTxBytes.Length; i++)
+                {
+                    UartTxBytes[i] = other.UartTxBytes[i];
+                }
+            }
+            if (other.UartRxBytes != null)
+            {
+                for (int i = 0; i < UartRxBytes.Length && i < other.UartRxBytes.Length; i++)
+                {
+                    UartRxBytes[i] = other.UartRxBytes[i];
+                }
+            }
+            SpiTransfers = other.SpiTransfers;
+            TwiTransfers = other.TwiTransfers;
+            WdtResets = other.WdtResets;
+        }
+    }
+
     public class FirmwareStepResult
     {
-        public int[] PinStates { get; set; } = new int[20];
+        public ulong StepSequence { get; set; }
+        public int[] PinStates { get; set; } = new int[70];
         public string SerialOutput { get; set; } = string.Empty;
+        public FirmwarePerfCounters PerfCounters { get; set; } = new FirmwarePerfCounters();
     }
 
     public sealed class FirmwareClient : IFirmwareClient
@@ -36,7 +74,7 @@ namespace RobotTwin.CoreSim.IPC
         private const uint ProtocolMagic = 0x57465452; // "RTFW"
         private const ushort ProtocolMajor = 1;
         private const ushort ProtocolMinor = 0;
-        private const int PinCount = 20;
+        private const int PinCount = 70;
         private const int AnalogCount = 16;
         private const int BoardIdSize = 64;
         private const int BoardProfileSize = 64;
@@ -57,8 +95,11 @@ namespace RobotTwin.CoreSim.IPC
 
         private sealed class BoardState
         {
+            public ulong LastSequence;
             public readonly int[] PinOutputs = new int[PinCount];
             public readonly StringBuilder SerialBuffer = new StringBuilder();
+            public readonly FirmwarePerfCounters Perf = new FirmwarePerfCounters();
+            public readonly object SequenceLock = new object();
         }
 
         private NamedPipeClientStream? _pipeClient;
@@ -114,15 +155,36 @@ namespace RobotTwin.CoreSim.IPC
             if (_pipeClient == null || !_pipeClient.IsConnected) return result;
             if (!SendStep(BoardId, request)) return result;
 
+            BoardState state;
             lock (_stateLock)
             {
-                var state = GetBoardState(BoardId);
+                state = GetBoardState(BoardId);
+            }
+
+            lock (state.SequenceLock)
+            {
+                // Wait for the specific sequence
+                // We use a loop to handle spurious wakeups
+                while (state.LastSequence < request.StepSequence)
+                {
+                    if (!Monitor.Wait(state.SequenceLock, 2000))
+                    {
+                        // Timeout
+                        break;
+                    }
+                }
+            }
+
+            lock (_stateLock)
+            {
+                result.StepSequence = state.LastSequence;
                 Array.Copy(state.PinOutputs, result.PinStates, result.PinStates.Length);
                 if (state.SerialBuffer.Length > 0)
                 {
                     result.SerialOutput = state.SerialBuffer.ToString();
                     state.SerialBuffer.Clear();
                 }
+                result.PerfCounters.CopyFrom(state.Perf);
             }
 
             return result;
@@ -199,15 +261,40 @@ namespace RobotTwin.CoreSim.IPC
             }
             if (type == MessageType.OutputState)
             {
-                if (payload == null || payload.Length < BoardIdSize + 8 + PinCount) return;
+                if (payload == null || payload.Length < BoardIdSize + 16 + PinCount) return;
                 lock (_stateLock)
                 {
                     string boardId = ReadFixedString(payload, 0, BoardIdSize);
                     var state = GetBoardState(boardId);
+                    ulong seq = ReadUInt64(payload, BoardIdSize);
+                    state.LastSequence = seq;
+                    lock (state.SequenceLock)
+                    {
+                        Monitor.PulseAll(state.SequenceLock);
+                    }
+
                     for (int i = 0; i < PinCount; i++)
                     {
-                        byte raw = payload[BoardIdSize + 8 + i];
+                        byte raw = payload[BoardIdSize + 16 + i];
                         state.PinOutputs[i] = raw == 0xFF ? -1 : raw;
+                    }
+                    int offset = BoardIdSize + 16 + PinCount;
+                    int needed = offset + (13 * 8);
+                    if (payload.Length >= needed)
+                    {
+                        state.Perf.Cycles = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.AdcSamples = ReadUInt64(payload, offset); offset += 8;
+                        for (int i = 0; i < state.Perf.UartTxBytes.Length; i++)
+                        {
+                            state.Perf.UartTxBytes[i] = ReadUInt64(payload, offset); offset += 8;
+                        }
+                        for (int i = 0; i < state.Perf.UartRxBytes.Length; i++)
+                        {
+                            state.Perf.UartRxBytes[i] = ReadUInt64(payload, offset); offset += 8;
+                        }
+                        state.Perf.SpiTransfers = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.TwiTransfers = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.WdtResets = ReadUInt64(payload, offset);
                     }
                 }
                 return;
@@ -259,15 +346,16 @@ namespace RobotTwin.CoreSim.IPC
         {
             if (request == null) return false;
             if (string.IsNullOrWhiteSpace(boardId)) return false;
-            var payload = new byte[BoardIdSize + 4 + PinCount + (AnalogCount * 2)];
+            var payload = new byte[BoardIdSize + 8 + 4 + PinCount + (AnalogCount * 2)];
             WriteFixedString(payload, 0, BoardIdSize, boardId);
-            WriteUInt32(payload, BoardIdSize, request.DeltaMicros);
+            WriteUInt64(payload, BoardIdSize, request.StepSequence);
+            WriteUInt32(payload, BoardIdSize + 8, request.DeltaMicros);
             for (int i = 0; i < PinCount; i++)
             {
                 int value = (request.PinStates != null && i < request.PinStates.Length && request.PinStates[i] > 0) ? 1 : 0;
-                payload[BoardIdSize + 4 + i] = (byte)value;
+                payload[BoardIdSize + 8 + 4 + i] = (byte)value;
             }
-            int analogOffset = BoardIdSize + 4 + PinCount;
+            int analogOffset = BoardIdSize + 8 + 4 + PinCount;
             for (int i = 0; i < AnalogCount; i++)
             {
                 float voltage = (request.AnalogVoltages != null && i < request.AnalogVoltages.Length)
@@ -353,6 +441,18 @@ namespace RobotTwin.CoreSim.IPC
             buffer[offset + 3] = (byte)(value >> 24);
         }
 
+        private static void WriteUInt64(byte[] buffer, int offset, ulong value)
+        {
+            buffer[offset] = (byte)value;
+            buffer[offset + 1] = (byte)(value >> 8);
+            buffer[offset + 2] = (byte)(value >> 16);
+            buffer[offset + 3] = (byte)(value >> 24);
+            buffer[offset + 4] = (byte)(value >> 32);
+            buffer[offset + 5] = (byte)(value >> 40);
+            buffer[offset + 6] = (byte)(value >> 48);
+            buffer[offset + 7] = (byte)(value >> 56);
+        }
+
         private static void WriteUInt16(byte[] buffer, int offset, ushort value)
         {
             buffer[offset] = (byte)value;
@@ -365,6 +465,19 @@ namespace RobotTwin.CoreSim.IPC
                 | (buffer[offset + 1] << 8)
                 | (buffer[offset + 2] << 16)
                 | (buffer[offset + 3] << 24));
+        }
+
+        private static ulong ReadUInt64(byte[] buffer, int offset)
+        {
+            return (ulong)(
+                buffer[offset]
+                | ((ulong)buffer[offset + 1] << 8)
+                | ((ulong)buffer[offset + 2] << 16)
+                | ((ulong)buffer[offset + 3] << 24)
+                | ((ulong)buffer[offset + 4] << 32)
+                | ((ulong)buffer[offset + 5] << 40)
+                | ((ulong)buffer[offset + 6] << 48)
+                | ((ulong)buffer[offset + 7] << 56));
         }
 
         private static ushort ReadUInt16(byte[] buffer, int offset)
