@@ -2334,7 +2334,7 @@ namespace RobotTwin.UI
 
             string fqbn = ResolveFqbn(targetBoard);
             string codeRoot = GetCodeRoot(_codeTargetComponentId);
-            string outDir = Path.Combine(codeRoot, "build");
+            string outDir = Path.Combine(codeRoot, "builds");
             Directory.CreateDirectory(outDir);
             string outPath = Path.Combine(outDir, $"{Path.GetFileNameWithoutExtension(inoPath)}.bvm");
 
@@ -6939,7 +6939,8 @@ namespace RobotTwin.UI
         private static bool HasCustomLayout(ComponentCatalog.Item item)
         {
             return (item.PinLayout != null && item.PinLayout.Count > 0) ||
-                   (item.Labels != null && item.Labels.Count > 0);
+                   (item.Labels != null && item.Labels.Count > 0) ||
+                   (item.Shapes != null && item.Shapes.Count > 0);
         }
 
         private void BuildCustomComponentVisual(VisualElement root, ComponentSpec spec, ComponentCatalog.Item item)
@@ -6995,6 +6996,24 @@ namespace RobotTwin.UI
                     body.Add(label);
                 }
             }
+            bool hasShapes = item.Shapes != null && item.Shapes.Count > 0;
+            if (hasShapes)
+            {
+                foreach (var shape in item.Shapes)
+                {
+                    if (string.IsNullOrWhiteSpace(shape.Type)) continue;
+                    var shapePos = ResolveLayoutPosition(shape.Position, size);
+                    var shapeSize = ResolveLayoutSize(new Vector2(shape.Width, shape.Height), size);
+                    var element = new LayoutShapeVisual(shape);
+                    element.AddToClassList("custom-shape");
+                    element.style.position = Position.Absolute;
+                    element.style.left = shapePos.x - shapeSize.x * 0.5f;
+                    element.style.top = shapePos.y - shapeSize.y * 0.5f;
+                    element.style.width = Mathf.Max(6f, shapeSize.x);
+                    element.style.height = Mathf.Max(6f, shapeSize.y);
+                    body.Add(element);
+                }
+            }
             else
             {
                 var defaultLabel = new Label(spec.Id);
@@ -7007,6 +7026,15 @@ namespace RobotTwin.UI
                 defaultLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
                 body.Add(defaultLabel);
             }
+        }
+
+        private static Vector2 ResolveLayoutSize(Vector2 raw, Vector2 size)
+        {
+            if (raw.x >= 0f && raw.x <= 1f && raw.y >= 0f && raw.y <= 1f)
+            {
+                return new Vector2(raw.x * size.x, raw.y * size.y);
+            }
+            return raw;
         }
 
         private static Vector2 ResolveLayoutPosition(Vector2 raw, Vector2 size)
@@ -7042,6 +7070,92 @@ namespace RobotTwin.UI
                 case "center":
                     label.style.unityTextAlign = TextAnchor.MiddleCenter;
                     break;
+            }
+        }
+
+        private sealed class LayoutShapeVisual : VisualElement
+        {
+            private readonly ComponentCatalog.ShapeLayout _shape;
+            private readonly Label _textLabel;
+
+            public LayoutShapeVisual(ComponentCatalog.ShapeLayout shape)
+            {
+                _shape = shape;
+                pickingMode = PickingMode.Ignore;
+                generateVisualContent += OnGenerateVisualContent;
+
+                if (string.Equals(shape.Type, "Text", StringComparison.OrdinalIgnoreCase))
+                {
+                    _textLabel = new Label(shape.Text ?? string.Empty);
+                    _textLabel.AddToClassList("custom-shape-text");
+                    _textLabel.style.flexGrow = 1f;
+                    _textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                    Add(_textLabel);
+                }
+            }
+
+            private void OnGenerateVisualContent(MeshGenerationContext ctx)
+            {
+                var painter = ctx.painter2D;
+                var rect = contentRect;
+                painter.lineWidth = 1f;
+                painter.strokeColor = new Color(0.4f, 0.75f, 1f, 0.85f);
+                painter.fillColor = new Color(0.12f, 0.18f, 0.28f, 0.25f);
+
+                string type = _shape.Type ?? string.Empty;
+                if (type.Equals("Text", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+                if (type.Equals("Line", StringComparison.OrdinalIgnoreCase))
+                {
+                    float midY = rect.y + rect.height * 0.5f;
+                    painter.BeginPath();
+                    painter.MoveTo(new Vector2(rect.x, midY));
+                    painter.LineTo(new Vector2(rect.x + rect.width, midY));
+                    painter.Stroke();
+                    return;
+                }
+                if (type.Equals("Triangle", StringComparison.OrdinalIgnoreCase))
+                {
+                    var p1 = new Vector2(rect.x + rect.width * 0.5f, rect.y);
+                    var p2 = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                    var p3 = new Vector2(rect.x, rect.y + rect.height);
+                    painter.BeginPath();
+                    painter.MoveTo(p1);
+                    painter.LineTo(p2);
+                    painter.LineTo(p3);
+                    painter.ClosePath();
+                    painter.Fill();
+                    painter.Stroke();
+                    return;
+                }
+                if (type.Equals("Circle", StringComparison.OrdinalIgnoreCase))
+                {
+                    var center = rect.center;
+                    float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
+                    int segments = 32;
+                    painter.BeginPath();
+                    painter.MoveTo(center + new Vector2(radius, 0f));
+                    for (int i = 1; i <= segments; i++)
+                    {
+                        float angle = (Mathf.PI * 2f) * (i / (float)segments);
+                        painter.LineTo(center + new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius));
+                    }
+                    painter.ClosePath();
+                    painter.Fill();
+                    painter.Stroke();
+                    return;
+                }
+
+                painter.BeginPath();
+                painter.MoveTo(new Vector2(rect.x, rect.y));
+                painter.LineTo(new Vector2(rect.x + rect.width, rect.y));
+                painter.LineTo(new Vector2(rect.x + rect.width, rect.y + rect.height));
+                painter.LineTo(new Vector2(rect.x, rect.y + rect.height));
+                painter.ClosePath();
+                painter.Fill();
+                painter.Stroke();
             }
         }
 
@@ -10905,6 +11019,16 @@ namespace RobotTwin.UI
             public string Align;
         }
 
+        public struct ShapeLayout
+        {
+            public string Id;
+            public string Type;
+            public Vector2 Position;
+            public float Width;
+            public float Height;
+            public string Text;
+        }
+
         public struct Tuning
         {
             public Vector3 Euler;
@@ -10954,6 +11078,7 @@ namespace RobotTwin.UI
             public string Description;
             public string Type;
             public string Symbol;
+            public string SymbolFile;
             public string IconChar;
             public Dictionary<string, string> ElectricalSpecs;
             public Dictionary<string, string> DefaultProperties;
@@ -10961,6 +11086,7 @@ namespace RobotTwin.UI
             public Vector2 Size2D;
             public List<PinLayout> PinLayout;
             public List<LabelLayout> Labels;
+            public List<ShapeLayout> Shapes;
             public bool HasTuning;
             public Tuning Tuning;
             public string ModelFile;
@@ -11205,6 +11331,7 @@ namespace RobotTwin.UI
             var pins = BuildPinList(def);
             var pinLayout = ToPinLayout(def.pinLayout);
             var labels = ToLabelLayout(def.labels);
+            var shapes = ToShapeLayout(def.shapes);
 
             item = new Item
             {
@@ -11213,6 +11340,7 @@ namespace RobotTwin.UI
                 Description = def.description ?? string.Empty,
                 Type = def.type,
                 Symbol = string.IsNullOrWhiteSpace(def.symbol) ? "?" : def.symbol,
+                SymbolFile = def.symbolFile ?? string.Empty,
                 IconChar = string.IsNullOrWhiteSpace(def.iconChar) ? "?" : def.iconChar,
                 ElectricalSpecs = ToDictionary(def.specs),
                 DefaultProperties = ToDictionary(def.defaults),
@@ -11220,6 +11348,7 @@ namespace RobotTwin.UI
                 Size2D = def.size2D.x > 0f && def.size2D.y > 0f ? def.size2D : Vector2.zero,
                 PinLayout = pinLayout,
                 Labels = labels,
+                Shapes = shapes,
                 ModelFile = def.modelFile ?? string.Empty,
                 PhysicsScript = def.physicsScript ?? string.Empty,
                 PartOverrides = ToPartOverrides(def.parts),
@@ -11296,6 +11425,26 @@ namespace RobotTwin.UI
             return list;
         }
 
+        private static List<ShapeLayout> ToShapeLayout(ShapeLayoutEntry[] entries)
+        {
+            var list = new List<ShapeLayout>();
+            if (entries == null) return list;
+            foreach (var entry in entries)
+            {
+                if (entry == null || string.IsNullOrWhiteSpace(entry.type)) continue;
+                list.Add(new ShapeLayout
+                {
+                    Id = entry.id ?? string.Empty,
+                    Type = entry.type,
+                    Position = new Vector2(entry.x, entry.y),
+                    Width = entry.width,
+                    Height = entry.height,
+                    Text = entry.text ?? string.Empty
+                });
+            }
+            return list;
+        }
+
         private static List<PartOverride> ToPartOverrides(PartOverrideEntry[] entries)
         {
             var list = new List<PartOverride>();
@@ -11354,6 +11503,7 @@ namespace RobotTwin.UI
             public string description;
             public string type;
             public string symbol;
+            public string symbolFile;
             public string iconChar;
             public int order;
             public string[] pins;
@@ -11362,6 +11512,7 @@ namespace RobotTwin.UI
             public Vector2 size2D;
             public PinLayoutEntry[] pinLayout;
             public LabelLayoutEntry[] labels;
+            public ShapeLayoutEntry[] shapes;
             public ComponentTuningEntry tuning;
             public string modelFile;
             public string physicsScript;
@@ -11393,6 +11544,18 @@ namespace RobotTwin.UI
             public float y;
             public int size;
             public string align;
+        }
+
+        [System.Serializable]
+        private class ShapeLayoutEntry
+        {
+            public string id;
+            public string type;
+            public float x;
+            public float y;
+            public float width;
+            public float height;
+            public string text;
         }
 
         [System.Serializable]
@@ -11485,6 +11648,7 @@ namespace RobotTwin.UI
                     Description = "Annotation",
                     Type = "TextNote",
                     Symbol = "T",
+                    SymbolFile = string.Empty,
                     IconChar = "T",
                     ElectricalSpecs = new Dictionary<string, string>(),
                     DefaultProperties = new Dictionary<string, string>(),
@@ -11501,6 +11665,7 @@ namespace RobotTwin.UI
                 Description = type,
                 Type = type,
                 Symbol = "U",
+                SymbolFile = string.Empty,
                 IconChar = "U",
                 ElectricalSpecs = new Dictionary<string, string>(),
                 DefaultProperties = new Dictionary<string, string>(),

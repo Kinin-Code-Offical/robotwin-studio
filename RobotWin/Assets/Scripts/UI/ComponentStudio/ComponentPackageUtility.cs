@@ -208,7 +208,7 @@ namespace RobotTwin.UI
             }
         }
 
-        public static void SavePackage(string packagePath, string definitionJson, string modelSourcePath)
+        public static void SavePackage(string packagePath, string definitionJson, string modelSourcePath, IEnumerable<string> extraAssets = null)
         {
             if (string.IsNullOrWhiteSpace(packagePath)) return;
             if (definitionJson == null) definitionJson = string.Empty;
@@ -226,9 +226,23 @@ namespace RobotTwin.UI
                     {
                         WriteTextEntry(archive, DefinitionFileName, definitionJson);
 
+                        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                         foreach (var asset in CollectAssets(modelSourcePath))
                         {
-                            AddFileEntry(archive, asset.SourcePath, asset.EntryPath);
+                            if (seen.Add(asset.EntryPath))
+                            {
+                                AddFileEntry(archive, asset.SourcePath, asset.EntryPath);
+                            }
+                        }
+                        if (extraAssets != null)
+                        {
+                            foreach (var assetPath in extraAssets)
+                            {
+                                if (string.IsNullOrWhiteSpace(assetPath) || !File.Exists(assetPath)) continue;
+                                string entry = BuildAssetEntryName(Path.GetFileName(assetPath));
+                                if (string.IsNullOrWhiteSpace(entry) || !seen.Add(entry)) continue;
+                                AddFileEntry(archive, assetPath, entry);
+                            }
                         }
                     }
                 }

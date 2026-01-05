@@ -16,6 +16,7 @@ $Sources = @(
     "FirmwareEngine/main.cpp",
     "FirmwareEngine/PipeManager.cpp",
     "FirmwareEngine/VirtualArduino.cpp",
+    "FirmwareEngine/BoardProfile.cpp",
     "NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 
@@ -52,6 +53,22 @@ $cmd = @("g++") + $Flags + @("-o", $OutputExe) + $Sources + $IncludeArgs + $Reso
 & $cmd[0] @($cmd[1..($cmd.Length - 1)]) 2>&1 | Tee-Object -FilePath $LogPath -Append
 if ($LASTEXITCODE -ne 0) { Write-Error "Firmware build failed. See $LogPath"; exit 1 }
 
+$CompileDbPath = Join-Path $OutDir "compile_commands.json"
+$CompileEntries = @()
+$RepoRootPath = $RepoRoot.Path
+$IncludeArgsAbs = $IncludeDirs | ForEach-Object { "-I" + (Join-Path $RepoRootPath $_) }
+foreach ($Source in $Sources) {
+    $AbsSource = Join-Path $RepoRootPath $Source
+    $CompileCmd = @("g++") + $Flags + @("-c", $AbsSource) + $IncludeArgsAbs
+    $CompileEntries += @{
+        directory = $RepoRootPath
+        command = ($CompileCmd -join " ")
+        file = $AbsSource
+    }
+}
+$CompileEntries | ConvertTo-Json -Depth 4 | Set-Content -Path $CompileDbPath
+
 Write-Host "[Firmware] Output: $OutputExe" -ForegroundColor Green
 Write-Host "[Firmware] Log: $LogPath" -ForegroundColor Green
+Write-Host "[Firmware] Compile DB: $CompileDbPath" -ForegroundColor Green
 Pop-Location

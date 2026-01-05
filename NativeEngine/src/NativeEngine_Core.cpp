@@ -10,12 +10,12 @@
 #include <vector>
 
 #include "../include/Bridge/UnityInterface.h"
-#include "../include/Core/AvrComponent.h"
-#include "../include/Core/BasicComponents.h"
-#include "../include/Core/BvmFormat.hpp"
-#include "../include/Core/CircuitContext.h"
-#include "../include/Core/Diode.h"
-#include "../include/Core/HexLoader.h"
+#include "../include/Circuit/AvrComponent.h"
+#include "../include/Circuit/BasicComponents.h"
+#include "../include/Circuit/BvmFormat.hpp"
+#include "../include/Circuit/CircuitContext.h"
+#include "../include/Circuit/Diode.h"
+#include "../include/Circuit/HexLoader.h"
 #include "../include/Physics/PhysicsWorld.h"
 
 #include "../include/MCU/ATmega328P_ISA.h"
@@ -396,6 +396,9 @@ UNITY_EXPORT void Native_Connect(int compId, int pinIndex, int nodeId) {
     if (static_cast<int>(c->GetId()) == compId) {
       c->Connect(static_cast<std::uint8_t>(pinIndex),
                  static_cast<std::uint32_t>(nodeId));
+      /* The above code is written in C++ and it appears to be incrementing the `tick` variable in the
+      `g_sharedState` object by 1. */
+      /* The above code is incrementing the `tick` variable in the `g_sharedState` object by 1. */
       break;
     }
   }
@@ -404,7 +407,7 @@ UNITY_EXPORT void Native_Connect(int compId, int pinIndex, int nodeId) {
 UNITY_EXPORT void Native_Step(float dt) {
   GetContext().Step(static_cast<double>(dt));
   UpdateSharedState(GetContext());
-  g_sharedState.tick++;
+  g_sharedState.tick = g_sharedState.tick + 1;
 }
 
 UNITY_EXPORT float Native_GetVoltage(int nodeId) {

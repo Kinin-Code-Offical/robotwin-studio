@@ -15,6 +15,7 @@ CoreSim is the deterministic simulation engine implemented in pure C#.
 - `CoreSim/src/RobotTwin.CoreSim/Runtime`: simulation runtime and ticking.
 - `CoreSim/src/RobotTwin.CoreSim/Specs`: model specs and versioning.
 - `CoreSim/src/RobotTwin.CoreSim/Serialization`: save/load pipeline.
+- `CoreSim/src/RobotTwin.CoreSim/IPC`: firmware pipe client (binary protocol).
 
 ## Integration Rules
 

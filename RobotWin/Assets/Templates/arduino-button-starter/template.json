@@ -1,0 +1,8 @@
+{
+  "TemplateId": "template.arduino-button-starter",
+  "DisplayName": "Arduino Button Starter",
+  "Description": "UNO + LED + Button + Battery starter circuit.",
+  "SystemType": "CircuitOnly",
+  "ID": "template.arduino-button-starter",
+  "Name": "Arduino Button Starter"
+}

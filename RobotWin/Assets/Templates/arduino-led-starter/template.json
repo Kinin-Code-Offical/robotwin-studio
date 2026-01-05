@@ -1,0 +1,8 @@
+{
+  "TemplateId": "template.arduino-led-starter",
+  "DisplayName": "Arduino LED Starter",
+  "Description": "UNO + LED + Resistor + Battery starter circuit.",
+  "SystemType": "CircuitOnly",
+  "ID": "template.arduino-led-starter",
+  "Name": "Arduino LED Starter"
+}

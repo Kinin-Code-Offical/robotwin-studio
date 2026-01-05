@@ -2,97 +2,68 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
     name: Build & Test (Windows)
     runs-on: windows-latest
-    
+
     steps:
-    - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: 9.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
 
-    - name: Verify Context Pack (Shell Check)
-      shell: pwsh
-      run: |
-        $OutDir = Join-Path $env:GITHUB_WORKSPACE "docs/antigravity/context_exports"
-        Write-Host "Context export directory: $OutDir"
-        # Just verification that path construction works in pwsh
+      - name: Guardrail - Check Ignored Files
+        shell: pwsh
+        run: |
+          # Fail if workspace_snapshot is tracked
+          $snap = git ls-files workspace_snapshot.txt
+          if ($snap) {
+              Write-Error "CRITICAL: workspace_snapshot.txt is tracked!"
+              exit 1
+          }
+          Write-Host "Guardrail passed: No forbidden files tracked."
 
-    - name: Guardrail - Check Ignored Files
-      shell: pwsh
-      run: |
-        # Fail if .gpt is tracked
-        $gpt = git ls-files .gpt
-        if ($gpt) {
-            Write-Error "CRITICAL: .gpt folder is tracked! It must be gitignored. Found: $gpt"
+      - name: Verify UXML validity
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/validate_uxml.ps1
+
+      - name: Verify Unity plugins sync
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/update_unity_plugins.ps1 -Check
+
+      - name: Verify repo snapshot (README tree + repo_files)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/update_repo_snapshot.ps1
+          git diff --exit-code
+
+      - name: Verify no tracked build artifacts
+        run: |
+          $artifacts = git ls-files | Select-String -Pattern "(\\bin\\)|(\\obj\\)|(TestResults)" -AllMatches
+          if ($artifacts) {
+            Write-Error "Found tracked build artifacts. These must be gitignored:`n$artifacts"
+          }
+        shell: pwsh
+
+      - name: Verify global.json existence
+        run: |
+          if (!(Test-Path "global.json")) {
+            Write-Error "global.json is missing. Please ensure the .NET SDK is pinned."
             exit 1
-        }
-        # Fail if workspace_snapshot is tracked
-        $snap = git ls-files workspace_snapshot.txt
-        if ($snap) {
-            Write-Error "CRITICAL: workspace_snapshot.txt is tracked!"
-            exit 1
-        }
-        Write-Host "Guardrail passed: No forbidden files tracked."
+          }
+        shell: powershell
 
-    - name: Verify context pack script
-      shell: pwsh
-      run: |
-        $outDir = Join-Path $env:RUNNER_TEMP "context_pack"
-        pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/export_context_pack.ps1 -Mode MIN -OutDir $outDir -SkipGh
+      - name: Restore CoreSim
+        run: dotnet restore CoreSim/CoreSim.sln
 
-    - name: Verify UXML validity
-      shell: pwsh
-      run: |
-        ./tools/validate_uxml.ps1
-
-    - name: Verify Unity plugins sync
-      shell: pwsh
-      run: |
-        pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/update_unity_plugins.ps1 -Check
-
-    - name: Verify repo snapshot (README tree + repo_files)
-      shell: pwsh
-      run: |
-        pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/update_repo_snapshot.ps1
-        git diff --exit-code
-
-    - name: Verify no tracked build artifacts
-      run: |
-        $artifacts = git ls-files | Select-String -Pattern "(\\bin\\)|(\\obj\\)|(TestResults)" -AllMatches
-        if ($artifacts) {
-          Write-Error "Found tracked build artifacts. These must be gitignored:`n$artifacts"
-        }
-      shell: pwsh
-
-    - name: Verify no tracked context exports
-      run: |
-        $exports = git ls-files docs/antigravity/context_exports
-        if ($exports) {
-          Write-Error "Found tracked context exports. These must be gitignored:`n$exports"
-        }
-      shell: pwsh
-
-    - name: Verify global.json existence
-      run: |
-        if (!(Test-Path "global.json")) {
-          Write-Error "global.json is missing. Please ensure the .NET SDK is pinned."
-          exit 1
-        }
-      shell: powershell
-    
-
-
-    - name: Restore CoreSim
-      run: dotnet restore CoreSim/CoreSim.sln
-      
-    - name: Test CoreSim
-      run: dotnet test CoreSim/CoreSim.sln --no-restore --verbosity normal
+      - name: Test CoreSim
+        run: dotnet test CoreSim/CoreSim.sln --no-restore --verbosity normal

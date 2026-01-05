@@ -1,0 +1,21 @@
+title: "Idea: "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for early-stage ideas that aren't ready to be filed as a feature request issue yet.
+  - type: textarea
+    attributes:
+      label: Idea
+      placeholder: "Add a small tutorial project wizard for first-time users."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Why
+      description: What problem does it solve?
+  - type: textarea
+    attributes:
+      label: Notes
+      description: Links, sketches, or constraints.

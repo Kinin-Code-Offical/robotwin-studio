@@ -1,0 +1,8 @@
+{
+  "TemplateId": "template.resistor-overload-demo",
+  "DisplayName": "Resistor Overload Demo",
+  "Description": "Forces a low-ohm resistor to overheat so you can see smoke and error states in Run Mode.",
+  "SystemType": "CircuitOnly",
+  "ID": "template.resistor-overload-demo",
+  "Name": "Resistor Overload Demo"
+}

@@ -30,11 +30,3 @@ body:
         - Other
     validations:
       required: true
-  - type: dropdown
-    id: model-tier
-    attributes:
-      label: Suggested Model Tier for Fix
-      options:
-        - LIGHT
-        - PRO
-        - HEAVY

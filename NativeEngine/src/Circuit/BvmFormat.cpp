@@ -1,4 +1,4 @@
-#include "Core/BvmFormat.hpp"
+#include "Circuit/BvmFormat.hpp"
 #include <cstring>
 
 namespace bvm

@@ -1,5 +1,5 @@
-#include "../../include/Core/CircuitContext.h"
-#include "../../include/Core/BasicComponents.h"
+#include "../../include/Circuit/CircuitContext.h"
+#include "../../include/Circuit/BasicComponents.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>

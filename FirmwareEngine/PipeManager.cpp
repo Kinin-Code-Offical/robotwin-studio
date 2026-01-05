@@ -16,6 +16,27 @@ namespace firmware
             }
             return L"\\\\.\\pipe\\" + name;
         }
+
+        std::string ReadFixedString(const char* data, std::size_t size)
+        {
+            if (!data || size == 0) return {};
+            std::size_t len = 0;
+            while (len < size && data[len] != '\0')
+            {
+                len++;
+            }
+            return std::string(data, len);
+        }
+
+        void WriteFixedString(char* dst, std::size_t size, const std::string& value)
+        {
+            if (!dst || size == 0) return;
+            std::memset(dst, 0, size);
+            if (value.empty()) return;
+            std::size_t copy = value.size();
+            if (copy >= size) copy = size - 1;
+            std::memcpy(dst, value.data(), copy);
+        }
     }
 
     PipeManager::PipeManager() = default;
@@ -70,47 +91,57 @@ namespace firmware
         HelloAckPayload payload{};
         payload.flags = flags;
         payload.pin_count = static_cast<std::uint32_t>(kPinCount);
+        payload.board_id_size = static_cast<std::uint32_t>(kBoardIdSize);
+        payload.analog_count = static_cast<std::uint32_t>(kAnalogCount);
         WritePacket(MessageType::HelloAck, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
     }
 
-    void PipeManager::SendOutputState(std::uint64_t tickCount, const std::uint8_t* pins, std::size_t count)
+    void PipeManager::SendOutputState(const std::string& boardId, std::uint64_t tickCount, const std::uint8_t* pins, std::size_t count)
     {
         if (!pins || count < kPinCount) return;
         OutputStatePayload payload{};
+        WriteFixedString(payload.board_id, kBoardIdSize, boardId);
         payload.tick_count = tickCount;
         std::memcpy(payload.pins, pins, kPinCount);
         WritePacket(MessageType::OutputState, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
     }
 
-    void PipeManager::SendSerial(const std::uint8_t* data, std::size_t size)
+    void PipeManager::SendSerial(const std::string& boardId, const std::uint8_t* data, std::size_t size)
     {
         if (!data || size == 0) return;
-        WritePacket(MessageType::Serial, data, size);
+        std::vector<std::uint8_t> payload;
+        payload.resize(kBoardIdSize + size);
+        WriteFixedString(reinterpret_cast<char*>(payload.data()), kBoardIdSize, boardId);
+        std::memcpy(payload.data() + kBoardIdSize, data, size);
+        WritePacket(MessageType::Serial, payload.data(), payload.size());
     }
 
-    void PipeManager::SendStatus(std::uint64_t tickCount)
+    void PipeManager::SendStatus(const std::string& boardId, std::uint64_t tickCount)
     {
         StatusPayload payload{};
+        WriteFixedString(payload.board_id, kBoardIdSize, boardId);
         payload.tick_count = tickCount;
         WritePacket(MessageType::Status, reinterpret_cast<const std::uint8_t*>(&payload), sizeof(payload));
     }
 
-    void PipeManager::SendLog(LogLevel level, const std::string& text)
+    void PipeManager::SendLog(const std::string& boardId, LogLevel level, const std::string& text)
     {
         if (text.empty()) return;
         std::vector<std::uint8_t> payload;
         payload.resize(sizeof(LogPayload) + text.size());
         auto* header = reinterpret_cast<LogPayload*>(payload.data());
+        WriteFixedString(header->board_id, kBoardIdSize, boardId);
         header->level = static_cast<std::uint8_t>(level);
         std::memcpy(payload.data() + sizeof(LogPayload), text.data(), text.size());
         WritePacket(MessageType::Log, payload.data(), payload.size());
     }
 
-    void PipeManager::SendError(std::uint32_t code, const std::string& text)
+    void PipeManager::SendError(const std::string& boardId, std::uint32_t code, const std::string& text)
     {
         std::vector<std::uint8_t> payload;
         payload.resize(sizeof(ErrorPayload) + text.size());
         auto* header = reinterpret_cast<ErrorPayload*>(payload.data());
+        WriteFixedString(header->board_id, kBoardIdSize, boardId);
         header->code = code;
         if (!text.empty())
         {
@@ -139,7 +170,7 @@ namespace firmware
 
             if (header.magic != kProtocolMagic)
             {
-                SendError(1, "Invalid protocol magic");
+                SendError("system", 1, "Invalid protocol magic");
                 continue;
             }
 
@@ -152,9 +183,17 @@ namespace firmware
 
             if (type == MessageType::LoadBvm)
             {
+                if (payload.size() < sizeof(LoadBvmHeader))
+                {
+                    SendError("system", 2, "Invalid load payload");
+                    continue;
+                }
+                auto* header = reinterpret_cast<const LoadBvmHeader*>(payload.data());
                 PipeCommand cmd;
                 cmd.type = PipeCommand::Type::Load;
-                cmd.data = std::move(payload);
+                cmd.boardId = ReadFixedString(header->board_id, kBoardIdSize);
+                cmd.boardProfile = ReadFixedString(header->board_profile, kBoardIdSize);
+                cmd.data.assign(payload.begin() + sizeof(LoadBvmHeader), payload.end());
                 Enqueue(cmd);
                 continue;
             }
@@ -163,14 +202,17 @@ namespace firmware
             {
                 if (payload.size() < sizeof(StepPayload))
                 {
-                    SendError(2, "Invalid step payload");
+                    SendError("system", 2, "Invalid step payload");
                     continue;
                 }
                 const auto* step = reinterpret_cast<const StepPayload*>(payload.data());
                 PipeCommand cmd;
                 cmd.type = PipeCommand::Type::Step;
+                cmd.boardId = ReadFixedString(step->board_id, kBoardIdSize);
                 cmd.deltaMicros = step->delta_micros;
                 std::memcpy(cmd.pins, step->pins, kPinCount);
+                cmd.analogCount = kAnalogCount;
+                std::memcpy(cmd.analog, step->analog, sizeof(step->analog));
                 Enqueue(cmd);
                 continue;
             }

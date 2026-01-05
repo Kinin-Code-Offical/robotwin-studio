@@ -1,8 +1,12 @@
 const unity = require('../UnityBridge');
+const shouldRun = process.env.UNITY_E2E === '1';
+const runDescribe = shouldRun ? describe : describe.skip;
+const runTest = shouldRun ? test : test.skip;
 
-describe('RoboTwin UI Integration Tests', () => {
+runDescribe('RoboTwin UI Integration Tests', () => {
 
     beforeAll(async () => {
+        if (!shouldRun) return;
         await unity.connect();
     });
 
@@ -10,12 +14,12 @@ describe('RoboTwin UI Integration Tests', () => {
         unity.disconnect();
     });
 
-    test('User can launch application and see Dashboard', async () => {
+    runTest('User can launch application and see Dashboard', async () => {
         const scene = await unity.queryState('CurrentScene');
         expect(scene).toBeDefined();
     });
 
-    test('User can create a new project', async () => {
+    runTest('User can create a new project', async () => {
         await unity.sendCommand('CLICK', '#NewProjectBtn');
         await unity.takeScreenshot('step1_project_created.png');
         
@@ -23,7 +27,7 @@ describe('RoboTwin UI Integration Tests', () => {
         expect(scene).toBe('CircuitStudio');
     });
 
-    test('User can toggle Run Mode', async () => {
+    runTest('User can toggle Run Mode', async () => {
         await unity.sendCommand('CLICK', '#toolbar-sim'); // The lightning bolt icon
         await unity.takeScreenshot('step2_runmode_active.png');
         

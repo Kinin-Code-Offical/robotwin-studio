@@ -9,6 +9,8 @@ namespace firmware
     constexpr std::uint16_t kProtocolMajor = 1;
     constexpr std::uint16_t kProtocolMinor = 0;
     constexpr std::size_t kPinCount = 20;
+    constexpr std::size_t kAnalogCount = 16;
+    constexpr std::size_t kBoardIdSize = 64;
 
     enum class MessageType : std::uint16_t
     {
@@ -46,38 +48,54 @@ namespace firmware
     {
         std::uint32_t flags;
         std::uint32_t pin_count;
+        std::uint32_t board_id_size;
+        std::uint32_t analog_count;
     };
 
     struct HelloAckPayload
     {
         std::uint32_t flags;
         std::uint32_t pin_count;
+        std::uint32_t board_id_size;
+        std::uint32_t analog_count;
     };
 
     struct StepPayload
     {
+        char board_id[kBoardIdSize];
         std::uint32_t delta_micros;
         std::uint8_t pins[kPinCount];
+        std::uint16_t analog[kAnalogCount];
+    };
+
+    struct LoadBvmHeader
+    {
+        char board_id[kBoardIdSize];
+        char board_profile[kBoardIdSize];
     };
 
     struct OutputStatePayload
     {
+        char board_id[kBoardIdSize];
         std::uint64_t tick_count;
         std::uint8_t pins[kPinCount];
     };
 
     struct StatusPayload
     {
+        char board_id[kBoardIdSize];
         std::uint64_t tick_count;
     };
 
     struct ErrorPayload
     {
+        char board_id[kBoardIdSize];
         std::uint32_t code;
     };
 
     struct LogPayload
     {
+        char board_id[kBoardIdSize];
         std::uint8_t level;
     };
 #pragma pack(pop)

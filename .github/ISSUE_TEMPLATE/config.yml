@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Support (Discussions)
+    url: https://github.com/Kinin-Code-Offical/robotwin-studio/discussions
+    about: Ask questions, get help with setup, and discuss usage.
+  - name: Documentation
+    url: https://github.com/Kinin-Code-Offical/robotwin-studio/tree/main/docs
+    about: Read setup, architecture, and tooling docs.

@@ -1211,6 +1211,34 @@ namespace RobotTwin.UI
             {
                 foreach (var dir in Directory.EnumerateDirectories(root))
                 {
+                    var specPath = Path.Combine(dir, "template.json");
+                    if (File.Exists(specPath))
+                    {
+                        try
+                        {
+                            var specJson = File.ReadAllText(specPath);
+                            var spec = SimulationSerializer.Deserialize<TemplateSpec>(specJson);
+                            if (spec != null && !string.IsNullOrWhiteSpace(spec.DisplayName))
+                            {
+                                templates.Add(new Template
+                                {
+                                    Title = spec.DisplayName,
+                                    Description = spec.Description ?? string.Empty,
+                                    Tag = ResolveTemplateTagFromSpec(spec),
+                                    Difficulty = string.Empty,
+                                    IconClass = string.Empty,
+                                    SourcePath = dir,
+                                    AccentColor = Color.gray
+                                });
+                                continue;
+                            }
+                        }
+                        catch
+                        {
+                            // Fall back to metadata.json
+                        }
+                    }
+
                     var metadataPath = Path.Combine(dir, "metadata.json");
                     if (!File.Exists(metadataPath)) continue;
 
@@ -1224,14 +1252,20 @@ namespace RobotTwin.UI
                         continue;
                     }
 
-                    if (meta == null || string.IsNullOrWhiteSpace(meta.name)) continue;
+                    if (meta == null) continue;
+
+                    string templateName = FirstNonEmpty(meta.name, meta.Name, meta.displayName, meta.DisplayName, meta.title, meta.Title);
+                    if (string.IsNullOrWhiteSpace(templateName)) continue;
+                    string description = FirstNonEmpty(meta.description, meta.Description);
+                    string tag = FirstNonEmpty(meta.tag, meta.Tag);
+                    string difficulty = FirstNonEmpty(meta.difficulty, meta.Difficulty);
 
                     templates.Add(new Template
                     {
-                        Title = meta.name,
-                        Description = meta.description ?? string.Empty,
-                        Tag = meta.tag ?? string.Empty,
-                        Difficulty = meta.difficulty ?? string.Empty,
+                        Title = templateName,
+                        Description = description ?? string.Empty,
+                        Tag = tag ?? string.Empty,
+                        Difficulty = difficulty ?? string.Empty,
                         IconClass = string.Empty,
                         SourcePath = dir,
                         AccentColor = Color.gray
@@ -1297,6 +1331,25 @@ namespace RobotTwin.UI
             return template;
         }
 
+        private static string ResolveTemplateTagFromSpec(TemplateSpec spec)
+        {
+            if (spec == null || string.IsNullOrWhiteSpace(spec.SystemType)) return string.Empty;
+            string systemType = spec.SystemType.Trim().ToUpperInvariant();
+            if (systemType == "ROBOT" || systemType == "ROBOTICS")
+            {
+                return "ROBOTICS";
+            }
+            if (systemType == "CIRCUITONLY")
+            {
+                return "PCB DESIGN";
+            }
+            if (systemType == "MECHATRONIC")
+            {
+                return "ROBOTICS";
+            }
+            return systemType;
+        }
+
         private string ResolveTemplateTag(string title)
         {
             string lower = (title ?? string.Empty).ToLowerInvariant();
@@ -1353,9 +1406,27 @@ namespace RobotTwin.UI
         private class TemplateMetadata
         {
             public string name;
+            public string Name;
+            public string displayName;
+            public string DisplayName;
+            public string title;
+            public string Title;
             public string description;
+            public string Description;
             public string tag;
+            public string Tag;
             public string difficulty;
+            public string Difficulty;
+        }
+
+        private static string FirstNonEmpty(params string[] candidates)
+        {
+            if (candidates == null) return string.Empty;
+            foreach (var value in candidates)
+            {
+                if (!string.IsNullOrWhiteSpace(value)) return value;
+            }
+            return string.Empty;
         }
 
         private void PopulateProjects()
@@ -1724,6 +1795,7 @@ namespace RobotTwin.UI
                 physicsScript = string.Empty,
                 type = "Generic",
                 symbol = "U",
+                symbolFile = string.Empty,
                 iconChar = "U",
                 order = 1000,
                 size2D = new Vector2(CircuitLayoutSizing.DefaultComponentWidth, CircuitLayoutSizing.DefaultComponentHeight),
@@ -1761,6 +1833,7 @@ namespace RobotTwin.UI
                         align = "center"
                     }
                 },
+                shapes = Array.Empty<ShapeLayoutPayload>(),
                 specs = Array.Empty<ComponentKeyValue>(),
                 defaults = Array.Empty<ComponentKeyValue>(),
                 pins = new[] { "P1", "P2" }
@@ -1776,6 +1849,7 @@ namespace RobotTwin.UI
                 description = item.Description,
                 type = item.Type,
                 symbol = item.Symbol,
+                symbolFile = item.SymbolFile,
                 iconChar = item.IconChar,
                 order = item.Order,
                 pins = item.Pins != null ? item.Pins.ToArray() : Array.Empty<string>(),
@@ -1808,6 +1882,18 @@ namespace RobotTwin.UI
                         align = label.Align
                     }).ToArray()
                     : Array.Empty<LabelLayoutPayload>(),
+                shapes = item.Shapes != null
+                    ? item.Shapes.Select(shape => new ShapeLayoutPayload
+                    {
+                        id = shape.Id,
+                        type = shape.Type,
+                        x = shape.Position.x,
+                        y = shape.Position.y,
+                        width = shape.Width,
+                        height = shape.Height,
+                        text = shape.Text
+                    }).ToArray()
+                    : Array.Empty<ShapeLayoutPayload>(),
                 modelFile = item.ModelFile,
                 physicsScript = item.PhysicsScript
             };
@@ -2047,6 +2133,7 @@ namespace RobotTwin.UI
                 description = GetEditorField("ComponentDescriptionField")?.value ?? string.Empty,
                 physicsScript = GetEditorField("ComponentPhysicsScriptField")?.value ?? string.Empty,
                 symbol = GetEditorField("ComponentSymbolField")?.value ?? string.Empty,
+                symbolFile = string.Empty,
                 iconChar = GetEditorField("ComponentIconField")?.value ?? string.Empty,
                 order = ReadIntFromField("ComponentOrderField", 1000),
                 size2D = new Vector2(
@@ -2914,6 +3001,7 @@ namespace RobotTwin.UI
             public string description;
             public string type;
             public string symbol;
+            public string symbolFile;
             public string iconChar;
             public int order;
             public string[] pins;
@@ -2922,6 +3010,7 @@ namespace RobotTwin.UI
             public Vector2 size2D;
             public PinLayoutPayload[] pinLayout;
             public LabelLayoutPayload[] labels;
+            public ShapeLayoutPayload[] shapes;
             public ComponentTuningPayload tuning;
             public string modelFile;
             public string physicsScript;
@@ -2958,6 +3047,18 @@ namespace RobotTwin.UI
             public float y;
             public int size;
             public string align;
+        }
+
+        [Serializable]
+        private class ShapeLayoutPayload
+        {
+            public string id;
+            public string type;
+            public float x;
+            public float y;
+            public float width;
+            public float height;
+            public string text;
         }
 
         [Serializable]
