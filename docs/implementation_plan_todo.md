@@ -8,8 +8,8 @@ Phase 1: Foundation
 - DONE 107 P0-05 FirmwareEngine full pin output sampling (PinToPort-based)
 - DONE 108 P0-06 Define 0xFF pin output semantics + enforce in clients
 - DONE 109 P0-07 Pipe reader hardening + connection health surfaced
-- 110 P1-08 Decide canonical firmware runtime (authoritative path)
-- 111 P1-09 Decide canonical circuit model (authoritative path)
+- DONE 110 P1-08 Decide canonical firmware runtime (authoritative path)
+- DONE 111 P1-09 Decide canonical circuit model (authoritative path)
 - DONE 112 P1-10 Fix NativeEngine co-sim step ordering (remove one-step lag)
 - DONE 113 P1-11 Clarify Unity stepping contract (Native_Step vs Physics_Step)
 - DONE 114 P1-12 Mark prototype/legacy interfaces (fixed-size SharedState)

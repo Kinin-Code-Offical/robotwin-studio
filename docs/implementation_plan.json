@@ -4,7 +4,22 @@
   "progress": {
     "lastUpdated": "2026-01-05",
     "completedIssues": [
-      103, 104, 105, 106, 107, 108, 109, 112, 113, 114, 129, 141, 147, 150
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      129,
+      141,
+      147,
+      150
     ],
     "notes": [
       {
@@ -163,6 +178,20 @@
         "files": [
           "RobotWin/Assets/Scripts/UI/RunMode/RunModeController.cs"
         ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "decision",
+        "summary": "Canonical firmware + circuit runtime selected",
+        "details": [
+          "FirmwareEngine is the authoritative firmware runtime for correctness.",
+          "NativeEngine is the authoritative circuit/physics solver; Unity/CoreSim virtual paths are fallback/preview."
+        ],
+        "files": [
+          "docs/ARCHITECTURE.md",
+          "docs/implementation_plan.json",
+          "docs/implementation_plan_todo.md"
+        ]
       }
     ]
   },
@@ -176,7 +205,10 @@
           "number": 103,
           "title": "P0-01 Step/Output correlation in RTFW protocol"
         },
-        { "number": 104, "title": "P0-02 CoreSim synchronous stepping API" },
+        {
+          "number": 104,
+          "title": "P0-02 CoreSim synchronous stepping API"
+        },
         {
           "number": 105,
           "title": "P0-03 Unity synchronous stepping API for external firmware"
@@ -271,7 +303,10 @@
       "name": "Phase 3: High Fidelity (The Body)",
       "goal": "Add physical realism: thermal, environmental, and manufacturing imperfections.",
       "issues": [
-        { "number": 161, "title": "HF-01 Thermal Simulation Subsystem" },
+        {
+          "number": 161,
+          "title": "HF-01 Thermal Simulation Subsystem"
+        },
         {
           "number": 163,
           "title": "HF-03 Temperature Dependent Component Models"
@@ -280,8 +315,14 @@
           "number": 162,
           "title": "HF-02 Environmental Link (Wind and Ambient)"
         },
-        { "number": 164, "title": "HF-04 Component Tolerance and Aging" },
-        { "number": 165, "title": "HF-05 Electronic Noise Injection" }
+        {
+          "number": 164,
+          "title": "HF-04 Component Tolerance and Aging"
+        },
+        {
+          "number": 165,
+          "title": "HF-05 Electronic Noise Injection"
+        }
       ]
     },
     {
@@ -289,14 +330,38 @@
       "name": "Phase 4: Raspberry Pi (The Brain)",
       "goal": "Integrate full system emulation (QEMU) for Linux/AI support.",
       "issues": [
-        { "number": 152, "title": "RP-01 QEMU Process Lifecycle Management" },
-        { "number": 159, "title": "RP-08 Shared Memory Transport Layer" },
-        { "number": 153, "title": "RP-02 GPIO and Peripheral Bridge" },
-        { "number": 157, "title": "RP-06 QEMU Display Output to Unity" },
-        { "number": 154, "title": "RP-03 Virtual Camera Injection" },
-        { "number": 158, "title": "RP-07 Network and WiFi Bridge" },
-        { "number": 155, "title": "RP-04 IMU and Sensor Injection" },
-        { "number": 156, "title": "RP-05 Time Synchronization Strategy" }
+        {
+          "number": 152,
+          "title": "RP-01 QEMU Process Lifecycle Management"
+        },
+        {
+          "number": 159,
+          "title": "RP-08 Shared Memory Transport Layer"
+        },
+        {
+          "number": 153,
+          "title": "RP-02 GPIO and Peripheral Bridge"
+        },
+        {
+          "number": 157,
+          "title": "RP-06 QEMU Display Output to Unity"
+        },
+        {
+          "number": 154,
+          "title": "RP-03 Virtual Camera Injection"
+        },
+        {
+          "number": 158,
+          "title": "RP-07 Network and WiFi Bridge"
+        },
+        {
+          "number": 155,
+          "title": "RP-04 IMU and Sensor Injection"
+        },
+        {
+          "number": 156,
+          "title": "RP-05 Time Synchronization Strategy"
+        }
       ]
     },
     {
@@ -312,7 +377,10 @@
           "number": 119,
           "title": "P2-17 NativeEngine adaptive convergence + early exit"
         },
-        { "number": 120, "title": "P2-18 NativeEngine circuit islanding" },
+        {
+          "number": 120,
+          "title": "P2-18 NativeEngine circuit islanding"
+        },
         {
           "number": 121,
           "title": "P2-19 FirmwareEngine SyncInputs allocation optimization"
