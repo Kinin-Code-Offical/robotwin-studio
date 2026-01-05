@@ -66,6 +66,11 @@ graph TD
   - Plotting telemetry graphs.
   - **Note:** The UI is *passive*. If the UI hangs, the simulation continues in the background.
 
+## Authoritative Runtime Choices
+- **Firmware:** FirmwareEngine is the authoritative runtime for firmware execution and timing.
+- **Circuit/Physics:** NativeEngine is the authoritative circuit + physics solver.
+- **Fallbacks:** Unity/CoreSim "virtual" runtimes are treated as fallback or preview paths, not the reference.
+
 ## Key Architectural Patterns
 
 ### Shared Memory Transport (SMT)
