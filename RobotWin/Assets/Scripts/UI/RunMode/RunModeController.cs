@@ -294,6 +294,15 @@ namespace RobotTwin.UI
             // Start
             _host.BeginSimulation();
             _isRunning = true;
+            AppendLog($"[RunMode] Backend: {ResolveBackendLabel()}");
+        }
+
+        private string ResolveBackendLabel()
+        {
+            if (_host == null) return "Unknown";
+            if (_host.UseExternalFirmware) return "FirmwareEngine";
+            if (_host.UseNativeEngine) return "NativeEngine";
+            return "VirtualMcu";
         }
 
         private void StopSimulation()

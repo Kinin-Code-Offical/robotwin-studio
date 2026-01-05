@@ -327,45 +327,7 @@ int main(int argc, char **argv)
 
     auto UpdateOutputs = [&](BoardState &state)
     {
-        std::uint8_t portb = 0;
-        std::uint8_t portc = 0;
-        std::uint8_t portd = 0;
-        std::uint8_t ddrb = 0;
-        std::uint8_t ddrc = 0;
-        std::uint8_t ddrd = 0;
-        state.mcu->SnapshotPorts(portb, portc, portd, ddrb, ddrc, ddrd);
-
-        for (std::size_t i = 0; i < kPinCount; ++i)
-        {
-            state.lastOutputs[i] = 0xFF;
-        }
-
-        for (int bit = 0; bit < 8; ++bit)
-        {
-            std::uint8_t mask = static_cast<std::uint8_t>(1u << bit);
-            if ((ddrd & mask) == 0)
-                continue;
-            bool value = (portd & mask) != 0;
-            state.lastOutputs[bit] = value ? 1 : 0;
-        }
-
-        for (int bit = 0; bit < 6; ++bit)
-        {
-            std::uint8_t mask = static_cast<std::uint8_t>(1u << bit);
-            if ((ddrb & mask) == 0)
-                continue;
-            bool value = (portb & mask) != 0;
-            state.lastOutputs[8 + bit] = value ? 1 : 0;
-        }
-
-        for (int bit = 0; bit < 6; ++bit)
-        {
-            std::uint8_t mask = static_cast<std::uint8_t>(1u << bit);
-            if ((ddrc & mask) == 0)
-                continue;
-            bool value = (portc & mask) != 0;
-            state.lastOutputs[14 + bit] = value ? 1 : 0;
-        }
+        state.mcu->SamplePinOutputs(state.lastOutputs, kPinCount);
     };
 
     while (true)

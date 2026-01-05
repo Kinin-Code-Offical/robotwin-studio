@@ -127,7 +127,7 @@ namespace RobotTwin.Debugging
             {
                 string rawUrl = context.Request.RawUrl;
                 string command = rawUrl.Split('?')[0].Trim('/');
-                var queryParams = System.Web.HttpUtility.ParseQueryString(context.Request.Url.Query);
+                var queryParams = ParseQuery(context.Request.Url?.Query);
 
                 switch (command)
                 {
@@ -156,8 +156,8 @@ namespace RobotTwin.Debugging
                         break;
 
                     case "action":
-                        string actionType = queryParams["type"];
-                        string target = queryParams["target"];
+                        queryParams.TryGetValue("type", out string actionType);
+                        queryParams.TryGetValue("target", out string target);
                         Enqueue(() =>
                         {
                             Debug.Log($"[RemoteCommandServer] ACTION: {actionType} on {target}");
@@ -166,7 +166,7 @@ namespace RobotTwin.Debugging
                         break;
 
                     case "query":
-                        string selector = queryParams["target"];
+                        queryParams.TryGetValue("target", out string selector);
                         Debug.Log($"[RemoteCommandServer] QUERY: {selector}");
                         // Mock Response for now
                         if (selector == "CurrentScene") responseString = "{\"value\": \"CircuitStudio\"}";
@@ -229,6 +229,39 @@ namespace RobotTwin.Debugging
             _mainThreadActions.Enqueue(action);
         }
 
+        private static Dictionary<string, string> ParseQuery(string query)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return dict;
+            }
+
+            // query may start with '?'
+            if (query.StartsWith("?", StringComparison.Ordinal))
+            {
+                query = query.Substring(1);
+            }
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return dict;
+            }
+
+            var parts = query.Split('&');
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+                var kv = part.Split(new[] { '=' }, 2);
+                var key = Uri.UnescapeDataString(kv[0] ?? string.Empty);
+                if (string.IsNullOrEmpty(key)) continue;
+                var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1] ?? string.Empty) : string.Empty;
+                dict[key] = value;
+            }
+
+            return dict;
+        }
+
         private static string BuildTelemetryPayload()
         {
             var host = SimHost.Instance;
@@ -286,6 +319,7 @@ namespace RobotTwin.Debugging
 
             sb.Append("]");
             AppendFirmwarePerfPayload(sb, telemetry);
+            AppendTickTracePayload(sb, host);
             sb.Append("}");
             return sb.ToString();
         }
@@ -398,6 +432,26 @@ namespace RobotTwin.Debugging
                 sb.Append("}");
             }
 
+            sb.Append("]");
+        }
+
+        private static void AppendTickTracePayload(StringBuilder sb, SimHost host)
+        {
+            if (host == null) return;
+            var trace = host.GetTickTraceSnapshot();
+            sb.Append(",\"trace\":[");
+            for (int i = 0; i < trace.Count; i++)
+            {
+                var sample = trace[i];
+                if (i > 0) sb.Append(",");
+                sb.Append("{");
+                sb.Append($"\"tick\":{sample.TickIndex},");
+                sb.Append($"\"dt\":{sample.DtSeconds.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)},");
+                sb.Append($"\"solve_ms\":{sample.SolveMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},");
+                sb.Append($"\"native\":{BoolJson(sample.UsedNativePins)},");
+                sb.Append($"\"external_fw\":{BoolJson(sample.UsedExternalFirmware)}");
+                sb.Append("}");
+            }
             sb.Append("]");
         }
 

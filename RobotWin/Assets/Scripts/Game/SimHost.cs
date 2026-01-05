@@ -50,6 +50,10 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, bool> _boardPowerById = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FirmwarePerfCounters> _firmwarePerfByBoard =
             new Dictionary<string, FirmwarePerfCounters>(System.StringComparer.OrdinalIgnoreCase);
+        private const int TickTraceCapacity = 120;
+        private readonly TickSample[] _tickTrace = new TickSample[TickTraceCapacity];
+        private int _tickTraceIndex;
+        private int _tickTraceCount;
 
         private const int ExternalFirmwarePinLimit = 20;
         private const int SerialBufferLimit = 4000;
@@ -80,6 +84,38 @@ namespace RobotTwin.Game
         public int ExternalFirmwareSessionCount => _externalFirmwareSessions.Count;
         public int VirtualBoardCount => _virtualMcus.Count;
         public int PoweredBoardCount => _boardPowerById.Count;
+
+        public readonly struct TickSample
+        {
+            public readonly int TickIndex;
+            public readonly float DtSeconds;
+            public readonly float SolveMs;
+            public readonly bool UsedNativePins;
+            public readonly bool UsedExternalFirmware;
+
+            public TickSample(int tickIndex, float dtSeconds, float solveMs, bool usedNativePins, bool usedExternalFirmware)
+            {
+                TickIndex = tickIndex;
+                DtSeconds = dtSeconds;
+                SolveMs = solveMs;
+                UsedNativePins = usedNativePins;
+                UsedExternalFirmware = usedExternalFirmware;
+            }
+        }
+
+        public List<TickSample> GetTickTraceSnapshot()
+        {
+            var list = new List<TickSample>(_tickTraceCount);
+            int count = _tickTraceCount;
+            if (count <= 0) return list;
+            int start = _tickTraceCount < _tickTrace.Length ? 0 : _tickTraceIndex;
+            for (int i = 0; i < count; i++)
+            {
+                int index = (start + i) % _tickTrace.Length;
+                list.Add(_tickTrace[index]);
+            }
+            return list;
+        }
 
         public void SetUsbConnected(string boardId, bool connected)
         {
@@ -189,7 +225,7 @@ namespace RobotTwin.Game
             // Step Physics (High Frequency)
             if (_useNativeEngine && _nativePinsReady)
             {
-                NativeBridge.StepSimulation(Time.fixedDeltaTime);
+                // NativeEngine circuit stepping occurs in RunTick to avoid one-tick lag.
             }
         }
 
@@ -203,11 +239,23 @@ namespace RobotTwin.Game
             {
                 _tickTimer -= TICK_RATE;
                 TickCount++;
-                OnTick();
+                RunTick(TICK_RATE);
             }
         }
 
-        private void OnTick()
+        public bool StepOnce(float dtSeconds)
+        {
+            if (dtSeconds <= 0f) return false;
+            if (!_isRunning)
+            {
+                BeginSimulation();
+            }
+            TickCount++;
+            RunTick(dtSeconds);
+            return true;
+        }
+
+        private void RunTick(float dtSeconds)
         {
             // Sync with Firmware
             // In full impl, we'd read pipe messages here
@@ -218,7 +266,7 @@ namespace RobotTwin.Game
                 _pinStatesByComponent.Clear();
                 _pullupResistances.Clear();
                 RefreshBoardPowerStates();
-                bool usedNativePins = TryApplyNativePins();
+                bool usedNativePins = TryApplyNativePins(dtSeconds);
                 HashSet<string> handledBoards = null;
                 if (!usedNativePins && _useExternalFirmware)
                 {
@@ -228,7 +276,7 @@ namespace RobotTwin.Game
                         {
                             continue;
                         }
-                        if (TryStepExternalFirmware(session))
+                        if (TryStepExternalFirmware(session, dtSeconds))
                         {
                             if (handledBoards == null)
                             {
@@ -250,14 +298,16 @@ namespace RobotTwin.Game
                         {
                             continue;
                         }
-                        mcu.Step(TICK_RATE);
+                        mcu.Step(dtSeconds);
                         mcu.CopyVoltages(_pinVoltages);
                         _pinStatesByComponent[mcu.Id] = mcu.Hal.GetPinStates();
                         _pullupResistances[mcu.Id] = mcu.Hal.GetPullupResistance();
                         TryAppendVirtualSerial(mcu.Id);
                     }
                 }
-                LastTelemetry = _coreSim.Step(_circuit, _pinVoltages, _pinStatesByComponent, _pullupResistances, TICK_RATE, _boardPowerById, _usbConnectedByBoard);
+                float solveStart = Time.realtimeSinceStartup;
+                LastTelemetry = _coreSim.Step(_circuit, _pinVoltages, _pinStatesByComponent, _pullupResistances, dtSeconds, _boardPowerById, _usbConnectedByBoard);
+                float solveMs = (Time.realtimeSinceStartup - solveStart) * 1000f;
                 if (LastTelemetry != null)
                 {
                     LastTelemetry.TimeSeconds = SimTime;
@@ -274,6 +324,10 @@ namespace RobotTwin.Game
                         LogTelemetrySample();
                     }
                 }
+
+                _tickTrace[_tickTraceIndex] = new TickSample(TickCount, dtSeconds, solveMs, usedNativePins, _useExternalFirmware);
+                _tickTraceIndex = (_tickTraceIndex + 1) % _tickTrace.Length;
+                _tickTraceCount = Mathf.Min(_tickTraceCount + 1, _tickTrace.Length);
             }
 
             OnTickComplete?.Invoke(SimTime);
@@ -377,7 +431,7 @@ namespace RobotTwin.Game
             return loadedAny;
         }
 
-        private bool TryApplyNativePins()
+        private bool TryApplyNativePins(float dtSeconds)
         {
             if (_useExternalFirmware || !_useNativeEngine)
             {
@@ -387,6 +441,8 @@ namespace RobotTwin.Game
             {
                 return false;
             }
+
+            NativeBridge.StepSimulation(dtSeconds);
 
             if (!BridgeInterface.TryReadState(out var state))
             {
@@ -792,7 +848,7 @@ namespace RobotTwin.Game
             return true;
         }
 
-        private bool TryStepExternalFirmware(ExternalFirmwareSession session)
+        private bool TryStepExternalFirmware(ExternalFirmwareSession session, float dtSeconds)
         {
             if (session == null || _externalFirmwareClient == null) return false;
 
@@ -801,7 +857,7 @@ namespace RobotTwin.Game
             var request = new RobotTwin.CoreSim.FirmwareStepRequest
             {
                 RailVoltage = 5.0f,
-                DeltaMicros = (uint)Mathf.RoundToInt(TICK_RATE * 1000000f),
+                DeltaMicros = (uint)Mathf.RoundToInt(dtSeconds * 1000000f),
                 PinStates = BuildFirmwareInputStates(session.BoardId),
                 AnalogVoltages = BuildFirmwareAnalogInputs(session.BoardId)
             };
