@@ -34,6 +34,7 @@ namespace RobotTwin.Game
 
         public void InitializeSession(TemplateSpec template)
         {
+            TemplateSpecValidator.ValidateOrThrow(template);
             ActiveTemplate = template;
             CurrentCircuit = template.DefaultCircuit;
             CurrentRobot = template.DefaultRobot;

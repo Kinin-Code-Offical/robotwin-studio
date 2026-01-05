@@ -14,6 +14,7 @@ namespace RobotTwin.CoreSim
         public float RailVoltage = 5.0f;
         public uint DeltaMicros = 100000;
         public int[] PinStates = Array.Empty<int>();
+        public float[] AnalogVoltages = Array.Empty<float>();
     }
 
     [Serializable]
@@ -25,13 +26,16 @@ namespace RobotTwin.CoreSim
 
     public class FirmwareClient : MonoBehaviour
     {
-        private const string DefaultPipeName = "RoboTwin.FirmwareEngine.v1";
+        private const string DefaultPipeName = "RoboTwin.FirmwareEngine";
         private const float ConnectRetrySeconds = 1.0f;
         private const int PipeConnectTimeoutMs = 250;
         private const uint ProtocolMagic = 0x57465452; // "RTFW"
         private const ushort ProtocolMajor = 1;
         private const ushort ProtocolMinor = 0;
         private const int PinCount = 20;
+        private const int AnalogCount = 16;
+        private const int BoardIdSize = 64;
+        private const int BoardProfileSize = 64;
         private const uint ClientFlags = 1; // Lockstep
 
         private enum MessageType : ushort
@@ -54,11 +58,16 @@ namespace RobotTwin.CoreSim
         private float _nextConnectAttemptTime;
         private readonly object _writeLock = new object();
         private readonly object _stateLock = new object();
-        private readonly int[] _pinOutputs = new int[20];
-        private readonly int[] _lastInputs = new int[20];
-        private readonly StringBuilder _serialBuffer = new StringBuilder();
+        private readonly int[] _lastInputs = new int[PinCount];
         private uint _sequence = 1;
         private string _pipeName = DefaultPipeName;
+        private readonly Dictionary<string, BoardState> _boardStates = new Dictionary<string, BoardState>(StringComparer.OrdinalIgnoreCase);
+
+        private sealed class BoardState
+        {
+            public readonly int[] PinOutputs = new int[PinCount];
+            public readonly StringBuilder SerialBuffer = new StringBuilder();
+        }
 
         public string PipeName => _pipeName;
 
@@ -135,40 +144,50 @@ namespace RobotTwin.CoreSim
             }
         }
 
-        public bool TryStep(FirmwareStepRequest request, out FirmwareStepResult result)
+        public bool TryStep(string boardId, FirmwareStepRequest request, out FirmwareStepResult result)
         {
             result = new FirmwareStepResult();
             if (request == null) return false;
+            if (string.IsNullOrWhiteSpace(boardId)) return false;
             if (!EnsureConnected()) return false;
 
-            if (!SendStep(request)) return false;
+            if (!SendStep(boardId, request)) return false;
 
-            result.PinStates = new int[_pinOutputs.Length];
+            result.PinStates = new int[PinCount];
             lock (_stateLock)
             {
-                Array.Copy(_pinOutputs, result.PinStates, result.PinStates.Length);
-                if (_serialBuffer.Length > 0)
+                var state = GetBoardState(boardId);
+                Array.Copy(state.PinOutputs, result.PinStates, result.PinStates.Length);
+                if (state.SerialBuffer.Length > 0)
                 {
-                    result.SerialOutput = _serialBuffer.ToString();
-                    _serialBuffer.Clear();
+                    result.SerialOutput = state.SerialBuffer.ToString();
+                    state.SerialBuffer.Clear();
                 }
             }
 
             return true;
         }
 
-        public bool LoadBvmFile(string path)
+        public bool LoadBvmFile(string boardId, string boardProfile, string path)
         {
+            if (string.IsNullOrWhiteSpace(boardId)) return false;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return false;
             var data = File.ReadAllBytes(path);
-            return LoadBvmBytes(data);
+            return LoadBvmBytes(boardId, boardProfile, data);
         }
 
-        public bool LoadBvmBytes(byte[] data)
+        public bool LoadBvmBytes(string boardId, string boardProfile, byte[] data)
         {
+            if (string.IsNullOrWhiteSpace(boardId)) return false;
             if (data == null || data.Length == 0) return false;
             if (!EnsureConnected()) return false;
-            if (!WritePacket(MessageType.LoadBvm, data))
+            var header = new byte[BoardIdSize + BoardProfileSize];
+            WriteFixedString(header, 0, BoardIdSize, boardId);
+            WriteFixedString(header, BoardIdSize, BoardProfileSize, boardProfile ?? string.Empty);
+            var payload = new byte[header.Length + data.Length];
+            Buffer.BlockCopy(header, 0, payload, 0, header.Length);
+            Buffer.BlockCopy(data, 0, payload, header.Length, data.Length);
+            if (!WritePacket(MessageType.LoadBvm, payload))
             {
                 UnityEngine.Debug.LogWarning("[FirmwareClient] Load failed: pipe write error.");
                 Disconnect();
@@ -240,61 +259,85 @@ namespace RobotTwin.CoreSim
             }
             if (type == MessageType.OutputState)
             {
-                if (payload == null || payload.Length < 8 + PinCount) return;
+                if (payload == null || payload.Length < BoardIdSize + 8 + PinCount) return;
                 lock (_stateLock)
                 {
+                    string boardId = ReadFixedString(payload, 0, BoardIdSize);
+                    var state = GetBoardState(boardId);
                     for (int i = 0; i < PinCount; i++)
                     {
-                        _pinOutputs[i] = payload[8 + i];
+                        byte raw = payload[BoardIdSize + 8 + i];
+                        state.PinOutputs[i] = raw == 0xFF ? -1 : raw;
                     }
                 }
                 return;
             }
             if (type == MessageType.Serial)
             {
-                if (payload == null || payload.Length == 0) return;
+                if (payload == null || payload.Length <= BoardIdSize) return;
                 lock (_stateLock)
                 {
-                    _serialBuffer.Append(Encoding.UTF8.GetString(payload));
+                    string boardId = ReadFixedString(payload, 0, BoardIdSize);
+                    var state = GetBoardState(boardId);
+                    state.SerialBuffer.Append(Encoding.UTF8.GetString(payload, BoardIdSize, payload.Length - BoardIdSize));
                 }
                 return;
             }
             if (type == MessageType.Log)
             {
-                if (payload == null || payload.Length < 1) return;
-                string text = payload.Length > 1 ? Encoding.UTF8.GetString(payload, 1, payload.Length - 1) : string.Empty;
-                UnityEngine.Debug.Log($"[Firmware] {text}");
+                if (payload == null || payload.Length < BoardIdSize + 1) return;
+                string boardId = ReadFixedString(payload, 0, BoardIdSize);
+                string text = payload.Length > BoardIdSize + 1
+                    ? Encoding.UTF8.GetString(payload, BoardIdSize + 1, payload.Length - (BoardIdSize + 1))
+                    : string.Empty;
+                UnityEngine.Debug.Log($"[Firmware:{boardId}] {text}");
                 return;
             }
             if (type == MessageType.Error)
             {
-                string text = payload != null && payload.Length > 4
-                    ? Encoding.UTF8.GetString(payload, 4, payload.Length - 4)
+                if (payload == null || payload.Length < BoardIdSize + 4) return;
+                string boardId = ReadFixedString(payload, 0, BoardIdSize);
+                string text = payload.Length > BoardIdSize + 4
+                    ? Encoding.UTF8.GetString(payload, BoardIdSize + 4, payload.Length - (BoardIdSize + 4))
                     : "Unknown firmware error";
-                UnityEngine.Debug.LogWarning($"[Firmware] {text}");
+                UnityEngine.Debug.LogWarning($"[Firmware:{boardId}] {text}");
                 return;
             }
         }
 
-        private bool SendStep(FirmwareStepRequest request)
+        private bool SendStep(string boardId, FirmwareStepRequest request)
         {
             if (request == null) return false;
-            var payload = new byte[4 + PinCount];
-            WriteUInt32(payload, 0, request.DeltaMicros);
+            var payload = new byte[BoardIdSize + 4 + PinCount + (AnalogCount * 2)];
+            WriteFixedString(payload, 0, BoardIdSize, boardId);
+            WriteUInt32(payload, BoardIdSize, request.DeltaMicros);
             for (int i = 0; i < PinCount; i++)
             {
                 int value = (request.PinStates != null && i < request.PinStates.Length && request.PinStates[i] > 0) ? 1 : 0;
-                payload[4 + i] = (byte)value;
+                payload[BoardIdSize + 4 + i] = (byte)value;
                 _lastInputs[i] = value;
+            }
+            int analogOffset = BoardIdSize + 4 + PinCount;
+            for (int i = 0; i < AnalogCount; i++)
+            {
+                float voltage = (request.AnalogVoltages != null && i < request.AnalogVoltages.Length)
+                    ? request.AnalogVoltages[i]
+                    : 0f;
+                if (voltage < 0f) voltage = 0f;
+                if (voltage > 5f) voltage = 5f;
+                ushort raw = (ushort)Mathf.RoundToInt((voltage / 5f) * 1023f);
+                WriteUInt16(payload, analogOffset + (i * 2), raw);
             }
             return WritePacket(MessageType.Step, payload);
         }
 
         private bool SendHello()
         {
-            var payload = new byte[8];
+            var payload = new byte[16];
             WriteUInt32(payload, 0, ClientFlags);
             WriteUInt32(payload, 4, PinCount);
+            WriteUInt32(payload, 8, BoardIdSize);
+            WriteUInt32(payload, 12, AnalogCount);
             return WritePacket(MessageType.Hello, payload);
         }
 
@@ -395,6 +438,37 @@ namespace RobotTwin.CoreSim
         private static ushort ReadUInt16(byte[] buffer, int offset)
         {
             return (ushort)(buffer[offset] | (buffer[offset + 1] << 8));
+        }
+
+        private static void WriteFixedString(byte[] buffer, int offset, int size, string value)
+        {
+            for (int i = 0; i < size; i++) buffer[offset + i] = 0;
+            if (string.IsNullOrWhiteSpace(value)) return;
+            var bytes = Encoding.UTF8.GetBytes(value);
+            int count = Mathf.Min(bytes.Length, size - 1);
+            Buffer.BlockCopy(bytes, 0, buffer, offset, count);
+        }
+
+        private static string ReadFixedString(byte[] buffer, int offset, int size)
+        {
+            int len = 0;
+            for (int i = 0; i < size; i++)
+            {
+                if (buffer[offset + i] == 0) break;
+                len++;
+            }
+            return len == 0 ? string.Empty : Encoding.UTF8.GetString(buffer, offset, len);
+        }
+
+        private BoardState GetBoardState(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) boardId = "board";
+            if (!_boardStates.TryGetValue(boardId, out var state))
+            {
+                state = new BoardState();
+                _boardStates[boardId] = state;
+            }
+            return state;
         }
     }
 }

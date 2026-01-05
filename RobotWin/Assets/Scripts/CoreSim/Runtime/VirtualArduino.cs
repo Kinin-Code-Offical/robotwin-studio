@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using RobotTwin.CoreSim;
 
 namespace RobotTwin.CoreSim.Runtime
 {
@@ -11,6 +12,7 @@ namespace RobotTwin.CoreSim.Runtime
         private const double ClockHz = 16_000_000.0;
 
         public string Id { get; }
+        public string BoardProfileId { get; }
         public VirtualClock Clock { get; }
         public VirtualRegisterFile Registers { get; }
         public VirtualArduinoHal Hal { get; }
@@ -19,12 +21,17 @@ namespace RobotTwin.CoreSim.Runtime
         public string FirmwareSource { get; private set; } = string.Empty;
         public bool FirmwareLoaded { get; private set; }
 
-        public VirtualArduino(string id)
+        public VirtualArduino(string id, BoardProfileInfo profile = null)
         {
             Id = id;
-            Clock = new VirtualClock(ClockHz);
+            var resolved = profile ?? BoardProfiles.Get("ArduinoUno");
+            BoardProfileId = resolved.Id;
+            Clock = new VirtualClock(resolved.ClockHz > 0 ? resolved.ClockHz : ClockHz);
             Registers = new VirtualRegisterFile();
-            Hal = new VirtualArduinoHal(Registers);
+            var pins = resolved.CoreLimited && resolved.Pins.Count > 20
+                ? new List<string>(resolved.Pins).GetRange(0, 20)
+                : resolved.Pins;
+            Hal = new VirtualArduinoHal(Registers, pins);
             Cpu = new VirtualArduinoCpu(Registers);
             Memory = new VirtualMemory();
         }
@@ -122,6 +129,11 @@ namespace RobotTwin.CoreSim.Runtime
             {
                 target[$"{Id}.{kvp.Key}"] = kvp.Value;
             }
+        }
+
+        public void SetInputVoltage(string pin, float voltage)
+        {
+            Hal.SetInputVoltage(pin, voltage);
         }
 
         private bool TryLoadHexValue(string value)

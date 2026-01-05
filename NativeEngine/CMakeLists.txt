@@ -1,15 +1,30 @@
 cmake_minimum_required(VERSION 3.20)
 project(NativeEngine LANGUAGES C CXX)
 
+enable_testing()
+
+add_test(NAME nativeengine_smoketest COMMAND ${CMAKE_COMMAND} -E echo "NativeEngine CTest placeholder")
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
+
+set(NATIVE_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/../builds/native")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${NATIVE_OUTPUT_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${NATIVE_OUTPUT_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${NATIVE_OUTPUT_DIR}")
+
+foreach(OUTPUT_CONFIG DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUT_CONFIG} "${NATIVE_OUTPUT_DIR}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUT_CONFIG} "${NATIVE_OUTPUT_DIR}")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUT_CONFIG} "${NATIVE_OUTPUT_DIR}")
+endforeach()
 
 add_library(NativeEngineCore OBJECT
     src/NativeEngine_Core.cpp
     src/MCU/ATmega328P_ISA.c
-    src/Core/NodalSolver.cpp
-    src/Core/BvmFormat.cpp
-    src/Core/CircuitContext.cpp
+    src/Circuit/NodalSolver.cpp
+    src/Circuit/BvmFormat.cpp
+    src/Circuit/CircuitContext.cpp
     src/Physics/PhysicsWorld.cpp
 )
 

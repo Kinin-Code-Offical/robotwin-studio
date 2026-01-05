@@ -57,6 +57,8 @@ namespace RobotTwin.UI
         private RenderTexture _viewCubeTexture;
         private Transform _viewCubeRoot;
         private GameObject _viewCubeModel;
+        private Transform _viewCubeFaceRoot;
+        private Light _viewCubeLight;
         private int _viewCubeSize = 128;
         private Transform _root;
         private Transform _modelRoot;
@@ -79,6 +81,8 @@ namespace RobotTwin.UI
         private Quaternion _gizmoWorldRot = Quaternion.identity;
         private float _gizmoScale = 1f;
         private Bounds _gizmoBounds;
+        private LineRenderer _selectionOutline;
+        private Transform _selectionTarget;
         private Vector2 _orbitAngles = new Vector2(28f, 30f);
         private float _distance = 1.4f;
         private Vector3 _panOffset = Vector3.zero;
@@ -108,6 +112,7 @@ namespace RobotTwin.UI
         public RenderTexture ViewCubeTexture => _viewCubeTexture;
         public IReadOnlyList<Transform> Parts => _parts;
         public Transform Root => _root;
+        public Transform ModelRoot => _modelRoot;
         public Camera ViewCamera => _camera;
 
         public enum EditMarkerKind
@@ -271,6 +276,7 @@ namespace RobotTwin.UI
             _parts.Clear();
             ClearAnchors();
             ClearEffects();
+            ClearSelectionOutline();
             if (_markerRoot != null)
             {
                 Destroy(_markerRoot.gameObject);
@@ -584,6 +590,27 @@ namespace RobotTwin.UI
             }
         }
 
+        public void SetSelectionOutline(Transform target)
+        {
+            _selectionTarget = target;
+            if (_selectionTarget == null)
+            {
+                ClearSelectionOutline();
+                return;
+            }
+            EnsureSelectionOutline();
+            UpdateSelectionOutline();
+        }
+
+        public void ClearSelectionOutline()
+        {
+            _selectionTarget = null;
+            if (_selectionOutline != null)
+            {
+                _selectionOutline.gameObject.SetActive(false);
+            }
+        }
+
         public bool TryPickLocal(Vector2 viewportPoint, out Vector3 localPosition)
         {
             localPosition = Vector3.zero;
@@ -753,8 +780,7 @@ namespace RobotTwin.UI
         {
             bounds = new Bounds(Vector3.zero, Vector3.zero);
             if (part == null) return false;
-            var reference = _root != null ? _root : part;
-            return TryGetBoundsRelativeTo(reference, part, out bounds);
+            return TryGetBoundsRelativeTo(part, part, out bounds);
         }
 
         public bool TryGetViewportRay(Vector2 viewportPoint, out Ray ray)
@@ -1145,21 +1171,82 @@ namespace RobotTwin.UI
             _gizmoRoot.position = _gizmoWorldPos;
             _gizmoRoot.rotation = _gizmoWorldRot;
             _gizmoScale = ComputeGizmoScale(_gizmoWorldPos);
-            if (_gizmoMode == GizmoMode.Scale || _gizmoMode == GizmoMode.Rotate || _gizmoMode == GizmoMode.Move)
-            {
-                _gizmoRoot.localScale = Vector3.one;
-            }
-            else
-            {
-                _gizmoRoot.localScale = Vector3.one * _gizmoScale;
-            }
+            _gizmoRoot.localScale = Vector3.one * _gizmoScale;
         }
 
         private float ComputeGizmoScale(Vector3 worldPos)
         {
             if (_camera == null) return 1f;
             float dist = Vector3.Distance(_camera.transform.position, worldPos);
-            return Mathf.Clamp(dist * 0.16f, 0.06f, 2f);
+            return Mathf.Clamp(dist * 0.18f, 0.12f, 3f);
+        }
+
+        private void EnsureSelectionOutline()
+        {
+            if (_selectionOutline != null) return;
+            var lineGo = new GameObject("ComponentStudioSelectionOutline");
+            lineGo.transform.SetParent(transform, false);
+            _selectionOutline = lineGo.AddComponent<LineRenderer>();
+            _selectionOutline.useWorldSpace = true;
+            _selectionOutline.loop = false;
+            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
+            if (shader != null)
+            {
+                _selectionOutline.material = new Material(shader);
+            }
+            _selectionOutline.startColor = Color.white;
+            _selectionOutline.endColor = Color.white;
+            _selectionOutline.positionCount = 17;
+            _selectionOutline.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _selectionOutline.receiveShadows = false;
+        }
+
+        private void UpdateSelectionOutline()
+        {
+            if (_selectionOutline == null || _selectionTarget == null)
+            {
+                return;
+            }
+            if (!TryGetBoundsRelativeTo(_selectionTarget, _selectionTarget, out var bounds))
+            {
+                _selectionOutline.gameObject.SetActive(false);
+                return;
+            }
+            var ext = bounds.extents;
+            if (ext == Vector3.zero)
+            {
+                ext = Vector3.one * 0.01f;
+            }
+            var center = bounds.center;
+            var localCorners = new[]
+            {
+                center + new Vector3(-ext.x, -ext.y, -ext.z),
+                center + new Vector3(ext.x, -ext.y, -ext.z),
+                center + new Vector3(ext.x, -ext.y, ext.z),
+                center + new Vector3(-ext.x, -ext.y, ext.z),
+                center + new Vector3(-ext.x, ext.y, -ext.z),
+                center + new Vector3(ext.x, ext.y, -ext.z),
+                center + new Vector3(ext.x, ext.y, ext.z),
+                center + new Vector3(-ext.x, ext.y, ext.z)
+            };
+            var order = new[] { 0, 1, 2, 3, 0, 4, 5, 1, 5, 6, 2, 6, 7, 3, 7, 4, 0 };
+            var points = new Vector3[order.Length];
+            for (int i = 0; i < order.Length; i++)
+            {
+                points[i] = _selectionTarget.TransformPoint(localCorners[order[i]]);
+            }
+            _selectionOutline.positionCount = points.Length;
+            _selectionOutline.SetPositions(points);
+
+            float width = 0.003f;
+            if (_camera != null)
+            {
+                float dist = Vector3.Distance(_camera.transform.position, _selectionTarget.position);
+                width = Mathf.Clamp(dist * 0.0025f, 0.002f, 0.02f);
+            }
+            _selectionOutline.startWidth = width;
+            _selectionOutline.endWidth = width;
+            _selectionOutline.gameObject.SetActive(true);
         }
 
         private Transform GetMarkerRoot()
@@ -1208,6 +1295,7 @@ namespace RobotTwin.UI
             _headLight.intensity = 0.45f;
             _headLight.color = Color.white;
             _headLight.shadows = LightShadows.None;
+            _headLight.cullingMask &= ~(1 << ViewCubeLayer);
             return _headLight;
         }
 
@@ -1221,6 +1309,7 @@ namespace RobotTwin.UI
             light.intensity = intensity;
             light.color = Color.white;
             light.shadows = LightShadows.None;
+            light.cullingMask &= ~(1 << ViewCubeLayer);
             return light;
         }
 
@@ -1291,10 +1380,11 @@ namespace RobotTwin.UI
                     if (shader != null)
                     {
                         var mat = new Material(shader) { name = "ViewCubeMat" };
-                        mat.color = new Color(0.7f, 0.74f, 0.8f);
+                        mat.color = new Color(0.22f, 0.26f, 0.32f);
                         renderer.sharedMaterial = mat;
                     }
                 }
+                EnsureViewCubeDecorations();
             }
 
             if (_viewCubeCamera == null)
@@ -1314,6 +1404,8 @@ namespace RobotTwin.UI
                 camGo.transform.LookAt(Vector3.zero);
             }
 
+            EnsureViewCubeLight();
+
             size = Mathf.Clamp(size, 64, 256);
             if (_viewCubeTexture == null || _viewCubeTexture.width != size || _viewCubeTexture.height != size)
             {
@@ -1330,6 +1422,88 @@ namespace RobotTwin.UI
             }
             if (_viewCubeCamera != null) _viewCubeCamera.targetTexture = _viewCubeTexture;
             UpdateViewCubeOrientation();
+        }
+
+        private void EnsureViewCubeLight()
+        {
+            if (_viewCubeLight != null || _viewCubeRoot == null) return;
+            var lightGo = new GameObject("ViewCubeLight");
+            lightGo.transform.SetParent(_viewCubeRoot, false);
+            lightGo.transform.localRotation = Quaternion.Euler(35f, 45f, 0f);
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.2f;
+            light.color = Color.white;
+            light.cullingMask = 1 << ViewCubeLayer;
+            _viewCubeLight = light;
+        }
+
+        private void EnsureViewCubeDecorations()
+        {
+            if (_viewCubeModel == null || _viewCubeFaceRoot != null) return;
+            var faceRoot = new GameObject("ViewCubeFaces");
+            faceRoot.transform.SetParent(_viewCubeModel.transform, false);
+            _viewCubeFaceRoot = faceRoot.transform;
+
+            var faceColor = new Color(0.78f, 0.8f, 0.84f, 1f);
+            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(-90f, 0f, 0f), faceColor, "TOP");
+            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(90f, 0f, 0f), faceColor, "BOTTOM");
+            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), faceColor, "LEFT");
+            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), faceColor, "RIGHT");
+            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), Vector3.zero, faceColor, "FRONT");
+            CreateViewCubeFace("Back", new Vector3(0f, 0f, -0.51f), new Vector3(0f, 180f, 0f), faceColor, "BACK");
+        }
+
+        private void CreateViewCubeFace(string name, Vector3 localPos, Vector3 localEuler, Color color, string label)
+        {
+            if (_viewCubeFaceRoot == null) return;
+            var face = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            face.name = $"ViewCubeFace_{name}";
+            face.transform.SetParent(_viewCubeFaceRoot, false);
+            face.transform.localPosition = localPos;
+            face.transform.localRotation = Quaternion.Euler(localEuler);
+            face.transform.localScale = Vector3.one * 0.86f;
+
+            var collider = face.GetComponent<Collider>();
+            if (collider != null)
+            {
+                Destroy(collider);
+            }
+
+            var renderer = face.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                    Shader.Find("Unlit/Color") ??
+                    Shader.Find("Standard");
+                if (shader != null)
+                {
+                    var mat = new Material(shader) { name = $"ViewCubeFace_{name}_Mat" };
+                    mat.color = color;
+                    renderer.sharedMaterial = mat;
+                }
+            }
+
+            var textGo = new GameObject($"ViewCubeFace_{name}_Label");
+            textGo.transform.SetParent(face.transform, false);
+            textGo.transform.localPosition = new Vector3(0f, 0f, 0.012f);
+            textGo.transform.localRotation = Quaternion.identity;
+            var text = textGo.AddComponent<TextMesh>();
+            text.text = label;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontSize = 32;
+            text.characterSize = 0.045f;
+            text.color = Color.white;
+            var textRenderer = text.GetComponent<MeshRenderer>();
+            if (textRenderer != null && textRenderer.sharedMaterial != null)
+            {
+                var textMat = new Material(textRenderer.sharedMaterial) { name = $"ViewCubeFace_{name}_TextMat" };
+                textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
+                textRenderer.sharedMaterial = textMat;
+            }
+
+            SetLayerRecursively(face.transform, ViewCubeLayer);
         }
 
         private void UpdateViewCubeOrientation()
@@ -1366,9 +1540,15 @@ namespace RobotTwin.UI
 
         private void LateUpdate()
         {
-            if (!_followTarget || _followTransform == null || _root == null) return;
-            _panOffset = _root.InverseTransformPoint(_followTransform.position);
-            UpdateCameraTransform();
+            if (_followTarget && _followTransform != null && _root != null)
+            {
+                _panOffset = _root.InverseTransformPoint(_followTransform.position);
+                UpdateCameraTransform();
+            }
+            if (_selectionTarget != null)
+            {
+                UpdateSelectionOutline();
+            }
         }
 
         private void UpdateCameraTransform()

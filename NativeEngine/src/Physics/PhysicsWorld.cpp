@@ -1,14 +1,28 @@
 #include "../../include/Physics/PhysicsWorld.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace NativeEngine::Physics {
 
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
+
+std::uint64_t MakeContactKey(std::uint32_t a, std::uint32_t b) {
+  if (a > b) std::swap(a, b);
+  return (static_cast<std::uint64_t>(a) << 32) | static_cast<std::uint64_t>(b);
+}
+
+void ApplyImpulse(RigidBody &body, const Vec3 &impulse, const Vec3 &r) {
+  body.velocity += impulse * body.inv_mass;
+  body.angular_velocity += Hadamard(Cross(r, impulse), body.inv_inertia);
+}
 }  // namespace
 
-PhysicsWorld::PhysicsWorld() { rng_.Seed(config_.noise_seed); }
+PhysicsWorld::PhysicsWorld() {
+  rng_.Seed(config_.noise_seed);
+  ground_planes_.push_back({{0.0f, 1.0f, 0.0f}, 0.0f});
+}
 
 void PhysicsWorld::SetConfig(const PhysicsConfig &config) {
   config_ = config;
@@ -146,7 +160,7 @@ void PhysicsWorld::Integrate(RigidBody &body, float dt) {
   body.position += body.velocity * dt;
 
   body.angular_velocity = body.angular_velocity * (1.0f - body.angular_damping);
-  body.rotation = body.rotation * Quat::FromAxisAngle(body.angular_velocity, dt);
+  body.rotation = Normalize(body.rotation * Quat::FromAxisAngle(body.angular_velocity, dt));
 
   float lin_thresh = config_.sleep_linear_threshold;
   float ang_thresh = config_.sleep_angular_threshold;
@@ -169,30 +183,50 @@ void PhysicsWorld::Integrate(RigidBody &body, float dt) {
 
 void PhysicsWorld::Step(float dt_override) {
   float dt = ComputeDt(dt_override);
-  Vec3 gravity = ComputeGravity(dt);
-
+  float maxStep = 0.0f;
   for (auto &kvp : bodies_) {
     auto &body = kvp.second;
-    if (!body.is_static) {
-      body.force_accum += gravity * body.mass;
+    if (body.is_static) continue;
+    float speed = body.velocity.Length();
+    float radius = ComputeBodyRadius(body);
+    if (radius <= 0.0f) radius = 0.05f;
+    float step = speed * dt / std::max(radius * 0.5f, 0.01f);
+    if (step > maxStep) maxStep = step;
+  }
+
+  int substeps = 1;
+  if (maxStep > 1.0f) {
+    substeps = static_cast<int>(std::ceil(maxStep));
+    if (substeps > 8) substeps = 8;
+  }
+  float subDt = dt / static_cast<float>(substeps);
+
+  for (int step = 0; step < substeps; ++step) {
+    Vec3 gravity = ComputeGravity(subDt);
+
+    for (auto &kvp : bodies_) {
+      auto &body = kvp.second;
+      if (!body.is_static) {
+        body.force_accum += gravity * body.mass;
+      }
     }
-  }
 
-  ApplyDistanceConstraints(dt);
+    ApplyDistanceConstraints(subDt);
 
-  for (auto &kvp : vehicles_) {
-    StepVehicle(kvp.second, dt);
-  }
+    for (auto &kvp : vehicles_) {
+      StepVehicle(kvp.second, subDt);
+    }
 
-  for (auto &kvp : bodies_) {
-    Integrate(kvp.second, dt);
-  }
+    for (auto &kvp : bodies_) {
+      Integrate(kvp.second, subDt);
+    }
 
-  GenerateContacts();
-  ResolveContacts(dt);
+    GenerateContacts();
+    ResolveContacts(subDt);
 
-  for (auto &kvp : bodies_) {
-    ApplyGroundContact(kvp.second, dt);
+    for (auto &kvp : bodies_) {
+      ApplyGroundContact(kvp.second, subDt);
+    }
   }
 }
 
@@ -334,6 +368,18 @@ void PhysicsWorld::SetVehicleTireModel(std::uint32_t vehicle_id, float B, float 
   it->second.pacejka_E = E;
 }
 
+void PhysicsWorld::ClearGroundPlanes() {
+  ground_planes_.clear();
+}
+
+void PhysicsWorld::AddGroundPlane(const Vec3 &normal, float distance) {
+  Vec3 n = Normalize(normal);
+  if (n.LengthSq() <= 1e-6f) {
+    return;
+  }
+  ground_planes_.push_back({n, distance});
+}
+
 void PhysicsWorld::ApplyAerodynamics(RigidBody &body, float dt) {
   (void)dt;
   Vec3 relative_wind = body.velocity - config_.wind;
@@ -374,34 +420,44 @@ float PhysicsWorld::ComputeBodyRadius(const RigidBody &body) const {
 }
 
 void PhysicsWorld::ApplyGroundContact(RigidBody &body, float dt) {
-  float radius = ComputeBodyRadius(body);
-  float target_y = radius;
-  float penetration = target_y - body.position.y;
-  if (penetration <= config_.contact_slop) {
+  if (ground_planes_.empty()) {
     return;
   }
 
-  body.position.y += penetration;
-  if (body.velocity.y < 0.0f) {
-    body.velocity.y = -body.velocity.y * std::max(0.0f, body.restitution);
-  }
-
-  float horiz_speed = std::sqrt(body.velocity.x * body.velocity.x + body.velocity.z * body.velocity.z);
-  if (horiz_speed > 0.0f) {
-    float friction = std::max(0.0f, body.friction);
-    float static_threshold = config_.static_friction * friction * 0.2f;
-    if (horiz_speed < static_threshold) {
-      body.velocity.x = 0.0f;
-      body.velocity.z = 0.0f;
-    } else {
-      float damp = std::max(0.0f, 1.0f - config_.dynamic_friction * friction * 4.0f * dt);
-      body.velocity.x *= damp;
-      body.velocity.z *= damp;
+  float radius = ComputeBodyRadius(body);
+  for (const auto &plane : ground_planes_) {
+    float distance = Dot(plane.normal, body.position) - plane.distance;
+    float projected = radius;
+    if (body.shape == ShapeType::Box) {
+      projected = ProjectBoxRadius(body, plane.normal);
     }
-  }
+    float penetration = projected - distance;
+    if (penetration <= config_.contact_slop) {
+      continue;
+    }
 
-  float spin_damp = std::max(0.0f, 1.0f - config_.dynamic_friction * std::max(0.0f, body.friction) * 2.0f * dt);
-  body.angular_velocity = body.angular_velocity * spin_damp;
+    body.position += plane.normal * penetration;
+    float velAlong = Dot(body.velocity, plane.normal);
+    if (velAlong < 0.0f) {
+      body.velocity -= plane.normal * (1.0f + std::max(0.0f, body.restitution)) * velAlong;
+    }
+
+    Vec3 lateral = body.velocity - plane.normal * Dot(body.velocity, plane.normal);
+    float horiz_speed = lateral.Length();
+    if (horiz_speed > 0.0f) {
+      float friction = std::max(0.0f, body.friction);
+      float static_threshold = config_.static_friction * friction * 0.2f;
+      if (horiz_speed < static_threshold) {
+        body.velocity -= lateral;
+      } else {
+        float damp = std::max(0.0f, 1.0f - config_.dynamic_friction * friction * 4.0f * dt);
+        body.velocity -= lateral * (1.0f - damp);
+      }
+    }
+
+    float spin_damp = std::max(0.0f, 1.0f - config_.dynamic_friction * std::max(0.0f, body.friction) * 2.0f * dt);
+    body.angular_velocity = body.angular_velocity * spin_damp;
+  }
 }
 
 PhysicsWorld::Aabb PhysicsWorld::ComputeAabb(const RigidBody &body) const {
@@ -433,6 +489,31 @@ PhysicsWorld::Aabb PhysicsWorld::ComputeAabb(const RigidBody &body) const {
   }
 
   return {body.position - extents, body.position + extents};
+}
+
+float PhysicsWorld::ProjectBoxRadius(const RigidBody &body, const Vec3 &axis) const {
+  Vec3 half = body.half_extents;
+  float xx = body.rotation.x;
+  float yy = body.rotation.y;
+  float zz = body.rotation.z;
+  float ww = body.rotation.w;
+
+  Vec3 axisX{
+      1.0f - 2.0f * (yy * yy + zz * zz),
+      2.0f * (xx * yy + zz * ww),
+      2.0f * (xx * zz - yy * ww)};
+  Vec3 axisY{
+      2.0f * (xx * yy - zz * ww),
+      1.0f - 2.0f * (xx * xx + zz * zz),
+      2.0f * (yy * zz + xx * ww)};
+  Vec3 axisZ{
+      2.0f * (xx * zz + yy * ww),
+      2.0f * (yy * zz - xx * ww),
+      1.0f - 2.0f * (xx * xx + yy * yy)};
+
+  return std::fabs(Dot(axis, axisX)) * half.x +
+         std::fabs(Dot(axis, axisY)) * half.y +
+         std::fabs(Dot(axis, axisZ)) * half.z;
 }
 
 bool PhysicsWorld::AabbOverlap(const Aabb &a, const Aabb &b) const {
@@ -484,35 +565,117 @@ bool PhysicsWorld::CollideSphereBox(const RigidBody &sphere, const RigidBody &bo
 }
 
 bool PhysicsWorld::CollideBoxBox(const RigidBody &a, const RigidBody &b, Contact &out) const {
-  Vec3 aMin = a.position - a.half_extents;
-  Vec3 aMax = a.position + a.half_extents;
-  Vec3 bMin = b.position - b.half_extents;
-  Vec3 bMax = b.position + b.half_extents;
+  const float kEpsilon = 1e-5f;
+  Vec3 aHalf = a.half_extents;
+  Vec3 bHalf = b.half_extents;
 
-  if (!(aMin.x <= bMax.x && aMax.x >= bMin.x &&
-        aMin.y <= bMax.y && aMax.y >= bMin.y &&
-        aMin.z <= bMax.z && aMax.z >= bMin.z)) {
-    return false;
+  float ax = a.rotation.x, ay = a.rotation.y, az = a.rotation.z, aw = a.rotation.w;
+  float bx = b.rotation.x, by = b.rotation.y, bz = b.rotation.z, bw = b.rotation.w;
+
+  Vec3 A0{
+      1.0f - 2.0f * (ay * ay + az * az),
+      2.0f * (ax * ay + az * aw),
+      2.0f * (ax * az - ay * aw)};
+  Vec3 A1{
+      2.0f * (ax * ay - az * aw),
+      1.0f - 2.0f * (ax * ax + az * az),
+      2.0f * (ay * az + ax * aw)};
+  Vec3 A2{
+      2.0f * (ax * az + ay * aw),
+      2.0f * (ay * az - ax * aw),
+      1.0f - 2.0f * (ax * ax + ay * ay)};
+
+  Vec3 B0{
+      1.0f - 2.0f * (by * by + bz * bz),
+      2.0f * (bx * by + bz * bw),
+      2.0f * (bx * bz - by * bw)};
+  Vec3 B1{
+      2.0f * (bx * by - bz * bw),
+      1.0f - 2.0f * (bx * bx + bz * bz),
+      2.0f * (by * bz + bx * bw)};
+  Vec3 B2{
+      2.0f * (bx * bz + by * bw),
+      2.0f * (by * bz - bx * bw),
+      1.0f - 2.0f * (bx * bx + by * by)};
+
+  float R[3][3] = {
+      {Dot(A0, B0), Dot(A0, B1), Dot(A0, B2)},
+      {Dot(A1, B0), Dot(A1, B1), Dot(A1, B2)},
+      {Dot(A2, B0), Dot(A2, B1), Dot(A2, B2)}};
+
+  float AbsR[3][3];
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      AbsR[i][j] = std::fabs(R[i][j]) + kEpsilon;
+    }
   }
 
-  float penX = std::min(aMax.x - bMin.x, bMax.x - aMin.x);
-  float penY = std::min(aMax.y - bMin.y, bMax.y - aMin.y);
-  float penZ = std::min(aMax.z - bMin.z, bMax.z - aMin.z);
+  Vec3 t = b.position - a.position;
+  Vec3 tA{Dot(t, A0), Dot(t, A1), Dot(t, A2)};
 
-  Vec3 normal{1.0f, 0.0f, 0.0f};
-  float penetration = penX;
-  if (penY < penetration) { penetration = penY; normal = {0.0f, 1.0f, 0.0f}; }
-  if (penZ < penetration) { penetration = penZ; normal = {0.0f, 0.0f, 1.0f}; }
+  float minPen = std::numeric_limits<float>::max();
+  Vec3 bestNormal{1.0f, 0.0f, 0.0f};
 
-  Vec3 centerDelta = b.position - a.position;
-  if (Dot(centerDelta, normal) < 0.0f) {
-    normal = normal * -1.0f;
+  auto update_axis = [&](const Vec3 &axis, float dist, float ra, float rb) -> bool {
+    float pen = ra + rb - std::fabs(dist);
+    if (pen < 0.0f) return false;
+    if (pen < minPen) {
+      minPen = pen;
+      bestNormal = (dist < 0.0f) ? axis * -1.0f : axis;
+    }
+    return true;
+  };
+
+  if (!update_axis(A0, tA.x, aHalf.x, bHalf.x * AbsR[0][0] + bHalf.y * AbsR[0][1] + bHalf.z * AbsR[0][2])) return false;
+  if (!update_axis(A1, tA.y, aHalf.y, bHalf.x * AbsR[1][0] + bHalf.y * AbsR[1][1] + bHalf.z * AbsR[1][2])) return false;
+  if (!update_axis(A2, tA.z, aHalf.z, bHalf.x * AbsR[2][0] + bHalf.y * AbsR[2][1] + bHalf.z * AbsR[2][2])) return false;
+
+  float tB0 = tA.x * R[0][0] + tA.y * R[1][0] + tA.z * R[2][0];
+  float tB1 = tA.x * R[0][1] + tA.y * R[1][1] + tA.z * R[2][1];
+  float tB2 = tA.x * R[0][2] + tA.y * R[1][2] + tA.z * R[2][2];
+
+  if (!update_axis(B0, tB0,
+                   aHalf.x * AbsR[0][0] + aHalf.y * AbsR[1][0] + aHalf.z * AbsR[2][0],
+                   bHalf.x)) return false;
+  if (!update_axis(B1, tB1,
+                   aHalf.x * AbsR[0][1] + aHalf.y * AbsR[1][1] + aHalf.z * AbsR[2][1],
+                   bHalf.y)) return false;
+  if (!update_axis(B2, tB2,
+                   aHalf.x * AbsR[0][2] + aHalf.y * AbsR[1][2] + aHalf.z * AbsR[2][2],
+                   bHalf.z)) return false;
+
+  Vec3 axesA[3] = {A0, A1, A2};
+  Vec3 axesB[3] = {B0, B1, B2};
+  float tAvals[3] = {tA.x, tA.y, tA.z};
+  float aHalfVals[3] = {aHalf.x, aHalf.y, aHalf.z};
+  float bHalfVals[3] = {bHalf.x, bHalf.y, bHalf.z};
+
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      Vec3 axis = Cross(axesA[i], axesB[j]);
+      if (axis.LengthSq() <= 1e-6f) continue;
+
+      float ra = aHalfVals[(i + 1) % 3] * AbsR[(i + 2) % 3][j] +
+                 aHalfVals[(i + 2) % 3] * AbsR[(i + 1) % 3][j];
+      float rb = bHalfVals[(j + 1) % 3] * AbsR[i][(j + 2) % 3] +
+                 bHalfVals[(j + 2) % 3] * AbsR[i][(j + 1) % 3];
+      float dist = std::fabs(tAvals[(i + 2) % 3] * R[(i + 1) % 3][j] -
+                             tAvals[(i + 1) % 3] * R[(i + 2) % 3][j]);
+      if (dist > ra + rb) return false;
+      float pen = ra + rb - dist;
+      if (pen < minPen) {
+        minPen = pen;
+        axis = Normalize(axis);
+        float sign = (Dot(axis, t) < 0.0f) ? -1.0f : 1.0f;
+        bestNormal = axis * sign;
+      }
+    }
   }
 
   out.a = a.id;
   out.b = b.id;
-  out.normal = normal;
-  out.penetration = penetration;
+  out.normal = bestNormal;
+  out.penetration = minPen;
   out.point = (a.position + b.position) * 0.5f;
   return true;
 }
@@ -541,6 +704,7 @@ void PhysicsWorld::GenerateContacts() {
       if (bodyA.is_static && bodyB.is_static) continue;
 
       Contact contact{};
+      contact.key = MakeContactKey(bodyA.id, bodyB.id);
       bool hit = false;
       if (bodyA.shape == ShapeType::Sphere && bodyB.shape == ShapeType::Sphere) {
         hit = CollideSphereSphere(bodyA, bodyB, contact);
@@ -561,6 +725,14 @@ void PhysicsWorld::GenerateContacts() {
         float restitution = std::max(bodyA.restitution, bodyB.restitution);
         contact.friction = friction;
         contact.restitution = restitution;
+        auto cached = contact_cache_.find(contact.key);
+        if (cached != contact_cache_.end()) {
+          float alignment = Dot(cached->second.normal, contact.normal);
+          if (alignment > 0.5f) {
+            contact.cached_normal_impulse = cached->second.normal_impulse;
+            contact.cached_tangent_impulse = cached->second.tangent_impulse;
+          }
+        }
         contacts_.push_back(contact);
       }
     }
@@ -568,10 +740,52 @@ void PhysicsWorld::GenerateContacts() {
 }
 
 void PhysicsWorld::ResolveContacts(float dt) {
-  (void)dt;
+  if (contacts_.empty()) return;
+  int iterations = static_cast<int>(std::max(1.0f, config_.solver_iterations));
+
   for (auto &contact : contacts_) {
-    ResolveContact(contact, dt);
+    auto itA = bodies_.find(contact.a);
+    auto itB = bodies_.find(contact.b);
+    if (itA == bodies_.end() || itB == bodies_.end()) continue;
+    auto &a = itA->second;
+    auto &b = itB->second;
+    Vec3 ra = contact.point - a.position;
+    Vec3 rb = contact.point - b.position;
+    Vec3 warmImpulse = contact.normal * contact.cached_normal_impulse;
+    Vec3 tangent{};
+    if (contact.cached_tangent_impulse != 0.0f) {
+      Vec3 rv = (b.velocity + Cross(b.angular_velocity, rb)) -
+                (a.velocity + Cross(a.angular_velocity, ra));
+      Vec3 tangentCandidate = rv - contact.normal * Dot(rv, contact.normal);
+      if (tangentCandidate.LengthSq() > 1e-6f) {
+        tangent = Normalize(tangentCandidate);
+      }
+    }
+    warmImpulse += tangent * contact.cached_tangent_impulse;
+    if (warmImpulse.LengthSq() > 0.0f) {
+      ApplyImpulse(a, warmImpulse * -1.0f, ra);
+      ApplyImpulse(b, warmImpulse, rb);
+    }
+    contact.normal_impulse_accum = contact.cached_normal_impulse;
+    contact.tangent_impulse_accum = contact.cached_tangent_impulse;
   }
+
+  for (int i = 0; i < iterations; ++i) {
+    for (auto &contact : contacts_) {
+      ResolveContact(contact, dt);
+    }
+  }
+
+  std::unordered_map<std::uint64_t, CachedContact> next_cache;
+  next_cache.reserve(contacts_.size());
+  for (const auto &contact : contacts_) {
+    CachedContact entry{};
+    entry.normal = contact.normal;
+    entry.normal_impulse = contact.normal_impulse_accum * 0.8f;
+    entry.tangent_impulse = contact.tangent_impulse_accum * 0.8f;
+    next_cache[contact.key] = entry;
+  }
+  contact_cache_.swap(next_cache);
 }
 
 void PhysicsWorld::ApplyDistanceConstraints(float dt) {
@@ -615,7 +829,6 @@ void PhysicsWorld::ApplyDistanceConstraints(float dt) {
 }
 
 void PhysicsWorld::ResolveContact(Contact &contact, float dt) {
-  (void)dt;
   auto itA = bodies_.find(contact.a);
   auto itB = bodies_.find(contact.b);
   if (itA == bodies_.end() || itB == bodies_.end()) return;
@@ -633,21 +846,20 @@ void PhysicsWorld::ResolveContact(Contact &contact, float dt) {
   Vec3 rv = velB - velA;
 
   float velAlongNormal = Dot(rv, contact.normal);
-  if (velAlongNormal > 0.0f) {
-    return;
+  float restitution = (velAlongNormal < -0.5f) ? contact.restitution : 0.0f;
+  float j = -(1.0f + restitution) * velAlongNormal;
+  j /= (invMassA + invMassB);
+  float newImpulse = contact.normal_impulse_accum + j;
+  if (newImpulse < 0.0f) {
+    j = -contact.normal_impulse_accum;
+    contact.normal_impulse_accum = 0.0f;
+  } else {
+    contact.normal_impulse_accum = newImpulse;
   }
 
-  float j = -(1.0f + contact.restitution) * velAlongNormal;
-  j /= (invMassA + invMassB);
-
   Vec3 impulse = contact.normal * j;
-  a.velocity -= impulse * invMassA;
-  b.velocity += impulse * invMassB;
-
-  Vec3 angImpulseA = Cross(ra, impulse);
-  Vec3 angImpulseB = Cross(rb, impulse);
-  a.angular_velocity -= Hadamard(angImpulseA, a.inv_inertia);
-  b.angular_velocity += Hadamard(angImpulseB, b.inv_inertia);
+  ApplyImpulse(a, impulse * -1.0f, ra);
+  ApplyImpulse(b, impulse, rb);
 
   if (j > 0.0f) {
     if (a.is_sleeping) {
@@ -665,18 +877,18 @@ void PhysicsWorld::ResolveContact(Contact &contact, float dt) {
     tangent = Normalize(tangent);
     float jt = -Dot(rv, tangent);
     jt /= (invMassA + invMassB);
-    float maxFriction = j * contact.friction;
-    jt = std::max(-maxFriction, std::min(jt, maxFriction));
+    float maxFriction = contact.normal_impulse_accum * contact.friction;
+    float newTangent = contact.tangent_impulse_accum + jt;
+    if (newTangent > maxFriction) newTangent = maxFriction;
+    if (newTangent < -maxFriction) newTangent = -maxFriction;
+    jt = newTangent - contact.tangent_impulse_accum;
+    contact.tangent_impulse_accum = newTangent;
     Vec3 frictionImpulse = tangent * jt;
-    a.velocity -= frictionImpulse * invMassA;
-    b.velocity += frictionImpulse * invMassB;
-    Vec3 angFrictionA = Cross(ra, frictionImpulse);
-    Vec3 angFrictionB = Cross(rb, frictionImpulse);
-    a.angular_velocity -= Hadamard(angFrictionA, a.inv_inertia);
-    b.angular_velocity += Hadamard(angFrictionB, b.inv_inertia);
+    ApplyImpulse(a, frictionImpulse * -1.0f, ra);
+    ApplyImpulse(b, frictionImpulse, rb);
   }
 
-  float percent = 0.8f;
+  float percent = 0.65f;
   float slop = config_.contact_slop;
   float correction = std::max(contact.penetration - slop, 0.0f) / (invMassA + invMassB) * percent;
   Vec3 correctionVec = contact.normal * correction;

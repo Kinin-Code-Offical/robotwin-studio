@@ -71,6 +71,15 @@ struct Quat {
   }
 };
 
+inline Quat Normalize(const Quat &q) {
+  float len = std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
+  if (len <= 1e-6f) {
+    return Quat::Identity();
+  }
+  float inv = 1.0f / len;
+  return {q.w * inv, q.x * inv, q.y * inv, q.z * inv};
+}
+
 inline Vec3 Rotate(const Quat &q, const Vec3 &v) {
   Quat vq{0.0f, v.x, v.y, v.z};
   Quat iq{q.w, -q.x, -q.y, -q.z};

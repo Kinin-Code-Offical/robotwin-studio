@@ -8,6 +8,11 @@
 
 namespace NativeEngine::Physics {
 
+struct Plane {
+  Vec3 normal{};
+  float distance{0.0f};
+};
+
 class PhysicsWorld {
  public:
   PhysicsWorld();
@@ -36,6 +41,8 @@ class PhysicsWorld {
   void SetWheelInput(std::uint32_t vehicle_id, int wheel_index, float steer, float drive_torque, float brake_torque);
   void SetVehicleAero(std::uint32_t vehicle_id, float drag_coefficient, float downforce);
   void SetVehicleTireModel(std::uint32_t vehicle_id, float B, float C, float D, float E);
+  void ClearGroundPlanes();
+  void AddGroundPlane(const Vec3 &normal, float distance);
 
   struct RaycastHit {
     std::uint32_t body_id{0};
@@ -101,11 +108,16 @@ class PhysicsWorld {
   struct Contact {
     std::uint32_t a{0};
     std::uint32_t b{0};
+    std::uint64_t key{0};
     Vec3 normal{};
     Vec3 point{};
     float penetration{0.0f};
     float restitution{0.2f};
     float friction{0.8f};
+    float cached_normal_impulse{0.0f};
+    float cached_tangent_impulse{0.0f};
+    float normal_impulse_accum{0.0f};
+    float tangent_impulse_accum{0.0f};
   };
 
   struct DistanceConstraint {
@@ -131,6 +143,13 @@ class PhysicsWorld {
                      const RigidBody &body, RaycastHit &out) const;
   bool RaycastBox(const Vec3 &origin, const Vec3 &dir, float max_distance,
                   const RigidBody &body, RaycastHit &out) const;
+  float ProjectBoxRadius(const RigidBody &body, const Vec3 &axis) const;
+
+  struct CachedContact {
+    Vec3 normal{};
+    float normal_impulse{0.0f};
+    float tangent_impulse{0.0f};
+  };
 
   PhysicsConfig config_{};
   DeterministicRng rng_{config_.noise_seed};
@@ -139,7 +158,9 @@ class PhysicsWorld {
   std::unordered_map<std::uint32_t, RigidBody> bodies_;
   std::unordered_map<std::uint32_t, VehicleState> vehicles_;
   std::vector<Contact> contacts_;
+  std::unordered_map<std::uint64_t, CachedContact> contact_cache_;
   std::vector<DistanceConstraint> distance_constraints_;
+  std::vector<Plane> ground_planes_;
 };
 
 }  // namespace NativeEngine::Physics

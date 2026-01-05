@@ -179,7 +179,7 @@ namespace RobotTwin.Core
         public static void StepSimulation(float dt) => Native_Step(dt); // Wrapper for old StepSimulation
 
 
-        // Enum mirroring Core/CircuitComponent.h
+        // Enum mirroring Circuit/CircuitComponent.h
         public enum ComponentType
         {
             Resistor = 0,

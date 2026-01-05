@@ -856,6 +856,16 @@
     font-size: 10px;
 }
 
+.custom-shape {
+    position: absolute;
+}
+
+.custom-shape-text {
+    color: #e6eefb;
+    font-size: 9px;
+    -unity-text-align: middle-center;
+}
+
 .block-component {
     background-color: #0f1621;
 }

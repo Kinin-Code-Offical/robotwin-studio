@@ -91,7 +91,10 @@ namespace RobotTwin.CoreSim.Host
         private void Tick()
         {
             // 1. Prepare Inputs for Firmware (e.g., from circuit sensors)
-            var inputs = new FirmwareStepRequest(); 
+            var inputs = new FirmwareStepRequest
+            {
+                DeltaMicros = (uint)Math.Max(1, (int)Math.Round(_dt * 1_000_000.0))
+            };
             // TODO: Populate inputs from circuit state
 
             // 2. Step Firmware

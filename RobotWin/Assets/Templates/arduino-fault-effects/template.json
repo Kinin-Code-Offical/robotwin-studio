@@ -1,0 +1,8 @@
+{
+  "TemplateId": "template.arduino-fault-effects",
+  "DisplayName": "Arduino Fault Effects",
+  "Description": "Intentional faults to preview 3D error, spark, and smoke effects.",
+  "SystemType": "CircuitOnly",
+  "ID": "template.arduino-fault-effects",
+  "Name": "Arduino Fault Effects"
+}

@@ -40,6 +40,8 @@ namespace RobotTwin.UI
         private Button _addLabelBtn;
         private Button _addSpecBtn;
         private Button _addDefaultBtn;
+        private Button _addAnchorBtn;
+        private Button _symbolBrowseBtn;
         private Button _frameBtn;
         private Toggle _anchorPickToggle;
         private Toggle _anchorShowToggle;
@@ -52,7 +54,20 @@ namespace RobotTwin.UI
         private ScrollView _catalogList;
         private Button _catalogRefreshBtn;
         private ScrollView _hierarchyTree;
-        private Button _hierarchyToggleBtn;
+        private ScrollView _anchorsContainer;
+        private Button _leftTabHierarchyBtn;
+        private Button _leftTabCatalogBtn;
+        private Button _leftTabBasicsBtn;
+        private Button _leftTabTypeBtn;
+        private Button _leftTabObjectsBtn;
+        private DropdownField _componentTypeDropdown;
+        private TextField _symbolFileField;
+        private VisualElement _leftPanelHierarchy;
+        private VisualElement _leftPanelCatalog;
+        private VisualElement _leftPanelBasics;
+        private VisualElement _leftPanelType;
+        private VisualElement _leftPanelObjects;
+        private Label _typePanelTitle;
         private ScrollView _partsContainer;
         private ScrollView _statesContainer;
         private VisualElement _layoutPreview;
@@ -90,6 +105,7 @@ namespace RobotTwin.UI
         private Button _viewportZoomInBtn;
         private Button _viewportZoomOutBtn;
         private Button _viewportToolsToggleBtn;
+        private VisualElement _viewportTools;
         private VisualElement _viewportToolsBody;
         private Button _viewportPinBtn;
         private Button _viewportLabelBtn;
@@ -112,6 +128,11 @@ namespace RobotTwin.UI
         private Button _layoutToolPanBtn;
         private Button _layoutToolPinBtn;
         private Button _layoutToolLabelBtn;
+        private Button _layoutToolBoxBtn;
+        private Button _layoutToolTriangleBtn;
+        private Button _layoutToolLineBtn;
+        private Button _layoutToolTextBtn;
+        private Button _layoutToolCircleBtn;
         private Button _layoutGridToggleBtn;
         private VisualElement _layoutGrid;
         private VisualElement _layoutHelpIcon;
@@ -126,12 +147,32 @@ namespace RobotTwin.UI
         private Vector2 _layoutPanStartOffset;
         private Vector2 _layoutPanOffset = Vector2.zero;
         private float _layoutZoom = 1f;
+        private readonly List<ShapeLayoutPayload> _shapeLayout = new List<ShapeLayoutPayload>();
+        private string _selectedShapeId;
+        private string _draggingShapeId;
+        private bool _draggingShape;
+        private bool _placingShape;
+        private string _placingShapeId;
+        private Vector2 _placingShapeStart;
+        private string _pendingShapeTextFocusId;
         private const float LayoutZoomMin = 0.4f;
         private const float LayoutZoomMax = 3.5f;
         private const float LayoutZoomSpeed = 0.0015f;
         private const float LayoutPanSpeed = 1f;
         private const float LayoutKeyPanStep = 22f;
         private const float LayoutKeyZoomStep = 0.08f;
+        private const string FxTypeUnsetLabel = "Unspecified";
+        private static readonly List<string> FxTypeChoices = new List<string>
+        {
+            FxTypeUnsetLabel,
+            "Glow",
+            "Heat",
+            "Spark",
+            "Smoke",
+            "Error",
+            "Pulse",
+            "Vibration"
+        };
         private LayoutTool _layoutTool = LayoutTool.Select;
         private VisualElement _circuit3DControls;
         private VisualElement _circuit3DControlsBody;
@@ -139,6 +180,7 @@ namespace RobotTwin.UI
         private Slider _circuit3DFovSlider;
         private Toggle _circuit3DPerspectiveToggle;
         private Toggle _circuit3DFollowToggle;
+        private Toggle _viewportPartColorsToggle;
         private Button _circuit3DRebuildBtn;
         private VisualElement _viewportEditPanel;
         private Toggle _viewportEditPanelToggle;
@@ -176,6 +218,8 @@ namespace RobotTwin.UI
         private Button _menuViewFrameBtn;
         private Button _menuViewResetBtn;
         private Button _menuToolsMaterialBtn;
+        private Button _menuToolsValidateBtn;
+        private Button _menuToolsRunBtn;
         private Button _menuToolsReloadModelBtn;
         private Button _menuToolsExtractPinsBtn;
         private Button _menuHelpShortcutsBtn;
@@ -204,10 +248,20 @@ namespace RobotTwin.UI
         private Button _materialCloseBtn;
         private Label _inspectorTargetLabel;
         private VisualElement _inspectorDetailsContainer;
+        private VisualElement _notificationStack;
+        private VisualElement _ledSettingsSection;
+        private VisualElement _resistorSettingsSection;
         private VisualElement _layoutContextMenu;
         private Button _layoutContextDeletePinBtn;
         private Button _layoutContextDeleteLabelBtn;
         private Button _layoutContextResetViewBtn;
+        private Button _layoutContextDeleteShapeBtn;
+        private string _layoutContextShapeId;
+        private bool _catalogDragging;
+        private string _catalogDragName;
+        private string _catalogDragKind;
+        private int _catalogDragPointerId = -1;
+        private VisualElement _catalogDragGhost;
         private string _layoutContextPinName;
         private VisualElement _layoutContextLabelEntry;
 
@@ -230,10 +284,14 @@ namespace RobotTwin.UI
 
         private bool _orbiting;
         private bool _panning;
+        private bool _anchorPickMode;
+        private bool _anchorVisible = true;
+        private bool _partColorsEnabled;
         private Vector2 _lastPointer;
         private bool _viewportHover;
         private int _viewportPointerId = -1;
-        private bool _circuit3DControlsCollapsed;
+        private bool _circuit3DControlsCollapsed = true;
+        private bool _viewportToolsCollapsed = true;
         private bool _outputCollapsed;
         private bool _validationQueued;
         private ViewportEditMode _viewportEditMode = ViewportEditMode.Move;
@@ -315,6 +373,8 @@ namespace RobotTwin.UI
             _addLabelBtn = _root.Q<Button>("ComponentAddLabelBtn");
             _addSpecBtn = _root.Q<Button>("ComponentAddSpecBtn");
             _addDefaultBtn = _root.Q<Button>("ComponentAddDefaultBtn");
+            _addAnchorBtn = _root.Q<Button>("ComponentAddAnchorBtn");
+            _symbolBrowseBtn = _root.Q<Button>("ComponentSymbolBrowseBtn");
             _frameBtn = _root.Q<Button>("AnchorFrameBtn");
             _anchorPickToggle = _root.Q<Toggle>("AnchorPickToggle");
             _anchorShowToggle = _root.Q<Toggle>("AnchorShowToggle");
@@ -328,7 +388,20 @@ namespace RobotTwin.UI
             _catalogList = _root.Q<ScrollView>("ComponentCatalogList");
             _catalogRefreshBtn = _root.Q<Button>("CatalogRefreshBtn");
             _hierarchyTree = _root.Q<ScrollView>("HierarchyTreeContainer");
-            _hierarchyToggleBtn = _root.Q<Button>("HierarchyToggleBtn");
+            _anchorsContainer = _root.Q<ScrollView>("ComponentAnchorsContainer");
+            _leftTabHierarchyBtn = _root.Q<Button>("LeftTabHierarchyBtn");
+            _leftTabCatalogBtn = _root.Q<Button>("LeftTabCatalogBtn");
+            _leftTabBasicsBtn = _root.Q<Button>("LeftTabBasicsBtn");
+            _leftTabTypeBtn = _root.Q<Button>("LeftTabTypeBtn");
+            _leftTabObjectsBtn = _root.Q<Button>("LeftTabObjectsBtn");
+            _componentTypeDropdown = _root.Q<DropdownField>("ComponentTypeField");
+            _symbolFileField = _root.Q<TextField>("ComponentSymbolFileField");
+            _leftPanelHierarchy = _root.Q<VisualElement>("LeftPanelHierarchy");
+            _leftPanelCatalog = _root.Q<VisualElement>("LeftPanelCatalog");
+            _leftPanelBasics = _root.Q<VisualElement>("LeftPanelBasics");
+            _leftPanelType = _root.Q<VisualElement>("LeftPanelType");
+            _leftPanelObjects = _root.Q<VisualElement>("LeftPanelObjects");
+            _typePanelTitle = _root.Q<Label>("TypePanelTitle");
             _partsContainer = _root.Q<ScrollView>("PartListContainer");
             _statesContainer = _root.Q<ScrollView>("StateListContainer");
             _layoutPreview = _root.Q<VisualElement>("Layout2DPreview");
@@ -363,6 +436,7 @@ namespace RobotTwin.UI
             _viewportZoomInBtn = _root.Q<Button>("ViewportZoomInBtn");
             _viewportZoomOutBtn = _root.Q<Button>("ViewportZoomOutBtn");
             _viewportToolsToggleBtn = _root.Q<Button>("ViewportToolsToggleBtn");
+            _viewportTools = _root.Q<VisualElement>("ViewportTools");
             _viewportToolsBody = _root.Q<VisualElement>("ViewportToolsBody");
             _viewportPinBtn = _root.Q<Button>("ViewportPinBtn");
             _viewportLabelBtn = _root.Q<Button>("ViewportLabelBtn");
@@ -385,6 +459,11 @@ namespace RobotTwin.UI
             _layoutToolPanBtn = _root.Q<Button>("LayoutToolPanBtn");
             _layoutToolPinBtn = _root.Q<Button>("LayoutToolPinBtn");
             _layoutToolLabelBtn = _root.Q<Button>("LayoutToolLabelBtn");
+            _layoutToolBoxBtn = _root.Q<Button>("LayoutToolBoxBtn");
+            _layoutToolTriangleBtn = _root.Q<Button>("LayoutToolTriangleBtn");
+            _layoutToolLineBtn = _root.Q<Button>("LayoutToolLineBtn");
+            _layoutToolTextBtn = _root.Q<Button>("LayoutToolTextBtn");
+            _layoutToolCircleBtn = _root.Q<Button>("LayoutToolCircleBtn");
             _layoutGridToggleBtn = _root.Q<Button>("LayoutGridToggleBtn");
             _layoutGrid = _root.Q<VisualElement>("Layout2DGrid");
             _layoutHelpIcon = _root.Q<VisualElement>("Layout2DHelpIcon");
@@ -395,6 +474,7 @@ namespace RobotTwin.UI
             _circuit3DFovSlider = _root.Q<Slider>("Circuit3DFovSlider");
             _circuit3DPerspectiveToggle = _root.Q<Toggle>("Circuit3DPerspectiveToggle");
             _circuit3DFollowToggle = _root.Q<Toggle>("Circuit3DFollowToggle");
+            _viewportPartColorsToggle = _root.Q<Toggle>("ViewportPartColorsToggle");
             _circuit3DRebuildBtn = _root.Q<Button>("Circuit3DRebuildBtn");
             _viewportEditPanel = _root.Q<VisualElement>("ViewportEditPanel");
             _viewportEditPanelToggle = _root.Q<Toggle>("ViewportEditPanelToggle");
@@ -432,6 +512,8 @@ namespace RobotTwin.UI
             _menuViewFrameBtn = _root.Q<Button>("MenuViewFrame");
             _menuViewResetBtn = _root.Q<Button>("MenuViewReset");
             _menuToolsMaterialBtn = _root.Q<Button>("MenuToolsMaterial");
+            _menuToolsValidateBtn = _root.Q<Button>("MenuToolsValidate");
+            _menuToolsRunBtn = _root.Q<Button>("MenuToolsRun");
             _menuToolsReloadModelBtn = _root.Q<Button>("MenuToolsReloadModel");
             _menuToolsExtractPinsBtn = _root.Q<Button>("MenuToolsExtractPins");
             _menuHelpShortcutsBtn = _root.Q<Button>("MenuHelpShortcuts");
@@ -460,9 +542,13 @@ namespace RobotTwin.UI
             _materialCloseBtn = _root.Q<Button>("MaterialCloseBtn");
             _inspectorTargetLabel = _root.Q<Label>("InspectorTargetLabel");
             _inspectorDetailsContainer = _root.Q<VisualElement>("InspectorDetailsContainer");
+            _notificationStack = _root.Q<VisualElement>("StudioNotificationStack");
+            _ledSettingsSection = _root.Q<VisualElement>("LedSettingsSection");
+            _resistorSettingsSection = _root.Q<VisualElement>("ResistorSettingsSection");
             _layoutContextMenu = _root.Q<VisualElement>("LayoutContextMenu");
             _layoutContextDeletePinBtn = _root.Q<Button>("LayoutContextDeletePinBtn");
             _layoutContextDeleteLabelBtn = _root.Q<Button>("LayoutContextDeleteLabelBtn");
+            _layoutContextDeleteShapeBtn = _root.Q<Button>("LayoutContextDeleteShapeBtn");
             _layoutContextResetViewBtn = _root.Q<Button>("LayoutContextResetViewBtn");
 
             if (_saveBtn != null) _saveBtn.clicked += SavePackageOnly;
@@ -477,15 +563,24 @@ namespace RobotTwin.UI
             if (_addLabelBtn != null) _addLabelBtn.clicked += () => AddLabelRow(new LabelLayoutPayload { text = "{id}", x = 0.5f, y = 0.5f, size = 10, align = "center" });
             if (_addSpecBtn != null) _addSpecBtn.clicked += () => AddKeyValueRow(_specsContainer, string.Empty, string.Empty);
             if (_addDefaultBtn != null) _addDefaultBtn.clicked += () => AddKeyValueRow(_defaultsContainer, string.Empty, string.Empty);
+            if (_addAnchorBtn != null) _addAnchorBtn.clicked += () => AddPinRow(new PinLayoutPayload { name = GetNextPinName(), anchorRadius = 0.01f });
+            if (_symbolBrowseBtn != null) _symbolBrowseBtn.clicked += BrowseForSymbol;
             if (_addFxBtn != null) _addFxBtn.clicked += () => AddFxRow(new FxPayload { id = $"fx_{Guid.NewGuid():N}".Substring(0, 6), type = "Glow" });
             if (_frameBtn != null) _frameBtn.clicked += () => _studioView?.FrameModel();
             if (_anchorShowToggle != null)
             {
+                _anchorVisible = _anchorShowToggle.value;
                 _anchorShowToggle.RegisterValueChangedCallback(evt =>
                 {
+                    _anchorVisible = evt.newValue;
                     if (_viewportEditAnchorsToggle != null) _viewportEditAnchorsToggle.SetValueWithoutNotify(evt.newValue);
                     RefreshAnchorGizmos();
                 });
+            }
+            if (_anchorPickToggle != null)
+            {
+                _anchorPickMode = _anchorPickToggle.value;
+                _anchorPickToggle.RegisterValueChangedCallback(evt => _anchorPickMode = evt.newValue);
             }
             if (_partApplyBtn != null) _partApplyBtn.clicked += ApplySelectedPartOverride;
             if (_stateAddBtn != null) _stateAddBtn.clicked += AddStateOverride;
@@ -497,16 +592,17 @@ namespace RobotTwin.UI
             if (_viewportZoomInBtn != null) _viewportZoomInBtn.clicked += () => _studioView?.Zoom(-0.08f);
             if (_viewportZoomOutBtn != null) _viewportZoomOutBtn.clicked += () => _studioView?.Zoom(0.08f);
             if (_viewportToolsToggleBtn != null) _viewportToolsToggleBtn.clicked += ToggleViewportTools;
+            SetViewportToolsCollapsed(_viewportToolsCollapsed);
             if (_viewportPinBtn != null) _viewportPinBtn.clicked += () => ActivateTool(ToolAction.Pin);
             if (_viewportLabelBtn != null) _viewportLabelBtn.clicked += () => ActivateTool(ToolAction.Label);
-            if (_viewportMaterialBtn != null) _viewportMaterialBtn.clicked += () => ActivateTool(ToolAction.Material);
+            if (_viewportMaterialBtn != null) _viewportMaterialBtn.clicked += () => ToggleMaterialPanel();
             if (_viewportStateBtn != null) _viewportStateBtn.clicked += () => ActivateTool(ToolAction.State);
-            if (_viewCubeTopBtn != null) _viewCubeTopBtn.clicked += () => _studioView?.SnapView(ComponentStudioView.ViewPreset.Top);
-            if (_viewCubeBottomBtn != null) _viewCubeBottomBtn.clicked += () => _studioView?.SnapView(ComponentStudioView.ViewPreset.Bottom);
-            if (_viewCubeLeftBtn != null) _viewCubeLeftBtn.clicked += () => _studioView?.SnapView(ComponentStudioView.ViewPreset.Left);
-            if (_viewCubeRightBtn != null) _viewCubeRightBtn.clicked += () => _studioView?.SnapView(ComponentStudioView.ViewPreset.Right);
-            if (_viewCubeFrontBtn != null) _viewCubeFrontBtn.clicked += () => _studioView?.SnapView(ComponentStudioView.ViewPreset.Front);
-            if (_viewCubeBackBtn != null) _viewCubeBackBtn.clicked += () => _studioView?.SnapView(ComponentStudioView.ViewPreset.Back);
+            if (_viewCubeTopBtn != null) _viewCubeTopBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Top); _studioView?.FrameModel(); };
+            if (_viewCubeBottomBtn != null) _viewCubeBottomBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Bottom); _studioView?.FrameModel(); };
+            if (_viewCubeLeftBtn != null) _viewCubeLeftBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Left); _studioView?.FrameModel(); };
+            if (_viewCubeRightBtn != null) _viewCubeRightBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Right); _studioView?.FrameModel(); };
+            if (_viewCubeFrontBtn != null) _viewCubeFrontBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Front); _studioView?.FrameModel(); };
+            if (_viewCubeBackBtn != null) _viewCubeBackBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Back); _studioView?.FrameModel(); };
             if (_centerTab3dBtn != null) _centerTab3dBtn.clicked += () => SetCenterView(true);
             if (_centerTab2dBtn != null) _centerTab2dBtn.clicked += () => SetCenterView(false);
             if (_layoutResetBtn != null) _layoutResetBtn.clicked += ResetLayoutView;
@@ -514,6 +610,11 @@ namespace RobotTwin.UI
             if (_layoutToolPanBtn != null) _layoutToolPanBtn.clicked += () => SetLayoutTool(LayoutTool.Pan);
             if (_layoutToolPinBtn != null) _layoutToolPinBtn.clicked += () => SetLayoutTool(LayoutTool.Pin);
             if (_layoutToolLabelBtn != null) _layoutToolLabelBtn.clicked += () => SetLayoutTool(LayoutTool.Label);
+            if (_layoutToolBoxBtn != null) _layoutToolBoxBtn.clicked += () => SetLayoutTool(LayoutTool.Box);
+            if (_layoutToolTriangleBtn != null) _layoutToolTriangleBtn.clicked += () => SetLayoutTool(LayoutTool.Triangle);
+            if (_layoutToolLineBtn != null) _layoutToolLineBtn.clicked += () => SetLayoutTool(LayoutTool.Line);
+            if (_layoutToolTextBtn != null) _layoutToolTextBtn.clicked += () => SetLayoutTool(LayoutTool.Text);
+            if (_layoutToolCircleBtn != null) _layoutToolCircleBtn.clicked += () => SetLayoutTool(LayoutTool.Circle);
             if (_layoutGridToggleBtn != null) _layoutGridToggleBtn.clicked += ToggleLayoutGrid;
             if (_layoutHelpIcon != null)
             {
@@ -547,6 +648,11 @@ namespace RobotTwin.UI
             {
                 _circuit3DFollowToggle.RegisterValueChangedCallback(_ => ApplyFollowSelection());
             }
+            if (_viewportPartColorsToggle != null)
+            {
+                _partColorsEnabled = _viewportPartColorsToggle.value;
+                _viewportPartColorsToggle.RegisterValueChangedCallback(evt => TogglePartColors(evt.newValue));
+            }
             if (_circuit3DRebuildBtn != null) _circuit3DRebuildBtn.clicked += () => LoadModelForPayload(_payload);
             if (_viewportEditPanelToggle != null)
             {
@@ -561,7 +667,7 @@ namespace RobotTwin.UI
             {
                 _viewportEditAnchorsToggle.RegisterValueChangedCallback(evt =>
                 {
-                    if (_anchorShowToggle != null) _anchorShowToggle.SetValueWithoutNotify(evt.newValue);
+                    SetAnchorVisible(evt.newValue);
                     RefreshAnchorGizmos();
                     RefreshTransformGizmo();
                 });
@@ -603,7 +709,7 @@ namespace RobotTwin.UI
             if (_toolPinBtn != null) _toolPinBtn.clicked += () => ActivateTool(ToolAction.Pin);
             if (_toolLabelBtn != null) _toolLabelBtn.clicked += () => ActivateTool(ToolAction.Label);
             if (_toolStateBtn != null) _toolStateBtn.clicked += () => ActivateTool(ToolAction.State);
-            if (_toolMaterialBtn != null) _toolMaterialBtn.clicked += () => ActivateTool(ToolAction.Material);
+            if (_toolMaterialBtn != null) _toolMaterialBtn.clicked += () => ToggleMaterialPanel();
             if (_menuFileBtn != null) _menuFileBtn.clicked += () => ToggleMenu(_menuFileDropdown, _menuFileBtn);
             if (_menuEditBtn != null) _menuEditBtn.clicked += () => ToggleMenu(_menuEditDropdown, _menuEditBtn);
             if (_menuViewBtn != null) _menuViewBtn.clicked += () => ToggleMenu(_menuViewDropdown, _menuViewBtn);
@@ -622,7 +728,9 @@ namespace RobotTwin.UI
             if (_menuViewToggleAnchorsBtn != null) _menuViewToggleAnchorsBtn.clicked += () => { ToggleAnchors(); HideMenus(); };
             if (_menuViewFrameBtn != null) _menuViewFrameBtn.clicked += () => { _studioView?.FrameModel(); HideMenus(); };
             if (_menuViewResetBtn != null) _menuViewResetBtn.clicked += () => { _studioView?.ResetView(); HideMenus(); };
-            if (_menuToolsMaterialBtn != null) _menuToolsMaterialBtn.clicked += () => { ActivateTool(ToolAction.Material); HideMenus(); };
+            if (_menuToolsMaterialBtn != null) _menuToolsMaterialBtn.clicked += () => { ToggleMaterialPanel(); HideMenus(); };
+            if (_menuToolsValidateBtn != null) _menuToolsValidateBtn.clicked += () => { RunValidationAndNotify(); HideMenus(); };
+            if (_menuToolsRunBtn != null) _menuToolsRunBtn.clicked += () => { RunModelCheck(); HideMenus(); };
             if (_menuToolsReloadModelBtn != null) _menuToolsReloadModelBtn.clicked += () => { LoadModelForPayload(_payload); HideMenus(); };
             if (_menuToolsExtractPinsBtn != null) _menuToolsExtractPinsBtn.clicked += () => { AutoAddPinsFromCurrent(); HideMenus(); };
             if (_menuHelpShortcutsBtn != null) _menuHelpShortcutsBtn.clicked += () => { ToggleHelpTooltip(); HideMenus(); };
@@ -637,9 +745,14 @@ namespace RobotTwin.UI
             if (_materialClearBtn != null) _materialClearBtn.clicked += ClearMaterialOverrides;
             if (_materialCloseBtn != null) _materialCloseBtn.clicked += CloseMaterialModal;
             if (_catalogRefreshBtn != null) _catalogRefreshBtn.clicked += RefreshCatalogAndHierarchy;
-            if (_hierarchyToggleBtn != null) _hierarchyToggleBtn.clicked += ToggleHierarchyPanel;
+            if (_leftTabHierarchyBtn != null) _leftTabHierarchyBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Hierarchy);
+            if (_leftTabCatalogBtn != null) _leftTabCatalogBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Catalog);
+            if (_leftTabBasicsBtn != null) _leftTabBasicsBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Basics);
+            if (_leftTabTypeBtn != null) _leftTabTypeBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Type);
+            if (_leftTabObjectsBtn != null) _leftTabObjectsBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Objects);
             if (_layoutContextDeletePinBtn != null) _layoutContextDeletePinBtn.clicked += DeleteContextPin;
             if (_layoutContextDeleteLabelBtn != null) _layoutContextDeleteLabelBtn.clicked += DeleteContextLabel;
+            if (_layoutContextDeleteShapeBtn != null) _layoutContextDeleteShapeBtn.clicked += DeleteContextShape;
             if (_layoutContextResetViewBtn != null) _layoutContextResetViewBtn.clicked += ResetLayoutView;
 
             if (_layoutPreview != null)
@@ -671,8 +784,23 @@ namespace RobotTwin.UI
             var sizeYField = GetField("ComponentSizeYField");
             if (sizeXField != null) sizeXField.RegisterValueChangedCallback(_ => RefreshLayoutPreview());
             if (sizeYField != null) sizeYField.RegisterValueChangedCallback(_ => RefreshLayoutPreview());
-            var typeField = GetField("ComponentTypeField");
-            if (typeField != null) typeField.RegisterValueChangedCallback(_ => EnsureRequiredStates());
+            if (_componentTypeDropdown != null)
+            {
+                _componentTypeDropdown.RegisterValueChangedCallback(_ =>
+                {
+                    EnsureRequiredStates();
+                    UpdateTypePanels();
+                });
+            }
+            else
+            {
+                var typeField = GetField("ComponentTypeField");
+                if (typeField != null) typeField.RegisterValueChangedCallback(_ =>
+                {
+                    EnsureRequiredStates();
+                    UpdateTypePanels();
+                });
+            }
 
             if (_viewport != null)
             {
@@ -692,13 +820,19 @@ namespace RobotTwin.UI
             if (_root != null)
             {
                 _root.RegisterCallback<PointerDownEvent>(OnRootPointerDown, TrickleDown.TrickleDown);
+                _root.RegisterCallback<PointerMoveEvent>(OnCatalogDragMove);
+                _root.RegisterCallback<PointerUpEvent>(OnCatalogDragEnd);
+                _root.RegisterCallback<PointerCancelEvent>(OnCatalogDragCancel);
             }
 
             UpdateToolButtons();
             RegisterValidationBindings();
+            InitializeTypeDropdown();
+            UpdateTypePanels();
             InitializeOutputPanel();
             RegisterMenuDismissHandler();
             RefreshCatalogAndHierarchy();
+            SetLeftPanelTab(LeftPanelTab.Hierarchy);
         }
 
         private void RegisterMenuDismissHandler()
@@ -720,14 +854,7 @@ namespace RobotTwin.UI
             }
             if (_is2dView)
             {
-                if (_component2DPanel != null && (_component2DPanel == target || _component2DPanel.Contains(target)))
-                {
-                    _layoutKeyFocus = true;
-                }
-                else
-                {
-                    _layoutKeyFocus = false;
-                }
+                _layoutKeyFocus = true;
                 if (!IsLayoutHelpPointerTarget(target))
                 {
                     HideLayoutHelpTooltip();
@@ -855,6 +982,27 @@ namespace RobotTwin.UI
             }
         }
 
+        private void SetLeftPanelTab(LeftPanelTab tab)
+        {
+            SetPanelVisible(_leftPanelHierarchy, tab == LeftPanelTab.Hierarchy);
+            SetPanelVisible(_leftPanelCatalog, tab == LeftPanelTab.Catalog);
+            SetPanelVisible(_leftPanelBasics, tab == LeftPanelTab.Basics);
+            SetPanelVisible(_leftPanelType, tab == LeftPanelTab.Type);
+            SetPanelVisible(_leftPanelObjects, tab == LeftPanelTab.Objects);
+
+            ToggleActiveClass(_leftTabHierarchyBtn, tab == LeftPanelTab.Hierarchy);
+            ToggleActiveClass(_leftTabCatalogBtn, tab == LeftPanelTab.Catalog);
+            ToggleActiveClass(_leftTabBasicsBtn, tab == LeftPanelTab.Basics);
+            ToggleActiveClass(_leftTabTypeBtn, tab == LeftPanelTab.Type);
+            ToggleActiveClass(_leftTabObjectsBtn, tab == LeftPanelTab.Objects);
+        }
+
+        private static void SetPanelVisible(VisualElement panel, bool isVisible)
+        {
+            if (panel == null) return;
+            panel.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
         private void SetOutputFilter(OutputFilter filter)
         {
             _outputFilter = filter;
@@ -963,46 +1111,50 @@ namespace RobotTwin.UI
 
         private void RenderOutput()
         {
-            if (_outputConsole == null) return;
-            _outputConsole.Clear();
+            if (_outputConsole != null)
+            {
+                _outputConsole.Clear();
 
-            IEnumerable<StudioLogEntry> entries = _logEntries;
-            if (_outputFilter == OutputFilter.Warnings)
-            {
-                entries = entries.Where(e => e.Level == LogLevel.Warning);
-            }
-            else if (_outputFilter == OutputFilter.Errors)
-            {
-                entries = entries.Where(e => e.Level == LogLevel.Error);
-            }
-
-            int added = 0;
-            foreach (var entry in entries)
-            {
-                var line = new Label(entry.Message);
-                line.AddToClassList("console-line");
-                if (entry.Level == LogLevel.Warning) line.AddToClassList("warn");
-                if (entry.Level == LogLevel.Error) line.AddToClassList("error");
-                if (entry.Level == LogLevel.Info) line.AddToClassList("info");
-                _outputConsole.Add(line);
-                added++;
-                if (!string.IsNullOrWhiteSpace(entry.Detail))
+                IEnumerable<StudioLogEntry> entries = _logEntries;
+                if (_outputFilter == OutputFilter.Warnings)
                 {
-                    var detail = new Label(entry.Detail);
-                    detail.AddToClassList("console-line");
-                    detail.AddToClassList("stack");
-                    _outputConsole.Add(detail);
+                    entries = entries.Where(e => e.Level == LogLevel.Warning);
                 }
+                else if (_outputFilter == OutputFilter.Errors)
+                {
+                    entries = entries.Where(e => e.Level == LogLevel.Error);
+                }
+
+                int added = 0;
+                foreach (var entry in entries)
+                {
+                    var line = new Label(entry.Message);
+                    line.AddToClassList("console-line");
+                    if (entry.Level == LogLevel.Warning) line.AddToClassList("warn");
+                    if (entry.Level == LogLevel.Error) line.AddToClassList("error");
+                    if (entry.Level == LogLevel.Info) line.AddToClassList("info");
+                    _outputConsole.Add(line);
+                    added++;
+                    if (!string.IsNullOrWhiteSpace(entry.Detail))
+                    {
+                        var detail = new Label(entry.Detail);
+                        detail.AddToClassList("console-line");
+                        detail.AddToClassList("stack");
+                        _outputConsole.Add(detail);
+                    }
+                }
+
+                if (added == 0)
+                {
+                    var empty = new Label("No output to display.");
+                    empty.AddToClassList("empty-state");
+                    _outputConsole.Add(empty);
+                }
+
+                UpdateOutputCounts();
             }
 
-            if (added == 0)
-            {
-                var empty = new Label("No output to display.");
-                empty.AddToClassList("empty-state");
-                _outputConsole.Add(empty);
-            }
-
-            UpdateOutputCounts();
+            RenderNotifications();
         }
 
         private void UpdateOutputCounts()
@@ -1027,12 +1179,65 @@ namespace RobotTwin.UI
             }
         }
 
+        private void RenderNotifications()
+        {
+            if (_notificationStack == null) return;
+            _notificationStack.Clear();
+
+            var entries = _logEntries
+                .Where(entry => entry.Level == LogLevel.Error || entry.Level == LogLevel.Warning)
+                .Reverse()
+                .Take(3)
+                .Reverse()
+                .ToList();
+
+            foreach (var entry in entries)
+            {
+                var note = new VisualElement();
+                note.AddToClassList("studio-note");
+                if (entry.Level == LogLevel.Warning) note.AddToClassList("warning");
+
+                var header = new VisualElement();
+                header.AddToClassList("studio-note-header");
+                var title = new Label(entry.Level == LogLevel.Error ? "Error" : "Warning");
+                title.AddToClassList("studio-note-title");
+                var entryRef = entry;
+                var closeBtn = new Button(() =>
+                {
+                    _logEntries.Remove(entryRef);
+                    UpdateOutputCounts();
+                    RenderNotifications();
+                })
+                {
+                    text = "X"
+                };
+                closeBtn.AddToClassList("studio-note-close");
+                header.Add(title);
+                header.Add(closeBtn);
+
+                var body = new Label(entry.Message ?? string.Empty);
+                body.AddToClassList("studio-note-body");
+
+                note.Add(header);
+                note.Add(body);
+                if (!string.IsNullOrWhiteSpace(entry.Detail))
+                {
+                    var detail = new Label(entry.Detail);
+                    detail.AddToClassList("studio-note-body");
+                    note.Add(detail);
+                }
+                _notificationStack.Add(note);
+            }
+        }
+
         private void RegisterValidationBindings()
         {
             RegisterValidationField(GetField("ComponentNameField"));
             RegisterValidationField(GetField("ComponentIdField"));
+            RegisterValidationField(_componentTypeDropdown);
             RegisterValidationField(GetField("ComponentTypeField"));
             RegisterValidationField(GetField("ComponentModelField"));
+            RegisterValidationField(_symbolFileField);
             RegisterValidationField(GetField("ComponentSizeXField"));
             RegisterValidationField(GetField("ComponentSizeYField"));
             RegisterValidationField(GetField("ComponentPhysicsScriptField"));
@@ -1070,7 +1275,33 @@ namespace RobotTwin.UI
             if (_materialUseColorToggle != null) _materialUseColorToggle.RegisterValueChangedCallback(_ => QueueValidation());
         }
 
+        private void InitializeTypeDropdown()
+        {
+            if (_componentTypeDropdown == null) return;
+            var choices = ComponentCatalog.Items
+                .Select(item => item.Type)
+                .Where(type => !string.IsNullOrWhiteSpace(type))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(type => type, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (!choices.Any(choice => string.Equals(choice, "Generic", StringComparison.OrdinalIgnoreCase)))
+            {
+                choices.Insert(0, "Generic");
+            }
+            if (choices.Count == 0)
+            {
+                choices.Add("Generic");
+            }
+            _componentTypeDropdown.choices = choices;
+        }
+
         private void RegisterValidationField(TextField field)
+        {
+            if (field == null) return;
+            field.RegisterValueChangedCallback(_ => QueueValidation());
+        }
+
+        private void RegisterValidationField(DropdownField field)
         {
             if (field == null) return;
             field.RegisterValueChangedCallback(_ => QueueValidation());
@@ -1095,6 +1326,7 @@ namespace RobotTwin.UI
                     ReadFloat(GetField("ComponentScaleYField"), 1f),
                     ReadFloat(GetField("ComponentScaleZField"), 1f));
                 _studioView?.ApplyModelTuning(euler, scale, _modelOffset);
+                SyncLayoutSizeFromModelBounds();
                 QueueValidation();
             });
         }
@@ -1117,7 +1349,7 @@ namespace RobotTwin.UI
 
             string name = GetField("ComponentNameField")?.value?.Trim();
             string id = SanitizeComponentId(GetField("ComponentIdField")?.value);
-            string type = GetField("ComponentTypeField")?.value?.Trim();
+            string type = GetTypeValue();
             string modelPath = GetField("ComponentModelField")?.value?.Trim();
             float sizeX = ReadFloat(GetField("ComponentSizeXField"), 0f);
             float sizeY = ReadFloat(GetField("ComponentSizeYField"), 0f);
@@ -1243,6 +1475,53 @@ namespace RobotTwin.UI
             RenderOutput();
         }
 
+        private void RunValidationAndNotify()
+        {
+            RunValidation();
+            bool hasErrors = _logEntries.Any(entry =>
+                entry.Level == LogLevel.Error &&
+                string.Equals(entry.Source, "validation", StringComparison.OrdinalIgnoreCase));
+            if (hasErrors)
+            {
+                SetStatus("Validation failed. Fix errors.", true);
+            }
+            else
+            {
+                SetStatus("Validation OK.", false);
+                AddLog(LogLevel.Info, "Validation OK.", "validation");
+            }
+        }
+
+        private void RunModelCheck()
+        {
+            RunValidation();
+            bool hasErrors = _logEntries.Any(entry =>
+                entry.Level == LogLevel.Error &&
+                string.Equals(entry.Source, "validation", StringComparison.OrdinalIgnoreCase));
+            if (hasErrors)
+            {
+                SetStatus("Run blocked by validation errors.", true);
+                AddLog(LogLevel.Error, "Run blocked. Fix validation errors first.", "run");
+                return;
+            }
+            SetStatus("Run OK. Model ready.", false);
+            AddLog(LogLevel.Info, "Run OK. Model ready.", "run");
+        }
+
+        private bool EnsureValidationOkForSave()
+        {
+            RunValidation();
+            bool hasErrors = _logEntries.Any(entry =>
+                entry.Level == LogLevel.Error &&
+                string.Equals(entry.Source, "validation", StringComparison.OrdinalIgnoreCase));
+            if (hasErrors)
+            {
+                SetStatus("Fix validation errors before saving.", true);
+                return false;
+            }
+            return true;
+        }
+
         private void OpenMaterialModal()
         {
             if (_materialOverlay == null) return;
@@ -1250,18 +1529,35 @@ namespace RobotTwin.UI
             {
                 AddLog(LogLevel.Warning, "Select a part to edit materials.", "material");
             }
-            _activeTool = ToolAction.Material;
-            UpdateToolButtons();
             UpdateMaterialModalFromSelection();
-            _materialOverlay.style.display = DisplayStyle.Flex;
+            SetMaterialPanelVisible(true);
+        }
+
+        private void SetMaterialPanelVisible(bool visible)
+        {
+            if (_materialOverlay == null) return;
+            _materialOverlay.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (visible)
+            {
+                _activeTool = ToolAction.Material;
+            }
+            else if (_activeTool == ToolAction.Material)
+            {
+                _activeTool = ToolAction.Select;
+            }
+            UpdateToolButtons();
+        }
+
+        private void ToggleMaterialPanel()
+        {
+            if (_materialOverlay == null) return;
+            bool visible = _materialOverlay.style.display == DisplayStyle.Flex;
+            SetMaterialPanelVisible(!visible);
         }
 
         private void CloseMaterialModal()
         {
-            if (_materialOverlay == null) return;
-            _materialOverlay.style.display = DisplayStyle.None;
-            _activeTool = ToolAction.Select;
-            UpdateToolButtons();
+            SetMaterialPanelVisible(false);
         }
 
         private void UpdateMaterialModalFromSelection()
@@ -1311,6 +1607,22 @@ namespace RobotTwin.UI
             if (TryPickFileRuntime("Select Texture", "Texture|*.png;*.jpg;*.jpeg;*.tga;*.tif;*.tiff;*.bmp;*.dds|All Files|*.*", out var file))
             {
                 if (_materialTextureField != null) _materialTextureField.SetValueWithoutNotify(file);
+            }
+#endif
+        }
+
+        private void BrowseForSymbol()
+        {
+#if UNITY_EDITOR
+            string file = EditorUtility.OpenFilePanel("Select Symbol", string.Empty, "png,svg");
+            if (!string.IsNullOrWhiteSpace(file))
+            {
+                SetTextValue("ComponentSymbolFileField", file);
+            }
+#else
+            if (TryPickFileRuntime("Select Symbol", "Symbol|*.png;*.svg|All Files|*.*", out var file))
+            {
+                SetTextValue("ComponentSymbolFileField", file);
             }
 #endif
         }
@@ -1467,6 +1779,37 @@ namespace RobotTwin.UI
                     if (File.Exists(candidate)) return candidate;
                 }
             }
+            return entryName;
+        }
+
+        private string ResolveSymbolPath(string entryName)
+        {
+            if (string.IsNullOrWhiteSpace(entryName)) return string.Empty;
+            if (File.Exists(entryName)) return entryName;
+            if (!string.IsNullOrWhiteSpace(_packagePath) &&
+                File.Exists(_packagePath) &&
+                ComponentPackageUtility.IsPackagePath(_packagePath) &&
+                ComponentPackageUtility.TryExtractEntryToCache(_packagePath, entryName, out var extracted))
+            {
+                return extracted;
+            }
+
+            string modelPath = GetField("ComponentModelField")?.value?.Trim();
+            if (!string.IsNullOrWhiteSpace(modelPath))
+            {
+                string modelDir = Path.GetDirectoryName(modelPath) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(modelDir))
+                {
+                    string relative = entryName.Replace('\\', '/');
+                    if (relative.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        relative = relative.Substring("assets/".Length);
+                    }
+                    relative = relative.Replace('/', Path.DirectorySeparatorChar);
+                    string candidate = Path.Combine(modelDir, relative);
+                    if (File.Exists(candidate)) return candidate;
+                }
+            }
             return string.Empty;
         }
 
@@ -1539,7 +1882,7 @@ namespace RobotTwin.UI
         private void AutoAddPinsFromCurrent()
         {
             if (_pinsContainer == null) return;
-            string type = GetField("ComponentTypeField")?.value?.Trim();
+            string type = GetTypeValue();
             if (string.IsNullOrWhiteSpace(type))
             {
                 AddLog(LogLevel.Warning, "Set component type before auto-adding pins.", "pins");
@@ -1665,16 +2008,12 @@ namespace RobotTwin.UI
                     evt.StopPropagation();
                     return;
                 }
-                if (evt.keyCode == KeyCode.Escape)
+                if (evt.keyCode == KeyCode.Escape && HandleEscapeKey())
                 {
-                    _layoutKeyFocus = false;
                     IgnoreEvent(evt);
                     evt.StopPropagation();
                     return;
                 }
-                IgnoreEvent(evt);
-                evt.StopPropagation();
-                return;
             }
             if (!_is2dView && IsViewportKeyTarget())
             {
@@ -1684,16 +2023,12 @@ namespace RobotTwin.UI
                     evt.StopPropagation();
                     return;
                 }
-                if (evt.keyCode == KeyCode.Escape)
+                if (evt.keyCode == KeyCode.Escape && HandleEscapeKey())
                 {
-                    _viewportKeyFocus = false;
                     IgnoreEvent(evt);
                     evt.StopPropagation();
                     return;
                 }
-                IgnoreEvent(evt);
-                evt.StopPropagation();
-                return;
             }
             if (evt.keyCode == KeyCode.Escape)
             {
@@ -1705,13 +2040,7 @@ namespace RobotTwin.UI
             }
             if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.M)
             {
-                ActivateTool(ToolAction.Material);
-                evt.StopPropagation();
-                return;
-            }
-            if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.O)
-            {
-                ToggleOutputPanel();
+                ToggleMaterialPanel();
                 evt.StopPropagation();
                 return;
             }
@@ -1736,6 +2065,12 @@ namespace RobotTwin.UI
             if (evt.ctrlKey && evt.keyCode == KeyCode.M)
             {
                 BrowseForModel();
+                evt.StopPropagation();
+                return;
+            }
+            if (evt.ctrlKey && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter))
+            {
+                RunModelCheck();
                 evt.StopPropagation();
                 return;
             }
@@ -1805,7 +2140,9 @@ namespace RobotTwin.UI
             for (var element = target; element != null; element = element.parent)
             {
                 if (element is TextField) return true;
+                if (element is DropdownField) return true;
                 if (element.ClassListContains("unity-text-input")) return true;
+                if (element.ClassListContains("unity-base-dropdown")) return true;
             }
             return false;
         }
@@ -1818,6 +2155,11 @@ namespace RobotTwin.UI
                 HideMenus();
                 handled = true;
             }
+            if (_layoutContextMenu != null && _layoutContextMenu.style.display == DisplayStyle.Flex)
+            {
+                HideLayoutContextMenu();
+                handled = true;
+            }
             if (_materialOverlay != null && _materialOverlay.style.display == DisplayStyle.Flex)
             {
                 CloseMaterialModal();
@@ -1828,9 +2170,19 @@ namespace RobotTwin.UI
                 _helpTooltip.style.display = DisplayStyle.None;
                 handled = true;
             }
-            if (_anchorPickToggle != null && _anchorPickToggle.value)
+            if (_layoutHelpTooltip != null && _layoutHelpTooltip.style.display == DisplayStyle.Flex)
             {
-                _anchorPickToggle.SetValueWithoutNotify(false);
+                _layoutHelpTooltip.style.display = DisplayStyle.None;
+                handled = true;
+            }
+            if (_catalogDragging)
+            {
+                CancelCatalogDrag();
+                handled = true;
+            }
+            if (IsAnchorPickEnabled())
+            {
+                SetAnchorPick(false);
                 handled = true;
             }
             if (_isViewportEditDragging)
@@ -1838,7 +2190,20 @@ namespace RobotTwin.UI
                 EndViewportEdit();
                 handled = true;
             }
-            if (_draggingPin || _layoutPanning)
+            if (_orbiting || _panning)
+            {
+                _orbiting = false;
+                _panning = false;
+                ReleaseViewportPointerCapture();
+                handled = true;
+            }
+            if (_placingShape)
+            {
+                CancelPlacingShape();
+                StopLayoutInteractions();
+                handled = true;
+            }
+            if (_draggingPin || _draggingLabel || _draggingShape || _layoutPanning)
             {
                 StopLayoutInteractions();
                 handled = true;
@@ -1884,11 +2249,13 @@ namespace RobotTwin.UI
             }
             if (evt.keyCode == KeyCode.O)
             {
-                if (_anchorShowToggle != null)
-                {
-                    _anchorShowToggle.SetValueWithoutNotify(!_anchorShowToggle.value);
-                }
+                SetAnchorVisible(!IsAnchorVisible());
                 RefreshAnchorGizmos();
+                return true;
+            }
+            if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.C)
+            {
+                SetPartColorsEnabled(!_partColorsEnabled, true);
                 return true;
             }
 
@@ -1944,6 +2311,16 @@ namespace RobotTwin.UI
                     _studioView.AdjustLightingBlend(0.1f);
                     return true;
                 }
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    _studioView.Zoom(CameraKeyZoomDelta * CameraKeyZoomScale);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    _studioView.Zoom(-CameraKeyZoomDelta * CameraKeyZoomScale);
+                    return true;
+                }
                 return false;
             }
 
@@ -1969,7 +2346,6 @@ namespace RobotTwin.UI
 
         private bool Handle2DKeyInput(KeyDownEvent evt)
         {
-            if (!IsLayoutKeyTarget()) return false;
             if (evt.keyCode == KeyCode.R || evt.keyCode == KeyCode.F)
             {
                 ResetLayoutView();
@@ -1990,6 +2366,31 @@ namespace RobotTwin.UI
                 SetLayoutTool(LayoutTool.Label);
                 return true;
             }
+            if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.B)
+            {
+                SetLayoutTool(LayoutTool.Box);
+                return true;
+            }
+            if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.T)
+            {
+                SetLayoutTool(LayoutTool.Triangle);
+                return true;
+            }
+            if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.N)
+            {
+                SetLayoutTool(LayoutTool.Line);
+                return true;
+            }
+            if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.X)
+            {
+                SetLayoutTool(LayoutTool.Text);
+                return true;
+            }
+            if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.C)
+            {
+                SetLayoutTool(LayoutTool.Circle);
+                return true;
+            }
             if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.V)
             {
                 SetLayoutTool(LayoutTool.Select);
@@ -2003,6 +2404,12 @@ namespace RobotTwin.UI
             if (evt.keyCode == KeyCode.Minus || evt.keyCode == KeyCode.KeypadMinus)
             {
                 ApplyLayoutZoom(-LayoutKeyZoomStep, GetLayoutZoomCenter());
+                return true;
+            }
+            if (evt.ctrlKey && (evt.keyCode == KeyCode.UpArrow || evt.keyCode == KeyCode.DownArrow))
+            {
+                float zoomDelta = evt.keyCode == KeyCode.UpArrow ? LayoutKeyZoomStep : -LayoutKeyZoomStep;
+                ApplyLayoutZoom(zoomDelta, GetLayoutZoomCenter());
                 return true;
             }
 
@@ -2199,10 +2606,11 @@ namespace RobotTwin.UI
             if (payload == null) return;
             SetField("ComponentNameField", payload.name);
             SetField("ComponentIdField", payload.id);
-            SetField("ComponentTypeField", payload.type);
+            SetTypeValue(payload.type);
             SetField("ComponentDescriptionField", payload.description);
             SetField("ComponentPhysicsScriptField", payload.physicsScript);
             SetField("ComponentSymbolField", payload.symbol);
+            SetTextValue("ComponentSymbolFileField", ResolveSymbolPath(payload.symbolFile));
             SetField("ComponentIconField", payload.iconChar);
             SetField("ComponentOrderField", payload.order.ToString(CultureInfo.InvariantCulture));
             SetField("ComponentModelField", _modelSourcePath);
@@ -2216,6 +2624,8 @@ namespace RobotTwin.UI
             _specsContainer?.Clear();
             _defaultsContainer?.Clear();
             _fxContainer?.Clear();
+            _shapeLayout.Clear();
+            _selectedShapeId = null;
 
             if (payload.pinLayout != null)
             {
@@ -2232,6 +2642,21 @@ namespace RobotTwin.UI
                     AddLabelRow(label);
                 }
             }
+
+            if (payload.shapes != null)
+            {
+                foreach (var shape in payload.shapes)
+                {
+                    if (shape == null) continue;
+                    if (string.IsNullOrWhiteSpace(shape.id))
+                    {
+                        shape.id = $"shape_{Guid.NewGuid():N}".Substring(0, 8);
+                    }
+                    _shapeLayout.Add(shape);
+                }
+            }
+
+            RefreshLayoutPreview();
 
             if (payload.specs != null)
             {
@@ -2269,7 +2694,7 @@ namespace RobotTwin.UI
 
         private void EnsureRequiredStates()
         {
-            string type = GetField("ComponentTypeField")?.value?.Trim() ?? string.Empty;
+            string type = GetTypeValue();
             var required = GetRequiredStatesForType(type);
             if (required.Count == 0) return;
             bool changed = false;
@@ -2391,6 +2816,7 @@ namespace RobotTwin.UI
             _modelOffset = tuning.ModelOffset;
             _studioView?.ApplyModelTuning(tuning.Euler, tuning.Scale, _modelOffset);
             RefreshEffectGizmos();
+            SyncLayoutSizeFromModelBounds();
         }
 
         private void ApplyCurrentModelTuning()
@@ -2399,6 +2825,40 @@ namespace RobotTwin.UI
             var euler = ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField");
             var scale = ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField");
             _studioView.ApplyModelTuning(euler, scale, _modelOffset);
+            SyncLayoutSizeFromModelBounds();
+        }
+
+        private void SyncLayoutSizeFromModelBounds()
+        {
+            if (_studioView == null) return;
+            if (!_studioView.TryGetModelBoundsLocal(out var bounds)) return;
+            float sizeX = Mathf.Max(bounds.size.x, 0.001f);
+            float sizeY = Mathf.Max(bounds.size.z, 0.001f);
+            var sizeXField = GetField("ComponentSizeXField");
+            var sizeYField = GetField("ComponentSizeYField");
+            bool updated = false;
+            if (sizeXField != null)
+            {
+                float current = ReadFloat(sizeXField, -1f);
+                if (Mathf.Abs(current - sizeX) > 0.0005f)
+                {
+                    SetField("ComponentSizeXField", sizeX.ToString("0.###", CultureInfo.InvariantCulture));
+                    updated = true;
+                }
+            }
+            if (sizeYField != null)
+            {
+                float current = ReadFloat(sizeYField, -1f);
+                if (Mathf.Abs(current - sizeY) > 0.0005f)
+                {
+                    SetField("ComponentSizeYField", sizeY.ToString("0.###", CultureInfo.InvariantCulture));
+                    updated = true;
+                }
+            }
+            if (updated)
+            {
+                RefreshLayoutPreview();
+            }
         }
 
         private void ClearTuning()
@@ -2543,6 +3003,7 @@ namespace RobotTwin.UI
         }
         private void SavePackageAndReturn()
         {
+            if (!EnsureValidationOkForSave()) return;
             var payload = BuildPayloadFromEditor();
             if (payload == null)
             {
@@ -2599,6 +3060,7 @@ namespace RobotTwin.UI
 
         private void SavePackageOnly()
         {
+            if (!EnsureValidationOkForSave()) return;
             var payload = BuildPayloadFromEditor();
             if (payload == null)
             {
@@ -2654,6 +3116,7 @@ namespace RobotTwin.UI
 
         private void SavePackageAs()
         {
+            if (!EnsureValidationOkForSave()) return;
             var payload = BuildPayloadFromEditor();
             if (payload == null)
             {
@@ -2831,7 +3294,16 @@ namespace RobotTwin.UI
             var labelXField = CreateField("LabelXField", FormatFloat(payload.x), "editor-field-small");
             var labelYField = CreateField("LabelYField", FormatFloat(payload.y), "editor-field-small");
             var labelSizeField = CreateField("LabelSizeField", payload.size > 0 ? payload.size.ToString(CultureInfo.InvariantCulture) : string.Empty, "editor-field-small");
-            var labelAlignField = CreateField("LabelAlignField", payload.align, "editor-field-small");
+            var labelAlignField = new DropdownField { name = "LabelAlignField" };
+            labelAlignField.AddToClassList("editor-field-small");
+            labelAlignField.AddToClassList("input-dark");
+            labelAlignField.choices = new List<string> { "left", "center", "right" };
+            string alignValue = string.IsNullOrWhiteSpace(payload.align) ? "center" : payload.align;
+            if (!labelAlignField.choices.Contains(alignValue, StringComparer.OrdinalIgnoreCase))
+            {
+                labelAlignField.choices.Add(alignValue);
+            }
+            labelAlignField.SetValueWithoutNotify(alignValue);
             row.Add(labelTextField);
             row.Add(labelXField);
             row.Add(labelYField);
@@ -2863,6 +3335,123 @@ namespace RobotTwin.UI
             RefreshCatalogAndHierarchy();
         }
 
+        private void AddShapeAt(float nx, float ny, LayoutTool tool)
+        {
+            string type = tool switch
+            {
+                LayoutTool.Box => "Box",
+                LayoutTool.Triangle => "Triangle",
+                LayoutTool.Line => "Line",
+                LayoutTool.Text => "Text",
+                LayoutTool.Circle => "Circle",
+                _ => "Box"
+            };
+            var shape = new ShapeLayoutPayload
+            {
+                id = $"shape_{Guid.NewGuid():N}".Substring(0, 8),
+                type = type,
+                x = Mathf.Clamp01(nx),
+                y = Mathf.Clamp01(ny),
+                width = type == "Line" ? 0.35f : 0.22f,
+                height = type == "Line" ? 0.04f : (type == "Text" ? 0.08f : 0.18f),
+                text = type == "Text" ? "TEXT" : string.Empty
+            };
+            _shapeLayout.Add(shape);
+            if (type == "Text")
+            {
+                _pendingShapeTextFocusId = shape.id;
+            }
+            SelectShape(shape.id);
+        }
+
+        private void BeginShapePlacement(float nx, float ny, LayoutTool tool, int pointerId)
+        {
+            if (_layoutPreviewActive == null) return;
+            string type = tool switch
+            {
+                LayoutTool.Box => "Box",
+                LayoutTool.Triangle => "Triangle",
+                LayoutTool.Line => "Line",
+                LayoutTool.Text => "Text",
+                LayoutTool.Circle => "Circle",
+                _ => "Box"
+            };
+            var shape = new ShapeLayoutPayload
+            {
+                id = $"shape_{Guid.NewGuid():N}".Substring(0, 8),
+                type = type,
+                x = Mathf.Clamp01(nx),
+                y = Mathf.Clamp01(ny),
+                width = 0.02f,
+                height = 0.02f,
+                text = type == "Text" ? "TEXT" : string.Empty
+            };
+            _shapeLayout.Add(shape);
+            _placingShape = true;
+            _placingShapeId = shape.id;
+            _placingShapeStart = new Vector2(nx, ny);
+            if (type == "Text")
+            {
+                _pendingShapeTextFocusId = shape.id;
+            }
+            _dragPointerId = pointerId;
+            if (_layoutPreviewActive.HasPointerCapture(_dragPointerId) == false)
+            {
+                _layoutPreviewActive.CapturePointer(_dragPointerId);
+            }
+            SelectShape(shape.id);
+        }
+
+        private bool UpdatePlacingShape(Vector2 local)
+        {
+            if (!_placingShape || string.IsNullOrWhiteSpace(_placingShapeId)) return false;
+            if (!TryGetLayoutNormalizedPosition(local, out var nx, out var ny)) return false;
+            var shape = _shapeLayout.FirstOrDefault(s => s != null && s.id == _placingShapeId);
+            if (shape == null) return false;
+            float startX = Mathf.Clamp01(_placingShapeStart.x);
+            float startY = Mathf.Clamp01(_placingShapeStart.y);
+            float endX = Mathf.Clamp01(nx);
+            float endY = Mathf.Clamp01(ny);
+            float width = Mathf.Max(0.02f, Mathf.Abs(endX - startX));
+            float height = Mathf.Max(0.02f, Mathf.Abs(endY - startY));
+            shape.x = (startX + endX) * 0.5f;
+            shape.y = (startY + endY) * 0.5f;
+            shape.width = width;
+            shape.height = height;
+            if (string.Equals(shape.type, "Line", StringComparison.OrdinalIgnoreCase))
+            {
+                shape.height = Mathf.Max(0.02f, height);
+            }
+            return true;
+        }
+
+        private void FinishPlacingShape()
+        {
+            if (!_placingShape) return;
+            _placingShape = false;
+            _placingShapeId = null;
+        }
+
+        private void CancelPlacingShape()
+        {
+            if (!_placingShape) return;
+            if (!string.IsNullOrWhiteSpace(_placingShapeId))
+            {
+                RemoveShapeById(_placingShapeId);
+            }
+            _placingShape = false;
+            _placingShapeId = null;
+        }
+
+        private void RemoveShapeById(string shapeId)
+        {
+            if (string.IsNullOrWhiteSpace(shapeId)) return;
+            _shapeLayout.RemoveAll(shape => shape != null && shape.id == shapeId);
+            if (_selectedShapeId == shapeId) _selectedShapeId = null;
+            RefreshLayoutPreview();
+            QueueValidation();
+        }
+
         private void AddFxRow(FxPayload payload)
         {
             if (_fxContainer == null) return;
@@ -2878,7 +3467,8 @@ namespace RobotTwin.UI
             var row = new VisualElement();
             row.AddToClassList("editor-row");
             var idField = CreateField("FxIdField", payload.id, "editor-field-small");
-            var typeField = CreateField("FxTypeField", payload.type, "editor-field");
+            string normalizedType = NormalizeFxTypeValue(payload.type);
+            var typeField = CreateDropdownField("FxTypeField", normalizedType, "editor-field", FxTypeChoices);
             var anchorField = CreateField("FxAnchorField", payload.anchorId, "editor-field-small");
             row.Add(idField);
             row.Add(typeField);
@@ -2967,6 +3557,8 @@ namespace RobotTwin.UI
             if (_selectedPinEntry != null) _selectedPinEntry.RemoveFromClassList("selected");
             _selectedPinEntry = entry;
             if (_selectedPinEntry != null) _selectedPinEntry.AddToClassList("selected");
+            _selectedShapeId = null;
+            RefreshLayoutPreview();
             RefreshTransformGizmo();
             UpdateInspectorForSelection("Pin", entry);
         }
@@ -2977,7 +3569,108 @@ namespace RobotTwin.UI
             if (_selectedLabelEntry != null) _selectedLabelEntry.RemoveFromClassList("selected");
             _selectedLabelEntry = entry;
             if (_selectedLabelEntry != null) _selectedLabelEntry.AddToClassList("selected");
+            _selectedShapeId = null;
+            RefreshLayoutPreview();
             UpdateInspectorForSelection("Label", entry);
+        }
+
+        private void SelectShape(string shapeId)
+        {
+            if (string.IsNullOrWhiteSpace(shapeId)) return;
+            _selectedShapeId = shapeId;
+            if (_selectedPinEntry != null) _selectedPinEntry.RemoveFromClassList("selected");
+            if (_selectedLabelEntry != null) _selectedLabelEntry.RemoveFromClassList("selected");
+            _selectedPinEntry = null;
+            _selectedLabelEntry = null;
+            UpdateInspectorForShape(shapeId);
+            RefreshLayoutPreview();
+        }
+
+        private void UpdateInspectorForShape(string shapeId)
+        {
+            var shape = _shapeLayout.FirstOrDefault(s => s != null && s.id == shapeId);
+            if (_inspectorTargetLabel != null)
+            {
+                if (shape == null)
+                {
+                    _inspectorTargetLabel.text = "Shape";
+                }
+                else
+                {
+                    string label = string.IsNullOrWhiteSpace(shape.type) ? "Shape" : $"Shape: {shape.type}";
+                    _inspectorTargetLabel.text = label;
+                }
+            }
+            if (_inspectorDetailsContainer == null) return;
+            _inspectorDetailsContainer.Clear();
+            if (shape == null) return;
+            var detail = new Label($"Type: {shape.type}");
+            detail.AddToClassList("form-label");
+            _inspectorDetailsContainer.Add(detail);
+
+            var sizeRow = new VisualElement();
+            sizeRow.AddToClassList("form-row-inline");
+            var sizeLabel = new Label("Size");
+            sizeLabel.AddToClassList("form-label");
+            var widthField = new TextField { value = shape.width.ToString("0.###", CultureInfo.InvariantCulture) };
+            widthField.AddToClassList("form-field");
+            widthField.AddToClassList("editor-field-small");
+            widthField.AddToClassList("input-dark");
+            var heightField = new TextField { value = shape.height.ToString("0.###", CultureInfo.InvariantCulture) };
+            heightField.AddToClassList("form-field");
+            heightField.AddToClassList("editor-field-small");
+            heightField.AddToClassList("input-dark");
+            sizeRow.Add(sizeLabel);
+            sizeRow.Add(widthField);
+            sizeRow.Add(heightField);
+            _inspectorDetailsContainer.Add(sizeRow);
+            widthField.RegisterValueChangedCallback(evt =>
+            {
+                if (float.TryParse(evt.newValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+                {
+                    shape.width = Mathf.Max(0.02f, value);
+                    RefreshLayoutPreview();
+                    QueueValidation();
+                }
+            });
+            heightField.RegisterValueChangedCallback(evt =>
+            {
+                if (float.TryParse(evt.newValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+                {
+                    shape.height = Mathf.Max(0.02f, value);
+                    RefreshLayoutPreview();
+                    QueueValidation();
+                }
+            });
+
+            if (string.Equals(shape.type, "Text", StringComparison.OrdinalIgnoreCase))
+            {
+                var textRow = new VisualElement();
+                textRow.AddToClassList("form-row");
+                var textLabel = new Label("Text");
+                textLabel.AddToClassList("form-label");
+                var textField = new TextField { value = shape.text ?? string.Empty };
+                textField.AddToClassList("form-field");
+                textField.AddToClassList("input-dark");
+                textRow.Add(textLabel);
+                textRow.Add(textField);
+                _inspectorDetailsContainer.Add(textRow);
+                textField.RegisterValueChangedCallback(evt =>
+                {
+                    shape.text = evt.newValue ?? string.Empty;
+                    RefreshLayoutPreview();
+                    QueueValidation();
+                });
+                if (!string.IsNullOrWhiteSpace(_pendingShapeTextFocusId) && _pendingShapeTextFocusId == shape.id)
+                {
+                    _pendingShapeTextFocusId = null;
+                    textField.schedule.Execute(() =>
+                    {
+                        textField.Focus();
+                        textField.SelectAll();
+                    }).ExecuteLater(1);
+                }
+            }
         }
 
         private void UpdateInspectorForSelection(string kind, VisualElement entry)
@@ -3010,6 +3703,46 @@ namespace RobotTwin.UI
         {
             RefreshCatalog();
             RefreshHierarchy();
+            RefreshAnchorsList();
+        }
+
+        private void RefreshAnchorsList()
+        {
+            if (_anchorsContainer == null) return;
+            _anchorsContainer.Clear();
+            if (_pinsContainer == null) return;
+            foreach (var entry in _pinsContainer.Children())
+            {
+                var nameField = entry.Q<TextField>("PinNameField");
+                string name = nameField?.value?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                float radius = ReadFloat(entry.Q<TextField>("PinAnchorRadiusField"));
+                var row = new VisualElement();
+                row.AddToClassList("hierarchy-item");
+                var label = new Label(name);
+                label.AddToClassList("hierarchy-item-label");
+                var kindLabel = new Label(radius > 0f ? $"r={FormatFloat(radius)}" : "anchor");
+                kindLabel.AddToClassList("hierarchy-item-kind");
+                row.Add(label);
+                row.Add(kindLabel);
+                row.RegisterCallback<PointerDownEvent>(_ => SelectPinEntry(entry));
+                _anchorsContainer.Add(row);
+            }
+        }
+
+        private string GetModelDisplayName()
+        {
+            string modelPath = _modelSourcePath;
+            if (string.IsNullOrWhiteSpace(modelPath))
+            {
+                modelPath = GetField("ComponentModelField")?.value;
+            }
+            if (string.IsNullOrWhiteSpace(modelPath) && _payload != null)
+            {
+                modelPath = _payload.modelFile;
+            }
+            if (string.IsNullOrWhiteSpace(modelPath)) return "Model";
+            return Path.GetFileNameWithoutExtension(modelPath);
         }
 
         private void RefreshCatalog()
@@ -3017,7 +3750,11 @@ namespace RobotTwin.UI
             if (_catalogList == null) return;
             _catalogList.Clear();
 
-            AddCatalogHeader("Pins");
+            string modelName = GetModelDisplayName();
+            AddCatalogHeader(modelName, 0);
+            int indent = 1;
+
+            AddCatalogHeader("Pins", indent);
             if (_pinsContainer != null)
             {
                 foreach (var entry in _pinsContainer.Children())
@@ -3025,11 +3762,11 @@ namespace RobotTwin.UI
                     var nameField = entry.Q<TextField>("PinNameField");
                     string name = nameField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
-                    AddCatalogItem(name, "Pin", () => SelectPinEntry(entry));
+                    AddCatalogItem(name, "Pin", () => SelectPinEntry(entry), true, indent);
                 }
             }
 
-            AddCatalogHeader("Labels");
+            AddCatalogHeader("Labels", indent);
             if (_labelsContainer != null)
             {
                 foreach (var entry in _labelsContainer.Children())
@@ -3037,11 +3774,11 @@ namespace RobotTwin.UI
                     var textField = entry.Q<TextField>("LabelTextField");
                     string text = textField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(text)) continue;
-                    AddCatalogItem(text, "Label", () => SelectLabelEntry(entry));
+                    AddCatalogItem(text, "Label", () => SelectLabelEntry(entry), true, indent);
                 }
             }
 
-            AddCatalogHeader("States");
+            AddCatalogHeader("States", indent);
             foreach (var state in _stateOverrides.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
             {
                 string stateId = state;
@@ -3049,28 +3786,28 @@ namespace RobotTwin.UI
                 {
                     var entry = FindStateEntryById(stateId);
                     if (entry != null) SelectStateEntry(entry);
-                });
+                }, false, indent);
             }
 
-            AddCatalogHeader("Parts");
+            AddCatalogHeader("Parts", indent);
             if (_partsContainer != null)
             {
                 foreach (var entry in _partsContainer.Children())
                 {
                     string name = entry.userData as string ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
-                    AddCatalogItem(name, "Part", () => SelectPartEntry(entry));
+                    AddCatalogItem(name, "Part", () => SelectPartEntry(entry), false, indent);
                 }
             }
 
-            AddCatalogHeader("Effects");
+            AddCatalogHeader("Effects", indent);
             var effectNames = new[]
             {
                 "LabelOffset", "LedGlowOffset", "HeatFxOffset", "SparkFxOffset", "ErrorFxOffset", "SmokeOffset", "UsbOffset"
             };
             foreach (var effect in effectNames)
             {
-                AddCatalogItem(effect, "FX", null);
+                AddCatalogItem(effect, "FX", null, true, indent);
             }
             if (_fxContainer != null)
             {
@@ -3079,14 +3816,14 @@ namespace RobotTwin.UI
                     var idField = entry.Q<TextField>("FxIdField");
                     string id = idField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(id)) continue;
-                    AddCatalogItem(id, "FX", null);
+                    AddCatalogItem(id, "FX", null, true, indent);
                 }
             }
 
-            AddCatalogHeader("Scripts");
+            AddCatalogHeader("Scripts", indent);
             var physicsField = GetField("ComponentPhysicsScriptField");
             string scriptPath = physicsField?.value?.Trim() ?? string.Empty;
-            AddCatalogItem(string.IsNullOrWhiteSpace(scriptPath) ? "Physics Script (none)" : scriptPath, "Script", null);
+            AddCatalogItem(string.IsNullOrWhiteSpace(scriptPath) ? "Physics Script (none)" : scriptPath, "Script", null, true, indent);
         }
 
         private void RefreshHierarchy()
@@ -3094,7 +3831,19 @@ namespace RobotTwin.UI
             if (_hierarchyTree == null) return;
             _hierarchyTree.Clear();
 
-            AddHierarchyItem("2D View", "Root", 0, () => SetCenterView(false), () => SetCenterView(false));
+            string modelName = GetModelDisplayName();
+            AddHierarchyItem(modelName, "Model", 0, () =>
+            {
+                SetCenterView(true);
+                SelectModelRoot();
+            }, () =>
+            {
+                SetCenterView(true);
+                SelectModelRoot();
+                _studioView?.FrameModel();
+            });
+
+            AddHierarchyItem("2D View", "Root", 1, () => SetCenterView(false), () => SetCenterView(false));
             if (_pinsContainer != null)
             {
                 foreach (var entry in _pinsContainer.Children())
@@ -3102,7 +3851,7 @@ namespace RobotTwin.UI
                     var nameField = entry.Q<TextField>("PinNameField");
                     string name = nameField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
-                    AddHierarchyItem(name, "Pin", 1, () => SelectPinEntry(entry), () =>
+                    AddHierarchyItem(name, "Pin", 2, () => SelectPinEntry(entry), () =>
                     {
                         SetCenterView(false);
                         FocusLayoutOnEntry(entry, true);
@@ -3116,7 +3865,7 @@ namespace RobotTwin.UI
                     var textField = entry.Q<TextField>("LabelTextField");
                     string text = textField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(text)) continue;
-                    AddHierarchyItem(text, "Label", 1, () => SelectLabelEntry(entry), () =>
+                    AddHierarchyItem(text, "Label", 2, () => SelectLabelEntry(entry), () =>
                     {
                         SetCenterView(false);
                         FocusLayoutOnEntry(entry, false);
@@ -3124,14 +3873,14 @@ namespace RobotTwin.UI
                 }
             }
 
-            AddHierarchyItem("3D View", "Root", 0, () => SetCenterView(true), () => SetCenterView(true));
+            AddHierarchyItem("3D View", "Root", 1, () => SetCenterView(true), () => SetCenterView(true));
             if (_partsContainer != null)
             {
                 foreach (var entry in _partsContainer.Children())
                 {
                     string name = entry.userData as string ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
-                    AddHierarchyItem(name, "Part", 1, () => SelectPartEntry(entry), () =>
+                    AddHierarchyItem(name, "Part", 2, () => SelectPartEntry(entry), () =>
                     {
                         SetCenterView(true);
                         FrameSelectedPart();
@@ -3145,28 +3894,40 @@ namespace RobotTwin.UI
                     var idField = entry.Q<TextField>("FxIdField");
                     string id = idField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(id)) continue;
-                    AddHierarchyItem(id, "FX", 1, null, () => SetCenterView(true));
+                    AddHierarchyItem(id, "FX", 2, null, () => SetCenterView(true));
                 }
             }
         }
 
-        private void AddCatalogHeader(string title)
+        private void AddCatalogHeader(string title, int indent = 0)
         {
             var label = new Label(title);
             label.AddToClassList("panel-section-title");
+            if (indent > 0)
+            {
+                label.style.marginLeft = indent * 12;
+            }
             _catalogList.Add(label);
         }
 
-        private void AddCatalogItem(string name, string kind, Action onClick)
+        private void AddCatalogItem(string name, string kind, Action onClick, bool allowDrag = false, int indent = 0)
         {
             var row = new VisualElement();
             row.AddToClassList("catalog-item");
+            if (indent > 0)
+            {
+                row.style.marginLeft = indent * 12;
+            }
             var label = new Label(name);
             label.AddToClassList("catalog-item-label");
             var kindLabel = new Label(kind);
             kindLabel.AddToClassList("hierarchy-item-kind");
             row.Add(label);
             row.Add(kindLabel);
+            if (allowDrag)
+            {
+                row.RegisterCallback<PointerDownEvent>(evt => StartCatalogDrag(evt, name, kind));
+            }
             if (onClick != null)
             {
                 row.RegisterCallback<PointerDownEvent>(_ => onClick());
@@ -3213,14 +3974,6 @@ namespace RobotTwin.UI
             return null;
         }
 
-        private void ToggleHierarchyPanel()
-        {
-            if (_hierarchyTree == null || _hierarchyToggleBtn == null) return;
-            bool isVisible = _hierarchyTree.style.display != DisplayStyle.None;
-            _hierarchyTree.style.display = isVisible ? DisplayStyle.None : DisplayStyle.Flex;
-            _hierarchyToggleBtn.text = isVisible ? "Show" : "Hide";
-        }
-
         private void DeleteContextPin()
         {
             if (string.IsNullOrWhiteSpace(_layoutContextPinName)) return;
@@ -3235,18 +3988,206 @@ namespace RobotTwin.UI
             HideLayoutContextMenu();
         }
 
+        private void DeleteContextShape()
+        {
+            if (string.IsNullOrWhiteSpace(_layoutContextShapeId)) return;
+            RemoveShapeById(_layoutContextShapeId);
+            HideLayoutContextMenu();
+        }
+
         private void ShowLayoutContextMenu(Vector2 panelPosition)
         {
             if (_layoutContextMenu == null || _root == null) return;
-            var rootRect = _root.worldBound;
-            float left = panelPosition.x - rootRect.xMin;
-            float top = panelPosition.y - rootRect.yMin;
+            var parentRect = _component2DPanel != null ? _component2DPanel.worldBound : _root.worldBound;
+            float left = panelPosition.x - parentRect.xMin;
+            float top = panelPosition.y - parentRect.yMin;
             _layoutContextMenu.style.left = left;
             _layoutContextMenu.style.top = top;
             _layoutContextMenu.style.display = DisplayStyle.Flex;
         }
 
-        private void PrepareLayoutContextMenu(bool showPinDelete, bool showLabelDelete)
+        private void StartCatalogDrag(PointerDownEvent evt, string name, string kind)
+        {
+            if (evt.button != 0) return;
+            if (_root == null) return;
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(kind)) return;
+            _catalogDragging = true;
+            _catalogDragName = name;
+            _catalogDragKind = kind;
+            _catalogDragPointerId = evt.pointerId;
+
+            _catalogDragGhost = new VisualElement();
+            _catalogDragGhost.pickingMode = PickingMode.Ignore;
+            _catalogDragGhost.style.position = Position.Absolute;
+            _catalogDragGhost.style.left = evt.position.x;
+            _catalogDragGhost.style.top = evt.position.y;
+            _catalogDragGhost.style.width = 24;
+            _catalogDragGhost.style.height = 24;
+            _catalogDragGhost.style.backgroundColor = new Color(0.2f, 0.8f, 0.9f, 0.45f);
+            _catalogDragGhost.style.borderTopLeftRadius = 4;
+            _catalogDragGhost.style.borderTopRightRadius = 4;
+            _catalogDragGhost.style.borderBottomLeftRadius = 4;
+            _catalogDragGhost.style.borderBottomRightRadius = 4;
+            _root.Add(_catalogDragGhost);
+
+            _root.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+
+        private void OnCatalogDragMove(PointerMoveEvent evt)
+        {
+            if (!_catalogDragging || _catalogDragGhost == null || evt.pointerId != _catalogDragPointerId) return;
+            _catalogDragGhost.style.left = evt.position.x;
+            _catalogDragGhost.style.top = evt.position.y;
+        }
+
+        private void OnCatalogDragEnd(PointerUpEvent evt)
+        {
+            if (!_catalogDragging || evt.pointerId != _catalogDragPointerId) return;
+            if (_root != null && _root.HasPointerCapture(evt.pointerId))
+            {
+                _root.ReleasePointer(evt.pointerId);
+            }
+            if (_catalogDragGhost != null)
+            {
+                _catalogDragGhost.RemoveFromHierarchy();
+                _catalogDragGhost = null;
+            }
+
+            bool droppedOnViewport = _viewport != null && _viewport.worldBound.Contains(evt.position);
+            bool droppedOnLayout = _layoutPreviewLarge != null && _layoutPreviewLarge.worldBound.Contains(evt.position);
+            if (droppedOnViewport || droppedOnLayout)
+            {
+                TryApplyCatalogDrop(evt.position, _catalogDragName, _catalogDragKind, droppedOnViewport);
+            }
+            _catalogDragging = false;
+            _catalogDragName = string.Empty;
+            _catalogDragKind = string.Empty;
+            _catalogDragPointerId = -1;
+        }
+
+        private void OnCatalogDragCancel(PointerCancelEvent evt)
+        {
+            if (!_catalogDragging || evt.pointerId != _catalogDragPointerId) return;
+            CancelCatalogDrag();
+        }
+
+        private void CancelCatalogDrag()
+        {
+            if (_root != null && _catalogDragPointerId != -1 && _root.HasPointerCapture(_catalogDragPointerId))
+            {
+                _root.ReleasePointer(_catalogDragPointerId);
+            }
+            if (_catalogDragGhost != null)
+            {
+                _catalogDragGhost.RemoveFromHierarchy();
+                _catalogDragGhost = null;
+            }
+            _catalogDragging = false;
+            _catalogDragName = string.Empty;
+            _catalogDragKind = string.Empty;
+            _catalogDragPointerId = -1;
+        }
+
+        private void TryApplyCatalogDrop(Vector2 worldPosition, string name, string kind, bool droppedOnViewport)
+        {
+            if (string.IsNullOrWhiteSpace(kind)) return;
+            if (kind.Equals("FX", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!droppedOnViewport) return;
+                Vector3 localPos = Vector3.zero;
+                if (_studioView != null && _viewport != null && droppedOnViewport)
+                {
+                    var rect = _viewport.worldBound;
+                    if (rect.width > 0f && rect.height > 0f)
+                    {
+                        var local = new Vector2(worldPosition.x - rect.xMin, worldPosition.y - rect.yMin);
+                        var viewportPoint = new Vector2(local.x / rect.width, 1f - (local.y / rect.height));
+                        _studioView.TryPickLocal(viewportPoint, out localPos);
+                    }
+                }
+
+                var payload = new FxPayload
+                {
+                    id = $"fx_{Guid.NewGuid():N}".Substring(0, 6),
+                    type = ResolveFxTypeFromCatalogName(name),
+                    localPosition = localPos,
+                    trigger = string.Empty,
+                    expression = string.Empty
+                };
+                AddFxRow(payload);
+                return;
+            }
+            if (kind.Equals("Script", StringComparison.OrdinalIgnoreCase))
+            {
+                var field = GetField("ComponentPhysicsScriptField");
+                if (field == null) return;
+                string value = string.Equals(name, "Physics Script (none)", StringComparison.OrdinalIgnoreCase) ? string.Empty : name;
+                field.SetValueWithoutNotify(value);
+                QueueValidation();
+                return;
+            }
+            if (kind.Equals("Pin", StringComparison.OrdinalIgnoreCase) && !droppedOnViewport)
+            {
+                if (!TryGetLayoutNormalizedFromWorld(worldPosition, out var nx, out var ny)) return;
+                var entry = FindPinEntry(name);
+                if (entry == null)
+                {
+                    entry = AddPinRow(new PinLayoutPayload { name = string.IsNullOrWhiteSpace(name) ? GetNextPinName() : name, x = nx, y = ny });
+                    if (entry != null) SelectPinEntry(entry);
+                }
+                else
+                {
+                    SetEntryValue(entry, "PinXField", nx.ToString("0.###", CultureInfo.InvariantCulture));
+                    SetEntryValue(entry, "PinYField", ny.ToString("0.###", CultureInfo.InvariantCulture));
+                }
+                RefreshLayoutPreview();
+                QueueValidation();
+                return;
+            }
+            if (kind.Equals("Label", StringComparison.OrdinalIgnoreCase) && !droppedOnViewport)
+            {
+                if (!TryGetLayoutNormalizedFromWorld(worldPosition, out var nx, out var ny)) return;
+                var entry = FindLabelEntry(name);
+                if (entry == null)
+                {
+                    AddLabelRow(new LabelLayoutPayload { text = string.IsNullOrWhiteSpace(name) ? "{id}" : name, x = nx, y = ny, size = 10, align = "center" });
+                }
+                else
+                {
+                    SetEntryValue(entry, "LabelXField", nx.ToString("0.###", CultureInfo.InvariantCulture));
+                    SetEntryValue(entry, "LabelYField", ny.ToString("0.###", CultureInfo.InvariantCulture));
+                }
+                RefreshLayoutPreview();
+                QueueValidation();
+            }
+        }
+
+        private bool TryGetLayoutNormalizedFromWorld(Vector2 worldPosition, out float nx, out float ny)
+        {
+            nx = 0f;
+            ny = 0f;
+            if (_layoutPreviewActive == null) return false;
+            var local = _layoutPreviewActive.WorldToLocal(worldPosition);
+            return TryGetLayoutNormalizedPosition(new Vector2(local.x, local.y), out nx, out ny);
+        }
+
+        private static string ResolveFxTypeFromCatalogName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "Glow";
+            string key = name.Trim().ToLowerInvariant();
+            if (key.Contains("heat")) return "Heat";
+            if (key.Contains("spark") || key.Contains("arc")) return "Spark";
+            if (key.Contains("error") || key.Contains("alarm")) return "Error";
+            if (key.Contains("smoke") || key.Contains("steam")) return "Smoke";
+            if (key.Contains("usb")) return "Pulse";
+            if (key.Contains("label")) return "Glow";
+            if (key.Contains("led") || key.Contains("glow")) return "Glow";
+            if (key.Contains("vibration")) return "Vibration";
+            return "Glow";
+        }
+
+        private void PrepareLayoutContextMenu(bool showPinDelete, bool showLabelDelete, bool showShapeDelete)
         {
             if (_layoutContextDeletePinBtn != null)
             {
@@ -3256,6 +4197,10 @@ namespace RobotTwin.UI
             {
                 _layoutContextDeleteLabelBtn.style.display = showLabelDelete ? DisplayStyle.Flex : DisplayStyle.None;
             }
+            if (_layoutContextDeleteShapeBtn != null)
+            {
+                _layoutContextDeleteShapeBtn.style.display = showShapeDelete ? DisplayStyle.Flex : DisplayStyle.None;
+            }
         }
 
         private void HideLayoutContextMenu()
@@ -3264,6 +4209,7 @@ namespace RobotTwin.UI
             _layoutContextMenu.style.display = DisplayStyle.None;
             _layoutContextPinName = null;
             _layoutContextLabelEntry = null;
+            _layoutContextShapeId = null;
         }
 
         private bool IsLayoutContextTarget(VisualElement target)
@@ -3314,6 +4260,7 @@ namespace RobotTwin.UI
             _layoutPanOffset = new Vector2(
                 (previewWidth * 0.5f) - (bodyWidth * 0.5f) - (nx * bodyWidth),
                 (previewHeight * 0.5f) - (bodyHeight * 0.5f) - (ny * bodyHeight));
+            ClampLayoutPanOffset();
             RefreshLayoutPreview();
         }
 
@@ -3327,7 +4274,7 @@ namespace RobotTwin.UI
         private void RefreshAnchorGizmos()
         {
             if (_studioView == null) return;
-            if (_anchorShowToggle != null && !_anchorShowToggle.value)
+            if (!IsAnchorVisible())
             {
                 _studioView.ClearAnchors();
                 return;
@@ -3389,10 +4336,9 @@ namespace RobotTwin.UI
                 foreach (var entry in _fxContainer.Children())
                 {
                     var idField = entry.Q<TextField>("FxIdField");
-                    var typeField = entry.Q<TextField>("FxTypeField");
                     string id = idField?.value?.Trim();
                     if (string.IsNullOrWhiteSpace(id)) continue;
-                    string type = typeField?.value?.Trim() ?? "FX";
+                    string type = DenormalizeFxTypeValue(GetEntryValue(entry, "FxTypeField"));
                     string anchorId = entry.Q<TextField>("FxAnchorField")?.value?.Trim();
                     Vector3 localPos = new Vector3(
                         ReadFloat(entry.Q<TextField>("FxPosXField")),
@@ -3473,6 +4419,7 @@ namespace RobotTwin.UI
             var primaryPreview = _is2dView ? (_layoutPreviewLarge ?? _layoutPreview) : (_layoutPreview ?? _layoutPreviewLarge);
             if (primaryPreview == null) return;
             _layoutPreviewActive = primaryPreview;
+            ClampLayoutPanOffset();
 
             RenderLayoutPreview(primaryPreview, true);
 
@@ -3481,6 +4428,59 @@ namespace RobotTwin.UI
             {
                 RenderLayoutPreview(secondaryPreview, false);
             }
+        }
+
+        private void ClampLayoutPanOffset()
+        {
+            if (_layoutPreviewLarge == null) return;
+            float previewWidth = _layoutPreviewLarge.resolvedStyle.width;
+            float previewHeight = _layoutPreviewLarge.resolvedStyle.height;
+            if (previewWidth <= 1f || previewHeight <= 1f) return;
+
+            float sizeX = ReadFloat(GetField("ComponentSizeXField"), CircuitLayoutSizing.DefaultComponentWidth);
+            float sizeY = ReadFloat(GetField("ComponentSizeYField"), CircuitLayoutSizing.DefaultComponentHeight);
+            if (sizeX <= 0f) sizeX = CircuitLayoutSizing.DefaultComponentWidth;
+            if (sizeY <= 0f) sizeY = CircuitLayoutSizing.DefaultComponentHeight;
+
+            float padding = 12f;
+            Vector2 averageSize = GetAverageComponentSize();
+            float maxX = Mathf.Max(sizeX, averageSize.x);
+            float maxY = Mathf.Max(sizeY, averageSize.y);
+            float scale = Mathf.Min((previewWidth - padding * 2f) / maxX, (previewHeight - padding * 2f) / maxY);
+            scale = Mathf.Clamp(scale, 0.1f, 100f);
+
+            float bodyWidth = sizeX * scale * _layoutZoom;
+            float bodyHeight = sizeY * scale * _layoutZoom;
+            float baseLeft = (previewWidth - bodyWidth) * 0.5f;
+            float baseTop = (previewHeight - bodyHeight) * 0.5f;
+
+            float margin = 18f;
+            float left = baseLeft + _layoutPanOffset.x;
+            float top = baseTop + _layoutPanOffset.y;
+
+            float minLeft = margin;
+            float maxLeft = previewWidth - bodyWidth - margin;
+            if (maxLeft >= minLeft)
+            {
+                left = Mathf.Clamp(left, minLeft, maxLeft);
+            }
+            else
+            {
+                left = Mathf.Clamp(left, baseLeft - margin, baseLeft + margin);
+            }
+
+            float minTop = margin;
+            float maxTop = previewHeight - bodyHeight - margin;
+            if (maxTop >= minTop)
+            {
+                top = Mathf.Clamp(top, minTop, maxTop);
+            }
+            else
+            {
+                top = Mathf.Clamp(top, baseTop - margin, baseTop + margin);
+            }
+
+            _layoutPanOffset = new Vector2(left - baseLeft, top - baseTop);
         }
 
         private void RenderLayoutPreview(VisualElement target, bool interactive)
@@ -3543,63 +4543,90 @@ namespace RobotTwin.UI
                 _layoutBodyActive = body;
             }
 
-            if (_pinsContainer == null) return;
-            foreach (var entry in _pinsContainer.Children())
+            if (_pinsContainer != null)
             {
-                var nameField = entry.Q<TextField>("PinNameField");
-                string pinName = nameField?.value?.Trim();
-                if (string.IsNullOrWhiteSpace(pinName)) continue;
-                float pinX = ReadFloat(entry.Q<TextField>("PinXField"));
-                float pinY = ReadFloat(entry.Q<TextField>("PinYField"));
-
-                float px = pinX >= 0f && pinX <= 1f ? pinX * bodyWidth : pinX * scale * zoom;
-                float py = pinY >= 0f && pinY <= 1f ? pinY * bodyHeight : pinY * scale * zoom;
-
-                var pin = new VisualElement();
-                pin.AddToClassList("layout-pin");
-                pin.style.left = bodyLeft + px - 5f;
-                pin.style.top = bodyTop + py - 5f;
-                pin.userData = pinName;
-                if (interactive)
+                foreach (var entry in _pinsContainer.Children())
                 {
-                    pin.RegisterCallback<PointerDownEvent>(OnLayoutPinPointerDown);
-                    _layoutPins[pinName] = pin;
-                }
-                target.Add(pin);
+                    var nameField = entry.Q<TextField>("PinNameField");
+                    string pinName = nameField?.value?.Trim();
+                    if (string.IsNullOrWhiteSpace(pinName)) continue;
+                    float pinX = ReadFloat(entry.Q<TextField>("PinXField"));
+                    float pinY = ReadFloat(entry.Q<TextField>("PinYField"));
 
-                var label = new Label(pinName);
-                label.AddToClassList("layout-pin-label");
-                label.style.left = bodyLeft + px + 6f;
-                label.style.top = bodyTop + py - 6f;
-                target.Add(label);
+                    float px = pinX >= 0f && pinX <= 1f ? pinX * bodyWidth : pinX * scale * zoom;
+                    float py = pinY >= 0f && pinY <= 1f ? pinY * bodyHeight : pinY * scale * zoom;
+
+                    var pin = new VisualElement();
+                    pin.AddToClassList("layout-pin");
+                    pin.style.left = bodyLeft + px - 5f;
+                    pin.style.top = bodyTop + py - 5f;
+                    pin.userData = pinName;
+                    if (interactive)
+                    {
+                        pin.RegisterCallback<PointerDownEvent>(OnLayoutPinPointerDown);
+                        _layoutPins[pinName] = pin;
+                    }
+                    target.Add(pin);
+
+                    var label = new Label(pinName);
+                    label.AddToClassList("layout-pin-label");
+                    label.style.left = bodyLeft + px + 6f;
+                    label.style.top = bodyTop + py - 6f;
+                    target.Add(label);
+                }
             }
 
-            if (_labelsContainer == null) return;
-            foreach (var entry in _labelsContainer.Children())
+            if (_labelsContainer != null)
             {
-                var textField = entry.Q<TextField>("LabelTextField");
-                string text = textField?.value?.Trim();
-                if (string.IsNullOrWhiteSpace(text)) continue;
-                float lx = ReadFloat(entry.Q<TextField>("LabelXField"));
-                float ly = ReadFloat(entry.Q<TextField>("LabelYField"));
-                float size = ReadFloat(entry.Q<TextField>("LabelSizeField"), 10f);
-                string align = entry.Q<TextField>("LabelAlignField")?.value ?? string.Empty;
+                foreach (var entry in _labelsContainer.Children())
+                {
+                    var textField = entry.Q<TextField>("LabelTextField");
+                    string text = textField?.value?.Trim();
+                    if (string.IsNullOrWhiteSpace(text)) continue;
+                    float lx = ReadFloat(entry.Q<TextField>("LabelXField"));
+                    float ly = ReadFloat(entry.Q<TextField>("LabelYField"));
+                    float size = ReadFloat(entry.Q<TextField>("LabelSizeField"), 10f);
+                    string align = GetEntryValue(entry, "LabelAlignField");
 
-                float px = lx >= 0f && lx <= 1f ? lx * bodyWidth : lx * scale * zoom;
-                float py = ly >= 0f && ly <= 1f ? ly * bodyHeight : ly * scale * zoom;
+                    float px = lx >= 0f && lx <= 1f ? lx * bodyWidth : lx * scale * zoom;
+                    float py = ly >= 0f && ly <= 1f ? ly * bodyHeight : ly * scale * zoom;
 
-                var layoutLabel = new Label(text);
-                layoutLabel.AddToClassList("layout-text-label");
-                layoutLabel.style.left = bodyLeft + px;
-                layoutLabel.style.top = bodyTop + py;
-                layoutLabel.style.fontSize = Mathf.Max(8f, size);
-                layoutLabel.style.unityTextAlign = ResolveTextAlign(align);
-                layoutLabel.userData = entry;
+                    var layoutLabel = new Label(text);
+                    layoutLabel.AddToClassList("layout-text-label");
+                    layoutLabel.style.left = bodyLeft + px;
+                    layoutLabel.style.top = bodyTop + py;
+                    layoutLabel.style.fontSize = Mathf.Max(8f, size);
+                    layoutLabel.style.unityTextAlign = ResolveTextAlign(align);
+                    layoutLabel.userData = entry;
+                    if (interactive)
+                    {
+                        layoutLabel.RegisterCallback<PointerDownEvent>(OnLayoutLabelPointerDown);
+                    }
+                    target.Add(layoutLabel);
+                }
+            }
+
+            if (_shapeLayout.Count == 0) return;
+            foreach (var shape in _shapeLayout)
+            {
+                if (shape == null) continue;
+                float px = shape.x >= 0f && shape.x <= 1f ? shape.x * bodyWidth : shape.x * scale * zoom;
+                float py = shape.y >= 0f && shape.y <= 1f ? shape.y * bodyHeight : shape.y * scale * zoom;
+                float w = shape.width >= 0f && shape.width <= 1f ? shape.width * bodyWidth : shape.width * scale * zoom;
+                float h = shape.height >= 0f && shape.height <= 1f ? shape.height * bodyHeight : shape.height * scale * zoom;
+
+                var element = new LayoutShapeElement(shape, shape.id == _selectedShapeId);
+                element.AddToClassList("layout-shape");
+                element.style.left = bodyLeft + px - w * 0.5f;
+                element.style.top = bodyTop + py - h * 0.5f;
+                element.style.width = Mathf.Max(6f, w);
+                element.style.height = Mathf.Max(6f, h);
+                element.userData = shape;
                 if (interactive)
                 {
-                    layoutLabel.RegisterCallback<PointerDownEvent>(OnLayoutLabelPointerDown);
+                    element.RegisterCallback<PointerDownEvent>(OnLayoutShapePointerDown);
                 }
-                target.Add(layoutLabel);
+                target.Add(element);
             }
         }
 
@@ -3610,6 +4637,120 @@ namespace RobotTwin.UI
             if (value.Contains("left")) return TextAnchor.MiddleLeft;
             if (value.Contains("right")) return TextAnchor.MiddleRight;
             return TextAnchor.MiddleCenter;
+        }
+
+        private sealed class LayoutShapeElement : VisualElement
+        {
+            private readonly ShapeLayoutPayload _payload;
+            private readonly bool _selected;
+            private readonly Label _textLabel;
+
+            public LayoutShapeElement(ShapeLayoutPayload payload, bool selected)
+            {
+                _payload = payload;
+                _selected = selected;
+                pickingMode = PickingMode.Position;
+                generateVisualContent += OnGenerateVisualContent;
+
+                if (IsTextShape(_payload?.type))
+                {
+                    _textLabel = new Label(_payload?.text ?? "TEXT");
+                    _textLabel.AddToClassList("layout-shape-text");
+                    _textLabel.style.flexGrow = 1f;
+                    _textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                    Add(_textLabel);
+                }
+
+                if (IsNoOutlineShape(_payload?.type))
+                {
+                    AddToClassList("shape-no-outline");
+                }
+
+                if (_selected)
+                {
+                    AddToClassList("selected");
+                }
+            }
+
+            private static bool IsTextShape(string type)
+            {
+                return string.Equals(type, "Text", StringComparison.OrdinalIgnoreCase);
+            }
+
+            private static bool IsNoOutlineShape(string type)
+            {
+                if (string.IsNullOrWhiteSpace(type)) return false;
+                return type.Equals("Text", StringComparison.OrdinalIgnoreCase) ||
+                       type.Equals("Triangle", StringComparison.OrdinalIgnoreCase) ||
+                       type.Equals("Line", StringComparison.OrdinalIgnoreCase);
+            }
+
+            private void OnGenerateVisualContent(MeshGenerationContext ctx)
+            {
+                if (_payload == null) return;
+                var painter = ctx.painter2D;
+                var rect = contentRect;
+                painter.lineWidth = _selected ? 2f : 1f;
+                painter.strokeColor = _selected ? Color.white : new Color(0.75f, 0.85f, 1f, 0.8f);
+                painter.fillColor = new Color(0.15f, 0.2f, 0.28f, 0.25f);
+
+                string type = _payload.type ?? string.Empty;
+                if (type.Equals("Text", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+                if (type.Equals("Line", StringComparison.OrdinalIgnoreCase))
+                {
+                    float midY = rect.y + rect.height * 0.5f;
+                    painter.BeginPath();
+                    painter.MoveTo(new Vector2(rect.x, midY));
+                    painter.LineTo(new Vector2(rect.x + rect.width, midY));
+                    painter.Stroke();
+                    return;
+                }
+
+                if (type.Equals("Triangle", StringComparison.OrdinalIgnoreCase))
+                {
+                    var p1 = new Vector2(rect.x + rect.width * 0.5f, rect.y);
+                    var p2 = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                    var p3 = new Vector2(rect.x, rect.y + rect.height);
+                    painter.BeginPath();
+                    painter.MoveTo(p1);
+                    painter.LineTo(p2);
+                    painter.LineTo(p3);
+                    painter.ClosePath();
+                    painter.Fill();
+                    painter.Stroke();
+                    return;
+                }
+
+                if (type.Equals("Circle", StringComparison.OrdinalIgnoreCase))
+                {
+                    var center = rect.center;
+                    float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
+                    int segments = 32;
+                    painter.BeginPath();
+                    painter.MoveTo(center + new Vector2(radius, 0f));
+                    for (int i = 1; i <= segments; i++)
+                    {
+                        float angle = (Mathf.PI * 2f) * (i / (float)segments);
+                        painter.LineTo(center + new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius));
+                    }
+                    painter.ClosePath();
+                    painter.Fill();
+                    painter.Stroke();
+                    return;
+                }
+
+                painter.BeginPath();
+                painter.MoveTo(new Vector2(rect.x, rect.y));
+                painter.LineTo(new Vector2(rect.x + rect.width, rect.y));
+                painter.LineTo(new Vector2(rect.x + rect.width, rect.y + rect.height));
+                painter.LineTo(new Vector2(rect.x, rect.y + rect.height));
+                painter.ClosePath();
+                painter.Fill();
+                painter.Stroke();
+            }
         }
 
         private Vector2 GetAverageComponentSize()
@@ -3641,7 +4782,8 @@ namespace RobotTwin.UI
                 if (entry != null) SelectPinEntry(entry);
                 _layoutContextPinName = pin.userData as string;
                 _layoutContextLabelEntry = null;
-                PrepareLayoutContextMenu(true, false);
+                _layoutContextShapeId = null;
+                PrepareLayoutContextMenu(true, false, false);
                 ShowLayoutContextMenu(evt.position);
                 evt.StopPropagation();
                 return;
@@ -3669,7 +4811,8 @@ namespace RobotTwin.UI
                 SelectLabelEntry(entry);
                 _layoutContextPinName = null;
                 _layoutContextLabelEntry = entry;
-                PrepareLayoutContextMenu(false, true);
+                _layoutContextShapeId = null;
+                PrepareLayoutContextMenu(false, true, false);
                 ShowLayoutContextMenu(evt.position);
                 evt.StopPropagation();
                 return;
@@ -3677,6 +4820,34 @@ namespace RobotTwin.UI
             SelectLabelEntry(entry);
             _draggingLabel = true;
             _draggingLabelEntry = entry;
+            _layoutKeyFocus = true;
+            _dragPointerId = evt.pointerId;
+            if (_layoutPreviewActive.HasPointerCapture(_dragPointerId) == false)
+            {
+                _layoutPreviewActive.CapturePointer(_dragPointerId);
+            }
+            evt.StopPropagation();
+        }
+
+        private void OnLayoutShapePointerDown(PointerDownEvent evt)
+        {
+            if (_layoutPreviewActive == null) return;
+            if (evt.currentTarget is not VisualElement element) return;
+            if (element.userData is not ShapeLayoutPayload shape) return;
+            if (evt.button == 1)
+            {
+                SelectShape(shape.id);
+                _layoutContextPinName = null;
+                _layoutContextLabelEntry = null;
+                _layoutContextShapeId = shape.id;
+                PrepareLayoutContextMenu(false, false, true);
+                ShowLayoutContextMenu(evt.position);
+                evt.StopPropagation();
+                return;
+            }
+            SelectShape(shape.id);
+            _draggingShape = true;
+            _draggingShapeId = shape.id;
             _layoutKeyFocus = true;
             _dragPointerId = evt.pointerId;
             if (_layoutPreviewActive.HasPointerCapture(_dragPointerId) == false)
@@ -3694,7 +4865,8 @@ namespace RobotTwin.UI
             {
                 _layoutContextPinName = null;
                 _layoutContextLabelEntry = null;
-                PrepareLayoutContextMenu(false, false);
+                _layoutContextShapeId = null;
+                PrepareLayoutContextMenu(false, false, false);
                 ShowLayoutContextMenu(evt.position);
                 evt.StopPropagation();
                 return;
@@ -3728,8 +4900,23 @@ namespace RobotTwin.UI
                     evt.StopPropagation();
                     return;
                 }
+                if (!string.IsNullOrWhiteSpace(_selectedShapeId))
+                {
+                    _draggingShape = true;
+                    _draggingShapeId = _selectedShapeId;
+                    _dragPointerId = evt.pointerId;
+                    if (_layoutPreviewActive.HasPointerCapture(_dragPointerId) == false)
+                    {
+                        _layoutPreviewActive.CapturePointer(_dragPointerId);
+                    }
+                    evt.StopPropagation();
+                    return;
+                }
             }
-            if (evt.button == 0 && (_layoutTool == LayoutTool.Pin || _layoutTool == LayoutTool.Label))
+            if (evt.button == 0 && (_layoutTool == LayoutTool.Pin || _layoutTool == LayoutTool.Label ||
+                                    _layoutTool == LayoutTool.Box || _layoutTool == LayoutTool.Triangle ||
+                                    _layoutTool == LayoutTool.Line || _layoutTool == LayoutTool.Text ||
+                                    _layoutTool == LayoutTool.Circle))
             {
                 if (TryGetLayoutNormalizedPosition(new Vector2(evt.localPosition.x, evt.localPosition.y), out var nx, out var ny))
                 {
@@ -3737,13 +4924,20 @@ namespace RobotTwin.UI
                     {
                         var entry = AddPinRow(new PinLayoutPayload { name = GetNextPinName(), x = nx, y = ny });
                         if (entry != null) SelectPinEntry(entry);
+                        RefreshLayoutPreview();
+                        QueueValidation();
+                    }
+                    else if (_layoutTool == LayoutTool.Label)
+                    {
+                        AddLabelRow(new LabelLayoutPayload { text = "{id}", x = nx, y = ny, size = 10, align = "center" });
+                        RefreshLayoutPreview();
+                        QueueValidation();
                     }
                     else
                     {
-                        AddLabelRow(new LabelLayoutPayload { text = "{id}", x = nx, y = ny, size = 10, align = "center" });
+                        BeginShapePlacement(nx, ny, _layoutTool, evt.pointerId);
+                        RefreshLayoutPreview();
                     }
-                    RefreshLayoutPreview();
-                    QueueValidation();
                     evt.StopPropagation();
                     return;
                 }
@@ -3793,6 +4987,17 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
+            if (_placingShape)
+            {
+                if (_layoutPreviewActive == null) return;
+                if (_dragPointerId != -1 && evt.pointerId != _dragPointerId) return;
+                if (UpdatePlacingShape(new Vector2(evt.localPosition.x, evt.localPosition.y)))
+                {
+                    RefreshLayoutPreview();
+                    evt.StopPropagation();
+                }
+                return;
+            }
             if (_draggingPin && !string.IsNullOrWhiteSpace(_draggingPinName))
             {
                 if (_layoutPreviewActive == null || _layoutBodyActive == null) return;
@@ -3812,6 +5017,38 @@ namespace RobotTwin.UI
                 {
                     SetEntryValue(entry, "PinXField", nx.ToString("0.###", CultureInfo.InvariantCulture));
                     SetEntryValue(entry, "PinYField", ny.ToString("0.###", CultureInfo.InvariantCulture));
+                }
+
+                RefreshLayoutPreview();
+                evt.StopPropagation();
+                return;
+            }
+
+            if (_draggingShape && !string.IsNullOrWhiteSpace(_draggingShapeId))
+            {
+                if (_layoutPreviewActive == null || _layoutBodyActive == null) return;
+                Vector2 local = new Vector2(evt.localPosition.x, evt.localPosition.y);
+                float bodyLeft = _layoutBodyActive.resolvedStyle.left;
+                float bodyTop = _layoutBodyActive.resolvedStyle.top;
+                float bodyWidth = _layoutBodyActive.resolvedStyle.width;
+                float bodyHeight = _layoutBodyActive.resolvedStyle.height;
+                if (bodyWidth <= 1f || bodyHeight <= 1f) return;
+
+                float nx = Mathf.Clamp01((local.x - bodyLeft) / bodyWidth);
+                float ny = Mathf.Clamp01((local.y - bodyTop) / bodyHeight);
+                var shape = _shapeLayout.FirstOrDefault(s => s != null && s.id == _draggingShapeId);
+                if (shape != null)
+                {
+                    if (evt.altKey)
+                    {
+                        shape.width = Mathf.Clamp(Mathf.Abs(nx - shape.x) * 2f, 0.02f, 1f);
+                        shape.height = Mathf.Clamp(Mathf.Abs(ny - shape.y) * 2f, 0.02f, 1f);
+                    }
+                    else
+                    {
+                        shape.x = nx;
+                        shape.y = ny;
+                    }
                 }
 
                 RefreshLayoutPreview();
@@ -3847,7 +5084,16 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
-            if (!_draggingPin && !_draggingLabel) return;
+            if (_placingShape && evt.pointerId == _dragPointerId)
+            {
+                FinishPlacingShape();
+                ReleaseLayoutPointerCapture();
+                RefreshLayoutPreview();
+                QueueValidation();
+                evt.StopPropagation();
+                return;
+            }
+            if (!_draggingPin && !_draggingLabel && !_draggingShape) return;
             StopLayoutInteractions();
             QueueValidation();
         }
@@ -3860,7 +5106,16 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
-            if (!_draggingPin && !_draggingLabel) return;
+            if (_placingShape && evt.pointerId == _dragPointerId)
+            {
+                FinishPlacingShape();
+                ReleaseLayoutPointerCapture();
+                RefreshLayoutPreview();
+                QueueValidation();
+                evt.StopPropagation();
+                return;
+            }
+            if (!_draggingPin && !_draggingLabel && !_draggingShape) return;
             StopLayoutInteractions();
             QueueValidation();
         }
@@ -3896,13 +5151,18 @@ namespace RobotTwin.UI
             Vector2 content = (localPoint - center - _layoutPanOffset) / oldZoom;
             _layoutZoom = newZoom;
             _layoutPanOffset = localPoint - center - content * newZoom;
+            ClampLayoutPanOffset();
 
             RefreshLayoutPreview();
         }
 
         private void OnLayoutPointerCancel(PointerCancelEvent evt)
         {
-            if (_draggingPin || _layoutPanning)
+            if (_placingShape)
+            {
+                CancelPlacingShape();
+            }
+            if (_draggingPin || _draggingShape || _placingShape || _layoutPanning)
             {
                 StopLayoutInteractions();
             }
@@ -3911,7 +5171,11 @@ namespace RobotTwin.UI
 
         private void OnLayoutPointerCaptureOut(PointerCaptureOutEvent evt)
         {
-            if (_draggingPin || _layoutPanning)
+            if (_placingShape)
+            {
+                CancelPlacingShape();
+            }
+            if (_draggingPin || _draggingShape || _placingShape || _layoutPanning)
             {
                 StopLayoutInteractions();
             }
@@ -3940,6 +5204,20 @@ namespace RobotTwin.UI
             {
                 var nameField = entry.Q<TextField>("PinNameField");
                 if (string.Equals(nameField?.value?.Trim(), pinName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return entry;
+                }
+            }
+            return null;
+        }
+
+        private VisualElement FindLabelEntry(string text)
+        {
+            if (_labelsContainer == null || string.IsNullOrWhiteSpace(text)) return null;
+            foreach (var entry in _labelsContainer.Children())
+            {
+                var textField = entry.Q<TextField>("LabelTextField");
+                if (string.Equals(textField?.value?.Trim(), text, StringComparison.OrdinalIgnoreCase))
                 {
                     return entry;
                 }
@@ -3997,6 +5275,10 @@ namespace RobotTwin.UI
                 {
                     ApplyPartOverrideToModel(overrideData);
                 }
+            }
+            if (_partColorsEnabled)
+            {
+                ApplyPartColorOverlay();
             }
         }
 
@@ -4061,6 +5343,7 @@ namespace RobotTwin.UI
             ApplyStateOverridesToModel();
             LoadSelectedPart();
             UpdateInspectorForSelection("State", entry);
+            _studioView?.ClearSelectionOutline();
         }
 
         private void SelectPartEntry(VisualElement entry)
@@ -4077,6 +5360,55 @@ namespace RobotTwin.UI
                 UpdateMaterialModalFromSelection();
             }
             UpdateInspectorForSelection("Part", entry);
+            if (_studioView != null && TryGetPartTransform(_selectedPartName, out var part))
+            {
+                _studioView.SetSelectionOutline(part);
+            }
+            else
+            {
+                _studioView?.ClearSelectionOutline();
+            }
+        }
+
+        private void SelectModelRoot()
+        {
+            if (_selectedPartEntry != null) _selectedPartEntry.RemoveFromClassList("selected");
+            _selectedPartEntry = null;
+            _selectedPartName = null;
+            if (_selectedPinEntry != null) _selectedPinEntry.RemoveFromClassList("selected");
+            if (_selectedLabelEntry != null) _selectedLabelEntry.RemoveFromClassList("selected");
+            if (_selectedStateEntry != null) _selectedStateEntry.RemoveFromClassList("selected");
+            _selectedPinEntry = null;
+            _selectedLabelEntry = null;
+            _selectedStateEntry = null;
+            _selectedStateId = null;
+            UpdateInspectorForModel();
+            if (_materialOverlay != null && _materialOverlay.style.display == DisplayStyle.Flex)
+            {
+                UpdateMaterialModalFromSelection();
+            }
+            var modelRoot = _studioView?.ModelRoot;
+            if (_studioView != null && modelRoot != null)
+            {
+                _studioView.SetSelectionOutline(modelRoot);
+            }
+            else
+            {
+                _studioView?.ClearSelectionOutline();
+            }
+        }
+
+        private void UpdateInspectorForModel()
+        {
+            if (_inspectorTargetLabel != null)
+            {
+                _inspectorTargetLabel.text = $"Model: {GetModelDisplayName()}";
+            }
+            if (_inspectorDetailsContainer == null) return;
+            _inspectorDetailsContainer.Clear();
+            var detail = new Label("Root selection");
+            detail.AddToClassList("form-label");
+            _inspectorDetailsContainer.Add(detail);
         }
 
         private void LoadSelectedPart()
@@ -4157,7 +5489,7 @@ namespace RobotTwin.UI
             var pointerPos = new Vector2(evt.position.x, evt.position.y);
             _lastPointer = pointerPos;
 
-            if (_anchorPickToggle != null && _anchorPickToggle.value && _selectedPinEntry != null)
+            if (IsAnchorPickEnabled() && _selectedPinEntry != null)
             {
                 TryPickAnchor(pointerPos);
                 evt.StopPropagation();
@@ -4184,14 +5516,17 @@ namespace RobotTwin.UI
                     }
                     if (IsPartEditEnabled() && _studioView.TryPickPart(viewportPoint, out var part))
                     {
-                        SelectPartByName(part.name);
-                        BeginViewportEdit(part, pointerPos);
-                        if (_activeTool == ToolAction.Material)
+                        if (evt.clickCount >= 2)
                         {
-                            OpenMaterialModal();
+                            SelectPartByName(part.name);
+                            BeginViewportEdit(part, pointerPos);
+                            if (_activeTool == ToolAction.Material)
+                            {
+                                OpenMaterialModal();
+                            }
+                            evt.StopPropagation();
+                            return;
                         }
-                        evt.StopPropagation();
-                        return;
                     }
                 }
             }
@@ -4206,6 +5541,10 @@ namespace RobotTwin.UI
             }
             if (_orbiting || _panning)
             {
+                DisableFollowDuringCameraMove();
+            }
+            if (_orbiting || _panning)
+            {
                 _viewportPointerId = evt.pointerId;
                 if (_viewport != null && !_viewport.HasPointerCapture(evt.pointerId))
                 {
@@ -4213,6 +5552,13 @@ namespace RobotTwin.UI
                 }
             }
             evt.StopPropagation();
+        }
+
+        private void DisableFollowDuringCameraMove()
+        {
+            if (_circuit3DFollowToggle == null || !_circuit3DFollowToggle.value) return;
+            _circuit3DFollowToggle.SetValueWithoutNotify(false);
+            ApplyFollowSelection();
         }
 
         private void OnViewportPointerMove(PointerMoveEvent evt)
@@ -4258,12 +5604,17 @@ namespace RobotTwin.UI
             }
             _orbiting = false;
             _panning = false;
+            ReleaseViewportPointerCapture();
+            evt.StopPropagation();
+        }
+
+        private void ReleaseViewportPointerCapture()
+        {
             if (_viewport != null && _viewportPointerId != -1 && _viewport.HasPointerCapture(_viewportPointerId))
             {
                 _viewport.ReleasePointer(_viewportPointerId);
             }
             _viewportPointerId = -1;
-            evt.StopPropagation();
         }
 
         private void OnViewportWheel(WheelEvent evt)
@@ -4295,6 +5646,7 @@ namespace RobotTwin.UI
             if (_studioView.TryPickViewCubeFace(viewportPoint, out var preset))
             {
                 _studioView.SnapView(preset);
+                _studioView.FrameModel();
                 _viewport?.Focus();
                 _viewportKeyFocus = true;
                 evt.StopPropagation();
@@ -4344,7 +5696,8 @@ namespace RobotTwin.UI
             if (_layoutHover) return true;
             var focused = _root.panel?.focusController?.focusedElement as VisualElement;
             if (focused == null) return false;
-            return focused == _layoutPreviewLarge || _layoutPreviewLarge.Contains(focused);
+            if (focused == _layoutPreviewLarge || _layoutPreviewLarge.Contains(focused)) return true;
+            return _component2DPanel != null && (_component2DPanel == focused || _component2DPanel.Contains(focused));
         }
 
         private void Apply3DCameraSettings()
@@ -4407,10 +5760,15 @@ namespace RobotTwin.UI
             if (TryGetSelectedPart(out var part))
             {
                 target = new EditTarget { Kind = EditTargetKind.Part, Id = part.name, Part = part };
-                worldPos = part.position;
                 worldRot = part.rotation;
-                if (!_studioView.TryGetPartBoundsLocal(part, out bounds))
+                if (_studioView.TryGetPartBoundsLocal(part, out bounds))
                 {
+                    worldPos = part.TransformPoint(bounds.center);
+                    bounds.center = Vector3.zero;
+                }
+                else
+                {
+                    worldPos = part.position;
                     bounds = new Bounds(Vector3.zero, Vector3.one * 0.2f);
                 }
                 return true;
@@ -4431,11 +5789,9 @@ namespace RobotTwin.UI
             if (_studioView.TryGetModelBoundsLocal(out bounds))
             {
                 target = new EditTarget { Kind = EditTargetKind.Component, Id = "Component" };
-                if (_studioView.Root != null)
-                {
-                    worldPos = _studioView.Root.TransformPoint(bounds.center);
-                    worldRot = _studioView.Root.rotation;
-                }
+                if (_studioView.Root != null) worldRot = _studioView.Root.rotation;
+                worldPos = _studioView.Root != null ? _studioView.Root.TransformPoint(bounds.center) : bounds.center;
+                bounds.center = Vector3.zero;
                 return true;
             }
 
@@ -4451,10 +5807,15 @@ namespace RobotTwin.UI
 
             if (_editTarget.Kind == EditTargetKind.Part && _editTarget.Part != null)
             {
-                worldPos = _editTarget.Part.position;
                 worldRot = _editTarget.Part.rotation;
-                if (!_studioView.TryGetPartBoundsLocal(_editTarget.Part, out bounds))
+                if (_studioView.TryGetPartBoundsLocal(_editTarget.Part, out bounds))
                 {
+                    worldPos = _editTarget.Part.TransformPoint(bounds.center);
+                    bounds.center = Vector3.zero;
+                }
+                else
+                {
+                    worldPos = _editTarget.Part.position;
                     bounds = new Bounds(Vector3.zero, Vector3.one * 0.2f);
                 }
                 return true;
@@ -4478,14 +5839,12 @@ namespace RobotTwin.UI
 
             if (_editTarget.Kind == EditTargetKind.Component)
             {
-                if (_studioView.Root != null)
-                {
-                    worldRot = _studioView.Root.rotation;
-                }
+                if (_studioView.Root != null) worldRot = _studioView.Root.rotation;
                 if (_studioView.TryGetModelBoundsLocal(out var modelBounds))
                 {
                     bounds = modelBounds;
                     worldPos = _studioView.Root != null ? _studioView.Root.TransformPoint(modelBounds.center) : modelBounds.center;
+                    bounds.center = Vector3.zero;
                 }
                 else
                 {
@@ -4567,6 +5926,7 @@ namespace RobotTwin.UI
         {
             _layoutZoom = 1f;
             _layoutPanOffset = Vector2.zero;
+            ClampLayoutPanOffset();
             RefreshLayoutPreview();
         }
 
@@ -4608,6 +5968,10 @@ namespace RobotTwin.UI
             _draggingPinName = null;
             _draggingLabel = false;
             _draggingLabelEntry = null;
+            _draggingShape = false;
+            _draggingShapeId = null;
+            _placingShape = false;
+            _placingShapeId = null;
             _layoutPanning = false;
             _layoutPanPointerId = -1;
         }
@@ -4636,15 +6000,41 @@ namespace RobotTwin.UI
 
         private void ToggleAnchors()
         {
-            if (_anchorShowToggle == null) return;
-            _anchorShowToggle.SetValueWithoutNotify(!_anchorShowToggle.value);
+            SetAnchorVisible(!IsAnchorVisible());
             RefreshAnchorGizmos();
+            QueueValidation();
         }
 
         private void ToggleAnchorPick()
         {
-            if (_anchorPickToggle == null) return;
-            _anchorPickToggle.SetValueWithoutNotify(!_anchorPickToggle.value);
+            SetAnchorPick(!IsAnchorPickEnabled());
+            QueueValidation();
+        }
+
+        private bool IsAnchorPickEnabled()
+        {
+            return _anchorPickToggle != null ? _anchorPickToggle.value : _anchorPickMode;
+        }
+
+        private void SetAnchorPick(bool enabled)
+        {
+            _anchorPickMode = enabled;
+            if (_anchorPickToggle != null) _anchorPickToggle.SetValueWithoutNotify(enabled);
+        }
+
+        private bool IsAnchorVisible()
+        {
+            return _anchorShowToggle != null ? _anchorShowToggle.value : _anchorVisible;
+        }
+
+        private void SetAnchorVisible(bool visible)
+        {
+            _anchorVisible = visible;
+            if (_anchorShowToggle != null) _anchorShowToggle.SetValueWithoutNotify(visible);
+            if (_viewportEditAnchorsToggle != null && _viewportEditAnchorsToggle.value != visible)
+            {
+                _viewportEditAnchorsToggle.SetValueWithoutNotify(visible);
+            }
         }
 
         private void ApplyFollowSelection()
@@ -4663,12 +6053,61 @@ namespace RobotTwin.UI
             _studioView.SetFollowTarget(part, true);
         }
 
+        private void TogglePartColors(bool enabled)
+        {
+            SetPartColorsEnabled(enabled, false);
+        }
+
+        private void SetPartColorsEnabled(bool enabled, bool updateToggle)
+        {
+            _partColorsEnabled = enabled;
+            if (updateToggle && _viewportPartColorsToggle != null)
+            {
+                _viewportPartColorsToggle.SetValueWithoutNotify(enabled);
+            }
+            if (_studioView == null) return;
+            if (!_partColorsEnabled)
+            {
+                ApplyStateOverridesToModel();
+                return;
+            }
+            ApplyPartColorOverlay();
+        }
+
+        private void ApplyPartColorOverlay()
+        {
+            if (_studioView == null || _studioView.Parts == null) return;
+            int index = 0;
+            foreach (var part in _studioView.Parts)
+            {
+                if (part == null) continue;
+                float hue = (index * 0.17f) % 1f;
+                var color = Color.HSVToRGB(hue, 0.55f, 0.95f);
+                _studioView.SetPartColor(part, color);
+                index++;
+            }
+        }
+
         private void ToggleViewportTools()
         {
-            if (_viewportToolsBody == null || _viewportToolsToggleBtn == null) return;
-            bool isVisible = _viewportToolsBody.style.display != DisplayStyle.None;
-            _viewportToolsBody.style.display = isVisible ? DisplayStyle.None : DisplayStyle.Flex;
-            _viewportToolsToggleBtn.text = isVisible ? "Show" : "Hide";
+            SetViewportToolsCollapsed(!_viewportToolsCollapsed);
+        }
+
+        private void SetViewportToolsCollapsed(bool collapsed)
+        {
+            _viewportToolsCollapsed = collapsed;
+            if (_viewportToolsBody != null)
+            {
+                _viewportToolsBody.style.display = collapsed ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+            if (_viewportTools != null)
+            {
+                _viewportTools.EnableInClassList("tools-collapsed", collapsed);
+            }
+            if (_viewportToolsToggleBtn != null)
+            {
+                _viewportToolsToggleBtn.text = collapsed ? "Viewport" : "Hide";
+            }
         }
 
         private enum ViewportEditMode
@@ -4732,7 +6171,21 @@ namespace RobotTwin.UI
             Select,
             Pan,
             Pin,
-            Label
+            Label,
+            Box,
+            Triangle,
+            Line,
+            Text,
+            Circle
+        }
+
+        private enum LeftPanelTab
+        {
+            Hierarchy,
+            Catalog,
+            Basics,
+            Type,
+            Objects
         }
 
         private void ActivateTool(ToolAction action)
@@ -4742,11 +6195,11 @@ namespace RobotTwin.UI
             switch (action)
             {
                 case ToolAction.Select:
-                    if (_anchorPickToggle != null) _anchorPickToggle.SetValueWithoutNotify(false);
+                    SetAnchorPick(false);
                     break;
                 case ToolAction.Anchor:
-                    if (_anchorShowToggle != null) _anchorShowToggle.SetValueWithoutNotify(true);
-                    if (_anchorPickToggle != null) _anchorPickToggle.SetValueWithoutNotify(true);
+                    SetAnchorVisible(true);
+                    SetAnchorPick(true);
                     RefreshAnchorGizmos();
                     break;
                 case ToolAction.Pin:
@@ -4756,8 +6209,8 @@ namespace RobotTwin.UI
                         {
                             SelectPinEntry(entry);
                         }
-                        if (_anchorShowToggle != null) _anchorShowToggle.SetValueWithoutNotify(true);
-                        if (_anchorPickToggle != null) _anchorPickToggle.SetValueWithoutNotify(true);
+                        SetAnchorVisible(true);
+                        SetAnchorPick(true);
                         RefreshAnchorGizmos();
                     }
                     break;
@@ -4789,6 +6242,11 @@ namespace RobotTwin.UI
             SetToolButtonActive(_layoutToolPanBtn, _layoutTool == LayoutTool.Pan);
             SetToolButtonActive(_layoutToolPinBtn, _layoutTool == LayoutTool.Pin);
             SetToolButtonActive(_layoutToolLabelBtn, _layoutTool == LayoutTool.Label);
+            SetToolButtonActive(_layoutToolBoxBtn, _layoutTool == LayoutTool.Box);
+            SetToolButtonActive(_layoutToolTriangleBtn, _layoutTool == LayoutTool.Triangle);
+            SetToolButtonActive(_layoutToolLineBtn, _layoutTool == LayoutTool.Line);
+            SetToolButtonActive(_layoutToolTextBtn, _layoutTool == LayoutTool.Text);
+            SetToolButtonActive(_layoutToolCircleBtn, _layoutTool == LayoutTool.Circle);
             ToggleActiveClass(_layoutGridToggleBtn, _layoutGridVisible);
         }
 
@@ -5361,6 +6819,7 @@ namespace RobotTwin.UI
         {
             SetVector3Fields("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField", euler);
             _studioView?.ApplyModelTuning(euler, ReadScaleVector3Field("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField"), _modelOffset);
+            SyncLayoutSizeFromModelBounds();
             QueueValidation();
         }
 
@@ -5372,6 +6831,7 @@ namespace RobotTwin.UI
                 Mathf.Max(0.001f, scale.z));
             SetVector3Fields("ComponentScaleXField", "ComponentScaleYField", "ComponentScaleZField", clamped);
             _studioView?.ApplyModelTuning(ReadVector3Field("ComponentEulerXField", "ComponentEulerYField", "ComponentEulerZField"), clamped, _modelOffset);
+            SyncLayoutSizeFromModelBounds();
             QueueValidation();
         }
 
@@ -5460,10 +6920,11 @@ namespace RobotTwin.UI
             {
                 name = GetField("ComponentNameField")?.value?.Trim() ?? string.Empty,
                 id = SanitizeComponentId(GetField("ComponentIdField")?.value),
-                type = GetField("ComponentTypeField")?.value?.Trim() ?? string.Empty,
+                type = GetTypeValue(),
                 description = GetField("ComponentDescriptionField")?.value ?? string.Empty,
                 physicsScript = GetField("ComponentPhysicsScriptField")?.value ?? string.Empty,
                 symbol = GetField("ComponentSymbolField")?.value ?? string.Empty,
+                symbolFile = GetTextValue("ComponentSymbolFileField").Trim(),
                 iconChar = GetField("ComponentIconField")?.value ?? string.Empty,
                 order = ReadInt(GetField("ComponentOrderField"), 1000),
                 size2D = new Vector2(
@@ -5476,6 +6937,16 @@ namespace RobotTwin.UI
             payload.pins = pinLayout.Select(p => p.name).Where(name => !string.IsNullOrWhiteSpace(name))
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             payload.labels = CollectLabelLayout().ToArray();
+            payload.shapes = _shapeLayout.Select(shape => shape == null ? null : new ShapeLayoutPayload
+            {
+                id = shape.id,
+                type = shape.type,
+                x = shape.x,
+                y = shape.y,
+                width = shape.width,
+                height = shape.height,
+                text = shape.text
+            }).Where(shape => shape != null).ToArray();
             payload.specs = CollectKeyValues(_specsContainer);
             payload.defaults = CollectKeyValues(_defaultsContainer);
             payload.fx = CollectFxPayloads();
@@ -5671,7 +7142,7 @@ namespace RobotTwin.UI
                     x = ReadFloat(entry.Q<TextField>("LabelXField")),
                     y = ReadFloat(entry.Q<TextField>("LabelYField")),
                     size = ReadInt(entry.Q<TextField>("LabelSizeField")),
-                    align = entry.Q<TextField>("LabelAlignField")?.value ?? string.Empty
+                    align = GetEntryValue(entry, "LabelAlignField")
                 });
             }
             return list;
@@ -5684,13 +7155,12 @@ namespace RobotTwin.UI
             foreach (var entry in _fxContainer.Children())
             {
                 var idField = entry.Q<TextField>("FxIdField");
-                var typeField = entry.Q<TextField>("FxTypeField");
                 string id = idField?.value?.Trim() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(id)) continue;
                 var fx = new FxPayload
                 {
                     id = id,
-                    type = typeField?.value?.Trim() ?? string.Empty,
+                    type = DenormalizeFxTypeValue(GetEntryValue(entry, "FxTypeField")),
                     anchorId = entry.Q<TextField>("FxAnchorField")?.value?.Trim() ?? string.Empty,
                     localPosition = new Vector3(
                         ReadFloat(entry.Q<TextField>("FxPosXField")),
@@ -5724,6 +7194,16 @@ namespace RobotTwin.UI
         {
             if (string.IsNullOrWhiteSpace(packagePath)) return;
 
+            string symbolSourcePath = GetTextValue("ComponentSymbolFileField").Trim();
+            if (!string.IsNullOrWhiteSpace(symbolSourcePath) && File.Exists(symbolSourcePath))
+            {
+                payload.symbolFile = ComponentPackageUtility.BuildAssetEntryName(Path.GetFileName(symbolSourcePath));
+            }
+            else if (string.IsNullOrWhiteSpace(payload.symbolFile))
+            {
+                payload.symbolFile = string.Empty;
+            }
+
             if (!string.IsNullOrWhiteSpace(modelSourcePath) && File.Exists(modelSourcePath))
             {
                 string fileName = Path.GetFileName(modelSourcePath);
@@ -5740,7 +7220,12 @@ namespace RobotTwin.UI
                 : Array.Empty<string>();
 
             string json = JsonUtility.ToJson(payload, true);
-            ComponentPackageUtility.SavePackage(packagePath, json, modelSourcePath);
+            var extraAssets = new List<string>();
+            if (!string.IsNullOrWhiteSpace(symbolSourcePath) && File.Exists(symbolSourcePath))
+            {
+                extraAssets.Add(symbolSourcePath);
+            }
+            ComponentPackageUtility.SavePackage(packagePath, json, modelSourcePath, extraAssets);
         }
 
         private string ResolvePackagePath(ComponentDefinitionPayload payload)
@@ -5775,6 +7260,7 @@ namespace RobotTwin.UI
                 physicsScript = string.Empty,
                 type = "Generic",
                 symbol = "U",
+                symbolFile = string.Empty,
                 iconChar = "U",
                 order = 1000,
                 size2D = new Vector2(CircuitLayoutSizing.DefaultComponentWidth, CircuitLayoutSizing.DefaultComponentHeight),
@@ -5812,6 +7298,7 @@ namespace RobotTwin.UI
                         align = "center"
                     }
                 },
+                shapes = Array.Empty<ShapeLayoutPayload>(),
                 specs = Array.Empty<ComponentKeyValue>(),
                 defaults = Array.Empty<ComponentKeyValue>(),
                 pins = new[] { "P1", "P2" }
@@ -5870,6 +7357,71 @@ namespace RobotTwin.UI
             return _root?.Q<TextField>(name);
         }
 
+        private DropdownField GetDropdownField(string name)
+        {
+            return _root?.Q<DropdownField>(name);
+        }
+
+        private string GetTextValue(string name)
+        {
+            var field = GetField(name);
+            if (field != null) return field.value ?? string.Empty;
+            var dropdown = GetDropdownField(name);
+            return dropdown?.value ?? string.Empty;
+        }
+
+        private void SetTextValue(string name, string value)
+        {
+            var field = GetField(name);
+            if (field != null)
+            {
+                field.SetValueWithoutNotify(value ?? string.Empty);
+                return;
+            }
+            var dropdown = GetDropdownField(name);
+            dropdown?.SetValueWithoutNotify(value ?? string.Empty);
+        }
+
+        private string GetTypeValue()
+        {
+            return GetTextValue("ComponentTypeField").Trim();
+        }
+
+        private void SetTypeValue(string value)
+        {
+            value = value ?? string.Empty;
+            if (_componentTypeDropdown != null && !string.IsNullOrWhiteSpace(value))
+            {
+                var choices = _componentTypeDropdown.choices ?? new List<string>();
+                if (!choices.Any(choice => string.Equals(choice, value, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var updated = new List<string>(choices) { value };
+                    _componentTypeDropdown.choices = updated;
+                }
+            }
+            SetTextValue("ComponentTypeField", value);
+            UpdateTypePanels();
+        }
+
+        private void UpdateTypePanels()
+        {
+            string type = GetTypeValue();
+            string label = string.IsNullOrWhiteSpace(type) ? "TYPE" : type.Trim().ToUpperInvariant();
+            if (_leftTabTypeBtn != null) _leftTabTypeBtn.text = label;
+            if (_typePanelTitle != null) _typePanelTitle.text = $"{label} Specs";
+
+            bool showLed = type.Contains("led", StringComparison.OrdinalIgnoreCase);
+            bool showResistor = type.Contains("resistor", StringComparison.OrdinalIgnoreCase);
+            if (_ledSettingsSection != null)
+            {
+                _ledSettingsSection.style.display = showLed ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            if (_resistorSettingsSection != null)
+            {
+                _resistorSettingsSection.style.display = showResistor ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
         private void SetField(string name, string value)
         {
             var field = GetField(name);
@@ -5889,6 +7441,36 @@ namespace RobotTwin.UI
             field.AddToClassList(className);
             field.SetValueWithoutNotify(value ?? string.Empty);
             return field;
+        }
+
+        private static DropdownField CreateDropdownField(string name, string value, string className, IEnumerable<string> choices)
+        {
+            var field = new DropdownField { name = name };
+            if (!string.IsNullOrWhiteSpace(className)) field.AddToClassList(className);
+            field.AddToClassList("input-dark");
+            var list = choices?.ToList() ?? new List<string>();
+            if (!string.IsNullOrWhiteSpace(value) &&
+                !list.Any(choice => string.Equals(choice, value, StringComparison.OrdinalIgnoreCase)))
+            {
+                list.Add(value);
+            }
+            field.choices = list;
+            string resolved = string.IsNullOrWhiteSpace(value)
+                ? (list.Count > 0 ? list[0] : string.Empty)
+                : value;
+            field.SetValueWithoutNotify(resolved);
+            return field;
+        }
+
+        private static string NormalizeFxTypeValue(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? FxTypeUnsetLabel : value.Trim();
+        }
+
+        private static string DenormalizeFxTypeValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+            return string.Equals(value, FxTypeUnsetLabel, StringComparison.OrdinalIgnoreCase) ? string.Empty : value.Trim();
         }
 
         private static string FormatFloat(float value)
@@ -5927,14 +7509,24 @@ namespace RobotTwin.UI
 
         private static string GetEntryValue(VisualElement entry, string fieldName)
         {
-            return entry?.Q<TextField>(fieldName)?.value ?? string.Empty;
+            if (entry == null) return string.Empty;
+            var textField = entry.Q<TextField>(fieldName);
+            if (textField != null) return textField.value ?? string.Empty;
+            var dropdown = entry.Q<DropdownField>(fieldName);
+            return dropdown?.value ?? string.Empty;
         }
 
         private static void SetEntryValue(VisualElement entry, string fieldName, string value)
         {
-            var field = entry?.Q<TextField>(fieldName);
-            if (field == null) return;
-            field.SetValueWithoutNotify(value ?? string.Empty);
+            if (entry == null) return;
+            var field = entry.Q<TextField>(fieldName);
+            if (field != null)
+            {
+                field.SetValueWithoutNotify(value ?? string.Empty);
+                return;
+            }
+            var dropdown = entry.Q<DropdownField>(fieldName);
+            dropdown?.SetValueWithoutNotify(value ?? string.Empty);
         }
 
         private static string SanitizeComponentId(string raw)
@@ -6222,6 +7814,7 @@ namespace RobotTwin.UI
             public string description;
             public string type;
             public string symbol;
+            public string symbolFile;
             public string iconChar;
             public int order;
             public string[] pins;
@@ -6230,6 +7823,7 @@ namespace RobotTwin.UI
             public Vector2 size2D;
             public PinLayoutPayload[] pinLayout;
             public LabelLayoutPayload[] labels;
+            public ShapeLayoutPayload[] shapes;
             public ComponentTuningPayload tuning;
             public string modelFile;
             public string physicsScript;
@@ -6269,6 +7863,18 @@ namespace RobotTwin.UI
             public float y;
             public int size;
             public string align;
+        }
+
+        [Serializable]
+        private class ShapeLayoutPayload
+        {
+            public string id;
+            public string type;
+            public float x;
+            public float y;
+            public float width;
+            public float height;
+            public string text;
         }
 
         [Serializable]

@@ -2,6 +2,7 @@
 
 uint8_t AVR_IoRead(AvrCore* core, uint8_t address);
 void AVR_IoWrite(AvrCore* core, uint8_t address, uint8_t value);
+static void AVR_Push(AvrCore* core, uint8_t value);
 
 static uint16_t AVR_FetchWord(AvrCore* core)
 {
@@ -137,20 +138,56 @@ void AVR_Init(AvrCore* core,
     core->zero_flag = 0;
     core->carry_flag = 0;
     core->sp = (uint16_t)(AVR_SRAM_START + (uint16_t)sram_size - 1);
+    core->io_write_user = NULL;
+    core->io_write_hook = NULL;
+    core->io_read_user = NULL;
+    core->io_read_hook = NULL;
     AVR_UpdateSPRegisters(core);
+}
+
+void AVR_SetIoWriteHook(AvrCore* core, void (*hook)(AvrCore* core, uint8_t address, uint8_t value, void* user), void* user)
+{
+    if (!core) return;
+    core->io_write_hook = hook;
+    core->io_write_user = user;
+}
+
+void AVR_SetIoReadHook(AvrCore* core, void (*hook)(AvrCore* core, uint8_t address, uint8_t value, void* user), void* user)
+{
+    if (!core) return;
+    core->io_read_hook = hook;
+    core->io_read_user = user;
 }
 
 uint8_t AVR_IoRead(AvrCore* core, uint8_t address)
 {
     size_t idx = (size_t)(address - AVR_IO_BASE);
     if (idx >= core->io_size) return 0;
-    return core->io[idx];
+    uint8_t value = core->io[idx];
+    if (core->io_read_hook)
+    {
+        core->io_read_hook(core, address, value, core->io_read_user);
+    }
+    return value;
 }
 
 void AVR_IoWrite(AvrCore* core, uint8_t address, uint8_t value)
 {
     size_t idx = (size_t)(address - AVR_IO_BASE);
     if (idx >= core->io_size) return;
+    if (address == AVR_TIFR0 || address == AVR_TIFR1 || address == AVR_TIFR2)
+    {
+        core->io[idx] = (uint8_t)(core->io[idx] & ~value);
+        return;
+    }
+    if (address == AVR_ADCSRA)
+    {
+        uint8_t current = core->io[idx];
+        uint8_t clearMask = (uint8_t)(value & (1u << 4));
+        uint8_t next = (uint8_t)((current & ~clearMask) | (value & ~(1u << 4)));
+        core->io[idx] = next;
+        return;
+    }
     core->io[idx] = value;
     if (address == AVR_SPL)
     {
@@ -159,6 +196,10 @@ void AVR_IoWrite(AvrCore* core, uint8_t address, uint8_t value)
     else if (address == AVR_SPH)
     {
         core->sp = (uint16_t)((core->sp & 0x00FF) | ((uint16_t)value << 8));
+    }
+    if (core->io_write_hook)
+    {
+        core->io_write_hook(core, address, value, core->io_write_user);
     }
 }
 
@@ -182,8 +223,135 @@ uint8_t AVR_IoGetBit(AvrCore* core, uint8_t address, uint8_t bit)
     return (uint8_t)((value & (1u << bit)) != 0u);
 }
 
+static void AVR_EnterInterrupt(AvrCore* core, uint16_t vector)
+{
+    uint16_t returnAddr = core->pc;
+    AVR_Push(core, (uint8_t)(returnAddr & 0xFF));
+    AVR_Push(core, (uint8_t)((returnAddr >> 8) & 0xFF));
+    uint8_t sreg = AVR_IoRead(core, AVR_SREG);
+    sreg = (uint8_t)(sreg & ~(1u << 7));
+    AVR_IoWrite(core, AVR_SREG, sreg);
+    core->pc = vector;
+}
+
+static uint8_t AVR_CheckInterrupts(AvrCore* core)
+{
+    uint8_t sreg = AVR_IoRead(core, AVR_SREG);
+    if ((sreg & (1u << 7)) == 0)
+    {
+        return 0;
+    }
+
+    uint8_t tifr2 = AVR_IoRead(core, AVR_TIFR2);
+    uint8_t timsk2 = AVR_IoRead(core, AVR_TIMSK2);
+    if ((tifr2 & (1u << 1)) && (timsk2 & (1u << 1)))
+    {
+        tifr2 = (uint8_t)(tifr2 & ~(1u << 1));
+        AVR_IoWrite(core, AVR_TIFR2, tifr2);
+        AVR_EnterInterrupt(core, 0x0007);
+        return 1;
+    }
+    if ((tifr2 & (1u << 2)) && (timsk2 & (1u << 2)))
+    {
+        tifr2 = (uint8_t)(tifr2 & ~(1u << 2));
+        AVR_IoWrite(core, AVR_TIFR2, tifr2);
+        AVR_EnterInterrupt(core, 0x0008);
+        return 1;
+    }
+    if ((tifr2 & (1u << 0)) && (timsk2 & (1u << 0)))
+    {
+        tifr2 = (uint8_t)(tifr2 & ~(1u << 0));
+        AVR_IoWrite(core, AVR_TIFR2, tifr2);
+        AVR_EnterInterrupt(core, 0x0009);
+        return 1;
+    }
+
+    uint8_t tifr1 = AVR_IoRead(core, AVR_TIFR1);
+    uint8_t timsk1 = AVR_IoRead(core, AVR_TIMSK1);
+    if ((tifr1 & (1u << 1)) && (timsk1 & (1u << 1)))
+    {
+        tifr1 = (uint8_t)(tifr1 & ~(1u << 1));
+        AVR_IoWrite(core, AVR_TIFR1, tifr1);
+        AVR_EnterInterrupt(core, 0x000B);
+        return 1;
+    }
+    if ((tifr1 & (1u << 2)) && (timsk1 & (1u << 2)))
+    {
+        tifr1 = (uint8_t)(tifr1 & ~(1u << 2));
+        AVR_IoWrite(core, AVR_TIFR1, tifr1);
+        AVR_EnterInterrupt(core, 0x000C);
+        return 1;
+    }
+    if ((tifr1 & (1u << 0)) && (timsk1 & (1u << 0)))
+    {
+        tifr1 = (uint8_t)(tifr1 & ~(1u << 0));
+        AVR_IoWrite(core, AVR_TIFR1, tifr1);
+        AVR_EnterInterrupt(core, 0x000D);
+        return 1;
+    }
+
+    uint8_t tifr0 = AVR_IoRead(core, AVR_TIFR0);
+    uint8_t timsk0 = AVR_IoRead(core, AVR_TIMSK0);
+    if ((tifr0 & (1u << 1)) && (timsk0 & (1u << 1)))
+    {
+        tifr0 = (uint8_t)(tifr0 & ~(1u << 1));
+        AVR_IoWrite(core, AVR_TIFR0, tifr0);
+        AVR_EnterInterrupt(core, 0x000E);
+        return 1;
+    }
+    if ((tifr0 & (1u << 2)) && (timsk0 & (1u << 2)))
+    {
+        tifr0 = (uint8_t)(tifr0 & ~(1u << 2));
+        AVR_IoWrite(core, AVR_TIFR0, tifr0);
+        AVR_EnterInterrupt(core, 0x000F);
+        return 1;
+    }
+    if ((tifr0 & (1u << 0)) && (timsk0 & (1u << 0)))
+    {
+        tifr0 = (uint8_t)(tifr0 & ~(1u << 0));
+        AVR_IoWrite(core, AVR_TIFR0, tifr0);
+        AVR_EnterInterrupt(core, 0x0010);
+        return 1;
+    }
+
+    uint8_t ucsr0a = AVR_IoRead(core, AVR_UCSR0A);
+    uint8_t ucsr0b = AVR_IoRead(core, AVR_UCSR0B);
+    if ((ucsr0a & (1u << 7)) && (ucsr0b & (1u << 7)))
+    {
+        AVR_EnterInterrupt(core, 0x0012);
+        return 1;
+    }
+    if ((ucsr0a & (1u << 5)) && (ucsr0b & (1u << 5)))
+    {
+        AVR_EnterInterrupt(core, 0x0013);
+        return 1;
+    }
+    if ((ucsr0a & (1u << 6)) && (ucsr0b & (1u << 6)))
+    {
+        ucsr0a = (uint8_t)(ucsr0a & ~(1u << 6));
+        AVR_IoWrite(core, AVR_UCSR0A, ucsr0a);
+        AVR_EnterInterrupt(core, 0x0014);
+        return 1;
+    }
+
+    uint8_t adcsra = AVR_IoRead(core, AVR_ADCSRA);
+    if ((adcsra & (1u << 4)) && (adcsra & (1u << 3)))
+    {
+        adcsra = (uint8_t)(adcsra & ~(1u << 4));
+        AVR_IoWrite(core, AVR_ADCSRA, adcsra);
+        AVR_EnterInterrupt(core, 0x0015);
+        return 1;
+    }
+
+    return 0;
+}
+
 uint8_t AVR_ExecuteNext(AvrCore* core)
 {
+    if (AVR_CheckInterrupts(core))
+    {
+        return 4;
+    }
     uint16_t opcode = AVR_FetchWord(core);
     if (opcode == 0x0000)
     {
@@ -453,6 +621,30 @@ uint8_t AVR_ExecuteNext(AvrCore* core)
         uint8_t low = AVR_Pop(core);
         core->pc = (uint16_t)(low | (high << 8));
         return 4;
+    }
+    if (opcode == 0x9518)
+    {
+        uint8_t high = AVR_Pop(core);
+        uint8_t low = AVR_Pop(core);
+        core->pc = (uint16_t)(low | (high << 8));
+        uint8_t sreg = AVR_IoRead(core, AVR_SREG);
+        sreg = (uint8_t)(sreg | (1u << 7));
+        AVR_IoWrite(core, AVR_SREG, sreg);
+        return 4;
+    }
+    if (opcode == 0x9478)
+    {
+        uint8_t sreg = AVR_IoRead(core, AVR_SREG);
+        sreg = (uint8_t)(sreg | (1u << 7));
+        AVR_IoWrite(core, AVR_SREG, sreg);
+        return 1;
+    }
+    if (opcode == 0x94F8)
+    {
+        uint8_t sreg = AVR_IoRead(core, AVR_SREG);
+        sreg = (uint8_t)(sreg & ~(1u << 7));
+        AVR_IoWrite(core, AVR_SREG, sreg);
+        return 1;
     }
     if ((opcode & 0xFF00) == 0x9600)
     {

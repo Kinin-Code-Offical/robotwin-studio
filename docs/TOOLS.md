@@ -5,6 +5,7 @@ The primary entry point is `tools/rt_tool.py`.
 ## Common Commands
 
 ```powershell
+python tools/rt_tool.py setup
 python tools/rt_tool.py update-repo-snapshot
 python tools/rt_tool.py update-unity-plugins
 python tools/rt_tool.py run-unity-smoke
@@ -20,6 +21,10 @@ python tools/rt_tool.py build-standalone
 - Updates `docs/repo_files.txt` using `git ls-files`.
 - Writes a workspace snapshot to `logs/tools/workspace_snapshot.txt`.
 - Regenerates the README folder tree section.
+
+## Contributing
+
+See `CONTRIBUTING.md` for workflow and PR guidelines.
 
 ## Debug Console
 

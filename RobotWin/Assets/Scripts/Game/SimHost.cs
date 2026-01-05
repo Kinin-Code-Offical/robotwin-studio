@@ -41,6 +41,7 @@ namespace RobotTwin.Game
         private bool _useExternalFirmware;
         private bool _useNativeEngine;
         private string _externalFirmwareExePath;
+        private FirmwareClient _externalFirmwareClient;
         private string _serialBuffer = string.Empty;
         private readonly Dictionary<string, ExternalFirmwareSession> _externalFirmwareSessions =
             new Dictionary<string, ExternalFirmwareSession>(System.StringComparer.OrdinalIgnoreCase);
@@ -48,20 +49,18 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, bool> _usbConnectedByBoard = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, bool> _boardPowerById = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
 
-        private const int ExternalFirmwarePinCount = 20;
+        private const int ExternalFirmwarePinLimit = 20;
         private const int SerialBufferLimit = 4000;
-        private static readonly string[] ExternalFirmwarePins =
-        {
-            "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13",
-            "A0", "A1", "A2", "A3", "A4", "A5"
-        };
+        private readonly Dictionary<string, string[]> _externalFirmwarePinsByBoard =
+            new Dictionary<string, string[]>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _externalFirmwarePinWarnings =
+            new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
 
         private class ExternalFirmwareSession
         {
             public string BoardId;
             public string BvmPath;
-            public string PipeName;
-            public FirmwareClient Client;
+            public string BoardProfile;
             public bool Loaded;
             public bool LoggedFallback;
         }
@@ -110,6 +109,8 @@ namespace RobotTwin.Game
             _loggedTelemetrySample = false;
             _loggedNativeFallback = false;
             _externalFirmwareSessions.Clear();
+            _externalFirmwarePinsByBoard.Clear();
+            _externalFirmwarePinWarnings.Clear();
             _externalFirmwareExePath = null;
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
@@ -120,9 +121,9 @@ namespace RobotTwin.Game
             _useExternalFirmware = TrySetupExternalFirmwares();
             if (_useExternalFirmware)
             {
+                _externalFirmwareClient?.LaunchFirmware(_externalFirmwareExePath);
                 foreach (var session in _externalFirmwareSessions.Values)
                 {
-                    session.Client.LaunchFirmware(_externalFirmwareExePath);
                     TryLoadExternalFirmware(session);
                 }
             }
@@ -152,9 +153,13 @@ namespace RobotTwin.Game
             _isRunning = false;
             foreach (var session in _externalFirmwareSessions.Values)
             {
-                session.Client?.StopFirmware();
+                // No per-board process; shared firmware client handles all boards.
             }
             _externalFirmwareSessions.Clear();
+            _externalFirmwarePinsByBoard.Clear();
+            _externalFirmwarePinWarnings.Clear();
+            _externalFirmwareClient?.StopFirmware();
+            _externalFirmwareClient = null;
             _externalFirmwareExePath = null;
             _useExternalFirmware = false;
             _useNativeEngine = false;
@@ -414,7 +419,7 @@ namespace RobotTwin.Game
             if (string.IsNullOrWhiteSpace(componentId) || string.IsNullOrWhiteSpace(pinName)) return;
             if (_virtualArduinos.TryGetValue(componentId, out var board))
             {
-                board.SetVoltage(pinName, voltage);
+                board.SetInputVoltage(pinName, voltage);
                 return;
             }
             _pinVoltages[$"{componentId}.{pinName}"] = voltage;
@@ -429,7 +434,8 @@ namespace RobotTwin.Game
             foreach (var comp in _circuit.Components)
             {
                 if (!IsArduinoType(comp.Type)) continue;
-                var board = new VirtualArduino(comp.Id);
+                var profile = BoardProfiles.Get(ResolveBoardProfile(comp));
+                var board = new VirtualArduino(comp.Id, profile);
                 if (comp.Properties != null)
                 {
                     board.ConfigureFromProperties(comp.Properties);
@@ -453,7 +459,75 @@ namespace RobotTwin.Game
         {
             return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
+                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoMega", System.StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(type, "ArduinoMega2560", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ResolveBoardProfile(ComponentSpec board)
+        {
+            if (board == null || string.IsNullOrWhiteSpace(board.Type))
+            {
+                return "ArduinoUno";
+            }
+            if (board.Properties != null &&
+                board.Properties.TryGetValue("boardProfile", out var explicitProfile) &&
+                !string.IsNullOrWhiteSpace(explicitProfile))
+            {
+                return explicitProfile;
+            }
+            if (string.Equals(board.Type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return "ArduinoNano";
+            }
+            if (string.Equals(board.Type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return "ArduinoProMini";
+            }
+            if (string.Equals(board.Type, "ArduinoMega", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(board.Type, "ArduinoMega2560", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return "ArduinoMega";
+            }
+            return "ArduinoUno";
+        }
+
+        private string[] GetExternalFirmwarePins(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) boardId = "board";
+            if (_externalFirmwarePinsByBoard.TryGetValue(boardId, out var cached)) return cached;
+
+            string profileId = "ArduinoUno";
+            if (_externalFirmwareSessions.TryGetValue(boardId, out var session) &&
+                !string.IsNullOrWhiteSpace(session.BoardProfile))
+            {
+                profileId = session.BoardProfile;
+            }
+
+            var profile = BoardProfiles.Get(profileId);
+            int count = profile.Pins.Count;
+            if (profile.CoreLimited && count > ExternalFirmwarePinLimit)
+            {
+                if (_externalFirmwarePinWarnings.Add(boardId))
+                {
+                    Debug.LogWarning($"[SimHost] {boardId} profile {profile.Id} exposes {count} pins; firmware core limited to {ExternalFirmwarePinLimit}.");
+                }
+                count = ExternalFirmwarePinLimit;
+            }
+
+            if (count <= 0)
+            {
+                count = ExternalFirmwarePinLimit;
+            }
+
+            var pins = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                pins[i] = i < profile.Pins.Count ? profile.Pins[i] : $"D{i}";
+            }
+
+            _externalFirmwarePinsByBoard[boardId] = pins;
+            return pins;
         }
 
         private void BuildPinNetMap()
@@ -601,6 +675,11 @@ namespace RobotTwin.Game
             var boards = _circuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
             if (boards.Count == 0) return false;
 
+            if (_externalFirmwareClient == null)
+            {
+                _externalFirmwareClient = CreateSharedFirmwareClient();
+            }
+
             foreach (var board in boards)
             {
                 if (!TryGetBvmPath(board, out var bvmPath))
@@ -617,9 +696,8 @@ namespace RobotTwin.Game
                 {
                     BoardId = board.Id,
                     BvmPath = bvmPath,
-                    PipeName = BuildPipeName(board.Id)
+                    BoardProfile = ResolveBoardProfile(board)
                 };
-                session.Client = CreateFirmwareClient(session);
                 _externalFirmwareSessions[board.Id] = session;
                 if (!_usbConnectedByBoard.ContainsKey(board.Id))
                 {
@@ -634,41 +712,18 @@ namespace RobotTwin.Game
             return true;
         }
 
-        private FirmwareClient CreateFirmwareClient(ExternalFirmwareSession session)
+        private FirmwareClient CreateSharedFirmwareClient()
         {
-            var go = new GameObject($"FirmwareClient_{session.BoardId}");
+            var go = new GameObject("FirmwareClient_Shared");
             go.transform.SetParent(transform);
             var client = go.AddComponent<FirmwareClient>();
-            client.Configure(session.PipeName);
+            client.Configure(BuildPipeName());
             return client;
         }
 
-        private static string BuildPipeName(string boardId)
+        private static string BuildPipeName()
         {
-            string token = SanitizePipeToken(boardId);
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                token = "board";
-            }
-            return $"RoboTwin.FirmwareEngine.v1.{token}";
-        }
-
-        private static string SanitizePipeToken(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
-            var sb = new System.Text.StringBuilder(input.Length);
-            foreach (char c in input)
-            {
-                if (char.IsLetterOrDigit(c) || c == '_' || c == '-')
-                {
-                    sb.Append(c);
-                }
-                else
-                {
-                    sb.Append('_');
-                }
-            }
-            return sb.ToString();
+            return "RoboTwin.FirmwareEngine";
         }
 
         private static bool TryGetBvmPath(ComponentSpec board, out string bvmPath)
@@ -691,7 +746,7 @@ namespace RobotTwin.Game
 
         private void TryLoadExternalFirmware(ExternalFirmwareSession session)
         {
-            if (!_useExternalFirmware || session == null || session.Client == null) return;
+            if (!_useExternalFirmware || session == null || _externalFirmwareClient == null) return;
             if (session.Loaded) return;
             if (string.IsNullOrWhiteSpace(session.BvmPath) || !File.Exists(session.BvmPath))
             {
@@ -711,17 +766,17 @@ namespace RobotTwin.Game
 
         private bool TryLoadPendingFirmware(ExternalFirmwareSession session)
         {
-            if (session == null || session.Client == null) return false;
+            if (session == null || _externalFirmwareClient == null) return false;
             if (session.Loaded) return true;
             if (string.IsNullOrWhiteSpace(session.BvmPath) || !File.Exists(session.BvmPath)) return false;
-            if (!session.Client.LoadBvmFile(session.BvmPath)) return false;
+            if (! _externalFirmwareClient.LoadBvmFile(session.BoardId, session.BoardProfile, session.BvmPath)) return false;
             session.Loaded = true;
             return true;
         }
 
         private bool TryStepExternalFirmware(ExternalFirmwareSession session)
         {
-            if (session == null || session.Client == null) return false;
+            if (session == null || _externalFirmwareClient == null) return false;
 
             TryLoadPendingFirmware(session);
 
@@ -729,10 +784,11 @@ namespace RobotTwin.Game
             {
                 RailVoltage = 5.0f,
                 DeltaMicros = (uint)Mathf.RoundToInt(TICK_RATE * 1000000f),
-                PinStates = BuildFirmwareInputStates(session.BoardId)
+                PinStates = BuildFirmwareInputStates(session.BoardId),
+                AnalogVoltages = BuildFirmwareAnalogInputs(session.BoardId)
             };
 
-            if (!session.Client.TryStep(request, out var result))
+            if (!_externalFirmwareClient.TryStep(session.BoardId, request, out var result))
             {
                 if (!session.LoggedFallback)
                 {
@@ -748,14 +804,30 @@ namespace RobotTwin.Game
 
         private int[] BuildFirmwareInputStates(string boardId)
         {
-            var inputs = new int[ExternalFirmwarePinCount];
-            for (int i = 0; i < ExternalFirmwarePinCount; i++)
+            var inputs = new int[ExternalFirmwarePinLimit];
+            var pins = GetExternalFirmwarePins(boardId);
+            int count = Mathf.Min(pins.Length, ExternalFirmwarePinLimit);
+            for (int i = 0; i < count; i++)
             {
-                string pin = ExternalFirmwarePins[i];
+                string pin = pins[i];
                 float voltage = GetLastNetVoltage(boardId, pin);
                 inputs[i] = voltage >= 2.5f ? 1 : 0;
             }
             return inputs;
+        }
+
+        private float[] BuildFirmwareAnalogInputs(string boardId)
+        {
+            var values = new float[16];
+            var pins = GetExternalFirmwarePins(boardId);
+            int write = 0;
+            for (int i = 0; i < pins.Length && write < values.Length; i++)
+            {
+                string pin = pins[i];
+                if (!pin.StartsWith("A", StringComparison.OrdinalIgnoreCase)) continue;
+                values[write++] = GetLastNetVoltage(boardId, pin);
+            }
+            return values;
         }
 
         private float GetLastNetVoltage(string boardId, string pin)
@@ -773,12 +845,13 @@ namespace RobotTwin.Game
 
         private void ApplyFirmwareResult(string boardId, RobotTwin.CoreSim.FirmwareStepResult result)
         {
-            var pinStates = new List<PinState>(ExternalFirmwarePinCount);
+            var pins = GetExternalFirmwarePins(boardId);
+            var pinStates = new List<PinState>(pins.Length);
             int[] outputs = result?.PinStates ?? System.Array.Empty<int>();
 
-            for (int i = 0; i < ExternalFirmwarePinCount; i++)
+            for (int i = 0; i < pins.Length; i++)
             {
-                string pin = ExternalFirmwarePins[i];
+                string pin = pins[i];
                 int state = i < outputs.Length ? outputs[i] : -1;
                 bool isOutput = state >= 0;
                 if (isOutput)

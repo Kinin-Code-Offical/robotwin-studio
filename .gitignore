@@ -56,7 +56,6 @@ __pycache__/
 workspace_snapshot.txt
 
 # Shared Info & Temp
-.gpt/
 templates/
 !RobotWin/Assets/Templates/
 !RobotWin/Assets/Templates/**

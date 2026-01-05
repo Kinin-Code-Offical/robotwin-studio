@@ -9,7 +9,7 @@ if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDi
 
 $Includes = "-I NativeEngine/include"
 # Note: Mixed .cpp and .c files
-$Sources = "NativeEngine/src/NativeEngine_Core.cpp", "NativeEngine/src/Core/CircuitContext.cpp", "NativeEngine/src/Core/NodalSolver.cpp", "NativeEngine/src/Core/BvmFormat.cpp", "NativeEngine/src/Physics/PhysicsWorld.cpp", "NativeEngine/src/MCU/ATmega328P_ISA.c"
+$Sources = "NativeEngine/src/NativeEngine_Core.cpp", "NativeEngine/src/Circuit/CircuitContext.cpp", "NativeEngine/src/Circuit/NodalSolver.cpp", "NativeEngine/src/Circuit/BvmFormat.cpp", "NativeEngine/src/Physics/PhysicsWorld.cpp", "NativeEngine/src/MCU/ATmega328P_ISA.c"
 $MainSrc = "NativeEngine/src/main.cpp"
 
 Push-Location $RepoRoot

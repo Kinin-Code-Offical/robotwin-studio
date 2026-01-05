@@ -1,4 +1,4 @@
-#include "Core/NodalSolver.hpp"
+#include "Circuit/NodalSolver.hpp"
 #include <cmath>
 
 namespace solver

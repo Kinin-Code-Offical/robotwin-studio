@@ -23,12 +23,13 @@ namespace RobotTwin.CoreSim.Runtime
         private readonly VirtualRegisterFile _registers;
         private readonly Dictionary<string, PinMapping> _pinMap = new Dictionary<string, PinMapping>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, float> _pinOverrides = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, float> _pinInputs = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         private const double DefaultPullupResistance = 20000.0;
 
-        public VirtualArduinoHal(VirtualRegisterFile registers)
+        public VirtualArduinoHal(VirtualRegisterFile registers, IReadOnlyList<string> pins = null)
         {
             _registers = registers;
-            BuildPinMap();
+            BuildPinMap(pins);
         }
 
         public bool TryGetPortBit(string pin, out byte ddr, out byte port, out int bit)
@@ -75,6 +76,12 @@ namespace RobotTwin.CoreSim.Runtime
             }
         }
 
+        public void SetInputVoltage(string pin, float voltage)
+        {
+            if (string.IsNullOrWhiteSpace(pin)) return;
+            _pinInputs[pin] = voltage;
+        }
+
         public Dictionary<string, float> GetOutputVoltages()
         {
             var voltages = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
@@ -89,9 +96,23 @@ namespace RobotTwin.CoreSim.Runtime
 
                 var mapping = kvp.Value;
                 bool isOutput = _registers.GetBit(mapping.Ddr, mapping.Bit);
-                if (!isOutput) continue;
-                bool isHigh = _registers.GetBit(mapping.Port, mapping.Bit);
-                voltages[pin] = isHigh ? VirtualArduino.DefaultHighVoltage : 0f;
+                if (isOutput)
+                {
+                    bool isHigh = _registers.GetBit(mapping.Port, mapping.Bit);
+                    voltages[pin] = isHigh ? VirtualArduino.DefaultHighVoltage : 0f;
+                    continue;
+                }
+
+                if (_pinOverrides.TryGetValue(pin, out var overrideVoltage))
+                {
+                    voltages[pin] = overrideVoltage;
+                    continue;
+                }
+
+                if (_pinInputs.TryGetValue(pin, out var inputVoltage))
+                {
+                    voltages[pin] = inputVoltage;
+                }
             }
             return voltages;
         }
@@ -114,20 +135,52 @@ namespace RobotTwin.CoreSim.Runtime
             return DefaultPullupResistance;
         }
 
-        private void BuildPinMap()
+        private void BuildPinMap(IReadOnlyList<string> pins)
         {
-            for (int i = 0; i <= 7; i++)
+            if (pins == null || pins.Count == 0)
             {
-                _pinMap[$"D{i}"] = new PinMapping(VirtualRegisterFile.DDRD, VirtualRegisterFile.PORTD, i);
+                var defaultPins = new List<string>();
+                for (int i = 0; i <= 13; i++) defaultPins.Add($"D{i}");
+                for (int i = 0; i <= 5; i++) defaultPins.Add($"A{i}");
+                pins = defaultPins;
             }
-            for (int i = 0; i <= 5; i++)
+
+            foreach (var pin in pins)
             {
-                _pinMap[$"D{8 + i}"] = new PinMapping(VirtualRegisterFile.DDRB, VirtualRegisterFile.PORTB, i);
+                if (string.IsNullOrWhiteSpace(pin)) continue;
+                if (!TryMapPin(pin.Trim().ToUpperInvariant(), out var mapping)) continue;
+                _pinMap[pin] = mapping;
             }
-            for (int i = 0; i <= 5; i++)
+        }
+
+        private static bool TryMapPin(string pin, out PinMapping mapping)
+        {
+            mapping = default;
+            if (pin.StartsWith("D", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(pin.Substring(1), out var d))
             {
-                _pinMap[$"A{i}"] = new PinMapping(VirtualRegisterFile.DDRC, VirtualRegisterFile.PORTC, i);
+                if (d >= 0 && d <= 7)
+                {
+                    mapping = new PinMapping(VirtualRegisterFile.DDRD, VirtualRegisterFile.PORTD, d);
+                    return true;
+                }
+                if (d >= 8 && d <= 13)
+                {
+                    mapping = new PinMapping(VirtualRegisterFile.DDRB, VirtualRegisterFile.PORTB, d - 8);
+                    return true;
+                }
+                return false;
             }
+            if (pin.StartsWith("A", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(pin.Substring(1), out var a))
+            {
+                if (a >= 0 && a <= 5)
+                {
+                    mapping = new PinMapping(VirtualRegisterFile.DDRC, VirtualRegisterFile.PORTC, a);
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static bool TryParseVoltage(string raw, out float voltage)

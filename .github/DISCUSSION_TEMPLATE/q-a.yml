@@ -1,0 +1,22 @@
+title: "Q&A: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for setup questions, usage questions, or clarifying behavior.
+  - type: textarea
+    attributes:
+      label: Question
+      description: What are you trying to do?
+      placeholder: "How do I run CoreSim tests on Windows?"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What you tried
+      description: Commands, screenshots, or steps you've already taken.
+  - type: textarea
+    attributes:
+      label: Environment
+      description: OS, .NET version, Unity version (if relevant).
