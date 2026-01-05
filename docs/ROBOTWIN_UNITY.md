@@ -38,3 +38,10 @@ RobotWin includes a pipeline for generating labeled training data for Computer V
 2. **Open Unity:** Launch the project in Unity 6.
 3. **Play Mode:** Unity will automatically spin up the CoreSim orchestrator and connect to the native processes.
 
+## Stepping Contract (Unity ↔ Native)
+
+- `Native_Step(dt)` is reserved for **circuit/IO solving** in NativeEngine.
+- `Physics_Step(dt)` is reserved for **physics simulation** in NativeEngine.
+- Unity must not mix the two in a single loop; circuit stepping is orchestrated by `SimHost` ticks, while physics runs in its own loop.
+- When NativeEngine pins are enabled, Unity calls `Native_Step` inside the logic tick to avoid a one-step lag.
+

@@ -9,6 +9,7 @@ namespace firmware
     constexpr std::uint16_t kProtocolMajor = 1;
     constexpr std::uint16_t kProtocolMinor = 0;
     constexpr std::size_t kPinCount = 70;
+    constexpr std::uint8_t kPinValueUnknown = 0xFF;
     constexpr std::size_t kAnalogCount = 16;
     constexpr std::size_t kBoardIdSize = 64;
 

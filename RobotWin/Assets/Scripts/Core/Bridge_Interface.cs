@@ -48,6 +48,7 @@ namespace RobotTwin.Core
         public const int CurrentCount = 2;
 
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        // Legacy fixed-size shared state (prototype interface).
         public unsafe struct SharedState
         {
             public fixed uint ComponentPositions[ComponentCount * 2];
