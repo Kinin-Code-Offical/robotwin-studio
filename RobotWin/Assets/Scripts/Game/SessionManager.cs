@@ -73,16 +73,16 @@ namespace RobotTwin.Game
             CurrentProjectPath = projectPath;
         }
         public string FirmwarePath { get; private set; }
-        public bool UseVirtualArduino { get; set; } = true;
+        public bool UseVirtualMcu { get; set; } = true;
         public bool UseNativeEnginePins { get; set; } = true;
 
         public void FindFirmware()
         {
             string resolvedPath = string.Empty;
 #if UNITY_EDITOR
-            // Relative to project path: ../builds/firmware/VirtualArduinoFirmware.exe
+            // Relative to project path: ../builds/firmware/RoboTwinFirmwareHost.exe
             var projectRoot = Directory.GetParent(Application.dataPath).Parent.FullName;
-            var firmwarePath = Path.Combine(projectRoot, "builds", "firmware", "VirtualArduinoFirmware.exe");
+            var firmwarePath = Path.Combine(projectRoot, "builds", "firmware", "RoboTwinFirmwareHost.exe");
             if (File.Exists(firmwarePath))
             {
                 resolvedPath = firmwarePath;
@@ -94,12 +94,12 @@ namespace RobotTwin.Game
             }
 #else
             // In build, expect next to executable or in data
-            resolvedPath = Path.Combine(Application.streamingAssetsPath, "VirtualArduinoFirmware.exe");
+            resolvedPath = Path.Combine(Application.streamingAssetsPath, "RoboTwinFirmwareHost.exe");
 #endif
             FirmwarePath = resolvedPath;
-            if (UseVirtualArduino)
+            if (UseVirtualMcu)
             {
-                Debug.Log("[SessionManager] VirtualArduino enabled. External firmware will be ignored.");
+                Debug.Log("[SessionManager] VirtualMcu enabled. External firmware will be ignored.");
             }
         }
 

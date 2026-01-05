@@ -36,6 +36,7 @@ std::uint32_t PhysicsWorld::AddBody(const RigidBody &body) {
   }
   copy.SetMass(copy.mass);
   bodies_[copy.id] = copy;
+  body_cache_dirty_ = true;
   return copy.id;
 }
 
@@ -183,12 +184,13 @@ void PhysicsWorld::Integrate(RigidBody &body, float dt) {
 
 void PhysicsWorld::Step(float dt_override) {
   float dt = ComputeDt(dt_override);
+  RebuildBodyCache();
   float maxStep = 0.0f;
-  for (auto &kvp : bodies_) {
-    auto &body = kvp.second;
-    if (body.is_static) continue;
-    float speed = body.velocity.Length();
-    float radius = ComputeBodyRadius(body);
+  for (auto *body : body_cache_) {
+    if (!body) continue;
+    if (body->is_static) continue;
+    float speed = body->velocity.Length();
+    float radius = ComputeBodyRadius(*body);
     if (radius <= 0.0f) radius = 0.05f;
     float step = speed * dt / std::max(radius * 0.5f, 0.01f);
     if (step > maxStep) maxStep = step;
@@ -204,10 +206,10 @@ void PhysicsWorld::Step(float dt_override) {
   for (int step = 0; step < substeps; ++step) {
     Vec3 gravity = ComputeGravity(subDt);
 
-    for (auto &kvp : bodies_) {
-      auto &body = kvp.second;
-      if (!body.is_static) {
-        body.force_accum += gravity * body.mass;
+    for (auto *body : body_cache_) {
+      if (!body) continue;
+      if (!body->is_static) {
+        body->force_accum += gravity * body->mass;
       }
     }
 
@@ -217,15 +219,17 @@ void PhysicsWorld::Step(float dt_override) {
       StepVehicle(kvp.second, subDt);
     }
 
-    for (auto &kvp : bodies_) {
-      Integrate(kvp.second, subDt);
+    for (auto *body : body_cache_) {
+      if (!body) continue;
+      Integrate(*body, subDt);
     }
 
     GenerateContacts();
     ResolveContacts(subDt);
 
-    for (auto &kvp : bodies_) {
-      ApplyGroundContact(kvp.second, subDt);
+    for (auto *body : body_cache_) {
+      if (!body) continue;
+      ApplyGroundContact(*body, subDt);
     }
   }
 }
@@ -417,6 +421,48 @@ float PhysicsWorld::ComputeBodyRadius(const RigidBody &body) const {
     return std::max(body.radius, 0.01f);
   }
   return std::max(body.half_extents.y, 0.01f);
+}
+
+void PhysicsWorld::RebuildBodyCache() {
+  if (!body_cache_dirty_ && body_cache_size_ == bodies_.size()) {
+    return;
+  }
+  body_cache_.clear();
+  body_cache_.reserve(bodies_.size());
+  for (auto &kvp : bodies_) {
+    body_cache_.push_back(&kvp.second);
+  }
+  body_cache_size_ = bodies_.size();
+  body_cache_dirty_ = false;
+}
+
+PhysicsWorld::Aabb PhysicsWorld::GetCachedAabb(const RigidBody &body) {
+  auto same_vec = [](const Vec3 &a, const Vec3 &b) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+  };
+  auto same_quat = [](const Quat &a, const Quat &b) {
+    return a.w == b.w && a.x == b.x && a.y == b.y && a.z == b.z;
+  };
+
+  bool eligible = body.is_static || body.is_sleeping;
+  auto &cache = aabb_cache_[body.id];
+  if (eligible && cache.valid &&
+      cache.shape == body.shape &&
+      cache.radius == body.radius &&
+      same_vec(cache.half_extents, body.half_extents) &&
+      same_vec(cache.position, body.position) &&
+      same_quat(cache.rotation, body.rotation)) {
+    return cache.aabb;
+  }
+
+  cache.aabb = ComputeAabb(body);
+  cache.position = body.position;
+  cache.rotation = body.rotation;
+  cache.half_extents = body.half_extents;
+  cache.radius = body.radius;
+  cache.shape = body.shape;
+  cache.valid = true;
+  return cache.aabb;
 }
 
 void PhysicsWorld::ApplyGroundContact(RigidBody &body, float dt) {
@@ -682,53 +728,97 @@ bool PhysicsWorld::CollideBoxBox(const RigidBody &a, const RigidBody &b, Contact
 
 void PhysicsWorld::GenerateContacts() {
   contacts_.clear();
-  if (bodies_.size() < 2) return;
+  if (body_cache_.size() < 2) return;
 
-  std::vector<std::pair<std::uint32_t, Aabb>> aabbs;
-  aabbs.reserve(bodies_.size());
-  for (auto &kvp : bodies_) {
-    aabbs.emplace_back(kvp.first, ComputeAabb(kvp.second));
+  struct BroadphaseEntry {
+    const RigidBody *body;
+    Aabb aabb;
+  };
+
+  std::vector<BroadphaseEntry> entries;
+  entries.reserve(body_cache_.size());
+  for (auto *body : body_cache_) {
+    if (!body) continue;
+    entries.push_back({body, GetCachedAabb(*body)});
   }
 
-  for (std::size_t i = 0; i < aabbs.size(); ++i) {
-    for (std::size_t j = i + 1; j < aabbs.size(); ++j) {
-      const auto &entryA = aabbs[i];
-      const auto &entryB = aabbs[j];
-      if (!AabbOverlap(entryA.second, entryB.second)) continue;
+  float minX = std::numeric_limits<float>::max();
+  float minY = std::numeric_limits<float>::max();
+  float minZ = std::numeric_limits<float>::max();
+  float maxX = std::numeric_limits<float>::lowest();
+  float maxY = std::numeric_limits<float>::lowest();
+  float maxZ = std::numeric_limits<float>::lowest();
+  for (const auto &entry : entries) {
+    minX = std::min(minX, entry.aabb.min.x);
+    minY = std::min(minY, entry.aabb.min.y);
+    minZ = std::min(minZ, entry.aabb.min.z);
+    maxX = std::max(maxX, entry.aabb.max.x);
+    maxY = std::max(maxY, entry.aabb.max.y);
+    maxZ = std::max(maxZ, entry.aabb.max.z);
+  }
+  float rangeX = maxX - minX;
+  float rangeY = maxY - minY;
+  float rangeZ = maxZ - minZ;
+  int axis = 0;
+  if (rangeY > rangeX && rangeY >= rangeZ) {
+    axis = 1;
+  } else if (rangeZ > rangeX && rangeZ >= rangeY) {
+    axis = 2;
+  }
 
-      auto itA = bodies_.find(entryA.first);
-      auto itB = bodies_.find(entryB.first);
-      if (itA == bodies_.end() || itB == bodies_.end()) continue;
-      auto &bodyA = itA->second;
-      auto &bodyB = itB->second;
-      if (bodyA.is_static && bodyB.is_static) continue;
+  auto axis_min = [axis](const Aabb &aabb) {
+    return axis == 0 ? aabb.min.x : (axis == 1 ? aabb.min.y : aabb.min.z);
+  };
+  auto axis_max = [axis](const Aabb &aabb) {
+    return axis == 0 ? aabb.max.x : (axis == 1 ? aabb.max.y : aabb.max.z);
+  };
+
+  std::sort(entries.begin(), entries.end(), [axis_min](const BroadphaseEntry &a, const BroadphaseEntry &b) {
+    return axis_min(a.aabb) < axis_min(b.aabb);
+  });
+
+  contacts_.reserve(std::min<std::size_t>(entries.size() * 4u, 1024u));
+
+  for (std::size_t i = 0; i < entries.size(); ++i) {
+    const auto &entryA = entries[i];
+    const auto *bodyA = entryA.body;
+    if (!bodyA) continue;
+    for (std::size_t j = i + 1; j < entries.size(); ++j) {
+      const auto &entryB = entries[j];
+      if (axis_min(entryB.aabb) > axis_max(entryA.aabb)) break;
+      if (!AabbOverlap(entryA.aabb, entryB.aabb)) continue;
+
+      const auto *bodyB = entryB.body;
+      if (!bodyB) continue;
+      if (bodyA->is_static && bodyB->is_static) continue;
+      if (bodyA->is_sleeping && bodyB->is_sleeping) continue;
 
       Contact contact{};
-      contact.key = MakeContactKey(bodyA.id, bodyB.id);
+      contact.key = MakeContactKey(bodyA->id, bodyB->id);
       bool hit = false;
-      if (bodyA.shape == ShapeType::Sphere && bodyB.shape == ShapeType::Sphere) {
-        hit = CollideSphereSphere(bodyA, bodyB, contact);
-      } else if (bodyA.shape == ShapeType::Sphere && bodyB.shape == ShapeType::Box) {
-        hit = CollideSphereBox(bodyA, bodyB, contact);
-      } else if (bodyA.shape == ShapeType::Box && bodyB.shape == ShapeType::Sphere) {
-        hit = CollideSphereBox(bodyB, bodyA, contact);
+      if (bodyA->shape == ShapeType::Sphere && bodyB->shape == ShapeType::Sphere) {
+        hit = CollideSphereSphere(*bodyA, *bodyB, contact);
+      } else if (bodyA->shape == ShapeType::Sphere && bodyB->shape == ShapeType::Box) {
+        hit = CollideSphereBox(*bodyA, *bodyB, contact);
+      } else if (bodyA->shape == ShapeType::Box && bodyB->shape == ShapeType::Sphere) {
+        hit = CollideSphereBox(*bodyB, *bodyA, contact);
         if (hit) {
           std::swap(contact.a, contact.b);
           contact.normal = contact.normal * -1.0f;
         }
       } else {
-        hit = CollideBoxBox(bodyA, bodyB, contact);
+        hit = CollideBoxBox(*bodyA, *bodyB, contact);
       }
 
       if (hit) {
-        float friction = std::sqrt(std::max(bodyA.friction, 0.0f) * std::max(bodyB.friction, 0.0f));
-        float restitution = std::max(bodyA.restitution, bodyB.restitution);
+        float friction = std::sqrt(std::max(bodyA->friction, 0.0f) * std::max(bodyB->friction, 0.0f));
+        float restitution = std::max(bodyA->restitution, bodyB->restitution);
         contact.friction = friction;
         contact.restitution = restitution;
         auto cached = contact_cache_.find(contact.key);
         if (cached != contact_cache_.end()) {
           float alignment = Dot(cached->second.normal, contact.normal);
-          if (alignment > 0.5f) {
+          if (alignment > 0.7f) {
             contact.cached_normal_impulse = cached->second.normal_impulse;
             contact.cached_tangent_impulse = cached->second.tangent_impulse;
           }
@@ -742,6 +832,8 @@ void PhysicsWorld::GenerateContacts() {
 void PhysicsWorld::ResolveContacts(float dt) {
   if (contacts_.empty()) return;
   int iterations = static_cast<int>(std::max(1.0f, config_.solver_iterations));
+  float cacheDecay = 1.0f - 0.02f * static_cast<float>(iterations);
+  cacheDecay = std::min(0.85f, std::max(0.65f, cacheDecay));
 
   for (auto &contact : contacts_) {
     auto itA = bodies_.find(contact.a);
@@ -776,16 +868,16 @@ void PhysicsWorld::ResolveContacts(float dt) {
     }
   }
 
-  std::unordered_map<std::uint64_t, CachedContact> next_cache;
-  next_cache.reserve(contacts_.size());
+  contact_cache_scratch_.clear();
+  contact_cache_scratch_.reserve(contacts_.size());
   for (const auto &contact : contacts_) {
     CachedContact entry{};
     entry.normal = contact.normal;
-    entry.normal_impulse = contact.normal_impulse_accum * 0.8f;
-    entry.tangent_impulse = contact.tangent_impulse_accum * 0.8f;
-    next_cache[contact.key] = entry;
+    entry.normal_impulse = contact.normal_impulse_accum * cacheDecay;
+    entry.tangent_impulse = contact.tangent_impulse_accum * cacheDecay;
+    contact_cache_scratch_[contact.key] = entry;
   }
-  contact_cache_.swap(next_cache);
+  contact_cache_.swap(contact_cache_scratch_);
 }
 
 void PhysicsWorld::ApplyDistanceConstraints(float dt) {
@@ -888,7 +980,7 @@ void PhysicsWorld::ResolveContact(Contact &contact, float dt) {
     ApplyImpulse(b, frictionImpulse, rb);
   }
 
-  float percent = 0.65f;
+  float percent = 0.6f;
   float slop = config_.contact_slop;
   float correction = std::max(contact.penetration - slop, 0.0f) / (invMassA + invMassB) * percent;
   Vec3 correctionVec = contact.normal * correction;

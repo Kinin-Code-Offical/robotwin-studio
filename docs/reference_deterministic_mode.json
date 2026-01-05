@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "dtSeconds": 0.01,
+  "deltaMicrosOverride": null,
+  "randomSeed": 1337,
+  "firmwareConnectTimeoutMs": 5000
+}

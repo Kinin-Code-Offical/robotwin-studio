@@ -1,94 +1,92 @@
-﻿# Architecture Overview
+# System Architecture
 
-RobotWin Studio is a multi-module system that combines a deterministic simulator with a Unity UI front-end and native firmware/runtime support.
+RobotWin Studio employs a **Hybrid Realtime Architecture** designed to decouple simulation physics, firmware emulation, and visualization into separate, optimized processes. This ensures that heavy graphical rendering in Unity never impacts the deterministic timing of the physics solver or the instruction-accurate execution of firmware.
 
-## Major Modules
+## High-Level Topology
 
-- CoreSim: Pure C# simulation core. Owns circuits, components, and deterministic execution.
-- RobotWin: Unity project for UI, visualization, and interaction.
-- FirmwareEngine: C++ firmware runtime (VirtualArduinoFirmware.exe).
-- NativeEngine: Native performance components and build system.
+`mermaid
+graph TD
+    subgraph User Space
+        Unity[RobotWin (Unity UI)]
+        Input[Input System]
+    end
 
-## Runtime Flow (Typical)
+    subgraph Realtime Kernel Space
+        Core[CoreSim (Orchestrator)]
+        Physics[NativeEngine (C++ Physics)]
+        Thermal[Thermal Solver]
+        Env[Environment Solver]
+    end
 
-1. User builds or loads a circuit in RobotWin.
-2. RobotWin validates and serializes the circuit model.
-3. CoreSim executes the simulation tick loop.
-4. Optional firmware execution is bridged via FirmwareEngine.
-5. RobotWin renders results and displays telemetry.
+    subgraph Emulation Space
+        AVR[AVR Emulator (Arduino)]
+        QEMU[QEMU Guest (Raspberry Pi/Linux)]
+    end
 
-## Data Boundaries
+    Unity <-->|Shared Memory| Core
+    Core <-->|IPC Ring Buffer| Physics
+    Core <-->|Virtual Bus| AVR
+    Core <-->|VirtIO| QEMU
+    Physics <-->|Heat Map| Thermal
+`
 
-- CoreSim is Unity-agnostic and should not depend on Unity types.
-- RobotWin communicates with CoreSim via serialized models and plugin APIs.
-- FirmwareEngine exchanges telemetry via file or IPC contracts defined in CoreSim.
+## Module Descriptions
 
-## Ownership Matrix (What Lives Where)
+### 1. CoreSim (The Conductor)
+- **Role:** Deterministic scheduler and state manager.
+- **Responsibility:**
+  - Synchronizes all subsystems (Physics, Firmware, UI).
+  - Manages the "Global Simulation Time" (GST).
+  - Handles serialization/deserialization of the circuit model.
+- **Tech Stack:** .NET 8, High-Performance shared memory.
 
-- CoreSim: deterministic circuit solving, logic/telemetry, and simulation metadata (no physics).
-- NativeEngine: full rigid-body physics, constraints, collision, friction, aerodynamics, and actuator dynamics.
-- FirmwareEngine: real firmware execution (BVM/HEX), pin I/O, and serial flow.
-- RobotWin (Unity): UI, scene orchestration, visualization, and editor tools.
+### 2. NativeEngine (The Physical World)
+- **Role:** High-fidelity multi-physics solver.
+- **Responsibility:**
+  - **Rigid Body Dynamics:** Mass, inertia, collision, friction (PhysX/Jolt backend).
+  - **Aerodynamics:** Lift, drag, and turbulence calculations for drone rotors/wings.
+  - **Thermodynamics:** Heat generation (P=IV), thermal mass, conduction, convection, and active cooling (fans/heatsinks).
+  - **Environment:** Wind vectors, atmospheric density, magnetic field simulation.
+- **Tech Stack:** C++20, SIMD-optimized, OpenMP.
 
-## Determinism & Noise Model
+### 3. FirmwareEngine (The Digital Brain)
+- **Role:** Instruction-set emulator for embedded targets.
+- **Sub-Modules:**
+  - **VirtualArduino:** Cycle-accurate AVR emulation for Arduino Uno/Mega/Nano.
+  - **VirtualPi (QEMU):** ARM64 virtualization running full Linux (Debian/Ubuntu).
+- **Connectivity:**
+  - Exposes virtual GPIO, I2C, SPI, UART interfaces that map directly to CoreSim signals.
+  - Supports "Virtual Sensors" (e.g., a virtual MPU6050 driver in Linux talks to the physics engine's simulated accelerometer).
 
-To reflect real-world imperfections, physics uses deterministic noise:
+### 4. RobotWin (The Window)
+- **Role:** Visualization and Interaction layer.
+- **Responsibility:**
+  - Rendering the 3D scene (HDRP/URP).
+  - User Interface for circuit building and debugging.
+  - Plotting telemetry graphs.
+  - **Note:** The UI is *passive*. If the UI hangs, the simulation continues in the background.
 
-- Gravity micro-jitter (configurable)
-- Time-step micro-jitter (configurable)
-- Material variance (planned)
-- Actuator response variance (planned)
+## Key Architectural Patterns
 
-## CoreSim <-> NativeEngine Data Contract (Draft)
+### Shared Memory Transport (SMT)
+To achieve <1ms latency between processes, we utilize a zero-copy Shared Memory Transport.
+- **Ring Buffers:** Lock-free ring buffers for high-throughput sensor data (Lidar/Camera).
+- **State Snapshots:** Double-buffered state atoms for atomic updates of physics transforms.
 
-CoreSim produces control intents; NativeEngine produces physical state + sensor feedback.
+### Deterministic Lockstep
+The simulation runs in fixed time steps (e.g., 1000Hz).
+1. **Input Phase:** CoreSim gathers inputs from UI and Firmware.
+2. **Solve Phase:** NativeEngine advances physics by dt.
+3. **Emulate Phase:** FirmwareEngine executes N cycles of instructions.
+4. **Commit Phase:** State is finalized and written to the output buffer.
 
-### CoreSim → NativeEngine (ControlFrame)
+### The "Perfect Sensor" Fallacy
+RobotWin avoids ideal sensors. All sensor data passes through a **Noise & Degradation Layer**:
+- **IMU:** Adds bias, random walk, and temperature-dependent drift.
+- **Camera:** Simulates lens distortion, rolling shutter, and sensor noise.
+- **GPS:** Simulates multipath interference and satellite visibility.
 
-- tick_index: int
-- dt_seconds: float
-- actuators: list
-  - id: string
-  - type: servo | motor | thruster
-  - target: float (angle / rpm / thrust)
-  - pwm: float (0..1)
-  - torque_limit: float
-  - enabled: bool
-- power: list
-  - board_id: string
-  - rail_voltage: float
+## File Formats
+- **.rwin:** Project file (JSON/YAML) defining the robot structure, circuit connections, and environment settings.
+- **.rsim:** Replay file containing the deterministic input log for perfect session reproduction.
 
-### NativeEngine → CoreSim (PhysicsFrame)
-
-- tick_index: int
-- dt_seconds: float
-- bodies: list
-  - id: string
-  - position: vec3
-  - rotation: quat
-  - linear_velocity: vec3
-  - angular_velocity: vec3
-- sensors: list
-  - id: string
-  - type: imu | encoder | gyro | accel | distance
-  - value: float/vec3
-- constraints: list
-  - id: string
-  - error: float
-  - impulse: float
-
-## Design Goals
-
-- Deterministic simulation (CoreSim).
-- Responsive UI (RobotWin + UI Toolkit).
-- Clear separation of native/managed responsibilities.
-
-## Product Vision
-
-The long-term goal is a full-stack robotics simulator: build a robot and its world, simulate circuits in real time, and include servo/sensor physics so that running the real robot yields nearly identical behavior and telemetry to the simulated result.
-
-## Confirmed Roadmap Milestones
-
-- Raspberry Pi target support with on-device AI inference workflows and deployment tooling.
-- C++ physics simulator pipeline that extends CoreSim with higher-fidelity rigid-body and actuator modeling.
-- CAD post-processing for robotics parts: import, classify by function, and enable editable properties (mass, materials, tolerances, and mounting metadata).

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Runtime;
 
@@ -727,7 +728,7 @@ namespace RobotTwin.UI
                 IsResistor = IsResistorType(comp.Type),
                 IsSwitch = IsSwitchType(comp.Type),
                 IsButton = IsButtonType(comp.Type),
-                IsArduino = IsArduinoType(comp.Type),
+                IsBoard = IsBoardType(comp),
                 IsBattery = IsBatteryType(comp.Type),
                 IsServo = IsServoType(comp.Type),
                 ErrorSeed = UnityEngine.Random.Range(0f, 10f),
@@ -757,7 +758,7 @@ namespace RobotTwin.UI
                 EnsureLedGlow(visual);
             }
 
-            if (visual.IsArduino)
+            if (visual.IsBoard)
             {
                 EnsureUsbIndicator(visual);
             }
@@ -774,7 +775,7 @@ namespace RobotTwin.UI
                 EnsureBatteryBar(visual);
             }
 
-            if (visual.IsArduino)
+            if (visual.IsBoard)
             {
                 EnsureTempBar(visual);
             }
@@ -1966,7 +1967,7 @@ namespace RobotTwin.UI
                 UpdateLedGlowFx(visual, baseColor, intensity, effectScale);
             }
 
-            if (visual.IsArduino)
+            if (visual.IsBoard)
             {
                 if (visual.UsbRenderer != null)
                 {
@@ -2006,14 +2007,14 @@ namespace RobotTwin.UI
                 arm.localRotation = visual.ServoArmBaseRotation * Quaternion.Euler(0f, servoAngle, 0f);
             }
 
-            if (hasError && !visual.IsArduino && !visual.IsBattery)
+            if (hasError && !visual.IsBoard && !visual.IsBattery)
             {
                 // Error visuals are handled via FX overlay instead of tinting base materials.
             }
 
             if (visual.StatusLabel != null)
             {
-                if (visual.IsArduino)
+                if (visual.IsBoard)
                 {
                     labelText = usbConnected ? "USB ON" : "USB OFF";
                     labelColor = usbConnected ? new Color(0.3f, 0.9f, 0.6f) : Color.gray;
@@ -2939,12 +2940,20 @@ namespace RobotTwin.UI
             return type.IndexOf("servo", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private static bool IsArduinoType(string type)
+        private static bool IsBoardType(string type)
         {
-            if (string.IsNullOrWhiteSpace(type)) return false;
-            return string.Equals(type, "ArduinoUno", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoNano", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoProMini", StringComparison.OrdinalIgnoreCase);
+            return BoardProfiles.IsKnownProfileId(type);
+        }
+
+        private static bool IsBoardType(ComponentSpec comp)
+        {
+            if (comp?.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                BoardProfiles.IsKnownProfileId(profile))
+            {
+                return true;
+            }
+            return BoardProfiles.IsKnownProfileId(comp?.Type);
         }
 
         private static bool IsBatteryType(string type)
@@ -4208,7 +4217,7 @@ namespace RobotTwin.UI
             public bool IsResistor;
             public bool IsSwitch;
             public bool IsButton;
-            public bool IsArduino;
+            public bool IsBoard;
             public bool IsBattery;
             public bool IsServo;
             public ComponentCatalog.Item CatalogItem;

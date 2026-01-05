@@ -7557,26 +7557,18 @@ namespace RobotTwin.UI
         private bool TryPickFileRuntime(string title, string filter, out string path)
         {
             path = string.Empty;
-#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
-            try
+#if UNITY_EDITOR
+            string extension = "*";
+            if (!string.IsNullOrWhiteSpace(filter))
             {
-                using var dialog = new System.Windows.Forms.OpenFileDialog();
-                dialog.Title = title;
-                dialog.Filter = string.IsNullOrWhiteSpace(filter) ? "All Files|*.*" : filter;
-                dialog.Multiselect = false;
-                dialog.CheckFileExists = true;
-                dialog.RestoreDirectory = true;
-                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                var parts = filter.Split('|');
+                if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[1]))
                 {
-                    path = dialog.FileName;
-                    return !string.IsNullOrWhiteSpace(path);
+                    extension = parts[1].Replace("*.", string.Empty).Replace("*", string.Empty).Split(';')[0];
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[ComponentStudio] File picker failed: {ex.Message}");
-            }
-            return false;
+            path = UnityEditor.EditorUtility.OpenFilePanel(title ?? "Select file", Application.dataPath, extension);
+            return !string.IsNullOrWhiteSpace(path);
 #else
             return false;
 #endif

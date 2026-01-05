@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UIElements;
+using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Serialization;
 using RobotTwin.Game;
@@ -341,57 +342,57 @@ namespace RobotTwin.UI
             "union", "unsigned", "using", "virtual", "void", "volatile", "while",
             "setup", "loop", "HIGH", "LOW", "INPUT", "OUTPUT", "INPUT_PULLUP"
         };
-        private static readonly string[] ArduinoLeftPins =
+        private static readonly string[] UnoLeftPins =
         {
             "IOREF", "RESET", "3V3", "5V", "GND1", "GND2", "VIN", "A0", "A1", "A2", "A3", "A4", "A5"
         };
-        private static readonly string[] ArduinoRightPins =
+        private static readonly string[] UnoRightPins =
         {
             "SCL", "SDA", "AREF", "GND3", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0"
         };
-        private static readonly string[] ArduinoPreferredPins =
+        private static readonly string[] UnoPreferredPins =
         {
             "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D0", "D1",
             "A0", "A1", "A2", "A3", "A4", "A5",
             "GND1", "GND2", "GND3", "5V", "3V3", "VIN"
         };
-        private static readonly string[] ArduinoNanoLeftPins =
+        private static readonly string[] NanoLeftPins =
         {
             "VIN", "GND1", "RST", "5V", "3V3", "A7", "A6", "A5", "A4", "A3", "A2", "A1", "A0"
         };
-        private static readonly string[] ArduinoNanoRightPins =
+        private static readonly string[] NanoRightPins =
         {
             "AREF", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0", "GND2"
         };
-        private static readonly string[] ArduinoNanoPreferredPins =
+        private static readonly string[] NanoPreferredPins =
         {
             "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D0", "D1",
             "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
             "GND1", "GND2", "5V", "3V3", "VIN", "RST", "AREF"
         };
-        private static readonly string[] ArduinoProMiniLeftPins =
+        private static readonly string[] ProMiniLeftPins =
         {
             "RAW", "GND1", "RST", "VCC", "A7", "A6", "A5", "A4", "A3", "A2", "A1", "A0"
         };
-        private static readonly string[] ArduinoProMiniRightPins =
+        private static readonly string[] ProMiniRightPins =
         {
             "AREF", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "D0", "GND2"
         };
-        private static readonly string[] ArduinoProMiniPreferredPins =
+        private static readonly string[] ProMiniPreferredPins =
         {
             "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D0", "D1",
             "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
             "GND1", "GND2", "VCC", "RAW", "RST", "AREF"
         };
 
-        private readonly struct ArduinoProfile
+        private readonly struct BoardVisualProfile
         {
             public string Title { get; }
             public IReadOnlyList<string> LeftPins { get; }
             public IReadOnlyList<string> RightPins { get; }
             public IReadOnlyList<string> PreferredPins { get; }
 
-            public ArduinoProfile(string title, IReadOnlyList<string> leftPins, IReadOnlyList<string> rightPins, IReadOnlyList<string> preferredPins)
+            public BoardVisualProfile(string title, IReadOnlyList<string> leftPins, IReadOnlyList<string> rightPins, IReadOnlyList<string> preferredPins)
             {
                 Title = title;
                 LeftPins = leftPins;
@@ -2252,10 +2253,10 @@ namespace RobotTwin.UI
         private IEnumerator RunBuildAllRoutine()
         {
             if (_currentCircuit == null || _currentCircuit.Components == null) yield break;
-            var targets = _currentCircuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            var targets = _currentCircuit.Components.Where(IsBoardType).ToList();
             if (targets.Count == 0)
             {
-                Debug.LogWarning("[CodeStudio] No Arduino targets to build.");
+                Debug.LogWarning("[CodeStudio] No board targets to build.");
                 yield break;
             }
 
@@ -2311,7 +2312,7 @@ namespace RobotTwin.UI
             var targetBoard = ResolveTargetBoard();
             if (targetBoard == null)
             {
-                Debug.LogError("[CodeStudio] No Arduino target found.");
+                Debug.LogError("[CodeStudio] No board target found.");
                 if (manageSession) EndBuildProgress(false, "Build failed");
                 yield break;
             }
@@ -2333,6 +2334,12 @@ namespace RobotTwin.UI
             }
 
             string fqbn = ResolveFqbn(targetBoard);
+            if (string.IsNullOrWhiteSpace(fqbn))
+            {
+                Debug.LogWarning("[CodeStudio] Selected board profile is not supported by the Arduino build pipeline.");
+                if (manageSession) EndBuildProgress(false, "Build failed");
+                yield break;
+            }
             string codeRoot = GetCodeRoot(_codeTargetComponentId);
             string outDir = Path.Combine(codeRoot, "builds");
             Directory.CreateDirectory(outDir);
@@ -2607,18 +2614,19 @@ namespace RobotTwin.UI
             if (!string.IsNullOrWhiteSpace(_codeTargetComponentId))
             {
                 var match = _currentCircuit.Components.FirstOrDefault(c => c.Id == _codeTargetComponentId);
-                if (match != null && IsArduinoType(match.Type)) return match;
+                if (match != null && IsBoardType(match)) return match;
             }
-            return _currentCircuit.Components.FirstOrDefault(c => IsArduinoType(c.Type));
+            return _currentCircuit.Components.FirstOrDefault(IsBoardType);
         }
 
         private string ResolveFqbn(ComponentSpec board)
         {
-            if (board != null && board.Properties != null && board.Properties.TryGetValue("virtualBoard", out var id))
+            if (board != null && board.Properties != null && board.Properties.TryGetValue("boardProfile", out var id))
             {
                 string key = (id ?? string.Empty).Trim().ToLowerInvariant();
                 if (key.Contains("nano")) return "arduino:avr:nano";
                 if (key.Contains("pro-mini") || key.Contains("pro_mini") || key.Contains("promini")) return "arduino:avr:pro";
+                if (key.Contains("uno")) return "arduino:avr:uno";
             }
 
             if (board != null && board.Type != null)
@@ -2626,9 +2634,10 @@ namespace RobotTwin.UI
                 string type = board.Type.Trim().ToLowerInvariant();
                 if (type.Contains("nano")) return "arduino:avr:nano";
                 if (type.Contains("pro")) return "arduino:avr:pro";
+                if (type.Contains("uno")) return "arduino:avr:uno";
             }
 
-            return "arduino:avr:uno";
+            return null;
         }
 
         private string ResolveRepoRoot()
@@ -2795,13 +2804,13 @@ namespace RobotTwin.UI
             foreach (var entry in states)
             {
                 if (!entry.Value.high || !entry.Value.low) continue;
-                if (TryNormalizeArduinoPin(entry.Key, text, out pin)) return true;
+                if (TryNormalizeBoardPin(entry.Key, text, out pin)) return true;
             }
 
             return false;
         }
 
-        private static bool TryNormalizeArduinoPin(string rawPin, string text, out string pin)
+        private static bool TryNormalizeBoardPin(string rawPin, string text, out string pin)
         {
             pin = null;
             if (string.IsNullOrWhiteSpace(rawPin)) return false;
@@ -2883,8 +2892,8 @@ namespace RobotTwin.UI
             {
                 foreach (var comp in _currentCircuit.Components)
                 {
-                    if (!IsArduinoType(comp.Type)) continue;
-                    string label = $"{comp.Id} ({comp.Type})";
+                    if (!IsBoardType(comp)) continue;
+                    string label = $"{comp.Id} ({ResolveBoardProfileId(comp)})";
                     _codeTargetLabels[label] = comp.Id;
                     choices.Add(label);
                 }
@@ -2892,7 +2901,7 @@ namespace RobotTwin.UI
 
             if (choices.Count == 0)
             {
-                choices.Add("No Arduino found");
+                choices.Add("No boards found");
                 _codeTargetComponentId = null;
                 _codeTargetDropdown.SetEnabled(false);
                 _codeTargetDropdown.choices = choices;
@@ -6098,7 +6107,7 @@ namespace RobotTwin.UI
                 var supplyKinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 bool hasSupplyPin = false;
                 bool hasGroundPin = false;
-                bool hasArduinoSignal = false;
+                bool hasBoardSignal = false;
                 if (string.IsNullOrWhiteSpace(net.Id))
                 {
                     issues.Add(new DrcIssue { Severity = DrcSeverity.Error, Code = "DRC010", Message = "Net has empty name." });
@@ -6187,9 +6196,9 @@ namespace RobotTwin.UI
                             }
                         }
 
-                        if (IsArduinoType(comp.Type) && IsArduinoSignalPin(pinName))
+                        if (IsBoardType(comp) && IsBoardSignalPin(pinName))
                         {
-                            hasArduinoSignal = true;
+                            hasBoardSignal = true;
                         }
                     }
                 }
@@ -6247,7 +6256,7 @@ namespace RobotTwin.UI
                     });
                 }
 
-                if ((net.Nodes?.Count ?? 0) >= 2 && !hasSupplyPin && !hasGroundPin && !hasArduinoSignal)
+                if ((net.Nodes?.Count ?? 0) >= 2 && !hasSupplyPin && !hasGroundPin && !hasBoardSignal)
                 {
                     issues.Add(new DrcIssue
                     {
@@ -6305,7 +6314,7 @@ namespace RobotTwin.UI
                         });
                     }
                 }
-                else if (IsArduinoType(comp.Type))
+                else if (IsBoardType(comp))
                 {
                     bool hasGnd = connectedPins.Any(p => p.StartsWith("GND", StringComparison.OrdinalIgnoreCase));
                     if (!hasGnd)
@@ -6429,7 +6438,7 @@ namespace RobotTwin.UI
             return false;
         }
 
-        private static bool IsArduinoSignalPin(string pinName)
+        private static bool IsBoardSignalPin(string pinName)
         {
             if (string.IsNullOrWhiteSpace(pinName)) return false;
             if (pinName.Equals("SDA", StringComparison.OrdinalIgnoreCase) || pinName.Equals("SCL", StringComparison.OrdinalIgnoreCase)) return true;
@@ -6437,6 +6446,16 @@ namespace RobotTwin.UI
             if ((pinName.StartsWith("D", StringComparison.OrdinalIgnoreCase) || pinName.StartsWith("A", StringComparison.OrdinalIgnoreCase)) && pinName.Length > 1)
             {
                 if (int.TryParse(pinName.Substring(1), out _)) return true;
+            }
+            if (pinName.StartsWith("GPIO", StringComparison.OrdinalIgnoreCase) && pinName.Length > 4)
+            {
+                if (int.TryParse(pinName.Substring(4), out _)) return true;
+            }
+            if ((pinName.StartsWith("PA", StringComparison.OrdinalIgnoreCase) ||
+                 pinName.StartsWith("PB", StringComparison.OrdinalIgnoreCase) ||
+                 pinName.StartsWith("PC", StringComparison.OrdinalIgnoreCase)) && pinName.Length > 2)
+            {
+                if (int.TryParse(pinName.Substring(2), out _)) return true;
             }
             return false;
         }
@@ -6901,13 +6920,13 @@ namespace RobotTwin.UI
                 BuildCustomComponentVisual(root, spec, item);
                 return;
             }
+            if (IsBoardType(item.Type))
+            {
+                BuildBoardComponentVisual(root, spec);
+                return;
+            }
             switch (item.Type)
             {
-                case "ArduinoUno":
-                case "ArduinoNano":
-                case "ArduinoProMini":
-                    BuildArduinoComponentVisual(root, spec);
-                    break;
                 case "Resistor":
                     BuildTwoPinComponentVisual(root, spec, item, SymbolKind.Resistor);
                     break;
@@ -7255,17 +7274,17 @@ namespace RobotTwin.UI
             root.Add(row);
         }
 
-        private void BuildArduinoComponentVisual(VisualElement root, ComponentSpec spec)
+        private void BuildBoardComponentVisual(VisualElement root, ComponentSpec spec)
         {
             root.AddToClassList("arduino-component");
 
             var body = new VisualElement();
             body.AddToClassList("arduino-body");
 
-            var profile = GetArduinoProfile(spec.Type);
-            var leftColumn = BuildArduinoPinColumn(spec, profile.LeftPins, true);
-            var center = BuildArduinoCenter(spec, profile.Title);
-            var rightColumn = BuildArduinoPinColumn(spec, profile.RightPins, false);
+            var profile = GetBoardVisualProfile(ResolveBoardProfileId(spec));
+            var leftColumn = BuildBoardPinColumn(spec, profile.LeftPins, true);
+            var center = BuildBoardCenter(spec, profile.Title);
+            var rightColumn = BuildBoardPinColumn(spec, profile.RightPins, false);
 
             body.Add(leftColumn);
             body.Add(center);
@@ -7293,7 +7312,7 @@ namespace RobotTwin.UI
             root.Add(note);
         }
 
-        private VisualElement BuildArduinoPinColumn(ComponentSpec spec, IReadOnlyList<string> pins, bool isLeft)
+        private VisualElement BuildBoardPinColumn(ComponentSpec spec, IReadOnlyList<string> pins, bool isLeft)
         {
             var column = new VisualElement();
             column.AddToClassList("arduino-pin-column");
@@ -7330,7 +7349,7 @@ namespace RobotTwin.UI
             return column;
         }
 
-        private VisualElement BuildArduinoCenter(ComponentSpec spec, string boardTitle)
+        private VisualElement BuildBoardCenter(ComponentSpec spec, string boardTitle)
         {
             var center = new VisualElement();
             center.AddToClassList("arduino-center");
@@ -7365,24 +7384,65 @@ namespace RobotTwin.UI
             return center;
         }
 
-        private ArduinoProfile GetArduinoProfile(string type)
+        private BoardVisualProfile GetBoardVisualProfile(string profileId)
         {
-            if (string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase))
+            string normalized = string.IsNullOrWhiteSpace(profileId) ? string.Empty : profileId.Trim();
+            if (string.Equals(normalized, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase))
             {
-                return new ArduinoProfile("ARDUINO NANO", ArduinoNanoLeftPins, ArduinoNanoRightPins, ArduinoNanoPreferredPins);
+                return new BoardVisualProfile("NANO", NanoLeftPins, NanoRightPins, NanoPreferredPins);
             }
-            if (string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(normalized, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase))
             {
-                return new ArduinoProfile("ARDUINO PRO MINI", ArduinoProMiniLeftPins, ArduinoProMiniRightPins, ArduinoProMiniPreferredPins);
+                return new BoardVisualProfile("PRO MINI", ProMiniLeftPins, ProMiniRightPins, ProMiniPreferredPins);
             }
-            return new ArduinoProfile("ARDUINO UNO", ArduinoLeftPins, ArduinoRightPins, ArduinoPreferredPins);
+            if (string.Equals(normalized, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return new BoardVisualProfile("UNO", UnoLeftPins, UnoRightPins, UnoPreferredPins);
+            }
+
+            var profile = BoardProfiles.Get(profileId);
+            var pins = profile.Pins ?? new List<string>();
+            int count = pins.Count;
+            if (count == 0)
+            {
+                return new BoardVisualProfile(profile.Id.ToUpperInvariant(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+            }
+
+            int mid = Mathf.CeilToInt(count * 0.5f);
+            var leftPins = pins.Take(mid).ToList();
+            var rightPins = pins.Skip(mid).ToList();
+            return new BoardVisualProfile(profile.Id.ToUpperInvariant(), leftPins, rightPins, pins);
         }
 
-        private bool IsArduinoType(string type)
+        private bool IsBoardType(string type)
         {
-            return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
+            return BoardProfiles.IsKnownProfileId(type);
+        }
+
+        private bool IsBoardType(ComponentSpec comp)
+        {
+            if (comp?.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                BoardProfiles.IsKnownProfileId(profile))
+            {
+                return true;
+            }
+            return BoardProfiles.IsKnownProfileId(comp?.Type);
+        }
+
+        private string ResolveBoardProfileId(ComponentSpec spec)
+        {
+            if (spec?.Properties != null &&
+                spec.Properties.TryGetValue("boardProfile", out var profile) &&
+                !string.IsNullOrWhiteSpace(profile))
+            {
+                return BoardProfiles.Get(profile).Id;
+            }
+            if (spec == null || string.IsNullOrWhiteSpace(spec.Type))
+            {
+                return BoardProfiles.GetDefault().Id;
+            }
+            return BoardProfiles.Get(spec.Type).Id;
         }
 
         private VisualElement CreatePinDot(string componentId, string pinName)
@@ -8148,12 +8208,15 @@ namespace RobotTwin.UI
             }
 
             IEnumerable<string> orderedPins = info.Pins;
-            if (IsArduinoType(info.Type))
+            if (IsBoardType(info.Type))
             {
-                var profile = GetArduinoProfile(info.Type);
+                var profileId = ResolveBoardProfileId(spec);
+                var profile = GetBoardVisualProfile(profileId);
+                var profilePins = BoardProfiles.Get(profileId).Pins;
+                var availablePins = (info.Pins == null || info.Pins.Count == 0) ? profilePins : info.Pins;
                 var preferred = new HashSet<string>(profile.PreferredPins);
-                var available = new HashSet<string>(info.Pins);
-                orderedPins = profile.PreferredPins.Where(available.Contains).Concat(info.Pins.Where(p => !preferred.Contains(p)));
+                var available = new HashSet<string>(availablePins);
+                orderedPins = profile.PreferredPins.Where(available.Contains).Concat(availablePins.Where(p => !preferred.Contains(p)));
             }
 
             foreach (var pin in orderedPins)
@@ -8181,16 +8244,17 @@ namespace RobotTwin.UI
                 }
             }
 
-            if (IsArduinoType(item.Type))
+            if (IsBoardType(item.Type))
             {
-                SetDefaultIfMissing(spec, "virtualBoard", item.Type == "ArduinoNano"
-                    ? "arduino-nano"
-                    : item.Type == "ArduinoProMini"
-                        ? "arduino-pro-mini"
-                        : "arduino-uno");
-                SetDefaultIfMissing(spec, "clock", "16MHz");
-                SetDefaultIfMissing(spec, "vcc", "5V");
-                SetDefaultIfMissing(spec, "nativeConfig", "{\"Core\":\"ATmega328P\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}");
+                var profile = BoardProfiles.Get(item.Type);
+                SetDefaultIfMissing(spec, "boardProfile", profile.Id);
+                if (string.Equals(profile.Mcu, "ATmega328P", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(profile.Mcu, "ATmega2560", StringComparison.OrdinalIgnoreCase))
+                {
+                    SetDefaultIfMissing(spec, "clock", "16MHz");
+                    SetDefaultIfMissing(spec, "vcc", "5V");
+                    SetDefaultIfMissing(spec, "nativeConfig", $"{{\"Core\":\"{profile.Mcu}\",\"Clock\":\"16MHz\",\"Firmware\":\"User_Defined\"}}");
+                }
             }
             else if (item.Type == "Resistor")
             {
@@ -9086,6 +9150,10 @@ namespace RobotTwin.UI
                 {
                     AddSwitchStateRow(container, spec);
                 }
+                if (IsBoardType(spec))
+                {
+                    AddBoardProfileRow(container, spec);
+                }
 
                 // Add dynamic specs
                 foreach (var kvp in info.ElectricalSpecs)
@@ -9211,7 +9279,7 @@ namespace RobotTwin.UI
                 _codeTargetComponentId = trimmed;
             }
 
-            if (IsArduinoType(spec.Type))
+            if (IsBoardType(spec))
             {
                 TryRenameCodeWorkspace(oldId, trimmed);
             }
@@ -9349,6 +9417,41 @@ namespace RobotTwin.UI
                 spec.Properties["state"] = string.Equals(next, "Closed", StringComparison.OrdinalIgnoreCase)
                     ? "closed"
                     : "open";
+            });
+
+            row.Add(label);
+            row.Add(dropdown);
+            container.Add(row);
+        }
+
+        private void AddBoardProfileRow(VisualElement container, ComponentSpec spec)
+        {
+            if (container == null || spec == null) return;
+            EnsureComponentProperties(spec);
+
+            var row = new VisualElement();
+            row.AddToClassList("prop-row");
+
+            var label = new Label("Board Profile");
+            label.AddToClassList("prop-label-row");
+
+            var dropdown = new DropdownField();
+            dropdown.AddToClassList("input-dark");
+            dropdown.AddToClassList("input-right");
+            dropdown.AddToClassList("board-profile-dropdown");
+
+            var profiles = BoardProfiles.GetAll().Select(p => p.Id).ToList();
+            dropdown.choices = profiles;
+            dropdown.SetValueWithoutNotify(ResolveBoardProfileId(spec));
+
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                if (_selectedComponent != spec) return;
+                string next = evt.newValue;
+                if (string.IsNullOrWhiteSpace(next)) return;
+                spec.Properties["boardProfile"] = BoardProfiles.Get(next).Id;
+                RefreshCodeTargets();
+                RefreshCanvas();
             });
 
             row.Add(label);
@@ -9660,12 +9763,12 @@ namespace RobotTwin.UI
                         && File.Exists(SessionManager.Instance.FirmwarePath);
                     if (hasVirtualFirmware)
                     {
-                        SessionManager.Instance.UseVirtualArduino = true;
+                        SessionManager.Instance.UseVirtualMcu = true;
                         SessionManager.Instance.UseNativeEnginePins = false;
                     }
                     else
                     {
-                        SessionManager.Instance.UseVirtualArduino = false;
+                        SessionManager.Instance.UseVirtualMcu = false;
                         SessionManager.Instance.UseNativeEnginePins = !hasExternalFirmware;
                     }
                 }

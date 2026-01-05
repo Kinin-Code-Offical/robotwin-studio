@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Runtime;
 using RobotTwin.CoreSim.Specs;
 
@@ -31,7 +32,7 @@ namespace RobotTwin.CoreSim.Engine
         private const double DefaultBatteryVoltageMax = 9.0;
         private const double DefaultBatteryDepletionSoc = 0.01;
         private const double DefaultBatteryDrainScale = 1.0;
-        private const double DefaultArduinoIdleCurrent = 0.03;
+        private const double DefaultMcuIdleCurrent = 0.03;
         private const double UsbAutoSelectThresholdVin = 6.6;
         private const double GminConductance = 1e-8;
 
@@ -220,34 +221,41 @@ namespace RobotTwin.CoreSim.Engine
             foreach (var comp in spec.Components)
             {
                 if (comp == null || string.IsNullOrWhiteSpace(comp.Type)) continue;
+                bool handled = false;
                 switch (comp.Type)
                 {
                     case "Resistor":
                         AddTwoPinResistor(comp, "A", "B", resistors, frame);
+                        handled = true;
                         break;
                     case "Capacitor":
                         AddTwoPinResistor(comp, "A", "B", resistors, frame, HighResistance, false);
+                        handled = true;
                         break;
                     case "LED":
                         AddLed(comp, diodes, frame);
+                        handled = true;
                         break;
                     case "DCMotor":
                         AddTwoPinResistor(comp, "A", "B", resistors, frame, ParseResistance(comp, 10.0));
+                        handled = true;
                         break;
                     case "Battery":
                         AddBattery(comp, voltageSources, frame);
+                        handled = true;
                         break;
                     case "Button":
                     case "Switch":
                         AddButton(comp, resistors, frame);
+                        handled = true;
                         break;
-                    case "ArduinoUno":
-                    case "ArduinoNano":
-                    case "ArduinoProMini":
-                        AddArduinoSources(comp, spec, pinVoltages, voltageSources, frame, boardPowerById, usbConnectedById);
-                        AddArduinoIdleLoad(comp, spec, resistors, boardPowerById, usbConnectedById);
-                        AddArduinoPullups(comp, spec, pinStatesByComponent, pullupResistances, resistors, frame, usbConnectedById);
-                        break;
+                }
+
+                if (!handled && IsMcuBoardComponent(comp))
+                {
+                    AddMcuSources(comp, spec, pinVoltages, voltageSources, frame, boardPowerById, usbConnectedById);
+                    AddMcuIdleLoad(comp, spec, resistors, boardPowerById, usbConnectedById);
+                    AddMcuPullups(comp, spec, pinStatesByComponent, pullupResistances, resistors, frame, usbConnectedById);
                 }
             }
         }
@@ -559,7 +567,7 @@ namespace RobotTwin.CoreSim.Engine
             AddTwoPinResistor(comp, "A", "B", resistors, frame, resistance, false);
         }
 
-        private void AddArduinoSources(
+        private void AddMcuSources(
             ComponentSpec comp,
             CircuitSpec spec,
             Dictionary<string, float> pinVoltages,
@@ -583,11 +591,11 @@ namespace RobotTwin.CoreSim.Engine
                     voltageSources.Add(new VoltageSourceElement($"{comp.Id}.USB", usbNet, gndNet, 5.0, false, null));
                 }
             }
-            AddArduinoRegulatorSource(comp, spec, voltageSources, gndNet, usbConnectedById);
-            AddArduinoPinSource(comp, "5V", 5.0, voltageSources, gndNet);
-            AddArduinoPinSource(comp, "3V3", 3.3, voltageSources, gndNet);
-            AddArduinoPinSource(comp, "IOREF", 5.0, voltageSources, gndNet);
-            AddArduinoPinSource(comp, "VCC", 5.0, voltageSources, gndNet);
+            AddMcuRegulatorSource(comp, spec, voltageSources, gndNet, usbConnectedById);
+            AddMcuPinSource(comp, "5V", 5.0, voltageSources, gndNet);
+            AddMcuPinSource(comp, "3V3", 3.3, voltageSources, gndNet);
+            AddMcuPinSource(comp, "IOREF", 5.0, voltageSources, gndNet);
+            AddMcuPinSource(comp, "VCC", 5.0, voltageSources, gndNet);
 
             if (pinVoltages == null) return;
 
@@ -596,7 +604,7 @@ namespace RobotTwin.CoreSim.Engine
                 if (!kvp.Key.StartsWith(comp.Id + ".", StringComparison.Ordinal)) continue;
                 string pin = kvp.Key.Substring(comp.Id.Length + 1);
                 if (!IsDigitalPin(pin)) continue;
-                AddArduinoPinSource(comp, pin, kvp.Value, voltageSources, gndNet);
+                AddMcuPinSource(comp, pin, kvp.Value, voltageSources, gndNet);
             }
         }
 
@@ -645,7 +653,7 @@ namespace RobotTwin.CoreSim.Engine
             return GetGroundNet();
         }
 
-        private void AddArduinoPinSource(ComponentSpec comp, string pin, double voltage, List<VoltageSourceElement> voltageSources, string groundNet)
+        private void AddMcuPinSource(ComponentSpec comp, string pin, double voltage, List<VoltageSourceElement> voltageSources, string groundNet)
         {
             var net = GetNetFor(comp.Id, pin);
             if (!IsConnected(net)) return;
@@ -653,7 +661,7 @@ namespace RobotTwin.CoreSim.Engine
             voltageSources.Add(new VoltageSourceElement($"{comp.Id}.{pin}", net, gndNet, voltage, false, null));
         }
 
-        private void AddArduinoRegulatorSource(
+        private void AddMcuRegulatorSource(
             ComponentSpec comp,
             CircuitSpec spec,
             List<VoltageSourceElement> voltageSources,
@@ -689,7 +697,7 @@ namespace RobotTwin.CoreSim.Engine
             return netId;
         }
 
-        private double GetArduinoIdleCurrent(ComponentSpec comp)
+        private double GetMcuIdleCurrent(ComponentSpec comp)
         {
             if (comp?.Properties != null && comp.Properties.TryGetValue("idleCurrent", out var raw))
             {
@@ -698,19 +706,20 @@ namespace RobotTwin.CoreSim.Engine
                     return Math.Max(parsed, 0.0);
                 }
             }
-            return GetArduinoDefaultIdleCurrent(comp);
+            return GetMcuDefaultIdleCurrent(comp);
         }
 
-        private static double GetArduinoDefaultIdleCurrent(ComponentSpec comp)
+        private static double GetMcuDefaultIdleCurrent(ComponentSpec comp)
         {
-            if (comp == null) return DefaultArduinoIdleCurrent;
-            if (string.Equals(comp.Type, "ArduinoUno", StringComparison.OrdinalIgnoreCase)) return 0.05;
-            if (string.Equals(comp.Type, "ArduinoNano", StringComparison.OrdinalIgnoreCase)) return 0.03;
-            if (string.Equals(comp.Type, "ArduinoProMini", StringComparison.OrdinalIgnoreCase)) return 0.02;
-            return DefaultArduinoIdleCurrent;
+            if (comp == null) return DefaultMcuIdleCurrent;
+            string profileId = ResolveMcuProfileId(comp);
+            if (string.Equals(profileId, "ArduinoUno", StringComparison.OrdinalIgnoreCase)) return 0.05;
+            if (string.Equals(profileId, "ArduinoNano", StringComparison.OrdinalIgnoreCase)) return 0.03;
+            if (string.Equals(profileId, "ArduinoProMini", StringComparison.OrdinalIgnoreCase)) return 0.02;
+            return DefaultMcuIdleCurrent;
         }
 
-        private bool TryGetArduinoIdleSupply(
+        private bool TryGetMcuIdleSupply(
             ComponentSpec comp,
             CircuitSpec spec,
             Dictionary<string, bool> usbConnectedById,
@@ -903,7 +912,7 @@ namespace RobotTwin.CoreSim.Engine
             }
         }
 
-        private void AddArduinoIdleLoad(
+        private void AddMcuIdleLoad(
             ComponentSpec comp,
             CircuitSpec spec,
             List<ResistorElement> resistors,
@@ -912,7 +921,7 @@ namespace RobotTwin.CoreSim.Engine
         {
             if (comp == null || resistors == null) return;
             if (!IsBoardPowered(comp, boardPowerById)) return;
-            if (!TryGetArduinoIdleSupply(comp, spec, usbConnectedById, out var supplyNet, out var nominalVoltage))
+            if (!TryGetMcuIdleSupply(comp, spec, usbConnectedById, out var supplyNet, out var nominalVoltage))
             {
                 return;
             }
@@ -921,14 +930,14 @@ namespace RobotTwin.CoreSim.Engine
             if (!IsConnected(gndNet)) gndNet = GetGroundNet();
             if (!IsConnected(gndNet)) return;
 
-            double idleCurrent = GetArduinoIdleCurrent(comp);
+            double idleCurrent = GetMcuIdleCurrent(comp);
             if (idleCurrent <= 0.0) return;
 
             double resistance = nominalVoltage / Math.Max(idleCurrent, 1e-6);
             resistors.Add(new ResistorElement($"{comp.Id}.IDLE", supplyNet, gndNet, resistance, resistance, 0.0, null, false, 0.0));
         }
 
-        private void AddArduinoPullups(
+        private void AddMcuPullups(
             ComponentSpec comp,
             CircuitSpec spec,
             Dictionary<string, List<PinState>> pinStatesByComponent,
@@ -1369,9 +1378,7 @@ namespace RobotTwin.CoreSim.Engine
             foreach (var comp in spec.Components)
             {
                 if (comp == null) continue;
-                if (!string.Equals(comp.Type, "ArduinoUno", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(comp.Type, "ArduinoNano", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(comp.Type, "ArduinoProMini", StringComparison.OrdinalIgnoreCase))
+                if (!IsMcuBoardComponent(comp))
                 {
                     continue;
                 }
@@ -1400,6 +1407,33 @@ namespace RobotTwin.CoreSim.Engine
                 if (source.Id.StartsWith("Battery", StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
+        }
+
+        private static bool IsMcuBoardComponent(ComponentSpec comp)
+        {
+            if (comp == null) return false;
+            if (comp.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                BoardProfiles.IsKnownProfileId(profile))
+            {
+                return true;
+            }
+            return BoardProfiles.IsKnownProfileId(comp.Type);
+        }
+
+        private static string ResolveMcuProfileId(ComponentSpec comp)
+        {
+            if (comp?.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                !string.IsNullOrWhiteSpace(profile))
+            {
+                return BoardProfiles.Get(profile).Id;
+            }
+            if (comp == null || string.IsNullOrWhiteSpace(comp.Type))
+            {
+                return BoardProfiles.GetDefault().Id;
+            }
+            return BoardProfiles.Get(comp.Type).Id;
         }
 
         private bool TrySolve(double[,] matrix, double[] rhs, out double[] solution)

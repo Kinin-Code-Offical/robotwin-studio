@@ -20,6 +20,7 @@ const validationCount = document.getElementById("validationCount");
 const telemetryFilter = document.getElementById("telemetryFilter");
 const refreshTelemetry = document.getElementById("refreshTelemetry");
 const telemetryList = document.getElementById("telemetryList");
+const firmwarePerfList = document.getElementById("firmwarePerfList");
 let unityOnline = false;
 const bridgeReady = document.getElementById("bridgeReady");
 const bridgeRunning = document.getElementById("bridgeRunning");
@@ -205,6 +206,41 @@ const renderTelemetryList = (components) => {
   });
 };
 
+const renderFirmwarePerfList = (items) => {
+  firmwarePerfList.innerHTML = "";
+  if (!items || items.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = "No firmware perf data.";
+    firmwarePerfList.appendChild(empty);
+    return;
+  }
+
+  items.forEach((board) => {
+    const metrics = board.metrics || {};
+    const lines = [
+      `cycles: ${metrics.cycles ?? "N/A"}`,
+      `adc: ${metrics.adc_samples ?? "N/A"}`,
+      `uart tx: ${metrics.uart_tx0 ?? 0}/${metrics.uart_tx1 ?? 0}/${metrics.uart_tx2 ?? 0}/${metrics.uart_tx3 ?? 0}`,
+      `uart rx: ${metrics.uart_rx0 ?? 0}/${metrics.uart_rx1 ?? 0}/${metrics.uart_rx2 ?? 0}/${metrics.uart_rx3 ?? 0}`,
+      `spi: ${metrics.spi_transfers ?? 0}`,
+      `twi: ${metrics.twi_transfers ?? 0}`,
+      `wdt: ${metrics.wdt_resets ?? 0}`,
+    ];
+    const item = document.createElement("li");
+    item.innerHTML = `
+      <div class="telemetry-item">
+        <div>
+          <strong>${board.id || "board"}</strong>
+          <span class="tag">firmware</span>
+        </div>
+        <div class="telemetry-values">${lines.join(" · ")}</div>
+      </div>
+    `;
+    firmwarePerfList.appendChild(item);
+  });
+};
+
 const loadUnityStatus = async () => {
   try {
     const data = await fetchJson("/api/unity-status");
@@ -230,6 +266,7 @@ const loadTelemetry = async () => {
     signalCount.textContent = "0";
     validationCount.textContent = "0";
     telemetryList.innerHTML = "<li class=\"empty\">Unity not connected.</li>";
+    firmwarePerfList.innerHTML = "<li class=\"empty\">Unity not connected.</li>";
     return;
   }
   try {
@@ -240,6 +277,7 @@ const loadTelemetry = async () => {
     signalCount.textContent = data.signals ?? 0;
     validationCount.textContent = data.validation ?? 0;
     renderTelemetryList(data.components || []);
+    renderFirmwarePerfList(data.firmware || []);
   } catch (err) {
     simRunning.textContent = "N/A";
     simTick.textContent = "0";
@@ -247,6 +285,7 @@ const loadTelemetry = async () => {
     signalCount.textContent = "0";
     validationCount.textContent = "0";
     telemetryList.innerHTML = "<li class=\"empty\">Unity telemetry not available.</li>";
+    firmwarePerfList.innerHTML = "<li class=\"empty\">Unity telemetry not available.</li>";
   }
 };
 

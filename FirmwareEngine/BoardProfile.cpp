@@ -58,7 +58,7 @@ namespace firmware
             70,
             16000000.0,
             0x2000,
-            true};
+            false};
 
         const BoardProfile kProMiniProfile{
             "ArduinoProMini",
@@ -71,6 +71,30 @@ namespace firmware
             16000000.0,
             0x0200,
             false};
+
+        const BoardProfile kStm32Profile{
+            "STM32F103",
+            "STM32F103",
+            0x20000,
+            0x5000,
+            0x0000,
+            0x0400,
+            37,
+            72000000.0,
+            0x0000,
+            true};
+
+        const BoardProfile kRaspberryPiProfile{
+            "RaspberryPi",
+            "RaspberryPi",
+            0x0000,
+            0x0000,
+            0x0000,
+            0x0000,
+            40,
+            700000000.0,
+            0x0000,
+            true};
     }
 
     const BoardProfile& GetDefaultBoardProfile()
@@ -100,6 +124,14 @@ namespace firmware
         if (key == "arduinopromini" || key == "promini")
         {
             return kProMiniProfile;
+        }
+        if (key == "stm32f103" || key == "stm32")
+        {
+            return kStm32Profile;
+        }
+        if (key == "raspberrypi" || key == "rpi")
+        {
+            return kRaspberryPiProfile;
         }
         return kDefaultProfile;
     }

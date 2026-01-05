@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 public class CircuitController : MonoBehaviour
 {
-    [Tooltip("Path to VirtualArduinoFirmware.exe if not in PATH")]
+    [Tooltip("Path to RoboTwinFirmwareHost.exe if not in PATH")]
     public string MockEnginePath = "Default"; // Logic to find it relative to project
 
     private SimHost _simHost;

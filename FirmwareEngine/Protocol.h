@@ -8,7 +8,7 @@ namespace firmware
     constexpr std::uint32_t kProtocolMagic = 0x57465452; // "RTFW"
     constexpr std::uint16_t kProtocolMajor = 1;
     constexpr std::uint16_t kProtocolMinor = 0;
-    constexpr std::size_t kPinCount = 20;
+    constexpr std::size_t kPinCount = 70;
     constexpr std::size_t kAnalogCount = 16;
     constexpr std::size_t kBoardIdSize = 64;
 
@@ -63,6 +63,7 @@ namespace firmware
     struct StepPayload
     {
         char board_id[kBoardIdSize];
+        std::uint64_t step_sequence;
         std::uint32_t delta_micros;
         std::uint8_t pins[kPinCount];
         std::uint16_t analog[kAnalogCount];
@@ -77,8 +78,16 @@ namespace firmware
     struct OutputStatePayload
     {
         char board_id[kBoardIdSize];
+        std::uint64_t step_sequence;
         std::uint64_t tick_count;
         std::uint8_t pins[kPinCount];
+        std::uint64_t cycles;
+        std::uint64_t adc_samples;
+        std::uint64_t uart_tx_bytes[4];
+        std::uint64_t uart_rx_bytes[4];
+        std::uint64_t spi_transfers;
+        std::uint64_t twi_transfers;
+        std::uint64_t wdt_resets;
     };
 
     struct StatusPayload

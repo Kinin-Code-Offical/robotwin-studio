@@ -133,6 +133,24 @@ class PhysicsWorld {
     bool tension_only{false};
   };
 
+  struct CachedContact {
+    Vec3 normal{};
+    float normal_impulse{0.0f};
+    float tangent_impulse{0.0f};
+  };
+
+  struct CachedAabb {
+    Aabb aabb{};
+    Vec3 position{};
+    Quat rotation{};
+    Vec3 half_extents{};
+    float radius{0.0f};
+    ShapeType shape{ShapeType::Sphere};
+    bool valid{false};
+  };
+
+  void RebuildBodyCache();
+  Aabb GetCachedAabb(const RigidBody &body);
   Aabb ComputeAabb(const RigidBody &body) const;
   bool AabbOverlap(const Aabb &a, const Aabb &b) const;
   bool CollideSphereSphere(const RigidBody &a, const RigidBody &b, Contact &out) const;
@@ -145,20 +163,19 @@ class PhysicsWorld {
                   const RigidBody &body, RaycastHit &out) const;
   float ProjectBoxRadius(const RigidBody &body, const Vec3 &axis) const;
 
-  struct CachedContact {
-    Vec3 normal{};
-    float normal_impulse{0.0f};
-    float tangent_impulse{0.0f};
-  };
-
   PhysicsConfig config_{};
   DeterministicRng rng_{config_.noise_seed};
   std::uint32_t next_id_{1};
   std::uint32_t next_constraint_id_{1};
   std::unordered_map<std::uint32_t, RigidBody> bodies_;
+  std::vector<RigidBody*> body_cache_;
+  std::size_t body_cache_size_{0};
+  bool body_cache_dirty_{true};
   std::unordered_map<std::uint32_t, VehicleState> vehicles_;
   std::vector<Contact> contacts_;
   std::unordered_map<std::uint64_t, CachedContact> contact_cache_;
+  std::unordered_map<std::uint64_t, CachedContact> contact_cache_scratch_;
+  std::unordered_map<std::uint32_t, CachedAabb> aabb_cache_;
   std::vector<DistanceConstraint> distance_constraints_;
   std::vector<Plane> ground_planes_;
 };

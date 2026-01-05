@@ -1,0 +1,290 @@
+{
+  "title": "RobotTwin Studio Implementation Plan (Golden Path)",
+  "description": "Optimized implementation order: Foundation -> Realtime -> High Fidelity -> Raspberry Pi -> Polish",
+  "progress": {
+    "lastUpdated": "2026-01-05",
+    "completedIssues": [103, 104, 106, 108, 109],
+    "notes": [
+      {
+        "date": "2026-01-05",
+        "type": "documentation",
+        "summary": "Vision-driven documentation refresh (docs describe end-state product)",
+        "details": [
+          "Updated README.md to reflect the finished high-fidelity digital twin vision.",
+          "Rewrote docs to match the target architecture: ARCHITECTURE.md, CORE_SIM.md, NATIVE_ENGINE.md, FIRMWARE_ENGINE.md, ROBOTWIN_UNITY.md, PROJECT_STRUCTURE.md, TOOLS.md, TESTING.md, SETUP_WINDOWS.md.",
+          "Build verification in this workspace: build-firmware and build-standalone reported success."
+        ],
+        "caveats": [
+          "No implementation_plan.json backlog issues have been completed yet; entries above are documentation-only work and local build verification."
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "RTFW client hardening + step/output correlation",
+        "details": [
+          "Completed P0-01 and P0-07 in the RTFW clients by enforcing step_sequence correlation and hardening the pipe reader/writer.",
+          "CoreSim FirmwareClient now exposes basic health signals (IsConnected/ReaderHealthy, LastPacketUtc/LastWriteUtc, LastError), avoids sequence regression on OutputState, and unblocks waiting steps on disconnect.",
+          "Unity FirmwareClient received the same safety improvements (no LastSequence regression, basic health/error timestamps, and avoiding self-join on reader shutdown).",
+          "Verification: dotnet test CoreSim/tests/RobotTwin.CoreSim.Tests passed (8/8)."
+        ],
+        "files": [
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs",
+          "RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "0xFF pin output semantics enforced (Unknown=-1)",
+        "details": [
+          "Completed P0-06 by enforcing the 0xFF/unknown pin semantics end-to-end in both firmware clients.",
+          "Pins are now initialized to Unknown (-1) until an OutputState arrives, preventing undriven pins from being misinterpreted as LOW (0) before first output.",
+          "Verification: dotnet test CoreSim/tests/RobotTwin.CoreSim.Tests passed (8/8)."
+        ],
+        "files": [
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs",
+          "RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "CoreSim synchronous stepping API + reference deterministic config",
+        "details": [
+          "Completed P0-02 by adding a synchronous StepOnce() API to CoreSim SimHost for deterministic/headless stepping (no background thread, no sleeping).",
+          "Completed P0-04 by introducing a small DeterministicModeConfig (JSON load/save) and adding a reference config file in docs.",
+          "SimHost threaded loop now uses Stopwatch for timing stability; legacy API remains compatible.",
+          "Verification: dotnet test CoreSim/tests/RobotTwin.CoreSim.Tests passed (8/8)."
+        ],
+        "files": [
+          "CoreSim/src/RobotTwin.CoreSim/Host/SimHost.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Host/SimHostOptions.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Host/DeterministicModeConfig.cs",
+          "docs/reference_deterministic_mode.json"
+        ]
+      }
+    ]
+  },
+  "phases": [
+    {
+      "id": "phase_1",
+      "name": "Phase 1: Foundation (The Foundation)",
+      "goal": "Ensure core circuit and firmware execution is correct and deterministic.",
+      "issues": [
+        {
+          "number": 103,
+          "title": "P0-01 Step/Output correlation in RTFW protocol"
+        },
+        { "number": 104, "title": "P0-02 CoreSim synchronous stepping API" },
+        {
+          "number": 105,
+          "title": "P0-03 Unity synchronous stepping API for external firmware"
+        },
+        {
+          "number": 106,
+          "title": "P0-04 Define reference deterministic mode config"
+        },
+        {
+          "number": 107,
+          "title": "P0-05 FirmwareEngine full pin output sampling (PinToPort-based)"
+        },
+        {
+          "number": 108,
+          "title": "P0-06 Define 0xFF pin output semantics + enforce in clients"
+        },
+        {
+          "number": 109,
+          "title": "P0-07 Pipe reader hardening + connection health surfaced"
+        },
+        {
+          "number": 110,
+          "title": "P1-08 Decide canonical firmware runtime (authoritative path)"
+        },
+        {
+          "number": 111,
+          "title": "P1-09 Decide canonical circuit model (authoritative path)"
+        },
+        {
+          "number": 112,
+          "title": "P1-10 Fix NativeEngine co-sim step ordering (remove one-step lag)"
+        },
+        {
+          "number": 113,
+          "title": "P1-11 Clarify Unity stepping contract (Native_Step vs Physics_Step)"
+        },
+        {
+          "number": 114,
+          "title": "P1-12 Mark prototype/legacy interfaces (fixed-size SharedState)"
+        }
+      ]
+    },
+    {
+      "id": "phase_2",
+      "name": "Phase 2: Realtime (The Pulse)",
+      "goal": "Achieve low-latency, jitter-free execution for live mode.",
+      "issues": [
+        {
+          "number": 149,
+          "title": "RT-09 Windows realtime hardening (priority/affinity/timers/no-alloc hot loops)"
+        },
+        {
+          "number": 146,
+          "title": "RT-06 Multi-rate stepping with a master clock (next-event scheduling)"
+        },
+        {
+          "number": 148,
+          "title": "RT-08 Timestamped protocol stream + backlog/drop policy"
+        },
+        {
+          "number": 141,
+          "title": "RT-01 Define Realtime Contract (deadline-first)"
+        },
+        {
+          "number": 142,
+          "title": "RT-02 Deadline-aware scheduler + per-simulation budgets"
+        },
+        {
+          "number": 143,
+          "title": "RT-03 Fast-Path + Corrective-Path (tiered realtime)"
+        },
+        {
+          "number": 144,
+          "title": "RT-04 Realtime circuit solving strategy (incremental + sparse + early-exit)"
+        },
+        {
+          "number": 145,
+          "title": "RT-05 Hybrid MCU/peripheral modeling for realtime (event queues)"
+        },
+        {
+          "number": 147,
+          "title": "RT-07 Observability/metrics + ring-buffer tracing (non-blocking)"
+        },
+        {
+          "number": 150,
+          "title": "RT-10 Define fidelity/error budgets per tier (numeric targets)"
+        }
+      ]
+    },
+    {
+      "id": "phase_3",
+      "name": "Phase 3: High Fidelity (The Body)",
+      "goal": "Add physical realism: thermal, environmental, and manufacturing imperfections.",
+      "issues": [
+        { "number": 161, "title": "HF-01 Thermal Simulation Subsystem" },
+        {
+          "number": 163,
+          "title": "HF-03 Temperature Dependent Component Models"
+        },
+        {
+          "number": 162,
+          "title": "HF-02 Environmental Link (Wind and Ambient)"
+        },
+        { "number": 164, "title": "HF-04 Component Tolerance and Aging" },
+        { "number": 165, "title": "HF-05 Electronic Noise Injection" }
+      ]
+    },
+    {
+      "id": "phase_4",
+      "name": "Phase 4: Raspberry Pi (The Brain)",
+      "goal": "Integrate full system emulation (QEMU) for Linux/AI support.",
+      "issues": [
+        { "number": 152, "title": "RP-01 QEMU Process Lifecycle Management" },
+        { "number": 159, "title": "RP-08 Shared Memory Transport Layer" },
+        { "number": 153, "title": "RP-02 GPIO and Peripheral Bridge" },
+        { "number": 157, "title": "RP-06 QEMU Display Output to Unity" },
+        { "number": 154, "title": "RP-03 Virtual Camera Injection" },
+        { "number": 158, "title": "RP-07 Network and WiFi Bridge" },
+        { "number": 155, "title": "RP-04 IMU and Sensor Injection" },
+        { "number": 156, "title": "RP-05 Time Synchronization Strategy" }
+      ]
+    },
+    {
+      "id": "phase_5",
+      "name": "Phase 5: Polish & Optimization (The Polish)",
+      "goal": "Optimize performance, clean up technical debt, and improve UX.",
+      "issues": [
+        {
+          "number": 118,
+          "title": "P2-16 NativeEngine sparse MNA solver + factor reuse"
+        },
+        {
+          "number": 119,
+          "title": "P2-17 NativeEngine adaptive convergence + early exit"
+        },
+        { "number": 120, "title": "P2-18 NativeEngine circuit islanding" },
+        {
+          "number": 121,
+          "title": "P2-19 FirmwareEngine SyncInputs allocation optimization"
+        },
+        {
+          "number": 122,
+          "title": "P2-20 FirmwareEngine batch serial output messages (realtime)"
+        },
+        {
+          "number": 123,
+          "title": "P2-21 VirtualArduino PWM mapping for Uno + Mega"
+        },
+        {
+          "number": 124,
+          "title": "P2-22 VirtualArduino external interrupt modes (edge/level)"
+        },
+        {
+          "number": 125,
+          "title": "P2-23 NativeEngine AVR IO electrical modeling tier"
+        },
+        {
+          "number": 126,
+          "title": "P2-24 ADC reference/scaling rules consistency (end-to-end)"
+        },
+        {
+          "number": 127,
+          "title": "P2-25 Opt-in protocol trace stream for firmware stepping"
+        },
+        {
+          "number": 128,
+          "title": "P2-26 FirmwareEngine snapshot/restore for deterministic rewind"
+        },
+        {
+          "number": 130,
+          "title": "P3-28 RTFW schema single source of truth (codegen/shared)"
+        },
+        {
+          "number": 131,
+          "title": "P3-29 Centralize BVM parsing/writing shared C++ module"
+        },
+        {
+          "number": 132,
+          "title": "P3-30 Unify simulation clock across Unity/CoreSim/NativeEngine"
+        },
+        {
+          "number": 133,
+          "title": "P3-31 Approximation tiers enforcement (reference vs fast)"
+        },
+        {
+          "number": 134,
+          "title": "P3-32 Remove Unity/CoreSim namespace collisions"
+        },
+        {
+          "number": 135,
+          "title": "P3-33 Netlist-to-NativeEngine builder (full circuit in native)"
+        },
+        {
+          "number": 136,
+          "title": "P3-34 End-to-end replay system (firmware+circuit+physics)"
+        }
+      ]
+    },
+    {
+      "id": "phase_6",
+      "name": "Phase 6: User Interface (The Face)",
+      "goal": "Build the visual controls, menus, and interactive tools (Frontend).",
+      "issues": [
+        {
+          "number": 129,
+          "title": "P2-27 Make active backend choice visible in Unity logs/UI"
+        }
+      ]
+    }
+  ]
+}

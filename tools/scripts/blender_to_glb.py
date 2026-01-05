@@ -1,4 +1,5 @@
 import bpy
+import contextlib
 import sys
 import os
 
@@ -19,10 +20,10 @@ def import_model(path):
         bpy.ops.import_scene.fbx(filepath=path)
     elif ext == ".obj":
         bpy.ops.import_scene.obj(filepath=path)
-    elif ext == ".gltf" or ext == ".glb":
+    elif ext in [".gltf", ".glb"]:
         bpy.ops.import_scene.gltf(filepath=path)
     else:
-        raise RuntimeError("Unsupported extension: " + ext)
+        raise RuntimeError(f"Unsupported extension: {ext}")
 
 
 def export_glb(path):
@@ -38,12 +39,9 @@ def export_glb(path):
         export_cameras=False,
         export_lights=False,
     )
-    try:
+    with contextlib.suppress(TypeError):
         bpy.ops.export_scene.gltf(**export_kwargs)
         return
-    except TypeError:
-        pass
-
     export_kwargs.pop("export_apply", None)
     export_kwargs.pop("export_yup", None)
     bpy.ops.export_scene.gltf(
@@ -80,6 +78,11 @@ def patch_fbx_importer():
     import_fbx._rtwin_patched = True
 
 
+def pack_external_files():
+    with contextlib.suppress(Exception):
+        bpy.ops.file.pack_all()
+
+
 def main():
     argv = sys.argv
     if "--" not in argv:
@@ -93,13 +96,14 @@ def main():
 
     clear_scene()
     import_model(input_path)
+    pack_external_files()
     try:
         export_glb(output_path)
     except Exception as ex:
-        raise RuntimeError("GLB export failed: " + str(ex))
+        raise RuntimeError(f"GLB export failed: {str(ex)}") from ex
 
     if not os.path.exists(output_path):
-        raise RuntimeError("GLB export did not create output file: " + output_path)
+        raise RuntimeError(f"GLB export did not create output file: {output_path}")
     print("Exported:", output_path)
 
 

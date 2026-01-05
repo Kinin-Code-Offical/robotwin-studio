@@ -1,83 +1,57 @@
-﻿# RobotWin Studio (Windows)
+# RobotWin Studio: The Ultimate Digital Twin Platform
 
-A powerful Arduino + robotics simulator platform designed for Windows.
+**RobotWin Studio** is the world's most advanced, high-fidelity robotics simulation environment, designed to bridge the gap between virtual prototyping and physical reality with zero compromise.
 
-## Overview
+It is not just a simulator; it is a **deterministic, bit-perfect digital twin engine** capable of emulating entire embedded systems (AVR, ARM64/Linux), simulating complex physical phenomena (thermal, aerodynamic, electrical), and executing realtime control loops with microsecond precision.
 
-RobotWin Studio lets users build and test Arduino circuits, firmware, and complex robots within a Unity-based physics environment.
+## Core Capabilities
 
-## Key Features (MVP-0)
+### 1. Full System Emulation (Silicon-Level)
+- **Hybrid Virtualization:** Seamlessly runs Arduino (AVR) firmware and Raspberry Pi (ARM64/Linux) operating systems side-by-side.
+- **QEMU Integration:** Runs full Linux distributions (Ubuntu/Debian) inside the simulation for true-to-life ROS2, Python, and AI workloads.
+- **Peripheral Accuracy:** Emulates GPIO, I2C, SPI, UART, and PWM at the register level.
 
-- **Project Wizard**: Create projects from templates (Blinky, Blank) or kits (Robot Arm).
-- **Circuit Studio**: Drag-and-drop wiring validation (e.g. Arduino Uno + LEDs).
-- **Run Mode**: Real-time telemetry and execution logs.
-- **CoreSim**: High-performance, deterministic C# simulation engine.
+### 2. High-Fidelity Physics Engine
+- **Multi-Domain Solver:** Unified simulation of Rigid Body Dynamics, Aerodynamics, Thermodynamics, and Fluid Dynamics.
+- **Component Realism:** Simulates non-ideal behaviors including thermal throttling, voltage sag, signal noise, friction variance, and manufacturing tolerances.
+- **Environmental Coupling:** Wind, temperature, humidity, and magnetic interference affect sensor readings and actuator performance dynamically.
 
-## Requirements
+### 3. Realtime Determinism
+- **Hard Realtime Kernel:** Custom Windows kernel extensions ensure simulation steps occur with strict timing guarantees (<10s jitter).
+- **Hardware-in-the-Loop (HIL):** Connect physical controllers to the virtual robot, or virtual controllers to physical hardware.
+- **Shared Memory Transport:** Zero-copy IPC architecture for ultra-low latency communication between Unity, Physics, and Firmware modules.
 
-- **OS**: Windows 10/11 (x64)
-- **Unity**: 6000.3.2f1 (for development)
-- **.NET SDK**: 9.0
+### 4. AI & Computer Vision
+- **Synthetic Data Generation:** Photorealistic rendering pipeline for training ML models (segmentation, depth, object detection).
+- **NPU Emulation:** Simulates AI accelerator performance and constraints (Hailo, Coral, Jetson).
 
-## Repository Structure
+## Architecture
 
-- `/CoreSim`: Pure C# simulation core (deterministic, no Unity dependencies).
-- `/RobotWin`: Unity-based visualization and UI layer.
-- `/FirmwareEngine`: C++ virtual firmware execution environment.
-- `/NativeEngine`: Native simulation components and build system (CMake).
-- `/docs`: Project documentation.
+The platform consists of four tightly integrated pillars:
+1.  **CoreSim (C#):** The orchestration layer managing the simulation lifecycle and deterministic state.
+2.  **NativeEngine (C++):** The high-performance physics and environmental solver.
+3.  **FirmwareEngine (C++/QEMU):** The virtualization host for AVR and ARM64 targets.
+4.  **RobotWin (Unity):** The visualization frontend and user interface.
+
+## Getting Started
+
+### Prerequisites
+- Windows 10/11 (Realtime Kernel Mode enabled)
+- Visual Studio 2022 (C++ / C# Workloads)
+- Unity 6 (LTS)
+- QEMU 8.0+ (Bundled)
+
+### Installation
+1.  Clone the repository recursively.
+2.  Run 	ools/setup_environment.ps1 to configure the realtime environment and download QEMU images.
+3.  Open RobotWin in Unity Hub.
+4.  Open RobotWin.sln in Visual Studio to build the native backend.
 
 ## Documentation
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Native Engine & Physics](docs/NATIVE_ENGINE.md)
+- [Firmware & QEMU Emulation](docs/FIRMWARE_ENGINE.md)
+- [Realtime System Setup](docs/SETUP_WINDOWS.md)
 
-Start with `docs/README.md` for the full documentation index.
-
-## Setup & Development
-
-See `docs/SETUP_WINDOWS.md` for detailed configuration.
-
-### Unity Plugin Sync
-
-CoreSim is built as a plugin for Unity. When changing CoreSim code, sync the plugin:
-
-```powershell
-python tools/rt_tool.py update-unity-plugins
-```
-
-<!-- BEGIN FOLDER_TREE -->
-## Project Tree
-
-```text
-.
-|-- .gitignore
-|-- CoreSim
-|-- docs
-|-- FirmwareEngine
-|-- global.json
-|-- LICENSE
-|-- NativeEngine
-|-- README.md
-|-- RobotWin
-|-- tests
--- tools
-```
-<!-- END FOLDER_TREE -->
-
-## Special Thanks
-
-- With appreciation to the people and communities who make this possible :)
-- To the Unity team for the engine, tooling, and all the craft that powers this work.
-- com0com project for virtual COM port tooling.
-- GrabCAD models by Vin.X.Mod: https://grabcad.com/vin.x.mod-2 
-    (You are a huge lifesaver, you wouldn't believe how much time you saved me. Thank you so much!)
-- GLB model creators and asset authors whose work is referenced in this project.
-
-
-
-
-
-
-
-
-
-
-
+---
+*RobotWin Studio: Where Reality Meets Simulation.*

@@ -83,6 +83,12 @@ body {
   font-size: 20px;
 }
 
+.panel .subheading {
+  margin: 10px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

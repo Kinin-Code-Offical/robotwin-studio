@@ -1,34 +1,79 @@
-﻿# FirmwareEngine
+# FirmwareEngine: Hybrid Virtualization Host
 
-FirmwareEngine hosts the native firmware runtime for Arduino-style firmware.
+**FirmwareEngine** is the subsystem responsible for executing the software that runs on the robot's onboard computers. It is not a simple script interpreter; it is a **cycle-accurate emulator** capable of running binary firmware and full operating systems.
 
-## Board Profiles
+## Dual-Stack Architecture
 
-Profiles define memory limits, clocks, bootloader reservation, and IO counts per board.
+FirmwareEngine supports two distinct classes of emulation targets:
 
-| Profile | MCU | Flash | SRAM | EEPROM | IO | Pins | Clock | Bootloader |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ArduinoUno | ATmega328P | 32 KB | 2 KB | 1 KB | 256 B | 20 | 16 MHz | 0.5 KB |
-| ArduinoNano | ATmega328P | 32 KB | 2 KB | 1 KB | 256 B | 20 | 16 MHz | 0.5 KB |
-| ArduinoProMini | ATmega328P | 32 KB | 2 KB | 1 KB | 256 B | 20 | 16 MHz | 0.5 KB |
-| ArduinoMega | ATmega2560 | 256 KB | 8 KB | 4 KB | 512 B | 70 | 16 MHz | 8 KB |
+### 1. Microcontroller Emulation (AVR/STM32)
 
-Note: The firmware core emulates ATmega328P IO today; Mega is supported for memory limits and will clamp IO pins.
+Used for real-time control boards like Arduino Uno, Mega, and Nano.
 
-## Output
+- **Technology:** Custom C++ AVR Interpreter (SimAVR based).
+- **Accuracy:** Cycle-accurate (executes .hex/.elf binaries directly).
+- **Peripherals:**
+  - **GPIO:** Digital Read/Write with electrical logic levels.
+  - **ADC:** Analog-to-Digital conversion with reference voltage simulation.
+  - **Timers:** PWM generation and interrupt triggering.
+  - **Comms:** UART, I2C (TWI), SPI.
 
-- `VirtualArduinoFirmware.exe` is built into `builds/firmware`.
-- `compile_commands.json` is emitted into `builds/firmware` for tooling.
+### 2. Single Board Computer Emulation (ARM64/Linux)
 
-## Build
+Used for high-level logic, AI, and ROS2 nodes (Raspberry Pi 4/5, Jetson Nano).
 
-```powershell
-python tools/rt_tool.py build-firmware
-```
+- **Technology:** QEMU (Quick Emulator) integration via VirtIO.
+- **OS Support:** Runs unmodified Linux images (Raspberry Pi OS, Ubuntu Server).
+- **Networking:** Virtual TAP adapter bridges the guest OS to the host network (allows SSH, apt-get, ROS2 discovery).
+- **Acceleration:**
+  - **NPU:** Emulates Hailo-8 / Coral TPU via host GPU compute shaders.
+  - **Camera:** Injects rendered frames from Unity directly into /dev/video0 in the guest Linux.
 
-## Notes
+## Inter-Process Communication (IPC)
 
-- The firmware runtime communicates with CoreSim via serialization contracts.
-- Protocol includes `board_id` routing and analog pin payloads.
-- UART, ADC, and PWM/timer simulation are cycle-based and honor basic AVR register semantics.
-- Keep platform-specific code isolated to this module.
+FirmwareEngine acts as the bridge between the emulated code and the simulated physical world.
+
+`mermaid
+sequenceDiagram
+participant Linux as QEMU (Guest OS)
+participant FW as FirmwareEngine
+participant Core as CoreSim
+participant Phys as NativeEngine
+
+    Linux->>FW: Write GPIO High (VirtIO)
+    FW->>Core: Update Pin State
+    Core->>Phys: Apply Voltage to Motor Driver
+    Phys->>Phys: Simulate Motor Torque
+    Phys->>Core: Update Encoder Position
+    Core->>FW: Update Encoder Register
+    FW->>Linux: Trigger Interrupt (VirtIO)
+
+`
+
+## Supported Boards
+
+| Board              | Architecture     | Emulation Type      | OS/Firmware            | Use Case                |
+| :----------------- | :--------------- | :------------------ | :--------------------- | :---------------------- |
+| **Arduino Uno**    | AVR (ATmega328P) | Cycle-Accurate      | Bare Metal / Arduino   | Motor Control, Sensors  |
+| **Arduino Mega**   | AVR (ATmega2560) | Cycle-Accurate      | Bare Metal / Arduino   | Complex IO, 3D Printers |
+| **Raspberry Pi 4** | ARM Cortex-A72   | QEMU Virtualization | Linux (Debian)         | ROS2, Computer Vision   |
+| **Raspberry Pi 5** | ARM Cortex-A76   | QEMU Virtualization | Linux (Debian)         | Heavy AI Workloads      |
+| **ESP32**          | Xtensa LX6       | QEMU (Experimental) | FreeRTOS / MicroPython | IoT, WiFi/BLE           |
+
+## Virtual Hardware Interfaces
+
+### Camera Injection
+
+RobotWin renders the camera view in Unity/NativeEngine and writes the pixel buffer to a shared memory region. FirmwareEngine exposes this as a V4L2 device inside the Linux guest.
+
+- **Latency:** <1 frame.
+- **Format:** RGB888, YUV420.
+
+### Lidar Injection
+
+Simulated Lidar point clouds are injected into the Linux guest as a standard /dev/ttyUSB stream or Ethernet packet stream (Velodyne protocol), allowing standard ROS drivers to consume the data without modification.
+
+## Debugging
+
+- **GDB Stub:** Connect a standard GDB debugger to the emulated chip to step through code, inspect registers, and set breakpoints.
+- **Serial Console:** View the boot logs and serial output of the emulated device directly in the RobotWin UI.

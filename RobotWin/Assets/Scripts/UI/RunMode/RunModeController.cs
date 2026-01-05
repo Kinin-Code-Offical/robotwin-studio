@@ -9,6 +9,7 @@ using RobotTwin.CoreSim.Specs;
 using RobotTwin.Game;
 // using RobotTwin.CoreSim.Host;
 using System.Linq;
+using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Runtime;
 
 namespace RobotTwin.UI
@@ -568,7 +569,7 @@ namespace RobotTwin.UI
             if (_usbBoardList == null || _activeCircuit?.Components == null) return;
 
             _usbBoardList.Clear();
-            var boards = _activeCircuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            var boards = _activeCircuit.Components.Where(IsBoardType).ToList();
             bool wantsAdmin = _autoInstallVirtualCom && !_comInstallAttempted;
             ConfigureVirtualComPorts(boards, wantsAdmin, true);
             foreach (var board in boards)
@@ -579,7 +580,7 @@ namespace RobotTwin.UI
                 var name = new Label(board.Id);
                 name.AddToClassList("usb-name");
 
-                var typeLabel = new Label(GetBoardDisplayType(board.Type));
+                var typeLabel = new Label(GetBoardDisplayType(board));
                 typeLabel.AddToClassList("usb-type");
 
                 var portLabel = new Label("COM: -");
@@ -713,10 +714,10 @@ namespace RobotTwin.UI
                 return;
             }
 
-            var boards = _activeCircuit.Components.Where(c => IsArduinoType(c.Type)).ToList();
+            var boards = _activeCircuit.Components.Where(IsBoardType).ToList();
             if (boards.Count == 0)
             {
-                AppendLog("[VirtualCOM] No Arduino boards.");
+                AppendLog("[VirtualCOM] No board targets.");
                 return;
             }
 
@@ -959,7 +960,7 @@ namespace RobotTwin.UI
             AddTelemetrySection("Boards");
             if (_activeCircuit?.Components != null)
             {
-                foreach (var board in _activeCircuit.Components.Where(c => IsArduinoType(c.Type)))
+                foreach (var board in _activeCircuit.Components.Where(IsBoardType))
                 {
                     var entry = CreateTelemetryEntry($"{board.Id} ({board.Type})");
                     _boardTelemetry[board.Id] = entry;
@@ -967,7 +968,7 @@ namespace RobotTwin.UI
             }
             if (_boardTelemetry.Count == 0)
             {
-                AddTelemetryPlaceholder("No Arduino boards.");
+                AddTelemetryPlaceholder("No board targets.");
             }
 
             AddTelemetrySection("Sources");
@@ -1073,8 +1074,8 @@ namespace RobotTwin.UI
                 {
                     lines.Add("FW: none");
                 }
-                lines.Add(BuildArduinoRailSummary(board, telemetry));
-                lines.Add(BuildArduinoPinSummary(board, telemetry));
+                lines.Add(BuildBoardRailSummary(board, telemetry));
+                lines.Add(BuildBoardPinSummary(board, telemetry));
                 entry.Value.text = string.Join("\n", lines);
             }
         }
@@ -1190,7 +1191,7 @@ namespace RobotTwin.UI
             }
         }
 
-        private string BuildArduinoRailSummary(ComponentSpec comp, TelemetryFrame telemetry)
+        private string BuildBoardRailSummary(ComponentSpec comp, TelemetryFrame telemetry)
         {
             if (comp == null || telemetry == null) return "Rails: N/A";
             var rails = new List<string>();
@@ -1203,10 +1204,10 @@ namespace RobotTwin.UI
             return "Rails: " + string.Join(" ", rails);
         }
 
-        private string BuildArduinoPinSummary(ComponentSpec comp, TelemetryFrame telemetry)
+        private string BuildBoardPinSummary(ComponentSpec comp, TelemetryFrame telemetry)
         {
             if (comp == null || telemetry == null) return "Pin: N/A";
-            if (!TryGetPrimaryArduinoPin(comp, out var pin) || string.IsNullOrWhiteSpace(pin)) return "Pin: N/A";
+            if (!TryGetPrimaryBoardPin(comp, out var pin) || string.IsNullOrWhiteSpace(pin)) return "Pin: N/A";
             if (TryGetPinVoltage(comp, pin, telemetry, out var voltage))
             {
                 return $"Pin {pin}: {voltage:F2}V";
@@ -1953,12 +1954,12 @@ namespace RobotTwin.UI
                 Label lbl = kvp.Value;
                 _componentTypes.TryGetValue(id, out var type);
 
-                if (IsArduinoType(type))
+                if (IsBoardType(type))
                 {
                     var comp = _activeCircuit?.Components?.FirstOrDefault(c => c.Id == id);
                     bool hasFirmware = TryGetFirmwareLabel(comp, out var fwLabel);
                     string pinInfo = string.Empty;
-                    if (comp != null && TryGetPrimaryArduinoPin(comp, out var pin) &&
+                    if (comp != null && TryGetPrimaryBoardPin(comp, out var pin) &&
                         TryGetPinVoltage(comp, pin, telemetry, out var pinVoltage))
                     {
                         pinInfo = $" {pin}:{pinVoltage:F2}V";
@@ -2329,28 +2330,32 @@ namespace RobotTwin.UI
             return true;
         }
 
-        private static bool IsArduinoType(string type)
+        private static bool IsBoardType(string type)
         {
-            if (string.IsNullOrWhiteSpace(type)) return false;
-            return string.Equals(type, "ArduinoUno", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoNano", System.StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(type, "ArduinoProMini", System.StringComparison.OrdinalIgnoreCase);
+            return BoardProfiles.IsKnownProfileId(type);
         }
 
-        private static string GetBoardDisplayType(string type)
+        private static bool IsBoardType(ComponentSpec comp)
         {
-            if (string.IsNullOrWhiteSpace(type)) return "Arduino";
-            switch (type.Trim().ToLowerInvariant())
+            if (comp?.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                BoardProfiles.IsKnownProfileId(profile))
             {
-                case "arduinouno":
-                    return "Arduino Uno";
-                case "arduinonano":
-                    return "Arduino Nano";
-                case "arduinopromini":
-                    return "Arduino Pro Mini";
-                default:
-                    return type;
+                return true;
             }
+            return BoardProfiles.IsKnownProfileId(comp?.Type);
+        }
+
+        private static string GetBoardDisplayType(ComponentSpec comp)
+        {
+            if (comp?.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profileId) &&
+                !string.IsNullOrWhiteSpace(profileId))
+            {
+                return BoardProfiles.Get(profileId).Id;
+            }
+            if (string.IsNullOrWhiteSpace(comp?.Type)) return "Board";
+            return BoardProfiles.Get(comp.Type).Id;
         }
 
         private static bool ArePortsAvailable(IEnumerable<string> ports, int basePort, int boardCount)
@@ -2439,10 +2444,19 @@ namespace RobotTwin.UI
             return false;
         }
 
-        private static bool TryGetPrimaryArduinoPin(ComponentSpec comp, out string pin)
+        private static bool TryGetPrimaryBoardPin(ComponentSpec comp, out string pin)
         {
             pin = "D13";
-            if (comp?.Properties == null) return true;
+            if (comp?.Properties != null &&
+                comp.Properties.TryGetValue("boardProfile", out var profileId) &&
+                !string.IsNullOrWhiteSpace(profileId))
+            {
+                var profile = BoardProfiles.Get(profileId);
+                if (profile?.Pins != null && profile.Pins.Count > 0)
+                {
+                    pin = profile.Pins.Contains("D13") ? "D13" : profile.Pins[0];
+                }
+            }
             if (comp.Properties.TryGetValue("virtualFirmware", out var fw) &&
                 !string.IsNullOrWhiteSpace(fw) &&
                 fw.StartsWith("blink:", System.StringComparison.OrdinalIgnoreCase))
