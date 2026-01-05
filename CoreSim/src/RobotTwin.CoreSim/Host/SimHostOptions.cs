@@ -11,5 +11,10 @@ namespace RobotTwin.CoreSim.Host
         /// Optional deterministic config. When set and Enabled=true, DtSeconds is taken from it.
         /// </summary>
         public DeterministicModeConfig? Deterministic { get; set; }
+
+        /// <summary>
+        /// Optional realtime hardening settings for Windows runtimes.
+        /// </summary>
+        public RealtimeHardeningOptions? Realtime { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.Serialization;
 using RobotTwin.CoreSim.Host;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.IPC;
@@ -8,8 +9,9 @@ using System.Threading.Tasks;
 
 public class CircuitController : MonoBehaviour
 {
-    [Tooltip("Path to RoboTwinFirmwareHost.exe if not in PATH")]
-    public string MockEnginePath = "Default"; // Logic to find it relative to project
+    [Tooltip("Path to the firmware host executable if not in PATH")]
+    [FormerlySerializedAs("MockEnginePath")]
+    public string FirmwareHostPath = "Default"; // Logic to find it relative to project
 
     private SimHost _simHost;
     private IFirmwareClient _firmwareClient;
@@ -69,15 +71,15 @@ public class CircuitController : MonoBehaviour
 
         // 2. Init IPC & Host
         _firmwareClient = new FirmwareClient();
-        // TODO: Start MockEngine process here if needed
-        // SimulationManager.LaunchEngine(MockEnginePath); 
+        // TODO: Start firmware host process here if needed
+        // SimulationManager.LaunchEngine(FirmwareHostPath);
 
         _simHost = new SimHost(spec, _firmwareClient);
 
         // MVP: Launch Mock Engine if path is provided and valid
-        if (!string.IsNullOrEmpty(MockEnginePath) && MockEnginePath != "Default" && System.IO.File.Exists(MockEnginePath))
+        if (!string.IsNullOrEmpty(FirmwareHostPath) && FirmwareHostPath != "Default" && System.IO.File.Exists(FirmwareHostPath))
         {
-            _simHost.StartFirmwareProcess(MockEnginePath);
+            _simHost.StartFirmwareProcess(FirmwareHostPath);
         }
 
         _simHost.OnTickComplete += HandleTick;

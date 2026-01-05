@@ -128,6 +128,12 @@ def _run_repo_validations(*, sync_unity_plugins: bool) -> int:
     code = _run_rt_tool("validate-uxml")
     if code != 0:
         return code
+    code = _run_rt_tool("audit-runtime")
+    if code != 0:
+        return code
+    code = _run_rt_tool("audit-build-outputs")
+    if code != 0:
+        return code
 
     return _run_rt_tool("update-unity-plugins") if sync_unity_plugins else 0
 
@@ -303,6 +309,8 @@ COMMAND_HELP = {
     "update-unity-plugins": "Build CoreSim .NET plugin and sync into RobotWin/Assets/Plugins.",
     "update-repo-snapshot": "Refresh docs/repo_files.txt, workspace snapshot, and README folder tree.",
     "validate-uxml": "Parse and validate all .uxml files.",
+    "audit-runtime": "Scan runtime scripts for editor-only APIs.",
+    "audit-build-outputs": "Audit build scripts for builds/ and logs/ output consistency.",
     "run-qa": "Run Node/Jest integration tests.",
     "run-unity-smoke": "Batchmode Unity compile smoke test.",
     "monitor-unity": "Tail logs/unity/unity_live_error.log and highlight errors.",
@@ -338,6 +346,8 @@ def main() -> int:
         "Refresh repo files list, workspace snapshot, and README tree"
     )
     add_script_command("validate-uxml", "tools/scripts/validate_uxml.ps1", "Validate UXML files")
+    add_script_command("audit-runtime", "tools/scripts/audit_runtime_apis.py", "Scan runtime scripts for editor-only APIs")
+    add_script_command("audit-build-outputs", "tools/scripts/audit_build_outputs.py", "Audit build scripts for output directories")
     add_script_command("run-qa", "tools/scripts/run_qa.ps1", "Run integration tests (Node/Jest)")
     add_script_command("run-unity-smoke", "tools/scripts/run_unity_smoke.ps1", "Run Unity batchmode smoke test")
     add_script_command("debug-console", "tools/debug_console/launch_debug_console.ps1", "Launch Debug Console dashboard")

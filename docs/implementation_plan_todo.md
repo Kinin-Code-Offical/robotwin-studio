@@ -1,32 +1,53 @@
 # Implementation Plan TODO
 
+Status legend:
+
+- DONE (verified): Implemented and backed by repo evidence (code/docs/tools).
+- DONE (needs rewrite): Implemented, but this entry needs wording/evidence cleanup before closing.
+- TODO: Not implemented yet.
+
+Phase 0: Stabilization (Blocking/Quality Gates)
+
+- DONE (verified) 167 Q0-01 Remove editor-only APIs from runtime builds (ban editor-only APIs in player) (Evidence: tools/scripts/audit_runtime_apis.py; tools/rt_tool.py; no System.Windows.Forms usage found in runtime sources)
+- DONE (verified) 168 Q0-02 Generalize firmware host naming/pathing for non-Arduino boards (Evidence: RobotWin/Assets/Scripts/Game/SessionManager.cs; RobotWin/Assets/Scripts/Circuit/CircuitController.cs)
+- DONE (verified) 169 Q0-03 Non-AVR profile QA path (disable external firmware cleanly when no supported MCU profile exists) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs)
+- DONE (verified) 170 Q0-04 Build/log output audit across tools (builds/ + logs/ consistency) (Evidence: tools/scripts/audit_build_outputs.py; tools/rt_tool.py; logs/tools/build_output_audit.log)
+
 Phase 1: Foundation
-- DONE 103 P0-01 Step/Output correlation in RTFW protocol
-- DONE 104 P0-02 CoreSim synchronous stepping API
-- DONE 105 P0-03 Unity synchronous stepping API for external firmware
-- DONE 106 P0-04 Define reference deterministic mode config
-- DONE 107 P0-05 FirmwareEngine full pin output sampling (PinToPort-based)
-- DONE 108 P0-06 Define 0xFF pin output semantics + enforce in clients
-- DONE 109 P0-07 Pipe reader hardening + connection health surfaced
-- DONE 110 P1-08 Decide canonical firmware runtime (authoritative path)
-- DONE 111 P1-09 Decide canonical circuit model (authoritative path)
-- DONE 112 P1-10 Fix NativeEngine co-sim step ordering (remove one-step lag)
-- DONE 113 P1-11 Clarify Unity stepping contract (Native_Step vs Physics_Step)
-- DONE 114 P1-12 Mark prototype/legacy interfaces (fixed-size SharedState)
+
+- DONE (verified) 103 P0-01 Step/Output correlation in RTFW protocol (Evidence: FirmwareEngine/PipeManager.\* stepSequence; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs; RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs)
+- DONE (verified) 104 P0-02 CoreSim synchronous stepping API (Evidence: CoreSim/src/RobotTwin.CoreSim/Host/SimHost.cs StepOnce)
+- DONE (verified) 105 P0-03 Unity synchronous stepping API for external firmware (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs StepOnce(dtSeconds))
+- DONE (verified) 106 P0-04 Define reference deterministic mode config (Evidence: CoreSim/src/RobotTwin.CoreSim/Host/DeterministicModeConfig.cs; docs/reference_deterministic_mode.json)
+- DONE (verified) 107 P0-05 FirmwareEngine full pin output sampling (PinToPort-based) (Evidence: FirmwareEngine/VirtualMcu.cpp SamplePinOutputs; FirmwareEngine/main.cpp)
+- DONE (verified) 108 P0-06 Define 0xFF pin output semantics + enforce in clients (Evidence: FirmwareEngine/Protocol.h kPinValueUnknown; FirmwareEngine/VirtualMcu.h; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs; RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs)
+- DONE (verified) 109 P0-07 Pipe reader hardening + connection health surfaced (Evidence: FirmwareEngine/PipeManager.\* IsConnected/EnsurePipe/DisconnectPipe; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs)
+- DONE (verified) 110 P1-08 Decide canonical firmware runtime (authoritative path) (Evidence: docs/ARCHITECTURE.md; docs/implementation_plan.json decision entry)
+- DONE (verified) 111 P1-09 Decide canonical circuit model (authoritative path) (Evidence: docs/ARCHITECTURE.md; docs/implementation_plan.json decision entry)
+- DONE (verified) 112 P1-10 Fix NativeEngine co-sim step ordering (remove one-step lag) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs comment on one-tick lag)
+- DONE (verified) 113 P1-11 Clarify Unity stepping contract (Native_Step vs Physics_Step) (Evidence: docs/ROBOTWIN_UNITY.md; RobotWin/Assets/Scripts/Core/NativeBridge.cs; RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs)
+- DONE (verified) 114 P1-12 Mark prototype/legacy interfaces (fixed-size SharedState) (Evidence: NativeEngine/src/NativeEngine_Core.cpp legacy shared state; RobotWin/Assets/Scripts/Core/Bridge_Interface.cs SharedState)
 
 Phase 2: Realtime
-- 149 RT-09 Windows realtime hardening (priority/affinity/timers/no-alloc hot loops)
-- 146 RT-06 Multi-rate stepping with a master clock (next-event scheduling)
-- 148 RT-08 Timestamped protocol stream + backlog/drop policy
-- DONE 141 RT-01 Define Realtime Contract (deadline-first)
-- 142 RT-02 Deadline-aware scheduler + per-simulation budgets
-- 143 RT-03 Fast-Path + Corrective-Path (tiered realtime)
-- 144 RT-04 Realtime circuit solving strategy (incremental + sparse + early-exit)
-- 145 RT-05 Hybrid MCU/peripheral modeling for realtime (event queues)
-- DONE 147 RT-07 Observability/metrics + ring-buffer tracing (non-blocking)
-- DONE 150 RT-10 Define fidelity/error budgets per tier (numeric targets)
+
+- 179 RT-15 Protocol version negotiation + feature flags (tolerate minor mismatches, surface capability flags)
+- DONE (verified) 178 RT-14 Realtime budget/fast-path counters in telemetry (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs budget stats; RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs realtime_stats; tools/debug_console/public/\*)
+- DONE (verified) 177 RT-13 Firmware host mode control (lockstep vs realtime) + UI toggle (Evidence: RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs firmware-mode; RobotWin/Assets/Scripts/Game/SessionManager.cs; RobotWin/Assets/Scripts/Game/SimHost.cs; tools/debug_console/public/\*)
+- DONE (verified) 176 RT-12 Telemetry surface for firmware host + realtime mode flags (Evidence: RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs firmware_host + realtime payload)
+- DONE (verified) 175 RT-11 Tick jitter/overrun counters + telemetry surface (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs timing stats; RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs; tools/debug_console/public/\*)
+- DONE (verified) 149 RT-09 Windows realtime hardening (priority/affinity/timers/no-alloc hot loops) (Evidence: CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardening.cs; CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardeningOptions.cs)
+- 146 RT-06 Multi-rate stepping with a master clock (next-event scheduling) (Partial implementation exists: RobotWin/Assets/Scripts/Game/SimHost.cs RealtimeScheduleConfig + RunRealtimeScheduler; GitHub issue remains open for true next-event scheduling/physics integration.)
+- DONE (verified) 148 RT-08 Timestamped protocol stream + backlog/drop policy (Evidence: FirmwareEngine/Protocol.h; FirmwareEngine/PipeManager.cpp; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs; RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs)
+- DONE (verified) 141 RT-01 Define Realtime Contract (deadline-first) (Evidence: docs/REALTIME_CONTRACT.md)
+- DONE (verified) 142 RT-02 Deadline-aware scheduler + per-simulation budgets (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs realtime budgets + overruns)
+- DONE (verified) 143 RT-03 Fast-Path + Corrective-Path (tiered realtime) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs fast path counters + skip logic)
+- DONE (verified) 144 RT-04 Realtime circuit solving strategy (incremental + sparse + early-exit) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs input signature + early-exit reuse)
+- DONE (verified) 145 RT-05 Hybrid MCU/peripheral modeling for realtime (event queues) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs firmware input cache/change tracking)
+- DONE (verified) 147 RT-07 Observability/metrics + ring-buffer tracing (non-blocking) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs tick trace; tools/debug_console/public/\*)
+- DONE (verified) 150 RT-10 Define fidelity/error budgets per tier (numeric targets) (Evidence: docs/REALTIME_BUDGETS.md)
 
 Phase 3: High Fidelity
+
 - 161 HF-01 Thermal Simulation Subsystem
 - 163 HF-03 Temperature Dependent Component Models
 - 162 HF-02 Environmental Link (Wind and Ambient)
@@ -34,6 +55,7 @@ Phase 3: High Fidelity
 - 165 HF-05 Electronic Noise Injection
 
 Phase 4: Raspberry Pi
+
 - 152 RP-01 QEMU Process Lifecycle Management
 - 159 RP-08 Shared Memory Transport Layer
 - 153 RP-02 GPIO and Peripheral Bridge
@@ -44,6 +66,7 @@ Phase 4: Raspberry Pi
 - 156 RP-05 Time Synchronization Strategy
 
 Phase 5: Polish & Optimization
+
 - 118 P2-16 NativeEngine sparse MNA solver + factor reuse
 - 119 P2-17 NativeEngine adaptive convergence + early exit
 - 120 P2-18 NativeEngine circuit islanding
@@ -64,4 +87,5 @@ Phase 5: Polish & Optimization
 - 136 P3-34 End-to-end replay system (firmware+circuit+physics)
 
 Phase 6: User Interface
-- DONE 129 P2-27 Make active backend choice visible in Unity logs/UI
+
+- DONE (verified) 129 P2-27 Make active backend choice visible in Unity logs/UI (Evidence: RobotWin/Assets/Scripts/UI/RunMode/RunModeController.cs Backend log)

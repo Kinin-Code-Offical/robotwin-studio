@@ -67,7 +67,7 @@ function Check-PlanDrift {
     try {
         $doneNums = @()
         foreach ($line in Get-Content -Path $todoPath -ErrorAction Stop) {
-            if ($line -match "^-\s*DONE\s+(\d+)\b") {
+            if ($line -match "^-\s*DONE(?:\s*\((?:verified|needs rewrite)\))?\s+(\d+)\b") {
                 $doneNums += [int]$Matches[1]
             }
         }

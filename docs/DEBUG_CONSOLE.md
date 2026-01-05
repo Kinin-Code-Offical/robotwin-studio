@@ -1,6 +1,6 @@
 # Debug Console
 
-The Debug Console is a local web dashboard that runs tests and surfaces logs from the repo.
+The Debug Console is a local web dashboard for running common tasks and browsing logs from the repo.
 
 ## Launch
 

@@ -283,6 +283,19 @@ class DebugHandler(SimpleHTTPRequestHandler):
                 return
             self.send_json({"ready": False, "reason": "Unity not reachable"}, status=503)
             return
+        if parsed.path == "/api/firmware-mode":
+            query = parse_qs(parsed.query)
+            mode = query.get("mode", ["lockstep"])[0]
+            payload = fetch_unity_text(f"firmware-mode?mode={mode}")
+            if payload:
+                try:
+                    self.send_json(json.loads(payload))
+                    return
+                except Exception:
+                    self.send_json({"error": "Invalid Unity response"}, status=502)
+                    return
+            self.send_json({"error": "Unity not reachable"}, status=503)
+            return
         if parsed.path == "/api/logs":
             query = parse_qs(parsed.query)
             area = query.get("area", ["debug_console"])[0]

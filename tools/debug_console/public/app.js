@@ -17,6 +17,13 @@ const simTick = document.getElementById("simTick");
 const simTime = document.getElementById("simTime");
 const signalCount = document.getElementById("signalCount");
 const validationCount = document.getElementById("validationCount");
+const simAvgJitter = document.getElementById("simAvgJitter");
+const simMaxJitter = document.getElementById("simMaxJitter");
+const simAvgTick = document.getElementById("simAvgTick");
+const simOverruns = document.getElementById("simOverruns");
+const simFastPath = document.getElementById("simFastPath");
+const simCorrective = document.getElementById("simCorrective");
+const simBudgetOverruns = document.getElementById("simBudgetOverruns");
 const telemetryFilter = document.getElementById("telemetryFilter");
 const refreshTelemetry = document.getElementById("refreshTelemetry");
 const telemetryList = document.getElementById("telemetryList");
@@ -28,6 +35,9 @@ const bridgeNative = document.getElementById("bridgeNative");
 const bridgeNativePins = document.getElementById("bridgeNativePins");
 const bridgeFirmware = document.getElementById("bridgeFirmware");
 const bridgeFirmwareSessions = document.getElementById("bridgeFirmwareSessions");
+const bridgeFirmwareHost = document.getElementById("bridgeFirmwareHost");
+const bridgeFirmwareMode = document.getElementById("bridgeFirmwareMode");
+const bridgeFirmwarePipe = document.getElementById("bridgeFirmwarePipe");
 const bridgeVirtualBoards = document.getElementById("bridgeVirtualBoards");
 const bridgePoweredBoards = document.getElementById("bridgePoweredBoards");
 const bridgeSignals = document.getElementById("bridgeSignals");
@@ -37,6 +47,9 @@ const bridgePhysicsBodies = document.getElementById("bridgePhysicsBodies");
 const bridgeNote = document.getElementById("bridgeNote");
 const bridgeControlKeys = document.getElementById("bridgeControlKeys");
 const bridgePhysicsKeys = document.getElementById("bridgePhysicsKeys");
+const firmwareModeSelect = document.getElementById("firmwareModeSelect");
+const firmwareModeApply = document.getElementById("firmwareModeApply");
+const firmwareModeStatus = document.getElementById("firmwareModeStatus");
 
 const setOutput = (target, text) => {
   target.textContent = text || "";
@@ -226,6 +239,7 @@ const renderFirmwarePerfList = (items) => {
       `spi: ${metrics.spi_transfers ?? 0}`,
       `twi: ${metrics.twi_transfers ?? 0}`,
       `wdt: ${metrics.wdt_resets ?? 0}`,
+      `drops: ${metrics.drops ?? 0}`,
     ];
     const item = document.createElement("li");
     item.innerHTML = `
@@ -265,6 +279,13 @@ const loadTelemetry = async () => {
     simTime.textContent = "0.00";
     signalCount.textContent = "0";
     validationCount.textContent = "0";
+    simAvgJitter.textContent = "N/A";
+    simMaxJitter.textContent = "N/A";
+    simAvgTick.textContent = "N/A";
+    simOverruns.textContent = "0";
+    simFastPath.textContent = "0";
+    simCorrective.textContent = "0";
+    simBudgetOverruns.textContent = "0";
     telemetryList.innerHTML = "<li class=\"empty\">Unity not connected.</li>";
     firmwarePerfList.innerHTML = "<li class=\"empty\">Unity not connected.</li>";
     return;
@@ -276,6 +297,21 @@ const loadTelemetry = async () => {
     simTime.textContent = data.time ?? 0;
     signalCount.textContent = data.signals ?? 0;
     validationCount.textContent = data.validation ?? 0;
+    const timing = data.timing || {};
+    const realtimeStats = data.realtime_stats || {};
+    simAvgJitter.textContent = Number.isFinite(timing.avg_jitter_ms)
+      ? timing.avg_jitter_ms.toFixed(3)
+      : "N/A";
+    simMaxJitter.textContent = Number.isFinite(timing.max_jitter_ms)
+      ? timing.max_jitter_ms.toFixed(3)
+      : "N/A";
+    simAvgTick.textContent = Number.isFinite(timing.avg_tick_ms)
+      ? timing.avg_tick_ms.toFixed(3)
+      : "N/A";
+    simOverruns.textContent = timing.overruns ?? 0;
+    simFastPath.textContent = realtimeStats.fast_path ?? 0;
+    simCorrective.textContent = realtimeStats.corrective ?? 0;
+    simBudgetOverruns.textContent = realtimeStats.budget_overruns ?? 0;
     renderTelemetryList(data.components || []);
     renderFirmwarePerfList(data.firmware || []);
   } catch (err) {
@@ -284,6 +320,13 @@ const loadTelemetry = async () => {
     simTime.textContent = "0.00";
     signalCount.textContent = "0";
     validationCount.textContent = "0";
+    simAvgJitter.textContent = "N/A";
+    simMaxJitter.textContent = "N/A";
+    simAvgTick.textContent = "N/A";
+    simOverruns.textContent = "0";
+    simFastPath.textContent = "0";
+    simCorrective.textContent = "0";
+    simBudgetOverruns.textContent = "0";
     telemetryList.innerHTML = "<li class=\"empty\">Unity telemetry not available.</li>";
     firmwarePerfList.innerHTML = "<li class=\"empty\">Unity telemetry not available.</li>";
   }
@@ -297,6 +340,9 @@ const loadBridgeStatus = async () => {
     bridgeNativePins.textContent = "false";
     bridgeFirmware.textContent = "false";
     bridgeFirmwareSessions.textContent = "0";
+    bridgeFirmwareHost.textContent = "N/A";
+    bridgeFirmwareMode.textContent = "N/A";
+    bridgeFirmwarePipe.textContent = "N/A";
     bridgeVirtualBoards.textContent = "0";
     bridgePoweredBoards.textContent = "0";
     bridgeSignals.textContent = "0";
@@ -306,6 +352,9 @@ const loadBridgeStatus = async () => {
     bridgeControlKeys.innerHTML = "";
     bridgePhysicsKeys.innerHTML = "";
     bridgeNote.textContent = "Unity not connected.";
+    if (firmwareModeStatus) {
+      firmwareModeStatus.textContent = "Unity not connected.";
+    }
     return;
   }
 
@@ -317,6 +366,9 @@ const loadBridgeStatus = async () => {
     bridgeNativePins.textContent = data.native_ready ? "true" : "false";
     bridgeFirmware.textContent = data.use_firmware ? "true" : "false";
     bridgeFirmwareSessions.textContent = data.external_firmware_sessions ?? 0;
+    bridgeFirmwareHost.textContent = data.firmware_host || "N/A";
+    bridgeFirmwareMode.textContent = data.firmware_mode || "N/A";
+    bridgeFirmwarePipe.textContent = data.firmware_pipe || "N/A";
     bridgeVirtualBoards.textContent = data.virtual_boards ?? 0;
     bridgePoweredBoards.textContent = data.powered_boards ?? 0;
     bridgeSignals.textContent = data.signals ?? 0;
@@ -328,10 +380,38 @@ const loadBridgeStatus = async () => {
     bridgeControlKeys.innerHTML = control.map((key) => `<li>${key}</li>`).join("") || "<li>N/A</li>";
     bridgePhysicsKeys.innerHTML = physics.map((key) => `<li>${key}</li>`).join("") || "<li>N/A</li>";
     bridgeNote.textContent = "Live bridge status from Unity.";
+    if (firmwareModeSelect) {
+      const modeValue = (data.firmware_mode || "").toLowerCase();
+      if (modeValue === "lockstep" || modeValue === "realtime") {
+        firmwareModeSelect.value = modeValue;
+      }
+    }
+    if (firmwareModeStatus) {
+      firmwareModeStatus.textContent = "";
+    }
   } catch (err) {
     bridgeNote.textContent = "Bridge status unavailable.";
   }
 };
+
+if (firmwareModeApply) {
+  firmwareModeApply.addEventListener("click", async () => {
+    if (!firmwareModeSelect) return;
+    const mode = firmwareModeSelect.value || "lockstep";
+    firmwareModeStatus.textContent = "Applying...";
+    try {
+      const result = await fetchJson(`/api/firmware-mode?mode=${encodeURIComponent(mode)}`);
+      if (result.requires_restart) {
+        firmwareModeStatus.textContent = "Mode set. Restart firmware to apply.";
+      } else {
+        firmwareModeStatus.textContent = "Mode applied.";
+      }
+      bridgeFirmwareMode.textContent = result.mode || mode;
+    } catch (err) {
+      firmwareModeStatus.textContent = `Error: ${err.message}`;
+    }
+  });
+}
 
 clearOutput.addEventListener("click", () => setOutput(testOutput, ""));
 refreshLogs.addEventListener("click", loadLogs);

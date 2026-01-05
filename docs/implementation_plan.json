@@ -4,22 +4,8 @@
   "progress": {
     "lastUpdated": "2026-01-05",
     "completedIssues": [
-      103,
-      104,
-      105,
-      106,
-      107,
-      108,
-      109,
-      110,
-      111,
-      112,
-      113,
-      114,
-      129,
-      141,
-      147,
-      150
+      167, 168, 169, 170, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113,
+      114, 129, 141, 142, 143, 144, 145, 147, 148, 149, 150, 175, 176, 177, 178
     ],
     "notes": [
       {
@@ -83,9 +69,7 @@
         "details": [
           "Added SimHost.StepOnce(dtSeconds) and routed firmware/virtual MCU stepping through explicit dt."
         ],
-        "files": [
-          "RobotWin/Assets/Scripts/Game/SimHost.cs"
-        ]
+        "files": ["RobotWin/Assets/Scripts/Game/SimHost.cs"]
       },
       {
         "date": "2026-01-05",
@@ -95,10 +79,7 @@
           "OutputState sampling now uses VirtualMcu.SamplePinOutputs for all pins.",
           "Unknown pins remain 0xFF until configured as outputs."
         ],
-        "files": [
-          "FirmwareEngine/main.cpp",
-          "FirmwareEngine/VirtualMcu.cpp"
-        ]
+        "files": ["FirmwareEngine/main.cpp", "FirmwareEngine/VirtualMcu.cpp"]
       },
       {
         "date": "2026-01-05",
@@ -108,9 +89,7 @@
           "Native circuit stepping now happens inside the SimHost tick before pin sampling.",
           "Removes the one-tick lag for NativeEngine output updates."
         ],
-        "files": [
-          "RobotWin/Assets/Scripts/Game/SimHost.cs"
-        ]
+        "files": ["RobotWin/Assets/Scripts/Game/SimHost.cs"]
       },
       {
         "date": "2026-01-05",
@@ -119,9 +98,7 @@
         "details": [
           "Documented Native_Step vs Physics_Step responsibilities and call order."
         ],
-        "files": [
-          "docs/ROBOTWIN_UNITY.md"
-        ]
+        "files": ["docs/ROBOTWIN_UNITY.md"]
       },
       {
         "date": "2026-01-05",
@@ -130,9 +107,7 @@
         "details": [
           "Marked SharedState as legacy fixed-size interface in Unity bridge code."
         ],
-        "files": [
-          "RobotWin/Assets/Scripts/Core/Bridge_Interface.cs"
-        ]
+        "files": ["RobotWin/Assets/Scripts/Core/Bridge_Interface.cs"]
       },
       {
         "date": "2026-01-05",
@@ -141,9 +116,7 @@
         "details": [
           "Documented master clock, step ordering, and deadline policy."
         ],
-        "files": [
-          "docs/REALTIME_CONTRACT.md"
-        ]
+        "files": ["docs/REALTIME_CONTRACT.md"]
       },
       {
         "date": "2026-01-05",
@@ -161,12 +134,8 @@
         "date": "2026-01-05",
         "type": "documentation",
         "summary": "Realtime fidelity/error budgets defined",
-        "details": [
-          "Specified default budgets and error tolerances per tier."
-        ],
-        "files": [
-          "docs/REALTIME_BUDGETS.md"
-        ]
+        "details": ["Specified default budgets and error tolerances per tier."],
+        "files": ["docs/REALTIME_BUDGETS.md"]
       },
       {
         "date": "2026-01-05",
@@ -175,9 +144,7 @@
         "details": [
           "RunMode logs which backend is active when the mode starts."
         ],
-        "files": [
-          "RobotWin/Assets/Scripts/UI/RunMode/RunModeController.cs"
-        ]
+        "files": ["RobotWin/Assets/Scripts/UI/RunMode/RunModeController.cs"]
       },
       {
         "date": "2026-01-05",
@@ -192,13 +159,187 @@
           "docs/implementation_plan.json",
           "docs/implementation_plan_todo.md"
         ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Runtime API audit gate added",
+        "details": [
+          "Added an audit script to catch editor-only API usage in runtime scripts.",
+          "Hooked the audit into rt_tool validations."
+        ],
+        "files": ["tools/scripts/audit_runtime_apis.py", "tools/rt_tool.py"]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Firmware host naming/pathing generalized",
+        "details": [
+          "SessionManager now supports firmware host overrides and a configurable executable name.",
+          "CircuitController uses a generic firmware host field name and tooltip."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Game/SessionManager.cs",
+          "RobotWin/Assets/Scripts/Circuit/CircuitController.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Non-AVR external firmware guardrail",
+        "details": [
+          "External firmware setup now short-circuits with a clear warning when no supported MCU profiles exist."
+        ],
+        "files": ["RobotWin/Assets/Scripts/Game/SimHost.cs"]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Build/log output audit added",
+        "details": [
+          "Added a build output audit script and hooked it into rt_tool validations.",
+          "Audit report is written to logs/tools/build_output_audit.log."
+        ],
+        "files": ["tools/scripts/audit_build_outputs.py", "tools/rt_tool.py"]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Windows realtime hardening applied to CoreSim loop",
+        "details": [
+          "Added high-resolution timer support and optional process/thread priority tuning.",
+          "Introduced spin-wait scheduling to reduce jitter on short sleeps."
+        ],
+        "files": [
+          "CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardening.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardeningOptions.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Host/SimHost.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Host/SimHostOptions.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Tick jitter/overrun telemetry surfaced",
+        "details": [
+          "Collected tick timing stats (jitter, overrun count, tick duration).",
+          "Exposed timing stats in Unity telemetry and Debug Console UI."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs",
+          "tools/debug_console/public/index.html",
+          "tools/debug_console/public/app.js"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Firmware host + realtime flags surfaced in telemetry",
+        "details": [
+          "Unity telemetry now includes firmware host path/name/pipe/mode plus realtime flag summary.",
+          "Debug Console shows firmware host/mode/pipe in bridge status."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs",
+          "RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs",
+          "tools/debug_console/public/index.html",
+          "tools/debug_console/public/app.js",
+          "RobotWin/Assets/Scripts/Game/SessionManager.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Realtime scheduler + fast-path solving added",
+        "details": [
+          "Added multi-rate scheduler with per-task budgets and frame budget enforcement.",
+          "Implemented fast-path circuit reuse + input signature early-exit.",
+          "Added firmware input change caching for realtime stepping."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Game/RealtimeScheduleConfig.cs",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Realtime budget/fast-path telemetry surfaced",
+        "details": [
+          "Added realtime budget stats to telemetry payload and debug console UI."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs",
+          "tools/debug_console/public/index.html",
+          "tools/debug_console/public/app.js"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Timestamped firmware outputs + backlog drop tracking",
+        "details": [
+          "Added output timestamps to the firmware protocol and step payloads.",
+          "Clients track dropped OutputState sequences and stale output drops."
+        ],
+        "files": [
+          "FirmwareEngine/Protocol.h",
+          "FirmwareEngine/PipeManager.cpp",
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs",
+          "RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs",
+          "tools/debug_console/public/app.js"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Firmware host mode toggle wired into debug console",
+        "details": [
+          "Added firmware mode switch endpoint and UI toggle with restart hint.",
+          "SessionManager now stores the preferred firmware host mode."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Game/SessionManager.cs",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs",
+          "tools/debug_console/server.py",
+          "tools/debug_console/public/index.html",
+          "tools/debug_console/public/app.js"
+        ]
       }
     ]
   },
   "phases": [
     {
+      "id": "phase_0",
+      "name": "Phase 0: Stabilization (Blocking/Quality Gates)",
+      "goal": "Remove build blockers and lock in core tooling hygiene before deeper work.",
+      "issues": [
+        {
+          "number": 167,
+          "title": "Q0-01 Remove editor-only APIs from runtime builds (no System.Windows.Forms in player)"
+        },
+        {
+          "number": 168,
+          "title": "Q0-02 Generalize firmware host naming/pathing for non-Arduino boards"
+        },
+        {
+          "number": 169,
+          "title": "Q0-03 Non-AVR profile QA path (STM32/RPi selection should disable firmware cleanly)"
+        },
+        {
+          "number": 170,
+          "title": "Q0-04 Build/log output audit across tools (builds/ + logs/ consistency)"
+        }
+      ]
+    },
+    {
       "id": "phase_1",
-      "name": "Phase 1: Foundation (The Foundation)",
+      "name": "Phase 1: Foundation",
       "goal": "Ensure core circuit and firmware execution is correct and deterministic.",
       "issues": [
         {
@@ -253,9 +394,29 @@
     },
     {
       "id": "phase_2",
-      "name": "Phase 2: Realtime (The Pulse)",
+      "name": "Phase 2: Realtime",
       "goal": "Achieve low-latency, jitter-free execution for live mode.",
       "issues": [
+        {
+          "number": 179,
+          "title": "RT-15 Protocol version negotiation + feature flags"
+        },
+        {
+          "number": 178,
+          "title": "RT-14 Realtime budget/fast-path counters in telemetry"
+        },
+        {
+          "number": 177,
+          "title": "RT-13 Firmware host mode control (lockstep vs realtime) + UI toggle"
+        },
+        {
+          "number": 176,
+          "title": "RT-12 Telemetry surface for firmware host + realtime mode flags"
+        },
+        {
+          "number": 175,
+          "title": "RT-11 Tick jitter/overrun counters + telemetry surface"
+        },
         {
           "number": 149,
           "title": "RT-09 Windows realtime hardening (priority/affinity/timers/no-alloc hot loops)"
@@ -300,7 +461,7 @@
     },
     {
       "id": "phase_3",
-      "name": "Phase 3: High Fidelity (The Body)",
+      "name": "Phase 3: High Fidelity",
       "goal": "Add physical realism: thermal, environmental, and manufacturing imperfections.",
       "issues": [
         {
@@ -327,7 +488,7 @@
     },
     {
       "id": "phase_4",
-      "name": "Phase 4: Raspberry Pi (The Brain)",
+      "name": "Phase 4: Raspberry Pi",
       "goal": "Integrate full system emulation (QEMU) for Linux/AI support.",
       "issues": [
         {
@@ -366,7 +527,7 @@
     },
     {
       "id": "phase_5",
-      "name": "Phase 5: Polish & Optimization (The Polish)",
+      "name": "Phase 5: Polish & Optimization",
       "goal": "Optimize performance, clean up technical debt, and improve UX.",
       "issues": [
         {
@@ -445,7 +606,7 @@
     },
     {
       "id": "phase_6",
-      "name": "Phase 6: User Interface (The Face)",
+      "name": "Phase 6: User Interface",
       "goal": "Build the visual controls, menus, and interactive tools (Frontend).",
       "issues": [
         {

@@ -198,6 +198,25 @@ namespace RobotTwin.Debugging
                         responseString = BuildBridgePayload();
                         break;
 
+                    case "firmware-mode":
+                        queryParams.TryGetValue("mode", out string modeValue);
+                        string mode = (modeValue ?? string.Empty).Trim().ToLowerInvariant();
+                        bool lockstep = mode != "realtime";
+                        bool hasSession = SessionManager.Instance != null;
+                        bool hasSimHost = SimHost.Instance != null;
+                        bool requiresRestart = hasSimHost && SimHost.Instance.UseExternalFirmware;
+                        Enqueue(() =>
+                        {
+                            var session = SessionManager.Instance;
+                            if (session != null)
+                            {
+                                session.FirmwareHostLockstep = lockstep;
+                            }
+                            SimHost.Instance?.SetFirmwareHostMode(lockstep);
+                        });
+                        responseString = $"{{\"mode\":\"{(lockstep ? "lockstep" : "realtime")}\",\"applied\":{BoolJson(hasSession || hasSimHost)},\"requires_restart\":{BoolJson(requiresRestart)}}}";
+                        break;
+
                     default:
                         statusCode = 404;
                         responseString = "Unknown Command";
@@ -319,6 +338,10 @@ namespace RobotTwin.Debugging
 
             sb.Append("]");
             AppendFirmwarePerfPayload(sb, telemetry);
+            AppendFirmwareHostPayload(sb, host);
+            AppendRealtimeFlagsPayload(sb, host);
+            AppendRealtimeBudgetPayload(sb, host);
+            AppendTimingPayload(sb, host);
             AppendTickTracePayload(sb, host);
             sb.Append("}");
             return sb.ToString();
@@ -338,6 +361,7 @@ namespace RobotTwin.Debugging
             var physicsWorld = NativePhysicsWorld.Instance;
             bool physicsRunning = physicsWorld != null && physicsWorld.IsRunning;
             int physicsBodies = physicsWorld?.BodyCount ?? 0;
+            var firmwareInfo = host.GetFirmwareHostTelemetry();
 
             var sb = new StringBuilder();
             sb.Append("{");
@@ -347,6 +371,9 @@ namespace RobotTwin.Debugging
             sb.Append($"\"use_firmware\":{BoolJson(host.UseExternalFirmware)},");
             sb.Append($"\"native_ready\":{BoolJson(host.NativePinsReady)},");
             sb.Append($"\"external_firmware_sessions\":{host.ExternalFirmwareSessionCount},");
+            sb.Append($"\"firmware_host\":\"{EscapeJson(firmwareInfo.ExecutableName)}\",");
+            sb.Append($"\"firmware_mode\":\"{EscapeJson(firmwareInfo.Mode)}\",");
+            sb.Append($"\"firmware_pipe\":\"{EscapeJson(firmwareInfo.PipeName)}\",");
             sb.Append($"\"virtual_boards\":{host.VirtualBoardCount},");
             sb.Append($"\"powered_boards\":{host.PoweredBoardCount},");
             sb.Append($"\"physics_running\":{BoolJson(physicsRunning)},");
@@ -408,7 +435,8 @@ namespace RobotTwin.Debugging
                 "uart_rx3",
                 "spi_transfers",
                 "twi_transfers",
-                "wdt_resets"
+                "wdt_resets",
+                "drops"
             };
 
             foreach (var board in byBoard)
@@ -453,6 +481,61 @@ namespace RobotTwin.Debugging
                 sb.Append("}");
             }
             sb.Append("]");
+        }
+
+        private static void AppendFirmwareHostPayload(StringBuilder sb, SimHost host)
+        {
+            if (host == null) return;
+            var info = host.GetFirmwareHostTelemetry();
+            sb.Append(",\"firmware_host\":{");
+            sb.Append($"\"exe\":\"{EscapeJson(info.ExecutableName)}\",");
+            sb.Append($"\"path\":\"{EscapeJson(info.ResolvedPath)}\",");
+            sb.Append($"\"override\":\"{EscapeJson(info.OverridePath)}\",");
+            sb.Append($"\"pipe\":\"{EscapeJson(info.PipeName)}\",");
+            sb.Append($"\"mode\":\"{EscapeJson(info.Mode)}\",");
+            sb.Append($"\"external\":{BoolJson(info.ExternalEnabled)}");
+            sb.Append("}");
+        }
+
+        private static void AppendRealtimeFlagsPayload(StringBuilder sb, SimHost host)
+        {
+            if (host == null) return;
+            var session = SessionManager.Instance;
+            bool virtualMcu = session == null || session.UseVirtualMcu;
+            sb.Append(",\"realtime\":{");
+            sb.Append($"\"external_firmware\":{BoolJson(host.UseExternalFirmware)},");
+            sb.Append($"\"native\":{BoolJson(host.UseNativeEngine)},");
+            sb.Append($"\"virtual_mcu\":{BoolJson(virtualMcu)},");
+            sb.Append($"\"firmware_mode\":\"{EscapeJson(host.GetFirmwareHostTelemetry().Mode)}\"");
+            sb.Append("}");
+        }
+
+        private static void AppendTimingPayload(StringBuilder sb, SimHost host)
+        {
+            if (host == null) return;
+            var timing = host.GetTimingStatsSnapshot();
+            sb.Append(",\"timing\":{");
+            sb.Append($"\"tick_samples\":{timing.TickSamples},");
+            sb.Append($"\"jitter_samples\":{timing.JitterSamples},");
+            sb.Append($"\"overruns\":{timing.Overruns},");
+            sb.Append($"\"avg_jitter_ms\":{timing.AvgJitterMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},");
+            sb.Append($"\"max_jitter_ms\":{timing.MaxJitterMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},");
+            sb.Append($"\"last_jitter_ms\":{timing.LastJitterMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},");
+            sb.Append($"\"avg_tick_ms\":{timing.AvgTickMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},");
+            sb.Append($"\"max_tick_ms\":{timing.MaxTickMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},");
+            sb.Append($"\"last_tick_ms\":{timing.LastTickMs.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.Append("}");
+        }
+
+        private static void AppendRealtimeBudgetPayload(StringBuilder sb, SimHost host)
+        {
+            if (host == null) return;
+            var stats = host.GetRealtimeBudgetStatsSnapshot();
+            sb.Append(",\"realtime_stats\":{");
+            sb.Append($"\"fast_path\":{stats.FastPathTicks},");
+            sb.Append($"\"corrective\":{stats.CorrectiveTicks},");
+            sb.Append($"\"budget_overruns\":{stats.BudgetOverruns}");
+            sb.Append("}");
         }
 
         private static void TrimTrailingComma(StringBuilder sb)

@@ -41,6 +41,17 @@ namespace firmware
                 copy = size - 1;
             std::memcpy(dst, value.data(), copy);
         }
+
+        std::uint64_t NowMicros()
+        {
+            LARGE_INTEGER freq{};
+            LARGE_INTEGER counter{};
+            if (!QueryPerformanceFrequency(&freq) || !QueryPerformanceCounter(&counter) || freq.QuadPart == 0)
+            {
+                return 0;
+            }
+            return static_cast<std::uint64_t>((counter.QuadPart * 1000000ULL) / static_cast<std::uint64_t>(freq.QuadPart));
+        }
     }
 
     PipeManager::PipeManager() = default;
@@ -127,6 +138,7 @@ namespace firmware
         payload.spi_transfers = spiTransfers;
         payload.twi_transfers = twiTransfers;
         payload.wdt_resets = wdtResets;
+        payload.timestamp_micros = NowMicros();
         WritePacket(MessageType::OutputState, reinterpret_cast<const std::uint8_t *>(&payload), sizeof(payload));
     }
 
@@ -226,7 +238,8 @@ namespace firmware
 
             if (type == MessageType::Step)
             {
-                if (payload.size() < sizeof(StepPayload))
+                const std::size_t baseSize = sizeof(StepPayload) - sizeof(std::uint64_t);
+                if (payload.size() < baseSize)
                 {
                     SendError("system", 2, "Invalid step payload");
                     continue;
@@ -237,6 +250,7 @@ namespace firmware
                 cmd.boardId = ReadFixedString(step->board_id, kBoardIdSize);
                 cmd.stepSequence = step->step_sequence;
                 cmd.deltaMicros = step->delta_micros;
+                cmd.sentMicros = payload.size() >= sizeof(StepPayload) ? step->sent_micros : 0;
                 std::memcpy(cmd.pins, step->pins, kPinCount);
                 cmd.analogCount = kAnalogCount;
                 std::memcpy(cmd.analog, step->analog, sizeof(step->analog));

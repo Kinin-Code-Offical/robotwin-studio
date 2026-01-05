@@ -13,16 +13,18 @@ It captures actionable mismatches and build-breakers found while Codex is runnin
   - Verified: `py tools/rt_tool.py build-firmware` succeeded.
 
 - Unity compile risk: `RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs` used `System.Web.HttpUtility` which is typically unavailable in Unity.
+
   - Fix: replaced with a small local query-string parser.
 
-### Needs an Issue / Follow-up
+- Unity standalone build plugin-collision (template assets): build was failing with `Plugins colliding with each other`.
+  - Fix: updated the colliding template `.meta` files to use valid spaces-only YAML and explicitly disable `PluginImporter` for all Standalone targets.
+    - `RobotWin/Assets/Templates/arduino-*-starter/Code/U1/app.h.meta`
+    - `RobotWin/Assets/Templates/arduino-*-starter/Code/U1/builds/bvm_build/sketch/app.h.meta`
+    - `RobotWin/Assets/Templates/arduino-*-starter/Code/U1/builds/bvm_build/sketch/U1.ino.cpp.meta`
+  - Verified: `py tools/rt_tool.py build-standalone` succeeded.
+  - Tracked: GitHub issue #166.
 
-- Unity standalone build fails due to plugin collisions in template assets.
-  - Evidence: `logs/unity/build.log` shows `Plugins colliding with each other` and lists collisions for `Assets/Templates/.../app.h` and `Assets/Templates/.../U1.ino.cpp`.
-  - Suggested resolution:
-    - Ensure these template files are NOT imported as plugins (or move them out of any `Plugins/` folder scope).
-    - Alternatively, adjust importer settings so they don't collide in `<PluginPath>/x86/`.
-  - Impact: `py tools/rt_tool.py build-standalone` fails until fixed.
+### Needs an Issue / Follow-up
 
 ### Plan Tracking Integrity
 

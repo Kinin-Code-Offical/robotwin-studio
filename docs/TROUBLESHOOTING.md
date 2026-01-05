@@ -1,5 +1,7 @@
 ﻿# Troubleshooting
 
+Common issues and quick fixes.
+
 ## Unity Does Not Open
 
 - Verify Unity 6000.3.2f1 is installed.

@@ -1,6 +1,6 @@
 # FirmwareEngine: Hybrid Virtualization Host
 
-**FirmwareEngine** is the subsystem responsible for executing the software that runs on the robot's onboard computers. It is not a simple script interpreter; it is a **cycle-accurate emulator** capable of running binary firmware and full operating systems.
+**FirmwareEngine** runs the software side of the simulation: microcontroller firmware and (optionally) full Linux images via QEMU. The main focus is deterministic stepping and clear IO/IPC boundaries between “code execution” and the simulated world.
 
 ## Dual-Stack Architecture
 
@@ -33,7 +33,7 @@ Used for high-level logic, AI, and ROS2 nodes (Raspberry Pi 4/5, Jetson Nano).
 
 FirmwareEngine acts as the bridge between the emulated code and the simulated physical world.
 
-`mermaid
+```mermaid
 sequenceDiagram
 participant Linux as QEMU (Guest OS)
 participant FW as FirmwareEngine
@@ -48,7 +48,7 @@ participant Phys as NativeEngine
     Core->>FW: Update Encoder Register
     FW->>Linux: Trigger Interrupt (VirtIO)
 
-`
+```
 
 ## Supported Boards
 
