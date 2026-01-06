@@ -249,6 +249,37 @@ UNITY_EXPORT int Physics_GetBody(uint32_t id, RigidBody_C *out) {
   return 1;
 }
 
+UNITY_EXPORT int Physics_SetBody(uint32_t id, const RigidBody_C *body) {
+  if (!g_physics || !body || id == 0) {
+    return 0;
+  }
+  NativeEngine::Physics::RigidBody rb{};
+  rb.id = id;
+  rb.mass = body->mass;
+  rb.position = {body->pos_x, body->pos_y, body->pos_z};
+  rb.velocity = {body->vel_x, body->vel_y, body->vel_z};
+  rb.rotation = {body->rot_w, body->rot_x, body->rot_y, body->rot_z};
+  rb.angular_velocity = {body->ang_x, body->ang_y, body->ang_z};
+  rb.linear_damping = body->linear_damping;
+  rb.angular_damping = body->angular_damping;
+  rb.drag_coefficient = body->drag_coefficient;
+  rb.cross_section_area = body->cross_section_area;
+  rb.surface_area = body->surface_area;
+  rb.temperature_c = body->temperature_c;
+  rb.material_strength = body->material_strength;
+  rb.fracture_toughness = body->fracture_toughness;
+  rb.shape = static_cast<NativeEngine::Physics::ShapeType>(body->shape_type);
+  rb.radius = body->radius;
+  rb.half_extents = {body->half_x, body->half_y, body->half_z};
+  rb.friction = body->friction;
+  rb.restitution = body->restitution;
+  rb.damage = body->damage;
+  rb.is_broken = body->is_broken != 0;
+  rb.is_static = body->is_static != 0;
+  rb.SetMass(rb.mass);
+  return g_physics->SetBody(id, rb) ? 1 : 0;
+}
+
 UNITY_EXPORT void Physics_Step(float dt) {
   if (!g_physics) {
     return;

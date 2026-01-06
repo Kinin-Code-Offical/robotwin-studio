@@ -380,6 +380,19 @@ namespace RobotTwin.Debugging
             sb.Append($"\"physics_bodies\":{physicsBodies},");
             sb.Append($"\"signals\":{signalCount},");
             sb.Append($"\"validation\":{validationCount},");
+
+            string virtualCom = host.VirtualComStatusJson;
+            if (string.IsNullOrWhiteSpace(virtualCom))
+            {
+                sb.Append("\"virtual_com\":null,");
+            }
+            else
+            {
+                sb.Append("\"virtual_com\":");
+                sb.Append(virtualCom);
+                sb.Append(",");
+            }
+
             sb.Append("\"contract\":{");
             sb.Append("\"control\":[\"tick_index\",\"dt_seconds\",\"actuators\",\"power\"],");
             sb.Append("\"physics\":[\"tick_index\",\"dt_seconds\",\"bodies\",\"sensors\",\"constraints\"]");

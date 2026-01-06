@@ -31,6 +31,12 @@
                 <ui:VisualElement class="card board-card">
                     <ui:Label text="Live Circuit View" class="card-title" />
                     <ui:VisualElement name="Circuit3DView" class="board-view" />
+                        <ui:VisualElement name="Circuit3DLoadingOverlay" class="board-loading" style="display: none;">
+                            <ui:VisualElement class="board-loading-card">
+                                <ui:VisualElement name="Circuit3DLoadingSpinner" class="board-loading-spinner" />
+                                <ui:Label name="Circuit3DLoadingLabel" text="Loading 3D view..." class="board-loading-title" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
                     <ui:VisualElement name="Circuit3DControls" class="board-3d-controls">
                         <ui:VisualElement class="board-3d-controls-header">
                             <ui:Label text="Camera" class="board-3d-controls-title" />
@@ -65,6 +71,7 @@
                             <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
                             <ui:Label text="R / Home: Reset view" class="board-3d-help-line" />
                             <ui:Label text="F: Focus selection" class="board-3d-help-line" />
+                            <ui:Label text="Alt + Arrows: Snap view (Top/Bottom/Left/Right)" class="board-3d-help-line" />
                             <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
                             <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
                             <ui:Label text="Ctrl + Arrows: Zoom / Lighting" class="board-3d-help-line" />

@@ -310,6 +310,7 @@
                                 <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
                                 <ui:Label text="R / Home: Reset view" class="board-3d-help-line" />
                                 <ui:Label text="F: Frame model" class="board-3d-help-line" />
+                                <ui:Label text="Alt + Arrows: Snap view (Top/Bottom/Left/Right)" class="board-3d-help-line" />
                                 <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
                                 <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
                                 <ui:Label text="W/A/S/D: Drone move" class="board-3d-help-line" />
@@ -330,6 +331,7 @@
                         </ui:VisualElement>
                         <ui:VisualElement name="StudioLoadingOverlay" class="studio-loading" style="display: none;">
                             <ui:VisualElement class="studio-loading-card">
+                                <ui:VisualElement name="StudioLoadingSpinner" class="studio-loading-spinner" />
                                 <ui:Label name="StudioLoadingLabel" text="Loading model..." class="studio-loading-title" />
                                 <ui:Button name="StudioLoadingCancelBtn" class="ghost-button">
                                     <ui:Label text="Cancel" class="button-label" />
@@ -703,6 +705,24 @@
                         <ui:TextField name="MaterialColorAField" class="form-field editor-field-small input-dark" />
                     </ui:VisualElement>
                     <ui:Toggle name="MaterialUseColorToggle" text="Use Color Tint" class="toggle-field" />
+
+                    <ui:VisualElement class="menu-divider" />
+                    <ui:Label text="Physical (optional)" class="modal-label" />
+                    <ui:Label text="Physical Material Id" class="modal-label" />
+                    <ui:TextField name="MaterialPhysicalMaterialField" class="form-field input-dark" />
+                    <ui:Label text="Density (kg/m^3)" class="modal-label" />
+                    <ui:TextField name="MaterialDensityField" class="form-field input-dark" />
+                    <ui:Label text="Volume (m^3, preferred for realism)" class="modal-label" />
+                    <ui:TextField name="MaterialVolumeField" class="form-field input-dark" />
+                    <ui:Label text="Mass Override (kg)" class="modal-label" />
+                    <ui:TextField name="MaterialMassField" class="form-field input-dark" />
+                    <ui:Label text="Friction (0..1)" class="modal-label" />
+                    <ui:TextField name="MaterialFrictionField" class="form-field input-dark" />
+                    <ui:Label text="Elasticity (0..1)" class="modal-label" />
+                    <ui:TextField name="MaterialElasticityField" class="form-field input-dark" />
+                    <ui:Label text="Strength" class="modal-label" />
+                    <ui:TextField name="MaterialStrengthField" class="form-field input-dark" />
+                    <ui:Label name="MaterialComputedMassLabel" text="Estimated Mass: (unset)" class="modal-label" />
                 </ui:VisualElement>
                 <ui:VisualElement class="modal-actions">
                     <ui:Button name="MaterialApplyBtn" text="Apply" class="btn-primary" />

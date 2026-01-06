@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace RobotTwin.Game
 {
@@ -32,6 +33,44 @@ namespace RobotTwin.Game
         public VirtualComPortManager(Action<string> log = null)
         {
             _log = log;
+        }
+
+        public string BuildStatusPayloadJson()
+        {
+            var sb = new StringBuilder();
+            sb.Append("{");
+            sb.Append($"\"port_base\":{PortBase},");
+            sb.Append($"\"status\":\"{EscapeJson(StatusMessage)}\",");
+            sb.Append("\"pairs\":[");
+
+            bool first = true;
+            foreach (var pair in _pairs.Values.OrderBy(p => p.BoardId, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!first) sb.Append(",");
+                first = false;
+
+                bool usbConnected = _usbConnected.Contains(pair.BoardId);
+                sb.Append("{");
+                sb.Append($"\"board_id\":\"{EscapeJson(pair.BoardId)}\",");
+                sb.Append($"\"ide_port\":\"{EscapeJson(pair.IdePort)}\",");
+                sb.Append($"\"app_port\":\"{EscapeJson(pair.AppPort)}\",");
+                sb.Append($"\"usb_connected\":{(usbConnected ? "true" : "false")}");
+                sb.Append("}");
+            }
+
+            sb.Append("]}");
+            return sb.ToString();
+        }
+
+        private static string EscapeJson(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            return value
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\n", "\\n")
+                .Replace("\r", "\\r")
+                .Replace("\t", "\\t");
         }
 
         public void SetStatus(string message)

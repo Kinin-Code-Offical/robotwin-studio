@@ -42,10 +42,11 @@ namespace firmware
         void Stop();
 
         bool IsConnected() const;
+        DWORD LastWriteError() const { return _lastWriteError.load(); }
         bool PopCommand(PipeCommand &outCommand);
 
         void SendHelloAck(std::uint32_t flags);
-        void SendOutputState(const std::string &boardId, std::uint64_t stepSequence, std::uint64_t tickCount, const std::uint8_t *pins, std::size_t count,
+        bool SendOutputState(const std::string &boardId, std::uint64_t stepSequence, std::uint64_t tickCount, const std::uint8_t *pins, std::size_t count,
                              std::uint64_t cycles, std::uint64_t adcSamples,
                              const std::uint64_t *uartTxBytes, const std::uint64_t *uartRxBytes,
                              std::uint64_t spiTransfers, std::uint64_t twiTransfers, std::uint64_t wdtResets);
@@ -71,5 +72,6 @@ namespace firmware
         std::mutex _queueMutex;
         std::queue<PipeCommand> _queue;
         std::uint32_t _sequence = 1;
+        std::atomic<DWORD> _lastWriteError{0};
     };
 }

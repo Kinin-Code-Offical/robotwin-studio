@@ -6,7 +6,6 @@
 
 #include <cstring>
 #include <fstream>
-#include <unordered_map>
 
 #include "Circuit/HexLoader.h"
 
@@ -79,6 +78,10 @@ namespace firmware
             _pinCount = AvrPinCount;
         }
         _pinInputs.assign(static_cast<std::size_t>(_pinCount), -1);
+        _pinValueScratch.assign(_state.io.size(), 0);
+        _pinValueTouchedFlags.assign(_state.io.size(), 0);
+        _pinValueTouched.clear();
+        _pinValueTouched.reserve(static_cast<std::size_t>(_pinCount));
         _analogInputs.assign(AnalogCount, 0.0f);
         Reset();
     }
@@ -711,9 +714,6 @@ namespace firmware
 
     void VirtualMcu::SyncInputs()
     {
-        std::unordered_map<std::uint16_t, std::uint8_t> pinValues;
-        pinValues.reserve(static_cast<std::size_t>(_pinCount));
-
         for (int pin = 0; pin < _pinCount; ++pin)
         {
             std::uint16_t ddr = 0;
@@ -721,6 +721,10 @@ namespace firmware
             std::uint16_t pinReg = 0;
             std::uint8_t bit = 0;
             if (!PinToPort(pin, ddr, port, pinReg, bit))
+            {
+                continue;
+            }
+            if (pinReg >= _pinValueScratch.size())
             {
                 continue;
             }
@@ -732,14 +736,23 @@ namespace firmware
                                   : (inputValue >= 0 ? (inputValue != 0) : ((portValue & (1u << bit)) != 0));
             if (value)
             {
-                pinValues[pinReg] = static_cast<std::uint8_t>(pinValues[pinReg] | (1u << bit));
+                if (_pinValueTouchedFlags[pinReg] == 0)
+                {
+                    _pinValueTouchedFlags[pinReg] = 1;
+                    _pinValueTouched.push_back(pinReg);
+                    _pinValueScratch[pinReg] = 0;
+                }
+                _pinValueScratch[pinReg] = static_cast<std::uint8_t>(_pinValueScratch[pinReg] | (1u << bit));
             }
         }
 
-        for (const auto &entry : pinValues)
+        for (const auto pinReg : _pinValueTouched)
         {
-            AVR_IoWrite(&_state.core, entry.first, entry.second);
+            AVR_IoWrite(&_state.core, pinReg, _pinValueScratch[pinReg]);
+            _pinValueScratch[pinReg] = 0;
+            _pinValueTouchedFlags[pinReg] = 0;
         }
+        _pinValueTouched.clear();
 
         std::uint8_t pinb = GetIo(AVR_PINB);
         std::uint8_t pinc = GetIo(AVR_PINC);

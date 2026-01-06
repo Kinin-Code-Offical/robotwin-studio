@@ -63,6 +63,15 @@ namespace RobotTwin.UI
         private Button _circuit3DRebuildBtn;
         private VisualElement _circuit3DHelpIcon;
         private VisualElement _circuit3DHelpTooltip;
+
+        private VisualElement _circuit3DLoadingOverlay;
+        private VisualElement _circuit3DLoadingSpinner;
+        private Label _circuit3DLoadingLabel;
+        private IVisualElementScheduledItem _circuit3DLoadingSpin;
+        private IVisualElementScheduledItem _circuit3DLoadingPoll;
+        private float _circuit3DLoadingShownAt;
+        private RenderTexture _circuit3DLoadingBlurTexture;
+
         private Button _outputErrorsBtn;
         private Button _outputAllBtn;
         private Button _outputWarningsBtn;
@@ -406,7 +415,7 @@ namespace RobotTwin.UI
         private ToolMode _currentTool = ToolMode.Select;
         private enum CenterPanelMode { Circuit, Code, Preview3D }
         private CenterPanelMode _centerMode = CenterPanelMode.Circuit;
-        private enum ThreeDDragMode { None, Pan, Orbit }
+        private enum ThreeDDragMode { None, Pan, Orbit, Roll }
 
         private void OnEnable()
         {
@@ -625,6 +634,10 @@ namespace RobotTwin.UI
             _circuit3DRebuildBtn = _root.Q<Button>("Circuit3DRebuildBtn");
             _circuit3DHelpIcon = _root.Q<VisualElement>("Circuit3DHelpIcon");
             _circuit3DHelpTooltip = _root.Q<VisualElement>("Circuit3DHelpTooltip");
+
+            _circuit3DLoadingOverlay = _root.Q<VisualElement>("Circuit3DLoadingOverlay");
+            _circuit3DLoadingSpinner = _root.Q<VisualElement>("Circuit3DLoadingSpinner");
+            _circuit3DLoadingLabel = _root.Q<Label>("Circuit3DLoadingLabel");
             if (_circuit3DControlsToggle != null)
             {
                 _circuit3DControlsToggle.clicked += Toggle3DControlsLayout;
@@ -1594,8 +1607,12 @@ namespace RobotTwin.UI
                 var go = new GameObject("CircuitStudio3DView");
                 go.transform.SetParent(transform, false);
                 _circuit3DRenderer = go.AddComponent<Circuit3DView>();
+                _circuit3DRenderer.BuildStarted += () => ShowCircuit3DLoading("Building 3D view...");
+                _circuit3DRenderer.BuildFinished += BeginHideCircuit3DLoadingWhenReady;
                 Apply3DCameraSettings();
             }
+
+            BeginHideCircuit3DLoadingWhenReady();
 
             _circuit3DView.RegisterCallback<GeometryChangedEvent>(evt =>
             {
@@ -1604,6 +1621,7 @@ namespace RobotTwin.UI
                 int height = Mathf.RoundToInt(evt.newRect.height);
                 if (width <= 0 || height <= 0) return;
 
+                ShowCircuit3DLoading("Loading 3D view...");
                 _circuit3DRenderer.Initialize(width, height);
                 if (_circuit3DRenderer.TargetTexture != null)
                 {
@@ -1613,6 +1631,86 @@ namespace RobotTwin.UI
                 }
                 RequestCircuit3DRebuild();
             });
+        }
+
+        private void ShowCircuit3DLoading(string message)
+        {
+            if (_circuit3DLoadingOverlay == null) return;
+            _circuit3DLoadingShownAt = Time.realtimeSinceStartup;
+            if (_circuit3DLoadingLabel != null && !string.IsNullOrWhiteSpace(message))
+            {
+                _circuit3DLoadingLabel.text = message;
+            }
+
+            UpdateCircuit3DLoadingBlurBackdrop();
+            _circuit3DLoadingOverlay.style.display = DisplayStyle.Flex;
+
+            if (_circuit3DLoadingSpinner != null && _circuit3DLoadingSpin == null)
+            {
+                _circuit3DLoadingSpin = _circuit3DLoadingSpinner.schedule.Execute(() =>
+                {
+                    if (_circuit3DLoadingSpinner == null) return;
+                    var angle = (Time.realtimeSinceStartup * 360f) % 360f;
+                    _circuit3DLoadingSpinner.style.rotate = new Rotate(new Angle(angle, AngleUnit.Degree));
+                }).Every(16);
+            }
+        }
+
+        private void BeginHideCircuit3DLoadingWhenReady()
+        {
+            if (_circuit3DLoadingOverlay == null || _circuit3DLoadingPoll != null) return;
+
+            _circuit3DLoadingPoll = _circuit3DLoadingOverlay.schedule.Execute(() =>
+            {
+                if (_circuit3DLoadingOverlay == null) return;
+                if (_circuit3DRenderer == null) return;
+
+                const float minSeconds = 0.25f;
+                if (Time.realtimeSinceStartup - _circuit3DLoadingShownAt < minSeconds) return;
+
+                bool ready = _circuit3DRenderer.TargetTexture != null && !_circuit3DRenderer.HasPendingRuntimeModelLoads;
+                if (!ready)
+                {
+                    if (_circuit3DLoadingOverlay.resolvedStyle.display == DisplayStyle.None)
+                    {
+                        ShowCircuit3DLoading("Loading models...");
+                    }
+                    else
+                    {
+                        UpdateCircuit3DLoadingBlurBackdrop();
+                    }
+                    return;
+                }
+
+                _circuit3DLoadingOverlay.style.display = DisplayStyle.None;
+            }).Every(60);
+        }
+
+        private void UpdateCircuit3DLoadingBlurBackdrop()
+        {
+            if (_circuit3DLoadingOverlay == null || _circuit3DRenderer == null) return;
+            var src = _circuit3DRenderer.TargetTexture;
+            if (src == null) return;
+
+            int w = Mathf.Max(16, src.width / 6);
+            int h = Mathf.Max(16, src.height / 6);
+            if (_circuit3DLoadingBlurTexture == null || _circuit3DLoadingBlurTexture.width != w || _circuit3DLoadingBlurTexture.height != h)
+            {
+                if (_circuit3DLoadingBlurTexture != null)
+                {
+                    _circuit3DLoadingBlurTexture.Release();
+                }
+                _circuit3DLoadingBlurTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
+                {
+                    name = "CircuitStudio3D_LoadingBlur",
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                _circuit3DLoadingBlurTexture.Create();
+            }
+
+            Graphics.Blit(src, _circuit3DLoadingBlurTexture);
+            _circuit3DLoadingOverlay.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DLoadingBlurTexture));
         }
 
         private void Initialize3DInput()
@@ -3830,6 +3928,9 @@ namespace RobotTwin.UI
         private void RebuildWires()
         {
             UpdateWireLayer();
+            // UI Toolkit layout/pin bounds can lag one frame behind style changes (e.g. auto-layout).
+            // Schedule a second pass so wiring uses the settled geometry.
+            RequestWireUpdateThrottled();
             LogNoStack(LogType.Log, "[Wiring] Wires rebuilt.");
         }
 
@@ -9141,6 +9242,7 @@ namespace RobotTwin.UI
                 .FirstOrDefault(l => l.text.Contains("ELECTRICAL"));
             if (headerLbl != null)
             {
+                const bool allowEditElectricalSpecs = false;
                 var container = headerLbl.parent;
                 // Clear existing rows except header
                 var rows = container.Query<VisualElement>(className: "prop-row").ToList();
@@ -9148,11 +9250,11 @@ namespace RobotTwin.UI
 
                 if (IsSwitchType(spec.Type))
                 {
-                    AddSwitchStateRow(container, spec);
+                    AddSwitchStateRow(container, spec, allowEditElectricalSpecs);
                 }
                 if (IsBoardType(spec))
                 {
-                    AddBoardProfileRow(container, spec);
+                    AddBoardProfileRow(container, spec, allowEditElectricalSpecs);
                 }
 
                 // Add dynamic specs
@@ -9169,6 +9271,10 @@ namespace RobotTwin.UI
                     var t = new TextField(kvp.Value);
                     t.AddToClassList("input-dark");
                     t.AddToClassList("input-right");
+                    if (!allowEditElectricalSpecs)
+                    {
+                        t.isReadOnly = true;
+                    }
                     row.Add(l);
                     row.Add(t);
                     container.Add(row);
@@ -9386,7 +9492,7 @@ namespace RobotTwin.UI
                    string.Equals(type, "Button", StringComparison.OrdinalIgnoreCase);
         }
 
-        private void AddSwitchStateRow(VisualElement container, ComponentSpec spec)
+        private void AddSwitchStateRow(VisualElement container, ComponentSpec spec, bool allowEdit)
         {
             if (container == null || spec == null) return;
             EnsureComponentProperties(spec);
@@ -9410,21 +9516,28 @@ namespace RobotTwin.UI
             }
             dropdown.SetValueWithoutNotify(state == "closed" ? "Closed" : "Open");
 
-            dropdown.RegisterValueChangedCallback(evt =>
+            if (allowEdit)
             {
-                if (_selectedComponent != spec) return;
-                string next = evt.newValue;
-                spec.Properties["state"] = string.Equals(next, "Closed", StringComparison.OrdinalIgnoreCase)
-                    ? "closed"
-                    : "open";
-            });
+                dropdown.RegisterValueChangedCallback(evt =>
+                {
+                    if (_selectedComponent != spec) return;
+                    string next = evt.newValue;
+                    spec.Properties["state"] = string.Equals(next, "Closed", StringComparison.OrdinalIgnoreCase)
+                        ? "closed"
+                        : "open";
+                });
+            }
+            else
+            {
+                dropdown.SetEnabled(false);
+            }
 
             row.Add(label);
             row.Add(dropdown);
             container.Add(row);
         }
 
-        private void AddBoardProfileRow(VisualElement container, ComponentSpec spec)
+        private void AddBoardProfileRow(VisualElement container, ComponentSpec spec, bool allowEdit)
         {
             if (container == null || spec == null) return;
             EnsureComponentProperties(spec);
@@ -9444,15 +9557,22 @@ namespace RobotTwin.UI
             dropdown.choices = profiles;
             dropdown.SetValueWithoutNotify(ResolveBoardProfileId(spec));
 
-            dropdown.RegisterValueChangedCallback(evt =>
+            if (allowEdit)
             {
-                if (_selectedComponent != spec) return;
-                string next = evt.newValue;
-                if (string.IsNullOrWhiteSpace(next)) return;
-                spec.Properties["boardProfile"] = BoardProfiles.Get(next).Id;
-                RefreshCodeTargets();
-                RefreshCanvas();
-            });
+                dropdown.RegisterValueChangedCallback(evt =>
+                {
+                    if (_selectedComponent != spec) return;
+                    string next = evt.newValue;
+                    if (string.IsNullOrWhiteSpace(next)) return;
+                    spec.Properties["boardProfile"] = BoardProfiles.Get(next).Id;
+                    RefreshCodeTargets();
+                    RefreshCanvas();
+                });
+            }
+            else
+            {
+                dropdown.SetEnabled(false);
+            }
 
             row.Add(label);
             row.Add(dropdown);
@@ -10028,6 +10148,32 @@ namespace RobotTwin.UI
         {
             if (_centerMode != CenterPanelMode.Preview3D) return;
             if (_circuit3DView == null || _circuit3DRenderer == null) return;
+
+            if (evt.altKey)
+            {
+                if (evt.button == 0)
+                {
+                    _3dDragMode = ThreeDDragMode.Orbit;
+                }
+                else if (evt.button == 1)
+                {
+                    _3dDragMode = ThreeDDragMode.Roll;
+                }
+                else
+                {
+                    return;
+                }
+
+                _is3DDragging = true;
+                _3dPointerId = evt.pointerId;
+                _3dLastPos = (Vector2)evt.position;
+                _circuit3DView.CapturePointer(evt.pointerId);
+                _is3DViewFocused = true;
+                _circuit3DView.Focus();
+                evt.StopPropagation();
+                return;
+            }
+
             if (evt.button == 0)
             {
                 _3dDragMode = ThreeDDragMode.Pan;
@@ -10064,6 +10210,10 @@ namespace RobotTwin.UI
             {
                 _circuit3DRenderer.Orbit(delta);
             }
+            else if (_3dDragMode == ThreeDDragMode.Roll)
+            {
+                _circuit3DRenderer.Roll(delta);
+            }
             evt.StopPropagation();
         }
 
@@ -10083,7 +10233,21 @@ namespace RobotTwin.UI
         private void On3DWheel(WheelEvent evt)
         {
             if (_centerMode != CenterPanelMode.Preview3D) return;
-            _circuit3DRenderer?.Zoom(evt.delta.y);
+            float wheel = evt.delta.y;
+            float zoomDelta;
+            if (Mathf.Abs(wheel) < 1.5f)
+            {
+                zoomDelta = Mathf.Sign(wheel) * 120f;
+            }
+            else if (Mathf.Abs(wheel) < 15f)
+            {
+                zoomDelta = wheel * 40f;
+            }
+            else
+            {
+                zoomDelta = wheel;
+            }
+            _circuit3DRenderer?.Zoom(zoomDelta);
             evt.StopPropagation();
         }
 
@@ -10111,6 +10275,29 @@ namespace RobotTwin.UI
         private bool Handle3DKeyInput(KeyDownEvent evt)
         {
             if (_circuit3DRenderer == null) return false;
+            if (evt.altKey)
+            {
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Top);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Bottom);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.LeftArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Left);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.RightArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Right);
+                    return true;
+                }
+            }
             if (evt.keyCode == KeyCode.R || evt.keyCode == KeyCode.Home)
             {
                 _circuit3DRenderer.ResetView();
@@ -11166,6 +11353,15 @@ namespace RobotTwin.UI
             public Color Color;
             public bool UseTexture;
             public string TextureFile;
+
+            // Optional physical material properties (used for mass/friction/etc).
+            public string PhysicalMaterial;
+            public float DensityKgPerM3;
+            public float MassKg;
+            public float VolumeM3;
+            public float Friction;
+            public float Elasticity;
+            public float Strength;
         }
 
         public struct StateOverride
@@ -11564,7 +11760,15 @@ namespace RobotTwin.UI
                     UseColor = entry.useColor,
                     Color = entry.color,
                     UseTexture = entry.useTexture,
-                    TextureFile = entry.textureFile ?? string.Empty
+                    TextureFile = entry.textureFile ?? string.Empty,
+
+                    PhysicalMaterial = entry.physicalMaterial ?? string.Empty,
+                    DensityKgPerM3 = entry.densityKgPerM3,
+                    MassKg = entry.massKg,
+                    VolumeM3 = entry.volumeM3,
+                    Friction = entry.friction,
+                    Elasticity = entry.elasticity,
+                    Strength = entry.strength
                 });
             }
             return list;
@@ -11672,6 +11876,15 @@ namespace RobotTwin.UI
             public Color color;
             public bool useTexture;
             public string textureFile;
+
+            // Optional physical material properties.
+            public string physicalMaterial;
+            public float densityKgPerM3;
+            public float massKg;
+            public float volumeM3;
+            public float friction;
+            public float elasticity;
+            public float strength;
         }
 
         [System.Serializable]

@@ -116,6 +116,7 @@ UNITY_EXPORT void Physics_DestroyWorld();
 UNITY_EXPORT void Physics_SetConfig(const PhysicsConfig_C *config);
 UNITY_EXPORT uint32_t Physics_AddBody(const RigidBody_C *body);
 UNITY_EXPORT int Physics_GetBody(uint32_t id, RigidBody_C *out);
+UNITY_EXPORT int Physics_SetBody(uint32_t id, const RigidBody_C *body);
 UNITY_EXPORT void Physics_Step(float dt);
 UNITY_EXPORT uint32_t Physics_AddVehicle(uint32_t body_id, int wheel_count,
                                          const float *wheel_positions,

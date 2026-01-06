@@ -27,16 +27,20 @@ Phase 1: Foundation
 - DONE (verified) 112 P1-10 Fix NativeEngine co-sim step ordering (remove one-step lag) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs comment on one-tick lag)
 - DONE (verified) 113 P1-11 Clarify Unity stepping contract (Native_Step vs Physics_Step) (Evidence: docs/ROBOTWIN_UNITY.md; RobotWin/Assets/Scripts/Core/NativeBridge.cs; RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs)
 - DONE (verified) 114 P1-12 Mark prototype/legacy interfaces (fixed-size SharedState) (Evidence: NativeEngine/src/NativeEngine_Core.cpp legacy shared state; RobotWin/Assets/Scripts/Core/Bridge_Interface.cs SharedState)
+- DONE (verified) 115 P1-13 Cross-layer golden trace harness (Evidence: CoreSim/tests/RobotTwin.CoreSim.Tests/GoldenTraceHarnessTests.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/golden_trace_v1.json; Recorder: tools/GoldenTraceRecorder/Program.cs + tools/scripts/record_golden_trace.ps1; Repro: `python tools/rt_tool.py record-golden-trace` writes fixture successfully)
+- DONE (verified) 184 P1-13b FirmwareEngine lockstep OutputState capture (Evidence: FirmwareEngine/main.cpp lockstep contract + SendOutputState; FirmwareEngine/PipeManager.cpp read loop does not time out/disconnect during idle; Repro: `python tools/rt_tool.py record-golden-trace`)
+- DONE (verified) 116 P1-14 .rtwin round-trip tests (Evidence: CoreSim/tests/RobotTwin.CoreSim.Tests/RtwinRoundTripTests.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/fixture_v1.rtwin.base64; CoreSim/tests/RobotTwin.CoreSim.Tests/RobotTwin.CoreSim.Tests.csproj)
+- DONE (verified) 117 P1-15 Protocol framing tests (magic/version/bounds) (Evidence: CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/ProtocolFramingTests.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/FirmwareProtocolTests.cs; FirmwareEngine/PipeManager.cpp)
 
 Phase 2: Realtime
 
-- 179 RT-15 Protocol version negotiation + feature flags (tolerate minor mismatches, surface capability flags)
+- DONE (verified) 179 RT-15 Protocol version negotiation + feature flags (Evidence: FirmwareEngine/Protocol.h; FirmwareEngine/PipeManager.cpp; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs; RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/FirmwareProtocolTests.cs)
 - DONE (verified) 178 RT-14 Realtime budget/fast-path counters in telemetry (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs budget stats; RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs realtime_stats; tools/debug_console/public/\*)
-- DONE (verified) 177 RT-13 Firmware host mode control (lockstep vs realtime) + UI toggle (Evidence: RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs firmware-mode; RobotWin/Assets/Scripts/Game/SessionManager.cs; RobotWin/Assets/Scripts/Game/SimHost.cs; tools/debug_console/public/\*)
+- DONE (verified) 177 RT-13 Firmware host mode control (lockstep vs realtime) + Debug Console UI toggle (Evidence: RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs firmware-mode; RobotWin/Assets/Scripts/Game/SessionManager.cs; RobotWin/Assets/Scripts/Game/SimHost.cs; tools/debug_console/public/\*)
 - DONE (verified) 176 RT-12 Telemetry surface for firmware host + realtime mode flags (Evidence: RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs firmware_host + realtime payload)
 - DONE (verified) 175 RT-11 Tick jitter/overrun counters + telemetry surface (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs timing stats; RobotWin/Assets/Scripts/Debug/RemoteCommandServer.cs; tools/debug_console/public/\*)
 - DONE (verified) 149 RT-09 Windows realtime hardening (priority/affinity/timers/no-alloc hot loops) (Evidence: CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardening.cs; CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardeningOptions.cs)
-- 146 RT-06 Multi-rate stepping with a master clock (next-event scheduling) (Partial implementation exists: RobotWin/Assets/Scripts/Game/SimHost.cs RealtimeScheduleConfig + RunRealtimeScheduler; GitHub issue remains open for true next-event scheduling/physics integration.)
+- DONE (verified) 146 RT-06 Multi-rate stepping with a master clock (next-event scheduling) (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs next-event scheduler + circuit-only events; RobotWin/Assets/Scripts/Game/RealtimeScheduleConfig.cs accumulator cap/epsilon; RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs external stepping)
 - DONE (verified) 148 RT-08 Timestamped protocol stream + backlog/drop policy (Evidence: FirmwareEngine/Protocol.h; FirmwareEngine/PipeManager.cpp; CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs; RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs)
 - DONE (verified) 141 RT-01 Define Realtime Contract (deadline-first) (Evidence: docs/REALTIME_CONTRACT.md)
 - DONE (verified) 142 RT-02 Deadline-aware scheduler + per-simulation budgets (Evidence: RobotWin/Assets/Scripts/Game/SimHost.cs realtime budgets + overruns)
@@ -48,11 +52,15 @@ Phase 2: Realtime
 
 Phase 3: High Fidelity
 
-- 161 HF-01 Thermal Simulation Subsystem
-- 163 HF-03 Temperature Dependent Component Models
-- 162 HF-02 Environmental Link (Wind and Ambient)
-- 164 HF-04 Component Tolerance and Aging
-- 165 HF-05 Electronic Noise Injection
+- DONE (verified) 161 HF-01 Thermal Simulation Subsystem (Evidence: CoreSim/src/RobotTwin.CoreSim/Models/Physics/ThermalModel.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/ThermalModelTests.cs; RobotWin/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs; NativeEngine/src/Physics/PhysicsWorld.cpp)
+- DONE (verified) 163 HF-03 Temperature Dependent Component Models (Evidence: RobotWin/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs diode forward temp coeff + resistor temp coeff; CoreSim/src/RobotTwin.CoreSim/Models/Physics/ThermalModel.cs)
+- DONE (verified) 162 HF-02 Environmental Link (Wind and Ambient) (Evidence: RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs ambient/wind config + accessors; RobotWin/Assets/Scripts/Game/SimHost.cs AmbientTempC sync; NativeEngine/src/Physics/PhysicsWorld.cpp)
+- DONE (verified) 164 HF-04 Component Tolerance and Aging (Evidence: CoreSim/src/RobotTwin.CoreSim/Models/Physics/ComponentVariation.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/ComponentVariationTests.cs; RobotWin/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs)
+- DONE (verified) 165 HF-05 Electronic Noise Injection (Evidence: CoreSim/src/RobotTwin.CoreSim/Models/Physics/DeterministicNoise.cs; CoreSim/tests/RobotTwin.CoreSim.Tests/DeterministicNoiseTests.cs; RobotWin/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs)
+- DONE (verified) 180 HF-06 Per-part physical material properties (mass/friction/elasticity/strength) (Evidence: RobotWin/Assets/Scripts/UI/RunMode/Circuit3DView.cs; RobotWin/Assets/Scripts/UI/RunMode/ComponentPhysicalInfo.cs; RobotWin/Assets/Scripts/UI/ComponentStudio/ComponentStudioController.cs; RobotWin/Assets/Scripts/UI/CircuitStudio/CircuitStudioController.cs; RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs; RobotWin/Assets/Scripts/Game/NativePhysicsBody.cs; RobotWin/Assets/Scripts/Core/NativeBridge.cs; NativeEngine/src/NativeEngine_Core.cpp)
+- DONE (verified) 181 HF-06b Sample component + regression validation for physical overrides (Evidence: tools/fixtures/hf06_sample.rtcomp; tools/scripts/validate_physical_overrides.py; tools/rt_tool.py)
+- DONE (verified) 182 HF-06c Per-part NativePhysicsBody mapping (no equal mass split) (Evidence: RobotWin/Assets/Scripts/UI/RunMode/Circuit3DView.cs; RobotWin/Assets/Scripts/Game/NativePhysicsBody.cs; RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs; RobotWin/Assets/Scripts/Core/NativeBridge.cs; NativeEngine/src/NativeEngine_Core.cpp)
+- DONE (verified) 183 HF-06d Volume source-of-truth for mass realism (Evidence: RobotWin/Assets/UI/ComponentStudio/ComponentStudio.uxml; RobotWin/Assets/Scripts/UI/ComponentStudio/ComponentStudioController.cs; RobotWin/Assets/Scripts/UI/CircuitStudio/CircuitStudioController.cs; docs/HIGH_FIDELITY_PLAN.md)
 
 Phase 4: Raspberry Pi
 
@@ -70,7 +78,7 @@ Phase 5: Polish & Optimization
 - 118 P2-16 NativeEngine sparse MNA solver + factor reuse
 - 119 P2-17 NativeEngine adaptive convergence + early exit
 - 120 P2-18 NativeEngine circuit islanding
-- 121 P2-19 FirmwareEngine SyncInputs allocation optimization
+- DONE (verified) 121 P2-19 FirmwareEngine SyncInputs allocation optimization (Evidence: FirmwareEngine/VirtualMcu.cpp; FirmwareEngine/VirtualMcu.h; logs/firmware/build.log)
 - 122 P2-20 FirmwareEngine batch serial output messages (realtime)
 - 123 P2-21 VirtualArduino PWM mapping for Uno + Mega
 - 124 P2-22 VirtualArduino external interrupt modes (edge/level)

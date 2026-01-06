@@ -74,14 +74,16 @@ namespace RobotTwin.CoreSim.IPC
     public sealed class FirmwareClient : IFirmwareClient
     {
         private const string DefaultPipeName = "RoboTwin.FirmwareEngine";
-        private const uint ProtocolMagic = 0x57465452; // "RTFW"
-        private const ushort ProtocolMajor = 1;
-        private const ushort ProtocolMinor = 1;
+        private const uint ProtocolMagic = FirmwareProtocol.ProtocolMagic;
+        private const ushort ProtocolMajor = FirmwareProtocol.ProtocolMajor;
+        private const ushort ProtocolMinor = FirmwareProtocol.ProtocolMinor;
         private const int PinCount = 70;
         private const int AnalogCount = 16;
         private const int BoardIdSize = 64;
         private const int BoardProfileSize = 64;
-        private const uint ClientFlags = 1; // Lockstep
+        private const uint ClientFlags = 1u << 8; // Lockstep mode hint
+        private const uint FeatureTimestampMicros = 1u << 0;
+        private const uint FeaturePerfCounters = 1u << 1;
 
         private enum MessageType : ushort
         {
@@ -114,6 +116,8 @@ namespace RobotTwin.CoreSim.IPC
         private uint _sequence = 1;
         private string _pipeName = DefaultPipeName;
         private readonly Dictionary<string, BoardState> _boardStates = new Dictionary<string, BoardState>(StringComparer.OrdinalIgnoreCase);
+        private uint _serverFlags;
+        private bool _versionWarned;
 
         public string PipeName => _pipeName;
         public string BoardId { get; set; } = "board";
@@ -264,6 +268,14 @@ namespace RobotTwin.CoreSim.IPC
         {
             if (type == MessageType.HelloAck)
             {
+                if (payload != null && payload.Length >= 16)
+                {
+                    _serverFlags = ReadUInt32(payload, 0);
+                    if ((_serverFlags & FeatureTimestampMicros) == 0)
+                    {
+                        DropStaleOutputs = false;
+                    }
+                }
                 return;
             }
             if (type == MessageType.OutputState)
@@ -365,7 +377,7 @@ namespace RobotTwin.CoreSim.IPC
         private bool SendHello()
         {
             var payload = new byte[16];
-            WriteUInt32(payload, 0, ClientFlags);
+            WriteUInt32(payload, 0, ClientFlags | FeatureTimestampMicros | FeaturePerfCounters);
             WriteUInt32(payload, 4, PinCount);
             WriteUInt32(payload, 8, BoardIdSize);
             WriteUInt32(payload, 12, AnalogCount);
@@ -438,12 +450,20 @@ namespace RobotTwin.CoreSim.IPC
             type = MessageType.Log;
             payload = Array.Empty<byte>();
             if (_pipeClient == null) return false;
-            var header = new byte[20];
+            var header = new byte[FirmwareProtocol.HeaderSize];
             if (!ReadExact(header, 0, header.Length)) return false;
-            uint magic = ReadUInt32(header, 0);
-            if (magic != ProtocolMagic) return false;
-            type = (MessageType)ReadUInt16(header, 8);
-            uint size = ReadUInt32(header, 12);
+            if (!FirmwareProtocol.TryParseHeader(header, out var parsed, out _))
+            {
+                return false;
+            }
+            ushort minor = parsed.VersionMinor;
+            if (minor > ProtocolMinor && !_versionWarned)
+            {
+                _versionWarned = true;
+                Console.WriteLine($"[FirmwareClient] Protocol minor {minor} > {ProtocolMinor}. Proceeding with best-effort parsing.");
+            }
+            type = (MessageType)parsed.Type;
+            uint size = parsed.PayloadSize;
             if (size > 0)
             {
                 payload = new byte[size];

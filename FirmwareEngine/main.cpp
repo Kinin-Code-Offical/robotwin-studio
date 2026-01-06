@@ -159,6 +159,7 @@ int main(int argc, char **argv)
     bool lockstep = true;
     const char *logPath = nullptr;
     bool selfTest = false;
+    bool traceLockstep = false;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -203,6 +204,20 @@ int main(int argc, char **argv)
         {
             selfTest = true;
             continue;
+        }
+        if (ParseArg(argv[i], "--trace-lockstep"))
+        {
+            traceLockstep = true;
+            continue;
+        }
+    }
+
+    if (!traceLockstep)
+    {
+        const char *env = std::getenv("RTFW_LOCKSTEP_TRACE");
+        if (env != nullptr && env[0] != '\0' && env[0] != '0')
+        {
+            traceLockstep = true;
         }
     }
 
@@ -370,6 +385,14 @@ int main(int argc, char **argv)
                     pipe.SendError(state.id, 121, "Step rejected for unsupported MCU profile.");
                     continue;
                 }
+
+                if (traceLockstep)
+                {
+                    Log("[Lockstep] Step rx board=%s seq=%llu dt_us=%u sent_us=%llu has_fw=%d", state.id.c_str(),
+                        static_cast<unsigned long long>(cmd.stepSequence), static_cast<unsigned int>(cmd.deltaMicros),
+                        static_cast<unsigned long long>(cmd.sentMicros), state.hasFirmware ? 1 : 0);
+                }
+
                 for (std::size_t i = 0; i < kPinCount; ++i)
                 {
                     state.mcu->SetInputPin(static_cast<int>(i), cmd.pins[i] != 0 ? 1 : 0);
@@ -382,20 +405,38 @@ int main(int argc, char **argv)
                     float voltage = static_cast<float>(cmd.analog[i]) * (5.0f / 1023.0f);
                     state.mcu->SetAnalogInput(static_cast<int>(i), voltage);
                 }
-                if (cmd.deltaMicros > 0)
+                // Lockstep contract: every Step must emit an OutputState.
+                // (Previously this was gated on deltaMicros>0, which can stall recorders/tests.)
+                // Note: avoid invoking MCU stepping paths when no time advances or when firmware isn't loaded.
+                if (cmd.deltaMicros > 0 && state.hasFirmware)
                 {
+                    state.mcu->SyncInputs();
                     double boardHz = state.profile.cpu_hz > 0.0 ? state.profile.cpu_hz : cpuHz;
                     double cyclesExact = (static_cast<double>(cmd.deltaMicros) * boardHz / 1e6) + state.remainder;
                     std::uint64_t cycles = static_cast<std::uint64_t>(cyclesExact);
                     state.remainder = cyclesExact - static_cast<double>(cycles);
-                    state.mcu->SyncInputs();
-                    state.mcu->StepCycles(cycles);
-                    UpdateOutputs(state);
-                    const auto &perf = state.mcu->GetPerfCounters();
-                    pipe.SendOutputState(state.id, cmd.stepSequence, state.mcu->TickCount(), state.lastOutputs, kPinCount,
-                                         perf.cycles, perf.adcSamples,
-                                         perf.uartTxBytes, perf.uartRxBytes,
-                                         perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
+                    if (cycles > 0)
+                    {
+                        state.mcu->StepCycles(cycles);
+                    }
+                }
+                UpdateOutputs(state);
+                const auto &perf = state.mcu->GetPerfCounters();
+                const auto tick = state.mcu->TickCount();
+                const bool sent = pipe.SendOutputState(state.id, cmd.stepSequence, tick, state.lastOutputs, kPinCount,
+                                                       perf.cycles, perf.adcSamples,
+                                                       perf.uartTxBytes, perf.uartRxBytes,
+                                                       perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
+
+                if (traceLockstep)
+                {
+                    Log("[Lockstep] OutputState tx board=%s seq=%llu tick=%llu ok=%d connected=%d", state.id.c_str(),
+                        static_cast<unsigned long long>(cmd.stepSequence),
+                        static_cast<unsigned long long>(tick), sent ? 1 : 0, pipe.IsConnected() ? 1 : 0);
+                    if (!sent)
+                    {
+                        Log("[Lockstep] OutputState write error=%lu", static_cast<unsigned long>(pipe.LastWriteError()));
+                    }
                 }
                 continue;
             }

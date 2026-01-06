@@ -10,6 +10,32 @@ Validates the deterministic logic of the orchestration layer.
 dotnet test CoreSim/tests/RobotTwin.CoreSim.Tests/RobotTwin.CoreSim.Tests.csproj
 ```
 
+### .rtwin Format Compatibility
+
+- The `.rtwin` container starts with magic `RTWN` and a `formatVersion` (currently v1).
+- **Backward compatibility expectation:** CoreSim should continue to load older `.rtwin` versions where feasible; if a breaking change is unavoidable, bump the format version and keep a clear migration story (or explicit rejection with a readable error).
+- Tests in `CoreSim/tests/RobotTwin.CoreSim.Tests` cover save/load/extract round-trip and loading a fixed v1 fixture.
+
+### Golden Trace Harness
+
+- Fixtures live under `CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures`.
+- `GoldenTraceHarnessTests` replays a deterministic trace and compares expected outputs.
+- To re-record the fixture from the FirmwareEngine lockstep backend, use:
+
+```powershell
+python tools/rt_tool.py record-golden-trace
+```
+
+- The recorder uses `tools/fixtures/firmware_minimal.bvm` by default.
+
+### HF-06 Physical Overrides Validation
+
+- Validates the sample `.rtcomp` package and its physical override fields.
+
+```powershell
+python tools/rt_tool.py validate-physical-overrides
+```
+
 ## 2. Physics Regression Suite (NativeEngine)
 
 Ensures that physics behavior remains deterministic across commits.

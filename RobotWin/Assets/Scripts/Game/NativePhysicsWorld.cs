@@ -33,9 +33,13 @@ namespace RobotTwin.Game
         private readonly Dictionary<uint, NativePhysicsBody> _bodyById = new Dictionary<uint, NativePhysicsBody>();
         private readonly Dictionary<NativePhysicsBody, uint> _idByBody = new Dictionary<NativePhysicsBody, uint>();
         private bool _running;
+        private bool _externalStepping;
 
         public bool IsRunning => _running;
         public int BodyCount => _bodyById.Count;
+        public bool ExternalStepping => _externalStepping;
+        public float AmbientTempC => _ambientTempC;
+        public Vector3 Wind => _wind;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -85,6 +89,18 @@ namespace RobotTwin.Game
             _running = false;
             _bodyById.Clear();
             _idByBody.Clear();
+        }
+
+        public void SetExternalStepping(bool enabled)
+        {
+            _externalStepping = enabled;
+        }
+
+        public void StepExternal(float dtSeconds)
+        {
+            if (!_running) return;
+            if (dtSeconds <= 0f) return;
+            StepInternal(dtSeconds);
         }
 
         public void ApplyConfig()
@@ -172,6 +188,52 @@ namespace RobotTwin.Game
             _bodyById[id] = body;
         }
 
+        public void UpdateBody(NativePhysicsBody body)
+        {
+            if (body == null) return;
+            if (!_running) return;
+            if (!_idByBody.TryGetValue(body, out var id) || id == 0) return;
+
+            var t = body.transform;
+            var rb = new NativeBridge.RigidBody
+            {
+                id = id,
+                mass = body.Mass,
+                pos_x = t.position.x,
+                pos_y = t.position.y,
+                pos_z = t.position.z,
+                vel_x = body.Velocity.x,
+                vel_y = body.Velocity.y,
+                vel_z = body.Velocity.z,
+                rot_w = t.rotation.w,
+                rot_x = t.rotation.x,
+                rot_y = t.rotation.y,
+                rot_z = t.rotation.z,
+                ang_x = body.AngularVelocity.x,
+                ang_y = body.AngularVelocity.y,
+                ang_z = body.AngularVelocity.z,
+                linear_damping = body.LinearDamping,
+                angular_damping = body.AngularDamping,
+                drag_coefficient = body.DragCoefficient,
+                cross_section_area = body.CrossSectionArea,
+                surface_area = body.SurfaceArea,
+                temperature_c = body.TemperatureC > 0f ? body.TemperatureC : _ambientTempC,
+                material_strength = body.MaterialStrength,
+                fracture_toughness = body.FractureToughness,
+                shape_type = (int)body.Shape,
+                radius = body.Radius,
+                half_x = body.HalfExtents.x,
+                half_y = body.HalfExtents.y,
+                half_z = body.HalfExtents.z,
+                friction = body.Friction,
+                restitution = body.Restitution,
+                damage = body.Damage,
+                is_broken = body.IsBroken ? 1 : 0,
+                is_static = body.IsStatic ? 1 : 0
+            };
+            NativeBridge.Physics_SetBody(id, ref rb);
+        }
+
         public void UnregisterBody(NativePhysicsBody body)
         {
             if (body == null) return;
@@ -182,9 +244,13 @@ namespace RobotTwin.Game
 
         private void FixedUpdate()
         {
-            if (!_running) return;
-            NativeBridge.Physics_Step(Time.fixedDeltaTime);
+            if (!_running || _externalStepping) return;
+            StepInternal(Time.fixedDeltaTime);
+        }
 
+        private void StepInternal(float dtSeconds)
+        {
+            NativeBridge.Physics_Step(dtSeconds);
             foreach (var kvp in _bodyById)
             {
                 var id = kvp.Key;

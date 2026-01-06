@@ -10,12 +10,111 @@
   <body>
     <header class="hero">
       <div class="hero-inner">
-        <h1>RobotWin Debug Console</h1>
-        <p>Run tests, inspect logs, and capture system output from one local dashboard.</p>
+        <div class="hero-title">
+          <div>
+            <h1>RobotWin Debug Console</h1>
+            <p>Unified observability for sim, firmware, physics, and toolchain.</p>
+          </div>
+          <div class="hero-actions">
+            <button id="downloadSnapshot" class="ghost">Download Snapshot</button>
+          </div>
+        </div>
+        <div class="hero-toolbar">
+          <div class="toolbar-group">
+            <span class="muted">Auto Refresh</span>
+            <label class="switch">
+              <input id="autoRefreshToggle" type="checkbox" checked />
+              <span class="slider"></span>
+            </label>
+            <label class="toolbar-field">
+              Interval (sec)
+              <input id="refreshInterval" type="number" min="2" max="30" value="4" />
+            </label>
+          </div>
+          <div class="toolbar-group">
+            <span class="muted">Log Scan</span>
+            <label class="toolbar-field">
+              Tail lines
+              <input id="logScanTail" type="number" min="50" max="2000" value="400" />
+            </label>
+            <button id="refreshAlerts">Refresh Alerts</button>
+          </div>
+          <div class="toolbar-group status-inline">
+            <span class="muted">Last Update</span>
+            <strong id="lastUpdate">--</strong>
+            <span class="muted">Unity</span>
+            <strong id="unityLatency">N/A</strong>
+          </div>
+        </div>
       </div>
     </header>
 
     <main class="layout">
+      <section class="panel">
+        <h2>System Overview</h2>
+        <div class="status-grid">
+          <div class="status-card">
+            <span>Server Time</span>
+            <strong id="systemTime">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Platform</span>
+            <strong id="systemPlatform">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Python</span>
+            <strong id="systemPython">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Repo</span>
+            <strong id="systemRepo">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Logs Size</span>
+            <strong id="systemLogsSize">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Builds Size</span>
+            <strong id="systemBuildsSize">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Unity Base URL</span>
+            <strong id="systemUnityUrl">N/A</strong>
+          </div>
+          <div class="status-card">
+            <span>Console Uptime</span>
+            <strong id="systemUptime">N/A</strong>
+          </div>
+        </div>
+        <div class="telemetry-controls">
+          <label>
+            Notes
+            <input id="systemNotes" type="text" placeholder="Session notes (local only)" />
+          </label>
+          <button id="saveNotes">Save</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Alerts & Event Feed</h2>
+        <div class="telemetry-controls">
+          <label>
+            Filter
+            <input id="alertFilter" type="text" placeholder="error, warning, subsystem" />
+          </label>
+          <button id="clearAlerts" class="ghost">Clear Feed</button>
+        </div>
+        <div class="alert-list">
+          <ul id="alertList"></ul>
+        </div>
+        <div class="output">
+          <div class="output-header">
+            <span>Alert Detail</span>
+          </div>
+          <pre id="alertDetail">Select an alert to view context.</pre>
+        </div>
+      </section>
+
       <section class="panel">
         <h2>Simulation Status</h2>
         <div class="status-grid">
@@ -97,6 +196,10 @@
         <h3 class="subheading">Firmware Perf</h3>
         <div class="telemetry-list">
           <ul id="firmwarePerfList"></ul>
+        </div>
+        <h3 class="subheading">Hotspots</h3>
+        <div class="telemetry-list">
+          <ul id="hotspotList"></ul>
         </div>
       </section>
 
@@ -190,6 +293,16 @@
       <section class="panel">
         <h2>Test Runner</h2>
         <div id="testList" class="test-grid"></div>
+        <div class="telemetry-controls">
+          <label>
+            History
+            <input id="testHistoryFilter" type="text" placeholder="filter history" />
+          </label>
+          <button id="clearHistory" class="ghost">Clear History</button>
+        </div>
+        <div class="test-history">
+          <ul id="testHistory"></ul>
+        </div>
         <div class="output">
           <div class="output-header">
             <span>Latest Output</span>
@@ -215,6 +328,10 @@
           <label>
             Tail lines
             <input id="logTail" type="number" min="50" max="2000" value="400" />
+          </label>
+          <label>
+            Search
+            <input id="logSearch" type="text" placeholder="text / error / warn" />
           </label>
           <button id="refreshLogs">Refresh</button>
         </div>

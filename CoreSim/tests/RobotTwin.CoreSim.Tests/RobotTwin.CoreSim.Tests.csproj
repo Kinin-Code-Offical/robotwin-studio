@@ -22,4 +22,16 @@
     <ProjectReference Include="..\..\src\RobotTwin.CoreSim\RobotTwin.CoreSim.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Fixtures\*.base64">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Fixtures\*.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

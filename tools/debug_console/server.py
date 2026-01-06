@@ -1,5 +1,7 @@
 import argparse
 import json
+import os
+import platform
 import subprocess
 import sys
 import time
@@ -13,6 +15,7 @@ from urllib.parse import parse_qs, urlparse
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = REPO_ROOT / "tools" / "debug_console" / "public"
 LOG_DIR = REPO_ROOT / "logs" / "debug_console"
+START_TIME = time.time()
 
 LOG_AREAS = {
     "debug_console": LOG_DIR,
@@ -112,7 +115,52 @@ TESTS = [
         "description": "Run Node/Jest integration tests.",
         "command": [sys.executable, "tools/rt_tool.py", "run-qa"],
     },
+    {
+        "name": "validate-physical-overrides",
+        "label": "HF-06 Physical Overrides Validation",
+        "description": "Validate HF-06 sample component package.",
+        "command": [sys.executable, "tools/rt_tool.py", "validate-physical-overrides"],
+    },
 ]
+
+
+def format_bytes(value: int) -> str:
+    size = float(value)
+    for suffix in ("B", "KB", "MB", "GB"):
+        if size < 1024.0:
+            return f"{size:.1f} {suffix}"
+        size /= 1024.0
+    return f"{size:.1f} TB"
+
+
+def dir_size(path: Path) -> int:
+    if not path.exists():
+        return 0
+    total = 0
+    for root, _, files in os.walk(path):
+        for name in files:
+            try:
+                total += (Path(root) / name).stat().st_size
+            except OSError:
+                continue
+    return total
+
+
+def get_system_info() -> dict:
+    uptime = time.time() - START_TIME
+    unity_url = find_unity_base_url()
+    logs_size = dir_size(REPO_ROOT / "logs")
+    builds_size = dir_size(REPO_ROOT / "builds")
+    return {
+        "server_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+        "repo": str(REPO_ROOT),
+        "logs_size": format_bytes(logs_size),
+        "builds_size": format_bytes(builds_size),
+        "unity_base_url": unity_url or "",
+        "uptime": f"{uptime:.0f}s",
+    }
 
 
 def list_logs(area: str) -> list[dict]:
@@ -146,6 +194,42 @@ def read_log(area: str, name: str, tail: int | None) -> str:
         return content
     lines = content.splitlines()
     return "\n".join(lines[-tail:])
+
+
+def classify_line(line: str) -> str | None:
+    lowered = line.lower()
+    if "error" in lowered or "exception" in lowered or "fatal" in lowered or "fail" in lowered:
+        return "error"
+    if "warn" in lowered:
+        return "warning"
+    if "info" in lowered:
+        return "info"
+    return None
+
+
+def scan_logs(tail: int) -> list[dict]:
+    alerts: list[dict] = []
+    for area, base in LOG_AREAS.items():
+        if not base.exists():
+            continue
+        for path in sorted(base.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]:
+            content = read_log(area, path.name, tail)
+            if not content:
+                continue
+            for line in content.splitlines():
+                level = classify_line(line)
+                if not level:
+                    continue
+                alerts.append(
+                    {
+                        "area": area,
+                        "log": path.name,
+                        "level": level,
+                        "message": line.strip(),
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime)),
+                    }
+                )
+    return alerts[:200]
 
 
 def get_com_ports() -> list[dict]:
@@ -250,6 +334,9 @@ class DebugHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/tests":
             self.send_json({"tests": TESTS})
             return
+        if parsed.path == "/api/system-info":
+            self.send_json(get_system_info())
+            return
         if parsed.path == "/api/com-ports":
             self.send_json({"ports": get_com_ports()})
             return
@@ -300,6 +387,15 @@ class DebugHandler(SimpleHTTPRequestHandler):
             query = parse_qs(parsed.query)
             area = query.get("area", ["debug_console"])[0]
             self.send_json({"area": area, "logs": list_logs(area)})
+            return
+        if parsed.path == "/api/log-scan":
+            query = parse_qs(parsed.query)
+            tail_raw = query.get("tail", ["400"])[0]
+            try:
+                tail = int(tail_raw)
+            except ValueError:
+                tail = 400
+            self.send_json({"alerts": scan_logs(tail)})
             return
         if parsed.path == "/api/log":
             query = parse_qs(parsed.query)

@@ -119,6 +119,9 @@ namespace firmware
         BoardProfile _profile;
         int _pinCount = 0;
         std::vector<int> _pinInputs;
+        std::vector<std::uint8_t> _pinValueScratch;
+        std::vector<std::uint8_t> _pinValueTouchedFlags;
+        std::vector<std::uint16_t> _pinValueTouched;
         std::vector<float> _analogInputs;
         double _timer0Remainder = 0.0;
         double _timer1Remainder = 0.0;

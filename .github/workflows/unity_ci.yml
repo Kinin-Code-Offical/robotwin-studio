@@ -7,6 +7,9 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   probe:
     name: Probe Unity Environment
@@ -57,13 +60,15 @@ jobs:
   dotnet-tests:
     name: CoreSim .NET Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: "9.0.x"
 
       - name: Run CoreSim Tests
         run: dotnet test CoreSim
@@ -73,6 +78,9 @@ jobs:
     needs: probe
     if: needs.probe.outputs.run_unity == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:

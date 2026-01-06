@@ -96,8 +96,11 @@ namespace RobotTwin.UI
         private VisualElement _helpIcon;
         private VisualElement _helpTooltip;
         private VisualElement _loadingOverlay;
+        private VisualElement _loadingSpinner;
         private Label _loadingLabel;
         private Button _loadingCancelBtn;
+        private IVisualElementScheduledItem _loadingSpin;
+        private RenderTexture _loadingBlurTexture;
         private Button _viewportResetBtn;
         private Button _viewportFrameBtn;
         private Button _viewportAnchorsBtn;
@@ -243,6 +246,14 @@ namespace RobotTwin.UI
         private TextField _materialColorBField;
         private TextField _materialColorAField;
         private Toggle _materialUseColorToggle;
+        private TextField _materialPhysicalMaterialField;
+        private TextField _materialDensityField;
+        private TextField _materialVolumeField;
+        private TextField _materialMassField;
+        private TextField _materialFrictionField;
+        private TextField _materialElasticityField;
+        private TextField _materialStrengthField;
+        private Label _materialComputedMassLabel;
         private Button _materialApplyBtn;
         private Button _materialClearBtn;
         private Button _materialCloseBtn;
@@ -427,6 +438,7 @@ namespace RobotTwin.UI
             _helpIcon = _root.Q<VisualElement>("StudioHelpIcon");
             _helpTooltip = _root.Q<VisualElement>("StudioHelpTooltip");
             _loadingOverlay = _root.Q<VisualElement>("StudioLoadingOverlay");
+            _loadingSpinner = _root.Q<VisualElement>("StudioLoadingSpinner");
             _loadingLabel = _root.Q<Label>("StudioLoadingLabel");
             _loadingCancelBtn = _root.Q<Button>("StudioLoadingCancelBtn");
             _viewportResetBtn = _root.Q<Button>("ViewportResetBtn");
@@ -537,6 +549,14 @@ namespace RobotTwin.UI
             _materialColorBField = _root.Q<TextField>("MaterialColorBField");
             _materialColorAField = _root.Q<TextField>("MaterialColorAField");
             _materialUseColorToggle = _root.Q<Toggle>("MaterialUseColorToggle");
+            _materialPhysicalMaterialField = _root.Q<TextField>("MaterialPhysicalMaterialField");
+            _materialDensityField = _root.Q<TextField>("MaterialDensityField");
+            _materialVolumeField = _root.Q<TextField>("MaterialVolumeField");
+            _materialMassField = _root.Q<TextField>("MaterialMassField");
+            _materialFrictionField = _root.Q<TextField>("MaterialFrictionField");
+            _materialElasticityField = _root.Q<TextField>("MaterialElasticityField");
+            _materialStrengthField = _root.Q<TextField>("MaterialStrengthField");
+            _materialComputedMassLabel = _root.Q<Label>("MaterialComputedMassLabel");
             _materialApplyBtn = _root.Q<Button>("MaterialApplyBtn");
             _materialClearBtn = _root.Q<Button>("MaterialClearBtn");
             _materialCloseBtn = _root.Q<Button>("MaterialCloseBtn");
@@ -1582,6 +1602,14 @@ namespace RobotTwin.UI
                 if (_materialColorBField != null) _materialColorBField.SetValueWithoutNotify(FormatFloat(overrideData.Color.b));
                 if (_materialColorAField != null) _materialColorAField.SetValueWithoutNotify(FormatFloat(overrideData.Color.a));
                 if (_materialUseColorToggle != null) _materialUseColorToggle.SetValueWithoutNotify(overrideData.UseColor);
+
+                if (_materialPhysicalMaterialField != null) _materialPhysicalMaterialField.SetValueWithoutNotify(overrideData.PhysicalMaterialId ?? string.Empty);
+                if (_materialDensityField != null) _materialDensityField.SetValueWithoutNotify(FormatFloat(overrideData.DensityKgPerM3));
+                if (_materialVolumeField != null) _materialVolumeField.SetValueWithoutNotify(FormatFloat(overrideData.VolumeM3));
+                if (_materialMassField != null) _materialMassField.SetValueWithoutNotify(FormatFloat(overrideData.MassKg));
+                if (_materialFrictionField != null) _materialFrictionField.SetValueWithoutNotify(FormatFloat(overrideData.Friction));
+                if (_materialElasticityField != null) _materialElasticityField.SetValueWithoutNotify(FormatFloat(overrideData.Elasticity));
+                if (_materialStrengthField != null) _materialStrengthField.SetValueWithoutNotify(FormatFloat(overrideData.Strength));
             }
             else
             {
@@ -1592,7 +1620,57 @@ namespace RobotTwin.UI
                 if (_materialColorBField != null) _materialColorBField.SetValueWithoutNotify(string.Empty);
                 if (_materialColorAField != null) _materialColorAField.SetValueWithoutNotify(string.Empty);
                 if (_materialUseColorToggle != null) _materialUseColorToggle.SetValueWithoutNotify(false);
+
+                if (_materialPhysicalMaterialField != null) _materialPhysicalMaterialField.SetValueWithoutNotify(string.Empty);
+                if (_materialDensityField != null) _materialDensityField.SetValueWithoutNotify(string.Empty);
+                if (_materialVolumeField != null) _materialVolumeField.SetValueWithoutNotify(string.Empty);
+                if (_materialMassField != null) _materialMassField.SetValueWithoutNotify(string.Empty);
+                if (_materialFrictionField != null) _materialFrictionField.SetValueWithoutNotify(string.Empty);
+                if (_materialElasticityField != null) _materialElasticityField.SetValueWithoutNotify(string.Empty);
+                if (_materialStrengthField != null) _materialStrengthField.SetValueWithoutNotify(string.Empty);
             }
+
+            UpdateMaterialComputedMassLabel(overrideData);
+        }
+
+        private void UpdateMaterialComputedMassLabel(PartOverride overrideData)
+        {
+            if (_materialComputedMassLabel == null) return;
+            if (overrideData == null || string.IsNullOrWhiteSpace(_selectedPartName))
+            {
+                _materialComputedMassLabel.text = "Estimated Mass: (unset)";
+                return;
+            }
+
+            float mass = 0f;
+            bool hasMass = false;
+
+            if (overrideData.MassKg > 0f)
+            {
+                mass = overrideData.MassKg;
+                hasMass = true;
+            }
+            else if (overrideData.VolumeM3 > 0f && overrideData.DensityKgPerM3 > 0f)
+            {
+                mass = overrideData.DensityKgPerM3 * overrideData.VolumeM3;
+                hasMass = true;
+            }
+            else if (overrideData.DensityKgPerM3 > 0f && TryGetPartTransform(_selectedPartName, out var part) && part != null)
+            {
+                var renderer = part.GetComponentInChildren<Renderer>(true);
+                if (renderer != null)
+                {
+                    var size = renderer.bounds.size;
+                    float volume = Mathf.Abs(size.x * size.y * size.z);
+                    if (volume > 0f)
+                    {
+                        mass = overrideData.DensityKgPerM3 * volume;
+                        hasMass = true;
+                    }
+                }
+            }
+
+            _materialComputedMassLabel.text = hasMass ? $"Estimated Mass: {mass:0.###} kg" : "Estimated Mass: (unset)";
         }
 
         private void BrowseForTexture()
@@ -1672,7 +1750,16 @@ namespace RobotTwin.UI
                 AddLog(LogLevel.Warning, "Texture path is empty.", "material");
             }
 
+            overrideData.PhysicalMaterialId = _materialPhysicalMaterialField?.value?.Trim() ?? string.Empty;
+            overrideData.DensityKgPerM3 = ReadFloat(_materialDensityField, 0f);
+            overrideData.VolumeM3 = ReadFloat(_materialVolumeField, 0f);
+            overrideData.MassKg = ReadFloat(_materialMassField, 0f);
+            overrideData.Friction = ReadFloat(_materialFrictionField, 0f);
+            overrideData.Elasticity = ReadFloat(_materialElasticityField, 0f);
+            overrideData.Strength = ReadFloat(_materialStrengthField, 0f);
+
             ApplySelectedPartOverride();
+            UpdateMaterialComputedMassLabel(overrideData);
             QueueValidation();
         }
 
@@ -1683,9 +1770,27 @@ namespace RobotTwin.UI
             var overrideData = GetOrCreateActivePartOverride(part);
             overrideData.TextureEntry = string.Empty;
             overrideData.UseTexture = false;
+
+            overrideData.PhysicalMaterialId = string.Empty;
+            overrideData.DensityKgPerM3 = 0f;
+            overrideData.MassKg = 0f;
+            overrideData.VolumeM3 = 0f;
+            overrideData.Friction = 0f;
+            overrideData.Elasticity = 0f;
+            overrideData.Strength = 0f;
+
             ApplyPartMaterial(part, overrideData, null);
             if (_materialTextureField != null) _materialTextureField.SetValueWithoutNotify(string.Empty);
             if (_materialUseTextureToggle != null) _materialUseTextureToggle.SetValueWithoutNotify(false);
+
+            if (_materialPhysicalMaterialField != null) _materialPhysicalMaterialField.SetValueWithoutNotify(string.Empty);
+            if (_materialDensityField != null) _materialDensityField.SetValueWithoutNotify(string.Empty);
+            if (_materialVolumeField != null) _materialVolumeField.SetValueWithoutNotify(string.Empty);
+            if (_materialMassField != null) _materialMassField.SetValueWithoutNotify(string.Empty);
+            if (_materialFrictionField != null) _materialFrictionField.SetValueWithoutNotify(string.Empty);
+            if (_materialElasticityField != null) _materialElasticityField.SetValueWithoutNotify(string.Empty);
+            if (_materialStrengthField != null) _materialStrengthField.SetValueWithoutNotify(string.Empty);
+            UpdateMaterialComputedMassLabel(overrideData);
             QueueValidation();
         }
 
@@ -2214,6 +2319,34 @@ namespace RobotTwin.UI
         private bool Handle3DKeyInput(KeyDownEvent evt)
         {
             if (_studioView == null) return false;
+
+            if (evt.altKey)
+            {
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    _studioView.SnapView(ComponentStudioView.ViewPreset.Top);
+                    _studioView.FrameModel();
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    _studioView.SnapView(ComponentStudioView.ViewPreset.Bottom);
+                    _studioView.FrameModel();
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.LeftArrow)
+                {
+                    _studioView.SnapView(ComponentStudioView.ViewPreset.Left);
+                    _studioView.FrameModel();
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.RightArrow)
+                {
+                    _studioView.SnapView(ComponentStudioView.ViewPreset.Right);
+                    _studioView.FrameModel();
+                    return true;
+                }
+            }
             if (evt.keyCode == KeyCode.Alpha1)
             {
                 SetViewportEditMode(ViewportEditMode.Move);
@@ -5627,7 +5760,22 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
-            _studioView.Zoom(evt.delta.y * 0.04f);
+
+            float wheel = evt.delta.y;
+            float zoomDelta;
+            if (Mathf.Abs(wheel) < 1.5f)
+            {
+                zoomDelta = Mathf.Sign(wheel) * CameraKeyZoomDelta;
+            }
+            else if (Mathf.Abs(wheel) < 15f)
+            {
+                zoomDelta = wheel * 40f;
+            }
+            else
+            {
+                zoomDelta = wheel;
+            }
+            _studioView.Zoom(zoomDelta * CameraKeyZoomScale);
             evt.StopPropagation();
         }
 
@@ -7313,7 +7461,18 @@ namespace RobotTwin.UI
             }
             if (_loadingOverlay != null)
             {
+                UpdateLoadingBlurBackdrop();
                 _loadingOverlay.style.display = DisplayStyle.Flex;
+            }
+
+            if (_loadingSpinner != null && _loadingSpin == null)
+            {
+                _loadingSpin = _loadingSpinner.schedule.Execute(() =>
+                {
+                    if (_loadingSpinner == null) return;
+                    var angle = (Time.realtimeSinceStartup * 360f) % 360f;
+                    _loadingSpinner.style.rotate = new Rotate(new Angle(angle, AngleUnit.Degree));
+                }).Every(16);
             }
         }
 
@@ -7323,6 +7482,33 @@ namespace RobotTwin.UI
             {
                 _loadingOverlay.style.display = DisplayStyle.None;
             }
+        }
+
+        private void UpdateLoadingBlurBackdrop()
+        {
+            if (_loadingOverlay == null || _studioView == null) return;
+            var src = _studioView.TargetTexture;
+            if (src == null) return;
+
+            int w = Mathf.Max(16, src.width / 6);
+            int h = Mathf.Max(16, src.height / 6);
+            if (_loadingBlurTexture == null || _loadingBlurTexture.width != w || _loadingBlurTexture.height != h)
+            {
+                if (_loadingBlurTexture != null)
+                {
+                    _loadingBlurTexture.Release();
+                }
+                _loadingBlurTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
+                {
+                    name = "ComponentStudio_LoadingBlur",
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                _loadingBlurTexture.Create();
+            }
+
+            Graphics.Blit(src, _loadingBlurTexture);
+            _loadingOverlay.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_loadingBlurTexture));
         }
 
         private void CancelModelLoad(bool hideOverlay)
@@ -7880,6 +8066,15 @@ namespace RobotTwin.UI
             public bool useColor;
             public string textureFile;
             public bool useTexture;
+
+            // Physical (optional)
+            public string physicalMaterial;
+            public float densityKgPerM3;
+            public float massKg;
+            public float volumeM3;
+            public float friction;
+            public float elasticity;
+            public float strength;
         }
 
         [Serializable]
@@ -7937,6 +8132,14 @@ namespace RobotTwin.UI
             public string TextureEntry;
             public bool UseTexture;
 
+            public string PhysicalMaterialId;
+            public float DensityKgPerM3;
+            public float MassKg;
+            public float VolumeM3;
+            public float Friction;
+            public float Elasticity;
+            public float Strength;
+
             public PartOverride(Transform part)
             {
                 Name = part.name;
@@ -7945,6 +8148,14 @@ namespace RobotTwin.UI
                 Scale = part.localScale;
                 TextureEntry = string.Empty;
                 UseTexture = false;
+
+                PhysicalMaterialId = string.Empty;
+                DensityKgPerM3 = 0f;
+                MassKg = 0f;
+                VolumeM3 = 0f;
+                Friction = 0f;
+                Elasticity = 0f;
+                Strength = 0f;
             }
 
             public PartOverride(PartOverridePayload payload)
@@ -7957,6 +8168,14 @@ namespace RobotTwin.UI
                 UseColor = payload.useColor;
                 TextureEntry = payload.textureFile ?? string.Empty;
                 UseTexture = payload.useTexture;
+
+                PhysicalMaterialId = payload.physicalMaterial ?? string.Empty;
+                DensityKgPerM3 = payload.densityKgPerM3;
+                MassKg = payload.massKg;
+                VolumeM3 = payload.volumeM3;
+                Friction = payload.friction;
+                Elasticity = payload.elasticity;
+                Strength = payload.strength;
             }
 
             public PartOverridePayload ToPayload()
@@ -7970,7 +8189,15 @@ namespace RobotTwin.UI
                     color = Color,
                     useColor = UseColor,
                     textureFile = TextureEntry,
-                    useTexture = UseTexture
+                    useTexture = UseTexture,
+
+                    physicalMaterial = PhysicalMaterialId,
+                    densityKgPerM3 = DensityKgPerM3,
+                    massKg = MassKg,
+                    volumeM3 = VolumeM3,
+                    friction = Friction,
+                    elasticity = Elasticity,
+                    strength = Strength
                 };
             }
         }

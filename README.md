@@ -34,3 +34,26 @@ Note: The docs are written with the “target end-state product” in mind; part
 - [Native Engine](docs/NATIVE_ENGINE.md)
 - [Firmware Engine](docs/FIRMWARE_ENGINE.md)
 - [Windows Setup](docs/SETUP_WINDOWS.md)
+
+<!-- BEGIN FOLDER_TREE -->
+## Project Tree
+
+```text
+.
+|-- .gitignore
+|-- CODE_OF_CONDUCT.md
+|-- CONTRIBUTING.md
+|-- CoreSim
+|-- docs
+|-- FirmwareEngine
+|-- global.json
+|-- LICENSE
+|-- NativeEngine
+|-- README.md
+|-- RobotWin
+|-- SECURITY.md
+|-- tests
+-- tools
+```
+<!-- END FOLDER_TREE -->
+

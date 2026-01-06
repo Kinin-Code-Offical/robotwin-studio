@@ -90,7 +90,10 @@ namespace RobotTwin.CoreSim
         private const int AnalogCount = 16;
         private const int BoardIdSize = 64;
         private const int BoardProfileSize = 64;
-        private const uint ClientFlags = 1; // Lockstep
+        private const uint ClientFlags = 1u << 8; // Lockstep mode hint
+        private const uint FeatureTimestampMicros = 1u << 0;
+        private const uint FeaturePerfCounters = 1u << 1;
+        private const uint MaxPayloadBytes = 8 * 1024 * 1024;
 
         private enum MessageType : ushort
         {
@@ -118,6 +121,8 @@ namespace RobotTwin.CoreSim
         private ulong _stepSequence = 1;
         private string _pipeName = DefaultPipeName;
         private readonly Dictionary<string, BoardState> _boardStates = new Dictionary<string, BoardState>(StringComparer.OrdinalIgnoreCase);
+        private uint _serverFlags;
+        private bool _versionWarned;
 
         public bool IsConnected => _pipeClient != null && _pipeClient.IsConnected;
         public bool ReaderHealthy => _readerHealthy;
@@ -384,6 +389,14 @@ namespace RobotTwin.CoreSim
         {
             if (type == MessageType.HelloAck)
             {
+                if (payload != null && payload.Length >= 16)
+                {
+                    _serverFlags = ReadUInt32(payload, 0);
+                    if ((_serverFlags & FeatureTimestampMicros) == 0)
+                    {
+                        DropStaleOutputs = false;
+                    }
+                }
                 LastPacketUtc = DateTime.UtcNow;
                 UnityEngine.Debug.Log("[FirmwareClient] Firmware handshake complete.");
                 return;
@@ -522,7 +535,7 @@ namespace RobotTwin.CoreSim
         private bool SendHello()
         {
             var payload = new byte[16];
-            WriteUInt32(payload, 0, ClientFlags);
+            WriteUInt32(payload, 0, ClientFlags | FeatureTimestampMicros | FeaturePerfCounters);
             WriteUInt32(payload, 4, PinCount);
             WriteUInt32(payload, 8, BoardIdSize);
             WriteUInt32(payload, 12, AnalogCount);
@@ -577,8 +590,18 @@ namespace RobotTwin.CoreSim
             uint magic = ReadUInt32(header, 0);
             if (magic != ProtocolMagic) return false;
 
+            ushort major = ReadUInt16(header, 4);
+            ushort minor = ReadUInt16(header, 6);
+            if (major != ProtocolMajor) return false;
+            if (minor > ProtocolMinor && !_versionWarned)
+            {
+                _versionWarned = true;
+                UnityEngine.Debug.LogWarning($"[FirmwareClient] Protocol minor {minor} > {ProtocolMinor}. Proceeding with best-effort parsing.");
+            }
+
             type = (MessageType)ReadUInt16(header, 8);
             uint size = ReadUInt32(header, 12);
+            if (size > MaxPayloadBytes) return false;
             if (size > 0)
             {
                 payload = new byte[size];

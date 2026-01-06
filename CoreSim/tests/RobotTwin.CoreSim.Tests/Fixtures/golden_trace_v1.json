@@ -1,0 +1,138 @@
+{
+  "Version": 1,
+  "DtSeconds": 0.02,
+  "Metadata": {
+    "source": "firmware_lockstep",
+    "recorded_utc": "2026-01-06T00:40:10.4002627Z",
+    "firmware_exe": "C:\\BASE\\ROBOTWIN-STUDIO\\robotwin-studio\\builds\\firmware\\RoboTwinFirmwareHost.exe",
+    "board_id": "board",
+    "board_profile": "ArduinoUno",
+    "pin_prefix": "16"
+  },
+  "Steps": [
+    {
+      "StepSequence": 1,
+      "Inputs": [
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1
+      ],
+      "ExpectedPins": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    },
+    {
+      "StepSequence": 2,
+      "Inputs": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "ExpectedPins": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    },
+    {
+      "StepSequence": 3,
+      "Inputs": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ],
+      "ExpectedPins": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    },
+    {
+      "StepSequence": 4,
+      "Inputs": [
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0
+      ],
+      "ExpectedPins": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    }
+  ]
+}

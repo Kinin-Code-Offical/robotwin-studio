@@ -134,6 +134,9 @@ def _run_repo_validations(*, sync_unity_plugins: bool) -> int:
     code = _run_rt_tool("audit-build-outputs")
     if code != 0:
         return code
+    code = _run_rt_tool("validate-physical-overrides")
+    if code != 0:
+        return code
 
     return _run_rt_tool("update-unity-plugins") if sync_unity_plugins else 0
 
@@ -311,6 +314,8 @@ COMMAND_HELP = {
     "validate-uxml": "Parse and validate all .uxml files.",
     "audit-runtime": "Scan runtime scripts for editor-only APIs.",
     "audit-build-outputs": "Audit build scripts for builds/ and logs/ output consistency.",
+    "validate-physical-overrides": "Validate HF-06 physical override sample package.",
+    "record-golden-trace": "Record golden trace from FirmwareEngine lockstep into test fixtures.",
     "run-qa": "Run Node/Jest integration tests.",
     "run-unity-smoke": "Batchmode Unity compile smoke test.",
     "monitor-unity": "Tail logs/unity/unity_live_error.log and highlight errors.",
@@ -348,6 +353,12 @@ def main() -> int:
     add_script_command("validate-uxml", "tools/scripts/validate_uxml.ps1", "Validate UXML files")
     add_script_command("audit-runtime", "tools/scripts/audit_runtime_apis.py", "Scan runtime scripts for editor-only APIs")
     add_script_command("audit-build-outputs", "tools/scripts/audit_build_outputs.py", "Audit build scripts for output directories")
+    add_script_command(
+        "validate-physical-overrides",
+        "tools/scripts/validate_physical_overrides.py",
+        "Validate HF-06 sample physical overrides package",
+    )
+    add_script_command("record-golden-trace", "tools/scripts/record_golden_trace.ps1", "Record FirmwareEngine golden trace fixture")
     add_script_command("run-qa", "tools/scripts/run_qa.ps1", "Run integration tests (Node/Jest)")
     add_script_command("run-unity-smoke", "tools/scripts/run_unity_smoke.ps1", "Run Unity batchmode smoke test")
     add_script_command("debug-console", "tools/debug_console/launch_debug_console.ps1", "Launch Debug Console dashboard")

@@ -29,3 +29,15 @@ set_target_properties(RoboTwinFirmwareHost PROPERTIES
 if (MINGW)
     target_link_options(RoboTwinFirmwareHost PRIVATE -static-libgcc -static-libstdc++)
 endif()
+
+# Minimal lockstep regression test: ensure every Step produces OutputState.
+add_executable(RoboTwinFirmwareHostLockstepSanity
+    "${REPO_ROOT}/FirmwareEngine/LockstepSanityTest.cpp"
+)
+target_include_directories(RoboTwinFirmwareHostLockstepSanity PRIVATE
+    "${REPO_ROOT}/FirmwareEngine"
+)
+set_target_properties(RoboTwinFirmwareHostLockstepSanity PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${OUT_DIR}"
+)
+

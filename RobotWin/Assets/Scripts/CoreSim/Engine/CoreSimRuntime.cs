@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using RobotTwin.CoreSim;
+using RobotTwin.CoreSim.Models.Physics;
 using RobotTwin.CoreSim.Runtime;
 using RobotTwin.CoreSim.Specs;
 
@@ -26,6 +27,7 @@ namespace RobotTwin.CoreSim.Engine
         private const double DefaultDiodeIs = 1e-12;
         private const double DefaultDiodeIdeality = 2.0;
         private const double DefaultDiodeThermalVoltage = 0.02585;
+        private const double DefaultDiodeForwardTempCoeff = -0.002;
         private const double DefaultBatteryCapacityAh = 0.5;
         private const double DefaultBatteryInternalResistance = 1.5;
         private const double DefaultBatteryVoltageMin = 6.0;
@@ -50,6 +52,9 @@ namespace RobotTwin.CoreSim.Engine
         private readonly Dictionary<string, string> _regulatorVirtualSupplyNets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _blownResistors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _blownDiodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private int _noiseStep;
+
+        public double AmbientTempC { get; set; } = DefaultAmbientTempC;
 
         public TelemetryFrame Step(
             CircuitSpec spec,
@@ -64,6 +69,10 @@ namespace RobotTwin.CoreSim.Engine
             {
                 TimeSeconds = dtSeconds
             };
+            unchecked
+            {
+                _noiseStep++;
+            }
 
             if (spec == null || spec.Components == null || spec.Nets == null || spec.Nets.Count == 0)
             {
@@ -443,6 +452,7 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             double baseResistance = resistanceOverride > 0 ? resistanceOverride : ParseResistance(comp, 1000.0);
+            baseResistance = ApplyStaticVariation(comp, "resistance", baseResistance);
             double blowTemp = DefaultResistorBlowTemp;
             if (TryGetDouble(comp, "blowTemp", out var blowTempVal) && blowTempVal > 0)
             {
@@ -457,11 +467,14 @@ namespace RobotTwin.CoreSim.Engine
                 blowTemp = burnTempVal;
             }
             double contactResistance = TryGetDouble(comp, "contactResistance", out var contact) ? contact : DefaultContactResistance;
+            contactResistance = ApplyStaticVariation(comp, "contactResistance", contactResistance);
+            double noiseVrms = ReadNoiseRms(comp, "V", baseResistance);
+            double noiseIrms = ReadNoiseRms(comp, "I", baseResistance);
             if (_blownResistors.Contains(comp.Id))
             {
                 frame.ValidationMessages.Add($"Component Blown: {comp.Id}");
                 var blownThermal = GetOrCreateThermalState(_resistorThermal, comp, DefaultResistorTempCoeff, DefaultResistorThermalResistance, DefaultResistorThermalMass);
-                resistors.Add(new ResistorElement(comp.Id, netA, netB, HighResistance, baseResistance, contactResistance, blownThermal, true, blowTemp));
+                resistors.Add(new ResistorElement(comp.Id, netA, netB, HighResistance, baseResistance, contactResistance, blownThermal, true, blowTemp, noiseVrms, noiseIrms));
                 return;
             }
             ThermalState thermal = null;
@@ -472,7 +485,7 @@ namespace RobotTwin.CoreSim.Engine
                 resistance = ApplyTempCoeff(baseResistance, thermal);
             }
             resistance += contactResistance * 2.0;
-            resistors.Add(new ResistorElement(comp.Id, netA, netB, resistance, baseResistance, contactResistance, thermal, trackThermal, blowTemp));
+            resistors.Add(new ResistorElement(comp.Id, netA, netB, resistance, baseResistance, contactResistance, thermal, trackThermal, blowTemp, noiseVrms, noiseIrms));
         }
 
         private void AddLed(ComponentSpec comp, List<DiodeElement> diodes, TelemetryFrame frame)
@@ -491,13 +504,21 @@ namespace RobotTwin.CoreSim.Engine
             }
 
             double forwardV = ParseVoltage(comp, DefaultLedForwardV, "forwardV");
+            forwardV = ApplyStaticVariation(comp, "forwardV", forwardV);
             double maxCurrent = ParseCurrent(comp, 0.02, "If_max");
             if (maxCurrent <= 0) maxCurrent = ParseCurrent(comp, 0.02, "current");
             double saturationCurrent = TryGetDouble(comp, "Is", out var isVal) ? isVal : DefaultDiodeIs;
             double ideality = TryGetDouble(comp, "ideality", out var nVal) ? nVal : DefaultDiodeIdeality;
             if (TryGetDouble(comp, "n", out var nAlt)) ideality = nAlt;
+            saturationCurrent = ApplyStaticVariation(comp, "saturationCurrent", saturationCurrent);
             double seriesResistance = TryGetDouble(comp, "seriesResistance", out var rsVal) ? rsVal : 0.0;
+            seriesResistance = ApplyStaticVariation(comp, "seriesResistance", seriesResistance);
             double contactResistance = TryGetDouble(comp, "contactResistance", out var contact) ? contact : DefaultContactResistance;
+            contactResistance = ApplyStaticVariation(comp, "contactResistance", contactResistance);
+            double forwardTempCoeff = TryGetDouble(comp, "vfTempCoeff", out var vfTc) ? vfTc : DefaultDiodeForwardTempCoeff;
+            if (TryGetDouble(comp, "forwardTempCoeff", out var vfAlt)) forwardTempCoeff = vfAlt;
+            double noiseVrms = ReadNoiseRms(comp, "V", forwardV);
+            double noiseIrms = ReadNoiseRms(comp, "I", maxCurrent);
             var thermal = GetOrCreateThermalState(_ledThermal, comp, 0.0, DefaultLedThermalResistance, DefaultLedThermalMass);
 
             diodes.Add(new DiodeElement(
@@ -511,6 +532,9 @@ namespace RobotTwin.CoreSim.Engine
                 DefaultDiodeThermalVoltage,
                 seriesResistance,
                 contactResistance,
+                forwardTempCoeff,
+                noiseVrms,
+                noiseIrms,
                 thermal,
                 true));
         }
@@ -934,7 +958,7 @@ namespace RobotTwin.CoreSim.Engine
             if (idleCurrent <= 0.0) return;
 
             double resistance = nominalVoltage / Math.Max(idleCurrent, 1e-6);
-            resistors.Add(new ResistorElement($"{comp.Id}.IDLE", supplyNet, gndNet, resistance, resistance, 0.0, null, false, 0.0));
+            resistors.Add(new ResistorElement($"{comp.Id}.IDLE", supplyNet, gndNet, resistance, resistance, 0.0, null, false, 0.0, 0.0, 0.0));
         }
 
         private void AddMcuPullups(
@@ -989,7 +1013,7 @@ namespace RobotTwin.CoreSim.Engine
                     frame.ValidationMessages.Add($"Pull-up pin '{comp.Id}.{state.Pin}' missing net.");
                     continue;
                 }
-                resistors.Add(new ResistorElement($"{comp.Id}.{state.Pin}:PULLUP", pinNet, vccNet, pullupResistance, pullupResistance, 0.0, null, false, 0.0));
+                resistors.Add(new ResistorElement($"{comp.Id}.{state.Pin}:PULLUP", pinNet, vccNet, pullupResistance, pullupResistance, 0.0, null, false, 0.0, 0.0, 0.0));
             }
         }
 
@@ -1169,6 +1193,11 @@ namespace RobotTwin.CoreSim.Engine
         {
             double vf = diode.ForwardVoltage;
             if (vf <= 0.0) vf = DefaultLedForwardV;
+            if (diode.TrackThermal && diode.Thermal != null && diode.ForwardTempCoeff != 0.0)
+            {
+                double delta = diode.Thermal.TempC - diode.Thermal.AmbientTempC;
+                vf += diode.ForwardTempCoeff * delta;
+            }
             return vf;
         }
 
@@ -1210,9 +1239,12 @@ namespace RobotTwin.CoreSim.Engine
                 double vDiff = vA - vB;
                 double current = vDiff / Math.Max(res.Resistance, 1e-6);
                 double power = current * current * res.Resistance;
-                frame.Signals[$"COMP:{res.Id}:I"] = current;
-                frame.Signals[$"COMP:{res.Id}:V"] = vDiff;
-                frame.Signals[$"COMP:{res.Id}:P"] = power;
+                double measV = vDiff;
+                double measI = current;
+                ApplyMeasurementNoise(res.Id, res.NoiseVrms, res.NoiseIrms, ref measV, ref measI);
+                frame.Signals[$"COMP:{res.Id}:I"] = measI;
+                frame.Signals[$"COMP:{res.Id}:V"] = measV;
+                frame.Signals[$"COMP:{res.Id}:P"] = measI * measV;
                 frame.Signals[$"COMP:{res.Id}:R"] = res.Resistance;
 
                 if (res.TrackThermal && res.Thermal != null)
@@ -1235,9 +1267,12 @@ namespace RobotTwin.CoreSim.Engine
                 double vDiff = vA - vB;
                 double current = ComputeDiodeCurrent(diode, vDiff);
                 double power = Math.Abs(current * vDiff);
-                frame.Signals[$"COMP:{diode.Id}:I"] = current;
-                frame.Signals[$"COMP:{diode.Id}:V"] = vDiff;
-                frame.Signals[$"COMP:{diode.Id}:P"] = power;
+                double measV = vDiff;
+                double measI = current;
+                ApplyMeasurementNoise(diode.Id, diode.NoiseVrms, diode.NoiseIrms, ref measV, ref measI);
+                frame.Signals[$"COMP:{diode.Id}:I"] = measI;
+                frame.Signals[$"COMP:{diode.Id}:V"] = measV;
+                frame.Signals[$"COMP:{diode.Id}:P"] = Math.Abs(measI * measV);
                 if (diode.MaxCurrent > 0)
                 {
                     double intensity = Clamp(Math.Abs(current) / diode.MaxCurrent, 0.0, 1.0);
@@ -1582,7 +1617,7 @@ namespace RobotTwin.CoreSim.Engine
             if (comp == null) return null;
             if (map.TryGetValue(comp.Id, out var state)) return state;
 
-            double ambient = TryGetDouble(comp, "ambientTemp", out var amb) ? amb : DefaultAmbientTempC;
+            double ambient = TryGetDouble(comp, "ambientTemp", out var amb) ? amb : AmbientTempC;
             double tempCoeff = TryGetDouble(comp, "tempCoeff", out var tc) ? tc : defaultTempCoeff;
             if (TryGetDouble(comp, "tc", out var tcAlt)) tempCoeff = tcAlt;
             double thermalResistance = TryGetDouble(comp, "thermalResistance", out var rth) ? rth : defaultThermalResistance;
@@ -1619,6 +1654,8 @@ namespace RobotTwin.CoreSim.Engine
             double internalResistance = TryGetDouble(comp, "internalResistance", out var rint)
                 ? rint
                 : (TryGetDouble(comp, "rint", out var rintAlt) ? rintAlt : DefaultBatteryInternalResistance);
+            capacityAh = ApplyStaticVariation(comp, "capacity", capacityAh);
+            internalResistance = ApplyStaticVariation(comp, "internalResistance", internalResistance);
             double voltageMin = TryGetDouble(comp, "voltageMin", out var vmin) ? vmin : Math.Min(DefaultBatteryVoltageMin, nominal);
             double voltageMax = TryGetDouble(comp, "voltageMax", out var vmax) ? vmax : Math.Max(DefaultBatteryVoltageMax, nominal);
             double soc = TryGetDouble(comp, "soc", out var socVal) ? socVal : 1.0;
@@ -1685,6 +1722,98 @@ namespace RobotTwin.CoreSim.Engine
             if (comp?.Properties == null || string.IsNullOrWhiteSpace(key)) return false;
             if (!comp.Properties.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw)) return false;
             return TryParseValue(raw, out value);
+        }
+
+        private static bool TryGetDoubleAny(ComponentSpec comp, out double value, params string[] keys)
+        {
+            value = 0.0;
+            if (keys == null || keys.Length == 0) return false;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (TryGetDouble(comp, keys[i], out value))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static double ReadTolerance(ComponentSpec comp, string key)
+        {
+            if (TryGetDoubleAny(comp, out var val, $"{key}Tolerance", $"{key}Tol", $"{key}TolPct", "tolerance", "tol"))
+            {
+                return val;
+            }
+            return 0.0;
+        }
+
+        private static double ReadAgingYears(ComponentSpec comp)
+        {
+            if (TryGetDoubleAny(comp, out var val, "agingYears", "ageYears", "age"))
+            {
+                return Math.Max(0.0, val);
+            }
+            return 0.0;
+        }
+
+        private static double ReadAgingRate(ComponentSpec comp, string key)
+        {
+            if (TryGetDoubleAny(comp, out var val, $"{key}AgingRate", $"{key}AgingRatePct", "agingRate", "agingRatePct"))
+            {
+                return val;
+            }
+            return 0.0;
+        }
+
+        private double ApplyStaticVariation(ComponentSpec comp, string key, double nominal)
+        {
+            if (comp == null) return nominal;
+            double tolerance = ReadTolerance(comp, key);
+            if (tolerance != 0.0)
+            {
+                double sample = DeterministicNoise.SampleSigned($"{comp.Id}:{key}:tol");
+                nominal = ComponentVariation.ApplyTolerance(nominal, tolerance, sample);
+            }
+            double years = ReadAgingYears(comp);
+            double rate = ReadAgingRate(comp, key);
+            if (years > 0.0 && rate != 0.0)
+            {
+                nominal = ComponentVariation.ApplyAging(nominal, rate, years);
+            }
+            return nominal;
+        }
+
+        private double ReadNoiseRms(ComponentSpec comp, string signalSuffix, double nominal)
+        {
+            if (comp == null) return 0.0;
+            if (TryGetDoubleAny(comp, out var rms, $"noise{signalSuffix}", $"noise{signalSuffix}Rms", $"noise{signalSuffix}RmsValue"))
+            {
+                return Math.Abs(rms);
+            }
+            if (TryGetDoubleAny(comp, out var pct, $"noise{signalSuffix}Pct", $"noise{signalSuffix}Percent", "noisePct", "noisePercent"))
+            {
+                double ratio = Math.Abs(ComponentVariation.NormalizePercent(pct));
+                return Math.Abs(nominal) * ratio;
+            }
+            if (TryGetDoubleAny(comp, out var rmsAny, "noiseRms", "noise"))
+            {
+                return Math.Abs(rmsAny);
+            }
+            return 0.0;
+        }
+
+        private void ApplyMeasurementNoise(string id, double noiseVrms, double noiseIrms, ref double v, ref double i)
+        {
+            if (noiseVrms > 0.0)
+            {
+                double sample = DeterministicNoise.SampleSigned($"{id}:V", _noiseStep);
+                v = ComponentVariation.ApplyNoise(v, noiseVrms, sample);
+            }
+            if (noiseIrms > 0.0)
+            {
+                double sample = DeterministicNoise.SampleSigned($"{id}:I", _noiseStep);
+                i = ComponentVariation.ApplyNoise(i, noiseIrms, sample);
+            }
         }
 
         private static double Clamp(double value, double min, double max)
@@ -1918,6 +2047,8 @@ namespace RobotTwin.CoreSim.Engine
             public double BaseResistance { get; }
             public double ContactResistance { get; }
             public double BlowTemp { get; }
+            public double NoiseVrms { get; }
+            public double NoiseIrms { get; }
             public ThermalState Thermal { get; }
             public bool TrackThermal { get; }
 
@@ -1930,7 +2061,9 @@ namespace RobotTwin.CoreSim.Engine
                 double contactResistance,
                 ThermalState thermal,
                 bool trackThermal,
-                double blowTemp)
+                double blowTemp,
+                double noiseVrms,
+                double noiseIrms)
             {
                 Id = id;
                 NetA = netA;
@@ -1939,6 +2072,8 @@ namespace RobotTwin.CoreSim.Engine
                 BaseResistance = baseResistance;
                 ContactResistance = contactResistance;
                 BlowTemp = blowTemp;
+                NoiseVrms = noiseVrms;
+                NoiseIrms = noiseIrms;
                 Thermal = thermal;
                 TrackThermal = trackThermal;
             }
@@ -1954,8 +2089,11 @@ namespace RobotTwin.CoreSim.Engine
             public double SaturationCurrent { get; }
             public double Ideality { get; }
             public double ThermalVoltage { get; }
+            public double ForwardTempCoeff { get; }
             public double SeriesResistance { get; }
             public double ContactResistance { get; }
+            public double NoiseVrms { get; }
+            public double NoiseIrms { get; }
             public ThermalState Thermal { get; }
             public bool TrackThermal { get; }
 
@@ -1970,6 +2108,9 @@ namespace RobotTwin.CoreSim.Engine
                 double thermalVoltage,
                 double seriesResistance,
                 double contactResistance,
+                double forwardTempCoeff,
+                double noiseVrms,
+                double noiseIrms,
                 ThermalState thermal,
                 bool trackThermal)
             {
@@ -1981,8 +2122,11 @@ namespace RobotTwin.CoreSim.Engine
                 SaturationCurrent = saturationCurrent;
                 Ideality = ideality;
                 ThermalVoltage = thermalVoltage;
+                ForwardTempCoeff = forwardTempCoeff;
                 SeriesResistance = seriesResistance;
                 ContactResistance = contactResistance;
+                NoiseVrms = noiseVrms;
+                NoiseIrms = noiseIrms;
                 Thermal = thermal;
                 TrackThermal = trackThermal;
             }
