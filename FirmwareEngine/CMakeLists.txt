@@ -13,12 +13,16 @@ set(SOURCES
     "${REPO_ROOT}/FirmwareEngine/PipeManager.cpp"
     "${REPO_ROOT}/FirmwareEngine/VirtualMcu.cpp"
     "${REPO_ROOT}/FirmwareEngine/BoardProfile.cpp"
+    "${REPO_ROOT}/FirmwareEngine/Rpi/RpiBackend.cpp"
+    "${REPO_ROOT}/FirmwareEngine/Rpi/RpiShm.cpp"
+    "${REPO_ROOT}/FirmwareEngine/Rpi/QemuProcess.cpp"
     "${REPO_ROOT}/NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 
 add_executable(RoboTwinFirmwareHost ${SOURCES})
 target_include_directories(RoboTwinFirmwareHost PRIVATE
     "${REPO_ROOT}/FirmwareEngine"
+    "${REPO_ROOT}/FirmwareEngine/Rpi"
     "${REPO_ROOT}/NativeEngine/include"
 )
 
@@ -40,4 +44,3 @@ target_include_directories(RoboTwinFirmwareHostLockstepSanity PRIVATE
 set_target_properties(RoboTwinFirmwareHostLockstepSanity PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${OUT_DIR}"
 )
-

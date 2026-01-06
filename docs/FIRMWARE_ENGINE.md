@@ -23,7 +23,7 @@ Used for real-time control boards like Arduino Uno, Mega, and Nano.
 Used for high-level logic, AI, and ROS2 nodes (Raspberry Pi 4/5, Jetson Nano).
 
 - **Technology:** QEMU (Quick Emulator) integration via VirtIO.
-- **OS Support:** Runs unmodified Linux images (Raspberry Pi OS, Ubuntu Server).
+- **OS Support:** Runs Linux guest images (e.g., Debian/Ubuntu). “Raspberry Pi OS” compatibility depends on the chosen machine model and guest kernel/device-tree; the product target is an RPi-class experience rather than a guarantee of bit-for-bit Raspberry Pi firmware compatibility.
 - **Networking:** Virtual TAP adapter bridges the guest OS to the host network (allows SSH, apt-get, ROS2 discovery).
 - **Acceleration:**
   - **NPU:** Emulates Hailo-8 / Coral TPU via host GPU compute shaders.
@@ -77,3 +77,34 @@ Simulated Lidar point clouds are injected into the Linux guest as a standard /de
 
 - **GDB Stub:** Connect a standard GDB debugger to the emulated chip to step through code, inspect registers, and set breakpoints.
 - **Serial Console:** View the boot logs and serial output of the emulated device directly in the RobotWin UI.
+
+## Arduino IDE (Serial Monitor + Upload)
+
+RobotWin supports two Arduino IDE workflows:
+
+- **Serial Monitor (COM port):** Uses a virtual COM pair (com0com) so Arduino IDE can open a COM port and view/send serial text.
+- **Upload button (target):** FirmwareEngine can optionally expose an **STK500v1** programmer on a COM port so Arduino IDE can upload sketches without Unity.
+
+### Serial Monitor (Virtual COM)
+
+- Use the RunMode "Virtual COM" tools to install com0com and create a port pair like `COM30<->COM31`.
+- Select the **IDE port** (typically the odd-numbered one like `COM31`) in Arduino IDE.
+
+### Upload via Arduino IDE (STK500v1 bridge)
+
+Run the firmware host with an IDE bridge:
+
+```powershell
+./builds/firmware/RoboTwinFirmwareHost.exe --ide-com COM31 --ide-board board --ide-profile ArduinoUno
+```
+
+Then in Arduino IDE:
+
+- Select `COM31` as the Port.
+- Select the matching board (e.g. Arduino Uno).
+- Use **Upload**.
+
+Notes:
+
+- This path is intended for AVR boards (Uno/Mega). EEPROM programming is not required for basic sketches.
+- RobotWin's native CoreSim pipe transport (`RoboTwin.FirmwareEngine`) still works in parallel; the IDE bridge is an optional extra.

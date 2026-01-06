@@ -17,6 +17,9 @@ $Sources = @(
     "FirmwareEngine/PipeManager.cpp",
     "FirmwareEngine/VirtualMcu.cpp",
     "FirmwareEngine/BoardProfile.cpp",
+    "FirmwareEngine/Rpi/RpiBackend.cpp",
+    "FirmwareEngine/Rpi/RpiShm.cpp",
+    "FirmwareEngine/Rpi/QemuProcess.cpp",
     "NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 
@@ -25,6 +28,7 @@ $ResourceFile = "FirmwareEngine/RoboTwinFirmwareHost.rc"
 $ResourceObj = Join-Path $OutDir "RoboTwinFirmwareHost.res.o"
 $IncludeDirs = @(
     "FirmwareEngine",
+    "FirmwareEngine/Rpi",
     "NativeEngine/include"
 )
 

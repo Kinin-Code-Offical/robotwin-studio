@@ -44,7 +44,12 @@ namespace firmware
 
         bool LoadBvm(const std::vector<std::uint8_t> &buffer, std::string &error);
         void Reset();
+        void SoftReset();
         void StepCycles(std::uint64_t cycles);
+
+        bool EraseFlash(std::string &error);
+        bool ProgramFlash(std::uint32_t byteAddress, const std::uint8_t *data, std::size_t size, std::string &error);
+        bool ReadFlash(std::uint32_t byteAddress, std::uint8_t *outData, std::size_t size, std::string &error) const;
 
         void SetInputPin(int pin, int value);
         void SyncInputs();
@@ -72,6 +77,7 @@ namespace firmware
         void QueueSerialInput(int channel, std::uint8_t value);
 
     private:
+        void ResetState(bool clearFlash);
         bool LoadTextSection(const std::uint8_t *data, std::size_t size, std::uint64_t flags, std::string &error);
         bool ParseBvmText(const std::vector<std::uint8_t> &buffer, const std::uint8_t *&data,
                           std::size_t &size, std::uint64_t &flags, std::string &error);

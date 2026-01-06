@@ -165,6 +165,13 @@ namespace RobotTwin.UI
         private const float LayoutKeyPanStep = 22f;
         private const float LayoutKeyZoomStep = 0.08f;
         private const string FxTypeUnsetLabel = "Unspecified";
+        private const string PinTypeLead = "lead";
+        private const string PinTypePin = "pin";
+        private static readonly List<string> PinTypeChoices = new List<string>
+        {
+            PinTypeLead,
+            PinTypePin
+        };
         private static readonly List<string> FxTypeChoices = new List<string>
         {
             FxTypeUnsetLabel,
@@ -344,13 +351,32 @@ namespace RobotTwin.UI
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
-            if (_doc == null) { Debug.LogError("[ComponentStudio] Missing UIDocument"); return; }
+            if (_doc == null)
+            {
+                Debug.LogError("[ComponentStudio] Missing UIDocument");
+                enabled = false;
+                return;
+            }
             _root = _doc.rootVisualElement;
-            if (_root == null) return;
+            if (_root == null)
+            {
+                Debug.LogError("[ComponentStudio] UIDocument rootVisualElement is null.");
+                enabled = false;
+                return;
+            }
 
             UiResponsive.Bind(_root, 1200f, 1600f, "studio-compact", "studio-medium", "studio-wide");
 
             BindUi();
+
+            // Critical UI sanity: viewport + status are required for event hooks and feedback.
+            if (_viewport == null || _statusLabel == null)
+            {
+                Debug.LogError("[ComponentStudio] UI binding failed: missing required elements (StudioViewport / StudioStatusLabel).");
+                enabled = false;
+                return;
+            }
+
             Initialize3DView();
             InitializeHelp();
             RegisterKeyboardShortcuts();
@@ -2026,7 +2052,8 @@ namespace RobotTwin.UI
                         anchorX = layout.AnchorLocal.x,
                         anchorY = layout.AnchorLocal.y,
                         anchorZ = layout.AnchorLocal.z,
-                        anchorRadius = layout.AnchorRadius
+                        anchorRadius = layout.AnchorRadius,
+                        pinType = layout.PinType
                     });
                     added++;
                 }
@@ -3365,10 +3392,12 @@ namespace RobotTwin.UI
             var anchorYField = CreateField("PinAnchorYField", FormatFloat(payload.anchorY), "editor-field-small");
             var anchorZField = CreateField("PinAnchorZField", FormatFloat(payload.anchorZ), "editor-field-small");
             var anchorRadiusField = CreateField("PinAnchorRadiusField", FormatFloat(payload.anchorRadius), "editor-field-small");
+            var pinTypeField = CreateDropdownField("PinTypeField", NormalizePinType(payload.pinType), "editor-field-small", PinTypeChoices);
             anchorRow.Add(anchorXField);
             anchorRow.Add(anchorYField);
             anchorRow.Add(anchorZField);
             anchorRow.Add(anchorRadiusField);
+            anchorRow.Add(pinTypeField);
             entry.Add(anchorRow);
 
             _pinsContainer.Add(entry);
@@ -3387,10 +3416,12 @@ namespace RobotTwin.UI
             RegisterValidationField(anchorYField);
             RegisterValidationField(anchorZField);
             RegisterValidationField(anchorRadiusField);
+            RegisterValidationField(pinTypeField);
             RegisterAnchorField(anchorXField);
             RegisterAnchorField(anchorYField);
             RegisterAnchorField(anchorZField);
             RegisterAnchorField(anchorRadiusField);
+            if (pinTypeField != null) pinTypeField.RegisterValueChangedCallback(_ => RefreshAnchorGizmos());
             RefreshLayoutPreview();
             QueueValidation();
             RefreshCatalogAndHierarchy();
@@ -4425,12 +4456,16 @@ namespace RobotTwin.UI
                     float y = ReadFloat(entry.Q<TextField>("PinAnchorYField"));
                     float z = ReadFloat(entry.Q<TextField>("PinAnchorZField"));
                     float r = ReadFloat(entry.Q<TextField>("PinAnchorRadiusField"));
+                    string pinType = NormalizePinType(GetEntryValue(entry, "PinTypeField"));
+                    Color color = string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase)
+                        ? new Color(0.85f, 0.68f, 0.4f)
+                        : new Color(0.2f, 0.7f, 1f);
                     anchors.Add(new ComponentStudioView.AnchorGizmo
                     {
                         Name = name,
                         LocalPosition = new Vector3(x, y, z),
                         Radius = r <= 0f ? 0.006f : r,
-                        Color = new Color(0.2f, 0.7f, 1f)
+                        Color = color
                     });
                 }
             }
@@ -7269,7 +7304,8 @@ namespace RobotTwin.UI
                     anchorX = ReadFloat(entry.Q<TextField>("PinAnchorXField")),
                     anchorY = ReadFloat(entry.Q<TextField>("PinAnchorYField")),
                     anchorZ = ReadFloat(entry.Q<TextField>("PinAnchorZField")),
-                    anchorRadius = ReadFloat(entry.Q<TextField>("PinAnchorRadiusField"))
+                    anchorRadius = ReadFloat(entry.Q<TextField>("PinAnchorRadiusField")),
+                    pinType = NormalizePinType(GetEntryValue(entry, "PinTypeField"))
                 });
             }
             return list;
@@ -7659,6 +7695,15 @@ namespace RobotTwin.UI
             return string.Equals(value, FxTypeUnsetLabel, StringComparison.OrdinalIgnoreCase) ? string.Empty : value.Trim();
         }
 
+        private static string NormalizePinType(string value)
+        {
+            if (string.Equals(value, PinTypePin, StringComparison.OrdinalIgnoreCase))
+            {
+                return PinTypePin;
+            }
+            return PinTypeLead;
+        }
+
         private static string FormatFloat(float value)
         {
             if (Mathf.Abs(value) < 0.0001f) return string.Empty;
@@ -8031,6 +8076,7 @@ namespace RobotTwin.UI
             public float anchorY;
             public float anchorZ;
             public float anchorRadius;
+            public string pinType;
         }
 
         [Serializable]

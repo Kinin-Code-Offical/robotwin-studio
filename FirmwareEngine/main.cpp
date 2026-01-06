@@ -1,19 +1,24 @@
 #include "BoardProfile.h"
 #include "PipeManager.h"
 #include "Protocol.h"
+#include "Rpi/RpiBackend.h"
 #include "VirtualMcu.h"
 
 #include <chrono>
 #include <algorithm>
+#include <atomic>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <random>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 #include <windows.h>
 
 using namespace firmware;
@@ -150,6 +155,18 @@ namespace
     {
         return profile.mcu == "ATmega328P" || profile.mcu == "ATmega2560";
     }
+
+    bool ParseSize(const char *value, int &outW, int &outH)
+    {
+        if (!value)
+            return false;
+        const char *x = std::strchr(value, 'x');
+        if (!x)
+            return false;
+        outW = std::atoi(value);
+        outH = std::atoi(x + 1);
+        return outW > 0 && outH > 0;
+    }
 }
 
 int main(int argc, char **argv)
@@ -160,6 +177,24 @@ int main(int argc, char **argv)
     const char *logPath = nullptr;
     bool selfTest = false;
     bool traceLockstep = false;
+    std::string ideComPort;
+    std::string ideBoardId = "board";
+    std::string ideBoardProfile = "ArduinoUno";
+    bool rpiEnabled = false;
+    bool rpiAllowMock = false;
+    std::string rpiQemuPath;
+    std::string rpiImagePath;
+    std::string rpiShmDir;
+    std::string rpiNetMode = "nat";
+    std::string rpiLogPath;
+    int rpiDisplayW = 320;
+    int rpiDisplayH = 200;
+    int rpiCameraW = 320;
+    int rpiCameraH = 200;
+    std::uint64_t rpiCpuAffinity = 0;
+    std::uint32_t rpiCpuPercent = 0;
+    std::uint32_t rpiThreads = 0;
+    std::uint32_t rpiPriorityClass = 0;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -210,6 +245,100 @@ int main(int argc, char **argv)
             traceLockstep = true;
             continue;
         }
+        if (ParseArg(argv[i], "--ide-com") && i + 1 < argc)
+        {
+            ideComPort = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--ide-board") && i + 1 < argc)
+        {
+            ideBoardId = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--ide-profile") && i + 1 < argc)
+        {
+            ideBoardProfile = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-enable"))
+        {
+            rpiEnabled = true;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-allow-mock"))
+        {
+            rpiAllowMock = true;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-qemu") && i + 1 < argc)
+        {
+            rpiQemuPath = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-image") && i + 1 < argc)
+        {
+            rpiImagePath = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-shm-dir") && i + 1 < argc)
+        {
+            rpiShmDir = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-display") && i + 1 < argc)
+        {
+            ParseSize(argv[i + 1], rpiDisplayW, rpiDisplayH);
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-camera") && i + 1 < argc)
+        {
+            ParseSize(argv[i + 1], rpiCameraW, rpiCameraH);
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-net-mode") && i + 1 < argc)
+        {
+            rpiNetMode = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-log") && i + 1 < argc)
+        {
+            rpiLogPath = argv[i + 1];
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-cpu-affinity") && i + 1 < argc)
+        {
+            rpiCpuAffinity = std::strtoull(argv[i + 1], nullptr, 0);
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-cpu-max-percent") && i + 1 < argc)
+        {
+            rpiCpuPercent = static_cast<std::uint32_t>(std::atoi(argv[i + 1]));
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-threads") && i + 1 < argc)
+        {
+            rpiThreads = static_cast<std::uint32_t>(std::atoi(argv[i + 1]));
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--rpi-priority") && i + 1 < argc)
+        {
+            rpiPriorityClass = static_cast<std::uint32_t>(std::atoi(argv[i + 1]));
+            ++i;
+            continue;
+        }
     }
 
     if (!traceLockstep)
@@ -249,11 +378,43 @@ int main(int argc, char **argv)
 
     Log("RoboTwinFirmwareHost - CoreSim Standalone");
 
+    if (!ideComPort.empty())
+    {
+        Log("[IDE] STK500 bridge enabled: com=%s board=%s profile=%s", ideComPort.c_str(), ideBoardId.c_str(), ideBoardProfile.c_str());
+    }
+
     PipeManager pipe;
     if (!pipe.Start(pipeName))
     {
         Log("Failed to start pipe server.");
         return 1;
+    }
+
+    rpi::RpiBackend rpiBackend;
+    if (rpiEnabled)
+    {
+        rpi::RpiConfig config{};
+        config.enabled = true;
+        config.allow_mock = rpiAllowMock;
+        config.qemu_path = rpiQemuPath;
+        config.image_path = rpiImagePath;
+        config.shm_dir = rpiShmDir.empty() ? "logs/rpi/shm" : rpiShmDir;
+        config.net_mode = rpiNetMode;
+        config.display_width = rpiDisplayW;
+        config.display_height = rpiDisplayH;
+        config.camera_width = rpiCameraW;
+        config.camera_height = rpiCameraH;
+        config.cpu_affinity_mask = rpiCpuAffinity;
+        config.cpu_max_percent = rpiCpuPercent;
+        config.thread_count = rpiThreads;
+        config.cpu_priority_class = rpiPriorityClass;
+        config.log_path = rpiLogPath;
+        auto logFn = [&](const char *msg)
+        {
+            Log("%s", msg);
+        };
+        rpiBackend.Start(config, logFn);
+        Log("[RPI] backend enabled (mock=%d)", config.allow_mock ? 1 : 0);
     }
 
     struct BoardState
@@ -276,6 +437,8 @@ int main(int argc, char **argv)
     std::size_t boardOrderIndex = 0;
     std::mt19937 rng(static_cast<unsigned int>(GetTickCount()));
     std::uniform_real_distribution<double> driftDist(-50.0, 50.0);
+
+    std::mutex boardsMutex;
 
     auto GetBoardState = [&](const std::string &boardId, const std::string &profileId) -> BoardState &
     {
@@ -345,11 +508,509 @@ int main(int argc, char **argv)
         state.mcu->SamplePinOutputs(state.lastOutputs, kPinCount);
     };
 
+    struct IdeBridge
+    {
+        enum : std::uint8_t
+        {
+            STK_OK = 0x10,
+            STK_FAILED = 0x11,
+            STK_INSYNC = 0x14,
+            STK_NOSYNC = 0x15,
+            CRC_EOP = 0x20,
+
+            STK_GET_SYNC = 0x30,
+            STK_GET_PARAMETER = 0x41,
+            STK_SET_DEVICE = 0x42,
+            STK_SET_DEVICE_EXT = 0x45,
+            STK_ENTER_PROGMODE = 0x50,
+            STK_LEAVE_PROGMODE = 0x51,
+            STK_LOAD_ADDRESS = 0x55,
+            STK_PROG_PAGE = 0x64,
+            STK_READ_PAGE = 0x74,
+            STK_READ_SIGN = 0x75,
+        };
+
+        std::thread thread;
+        std::atomic<bool> running{false};
+        HANDLE port = INVALID_HANDLE_VALUE;
+        std::uint32_t addressWords = 0;
+        bool inProgMode = false;
+
+        std::function<void(const char *)> log;
+        std::function<BoardState &(const std::string &, const std::string &)> getBoard;
+        std::mutex *boardsMutex = nullptr;
+        std::string boardId;
+        std::string boardProfile;
+
+        bool Start(const std::string &com, const std::string &id, const std::string &profile,
+                   std::function<void(const char *)> logFn,
+                   std::function<BoardState &(const std::string &, const std::string &)> getBoardFn,
+                   std::mutex *mutexPtr)
+        {
+            boardId = id.empty() ? "board" : id;
+            boardProfile = profile.empty() ? "ArduinoUno" : profile;
+            log = std::move(logFn);
+            getBoard = std::move(getBoardFn);
+            boardsMutex = mutexPtr;
+
+            std::wstring device = L"\\\\.\\";
+            int len = MultiByteToWideChar(CP_UTF8, 0, com.c_str(), -1, nullptr, 0);
+            if (len <= 0)
+            {
+                log("[IDE] Invalid COM port string");
+                return false;
+            }
+            std::wstring comW;
+            comW.resize(static_cast<std::size_t>(len));
+            MultiByteToWideChar(CP_UTF8, 0, com.c_str(), -1, comW.data(), len);
+            if (!comW.empty() && comW.back() == L'\0')
+            {
+                comW.pop_back();
+            }
+            device += comW;
+
+            port = CreateFileW(device.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+            if (port == INVALID_HANDLE_VALUE)
+            {
+                log("[IDE] Failed to open COM port (CreateFileW)");
+                return false;
+            }
+
+            DCB dcb{};
+            dcb.DCBlength = sizeof(DCB);
+            if (!GetCommState(port, &dcb))
+            {
+                log("[IDE] GetCommState failed");
+                CloseHandle(port);
+                port = INVALID_HANDLE_VALUE;
+                return false;
+            }
+
+            dcb.BaudRate = CBR_115200;
+            dcb.ByteSize = 8;
+            dcb.Parity = NOPARITY;
+            dcb.StopBits = ONESTOPBIT;
+            dcb.fBinary = TRUE;
+            dcb.fDtrControl = DTR_CONTROL_ENABLE;
+            dcb.fRtsControl = RTS_CONTROL_ENABLE;
+            dcb.fOutxCtsFlow = FALSE;
+            dcb.fOutxDsrFlow = FALSE;
+            dcb.fOutX = FALSE;
+            dcb.fInX = FALSE;
+            dcb.fParity = FALSE;
+
+            if (!SetCommState(port, &dcb))
+            {
+                log("[IDE] SetCommState failed");
+                CloseHandle(port);
+                port = INVALID_HANDLE_VALUE;
+                return false;
+            }
+
+            COMMTIMEOUTS timeouts{};
+            timeouts.ReadIntervalTimeout = 10;
+            timeouts.ReadTotalTimeoutMultiplier = 0;
+            timeouts.ReadTotalTimeoutConstant = 50;
+            timeouts.WriteTotalTimeoutMultiplier = 0;
+            timeouts.WriteTotalTimeoutConstant = 200;
+            SetCommTimeouts(port, &timeouts);
+
+            PurgeComm(port, PURGE_RXCLEAR | PURGE_TXCLEAR);
+
+            running = true;
+            thread = std::thread([this]()
+                                 { this->Run(); });
+            return true;
+        }
+
+        void Stop()
+        {
+            running = false;
+            if (thread.joinable())
+            {
+                thread.join();
+            }
+            if (port != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(port);
+                port = INVALID_HANDLE_VALUE;
+            }
+        }
+
+        bool ReadExact(std::uint8_t *buffer, std::size_t size)
+        {
+            std::size_t offset = 0;
+            while (running && offset < size)
+            {
+                DWORD got = 0;
+                if (!ReadFile(port, buffer + offset, static_cast<DWORD>(size - offset), &got, nullptr))
+                {
+                    return false;
+                }
+                if (got == 0)
+                {
+                    continue;
+                }
+                offset += got;
+            }
+            return offset == size;
+        }
+
+        bool WriteAll(const std::uint8_t *buffer, std::size_t size)
+        {
+            std::size_t offset = 0;
+            while (running && offset < size)
+            {
+                DWORD wrote = 0;
+                if (!WriteFile(port, buffer + offset, static_cast<DWORD>(size - offset), &wrote, nullptr))
+                {
+                    return false;
+                }
+                if (wrote == 0)
+                {
+                    continue;
+                }
+                offset += wrote;
+            }
+            return offset == size;
+        }
+
+        void ReplyOk()
+        {
+            const std::uint8_t out[2] = {STK_INSYNC, STK_OK};
+            WriteAll(out, sizeof(out));
+        }
+
+        void ReplyFail()
+        {
+            const std::uint8_t out[2] = {STK_INSYNC, STK_FAILED};
+            WriteAll(out, sizeof(out));
+        }
+
+        void ReplyNoSync()
+        {
+            const std::uint8_t out[1] = {STK_NOSYNC};
+            WriteAll(out, sizeof(out));
+        }
+
+        void ReplyData(const std::uint8_t *data, std::size_t size)
+        {
+            std::vector<std::uint8_t> out;
+            out.reserve(2 + size);
+            out.push_back(STK_INSYNC);
+            for (std::size_t i = 0; i < size; ++i)
+            {
+                out.push_back(data[i]);
+            }
+            out.push_back(STK_OK);
+            WriteAll(out.data(), out.size());
+        }
+
+        void Run()
+        {
+            if (port == INVALID_HANDLE_VALUE)
+            {
+                return;
+            }
+            log("[IDE] Listening for STK500v1...");
+
+            while (running)
+            {
+                std::uint8_t cmd = 0;
+                if (!ReadExact(&cmd, 1))
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    continue;
+                }
+
+                switch (cmd)
+                {
+                case STK_GET_SYNC:
+                {
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    ReplyOk();
+                    break;
+                }
+                case STK_GET_PARAMETER:
+                {
+                    std::uint8_t which = 0;
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&which, 1) || !ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    // Minimal responses.
+                    std::uint8_t value = 0;
+                    if (which == 0x82)
+                        value = 0x02; // HW_VER
+                    if (which == 0x81)
+                        value = 0x01; // SW_MAJOR
+                    if (which == 0x80)
+                        value = 0x01; // SW_MINOR
+                    ReplyData(&value, 1);
+                    break;
+                }
+                case STK_SET_DEVICE:
+                {
+                    std::uint8_t payload[20] = {};
+                    if (!ReadExact(payload, sizeof(payload)))
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    ReplyOk();
+                    break;
+                }
+                case STK_SET_DEVICE_EXT:
+                {
+                    std::uint8_t len = 0;
+                    if (!ReadExact(&len, 1))
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    std::vector<std::uint8_t> payload(len);
+                    if (len > 0 && !ReadExact(payload.data(), payload.size()))
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    ReplyOk();
+                    break;
+                }
+                case STK_ENTER_PROGMODE:
+                {
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    inProgMode = true;
+                    addressWords = 0;
+                    {
+                        std::lock_guard<std::mutex> guard(*boardsMutex);
+                        auto &state = getBoard(boardId, boardProfile);
+                        std::string error;
+                        state.hasFirmware = false;
+                        state.mcu->EraseFlash(error);
+                        state.mcu->SoftReset();
+                    }
+                    ReplyOk();
+                    break;
+                }
+                case STK_LEAVE_PROGMODE:
+                {
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    inProgMode = false;
+                    {
+                        std::lock_guard<std::mutex> guard(*boardsMutex);
+                        auto &state = getBoard(boardId, boardProfile);
+                        state.mcu->SoftReset();
+                        state.hasFirmware = true;
+                    }
+                    ReplyOk();
+                    break;
+                }
+                case STK_LOAD_ADDRESS:
+                {
+                    std::uint8_t addrLo = 0;
+                    std::uint8_t addrHi = 0;
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&addrLo, 1) || !ReadExact(&addrHi, 1) || !ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    addressWords = static_cast<std::uint32_t>(addrLo) | (static_cast<std::uint32_t>(addrHi) << 8);
+                    ReplyOk();
+                    break;
+                }
+                case STK_PROG_PAGE:
+                {
+                    std::uint8_t lenHi = 0;
+                    std::uint8_t lenLo = 0;
+                    std::uint8_t memType = 0;
+                    if (!ReadExact(&lenHi, 1) || !ReadExact(&lenLo, 1) || !ReadExact(&memType, 1))
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    const std::uint16_t len = static_cast<std::uint16_t>((lenHi << 8) | lenLo);
+                    std::vector<std::uint8_t> data(len);
+                    if (len > 0 && !ReadExact(data.data(), data.size()))
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+
+                    if (!inProgMode)
+                    {
+                        ReplyFail();
+                        break;
+                    }
+
+                    if (memType == static_cast<std::uint8_t>('F'))
+                    {
+                        std::lock_guard<std::mutex> guard(*boardsMutex);
+                        auto &state = getBoard(boardId, boardProfile);
+                        std::string error;
+                        const std::uint32_t byteAddress = addressWords * 2u;
+                        if (!state.mcu->ProgramFlash(byteAddress, data.data(), data.size(), error))
+                        {
+                            ReplyFail();
+                            break;
+                        }
+                        ReplyOk();
+                        // Address auto-increment is handled by the host tool; keep ours stable.
+                        break;
+                    }
+
+                    // EEPROM not currently supported.
+                    ReplyOk();
+                    break;
+                }
+                case STK_READ_PAGE:
+                {
+                    std::uint8_t lenHi = 0;
+                    std::uint8_t lenLo = 0;
+                    std::uint8_t memType = 0;
+                    if (!ReadExact(&lenHi, 1) || !ReadExact(&lenLo, 1) || !ReadExact(&memType, 1))
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    const std::uint16_t len = static_cast<std::uint16_t>((lenHi << 8) | lenLo);
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+
+                    if (memType != static_cast<std::uint8_t>('F'))
+                    {
+                        std::vector<std::uint8_t> zeros(len, 0);
+                        ReplyData(zeros.data(), zeros.size());
+                        break;
+                    }
+
+                    std::vector<std::uint8_t> out(len, 0);
+                    {
+                        std::lock_guard<std::mutex> guard(*boardsMutex);
+                        auto &state = getBoard(boardId, boardProfile);
+                        std::string error;
+                        const std::uint32_t byteAddress = addressWords * 2u;
+                        if (!state.mcu->ReadFlash(byteAddress, out.data(), out.size(), error))
+                        {
+                            std::fill(out.begin(), out.end(), 0);
+                        }
+                    }
+                    ReplyData(out.data(), out.size());
+                    break;
+                }
+                case STK_READ_SIGN:
+                {
+                    std::uint8_t eop = 0;
+                    if (!ReadExact(&eop, 1) || eop != CRC_EOP)
+                    {
+                        ReplyNoSync();
+                        break;
+                    }
+                    std::uint8_t sig[3] = {0x1E, 0x95, 0x0F};
+                    {
+                        std::lock_guard<std::mutex> guard(*boardsMutex);
+                        auto &state = getBoard(boardId, boardProfile);
+                        if (state.profile.mcu == "ATmega2560")
+                        {
+                            sig[0] = 0x1E;
+                            sig[1] = 0x98;
+                            sig[2] = 0x01;
+                        }
+                    }
+                    ReplyData(sig, sizeof(sig));
+                    break;
+                }
+                default:
+                {
+                    // Drain until EOP when possible.
+                    std::uint8_t b = 0;
+                    for (int i = 0; i < 64; ++i)
+                    {
+                        if (!ReadExact(&b, 1))
+                        {
+                            break;
+                        }
+                        if (b == CRC_EOP)
+                        {
+                            break;
+                        }
+                    }
+                    ReplyNoSync();
+                    break;
+                }
+                }
+            }
+        }
+    };
+
+    IdeBridge ide;
+    if (!ideComPort.empty())
+    {
+        // Ensure the board exists up-front so IDE can upload without Unity.
+        {
+            std::lock_guard<std::mutex> guard(boardsMutex);
+            (void)GetBoardState(ideBoardId, ideBoardProfile);
+        }
+
+        auto logFn = [&](const char *msg)
+        { Log("%s", msg); };
+        if (!ide.Start(ideComPort, ideBoardId, ideBoardProfile, logFn, GetBoardState, &boardsMutex))
+        {
+            Log("[IDE] Failed to start IDE bridge.");
+        }
+    }
+
     while (true)
     {
+        if (rpiBackend.Enabled())
+        {
+            rpiBackend.Update(QueryNowSeconds());
+        }
+
         PipeCommand cmd;
         while (pipe.PopCommand(cmd))
         {
+            std::lock_guard<std::mutex> guard(boardsMutex);
             if (cmd.type == PipeCommand::Type::Load)
             {
                 auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
@@ -456,6 +1117,7 @@ int main(int argc, char **argv)
 
         if (boardOrder.size() != boards.size())
         {
+            std::lock_guard<std::mutex> guard(boardsMutex);
             boardOrder.clear();
             boardOrder.reserve(boards.size());
             for (const auto &entry : boards)
@@ -473,6 +1135,7 @@ int main(int argc, char **argv)
         {
             std::size_t index = (boardOrderIndex + i) % count;
             const auto &key = boardOrder[index];
+            std::lock_guard<std::mutex> guard(boardsMutex);
             auto it = boards.find(key);
             if (it == boards.end())
                 continue;

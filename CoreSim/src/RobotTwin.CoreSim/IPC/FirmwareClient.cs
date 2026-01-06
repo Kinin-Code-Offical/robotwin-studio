@@ -124,6 +124,7 @@ namespace RobotTwin.CoreSim.IPC
         public string BoardProfile { get; set; } = "ArduinoUno";
         public bool DropStaleOutputs { get; set; } = true;
         public double MaxOutputAgeMs { get; set; } = 250.0;
+        public string ExtraLaunchArguments { get; set; } = string.Empty;
 
         public void Configure(string pipeName)
         {
@@ -224,10 +225,11 @@ namespace RobotTwin.CoreSim.IPC
         public void LaunchFirmware(string executablePath)
         {
             if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath)) return;
+            string extra = string.IsNullOrWhiteSpace(ExtraLaunchArguments) ? string.Empty : $" {ExtraLaunchArguments}";
             var startInfo = new ProcessStartInfo
             {
                 FileName = executablePath,
-                Arguments = $"--pipe {_pipeName} --lockstep",
+                Arguments = $"--pipe {_pipeName} --lockstep{extra}",
                 UseShellExecute = false,
                 CreateNoWindow = true
             };

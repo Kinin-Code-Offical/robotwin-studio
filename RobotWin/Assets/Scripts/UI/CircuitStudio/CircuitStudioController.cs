@@ -420,7 +420,12 @@ namespace RobotTwin.UI
         private void OnEnable()
         {
             _doc = GetComponent<UIDocument>();
-            if (_doc == null) return;
+            if (_doc == null)
+            {
+                Debug.LogError("[CircuitStudio] Missing UIDocument.");
+                enabled = false;
+                return;
+            }
 
             // Ensure VisualTree is loaded
             if (_doc.visualTreeAsset == null)
@@ -436,11 +441,25 @@ namespace RobotTwin.UI
             }
 
             _root = _doc.rootVisualElement;
-            if (_root == null) return;
+            if (_root == null)
+            {
+                Debug.LogError("[CircuitStudio] UIDocument rootVisualElement is null.");
+                enabled = false;
+                return;
+            }
 
             UiResponsive.Bind(_root, 1200f, 1600f, "studio-compact", "studio-medium", "studio-wide");
 
             InitializeUI();
+
+            // Critical UI sanity: if the canvas is missing, almost every interaction will null-ref.
+            if (_canvasView == null)
+            {
+                Debug.LogError("[CircuitStudio] UI binding failed: missing '.canvas-view' VisualElement.");
+                enabled = false;
+                return;
+            }
+
             InitializeSession();
 
             // Redirect Console (capture main + worker threads)
@@ -11299,6 +11318,7 @@ namespace RobotTwin.UI
             public string Label;
             public Vector3 AnchorLocal;
             public float AnchorRadius;
+            public string PinType;
         }
 
         public struct LabelLayout
@@ -11700,7 +11720,8 @@ namespace RobotTwin.UI
                     LabelSize = entry.labelSize,
                     Label = entry.label ?? string.Empty,
                     AnchorLocal = new Vector3(entry.anchorX, entry.anchorY, entry.anchorZ),
-                    AnchorRadius = entry.anchorRadius
+                    AnchorRadius = entry.anchorRadius,
+                    PinType = string.IsNullOrWhiteSpace(entry.pinType) ? string.Empty : entry.pinType.Trim()
                 });
             }
             return list;
@@ -11841,6 +11862,7 @@ namespace RobotTwin.UI
             public float anchorY;
             public float anchorZ;
             public float anchorRadius;
+            public string pinType;
         }
 
         [System.Serializable]

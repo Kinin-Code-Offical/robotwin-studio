@@ -43,6 +43,10 @@ namespace RobotTwin.UI
         private VisualElement _circuit3DLoadingOverlay;
         private VisualElement _circuit3DLoadingSpinner;
         private Label _circuit3DLoadingLabel;
+        private VisualElement _rpiDisplayView;
+        private Label _rpiStatusLabel;
+        private Texture2D _lastRpiTexture;
+        private string _lastRpiStatus;
         private IVisualElementScheduledItem _circuit3DLoadingSpin;
         private IVisualElementScheduledItem _circuit3DLoadingPoll;
         private float _circuit3DLoadingShownAt;
@@ -180,6 +184,8 @@ namespace RobotTwin.UI
             _circuit3DLoadingOverlay = root.Q<VisualElement>("Circuit3DLoadingOverlay");
             _circuit3DLoadingSpinner = root.Q<VisualElement>("Circuit3DLoadingSpinner");
             _circuit3DLoadingLabel = root.Q<Label>("Circuit3DLoadingLabel");
+            _rpiDisplayView = root.Q<VisualElement>("RpiDisplayView");
+            _rpiStatusLabel = root.Q<Label>("RpiStatusLabel");
             _circuit3DFovSlider = root.Q<Slider>("Circuit3DFovSlider");
             _circuit3DPerspectiveToggle = root.Q<Toggle>("Circuit3DPerspectiveToggle");
             _circuit3DFollowToggle = root.Q<Toggle>("Circuit3DFollowToggle");
@@ -459,6 +465,42 @@ namespace RobotTwin.UI
             }
         }
 
+        private void UpdateRpiPanel()
+        {
+            if (_rpiDisplayView == null && _rpiStatusLabel == null) return;
+
+            if (_host == null || !_host.UseRpiRuntime)
+            {
+                if (_rpiStatusLabel != null && _lastRpiStatus != "offline")
+                {
+                    _rpiStatusLabel.text = "RPI: offline";
+                    _lastRpiStatus = "offline";
+                }
+                if (_rpiDisplayView != null && _lastRpiTexture != null)
+                {
+                    _rpiDisplayView.style.backgroundImage = StyleKeyword.None;
+                    _lastRpiTexture = null;
+                }
+                return;
+            }
+
+            string status = string.IsNullOrWhiteSpace(_host.RpiStatus) ? "online" : _host.RpiStatus;
+            if (_rpiStatusLabel != null && !string.Equals(_lastRpiStatus, status, StringComparison.Ordinal))
+            {
+                _rpiStatusLabel.text = $"RPI: {status}";
+                _lastRpiStatus = status;
+            }
+
+            Texture2D texture = _host.RpiDisplayTexture;
+            if (_rpiDisplayView != null && !ReferenceEquals(_lastRpiTexture, texture))
+            {
+                _rpiDisplayView.style.backgroundImage = texture != null
+                    ? new StyleBackground(texture)
+                    : StyleKeyword.None;
+                _lastRpiTexture = texture;
+            }
+        }
+
         private static string SanitizeFileName(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return "session";
@@ -512,6 +554,7 @@ namespace RobotTwin.UI
 
             UpdateVisualization();
             UpdateTelemetry();
+            UpdateRpiPanel();
         }
 
         private void CaptureSwitchDefaults()

@@ -5,11 +5,104 @@
     "lastUpdated": "2026-01-06",
     "completedIssues": [
       103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117,
-      121, 184, 129, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 161, 162,
-      163, 164, 165, 167, 168, 169, 170, 175, 176, 177, 178, 179, 180, 181, 182,
-      183
+      121, 184, 129, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 152, 153,
+      154, 155, 156, 157, 158, 159, 161, 162, 163, 164, 165, 167, 168, 169, 170,
+      175, 176, 177, 178, 179, 180, 181, 182, 183, 191, 192
     ],
     "notes": [
+      {
+        "date": "2026-01-06",
+        "type": "implementation",
+        "summary": "RPi runtime moved into FirmwareEngine (C++ backend, no Python in production)",
+        "details": [
+          "Added C++ RPi backend with QEMU lifecycle, memory-mapped channels, and status reporting.",
+          "Unity runtime now only consumes shared memory (no host process start); board-gated firmware host launch passes RPi args.",
+          "Replaced Python smoke test with .NET tool that exercises the production backend."
+        ],
+        "files": [
+          "FirmwareEngine/Rpi/RpiBackend.h",
+          "FirmwareEngine/Rpi/RpiBackend.cpp",
+          "FirmwareEngine/Rpi/RpiShmProtocol.h",
+          "FirmwareEngine/Rpi/RpiShm.h",
+          "FirmwareEngine/Rpi/RpiShm.cpp",
+          "FirmwareEngine/Rpi/QemuProcess.h",
+          "FirmwareEngine/Rpi/QemuProcess.cpp",
+          "FirmwareEngine/main.cpp",
+          "tools/scripts/build_firmware.ps1",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryChannel.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryTransport.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeConfig.cs",
+          "tools/RpiSmokeTest/Program.cs",
+          "tools/RpiSmokeTest/RpiSmokeTest.csproj",
+          "tools/scripts/rpi_smoke_test.ps1",
+          "logs/tools/rpi_smoke_test.log",
+          "logs/firmware/build.log",
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
+      {
+        "date": "2026-01-06",
+        "type": "implementation",
+        "summary": "Raspberry Pi Phase 4 MVP bridge (mock QEMU + shared memory)",
+        "details": [
+          "Added shared memory transport (display, camera, GPIO, IMU, time, network) with a mock QEMU host loop.",
+          "Unity runtime starts/stops the host process and surfaces the display in RunMode UI.",
+          "Smoke test validates display + GPIO/camera updates via tools/rt_tool.py rpi-smoke."
+        ],
+        "files": [
+          "tools/rpi/rpi_host.py",
+          "tools/rpi/rpi_shm.py",
+          "tools/rpi/rpi_smoke_test.py",
+          "tools/scripts/rpi_smoke_test.ps1",
+          "tools/rt_tool.py",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeConfig.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryChannel.cs",
+          "RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryTransport.cs",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/UI/RunMode/RunModeController.cs",
+          "RobotWin/Assets/UI/RunMode/RunMode.uxml",
+          "RobotWin/Assets/UI/RunMode/RunMode.uss",
+          "logs/rpi/rpi_smoke.log",
+          "logs/tools/rpi_smoke_test.log",
+          "docs/TESTING.md",
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
+      {
+        "date": "2026-01-06",
+        "type": "architecture",
+        "summary": "Finalization direction: unify firmware backends in FirmwareEngine (C++), remove Python runtime host",
+        "details": [
+          "The Phase 4 Raspberry Pi work is treated as an MVP tooling bridge; the production path should move into FirmwareEngine (single executable hosting both Arduino/AVR and RaspberryPi/QEMU).",
+          "The final system should not generate mock sensor data in the runtime path; if QEMU is unavailable, the Raspberry Pi board is marked unavailable.",
+          "Peripherals (camera, IMU, GPIO, audio/microphone, networking, RF/RC, USB device bridging) should be unified under a shared device graph/binding model and kept disableable with near-zero overhead when unused.",
+          "RPi/QEMU connectivity must support both: (1) serial/terminal workflows via QEMU chardev (pipe/socket) and (2) an optional Windows COM exposure layer (com0com) for IDE/monitor integration, with strict feature-gating so unused paths allocate/spawn nothing.",
+          "USB bridging is a separate feature area: support simulated USB device classes (HID/CDC/mass storage) and/or passthrough/redirect modes where feasible, and keep it opt-in so it does not impact baseline performance."
+        ],
+        "issues": [191, 192, 193, 194, 195, 196, 197]
+      },
+      {
+        "date": "2026-01-06",
+        "type": "planning",
+        "summary": "Phase 7 skeleton expanded: RPi serial bridge + USB bridge scope",
+        "details": [
+          "Added explicit plan coverage for RPi/QEMU serial bridging (pipe/socket; optional com0com COM exposure) and clarified USB bridge scope (simulated device classes + optional passthrough).",
+          "Both features are required to be strictly disableable: no worker threads, device handles, or buffers unless the board/profile and user configuration enables them.",
+          "Expanded NET-01 expectations: WiFi/Bluetooth should be modeled as an environment (AP/router objects, client devices, distance/obstacles) with link quality that changes over time (RSSI/SNR, bandwidth/latency/jitter, dropouts) and supports an optional bridge-to-real mode (host NIC/Bluetooth adapter) for external connectivity.",
+          "NET-01 should be implemented in tiers: Tier A deterministic/reference (default) and Tier B high-fidelity/stochastic (opt-in), both compatible with replay via seeding.",
+          "USB bridging is intended to be full-functional via modular extensions: implement simulated USB device classes (HID/CDC/mass storage) and optional passthrough/redirect modes, while keeping all USB work fully opt-in to preserve baseline performance.",
+          "Added IO-05 requirement: Raspberry Pi 5 board profiles must ship with a complete built-in hardware inventory exposed as device-graph endpoints (Circuit Studio bindings + WorldSim attachments). Fidelity may be tiered, but presence/connectability must be complete (no missing fan/USB/Ethernet/MIPI/HDMI/PCIe/WiFi/BT/PMIC/etc)."
+        ],
+        "files": [
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
       {
         "date": "2026-01-06",
         "type": "maintenance",

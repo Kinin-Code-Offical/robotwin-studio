@@ -75,3 +75,11 @@ Ensures the UI and Rendering pipeline do not crash on startup.
 ```powershell
 python tools/rt_tool.py run-unity-smoke
 ```
+
+## 6. Raspberry Pi Smoke Test
+
+Validates the shared-memory bridge (display + GPIO + sensor channels) in mock mode.
+
+```powershell
+python tools/rt_tool.py rpi-smoke
+```

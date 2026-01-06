@@ -60,6 +60,8 @@ namespace RobotTwin.UI
         private const string ProjectRootKey = "ProjectWizard.ProjectRootPath";
         private const int RecentProjectLimit = 5;
         private const string RecentProjectsKey = "ProjectWizard.RecentProjects";
+        private const string PinTypeLead = "lead";
+        private const string PinTypePin = "pin";
 
         private enum ProjectSortMode
         {
@@ -1869,7 +1871,8 @@ namespace RobotTwin.UI
                         anchorX = pin.AnchorLocal.x,
                         anchorY = pin.AnchorLocal.y,
                         anchorZ = pin.AnchorLocal.z,
-                        anchorRadius = pin.AnchorRadius
+                        anchorRadius = pin.AnchorRadius,
+                        pinType = pin.PinType
                     }).ToArray()
                     : Array.Empty<PinLayoutPayload>(),
                 labels = item.Labels != null
@@ -2404,6 +2407,7 @@ namespace RobotTwin.UI
             anchorRow.Add(CreateEditorField("PinAnchorYField", FormatFloat(payload.anchorY), "editor-field-small"));
             anchorRow.Add(CreateEditorField("PinAnchorZField", FormatFloat(payload.anchorZ), "editor-field-small"));
             anchorRow.Add(CreateEditorField("PinAnchorRadiusField", FormatFloat(payload.anchorRadius), "editor-field-small"));
+            anchorRow.Add(CreateEditorDropdown("PinTypeField", NormalizePinType(payload.pinType), "editor-field-small", new[] { PinTypeLead, PinTypePin }));
             entry.Add(anchorRow);
 
             _componentPinsContainer.Add(entry);
@@ -2467,7 +2471,8 @@ namespace RobotTwin.UI
                     anchorX = ReadFloatFromField(entry.Q<TextField>("PinAnchorXField")),
                     anchorY = ReadFloatFromField(entry.Q<TextField>("PinAnchorYField")),
                     anchorZ = ReadFloatFromField(entry.Q<TextField>("PinAnchorZField")),
-                    anchorRadius = ReadFloatFromField(entry.Q<TextField>("PinAnchorRadiusField"))
+                    anchorRadius = ReadFloatFromField(entry.Q<TextField>("PinAnchorRadiusField")),
+                    pinType = NormalizePinType(GetEntryValue(entry, "PinTypeField"))
                 });
             }
             return list;
@@ -2662,6 +2667,43 @@ namespace RobotTwin.UI
             field.AddToClassList(className);
             field.SetValueWithoutNotify(value ?? string.Empty);
             return field;
+        }
+
+        private static DropdownField CreateEditorDropdown(string name, string value, string className, IEnumerable<string> choices)
+        {
+            var field = new DropdownField { name = name };
+            if (!string.IsNullOrWhiteSpace(className)) field.AddToClassList(className);
+            field.AddToClassList("input-dark");
+            var list = choices?.ToList() ?? new List<string>();
+            if (!string.IsNullOrWhiteSpace(value) &&
+                !list.Any(choice => string.Equals(choice, value, StringComparison.OrdinalIgnoreCase)))
+            {
+                list.Add(value);
+            }
+            field.choices = list;
+            string resolved = string.IsNullOrWhiteSpace(value)
+                ? (list.Count > 0 ? list[0] : string.Empty)
+                : value;
+            field.SetValueWithoutNotify(resolved);
+            return field;
+        }
+
+        private static string NormalizePinType(string value)
+        {
+            if (string.Equals(value, PinTypePin, StringComparison.OrdinalIgnoreCase))
+            {
+                return PinTypePin;
+            }
+            return PinTypeLead;
+        }
+
+        private static string GetEntryValue(VisualElement entry, string fieldName)
+        {
+            if (entry == null) return string.Empty;
+            var textField = entry.Q<TextField>(fieldName);
+            if (textField != null) return textField.value ?? string.Empty;
+            var dropdown = entry.Q<DropdownField>(fieldName);
+            return dropdown?.value ?? string.Empty;
         }
 
         private static float ReadFloatFromField(TextField field)
@@ -3037,6 +3079,7 @@ namespace RobotTwin.UI
             public float anchorY;
             public float anchorZ;
             public float anchorRadius;
+            public string pinType;
         }
 
         [Serializable]
