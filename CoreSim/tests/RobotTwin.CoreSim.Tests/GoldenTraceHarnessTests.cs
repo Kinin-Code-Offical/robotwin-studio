@@ -15,7 +15,7 @@ public class GoldenTraceHarnessTests
     public void GoldenTraceFixtureReplaysDeterministically()
     {
         var trace = GoldenTrace.LoadFixture("golden_trace_v1.json");
-        var firmware = new DeterministicFirmwareClient();
+        var firmware = new AllUnknownFirmwareClient();
         var circuit = new CircuitSpec { Id = "golden-circuit", Mode = SimulationMode.Fast };
         var host = new SimHost(circuit, firmware, trace.DtSeconds);
 
@@ -181,6 +181,23 @@ public class GoldenTraceHarnessTests
             }
 
             result.PinStates[8] = (request.StepSequence % 2 == 0) ? 1 : 0;
+            return result;
+        }
+    }
+
+    private sealed class AllUnknownFirmwareClient : IFirmwareClient
+    {
+        public Task ConnectAsync() => Task.CompletedTask;
+        public void Disconnect() { }
+
+        public FirmwareStepResult Step(FirmwareStepRequest request)
+        {
+            var result = new FirmwareStepResult
+            {
+                StepSequence = request.StepSequence
+            };
+
+            Array.Fill(result.PinStates, -1);
             return result;
         }
     }

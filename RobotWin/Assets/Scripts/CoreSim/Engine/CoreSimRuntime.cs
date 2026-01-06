@@ -605,21 +605,61 @@ namespace RobotTwin.CoreSim.Engine
                 return;
             }
             string gndNet = GetGroundNetForComponent(comp);
-            bool batterySupply = IsBatterySupplyingBoard(comp, spec, usbConnectedById);
-            if (IsUsbConnected(comp, usbConnectedById) && !HasAnySupplyNet(comp) && !batterySupply)
+            bool batterySupply = TryGetActiveBatterySupply(comp, spec, usbConnectedById, out var batterySupplyNet, out var batteryNominalVoltage, out _);
+            bool usbSupply = IsUsbConnected(comp, usbConnectedById) && !batterySupply;
+
+            string gndRef = IsConnected(gndNet) ? gndNet : GetGroundNet();
+
+            // If powered via USB (and not via battery), the board provides a 5V rail.
+            // We model this as an internal virtual supply net used for idle load/pullups,
+            // and optionally as a 5V/3V3 output if those header pins are connected.
+            if (usbSupply)
             {
                 string usbNet = GetUsbSupplyNet(comp);
                 RegisterVirtualNet(usbNet);
-                if (IsConnected(gndNet))
+                if (IsConnected(gndRef))
                 {
-                    voltageSources.Add(new VoltageSourceElement($"{comp.Id}.USB", usbNet, gndNet, 5.0, false, null));
+                    voltageSources.Add(new VoltageSourceElement($"{comp.Id}.USB", usbNet, gndRef, 5.0, false, null));
                 }
             }
-            AddMcuRegulatorSource(comp, spec, voltageSources, gndNet, usbConnectedById);
-            AddMcuPinSource(comp, "5V", 5.0, voltageSources, gndNet);
-            AddMcuPinSource(comp, "3V3", 3.3, voltageSources, gndNet);
-            AddMcuPinSource(comp, "IOREF", 5.0, voltageSources, gndNet);
-            AddMcuPinSource(comp, "VCC", 5.0, voltageSources, gndNet);
+
+            // If powered via VIN/RAW (battery supply), the board provides a regulated 5V rail.
+            bool vinOrRawSupply = false;
+            if (batterySupply)
+            {
+                string vinNet = GetNetFor(comp.Id, "VIN");
+                string rawNet = GetNetFor(comp.Id, "RAW");
+                vinOrRawSupply = (!string.IsNullOrWhiteSpace(vinNet) && string.Equals(batterySupplyNet, vinNet, StringComparison.OrdinalIgnoreCase)) ||
+                                (!string.IsNullOrWhiteSpace(rawNet) && string.Equals(batterySupplyNet, rawNet, StringComparison.OrdinalIgnoreCase));
+                if (vinOrRawSupply)
+                {
+                    string regNet = GetRegulatorSupplyNet(comp);
+                    RegisterVirtualNet(regNet);
+                    if (IsConnected(gndRef))
+                    {
+                        voltageSources.Add(new VoltageSourceElement($"{comp.Id}.REG5V", regNet, gndRef, 5.0, false, null));
+                    }
+                }
+            }
+
+            // Drive header rails only when the board is generating them (USB or VIN/RAW).
+            // This avoids fights when the board is externally powered through 5V/3V3.
+            bool canDrive5V = usbSupply || vinOrRawSupply;
+            if (canDrive5V)
+            {
+                AddMcuPinSource(comp, "5V", 5.0, voltageSources, gndRef);
+                AddMcuPinSource(comp, "3V3", 3.3, voltageSources, gndRef);
+            }
+
+            // IOREF/VCC are treated as board outputs indicating logic rail.
+            // If supply is explicitly 3V3, reflect that; otherwise assume 5V logic.
+            double logicVoltage = 5.0;
+            if (batterySupply && !vinOrRawSupply && batteryNominalVoltage <= 5.5)
+            {
+                logicVoltage = Math.Max(0.0, Math.Min(5.0, batteryNominalVoltage));
+            }
+            AddMcuPinSource(comp, "IOREF", logicVoltage, voltageSources, gndRef);
+            AddMcuPinSource(comp, "VCC", logicVoltage, voltageSources, gndRef);
 
             if (pinVoltages == null) return;
 
@@ -629,6 +669,16 @@ namespace RobotTwin.CoreSim.Engine
                 string pin = kvp.Key.Substring(comp.Id.Length + 1);
                 if (!IsDigitalPin(pin)) continue;
                 AddMcuPinSource(comp, pin, kvp.Value, voltageSources, gndNet);
+
+                // Arduino Uno R3 aliases: SDA=SDA(A4), SCL=SCL(A5)
+                if (string.Equals(pin, "A4", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddMcuPinSource(comp, "SDA", kvp.Value, voltageSources, gndRef);
+                }
+                else if (string.Equals(pin, "A5", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddMcuPinSource(comp, "SCL", kvp.Value, voltageSources, gndRef);
+                }
             }
         }
 
@@ -1604,7 +1654,12 @@ namespace RobotTwin.CoreSim.Engine
 
         private static bool IsDigitalPin(string pin)
         {
-            return pin.StartsWith("D", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(pin)) return false;
+            if (pin.StartsWith("D", StringComparison.OrdinalIgnoreCase)) return true;
+            if (pin.StartsWith("A", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(pin, "SDA", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(pin, "SCL", StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         private ThermalState GetOrCreateThermalState(

@@ -449,6 +449,10 @@
     background-color: #0b1016;
 }
 
+.rpi-display {
+    min-height: 160px;
+}
+
 .board-loading {
     position: absolute;
     left: 12px;

@@ -37,6 +37,14 @@ namespace RobotTwin.UI
         private const float BoardWorldWidth = CircuitLayoutSizing.BoardWorldWidth;
         private const float BoardWorldHeight = CircuitLayoutSizing.BoardWorldHeight;
         private const float DefaultAnchorRadius = 0.006f;
+        private const string PinTypeLead = "lead";
+        private const string PinTypePin = "pin";
+        private const float PinTipLengthScale = 2.5f;
+        private const float PinTipMinLength = 0.012f;
+        private const float PinTipRadiusScale = 0.35f;
+        private const float PinTipMinRadius = 0.0012f;
+        private const float LeadSolderRadiusScale = 1.2f;
+        private const float LeadSolderMinRadius = 0.003f;
         private const string PrefabRoot = "Prefabs/Circuit3D";
         private const string TextureRoot = "Prefabs/Circuit3D/Textures";
         private const string ComponentSettingsResource = "Circuit3D/ComponentSettings";
@@ -92,6 +100,8 @@ namespace RobotTwin.UI
         private static Texture2D _ledGlowTexture;
         private static Texture2D _smokeTexture;
         private static Material _sparkMaterial;
+        private static Material _pinMetalMaterial;
+        private static Material _solderMaterial;
 
         [Header("Prefabs (optional)")]
         [SerializeField] private GameObject _arduinoPrefab;
@@ -881,13 +891,21 @@ namespace RobotTwin.UI
                 if (string.IsNullOrWhiteSpace(pin.Name)) continue;
                 if (pin.AnchorRadius <= 0f && pin.AnchorLocal.sqrMagnitude <= 0.0001f) continue;
 
+                string pinType = NormalizePinType(pin.PinType);
+                float radius = pin.AnchorRadius > 0f ? pin.AnchorRadius : DefaultAnchorRadius;
+                Vector3 anchorLocal = pin.AnchorLocal;
+                if (string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase))
+                {
+                    Vector3 dir = anchorLocal.sqrMagnitude > 0.000001f ? anchorLocal.normalized : Vector3.up;
+                    anchorLocal += dir * GetPinTipLength(radius);
+                }
+
                 var root = new GameObject($"Pin_{pin.Name}");
                 root.transform.SetParent(visual.Root, false);
-                root.transform.localPosition = pin.AnchorLocal;
+                root.transform.localPosition = anchorLocal;
 
                 var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 sphere.transform.SetParent(root.transform, false);
-                float radius = pin.AnchorRadius > 0f ? pin.AnchorRadius : DefaultAnchorRadius;
                 sphere.transform.localScale = Vector3.one * Mathf.Max(radius * 2f, 0.002f);
                 var collider = sphere.GetComponent<Collider>();
                 if (collider != null) Destroy(collider);
@@ -896,8 +914,11 @@ namespace RobotTwin.UI
                 if (renderer != null)
                 {
                     var block = new MaterialPropertyBlock();
-                    block.SetColor("_Color", new Color(0.2f, 0.7f, 1f));
-                    block.SetColor("_BaseColor", new Color(0.2f, 0.7f, 1f));
+                    var color = string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase)
+                        ? new Color(0.85f, 0.68f, 0.4f)
+                        : new Color(0.2f, 0.7f, 1f);
+                    block.SetColor("_Color", color);
+                    block.SetColor("_BaseColor", color);
                     renderer.SetPropertyBlock(block);
                 }
 
@@ -1882,25 +1903,176 @@ namespace RobotTwin.UI
                     var compId = GetComponentId(node);
                     var pin = GetPinName(node);
                     float radius = DefaultAnchorRadius;
+                    bool hasPrefabPin = false;
                     bool hasOverride = TryGetAnchorOverride(circuit, compId, pin, out var position, out radius);
                     if (!hasOverride &&
-                        !TryGetPrefabAnchor(compId, pin, out position, out radius) &&
+                        !TryGetPrefabAnchor(compId, pin, out position, out radius, out hasPrefabPin) &&
                         !positions.TryGetValue(compId, out position))
                     {
                         position = new Vector3(0f, ComponentHeight, 0f);
                     }
 
+                    bool useCache = !hasOverride;
+                    bool hasCachedPosition = useCache && _anchorStateCache.TryGetValue(node, out var cached);
+                    if (hasCachedPosition)
+                    {
+                        position = cached.LocalPosition;
+                        radius = cached.Radius;
+                    }
+
+                    string pinType = PinTypeLead;
+                    bool hasExplicitPinType = false;
                     if (_componentVisuals.TryGetValue(compId, out var visual))
                     {
+                        pinType = ResolvePinType(visual, pin, out hasExplicitPinType);
                         radius = Mathf.Max(radius, GetAnchorRadius(visual, DefaultAnchorRadius));
                     }
 
-                    var anchor = CreateAnchor(node, position, radius, useCache: !hasOverride);
+                    Vector3 basePosition = position;
+                    if (hasExplicitPinType && string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase) && !hasPrefabPin)
+                    {
+                        Vector3 dir = GetPinDirection(compId, basePosition, positions);
+                        float pinLength = GetPinTipLength(radius);
+                        float pinRadius = GetPinTipRadius(radius);
+                        if (hasCachedPosition)
+                        {
+                            basePosition = position - dir * pinLength;
+                        }
+                        else
+                        {
+                            position = basePosition + dir * pinLength;
+                        }
+                        CreatePinTip(node, basePosition, dir, pinLength, pinRadius);
+                    }
+                    else if (hasExplicitPinType && string.Equals(pinType, PinTypeLead, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CreateLeadSolder(node, basePosition, radius);
+                    }
+
+                    var anchor = CreateAnchor(node, position, radius, useCache: useCache);
                     anchors[node] = anchor;
                 }
             }
 
             return anchors;
+        }
+
+        private static string ResolvePinType(ComponentVisual visual, string pin, out bool hasExplicitPinType)
+        {
+            hasExplicitPinType = false;
+            if (visual?.CatalogItem.PinLayout == null || string.IsNullOrWhiteSpace(pin))
+            {
+                return PinTypeLead;
+            }
+            foreach (var layout in visual.CatalogItem.PinLayout)
+            {
+                if (!string.Equals(layout.Name, pin, StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.IsNullOrWhiteSpace(layout.PinType))
+                {
+                    return PinTypeLead;
+                }
+                hasExplicitPinType = true;
+                return NormalizePinType(layout.PinType);
+            }
+            return PinTypeLead;
+        }
+
+        private static string NormalizePinType(string value)
+        {
+            if (string.Equals(value, PinTypePin, StringComparison.OrdinalIgnoreCase))
+            {
+                return PinTypePin;
+            }
+            return PinTypeLead;
+        }
+
+        private Vector3 GetPinDirection(string compId, Vector3 anchorPosition, Dictionary<string, Vector3> positions)
+        {
+            if (!string.IsNullOrWhiteSpace(compId) && positions != null && positions.TryGetValue(compId, out var center))
+            {
+                var dir = anchorPosition - center;
+                if (dir.sqrMagnitude > 0.000001f) return dir.normalized;
+            }
+
+            if (!string.IsNullOrWhiteSpace(compId) && _componentVisuals.TryGetValue(compId, out var visual) && visual?.Root != null)
+            {
+                var dir = anchorPosition - visual.Root.localPosition;
+                if (dir.sqrMagnitude > 0.000001f) return dir.normalized;
+            }
+
+            return Vector3.up;
+        }
+
+        private static float GetPinTipLength(float anchorRadius)
+        {
+            return Mathf.Max(PinTipMinLength, anchorRadius * PinTipLengthScale);
+        }
+
+        private static float GetPinTipRadius(float anchorRadius)
+        {
+            return Mathf.Max(PinTipMinRadius, anchorRadius * PinTipRadiusScale);
+        }
+
+        private void CreatePinTip(string nodeId, Vector3 basePosition, Vector3 direction, float length, float radius)
+        {
+            if (_root == null) return;
+            if (direction.sqrMagnitude < 0.000001f) direction = Vector3.up;
+
+            var root = new GameObject($"PinTip_{nodeId}");
+            root.transform.SetParent(_root, false);
+            root.transform.localPosition = basePosition + direction.normalized * (length * 0.5f);
+            root.transform.localRotation = Quaternion.FromToRotation(Vector3.up, direction.normalized);
+
+            var stem = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stem.name = "Stem";
+            stem.transform.SetParent(root.transform, false);
+            stem.transform.localScale = new Vector3(radius * 2f, length * 0.5f, radius * 2f);
+            RemoveCollider(stem);
+
+            var tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            tip.name = "Tip";
+            tip.transform.SetParent(root.transform, false);
+            float tipRadius = radius * 1.15f;
+            tip.transform.localScale = new Vector3(tipRadius * 2f, tipRadius * 2f, tipRadius * 2f);
+            tip.transform.localPosition = Vector3.up * (length * 0.5f);
+            RemoveCollider(tip);
+
+            var material = GetPinMetalMaterial();
+            ApplyMaterial(stem, material);
+            ApplyMaterial(tip, material);
+        }
+
+        private void CreateLeadSolder(string nodeId, Vector3 position, float anchorRadius)
+        {
+            if (_root == null) return;
+            var blob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            blob.name = $"Solder_{nodeId}";
+            blob.transform.SetParent(_root, false);
+            float radius = Mathf.Max(LeadSolderMinRadius, anchorRadius * LeadSolderRadiusScale);
+            blob.transform.localScale = Vector3.one * radius * 2f;
+            blob.transform.localPosition = position;
+            RemoveCollider(blob);
+            ApplyMaterial(blob, GetSolderMaterial());
+        }
+
+        private static void RemoveCollider(GameObject target)
+        {
+            if (target == null) return;
+            var collider = target.GetComponent<Collider>();
+            if (collider != null)
+            {
+                Destroy(collider);
+            }
+        }
+
+        private static void ApplyMaterial(GameObject target, Material material)
+        {
+            if (target == null || material == null) return;
+            var renderer = target.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = material;
+            }
         }
 
         private WireAnchor CreateAnchor(string nodeId, Vector3 position, float radius, bool useCache)
@@ -1946,6 +2118,17 @@ namespace RobotTwin.UI
                     localPos = visual.Root.InverseTransformPoint(anchor.transform.position);
                 }
 
+                if (_componentVisuals.TryGetValue(compId, out var pinVisual))
+                {
+                    string pinType = ResolvePinType(pinVisual, pin, out var hasExplicitPinType);
+                    if (hasExplicitPinType && string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Vector3 dir = localPos.sqrMagnitude > 0.000001f ? localPos.normalized : Vector3.up;
+                        float pinLength = GetPinTipLength(anchor.Radius);
+                        localPos -= dir * pinLength;
+                    }
+                }
+
                 SetAnchorProperty(comp.Properties, pin, "x", localPos.x);
                 SetAnchorProperty(comp.Properties, pin, "y", localPos.y);
                 SetAnchorProperty(comp.Properties, pin, "z", localPos.z);
@@ -1953,10 +2136,11 @@ namespace RobotTwin.UI
             }
         }
 
-        private bool TryGetPrefabAnchor(string compId, string pin, out Vector3 rootLocalPosition, out float radius)
+        private bool TryGetPrefabAnchor(string compId, string pin, out Vector3 rootLocalPosition, out float radius, out bool hasPinTransform)
         {
             rootLocalPosition = Vector3.zero;
             radius = DefaultAnchorRadius;
+            hasPinTransform = false;
             if (string.IsNullOrWhiteSpace(compId) || string.IsNullOrWhiteSpace(pin)) return false;
             if (_root == null) return false;
             if (!_componentVisuals.TryGetValue(compId, out var visual) || visual?.Root == null) return false;
@@ -1974,6 +2158,7 @@ namespace RobotTwin.UI
                 return false;
             }
 
+            hasPinTransform = true;
             var anchor = pinTransform.GetComponent<WireAnchor>();
             if (anchor != null)
             {
@@ -4392,6 +4577,36 @@ namespace RobotTwin.UI
                 _sparkMaterial.name = "Circuit3D_SparkMat";
             }
             return _sparkMaterial;
+        }
+
+        private static Material GetPinMetalMaterial()
+        {
+            if (_pinMetalMaterial != null) return _pinMetalMaterial;
+            _pinMetalMaterial = CreateMetalMaterial("Circuit3D_PinMetal", new Color(0.82f, 0.62f, 0.32f), 0.85f, 0.55f);
+            return _pinMetalMaterial;
+        }
+
+        private static Material GetSolderMaterial()
+        {
+            if (_solderMaterial != null) return _solderMaterial;
+            _solderMaterial = CreateMetalMaterial("Circuit3D_Solder", new Color(0.78f, 0.78f, 0.82f), 0.9f, 0.35f);
+            return _solderMaterial;
+        }
+
+        private static Material CreateMetalMaterial(string name, Color color, float metallic, float smoothness)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            if (shader == null) return null;
+            var material = new Material(shader)
+            {
+                name = name
+            };
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", smoothness);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", smoothness);
+            return material;
         }
 
         private static Texture2D GetLedGlowTexture()

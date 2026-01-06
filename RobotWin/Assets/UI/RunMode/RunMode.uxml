@@ -116,6 +116,12 @@
                         <ui:Label name="SerialContentLabel" text="Serial ready." class="serial-text" />
                     </ui:ScrollView>
                 </ui:VisualElement>
+
+                <ui:VisualElement class="card rpi-card">
+                    <ui:Label text="Raspberry Pi Display" class="card-title" />
+                    <ui:VisualElement name="RpiDisplayView" class="board-view rpi-display" />
+                    <ui:Label name="RpiStatusLabel" text="RPI: offline" class="subtle" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

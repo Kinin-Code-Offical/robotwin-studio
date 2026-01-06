@@ -34,8 +34,10 @@ Note: The docs are written with the “target end-state product” in mind; part
 - [Native Engine](docs/NATIVE_ENGINE.md)
 - [Firmware Engine](docs/FIRMWARE_ENGINE.md)
 - [Windows Setup](docs/SETUP_WINDOWS.md)
+- [Third-Party Notices](THIRD_PARTY_NOTICES.md)
 
 <!-- BEGIN FOLDER_TREE -->
+
 ## Project Tree
 
 ```text
@@ -55,5 +57,5 @@ Note: The docs are written with the “target end-state product” in mind; part
 |-- tests
 -- tools
 ```
-<!-- END FOLDER_TREE -->
 
+<!-- END FOLDER_TREE -->

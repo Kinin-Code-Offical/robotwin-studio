@@ -4,6 +4,7 @@ using RobotTwin.Core;
 using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Engine;
 using RobotTwin.CoreSim.Runtime;
+using RobotTwin.Game.RaspberryPi;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -37,10 +38,12 @@ namespace RobotTwin.Game
         private bool _loggedTelemetry;
         private bool _loggedTelemetrySample;
         private bool _loggedNativeFallback;
+        private bool _loggedUnoVirtualFidelityWarning;
         private bool _nativePinsReady;
         private readonly Dictionary<string, int> _nativeAvrIndex = new Dictionary<string, int>();
         private readonly Dictionary<string, string> _pinNetMap = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
         private bool _useExternalFirmware;
+        private bool _useFirmwareHost;
         private bool _useNativeEngine;
         private string _externalFirmwareExePath;
         private FirmwareClient _externalFirmwareClient;
@@ -52,6 +55,9 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, bool> _boardPowerById = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FirmwarePerfCounters> _firmwarePerfByBoard =
             new Dictionary<string, FirmwarePerfCounters>(System.StringComparer.OrdinalIgnoreCase);
+        private RpiRuntimeManager _rpiRuntime;
+        private bool _useRpiRuntime;
+        private RpiRuntimeConfig _rpiConfig;
         private const int TickTraceCapacity = 120;
         private readonly TickSample[] _tickTrace = new TickSample[TickTraceCapacity];
         private int _tickTraceIndex;
@@ -128,9 +134,12 @@ namespace RobotTwin.Game
         public bool UseNativeEngine => _useNativeEngine;
         public bool UseExternalFirmware => _useExternalFirmware;
         public bool NativePinsReady => _nativePinsReady;
+        public bool UseRpiRuntime => _useRpiRuntime;
         public int ExternalFirmwareSessionCount => _externalFirmwareSessions.Count;
         public int VirtualBoardCount => _virtualMcus.Count;
         public int PoweredBoardCount => _boardPowerById.Count;
+        public Texture2D RpiDisplayTexture => _rpiRuntime != null ? _rpiRuntime.DisplayTexture : null;
+        public string RpiStatus => _rpiRuntime != null ? _rpiRuntime.Status : "offline";
 
         public string VirtualComStatusJson { get; private set; } = string.Empty;
 
@@ -278,6 +287,7 @@ namespace RobotTwin.Game
             _loggedTelemetry = false;
             _loggedTelemetrySample = false;
             _loggedNativeFallback = false;
+            _loggedUnoVirtualFidelityWarning = false;
             _externalFirmwareSessions.Clear();
             _externalFirmwarePinsByBoard.Clear();
             _externalFirmwarePinWarnings.Clear();
@@ -304,34 +314,108 @@ namespace RobotTwin.Game
 
             _circuit = SessionManager.Instance != null ? SessionManager.Instance.CurrentCircuit : null;
             BuildPinNetMap();
+            bool unoOnlyMode = RpiRuntimeConfig.IsUnoOnlyMode();
+            bool wantsRpi = TryStartRpiRuntime();
+            string firmwarePath = ResolveFirmwareHostPath();
 
-            _useExternalFirmware = TrySetupExternalFirmwares();
-            if (_useExternalFirmware)
+            _useExternalFirmware = TrySetupExternalFirmwares(firmwarePath);
+
+            // Uno-only mode prioritizes high-fidelity AVR emulation via NativeEngine.
+            // External firmware (.bvm via FirmwareEngine) is disabled by default to reduce runtime surface area.
+            if (unoOnlyMode && _useExternalFirmware)
             {
-                _externalFirmwareClient?.LaunchFirmware(_externalFirmwareExePath);
-                foreach (var session in _externalFirmwareSessions.Values)
+                Debug.Log("[SimHost] Uno-only mode: external firmware disabled; preferring NativeEngine AVR path.");
+                _useExternalFirmware = false;
+            }
+
+            _useFirmwareHost = wantsRpi || _useExternalFirmware;
+            if (_useFirmwareHost)
+            {
+                if (string.IsNullOrWhiteSpace(firmwarePath) || !File.Exists(firmwarePath))
                 {
-                    TryLoadExternalFirmware(session);
+                    Debug.LogError("[SimHost] Firmware host missing; external firmware disabled.");
+                    _useFirmwareHost = false;
+                    _useExternalFirmware = false;
+                    if (wantsRpi)
+                    {
+                        _rpiRuntime?.SetUnavailable("firmware host missing");
+                    }
+                }
+                else
+                {
+                    EnsureFirmwareClient();
+                    _externalFirmwareExePath = firmwarePath;
+                    if (_externalFirmwareClient != null)
+                    {
+                        _externalFirmwareClient.ExtraLaunchArguments = BuildFirmwareLaunchArguments(wantsRpi);
+                        _externalFirmwareClient.LaunchFirmware(_externalFirmwareExePath);
+                    }
+                    if (_useExternalFirmware)
+                    {
+                        foreach (var session in _externalFirmwareSessions.Values)
+                        {
+                            TryLoadExternalFirmware(session);
+                        }
+                    }
                 }
             }
             BuildVirtualMcus();
 
             _useNativeEngine = !_useExternalFirmware
                 && SessionManager.Instance != null
-                && SessionManager.Instance.UseNativeEnginePins
+                && (SessionManager.Instance.UseNativeEnginePins || unoOnlyMode)
                 && !SessionManager.Instance.UseVirtualMcu;
 
             // 3. Initialize Native Engine
             if (_useNativeEngine)
             {
-                int engines = NativeBridge.GetVersion();
-                Debug.Log($"[SimHost] NativeEngine v{engines} Linked.");
+                try
+                {
+                    int engines = NativeBridge.GetVersion();
+                    Debug.Log($"[SimHost] NativeEngine v{engines} Linked.");
+                }
+                catch (DllNotFoundException ex)
+                {
+                    _useNativeEngine = false;
+                    Debug.LogWarning($"[SimHost] NativeEngine DLL not found. Falling back to VirtualMcu. ({ex.Message})");
+                }
+                catch (EntryPointNotFoundException ex)
+                {
+                    _useNativeEngine = false;
+                    Debug.LogWarning($"[SimHost] NativeEngine entry point missing. Falling back to VirtualMcu. ({ex.Message})");
+                }
+                catch (Exception ex)
+                {
+                    _useNativeEngine = false;
+                    Debug.LogWarning($"[SimHost] NativeEngine init error. Falling back to VirtualMcu. ({ex.Message})");
+                }
             }
 
             _coreSim = new CoreSimRuntime();
             if (_useNativeEngine)
             {
-                InitializeNativePins();
+                try
+                {
+                    InitializeNativePins();
+                }
+                catch (DllNotFoundException ex)
+                {
+                    _useNativeEngine = false;
+                    _nativePinsReady = false;
+                    Debug.LogWarning($"[SimHost] NativeEngine DLL not found during pin init. Falling back to VirtualMcu. ({ex.Message})");
+                }
+                catch (EntryPointNotFoundException ex)
+                {
+                    _useNativeEngine = false;
+                    _nativePinsReady = false;
+                    Debug.LogWarning($"[SimHost] NativeEngine entry point missing during pin init. Falling back to VirtualMcu. ({ex.Message})");
+                }
+                catch (Exception ex)
+                {
+                    _useNativeEngine = false;
+                    _nativePinsReady = false;
+                    Debug.LogWarning($"[SimHost] NativeEngine pin init error. Falling back to VirtualMcu. ({ex.Message})");
+                }
             }
         }
 
@@ -349,6 +433,7 @@ namespace RobotTwin.Game
             _externalFirmwareClient = null;
             _externalFirmwareExePath = null;
             _useExternalFirmware = false;
+            _useFirmwareHost = false;
             _useNativeEngine = false;
             _nativePinsReady = false;
             _nativeAvrIndex.Clear();
@@ -358,6 +443,10 @@ namespace RobotTwin.Game
             _pullupResistances.Clear();
             _virtualSerialNextTime.Clear();
             _boardPowerById.Clear();
+            _useRpiRuntime = false;
+            _rpiRuntime?.Stop();
+            _rpiRuntime = null;
+            _rpiConfig = null;
             _firmwarePerfByBoard.Clear();
             _serialBuffer = string.Empty;
             _timingStats = new TimingStats();
@@ -392,6 +481,7 @@ namespace RobotTwin.Game
         private void Update()
         {
             if (!_isRunning) return;
+            _rpiRuntime?.Update(Time.unscaledDeltaTime, SimTime);
 
             if (_realtimeConfig != null && _realtimeConfig.Enabled)
             {
@@ -492,6 +582,11 @@ namespace RobotTwin.Game
 
             if (!usedNativePins)
             {
+                if (!_loggedUnoVirtualFidelityWarning && RpiRuntimeConfig.IsUnoOnlyMode())
+                {
+                    _loggedUnoVirtualFidelityWarning = true;
+                    Debug.LogWarning("[SimHost] Uno-only mode is running on VirtualMcu fallback. PWM/timers/interrupt fidelity is limited; enable NativeEngine pins + provide .hex/.bvm for realistic behavior.");
+                }
                 foreach (var mcu in _virtualMcus.Values)
                 {
                     if (!IsBoardPowered(mcu.Id))
@@ -1070,6 +1165,48 @@ namespace RobotTwin.Game
             }
         }
 
+        private bool TryStartRpiRuntime()
+        {
+            if (_useRpiRuntime) return true;
+            if (RpiRuntimeConfig.IsUnoOnlyMode())
+            {
+                return false;
+            }
+            if (!HasRaspberryPiBoard())
+            {
+                return false;
+            }
+
+            var config = RpiRuntimeConfig.FromEnvironment();
+            _rpiRuntime = new RpiRuntimeManager();
+            _rpiRuntime.Start(config);
+            _useRpiRuntime = true;
+            _rpiConfig = config;
+            Debug.Log("[SimHost] Raspberry Pi runtime started.");
+            return true;
+        }
+
+        private bool HasRaspberryPiBoard()
+        {
+            if (_circuit?.Components == null) return false;
+            foreach (var comp in _circuit.Components)
+            {
+                if (comp == null) continue;
+                if (comp.Properties != null &&
+                    comp.Properties.TryGetValue("boardProfile", out var profile) &&
+                    string.Equals(BoardProfiles.Get(profile).Id, "RaspberryPi", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                if (!string.IsNullOrWhiteSpace(comp.Type) &&
+                    string.Equals(BoardProfiles.Get(comp.Type).Id, "RaspberryPi", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private void RefreshBoardPowerStates()
         {
             _boardPowerById.Clear();
@@ -1183,12 +1320,9 @@ namespace RobotTwin.Game
             return false;
         }
 
-        private bool TrySetupExternalFirmwares()
+        private bool TrySetupExternalFirmwares(string firmwarePath)
         {
             if (SessionManager.Instance == null || _circuit == null || _circuit.Components == null) return false;
-
-            SessionManager.Instance.FindFirmware();
-            var firmwarePath = SessionManager.Instance.FirmwarePath;
             if (string.IsNullOrWhiteSpace(firmwarePath) || !File.Exists(firmwarePath)) return false;
 
             if (SessionManager.Instance.UseVirtualMcu)
@@ -1200,11 +1334,6 @@ namespace RobotTwin.Game
             var boards = _circuit.Components.Where(IsMcuBoard).ToList();
             if (boards.Count == 0) return false;
             var supportedBoards = new List<ComponentSpec>();
-
-            if (_externalFirmwareClient == null)
-            {
-                _externalFirmwareClient = CreateSharedFirmwareClient();
-            }
 
             foreach (var board in boards)
             {
@@ -1254,6 +1383,81 @@ namespace RobotTwin.Game
             _externalFirmwareExePath = firmwarePath;
             Debug.Log($"[SimHost] External firmware enabled for {_externalFirmwareSessions.Count} board(s).");
             return true;
+        }
+
+        private string ResolveFirmwareHostPath()
+        {
+            var session = SessionManager.Instance;
+            if (session == null) return null;
+            session.FindFirmware();
+            return session.FirmwarePath;
+        }
+
+        private void EnsureFirmwareClient()
+        {
+            if (_externalFirmwareClient == null)
+            {
+                _externalFirmwareClient = CreateSharedFirmwareClient();
+            }
+        }
+
+        private string BuildFirmwareLaunchArguments(bool enableRpi)
+        {
+            if (!enableRpi || _rpiConfig == null) return string.Empty;
+
+            var args = new List<string>
+            {
+                "--rpi-enable",
+                "--rpi-shm-dir",
+                _rpiConfig.SharedMemoryDir,
+                "--rpi-display",
+                $"{_rpiConfig.DisplayWidth}x{_rpiConfig.DisplayHeight}",
+                "--rpi-camera",
+                $"{_rpiConfig.CameraWidth}x{_rpiConfig.CameraHeight}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(_rpiConfig.QemuPath))
+            {
+                args.Add("--rpi-qemu");
+                args.Add(_rpiConfig.QemuPath);
+            }
+            if (!string.IsNullOrWhiteSpace(_rpiConfig.ImagePath))
+            {
+                args.Add("--rpi-image");
+                args.Add(_rpiConfig.ImagePath);
+            }
+            if (!string.IsNullOrWhiteSpace(_rpiConfig.NetworkMode))
+            {
+                args.Add("--rpi-net-mode");
+                args.Add(_rpiConfig.NetworkMode);
+            }
+            if (_rpiConfig.CpuAffinityMask != 0)
+            {
+                args.Add("--rpi-cpu-affinity");
+                args.Add($"0x{_rpiConfig.CpuAffinityMask:X}");
+            }
+            if (_rpiConfig.CpuMaxPercent > 0)
+            {
+                args.Add("--rpi-cpu-max-percent");
+                args.Add(_rpiConfig.CpuMaxPercent.ToString(CultureInfo.InvariantCulture));
+            }
+            if (_rpiConfig.ThreadCount > 0)
+            {
+                args.Add("--rpi-threads");
+                args.Add(_rpiConfig.ThreadCount.ToString(CultureInfo.InvariantCulture));
+            }
+            if (_rpiConfig.PriorityClass > 0)
+            {
+                args.Add("--rpi-priority");
+                args.Add(_rpiConfig.PriorityClass.ToString(CultureInfo.InvariantCulture));
+            }
+
+            string repoRoot = RpiRuntimeConfig.ResolveRepoRoot();
+            string rpiLog = Path.Combine(repoRoot, "logs", "rpi", "rpi_qemu.log");
+            args.Add("--rpi-log");
+            args.Add(rpiLog);
+
+            return string.Join(" ", args);
         }
 
         private FirmwareClient CreateSharedFirmwareClient()

@@ -318,6 +318,7 @@ COMMAND_HELP = {
     "record-golden-trace": "Record golden trace from FirmwareEngine lockstep into test fixtures.",
     "run-qa": "Run Node/Jest integration tests.",
     "run-unity-smoke": "Batchmode Unity compile smoke test.",
+    "rpi-smoke": "Run Raspberry Pi shared-memory smoke test.",
     "monitor-unity": "Tail logs/unity/unity_live_error.log and highlight errors.",
     "console": "Interactive HTTP console for RemoteCommandServer.",
     "debug-console": "Launch the Debug Console web dashboard.",
@@ -361,6 +362,7 @@ def main() -> int:
     add_script_command("record-golden-trace", "tools/scripts/record_golden_trace.ps1", "Record FirmwareEngine golden trace fixture")
     add_script_command("run-qa", "tools/scripts/run_qa.ps1", "Run integration tests (Node/Jest)")
     add_script_command("run-unity-smoke", "tools/scripts/run_unity_smoke.ps1", "Run Unity batchmode smoke test")
+    add_script_command("rpi-smoke", "tools/scripts/rpi_smoke_test.ps1", "Run Raspberry Pi shared-memory smoke test")
     add_script_command("debug-console", "tools/debug_console/launch_debug_console.ps1", "Launch Debug Console dashboard")
     setup_parser = subparsers.add_parser("setup", help="Verify prerequisites and bootstrap local dev")
     setup_parser.add_argument("--check-only", action="store_true", help="Only verify prerequisites")

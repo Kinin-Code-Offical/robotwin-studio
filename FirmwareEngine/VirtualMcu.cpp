@@ -88,7 +88,20 @@ namespace firmware
 
     void VirtualMcu::Reset()
     {
-        std::fill(_state.flash.begin(), _state.flash.end(), 0);
+        ResetState(true);
+    }
+
+    void VirtualMcu::SoftReset()
+    {
+        ResetState(false);
+    }
+
+    void VirtualMcu::ResetState(bool clearFlash)
+    {
+        if (clearFlash)
+        {
+            std::fill(_state.flash.begin(), _state.flash.end(), 0);
+        }
         std::fill(_state.sram.begin(), _state.sram.end(), 0);
         // EEPROM persists across resets by design.
         std::fill(_state.io.begin(), _state.io.end(), 0);
@@ -156,6 +169,90 @@ namespace firmware
             std::uint8_t ucsra = static_cast<std::uint8_t>((1u << UartDataRegisterEmptyBit));
             AVR_IoWrite(&_state.core, UcsrAAddress[i], ucsra);
         }
+    }
+
+    bool VirtualMcu::EraseFlash(std::string &error)
+    {
+        (void)error;
+        if (_state.flash.empty())
+        {
+            error = "Flash not allocated";
+            return false;
+        }
+        std::size_t limit = _state.flash.size();
+        if (_profile.bootloader_bytes > 0 && _profile.bootloader_bytes < limit)
+        {
+            limit -= _profile.bootloader_bytes;
+        }
+        std::fill(_state.flash.begin(), _state.flash.begin() + static_cast<std::ptrdiff_t>(limit), 0xFF);
+        return true;
+    }
+
+    bool VirtualMcu::ProgramFlash(std::uint32_t byteAddress, const std::uint8_t *data, std::size_t size, std::string &error)
+    {
+        if (!data || size == 0)
+        {
+            error = "No flash data";
+            return false;
+        }
+        if (_state.flash.empty())
+        {
+            error = "Flash not allocated";
+            return false;
+        }
+
+        std::size_t limit = _state.flash.size();
+        if (_profile.bootloader_bytes > 0 && _profile.bootloader_bytes < limit)
+        {
+            limit -= _profile.bootloader_bytes;
+        }
+
+        const std::size_t start = static_cast<std::size_t>(byteAddress);
+        if (start >= limit)
+        {
+            error = "Flash address out of range";
+            return false;
+        }
+        if (start + size > limit)
+        {
+            error = "Flash write exceeds application region";
+            return false;
+        }
+        std::memcpy(_state.flash.data() + start, data, size);
+        return true;
+    }
+
+    bool VirtualMcu::ReadFlash(std::uint32_t byteAddress, std::uint8_t *outData, std::size_t size, std::string &error) const
+    {
+        if (!outData || size == 0)
+        {
+            error = "No output buffer";
+            return false;
+        }
+        if (_state.flash.empty())
+        {
+            error = "Flash not allocated";
+            return false;
+        }
+
+        std::size_t limit = _state.flash.size();
+        if (_profile.bootloader_bytes > 0 && _profile.bootloader_bytes < limit)
+        {
+            limit -= _profile.bootloader_bytes;
+        }
+        const std::size_t start = static_cast<std::size_t>(byteAddress);
+        if (start >= limit)
+        {
+            error = "Flash address out of range";
+            return false;
+        }
+        if (start + size > limit)
+        {
+            error = "Flash read exceeds application region";
+            return false;
+        }
+        std::memcpy(outData, _state.flash.data() + start, size);
+        return true;
     }
 
     void VirtualMcu::SamplePinOutputs(std::uint8_t *outPins, std::size_t outCount) const

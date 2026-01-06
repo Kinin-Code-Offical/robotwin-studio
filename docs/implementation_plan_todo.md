@@ -64,14 +64,40 @@ Phase 3: High Fidelity
 
 Phase 4: Raspberry Pi
 
-- 152 RP-01 QEMU Process Lifecycle Management
-- 159 RP-08 Shared Memory Transport Layer
-- 153 RP-02 GPIO and Peripheral Bridge
-- 157 RP-06 QEMU Display Output to Unity
-- 154 RP-03 Virtual Camera Injection
-- 158 RP-07 Network and WiFi Bridge
-- 155 RP-04 IMU and Sensor Injection
-- 156 RP-05 Time Synchronization Strategy
+- DONE (verified) 152 RP-01 QEMU Process Lifecycle Management (Evidence: FirmwareEngine/Rpi/RpiBackend._; FirmwareEngine/Rpi/QemuProcess._; FirmwareEngine/main.cpp --rpi-enable; logs/firmware/build.log; logs/tools/rpi_smoke_test.log)
+- DONE (verified) 159 RP-08 Shared Memory Transport Layer (Evidence: FirmwareEngine/Rpi/RpiShm.\*; FirmwareEngine/Rpi/RpiShmProtocol.h; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryChannel.cs; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryTransport.cs; tools/RpiSmokeTest/Program.cs)
+- DONE (verified) 153 RP-02 GPIO and Peripheral Bridge (Evidence: FirmwareEngine/Rpi/RpiBackend.cpp ReadIfNew GPIO; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs SetGpioState/WriteGpio; tools/RpiSmokeTest/Program.cs)
+- DONE (verified) 157 RP-06 QEMU Display Output to Unity (Evidence: FirmwareEngine/Rpi/RpiBackend.cpp display writer + status channel; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs UpdateDisplay; RobotWin/Assets/Scripts/UI/RunMode/RunModeController.cs; RobotWin/Assets/UI/RunMode/RunMode.uxml; RobotWin/Assets/UI/RunMode/RunMode.uss)
+- DONE (verified) 154 RP-03 Virtual Camera Injection (Evidence: FirmwareEngine/Rpi/RpiBackend.cpp camera channel; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs SetCameraFrame/WriteCameraFrame; tools/RpiSmokeTest/Program.cs)
+- DONE (verified) 158 RP-07 Network and WiFi Bridge (Evidence: FirmwareEngine/Rpi/RpiBackend.cpp network channel; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs UpdateNetwork; tools/RpiSmokeTest/Program.cs)
+- DONE (verified) 155 RP-04 IMU and Sensor Injection (Evidence: FirmwareEngine/Rpi/RpiBackend.cpp IMU channel; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs SetImuSample/WriteImu; tools/RpiSmokeTest/Program.cs)
+- DONE (verified) 156 RP-05 Time Synchronization Strategy (Evidence: FirmwareEngine/Rpi/RpiBackend.cpp time channel; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs UpdateTimeSync; tools/RpiSmokeTest/Program.cs)
+
+Phase 7: Unified Peripherals & Connectivity (Final Architecture)
+
+- DONE (verified) 191 FE-RP-09 FirmwareEngine RPi/QEMU backend in C++ (remove Python runtime host; no production mock data) (Evidence: FirmwareEngine/Rpi/RpiBackend._; FirmwareEngine/Rpi/QemuProcess._; FirmwareEngine/main.cpp; tools/RpiSmokeTest/Program.cs; tools/scripts/rpi_smoke_test.ps1)
+- DONE (verified) 192 FE-RP-10 RPi shared memory protocol single source of truth (C/C++ header; prevent drift with Unity) (Evidence: FirmwareEngine/Rpi/RpiShmProtocol.h; RobotWin/Assets/Scripts/Game/RaspberryPi/RpiSharedMemoryChannel.cs; tools/RpiSmokeTest/Program.cs)
+- TODO 193 IO-01 Unified device graph + bindings (Unity objects ↔ simulation IO ↔ firmware endpoints)
+- TODO 194 IO-02 Audio realism: spatial audio capture to simulated microphone inputs
+- TODO 195 NET-01 Virtual WiFi/Bluetooth world: Tier A (deterministic), Tier B (high-fidelity), + Bridge-to-real (RF propagation + obstacles + variable link quality)
+- TODO 196 RF-01 RC/RF link simulation: inter-process radio bus + receiver mapping
+- TODO 197 IO-03 USB bridge: full-functional USB extensions (simulated device classes: HID/CDC/mass storage + optional passthrough/redirect), strict opt-in / near-zero overhead when unused
+- TODO (needs issue) IO-04 RPi serial bridge: QEMU UART/CDC ↔ pipe/socket ↔ (optional) com0com → Windows COM for terminal/IDE
+- TODO (needs issue) IO-05 Raspberry Pi 5 board inventory: ship all built-in modules as usable endpoints (Circuit Studio + WorldSim)
+
+  - Includes: fan connector, USB2/USB3 ports, Ethernet PHY+jack, RP1 I/O controller, MIPI CSI/DSI, PoE HAT, micro HDMI, RTC battery connector, USB-C power/OTG, UART header, PMIC, power button, PCIe, dual-band 802.11ac WiFi + Bluetooth 5, and SoC/RAM modeled at least for power/thermal/resource constraints.
+  - Requirement: every listed module appears in the device graph by default (no “missing hardware”), is connectable/bindable in Circuit Studio (electrical/IO endpoints), and has a WorldSim representation where applicable (ports/physical placement/occlusion/thermal/RF).
+  - Fidelity tiers are allowed (Tier 0 presence/connectivity → Tier 1 functional protocol → Tier 2 physical effects), but “present and bindable” is non-negotiable.
+
+- TODO (needs issue) FE-RP-11 Bundle/Embed QEMU with FirmwareEngine distribution (no external installs)
+
+  - Goal: Raspberry Pi backend never depends on a separately installed QEMU.
+  - Packaging rule: ship QEMU as part of the product (e.g., alongside the exe or embedded/compressed and extracted on demand).
+  - Runtime rule: if Raspberry Pi board is not selected/enabled, the QEMU payload is not extracted/loaded and no processes/threads are started.
+
+- TODO (needs issue) FE-RP-12 Real QEMU display pipeline (remove mock display generation entirely)
+  - Goal: the display channel is sourced from the running QEMU guest (not synthetic patterns).
+  - Acceptance: no runtime path produces mock frames; when QEMU is missing/unavailable the status channel must report Unavailable.
 
 Phase 5: Polish & Optimization
 
