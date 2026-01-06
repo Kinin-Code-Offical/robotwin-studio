@@ -449,6 +449,56 @@
     background-color: #0b1016;
 }
 
+.board-loading {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 42px;
+    bottom: 12px;
+    background-color: rgba(18, 22, 29, 0.78);
+    justify-content: center;
+    align-items: center;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.board-loading-card {
+    background-color: #161c24;
+    border-radius: 10px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: #283241;
+    border-bottom-color: #283241;
+    border-left-color: #283241;
+    border-right-color: #283241;
+    padding: 14px 18px;
+    min-width: 240px;
+    align-items: center;
+    justify-content: center;
+}
+
+.board-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    border-top-width: 3px;
+    border-bottom-width: 3px;
+    border-left-width: 3px;
+    border-right-width: 3px;
+    border-top-color: #38bdf8;
+    border-right-color: rgba(148, 163, 184, 0.6);
+    border-bottom-color: rgba(148, 163, 184, 0.6);
+    border-left-color: rgba(148, 163, 184, 0.6);
+    margin-bottom: 10px;
+}
+
+.board-loading-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: #f1f5f9;
+}
+
 .board-3d-help {
     position: absolute;
     top: 48px;

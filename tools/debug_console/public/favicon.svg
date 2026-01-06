@@ -1,5 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="24" fill="#1460a5"/>
-  <rect x="18" y="18" width="92" height="92" rx="18" fill="#f6e9d4"/>
-  <text x="64" y="78" text-anchor="middle" font-size="54" font-family="Segoe UI, Arial, sans-serif" fill="#1460a5">RW</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f4f86"/>
+      <stop offset="1" stop-color="#1460a5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
+
+  <!-- hex outline -->
+  <path
+    d="M64 18 L98 38 L98 78 L64 98 L30 78 L30 38 Z"
+    fill="none"
+    stroke="#f6e9d4"
+    stroke-width="10"
+    stroke-linejoin="round"
+  />
+
+  <!-- dotted corners (classic look) -->
+  <g fill="#f6e9d4">
+    <circle cx="64" cy="18" r="4.5"/>
+    <circle cx="98" cy="38" r="4.5"/>
+    <circle cx="98" cy="78" r="4.5"/>
+    <circle cx="64" cy="98" r="4.5"/>
+    <circle cx="30" cy="78" r="4.5"/>
+    <circle cx="30" cy="38" r="4.5"/>
+  </g>
+
+  <!-- inner hex for depth -->
+  <path
+    d="M64 30 L88 44 L88 72 L64 86 L40 72 L40 44 Z"
+    fill="#f6e9d4"
+    opacity="0.10"
+  />
 </svg>

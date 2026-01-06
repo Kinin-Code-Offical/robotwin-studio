@@ -134,6 +134,9 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "Physics_GetBody")]
         public static extern int Physics_GetBody(uint id, out RigidBody body);
 
+        [DllImport(PLUGIN_NAME, EntryPoint = "Physics_SetBody")]
+        public static extern int Physics_SetBody(uint id, ref RigidBody body);
+
         [DllImport(PLUGIN_NAME, EntryPoint = "Physics_Step")]
         public static extern void Physics_Step(float dt);
 

@@ -146,6 +146,13 @@
                         </ui:VisualElement>
                     </ui:VisualElement>
                             <ui:Label text="3D Circuit Preview" class="circuit-3d-label" />
+
+                            <ui:VisualElement name="Circuit3DLoadingOverlay" class="circuit-3d-loading" style="display: none;">
+                                <ui:VisualElement class="circuit-3d-loading-card">
+                                    <ui:VisualElement name="Circuit3DLoadingSpinner" class="circuit-3d-loading-spinner" />
+                                    <ui:Label name="Circuit3DLoadingLabel" text="Loading 3D view..." class="circuit-3d-loading-title" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
                         </ui:VisualElement>
                         <ui:VisualElement name="Circuit3DHelpIcon" class="board-3d-help">
                             <ui:Label text="?" class="board-3d-help-icon" />
@@ -153,6 +160,7 @@
                                 <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
                                 <ui:Label text="R / Home: Reset view" class="board-3d-help-line" />
                                 <ui:Label text="F: Focus selection" class="board-3d-help-line" />
+                                <ui:Label text="Alt + Arrows: Snap view (Top/Bottom/Left/Right)" class="board-3d-help-line" />
                                 <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
                                 <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
                                 <ui:Label text="Ctrl + Arrows: Zoom / Lighting" class="board-3d-help-line" />

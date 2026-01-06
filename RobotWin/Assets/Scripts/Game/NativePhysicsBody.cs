@@ -77,6 +77,14 @@ namespace RobotTwin.Game
             BodyId = id;
         }
 
+        public void ApplyPhysicalOverrides(float massKg, float friction, float restitution, float strength)
+        {
+            if (massKg > 0f) _mass = massKg;
+            if (friction > 0f) _friction = friction;
+            if (restitution > 0f) _restitution = restitution;
+            if (strength > 0f) _materialStrength = strength;
+        }
+
         private void SyncFromUnityCollider()
         {
             if (TryGetComponent<SphereCollider>(out var sphere))

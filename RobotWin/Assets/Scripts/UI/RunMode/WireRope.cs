@@ -25,7 +25,7 @@ namespace RobotTwin.UI
         [SerializeField] private float _bendSmoothing = 0.18f;
         [Header("End Caps")]
         [SerializeField] private bool _showEndCaps = true;
-        [SerializeField] private float _copperLength = 0.015f;
+        [SerializeField] private float _copperLength = 0.03f;
         [SerializeField] private float _copperRadius = 0.0016f;
         [SerializeField] private float _solderRadius = 0.0024f;
         [SerializeField] private float _endOffset = 0.001f;
@@ -83,6 +83,7 @@ namespace RobotTwin.UI
 
         public void SetColor(Color color)
         {
+            color.a = 1f;
             _color = color;
             UpdateColor();
         }
@@ -333,6 +334,7 @@ namespace RobotTwin.UI
             if (_line == null) return;
             if (!_errorActive)
             {
+                _color.a = 1f;
                 _line.startColor = _color;
                 _line.endColor = _color;
                 return;
@@ -341,6 +343,7 @@ namespace RobotTwin.UI
             float pulse = 0.4f + 0.6f * Mathf.Sin(Time.time * 6f + _errorSeed);
             float strength = Mathf.Clamp01(_errorIntensity * pulse);
             var tinted = Color.Lerp(_color, _errorColor, strength);
+            tinted.a = 1f;
             _line.startColor = tinted;
             _line.endColor = tinted;
         }
@@ -467,10 +470,43 @@ namespace RobotTwin.UI
             cap.Root.localPosition = anchorPos;
             cap.Root.localRotation = rotation;
 
-            float length = Mathf.Max(0.0001f, cap.CopperLength);
-            float radius = Mathf.Max(0.0001f, cap.CopperRadius);
+            float width = _line != null ? Mathf.Max(_line.startWidth, _line.endWidth) : _minWidth;
+            float thicknessRatio = width / Mathf.Max(0.0001f, _minWidth);
+            float radiusScale = Mathf.Clamp(thicknessRatio, 0.9f, 6.0f);
+            float lengthScale = Mathf.Clamp(thicknessRatio, 0.9f, 4.5f);
+
+            float baseLength = Mathf.Max(0.0001f, cap.CopperLength);
+            float baseRadius = Mathf.Max(0.0001f, cap.CopperRadius);
+
+            // Longer "stripped" copper look.
+            float length = baseLength * lengthScale * 1.6f;
+            float radius = baseRadius * radiusScale;
+
+            // Ensure the visual tip doesn't become tiny compared to the rendered wire width.
+            float minTipRadius = width * 0.45f;
+            float minTipLength = width * 1.25f;
+            radius = Mathf.Max(radius, minTipRadius);
+            length = Mathf.Max(length, minTipLength);
+
+            float effectiveRadiusScale = radius / baseRadius;
+            float effectiveLengthScale = length / baseLength;
             cap.Copper.localScale = new Vector3(radius * 2f, length * 0.5f, radius * 2f);
-            cap.Copper.localPosition = Vector3.up * (length * 0.5f + _endOffset);
+            cap.Copper.localPosition = Vector3.up * (length * 0.5f + _endOffset * effectiveLengthScale);
+
+            if (cap.Solder != null && cap.SolderBasePositions != null && cap.SolderBaseScales != null)
+            {
+                int count = Mathf.Min(cap.Solder.Length, Mathf.Min(cap.SolderBasePositions.Length, cap.SolderBaseScales.Length));
+                for (int i = 0; i < count; i++)
+                {
+                    var blob = cap.Solder[i];
+                    if (blob == null) continue;
+                    var basePos = cap.SolderBasePositions[i];
+                    var baseScale = cap.SolderBaseScales[i];
+                    // Scale X/Z with radius, Y with length for a more organic joint.
+                    blob.localScale = new Vector3(baseScale.x * effectiveRadiusScale, baseScale.y * effectiveLengthScale, baseScale.z * effectiveRadiusScale);
+                    blob.localPosition = new Vector3(basePos.x * effectiveRadiusScale, basePos.y * effectiveLengthScale, basePos.z * effectiveRadiusScale);
+                }
+            }
         }
 
         private EndCap CreateEndCap(string name, int seedOffset)
@@ -484,24 +520,45 @@ namespace RobotTwin.UI
 
             int seed = BuildVisualSeed(seedOffset);
             var rng = new System.Random(seed);
-            float length = _copperLength * Mathf.Lerp(0.85f, 1.25f, (float)rng.NextDouble());
-            float radius = _copperRadius * Mathf.Lerp(0.85f, 1.2f, (float)rng.NextDouble());
-            float solderBase = _solderRadius * Mathf.Lerp(0.85f, 1.25f, (float)rng.NextDouble());
-            int blobCount = Mathf.Clamp(_solderBlobCount + rng.Next(-1, 2), 1, 3);
+            float length = _copperLength * Mathf.Lerp(0.9f, 1.35f, (float)rng.NextDouble());
+            float radius = _copperRadius * Mathf.Lerp(0.9f, 1.25f, (float)rng.NextDouble());
+            float solderBase = _solderRadius * Mathf.Lerp(0.9f, 1.3f, (float)rng.NextDouble());
+            int blobCount = Mathf.Clamp(_solderBlobCount + rng.Next(0, 2), 2, 4);
 
             var solder = new Transform[blobCount];
+            var solderBaseScales = new Vector3[blobCount];
+            var solderBasePositions = new Vector3[blobCount];
+            // More organic solder joint: one main elongated blob + a few droplets.
+            // Uses primitives only, but with non-uniform scaling (ellipsoids) for shape variety.
             for (int i = 0; i < blobCount; i++)
             {
                 var blob = CreatePrimitive($"Solder_{i}", PrimitiveType.Sphere, root.transform);
                 var renderer = blob.GetComponent<Renderer>();
                 if (renderer != null) renderer.sharedMaterial = GetSolderMaterial();
-                float scale = solderBase * Mathf.Lerp(0.8f, 1.4f, (float)rng.NextDouble());
-                blob.transform.localScale = Vector3.one * scale * 2f;
-                float radial = solderBase * Mathf.Lerp(0.1f, 0.6f, (float)rng.NextDouble());
+
                 float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float height = length * Mathf.Lerp(0.05f, 0.35f, (float)rng.NextDouble());
-                blob.transform.localPosition = new Vector3(Mathf.Cos(angle) * radial, height, Mathf.Sin(angle) * radial);
+
+                if (i == 0)
+                {
+                    float r = solderBase * Mathf.Lerp(1.25f, 1.75f, (float)rng.NextDouble());
+                    float y = length * Mathf.Lerp(0.55f, 0.8f, (float)rng.NextDouble());
+                    float radial = radius * Mathf.Lerp(0.05f, 0.18f, (float)rng.NextDouble());
+                    blob.transform.localScale = new Vector3(r * 2.2f, r * 3.3f, r * 2.2f);
+                    blob.transform.localPosition = new Vector3(Mathf.Cos(angle) * radial, y, Mathf.Sin(angle) * radial);
+                }
+                else
+                {
+                    float r = solderBase * Mathf.Lerp(0.75f, 1.35f, (float)rng.NextDouble());
+                    float y = length * Mathf.Lerp(0.18f, 0.6f, (float)rng.NextDouble());
+                    float radial = Mathf.Max(radius * 0.35f, solderBase * Mathf.Lerp(0.25f, 0.9f, (float)rng.NextDouble()));
+                    float squash = Mathf.Lerp(0.75f, 1.25f, (float)rng.NextDouble());
+                    blob.transform.localScale = new Vector3(r * 2f, r * 2f * squash, r * 2f);
+                    blob.transform.localPosition = new Vector3(Mathf.Cos(angle) * radial, y, Mathf.Sin(angle) * radial);
+                }
+
                 solder[i] = blob.transform;
+                solderBaseScales[i] = blob.transform.localScale;
+                solderBasePositions[i] = blob.transform.localPosition;
             }
 
             return new EndCap
@@ -509,6 +566,8 @@ namespace RobotTwin.UI
                 Root = root.transform,
                 Copper = copper.transform,
                 Solder = solder,
+                SolderBaseScales = solderBaseScales,
+                SolderBasePositions = solderBasePositions,
                 CopperLength = length,
                 CopperRadius = radius
             };
@@ -593,6 +652,8 @@ namespace RobotTwin.UI
             public Transform Root;
             public Transform Copper;
             public Transform[] Solder;
+            public Vector3[] SolderBaseScales;
+            public Vector3[] SolderBasePositions;
             public float CopperLength;
             public float CopperRadius;
         }
@@ -643,12 +704,16 @@ namespace RobotTwin.UI
             if (_probeCollider == null || _probeTransform == null) return;
 
             _probeCollider.radius = Mathf.Max(0.0001f, radius);
+            var probeScale = _probeTransform.lossyScale;
+            float probeScaleMax = Mathf.Max(Mathf.Abs(probeScale.x), Mathf.Max(Mathf.Abs(probeScale.y), Mathf.Abs(probeScale.z)));
+            if (probeScaleMax <= 0.0001f) probeScaleMax = 1f;
+            float worldRadius = _probeCollider.radius * probeScaleMax;
             var parent = transform.parent;
             for (int i = 1; i < positions.Length - 1; i++)
             {
                 Vector3 worldPos = parent != null ? parent.TransformPoint(positions[i]) : positions[i];
                 _probeTransform.position = worldPos;
-                var hits = Physics.OverlapSphere(worldPos, _probeCollider.radius, ~0, QueryTriggerInteraction.Ignore);
+                var hits = Physics.OverlapSphere(worldPos, worldRadius, ~0, QueryTriggerInteraction.Ignore);
                 if (hits == null || hits.Length == 0) continue;
                 foreach (var hit in hits)
                 {
@@ -681,13 +746,18 @@ namespace RobotTwin.UI
         private static Material GetWireMaterial()
         {
             if (_wireMaterial != null) return _wireMaterial;
-            Shader shader = Shader.Find("Sprites/Default") ??
-                Shader.Find("Universal Render Pipeline/Unlit") ??
-                Shader.Find("Unlit/Color");
-            _wireMaterial = new Material(shader)
-            {
-                name = "Circuit3D_Wire"
-            };
+            // Opaque plastic look for the wire itself (non-metallic).
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            if (shader == null) return null;
+            _wireMaterial = new Material(shader) { name = "Circuit3D_WirePlastic" };
+
+            if (_wireMaterial.HasProperty("_Metallic")) _wireMaterial.SetFloat("_Metallic", 0f);
+            if (_wireMaterial.HasProperty("_Glossiness")) _wireMaterial.SetFloat("_Glossiness", 0.25f);
+            if (_wireMaterial.HasProperty("_Smoothness")) _wireMaterial.SetFloat("_Smoothness", 0.25f);
+
+            // Try to force opaque surface if the shader supports it.
+            if (_wireMaterial.HasProperty("_Surface")) _wireMaterial.SetFloat("_Surface", 0f);
+            if (_wireMaterial.HasProperty("_Mode")) _wireMaterial.SetFloat("_Mode", 0f);
             return _wireMaterial;
         }
     }

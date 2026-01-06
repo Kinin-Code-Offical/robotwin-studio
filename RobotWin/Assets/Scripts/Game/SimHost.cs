@@ -132,6 +132,13 @@ namespace RobotTwin.Game
         public int VirtualBoardCount => _virtualMcus.Count;
         public int PoweredBoardCount => _boardPowerById.Count;
 
+        public string VirtualComStatusJson { get; private set; } = string.Empty;
+
+        public void SetVirtualComStatusJson(string json)
+        {
+            VirtualComStatusJson = json ?? string.Empty;
+        }
+
         public struct TimingStats
         {
             public int TickSamples;
@@ -250,9 +257,9 @@ namespace RobotTwin.Game
 
         private void Awake()
         {
-             if (Instance != null) Destroy(gameObject);
-             Instance = this;
-             DontDestroyOnLoad(gameObject);
+            if (Instance != null) Destroy(gameObject);
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         private void Start()
@@ -291,6 +298,7 @@ namespace RobotTwin.Game
                 _realtimeState = new RealtimeSchedulerState();
             }
             _realtimeState.Reset(_realtimeConfig);
+            NativePhysicsWorld.Instance?.SetExternalStepping(_realtimeConfig != null && _realtimeConfig.Enabled);
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
 
@@ -363,6 +371,7 @@ namespace RobotTwin.Game
             _budgetOverruns = 0;
             _firmwareInputCache.Clear();
             _realtimeState?.Reset(_realtimeConfig);
+            NativePhysicsWorld.Instance?.SetExternalStepping(false);
             LastTelemetry = null;
             TickCount = 0;
             _tickTimer = 0f;
@@ -389,6 +398,7 @@ namespace RobotTwin.Game
                 RunRealtimeScheduler(Time.unscaledDeltaTime);
                 return;
             }
+            NativePhysicsWorld.Instance?.SetExternalStepping(false);
 
             // Step Logic (Low Frequency / Tick)
             _tickTimer += Time.deltaTime;
@@ -424,6 +434,10 @@ namespace RobotTwin.Game
             _timingReady = true;
 
             bool usedNativePins = CollectFirmwareOutputs(firmwareDtSeconds);
+            if (_realtimeState != null)
+            {
+                _realtimeState.LastUsedNativePins = usedNativePins;
+            }
             float solveMs = 0f;
             if (solveCircuit)
             {
@@ -506,6 +520,12 @@ namespace RobotTwin.Game
                 return 0f;
             }
 
+            var envWorld = NativePhysicsWorld.Instance;
+            if (envWorld != null)
+            {
+                _coreSim.AmbientTempC = envWorld.AmbientTempC;
+            }
+
             int signature = ComputeInputSignature();
             bool inputsUnchanged = _hasInputSignature && signature == _lastInputSignature;
             bool canSkipSolve = allowFastPath && inputsUnchanged && LastTelemetry != null;
@@ -573,50 +593,72 @@ namespace RobotTwin.Game
                 _realtimeState.Reset(_realtimeConfig);
             }
 
-            float firmwareDt = Mathf.Max(0.0001f, _realtimeConfig.FirmwareDtSeconds);
-            float circuitDt = Mathf.Max(0.0001f, _realtimeConfig.CircuitDtSeconds);
-            float masterDt = Mathf.Max(0.0001f, _realtimeConfig.MasterDtSeconds);
+            NativePhysicsWorld.Instance?.SetExternalStepping(true);
 
-            _realtimeState.AccumulatorSeconds += deltaSeconds;
-            float frameStart = Time.realtimeSinceStartup;
+            double firmwareDt = Math.Max(0.0001, _realtimeConfig.FirmwareDtSeconds);
+            double circuitDt = Math.Max(0.0001, _realtimeConfig.CircuitDtSeconds);
+            double physicsDt = Math.Max(0.0001, _realtimeConfig.PhysicsDtSeconds);
+            double epsilon = Math.Max(0.000001, _realtimeConfig.EventEpsilonSeconds);
 
-            int masterSteps = Math.Min(_realtimeConfig.MaxStepsPerFrame,
-                (int)Math.Floor(_realtimeState.AccumulatorSeconds / masterDt));
-            if (masterSteps <= 0)
+            if (deltaSeconds < 0f)
             {
-                return;
+                deltaSeconds = 0f;
             }
 
-            _realtimeState.AccumulatorSeconds -= masterSteps * masterDt;
-
-            for (int step = 0; step < masterSteps; step++)
+            _realtimeState.AccumulatorSeconds += deltaSeconds;
+            if (_realtimeConfig.MaxAccumulatorSeconds > 0f &&
+                _realtimeState.AccumulatorSeconds > _realtimeConfig.MaxAccumulatorSeconds)
             {
-                _realtimeState.MasterTimeSeconds += masterDt;
-                int firmwareSteps = 0;
-                while (_realtimeState.MasterTimeSeconds >= _realtimeState.NextFirmwareAt &&
-                       firmwareSteps < _realtimeConfig.MaxStepsPerFrame)
-                {
-                    float elapsedMs = (Time.realtimeSinceStartup - frameStart) * 1000f;
-                    if (elapsedMs >= _realtimeConfig.FrameBudgetMs)
-                    {
-                        _budgetOverruns++;
-                        return;
-                    }
+                _realtimeState.AccumulatorSeconds = _realtimeConfig.MaxAccumulatorSeconds;
+            }
 
-                    bool solveCircuit = _realtimeState.MasterTimeSeconds >= _realtimeState.NextCircuitAt;
+            float frameStart = Time.realtimeSinceStartup;
+            int eventSteps = 0;
+
+            while (_realtimeState.AccumulatorSeconds > 0 && eventSteps < _realtimeConfig.MaxStepsPerFrame)
+            {
+                double nextFirmware = _realtimeState.NextFirmwareAt;
+                double nextCircuit = _realtimeState.NextCircuitAt;
+                double nextPhysics = _realtimeState.NextPhysicsAt;
+                double nextEvent = Math.Min(nextFirmware, Math.Min(nextCircuit, nextPhysics));
+
+                double timeUntilEvent = nextEvent - _realtimeState.MasterTimeSeconds;
+                if (timeUntilEvent > _realtimeState.AccumulatorSeconds)
+                {
+                    _realtimeState.MasterTimeSeconds += _realtimeState.AccumulatorSeconds;
+                    _realtimeState.AccumulatorSeconds = 0;
+                    break;
+                }
+
+                if (timeUntilEvent > 0)
+                {
+                    _realtimeState.MasterTimeSeconds += timeUntilEvent;
+                    _realtimeState.AccumulatorSeconds -= timeUntilEvent;
+                }
+
+                float elapsedMs = (Time.realtimeSinceStartup - frameStart) * 1000f;
+                if (elapsedMs >= _realtimeConfig.FrameBudgetMs)
+                {
+                    _budgetOverruns++;
+                    break;
+                }
+
+                bool firmwareDue = Math.Abs(_realtimeState.MasterTimeSeconds - nextFirmware) <= epsilon;
+                bool circuitDue = Math.Abs(_realtimeState.MasterTimeSeconds - nextCircuit) <= epsilon;
+                bool physicsDue = Math.Abs(_realtimeState.MasterTimeSeconds - nextPhysics) <= epsilon;
+
+                if (firmwareDue)
+                {
+                    bool solveCircuit = _realtimeState.MasterTimeSeconds + epsilon >= nextCircuit;
                     bool allowFastPath = _realtimeConfig.AllowFastPath ||
                                          (_realtimeConfig.FrameBudgetMs - elapsedMs) < _realtimeConfig.CircuitBudgetMs;
 
                     float tickStart = Time.realtimeSinceStartup;
                     TickCount++;
-                    RunTick(firmwareDt, solveCircuit, circuitDt, allowFastPath, _realtimeConfig.CircuitBudgetMs);
+                    RunTick((float)firmwareDt, solveCircuit, (float)circuitDt, allowFastPath, _realtimeConfig.CircuitBudgetMs);
                     float tickMs = (Time.realtimeSinceStartup - tickStart) * 1000f;
-
-                    if (!solveCircuit && tickMs > _realtimeConfig.FirmwareBudgetMs)
-                    {
-                        _budgetOverruns++;
-                    }
-                    if (solveCircuit && tickMs > (_realtimeConfig.FirmwareBudgetMs + _realtimeConfig.CircuitBudgetMs))
+                    float budgetMs = _realtimeConfig.FirmwareBudgetMs + (solveCircuit ? _realtimeConfig.CircuitBudgetMs : 0f);
+                    if (budgetMs > 0f && tickMs > budgetMs)
                     {
                         _budgetOverruns++;
                     }
@@ -626,8 +668,64 @@ namespace RobotTwin.Game
                     {
                         _realtimeState.NextCircuitAt += circuitDt;
                     }
-                    firmwareSteps++;
+                    eventSteps++;
                 }
+
+                if (circuitDue && !firmwareDue)
+                {
+                    float elapsedAfter = (Time.realtimeSinceStartup - frameStart) * 1000f;
+                    if (elapsedAfter >= _realtimeConfig.FrameBudgetMs)
+                    {
+                        _budgetOverruns++;
+                        break;
+                    }
+
+                    bool allowFastPath = _realtimeConfig.AllowFastPath ||
+                                         (_realtimeConfig.FrameBudgetMs - elapsedAfter) < _realtimeConfig.CircuitBudgetMs;
+                    RunCircuitOnly((float)circuitDt, allowFastPath);
+                    _realtimeState.NextCircuitAt += circuitDt;
+                    eventSteps++;
+                }
+
+                if (physicsDue)
+                {
+                    float elapsedAfter = (Time.realtimeSinceStartup - frameStart) * 1000f;
+                    if (elapsedAfter >= _realtimeConfig.FrameBudgetMs)
+                    {
+                        _budgetOverruns++;
+                        break;
+                    }
+                    StepPhysicsRealtime((float)physicsDt);
+                    _realtimeState.NextPhysicsAt += physicsDt;
+                    eventSteps++;
+                }
+
+                if (!firmwareDue && !circuitDue && !physicsDue)
+                {
+                    double nudge = Math.Min(_realtimeState.AccumulatorSeconds, epsilon);
+                    _realtimeState.MasterTimeSeconds += nudge;
+                    _realtimeState.AccumulatorSeconds -= nudge;
+                }
+            }
+        }
+
+        private void RunCircuitOnly(float dtSeconds, bool allowFastPath)
+        {
+            if (_coreSim == null || _circuit == null) return;
+            bool usedNativePins = _realtimeState != null && _realtimeState.LastUsedNativePins;
+            SolveCircuit(dtSeconds, usedNativePins, allowFastPath, _realtimeConfig?.CircuitBudgetMs ?? 0f);
+        }
+
+        private void StepPhysicsRealtime(float dtSeconds)
+        {
+            var world = NativePhysicsWorld.Instance;
+            if (world == null || !world.IsRunning) return;
+            float start = Time.realtimeSinceStartup;
+            world.StepExternal(dtSeconds);
+            float stepMs = (Time.realtimeSinceStartup - start) * 1000f;
+            if (_realtimeConfig != null && _realtimeConfig.PhysicsBudgetMs > 0f && stepMs > _realtimeConfig.PhysicsBudgetMs)
+            {
+                _budgetOverruns++;
             }
         }
 
@@ -1220,7 +1318,7 @@ namespace RobotTwin.Game
             if (session == null || _externalFirmwareClient == null) return false;
             if (session.Loaded) return true;
             if (string.IsNullOrWhiteSpace(session.BvmPath) || !File.Exists(session.BvmPath)) return false;
-            if (! _externalFirmwareClient.LoadBvmFile(session.BoardId, session.BoardProfile, session.BvmPath)) return false;
+            if (!_externalFirmwareClient.LoadBvmFile(session.BoardId, session.BoardProfile, session.BvmPath)) return false;
             session.Loaded = true;
             return true;
         }

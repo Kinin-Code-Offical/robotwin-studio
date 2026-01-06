@@ -8,11 +8,23 @@ using UnityEngine;
 using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Runtime;
+using RobotTwin.Game;
 
 namespace RobotTwin.UI
 {
     public class Circuit3DView : MonoBehaviour
     {
+        public event Action BuildStarted;
+        public event Action BuildFinished;
+
+        public enum ViewPreset
+        {
+            Top,
+            Bottom,
+            Left,
+            Right
+        }
+
         private const float DefaultScale = 0.01f;
         private const float WireHeight = 0.02f;
         private const float ComponentHeight = 0.03f;
@@ -45,6 +57,8 @@ namespace RobotTwin.UI
             new Color(0.80f, 0.70f, 0.45f, 0.9f),
             new Color(0.55f, 0.55f, 0.60f, 0.9f)
         };
+
+        private static readonly Dictionary<int, PhysicsMaterial> PhysicMaterialCache = new Dictionary<int, PhysicsMaterial>();
 
         private Camera _camera;
         private RenderTexture _renderTexture;
@@ -98,6 +112,7 @@ namespace RobotTwin.UI
         private Vector2 _size;
         private Vector2 _viewportSize;
         private Vector2 _orbitAngles = new Vector2(45f, 0f);
+        private float _rollAngle;
         private float _zoom = 0.5f;
         private float _distance = 1.2f;
         private Vector3 _panOffset = Vector3.zero;
@@ -128,6 +143,19 @@ namespace RobotTwin.UI
             };
 
         public RenderTexture TargetTexture => _renderTexture;
+
+        public bool HasPendingRuntimeModelLoads
+        {
+            get
+            {
+                if (_runtimeModelLoads == null || _runtimeModelLoads.Count == 0) return false;
+                foreach (var task in _runtimeModelLoads.Values)
+                {
+                    if (task != null && !task.IsCompleted) return true;
+                }
+                return false;
+            }
+        }
 
         public void Initialize(int width, int height)
         {
@@ -233,6 +261,35 @@ namespace RobotTwin.UI
         public void ResetView()
         {
             FrameCamera();
+        }
+
+        public void SnapView(ViewPreset preset)
+        {
+            if (_camera == null)
+            {
+                EnsureCamera();
+            }
+            _rollAngle = 0f;
+            switch (preset)
+            {
+                case ViewPreset.Top:
+                    _orbitAngles = new Vector2(90f, 0f);
+                    break;
+                case ViewPreset.Bottom:
+                    _orbitAngles = new Vector2(270f, 0f);
+                    break;
+                case ViewPreset.Left:
+                    _orbitAngles = new Vector2(0f, 90f);
+                    break;
+                case ViewPreset.Right:
+                    _orbitAngles = new Vector2(0f, 270f);
+                    break;
+                default:
+                    _orbitAngles = new Vector2(45f, 0f);
+                    break;
+            }
+            _hasUserCamera = true;
+            UpdateCameraTransform();
         }
 
         public bool FocusOnComponent(string componentId, float padding = 1.4f)
@@ -357,31 +414,39 @@ namespace RobotTwin.UI
 
         public void Build(CircuitSpec circuit)
         {
-            _lastCircuit = circuit;
-            EnsureRoot();
-            EnsurePrefabs();
-            EnsureLighting();
-            CaptureAnchorState();
-            ClearRoot();
+            BuildStarted?.Invoke();
+            try
+            {
+                _lastCircuit = circuit;
+                EnsureRoot();
+                EnsurePrefabs();
+                EnsureLighting();
+                CaptureAnchorState();
+                ClearRoot();
 
-            UpdateLayoutScale(circuit);
-            ComputeBounds(circuit);
-            var positions = BuildComponents(circuit);
-            ResolveComponentOverlaps(positions);
-            var anchors = BuildAnchors(circuit, positions);
-            BuildWires(circuit, anchors);
-            if (_followTarget && !string.IsNullOrWhiteSpace(_followComponentId))
-            {
-                SetFollowComponent(_followComponentId, true);
-            }
+                UpdateLayoutScale(circuit);
+                ComputeBounds(circuit);
+                var positions = BuildComponents(circuit);
+                ResolveComponentOverlaps(positions);
+                var anchors = BuildAnchors(circuit, positions);
+                BuildWires(circuit, anchors);
+                if (_followTarget && !string.IsNullOrWhiteSpace(_followComponentId))
+                {
+                    SetFollowComponent(_followComponentId, true);
+                }
 
-            if (_hasUserCamera)
-            {
-                UpdateCameraTransform();
+                if (_hasUserCamera)
+                {
+                    UpdateCameraTransform();
+                }
+                else
+                {
+                    FrameCamera();
+                }
             }
-            else
+            finally
             {
-                FrameCamera();
+                BuildFinished?.Invoke();
             }
         }
 
@@ -933,6 +998,9 @@ namespace RobotTwin.UI
                 ApplyPartOverrides(visual, visual.CatalogItem.PartOverrides);
             }
 
+            var finalOverrides = BuildFinalPartOverrideMap(visual, stateId);
+            ApplyPhysicalOverrides(visual, finalOverrides);
+
             if (!string.IsNullOrWhiteSpace(stateId) &&
                 visual.CatalogItem.StateOverrides != null &&
                 visual.CatalogItem.StateOverrides.Count > 0)
@@ -947,6 +1015,239 @@ namespace RobotTwin.UI
                     break;
                 }
             }
+
+            // Re-apply physicals after state overrides so the final values win.
+            finalOverrides = BuildFinalPartOverrideMap(visual, stateId);
+            ApplyPhysicalOverrides(visual, finalOverrides);
+        }
+
+        private static Dictionary<string, ComponentCatalog.PartOverride> BuildFinalPartOverrideMap(ComponentVisual visual, string stateId)
+        {
+            var result = new Dictionary<string, ComponentCatalog.PartOverride>(StringComparer.OrdinalIgnoreCase);
+            if (visual?.CatalogItem == null) return result;
+
+            if (visual.CatalogItem.PartOverrides != null)
+            {
+                foreach (var part in visual.CatalogItem.PartOverrides)
+                {
+                    if (string.IsNullOrWhiteSpace(part.Name)) continue;
+                    result[part.Name] = part;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(stateId) && visual.CatalogItem.StateOverrides != null)
+            {
+                foreach (var state in visual.CatalogItem.StateOverrides)
+                {
+                    if (!string.Equals(state.Id, stateId, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (state.Parts == null) break;
+                    foreach (var part in state.Parts)
+                    {
+                        if (string.IsNullOrWhiteSpace(part.Name)) continue;
+                        result[part.Name] = part;
+                    }
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        private static void ApplyPhysicalOverrides(ComponentVisual visual, Dictionary<string, ComponentCatalog.PartOverride> overrides)
+        {
+            if (visual?.Root == null || visual.PartBases == null || overrides == null) return;
+
+            var parts = new List<ComponentPhysicalInfo.PartInfo>();
+            float totalMass = 0f;
+            bool hasAnyMass = false;
+            float frictionWeighted = 0f;
+            float elasticityWeighted = 0f;
+            float strengthMin = float.PositiveInfinity;
+            float weightSumForMaterial = 0f;
+            bool hasAnyFriction = false;
+            bool hasAnyElasticity = false;
+            bool hasAnyStrength = false;
+
+            foreach (var kvp in overrides)
+            {
+                var partOverride = kvp.Value;
+                if (string.IsNullOrWhiteSpace(partOverride.Name)) continue;
+
+                bool hasPhysical =
+                    partOverride.MassKg > 0f ||
+                    partOverride.DensityKgPerM3 > 0f ||
+                    partOverride.Friction > 0f ||
+                    partOverride.Elasticity > 0f ||
+                    partOverride.Strength > 0f ||
+                    !string.IsNullOrWhiteSpace(partOverride.PhysicalMaterial);
+
+                if (!hasPhysical) continue;
+                if (!visual.PartBases.TryGetValue(partOverride.Name, out var snapshot) || snapshot?.Transform == null) continue;
+
+                float partMass = 0f;
+                float partVolume = 0f;
+                if (partOverride.MassKg > 0f)
+                {
+                    partMass = partOverride.MassKg;
+                }
+                else if (partOverride.DensityKgPerM3 > 0f)
+                {
+                    partVolume = ResolvePartVolume(snapshot, partOverride);
+                    if (partVolume > 0f)
+                    {
+                        partMass = partOverride.DensityKgPerM3 * partVolume;
+                    }
+                }
+
+                if (partMass > 0f)
+                {
+                    totalMass += partMass;
+                    hasAnyMass = true;
+                }
+
+                float friction = Mathf.Clamp01(partOverride.Friction);
+                float elasticity = Mathf.Clamp01(partOverride.Elasticity);
+                float strength = partOverride.Strength;
+
+                float weight = partMass > 0f ? partMass : 1f;
+                if (friction > 0f)
+                {
+                    frictionWeighted += friction * weight;
+                    hasAnyFriction = true;
+                }
+                if (elasticity > 0f)
+                {
+                    elasticityWeighted += elasticity * weight;
+                    hasAnyElasticity = true;
+                }
+                if (strength > 0f)
+                {
+                    strengthMin = Mathf.Min(strengthMin, strength);
+                    hasAnyStrength = true;
+                }
+                if ((friction > 0f || elasticity > 0f) && weight > 0f)
+                {
+                    weightSumForMaterial += weight;
+                }
+
+                ApplyUnityColliderMaterial(snapshot.Transform, friction, elasticity);
+                ApplyPartNativeOverrides(snapshot.Transform, partMass, friction, elasticity, strength);
+
+                parts.Add(new ComponentPhysicalInfo.PartInfo
+                {
+                    Name = partOverride.Name,
+                    PhysicalMaterialId = partOverride.PhysicalMaterial ?? string.Empty,
+                    DensityKgPerM3 = partOverride.DensityKgPerM3,
+                    MassKg = partMass,
+                    VolumeM3 = partVolume,
+                    Friction = friction,
+                    Elasticity = elasticity,
+                    Strength = strength
+                });
+            }
+
+            float effectiveFriction = hasAnyFriction && weightSumForMaterial > 0f ? frictionWeighted / weightSumForMaterial : 0f;
+            float effectiveElasticity = hasAnyElasticity && weightSumForMaterial > 0f ? elasticityWeighted / weightSumForMaterial : 0f;
+            float effectiveStrength = hasAnyStrength && !float.IsPositiveInfinity(strengthMin) ? strengthMin : 0f;
+
+            var info = visual.Root.GetComponent<ComponentPhysicalInfo>();
+            if (info == null) info = visual.Root.gameObject.AddComponent<ComponentPhysicalInfo>();
+            info.Set(hasAnyMass ? totalMass : 0f, effectiveFriction, effectiveElasticity, effectiveStrength, parts.ToArray());
+        }
+
+        private static float ResolvePartVolume(PartSnapshot snapshot, ComponentCatalog.PartOverride partOverride)
+        {
+            // HF-06 policy: authored volumeM3 is the source of truth for mass realism.
+            // Mesh/bounds volume estimates are not used for runtime mass calculations.
+            return partOverride.VolumeM3 > 0f ? partOverride.VolumeM3 : 0f;
+        }
+
+        private static float EstimateVolumeFromMeshes(Transform root)
+        {
+            if (root == null) return 0f;
+            float total = 0f;
+            var filters = root.GetComponentsInChildren<MeshFilter>(true);
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    if (filter == null || filter.sharedMesh == null) continue;
+                    var size = Vector3.Scale(filter.sharedMesh.bounds.size, filter.transform.lossyScale);
+                    total += Mathf.Abs(size.x * size.y * size.z);
+                }
+            }
+            var skinned = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            if (skinned != null)
+            {
+                foreach (var renderer in skinned)
+                {
+                    if (renderer == null || renderer.sharedMesh == null) continue;
+                    var size = Vector3.Scale(renderer.sharedMesh.bounds.size, renderer.transform.lossyScale);
+                    total += Mathf.Abs(size.x * size.y * size.z);
+                }
+            }
+            return total;
+        }
+
+        private static float EstimateVolumeFromRenderer(Renderer renderer)
+        {
+            if (renderer == null) return 0f;
+            var size = renderer.bounds.size;
+            float volume = Mathf.Abs(size.x * size.y * size.z);
+            return volume > 0f ? volume : 0f;
+        }
+
+        private static void ApplyPartNativeOverrides(Transform root, float partMass, float friction, float elasticity, float strength)
+        {
+            if (root == null) return;
+            if (partMass <= 0f && friction <= 0f && elasticity <= 0f && strength <= 0f) return;
+            var bodies = root.GetComponentsInChildren<NativePhysicsBody>(true);
+            if (bodies == null || bodies.Length == 0) return;
+            float perBodyMass = partMass > 0f ? partMass / bodies.Length : 0f;
+            foreach (var body in bodies)
+            {
+                if (body == null) continue;
+                body.ApplyPhysicalOverrides(perBodyMass, friction, elasticity, strength);
+                NativePhysicsWorld.Instance?.UpdateBody(body);
+            }
+        }
+
+        private static void ApplyUnityColliderMaterial(Transform root, float friction01, float elasticity01)
+        {
+            if (root == null) return;
+            if (friction01 <= 0f && elasticity01 <= 0f) return;
+            var colliders = root.GetComponentsInChildren<Collider>(true);
+            if (colliders == null || colliders.Length == 0) return;
+
+            var mat = GetOrCreatePhysicMaterial(friction01, elasticity01);
+
+            foreach (var col in colliders)
+            {
+                if (col == null || col.isTrigger) continue;
+                col.material = mat;
+            }
+        }
+
+        private static PhysicsMaterial GetOrCreatePhysicMaterial(float friction01, float elasticity01)
+        {
+            int f = Mathf.Clamp(Mathf.RoundToInt(friction01 * 1000f), 0, 1000);
+            int e = Mathf.Clamp(Mathf.RoundToInt(elasticity01 * 1000f), 0, 1000);
+            int key = (e << 16) | f;
+            if (PhysicMaterialCache.TryGetValue(key, out var cached) && cached != null)
+            {
+                return cached;
+            }
+
+            var mat = new PhysicsMaterial
+            {
+                staticFriction = f / 1000f,
+                dynamicFriction = f / 1000f,
+                bounciness = e / 1000f,
+                frictionCombine = PhysicsMaterialCombine.Average,
+                bounceCombine = PhysicsMaterialCombine.Average
+            };
+            PhysicMaterialCache[key] = mat;
+            return mat;
         }
 
         private static void ApplyPartOverrides(ComponentVisual visual, List<ComponentCatalog.PartOverride> overrides)
@@ -1101,7 +1402,117 @@ namespace RobotTwin.UI
 
             RemoveBoxColliders(part);
             if (HasSolidCollider(part)) return;
-            EnsureMeshColliders(part);
+
+            if (!EnsureAutoColliders(part, renderers))
+            {
+                EnsureMeshColliders(part);
+            }
+        }
+
+        private struct AutoColliderEntry
+        {
+            public Vector3 center;
+            public Bounds bounds;
+        }
+
+        private static bool EnsureAutoColliders(GameObject root, Renderer[] renderers)
+        {
+            if (root == null || renderers == null || renderers.Length == 0) return false;
+
+            var existing = root.transform.Find("__AutoColliders");
+            if (existing != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(existing.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(existing.gameObject);
+                }
+            }
+
+            var entries = new List<AutoColliderEntry>(renderers.Length);
+            bool hasBounds = false;
+            Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
+            var referenceMatrix = root.transform.worldToLocalMatrix;
+
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null) continue;
+                var matrix = referenceMatrix * renderer.transform.localToWorldMatrix;
+                var transformed = TransformBounds(renderer.localBounds, matrix);
+                if (!hasBounds)
+                {
+                    bounds = transformed;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(transformed);
+                }
+                entries.Add(new AutoColliderEntry { center = transformed.center, bounds = transformed });
+            }
+
+            if (!hasBounds || entries.Count == 0) return false;
+            if (bounds.size.sqrMagnitude < 0.0000001f)
+            {
+                bounds = new Bounds(Vector3.zero, Vector3.one * 0.001f);
+            }
+
+            float minSize = Mathf.Max(0.0001f, Mathf.Min(bounds.size.x, Mathf.Min(bounds.size.y, bounds.size.z)));
+            float maxSize = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            float aspect = maxSize / minSize;
+            bool sphereLike = (maxSize - minSize) / maxSize < 0.15f;
+
+            int parts = 1;
+            if (!sphereLike)
+            {
+                parts = aspect > 2.5f ? 3 : (aspect > 1.4f ? 2 : 1);
+            }
+            parts = Mathf.Clamp(parts, 1, 3);
+
+            var autoRoot = new GameObject("__AutoColliders");
+            autoRoot.transform.SetParent(root.transform, false);
+
+            if (sphereLike)
+            {
+                var sphere = autoRoot.AddComponent<SphereCollider>();
+                sphere.center = bounds.center;
+                sphere.radius = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+                sphere.isTrigger = false;
+                return true;
+            }
+
+            int axis = GetLongestAxis(bounds.size);
+            entries.Sort((a, b) => a.center[axis].CompareTo(b.center[axis]));
+            int batchSize = Mathf.Max(1, Mathf.CeilToInt(entries.Count / (float)parts));
+            int created = 0;
+            for (int i = 0; i < parts; i++)
+            {
+                int start = i * batchSize;
+                if (start >= entries.Count) break;
+                int end = Mathf.Min(entries.Count, start + batchSize);
+                var groupBounds = entries[start].bounds;
+                for (int j = start + 1; j < end; j++)
+                {
+                    groupBounds.Encapsulate(entries[j].bounds);
+                }
+                var box = autoRoot.AddComponent<BoxCollider>();
+                box.center = groupBounds.center;
+                box.size = groupBounds.size;
+                box.isTrigger = false;
+                created++;
+            }
+
+            return created > 0;
+        }
+
+        private static int GetLongestAxis(Vector3 size)
+        {
+            if (size.x >= size.y && size.x >= size.z) return 0;
+            if (size.y >= size.z) return 1;
+            return 2;
         }
 
         private static void EnsureMeshColliders(GameObject root)
@@ -1173,10 +1584,15 @@ namespace RobotTwin.UI
         private static void RemoveBoxColliders(GameObject root)
         {
             if (root == null) return;
+            var autoRoot = FindAutoCollidersRoot(root.transform);
             var boxes = root.GetComponentsInChildren<BoxCollider>(true);
             foreach (var box in boxes)
             {
                 if (box == null) continue;
+                if (autoRoot != null && box.transform != null && box.transform.IsChildOf(autoRoot))
+                {
+                    continue;
+                }
                 box.enabled = false;
                 if (Application.isPlaying)
                 {
@@ -1192,12 +1608,31 @@ namespace RobotTwin.UI
         private static void DisableBoxColliders(GameObject root)
         {
             if (root == null) return;
+            var autoRoot = FindAutoCollidersRoot(root.transform);
             var boxes = root.GetComponentsInChildren<BoxCollider>(true);
             foreach (var box in boxes)
             {
                 if (box == null) continue;
+                if (autoRoot != null && box.transform != null && box.transform.IsChildOf(autoRoot))
+                {
+                    continue;
+                }
                 box.enabled = false;
             }
+        }
+
+        private static Transform FindAutoCollidersRoot(Transform root)
+        {
+            if (root == null) return null;
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            foreach (var transform in transforms)
+            {
+                if (transform != null && string.Equals(transform.name, "__AutoColliders", StringComparison.Ordinal))
+                {
+                    return transform;
+                }
+            }
+            return null;
         }
 
         private static bool HasSolidCollider(GameObject root)
@@ -1701,7 +2136,8 @@ namespace RobotTwin.UI
 
             var ray = _camera.ViewportPointToRay(new Vector3(viewportPoint.x, viewportPoint.y, 0f));
             float maxDistance = Mathf.Max(10f, _camera.farClipPlane);
-            var hits = Physics.RaycastAll(ray, maxDistance, ~0, QueryTriggerInteraction.Ignore);
+            // Component colliders are often triggers; include them so switches/buttons remain clickable.
+            var hits = Physics.RaycastAll(ray, maxDistance, ~0, QueryTriggerInteraction.Collide);
             if (hits == null || hits.Length == 0) return false;
             Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             foreach (var hit in hits)
@@ -3358,6 +3794,7 @@ namespace RobotTwin.UI
             }
 
             _orbitAngles = new Vector2(45f, 0f);
+            _rollAngle = 0f;
             _hasUserCamera = false;
             UpdateCameraTransform();
         }
@@ -3425,6 +3862,14 @@ namespace RobotTwin.UI
             UpdateCameraTransform();
         }
 
+        public void Roll(Vector2 deltaPixels)
+        {
+            if (_camera == null) return;
+            _rollAngle = Mathf.Repeat(_rollAngle + deltaPixels.x * 0.2f, 360f);
+            _hasUserCamera = true;
+            UpdateCameraTransform();
+        }
+
         public void Zoom(float delta)
         {
             if (_camera == null) return;
@@ -3444,7 +3889,7 @@ namespace RobotTwin.UI
         private void UpdateCameraTransform()
         {
             if (_camera == null) return;
-            var rotation = Quaternion.Euler(_orbitAngles.x, _orbitAngles.y, 0f);
+            var rotation = Quaternion.Euler(_orbitAngles.x, _orbitAngles.y, _rollAngle);
             var forward = rotation * Vector3.forward;
             _camera.orthographic = !_usePerspective;
             _camera.backgroundColor = CameraBackgroundColor;

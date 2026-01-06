@@ -17,5 +17,7 @@ namespace RobotTwin.Game
         public float PhysicsBudgetMs = 2f;
         public bool AllowFastPath = true;
         public float MaxSolveSkipSeconds = 0.2f;
+        public float MaxAccumulatorSeconds = 0.25f;
+        public float EventEpsilonSeconds = 0.0001f;
     }
 }

@@ -1883,6 +1883,57 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 
+.circuit-3d-loading {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 8px;
+    background-color: rgba(5, 7, 12, 0.55);
+    justify-content: center;
+    align-items: center;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.circuit-3d-loading-card {
+    background-color: rgba(18, 22, 31, 0.92);
+    border-radius: 10px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    padding: 14px 18px;
+    min-width: 240px;
+    align-items: center;
+    justify-content: center;
+}
+
+.circuit-3d-loading-spinner {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    border-top-width: 3px;
+    border-bottom-width: 3px;
+    border-left-width: 3px;
+    border-right-width: 3px;
+    border-top-color: rgba(56, 189, 248, 0.95);
+    border-right-color: rgba(56, 189, 248, 0.28);
+    border-bottom-color: rgba(56, 189, 248, 0.28);
+    border-left-color: rgba(56, 189, 248, 0.28);
+    margin-bottom: 10px;
+}
+
+.circuit-3d-loading-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--text-0);
+}
+
 .board-3d-help {
     position: absolute;
     top: 12px;

@@ -8,6 +8,9 @@ namespace firmware
     constexpr std::uint32_t kProtocolMagic = 0x57465452; // "RTFW"
     constexpr std::uint16_t kProtocolMajor = 1;
     constexpr std::uint16_t kProtocolMinor = 1;
+    constexpr std::uint32_t kFeatureTimestampMicros = 1u << 0;
+    constexpr std::uint32_t kFeaturePerfCounters = 1u << 1;
+    constexpr std::uint32_t kMaxPayloadBytes = 8 * 1024 * 1024;
     constexpr std::size_t kPinCount = 70;
     constexpr std::uint8_t kPinValueUnknown = 0xFF;
     constexpr std::size_t kAnalogCount = 16;

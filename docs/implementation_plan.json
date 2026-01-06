@@ -2,12 +2,145 @@
   "title": "RobotTwin Studio Implementation Plan (Golden Path)",
   "description": "Optimized implementation order: Foundation -> Realtime -> High Fidelity -> Raspberry Pi -> Polish",
   "progress": {
-    "lastUpdated": "2026-01-05",
+    "lastUpdated": "2026-01-06",
     "completedIssues": [
-      167, 168, 169, 170, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113,
-      114, 129, 141, 142, 143, 144, 145, 147, 148, 149, 150, 175, 176, 177, 178
+      103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117,
+      121, 184, 129, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 161, 162,
+      163, 164, 165, 167, 168, 169, 170, 175, 176, 177, 178, 179, 180, 181, 182,
+      183
     ],
     "notes": [
+      {
+        "date": "2026-01-06",
+        "type": "maintenance",
+        "summary": "Golden trace recorder tool added (lockstep OutputState delivery fixed)",
+        "details": [
+          "Added a standalone recorder and rt_tool command to capture FirmwareEngine lockstep traces.",
+          "Recorder can load a minimal BVM fixture and successfully records a golden trace end-to-end.",
+          "Fixed a pipe read behavior where the firmware host could disconnect while the client was idle waiting for output, causing the recorder to time out."
+        ],
+        "files": [
+          "tools/GoldenTraceRecorder/GoldenTraceRecorder.csproj",
+          "tools/GoldenTraceRecorder/Program.cs",
+          "tools/scripts/record_golden_trace.ps1",
+          "tools/fixtures/firmware_minimal.bin",
+          "tools/fixtures/firmware_minimal.bvm",
+          "FirmwareEngine/PipeManager.cpp",
+          "docs/TESTING.md",
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "High-fidelity physics features landed (thermal, environment, tolerance, noise)",
+        "details": [
+          "Thermal model coverage includes CoreSim runtime + tests and NativeEngine thermal integration.",
+          "Environmental ambient/wind data now links from Unity physics to circuit thermal defaults.",
+          "Component tolerance/aging and deterministic noise injection added with tests.",
+          "Per-part physical overrides now drive mass/friction/elasticity/strength and native body updates."
+        ],
+        "files": [
+          "CoreSim/src/RobotTwin.CoreSim/Models/Physics/ThermalModel.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Models/Physics/ComponentVariation.cs",
+          "CoreSim/src/RobotTwin.CoreSim/Models/Physics/DeterministicNoise.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/ThermalModelTests.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/ComponentVariationTests.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/DeterministicNoiseTests.cs",
+          "RobotWin/Assets/Scripts/CoreSim/Engine/CoreSimRuntime.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/UI/RunMode/Circuit3DView.cs",
+          "RobotWin/Assets/Scripts/UI/RunMode/ComponentPhysicalInfo.cs",
+          "RobotWin/Assets/Scripts/UI/ComponentStudio/ComponentStudioController.cs",
+          "RobotWin/Assets/Scripts/UI/CircuitStudio/CircuitStudioController.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsBody.cs",
+          "RobotWin/Assets/Scripts/Core/NativeBridge.cs",
+          "NativeEngine/src/NativeEngine_Core.cpp",
+          "NativeEngine/src/Physics/PhysicsWorld.cpp",
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
+      {
+        "date": "2026-01-06",
+        "type": "implementation",
+        "summary": "HF-06b/c/d validation + per-part mapping + volume policy",
+        "details": [
+          "Added a sample .rtcomp with physical overrides and a validation script wired into rt_tool.",
+          "Per-part overrides now apply to matching NativePhysicsBody instead of splitting across all bodies.",
+          "VolumeM3 is the preferred source of truth; UI and docs call this out explicitly."
+        ],
+        "files": [
+          "tools/fixtures/hf06_sample.rtcomp",
+          "tools/scripts/validate_physical_overrides.py",
+          "tools/rt_tool.py",
+          "RobotWin/Assets/Scripts/UI/RunMode/Circuit3DView.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsBody.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs",
+          "RobotWin/Assets/Scripts/Core/NativeBridge.cs",
+          "NativeEngine/src/NativeEngine_Core.cpp",
+          "RobotWin/Assets/UI/ComponentStudio/ComponentStudio.uxml",
+          "RobotWin/Assets/Scripts/UI/ComponentStudio/ComponentStudioController.cs",
+          "RobotWin/Assets/Scripts/UI/CircuitStudio/CircuitStudioController.cs",
+          "docs/HIGH_FIDELITY_PLAN.md",
+          "docs/TESTING.md",
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Optimized SyncInputs allocations in FirmwareEngine",
+        "details": [
+          "Replaced per-call unordered_map allocations with reusable scratch buffers.",
+          "Firmware build completed successfully after the SyncInputs changes."
+        ],
+        "files": [
+          "FirmwareEngine/VirtualMcu.cpp",
+          "FirmwareEngine/VirtualMcu.h",
+          "logs/firmware/build.log",
+          "docs/implementation_plan_todo.md",
+          "docs/implementation_plan.json"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "maintenance",
+        "summary": "Golden trace harness exists (real FirmwareEngine capture wired)",
+        "details": [
+          "Golden trace JSON format + replay harness + diff output exist and are covered by tests.",
+          "Recording a trace from the real FirmwareEngine lockstep backend is now supported via tools/GoldenTraceRecorder."
+        ],
+        "files": [
+          "docs/implementation_plan.json",
+          "docs/implementation_plan_todo.md",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/GoldenTraceHarnessTests.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/golden_trace_v1.json"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "maintenance",
+        "summary": "Aligned RT-06/RT-15 completion status",
+        "details": [
+          "RT-06 now uses next-event scheduling with circuit-only events and external physics stepping.",
+          "RT-15 protocol negotiation flags and payload guards are fully covered by tests.",
+          "Synced completion tracking with implementation_plan_todo.md and GitHub issue state."
+        ],
+        "files": [
+          "docs/implementation_plan.json",
+          "docs/implementation_plan_todo.md",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs",
+          "FirmwareEngine/Protocol.h",
+          "FirmwareEngine/PipeManager.cpp",
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/FirmwareProtocolTests.cs"
+        ]
+      },
       {
         "date": "2026-01-05",
         "type": "maintenance",
@@ -310,6 +443,95 @@
           "tools/debug_console/public/index.html",
           "tools/debug_console/public/app.js"
         ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Next-event realtime scheduler with physics external stepping",
+        "details": [
+          "Switched realtime scheduling to a next-event loop with per-event budgeting.",
+          "Physics stepping now supports external scheduler control."
+        ],
+        "files": [
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Game/RealtimeScheduleConfig.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Protocol negotiation flags + minor version tolerance",
+        "details": [
+          "Hello/HelloAck now advertises feature flags for timestamps/perf counters.",
+          "Clients warn on minor version mismatches and disable stale-output dropping when unsupported."
+        ],
+        "files": [
+          "FirmwareEngine/Protocol.h",
+          "FirmwareEngine/PipeManager.cpp",
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareClient.cs",
+          "RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Golden trace harness + fixtures",
+        "details": [
+          "Added a deterministic golden trace fixture and replay harness for firmware stepping.",
+          "Fixture is copied to test output for stable replay validation."
+        ],
+        "files": [
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/GoldenTraceHarnessTests.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/golden_trace_v1.json",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/RobotTwin.CoreSim.Tests.csproj"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Protocol framing tests + payload bounds guard",
+        "details": [
+          "Added protocol header parsing guardrails for invalid magic/major and oversized payloads.",
+          "Introduced unit tests covering framing rejection cases."
+        ],
+        "files": [
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/ProtocolFramingTests.cs",
+          "FirmwareEngine/PipeManager.cpp",
+          "RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": ".rtwin workspace extraction tests expanded",
+        "details": [
+          "Added extraction coverage for workspace snapshot files and package manifest."
+        ],
+        "files": [
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/RtwinRoundTripTests.cs"
+        ]
+      },
+      {
+        "date": "2026-01-05",
+        "type": "implementation",
+        "summary": "Golden trace record/replay + realtime scheduler finalization",
+        "details": [
+          "Added golden trace recording/replay with diff output and metadata.",
+          "Finalized next-event scheduling to include circuit-only events and external physics stepping.",
+          "Protocol negotiation flags and bounds checks are now fully covered by tests."
+        ],
+        "files": [
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/GoldenTraceHarnessTests.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/golden_trace_v1.json",
+          "RobotWin/Assets/Scripts/Game/SimHost.cs",
+          "RobotWin/Assets/Scripts/Game/RealtimeScheduleConfig.cs",
+          "RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs",
+          "CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs",
+          "CoreSim/tests/RobotTwin.CoreSim.Tests/FirmwareProtocolTests.cs",
+          "FirmwareEngine/PipeManager.cpp"
+        ]
       }
     ]
   },
@@ -389,6 +611,22 @@
         {
           "number": 114,
           "title": "P1-12 Mark prototype/legacy interfaces (fixed-size SharedState)"
+        },
+        {
+          "number": 115,
+          "title": "P1-13 Cross-layer golden trace harness"
+        },
+        {
+          "number": 184,
+          "title": "P1-13b FirmwareEngine lockstep OutputState capture"
+        },
+        {
+          "number": 116,
+          "title": "P1-14 .rtwin round-trip tests"
+        },
+        {
+          "number": 117,
+          "title": "P1-15 Protocol framing tests (magic/version/bounds)"
         }
       ]
     },
@@ -483,6 +721,22 @@
         {
           "number": 165,
           "title": "HF-05 Electronic Noise Injection"
+        },
+        {
+          "number": 180,
+          "title": "HF-06 Per-part physical material properties (mass/friction/elasticity/strength)"
+        },
+        {
+          "number": 181,
+          "title": "HF-06b Sample component + regression validation for physical overrides"
+        },
+        {
+          "number": 182,
+          "title": "HF-06c Per-part NativePhysicsBody mapping (no equal mass split)"
+        },
+        {
+          "number": 183,
+          "title": "HF-06d Volume source-of-truth for mass realism"
         }
       ]
     },

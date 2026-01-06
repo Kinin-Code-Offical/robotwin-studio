@@ -40,6 +40,13 @@ namespace RobotTwin.UI
         private Button _comInstallBtn;
         private TextField _componentSearchField;
         private VisualElement _circuit3DView;
+        private VisualElement _circuit3DLoadingOverlay;
+        private VisualElement _circuit3DLoadingSpinner;
+        private Label _circuit3DLoadingLabel;
+        private IVisualElementScheduledItem _circuit3DLoadingSpin;
+        private IVisualElementScheduledItem _circuit3DLoadingPoll;
+        private float _circuit3DLoadingShownAt;
+        private RenderTexture _circuit3DLoadingBlurTexture;
         private Slider _circuit3DFovSlider;
         private Toggle _circuit3DPerspectiveToggle;
         private Toggle _circuit3DFollowToggle;
@@ -67,7 +74,7 @@ namespace RobotTwin.UI
         private string _pressed3DButtonId;
         private string _last3dPickedComponentId;
         private string _layoutClass = string.Empty;
-        
+
         [Header("Configuration")]
         [SerializeField] private string _firmwarePath;
         [SerializeField] private string _com0comSetupcPath;
@@ -99,7 +106,7 @@ namespace RobotTwin.UI
         // State
         private RobotTwin.Game.SimHost _host;
         private CircuitSpec _activeCircuit;
-        
+
         private bool _isRunning = false;
         private string _runOutputPath;
         private string _eventLogPath;
@@ -135,7 +142,8 @@ namespace RobotTwin.UI
         {
             None,
             Pan,
-            Orbit
+            Orbit,
+            Roll
         }
 
         private void OnEnable()
@@ -169,6 +177,9 @@ namespace RobotTwin.UI
             _telemetryList = root.Q<VisualElement>("TelemetryList");
             _componentSearchField = root.Q<TextField>("ComponentSearchField");
             _circuit3DView = root.Q<VisualElement>("Circuit3DView");
+            _circuit3DLoadingOverlay = root.Q<VisualElement>("Circuit3DLoadingOverlay");
+            _circuit3DLoadingSpinner = root.Q<VisualElement>("Circuit3DLoadingSpinner");
+            _circuit3DLoadingLabel = root.Q<Label>("Circuit3DLoadingLabel");
             _circuit3DFovSlider = root.Q<Slider>("Circuit3DFovSlider");
             _circuit3DPerspectiveToggle = root.Q<Toggle>("Circuit3DPerspectiveToggle");
             _circuit3DFollowToggle = root.Q<Toggle>("Circuit3DFollowToggle");
@@ -248,12 +259,12 @@ namespace RobotTwin.UI
 
         private void StartSimulation()
         {
-             if (SessionManager.Instance == null || SessionManager.Instance.CurrentCircuit == null)
+            if (SessionManager.Instance == null || SessionManager.Instance.CurrentCircuit == null)
             {
                 Debug.LogError("[RunMode] No Session/Circuit found!");
                 return;
             }
-            
+
             _activeCircuit = SessionManager.Instance.CurrentCircuit;
             CaptureSwitchDefaults();
             if (_projectLabel != null)
@@ -311,6 +322,7 @@ namespace RobotTwin.UI
             {
                 _host.StopSimulation();
                 _host.OnSerialOutput -= HandleSerialOutput;
+                _host.SetVirtualComStatusJson(string.Empty);
             }
             _comPortManager?.CloseAll();
             RestoreSwitchDefaults();
@@ -660,6 +672,22 @@ namespace RobotTwin.UI
             }
             UpdateUsbHint();
             UpdateComStatus();
+            SyncVirtualComStatusToHost();
+        }
+
+        private void SyncVirtualComStatusToHost()
+        {
+            if (_host == null)
+            {
+                _host = RobotTwin.Game.SimHost.Instance;
+            }
+            if (_host == null) return;
+            if (_comPortManager == null)
+            {
+                _host.SetVirtualComStatusJson(string.Empty);
+                return;
+            }
+            _host.SetVirtualComStatusJson(_comPortManager.BuildStatusPayloadJson());
         }
 
         private void UpdateUsbPortLabels()
@@ -914,6 +942,7 @@ namespace RobotTwin.UI
             }
             UpdateUsbPortLabels();
             UpdateUsbStatus();
+            SyncVirtualComStatusToHost();
         }
 
         private bool HasAnyUsbConnected()
@@ -1704,6 +1733,8 @@ namespace RobotTwin.UI
                 var go = new GameObject("Circuit3DView");
                 go.transform.SetParent(transform, false);
                 _circuit3DRenderer = go.AddComponent<Circuit3DView>();
+                _circuit3DRenderer.BuildStarted += () => ShowCircuit3DLoading("Building 3D view...");
+                _circuit3DRenderer.BuildFinished += BeginHideCircuit3DLoadingWhenReady;
                 Apply3DCameraSettings();
             }
 
@@ -1714,6 +1745,7 @@ namespace RobotTwin.UI
 
             _circuit3DView.RegisterCallback<GeometryChangedEvent>(evt =>
             {
+                ShowCircuit3DLoading("Loading 3D view...");
                 int width = Mathf.RoundToInt(evt.newRect.width);
                 int height = Mathf.RoundToInt(evt.newRect.height - 18f);
                 _circuit3DRenderer.Initialize(width, height);
@@ -1727,7 +1759,79 @@ namespace RobotTwin.UI
                 {
                     _circuit3DView.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DRenderer.TargetTexture));
                 }
+
+                BeginHideCircuit3DLoadingWhenReady();
             });
+        }
+
+        private void ShowCircuit3DLoading(string message)
+        {
+            if (_circuit3DLoadingOverlay == null) return;
+            _circuit3DLoadingShownAt = Time.realtimeSinceStartup;
+            if (_circuit3DLoadingLabel != null && !string.IsNullOrWhiteSpace(message))
+            {
+                _circuit3DLoadingLabel.text = message;
+            }
+
+            UpdateCircuit3DLoadingBlurBackdrop();
+            _circuit3DLoadingOverlay.style.display = DisplayStyle.Flex;
+
+            if (_circuit3DLoadingSpinner != null && _circuit3DLoadingSpin == null)
+            {
+                _circuit3DLoadingSpin = _circuit3DLoadingSpinner.schedule.Execute(() =>
+                {
+                    if (_circuit3DLoadingSpinner == null) return;
+                    var angle = (Time.realtimeSinceStartup * 360f) % 360f;
+                    _circuit3DLoadingSpinner.style.rotate = new Rotate(new Angle(angle, AngleUnit.Degree));
+                }).Every(16);
+            }
+        }
+
+        private void BeginHideCircuit3DLoadingWhenReady()
+        {
+            if (_circuit3DLoadingOverlay == null || _circuit3DLoadingPoll != null) return;
+
+            _circuit3DLoadingPoll = _circuit3DLoadingOverlay.schedule.Execute(() =>
+            {
+                if (_circuit3DLoadingOverlay == null) return;
+
+                const float minSeconds = 0.25f;
+                if (Time.realtimeSinceStartup - _circuit3DLoadingShownAt < minSeconds) return;
+                if (_circuit3DRenderer == null) return;
+                if (_circuit3DRenderer.TargetTexture == null) return;
+                if (_circuit3DRenderer.HasPendingRuntimeModelLoads) return;
+
+                _circuit3DLoadingOverlay.style.display = DisplayStyle.None;
+                _circuit3DLoadingPoll?.Pause();
+                _circuit3DLoadingPoll = null;
+            }).Every(60);
+        }
+
+        private void UpdateCircuit3DLoadingBlurBackdrop()
+        {
+            if (_circuit3DLoadingOverlay == null || _circuit3DRenderer == null) return;
+            var src = _circuit3DRenderer.TargetTexture;
+            if (src == null) return;
+
+            int w = Mathf.Max(16, src.width / 6);
+            int h = Mathf.Max(16, src.height / 6);
+            if (_circuit3DLoadingBlurTexture == null || _circuit3DLoadingBlurTexture.width != w || _circuit3DLoadingBlurTexture.height != h)
+            {
+                if (_circuit3DLoadingBlurTexture != null)
+                {
+                    _circuit3DLoadingBlurTexture.Release();
+                }
+                _circuit3DLoadingBlurTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
+                {
+                    name = "RunMode3D_LoadingBlur",
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                _circuit3DLoadingBlurTexture.Create();
+            }
+
+            Graphics.Blit(src, _circuit3DLoadingBlurTexture);
+            _circuit3DLoadingOverlay.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_circuit3DLoadingBlurTexture));
         }
 
         private void Initialize3DCameraControls()
@@ -2076,6 +2180,30 @@ namespace RobotTwin.UI
         private void On3DPointerDown(PointerDownEvent evt)
         {
             if (_circuit3DView == null || _circuit3DRenderer == null) return;
+
+            if (evt.altKey)
+            {
+                if (evt.button == 0)
+                {
+                    _3dDragMode = ThreeDDragMode.Orbit;
+                }
+                else if (evt.button == 1)
+                {
+                    _3dDragMode = ThreeDDragMode.Roll;
+                }
+                else
+                {
+                    return;
+                }
+
+                _is3DDragging = true;
+                _3dPointerId = evt.pointerId;
+                _3dLastPos = (Vector2)evt.position;
+                _circuit3DView.CapturePointer(evt.pointerId);
+                evt.StopPropagation();
+                return;
+            }
+
             if (evt.button == 0)
             {
                 if (TryHandle3DPointerDown(evt.position, evt.pointerId))
@@ -2114,6 +2242,10 @@ namespace RobotTwin.UI
             {
                 _circuit3DRenderer.Orbit(delta);
             }
+            else if (_3dDragMode == ThreeDDragMode.Roll)
+            {
+                _circuit3DRenderer.Roll(delta);
+            }
             evt.StopPropagation();
         }
 
@@ -2149,7 +2281,21 @@ namespace RobotTwin.UI
 
         private void On3DWheel(WheelEvent evt)
         {
-            _circuit3DRenderer?.Zoom(evt.delta.y);
+            float wheel = evt.delta.y;
+            float zoomDelta;
+            if (Mathf.Abs(wheel) < 1.5f)
+            {
+                zoomDelta = Mathf.Sign(wheel) * 120f;
+            }
+            else if (Mathf.Abs(wheel) < 15f)
+            {
+                zoomDelta = wheel * 40f;
+            }
+            else
+            {
+                zoomDelta = wheel;
+            }
+            _circuit3DRenderer?.Zoom(zoomDelta);
             evt.StopPropagation();
         }
 
@@ -2201,6 +2347,29 @@ namespace RobotTwin.UI
         private bool Handle3DKeyInput(KeyDownEvent evt)
         {
             if (_circuit3DRenderer == null) return false;
+            if (evt.altKey)
+            {
+                if (evt.keyCode == KeyCode.UpArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Top);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.DownArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Bottom);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.LeftArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Left);
+                    return true;
+                }
+                if (evt.keyCode == KeyCode.RightArrow)
+                {
+                    _circuit3DRenderer.SnapView(Circuit3DView.ViewPreset.Right);
+                    return true;
+                }
+            }
             if (evt.keyCode == KeyCode.L)
             {
                 _circuit3DLabelsVisible = !_circuit3DLabelsVisible;
@@ -2288,7 +2457,8 @@ namespace RobotTwin.UI
         {
             if (!TryPick3DComponent(panelPos, out var compId, out _)) return false;
             if (_activeCircuit?.Components == null) return false;
-            var comp = _activeCircuit.Components.FirstOrDefault(c => c.Id == compId);
+            var comp = _activeCircuit.Components.FirstOrDefault(c =>
+                c != null && string.Equals(c.Id, compId, System.StringComparison.OrdinalIgnoreCase));
             if (comp == null) return false;
             _last3dPickedComponentId = compId;
             if (_circuit3DFollowToggle != null && _circuit3DFollowToggle.value)
@@ -2333,8 +2503,16 @@ namespace RobotTwin.UI
             if (_circuit3DView == null) return false;
             var rect = _circuit3DView.worldBound;
             if (rect.width <= 0f || rect.height <= 0f) return false;
-            float x = (panelPos.x - rect.xMin) / rect.width;
-            float y = (panelPos.y - rect.yMin) / rect.height;
+
+            // Pointer events can arrive in either panel space (world coordinates) or local space,
+            // depending on how the event is dispatched. Support both to keep 3D picking reliable.
+            bool isPanelSpace =
+                panelPos.x >= rect.xMin && panelPos.x <= rect.xMax &&
+                panelPos.y >= rect.yMin && panelPos.y <= rect.yMax;
+
+            var local = isPanelSpace ? (panelPos - rect.position) : panelPos;
+            float x = local.x / rect.width;
+            float y = local.y / rect.height;
             viewportPoint = new Vector2(Mathf.Clamp01(x), Mathf.Clamp01(1f - y));
             return true;
         }

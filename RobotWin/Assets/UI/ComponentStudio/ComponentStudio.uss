@@ -1025,6 +1025,7 @@
     background-color: rgba(5, 7, 12, 0.7);
     justify-content: center;
     align-items: center;
+    -unity-background-scale-mode: scale-and-crop;
 }
 
 .modal-overlay {
@@ -1086,6 +1087,21 @@
     -unity-font-style: bold;
     margin-bottom: 8px;
     color: var(--text-0);
+}
+
+.studio-loading-spinner {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    border-top-width: 3px;
+    border-bottom-width: 3px;
+    border-left-width: 3px;
+    border-right-width: 3px;
+    border-top-color: rgba(56, 189, 248, 0.95);
+    border-right-color: rgba(56, 189, 248, 0.28);
+    border-bottom-color: rgba(56, 189, 248, 0.28);
+    border-left-color: rgba(56, 189, 248, 0.28);
+    margin-bottom: 10px;
 }
 
 .material-card {
