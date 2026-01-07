@@ -19,7 +19,7 @@ function Get-WorkspaceFiles {
         "RobotWin\\Logs",
         "RobotWin\UserSettings\AI."
     )
-    $ExcludedPattern = '(^|\\)(\\.git|node_modules|\\.venv|\\.vscode)(\\|$)'
+    $ExcludedPattern = '(^|\\)(\\.git|node_modules|\\.venv|\\.venv_step|\\.vscode)(\\|$)'
 
     $allFiles = Get-ChildItem -Path $RepoRoot -Recurse -File -Name | ForEach-Object {
         $relativePath = $_

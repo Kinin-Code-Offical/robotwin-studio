@@ -106,6 +106,13 @@ namespace RobotTwin.UI
         private TelemetryEntry _summaryTelemetry;
         private TelemetryEntry _validationTelemetry;
         private TelemetryEntry _thermalTelemetry;
+        private TelemetryEntry _dataLossTelemetry;
+
+        // Data-loss / alert overlay (eye-catching on purpose).
+        private VisualElement _dataLossFlashOverlay;
+        private float _dataLossFlashUntilRealtime;
+        private long _lastFirmwareDropsTotal = -1;
+        private long _lastFirmwareDropsDelta;
 
         // State
         private RobotTwin.Game.SimHost _host;
@@ -199,6 +206,8 @@ namespace RobotTwin.UI
             _wiringToolsBody = root.Q<VisualElement>("WiringToolsBody");
             _wiringHeatmapBtn = root.Q<Button>("WiringHeatmapBtn");
             _wiringReportBtn = root.Q<Button>("WiringReportBtn");
+
+            EnsureDataLossOverlay(root);
 
             // Buttons
             root.Q<Button>("StopButton")?.RegisterCallback<ClickEvent>(OnStopClicked);
@@ -554,7 +563,50 @@ namespace RobotTwin.UI
 
             UpdateVisualization();
             UpdateTelemetry();
+            UpdateDataLossFlashOverlay();
             UpdateRpiPanel();
+        }
+
+        private void EnsureDataLossOverlay(VisualElement root)
+        {
+            if (root == null) return;
+            if (_dataLossFlashOverlay != null) return;
+
+            var overlay = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            overlay.style.position = Position.Absolute;
+            overlay.style.left = 0;
+            overlay.style.right = 0;
+            overlay.style.top = 0;
+            overlay.style.bottom = 0;
+            overlay.style.backgroundColor = new StyleColor(new Color(1f, 0.1f, 0.1f, 0f));
+            overlay.style.opacity = 0f;
+            overlay.style.display = DisplayStyle.None;
+
+            root.Add(overlay);
+            _dataLossFlashOverlay = overlay;
+        }
+
+        private void UpdateDataLossFlashOverlay()
+        {
+            if (_dataLossFlashOverlay == null) return;
+            float now = Time.realtimeSinceStartup;
+            if (now >= _dataLossFlashUntilRealtime)
+            {
+                if (_dataLossFlashOverlay.style.display != DisplayStyle.None)
+                {
+                    _dataLossFlashOverlay.style.display = DisplayStyle.None;
+                    _dataLossFlashOverlay.style.opacity = 0f;
+                }
+                return;
+            }
+
+            _dataLossFlashOverlay.style.display = DisplayStyle.Flex;
+            float t = Mathf.Clamp01((_dataLossFlashUntilRealtime - now) / 0.65f);
+            float pulse = 0.25f + 0.35f * (0.5f + 0.5f * Mathf.Sin(now * 18f));
+            _dataLossFlashOverlay.style.opacity = pulse * Mathf.Lerp(1f, 0.2f, 1f - t);
         }
 
         private void CaptureSwitchDefaults()
@@ -1023,6 +1075,7 @@ namespace RobotTwin.UI
             UpdateBoardTelemetry(telemetry);
             UpdateBatteryTelemetry(telemetry);
             UpdateDiagnosticsTelemetry(telemetry);
+            UpdateFirmwareDataLossTelemetry(telemetry);
 
             LogValidationSummary(telemetry);
             LogPowerSummary();
@@ -1037,6 +1090,7 @@ namespace RobotTwin.UI
             _summaryTelemetry = null;
             _validationTelemetry = null;
             _thermalTelemetry = null;
+            _dataLossTelemetry = null;
 
             AddTelemetrySection("Boards");
             if (_activeCircuit?.Components != null)
@@ -1071,6 +1125,7 @@ namespace RobotTwin.UI
             _summaryTelemetry = CreateTelemetryEntry("Signals");
             _validationTelemetry = CreateTelemetryEntry("Validation");
             _thermalTelemetry = CreateTelemetryEntry("Thermal");
+            _dataLossTelemetry = CreateTelemetryEntry("Data loss");
 
             _telemetryBuilt = true;
         }
@@ -1269,6 +1324,54 @@ namespace RobotTwin.UI
                     }
                 }
                 _thermalTelemetry.Value.text = double.IsNaN(maxTemp) ? "Max temp: N/A" : $"Max temp: {maxTemp:F1}C";
+            }
+        }
+
+        private void UpdateFirmwareDataLossTelemetry(TelemetryFrame telemetry)
+        {
+            if (_dataLossTelemetry == null) return;
+
+            long totalDrops = 0;
+            bool hasAny = false;
+            if (telemetry?.Signals != null)
+            {
+                foreach (var kvp in telemetry.Signals)
+                {
+                    if (!kvp.Key.StartsWith("FW:", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!kvp.Key.EndsWith(":drops", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (double.IsNaN(kvp.Value)) continue;
+                    long v = (long)Math.Max(0.0, Math.Floor(kvp.Value));
+                    totalDrops += v;
+                    hasAny = true;
+                }
+            }
+
+            if (!hasAny)
+            {
+                _dataLossTelemetry.Value.text = "Drops: N/A";
+                _lastFirmwareDropsDelta = 0;
+                _lastFirmwareDropsTotal = -1;
+                return;
+            }
+
+            long delta = 0;
+            if (_lastFirmwareDropsTotal >= 0)
+            {
+                delta = totalDrops - _lastFirmwareDropsTotal;
+                if (delta < 0) delta = 0; // counter reset or partial telemetry
+            }
+            _lastFirmwareDropsTotal = totalDrops;
+            _lastFirmwareDropsDelta = delta;
+
+            _dataLossTelemetry.Value.text = delta > 0
+                ? $"Drops: {totalDrops} (+{delta})"
+                : $"Drops: {totalDrops}";
+
+            if (delta > 0)
+            {
+                // Flash red overlay for a brief moment (visual "data loss" alarm).
+                _dataLossFlashUntilRealtime = Time.realtimeSinceStartup + 0.65f;
+                AppendLog($"[DataLoss] Firmware reported +{delta} dropped outputs (total {totalDrops}).");
             }
         }
 

@@ -66,7 +66,23 @@ namespace RobotTwin.CoreSim.Host
             try
             {
                 using var process = Process.GetCurrentProcess();
-                process.ProcessorAffinity = (IntPtr)affinityMask;
+                IntPtr affinityMask1 = (IntPtr)affinityMask;
+
+#if NET5_0_OR_GREATER
+                if (OperatingSystem.IsWindows())
+                {
+                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
+                }
+#else
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
+                }
+#endif
             }
             catch
             {
@@ -82,17 +98,21 @@ namespace RobotTwin.CoreSim.Host
             public void TryBeginTimerResolution(uint periodMs)
             {
                 if (_timerActive) return;
+#pragma warning disable CA1416 // Guarded by OS checks; best-effort hardening only.
                 if (timeBeginPeriod(periodMs) == 0)
                 {
                     _timerActive = true;
                     _timerPeriod = periodMs;
                 }
+#pragma warning restore CA1416
             }
 
             public void Dispose()
             {
                 if (!_timerActive) return;
+#pragma warning disable CA1416 // Guarded by OS checks; best-effort hardening only.
                 timeEndPeriod(_timerPeriod);
+#pragma warning restore CA1416
                 _timerActive = false;
             }
         }
