@@ -1,0 +1,72 @@
+{
+  "id": "battery-4xaa",
+  "name": "Battery Pack 4xAA",
+  "description": "4xAA holder (typical 6V alkaline)",
+  "type": "Battery",
+  "symbol": "B",
+  "iconChar": "B",
+  "order": 41,
+  "pins": ["+", "-"],
+  "specs": [
+    { "key": "Voltage", "value": "6V" },
+    { "key": "Cells", "value": "4xAA" }
+  ],
+  "defaults": [
+    { "key": "voltage", "value": "6V" },
+    { "key": "capacity", "value": "2000mAh" },
+    { "key": "internalResistance", "value": "0.25" },
+    { "key": "voltageMin", "value": "4.4V" },
+    { "key": "voltageMax", "value": "6.4V" },
+    { "key": "drainScale", "value": "1" }
+  ],
+  "size2D": { "x": 160, "y": 90 },
+  "pinLayout": [
+    {
+      "name": "+",
+      "x": 0.08,
+      "y": 0.7,
+      "label": "+",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.05,
+      "anchorY": 0.02,
+      "anchorZ": 0.04,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "-",
+      "x": 0.08,
+      "y": 0.3,
+      "label": "-",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.05,
+      "anchorY": 0.02,
+      "anchorZ": -0.04,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    }
+  ],
+  "labels": [
+    { "text": "{id}", "x": 0.55, "y": 0.18, "size": 14, "align": "center" },
+    { "text": "4xAA", "x": 0.55, "y": 0.5, "size": 14, "align": "center" },
+    { "text": "6V", "x": 0.55, "y": 0.78, "size": 12, "align": "center" }
+  ],
+  "shapes": [
+    {
+      "id": "body",
+      "type": "Box",
+      "x": 0.18,
+      "y": 0.12,
+      "width": 120,
+      "height": 66,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    }
+  ]
+}

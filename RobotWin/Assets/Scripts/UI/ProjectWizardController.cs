@@ -1894,7 +1894,10 @@ namespace RobotTwin.UI
                         y = shape.Position.y,
                         width = shape.Width,
                         height = shape.Height,
-                        text = shape.Text
+                        text = shape.Text,
+                        lineFlip = shape.LineFlip,
+                        rotation = shape.Rotation,
+                        fontSize = shape.FontSize
                     }).ToArray()
                     : Array.Empty<ShapeLayoutPayload>(),
                 modelFile = item.ModelFile,
@@ -3102,6 +3105,9 @@ namespace RobotTwin.UI
             public float width;
             public float height;
             public string text;
+            public bool lineFlip;
+            public float rotation;
+            public float fontSize;
         }
 
         [Serializable]

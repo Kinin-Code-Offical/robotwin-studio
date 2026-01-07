@@ -320,14 +320,6 @@ namespace RobotTwin.Game
 
             _useExternalFirmware = TrySetupExternalFirmwares(firmwarePath);
 
-            // Uno-only mode prioritizes high-fidelity AVR emulation via NativeEngine.
-            // External firmware (.bvm via FirmwareEngine) is disabled by default to reduce runtime surface area.
-            if (unoOnlyMode && _useExternalFirmware)
-            {
-                Debug.Log("[SimHost] Uno-only mode: external firmware disabled; preferring NativeEngine AVR path.");
-                _useExternalFirmware = false;
-            }
-
             _useFirmwareHost = wantsRpi || _useExternalFirmware;
             if (_useFirmwareHost)
             {
@@ -815,6 +807,7 @@ namespace RobotTwin.Game
         {
             var world = NativePhysicsWorld.Instance;
             if (world == null || !world.IsRunning) return;
+            dtSeconds = ClampPhysicsDt(dtSeconds);
             float start = Time.realtimeSinceStartup;
             world.StepExternal(dtSeconds);
             float stepMs = (Time.realtimeSinceStartup - start) * 1000f;
@@ -822,6 +815,14 @@ namespace RobotTwin.Game
             {
                 _budgetOverruns++;
             }
+        }
+
+        private float ClampPhysicsDt(float dtSeconds)
+        {
+            if (_realtimeConfig == null || !_realtimeConfig.ClampPhysicsDt) return dtSeconds;
+            float min = Mathf.Max(0.0001f, _realtimeConfig.MinPhysicsDtSeconds);
+            float max = Mathf.Max(min, _realtimeConfig.MaxPhysicsDtSeconds);
+            return Mathf.Clamp(dtSeconds, min, max);
         }
 
         private int ComputeInputSignature()

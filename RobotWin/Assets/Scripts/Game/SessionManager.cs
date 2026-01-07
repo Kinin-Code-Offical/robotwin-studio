@@ -2,6 +2,8 @@ using UnityEngine;
 using RobotTwin.CoreSim.Specs;
 using System;
 using System.IO;
+using System.Linq;
+using RobotTwin.Game.RaspberryPi;
 
 
 namespace RobotTwin.Game
@@ -49,6 +51,7 @@ namespace RobotTwin.Game
 
         public void StartSession(CircuitSpec circuit)
         {
+            ConfigureFirmwareMode(circuit);
             CurrentCircuit = circuit;
             CurrentRobot = new RobotSpec { Name = "TestRobot" };
             CurrentWorld = new WorldSpec { Name = "TestWorld" };
@@ -62,11 +65,12 @@ namespace RobotTwin.Game
         {
             CurrentProject = project;
             CurrentCircuit = project.Circuit;
+            ConfigureFirmwareMode(CurrentCircuit);
             CurrentRobot = project.Robot;
             CurrentWorld = project.World;
             ActiveTemplate = null;
             CurrentProjectPath = null;
-            
+
             LogNoStack(LogType.Log, $"Session Started from Project: {project.ProjectName}");
         }
 
@@ -81,6 +85,105 @@ namespace RobotTwin.Game
         public bool UseVirtualMcu { get; set; } = true;
         public bool UseNativeEnginePins { get; set; } = true;
         public bool FirmwareHostLockstep { get; set; } = true;
+
+        public void ConfigureFirmwareMode(CircuitSpec circuit)
+        {
+            bool hasVirtualFirmware = false;
+            bool hasHexFirmware = false;
+            bool hasBvmFirmware = false;
+
+            if (circuit?.Components != null)
+            {
+                foreach (var comp in circuit.Components)
+                {
+                    if (comp?.Properties == null) continue;
+
+                    if (comp.Properties.TryGetValue("virtualFirmware", out var virtualFirmware) &&
+                        !string.IsNullOrWhiteSpace(virtualFirmware))
+                    {
+                        hasVirtualFirmware = true;
+                    }
+
+                    if (comp.Properties.TryGetValue("firmwarePath", out var firmwarePath) &&
+                        !string.IsNullOrWhiteSpace(firmwarePath) &&
+                        File.Exists(firmwarePath) &&
+                        (firmwarePath.EndsWith(".hex", StringComparison.OrdinalIgnoreCase) ||
+                         firmwarePath.EndsWith(".ihx", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        hasHexFirmware = true;
+                    }
+
+                    if (comp.Properties.TryGetValue("firmware", out var firmwareValue) &&
+                        !string.IsNullOrWhiteSpace(firmwareValue) &&
+                        File.Exists(firmwareValue) &&
+                        (firmwareValue.EndsWith(".hex", StringComparison.OrdinalIgnoreCase) ||
+                         firmwareValue.EndsWith(".ihx", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        hasHexFirmware = true;
+                    }
+
+                    if (comp.Properties.TryGetValue("bvmPath", out var bvmPath) &&
+                        !string.IsNullOrWhiteSpace(bvmPath) &&
+                        File.Exists(bvmPath))
+                    {
+                        hasBvmFirmware = true;
+                    }
+                }
+            }
+
+            // If there's no real firmware, keep VirtualMcu on (placeholder/demo programs).
+            if (!hasVirtualFirmware && !hasHexFirmware && !hasBvmFirmware)
+            {
+                UseVirtualMcu = true;
+                UseNativeEnginePins = false;
+                return;
+            }
+
+            // Prefer real firmware backends over VirtualMcu.
+            UseVirtualMcu = false;
+
+            // If bvm exists and firmware host exists, use external firmware host.
+            if (hasBvmFirmware)
+            {
+                FindFirmware();
+                bool hostExists = !string.IsNullOrWhiteSpace(FirmwarePath) && File.Exists(FirmwarePath);
+                if (hostExists)
+                {
+                    UseNativeEnginePins = false;
+                    Debug.Log("[SessionManager] Firmware backend: FirmwareHost (.bvm). Reason: bvmPath present and host executable found.");
+                    return;
+                }
+
+                // If we can't run the .bvm (host missing) and we don't have a HEX fallback,
+                // we must fall back to VirtualMcu to avoid ending up with no backend.
+                if (!hasHexFirmware)
+                {
+                    Debug.LogWarning("[SessionManager] .bvm firmware detected but firmware host is missing. Falling back to VirtualMcu.");
+                    UseVirtualMcu = true;
+                    UseNativeEnginePins = false;
+                    return;
+                }
+            }
+
+            // Otherwise, prefer NativeEngine AVR when a HEX exists.
+            UseNativeEnginePins = hasHexFirmware;
+
+            // If only virtual firmware exists (no hex/bvm), fall back to VirtualMcu.
+            if (hasVirtualFirmware && !hasHexFirmware && !hasBvmFirmware)
+            {
+                UseVirtualMcu = true;
+                UseNativeEnginePins = false;
+            }
+
+            if (UseVirtualMcu)
+            {
+                Debug.Log("[SessionManager] Firmware backend: VirtualMcu. Reason: virtualFirmware/no-host fallback.");
+            }
+            else if (UseNativeEnginePins)
+            {
+                Debug.Log("[SessionManager] Firmware backend: NativeEngine AVR (.hex/.ihx).");
+            }
+        }
 
         public string ResolveFirmwareHostOverride()
         {
@@ -138,7 +241,7 @@ namespace RobotTwin.Game
 
         private void OnApplicationQuit()
         {
-             // Cleanup if needed
+            // Cleanup if needed
         }
 
         private static void LogNoStack(LogType type, string message)

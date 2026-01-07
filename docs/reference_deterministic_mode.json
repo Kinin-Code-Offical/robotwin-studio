@@ -1,7 +1,8 @@
 {
-  "enabled": true,
-  "dtSeconds": 0.01,
-  "deltaMicrosOverride": null,
-  "randomSeed": 1337,
-  "firmwareConnectTimeoutMs": 5000
+  "name": "deterministic_default",
+  "fixedDeltaSeconds": 0.001,
+  "seed": 12345,
+  "maxTicksPerFrame": 8,
+  "enableTelemetry": true,
+  "notes": "Reference settings for deterministic runs."
 }

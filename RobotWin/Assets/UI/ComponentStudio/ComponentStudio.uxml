@@ -33,7 +33,7 @@
                 </ui:VisualElement>
                 <ui:VisualElement name="LeftPanelHierarchy" class="left-tab-panel">
                     <ui:ScrollView name="HierarchyScroll" class="panel-scroll component-scroll">
-                        <ui:VisualElement class="panel-section">
+                        <ui:VisualElement name="ObjectsLabelsSection" class="panel-section">
                             <ui:Label text="Hierarchy" class="panel-section-title" />
                             <ui:ScrollView name="HierarchyTreeContainer" class="editor-list hierarchy-tree" />
                         </ui:VisualElement>
@@ -42,7 +42,7 @@
 
                 <ui:VisualElement name="LeftPanelCatalog" class="left-tab-panel" style="display: none;">
                     <ui:ScrollView name="CatalogScroll" class="panel-scroll component-scroll">
-                        <ui:VisualElement class="panel-section">
+                        <ui:VisualElement name="ObjectsPinsSection" class="panel-section">
                             <ui:VisualElement class="panel-section-header">
                                 <ui:Label text="Catalog" class="panel-section-title" />
                                 <ui:Button name="CatalogRefreshBtn" class="ghost-button">
@@ -56,7 +56,7 @@
 
                 <ui:VisualElement name="LeftPanelBasics" class="left-tab-panel" style="display: none;">
                     <ui:ScrollView name="BasicsScroll" class="panel-scroll component-scroll">
-                        <ui:VisualElement class="panel-section">
+                        <ui:VisualElement name="ObjectsFxSection" class="panel-section">
                             <ui:Label text="Basics" class="panel-section-title" />
                             <ui:VisualElement class="form-row">
                                 <ui:Label text="Name" class="form-label" />
@@ -103,7 +103,7 @@
                             </ui:VisualElement>
                         </ui:VisualElement>
 
-                        <ui:VisualElement class="panel-section">
+                        <ui:VisualElement name="ObjectsAnchorsSection" class="panel-section">
                             <ui:Label text="Defaults" class="panel-section-title" />
                             <ui:VisualElement class="panel-section-header">
                                 <ui:Label text="Defaults" class="form-label" />
@@ -271,38 +271,90 @@
                                 <ui:Toggle name="ViewportPartColorsToggle" text="Part Colors" class="circuit-3d-toggle" />
                                 <ui:Button name="Circuit3DRebuildBtn" text="Rebuild 3D" class="circuit-3d-btn" />
                                 <ui:VisualElement class="circuit-3d-divider" />
-                                <ui:VisualElement class="circuit-3d-controls-row viewport-edit-toggle-row">
-                                    <ui:Label text="3D Edit" class="circuit-3d-controls-label wide" />
-                                    <ui:Toggle name="ViewportEditPanelToggle" text="Show" class="circuit-3d-toggle" value="true" />
-                                </ui:VisualElement>
-                                <ui:VisualElement name="ViewportEditPanel" class="viewport-edit-panel inline">
-                                    <ui:VisualElement class="viewport-edit-row">
-                                        <ui:Toggle name="ViewportEditAnchorsToggle" text="Anchors" class="viewport-edit-toggle" value="true" />
-                                    </ui:VisualElement>
-                                    <ui:VisualElement class="viewport-edit-row">
-                                        <ui:Toggle name="ViewportEditEffectsToggle" text="Effects" class="viewport-edit-toggle" value="true" />
-                                    </ui:VisualElement>
-                                    <ui:VisualElement class="viewport-edit-row">
-                                        <ui:Toggle name="ViewportEditPartsToggle" text="Parts" class="viewport-edit-toggle" value="true" />
-                                    </ui:VisualElement>
-                                    <ui:VisualElement class="viewport-edit-row">
-                                        <ui:Toggle name="ViewportEditStatesToggle" text="States" class="viewport-edit-toggle" value="false" />
-                                    </ui:VisualElement>
-                                    <ui:VisualElement class="viewport-edit-row mode-row">
-                                        <ui:Label text="Mode" class="viewport-edit-label" />
-                                        <ui:Button name="ViewportEditMoveBtn" text="M" class="viewport-edit-btn icon active" />
-                                        <ui:Button name="ViewportEditRotateBtn" text="R" class="viewport-edit-btn icon" />
-                                        <ui:Button name="ViewportEditScaleBtn" text="S" class="viewport-edit-btn icon last" />
-                                    </ui:VisualElement>
-                                    <ui:VisualElement class="viewport-edit-row">
-                                        <ui:Toggle name="ViewportEditSnapToggle" text="Snap" class="viewport-edit-toggle" />
-                                        <ui:TextField name="ViewportEditSnapField" value="0.01" class="viewport-edit-field input-dark" />
-                                    </ui:VisualElement>
-                                </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
                         <ui:VisualElement name="ViewportViewCube" class="view-cube">
                             <ui:VisualElement name="ViewCubeSurface" class="view-cube-surface" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="MaterialOverlay" class="modal-overlay material-side-panel" style="display: none;">
+                            <ui:VisualElement class="modal-card material-card">
+                                <ui:Label text="Material + Texture" class="modal-title" />
+                                <ui:Label name="MaterialTargetLabel" text="No part selected" class="modal-label" />
+                                <ui:VisualElement class="modal-body">
+                                    <ui:Label text="Texture" class="modal-label" />
+                                    <ui:VisualElement class="form-row-inline">
+                                        <ui:TextField name="MaterialTexturePathField" class="form-field input-dark editor-inline-grow" />
+                                        <ui:Button name="MaterialTextureBrowseBtn" class="ghost-button editor-inline-button">
+                                            <ui:Label text="Browse" class="button-label" />
+                                        </ui:Button>
+                                    </ui:VisualElement>
+                                    <ui:Toggle name="MaterialUseTextureToggle" text="Use Texture" class="toggle-field" />
+                                    <ui:Label text="Tint Color" class="modal-label" />
+                                    <ui:VisualElement class="form-row-inline">
+                                        <ui:TextField name="MaterialColorRField" class="form-field editor-field-small input-dark" />
+                                        <ui:TextField name="MaterialColorGField" class="form-field editor-field-small input-dark" />
+                                        <ui:TextField name="MaterialColorBField" class="form-field editor-field-small input-dark" />
+                                        <ui:TextField name="MaterialColorAField" class="form-field editor-field-small input-dark" />
+                                    </ui:VisualElement>
+                                    <ui:Toggle name="MaterialUseColorToggle" text="Use Color Tint" class="toggle-field" />
+
+                                    <ui:VisualElement class="menu-divider" />
+                                    <ui:Label text="Physical (optional)" class="modal-label" />
+                                    <ui:Label text="Physical Material Id" class="modal-label" />
+                                    <ui:TextField name="MaterialPhysicalMaterialField" class="form-field input-dark" />
+                                    <ui:Label text="Density (kg/m^3)" class="modal-label" />
+                                    <ui:TextField name="MaterialDensityField" class="form-field input-dark" />
+                                    <ui:Label text="Volume (m^3, preferred for realism)" class="modal-label" />
+                                    <ui:TextField name="MaterialVolumeField" class="form-field input-dark" />
+                                    <ui:Label text="Mass Override (kg)" class="modal-label" />
+                                    <ui:TextField name="MaterialMassField" class="form-field input-dark" />
+                                    <ui:Label text="Friction (0..1)" class="modal-label" />
+                                    <ui:TextField name="MaterialFrictionField" class="form-field input-dark" />
+                                    <ui:Label text="Elasticity (0..1)" class="modal-label" />
+                                    <ui:TextField name="MaterialElasticityField" class="form-field input-dark" />
+                                    <ui:Label text="Strength" class="modal-label" />
+                                    <ui:TextField name="MaterialStrengthField" class="form-field input-dark" />
+                                    <ui:Label name="MaterialComputedMassLabel" text="Estimated Mass: (unset)" class="modal-label" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="modal-actions">
+                                    <ui:Button name="MaterialApplyBtn" text="Apply" class="btn-primary" />
+                                    <ui:Button name="MaterialClearBtn" text="Clear" class="btn-secondary" />
+                                    <ui:Button name="MaterialCloseBtn" text="Close" class="btn-secondary" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="ViewportEditDock" class="viewport-edit-dock">
+                            <ui:VisualElement class="viewport-edit-dock-header">
+                                <ui:Label text="3D Edit" class="viewport-edit-dock-title" />
+                                <ui:Toggle name="ViewportEditPanelToggle" text="Show" class="viewport-edit-toggle" value="true" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="ViewportEditPanel" class="viewport-edit-panel inline">
+                                <ui:VisualElement class="viewport-edit-row">
+                                    <ui:Toggle name="ViewportEditAnchorsToggle" text="Anchors" class="viewport-edit-toggle" value="true" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-edit-row">
+                                    <ui:Toggle name="ViewportEditEffectsToggle" text="Effects" class="viewport-edit-toggle" value="true" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-edit-row">
+                                    <ui:Toggle name="ViewportEditPartsToggle" text="Parts" class="viewport-edit-toggle" value="true" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-edit-row">
+                                    <ui:Toggle name="ViewportEditStatesToggle" text="States" class="viewport-edit-toggle" value="false" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-edit-row mode-row">
+                                    <ui:Label text="Mode" class="viewport-edit-label" />
+                                    <ui:Button name="ViewportEditMoveBtn" text="M" class="viewport-edit-btn icon active" />
+                                    <ui:Button name="ViewportEditRotateBtn" text="R" class="viewport-edit-btn icon" />
+                                    <ui:Button name="ViewportEditScaleBtn" text="S" class="viewport-edit-btn icon last" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-edit-row">
+                                    <ui:Toggle name="ViewportEditSnapToggle" text="Snap" class="viewport-edit-toggle" />
+                                    <ui:TextField name="ViewportEditSnapField" value="0.01" class="viewport-edit-field input-dark" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="viewport-edit-row">
+                                    <ui:Button name="ViewportEditResetBtn" text="Reset" class="viewport-edit-btn" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
                         </ui:VisualElement>
                             <ui:VisualElement name="StudioHelpIcon" class="board-3d-help">
                             <ui:Label text="?" class="board-3d-help-icon" />
@@ -314,7 +366,7 @@
                                 <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
                                 <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
                                 <ui:Label text="W/A/S/D: Drone move" class="board-3d-help-line" />
-                                <ui:Label text="Q/E or PageUp/PageDown: Up/Down" class="board-3d-help-line" />
+                                <ui:Label text="Shift + Q/E or PageUp/PageDown: Up/Down" class="board-3d-help-line" />
                                 <ui:Label text="Ctrl + Up/Down: Zoom" class="board-3d-help-line" />
                                 <ui:Label text="Ctrl + Enter: Run" class="board-3d-help-line" />
                                 <ui:Label text="O: Toggle anchors" class="board-3d-help-line" />
@@ -348,6 +400,8 @@
                         <ui:VisualElement class="layout-toolbar">
                             <ui:Button name="LayoutToolSelectBtn" text="SELECT" class="toolbar-btn active" />
                             <ui:Button name="LayoutToolPanBtn" text="PAN" class="toolbar-btn" />
+                            <ui:Button name="LayoutToolRotateBtn" text="ROT" class="toolbar-btn" />
+                            <ui:Button name="LayoutToolScaleBtn" text="SCALE" class="toolbar-btn" />
                             <ui:Button name="LayoutToolPinBtn" text="PIN" class="toolbar-btn" />
                             <ui:Button name="LayoutToolLabelBtn" text="LABEL" class="toolbar-btn" />
                             <ui:Button name="LayoutToolBoxBtn" text="BOX" class="toolbar-btn" />
@@ -371,7 +425,8 @@
                                         <ui:Label text="+/- or Ctrl+Up/Down: Zoom" class="layout-help-line" />
                                         <ui:Label text="R/F: Reset view" class="layout-help-line" />
                                         <ui:Label text="G: Toggle grid" class="layout-help-line" />
-                                        <ui:Label text="V: Select, P: Pin, L: Label, B/T/N/C/X: Shapes" class="layout-help-line" />
+                                        <ui:Label text="V: Select, E: Rotate, S: Scale" class="layout-help-line" />
+                                        <ui:Label text="P: Pin, L: Label, B/T/N/C: Shapes" class="layout-help-line" />
                                         <ui:Label text="Alt + Drag: Resize shape" class="layout-help-line" />
                                     </ui:VisualElement>
                                 </ui:VisualElement>
@@ -684,50 +739,49 @@
                 <ui:Button name="MenuHelpAbout" text="About Component Studio" class="menu-item" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="MaterialOverlay" class="modal-overlay material-side-panel" style="display: none;">
-            <ui:VisualElement class="modal-card material-card">
-                <ui:Label text="Material + Texture" class="modal-title" />
-                <ui:Label name="MaterialTargetLabel" text="No part selected" class="modal-label" />
-                <ui:VisualElement class="modal-body">
-                    <ui:Label text="Texture" class="modal-label" />
-                    <ui:VisualElement class="form-row-inline">
-                        <ui:TextField name="MaterialTexturePathField" class="form-field input-dark editor-inline-grow" />
-                        <ui:Button name="MaterialTextureBrowseBtn" class="ghost-button editor-inline-button">
-                            <ui:Label text="Browse" class="button-label" />
-                        </ui:Button>
-                    </ui:VisualElement>
-                    <ui:Toggle name="MaterialUseTextureToggle" text="Use Texture" class="toggle-field" />
-                    <ui:Label text="Tint Color" class="modal-label" />
-                    <ui:VisualElement class="form-row-inline">
-                        <ui:TextField name="MaterialColorRField" class="form-field editor-field-small input-dark" />
-                        <ui:TextField name="MaterialColorGField" class="form-field editor-field-small input-dark" />
-                        <ui:TextField name="MaterialColorBField" class="form-field editor-field-small input-dark" />
-                        <ui:TextField name="MaterialColorAField" class="form-field editor-field-small input-dark" />
-                    </ui:VisualElement>
-                    <ui:Toggle name="MaterialUseColorToggle" text="Use Color Tint" class="toggle-field" />
 
-                    <ui:VisualElement class="menu-divider" />
-                    <ui:Label text="Physical (optional)" class="modal-label" />
-                    <ui:Label text="Physical Material Id" class="modal-label" />
-                    <ui:TextField name="MaterialPhysicalMaterialField" class="form-field input-dark" />
-                    <ui:Label text="Density (kg/m^3)" class="modal-label" />
-                    <ui:TextField name="MaterialDensityField" class="form-field input-dark" />
-                    <ui:Label text="Volume (m^3, preferred for realism)" class="modal-label" />
-                    <ui:TextField name="MaterialVolumeField" class="form-field input-dark" />
-                    <ui:Label text="Mass Override (kg)" class="modal-label" />
-                    <ui:TextField name="MaterialMassField" class="form-field input-dark" />
-                    <ui:Label text="Friction (0..1)" class="modal-label" />
-                    <ui:TextField name="MaterialFrictionField" class="form-field input-dark" />
-                    <ui:Label text="Elasticity (0..1)" class="modal-label" />
-                    <ui:TextField name="MaterialElasticityField" class="form-field input-dark" />
-                    <ui:Label text="Strength" class="modal-label" />
-                    <ui:TextField name="MaterialStrengthField" class="form-field input-dark" />
-                    <ui:Label name="MaterialComputedMassLabel" text="Estimated Mass: (unset)" class="modal-label" />
+        <ui:VisualElement name="HelpOverlay" class="modal-overlay help-overlay" style="display: none;">
+            <ui:VisualElement class="modal-card help-card">
+                <ui:Label name="HelpOverlayTitle" text="Keyboard Shortcuts" class="modal-title" />
+                <ui:VisualElement class="modal-body">
+                    <ui:VisualElement name="HelpOverlayShortcuts">
+                        <ui:Label text="3D View" class="modal-label" />
+                        <ui:Label text="1/2/3: Move/Rotate/Scale gizmo" class="help-line" />
+                        <ui:Label text="F: Frame model" class="help-line" />
+                        <ui:Label text="R/Home: Reset camera" class="help-line" />
+                        <ui:Label text="W/A/S/D: Pan camera" class="help-line" />
+                        <ui:Label text="Shift + Q/E: Up/Down" class="help-line" />
+                        <ui:Label text="Ctrl + Arrow: Zoom / Light blend" class="help-line" />
+                        <ui:Label text="O: Toggle anchors" class="help-line" />
+
+                        <ui:Label text="2D Layout" class="modal-label" />
+                        <ui:Label text="P/L/B/T/N/C: Pin/Label/Box/Triangle/Line/Circle" class="help-line" />
+                        <ui:Label text="E/S: Rotate/Scale selected shape" class="help-line" />
+                        <ui:Label text="R/F: Reset view" class="help-line" />
+                        <ui:Label text="G: Toggle grid" class="help-line" />
+                        <ui:Label text="Mouse wheel: Zoom" class="help-line" />
+                        <ui:Label text="Right/Middle drag: Pan" class="help-line" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="HelpOverlayAbout" style="display: none;">
+                        <ui:Label text="Component Studio" class="modal-label" />
+                        <ui:Label name="HelpOverlayVersionLabel" text="Version: (auto)" class="help-line" />
+                        <ui:Label text="Build: UI + 3D authoring tools for RobotWin." class="help-line" />
+                        <ui:Label text="Support: see README.md in the project root." class="help-line" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement class="modal-actions">
-                    <ui:Button name="MaterialApplyBtn" text="Apply" class="btn-primary" />
-                    <ui:Button name="MaterialClearBtn" text="Clear" class="btn-secondary" />
-                    <ui:Button name="MaterialCloseBtn" text="Close" class="btn-secondary" />
+                    <ui:Button name="HelpOverlayCloseBtn" text="Close" class="btn-primary" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="ConfirmOverlay" class="modal-overlay confirm-overlay" style="display: none;">
+            <ui:VisualElement class="modal-card confirm-card">
+                <ui:Label text="Unsaved Changes" class="modal-title" />
+                <ui:Label name="ConfirmMessage" text="You have unsaved changes." class="modal-label" />
+                <ui:VisualElement class="modal-actions">
+                    <ui:Button name="ConfirmCancelBtn" text="Cancel" class="btn-secondary" />
+                    <ui:Button name="ConfirmExitBtn" text="Return" class="btn-primary" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

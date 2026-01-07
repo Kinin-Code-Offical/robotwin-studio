@@ -1,110 +1,83 @@
-# FirmwareEngine: Hybrid Virtualization Host
+# FirmwareEngine
 
-**FirmwareEngine** runs the software side of the simulation: microcontroller firmware and (optionally) full Linux images via QEMU. The main focus is deterministic stepping and clear IO/IPC boundaries between “code execution” and the simulated world.
+FirmwareEngine runs firmware emulation and optional guest OS virtualization. It bridges virtual hardware to the simulated world.
 
-## Dual-Stack Architecture
+## Targets
 
-FirmwareEngine supports two distinct classes of emulation targets:
+- MCU class boards (AVR profiles such as Arduino Uno and Mega).
+- Linux guest images through QEMU for board-class targets.
 
-### 1. Microcontroller Emulation (AVR/STM32)
+## Responsibilities
 
-Used for real-time control boards like Arduino Uno, Mega, and Nano.
+- Execute firmware on a fixed time step.
+- Expose virtual GPIO, UART, I2C, SPI, PWM, and ADC.
+- Bridge device state to CoreSim over IPC.
 
-- **Technology:** Custom C++ AVR Interpreter (SimAVR based).
-- **Accuracy:** Cycle-accurate (executes .hex/.elf binaries directly).
-- **Peripherals:**
-  - **GPIO:** Digital Read/Write with electrical logic levels.
-  - **ADC:** Analog-to-Digital conversion with reference voltage simulation.
-  - **Timers:** PWM generation and interrupt triggering.
-  - **Comms:** UART, I2C (TWI), SPI.
+## Runtime notes
 
-### 2. Single Board Computer Emulation (ARM64/Linux)
+- FirmwareEngine uses the `RTFW` protocol over a named pipe (see `FirmwareEngine/Protocol.h` and `CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs`).
+- A Raspberry Pi backend exists under `FirmwareEngine/Rpi/` and can be smoke-tested via `python tools/rt_tool.py rpi-smoke`.
 
-Used for high-level logic, AI, and ROS2 nodes (Raspberry Pi 4/5, Jetson Nano).
+## Process modes
 
-- **Technology:** QEMU (Quick Emulator) integration via VirtIO.
-- **OS Support:** Runs Linux guest images (e.g., Debian/Ubuntu). “Raspberry Pi OS” compatibility depends on the chosen machine model and guest kernel/device-tree; the product target is an RPi-class experience rather than a guarantee of bit-for-bit Raspberry Pi firmware compatibility.
-- **Networking:** Virtual TAP adapter bridges the guest OS to the host network (allows SSH, apt-get, ROS2 discovery).
-- **Acceleration:**
-  - **NPU:** Emulates Hailo-8 / Coral TPU via host GPU compute shaders.
-  - **Camera:** Injects rendered frames from Unity directly into /dev/video0 in the guest Linux.
+- Default: lockstep mode (waits for explicit step commands over the pipe).
+- Realtime mode: steps boards based on wall-clock time (see `--realtime`).
 
-## Inter-Process Communication (IPC)
+Lockstep tracing can be enabled with either:
 
-FirmwareEngine acts as the bridge between the emulated code and the simulated physical world.
+- `--trace-lockstep`
+- `RTFW_LOCKSTEP_TRACE=1` (environment variable)
 
-```mermaid
-sequenceDiagram
-participant Linux as QEMU (Guest OS)
-participant FW as FirmwareEngine
-participant Core as CoreSim
-participant Phys as NativeEngine
+## Supported MCU profiles (host-side)
 
-    Linux->>FW: Write GPIO High (VirtIO)
-    FW->>Core: Update Pin State
-    Core->>Phys: Apply Voltage to Motor Driver
-    Phys->>Phys: Simulate Motor Torque
-    Phys->>Core: Update Encoder Position
-    Core->>FW: Update Encoder Register
-    FW->>Linux: Trigger Interrupt (VirtIO)
+The host explicitly supports these MCU cores for stepping:
 
-```
+- `ATmega328P` (Arduino Uno-class)
+- `ATmega2560` (Arduino Mega2560-class)
 
-## Supported Boards
+## Command-line arguments
 
-| Board              | Architecture     | Emulation Type      | OS/Firmware            | Use Case                |
-| :----------------- | :--------------- | :------------------ | :--------------------- | :---------------------- |
-| **Arduino Uno**    | AVR (ATmega328P) | Cycle-Accurate      | Bare Metal / Arduino   | Motor Control, Sensors  |
-| **Arduino Mega**   | AVR (ATmega2560) | Cycle-Accurate      | Bare Metal / Arduino   | Complex IO, 3D Printers |
-| **Raspberry Pi 4** | ARM Cortex-A72   | QEMU Virtualization | Linux (Debian)         | ROS2, Computer Vision   |
-| **Raspberry Pi 5** | ARM Cortex-A76   | QEMU Virtualization | Linux (Debian)         | Heavy AI Workloads      |
-| **ESP32**          | Xtensa LX6       | QEMU (Experimental) | FreeRTOS / MicroPython | IoT, WiFi/BLE           |
+Arguments are parsed in `FirmwareEngine/main.cpp`:
 
-## Virtual Hardware Interfaces
+- `--pipe <name>`: named pipe name (default `RoboTwin.FirmwareEngine`).
+- `--hz <cpu_hz>`: default MCU clock rate (default 16 MHz).
+- `--lockstep`: force lockstep mode.
+- `--realtime`: realtime stepping mode.
+- `--log <path>`: append log output to a file.
+- `--self-test`: run a built-in peripheral self-test and exit.
+- `--trace-lockstep`: verbose lockstep logging.
+- `--ide-com <COMx>`: enable STK500 bridge on a COM port.
+- `--ide-board <id>`: board identifier for IDE bridge (default `board`).
+- `--ide-profile <profile>`: board profile for IDE bridge (default `ArduinoUno`).
 
-### Camera Injection
+Raspberry Pi backend flags:
 
-RobotWin renders the camera view in Unity/NativeEngine and writes the pixel buffer to a shared memory region. FirmwareEngine exposes this as a V4L2 device inside the Linux guest.
+- `--rpi-enable`
+- `--rpi-allow-mock`
+- `--rpi-qemu <path>`
+- `--rpi-image <path>`
+- `--rpi-shm-dir <dir>`
+- `--rpi-display <WxH>`
+- `--rpi-camera <WxH>`
+- `--rpi-net-mode <nat|...>`
+- `--rpi-log <path>`
+- `--rpi-cpu-affinity <mask>`
+- `--rpi-cpu-max-percent <percent>`
+- `--rpi-threads <count>`
+- `--rpi-priority <class>`
 
-- **Latency:** <1 frame.
-- **Format:** RGB888, YUV420.
+## Arduino IDE (optional)
 
-### Lidar Injection
+For serial workflows, the project includes a helper to create virtual COM pairs (com0com):
 
-Simulated Lidar point clouds are injected into the Linux guest as a standard /dev/ttyUSB stream or Ethernet packet stream (Velodyne protocol), allowing standard ROS drivers to consume the data without modification.
+- Install/create ports: `python tools/rt_tool.py setup --install-com0com`
+
+## Build
+
+- Use `python tools/rt_tool.py build-firmware`.
+- Outputs land in `builds/firmware/`.
 
 ## Debugging
 
-- **GDB Stub:** Connect a standard GDB debugger to the emulated chip to step through code, inspect registers, and set breakpoints.
-- **Serial Console:** View the boot logs and serial output of the emulated device directly in the RobotWin UI.
-
-## Arduino IDE (Serial Monitor + Upload)
-
-RobotWin supports two Arduino IDE workflows:
-
-- **Serial Monitor (COM port):** Uses a virtual COM pair (com0com) so Arduino IDE can open a COM port and view/send serial text.
-- **Upload button (target):** FirmwareEngine can optionally expose an **STK500v1** programmer on a COM port so Arduino IDE can upload sketches without Unity.
-
-### Serial Monitor (Virtual COM)
-
-- Use the RunMode "Virtual COM" tools to install com0com and create a port pair like `COM30<->COM31`.
-- Select the **IDE port** (typically the odd-numbered one like `COM31`) in Arduino IDE.
-
-### Upload via Arduino IDE (STK500v1 bridge)
-
-Run the firmware host with an IDE bridge:
-
-```powershell
-./builds/firmware/RoboTwinFirmwareHost.exe --ide-com COM31 --ide-board board --ide-profile ArduinoUno
-```
-
-Then in Arduino IDE:
-
-- Select `COM31` as the Port.
-- Select the matching board (e.g. Arduino Uno).
-- Use **Upload**.
-
-Notes:
-
-- This path is intended for AVR boards (Uno/Mega). EEPROM programming is not required for basic sketches.
-- RobotWin's native CoreSim pipe transport (`RoboTwin.FirmwareEngine`) still works in parallel; the IDE bridge is an optional extra.
+- Serial output is available through the firmware host logs.
+- Optional GDB stub support for firmware debugging (when enabled in the host).

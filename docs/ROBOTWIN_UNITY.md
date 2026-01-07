@@ -1,51 +1,64 @@
-# RobotWin: Visualization & Interaction
+# RobotWin (Unity)
 
-**RobotWin** is the Unity-based frontend. It’s where we do visualization, scene setup, and user interaction.
+RobotWin is the Unity front end for visualization and interaction.
 
-## Philosophy: The Passive View
+## Design goals
 
-In this project, Unity should not be the source of truth for time.
+- Unity renders the latest committed simulation state.
+- Simulation time is owned by CoreSim, not the frame rate.
+- The UI should never author time.
 
-- Unity visualizes state produced by CoreSim/NativeEngine.
-- If the Unity frame rate stutters, the goal is to keep simulation stepping stable.
+## Main areas
 
-## Key Features
+- Assets/Scripts/Core: CoreSim bridge and session control.
+- Assets/Scripts/UI: editor and run mode screens.
+- Assets/Scenes: authoring and runtime scenes.
 
-### 1. Photorealistic Rendering (HDRP)
+## Main UI flows
 
-- **Physically Based Materials:** Standard PBR materials for consistent visuals.
-- **Ray Tracing:** Optional, depending on project settings and hardware.
-- **Volumetric Lighting:** Optional scene effects when needed.
+- Project wizard: project creation and templates (see `RobotWin/Assets/Scripts/UI/ProjectWizardController.cs`).
+- Circuit Studio: wiring and run configuration (see `RobotWin/Assets/Scripts/UI/CircuitStudio/` and `RobotWin/Assets/UI/CircuitStudio/`).
+- Component Studio: authoring `.rtcomp` component packages (see `RobotWin/Assets/Scripts/UI/ComponentStudio/` and `RobotWin/Assets/UI/ComponentStudio/`).
+- Run mode: runtime visualization and telemetry (see `RobotWin/Assets/Scripts/UI/RunMode/`).
 
-### 2. Synthetic Data Generation (SDG)
+## Simulation orchestration (Unity runtime)
 
-RobotWin includes a pipeline for generating labeled training data for Computer Vision models.
+Unity hosts an orchestration loop in `RobotWin/Assets/Scripts/Game/SimHost.cs` which:
 
-- **Ground Truth:** Automatically generates segmentation masks, depth maps, and optical flow vectors.
-- **Domain Randomization:** Randomizes lighting, textures, and object placement to train robust AI models.
-- **Sensor Injection:** Renders camera frames directly into shared memory for the FirmwareEngine (QEMU) to consume.
+- Owns session-level state (selected circuit, enabled backends, runtime config).
+- Drives firmware stepping (external firmware host or in-process virtual MCU).
+- Drives physics stepping via `NativeBridge.Physics_Step(dt)`.
+- Collects telemetry and serial output for UI surfaces.
 
-### 3. The Builder UI
+Key related scripts:
 
-- **Component Library:** Drag-and-drop interface for assembling robots from CAD parts.
-- **Circuit Designer:** Node-based editor for wiring electronics (Power -> ESC -> Motor).
-- **Live Telemetry:** Real-time plotting of any signal (Voltage, Current, RPM, Temperature) at 60fps.
+- Session bootstrapping: `RobotWin/Assets/Scripts/Game/SessionManager.cs`
+- Physics world: `RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs`
+- Realtime scheduling: `RobotWin/Assets/Scripts/Game/RealtimeScheduleConfig.cs`
+- Raspberry Pi bridge: `RobotWin/Assets/Scripts/Game/RaspberryPi/RpiRuntimeManager.cs`
 
-## Project Structure
+## Typical workflow
 
-- Assets/Scripts/Core: The bridge to CoreSim.
-- Assets/Scripts/Rendering: Custom render passes for sensors (Lidar/Depth).
-- Assets/Scripts/UI: UI Toolkit (USS/UXML) definitions for the editor.
+1. Build native and firmware binaries.
+2. Run `python tools/rt_tool.py update-unity-plugins`.
+3. Open `RobotWin/` in Unity Hub and enter Play mode.
 
-## Development Workflow
+## Stepping contract
 
-1. **Build Native Backend:** Ensure NativeEngine and FirmwareEngine are built.
-2. **Open Unity:** Launch the project in Unity 6.
-3. **Play Mode:** Unity will automatically spin up the CoreSim orchestrator and connect to the native processes.
+- Logic stepping is driven by CoreSim.
+- Physics stepping runs on its own fixed rate.
+- Unity consumes outputs; it does not advance the clock.
 
-## Stepping Contract (Unity ↔ Native)
+## Native step separation
 
-- `Native_Step(dt)` is reserved for **circuit/IO solving** in NativeEngine.
-- `Physics_Step(dt)` is reserved for **physics simulation** in NativeEngine.
-- Unity must not mix the two in a single loop; circuit stepping is orchestrated by `SimHost` ticks, while physics runs in its own loop.
-- When NativeEngine pins are enabled, Unity calls `Native_Step` inside the logic tick to avoid a one-step lag.
+- Circuit/IO step: `NativeBridge.Native_Step(dt)`.
+- Physics step: `NativeBridge.Physics_Step(dt)`.
+
+These are intentionally separate so a scene can run physics at a different fixed rate than logic/circuit stepping.
+
+## Components and packages
+
+- Component definitions (JSON) are stored under `RobotWin/Assets/Resources/Components/`.
+- Packaged runtime components (`.rtcomp`) used by the app are under `RobotWin/Assets/StreamingAssets/Components/`.
+
+The editor exporter lives at `RobotWin/Assets/Scripts/Editor/ComponentPackageExporter.cs`.

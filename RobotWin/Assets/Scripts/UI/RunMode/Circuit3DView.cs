@@ -76,6 +76,8 @@ namespace RobotTwin.UI
         private readonly Dictionary<string, Task> _runtimeModelLoads = new Dictionary<string, Task>(StringComparer.OrdinalIgnoreCase);
         private Transform _runtimeModelRoot;
         private CircuitSpec _lastCircuit;
+        private volatile bool _rebuildRequested;
+        private CircuitSpec _rebuildRequestedCircuit;
         private Transform _lightRoot;
         private Light _keyLight;
         private Light _fillLight;
@@ -383,6 +385,17 @@ namespace RobotTwin.UI
 
         private void LateUpdate()
         {
+            if (_rebuildRequested)
+            {
+                _rebuildRequested = false;
+                var circuit = _rebuildRequestedCircuit ?? _lastCircuit;
+                _rebuildRequestedCircuit = null;
+                if (circuit != null)
+                {
+                    Build(circuit);
+                }
+            }
+
             if (_followTarget && _followTransform != null && _root != null)
             {
                 var target = _root.InverseTransformPoint(_followTransform.position);
@@ -1913,7 +1926,12 @@ namespace RobotTwin.UI
                     }
 
                     bool useCache = !hasOverride;
-                    bool hasCachedPosition = useCache && _anchorStateCache.TryGetValue(node, out var cached);
+                    AnchorState cached = default;
+                    bool hasCachedPosition = false;
+                    if (useCache)
+                    {
+                        hasCachedPosition = _anchorStateCache.TryGetValue(node, out cached);
+                    }
                     if (hasCachedPosition)
                     {
                         position = cached.LocalPosition;
@@ -4340,9 +4358,12 @@ namespace RobotTwin.UI
                 _runtimeModelLoads.Remove(modelPath);
             }
 
+            // Runtime model loading may complete on a worker thread.
+            // Request a rebuild and let LateUpdate perform it on the main thread.
             if (this != null && _lastCircuit != null)
             {
-                Build(_lastCircuit);
+                _rebuildRequestedCircuit = _lastCircuit;
+                _rebuildRequested = true;
             }
         }
 

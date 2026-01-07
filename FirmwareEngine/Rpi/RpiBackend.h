@@ -12,6 +12,7 @@ namespace firmware::rpi
     struct RpiConfig
     {
         bool enabled = false;
+        bool allow_mock = false;
         std::string qemu_path;
         std::string image_path;
         std::string shm_dir;

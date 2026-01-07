@@ -864,6 +864,7 @@
     color: #e6eefb;
     font-size: 9px;
     -unity-text-align: middle-center;
+    white-space: nowrap;
 }
 
 .block-component {
@@ -1345,6 +1346,22 @@
 .bottom-status {
     flex-direction: row;
     align-items: center;
+}
+
+.output-search {
+    width: 160px;
+    height: 22px;
+    margin-left: 6px;
+    font-size: 9px;
+    -unity-text-align: middle-left;
+}
+
+.output-tag {
+    width: 120px;
+    height: 22px;
+    margin-left: 6px;
+    font-size: 9px;
+    -unity-text-align: middle-left;
 }
 
 .bottom-tab-btn {

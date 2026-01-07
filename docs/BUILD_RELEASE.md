@@ -1,27 +1,31 @@
-﻿# Build and Release
+# Build and Release
 
-Quick commands for building the main artifacts on Windows.
+These commands build the main artifacts on Windows.
 
-## Unity Standalone Build
+## Build native and firmware
 
 ```powershell
-python tools/rt_tool.py build-standalone
+python tools/rt_tool.py build-native
+python tools/rt_tool.py build-firmware
 ```
 
-## Plugin Sync
+Logs:
+
+- Native build logs: `logs/native/`
+- Firmware build logs: `logs/firmware/`
+
+## Sync Unity plugins
 
 ```powershell
 python tools/rt_tool.py update-unity-plugins
 ```
 
-## Firmware Build
+This copies the built CoreSim plugin (and any required native binaries) into `RobotWin/Assets/Plugins/`.
+
+## Build Unity standalone
 
 ```powershell
-python tools/rt_tool.py build-firmware
+python tools/rt_tool.py build-standalone
 ```
 
-## Native Build
-
-```powershell
-python tools/rt_tool.py build-native
-```
+The standalone build script is `tools/scripts/build_windows_standalone.ps1` and writes logs under `logs/unity/`.

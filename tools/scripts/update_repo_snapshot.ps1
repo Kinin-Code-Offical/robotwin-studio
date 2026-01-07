@@ -16,7 +16,8 @@ function Get-WorkspaceFiles {
         "logs",
         "RobotWin\\Library",
         "RobotWin\\Temp",
-        "RobotWin\\Logs"
+        "RobotWin\\Logs",
+        "RobotWin\UserSettings\AI."
     )
     $ExcludedPattern = '(^|\\)(\\.git|node_modules|\\.venv|\\.vscode)(\\|$)'
 

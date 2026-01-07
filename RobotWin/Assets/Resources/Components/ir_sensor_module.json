@@ -1,0 +1,87 @@
+{
+  "id": "ir-sensor-module",
+  "name": "IR Line Sensor",
+  "description": "IR reflective sensor module (digital output)",
+  "type": "IRSensor",
+  "symbol": "S",
+  "iconChar": "IR",
+  "order": 120,
+  "pins": ["VCC", "GND", "OUT"],
+  "specs": [{ "key": "Output", "value": "Digital" }],
+  "defaults": [{ "key": "vcc", "value": "5V" }],
+  "size2D": { "x": 150, "y": 80 },
+  "pinLayout": [
+    {
+      "name": "VCC",
+      "x": 0.25,
+      "y": 0.9,
+      "label": "VCC",
+      "labelOffsetX": -16,
+      "labelOffsetY": -18,
+      "labelSize": 11,
+      "anchorX": 0.0,
+      "anchorY": 0.02,
+      "anchorZ": 0.04,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "GND",
+      "x": 0.5,
+      "y": 0.9,
+      "label": "GND",
+      "labelOffsetX": -16,
+      "labelOffsetY": -18,
+      "labelSize": 11,
+      "anchorX": 0.02,
+      "anchorY": 0.02,
+      "anchorZ": 0.04,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "OUT",
+      "x": 0.75,
+      "y": 0.9,
+      "label": "OUT",
+      "labelOffsetX": -14,
+      "labelOffsetY": -18,
+      "labelSize": 11,
+      "anchorX": 0.04,
+      "anchorY": 0.02,
+      "anchorZ": 0.04,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    }
+  ],
+  "labels": [
+    { "text": "{id}", "x": 0.5, "y": 0.2, "size": 13, "align": "center" },
+    { "text": "IR", "x": 0.5, "y": 0.48, "size": 18, "align": "center" }
+  ],
+  "shapes": [
+    {
+      "id": "body",
+      "type": "Box",
+      "x": 0.12,
+      "y": 0.16,
+      "width": 126,
+      "height": 52,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    },
+    {
+      "id": "lens",
+      "type": "Circle",
+      "x": 0.18,
+      "y": 0.4,
+      "width": 18,
+      "height": 18,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    }
+  ]
+}

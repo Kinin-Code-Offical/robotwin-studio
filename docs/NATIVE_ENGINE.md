@@ -1,77 +1,56 @@
-# NativeEngine: High-Fidelity Physics & Environment
+# NativeEngine
 
-**NativeEngine** is the native (C++20) part of the stack where we keep performance‑critical simulation work. The intent is repeatable results (determinism where possible) and a clear API surface for CoreSim/Unity to drive.
+NativeEngine is the C++ runtime for physics and environment simulation.
 
-## Core Solvers
+## Responsibilities
 
-### 1. Rigid Body Dynamics (RBD)
+- Rigid body simulation and constraints.
+- Environment parameters (wind, ambient temperature).
+- Sensor signal generation as needed by the simulation.
 
-- **Integrator:** Symplectic Euler / RK4 (configurable per body).
-- **Collision:** Continuous Collision Detection (CCD) for high-speed rotors and projectiles.
-- **Friction Model:** Coulomb friction with Stribeck effect for realistic motor startup behavior.
-- **Constraints:** 6-DOF mechanical linkages (hinges, sliders, ball joints) with realistic compliance and breakage thresholds.
+## Integration
 
-### 2. Aerodynamics & Fluid Dynamics
+- NativeEngine is driven from Unity via `RobotWin/Assets/Scripts/Core/NativeBridge.cs`.
+- Physics stepping is done via `NativeBridge.Physics_Step(dt)` (see `RobotWin/Assets/Scripts/Game/NativePhysicsWorld.cs`).
+- Circuit/IO stepping uses `NativeBridge.Native_Step(dt)` and is kept separate from physics stepping.
 
-- **Blade Element Theory (BET):** Simulates lift/drag for each section of a propeller blade, accounting for twist, chord, and airfoil shape.
-- **Drag Equation:** Calculates drag on bodies based on cross-sectional area and drag coefficient ($F_d = 0.5 \rho v^2 C_d A$).
-- **Wind Simulation:** Global wind vector field with gusting and turbulence models.
+## Configuration surface
 
-### 3. Thermal Solver (Thermodynamics)
+Runtime config is passed via an interop struct (solver iterations, air density, wind, etc.) and is authored on the Unity side (see `NativeBridge.PhysicsConfig`).
 
-- **Heat Generation:** Calculates Joule heating (=I^2R$) for all electrical components (motors, ESCs, batteries, PCBs).
-- **Heat Generation:** Calculates Joule heating ($P = I^2 R$) for electrical components (motors, ESCs, batteries, PCBs).
-- **Heat Transfer:**
-  - **Conduction:** Heat flow between physically touching bodies based on thermal conductivity and contact area.
-  - **Convection:** Heat loss to the air, dependent on airflow velocity (propeller wash cools motors!).
-  - **Radiation:** Black-body radiation (significant for high-temp components).
-- **Throttling:** Simulates CPU/MCU thermal throttling and battery voltage sag under load.
+## Exported APIs (Unity P/Invoke)
 
-### 4. Sensor Simulation
+The entry points are declared in `RobotWin/Assets/Scripts/Core/NativeBridge.cs`.
 
-- **IMU (Accel/Gyro/Mag):**
-  - Models bias instability, random walk, and temperature dependency.
-  - Simulates "g-sensitivity" in gyroscopes.
-- **Lidar / Depth Cameras:**
-  - GPU-accelerated raycasting via shared memory.
-  - Simulates material reflectivity and ambient light interference.
-- **GPS:**
-  - Simulates satellite constellation visibility and multipath errors based on environment geometry.
+Circuit API (electrical graph):
 
-## Architecture & Performance
+- `Native_CreateContext()`, `Native_DestroyContext()`
+- `Native_AddNode()`
+- `Native_AddComponent(type, paramCount, parameters)`
+- `Native_Connect(compId, pinIndex, nodeId)`
+- `Native_Step(dt)`
+- `Native_GetVoltage(nodeId)`
 
-### Data-Oriented Design (DOD)
+Physics API:
 
-NativeEngine uses an Entity Component System (ECS) architecture in C++ to maximize cache locality and SIMD usage.
+- World lifecycle: `Physics_CreateWorld()`, `Physics_DestroyWorld()`, `Physics_SetConfig(ref config)`
+- Bodies: `Physics_AddBody(ref body)`, `Physics_GetBody(id, out body)`, `Physics_SetBody(id, ref body)`
+- Stepping: `Physics_Step(dt)`
+- Vehicles: `Physics_AddVehicle(...)`, `Physics_SetWheelInput(...)`, `Physics_SetVehicleAero(...)`, `Physics_SetVehicleTireModel(...)`
+- Forces/constraints: `Physics_ApplyForce(...)`, `Physics_ApplyForceAtPoint(...)`, `Physics_ApplyTorque(...)`, `Physics_AddDistanceConstraint(...)`
+- Queries: `Physics_Raycast(...)`
 
-- **SoA Layout:** Structure-of-Arrays for hot data (positions, velocities).
-- **Job System:** Multithreaded task graph for parallelizing independent solver islands.
+## Build
 
-### Determinism
+- Use `python tools/rt_tool.py build-native`.
+- Outputs land in `builds/native/`.
 
-- **Fixed-Point Math:** Optional fixed-point mode for cross-platform determinism (x86 vs ARM).
-- **IEEE 754 Compliance:** Strict floating-point control when using floats.
-- **Regression Testing:** Automated regression suite ensures that state(t) + inputs -> state(t+1) is bit-identical across builds.
+## Interop
 
-## C# Interop (P/Invoke)
+- Exposes a C ABI used by CoreSim and Unity.
+- Inputs and outputs are fixed-size structs to avoid per-step allocations.
 
-NativeEngine exposes a C-ABI for CoreSim to drive the simulation.
+## Determinism
 
-`cpp
-// Example API
-extern "C" {
-    void Physics_Step(float dt, ControlFrame* inputs, PhysicsFrame* outputs);
-    void Physics_SetWind(Vector3 velocity);
-    void Physics_CreateBody(BodyDef* def);
-    float Thermal_GetTemperature(int bodyId);
-}
-`
-
-## Configuration
-
-Physics parameters are defined in physics_config.json:
-
-- gravity: Global gravity vector.
-- ir_density: kg/m^3 (varies with altitude).
-- solver_iterations: Velocity/Position iterations.
--     hermal_ambient: Ambient temperature (Celsius).
+- Fixed step sizes in deterministic mode.
+- Avoid nondeterministic sources in hot paths.

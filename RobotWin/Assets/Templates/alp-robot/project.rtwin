@@ -1,0 +1,180 @@
+{
+  "projectName": "ALP Robot (Line Follow + Gripper)",
+  "version": "1.0.0",
+  "description": "UNO + L293D Motor Shield (AFMotor v1) + 2 DC motors + 4x IR line sensors + TCS34725 + 2 servos + 2 battery packs.",
+  "circuit": {
+    "id": "alp-robot",
+    "mode": "fast",
+    "components": [
+      {
+        "id": "U1",
+        "type": "ArduinoUno",
+        "properties": {
+          "posX": "120",
+          "posY": "220",
+          "virtualBoard": "arduino-uno",
+          "catalogId": "arduino-uno"
+        }
+      },
+      {
+        "id": "SH1",
+        "type": "MotorShieldL293D",
+        "properties": {
+          "posX": "420",
+          "posY": "220",
+          "catalogId": "motor-shield-l293d-v1"
+        }
+      },
+      {
+        "id": "M1",
+        "type": "DCMotor",
+        "properties": {
+          "posX": "700",
+          "posY": "140",
+          "catalogId": "dc-motor-25ga370"
+        }
+      },
+      {
+        "id": "M2",
+        "type": "DCMotor",
+        "properties": {
+          "posX": "700",
+          "posY": "300",
+          "catalogId": "dc-motor-25ga370"
+        }
+      },
+      {
+        "id": "S_ARM",
+        "type": "ServoMG90S",
+        "properties": {
+          "posX": "420",
+          "posY": "430",
+          "catalogId": "servo-mg90s"
+        }
+      },
+      {
+        "id": "S_GRIP",
+        "type": "ServoSG90",
+        "properties": {
+          "posX": "620",
+          "posY": "430",
+          "catalogId": "servo-sg90"
+        }
+      },
+      {
+        "id": "RGB1",
+        "type": "TCS34725",
+        "properties": {
+          "posX": "120",
+          "posY": "430",
+          "catalogId": "tcs34725-module"
+        }
+      },
+      {
+        "id": "IR_A0",
+        "type": "IRSensor",
+        "properties": {
+          "posX": "120",
+          "posY": "570",
+          "catalogId": "ir-sensor-module"
+        }
+      },
+      {
+        "id": "IR_A1",
+        "type": "IRSensor",
+        "properties": {
+          "posX": "300",
+          "posY": "570",
+          "catalogId": "ir-sensor-module"
+        }
+      },
+      {
+        "id": "IR_A2",
+        "type": "IRSensor",
+        "properties": {
+          "posX": "480",
+          "posY": "570",
+          "catalogId": "ir-sensor-module"
+        }
+      },
+      {
+        "id": "IR_A3",
+        "type": "IRSensor",
+        "properties": {
+          "posX": "660",
+          "posY": "570",
+          "catalogId": "ir-sensor-module"
+        }
+      },
+      {
+        "id": "B_MOTOR",
+        "type": "Battery",
+        "properties": {
+          "posX": "420",
+          "posY": "60",
+          "voltage": "6V",
+          "catalogId": "battery-4xaa"
+        }
+      },
+      {
+        "id": "B_LOGIC",
+        "type": "Battery",
+        "properties": {
+          "posX": "120",
+          "posY": "60",
+          "voltage": "6V",
+          "catalogId": "battery-4xaa"
+        }
+      }
+    ],
+    "nets": [
+      { "id": "GND", "nodes": [
+        "U1.GND1",
+        "U1.GND2",
+        "U1.GND3",
+        "SH1.GND",
+        "RGB1.GND",
+        "IR_A0.GND",
+        "IR_A1.GND",
+        "IR_A2.GND",
+        "IR_A3.GND",
+        "S_ARM.GND",
+        "S_GRIP.GND",
+        "B_MOTOR.-",
+        "B_LOGIC.-"
+      ]},
+
+      { "id": "VIN_MOTOR", "nodes": ["B_MOTOR.+", "SH1.VIN"] },
+      { "id": "VIN_ARDUINO", "nodes": ["B_LOGIC.+", "U1.VIN"] },
+      { "id": "5V", "nodes": ["U1.5V", "SH1.5V", "RGB1.VIN", "IR_A0.VCC", "IR_A1.VCC", "IR_A2.VCC", "IR_A3.VCC", "S_ARM.VCC", "S_GRIP.VCC"] },
+
+      { "id": "I2C_SDA", "nodes": ["U1.SDA", "RGB1.SDA"] },
+      { "id": "I2C_SCL", "nodes": ["U1.SCL", "RGB1.SCL"] },
+
+      { "id": "SERVO_ARM", "nodes": ["U1.D10", "SH1.SERVO2_SIG", "S_ARM.SIG"] },
+      { "id": "SERVO_GRIP", "nodes": ["U1.D9", "SH1.SERVO1_SIG", "S_GRIP.SIG"] },
+
+      { "id": "IR0", "nodes": ["U1.A0", "IR_A0.OUT"] },
+      { "id": "IR1", "nodes": ["U1.A1", "IR_A1.OUT"] },
+      { "id": "IR2", "nodes": ["U1.A2", "IR_A2.OUT"] },
+      { "id": "IR3", "nodes": ["U1.A3", "IR_A3.OUT"] },
+
+      { "id": "M1_POS", "nodes": ["SH1.M1+", "M1.A"] },
+      { "id": "M1_NEG", "nodes": ["SH1.M1-", "M1.B"] },
+
+      { "id": "M2_POS", "nodes": ["SH1.M3+", "M2.A"] },
+      { "id": "M2_NEG", "nodes": ["SH1.M3-", "M2.B"] }
+    ]
+  },
+  "robot": {
+    "name": "ALP"
+  },
+  "world": {
+    "name": "DefaultWorld",
+    "width": 0,
+    "depth": 0
+  },
+  "metadata": {
+    "template": "alp-robot"
+  }
+}
