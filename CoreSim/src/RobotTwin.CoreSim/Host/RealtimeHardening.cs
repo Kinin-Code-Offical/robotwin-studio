@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -61,6 +62,7 @@ namespace RobotTwin.CoreSim.Host
             }
         }
 
+        [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Best-effort hardening only; call sites are OS-guarded.")]
         private static void TrySetAffinity(long affinityMask)
         {
             try
@@ -71,22 +73,16 @@ namespace RobotTwin.CoreSim.Host
 #if NET5_0_OR_GREATER
                 if (OperatingSystem.IsWindows())
                 {
-#pragma warning disable CA1416 // Platform compatibility
-                    process.ProcessorAffinity = affinityMask1;
-#pragma warning restore CA1416
+                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
                 }
                 else if (OperatingSystem.IsLinux())
                 {
-#pragma warning disable CA1416 // Platform compatibility
-                    process.ProcessorAffinity = affinityMask1;
-#pragma warning restore CA1416
+                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
                 }
 #else
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-#pragma warning disable CA1416 // Platform compatibility
-                    process.ProcessorAffinity = affinityMask1;
-#pragma warning restore CA1416
+                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
                 }
 #endif
             }
