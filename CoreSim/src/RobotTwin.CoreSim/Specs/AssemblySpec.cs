@@ -6,6 +6,7 @@ namespace RobotTwin.CoreSim.Specs
     {
         public List<AssemblyPartSpec> Parts { get; set; } = new List<AssemblyPartSpec>();
         public List<AssemblyWireSpec> Wires { get; set; } = new List<AssemblyWireSpec>();
+        public List<BreadboardSpec> Breadboards { get; set; } = new List<BreadboardSpec>();
     }
 
     public class AssemblyPartSpec
@@ -33,6 +34,17 @@ namespace RobotTwin.CoreSim.Specs
         public double Damping { get; set; } = 0.2;
     }
 
+    public class BreadboardSpec
+    {
+        public string Id { get; set; } = string.Empty;
+        public int PinCount { get; set; } = 400;
+        public int Columns { get; set; } = 10;
+        public int Rows { get; set; } = 40;
+        public double Pitch { get; set; } = 0.00254;
+        public Vec3 Position { get; set; } = new Vec3();
+        public Vec3 Rotation { get; set; } = new Vec3();
+        public Vec3 Scale { get; set; } = new Vec3 { X = 1, Y = 1, Z = 1 };
+    }
     public struct Vec3
     {
         public double X { get; set; }
