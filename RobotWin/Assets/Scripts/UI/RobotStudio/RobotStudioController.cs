@@ -69,10 +69,14 @@ namespace RobotTwin.UI
         private VisualElement _leftPanelBasics;
         private VisualElement _leftPanelType;
         private VisualElement _leftPanelObjects;
+        private ScrollView _typeScroll;
+        private VisualElement _typeSpecsSection;
+        private VisualElement _defaultsSection;
         private VisualElement _objectsLabelsSection;
         private VisualElement _objectsPinsSection;
         private VisualElement _objectsFxSection;
         private VisualElement _objectsAnchorsSection;
+        private VisualElement _layout2DSection;
         private Label _typePanelTitle;
         private ScrollView _partsContainer;
         private ScrollView _statesContainer;
@@ -306,10 +310,14 @@ namespace RobotTwin.UI
         private Button _layoutContextDeleteShapeBtn;
         private string _layoutContextShapeId;
         private bool _catalogDragging;
+        private bool _catalogPressing;
         private string _catalogDragName;
         private string _catalogDragKind;
         private int _catalogDragPointerId = -1;
+        private Vector2 _catalogPressStart;
         private VisualElement _catalogDragGhost;
+        private bool _suppressNextCatalogClick;
+        private const float CatalogDragThresholdPixels = 6f;
         private string _layoutContextPinName;
         private VisualElement _layoutContextLabelEntry;
 
@@ -584,6 +592,9 @@ namespace RobotTwin.UI
             _leftPanelBasics = _root.Q<VisualElement>("LeftPanelBasics");
             _leftPanelType = _root.Q<VisualElement>("LeftPanelType");
             _leftPanelObjects = _root.Q<VisualElement>("LeftPanelObjects");
+            _typeScroll = _root.Q<ScrollView>("TypeScroll");
+            _typeSpecsSection = _root.Q<VisualElement>("TypeSpecsSection");
+            _defaultsSection = _root.Q<VisualElement>("DefaultsSection");
             _leftPanelAssembly = _root.Q<VisualElement>("LeftPanelAssembly");
             _leftPanelEnvironment = _root.Q<VisualElement>("LeftPanelEnvironment");
             _leftPanelWiring = _root.Q<VisualElement>("LeftPanelWiring");
@@ -591,6 +602,7 @@ namespace RobotTwin.UI
             _objectsPinsSection = _root.Q<VisualElement>("ObjectsPinsSection");
             _objectsFxSection = _root.Q<VisualElement>("ObjectsFxSection");
             _objectsAnchorsSection = _root.Q<VisualElement>("ObjectsAnchorsSection");
+            _layout2DSection = _root.Q<VisualElement>("Layout2DSection");
             _typePanelTitle = _root.Q<Label>("TypePanelTitle");
             _partsContainer = _root.Q<ScrollView>("PartListContainer");
             _statesContainer = _root.Q<ScrollView>("StateListContainer");
@@ -2602,6 +2614,17 @@ namespace RobotTwin.UI
                 return;
             }
 
+            if (!targetIsTextInput && !evt.ctrlKey && !evt.shiftKey && !evt.altKey &&
+                (evt.keyCode == KeyCode.Delete || evt.keyCode == KeyCode.Backspace))
+            {
+                if (TryDeleteCurrentSelection())
+                {
+                    IgnoreEvent(evt);
+                    evt.StopPropagation();
+                }
+                return;
+            }
+
             // Global shortcuts should work even while typing.
             if (_is2dView && IsLayoutKeyTarget())
             {
@@ -2680,6 +2703,39 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
+        }
+
+        private bool TryDeleteCurrentSelection()
+        {
+            if (_selectedPinEntry != null)
+            {
+                string pinName = _selectedPinEntry.Q<TextField>("PinNameField")?.value?.Trim();
+                if (!string.IsNullOrWhiteSpace(pinName))
+                {
+                    RemovePinEntryByName(pinName);
+                }
+                else
+                {
+                    _pinsContainer?.Remove(_selectedPinEntry);
+                    _selectedPinEntry = null;
+                    RefreshAnchorGizmos();
+                    RefreshLayoutPreview();
+                    QueueValidation();
+                    RefreshCatalogAndHierarchy();
+                }
+                return true;
+            }
+            if (_selectedLabelEntry != null)
+            {
+                RemoveLabelEntry(_selectedLabelEntry);
+                return true;
+            }
+            if (!string.IsNullOrWhiteSpace(_selectedShapeId))
+            {
+                RemoveShapeById(_selectedShapeId);
+                return true;
+            }
+            return false;
         }
 
         private bool TryHandleUndoRedo(KeyDownEvent evt)
@@ -2780,7 +2836,7 @@ namespace RobotTwin.UI
                 _layoutHelpTooltip.style.display = DisplayStyle.None;
                 handled = true;
             }
-            if (_catalogDragging)
+            if (_catalogDragging || _catalogPressing)
             {
                 CancelCatalogDrag();
                 handled = true;
@@ -4382,7 +4438,14 @@ namespace RobotTwin.UI
             foreach (var item in ComponentCatalog.Items.OrderBy(i => i.Order).ThenBy(i => i.Name))
             {
                 var localItem = item;
-                AddCatalogItem(localItem.Name, localItem.Type, () => BeginCatalogPlacement(localItem), false, indent);
+                bool allowDrag = string.Equals(localItem.Type, "Pin", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(localItem.Type, "Label", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(localItem.Type, "FX", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(localItem.Type, "Script", StringComparison.OrdinalIgnoreCase);
+                string tooltip = string.IsNullOrWhiteSpace(localItem.Description)
+                    ? $"{localItem.Type}: {localItem.Name}"
+                    : $"{localItem.Type}: {localItem.Name}\n{localItem.Description}";
+                AddCatalogItem(localItem.Name, localItem.Type, () => BeginCatalogPlacement(localItem), allowDrag, indent, tooltip);
             }
         }
 
@@ -4430,10 +4493,14 @@ namespace RobotTwin.UI
             _catalogList.Add(label);
         }
 
-        private void AddCatalogItem(string name, string kind, Action onClick, bool allowDrag = false, int indent = 0)
+        private void AddCatalogItem(string name, string kind, Action onClick, bool allowDrag = false, int indent = 0, string tooltip = null)
         {
             var row = new VisualElement();
             row.AddToClassList("catalog-item");
+            if (!string.IsNullOrWhiteSpace(tooltip))
+            {
+                row.tooltip = tooltip;
+            }
             if (indent > 0)
             {
                 row.style.marginLeft = indent * 12;
@@ -4459,13 +4526,18 @@ namespace RobotTwin.UI
             });
             if (allowDrag)
             {
-                row.RegisterCallback<PointerDownEvent>(evt => StartCatalogDrag(evt, name, kind));
+                row.RegisterCallback<PointerDownEvent>(evt => BeginCatalogPress(evt, name, kind));
             }
             if (onClick != null)
             {
-                row.RegisterCallback<PointerDownEvent>(evt =>
+                row.RegisterCallback<ClickEvent>(evt =>
                 {
                     if (evt.button != 0) return;
+                    if (_suppressNextCatalogClick)
+                    {
+                        _suppressNextCatalogClick = false;
+                        return;
+                    }
                     onClick();
                 });
             }
@@ -4569,43 +4641,97 @@ namespace RobotTwin.UI
             _layoutContextMenu.style.display = DisplayStyle.Flex;
         }
 
-        private void StartCatalogDrag(PointerDownEvent evt, string name, string kind)
+        private void BeginCatalogPress(PointerDownEvent evt, string name, string kind)
         {
             if (evt.button != 0) return;
             if (_root == null) return;
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(kind)) return;
-            _catalogDragging = true;
+
+            _catalogPressing = true;
+            _catalogDragging = false;
             _catalogDragName = name;
             _catalogDragKind = kind;
             _catalogDragPointerId = evt.pointerId;
+            _catalogPressStart = new Vector2(evt.position.x, evt.position.y);
+        }
+
+        private void StartCatalogDragNow(Vector2 worldPosition)
+        {
+            if (_root == null) return;
+            if (_catalogDragPointerId == -1) return;
+            if (string.IsNullOrWhiteSpace(_catalogDragName) || string.IsNullOrWhiteSpace(_catalogDragKind)) return;
+            if (_catalogDragging) return;
+
+            _catalogDragging = true;
+            _suppressNextCatalogClick = true;
 
             _catalogDragGhost = new VisualElement();
             _catalogDragGhost.pickingMode = PickingMode.Ignore;
             _catalogDragGhost.style.position = Position.Absolute;
-            _catalogDragGhost.style.left = evt.position.x;
-            _catalogDragGhost.style.top = evt.position.y;
-            _catalogDragGhost.style.width = 24;
-            _catalogDragGhost.style.height = 24;
-            _catalogDragGhost.style.backgroundColor = new Color(0.2f, 0.8f, 0.9f, 0.45f);
-            _catalogDragGhost.style.borderTopLeftRadius = 4;
-            _catalogDragGhost.style.borderTopRightRadius = 4;
-            _catalogDragGhost.style.borderBottomLeftRadius = 4;
-            _catalogDragGhost.style.borderBottomRightRadius = 4;
-            _root.Add(_catalogDragGhost);
+            _catalogDragGhost.style.left = worldPosition.x + 10f;
+            _catalogDragGhost.style.top = worldPosition.y + 10f;
+            _catalogDragGhost.style.minWidth = 140;
+            _catalogDragGhost.style.height = 26;
+            _catalogDragGhost.style.paddingLeft = 8;
+            _catalogDragGhost.style.paddingRight = 8;
+            _catalogDragGhost.style.justifyContent = Justify.Center;
+            _catalogDragGhost.style.backgroundColor = new Color(0.1f, 0.13f, 0.18f, 0.92f);
+            _catalogDragGhost.style.borderTopLeftRadius = 6;
+            _catalogDragGhost.style.borderTopRightRadius = 6;
+            _catalogDragGhost.style.borderBottomLeftRadius = 6;
+            _catalogDragGhost.style.borderBottomRightRadius = 6;
+            _catalogDragGhost.style.borderTopColor = new Color(0.25f, 0.35f, 0.5f, 0.9f);
+            _catalogDragGhost.style.borderBottomColor = new Color(0.25f, 0.35f, 0.5f, 0.9f);
+            _catalogDragGhost.style.borderLeftColor = new Color(0.25f, 0.35f, 0.5f, 0.9f);
+            _catalogDragGhost.style.borderRightColor = new Color(0.25f, 0.35f, 0.5f, 0.9f);
+            _catalogDragGhost.style.borderTopWidth = 1;
+            _catalogDragGhost.style.borderBottomWidth = 1;
+            _catalogDragGhost.style.borderLeftWidth = 1;
+            _catalogDragGhost.style.borderRightWidth = 1;
 
-            _root.CapturePointer(evt.pointerId);
-            evt.StopPropagation();
+            var ghostLabel = new Label($"{_catalogDragKind}: {_catalogDragName}");
+            ghostLabel.style.color = new Color(0.92f, 0.96f, 1f, 1f);
+            ghostLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            ghostLabel.style.fontSize = 10;
+            _catalogDragGhost.Add(ghostLabel);
+
+            _root.Add(_catalogDragGhost);
+            if (_root.HasPointerCapture(_catalogDragPointerId) == false)
+            {
+                _root.CapturePointer(_catalogDragPointerId);
+            }
         }
 
         private void OnCatalogDragMove(PointerMoveEvent evt)
         {
+            if (_catalogPressing && !_catalogDragging && evt.pointerId == _catalogDragPointerId)
+            {
+                var pos = new Vector2(evt.position.x, evt.position.y);
+                float sq = (pos - _catalogPressStart).sqrMagnitude;
+                if (sq >= CatalogDragThresholdPixels * CatalogDragThresholdPixels)
+                {
+                    StartCatalogDragNow(pos);
+                    evt.StopPropagation();
+                }
+                return;
+            }
+
             if (!_catalogDragging || _catalogDragGhost == null || evt.pointerId != _catalogDragPointerId) return;
-            _catalogDragGhost.style.left = evt.position.x;
-            _catalogDragGhost.style.top = evt.position.y;
+            _catalogDragGhost.style.left = evt.position.x + 10f;
+            _catalogDragGhost.style.top = evt.position.y + 10f;
         }
 
         private void OnCatalogDragEnd(PointerUpEvent evt)
         {
+            if (_catalogPressing && !_catalogDragging && evt.pointerId == _catalogDragPointerId)
+            {
+                _catalogPressing = false;
+                _catalogDragName = string.Empty;
+                _catalogDragKind = string.Empty;
+                _catalogDragPointerId = -1;
+                return;
+            }
+
             if (!_catalogDragging || evt.pointerId != _catalogDragPointerId) return;
             if (_root != null && _root.HasPointerCapture(evt.pointerId))
             {
@@ -4617,12 +4743,14 @@ namespace RobotTwin.UI
                 _catalogDragGhost = null;
             }
 
-            bool droppedOnViewport = _viewport != null && _viewport.worldBound.Contains(evt.position);
-            bool droppedOnLayout = _layoutPreviewLarge != null && _layoutPreviewLarge.worldBound.Contains(evt.position);
+            var pos = new Vector2(evt.position.x, evt.position.y);
+            bool droppedOnViewport = _viewport != null && _viewport.worldBound.Contains(pos);
+            bool droppedOnLayout = _layoutPreviewLarge != null && _layoutPreviewLarge.worldBound.Contains(pos);
             if (droppedOnViewport || droppedOnLayout)
             {
-                TryApplyCatalogDrop(evt.position, _catalogDragName, _catalogDragKind, droppedOnViewport);
+                TryApplyCatalogDrop(pos, _catalogDragName, _catalogDragKind, droppedOnViewport);
             }
+            _catalogPressing = false;
             _catalogDragging = false;
             _catalogDragName = string.Empty;
             _catalogDragKind = string.Empty;
@@ -4631,7 +4759,7 @@ namespace RobotTwin.UI
 
         private void OnCatalogDragCancel(PointerCancelEvent evt)
         {
-            if (!_catalogDragging || evt.pointerId != _catalogDragPointerId) return;
+            if ((!_catalogDragging && !_catalogPressing) || evt.pointerId != _catalogDragPointerId) return;
             CancelCatalogDrag();
         }
 
@@ -4646,10 +4774,49 @@ namespace RobotTwin.UI
                 _catalogDragGhost.RemoveFromHierarchy();
                 _catalogDragGhost = null;
             }
+            _catalogPressing = false;
             _catalogDragging = false;
             _catalogDragName = string.Empty;
             _catalogDragKind = string.Empty;
             _catalogDragPointerId = -1;
+        }
+
+        private void EnsurePinEntryHasDefaultAnchor(VisualElement entry, float nx, float ny)
+        {
+            if (entry == null) return;
+            var ax = entry.Q<TextField>("PinAnchorXField");
+            var ay = entry.Q<TextField>("PinAnchorYField");
+            var az = entry.Q<TextField>("PinAnchorZField");
+            var ar = entry.Q<TextField>("PinAnchorRadiusField");
+            if (ax == null || ay == null || az == null) return;
+
+            bool hasAnchor = !string.IsNullOrWhiteSpace(ax.value) ||
+                             !string.IsNullOrWhiteSpace(ay.value) ||
+                             !string.IsNullOrWhiteSpace(az.value) ||
+                             (ar != null && !string.IsNullOrWhiteSpace(ar.value));
+            if (hasAnchor) return;
+
+            if (_studioView != null && _studioView.TryGetModelBoundsLocal(out var bounds))
+            {
+                if (bounds.size.sqrMagnitude > 0.0000001f)
+                {
+                    float clampedX = Mathf.Clamp01(nx);
+                    float clampedY = Mathf.Clamp01(ny);
+                    float localX = Mathf.Lerp(bounds.min.x, bounds.max.x, clampedX);
+                    float localY = Mathf.Lerp(bounds.min.y, bounds.max.y, clampedY);
+                    float offset = Mathf.Max(bounds.size.magnitude * 0.002f, 0.001f);
+                    float localZ = bounds.max.z + offset;
+                    SetEntryValue(entry, "PinAnchorXField", FormatFloat(localX));
+                    SetEntryValue(entry, "PinAnchorYField", FormatFloat(localY));
+                    SetEntryValue(entry, "PinAnchorZField", FormatFloat(localZ));
+                    if (ar != null && string.IsNullOrWhiteSpace(ar.value))
+                    {
+                        SetEntryValue(entry, "PinAnchorRadiusField", "0.006");
+                    }
+                }
+            }
+
+            RefreshAnchorGizmos();
         }
 
         private void TryApplyCatalogDrop(Vector2 worldPosition, string name, string kind, bool droppedOnViewport)
@@ -4698,6 +4865,7 @@ namespace RobotTwin.UI
                 {
                     entry = AddPinRow(new PinLayoutPayload { name = string.IsNullOrWhiteSpace(name) ? GetNextPinName() : name, x = nx, y = ny });
                     if (entry != null) SelectPinEntry(entry);
+                    EnsurePinEntryHasDefaultAnchor(entry, nx, ny);
                 }
                 else
                 {
@@ -5624,6 +5792,7 @@ namespace RobotTwin.UI
                     {
                         var entry = AddPinRow(new PinLayoutPayload { name = GetNextPinName(), x = nx, y = ny });
                         if (entry != null) SelectPinEntry(entry);
+                        EnsurePinEntryHasDefaultAnchor(entry, nx, ny);
                         RefreshLayoutPreview();
                         QueueValidation();
                     }
@@ -7568,6 +7737,7 @@ namespace RobotTwin.UI
             SetPanelVisible(_objectsPinsSection, true);
             SetPanelVisible(_objectsFxSection, !show2d);
             SetPanelVisible(_objectsAnchorsSection, !show2d);
+            SetPanelVisible(_layout2DSection, show2d);
         }
 
         private static void SetTabActive(Button tab, bool active)
@@ -9183,6 +9353,31 @@ namespace RobotTwin.UI
             if (_resistorSettingsSection != null)
             {
                 _resistorSettingsSection.style.display = showResistor ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (_defaultsSection != null && _typeScroll != null)
+            {
+                var container = _typeScroll.contentContainer;
+                if (container != null)
+                {
+                    int targetIndex = 0;
+                    if (showResistor && _resistorSettingsSection != null && _resistorSettingsSection.parent == container)
+                    {
+                        targetIndex = container.IndexOf(_resistorSettingsSection) + 1;
+                    }
+                    else if (_typeSpecsSection != null && _typeSpecsSection.parent == container)
+                    {
+                        targetIndex = container.IndexOf(_typeSpecsSection) + 1;
+                    }
+
+                    if (_defaultsSection.parent != container)
+                    {
+                        container.Add(_defaultsSection);
+                    }
+
+                    int clampedIndex = Mathf.Clamp(targetIndex, 0, container.childCount);
+                    container.Insert(clampedIndex, _defaultsSection);
+                }
             }
         }
 

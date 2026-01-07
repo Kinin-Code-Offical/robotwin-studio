@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.CoreSim.Runtime;
@@ -70,6 +71,15 @@ namespace RobotTwin.UI
 
         private Camera _camera;
         private RenderTexture _renderTexture;
+
+        [Header("3D View Helpers")]
+        [SerializeField] private bool _showReferenceFrame = true;
+
+        private Transform _referenceRoot;
+        private readonly List<LineRenderer> _referenceLines = new List<LineRenderer>();
+        private Material _referenceLineMaterial;
+        private const int ReferenceGridHalfLines = 8;
+
         private Transform _root;
         private bool _prefabsLoaded;
         private readonly Dictionary<string, GameObject> _runtimeModelCache = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
@@ -173,6 +183,162 @@ namespace RobotTwin.UI
         {
             EnsureCamera();
             EnsureRenderTexture(width, height);
+        }
+
+        private bool ShouldShowReferenceFrame()
+        {
+            if (!_showReferenceFrame) return false;
+            var scene = SceneManager.GetActiveScene();
+            return !string.Equals(scene.name, "WorldScene", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private Transform GetReferenceRoot()
+        {
+            if (_referenceRoot != null) return _referenceRoot;
+            var rootGo = new GameObject("Circuit3D_Reference");
+            rootGo.transform.SetParent(transform, false);
+            rootGo.transform.localPosition = Vector3.zero;
+            rootGo.transform.localRotation = Quaternion.identity;
+            rootGo.transform.localScale = Vector3.one;
+            _referenceRoot = rootGo.transform;
+            return _referenceRoot;
+        }
+
+        private Material GetReferenceLineMaterial()
+        {
+            if (_referenceLineMaterial != null) return _referenceLineMaterial;
+            // Prefer shaders that respect LineRenderer vertex colors (start/end colors).
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ??
+                Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Sprites/Default") ??
+                Shader.Find("Unlit/Color") ??
+                Shader.Find("Standard");
+            if (shader == null) return null;
+            _referenceLineMaterial = new Material(shader) { name = "Circuit3D_ReferenceLineMat" };
+            if (_referenceLineMaterial.HasProperty("_BaseColor")) _referenceLineMaterial.SetColor("_BaseColor", Color.white);
+            if (_referenceLineMaterial.HasProperty("_Color")) _referenceLineMaterial.SetColor("_Color", Color.white);
+            if (_referenceLineMaterial.HasProperty("_Cull")) _referenceLineMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+            if (_referenceLineMaterial.HasProperty("_ZWrite")) _referenceLineMaterial.SetInt("_ZWrite", 0);
+            if (_referenceLineMaterial.HasProperty("_ZTest")) _referenceLineMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+            _referenceLineMaterial.renderQueue = 3000;
+            return _referenceLineMaterial;
+        }
+
+        private LineRenderer CreateReferenceLine(string name)
+        {
+            var root = GetReferenceRoot();
+            var go = new GameObject(name);
+            go.transform.SetParent(root, false);
+            var lr = go.AddComponent<LineRenderer>();
+            lr.useWorldSpace = false;
+            lr.positionCount = 2;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            lr.numCapVertices = 4;
+            lr.numCornerVertices = 4;
+            lr.alignment = LineAlignment.View;
+            lr.textureMode = LineTextureMode.Stretch;
+            lr.material = GetReferenceLineMaterial();
+            return lr;
+        }
+
+        private void EnsureReferenceLines(int desired)
+        {
+            while (_referenceLines.Count < desired)
+            {
+                _referenceLines.Add(CreateReferenceLine($"RefLine_{_referenceLines.Count}"));
+            }
+        }
+
+        private void SetReferenceLine(int index, Vector3 a, Vector3 b, Color color, float width)
+        {
+            if (index < 0 || index >= _referenceLines.Count) return;
+            var lr = _referenceLines[index];
+            if (lr == null) return;
+            lr.startWidth = width;
+            lr.endWidth = width;
+            lr.startColor = color;
+            lr.endColor = color;
+            lr.SetPosition(0, a);
+            lr.SetPosition(1, b);
+            lr.enabled = true;
+        }
+
+        private void DisableReferenceFrame()
+        {
+            if (_referenceRoot != null) _referenceRoot.gameObject.SetActive(false);
+            for (int i = 0; i < _referenceLines.Count; i++)
+            {
+                if (_referenceLines[i] != null) _referenceLines[i].enabled = false;
+            }
+        }
+
+        private void UpdateReferenceFrame(Bounds contentWorldBounds)
+        {
+            if (!ShouldShowReferenceFrame())
+            {
+                DisableReferenceFrame();
+                return;
+            }
+
+            var root = GetReferenceRoot();
+            if (root != null && !root.gameObject.activeSelf) root.gameObject.SetActive(true);
+
+            // Estimate extents in the view's local space.
+            var extentsWorld = contentWorldBounds.extents;
+            float extent = Mathf.Max(extentsWorld.x, Mathf.Max(extentsWorld.y, extentsWorld.z));
+            if (extent <= 0.00001f)
+            {
+                float width = _size.x * _scale2D.x;
+                float height = _size.y * _scale2D.y;
+                extent = Mathf.Max(width, height) * 0.5f;
+            }
+            if (extent <= 0.00001f) extent = 0.05f;
+
+            // Make grid/axes more visible: larger extents and thicker lines.
+            float axisLen = extent * 2.4f;
+            float gridHalf = extent * 3.6f;
+
+            float y = 0f;
+            try
+            {
+                y = transform.InverseTransformPoint(contentWorldBounds.min).y;
+            }
+            catch
+            {
+                y = 0f;
+            }
+            y = Mathf.Min(0f, y);
+
+            // Push the grid slightly below content to reduce z-fighting shimmer.
+            y -= Mathf.Max(extent * 0.01f, 0.002f);
+
+            float widthAxis = Mathf.Clamp(extent * 0.03f, 0.0025f, 0.04f);
+            float widthGrid = Mathf.Clamp(extent * 0.02f, 0.0018f, 0.02f);
+
+            int gridLines = (ReferenceGridHalfLines * 2 + 1) * 2;
+            EnsureReferenceLines(3 + gridLines);
+
+            SetReferenceLine(0, Vector3.zero, new Vector3(axisLen, 0f, 0f), new Color(0.95f, 0.25f, 0.25f, 1f), widthAxis);
+            SetReferenceLine(1, Vector3.zero, new Vector3(0f, axisLen, 0f), new Color(0.25f, 0.95f, 0.35f, 1f), widthAxis);
+            SetReferenceLine(2, Vector3.zero, new Vector3(0f, 0f, axisLen), new Color(0.35f, 0.7f, 1f, 1f), widthAxis);
+
+            float spacing = gridHalf / ReferenceGridHalfLines;
+            int idx = 3;
+            for (int i = -ReferenceGridHalfLines; i <= ReferenceGridHalfLines; i++)
+            {
+                float p = i * spacing;
+                float alpha = i == 0 ? 0.32f : 0.16f;
+                float w = i == 0 ? widthGrid * 1.35f : widthGrid;
+                var c = new Color(0.8f, 0.85f, 0.95f, alpha);
+                SetReferenceLine(idx++, new Vector3(-gridHalf, y, p), new Vector3(gridHalf, y, p), c, w);
+                SetReferenceLine(idx++, new Vector3(p, y, -gridHalf), new Vector3(p, y, gridHalf), c, w);
+            }
+
+            for (int i = idx; i < _referenceLines.Count; i++)
+            {
+                if (_referenceLines[i] != null) _referenceLines[i].enabled = false;
+            }
         }
 
         public void SetPerspective(bool enabled)
@@ -466,6 +632,15 @@ namespace RobotTwin.UI
                 {
                     FrameCamera();
                 }
+
+                if (TryGetContentBounds(out var contentBounds))
+                {
+                    UpdateReferenceFrame(contentBounds);
+                }
+                else
+                {
+                    UpdateReferenceFrame(new Bounds(transform.position, Vector3.one * 0.1f));
+                }
             }
             finally
             {
@@ -489,6 +664,9 @@ namespace RobotTwin.UI
             {
                 _headLight.transform.SetParent(_camera.transform, false);
             }
+
+            // Provide immediate orientation cues even before a circuit is built.
+            UpdateReferenceFrame(new Bounds(transform.position, Vector3.one * 0.1f));
         }
 
         private void EnsureRenderTexture(int width, int height)
@@ -508,7 +686,7 @@ namespace RobotTwin.UI
             _renderTexture = new RenderTexture(width, height, 16)
             {
                 name = "Circuit3D_RT",
-                antiAliasing = 2
+                antiAliasing = 4
             };
             _renderTexture.Create();
             if (_camera != null) _camera.targetTexture = _renderTexture;
@@ -3963,7 +4141,8 @@ namespace RobotTwin.UI
         private void FrameCamera()
         {
             if (_camera == null) return;
-            if (TryGetContentBounds(out var bounds))
+            bool hasBounds = TryGetContentBounds(out var bounds);
+            if (hasBounds)
             {
                 var centerLocal = transform.InverseTransformPoint(bounds.center);
                 _panOffset = centerLocal;
@@ -4000,6 +4179,32 @@ namespace RobotTwin.UI
             _rollAngle = 0f;
             _hasUserCamera = false;
             UpdateCameraTransform();
+
+            if (hasBounds)
+            {
+                UpdateReferenceFrame(bounds);
+            }
+            else
+            {
+                float width = _size.x * _scale2D.x;
+                float height = _size.y * _scale2D.y;
+                UpdateReferenceFrame(new Bounds(transform.position, new Vector3(Mathf.Max(0.1f, width), 0.1f, Mathf.Max(0.1f, height))));
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_renderTexture != null)
+            {
+                _renderTexture.Release();
+                Destroy(_renderTexture);
+                _renderTexture = null;
+            }
+            if (_referenceLineMaterial != null)
+            {
+                Destroy(_referenceLineMaterial);
+                _referenceLineMaterial = null;
+            }
         }
 
         private float ComputePerspectiveDistance(Bounds bounds, float padding)
