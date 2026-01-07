@@ -10,6 +10,9 @@ namespace RobotTwin.Game
         public float FirmwareDtSeconds = 0.02f;
         public float CircuitDtSeconds = 0.02f;
         public float PhysicsDtSeconds = 0.02f;
+        public bool ClampPhysicsDt = true;
+        public float MinPhysicsDtSeconds = 0.0005f;
+        public float MaxPhysicsDtSeconds = 0.05f;
         public int MaxStepsPerFrame = 4;
         public float FrameBudgetMs = 8f;
         public float FirmwareBudgetMs = 2f;

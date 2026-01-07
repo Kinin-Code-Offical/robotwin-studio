@@ -1,0 +1,250 @@
+{
+  "id": "motor-shield-l293d-v1",
+  "name": "Motor Shield L293D (AFMotor v1)",
+  "description": "Arduino L293D Motor Driver Shield v1 compatible",
+  "type": "MotorShieldL293D",
+  "symbol": "U",
+  "iconChar": "DRV",
+  "order": 20,
+  "pins": [
+    "VIN",
+    "GND",
+    "M1+",
+    "M1-",
+    "M2+",
+    "M2-",
+    "M3+",
+    "M3-",
+    "M4+",
+    "M4-",
+    "SERVO1_SIG",
+    "SERVO2_SIG",
+    "5V"
+  ],
+  "specs": [
+    { "key": "Driver", "value": "L293D" },
+    { "key": "Library", "value": "AFMotor" }
+  ],
+  "defaults": [{ "key": "vcc", "value": "5V" }],
+  "size2D": { "x": 260, "y": 160 },
+  "pinLayout": [
+    {
+      "name": "VIN",
+      "x": 0.08,
+      "y": 0.15,
+      "label": "VIN",
+      "labelOffsetX": 10,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.08,
+      "anchorY": 0.02,
+      "anchorZ": -0.05,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "GND",
+      "x": 0.08,
+      "y": 0.3,
+      "label": "GND",
+      "labelOffsetX": 10,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.08,
+      "anchorY": 0.02,
+      "anchorZ": -0.02,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "5V",
+      "x": 0.08,
+      "y": 0.45,
+      "label": "5V",
+      "labelOffsetX": 10,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.08,
+      "anchorY": 0.02,
+      "anchorZ": 0.01,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+
+    {
+      "name": "M1+",
+      "x": 0.92,
+      "y": 0.12,
+      "label": "M1+",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": 0.06,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "M1-",
+      "x": 0.92,
+      "y": 0.22,
+      "label": "M1-",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": 0.04,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+
+    {
+      "name": "M2+",
+      "x": 0.92,
+      "y": 0.32,
+      "label": "M2+",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": 0.02,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "M2-",
+      "x": 0.92,
+      "y": 0.42,
+      "label": "M2-",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": 0.0,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+
+    {
+      "name": "M3+",
+      "x": 0.92,
+      "y": 0.52,
+      "label": "M3+",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": -0.02,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "M3-",
+      "x": 0.92,
+      "y": 0.62,
+      "label": "M3-",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": -0.04,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+
+    {
+      "name": "M4+",
+      "x": 0.92,
+      "y": 0.72,
+      "label": "M4+",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": -0.06,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+    {
+      "name": "M4-",
+      "x": 0.92,
+      "y": 0.82,
+      "label": "M4-",
+      "labelOffsetX": -40,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.08,
+      "anchorY": 0.02,
+      "anchorZ": -0.08,
+      "anchorRadius": 0.012,
+      "pinType": "lead"
+    },
+
+    {
+      "name": "SERVO1_SIG",
+      "x": 0.25,
+      "y": 0.92,
+      "label": "S1",
+      "labelOffsetX": -10,
+      "labelOffsetY": -20,
+      "labelSize": 12,
+      "anchorX": -0.02,
+      "anchorY": 0.02,
+      "anchorZ": 0.08,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "SERVO2_SIG",
+      "x": 0.4,
+      "y": 0.92,
+      "label": "S2",
+      "labelOffsetX": -10,
+      "labelOffsetY": -20,
+      "labelSize": 12,
+      "anchorX": 0.0,
+      "anchorY": 0.02,
+      "anchorZ": 0.08,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    }
+  ],
+  "labels": [
+    { "text": "{id}", "x": 0.42, "y": 0.18, "size": 14, "align": "center" },
+    {
+      "text": "L293D Shield",
+      "x": 0.46,
+      "y": 0.46,
+      "size": 14,
+      "align": "center"
+    },
+    {
+      "text": "AFMotor v1",
+      "x": 0.46,
+      "y": 0.66,
+      "size": 12,
+      "align": "center"
+    }
+  ],
+  "shapes": [
+    {
+      "id": "body",
+      "type": "Box",
+      "x": 0.16,
+      "y": 0.1,
+      "width": 190,
+      "height": 120,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    }
+  ]
+}

@@ -1,40 +1,42 @@
-﻿# RobotWin Studio Documentation
+# RobotWin Studio Documentation
 
-This folder contains the authoritative documentation for the RobotWin Studio codebase.
+This folder contains the primary documentation for the RobotWin Studio repo.
 
-## Contents
+## Start here
 
-- SETUP_WINDOWS.md: Development environment setup on Windows.
-- ARCHITECTURE.md: System overview and runtime flow.
-- PROJECT_STRUCTURE.md: Repository layout and ownership.
-- CORE_SIM.md: CoreSim engine notes and contracts.
-- ROBOTWIN_UNITY.md: Unity project structure and UI workflow.
-- FIRMWARE_ENGINE.md: Virtual firmware runtime and build notes.
-- NATIVE_ENGINE.md: Native engine overview and build notes.
-- TOOLS.md: Tooling and automation commands.
-- BUILD_RELEASE.md: Build and packaging steps.
-- TESTING.md: Test strategy and how to run tests.
-- DEBUG_CONSOLE.md: Local web UI for tests and log inspection.
-- TROUBLESHOOTING.md: Common issues and fixes.
+- SETUP_WINDOWS.md
+- ARCHITECTURE.md
+- PROJECT_STRUCTURE.md
+- TOOLS.md
+- TESTING.md
+- DEBUG_CONSOLE.md
+- TROUBLESHOOTING.md
 
-## Quick Start (Dev)
+## Subsystem docs
 
-1. Follow SETUP_WINDOWS.md to install dependencies.
-2. Open `RobotWin` in Unity Hub with version 6000.3.2f1.
-3. Sync plugins:
+- CORE_SIM.md
+- NATIVE_ENGINE.md
+- FIRMWARE_ENGINE.md
+- ROBOTWIN_UNITY.md
 
-   ```powershell
-   python tools/rt_tool.py update-unity-plugins
-   ```
+## Plans and contracts
 
-4. Run smoke validation:
+- REALTIME_CONTRACT.md
+- REALTIME_BUDGETS.md
+- REALTIME_DESIGN.md
+- OPTIMIZATION_PLAN.md
+- HIGH_FIDELITY_PLAN.md
+- RASPBERRY_PI_PLAN.md
+- MEGA_PIN_MAP_PLAN.md
+- implementation_plan_todo.md
+- implementation_plan.json
 
-   ```powershell
-   python tools/rt_tool.py run-unity-smoke
-   ```
+## Status snapshots
 
-## Documentation Rules
+- current_status/README.md
 
-- Keep files concise and focused on one topic.
-- Prefer concrete steps and commands.
-- Update TOOLS.md when scripts change.
+## Doc rules
+
+- Keep one topic per file.
+- Prefer exact commands.
+- Update this index when adding or renaming docs.

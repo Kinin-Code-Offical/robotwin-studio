@@ -119,6 +119,12 @@ namespace RobotTwin.Editor
             if (string.IsNullOrWhiteSpace(type)) return string.Empty;
             string key = type.ToLowerInvariant();
             string baseName = null;
+            if (key.Contains("tcs34725")) baseName = "TCS34725 RGB sensor";
+            else if (key.Contains("mg90")) baseName = "Tower Pro MG90S Micro servo";
+            else if (key.Contains("25ga370")) baseName = "Motor_25GA370-26x1-6V-320RPM";
+            else if (key.Contains("yl-70") || key.Contains("irsensor") || key.Contains("ir_sensor")) baseName = "IR YL-70";
+            else if (key.Contains("l293d") || key.Contains("motor_shield")) baseName = "motor_shield_l293d";
+            else if (key.Contains("4xaa")) baseName = "4xAA BATTERY HOLDER 1_5V";
             if (key.Contains("arduinomega")) baseName = "ArduinoMega";
             else if (key.Contains("arduinouno")) baseName = "ArduinoUno";
             else if (key.Contains("arduinonano")) baseName = "ArduinoNano";
@@ -136,6 +142,14 @@ namespace RobotTwin.Editor
             string root = Path.Combine(Application.dataPath, "Resources", "Prefabs", "Circuit3D");
             string glb = Path.Combine(root, baseName + ".glb");
             if (File.Exists(glb)) return glb;
+            string step = Path.Combine(root, baseName + ".step");
+            if (File.Exists(step)) return step;
+            string STEP = Path.Combine(root, baseName + ".STEP");
+            if (File.Exists(STEP)) return STEP;
+            string stp = Path.Combine(root, baseName + ".stp");
+            if (File.Exists(stp)) return stp;
+            string STP = Path.Combine(root, baseName + ".STP");
+            if (File.Exists(STP)) return STP;
             string fbx = Path.Combine(root, baseName + ".fbx");
             if (File.Exists(fbx)) return fbx;
             string obj = Path.Combine(root, baseName + ".obj");

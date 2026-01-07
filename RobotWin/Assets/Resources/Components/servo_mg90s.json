@@ -1,0 +1,90 @@
+{
+  "id": "servo-mg90s",
+  "name": "Servo MG90S",
+  "description": "MG90S metal gear micro servo",
+  "type": "ServoMG90S",
+  "symbol": "M",
+  "iconChar": "SV",
+  "order": 91,
+  "pins": ["SIG", "VCC", "GND"],
+  "specs": [
+    { "key": "Voltage", "value": "5V" },
+    { "key": "Gears", "value": "Metal" }
+  ],
+  "defaults": [{ "key": "vcc", "value": "5V" }],
+  "size2D": { "x": 160, "y": 90 },
+  "pinLayout": [
+    {
+      "name": "SIG",
+      "x": 0.25,
+      "y": 0.92,
+      "label": "SIG",
+      "labelOffsetX": -14,
+      "labelOffsetY": -18,
+      "labelSize": 11,
+      "anchorX": -0.02,
+      "anchorY": 0.02,
+      "anchorZ": 0.06,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "VCC",
+      "x": 0.5,
+      "y": 0.92,
+      "label": "VCC",
+      "labelOffsetX": -16,
+      "labelOffsetY": -18,
+      "labelSize": 11,
+      "anchorX": 0.0,
+      "anchorY": 0.02,
+      "anchorZ": 0.06,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "GND",
+      "x": 0.75,
+      "y": 0.92,
+      "label": "GND",
+      "labelOffsetX": -16,
+      "labelOffsetY": -18,
+      "labelSize": 11,
+      "anchorX": 0.02,
+      "anchorY": 0.02,
+      "anchorZ": 0.06,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    }
+  ],
+  "labels": [
+    { "text": "{id}", "x": 0.52, "y": 0.22, "size": 14, "align": "center" },
+    { "text": "MG90S", "x": 0.52, "y": 0.55, "size": 18, "align": "center" }
+  ],
+  "shapes": [
+    {
+      "id": "body",
+      "type": "Box",
+      "x": 0.14,
+      "y": 0.16,
+      "width": 132,
+      "height": 52,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    },
+    {
+      "id": "horn",
+      "type": "Circle",
+      "x": 0.7,
+      "y": 0.3,
+      "width": 20,
+      "height": 20,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    }
+  ]
+}

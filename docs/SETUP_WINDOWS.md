@@ -1,67 +1,47 @@
-# Windows Development Setup
+# Windows Setup
 
-This document lists the Windows setup we use for development. Some items are optional depending on what you’re building (Unity-only vs native/firmware/QEMU).
+This guide covers the standard Windows developer setup.
 
 ## Prerequisites
 
-- **OS:** Windows 10/11 Pro or Enterprise (x64)
-- **Virtualization:** Hyper-V enabled in BIOS and Windows Features.
-- **IDE:** Visual Studio 2022 (Desktop C++ & .NET Desktop Development workloads).
-- **Engine:** Unity 6 (LTS).
-- **Languages:** Python 3.11+, Node.js 20+.
-- **Tools:** CMake 3.28+, Ninja, Git.
+- Windows 10/11 x64
+- Git
+- Visual Studio 2022 (Desktop C++ and .NET workloads)
+- .NET SDK
+- Python 3.11+
+- CMake
+- C++ compiler in PATH (g++ or clang)
+- Unity 6 LTS
+- Optional: Node.js + npm for integration tests
 
-## 1. Realtime Kernel Configuration
+## Optional virtualization
 
-If you’re working on realtime behavior, you’ll want Windows to prioritize simulation threads and keep timer settings stable.
+Enable Windows Hypervisor Platform and Virtual Machine Platform if you plan to run QEMU targets.
 
-1. **Enable High Performance Power Plan:**
-   ```powershell
-   powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
-   ```
-2. **Disable CPU Core Parking:**
-   Run `tools/scripts/disable_core_parking.ps1` (Admin).
-3. **Set Timer Resolution:**
-   The simulation engine will automatically request 0.5ms timer resolution at runtime.
+## Quick setup
 
-## 2. QEMU Setup
+1. Clone the repo.
+2. Run `python tools/rt_tool.py setup`.
+3. Open `RobotWin/` in Unity Hub.
 
-RobotWin bundles a custom QEMU build, but you must enable the Windows Hypervisor Platform.
+## Check only
 
-1. Open **Turn Windows features on or off**.
-2. Check **Windows Hypervisor Platform**.
-3. Check **Virtual Machine Platform**.
-4. Restart your computer.
-
-## 3. Clone and Bootstrap
-
-1. Clone the repo recursively (submodules are required for QEMU/SimAVR):
-
-   ```powershell
-   git clone --recursive https://github.com/robotwin-studio/robotwin-studio.git
-   cd robotwin-studio
-   ```
-
-2. Run the automated setup script:
-   ```powershell
-   python tools/rt_tool.py setup
-   ```
-   This will:
-   - Download the QEMU binaries.
-   - Compile the NativeEngine dependencies (PhysX/Jolt).
-   - Generate the Visual Studio solution files.
-
-## 4. Verify Installation
-
-Run the system health check:
+Run a prerequisite check without building:
 
 ```powershell
-python tools/rt_tool.py check-env
+python tools/rt_tool.py setup --check-only
 ```
 
-Expected output:
+## Optional: virtual COM ports (com0com)
 
-- [OK] Realtime Kernel: Enabled
-- [OK] Hypervisor: Present
-- [OK] QEMU: Found (v8.2.0)
-- [OK] Unity: Found (2023.3.0f1)
+If you need a virtual COM pair for serial workflows:
+
+```powershell
+python tools/rt_tool.py setup --install-com0com
+```
+
+## Notes
+
+- Use `python tools/rt_tool.py update-unity-plugins` after building native or firmware binaries.
+- Logs are written under `logs/`.
+- The tooling expects `g++` on PATH for the native build (for example via MSYS2/MinGW-w64).

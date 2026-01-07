@@ -124,6 +124,8 @@ namespace RobotTwin.CoreSim.IPC
         public string BoardProfile { get; set; } = "ArduinoUno";
         public bool DropStaleOutputs { get; set; } = true;
         public double MaxOutputAgeMs { get; set; } = 250.0;
+        public int StepTimeoutMs { get; set; } = 2000;
+        public bool StrictStepSequence { get; set; } = true;
         public string ExtraLaunchArguments { get; set; } = string.Empty;
 
         public void Configure(string pipeName)
@@ -174,15 +176,21 @@ namespace RobotTwin.CoreSim.IPC
 
             lock (state.SequenceLock)
             {
-                // Wait for the specific sequence
-                // We use a loop to handle spurious wakeups
+                var deadline = DateTime.UtcNow.AddMilliseconds(Math.Max(1, StepTimeoutMs));
                 while (state.LastSequence < request.StepSequence)
                 {
-                    if (!Monitor.Wait(state.SequenceLock, 2000))
+                    var remaining = deadline - DateTime.UtcNow;
+                    if (remaining <= TimeSpan.Zero)
                     {
-                        // Timeout
                         break;
                     }
+                    Monitor.Wait(state.SequenceLock, remaining);
+                }
+
+                if (StrictStepSequence && state.LastSequence < request.StepSequence)
+                {
+                    throw new TimeoutException(
+                        $"Firmware lockstep timeout. board={BoardId} expected_seq={request.StepSequence} last_seq={state.LastSequence} timeout_ms={StepTimeoutMs}");
                 }
             }
 
@@ -289,18 +297,6 @@ namespace RobotTwin.CoreSim.IPC
                     var state = GetBoardState(boardId);
                     ulong seq = ReadUInt64(payload, BoardIdSize);
                     ulong previous = state.LastSequence;
-                    if (previous > 0 && seq > previous + 1)
-                    {
-                        state.Perf.DroppedOutputs += seq - previous - 1;
-                    }
-                    if (seq >= state.LastSequence)
-                    {
-                        state.LastSequence = seq;
-                    }
-                    lock (state.SequenceLock)
-                    {
-                        Monitor.PulseAll(state.SequenceLock);
-                    }
 
                     int offset = BoardIdSize + 16 + PinCount;
                     int perfSize = 13 * 8;
@@ -321,6 +317,8 @@ namespace RobotTwin.CoreSim.IPC
                         state.Perf.TwiTransfers = ReadUInt64(payload, offset); offset += 8;
                         state.Perf.WdtResets = ReadUInt64(payload, offset);
                     }
+
+                    // If enabled, drop stale outputs without advancing sequence.
                     if (payload.Length >= perfEnd + 8)
                     {
                         state.LastTimestampMicros = ReadUInt64(payload, perfEnd);
@@ -333,6 +331,21 @@ namespace RobotTwin.CoreSim.IPC
                                 return;
                             }
                         }
+                    }
+
+                    if (previous > 0 && seq > previous + 1)
+                    {
+                        state.Perf.DroppedOutputs += seq - previous - 1;
+                    }
+
+                    if (seq >= state.LastSequence)
+                    {
+                        state.LastSequence = seq;
+                    }
+
+                    lock (state.SequenceLock)
+                    {
+                        Monitor.PulseAll(state.SequenceLock);
                     }
 
                     for (int i = 0; i < PinCount; i++)

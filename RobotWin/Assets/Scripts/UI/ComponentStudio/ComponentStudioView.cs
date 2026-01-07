@@ -881,14 +881,12 @@ namespace RobotTwin.UI
                 Mathf.Max(ext.z, minExtent));
             bounds = new Bounds(bounds.center, ext * 2f);
 
-            float handleSize = Mathf.Clamp(bounds.size.magnitude * 0.065f, 0.18f, 0.42f);
-            float cornerSize = Mathf.Clamp(bounds.size.magnitude * 0.075f, 0.2f, 0.48f);
-            float minOffset = Mathf.Max(handleSize * 1.25f, 0.18f);
+            float handleSize = Mathf.Clamp(bounds.size.magnitude * 0.045f, 0.08f, 0.22f);
+            float cornerSize = Mathf.Clamp(bounds.size.magnitude * 0.055f, 0.09f, 0.26f);
 
-            CreateScaleBox(bounds, new Color(0.6f, 0.66f, 0.78f, 0.6f));
-            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, new Vector3(Mathf.Max(ext.x, minOffset), 0f, 0f), handleSize);
-            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, new Vector3(0f, Mathf.Max(ext.y, minOffset), 0f), handleSize);
-            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), new Vector3(0f, 0f, Mathf.Max(ext.z, minOffset)), handleSize);
+            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, new Vector3(ext.x, 0f, 0f), handleSize);
+            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, new Vector3(0f, ext.y, 0f), handleSize);
+            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), new Vector3(0f, 0f, ext.z), handleSize);
 
             var center = bounds.center;
             var cornerOffsets = new[]
@@ -1445,13 +1443,12 @@ namespace RobotTwin.UI
             faceRoot.transform.SetParent(_viewCubeModel.transform, false);
             _viewCubeFaceRoot = faceRoot.transform;
 
-            var faceColor = new Color(0.78f, 0.8f, 0.84f, 1f);
-            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(-90f, 0f, 0f), faceColor, "TOP");
-            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(90f, 0f, 0f), faceColor, "BOTTOM");
-            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), faceColor, "LEFT");
-            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), faceColor, "RIGHT");
-            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), Vector3.zero, faceColor, "FRONT");
-            CreateViewCubeFace("Back", new Vector3(0f, 0f, -0.51f), new Vector3(0f, 180f, 0f), faceColor, "BACK");
+            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(-90f, 0f, 0f), new Color(0.35f, 0.82f, 0.55f, 1f), "TOP");
+            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(90f, 0f, 0f), new Color(0.25f, 0.46f, 0.82f, 1f), "BOTTOM");
+            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), new Color(0.88f, 0.45f, 0.85f, 1f), "LEFT");
+            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), new Color(0.9f, 0.35f, 0.32f, 1f), "RIGHT");
+            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), Vector3.zero, new Color(0.3f, 0.7f, 0.9f, 1f), "FRONT");
+            CreateViewCubeFace("Back", new Vector3(0f, 0f, -0.51f), new Vector3(0f, 180f, 0f), new Color(0.95f, 0.72f, 0.32f, 1f), "BACK");
         }
 
         private void CreateViewCubeFace(string name, Vector3 localPos, Vector3 localEuler, Color color, string label)
@@ -1500,6 +1497,9 @@ namespace RobotTwin.UI
             {
                 var textMat = new Material(textRenderer.sharedMaterial) { name = $"ViewCubeFace_{name}_TextMat" };
                 textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
+                textMat.renderQueue = 2000;
+                if (textMat.HasProperty("_ZWrite")) textMat.SetInt("_ZWrite", 1);
+                if (textMat.HasProperty("_ZTest")) textMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
                 textRenderer.sharedMaterial = textMat;
             }
 

@@ -1,0 +1,132 @@
+{
+  "id": "tcs34725-module",
+  "name": "TCS34725",
+  "description": "RGB color sensor module (I2C)",
+  "type": "TCS34725",
+  "symbol": "U",
+  "iconChar": "RGB",
+  "order": 121,
+  "pins": ["VIN", "GND", "SDA", "SCL", "LED", "INT"],
+  "specs": [
+    { "key": "Bus", "value": "I2C" },
+    { "key": "Address", "value": "0x29" }
+  ],
+  "defaults": [{ "key": "vcc", "value": "5V" }],
+  "size2D": { "x": 170, "y": 90 },
+  "pinLayout": [
+    {
+      "name": "VIN",
+      "x": 0.1,
+      "y": 0.85,
+      "label": "VIN",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": -0.05,
+      "anchorY": 0.02,
+      "anchorZ": 0.04,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "GND",
+      "x": 0.1,
+      "y": 0.65,
+      "label": "GND",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": -0.05,
+      "anchorY": 0.02,
+      "anchorZ": 0.02,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "SDA",
+      "x": 0.1,
+      "y": 0.45,
+      "label": "SDA",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": -0.05,
+      "anchorY": 0.02,
+      "anchorZ": 0.0,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "SCL",
+      "x": 0.1,
+      "y": 0.25,
+      "label": "SCL",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": -0.05,
+      "anchorY": 0.02,
+      "anchorZ": -0.02,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "LED",
+      "x": 0.9,
+      "y": 0.65,
+      "label": "LED",
+      "labelOffsetX": -32,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.05,
+      "anchorY": 0.02,
+      "anchorZ": 0.02,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    },
+    {
+      "name": "INT",
+      "x": 0.9,
+      "y": 0.35,
+      "label": "INT",
+      "labelOffsetX": -28,
+      "labelOffsetY": -10,
+      "labelSize": 11,
+      "anchorX": 0.05,
+      "anchorY": 0.02,
+      "anchorZ": -0.02,
+      "anchorRadius": 0.01,
+      "pinType": "pin"
+    }
+  ],
+  "labels": [
+    { "text": "{id}", "x": 0.52, "y": 0.2, "size": 13, "align": "center" },
+    { "text": "TCS34725", "x": 0.55, "y": 0.55, "size": 14, "align": "center" }
+  ],
+  "shapes": [
+    {
+      "id": "body",
+      "type": "Box",
+      "x": 0.18,
+      "y": 0.12,
+      "width": 132,
+      "height": 66,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    },
+    {
+      "id": "sensor",
+      "type": "Circle",
+      "x": 0.55,
+      "y": 0.36,
+      "width": 24,
+      "height": 24,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    }
+  ]
+}

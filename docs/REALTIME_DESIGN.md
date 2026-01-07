@@ -1,49 +1,39 @@
 # Realtime Design Notes
 
-Design notes for realtime execution. Treat this as a working spec we can align code against.
+Working notes for realtime execution.
 
-## RT-02 Deadline-aware scheduler + per-simulation budgets
+## Scheduling
 
-- Every tick is assigned a deadline from the master clock.
-- Each subsystem consumes a budget slice (see REALTIME_BUDGETS.md).
-- If a subsystem overruns, the scheduler downgrades to fast-path and logs the miss.
+- Fixed dt with explicit tick counters.
+- Per-subsystem budgets and deadline tracking.
+- Fast-path for overrun recovery.
 
-## RT-03 Fast-Path + Corrective-Path (tiered realtime)
+## Data flow
 
-- Fast-path: reuse last stable circuit/physics state and advance firmware only.
-- Corrective-path: run full solve once budget allows and re-sync outputs.
-- Tier selection is per-scene and can change at runtime.
+- Inputs and outputs are double-buffered.
+- High-rate streams use shared memory when enabled.
+- Low-rate control uses IPC.
 
-## RT-04 Realtime circuit solving strategy
+## Engineering rules
 
-- Incremental solve using cached factorization.
-- Sparse matrix reuse across ticks when topology unchanged.
-- Early-exit when delta below epsilon.
+- Avoid allocations in hot loops.
+- Keep ordering identical across platforms.
+- Record inputs for replay when validating changes.
 
-## RT-05 Hybrid MCU/peripheral modeling
+## Fast-path vs corrective-path
 
-- MCU core cycles remain deterministic.
-- Peripherals (UART/ADC/PWM) are event-queue driven.
-- Optional coarse peripheral updates for fast-path.
+When the system is overloaded, the runtime can switch to a reduced-work tick:
 
-## RT-06 Multi-rate stepping (master clock)
+- Fast-path: reuse last stable circuit/physics state, prioritize firmware stepping, and publish telemetry about the downgrade.
+- Corrective-path: perform a full solve once budget allows and resynchronize outputs.
 
-- Master clock maintains a priority queue of next-event times.
-- Firmware, circuit, and physics register their next deadlines.
-- Scheduler advances to earliest deadline and processes due tasks.
+The Unity runtime tracks fast-path and overrun counters in `RobotWin/Assets/Scripts/Game/SimHost.cs`.
 
-## RT-08 Timestamped protocol stream
+## Observability
 
-- Every IPC packet includes:
-  - `tick_index`
-  - `dt_seconds`
-  - `sent_utc`
-  - `seq`
-- Client maintains a backlog window and drops stale packets.
+Recommended signals to watch when profiling or debugging realtime behavior:
 
-## RT-09 Windows realtime hardening
-
-- Set thread priority to `TIME_CRITICAL` for simulation loops.
-- Pin simulation threads to dedicated cores (affinity mask).
-- Use high-resolution timers (`timeBeginPeriod(1)`).
-- Avoid heap allocation in hot loops; pre-allocate buffers.
+- tick duration and jitter counters
+- budget overrun counters
+- fast-path / corrective-path counters
+- firmware perf counters (cycles, ADC samples, serial bytes, transfers)

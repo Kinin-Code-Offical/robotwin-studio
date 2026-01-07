@@ -5,11 +5,34 @@ import platform
 import subprocess
 import sys
 import time
+import traceback
 import urllib.request
+from collections import deque
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+
+_SERVER_EVENTS: "deque[dict]" = deque(maxlen=400)
+
+
+def server_event(level: str, message: str, **fields) -> None:
+    evt = {
+        "ts": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "level": level,
+        "message": message,
+    }
+    if fields:
+        evt.update(fields)
+    _SERVER_EVENTS.append(evt)
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        (LOG_DIR / "server.log").open("a", encoding="utf-8", errors="ignore").write(
+            json.dumps(evt, ensure_ascii=False) + "\n"
+        )
+    except Exception:
+        pass
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -163,6 +186,23 @@ def get_system_info() -> dict:
     }
 
 
+def list_log_areas() -> list[dict]:
+    areas = []
+    for key, base in LOG_AREAS.items():
+        base_path = str(base)
+        exists = base.exists()
+        areas.append(
+            {
+                "area": key,
+                "path": base_path,
+                "exists": exists,
+                "size_bytes": dir_size(base) if exists else 0,
+                "log_count": len(list(base.glob("*.log"))) if exists else 0,
+            }
+        )
+    return sorted(areas, key=lambda x: x["area"])
+
+
 def list_logs(area: str) -> list[dict]:
     base = LOG_AREAS.get(area)
     if not base or not base.exists():
@@ -270,7 +310,11 @@ def find_unity_base_url() -> str | None:
         url = f"http://localhost:{port}"
         try:
             with urllib.request.urlopen(f"{url}/status", timeout=0.5) as res:
-                if res.status == 200:
+                if res.status != 200:
+                    continue
+                payload = res.read().decode("utf-8", errors="ignore")
+                data = json.loads(payload)
+                if isinstance(data, dict) and ("engine" in data or "version" in data):
                     return url
         except Exception:
             continue
@@ -308,19 +352,45 @@ class DebugHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
 
+    def log_message(self, fmt: str, *args) -> None:
+        # Keep console output quiet; write minimal access events to server.log.
+        try:
+            server_event(
+                "access",
+                fmt % args,
+                client=str(getattr(self, "client_address", "")),
+                path=str(getattr(self, "path", "")),
+            )
+        except Exception:
+            pass
+
+    def _safe_write(self, data: bytes) -> None:
+        try:
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # Client disconnected mid-response; this is expected during polling.
+            return
+        except OSError:
+            return
+
     def send_json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
-        self._extracted_from_do_GET_4("application/json", body)
+        self._send_bytes("application/json", body)
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "/index.html")
+            self.end_headers()
+            return
         if parsed.path == "/favicon.ico":
             icon_path = STATIC_DIR / "favicon.svg"
             if icon_path.exists():
                 data = icon_path.read_bytes()
                 self.send_response(HTTPStatus.OK)
-                self._extracted_from_do_GET_4("image/svg+xml", data)
+                self._send_bytes("image/svg+xml", data)
                 return
             self.send_response(HTTPStatus.NO_CONTENT)
             self.end_headers()
@@ -330,6 +400,42 @@ class DebugHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/status":
             self.send_json({"status": "ok"})
+            return
+        if parsed.path == "/api/routes":
+            self.send_json(
+                {
+                    "routes": [
+                        "/status",
+                        "/api/health",
+                        "/api/system-info",
+                        "/api/tests",
+                        "/api/run?name=...",
+                        "/api/unity-status",
+                        "/api/unity-telemetry",
+                        "/api/bridge-status",
+                        "/api/firmware-mode?mode=lockstep|fast|...",
+                        "/api/com-ports",
+                        "/api/log-areas",
+                        "/api/logs?area=...",
+                        "/api/log?area=...&name=...&tail=...",
+                        "/api/log-scan?tail=...",
+                        "/api/server-log",
+                    ]
+                }
+            )
+            return
+        if parsed.path == "/api/log-areas":
+            self.send_json({"areas": list_log_areas()})
+            return
+        if parsed.path == "/api/server-log":
+            query = parse_qs(parsed.query)
+            tail_raw = query.get("tail", ["200"])[0]
+            try:
+                tail = max(1, min(400, int(tail_raw)))
+            except ValueError:
+                tail = 200
+            events = list(_SERVER_EVENTS)[-tail:]
+            self.send_json({"events": events})
             return
         if parsed.path == "/api/tests":
             self.send_json({"tests": TESTS})
@@ -407,16 +513,24 @@ class DebugHandler(SimpleHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
-            self.wfile.write(content.encode("utf-8", errors="ignore"))
+            self._safe_write(content.encode("utf-8", errors="ignore"))
             return
-        super().do_GET()
+        try:
+            super().do_GET()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return
+        except Exception as exc:
+            server_event("error", "Unhandled GET exception", path=self.path, error=str(exc), traceback=traceback.format_exc())
+            try:
+                self.send_json({"error": "Internal server error"}, status=500)
+            except Exception:
+                return
 
-    # TODO Rename this here and in `send_json` and `do_GET`
-    def _extracted_from_do_GET_4(self, arg0, arg1):
-        self.send_header("Content-Type", arg0)
-        self.send_header("Content-Length", str(len(arg1)))
+    def _send_bytes(self, content_type: str, body: bytes) -> None:
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(arg1)
+        self._safe_write(body)
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
@@ -439,6 +553,7 @@ def main() -> int:
     args = parser.parse_args()
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    server_event("info", "Debug console starting", port=args.port, static_dir=str(STATIC_DIR))
     server = ThreadingHTTPServer(("0.0.0.0", args.port), DebugHandler)
     print(f"[Debug Console] http://localhost:{args.port}")
     try:
@@ -446,6 +561,7 @@ def main() -> int:
     except KeyboardInterrupt:
         print("\n[Debug Console] Shutting down.")
     finally:
+        server_event("info", "Debug console shutting down")
         server.shutdown()
         server.server_close()
     return 0

@@ -1,59 +1,60 @@
-# CoreSim: The Realtime Orchestrator
+# CoreSim
 
-**CoreSim** is the orchestration layer. It owns the simulation clock, defines step ordering, and coordinates data flow between firmware, circuit/IO, native simulation, and Unity.
+CoreSim is the orchestration layer that owns simulation time and cross-system ordering.
 
 ## Responsibilities
 
-### 1. Deterministic Scheduling
+- Maintain the master clock and fixed step cadence.
+- Schedule firmware, circuit, and physics in a consistent order.
+- Provide a single place for data marshaling and state publication.
 
-CoreSim manages the **Global Simulation Time (GST)**. It advances the simulation in discrete, fixed time steps (for example 1 ms or 100 μs), and keeps ordering consistent.
+## Tick ordering (reference)
 
-- **Strict Ordering:** Ensures Input -> Physics -> Firmware -> Output happens in the exact same order every frame.
-- **Replayability:** By logging the inputs at each tick, CoreSim can replay a session with bit-perfect accuracy.
+CoreSim drives a fixed-step tick and keeps ordering consistent across subsystems:
 
-### 2. Circuit & Signal Propagation
+1. Ingest inputs (UI actions, device inputs, external IO).
+2. Step firmware (FirmwareEngine) for the tick's dt.
+3. Solve circuit and signal propagation.
+4. Step physics (NativeEngine) for the tick's dt.
+5. Publish outputs and telemetry.
 
-CoreSim owns the "Electrical Graph" of the robot.
+## Key areas
 
-- **Netlist Solving:** Resolves connections between components (e.g., Battery -> ESC -> Motor).
-- **Signal Routing:** Routes logical signals (PWM, UART, SPI) from FirmwareEngine to the appropriate component models.
-- **Fault Injection:** Can simulate broken wires, short circuits, or noisy connections on the fly.
+- Host/SimHost: tick loop and configuration.
+- IPC clients: firmware and native engine bridges.
+- Circuit model: netlist and signal propagation.
 
-### 3. Inter-Process Communication (IPC) Hub
+## IPC notes
 
-CoreSim manages the high-speed data highways between modules.
+- Firmware protocol: `RTFW` framing and versioning is implemented in `CoreSim/src/RobotTwin.CoreSim/IPC/FirmwareProtocol.cs`.
+- Unity uses a matching client implementation in `RobotWin/Assets/Scripts/CoreSim/FirmwareClient.cs`.
 
-- **Shared Memory:** Allocates and manages the ring buffers used for sensor data.
-- **Synchronization Barriers:** Uses named mutexes/semaphores to ensure the Physics engine doesn't run ahead of the Firmware.
+## .rtwin projects
 
-## Architecture
+- `.rtwin` is a custom binary package format with magic `RTWN` and version `1`.
+- Serialization entry point: `CoreSim/src/RobotTwin.CoreSim/Serialization/SimulationSerializer.cs`.
 
-CoreSim is a pure C# .NET 8 library, designed to be embedded into the Unity process but capable of running headless.
+## Host modes
 
-### The Tick Loop
+- Headless / deterministic stepping: `RobotTwin.CoreSim.Host.SimHost.StepOnce()` (synchronous, no sleep).
+- Background loop: `RobotTwin.CoreSim.Host.SimHost.Start()` (threaded loop with optional realtime hardening).
 
-```csharp
-public void Tick()
-{
-    // 1. Gather Inputs
-    var inputs = InputSystem.Poll();
+`SimHostOptions` lives at `CoreSim/src/RobotTwin.CoreSim/Host/SimHostOptions.cs` and includes deterministic and realtime settings.
 
-    // 2. Step Physics (Native Interop)
-    NativeEngine.Step(dt, inputs);
+## Realtime hardening (Windows)
 
-    // 3. Step Firmware (IPC)
-    FirmwareEngine.Step(dt);
+CoreSim includes an optional hardening scope used by the host loop:
 
-    // 4. Resolve Circuit Logic
-    CircuitSolver.Solve();
+- `CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardening.cs`
+- `CoreSim/src/RobotTwin.CoreSim/Host/RealtimeHardeningOptions.cs`
 
-    // 5. Publish State
-    Telemetry.Publish();
-}
-```
+## Build and tests
 
-## Integration Rules
+- Build: `dotnet build CoreSim/CoreSim.sln`
+- Tests: `dotnet test CoreSim/CoreSim.sln`
 
-- **No Unity Dependencies:** CoreSim must remain engine-agnostic to support headless cloud simulation.
-- **Zero Allocation:** The hot path (Tick loop) must generate zero garbage (GC) to prevent latency spikes.
-- **Thread Safety:** All state access must be thread-safe or confined to the simulation thread.
+## Integration rules
+
+- Keep the tick loop allocation-free.
+- Avoid Unity dependencies in the core library.
+- Use explicit dt and step counters for every output frame.

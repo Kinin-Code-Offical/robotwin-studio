@@ -414,14 +414,6 @@ namespace RobotTwin.CoreSim
                     var state = GetBoardState(boardId);
                     ulong seq = ReadUInt64(payload, BoardIdSize);
                     ulong previous = state.LastSequence;
-                    lock (state.SequenceLock)
-                    {
-                        if (seq >= state.LastSequence)
-                        {
-                            state.LastSequence = seq;
-                        }
-                        Monitor.PulseAll(state.SequenceLock);
-                    }
                     int offset = BoardIdSize + 16 + PinCount;
                     int perfSize = 13 * 8;
                     int perfEnd = offset + perfSize;
@@ -459,6 +451,16 @@ namespace RobotTwin.CoreSim
                                 return;
                             }
                         }
+                    }
+
+                    // Only advance sequence and unblock waiters after we accept the output.
+                    lock (state.SequenceLock)
+                    {
+                        if (seq >= state.LastSequence)
+                        {
+                            state.LastSequence = seq;
+                        }
+                        Monitor.PulseAll(state.SequenceLock);
                     }
 
                     for (int i = 0; i < PinCount; i++)

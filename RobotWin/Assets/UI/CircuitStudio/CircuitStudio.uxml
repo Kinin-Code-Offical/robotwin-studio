@@ -164,7 +164,7 @@
                                 <ui:Label text="Shift + Arrows: Pan" class="board-3d-help-line" />
                                 <ui:Label text="Arrows: Orbit" class="board-3d-help-line" />
                                 <ui:Label text="Ctrl + Arrows: Zoom / Lighting" class="board-3d-help-line" />
-                                <ui:Label text="PageUp / PageDown or E / Q: Nudge" class="board-3d-help-line" />
+                                <ui:Label text="PageUp / PageDown or Shift + E / Q: Nudge" class="board-3d-help-line" />
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
@@ -256,9 +256,15 @@
                     <ui:Label text="LIVE" class="bottom-chip live" />
                 </ui:VisualElement>
                 <ui:VisualElement class="bottom-status">
+                    <ui:TextField name="OutputSearchField" value="" class="input-dark output-search" />
+                    <ui:DropdownField name="OutputTagDropdown" class="input-dark output-tag" />
                     <ui:Button name="OutputFilterAllBtn" text="All" class="filter-btn active" />
                     <ui:Button name="OutputFilterWarningsBtn" text="Warnings" class="filter-btn" />
                     <ui:Button name="OutputFilterErrorsBtn" text="Errors" class="filter-btn" />
+                    <ui:Button name="OutputPauseBtn" text="Pause" class="filter-btn" />
+                    <ui:Button name="OutputFollowBtn" text="Follow On" class="filter-btn active" />
+                    <ui:Button name="OutputCopyBtn" text="Copy" class="filter-btn" />
+                    <ui:Button name="OutputExportBtn" text="Export" class="filter-btn" />
                     <ui:Button name="OutputClearBtn" text="Clear" class="filter-btn clear-btn" />
                     <ui:Label name="ErrorCountLabel" text="2 Errors" class="status-pill error" />
                     <ui:Button name="BottomToggleBtn" text="HIDE" class="bottom-toggle" />
@@ -343,14 +349,14 @@
                     <ui:Label text="Ctrl+D = export wire matrix." class="help-line" />
 
                     <ui:Label text="3D Preview Camera" class="help-section" />
-                    <ui:Label text="LMB drag = pan, RMB drag = orbit, wheel = zoom." class="help-line" />
+                    <ui:Label text="LMB/MMB drag = pan, RMB drag = orbit, wheel = zoom." class="help-line" />
                     <ui:Label text="R or Home = reset view." class="help-line" />
                     <ui:Label text="F = focus selected component." class="help-line" />
                     <ui:Label text="Shift + Arrows = pan." class="help-line" />
                     <ui:Label text="Arrows = orbit." class="help-line" />
                     <ui:Label text="Ctrl + Up/Down = zoom." class="help-line" />
                     <ui:Label text="Ctrl + Left/Right = lighting." class="help-line" />
-                    <ui:Label text="PageUp/PageDown or E/Q = nudge vertical." class="help-line" />
+                    <ui:Label text="PageUp/PageDown or Shift+E/Q = nudge vertical." class="help-line" />
                     <ui:Label text="Run Mode 3D uses the same camera shortcuts." class="help-line" />
 
                     <ui:Label text="Project / Code" class="help-section" />

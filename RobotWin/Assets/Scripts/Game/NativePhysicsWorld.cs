@@ -29,17 +29,39 @@ namespace RobotTwin.Game
         [SerializeField] private float _sleepLinearThreshold = 0.05f;
         [SerializeField] private float _sleepAngularThreshold = 0.05f;
         [SerializeField] private float _sleepTime = 0.5f;
+        [Header("Stability")]
+        [SerializeField] private bool _enableSubstepping = true;
+        [SerializeField] private float _maxSubstepDt = 0.01f;
+        [SerializeField] private int _maxSubsteps = 4;
+        [SerializeField] private bool _recordDiagnostics = true;
+        [Header("Presets")]
+        [SerializeField] private bool _usePreset = true;
+        [SerializeField] private PhysicsPreset _preset;
 
         private readonly Dictionary<uint, NativePhysicsBody> _bodyById = new Dictionary<uint, NativePhysicsBody>();
         private readonly Dictionary<NativePhysicsBody, uint> _idByBody = new Dictionary<NativePhysicsBody, uint>();
         private bool _running;
         private bool _externalStepping;
+        private float _lastStepMs;
+        private float _lastStepDt;
+        private int _lastStepSubsteps;
+        private long _stepCount;
+        private bool _effectiveSubstepping;
+        private float _effectiveMaxSubstepDt;
+        private int _effectiveMaxSubsteps;
+        private float _effectiveAmbientTempC;
 
         public bool IsRunning => _running;
         public int BodyCount => _bodyById.Count;
         public bool ExternalStepping => _externalStepping;
-        public float AmbientTempC => _ambientTempC;
+        public float AmbientTempC => _effectiveAmbientTempC;
         public Vector3 Wind => _wind;
+        public float LastStepMs => _lastStepMs;
+        public float LastStepDt => _lastStepDt;
+        public int LastStepSubsteps => _lastStepSubsteps;
+        public long StepCount => _stepCount;
+        public PhysicsPreset ActivePreset => _preset;
+        public bool UsingPreset => _usePreset && _preset != null;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -59,6 +81,7 @@ namespace RobotTwin.Game
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            _effectiveAmbientTempC = _ambientTempC;
             if (_autoStart)
             {
                 Initialize();
@@ -71,6 +94,14 @@ namespace RobotTwin.Game
             if (Instance == this)
             {
                 Instance = null;
+            }
+        }
+
+        private void OnValidate()
+        {
+            if (_running)
+            {
+                ApplyConfig();
             }
         }
 
@@ -105,32 +136,66 @@ namespace RobotTwin.Game
 
         public void ApplyConfig()
         {
+            var preset = _usePreset ? _preset : null;
+            float baseDt = preset != null ? preset.BaseDt : _baseDt;
+            Vector3 gravity = preset != null ? preset.Gravity : _gravity;
+            float gravityJitter = preset != null ? preset.GravityJitter : _gravityJitter;
+            float timeJitter = preset != null ? preset.TimeJitter : _timeJitter;
+            float solverIterations = preset != null ? preset.SolverIterations : _solverIterations;
+            ulong noiseSeed = preset != null ? preset.NoiseSeed : _noiseSeed;
+            float contactSlop = preset != null ? preset.ContactSlop : _contactSlop;
+            float restitution = preset != null ? preset.Restitution : _restitution;
+            float staticFriction = preset != null ? preset.StaticFriction : _staticFriction;
+            float dynamicFriction = preset != null ? preset.DynamicFriction : _dynamicFriction;
+            float airDensity = preset != null ? preset.AirDensity : _airDensity;
+            Vector3 wind = preset != null ? preset.Wind : _wind;
+            float ambientTemp = preset != null ? preset.AmbientTempC : _ambientTempC;
+            float rainIntensity = preset != null ? preset.RainIntensity : _rainIntensity;
+            float thermalExchange = preset != null ? preset.ThermalExchange : _thermalExchange;
+            float sleepLinear = preset != null ? preset.SleepLinearThreshold : _sleepLinearThreshold;
+            float sleepAngular = preset != null ? preset.SleepAngularThreshold : _sleepAngularThreshold;
+            float sleepTime = preset != null ? preset.SleepTime : _sleepTime;
+
+            _effectiveSubstepping = preset != null ? preset.EnableSubstepping : _enableSubstepping;
+            _effectiveMaxSubstepDt = preset != null ? preset.MaxSubstepDt : _maxSubstepDt;
+            _effectiveMaxSubsteps = preset != null ? preset.MaxSubsteps : _maxSubsteps;
+            _effectiveAmbientTempC = ambientTemp;
+
             var cfg = new NativeBridge.PhysicsConfig
             {
-                base_dt = _baseDt,
-                gravity_x = _gravity.x,
-                gravity_y = _gravity.y,
-                gravity_z = _gravity.z,
-                gravity_jitter = _gravityJitter,
-                time_jitter = _timeJitter,
-                solver_iterations = _solverIterations,
-                noise_seed = _noiseSeed,
-                contact_slop = _contactSlop,
-                restitution = _restitution,
-                static_friction = _staticFriction,
-                dynamic_friction = _dynamicFriction,
-                air_density = _airDensity,
-                wind_x = _wind.x,
-                wind_y = _wind.y,
-                wind_z = _wind.z,
-                ambient_temp_c = _ambientTempC,
-                rain_intensity = _rainIntensity,
-                thermal_exchange = _thermalExchange,
-                sleep_linear_threshold = _sleepLinearThreshold,
-                sleep_angular_threshold = _sleepAngularThreshold,
-                sleep_time = _sleepTime
+                base_dt = baseDt,
+                gravity_x = gravity.x,
+                gravity_y = gravity.y,
+                gravity_z = gravity.z,
+                gravity_jitter = gravityJitter,
+                time_jitter = timeJitter,
+                solver_iterations = solverIterations,
+                noise_seed = noiseSeed,
+                contact_slop = contactSlop,
+                restitution = restitution,
+                static_friction = staticFriction,
+                dynamic_friction = dynamicFriction,
+                air_density = airDensity,
+                wind_x = wind.x,
+                wind_y = wind.y,
+                wind_z = wind.z,
+                ambient_temp_c = ambientTemp,
+                rain_intensity = rainIntensity,
+                thermal_exchange = thermalExchange,
+                sleep_linear_threshold = sleepLinear,
+                sleep_angular_threshold = sleepAngular,
+                sleep_time = sleepTime
             };
             NativeBridge.Physics_SetConfig(ref cfg);
+        }
+
+        public void SetPreset(PhysicsPreset preset, bool apply = true)
+        {
+            _preset = preset;
+            if (apply && _running)
+            {
+                ApplyConfig();
+            }
         }
 
         public void RegisterBody(NativePhysicsBody body)
@@ -165,7 +230,7 @@ namespace RobotTwin.Game
                 drag_coefficient = body.DragCoefficient,
                 cross_section_area = body.CrossSectionArea,
                 surface_area = body.SurfaceArea,
-                temperature_c = _ambientTempC,
+                temperature_c = _effectiveAmbientTempC,
                 material_strength = body.MaterialStrength,
                 fracture_toughness = body.FractureToughness,
                 shape_type = (int)body.Shape,
@@ -217,7 +282,7 @@ namespace RobotTwin.Game
                 drag_coefficient = body.DragCoefficient,
                 cross_section_area = body.CrossSectionArea,
                 surface_area = body.SurfaceArea,
-                temperature_c = body.TemperatureC > 0f ? body.TemperatureC : _ambientTempC,
+                temperature_c = body.TemperatureC > 0f ? body.TemperatureC : _effectiveAmbientTempC,
                 material_strength = body.MaterialStrength,
                 fracture_toughness = body.FractureToughness,
                 shape_type = (int)body.Shape,
@@ -250,7 +315,29 @@ namespace RobotTwin.Game
 
         private void StepInternal(float dtSeconds)
         {
-            NativeBridge.Physics_Step(dtSeconds);
+            if (dtSeconds <= 0f) return;
+            int maxSubsteps = Mathf.Max(1, _effectiveMaxSubsteps);
+            float dt = dtSeconds;
+            int substeps = 1;
+            if (_effectiveSubstepping && _effectiveMaxSubstepDt > 0f && dt > _effectiveMaxSubstepDt)
+            {
+                substeps = Mathf.Clamp(Mathf.CeilToInt(dt / _effectiveMaxSubstepDt), 1, maxSubsteps);
+            }
+            float stepDt = dt / substeps;
+            if (stepDt <= 0f) return;
+
+            float start = _recordDiagnostics ? Time.realtimeSinceStartup : 0f;
+            for (int i = 0; i < substeps; i++)
+            {
+                NativeBridge.Physics_Step(stepDt);
+            }
+            if (_recordDiagnostics)
+            {
+                _lastStepMs = (Time.realtimeSinceStartup - start) * 1000f;
+                _lastStepDt = dt;
+                _lastStepSubsteps = substeps;
+                _stepCount++;
+            }
             foreach (var kvp in _bodyById)
             {
                 var id = kvp.Key;

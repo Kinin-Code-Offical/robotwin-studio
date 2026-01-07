@@ -1,36 +1,43 @@
 # Realtime Contract
 
-This document defines the realtime stepping contract between Unity, CoreSim, NativeEngine, and FirmwareEngine.
+This document defines the realtime stepping contract between CoreSim, NativeEngine, FirmwareEngine, and the Unity front end.
 
 ## Goals
-- Stable step cadence under load.
-- Deterministic ordering across domains (firmware, circuit, physics).
-- Clear behavior on missed deadlines (drop, catch-up, or slow-mode).
 
-## Master Clock
+- Stable fixed-step cadence under load.
+- Deterministic ordering across subsystems.
+- Clear behavior on missed deadlines.
+
+## Master clock
+
 - A single master clock advances simulation time.
-- All subsystems consume dt from the master clock (no local drift).
-- Unity visual frame rate must never change simulation time.
+- Subsystems consume the same dt for a given tick.
+- Unity does not advance time.
 
-## Step Ordering (per tick)
-1. Ingest inputs (IO voltages, sensor values, user actions).
-2. Firmware step (MCU runtime) consumes inputs and writes outputs.
-3. Circuit solve consumes MCU outputs and external sources.
-4. Physics step consumes circuit signals and control values.
-5. Emit telemetry and logs.
+## Step order (per tick)
 
-## Deadline Policy
+1. Ingest inputs.
+2. Firmware step.
+3. Circuit solve.
+4. Physics step.
+5. Publish outputs.
+
+## Deadline policy
+
 - Each tick has a target budget (see REALTIME_BUDGETS.md).
-- If a subsystem exceeds its budget:
-  - Fast-path keeps last stable output and logs a "late" marker.
-  - Corrective-path performs a full step when budget allows.
+- Overruns trigger a fast-path to keep cadence and log the miss.
 
-## Required Properties
-- dt must be explicit and monotonic.
-- OutputState must include step_sequence and tick_count.
-- No blocking calls in hot loops (IPC writes are buffered).
+## Implementation pointers
 
-## Unity Responsibilities
-- Unity calls circuit stepping in the logic tick (not per frame).
-- Physics stepping remains separate and may run at a higher fixed rate.
-- Unity never invents time; it only visualizes the latest committed state.
+Unity runtime orchestration and realtime scheduling live in:
+
+- `RobotWin/Assets/Scripts/Game/SimHost.cs` (tick loop, budget counters, fast-path decisions)
+- `RobotWin/Assets/Scripts/Game/RealtimeScheduleConfig.cs` (budget configuration)
+
+Firmware stepping uses the `RTFW` protocol (lockstep or realtime mode) and physics stepping uses `NativeBridge.Physics_Step(dt)`.
+
+## Non-negotiables
+
+- dt must be explicit per step and monotonic.
+- Every output frame is attributable to a step sequence and tick count.
+- Hot loops avoid blocking calls; IO writes are buffered or rate-limited.

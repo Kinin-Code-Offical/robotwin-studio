@@ -50,6 +50,7 @@ Desktop.ini
 
 # Python
 .venv/
+.venv_step/
 __pycache__/
 
 # RoboTwin Specific
@@ -58,6 +59,9 @@ workspace_snapshot.txt
 # Local technical notes (generated/authoring workspace)
 # Note: if these files are already tracked by git, adding them here will NOT remove them from the repo.
 docs/current_status/
+
+# Documentation assets (local-only)
+docs/alp-robot/
 
 # Shared Info & Temp
 templates/

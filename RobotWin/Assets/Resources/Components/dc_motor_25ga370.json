@@ -1,0 +1,76 @@
+{
+  "id": "dc-motor-25ga370",
+  "name": "DC Motor 25GA-370",
+  "description": "25GA-370 geared DC motor (280 rpm)",
+  "type": "DCMotor",
+  "symbol": "M",
+  "iconChar": "M",
+  "order": 61,
+  "pins": ["A", "B"],
+  "specs": [
+    { "key": "Voltage", "value": "6V" },
+    { "key": "Gearbox", "value": "25GA" },
+    { "key": "RPM", "value": "280" }
+  ],
+  "defaults": [{ "key": "nativeConfig", "value": "{\"Voltage\":\"6V\"}" }],
+  "size2D": { "x": 120, "y": 70 },
+  "pinLayout": [
+    {
+      "name": "A",
+      "x": 0.1,
+      "y": 0.3,
+      "label": "A",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.06,
+      "anchorY": 0.02,
+      "anchorZ": -0.03,
+      "anchorRadius": 0.01,
+      "pinType": "lead"
+    },
+    {
+      "name": "B",
+      "x": 0.1,
+      "y": 0.7,
+      "label": "B",
+      "labelOffsetX": 8,
+      "labelOffsetY": -10,
+      "labelSize": 12,
+      "anchorX": -0.06,
+      "anchorY": 0.02,
+      "anchorZ": 0.03,
+      "anchorRadius": 0.01,
+      "pinType": "lead"
+    }
+  ],
+  "labels": [
+    { "text": "{id}", "x": 0.62, "y": 0.5, "size": 14, "align": "center" }
+  ],
+  "shapes": [
+    {
+      "id": "body",
+      "type": "Circle",
+      "x": 0.4,
+      "y": 0.18,
+      "width": 52,
+      "height": 52,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    },
+    {
+      "id": "shaft",
+      "type": "Line",
+      "x": 0.72,
+      "y": 0.34,
+      "width": 28,
+      "height": 0,
+      "text": "",
+      "lineFlip": false,
+      "rotation": 0,
+      "fontSize": 0
+    }
+  ]
+}

@@ -76,6 +76,12 @@ namespace RobotTwin.UI
         private Button _outputAllBtn;
         private Button _outputWarningsBtn;
         private Button _outputClearBtn;
+        private Button _outputCopyBtn;
+        private Button _outputExportBtn;
+        private Button _outputPauseBtn;
+        private Button _outputFollowBtn;
+        private TextField _outputSearchField;
+        private DropdownField _outputTagDropdown;
         private Button _bottomToggleBtn;
         private Label _errorCountLabel;
         private TextField _transformInputX;
@@ -248,6 +254,12 @@ namespace RobotTwin.UI
         }
 
         private OutputFilterMode _outputFilterMode = OutputFilterMode.All;
+        private string _outputSearchQuery = string.Empty;
+        private string _outputTagFilter = "All";
+        private bool _outputPaused;
+        private readonly HashSet<string> _outputTagSet = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> _outputTagOptions = new List<string>();
+        private bool _outputTagNeedsRebuild;
 
         private struct LogEntry
         {
@@ -300,6 +312,11 @@ namespace RobotTwin.UI
         private const float AutoLayoutMinGap = 80f;
         private const float ManualOverlapPadding = 4f;
         private const float PinObstaclePadding = 6f;
+        private const float ShapeTextDefaultFontSize = 10f;
+        private const float ShapeTextMinFontSize = 8f;
+        private const float ShapeTextPadding = 2f;
+        private const float ShapeTextWidthFactor = 0.56f;
+        private const float ShapeTextHeightFactor = 1.2f;
         private bool _constrainComponentsToBoard = true;
         private const float BoardWorldWidth = CircuitLayoutSizing.BoardWorldWidth;
         private const float BoardWorldHeight = CircuitLayoutSizing.BoardWorldHeight;
@@ -688,6 +705,12 @@ namespace RobotTwin.UI
             _outputAllBtn = _root.Q<Button>("OutputFilterAllBtn");
             _outputWarningsBtn = _root.Q<Button>("OutputFilterWarningsBtn");
             _outputClearBtn = _root.Q<Button>("OutputClearBtn");
+            _outputCopyBtn = _root.Q<Button>("OutputCopyBtn");
+            _outputExportBtn = _root.Q<Button>("OutputExportBtn");
+            _outputPauseBtn = _root.Q<Button>("OutputPauseBtn");
+            _outputFollowBtn = _root.Q<Button>("OutputFollowBtn");
+            _outputSearchField = _root.Q<TextField>("OutputSearchField");
+            _outputTagDropdown = _root.Q<DropdownField>("OutputTagDropdown");
             _bottomToggleBtn = _root.Q<Button>("BottomToggleBtn");
             _preferencesOverlay = _root.Q<VisualElement>("PreferencesOverlay");
             _prefProjectNameField = _root.Q<TextField>("PrefProjectNameField");
@@ -816,6 +839,28 @@ namespace RobotTwin.UI
             _outputWarningsBtn?.RegisterCallback<ClickEvent>(_ => SetOutputFilter(OutputFilterMode.Warnings));
             _outputErrorsBtn?.RegisterCallback<ClickEvent>(_ => SetOutputFilter(OutputFilterMode.Errors));
             _outputClearBtn?.RegisterCallback<ClickEvent>(_ => ClearOutputLogs());
+            _outputCopyBtn?.RegisterCallback<ClickEvent>(_ => CopyOutputLogs());
+            _outputExportBtn?.RegisterCallback<ClickEvent>(_ => ExportOutputLogs());
+            _outputPauseBtn?.RegisterCallback<ClickEvent>(_ => ToggleOutputPause());
+            _outputFollowBtn?.RegisterCallback<ClickEvent>(_ => ToggleOutputFollow());
+            if (_outputSearchField != null)
+            {
+                _outputSearchField.isDelayed = false;
+                _outputSearchField.RegisterValueChangedCallback(evt =>
+                {
+                    _outputSearchQuery = evt?.newValue?.Trim() ?? string.Empty;
+                    RefreshOutputConsole();
+                });
+            }
+            if (_outputTagDropdown != null)
+            {
+                EnsureOutputTagOptions();
+                _outputTagDropdown.RegisterValueChangedCallback(evt =>
+                {
+                    _outputTagFilter = string.IsNullOrWhiteSpace(evt?.newValue) ? "All" : evt.newValue;
+                    RefreshOutputConsole();
+                });
+            }
             _bottomToggleBtn?.RegisterCallback<ClickEvent>(_ => ToggleBottomPanel());
             _codeFileMenuBtn?.RegisterCallback<ClickEvent>(_ => ShowCodeFileMenu());
             _codeBuildMenuBtn?.RegisterCallback<ClickEvent>(_ => ShowCodeBuildMenu());
@@ -1400,6 +1445,7 @@ namespace RobotTwin.UI
             menu.AddItem("Wire Report", false, LogWireReport);
             menu.AddItem("Prune Dangling Nets", false, PruneDanglingNets);
             menu.AddItem("Highlight Floating Pins", _showFloatingPins, ToggleFloatingPinsHighlight);
+            menu.AddItem("Clear Wire Preview", false, ClearWirePreview);
             menu.AddSeparator(string.Empty);
             menu.AddItem("Export Wire Matrix", false, ExportWireMatrix);
             menu.DropDown(_menuRoute.worldBound, _root, DropdownMenuSizeMode.Auto);
@@ -2045,6 +2091,7 @@ namespace RobotTwin.UI
                     _outputAllBtn?.AddToClassList("active");
                     break;
             }
+            UpdateOutputControlButtons();
         }
 
         private void ToggleBottomPanel()
@@ -7143,6 +7190,14 @@ namespace RobotTwin.UI
                     if (string.IsNullOrWhiteSpace(shape.Type)) continue;
                     var shapePos = ResolveLayoutPosition(shape.Position, size);
                     var shapeSize = ResolveLayoutSize(new Vector2(shape.Width, shape.Height), size);
+                    if (string.Equals(shape.Type, "Text", StringComparison.OrdinalIgnoreCase))
+                    {
+                        float fontSize = shape.FontSize > 0f ? shape.FontSize : ShapeTextDefaultFontSize;
+                        fontSize = Mathf.Max(ShapeTextMinFontSize, fontSize);
+                        var textSize = EstimateShapeTextSize(shape.Text, fontSize);
+                        float pad = Mathf.Max(ShapeTextPadding, fontSize * 0.2f);
+                        shapeSize = new Vector2(textSize.x + pad * 2f, textSize.y + pad);
+                    }
                     var element = new LayoutShapeVisual(shape);
                     element.AddToClassList("custom-shape");
                     element.style.position = Position.Absolute;
@@ -7195,6 +7250,26 @@ namespace RobotTwin.UI
             return text;
         }
 
+        private static Vector2 EstimateShapeTextSize(string text, float fontSize)
+        {
+            if (string.IsNullOrWhiteSpace(text)) text = " ";
+            float width = text.Length * fontSize * ShapeTextWidthFactor;
+            float height = fontSize * ShapeTextHeightFactor;
+            return new Vector2(Mathf.Max(6f, width), Mathf.Max(6f, height));
+        }
+
+        private static Vector2 RotateShapePoint(Vector2 point, Vector2 center, float angleDeg)
+        {
+            if (Mathf.Abs(angleDeg) < 0.01f) return point;
+            float rad = angleDeg * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(rad);
+            float sin = Mathf.Sin(rad);
+            var offset = point - center;
+            return new Vector2(
+                offset.x * cos - offset.y * sin + center.x,
+                offset.x * sin + offset.y * cos + center.y);
+        }
+
         private static void ApplyLabelAlignment(Label label, string alignment)
         {
             if (label == null || string.IsNullOrWhiteSpace(alignment)) return;
@@ -7229,6 +7304,10 @@ namespace RobotTwin.UI
                     _textLabel.AddToClassList("custom-shape-text");
                     _textLabel.style.flexGrow = 1f;
                     _textLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                    if (shape.FontSize > 0f)
+                    {
+                        _textLabel.style.fontSize = Mathf.Max(8f, shape.FontSize);
+                    }
                     Add(_textLabel);
                 }
             }
@@ -7248,18 +7327,35 @@ namespace RobotTwin.UI
                 }
                 if (type.Equals("Line", StringComparison.OrdinalIgnoreCase))
                 {
-                    float midY = rect.y + rect.height * 0.5f;
+                    Vector2 start;
+                    Vector2 end;
+                    if (_shape.LineFlip)
+                    {
+                        start = new Vector2(rect.x + rect.width, rect.y);
+                        end = new Vector2(rect.x, rect.y + rect.height);
+                    }
+                    else
+                    {
+                        start = new Vector2(rect.x, rect.y);
+                        end = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                    }
+                    var center = rect.center;
+                    float rotation = _shape.Rotation;
+                    start = RotateShapePoint(start, center, rotation);
+                    end = RotateShapePoint(end, center, rotation);
                     painter.BeginPath();
-                    painter.MoveTo(new Vector2(rect.x, midY));
-                    painter.LineTo(new Vector2(rect.x + rect.width, midY));
+                    painter.MoveTo(start);
+                    painter.LineTo(end);
                     painter.Stroke();
                     return;
                 }
                 if (type.Equals("Triangle", StringComparison.OrdinalIgnoreCase))
                 {
-                    var p1 = new Vector2(rect.x + rect.width * 0.5f, rect.y);
-                    var p2 = new Vector2(rect.x + rect.width, rect.y + rect.height);
-                    var p3 = new Vector2(rect.x, rect.y + rect.height);
+                    var center = rect.center;
+                    float rotation = _shape.Rotation;
+                    var p1 = RotateShapePoint(new Vector2(rect.x + rect.width * 0.5f, rect.y), center, rotation);
+                    var p2 = RotateShapePoint(new Vector2(rect.x + rect.width, rect.y + rect.height), center, rotation);
+                    var p3 = RotateShapePoint(new Vector2(rect.x, rect.y + rect.height), center, rotation);
                     painter.BeginPath();
                     painter.MoveTo(p1);
                     painter.LineTo(p2);
@@ -7287,11 +7383,17 @@ namespace RobotTwin.UI
                     return;
                 }
 
+                var boxCenter = rect.center;
+                float boxRotation = _shape.Rotation;
+                var b1 = RotateShapePoint(new Vector2(rect.x, rect.y), boxCenter, boxRotation);
+                var b2 = RotateShapePoint(new Vector2(rect.x + rect.width, rect.y), boxCenter, boxRotation);
+                var b3 = RotateShapePoint(new Vector2(rect.x + rect.width, rect.y + rect.height), boxCenter, boxRotation);
+                var b4 = RotateShapePoint(new Vector2(rect.x, rect.y + rect.height), boxCenter, boxRotation);
                 painter.BeginPath();
-                painter.MoveTo(new Vector2(rect.x, rect.y));
-                painter.LineTo(new Vector2(rect.x + rect.width, rect.y));
-                painter.LineTo(new Vector2(rect.x + rect.width, rect.y + rect.height));
-                painter.LineTo(new Vector2(rect.x, rect.y + rect.height));
+                painter.MoveTo(b1);
+                painter.LineTo(b2);
+                painter.LineTo(b3);
+                painter.LineTo(b4);
                 painter.ClosePath();
                 painter.Fill();
                 painter.Stroke();
@@ -7717,9 +7819,72 @@ namespace RobotTwin.UI
             RestoreCircuitFromSnapshot(snapshot);
         }
 
+        private void ResetTransientStatesForHistory()
+        {
+            if (_helpOverlay != null && _helpOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HideHelpOverlay();
+            }
+            if (_preferencesOverlay != null && _preferencesOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HidePreferences();
+            }
+            if (_netEditorOverlay != null && _netEditorOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HideNetEditor();
+            }
+            if (_wireExportOverlay != null && _wireExportOverlay.resolvedStyle.display != DisplayStyle.None)
+            {
+                HideWireExportProgress();
+            }
+            if (_circuit3DHelpTooltip != null && _circuit3DHelpTooltip.style.display == DisplayStyle.Flex)
+            {
+                _circuit3DHelpTooltip.style.display = DisplayStyle.None;
+            }
+            if (_isBoxSelecting)
+            {
+                CancelBoxSelection();
+            }
+            if (_isMovingSelection)
+            {
+                CancelGroupMove();
+            }
+            if (_isMovingComponent)
+            {
+                CancelComponentMove();
+            }
+            if (_isPanningCanvas)
+            {
+                CancelCanvasPan();
+            }
+            if (_currentTool == ToolMode.Wire)
+            {
+                CancelWireMode();
+            }
+            if (_isDragging)
+            {
+                CancelLibraryDrag();
+            }
+            if (_isResizing && _resizeTarget != null && _resizePointerId != -1 && _resizeTarget.HasPointerCapture(_resizePointerId))
+            {
+                _resizeTarget.ReleasePointer(_resizePointerId);
+            }
+            _isResizing = false;
+            _resizePointerId = -1;
+            _resizeMode = ResizeMode.None;
+            if (_is3DDragging && _circuit3DView != null && _3dPointerId != -1 && _circuit3DView.HasPointerCapture(_3dPointerId))
+            {
+                _circuit3DView.ReleasePointer(_3dPointerId);
+            }
+            _is3DDragging = false;
+            _3dPointerId = -1;
+            _3dDragMode = ThreeDDragMode.None;
+        }
+
         private void RestoreCircuitFromSnapshot(CircuitSpec snapshot)
         {
             if (snapshot == null) return;
+            ResetTransientStatesForHistory();
             _isRestoringState = true;
             _currentCircuit = CloneCircuitSpec(snapshot);
             NormalizeCircuit();
@@ -9877,40 +10042,7 @@ namespace RobotTwin.UI
             if (SessionManager.Instance != null)
             {
                 _currentCircuit.Mode = RobotTwin.CoreSim.Specs.SimulationMode.Fast;
-                bool hasBvm = false;
-                bool hasVirtualFirmware = false;
-                if (_currentCircuit?.Components != null)
-                {
-                    foreach (var comp in _currentCircuit.Components)
-                    {
-                        if (comp?.Properties == null) continue;
-                        if (comp.Properties.TryGetValue("bvmPath", out var bvmPath) && File.Exists(bvmPath))
-                        {
-                            hasBvm = true;
-                        }
-                        if (comp.Properties.TryGetValue("virtualFirmware", out var virtualFirmware) &&
-                            !string.IsNullOrWhiteSpace(virtualFirmware))
-                        {
-                            hasVirtualFirmware = true;
-                        }
-                    }
-                }
-                if (hasBvm)
-                {
-                    SessionManager.Instance.FindFirmware();
-                    bool hasExternalFirmware = !string.IsNullOrWhiteSpace(SessionManager.Instance.FirmwarePath)
-                        && File.Exists(SessionManager.Instance.FirmwarePath);
-                    if (hasVirtualFirmware)
-                    {
-                        SessionManager.Instance.UseVirtualMcu = true;
-                        SessionManager.Instance.UseNativeEnginePins = false;
-                    }
-                    else
-                    {
-                        SessionManager.Instance.UseVirtualMcu = false;
-                        SessionManager.Instance.UseNativeEnginePins = !hasExternalFirmware;
-                    }
-                }
+                SessionManager.Instance.ConfigureFirmwareMode(_currentCircuit);
                 SessionManager.Instance.StartSession(_currentCircuit);
             }
             UnityEngine.SceneManagement.SceneManager.LoadScene("RunMode");
@@ -10017,16 +10149,21 @@ namespace RobotTwin.UI
             while (_pendingLogs.TryDequeue(out var entry))
             {
                 _logEntries.Add(entry);
+                TrackOutputTag(entry);
                 if (_logEntries.Count > MaxOutputLines)
                 {
                     _logEntries.RemoveAt(0);
+                    _outputTagNeedsRebuild = true;
                 }
                 changed = true;
             }
 
             if (changed)
             {
-                RefreshOutputConsole();
+                if (!_outputPaused)
+                {
+                    RefreshOutputConsole();
+                }
             }
         }
 
@@ -10038,7 +10175,7 @@ namespace RobotTwin.UI
             VisualElement lastLine = null;
             foreach (var entry in _logEntries)
             {
-                if (!ShouldShowLog(entry.Type)) continue;
+                if (!ShouldShowLog(entry)) continue;
                 string stamp = entry.Time.ToString("HH:mm:ss.fff");
                 var line = new Label($"[{stamp}] [{GetLogLabel(entry.Type)}] {entry.Message}");
                 line.AddToClassList("console-line");
@@ -10083,11 +10220,94 @@ namespace RobotTwin.UI
             {
                 _outputPanel.scrollOffset = Vector2.zero;
             }
+            _outputTagSet.Clear();
+            _outputTagNeedsRebuild = false;
+            _outputTagFilter = "All";
+            EnsureOutputTagOptions();
+            UpdateOutputControlButtons();
+        }
+
+        private void CopyOutputLogs()
+        {
+            if (_logEntries.Count == 0) return;
+            GUIUtility.systemCopyBuffer = BuildOutputText();
+        }
+
+        private void ExportOutputLogs()
+        {
+            if (_logEntries.Count == 0) return;
+            string dir = Path.Combine(Application.persistentDataPath, "Logs", "CircuitStudio");
+            Directory.CreateDirectory(dir);
+            string path = Path.Combine(dir, $"console_log_{System.DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            File.WriteAllText(path, BuildOutputText());
+            LogNoStack(LogType.Log, $"[Console] Exported output log to {path}");
+        }
+
+        private string BuildOutputText()
+        {
+            var sb = new StringBuilder();
+            foreach (var entry in _logEntries)
+            {
+                if (!ShouldShowLog(entry)) continue;
+                string stamp = entry.Time.ToString("HH:mm:ss.fff");
+                sb.Append('[').Append(stamp).Append("] [").Append(GetLogLabel(entry.Type)).Append("] ")
+                    .Append(entry.Message).AppendLine();
+                if (!string.IsNullOrWhiteSpace(entry.Stack) && IsErrorType(entry.Type))
+                {
+                    sb.AppendLine(entry.Stack.Trim());
+                }
+            }
+            return sb.ToString();
+        }
+
+        private void ToggleOutputPause()
+        {
+            _outputPaused = !_outputPaused;
+            UpdateOutputControlButtons();
+            if (!_outputPaused)
+            {
+                RefreshOutputConsole();
+            }
+        }
+
+        private void ToggleOutputFollow()
+        {
+            _outputAutoFollow = !_outputAutoFollow;
+            UpdateOutputControlButtons();
+            if (_outputAutoFollow && _outputPanel != null)
+            {
+                _outputPanel.scrollOffset = new Vector2(0f, float.MaxValue);
+            }
+        }
+
+        private void UpdateOutputControlButtons()
+        {
+            if (_outputPauseBtn != null)
+            {
+                _outputPauseBtn.text = _outputPaused ? "Resume" : "Pause";
+                SetOutputButtonActive(_outputPauseBtn, _outputPaused);
+            }
+            if (_outputFollowBtn != null)
+            {
+                _outputFollowBtn.text = _outputAutoFollow ? "Follow On" : "Follow Off";
+                SetOutputButtonActive(_outputFollowBtn, _outputAutoFollow);
+            }
+        }
+
+        private static void SetOutputButtonActive(VisualElement button, bool active)
+        {
+            if (button == null) return;
+            if (active) button.AddToClassList("active");
+            else button.RemoveFromClassList("active");
         }
 
         private void InitializeOutputAutoScroll()
         {
-            SetupAutoFollow(_outputPanel, value => _outputAutoFollow = value);
+            SetupAutoFollow(_outputPanel, value =>
+            {
+                _outputAutoFollow = value;
+                UpdateOutputControlButtons();
+            });
         }
 
         private static void SetupAutoFollow(ScrollView scrollView, Action<bool> setFlag)
@@ -10134,6 +10354,92 @@ namespace RobotTwin.UI
                 default:
                     return true;
             }
+        }
+
+        private bool ShouldShowLog(LogEntry entry)
+        {
+            if (!ShouldShowLog(entry.Type)) return false;
+            if (!PassesTagFilter(entry)) return false;
+            if (string.IsNullOrWhiteSpace(_outputSearchQuery)) return true;
+
+            if (!string.IsNullOrWhiteSpace(entry.Message) &&
+                entry.Message.IndexOf(_outputSearchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Stack) &&
+                entry.Stack.IndexOf(_outputSearchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private void TrackOutputTag(LogEntry entry)
+        {
+            string tag = GetLogTag(entry.Message);
+            if (_outputTagSet.Add(tag))
+            {
+                EnsureOutputTagOptions();
+            }
+        }
+
+        private void EnsureOutputTagOptions()
+        {
+            if (_outputTagNeedsRebuild)
+            {
+                RebuildOutputTagSet();
+            }
+            _outputTagOptions.Clear();
+            _outputTagOptions.Add("All");
+            foreach (var tag in _outputTagSet.OrderBy(t => t, System.StringComparer.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(tag)) continue;
+                _outputTagOptions.Add(tag);
+            }
+            if (_outputTagDropdown != null)
+            {
+                _outputTagDropdown.choices = new List<string>(_outputTagOptions);
+                string desired = string.IsNullOrWhiteSpace(_outputTagFilter) ? "All" : _outputTagFilter;
+                if (!_outputTagOptions.Any(t => string.Equals(t, desired, System.StringComparison.OrdinalIgnoreCase)))
+                {
+                    desired = "All";
+                    _outputTagFilter = "All";
+                }
+                _outputTagDropdown.SetValueWithoutNotify(desired);
+            }
+        }
+
+        private void RebuildOutputTagSet()
+        {
+            _outputTagSet.Clear();
+            foreach (var entry in _logEntries)
+            {
+                _outputTagSet.Add(GetLogTag(entry.Message));
+            }
+            _outputTagNeedsRebuild = false;
+        }
+
+        private bool PassesTagFilter(LogEntry entry)
+        {
+            if (string.IsNullOrWhiteSpace(_outputTagFilter) || string.Equals(_outputTagFilter, "All", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            string tag = GetLogTag(entry.Message);
+            return string.Equals(tag, _outputTagFilter, System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetLogTag(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message)) return "General";
+            if (message[0] != '[') return "General";
+            int end = message.IndexOf(']');
+            if (end <= 1) return "General";
+            string tag = message.Substring(1, end - 1).Trim();
+            return string.IsNullOrWhiteSpace(tag) ? "General" : tag;
         }
 
         private static bool IsErrorType(LogType type)
@@ -10193,7 +10499,7 @@ namespace RobotTwin.UI
                 return;
             }
 
-            if (evt.button == 0)
+            if (evt.button == 0 || evt.button == 2)
             {
                 _3dDragMode = ThreeDDragMode.Pan;
             }
@@ -10223,7 +10529,7 @@ namespace RobotTwin.UI
             _3dLastPos = (Vector2)evt.position;
             if (_3dDragMode == ThreeDDragMode.Pan)
             {
-                _circuit3DRenderer.Pan(delta);
+                _circuit3DRenderer.Pan(new Vector2(delta.x, -delta.y));
             }
             else if (_3dDragMode == ThreeDDragMode.Orbit)
             {
@@ -10252,7 +10558,7 @@ namespace RobotTwin.UI
         private void On3DWheel(WheelEvent evt)
         {
             if (_centerMode != CenterPanelMode.Preview3D) return;
-            float wheel = evt.delta.y;
+            float wheel = -evt.delta.y;
             float zoomDelta;
             if (Mathf.Abs(wheel) < 1.5f)
             {
@@ -10331,12 +10637,12 @@ namespace RobotTwin.UI
                     return true;
                 }
             }
-            if (evt.keyCode == KeyCode.PageUp || evt.keyCode == KeyCode.E)
+            if (evt.keyCode == KeyCode.PageUp || (evt.shiftKey && evt.keyCode == KeyCode.E))
             {
                 _circuit3DRenderer.NudgePanCameraVertical(1f);
                 return true;
             }
-            if (evt.keyCode == KeyCode.PageDown || evt.keyCode == KeyCode.Q)
+            if (evt.keyCode == KeyCode.PageDown || (evt.shiftKey && evt.keyCode == KeyCode.Q))
             {
                 _circuit3DRenderer.NudgePanCameraVertical(-1f);
                 return true;
@@ -11337,6 +11643,9 @@ namespace RobotTwin.UI
             public float Width;
             public float Height;
             public string Text;
+            public bool LineFlip;
+            public float Rotation;
+            public float FontSize;
         }
 
         public struct Tuning
@@ -11759,7 +12068,10 @@ namespace RobotTwin.UI
                     Position = new Vector2(entry.x, entry.y),
                     Width = entry.width,
                     Height = entry.height,
-                    Text = entry.text ?? string.Empty
+                    Text = entry.text ?? string.Empty,
+                    LineFlip = entry.lineFlip,
+                    Rotation = entry.rotation,
+                    FontSize = entry.fontSize
                 });
             }
             return list;
@@ -11885,6 +12197,9 @@ namespace RobotTwin.UI
             public float width;
             public float height;
             public string text;
+            public bool lineFlip;
+            public float rotation;
+            public float fontSize;
         }
 
         [System.Serializable]

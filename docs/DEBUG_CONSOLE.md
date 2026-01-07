@@ -1,6 +1,6 @@
 # Debug Console
 
-The Debug Console is a local web dashboard for running common tasks and browsing logs from the repo.
+The Debug Console is a local web dashboard for running common tasks and browsing logs.
 
 ## Launch
 
@@ -8,20 +8,14 @@ The Debug Console is a local web dashboard for running common tasks and browsing
 python tools/rt_tool.py debug-console
 ```
 
-The server runs at `http://localhost:8090`.
+The server starts on http://127.0.0.1:8090 and will pick the next open port up to 8100.
 
-## Features
+## What it does
 
-- Run CoreSim, physics, Unity smoke, native build, firmware build, and QA tests.
-- Capture all command output into `logs/debug_console`.
-- Browse logs from `logs/unity`, `logs/firmware`, `logs/native`, and `logs/tools`.
-- View detected COM ports (including com0com virtual ports when present).
-- Monitor Unity simulation status and component telemetry (when the Unity RemoteCommandServer is running).
-- Inspect CoreSim <-> NativeEngine bridge status and the draft contract keys.
-- Track NativeEngine physics world status and body counts.
-- Stream bridge snapshots from Unity into `logs/native/bridge.log` (via `BridgeLogWriter`).
+- Runs common build, validation, and test actions by invoking the same scripts behind `rt_tool.py`.
+- Provides a simple UI for browsing `logs/` outputs.
 
-## Outputs
+## Notes
 
-- Test runs are stored as timestamped `.log` files in `logs/debug_console`.
-- Log previews in the UI default to the most recent 400 lines.
+- Logs are stored in `logs/debug_console/`.
+- The dashboard can launch build and validation tasks that are also available in `rt_tool.py`.

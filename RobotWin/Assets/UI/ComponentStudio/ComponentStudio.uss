@@ -52,7 +52,7 @@
 
 .component-studio-root .toolbar-btn.active {
     background-color: var(--accent);
-    color: #0b0f14;
+    color: var(--bg-0);
     border-top-color: var(--accent);
     border-bottom-color: var(--accent);
     border-left-color: var(--accent);
@@ -258,7 +258,7 @@
 
 .primary-button {
     background-color: var(--accent-2);
-    color: #0b0f14;
+    color: var(--bg-0);
     border-radius: 6px;
     padding-left: 12px;
     padding-right: 12px;
@@ -371,6 +371,7 @@
     font-size: 9px;
     color: var(--text-0);
     -unity-text-align: middle-center;
+    white-space: nowrap;
 }
 
 .studio-viewport-panel {
@@ -520,14 +521,14 @@
 }
 
 .layout-help-title {
-    color: #38bdf8;
+    color: var(--accent);
     font-size: 10px;
     margin-bottom: 4px;
     -unity-font-style: bold;
 }
 
 .layout-help-line {
-    color: #cbd5f5;
+    color: var(--text-1);
     font-size: 10px;
     margin-bottom: 2px;
 }
@@ -571,7 +572,7 @@
     position: absolute;
     left: 0;
     top: 52px;
-    bottom: 110px;
+    bottom: 12px;
     width: 190px;
     background-color: rgba(9, 12, 18, 0.82);
     border-radius: 0 10px 10px 0;
@@ -690,6 +691,37 @@
 .viewport-edit-panel.inline .viewport-edit-row {
     margin-bottom: 4px;
     min-height: 22px;
+}
+
+.viewport-edit-dock {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: 210px;
+    padding: 8px 9px;
+    border-radius: 10px;
+    background-color: rgba(9, 12, 18, 0.82);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    flex-direction: column-reverse;
+}
+
+.viewport-edit-dock-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+.viewport-edit-dock-title {
+    font-size: 10px;
+    color: var(--text-2);
 }
 
 .viewport-edit-row.mode-row {
@@ -1029,6 +1061,61 @@
 }
 
 .modal-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(10, 12, 16, 0.7);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-card {
+    width: 420px;
+    background-color: #141a22;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: #243041;
+    padding: 16px;
+    flex-direction: column;
+}
+
+.modal-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--text-0);
+    margin-bottom: 6px;
+}
+
+.modal-body {
+    flex-direction: column;
+}
+
+.modal-label {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: 8px;
+}
+
+.modal-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.help-card {
+    width: 460px;
+}
+
+.help-line {
+    font-size: 11px;
+    color: var(--text-1);
+    margin-top: 2px;
+}
+
+.confirm-card {
+    width: 380px;
 }
 
 .studio-loading-card {

@@ -1,28 +1,33 @@
-﻿# Troubleshooting
+# Troubleshooting
 
-Common issues and quick fixes.
+## Unity does not open
 
-## Unity Does Not Open
+- Verify the Unity version from `RobotWin/ProjectSettings/ProjectVersion.txt`.
+- Open `RobotWin/` directly from Unity Hub.
 
-- Verify Unity 6000.3.2f1 is installed.
-- Open `RobotWin` directly from Unity Hub.
-
-## Missing Plugins in Unity
+## Missing native plugins
 
 - Run `python tools/rt_tool.py update-unity-plugins`.
-- Ensure `RobotWin/Assets/Plugins` has the generated DLLs.
+- Check `RobotWin/Assets/Plugins` for updated DLLs.
 
-## Unity Compile Errors After Pull
+## Unity smoke test skips immediately
 
-- Delete `RobotWin/Library` (Unity will regenerate).
-- Reopen the project and resync plugins.
+- `python tools/rt_tool.py run-unity-smoke` uses a default Unity path in `tools/scripts/run_unity_smoke.ps1`.
+- If Unity is installed elsewhere, update the script parameter or install the matching editor version.
 
-## Firmware Build Fails
+## Build failures
 
-- Ensure Visual Studio Build Tools are installed.
-- Confirm CMake and the C++ workload are available.
+- Run `python tools/rt_tool.py setup --check-only` to confirm prerequisites.
+- Verify CMake and a C++ compiler are on PATH.
+
+## Integration tests fail (Node)
+
+- Run `python tools/rt_tool.py run-qa` once to populate `tests/integration/node_modules`.
+- If `npm install` is slow or blocked, verify proxy settings or run it manually in `tests/integration/`.
 
 ## Logs
 
 - Unity logs: `logs/unity/`
-- Tool outputs: `logs/tools/`
+- Firmware logs: `logs/firmware/`
+- Native logs: `logs/native/`
+- Tool logs: `logs/tools/`
