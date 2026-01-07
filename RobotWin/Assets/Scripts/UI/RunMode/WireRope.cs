@@ -746,10 +746,20 @@ namespace RobotTwin.UI
         private static Material GetWireMaterial()
         {
             if (_wireMaterial != null) return _wireMaterial;
-            // Opaque plastic look for the wire itself (non-metallic).
-            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            // IMPORTANT: The wire color is driven via LineRenderer vertex colors.
+            // Many lit shaders ignore vertex colors, which makes all wires look the same.
+            // Prefer a shader known to respect vertex colors.
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ??
+                Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Sprites/Default") ??
+                Shader.Find("Unlit/Color") ??
+                Shader.Find("Standard");
             if (shader == null) return null;
             _wireMaterial = new Material(shader) { name = "Circuit3D_WirePlastic" };
+
+            // Keep material tint neutral so vertex colors show as-is.
+            if (_wireMaterial.HasProperty("_BaseColor")) _wireMaterial.SetColor("_BaseColor", Color.white);
+            if (_wireMaterial.HasProperty("_Color")) _wireMaterial.SetColor("_Color", Color.white);
 
             if (_wireMaterial.HasProperty("_Metallic")) _wireMaterial.SetFloat("_Metallic", 0f);
             if (_wireMaterial.HasProperty("_Glossiness")) _wireMaterial.SetFloat("_Glossiness", 0.25f);

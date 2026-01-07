@@ -77,7 +77,6 @@
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    row-gap: 4px;
 }
 
 .left-panel-tabs .tab-btn {
@@ -86,6 +85,7 @@
     font-size: 9px;
     padding: 3px 5px;
     margin-right: 5px;
+    margin-bottom: 4px;
 }
 
 .left-tab-panel {
@@ -148,8 +148,8 @@
 }
 
 .form-label {
-    font-size: 9px;
-    color: var(--text-2);
+    font-size: 10px;
+    color: var(--text-1);
     margin-bottom: 3px;
 }
 
@@ -232,7 +232,7 @@
 
 .toggle-field {
     margin-right: 8px;
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-1);
 }
 
@@ -378,7 +378,7 @@
 
 .studio-viewport-panel {
     flex-grow: 1;
-    padding: 12px 24px;
+    padding: 0;
     min-height: 0;
     min-width: 0;
     position: relative;
@@ -388,15 +388,11 @@
 .studio-viewport {
     flex-grow: 1;
     background-color: var(--bg-0);
-    border-radius: 10px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-color: var(--line);
-    border-bottom-color: var(--line);
-    border-left-color: var(--line);
-    border-right-color: var(--line);
+    border-radius: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-right-width: 0;
     align-items: center;
     justify-content: center;
     -unity-background-scale-mode: scale-and-crop;
@@ -537,8 +533,8 @@
 
 .view-cube {
     position: absolute;
-    left: 24px;
-    bottom: 24px;
+    left: 12px;
+    bottom: 12px;
     width: 90px;
     height: 90px;
     background-color: rgba(10, 14, 20, 0.82);
@@ -572,8 +568,8 @@
 
 .viewport-tools {
     position: absolute;
-    left: 24px;
-    top: 58px;
+    left: 12px;
+    top: 12px;
     bottom: auto;
     width: 190px;
     background-color: rgba(9, 12, 18, 0.82);
@@ -658,7 +654,7 @@
 .viewport-edit-panel {
     position: absolute;
     top: 56px;
-    left: 24px;
+    left: 12px;
     width: 260px;
     background-color: rgba(9, 12, 18, 0.78);
     border-radius: 10px;
@@ -697,8 +693,8 @@
 
 .viewport-edit-dock {
     position: absolute;
-    right: 24px;
-    bottom: 24px;
+    right: 12px;
+    bottom: 12px;
     width: 210px;
     padding: 8px 9px;
     border-radius: 10px;
@@ -766,8 +762,8 @@
 .component-studio-root .circuit-3d-controls {
     width: 200px;
     padding: 7px 8px;
-    top: 16px;
-    right: 16px;
+    top: 12px;
+    right: 12px;
 }
 
 .component-studio-root .circuit-3d-controls-row {
@@ -962,7 +958,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 8px;
+    padding: 7px 10px;
     border-radius: 6px;
     margin-bottom: 4px;
     background-color: rgba(15, 23, 42, 0.4);
@@ -980,14 +976,14 @@
 
 .catalog-item-label,
 .hierarchy-item-label {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-0);
     -unity-text-align: middle-left;
     flex-grow: 1;
 }
 
 .hierarchy-item-kind {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-2);
     margin-left: 6px;
 }
@@ -1032,11 +1028,11 @@
     border-bottom-width: 0;
     border-left-width: 0;
     border-right-width: 0;
-    color: var(--text-1);
-    font-size: 9px;
+    color: var(--text-0);
+    font-size: 10px;
     -unity-text-align: middle-left;
     padding: 5px 7px;
-    height: 24px;
+    height: 26px;
 }
 
 .menu-item:hover {
@@ -1113,9 +1109,10 @@
 }
 
 .help-line {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-1);
-    margin-top: 2px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .confirm-card {
@@ -1324,4 +1321,260 @@
     background-color: transparent;
     border-width: 0;
     color: var(--text-0, #f8fafc);
+}
+
+.component-studio-root .input-dark.unity-base-popup-field,
+.component-studio-root .input-dark.unity-popup-field {
+    background-color: var(--panel-strong);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    border-radius: 6px;
+    color: var(--text-0);
+    height: 22px;
+}
+
+.component-studio-root .input-dark .unity-base-popup-field__text,
+.component-studio-root .input-dark .unity-popup-field__text {
+    color: var(--text-0);
+}
+
+.component-studio-root .input-dark .unity-base-popup-field__input,
+.component-studio-root .input-dark .unity-popup-field__input {
+    background-color: transparent;
+    color: var(--text-0);
+}
+
+.component-studio-root .input-dark .unity-base-popup-field__arrow,
+.component-studio-root .input-dark .unity-popup-field__arrow {
+    -unity-background-image-tint-color: var(--text-2);
+}
+
+.component-studio-root .unity-base-popup-field__menu,
+.component-studio-root .unity-popup-field__menu {
+    background-color: var(--panel-strong);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    border-radius: 6px;
+    color: var(--text-1);
+}
+
+.component-studio-root .unity-base-popup-field__menu .unity-list-view__item,
+.component-studio-root .unity-popup-field__menu .unity-list-view__item,
+.component-studio-root .unity-base-popup-field__menu .unity-base-popup-field__item,
+.component-studio-root .unity-popup-field__menu .unity-popup-field__item {
+    color: var(--text-1);
+    background-color: transparent;
+}
+
+.component-studio-root .unity-base-popup-field__menu .unity-list-view__item:hover,
+.component-studio-root .unity-popup-field__menu .unity-list-view__item:hover,
+.component-studio-root .unity-base-popup-field__menu .unity-base-popup-field__item:hover,
+.component-studio-root .unity-popup-field__menu .unity-popup-field__item:hover {
+    background-color: rgba(56, 189, 248, 0.12);
+    color: var(--text-0);
+}
+
+.component-studio-root .unity-base-popup-field__menu .unity-list-view__item--selected,
+.component-studio-root .unity-popup-field__menu .unity-list-view__item--selected,
+.component-studio-root .unity-base-popup-field__menu .unity-base-popup-field__item--selected,
+.component-studio-root .unity-popup-field__menu .unity-popup-field__item--selected {
+    background-color: rgba(56, 189, 248, 0.2);
+    color: var(--text-0);
+}
+
+.component-studio-root.studio-compact,
+.component-studio-root.studio-medium {
+    min-width: 0;
+    min-height: 0;
+}
+
+.studio-medium .panel-left {
+    width: 360px;
+    min-width: 300px;
+    max-width: 520px;
+}
+
+.studio-medium .panel-right {
+    width: 300px;
+    min-width: 240px;
+    max-width: 360px;
+}
+
+.studio-medium .center-area {
+    min-width: 320px;
+}
+
+.studio-medium .studio-viewport-panel {
+    padding: 10px 18px;
+}
+
+.studio-medium .view-cube {
+    left: 12px;
+    bottom: 12px;
+    width: 80px;
+    height: 80px;
+    padding: 6px;
+}
+
+.studio-medium .view-cube-surface {
+    width: 64px;
+    height: 64px;
+}
+
+.studio-medium .viewport-tools {
+    left: 12px;
+    top: 12px;
+    width: 170px;
+    padding: 6px 7px;
+}
+
+.studio-medium .viewport-edit-panel {
+    top: 52px;
+    left: 12px;
+    width: 240px;
+    padding: 6px 8px;
+}
+
+.studio-medium .viewport-edit-dock {
+    right: 12px;
+    bottom: 12px;
+    width: 190px;
+    padding: 6px 7px;
+}
+
+.studio-medium .circuit-3d-controls {
+    width: 180px;
+    top: 12px;
+    right: 12px;
+    padding: 6px 7px;
+}
+
+.studio-medium .material-side-panel {
+    right: 10px;
+    top: 54px;
+    width: 260px;
+}
+
+.studio-medium .layout-preview-large {
+    min-height: 280px;
+    min-width: 280px;
+}
+
+.studio-compact .panel-left,
+.studio-compact .panel-right {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-left-width: 0;
+    border-right-width: 0;
+}
+
+.studio-compact .center-area {
+    min-width: 0;
+}
+
+.studio-compact .menubar-center,
+.studio-compact .tool-cluster {
+    flex-wrap: wrap;
+}
+
+.studio-compact .menu-btn,
+.studio-compact .toolbar-btn,
+.studio-compact .center-tab-btn {
+    min-width: 0;
+    padding-left: 6px;
+    padding-right: 6px;
+    margin-bottom: 4px;
+}
+
+.studio-compact .toolbar-btn {
+    margin-right: 4px;
+}
+
+.studio-compact .center-tab-btn {
+    margin-right: 4px;
+}
+
+.studio-compact .component-scroll {
+    padding: 6px 8px;
+}
+
+.studio-compact .studio-viewport-panel {
+    padding: 8px 12px;
+}
+
+.studio-compact .view-cube {
+    left: 10px;
+    bottom: 10px;
+    width: 70px;
+    height: 70px;
+    padding: 5px;
+}
+
+.studio-compact .view-cube-surface {
+    width: 56px;
+    height: 56px;
+}
+
+.studio-compact .viewport-tools {
+    left: 10px;
+    top: 10px;
+    width: 160px;
+    padding: 6px 7px;
+}
+
+.studio-compact .viewport-edit-panel {
+    top: 48px;
+    left: 10px;
+    width: 220px;
+    padding: 6px 8px;
+}
+
+.studio-compact .viewport-edit-dock {
+    right: 10px;
+    bottom: 10px;
+    width: 180px;
+    padding: 6px 7px;
+}
+
+.studio-compact .circuit-3d-controls {
+    width: 170px;
+    top: 10px;
+    right: 10px;
+    padding: 6px 7px;
+}
+
+.studio-compact .material-side-panel {
+    right: 8px;
+    top: 50px;
+    width: 240px;
+}
+
+.studio-compact .layout-preview {
+    height: 140px;
+    min-height: 130px;
+}
+
+.studio-compact .layout-preview-large {
+    min-height: 240px;
+    min-width: 240px;
+}
+
+.studio-compact .studio-notifications {
+    right: 10px;
+    top: 40px;
+    min-width: 200px;
+    max-width: 300px;
 }
