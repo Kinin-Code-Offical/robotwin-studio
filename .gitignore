@@ -47,7 +47,7 @@ crashlytics-build.properties
 .DS_Store
 Thumbs.db
 Desktop.ini
-
+.amazonq/
 # Python
 .venv/
 .venv_step/

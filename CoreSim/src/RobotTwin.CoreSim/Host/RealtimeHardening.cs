@@ -71,16 +71,22 @@ namespace RobotTwin.CoreSim.Host
 #if NET5_0_OR_GREATER
                 if (OperatingSystem.IsWindows())
                 {
-                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
+#pragma warning disable CA1416 // Platform compatibility
+                    process.ProcessorAffinity = affinityMask1;
+#pragma warning restore CA1416
                 }
                 else if (OperatingSystem.IsLinux())
                 {
-                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
+#pragma warning disable CA1416 // Platform compatibility
+                    process.ProcessorAffinity = affinityMask1;
+#pragma warning restore CA1416
                 }
 #else
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    typeof(Process).GetProperty("ProcessorAffinity")?.SetValue(process, affinityMask1);
+#pragma warning disable CA1416 // Platform compatibility
+                    process.ProcessorAffinity = affinityMask1;
+#pragma warning restore CA1416
                 }
 #endif
             }
