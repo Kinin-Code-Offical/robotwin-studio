@@ -405,7 +405,6 @@ namespace RobotTwin.UI
         private RobotStudioSimulationHost _simulationHost;
         private float _rotationSnapDegrees = 15f;
         private float _breadboardPitch = 0.00254f;
-        private float _breadboardRowWidth = 0.16f;
 
         private Material _assemblyFloorMaterial;
         private Material _placementGhostMaterial;
@@ -4407,6 +4406,17 @@ namespace RobotTwin.UI
                     _studioView?.FramePart(item.transform);
                 });
             }
+
+            foreach (var board in _breadboards.Values.OrderBy(b => b.PinCount))
+            {
+                if (board == null) continue;
+                string label = $"Breadboard ({board.PinCount})";
+                AddHierarchyItem(label, "Breadboard", 1, () => SetCenterView(true), () =>
+                {
+                    SetCenterView(true);
+                    _studioView?.FramePart(board.transform);
+                });
+            }
         }
 
         private void AddCatalogHeader(string title, int indent = 0)
@@ -6604,6 +6614,16 @@ namespace RobotTwin.UI
             {
                 CreateBreadboard(board);
             }
+            if (_breadboards.Count > 0)
+            {
+                var primary = _breadboards.Values.FirstOrDefault();
+                if (primary != null)
+                {
+                    _breadboardPinCountField?.SetValueWithoutNotify(primary.PinCount.ToString(CultureInfo.InvariantCulture));
+                    _breadboardColumnsField?.SetValueWithoutNotify(primary.Columns.ToString(CultureInfo.InvariantCulture));
+                    _breadboardPitchField?.SetValueWithoutNotify(primary.Pitch.ToString("0.#####", CultureInfo.InvariantCulture));
+                }
+            }
 
             foreach (var part in _assemblySpec.Parts)
             {
@@ -6869,33 +6889,195 @@ namespace RobotTwin.UI
             EnsureAssemblyRoot();
             var items = _selectedAssemblyItems.Count > 0 ? _selectedAssemblyItems : _assemblyItems.Values.ToList();
             if (items.Count == 0) return;
+            int requestedPins = Mathf.Max(1, ReadInt(_breadboardPinCountField, Mathf.Max(400, items.Count)));
+            int columns = Mathf.Max(1, ReadInt(_breadboardColumnsField, 10));
+            float pitch = Mathf.Max(0.0001f, ReadFloat(_breadboardPitchField, _breadboardPitch));
+            _breadboardPitch = pitch;
 
-            float cursorX = 0f;
-            float cursorZ = 0f;
-            float rowDepth = 0f;
-
-            foreach (var item in items)
+            var board = GetOrCreateBreadboard(requestedPins, columns, pitch, items.Count);
+            if (board != null)
             {
-                if (item == null) continue;
-                var bounds = GetItemBounds(item.transform);
-                float width = bounds.size.x;
-                float depth = bounds.size.z;
-                if (cursorX + width > _breadboardRowWidth)
-                {
-                    cursorX = 0f;
-                    cursorZ += rowDepth + _breadboardPitch;
-                    rowDepth = 0f;
-                }
+                PlaceItemsOnBreadboard(board, items);
+                _breadboardPinCountField?.SetValueWithoutNotify(board.PinCount.ToString(CultureInfo.InvariantCulture));
+                _breadboardColumnsField?.SetValueWithoutNotify(board.Columns.ToString(CultureInfo.InvariantCulture));
+                _breadboardPitchField?.SetValueWithoutNotify(board.Pitch.ToString("0.#####", CultureInfo.InvariantCulture));
+            }
+            MarkAssemblyDirty();
+            RefreshHierarchy();
+        }
 
-                var pos = new Vector3(cursorX + width * 0.5f, item.transform.position.y, cursorZ + depth * 0.5f);
-                pos = SnapToGrid(pos);
-                item.transform.position = pos;
-
-                cursorX += width + _breadboardPitch;
-                rowDepth = Mathf.Max(rowDepth, depth);
+        private RobotStudioBreadboard GetOrCreateBreadboard(int requestedPins, int columns, float pitch, int requiredPins)
+        {
+            int pins = Mathf.Max(requestedPins, requiredPins);
+            var board = _breadboards.Values.FirstOrDefault();
+            if (board == null)
+            {
+                var spec = BuildBreadboardSpec(pins, columns, pitch, Vector3.zero, Quaternion.identity, null);
+                return CreateBreadboard(spec);
             }
 
-            MarkAssemblyDirty();
+            if (board.PinCount < pins || board.Columns != columns || Mathf.Abs(board.Pitch - pitch) > 0.000001f)
+            {
+                var position = board.transform.position;
+                var rotation = board.transform.rotation;
+                string id = board.Id;
+                Destroy(board.gameObject);
+                _breadboards.Remove(id);
+                var spec = BuildBreadboardSpec(pins, columns, pitch, position, rotation, id);
+                return CreateBreadboard(spec);
+            }
+
+            return board;
+        }
+
+        private void PlaceItemsOnBreadboard(RobotStudioBreadboard board, List<RobotStudioAssemblyItem> items)
+        {
+            if (board == null || items == null || items.Count == 0) return;
+            int columns = Mathf.Max(1, board.Columns);
+            int rows = Mathf.Max(1, board.Rows);
+            float pitch = Mathf.Max(0.0001f, board.Pitch);
+
+            float startX = -board.Width * 0.5f + board.Margin + pitch * 0.5f;
+            float startZ = -board.Depth * 0.5f + board.Margin + pitch * 0.5f;
+            float surfaceY = board.TopSurfaceY + 0.001f;
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                int row = i / columns;
+                int col = i % columns;
+                if (row >= rows) break;
+
+                var item = items[i];
+                if (item == null) continue;
+                var bounds = GetItemBounds(item.transform);
+                float lift = bounds.extents.y;
+                var local = new Vector3(startX + col * pitch, surfaceY + lift, startZ + row * pitch);
+                item.transform.position = board.transform.TransformPoint(local);
+                item.transform.rotation = board.transform.rotation;
+            }
+        }
+
+        private RobotStudioBreadboard CreateBreadboard(BreadboardSpec spec)
+        {
+            if (spec == null) return null;
+            EnsureAssemblyRoot();
+
+            string id = string.IsNullOrWhiteSpace(spec.Id) ? Guid.NewGuid().ToString("N") : spec.Id;
+            var root = new GameObject($"Breadboard_{id.Substring(0, 8)}");
+            root.transform.SetParent(_assemblyRoot.transform, false);
+            root.transform.position = ToVector3(spec.Position);
+            root.transform.rotation = Quaternion.Euler(ToVector3(spec.Rotation));
+            root.transform.localScale = ToVector3(spec.Scale);
+
+            var board = root.AddComponent<RobotStudioBreadboard>();
+            board.Id = id;
+            board.PinCount = Mathf.Max(1, spec.PinCount);
+            board.Columns = Mathf.Max(1, spec.Columns);
+            board.Rows = Mathf.Max(1, spec.Rows);
+            board.Pitch = (float)spec.Pitch;
+            board.Margin = Mathf.Max(board.Pitch * 0.6f, 0.001f);
+            board.Thickness = Mathf.Max(board.Pitch * 0.4f, 0.001f);
+            board.Width = board.Columns * board.Pitch + board.Margin * 2f;
+            board.Depth = board.Rows * board.Pitch + board.Margin * 2f;
+
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "BreadboardBase";
+            body.transform.SetParent(root.transform, false);
+            body.transform.localScale = new Vector3(board.Width, board.Thickness, board.Depth);
+            body.transform.localPosition = new Vector3(0f, board.Thickness * 0.5f, 0f);
+
+            var renderer = body.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                var material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                material.SetColor("_BaseColor", new Color(0.14f, 0.14f, 0.16f, 1f));
+                Texture2D texture = BuildBreadboardTexture(board.Columns, board.Rows);
+                if (texture != null)
+                {
+                    material.SetTexture("_BaseMap", texture);
+                }
+                renderer.sharedMaterial = material;
+                board.BoardRenderer = renderer;
+                board.OwnedMaterial = material;
+                board.OwnedTexture = texture;
+            }
+
+            var collider = body.GetComponent<Collider>();
+            if (collider != null) Destroy(collider);
+
+            _breadboards[id] = board;
+            return board;
+        }
+
+        private BreadboardSpec BuildBreadboardSpec(int pinCount, int columns, float pitch, Vector3 position, Quaternion rotation, string id)
+        {
+            int cols = Mathf.Max(1, columns);
+            int rows = Mathf.Max(1, Mathf.CeilToInt(pinCount / (float)cols));
+            int totalPins = rows * cols;
+            return new BreadboardSpec
+            {
+                Id = id ?? Guid.NewGuid().ToString("N"),
+                PinCount = totalPins,
+                Columns = cols,
+                Rows = rows,
+                Pitch = pitch,
+                Position = ToVec3(position),
+                Rotation = ToVec3(rotation.eulerAngles),
+                Scale = new Vec3 { X = 1, Y = 1, Z = 1 }
+            };
+        }
+
+        private BreadboardSpec BuildBreadboardSpec(RobotStudioBreadboard board)
+        {
+            if (board == null) return new BreadboardSpec();
+            return new BreadboardSpec
+            {
+                Id = board.Id,
+                PinCount = board.PinCount,
+                Columns = board.Columns,
+                Rows = board.Rows,
+                Pitch = board.Pitch,
+                Position = ToVec3(board.transform.position),
+                Rotation = ToVec3(board.transform.eulerAngles),
+                Scale = ToVec3(board.transform.localScale)
+            };
+        }
+
+        private Texture2D BuildBreadboardTexture(int columns, int rows)
+        {
+            int cols = Mathf.Max(1, columns);
+            int rowCount = Mathf.Max(1, rows);
+            int width = Mathf.Clamp(cols * 4, 32, 512);
+            int height = Mathf.Clamp(rowCount * 4, 32, 512);
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+
+            var pixels = new Color32[width * height];
+            var baseColor = new Color32(32, 32, 36, 255);
+            var dotColor = new Color32(12, 12, 12, 255);
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = baseColor;
+            }
+
+            for (int row = 0; row < rowCount; row++)
+            {
+                for (int col = 0; col < cols; col++)
+                {
+                    float u = (col + 0.5f) / cols;
+                    float v = (row + 0.5f) / rowCount;
+                    int x = Mathf.Clamp(Mathf.RoundToInt(u * (width - 1)), 1, width - 2);
+                    int y = Mathf.Clamp(Mathf.RoundToInt(v * (height - 1)), 1, height - 2);
+                    int idx = y * width + x;
+                    pixels[idx] = dotColor;
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return texture;
         }
 
         private Bounds GetItemBounds(Transform root)
@@ -6968,6 +7150,13 @@ namespace RobotTwin.UI
                 });
             }
             spec.Parts = parts;
+            var boards = new List<BreadboardSpec>();
+            foreach (var board in _breadboards.Values)
+            {
+                if (board == null) continue;
+                boards.Add(BuildBreadboardSpec(board));
+            }
+            spec.Breadboards = boards;
             spec.Wires = _assemblySpec?.Wires ?? new List<AssemblyWireSpec>();
             return spec;
         }
@@ -7047,6 +7236,7 @@ namespace RobotTwin.UI
             }
             return fallback;
         }
+
 
         private void ReleaseViewportPointerCapture()
         {
