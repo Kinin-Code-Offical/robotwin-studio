@@ -60,9 +60,15 @@ namespace RobotTwin.UI
         private Transform _viewCubeFaceRoot;
         private Light _viewCubeLight;
         private int _viewCubeSize = 128;
+        private readonly List<ViewCubeFaceInfo> _viewCubeFaces = new List<ViewCubeFaceInfo>();
         private Transform _root;
         private Transform _modelRoot;
         private Transform _modelContent;
+
+        // Runtime material overrides (e.g., per-part material/texture edits).
+        // IMPORTANT: Materials created at runtime must be explicitly destroyed, otherwise they leak.
+        private readonly Dictionary<Renderer, Material> _originalSharedMaterials = new Dictionary<Renderer, Material>();
+        private readonly Dictionary<Renderer, Material> _overrideSharedMaterials = new Dictionary<Renderer, Material>();
         private GameObject _modelInstance;
         private readonly List<Transform> _parts = new List<Transform>();
         private readonly List<GameObject> _anchorGizmos = new List<GameObject>();
@@ -83,6 +89,8 @@ namespace RobotTwin.UI
         private Bounds _gizmoBounds;
         private LineRenderer _selectionOutline;
         private Transform _selectionTarget;
+        private readonly Dictionary<Renderer, MaterialPropertyBlock> _partFocusOriginalBlocks = new Dictionary<Renderer, MaterialPropertyBlock>();
+        private Transform _focusedPart;
         private Vector2 _orbitAngles = new Vector2(28f, 30f);
         private float _distance = 1.4f;
         private Vector3 _panOffset = Vector3.zero;
@@ -106,6 +114,12 @@ namespace RobotTwin.UI
             public Vector3 LocalPosition;
             public float Radius;
             public Color Color;
+        }
+
+        private struct ViewCubeFaceInfo
+        {
+            public Transform Face;
+            public Renderer LabelRenderer;
         }
 
         public RenderTexture TargetTexture => _renderTexture;
@@ -217,6 +231,11 @@ namespace RobotTwin.UI
 
         public void SetModelInstance(GameObject instance)
         {
+            SetModelInstance(instance, true);
+        }
+
+        public void SetModelInstance(GameObject instance, bool recenter)
+        {
             ClearModel();
             if (instance == null) return;
             if (_root == null) EnsureCamera();
@@ -234,7 +253,10 @@ namespace RobotTwin.UI
             _modelRoot = pivot.transform;
             _modelContent = instance.transform;
 
-            RecenterModelToBounds();
+            if (recenter)
+            {
+                RecenterModelToBounds();
+            }
             CacheParts();
             EnsureModelColliders();
             FrameModel();
@@ -284,6 +306,23 @@ namespace RobotTwin.UI
             }
             _followTarget = false;
             _followTransform = null;
+
+            ClearPartFocus();
+
+            // Clean up any runtime-created materials we own.
+            if (_overrideSharedMaterials.Count > 0)
+            {
+                foreach (var kvp in _overrideSharedMaterials)
+                {
+                    var mat = kvp.Value;
+                    if (mat != null)
+                    {
+                        Destroy(mat);
+                    }
+                }
+                _overrideSharedMaterials.Clear();
+            }
+            _originalSharedMaterials.Clear();
         }
 
         private void RecenterModelToBounds()
@@ -309,6 +348,34 @@ namespace RobotTwin.UI
             _distance = _usePerspective
                 ? ComputePerspectiveDistance(bounds, 1.4f)
                 : ComputeOrthoSize(bounds, 1.15f);
+            UpdateCameraTransform();
+        }
+
+        public void FramePart(Transform part)
+        {
+            if (_camera == null) return;
+            if (part == null)
+            {
+                FrameModel();
+                return;
+            }
+            if (_modelRoot == null)
+            {
+                FrameModel();
+                return;
+            }
+
+            // Frame in the same reference-space as FrameModel (model-root local), so camera pan stays consistent.
+            if (!TryGetBoundsRelativeTo(_modelRoot, part, out var bounds))
+            {
+                FrameModel();
+                return;
+            }
+
+            _panOffset = bounds.center;
+            _distance = _usePerspective
+                ? ComputePerspectiveDistance(bounds, 1.35f)
+                : ComputeOrthoSize(bounds, 1.10f);
             UpdateCameraTransform();
         }
 
@@ -574,20 +641,127 @@ namespace RobotTwin.UI
             foreach (var renderer in renderers)
             {
                 if (renderer == null) continue;
-                var material = renderer.sharedMaterial != null
-                    ? new Material(renderer.sharedMaterial)
-                    : new Material(Shader.Find("Standard"));
+
+                // If there's no active override, revert back to the original shared material.
+                bool hasAnyOverride = texture != null || useColor;
+                if (!hasAnyOverride)
+                {
+                    if (_overrideSharedMaterials.TryGetValue(renderer, out var oldOverride) && oldOverride != null)
+                    {
+                        Destroy(oldOverride);
+                    }
+                    _overrideSharedMaterials.Remove(renderer);
+
+                    if (_originalSharedMaterials.TryGetValue(renderer, out var original) && original != null)
+                    {
+                        renderer.sharedMaterial = original;
+                    }
+                    _originalSharedMaterials.Remove(renderer);
+                    continue;
+                }
+
+                if (!_originalSharedMaterials.ContainsKey(renderer) && renderer.sharedMaterial != null)
+                {
+                    _originalSharedMaterials[renderer] = renderer.sharedMaterial;
+                }
+
+                if (!_overrideSharedMaterials.TryGetValue(renderer, out var overrideMat) || overrideMat == null)
+                {
+                    var baseMat = renderer.sharedMaterial;
+                    overrideMat = baseMat != null
+                        ? new Material(baseMat)
+                        : new Material(Shader.Find("Standard"));
+                    overrideMat.name = $"{renderer.gameObject.name}_RuntimeOverride";
+                    _overrideSharedMaterials[renderer] = overrideMat;
+                }
+
+                // Apply requested overrides.
                 if (texture != null)
                 {
-                    material.mainTexture = texture;
+                    overrideMat.mainTexture = texture;
+                    if (overrideMat.HasProperty("_BaseMap")) overrideMat.SetTexture("_BaseMap", texture);
                 }
+                else
+                {
+                    overrideMat.mainTexture = null;
+                    if (overrideMat.HasProperty("_BaseMap")) overrideMat.SetTexture("_BaseMap", null);
+                }
+
                 if (useColor)
                 {
-                    material.color = color;
-                    if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+                    overrideMat.color = color;
+                    if (overrideMat.HasProperty("_BaseColor")) overrideMat.SetColor("_BaseColor", color);
                 }
-                renderer.material = material;
+
+                // Use sharedMaterial to avoid Unity silently instancing via renderer.material.
+                renderer.sharedMaterial = overrideMat;
             }
+        }
+
+        /// <summary>
+        /// Dims all non-selected parts for clearer selection, regardless of hierarchy/grouping.
+        /// This only affects a per-renderer MaterialPropertyBlock and is fully reversible.
+        /// </summary>
+        public void SetPartFocus(Transform focusedPart, float dimFactor = 0.25f)
+        {
+            if (_modelRoot == null)
+            {
+                ClearPartFocus();
+                return;
+            }
+
+            // Restore any prior focus state first.
+            ClearPartFocus();
+            _focusedPart = focusedPart;
+            if (_focusedPart == null) return;
+
+            dimFactor = Mathf.Clamp01(dimFactor);
+            if (dimFactor >= 0.999f) return;
+
+            var focusedRenderers = new HashSet<Renderer>(_focusedPart.GetComponentsInChildren<Renderer>(true));
+            var allRenderers = _modelRoot.GetComponentsInChildren<Renderer>(true);
+
+            foreach (var renderer in allRenderers)
+            {
+                if (renderer == null) continue;
+                if (focusedRenderers.Contains(renderer)) continue;
+
+                // Cache the existing block so we can restore exactly.
+                var existing = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(existing);
+                var cached = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(cached);
+                _partFocusOriginalBlocks[renderer] = cached;
+
+                Color baseColor = Color.white;
+                var mat = renderer.sharedMaterial;
+                if (mat != null)
+                {
+                    if (mat.HasProperty("_BaseColor")) baseColor = mat.GetColor("_BaseColor");
+                    else if (mat.HasProperty("_Color")) baseColor = mat.GetColor("_Color");
+                    else baseColor = mat.color;
+                }
+
+                var dimmed = new Color(baseColor.r * dimFactor, baseColor.g * dimFactor, baseColor.b * dimFactor, baseColor.a);
+                existing.SetColor("_BaseColor", dimmed);
+                existing.SetColor("_Color", dimmed);
+                renderer.SetPropertyBlock(existing);
+            }
+        }
+
+        public void ClearPartFocus()
+        {
+            if (_partFocusOriginalBlocks.Count > 0)
+            {
+                foreach (var kvp in _partFocusOriginalBlocks)
+                {
+                    var renderer = kvp.Key;
+                    if (renderer == null) continue;
+                    renderer.SetPropertyBlock(kvp.Value);
+                }
+                _partFocusOriginalBlocks.Clear();
+            }
+            _focusedPart = null;
         }
 
         public void SetSelectionOutline(Transform target)
@@ -851,9 +1025,9 @@ namespace RobotTwin.UI
         private void BuildMoveGizmo(Bounds bounds)
         {
             float extent = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
-            float shaftLength = Mathf.Clamp(Mathf.Max(extent * 2.1f, 0.85f), 0.8f, 5.5f);
-            float shaftRadius = Mathf.Clamp(shaftLength * 0.075f, 0.035f, 0.2f);
-            float headSize = Mathf.Clamp(shaftLength * 0.3f, 0.18f, 0.65f);
+            float shaftLength = Mathf.Clamp(Mathf.Max(extent * 1.6f, 0.65f), 0.6f, 4f);
+            float shaftRadius = Mathf.Clamp(shaftLength * 0.06f, 0.03f, 0.16f);
+            float headSize = Mathf.Clamp(shaftLength * 0.24f, 0.14f, 0.5f);
 
             CreateAxisHandle("MoveAxisX", GizmoHandleKind.MoveAxis, GizmoAxis.X, Color.red, Vector3.right, shaftLength, shaftRadius, headSize);
             CreateAxisHandle("MoveAxisY", GizmoHandleKind.MoveAxis, GizmoAxis.Y, Color.green, Vector3.up, shaftLength, shaftRadius, headSize);
@@ -863,9 +1037,9 @@ namespace RobotTwin.UI
         private void BuildRotateGizmo(Bounds bounds)
         {
             float extent = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
-            float radius = Mathf.Max(extent * 1.2f, 0.3f);
-            float thickness = Mathf.Max(radius * 0.12f, 0.05f);
-            float width = Mathf.Max(radius * 0.035f, 0.015f);
+            float radius = Mathf.Max(extent * 1.0f, 0.25f);
+            float thickness = Mathf.Max(radius * 0.08f, 0.035f);
+            float width = Mathf.Max(radius * 0.028f, 0.012f);
             CreateRotateHandle("RotateAxisX", GizmoAxis.X, Color.red, Vector3.right, radius, thickness, width);
             CreateRotateHandle("RotateAxisY", GizmoAxis.Y, Color.green, Vector3.up, radius, thickness, width);
             CreateRotateHandle("RotateAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward, radius, thickness, width);
@@ -883,22 +1057,31 @@ namespace RobotTwin.UI
 
             float handleSize = Mathf.Clamp(bounds.size.magnitude * 0.045f, 0.08f, 0.22f);
             float cornerSize = Mathf.Clamp(bounds.size.magnitude * 0.055f, 0.09f, 0.26f);
+            float handleOffset = Mathf.Max(handleSize * 0.35f, 0.02f);
+            float cornerOffset = Mathf.Max(cornerSize * 0.3f, 0.02f);
 
-            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, new Vector3(ext.x, 0f, 0f), handleSize);
-            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, new Vector3(0f, ext.y, 0f), handleSize);
-            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), new Vector3(0f, 0f, ext.z), handleSize);
+            float x = Mathf.Max(ext.x + handleOffset, minExtent * 0.5f);
+            float y = Mathf.Max(ext.y + handleOffset, minExtent * 0.5f);
+            float z = Mathf.Max(ext.z + handleOffset, minExtent * 0.5f);
+
+            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, new Vector3(x, 0f, 0f), handleSize);
+            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, new Vector3(0f, y, 0f), handleSize);
+            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), new Vector3(0f, 0f, z), handleSize);
 
             var center = bounds.center;
+            float cornerX = Mathf.Max(ext.x + cornerOffset, minExtent * 0.5f);
+            float cornerY = Mathf.Max(ext.y + cornerOffset, minExtent * 0.5f);
+            float cornerZ = Mathf.Max(ext.z + cornerOffset, minExtent * 0.5f);
             var cornerOffsets = new[]
             {
-                new Vector3(ext.x, ext.y, ext.z),
-                new Vector3(ext.x, ext.y, -ext.z),
-                new Vector3(ext.x, -ext.y, ext.z),
-                new Vector3(ext.x, -ext.y, -ext.z),
-                new Vector3(-ext.x, ext.y, ext.z),
-                new Vector3(-ext.x, ext.y, -ext.z),
-                new Vector3(-ext.x, -ext.y, ext.z),
-                new Vector3(-ext.x, -ext.y, -ext.z)
+                new Vector3(cornerX, cornerY, cornerZ),
+                new Vector3(cornerX, cornerY, -cornerZ),
+                new Vector3(cornerX, -cornerY, cornerZ),
+                new Vector3(cornerX, -cornerY, -cornerZ),
+                new Vector3(-cornerX, cornerY, cornerZ),
+                new Vector3(-cornerX, cornerY, -cornerZ),
+                new Vector3(-cornerX, -cornerY, cornerZ),
+                new Vector3(-cornerX, -cornerY, -cornerZ)
             };
             foreach (var offset in cornerOffsets)
             {
@@ -1011,14 +1194,29 @@ namespace RobotTwin.UI
             if (_gizmoRoot == null) return;
             var handle = new GameObject(name);
             handle.transform.SetParent(_gizmoRoot, false);
-            handle.transform.localPosition = localOffset;
+            handle.transform.localPosition = Vector3.zero;
             var handleComp = handle.AddComponent<GizmoHandle>();
             handleComp.Kind = GizmoHandleKind.ScaleAxis;
             handleComp.Axis = axis;
 
+            float length = localOffset.magnitude;
+            if (length > 0.0001f)
+            {
+                var shaft = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                shaft.transform.SetParent(handle.transform, false);
+                shaft.transform.localRotation = Quaternion.FromToRotation(Vector3.up, localOffset.normalized);
+                float shaftRadius = Mathf.Max(size * 0.15f, 0.01f);
+                shaft.transform.localScale = new Vector3(shaftRadius, length * 0.5f, shaftRadius);
+                shaft.transform.localPosition = localOffset * 0.5f;
+                ApplyGizmoColor(shaft, color);
+                var shaftCollider = shaft.GetComponent<Collider>();
+                if (shaftCollider != null) Destroy(shaftCollider);
+            }
+
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cube.transform.SetParent(handle.transform, false);
             cube.transform.localScale = Vector3.one * size;
+            cube.transform.localPosition = localOffset;
             ApplyGizmoColor(cube, color);
             _gizmoObjects.Add(handle);
         }
@@ -1072,6 +1270,7 @@ namespace RobotTwin.UI
                 line.startWidth = lineWidth;
                 line.endWidth = lineWidth;
                 line.material = new Material(Shader.Find("Sprites/Default"));
+                ConfigureGizmoMaterial(line.material);
                 line.startColor = color;
                 line.endColor = color;
                 line.SetPosition(0, corners[edges[i, 0]]);
@@ -1088,6 +1287,7 @@ namespace RobotTwin.UI
             line.startWidth = width;
             line.endWidth = width;
             line.material = new Material(Shader.Find("Sprites/Default"));
+            ConfigureGizmoMaterial(line.material);
             line.startColor = color;
             line.endColor = color;
             float step = Mathf.PI * 2f / (segments - 1);
@@ -1106,6 +1306,7 @@ namespace RobotTwin.UI
             line.startWidth = width;
             line.endWidth = width;
             line.material = new Material(Shader.Find("Sprites/Default"));
+            ConfigureGizmoMaterial(line.material);
             line.startColor = color;
             line.endColor = color;
         }
@@ -1160,7 +1361,16 @@ namespace RobotTwin.UI
             var mat = new Material(shader) { name = "ComponentStudioGizmoMat" };
             mat.color = color;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+            ConfigureGizmoMaterial(mat);
             renderer.sharedMaterial = mat;
+        }
+
+        private static void ConfigureGizmoMaterial(Material material)
+        {
+            if (material == null) return;
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Overlay;
+            if (material.HasProperty("_ZWrite")) material.SetInt("_ZWrite", 0);
+            if (material.HasProperty("_ZTest")) material.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
         }
 
         private void UpdateGizmoTransform()
@@ -1176,7 +1386,7 @@ namespace RobotTwin.UI
         {
             if (_camera == null) return 1f;
             float dist = Vector3.Distance(_camera.transform.position, worldPos);
-            return Mathf.Clamp(dist * 0.18f, 0.12f, 3f);
+            return Mathf.Clamp(dist * 0.1f, 0.08f, 2f);
         }
 
         private void EnsureSelectionOutline()
@@ -1190,7 +1400,9 @@ namespace RobotTwin.UI
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color");
             if (shader != null)
             {
-                _selectionOutline.material = new Material(shader);
+                var mat = new Material(shader);
+                ConfigureGizmoMaterial(mat);
+                _selectionOutline.material = mat;
             }
             _selectionOutline.startColor = Color.white;
             _selectionOutline.endColor = Color.white;
@@ -1342,6 +1554,7 @@ namespace RobotTwin.UI
             if (_renderTexture != null)
             {
                 _renderTexture.Release();
+                Destroy(_renderTexture);
             }
             _renderTexture = new RenderTexture(width, height, 16)
             {
@@ -1410,6 +1623,7 @@ namespace RobotTwin.UI
                 if (_viewCubeTexture != null)
                 {
                     _viewCubeTexture.Release();
+                    Destroy(_viewCubeTexture);
                 }
                 _viewCubeTexture = new RenderTexture(size, size, 16, RenderTextureFormat.ARGB32)
                 {
@@ -1420,6 +1634,23 @@ namespace RobotTwin.UI
             }
             if (_viewCubeCamera != null) _viewCubeCamera.targetTexture = _viewCubeTexture;
             UpdateViewCubeOrientation();
+        }
+
+        private void OnDestroy()
+        {
+            if (_renderTexture != null)
+            {
+                _renderTexture.Release();
+                Destroy(_renderTexture);
+                _renderTexture = null;
+            }
+            if (_viewCubeTexture != null)
+            {
+                _viewCubeTexture.Release();
+                Destroy(_viewCubeTexture);
+                _viewCubeTexture = null;
+            }
+            ClearModel();
         }
 
         private void EnsureViewCubeLight()
@@ -1442,12 +1673,13 @@ namespace RobotTwin.UI
             var faceRoot = new GameObject("ViewCubeFaces");
             faceRoot.transform.SetParent(_viewCubeModel.transform, false);
             _viewCubeFaceRoot = faceRoot.transform;
+            _viewCubeFaces.Clear();
 
-            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(-90f, 0f, 0f), new Color(0.35f, 0.82f, 0.55f, 1f), "TOP");
-            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(90f, 0f, 0f), new Color(0.25f, 0.46f, 0.82f, 1f), "BOTTOM");
-            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), new Color(0.88f, 0.45f, 0.85f, 1f), "LEFT");
-            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), new Color(0.9f, 0.35f, 0.32f, 1f), "RIGHT");
-            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), Vector3.zero, new Color(0.3f, 0.7f, 0.9f, 1f), "FRONT");
+            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(-90f, 0f, 0f), new Color(0.92f, 0.32f, 0.32f, 1f), "TOP");
+            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(90f, 0f, 0f), new Color(0.28f, 0.45f, 0.9f, 1f), "BOTTOM");
+            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), new Color(0.92f, 0.45f, 0.75f, 1f), "LEFT");
+            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), new Color(0.34f, 0.78f, 0.42f, 1f), "RIGHT");
+            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), Vector3.zero, new Color(0.32f, 0.7f, 0.86f, 1f), "FRONT");
             CreateViewCubeFace("Back", new Vector3(0f, 0f, -0.51f), new Vector3(0f, 180f, 0f), new Color(0.95f, 0.72f, 0.32f, 1f), "BACK");
         }
 
@@ -1496,14 +1728,25 @@ namespace RobotTwin.UI
             if (textRenderer != null && textRenderer.sharedMaterial != null)
             {
                 var textMat = new Material(textRenderer.sharedMaterial) { name = $"ViewCubeFace_{name}_TextMat" };
-                textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
-                textMat.renderQueue = 2000;
-                if (textMat.HasProperty("_ZWrite")) textMat.SetInt("_ZWrite", 1);
+                if (textMat.HasProperty("_Cull")) textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                // Render after the face quad to reduce z-fighting with the label's slight offset.
+                textMat.renderQueue = 3000;
+                if (textMat.HasProperty("_ZWrite")) textMat.SetInt("_ZWrite", 0);
                 if (textMat.HasProperty("_ZTest")) textMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
                 textRenderer.sharedMaterial = textMat;
+                textRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                textRenderer.receiveShadows = false;
             }
 
             SetLayerRecursively(face.transform, ViewCubeLayer);
+            if (textRenderer != null)
+            {
+                _viewCubeFaces.Add(new ViewCubeFaceInfo
+                {
+                    Face = face.transform,
+                    LabelRenderer = textRenderer
+                });
+            }
         }
 
         private void UpdateViewCubeOrientation()
@@ -1512,6 +1755,20 @@ namespace RobotTwin.UI
             if (_camera == null) return;
             var modelRotation = GetModelRotation();
             _viewCubeRoot.rotation = _camera.transform.rotation * modelRotation;
+            UpdateViewCubeFaceVisibility();
+        }
+
+        private void UpdateViewCubeFaceVisibility()
+        {
+            if (_viewCubeCamera == null || _viewCubeFaces.Count == 0) return;
+            Vector3 camForward = _viewCubeCamera.transform.forward;
+            foreach (var face in _viewCubeFaces)
+            {
+                if (face.Face == null || face.LabelRenderer == null) continue;
+                // A face is visible if its normal points toward the camera (i.e., opposite the camera's forward).
+                bool frontFacing = Vector3.Dot(face.Face.forward, camForward) < 0f;
+                face.LabelRenderer.enabled = frontFacing;
+            }
         }
 
         private Quaternion GetModelRotation()

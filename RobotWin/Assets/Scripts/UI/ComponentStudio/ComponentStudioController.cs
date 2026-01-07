@@ -336,6 +336,8 @@ namespace RobotTwin.UI
         private Vector2 _lastPointer;
         private bool _viewportHover;
         private int _viewportPointerId = -1;
+        private Vector2 _viewportContextStart;
+        private bool _viewportContextDrag;
         private bool _circuit3DControlsCollapsed = true;
         private bool _viewportToolsCollapsed = true;
         private bool _outputCollapsed;
@@ -419,6 +421,13 @@ namespace RobotTwin.UI
         private void OnDisable()
         {
             CancelModelLoad(true);
+
+            if (_loadingBlurTexture != null)
+            {
+                _loadingBlurTexture.Release();
+                Destroy(_loadingBlurTexture);
+                _loadingBlurTexture = null;
+            }
         }
 
         private void BindUi()
@@ -662,7 +671,7 @@ namespace RobotTwin.UI
             if (_addAnchorBtn != null) _addAnchorBtn.clicked += () => AddPinRow(new PinLayoutPayload { name = GetNextPinName(), anchorRadius = 0.01f });
             if (_symbolBrowseBtn != null) _symbolBrowseBtn.clicked += BrowseForSymbol;
             if (_addFxBtn != null) _addFxBtn.clicked += () => AddFxRow(new FxPayload { id = $"fx_{Guid.NewGuid():N}".Substring(0, 6), type = "Glow" });
-            if (_frameBtn != null) _frameBtn.clicked += () => _studioView?.FrameModel();
+            if (_frameBtn != null) _frameBtn.clicked += FrameSelectedPartOrModel;
             if (_anchorShowToggle != null)
             {
                 _anchorVisible = _anchorShowToggle.value;
@@ -682,7 +691,7 @@ namespace RobotTwin.UI
             if (_stateAddBtn != null) _stateAddBtn.clicked += AddStateOverride;
             if (_loadingCancelBtn != null) _loadingCancelBtn.clicked += () => CancelModelLoad(true);
             if (_viewportResetBtn != null) _viewportResetBtn.clicked += () => _studioView?.ResetView();
-            if (_viewportFrameBtn != null) _viewportFrameBtn.clicked += () => _studioView?.FrameModel();
+            if (_viewportFrameBtn != null) _viewportFrameBtn.clicked += FrameSelectedPartOrModel;
             if (_viewportAnchorsBtn != null) _viewportAnchorsBtn.clicked += ToggleAnchors;
             if (_viewportPickBtn != null) _viewportPickBtn.clicked += ToggleAnchorPick;
             if (_viewportZoomInBtn != null) _viewportZoomInBtn.clicked += () => _studioView?.Zoom(-0.08f);
@@ -693,12 +702,12 @@ namespace RobotTwin.UI
             if (_viewportLabelBtn != null) _viewportLabelBtn.clicked += () => ActivateTool(ToolAction.Label);
             if (_viewportMaterialBtn != null) _viewportMaterialBtn.clicked += () => ToggleMaterialPanel();
             if (_viewportStateBtn != null) _viewportStateBtn.clicked += () => ActivateTool(ToolAction.State);
-            if (_viewCubeTopBtn != null) _viewCubeTopBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Top); _studioView?.FrameModel(); };
-            if (_viewCubeBottomBtn != null) _viewCubeBottomBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Bottom); _studioView?.FrameModel(); };
-            if (_viewCubeLeftBtn != null) _viewCubeLeftBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Left); _studioView?.FrameModel(); };
-            if (_viewCubeRightBtn != null) _viewCubeRightBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Right); _studioView?.FrameModel(); };
-            if (_viewCubeFrontBtn != null) _viewCubeFrontBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Front); _studioView?.FrameModel(); };
-            if (_viewCubeBackBtn != null) _viewCubeBackBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Back); _studioView?.FrameModel(); };
+            if (_viewCubeTopBtn != null) _viewCubeTopBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Top); FrameSelectedPartOrModel(); };
+            if (_viewCubeBottomBtn != null) _viewCubeBottomBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Bottom); FrameSelectedPartOrModel(); };
+            if (_viewCubeLeftBtn != null) _viewCubeLeftBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Left); FrameSelectedPartOrModel(); };
+            if (_viewCubeRightBtn != null) _viewCubeRightBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Right); FrameSelectedPartOrModel(); };
+            if (_viewCubeFrontBtn != null) _viewCubeFrontBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Front); FrameSelectedPartOrModel(); };
+            if (_viewCubeBackBtn != null) _viewCubeBackBtn.clicked += () => { _studioView?.SnapView(ComponentStudioView.ViewPreset.Back); FrameSelectedPartOrModel(); };
             if (_centerTab3dBtn != null) _centerTab3dBtn.clicked += () => SetCenterView(true);
             if (_centerTab2dBtn != null) _centerTab2dBtn.clicked += () => SetCenterView(false);
             if (_layoutResetBtn != null) _layoutResetBtn.clicked += ResetLayoutView;
@@ -882,6 +891,38 @@ namespace RobotTwin.UI
             if (_materialClearBtn != null) _materialClearBtn.clicked += ClearMaterialOverrides;
             if (_materialCloseBtn != null) _materialCloseBtn.clicked += CloseMaterialModal;
             if (_catalogRefreshBtn != null) _catalogRefreshBtn.clicked += RefreshCatalogAndHierarchy;
+            if (_hierarchyTree != null)
+            {
+                _hierarchyTree.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.button != 1) return;
+                    ShowContextMenu(evt.position, menu =>
+                    {
+                        menu.AddItem("Refresh Hierarchy", false, RefreshCatalogAndHierarchy);
+                        if (_is2dView)
+                        {
+                            menu.AddItem("Switch to 3D View", false, () => SetCenterView(true));
+                        }
+                        else
+                        {
+                            menu.AddItem("Switch to 2D View", false, () => SetCenterView(false));
+                        }
+                    });
+                    evt.StopPropagation();
+                });
+            }
+            if (_catalogList != null)
+            {
+                _catalogList.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.button != 1) return;
+                    ShowContextMenu(evt.position, menu =>
+                    {
+                        menu.AddItem("Refresh Catalog", false, RefreshCatalogAndHierarchy);
+                    });
+                    evt.StopPropagation();
+                });
+            }
             if (_leftTabHierarchyBtn != null) _leftTabHierarchyBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Hierarchy);
             if (_leftTabCatalogBtn != null) _leftTabCatalogBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Catalog);
             if (_leftTabBasicsBtn != null) _leftTabBasicsBtn.clicked += () => SetLeftPanelTab(LeftPanelTab.Basics);
@@ -1822,6 +1863,17 @@ namespace RobotTwin.UI
             UpdateMaterialComputedMassLabel(overrideData);
         }
 
+        private void RefreshMaterialPanelForSelection()
+        {
+            if (_materialOverlay == null || _materialOverlay.style.display != DisplayStyle.Flex) return;
+            if (!IsMaterialEditingAllowed(out _))
+            {
+                SetMaterialPanelVisible(false);
+                return;
+            }
+            UpdateMaterialModalFromSelection();
+        }
+
         private void UpdateMaterialComputedMassLabel(PartOverride overrideData)
         {
             if (_materialComputedMassLabel == null) return;
@@ -2380,24 +2432,29 @@ namespace RobotTwin.UI
 
         private void OnKeyDown(KeyDownEvent evt)
         {
-            if (TryHandleUndoRedo(evt))
+            if (evt == null) return;
+
+            bool targetIsTextInput = evt.target is VisualElement target && IsTextInputTarget(target);
+
+            // ESC should work everywhere (even when a TextField has focus).
+            if (evt.keyCode == KeyCode.Escape && HandleEscapeKey())
+            {
+                IgnoreEvent(evt);
+                evt.StopPropagation();
+                return;
+            }
+
+            // Don't hijack TextField undo/redo.
+            if (!targetIsTextInput && TryHandleUndoRedo(evt))
             {
                 evt.StopPropagation();
                 return;
             }
-            if (evt.target is VisualElement target && IsTextInputTarget(target))
-            {
-                return;
-            }
+
+            // Global shortcuts should work even while typing.
             if (_is2dView && IsLayoutKeyTarget())
             {
                 if (Handle2DKeyInput(evt))
-                {
-                    IgnoreEvent(evt);
-                    evt.StopPropagation();
-                    return;
-                }
-                if (evt.keyCode == KeyCode.Escape && HandleEscapeKey())
                 {
                     IgnoreEvent(evt);
                     evt.StopPropagation();
@@ -2409,20 +2466,6 @@ namespace RobotTwin.UI
                 if (Handle3DKeyInput(evt))
                 {
                     IgnoreEvent(evt);
-                    evt.StopPropagation();
-                    return;
-                }
-                if (evt.keyCode == KeyCode.Escape && HandleEscapeKey())
-                {
-                    IgnoreEvent(evt);
-                    evt.StopPropagation();
-                    return;
-                }
-            }
-            if (evt.keyCode == KeyCode.Escape)
-            {
-                if (HandleEscapeKey())
-                {
                     evt.StopPropagation();
                     return;
                 }
@@ -2463,6 +2506,10 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
+
+            // While typing, let the input element handle remaining keystrokes.
+            if (targetIsTextInput) return;
+
             if (_is2dView) return;
             if (!evt.ctrlKey && !evt.shiftKey && !evt.altKey && evt.keyCode == KeyCode.P)
             {
@@ -2486,7 +2533,7 @@ namespace RobotTwin.UI
 
         private bool TryHandleUndoRedo(KeyDownEvent evt)
         {
-            if (evt == null || !evt.ctrlKey) return false;
+            if (evt == null || !IsUndoRedoModifier(evt)) return false;
             if (evt.shiftKey && evt.keyCode == KeyCode.Z)
             {
                 Redo();
@@ -2503,6 +2550,14 @@ namespace RobotTwin.UI
                 return true;
             }
             return false;
+        }
+
+        private static bool IsUndoRedoModifier(KeyDownEvent evt)
+        {
+            if (evt == null) return false;
+            if (evt.ctrlKey || evt.commandKey) return true;
+            var mods = evt.modifiers;
+            return (mods & EventModifiers.Control) != 0 || (mods & EventModifiers.Command) != 0;
         }
 
         private void OnNavigationMove(NavigationMoveEvent evt)
@@ -4036,6 +4091,7 @@ namespace RobotTwin.UI
             RefreshLayoutPreview();
             RefreshTransformGizmo();
             UpdateInspectorForSelection("Pin", entry);
+            _studioView?.ClearPartFocus();
         }
 
         private void SelectLabelEntry(VisualElement entry)
@@ -4051,6 +4107,7 @@ namespace RobotTwin.UI
             }
             RefreshLayoutPreview();
             UpdateInspectorForSelection("Label", entry);
+            _studioView?.ClearPartFocus();
         }
 
         private void SelectShape(string shapeId)
@@ -4063,6 +4120,7 @@ namespace RobotTwin.UI
             _selectedLabelEntry = null;
             UpdateInspectorForShape(shapeId);
             RefreshLayoutPreview();
+            _studioView?.ClearPartFocus();
         }
 
         private void UpdateInspectorForShape(string shapeId)
@@ -4470,13 +4528,30 @@ namespace RobotTwin.UI
             kindLabel.AddToClassList("hierarchy-item-kind");
             row.Add(label);
             row.Add(kindLabel);
+            row.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 1) return;
+                ShowContextMenu(evt.position, menu =>
+                {
+                    if (onClick != null)
+                    {
+                        menu.AddItem("Select", false, () => onClick());
+                    }
+                    menu.AddItem("Refresh Catalog", false, RefreshCatalogAndHierarchy);
+                });
+                evt.StopPropagation();
+            });
             if (allowDrag)
             {
                 row.RegisterCallback<PointerDownEvent>(evt => StartCatalogDrag(evt, name, kind));
             }
             if (onClick != null)
             {
-                row.RegisterCallback<PointerDownEvent>(_ => onClick());
+                row.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.button != 0) return;
+                    onClick();
+                });
             }
             _catalogList.Add(row);
         }
@@ -4493,6 +4568,23 @@ namespace RobotTwin.UI
             kindLabel.AddToClassList("hierarchy-item-kind");
             row.Add(label);
             row.Add(kindLabel);
+            row.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 1) return;
+                ShowContextMenu(evt.position, menu =>
+                {
+                    if (onClick != null)
+                    {
+                        menu.AddItem("Select", false, () => onClick());
+                    }
+                    if (onDoubleClick != null)
+                    {
+                        menu.AddItem("Focus", false, () => onDoubleClick());
+                    }
+                    menu.AddItem("Refresh Hierarchy", false, RefreshCatalogAndHierarchy);
+                });
+                evt.StopPropagation();
+            });
             row.RegisterCallback<ClickEvent>(evt =>
             {
                 if (evt.clickCount > 1)
@@ -4505,6 +4597,15 @@ namespace RobotTwin.UI
                 }
             });
             _hierarchyTree.Add(row);
+        }
+
+        private void ShowContextMenu(Vector2 worldPosition, Action<GenericDropdownMenu> buildMenu)
+        {
+            if (_root == null || buildMenu == null) return;
+            var menu = new GenericDropdownMenu();
+            buildMenu(menu);
+            Vector2 rootPos = _root.WorldToLocal(worldPosition);
+            menu.DropDown(new Rect(rootPos, Vector2.zero), _root, DropdownMenuSizeMode.Auto);
         }
 
         private VisualElement FindStateEntryById(string id)
@@ -4817,9 +4918,28 @@ namespace RobotTwin.UI
 
         private void FrameSelectedPart()
         {
-            if (string.IsNullOrWhiteSpace(_selectedPartName)) return;
             if (_studioView == null) return;
-            _studioView.FrameModel();
+            if (TryGetSelectedPart(out var part) && part != null)
+            {
+                _studioView.FramePart(part);
+            }
+            else
+            {
+                _studioView.FrameModel();
+            }
+        }
+
+        private void FrameSelectedPartOrModel()
+        {
+            if (_studioView == null) return;
+            if (TryGetSelectedPart(out var part) && part != null)
+            {
+                _studioView.FramePart(part);
+            }
+            else
+            {
+                _studioView.FrameModel();
+            }
         }
 
         private void RefreshAnchorGizmos()
@@ -5331,47 +5451,47 @@ namespace RobotTwin.UI
                 {
                     return;
                 }
-            if (type.Equals("Line", StringComparison.OrdinalIgnoreCase))
-            {
-                Vector2 start;
-                Vector2 end;
-                if (_payload != null && _payload.lineFlip)
+                if (type.Equals("Line", StringComparison.OrdinalIgnoreCase))
                 {
-                    start = new Vector2(rect.x + rect.width, rect.y);
-                    end = new Vector2(rect.x, rect.y + rect.height);
+                    Vector2 start;
+                    Vector2 end;
+                    if (_payload != null && _payload.lineFlip)
+                    {
+                        start = new Vector2(rect.x + rect.width, rect.y);
+                        end = new Vector2(rect.x, rect.y + rect.height);
+                    }
+                    else
+                    {
+                        start = new Vector2(rect.x, rect.y);
+                        end = new Vector2(rect.x + rect.width, rect.y + rect.height);
+                    }
+                    var center = rect.center;
+                    float rotation = _payload?.rotation ?? 0f;
+                    start = RotatePoint(start, center, rotation);
+                    end = RotatePoint(end, center, rotation);
+                    painter.BeginPath();
+                    painter.MoveTo(start);
+                    painter.LineTo(end);
+                    painter.Stroke();
+                    return;
                 }
-                else
-                {
-                    start = new Vector2(rect.x, rect.y);
-                    end = new Vector2(rect.x + rect.width, rect.y + rect.height);
-                }
-                var center = rect.center;
-                float rotation = _payload?.rotation ?? 0f;
-                start = RotatePoint(start, center, rotation);
-                end = RotatePoint(end, center, rotation);
-                painter.BeginPath();
-                painter.MoveTo(start);
-                painter.LineTo(end);
-                painter.Stroke();
-                return;
-            }
 
-            if (type.Equals("Triangle", StringComparison.OrdinalIgnoreCase))
-            {
-                var center = rect.center;
-                float rotation = _payload?.rotation ?? 0f;
-                var p1 = RotatePoint(new Vector2(rect.x + rect.width * 0.5f, rect.y), center, rotation);
-                var p2 = RotatePoint(new Vector2(rect.x + rect.width, rect.y + rect.height), center, rotation);
-                var p3 = RotatePoint(new Vector2(rect.x, rect.y + rect.height), center, rotation);
-                painter.BeginPath();
-                painter.MoveTo(p1);
-                painter.LineTo(p2);
-                painter.LineTo(p3);
-                painter.ClosePath();
-                painter.Fill();
-                painter.Stroke();
-                return;
-            }
+                if (type.Equals("Triangle", StringComparison.OrdinalIgnoreCase))
+                {
+                    var center = rect.center;
+                    float rotation = _payload?.rotation ?? 0f;
+                    var p1 = RotatePoint(new Vector2(rect.x + rect.width * 0.5f, rect.y), center, rotation);
+                    var p2 = RotatePoint(new Vector2(rect.x + rect.width, rect.y + rect.height), center, rotation);
+                    var p3 = RotatePoint(new Vector2(rect.x, rect.y + rect.height), center, rotation);
+                    painter.BeginPath();
+                    painter.MoveTo(p1);
+                    painter.LineTo(p2);
+                    painter.LineTo(p3);
+                    painter.ClosePath();
+                    painter.Fill();
+                    painter.Stroke();
+                    return;
+                }
 
                 if (type.Equals("Circle", StringComparison.OrdinalIgnoreCase))
                 {
@@ -5391,20 +5511,20 @@ namespace RobotTwin.UI
                     return;
                 }
 
-            var boxCenter = rect.center;
-            float boxRotation = _payload?.rotation ?? 0f;
-            var b1 = RotatePoint(new Vector2(rect.x, rect.y), boxCenter, boxRotation);
-            var b2 = RotatePoint(new Vector2(rect.x + rect.width, rect.y), boxCenter, boxRotation);
-            var b3 = RotatePoint(new Vector2(rect.x + rect.width, rect.y + rect.height), boxCenter, boxRotation);
-            var b4 = RotatePoint(new Vector2(rect.x, rect.y + rect.height), boxCenter, boxRotation);
-            painter.BeginPath();
-            painter.MoveTo(b1);
-            painter.LineTo(b2);
-            painter.LineTo(b3);
-            painter.LineTo(b4);
-            painter.ClosePath();
-            painter.Fill();
-            painter.Stroke();
+                var boxCenter = rect.center;
+                float boxRotation = _payload?.rotation ?? 0f;
+                var b1 = RotatePoint(new Vector2(rect.x, rect.y), boxCenter, boxRotation);
+                var b2 = RotatePoint(new Vector2(rect.x + rect.width, rect.y), boxCenter, boxRotation);
+                var b3 = RotatePoint(new Vector2(rect.x + rect.width, rect.y + rect.height), boxCenter, boxRotation);
+                var b4 = RotatePoint(new Vector2(rect.x, rect.y + rect.height), boxCenter, boxRotation);
+                painter.BeginPath();
+                painter.MoveTo(b1);
+                painter.LineTo(b2);
+                painter.LineTo(b3);
+                painter.LineTo(b4);
+                painter.ClosePath();
+                painter.Fill();
+                painter.Stroke();
             }
         }
 
@@ -6061,6 +6181,7 @@ namespace RobotTwin.UI
             LoadSelectedPart();
             UpdateInspectorForSelection("State", entry);
             _studioView?.ClearSelectionOutline();
+            _studioView?.ClearPartFocus();
         }
 
         private void SelectPartEntry(VisualElement entry)
@@ -6072,18 +6193,17 @@ namespace RobotTwin.UI
             _selectedPartName = entry?.userData as string;
             LoadSelectedPart();
             RefreshTransformGizmo();
-            if (_materialOverlay != null && _materialOverlay.style.display == DisplayStyle.Flex)
-            {
-                UpdateMaterialModalFromSelection();
-            }
+            RefreshMaterialPanelForSelection();
             UpdateInspectorForSelection("Part", entry);
             if (_studioView != null && TryGetPartTransform(_selectedPartName, out var part))
             {
                 _studioView.SetSelectionOutline(part);
+                _studioView.SetPartFocus(part);
             }
             else
             {
                 _studioView?.ClearSelectionOutline();
+                _studioView?.ClearPartFocus();
             }
         }
 
@@ -6100,10 +6220,7 @@ namespace RobotTwin.UI
             _selectedStateEntry = null;
             _selectedStateId = null;
             UpdateInspectorForModel();
-            if (_materialOverlay != null && _materialOverlay.style.display == DisplayStyle.Flex)
-            {
-                UpdateMaterialModalFromSelection();
-            }
+            RefreshMaterialPanelForSelection();
             var modelRoot = _studioView?.ModelRoot;
             if (_studioView != null && modelRoot != null)
             {
@@ -6113,6 +6230,8 @@ namespace RobotTwin.UI
             {
                 _studioView?.ClearSelectionOutline();
             }
+
+            _studioView?.ClearPartFocus();
         }
 
         private void UpdateInspectorForModel()
@@ -6206,6 +6325,12 @@ namespace RobotTwin.UI
             var pointerPos = new Vector2(evt.position.x, evt.position.y);
             _lastPointer = pointerPos;
 
+            if (evt.button == 1 || evt.button == 2)
+            {
+                _viewportContextStart = pointerPos;
+                _viewportContextDrag = false;
+            }
+
             if (IsAnchorPickEnabled() && _selectedPinEntry != null)
             {
                 TryPickAnchor(pointerPos);
@@ -6286,6 +6411,11 @@ namespace RobotTwin.UI
             var delta = pointerPos - _lastPointer;
             _lastPointer = pointerPos;
 
+            if (_panning && (pointerPos - _viewportContextStart).sqrMagnitude > 9f)
+            {
+                _viewportContextDrag = true;
+            }
+
             if (_isViewportEditDragging)
             {
                 if (TryGetViewportPoint(pointerPos, out var viewportPoint))
@@ -6319,8 +6449,25 @@ namespace RobotTwin.UI
                 evt.StopPropagation();
                 return;
             }
+            if (evt.button == 1 && !_viewportContextDrag)
+            {
+                ShowContextMenu(evt.position, menu =>
+                {
+                    if (TryGetSelectedPart(out var part) && part != null)
+                    {
+                        menu.AddItem("Frame Selected Part", false, FrameSelectedPart);
+                    }
+                    menu.AddItem("Frame Model", false, () => _studioView?.FrameModel());
+                    menu.AddItem("Reset View", false, () => _studioView?.ResetView());
+                    menu.AddItem(IsAnchorVisible() ? "Hide Anchors" : "Show Anchors", false, ToggleAnchors);
+                });
+            }
             _orbiting = false;
             _panning = false;
+            if (evt.button == 1 || evt.button == 2)
+            {
+                _viewportContextDrag = false;
+            }
             ReleaseViewportPointerCapture();
             evt.StopPropagation();
         }
@@ -6378,7 +6525,7 @@ namespace RobotTwin.UI
             if (_studioView.TryPickViewCubeFace(viewportPoint, out var preset))
             {
                 _studioView.SnapView(preset);
-                _studioView.FrameModel();
+                FrameSelectedPartOrModel();
                 _viewport?.Focus();
                 _viewportKeyFocus = true;
                 evt.StopPropagation();
@@ -6652,8 +6799,8 @@ namespace RobotTwin.UI
         private void UpdateObjectsPanelForView()
         {
             bool show2d = _is2dView;
-            SetPanelVisible(_objectsLabelsSection, show2d);
-            SetPanelVisible(_objectsPinsSection, show2d);
+            SetPanelVisible(_objectsLabelsSection, true);
+            SetPanelVisible(_objectsPinsSection, true);
             SetPanelVisible(_objectsFxSection, !show2d);
             SetPanelVisible(_objectsAnchorsSection, !show2d);
         }
@@ -8151,6 +8298,7 @@ namespace RobotTwin.UI
                 if (_loadingBlurTexture != null)
                 {
                     _loadingBlurTexture.Release();
+                    Destroy(_loadingBlurTexture);
                 }
                 _loadingBlurTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
                 {

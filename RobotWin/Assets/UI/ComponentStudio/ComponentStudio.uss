@@ -376,7 +376,7 @@
 
 .studio-viewport-panel {
     flex-grow: 1;
-    padding: 8px 10px;
+    padding: 12px 24px;
     min-height: 0;
     min-width: 0;
     position: relative;
@@ -397,7 +397,7 @@
     border-right-color: var(--line);
     align-items: center;
     justify-content: center;
-    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-scale-mode: scale-and-crop;
     min-width: 320px;
     min-height: 220px;
 }
@@ -535,8 +535,8 @@
 
 .view-cube {
     position: absolute;
-    left: 10px;
-    bottom: 10px;
+    left: 24px;
+    bottom: 24px;
     width: 90px;
     height: 90px;
     background-color: rgba(10, 14, 20, 0.82);
@@ -570,9 +570,9 @@
 
 .viewport-tools {
     position: absolute;
-    left: 0;
-    top: 52px;
-    bottom: 12px;
+    left: 24px;
+    top: 58px;
+    bottom: auto;
     width: 190px;
     background-color: rgba(9, 12, 18, 0.82);
     border-radius: 0 10px 10px 0;
@@ -656,7 +656,7 @@
 .viewport-edit-panel {
     position: absolute;
     top: 56px;
-    left: 12px;
+    left: 24px;
     width: 260px;
     background-color: rgba(9, 12, 18, 0.78);
     border-radius: 10px;
@@ -695,8 +695,8 @@
 
 .viewport-edit-dock {
     position: absolute;
-    right: 12px;
-    bottom: 12px;
+    right: 24px;
+    bottom: 24px;
     width: 210px;
     padding: 8px 9px;
     border-radius: 10px;
@@ -764,6 +764,8 @@
 .component-studio-root .circuit-3d-controls {
     width: 200px;
     padding: 7px 8px;
+    top: 16px;
+    right: 16px;
 }
 
 .component-studio-root .circuit-3d-controls-row {
@@ -1139,6 +1141,8 @@
     position: absolute;
     right: 12px;
     top: 58px;
+    left: auto;
+    bottom: auto;
     width: 280px;
     background-color: rgba(9, 12, 18, 0.88);
     border-radius: 10px;
@@ -1151,6 +1155,12 @@
     border-left-color: var(--line-strong);
     border-right-color: var(--line-strong);
     padding: 10px;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+.material-side-panel.modal-overlay {
+    background-color: transparent;
 }
 
 .material-side-panel .modal-card {

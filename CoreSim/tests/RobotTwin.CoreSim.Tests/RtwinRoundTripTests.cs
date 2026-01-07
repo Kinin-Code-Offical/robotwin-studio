@@ -124,6 +124,93 @@ public class RtwinRoundTripTests
         }
     }
 
+    [Fact]
+    public void RtrobotSaveLoadExtractRoundTripPreservesAssemblyAndEnvironment()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "RobotTwin.CoreSim.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var filePath = Path.Combine(tempRoot, "robotstudio_fixture.rtrobot");
+            var workspaceRoot = Path.Combine(tempRoot, "robotstudio_fixture");
+
+            var package = new RobotStudioPackage
+            {
+                Robot = new RobotSpec { Name = "Robot-1" },
+                Circuit = new CircuitSpec { Id = "circuit-rs-1", Mode = SimulationMode.Fast },
+                Assembly = new AssemblySpec
+                {
+                    Parts = new List<AssemblyPartSpec>
+                    {
+                        new AssemblyPartSpec
+                        {
+                            InstanceId = "part-1",
+                            ComponentType = "servo",
+                            CatalogId = "catalog/servo/sg90",
+                            Position = new Vec3 { X = 1, Y = 2, Z = 3 },
+                            Rotation = new Vec3 { X = 0, Y = 90, Z = 0 },
+                            Scale = new Vec3 { X = 1, Y = 1, Z = 1 },
+                            Pinned = true,
+                            DensityKgPerM3 = 1200,
+                            MassKg = 0.055,
+                            Friction = 0.8
+                        }
+                    },
+                    Wires = new List<AssemblyWireSpec>
+                    {
+                        new AssemblyWireSpec
+                        {
+                            Id = "wire-1",
+                            From = "part-1:signal",
+                            To = "mcu:pwm0",
+                            LengthMeters = 0.15,
+                            YoungModulus = 1e9,
+                            MaxStress = 4e7,
+                            Damping = 0.05
+                        }
+                    }
+                },
+                Environment = new EnvironmentSpec
+                {
+                    Name = "Lab",
+                    TemperatureC = 22,
+                    VibrationAmplitude = 0.01,
+                    VibrationFrequencyHz = 60,
+                    Gravity = 9.81,
+                    AirDensity = 1.225,
+                    SurfaceFriction = 0.6
+                },
+                Metadata = new Dictionary<string, object> { { "author", "fixture" } }
+            };
+
+            SimulationSerializer.SaveRobotPackage(package, filePath);
+            Assert.True(File.Exists(filePath), $"Expected .rtrobot to exist: {filePath}");
+
+            var loadedNoExtract = SimulationSerializer.LoadRobotPackage(filePath, extractWorkspace: false);
+            Assert.NotNull(loadedNoExtract);
+            Assert.NotNull(loadedNoExtract!.Assembly);
+            Assert.NotNull(loadedNoExtract.Environment);
+            Assert.Single(loadedNoExtract.Assembly.Parts);
+            Assert.Single(loadedNoExtract.Assembly.Wires);
+            Assert.Equal("Lab", loadedNoExtract.Environment.Name);
+            Assert.Equal(9.81, loadedNoExtract.Environment.Gravity, 3);
+
+            var loadedWithExtract = SimulationSerializer.LoadRobotPackage(filePath, extractWorkspace: true);
+            Assert.NotNull(loadedWithExtract);
+
+            Assert.True(File.Exists(Path.Combine(workspaceRoot, "assembly.json")));
+            Assert.True(File.Exists(Path.Combine(workspaceRoot, "environment.json")));
+            Assert.True(File.Exists(Path.Combine(workspaceRoot, "robot.json")));
+            Assert.True(File.Exists(Path.Combine(workspaceRoot, "circuit.json")));
+            Assert.True(File.Exists(Path.Combine(workspaceRoot, "metadata.json")));
+        }
+        finally
+        {
+            TryDeleteDirectory(tempRoot);
+        }
+    }
+
     private static byte[] LoadFixtureBytes(string fileName)
     {
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", fileName);

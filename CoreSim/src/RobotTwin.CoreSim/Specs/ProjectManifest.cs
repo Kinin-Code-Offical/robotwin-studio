@@ -17,6 +17,18 @@ namespace RobotTwin.CoreSim.Specs
         public required RobotSpec Robot { get; set; }
         public required WorldSpec World { get; set; }
 
+        /// <summary>
+        /// Optional assembly layout for RobotStudio / Full Mode preparation.
+        /// Stored as assembly.json in binary packages.
+        /// </summary>
+        public AssemblySpec? Assembly { get; set; }
+
+        /// <summary>
+        /// Optional environment factors (temperature, vibration, etc.).
+        /// Stored as environment.json in binary packages.
+        /// </summary>
+        public EnvironmentSpec? Environment { get; set; }
+
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
     }
 }

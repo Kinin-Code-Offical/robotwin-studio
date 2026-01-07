@@ -33,6 +33,59 @@ namespace RobotTwin.Editor
             Debug.Log($"[ComponentPackageExporter] Exported {exported} .rtcomp packages to {streamingRoot}. Copied {copied} package(s) to user AppData.");
         }
 
+        [MenuItem("RobotWin/Components/Rebuild Bundled RTComp (STEP/STP -> GLB)")]
+        public static void RebuildBundledRtcomp()
+        {
+            string repoRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", ".."));
+            string scriptPath = Path.Combine(repoRoot, "tools", "scripts", "build_rtcomp_from_components.py");
+            if (!File.Exists(scriptPath))
+            {
+                Debug.LogWarning($"[ComponentPackageExporter] Missing script: {scriptPath}");
+                return;
+            }
+
+            string python = GetEnvVar("RTWIN_PYTHON") ?? "python";
+            string args = $"\"{scriptPath}\"";
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = python,
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                WorkingDirectory = repoRoot
+            };
+
+            try
+            {
+                using var proc = System.Diagnostics.Process.Start(startInfo);
+                if (proc == null)
+                {
+                    Debug.LogWarning("[ComponentPackageExporter] Failed to start rtcomp rebuild process.");
+                    return;
+                }
+                proc.WaitForExit(600000);
+                string stdout = proc.StandardOutput.ReadToEnd();
+                string stderr = proc.StandardError.ReadToEnd();
+                if (!string.IsNullOrWhiteSpace(stdout))
+                {
+                    Debug.Log($"[ComponentPackageExporter] build_rtcomp stdout:\n{stdout}");
+                }
+                if (!string.IsNullOrWhiteSpace(stderr))
+                {
+                    Debug.LogWarning($"[ComponentPackageExporter] build_rtcomp stderr:\n{stderr}");
+                }
+
+                AssetDatabase.Refresh();
+                Debug.Log($"[ComponentPackageExporter] Rebuild bundled rtcomp complete. ExitCode={proc.ExitCode}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ComponentPackageExporter] Rebuild bundled rtcomp failed: {ex.Message}");
+            }
+        }
+
         private static int ExportFolder(string sourceRoot, string outputRoot)
         {
             if (!Directory.Exists(sourceRoot)) return 0;

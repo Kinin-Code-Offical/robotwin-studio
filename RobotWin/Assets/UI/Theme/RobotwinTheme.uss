@@ -26,8 +26,18 @@
     -unity-font-definition: resource("Fonts/Inter-Regular SDF"); 
 } */
 
+/* Default text colors: many UXML files don't apply .unity-text-default.
+   Without a base rule, labels can end up effectively invisible on dark panels. */
+Label,
+TextElement,
+Button {
+    color: var(--color-text-main);
+    font-size: 13px;
+    -unity-text-align: middle-left;
+}
+
 .unity-text-default {
-    color: #9ca3af;
+    color: var(--color-text-dim);
     font-size: 13px;
     -unity-text-align: middle-left;
 }
