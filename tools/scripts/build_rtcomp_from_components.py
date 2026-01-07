@@ -33,6 +33,54 @@ def load_component_definition(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _read_glb_json(model_path: Path) -> dict:
+    import struct
+
+    data = model_path.read_bytes()
+    if len(data) < 20 or data[:4] != b"glTF":
+        return {}
+    # header: magic(4), version(4), length(4)
+    # first chunk: chunkLength(4), chunkType(4), chunkData...
+    off = 12
+    chunk_len, chunk_type = struct.unpack_from("<I4s", data, off)
+    off += 8
+    if chunk_type != b"JSON":
+        return {}
+    text = data[off : off + chunk_len].decode("utf-8", errors="replace")
+    return json.loads(text)
+
+
+def collect_model_dependencies(model_path: Path) -> list[Path]:
+    ext = model_path.suffix.lower()
+    model_dir = model_path.parent
+    deps: list[Path] = []
+
+    if ext == ".gltf":
+        gltf = json.loads(model_path.read_text(encoding="utf-8", errors="replace"))
+        for buffer in gltf.get("buffers") or []:
+            uri = (buffer or {}).get("uri")
+            if not uri or "://" in uri or uri.startswith("data:"):
+                continue
+            deps.append(model_dir / uri)
+        for image in gltf.get("images") or []:
+            uri = (image or {}).get("uri")
+            if not uri or "://" in uri or uri.startswith("data:"):
+                continue
+            deps.append(model_dir / uri)
+        return [p for p in deps if p.exists()]
+
+    if ext == ".glb":
+        gltf = _read_glb_json(model_path)
+        for image in gltf.get("images") or []:
+            uri = (image or {}).get("uri")
+            if not uri or "://" in uri or uri.startswith("data:"):
+                continue
+            deps.append(model_dir / uri)
+        return [p for p in deps if p.exists()]
+
+    return []
+
+
 def ensure_model_glb(step_venv_python: Path, model_path: Path) -> Path:
     ext = model_path.suffix.lower()
     if ext in (".glb", ".gltf"):
@@ -124,6 +172,8 @@ def main() -> int:
         package_path = out_dir / f"{package_name}.rtcomp"
 
         assets = [(glb_path, f"assets/{glb_path.name}")]
+        for dep in collect_model_dependencies(glb_path):
+            assets.append((dep, f"assets/{dep.name}"))
         write_rtcomp(package_path, component_json_text, assets)
         built += 1
 
@@ -133,4 +183,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

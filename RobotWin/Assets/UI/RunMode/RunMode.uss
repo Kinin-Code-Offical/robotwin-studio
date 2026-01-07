@@ -680,6 +680,7 @@
     background-color: #06080b;
     border-radius: 6px;
     min-height: 0;
+    padding-right: 8px;
 }
 
 .log-text {
@@ -808,6 +809,7 @@
     background-color: #0b1016;
     border-radius: 6px;
     padding: 6px;
+    padding-right: 12px;
 }
 
 .telemetry-list {
@@ -861,6 +863,7 @@
     background-color: #06080b;
     border-radius: 6px;
     min-height: 0;
+    padding-right: 8px;
 }
 
 .serial-text {
@@ -875,13 +878,17 @@
 .run-root .unity-scroll-view__vertical-scroller,
 .run-root .unity-scroll-view__horizontal-scroller {
     background-color: transparent;
-    width: 10px;
+    width: 4px;
     border-radius: 8px;
     margin-top: 0;
     margin-bottom: 0;
     align-self: stretch;
     padding-top: 0;
     padding-bottom: 0;
+}
+
+.run-root .unity-scroll-view__horizontal-scroller {
+    height: 4px;
 }
 
 .run-root .unity-scroller,
@@ -898,7 +905,7 @@
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
-    margin: 2px;
+    margin: 1px;
 }
 
 .run-root .unity-scroller .unity-base-slider__track,
@@ -908,7 +915,7 @@
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
-    margin: 2px;
+    margin: 1px;
 }
 
 .run-root .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,

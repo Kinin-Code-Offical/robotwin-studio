@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import json
 import os
 import platform
@@ -12,6 +13,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+import threading
 
 
 _SERVER_EVENTS: "deque[dict]" = deque(maxlen=400)
@@ -24,15 +26,13 @@ def server_event(level: str, message: str, **fields) -> None:
         "message": message,
     }
     if fields:
-        evt.update(fields)
+        evt |= fields
     _SERVER_EVENTS.append(evt)
-    try:
+    with contextlib.suppress(Exception):
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         (LOG_DIR / "server.log").open("a", encoding="utf-8", errors="ignore").write(
             json.dumps(evt, ensure_ascii=False) + "\n"
         )
-    except Exception:
-        pass
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -144,6 +144,12 @@ TESTS = [
         "description": "Validate HF-06 sample component package.",
         "command": [sys.executable, "tools/rt_tool.py", "validate-physical-overrides"],
     },
+    {
+        "name": "build-rtcomp",
+        "label": "Build .rtcomp Packages",
+        "description": "Convert STEP/STP models to GLB and rebuild bundled .rtcomp packages.",
+        "command": [sys.executable, "tools/rt_tool.py", "build-rtcomp"],
+    },
 ]
 
 
@@ -242,9 +248,7 @@ def classify_line(line: str) -> str | None:
         return "error"
     if "warn" in lowered:
         return "warning"
-    if "info" in lowered:
-        return "info"
-    return None
+    return "info" if "info" in lowered else None
 
 
 def scan_logs(tail: int) -> list[dict]:
@@ -257,18 +261,16 @@ def scan_logs(tail: int) -> list[dict]:
             if not content:
                 continue
             for line in content.splitlines():
-                level = classify_line(line)
-                if not level:
-                    continue
-                alerts.append(
-                    {
-                        "area": area,
-                        "log": path.name,
-                        "level": level,
-                        "message": line.strip(),
-                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime)),
-                    }
-                )
+                if level := classify_line(line):
+                    alerts.append(
+                        {
+                            "area": area,
+                            "log": path.name,
+                            "level": level,
+                            "message": line.strip(),
+                            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime)),
+                        }
+                    )
     return alerts[:200]
 
 
@@ -354,23 +356,19 @@ class DebugHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args) -> None:
         # Keep console output quiet; write minimal access events to server.log.
-        try:
+        with contextlib.suppress(Exception):
             server_event(
                 "access",
                 fmt % args,
                 client=str(getattr(self, "client_address", "")),
                 path=str(getattr(self, "path", "")),
             )
-        except Exception:
-            pass
 
     def _safe_write(self, data: bytes) -> None:
         try:
             self.wfile.write(data)
-        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-            # Client disconnected mid-response; this is expected during polling.
-            return
         except OSError:
+            # Client disconnected mid-response; this is expected during polling.
             return
 
     def send_json(self, payload: dict, status: int = 200) -> None:
@@ -378,7 +376,7 @@ class DebugHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self._send_bytes("application/json", body)
 
-    def do_GET(self) -> None:
+    def do_GET(self) -> None:  # sourcery skip: low-code-quality
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self.send_response(HTTPStatus.FOUND)
@@ -479,8 +477,7 @@ class DebugHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/firmware-mode":
             query = parse_qs(parsed.query)
             mode = query.get("mode", ["lockstep"])[0]
-            payload = fetch_unity_text(f"firmware-mode?mode={mode}")
-            if payload:
+            if payload := fetch_unity_text(f"firmware-mode?mode={mode}"):
                 try:
                     self.send_json(json.loads(payload))
                     return
@@ -543,6 +540,11 @@ class DebugHandler(SimpleHTTPRequestHandler):
                 return
             result = run_command(test["name"], test["command"])
             self.send_json(result)
+            return
+        if parsed.path == "/api/shutdown":
+            self.send_json({"ok": True, "message": "Shutting down debug console."})
+            server_event("info", "Shutdown requested")
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
             return
         self.send_json({"error": "Unsupported endpoint."}, status=404)
 

@@ -506,6 +506,7 @@
 
 .projects-list {
     flex-grow: 1;
+    padding-right: 10px;
 }
 
 .projects-table {
@@ -701,9 +702,40 @@
     color: #ffffff;
 }
 
+.row-action-btn-icon {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.row-action-btn.danger {
+    background-color: rgba(248, 113, 113, 0.18);
+}
+
+.row-action-btn.danger:hover {
+    background-color: rgba(248, 113, 113, 0.3);
+}
+
+.row-action-icon {
+    width: 14px;
+    height: 14px;
+    -unity-background-image-tint-color: #f87171;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.row-action-btn.danger:hover .row-action-icon {
+    -unity-background-image-tint-color: #ffffff;
+}
+
 /* TEMPLATES */
 .templates-list {
     flex-grow: 1;
+    padding-right: 10px;
+}
+
+.recent-list {
+    padding-right: 10px;
 }
 
 .components-header {
@@ -721,6 +753,7 @@
     padding: 8px;
     padding-top: 4px;
     padding-bottom: 4px;
+    padding-right: 12px;
     border-top-width: 1px;
     border-bottom-width: 1px;
     border-left-width: 1px;
@@ -771,6 +804,10 @@
     height: 24px;
     padding-left: 8px;
     padding-right: 8px;
+    margin-left: 6px;
+}
+
+.component-row-actions .row-action-btn {
     margin-left: 6px;
 }
 
@@ -1069,6 +1106,7 @@
 
 .component-editor-scroll {
     max-height: 70%;
+    padding-right: 10px;
 }
 
 .editor-section {
@@ -1414,13 +1452,17 @@
 .unity-scroll-view__vertical-scroller,
 .unity-scroll-view__horizontal-scroller {
     background-color: transparent;
-    width: 10px;
+    width: 4px;
     border-radius: 8px;
     margin-top: 0;
     margin-bottom: 0;
     align-self: stretch;
     padding-top: 0;
     padding-bottom: 0;
+}
+
+.unity-scroll-view__horizontal-scroller {
+    height: 4px;
 }
 
 .unity-scroller,
@@ -1437,7 +1479,7 @@
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
-    margin: 2px;
+    margin: 1px;
 }
 
 .unity-scroller .unity-base-slider__track,
@@ -1447,7 +1489,7 @@
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
-    margin: 2px;
+    margin: 1px;
 }
 
 .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,
@@ -1529,7 +1571,7 @@
 .projects-list .unity-scroll-view__vertical-scroller,
 .templates-list .unity-scroll-view__vertical-scroller,
 .recent-list .unity-scroll-view__vertical-scroller {
-    width: 10px;
+    width: 6px;
 }
 
 .projects-list .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,

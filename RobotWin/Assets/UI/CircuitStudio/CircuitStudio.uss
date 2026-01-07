@@ -1084,7 +1084,7 @@
 }
 
 .panel-scroll {
-    padding: 12px 18px 12px 12px;
+    padding: 12px 14px 12px 12px;
     min-width: 0;
     min-height: 0;
 }
@@ -1768,13 +1768,17 @@
 .unity-scroll-view__vertical-scroller,
 .unity-scroll-view__horizontal-scroller {
     background-color: transparent;
-    width: 10px;
+    width: 4px;
     border-radius: 8px;
     margin-top: 0;
     margin-bottom: 0;
     align-self: stretch;
     padding-top: 0;
     padding-bottom: 0;
+}
+
+.unity-scroll-view__horizontal-scroller {
+    height: 4px;
 }
 
 .unity-scroller,
@@ -1791,7 +1795,7 @@
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
-    margin: 2px;
+    margin: 1px;
 }
 
 .unity-scroller .unity-base-slider__track,
@@ -1801,7 +1805,7 @@
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
-    margin: 2px;
+    margin: 1px;
 }
 
 .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,

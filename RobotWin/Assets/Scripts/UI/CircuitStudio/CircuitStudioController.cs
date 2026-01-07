@@ -507,6 +507,13 @@ namespace RobotTwin.UI
             }
             _isPanningCanvas = false;
             _panPointerId = -1;
+
+            if (_circuit3DLoadingBlurTexture != null)
+            {
+                _circuit3DLoadingBlurTexture.Release();
+                Destroy(_circuit3DLoadingBlurTexture);
+                _circuit3DLoadingBlurTexture = null;
+            }
         }
 
         private void Update()
@@ -1546,7 +1553,7 @@ namespace RobotTwin.UI
 
         private void LoadProjectFromPath(string path)
         {
-            var project = SimulationSerializer.LoadProject(path);
+            var project = SimulationSerializer.LoadProject(path, extractWorkspace: true, SimulationSerializer.WorkspaceSnapshotMode.CircuitOnly);
             if (project == null)
             {
                 Debug.LogWarning("[CircuitStudio] Failed to load project.");
@@ -1764,6 +1771,7 @@ namespace RobotTwin.UI
                 if (_circuit3DLoadingBlurTexture != null)
                 {
                     _circuit3DLoadingBlurTexture.Release();
+                    Destroy(_circuit3DLoadingBlurTexture);
                 }
                 _circuit3DLoadingBlurTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
                 {
@@ -9859,13 +9867,13 @@ namespace RobotTwin.UI
             }
             if (!targetIsText)
             {
-                if (evt.ctrlKey && evt.keyCode == KeyCode.Z)
+                if (IsActionKey(evt) && evt.keyCode == KeyCode.Z && !evt.shiftKey)
                 {
                     Undo();
                     evt.StopPropagation();
                     return;
                 }
-                if (evt.ctrlKey && (evt.keyCode == KeyCode.Y || (evt.shiftKey && evt.keyCode == KeyCode.Z)))
+                if (IsActionKey(evt) && (evt.keyCode == KeyCode.Y || (evt.shiftKey && evt.keyCode == KeyCode.Z)))
                 {
                     Redo();
                     evt.StopPropagation();
@@ -9873,13 +9881,13 @@ namespace RobotTwin.UI
                 }
                 if (_centerMode == CenterPanelMode.Circuit)
                 {
-                    if (evt.ctrlKey && evt.keyCode == KeyCode.C)
+                    if (IsActionKey(evt) && evt.keyCode == KeyCode.C)
                     {
                         CopySelectionToClipboard();
                         evt.StopPropagation();
                         return;
                     }
-                    if (evt.ctrlKey && evt.keyCode == KeyCode.V)
+                    if (IsActionKey(evt) && evt.keyCode == KeyCode.V)
                     {
                         PasteClipboard();
                         evt.StopPropagation();
@@ -9903,45 +9911,45 @@ namespace RobotTwin.UI
                     return;
                 }
             }
-            if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.S)
+            if (IsActionKey(evt) && evt.shiftKey && evt.keyCode == KeyCode.S)
             {
                 if (codeContextActive) SaveCodeFile(true);
                 else SaveCurrentProject();
                 evt.StopPropagation();
                 return;
             }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.S)
+            if (IsActionKey(evt) && evt.keyCode == KeyCode.S)
             {
                 if (codeContextActive) SaveCodeFile(false);
                 else SaveCurrentProject();
                 evt.StopPropagation();
                 return;
             }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.N)
+            if (IsActionKey(evt) && evt.keyCode == KeyCode.N)
             {
                 CreateNewCodeFile();
                 evt.StopPropagation();
                 return;
             }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.O)
+            if (IsActionKey(evt) && evt.keyCode == KeyCode.O)
             {
                 OpenCodeFileDialog();
                 evt.StopPropagation();
                 return;
             }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.B)
+            if (IsActionKey(evt) && evt.keyCode == KeyCode.B)
             {
                 RunCodeBuild();
                 evt.StopPropagation();
                 return;
             }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.R)
+            if (IsActionKey(evt) && evt.keyCode == KeyCode.R)
             {
                 RunCodeBuildAndRun();
                 evt.StopPropagation();
                 return;
             }
-            if (evt.ctrlKey && (evt.keyCode == KeyCode.Z || (evt.shiftKey && evt.keyCode == KeyCode.Z)))
+            if (IsActionKey(evt) && (evt.keyCode == KeyCode.Z || (evt.shiftKey && evt.keyCode == KeyCode.Z)))
             {
                 if (IsCodeEditorFocused())
                 {
@@ -9951,7 +9959,7 @@ namespace RobotTwin.UI
                 }
                 return;
             }
-            if (evt.ctrlKey && evt.keyCode == KeyCode.Y)
+            if (IsActionKey(evt) && evt.keyCode == KeyCode.Y)
             {
                 if (IsCodeEditorFocused())
                 {
@@ -10341,6 +10349,14 @@ namespace RobotTwin.UI
                 ? scrollView.contentViewport.layout.height
                 : scrollView.layout.height;
             return Mathf.Max(0f, contentHeight - viewportHeight);
+        }
+
+        private static bool IsActionKey(KeyDownEvent evt)
+        {
+            if (evt == null) return false;
+            if (evt.ctrlKey || evt.commandKey) return true;
+            var mods = evt.modifiers;
+            return (mods & EventModifiers.Control) != 0 || (mods & EventModifiers.Command) != 0;
         }
 
         private bool ShouldShowLog(LogType type)

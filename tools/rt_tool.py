@@ -311,6 +311,7 @@ COMMAND_HELP = {
     "build-standalone": "Build Unity Windows player via batchmode.",
     "update-unity-plugins": "Build CoreSim .NET plugin and sync into RobotWin/Assets/Plugins.",
     "update-repo-snapshot": "Refresh docs/repo_files.txt, workspace snapshot, and README folder tree.",
+    "build-rtcomp": "Build bundled .rtcomp packages (STEP/STP -> GLB).",
     "validate-uxml": "Parse and validate all .uxml files.",
     "audit-runtime": "Scan runtime scripts for editor-only APIs.",
     "audit-build-outputs": "Audit build scripts for builds/ and logs/ output consistency.",
@@ -322,6 +323,7 @@ COMMAND_HELP = {
     "monitor-unity": "Tail logs/unity/unity_live_error.log and highlight errors.",
     "console": "Interactive HTTP console for RemoteCommandServer.",
     "debug-console": "Launch the Debug Console web dashboard.",
+    "debug-console-stop": "Stop the Debug Console web dashboard.",
     "setup": "Verify prerequisites and bootstrap dev setup (tests + validations + builds).",
 }
 
@@ -363,7 +365,9 @@ def main() -> int:
     add_script_command("run-qa", "tools/scripts/run_qa.ps1", "Run integration tests (Node/Jest)")
     add_script_command("run-unity-smoke", "tools/scripts/run_unity_smoke.ps1", "Run Unity batchmode smoke test")
     add_script_command("rpi-smoke", "tools/scripts/rpi_smoke_test.ps1", "Run Raspberry Pi shared-memory smoke test")
+    add_script_command("build-rtcomp", "tools/scripts/build_rtcomp_from_components.py", "Build bundled .rtcomp packages")
     add_script_command("debug-console", "tools/debug_console/launch_debug_console.ps1", "Launch Debug Console dashboard")
+    add_script_command("debug-console-stop", "tools/scripts/stop_debug_console.ps1", "Stop Debug Console dashboard")
     setup_parser = subparsers.add_parser("setup", help="Verify prerequisites and bootstrap local dev")
     setup_parser.add_argument("--check-only", action="store_true", help="Only verify prerequisites")
     setup_parser.add_argument("--qa", action="store_true", help="Also run integration tests (Node/Jest)")

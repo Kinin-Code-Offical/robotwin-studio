@@ -124,6 +124,12 @@ namespace RobotTwin.EditorTools
             Process.Start(new ProcessStartInfo("http://localhost:8090") { UseShellExecute = true });
         }
 
+        [MenuItem("RobotWin/Tools/Debug/Close Debug Console")]
+        private static void CloseDebugConsole()
+        {
+            RunRtTool("debug-console-stop");
+        }
+
         [MenuItem("RobotWin/Tools/Debug/Tail Unity Log")]
         private static void TailUnityLog()
         {

@@ -1060,6 +1060,11 @@ namespace RobotTwin.UI
                 if (evt.button != 0 || evt.target is Button) return;
                 OpenProjectFile(proj.FullPath);
             });
+            row.RegisterCallback<ContextClickEvent>(evt =>
+            {
+                ShowContextMenu(proj, row.LocalToWorld(evt.mousePosition), row);
+                evt.StopPropagation();
+            });
             row.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.button != 1 && evt.button != 2) return;
@@ -1632,6 +1637,18 @@ namespace RobotTwin.UI
             btnMenu.AddToClassList("row-action-btn");
             btnMenu.clicked += () => ShowContextMenu(currentProject, GetMenuAnchor(btnMenu), row);
             colActions.Add(btnMenu);
+
+            var deleteBtn = new Button(() => ShowDeleteConfirm(currentProject));
+            deleteBtn.tooltip = "Delete";
+            deleteBtn.AddToClassList("row-action-btn");
+            deleteBtn.AddToClassList("row-action-btn-icon");
+            deleteBtn.AddToClassList("danger");
+            var deleteIcon = new VisualElement();
+            deleteIcon.AddToClassList("row-action-icon");
+            deleteIcon.AddToClassList("icon");
+            deleteIcon.AddToClassList("icon-trash-2");
+            deleteBtn.Add(deleteIcon);
+            colActions.Add(deleteBtn);
             row.Add(colActions);
 
             return row;
@@ -1698,6 +1715,18 @@ namespace RobotTwin.UI
         {
             var row = new VisualElement();
             row.AddToClassList("component-row");
+            row.RegisterCallback<ContextClickEvent>(evt =>
+            {
+                ShowComponentContextMenu(item, row.LocalToWorld(evt.mousePosition));
+                evt.StopPropagation();
+            });
+            row.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 1 && evt.button != 2) return;
+                if (evt.target is Button) return;
+                ShowComponentContextMenu(item, row.LocalToWorld(evt.localPosition));
+                evt.StopPropagation();
+            });
 
             var main = new VisualElement();
             main.AddToClassList("component-row-main");
@@ -1734,6 +1763,21 @@ namespace RobotTwin.UI
                 actions.Add(openBtn);
             }
 
+            if (item.IsUserItem)
+            {
+                var deleteBtn = new Button(() => RemoveComponent(item));
+                deleteBtn.tooltip = "Delete";
+                deleteBtn.AddToClassList("row-action-btn");
+                deleteBtn.AddToClassList("row-action-btn-icon");
+                deleteBtn.AddToClassList("danger");
+                var deleteIcon = new VisualElement();
+                deleteIcon.AddToClassList("row-action-icon");
+                deleteIcon.AddToClassList("icon");
+                deleteIcon.AddToClassList("icon-trash-2");
+                deleteBtn.Add(deleteIcon);
+                actions.Add(deleteBtn);
+            }
+
             row.Add(actions);
             return row;
         }
@@ -1744,6 +1788,55 @@ namespace RobotTwin.UI
             payload.name = $"{payload.name} Copy";
             payload.id = GetUniqueComponentId(payload.id);
             OpenComponentStudio(payload, true, null);
+        }
+
+        private void ShowComponentContextMenu(ComponentCatalog.Item item, Vector2 worldPosition)
+        {
+            if (_root == null) return;
+            var menu = new GenericDropdownMenu();
+            menu.AddItem("Edit", false, () => OpenComponentStudio(BuildDefinitionFromItem(item), false, item));
+            menu.AddItem("Duplicate", false, () => DuplicateComponent(item));
+            if (item.IsPackage && !string.IsNullOrWhiteSpace(item.SourcePath))
+            {
+                menu.AddItem("Open Location", false, () => OpenInBrowser(item.SourcePath));
+            }
+            if (item.IsUserItem)
+            {
+                menu.AddItem("Delete", false, () => RemoveComponent(item));
+            }
+
+            Vector2 rootPos = _root.WorldToLocal(worldPosition);
+            menu.DropDown(new Rect(rootPos, Vector2.zero), _root, DropdownMenuSizeMode.Auto);
+        }
+
+        private void RemoveComponent(ComponentCatalog.Item item)
+        {
+            if (!item.IsUserItem || string.IsNullOrWhiteSpace(item.SourcePath)) return;
+#if UNITY_EDITOR
+            if (!EditorUtility.DisplayDialog("Delete Component", $"Delete \"{item.Name}\"?", "Delete", "Cancel"))
+            {
+                return;
+            }
+#endif
+            try
+            {
+                if (File.Exists(item.SourcePath))
+                {
+                    File.Delete(item.SourcePath);
+                }
+                else if (Directory.Exists(item.SourcePath))
+                {
+                    Directory.Delete(item.SourcePath, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ProjectWizard] Failed to delete component: {ex.Message}");
+                return;
+            }
+
+            ComponentCatalog.Reload();
+            PopulateComponents();
         }
 
         private void OpenComponentEditor(ComponentDefinitionPayload payload, bool isNew, ComponentCatalog.Item? sourceItem)
@@ -2121,8 +2214,23 @@ namespace RobotTwin.UI
             }
 
             string modelSourcePath = GetEditorField("ComponentModelField")?.value?.Trim();
+            string previousPath = _componentEditorSourcePath;
             string packagePath = ResolveComponentPackagePath(payload);
             SaveComponentPackage(payload, packagePath, modelSourcePath);
+            if (!string.IsNullOrWhiteSpace(previousPath) &&
+                !string.Equals(previousPath, packagePath, StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(packagePath))
+            {
+                try
+                {
+                    if (File.Exists(previousPath)) File.Delete(previousPath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ProjectWizard] Failed to remove old component package: {ex.Message}");
+                }
+            }
+            _componentEditorSourcePath = packagePath;
 
             ComponentCatalog.Reload();
             PopulateComponents();
@@ -2548,7 +2656,15 @@ namespace RobotTwin.UI
                 !string.IsNullOrWhiteSpace(_componentEditorSourcePath) &&
                 File.Exists(_componentEditorSourcePath))
             {
-                return _componentEditorSourcePath;
+                string desiredBase = SanitizeComponentId(payload?.id ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(desiredBase)) return _componentEditorSourcePath;
+                string dir = Path.GetDirectoryName(_componentEditorSourcePath) ?? ComponentCatalog.GetUserComponentRoot();
+                string targetPath = Path.Combine(dir, desiredBase + ComponentPackageUtility.PackageExtension);
+                if (string.Equals(_componentEditorSourcePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return _componentEditorSourcePath;
+                }
+                return EnsureUniqueComponentPackagePath(targetPath);
             }
 
             string root = ComponentCatalog.GetUserComponentRoot();
@@ -2564,6 +2680,26 @@ namespace RobotTwin.UI
                 index++;
             }
             return Path.Combine(root, $"{baseName}_{index}{ComponentPackageUtility.PackageExtension}");
+        }
+
+        private string EnsureUniqueComponentPackagePath(string targetPath)
+        {
+            if (string.IsNullOrWhiteSpace(targetPath)) return targetPath;
+            if (!File.Exists(targetPath)) return targetPath;
+
+            string dir = Path.GetDirectoryName(targetPath) ?? ComponentCatalog.GetUserComponentRoot();
+            string name = Path.GetFileNameWithoutExtension(targetPath);
+            string ext = Path.GetExtension(targetPath);
+            int index = 1;
+            string candidate = targetPath;
+
+            while (File.Exists(candidate))
+            {
+                candidate = Path.Combine(dir, $"{name}_{index}{ext}");
+                index++;
+            }
+
+            return candidate;
         }
 
         private string GetUniqueComponentId(string baseId)
