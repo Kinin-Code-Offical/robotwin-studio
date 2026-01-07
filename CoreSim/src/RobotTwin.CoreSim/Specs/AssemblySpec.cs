@@ -45,7 +45,6 @@ namespace RobotTwin.CoreSim.Specs
         public Vec3 Rotation { get; set; } = new Vec3();
         public Vec3 Scale { get; set; } = new Vec3 { X = 1, Y = 1, Z = 1 };
     }
-
     public struct Vec3
     {
         public double X { get; set; }

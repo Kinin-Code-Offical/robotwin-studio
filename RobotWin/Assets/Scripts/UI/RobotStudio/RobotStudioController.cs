@@ -7237,7 +7237,6 @@ namespace RobotTwin.UI
             return fallback;
         }
 
-
         private void ReleaseViewportPointerCapture()
         {
             if (_viewport != null && _viewportPointerId != -1 && _viewport.HasPointerCapture(_viewportPointerId))

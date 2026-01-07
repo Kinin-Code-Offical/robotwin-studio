@@ -1,4 +1,5 @@
-import bpy
+# pyright: reportMissingImports=false
+import bpy  # type: ignore
 import contextlib
 import sys
 import os
