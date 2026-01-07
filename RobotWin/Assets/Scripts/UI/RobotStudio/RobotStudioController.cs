@@ -389,6 +389,7 @@ namespace RobotTwin.UI
         private AssemblySpec _assemblySpec = new AssemblySpec();
         private EnvironmentSpec _environmentSpec = new EnvironmentSpec();
         private readonly Dictionary<string, RobotStudioAssemblyItem> _assemblyItems = new Dictionary<string, RobotStudioAssemblyItem>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, RobotStudioBreadboard> _breadboards = new Dictionary<string, RobotStudioBreadboard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<RobotStudioAssemblyItem> _selectedAssemblyItems = new List<RobotStudioAssemblyItem>();
         private RobotStudioAssemblyItem _activeAssemblyItem;
         private AssemblyTool _assemblyTool = AssemblyTool.Select;
@@ -424,6 +425,9 @@ namespace RobotTwin.UI
         private Button _assemblyFrameBtn;
         private Toggle _assemblySnapToggle;
         private TextField _assemblySnapField;
+        private TextField _breadboardPinCountField;
+        private TextField _breadboardColumnsField;
+        private TextField _breadboardPitchField;
         private Slider _environmentTempSlider;
         private Slider _environmentVibrationSlider;
         private Slider _environmentVibrationFreqSlider;
@@ -599,6 +603,9 @@ namespace RobotTwin.UI
             _assemblyFrameBtn = _root.Q<Button>("AssemblyFrameBtn");
             _assemblySnapToggle = _root.Q<Toggle>("AssemblySnapToggle");
             _assemblySnapField = _root.Q<TextField>("AssemblySnapField");
+            _breadboardPinCountField = _root.Q<TextField>("BreadboardPinCountField");
+            _breadboardColumnsField = _root.Q<TextField>("BreadboardColumnsField");
+            _breadboardPitchField = _root.Q<TextField>("BreadboardPitchField");
             _environmentTempSlider = _root.Q<Slider>("EnvironmentTempSlider");
             _environmentVibrationSlider = _root.Q<Slider>("EnvironmentVibrationSlider");
             _environmentVibrationFreqSlider = _root.Q<Slider>("EnvironmentVibrationFreqSlider");
@@ -6574,11 +6581,29 @@ namespace RobotTwin.UI
             _studioView?.ClearPartFocus();
         }
 
+        private void ClearBreadboards()
+        {
+            foreach (var board in _breadboards.Values)
+            {
+                if (board != null)
+                {
+                    Destroy(board.gameObject);
+                }
+            }
+            _breadboards.Clear();
+        }
+
         private void PopulateAssemblyFromSpec()
         {
             if (_assemblySpec == null) return;
+            ClearBreadboards();
             ClearAssemblyItems();
             EnsureAssemblyRoot();
+
+            foreach (var board in _assemblySpec.Breadboards)
+            {
+                CreateBreadboard(board);
+            }
 
             foreach (var part in _assemblySpec.Parts)
             {

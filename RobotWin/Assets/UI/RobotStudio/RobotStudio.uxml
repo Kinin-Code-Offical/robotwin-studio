@@ -237,6 +237,21 @@
                                 <ui:TextField name="AssemblySnapField" value="15" class="form-field input-dark" />
                             </ui:VisualElement>
                         </ui:VisualElement>
+                        <ui:VisualElement class="panel-section">
+                            <ui:Label text="Breadboard" class="panel-section-title" />
+                            <ui:VisualElement class="form-row">
+                                <ui:Label text="Pin Count" class="form-label" />
+                                <ui:TextField name="BreadboardPinCountField" class="form-field input-dark" value="400" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row">
+                                <ui:Label text="Columns" class="form-label" />
+                                <ui:TextField name="BreadboardColumnsField" class="form-field input-dark" value="10" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="form-row">
+                                <ui:Label text="Pitch (m)" class="form-label" />
+                                <ui:TextField name="BreadboardPitchField" class="form-field input-dark" value="0.00254" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
                     </ui:ScrollView>
                 </ui:VisualElement>
 
