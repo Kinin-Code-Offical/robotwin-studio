@@ -56,6 +56,8 @@ namespace RobotTwin.UI
         private ScrollView _catalogList;
         private Button _catalogRefreshBtn;
         private ScrollView _hierarchyTree;
+        private TextField _hierarchySearchField;
+        private TextField _catalogSearchField;
         private ScrollView _anchorsContainer;
         private Button _leftTabHierarchyBtn;
         private Button _leftTabCatalogBtn;
@@ -576,6 +578,8 @@ namespace RobotTwin.UI
             _catalogList = _root.Q<ScrollView>("ComponentCatalogList");
             _catalogRefreshBtn = _root.Q<Button>("CatalogRefreshBtn");
             _hierarchyTree = _root.Q<ScrollView>("HierarchyTreeContainer");
+            _hierarchySearchField = _root.Q<TextField>("HierarchySearchField");
+            _catalogSearchField = _root.Q<TextField>("CatalogSearchField");
             _anchorsContainer = _root.Q<ScrollView>("ComponentAnchorsContainer");
             _leftTabHierarchyBtn = _root.Q<Button>("LeftTabHierarchyBtn");
             _leftTabCatalogBtn = _root.Q<Button>("LeftTabCatalogBtn");
@@ -592,6 +596,21 @@ namespace RobotTwin.UI
             _leftPanelBasics = _root.Q<VisualElement>("LeftPanelBasics");
             _leftPanelType = _root.Q<VisualElement>("LeftPanelType");
             _leftPanelObjects = _root.Q<VisualElement>("LeftPanelObjects");
+
+            // Search UX
+            SearchFieldHelpers.ApplyToSearchFields(_root);
+            SearchFieldHelpers.SetupHint(_hierarchySearchField, "Search hierarchy...");
+            SearchFieldHelpers.SetupHint(_catalogSearchField, "Search for a component...");
+            if (_hierarchySearchField != null)
+            {
+                _hierarchySearchField.isDelayed = false;
+                _hierarchySearchField.RegisterValueChangedCallback(_ => RefreshCatalogAndHierarchy());
+            }
+            if (_catalogSearchField != null)
+            {
+                _catalogSearchField.isDelayed = false;
+                _catalogSearchField.RegisterValueChangedCallback(_ => RefreshCatalogAndHierarchy());
+            }
             _typeScroll = _root.Q<ScrollView>("TypeScroll");
             _typeSpecsSection = _root.Q<VisualElement>("TypeSpecsSection");
             _defaultsSection = _root.Q<VisualElement>("DefaultsSection");
@@ -4435,9 +4454,24 @@ namespace RobotTwin.UI
             AddCatalogHeader("Components", 0);
             int indent = 1;
 
+            string query = SearchFieldHelpers.GetEffectiveQuery(_catalogSearchField, "Search for a component...");
+            string queryLower = string.IsNullOrWhiteSpace(query) ? string.Empty : query.ToLowerInvariant();
+            bool filtering = !string.IsNullOrWhiteSpace(queryLower);
+            int added = 0;
+
             foreach (var item in ComponentCatalog.Items.OrderBy(i => i.Order).ThenBy(i => i.Name))
             {
                 var localItem = item;
+
+                if (filtering)
+                {
+                    string hay = $"{localItem.Name} {localItem.Type} {localItem.Description}";
+                    if (string.IsNullOrWhiteSpace(hay) || !hay.ToLowerInvariant().Contains(queryLower))
+                    {
+                        continue;
+                    }
+                }
+
                 bool allowDrag = string.Equals(localItem.Type, "Pin", StringComparison.OrdinalIgnoreCase) ||
                                  string.Equals(localItem.Type, "Label", StringComparison.OrdinalIgnoreCase) ||
                                  string.Equals(localItem.Type, "FX", StringComparison.OrdinalIgnoreCase) ||
@@ -4446,6 +4480,16 @@ namespace RobotTwin.UI
                     ? $"{localItem.Type}: {localItem.Name}"
                     : $"{localItem.Type}: {localItem.Name}\n{localItem.Description}";
                 AddCatalogItem(localItem.Name, localItem.Type, () => BeginCatalogPlacement(localItem), allowDrag, indent, tooltip);
+                added++;
+            }
+
+            if (filtering && added == 0)
+            {
+                var empty = new Label("No matches");
+                empty.AddToClassList("panel-section-title");
+                empty.style.opacity = 0.7f;
+                empty.style.marginLeft = indent * 12;
+                _catalogList.Add(empty);
             }
         }
 
@@ -4453,6 +4497,12 @@ namespace RobotTwin.UI
         {
             if (_hierarchyTree == null) return;
             _hierarchyTree.Clear();
+
+            string query = SearchFieldHelpers.GetEffectiveQuery(_hierarchySearchField, "Search hierarchy...");
+            string queryLower = string.IsNullOrWhiteSpace(query) ? string.Empty : query.ToLowerInvariant();
+            bool filtering = !string.IsNullOrWhiteSpace(queryLower);
+            int matches = 0;
+
             AddHierarchyItem("Assembly", "Root", 0, () => SetCenterView(true), () =>
             {
                 SetCenterView(true);
@@ -4463,22 +4513,49 @@ namespace RobotTwin.UI
             {
                 if (item == null) continue;
                 string label = string.IsNullOrWhiteSpace(item.ComponentType) ? "Component" : item.ComponentType;
+
+                if (filtering)
+                {
+                    string hay = $"{label} Part";
+                    if (!hay.ToLowerInvariant().Contains(queryLower))
+                    {
+                        continue;
+                    }
+                }
+
                 AddHierarchyItem(label, "Part", 1, () => SelectAssemblyItem(item, false), () =>
                 {
                     SetCenterView(true);
                     _studioView?.FramePart(item.transform);
                 });
+                matches++;
             }
 
             foreach (var board in _breadboards.Values.OrderBy(b => b.PinCount))
             {
                 if (board == null) continue;
                 string label = $"Breadboard ({board.PinCount})";
+
+                if (filtering)
+                {
+                    string hay = $"{label} Breadboard";
+                    if (!hay.ToLowerInvariant().Contains(queryLower))
+                    {
+                        continue;
+                    }
+                }
+
                 AddHierarchyItem(label, "Breadboard", 1, () => SetCenterView(true), () =>
                 {
                     SetCenterView(true);
                     _studioView?.FramePart(board.transform);
                 });
+                matches++;
+            }
+
+            if (filtering && matches == 0)
+            {
+                AddHierarchyItem("No matches", "Info", 1, null, null);
             }
         }
 

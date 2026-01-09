@@ -54,6 +54,8 @@ namespace RobotTwin.UI
         private ScrollView _catalogList;
         private Button _catalogRefreshBtn;
         private ScrollView _hierarchyTree;
+        private TextField _hierarchySearchField;
+        private TextField _catalogSearchField;
         private ScrollView _anchorsContainer;
         private Button _leftTabHierarchyBtn;
         private Button _leftTabCatalogBtn;
@@ -467,6 +469,8 @@ namespace RobotTwin.UI
             _catalogList = _root.Q<ScrollView>("ComponentCatalogList");
             _catalogRefreshBtn = _root.Q<Button>("CatalogRefreshBtn");
             _hierarchyTree = _root.Q<ScrollView>("HierarchyTreeContainer");
+            _hierarchySearchField = _root.Q<TextField>("HierarchySearchField");
+            _catalogSearchField = _root.Q<TextField>("CatalogSearchField");
             _anchorsContainer = _root.Q<ScrollView>("ComponentAnchorsContainer");
             _leftTabHierarchyBtn = _root.Q<Button>("LeftTabHierarchyBtn");
             _leftTabCatalogBtn = _root.Q<Button>("LeftTabCatalogBtn");
@@ -480,6 +484,21 @@ namespace RobotTwin.UI
             _leftPanelBasics = _root.Q<VisualElement>("LeftPanelBasics");
             _leftPanelType = _root.Q<VisualElement>("LeftPanelType");
             _leftPanelObjects = _root.Q<VisualElement>("LeftPanelObjects");
+
+            // Search UX
+            SearchFieldHelpers.ApplyToSearchFields(_root);
+            SearchFieldHelpers.SetupHint(_hierarchySearchField, "Search hierarchy...");
+            SearchFieldHelpers.SetupHint(_catalogSearchField, "Search for a component...");
+            if (_hierarchySearchField != null)
+            {
+                _hierarchySearchField.isDelayed = false;
+                _hierarchySearchField.RegisterValueChangedCallback(_ => RefreshCatalogAndHierarchy());
+            }
+            if (_catalogSearchField != null)
+            {
+                _catalogSearchField.isDelayed = false;
+                _catalogSearchField.RegisterValueChangedCallback(_ => RefreshCatalogAndHierarchy());
+            }
             _objectsLabelsSection = _root.Q<VisualElement>("ObjectsLabelsSection");
             _objectsPinsSection = _root.Q<VisualElement>("ObjectsPinsSection");
             _objectsFxSection = _root.Q<VisualElement>("ObjectsFxSection");
@@ -4332,6 +4351,11 @@ namespace RobotTwin.UI
             if (_catalogList == null) return;
             _catalogList.Clear();
 
+            string query = SearchFieldHelpers.GetEffectiveQuery(_catalogSearchField, "Search for a component...");
+            string queryLower = string.IsNullOrWhiteSpace(query) ? string.Empty : query.ToLowerInvariant();
+            bool filtering = !string.IsNullOrWhiteSpace(queryLower);
+            int added = 0;
+
             string modelName = GetModelDisplayName();
             AddCatalogHeader(modelName, 0);
             int indent = 1;
@@ -4344,7 +4368,9 @@ namespace RobotTwin.UI
                     var nameField = entry.Q<TextField>("PinNameField");
                     string name = nameField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
+                    if (filtering && !($"{name} Pin".ToLowerInvariant().Contains(queryLower))) continue;
                     AddCatalogItem(name, "Pin", () => SelectPinEntry(entry), true, indent);
+                    added++;
                 }
             }
 
@@ -4356,7 +4382,9 @@ namespace RobotTwin.UI
                     var textField = entry.Q<TextField>("LabelTextField");
                     string text = textField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(text)) continue;
+                    if (filtering && !($"{text} Label".ToLowerInvariant().Contains(queryLower))) continue;
                     AddCatalogItem(text, "Label", () => SelectLabelEntry(entry), true, indent);
+                    added++;
                 }
             }
 
@@ -4364,11 +4392,13 @@ namespace RobotTwin.UI
             foreach (var state in _stateOverrides.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
             {
                 string stateId = state;
+                if (filtering && !($"{stateId} State".ToLowerInvariant().Contains(queryLower))) continue;
                 AddCatalogItem(stateId, "State", () =>
                 {
                     var entry = FindStateEntryById(stateId);
                     if (entry != null) SelectStateEntry(entry);
                 }, false, indent);
+                added++;
             }
 
             AddCatalogHeader("Parts", indent);
@@ -4378,7 +4408,9 @@ namespace RobotTwin.UI
                 {
                     string name = entry.userData as string ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
+                    if (filtering && !($"{name} Part".ToLowerInvariant().Contains(queryLower))) continue;
                     AddCatalogItem(name, "Part", () => SelectPartEntry(entry), false, indent);
+                    added++;
                 }
             }
 
@@ -4389,7 +4421,9 @@ namespace RobotTwin.UI
             };
             foreach (var effect in effectNames)
             {
+                if (filtering && !($"{effect} FX".ToLowerInvariant().Contains(queryLower))) continue;
                 AddCatalogItem(effect, "FX", null, true, indent);
+                added++;
             }
             if (_fxContainer != null)
             {
@@ -4398,20 +4432,40 @@ namespace RobotTwin.UI
                     var idField = entry.Q<TextField>("FxIdField");
                     string id = idField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(id)) continue;
+                    if (filtering && !($"{id} FX".ToLowerInvariant().Contains(queryLower))) continue;
                     AddCatalogItem(id, "FX", null, true, indent);
+                    added++;
                 }
             }
 
             AddCatalogHeader("Scripts", indent);
             var physicsField = GetField("ComponentPhysicsScriptField");
             string scriptPath = physicsField?.value?.Trim() ?? string.Empty;
-            AddCatalogItem(string.IsNullOrWhiteSpace(scriptPath) ? "Physics Script (none)" : scriptPath, "Script", null, true, indent);
+            if (!filtering || ($"{scriptPath} Script".ToLowerInvariant().Contains(queryLower) || "physics script".Contains(queryLower)))
+            {
+                AddCatalogItem(string.IsNullOrWhiteSpace(scriptPath) ? "Physics Script (none)" : scriptPath, "Script", null, true, indent);
+                added++;
+            }
+
+            if (filtering && added == 0)
+            {
+                var empty = new Label("No matches");
+                empty.AddToClassList("panel-section-title");
+                empty.style.opacity = 0.7f;
+                empty.style.marginLeft = indent * 12;
+                _catalogList.Add(empty);
+            }
         }
 
         private void RefreshHierarchy()
         {
             if (_hierarchyTree == null) return;
             _hierarchyTree.Clear();
+
+            string query = SearchFieldHelpers.GetEffectiveQuery(_hierarchySearchField, "Search hierarchy...");
+            string queryLower = string.IsNullOrWhiteSpace(query) ? string.Empty : query.ToLowerInvariant();
+            bool filtering = !string.IsNullOrWhiteSpace(queryLower);
+            int matches = 0;
 
             string modelName = GetModelDisplayName();
             AddHierarchyItem(modelName, "Model", 0, () =>
@@ -4433,11 +4487,13 @@ namespace RobotTwin.UI
                     var nameField = entry.Q<TextField>("PinNameField");
                     string name = nameField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
+                    if (filtering && !($"{name} Pin".ToLowerInvariant().Contains(queryLower))) continue;
                     AddHierarchyItem(name, "Pin", 2, () => SelectPinEntry(entry), () =>
                     {
                         SetCenterView(false);
                         FocusLayoutOnEntry(entry, true);
                     });
+                    matches++;
                 }
             }
             if (_labelsContainer != null)
@@ -4447,11 +4503,13 @@ namespace RobotTwin.UI
                     var textField = entry.Q<TextField>("LabelTextField");
                     string text = textField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(text)) continue;
+                    if (filtering && !($"{text} Label".ToLowerInvariant().Contains(queryLower))) continue;
                     AddHierarchyItem(text, "Label", 2, () => SelectLabelEntry(entry), () =>
                     {
                         SetCenterView(false);
                         FocusLayoutOnEntry(entry, false);
                     });
+                    matches++;
                 }
             }
             if (_shapeLayout != null && _shapeLayout.Count > 0)
@@ -4469,11 +4527,22 @@ namespace RobotTwin.UI
                     {
                         label = string.IsNullOrWhiteSpace(shape.id) ? kind : $"{kind} {shape.id}";
                     }
+
+                    if (filtering)
+                    {
+                        string hay = $"{label} {kind} Shape";
+                        if (!hay.ToLowerInvariant().Contains(queryLower))
+                        {
+                            continue;
+                        }
+                    }
+
                     AddHierarchyItem(label, kind, 2, () => SelectShape(shape.id), () =>
                     {
                         SetCenterView(false);
                         FocusLayoutOnNormalized(shape.x, shape.y);
                     });
+                    matches++;
                 }
             }
 
@@ -4484,11 +4553,15 @@ namespace RobotTwin.UI
                 {
                     string name = entry.userData as string ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(name)) continue;
+
+                    if (filtering && !($"{name} Part".ToLowerInvariant().Contains(queryLower))) continue;
+
                     AddHierarchyItem(name, "Part", 2, () => SelectPartEntry(entry), () =>
                     {
                         SetCenterView(true);
                         FrameSelectedPart();
                     });
+                    matches++;
                 }
             }
             if (_fxContainer != null)
@@ -4498,8 +4571,17 @@ namespace RobotTwin.UI
                     var idField = entry.Q<TextField>("FxIdField");
                     string id = idField?.value?.Trim() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(id)) continue;
+
+                    if (filtering && !($"{id} FX".ToLowerInvariant().Contains(queryLower))) continue;
+
                     AddHierarchyItem(id, "FX", 2, null, () => SetCenterView(true));
+                    matches++;
                 }
+            }
+
+            if (filtering && matches == 0)
+            {
+                AddHierarchyItem("No matches", "Info", 2, null, null);
             }
         }
 

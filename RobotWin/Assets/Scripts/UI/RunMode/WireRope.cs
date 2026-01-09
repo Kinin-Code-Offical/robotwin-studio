@@ -6,6 +6,9 @@ namespace RobotTwin.UI
     public class WireRope : MonoBehaviour
     {
         private static readonly HashSet<WireRope> ActiveRopes = new HashSet<WireRope>();
+        private static readonly Collider[] CollisionBuffer = new Collider[32];
+        private const float SpatialGridSize = 0.5f;
+        private static readonly Dictionary<Vector3Int, List<WireRope>> SpatialGrid = new Dictionary<Vector3Int, List<WireRope>>();
 
         [SerializeField] private WireAnchor _start;
         [SerializeField] private WireAnchor _end;
@@ -74,11 +77,13 @@ namespace RobotTwin.UI
         private void OnEnable()
         {
             ActiveRopes.Add(this);
+            UpdateSpatialGrid();
         }
 
         private void OnDisable()
         {
             ActiveRopes.Remove(this);
+            RemoveFromSpatialGrid();
         }
 
         public void SetColor(Color color)
@@ -113,15 +118,21 @@ namespace RobotTwin.UI
                 SetEndCapActive(_endCapB, false);
             }
 
-            if (_useRopePhysics)
-            {
-                SimulateRope();
-            }
-            else
+            // Visual updates only in LateUpdate
+            if (!_useRopePhysics)
             {
                 UpdateLine();
             }
             UpdateColor();
+        }
+
+        private void FixedUpdate()
+        {
+            // Physics simulation runs in FixedUpdate for determinism
+            if (_useRopePhysics)
+            {
+                SimulateRope();
+            }
         }
 
         private void EnsureRenderer()
@@ -153,8 +164,8 @@ namespace RobotTwin.UI
         {
             if (_line == null || _start == null || _end == null) return;
             int count = Mathf.Max(2, _segments);
-            var startPos = _start.transform.localPosition;
-            var endPos = _end.transform.localPosition;
+            var startPos = GetAnchorPosition(_start);
+            var endPos = GetAnchorPosition(_end);
             EnsureSimulationPoints(count, startPos, endPos);
 
             float length = Vector3.Distance(startPos, endPos);
@@ -168,7 +179,7 @@ namespace RobotTwin.UI
             float totalLength = Mathf.Max(0.0001f, length + extraLength);
             float segmentLength = totalLength / (count - 1);
 
-            float dt = Mathf.Max(0.0001f, Time.deltaTime);
+            float dt = Time.fixedDeltaTime; // Use fixed timestep for determinism
             Vector3 gravity = Physics.gravity;
             var parent = transform.parent;
             if (parent != null)
@@ -232,6 +243,7 @@ namespace RobotTwin.UI
             if (_line.positionCount != count) _line.positionCount = count;
             ApplyLinePositions(_points);
             UpdateEndCaps(_points);
+            UpdateSpatialGrid();
         }
 
         private void EnsureSimulationPoints(int count, Vector3 startPos, Vector3 endPos)
@@ -293,8 +305,8 @@ namespace RobotTwin.UI
             int count = Mathf.Max(2, _segments);
             if (_line.positionCount != count) _line.positionCount = count;
 
-            var startPos = _start.transform.localPosition;
-            var endPos = _end.transform.localPosition;
+            var startPos = GetAnchorPosition(_start);
+            var endPos = GetAnchorPosition(_end);
             var gravity = Physics.gravity;
             var gravityDir = gravity.sqrMagnitude > 0.0001f ? gravity.normalized : Vector3.down;
             var parent = transform.parent;
@@ -352,6 +364,12 @@ namespace RobotTwin.UI
         {
             float u = 1f - t;
             return u * u * a + 2f * u * t * b + t * t * c;
+        }
+
+        private static Vector3 GetAnchorPosition(WireAnchor anchor)
+        {
+            if (anchor == null) return Vector3.zero;
+            return anchor.GetAttachPosition();
         }
 
         private void ApplyLinePositions(Vector3[] positions)
@@ -665,31 +683,41 @@ namespace RobotTwin.UI
             float repulsion = Mathf.Clamp01(_wireRepulsion);
             if (repulsion <= 0.001f) return;
 
-            foreach (var other in ActiveRopes)
+            // Use spatial grid to query only nearby wires
+            Vector3 centerPos = positions[positions.Length / 2];
+            var cellKey = WorldToGridCell(centerPos);
+            var nearbyCells = GetNearbyCells(cellKey);
+
+            foreach (var cell in nearbyCells)
             {
-                if (other == null || other == this || !other._hasSim) continue;
-                var otherPoints = other._points;
-                if (otherPoints == null || otherPoints.Length < 3) continue;
+                if (!SpatialGrid.TryGetValue(cell, out var nearbyWires)) continue;
 
-                float otherRadius = other._lastCollisionRadius > 0f ? other._lastCollisionRadius : radius;
-                float minDist = radius + otherRadius;
-                float minDistSqr = minDist * minDist;
-
-                for (int i = 1; i < positions.Length - 1; i++)
+                foreach (var other in nearbyWires)
                 {
-                    Vector3 p = positions[i];
-                    for (int j = 1; j < otherPoints.Length - 1; j++)
+                    if (other == null || other == this || !other._hasSim) continue;
+                    var otherPoints = other._points;
+                    if (otherPoints == null || otherPoints.Length < 3) continue;
+
+                    float otherRadius = other._lastCollisionRadius > 0f ? other._lastCollisionRadius : radius;
+                    float minDist = radius + otherRadius;
+                    float minDistSqr = minDist * minDist;
+
+                    for (int i = 1; i < positions.Length - 1; i++)
                     {
-                        Vector3 delta = p - otherPoints[j];
-                        float distSqr = delta.sqrMagnitude;
-                        if (distSqr < 0.0000001f || distSqr > minDistSqr) continue;
-                        float dist = Mathf.Sqrt(distSqr);
-                        Vector3 push = delta / dist * (minDist - dist);
-                        positions[i] += push * 0.5f * repulsion;
-                        otherPoints[j] -= push * 0.5f * repulsion;
-                        if (other._prevPoints != null && j < other._prevPoints.Length)
+                        Vector3 p = positions[i];
+                        for (int j = 1; j < otherPoints.Length - 1; j++)
                         {
-                            other._prevPoints[j] = otherPoints[j];
+                            Vector3 delta = p - otherPoints[j];
+                            float distSqr = delta.sqrMagnitude;
+                            if (distSqr < 0.0000001f || distSqr > minDistSqr) continue;
+                            float dist = Mathf.Sqrt(distSqr);
+                            Vector3 push = delta / dist * (minDist - dist);
+                            positions[i] += push * 0.5f * repulsion;
+                            otherPoints[j] -= push * 0.5f * repulsion;
+                            if (other._prevPoints != null && j < other._prevPoints.Length)
+                            {
+                                other._prevPoints[j] = otherPoints[j];
+                            }
                         }
                     }
                 }
@@ -713,10 +741,12 @@ namespace RobotTwin.UI
             {
                 Vector3 worldPos = parent != null ? parent.TransformPoint(positions[i]) : positions[i];
                 _probeTransform.position = worldPos;
-                var hits = Physics.OverlapSphere(worldPos, worldRadius, ~0, QueryTriggerInteraction.Ignore);
-                if (hits == null || hits.Length == 0) continue;
-                foreach (var hit in hits)
+                int hitCount = Physics.OverlapSphereNonAlloc(worldPos, worldRadius, CollisionBuffer, ~0, QueryTriggerInteraction.Ignore);
+                if (hitCount == 0) continue;
+                var hits = CollisionBuffer;
+                for (int h = 0; h < hitCount; h++)
                 {
+                    var hit = hits[h];
                     if (hit == null) continue;
                     if (hit.transform.IsChildOf(transform)) continue;
                     if (Physics.ComputePenetration(
@@ -769,6 +799,58 @@ namespace RobotTwin.UI
             if (_wireMaterial.HasProperty("_Surface")) _wireMaterial.SetFloat("_Surface", 0f);
             if (_wireMaterial.HasProperty("_Mode")) _wireMaterial.SetFloat("_Mode", 0f);
             return _wireMaterial;
+        }
+
+        private Vector3Int WorldToGridCell(Vector3 worldPos)
+        {
+            var parent = transform.parent;
+            Vector3 localPos = parent != null ? parent.InverseTransformPoint(worldPos) : worldPos;
+            return new Vector3Int(
+                Mathf.FloorToInt(localPos.x / SpatialGridSize),
+                Mathf.FloorToInt(localPos.y / SpatialGridSize),
+                Mathf.FloorToInt(localPos.z / SpatialGridSize)
+            );
+        }
+
+        private List<Vector3Int> GetNearbyCells(Vector3Int center)
+        {
+            var cells = new List<Vector3Int>(27);
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    for (int z = -1; z <= 1; z++)
+                    {
+                        cells.Add(new Vector3Int(center.x + x, center.y + y, center.z + z));
+                    }
+                }
+            }
+            return cells;
+        }
+
+        private void UpdateSpatialGrid()
+        {
+            if (_points == null || _points.Length == 0) return;
+            RemoveFromSpatialGrid();
+            Vector3 centerPos = _points[_points.Length / 2];
+            var cellKey = WorldToGridCell(centerPos);
+            if (!SpatialGrid.TryGetValue(cellKey, out var list))
+            {
+                list = new List<WireRope>();
+                SpatialGrid[cellKey] = list;
+            }
+            if (!list.Contains(this))
+            {
+                list.Add(this);
+            }
+        }
+
+        private void RemoveFromSpatialGrid()
+        {
+            foreach (var kvp in SpatialGrid)
+            {
+                kvp.Value.Remove(this);
+            }
         }
     }
 }

@@ -4,24 +4,17 @@
     color: #e6edf3;
     --field-bg: #3a3a3a;
     --field-border: #3a3a3a;
+    --panel-left-pct: 20%;
+    --panel-right-pct: 24%;
+    --panel-min: 200px;
+    --panel-max: 400px;
 }
 
-.run-compact .topbar {
-    height: 52px;
-    padding-left: 12px;
-    padding-right: 12px;
-}
-
-.run-compact .title {
-    font-size: 14px;
-}
-
-.run-compact .branding-text {
-    font-size: 11px;
-}
-
-.run-compact .branding-sub {
-    font-size: 9px;
+.run-compact {
+    --panel-left-pct: 100%;
+    --panel-right-pct: 100%;
+    --panel-min: 180px;
+    --panel-max: none;
 }
 
 .run-compact .body {
@@ -29,16 +22,12 @@
     padding: 8px;
 }
 
-.run-compact .body .panel {
-    margin-right: 0;
-    margin-bottom: 12px;
-}
-
-.run-compact .left-panel,
-.run-compact .center-panel,
-.run-compact .right-panel {
+.run-compact .panel {
     width: 100%;
     min-width: 0;
+    max-width: none;
+    margin-bottom: 12px;
+    margin-right: 0;
 }
 
 .run-compact .log-card {
@@ -69,6 +58,13 @@
     min-height: 200px;
 }
 
+.run-medium {
+    --panel-left-pct: 22%;
+    --panel-right-pct: 26%;
+    --panel-min: 220px;
+    --panel-max: 360px;
+}
+
 .run-medium .topbar {
     height: 58px;
 }
@@ -79,16 +75,6 @@
 
 .run-medium .title {
     font-size: 16px;
-}
-
-.run-medium .left-panel {
-    width: 28%;
-    min-width: 220px;
-}
-
-.run-medium .right-panel {
-    width: 28%;
-    min-width: 240px;
 }
 
 .topbar {
@@ -151,6 +137,8 @@
     white-space: nowrap;
     overflow: hidden;
     -unity-text-overflow-position: end;
+    flex-shrink: 1;
+    max-width: 200px;
 }
 
 .branding-sub {
@@ -161,6 +149,8 @@
     white-space: nowrap;
     overflow: hidden;
     -unity-text-overflow-position: end;
+    flex-shrink: 1;
+    max-width: 150px;
 }
 
 .subtle {
@@ -224,20 +214,26 @@
 }
 
 .left-panel {
-    width: 24%;
-    min-width: 240px;
+    width: var(--panel-left-pct);
+    min-width: var(--panel-min);
+    max-width: var(--panel-max);
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .center-panel {
     flex-grow: 1;
-    min-width: 0;
+    flex-shrink: 1;
+    min-width: 300px;
+    overflow: hidden;
 }
 
 .right-panel {
-    width: 24%;
-    min-width: 260px;
+    width: var(--panel-right-pct);
+    min-width: var(--panel-min);
+    max-width: var(--panel-max);
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .panel-title {
@@ -290,9 +286,16 @@
 
 .component-list {
     flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 200px;
+    max-height: 600px;
     background-color: #0f141b;
     border-radius: 8px;
     padding: 6px;
+}
+
+.component-list > .unity-scroll-view__content-container {
+    min-height: 100%;
 }
 
 .component-row {
@@ -308,6 +311,10 @@
     color: #dfe7ef;
     font-size: 12px;
     flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .component-status {
@@ -438,15 +445,19 @@
 
 .board-card {
     flex-grow: 1;
-    min-height: 280px;
+    flex-shrink: 1;
+    min-height: 280px;\n    max-height: 600px;
     position: relative;
+    overflow: hidden;
 }
 
 .board-view {
     flex-grow: 1;
+    flex-shrink: 1;
     min-height: 240px;
     border-radius: 8px;
     background-color: #0b1016;
+    overflow: hidden;
 }
 
 .rpi-display {
@@ -670,17 +681,23 @@
 }
 
 .log-card {
-    flex-grow: 0;
-    height: 190px;
-    flex-shrink: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 150px;
+    max-height: 300px;
 }
 
 .log-scroll {
     flex-grow: 1;
+    flex-shrink: 1;
     background-color: #06080b;
     border-radius: 6px;
-    min-height: 0;
+    min-height: 100px;
     padding-right: 8px;
+}
+
+.log-scroll > .unity-scroll-view__content-container {
+    min-height: 100%;
 }
 
 .log-text {
@@ -721,29 +738,36 @@
 .power-card,
 .telemetry-card,
 .serial-card {
-    flex-grow: 0;
-    flex-shrink: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 150px;
 }
 
 .power-card {
-    height: 250px;
+    max-height: 300px;
 }
 
 .telemetry-card {
-    height: 180px;
+    max-height: 240px;
 }
 
 .serial-card {
-    height: 220px;
+    max-height: 280px;
 }
 
 .usb-list {
     flex-grow: 1;
+    flex-shrink: 1;
     min-height: 80px;
+    max-height: 200px;
     background-color: #0f141b;
     border-radius: 8px;
     padding: 6px;
     margin-bottom: 6px;
+}
+
+.usb-list > .unity-scroll-view__content-container {
+    min-height: 100%;
 }
 
 .usb-row {

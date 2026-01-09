@@ -68,7 +68,7 @@
                     <ui:Button name="BtnViewAll" text="VIEW ALL" class="link-button" />
                 </ui:VisualElement>
 
-                <ui:ScrollView name="RecentProjectsList" class="recent-list" />
+                <ui:ScrollView name="RecentProjectsList" class="recent-list" style="min-height: 200px; flex-shrink: 1;" />
             </ui:VisualElement>
 
             <!-- VIEW: PROJECTS -->
@@ -94,7 +94,7 @@
                 <ui:VisualElement class="projects-toolbar">
                     <ui:VisualElement class="search-row projects-search" style="flex-grow: 1;">
                         <ui:VisualElement class="search-icon icon icon-search" />
-                        <ui:TextField name="ProjectsSearchField" class="search-field" placeholder-text="Search projects..." />
+                        <ui:TextField name="ProjectsSearchField" class="search-field" placeholder-text="Search projects..." style="flex-grow: 1; min-width: 180px;" />
                     </ui:VisualElement>
                     <ui:Button name="ProjectsFilterBtn" class="filter-button">
                         <ui:VisualElement class="icon icon-menu filter-icon" />
@@ -111,14 +111,14 @@
                     <ui:Label text="ACTIONS" class="col-actions header-label" />
                 </ui:VisualElement>
 
-                <ui:ScrollView name="ProjectListContainer" class="projects-list projects-table" />
+                <ui:ScrollView name="ProjectListContainer" class="projects-list projects-table" style="min-height: 300px; flex-shrink: 1;" />
             </ui:VisualElement>
 
             <!-- VIEW: TEMPLATES -->
             <ui:VisualElement name="TemplatesView" class="view" style="display: none;">
                 <ui:Label text="Templates" class="page-title" />
                 <ui:Label text="Select a starting point for your new project." class="page-subtitle" style="margin-bottom: 20px; color: #888;" />
-                <ui:ScrollView name="TemplateListContainer" class="templates-list" />
+                <ui:ScrollView name="TemplateListContainer" class="templates-list" style="min-height: 300px; flex-shrink: 1;" />
             </ui:VisualElement>
 
             <!-- VIEW: COMPONENTS -->
@@ -130,7 +130,7 @@
                     </ui:Button>
                 </ui:VisualElement>
                 <ui:Label text="Create and edit reusable circuit components." class="page-subtitle" />
-                <ui:ScrollView name="ComponentListContainer" class="components-list" />
+                <ui:ScrollView name="ComponentListContainer" class="components-list" style="min-height: 300px; flex-shrink: 1;" />
             </ui:VisualElement>
 
         </ui:VisualElement>

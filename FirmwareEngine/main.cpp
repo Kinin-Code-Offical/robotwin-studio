@@ -1,3 +1,9 @@
+// Windows.h conflicts with Arduino macros
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#endif
+
 #include "BoardProfile.h"
 #include "PipeManager.h"
 #include "Protocol.h"
@@ -15,13 +21,33 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <random> // Fix missing include
+
+#ifdef _WIN32
+#include <windows.h>
+#undef INPUT
+#undef OUTPUT
+#undef min
+#undef max
+#endif
+
+#include "Arduino.h" // Include U1 Host Environment
+#undef min
+#undef max
+#undef abs
 #include <random>
 #include <thread>
 #include <unordered_map>
 #include <vector>
-#include <windows.h>
 
 using namespace firmware;
+
+// Define Global State for U1 HLE
+firmware::StepPayload g_inputState;
+firmware::OutputStatePayload g_outputState;
+uint32_t g_millis = 0;
+std::string g_serialBuffer;
+SerialMock Serial;
 
 namespace
 {
@@ -29,6 +55,7 @@ namespace
     constexpr std::uint64_t StatusInterval = 100000;
 
     double QueryNowSeconds()
+
     {
         static LARGE_INTEGER frequency = []()
         {
@@ -196,8 +223,16 @@ int main(int argc, char **argv)
     std::uint32_t rpiThreads = 0;
     std::uint32_t rpiPriorityClass = 0;
 
+    // Help flag
+    bool showHelp = false;
+
     for (int i = 1; i < argc; ++i)
     {
+        if (ParseArg(argv[i], "--help") || ParseArg(argv[i], "-h") || ParseArg(argv[i], "/?"))
+        {
+            showHelp = true;
+            break;
+        }
         if (ParseArg(argv[i], "--pipe") && i + 1 < argc)
         {
             std::wstring value;
@@ -339,6 +374,48 @@ int main(int argc, char **argv)
             ++i;
             continue;
         }
+    }
+
+    if (showHelp)
+    {
+        std::printf("RoboTwinFirmwareHost - CoreSim Firmware Engine\n\n");
+        std::printf("Usage: RoboTwinFirmwareHost [OPTIONS]\n\n");
+        std::printf("Options:\n");
+        std::printf("  --help, -h, /?           Show this help message\n");
+        std::printf("  --self-test              Run hardware self-tests and exit\n");
+        std::printf("  --pipe <name>            Named pipe for Unity communication (default: RoboTwin.FirmwareEngine)\n");
+        std::printf("  --hz <frequency>         CPU frequency in Hz (default: 16000000)\n");
+        std::printf("  --lockstep               Enable lockstep mode (default)\n");
+        std::printf("  --realtime               Disable lockstep, run in realtime\n");
+        std::printf("  --log <path>             Log file path\n");
+        std::printf("  --trace-lockstep         Enable lockstep trace logging\n");
+        std::printf("\n");
+        std::printf("IDE Integration:\n");
+        std::printf("  --ide-com <port>         COM port for STK500 protocol (e.g., COM3)\n");
+        std::printf("  --ide-board <id>         Board identifier (default: board)\n");
+        std::printf("  --ide-profile <name>     Board profile (default: ArduinoUno)\n");
+        std::printf("\n");
+        std::printf("Raspberry Pi Options:\n");
+        std::printf("  --rpi-enable             Enable RPi backend\n");
+        std::printf("  --rpi-allow-mock         Allow mock RPi if QEMU unavailable\n");
+        std::printf("  --rpi-qemu <path>        Path to QEMU executable\n");
+        std::printf("  --rpi-image <path>       Path to RPi disk image\n");
+        std::printf("  --rpi-shm-dir <dir>      Shared memory directory (default: logs/rpi/shm)\n");
+        std::printf("  --rpi-display <WxH>      Display resolution (default: 320x200)\n");
+        std::printf("  --rpi-camera <WxH>       Camera resolution (default: 320x200)\n");
+        std::printf("  --rpi-net-mode <mode>    Network mode: nat, bridge, none (default: nat)\n");
+        std::printf("  --rpi-log <path>         RPi log file path\n");
+        std::printf("  --rpi-cpu-affinity <n>   CPU affinity mask\n");
+        std::printf("  --rpi-cpu-max-percent <n> Max CPU percentage\n");
+        std::printf("  --rpi-threads <n>        Thread count\n");
+        std::printf("  --rpi-priority <n>       Process priority class\n");
+        std::printf("\n");
+        std::printf("Examples:\n");
+        std::printf("  RoboTwinFirmwareHost --self-test\n");
+        std::printf("  RoboTwinFirmwareHost --lockstep --hz 16000000\n");
+        std::printf("  RoboTwinFirmwareHost --ide-com COM3 --ide-profile ArduinoMega\n");
+        std::printf("\n");
+        return 0;
     }
 
     if (!traceLockstep)
@@ -1041,6 +1118,65 @@ int main(int argc, char **argv)
             if (cmd.type == PipeCommand::Type::Step)
             {
                 auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
+
+                // === U1 High Level Emulation Integration ===
+                // If the profile ID contains "U1" or specific tag, run HLE.
+                bool isHle = (cmd.boardProfile.find("U1") != std::string::npos);
+
+                if (isHle)
+                {
+                    static bool u1Initialized = false;
+                    if (!u1Initialized)
+                    {
+                        setup();
+                        u1Initialized = true;
+                    }
+
+                    // Sync Inputs
+                    // Map Unity pins to Global Inputs
+                    for (int i = 0; i < kPinCount; ++i)
+                        g_inputState.pins[i] = cmd.pins[i];
+                    for (int i = 0; i < kAnalogCount; ++i)
+                        g_inputState.analog[i] = cmd.analog[i];
+
+                    // Time Management
+                    uint32_t unityTimeMs = static_cast<uint32_t>(cmd.sentMicros / 1000);
+
+                    // If first run, sync clock
+                    if (g_millis == 0)
+                        g_millis = unityTimeMs;
+
+                    // Catch-up Loop: Execute loop() in 4ms increments until we catch up to Unity time
+                    // This creates the 250Hz behavior U1 expects.
+                    while (g_millis <= unityTimeMs)
+                    {
+                        loop();
+                        g_millis += 4; // Advance 4ms
+                    }
+                    // Rewind slightly to strictly match Unity time for next frame consistency?
+                    // No, keeping g_millis ahead is fine.
+
+                    // Sync Outputs
+                    std::memcpy(state.lastOutputs, g_outputState.pins, kPinCount);
+
+                    // Send Serial if any
+                    if (!g_serialBuffer.empty())
+                    {
+                        pipe.SendSerial(state.id, (const uint8_t *)g_serialBuffer.data(), g_serialBuffer.size());
+                        g_serialBuffer.clear();
+                    }
+
+                    // Fake perf counters
+                    const auto &perf = state.mcu->GetPerfCounters();
+                    // Just send output
+                    const bool sent = pipe.SendOutputState(state.id, cmd.stepSequence, 0, state.lastOutputs, kPinCount,
+                                                           perf.cycles, perf.adcSamples,
+                                                           perf.uartTxBytes, perf.uartRxBytes,
+                                                           perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
+                    continue;
+                }
+                // ==========================================
+
                 if (!state.supported)
                 {
                     pipe.SendError(state.id, 121, "Step rejected for unsupported MCU profile.");

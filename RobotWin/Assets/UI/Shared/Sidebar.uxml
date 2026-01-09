@@ -27,9 +27,22 @@
             </ui:Button>
 
             <ui:Button name="nav-settings" class="sidebar-button">
-                 <ui:VisualElement class="sidebar-icon" />
+                 <!-- Setting Icon with 'Depth' Look (Icon + Background Tint in CSS) -->
+                 <ui:VisualElement class="sidebar-icon icon-settings" />
                 <ui:Label text="Settings" />
             </ui:Button>
+
+            <!-- Preferences / Profile Area (User requested 'small logo' at bottom left) -->
+            <ui:VisualElement style="margin-top: auto; margin-bottom: 20px; flex-direction: row; align-items: center; padding-left: 20px;">
+                 <ui:VisualElement style="width: 48px; height: 48px; background-color: #2a2a2e; border-radius: 8px; justify-content: center; align-items: center; border-width: 1px; border-color: #3b3b3d; margin-right: 12px;">
+                      <!-- Placeholder Logo/Icon -->
+                      <ui:Label text="R" style="color: #3b82f6; -unity-font-style: bold; font-size: 24px;" />
+                 </ui:VisualElement>
+                 <ui:VisualElement>
+                      <ui:Label text="Preferences" style="color: #e0e0e0; font-size: 13px; -unity-font-style: bold;" />
+                      <ui:Label text="Customize IDE" style="color: #808080; font-size: 11px;" />
+                 </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
 
         <!-- Footer -->

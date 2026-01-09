@@ -1,0 +1,253 @@
+/* Shared UI Styles for RobotWin Studio */
+
+.full-screen {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: rgb(32, 32, 32);
+}
+
+.top-bar {
+    flex-direction: row;
+    background-color: rgb(45, 45, 45);
+    padding: 10px;
+    border-bottom-width: 2px;
+    border-bottom-color: rgb(60, 60, 60);
+    align-items: center;
+}
+
+.main-content {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.left-panel {
+    width: 60%;
+    min-width: 300px;
+    background-color: rgb(40, 40, 40);
+    padding: 10px;
+    border-right-width: 2px;
+    border-right-color: rgb(60, 60, 60);
+    flex-shrink: 1;
+}
+
+.right-panel {
+    width: 40%;
+    min-width: 250px;
+    background-color: rgb(35, 35, 35);
+    padding: 10px;
+    flex-shrink: 1;
+}
+
+.bottom-bar {
+    flex-direction: row;
+    background-color: rgb(45, 45, 45);
+    padding: 5px 10px;
+    border-top-width: 2px;
+    border-top-color: rgb(60, 60, 60);
+    justify-content: space-between;
+}
+
+.settings-panel {
+    background-color: rgb(45, 45, 45);
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+}
+
+.title-label {
+    font-size: 18px;
+    color: rgb(220, 220, 220);
+    -unity-font-style: bold;
+    margin-right: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+}
+
+.section-header {
+    font-size: 14px;
+    color: rgb(100, 200, 255);
+    -unity-font-style: bold;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+}
+
+.value-label {
+    font-size: 12px;
+    color: rgb(180, 180, 180);
+    margin-left: 10px;
+    margin-bottom: 5px;
+}
+
+.status-label {
+    color: rgb(100, 255, 100);
+    font-size: 12px;
+}
+
+.info-label {
+    color: rgb(200, 200, 200);
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* Button Styles */
+.button-primary {
+    background-color: rgb(0, 120, 215);
+    color: white;
+    padding: 5px 15px;
+    margin: 2px 5px;
+    border-radius: 3px;
+    border-width: 0;
+}
+
+.button-primary:hover {
+    background-color: rgb(0, 140, 235);
+}
+
+.button-secondary {
+    background-color: rgb(80, 80, 80);
+    color: white;
+    padding: 5px 15px;
+    margin: 2px 5px;
+    border-radius: 3px;
+    border-width: 0;
+}
+
+.button-secondary:hover {
+    background-color: rgb(100, 100, 100);
+}
+
+.button-success {
+    background-color: rgb(16, 124, 16);
+    color: white;
+    padding: 5px 15px;
+    margin: 2px 5px;
+    border-radius: 3px;
+    border-width: 0;
+}
+
+.button-success:hover {
+    background-color: rgb(20, 144, 20);
+}
+
+.button-danger {
+    background-color: rgb(196, 43, 28);
+    color: white;
+    padding: 5px 10px;
+    margin: 5px 0;
+    border-radius: 3px;
+    border-width: 0;
+}
+
+.button-danger:hover {
+    background-color: rgb(216, 63, 48);
+}
+
+.button-back {
+    background-color: rgb(60, 60, 60);
+    color: white;
+    padding: 5px 15px;
+    margin-left: auto;
+    border-radius: 3px;
+    border-width: 0;
+}
+
+.button-back:hover {
+    background-color: rgb(80, 80, 80);
+}
+
+/* Input Controls */
+Slider {
+    margin: 5px 0;
+}
+
+Slider Label {
+    min-width: 120px;
+    color: rgb(200, 200, 200);
+}
+
+TextField {
+    margin: 5px 0;
+}
+
+TextField Label {
+    min-width: 120px;
+    color: rgb(200, 200, 200);
+}
+
+Toggle {
+    margin: 5px 0;
+}
+
+Toggle Label {
+    color: rgb(200, 200, 200);
+}
+
+DropdownField {
+    margin: 5px 0;
+}
+
+DropdownField Label {
+    min-width: 120px;
+    color: rgb(200, 200, 200);
+}
+
+/* List Views */
+.list-view {
+    background-color: rgb(35, 35, 35);
+    border-color: rgb(60, 60, 60);
+    border-width: 1px;
+    border-radius: 3px;
+    margin: 5px 0;
+    min-height: 100px;
+    max-height: 200px;
+}
+
+/* Preview Container */
+.preview-container {
+    background-color: rgb(50, 50, 50);
+    border-color: rgb(80, 80, 80);
+    border-width: 2px;
+    border-radius: 5px;
+    min-height: 300px;
+    margin: 10px 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.stats-container {
+    background-color: rgb(40, 40, 40);
+    border-color: rgb(60, 60, 60);
+    border-width: 1px;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.stats-container Label {
+    color: rgb(200, 200, 200);
+    font-size: 12px;
+    margin: 3px 0;
+}
+
+/* Foldout Styling */
+Foldout {
+    margin: 5px 0;
+}
+
+Foldout > Toggle {
+    background-color: rgb(50, 50, 50);
+    padding: 5px;
+    border-radius: 3px;
+}
+
+Foldout > Toggle Label {
+    color: rgb(220, 220, 220);
+    font-size: 13px;
+    -unity-font-style: bold;
+}

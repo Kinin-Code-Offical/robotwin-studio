@@ -23,7 +23,10 @@
         <ui:VisualElement class="body">
             <ui:VisualElement class="panel left-panel">
                 <ui:Label text="Circuit Elements" class="panel-title" />
-                <ui:TextField name="ComponentSearchField" label="Search" class="input input-dark" />
+                <ui:VisualElement class="rw-search-row" style="margin-bottom: 8px;">
+                    <ui:VisualElement class="rw-search-icon" />
+                    <ui:TextField name="ComponentSearchField" value="Search for a component..." class="rw-search-field input-dark" />
+                </ui:VisualElement>
                 <ui:ScrollView name="ComponentList" class="component-list" />
             </ui:VisualElement>
 

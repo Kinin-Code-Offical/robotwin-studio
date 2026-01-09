@@ -20,6 +20,7 @@ $Sources = @(
     "FirmwareEngine/Rpi/RpiBackend.cpp",
     "FirmwareEngine/Rpi/RpiShm.cpp",
     "FirmwareEngine/Rpi/QemuProcess.cpp",
+    "FirmwareEngine/U1/U1.cpp",
     "NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 
@@ -28,6 +29,8 @@ $ResourceFile = "FirmwareEngine/RoboTwinFirmwareHost.rc"
 $ResourceObj = Join-Path $OutDir "RoboTwinFirmwareHost.res.o"
 $IncludeDirs = @(
     "FirmwareEngine",
+    "FirmwareEngine/include",
+    "FirmwareEngine/U1",
     "FirmwareEngine/Rpi",
     "NativeEngine/include"
 )
@@ -66,8 +69,8 @@ foreach ($Source in $Sources) {
     $CompileCmd = @("g++") + $Flags + @("-c", $AbsSource) + $IncludeArgsAbs
     $CompileEntries += @{
         directory = $RepoRootPath
-        command = ($CompileCmd -join " ")
-        file = $AbsSource
+        command   = ($CompileCmd -join " ")
+        file      = $AbsSource
     }
 }
 $CompileEntries | ConvertTo-Json -Depth 4 | Set-Content -Path $CompileDbPath

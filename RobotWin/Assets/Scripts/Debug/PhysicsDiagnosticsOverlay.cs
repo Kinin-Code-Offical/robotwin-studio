@@ -1,6 +1,10 @@
 using UnityEngine;
 using RobotTwin.Game;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 namespace RobotTwin.Debugging
 {
     public class PhysicsDiagnosticsOverlay : MonoBehaviour
@@ -17,10 +21,29 @@ namespace RobotTwin.Debugging
 
         private void Update()
         {
-            if (Input.GetKeyDown(_toggleKey))
+            if (WasTogglePressedThisFrame())
             {
                 _visible = !_visible;
             }
+        }
+
+        private bool WasTogglePressedThisFrame()
+        {
+#if ENABLE_INPUT_SYSTEM
+            // When the new Input System is enabled, UnityEngine.Input throws.
+            // Map KeyCode -> InputSystem Key via name matching (works for common keys like F3).
+            if (Keyboard.current == null) return false;
+
+            if (System.Enum.TryParse<Key>(_toggleKey.ToString(), out var key))
+            {
+                var control = Keyboard.current[key];
+                return control != null && control.wasPressedThisFrame;
+            }
+
+            return false;
+#else
+            return Input.GetKeyDown(_toggleKey);
+#endif
         }
 
         private void OnGUI()

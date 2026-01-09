@@ -5,6 +5,11 @@
 #include <filesystem>
 #include <windows.h>
 
+#ifdef _WIN32
+#undef min
+#undef max
+#endif
+
 namespace firmware::rpi
 {
     namespace

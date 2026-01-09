@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -17,6 +18,7 @@ namespace RobotTwin.UI
     {
         public event Action BuildStarted;
         public event Action BuildFinished;
+        public event Action<string, float> BuildProgress;
 
         public enum ViewPreset
         {
@@ -40,10 +42,10 @@ namespace RobotTwin.UI
         private const float DefaultAnchorRadius = 0.006f;
         private const string PinTypeLead = "lead";
         private const string PinTypePin = "pin";
-        private const float PinTipLengthScale = 2.5f;
-        private const float PinTipMinLength = 0.012f;
-        private const float PinTipRadiusScale = 0.35f;
-        private const float PinTipMinRadius = 0.0012f;
+        private const float PinTipLengthScale = 3.8f;
+        private const float PinTipMinLength = 0.02f;
+        private const float PinTipRadiusScale = 0.5f;
+        private const float PinTipMinRadius = 0.0016f;
         private const float LeadSolderRadiusScale = 1.2f;
         private const float LeadSolderMinRadius = 0.003f;
         private const string PrefabRoot = "Prefabs/Circuit3D";
@@ -603,49 +605,78 @@ namespace RobotTwin.UI
 
         public void Build(CircuitSpec circuit)
         {
+            // Start async build to prevent UI freeze
+            StartCoroutine(BuildAsync(circuit));
+        }
+
+        private IEnumerator BuildAsync(CircuitSpec circuit)
+        {
             BuildStarted?.Invoke();
-            try
+
+            _lastCircuit = circuit;
+            BuildProgress?.Invoke("Initializing scene...", 0.05f);
+            EnsureRoot();
+            EnsurePrefabs();
+            EnsureLighting();
+            CaptureAnchorState();
+            ClearRoot();
+            yield return null; // Yield to prevent frame drop
+
+            BuildProgress?.Invoke("Computing layout...", 0.15f);
+            UpdateLayoutScale(circuit);
+            ComputeBounds(circuit);
+            yield return null;
+
+            BuildProgress?.Invoke("Building components...", 0.25f);
+            var positions = BuildComponents(circuit);
+            yield return null; // Yield after heavy component creation
+
+            BuildProgress?.Invoke("Resolving overlaps...", 0.55f);
+            ResolveComponentOverlaps(positions);
+            yield return null;
+
+            BuildProgress?.Invoke("Placing anchors...", 0.65f);
+            var anchors = BuildAnchors(circuit, positions);
+            yield return null;
+
+            BuildProgress?.Invoke("Creating wires...", 0.75f);
+            BuildWires(circuit, anchors);
+            yield return null; // Yield after wire creation
+
+            BuildProgress?.Invoke("Finalizing scene...", 0.90f);
+
+            // RENDER OPTIMIZATION: Apply GPU instancing + static batching
+            if (_root != null && _camera != null)
             {
-                _lastCircuit = circuit;
-                EnsureRoot();
-                EnsurePrefabs();
-                EnsureLighting();
-                CaptureAnchorState();
-                ClearRoot();
-
-                UpdateLayoutScale(circuit);
-                ComputeBounds(circuit);
-                var positions = BuildComponents(circuit);
-                ResolveComponentOverlaps(positions);
-                var anchors = BuildAnchors(circuit, positions);
-                BuildWires(circuit, anchors);
-                if (_followTarget && !string.IsNullOrWhiteSpace(_followComponentId))
-                {
-                    SetFollowComponent(_followComponentId, true);
-                }
-
-                if (_hasUserCamera)
-                {
-                    UpdateCameraTransform();
-                }
-                else
-                {
-                    FrameCamera();
-                }
-
-                if (TryGetContentBounds(out var contentBounds))
-                {
-                    UpdateReferenceFrame(contentBounds);
-                }
-                else
-                {
-                    UpdateReferenceFrame(new Bounds(transform.position, Vector3.one * 0.1f));
-                }
+                var optimizationResult = RobotTwin.Performance.RenderOptimizer.OptimizeScene(_root.gameObject, _camera);
+                UnityEngine.Debug.Log($"[Circuit3DView] Render optimization: {optimizationResult}");
             }
-            finally
+
+            if (_followTarget && !string.IsNullOrWhiteSpace(_followComponentId))
             {
-                BuildFinished?.Invoke();
+                SetFollowComponent(_followComponentId, true);
             }
+
+            if (_hasUserCamera)
+            {
+                UpdateCameraTransform();
+            }
+            else
+            {
+                FrameCamera();
+            }
+
+            if (TryGetContentBounds(out var contentBounds))
+            {
+                UpdateReferenceFrame(contentBounds);
+            }
+            else
+            {
+                UpdateReferenceFrame(new Bounds(transform.position, Vector3.one * 0.1f));
+            }
+
+            BuildProgress?.Invoke("Complete", 1.0f);
+            BuildFinished?.Invoke();
         }
 
         private void EnsureCamera()
@@ -2139,6 +2170,14 @@ namespace RobotTwin.UI
                             position = basePosition + dir * pinLength;
                         }
                         CreatePinTip(node, basePosition, dir, pinLength, pinRadius);
+                        var anchor = CreateAnchor(node, position, radius, useCache: useCache);
+                        if (anchor != null)
+                        {
+                            float attachOffset = Mathf.Max(radius * 0.5f, pinLength * 0.25f);
+                            anchor.SetDirection(dir, attachOffset);
+                        }
+                        anchors[node] = anchor;
+                        continue;
                     }
                     else if (hasExplicitPinType && string.Equals(pinType, PinTypeLead, StringComparison.OrdinalIgnoreCase))
                     {
@@ -2146,6 +2185,16 @@ namespace RobotTwin.UI
                     }
 
                     var anchor = CreateAnchor(node, position, radius, useCache: useCache);
+                    if (anchor != null)
+                    {
+                        Vector3 dir = GetPinDirection(compId, basePosition, positions);
+                        float attachOffset = Mathf.Max(radius * 0.25f, 0.0005f);
+                        if (hasExplicitPinType && string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase))
+                        {
+                            attachOffset = Mathf.Max(radius * 0.5f, GetPinTipLength(radius) * 0.25f);
+                        }
+                        anchor.SetDirection(dir, attachOffset);
+                    }
                     anchors[node] = anchor;
                 }
             }
@@ -2314,9 +2363,10 @@ namespace RobotTwin.UI
                     localPos = visual.Root.InverseTransformPoint(anchor.transform.position);
                 }
 
+                string pinType = PinTypeLead;
                 if (_componentVisuals.TryGetValue(compId, out var pinVisual))
                 {
-                    string pinType = ResolvePinType(pinVisual, pin, out var hasExplicitPinType);
+                    pinType = ResolvePinType(pinVisual, pin, out var hasExplicitPinType);
                     if (hasExplicitPinType && string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase))
                     {
                         Vector3 dir = localPos.sqrMagnitude > 0.000001f ? localPos.normalized : Vector3.up;
@@ -2329,6 +2379,22 @@ namespace RobotTwin.UI
                 SetAnchorProperty(comp.Properties, pin, "y", localPos.y);
                 SetAnchorProperty(comp.Properties, pin, "z", localPos.z);
                 SetAnchorProperty(comp.Properties, pin, "r", anchor.Radius);
+
+                Vector3 dir = Vector3.up;
+                if (_componentVisuals.TryGetValue(compId, out var visualDir) && visualDir?.Root != null)
+                {
+                    Vector3 delta = anchor.transform.localPosition - visualDir.Root.localPosition;
+                    if (delta.sqrMagnitude > 0.000001f)
+                    {
+                        dir = delta.normalized;
+                    }
+                }
+                float attachOffset = Mathf.Max(anchor.Radius * 0.25f, 0.0005f);
+                if (string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase))
+                {
+                    attachOffset = Mathf.Max(anchor.Radius * 0.5f, GetPinTipLength(anchor.Radius) * 0.25f);
+                }
+                anchor.SetDirection(dir, attachOffset);
             }
         }
 
@@ -4479,6 +4545,35 @@ namespace RobotTwin.UI
             _switchPrefab ??= Resources.Load<GameObject>($"{PrefabRoot}/Swirch_ON_OFF");
             _servoPrefab ??= Resources.Load<GameObject>($"{PrefabRoot}/ServoSG90");
             _genericPrefab ??= Resources.Load<GameObject>($"{PrefabRoot}/Generic");
+        }
+
+        /// <summary>
+        /// Preload Circuit3D prefabs asynchronously. Call this before transitioning to RunMode
+        /// to have resources ready when the scene loads, reducing loading time.
+        /// </summary>
+        public static void PreloadPrefabsAsync()
+        {
+            // Use ResourceRequest for async loading
+            var prefabPaths = new[]
+            {
+                $"{PrefabRoot}/Arduino",
+                $"{PrefabRoot}/ArduinoUno",
+                $"{PrefabRoot}/ArduinoNano",
+                $"{PrefabRoot}/ArduinoProMini",
+                $"{PrefabRoot}/Resistor",
+                $"{PrefabRoot}/LED",
+                $"{PrefabRoot}/Battery",
+                $"{PrefabRoot}/Button",
+                $"{PrefabRoot}/Swirch_ON_OFF",
+                $"{PrefabRoot}/ServoSG90",
+                $"{PrefabRoot}/Generic"
+            };
+
+            foreach (var path in prefabPaths)
+            {
+                // Async load - doesn't block main thread
+                Resources.LoadAsync<GameObject>(path);
+            }
         }
 
         private GameObject CreateInstance(GameObject prefab, PrimitiveType fallback, string name)

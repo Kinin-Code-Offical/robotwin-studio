@@ -62,13 +62,15 @@
 .component-studio-root .panel-left {
     width: 440px;
     min-width: 380px;
-    max-width: 640px;
+    max-width: 560px;
+    flex-shrink: 1;
 }
 
 .component-studio-root .panel-right {
     width: 320px;
-    min-width: 280px;
-    max-width: 380px;
+    min-width: 260px;
+    max-width: 360px;
+    flex-shrink: 1;
 }
 
 .left-panel-tabs {
@@ -93,8 +95,9 @@
 }
 
 .component-studio-root .center-area {
-    min-width: 420px;
+    min-width: 450px;
     min-height: 0;
+    flex-shrink: 1;
 }
 
 .component-studio-root .center-content {
@@ -189,13 +192,15 @@
 
 .editor-inline-field {
     flex-grow: 1;
-    min-width: 120px;
+    min-width: 100px;
     margin-right: 6px;
+    flex-shrink: 1;
 }
 
 .editor-inline-grow {
     flex-grow: 1;
-    min-width: 160px;
+    min-width: 140px;
+    flex-shrink: 1;
 }
 
 .editor-inline-button {

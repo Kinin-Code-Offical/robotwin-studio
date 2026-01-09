@@ -1,0 +1,107 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace RobotWin.Hardware.Instruments
+{
+    /// <summary>
+    /// A concrete implementation of a Virtual DMM.
+    /// Simulates DC Voltage calculation with error margins and auto-ranging delay.
+    /// </summary>
+    public class DigitalMultimeter : VirtualInstrumentBase
+    {
+        [Header("DMM Spec")]
+        public Text displayReadout; // UI Text on the 3D model or Floating Window
+        public float errorMarginPercent = 0.5f;
+        public int errorUpdateRate = 2; // Updates per sec
+
+        [Header("State")]
+        // private float _displayedValue = 0f;
+        private float _timer = 0f;
+        private string _valueString = "0.00";
+        private string _unitString = "V";
+
+        public string GetValueString() => _valueString;
+        public string GetUnitString() => _unitString;
+
+        void Start()
+        {
+            // Auto-create Floating Window if Manager exists
+            if (RobotWin.Hardware.UI.InstrumentWindowManager.Instance != null)
+            {
+                var win = RobotWin.Hardware.UI.InstrumentWindowManager.Instance.OpenInstrumentWindow("Multimeter", "Digital Multimeter");
+                if (win != null)
+                {
+                    var ui = win.GetComponent<RobotWin.Hardware.UI.MultimeterUI>();
+                    if (ui != null) ui.SetSource(this);
+                }
+            }
+        }
+
+        protected override void InstrumentUpdateLoop()
+        {
+            _timer += Time.deltaTime;
+
+            // Simulate Display Refresh Rate (2Hz)
+            if (_timer < (1.0f / errorUpdateRate)) return;
+            _timer = 0f;
+
+            float voltageA = 0f;
+            float voltageB = 0f;
+
+            // Read Probe A
+            if (_targetModule != null && !string.IsNullOrEmpty(_targetPinA))
+            {
+                voltageA = _targetModule.ProbePinVoltage(_targetPinA);
+            }
+
+            // Read Probe B (Reference)
+            // Note: Probe B could be on a DIFFERENT module in improved versions,
+            // but for now Base assumes single module target or we need to expand Base.
+            // Assuming simplified relative measurement on same reference ground or expanded logic.
+            // Let's assume Probe B is Ground (0V) if unconnected, or read if connected.
+            // *Constraint*: Current VirtualInstrumentBase stores ONE _targetModule.
+            // *Improvement*: Probes should store their own target modules independently.
+            // For this iteration, we measure A relative to Ground if B is not connected.
+            if (_targetModule != null && !string.IsNullOrEmpty(_targetPinB))
+            {
+                voltageB = _targetModule.ProbePinVoltage(_targetPinB);
+            }
+
+            float trueVoltage = voltageA - voltageB;
+
+            // Simulate Error / Noise
+            // +/- 0.5% + Random Noise
+            float error = trueVoltage * (errorMarginPercent / 100f);
+            float noise = Random.Range(-0.02f, 0.02f); // 20mV thermal noise
+
+            float measuredVal = trueVoltage + error + noise;
+
+            UpdateDisplay(measuredVal);
+        }
+
+        private void UpdateDisplay(float val)
+        {
+            // Auto-ranging logic for UI consumption
+            if (Mathf.Abs(val) < 0.001f)
+            {
+                _valueString = "0.00";
+                _unitString = "mV";
+            }
+            else if (Mathf.Abs(val) < 1.0f)
+            {
+                _valueString = (val * 1000f).ToString("F1");
+                _unitString = "mV";
+            }
+            else
+            {
+                _valueString = val.ToString("F2");
+                _unitString = "V";
+            }
+
+            if (displayReadout != null)
+            {
+                displayReadout.text = $"{_valueString} {_unitString}";
+            }
+        }
+    }
+}

@@ -58,7 +58,7 @@
                             <ui:Label text="C1 Capacitor 100nF" class="tree-item" />
                         </ui:VisualElement>
                     </ui:ScrollView>
-                    <ui:ScrollView name="ConnectionsList" class="panel-content" style="display: none;">
+                    <ui:ScrollView name="ConnectionsList" class="panel-content" style="display: none; min-height: 150px; flex-shrink: 1;">
                         <ui:VisualElement class="connection-row header">
                             <ui:Label text="Net" class="connection-col-net" />
                             <ui:Label text="Nodes" class="connection-col-nodes" />
@@ -69,8 +69,11 @@
                     <ui:VisualElement class="panel-header-sm">
                         <ui:Label text="Library" />
                     </ui:VisualElement>
-                    <ui:TextField name="LibrarySearchField" class="search-field" placeholder-text="Search components" />
-                    <ui:ScrollView name="LibraryList" class="library-list">
+                    <ui:VisualElement class="rw-search-row" style="margin-bottom: 8px;">
+                        <ui:VisualElement class="rw-search-icon" />
+                        <ui:TextField name="LibrarySearchField" value="Search for a component..." class="rw-search-field search-field" style="flex-grow: 1; min-width: 150px;" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="LibraryList" class="library-list" style="min-height: 200px; flex-shrink: 1;">
                         <ui:VisualElement class="lib-item">
                             <ui:Label text="STM32F405" class="lib-title" />
                             <ui:Label text="ARM Cortex-M4" class="lib-sub" />
@@ -123,7 +126,13 @@
                         </ui:VisualElement>
                         <ui:VisualElement class="code-body">
                             <ui:ScrollView name="CodeFileList" class="code-file-list" />
-                            <ui:TextField name="CodeEditor" class="code-editor" multiline="true" />
+                            <ui:VisualElement name="CodeEditorArea" class="code-editor-area">
+                                <ui:ScrollView name="CodeGutterScroll" class="code-gutter-scroll" mode="Vertical">
+                                    <ui:Label name="CodeGutterLines" class="code-gutter-lines" text="1" />
+                                </ui:ScrollView>
+                                <ui:TextField name="CodeEditor" class="code-editor" multiline="true" />
+                                <ui:VisualElement name="CodeErrorOverlay" class="code-error-overlay" picking-mode="Ignore" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
 
@@ -256,7 +265,10 @@
                     <ui:Label text="LIVE" class="bottom-chip live" />
                 </ui:VisualElement>
                 <ui:VisualElement class="bottom-status">
-                    <ui:TextField name="OutputSearchField" value="" class="input-dark output-search" />
+                    <ui:VisualElement class="rw-search-row rw-search-row-compact" style="margin-left: 6px;">
+                        <ui:VisualElement class="rw-search-icon" style="width: 12px; height: 12px; margin-right: 6px;" />
+                        <ui:TextField name="LibrarySearchField" value="Search library..." class="rw-search-field input-dark lib-search" style="flex-grow: 1; min-width: 150px;" />
+                    </ui:VisualElement>
                     <ui:DropdownField name="OutputTagDropdown" class="input-dark output-tag" />
                     <ui:Button name="OutputFilterAllBtn" text="All" class="filter-btn active" />
                     <ui:Button name="OutputFilterWarningsBtn" text="Warnings" class="filter-btn" />
@@ -271,7 +283,7 @@
                 </ui:VisualElement>
             </ui:VisualElement>
 
-            <ui:ScrollView name="OutputPanel" class="output-panel">
+            <ui:ScrollView name="OutputPanel" class="output-panel" style="min-height: 100px; flex-shrink: 1;">
                 <ui:VisualElement class="output-console">
                     <ui:Label text="[Log] UnityBridge Ready" class="console-line" />
                     <ui:Label text="[Log] SelectComponent id=c1" class="console-line" />
@@ -300,7 +312,7 @@
             <ui:VisualElement class="modal-card net-editor-card">
                 <ui:Label text="Net Editor" class="modal-title" />
                 <ui:Label name="NetEditorErrorLabel" text="" class="modal-label net-editor-error" />
-                <ui:ScrollView name="NetEditorList" class="net-editor-list" />
+                <ui:ScrollView name="NetEditorList" class="net-editor-list" style="min-height: 200px; flex-shrink: 1;" />
                 <ui:VisualElement class="net-editor-actions">
                     <ui:Button name="NetEditorAddBtn" text="Add Net" class="btn-secondary" />
                     <ui:VisualElement style="flex-grow: 1;" />
@@ -319,7 +331,7 @@
         <ui:VisualElement name="HelpOverlay" class="modal-overlay" style="display: none;">
             <ui:VisualElement class="modal-card help-card">
                 <ui:Label text="Help &amp; Shortcuts" class="modal-title" />
-                <ui:ScrollView name="HelpScroll" class="help-scroll">
+                <ui:ScrollView name="HelpScroll" class="help-scroll" style="min-height: 300px; flex-shrink: 1;">
                     <ui:Label text="Getting Started" class="help-section" />
                     <ui:Label text="Drag parts from Library onto the canvas." class="help-line" />
                     <ui:Label text="Right click on canvas for Center Selection / Reset View." class="help-line" />

@@ -8,7 +8,7 @@
             <ui:Label text="Select a starting point for your new project." class="text-subtle" />
         </ui:VisualElement>
 
-        <ui:ScrollView>
+        <ui:ScrollView style="min-height: 300px; flex-shrink: 1;">
             <ui:VisualElement style="flex-direction: row; flex-wrap: wrap; justify-content: flex-start;">
                 
                 <!-- Template Card 1 -->

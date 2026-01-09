@@ -18,6 +18,13 @@ import threading
 
 _SERVER_EVENTS: "deque[dict]" = deque(maxlen=400)
 
+# Cache the last good Unity telemetry payload.
+# This prevents the console UI from hammering Unity's /telemetry endpoint during
+# heavy simulations (which can make Unity unresponsive).
+_TELEMETRY_CACHE: dict | None = None
+_TELEMETRY_CACHE_TS: float = 0.0
+_TELEMETRY_CACHE_TTL_SEC: float = 0.5
+
 
 def server_event(level: str, message: str, **fields) -> None:
     evt = {
@@ -458,15 +465,43 @@ class DebugHandler(SimpleHTTPRequestHandler):
             )
             return
         if parsed.path == "/api/unity-telemetry":
+            global _TELEMETRY_CACHE, _TELEMETRY_CACHE_TS
+
+            now = time.time()
+            if _TELEMETRY_CACHE is not None and (now - _TELEMETRY_CACHE_TS) < _TELEMETRY_CACHE_TTL_SEC:
+                self.send_json({**_TELEMETRY_CACHE, "cached": True})
+                return
+
             if telemetry := fetch_unity_text("telemetry"):
                 try:
                     payload = json.loads(telemetry)
+                except Exception:
+                    # Prefer stale data over hard failure for the UI.
+                    if _TELEMETRY_CACHE is not None:
+                        self.send_json({**_TELEMETRY_CACHE, "stale": True, "error": "Invalid telemetry payload"})
+                        return
+                    self.send_json({"error": "Invalid telemetry payload"}, status=502)
+                    return
+
+                if isinstance(payload, dict):
+                    _TELEMETRY_CACHE = payload
+                    _TELEMETRY_CACHE_TS = now
                     self.send_json(payload)
                     return
-                except Exception:
-                    self.send_json({"error": "Invalid telemetry payload"}, status=500)
+
+                # Non-dict JSON payloads are unexpected; still cache as an error.
+                if _TELEMETRY_CACHE is not None:
+                    self.send_json({**_TELEMETRY_CACHE, "stale": True, "error": "Unexpected telemetry type"})
                     return
-            self.send_json({"error": "Unity not reachable"}, status=503)
+                self.send_json({"error": "Unexpected telemetry type"}, status=502)
+                return
+
+            # Unity telemetry endpoint not reachable/too slow.
+            if _TELEMETRY_CACHE is not None:
+                self.send_json({**_TELEMETRY_CACHE, "stale": True, "error": "Unity telemetry unavailable"})
+                return
+
+            self.send_json({"error": "Unity telemetry unavailable"}, status=503)
             return
         if parsed.path == "/api/bridge-status":
             if bridge := fetch_unity_json("bridge"):

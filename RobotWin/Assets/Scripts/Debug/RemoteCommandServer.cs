@@ -22,6 +22,19 @@ namespace RobotTwin.Debugging
         private const int BasePort = 8085;
         private const int MaxPortAttempts = 10;
 
+        // NOTE:
+        // HttpListener callbacks run on ThreadPool threads.
+        // Unity APIs and most Unity-owned objects are NOT thread-safe.
+        // To avoid freezes/crashes during heavy simulation, we build/cache all
+        // Unity-derived payloads on the main thread and serve cached JSON.
+        [SerializeField] private float _cacheIntervalSeconds = 0.5f;
+        private float _nextCacheTime;
+        private volatile string _cachedTelemetryPayload = "{\"running\":false,\"reason\":\"Telemetry not ready\"}";
+        private volatile string _cachedBridgePayload = "{\"ready\":false,\"reason\":\"Bridge not ready\"}";
+        private volatile string _cachedSceneName = "";
+        private volatile bool _cachedRunMode;
+        private const int TelemetrySignalSoftLimit = 4000;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
         {
@@ -95,6 +108,54 @@ namespace RobotTwin.Debugging
                     action?.Invoke();
                 }
             }
+
+            // Refresh cached telemetry/bridge snapshots at a controlled rate.
+            // (Unscaled time so it continues even if Time.timeScale is 0.)
+            if (_isRunning && Time.unscaledTime >= _nextCacheTime)
+            {
+                _nextCacheTime = Time.unscaledTime + Mathf.Max(0.1f, _cacheIntervalSeconds);
+                RefreshCachedPayloads();
+            }
+        }
+
+        private void RefreshCachedPayloads()
+        {
+            try
+            {
+                _cachedSceneName = SceneManager.GetActiveScene().name;
+            }
+            catch
+            {
+                _cachedSceneName = "";
+            }
+
+            try
+            {
+                var host = SimHost.Instance;
+                _cachedRunMode = host != null && host.IsRunning;
+            }
+            catch
+            {
+                _cachedRunMode = false;
+            }
+
+            try
+            {
+                _cachedTelemetryPayload = BuildTelemetryPayload();
+            }
+            catch (Exception ex)
+            {
+                _cachedTelemetryPayload = "{\"running\":false,\"error\":\"Telemetry build failed\",\"detail\":\"" + EscapeJson(ex.Message) + "\"}";
+            }
+
+            try
+            {
+                _cachedBridgePayload = BuildBridgePayload();
+            }
+            catch (Exception ex)
+            {
+                _cachedBridgePayload = "{\"ready\":false,\"error\":\"Bridge build failed\",\"detail\":\"" + EscapeJson(ex.Message) + "\"}";
+            }
         }
 
         private void ListenLoop()
@@ -167,10 +228,9 @@ namespace RobotTwin.Debugging
 
                     case "query":
                         queryParams.TryGetValue("target", out string selector);
-                        Debug.Log($"[RemoteCommandServer] QUERY: {selector}");
-                        // Mock Response for now
-                        if (selector == "CurrentScene") responseString = "{\"value\": \"CircuitStudio\"}";
-                        else if (selector == "#RunMode") responseString = "{\"value\": true}";
+                        // IMPORTANT: do not touch Unity APIs on this thread.
+                        if (selector == "CurrentScene") responseString = $"{{\"value\":\"{EscapeJson(_cachedSceneName)}\"}}";
+                        else if (selector == "#RunMode") responseString = $"{{\"value\":{BoolJson(_cachedRunMode)}}}";
                         else responseString = "{\"value\": null}";
                         break;
 
@@ -191,11 +251,11 @@ namespace RobotTwin.Debugging
                         break;
 
                     case "telemetry":
-                        responseString = BuildTelemetryPayload();
+                        responseString = _cachedTelemetryPayload;
                         break;
 
                     case "bridge":
-                        responseString = BuildBridgePayload();
+                        responseString = _cachedBridgePayload;
                         break;
 
                     case "firmware-mode":
@@ -293,13 +353,17 @@ namespace RobotTwin.Debugging
             var circuit = host.Circuit;
             var sb = new StringBuilder();
 
+            int signalCount = telemetry?.Signals?.Count ?? 0;
+            bool truncated = signalCount > TelemetrySignalSoftLimit;
+
             sb.Append("{");
             sb.Append($"\"running\":{BoolJson(host.IsRunning)},");
             sb.Append($"\"scene\":\"{EscapeJson(SceneManager.GetActiveScene().name)}\",");
             sb.Append($"\"tick\":{host.TickCount},");
             sb.Append($"\"time\":{host.SimTime.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},");
-            sb.Append($"\"signals\":{(telemetry?.Signals?.Count ?? 0)},");
+            sb.Append($"\"signals\":{signalCount},");
             sb.Append($"\"validation\":{(telemetry?.ValidationMessages?.Count ?? 0)},");
+            sb.Append($"\"truncated\":{BoolJson(truncated)},");
             sb.Append("\"components\":[");
 
             if (circuit?.Components != null)
@@ -319,17 +383,20 @@ namespace RobotTwin.Debugging
                     sb.Append($"\"powered\":{BoolJson(powered)},");
 
                     sb.Append("\"values\":{");
-                    AppendSignal(sb, telemetry, $"COMP:{comp.Id}:V", "v");
-                    AppendSignal(sb, telemetry, $"COMP:{comp.Id}:I", "i");
-                    AppendSignal(sb, telemetry, $"COMP:{comp.Id}:P", "p");
-                    AppendSignal(sb, telemetry, $"COMP:{comp.Id}:T", "t");
-                    AppendSignal(sb, telemetry, $"COMP:{comp.Id}:R", "r");
-                    AppendSignal(sb, telemetry, $"COMP:{comp.Id}:L", "l");
-                    AppendSignal(sb, telemetry, $"SRC:{comp.Id}:V", "src_v");
-                    AppendSignal(sb, telemetry, $"SRC:{comp.Id}:I", "src_i");
-                    AppendSignal(sb, telemetry, $"SRC:{comp.Id}:SOC", "soc");
-                    AppendSignal(sb, telemetry, $"SRC:{comp.Id}:RINT", "rint");
-                    TrimTrailingComma(sb);
+                    if (!truncated)
+                    {
+                        AppendSignal(sb, telemetry, $"COMP:{comp.Id}:V", "v");
+                        AppendSignal(sb, telemetry, $"COMP:{comp.Id}:I", "i");
+                        AppendSignal(sb, telemetry, $"COMP:{comp.Id}:P", "p");
+                        AppendSignal(sb, telemetry, $"COMP:{comp.Id}:T", "t");
+                        AppendSignal(sb, telemetry, $"COMP:{comp.Id}:R", "r");
+                        AppendSignal(sb, telemetry, $"COMP:{comp.Id}:L", "l");
+                        AppendSignal(sb, telemetry, $"SRC:{comp.Id}:V", "src_v");
+                        AppendSignal(sb, telemetry, $"SRC:{comp.Id}:I", "src_i");
+                        AppendSignal(sb, telemetry, $"SRC:{comp.Id}:SOC", "soc");
+                        AppendSignal(sb, telemetry, $"SRC:{comp.Id}:RINT", "rint");
+                        TrimTrailingComma(sb);
+                    }
                     sb.Append("}");
 
                     sb.Append("}");
@@ -337,7 +404,7 @@ namespace RobotTwin.Debugging
             }
 
             sb.Append("]");
-            AppendFirmwarePerfPayload(sb, telemetry);
+            AppendFirmwarePerfPayload(sb, telemetry, truncated);
             AppendFirmwareHostPayload(sb, host);
             AppendRealtimeFlagsPayload(sb, host);
             AppendRealtimeBudgetPayload(sb, host);
@@ -408,10 +475,10 @@ namespace RobotTwin.Debugging
             sb.Append($"\"{label}\":{value.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)},");
         }
 
-        private static void AppendFirmwarePerfPayload(StringBuilder sb, RobotTwin.CoreSim.Runtime.TelemetryFrame telemetry)
+        private static void AppendFirmwarePerfPayload(StringBuilder sb, RobotTwin.CoreSim.Runtime.TelemetryFrame telemetry, bool truncated)
         {
             sb.Append(",\"firmware\":[");
-            if (telemetry?.Signals == null || telemetry.Signals.Count == 0)
+            if (truncated || telemetry?.Signals == null || telemetry.Signals.Count == 0)
             {
                 sb.Append("]");
                 return;

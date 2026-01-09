@@ -258,6 +258,10 @@ namespace RobotTwin.CoreSim.Engine
                         AddButton(comp, resistors, frame);
                         handled = true;
                         break;
+                    case "IRSensor":
+                        AddIrSensor(comp, resistors, frame);
+                        handled = true;
+                        break;
                 }
 
                 if (!handled && IsMcuBoardComponent(comp))
@@ -589,6 +593,116 @@ namespace RobotTwin.CoreSim.Engine
             double closedResistance = ParseResistance(comp, DefaultSwitchClosedResistance);
             double resistance = closed ? closedResistance : HighResistance;
             AddTwoPinResistor(comp, "A", "B", resistors, frame, resistance, false);
+        }
+
+        private void AddIrSensor(ComponentSpec comp, List<ResistorElement> resistors, TelemetryFrame frame)
+        {
+            if (comp == null) return;
+            string outNet = GetNetFor(comp.Id, "OUT");
+            if (!IsConnected(outNet))
+            {
+                frame.ValidationMessages.Add($"IR sensor '{comp.Id}' missing OUT connection.");
+                return;
+            }
+
+            string vccNet = GetNetFor(comp.Id, "VCC");
+            string gndNet = GetNetFor(comp.Id, "GND");
+            if (!IsConnected(gndNet))
+            {
+                gndNet = GetGroundNet();
+            }
+
+            bool outputHigh = ReadIrSensorState(comp);
+            double closedResistance = ParseResistance(comp, DefaultSwitchClosedResistance);
+
+            if (outputHigh)
+            {
+                if (!IsConnected(vccNet))
+                {
+                    frame.ValidationMessages.Add($"IR sensor '{comp.Id}' missing VCC connection.");
+                    return;
+                }
+                resistors.Add(new ResistorElement($"{comp.Id}:OUT_VCC", outNet, vccNet, closedResistance, closedResistance, 0.0, null, false, 0.0, 0.0, 0.0));
+            }
+            else
+            {
+                if (!IsConnected(gndNet))
+                {
+                    frame.ValidationMessages.Add($"IR sensor '{comp.Id}' missing GND connection.");
+                    return;
+                }
+                resistors.Add(new ResistorElement($"{comp.Id}:OUT_GND", outNet, gndNet, closedResistance, closedResistance, 0.0, null, false, 0.0, 0.0, 0.0));
+            }
+        }
+
+        private bool ReadIrSensorState(ComponentSpec comp)
+        {
+            if (comp?.Properties == null) return false;
+
+            bool activeLow = false;
+            if (TryGetBool(comp.Properties, "activeLow", out var activeLowValue) ||
+                TryGetBool(comp.Properties, "invert", out activeLowValue) ||
+                TryGetBool(comp.Properties, "inverted", out activeLowValue))
+            {
+                activeLow = activeLowValue;
+            }
+
+            if (TryGetBool(comp.Properties, "state", out var state) ||
+                TryGetBool(comp.Properties, "out", out state) ||
+                TryGetBool(comp.Properties, "output", out state) ||
+                TryGetBool(comp.Properties, "high", out state) ||
+                TryGetBool(comp.Properties, "detect", out state) ||
+                TryGetBool(comp.Properties, "active", out state))
+            {
+                return activeLow ? !state : state;
+            }
+
+            if (!TryGetDoubleAny(comp, out var signal, "signal", "value", "reflectance", "analog"))
+            {
+                return activeLow ? true : false;
+            }
+
+            double vref = 5.0;
+            double voltage;
+            if (signal <= 1.0)
+            {
+                voltage = signal * vref;
+            }
+            else if (signal <= vref + 0.5)
+            {
+                voltage = signal;
+            }
+            else
+            {
+                voltage = Clamp(signal, 0.0, 1023.0) * vref / 1023.0;
+            }
+
+            double threshold = 0.5 * vref;
+            if (TryGetDoubleAny(comp, out var rawThreshold, "threshold", "thresholdV", "thresholdPct"))
+            {
+                if (rawThreshold <= 1.0)
+                {
+                    threshold = rawThreshold * vref;
+                }
+                else if (rawThreshold <= vref + 0.5)
+                {
+                    threshold = rawThreshold;
+                }
+                else
+                {
+                    threshold = Clamp(rawThreshold, 0.0, 1023.0) * vref / 1023.0;
+                }
+            }
+
+            double noiseVrms = ReadNoiseRms(comp, "V", voltage);
+            if (noiseVrms > 0.0)
+            {
+                double sample = DeterministicNoise.SampleSigned($"{comp.Id}:IR:V", _noiseStep);
+                voltage = Clamp(voltage + sample * noiseVrms, 0.0, vref);
+            }
+
+            bool high = voltage >= threshold;
+            return activeLow ? !high : high;
         }
 
         private void AddMcuSources(
@@ -1918,6 +2032,16 @@ namespace RobotTwin.CoreSim.Engine
                 return true;
             }
             if (s == "false" || s == "0" || s == "no" || s == "off" || s == "open")
+            {
+                value = false;
+                return true;
+            }
+            if (s == "high")
+            {
+                value = true;
+                return true;
+            }
+            if (s == "low")
             {
                 value = false;
                 return true;

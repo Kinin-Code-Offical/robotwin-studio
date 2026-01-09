@@ -75,4 +75,48 @@ public:
 private:
   double m_voltage;
 };
+
+// Norton-equivalent driver: stamps a conductance to ground and a current source
+// such that the node is driven towards a target voltage with finite impedance.
+class AnalogDriver : public Component {
+public:
+  AnalogDriver(std::uint32_t id, double voltage, double resistance_ohms = 1000.0)
+      : Component(id, ComponentType::AnalogDriver), m_voltage(voltage) {
+    SetResistance(resistance_ohms);
+  }
+
+  void Connect(std::uint8_t pinIndex, std::uint32_t nodeId) override {
+    if (pinIndex == 0) {
+      m_node = nodeId;
+    }
+  }
+
+  void Stamp(Context &ctx) override {
+    if (m_node == 0) {
+      return;
+    }
+    // Conductance to ground.
+    ctx.StampConductance(m_node, 0, m_conductance);
+    // Current source from ground to node.
+    ctx.StampCurrent(0, m_node, m_voltage * m_conductance);
+  }
+
+  void SetVoltage(double v) { m_voltage = v; }
+  double GetVoltage() const { return m_voltage; }
+
+  void SetResistance(double r) {
+    if (r < 1e-6) {
+      r = 1e-6;
+    }
+    m_resistance = r;
+    m_conductance = 1.0 / m_resistance;
+  }
+
+  std::uint32_t m_node = 0;
+
+private:
+  double m_voltage = 0.0;
+  double m_resistance = 1000.0;
+  double m_conductance = 1.0 / 1000.0;
+};
 } // namespace NativeEngine::Circuit

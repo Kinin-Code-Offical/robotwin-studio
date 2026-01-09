@@ -177,10 +177,70 @@ namespace RobotTwin.Core
         [DllImport(PLUGIN_NAME, EntryPoint = "GetEngineVersion")]
         public static extern int GetEngineVersion();
 
+        [DllImport(PLUGIN_NAME, EntryPoint = "GetPinVoltageForAvr")]
+        public static extern float GetPinVoltageForAvr(int avrIndex, int pinIndex);
+
+        [DllImport(PLUGIN_NAME, EntryPoint = "SetAnalogVoltageForAvr")]
+        public static extern int SetAnalogVoltageForAvr(int avrIndex, int pinIndex, float voltage);
+
         // Legacy Wrapper
         public static int GetVersion() => GetEngineVersion();
         public static void StepSimulation(float dt) => Native_Step(dt); // Wrapper for old StepSimulation
 
+        // --- God Tier Helpers ---
+        /// <summary>
+        /// Gets the digital state (HIGH/LOW) of a pin on the first AVR.
+        /// Threshold is 2.5V.
+        /// </summary>
+        public static int GetPinState(int pin)
+        {
+            // Assuming AvrIndex 0 for single MCU robot
+            float v = GetPinVoltageForAvr(0, pin);
+            return v > 2.5f ? 1 : 0;
+        }
+
+        public static float GetPinVoltage(int pin)
+        {
+            return GetPinVoltageForAvr(0, pin);
+        }
+
+        public static int GetPinPwm(int pin)
+        {
+            // Pwm is just voltage averaged over time or instant check?
+            // If simulation is stepped fine enough, we catch the high/low.
+            // But for 'GetPinPwm', we likely want the Duty Cycle.
+            // NativeEngine might not expose Duty Cycle directly yet.
+            // Fallback: Return raw voltage scaled to 0-255
+            float v = GetPinVoltage(pin);
+            return (int)((v / 5.0f) * 255f);
+        }
+
+        public static float GetPinServo(int pin)
+        {
+            // Servo signal is PWM. Angle depends on pulse width.
+            // Mock: Voltage -> Angle (0-180)
+            float v = GetPinVoltage(pin);
+            return (v / 5.0f) * 180f;
+        }
+
+        public static void SetAnalogInput(int pin, int value)
+        {
+            // Map 0-1023 to 0-5V and drive the circuit node connected to this AVR pin with a
+            // finite-impedance Norton driver (native-side).
+            int clamped = Mathf.Clamp(value, 0, 1023);
+            float voltage = (clamped / 1023.0f) * 5.0f;
+            SetAnalogVoltageForAvr(0, pin, voltage);
+        }
+
+        // Instance Compatibility (Mock Singleton for legacy code)
+        public static class Instance
+        {
+            public static int GetPinState(int pin) => NativeBridge.GetPinState(pin);
+            public static float GetPinVoltage(int pin) => NativeBridge.GetPinVoltage(pin);
+            public static int GetPinPwm(int pin) => NativeBridge.GetPinPwm(pin);
+            public static float GetPinServo(int pin) => NativeBridge.GetPinServo(pin);
+            public static void SetAnalogInput(int pin, int value) => NativeBridge.SetAnalogInput(pin, value);
+        }
 
         // Enum mirroring Circuit/CircuitComponent.h
         public enum ComponentType

@@ -31,6 +31,7 @@ UNITY_EXPORT const SharedState *GetSharedState(void);
 UNITY_EXPORT void SetComponentXY(uint32_t index, uint32_t x, uint32_t y);
 UNITY_EXPORT int GetAvrCount(void);
 UNITY_EXPORT float GetPinVoltageForAvr(int avrIndex, int pinIndex);
+UNITY_EXPORT int SetAnalogVoltageForAvr(int avrIndex, int pinIndex, float voltage);
 
 // --- New Generic Circuit API ---
 UNITY_EXPORT void Native_CreateContext();
