@@ -2,7 +2,7 @@
     <!-- Theme Reference -->
     <ui:Style src="../Theme/RobotwinTheme.uss" />
 
-    <ui:VisualElement name="HomeView" style="flex-grow: 1; max-width: 1200px; margin-left: auto; margin-right: auto; width: 100%; padding-top: 60px; padding-left: 60px; padding-right: 60px; background-color: #09090b;">
+    <ui:VisualElement name="HomeView" style="flex-grow: 1; max-width: 1400px; min-width: 320px; margin-left: auto; margin-right: auto; width: 95%; padding-top: 4%; padding-left: 5%; padding-right: 5%; background-color: #09090b;">
         
         <!-- Header -->
         <ui:VisualElement style="margin-bottom: 60px;">
@@ -61,11 +61,11 @@
             </ui:VisualElement>
 
             <!-- Search Filter -->
-             <ui:VisualElement style="flex-direction: row; margin-bottom: 24px;">
-                <ui:TextField value="Filter recent projects..." class="search-field" style="margin-right: 0;" />
+             <ui:VisualElement style="flex-direction: row; margin-bottom: 24px; flex-shrink: 0;">
+                <ui:TextField value="Filter recent projects..." class="search-field" style="margin-right: 0; flex-grow: 1; min-width: 200px;" />
             </ui:VisualElement>
 
-            <ui:ScrollView style="flex-grow: 1;">
+            <ui:ScrollView style="flex-grow: 1; min-height: 200px; flex-shrink: 1;">
                 
                 <!-- Mock Item 1 -->
                 <ui:VisualElement class="list-item">

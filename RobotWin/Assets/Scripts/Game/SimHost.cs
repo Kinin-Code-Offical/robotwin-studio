@@ -4,6 +4,7 @@ using RobotTwin.Core;
 using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Engine;
 using RobotTwin.CoreSim.Runtime;
+using RobotTwin.CoreSim.Models.Physics;
 using RobotTwin.Game.RaspberryPi;
 using System;
 using System.Collections.Generic;
@@ -73,6 +74,8 @@ namespace RobotTwin.Game
         private int _budgetOverruns;
         private readonly Dictionary<string, FirmwareInputCache> _firmwareInputCache =
             new Dictionary<string, FirmwareInputCache>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, float[]> _analogOverridesByBoard =
+            new Dictionary<string, float[]>(System.StringComparer.OrdinalIgnoreCase);
 
         private const int ExternalFirmwarePinLimit = 20;
         private const int SerialBufferLimit = 4000;
@@ -550,6 +553,7 @@ namespace RobotTwin.Game
             _pinStatesByComponent.Clear();
             _pullupResistances.Clear();
             RefreshBoardPowerStates();
+            RefreshTcs34725Overrides();
 
             bool usedNativePins = TryApplyNativePins(dtSeconds);
             HashSet<string> handledBoards = null;
@@ -1595,7 +1599,177 @@ namespace RobotTwin.Game
                 }
                 write++;
             }
+            ApplyAnalogOverrides(boardId, cache.Analog);
             return cache.Analog;
+        }
+
+        private void RefreshTcs34725Overrides()
+        {
+            _analogOverridesByBoard.Clear();
+            if (_circuit?.Components == null) return;
+
+            string fallbackBoardId = null;
+            foreach (var comp in _circuit.Components)
+            {
+                if (IsMcuBoard(comp))
+                {
+                    fallbackBoardId = comp.Id;
+                    break;
+                }
+            }
+            if (string.IsNullOrWhiteSpace(fallbackBoardId)) return;
+
+            foreach (var comp in _circuit.Components)
+            {
+                if (comp == null || !string.Equals(comp.Type, "TCS34725", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string boardId = ResolveI2cBoardId(comp, fallbackBoardId);
+                var overrides = GetAnalogOverrides(boardId);
+                ApplyTcsChannelOverride(comp, overrides, 10, "r", "red", "tcsR", "tcsRed");
+                ApplyTcsChannelOverride(comp, overrides, 11, "g", "green", "tcsG", "tcsGreen");
+                ApplyTcsChannelOverride(comp, overrides, 12, "b", "blue", "tcsB", "tcsBlue");
+                ApplyTcsChannelOverride(comp, overrides, 13, "c", "clear", "tcsC", "tcsClear");
+            }
+        }
+
+        private string ResolveI2cBoardId(ComponentSpec device, string fallbackBoardId)
+        {
+            string sdaNet = GetPinNet(device?.Id, "SDA");
+            string sclNet = GetPinNet(device?.Id, "SCL");
+            if (_circuit?.Components == null) return fallbackBoardId;
+
+            foreach (var comp in _circuit.Components)
+            {
+                if (!IsMcuBoard(comp)) continue;
+                if (MatchesNet(comp.Id, "SDA", sdaNet) || MatchesNet(comp.Id, "A4", sdaNet))
+                {
+                    if (MatchesNet(comp.Id, "SCL", sclNet) || MatchesNet(comp.Id, "A5", sclNet))
+                    {
+                        return comp.Id;
+                    }
+                }
+            }
+            return fallbackBoardId;
+        }
+
+        private bool MatchesNet(string componentId, string pin, string netId)
+        {
+            if (string.IsNullOrWhiteSpace(componentId) || string.IsNullOrWhiteSpace(pin) || string.IsNullOrWhiteSpace(netId)) return false;
+            string key = $"{componentId}.{pin}";
+            return _pinNetMap.TryGetValue(key, out var boardNet) &&
+                   string.Equals(boardNet, netId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string GetPinNet(string componentId, string pin)
+        {
+            if (string.IsNullOrWhiteSpace(componentId) || string.IsNullOrWhiteSpace(pin)) return string.Empty;
+            string key = $"{componentId}.{pin}";
+            return _pinNetMap.TryGetValue(key, out var netId) ? netId : string.Empty;
+        }
+
+        private float[] GetAnalogOverrides(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) boardId = "board";
+            if (_analogOverridesByBoard.TryGetValue(boardId, out var overrides)) return overrides;
+            overrides = new float[16];
+            for (int i = 0; i < overrides.Length; i++)
+            {
+                overrides[i] = float.NaN;
+            }
+            _analogOverridesByBoard[boardId] = overrides;
+            return overrides;
+        }
+
+        private void ApplyAnalogOverrides(string boardId, float[] analogInputs)
+        {
+            if (analogInputs == null) return;
+            if (!_analogOverridesByBoard.TryGetValue(boardId, out var overrides)) return;
+            int count = Math.Min(analogInputs.Length, overrides.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (!float.IsNaN(overrides[i]))
+                {
+                    analogInputs[i] = overrides[i];
+                }
+            }
+        }
+
+        private void ApplyTcsChannelOverride(ComponentSpec comp, float[] overrides, int channel, params string[] keys)
+        {
+            if (comp?.Properties == null || overrides == null || channel < 0 || channel >= overrides.Length) return;
+            if (!TryGetDoubleAny(comp.Properties, out var rawValue, keys)) return;
+
+            double normalized = NormalizeTcsValue(rawValue);
+            if (TryGetDoubleAny(comp.Properties, out var noisePct, "noisePct", "noisePercent", "noise"))
+            {
+                double pct = Math.Abs(noisePct);
+                if (pct > 1.0)
+                {
+                    pct = pct / 100.0;
+                }
+                if (pct > 0.0)
+                {
+                    double sample = DeterministicNoise.SampleSigned($"{comp.Id}:tcs:{channel}", TickCount);
+                    normalized = ClampValue(normalized + normalized * pct * sample, 0.0, 1023.0);
+                }
+            }
+
+            overrides[channel] = (float)(normalized / 1023.0 * 5.0);
+        }
+
+        private static double NormalizeTcsValue(double raw)
+        {
+            if (raw <= 1.0)
+            {
+                return raw * 1023.0;
+            }
+            if (raw <= 5.5)
+            {
+                return ClampValue(raw / 5.0 * 1023.0, 0.0, 1023.0);
+            }
+            if (raw <= 1023.0)
+            {
+                return raw;
+            }
+            if (raw <= 65535.0)
+            {
+                return ClampValue(raw / 64.0, 0.0, 1023.0);
+            }
+            return 1023.0;
+        }
+
+        private static double ClampValue(double value, double min, double max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        }
+
+        private static bool TryGetDoubleAny(Dictionary<string, string> props, out double value, params string[] keys)
+        {
+            value = 0.0;
+            if (props == null || keys == null || keys.Length == 0) return false;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (TryGetDouble(props, keys[i], out value))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool TryGetDouble(Dictionary<string, string> props, string key, out double value)
+        {
+            value = 0.0;
+            if (props == null || string.IsNullOrWhiteSpace(key)) return false;
+            if (!props.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw)) return false;
+            string cleaned = raw.Trim().ToLowerInvariant();
+            cleaned = cleaned.Replace("v", string.Empty).Replace(" ", string.Empty);
+            return double.TryParse(cleaned, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
         }
 
         private FirmwareInputCache GetFirmwareInputCache(string boardId)
@@ -1639,7 +1813,20 @@ namespace RobotTwin.Game
                 bool isOutput = state >= 0;
                 if (isOutput)
                 {
-                    _pinVoltages[$"{boardId}.{pin}"] = state > 0 ? VirtualMcu.DefaultHighVoltage : 0f;
+                    float voltage = 0f;
+                    if (state <= 0)
+                    {
+                        voltage = 0f;
+                    }
+                    else if (state == 1)
+                    {
+                        voltage = VirtualMcu.DefaultHighVoltage;
+                    }
+                    else
+                    {
+                        voltage = VirtualMcu.DefaultHighVoltage * Mathf.Clamp01(state / 255f);
+                    }
+                    _pinVoltages[$"{boardId}.{pin}"] = voltage;
                 }
                 pinStates.Add(new PinState(pin, isOutput, false));
             }

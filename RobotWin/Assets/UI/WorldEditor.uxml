@@ -1,0 +1,130 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="/Assets/UI/Styles/SharedStyles.uss" />
+    <ui:VisualElement name="Root" class="full-screen">
+        <ui:VisualElement name="TopBar" class="top-bar">
+            <ui:Label text="World Editor - Environment Configuration" class="title-label" />
+            <ui:Button text="Save Config" name="SaveConfigButton" class="button-primary" />
+            <ui:Button text="Load Config" name="LoadConfigButton" class="button-secondary" />
+            <ui:Button text="Apply to Scene" name="ApplyButton" class="button-success" />
+            <ui:Button text="Back" name="BackButton" class="button-back" />
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="MainContent" class="main-content">
+            <ui:ScrollView name="LeftPanel" class="left-panel" style="min-height: 400px; flex-shrink: 1;">
+                <ui:Foldout text="Environment Settings" name="EnvironmentFoldout" value="true">
+                    <ui:VisualElement name="EnvironmentPanel" class="settings-panel">
+                        <ui:Label text="Gravity Settings" class="section-header" />
+                        <ui:Slider label="Gravity Y" name="GravitySlider" low-value="-30" high-value="30" value="-9.81" show-input-field="true" />
+                        <ui:Label name="GravityLabel" text="Gravity: -9.81 m/s²" class="value-label" />
+                        
+                        <ui:Label text="Wind Settings" class="section-header" />
+                        <ui:Slider label="Wind X" name="WindXSlider" low-value="-20" high-value="20" value="0" show-input-field="true" />
+                        <ui:Slider label="Wind Y" name="WindYSlider" low-value="-20" high-value="20" value="0" show-input-field="true" />
+                        <ui:Slider label="Wind Z" name="WindZSlider" low-value="-20" high-value="20" value="0" show-input-field="true" />
+                        <ui:Label name="WindLabel" text="Wind: (0.0, 0.0, 0.0) m/s" class="value-label" />
+                        
+                        <ui:Label text="Atmosphere" class="section-header" />
+                        <ui:Slider label="Air Density" name="AirDensitySlider" low-value="0" high-value="5" value="1.225" show-input-field="true" />
+                        <ui:Slider label="Temperature" name="TemperatureSlider" low-value="-50" high-value="50" value="20" show-input-field="true" />
+                        <ui:Label name="TemperatureLabel" text="Temperature: 20.0°C" class="value-label" />
+                        
+                        <ui:Label text="Weather" class="section-header" />
+                        <ui:Toggle label="Enable Weather" name="EnableWeatherToggle" value="false" />
+                        <ui:DropdownField label="Weather Type" name="WeatherTypeDropdown" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+                
+                <ui:Foldout text="Room Design" name="RoomFoldout" value="true">
+                    <ui:VisualElement name="RoomPanel" class="settings-panel">
+                        <ui:DropdownField label="Room Type" name="RoomTypeDropdown" />
+                        <ui:TextField label="Room Size X" name="RoomSizeXField" value="20" />
+                        <ui:TextField label="Room Size Y" name="RoomSizeYField" value="5" />
+                        <ui:TextField label="Room Size Z" name="RoomSizeZField" value="20" />
+                        <ui:Toggle label="Enable Ceiling" name="EnableCeilingToggle" value="true" />
+                        <ui:Slider label="Light Intensity" name="LightIntensitySlider" low-value="0" high-value="2" value="1" show-input-field="true" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+                
+                <ui:Foldout text="Physics Parameters" name="PhysicsFoldout" value="true">
+                    <ui:VisualElement name="PhysicsPanel" class="settings-panel">
+                        <ui:Slider label="Time Scale" name="TimeScaleSlider" low-value="0.1" high-value="5" value="1" show-input-field="true" />
+                        <ui:Label name="TimeScaleLabel" text="Time Scale: 1.00x" class="value-label" />
+                        <ui:Slider label="Fixed Delta Time" name="FixedDeltaTimeSlider" low-value="0.001" high-value="0.1" value="0.02" show-input-field="true" />
+                        <ui:Toggle label="Enable Collision" name="EnableCollisionToggle" value="true" />
+                        <ui:Toggle label="Enable Gravity" name="EnableGravityToggle" value="true" />
+                        <ui:Slider label="Bounce Multiplier" name="BounceMultiplierSlider" low-value="0" high-value="2" value="1" show-input-field="true" />
+                        <ui:Slider label="Friction Multiplier" name="FrictionMultiplierSlider" low-value="0" high-value="2" value="1" show-input-field="true" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+                
+                <ui:Foldout text="Network (WiFi Modems)" name="NetworkFoldout" value="false">
+                    <ui:VisualElement name="NetworkPanel" class="settings-panel">
+                        <ui:Label text="WiFi Modems Configuration" class="section-header" />
+                        <ui:TextField label="SSID" name="ModemSSIDField" value="WiFi_Default" />
+                        <ui:Slider label="Range (m)" name="ModemRangeSlider" low-value="1" high-value="100" value="10" show-input-field="true" />
+                        <ui:Slider label="Bandwidth (Mbps)" name="ModemBandwidthSlider" low-value="1" high-value="1000" value="100" show-input-field="true" />
+                        <ui:Button text="Add Modem" name="AddModemButton" class="button-primary" />
+                        <ui:ListView name="ModemListView" class="list-view" style="min-height: 100px;" />
+                        <ui:Button text="Remove Selected" name="RemoveModemButton" class="button-danger" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+                
+                <ui:Foldout text="Audio Effects" name="AudioFoldout" value="false">
+                    <ui:VisualElement name="AudioPanel" class="settings-panel">
+                        <ui:Toggle label="Enable Sound" name="EnableSoundToggle" value="true" />
+                        <ui:Slider label="Master Volume" name="MasterVolumeSlider" low-value="0" high-value="1" value="0.7" show-input-field="true" />
+                        <ui:Button text="Add Sound Effect" name="AddSoundButton" class="button-primary" />
+                        <ui:ListView name="SoundEffectsList" class="list-view" style="min-height: 100px;" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+                
+                <ui:Foldout text="World Constraints" name="ConstraintsFoldout" value="false">
+                    <ui:VisualElement name="ConstraintsPanel" class="settings-panel">
+                        <ui:Label text="World Boundaries" class="section-header" />
+                        <ui:TextField label="Min X" name="WorldBoundsMinXField" value="-50" />
+                        <ui:TextField label="Min Y" name="WorldBoundsMinYField" value="-10" />
+                        <ui:TextField label="Min Z" name="WorldBoundsMinZField" value="-50" />
+                        <ui:TextField label="Max X" name="WorldBoundsMaxXField" value="50" />
+                        <ui:TextField label="Max Y" name="WorldBoundsMaxYField" value="20" />
+                        <ui:TextField label="Max Z" name="WorldBoundsMaxZField" value="50" />
+                        <ui:Toggle label="Enable Boundary Collision" name="EnableBoundaryCollisionToggle" value="true" />
+                        
+                        <ui:Label text="Object Limits" class="section-header" />
+                        <ui:Slider label="Max Robots" name="MaxRobotsSlider" low-value="1" high-value="50" value="10" show-input-field="true" />
+                        <ui:Label name="MaxRobotsLabel" text="Max Robots: 10" class="value-label" />
+                        <ui:Slider label="Max Objects" name="MaxObjectsSlider" low-value="10" high-value="1000" value="100" show-input-field="true" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+                
+                <ui:Foldout text="Key Bindings (Test Mode)" name="KeyBindingsFoldout" value="false">
+                    <ui:VisualElement name="KeyBindingsPanel" class="settings-panel">
+                        <ui:Label text="Configure keys for runtime testing" class="section-header" />
+                        <ui:Button text="Add Key Binding" name="AddKeyBindingButton" class="button-primary" />
+                        <ui:ListView name="KeyBindingsList" class="list-view" style="min-height: 100px;" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+            </ui:ScrollView>
+            
+            <ui:VisualElement name="RightPanel" class="right-panel">
+                <ui:Label text="3D Preview" class="section-header" />
+                <ui:VisualElement name="PreviewContainer" class="preview-container">
+                    <ui:Label text="Scene preview will render here" style="margin: auto;" />
+                </ui:VisualElement>
+                
+                <ui:Label text="Quick Stats" class="section-header" />
+                <ui:VisualElement name="StatsContainer" class="stats-container">
+                    <ui:Label name="StatsGravity" text="Gravity: -9.81 m/s²" />
+                    <ui:Label name="StatsWind" text="Wind: Off" />
+                    <ui:Label name="StatsTimeScale" text="Time Scale: 1.0x" />
+                    <ui:Label name="StatsModems" text="WiFi Modems: 0" />
+                    <ui:Label name="StatsSounds" text="Sound Effects: 0" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <ui:VisualElement name="BottomBar" class="bottom-bar">
+            <ui:Label name="StatusLabel" text="Ready" class="status-label" />
+            <ui:Label name="InfoLabel" text="Configure world settings before running simulation" class="info-label" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

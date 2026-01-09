@@ -1,10 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 // This script generates a static HTML report from test results
 // Usage: node reporter.js [json_results_path]
 
-const REPORT_FILE = 'test-report.html';
+const REPORT_FILE = "test-report.html";
 
 const HTML_TEMPLATE = `
 <!DOCTYPE html>
@@ -56,9 +56,9 @@ const HTML_TEMPLATE = `
 `;
 
 function generateReport() {
-    console.log('[Reporter] Generating HTML Report...');
-    fs.writeFileSync(REPORT_FILE, HTML_TEMPLATE);
-    console.log(`[Reporter] Report saved to ${REPORT_FILE}`);
+  console.log("[Reporter] Generating HTML Report...");
+  fs.writeFileSync(REPORT_FILE, HTML_TEMPLATE);
+  console.log(`[Reporter] Report saved to ${REPORT_FILE}`);
 }
 
 generateReport();

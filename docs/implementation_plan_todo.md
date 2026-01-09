@@ -1,5 +1,12 @@
 # Implementation Plan TODO
 
+## COMPLETED (Session 2026-01-08)
+
+- [x] Integrate U1.ino control logic logic into docs/U1 structure.
+- [x] Fix compilation errors in Hardware/Instruments due to missing Unity.UI/EventSystems.
+- [x] Add `Unity.ugui` and `UnityEngine.UI` to `RobotTwin.Runtime.asmdef` references.
+- [x] Optimize WireRope physics (O(N) spatial grid, NonAlloc APIs).
+
 This file tracks active work items. Keep entries short and verifiable.
 
 ## Now

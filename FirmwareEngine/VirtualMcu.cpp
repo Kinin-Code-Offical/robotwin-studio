@@ -265,6 +265,147 @@ namespace firmware
         // Default everything to "unknown / not driving".
         std::memset(outPins, static_cast<int>(kPinValueUnknown), outCount);
 
+        auto clampByte = [](int value) -> std::uint8_t
+        {
+            if (value < 0) return 0;
+            if (value > 255) return 255;
+            return static_cast<std::uint8_t>(value);
+        };
+
+        auto computePwmDuty = [&](int pin, std::uint8_t &duty) -> bool
+        {
+            if (_profile.mcu != "ATmega328P")
+            {
+                return false;
+            }
+
+            if (pin == 5 || pin == 6)
+            {
+                std::uint8_t tccr0a = GetIo(AVR_TCCR0A);
+                std::uint8_t tccr0b = GetIo(AVR_TCCR0B);
+                std::uint8_t wgm = static_cast<std::uint8_t>((tccr0a & 0x03) | ((tccr0b & 0x08) >> 1));
+                bool pwmMode = (wgm == 0x01 || wgm == 0x03 || wgm == 0x05 || wgm == 0x07);
+                if (!pwmMode)
+                {
+                    return false;
+                }
+                std::uint8_t ocr0a = GetIo(AVR_OCR0A);
+                std::uint8_t ocr0b = GetIo(AVR_OCR0B);
+                std::uint8_t top = 0xFF;
+                if (wgm == 0x05 || wgm == 0x07)
+                {
+                    top = ocr0a;
+                }
+                if (top == 0)
+                {
+                    duty = 0;
+                    return true;
+                }
+                if (pin == 6)
+                {
+                    bool com0a = (tccr0a & 0x80) != 0;
+                    if (!com0a) return false;
+                    duty = clampByte(static_cast<int>((static_cast<double>(ocr0a) / top) * 255.0 + 0.5));
+                    return true;
+                }
+                bool com0b = (tccr0a & 0x20) != 0;
+                if (!com0b) return false;
+                duty = clampByte(static_cast<int>((static_cast<double>(ocr0b) / top) * 255.0 + 0.5));
+                return true;
+            }
+
+            if (pin == 3 || pin == 11)
+            {
+                std::uint8_t tccr2a = GetIo(AVR_TCCR2A);
+                std::uint8_t tccr2b = GetIo(AVR_TCCR2B);
+                std::uint8_t wgm = static_cast<std::uint8_t>((tccr2a & 0x03) | ((tccr2b & 0x08) >> 1));
+                bool pwmMode = (wgm == 0x01 || wgm == 0x03 || wgm == 0x05 || wgm == 0x07);
+                if (!pwmMode)
+                {
+                    return false;
+                }
+                std::uint8_t ocr2a = GetIo(AVR_OCR2A);
+                std::uint8_t ocr2b = GetIo(AVR_OCR2B);
+                std::uint8_t top = 0xFF;
+                if (wgm == 0x05 || wgm == 0x07)
+                {
+                    top = ocr2a;
+                }
+                if (top == 0)
+                {
+                    duty = 0;
+                    return true;
+                }
+                if (pin == 11)
+                {
+                    bool com2a = (tccr2a & 0x80) != 0;
+                    if (!com2a) return false;
+                    duty = clampByte(static_cast<int>((static_cast<double>(ocr2a) / top) * 255.0 + 0.5));
+                    return true;
+                }
+                bool com2b = (tccr2a & 0x20) != 0;
+                if (!com2b) return false;
+                duty = clampByte(static_cast<int>((static_cast<double>(ocr2b) / top) * 255.0 + 0.5));
+                return true;
+            }
+
+            if (pin == 9 || pin == 10)
+            {
+                std::uint8_t tccr1a = GetIo(AVR_TCCR1A);
+                std::uint8_t tccr1b = GetIo(AVR_TCCR1B);
+                std::uint8_t wgm = static_cast<std::uint8_t>((tccr1a & 0x03) | ((tccr1b & 0x18) >> 1));
+                bool pwmMode = (wgm == 1 || wgm == 2 || wgm == 3 || wgm == 5 || wgm == 6 || wgm == 7 ||
+                                wgm == 8 || wgm == 9 || wgm == 10 || wgm == 11 || wgm == 14 || wgm == 15);
+                if (!pwmMode)
+                {
+                    return false;
+                }
+                std::uint16_t ocr1a = static_cast<std::uint16_t>(
+                    static_cast<std::uint16_t>(GetIo(AVR_OCR1AL)) |
+                    (static_cast<std::uint16_t>(GetIo(AVR_OCR1AH)) << 8));
+                std::uint16_t ocr1b = static_cast<std::uint16_t>(
+                    static_cast<std::uint16_t>(GetIo(AVR_OCR1BL)) |
+                    (static_cast<std::uint16_t>(GetIo(AVR_OCR1BH)) << 8));
+                std::uint16_t top = 0xFFFF;
+                switch (wgm)
+                {
+                case 1:
+                case 5:
+                    top = 0x00FF;
+                    break;
+                case 2:
+                case 6:
+                    top = 0x01FF;
+                    break;
+                case 3:
+                case 7:
+                    top = 0x03FF;
+                    break;
+                default:
+                    top = 0xFFFF;
+                    break;
+                }
+                if (top == 0)
+                {
+                    duty = 0;
+                    return true;
+                }
+                if (pin == 9)
+                {
+                    bool com1a = (tccr1a & 0x80) != 0;
+                    if (!com1a) return false;
+                    duty = clampByte(static_cast<int>((static_cast<double>(ocr1a) / top) * 255.0 + 0.5));
+                    return true;
+                }
+                bool com1b = (tccr1a & 0x20) != 0;
+                if (!com1b) return false;
+                duty = clampByte(static_cast<int>((static_cast<double>(ocr1b) / top) * 255.0 + 0.5));
+                return true;
+            }
+
+            return false;
+        };
+
         std::size_t limit = static_cast<std::size_t>(_pinCount);
         if (limit > outCount)
         {
@@ -292,7 +433,15 @@ namespace firmware
             }
 
             const std::uint8_t portValue = GetIo(port);
-            outPins[pin] = (portValue & mask) != 0 ? 1 : 0;
+            std::uint8_t pwmDuty = 0;
+            if (computePwmDuty(static_cast<int>(pin), pwmDuty))
+            {
+                outPins[pin] = pwmDuty;
+            }
+            else
+            {
+                outPins[pin] = (portValue & mask) != 0 ? 1 : 0;
+            }
         }
     }
 

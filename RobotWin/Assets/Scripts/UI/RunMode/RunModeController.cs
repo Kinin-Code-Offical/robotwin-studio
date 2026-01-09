@@ -187,6 +187,11 @@ namespace RobotTwin.UI
             _telemetryScroll = root.Q<ScrollView>("TelemetryScroll");
             _telemetryList = root.Q<VisualElement>("TelemetryList");
             _componentSearchField = root.Q<TextField>("ComponentSearchField");
+
+            // Search UX: select-all-on-click + hint text.
+            SearchFieldHelpers.ApplyToSearchFields(root);
+            SearchFieldHelpers.SetupHint(_componentSearchField, "Search for a component...");
+
             _circuit3DView = root.Q<VisualElement>("Circuit3DView");
             _circuit3DLoadingOverlay = root.Q<VisualElement>("Circuit3DLoadingOverlay");
             _circuit3DLoadingSpinner = root.Q<VisualElement>("Circuit3DLoadingSpinner");
@@ -514,7 +519,16 @@ namespace RobotTwin.UI
         {
             if (string.IsNullOrWhiteSpace(name)) return "session";
             char[] invalid = Path.GetInvalidFileNameChars();
-            var cleaned = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
+            // Avoid LINQ allocation by using char array directly
+            char[] chars = name.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (System.Array.IndexOf(invalid, chars[i]) >= 0)
+                {
+                    chars[i] = '_';
+                }
+            }
+            var cleaned = new string(chars);
             return string.IsNullOrWhiteSpace(cleaned) ? "session" : cleaned;
         }
 
@@ -685,7 +699,7 @@ namespace RobotTwin.UI
             if (_usbBoardList == null || _activeCircuit?.Components == null) return;
 
             _usbBoardList.Clear();
-            var boards = _activeCircuit.Components.Where(IsBoardType).ToList();
+            var boards = _activeCircuit.Components.Where(IsBoardType).ToList(); // Materialize to List
             bool wantsAdmin = _autoInstallVirtualCom && !_comInstallAttempted;
             ConfigureVirtualComPorts(boards, wantsAdmin, true);
             foreach (var board in boards)
@@ -846,8 +860,8 @@ namespace RobotTwin.UI
                 return;
             }
 
-            var boards = _activeCircuit.Components.Where(IsBoardType).ToList();
-            if (boards.Count == 0)
+            var boards = _activeCircuit.Components.Where(IsBoardType).ToList(); // Materialize to List
+            if (!boards.Any())
             {
                 AppendLog("[VirtualCOM] No board targets.");
                 return;
@@ -1546,9 +1560,9 @@ namespace RobotTwin.UI
                 _componentSearchField.isDelayed = false;
                 _componentSearchField.RegisterValueChangedCallback(evt =>
                 {
-                    ApplyComponentFilter(evt.newValue);
+                    ApplyComponentFilter(SearchFieldHelpers.GetEffectiveQuery(_componentSearchField, "Search for a component..."));
                 });
-                ApplyComponentFilter(_componentSearchField.value);
+                ApplyComponentFilter(SearchFieldHelpers.GetEffectiveQuery(_componentSearchField, "Search for a component..."));
             }
         }
 
@@ -1880,6 +1894,7 @@ namespace RobotTwin.UI
                 go.transform.SetParent(transform, false);
                 _circuit3DRenderer = go.AddComponent<Circuit3DView>();
                 _circuit3DRenderer.BuildStarted += () => ShowCircuit3DLoading("Building 3D view...");
+                _circuit3DRenderer.BuildProgress += OnCircuit3DBuildProgress;
                 _circuit3DRenderer.BuildFinished += BeginHideCircuit3DLoadingWhenReady;
                 Apply3DCameraSettings();
             }
@@ -1933,6 +1948,15 @@ namespace RobotTwin.UI
             }
         }
 
+        private void OnCircuit3DBuildProgress(string status, float progress)
+        {
+            if (_circuit3DLoadingLabel != null && !string.IsNullOrWhiteSpace(status))
+            {
+                _circuit3DLoadingLabel.text = status;
+            }
+            // Progress bar could be added to UXML for even better feedback
+        }
+
         private void BeginHideCircuit3DLoadingWhenReady()
         {
             if (_circuit3DLoadingOverlay == null || _circuit3DLoadingPoll != null) return;
@@ -1941,7 +1965,8 @@ namespace RobotTwin.UI
             {
                 if (_circuit3DLoadingOverlay == null) return;
 
-                const float minSeconds = 0.25f;
+                // Reduced minimum display time for faster response
+                const float minSeconds = 0.1f;
                 if (Time.realtimeSinceStartup - _circuit3DLoadingShownAt < minSeconds) return;
                 if (_circuit3DRenderer == null) return;
                 if (_circuit3DRenderer.TargetTexture == null) return;
@@ -1950,7 +1975,7 @@ namespace RobotTwin.UI
                 _circuit3DLoadingOverlay.style.display = DisplayStyle.None;
                 _circuit3DLoadingPoll?.Pause();
                 _circuit3DLoadingPoll = null;
-            }).Every(60);
+            }).Every(33); // Increased polling frequency to 30fps for faster response
         }
 
         private void UpdateCircuit3DLoadingBlurBackdrop()

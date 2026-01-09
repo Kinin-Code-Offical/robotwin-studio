@@ -46,7 +46,11 @@ namespace RobotTwin.UI
         private VisualElement _circuit3DControlsBody;
         private Button _circuit3DControlsToggle;
         private ScrollView _codeFileList;
+        private ConcurrentQueue<string> _buildOutputQueue = new ConcurrentQueue<string>();
         private TextField _codeEditor;
+        private Label _codeGutterLines;
+        private ScrollView _codeGutterScroll;
+        private VisualElement _codeErrorOverlay;
         private Label _codeFileLabel;
         private DropdownField _codeTargetDropdown;
         private Button _codeFileMenuBtn;
@@ -543,6 +547,7 @@ namespace RobotTwin.UI
             _librarySearchField = _root.Q<TextField>("LibrarySearchField");
             if (_librarySearchField != null)
             {
+                SearchFieldHelpers.SetupHint(_librarySearchField, "Search for a component...");
                 _librarySearchField.isDelayed = false;
                 _librarySearchField.RegisterValueChangedCallback(_ => PopulateLibrary());
             }
@@ -693,6 +698,10 @@ namespace RobotTwin.UI
             _codeFileList = _root.Q<ScrollView>("CodeFileList");
             _codeEditor = _root.Q<TextField>("CodeEditor");
             if (_codeEditor == null) Debug.LogError("[CircuitStudio] TextField 'CodeEditor' not found in UI!");
+            _codeGutterLines = _root.Q<Label>("CodeGutterLines");
+            if (_codeGutterLines != null) _codeGutterLines.enableRichText = true;
+            _codeGutterScroll = _root.Q<ScrollView>("CodeGutterScroll");
+            _codeErrorOverlay = _root.Q<VisualElement>("CodeErrorOverlay");
             _codeFileLabel = _root.Q<Label>("CodeFileLabel");
             _codeTargetDropdown = _root.Q<DropdownField>("CodeTargetBoard");
             _codeFileMenuBtn = _root.Q<Button>("CodeFileMenuBtn");
@@ -852,10 +861,11 @@ namespace RobotTwin.UI
             _outputFollowBtn?.RegisterCallback<ClickEvent>(_ => ToggleOutputFollow());
             if (_outputSearchField != null)
             {
+                SearchFieldHelpers.SetupHint(_outputSearchField, "Search output...");
                 _outputSearchField.isDelayed = false;
                 _outputSearchField.RegisterValueChangedCallback(evt =>
                 {
-                    _outputSearchQuery = evt?.newValue?.Trim() ?? string.Empty;
+                    _outputSearchQuery = SearchFieldHelpers.GetEffectiveQuery(_outputSearchField, "Search output...");
                     RefreshOutputConsole();
                 });
             }
@@ -1680,6 +1690,7 @@ namespace RobotTwin.UI
                 go.transform.SetParent(transform, false);
                 _circuit3DRenderer = go.AddComponent<Circuit3DView>();
                 _circuit3DRenderer.BuildStarted += () => ShowCircuit3DLoading("Building 3D view...");
+                _circuit3DRenderer.BuildProgress += OnCircuit3DBuildProgress;
                 _circuit3DRenderer.BuildFinished += BeginHideCircuit3DLoadingWhenReady;
                 Apply3DCameraSettings();
             }
@@ -1728,6 +1739,14 @@ namespace RobotTwin.UI
             }
         }
 
+        private void OnCircuit3DBuildProgress(string status, float progress)
+        {
+            if (_circuit3DLoadingLabel != null && !string.IsNullOrWhiteSpace(status))
+            {
+                _circuit3DLoadingLabel.text = status;
+            }
+        }
+
         private void BeginHideCircuit3DLoadingWhenReady()
         {
             if (_circuit3DLoadingOverlay == null || _circuit3DLoadingPoll != null) return;
@@ -1737,7 +1756,8 @@ namespace RobotTwin.UI
                 if (_circuit3DLoadingOverlay == null) return;
                 if (_circuit3DRenderer == null) return;
 
-                const float minSeconds = 0.25f;
+                // Reduced minimum display time for faster response
+                const float minSeconds = 0.1f;
                 if (Time.realtimeSinceStartup - _circuit3DLoadingShownAt < minSeconds) return;
 
                 bool ready = _circuit3DRenderer.TargetTexture != null && !_circuit3DRenderer.HasPendingRuntimeModelLoads;
@@ -1755,7 +1775,7 @@ namespace RobotTwin.UI
                 }
 
                 _circuit3DLoadingOverlay.style.display = DisplayStyle.None;
-            }).Every(60);
+            }).Every(33); // Increased polling frequency to 30fps
         }
 
         private void UpdateCircuit3DLoadingBlurBackdrop()
@@ -2556,6 +2576,8 @@ namespace RobotTwin.UI
                 HandleBuildOutputLine(evt.Data, true);
             };
 
+            ClearErrorMarkers();
+
             try
             {
                 proc.Start();
@@ -2575,8 +2597,12 @@ namespace RobotTwin.UI
                 yield break;
             }
 
-            while (!proc.HasExited)
+            while (!proc.HasExited || !_buildOutputQueue.IsEmpty)
             {
+                while (_buildOutputQueue.TryDequeue(out var line)) ProcessBuildLine(line);
+
+                if (proc.HasExited && _buildOutputQueue.IsEmpty) break;
+
                 if (showProgress)
                 {
                     UpdateBuildProgress(Time.unscaledDeltaTime);
@@ -2632,30 +2658,32 @@ namespace RobotTwin.UI
         private void HandleBuildOutputLine(string line, bool isErrorStream)
         {
             if (string.IsNullOrWhiteSpace(line)) return;
+            _buildOutputQueue.Enqueue(line);
+        }
 
+        private void ProcessBuildLine(string line)
+        {
             if (TryParseCompilerMessage(line, out var logType, out var message))
             {
-                if (logType == LogType.Error) Debug.LogError(message);
+                if (logType == LogType.Error)
+                {
+                    Debug.LogError(message);
+                    var match = CompilerMessageWithColumn.Match(line);
+                    if (!match.Success) match = CompilerMessageNoColumn.Match(line);
+                    if (match.Success)
+                    {
+                        string file = match.Groups["file"].Value.Trim();
+                        if (!string.IsNullOrEmpty(_activeCodePath) && (file.EndsWith(Path.GetFileName(_activeCodePath)) || file == _activeCodePath))
+                        {
+                            if (int.TryParse(match.Groups["line"].Value, out int lineNum))
+                            {
+                                MarkErrorLine(lineNum);
+                            }
+                        }
+                    }
+                }
                 else if (logType == LogType.Warning) Debug.LogWarning(message);
                 else Debug.Log(message);
-                return;
-            }
-
-            string lower = line.ToLowerInvariant();
-            if (lower.Contains("error:"))
-            {
-                Debug.LogError($"[CodeStudio] {line}");
-                return;
-            }
-            if (lower.Contains("warning:"))
-            {
-                Debug.LogWarning($"[CodeStudio] {line}");
-                return;
-            }
-
-            if (isErrorStream)
-            {
-                Debug.LogWarning($"[CodeStudio] {line}");
             }
             else
             {
@@ -5218,23 +5246,62 @@ namespace RobotTwin.UI
                 _codeHighlightLabel.style.bottom = 0;
                 _codeHighlightLabel.style.unityTextAlign = TextAnchor.UpperLeft;
             }
-            if (!_codeHighlightEventsHooked)
-            {
-                _codeHighlightLabel.RegisterCallback<ChangeEvent<string>>(evt => evt.StopPropagation());
-                _codeHighlightEventsHooked = true;
-            }
 
             VisualElement container = input;
             var scrollView = input.Q<ScrollView>();
             if (scrollView != null)
             {
                 container = scrollView.contentContainer;
+
+                // Sync Gutter Scroll
+                if (_codeGutterScroll != null)
+                {
+                    scrollView.verticalScroller.valueChanged += (val) =>
+                    {
+                        var maxSync = Mathf.Max(0.1f, Mathf.Abs(_codeGutterScroll.scrollOffset.y - val));
+                        if (maxSync > 0.5f) _codeGutterScroll.scrollOffset = new Vector2(0, val);
+                    };
+                    _codeGutterScroll.verticalScroller.valueChanged += (val) =>
+                    {
+                        var maxSync = Mathf.Max(0.1f, Mathf.Abs(scrollView.scrollOffset.y - val));
+                        if (maxSync > 0.5f) scrollView.scrollOffset = new Vector2(scrollView.scrollOffset.x, val);
+                    };
+                }
             }
 
-            if (_codeHighlightLabel.parent != container)
+            // Fix: Ensure we are inserting into the actual parent of the TextElement
+            var targetParent = textElement.parent ?? container;
+
+            if (_codeHighlightLabel.parent != targetParent)
             {
                 _codeHighlightLabel.RemoveFromHierarchy();
-                container.Add(_codeHighlightLabel);
+                targetParent.Add(_codeHighlightLabel);
+            }
+
+            // Only attempt PlaceBehind if they are actual siblings
+            if (_codeHighlightLabel.parent == textElement.parent)
+            {
+                try
+                {
+                    _codeHighlightLabel.PlaceBehind(textElement);
+                }
+                catch (System.Exception) { /* Best effort */ }
+            }
+
+            if (!_codeHighlightEventsHooked)
+            {
+                _codeHighlightLabel.RegisterCallback<ChangeEvent<string>>(evt => evt.StopPropagation());
+
+                // Hook changes for Gutter
+                _codeEditor.RegisterCallback<ChangeEvent<string>>(evt =>
+                {
+                    UpdateCodeGutter(evt.newValue);
+                    UpdateCodeSyntaxHighlight(evt.newValue);
+                });
+                // Initial update
+                UpdateCodeGutter(_codeEditor.value);
+
+                _codeHighlightEventsHooked = true;
             }
 
             _codeHighlightReady = true;
@@ -5242,6 +5309,65 @@ namespace RobotTwin.UI
             SyncCodeHighlightStyle();
             UpdateCodeSyntaxHighlight(_codeEditor.value);
         }
+
+        private void UpdateCodeGutter(string text)
+        {
+            if (_codeGutterLines == null) return;
+            if (string.IsNullOrEmpty(text))
+            {
+                _codeGutterLines.text = "1";
+                return;
+            }
+
+            int lineCount = 1;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] == '\n') lineCount++;
+            }
+
+            // Limit gutter update frequency/size if needed, but for now simple builder:
+            if (lineCount > 2000) { _codeGutterLines.text = "Limit"; return; } // Safety
+
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            for (int i = 1; i <= lineCount; i++) { sb.AppendLine(i.ToString()); }
+            _codeGutterLines.text = sb.ToString();
+        }
+
+        private void MarkErrorLine(int lineNumber)
+        {
+            // Simple visual marker in Gutter for now?
+            // Or change Gutter Color?
+            // Implementation: Red Background on Gutter Line?
+            // Since Gutter is a single text block, I can use Rich Text.
+            if (_codeGutterLines == null) return;
+
+            // Re-render gutter with color tag
+            string text = _codeEditor.value ?? "";
+            int lineCount = 1; for (int i = 0; i < text.Length; i++) if (text[i] == '\n') lineCount++;
+
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            for (int i = 1; i <= lineCount; i++)
+            {
+                if (i == lineNumber) sb.AppendLine($"<mark=#FF000040>{i}</mark>");
+                else sb.AppendLine(i.ToString());
+            }
+            _codeGutterLines.text = sb.ToString();
+
+            // Also simple Red Overlay?
+            if (_codeErrorOverlay != null)
+            {
+                _codeErrorOverlay.style.display = DisplayStyle.Flex;
+                // Positioning is hard without known line height.
+                // Just Gutter highlight is safer.
+            }
+        }
+
+        public void ClearErrorMarkers()
+        {
+            if (_codeErrorOverlay != null) _codeErrorOverlay.style.display = DisplayStyle.None;
+            UpdateCodeGutter(_codeEditor?.value);
+        }
+
 
         private void ApplyCodeEditorHighlightOverlay(TextElement textElement)
         {
@@ -6685,7 +6811,7 @@ namespace RobotTwin.UI
         {
             if (_libraryList == null) return;
             _libraryList.Clear();
-            string query = _librarySearchField?.value ?? string.Empty;
+            string query = SearchFieldHelpers.GetEffectiveQuery(_librarySearchField, "Search for a component...");
             string queryLower = string.IsNullOrWhiteSpace(query) ? string.Empty : query.ToLowerInvariant();
             IEnumerable<ComponentCatalog.Item> items = ComponentCatalog.Items;
             if (!string.IsNullOrWhiteSpace(queryLower))
@@ -10053,6 +10179,10 @@ namespace RobotTwin.UI
                 SessionManager.Instance.ConfigureFirmwareMode(_currentCircuit);
                 SessionManager.Instance.StartSession(_currentCircuit);
             }
+
+            // Preload 3D prefabs asynchronously before scene transition
+            Circuit3DView.PreloadPrefabsAsync();
+
             UnityEngine.SceneManagement.SceneManager.LoadScene("RunMode");
         }
 

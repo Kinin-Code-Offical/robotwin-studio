@@ -17,7 +17,8 @@ enum class ComponentType {
   Diode,
   LED,
   Switch,
-  IC_Pin // Connection point for complex ICs like AVR
+  IC_Pin, // Connection point for complex ICs like AVR
+  AnalogDriver // Norton-style voltage driver (conductance + current)
 };
 
 /// <summary>

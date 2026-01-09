@@ -1,5 +1,9 @@
 :root {
     --studio-hint-bg: rgba(8, 12, 18, 0.7);
+    --panel-left-pct: 24%;
+    --panel-right-pct: 20%;
+    --panel-min: 260px;
+    --panel-max: 560px;
 }
 
 .component-studio-root {
@@ -60,15 +64,19 @@
 }
 
 .component-studio-root .panel-left {
-    width: 440px;
-    min-width: 380px;
-    max-width: 640px;
+    width: var(--panel-left-pct);
+    min-width: var(--panel-min);
+    max-width: var(--panel-max);
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 .component-studio-root .panel-right {
-    width: 320px;
-    min-width: 280px;
-    max-width: 380px;
+    width: var(--panel-right-pct);
+    min-width: var(--panel-min);
+    max-width: 400px;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 .left-panel-tabs {
@@ -95,8 +103,10 @@
 }
 
 .component-studio-root .center-area {
-    min-width: 420px;
+    min-width: 400px;
     min-height: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
 .component-studio-root .center-content {
@@ -191,13 +201,15 @@
 
 .editor-inline-field {
     flex-grow: 1;
-    min-width: 120px;
+    min-width: 100px;
     margin-right: 6px;
+    flex-shrink: 1;
 }
 
 .editor-inline-grow {
     flex-grow: 1;
-    min-width: 160px;
+    min-width: 140px;
+    flex-shrink: 1;
 }
 
 .editor-inline-button {
@@ -218,10 +230,22 @@
     border-left-color: var(--line);
     border-right-color: var(--line);
     max-height: 420px;
+    min-height: 200px;
+    flex-shrink: 1;
+}
+
+.editor-list > .unity-scroll-view__content-container {
+    min-height: 100%;
 }
 
 .hierarchy-tree {
-    max-height: 360px;
+    min-height: 200px;
+    max-height: 400px;
+    flex-shrink: 1;
+}
+
+.hierarchy-tree > .unity-scroll-view__content-container {
+    min-height: 100%;
 }
 
 .editor-field-small {
@@ -275,8 +299,9 @@
 }
 
 .layout-preview {
-    height: 160px;
     min-height: 150px;
+    max-height: 300px;
+    flex-grow: 1;
     background-color: rgba(8, 12, 18, 0.6);
     border-radius: 10px;
     border-top-width: 1px;
@@ -288,6 +313,7 @@
     border-left-color: var(--line);
     border-right-color: var(--line);
     position: relative;
+    overflow: hidden;
 }
 
 .layout-body {
@@ -571,7 +597,8 @@
     left: 12px;
     top: 12px;
     bottom: auto;
-    width: 190px;
+    min-width: 180px;
+    max-width: 240px;
     background-color: rgba(9, 12, 18, 0.82);
     border-radius: 0 10px 10px 0;
     border-top-width: 1px;

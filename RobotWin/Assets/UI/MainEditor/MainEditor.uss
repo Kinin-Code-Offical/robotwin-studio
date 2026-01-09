@@ -3,7 +3,9 @@
 :root {
     --toolbar-height: 48px;
     --activity-bar-width: 48px;
-    --panel-width: 280px;
+    --panel-width-pct: 20%;
+    --panel-min-width: 220px;
+    --panel-max-width: 400px;
     --status-bar-height: 24px;
     
     --col-bg-darkest: #181818;
@@ -27,8 +29,24 @@
 .editor-compact {
     --toolbar-height: 40px;
     --activity-bar-width: 40px;
-    --panel-width: 220px;
+    --panel-width-pct: 100%;
+    --panel-min-width: 180px;
+    --panel-max-width: none;
     --status-bar-height: 20px;
+}
+
+.editor-compact .workspace-row {
+    flex-direction: column;
+}
+
+.editor-compact .left-panel,
+.editor-compact .right-panel {
+    width: 100%;
+    max-width: none;
+    border-right-width: 0;
+    border-left-width: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--col-border);
 }
 
 .editor-compact .top-toolbar {
@@ -72,7 +90,9 @@
 .editor-medium {
     --toolbar-height: 44px;
     --activity-bar-width: 44px;
-    --panel-width: 250px;
+    --panel-width-pct: 22%;
+    --panel-min-width: 200px;
+    --panel-max-width: 350px;
     --status-bar-height: 22px;
 }
 
@@ -102,6 +122,11 @@
 .app-title {
     -unity-font-style: bold;
     color: #CCCCCC;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-overflow-position: end;
+    flex-shrink: 1;
+    max-width: 200px;
 }
 
 .controls-group {
@@ -151,7 +176,151 @@
 .workspace-row {
     flex-grow: 1;
     flex-direction: row;
+    min-height: 0;
 }
+
+/* ACTIVITY BAR */
+.activity-bar {
+    width: var(--activity-bar-width);
+    background-color: var(--col-bg-darkest);
+    flex-direction: column;
+    align-items: center;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-right-width: 1px;
+    border-right-color: var(--col-border);
+    flex-shrink: 0;
+}
+
+.activity-button {
+    width: 40px;
+    height: 40px;
+    background-color: transparent;
+    border-width: 0;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    border-radius: 4px;
+}
+
+.activity-button:hover {
+    background-color: #2D2D2D;
+}
+
+.activity-button.active {
+    background-color: var(--col-accent);
+}
+
+.activity-icon {
+    width: 20px;
+    height: 20px;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: #C5C5C5;
+}
+
+.activity-button.active .activity-icon {
+    -unity-background-image-tint-color: white;
+}
+
+/* PANELS */
+.panel {
+    flex-direction: column;
+    background-color: var(--col-bg-panel);
+}
+
+.left-panel {
+    width: var(--panel-width-pct);
+    min-width: var(--panel-min-width);
+    max-width: var(--panel-max-width);
+    border-right-width: 1px;
+    border-right-color: var(--col-border);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.right-panel {
+    width: var(--panel-width-pct);
+    min-width: var(--panel-min-width);
+    max-width: var(--panel-max-width);
+    border-left-width: 1px;
+    border-left-color: var(--col-border);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 12px;
+    background-color: var(--col-bg-header);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--col-border);
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: #B0B0B0;
+    letter-spacing: 0.5px;
+}
+
+/* VIEWPORT */
+.viewport-area {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 300px;
+    position: relative;
+    overflow: hidden;
+}
+
+.viewport-hud-top-right {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.hud-text {
+    font-size: 11px;
+    color: white;
+}
+
+/* SCROLL VIEWS */
+.tree-view {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 200px;
+    padding: 4px;
+}
+
+.tree-view > .unity-scroll-view__content-container {
+    min-height: 100%;
+}
+
+.tree-view ScrollView > .unity-scroller--vertical {
+    width: 12px;
+}
+
+.inspector-content {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 200px;
+    padding: 8px;
+}
+
+.inspector-content > .unity-scroll-view__content-container {
+    min-height: 100%;
+    padding: 4px;
+}
+
+.inspector-content ScrollView > .unity-scroller--vertical {
+    width: 12px;
+}
+
+.empty-selection-text {
+    color: #808080;
+    font-size: 12px;
+    -unity-text-align: middle-center;
+    padding: 20px;
+}
+
 /* ... skipped lines ... */
 .tree-icon {
     width: 14px;
@@ -165,6 +334,11 @@
 .tree-label {
     font-size: 12px;
     color: #CCCCCC;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-overflow-position: end;
+    flex-shrink: 1;
+    flex-grow: 1;
 }
 
 /* STATUS BADGE */

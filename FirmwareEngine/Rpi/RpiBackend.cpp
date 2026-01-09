@@ -6,6 +6,11 @@
 #include <vector>
 #include <windows.h>
 
+#ifdef _WIN32
+#undef min
+#undef max
+#endif
+
 namespace firmware::rpi
 {
     namespace
@@ -35,7 +40,8 @@ namespace firmware::rpi
 
         std::string BuildMessage(const std::string &prefix, const std::string &detail)
         {
-            if (detail.empty()) return prefix;
+            if (detail.empty())
+                return prefix;
             return prefix + ": " + detail;
         }
 
@@ -218,23 +224,28 @@ namespace firmware::rpi
 
         if (camera_.ReadIfNew(lastCameraSeq_, header, payload))
         {
-            if (config_.allow_mock && log_) log_("[RPI] Camera input");
+            if (config_.allow_mock && log_)
+                log_("[RPI] Camera input");
         }
         if (gpio_.ReadIfNew(lastGpioSeq_, header, payload))
         {
-            if (config_.allow_mock && log_) log_("[RPI] GPIO update");
+            if (config_.allow_mock && log_)
+                log_("[RPI] GPIO update");
         }
         if (imu_.ReadIfNew(lastImuSeq_, header, payload))
         {
-            if (config_.allow_mock && log_) log_("[RPI] IMU update");
+            if (config_.allow_mock && log_)
+                log_("[RPI] IMU update");
         }
         if (time_.ReadIfNew(lastTimeSeq_, header, payload))
         {
-            if (config_.allow_mock && log_) log_("[RPI] Time sync");
+            if (config_.allow_mock && log_)
+                log_("[RPI] Time sync");
         }
         if (network_.ReadIfNew(lastNetSeq_, header, payload))
         {
-            if (config_.allow_mock && log_) log_("[RPI] Network update");
+            if (config_.allow_mock && log_)
+                log_("[RPI] Network update");
         }
     }
 

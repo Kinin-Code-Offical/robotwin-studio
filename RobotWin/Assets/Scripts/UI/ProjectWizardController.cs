@@ -196,6 +196,7 @@ namespace RobotTwin.UI
             _projectsSearchField = _root.Q<TextField>("ProjectsSearchField");
             if (_projectsSearchField != null)
             {
+                _projectsSearchField.RegisterCallback<FocusEvent>(evt => _projectsSearchField.SelectAll());
                 _projectsSearchField.isDelayed = false;
                 _projectsSearchField.RegisterValueChangedCallback(evt =>
                 {
@@ -212,6 +213,7 @@ namespace RobotTwin.UI
             _recentSearchField = _root.Q<TextField>("RecentSearchField");
             if (_recentSearchField != null)
             {
+                _recentSearchField.RegisterCallback<FocusEvent>(evt => _recentSearchField.SelectAll());
                 _recentSearchField.RegisterValueChangedCallback(evt =>
                 {
                     _recentFilter = evt.newValue ?? string.Empty;
@@ -1077,9 +1079,12 @@ namespace RobotTwin.UI
             var iconImg = new VisualElement();
             iconImg.AddToClassList("recent-icon-img");
 
-            if (proj.Type == "PCB Design") iconImg.style.unityBackgroundImageTintColor = new StyleColor(new Color(0f, 0.8f, 0.5f));
-            else if (proj.Type == "Robotics") iconImg.style.unityBackgroundImageTintColor = new StyleColor(new Color(1f, 0.6f, 0f));
-            else iconImg.style.unityBackgroundImageTintColor = new StyleColor(new Color(0.3f, 0.6f, 0.9f));
+            Color typeColor = new Color(0.3f, 0.6f, 0.9f);
+            if (proj.Type == "PCB Design") typeColor = new Color(0f, 0.8f, 0.5f);
+            else if (proj.Type == "Robotics") typeColor = new Color(1f, 0.6f, 0f);
+
+            iconImg.style.unityBackgroundImageTintColor = new StyleColor(typeColor);
+            iconBox.style.backgroundColor = new StyleColor(new Color(typeColor.r, typeColor.g, typeColor.b, 0.15f));
 
             iconImg.AddToClassList("icon-activity");
             if (proj.Type == "PCB Design") iconImg.AddToClassList("icon-cpu");
@@ -1092,7 +1097,7 @@ namespace RobotTwin.UI
             metaCol.AddToClassList("recent-meta-col");
             var lblName = new Label(proj.Name);
             lblName.AddToClassList("recent-title");
-            var lblSub = new Label($"{proj.Type} - {proj.ModifiedAt:MMM dd, HH:mm}");
+            var lblSub = new Label($"{proj.Type} - {proj.ModifiedAt:MMM dd  HH:mm}");
             lblSub.AddToClassList("recent-subtitle");
             metaCol.Add(lblName);
             metaCol.Add(lblSub);
@@ -1478,11 +1483,26 @@ namespace RobotTwin.UI
 
             var icon = new VisualElement();
             // Assign icon based on type
-            if (proj.Type.Contains("PCB")) icon.AddToClassList("icon-cpu");
-            else if (proj.Type.Contains("Robotics")) icon.AddToClassList("icon-hexagon");
-            else icon.AddToClassList("icon-activity");
+            Color typeColor = new Color(0.3f, 0.6f, 0.9f);
+            if (proj.Type.Contains("PCB"))
+            {
+                icon.AddToClassList("icon-cpu");
+                typeColor = new Color(0f, 0.8f, 0.5f);
+            }
+            else if (proj.Type.Contains("Robotics"))
+            {
+                icon.AddToClassList("icon-hexagon");
+                typeColor = new Color(1f, 0.6f, 0f);
+            }
+            else
+            {
+                icon.AddToClassList("icon-activity");
+            }
 
             icon.AddToClassList("row-icon");
+            // Apply visual depth similar to Recent list (flat tint matching the type)
+            icon.style.unityBackgroundImageTintColor = new StyleColor(typeColor);
+
             colName.Add(icon);
 
             TextField nameField = null;
@@ -1622,7 +1642,7 @@ namespace RobotTwin.UI
             row.Add(lblType);
 
             // Modified Column
-            var lblDate = new Label(proj.ModifiedAt.ToString("MMM dd"));
+            var lblDate = new Label(proj.ModifiedAt.ToString("MMM dd  HH:mm"));
             lblDate.AddToClassList("col-date");
             lblDate.AddToClassList("row-text-dim");
             row.Add(lblDate);
@@ -2933,10 +2953,31 @@ namespace RobotTwin.UI
             if (string.IsNullOrWhiteSpace(tmpl.Difficulty)) diff.style.display = DisplayStyle.None;
             footer.Add(diff);
 
+            // Right side container for buttons
+            var btnGroup = new VisualElement();
+            btnGroup.style.flexDirection = FlexDirection.Row;
+            btnGroup.style.alignItems = Align.Center;
+
+            // Details Button
+            var infoBtn = new Button(() =>
+            {
+                // Show simple alert with details (Editor only currently, falls back safely)
+#if UNITY_EDITOR
+                EditorUtility.DisplayDialog(tmpl.Title, $"{tmpl.Description}\n\nTag: {tmpl.Tag}\nPath: {tmpl.SourcePath}", "Close");
+#else
+                Debug.Log($"[Template Info] {tmpl.Title}: {tmpl.Description}");
+#endif
+            });
+            infoBtn.text = "DETAILS";
+            infoBtn.AddToClassList("template-details-btn");
+            btnGroup.Add(infoBtn);
+
             var createBtn = new Button(() => OnTemplateClicked(tmpl));
             createBtn.text = "CREATE ->";
             createBtn.AddToClassList("template-create-link");
-            footer.Add(createBtn);
+            btnGroup.Add(createBtn);
+
+            footer.Add(btnGroup);
 
             card.Add(footer);
 

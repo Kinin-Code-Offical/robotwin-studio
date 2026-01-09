@@ -2,12 +2,15 @@
 
 .sidebar-container {
     width: 250px;
+    min-width: 200px;
+    max-width: 300px;
     height: 100%;
     background-color: #202020;
     border-right-width: 1px;
     border-right-color: #303030;
     display: flex;
     flex-direction: column;
+    flex-shrink: 1;
 }
 
 /* Header */
@@ -36,6 +39,10 @@
     font-size: 14px;
     -unity-font-style: bold;
     -unity-text-align: middle-left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 /* Navigation */
@@ -86,6 +93,10 @@
     color: #a0a0a0;
     font-size: 12px;
     -unity-font-style: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .nav-button:hover .nav-label {
@@ -109,6 +120,9 @@
     color: #a0a0a0;
     font-size: 11px;
     opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .footer-build {

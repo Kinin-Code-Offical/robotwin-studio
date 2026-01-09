@@ -10,7 +10,26 @@ namespace RobotTwin.UI
         private VisualElement _root;
         private Label _statusLabel;
         private Label _timeLabel;
-        
+
+        private TextField _hierarchySearchField;
+        private ScrollView _hierarchyContainer;
+        private readonly string[] _mockHierarchyItems = new[]
+        {
+            "Scene Root",
+            "Environment",
+            "    Floor",
+            "    Walls",
+            "    Lights",
+            "Robot (UR5)",
+            "    Base",
+            "    Shoulder",
+            "    Elbow",
+            "    Wrist 1",
+            "    Wrist 2",
+            "    Wrist 3",
+            "Camera Rig"
+        };
+
         private Button _btnPlay;
         private Button _btnPause;
         private Button _btnStop;
@@ -45,8 +64,17 @@ namespace RobotTwin.UI
             _btnStep.clicked += () => Debug.Log("Step Simulation");
 
             // Populate Mock Hierarchy
-            var hierarchyContainer = root.Q<ScrollView>("HierarchyTree");
-            if(hierarchyContainer != null) PopulateMockHierarchy(hierarchyContainer);
+            _hierarchyContainer = root.Q<ScrollView>("HierarchyTree");
+            _hierarchySearchField = root.Q<TextField>("HierarchySearchField");
+
+            SearchFieldHelpers.SetupHint(_hierarchySearchField, "Search hierarchy...");
+            if (_hierarchySearchField != null)
+            {
+                _hierarchySearchField.isDelayed = false;
+                _hierarchySearchField.RegisterValueChangedCallback(_ => RefreshMockHierarchy());
+            }
+
+            RefreshMockHierarchy();
         }
 
         void Update()
@@ -54,7 +82,7 @@ namespace RobotTwin.UI
             if (_isPlaying)
             {
                 _simTime += Time.deltaTime;
-                if (_timeLabel != null) 
+                if (_timeLabel != null)
                     _timeLabel.text = System.TimeSpan.FromSeconds(_simTime).ToString(@"mm\:ss\.ff");
             }
         }
@@ -63,7 +91,7 @@ namespace RobotTwin.UI
         {
             _isPlaying = true;
             UpdateStatus("RUNNING", "running");
-            
+
             // Toggle Buttons in a real app, here we just swap visibility logic if we had separate buttons
             _btnPlay.style.display = DisplayStyle.None;
             _btnPause.style.display = DisplayStyle.Flex;
@@ -98,28 +126,47 @@ namespace RobotTwin.UI
             _statusLabel.AddToClassList(className);
         }
 
-        private void PopulateMockHierarchy(VisualElement container)
+        private void RefreshMockHierarchy()
         {
-            container.Clear();
-            string[] items = new[] { "Scene Root", "Environment", "    Floor", "    Walls", "    Lights", "Robot (UR5)", "    Base", "    Shoulder", "    Elbow", "    Wrist 1", "    Wrist 2", "    Wrist 3", "Camera Rig" };
+            if (_hierarchyContainer == null) return;
+            _hierarchyContainer.Clear();
 
-            foreach (var item in items)
+            string query = SearchFieldHelpers.GetEffectiveQuery(_hierarchySearchField, "Search hierarchy...");
+            string queryLower = string.IsNullOrWhiteSpace(query) ? string.Empty : query.ToLowerInvariant();
+            bool filtering = !string.IsNullOrWhiteSpace(queryLower);
+
+            bool any = false;
+            foreach (var item in _mockHierarchyItems)
             {
+                string trimmed = item.Trim();
+                if (filtering && !trimmed.ToLowerInvariant().Contains(queryLower))
+                {
+                    continue;
+                }
+
                 var row = new VisualElement();
                 row.AddToClassList("tree-item");
-                
+
                 var icon = new VisualElement();
                 icon.AddToClassList("tree-icon");
-                
-                var label = new Label(item.Trim());
+
+                var label = new Label(trimmed);
                 label.AddToClassList("tree-label");
-                
+
                 // Indentation hack
                 if (item.StartsWith("   ")) row.style.paddingLeft = 20;
 
                 row.Add(icon);
                 row.Add(label);
-                container.Add(row);
+                _hierarchyContainer.Add(row);
+                any = true;
+            }
+
+            if (filtering && !any)
+            {
+                var empty = new Label("No matches");
+                empty.style.opacity = 0.7f;
+                _hierarchyContainer.Add(empty);
             }
         }
     }

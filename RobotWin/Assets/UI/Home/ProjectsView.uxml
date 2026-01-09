@@ -11,21 +11,21 @@
 
         <!-- Toolbar -->
         <ui:VisualElement style="flex-direction: row; margin-bottom: 20px;">
-            <ui:TextField value="Search projects..." style="flex-grow: 1; background-color: #202020; border-width: 1px; border-color: #303030; height: 36px; border-radius: 4px; padding-left: 8px; color: #e0e0e0; margin-right: 12px;" />
+            <ui:TextField name="ProjectsSearchField" value="Search projects..." class="search-field" style="flex-grow: 1; min-width: 180px; background-color: #202020; border-width: 1px; border-color: #303030; height: 36px; border-radius: 4px; padding-left: 8px; color: #e0e0e0; margin-right: 12px;" />
             <ui:Button text="Filter" style="width: 80px; background-color: #252525; border-width: 1px; border-color: #303030; color: #a0a0a0; border-radius: 4px;" />
         </ui:VisualElement>
 
         <!-- Table Header -->
         <ui:VisualElement style="flex-direction: row; padding: 10px; background-color: #202020; border-bottom-width: 1px; border-bottom-color: #303030;">
-            <ui:Label text="NAME" style="flex-grow: 1; width: 30%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
-            <ui:Label text="PATH" style="flex-grow: 1; width: 30%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
-            <ui:Label text="TYPE" style="width: 15%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
-            <ui:Label text="MODIFIED" style="width: 15%; color: #606060; font-size: 11px; -unity-font-style: bold;" />
-            <ui:Label text="ACTIONS" style="width: 10%; color: #606060; font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-right;" />
+            <ui:Label text="NAME" class="col-name" style="color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="PATH" class="col-path" style="color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="TYPE" class="col-type" style="color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="MODIFIED" class="col-date" style="color: #606060; font-size: 11px; -unity-font-style: bold;" />
+            <ui:Label text="ACTIONS" class="col-actions" style="color: #606060; font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-right;" />
         </ui:VisualElement>
 
         <!-- Table Body -->
-        <ui:ScrollView style="flex-grow: 1;">
+        <ui:ScrollView style="flex-grow: 1; min-height: 300px; flex-shrink: 1;">
             
             <!-- Row 1 -->
             <ui:VisualElement class="recent-row" style="background-color: #1e1e1e; margin-bottom: 1px;">

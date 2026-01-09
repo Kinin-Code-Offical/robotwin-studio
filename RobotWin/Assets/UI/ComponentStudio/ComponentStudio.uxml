@@ -32,16 +32,20 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="LeftPanelHierarchy" class="left-tab-panel">
-                    <ui:ScrollView name="HierarchyScroll" class="panel-scroll component-scroll">
+                    <ui:ScrollView name="HierarchyScroll" class="panel-scroll component-scroll" style="min-height: 200px; flex-shrink: 1;">
                         <ui:VisualElement name="ObjectsLabelsSection" class="panel-section">
                             <ui:Label text="Hierarchy" class="panel-section-title" />
-                            <ui:ScrollView name="HierarchyTreeContainer" class="editor-list hierarchy-tree" />
+                            <ui:VisualElement class="rw-search-row rw-search-row-compact" style="margin-bottom: 8px;">
+                                <ui:VisualElement class="rw-search-icon" />
+                                <ui:TextField name="HierarchySearchField" value="Search hierarchy..." class="rw-search-field input-dark" style="flex-grow: 1; min-width: 150px;" />
+                            </ui:VisualElement>
+                            <ui:ScrollView name="HierarchyTreeContainer" class="editor-list hierarchy-tree" style="min-height: 150px; flex-shrink: 1;" />
                         </ui:VisualElement>
                     </ui:ScrollView>
                 </ui:VisualElement>
 
                 <ui:VisualElement name="LeftPanelCatalog" class="left-tab-panel" style="display: none;">
-                    <ui:ScrollView name="CatalogScroll" class="panel-scroll component-scroll">
+                    <ui:ScrollView name="CatalogScroll" class="panel-scroll component-scroll" style="min-height: 200px; flex-shrink: 1;">
                         <ui:VisualElement name="ObjectsPinsSection" class="panel-section">
                             <ui:VisualElement class="panel-section-header">
                                 <ui:Label text="Catalog" class="panel-section-title" />
@@ -49,13 +53,17 @@
                                     <ui:Label text="Refresh" class="button-label" />
                                 </ui:Button>
                             </ui:VisualElement>
-                            <ui:ScrollView name="ComponentCatalogList" class="editor-list" />
+                            <ui:VisualElement class="rw-search-row rw-search-row-compact" style="margin-bottom: 8px;">
+                                <ui:VisualElement class="rw-search-icon" />
+                                <ui:TextField name="CatalogSearchField" value="Search for a component..." class="rw-search-field input-dark" style="flex-grow: 1; min-width: 150px;" />
+                            </ui:VisualElement>
+                            <ui:ScrollView name="ComponentCatalogList" class="editor-list" style="min-height: 200px; flex-shrink: 1;" />
                         </ui:VisualElement>
                     </ui:ScrollView>
                 </ui:VisualElement>
 
                 <ui:VisualElement name="LeftPanelBasics" class="left-tab-panel" style="display: none;">
-                    <ui:ScrollView name="BasicsScroll" class="panel-scroll component-scroll">
+                    <ui:ScrollView name="BasicsScroll" class="panel-scroll component-scroll" style="min-height: 200px; flex-shrink: 1;">
                         <ui:VisualElement name="ObjectsFxSection" class="panel-section">
                             <ui:Label text="Basics" class="panel-section-title" />
                             <ui:VisualElement class="form-row">
@@ -111,7 +119,7 @@
                                     <ui:Label text="Add Default" class="button-label" />
                                 </ui:Button>
                             </ui:VisualElement>
-                            <ui:ScrollView name="ComponentDefaultsContainer" class="editor-list" />
+                            <ui:ScrollView name="ComponentDefaultsContainer" class="editor-list" style="min-height: 150px; flex-shrink: 1;" />
                         </ui:VisualElement>
 
                         <ui:VisualElement class="panel-section">
