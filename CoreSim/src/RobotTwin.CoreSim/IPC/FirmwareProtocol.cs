@@ -7,7 +7,7 @@ namespace RobotTwin.CoreSim.IPC
     {
         internal const uint ProtocolMagic = 0x57465452; // "RTFW"
         internal const ushort ProtocolMajor = 1;
-        internal const ushort ProtocolMinor = 1;
+        internal const ushort ProtocolMinor = 3;
         internal const int HeaderSize = 20;
         internal const uint MaxPayloadBytes = 8 * 1024 * 1024;
 

@@ -6,6 +6,7 @@ using RobotTwin.CoreSim.Engine;
 using RobotTwin.CoreSim.Runtime;
 using RobotTwin.CoreSim.Models.Physics;
 using RobotTwin.Game.RaspberryPi;
+using RobotTwin.Tools;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -56,6 +57,12 @@ namespace RobotTwin.Game
         private readonly Dictionary<string, bool> _boardPowerById = new Dictionary<string, bool>(System.StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FirmwarePerfCounters> _firmwarePerfByBoard =
             new Dictionary<string, FirmwarePerfCounters>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FirmwareDebugCounters> _firmwareDebugByBoard =
+            new Dictionary<string, FirmwareDebugCounters>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FirmwareDebugBitset> _firmwareDebugBitsByBoard =
+            new Dictionary<string, FirmwareDebugBitset>(System.StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int[]> _firmwarePinOutputsByBoard =
+            new Dictionary<string, int[]>(System.StringComparer.OrdinalIgnoreCase);
         private RpiRuntimeManager _rpiRuntime;
         private bool _useRpiRuntime;
         private RpiRuntimeConfig _rpiConfig;
@@ -78,7 +85,12 @@ namespace RobotTwin.Game
             new Dictionary<string, float[]>(System.StringComparer.OrdinalIgnoreCase);
 
         private const int ExternalFirmwarePinLimit = 20;
+        private const int ExternalFirmwareFailureLimit = 3;
+        private const float ExternalFirmwareRetryDelay = 1.0f;
+        private const float ExternalFirmwareStartupGraceSeconds = 4.0f;
+        private const float ExternalFirmwareStartupTimeoutSeconds = 12.0f;
         private const int SerialBufferLimit = 4000;
+        private const int VirtualDebugBitCount = 744;
         private readonly Dictionary<string, string[]> _externalFirmwarePinsByBoard =
             new Dictionary<string, string[]>(System.StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _externalFirmwarePinWarnings =
@@ -91,6 +103,12 @@ namespace RobotTwin.Game
             public string BoardProfile;
             public bool Loaded;
             public bool LoggedFallback;
+            public bool LoggedPending;
+            public int FailureCount;
+            public float NextRetryTime;
+            public float StartTime;
+            public bool Disabled;
+            public string DisabledReason;
         }
 
         private sealed class FirmwareInputCache
@@ -145,6 +163,102 @@ namespace RobotTwin.Game
         public string RpiStatus => _rpiRuntime != null ? _rpiRuntime.Status : "offline";
 
         public string VirtualComStatusJson { get; private set; } = string.Empty;
+
+        public int GetFirmwareBoardIds(List<string> buffer)
+        {
+            if (buffer == null) return 0;
+            buffer.Clear();
+            foreach (var key in _firmwareDebugByBoard.Keys)
+            {
+                buffer.Add(key);
+            }
+            if (buffer.Count == 0)
+            {
+                foreach (var key in _firmwarePerfByBoard.Keys)
+                {
+                    buffer.Add(key);
+                }
+            }
+            return buffer.Count;
+        }
+
+        public int GetBoardIds(List<string> buffer)
+        {
+            if (buffer == null) return 0;
+            buffer.Clear();
+            foreach (var key in _externalFirmwareSessions.Keys)
+            {
+                buffer.Add(key);
+            }
+            foreach (var key in _virtualMcus.Keys)
+            {
+                if (!buffer.Contains(key))
+                {
+                    buffer.Add(key);
+                }
+            }
+            return buffer.Count;
+        }
+
+        public int[] GetFirmwarePinOutputsSnapshot(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) return Array.Empty<int>();
+            if (_firmwarePinOutputsByBoard.TryGetValue(boardId, out var outputs) && outputs != null && outputs.Length > 0)
+            {
+                var copy = new int[outputs.Length];
+                Array.Copy(outputs, copy, outputs.Length);
+                return copy;
+            }
+            return BuildPinOutputsFromVoltages(boardId);
+        }
+
+        public float[] GetFirmwareAnalogInputsSnapshot(string boardId)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) return Array.Empty<float>();
+            var inputs = BuildFirmwareAnalogInputs(boardId);
+            if (inputs == null || inputs.Length == 0) return Array.Empty<float>();
+            var copy = new float[inputs.Length];
+            Array.Copy(inputs, copy, inputs.Length);
+            return copy;
+        }
+
+        public bool TryGetPinVoltage(string boardId, string pinName, out float voltage)
+        {
+            voltage = 0f;
+            if (string.IsNullOrWhiteSpace(boardId) || string.IsNullOrWhiteSpace(pinName))
+            {
+                return false;
+            }
+
+            string key = $"{boardId}.{pinName}";
+            if (_pinVoltages.TryGetValue(key, out var direct))
+            {
+                voltage = direct;
+                return true;
+            }
+
+            if (_pinNetMap.TryGetValue(key, out var netId) && !string.IsNullOrWhiteSpace(netId))
+            {
+                voltage = GetLastNetVoltage(boardId, pinName);
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool TryGetFirmwareDebugCounters(string boardId, out FirmwareDebugCounters counters)
+        {
+            counters = null;
+            if (string.IsNullOrWhiteSpace(boardId)) return false;
+            return _firmwareDebugByBoard.TryGetValue(boardId, out counters);
+        }
+
+        public bool TryGetFirmwareDebugBits(string boardId, out FirmwareDebugBitset bits)
+        {
+            bits = null;
+            if (string.IsNullOrWhiteSpace(boardId)) return false;
+            return _firmwareDebugBitsByBoard.TryGetValue(boardId, out bits);
+        }
 
         public void SetVirtualComStatusJson(string json)
         {
@@ -296,6 +410,8 @@ namespace RobotTwin.Game
             _externalFirmwarePinWarnings.Clear();
             _externalFirmwareExePath = null;
             _firmwarePerfByBoard.Clear();
+            _firmwareDebugByBoard.Clear();
+            _firmwareDebugBitsByBoard.Clear();
             _timingStats = new TimingStats();
             _timingReady = false;
             _lastTickStartTime = 0f;
@@ -314,6 +430,7 @@ namespace RobotTwin.Game
             NativePhysicsWorld.Instance?.SetExternalStepping(_realtimeConfig != null && _realtimeConfig.Enabled);
 
             Debug.Log("[SimHost] Starting Simulation Loop...");
+            FirmwareMonitorLauncher.TryAutoLaunch();
 
             _circuit = SessionManager.Instance != null ? SessionManager.Instance.CurrentCircuit : null;
             BuildPinNetMap();
@@ -322,6 +439,13 @@ namespace RobotTwin.Game
             string firmwarePath = ResolveFirmwareHostPath();
 
             _useExternalFirmware = TrySetupExternalFirmwares(firmwarePath);
+            if (_useExternalFirmware
+                && FirmwareMonitorLauncher.ForceVirtualMcuInPipeMode
+                && !FirmwareMonitorLauncher.IsUnityTargetPreferred)
+            {
+                Debug.LogWarning("[SimHost] External firmware disabled (Firmware Monitor pipe mode preference).");
+                _useExternalFirmware = false;
+            }
 
             _useFirmwareHost = wantsRpi || _useExternalFirmware;
             if (_useFirmwareHost)
@@ -443,6 +567,9 @@ namespace RobotTwin.Game
             _rpiRuntime = null;
             _rpiConfig = null;
             _firmwarePerfByBoard.Clear();
+            _firmwareDebugByBoard.Clear();
+            _firmwareDebugBitsByBoard.Clear();
+            _firmwarePinOutputsByBoard.Clear();
             _serialBuffer = string.Empty;
             _timingStats = new TimingStats();
             _timingReady = false;
@@ -598,6 +725,8 @@ namespace RobotTwin.Game
                     _pinStatesByComponent[mcu.Id] = mcu.Hal.GetPinStates();
                     _pullupResistances[mcu.Id] = mcu.Hal.GetPullupResistance();
                     TryAppendVirtualSerial(mcu.Id);
+                    UpdateVirtualFirmwareTelemetry(mcu);
+                    _firmwarePinOutputsByBoard[mcu.Id] = BuildPinOutputsFromVoltages(mcu.Id);
                 }
             }
 
@@ -634,6 +763,7 @@ namespace RobotTwin.Game
                     LastTelemetry.TimeSeconds = SimTime;
                     LastTelemetry.TickIndex = TickCount;
                     AppendFirmwarePerfSignals(LastTelemetry);
+                    AppendFirmwareDebugSignals(LastTelemetry);
                 }
                 return 0f;
             }
@@ -647,6 +777,7 @@ namespace RobotTwin.Game
                 LastTelemetry.TimeSeconds = SimTime;
                 LastTelemetry.TickIndex = TickCount;
                 AppendFirmwarePerfSignals(LastTelemetry);
+                AppendFirmwareDebugSignals(LastTelemetry);
                 if (!_loggedTelemetry)
                 {
                     _loggedTelemetry = true;
@@ -1374,7 +1505,8 @@ namespace RobotTwin.Game
                 {
                     BoardId = board.Id,
                     BvmPath = bvmPath,
-                    BoardProfile = ResolveMcuProfileId(board)
+                    BoardProfile = ResolveMcuProfileId(board),
+                    StartTime = Time.unscaledTime
                 };
                 _externalFirmwareSessions[board.Id] = session;
                 if (!_usbConnectedByBoard.ContainsKey(board.Id))
@@ -1408,59 +1540,67 @@ namespace RobotTwin.Game
 
         private string BuildFirmwareLaunchArguments(bool enableRpi)
         {
-            if (!enableRpi || _rpiConfig == null) return string.Empty;
-
-            var args = new List<string>
+            var args = new List<string>();
+            if (enableRpi && _rpiConfig != null)
             {
-                "--rpi-enable",
-                "--rpi-shm-dir",
-                _rpiConfig.SharedMemoryDir,
-                "--rpi-display",
-                $"{_rpiConfig.DisplayWidth}x{_rpiConfig.DisplayHeight}",
-                "--rpi-camera",
-                $"{_rpiConfig.CameraWidth}x{_rpiConfig.CameraHeight}"
-            };
+                args.Add("--rpi-enable");
+                args.Add("--rpi-shm-dir");
+                args.Add(_rpiConfig.SharedMemoryDir);
+                args.Add("--rpi-display");
+                args.Add($"{_rpiConfig.DisplayWidth}x{_rpiConfig.DisplayHeight}");
+                args.Add("--rpi-camera");
+                args.Add($"{_rpiConfig.CameraWidth}x{_rpiConfig.CameraHeight}");
+            }
 
-            if (!string.IsNullOrWhiteSpace(_rpiConfig.QemuPath))
+            if (enableRpi && _rpiConfig != null && !string.IsNullOrWhiteSpace(_rpiConfig.QemuPath))
             {
                 args.Add("--rpi-qemu");
                 args.Add(_rpiConfig.QemuPath);
             }
-            if (!string.IsNullOrWhiteSpace(_rpiConfig.ImagePath))
+            if (enableRpi && _rpiConfig != null && !string.IsNullOrWhiteSpace(_rpiConfig.ImagePath))
             {
                 args.Add("--rpi-image");
                 args.Add(_rpiConfig.ImagePath);
             }
-            if (!string.IsNullOrWhiteSpace(_rpiConfig.NetworkMode))
+            if (enableRpi && _rpiConfig != null && !string.IsNullOrWhiteSpace(_rpiConfig.NetworkMode))
             {
                 args.Add("--rpi-net-mode");
                 args.Add(_rpiConfig.NetworkMode);
             }
-            if (_rpiConfig.CpuAffinityMask != 0)
+            if (enableRpi && _rpiConfig != null && _rpiConfig.CpuAffinityMask != 0)
             {
                 args.Add("--rpi-cpu-affinity");
                 args.Add($"0x{_rpiConfig.CpuAffinityMask:X}");
             }
-            if (_rpiConfig.CpuMaxPercent > 0)
+            if (enableRpi && _rpiConfig != null && _rpiConfig.CpuMaxPercent > 0)
             {
                 args.Add("--rpi-cpu-max-percent");
                 args.Add(_rpiConfig.CpuMaxPercent.ToString(CultureInfo.InvariantCulture));
             }
-            if (_rpiConfig.ThreadCount > 0)
+            if (enableRpi && _rpiConfig != null && _rpiConfig.ThreadCount > 0)
             {
                 args.Add("--rpi-threads");
                 args.Add(_rpiConfig.ThreadCount.ToString(CultureInfo.InvariantCulture));
             }
-            if (_rpiConfig.PriorityClass > 0)
+            if (enableRpi && _rpiConfig != null && _rpiConfig.PriorityClass > 0)
             {
                 args.Add("--rpi-priority");
                 args.Add(_rpiConfig.PriorityClass.ToString(CultureInfo.InvariantCulture));
             }
 
             string repoRoot = RpiRuntimeConfig.ResolveRepoRoot();
-            string rpiLog = Path.Combine(repoRoot, "logs", "rpi", "rpi_qemu.log");
-            args.Add("--rpi-log");
-            args.Add(rpiLog);
+            if (enableRpi && _rpiConfig != null)
+            {
+                string rpiLog = Path.Combine(repoRoot, "logs", "rpi", "rpi_qemu.log");
+                args.Add("--rpi-log");
+                args.Add(rpiLog);
+            }
+
+            string firmwareLogDir = Path.Combine(repoRoot, "logs", "firmware");
+            Directory.CreateDirectory(firmwareLogDir);
+            string firmwareLogPath = Path.Combine(firmwareLogDir, "firmware_host.log");
+            args.Add("--log");
+            args.Add(firmwareLogPath);
 
             return string.Join(" ", args);
         }
@@ -1505,6 +1645,8 @@ namespace RobotTwin.Game
         private void TryLoadExternalFirmware(ExternalFirmwareSession session)
         {
             if (!_useExternalFirmware || session == null || _externalFirmwareClient == null) return;
+            if (session.Disabled) return;
+            if (Time.unscaledTime < session.NextRetryTime) return;
             if (session.Loaded) return;
             if (string.IsNullOrWhiteSpace(session.BvmPath) || !File.Exists(session.BvmPath))
             {
@@ -1514,20 +1656,30 @@ namespace RobotTwin.Game
 
             if (TryLoadPendingFirmware(session))
             {
+                session.LoggedPending = false;
                 Debug.Log($"[SimHost] External firmware loaded: {session.BvmPath}");
             }
             else
             {
-                Debug.LogWarning($"[SimHost] External firmware pending (pipe not ready): {session.BvmPath}");
+                HandlePendingExternalFirmware(session, _externalFirmwareClient.LastErrorKind);
             }
         }
 
         private bool TryLoadPendingFirmware(ExternalFirmwareSession session)
         {
             if (session == null || _externalFirmwareClient == null) return false;
+            if (session.Disabled) return false;
+            if (Time.unscaledTime < session.NextRetryTime) return false;
             if (session.Loaded) return true;
             if (string.IsNullOrWhiteSpace(session.BvmPath) || !File.Exists(session.BvmPath)) return false;
-            if (!_externalFirmwareClient.LoadBvmFile(session.BoardId, session.BoardProfile, session.BvmPath)) return false;
+            if (!_externalFirmwareClient.LoadBvmFile(session.BoardId, session.BoardProfile, session.BvmPath))
+            {
+                if (_externalFirmwareClient.LastErrorKind == FirmwareErrorKind.PipeUnavailable)
+                {
+                    session.NextRetryTime = Time.unscaledTime + ExternalFirmwareRetryDelay;
+                }
+                return false;
+            }
             session.Loaded = true;
             return true;
         }
@@ -1535,6 +1687,8 @@ namespace RobotTwin.Game
         private bool TryStepExternalFirmware(ExternalFirmwareSession session, float dtSeconds)
         {
             if (session == null || _externalFirmwareClient == null) return false;
+            if (session.Disabled) return false;
+            if (Time.unscaledTime < session.NextRetryTime) return false;
 
             TryLoadPendingFirmware(session);
 
@@ -1548,6 +1702,27 @@ namespace RobotTwin.Game
 
             if (!_externalFirmwareClient.TryStep(session.BoardId, request, out var result))
             {
+                var errorKind = _externalFirmwareClient.LastErrorKind;
+                if (errorKind == FirmwareErrorKind.PipeUnavailable)
+                {
+                    session.NextRetryTime = Time.unscaledTime + ExternalFirmwareRetryDelay;
+                    HandlePendingExternalFirmware(session, errorKind);
+                    return false;
+                }
+                session.FailureCount++;
+                session.NextRetryTime = Time.unscaledTime + ExternalFirmwareRetryDelay;
+                if (errorKind == FirmwareErrorKind.AccessDenied)
+                {
+                    DisableExternalFirmwareSession(session, "access denied to firmware pipe (check admin/integrity level)");
+                }
+                else if (errorKind == FirmwareErrorKind.BrokenPipe)
+                {
+                    DisableExternalFirmwareSession(session, "firmware host disconnected");
+                }
+                else if (session.FailureCount >= ExternalFirmwareFailureLimit)
+                {
+                    DisableExternalFirmwareSession(session, "repeated firmware failures");
+                }
                 if (!session.LoggedFallback)
                 {
                     session.LoggedFallback = true;
@@ -1556,8 +1731,47 @@ namespace RobotTwin.Game
                 return false;
             }
 
+            session.FailureCount = 0;
+            session.NextRetryTime = 0f;
+            session.LoggedFallback = false;
             ApplyFirmwareResult(session.BoardId, result);
             return true;
+        }
+
+        private void DisableExternalFirmwareSession(ExternalFirmwareSession session, string reason)
+        {
+            if (session == null || session.Disabled) return;
+            session.Disabled = true;
+            session.DisabledReason = string.IsNullOrWhiteSpace(reason) ? "disabled" : reason;
+            Debug.LogWarning($"[SimHost] External firmware disabled for {session.BoardId}: {session.DisabledReason}.");
+
+            bool anyActive = _externalFirmwareSessions.Values.Any(s => s != null && !s.Disabled);
+            if (!anyActive)
+            {
+                _useExternalFirmware = false;
+                Debug.LogWarning("[SimHost] All external firmware sessions disabled. Using VirtualMcu only.");
+            }
+        }
+
+        private void HandlePendingExternalFirmware(ExternalFirmwareSession session, FirmwareErrorKind errorKind)
+        {
+            if (session == null) return;
+            if (errorKind != FirmwareErrorKind.PipeUnavailable) return;
+            float elapsed = Time.unscaledTime - session.StartTime;
+            if (elapsed >= ExternalFirmwareStartupTimeoutSeconds)
+            {
+                DisableExternalFirmwareSession(session, "firmware pipe not available");
+                return;
+            }
+            if (elapsed < ExternalFirmwareStartupGraceSeconds)
+            {
+                return;
+            }
+            if (!session.LoggedPending)
+            {
+                session.LoggedPending = true;
+                Debug.LogWarning($"[SimHost] External firmware pending (pipe not ready): {session.BvmPath}");
+            }
         }
 
         private int[] BuildFirmwareInputStates(string boardId)
@@ -1806,6 +2020,13 @@ namespace RobotTwin.Game
             var pinStates = new List<PinState>(pins.Length);
             int[] outputs = result?.PinStates ?? System.Array.Empty<int>();
 
+            if (outputs.Length > 0)
+            {
+                var snapshot = new int[outputs.Length];
+                Array.Copy(outputs, snapshot, outputs.Length);
+                _firmwarePinOutputsByBoard[boardId] = snapshot;
+            }
+
             for (int i = 0; i < pins.Length; i++)
             {
                 string pin = pins[i];
@@ -1843,6 +2064,186 @@ namespace RobotTwin.Game
             {
                 _firmwarePerfByBoard[boardId] = result.PerfCounters.Clone();
             }
+
+            if (result?.DebugCounters != null)
+            {
+                if (!_firmwareDebugByBoard.TryGetValue(boardId, out var debug))
+                {
+                    debug = new FirmwareDebugCounters();
+                    _firmwareDebugByBoard[boardId] = debug;
+                }
+                debug.CopyFrom(result.DebugCounters);
+            }
+
+            if (result?.DebugBits != null)
+            {
+                if (!_firmwareDebugBitsByBoard.TryGetValue(boardId, out var bits))
+                {
+                    bits = new FirmwareDebugBitset();
+                    _firmwareDebugBitsByBoard[boardId] = bits;
+                }
+                bits.CopyFrom(result.DebugBits);
+            }
+        }
+
+        private void UpdateVirtualFirmwareTelemetry(VirtualMcu mcu)
+        {
+            if (mcu == null) return;
+
+            if (!_firmwarePerfByBoard.TryGetValue(mcu.Id, out var perf) || perf == null)
+            {
+                perf = new FirmwarePerfCounters();
+                _firmwarePerfByBoard[mcu.Id] = perf;
+            }
+
+            perf.Cycles = (ulong)Math.Max(0L, mcu.Clock.TotalCycles);
+            perf.AdcSamples = 0;
+            perf.SpiTransfers = 0;
+            perf.TwiTransfers = 0;
+            perf.WdtResets = 0;
+            perf.DroppedOutputs = 0;
+            if (perf.UartTxBytes != null)
+            {
+                Array.Clear(perf.UartTxBytes, 0, perf.UartTxBytes.Length);
+            }
+            if (perf.UartRxBytes != null)
+            {
+                Array.Clear(perf.UartRxBytes, 0, perf.UartRxBytes.Length);
+            }
+
+            if (!_firmwareDebugByBoard.TryGetValue(mcu.Id, out var debug) || debug == null)
+            {
+                debug = new FirmwareDebugCounters();
+                _firmwareDebugByBoard[mcu.Id] = debug;
+            }
+
+            debug.FlashBytes = VirtualMemory.FlashSizeBytes;
+            debug.SramBytes = VirtualMemory.SramSizeBytes;
+            debug.EepromBytes = VirtualMemory.EepromSizeBytes;
+            debug.IoBytes = 0x200;
+            debug.CpuHz = (uint)Math.Max(0, Math.Round(mcu.Clock.FrequencyHz));
+            debug.ProgramCounter = (ushort)Mathf.Clamp(mcu.Cpu.ProgramCounter, 0, ushort.MaxValue);
+            debug.StackPointer = 0;
+            debug.StatusRegister = 0;
+            debug.StackHighWater = 0;
+            debug.HeapTopAddress = 0;
+            debug.StackMinAddress = 0;
+            debug.DataSegmentEnd = 0;
+            debug.StackOverflows = 0;
+            debug.InvalidMemoryAccesses = 0;
+            debug.InterruptCount = 0;
+            debug.InterruptLatencyMax = 0;
+            debug.TimingViolations = 0;
+            debug.CriticalSectionCycles = 0;
+            debug.SleepCycles = 0;
+            debug.FlashAccessCycles = 0;
+            debug.UartOverflows = 0;
+            debug.TimerOverflows = 0;
+            debug.BrownOutResets = 0;
+            debug.GpioStateChanges = 0;
+            debug.PwmCycles = 0;
+            debug.I2cTransactions = 0;
+            debug.SpiTransactions = 0;
+
+            if (!_firmwareDebugBitsByBoard.TryGetValue(mcu.Id, out var bits) || bits == null)
+            {
+                bits = new FirmwareDebugBitset();
+                _firmwareDebugBitsByBoard[mcu.Id] = bits;
+            }
+            PopulateVirtualDebugBits(bits, debug);
+        }
+
+        private static void PopulateVirtualDebugBits(FirmwareDebugBitset bits, FirmwareDebugCounters debug)
+        {
+            if (bits == null || debug == null) return;
+            bits.BitCount = VirtualDebugBitCount;
+            bits.Raw = Array.Empty<byte>();
+            bits.Fields.Clear();
+
+            AddVirtualDebugField(bits, "pc", 0, 16, debug.ProgramCounter);
+            AddVirtualDebugField(bits, "sp", 16, 16, debug.StackPointer);
+            AddVirtualDebugField(bits, "sreg", 32, 8, debug.StatusRegister);
+            AddVirtualDebugField(bits, "flash_bytes", 40, 32, debug.FlashBytes);
+            AddVirtualDebugField(bits, "sram_bytes", 72, 32, debug.SramBytes);
+            AddVirtualDebugField(bits, "eeprom_bytes", 104, 32, debug.EepromBytes);
+            AddVirtualDebugField(bits, "io_bytes", 136, 32, debug.IoBytes);
+            AddVirtualDebugField(bits, "cpu_hz", 168, 32, debug.CpuHz);
+            AddVirtualDebugField(bits, "stack_high_water", 200, 16, debug.StackHighWater);
+            AddVirtualDebugField(bits, "heap_top", 216, 16, debug.HeapTopAddress);
+            AddVirtualDebugField(bits, "stack_min", 232, 16, debug.StackMinAddress);
+            AddVirtualDebugField(bits, "data_segment_end", 248, 16, debug.DataSegmentEnd);
+            AddVirtualDebugField(bits, "stack_overflows", 264, 32, debug.StackOverflows);
+            AddVirtualDebugField(bits, "invalid_mem_accesses", 296, 32, debug.InvalidMemoryAccesses);
+            AddVirtualDebugField(bits, "interrupt_count", 328, 32, debug.InterruptCount);
+            AddVirtualDebugField(bits, "interrupt_latency_max", 360, 32, debug.InterruptLatencyMax);
+            AddVirtualDebugField(bits, "timing_violations", 392, 32, debug.TimingViolations);
+            AddVirtualDebugField(bits, "critical_section_cycles", 424, 32, debug.CriticalSectionCycles);
+            AddVirtualDebugField(bits, "sleep_cycles", 456, 32, debug.SleepCycles);
+            AddVirtualDebugField(bits, "flash_access_cycles", 488, 32, debug.FlashAccessCycles);
+            AddVirtualDebugField(bits, "uart_overflows", 520, 32, debug.UartOverflows);
+            AddVirtualDebugField(bits, "timer_overflows", 552, 32, debug.TimerOverflows);
+            AddVirtualDebugField(bits, "brown_out_resets", 584, 32, debug.BrownOutResets);
+            AddVirtualDebugField(bits, "gpio_state_changes", 616, 32, debug.GpioStateChanges);
+            AddVirtualDebugField(bits, "pwm_cycles", 648, 32, debug.PwmCycles);
+            AddVirtualDebugField(bits, "i2c_transactions", 680, 32, debug.I2cTransactions);
+            AddVirtualDebugField(bits, "spi_transactions", 712, 32, debug.SpiTransactions);
+        }
+
+        private static void AddVirtualDebugField(FirmwareDebugBitset bits, string name, ushort offset, byte width, ulong value)
+        {
+            bits.Fields.Add(new FirmwareDebugBitField(name, offset, width, value));
+        }
+
+        private int[] BuildPinOutputsFromVoltages(string boardId)
+        {
+            var pins = GetExternalFirmwarePins(boardId);
+            int count = Mathf.Min(pins.Length, ExternalFirmwarePinLimit);
+            var snapshot = new int[count];
+            Array.Fill(snapshot, -1);
+
+            if (!_pinStatesByComponent.TryGetValue(boardId, out var states) || states == null)
+            {
+                return snapshot;
+            }
+
+            var outputMap = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            foreach (var state in states)
+            {
+                if (string.IsNullOrWhiteSpace(state.Pin)) continue;
+                outputMap[state.Pin] = state.IsOutput;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                string pin = pins[i];
+                if (!outputMap.TryGetValue(pin, out var isOutput) || !isOutput)
+                {
+                    snapshot[i] = -1;
+                    continue;
+                }
+
+                if (_pinVoltages.TryGetValue($"{boardId}.{pin}", out var voltage))
+                {
+                    snapshot[i] = VoltageToOutputValue(voltage);
+                }
+                else
+                {
+                    snapshot[i] = 0;
+                }
+            }
+
+            return snapshot;
+        }
+
+        private static int VoltageToOutputValue(float voltage)
+        {
+            if (voltage <= 0.05f) return 0;
+            if (voltage >= VirtualMcu.DefaultHighVoltage - 0.25f) return 1;
+            float ratio = Mathf.Clamp01(voltage / VirtualMcu.DefaultHighVoltage);
+            int pwm = Mathf.Clamp(Mathf.RoundToInt(ratio * 255f), 0, 255);
+            if (pwm <= 1) return 1;
+            if (pwm >= 255) return 1;
+            return pwm;
         }
 
         private void AppendFirmwarePerfSignals(TelemetryFrame frame)
@@ -1867,6 +2268,45 @@ namespace RobotTwin.Game
                 frame.Signals[$"FW:{boardId}:twi_transfers"] = perf.TwiTransfers;
                 frame.Signals[$"FW:{boardId}:wdt_resets"] = perf.WdtResets;
                 frame.Signals[$"FW:{boardId}:drops"] = perf.DroppedOutputs;
+            }
+        }
+
+        private void AppendFirmwareDebugSignals(TelemetryFrame frame)
+        {
+            if (frame?.Signals == null || _firmwareDebugByBoard.Count == 0) return;
+            foreach (var entry in _firmwareDebugByBoard)
+            {
+                string boardId = entry.Key;
+                var debug = entry.Value;
+                if (debug == null) continue;
+                string prefix = $"FW:{boardId}:dbg:";
+                frame.Signals[$"{prefix}flash_bytes"] = debug.FlashBytes;
+                frame.Signals[$"{prefix}sram_bytes"] = debug.SramBytes;
+                frame.Signals[$"{prefix}eeprom_bytes"] = debug.EepromBytes;
+                frame.Signals[$"{prefix}io_bytes"] = debug.IoBytes;
+                frame.Signals[$"{prefix}cpu_hz"] = debug.CpuHz;
+                frame.Signals[$"{prefix}pc"] = debug.ProgramCounter;
+                frame.Signals[$"{prefix}sp"] = debug.StackPointer;
+                frame.Signals[$"{prefix}sreg"] = debug.StatusRegister;
+                frame.Signals[$"{prefix}stack_high_water"] = debug.StackHighWater;
+                frame.Signals[$"{prefix}heap_top"] = debug.HeapTopAddress;
+                frame.Signals[$"{prefix}stack_min"] = debug.StackMinAddress;
+                frame.Signals[$"{prefix}data_segment_end"] = debug.DataSegmentEnd;
+                frame.Signals[$"{prefix}stack_overflows"] = debug.StackOverflows;
+                frame.Signals[$"{prefix}invalid_mem_accesses"] = debug.InvalidMemoryAccesses;
+                frame.Signals[$"{prefix}interrupt_count"] = debug.InterruptCount;
+                frame.Signals[$"{prefix}interrupt_latency_max"] = debug.InterruptLatencyMax;
+                frame.Signals[$"{prefix}timing_violations"] = debug.TimingViolations;
+                frame.Signals[$"{prefix}critical_section_cycles"] = debug.CriticalSectionCycles;
+                frame.Signals[$"{prefix}sleep_cycles"] = debug.SleepCycles;
+                frame.Signals[$"{prefix}flash_access_cycles"] = debug.FlashAccessCycles;
+                frame.Signals[$"{prefix}uart_overflows"] = debug.UartOverflows;
+                frame.Signals[$"{prefix}timer_overflows"] = debug.TimerOverflows;
+                frame.Signals[$"{prefix}brown_out_resets"] = debug.BrownOutResets;
+                frame.Signals[$"{prefix}gpio_state_changes"] = debug.GpioStateChanges;
+                frame.Signals[$"{prefix}pwm_cycles"] = debug.PwmCycles;
+                frame.Signals[$"{prefix}i2c_transactions"] = debug.I2cTransactions;
+                frame.Signals[$"{prefix}spi_transactions"] = debug.SpiTransactions;
             }
         }
 

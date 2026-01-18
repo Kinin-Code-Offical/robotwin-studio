@@ -305,6 +305,7 @@ def console(url: str) -> int:
 COMMAND_HELP = {
     "build-bvm": "Build a .bvm from .hex or .ino. For .ino, pass --fqbn arduino:avr:uno.",
     "build-firmware": "Build RoboTwinFirmwareHost.exe into builds/firmware (logs to logs/firmware).",
+    "build-firmware-monitor": "Build RobotWinFirmwareMonitor.exe into builds/RobotWinFirmwareMonitor (logs to logs/RobotWinFirmwareMonitor).",
     "build-native": "Build NativeEngine DLL and standalone (g++). Outputs to builds/native.",
     "build-template-bvms": "Build .bvm outputs for all Arduino templates into each template's builds folder.",
     "migrate-template-specs": "Generate template.json specs (with legacy aliases) from metadata.json.",
@@ -343,6 +344,11 @@ def main() -> int:
 
     add_script_command("build-bvm", "tools/scripts/build_bvm.py", "Build a .bvm from .hex or .ino")
     add_script_command("build-firmware", "tools/scripts/build_firmware.ps1", "Build RoboTwinFirmwareHost.exe")
+    add_script_command(
+        "build-firmware-monitor",
+        "tools/scripts/build_firmware_monitor.ps1",
+        "Build RobotWinFirmwareMonitor.exe",
+    )
     add_script_command("build-native", "tools/scripts/build_native.ps1", "Build NativeEngine DLL + standalone")
     add_script_command("build-template-bvms", "tools/scripts/build_template_bvms.ps1", "Build template .bvm outputs")
     add_script_command("migrate-template-specs", "tools/scripts/migrate_template_specs.py", "Migrate template specs")

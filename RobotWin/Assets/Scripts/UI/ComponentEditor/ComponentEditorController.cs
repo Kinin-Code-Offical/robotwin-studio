@@ -303,7 +303,10 @@ namespace RobotTwin.UI.ComponentEditor
                 pinIndicator.style.left = (i * 20f) % (box.style.width.value.value - 20f);
                 pinIndicator.style.top = 5f;
                 pinIndicator.style.backgroundColor = GetPinColor(pin.Type);
-                pinIndicator.style.borderRadius = 10;
+                pinIndicator.style.borderTopLeftRadius = 10;
+                pinIndicator.style.borderTopRightRadius = 10;
+                pinIndicator.style.borderBottomLeftRadius = 10;
+                pinIndicator.style.borderBottomRightRadius = 10;
                 pinIndicator.style.width = 20;
                 pinIndicator.style.height = 20;
                 pinIndicator.style.unityTextAlign = TextAnchor.MiddleCenter;

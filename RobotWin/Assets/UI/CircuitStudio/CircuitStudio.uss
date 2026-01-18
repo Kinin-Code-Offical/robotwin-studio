@@ -1348,19 +1348,45 @@
 }
 
 .output-search {
-    width: 160px;
-    height: 22px;
+    min-width: 220px;
+    height: 26px;
     margin-left: 0;
-    font-size: 9px;
+    font-size: 10px;
     -unity-text-align: middle-left;
 }
 
 .output-tag {
-    width: 120px;
-    height: 22px;
-    margin-left: 6px;
-    font-size: 9px;
+    width: 160px;
+    height: 26px;
+    margin-left: 8px;
+    font-size: 10px;
     -unity-text-align: middle-left;
+}
+
+/* Bottom bar search row: light-blue theme + better focus state */
+.bottom-status .rw-search-row {
+    background-color: rgba(56, 189, 248, 0.10);
+    border-top-color: rgba(56, 189, 248, 0.25);
+    border-bottom-color: rgba(56, 189, 248, 0.25);
+    border-left-color: rgba(56, 189, 248, 0.25);
+    border-right-color: rgba(56, 189, 248, 0.25);
+}
+
+.bottom-status .rw-search-row.rw-focus-within {
+    border-top-color: rgba(56, 189, 248, 0.75);
+    border-bottom-color: rgba(56, 189, 248, 0.75);
+    border-left-color: rgba(56, 189, 248, 0.75);
+    border-right-color: rgba(56, 189, 248, 0.75);
+}
+
+.bottom-status .rw-search-icon {
+    -unity-background-image-tint-color: rgba(226, 232, 240, 0.95);
+    opacity: 0.95;
+}
+
+/* Hint-as-value: soften the hint text so it doesn't look like real input */
+.output-search.rw-hint .unity-text-input {
+    color: rgba(226, 232, 240, 0.55);
 }
 
 .bottom-tab-btn {
@@ -1533,15 +1559,15 @@
 .code-target {
     flex-direction: row;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(56, 189, 248, 0.10);
     border-radius: 6px;
     border-width: 1px;
-    border-color: #2b3a4e;
+    border-color: rgba(56, 189, 248, 0.35);
     padding: 2px 4px;
     margin-right: 6px;
     flex-shrink: 0; /* Prevent wobble/shrink */
     height: 32px; /* Fixed height container */
-    width: 210px; /* Fixed total width to prevent ANY movement */
+    width: 280px; /* Wider for longer targets */
     justify-content: space-between;
 }
 
@@ -1554,7 +1580,7 @@
 }
 
 .code-target-dropdown {
-    width: 140px; /* Fits inside 210px - label */
+    width: 205px; /* Fits inside 280px - label */
     margin: 0;
     padding: 0;
     flex-shrink: 0;
@@ -1567,7 +1593,7 @@
     color: var(--accent); /* Make selected target standout */
     font-size: 11px;
     padding: 3px 6px;
-    height: 24px;
+    height: 26px;
     -unity-font-style: bold;
 }
 
@@ -1588,24 +1614,26 @@
 .code-target-dropdown .unity-popup-field__text {
     color: var(--accent);
     margin-right: 4px;
+    -unity-text-align: middle-right;
 }
 
 /* Global Dropdown Restyle - User requested "fix dropdowns everywhere" */
 .unity-base-popup-field__input,
 .unity-popup-field__input {
-    background-color: #1b222b;
-    border-color: #2b3440;
+    background-color: rgba(56, 189, 248, 0.10);
+    border-color: rgba(56, 189, 248, 0.25);
     border-width: 1px;
     border-radius: 6px;
     padding: 6px 10px;
     color: #e8eef5;
     font-size: 12px;
+    min-height: 26px;
 }
 
 .unity-base-popup-field__input:hover,
 .unity-popup-field__input:hover {
-    border-color: var(--accent);
-    background-color: #222b36;
+    border-color: rgba(56, 189, 248, 0.75);
+    background-color: rgba(56, 189, 248, 0.14);
 }
 
 .unity-base-popup-field__text,
@@ -1616,7 +1644,7 @@
 
 .unity-base-popup-field__arrow,
 .unity-popup-field__arrow {
-    -unity-background-image-tint-color: #64748b;
+    -unity-background-image-tint-color: rgba(226, 232, 240, 0.75);
     width: 10px;
     height: 10px;
     margin-right: 4px;
@@ -1624,8 +1652,8 @@
 
 .unity-base-popup-field__menu,
 .unity-popup-field__menu {
-    background-color: #161b22;
-    border-color: #30363d;
+    background-color: rgba(15, 23, 42, 0.98);
+    border-color: rgba(56, 189, 248, 0.35);
     border-width: 1px;
     border-radius: 6px;
     padding: 4px;
@@ -1638,6 +1666,9 @@
 .unity-popup-field__menu .unity-popup-field__item {
     color: var(--text-1);
     background-color: transparent;
+    min-height: 22px;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .unity-base-popup-field__menu .unity-list-view__item:hover,
@@ -1780,13 +1811,16 @@
 
 .code-highlight-overlay {
     position: absolute;
-    left: 45px; /* Offset by gutter width */
+    /* Position/size are synced to the actual TextElement in C# for pixel-perfect alignment. */
+    left: 0;
     top: 0;
     right: 0;
     bottom: 0;
-    padding: 10px 12px;
+    margin: 0;
+    padding: 0;
     white-space: pre;
-    color: #e8eef5;
+    /* Default text color comes from theme; syntax tokens override via rich-text <color>. */
+    color: var(--color-text-main);
     font-size: 13px;
     -unity-text-align: upper-left;
 }
@@ -1843,7 +1877,7 @@
 .unity-scroll-view__vertical-scroller,
 .unity-scroll-view__horizontal-scroller {
     background-color: transparent;
-    width: 4px;
+    width: 6px;
     border-radius: 8px;
     margin-top: 0;
     margin-bottom: 0;
@@ -1853,7 +1887,7 @@
 }
 
 .unity-scroll-view__horizontal-scroller {
-    height: 4px;
+    height: 6px;
 }
 
 .unity-scroller,
@@ -1866,7 +1900,7 @@
 
 .unity-scroll-view__vertical-scroller .unity-base-slider__track,
 .unity-scroll-view__horizontal-scroller .unity-base-slider__track {
-    background-color: #2a2a2a;
+    background-color: rgba(56, 189, 248, 0.12);
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
@@ -1876,7 +1910,7 @@
 .unity-scroller .unity-base-slider__track,
 .unity-scroller__slider,
 .unity-scroller__track {
-    background-color: #2a2a2a;
+    background-color: rgba(56, 189, 248, 0.12);
     border-radius: 8px;
     flex-grow: 1;
     border-width: 0;
@@ -1885,20 +1919,20 @@
 
 .unity-scroll-view__vertical-scroller .unity-base-slider__dragger,
 .unity-scroll-view__horizontal-scroller .unity-base-slider__dragger {
-    background-color: #3d3d3d;
+    background-color: rgba(56, 189, 248, 0.45);
     border-radius: 8px;
     border-width: 0;
 }
 
 .unity-scroller .unity-base-slider__dragger,
 .unity-scroller__dragger {
-    background-color: #3d3d3d;
+    background-color: rgba(56, 189, 248, 0.45);
     border-radius: 8px;
     border-width: 0;
 }
 
 .unity-scroller__thumb {
-    background-color: #3d3d3d;
+    background-color: rgba(56, 189, 248, 0.45);
     border-radius: 8px;
     border-width: 0;
 }
@@ -1951,7 +1985,7 @@
 
 .unity-scroll-view__vertical-scroller:hover .unity-base-slider__dragger,
 .unity-scroll-view__horizontal-scroller:hover .unity-base-slider__dragger {
-    background-color: #4a4a4a;
+    background-color: rgba(56, 189, 248, 0.65);
 }
 
 .circuit-3d-panel {

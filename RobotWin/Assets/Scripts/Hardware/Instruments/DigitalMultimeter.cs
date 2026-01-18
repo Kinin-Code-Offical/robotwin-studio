@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using RobotTwin.Game;
 
 namespace RobotWin.Hardware.Instruments
 {
@@ -14,6 +15,14 @@ namespace RobotWin.Hardware.Instruments
         public float errorMarginPercent = 0.5f;
         public int errorUpdateRate = 2; // Updates per sec
 
+        [Header("Window")]
+        public bool AutoOpenWindow = true;
+
+        [Header("Bridge Fallback")]
+        public string simBoardId = string.Empty;
+        public string simPinA = string.Empty;
+        public string simPinB = string.Empty;
+
         [Header("State")]
         // private float _displayedValue = 0f;
         private float _timer = 0f;
@@ -26,15 +35,27 @@ namespace RobotWin.Hardware.Instruments
         void Start()
         {
             // Auto-create Floating Window if Manager exists
-            if (RobotWin.Hardware.UI.InstrumentWindowManager.Instance != null)
+            if (AutoOpenWindow && RobotWin.Hardware.UI.InstrumentWindowManager.Instance != null)
             {
                 var win = RobotWin.Hardware.UI.InstrumentWindowManager.Instance.OpenInstrumentWindow("Multimeter", "Digital Multimeter");
-                if (win != null)
-                {
-                    var ui = win.GetComponent<RobotWin.Hardware.UI.MultimeterUI>();
-                    if (ui != null) ui.SetSource(this);
-                }
+                AttachWindow(win);
             }
+        }
+
+        public void AttachWindow(GameObject window)
+        {
+            _activeWindow = window;
+            if (window == null) return;
+
+            var ui = window.GetComponent<RobotWin.Hardware.UI.MultimeterUI>();
+            if (ui != null) ui.SetSource(this);
+        }
+
+        public void SetSimPins(string boardId, string pinA, string pinB)
+        {
+            simBoardId = boardId ?? string.Empty;
+            simPinA = pinA ?? string.Empty;
+            simPinB = pinB ?? string.Empty;
         }
 
         protected override void InstrumentUpdateLoop()
@@ -49,10 +70,7 @@ namespace RobotWin.Hardware.Instruments
             float voltageB = 0f;
 
             // Read Probe A
-            if (_targetModule != null && !string.IsNullOrEmpty(_targetPinA))
-            {
-                voltageA = _targetModule.ProbePinVoltage(_targetPinA);
-            }
+            TryReadVoltage(_targetPinA, simPinA, out voltageA);
 
             // Read Probe B (Reference)
             // Note: Probe B could be on a DIFFERENT module in improved versions,
@@ -62,10 +80,7 @@ namespace RobotWin.Hardware.Instruments
             // *Constraint*: Current VirtualInstrumentBase stores ONE _targetModule.
             // *Improvement*: Probes should store their own target modules independently.
             // For this iteration, we measure A relative to Ground if B is not connected.
-            if (_targetModule != null && !string.IsNullOrEmpty(_targetPinB))
-            {
-                voltageB = _targetModule.ProbePinVoltage(_targetPinB);
-            }
+            TryReadVoltage(_targetPinB, simPinB, out voltageB);
 
             float trueVoltage = voltageA - voltageB;
 
@@ -77,6 +92,27 @@ namespace RobotWin.Hardware.Instruments
             float measuredVal = trueVoltage + error + noise;
 
             UpdateDisplay(measuredVal);
+        }
+
+        private bool TryReadVoltage(string probePin, string fallbackPin, out float voltage)
+        {
+            voltage = 0f;
+            if (_targetModule != null && !string.IsNullOrEmpty(probePin))
+            {
+                voltage = _targetModule.ProbePinVoltage(probePin);
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(simBoardId) && !string.IsNullOrEmpty(fallbackPin))
+            {
+                var host = SimHost.Instance;
+                if (host != null && host.TryGetPinVoltage(simBoardId, fallbackPin, out voltage))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void UpdateDisplay(float val)

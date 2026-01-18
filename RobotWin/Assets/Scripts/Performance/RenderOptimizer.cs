@@ -18,8 +18,12 @@ namespace RobotTwin.Performance
         // Material property caching for GPU instancing
         private static readonly Dictionary<int, Material> _instancedMaterials = new Dictionary<int, Material>();
         private static readonly int _colorProperty = Shader.PropertyToID("_Color");
+        private static readonly int _baseColorProperty = Shader.PropertyToID("_BaseColor"); // URP Support
+        private static readonly int _emissionColorProperty = Shader.PropertyToID("_EmissionColor");
         private static readonly int _metallicProperty = Shader.PropertyToID("_Metallic");
         private static readonly int _smoothnessProperty = Shader.PropertyToID("_Glossiness");
+        private static readonly int _mainTexProperty = Shader.PropertyToID("_MainTex");
+        private static readonly int _baseMapProperty = Shader.PropertyToID("_BaseMap"); // URP Support
 
         // Batching statistics
         private static int _totalDrawCallsReduced;
@@ -32,38 +36,51 @@ namespace RobotTwin.Performance
         public static int EnableGPUInstancing(GameObject root)
         {
             var renderers = root.GetComponentsInChildren<Renderer>(true);
-            int instancedCount = 0;
+            int instancedSlots = 0;
+            int touchedRenderers = 0;
 
             foreach (var renderer in renderers)
             {
-                if (renderer.sharedMaterial == null) continue;
+                var materials = renderer.sharedMaterials;
+                if (materials == null || materials.Length == 0) continue;
 
-                // Skip already instanced
-                if (renderer.sharedMaterial.enableInstancing)
+                bool changed = false;
+                for (int i = 0; i < materials.Length; i++)
                 {
-                    instancedCount++;
-                    continue;
+                    var material = materials[i];
+                    if (material == null) continue;
+
+                    // Already instancing-enabled for this slot.
+                    if (material.enableInstancing)
+                    {
+                        instancedSlots++;
+                        continue;
+                    }
+
+                    int hash = GetMaterialHash(material);
+                    if (!_instancedMaterials.TryGetValue(hash, out Material instancedMaterial))
+                    {
+                        instancedMaterial = new Material(material);
+                        instancedMaterial.name = $"{material.name}_Instanced";
+                        instancedMaterial.enableInstancing = true;
+                        _instancedMaterials[hash] = instancedMaterial;
+                        _totalInstancesCreated++;
+                    }
+
+                    materials[i] = instancedMaterial;
+                    instancedSlots++;
+                    changed = true;
                 }
 
-                // Get or create instanced material
-                var material = renderer.sharedMaterial;
-                int hash = GetMaterialHash(material);
-
-                if (!_instancedMaterials.TryGetValue(hash, out Material instancedMaterial))
+                if (changed)
                 {
-                    instancedMaterial = new Material(material);
-                    instancedMaterial.name = $"{material.name}_Instanced";
-                    instancedMaterial.enableInstancing = true;
-                    _instancedMaterials[hash] = instancedMaterial;
-                    _totalInstancesCreated++;
+                    renderer.sharedMaterials = materials;
+                    touchedRenderers++;
                 }
-
-                renderer.sharedMaterial = instancedMaterial;
-                instancedCount++;
             }
 
-            Debug.Log($"[RenderOptimizer] GPU Instancing enabled for {instancedCount} renderers (created {_totalInstancesCreated} instanced materials)");
-            return instancedCount;
+            Debug.Log($"[RenderOptimizer] GPU Instancing enabled for {instancedSlots} material slots across {touchedRenderers} renderers (created {_totalInstancesCreated} instanced materials)");
+            return instancedSlots;
         }
 
         /// <summary>
@@ -81,7 +98,8 @@ namespace RobotTwin.Performance
 
             if (staticRenderers.Length == 0)
             {
-                Debug.LogWarning("[RenderOptimizer] No static renderers found for batching. Mark components as Static in inspector.");
+                // This is common for runtime-loaded models; keep it informational to avoid log spam.
+                Debug.Log("[RenderOptimizer] No static renderers found for batching. (Optional) Mark components as Static in inspector to enable static batching.");
                 return 0;
             }
 
@@ -123,12 +141,28 @@ namespace RobotTwin.Performance
         /// </summary>
         public static void SetupOcclusionCulling(Camera camera, Transform root)
         {
+            if (camera == null || root == null)
+            {
+                Debug.LogWarning("[RenderOptimizer] Occlusion culling skipped: camera or root is null.");
+                return;
+            }
+
             // Enable occlusion culling on camera
             camera.useOcclusionCulling = true;
 
             // Create occlusion area for circuit board
             var boardBounds = CalculateBounds(root);
-            var occlusionArea = root.gameObject.AddComponent<OcclusionArea>();
+            var occlusionArea = root.GetComponent<OcclusionArea>();
+            if (occlusionArea == null)
+            {
+                occlusionArea = root.gameObject.AddComponent<OcclusionArea>();
+            }
+            if (occlusionArea == null)
+            {
+                Debug.LogWarning("[RenderOptimizer] Occlusion culling enabled on camera, but failed to create/find OcclusionArea on root.");
+                return;
+            }
+
             occlusionArea.center = boardBounds.center;
             occlusionArea.size = boardBounds.size * 1.2f; // 20% margin
 
@@ -185,15 +219,132 @@ namespace RobotTwin.Performance
         /// </summary>
         private static int GetMaterialHash(Material material)
         {
+            var logBuilder = new System.Text.StringBuilder();
+            logBuilder.AppendLine($"[MaterialHash] Hashing: {material.name} (Shader: {material.shader.name})");
+
             unchecked
             {
-                int hash = material.shader.GetInstanceID();
+                int hash = 17;
+
+                // CRITICAL FIX: Include Material Name in hash.
+                if (!string.IsNullOrEmpty(material.name))
+                {
+                    string cleanName = material.name.Replace(" (Instance)", "").Trim();
+                    hash = hash * 31 + cleanName.GetHashCode();
+                    logBuilder.AppendLine($" - Name Hash: {cleanName}");
+                }
+
+                if (material.shader != null)
+                    hash = hash * 31 + material.shader.GetInstanceID();
+
+                // Include render state
+                hash = hash * 31 + material.renderQueue;
+                hash = hash * 31 + material.globalIlluminationFlags.GetHashCode();
+
+                // Color properties (Standard + URP)
                 if (material.HasProperty(_colorProperty))
-                    hash = hash * 31 + material.GetColor(_colorProperty).GetHashCode();
+                {
+                    var col = material.GetColor(_colorProperty);
+                    hash = hash * 31 + col.GetHashCode();
+                    logBuilder.AppendLine($" - Color: {col}");
+                }
+                if (material.HasProperty(_baseColorProperty))
+                {
+                    var col = material.GetColor(_baseColorProperty);
+                    hash = hash * 31 + col.GetHashCode();
+                    logBuilder.AppendLine($" - BaseColor: {col}");
+                }
+
+                // Float properties
                 if (material.HasProperty(_metallicProperty))
                     hash = hash * 31 + material.GetFloat(_metallicProperty).GetHashCode();
                 if (material.HasProperty(_smoothnessProperty))
                     hash = hash * 31 + material.GetFloat(_smoothnessProperty).GetHashCode();
+                if (material.HasProperty(_emissionColorProperty))
+                    hash = hash * 31 + material.GetColor(_emissionColorProperty).GetHashCode();
+
+                var cutoffId = Shader.PropertyToID("_Cutoff");
+                if (material.HasProperty(cutoffId))
+                    hash = hash * 31 + material.GetFloat(cutoffId).GetHashCode();
+
+                // Include shader keywords (critical for variants)
+                var keywords = material.shaderKeywords;
+                if (keywords != null && keywords.Length > 0)
+                {
+                    // Sort to ensure order doesn't cause mismatch
+                    System.Array.Sort(keywords);
+                    for (int i = 0; i < keywords.Length; i++)
+                    {
+                        hash = hash * 31 + keywords[i].GetHashCode();
+                    }
+                    logBuilder.AppendLine($" - Keywords: {string.Join(",", keywords)}");
+                }
+
+                // IMPORTANT: Texture Hashing
+                // 1. Iterate ALL texture properties found by Unity.
+                // We hash the property NAME and the TEXTURE ID.
+                bool textureFound = false;
+                try
+                {
+                    var textureProps = material.GetTexturePropertyNames();
+                    if (textureProps != null)
+                    {
+                        foreach (var propName in textureProps)
+                        {
+                            if (string.IsNullOrEmpty(propName) || !material.HasProperty(propName)) continue;
+
+                            var tex = material.GetTexture(propName);
+                            if (tex != null)
+                            {
+                                hash = hash * 31 + propName.GetHashCode(); // Hash the slot name (e.g., _MainTex vs _Detail)
+                                hash = hash * 31 + tex.GetInstanceID();
+
+                                // Include Tiling/Offset if available
+                                var scale = material.GetTextureScale(propName);
+                                var offset = material.GetTextureOffset(propName);
+                                hash = hash * 31 + scale.GetHashCode();
+                                hash = hash * 31 + offset.GetHashCode();
+
+                                textureFound = true;
+                                logBuilder.AppendLine($" - Texture Found: {propName} -> {tex.name} (ID: {tex.GetInstanceID()})");
+                            }
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    logBuilder.AppendLine($" - Texture Enumeration Error: {ex.Message}");
+                }
+
+                // 2. Explicit Fallback for Standard/URP
+                // If enumeration missed it or failed, check standard slots manually.
+                if (!textureFound)
+                {
+                    logBuilder.AppendLine(" - No textures found via enumeration, checking fallback...");
+                    if (material.HasProperty(_mainTexProperty))
+                    {
+                        var tex = material.GetTexture(_mainTexProperty);
+                        if (tex != null)
+                        {
+                            hash = hash * 31 + tex.GetInstanceID();
+                            logBuilder.AppendLine($" - Fallback MainTex: {tex.name}");
+                        }
+                    }
+                    if (material.HasProperty(_baseMapProperty))
+                    {
+                        var tex = material.GetTexture(_baseMapProperty);
+                        if (tex != null)
+                        {
+                            hash = hash * 31 + tex.GetInstanceID();
+                            logBuilder.AppendLine($" - Fallback BaseMap: {tex.name}");
+                        }
+                    }
+                }
+
+                logBuilder.AppendLine($" -> Final Hash: {hash}");
+                // Only log if specifically debugging (uncomment to see all details)
+                Debug.Log(logBuilder.ToString());
+
                 return hash;
             }
         }
@@ -205,7 +356,7 @@ namespace RobotTwin.Performance
         {
             var filter = renderer.GetComponent<MeshFilter>();
             return filter != null && filter.sharedMesh != null
-                ? filter.sharedMesh.triangles.Length / 3
+                ? MeshAnalyzer.GetTriangleCountSafe(filter.sharedMesh)
                 : 0;
         }
 

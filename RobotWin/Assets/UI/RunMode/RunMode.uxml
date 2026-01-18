@@ -83,11 +83,19 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
 
-                <ui:VisualElement class="card log-card">
-                    <ui:Label text="Event Log" class="card-title" />
-                    <ui:ScrollView name="LogScroll" class="log-scroll">
-                        <ui:Label name="LogContentLabel" text="" class="log-text" />
-                    </ui:ScrollView>
+                <ui:VisualElement class="log-row">
+                    <ui:VisualElement class="card log-card">
+                        <ui:Label text="Event Log" class="card-title" />
+                        <ui:ScrollView name="LogScroll" class="log-scroll">
+                            <ui:Label name="LogContentLabel" text="" class="log-text" />
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="card serial-card">
+                        <ui:Label text="Serial Console" class="card-title mono" />
+                        <ui:ScrollView name="SerialScroll" class="serial-scroll">
+                            <ui:Label name="SerialContentLabel" text="Serial ready." class="serial-text" />
+                        </ui:ScrollView>
+                    </ui:VisualElement>
                 </ui:VisualElement>
 
                 <ui:VisualElement class="path-row">
@@ -100,6 +108,7 @@
                 <ui:VisualElement class="card power-card">
                     <ui:Label text="Power / USB" class="card-title" />
                     <ui:ScrollView name="UsbBoardList" class="usb-list" />
+                    <ui:Toggle name="UsbDefaultConnectedToggle" text="Default USB Connected" class="board-3d-toggle" value="true" />
                     <ui:Label name="UsbHintLabel" text="Select the IDE port (IDE may show it as Unknown)." class="subtle usb-hint" />
                     <ui:Label name="ComStatusLabel" text="Virtual COM: N/A" class="subtle" />
                     <ui:Button name="ComDriverInstallBtn" text="Install Virtual COM Driver" class="btn ghost com-btn" />
@@ -113,18 +122,39 @@
                     </ui:ScrollView>
                 </ui:VisualElement>
 
-                <ui:VisualElement class="card serial-card">
-                    <ui:Label text="Serial Console" class="card-title mono" />
-                    <ui:ScrollView name="SerialScroll" class="serial-scroll">
-                        <ui:Label name="SerialContentLabel" text="Serial ready." class="serial-text" />
-                    </ui:ScrollView>
+                <ui:VisualElement class="card instrument-card">
+                    <ui:VisualElement class="instrument-header">
+                        <ui:Label text="Instruments" class="card-title" />
+                        <ui:Button name="CloseInstrumentsBtn" text="Close All" class="btn ghost instrument-btn secondary instrument-close" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="instrument-grid">
+                        <ui:VisualElement class="instrument-tile">
+                            <ui:VisualElement class="instrument-top">
+                                <ui:Label text="Multimeter" class="instrument-name" />
+                                <ui:Label text="DMM" class="instrument-tag" />
+                            </ui:VisualElement>
+                            <ui:Label text="Voltage, resistance, continuity." class="subtle instrument-desc" />
+                            <ui:VisualElement class="instrument-actions-row">
+                                <ui:Button name="OpenMultimeterBtn" text="Open Multimeter" class="btn instrument-btn instrument-open" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="instrument-tile">
+                            <ui:VisualElement class="instrument-top">
+                                <ui:Label text="Oscilloscope" class="instrument-name" />
+                                <ui:Label text="SCOPE" class="instrument-tag" />
+                            </ui:VisualElement>
+                            <ui:Label text="Waveform capture over time." class="subtle instrument-desc" />
+                            <ui:VisualElement class="instrument-actions-row">
+                                <ui:Button name="OpenScopeBtn" text="Open Oscilloscope" class="btn instrument-btn instrument-open" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="instrument-settings">
+                        <ui:Toggle name="RunInBackgroundToggle" text="Run simulation in background" class="board-3d-toggle instrument-toggle" />
+                        <ui:Label name="InstrumentHintLabel" text="Set pins inside the instrument windows (board + pin)." class="subtle instrument-hint" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
 
-                <ui:VisualElement class="card rpi-card">
-                    <ui:Label text="Raspberry Pi Display" class="card-title" />
-                    <ui:VisualElement name="RpiDisplayView" class="board-view rpi-display" />
-                    <ui:Label name="RpiStatusLabel" text="RPI: offline" class="subtle" />
-                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

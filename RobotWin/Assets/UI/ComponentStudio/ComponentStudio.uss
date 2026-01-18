@@ -1,5 +1,16 @@
 :root {
     --studio-hint-bg: rgba(8, 12, 18, 0.7);
+
+    /* Unified field styling (TextField / DropdownField / etc.) */
+    --field-bg: rgba(16, 20, 28, 0.75);
+    --field-bg-hover: rgba(18, 24, 34, 0.85);
+    --field-bg-focus: rgba(18, 24, 34, 0.95);
+    --field-border: rgba(255, 255, 255, 0.12);
+    --field-border-hover: rgba(255, 255, 255, 0.18);
+    --field-border-focus: rgba(56, 189, 248, 0.65);
+    --field-placeholder: rgba(148, 163, 184, 0.75);
+    --field-radius: 6px;
+    --field-font-size: 9px;
 }
 
 .component-studio-root {
@@ -171,23 +182,133 @@
     border-bottom-color: var(--field-border, #3a3a3a);
     border-left-color: var(--field-border, #3a3a3a);
     border-right-color: var(--field-border, #3a3a3a);
+    border-radius: var(--field-radius, 6px);
     color: var(--text-0, #f8fafc);
+}
+
+.component-studio-root .input-dark:hover {
+    background-color: var(--field-bg-hover, rgba(18, 24, 34, 0.85));
+    border-top-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+    border-bottom-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+    border-left-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+    border-right-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+}
+
+/* UI Toolkit doesn't support :focus-within (Unity 2021/2022). Use :focus on focusable fields instead. */
+.component-studio-root .input-dark:focus,
+.component-studio-root .input-dark.unity-text-field:focus,
+.component-studio-root .input-dark.unity-base-text-field:focus,
+.component-studio-root .input-dark.unity-base-popup-field:focus,
+.component-studio-root .input-dark.unity-base-dropdown-field:focus {
+    background-color: var(--field-bg-focus, rgba(18, 24, 34, 0.95));
+    border-top-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+    border-bottom-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+    border-left-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+    border-right-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+}
+
+.component-studio-root .input-dark:disabled {
+    opacity: 0.6;
 }
 
 .component-studio-root .input-dark .unity-text-input {
     color: var(--text-0, #f8fafc);
     background-color: transparent;
+    font-size: var(--field-font-size, 9px);
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 0;
+    padding-right: 0;
+    -unity-text-align: middle-left;
+    -unity-selection-color: rgba(56, 189, 248, 0.35);
+    -unity-caret-color: rgba(56, 189, 248, 0.95);
 }
 
 .component-studio-root .input-dark .unity-text-field__input,
 .component-studio-root .input-dark .unity-base-text-field__input,
 .component-studio-root .input-dark .unity-text-field__input--single-line,
-.component-studio-root .input-dark .unity-base-text-field__input--single-line,
+.component-studio-root .input-dark .unity-base-text-field__input--single-line {
+    background-color: transparent;
+    color: var(--text-0, #f8fafc);
+    border-width: 0;
+    font-size: var(--field-font-size, 9px);
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 0;
+    padding-right: 0;
+    /* Single-line fields must be vertically centered; upper-left can clip glyphs at small heights. */
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
 .component-studio-root .input-dark .unity-text-field__input--multiline,
 .component-studio-root .input-dark .unity-base-text-field__input--multiline {
     background-color: transparent;
     color: var(--text-0, #f8fafc);
     border-width: 0;
+    font-size: var(--field-font-size, 9px);
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 0;
+    padding-right: 0;
+    -unity-text-align: upper-left;
+    white-space: normal;
+    overflow: auto;
+}
+
+.component-studio-root .input-dark .unity-base-text-field__input--multiline,
+.component-studio-root .input-dark .unity-text-field__input--multiline {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.component-studio-root .input-dark .unity-text-element--placeholder,
+.component-studio-root .input-dark .unity-base-text-field__placeholder,
+.component-studio-root .input-dark .unity-text-field__placeholder {
+    color: var(--field-placeholder, rgba(148, 163, 184, 0.75));
+}
+
+/* Description: keep to a few lines and scroll instead of growing/shrinking unpredictably */
+.component-studio-root #ComponentDescriptionField {
+    height: 72px;
+    min-height: 64px;
+    max-height: 96px;
+}
+
+.component-studio-root #ComponentDescriptionField .unity-text-field__input--multiline,
+.component-studio-root #ComponentDescriptionField .unity-base-text-field__input--multiline {
+    overflow: scroll;
+    -unity-text-align: upper-left;
+}
+
+/* Native config JSON editor: fixed height, scroll, and slightly tighter look */
+.component-studio-root .native-config-field {
+    height: 160px;
+    min-height: 120px;
+    max-height: 260px;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.component-studio-root .native-config-field .unity-text-field__input--multiline,
+.component-studio-root .native-config-field .unity-base-text-field__input--multiline {
+    overflow: auto;
+    -unity-text-align: upper-left;
+    white-space: pre;
+}
+
+/* Some Unity versions apply scrolling to the nested text input element instead of the multiline container */
+.component-studio-root .native-config-field .unity-text-input {
+    overflow: auto;
+    white-space: pre;
+}
+
+.component-studio-root .field-error {
+    margin-top: 4px;
+    font-size: 9px;
+    color: rgba(248, 113, 113, 0.95);
+    white-space: normal;
 }
 
 .editor-inline-field {
@@ -259,6 +380,42 @@
 
 .ghost-button:hover {
     background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Small remove (X) buttons used in list rows (Pins/Labels/FX/Specs/Defaults/etc.) */
+.component-studio-root .editor-remove-btn {
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0;
+    margin-left: 4px;
+    background-color: rgba(239, 68, 68, 0.14);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(239, 68, 68, 0.28);
+    border-bottom-color: rgba(239, 68, 68, 0.28);
+    border-left-color: rgba(239, 68, 68, 0.28);
+    border-right-color: rgba(239, 68, 68, 0.28);
+    border-radius: 6px;
+    color: var(--text-0, #f8fafc);
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.component-studio-root .editor-remove-btn:hover {
+    background-color: rgba(239, 68, 68, 0.22);
+    border-top-color: rgba(239, 68, 68, 0.55);
+    border-bottom-color: rgba(239, 68, 68, 0.55);
+    border-left-color: rgba(239, 68, 68, 0.55);
+    border-right-color: rgba(239, 68, 68, 0.55);
+}
+
+.component-studio-root .editor-remove-btn:active {
+    background-color: rgba(239, 68, 68, 0.35);
 }
 
 .primary-button {
@@ -381,7 +538,7 @@
 
 .studio-viewport-panel {
     flex-grow: 1;
-    padding: 12px 24px;
+    padding: 4px 6px;
     min-height: 0;
     min-width: 0;
     position: relative;
@@ -1323,8 +1480,353 @@
     -unity-text-align: middle-left;
 }
 
+.component-studio-root .input-dark .unity-base-popup-field__input,
 .component-studio-root .input-dark .unity-base-dropdown__input {
     background-color: transparent;
     border-width: 0;
     color: var(--text-0, #f8fafc);
+    font-size: var(--field-font-size, 9px);
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    min-height: 18px;
+    -unity-text-align: middle-left;
+}
+
+.component-studio-root .input-dark .unity-base-popup-field__text {
+    color: var(--text-0, #f8fafc);
+    font-size: var(--field-font-size, 9px);
+}
+
+.component-studio-root .input-dark .unity-base-popup-field__arrow {
+    width: 12px;
+    min-width: 12px;
+    margin-left: 6px;
+    -unity-background-image-tint-color: var(--text-2, #94a3b8);
+}
+
+.component-studio-root .input-dark:focus .unity-base-popup-field__arrow,
+.component-studio-root .input-dark.unity-base-popup-field:focus .unity-base-popup-field__arrow,
+.component-studio-root .input-dark.unity-base-dropdown-field:focus .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: var(--text-0, #f8fafc);
+}
+/* ==================== UNIFIED VIEWPORT CONTROLS ==================== */
+.unified-viewport-controls {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    bottom: 80px;
+    width: 240px;
+    background-color: rgba(9, 12, 18, 0.9);
+    border-radius: 12px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.12);
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+    border-left-color: rgba(255, 255, 255, 0.12);
+    border-right-color: rgba(255, 255, 255, 0.12);
+    padding: 12px;
+    flex-direction: column;
+}
+
+/* When collapsed, shrink to content instead of occupying the full (top..bottom) space. */
+.unified-viewport-controls.tools-collapsed {
+    bottom: auto;
+    height: auto;
+    min-height: 0;
+}
+
+.unified-controls-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.unified-controls-title {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--text-0, #f8fafc);
+}
+
+.unified-controls-toggle {
+    font-size: 8px;
+    color: var(--text-1);
+    background-color: rgba(16, 20, 28, 0.7);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--line-strong);
+    border-bottom-color: var(--line-strong);
+    border-left-color: var(--line-strong);
+    border-right-color: var(--line-strong);
+    padding: 3px 8px;
+    border-radius: 6px;
+    min-width: 50px;
+    height: 20px;
+    min-height: 20px;
+}
+
+.unified-controls-toggle:hover {
+    background-color: rgba(20, 24, 32, 0.9);
+}
+
+.unified-controls-body {
+    flex-direction: column;
+    overflow: scroll;
+    flex-grow: 1;
+}
+
+.unified-section {
+    flex-direction: column;
+}
+
+.unified-section-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.unified-section-body {
+    flex-direction: column;
+}
+
+/* Keep section collapse consistent if the controller toggles the class. */
+.unified-section.controls-collapsed .unified-section-body {
+    display: none;
+}
+
+.unified-section-title {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--text-0);
+    margin-top: 10px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.unified-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.06);
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.unified-controls-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.unified-label {
+    font-size: 9px;
+    color: var(--text-2);
+    min-width: 40px;
+    margin-right: 6px;
+}
+
+.unified-label-small {
+    font-size: 9px;
+    color: var(--text-2);
+    min-width: 35px;
+    margin-right: 4px;
+}
+
+.unified-slider {
+    flex-grow: 1;
+    min-width: 100px;
+}
+
+.unified-toggle {
+    font-size: 9px;
+    color: var(--text-1);
+    margin-right: 4px;
+    min-width: 70px;
+    height: 20px;
+    min-height: 20px;
+}
+
+.unified-btn {
+    font-size: 9px;
+    color: var(--text-1);
+    background-color: rgba(30, 35, 45, 0.8);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-width: 50px;
+    height: 22px;
+    min-height: 22px;
+    margin-right: 4px;
+    flex-grow: 1;
+}
+
+.unified-btn:hover {
+    background-color: rgba(40, 45, 55, 0.9);
+    border-top-color: rgba(255, 255, 255, 0.15);
+    border-bottom-color: rgba(255, 255, 255, 0.15);
+    border-left-color: rgba(255, 255, 255, 0.15);
+    border-right-color: rgba(255, 255, 255, 0.15);
+}
+
+.unified-btn:active {
+    background-color: var(--accent);
+    color: var(--bg-0);
+}
+
+.unified-btn-small {
+    font-size: 8px;
+    padding: 3px 6px;
+    min-width: 40px;
+    margin-right: 0;
+    height: 20px;
+    min-height: 20px;
+}
+
+.unified-btn-wide {
+    font-size: 9px;
+    width: 100%;
+    margin-right: 0;
+    -unity-font-style: bold;
+    height: 26px;
+    min-height: 26px;
+}
+
+.unified-mode-btn {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--text-1);
+    background-color: rgba(30, 35, 45, 0.8);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-width: 32px;
+    height: 22px;
+    min-height: 22px;
+    margin-right: 4px;
+    flex-grow: 1;
+}
+
+/* Primary action styling for Rebuild 3D (name selector matches UXML element name). */
+#Circuit3DRebuildBtn {
+    background-color: rgba(60, 120, 255, 0.85);
+    border-top-color: rgba(255, 255, 255, 0.18);
+    border-bottom-color: rgba(255, 255, 255, 0.18);
+    border-left-color: rgba(255, 255, 255, 0.18);
+    border-right-color: rgba(255, 255, 255, 0.18);
+    color: #0b0f14;
+    -unity-font-style: bold;
+}
+
+#Circuit3DRebuildBtn:hover {
+    background-color: rgba(70, 135, 255, 0.92);
+}
+
+#Circuit3DRebuildBtn:active {
+    background-color: rgba(80, 150, 255, 1.0);
+}
+
+.unified-mode-btn:hover {
+    background-color: rgba(40, 45, 55, 0.9);
+}
+
+.unified-mode-btn.active {
+    background-color: var(--accent);
+    color: var(--bg-0);
+    border-top-color: var(--accent);
+    border-bottom-color: var(--accent);
+    border-left-color: var(--accent);
+    border-right-color: var(--accent);
+}
+
+.unified-field {
+    flex-grow: 1;
+    min-width: 60px;
+    height: 22px;
+    font-size: 9px;
+    background-color: rgba(10, 15, 20, 0.8);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+/* -------------------- HARD OVERRIDES: Specs/Defaults rows --------------------
+   Some Unity themes/stylesheets can force TextField visuals to a white box.
+   These fields are created dynamically and share the names KeyField/ValueField.
+   We override them with high specificity so they always match the dark theme.
+*/
+.component-studio-root .editor-list .editor-row #KeyField,
+.component-studio-root .editor-list .editor-row #ValueField {
+    background-color: var(--field-bg, rgba(16, 20, 28, 0.75));
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-color: var(--field-border, rgba(255, 255, 255, 0.12));
+    border-bottom-color: var(--field-border, rgba(255, 255, 255, 0.12));
+    border-left-color: var(--field-border, rgba(255, 255, 255, 0.12));
+    border-right-color: var(--field-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--field-radius, 6px);
+    color: var(--text-0, #f8fafc);
+    height: 22px;
+}
+
+.component-studio-root .editor-list .editor-row #KeyField:hover,
+.component-studio-root .editor-list .editor-row #ValueField:hover {
+    background-color: var(--field-bg-hover, rgba(18, 24, 34, 0.85));
+    border-top-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+    border-bottom-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+    border-left-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+    border-right-color: var(--field-border-hover, rgba(255, 255, 255, 0.18));
+}
+
+.component-studio-root .editor-list .editor-row #KeyField:focus,
+.component-studio-root .editor-list .editor-row #ValueField:focus {
+    background-color: var(--field-bg-focus, rgba(18, 24, 34, 0.95));
+    border-top-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+    border-bottom-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+    border-left-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+    border-right-color: var(--field-border-focus, rgba(56, 189, 248, 0.65));
+}
+
+.component-studio-root .editor-list .editor-row #KeyField .unity-text-field__input,
+.component-studio-root .editor-list .editor-row #KeyField .unity-base-text-field__input,
+.component-studio-root .editor-list .editor-row #ValueField .unity-text-field__input,
+.component-studio-root .editor-list .editor-row #ValueField .unity-base-text-field__input {
+    background-color: transparent;
+    border-width: 0;
+    color: var(--text-0, #f8fafc);
+    font-size: var(--field-font-size, 9px);
+    -unity-text-align: middle-left;
 }

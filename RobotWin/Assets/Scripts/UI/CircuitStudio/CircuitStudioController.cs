@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using RobotTwin.Tools;
 
 namespace RobotTwin.UI
 {
@@ -100,6 +101,9 @@ namespace RobotTwin.UI
         private VisualElement _preferencesOverlay;
         private TextField _prefProjectNameField;
         private TextField _prefProjectIdField;
+        private Toggle _prefAutoLaunchMonitorToggle;
+        private Toggle _prefForceVirtualMcuToggle;
+        private Toggle _prefRunInBackgroundToggle;
         private Button _prefSaveBtn;
         private Button _prefCancelBtn;
         private VisualElement _netEditorOverlay;
@@ -297,7 +301,11 @@ namespace RobotTwin.UI
         private VisualElement _codeHighlightInput;
         private bool _codeHighlightReady;
         private bool _codeHighlightEventsHooked;
+        private bool _codeHighlightSetupRetryScheduled;
+        private int _codeHighlightSetupAttempts;
         private string _lastHighlightText = string.Empty;
+
+        private const int MaxCodeHighlightSetupAttempts = 30;
 
         private const float GridSnap = 10f;
         private const float ComponentWidth = CircuitLayoutSizing.DefaultComponentWidth;
@@ -731,6 +739,9 @@ namespace RobotTwin.UI
             _preferencesOverlay = _root.Q<VisualElement>("PreferencesOverlay");
             _prefProjectNameField = _root.Q<TextField>("PrefProjectNameField");
             _prefProjectIdField = _root.Q<TextField>("PrefProjectIdField");
+            _prefAutoLaunchMonitorToggle = _root.Q<Toggle>("PrefAutoLaunchMonitorToggle");
+            _prefForceVirtualMcuToggle = _root.Q<Toggle>("PrefForceVirtualMcuToggle");
+            _prefRunInBackgroundToggle = _root.Q<Toggle>("PrefRunInBackgroundToggle");
             _prefSaveBtn = _root.Q<Button>("PrefSaveBtn");
             _prefCancelBtn = _root.Q<Button>("PrefCancelBtn");
             if (_preferencesOverlay != null)
@@ -982,6 +993,18 @@ namespace RobotTwin.UI
 
             if (_prefProjectNameField != null) _prefProjectNameField.value = projectName;
             if (_prefProjectIdField != null) _prefProjectIdField.value = _currentCircuit?.Id ?? string.Empty;
+            if (_prefAutoLaunchMonitorToggle != null)
+            {
+                _prefAutoLaunchMonitorToggle.SetValueWithoutNotify(FirmwareMonitorLauncher.AutoLaunchEnabled);
+            }
+            if (_prefForceVirtualMcuToggle != null)
+            {
+                _prefForceVirtualMcuToggle.SetValueWithoutNotify(FirmwareMonitorLauncher.ForceVirtualMcuInPipeMode);
+            }
+            if (_prefRunInBackgroundToggle != null)
+            {
+                _prefRunInBackgroundToggle.SetValueWithoutNotify(RunInBackgroundPreference.Enabled);
+            }
             _preferencesOverlay.style.display = DisplayStyle.Flex;
             _prefProjectNameField?.Focus();
         }
@@ -1024,6 +1047,20 @@ namespace RobotTwin.UI
             {
                 SessionManager.Instance.CurrentProject.ProjectName = name;
                 SessionManager.Instance.CurrentProject.Circuit = _currentCircuit;
+            }
+
+            if (_prefAutoLaunchMonitorToggle != null)
+            {
+                FirmwareMonitorLauncher.AutoLaunchEnabled = _prefAutoLaunchMonitorToggle.value;
+            }
+            if (_prefForceVirtualMcuToggle != null)
+            {
+                FirmwareMonitorLauncher.ForceVirtualMcuInPipeMode = _prefForceVirtualMcuToggle.value;
+            }
+            if (_prefRunInBackgroundToggle != null)
+            {
+                RunInBackgroundPreference.Enabled = _prefRunInBackgroundToggle.value;
+                RunInBackgroundPreference.Apply();
             }
 
             PopulateProjectTree();
@@ -2070,6 +2107,12 @@ namespace RobotTwin.UI
                 EnsureCodeWorkspace();
                 RefreshCodeTargets();
                 RefreshCodeFileList();
+                // The code editor hides its real text via USS; ensure highlight overlay exists
+                // after the panel becomes visible so text + gutter are always shown.
+                _codeHighlightSetupAttempts = 0;
+                _codeHighlightSetupRetryScheduled = false;
+                SetupCodeEditorSyntaxHighlighting();
+                RefreshCodeEditorVisuals(_codeEditor?.value ?? string.Empty, true);
                 _codeEditor?.Focus();
             }
             else if (mode == CenterPanelMode.Preview3D)
@@ -2285,7 +2328,10 @@ namespace RobotTwin.UI
             _activeCodePath = path;
             if (_codeEditor != null)
             {
-                _codeEditor.SetValueWithoutNotify(content);
+                // Avoid polluting history; ensure overlay + gutter repaint even when change events are skipped.
+                _suppressCodeHistory = true;
+                ApplyCodeEditorValue(content, content.Length, content.Length);
+                _suppressCodeHistory = false;
             }
             ResetCodeHistory(content);
             UpdateCodeFileLabel();
@@ -5223,10 +5269,18 @@ namespace RobotTwin.UI
                 ?? _codeEditor.Q(className: "unity-text-field__input")
                 ?? _codeEditor.Children().FirstOrDefault(c => c.GetType().Name.Contains("Input"));
 
-            if (input == null) return;
+            if (input == null)
+            {
+                ScheduleCodeEditorSyntaxHighlightRetry();
+                return;
+            }
 
             var textElement = input.Q<TextElement>() ?? input.Children().OfType<TextElement>().FirstOrDefault();
-            if (textElement == null) return;
+            if (textElement == null)
+            {
+                ScheduleCodeEditorSyntaxHighlightRetry();
+                return;
+            }
 
             _codeHighlightTarget = textElement;
             _codeHighlightInput = input;
@@ -5239,12 +5293,7 @@ namespace RobotTwin.UI
                 _codeHighlightLabel.enableRichText = true;
                 _codeHighlightLabel.pickingMode = PickingMode.Ignore;
                 _codeHighlightLabel.AddToClassList("code-highlight-overlay");
-                _codeHighlightLabel.style.position = Position.Absolute;
-                _codeHighlightLabel.style.left = 0;
-                _codeHighlightLabel.style.top = 0;
-                _codeHighlightLabel.style.right = 0;
-                _codeHighlightLabel.style.bottom = 0;
-                _codeHighlightLabel.style.unityTextAlign = TextAnchor.UpperLeft;
+                // Layout/positioning is driven by USS (.code-highlight-overlay). Avoid overriding here.
             }
 
             VisualElement container = input;
@@ -5256,12 +5305,14 @@ namespace RobotTwin.UI
                 // Sync Gutter Scroll
                 if (_codeGutterScroll != null)
                 {
-                    scrollView.verticalScroller.valueChanged += (val) =>
+                    scrollView.verticalScroller.valueChanged += val =>
                     {
+                        if (_codeGutterScroll == null) return;
                         var maxSync = Mathf.Max(0.1f, Mathf.Abs(_codeGutterScroll.scrollOffset.y - val));
                         if (maxSync > 0.5f) _codeGutterScroll.scrollOffset = new Vector2(0, val);
                     };
-                    _codeGutterScroll.verticalScroller.valueChanged += (val) =>
+
+                    _codeGutterScroll.verticalScroller.valueChanged += val =>
                     {
                         var maxSync = Mathf.Max(0.1f, Mathf.Abs(scrollView.scrollOffset.y - val));
                         if (maxSync > 0.5f) scrollView.scrollOffset = new Vector2(scrollView.scrollOffset.x, val);
@@ -5269,7 +5320,7 @@ namespace RobotTwin.UI
                 }
             }
 
-            // Fix: Ensure we are inserting into the actual parent of the TextElement
+            // Ensure we are inserting into the actual parent of the TextElement
             var targetParent = textElement.parent ?? container;
 
             if (_codeHighlightLabel.parent != targetParent)
@@ -5278,29 +5329,22 @@ namespace RobotTwin.UI
                 targetParent.Add(_codeHighlightLabel);
             }
 
-            // Only attempt PlaceBehind if they are actual siblings
-            if (_codeHighlightLabel.parent == textElement.parent)
-            {
-                try
-                {
-                    _codeHighlightLabel.PlaceBehind(textElement);
-                }
-                catch (System.Exception) { /* Best effort */ }
-            }
+            // Draw overlay on top (it doesn't block input thanks to PickingMode.Ignore).
+            _codeHighlightLabel.BringToFront();
 
             if (!_codeHighlightEventsHooked)
             {
                 _codeHighlightLabel.RegisterCallback<ChangeEvent<string>>(evt => evt.StopPropagation());
 
-                // Hook changes for Gutter
+                // Hook changes for Gutter + highlight
                 _codeEditor.RegisterCallback<ChangeEvent<string>>(evt =>
                 {
                     UpdateCodeGutter(evt.newValue);
                     UpdateCodeSyntaxHighlight(evt.newValue);
                 });
+
                 // Initial update
                 UpdateCodeGutter(_codeEditor.value);
-
                 _codeHighlightEventsHooked = true;
             }
 
@@ -5308,6 +5352,53 @@ namespace RobotTwin.UI
             ApplyCodeEditorHighlightOverlay(textElement);
             SyncCodeHighlightStyle();
             UpdateCodeSyntaxHighlight(_codeEditor.value);
+        }
+
+        private void ScheduleCodeEditorSyntaxHighlightRetry()
+        {
+            if (_codeEditor == null || _codeHighlightReady) return;
+            if (_codeHighlightSetupRetryScheduled) return;
+            if (_codeHighlightSetupAttempts >= MaxCodeHighlightSetupAttempts) return;
+
+            _codeHighlightSetupRetryScheduled = true;
+            _codeHighlightSetupAttempts++;
+
+            // Retry next frame-ish; UI Toolkit often builds TextElement lazily.
+            _codeEditor.schedule.Execute(() =>
+            {
+                _codeHighlightSetupRetryScheduled = false;
+                SetupCodeEditorSyntaxHighlighting();
+                if (_codeHighlightReady)
+                {
+                    RefreshCodeEditorVisuals(_codeEditor.value, false);
+                }
+            }).ExecuteLater(50);
+        }
+
+        private void RefreshCodeEditorVisuals(string text, bool scheduleRetry)
+        {
+            if (_codeEditor == null) return;
+
+            // Ensure the overlay exists; otherwise the USS hides the TextField's own text.
+            if (!_codeHighlightReady)
+            {
+                SetupCodeEditorSyntaxHighlighting();
+            }
+
+            UpdateCodeGutter(text);
+            UpdateCodeSyntaxHighlight(text);
+            SyncCodeHighlightStyle();
+
+            // Force repaints (Unity UI Toolkit can miss redraws after programmatic text changes).
+            _codeGutterLines?.MarkDirtyRepaint();
+            _codeHighlightLabel?.MarkDirtyRepaint();
+            _codeEditor.MarkDirtyRepaint();
+
+            if (scheduleRetry)
+            {
+                // If the editor wasn't attached / overlay not ready yet, retry on the next tick.
+                _codeEditor.schedule.Execute(() => RefreshCodeEditorVisuals(_codeEditor.value, false)).ExecuteLater(1);
+            }
         }
 
         private void UpdateCodeGutter(string text)
@@ -5381,13 +5472,24 @@ namespace RobotTwin.UI
             if (!_codeHighlightReady || _codeHighlightLabel == null || _codeHighlightTarget == null) return;
 
             var resolved = _codeHighlightTarget.resolvedStyle;
-            var inputResolved = _codeHighlightInput != null ? _codeHighlightInput.resolvedStyle : resolved;
             _codeHighlightLabel.style.fontSize = resolved.fontSize;
-            _codeHighlightLabel.style.paddingLeft = inputResolved.paddingLeft;
-            _codeHighlightLabel.style.paddingRight = inputResolved.paddingRight;
-            _codeHighlightLabel.style.paddingTop = inputResolved.paddingTop;
-            _codeHighlightLabel.style.paddingBottom = inputResolved.paddingBottom;
+            _codeHighlightLabel.style.unityFontStyleAndWeight = resolved.unityFontStyleAndWeight;
             _codeHighlightLabel.style.unityTextAlign = TextAnchor.UpperLeft;
+
+            // Pixel-perfect alignment: match the hidden TextElement's box.
+            // (The TextElement already accounts for any internal paddings/offsets applied by the TextInput.)
+            var r = _codeHighlightTarget.layout;
+            _codeHighlightLabel.style.position = Position.Absolute;
+            _codeHighlightLabel.style.left = r.x;
+            _codeHighlightLabel.style.top = r.y;
+            _codeHighlightLabel.style.width = r.width;
+            _codeHighlightLabel.style.height = r.height;
+
+            // Avoid double-padding; .code-highlight-overlay padding is kept at 0 in USS.
+            _codeHighlightLabel.style.paddingLeft = 0;
+            _codeHighlightLabel.style.paddingRight = 0;
+            _codeHighlightLabel.style.paddingTop = 0;
+            _codeHighlightLabel.style.paddingBottom = 0;
         }
 
         private void UpdateCodeSyntaxHighlight(string source)
@@ -5690,7 +5792,7 @@ namespace RobotTwin.UI
 
             // Re-apply theme if it got reset during typing
             ApplyCodeEditorTheme();
-            UpdateCodeSyntaxHighlight(evt.newValue);
+            RefreshCodeEditorVisuals(evt.newValue, true);
         }
 
         private void OnCodeEditorKeyDown(KeyDownEvent evt)
@@ -5943,6 +6045,8 @@ namespace RobotTwin.UI
             int clampedCursor = Mathf.Clamp(cursorIndex, 0, max);
             int clampedSelection = Mathf.Clamp(selectionIndex, 0, max);
             SetSelectionIndices(_codeEditor, clampedCursor, clampedSelection);
+            // Ensure gutter + highlight overlay repaint even when changes are programmatic.
+            RefreshCodeEditorVisuals(newValue, true);
         }
 
         private void SetSelectionIndices(TextField field, int cursorIndex, int selectionIndex)
@@ -6079,8 +6183,7 @@ namespace RobotTwin.UI
         private void ApplyCodeEditorSnapshot(CodeEditorSnapshot snapshot)
         {
             if (_codeEditor == null) return;
-            _codeEditor.SetValueWithoutNotify(snapshot.Text ?? string.Empty);
-            SetSelectionIndices(_codeEditor, snapshot.CursorIndex, snapshot.SelectionIndex);
+            ApplyCodeEditorValue(snapshot.Text ?? string.Empty, snapshot.CursorIndex, snapshot.SelectionIndex);
         }
 
         private void ResetCodeHistory(string content)
@@ -6088,7 +6191,7 @@ namespace RobotTwin.UI
             _codeHistory.Clear();
             _codeHistory.Add(BuildCodeEditorSnapshot(content));
             _codeHistoryIndex = _codeHistory.Count - 1;
-            UpdateCodeSyntaxHighlight(content);
+            RefreshCodeEditorVisuals(content, true);
         }
 
         private void UndoCodeEdit()
@@ -6099,7 +6202,7 @@ namespace RobotTwin.UI
             var snapshot = _codeHistory[_codeHistoryIndex];
             ApplyCodeEditorSnapshot(snapshot);
             _suppressCodeHistory = false;
-            UpdateCodeSyntaxHighlight(snapshot.Text);
+            RefreshCodeEditorVisuals(snapshot.Text, true);
         }
 
         private void RedoCodeEdit()
@@ -6110,7 +6213,7 @@ namespace RobotTwin.UI
             var snapshot = _codeHistory[_codeHistoryIndex];
             ApplyCodeEditorSnapshot(snapshot);
             _suppressCodeHistory = false;
-            UpdateCodeSyntaxHighlight(snapshot.Text);
+            RefreshCodeEditorVisuals(snapshot.Text, true);
         }
 
         private void BuildCodeEditorMenu(GenericDropdownMenu menu)
@@ -6216,7 +6319,12 @@ namespace RobotTwin.UI
             if (string.Equals(_activeCodePath, path, StringComparison.OrdinalIgnoreCase))
             {
                 _activeCodePath = null;
-                if (_codeEditor != null) _codeEditor.SetValueWithoutNotify(string.Empty);
+                if (_codeEditor != null)
+                {
+                    _suppressCodeHistory = true;
+                    ApplyCodeEditorValue(string.Empty, 0, 0);
+                    _suppressCodeHistory = false;
+                }
                 UpdateCodeFileLabel();
                 ResetCodeHistory(string.Empty);
             }
@@ -6242,7 +6350,7 @@ namespace RobotTwin.UI
             RegisterRightClickMenu(element, menu =>
             {
                 menu.AddItem("Save Project", false, SaveCurrentProject);
-                menu.AddItem("Open Project", false, OpenProjectDialog);
+                RefreshCodeEditorVisuals(string.Empty, true);
             });
         }
 
@@ -6969,12 +7077,8 @@ namespace RobotTwin.UI
                 // For now, we rely on the runtime binding
             };
             EnsureComponentProperties(spec);
-
-            // Hack: Persist position in a temp dict or misuse existing fields if needed
-            // Since ComponentSpec is standard, we assume we can just manage the VisualElement position for this session.
             _currentCircuit.Components.Add(spec);
             ApplyDefaultProperties(spec, item);
-            SetComponentPosition(spec, position);
 
             CreateComponentVisuals(spec, item, position);
             Debug.Log($"[CircuitStudio] Created {spec.Id} at {position}");
@@ -7662,7 +7766,6 @@ namespace RobotTwin.UI
             note.AddToClassList("text-note-field");
             note.RegisterValueChangedCallback(evt =>
             {
-                if (spec.Properties == null) spec.Properties = new Dictionary<string, string>();
                 spec.Properties["text"] = evt.newValue ?? string.Empty;
             });
             root.Add(note);
@@ -7671,7 +7774,6 @@ namespace RobotTwin.UI
         private VisualElement BuildBoardPinColumn(ComponentSpec spec, IReadOnlyList<string> pins, bool isLeft)
         {
             var column = new VisualElement();
-            column.AddToClassList("arduino-pin-column");
             column.AddToClassList(isLeft ? "arduino-pin-column-left" : "arduino-pin-column-right");
             column.AddToClassList(isLeft ? "left" : "right");
 
@@ -7824,7 +7926,6 @@ namespace RobotTwin.UI
         private string GetPinDisplayName(string pinName)
         {
             if (string.IsNullOrWhiteSpace(pinName)) return string.Empty;
-            if (pinName.StartsWith("GND")) return "GND";
             return pinName;
         }
 
@@ -10835,8 +10936,8 @@ namespace RobotTwin.UI
             }
 
             var orbit = Vector2.zero;
-            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
-            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
             if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
             if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
             _circuit3DRenderer.Orbit(orbit);

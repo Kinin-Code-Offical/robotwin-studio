@@ -8,9 +8,9 @@
         <ui:Instance template="Sidebar" src="../Shared/Sidebar.uxml" name="MainSidebar" />
 
         <!-- Main Content Area -->
-        <ui:VisualElement name="ContentArea" style="flex-grow: 1; padding: 24px; background-color: #1a1a1a;">
+        <ui:VisualElement name="ContentArea" style="flex-grow: 1; padding: 24px; background-color: #1a1a1a; flex-shrink: 1; min-width: 400px;">
             <!-- Dynamic Content Container -->
-            <ui:VisualElement name="RouterOutlet" style="flex-grow: 1; z-index: 1;">
+            <ui:VisualElement name="RouterOutlet" style="flex-grow: 1; z-index: 1; flex-shrink: 1; min-width: 0;">
                <!-- Home View will be instantiated here by default -->
             </ui:VisualElement>
         </ui:VisualElement>

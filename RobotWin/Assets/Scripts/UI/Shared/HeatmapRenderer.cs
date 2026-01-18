@@ -15,7 +15,6 @@ namespace RobotTwin.UI
         [SerializeField] private Gradient _temperatureGradient;
         [SerializeField] private float _minTemperature = 20f; // °C
         [SerializeField] private float _maxTemperature = 100f; // °C
-        [SerializeField] private bool _showLegend = true;
         [SerializeField] private int _resolution = 256; // Texture resolution
 
         [Header("Display Options")]

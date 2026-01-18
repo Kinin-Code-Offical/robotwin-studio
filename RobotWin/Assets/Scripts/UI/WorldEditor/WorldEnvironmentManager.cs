@@ -28,7 +28,7 @@ namespace RobotTwin.UI.WorldEditor
         [SerializeField] private List<GameObject> _boundaryWalls = new List<GameObject>();
 
         [Header("Terrain")]
-        [SerializeField] private bool _terrainEnabled;
+        private GameObject _terrainGo;
 #if UNITY_TERRAIN
         [SerializeField] private Terrain _terrain;
         [SerializeField] private TerrainCollider _terrainCollider;
@@ -282,21 +282,20 @@ namespace RobotTwin.UI.WorldEditor
         {
             if (!config.EnableTerrain)
             {
-                if (_terrain != null)
+                if (_terrainGo != null)
                 {
-                    _terrain.gameObject.SetActive(false);
+                    _terrainGo.SetActive(false);
                 }
-                _terrainEnabled = false;
                 return;
             }
 
-            _terrainEnabled = true;
-            if (_terrain == null)
+#if UNITY_TERRAIN_MODULE
+            if (_terrainGo == null)
             {
-                var terrainGo = new GameObject("WorldTerrain");
-                terrainGo.transform.SetParent(_roomContainer != null ? _roomContainer.transform : transform);
-                _terrain = terrainGo.AddComponent<Terrain>();
-                _terrainCollider = terrainGo.AddComponent<TerrainCollider>();
+                _terrainGo = new GameObject("WorldTerrain");
+                _terrainGo.transform.SetParent(_roomContainer != null ? _roomContainer.transform : transform);
+                _terrain = _terrainGo.AddComponent<Terrain>();
+                _terrainCollider = _terrainGo.AddComponent<TerrainCollider>();
             }
 
             var data = new TerrainData();
@@ -327,6 +326,7 @@ namespace RobotTwin.UI.WorldEditor
             }
 
             _terrain.gameObject.SetActive(true);
+#endif
         }
 
         private void EnsurePlayer(WorldConfiguration config)
@@ -433,13 +433,13 @@ namespace RobotTwin.UI.WorldEditor
 
         private void ApplyWindForce()
         {
-            Rigidbody[] rigidbodies = FindObjectsOfType<Rigidbody>();
+            Rigidbody[] rigidbodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
             foreach (var rb in rigidbodies)
             {
                 if (!rb.isKinematic)
                 {
                     // Apply wind force based on air density and object velocity
-                    Vector3 relativeWind = _activeConfig.Wind - rb.velocity;
+                    Vector3 relativeWind = _activeConfig.Wind - rb.linearVelocity;
                     Vector3 dragForce = 0.5f * _activeConfig.AirDensity * relativeWind.sqrMagnitude * 0.1f * relativeWind.normalized;
                     rb.AddForce(dragForce, ForceMode.Force);
                 }
@@ -465,5 +465,15 @@ namespace RobotTwin.UI.WorldEditor
                 Debug.LogWarning($"[WorldEnvironmentManager] Configuration file not found: {path}");
             }
         }
+    }
+
+    /// <summary>
+    /// WiFi Modem Simulator - placeholder for modem component
+    /// </summary>
+    public class WiFiModemSimulator : MonoBehaviour
+    {
+        public string SSID;
+        public float Range;
+        public float Bandwidth;
     }
 }

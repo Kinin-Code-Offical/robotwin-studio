@@ -10,6 +10,7 @@ LOG_FILE = LOG_DIR / "build_output_audit.log"
 
 EXPECTED = {
     "tools/scripts/build_firmware.ps1": ["builds/firmware", "logs/firmware"],
+    "tools/scripts/build_firmware_monitor.ps1": ["builds/RobotWinFirmwareMonitor", "logs/RobotWinFirmwareMonitor"],
     "tools/scripts/build_native.ps1": ["builds/native"],
     "tools/scripts/build_windows_standalone.ps1": ["builds/windows", "logs/unity"],
     "tools/scripts/build_template_bvms.ps1": ["logs/tools", "builds"],

@@ -25,6 +25,15 @@ namespace RobotTwin.UI.RobotEditor
         public float OperatingVoltage = 12.0f; // volts
         public float BatteryCapacity = 5000f; // mAh
 
+        // Extended properties for RobotEditorController
+        public string VehicleName;
+        public float MaxSpeed = 2.0f; // m/s
+        public float Weight = 5.0f; // kg
+        public float BoardSize = 1.0f; // scale factor
+        public bool EnableMiniaturization;
+        public float MiniaturizationLevel = 0.5f; // 0-1
+        public float OptimizationLevel = 0.5f; // 0-1
+
         // Component lists
         public List<Motor> Motors = new List<Motor>();
         public List<Servo> Servos = new List<Servo>();
@@ -79,6 +88,8 @@ namespace RobotTwin.UI.RobotEditor
         public string Type;
         public float PowerConsumption = 0.05f;
         public int RequiredPins = 1;
+        public float Size = 1.0f; // scale factor
+        public float Range = 1.0f; // meters
     }
 
     [Serializable]

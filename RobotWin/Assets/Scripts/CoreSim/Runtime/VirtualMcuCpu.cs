@@ -12,6 +12,8 @@ namespace RobotTwin.CoreSim.Runtime
             _registers = registers;
         }
 
+        public int ProgramCounter => _pc;
+
         public void LoadProgram(VirtualMcuProgram program)
         {
             _program = program ?? new VirtualMcuProgram();

@@ -267,7 +267,7 @@
                 <ui:VisualElement class="bottom-status">
                     <ui:VisualElement class="rw-search-row rw-search-row-compact" style="margin-left: 6px;">
                         <ui:VisualElement class="rw-search-icon" style="width: 12px; height: 12px; margin-right: 6px;" />
-                        <ui:TextField name="LibrarySearchField" value="Search library..." class="rw-search-field input-dark lib-search" style="flex-grow: 1; min-width: 150px;" />
+                        <ui:TextField name="OutputSearchField" class="rw-search-field search-field output-search" style="flex-grow: 1; min-width: 150px;" />
                     </ui:VisualElement>
                     <ui:DropdownField name="OutputTagDropdown" class="input-dark output-tag" />
                     <ui:Button name="OutputFilterAllBtn" text="All" class="filter-btn active" />
@@ -301,6 +301,11 @@
                     <ui:TextField name="PrefProjectNameField" class="input input-dark" />
                     <ui:Label text="Project ID" class="modal-label" />
                     <ui:TextField name="PrefProjectIdField" class="input input-dark" />
+                    <ui:Label text="Firmware Monitor" class="modal-label" />
+                    <ui:Toggle name="PrefAutoLaunchMonitorToggle" text="Auto-launch on Run Mode" class="modal-toggle" />
+                    <ui:Toggle name="PrefForceVirtualMcuToggle" text="Force Virtual MCU for Monitor Pipe Mode" class="modal-toggle" />
+                    <ui:Label text="Simulation" class="modal-label" />
+                    <ui:Toggle name="PrefRunInBackgroundToggle" text="Run simulation in background" class="modal-toggle" />
                 </ui:VisualElement>
                 <ui:VisualElement class="modal-actions">
                     <ui:Button name="PrefCancelBtn" text="Cancel" class="btn-secondary" />

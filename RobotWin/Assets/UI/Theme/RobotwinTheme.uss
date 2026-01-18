@@ -70,6 +70,10 @@ Button {
 .text-subtle {
     color: #6b7280;
     font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 /* =========================================
@@ -85,7 +89,7 @@ Button {
     border-right-color: rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
-    flex-shrink: 0;
+    flex-shrink: 1;
     overflow: hidden;
 }
 
@@ -103,6 +107,10 @@ Button {
     font-size: 16px;
     -unity-font-style: bold;
     margin-left: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .sidebar-nav {
@@ -138,6 +146,10 @@ Button {
     margin-left: 12px;
     font-size: 14px;
     color: #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .sidebar-button:hover Label {
@@ -282,9 +294,8 @@ Button {
     min-height: 32px;
 }
 
-.rw-search-row:focus-within {
-    border-color: #3b82f6;
-}
+/* NOTE: UI Toolkit versions prior to full selector support don't recognize :focus-within.
+   We instead toggle a class (rw-focus-within) from code when the inner TextField gains focus. */
 
 .rw-search-row.rw-search-row-compact {
     border-radius: 6px;

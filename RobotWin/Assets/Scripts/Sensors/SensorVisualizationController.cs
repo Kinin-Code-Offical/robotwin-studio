@@ -38,7 +38,7 @@ namespace RobotTwin.Sensors
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<SensorVisualizationController>();
+                    _instance = FindFirstObjectByType<SensorVisualizationController>();
                     if (_instance == null)
                     {
                         GameObject go = new GameObject("SensorVisualizationController");

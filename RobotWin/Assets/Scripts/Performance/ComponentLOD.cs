@@ -20,13 +20,6 @@ namespace RobotTwin.Performance
         [SerializeField] private float _lodMedium = 0.25f; // 25% screen height
         [SerializeField] private float _lodLow = 0.1f;     // 10% screen height
 
-        [Header("Mesh Simplification")]
-        [Tooltip("Enable aggressive mesh decimation for Low LOD")]
-        [SerializeField] private bool _enableSimplification = true;
-        [Tooltip("Target triangle reduction for Low LOD (0-1)")]
-        [Range(0.1f, 0.9f)]
-        [SerializeField] private float _lowLodReduction = 0.9f; // 90% reduction
-
         private LODGroup _lodGroup;
 
         private void OnValidate()
@@ -155,7 +148,7 @@ namespace RobotTwin.Performance
             if (meshFilter == null || meshFilter.sharedMesh == null)
                 return 0;
 
-            return meshFilter.sharedMesh.triangles.Length / 3;
+            return MeshAnalyzer.GetTriangleCountSafe(meshFilter.sharedMesh);
         }
 
         /// <summary>
@@ -209,14 +202,14 @@ namespace RobotTwin.Performance
 
             // Draw LOD bounds
             Gizmos.color = Color.green;
-            Gizmos.DrawWireCube(transform.position, _lodGroup.size);
+            Gizmos.DrawWireCube(transform.position, Vector3.one * _lodGroup.size);
 
             // Draw LOD transition distances
             var lods = _lodGroup.GetLODs();
             for (int i = 0; i < lods.Length; i++)
             {
                 float screenHeight = lods[i].screenRelativeTransitionHeight;
-                float radius = _lodGroup.size.magnitude * screenHeight;
+                float radius = _lodGroup.size * screenHeight;
 
                 Gizmos.color = new Color(1f - (i * 0.3f), i * 0.3f, 0f);
                 Gizmos.DrawWireSphere(transform.position, radius);

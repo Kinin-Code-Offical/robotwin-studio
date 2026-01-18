@@ -120,7 +120,7 @@
     color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 
@@ -146,7 +146,7 @@
     color: var(--color-text-secondary);
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 
@@ -200,8 +200,9 @@
 .card-button {
     flex-grow: 1;
     flex-basis: 0;
-    min-width: 220px;
-    height: 140px;
+    min-width: 200px;
+    min-height: 120px;
+    max-height: 180px;
     padding: 18px;
     margin-right: 16px;
     margin-bottom: 16px;
@@ -274,7 +275,7 @@
     color: var(--color-text-secondary);
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 
@@ -623,6 +624,10 @@
     -unity-font-style: bold;
     font-size: 11px;
     color: #a6adba;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 /* Table Columns */
@@ -666,6 +671,7 @@
     width: 20px; height: 20px;
     margin-right: 12px;
     -unity-background-image-tint-color: var(--color-text-secondary);
+    flex-shrink: 0;
 }
 
 .row-label-name {
@@ -675,6 +681,7 @@
     white-space: nowrap;
     overflow: hidden;
     -unity-text-overflow-position: end;
+    flex-shrink: 1;
 }
 
 .project-name-label {
@@ -689,6 +696,7 @@
     white-space: nowrap;
     overflow: hidden;
     -unity-text-overflow-position: end;
+    flex-shrink: 1;
 }
 
 .row-type {
@@ -697,6 +705,10 @@
     -unity-text-align: middle-center;
     background-color: transparent;
     align-self: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .row-actions {

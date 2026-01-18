@@ -7,10 +7,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using RobotTwin.CoreSim.Specs;
 using RobotTwin.Game;
+using RobotTwin.Tools;
 // using RobotTwin.CoreSim.Host;
 using System.Linq;
 using RobotTwin.CoreSim;
 using RobotTwin.CoreSim.Runtime;
+using RobotWin.Hardware.Instruments;
+using RobotWin.Hardware.UI;
 
 namespace RobotTwin.UI
 {
@@ -36,6 +39,7 @@ namespace RobotTwin.UI
         private Label _usbStatusLabel;
         private Label _usbHintLabel;
         private ScrollView _usbBoardList;
+        private Toggle _usbDefaultConnectedToggle;
         private Label _comStatusLabel;
         private Button _comInstallBtn;
         private TextField _componentSearchField;
@@ -67,6 +71,12 @@ namespace RobotTwin.UI
         private Button _wiringHeatmapBtn;
         private Button _wiringReportBtn;
         private bool _wireHeatmapActive;
+        private Button _openMultimeterBtn;
+        private Button _openScopeBtn;
+        private Button _closeInstrumentsBtn;
+        private Toggle _runInBackgroundToggle;
+        private Transform _instrumentRoot;
+        private readonly List<VirtualInstrumentBase> _activeInstruments = new List<VirtualInstrumentBase>();
         private Circuit3DView _circuit3DRenderer;
         private bool _is3DDragging;
         private bool _did3DResetOnOpen;
@@ -125,6 +135,8 @@ namespace RobotTwin.UI
         private readonly Dictionary<string, bool> _usbConnectedByBoard = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Toggle> _usbToggles = new Dictionary<string, Toggle>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Label> _usbPortLabels = new Dictionary<string, Label>(StringComparer.OrdinalIgnoreCase);
+        private const string UsbDefaultConnectedPrefKey = "RunMode.UsbDefaultConnected";
+        private bool _usbDefaultConnected = true;
         private string _lastValidationSummary = string.Empty;
         private string _lastPowerSummary = string.Empty;
         private bool _comInstallAttempted;
@@ -182,6 +194,7 @@ namespace RobotTwin.UI
             _usbStatusLabel = root.Q<Label>("UsbStatusLabel");
             _usbHintLabel = root.Q<Label>("UsbHintLabel");
             _usbBoardList = root.Q<ScrollView>("UsbBoardList");
+            _usbDefaultConnectedToggle = root.Q<Toggle>("UsbDefaultConnectedToggle");
             _comStatusLabel = root.Q<Label>("ComStatusLabel");
             _comInstallBtn = root.Q<Button>("ComDriverInstallBtn");
             _telemetryScroll = root.Q<ScrollView>("TelemetryScroll");
@@ -211,6 +224,10 @@ namespace RobotTwin.UI
             _wiringToolsBody = root.Q<VisualElement>("WiringToolsBody");
             _wiringHeatmapBtn = root.Q<Button>("WiringHeatmapBtn");
             _wiringReportBtn = root.Q<Button>("WiringReportBtn");
+            _openMultimeterBtn = root.Q<Button>("OpenMultimeterBtn");
+            _openScopeBtn = root.Q<Button>("OpenScopeBtn");
+            _closeInstrumentsBtn = root.Q<Button>("CloseInstrumentsBtn");
+            _runInBackgroundToggle = root.Q<Toggle>("RunInBackgroundToggle");
 
             EnsureDataLossOverlay(root);
 
@@ -227,10 +244,23 @@ namespace RobotTwin.UI
             {
                 _wiringReportBtn.clicked += DumpWireSnapshot;
             }
+            if (_openMultimeterBtn != null) _openMultimeterBtn.clicked += OpenMultimeter;
+            if (_openScopeBtn != null) _openScopeBtn.clicked += OpenOscilloscope;
+            if (_closeInstrumentsBtn != null) _closeInstrumentsBtn.clicked += CloseAllInstruments;
+            if (_runInBackgroundToggle != null)
+            {
+                _runInBackgroundToggle.SetValueWithoutNotify(RunInBackgroundPreference.Enabled);
+                _runInBackgroundToggle.RegisterValueChangedCallback(evt =>
+                {
+                    RunInBackgroundPreference.Enabled = evt.newValue;
+                    RunInBackgroundPreference.Apply();
+                });
+            }
             if (_wiringToolsToggle != null)
             {
                 _wiringToolsToggle.clicked += ToggleWiringToolsLayout;
             }
+            InitializeUsbDefaultPreference();
             SetWiringToolsLayoutCollapsed(true);
             InitVisualization(root);
             Initialize3DCameraControls();
@@ -238,7 +268,11 @@ namespace RobotTwin.UI
             StartSimulation(); // Start Loop
         }
 
-        private void OnDisable() => StopSimulation();
+        private void OnDisable()
+        {
+            StopSimulation();
+            CloseAllInstruments();
+        }
 
         private void InitializeResponsiveLayout(VisualElement root)
         {
@@ -718,7 +752,7 @@ namespace RobotTwin.UI
 
                 var toggle = new Toggle();
                 toggle.AddToClassList("usb-toggle");
-                bool defaultUsb = !IsBatterySupplyingBoard(board.Id);
+                bool defaultUsb = _usbDefaultConnected;
                 toggle.value = defaultUsb;
 
                 row.Add(name);
@@ -737,6 +771,39 @@ namespace RobotTwin.UI
 
             UpdateUsbPortLabels();
             UpdateUsbStatus();
+        }
+
+        private void InitializeUsbDefaultPreference()
+        {
+            _usbDefaultConnected = GetUsbDefaultConnectedPreference();
+            if (_usbDefaultConnectedToggle == null) return;
+            _usbDefaultConnectedToggle.SetValueWithoutNotify(_usbDefaultConnected);
+            _usbDefaultConnectedToggle.RegisterValueChangedCallback(evt => OnUsbDefaultConnectedChanged(evt.newValue));
+        }
+
+        private void OnUsbDefaultConnectedChanged(bool value)
+        {
+            _usbDefaultConnected = value;
+            PlayerPrefs.SetInt(UsbDefaultConnectedPrefKey, value ? 1 : 0);
+            PlayerPrefs.Save();
+            ApplyUsbDefaultToBoards(value);
+        }
+
+        private void ApplyUsbDefaultToBoards(bool value)
+        {
+            foreach (var kvp in _usbToggles)
+            {
+                if (kvp.Value == null) continue;
+                kvp.Value.SetValueWithoutNotify(value);
+                SetUsbConnected(kvp.Key, value);
+            }
+            UpdateUsbPortLabels();
+            UpdateUsbStatus();
+        }
+
+        private static bool GetUsbDefaultConnectedPreference()
+        {
+            return PlayerPrefs.GetInt(UsbDefaultConnectedPrefKey, 1) == 1;
         }
 
         private void ConfigureVirtualComPorts(List<ComponentSpec> boards, bool requestAdmin, bool allowFallback)
@@ -1990,6 +2057,10 @@ namespace RobotTwin.UI
             {
                 if (_circuit3DLoadingBlurTexture != null)
                 {
+                    if (RenderTexture.active == _circuit3DLoadingBlurTexture)
+                    {
+                        RenderTexture.active = null;
+                    }
                     _circuit3DLoadingBlurTexture.Release();
                 }
                 _circuit3DLoadingBlurTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32)
@@ -2162,6 +2233,115 @@ namespace RobotTwin.UI
             {
                 AppendLog($"[Wiring] - {entry.Net} -> {entry.Voltage:F2}V");
             }
+        }
+
+        private void OpenMultimeter()
+        {
+            var manager = InstrumentWindowBootstrap.Ensure();
+            if (manager == null)
+            {
+                AppendLog("[Instruments] Instrument window system not available.");
+                return;
+            }
+
+            var dmm = CreateInstrument<DigitalMultimeter>("DigitalMultimeter");
+            dmm.AutoOpenWindow = false;
+            ApplyDefaultSimPins(dmm);
+            var win = manager.OpenInstrumentWindow("Multimeter", "Digital Multimeter");
+            dmm.AttachWindow(win);
+            AppendLog("[Instruments] Multimeter opened.");
+        }
+
+        private void OpenOscilloscope()
+        {
+            var manager = InstrumentWindowBootstrap.Ensure();
+            if (manager == null)
+            {
+                AppendLog("[Instruments] Instrument window system not available.");
+                return;
+            }
+
+            var scope = CreateInstrument<Oscilloscope>("Oscilloscope");
+            scope.AutoOpenWindow = false;
+            ApplyDefaultSimPins(scope);
+            var win = manager.OpenInstrumentWindow("Oscilloscope", "Oscilloscope - Channel 1");
+            scope.AttachWindow(win);
+            AppendLog("[Instruments] Oscilloscope opened.");
+        }
+
+        private void CloseAllInstruments()
+        {
+            if (_activeInstruments.Count == 0 && _instrumentRoot == null)
+            {
+                InstrumentWindowManager.Instance?.CloseAll();
+                return;
+            }
+
+            foreach (var instrument in _activeInstruments)
+            {
+                if (instrument == null) continue;
+                Destroy(instrument.gameObject);
+            }
+            _activeInstruments.Clear();
+            InstrumentWindowManager.Instance?.CloseAll();
+
+            if (_instrumentRoot != null)
+            {
+                Destroy(_instrumentRoot.gameObject);
+                _instrumentRoot = null;
+            }
+
+            AppendLog("[Instruments] Closed all instrument windows.");
+        }
+
+        private T CreateInstrument<T>(string name) where T : VirtualInstrumentBase
+        {
+            EnsureInstrumentRoot();
+            var obj = new GameObject(name);
+            obj.transform.SetParent(_instrumentRoot, false);
+            var instrument = obj.AddComponent<T>();
+            _activeInstruments.Add(instrument);
+            return instrument;
+        }
+
+        private void EnsureInstrumentRoot()
+        {
+            if (_instrumentRoot != null) return;
+            var root = new GameObject("RuntimeInstruments");
+            root.transform.SetParent(transform, false);
+            _instrumentRoot = root.transform;
+        }
+
+        private void ApplyDefaultSimPins(DigitalMultimeter dmm)
+        {
+            if (dmm == null) return;
+            if (!string.IsNullOrWhiteSpace(dmm.simBoardId) || !string.IsNullOrWhiteSpace(dmm.simPinA)) return;
+            if (TryGetPrimaryBoardId(out var boardId))
+            {
+                dmm.SetSimPins(boardId, "D13", "GND");
+            }
+        }
+
+        private void ApplyDefaultSimPins(Oscilloscope scope)
+        {
+            if (scope == null) return;
+            if (!string.IsNullOrWhiteSpace(scope.simBoardId) || !string.IsNullOrWhiteSpace(scope.simPin)) return;
+            if (TryGetPrimaryBoardId(out var boardId))
+            {
+                scope.SetSimPin(boardId, "A0");
+            }
+        }
+
+        private bool TryGetPrimaryBoardId(out string boardId)
+        {
+            boardId = string.Empty;
+            var host = _host ?? SimHost.Instance;
+            if (host == null) return false;
+            var ids = new List<string>();
+            host.GetBoardIds(ids);
+            if (ids.Count == 0) return false;
+            boardId = ids[0];
+            return true;
         }
 
         private void UpdateWireHeatmap(TelemetryFrame telemetry)
@@ -2616,8 +2796,8 @@ namespace RobotTwin.UI
             }
 
             var orbit = Vector2.zero;
-            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
-            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.LeftArrow) orbit = new Vector2(-CameraKeyOrbitPixels, 0f);
+            if (evt.keyCode == KeyCode.RightArrow) orbit = new Vector2(CameraKeyOrbitPixels, 0f);
             if (evt.keyCode == KeyCode.UpArrow) orbit = new Vector2(0f, -CameraKeyOrbitPixels);
             if (evt.keyCode == KeyCode.DownArrow) orbit = new Vector2(0f, CameraKeyOrbitPixels);
             _circuit3DRenderer.Orbit(orbit);

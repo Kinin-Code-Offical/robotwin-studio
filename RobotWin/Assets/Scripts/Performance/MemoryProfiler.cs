@@ -228,6 +228,10 @@ namespace RobotTwin.Performance
         public double ProfilingDuration;
         public int ProfilingFrames;
 
+        // Computed properties for backward compatibility
+        public int TotalGCCollections => Gen0Collections + Gen1Collections + Gen2Collections;
+        public float PeakMemoryMB => PeakMemory / (1024f * 1024f);
+
         public override string ToString()
         {
             var sb = new StringBuilder();

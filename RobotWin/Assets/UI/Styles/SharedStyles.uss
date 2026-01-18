@@ -27,7 +27,8 @@
     padding: 10px;
     border-right-width: 2px;
     border-right-color: rgb(60, 60, 60);
-    flex-shrink: 1;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 .right-panel {
@@ -35,7 +36,8 @@
     min-width: 250px;
     background-color: rgb(35, 35, 35);
     padding: 10px;
-    flex-shrink: 1;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 .bottom-bar {
@@ -61,7 +63,7 @@
     margin-right: auto;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 
@@ -73,7 +75,7 @@
     margin-bottom: 5px;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 

@@ -13,11 +13,9 @@ namespace RobotTwin.Timing
         [Header("Physics Configuration")]
         [SerializeField] private bool _useDeterministicPhysics = true;
         [SerializeField] private float _fixedTimestep = 0.016f; // 60 Hz default
-        [SerializeField] private int _maxSubsteps = 4;
 
         [Header("Synchronization")]
         [SerializeField] private bool _syncWithCircuitTiming = true;
-        [SerializeField] private bool _adjustTimestepDynamically = false;
 
         [Header("Drift Correction")]
         [SerializeField] private bool _enableDriftCorrection = true;
@@ -56,8 +54,7 @@ namespace RobotTwin.Timing
             {
                 // Set deterministic physics parameters
                 Time.fixedDeltaTime = _fixedTimestep;
-                Physics.autoSimulation = false; // Manual simulation for lockstep
-                Physics.autoSyncTransforms = true;
+                Physics.simulationMode = SimulationMode.Script; // Manual simulation for lockstep
 
                 // Configure solver for determinism
                 Physics.defaultSolverIterations = 6;

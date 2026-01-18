@@ -5,12 +5,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace RobotTwin.UI
 {
     public static class RuntimeModelLoader
     {
         private static int _mainThreadId;
+        private static bool _loggedDispatcherMissing;
         private const float MaxModelBoundsSize = 1000f;
         private const float MaxModelBoundsCenter = 1000f;
         private const string ContentRootName = "__RuntimeModelContent";
@@ -61,20 +63,50 @@ namespace RobotTwin.UI
             }
 
             LogInfo($"[RuntimeModelLoader] Loaded {loadPath}");
-            var root = new GameObject("RuntimeModel");
-            if (host != null) root.transform.SetParent(host.transform, false);
-            bool instantiated = await TryInstantiateAsync(gltfType, gltf, root.transform, token);
-            if (!instantiated)
+            GameObject root = null;
+            try
             {
-                Debug.LogWarning($"[RuntimeModelLoader] GLTFast failed to instantiate: {loadPath}");
-                UnityEngine.Object.Destroy(root);
+                await RunOnMainThreadAsync(() =>
+                {
+                    root = new GameObject("RuntimeModel");
+                    if (host != null) root.transform.SetParent(host.transform, false);
+                }, token);
+
+                bool instantiated = await RunOnMainThreadAsync(async () =>
+                {
+                    return await TryInstantiateAsync(gltfType, gltf, root.transform, token);
+                }, token);
+
+                if (!instantiated)
+                {
+                    Debug.LogWarning($"[RuntimeModelLoader] GLTFast failed to instantiate: {loadPath}");
+                    await RunOnMainThreadAsync(() =>
+                    {
+                        if (root != null) UnityEngine.Object.Destroy(root);
+                    }, token);
+                    return null;
+                }
+
+                LogInfo($"[RuntimeModelLoader] Instantiated {loadPath}");
+                await RunOnMainThreadAsync(() =>
+                {
+                    NormalizeRuntimeModel(root.transform);
+                    EnsureRuntimeColliders(root.transform);
+                }, token);
+
+                return root;
+            }
+            catch (OperationCanceledException)
+            {
+                if (root != null)
+                {
+                    await RunOnMainThreadAsync(() =>
+                    {
+                        if (root != null) UnityEngine.Object.Destroy(root);
+                    }, default);
+                }
                 return null;
             }
-
-            LogInfo($"[RuntimeModelLoader] Instantiated {loadPath}");
-            NormalizeRuntimeModel(root.transform);
-            EnsureRuntimeColliders(root.transform);
-            return root;
         }
 
         public static bool TryLoadModel(string path, GameObject host, out GameObject instance)
@@ -112,28 +144,136 @@ namespace RobotTwin.UI
         private static bool TryCreateGltf(Type gltfType, out object gltf)
         {
             gltf = null;
+            // Prefer the 4-arg ctor so we can inject a render-pipeline aware material generator.
+            // This is critical in URP/HDRP projects, otherwise materials can appear missing/pink.
+            var materialGenerator = TryCreateMaterialGenerator(gltfType);
+
+            try
+            {
+                var downloadProviderType = gltfType.Assembly.GetType("GLTFast.Loading.IDownloadProvider");
+                var deferAgentType = gltfType.Assembly.GetType("GLTFast.IDeferAgent");
+                var materialGeneratorType = gltfType.Assembly.GetType("GLTFast.Materials.IMaterialGenerator");
+                var codeLoggerType = gltfType.Assembly.GetType("GLTFast.Logging.ICodeLogger");
+
+                if (downloadProviderType != null && deferAgentType != null && materialGeneratorType != null && codeLoggerType != null)
+                {
+                    var ctor = gltfType.GetConstructor(new[] { downloadProviderType, deferAgentType, materialGeneratorType, codeLoggerType });
+                    if (ctor != null)
+                    {
+                        gltf = ctor.Invoke(new[] { (object)null, null, materialGenerator, null });
+                        return gltf != null;
+                    }
+                }
+
+                // Fall back to any 4-parameter ctor (signature varies by glTFast version).
+                var anyCtor = gltfType.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == 4);
+                if (anyCtor != null)
+                {
+                    // Best-effort: put generator in the third slot, which matches the common signature.
+                    gltf = anyCtor.Invoke(new[] { (object)null, null, materialGenerator, null });
+                    return gltf != null;
+                }
+            }
+            catch
+            {
+                // ignore and try default ctor below
+            }
+
             try
             {
                 gltf = Activator.CreateInstance(gltfType);
-                return gltf != null;
-            }
-            catch (MissingMethodException)
-            {
-                var types = new[]
+                if (gltf != null)
                 {
-                    gltfType.Assembly.GetType("GLTFast.Loading.IDownloadProvider"),
-                    gltfType.Assembly.GetType("GLTFast.IDeferAgent"),
-                    gltfType.Assembly.GetType("GLTFast.Materials.IMaterialGenerator"),
-                    gltfType.Assembly.GetType("GLTFast.Logging.ICodeLogger")
-                };
-                var ctor = types.All(t => t != null) ? gltfType.GetConstructor(types) : null;
-                if (ctor == null)
-                {
-                    ctor = gltfType.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == 4);
+                    if (materialGenerator == null)
+                    {
+                        Debug.Log("[RuntimeModelLoader] GLTFast created with default constructor (no material generator injected).");
+                    }
+                    return true;
                 }
-                if (ctor == null) return false;
-                gltf = ctor.Invoke(new object[] { null, null, null, null });
-                return gltf != null;
+            }
+            catch
+            {
+                // ignore
+            }
+
+            return false;
+        }
+
+        private static object TryCreateMaterialGenerator(Type gltfType)
+        {
+            try
+            {
+                var asm = gltfType.Assembly;
+                var iMatGen = asm.GetType("GLTFast.Materials.IMaterialGenerator");
+                if (iMatGen == null) return null;
+
+                // Detect render pipeline (Built-in / URP / HDRP)
+                var rpAsset = GraphicsSettings.currentRenderPipeline != null
+                    ? GraphicsSettings.currentRenderPipeline
+                    : GraphicsSettings.defaultRenderPipeline;
+
+                string rpName = rpAsset != null ? rpAsset.GetType().FullName : "Built-in";
+
+                // Candidate generator types (names vary slightly by glTFast version).
+                var candidates = new List<string>();
+                if (rpAsset != null)
+                {
+                    var upper = rpName != null ? rpName.ToUpperInvariant() : string.Empty;
+                    if (upper.Contains("UNIVERSAL"))
+                    {
+                        candidates.Add("GLTFast.Materials.UniversalRPMaterialGenerator");
+                        candidates.Add("GLTFast.Materials.UniversalRPShaderGraphMaterialGenerator");
+                    }
+                    else if (upper.Contains("HIGHDEFINITION") || upper.Contains("HDRENDERPIPELINE"))
+                    {
+                        candidates.Add("GLTFast.Materials.HighDefinitionRPMaterialGenerator");
+                        candidates.Add("GLTFast.Materials.HighDefinitionRPShaderGraphMaterialGenerator");
+                    }
+                }
+                candidates.Add("GLTFast.Materials.StandardMaterialGenerator");
+                candidates.Add("GLTFast.Materials.BuiltInMaterialGenerator");
+
+                foreach (var typeName in candidates.Distinct())
+                {
+                    var t = asm.GetType(typeName);
+                    if (t == null || !iMatGen.IsAssignableFrom(t) || t.IsAbstract) continue;
+                    var ctor = t.GetConstructor(Type.EmptyTypes);
+                    if (ctor == null) continue;
+                    var inst = ctor.Invoke(null);
+                    if (inst != null)
+                    {
+                        Debug.Log($"[RuntimeModelLoader] Using GLTFast material generator: {t.FullName} (RP: {rpName})");
+                        return inst;
+                    }
+                }
+
+                // Last resort: scan for any concrete IMaterialGenerator with a parameterless ctor.
+                try
+                {
+                    foreach (var t in asm.GetTypes())
+                    {
+                        if (t == null || t.IsAbstract || !iMatGen.IsAssignableFrom(t)) continue;
+                        var ctor = t.GetConstructor(Type.EmptyTypes);
+                        if (ctor == null) continue;
+                        var inst = ctor.Invoke(null);
+                        if (inst != null)
+                        {
+                            Debug.Log($"[RuntimeModelLoader] Using fallback GLTFast material generator: {t.FullName} (RP: {rpName})");
+                            return inst;
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                Debug.LogWarning($"[RuntimeModelLoader] Could not create a GLTFast material generator (RP: {rpName}). Materials may appear missing/pink.");
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -156,19 +296,38 @@ namespace RobotTwin.UI
             var loadMethods = gltfType.GetMethods().Where(m => m.Name == "Load").ToArray();
             if (loadMethods.Length == 0) return false;
 
+            Uri loadUri = null;
             if (Path.IsPathRooted(path))
             {
+                // On Windows, passing "C:/..." to Uri can be interpreted as scheme "c:".
+                // Always prefer a proper file:// URI.
                 try
                 {
-                    loadPath = new Uri(path).AbsoluteUri;
+                    var fullPath = Path.GetFullPath(path);
+                    loadUri = new Uri(fullPath);
+                    loadPath = loadUri.AbsoluteUri;
                 }
                 catch
                 {
-                    loadPath = path.Replace('\\', '/');
+                    // Fall back to the raw path if URI construction fails.
+                    loadUri = null;
+                    loadPath = path;
+                }
+            }
+            else
+            {
+                // Relative paths are typically handled by glTFast using its own download provider.
+                // Keep as-is.
+                try
+                {
+                    loadUri = new Uri(loadPath, UriKind.RelativeOrAbsolute);
+                }
+                catch
+                {
+                    loadUri = null;
                 }
             }
 
-            var loadUri = new Uri(loadPath);
             foreach (var method in loadMethods)
             {
                 var parameters = method.GetParameters();
@@ -181,6 +340,7 @@ namespace RobotTwin.UI
                     }
                     if (parameters[0].ParameterType == typeof(Uri))
                     {
+                        if (loadUri == null) continue;
                         task = method.Invoke(gltf, new object[] { loadUri }) as Task<bool>;
                         break;
                     }
@@ -194,12 +354,108 @@ namespace RobotTwin.UI
                     }
                     if (parameters[0].ParameterType == typeof(Uri))
                     {
+                        if (loadUri == null) continue;
                         task = method.Invoke(gltf, new object[] { loadUri, null, token }) as Task<bool>;
                         break;
                     }
                 }
             }
             return task != null;
+        }
+
+        private static Task RunOnMainThreadAsync(Action action, CancellationToken token)
+        {
+            if (action == null) return Task.CompletedTask;
+            if (token.IsCancellationRequested) return Task.FromCanceled(token);
+            if (IsMainThread())
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            var tcs = new TaskCompletionSource<bool>();
+            try
+            {
+                UnityMainThreadDispatcher.Instance().Enqueue(() =>
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        tcs.TrySetCanceled(token);
+                        return;
+                    }
+                    try
+                    {
+                        action();
+                        tcs.TrySetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.TrySetException(ex);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // If dispatcher is missing, we can't safely touch Unity objects off-thread.
+                if (!_loggedDispatcherMissing)
+                {
+                    _loggedDispatcherMissing = true;
+                    Debug.LogWarning("[RuntimeModelLoader] UnityMainThreadDispatcher not available. Runtime model instantiation must run on the main thread.");
+                }
+                tcs.TrySetException(ex);
+            }
+            return tcs.Task;
+        }
+
+        private static Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> func, CancellationToken token)
+        {
+            if (func == null) return Task.FromResult(default(T));
+            if (token.IsCancellationRequested) return Task.FromCanceled<T>(token);
+            if (IsMainThread())
+            {
+                return func();
+            }
+
+            var tcs = new TaskCompletionSource<T>();
+            try
+            {
+                UnityMainThreadDispatcher.Instance().Enqueue(() =>
+                {
+                    _ = InvokeAsync();
+
+                    async Task InvokeAsync()
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            tcs.TrySetCanceled(token);
+                            return;
+                        }
+                        try
+                        {
+                            var result = await func();
+                            tcs.TrySetResult(result);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            tcs.TrySetCanceled(token);
+                        }
+                        catch (Exception ex)
+                        {
+                            tcs.TrySetException(ex);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                if (!_loggedDispatcherMissing)
+                {
+                    _loggedDispatcherMissing = true;
+                    Debug.LogWarning("[RuntimeModelLoader] UnityMainThreadDispatcher not available. Runtime model instantiation must run on the main thread.");
+                }
+                tcs.TrySetException(ex);
+            }
+            return tcs.Task;
         }
 
         private static bool TryGetLoadFileTask(object gltf, Type gltfType, string path, CancellationToken token, out Task<bool> task)

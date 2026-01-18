@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RobotTwin.UI.CircuitEditor
 {
@@ -602,6 +603,7 @@ namespace RobotTwin.UI.CircuitEditor
         public bool EnableThermalSimulation;
         public OptimizationGoal OptimizationGoal;
         public float OptimizationTarget;
+        public float SupplyCurrent;
     }
 
     [Serializable]
@@ -615,6 +617,7 @@ namespace RobotTwin.UI.CircuitEditor
     [Serializable]
     public class CircuitComponent
     {
+        public string Id;
         public string Name;
         public ComponentType Type;
         public float Value;
@@ -625,6 +628,14 @@ namespace RobotTwin.UI.CircuitEditor
         public float PowerConsumption;
         public float CurrentTemperature;
         public Vector2 Position;
+
+        // Extended properties
+        public float Resistance;
+        public float RatedCurrent;
+        public string PositiveNode;
+        public string NegativeNode;
+        public float ThermalResistance;
+        public float MaxTemperature;
     }
 
     [Serializable]
@@ -633,6 +644,11 @@ namespace RobotTwin.UI.CircuitEditor
         public int FromComponentIndex;
         public int ToComponentIndex;
         public ConnectionType Type;
+
+        // Extended properties
+        public string FromNode;
+        public string ToNode;
+        public float Length;
     }
 
     [Serializable]
@@ -645,6 +661,23 @@ namespace RobotTwin.UI.CircuitEditor
         public float MaxCurrent;
         public float PowerConsumption;
         public float Efficiency;
+
+        // Extended analysis properties
+        public float Timestamp;
+        public Dictionary<string, float> NodeVoltages;
+        public Dictionary<string, float> ComponentCurrents;
+        public float TotalPowerDissipation;
+        public Dictionary<string, float> ComponentPowers;
+        public Dictionary<string, ComponentThermal> ThermalMap;
+        public float MaxTemperature;
+        public string HottestComponent;
+        public bool IsThermalSafe;
+        public float SignalIntegrityScore;
+        public Dictionary<string, float> ComponentStress;
+        public List<string> OverstressedComponents;
+        public float CircuitHealthScore;
+        public bool IsCircuitSafe;
+        public List<string> Recommendations;
     }
 
     [Serializable]
@@ -669,14 +702,17 @@ namespace RobotTwin.UI.CircuitEditor
         VoltageRegulator,
         Timer,
         Battery,
-        PowerSupply
+        PowerSupply,
+        Motor,
+        Servo
     }
 
     public enum ConnectionType
     {
         Wire,
         Series,
-        Parallel
+        Parallel,
+        Signal
     }
 
     public enum OptimizationGoal
@@ -714,7 +750,7 @@ namespace RobotTwin.UI.CircuitEditor
         public CircuitAnalysisResult Analyze(List<CircuitComponent> components, List<CircuitConnection> connections, CircuitConfiguration config)
         {
             CircuitAnalysisResult result = new CircuitAnalysisResult();
-            result.Timestamp = DateTime.Now;
+            result.Timestamp = (float)DateTime.Now.TimeOfDay.TotalSeconds;
 
             // Build circuit graph
             var circuitGraph = BuildCircuitGraph(components, connections);
@@ -1047,48 +1083,6 @@ namespace RobotTwin.UI.CircuitEditor
         public float Temperature;
         public float ThermalResistance;
         public bool IsOverheating;
-    }
-
-    [Serializable]
-    public class CircuitAnalysisResult
-    {
-        public DateTime Timestamp;
-        public Dictionary<string, float> NodeVoltages;
-        public Dictionary<string, float> ComponentCurrents;
-        public Dictionary<string, float> ComponentPowers;
-        public float TotalPowerDissipation;
-        public Dictionary<string, ComponentThermal> ThermalMap;
-        public float MaxTemperature;
-        public string HottestComponent;
-        public bool IsThermalSafe;
-        public float Efficiency;
-        public float SignalIntegrityScore;
-        public Dictionary<string, float> ComponentStress;
-        public List<string> OverstressedComponents;
-        public float CircuitHealthScore;
-        public bool IsCircuitSafe;
-        public List<string> Recommendations;
-    }
-
-    public enum ComponentType
-    {
-        Resistor,
-        Capacitor,
-        Inductor,
-        LED,
-        Motor,
-        Servo,
-        IC,
-        Transistor,
-        Diode
-    }
-
-    public enum ConnectionType
-    {
-        Power,
-        Ground,
-        Signal,
-        Data
     }
 
     /// <summary>

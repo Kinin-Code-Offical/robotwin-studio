@@ -607,7 +607,7 @@ namespace RobotTwin.UI.WorldEditor
             if (statusLabel != null)
                 statusLabel.text = "Configuration Applied!";
 
-            var envManager = FindObjectOfType<WorldEnvironmentManager>();
+            var envManager = FindFirstObjectByType<WorldEnvironmentManager>();
             if (envManager != null)
             {
                 envManager.ApplyConfiguration(_currentConfig);
