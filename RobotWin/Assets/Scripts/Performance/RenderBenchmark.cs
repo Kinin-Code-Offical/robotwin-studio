@@ -227,7 +227,7 @@ namespace RobotTwin.Tests
                 var filter = renderer.GetComponent<MeshFilter>();
                 if (filter != null && filter.sharedMesh != null)
                 {
-                    total += filter.sharedMesh.triangles.Length / 3;
+                    total += MeshAnalyzer.GetTriangleCountSafe(filter.sharedMesh);
                 }
             }
             return total;

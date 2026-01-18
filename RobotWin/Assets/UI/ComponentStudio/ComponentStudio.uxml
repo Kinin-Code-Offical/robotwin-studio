@@ -119,7 +119,21 @@
                                     <ui:Label text="Add Default" class="button-label" />
                                 </ui:Button>
                             </ui:VisualElement>
-                            <ui:ScrollView name="ComponentDefaultsContainer" class="editor-list" style="min-height: 150px; flex-shrink: 1;" />
+                            <ui:ScrollView name="ComponentDefaultsContainer" class="editor-list" style="min-height: 90px; flex-shrink: 1;" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="panel-section">
+                            <ui:VisualElement class="panel-section-header">
+                                <ui:Label text="Native Config (JSON)" class="panel-section-title" />
+                                <ui:Button name="NativeConfigFormatBtn" class="ghost-button">
+                                    <ui:Label text="Format" class="button-label" />
+                                </ui:Button>
+                                <ui:Button name="NativeConfigClearBtn" class="ghost-button">
+                                    <ui:Label text="Clear" class="button-label" />
+                                </ui:Button>
+                            </ui:VisualElement>
+                            <ui:TextField name="ComponentNativeConfigField" class="form-field input-dark native-config-field" multiline="true" placeholder-text="{&#10;  &quot;param&quot;: 123,&#10;  &quot;array&quot;: [1, 2, 3]&#10;}" />
+                            <ui:Label name="NativeConfigErrorLabel" text="" class="field-error" />
                         </ui:VisualElement>
 
                         <ui:VisualElement class="panel-section">
@@ -237,134 +251,102 @@
                 <ui:VisualElement class="center-content">
                     <ui:VisualElement name="Component3DPanel" class="studio-viewport-panel">
                         <ui:VisualElement name="StudioViewport" class="studio-viewport" focusable="true" />
-                        <ui:VisualElement name="ViewportTools" class="viewport-tools">
-                            <ui:VisualElement class="viewport-tools-header">
-                                <ui:Label text="Viewport" class="viewport-tools-title" />
-                                <ui:Button name="ViewportToolsToggleBtn" text="Hide" class="viewport-tools-toggle" />
+                        <!-- Unified viewport controls, but keeping legacy element names for controller bindings -->
+                        <ui:VisualElement name="ViewportTools" class="unified-viewport-controls">
+                            <ui:VisualElement class="unified-controls-header">
+                                <ui:Label text="Controls" class="unified-controls-title" />
+                                <ui:Button name="ViewportToolsToggleBtn" text="Hide" class="unified-controls-toggle" />
                             </ui:VisualElement>
-                            <ui:VisualElement name="ViewportToolsBody" class="viewport-tools-body">
-                                <ui:VisualElement class="viewport-tools-row">
-                                    <ui:Button name="ViewportResetBtn" text="Reset" class="viewport-tool-btn" />
-                                    <ui:Button name="ViewportFrameBtn" text="Frame" class="viewport-tool-btn" />
+                            <ui:VisualElement name="ViewportToolsBody" class="unified-controls-body">
+                                <!-- Camera Section (legacy: Circuit3DControls*) -->
+                                <ui:VisualElement name="Circuit3DControls" class="unified-section">
+                                    <ui:VisualElement class="unified-section-header">
+                                        <ui:Label text="Camera" class="unified-section-title" />
+                                        <ui:Button name="Circuit3DControlsToggle" text="Hide" class="unified-btn-small" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement name="Circuit3DControlsBody" class="unified-section-body">
+                                        <ui:VisualElement class="unified-controls-row">
+                                            <ui:Label text="FOV" class="unified-label" />
+                                            <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="unified-slider" />
+                                        </ui:VisualElement>
+                                        <ui:VisualElement class="unified-controls-row">
+                                            <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="unified-toggle" value="true" />
+                                            <ui:Toggle name="Circuit3DFollowToggle" text="Follow" class="unified-toggle" />
+                                        </ui:VisualElement>
+                                    </ui:VisualElement>
                                 </ui:VisualElement>
-                                <ui:VisualElement class="viewport-tools-row">
-                                    <ui:Button name="ViewportZoomInBtn" text="Zoom +" class="viewport-tool-btn" />
-                                    <ui:Button name="ViewportZoomOutBtn" text="Zoom -" class="viewport-tool-btn" />
+                                
+                                <ui:VisualElement class="unified-divider" />
+                                
+                                <!-- Viewport Tools Section -->
+                                <ui:Label text="View Tools" class="unified-section-title" />
+                                <ui:VisualElement class="unified-controls-row">
+                                    <ui:Button name="ViewportResetBtn" text="Reset" class="unified-btn" />
+                                    <ui:Button name="ViewportFrameBtn" text="Frame" class="unified-btn" />
                                 </ui:VisualElement>
-                                <ui:VisualElement class="viewport-tools-row">
-                                <ui:Button name="ViewportAnchorsBtn" text="Anchors" class="viewport-tool-btn" />
-                                <ui:Button name="ViewportPickBtn" text="Pick" class="viewport-tool-btn" />
-                            </ui:VisualElement>
-                            <ui:VisualElement class="viewport-tools-row">
-                                <ui:Button name="ViewportPinBtn" text="Pin" class="viewport-tool-btn" />
-                                    <ui:Button name="ViewportLabelBtn" text="Label" class="viewport-tool-btn" />
-                                    <ui:Button name="ViewportMaterialBtn" text="Material" class="viewport-tool-btn" />
-                                    <ui:Button name="ViewportStateBtn" text="State" class="viewport-tool-btn" />
+                                <ui:VisualElement class="unified-controls-row">
+                                    <ui:Button name="ViewportZoomInBtn" text="+" class="unified-btn" />
+                                    <ui:Button name="ViewportZoomOutBtn" text="-" class="unified-btn" />
+                                    <ui:Toggle name="ViewportPartColorsToggle" text="Colors" class="unified-toggle" />
                                 </ui:VisualElement>
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-                        <ui:VisualElement name="Circuit3DControls" class="circuit-3d-controls">
-                            <ui:VisualElement class="circuit-3d-controls-header">
-                                <ui:Label text="Camera" class="circuit-3d-controls-title" />
-                                <ui:Button name="Circuit3DControlsToggle" text="Hide" class="circuit-3d-controls-toggle" />
-                            </ui:VisualElement>
-                            <ui:VisualElement name="Circuit3DControlsBody" class="circuit-3d-controls-body">
-                                <ui:Label text="Controls" class="circuit-3d-controls-subtitle" />
-                                <ui:VisualElement class="circuit-3d-controls-row">
-                                    <ui:Label text="FOV" class="circuit-3d-controls-label" />
-                                    <ui:Slider name="Circuit3DFovSlider" low-value="30" high-value="90" value="55" class="circuit-3d-slider" />
+                                
+                                <ui:VisualElement class="unified-divider" />
+                                
+                                <!-- 3D Edit Section (legacy: ViewportEditPanel + ViewportEditPanelToggle) -->
+                                <ui:VisualElement class="unified-section-header">
+                                    <ui:Label text="3D Edit" class="unified-section-title" />
+                                    <ui:Toggle name="ViewportEditPanelToggle" text="Show" class="unified-toggle" value="true" />
                                 </ui:VisualElement>
-                                <ui:Toggle name="Circuit3DPerspectiveToggle" text="Perspective" class="circuit-3d-toggle" value="true" />
-                                <ui:Toggle name="Circuit3DFollowToggle" text="Follow Selection" class="circuit-3d-toggle" />
-                                <ui:Toggle name="ViewportPartColorsToggle" text="Part Colors" class="circuit-3d-toggle" />
-                                <ui:Button name="Circuit3DRebuildBtn" text="Rebuild 3D" class="circuit-3d-btn" />
-                                <ui:VisualElement class="circuit-3d-divider" />
+                                <ui:VisualElement name="ViewportEditPanel" class="unified-section-body">
+                                    <ui:VisualElement class="unified-controls-row">
+                                        <ui:Toggle name="ViewportEditAnchorsToggle" text="Anchors" class="unified-toggle" value="true" />
+                                        <ui:Button name="ViewportAnchorsBtn" text="Toggle" class="unified-btn-small" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="unified-controls-row">
+                                        <ui:Toggle name="ViewportEditEffectsToggle" text="Effects" class="unified-toggle" value="true" />
+                                        <ui:Toggle name="ViewportEditPartsToggle" text="Parts" class="unified-toggle" value="true" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="unified-controls-row">
+                                        <ui:Toggle name="ViewportEditStatesToggle" text="States" class="unified-toggle" value="false" />
+                                        <ui:Toggle name="ViewportEditSnapToggle" text="Snap" class="unified-toggle" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="unified-controls-row">
+                                        <ui:Label text="Mode" class="unified-label-small" />
+                                        <ui:Button name="ViewportEditMoveBtn" text="M" class="unified-mode-btn active" />
+                                        <ui:Button name="ViewportEditRotateBtn" text="R" class="unified-mode-btn" />
+                                        <ui:Button name="ViewportEditScaleBtn" text="S" class="unified-mode-btn" />
+                                    </ui:VisualElement>
+                                    <ui:VisualElement class="unified-controls-row">
+                                        <ui:Label text="Snap" class="unified-label-small" />
+                                        <ui:TextField name="ViewportEditSnapField" value="0.01" class="unified-field input-dark" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                                
+                                <ui:VisualElement class="unified-divider" />
+                                
+                                <!-- Actions Section -->
+                                <ui:Label text="Actions" class="unified-section-title" />
+                                <ui:VisualElement class="unified-controls-row">
+                                    <ui:Button name="ViewportPickBtn" text="Pick" class="unified-btn" />
+                                    <ui:Button name="ViewportPinBtn" text="Pin" class="unified-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="unified-controls-row">
+                                    <ui:Button name="ViewportLabelBtn" text="Label" class="unified-btn" />
+                                    <ui:Button name="ViewportMaterialBtn" text="Material" class="unified-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="unified-controls-row">
+                                    <ui:Button name="ViewportStateBtn" text="State" class="unified-btn" />
+                                    <ui:Button name="ViewportEditResetBtn" text="Reset Edit" class="unified-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="unified-controls-row">
+                                    <ui:Button name="Circuit3DRebuildBtn" text="Rebuild 3D" class="unified-btn-wide" />
+                                </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
                         <ui:VisualElement name="ViewportViewCube" class="view-cube">
                             <ui:VisualElement name="ViewCubeSurface" class="view-cube-surface" />
                         </ui:VisualElement>
-                        <ui:VisualElement name="MaterialOverlay" class="modal-overlay material-side-panel" style="display: none;">
-                            <ui:VisualElement class="modal-card material-card">
-                                <ui:Label text="Material + Texture" class="modal-title" />
-                                <ui:Label name="MaterialTargetLabel" text="No part selected" class="modal-label" />
-                                <ui:VisualElement class="modal-body">
-                                    <ui:Label text="Texture" class="modal-label" />
-                                    <ui:VisualElement class="form-row-inline">
-                                        <ui:TextField name="MaterialTexturePathField" class="form-field input-dark editor-inline-grow" />
-                                        <ui:Button name="MaterialTextureBrowseBtn" class="ghost-button editor-inline-button">
-                                            <ui:Label text="Browse" class="button-label" />
-                                        </ui:Button>
-                                    </ui:VisualElement>
-                                    <ui:Toggle name="MaterialUseTextureToggle" text="Use Texture" class="toggle-field" />
-                                    <ui:Label text="Tint Color" class="modal-label" />
-                                    <ui:VisualElement class="form-row-inline">
-                                        <ui:TextField name="MaterialColorRField" class="form-field editor-field-small input-dark" />
-                                        <ui:TextField name="MaterialColorGField" class="form-field editor-field-small input-dark" />
-                                        <ui:TextField name="MaterialColorBField" class="form-field editor-field-small input-dark" />
-                                        <ui:TextField name="MaterialColorAField" class="form-field editor-field-small input-dark" />
-                                    </ui:VisualElement>
-                                    <ui:Toggle name="MaterialUseColorToggle" text="Use Color Tint" class="toggle-field" />
-
-                                    <ui:VisualElement class="menu-divider" />
-                                    <ui:Label text="Physical (optional)" class="modal-label" />
-                                    <ui:Label text="Physical Material Id" class="modal-label" />
-                                    <ui:TextField name="MaterialPhysicalMaterialField" class="form-field input-dark" />
-                                    <ui:Label text="Density (kg/m^3)" class="modal-label" />
-                                    <ui:TextField name="MaterialDensityField" class="form-field input-dark" />
-                                    <ui:Label text="Volume (m^3, preferred for realism)" class="modal-label" />
-                                    <ui:TextField name="MaterialVolumeField" class="form-field input-dark" />
-                                    <ui:Label text="Mass Override (kg)" class="modal-label" />
-                                    <ui:TextField name="MaterialMassField" class="form-field input-dark" />
-                                    <ui:Label text="Friction (0..1)" class="modal-label" />
-                                    <ui:TextField name="MaterialFrictionField" class="form-field input-dark" />
-                                    <ui:Label text="Elasticity (0..1)" class="modal-label" />
-                                    <ui:TextField name="MaterialElasticityField" class="form-field input-dark" />
-                                    <ui:Label text="Strength" class="modal-label" />
-                                    <ui:TextField name="MaterialStrengthField" class="form-field input-dark" />
-                                    <ui:Label name="MaterialComputedMassLabel" text="Estimated Mass: (unset)" class="modal-label" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="modal-actions">
-                                    <ui:Button name="MaterialApplyBtn" text="Apply" class="btn-primary" />
-                                    <ui:Button name="MaterialClearBtn" text="Clear" class="btn-secondary" />
-                                    <ui:Button name="MaterialCloseBtn" text="Close" class="btn-secondary" />
-                                </ui:VisualElement>
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-                        <ui:VisualElement name="ViewportEditDock" class="viewport-edit-dock">
-                            <ui:VisualElement class="viewport-edit-dock-header">
-                                <ui:Label text="3D Edit" class="viewport-edit-dock-title" />
-                                <ui:Toggle name="ViewportEditPanelToggle" text="Show" class="viewport-edit-toggle" value="true" />
-                            </ui:VisualElement>
-                            <ui:VisualElement name="ViewportEditPanel" class="viewport-edit-panel inline">
-                                <ui:VisualElement class="viewport-edit-row">
-                                    <ui:Toggle name="ViewportEditAnchorsToggle" text="Anchors" class="viewport-edit-toggle" value="true" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="viewport-edit-row">
-                                    <ui:Toggle name="ViewportEditEffectsToggle" text="Effects" class="viewport-edit-toggle" value="true" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="viewport-edit-row">
-                                    <ui:Toggle name="ViewportEditPartsToggle" text="Parts" class="viewport-edit-toggle" value="true" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="viewport-edit-row">
-                                    <ui:Toggle name="ViewportEditStatesToggle" text="States" class="viewport-edit-toggle" value="false" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="viewport-edit-row mode-row">
-                                    <ui:Label text="Mode" class="viewport-edit-label" />
-                                    <ui:Button name="ViewportEditMoveBtn" text="M" class="viewport-edit-btn icon active" />
-                                    <ui:Button name="ViewportEditRotateBtn" text="R" class="viewport-edit-btn icon" />
-                                    <ui:Button name="ViewportEditScaleBtn" text="S" class="viewport-edit-btn icon last" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="viewport-edit-row">
-                                    <ui:Toggle name="ViewportEditSnapToggle" text="Snap" class="viewport-edit-toggle" />
-                                    <ui:TextField name="ViewportEditSnapField" value="0.01" class="viewport-edit-field input-dark" />
-                                </ui:VisualElement>
-                                <ui:VisualElement class="viewport-edit-row">
-                                    <ui:Button name="ViewportEditResetBtn" text="Reset" class="viewport-edit-btn" />
-                                </ui:VisualElement>
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-                            <ui:VisualElement name="StudioHelpIcon" class="board-3d-help">
+                        <ui:VisualElement name="StudioHelpIcon" class="board-3d-help">
                             <ui:Label text="?" class="board-3d-help-icon" />
                             <ui:VisualElement name="StudioHelpTooltip" class="board-3d-help-tooltip" style="display: none;">
                                 <ui:Label text="Keyboard Shortcuts" class="board-3d-help-title" />
@@ -396,6 +378,52 @@
                                 <ui:Button name="StudioLoadingCancelBtn" class="ghost-button">
                                     <ui:Label text="Cancel" class="button-label" />
                                 </ui:Button>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="MaterialOverlay" class="modal-overlay material-side-panel" style="display: none;">
+                            <ui:VisualElement class="modal-card material-card">
+                                <ui:Label text="Material + Texture" class="modal-title" />
+                                <ui:Label name="MaterialTargetLabel" text="No part selected" class="modal-label" />
+                                <ui:VisualElement class="modal-body">
+                                    <ui:Label text="Texture" class="modal-label" />
+                                    <ui:VisualElement class="form-row-inline">
+                                        <ui:TextField name="MaterialTexturePathField" class="form-field input-dark editor-inline-grow" />
+                                        <ui:Button name="MaterialTextureBrowseBtn" class="ghost-button editor-inline-button">
+                                            <ui:Label text="Browse" class="button-label" />
+                                        </ui:Button>
+                                    </ui:VisualElement>
+                                    <ui:Toggle name="MaterialUseTextureToggle" text="Use Texture" class="toggle-field" />
+                                    <ui:Label text="Tint Color" class="modal-label" />
+                                    <ui:VisualElement class="form-row-inline">
+                                        <ui:TextField name="MaterialColorRField" class="form-field editor-field-small input-dark" />
+                                        <ui:TextField name="MaterialColorGField" class="form-field editor-field-small input-dark" />
+                                        <ui:TextField name="MaterialColorBField" class="form-field editor-field-small input-dark" />
+                                        <ui:TextField name="MaterialColorAField" class="form-field editor-field-small input-dark" />
+                                    </ui:VisualElement>
+                                    <ui:Toggle name="MaterialUseColorToggle" text="Use Color Tint" class="toggle-field" />
+                                    <ui:VisualElement class="menu-divider" />
+                                    <ui:Label text="Physical (optional)" class="modal-label" />
+                                    <ui:Label text="Physical Material Id" class="modal-label" />
+                                    <ui:TextField name="MaterialPhysicalMaterialField" class="form-field input-dark" />
+                                    <ui:Label text="Density (kg/m^3)" class="modal-label" />
+                                    <ui:TextField name="MaterialDensityField" class="form-field input-dark" />
+                                    <ui:Label text="Volume (m^3, preferred for realism)" class="modal-label" />
+                                    <ui:TextField name="MaterialVolumeField" class="form-field input-dark" />
+                                    <ui:Label text="Mass Override (kg)" class="modal-label" />
+                                    <ui:TextField name="MaterialMassField" class="form-field input-dark" />
+                                    <ui:Label text="Friction (0..1)" class="modal-label" />
+                                    <ui:TextField name="MaterialFrictionField" class="form-field input-dark" />
+                                    <ui:Label text="Elasticity (0..1)" class="modal-label" />
+                                    <ui:TextField name="MaterialElasticityField" class="form-field input-dark" />
+                                    <ui:Label text="Strength" class="modal-label" />
+                                    <ui:TextField name="MaterialStrengthField" class="form-field input-dark" />
+                                    <ui:Label name="MaterialComputedMassLabel" text="Estimated Mass: (unset)" class="modal-label" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="modal-actions">
+                                    <ui:Button name="MaterialApplyBtn" text="Apply" class="btn-primary" />
+                                    <ui:Button name="MaterialClearBtn" text="Clear" class="btn-secondary" />
+                                    <ui:Button name="MaterialCloseBtn" text="Close" class="btn-secondary" />
+                                </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>

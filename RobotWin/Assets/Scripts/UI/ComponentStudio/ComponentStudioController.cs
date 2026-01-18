@@ -6,6 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -18,6 +20,11 @@ namespace RobotTwin.UI
 {
     public class ComponentStudioController : MonoBehaviour
     {
+        private const int UiBindMaxAttempts = 90; // ~1.5s at 60fps; protects against script enable-order quirks
+        private int _uiBindAttempts;
+        private bool _uiInitialized;
+        private bool _uiForcedClone;
+
         private UIDocument _doc;
         private VisualElement _root;
         private VisualElement _viewport;
@@ -56,6 +63,10 @@ namespace RobotTwin.UI
         private ScrollView _hierarchyTree;
         private TextField _hierarchySearchField;
         private TextField _catalogSearchField;
+        private TextField _nativeConfigField;
+        private Label _nativeConfigErrorLabel;
+        private Button _nativeConfigFormatBtn;
+        private Button _nativeConfigClearBtn;
         private ScrollView _anchorsContainer;
         private Button _leftTabHierarchyBtn;
         private Button _leftTabCatalogBtn;
@@ -340,10 +351,11 @@ namespace RobotTwin.UI
         private int _viewportPointerId = -1;
         private Vector2 _viewportContextStart;
         private bool _viewportContextDrag;
-        private bool _circuit3DControlsCollapsed = true;
-        private bool _viewportToolsCollapsed = true;
+        private bool _circuit3DControlsCollapsed;
+        private bool _viewportToolsCollapsed;
         private bool _outputCollapsed;
         private bool _validationQueued;
+        private bool _historyQueued;
         private ViewportEditMode _viewportEditMode = ViewportEditMode.Move;
         private EditTarget _editTarget;
         private bool _isViewportEditDragging;
@@ -369,6 +381,7 @@ namespace RobotTwin.UI
         private bool _viewportKeyFocus = true;
         private readonly List<EditorSnapshot> _undoStack = new List<EditorSnapshot>();
         private readonly List<EditorSnapshot> _redoStack = new List<EditorSnapshot>();
+        private readonly HashSet<VisualElement> _historyBoundElements = new HashSet<VisualElement>();
         private EditorSnapshot _lastSnapshot;
         private EditorSnapshot _lastSavedSnapshot;
         private bool _isRestoringHistory;
@@ -390,39 +403,44 @@ namespace RobotTwin.UI
             _doc = GetComponent<UIDocument>();
             if (_doc == null)
             {
-                Debug.LogError("[ComponentStudio] Missing UIDocument");
+                Debug.LogError("[ComponentStudio] Missing UIDocument component on this GameObject. Please add UIDocument component.", this);
                 enabled = false;
                 return;
             }
+
+            // CRITICAL: visualTreeAsset must be assigned in the Inspector
+            if (_doc.visualTreeAsset == null)
+            {
+                Debug.LogError("[ComponentStudio] UIDocument.visualTreeAsset is null! Please assign 'ComponentStudio.uxml' to the UIDocument component's 'Source Asset' field in the Inspector.", this);
+                enabled = false;
+                return;
+            }
+
             _root = _doc.rootVisualElement;
             if (_root == null)
             {
-                Debug.LogError("[ComponentStudio] UIDocument rootVisualElement is null.");
+                Debug.LogError("[ComponentStudio] UIDocument rootVisualElement is null.", this);
                 enabled = false;
                 return;
             }
 
-            UiResponsive.Bind(_root, 1200f, 1600f, "studio-compact", "studio-medium", "studio-wide");
-
-            BindUi();
-
-            // Critical UI sanity: viewport + status are required for event hooks and feedback.
-            if (_viewport == null || _statusLabel == null)
-            {
-                Debug.LogError("[ComponentStudio] UI binding failed: missing required elements (StudioViewport / StudioStatusLabel).");
-                enabled = false;
-                return;
-            }
-
-            Initialize3DView();
-            InitializeHelp();
-            RegisterKeyboardShortcuts();
-            LoadSession();
+            // UIDocument and this MonoBehaviour can receive OnEnable in either order.
+            // If we query immediately, the visual tree may not be instantiated yet.
+            _uiBindAttempts = 0;
+            _uiInitialized = false;
+            // Important: with Enter Play Mode options (domain reload disabled), instance fields persist.
+            // If this was true from a previous session, we would never attempt to force-clone again.
+            _uiForcedClone = false;
+            _root.schedule.Execute(TryInitializeUi).ExecuteLater(0);
         }
 
         private void OnDisable()
         {
             CancelModelLoad(true);
+
+            _uiInitialized = false;
+            _uiBindAttempts = 0;
+            _uiForcedClone = false;
 
             if (_loadingBlurTexture != null)
             {
@@ -432,10 +450,113 @@ namespace RobotTwin.UI
             }
         }
 
+        private void TryInitializeUi()
+        {
+            if (_uiInitialized || !isActiveAndEnabled) return;
+
+            // Re-fetch root each attempt in case UIDocument recreates it
+            if (_doc != null && _doc.rootVisualElement != null)
+            {
+                _root = _doc.rootVisualElement;
+            }
+
+            if (_root == null) return;
+
+            _uiBindAttempts++;
+
+            // Diagnostic logging for first few attempts
+            if (_uiBindAttempts <= 3)
+            {
+                string assetInfo = _doc?.visualTreeAsset != null
+                    ? $"{_doc.visualTreeAsset.name} (contentHash={_doc.visualTreeAsset.contentHash})"
+                    : "null";
+                Debug.Log($"[ComponentStudio] TryInitializeUi attempt {_uiBindAttempts}: rootChildCount={_root.childCount}, visualTreeAsset={assetInfo}, forcedClone={_uiForcedClone}");
+            }
+
+            // If the visual tree hasn't been instantiated yet (root has no children), try to force-clone once.
+            // This guards against rare runtime cases where UIDocument's internal cloning runs after our checks
+            // (or fails to run due to script execution order).
+            if (_root.childCount == 0 && !_uiForcedClone && _doc != null && _doc.visualTreeAsset != null)
+            {
+                _uiForcedClone = true;
+                Debug.Log($"[ComponentStudio] Forcing CloneTree for {_doc.visualTreeAsset.name} (contentHash={_doc.visualTreeAsset.contentHash})");
+                try
+                {
+                    _doc.visualTreeAsset.CloneTree(_root);
+                    Debug.Log($"[ComponentStudio] CloneTree completed, rootChildCount now = {_root.childCount}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[ComponentStudio] Failed to CloneTree into rootVisualElement: {ex.Message}\n{ex.StackTrace}");
+                }
+            }
+
+            // Critical UI sanity: viewport + status are required for event hooks and feedback.
+            // Query with fallbacks because some UXML variants may not keep the legacy 'name' fields.
+            _viewport = QueryRequiredViewport();
+            _statusLabel = QueryRequiredStatusLabel();
+            if (_viewport == null || _statusLabel == null)
+            {
+                if (_uiBindAttempts < UiBindMaxAttempts)
+                {
+                    // Wait a frame; executing with 0ms can run before UIDocument clones its tree.
+                    _root.schedule.Execute(TryInitializeUi).ExecuteLater(16);
+                    return;
+                }
+
+                string vtaName = _doc != null && _doc.visualTreeAsset != null ? _doc.visualTreeAsset.name : "<null>";
+                string psName = _doc != null && _doc.panelSettings != null ? _doc.panelSettings.name : "<null>";
+                bool hasPanel = _root != null && _root.panel != null;
+                int rootChildCount = _root != null ? _root.childCount : 0;
+                Debug.LogError($"[ComponentStudio] UI binding failed: missing required elements (StudioViewport / StudioStatusLabel). visualTreeAsset={vtaName}, panelSettings={psName}, rootHasPanel={hasPanel}, rootChildCount={rootChildCount}");
+                enabled = false;
+                return;
+            }
+
+            UiResponsive.Bind(_root, 1200f, 1600f, "studio-compact", "studio-medium", "studio-wide");
+            BindUi();
+
+            _uiInitialized = true;
+
+            Initialize3DView();
+            InitializeHelp();
+            RegisterKeyboardShortcuts();
+            LoadSession();
+        }
+
+        private VisualElement QueryRequiredViewport()
+        {
+            // Preferred legacy name.
+            var viewport = _root.Q<VisualElement>("StudioViewport");
+            if (viewport != null) return viewport;
+
+            // Fallback: find viewport within the 3D panel first, then by class.
+            var panel3d = _root.Q<VisualElement>("Component3DPanel") ?? _root.Q<VisualElement>(className: "studio-viewport-panel");
+            viewport = panel3d != null
+                ? panel3d.Q<VisualElement>(className: "studio-viewport")
+                : _root.Q<VisualElement>(className: "studio-viewport");
+            return viewport;
+        }
+
+        private Label QueryRequiredStatusLabel()
+        {
+            // Preferred legacy name.
+            var status = _root.Q<Label>("StudioStatusLabel");
+            if (status != null) return status;
+
+            // Fallback: the status chip lives in the center header.
+            var centerHeader = _root.Q<VisualElement>(className: "center-header");
+            status = centerHeader != null
+                ? centerHeader.Q<Label>(className: "center-chip")
+                : _root.Q<Label>(className: "center-chip");
+            return status;
+        }
+
         private void BindUi()
         {
-            _viewport = _root.Q<VisualElement>("StudioViewport");
-            _statusLabel = _root.Q<Label>("StudioStatusLabel");
+            // Required elements (keep fallbacks consistent with TryInitializeUi).
+            _viewport = QueryRequiredViewport();
+            _statusLabel = QueryRequiredStatusLabel();
             _saveBtn = _root.Q<Button>("StudioSaveBtn");
             _saveExitBtn = _root.Q<Button>("StudioSaveExitBtn");
             _saveAsBtn = _root.Q<Button>("StudioSaveAsBtn");
@@ -471,6 +592,10 @@ namespace RobotTwin.UI
             _hierarchyTree = _root.Q<ScrollView>("HierarchyTreeContainer");
             _hierarchySearchField = _root.Q<TextField>("HierarchySearchField");
             _catalogSearchField = _root.Q<TextField>("CatalogSearchField");
+            _nativeConfigField = _root.Q<TextField>("ComponentNativeConfigField");
+            _nativeConfigErrorLabel = _root.Q<Label>("NativeConfigErrorLabel");
+            _nativeConfigFormatBtn = _root.Q<Button>("NativeConfigFormatBtn");
+            _nativeConfigClearBtn = _root.Q<Button>("NativeConfigClearBtn");
             _anchorsContainer = _root.Q<ScrollView>("ComponentAnchorsContainer");
             _leftTabHierarchyBtn = _root.Q<Button>("LeftTabHierarchyBtn");
             _leftTabCatalogBtn = _root.Q<Button>("LeftTabCatalogBtn");
@@ -683,6 +808,8 @@ namespace RobotTwin.UI
             if (_modelBrowseBtn != null) _modelBrowseBtn.clicked += BrowseForModel;
             if (_configBrowseBtn != null) _configBrowseBtn.clicked += BrowseForConfig;
             if (_configLoadBtn != null) _configLoadBtn.clicked += LoadConfigFromField;
+            if (_nativeConfigFormatBtn != null) _nativeConfigFormatBtn.clicked += FormatNativeConfig;
+            if (_nativeConfigClearBtn != null) _nativeConfigClearBtn.clicked += ClearNativeConfig;
             if (_addPinBtn != null) _addPinBtn.clicked += () => AddPinRow(new PinLayoutPayload { name = GetNextPinName() });
             if (_addLabelBtn != null) _addLabelBtn.clicked += () => AddLabelRow(new LabelLayoutPayload { text = "{id}", x = 0.5f, y = 0.5f, size = 10, align = "center" });
             if (_addSpecBtn != null) _addSpecBtn.clicked += () => AddKeyValueRow(_specsContainer, string.Empty, string.Empty);
@@ -1024,12 +1151,46 @@ namespace RobotTwin.UI
 
             UpdateToolButtons();
             RegisterValidationBindings();
+            RegisterHistoryBindings();
             InitializeTypeDropdown();
             UpdateTypePanels();
             InitializeOutputPanel();
             RegisterMenuDismissHandler();
             RefreshCatalogAndHierarchy();
             SetLeftPanelTab(LeftPanelTab.Hierarchy);
+        }
+
+        private void RegisterHistoryBindings()
+        {
+            if (_root == null) return;
+
+            // Track editor history for ALL inputs (including text areas). Validation remains opt-in
+            // via RegisterValidationBindings(); this is only for undo/redo snapshots.
+            foreach (var field in _root.Query<TextField>().ToList()) RegisterHistoryField(field);
+            foreach (var field in _root.Query<DropdownField>().ToList()) RegisterHistoryField(field);
+            foreach (var toggle in _root.Query<Toggle>().ToList()) RegisterHistoryField(toggle);
+        }
+
+        private void RegisterHistoryField(TextField field)
+        {
+            if (field == null) return;
+            if (!_historyBoundElements.Add(field)) return;
+            field.RegisterValueChangedCallback(_ => QueueHistory());
+            field.RegisterCallback<BlurEvent>(_ => QueueHistory());
+        }
+
+        private void RegisterHistoryField(DropdownField field)
+        {
+            if (field == null) return;
+            if (!_historyBoundElements.Add(field)) return;
+            field.RegisterValueChangedCallback(_ => QueueHistory());
+        }
+
+        private void RegisterHistoryField(Toggle field)
+        {
+            if (field == null) return;
+            if (!_historyBoundElements.Add(field)) return;
+            field.RegisterValueChangedCallback(_ => QueueHistory());
         }
 
         private void RegisterMenuDismissHandler()
@@ -1503,6 +1664,7 @@ namespace RobotTwin.UI
             RegisterValidationField(GetField("ComponentSizeXField"));
             RegisterValidationField(GetField("ComponentSizeYField"));
             RegisterValidationField(GetField("ComponentPhysicsScriptField"));
+            RegisterValidationField(_nativeConfigField);
             RegisterEffectField("ComponentEulerXField");
             RegisterEffectField("ComponentEulerYField");
             RegisterEffectField("ComponentEulerZField");
@@ -1605,6 +1767,18 @@ namespace RobotTwin.UI
             }).ExecuteLater(150);
         }
 
+        private void QueueHistory()
+        {
+            // If validation is already queued, it will capture an undo snapshot as well.
+            if (_historyQueued || _validationQueued || _root == null) return;
+            _historyQueued = true;
+            _root.schedule.Execute(() =>
+            {
+                _historyQueued = false;
+                CaptureUndoSnapshot();
+            }).ExecuteLater(250);
+        }
+
         private void RunValidation()
         {
             var issues = new List<StudioLogEntry>();
@@ -1701,6 +1875,23 @@ namespace RobotTwin.UI
                 issues.Add(new StudioLogEntry { Level = LogLevel.Warning, Message = "Physics script path is invalid.", Source = "validation" });
             }
 
+            // Native config JSON (optional)
+            string nativeConfigError = string.Empty;
+            if (!TryValidateNativeConfig(_nativeConfigField?.value, out nativeConfigError))
+            {
+                issues.Add(new StudioLogEntry
+                {
+                    Level = LogLevel.Error,
+                    Message = $"Native config JSON is invalid: {nativeConfigError}",
+                    Source = "validation"
+                });
+            }
+            if (_nativeConfigErrorLabel != null)
+            {
+                _nativeConfigErrorLabel.text = string.IsNullOrWhiteSpace(nativeConfigError) ? string.Empty : nativeConfigError;
+                _nativeConfigErrorLabel.style.display = string.IsNullOrWhiteSpace(nativeConfigError) ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+
             foreach (var part in _partOverrides.Values)
             {
                 if (!part.UseTexture || string.IsNullOrWhiteSpace(part.TextureEntry)) continue;
@@ -1735,6 +1926,77 @@ namespace RobotTwin.UI
             _logEntries.RemoveAll(entry => string.Equals(entry.Source, "validation", StringComparison.OrdinalIgnoreCase));
             _logEntries.AddRange(issues);
             RenderOutput();
+        }
+
+        private static bool TryValidateNativeConfig(string raw, out string error)
+        {
+            error = string.Empty;
+            if (string.IsNullOrWhiteSpace(raw)) return true;
+            try
+            {
+                var token = JToken.Parse(raw);
+                if (token.Type != JTokenType.Object && token.Type != JTokenType.Array)
+                {
+                    error = "Must be a JSON object { } or array [ ].";
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private void FormatNativeConfig()
+        {
+            if (_nativeConfigField == null) return;
+            string raw = _nativeConfigField.value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                if (_nativeConfigErrorLabel != null)
+                {
+                    _nativeConfigErrorLabel.text = string.Empty;
+                    _nativeConfigErrorLabel.style.display = DisplayStyle.None;
+                }
+                return;
+            }
+
+            try
+            {
+                var token = JToken.Parse(raw);
+                if (token.Type != JTokenType.Object && token.Type != JTokenType.Array)
+                {
+                    if (_nativeConfigErrorLabel != null)
+                    {
+                        _nativeConfigErrorLabel.text = "Must be a JSON object { } or array [ ].";
+                        _nativeConfigErrorLabel.style.display = DisplayStyle.Flex;
+                    }
+                    return;
+                }
+
+                _nativeConfigField.value = token.ToString(Formatting.Indented);
+            }
+            catch (Exception ex)
+            {
+                if (_nativeConfigErrorLabel != null)
+                {
+                    _nativeConfigErrorLabel.text = ex.Message;
+                    _nativeConfigErrorLabel.style.display = DisplayStyle.Flex;
+                }
+            }
+        }
+
+        private void ClearNativeConfig()
+        {
+            if (_nativeConfigField == null) return;
+            _nativeConfigField.value = string.Empty;
+            if (_nativeConfigErrorLabel != null)
+            {
+                _nativeConfigErrorLabel.text = string.Empty;
+                _nativeConfigErrorLabel.style.display = DisplayStyle.None;
+            }
         }
 
         private void RunValidationAndNotify()
@@ -2463,9 +2725,11 @@ namespace RobotTwin.UI
                 return;
             }
 
-            // Don't hijack TextField undo/redo.
-            if (!targetIsTextInput && TryHandleUndoRedo(evt))
+            // Editor-level undo/redo should work everywhere (including while typing in TextFields).
+            // This ensures text edits participate in the same snapshot history.
+            if (TryHandleUndoRedo(evt))
             {
+                IgnoreEvent(evt);
                 evt.StopPropagation();
                 return;
             }
@@ -2978,7 +3242,10 @@ namespace RobotTwin.UI
 
             _packagePath = ComponentStudioSession.PackagePath ?? string.Empty;
             _modelSourcePath = ComponentStudioSession.SourceModelPath ?? string.Empty;
-            _payload = JsonUtility.FromJson<ComponentDefinitionPayload>(ComponentStudioSession.PayloadJson) ?? CreateDefaultPayload();
+            if (!TryParseComponentPayload(ComponentStudioSession.PayloadJson, out _payload) || _payload == null)
+            {
+                _payload = CreateDefaultPayload();
+            }
             ApplyPayload(_payload);
 
             LoadModelForPayload(_payload);
@@ -3120,6 +3387,12 @@ namespace RobotTwin.UI
             SetTypeValue(payload.type);
             SetField("ComponentDescriptionField", payload.description);
             SetField("ComponentPhysicsScriptField", payload.physicsScript);
+            SetField(_nativeConfigField, payload.nativeConfig);
+            if (_nativeConfigErrorLabel != null)
+            {
+                _nativeConfigErrorLabel.text = string.Empty;
+                _nativeConfigErrorLabel.style.display = DisplayStyle.None;
+            }
             SetField("ComponentSymbolField", payload.symbol);
             SetTextValue("ComponentSymbolFileField", ResolveSymbolPath(payload.symbolFile));
             SetField("ComponentIconField", payload.iconChar);
@@ -3137,6 +3410,29 @@ namespace RobotTwin.UI
             _fxContainer?.Clear();
             _shapeLayout.Clear();
             _selectedShapeId = null;
+
+            // Extract nativeConfig from defaults if present (legacy format migration)
+            string extractedNativeConfig = payload.nativeConfig;
+            if (payload.defaults != null)
+            {
+                foreach (var def in payload.defaults)
+                {
+                    if (def != null && string.Equals(def.key, "nativeConfig", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (string.IsNullOrWhiteSpace(extractedNativeConfig))
+                        {
+                            extractedNativeConfig = def.value;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Update the nativeConfig field if we found one in defaults
+            if (!string.IsNullOrWhiteSpace(extractedNativeConfig) && extractedNativeConfig != payload.nativeConfig)
+            {
+                SetField(_nativeConfigField, extractedNativeConfig);
+            }
 
             if (payload.pinLayout != null)
             {
@@ -3181,6 +3477,11 @@ namespace RobotTwin.UI
             {
                 foreach (var entry in payload.specs)
                 {
+                    // Skip nativeConfig entry - it now has its own dedicated editor in TYPE tab
+                    if (string.Equals(entry.key, "nativeConfig", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
                     AddKeyValueRow(_specsContainer, entry.key, entry.value);
                 }
             }
@@ -3189,6 +3490,16 @@ namespace RobotTwin.UI
             {
                 foreach (var entry in payload.defaults)
                 {
+                    // Extract nativeConfig from defaults (legacy format migration)
+                    if (string.Equals(entry.key, "nativeConfig", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Move it to the dedicated nativeConfig field in TYPE tab
+                        if (string.IsNullOrWhiteSpace(payload.nativeConfig) && !string.IsNullOrWhiteSpace(entry.value))
+                        {
+                            SetField(_nativeConfigField, entry.value);
+                        }
+                        continue;
+                    }
                     AddKeyValueRow(_defaultsContainer, entry.key, entry.value);
                 }
             }
@@ -3502,8 +3813,7 @@ namespace RobotTwin.UI
 
             try
             {
-                var payload = JsonUtility.FromJson<ComponentDefinitionPayload>(json);
-                if (payload == null)
+                if (!TryParseComponentPayload(json, out var payload))
                 {
                     SetStatus("Failed to parse component config.", true);
                     return;
@@ -3518,6 +3828,59 @@ namespace RobotTwin.UI
             catch (Exception ex)
             {
                 SetStatus($"Failed to load config: {ex.Message}", true);
+            }
+        }
+
+        private static bool TryParseComponentPayload(string json, out ComponentDefinitionPayload payload)
+        {
+            payload = null;
+            if (string.IsNullOrWhiteSpace(json)) return false;
+
+            // Extract nativeConfig (object/array/string) using JObject, then feed the rest to JsonUtility.
+            string nativeConfigText = string.Empty;
+            try
+            {
+                var obj = JObject.Parse(json);
+                var nativeToken = obj["nativeConfig"];
+                if (nativeToken != null)
+                {
+                    if (nativeToken.Type == JTokenType.String)
+                    {
+                        // Already a string, use as-is
+                        nativeConfigText = nativeToken.Value<string>() ?? string.Empty;
+                    }
+                    else if (nativeToken.Type == JTokenType.Object || nativeToken.Type == JTokenType.Array)
+                    {
+                        // Convert JSON object/array to formatted string for UI display
+                        nativeConfigText = nativeToken.ToString(Formatting.Indented);
+                    }
+                    else
+                    {
+                        // Other types (null, primitives) - just use ToString
+                        nativeConfigText = nativeToken.ToString();
+                    }
+                    obj.Remove("nativeConfig");
+                    json = obj.ToString();
+                }
+            }
+            catch
+            {
+                // ignore; JsonUtility will handle the rest
+            }
+
+            try
+            {
+                payload = JsonUtility.FromJson<ComponentDefinitionPayload>(json);
+                if (payload != null && !string.IsNullOrWhiteSpace(nativeConfigText))
+                {
+                    payload.nativeConfig = nativeConfigText;
+                }
+                return payload != null;
+            }
+            catch
+            {
+                payload = null;
+                return false;
             }
         }
         private void SavePackageAndReturn()
@@ -3753,7 +4116,8 @@ namespace RobotTwin.UI
                     RefreshCatalogAndHierarchy();
                 }
             });
-            removeBtn.text = "X";
+            removeBtn.text = "✕";
+            removeBtn.tooltip = "Remove";
             removeBtn.AddToClassList("editor-remove-btn");
             mainRow.Add(removeBtn);
             entry.Add(mainRow);
@@ -3850,7 +4214,8 @@ namespace RobotTwin.UI
             {
                 RemoveLabelEntry(entry);
             });
-            removeBtn.text = "X";
+            removeBtn.text = "✕";
+            removeBtn.tooltip = "Remove";
             removeBtn.AddToClassList("editor-remove-btn");
             row.Add(removeBtn);
             entry.Add(row);
@@ -4026,7 +4391,8 @@ namespace RobotTwin.UI
                 QueueValidation();
                 RefreshCatalogAndHierarchy();
             });
-            removeBtn.text = "X";
+            removeBtn.text = "✕";
+            removeBtn.tooltip = "Remove";
             removeBtn.AddToClassList("editor-remove-btn");
             row.Add(removeBtn);
             entry.Add(row);
@@ -4087,7 +4453,8 @@ namespace RobotTwin.UI
                 container.Remove(row);
                 QueueValidation();
             });
-            removeBtn.text = "X";
+            removeBtn.text = "✕";
+            removeBtn.tooltip = "Remove";
             removeBtn.AddToClassList("editor-remove-btn");
             row.Add(removeBtn);
             container.Add(row);
@@ -7081,7 +7448,7 @@ namespace RobotTwin.UI
             }
             if (_viewportToolsToggleBtn != null)
             {
-                _viewportToolsToggleBtn.text = collapsed ? "Viewport" : "Hide";
+                _viewportToolsToggleBtn.text = collapsed ? "Show" : "Hide";
             }
         }
 
@@ -7268,8 +7635,14 @@ namespace RobotTwin.UI
 
         private void SetViewportEditPanelVisible(bool visible)
         {
-            if (_viewportEditPanel == null) return;
-            _viewportEditPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_viewportEditPanel != null)
+            {
+                _viewportEditPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            if (_viewportEditPanelToggle != null)
+            {
+                _viewportEditPanelToggle.text = visible ? "Hide" : "Show";
+            }
         }
 
         private static void SetToolButtonActive(Button button, bool active)
@@ -7943,6 +8316,7 @@ namespace RobotTwin.UI
                 type = GetTypeValue(),
                 description = GetField("ComponentDescriptionField")?.value ?? string.Empty,
                 physicsScript = GetField("ComponentPhysicsScriptField")?.value ?? string.Empty,
+                nativeConfig = _nativeConfigField?.value?.Trim() ?? string.Empty,
                 symbol = GetField("ComponentSymbolField")?.value ?? string.Empty,
                 symbolFile = GetTextValue("ComponentSymbolFileField").Trim(),
                 iconChar = GetField("ComponentIconField")?.value ?? string.Empty,
@@ -8216,6 +8590,8 @@ namespace RobotTwin.UI
                 string key = keyField?.value?.Trim();
                 string value = valueField?.value ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(key)) continue;
+                // Skip nativeConfig entries - they belong in the dedicated TYPE tab field now
+                if (string.Equals(key, "nativeConfig", StringComparison.OrdinalIgnoreCase)) continue;
                 list.Add(new ComponentKeyValue { key = key, value = value });
             }
             return list.ToArray();
@@ -8250,13 +8626,57 @@ namespace RobotTwin.UI
                     .Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
                 : Array.Empty<string>();
 
-            string json = JsonUtility.ToJson(payload, true);
+            string json = SerializePayloadForPackage(payload);
             var extraAssets = new List<string>();
             if (!string.IsNullOrWhiteSpace(symbolSourcePath) && File.Exists(symbolSourcePath))
             {
                 extraAssets.Add(symbolSourcePath);
             }
             ComponentPackageUtility.SavePackage(packagePath, json, modelSourcePath, extraAssets);
+        }
+
+        private static string SerializePayloadForPackage(ComponentDefinitionPayload payload)
+        {
+            if (payload == null) return "{}";
+            string json = JsonUtility.ToJson(payload, true);
+
+            // Convert payload.nativeConfig (UI string) into a real JSON object/array in the saved file.
+            if (string.IsNullOrWhiteSpace(payload.nativeConfig))
+            {
+                // Remove empty nativeConfig from output
+                try
+                {
+                    var obj = JObject.Parse(json);
+                    obj.Remove("nativeConfig");
+                    return obj.ToString(Formatting.Indented);
+                }
+                catch
+                {
+                    return json;
+                }
+            }
+
+            try
+            {
+                var obj = JObject.Parse(json);
+                try
+                {
+                    // Try to parse nativeConfig string as JSON
+                    var token = JToken.Parse(payload.nativeConfig);
+                    // Store as real JSON object/array in file
+                    obj["nativeConfig"] = token;
+                }
+                catch
+                {
+                    // If parsing fails, keep it as a string to avoid data loss
+                    obj["nativeConfig"] = payload.nativeConfig;
+                }
+                return obj.ToString(Formatting.Indented);
+            }
+            catch
+            {
+                return json;
+            }
         }
 
         private string ResolvePackagePath(ComponentDefinitionPayload payload)
@@ -8289,6 +8709,7 @@ namespace RobotTwin.UI
                 name = "New Component",
                 description = string.Empty,
                 physicsScript = string.Empty,
+                nativeConfig = string.Empty,
                 type = "Generic",
                 symbol = "U",
                 symbolFile = string.Empty,
@@ -8508,7 +8929,10 @@ namespace RobotTwin.UI
         private static TextField CreateField(string name, string value, string className)
         {
             var field = new TextField { name = name };
-            field.AddToClassList(className);
+            // Normalize styling for dynamically created fields (Specs/Defaults/etc.)
+            field.AddToClassList("form-field");
+            field.AddToClassList("input-dark");
+            if (!string.IsNullOrWhiteSpace(className)) field.AddToClassList(className);
             field.SetValueWithoutNotify(value ?? string.Empty);
             return field;
         }
@@ -8517,6 +8941,7 @@ namespace RobotTwin.UI
         {
             var field = new DropdownField { name = name };
             if (!string.IsNullOrWhiteSpace(className)) field.AddToClassList(className);
+            field.AddToClassList("form-field");
             field.AddToClassList("input-dark");
             var list = choices?.ToList() ?? new List<string>();
             if (!string.IsNullOrWhiteSpace(value) &&
@@ -8891,6 +9316,7 @@ namespace RobotTwin.UI
             public string[] pins;
             public ComponentKeyValue[] specs;
             public ComponentKeyValue[] defaults;
+            public string nativeConfig;
             public Vector2 size2D;
             public PinLayoutPayload[] pinLayout;
             public LabelLayoutPayload[] labels;

@@ -96,6 +96,11 @@ namespace firmware
         ResetState(false);
     }
 
+    std::uint32_t VirtualMcu::GetPC() const
+    {
+        return static_cast<std::uint32_t>(_state.core.pc);
+    }
+
     void VirtualMcu::ResetState(bool clearFlash)
     {
         if (clearFlash)
@@ -108,7 +113,41 @@ namespace firmware
         std::fill(_state.regs.begin(), _state.regs.end(), 0);
         _tickCount = 0;
         _perf = {};
+        _perf.heapTopAddress = static_cast<std::uint16_t>(AVR_SRAM_START + 256); // Assume ~256 bytes for .data/.bss
         _adcNoiseSeed = static_cast<std::uint32_t>(_tickCount ^ 0x9E3779B9u);
+        _inInterrupt = false;
+        _stackMinAddress = 0xFFFF;
+        _dataSegmentEnd = _perf.heapTopAddress;
+        _perf.stackMinAddress = _stackMinAddress;
+        _perf.dataSegmentEnd = _dataSegmentEnd;
+        if (_eepromWriteCount.size() != _state.eeprom.size())
+        {
+            _eepromWriteCount.resize(_state.eeprom.size(), 0);
+        }
+        // Watchdog Timer
+        _watchdogCounter = 0;
+        _watchdogTimeout = 16000000; // Default ~2 seconds at 16MHz
+        _watchdogEnabled = false;
+        // Power Management
+        _sleepMode = 0;
+        _sleepEnabled = false;
+        _vccVoltage = 5.0;
+        _brownOutThreshold = 2.7;
+        // Flash Access
+        _flashAccessDelay = 0;
+        _lastFlashAddress = 0;
+        // Robotics Development Tracking
+        _gpioHistory.clear();
+        _pwmStates.clear();
+        _i2cLog.clear();
+        _spiLog.clear();
+        _interruptLog.clear();
+        _lastInterruptTrigger = 0;
+        _criticalSectionStart = 0;
+        _inCriticalSection = false;
+        _realtimeDeadline = 0;
+        _enableDevelopmentTracking = false;
+        _trackingSampleInterval = 1000;
         _wdtCyclesRemaining = 0.0;
         _wdtResetArmed = false;
         _spiActive = false;
@@ -129,6 +168,7 @@ namespace firmware
         _lastPinc = 0;
         _lastPind = 0;
         _lastPine = 0;
+        _traceCpuQueue.clear();
         for (int i = 0; i < static_cast<int>(_uarts.size()); ++i)
         {
             auto &uart = _uarts[static_cast<std::size_t>(i)];
@@ -255,6 +295,70 @@ namespace firmware
         return true;
     }
 
+    bool VirtualMcu::PatchMemory(MemoryType type, std::uint32_t address, const std::uint8_t *data, std::size_t size, std::string &error)
+    {
+        if (!data || size == 0)
+        {
+            error = "No patch data";
+            return false;
+        }
+
+        switch (type)
+        {
+        case MemoryType::Flash:
+            return ProgramFlash(address, data, size, error);
+        case MemoryType::Sram:
+        {
+            const std::uint32_t base = AVR_SRAM_START;
+            const std::uint32_t end = base + static_cast<std::uint32_t>(_state.sram.size());
+            if (address < base || address + size > end)
+            {
+                error = "SRAM address out of range";
+                return false;
+            }
+            std::size_t index = static_cast<std::size_t>(address - base);
+            std::memcpy(_state.sram.data() + index, data, size);
+            return true;
+        }
+        case MemoryType::Io:
+        {
+            const std::uint32_t base = AVR_IO_BASE;
+            const std::uint32_t end = base + static_cast<std::uint32_t>(_state.io.size());
+            if (address < base || address + size > end)
+            {
+                error = "IO address out of range";
+                return false;
+            }
+            for (std::size_t i = 0; i < size; ++i)
+            {
+                AVR_IoWrite(&_state.core, static_cast<std::uint16_t>(address + i), data[i]);
+            }
+            return true;
+        }
+        case MemoryType::Eeprom:
+        {
+            if (address + size > _state.eeprom.size())
+            {
+                error = "EEPROM address out of range";
+                return false;
+            }
+            std::memcpy(_state.eeprom.data() + address, data, size);
+            _perf.eepromWrites += size;
+            if (address + size <= _eepromWriteCount.size())
+            {
+                for (std::size_t i = 0; i < size; ++i)
+                {
+                    _eepromWriteCount[address + i] += 1;
+                }
+            }
+            return true;
+        }
+        default:
+            error = "Unsupported memory type";
+            return false;
+        }
+    }
+
     void VirtualMcu::SamplePinOutputs(std::uint8_t *outPins, std::size_t outCount) const
     {
         if (!outPins || outCount == 0)
@@ -267,8 +371,10 @@ namespace firmware
 
         auto clampByte = [](int value) -> std::uint8_t
         {
-            if (value < 0) return 0;
-            if (value > 255) return 255;
+            if (value < 0)
+                return 0;
+            if (value > 255)
+                return 255;
             return static_cast<std::uint8_t>(value);
         };
 
@@ -304,12 +410,14 @@ namespace firmware
                 if (pin == 6)
                 {
                     bool com0a = (tccr0a & 0x80) != 0;
-                    if (!com0a) return false;
+                    if (!com0a)
+                        return false;
                     duty = clampByte(static_cast<int>((static_cast<double>(ocr0a) / top) * 255.0 + 0.5));
                     return true;
                 }
                 bool com0b = (tccr0a & 0x20) != 0;
-                if (!com0b) return false;
+                if (!com0b)
+                    return false;
                 duty = clampByte(static_cast<int>((static_cast<double>(ocr0b) / top) * 255.0 + 0.5));
                 return true;
             }
@@ -339,12 +447,14 @@ namespace firmware
                 if (pin == 11)
                 {
                     bool com2a = (tccr2a & 0x80) != 0;
-                    if (!com2a) return false;
+                    if (!com2a)
+                        return false;
                     duty = clampByte(static_cast<int>((static_cast<double>(ocr2a) / top) * 255.0 + 0.5));
                     return true;
                 }
                 bool com2b = (tccr2a & 0x20) != 0;
-                if (!com2b) return false;
+                if (!com2b)
+                    return false;
                 duty = clampByte(static_cast<int>((static_cast<double>(ocr2b) / top) * 255.0 + 0.5));
                 return true;
             }
@@ -393,12 +503,14 @@ namespace firmware
                 if (pin == 9)
                 {
                     bool com1a = (tccr1a & 0x80) != 0;
-                    if (!com1a) return false;
+                    if (!com1a)
+                        return false;
                     duty = clampByte(static_cast<int>((static_cast<double>(ocr1a) / top) * 255.0 + 0.5));
                     return true;
                 }
                 bool com1b = (tccr1a & 0x20) != 0;
-                if (!com1b) return false;
+                if (!com1b)
+                    return false;
                 duty = clampByte(static_cast<int>((static_cast<double>(ocr1b) / top) * 255.0 + 0.5));
                 return true;
             }
@@ -555,392 +667,482 @@ namespace firmware
         return false;
     }
 
-    void VirtualMcu::StepCycles(std::uint64_t cycles)
+    void VirtualMcu::StepCycles(std::uint64_t totalCycles)
     {
-        std::uint64_t tickStart = _tickCount;
-        while (cycles > 0)
+        const std::uint64_t MaxQuantum = 1600;
+        while (totalCycles > 0)
         {
-            std::uint8_t cost = AVR_ExecuteNext(&_state.core);
-            if (cost == 0)
-                cost = 1;
-            cycles = (cost > cycles) ? 0 : (cycles - cost);
-            _tickCount += cost;
-        }
-
-        std::uint64_t executed = _tickCount - tickStart;
-        if (executed > 0)
-        {
-            _perf.cycles += executed;
-            SimulateTimer0(executed);
-            SimulateTimer1(executed);
-            SimulateTimer2(executed);
-            if (_profile.mcu == "ATmega2560")
+            std::uint64_t cycles = (totalCycles > MaxQuantum) ? MaxQuantum : totalCycles;
+            totalCycles -= cycles;
+            std::uint64_t tickStart = _tickCount;
+            while (cycles > 0)
             {
-                SimulateTimer3(executed);
-                SimulateTimer4(executed);
-                SimulateTimer5(executed);
-            }
-        }
-
-        std::uint8_t adcsra = GetIo(AVR_ADCSRA);
-        if ((adcsra & (1u << 6)) != 0)
-        {
-            if (_adcCyclesRemaining <= 0.0)
-            {
-                int prescaler = 2;
-                std::uint8_t adps = static_cast<std::uint8_t>(adcsra & 0x07);
-                switch (adps)
+                /* Trace logging removed for performance optimization
+                // Trace every instruction
+                static std::FILE *fTrace = nullptr;
+                if (!fTrace)
+                    fTrace = std::fopen("trace_cpu.txt", "w");
+                if (fTrace)
                 {
-                case 0:
-                    prescaler = 2;
-                    break;
-                case 1:
-                    prescaler = 2;
-                    break;
-                case 2:
-                    prescaler = 4;
-                    break;
-                case 3:
-                    prescaler = 8;
-                    break;
-                case 4:
-                    prescaler = 16;
-                    break;
-                case 5:
-                    prescaler = 32;
-                    break;
-                case 6:
-                    prescaler = 64;
-                    break;
-                case 7:
-                    prescaler = 128;
-                    break;
+                    std::uint16_t pc = _state.core.pc;
+                    std::uint16_t op = 0;
+                    if (pc * 2 < _state.flash.size() - 1)
+                    {
+                        op = _state.flash[pc * 2] | (_state.flash[pc * 2 + 1] << 8);
+                    }
+                    std::fprintf(fTrace, "PC=%04X OP=%04X SP=%04X X=%02X%02X Z=%02X%02X R17=%02X\n",
+                                 (unsigned)pc, (unsigned)op, (unsigned)(_state.core.sp),
+                                 _state.core.regs[27], _state.core.regs[26],
+                                 _state.core.regs[31], _state.core.regs[30],
+                                 _state.core.regs[17]);
+                    if (_tickCount % 1000 == 0)
+                        std::fflush(fTrace);
                 }
-                _adcCyclesRemaining = 13.0 * prescaler;
-            }
-        }
+                */
 
-        if (_adcCyclesRemaining > 0.0)
-        {
-            _adcCyclesRemaining -= static_cast<double>(executed);
-            if (_adcCyclesRemaining <= 0.0)
+                // Check stack integrity before instruction execution
+                CheckStackIntegrity();
+
+                // Update watchdog timer
+                UpdateWatchdogTimer(1);
+
+                // Check brown-out condition
+                CheckBrownOutCondition();
+
+                // Simulate power modes (sleep states)
+                SimulatePowerMode();
+
+                // Enforce flash access latency
+                EnforceFlashAccessLatency();
+
+                // Robotics Development Tracking (rate-limited, optional)
+                if (_enableDevelopmentTracking && (_tickCount % _trackingSampleInterval) == 0)
+                {
+                    TrackGpioChanges();
+                    AnalyzePwmOutputs();
+                    LogI2cTransaction();
+                    LogSpiTransaction();
+                    TrackInterruptLatency();
+                    DetectTimingViolations();
+                }
+
+                if (_traceCpuEnabled && (_tickCount % _traceCpuInterval) == 0)
+                {
+                    CpuTraceEvent evt{};
+                    evt.tick = _tickCount;
+                    evt.pc = _state.core.pc;
+                    evt.opcode = 0;
+                    std::size_t pcIndex = static_cast<std::size_t>(evt.pc) * 2;
+                    if (pcIndex + 1 < _state.flash.size())
+                    {
+                        evt.opcode = static_cast<std::uint16_t>(
+                            _state.flash[pcIndex] | (_state.flash[pcIndex + 1] << 8));
+                    }
+                    evt.sp = _state.core.sp;
+                    evt.sreg = GetIo(AVR_SREG);
+                    if (_traceCpuQueue.size() >= _traceCpuMax)
+                    {
+                        _traceCpuQueue.pop_front();
+                    }
+                    _traceCpuQueue.push_back(evt);
+                }
+
+                std::uint8_t cost = AVR_ExecuteNext(&_state.core);
+                if (cost == 0)
+                    cost = 1;
+                cycles = (cost > cycles) ? 0 : (cycles - cost);
+                _tickCount += cost;
+
+                if (_inInterrupt)
+                {
+                    _perf.interruptCycles += cost;
+                }
+
+                // Check peripheral constraints after execution
+                CheckPeripheralConstraints();
+
+                // Record execution snapshots for replay
+                if (_deterministicMode)
+                {
+                    RecordExecutionSnapshot();
+                }
+            }
+
+            std::uint64_t executed = _tickCount - tickStart;
+            if (executed > 0)
             {
-                std::uint8_t admux = GetIo(AVR_ADMUX);
-                std::uint8_t adcsrb = GetIo(AVR_ADCSRB);
-                std::uint8_t channel = 0;
+                _perf.cycles += executed;
+                SimulateTimer0(executed);
+                SimulateTimer1(executed);
+                SimulateTimer2(executed);
                 if (_profile.mcu == "ATmega2560")
                 {
-                    std::uint8_t mux5 = (adcsrb & (1u << 3)) != 0 ? 8 : 0;
-                    channel = static_cast<std::uint8_t>(mux5 | (admux & 0x07));
-                }
-                else
-                {
-                    channel = static_cast<std::uint8_t>(admux & 0x0F);
-                }
-                float voltage = 0.0f;
-                if (channel < _analogInputs.size())
-                {
-                    voltage = _analogInputs[channel];
-                }
-                if (voltage < 0.0f)
-                    voltage = 0.0f;
-                float refVoltage = 5.0f;
-                std::uint8_t refs = static_cast<std::uint8_t>(admux & 0xC0);
-                if (refs == 0xC0)
-                {
-                    refVoltage = 1.1f;
-                }
-                if (refVoltage <= 0.001f)
-                    refVoltage = 5.0f;
-                if (voltage > refVoltage)
-                    voltage = refVoltage;
-                double scaled = (static_cast<double>(voltage) / refVoltage) * 1023.0;
-                _adcNoiseSeed = _adcNoiseSeed * 1664525u + 1013904223u;
-                int noise = static_cast<int>((_adcNoiseSeed >> 30) & 0x03) - 1;
-                if (noise > 1)
-                    noise = 1;
-                int value = static_cast<int>(scaled + 0.5) + noise;
-                if (value < 0)
-                    value = 0;
-                if (value > 1023)
-                    value = 1023;
-                bool adlar = (admux & (1u << 5)) != 0;
-                if (adlar)
-                {
-                    std::uint8_t adcl = static_cast<std::uint8_t>((value & 0x03) << 6);
-                    std::uint8_t adch = static_cast<std::uint8_t>((value >> 2) & 0xFF);
-                    AVR_IoWrite(&_state.core, AVR_ADCL, adcl);
-                    AVR_IoWrite(&_state.core, AVR_ADCH, adch);
-                }
-                else
-                {
-                    AVR_IoWrite(&_state.core, AVR_ADCL, static_cast<std::uint8_t>(value & 0xFF));
-                    AVR_IoWrite(&_state.core, AVR_ADCH, static_cast<std::uint8_t>((value >> 8) & 0x03));
-                }
-                _perf.adcSamples++;
-                adcsra = GetIo(AVR_ADCSRA);
-                adcsra = static_cast<std::uint8_t>(adcsra & ~(1u << 6));
-                AVR_IoWrite(&_state.core, AVR_ADCSRA, adcsra);
-                std::size_t adcsraIndex = static_cast<std::size_t>(AVR_ADCSRA - AVR_IO_BASE);
-                if (adcsraIndex < _state.io.size())
-                {
-                    _state.io[adcsraIndex] = static_cast<std::uint8_t>(_state.io[adcsraIndex] | (1u << 4));
+                    SimulateTimer3(executed);
+                    SimulateTimer4(executed);
+                    SimulateTimer5(executed);
                 }
             }
-        }
 
-        double elapsed = static_cast<double>(executed);
-
-        for (int channel = 0; channel < static_cast<int>(_uarts.size()); ++channel)
-        {
-            if (!HasUart(channel))
+            std::uint8_t adcsra = GetIo(AVR_ADCSRA);
+            if ((adcsra & (1u << 6)) != 0)
             {
-                continue;
+                if (_adcCyclesRemaining <= 0.0)
+                {
+                    int prescaler = 2;
+                    std::uint8_t adps = static_cast<std::uint8_t>(adcsra & 0x07);
+                    switch (adps)
+                    {
+                    case 0:
+                        prescaler = 2;
+                        break;
+                    case 1:
+                        prescaler = 2;
+                        break;
+                    case 2:
+                        prescaler = 4;
+                        break;
+                    case 3:
+                        prescaler = 8;
+                        break;
+                    case 4:
+                        prescaler = 16;
+                        break;
+                    case 5:
+                        prescaler = 32;
+                        break;
+                    case 6:
+                        prescaler = 64;
+                        break;
+                    case 7:
+                        prescaler = 128;
+                        break;
+                    }
+                    _adcCyclesRemaining = 13.0 * prescaler;
+                }
             }
 
-            auto &uart = _uarts[static_cast<std::size_t>(channel)];
-            if (!IsUartTxEnabled(channel))
+            if (_adcCyclesRemaining > 0.0)
             {
-                uart.txActive = false;
-                uart.txCyclesRemaining = 0.0;
-                uart.udrEmptyCyclesRemaining = 0.0;
-                std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
-                ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartDataRegisterEmptyBit));
-                AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
+                _adcCyclesRemaining -= static_cast<double>(executed);
+                if (_adcCyclesRemaining <= 0.0)
+                {
+                    std::uint8_t admux = GetIo(AVR_ADMUX);
+                    std::uint8_t adcsrb = GetIo(AVR_ADCSRB);
+                    std::uint8_t channel = 0;
+                    if (_profile.mcu == "ATmega2560")
+                    {
+                        std::uint8_t mux5 = (adcsrb & (1u << 3)) != 0 ? 8 : 0;
+                        channel = static_cast<std::uint8_t>(mux5 | (admux & 0x07));
+                    }
+                    else
+                    {
+                        channel = static_cast<std::uint8_t>(admux & 0x0F);
+                    }
+                    float voltage = 0.0f;
+                    if (channel < _analogInputs.size())
+                    {
+                        voltage = _analogInputs[channel];
+                    }
+                    if (voltage < 0.0f)
+                        voltage = 0.0f;
+                    float refVoltage = 5.0f;
+                    std::uint8_t refs = static_cast<std::uint8_t>(admux & 0xC0);
+                    if (refs == 0xC0)
+                    {
+                        refVoltage = 1.1f;
+                    }
+                    if (refVoltage <= 0.001f)
+                        refVoltage = 5.0f;
+                    if (voltage > refVoltage)
+                        voltage = refVoltage;
+                    double scaled = (static_cast<double>(voltage) / refVoltage) * 1023.0;
+                    _adcNoiseSeed = _adcNoiseSeed * 1664525u + 1013904223u;
+                    int noise = static_cast<int>((_adcNoiseSeed >> 30) & 0x03) - 1;
+                    if (noise > 1)
+                        noise = 1;
+                    int value = static_cast<int>(scaled + 0.5) + noise;
+                    if (value < 0)
+                        value = 0;
+                    if (value > 1023)
+                        value = 1023;
+                    bool adlar = (admux & (1u << 5)) != 0;
+                    if (adlar)
+                    {
+                        std::uint8_t adcl = static_cast<std::uint8_t>((value & 0x03) << 6);
+                        std::uint8_t adch = static_cast<std::uint8_t>((value >> 2) & 0xFF);
+                        AVR_IoWrite(&_state.core, AVR_ADCL, adcl);
+                        AVR_IoWrite(&_state.core, AVR_ADCH, adch);
+                    }
+                    else
+                    {
+                        AVR_IoWrite(&_state.core, AVR_ADCL, static_cast<std::uint8_t>(value & 0xFF));
+                        AVR_IoWrite(&_state.core, AVR_ADCH, static_cast<std::uint8_t>((value >> 8) & 0x03));
+                    }
+                    _perf.adcSamples++;
+                    adcsra = GetIo(AVR_ADCSRA);
+                    adcsra = static_cast<std::uint8_t>(adcsra & ~(1u << 6));
+                    AVR_IoWrite(&_state.core, AVR_ADCSRA, adcsra);
+                    std::size_t adcsraIndex = static_cast<std::size_t>(AVR_ADCSRA - AVR_IO_BASE);
+                    if (adcsraIndex < _state.io.size())
+                    {
+                        _state.io[adcsraIndex] = static_cast<std::uint8_t>(_state.io[adcsraIndex] | (1u << 4));
+                    }
+                }
             }
-            else
+
+            double elapsed = static_cast<double>(executed);
+
+            for (int channel = 0; channel < static_cast<int>(_uarts.size()); ++channel)
             {
-                double cyclesPerBit = ComputeUartCyclesPerBit(channel);
-                double cyclesPerByte = cyclesPerBit * 10.0;
-
-                if (uart.udrEmptyCyclesRemaining > 0.0)
+                if (!HasUart(channel))
                 {
-                    uart.udrEmptyCyclesRemaining -= elapsed;
-                    if (uart.udrEmptyCyclesRemaining < 0.0)
-                    {
-                        uart.udrEmptyCyclesRemaining = 0.0;
-                    }
+                    continue;
                 }
 
-                double txElapsed = elapsed;
-                while (txElapsed > 0.0)
+                auto &uart = _uarts[static_cast<std::size_t>(channel)];
+                if (!IsUartTxEnabled(channel))
                 {
-                    if (uart.txActive)
-                    {
-                        if (uart.txCyclesRemaining > txElapsed)
-                        {
-                            uart.txCyclesRemaining -= txElapsed;
-                            txElapsed = 0.0;
-                            break;
-                        }
-
-                        txElapsed -= uart.txCyclesRemaining;
-                        uart.txCyclesRemaining = 0.0;
-                        uart.txActive = false;
-                        HandleUartWrite(channel, uart.txByte);
-                        std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
-                        if (uart.txPending.empty())
-                        {
-                            ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartTxCompleteBit));
-                        }
-                        AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
-                    }
-
-                    if (!uart.txActive && !uart.txPending.empty())
-                    {
-                        uart.txByte = uart.txPending.front();
-                        uart.txPending.pop_front();
-                        uart.txActive = true;
-                        uart.txCyclesRemaining = cyclesPerByte;
-                        uart.udrEmptyCyclesRemaining = cyclesPerBit;
-                        std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
-                        ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartTxCompleteBit));
-                        AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
-                        continue;
-                    }
-
-                    break;
-                }
-
-                std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
-                if (uart.txPending.empty() && uart.udrEmptyCyclesRemaining <= 0.0)
-                {
+                    uart.txActive = false;
+                    uart.txCyclesRemaining = 0.0;
+                    uart.udrEmptyCyclesRemaining = 0.0;
+                    std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
                     ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartDataRegisterEmptyBit));
+                    AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
                 }
                 else
                 {
-                    ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartDataRegisterEmptyBit));
-                }
-                AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
-            }
+                    double cyclesPerBit = ComputeUartCyclesPerBit(channel);
+                    double cyclesPerByte = cyclesPerBit * 10.0;
 
-            if (!IsUartRxEnabled(channel))
-            {
-                uart.rxReady = false;
-                uart.rxCyclesRemaining = 0.0;
-                uart.rxQueue.clear();
-                std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
-                ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartRxCompleteBit));
-                ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartFrameErrorBit));
-                ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartParityErrorBit));
-                AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
-            }
-            else if (!uart.rxReady)
-            {
-                double cyclesPerByte = ComputeUartCyclesPerByte(channel);
-                double rxElapsed = elapsed;
-                while (rxElapsed > 0.0 && !uart.rxReady)
-                {
-                    if (uart.rxCyclesRemaining <= 0.0)
+                    if (uart.udrEmptyCyclesRemaining > 0.0)
                     {
-                        if (uart.rxQueue.empty())
+                        uart.udrEmptyCyclesRemaining -= elapsed;
+                        if (uart.udrEmptyCyclesRemaining < 0.0)
                         {
-                            break;
+                            uart.udrEmptyCyclesRemaining = 0.0;
                         }
-                        uart.rxCyclesRemaining = cyclesPerByte;
                     }
 
-                    if (uart.rxCyclesRemaining > rxElapsed)
+                    double txElapsed = elapsed;
+                    while (txElapsed > 0.0)
                     {
-                        uart.rxCyclesRemaining -= rxElapsed;
-                        rxElapsed = 0.0;
+                        if (uart.txActive)
+                        {
+                            if (uart.txCyclesRemaining > txElapsed)
+                            {
+                                uart.txCyclesRemaining -= txElapsed;
+                                txElapsed = 0.0;
+                                break;
+                            }
+
+                            txElapsed -= uart.txCyclesRemaining;
+                            uart.txCyclesRemaining = 0.0;
+                            uart.txActive = false;
+                            HandleUartWrite(channel, uart.txByte);
+                            std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
+                            if (uart.txPending.empty())
+                            {
+                                ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartTxCompleteBit));
+                            }
+                            AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
+                        }
+
+                        if (!uart.txActive && !uart.txPending.empty())
+                        {
+                            uart.txByte = uart.txPending.front();
+                            uart.txPending.pop_front();
+                            uart.txActive = true;
+                            uart.txCyclesRemaining = cyclesPerByte;
+                            uart.udrEmptyCyclesRemaining = cyclesPerBit;
+                            std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
+                            ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartTxCompleteBit));
+                            AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
+                            continue;
+                        }
+
                         break;
                     }
 
-                    rxElapsed -= uart.rxCyclesRemaining;
-                    uart.rxCyclesRemaining = 0.0;
-                    if (!uart.rxQueue.empty())
+                    std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
+                    if (uart.txPending.empty() && uart.udrEmptyCyclesRemaining <= 0.0)
                     {
-                        std::uint8_t next = uart.rxQueue.front();
-                        uart.rxQueue.pop_front();
-                        _perf.uartRxBytes[static_cast<std::size_t>(channel)]++;
+                        ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartDataRegisterEmptyBit));
+                    }
+                    else
+                    {
+                        ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartDataRegisterEmptyBit));
+                    }
+                    AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
+                }
 
-                        std::uint8_t ucsrc = GetIo(UcsrCAddress[channel]);
-                        bool parityEnabled = IsUartParityEnabled(channel);
-                        bool twoStopBits = (ucsrc & (1u << 3)) != 0;
-
-                        ++uart.rxCount;
-                        std::uint32_t seed = NextUartErrorSeed(channel, next);
-                        bool frameError = (seed & (twoStopBits ? 0x3FFu : 0x1FFu)) == 0;
-                        bool parityError = false;
-                        if (parityEnabled)
+                if (!IsUartRxEnabled(channel))
+                {
+                    uart.rxReady = false;
+                    uart.rxCyclesRemaining = 0.0;
+                    uart.rxQueue.clear();
+                    std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
+                    ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartRxCompleteBit));
+                    ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartFrameErrorBit));
+                    ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartParityErrorBit));
+                    AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
+                }
+                else if (!uart.rxReady)
+                {
+                    double cyclesPerByte = ComputeUartCyclesPerByte(channel);
+                    double rxElapsed = elapsed;
+                    while (rxElapsed > 0.0 && !uart.rxReady)
+                    {
+                        if (uart.rxCyclesRemaining <= 0.0)
                         {
-                            parityError = (((seed >> 10) & 0x7Fu) == 0);
+                            if (uart.rxQueue.empty())
+                            {
+                                break;
+                            }
+                            uart.rxCyclesRemaining = cyclesPerByte;
+                        }
+
+                        if (uart.rxCyclesRemaining > rxElapsed)
+                        {
+                            uart.rxCyclesRemaining -= rxElapsed;
+                            rxElapsed = 0.0;
+                            break;
+                        }
+
+                        rxElapsed -= uart.rxCyclesRemaining;
+                        uart.rxCyclesRemaining = 0.0;
+                        if (!uart.rxQueue.empty())
+                        {
+                            std::uint8_t next = uart.rxQueue.front();
+                            uart.rxQueue.pop_front();
+                            _perf.uartRxBytes[static_cast<std::size_t>(channel)]++;
+
+                            std::uint8_t ucsrc = GetIo(UcsrCAddress[channel]);
+                            bool parityEnabled = IsUartParityEnabled(channel);
+                            bool twoStopBits = (ucsrc & (1u << 3)) != 0;
+
+                            ++uart.rxCount;
+                            std::uint32_t seed = NextUartErrorSeed(channel, next);
+                            bool frameError = (seed & (twoStopBits ? 0x3FFu : 0x1FFu)) == 0;
+                            bool parityError = false;
+                            if (parityEnabled)
+                            {
+                                parityError = (((seed >> 10) & 0x7Fu) == 0);
+                                if (parityError)
+                                {
+                                    next = static_cast<std::uint8_t>(next ^ 0x01);
+                                }
+                            }
+
+                            AVR_IoWrite(&_state.core, UdrAddress[channel], next);
+                            uart.rxReady = true;
+                            std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
+                            ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartRxCompleteBit));
+                            ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartFrameErrorBit));
+                            ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartParityErrorBit));
+                            if (frameError)
+                            {
+                                ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartFrameErrorBit));
+                            }
                             if (parityError)
                             {
-                                next = static_cast<std::uint8_t>(next ^ 0x01);
+                                ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartParityErrorBit));
                             }
+                            AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
                         }
-
-                        AVR_IoWrite(&_state.core, UdrAddress[channel], next);
-                        uart.rxReady = true;
-                        std::uint8_t ucsra = GetIo(UcsrAAddress[channel]);
-                        ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartRxCompleteBit));
-                        ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartFrameErrorBit));
-                        ucsra = static_cast<std::uint8_t>(ucsra & ~(1u << UartParityErrorBit));
-                        if (frameError)
-                        {
-                            ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartFrameErrorBit));
-                        }
-                        if (parityError)
-                        {
-                            ucsra = static_cast<std::uint8_t>(ucsra | (1u << UartParityErrorBit));
-                        }
-                        AVR_IoWrite(&_state.core, UcsrAAddress[channel], ucsra);
                     }
                 }
             }
-        }
 
-        std::uint8_t spcr = GetIo(AVR_SPCR);
-        bool spiEnabled = (spcr & (1u << 6)) != 0;
-        if (!spiEnabled)
-        {
-            _spiActive = false;
-            _spiCyclesRemaining = 0.0;
-        }
-        if (_spiActive)
-        {
-            _spiCyclesRemaining -= elapsed;
-            if (_spiCyclesRemaining <= 0.0)
+            std::uint8_t spcr = GetIo(AVR_SPCR);
+            bool spiEnabled = (spcr & (1u << 6)) != 0;
+            if (!spiEnabled)
             {
                 _spiActive = false;
                 _spiCyclesRemaining = 0.0;
-                AVR_IoWrite(&_state.core, AVR_SPDR, _spiData);
-                std::uint8_t spsr = GetIo(AVR_SPSR);
-                spsr = static_cast<std::uint8_t>(spsr | (1u << 7));
-                AVR_IoWrite(&_state.core, AVR_SPSR, spsr);
-                _perf.spiTransfers++;
             }
-        }
+            if (_spiActive)
+            {
+                _spiCyclesRemaining -= elapsed;
+                if (_spiCyclesRemaining <= 0.0)
+                {
+                    _spiActive = false;
+                    _spiCyclesRemaining = 0.0;
+                    AVR_IoWrite(&_state.core, AVR_SPDR, _spiData);
+                    std::uint8_t spsr = GetIo(AVR_SPSR);
+                    spsr = static_cast<std::uint8_t>(spsr | (1u << 7));
+                    AVR_IoWrite(&_state.core, AVR_SPSR, spsr);
+                    _perf.spiTransfers++;
+                }
+            }
 
-        std::uint8_t twcr = GetIo(AVR_TWCR);
-        bool twiEnabled = (twcr & (1u << 2)) != 0;
-        if (!twiEnabled)
-        {
-            _twiActive = false;
-            _twiCyclesRemaining = 0.0;
-        }
-        if (_twiActive)
-        {
-            _twiCyclesRemaining -= elapsed;
-            if (_twiCyclesRemaining <= 0.0)
+            std::uint8_t twcr = GetIo(AVR_TWCR);
+            bool twiEnabled = (twcr & (1u << 2)) != 0;
+            if (!twiEnabled)
             {
                 _twiActive = false;
                 _twiCyclesRemaining = 0.0;
-                AVR_IoWrite(&_state.core, AVR_TWDR, _twiData);
-                std::uint8_t twcr = GetIo(AVR_TWCR);
-                bool ack = (twcr & (1u << 6)) != 0;
-                if (_twiStatus == 0xF8)
-                {
-                    _twiStatus = ack ? 0x28 : 0x30;
-                }
-                std::uint8_t twsr = GetIo(AVR_TWSR);
-                twsr = static_cast<std::uint8_t>((twsr & 0x03) | (_twiStatus & 0xF8));
-                AVR_IoWrite(&_state.core, AVR_TWSR, twsr);
-                twcr = static_cast<std::uint8_t>(twcr | (1u << 7));
-                std::size_t twcrIdx = static_cast<std::size_t>(AVR_TWCR - AVR_IO_BASE);
-                if (twcrIdx < _state.io.size())
-                {
-                    _state.io[twcrIdx] = twcr;
-                }
-                _perf.twiTransfers++;
-                _twiStatus = 0xF8;
             }
-        }
-
-        std::uint8_t wdtcsr = GetIo(AVR_WDTCSR);
-        bool wdtEnable = (wdtcsr & (1u << 3)) != 0 || (wdtcsr & (1u << 6)) != 0;
-        if (wdtEnable)
-        {
-            if (_wdtCyclesRemaining <= 0.0)
+            if (_twiActive)
             {
-                int wdp = (wdtcsr & 0x07) | ((wdtcsr >> 5) & 0x01) * 8;
-                static const double kTimeouts[] = {0.016, 0.032, 0.064, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0};
-                int idx = wdp;
-                if (idx < 0)
-                    idx = 0;
-                if (idx > 9)
-                    idx = 9;
-                _wdtCyclesRemaining = kTimeouts[idx] * _profile.cpu_hz;
-            }
-            _wdtCyclesRemaining -= elapsed;
-            if (_wdtCyclesRemaining <= 0.0)
-            {
-                wdtcsr = static_cast<std::uint8_t>(wdtcsr | (1u << 7));
-                AVR_IoWrite(&_state.core, AVR_WDTCSR, wdtcsr);
-                if (wdtcsr & (1u << 3))
+                _twiCyclesRemaining -= elapsed;
+                if (_twiCyclesRemaining <= 0.0)
                 {
-                    _wdtResetArmed = true;
+                    _twiActive = false;
+                    _twiCyclesRemaining = 0.0;
+                    AVR_IoWrite(&_state.core, AVR_TWDR, _twiData);
+                    std::uint8_t twcr = GetIo(AVR_TWCR);
+                    bool ack = (twcr & (1u << 6)) != 0;
+                    if (_twiStatus == 0xF8)
+                    {
+                        _twiStatus = ack ? 0x28 : 0x30;
+                    }
+                    std::uint8_t twsr = GetIo(AVR_TWSR);
+                    twsr = static_cast<std::uint8_t>((twsr & 0x03) | (_twiStatus & 0xF8));
+                    AVR_IoWrite(&_state.core, AVR_TWSR, twsr);
+                    twcr = static_cast<std::uint8_t>(twcr | (1u << 7));
+                    std::size_t twcrIdx = static_cast<std::size_t>(AVR_TWCR - AVR_IO_BASE);
+                    if (twcrIdx < _state.io.size())
+                    {
+                        _state.io[twcrIdx] = twcr;
+                    }
+                    _perf.twiTransfers++;
+                    _twiStatus = 0xF8;
                 }
-                _wdtCyclesRemaining = 0.0;
             }
-        }
 
-        if (_wdtResetArmed)
-        {
-            _perf.wdtResets++;
-            Reset();
+            std::uint8_t wdtcsr = GetIo(AVR_WDTCSR);
+            bool wdtEnable = (wdtcsr & (1u << 3)) != 0 || (wdtcsr & (1u << 6)) != 0;
+            if (wdtEnable)
+            {
+                if (_wdtCyclesRemaining <= 0.0)
+                {
+                    int wdp = (wdtcsr & 0x07) | ((wdtcsr >> 5) & 0x01) * 8;
+                    static const double kTimeouts[] = {0.016, 0.032, 0.064, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0};
+                    int idx = wdp;
+                    if (idx < 0)
+                        idx = 0;
+                    if (idx > 9)
+                        idx = 9;
+                    _wdtCyclesRemaining = kTimeouts[idx] * _profile.cpu_hz;
+                }
+                _wdtCyclesRemaining -= elapsed;
+                if (_wdtCyclesRemaining <= 0.0)
+                {
+                    wdtcsr = static_cast<std::uint8_t>(wdtcsr | (1u << 7));
+                    AVR_IoWrite(&_state.core, AVR_WDTCSR, wdtcsr);
+                    if (wdtcsr & (1u << 3))
+                    {
+                        _wdtResetArmed = true;
+                    }
+                    _wdtCyclesRemaining = 0.0;
+                }
+            }
+
+            if (_wdtResetArmed)
+            {
+                _perf.wdtResets++;
+                Reset();
+            }
         }
     }
 
@@ -1530,6 +1732,46 @@ namespace firmware
         if (!user)
             return;
         auto *self = static_cast<VirtualMcu *>(user);
+
+        // Track EEPROM writes for wear monitoring
+        if (address >= AVR_EEARL && address <= AVR_EEDR)
+        {
+            if (address == AVR_EECR && (value & (1u << 1))) // EEPE bit set
+            {
+                self->_perf.eepromWrites++;
+                std::uint16_t eepromAddr = static_cast<std::uint16_t>(
+                    self->GetIo(AVR_EEARL) | (self->GetIo(AVR_EEARH) << 8));
+                if (eepromAddr < self->_eepromWriteCount.size())
+                {
+                    self->_eepromWriteCount[eepromAddr]++;
+                    // Warn if approaching endurance limit (100k writes typical)
+                    if (self->_eepromWriteCount[eepromAddr] > 90000)
+                    {
+                        // Could log warning here
+                    }
+                }
+            }
+        }
+
+        // Monitor watchdog timer configuration
+        if (address == AVR_WDTCSR)
+        {
+            self->_watchdogEnabled = (value & (1u << 3)) != 0; // WDE bit
+            // Calculate timeout from prescaler bits WDP3:0
+            std::uint8_t wdp = ((value & 0x20) >> 2) | (value & 0x07);
+            // Watchdog timeout = 2K * 2^wdp cycles at 128kHz oscillator
+            // At 16MHz CPU: timeout_cycles = (2048 * (1 << wdp)) * (16000000 / 128000)
+            self->_watchdogTimeout = (2048ULL << wdp) * 125ULL;
+            self->_watchdogCounter = 0; // Reset counter on config change
+        }
+
+        // Monitor sleep mode configuration
+        if (address == AVR_SMCR)
+        {
+            self->_sleepMode = (value >> 1) & 0x07;
+            self->_sleepEnabled = (value & 0x01) != 0;
+        }
+
         if (address == AVR_SPDR)
         {
             std::uint8_t spcr = self->GetIo(AVR_SPCR);
@@ -3238,6 +3480,434 @@ namespace firmware
             if (type == 0x01)
                 break;
         }
+        return true;
+    }
+
+    void VirtualMcu::CheckStackIntegrity()
+    {
+        std::uint16_t sp = _state.core.sp;
+
+        // Track stack high-water mark (lowest address reached)
+        if (sp < _stackMinAddress)
+        {
+            _stackMinAddress = sp;
+            std::uint16_t stackUsed = static_cast<std::uint16_t>(
+                (AVR_SRAM_START + _state.sram.size()) - sp);
+            if (stackUsed > _perf.stackHighWaterMark)
+            {
+                _perf.stackHighWaterMark = stackUsed;
+            }
+        }
+        _perf.stackMinAddress = _stackMinAddress;
+
+        // Detect stack overflow: SP dropped below data segment
+        if (sp < _dataSegmentEnd)
+        {
+            _perf.stackOverflows++;
+            // In real hardware, this corrupts RAM silently.
+            // We could optionally halt simulation here for debugging.
+        }
+    }
+
+    bool VirtualMcu::ValidateMemoryAccess(std::uint16_t address, bool isWrite)
+    {
+        // Check if accessing valid SRAM range
+        std::uint16_t sramEnd = static_cast<std::uint16_t>(AVR_SRAM_START + _state.sram.size());
+
+        if (address >= AVR_SRAM_START && address < sramEnd)
+        {
+            return true; // Valid SRAM access
+        }
+
+        // Check IO registers
+        if (address >= AVR_IO_BASE && address < AVR_IO_BASE + _state.io.size())
+        {
+            return true;
+        }
+
+        // Invalid access
+        _perf.invalidMemoryAccesses++;
+        return false;
+    }
+
+    void VirtualMcu::UpdateWatchdogTimer(std::uint64_t cycles)
+    {
+        if (!_watchdogEnabled)
+            return;
+
+        _watchdogCounter += cycles;
+        if (_watchdogCounter >= _watchdogTimeout)
+        {
+            // Watchdog timeout - trigger reset
+            _perf.watchdogResets++;
+            _watchdogCounter = 0;
+            // In real hardware, this would cause a full system reset
+            // We'll simulate by resetting the CPU state
+            SoftReset();
+        }
+    }
+
+    void VirtualMcu::CheckBrownOutCondition()
+    {
+        // Simulate voltage fluctuation (very simple model)
+        // In real scenarios, external factors would affect _vccVoltage
+        if (_vccVoltage < _brownOutThreshold)
+        {
+            _perf.brownOutResets++;
+            // Brown-out detected - trigger reset
+            SoftReset();
+            _vccVoltage = 5.0; // Power restored after reset
+        }
+    }
+
+    void VirtualMcu::SimulatePowerMode()
+    {
+        if (!_sleepEnabled)
+            return;
+
+        // Check SMCR register for sleep mode
+        std::uint8_t smcr = GetIo(0x33); // SMCR address
+        _sleepMode = (smcr >> 1) & 0x07;
+        _sleepEnabled = (smcr & 0x01) != 0;
+
+        if (_sleepEnabled && _sleepMode > 0)
+        {
+            // In sleep mode - count cycles spent sleeping
+            _perf.sleepCycles++;
+            // Different sleep modes have different power characteristics:
+            // IDLE (0): CPU stopped, peripherals run
+            // ADC_NOISE_REDUCTION (1): CPU & ADC stopped
+            // POWER_DOWN (2): Everything stopped except WDT and external interrupts
+            // POWER_SAVE (3): Like POWER_DOWN but Timer2 runs
+            // STANDBY/EXT_STANDBY (6/7): Like POWER_DOWN but oscillator runs
+        }
+    }
+
+    void VirtualMcu::EnforceFlashAccessLatency()
+    {
+        // LPM (Load Program Memory) instructions have access latency
+        // Real ATmega328P: Flash access takes 3 cycles
+        std::uint16_t pc = static_cast<std::uint16_t>(_state.core.pc);
+
+        if (pc != _lastFlashAddress)
+        {
+            // Sequential access is faster, random access has more latency
+            if (pc != _lastFlashAddress + 1)
+            {
+                _flashAccessDelay = 2; // Non-sequential access penalty
+                _perf.flashAccessCycles += 2;
+            }
+            _lastFlashAddress = pc;
+        }
+
+        if (_flashAccessDelay > 0)
+        {
+            _flashAccessDelay--;
+        }
+    }
+
+    void VirtualMcu::CheckPeripheralConstraints()
+    {
+        // UART Buffer Overflow Detection
+        for (std::size_t i = 0; i < _uarts.size(); i++)
+        {
+            if (_uarts[i].rxQueue.size() > _uartRxBufferSize)
+            {
+                _perf.uartOverflows++;
+                // In real hardware, excess data is lost
+                while (_uarts[i].rxQueue.size() > _uartRxBufferSize)
+                {
+                    _uarts[i].rxQueue.pop_front();
+                }
+            }
+
+            if (_uarts[i].txQueue.size() > _uartTxBufferSize)
+            {
+                _perf.uartOverflows++;
+                while (_uarts[i].txQueue.size() > _uartTxBufferSize)
+                {
+                    _uarts[i].txQueue.pop_front();
+                }
+            }
+        }
+
+        // Timer Overflow Detection
+        // Check if TCNT registers have overflowed
+        std::uint8_t tifr0 = GetIo(0x35); // TIFR0
+        if (tifr0 & 0x01)                 // TOV0 flag
+        {
+            _perf.timerOverflows++;
+        }
+
+        std::uint8_t tifr1 = GetIo(0x36); // TIFR1
+        if (tifr1 & 0x01)                 // TOV1 flag
+        {
+            _perf.timerOverflows++;
+        }
+
+        std::uint8_t tifr2 = GetIo(0x37); // TIFR2
+        if (tifr2 & 0x01)                 // TOV2 flag
+        {
+            _perf.timerOverflows++;
+        }
+    }
+
+    void VirtualMcu::TrackGpioChanges()
+    {
+        // Monitor port changes for debugging motor control, sensor signals
+        std::uint8_t currentPinB = GetIo(AVR_PINB);
+        std::uint8_t currentPinC = GetIo(AVR_PINC);
+        std::uint8_t currentPinD = GetIo(AVR_PIND);
+
+        // Track PORTB changes
+        if (currentPinB != _lastPinb)
+        {
+            for (std::uint8_t i = 0; i < 8; i++)
+            {
+                bool oldState = (_lastPinb >> i) & 1;
+                bool newState = (currentPinB >> i) & 1;
+                if (oldState != newState && _gpioHistory.size() < _maxGpioHistory)
+                {
+                    _gpioHistory.push_back({_tickCount, 'B', i, newState});
+                    _perf.gpioStateChanges++;
+                }
+            }
+            _lastPinb = currentPinB;
+        }
+
+        // Track PORTC changes
+        if (currentPinC != _lastPinc)
+        {
+            for (std::uint8_t i = 0; i < 8; i++)
+            {
+                bool oldState = (_lastPinc >> i) & 1;
+                bool newState = (currentPinC >> i) & 1;
+                if (oldState != newState && _gpioHistory.size() < _maxGpioHistory)
+                {
+                    _gpioHistory.push_back({_tickCount, 'C', i, newState});
+                    _perf.gpioStateChanges++;
+                }
+            }
+            _lastPinc = currentPinC;
+        }
+
+        // Track PORTD changes
+        if (currentPinD != _lastPind)
+        {
+            for (std::uint8_t i = 0; i < 8; i++)
+            {
+                bool oldState = (_lastPind >> i) & 1;
+                bool newState = (currentPinD >> i) & 1;
+                if (oldState != newState && _gpioHistory.size() < _maxGpioHistory)
+                {
+                    _gpioHistory.push_back({_tickCount, 'D', i, newState});
+                    _perf.gpioStateChanges++;
+                }
+            }
+            _lastPind = currentPinD;
+        }
+    }
+
+    void VirtualMcu::AnalyzePwmOutputs()
+    {
+        // Analyze Timer PWM outputs (OC0A, OC0B, OC1A, OC1B, OC2A, OC2B)
+        // Timer0: Fast PWM or Phase Correct PWM
+        std::uint8_t tccr0a = GetIo(0x44); // TCCR0A
+        std::uint8_t ocr0a = GetIo(0x47);  // OCR0A
+        std::uint8_t ocr0b = GetIo(0x48);  // OCR0B
+
+        if ((tccr0a & 0xC0) != 0) // COM0A bits set - OC0A active
+        {
+            _perf.pwmCycles++;
+            // Track OC0A (typically pin 6/PD6)
+        }
+
+        if ((tccr0a & 0x30) != 0) // COM0B bits set - OC0B active
+        {
+            _perf.pwmCycles++;
+            // Track OC0B (typically pin 5/PD5)
+        }
+
+        // Timer1: 16-bit PWM
+        std::uint8_t tccr1a = GetIo(0x80); // TCCR1A
+        std::uint16_t ocr1a = GetIo(0x88) | (GetIo(0x89) << 8);
+        std::uint16_t ocr1b = GetIo(0x8A) | (GetIo(0x8B) << 8);
+
+        if ((tccr1a & 0xC0) != 0) // COM1A bits set
+        {
+            _perf.pwmCycles++;
+            // Track OC1A (typically pin 9/PB1)
+        }
+
+        if ((tccr1a & 0x30) != 0) // COM1B bits set
+        {
+            _perf.pwmCycles++;
+            // Track OC1B (typically pin 10/PB2)
+        }
+    }
+
+    void VirtualMcu::LogI2cTransaction()
+    {
+        // Monitor TWI (I2C) transactions
+        std::uint8_t twcr = GetIo(AVR_TWCR);
+        std::uint8_t twsr = GetIo(AVR_TWSR);
+        std::uint8_t twdr = GetIo(AVR_TWDR);
+
+        // Check if TWI interrupt flag is set (transaction complete)
+        if (twcr & (1 << 7)) // TWINT bit
+        {
+            std::uint8_t status = twsr & 0xF8; // Mask prescaler bits
+
+            // Log significant TWI events
+            if (status == 0x08 || status == 0x10) // START or REPEATED START sent
+            {
+                if (_i2cLog.size() < _maxI2cLog)
+                {
+                    I2cTransaction trans;
+                    trans.timestamp = _tickCount;
+                    trans.address = 0; // Will be filled on next byte
+                    trans.isWrite = false;
+                    trans.ack = false;
+                    _i2cLog.push_back(trans);
+                    _perf.i2cTransactions++;
+                }
+            }
+            else if (status == 0x18 || status == 0x28) // SLA+W transmitted, ACK received
+            {
+                if (!_i2cLog.empty())
+                {
+                    _i2cLog.back().data.push_back(twdr);
+                    _i2cLog.back().ack = true;
+                }
+            }
+        }
+    }
+
+    void VirtualMcu::LogSpiTransaction()
+    {
+        // Monitor SPI transactions
+        std::uint8_t spsr = GetIo(AVR_SPSR);
+        std::uint8_t spdr = GetIo(AVR_SPDR);
+
+        // Check if SPI transfer complete
+        if (spsr & (1 << 7)) // SPIF bit
+        {
+            if (_spiLog.size() < _maxSpiLog)
+            {
+                SpiTransaction trans;
+                trans.timestamp = _tickCount;
+                trans.txData.push_back(spdr);
+                trans.rxData.push_back(spdr); // In SPI, data is exchanged simultaneously
+
+                // Calculate clock speed from SPR bits
+                std::uint8_t spcr = GetIo(AVR_SPCR);
+                std::uint8_t spr = spcr & 0x03;
+                bool spi2x = spsr & 0x01;
+                trans.clockSpeed = spi2x ? (16000000 >> spr) : (16000000 >> (spr + 1));
+
+                _spiLog.push_back(trans);
+                _perf.spiTransactions++;
+            }
+        }
+    }
+
+    void VirtualMcu::TrackInterruptLatency()
+    {
+        // Detect interrupt entry by monitoring SREG I-bit and PC changes
+        std::uint8_t sreg = GetIo(AVR_SREG);
+        bool interrupts_enabled = (sreg & 0x80) != 0;
+
+        // If we just entered an interrupt
+        if (_inInterrupt && !interrupts_enabled)
+        {
+            // Calculate latency from trigger to service
+            std::uint64_t latency = _tickCount - _lastInterruptTrigger;
+
+            if (_interruptLog.size() < _maxInterruptLog)
+            {
+                InterruptEvent evt;
+                evt.triggerTime = _lastInterruptTrigger;
+                evt.serviceTime = _tickCount;
+                evt.latency = latency;
+                evt.vector = 0; // Could decode from PC
+                _interruptLog.push_back(evt);
+            }
+
+            _perf.interruptLatencyTotal += latency;
+            if (latency > _perf.interruptLatencyMax)
+            {
+                _perf.interruptLatencyMax = latency;
+            }
+            _perf.interruptCount++;
+        }
+
+        // Track critical section entry/exit (CLI/SEI instructions)
+        if (!interrupts_enabled && !_inCriticalSection)
+        {
+            _inCriticalSection = true;
+            _criticalSectionStart = _tickCount;
+        }
+        else if (interrupts_enabled && _inCriticalSection)
+        {
+            _inCriticalSection = false;
+            _perf.criticalSectionCycles += (_tickCount - _criticalSectionStart);
+        }
+    }
+
+    void VirtualMcu::DetectTimingViolations()
+    {
+        // Detect when execution misses real-time deadlines
+        if (_realtimeDeadline > 0 && _tickCount > _realtimeDeadline)
+        {
+            _perf.timingViolations++;
+            _realtimeDeadline = 0; // Reset for next deadline
+        }
+
+        // Detect excessive critical section duration (> 100us at 16MHz = 1600 cycles)
+        if (_inCriticalSection && (_tickCount - _criticalSectionStart) > 1600)
+        {
+            _perf.timingViolations++;
+        }
+
+        // Detect interrupt starvation (no interrupts for > 10ms)
+        if (_perf.interruptCount > 0 && (_tickCount - _lastInterruptTrigger) > 160000)
+        {
+            // Possible interrupt starvation
+        }
+    }
+
+    void VirtualMcu::RecordExecutionSnapshot()
+    {
+        // For deterministic replay: record state at regular intervals
+        if (_deterministicMode && (_tickCount % 10000) == 0)
+        {
+            // Could serialize CPU state, GPIO state, peripheral state
+            // to enable deterministic replay of execution
+        }
+    }
+
+    void VirtualMcu::ClearDevelopmentLogs()
+    {
+        _gpioHistory.clear();
+        _pwmStates.clear();
+        _i2cLog.clear();
+        _spiLog.clear();
+        _interruptLog.clear();
+    }
+
+    double VirtualMcu::GetAverageInterruptLatency() const
+    {
+        if (_perf.interruptCount == 0)
+            return 0.0;
+        return static_cast<double>(_perf.interruptLatencyTotal) / static_cast<double>(_perf.interruptCount);
+    }
+
+    bool VirtualMcu::PopCpuTrace(CpuTraceEvent &out)
+    {
+        if (_traceCpuQueue.empty())
+            return false;
+        out = _traceCpuQueue.front();
+        _traceCpuQueue.pop_front();
         return true;
     }
 }

@@ -33,7 +33,9 @@ namespace RobotTwin.Debugging
         private volatile string _cachedBridgePayload = "{\"ready\":false,\"reason\":\"Bridge not ready\"}";
         private volatile string _cachedSceneName = "";
         private volatile bool _cachedRunMode;
+        private int _lastSerialBufferLength;
         private const int TelemetrySignalSoftLimit = 4000;
+        private const int UnityTelemetryPinCount = 70;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoStart()
@@ -341,7 +343,7 @@ namespace RobotTwin.Debugging
             return dict;
         }
 
-        private static string BuildTelemetryPayload()
+        private string BuildTelemetryPayload()
         {
             var host = SimHost.Instance;
             if (host == null)
@@ -405,6 +407,11 @@ namespace RobotTwin.Debugging
 
             sb.Append("]");
             AppendFirmwarePerfPayload(sb, telemetry, truncated);
+            AppendFirmwareDebugPayload(sb, host);
+            AppendFirmwareBitsPayload(sb, host);
+            AppendFirmwarePinsPayload(sb, host);
+            AppendFirmwareAnalogPayload(sb, host);
+            AppendSerialPayload(sb, host);
             AppendFirmwareHostPayload(sb, host);
             AppendRealtimeFlagsPayload(sb, host);
             AppendRealtimeBudgetPayload(sb, host);
@@ -541,6 +548,209 @@ namespace RobotTwin.Debugging
             }
 
             sb.Append("]");
+        }
+
+        private static void AppendFirmwareDebugPayload(StringBuilder sb, SimHost host)
+        {
+            sb.Append(",\"firmware_debug\":[");
+            if (host == null)
+            {
+                sb.Append("]");
+                return;
+            }
+
+            var boardIds = new List<string>();
+            host.GetFirmwareBoardIds(boardIds);
+            bool firstBoard = true;
+
+            foreach (var boardId in boardIds)
+            {
+                if (!host.TryGetFirmwareDebugCounters(boardId, out var debug) || debug == null) continue;
+                if (!firstBoard) sb.Append(",");
+                firstBoard = false;
+
+                sb.Append("{");
+                sb.Append($"\"id\":\"{EscapeJson(boardId)}\",");
+                sb.Append("\"counters\":{");
+                sb.Append($"\"flash_bytes\":{debug.FlashBytes},");
+                sb.Append($"\"sram_bytes\":{debug.SramBytes},");
+                sb.Append($"\"eeprom_bytes\":{debug.EepromBytes},");
+                sb.Append($"\"io_bytes\":{debug.IoBytes},");
+                sb.Append($"\"cpu_hz\":{debug.CpuHz},");
+                sb.Append($"\"pc\":{debug.ProgramCounter},");
+                sb.Append($"\"sp\":{debug.StackPointer},");
+                sb.Append($"\"sreg\":{debug.StatusRegister},");
+                sb.Append($"\"stack_high_water\":{debug.StackHighWater},");
+                sb.Append($"\"heap_top\":{debug.HeapTopAddress},");
+                sb.Append($"\"stack_min\":{debug.StackMinAddress},");
+                sb.Append($"\"data_segment_end\":{debug.DataSegmentEnd},");
+                sb.Append($"\"stack_overflows\":{debug.StackOverflows},");
+                sb.Append($"\"invalid_mem_accesses\":{debug.InvalidMemoryAccesses},");
+                sb.Append($"\"interrupt_count\":{debug.InterruptCount},");
+                sb.Append($"\"interrupt_latency_max\":{debug.InterruptLatencyMax},");
+                sb.Append($"\"timing_violations\":{debug.TimingViolations},");
+                sb.Append($"\"critical_section_cycles\":{debug.CriticalSectionCycles},");
+                sb.Append($"\"sleep_cycles\":{debug.SleepCycles},");
+                sb.Append($"\"flash_access_cycles\":{debug.FlashAccessCycles},");
+                sb.Append($"\"uart_overflows\":{debug.UartOverflows},");
+                sb.Append($"\"timer_overflows\":{debug.TimerOverflows},");
+                sb.Append($"\"brown_out_resets\":{debug.BrownOutResets},");
+                sb.Append($"\"gpio_state_changes\":{debug.GpioStateChanges},");
+                sb.Append($"\"pwm_cycles\":{debug.PwmCycles},");
+                sb.Append($"\"i2c_transactions\":{debug.I2cTransactions},");
+                sb.Append($"\"spi_transactions\":{debug.SpiTransactions}");
+                sb.Append("}");
+                sb.Append("}");
+            }
+
+            sb.Append("]");
+        }
+
+        private static void AppendFirmwareBitsPayload(StringBuilder sb, SimHost host)
+        {
+            sb.Append(",\"firmware_bits\":[");
+            if (host == null)
+            {
+                sb.Append("]");
+                return;
+            }
+
+            var boardIds = new List<string>();
+            host.GetFirmwareBoardIds(boardIds);
+            bool firstBoard = true;
+
+            foreach (var boardId in boardIds)
+            {
+                if (!host.TryGetFirmwareDebugBits(boardId, out var bits) || bits == null) continue;
+                if (bits.Fields == null || bits.Fields.Count == 0) continue;
+                if (!firstBoard) sb.Append(",");
+                firstBoard = false;
+
+                sb.Append("{");
+                sb.Append($"\"id\":\"{EscapeJson(boardId)}\",");
+                sb.Append("\"fields\":[");
+
+                bool firstField = true;
+                foreach (var field in bits.Fields)
+                {
+                    if (!firstField) sb.Append(",");
+                    firstField = false;
+                    sb.Append("{");
+                    sb.Append($"\"name\":\"{EscapeJson(field.Name)}\",");
+                    sb.Append($"\"offset\":{field.Offset},");
+                    sb.Append($"\"width\":{field.Width},");
+                    sb.Append($"\"bits\":\"{EscapeJson(field.Bits)}\",");
+                    sb.Append($"\"value\":{field.Value}");
+                    sb.Append("}");
+                }
+
+                sb.Append("]}");
+            }
+
+            sb.Append("]");
+        }
+
+        private static void AppendFirmwarePinsPayload(StringBuilder sb, SimHost host)
+        {
+            sb.Append(",\"firmware_pins\":[");
+            if (host == null)
+            {
+                sb.Append("]");
+                return;
+            }
+
+            var boardIds = new List<string>();
+            host.GetBoardIds(boardIds);
+            bool firstBoard = true;
+
+            foreach (var boardId in boardIds)
+            {
+                var outputs = host.GetFirmwarePinOutputsSnapshot(boardId);
+                if (outputs == null || outputs.Length == 0) continue;
+
+                if (!firstBoard) sb.Append(",");
+                firstBoard = false;
+                sb.Append("{");
+                sb.Append($"\"id\":\"{EscapeJson(boardId)}\",");
+                sb.Append("\"outputs\":[");
+
+                for (int i = 0; i < UnityTelemetryPinCount; i++)
+                {
+                    if (i > 0) sb.Append(",");
+                    int value = i < outputs.Length ? outputs[i] : -1;
+                    sb.Append(value);
+                }
+
+                sb.Append("]}");
+            }
+
+            sb.Append("]");
+        }
+
+        private static void AppendFirmwareAnalogPayload(StringBuilder sb, SimHost host)
+        {
+            sb.Append(",\"firmware_analog\":[");
+            if (host == null)
+            {
+                sb.Append("]");
+                return;
+            }
+
+            var boardIds = new List<string>();
+            host.GetBoardIds(boardIds);
+            bool firstBoard = true;
+
+            foreach (var boardId in boardIds)
+            {
+                var values = host.GetFirmwareAnalogInputsSnapshot(boardId);
+                if (values == null || values.Length == 0) continue;
+
+                if (!firstBoard) sb.Append(",");
+                firstBoard = false;
+                sb.Append("{");
+                sb.Append($"\"id\":\"{EscapeJson(boardId)}\",");
+                sb.Append("\"values\":[");
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    if (i > 0) sb.Append(",");
+                    sb.Append(values[i].ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+                }
+
+                sb.Append("]}");
+            }
+
+            sb.Append("]");
+        }
+
+        private void AppendSerialPayload(StringBuilder sb, SimHost host)
+        {
+            sb.Append(",\"serial\":{");
+            if (host == null)
+            {
+                _lastSerialBufferLength = 0;
+                sb.Append("\"length\":0,\"reset\":false,\"delta\":\"\",\"buffer\":\"\"}");
+                return;
+            }
+
+            string buffer = host.SerialOutput ?? string.Empty;
+            bool reset = buffer.Length < _lastSerialBufferLength;
+            if (reset)
+            {
+                _lastSerialBufferLength = 0;
+            }
+
+            string delta = buffer.Length > _lastSerialBufferLength
+                ? buffer.Substring(_lastSerialBufferLength)
+                : string.Empty;
+
+            _lastSerialBufferLength = buffer.Length;
+
+            sb.Append($"\"length\":{buffer.Length},");
+            sb.Append($"\"reset\":{BoolJson(reset)},");
+            sb.Append($"\"delta\":\"{EscapeJson(delta)}\",");
+            sb.Append($"\"buffer\":\"{EscapeJson(buffer)}\"");
+            sb.Append("}");
         }
 
         private static void AppendTickTracePayload(StringBuilder sb, SimHost host)

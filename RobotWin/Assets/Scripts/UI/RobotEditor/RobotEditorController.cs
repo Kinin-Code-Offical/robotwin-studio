@@ -101,16 +101,16 @@ namespace RobotTwin.UI.RobotEditor
             };
 
             // Default components
-            _components.Add(new RobotComponent { Name = "Main Controller", Type = ComponentType.Microcontroller, PowerConsumption = 150f, Size = 1.0f });
-            _components.Add(new RobotComponent { Name = "Motor Driver", Type = ComponentType.MotorDriver, PowerConsumption = 500f, Size = 0.8f });
+            _components.Add(new RobotComponent { Name = "Main Controller", Type = "Microcontroller", PowerConsumption = 150f, Size = 1.0f });
+            _components.Add(new RobotComponent { Name = "Motor Driver", Type = "MotorDriver", PowerConsumption = 500f, Size = 0.8f });
 
             // Default sensors
-            _sensors.Add(new Sensor { Name = "Ultrasonic", Type = SensorType.Ultrasonic, Range = 4.0f, PowerConsumption = 15f });
-            _sensors.Add(new Sensor { Name = "Line Follower", Type = SensorType.Infrared, Range = 0.1f, PowerConsumption = 30f });
+            _sensors.Add(new Sensor { Name = "Ultrasonic", Type = "Ultrasonic", Range = 4.0f, PowerConsumption = 15f });
+            _sensors.Add(new Sensor { Name = "Line Follower", Type = "Infrared", Range = 0.1f, PowerConsumption = 30f });
 
             // Default actuators
-            _actuators.Add(new Actuator { Name = "Left Motor", Type = ActuatorType.DCMotor, MaxForce = 10f, PowerConsumption = 1000f });
-            _actuators.Add(new Actuator { Name = "Right Motor", Type = ActuatorType.DCMotor, MaxForce = 10f, PowerConsumption = 1000f });
+            _actuators.Add(new Actuator { Name = "Left Motor", Type = "DCMotor", MaxForce = 10f, PowerConsumption = 1000f });
+            _actuators.Add(new Actuator { Name = "Right Motor", Type = "DCMotor", MaxForce = 10f, PowerConsumption = 1000f });
         }
 
         private void BindUIElements()
@@ -488,7 +488,7 @@ namespace RobotTwin.UI.RobotEditor
             var newComp = new RobotComponent
             {
                 Name = "New Component",
-                Type = ComponentType.Generic,
+                Type = "Generic",
                 PowerConsumption = 50f,
                 Size = 1.0f
             };
@@ -515,7 +515,7 @@ namespace RobotTwin.UI.RobotEditor
             var newSensor = new Sensor
             {
                 Name = "New Sensor",
-                Type = SensorType.Generic,
+                Type = "Generic",
                 Range = 1.0f,
                 PowerConsumption = 10f
             };
@@ -529,7 +529,7 @@ namespace RobotTwin.UI.RobotEditor
             var newActuator = new Actuator
             {
                 Name = "New Actuator",
-                Type = ActuatorType.Servo,
+                Type = "Servo",
                 MaxForce = 5f,
                 PowerConsumption = 200f
             };
@@ -641,5 +641,103 @@ namespace RobotTwin.UI.RobotEditor
             // TODO: Generate robot prefab
             // TODO: Load into simulation scene
         }
+    }
+
+    // Helper classes for internal use
+    [Serializable]
+    public class RobotComponent
+    {
+        public string Name;
+        public string Type;
+        public float PowerConsumption;
+        public float Size;
+        public float OriginalPower;
+        public float OriginalSize;
+    }
+
+    [Serializable]
+    public class Actuator
+    {
+        public string Name;
+        public string Type;
+        public float MaxForce;
+        public float PowerConsumption;
+    }
+
+    /// <summary>
+    /// Miniaturization Engine - Component size & power optimization algorithms
+    /// </summary>
+    public class MiniaturizationEngine
+    {
+        public float OptimizeSize(float originalSize, float level)
+        {
+            float reduction = Mathf.Lerp(0f, 0.9f, level);
+            return originalSize * (1f - reduction);
+        }
+
+        public float OptimizePower(float originalPower, float level)
+        {
+            float efficiency = 1f - (level * 0.5f);
+            return originalPower * efficiency;
+        }
+
+        public Vector2 OptimizeLayout(List<RobotComponent> components, float boardSize)
+        {
+            float totalArea = 0f;
+            foreach (var comp in components)
+            {
+                totalArea += comp.Size * comp.Size;
+            }
+            float side = Mathf.Sqrt(totalArea) * boardSize;
+            return new Vector2(side, side);
+        }
+
+        public List<Vector2> CalculateComponentPositions(List<RobotComponent> components, Vector2 boardSize)
+        {
+            // Unified grid system: Fixed 0.1m (10cm) grid spacing regardless of board size
+            const float GRID_SPACING = 0.1f; // 10cm unified grid cells
+            const float GRID_MARGIN = 0.05f; // 5cm margin from edges
+
+            List<Vector2> positions = new List<Vector2>();
+
+            // Calculate grid dimensions based on unified spacing
+            int maxCols = Mathf.FloorToInt((boardSize.x - 2f * GRID_MARGIN) / GRID_SPACING);
+            int maxRows = Mathf.FloorToInt((boardSize.y - 2f * GRID_MARGIN) / GRID_SPACING);
+
+            if (maxCols < 1) maxCols = 1;
+            if (maxRows < 1) maxRows = 1;
+
+            // Place components on unified grid
+            for (int i = 0; i < components.Count; i++)
+            {
+                int row = i / maxCols;
+                int col = i % maxCols;
+
+                // Absolute position on unified grid (0.1m spacing)
+                float x = GRID_MARGIN + col * GRID_SPACING;
+                float y = GRID_MARGIN + row * GRID_SPACING;
+
+                positions.Add(new Vector2(x, y));
+            }
+
+            return positions;
+        }
+    }
+
+    // Enums for RobotEditorController
+    public enum ComponentType { Motor, ESC, Battery, Sensor, Controller, Microcontroller, MotorDriver, Generic, Other }
+    public enum SensorType { LineSensor, Ultrasonic, IR, Infrared, Camera, IMU, Generic, Other }
+    public enum ActuatorType { DCMotor, ServoMotor, Servo, Stepper, Other }
+
+    /// <summary>
+    /// Robot configuration data for serialization
+    /// </summary>
+    [Serializable]
+    public class RobotConfigurationData
+    {
+        public RobotConfiguration Config;
+        public List<RobotComponent> Components;
+        public List<Sensor> Sensors;
+        public List<Actuator> Actuators;
     }
 }

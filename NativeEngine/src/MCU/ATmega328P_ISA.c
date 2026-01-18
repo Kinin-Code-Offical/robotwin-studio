@@ -1,10 +1,10 @@
 #include "MCU/ATmega328P_ISA.h"
 
-uint8_t AVR_IoRead(AvrCore* core, uint16_t address);
-void AVR_IoWrite(AvrCore* core, uint16_t address, uint8_t value);
-static void AVR_Push(AvrCore* core, uint8_t value);
+uint8_t AVR_IoRead(AvrCore *core, uint16_t address);
+void AVR_IoWrite(AvrCore *core, uint16_t address, uint8_t value);
+static void AVR_Push(AvrCore *core, uint8_t value);
 
-static uint16_t AVR_FetchWord(AvrCore* core)
+static uint16_t AVR_FetchWord(AvrCore *core)
 {
     size_t index = (size_t)core->pc * 2;
     if (index + 1 >= core->flash_size)
@@ -16,7 +16,7 @@ static uint16_t AVR_FetchWord(AvrCore* core)
     return opcode;
 }
 
-static void AVR_UpdateSPRegisters(AvrCore* core)
+static void AVR_UpdateSPRegisters(AvrCore *core)
 {
     uint8_t spl = (uint8_t)(core->sp & 0xFF);
     uint8_t sph = (uint8_t)((core->sp >> 8) & 0xFF);
@@ -24,18 +24,18 @@ static void AVR_UpdateSPRegisters(AvrCore* core)
     AVR_IoWrite(core, AVR_SPH, sph);
 }
 
-static void AVR_SetSP(AvrCore* core, uint16_t value)
+static void AVR_SetSP(AvrCore *core, uint16_t value)
 {
     core->sp = value;
     AVR_UpdateSPRegisters(core);
 }
 
-static uint16_t AVR_GetSP(AvrCore* core)
+static uint16_t AVR_GetSP(AvrCore *core)
 {
     return core->sp;
 }
 
-static uint8_t AVR_ReadData(AvrCore* core, uint16_t address)
+static uint8_t AVR_ReadData(AvrCore *core, uint16_t address)
 {
     if (address < core->regs_size)
     {
@@ -57,7 +57,7 @@ static uint8_t AVR_ReadData(AvrCore* core, uint16_t address)
     return 0;
 }
 
-static void AVR_WriteData(AvrCore* core, uint16_t address, uint8_t value)
+static void AVR_WriteData(AvrCore *core, uint16_t address, uint8_t value)
 {
     if (address < core->regs_size)
     {
@@ -79,7 +79,7 @@ static void AVR_WriteData(AvrCore* core, uint16_t address, uint8_t value)
     }
 }
 
-static void AVR_Push(AvrCore* core, uint8_t value)
+static void AVR_Push(AvrCore *core, uint8_t value)
 {
     uint16_t sp = AVR_GetSP(core);
     if (sp > 0)
@@ -90,7 +90,7 @@ static void AVR_Push(AvrCore* core, uint8_t value)
     }
 }
 
-static uint8_t AVR_Pop(AvrCore* core)
+static uint8_t AVR_Pop(AvrCore *core)
 {
     uint16_t sp = AVR_GetSP(core);
     uint8_t value = AVR_ReadData(core, sp);
@@ -99,7 +99,7 @@ static uint8_t AVR_Pop(AvrCore* core)
     return value;
 }
 
-static uint16_t AVR_GetRegWord(AvrCore* core, uint8_t index)
+static uint16_t AVR_GetRegWord(AvrCore *core, uint8_t index)
 {
     if (index + 1 >= core->regs_size)
     {
@@ -110,7 +110,7 @@ static uint16_t AVR_GetRegWord(AvrCore* core, uint8_t index)
     return (uint16_t)(lo | (hi << 8));
 }
 
-static void AVR_SetRegWord(AvrCore* core, uint8_t index, uint16_t value)
+static void AVR_SetRegWord(AvrCore *core, uint8_t index, uint16_t value)
 {
     if (index + 1 >= core->regs_size)
     {
@@ -120,11 +120,11 @@ static void AVR_SetRegWord(AvrCore* core, uint8_t index, uint16_t value)
     core->regs[index + 1] = (uint8_t)((value >> 8) & 0xFF);
 }
 
-void AVR_Init(AvrCore* core,
-              uint8_t* flash, size_t flash_size,
-              uint8_t* sram, size_t sram_size,
-              volatile uint8_t* io, size_t io_size,
-              uint8_t* regs, size_t regs_size)
+void AVR_Init(AvrCore *core,
+              uint8_t *flash, size_t flash_size,
+              uint8_t *sram, size_t sram_size,
+              volatile uint8_t *io, size_t io_size,
+              uint8_t *regs, size_t regs_size)
 {
     core->flash = flash;
     core->flash_size = flash_size;
@@ -146,30 +146,34 @@ void AVR_Init(AvrCore* core,
     AVR_UpdateSPRegisters(core);
 }
 
-void AVR_SetMcuKind(AvrCore* core, uint8_t mcu_kind)
+void AVR_SetMcuKind(AvrCore *core, uint8_t mcu_kind)
 {
-    if (!core) return;
+    if (!core)
+        return;
     core->mcu_kind = mcu_kind;
 }
 
-void AVR_SetIoWriteHook(AvrCore* core, void (*hook)(AvrCore* core, uint16_t address, uint8_t value, void* user), void* user)
+void AVR_SetIoWriteHook(AvrCore *core, void (*hook)(AvrCore *core, uint16_t address, uint8_t value, void *user), void *user)
 {
-    if (!core) return;
+    if (!core)
+        return;
     core->io_write_hook = hook;
     core->io_write_user = user;
 }
 
-void AVR_SetIoReadHook(AvrCore* core, void (*hook)(AvrCore* core, uint16_t address, uint8_t value, void* user), void* user)
+void AVR_SetIoReadHook(AvrCore *core, void (*hook)(AvrCore *core, uint16_t address, uint8_t value, void *user), void *user)
 {
-    if (!core) return;
+    if (!core)
+        return;
     core->io_read_hook = hook;
     core->io_read_user = user;
 }
 
-uint8_t AVR_IoRead(AvrCore* core, uint16_t address)
+uint8_t AVR_IoRead(AvrCore *core, uint16_t address)
 {
     size_t idx = (size_t)(address - AVR_IO_BASE);
-    if (idx >= core->io_size) return 0;
+    if (idx >= core->io_size)
+        return 0;
     uint8_t value = core->io[idx];
     if (core->io_read_hook)
     {
@@ -178,10 +182,11 @@ uint8_t AVR_IoRead(AvrCore* core, uint16_t address)
     return value;
 }
 
-void AVR_IoWrite(AvrCore* core, uint16_t address, uint8_t value)
+void AVR_IoWrite(AvrCore *core, uint16_t address, uint8_t value)
 {
     size_t idx = (size_t)(address - AVR_IO_BASE);
-    if (idx >= core->io_size) return;
+    if (idx >= core->io_size)
+        return;
     if (address == AVR_TIFR0 || address == AVR_TIFR1 || address == AVR_TIFR2 ||
         address == AVR_TIFR3 || address == AVR_TIFR4 || address == AVR_TIFR5 ||
         address == AVR_PCIFR || address == AVR_EIFR)
@@ -212,7 +217,7 @@ void AVR_IoWrite(AvrCore* core, uint16_t address, uint8_t value)
     }
 }
 
-void AVR_IoSetBit(AvrCore* core, uint16_t address, uint8_t bit, uint8_t state)
+void AVR_IoSetBit(AvrCore *core, uint16_t address, uint8_t bit, uint8_t state)
 {
     uint8_t value = AVR_IoRead(core, address);
     if (state)
@@ -226,13 +231,13 @@ void AVR_IoSetBit(AvrCore* core, uint16_t address, uint8_t bit, uint8_t state)
     AVR_IoWrite(core, address, value);
 }
 
-uint8_t AVR_IoGetBit(AvrCore* core, uint16_t address, uint8_t bit)
+uint8_t AVR_IoGetBit(AvrCore *core, uint16_t address, uint8_t bit)
 {
     uint8_t value = AVR_IoRead(core, address);
     return (uint8_t)((value & (1u << bit)) != 0u);
 }
 
-static void AVR_EnterInterrupt(AvrCore* core, uint16_t vector)
+static void AVR_EnterInterrupt(AvrCore *core, uint16_t vector)
 {
     uint16_t returnAddr = core->pc;
     AVR_Push(core, (uint8_t)(returnAddr & 0xFF));
@@ -243,7 +248,7 @@ static void AVR_EnterInterrupt(AvrCore* core, uint16_t vector)
     core->pc = vector;
 }
 
-static uint8_t AVR_CheckInterrupts(AvrCore* core)
+static uint8_t AVR_CheckInterrupts(AvrCore *core)
 {
     uint8_t sreg = AVR_IoRead(core, AVR_SREG);
     if ((sreg & (1u << 7)) == 0)
@@ -531,15 +536,63 @@ static uint8_t AVR_CheckInterrupts(AvrCore* core)
     return 0;
 }
 
-uint8_t AVR_ExecuteNext(AvrCore* core)
+uint8_t AVR_ExecuteNext(AvrCore *core)
 {
     if (AVR_CheckInterrupts(core))
     {
         return 4;
     }
     uint16_t opcode = AVR_FetchWord(core);
+
     if (opcode == 0x0000)
     {
+        return 1;
+    }
+
+    // LPM Rd, Z+ (9005 mask FE0F) - Precision Implementation
+    if ((opcode & 0xFE0F) == 0x9005)
+    {
+        uint8_t d = (uint8_t)((opcode >> 4) & 0x1F);
+        uint16_t z = AVR_GetRegWord(core, 30);
+        if (z < core->flash_size)
+        {
+            core->regs[d] = core->flash[z];
+        }
+        else
+        {
+            core->regs[d] = 0;
+        }
+        AVR_SetRegWord(core, 30, (uint16_t)(z + 1));
+        return 3;
+    }
+
+    // ST X+, Rr (920D mask FE0F) - Precision Implementation
+    if ((opcode & 0xFE0F) == 0x920D)
+    {
+        uint8_t r = (uint8_t)((opcode >> 4) & 0x1F);
+        uint16_t x = AVR_GetRegWord(core, 26);
+        AVR_WriteData(core, x, core->regs[r]);
+        AVR_SetRegWord(core, 26, (uint16_t)(x + 1));
+        return 2;
+    }
+
+    // CPC Rd, Rr (0400 mask FC00)
+    if ((opcode & 0xFC00) == 0x0400)
+    {
+        uint8_t d = (uint8_t)((opcode >> 4) & 0x1F);
+        uint8_t r = (uint8_t)((opcode & 0x0F) | ((opcode >> 5) & 0x10));
+        if (d < core->regs_size && r < core->regs_size)
+        {
+            uint16_t lhs = core->regs[d];
+            uint16_t rhs = (uint16_t)(core->regs[r] + (core->carry_flag ? 1 : 0));
+            uint16_t result = (uint16_t)(lhs - rhs);
+
+            if ((uint8_t)result != 0)
+            {
+                core->zero_flag = 0;
+            }
+            core->carry_flag = (uint8_t)(lhs < rhs);
+        }
         return 1;
     }
     if ((opcode & 0xF000) == 0xE000)
@@ -891,5 +944,8 @@ uint8_t AVR_ExecuteNext(AvrCore* core)
         core->pc = (uint16_t)(core->pc + k);
         return 2;
     }
+
+    // Moved specific handlers (LPM Z+, ST X+, CPC) to top of AVR_ExecuteNext
+
     return 1;
 }

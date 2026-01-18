@@ -50,13 +50,80 @@ namespace RobotTwin.Performance
                 var mesh = GetMesh(renderer);
                 if (mesh == null) continue;
                 meshes.Add(mesh);
-                stats.TriangleCount += mesh.triangles != null ? mesh.triangles.Length / 3 : 0;
+                stats.TriangleCount += GetTriangleCountSafe(mesh);
                 stats.VertexCount += mesh.vertexCount;
                 stats.TotalVolume += GetRendererWeight(renderer);
             }
 
             stats.MeshCount = meshes.Count;
             return stats;
+        }
+
+        /// <summary>
+        /// Returns a best-effort triangle count without requiring mesh Read/Write access.
+        /// Runtime-loaded meshes (e.g., glTFast) are often not readable, so accessing
+        /// <c>mesh.triangles</c> can throw.
+        /// </summary>
+        public static int GetTriangleCountSafe(Mesh mesh)
+        {
+            if (mesh == null) return 0;
+
+            // Fast path when readable.
+            if (mesh.isReadable)
+            {
+                try
+                {
+                    var tris = mesh.triangles;
+                    return tris != null ? tris.Length / 3 : 0;
+                }
+                catch
+                {
+                    // fall through
+                }
+            }
+
+            // Best-effort path: use submesh index counts/topology.
+            // This does not require CPU-side triangle/index access in most Unity versions.
+            int triangleCount = 0;
+            int subMeshes;
+            try
+            {
+                subMeshes = Mathf.Max(1, mesh.subMeshCount);
+            }
+            catch
+            {
+                subMeshes = 1;
+            }
+
+            for (int i = 0; i < subMeshes; i++)
+            {
+                try
+                {
+                    var topology = mesh.GetTopology(i);
+                    var indexCount = (int)mesh.GetIndexCount(i);
+                    if (indexCount <= 0) continue;
+
+                    switch (topology)
+                    {
+                        case MeshTopology.Triangles:
+                            triangleCount += indexCount / 3;
+                            break;
+                        case MeshTopology.Quads:
+                            // Each quad becomes 2 triangles.
+                            triangleCount += (indexCount / 4) * 2;
+                            break;
+                        default:
+                            // Lines/Points are not triangles; ignore.
+                            break;
+                    }
+                }
+                catch
+                {
+                    // ignore submesh failures and keep counting what we can
+                }
+            }
+
+            return triangleCount;
         }
 
         public static int SetupWeightedLodGroups(GameObject root, LODSettings settings)

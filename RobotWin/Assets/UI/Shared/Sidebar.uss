@@ -3,14 +3,15 @@
 .sidebar-container {
     width: 250px;
     min-width: 200px;
-    max-width: 300px;
+    max-width: 320px;
     height: 100%;
     background-color: #202020;
     border-right-width: 1px;
     border-right-color: #303030;
     display: flex;
     flex-direction: column;
-    flex-shrink: 1;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 /* Header */
@@ -41,7 +42,7 @@
     -unity-text-align: middle-left;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 
@@ -95,7 +96,7 @@
     -unity-font-style: normal;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
     flex-shrink: 1;
 }
 
@@ -122,7 +123,7 @@
     opacity: 0.8;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    -unity-text-overflow-position: end;
 }
 
 .footer-build {

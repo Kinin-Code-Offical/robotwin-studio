@@ -38,17 +38,17 @@
                       <!-- Placeholder Logo/Icon -->
                       <ui:Label text="R" style="color: #3b82f6; -unity-font-style: bold; font-size: 24px;" />
                  </ui:VisualElement>
-                 <ui:VisualElement>
-                      <ui:Label text="Preferences" style="color: #e0e0e0; font-size: 13px; -unity-font-style: bold;" />
-                      <ui:Label text="Customize IDE" style="color: #808080; font-size: 11px;" />
+                 <ui:VisualElement style="flex-shrink: 1; min-width: 0;">
+                      <ui:Label text="Preferences" style="color: #e0e0e0; font-size: 13px; -unity-font-style: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1;" />
+                      <ui:Label text="Customize IDE" style="color: #808080; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1;" />
                  </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
 
         <!-- Footer -->
         <ui:VisualElement style="padding: 24px; opacity: 0.5;">
-            <ui:Label text="v1.0.4 - Stable" class="text-subtle" style="color: #606060; font-size: 11px;" />
-            <ui:Label text="Build 2938.f1" class="text-subtle" style="color: #505050; font-size: 10px;" />
+            <ui:Label text="v1.0.4 - Stable" class="text-subtle" style="color: #606060; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" />
+            <ui:Label text="Build 2938.f1" class="text-subtle" style="color: #505050; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

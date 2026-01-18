@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using RobotTwin.Game;
 
 namespace RobotWin.Hardware.Instruments
 {
@@ -14,6 +15,13 @@ namespace RobotWin.Hardware.Instruments
         public RawImage screenRenderer; // The texture on the 3D model
         public float timePerDiv = 0.001f; // 1ms
         public float voltsPerDiv = 1.0f;  // 1V
+
+        [Header("Window")]
+        public bool AutoOpenWindow = true;
+
+        [Header("Bridge Fallback")]
+        public string simBoardId = string.Empty;
+        public string simPin = string.Empty;
 
         [Header("Trigger")]
         public float triggerLevel = 2.5f;
@@ -46,15 +54,26 @@ namespace RobotWin.Hardware.Instruments
             for (int i = 0; i < _clearPixels.Length; i++) _clearPixels[i] = Color.black;
 
             // Auto-create Floating Window if Manager exists
-            if (RobotWin.Hardware.UI.InstrumentWindowManager.Instance != null)
+            if (AutoOpenWindow && RobotWin.Hardware.UI.InstrumentWindowManager.Instance != null)
             {
                 var win = RobotWin.Hardware.UI.InstrumentWindowManager.Instance.OpenInstrumentWindow("Oscilloscope", "Oscilloscope - Channel 1");
-                if (win != null)
-                {
-                    var ui = win.GetComponent<RobotWin.Hardware.UI.OscilloscopeUI>();
-                    if (ui != null) ui.SetSource(this);
-                }
+                AttachWindow(win);
             }
+        }
+
+        public void AttachWindow(GameObject window)
+        {
+            _activeWindow = window;
+            if (window == null) return;
+
+            var ui = window.GetComponent<RobotWin.Hardware.UI.OscilloscopeUI>();
+            if (ui != null) ui.SetSource(this);
+        }
+
+        public void SetSimPin(string boardId, string pinName)
+        {
+            simBoardId = boardId ?? string.Empty;
+            simPin = pinName ?? string.Empty;
         }
 
 
@@ -72,10 +91,7 @@ namespace RobotWin.Hardware.Instruments
 
         private void AcquireSignal()
         {
-            if (_targetModule == null || string.IsNullOrEmpty(_targetPinA)) return;
-
-            // Read raw voltage
-            float rawVoltage = _targetModule.ProbePinVoltage(_targetPinA);
+            if (!TryReadVoltage(out float rawVoltage)) return;
 
             // Sim Bandwidth Limit (Low Pass Filter)
             // RC Filter: alpha = dt / (RC + dt)
@@ -86,6 +102,27 @@ namespace RobotWin.Hardware.Instruments
             // Write to buffer
             _signalBuffer[_writeHead] = smoothedVoltage;
             _writeHead = (_writeHead + 1) % BUFFER_SIZE;
+        }
+
+        private bool TryReadVoltage(out float voltage)
+        {
+            voltage = 0f;
+            if (_targetModule != null && !string.IsNullOrEmpty(_targetPinA))
+            {
+                voltage = _targetModule.ProbePinVoltage(_targetPinA);
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(simBoardId) && !string.IsNullOrEmpty(simPin))
+            {
+                var host = SimHost.Instance;
+                if (host != null && host.TryGetPinVoltage(simBoardId, simPin, out voltage))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void RenderTrace()

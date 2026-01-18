@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,36 @@ namespace RobotTwin.CoreSim.IPC
         Task ConnectAsync();
         void Disconnect();
         FirmwareStepResult Step(FirmwareStepRequest request);
+    }
+
+    public enum FirmwareLogLevel : byte
+    {
+        Unknown = 0,
+        Info = 1,
+        Warning = 2,
+        Error = 3
+    }
+
+    public enum FirmwareMemoryType : byte
+    {
+        Flash = 1,
+        Sram = 2,
+        Io = 3,
+        Eeprom = 4
+    }
+
+    public sealed class FirmwareLogEventArgs : EventArgs
+    {
+        public FirmwareLogEventArgs(string boardId, FirmwareLogLevel level, string message)
+        {
+            BoardId = boardId;
+            Level = level;
+            Message = message;
+        }
+
+        public string BoardId { get; }
+        public FirmwareLogLevel Level { get; }
+        public string Message { get; }
     }
 
     public class FirmwareStepRequest
@@ -62,12 +93,120 @@ namespace RobotTwin.CoreSim.IPC
         }
     }
 
+    public class FirmwareDebugCounters
+    {
+        public uint FlashBytes { get; set; }
+        public uint SramBytes { get; set; }
+        public uint EepromBytes { get; set; }
+        public uint IoBytes { get; set; }
+        public uint CpuHz { get; set; }
+        public ushort ProgramCounter { get; set; }
+        public ushort StackPointer { get; set; }
+        public byte StatusRegister { get; set; }
+        public ushort StackHighWater { get; set; }
+        public ushort HeapTopAddress { get; set; }
+        public ushort StackMinAddress { get; set; }
+        public ushort DataSegmentEnd { get; set; }
+        public ulong StackOverflows { get; set; }
+        public ulong InvalidMemoryAccesses { get; set; }
+        public ulong InterruptCount { get; set; }
+        public ulong InterruptLatencyMax { get; set; }
+        public ulong TimingViolations { get; set; }
+        public ulong CriticalSectionCycles { get; set; }
+        public ulong SleepCycles { get; set; }
+        public ulong FlashAccessCycles { get; set; }
+        public ulong UartOverflows { get; set; }
+        public ulong TimerOverflows { get; set; }
+        public ulong BrownOutResets { get; set; }
+        public ulong GpioStateChanges { get; set; }
+        public ulong PwmCycles { get; set; }
+        public ulong I2cTransactions { get; set; }
+        public ulong SpiTransactions { get; set; }
+
+        public void CopyFrom(FirmwareDebugCounters other)
+        {
+            if (other == null) return;
+            FlashBytes = other.FlashBytes;
+            SramBytes = other.SramBytes;
+            EepromBytes = other.EepromBytes;
+            IoBytes = other.IoBytes;
+            CpuHz = other.CpuHz;
+            ProgramCounter = other.ProgramCounter;
+            StackPointer = other.StackPointer;
+            StatusRegister = other.StatusRegister;
+            StackHighWater = other.StackHighWater;
+            HeapTopAddress = other.HeapTopAddress;
+            StackMinAddress = other.StackMinAddress;
+            DataSegmentEnd = other.DataSegmentEnd;
+            StackOverflows = other.StackOverflows;
+            InvalidMemoryAccesses = other.InvalidMemoryAccesses;
+            InterruptCount = other.InterruptCount;
+            InterruptLatencyMax = other.InterruptLatencyMax;
+            TimingViolations = other.TimingViolations;
+            CriticalSectionCycles = other.CriticalSectionCycles;
+            SleepCycles = other.SleepCycles;
+            FlashAccessCycles = other.FlashAccessCycles;
+            UartOverflows = other.UartOverflows;
+            TimerOverflows = other.TimerOverflows;
+            BrownOutResets = other.BrownOutResets;
+            GpioStateChanges = other.GpioStateChanges;
+            PwmCycles = other.PwmCycles;
+            I2cTransactions = other.I2cTransactions;
+            SpiTransactions = other.SpiTransactions;
+        }
+    }
+
+    public class FirmwareDebugBitField
+    {
+        public FirmwareDebugBitField(string name, ushort offset, byte width, ulong value)
+        {
+            Name = name;
+            Offset = offset;
+            Width = width;
+            Value = value;
+        }
+
+        public string Name { get; }
+        public ushort Offset { get; }
+        public byte Width { get; }
+        public ulong Value { get; }
+
+        public string Bits
+        {
+            get
+            {
+                if (Width == 0) return string.Empty;
+                var text = Convert.ToString((long)Value, 2);
+                return text.PadLeft(Width, '0');
+            }
+        }
+    }
+
+    public class FirmwareDebugBitset
+    {
+        public ushort BitCount { get; set; }
+        public byte[] Raw { get; set; } = Array.Empty<byte>();
+        public List<FirmwareDebugBitField> Fields { get; } = new List<FirmwareDebugBitField>();
+
+        public void CopyFrom(FirmwareDebugBitset other)
+        {
+            if (other == null) return;
+            BitCount = other.BitCount;
+            Raw = other.Raw ?? Array.Empty<byte>();
+            Fields.Clear();
+            Fields.AddRange(other.Fields);
+        }
+    }
+
     public class FirmwareStepResult
     {
         public ulong StepSequence { get; set; }
+        public ulong TickCount { get; set; }
         public int[] PinStates { get; set; } = new int[70];
         public string SerialOutput { get; set; } = string.Empty;
         public FirmwarePerfCounters PerfCounters { get; set; } = new FirmwarePerfCounters();
+        public FirmwareDebugCounters DebugCounters { get; set; } = new FirmwareDebugCounters();
+        public FirmwareDebugBitset DebugBits { get; set; } = new FirmwareDebugBitset();
         public ulong OutputTimestampMicros { get; set; }
     }
 
@@ -84,6 +223,11 @@ namespace RobotTwin.CoreSim.IPC
         private const uint ClientFlags = 1u << 8; // Lockstep mode hint
         private const uint FeatureTimestampMicros = 1u << 0;
         private const uint FeaturePerfCounters = 1u << 1;
+        private const int PipeNotFoundError = 2;
+        private const int PipeBusyError = 231;
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool WaitNamedPipe(string name, int timeout);
 
         private enum MessageType : ushort
         {
@@ -95,15 +239,64 @@ namespace RobotTwin.CoreSim.IPC
             Serial = 6,
             Status = 7,
             Log = 8,
-            Error = 9
+            Error = 9,
+            MemoryPatch = 10
         }
+
+        private readonly struct DebugBitFieldSpec
+        {
+            public readonly string Name;
+            public readonly ushort Offset;
+            public readonly byte Width;
+
+            public DebugBitFieldSpec(string name, ushort offset, byte width)
+            {
+                Name = name;
+                Offset = offset;
+                Width = width;
+            }
+        }
+
+        private static readonly DebugBitFieldSpec[] DebugBitFields =
+        {
+            new DebugBitFieldSpec("pc", 0, 16),
+            new DebugBitFieldSpec("sp", 16, 16),
+            new DebugBitFieldSpec("sreg", 32, 8),
+            new DebugBitFieldSpec("flash_bytes", 40, 32),
+            new DebugBitFieldSpec("sram_bytes", 72, 32),
+            new DebugBitFieldSpec("eeprom_bytes", 104, 32),
+            new DebugBitFieldSpec("io_bytes", 136, 32),
+            new DebugBitFieldSpec("cpu_hz", 168, 32),
+            new DebugBitFieldSpec("stack_high_water", 200, 16),
+            new DebugBitFieldSpec("heap_top", 216, 16),
+            new DebugBitFieldSpec("stack_min", 232, 16),
+            new DebugBitFieldSpec("data_segment_end", 248, 16),
+            new DebugBitFieldSpec("stack_overflows", 264, 32),
+            new DebugBitFieldSpec("invalid_mem_accesses", 296, 32),
+            new DebugBitFieldSpec("interrupt_count", 328, 32),
+            new DebugBitFieldSpec("interrupt_latency_max", 360, 32),
+            new DebugBitFieldSpec("timing_violations", 392, 32),
+            new DebugBitFieldSpec("critical_section_cycles", 424, 32),
+            new DebugBitFieldSpec("sleep_cycles", 456, 32),
+            new DebugBitFieldSpec("flash_access_cycles", 488, 32),
+            new DebugBitFieldSpec("uart_overflows", 520, 32),
+            new DebugBitFieldSpec("timer_overflows", 552, 32),
+            new DebugBitFieldSpec("brown_out_resets", 584, 32),
+            new DebugBitFieldSpec("gpio_state_changes", 616, 32),
+            new DebugBitFieldSpec("pwm_cycles", 648, 32),
+            new DebugBitFieldSpec("i2c_transactions", 680, 32),
+            new DebugBitFieldSpec("spi_transactions", 712, 32)
+        };
 
         private sealed class BoardState
         {
             public ulong LastSequence;
+            public ulong LastTick;
             public readonly int[] PinOutputs = new int[PinCount];
             public readonly StringBuilder SerialBuffer = new StringBuilder();
             public readonly FirmwarePerfCounters Perf = new FirmwarePerfCounters();
+            public readonly FirmwareDebugCounters Debug = new FirmwareDebugCounters();
+            public readonly FirmwareDebugBitset DebugBits = new FirmwareDebugBitset();
             public readonly object SequenceLock = new object();
             public ulong LastTimestampMicros;
         }
@@ -118,6 +311,9 @@ namespace RobotTwin.CoreSim.IPC
         private readonly Dictionary<string, BoardState> _boardStates = new Dictionary<string, BoardState>(StringComparer.OrdinalIgnoreCase);
         private uint _serverFlags;
         private bool _versionWarned;
+        private bool _timestampSyncValid;
+        private long _timestampOffsetMicros;
+        private const long TimestampResyncThresholdMicros = 5_000_000;
 
         public string PipeName => _pipeName;
         public string BoardId { get; set; } = "board";
@@ -128,6 +324,8 @@ namespace RobotTwin.CoreSim.IPC
         public bool StrictStepSequence { get; set; } = true;
         public string ExtraLaunchArguments { get; set; } = string.Empty;
 
+        public event EventHandler<FirmwareLogEventArgs>? LogReceived;
+
         public void Configure(string pipeName)
         {
             _pipeName = string.IsNullOrWhiteSpace(pipeName) ? DefaultPipeName : pipeName;
@@ -136,6 +334,10 @@ namespace RobotTwin.CoreSim.IPC
         public async Task ConnectAsync()
         {
             if (_pipeClient != null && _pipeClient.IsConnected) return;
+            if (!IsPipeAvailable(_pipeName))
+            {
+                throw new IOException($"Firmware pipe unavailable: {_pipeName}");
+            }
             _pipeClient = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut);
             await _pipeClient.ConnectAsync(5000).ConfigureAwait(false);
             try
@@ -154,11 +356,26 @@ namespace RobotTwin.CoreSim.IPC
             StartReaderThread();
         }
 
+        private static bool IsPipeAvailable(string pipeName)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return true;
+            if (string.IsNullOrWhiteSpace(pipeName)) return false;
+            string fullName = pipeName.StartsWith(@"\\.\pipe\", StringComparison.Ordinal)
+                ? pipeName
+                : $@"\\.\pipe\{pipeName}";
+            if (WaitNamedPipe(fullName, 0)) return true;
+            int err = Marshal.GetLastWin32Error();
+            if (err == PipeNotFoundError || err == PipeBusyError) return false;
+            return false;
+        }
+
         public void Disconnect()
         {
             StopReaderThread();
             _pipeClient?.Dispose();
             _pipeClient = null;
+            _timestampSyncValid = false;
+            _timestampOffsetMicros = 0;
         }
 
         public FirmwareStepResult Step(FirmwareStepRequest request)
@@ -197,6 +414,7 @@ namespace RobotTwin.CoreSim.IPC
             lock (_stateLock)
             {
                 result.StepSequence = state.LastSequence;
+                result.TickCount = state.LastTick;
                 Array.Copy(state.PinOutputs, result.PinStates, result.PinStates.Length);
                 if (state.SerialBuffer.Length > 0)
                 {
@@ -204,6 +422,8 @@ namespace RobotTwin.CoreSim.IPC
                     state.SerialBuffer.Clear();
                 }
                 result.PerfCounters.CopyFrom(state.Perf);
+                result.DebugCounters.CopyFrom(state.Debug);
+                result.DebugBits.CopyFrom(state.DebugBits);
                 result.OutputTimestampMicros = state.LastTimestampMicros;
             }
 
@@ -228,6 +448,24 @@ namespace RobotTwin.CoreSim.IPC
             Buffer.BlockCopy(header, 0, payload, 0, header.Length);
             Buffer.BlockCopy(data, 0, payload, header.Length, data.Length);
             return WritePacket(MessageType.LoadBvm, payload);
+        }
+
+        public bool InjectFlashBytes(uint address, byte[] data)
+        {
+            return InjectMemory(FirmwareMemoryType.Flash, address, data);
+        }
+
+        public bool InjectMemory(FirmwareMemoryType memoryType, uint address, byte[] data)
+        {
+            if (data == null || data.Length == 0) return false;
+            if (_pipeClient == null || !_pipeClient.IsConnected) return false;
+            var payload = new byte[BoardIdSize + 1 + 3 + 4 + 4 + data.Length];
+            WriteFixedString(payload, 0, BoardIdSize, BoardId);
+            payload[BoardIdSize] = (byte)memoryType;
+            WriteUInt32(payload, BoardIdSize + 4, address);
+            WriteUInt32(payload, BoardIdSize + 8, (uint)data.Length);
+            Buffer.BlockCopy(data, 0, payload, BoardIdSize + 12, data.Length);
+            return WritePacket(MessageType.MemoryPatch, payload);
         }
 
         public void LaunchFirmware(string executablePath)
@@ -296,39 +534,114 @@ namespace RobotTwin.CoreSim.IPC
                     string boardId = ReadFixedString(payload, 0, BoardIdSize);
                     var state = GetBoardState(boardId);
                     ulong seq = ReadUInt64(payload, BoardIdSize);
+                    ulong tick = ReadUInt64(payload, BoardIdSize + 8);
                     ulong previous = state.LastSequence;
 
-                    int offset = BoardIdSize + 16 + PinCount;
+                    int cursor = BoardIdSize + 16 + PinCount;
                     int perfSize = 13 * 8;
-                    int perfEnd = offset + perfSize;
-                    if (payload.Length >= perfEnd)
+                    if (payload.Length >= cursor + perfSize)
                     {
-                        state.Perf.Cycles = ReadUInt64(payload, offset); offset += 8;
-                        state.Perf.AdcSamples = ReadUInt64(payload, offset); offset += 8;
+                        state.Perf.Cycles = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Perf.AdcSamples = ReadUInt64(payload, cursor); cursor += 8;
                         for (int i = 0; i < state.Perf.UartTxBytes.Length; i++)
                         {
-                            state.Perf.UartTxBytes[i] = ReadUInt64(payload, offset); offset += 8;
+                            state.Perf.UartTxBytes[i] = ReadUInt64(payload, cursor); cursor += 8;
                         }
                         for (int i = 0; i < state.Perf.UartRxBytes.Length; i++)
                         {
-                            state.Perf.UartRxBytes[i] = ReadUInt64(payload, offset); offset += 8;
+                            state.Perf.UartRxBytes[i] = ReadUInt64(payload, cursor); cursor += 8;
                         }
-                        state.Perf.SpiTransfers = ReadUInt64(payload, offset); offset += 8;
-                        state.Perf.TwiTransfers = ReadUInt64(payload, offset); offset += 8;
-                        state.Perf.WdtResets = ReadUInt64(payload, offset);
+                        state.Perf.SpiTransfers = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Perf.TwiTransfers = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Perf.WdtResets = ReadUInt64(payload, cursor); cursor += 8;
                     }
 
                     // If enabled, drop stale outputs without advancing sequence.
-                    if (payload.Length >= perfEnd + 8)
+                    if (payload.Length >= cursor + 8)
                     {
-                        state.LastTimestampMicros = ReadUInt64(payload, perfEnd);
+                        state.LastTimestampMicros = ReadUInt64(payload, cursor);
+                        cursor += 8;
                         if (DropStaleOutputs && state.LastTimestampMicros > 0)
                         {
-                            long ageMicros = NowMicros() - (long)state.LastTimestampMicros;
+                            long nowMicros = NowMicros();
+                            long serverMicros = (long)state.LastTimestampMicros;
+                            long expected = serverMicros + _timestampOffsetMicros;
+                            long delta = Math.Abs(nowMicros - expected);
+                            if (!_timestampSyncValid || delta > TimestampResyncThresholdMicros)
+                            {
+                                _timestampOffsetMicros = nowMicros - serverMicros;
+                                _timestampSyncValid = true;
+                            }
+                            long ageMicros = nowMicros - (serverMicros + _timestampOffsetMicros);
+                            if (ageMicros < 0)
+                            {
+                                ageMicros = 0;
+                            }
                             if (ageMicros > (long)(MaxOutputAgeMs * 1000.0))
                             {
                                 state.Perf.DroppedOutputs += 1;
                                 return;
+                            }
+                        }
+                    }
+
+                    if (payload.Length >= cursor + 20)
+                    {
+                        state.Debug.FlashBytes = ReadUInt32(payload, cursor); cursor += 4;
+                        state.Debug.SramBytes = ReadUInt32(payload, cursor); cursor += 4;
+                        state.Debug.EepromBytes = ReadUInt32(payload, cursor); cursor += 4;
+                        state.Debug.IoBytes = ReadUInt32(payload, cursor); cursor += 4;
+                        state.Debug.CpuHz = ReadUInt32(payload, cursor); cursor += 4;
+                    }
+                    if (payload.Length >= cursor + 14)
+                    {
+                        state.Debug.ProgramCounter = ReadUInt16(payload, cursor); cursor += 2;
+                        state.Debug.StackPointer = ReadUInt16(payload, cursor); cursor += 2;
+                        state.Debug.StatusRegister = payload[cursor]; cursor += 1;
+                        cursor += 1; // reserved
+                        state.Debug.StackHighWater = ReadUInt16(payload, cursor); cursor += 2;
+                        state.Debug.HeapTopAddress = ReadUInt16(payload, cursor); cursor += 2;
+                        state.Debug.StackMinAddress = ReadUInt16(payload, cursor); cursor += 2;
+                        state.Debug.DataSegmentEnd = ReadUInt16(payload, cursor); cursor += 2;
+                    }
+                    if (payload.Length >= cursor + 88)
+                    {
+                        state.Debug.StackOverflows = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.InvalidMemoryAccesses = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.InterruptCount = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.InterruptLatencyMax = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.TimingViolations = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.CriticalSectionCycles = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.SleepCycles = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.FlashAccessCycles = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.UartOverflows = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.TimerOverflows = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.BrownOutResets = ReadUInt64(payload, cursor); cursor += 8;
+                    }
+                    if (payload.Length >= cursor + 32)
+                    {
+                        state.Debug.GpioStateChanges = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.PwmCycles = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.I2cTransactions = ReadUInt64(payload, cursor); cursor += 8;
+                        state.Debug.SpiTransactions = ReadUInt64(payload, cursor); cursor += 8;
+                    }
+
+                    if (payload.Length >= cursor + 4)
+                    {
+                        ushort bitCount = ReadUInt16(payload, cursor); cursor += 2;
+                        cursor += 2; // reserved
+                        int byteCount = (bitCount + 7) / 8;
+                        if (payload.Length >= cursor + byteCount && byteCount > 0)
+                        {
+                            var raw = new byte[byteCount];
+                            Buffer.BlockCopy(payload, cursor, raw, 0, byteCount);
+                            state.DebugBits.BitCount = bitCount;
+                            state.DebugBits.Raw = raw;
+                            state.DebugBits.Fields.Clear();
+                            foreach (var spec in DebugBitFields)
+                            {
+                                ulong value = ReadBits(raw, spec.Offset, spec.Width);
+                                state.DebugBits.Fields.Add(new FirmwareDebugBitField(spec.Name, spec.Offset, spec.Width, value));
                             }
                         }
                     }
@@ -341,6 +654,7 @@ namespace RobotTwin.CoreSim.IPC
                     if (seq >= state.LastSequence)
                     {
                         state.LastSequence = seq;
+                        state.LastTick = tick;
                     }
 
                     lock (state.SequenceLock)
@@ -371,9 +685,11 @@ namespace RobotTwin.CoreSim.IPC
             {
                 if (payload == null || payload.Length < BoardIdSize + 1) return;
                 string boardId = ReadFixedString(payload, 0, BoardIdSize);
+                var level = (FirmwareLogLevel)payload[BoardIdSize];
                 string text = payload.Length > BoardIdSize + 1
                     ? Encoding.UTF8.GetString(payload, BoardIdSize + 1, payload.Length - (BoardIdSize + 1))
                     : string.Empty;
+                RaiseLog(boardId, level, text);
                 Console.WriteLine($"[Firmware:{boardId}] {text}");
                 return;
             }
@@ -381,9 +697,11 @@ namespace RobotTwin.CoreSim.IPC
             {
                 if (payload == null || payload.Length < BoardIdSize + 4) return;
                 string boardId = ReadFixedString(payload, 0, BoardIdSize);
+                uint code = ReadUInt32(payload, BoardIdSize);
                 string text = payload.Length > BoardIdSize + 4
                     ? Encoding.UTF8.GetString(payload, BoardIdSize + 4, payload.Length - (BoardIdSize + 4))
-                    : "Unknown firmware error";
+                    : $"Firmware error code {code}";
+                RaiseLog(boardId, FirmwareLogLevel.Error, text);
                 Console.WriteLine($"[Firmware:{boardId}] {text}");
                 return;
             }
@@ -546,6 +864,25 @@ namespace RobotTwin.CoreSim.IPC
                 | ((ulong)buffer[offset + 7] << 56));
         }
 
+        private static ulong ReadBits(byte[] buffer, int bitOffset, int bitCount)
+        {
+            if (buffer == null || bitCount <= 0) return 0;
+            int maxBits = buffer.Length * 8;
+            if (bitOffset < 0 || bitOffset + bitCount > maxBits) return 0;
+            ulong value = 0;
+            for (int bit = 0; bit < bitCount && bit < 64; bit++)
+            {
+                int target = bitOffset + bit;
+                int byteIndex = target / 8;
+                int bitIndex = target % 8;
+                if ((buffer[byteIndex] & (1 << bitIndex)) != 0)
+                {
+                    value |= (1UL << bit);
+                }
+            }
+            return value;
+        }
+
         private static ushort ReadUInt16(byte[] buffer, int offset)
         {
             return (ushort)(buffer[offset] | (buffer[offset + 1] << 8));
@@ -585,6 +922,13 @@ namespace RobotTwin.CoreSim.IPC
                 _boardStates[boardId] = state;
             }
             return state;
+        }
+
+        private void RaiseLog(string boardId, FirmwareLogLevel level, string message)
+        {
+            if (LogReceived == null) return;
+            var args = new FirmwareLogEventArgs(boardId, level, message ?? string.Empty);
+            LogReceived(this, args);
         }
     }
 }

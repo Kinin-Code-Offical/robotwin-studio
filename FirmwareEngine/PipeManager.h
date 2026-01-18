@@ -17,7 +17,8 @@ namespace firmware
         enum class Type
         {
             Load,
-            Step
+            Step,
+            Patch
         };
 
         Type type = Type::Load;
@@ -30,6 +31,39 @@ namespace firmware
         std::uint8_t pins[kPinCount]{};
         std::uint16_t analog[kAnalogCount]{};
         std::size_t analogCount = 0;
+        MemoryType memoryType = MemoryType::Flash;
+        std::uint32_t address = 0;
+    };
+
+    struct OutputDebugState
+    {
+        std::uint32_t flashBytes = 0;
+        std::uint32_t sramBytes = 0;
+        std::uint32_t eepromBytes = 0;
+        std::uint32_t ioBytes = 0;
+        std::uint32_t cpuHz = 0;
+        std::uint16_t pc = 0;
+        std::uint16_t sp = 0;
+        std::uint8_t sreg = 0;
+        std::uint16_t stackHighWater = 0;
+        std::uint16_t heapTopAddress = 0;
+        std::uint16_t stackMinAddress = 0;
+        std::uint16_t dataSegmentEnd = 0;
+        std::uint64_t stackOverflows = 0;
+        std::uint64_t invalidMemoryAccesses = 0;
+        std::uint64_t interruptCount = 0;
+        std::uint64_t interruptLatencyMax = 0;
+        std::uint64_t timingViolations = 0;
+        std::uint64_t criticalSectionCycles = 0;
+        std::uint64_t sleepCycles = 0;
+        std::uint64_t flashAccessCycles = 0;
+        std::uint64_t uartOverflows = 0;
+        std::uint64_t timerOverflows = 0;
+        std::uint64_t brownOutResets = 0;
+        std::uint64_t gpioStateChanges = 0;
+        std::uint64_t pwmCycles = 0;
+        std::uint64_t i2cTransactions = 0;
+        std::uint64_t spiTransactions = 0;
     };
 
     class PipeManager
@@ -49,7 +83,8 @@ namespace firmware
         bool SendOutputState(const std::string &boardId, std::uint64_t stepSequence, std::uint64_t tickCount, const std::uint8_t *pins, std::size_t count,
                              std::uint64_t cycles, std::uint64_t adcSamples,
                              const std::uint64_t *uartTxBytes, const std::uint64_t *uartRxBytes,
-                             std::uint64_t spiTransfers, std::uint64_t twiTransfers, std::uint64_t wdtResets);
+                             std::uint64_t spiTransfers, std::uint64_t twiTransfers, std::uint64_t wdtResets,
+                             const OutputDebugState &debug);
         void SendSerial(const std::string &boardId, const std::uint8_t *data, std::size_t size);
         void SendStatus(const std::string &boardId, std::uint64_t tickCount);
         void SendLog(const std::string &boardId, LogLevel level, const std::string &text);

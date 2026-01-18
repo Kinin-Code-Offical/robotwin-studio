@@ -209,7 +209,7 @@ namespace RobotTwin.UI.RobotEditor
                 detail.LoadSafetyFactor = joint.MaxLoadCapacity / appliedLoad;
 
                 // Wear estimation (based on cycles and load)
-                detail.EstimatedCycles = joint.EstimatedLifeCycles;
+                detail.EstimatedCycles = (int)joint.EstimatedLifeCycles;
                 detail.WearFactor = CalculateWearFactor(joint, appliedLoad);
                 detail.MaintenanceInterval = EstimateMaintenanceInterval(joint, detail.WearFactor);
 

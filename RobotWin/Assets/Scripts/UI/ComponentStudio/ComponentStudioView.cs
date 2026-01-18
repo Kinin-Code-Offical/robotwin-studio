@@ -114,7 +114,15 @@ namespace RobotTwin.UI
         private Material _referenceLineMaterial;
         private float _lightingBlend;
 
-        private const int ReferenceGridHalfLines = 8;
+        // Reference grid auto-scaling (screen-space driven)
+        private const float ReferenceGridTargetSpacingPx = 34f; // desired pixels between minor lines
+        private const float ReferenceGridMinorWidthPx = 1.15f;
+        private const float ReferenceGridMajorWidthPx = 1.85f;
+        private const float ReferenceGridAxisWidthPx = 2.35f;
+        private const int ReferenceGridMajorEvery = 5;
+        private const int ReferenceGridMaxLinesPerAxis = 140; // safety cap
+
+        private Bounds _lastModelBounds = new Bounds(Vector3.zero, Vector3.one * 0.1f);
 
         private bool ShouldShowReferenceFrame()
         {
@@ -356,7 +364,8 @@ namespace RobotTwin.UI
                 _distance = 1.2f;
                 _panOffset = Vector3.zero;
                 UpdateCameraTransform();
-                UpdateReferenceFrame(new Bounds(Vector3.zero, Vector3.one * 0.1f));
+                _lastModelBounds = new Bounds(Vector3.zero, Vector3.one * 0.1f);
+                UpdateReferenceFrame(_lastModelBounds);
                 return;
             }
 
@@ -365,6 +374,7 @@ namespace RobotTwin.UI
                 ? ComputePerspectiveDistance(bounds, 1.4f)
                 : ComputeOrthoSize(bounds, 1.15f);
             UpdateCameraTransform();
+            _lastModelBounds = bounds;
             UpdateReferenceFrame(bounds);
         }
 
@@ -394,6 +404,7 @@ namespace RobotTwin.UI
                 ? ComputePerspectiveDistance(bounds, 1.35f)
                 : ComputeOrthoSize(bounds, 1.10f);
             UpdateCameraTransform();
+            _lastModelBounds = bounds;
             UpdateReferenceFrame(bounds);
         }
 
@@ -720,7 +731,7 @@ namespace RobotTwin.UI
         /// Dims all non-selected parts for clearer selection, regardless of hierarchy/grouping.
         /// This only affects a per-renderer MaterialPropertyBlock and is fully reversible.
         /// </summary>
-        public void SetPartFocus(Transform focusedPart, float dimFactor = 0.25f)
+        public void SetPartFocus(Transform focusedPart, float dimFactor = 0.25f, float focusedAlpha = 0.82f)
         {
             if (_modelRoot == null)
             {
@@ -734,7 +745,8 @@ namespace RobotTwin.UI
             if (_focusedPart == null) return;
 
             dimFactor = Mathf.Clamp01(dimFactor);
-            if (dimFactor >= 0.999f) return;
+            focusedAlpha = Mathf.Clamp01(focusedAlpha);
+            if (dimFactor >= 0.999f && focusedAlpha >= 0.999f) return;
 
             var focusedRenderers = new HashSet<Renderer>(_focusedPart.GetComponentsInChildren<Renderer>(true));
             var allRenderers = _modelRoot.GetComponentsInChildren<Renderer>(true);
@@ -742,14 +754,13 @@ namespace RobotTwin.UI
             foreach (var renderer in allRenderers)
             {
                 if (renderer == null) continue;
-                if (focusedRenderers.Contains(renderer)) continue;
-
                 // Cache the existing block so we can restore exactly.
-                var existing = new MaterialPropertyBlock();
-                renderer.GetPropertyBlock(existing);
                 var cached = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(cached);
                 _partFocusOriginalBlocks[renderer] = cached;
+
+                var existing = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(existing);
 
                 Color baseColor = Color.white;
                 var mat = renderer.sharedMaterial;
@@ -760,9 +771,20 @@ namespace RobotTwin.UI
                     else baseColor = mat.color;
                 }
 
-                var dimmed = new Color(baseColor.r * dimFactor, baseColor.g * dimFactor, baseColor.b * dimFactor, baseColor.a);
-                existing.SetColor("_BaseColor", dimmed);
-                existing.SetColor("_Color", dimmed);
+                if (focusedRenderers.Contains(renderer))
+                {
+                    // Selected part: slightly transparent.
+                    var focusedColor = new Color(baseColor.r, baseColor.g, baseColor.b, baseColor.a * focusedAlpha);
+                    existing.SetColor("_BaseColor", focusedColor);
+                    existing.SetColor("_Color", focusedColor);
+                }
+                else
+                {
+                    // Non-selected: dim RGB (keep alpha as-is).
+                    var dimmed = new Color(baseColor.r * dimFactor, baseColor.g * dimFactor, baseColor.b * dimFactor, baseColor.a);
+                    existing.SetColor("_BaseColor", dimmed);
+                    existing.SetColor("_Color", dimmed);
+                }
                 renderer.SetPropertyBlock(existing);
             }
         }
@@ -1055,9 +1077,12 @@ namespace RobotTwin.UI
         private void BuildRotateGizmo(Bounds bounds)
         {
             float extent = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
-            float radius = Mathf.Max(extent * 1.0f, 0.25f);
-            float thickness = Mathf.Max(radius * 0.08f, 0.035f);
-            float width = Mathf.Max(radius * 0.028f, 0.012f);
+            // Keep rotate rings proportional to the move/scale arrow length so the gizmo feels consistent.
+            float shaftLength = Mathf.Clamp(Mathf.Max(extent * 1.6f, 0.65f), 0.6f, 4f);
+            // Ratios are intentionally fixed to keep the ring "feel" stable across model sizes.
+            float radius = Mathf.Clamp(shaftLength * 0.60f, 0.28f, 2.8f);
+            float thickness = radius * 0.085f;
+            float width = radius * 0.030f;
             CreateRotateHandle("RotateAxisX", GizmoAxis.X, Color.red, Vector3.right, radius, thickness, width);
             CreateRotateHandle("RotateAxisY", GizmoAxis.Y, Color.green, Vector3.up, radius, thickness, width);
             CreateRotateHandle("RotateAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward, radius, thickness, width);
@@ -1065,46 +1090,18 @@ namespace RobotTwin.UI
 
         private void BuildScaleGizmo(Bounds bounds)
         {
-            var ext = bounds.extents;
-            float minExtent = 0.05f;
-            ext = new Vector3(
-                Mathf.Max(ext.x, minExtent),
-                Mathf.Max(ext.y, minExtent),
-                Mathf.Max(ext.z, minExtent));
-            bounds = new Bounds(bounds.center, ext * 2f);
+            // Scale gizmo should behave like Move gizmo: constant-ish on-screen size.
+            // The only difference: scale tips are squares (cubes), not arrow heads.
+            float extent = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
+            float shaftLength = Mathf.Clamp(Mathf.Max(extent * 1.6f, 0.65f), 0.6f, 4f);
+            float headSize = Mathf.Clamp(shaftLength * 0.18f, 0.12f, 0.32f);
 
-            float handleSize = Mathf.Clamp(bounds.size.magnitude * 0.045f, 0.08f, 0.22f);
-            float cornerSize = Mathf.Clamp(bounds.size.magnitude * 0.055f, 0.09f, 0.26f);
-            float handleOffset = Mathf.Max(handleSize * 0.35f, 0.02f);
-            float cornerOffset = Mathf.Max(cornerSize * 0.3f, 0.02f);
+            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, Vector3.right * shaftLength, headSize);
+            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, Vector3.up * shaftLength, headSize);
+            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), Vector3.forward * shaftLength, headSize);
 
-            float x = Mathf.Max(ext.x + handleOffset, minExtent * 0.5f);
-            float y = Mathf.Max(ext.y + handleOffset, minExtent * 0.5f);
-            float z = Mathf.Max(ext.z + handleOffset, minExtent * 0.5f);
-
-            CreateScaleAxisHandle("ScaleAxisX", GizmoAxis.X, Color.red, new Vector3(x, 0f, 0f), handleSize);
-            CreateScaleAxisHandle("ScaleAxisY", GizmoAxis.Y, Color.green, new Vector3(0f, y, 0f), handleSize);
-            CreateScaleAxisHandle("ScaleAxisZ", GizmoAxis.Z, new Color(0.35f, 0.7f, 1f), new Vector3(0f, 0f, z), handleSize);
-
-            var center = bounds.center;
-            float cornerX = Mathf.Max(ext.x + cornerOffset, minExtent * 0.5f);
-            float cornerY = Mathf.Max(ext.y + cornerOffset, minExtent * 0.5f);
-            float cornerZ = Mathf.Max(ext.z + cornerOffset, minExtent * 0.5f);
-            var cornerOffsets = new[]
-            {
-                new Vector3(cornerX, cornerY, cornerZ),
-                new Vector3(cornerX, cornerY, -cornerZ),
-                new Vector3(cornerX, -cornerY, cornerZ),
-                new Vector3(cornerX, -cornerY, -cornerZ),
-                new Vector3(-cornerX, cornerY, cornerZ),
-                new Vector3(-cornerX, cornerY, -cornerZ),
-                new Vector3(-cornerX, -cornerY, cornerZ),
-                new Vector3(-cornerX, -cornerY, -cornerZ)
-            };
-            foreach (var offset in cornerOffsets)
-            {
-                CreateCornerHandle(center + offset, new Color(0.82f, 0.88f, 0.98f), cornerSize);
-            }
+            // Keep a single uniform-scale handle.
+            CreateCornerHandle("ScaleUniform", Vector3.zero, new Color(0.82f, 0.88f, 0.98f), Mathf.Clamp(headSize * 0.95f, 0.10f, 0.30f));
         }
 
         private void CreateAxisHandle(string name, GizmoHandleKind kind, GizmoAxis axis, Color color, Vector3 direction, float shaftLength, float shaftRadius, float headSize)
@@ -1239,10 +1236,10 @@ namespace RobotTwin.UI
             _gizmoObjects.Add(handle);
         }
 
-        private void CreateCornerHandle(Vector3 localPosition, Color color, float size)
+        private void CreateCornerHandle(string name, Vector3 localPosition, Color color, float size)
         {
             if (_gizmoRoot == null) return;
-            var handle = new GameObject("ScaleCorner");
+            var handle = new GameObject(string.IsNullOrWhiteSpace(name) ? "ScaleCorner" : name);
             handle.transform.SetParent(_gizmoRoot, false);
             handle.transform.localPosition = localPosition;
             var handleComp = handle.AddComponent<GizmoHandle>();
@@ -1254,6 +1251,11 @@ namespace RobotTwin.UI
             cube.transform.localScale = Vector3.one * size;
             ApplyGizmoColor(cube, color);
             _gizmoObjects.Add(handle);
+        }
+
+        private void CreateCornerHandle(Vector3 localPosition, Color color, float size)
+        {
+            CreateCornerHandle("ScaleCorner", localPosition, color, size);
         }
 
         private void CreateScaleBox(Bounds bounds, Color color)
@@ -1287,7 +1289,8 @@ namespace RobotTwin.UI
                 line.useWorldSpace = false;
                 line.startWidth = lineWidth;
                 line.endWidth = lineWidth;
-                line.material = new Material(Shader.Find("Sprites/Default"));
+                var shader = GetOverlayLineShader();
+                if (shader != null) line.material = new Material(shader);
                 ConfigureGizmoMaterial(line.material);
                 line.startColor = color;
                 line.endColor = color;
@@ -1304,7 +1307,8 @@ namespace RobotTwin.UI
             line.positionCount = segments;
             line.startWidth = width;
             line.endWidth = width;
-            line.material = new Material(Shader.Find("Sprites/Default"));
+            var shader = GetOverlayLineShader();
+            if (shader != null) line.material = new Material(shader);
             ConfigureGizmoMaterial(line.material);
             line.startColor = color;
             line.endColor = color;
@@ -1323,7 +1327,8 @@ namespace RobotTwin.UI
             line.positionCount = 0;
             line.startWidth = width;
             line.endWidth = width;
-            line.material = new Material(Shader.Find("Sprites/Default"));
+            var shader = GetOverlayLineShader();
+            if (shader != null) line.material = new Material(shader);
             ConfigureGizmoMaterial(line.material);
             line.startColor = color;
             line.endColor = color;
@@ -1372,15 +1377,27 @@ namespace RobotTwin.UI
         {
             var renderer = target.GetComponent<Renderer>();
             if (renderer == null) return;
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
+            // Prefer always-on-top shader so gizmo handles remain visible over the model.
+            var shader = Shader.Find("RobotTwin/AlwaysOnTopUnlit") ??
+                Shader.Find("Universal Render Pipeline/Unlit") ??
                 Shader.Find("Unlit/Color") ??
+                Shader.Find("Sprites/Default") ??
                 Shader.Find("Standard");
             if (shader == null) return;
             var mat = new Material(shader) { name = "ComponentStudioGizmoMat" };
             mat.color = color;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
             ConfigureGizmoMaterial(mat);
             renderer.sharedMaterial = mat;
+        }
+
+        private static Shader GetOverlayLineShader()
+        {
+            return Shader.Find("RobotTwin/AlwaysOnTopUnlit") ??
+                   Shader.Find("Sprites/Default") ??
+                   Shader.Find("Unlit/Color") ??
+                   Shader.Find("Standard");
         }
 
         private static void ConfigureGizmoMaterial(Material material)
@@ -1396,6 +1413,13 @@ namespace RobotTwin.UI
             if (!_gizmoVisible || _gizmoRoot == null) return;
             _gizmoRoot.position = _gizmoWorldPos;
             _gizmoRoot.rotation = _gizmoWorldRot;
+
+            // Move/rotate gizmos are intended to maintain an approximately constant on-screen size,
+            // so we scale them by camera distance.
+            //
+            // Scale gizmo handles, however, are positioned relative to the target bounds. Scaling the
+            // whole gizmo would also scale the handle offsets, making the handles drift away from the
+            // object as the camera moves. Keep scale gizmo in world units so handles stay anchored.
             _gizmoScale = ComputeGizmoScale(_gizmoWorldPos);
             _gizmoRoot.localScale = Vector3.one * _gizmoScale;
         }
@@ -1579,34 +1603,159 @@ namespace RobotTwin.UI
 
             float extent = Mathf.Max(modelBounds.extents.x, Mathf.Max(modelBounds.extents.y, modelBounds.extents.z));
             if (extent <= 0.00001f) extent = 0.05f;
-            // Make grid/axes more visible: larger extents and thicker lines.
-            float axisLen = extent * 2.4f;
-            float gridHalf = extent * 3.6f;
-            float y = modelBounds.min.y;
-            // Push the grid slightly below the model to reduce z-fighting shimmer.
-            y -= Mathf.Max(extent * 0.01f, 0.002f);
-            float widthAxis = Mathf.Clamp(extent * 0.03f, 0.0025f, 0.04f);
-            float widthGrid = Mathf.Clamp(extent * 0.02f, 0.0018f, 0.02f);
 
-            int gridLines = (ReferenceGridHalfLines * 2 + 1) * 2;
-            EnsureReferenceLines(3 + gridLines);
+            // Grid plane: just below the model to reduce z-fighting.
+            float y = modelBounds.min.y - Mathf.Max(extent * 0.01f, 0.002f);
 
-            SetReferenceLine(0, Vector3.zero, new Vector3(axisLen, 0f, 0f), new Color(0.95f, 0.25f, 0.25f, 1f), widthAxis);
-            SetReferenceLine(1, Vector3.zero, new Vector3(0f, axisLen, 0f), new Color(0.25f, 0.95f, 0.35f, 1f), widthAxis);
-            SetReferenceLine(2, Vector3.zero, new Vector3(0f, 0f, axisLen), new Color(0.35f, 0.7f, 1f, 1f), widthAxis);
+            // Compute visible bounds on the grid plane (in reference/local space).
+            var root = GetReferenceRoot();
+            Vector3 planePointWorld = root.TransformPoint(new Vector3(0f, y, 0f));
+            var plane = new Plane(Vector3.up, planePointWorld);
 
-            float spacing = gridHalf / ReferenceGridHalfLines;
-            int idx = 3;
-            for (int i = -ReferenceGridHalfLines; i <= ReferenceGridHalfLines; i++)
+            // Derive bounds by intersecting viewport corner rays with the plane.
+            float minX = -extent * 6f, maxX = extent * 6f;
+            float minZ = -extent * 6f, maxZ = extent * 6f;
+
+            if (_camera != null)
             {
-                float p = i * spacing;
-                float alpha = i == 0 ? 0.32f : 0.16f;
-                float w = i == 0 ? widthGrid * 1.35f : widthGrid;
-                var c = new Color(0.8f, 0.85f, 0.95f, alpha);
-                // Lines parallel to X (vary Z)
-                SetReferenceLine(idx++, new Vector3(-gridHalf, y, p), new Vector3(gridHalf, y, p), c, w);
-                // Lines parallel to Z (vary X)
-                SetReferenceLine(idx++, new Vector3(p, y, -gridHalf), new Vector3(p, y, gridHalf), c, w);
+                Vector3[] corners =
+                {
+                    new Vector3(0f, 0f, 0f),
+                    new Vector3(1f, 0f, 0f),
+                    new Vector3(0f, 1f, 0f),
+                    new Vector3(1f, 1f, 0f)
+                };
+
+                bool allHit = true;
+                float tMinX = float.PositiveInfinity;
+                float tMaxX = float.NegativeInfinity;
+                float tMinZ = float.PositiveInfinity;
+                float tMaxZ = float.NegativeInfinity;
+
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    var ray = _camera.ViewportPointToRay(corners[i]);
+                    if (!plane.Raycast(ray, out float enter) || enter <= 0f)
+                    {
+                        allHit = false;
+                        break;
+                    }
+                    Vector3 hitWorld = ray.GetPoint(enter);
+                    Vector3 hitLocal = root.InverseTransformPoint(hitWorld);
+                    tMinX = Mathf.Min(tMinX, hitLocal.x);
+                    tMaxX = Mathf.Max(tMaxX, hitLocal.x);
+                    tMinZ = Mathf.Min(tMinZ, hitLocal.z);
+                    tMaxZ = Mathf.Max(tMaxZ, hitLocal.z);
+                }
+
+                if (allHit)
+                {
+                    minX = tMinX;
+                    maxX = tMaxX;
+                    minZ = tMinZ;
+                    maxZ = tMaxZ;
+                }
+            }
+
+            // Expand bounds a bit so the grid doesn't "end" exactly at the viewport edge.
+            float padFromModel = Mathf.Max(extent * 1.25f, 0.05f);
+            minX -= padFromModel;
+            maxX += padFromModel;
+            minZ -= padFromModel;
+            maxZ += padFromModel;
+
+            float rangeX = Mathf.Max(0.05f, maxX - minX);
+            float rangeZ = Mathf.Max(0.05f, maxZ - minZ);
+
+            // Compute a screen-space driven spacing.
+            float unitsPerPixel = 0.002f;
+            if (_camera != null)
+            {
+                float pixelH = Mathf.Max(32f, _renderTexture != null ? _renderTexture.height : _viewportSize.y);
+
+                if (_usePerspective)
+                {
+                    // Distance from camera to plane along center ray.
+                    var centerRay = _camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                    if (plane.Raycast(centerRay, out float enter) && enter > 0f)
+                    {
+                        float frustumH = 2f * enter * Mathf.Tan(_camera.fieldOfView * Mathf.Deg2Rad * 0.5f);
+                        unitsPerPixel = frustumH / pixelH;
+                    }
+                }
+                else
+                {
+                    float frustumH = 2f * _camera.orthographicSize;
+                    unitsPerPixel = frustumH / pixelH;
+                }
+            }
+
+            float rawSpacing = Mathf.Max(0.0005f, unitsPerPixel * ReferenceGridTargetSpacingPx);
+            float spacing = NiceStep(rawSpacing);
+
+            // Safety cap: prevent insane line counts (especially when very close to the plane).
+            float worstRange = Mathf.Max(rangeX, rangeZ);
+            float maxLinesSpan = Mathf.Max(10f, ReferenceGridMaxLinesPerAxis * 2f);
+            if (worstRange / spacing > maxLinesSpan)
+            {
+                spacing = NiceStep(worstRange / maxLinesSpan);
+            }
+
+            // Widths in world units, derived from pixel targets.
+            float widthMinor = Mathf.Clamp(unitsPerPixel * ReferenceGridMinorWidthPx, 0.00025f, 0.06f);
+            float widthMajor = Mathf.Clamp(unitsPerPixel * ReferenceGridMajorWidthPx, widthMinor, 0.08f);
+            float widthAxis = Mathf.Clamp(unitsPerPixel * ReferenceGridAxisWidthPx, widthMajor, 0.10f);
+
+            // Axes should feel effectively infinite; base it on visible ranges and far clip.
+            float axisLen = Mathf.Max(extent * 3f, Mathf.Max(rangeX, rangeZ) * 3f);
+            if (_camera != null)
+            {
+                axisLen = Mathf.Max(axisLen, Mathf.Min(_camera.farClipPlane * 0.75f, 3000f));
+            }
+
+            // Prepare grid extents snapped to spacing.
+            float snapMinX = Mathf.Floor(minX / spacing) * spacing;
+            float snapMaxX = Mathf.Ceil(maxX / spacing) * spacing;
+            float snapMinZ = Mathf.Floor(minZ / spacing) * spacing;
+            float snapMaxZ = Mathf.Ceil(maxZ / spacing) * spacing;
+
+            int linesX = Mathf.Clamp(Mathf.RoundToInt((snapMaxX - snapMinX) / spacing) + 1, 1, ReferenceGridMaxLinesPerAxis * 2);
+            int linesZ = Mathf.Clamp(Mathf.RoundToInt((snapMaxZ - snapMinZ) / spacing) + 1, 1, ReferenceGridMaxLinesPerAxis * 2);
+            int totalGridLines = linesX + linesZ;
+
+            EnsureReferenceLines(3 + totalGridLines);
+
+            // Axes: X (red), Y (green vertical), Z (blue)
+            SetReferenceLine(0, new Vector3(-axisLen, y, 0f), new Vector3(axisLen, y, 0f), new Color(0.95f, 0.25f, 0.25f, 1f), widthAxis);
+            SetReferenceLine(1, new Vector3(0f, y - axisLen, 0f), new Vector3(0f, y + axisLen, 0f), new Color(0.25f, 0.95f, 0.35f, 1f), widthAxis);
+            SetReferenceLine(2, new Vector3(0f, y, -axisLen), new Vector3(0f, y, axisLen), new Color(0.35f, 0.7f, 1f, 1f), widthAxis);
+
+            // Grid lines
+            int idx = 3;
+            var baseColor = new Color(0.8f, 0.85f, 0.95f, 1f);
+
+            // Lines parallel to Z (vary X)
+            for (int i = 0; i < linesX; i++)
+            {
+                float x = snapMinX + i * spacing;
+                int step = Mathf.RoundToInt(x / spacing);
+                bool isMajor = (ReferenceGridMajorEvery > 0) && (Mathf.Abs(step) % ReferenceGridMajorEvery == 0);
+                bool isCenter = Mathf.Abs(x) <= spacing * 0.001f;
+                float alpha = isCenter ? 0.30f : (isMajor ? 0.20f : 0.12f);
+                float w = isCenter ? widthMajor * 1.15f : (isMajor ? widthMajor : widthMinor);
+                SetReferenceLine(idx++, new Vector3(x, y, snapMinZ), new Vector3(x, y, snapMaxZ), new Color(baseColor.r, baseColor.g, baseColor.b, alpha), w);
+            }
+
+            // Lines parallel to X (vary Z)
+            for (int i = 0; i < linesZ; i++)
+            {
+                float z = snapMinZ + i * spacing;
+                int step = Mathf.RoundToInt(z / spacing);
+                bool isMajor = (ReferenceGridMajorEvery > 0) && (Mathf.Abs(step) % ReferenceGridMajorEvery == 0);
+                bool isCenter = Mathf.Abs(z) <= spacing * 0.001f;
+                float alpha = isCenter ? 0.30f : (isMajor ? 0.20f : 0.12f);
+                float w = isCenter ? widthMajor * 1.15f : (isMajor ? widthMajor : widthMinor);
+                SetReferenceLine(idx++, new Vector3(snapMinX, y, z), new Vector3(snapMaxX, y, z), new Color(baseColor.r, baseColor.g, baseColor.b, alpha), w);
             }
 
             // Disable any extras if we ever reduce desired.
@@ -1614,6 +1763,19 @@ namespace RobotTwin.UI
             {
                 if (_referenceLines[i] != null) _referenceLines[i].enabled = false;
             }
+        }
+
+        private static float NiceStep(float value)
+        {
+            if (value <= 0f) return 0.001f;
+            float exp = Mathf.Floor(Mathf.Log10(value));
+            float baseVal = value / Mathf.Pow(10f, exp);
+            float nice;
+            if (baseVal <= 1f) nice = 1f;
+            else if (baseVal <= 2f) nice = 2f;
+            else if (baseVal <= 5f) nice = 5f;
+            else nice = 10f;
+            return nice * Mathf.Pow(10f, exp);
         }
 
         private void EnsureCamera()
@@ -1761,6 +1923,7 @@ namespace RobotTwin.UI
                 _viewCubeCamera.nearClipPlane = 0.05f;
                 _viewCubeCamera.farClipPlane = 10f;
                 _viewCubeCamera.cullingMask = 1 << ViewCubeLayer;
+                // Keep camera on -Z (same side as the default Quad front face in Unity).
                 camGo.transform.localPosition = new Vector3(0f, 0f, -3.6f);
                 camGo.transform.localRotation = Quaternion.identity;
                 camGo.transform.LookAt(Vector3.zero);
@@ -1831,12 +1994,18 @@ namespace RobotTwin.UI
             _viewCubeFaceRoot = faceRoot.transform;
             _viewCubeFaces.Clear();
 
-            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(-90f, 0f, 0f), new Color(0.92f, 0.32f, 0.32f, 1f), "TOP");
-            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(90f, 0f, 0f), new Color(0.28f, 0.45f, 0.9f, 1f), "BOTTOM");
-            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), new Color(0.92f, 0.45f, 0.75f, 1f), "LEFT");
-            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), new Color(0.34f, 0.78f, 0.42f, 1f), "RIGHT");
-            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), Vector3.zero, new Color(0.32f, 0.7f, 0.86f, 1f), "FRONT");
-            CreateViewCubeFace("Back", new Vector3(0f, 0f, -0.51f), new Vector3(0f, 180f, 0f), new Color(0.95f, 0.72f, 0.32f, 1f), "BACK");
+            // Solid "view cube" faces. Colors match gizmo axes: X=Red, Y=Green, Z=Blue.
+            // IMPORTANT: Unity's Quad front face points along -Z, so rotations must make -Z point outward.
+            var axisX = new Color(0.95f, 0.25f, 0.25f, 1f);
+            var axisY = new Color(0.25f, 0.95f, 0.35f, 1f);
+            var axisZ = new Color(0.35f, 0.7f, 1f, 1f);
+
+            CreateViewCubeFace("Top", new Vector3(0f, 0.51f, 0f), new Vector3(90f, 0f, 0f), axisY, "TOP");
+            CreateViewCubeFace("Bottom", new Vector3(0f, -0.51f, 0f), new Vector3(-90f, 0f, 0f), axisY, "BOTTOM");
+            CreateViewCubeFace("Left", new Vector3(-0.51f, 0f, 0f), new Vector3(0f, 90f, 0f), axisX, "LEFT");
+            CreateViewCubeFace("Right", new Vector3(0.51f, 0f, 0f), new Vector3(0f, -90f, 0f), axisX, "RIGHT");
+            CreateViewCubeFace("Front", new Vector3(0f, 0f, 0.51f), new Vector3(0f, 180f, 0f), axisZ, "FRONT");
+            CreateViewCubeFace("Back", new Vector3(0f, 0f, -0.51f), Vector3.zero, axisZ, "BACK");
         }
 
         private void CreateViewCubeFace(string name, Vector3 localPos, Vector3 localEuler, Color color, string label)
@@ -1845,7 +2014,8 @@ namespace RobotTwin.UI
             var face = GameObject.CreatePrimitive(PrimitiveType.Quad);
             face.name = $"ViewCubeFace_{name}";
             face.transform.SetParent(_viewCubeFaceRoot, false);
-            face.transform.localPosition = localPos;
+            // Push face slightly outward to avoid z-fighting
+            face.transform.localPosition = localPos * 1.02f;
             face.transform.localRotation = Quaternion.Euler(localEuler);
             face.transform.localScale = Vector3.one * 0.86f;
 
@@ -1865,13 +2035,19 @@ namespace RobotTwin.UI
                 {
                     var mat = new Material(shader) { name = $"ViewCubeFace_{name}_Mat" };
                     mat.color = color;
+                    if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+                    if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
+                    // Ensure faces remain visible even if winding/culling differs per shader.
+                    if (mat.HasProperty("_Cull")) mat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                    // Keep faces opaque so they write depth correctly (prevents back-side label bleed-through).
                     renderer.sharedMaterial = mat;
                 }
             }
 
             var textGo = new GameObject($"ViewCubeFace_{name}_Label");
             textGo.transform.SetParent(face.transform, false);
-            textGo.transform.localPosition = new Vector3(0f, 0f, 0.012f);
+            // Place label slightly IN FRONT of the face (Quad front is -Z).
+            textGo.transform.localPosition = new Vector3(0f, 0f, -0.012f);
             textGo.transform.localRotation = Quaternion.identity;
             var text = textGo.AddComponent<TextMesh>();
             text.text = label;
@@ -1879,17 +2055,53 @@ namespace RobotTwin.UI
             text.alignment = TextAlignment.Center;
             text.fontSize = 32;
             text.characterSize = 0.045f;
-            text.color = Color.white;
+            text.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+            text.fontStyle = FontStyle.Bold;
+
             var textRenderer = text.GetComponent<MeshRenderer>();
-            if (textRenderer != null && textRenderer.sharedMaterial != null)
+            // Use a reliable built-in font and material so TextMesh actually renders in URP/Built-in.
+            Font font = null;
+            // Unity versions differ on which built-in fonts are available.
+            // Newer versions deprecate Arial.ttf in favor of LegacyRuntime.ttf.
+            try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
+            catch { /* ignored */ }
+            if (font == null)
             {
-                var textMat = new Material(textRenderer.sharedMaterial) { name = $"ViewCubeFace_{name}_TextMat" };
-                if (textMat.HasProperty("_Cull")) textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-                // Render after the face quad to reduce z-fighting with the label's slight offset.
-                textMat.renderQueue = 3000;
-                if (textMat.HasProperty("_ZWrite")) textMat.SetInt("_ZWrite", 0);
-                if (textMat.HasProperty("_ZTest")) textMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
-                textRenderer.sharedMaterial = textMat;
+                try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); }
+                catch { /* ignored */ }
+            }
+            if (font != null) text.font = font;
+
+            if (textRenderer != null)
+            {
+                // Prefer the font's own material (it includes the correct atlas/texture setup).
+                if (font != null && font.material != null)
+                {
+                    var textMat = new Material(font.material) { name = $"ViewCubeFace_{name}_TextMat" };
+                    textMat.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+                    if (textMat.HasProperty("_Cull")) textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                    // Render after the face quad to reduce z-fighting; don't write depth.
+                    textMat.renderQueue = 3000;
+                    if (textMat.HasProperty("_ZWrite")) textMat.SetInt("_ZWrite", 0);
+                    if (textMat.HasProperty("_ZTest")) textMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+                    textRenderer.sharedMaterial = textMat;
+                }
+                else
+                {
+                    // Fallback: keep whatever material Unity assigned, but make it double-sided & late.
+                    var baseMat = textRenderer.sharedMaterial;
+                    if (baseMat != null)
+                    {
+                        var textMat = new Material(baseMat) { name = $"ViewCubeFace_{name}_TextMat" };
+                        textMat.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+                        if (textMat.HasProperty("_Cull")) textMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                        textMat.renderQueue = 3000;
+                        if (textMat.HasProperty("_ZWrite")) textMat.SetInt("_ZWrite", 0);
+                        if (textMat.HasProperty("_ZTest")) textMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+                        textRenderer.sharedMaterial = textMat;
+                    }
+                }
+
                 textRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 textRenderer.receiveShadows = false;
             }
@@ -1921,8 +2133,9 @@ namespace RobotTwin.UI
             foreach (var face in _viewCubeFaces)
             {
                 if (face.Face == null || face.LabelRenderer == null) continue;
+                // Quad front normal is -Z, so the face normal is -transform.forward.
                 // A face is visible if its normal points toward the camera (i.e., opposite the camera's forward).
-                bool frontFacing = Vector3.Dot(face.Face.forward, camForward) < 0f;
+                bool frontFacing = Vector3.Dot(-face.Face.forward, camForward) < 0f;
                 face.LabelRenderer.enabled = frontFacing;
             }
         }
@@ -1979,6 +2192,9 @@ namespace RobotTwin.UI
             }
             UpdateViewCubeOrientation();
             UpdateGizmoTransform();
+
+            // Keep grid/axes responsive to zoom/orbit/pan.
+            UpdateReferenceFrame(_lastModelBounds);
         }
 
         public void SetViewCubeSize(int size)

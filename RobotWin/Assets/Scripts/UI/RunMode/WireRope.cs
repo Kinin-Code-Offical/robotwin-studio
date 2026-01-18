@@ -28,7 +28,7 @@ namespace RobotTwin.UI
         [SerializeField] private float _bendSmoothing = 0.18f;
         [Header("End Caps")]
         [SerializeField] private bool _showEndCaps = true;
-        [SerializeField] private float _copperLength = 0.03f;
+        [SerializeField] private float _copperLength = 0.1f;
         [SerializeField] private float _copperRadius = 0.0016f;
         [SerializeField] private float _solderRadius = 0.0024f;
         [SerializeField] private float _endOffset = 0.001f;

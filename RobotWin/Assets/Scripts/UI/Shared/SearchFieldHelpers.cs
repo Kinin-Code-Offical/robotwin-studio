@@ -9,6 +9,38 @@ namespace RobotTwin.UI
     {
         private const string FocusWithinClass = "rw-focus-within";
         private const string FocusWithinHookedClass = "rw-focus-within--hooked";
+        private const string SelectAllHookedClass = "rw-select-all--hooked";
+
+        private static void EnsureSelectAllOnFocusHooked(TextField field)
+        {
+            if (field == null) return;
+            if (field.ClassListContains(SelectAllHookedClass)) return;
+            field.AddToClassList(SelectAllHookedClass);
+
+            // Selecting in FocusInEvent can be flaky depending on frame timing; schedule makes it reliable.
+            field.RegisterCallback<FocusInEvent>(_ =>
+            {
+                field.schedule.Execute(() =>
+                {
+                    if (field == null) return;
+                    field.SelectAll();
+                });
+            });
+
+            // Some UI Toolkit versions send PointerDown to the inner text input first.
+            // TrickleDown ensures we see the pointer even if children handle it.
+            field.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt == null) return;
+                if (evt.button != 0) return;
+                field.schedule.Execute(() =>
+                {
+                    if (field == null) return;
+                    field.Focus();
+                    field.SelectAll();
+                });
+            }, TrickleDown.TrickleDown);
+        }
 
         /// <summary>
         /// Configures a TextField to behave like a "hint" search box:
@@ -48,28 +80,7 @@ namespace RobotTwin.UI
 
             ensureHintVisible();
 
-            // Selecting in FocusInEvent can be flaky depending on frame timing; schedule makes it reliable.
-            field.RegisterCallback<FocusInEvent>(_ =>
-            {
-                field.schedule.Execute(() =>
-                {
-                    if (field == null) return;
-                    field.SelectAll();
-                });
-            });
-
-            // Make pointer click behave like "select all" as well (helps on first click).
-            field.RegisterCallback<PointerDownEvent>(evt =>
-            {
-                if (evt == null) return;
-                if (evt.button != 0) return;
-                field.schedule.Execute(() =>
-                {
-                    if (field == null) return;
-                    field.Focus();
-                    field.SelectAll();
-                });
-            });
+            EnsureSelectAllOnFocusHooked(field);
 
             field.RegisterValueChangedCallback(evt =>
             {
@@ -103,34 +114,17 @@ namespace RobotTwin.UI
         /// </summary>
         public static void SetupSelectAllOnFocus(TextField field)
         {
-            if (field == null) return;
-            field.RegisterCallback<FocusInEvent>(_ => field.schedule.Execute(() => field.SelectAll()));
-            field.RegisterCallback<PointerDownEvent>(evt =>
-            {
-                if (evt == null) return;
-                if (evt.button != 0) return;
-                field.schedule.Execute(() =>
-                {
-                    field.Focus();
-                    field.SelectAll();
-                });
-            });
+            EnsureSelectAllOnFocusHooked(field);
         }
 
         public static void ApplyToSearchFields(VisualElement root)
         {
             if (root == null) return;
 
-            // Generic: any TextField with class "search-field" gets select-all-on-focus.
-            // Enumerate directly to avoid allocation
-            var searchFieldQuery = root.Query<TextField>(className: "search-field");
-            searchFieldQuery.ForEach(tf =>
-            {
-                if (tf != null)
-                {
-                    SetupSelectAllOnFocus(tf);
-                }
-            });
+            // Generic: any TextField with class "search-field" or "rw-search-field" gets select-all-on-focus.
+            // Enumerate directly to avoid allocation.
+            root.Query<TextField>(className: "search-field").ForEach(tf => SetupSelectAllOnFocus(tf));
+            root.Query<TextField>(className: "rw-search-field").ForEach(tf => SetupSelectAllOnFocus(tf));
 
             // UI Toolkit versions vary in supported pseudo-classes. We avoid relying on :focus-within
             // by explicitly toggling a class on the common search row container when any descendant

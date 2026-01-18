@@ -21,6 +21,7 @@ $Sources = @(
     "FirmwareEngine/Rpi/RpiShm.cpp",
     "FirmwareEngine/Rpi/QemuProcess.cpp",
     "FirmwareEngine/U1/U1.cpp",
+    "FirmwareEngine/U1/U1Globals.cpp",
     "NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 

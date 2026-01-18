@@ -16,7 +16,7 @@ set(SOURCES
     "${REPO_ROOT}/FirmwareEngine/Rpi/RpiBackend.cpp"
     "${REPO_ROOT}/FirmwareEngine/Rpi/RpiShm.cpp"
     "${REPO_ROOT}/FirmwareEngine/Rpi/QemuProcess.cpp"
-    "${REPO_ROOT}/FirmwareEngine/U1/U1.cpp"
+    # "${REPO_ROOT}/FirmwareEngine/U1/U1.cpp" # Removed for Real Sim
     "${REPO_ROOT}/NativeEngine/src/MCU/ATmega328P_ISA.c"
 )
 
@@ -24,7 +24,7 @@ add_executable(RoboTwinFirmwareHost ${SOURCES})
 target_include_directories(RoboTwinFirmwareHost PRIVATE
     "${REPO_ROOT}/FirmwareEngine"
     "${REPO_ROOT}/FirmwareEngine/include"
-    "${REPO_ROOT}/FirmwareEngine/U1"
+    # "${REPO_ROOT}/FirmwareEngine/U1" # Removed for Real Sim
     "${REPO_ROOT}/FirmwareEngine/Rpi"
     "${REPO_ROOT}/NativeEngine/include"
 )
@@ -46,5 +46,15 @@ target_include_directories(RoboTwinFirmwareHostLockstepSanity PRIVATE
     "${REPO_ROOT}/FirmwareEngine"
 )
 set_target_properties(RoboTwinFirmwareHostLockstepSanity PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${OUT_DIR}"
+)
+
+add_executable(SketchRunner
+    "${REPO_ROOT}/FirmwareEngine/tests/SketchRunner.cpp"
+)
+target_include_directories(SketchRunner PRIVATE
+    "${REPO_ROOT}/FirmwareEngine"
+)
+set_target_properties(SketchRunner PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${OUT_DIR}"
 )

@@ -50,5 +50,22 @@ namespace RobotTwin.EditorTools
             Undo.RegisterCreatedObjectUndo(go, "Add Physics Diagnostics Overlay");
             Selection.activeObject = go;
         }
+
+        [MenuItem("RobotWin/Tools/Firmware/Add Diagnostics Overlay")]
+        private static void AddFirmwareDiagnosticsOverlay()
+        {
+            var existing = Object.FindFirstObjectByType<FirmwareDiagnosticsOverlay>();
+            if (existing != null)
+            {
+                Selection.activeObject = existing.gameObject;
+                Debug.Log("[Firmware] Diagnostics overlay already present.");
+                return;
+            }
+
+            var go = new GameObject("FirmwareDiagnosticsOverlay");
+            go.AddComponent<FirmwareDiagnosticsOverlay>();
+            Undo.RegisterCreatedObjectUndo(go, "Add Firmware Diagnostics Overlay");
+            Selection.activeObject = go;
+        }
     }
 }

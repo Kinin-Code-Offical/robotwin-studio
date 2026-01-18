@@ -11,9 +11,10 @@ namespace RobotTwin.Timing
     /// </summary>
     public class SensorSyncController : MonoBehaviour, ILockstepSubsystem
     {
+        public static SensorSyncController Instance { get; private set; }
+
         [Header("Sensor Timing")]
         [SerializeField] private bool _syncToCircuitTiming = true;
-        [SerializeField] private float _defaultUpdateRate = 100f; // Hz
 
         [Header("Sensor-Specific Rates")]
         [SerializeField] private float _lineSensorRate = 1000f; // 1 kHz
@@ -23,7 +24,6 @@ namespace RobotTwin.Timing
         [SerializeField] private float _imuRate = 1000f; // 1 kHz
 
         [Header("Synchronization")]
-        [SerializeField] private bool _useFixedUpdateIntervals = true;
         [SerializeField] private bool _batchSensorUpdates = true;
 
         // Registered sensors
@@ -35,6 +35,18 @@ namespace RobotTwin.Timing
         private long _currentTimeMicros = 0;
 
         public SensorMetrics Metrics { get; private set; } = new SensorMetrics();
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else if (Instance != this)
+            {
+                Destroy(gameObject);
+            }
+        }
 
         private void Start()
         {

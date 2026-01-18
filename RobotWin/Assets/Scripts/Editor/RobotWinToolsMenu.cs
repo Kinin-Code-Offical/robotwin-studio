@@ -7,11 +7,25 @@ using UnityEditor;
 using UnityEngine;
 using RobotTwin.Game;
 using RobotTwin.Debugging;
+using RobotTwin.Tools;
 
 namespace RobotTwin.EditorTools
 {
+    [InitializeOnLoad]
     public static class RobotWinToolsMenu
     {
+        private const string FirmwareMonitorAutoLaunchMenu = "RobotWin/Tools/Monitor/Auto-Launch Firmware Monitor";
+
+        static RobotWinToolsMenu()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+        }
+
+        private static void OnPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredPlayMode) return;
+            FirmwareMonitorLauncher.TryAutoLaunch();
+        }
         [MenuItem("RobotWin/Tools/Physics/Rebuild Native Colliders (Selected)")]
         private static void RebuildNativeCollidersSelected()
         {
@@ -150,6 +164,33 @@ namespace RobotTwin.EditorTools
         [MenuItem("RobotWin/Tools/Build/Build Firmware")]
         private static void BuildFirmware() => RunRtTool("build-firmware");
 
+        [MenuItem("RobotWin/Tools/Monitor/Build Firmware Monitor")]
+        private static void BuildFirmwareMonitor() => RunRtTool("build-firmware-monitor");
+
+        [MenuItem("RobotWin/Tools/Monitor/Launch Firmware Monitor")]
+        private static void LaunchFirmwareMonitor()
+        {
+            if (!TryLaunchFirmwareMonitor())
+            {
+                UnityEngine.Debug.LogWarning("[RobotWin] Firmware Monitor not found. Run Build Firmware Monitor first.");
+            }
+        }
+
+        [MenuItem(FirmwareMonitorAutoLaunchMenu)]
+        private static void ToggleFirmwareMonitorAutoLaunch()
+        {
+            bool enabled = !FirmwareMonitorLauncher.AutoLaunchEnabled;
+            FirmwareMonitorLauncher.AutoLaunchEnabled = enabled;
+            Menu.SetChecked(FirmwareMonitorAutoLaunchMenu, enabled);
+        }
+
+        [MenuItem(FirmwareMonitorAutoLaunchMenu, true)]
+        private static bool ToggleFirmwareMonitorAutoLaunchValidate()
+        {
+            Menu.SetChecked(FirmwareMonitorAutoLaunchMenu, FirmwareMonitorLauncher.AutoLaunchEnabled);
+            return true;
+        }
+
         [MenuItem("RobotWin/Tools/Build/Update Unity Plugins")]
         private static void UpdateUnityPlugins() => RunRtTool("update-unity-plugins");
 
@@ -174,6 +215,11 @@ namespace RobotTwin.EditorTools
                 UseShellExecute = true
             };
             Process.Start(psi);
+        }
+
+        private static bool TryLaunchFirmwareMonitor()
+        {
+            return FirmwareMonitorLauncher.LaunchIfNeeded();
         }
 
         private static bool TryGetLocalBounds(Transform root, out Bounds bounds)

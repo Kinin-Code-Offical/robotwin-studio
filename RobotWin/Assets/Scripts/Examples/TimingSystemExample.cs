@@ -87,7 +87,7 @@ namespace RobotTwin.Examples
         /// </summary>
         private void RegisterAllSensors()
         {
-            var sensors = FindObjectsOfType<MonoBehaviour>()
+            var sensors = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
                 .OfType<ISynchronizedSensor>()
                 .ToList();
 

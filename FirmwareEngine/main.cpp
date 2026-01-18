@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cwctype>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -31,7 +32,9 @@
 #undef max
 #endif
 
-#include "Arduino.h" // Include U1 Host Environment
+// Arduino/U1 High Level Emulation headers removed for Real Sim optimization.
+// #include "Arduino.h"
+// #include "Wire.h"
 #undef min
 #undef max
 #undef abs
@@ -42,12 +45,15 @@
 
 using namespace firmware;
 
-// Define Global State for U1 HLE
+// Define Global State for U1 HLE - REMOVED for Real Sim
+/*
 firmware::StepPayload g_inputState;
 firmware::OutputStatePayload g_outputState;
 uint32_t g_millis = 0;
 std::string g_serialBuffer;
 SerialMock Serial;
+TwoWire Wire;
+*/
 
 namespace
 {
@@ -194,6 +200,137 @@ namespace
         outH = std::atoi(x + 1);
         return outW > 0 && outH > 0;
     }
+
+    std::filesystem::path LogRoot()
+    {
+        return std::filesystem::path("logs") / "FirmwareEngine";
+    }
+
+    std::wstring ToLower(std::wstring value)
+    {
+        for (auto &ch : value)
+        {
+            ch = static_cast<wchar_t>(std::towlower(ch));
+        }
+        return value;
+    }
+
+    bool IsUnderLogRoot(const std::filesystem::path &path)
+    {
+        auto root = std::filesystem::absolute(LogRoot()).lexically_normal();
+        auto full = std::filesystem::absolute(path).lexically_normal();
+        auto rootStr = ToLower(root.native());
+        auto fullStr = ToLower(full.native());
+        if (fullStr.size() < rootStr.size())
+            return false;
+        if (fullStr.compare(0, rootStr.size(), rootStr) != 0)
+            return false;
+        if (fullStr.size() == rootStr.size())
+            return true;
+        wchar_t next = fullStr[rootStr.size()];
+        return next == L'\\' || next == L'/';
+    }
+
+    std::filesystem::path EnsureLogPath(const std::filesystem::path &requested, const std::filesystem::path &fallback)
+    {
+        if (!requested.empty() && IsUnderLogRoot(requested))
+        {
+            return requested;
+        }
+        return LogRoot() / fallback;
+    }
+
+    void FormatOpcodeMnemonic(std::uint16_t opcode, char *out, std::size_t outSize)
+    {
+        if (!out || outSize == 0)
+            return;
+        const char *text = nullptr;
+        if (opcode == 0x0000)
+        {
+            text = "NOP";
+        }
+        else if (opcode == 0x9508)
+        {
+            text = "RET";
+        }
+        else if (opcode == 0x9518)
+        {
+            text = "RETI";
+        }
+        else if ((opcode & 0xF000) == 0xC000)
+        {
+            text = "RJMP";
+        }
+        else if ((opcode & 0xF000) == 0xD000)
+        {
+            text = "RCALL";
+        }
+        else if ((opcode & 0xF000) == 0xE000)
+        {
+            text = "LDI";
+        }
+        else if ((opcode & 0xF800) == 0xB000)
+        {
+            text = "IN";
+        }
+        else if ((opcode & 0xF800) == 0xB800)
+        {
+            text = "OUT";
+        }
+        else if ((opcode & 0xFE0F) == 0x900F)
+        {
+            text = "POP";
+        }
+        else if ((opcode & 0xFE0F) == 0x920F)
+        {
+            text = "PUSH";
+        }
+        else if ((opcode & 0xFE0F) == 0x9000)
+        {
+            text = "LDS";
+        }
+        else if ((opcode & 0xFE0F) == 0x9200)
+        {
+            text = "STS";
+        }
+        else if ((opcode & 0xFC00) == 0x0C00)
+        {
+            text = "ADD";
+        }
+        else if ((opcode & 0xFC00) == 0x1C00)
+        {
+            text = "ADC";
+        }
+        else if ((opcode & 0xFC00) == 0x1800)
+        {
+            text = "SUB";
+        }
+        else if ((opcode & 0xFC00) == 0x0800)
+        {
+            text = "SBC";
+        }
+        else if ((opcode & 0xF000) == 0x6000)
+        {
+            text = "ORI";
+        }
+        else if ((opcode & 0xF000) == 0x7000)
+        {
+            text = "ANDI";
+        }
+        else if ((opcode & 0xFF00) == 0x9A00)
+        {
+            text = "SBI";
+        }
+        else if ((opcode & 0xFF00) == 0x9800)
+        {
+            text = "CBI";
+        }
+        else
+        {
+            text = "OP";
+        }
+        std::snprintf(out, outSize, "%s", text);
+    }
 }
 
 int main(int argc, char **argv)
@@ -204,6 +341,9 @@ int main(int argc, char **argv)
     const char *logPath = nullptr;
     bool selfTest = false;
     bool traceLockstep = false;
+    bool traceCpu = false;
+    std::uint32_t traceCpuInterval = 1;
+    std::uint32_t traceCpuMax = 256;
     std::string ideComPort;
     std::string ideBoardId = "board";
     std::string ideBoardProfile = "ArduinoUno";
@@ -222,6 +362,9 @@ int main(int argc, char **argv)
     std::uint32_t rpiCpuPercent = 0;
     std::uint32_t rpiThreads = 0;
     std::uint32_t rpiPriorityClass = 0;
+    std::string logPathValue;
+    std::string rpiShmDirValue;
+    std::string rpiLogPathValue;
 
     // Help flag
     bool showHelp = false;
@@ -278,6 +421,23 @@ int main(int argc, char **argv)
         if (ParseArg(argv[i], "--trace-lockstep"))
         {
             traceLockstep = true;
+            continue;
+        }
+        if (ParseArg(argv[i], "--trace-cpu"))
+        {
+            traceCpu = true;
+            continue;
+        }
+        if (ParseArg(argv[i], "--trace-cpu-interval") && i + 1 < argc)
+        {
+            traceCpuInterval = static_cast<std::uint32_t>(std::max(1, std::atoi(argv[i + 1])));
+            ++i;
+            continue;
+        }
+        if (ParseArg(argv[i], "--trace-cpu-max") && i + 1 < argc)
+        {
+            traceCpuMax = static_cast<std::uint32_t>(std::max(1, std::atoi(argv[i + 1])));
+            ++i;
             continue;
         }
         if (ParseArg(argv[i], "--ide-com") && i + 1 < argc)
@@ -389,6 +549,9 @@ int main(int argc, char **argv)
         std::printf("  --realtime               Disable lockstep, run in realtime\n");
         std::printf("  --log <path>             Log file path\n");
         std::printf("  --trace-lockstep         Enable lockstep trace logging\n");
+        std::printf("  --trace-cpu              Enable instruction trace logging\n");
+        std::printf("  --trace-cpu-interval <n> Instruction trace sampling interval (default: 1)\n");
+        std::printf("  --trace-cpu-max <n>      Max trace lines sent per step (default: 256)\n");
         std::printf("\n");
         std::printf("IDE Integration:\n");
         std::printf("  --ide-com <port>         COM port for STK500 protocol (e.g., COM3)\n");
@@ -400,7 +563,7 @@ int main(int argc, char **argv)
         std::printf("  --rpi-allow-mock         Allow mock RPi if QEMU unavailable\n");
         std::printf("  --rpi-qemu <path>        Path to QEMU executable\n");
         std::printf("  --rpi-image <path>       Path to RPi disk image\n");
-        std::printf("  --rpi-shm-dir <dir>      Shared memory directory (default: logs/rpi/shm)\n");
+        std::printf("  --rpi-shm-dir <dir>      Shared memory directory (default: logs/FirmwareEngine/rpi/shm)\n");
         std::printf("  --rpi-display <WxH>      Display resolution (default: 320x200)\n");
         std::printf("  --rpi-camera <WxH>       Camera resolution (default: 320x200)\n");
         std::printf("  --rpi-net-mode <mode>    Network mode: nat, bridge, none (default: nat)\n");
@@ -427,14 +590,59 @@ int main(int argc, char **argv)
         }
     }
 
+    if (!traceCpu)
+    {
+        const char *env = std::getenv("RTFW_CPU_TRACE");
+        if (env != nullptr && env[0] != '\0' && env[0] != '0')
+        {
+            traceCpu = true;
+        }
+    }
+    const char *traceIntervalEnv = std::getenv("RTFW_CPU_TRACE_INTERVAL");
+    if (traceIntervalEnv != nullptr && traceIntervalEnv[0] != '\0')
+    {
+        traceCpuInterval = static_cast<std::uint32_t>(std::max(1, std::atoi(traceIntervalEnv)));
+    }
+    const char *traceMaxEnv = std::getenv("RTFW_CPU_TRACE_MAX");
+    if (traceMaxEnv != nullptr && traceMaxEnv[0] != '\0')
+    {
+        traceCpuMax = static_cast<std::uint32_t>(std::max(1, std::atoi(traceMaxEnv)));
+    }
+
     if (selfTest)
     {
         return RunSelfTest() ? 0 : 2;
     }
 
+    if (logPath != nullptr)
+    {
+        auto safePath = EnsureLogPath(logPath, "firmware.log");
+        logPathValue = safePath.string();
+        logPath = logPathValue.c_str();
+    }
+
+    if (!rpiShmDir.empty())
+    {
+        auto safePath = EnsureLogPath(rpiShmDir, std::filesystem::path("rpi") / "shm");
+        rpiShmDirValue = safePath.string();
+        rpiShmDir = rpiShmDirValue;
+    }
+
+    if (!rpiLogPath.empty())
+    {
+        auto safePath = EnsureLogPath(rpiLogPath, std::filesystem::path("rpi") / "rpi.log");
+        rpiLogPathValue = safePath.string();
+        rpiLogPath = rpiLogPathValue;
+    }
+
     std::FILE *logFile = nullptr;
     if (logPath != nullptr)
     {
+        std::filesystem::path logDir = std::filesystem::path(logPath).parent_path();
+        if (!logDir.empty())
+        {
+            std::filesystem::create_directories(logDir);
+        }
         logFile = std::fopen(logPath, "a");
     }
 
@@ -475,7 +683,14 @@ int main(int argc, char **argv)
         config.allow_mock = rpiAllowMock;
         config.qemu_path = rpiQemuPath;
         config.image_path = rpiImagePath;
-        config.shm_dir = rpiShmDir.empty() ? "logs/rpi/shm" : rpiShmDir;
+        if (rpiShmDir.empty())
+        {
+            config.shm_dir = (LogRoot() / "rpi" / "shm").string();
+        }
+        else
+        {
+            config.shm_dir = rpiShmDir;
+        }
         config.net_mode = rpiNetMode;
         config.display_width = rpiDisplayW;
         config.display_height = rpiDisplayH;
@@ -485,7 +700,19 @@ int main(int argc, char **argv)
         config.cpu_max_percent = rpiCpuPercent;
         config.thread_count = rpiThreads;
         config.cpu_priority_class = rpiPriorityClass;
-        config.log_path = rpiLogPath;
+        if (rpiLogPath.empty())
+        {
+            config.log_path = (LogRoot() / "rpi" / "rpi.log").string();
+        }
+        else
+        {
+            config.log_path = rpiLogPath;
+        }
+        std::filesystem::create_directories(config.shm_dir);
+        if (!config.log_path.empty())
+        {
+            std::filesystem::create_directories(std::filesystem::path(config.log_path).parent_path());
+        }
         auto logFn = [&](const char *msg)
         {
             Log("%s", msg);
@@ -536,12 +763,15 @@ int main(int argc, char **argv)
                 Log("Board %s uses %s; pin count limited to %zu by core.", key.c_str(), state.profile.mcu.c_str(), kPinCount);
             }
             state.mcu = std::make_unique<VirtualMcu>(state.profile);
+            state.mcu->EnableCpuTrace(traceCpu);
+            state.mcu->SetCpuTraceInterval(traceCpuInterval);
             state.lastTime = QueryNowSeconds();
             state.driftPpm = driftDist(rng);
             if (!logPath)
             {
-                std::filesystem::create_directories("logs/firmware/eeprom");
-                state.eepromPath = "logs/firmware/eeprom/" + key + ".bin";
+                auto eepromDir = LogRoot() / "eeprom";
+                std::filesystem::create_directories(eepromDir);
+                state.eepromPath = (eepromDir / (key + ".bin")).string();
             }
             else
             {
@@ -569,6 +799,8 @@ int main(int argc, char **argv)
                     Log("Board %s switched to unsupported MCU profile %s.", key.c_str(), it->second.profile.mcu.c_str());
                 }
                 it->second.mcu = std::make_unique<VirtualMcu>(it->second.profile);
+                it->second.mcu->EnableCpuTrace(traceCpu);
+                it->second.mcu->SetCpuTraceInterval(traceCpuInterval);
                 it->second.hasFirmware = false;
                 it->second.remainder = 0.0;
                 it->second.lastTime = QueryNowSeconds();
@@ -1115,66 +1347,40 @@ int main(int argc, char **argv)
                 }
                 continue;
             }
+            if (cmd.type == PipeCommand::Type::Patch)
+            {
+                auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
+                std::string error;
+                if (state.mcu->PatchMemory(cmd.memoryType, cmd.address, cmd.data.data(), cmd.data.size(), error))
+                {
+                    Log("Patched memory type=%u %zu bytes at 0x%08X for %s", static_cast<unsigned int>(cmd.memoryType),
+                        cmd.data.size(),
+                        static_cast<unsigned int>(cmd.address), state.id.c_str());
+                    pipe.SendLog(state.id, LogLevel::Info, "Memory patch injected");
+                    state.mcu->SaveEepromToFile(state.eepromPath);
+                }
+                else
+                {
+                    Log("Patch failed for %s: %s", state.id.c_str(), error.c_str());
+                    pipe.SendError(state.id, 131, error);
+                }
+                continue;
+            }
             if (cmd.type == PipeCommand::Type::Step)
             {
                 auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
 
-                // === U1 High Level Emulation Integration ===
+                // === U1 High Level Emulation Integration Removed ===
+                /*
                 // If the profile ID contains "U1" or specific tag, run HLE.
                 bool isHle = (cmd.boardProfile.find("U1") != std::string::npos);
 
                 if (isHle)
                 {
-                    static bool u1Initialized = false;
-                    if (!u1Initialized)
-                    {
-                        setup();
-                        u1Initialized = true;
-                    }
-
-                    // Sync Inputs
-                    // Map Unity pins to Global Inputs
-                    for (int i = 0; i < kPinCount; ++i)
-                        g_inputState.pins[i] = cmd.pins[i];
-                    for (int i = 0; i < kAnalogCount; ++i)
-                        g_inputState.analog[i] = cmd.analog[i];
-
-                    // Time Management
-                    uint32_t unityTimeMs = static_cast<uint32_t>(cmd.sentMicros / 1000);
-
-                    // If first run, sync clock
-                    if (g_millis == 0)
-                        g_millis = unityTimeMs;
-
-                    // Catch-up Loop: Execute loop() in 4ms increments until we catch up to Unity time
-                    // This creates the 250Hz behavior U1 expects.
-                    while (g_millis <= unityTimeMs)
-                    {
-                        loop();
-                        g_millis += 4; // Advance 4ms
-                    }
-                    // Rewind slightly to strictly match Unity time for next frame consistency?
-                    // No, keeping g_millis ahead is fine.
-
-                    // Sync Outputs
-                    std::memcpy(state.lastOutputs, g_outputState.pins, kPinCount);
-
-                    // Send Serial if any
-                    if (!g_serialBuffer.empty())
-                    {
-                        pipe.SendSerial(state.id, (const uint8_t *)g_serialBuffer.data(), g_serialBuffer.size());
-                        g_serialBuffer.clear();
-                    }
-
-                    // Fake perf counters
-                    const auto &perf = state.mcu->GetPerfCounters();
-                    // Just send output
-                    const bool sent = pipe.SendOutputState(state.id, cmd.stepSequence, 0, state.lastOutputs, kPinCount,
-                                                           perf.cycles, perf.adcSamples,
-                                                           perf.uartTxBytes, perf.uartRxBytes,
-                                                           perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
-                    continue;
+                   ...
+                   continue;
                 }
+                */
                 // ==========================================
 
                 if (!state.supported)
@@ -1218,21 +1424,79 @@ int main(int argc, char **argv)
                     }
                 }
                 UpdateOutputs(state);
+
+                std::uint8_t serialByte = 0;
+                while (state.mcu->ConsumeSerialByte(serialByte))
+                {
+                    pipe.SendSerial(state.id, &serialByte, 1);
+                }
+
                 const auto &perf = state.mcu->GetPerfCounters();
                 const auto tick = state.mcu->TickCount();
+                OutputDebugState debug{};
+                debug.flashBytes = static_cast<std::uint32_t>(state.profile.flash_bytes);
+                debug.sramBytes = static_cast<std::uint32_t>(state.profile.sram_bytes);
+                debug.eepromBytes = static_cast<std::uint32_t>(state.profile.eeprom_bytes);
+                debug.ioBytes = static_cast<std::uint32_t>(state.profile.io_bytes);
+                debug.cpuHz = static_cast<std::uint32_t>(state.profile.cpu_hz);
+                debug.pc = static_cast<std::uint16_t>(state.mcu->GetPC());
+                debug.sp = static_cast<std::uint16_t>(
+                    static_cast<std::uint16_t>(state.mcu->GetIo(AVR_SPL)) |
+                    (static_cast<std::uint16_t>(state.mcu->GetIo(AVR_SPH)) << 8));
+                debug.sreg = state.mcu->GetIo(AVR_SREG);
+                debug.stackHighWater = perf.stackHighWaterMark;
+                debug.heapTopAddress = perf.heapTopAddress;
+                debug.stackMinAddress = perf.stackMinAddress;
+                debug.dataSegmentEnd = perf.dataSegmentEnd;
+                debug.stackOverflows = perf.stackOverflows;
+                debug.invalidMemoryAccesses = perf.invalidMemoryAccesses;
+                debug.interruptCount = perf.interruptCount;
+                debug.interruptLatencyMax = perf.interruptLatencyMax;
+                debug.timingViolations = perf.timingViolations;
+                debug.criticalSectionCycles = perf.criticalSectionCycles;
+                debug.sleepCycles = perf.sleepCycles;
+                debug.flashAccessCycles = perf.flashAccessCycles;
+                debug.uartOverflows = perf.uartOverflows;
+                debug.timerOverflows = perf.timerOverflows;
+                debug.brownOutResets = perf.brownOutResets;
+                debug.gpioStateChanges = perf.gpioStateChanges;
+                debug.pwmCycles = perf.pwmCycles;
+                debug.i2cTransactions = perf.i2cTransactions;
+                debug.spiTransactions = perf.spiTransactions;
                 const bool sent = pipe.SendOutputState(state.id, cmd.stepSequence, tick, state.lastOutputs, kPinCount,
                                                        perf.cycles, perf.adcSamples,
                                                        perf.uartTxBytes, perf.uartRxBytes,
-                                                       perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
+                                                       perf.spiTransfers, perf.twiTransfers, perf.wdtResets,
+                                                       debug);
 
                 if (traceLockstep)
                 {
-                    Log("[Lockstep] OutputState tx board=%s seq=%llu tick=%llu ok=%d connected=%d", state.id.c_str(),
+                    Log("[Lockstep] OutputState tx board=%s seq=%llu tick=%llu pc=%04X tx=%llu ok=%d connected=%d", state.id.c_str(),
                         static_cast<unsigned long long>(cmd.stepSequence),
-                        static_cast<unsigned long long>(tick), sent ? 1 : 0, pipe.IsConnected() ? 1 : 0);
+                        static_cast<unsigned long long>(tick),
+                        state.mcu->GetPC(),
+                        static_cast<unsigned long long>(perf.uartTxBytes[0]),
+                        sent ? 1 : 0, pipe.IsConnected() ? 1 : 0);
                     if (!sent)
                     {
                         Log("[Lockstep] OutputState write error=%lu", static_cast<unsigned long>(pipe.LastWriteError()));
+                    }
+                }
+                if (traceCpu)
+                {
+                    VirtualMcu::CpuTraceEvent evt{};
+                    std::uint32_t sentTrace = 0;
+                    while (sentTrace < traceCpuMax && state.mcu->PopCpuTrace(evt))
+                    {
+                        char line[160];
+                        char mnemonic[12];
+                        FormatOpcodeMnemonic(evt.opcode, mnemonic, sizeof(mnemonic));
+                        std::snprintf(line, sizeof(line),
+                                      "TRACE pc=0x%04X op=0x%04X mnem=%s sp=0x%04X sreg=0x%02X tick=%llu",
+                                      evt.pc, evt.opcode, mnemonic, evt.sp, evt.sreg,
+                                      static_cast<unsigned long long>(evt.tick));
+                        pipe.SendLog(state.id, LogLevel::Info, line);
+                        ++sentTrace;
                     }
                 }
                 continue;
@@ -1309,10 +1573,41 @@ int main(int argc, char **argv)
             if (tick - state.lastStatusTick >= StatusInterval)
             {
                 const auto &perf = state.mcu->GetPerfCounters();
+                OutputDebugState debug{};
+                debug.flashBytes = static_cast<std::uint32_t>(state.profile.flash_bytes);
+                debug.sramBytes = static_cast<std::uint32_t>(state.profile.sram_bytes);
+                debug.eepromBytes = static_cast<std::uint32_t>(state.profile.eeprom_bytes);
+                debug.ioBytes = static_cast<std::uint32_t>(state.profile.io_bytes);
+                debug.cpuHz = static_cast<std::uint32_t>(state.profile.cpu_hz);
+                debug.pc = static_cast<std::uint16_t>(state.mcu->GetPC());
+                debug.sp = static_cast<std::uint16_t>(
+                    static_cast<std::uint16_t>(state.mcu->GetIo(AVR_SPL)) |
+                    (static_cast<std::uint16_t>(state.mcu->GetIo(AVR_SPH)) << 8));
+                debug.sreg = state.mcu->GetIo(AVR_SREG);
+                debug.stackHighWater = perf.stackHighWaterMark;
+                debug.heapTopAddress = perf.heapTopAddress;
+                debug.stackMinAddress = perf.stackMinAddress;
+                debug.dataSegmentEnd = perf.dataSegmentEnd;
+                debug.stackOverflows = perf.stackOverflows;
+                debug.invalidMemoryAccesses = perf.invalidMemoryAccesses;
+                debug.interruptCount = perf.interruptCount;
+                debug.interruptLatencyMax = perf.interruptLatencyMax;
+                debug.timingViolations = perf.timingViolations;
+                debug.criticalSectionCycles = perf.criticalSectionCycles;
+                debug.sleepCycles = perf.sleepCycles;
+                debug.flashAccessCycles = perf.flashAccessCycles;
+                debug.uartOverflows = perf.uartOverflows;
+                debug.timerOverflows = perf.timerOverflows;
+                debug.brownOutResets = perf.brownOutResets;
+                debug.gpioStateChanges = perf.gpioStateChanges;
+                debug.pwmCycles = perf.pwmCycles;
+                debug.i2cTransactions = perf.i2cTransactions;
+                debug.spiTransactions = perf.spiTransactions;
                 pipe.SendOutputState(state.id, 0, tick, state.lastOutputs, kPinCount,
                                      perf.cycles, perf.adcSamples,
                                      perf.uartTxBytes, perf.uartRxBytes,
-                                     perf.spiTransfers, perf.twiTransfers, perf.wdtResets);
+                                     perf.spiTransfers, perf.twiTransfers, perf.wdtResets,
+                                     debug);
                 pipe.SendStatus(state.id, tick);
                 state.lastStatusTick = tick;
             }

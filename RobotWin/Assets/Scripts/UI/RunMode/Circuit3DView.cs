@@ -101,6 +101,124 @@ namespace RobotTwin.UI
         private readonly Dictionary<string, List<WireRope>> _wiresByNet = new Dictionary<string, List<WireRope>>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, Material> TextureMaterials =
             new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, Dictionary<string, string>> MaterialRemap = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Arduino", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 3" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 3" },
+                { "mat10", "Prefabs/Circuit3D/Textures/mat10 1" },
+                { "mat11", "Prefabs/Circuit3D/Textures/mat11 1" },
+                { "mat12", "Prefabs/Circuit3D/Textures/mat12 1" },
+                { "mat13", "Prefabs/Circuit3D/Textures/mat13 1" },
+                { "mat14", "Prefabs/Circuit3D/Textures/mat14 1" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 3" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 3" },
+                { "mat4", "Prefabs/Circuit3D/Textures/mat4 2" },
+                { "mat5", "Prefabs/Circuit3D/Textures/mat5 2" },
+                { "mat6", "Prefabs/Circuit3D/Textures/mat6 2" },
+                { "mat7", "Prefabs/Circuit3D/Textures/mat7 1" },
+                { "mat8", "Prefabs/Circuit3D/Textures/mat8 1" },
+                { "mat9", "Prefabs/Circuit3D/Textures/mat9 1" },
+            } },
+            { "ArduinoMega", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 8" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 8" },
+                { "mat10", "Prefabs/Circuit3D/Textures/mat10 3" },
+                { "mat11", "Prefabs/Circuit3D/Textures/mat11 2" },
+                { "mat12", "Prefabs/Circuit3D/Textures/mat12 2" },
+                { "mat13", "Prefabs/Circuit3D/Textures/mat13 2" },
+                { "mat14", "Prefabs/Circuit3D/Textures/mat14 2" },
+                { "mat15", "Prefabs/Circuit3D/Textures/mat15" },
+                { "mat16", "Prefabs/Circuit3D/Textures/mat16" },
+                { "mat17", "Prefabs/Circuit3D/Textures/mat17" },
+                { "mat18", "Prefabs/Circuit3D/Textures/mat18" },
+                { "mat19", "Prefabs/Circuit3D/Textures/mat19" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 8" },
+                { "mat20", "Prefabs/Circuit3D/Textures/mat20" },
+                { "mat21", "Prefabs/Circuit3D/Textures/mat21" },
+                { "mat22", "Prefabs/Circuit3D/Textures/mat22" },
+                { "mat23", "Prefabs/Circuit3D/Textures/mat23" },
+                { "mat24", "Prefabs/Circuit3D/Textures/mat24" },
+                { "mat25", "Prefabs/Circuit3D/Textures/mat25" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 8" },
+                { "mat4", "Prefabs/Circuit3D/Textures/mat4 5" },
+                { "mat5", "Prefabs/Circuit3D/Textures/mat5 5" },
+                { "mat6", "Prefabs/Circuit3D/Textures/mat6 5" },
+                { "mat7", "Prefabs/Circuit3D/Textures/mat7 4" },
+                { "mat8", "Prefabs/Circuit3D/Textures/mat8 4" },
+                { "mat9", "Prefabs/Circuit3D/Textures/mat9 3" },
+            } },
+            { "ArduinoUno", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 2" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 2" },
+                { "mat10", "Prefabs/Circuit3D/Textures/mat10" },
+                { "mat11", "Prefabs/Circuit3D/Textures/mat11" },
+                { "mat12", "Prefabs/Circuit3D/Textures/mat12" },
+                { "mat13", "Prefabs/Circuit3D/Textures/mat13" },
+                { "mat14", "Prefabs/Circuit3D/Textures/mat14" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 2" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 2" },
+                { "mat4", "Prefabs/Circuit3D/Textures/mat4 1" },
+                { "mat5", "Prefabs/Circuit3D/Textures/mat5 1" },
+                { "mat6", "Prefabs/Circuit3D/Textures/mat6 1" },
+                { "mat7", "Prefabs/Circuit3D/Textures/mat7" },
+                { "mat8", "Prefabs/Circuit3D/Textures/mat8" },
+                { "mat9", "Prefabs/Circuit3D/Textures/mat9" },
+            } },
+            { "BarrelJackSocket", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 6" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 6" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 6" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 6" },
+                { "mat4", "Prefabs/Circuit3D/Textures/mat4 4" },
+                { "mat5", "Prefabs/Circuit3D/Textures/mat5 4" },
+                { "mat6", "Prefabs/Circuit3D/Textures/mat6 4" },
+                { "mat7", "Prefabs/Circuit3D/Textures/mat7 3" },
+                { "mat8", "Prefabs/Circuit3D/Textures/mat8 3" },
+            } },
+            { "Battery", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 1" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 1" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 1" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 1" },
+                { "mat4", "Prefabs/Circuit3D/Textures/mat4" },
+                { "mat5", "Prefabs/Circuit3D/Textures/mat5" },
+                { "mat6", "Prefabs/Circuit3D/Textures/mat6" },
+            } },
+            { "Breadboard", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 4" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 4" },
+                { "mat10", "Prefabs/Circuit3D/Textures/mat10 2" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 4" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 4" },
+                { "mat4", "Prefabs/Circuit3D/Textures/mat4 3" },
+                { "mat5", "Prefabs/Circuit3D/Textures/mat5 3" },
+                { "mat6", "Prefabs/Circuit3D/Textures/mat6 3" },
+                { "mat7", "Prefabs/Circuit3D/Textures/mat7 2" },
+                { "mat8", "Prefabs/Circuit3D/Textures/mat8 2" },
+                { "mat9", "Prefabs/Circuit3D/Textures/mat9 2" },
+            } },
+            { "LED", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3" },
+            } },
+            { "Resistor", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 7" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 7" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 7" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 7" },
+            } },
+            { "Swirch_ON_OFF", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "mat0", "Prefabs/Circuit3D/Textures/mat0 5" },
+                { "mat1", "Prefabs/Circuit3D/Textures/mat1 5" },
+                { "mat2", "Prefabs/Circuit3D/Textures/mat2 5" },
+                { "mat3", "Prefabs/Circuit3D/Textures/mat3 5" },
+            } },
+        };
+
         private static readonly Dictionary<string, Texture2D> RuntimeTextureCache =
             new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<GameObject, Bounds> PrefabBoundsCache = new Dictionary<GameObject, Bounds>();
@@ -931,6 +1049,11 @@ namespace RobotTwin.UI
                 if (prefab == null)
                 {
                     ApplyTexture(part, GetTextureForType(comp.Type));
+                }
+                else
+                {
+                    string prefabName = GetPrefabNameForType(comp.Type);
+                    RelinkMaterials(part, prefabName);
                 }
 
                 var catalogItem = ComponentCatalog.GetByType(comp.Type);
@@ -2170,13 +2293,13 @@ namespace RobotTwin.UI
                             position = basePosition + dir * pinLength;
                         }
                         CreatePinTip(node, basePosition, dir, pinLength, pinRadius);
-                        var anchor = CreateAnchor(node, position, radius, useCache: useCache);
-                        if (anchor != null)
+                        var pinAnchor = CreateAnchor(node, position, radius, useCache: useCache);
+                        if (pinAnchor != null)
                         {
                             float attachOffset = Mathf.Max(radius * 0.5f, pinLength * 0.25f);
-                            anchor.SetDirection(dir, attachOffset);
+                            pinAnchor.SetDirection(dir, attachOffset);
                         }
-                        anchors[node] = anchor;
+                        anchors[node] = pinAnchor;
                         continue;
                     }
                     else if (hasExplicitPinType && string.Equals(pinType, PinTypeLead, StringComparison.OrdinalIgnoreCase))
@@ -2369,9 +2492,9 @@ namespace RobotTwin.UI
                     pinType = ResolvePinType(pinVisual, pin, out var hasExplicitPinType);
                     if (hasExplicitPinType && string.Equals(pinType, PinTypePin, StringComparison.OrdinalIgnoreCase))
                     {
-                        Vector3 dir = localPos.sqrMagnitude > 0.000001f ? localPos.normalized : Vector3.up;
+                        Vector3 pinDir = localPos.sqrMagnitude > 0.000001f ? localPos.normalized : Vector3.up;
                         float pinLength = GetPinTipLength(anchor.Radius);
-                        localPos -= dir * pinLength;
+                        localPos -= pinDir * pinLength;
                     }
                 }
 
@@ -4588,6 +4711,26 @@ namespace RobotTwin.UI
             return go;
         }
 
+        private string GetPrefabNameForType(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return null;
+            string key = type.ToLowerInvariant();
+            if (key.Contains("arduinouno")) return "ArduinoUno";
+            if (key.Contains("arduinonano")) return "ArduinoNano";
+            if (key.Contains("arduinopromini")) return "ArduinoProMini";
+            if (key.Contains("arduinopromicro")) return "ArduinoProMicro";
+            if (key.Contains("arduinomega")) return "ArduinoMega";
+            if (key.Contains("arduino")) return "Arduino"; // Generic fallback
+            if (key.Contains("resistor")) return "Resistor";
+            if (key.Contains("led")) return "LED";
+            if (key.Contains("battery")) return "Battery";
+            if (key.Contains("button")) return "Button";
+            if (key.Contains("switch")) return "Swirch_ON_OFF";
+            if (key.Contains("barrel")) return "BarrelJackSocket";
+            if (key.Contains("breadboard")) return "Breadboard";
+            return null;
+        }
+
         private GameObject GetPrefabForType(string type)
         {
             if (string.IsNullOrWhiteSpace(type)) return _genericPrefab;
@@ -4691,6 +4834,59 @@ namespace RobotTwin.UI
                 if (renderer == null) continue;
                 if (RendererHasAnyMaterial(renderer)) continue;
                 renderer.sharedMaterial = material;
+            }
+        }
+
+        private static void RelinkMaterials(GameObject target, string prefabName)
+        {
+            if (target == null) return;
+
+            Dictionary<string, string> mapping = null;
+            if (!string.IsNullOrEmpty(prefabName))
+            {
+                MaterialRemap.TryGetValue(prefabName, out mapping);
+            }
+
+            foreach (var renderer in target.GetComponentsInChildren<Renderer>(true))
+            {
+                var materials = renderer.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    var mat = materials[i];
+                    if (mat == null) continue;
+
+                    // Attempt to restore broken material links by name
+                    string matName = mat.name.Replace(" (Instance)", "").Trim();
+                    // Handle cloned materials
+                    if (matName.EndsWith("_Instanced")) matName = matName.Substring(0, matName.Length - 10);
+
+                    string path = null;
+                    if (mapping != null && mapping.TryGetValue(matName, out var mappedPath))
+                    {
+                        path = mappedPath;
+                    }
+                    else
+                    {
+                        path = $"{TextureRoot}/{matName}";
+                    }
+
+                    var validMat = Resources.Load<Material>(path);
+                    if (validMat == null)
+                    {
+                        validMat = GetTextureMaterial(path);
+                    }
+
+                    if (validMat != null)
+                    {
+                        materials[i] = validMat;
+                        changed = true;
+                    }
+                }
+                if (changed)
+                {
+                    renderer.sharedMaterials = materials;
+                }
             }
         }
 
@@ -5291,6 +5487,15 @@ namespace RobotTwin.UI
         private static Material GetTextureMaterial(string resourcePath)
         {
             if (TextureMaterials.TryGetValue(resourcePath, out var cached)) return cached;
+
+            // Fix for missing textures: Try loading Material directly
+            var materialAsset = Resources.Load<Material>(resourcePath);
+            if (materialAsset != null)
+            {
+                TextureMaterials[resourcePath] = materialAsset;
+                return materialAsset;
+            }
+
             var texture = Resources.Load<Texture2D>(resourcePath);
             if (texture == null) return null;
 
