@@ -164,6 +164,35 @@ namespace RobotTwin.Game
 
         public string VirtualComStatusJson { get; private set; } = string.Empty;
 
+        public bool SendSerialInput(string boardId, string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            if (string.IsNullOrWhiteSpace(boardId))
+            {
+                boardId = "U1";
+            }
+
+            if (_useExternalFirmware && _externalFirmwareClient != null)
+            {
+                if (_externalFirmwareSessions.TryGetValue(boardId, out var session) && session != null && !session.Disabled)
+                {
+                    return _externalFirmwareClient.SendSerialInput(boardId, text);
+                }
+                if (_externalFirmwareSessions.Count > 0)
+                {
+                    var first = _externalFirmwareSessions.Values.FirstOrDefault(s => s != null && !s.Disabled);
+                    if (first != null)
+                    {
+                        return _externalFirmwareClient.SendSerialInput(first.BoardId, text);
+                    }
+                }
+            }
+
+            // VirtualMcu path does not support inbound serial yet; keep local echo.
+            AppendSerialOutput(boardId, $"> {text}\n");
+            return false;
+        }
+
         public int GetFirmwareBoardIds(List<string> buffer)
         {
             if (buffer == null) return 0;
@@ -1726,7 +1755,7 @@ namespace RobotTwin.Game
                 if (!session.LoggedFallback)
                 {
                     session.LoggedFallback = true;
-                    Debug.LogWarning($"[SimHost] External firmware not responding for {session.BoardId}. Falling back to VirtualMcu.");
+                    Debug.Log($"[SimHost] External firmware not responding for {session.BoardId}. Falling back to VirtualMcu.");
                 }
                 return false;
             }
@@ -1743,13 +1772,13 @@ namespace RobotTwin.Game
             if (session == null || session.Disabled) return;
             session.Disabled = true;
             session.DisabledReason = string.IsNullOrWhiteSpace(reason) ? "disabled" : reason;
-            Debug.LogWarning($"[SimHost] External firmware disabled for {session.BoardId}: {session.DisabledReason}.");
+            Debug.Log($"[SimHost] External firmware disabled for {session.BoardId}: {session.DisabledReason}.");
 
             bool anyActive = _externalFirmwareSessions.Values.Any(s => s != null && !s.Disabled);
             if (!anyActive)
             {
                 _useExternalFirmware = false;
-                Debug.LogWarning("[SimHost] All external firmware sessions disabled. Using VirtualMcu only.");
+                Debug.Log("[SimHost] All external firmware sessions disabled. Using VirtualMcu only.");
             }
         }
 
@@ -1770,7 +1799,7 @@ namespace RobotTwin.Game
             if (!session.LoggedPending)
             {
                 session.LoggedPending = true;
-                Debug.LogWarning($"[SimHost] External firmware pending (pipe not ready): {session.BvmPath}");
+                Debug.Log($"[SimHost] External firmware pending (pipe not ready): {session.BvmPath}");
             }
         }
 

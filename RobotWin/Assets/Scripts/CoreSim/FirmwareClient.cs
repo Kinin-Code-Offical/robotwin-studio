@@ -650,6 +650,32 @@ namespace RobotTwin.CoreSim
             return true;
         }
 
+        public bool SendSerialInput(string boardId, string text)
+        {
+            if (string.IsNullOrWhiteSpace(boardId)) return false;
+            if (string.IsNullOrEmpty(text)) return false;
+            if (!EnsureConnected()) return false;
+
+            byte[] data = Encoding.UTF8.GetBytes(text);
+            if (data.Length == 0) return false;
+            int maxSerialBytes = Mathf.Max(0, (int)MaxPayloadBytes - BoardIdSize);
+            if (data.Length > maxSerialBytes)
+            {
+                Array.Resize(ref data, maxSerialBytes);
+            }
+
+            var payload = new byte[BoardIdSize + data.Length];
+            WriteFixedString(payload, 0, BoardIdSize, boardId);
+            Buffer.BlockCopy(data, 0, payload, BoardIdSize, data.Length);
+            if (!WritePacket(MessageType.Serial, payload))
+            {
+                UnityEngine.Debug.LogWarning("[FirmwareClient] Serial input failed: pipe write error.");
+                Disconnect();
+                return false;
+            }
+            return true;
+        }
+
         public bool InjectFlashBytes(string boardId, uint address, byte[] data)
         {
             return InjectMemory(boardId, FirmwareMemoryType.Flash, address, data);

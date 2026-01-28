@@ -397,6 +397,24 @@ namespace firmware
                 continue;
             }
 
+            if (type == MessageType::Serial)
+            {
+                if (payload.size() <= kBoardIdSize)
+                {
+                    SendError("system", 2, "Invalid serial payload");
+                    continue;
+                }
+                PipeCommand cmd;
+                cmd.type = PipeCommand::Type::SerialInput;
+                cmd.boardId = ReadFixedString(reinterpret_cast<const char *>(payload.data()), kBoardIdSize);
+                if (payload.size() > kBoardIdSize)
+                {
+                    cmd.data.assign(payload.begin() + kBoardIdSize, payload.end());
+                }
+                Enqueue(cmd);
+                continue;
+            }
+
             if (type == MessageType::MemoryPatch)
             {
                 if (payload.size() < sizeof(MemoryPatchHeader))

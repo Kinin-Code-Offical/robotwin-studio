@@ -1366,6 +1366,19 @@ int main(int argc, char **argv)
                 }
                 continue;
             }
+            if (cmd.type == PipeCommand::Type::SerialInput)
+            {
+                auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
+                if (!state.supported)
+                {
+                    continue;
+                }
+                for (std::uint8_t value : cmd.data)
+                {
+                    state.mcu->QueueSerialInput(value);
+                }
+                continue;
+            }
             if (cmd.type == PipeCommand::Type::Step)
             {
                 auto &state = GetBoardState(cmd.boardId, cmd.boardProfile);
