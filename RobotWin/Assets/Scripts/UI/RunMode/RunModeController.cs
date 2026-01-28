@@ -31,8 +31,13 @@ namespace RobotTwin.UI
         private Label _serialContentLabel;
         private ScrollView _logScroll;
         private ScrollView _serialScroll;
+        private TextField _serialInputField;
+        private Button _serialSendBtn;
         private bool _logAutoFollow = true;
         private bool _serialAutoFollow = true;
+        private readonly List<string> _serialUserLines = new List<string>();
+        private const int SerialUserLineLimit = 40;
+        private const string SerialInputHint = "Input ...";
         private Label _pathLabel;
         private Button _openLogBtn;
         private Label _projectLabel;
@@ -187,6 +192,8 @@ namespace RobotTwin.UI
             _serialContentLabel = root.Q<Label>("SerialContentLabel");
             _logScroll = root.Q<ScrollView>("LogScroll");
             _serialScroll = root.Q<ScrollView>("SerialScroll");
+            _serialInputField = root.Q<TextField>("SerialInputField");
+            _serialSendBtn = root.Q<Button>("SerialSendBtn");
             InitializeAutoScroll();
             _pathLabel = root.Q<Label>("TelemetryPathLabel");
             _openLogBtn = root.Q<Button>("OpenLogFileBtn");
@@ -228,6 +235,8 @@ namespace RobotTwin.UI
             _openScopeBtn = root.Q<Button>("OpenScopeBtn");
             _closeInstrumentsBtn = root.Q<Button>("CloseInstrumentsBtn");
             _runInBackgroundToggle = root.Q<Toggle>("RunInBackgroundToggle");
+
+            InitializeSerialInput();
 
             EnsureDataLossOverlay(root);
 
@@ -596,16 +605,18 @@ namespace RobotTwin.UI
             if (_tickLabel != null) _tickLabel.text = "Running";
             if (_serialContentLabel != null)
             {
+                string baseText;
                 if (HasAnyUsbConnected())
                 {
-                    _serialContentLabel.text = string.IsNullOrEmpty(_host.SerialOutput) ? "Serial ready." : _host.SerialOutput;
+                    baseText = string.IsNullOrEmpty(_host.SerialOutput) ? "Serial ready." : _host.SerialOutput;
                 }
                 else
                 {
-                    _serialContentLabel.text = string.IsNullOrEmpty(_host.SerialOutput)
+                    baseText = string.IsNullOrEmpty(_host.SerialOutput)
                         ? "USB disconnected. Serial paused."
                         : _host.SerialOutput;
                 }
+                _serialContentLabel.text = ComposeSerialOutput(baseText);
                 AutoScroll(_serialScroll, _serialAutoFollow);
             }
 
@@ -1907,6 +1918,69 @@ namespace RobotTwin.UI
         {
             SetupAutoFollow(_logScroll, value => _logAutoFollow = value);
             SetupAutoFollow(_serialScroll, value => _serialAutoFollow = value);
+        }
+
+        private void InitializeSerialInput()
+        {
+            if (_serialInputField == null) return;
+
+            SearchFieldHelpers.SetupHint(_serialInputField, SerialInputHint);
+            _serialInputField.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
+                evt.StopPropagation();
+                SendSerialInput();
+            });
+
+            if (_serialSendBtn != null)
+            {
+                _serialSendBtn.clicked += SendSerialInput;
+            }
+        }
+
+        private void SendSerialInput()
+        {
+            if (_serialInputField == null) return;
+            string payload = SearchFieldHelpers.GetEffectiveQuery(_serialInputField, SerialInputHint);
+            if (string.IsNullOrWhiteSpace(payload)) return;
+
+            string boardId = ResolveSerialBoardId();
+            bool sentToFirmware = _host != null && _host.SendSerialInput(boardId, payload);
+            bool sentToCom = _comPortManager != null && _comPortManager.SendSerialInput(boardId, payload);
+            if (!sentToFirmware && !sentToCom)
+            {
+                AppendLog($"[Serial] Input failed ({boardId}).");
+            }
+            AddSerialUserLine($"> {payload}");
+            _serialInputField.SetValueWithoutNotify(string.Empty);
+            _serialInputField.RemoveFromClassList("rw-hint");
+            _serialInputField.Focus();
+        }
+
+        private void AddSerialUserLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return;
+            _serialUserLines.Add(line);
+            if (_serialUserLines.Count <= SerialUserLineLimit) return;
+            int removeCount = _serialUserLines.Count - SerialUserLineLimit;
+            _serialUserLines.RemoveRange(0, removeCount);
+        }
+
+        private string ComposeSerialOutput(string baseText)
+        {
+            if (_serialUserLines.Count == 0) return baseText;
+            string userText = string.Join("\n", _serialUserLines);
+            if (string.IsNullOrWhiteSpace(baseText)) return userText;
+            return $"{baseText}\n{userText}";
+        }
+
+        private string ResolveSerialBoardId()
+        {
+            if (_host == null) return "U1";
+            var ids = new List<string>();
+            _host.GetBoardIds(ids);
+            if (ids.Count > 0) return ids[0];
+            return "U1";
         }
 
         private static void SetupAutoFollow(ScrollView scrollView, Action<bool> setFlag)

@@ -18,7 +18,8 @@ namespace firmware
         {
             Load,
             Step,
-            Patch
+            Patch,
+            SerialInput
         };
 
         Type type = Type::Load;

@@ -215,6 +215,7 @@
 
 .body .right-panel {
     margin-right: 0;
+    padding: 8px;
 }
 
 .left-panel {
@@ -434,6 +435,7 @@
 
 .right-panel .card {
     margin-bottom: 12px;
+    padding: 4px;
 }
 
 .log-row {
@@ -445,6 +447,8 @@
 .log-row .card {
     flex-grow: 1;
     flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
     margin-bottom: 0;
 }
 
@@ -625,9 +629,19 @@
 }
 
 .board-3d-toggle {
-    font-size: 10px;
+    font-size: 6px;
     color: #e6edf3;
-    margin-top: 4px;
+    margin-top: 4px; 
+}
+
+.board-3d-toggle Label {
+    display: flex;
+    font-size: 8px;
+}
+
+.board-3d-toggle .unity-toggle__checkmark {
+    width: 14px;
+    height: 14px;
 }
 
 .board-wiring-tools {
@@ -770,6 +784,7 @@
 
 .serial-card {
     max-height: 300px;
+    flex-direction: column;
 }
 
 .instrument-card {
@@ -863,7 +878,7 @@
 .instrument-toggle {
     margin-top: 0;
     white-space: normal;
-    -unity-text-align: left;
+    -unity-text-align: upper-left;
     min-height: 22px;
     width: 100%;
 }
@@ -1038,19 +1053,59 @@
 .serial-scroll {
     flex-grow: 1;
     min-height: 140px;
-    background-color: #06080b;
+    background-color: #050607;
     border-radius: 6px;
     min-height: 0;
     padding-right: 8px;
 }
 
 .serial-text {
-    color: #7ce4b4;
+    color: #58f28c;
     font-size: 11px;
     padding: 6px;
     white-space: normal;
     overflow: visible;
     -unity-text-align: upper-left;
+}
+
+.serial-input-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.serial-input {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 28px;
+    min-width: 0;
+    background-color: #030405;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: #1b2531;
+    padding-left: 6px;
+    padding-right: 6px;
+    margin-right: 6px;
+}
+
+.serial-input .unity-text-input {
+    color: #f8fafc;
+    font-size: 11px;
+}
+
+.serial-send {
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
+    background-color: #1a2634;
+    border-color: #2b3b4f;
+    color: #e2e8f0;
+    font-size: 12px;
+}
+
+.serial-send:hover {
+    background-color: #223246;
 }
 
 .run-root .unity-scroll-view__vertical-scroller,

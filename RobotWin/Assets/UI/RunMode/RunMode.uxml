@@ -95,6 +95,10 @@
                         <ui:ScrollView name="SerialScroll" class="serial-scroll">
                             <ui:Label name="SerialContentLabel" text="Serial ready." class="serial-text" />
                         </ui:ScrollView>
+                        <ui:VisualElement class="serial-input-row">
+                            <ui:TextField name="SerialInputField" class="serial-input" />
+                            <ui:Button name="SerialSendBtn" text=">" class="btn serial-send" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
 
@@ -110,9 +114,11 @@
                     <ui:ScrollView name="UsbBoardList" class="usb-list" />
                     <ui:Toggle name="UsbDefaultConnectedToggle" text="Default USB Connected" class="board-3d-toggle" value="true" />
                     <ui:Label name="UsbHintLabel" text="Select the IDE port (IDE may show it as Unknown)." class="subtle usb-hint" />
-                    <ui:Label name="ComStatusLabel" text="Virtual COM: N/A" class="subtle" />
+                    <ui:VisualElement style="flex-direction: row; justify-content: space-between;">
+                        <ui:Label name="UsbStatusLabel" text="USB: N/A" class="subtle" />
+                        <ui:Label name="ComStatusLabel" text="Virtual COM: N/A" class="subtle" />
+                    </ui:VisualElement>
                     <ui:Button name="ComDriverInstallBtn" text="Install Virtual COM Driver" class="btn ghost com-btn" />
-                    <ui:Label name="UsbStatusLabel" text="USB: N/A" class="subtle" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="card telemetry-card">

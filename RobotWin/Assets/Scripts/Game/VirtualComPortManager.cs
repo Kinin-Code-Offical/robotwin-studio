@@ -301,6 +301,25 @@ namespace RobotTwin.Game
             }
         }
 
+        public bool SendSerialInput(string boardId, string text)
+        {
+            if (string.IsNullOrWhiteSpace(boardId) || string.IsNullOrEmpty(text)) return false;
+            if (!_pairs.TryGetValue(boardId, out var pair)) return false;
+            if (pair.Port == null || !IsPortOpen(pair.Port)) return false;
+
+            string payload = text.Replace("\r\n", "\n").Replace("\r", "\n");
+            if (!payload.EndsWith("\n", StringComparison.Ordinal))
+            {
+                payload += "\n";
+            }
+            if (!WritePort(pair.Port, payload))
+            {
+                _log?.Invoke($"[VirtualCOM] Input write failed for {pair.AppPort}.");
+                return false;
+            }
+            return true;
+        }
+
         public void CloseAll()
         {
             foreach (var pair in _pairs.Values)
