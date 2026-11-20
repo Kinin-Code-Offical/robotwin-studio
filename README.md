@@ -139,7 +139,9 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 ### Dünya
 
 - **Nesneler:** kendi tasarladığınız kartlar (devre + PCB + kod, aynı tasarımdan birden fazla kopya), tek başına katalog parçaları, mekanik gövdeler (kutu, plaka, kol, silindir, tekerlek, küre, masa), içe aktarılan 3D modeller (STL, OBJ, PLY).
-- **Kablolar:** AWG kesiti, uzunluk ve renk; gerçek bakır direnci, akım sınırı, aşırı yükte ısınıp yanma.
+- **Kablolar:** AWG kesiti, uzunluk ve renk; hazır jumper boyları (10/15/20/30/50 cm); gerçek bakır direnci ve voltaj düşümü, akım sınırı, aşırı yükte ısınıp yanma. Halat fiziğiyle sarkar; kısa kalırsa gerilir, fişi çekip çıkarır. **Kablolar ve ölçümler** sekmesi her kablonun boyunu uçlar arası mesafeyle karşılaştırır (bol / yeterli / gergin / yetmiyor) ve akım, güç, voltaj düşümü, yük yüzdesini gösterir.
+
+  ![Kablolar ve ölçümler: boy, uçlar arası mesafe, voltaj düşümü](docs/images/world-cables.png)
 - **Mekanik bağlantılar:** sabit (vida/yapıştırıcı), servo koluna/motor miline sabitleme, menteşe, kızak.
 - **Fizik:** yerçekimi (Dünya, Ay, Mars, Jüpiter, sıfır), malzemeye göre sürtünme ve sekme, kutu/küre/silindir/üçgen ağ çarpışmaları, 1 ms sabit adım; servolar ve DC motorlar devreyle çift yönlü bağlıdır (yük devreye geri döner).
 - **Sensörler:** HC-SR04 ultrasonik sensör dünyadaki nesnelere ışın izleme ile gerçekten ölçer; I²C ekranlar 3D model üzerinde canlı görünür.
@@ -285,7 +287,7 @@ The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) walks t
 | Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). |
 | Model (**Modelle**) | Ctrl+4 | Blender-like modeller: primitives, edit mode (extrude, inset, subdivide, …), CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export, *send to world*. |
 | Assembly (**Montaj**) | Ctrl+5 | Auto-build a rover or X-quadcopter from the circuit, drive/fly it in arenas, run fault experiments, record `.rwsim`. |
-| World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, resistance, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. |
+| World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. |
 
 Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
 
