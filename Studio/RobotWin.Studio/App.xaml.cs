@@ -76,6 +76,8 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Automation.StudioApiHost.TryRun(this, args)) return;   // [api] --api <port> / --bake-geometry: windowless automation server
+
             Shell.UserLibrary.LoadAll(RobotTwin.CoreSim.Design.PartLibrary.Default);
             var window = new MainWindow();
             MainWindow = window;

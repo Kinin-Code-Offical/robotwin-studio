@@ -1,0 +1,31 @@
+# Parameters of the robotwin_bridge node (ros2 run robotwin_bridge bridge --ros-args --params-file config/bridge.yaml)
+robotwin_bridge:
+  ros__parameters:
+    use_sim_time: true
+    example: car            # car | line-follower | obstacle-avoider | quadcopter (ignored when world is set)
+    world: ""               # path to a .rwworld / .rwproj
+    host: ""                # connect to a running server (RobotWinStudio.exe --api 5555) instead of launching one
+    port: 5555
+    seed: 0
+    firmware: true
+    dt: 0.005               # simulation step (s)
+    rate: 50.0              # topic rate (Hz, simulated time)
+    realtime: true          # false = as fast as possible (consumers must use /clock)
+    base: ""                # robot body object id (auto)
+    odom_frame: odom
+    base_frame: base_link
+    world_frame: map
+    scan: true
+    scan_samples: 360
+    scan_range_max: 8.0
+    scan_offset: [0.0, 0.0, 0.06]
+    imu: true
+    gps: true
+    camera: false
+    camera_width: 160
+    camera_height: 120
+    camera_fov_deg: 70.0
+    camera_offset: [0.08, 0.0, 0.06]
+    camera_every: 5
+    object_tf: true
+    max_speed: 0.5

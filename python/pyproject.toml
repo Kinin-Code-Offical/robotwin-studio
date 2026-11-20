@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robotwin"
+version = "1.0.0"
+description = "RobotWin Studio automation: headless simulation client, Gymnasium environments, imitation learning, ROS bridge"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = []          # standard library only
+
+[project.optional-dependencies]
+rl = ["gymnasium>=0.29", "numpy"]
+sb3 = ["gymnasium>=0.29", "numpy", "stable-baselines3>=2.0"]
+
+[tool.setuptools]
+packages = ["robotwin"]

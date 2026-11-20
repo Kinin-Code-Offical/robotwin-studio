@@ -71,6 +71,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Simulated mechanical time step (s).</summary>
         public double Step { get; set; } = 1e-3;
 
+        /// <summary>[api] Automation hook: called for every moving port (object id, its hinge) before the circuit drives it; return true when it was driven.</summary>
+        public Func<string, SceneJoint, bool>? DriveOverride { get; set; }   // [api]
+
         private WorldPhysics(WorldCircuit? circuit)
         {
             _circuit = circuit;
@@ -329,6 +332,7 @@ namespace RobotTwin.CoreSim.Sandbox
             foreach (var it in _items.Values)
             {
                 if (it.RotorJoint == null) continue;
+                if (DriveOverride != null && DriveOverride(it.Object.Id, it.RotorJoint)) continue;   // [api] automation drives this port directly
                 if (it.Servo != null && it.ServoMotor != null)
                 {
                     var m = it.ServoMotor;
