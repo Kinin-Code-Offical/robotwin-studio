@@ -59,6 +59,7 @@
                         </Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="10 ms ilerlet" Click="OnStep" Margin="6,0,0,0"><t:Icon Data="{StaticResource I.Step}" Size="14"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Durdur ve başa dön (Shift+F5)" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}" Size="14"/></Button>
+                        <ToggleButton x:Name="RecordButton" Margin="6,0,0,0" Padding="10,0" MinHeight="28" Click="OnRecord" ToolTip="Kayıt al: dünyayı baştan çalıştırır; durdurunca bu süre render modunda tam fizikle yeniden hesaplanır ve video gibi oynatılır (Ctrl+R)"><StackPanel Orientation="Horizontal"><Ellipse x:Name="RecordDot" Width="10" Height="10" Fill="#E5484D" VerticalAlignment="Center"/><TextBlock x:Name="RecordText" Text="Kayıt" Margin="6,0,0,0" VerticalAlignment="Center"/></StackPanel></ToggleButton>
                         <ComboBox x:Name="SpeedBox" Width="130" Margin="6,0,0,0" SelectionChanged="OnSpeed" ToolTip="Simülasyon hızı">
                             <ComboBoxItem Content="0.01×" Tag="0.01"/>
                             <ComboBoxItem Content="0.1×" Tag="0.1"/>

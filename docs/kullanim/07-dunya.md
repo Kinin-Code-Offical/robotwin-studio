@@ -158,27 +158,32 @@ Wi-Fi, BLE ve Bluetooth sinyalleri uzaklıkla, engellerle ve gövdelerle zayıfl
 
 Kartta yazılım yoksa **Olaylar** sekmesine "Yüklü yazılım yok (kart boşta)" yazılır.
 
-## Analiz modu
+## Kayıt ve render
 
-Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır; **analiz modu** ise dünyayı ekrandan bağımsız olarak, sizin seçtiğiniz süre ve doğrulukta baştan sona hesaplar. **Simülasyon › Analiz modu** menüsünden ya da Dünya sayfasında **Ctrl+F5** ile açılır. Analiz dünyanın bir kopyası üzerinde çalışır; bu sırada dünyayı düzenlemeye devam edebilirsiniz.
+Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir kaydı ekrandan bağımsız olarak, seçtiğiniz doğrulukta baştan sona yeniden hesaplar ve sonra video gibi oynatır.
 
-**Ayarlar**
+1. Araç çubuğunda **● Kayıt**'a basın (Ctrl+R). Dünya baştan çalışmaya başlar.
+2. İstediğiniz an **Kaydı bitir**'e basın. Render penceresi açılır ve bu süre hesaplanmaya başlar. **Simülasyon › Render** (Ctrl+F5) ile süreyi kendiniz de girebilirsiniz.
 
-- **Hazır ayar:** Gerilme, Isı, Akış, Tam analiz ya da Özel.
-- **Doğruluk:** Hızlı (1 ms fizik), Standart (0,5 ms), Hassas (0,1 ms, 24 çözücü geçişi, uyumaya izin yok) ve Referans (0,05 ms). Devre çözücüsünün adımı ve toleransı da buna göre küçülür.
-- **Süre** ve **kayıt hızı:** örneğin 3 s boyunca saniyede 1000 örnek.
-- **Gerilme (FEM):** işaretlediğiniz parçalar kayıt boyunca aldıkları temas ve eklem yükleriyle çözülür. Ağ ikinci derece dörtyüzlülerden oluşur; ince uzun parçalarda kiriş elemanları kullanılır. Serbest parçalar atalet dengesiyle (inertia relief) çözülür. Sonuç von Mises gerilmesi, yer değiştirme ve malzemenin akma sınırına göre emniyet katsayısıdır.
-- **Akış (CFD):** seçilen parçanın akış yönündeki düşey kesiti etrafında lattice-Boltzmann akışı hesaplanır. Sonuç sürükleme (Cd) ve kaldırma (Cl) katsayıları, girdap kopma frekansı (Strouhal), tahmini sürükleme kuvveti ve girdaplılık haritasıdır. Yüksek Reynolds sayılarında Smagorinsky türbülans modeli kullanılır.
-- **Isı:** kartlardaki her bileşenin kayıtlı gücü, PCB'deki gerçek yerinden ısı kaynağı olur; iletim, taşınım (h) ve ışınım çözülür. **Sonra ısıtmaya devam** süresiyle, örneğin bir regülatörün kararlı sıcaklığına ulaşması izlenebilir.
+![Render: gerilme, kuvvetler ve hava akışı](../images/world-render.png)
 
-**Sonuçlar**
+**Hesaplananlar**
 
-- **Grafikler:** kaydedilen bütün kanallar (gövde konumu, hızı, ivmesi; eklem açısı, torku, gücü; her parçanın akım, gerilim ve güç sinyalleri; devre düğümleri). Arama kutusuyla süzün, aynı anda altı kanala kadar seçin.
-- **Gerilme:** deforme edilmiş parça üzerinde renkli gerilme haritası (fareyle sürükleyerek döndürülür) ve en kritik anın değerleri. Emniyet katsayısı 1'in altındaysa parça akar ya da kırılır.
-- **Akış** ve **Isı:** alan haritaları ve zamana bağlı grafikler.
-- **Günlük:** ayarlar, ağ bilgileri, olaylar ve seri port çıktısı.
+- **Her kare:** her nesnenin konumu ve yönü, servo kolu ve motor mili açıları, hızlar, ivmeler, temas ve eklem kuvvetleri, her parçanın akım, gerilim, güç ve sıcaklık sinyalleri, devre düğümleri, seri port çıktısı.
+- **Gerilme:** işaretlediğiniz her parça, "gerilme kare hızında" (varsayılan 15 kare/s) ve en yüklü anlarda, o anki gerçek yükleriyle FEM ile çözülür. İnce uzun parçalarda kiriş elemanları kullanılır.
+- **Hava akışı:** bütün hareketli parçalar o anki konumlarında birlikte, 3B lattice-Boltzmann ile çözülür. Rüzgâr, dünyanın rüzgârı eksi montajın kendi hızıdır; montaj duruyorsa test hızı kullanılır. Sonuç montaja etkiyen kuvvet ve sürükleme katsayısıdır (Cd).
+- **Isınma:** kartlardaki bileşenlerin güç kaybından iletim, taşınım ve ışınım çözülür.
 
-Sonuçlar **Kaydet** ile `.rwanalysis` dosyasına yazılır ya da **CSV olarak dışa aktar** ile her kanal bir sütun olarak MATLAB, Python veya Excel'e taşınır.
+**Oynatma**
+
+- **Oynat / duraklat:** Boşluk tuşu. **Kare kare ilerleme:** ← →. **Başa / sona:** Home / End. Hız ×0,05 ile ×2 arasında seçilir (ağır çekim).
+- **Renk:** gerilme (von Mises, deforme şekil büyütülmüş) ya da hız okları. **Ölçek:** render'ın en yüksek değeri ya da her malzemenin akma sınırı.
+- **Kuvvetler:** temas kuvvetleri turuncu, eklem kuvvetleri camgöbeği ok. **Hava:** montajın ortasından geçen hız kesiti (mavi durgun, sarı serbest akış, kırmızı hızlanan hava) ve aerodinamik kuvvet (mor ok).
+- **Grafikler:** kaydedilen her kanal. Grafiğe tıklayınca ya da sürükleyince o saniyeye atlanır.
+- **Parçalar · gerilme:** her parçanın en kötü anı ve emniyet katsayısı. Satıra tıklayınca o ana gidilir.
+- **Isı** ve **Günlük** sekmeleri; sonuçlar `.rwanalysis` ya da CSV olarak saklanır.
+
+Elle verilen kumanda girdileri (gamepad, sahnedeki düğmeler) render'da henüz yeniden oynatılmıyor. Render dünyanın programlı davranışını (firmware, motorlar, fizik) baştan hesaplar.
 
 ## Fare ve klavye
 

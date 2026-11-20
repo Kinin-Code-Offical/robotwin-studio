@@ -1,5 +1,6 @@
 using System.Linq;
 using RobotTwin.CoreSim.Analysis;
+using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
 using RobotTwin.CoreSim.Design;
 using Xunit;
@@ -90,5 +91,43 @@ namespace RobotTwin.CoreSim.Tests.Analysis
             Assert.True(hot.PeakTemperature < 200, "and stay physical");
             Assert.InRange(hot.Frames.Count, s.ThermalFrames - 1, s.ThermalFrames + 2);
         }
-    }
+    
+        [Fact]
+        public void RenderRecordsPosesAndComputesFlowAroundTheWholeCar()
+        {
+            var world = WorldExamples.CarDetailed(PartLibrary.Default);
+            var s = new AnalysisSettings
+            {
+                Preset = AnalysisPreset.Custom,
+                Duration = 0.4,
+                OutputRate = 100,
+                Accuracy = AccuracyPreset.Fast,
+                Firmware = false,
+                Aero = true,
+                Aero3D = true,
+                AeroSpeed = 3,
+                AeroAxis = "+X",
+                AeroResolution = 12,
+                AeroPasses = 10
+            };
+
+            var r = AnalysisRun.Run(world, s);
+            var plate = world.Objects.First(o => o.Kind == WorldObjectKind.Body && o.SizeX > 0.1);
+            var first = AnalysisRun.RecordedPose(r.Channels, plate.Id, 0);
+            var last = AnalysisRun.RecordedPose(r.Channels, plate.Id, r.Channels.Count - 1);
+            Assert.NotNull(first);
+            Assert.NotNull(last);
+            Assert.InRange(first!.Value.Position.Z, plate.Pose.Z - 0.01, plate.Pose.Z + 0.01);
+            Assert.NotEmpty(r.AeroFrames);
+            foreach (var f in r.AeroFrames)
+            {
+                _out.WriteLine($"t {f.Time:0.00} s: {f.Nx}×{f.Ny}×{f.Nz}, wind {f.Speed:0.0} m/s, F = ({f.Force.X * 1000:0.##}, {f.Force.Y * 1000:0.##}, {f.Force.Z * 1000:0.##}) mN, Cd {f.MeanCd:0.00}");
+                foreach (var n in f.Notes) _out.WriteLine("  " + n);
+            }
+
+            var a = r.AeroFrames[0];
+            Assert.True(a.Force.Dot(a.AxisX) > 0, "drag acts along the relative wind");
+            Assert.InRange(a.Force.Length, 1e-4, 0.5);   // a toy car in a 3 m/s breeze: millinewtons
+        }
+}
 }

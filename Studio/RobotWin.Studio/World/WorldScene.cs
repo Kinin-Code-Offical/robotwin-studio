@@ -65,6 +65,7 @@ namespace RobotWin.Studio.World
             _view.Children.Add(_environment);
             _view.Children.Add(_cables);
             _view.Children.Add(_overlay);
+            _view.Children.Add(_replay);   // [render] replay overlays (World/WorldScene.Playback.cs)
             Children.Add(_view);
             _effects.Project = Project;
             _effects.IsHitTestVisible = false;
@@ -162,7 +163,7 @@ namespace RobotWin.Studio.World
             for (int i = _view.Children.Count - 1; i >= 0; i--)
             {
                 var c = _view.Children[i];
-                if (c != _environment && c != _cables && c != _overlay) _view.Children.RemoveAt(i);
+                if (c != _environment && c != _cables && c != _overlay && c != _replay) _view.Children.RemoveAt(i);
             }
 
             BuildEnvironment();
@@ -634,7 +635,7 @@ namespace RobotWin.Studio.World
             foreach (var it in _items.Values)
             {
                 bool live = Session != null && Session.State != Simulation.SimState.Stopped;
-                double angle = !live ? 0 : Session!.Physics != null ? Session.Physics.PortAngle(it.Object.Id) : Session.PortAngle(it.Object);
+                double angle = Playback != null ? Playback.PortAngle(it.Object.Id) : !live ? 0 : Session!.Physics != null ? Session.Physics.PortAngle(it.Object.Id) : Session.PortAngle(it.Object);
                 it.PortAngle = angle;
                 if (it.PortRotation != null) ((AxisAngleRotation3D)it.PortRotation.Rotation).Angle = angle * 180 / Math.PI;
                 if (it.Model.PortSpin != null) it.Model.PortSpin.Angle = it.Model.PortSign * angle * 180 / Math.PI;
@@ -642,11 +643,13 @@ namespace RobotWin.Studio.World
 
             var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var physics = Session != null && Session.State != Simulation.SimState.Stopped ? Session.Physics : null;
-            if (physics != null)
+            Func<string, (RobotTwin.CoreSim.Mechanics.Vec3 Position, RobotTwin.CoreSim.Mechanics.Quat Orientation)?>? poseOf =
+                Playback != null ? Playback.PoseOf : physics != null ? physics.PoseOf : null;
+            if (poseOf != null)
             {
                 foreach (var it in _items.Values)
                 {
-                    if (physics.PoseOf(it.Object.Id) is { } pose)
+                    if (poseOf(it.Object.Id) is { } pose)
                     {
                         var q = new Quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
                         var m = Matrix3D.Identity;

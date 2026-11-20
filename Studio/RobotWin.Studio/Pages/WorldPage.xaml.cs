@@ -1185,6 +1185,9 @@ namespace RobotWin.Studio.Pages
                     if (Scene.Selected != null) Scene.FrameSelected();
                     else Scene.FrameAll();
                     break;
+                case Key.R when ctrl:
+                    OnRecord(this, new RoutedEventArgs());
+                    break;
                 case Key.F5:
                     if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) StopSimulation();
                     else if (ctrl) OpenAnalysis();

@@ -224,7 +224,7 @@ namespace RobotWin.Studio
                 _world.ToggleRun();
             }, world));
             m.Items.Add(Item("Dünyayı durdur", null, () => _world.StopSimulation(), ws != SimState.Stopped));
-            m.Items.Add(Item("Analiz modu (gerilme, akış, grafikler)…", "Ctrl+F5", () =>
+            m.Items.Add(Item("Render: tam fizik, gerilme, akış, ısı…", "Ctrl+F5", () =>
             {
                 Navigate("world");
                 _world.OpenAnalysis();

@@ -117,7 +117,13 @@ namespace RobotTwin.CoreSim.Analysis
         public double BeamHeight { get; set; }
         public bool BeamCircular { get; set; }
 
+        /// <summary>Beam: direction of the section height (thinnest side) in the body frame.</summary>
+        public Vec3 BeamUp { get; set; } = Vec3.UnitZ;
+
         public List<StressFrame> Frames { get; } = new List<StressFrame>();
+
+        /// <summary>Body centre relative to the object origin (object frame): the mesh nodes are in the body frame.</summary>
+        public Vec3 BodyOffset { get; set; }
         public List<string> Notes { get; } = new List<string>();
         public int NodeCount => Nodes.Length / 3;
         public int NodesPerElement => Method == "beam" ? 2 : Order == 2 ? 10 : 4;
@@ -204,7 +210,19 @@ namespace RobotTwin.CoreSim.Analysis
         public double Strouhal { get; set; }
 
         /// <summary>Mean drag force (N) at the physical speed.</summary>
-        public double DragForce => 0.5 * AirDensity * Speed * Speed * ReferenceArea * MeanCd;
+        public double DragForce => Is3D ? Force.Length : 0.5 * AirDensity * Speed * Speed * ReferenceArea * MeanCd;
+
+        /// <summary>Recording time of this flow frame (s).</summary>
+        public double Time { get; set; }
+
+        /// <summary>3D: world position of grid cell (0,0,0)'s corner and the grid axes (x = along the relative wind).</summary>
+        public Vec3 Origin { get; set; }
+        public Vec3 AxisX { get; set; } = Vec3.UnitX;
+        public Vec3 AxisY { get; set; } = Vec3.UnitY;
+        public Vec3 AxisZ { get; set; } = Vec3.UnitZ;
+
+        /// <summary>3D: aerodynamic force on the assembly (N, world frame).</summary>
+        public Vec3 Force { get; set; }
 
         public List<string> Notes { get; } = new List<string>();
     }
@@ -233,6 +251,9 @@ namespace RobotTwin.CoreSim.Analysis
         public List<StressResult> Stress { get; } = new List<StressResult>();
         public List<ThermalResult> Thermal { get; } = new List<ThermalResult>();
         public CfdResult? Aero { get; set; }
+
+        /// <summary>Flow around the whole assembly at keyframes of the recording (render mode).</summary>
+        public List<CfdResult> AeroFrames { get; } = new List<CfdResult>();
         public List<string> Log { get; } = new List<string>();
 
         /// <summary>Device id → part designator (for thermal source placement).</summary>

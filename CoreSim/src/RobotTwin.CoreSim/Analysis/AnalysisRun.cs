@@ -46,9 +46,11 @@ namespace RobotTwin.CoreSim.Analysis
                 }
 
                 var probe = new WorldProbe(runner, s, result, stressIds);
+                var poses = PoseRecorder(world, result.Channels);
                 int n = s.SampleCount;
                 double dt = 1.0 / s.OutputRate;
                 probe.Sample();
+                RecordPoses(runner.Physics, result.Channels, poses, world);
                 for (int i = 1; i <= n; i++)
                 {
                     if (cancel.IsCancellationRequested)
@@ -59,6 +61,7 @@ namespace RobotTwin.CoreSim.Analysis
 
                     runner.Step(dt);
                     probe.Sample();
+                    RecordPoses(runner.Physics, result.Channels, poses, world);
                     if (runner.Halted)
                     {
                         result.HaltReason = runner.HaltReason;
@@ -74,7 +77,7 @@ namespace RobotTwin.CoreSim.Analysis
                 foreach (var id in stressIds)
                 {
                     if (cancel.IsCancellationRequested) break;
-                    var part = PartOf(world, scene, id);
+                    var part = PartOf(world, scene, id, runner.Physics);
                     if (part == null)
                     {
                         result.Note($"{id}: gerilme için şekil bulunamadı.");
@@ -86,7 +89,9 @@ namespace RobotTwin.CoreSim.Analysis
                     result.Stress.Add(StressJob.Run(part, s, (IReadOnlyList<LoadSample>?)loads ?? Array.Empty<LoadSample>(), cancel, p => progress?.Invoke(label, p)));
                 }
 
-                if (s.Aero && !cancel.IsCancellationRequested && s.AeroObject is { } aeroId && PartOf(world, scene, aeroId) is { } aeroPart)
+                if (s.Aero && s.Aero3D && !cancel.IsCancellationRequested)
+                    result.AeroFrames.AddRange(AeroAssembly(world, scene, result, s, cancel, p => progress?.Invoke("Akış: tüm montaj (3B)", p), runner.Physics));
+                else if (s.Aero && !cancel.IsCancellationRequested && s.AeroObject is { } aeroId && PartOf(world, scene, aeroId) is { } aeroPart)
                     result.Aero = Aero2D(aeroPart, s, scene?.AirDensity ?? 1.2, cancel, p => progress?.Invoke("Akış: " + aeroPart.Name, p));
 
                 if (s.Thermal && !cancel.IsCancellationRequested) result.Thermal.AddRange(Thermal(world, scene, result, s, cancel, progress));
@@ -97,7 +102,7 @@ namespace RobotTwin.CoreSim.Analysis
         }
 
         /// <summary>Geometry, material and pose of an object's physical body.</summary>
-        public static PartGeometry? PartOf(WorldDocument world, PhysicsScene? scene, string objectId)
+        public static PartGeometry? PartOf(WorldDocument world, PhysicsScene? scene, string objectId, WorldPhysics? physics = null)
         {
             var o = world.Find(objectId);
             var body = scene?.FindBody(objectId);
@@ -124,7 +129,8 @@ namespace RobotTwin.CoreSim.Analysis
                 Orientation = body.Orientation,
                 Mass = body.Mass,
                 Shape = kind,
-                Size = size
+                Size = size,
+                BodyOffset = physics?.PoseOf(objectId) is { } op ? op.Orientation.InverseRotate(body.Position - op.Position) : Vec3.Zero
             };
         }
 

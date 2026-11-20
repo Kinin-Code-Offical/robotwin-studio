@@ -20,6 +20,9 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
         public Quat Orientation { get; set; } = Quat.Identity;
         public double Mass { get; set; }
 
+        /// <summary>Body centre relative to the object origin, in the object frame (replay placement).</summary>
+        public Vec3 BodyOffset { get; set; }
+
         /// <summary>"box", "cylinder", "sphere", "hull", "mesh".</summary>
         public string Shape { get; set; } = "box";
 
@@ -57,7 +60,7 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
         public static StressResult Run(PartGeometry part, AnalysisSettings s, IReadOnlyList<LoadSample> loads, CancellationToken cancel, Action<double>? progress = null)
         {
             var mat = StructuralMaterial.For(part.MaterialName);
-            var result = new StressResult { ObjectId = part.ObjectId, Name = part.Name, Material = mat.Name, Yield = mat.Yield };
+            var result = new StressResult { ObjectId = part.ObjectId, Name = part.Name, Material = mat.Name, Yield = mat.Yield, BodyOffset = part.BodyOffset };
             var instants = ChooseInstants(loads, s.StressInstants);
             if (instants.Count == 0)
             {
@@ -186,6 +189,7 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
             const int elements = 24;
             result.Method = "beam";
             result.BeamCircular = section.Circular;
+            result.BeamUp = up;
             result.BeamWidth = section.Circular ? section.Diameter : section.Width;
             result.BeamHeight = section.Circular ? section.Diameter : section.Height;
             result.ElementSize = len / elements;

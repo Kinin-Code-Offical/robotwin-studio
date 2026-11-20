@@ -38,6 +38,41 @@ namespace RobotWin.Studio.Analysis
 
         public void Refresh() => InvalidateVisual();
 
+        /// <summary>Time cursor (vertical line), or null.</summary>
+        public double? Cursor { get; set; }
+
+        /// <summary>The user clicked / dragged on the plot at this x value (replay: jump to that second).</summary>
+        public event Action<double>? Seek;
+
+        private double _vx0, _vx1;
+        private Rect _varea = Rect.Empty;
+
+        private void SeekAt(Point p)
+        {
+            if (_varea.IsEmpty || _varea.Width <= 0 || Seek == null) return;
+            double x = _vx0 + (p.X - _varea.Left) / _varea.Width * (_vx1 - _vx0);
+            Seek(Math.Max(_vx0, Math.Min(_vx1, x)));
+        }
+
+        protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
+        {
+            base.OnMouseLeftButtonDown(e);
+            SeekAt(e.GetPosition(this));
+            CaptureMouse();
+        }
+
+        protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            if (IsMouseCaptured) SeekAt(e.GetPosition(this));
+        }
+
+        protected override void OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
+        {
+            base.OnMouseLeftButtonUp(e);
+            ReleaseMouseCapture();
+        }
+
         private Brush Res(string key, Brush fallback) => TryFindResource(key) as Brush ?? fallback;
 
         protected override void OnRender(DrawingContext dc)
@@ -100,8 +135,17 @@ namespace RobotWin.Studio.Analysis
 
             var xl = T(XLabel, text, 10);
             dc.DrawText(xl, new Point(area.Right - xl.Width, area.Bottom + 18));
+            _vx0 = x0;
+            _vx1 = x1;
+            _varea = area;
             dc.PushClip(new RectangleGeometry(area));
             foreach (var s in live) DrawSeries(dc, s, area, X, Y);
+            if (Cursor is double cur && cur >= x0 && cur <= x1)
+            {
+                var pen = new Pen(Res("B.Text", Brushes.White), 1);
+                dc.DrawLine(pen, new Point(X(cur), area.Top), new Point(X(cur), area.Bottom));
+            }
+
             dc.Pop();
 
             double lx = area.Left + 8, ly = area.Bottom + 18;

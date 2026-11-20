@@ -6,13 +6,14 @@ using System.Windows;
 using RobotTwin.CoreSim.Automation;
 using RobotTwin.CoreSim.Sandbox;
 using RobotWin.Studio.Analysis;
+using RobotWin.Studio.Simulation;
 
 namespace RobotWin.Studio.Pages
 {
-    /// <summary>[analysis] Opens the offline analysis mode (stress, flow, recorded plots) for the current world.</summary>
+    /// <summary>[render] Record the live world and render it offline (full physics, stress, flow, heat) for replay.</summary>
     public partial class WorldPage
     {
-        /// <summary>Geometry captured on the UI thread so the analysis can run on a worker thread.</summary>
+        /// <summary>Geometry captured on the UI thread so the render can run on a worker thread.</summary>
         private sealed class CapturedGeometry : IWorldGeometry
         {
             private readonly Dictionary<string, WorldBodyGeometry> _bodies = new Dictionary<string, WorldBodyGeometry>(StringComparer.OrdinalIgnoreCase);
@@ -29,17 +30,43 @@ namespace RobotWin.Studio.Pages
             public double CableLength(WorldCable cable) => _cables.TryGetValue(cable.Id, out var l) ? l : 0.2;
         }
 
-        /// <summary>Opens the analysis window on a private copy of the world (later edits do not affect a run).</summary>
-        public AnalysisWindow? OpenAnalysis()
+        private bool _recording;
+        private double _recordStart;
+
+        private void OnRecord(object sender, RoutedEventArgs e)
+        {
+            if (!_recording)
+            {
+                // A render recomputes the run from its start, so a recording always starts the world fresh.
+                if (_session.State != SimState.Stopped) StopSimulation();
+                Run();
+                _recording = _session.State != SimState.Stopped;
+                _recordStart = _session.Time;
+                if (_recording) Shell.Workspace.Current.Status = "Kayıt alınıyor… Bitirmek için Kayıt düğmesine yeniden basın.";
+            }
+            else
+            {
+                double end = _session.Time;
+                _recording = false;
+                StopSimulation();
+                OpenRender(Math.Max(0.05, end - _recordStart), autoStart: true);
+            }
+
+            RecordButton.IsChecked = _recording;
+            RecordText.Text = _recording ? "Kaydı bitir" : "Kayıt";
+        }
+
+        /// <summary>Opens the render window on a private copy of the world (later edits do not affect it).</summary>
+        public RenderWindow? OpenRender(double duration = 2, bool autoStart = false)
         {
             var world = World;
             if (world == null)
             {
-                Shell.Workspace.Current.Status = "Analiz için önce bir dünya açın.";
+                Shell.Workspace.Current.Status = "Render için önce bir dünya açın.";
                 return null;
             }
 
-            string temp = Path.Combine(Path.GetTempPath(), "robotwin-analysis-" + Guid.NewGuid().ToString("N") + ".rwworld");
+            string temp = Path.Combine(Path.GetTempPath(), "robotwin-render-" + Guid.NewGuid().ToString("N") + ".rwworld");
             WorldDocument copy;
             try
             {
@@ -58,17 +85,24 @@ namespace RobotWin.Studio.Pages
             }
 
             var geometry = new CapturedGeometry(copy, o => Scene.GeometryOf(world.Find(o.Id) ?? o), c => Scene.CableLength(world.Cables.FirstOrDefault(x => x.Id == c.Id) ?? c));
-            var w = new AnalysisWindow(copy, geometry) { Owner = Window.GetWindow(this) };
+            var w = new RenderWindow(copy, geometry, duration, Scene.Library, Scene.MassOf) { Owner = Window.GetWindow(this) };
             w.Show();
+            if (autoStart) _ = w.RenderNow();
             return w;
         }
 
-        /// <summary>--analysis in a world snapshot: opens the analysis window, runs it and captures that window.</summary>
+        /// <summary>Simülasyon › Analiz / render: opens the render window for a 2 s run.</summary>
+        public RenderWindow? OpenAnalysis() => OpenRender();
+
+        /// <summary>--analysis in a world snapshot: opens the render window, renders and captures that window.</summary>
         private void AnalysisSnapshot()
         {
-            if (!Environment.GetCommandLineArgs().Contains("--analysis")) return;
+            var args = Environment.GetCommandLineArgs();
+            if (!args.Contains("--analysis")) return;
+            int k = Array.IndexOf(args, "--render-seconds");
+            double secs = k >= 0 && k + 1 < args.Length && double.TryParse(args[k + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : 1.0;
             var owner = Window.GetWindow(this);
-            var w = OpenAnalysis();
+            var w = OpenRender(secs);
             if (w == null) return;
             w.WindowStartupLocation = WindowStartupLocation.Manual;
             w.Left = owner?.Left ?? -3000;
@@ -76,7 +110,9 @@ namespace RobotWin.Studio.Pages
             w.Width = owner?.Width ?? 1600;
             w.Height = owner?.Height ?? 960;
             App.SnapshotTarget = w.Content as FrameworkElement;
-            _ = w.RunNow();
+            int at = Array.IndexOf(args, "--render-at");
+            double seek = at >= 0 && at + 1 < args.Length && double.TryParse(args[at + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double sv) ? sv : secs / 2;
+            w.RenderNow().ContinueWith(_ => w.SeekTo(seek), System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
         }
     }
 }
