@@ -71,6 +71,11 @@ namespace RobotWin.Studio.Analysis
         private readonly ListBox _channels = new ListBox { SelectionMode = SelectionMode.Multiple };
         private readonly TextBox _filter = new TextBox { Margin = new Thickness(0, 0, 0, 6) };
         private readonly LinePlot _plot = new LinePlot();
+        private readonly List<BenchSeries> _bench = new List<BenchSeries>();
+        private readonly ComboBox _benchPick = new ComboBox { MinWidth = 160, Margin = new Thickness(6, 0, 6, 0) };
+        private readonly TextBlock _benchResult = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4) };
+        private BenchComparison? _benchLast;
+        private BenchSeries? _benchShown;
         private readonly LinePlot _stressPlot = new LinePlot { Title = "Parçaların en yüksek von Mises gerilmesi" };
         private readonly StackPanel _partList = new StackPanel();
         private readonly ComboBox _heatPart = new ComboBox { MinWidth = 160 };
@@ -401,7 +406,21 @@ namespace RobotWin.Studio.Analysis
             chans.Children.Add(_channels);
             DockPanel.SetDock(chans, Dock.Left);
             graphs.Children.Add(chans);
-            graphs.Children.Add(_plot);
+            var benchBar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
+            var import = new Button { Content = "Tezgâh ölçümü içe aktar (CSV)…", Padding = new Thickness(8, 2, 8, 2), ToolTip = "Başlık satırı + sütunlar: ilk sütun zaman (s, ms veya µs; başlıktan anlaşılır), diğerleri ölçülen sinyaller (A, mA, V, mV, derece…). Örn. Arduino + INA219 ile servo akımı." };
+            import.Click += (_, _) => ImportBench();
+            var compare = new Button { Content = "Seçili kanalla karşılaştır", Padding = new Thickness(8, 2, 8, 2) };
+            compare.Click += (_, _) => CompareBench();
+            benchBar.Children.Add(import);
+            benchBar.Children.Add(_benchPick);
+            benchBar.Children.Add(compare);
+            var plotArea = new DockPanel();
+            DockPanel.SetDock(benchBar, Dock.Top);
+            DockPanel.SetDock(_benchResult, Dock.Bottom);
+            plotArea.Children.Add(benchBar);
+            plotArea.Children.Add(_benchResult);
+            plotArea.Children.Add(_plot);
+            graphs.Children.Add(plotArea);
             _filter.TextChanged += (_, _) => FillChannels();
             _channels.SelectionChanged += (_, _) => PlotSelected();
             _plot.Seek += Seek;
@@ -501,8 +520,55 @@ namespace RobotWin.Studio.Analysis
                 if (k >= 6) break;
             }
 
+            if (_benchShown != null && _benchLast != null)
+            {
+                // The measurement, shifted by the found lag so it lines up with the simulation.
+                _plot.Series.Add(new PlotSeries { Name = "ölçüm: " + _benchShown.Name, Unit = _plot.Series.FirstOrDefault()?.Unit ?? string.Empty, X = _benchShown.T.Select(x => x - _benchLast.Lag).ToArray(), Y = _benchShown.V, Color = Color.FromRgb(0xF5, 0x9E, 0x0B) });
+            }
+
             _plot.Cursor = _t;
             _plot.Refresh();
+        }
+
+        private void ImportBench()
+        {
+            var dlg = new OpenFileDialog { Filter = "Ölçüm kaydı (*.csv;*.txt)|*.csv;*.txt|Tüm dosyalar|*.*" };
+            if (dlg.ShowDialog(this) != true) return;
+            try
+            {
+                var series = BenchComparison.ParseCsv(File.ReadAllText(dlg.FileName));
+                _bench.Clear();
+                _bench.AddRange(series);
+                _benchPick.Items.Clear();
+                foreach (var b in series) _benchPick.Items.Add(new ComboBoxItem { Content = b.Name, Tag = b });
+                if (_benchPick.Items.Count > 0) _benchPick.SelectedIndex = 0;
+                _benchResult.Text = $"{Path.GetFileName(dlg.FileName)}: {series.Count} sinyal, {series.FirstOrDefault()?.T.Length ?? 0} örnek, {series.FirstOrDefault()?.T.LastOrDefault() ?? 0:0.###} s. Soldan karşılaştırılacak simülasyon kanalını seçin.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is FormatException || ex is UnauthorizedAccessException)
+            {
+                _benchResult.Text = "Ölçüm okunamadı: " + ex.Message;
+            }
+        }
+
+        private void CompareBench()
+        {
+            if (_result == null || _benchPick.SelectedItem is not ComboBoxItem { Tag: BenchSeries raw }) return;
+            var item = _channels.SelectedItems.Cast<ListBoxItem>().FirstOrDefault();
+            var c = item == null ? null : _result.Channels.Find((string)item.Tag);
+            if (c == null)
+            {
+                _benchResult.Text = "Önce soldan bir simülasyon kanalı seçin (ör. servonun akımı).";
+                return;
+            }
+
+            // mA / mV logs against A / V channels.
+            double scale = raw.Name.IndexOf("mA", StringComparison.Ordinal) >= 0 && c.Unit == "A" || raw.Name.IndexOf("mV", StringComparison.Ordinal) >= 0 && c.Unit == "V" ? 1e-3 : 1;
+            var meas = new BenchSeries { Name = raw.Name, T = raw.T, V = raw.V.Select(x => x * scale).ToArray() };
+            _benchLast = BenchComparison.Compare(_result.Channels.TimeArray(), c.ToArray(), meas);
+            _benchShown = meas;
+            _benchResult.Text = $"{c.Label} ↔ {raw.Name}: " + _benchLast.Summary(c.Unit)
+                + (Math.Abs(_benchLast.Gain - 1) > 0.15 ? $"  — gerçek parça modelden %{(_benchLast.Gain - 1) * 100:+0;-0} farklı; parça 'klon' mu, besleme gerilimi aynı mı?" : string.Empty);
+            PlotSelected();
         }
 
         private void BuildPartList()

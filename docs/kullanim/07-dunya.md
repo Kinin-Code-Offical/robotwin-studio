@@ -185,6 +185,44 @@ Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir
 
 Elle verilen kumanda girdileri (gamepad, sahnedeki düğmeler) render'da henüz yeniden oynatılmıyor. Render dünyanın programlı davranışını (firmware, motorlar, fizik) baştan hesaplar.
 
+## Tezgâhla karşılaştırma
+
+Simülasyonun gerçeğe ne kadar yakın olduğunu en iyi aynı düzeneği tezgâhta çalıştırıp ölçerek görürsünüz. Render penceresinin **Grafikler** sekmesinde **Tezgâh ölçümü içe aktar (CSV)** ile bir ölçüm kaydı açın, soldan karşılaştırılacak simülasyon kanalını (ör. servonun akımı) seçin ve **Seçili kanalla karşılaştır**'a basın.
+
+RobotWin iki sinyali zamanda hizalar, ölçümü grafiğe turuncu çizer ve şunları yazar:
+
+- **gecikme:** ölçüm kaydının simülasyona göre ne kadar kaydığı;
+- **ölçüm ≈ k × sim + c:** gerçek parçanın modelden oransal farkı (örneğin klon servo 1,30×);
+- RMSE, en büyük fark ve zamanı;
+- **uyum:** farkın ölçüm aralığının %10'u içinde kaldığı zamanın oranı;
+- **ilk ayrılma:** iki sinyalin 50 ms'den uzun süre ayrıldığı ilk an (örneğin kolun gerçekte bir yere takıldığı an).
+
+Kayıt biçimi: ilk satır başlık, ilk sütun zaman. Başlıkta `ms` ya da `us` varsa birim ona göre alınır, yoksa saniye kabul edilir. Ayırıcı virgül, noktalı virgül ya da sekme olabilir; ondalık virgül de olur. Başlığında `mA` / `mV` olan sütunlar A / V kanallarıyla karşılaştırılırken otomatik çevrilir.
+
+Örnek kayıt çizimi (Arduino + INA219, servonun beslemesine seri):
+
+```cpp
+#include <Wire.h>
+#include <Adafruit_INA219.h>
+#include <Servo.h>
+Adafruit_INA219 ina;
+Servo s;
+void setup() {
+  Serial.begin(115200);
+  ina.begin();
+  s.attach(9);
+  Serial.println("t_ms,akim_mA");
+}
+void loop() {
+  unsigned long t = millis();
+  s.write((t / 1000) % 2 ? 135 : 45);   // simülasyondaki komutla aynı hareket
+  Serial.print(t); Serial.print(','); Serial.println(ina.getCurrent_mA());
+  delay(5);                             // 200 Hz
+}
+```
+
+Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi simülasyondaki karta da yükleyin ve render alın.
+
 ## Fare ve klavye
 
 | Fare | İşlev |
