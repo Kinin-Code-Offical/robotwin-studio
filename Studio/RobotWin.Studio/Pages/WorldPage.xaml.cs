@@ -1001,6 +1001,14 @@ namespace RobotWin.Studio.Pages
             var lines = new List<string>();
             double t = _session.Temperature(o);
             if (!double.IsNaN(t)) lines.Add($"En sıcak parça : {t:0.0} °C");
+            if (_session.Physics is { } ph && ph.MaterialOf(o.Id) is { } mat)   // [thermal]
+            {
+                double tb = ph.TemperatureOf(o.Id);
+                string tg = double.IsNaN(mat.GlassTransition) ? string.Empty : $", camsı geçiş {mat.GlassTransition:0} °C";
+                lines.Add($"Gövde sıcaklığı: {tb:0.0} °C · {mat.Name}: {ph.MaterialStateOf(o.Id)} (sertlik %{mat.ModulusFactor(tb) * 100:0}{tg})");
+                double q = ph.HeatOf(o.Id);
+                if (q > 0.001) lines.Add($"Üretilen ısı   : {SiValue.Format(q, "W")}");
+            }
             if (_session.IsFailed(o.Id)) lines.Add("DURUM          : ARIZALI (yandı / bozuldu)");
             if (o.Kind == WorldObjectKind.Component)
             {

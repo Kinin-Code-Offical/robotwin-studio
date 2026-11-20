@@ -41,6 +41,16 @@ namespace RobotWin.Studio.World
             }
         }
 
+        /// <summary>Tints objects (emissive) during a replay, e.g. by temperature; null clears every tint.</summary>
+        public void SetTints(System.Collections.Generic.IReadOnlyDictionary<string, System.Windows.Media.Color>? tints)
+        {
+            foreach (var kv in _items)
+            {
+                if (kv.Value.Model.Heat.Brush is not System.Windows.Media.SolidColorBrush b || b.IsFrozen) continue;
+                b.Color = tints != null && tints.TryGetValue(kv.Key, out var c) ? c : System.Windows.Media.Colors.Black;
+            }
+        }
+
         /// <summary>Moves every object to the playback pose and replaces the replay overlay.</summary>
         public void ShowPlayback(Model3D? overlay)
         {

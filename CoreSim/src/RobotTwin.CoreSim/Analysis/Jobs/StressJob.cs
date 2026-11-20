@@ -20,6 +20,12 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
         public Quat Orientation { get; set; } = Quat.Identity;
         public double Mass { get; set; }
 
+        /// <summary>[thermal] Part temperature at a simulation time (°C), from the recording; null = ambient.</summary>
+        public Func<double, double>? TemperatureAt { get; set; }
+
+        /// <summary>Temperature at which the part is stress-free (assembly temperature, °C).</summary>
+        public double ReferenceTemperature { get; set; } = 25;
+
         /// <summary>Body centre relative to the object origin, in the object frame (replay placement).</summary>
         public Vec3 BodyOffset { get; set; }
 
@@ -114,7 +120,8 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
             // Relative CG residual by accuracy: thin parts are ill-conditioned, and 1e-6 already gives
             // stresses within a fraction of a percent of the 1e-8 reference.
             double tol = s.Accuracy switch { AccuracyPreset.Reference => 1e-8, AccuracyPreset.Fine => 1e-7, _ => 1e-6 };
-            var model = new ElasticModel(mesh, mat) { Tolerance = tol };
+            var model = new ElasticModel(mesh, mat.Clone()) { Tolerance = tol };
+            double baseYield = mat.Yield;
             bool relief = true;
             if (part.IsStatic)
             {
@@ -131,10 +138,16 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
             {
                 cancel.ThrowIfCancellationRequested();
                 var ls = loads[instants[k]];
+                // [thermal] strength at this instant's temperature, and the free thermal strain
+                // (stress only where the part is held; scaled with the softened modulus).
+                double temp = part.TemperatureAt?.Invoke(ls.Time) ?? part.ReferenceTemperature;
+                model.Material.Yield = baseYield * mat.YieldFactor(temp);
+                model.ThermalStrain = mat.Alpha * (temp - part.ReferenceTemperature) * mat.ModulusFactor(temp);
                 var sol = model.Solve(CaseOf(ls, relief), cancel);
                 var frame = new StressFrame
                 {
                     Time = ls.Time,
+                    Temperature = temp,
                     MaxVonMises = sol.MaxVonMises,
                     MaxDisplacement = sol.MaxDisplacement,
                     MinSafetyFactor = sol.MinSafetyFactor,

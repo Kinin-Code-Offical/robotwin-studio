@@ -84,6 +84,9 @@ namespace RobotTwin.CoreSim.Analysis
         public float[] Displacement { get; set; } = Array.Empty<float>();
 
         public double MaxVonMises { get; set; }
+
+        /// <summary>[thermal] Part temperature at this instant (°C); its strength and thermal strain follow it.</summary>
+        public double Temperature { get; set; } = double.NaN;
         public double MaxDisplacement { get; set; }
         public double MinSafetyFactor { get; set; }
         public double ReactionRatio { get; set; }

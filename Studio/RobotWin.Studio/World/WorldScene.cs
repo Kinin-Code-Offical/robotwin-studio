@@ -784,8 +784,17 @@ namespace RobotWin.Studio.World
             {
                 double t = Session!.Temperature(it.Object);
                 bool failed = Session.IsFailed(it.Object.Id);
-                // Red-hot tint from 70 °C, full at 250 °C.
+                // Red-hot tint from 70 °C, full at 250 °C; plastics glow from just below their glass
+                // transition (where they start to sag) and are fully lit at their melting point.
                 double heat = double.IsNaN(t) ? 0 : Math.Max(0, Math.Min(1, (t - 70) / 180));
+                if (Session.Physics is { } thermalPhysics)   // [thermal] part temperature from the world's heat network
+                {
+                    double tb = thermalPhysics.TemperatureOf(it.Object.Id);
+                    var mat = thermalPhysics.MaterialOf(it.Object.Id);
+                    if (mat != null && !double.IsNaN(mat.GlassTransition) && !double.IsNaN(mat.MeltingPoint))
+                        heat = Math.Max(heat, Math.Max(0, Math.Min(1, (tb - (mat.GlassTransition - 10)) / (mat.MeltingPoint - mat.GlassTransition + 10))));
+                    else heat = Math.Max(heat, Math.Max(0, Math.Min(1, (tb - 70) / 180)));
+                }
                 ((SolidColorBrush)it.Model.Heat.Brush).Color = failed ? Color.FromRgb(0x18, 0x08, 0x02) : Color.FromRgb((byte)(200 * heat), (byte)(50 * heat * heat), 0);
                 if (it.Model.Instance is { } inst)
                 {

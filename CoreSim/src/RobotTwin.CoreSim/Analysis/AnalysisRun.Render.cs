@@ -21,7 +21,7 @@ namespace RobotTwin.CoreSim.Analysis
         private sealed class PoseChannels
         {
             public string Id = string.Empty;
-            public Channel Px = null!, Py = null!, Pz = null!, Qw = null!, Qx = null!, Qy = null!, Qz = null!, Port = null!;
+            public Channel Px = null!, Py = null!, Pz = null!, Qw = null!, Qx = null!, Qy = null!, Qz = null!, Port = null!, Temp = null!;
         }
 
         private static List<PoseChannels> PoseRecorder(WorldDocument world, ChannelStore store)
@@ -37,7 +37,8 @@ namespace RobotTwin.CoreSim.Analysis
                     Id = id,
                     Px = C("px", "x", "m"), Py = C("py", "y", "m"), Pz = C("pz", "z", "m"),
                     Qw = C("qw", "qw", ""), Qx = C("qx", "qx", ""), Qy = C("qy", "qy", ""), Qz = C("qz", "qz", ""),
-                    Port = C("port", "mil / kol açısı", "rad")
+                    Port = C("port", "mil / kol açısı", "rad"),
+                    Temp = store.Get("pose/" + id + "/temp", o.Name + " · sıcaklık", "°C", "Isı/Parça sıcaklıkları")
                 });
             }
 
@@ -70,6 +71,7 @@ namespace RobotTwin.CoreSim.Analysis
                 store.Set(p.Qy, q.Y);
                 store.Set(p.Qz, q.Z);
                 store.Set(p.Port, physics?.PortAngle(p.Id) ?? 0);
+                store.Set(p.Temp, physics?.TemperatureOf(p.Id) ?? world.Environment.AmbientC);
             }
         }
 

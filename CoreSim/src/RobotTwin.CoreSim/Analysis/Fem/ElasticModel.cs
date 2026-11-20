@@ -126,6 +126,38 @@ namespace RobotTwin.CoreSim.Analysis.Fem
         public double[] Inertia { get; private set; } = new double[9];
 
         public double Tolerance { get; set; } = 1e-8;
+
+        /// <summary>
+        /// Uniform free thermal strain α·ΔT of the part (temperature above the assembly temperature).
+        /// A free part just grows; where it is held it builds thermal stress σ = D(ε − α·ΔT·I).
+        /// </summary>
+        public double ThermalStrain { get; set; }
+
+        /// <summary>Equivalent nodal loads of the thermal strain: ∫ Bᵀ·D·(α·ΔT·I) dV = (3λ+2μ)·α·ΔT·∫∇N dV.</summary>
+        private void AddThermalLoad(double[] f)
+        {
+            if (ThermalStrain == 0) return;
+            double k = (3 * Material.Lame + 2 * Material.ShearModulus) * ThermalStrain;
+            var n = new double[10];
+            var dn = new double[30];
+            var g = new double[30];
+            var rules = Mesh.Order == 2 ? Gauss4 : new[] { new[] { 0.25, 0.25, 0.25, 0.25 } };
+            var weights = Mesh.Order == 2 ? Gauss4W : new[] { 1.0 / 6 };
+            foreach (var el in Mesh.Elements)
+            {
+                for (int q = 0; q < rules.Length; q++)
+                {
+                    double w = weights[q] * Math.Abs(Gradients(el, rules[q], n, dn, g)) * k;
+                    for (int a = 0; a < _npe; a++)
+                    {
+                        int o = 3 * el[a];
+                        f[o] += w * g[3 * a];
+                        f[o + 1] += w * g[3 * a + 1];
+                        f[o + 2] += w * g[3 * a + 2];
+                    }
+                }
+            }
+        }
         public int DofCount => Mesh.Nodes.Count * 3;
 
         public void FixNodes(Func<Vec3, bool> where, bool x = true, bool y = true, bool z = true)
@@ -486,6 +518,7 @@ namespace RobotTwin.CoreSim.Analysis.Fem
             }
 
             AddBodyAcceleration(f, lc.Gravity);
+            AddThermalLoad(f);   // self-balanced: it never changes the inertia-relief acceleration
             totalLoad += Mass * lc.Gravity.Length;
             reliefAccel = Vec3.Zero;
             if (!lc.InertiaRelief) return f;
@@ -657,7 +690,7 @@ namespace RobotTwin.CoreSim.Analysis.Fem
                         gzx += uz * gx + ux * gz;
                     }
 
-                    double tr = lam * (exx + eyy + ezz);
+                    double tr = lam * (exx + eyy + ezz) - (3 * lam + 2 * mu) * ThermalStrain;
                     int o = el[a] * 6;
                     s[o] += tr + 2 * mu * exx;
                     s[o + 1] += tr + 2 * mu * eyy;

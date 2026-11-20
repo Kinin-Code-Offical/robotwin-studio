@@ -300,7 +300,7 @@ namespace RobotWin.Studio.Analysis
             bar.Children.Add(leftSide);
 
             var rightSide = new StackPanel { Orientation = Orientation.Horizontal };
-            foreach (var m in new[] { "Renk: gerilme (von Mises)", "Renk: yok", "Renk: hız oku" }) _mode.Items.Add(m);
+            foreach (var m in new[] { "Renk: gerilme (von Mises)", "Renk: yok", "Renk: hız oku", "Renk: sıcaklık" }) _mode.Items.Add(m);
             _mode.SelectedIndex = 0;
             foreach (var m in new[] { "Ölçek: render'ın en yükseği", "Ölçek: malzemenin akma sınırı" }) _scale.Items.Add(m);
             _scale.SelectedIndex = 0;
@@ -586,6 +586,7 @@ namespace RobotWin.Studio.Analysis
 
             if (_mode.SelectedIndex == 0) StressOverlay(overlay, i, t + t0, hidden, legend);
             else if (_mode.SelectedIndex == 2) SpeedOverlay(overlay, i, legend);
+            _scene.SetTints(_mode.SelectedIndex == 3 ? TemperatureTints(i, legend) : null);
             if (_forces.IsChecked == true) ForceOverlay(overlay, i, t + t0, legend);
             if (_air.IsChecked == true) AirOverlay(overlay, t, legend);
             _scene.SetHidden(hidden);
@@ -713,6 +714,38 @@ namespace RobotWin.Studio.Analysis
             int e = 4 * (n - 1);
             Tri(mesh, e, e + 1, e + 2);
             Tri(mesh, e, e + 2, e + 3);
+        }
+
+        /// <summary>[thermal] Every part glows by its recorded temperature (ambient dark → hottest of the render red).</summary>
+        private Dictionary<string, Color> TemperatureTints(int i, StringBuilder legend)
+        {
+            var tints = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+            if (_result == null) return tints;
+            var store = _result.Channels;
+            double amb = _world.Environment.AmbientC, max = amb + 1;
+            foreach (var o in _world.Objects)
+                if (store.Find("pose/" + o.Id + "/temp") is { } c)
+                    max = Math.Max(max, c.ToArray().Where(double.IsFinite).DefaultIfEmpty(amb).Max());
+            string hottest = string.Empty;
+            double hot = double.MinValue;
+            foreach (var o in _world.Objects)
+            {
+                if (store.Find("pose/" + o.Id + "/temp") is not { } c || i >= c.Count) continue;
+                double tc = c[i];
+                double k = Math.Max(0, Math.Min(1, (tc - amb) / (max - amb)));
+                var h = LinePlot.Heat(0.15 + 0.85 * k);
+                tints[o.Id] = Color.FromRgb((byte)(h.R * k), (byte)(h.G * k), (byte)(h.B * k));
+                if (tc > hot)
+                {
+                    hot = tc;
+                    var mat = RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.For(o.Material);
+                    hottest = $"{o.Name} {tc:0.0} °C ({mat.Name}: {mat.StateAt(tc)}" + (double.IsNaN(mat.GlassTransition) ? ")" : $", camsı geçiş {mat.GlassTransition:0} °C)");
+                }
+            }
+
+            legend.AppendLine($"Renk: parça sıcaklığı, ortam {amb:0} °C → kırmızı {max:0.0} °C");
+            if (hottest.Length > 0) legend.AppendLine("En sıcak: " + hottest);
+            return tints;
         }
 
         private static void Tri(MeshGeometry3D m, int a, int b, int c)

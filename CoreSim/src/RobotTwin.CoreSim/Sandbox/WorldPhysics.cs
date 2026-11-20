@@ -109,6 +109,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
             p.BuildWings();   // [aero] lifting surfaces replace the generic drag the environment just gave every body (Sandbox/WorldPhysics.Wings.cs)
             p.ApplyLaunches(world);   // [aero] hand-launched aircraft
+            p.BuildThermal(world);   // [thermal] part temperatures, softening, melting (Sandbox/WorldPhysics.Thermal.cs)
             return p;
         }
 
@@ -282,6 +283,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia
                 Sdk?.AfterStep(Step, sim);   // [sdk]
+                StepThermal(Step, sim);   // [thermal]
                 if (++_sonarTick % 5 == 0) Ranging();
             }
         }

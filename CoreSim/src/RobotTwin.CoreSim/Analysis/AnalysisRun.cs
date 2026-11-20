@@ -79,6 +79,16 @@ namespace RobotTwin.CoreSim.Analysis
                 {
                     if (cancel.IsCancellationRequested) break;
                     var part = PartOf(world, scene, id, runner.Physics);
+                    if (part != null && result.Channels.Find("pose/" + id + "/temp") is { } tempChannel)
+                    {
+                        var store = result.Channels;
+                        double fallback = part.ReferenceTemperature;
+                        part.TemperatureAt = t =>
+                        {
+                            int i = SampleAt(store, t - store.Time(0));
+                            return i >= 0 && i < tempChannel.Count && double.IsFinite(tempChannel[i]) ? tempChannel[i] : fallback;
+                        };
+                    }
                     if (part == null)
                     {
                         result.Note($"{id}: gerilme için şekil bulunamadı.");
@@ -205,7 +215,8 @@ namespace RobotTwin.CoreSim.Analysis
                 Mass = body.Mass,
                 Shape = kind,
                 Size = size,
-                BodyOffset = physics?.PoseOf(objectId) is { } op ? op.Orientation.InverseRotate(body.Position - op.Position) : Vec3.Zero
+                BodyOffset = physics?.PoseOf(objectId) is { } op ? op.Orientation.InverseRotate(body.Position - op.Position) : Vec3.Zero,
+                ReferenceTemperature = world.Environment.AmbientC
             };
         }
 

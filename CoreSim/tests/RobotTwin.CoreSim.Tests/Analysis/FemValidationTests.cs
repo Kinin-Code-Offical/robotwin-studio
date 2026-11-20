@@ -21,6 +21,54 @@ namespace RobotTwin.CoreSim.Tests.Analysis
         private static StructuralMaterial Steel => new StructuralMaterial { Name = "steel", E = 200e9, Nu = 0.3, Yield = 250e6, Density = 7850 };
 
         [Fact]
+        public void HeatedBarIsStressFreeWhenFreeAndCarriesEAlphaDeltaTWhenClamped()
+        {
+            // 100 × 10 × 10 mm aluminium bar heated by ΔT = 50 K: free, it grows α·ΔT·L and stays
+            // stress-free; held between rigid walls (ux = 0 at both ends, lateral free) it carries
+            // σxx = −E·α·ΔT everywhere.
+            double l = 0.1, b = 0.01, dT = 50, alpha = 23e-6;
+            var al = new StructuralMaterial { Name = "Al", E = 69e9, Nu = 0.33, Yield = 276e6, Density = 2700, Alpha = alpha };
+            var mesh = TetMesh.Box(new Vec3(0, -b / 2, -b / 2), new Vec3(l, b / 2, b / 2), 20, 4, 4, order: 2);
+
+            var free = new ElasticModel(mesh, al) { Tolerance = 1e-10, ThermalStrain = alpha * dT };
+            var fsol = free.Solve(new FemLoadCase { InertiaRelief = true });
+            int tip = free.NearestNode(new Vec3(l, 0, 0)), root = free.NearestNode(new Vec3(0, 0, 0));
+            double growth = fsol.Displacement[3 * tip] - fsol.Displacement[3 * root];
+            _out.WriteLine($"free: growth {growth * 1e6:F2} µm (α·ΔT·L = {alpha * dT * l * 1e6:F2} µm), max σ_vM {fsol.MaxVonMises / 1e6:F4} MPa");
+            Assert.InRange(growth / (alpha * dT * l), 0.99, 1.01);
+            Assert.True(fsol.MaxVonMises < 0.01 * al.E * alpha * dT, "a freely expanding part is stress-free");
+
+            var held = new ElasticModel(mesh, al) { Tolerance = 1e-10, ThermalStrain = alpha * dT };
+            for (int i = 0; i < mesh.Nodes.Count; i++)
+            {
+                var x = mesh.Nodes[i];
+                if (x.X < 1e-9 || x.X > l - 1e-9) held.Fixed[3 * i] = true;              // walls
+                if (Math.Abs(x.Y) < 1e-9) held.Fixed[3 * i + 1] = true;                   // symmetry y = 0
+                if (Math.Abs(x.Z) < 1e-9) held.Fixed[3 * i + 2] = true;                   // symmetry z = 0
+            }
+
+            held.Assemble();
+            var f = held.LoadVector(new FemLoadCase { InertiaRelief = false }, out _, out _);
+            var hsol = held.Solve(f, held.Fixed);
+            int mid = held.NearestNode(new Vec3(l / 2, b / 4, b / 4));
+            double sxx = hsol.Stress[6 * mid];
+            _out.WriteLine($"clamped: σxx mid-span {sxx / 1e6:F2} MPa, −E·α·ΔT = {-al.E * alpha * dT / 1e6:F2} MPa");
+            Assert.InRange(sxx / (-al.E * alpha * dT), 0.98, 1.02);
+        }
+
+        [Fact]
+        public void PlaLosesItsStiffnessAboveTheGlassTransition()
+        {
+            var pla = StructuralMaterial.For("PLA");
+            _out.WriteLine($"PLA E/E25: 40 °C {pla.ModulusFactor(40):F2}, 55 °C {pla.ModulusFactor(55):F2}, 60 °C {pla.ModulusFactor(60):F2}, 70 °C {pla.ModulusFactor(70):F3}; {pla.StateAt(70)}, {pla.StateAt(170)}");
+            Assert.InRange(pla.ModulusFactor(40), 0.85, 1.0);
+            Assert.True(pla.ModulusFactor(70) < 0.1, "above T_g PLA is rubbery");
+            Assert.Equal("eriyor", pla.StateAt(170));
+            var steel = StructuralMaterial.For("ÇELİK");
+            Assert.True(steel.ModulusFactor(150) > 0.95, "steel barely notices 150 °C");
+        }
+
+        [Fact]
         public void CantileverTipDeflectionAndRootStressMatchBeamTheory()
         {
             // L = 100 mm, 10 × 10 mm section, P = 100 N at the tip (−z), clamped at x = 0.
