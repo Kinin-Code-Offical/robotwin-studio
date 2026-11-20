@@ -952,7 +952,8 @@ namespace RobotWin.Studio.Pcb
                 }
                 else
                 {
-                    Say("Yol çizmeye başlamak için bir pede, yola veya viaya tıklayın.");
+                    if (StartFromRatsnest(x, y)) return;   // clicking a ratsnest line routes that connection
+                    Say("Yol çizmeye başlamak için bir pede, yola, viaya veya bir ratsnest çizgisine tıklayın.");
                     return;
                 }
 
@@ -1080,6 +1081,9 @@ namespace RobotWin.Studio.Pcb
                     return true;
                 }
 
+                case Key.F:
+                    FinishToTarget();
+                    return true;
                 case Key.W:
                     CycleTrackWidth(shift ? -1 : 1);
                     return true;
@@ -1200,8 +1204,10 @@ namespace RobotWin.Studio.Pcb
             }
 
             string mode = (_only90 ? "90°" : "45°") + (_diagonalFirst ? " · önce çapraz" : " · önce düz");
-            var label = Text($"{PcbLayers.DisplayName(_routeLayer)} · {(_routeNet.Length > 0 ? _routeNet : "yeni hat")} · {Length(_router.Width)} · {mode}", 12, Silk);
+            var (routeLen, netLen) = RouteLengths();
+            var label = Text($"{PcbLayers.DisplayName(_routeLayer)} · {(_routeNet.Length > 0 ? _routeNet : "yeni hat")} · {Length(_router.Width)} · {mode}\nbu yol {Length(routeLen)}" + (netLen > 0 ? $" · hattın çizili toplamı {Length(netLen)}" : string.Empty) + " · F: hedefe bitir", 12, Silk);
             dc.DrawText(label, new Point(c.X + 14, c.Y + 10));
+            DrawRouteTargets(dc);
         }
 
         /// <summary>For snapshots: start a route at (x0, y0) and show the walkaround preview towards (x1, y1).</summary>
