@@ -36,7 +36,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>State and time of the world simulation (for the navigation rail).</summary>
         public (Simulation.SimState State, double Time) SimulationState => (_session.State, _session.Time);
         private WorldDocument? _shown;
-        private int _serialShown;
+        private long _serialShown;
         private DateTime _lastPanels = DateTime.MinValue;
 
         public WorldPage(MainWindow main)
@@ -1227,12 +1227,14 @@ namespace RobotWin.Studio.Pages
 
         private void UpdateSerial()
         {
+            long total = _session.SerialTotal;
+            if (total < _serialShown) _serialShown = 0;
+            if (total == _serialShown) return;
             string text = _session.SerialText;
-            if (text.Length < _serialShown) _serialShown = 0;
-            if (text.Length == _serialShown) return;
-            if (_serialShown == 0) SerialView.Text = text;
-            else SerialView.AppendText(text.Substring(_serialShown));
-            _serialShown = text.Length;
+            long fresh = total - _serialShown;
+            if (_serialShown == 0 || fresh >= text.Length) SerialView.Text = text;
+            else SerialView.AppendText(text.Substring(text.Length - (int)fresh));
+            _serialShown = total;
             if (SerialView.Text.Length > 60000) SerialView.Text = SerialView.Text.Substring(SerialView.Text.Length - 40000);
             SerialView.ScrollToEnd();
         }

@@ -160,6 +160,9 @@ namespace RobotWin.Studio.Simulation
         /// <summary>Everything the firmware printed on Serial during this run.</summary>
         public string SerialText => _serial.ToString();
 
+        /// <summary>Characters ever written to the serial log (keeps growing after the buffer is trimmed).</summary>
+        public long SerialTotal { get; private set; }
+
         public event EventHandler<string>? SerialReceived;
 
         public SimulationSession(Workspace workspace)
@@ -558,6 +561,7 @@ namespace RobotWin.Studio.Simulation
 
             _serial.Clear();
             _serial.Append(rec.Serial);
+            SerialTotal = rec.Serial.Length;
             // The first four recorded channels go back onto the scope, frozen at the end of the recording.
             ReplayTime = rec.Duration;
             Scope.ResetAcquisition();
@@ -613,6 +617,7 @@ namespace RobotWin.Studio.Simulation
         private void AppendSerial(string text)
         {
             _serial.Append(text);
+            SerialTotal += text.Length;
             if (_serial.Length > 200_000) _serial.Remove(0, _serial.Length - 200_000);
             SerialReceived?.Invoke(this, text);
         }
@@ -675,6 +680,7 @@ namespace RobotWin.Studio.Simulation
             _firmware.Clear();
             DisposeEsp32();
             _serial.Clear();
+            SerialTotal = 0;
             _i2c.Clear();
             if (Compiled == null || Simulator == null) return;
             foreach (var part in _workspace.Schematic.Parts)

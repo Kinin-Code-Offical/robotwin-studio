@@ -39,7 +39,7 @@ namespace RobotWin.Studio.Pages
         private BoardItem? _board;
         private bool _loading;
         private CancellationTokenSource? _build;
-        private int _serialShown;
+        private long _serialShown;
 
         public CodePage()
         {
@@ -323,12 +323,14 @@ void loop() {
 
         private void UpdateSerial()
         {
+            long total = W.Simulation.SerialTotal;
+            if (total < _serialShown) _serialShown = 0;
+            if (total == _serialShown) return;
             string text = W.Simulation.SerialText;
-            if (text.Length < _serialShown) _serialShown = 0;
-            if (text.Length == _serialShown) return;
-            if (_serialShown == 0) SerialView.Text = text;
-            else SerialView.AppendText(text.Substring(_serialShown));
-            _serialShown = text.Length;
+            long fresh = total - _serialShown;
+            if (_serialShown == 0 || fresh >= text.Length) SerialView.Text = text;
+            else SerialView.AppendText(text.Substring(text.Length - (int)fresh));
+            _serialShown = total;
             if (SerialView.Text.Length > 60000) SerialView.Text = SerialView.Text.Substring(SerialView.Text.Length - 40000);
             SerialView.ScrollToEnd();
         }

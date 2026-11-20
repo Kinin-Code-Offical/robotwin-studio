@@ -532,6 +532,15 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ files
 
+        /// <summary>Asked by the main window before the app closes: save, discard or cancel unsaved model work.</summary>
+        public bool ConfirmCloseApp(Window owner)
+        {
+            if (!_ed.IsDirty || _ed.Doc.Objects.Count == 0) return true;
+            int r = Dialog.Show(owner, "Kaydedilmemiş model", $"'{_ed.Doc.Title}' modelindeki değişiklikler kaydedilsin mi?", "Kaydet", "Kaydetme", "İptal");
+            if (r == 0) return Save(false);
+            return r == 1;
+        }
+
         private bool ConfirmDiscard()
         {
             if (!_ed.IsDirty || _ed.Doc.Objects.Count == 0) return true;

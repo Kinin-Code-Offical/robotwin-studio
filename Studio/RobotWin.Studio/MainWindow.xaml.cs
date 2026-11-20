@@ -954,6 +954,13 @@ namespace RobotWin.Studio
         {
             if (!_forceClose)
             {
+                // The 3D modeller keeps its own document outside the tabs.
+                if (!_model.ConfirmCloseApp(this))
+                {
+                    e.Cancel = true;
+                    return;
+                }
+
                 foreach (var doc in W.Documents.Where(d => !d.IsEmbedded).ToList())
                 {
                     if (!ConfirmDiscard(doc))

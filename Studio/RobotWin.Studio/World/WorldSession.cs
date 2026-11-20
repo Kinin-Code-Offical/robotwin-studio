@@ -54,6 +54,9 @@ namespace RobotWin.Studio.World
         public ObservableCollection<SimLogEntry> Log { get; } = new ObservableCollection<SimLogEntry>();
         public string SerialText => _serial.ToString();
 
+        /// <summary>Characters ever written to the serial log (keeps growing after the buffer is trimmed).</summary>
+        public long SerialTotal { get; private set; }
+
         /// <summary>Raised after every rendered frame of simulation.</summary>
         public event EventHandler? Updated;
 
@@ -79,6 +82,7 @@ namespace RobotWin.Studio.World
             Log.Clear();
             _impactLogged = 0;
             _serial.Clear();
+            SerialTotal = 0;
             _failedObjects.Clear();
             World = world;
             try
@@ -395,12 +399,15 @@ namespace RobotWin.Studio.World
         {
             if (source != _serialSource)
             {
+                int before = _serial.Length;
                 if (_serial.Length > 0 && _serial[_serial.Length - 1] != '\n') _serial.Append('\n');
                 _serial.Append('[').Append(source).Append("] ");
+                SerialTotal += _serial.Length - before;
                 _serialSource = source;
             }
 
             _serial.Append(text);
+            SerialTotal += text.Length;
             if (_serial.Length > 200_000) _serial.Remove(0, _serial.Length - 200_000);
         }
 
