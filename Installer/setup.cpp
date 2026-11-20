@@ -1,4 +1,4 @@
-// RobotWin Studio Setup — native Win32 installer (no runtime dependencies).
+﻿// RobotWin Studio Setup — native Win32 installer (no runtime dependencies).
 //
 //   setup.exe --pack <publishDir> <out.exe>   build time: appends the compressed app to a copy of this exe
 //   setup.exe                                  wizard install (per user, or all users with elevation)
@@ -183,6 +183,35 @@ static bool Shortcut(const std::wstring& lnk, const std::wstring& target, const 
     if (pf) pf->Release();
     sl->Release();
     return ok;
+}
+
+// True when the packed app carries its own .NET runtime (self-contained "-tam" build).
+static bool PayloadSelfContained()
+{
+    std::vector<char> self;
+    if (!ReadAll(SelfPath(), self) || self.size() < 16 || memcmp(self.data() + self.size() - 8, Magic, 8) != 0) return false;
+    uint64_t off;
+    memcpy(&off, self.data() + self.size() - 16, 8);
+    const char* p = self.data() + off;
+    const char* end = self.data() + self.size() - 16;
+    uint32_t count;
+    memcpy(&count, p, 4);
+    p += 4;
+    for (uint32_t i = 0; i < count && p + 2 < end; i++)
+    {
+        uint16_t n;
+        memcpy(&n, p, 2);
+        p += 2;
+        std::wstring rel((const wchar_t*)p, n);
+        p += n * 2;
+        uint64_t size, cs;
+        memcpy(&size, p, 8);
+        memcpy(&cs, p + 8, 8);
+        p += 16 + cs;
+        if (_wcsicmp(fs::path(rel).filename().c_str(), L"coreclr.dll") == 0) return true;
+    }
+
+    return false;
 }
 
 static bool DotNetDesktop9Present()
@@ -393,7 +422,7 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l)
         SendMessageW(t, BM_SETCHECK, BST_CHECKED, 0);
         HWND r = Ctl(h, L"BUTTON", L"Kurulumdan sonra RobotWin Studio'yu başlat", BS_AUTOCHECKBOX, 32, 260, 500, 22, IdLaunch);
         SendMessageW(r, BM_SETCHECK, BST_CHECKED, 0);
-        if (!DotNetDesktop9Present())
+        if (!PayloadSelfContained() && !DotNetDesktop9Present())
         {
             Ctl(h, L"STATIC", L"Bu bilgisayarda .NET 9 Masaüstü Çalışma Zamanı yok; RobotWin Studio buna ihtiyaç duyar.", 0, 32, 292, 520, 20, 0);
             Ctl(h, L"BUTTON", L".NET 9'u indir ve kur (Microsoft)", BS_PUSHBUTTON, 32, 314, 250, 28, IdDotnet);

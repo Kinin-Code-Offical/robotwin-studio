@@ -34,7 +34,9 @@ cmd /c $cmd | Out-Host
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $stub)) { throw "setup.cpp derlenemedi" }
 
 Write-Host "3/3 Paketleniyor…"
-$setup = Join-Path $out "RobotWinStudio-Setup-$Version.exe"
+# The self-contained build carries .NET itself ("tam" = complete, no runtime needed on the PC).
+$suffix = if ($SelfContained) { "-tam" } else { "" }
+$setup = Join-Path $out "RobotWinStudio-Setup-$Version$suffix.exe"
 $p = Start-Process -FilePath $stub -ArgumentList "--pack", "`"$publish`"", "`"$setup`"" -Wait -PassThru -NoNewWindow
 if ($p.ExitCode -ne 0 -or -not (Test-Path $setup)) { throw "Paketleme başarısız ($($p.ExitCode))" }
 "{0}  ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB) | Write-Host
