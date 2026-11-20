@@ -36,6 +36,12 @@ namespace RobotWin.Studio.Analysis
         private readonly ComboBox _aeroAxis = new ComboBox();
         private readonly CheckBox _stress = new CheckBox { Content = "Gerilme (FEM)" };
         private readonly CheckBox _aero = new CheckBox { Content = "Akış (CFD, 2B kesit)" };
+        private readonly CheckBox _thermal = new CheckBox { Content = "Isı (kart / parça ısınması)" };
+        private readonly TextBox _extend = new TextBox { Width = 70 };
+        private readonly ComboBox _thermalPart = new ComboBox { MinWidth = 160 };
+        private readonly Image _heat = new Image { Stretch = Stretch.Uniform };
+        private readonly LinePlot _heatPlot = new LinePlot { Title = "Sıcaklık", Height = 190 };
+        private readonly TextBlock _heatInfo = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 6) };
         private readonly Button _run = new Button { Content = "Analizi başlat", Padding = new Thickness(14, 6, 14, 6) };
         private readonly Button _save = new Button { Content = "Kaydet (.rwanalysis)", IsEnabled = false, Margin = new Thickness(0, 6, 0, 0) };
         private readonly Button _csv = new Button { Content = "CSV olarak dışa aktar", IsEnabled = false, Margin = new Thickness(0, 6, 0, 0) };
@@ -94,6 +100,8 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(Row("Hava hızı (m/s)", _aeroSpeed));
             left.Children.Add(Row("Akış yönü", _aeroAxis));
             foreach (var ax in new[] { "+X", "-X", "+Y", "-Y" }) _aeroAxis.Items.Add(ax);
+            left.Children.Add(new Border { Child = _thermal, Margin = new Thickness(0, 8, 0, 0) });
+            left.Children.Add(Row("Sonra ısıtmaya devam (s)", _extend));
 
             _run.Style = (Style)Application.Current.FindResource("Btn.Primary");
             _run.Margin = new Thickness(0, 16, 0, 0);
@@ -154,6 +162,20 @@ namespace RobotWin.Studio.Analysis
             aeroTab.Children.Add(_cdPlot);
             aeroTab.Children.Add(new Border { Background = Res("B.Base"), Child = _flow });
             _tabs.Items.Add(new TabItem { Header = "Akış", Content = aeroTab });
+
+            var heatTab = new DockPanel { Margin = new Thickness(8) };
+            var heatTop = new StackPanel { Orientation = Orientation.Horizontal };
+            heatTop.Children.Add(new TextBlock { Text = "Nesne: ", VerticalAlignment = VerticalAlignment.Center });
+            heatTop.Children.Add(_thermalPart);
+            DockPanel.SetDock(heatTop, Dock.Top);
+            DockPanel.SetDock(_heatInfo, Dock.Top);
+            DockPanel.SetDock(_heatPlot, Dock.Bottom);
+            heatTab.Children.Add(heatTop);
+            heatTab.Children.Add(_heatInfo);
+            heatTab.Children.Add(_heatPlot);
+            heatTab.Children.Add(new Border { Background = Res("B.Base"), Child = _heat });
+            _thermalPart.SelectionChanged += (_, _) => ShowThermal();
+            _tabs.Items.Add(new TabItem { Header = "Isı", Content = heatTab });
             _tabs.Items.Add(new TabItem { Header = "Günlük", Content = _log });
             Content = root;
 
@@ -201,6 +223,8 @@ namespace RobotWin.Studio.Analysis
             _aeroObject.SelectedItem = _aeroObject.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == s.AeroObject);
             _aeroSpeed.Text = s.AeroSpeed.ToString("0.###", CultureInfo.InvariantCulture);
             _aeroAxis.SelectedItem = s.AeroAxis;
+            _thermal.IsChecked = s.Thermal;
+            _extend.Text = s.ThermalExtend.ToString("0.#", CultureInfo.InvariantCulture);
         }
 
         private static double Num(TextBox box, double fallback) =>
@@ -218,6 +242,8 @@ namespace RobotWin.Studio.Analysis
             s.AeroObject = (_aeroObject.SelectedItem as ComboBoxItem)?.Tag as string;
             s.AeroSpeed = Num(_aeroSpeed, s.AeroSpeed);
             s.AeroAxis = _aeroAxis.SelectedItem as string ?? "+X";
+            s.Thermal = _thermal.IsChecked == true;
+            s.ThermalExtend = double.TryParse(_extend.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double ext) ? Math.Clamp(ext, 0, 3600) : s.ThermalExtend;
             return s;
         }
 
@@ -249,7 +275,21 @@ namespace RobotWin.Studio.Analysis
             IProgress<(string, double)> report = progress;
             try
             {
-                var result = await Task.Run(() => AnalysisRun.Run(_world, s, _geometry, token, (phase, v) => report.Report((phase, v))), token);
+                // Solvers report very often; pass on only visible changes so the UI thread stays free.
+                string lastPhase = string.Empty;
+                double lastValue = -1;
+                long lastTick = 0;
+                void OnProgress(string phase, double v)
+                {
+                    long now = Environment.TickCount64;
+                    if (phase == lastPhase && Math.Abs(v - lastValue) < 0.01 && now - lastTick < 250) return;
+                    lastPhase = phase;
+                    lastValue = v;
+                    lastTick = now;
+                    report.Report((phase, v));
+                }
+
+                var result = await Task.Run(() => AnalysisRun.Run(_world, s, _geometry, token, OnProgress), token);
                 Show(result);
             }
             catch (OperationCanceledException)
@@ -287,6 +327,15 @@ namespace RobotWin.Studio.Analysis
             foreach (var st in r.Stress) _stressPart.Items.Add(new ComboBoxItem { Content = st.Name, Tag = st });
             if (_stressPart.Items.Count > 0) _stressPart.SelectedIndex = 0;
             else _stressView.Show(null, null);
+
+            _thermalPart.Items.Clear();
+            foreach (var th in r.Thermal) _thermalPart.Items.Add(new ComboBoxItem { Content = th.Name, Tag = th });
+            if (_thermalPart.Items.Count > 0) _thermalPart.SelectedIndex = 0;
+            else
+            {
+                _heat.Source = null;
+                _heatInfo.Text = r.Settings.Thermal ? "Güç harcayan parça bulunamadı." : "Isı analizi seçilmedi.";
+            }
 
             var a = r.Aero;
             _flow.Source = FlowImage.Render(a, true);
@@ -373,6 +422,26 @@ namespace RobotWin.Studio.Analysis
                 Color = LinePlot.Palette[3]
             });
             _stressPlot.Refresh();
+        }
+
+        private void ShowThermal()
+        {
+            _heatPlot.Series.Clear();
+            if (_thermalPart.SelectedItem is not ComboBoxItem { Tag: ThermalResult t })
+            {
+                _heatPlot.Refresh();
+                return;
+            }
+
+            _heat.Source = HeatImage.Render(t, t.Frames.Count - 1);
+            var times = t.History.Select(h => h.Time).ToArray();
+            _heatPlot.Series.Add(new PlotSeries { Name = "en sıcak nokta", Unit = "°C", X = times, Y = t.History.Select(h => h.Max).ToArray(), Color = LinePlot.Palette[3] });
+            _heatPlot.Series.Add(new PlotSeries { Name = "ortalama", Unit = "°C", X = times, Y = t.History.Select(h => h.Mean).ToArray(), Color = LinePlot.Palette[1] });
+            _heatPlot.Refresh();
+            double p = t.History.Count > 0 ? t.History[^1].Power : 0;
+            _heatInfo.Text = $"{t.Name} · {t.Material}: en yüksek {t.PeakTemperature:0.0} °C, son güç {SiValue.Format(p, "W")}. "
+                + (t.Sources.Count > 0 ? "Isı kaynakları: " + string.Join(", ", t.Sources.Select(x => x.Name)) + ". " : string.Empty)
+                + string.Join(" ", t.Notes);
         }
 
         private void Save()

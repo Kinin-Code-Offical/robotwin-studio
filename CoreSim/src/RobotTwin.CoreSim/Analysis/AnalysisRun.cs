@@ -20,7 +20,7 @@ namespace RobotTwin.CoreSim.Analysis
     /// post-processing — FEM stress of selected parts under the recorded loads and a lattice-Boltzmann
     /// flow around a part. Real-time play may use shortcuts; this path computes everything.
     /// </summary>
-    public static class AnalysisRun
+    public static partial class AnalysisRun
     {
         /// <summary>Kinematic viscosity of air at about 20 °C (m²/s).</summary>
         public const double AirViscosity = 1.5e-5;
@@ -89,7 +89,7 @@ namespace RobotTwin.CoreSim.Analysis
                 if (s.Aero && !cancel.IsCancellationRequested && s.AeroObject is { } aeroId && PartOf(world, scene, aeroId) is { } aeroPart)
                     result.Aero = Aero2D(aeroPart, s, scene?.AirDensity ?? 1.2, cancel, p => progress?.Invoke("Akış: " + aeroPart.Name, p));
 
-                if (s.Thermal) result.Note("Isı analizi: kart güç haritası bu sürümde kayıtlı sinyallerden (sıcaklık kanalları) okunur.");
+                if (s.Thermal && !cancel.IsCancellationRequested) result.Thermal.AddRange(Thermal(world, scene, result, s, cancel, progress));
             }
 
             result.WallSeconds = watch.Elapsed.TotalSeconds;

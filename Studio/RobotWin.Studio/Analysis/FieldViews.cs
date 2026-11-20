@@ -159,4 +159,57 @@ namespace RobotWin.Studio.Analysis
             return bmp;
         }
     }
+
+    /// <summary>Temperature map of a thermal frame seen from above (hottest cell through the thickness).</summary>
+    public static class HeatImage
+    {
+        public static BitmapSource? Render(ThermalResult? r, int frame)
+        {
+            if (r == null || frame < 0 || frame >= r.Frames.Count) return null;
+            var f = r.Frames[frame];
+            int nx = r.Nx, ny = r.Ny, nz = r.Nz;
+            if (f.Length < nx * ny * nz) return null;
+            var top = new double[nx * ny];
+            double lo = double.MaxValue, hi = double.MinValue;
+            for (int j = 0; j < ny; j++)
+            {
+                for (int i = 0; i < nx; i++)
+                {
+                    double m = double.NaN;
+                    for (int k = 0; k < nz; k++)
+                    {
+                        double v = f[(k * ny + j) * nx + i];
+                        if (double.IsFinite(v) && !(v <= m)) m = v;
+                    }
+
+                    top[j * nx + i] = m;
+                    if (double.IsFinite(m))
+                    {
+                        lo = Math.Min(lo, m);
+                        hi = Math.Max(hi, m);
+                    }
+                }
+            }
+
+            if (hi <= lo) hi = lo + 1;
+            var px = new byte[nx * ny * 4];
+            for (int j = 0; j < ny; j++)
+            {
+                for (int i = 0; i < nx; i++)
+                {
+                    double v = top[j * nx + i];
+                    var c = double.IsFinite(v) ? LinePlot.Heat((v - lo) / (hi - lo)) : Color.FromRgb(40, 40, 46);
+                    int o = ((ny - 1 - j) * nx + i) * 4;
+                    px[o] = c.B;
+                    px[o + 1] = c.G;
+                    px[o + 2] = c.R;
+                    px[o + 3] = 255;
+                }
+            }
+
+            var bmp = BitmapSource.Create(nx, ny, 96, 96, PixelFormats.Bgra32, null, px, nx * 4);
+            bmp.Freeze();
+            return bmp;
+        }
+    }
 }

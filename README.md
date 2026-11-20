@@ -147,6 +147,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 - **Sensörler:** HC-SR04 ultrasonik sensör dünyadaki nesnelere ışın izleme ile gerçekten ölçer; I²C ekranlar 3D model üzerinde canlı görünür.
 - **Radyo ve USB:** 2.4 GHz ortamı (BLE, Wi-Fi, Bluetooth Classic kumandalar), uzaklık ve engelle zayıflama, IR (NEC) kumanda; DualSense/DualShock 4/Xbox kumandalar (gerçek kumanda veya ekrandaki sanal kumanda); bilgisayar + USB kablosu ile besleme ve seri monitör.
 - **Sahne ağacı**, olay günlüğü, kablo ölçümleri, RF paneli; simülasyon sesleri (motor, servo, buzzer, röle, yanma).
+- **Analiz modu** (Simülasyon › Analiz modu, Ctrl+F5): dünya ekrandan bağımsız olarak seçilen süre ve doğrulukta (0,05 ms'ye kadar fizik adımı) baştan sona hesaplanır ve her sinyal kaydedilir (gövdeler, eklemler, akım/gerilim/güç, devre düğümleri). Ardından seçilen parçalarda kayıtlı temas ve eklem yükleriyle **FEM gerilme** analizi (ikinci derece dörtyüzlü ya da kiriş elemanlar, von Mises, emniyet katsayısı), bir parça etrafında **CFD akış** (lattice-Boltzmann; Cd, Cl, Strouhal, girdap alanı) ve kartlarda/parçalarda bileşen güçlerinden **ısınma** (iletim, taşınım, ışınım) hesaplanır. Sonuçlar çok kanallı grafikler, deforme parça üzerinde gerilme haritası, akış ve sıcaklık haritalarıdır; `.rwanalysis` olarak saklanır ya da CSV'ye aktarılır. Çözücüler analitik çözümlerle doğrulanır (kiriş sehimi, Poiseuille akışı, silindir arkası girdap kopması, ısı iletimi).
 
 ### Pencere ve gezinme
 
@@ -166,7 +167,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 | Ctrl+B | Tasarım hattını genişlet / daralt |
 | Ctrl+\\ | Bölünmüş görünüm aç / kapat |
 | Ctrl+Tab / Ctrl+Shift+Tab / Ctrl+W | Sonraki / önceki sekme · Sekmeyi kapat |
-| F5 / Shift+F5 | Simülasyonu başlat-duraklat · Durdur |
+| F5 / Shift+F5 / Ctrl+F5 | Simülasyonu başlat-duraklat · Durdur · Analiz modu (Dünya) |
 | F7 | Derle (Kod sayfası) |
 | F10 | Menü çubuğu |
 | F11 / Esc | Tam ekran · Tam ekrandan çık |
@@ -251,12 +252,13 @@ Ayrıntılar: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md), mimari: [d
 
 Aşağıdakiler üzerinde çalışılıyor; **henüz ana dala alınmadı** ve yayımlanmış sürümlerde yoktur:
 
-- **Daha gerçekçi fizik:** halat gibi davranan kablolar, lastik kayması.
-- **Sensörler:** gerçek çözünürlüklü kameralar, aşınmış ve parlak bant üzerinde çizgi sensörleri, LiDAR, IMU, GPS, enkoderler.
-- **Unity tarzı Sahne/Oyun bölünmüş görünümü.**
-- **Hazır parçalar ve ses:** tekerlekler, pervaneler, serbest duran ışıklar ve 3D konumsal ses.
-- **Endüstriyel robot kol hücresi:** 6 eksenli kol, ters kinematik (IK), tutucu, konveyör.
-- **Otomasyon:** Python/Gymnasium API, ROS 2 köprüsü, arayüzsüz (headless) mod.
+- **Havacılık:** sabit kanat aerodinamiği, itki eğrili (.eng) roketler, atmosfer modeli, aviyonik sensörler, paraşüt/piro.
+- **Akışkanlar:** su ve su altı, kaldırma kuvveti, sıvılar ve basınç.
+- **Tek saat ve birlikte hata ayıklama:** firmware kesme noktasında MCU, devre ve fizik birlikte durur; karışık sinyal bölümleme.
+- **Mekanik ve endüstriyel parçalar:** vida/geçme, kırılma, dişli/kayış/yay/sönümleyici, profiller, lineer raylar, step motor ve sürücüler, pnömatik, paletli araçlar, yumuşak gövdeler.
+- **Daha fazla MCU:** Mega, ATtiny, RP2040, STM32, ESP8266, ESP32-C3/S3; SPI/CAN/ESP-NOW/LoRa sürüleri; PLC (ladder/ST, Modbus).
+- **Köprüler:** STEP/URDF/KiCad proje içe aktarma, SPICE modelleri, `custom_parts` klasörü.
+- **Dil:** İngilizce varsayılan arayüz, Türkçe ve eklenebilir dil paketleri.
 
 ## Katkı, güvenlik, belgeler
 
@@ -287,7 +289,7 @@ The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) walks t
 | Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). |
 | Model (**Modelle**) | Ctrl+4 | Blender-like modeller: primitives, edit mode (extrude, inset, subdivide, …), CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export, *send to world*. |
 | Assembly (**Montaj**) | Ctrl+5 | Auto-build a rover or X-quadcopter from the circuit, drive/fly it in arenas, run fault experiments, record `.rwsim`. |
-| World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. |
+| World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. **Analysis mode** (Ctrl+F5) runs the world off-screen for a chosen duration and accuracy, records every signal, then computes FEM stress of selected parts under the recorded loads, lattice-Boltzmann flow around a part and board/part heating from component power, with plots, stress/flow/heat maps and CSV export. |
 
 Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
 
@@ -348,12 +350,13 @@ Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -
 
 Being worked on, **not merged yet** and not in any release:
 
-- More realistic physics: rope-like cables, tyre slip.
-- Sensors: cameras with real resolution, line sensors on worn and glossy tape, LiDAR, IMU, GPS, encoders.
-- A Unity-style Scene/Game split view.
-- Ready-made wheels, propellers and free-standing lights; 3D positional sound.
-- An industrial robot-arm cell: 6-axis arm, inverse kinematics, gripper, conveyor.
-- A Python/Gymnasium API, a ROS 2 bridge and a headless mode.
+- Aerospace: fixed-wing aerodynamics, rockets with thrust curves, atmosphere, avionics sensors, parachute/pyro.
+- Fluids: water and underwater, buoyancy, liquids and pressure.
+- One clock and co-debugging: a firmware breakpoint freezes MCU, circuit and physics together; mixed-signal partitioning.
+- Mechanical and industrial parts: fasteners and fits, breakage, gears/belts/springs/dampers, extrusions, linear rails, steppers and drivers, pneumatics, tracked vehicles, soft bodies.
+- More MCUs (Mega, ATtiny, RP2040, STM32, ESP8266, ESP32-C3/S3), SPI/CAN/ESP-NOW/LoRa swarms, PLC (ladder/ST, Modbus).
+- Bridges: STEP/URDF/KiCad project import, SPICE models, a `custom_parts` folder.
+- English as the default UI language, Turkish and add-on language packs.
 
 ### License
 
