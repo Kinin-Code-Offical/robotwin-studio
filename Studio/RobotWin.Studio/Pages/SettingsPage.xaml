@@ -42,7 +42,7 @@
                         </Grid.ColumnDefinitions>
                         <Image x:Name="AboutLogo" Width="72" Height="72" Margin="0,0,18,0" VerticalAlignment="Top"/>
                         <StackPanel Grid.Column="1">
-                            <TextBlock Text="RobotWin Studio 2.0" Style="{StaticResource Text.Subtitle}"/>
+                            <TextBlock Text="RobotWin Studio" Style="{StaticResource Text.Subtitle}"/>
                             <TextBlock x:Name="AboutText" Style="{StaticResource Text.Body}" Margin="0,6,0,12" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Logoyu dışa aktar (PNG + ICO)" Click="OnExportLogo"/>

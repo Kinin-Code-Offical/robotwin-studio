@@ -202,7 +202,7 @@ namespace RobotWin.Studio.Branding
                     dc.DrawRoundedRectangle(new SolidColorBrush(TileColor), new Pen(new SolidColorBrush(c), 2), new Rect(x - 7, ly - 7, 14, 14), 4, 4);
                 }
 
-                var ver = new FormattedText("Sürüm 2.0 · yükleniyor…", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, text, 12, new SolidColorBrush(Color.FromRgb(0x6C, 0x6C, 0x74)), 1.0);
+                var ver = new FormattedText("Yükleniyor…", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, text, 12, new SolidColorBrush(Color.FromRgb(0x6C, 0x6C, 0x74)), 1.0);
                 dc.DrawText(ver, new Point(lx0 - 2, ly + 16));
             }
 
