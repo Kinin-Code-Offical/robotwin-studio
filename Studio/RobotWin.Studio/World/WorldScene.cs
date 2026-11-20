@@ -22,7 +22,7 @@ namespace RobotWin.Studio.World
     }
 
     /// <summary>3D editor and live view of a <see cref="WorldDocument"/>.</summary>
-    public sealed class WorldScene : Grid
+    public sealed partial class WorldScene : Grid
     {
         private sealed class Item
         {
@@ -76,6 +76,7 @@ namespace RobotWin.Studio.World
             _hint.HorizontalAlignment = HorizontalAlignment.Left;
             _hint.IsHitTestVisible = false;
             Children.Add(_hint);
+            InitRadio();   // [radio] World/WorldScene.Radio.cs
             Focusable = true;
 
             MouseDown += OnMouseDown;
@@ -123,6 +124,9 @@ namespace RobotWin.Studio.World
         }
 
         public string? Selected { get; private set; }
+
+        /// <summary>Camera follows the selected object (or the first moving one) while simulating.</summary>
+        public bool Follow { get; set; }
 
         /// <summary>Snap grid in metres (0 = off).</summary>
         public double Grid { get; set; } = 0.005;
@@ -230,6 +234,32 @@ namespace RobotWin.Studio.World
             UpdateCamera();
         }
 
+        private void FollowTarget()
+        {
+            var id = Selected ?? World?.Objects.FirstOrDefault(o => !o.IsStatic)?.Id;
+            if (id == null || !_items.TryGetValue(id, out var it)) return;
+            var c = it.Current.Transform(new Point3D(0, 0, 0));
+            // Glide towards the object so the view does not jerk.
+            _target = new Point3D(_target.X + (c.X - _target.X) * 0.15, _target.Y + (c.Y - _target.Y) * 0.15, _target.Z + (c.Z + 0.02 - _target.Z) * 0.15);
+            UpdateCamera();
+        }
+
+        /// <summary>Frames everything at its current (simulated) place.</summary>
+        public void FrameCurrent()
+        {
+            UpdateKinematics();
+            var b = Rect3D.Empty;
+            foreach (var it in _items.Values)
+            {
+                if (!it.Visual.Content.Bounds.IsEmpty) b.Union(new MatrixTransform3D(it.Current).TransformBounds(it.Visual.Content.Bounds));
+            }
+
+            if (b.IsEmpty) return;
+            _target = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 3);
+            _distance = Math.Max(0.25, Math.Max(b.SizeX, Math.Max(b.SizeY, b.SizeZ)) * 1.9);
+            UpdateCamera();
+        }
+
         public void TopView()
         {
             _yaw = Math.PI / 2;   // +X right, +Y up on screen
@@ -249,6 +279,54 @@ namespace RobotWin.Studio.World
 
         public IReadOnlyList<PinAnchor> PinsOf(string objectId) =>
             _items.TryGetValue(objectId, out var it) ? it.Model.Pins : (IReadOnlyList<PinAnchor>)Array.Empty<PinAnchor>();
+
+        /// <summary>Mass of an object in kg (set by the page; default 10 g).</summary>
+        public Func<WorldObject, double>? MassOf { get; set; }
+
+        /// <summary>Physical body of an object for the world physics, taken from its 3D model.</summary>
+        public WorldBodyGeometry GeometryOf(WorldObject o)
+        {
+            var g = new WorldBodyGeometry { MassKg = MassOf?.Invoke(o) ?? 0.01 };
+            if (_items.TryGetValue(o.Id, out var it) && !it.Model.Bounds.IsEmpty)
+            {
+                var b = it.Model.CollisionBounds.IsEmpty ? it.Model.Bounds : it.Model.CollisionBounds;
+                g.Min = new RobotTwin.CoreSim.Mechanics.Vec3(b.X, b.Y, b.Z);
+                g.Max = new RobotTwin.CoreSim.Mechanics.Vec3(b.X + b.SizeX, b.Y + b.SizeY, b.Z + b.SizeZ);
+                if (it.Model.Port is { } pf)
+                {
+                    g.PortName = pf.Name;
+                    g.PortPivot = new RobotTwin.CoreSim.Mechanics.Vec3(pf.Pivot.X, pf.Pivot.Y, pf.Pivot.Z);
+                    g.PortAxis = new RobotTwin.CoreSim.Mechanics.Vec3(pf.Axis.X, pf.Axis.Y, pf.Axis.Z);
+                }
+            }
+            else
+            {
+                g.Min = new RobotTwin.CoreSim.Mechanics.Vec3(-0.01, -0.01, 0);
+                g.Max = new RobotTwin.CoreSim.Mechanics.Vec3(0.01, 0.01, 0.01);
+            }
+
+            if (o.Kind == WorldObjectKind.Body)
+            {
+                g.Shape = o.Shape switch { "wheel" => "cylinder-y", "cylinder" => "cylinder-z", "sphere" => "sphere", _ => "box" };
+            }
+            else if (o.Kind == WorldObjectKind.Model && o.Mesh != null)
+            {
+                try
+                {
+                    // Same placement as the visual: centred in X/Y, resting on z = 0.
+                    var mesh = RobotTwin.CoreSim.Mechanics.MeshModel.FromEmbedded(o.Mesh);
+                    var mb = mesh.Bounds;
+                    mesh.Translate(new RobotTwin.CoreSim.Mechanics.Vec3(-(mb.Min.X + mb.Max.X) / 2, -(mb.Min.Y + mb.Max.Y) / 2, -mb.Min.Z));
+                    g.Mesh = mesh;
+                    g.Shape = "mesh";
+                }
+                catch (FormatException)
+                {
+                }
+            }
+
+            return g;
+        }
 
         public PortFrame? PortOf(string objectId) => _items.TryGetValue(objectId, out var it) ? it.Model.Port : null;
 
@@ -498,6 +576,7 @@ namespace RobotWin.Studio.World
                 g.Children.Add(M.Model(M.Box(pb.X, pb.Y, pb.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
             }
 
+            AppendUsbCables(g);   // [radio] PC → board USB cables
             _cables.Content = g;
         }
 
@@ -508,13 +587,33 @@ namespace RobotWin.Studio.World
             if (World == null) return;
             foreach (var it in _items.Values)
             {
-                double angle = Session != null && Session.State != Simulation.SimState.Stopped ? Session.PortAngle(it.Object) : 0;
+                bool live = Session != null && Session.State != Simulation.SimState.Stopped;
+                double angle = !live ? 0 : Session!.Physics != null ? Session.Physics.PortAngle(it.Object.Id) : Session.PortAngle(it.Object);
                 it.PortAngle = angle;
                 if (it.PortRotation != null) ((AxisAngleRotation3D)it.PortRotation.Rotation).Angle = angle * 180 / Math.PI;
+                if (it.Model.PortSpin != null) it.Model.PortSpin.Angle = it.Model.PortSign * angle * 180 / Math.PI;
             }
 
             var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var it in _items.Values) Resolve(it, done, 0);
+            var physics = Session != null && Session.State != Simulation.SimState.Stopped ? Session.Physics : null;
+            if (physics != null)
+            {
+                foreach (var it in _items.Values)
+                {
+                    if (physics.PoseOf(it.Object.Id) is { } pose)
+                    {
+                        var q = new Quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
+                        var m = Matrix3D.Identity;
+                        m.Rotate(q);
+                        m.Translate(new Vector3D(pose.Position.X, pose.Position.Y, pose.Position.Z));
+                        it.Current = m;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var it in _items.Values) Resolve(it, done, 0);
+            }
             foreach (var it in _items.Values) ((MatrixTransform3D)it.Visual.Transform).Matrix = it.Current;
         }
 
@@ -567,6 +666,7 @@ namespace RobotWin.Studio.World
             if (World != null && s != null && s.State != Simulation.SimState.Stopped)
             {
                 UpdateKinematics();
+                if (Follow) FollowTarget();
                 UpdateLive(dt);
                 RebuildCables();
                 if (Selected != null) RebuildOverlay();
@@ -574,6 +674,7 @@ namespace RobotWin.Studio.World
 
             _effects.Step(dt);
             _effects.InvalidateVisual();
+            RadioFrame();   // [radio] waves, RF links, controller lightbars
         }
 
         private void UpdateLive(double dt)
@@ -585,6 +686,21 @@ namespace RobotWin.Studio.World
                 // Red-hot tint from 70 °C, full at 250 °C.
                 double heat = double.IsNaN(t) ? 0 : Math.Max(0, Math.Min(1, (t - 70) / 180));
                 ((SolidColorBrush)it.Model.Heat.Brush).Color = failed ? Color.FromRgb(0x18, 0x08, 0x02) : Color.FromRgb((byte)(200 * heat), (byte)(50 * heat * heat), 0);
+                if (it.Model.Instance is { } inst)
+                {
+                    inst.SetCharred(failed);
+                    if (inst.Light != null) inst.SetBrightness(Session.Brightness(it.Object, string.Empty));
+                }
+
+                foreach (var (refDes, part) in it.Model.Parts)
+                {
+                    double pt = Session.PartTemperature(it.Object, refDes);
+                    double ph = double.IsNaN(pt) ? 0 : Math.Max(0, Math.Min(1, (pt - 70) / 180));
+                    part.SetHeat(Color.FromRgb((byte)(200 * ph), (byte)(50 * ph * ph), 0));
+                    part.SetCharred(Session.PartFailed(it.Object, refDes));
+                    if (part.Light != null) part.SetBrightness(Session.Brightness(it.Object, refDes));
+                }
+
                 foreach (var kv in it.Model.Lights)
                 {
                     double b = Session.Brightness(it.Object, kv.Key);
@@ -601,6 +717,11 @@ namespace RobotWin.Studio.World
                         case RobotTwin.CoreSim.Firmware.Devices.Pcf8574Lcd lcd:
                             it.Model.Screen.ImageSource = Editor.DisplayRenderer.Lcd(lcd, it.Model.ScreenStyle);
                             break;
+                    }
+
+                    if (it.Model.ScreenMaterial != null && it.Model.Screen.ImageSource != null && it.Model.ScreenMaterial.Brush != it.Model.Screen)
+                    {
+                        it.Model.ScreenMaterial.Brush = it.Model.Screen;
                     }
                 }
 
@@ -629,6 +750,14 @@ namespace RobotWin.Studio.World
             {
                 ((SolidColorBrush)it.Model.Heat.Brush).Color = Colors.Black;
                 foreach (var l in it.Model.Lights.Values) ((SolidColorBrush)l.Brush).Color = Colors.Black;
+                it.Model.Instance?.SetCharred(false);
+                it.Model.Instance?.SetBrightness(0);
+                foreach (var (_, part) in it.Model.Parts)
+                {
+                    part.SetHeat(Colors.Black);
+                    part.SetCharred(false);
+                    part.SetBrightness(0);
+                }
             }
 
             RebuildCables();

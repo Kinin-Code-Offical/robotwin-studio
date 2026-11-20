@@ -9,7 +9,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
     /// <summary>Interop declarations mirroring native/esp32hal/rw_host_api.h (keep in sync).</summary>
     internal static class Esp32Abi
     {
-        public const int Version = 1;
+        public const int Version = 2;   // 2: radio_request (Wi-Fi / BLE / Bluepad32 through the host's radio medium)
 
         public const int StatusOk = 0;
         public const int StatusWatchdog = 1;
@@ -40,6 +40,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int I2cReadFn(IntPtr user, int bus, int ack);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void I2cStopFn(IntPtr user, int bus);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void SystemEventFn(IntPtr user, int kind, long arg);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int RadioRequestFn(IntPtr user, int op, IntPtr input, int inputLength, IntPtr output, int outputCapacity);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct HostApi
@@ -62,6 +63,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             public IntPtr I2cRead;
             public IntPtr I2cStop;
             public IntPtr SystemEvent;
+            public IntPtr RadioRequest;   // ABI 2
         }
 
         [StructLayout(LayoutKind.Sequential)]

@@ -32,8 +32,14 @@
                     <ToggleButton x:Name="ToolWire" Style="{StaticResource Toggle.Tool}" ToolTip="Kablo  (W) — bir pine tıklayarak da başlar" Click="OnToolClick" Tag="Wire" Margin="2,0">
                         <t:Icon Data="{StaticResource I.Wire}" Size="16"/>
                     </ToggleButton>
-                    <ToggleButton x:Name="ToolLabel" Style="{StaticResource Toggle.Tool}" ToolTip="Hat etiketi  (L)" Click="OnToolClick" Tag="Label">
+                    <ToggleButton x:Name="ToolLabel" Style="{StaticResource Toggle.Tool}" ToolTip="Hat etiketi  (L) · global etiket (Ctrl+L)" Click="OnToolClick" Tag="Label">
                         <t:Icon Data="{StaticResource I.Label}" Size="16"/>
+                    </ToggleButton>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Güç sembolü ekle  (P)" Click="OnPowerTool" Margin="2,0,0,0">
+                        <t:Icon Data="{StaticResource I.Ground}" Size="16"/>
+                    </Button>
+                    <ToggleButton x:Name="ToolNoConnect" Style="{StaticResource Toggle.Tool}" ToolTip="Bağlantı yok (NC) işareti  (Q)" Click="OnToolClick" Tag="NoConnect" Margin="2,0,0,0">
+                        <t:Icon Data="{StaticResource I.Close}" Size="15"/>
                     </ToggleButton>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Multimetre uçlarını devreye tak (kırmızı, sonra siyah)" Click="OnPlaceLeads" Margin="2,0,0,0">
                         <t:Icon Data="{StaticResource I.Meter}" Size="16"/>
@@ -46,6 +52,14 @@
                         <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
                         <Button x:Name="UndoButton" Style="{StaticResource Btn.Icon}" ToolTip="Geri al  (Ctrl+Z)" Click="OnUndo"><t:Icon Data="{StaticResource I.Undo}" Size="16"/></Button>
                         <Button x:Name="RedoButton" Style="{StaticResource Btn.Icon}" ToolTip="Yinele  (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
+                        <StackPanel x:Name="EditorExtras" Orientation="Horizontal">
+                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Numaralandır (R?, çakışan tanımlayıcılar)" Click="OnAnnotate"><t:Icon Data="{StaticResource I.Spark}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Elektriksel kural denetimi (ERC)" Click="OnErc"><t:Icon Data="{StaticResource I.Drc}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Bul / değiştir  (Ctrl+F · Ctrl+H)" Click="OnFind"><t:Icon Data="{StaticResource I.Search}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Dışa aktar: BOM, KiCad/SPICE netlist, PNG/SVG, yazdır" Click="OnExportMenu"><t:Icon Data="{StaticResource I.Export}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Kısayollar  (F1 · ?)" Click="OnHelp"><t:Icon Data="{StaticResource I.Info}" Size="16"/></Button>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 

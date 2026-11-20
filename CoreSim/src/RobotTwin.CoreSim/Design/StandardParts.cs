@@ -33,6 +33,7 @@ namespace RobotTwin.CoreSim.Design
             RegisterSensors(lib);
             RegisterDisplays(lib);
             Esp32Parts.Register(lib);
+            WirelessParts.Register(lib);   // [radio] wireless / USB parts (Design/WirelessParts.cs)
             RegisterConnectors(lib);
             RegisterBoards(lib);
         }
@@ -924,10 +925,9 @@ namespace RobotTwin.CoreSim.Design
         {
             int v5 = c.Pin("5V"), v3 = c.Pin("3V3"), vin = c.Pin("VIN"), gnd = c.Pin("GND1");
 
-            if (c.Flag("usb"))
+            if (c.Flag("usb") || WirelessParts.UsbFromCable(c))
             {
-                int usb = c.Internal("usb");
-                c.Add(new VoltageSource(c.Sub("USB"), usb, gnd, 5.0) { SeriesResistance = 0.1 });
+                int usb = WirelessParts.UsbSupply(c, gnd, 0.1);   // [radio] usb=cable: VBUS switched by the world's USB cable
                 c.Add(new Fuse(c.Sub("F1"), usb, v5, 0.5) { TimeConstant = 2.0 });
             }
 

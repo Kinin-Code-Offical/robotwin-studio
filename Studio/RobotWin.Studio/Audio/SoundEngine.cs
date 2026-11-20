@@ -116,6 +116,18 @@ namespace RobotWin.Studio.Audio
             }
         }
 
+        /// <summary>Fades out the voices under a prefix except the listed keys.</summary>
+        public void Silence(string prefix, ICollection<string> keep)
+        {
+            lock (_gate)
+            {
+                foreach (var kv in _voices)
+                {
+                    if (kv.Key.StartsWith(prefix, StringComparison.Ordinal) && !keep.Contains(kv.Key)) kv.Value.TargetGain = 0;
+                }
+            }
+        }
+
         public void Play(OneShot kind, double gain = 1.0)
         {
             if (!Enabled) return;

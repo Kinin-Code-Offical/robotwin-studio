@@ -66,7 +66,8 @@ namespace RobotWin.Studio.Firmware
 
         public static bool IsEsp32(string? target) => target == Esp32Target;
 
-        private static string Esp32Dir(string source) => Path.Combine(BuildRoot, "esp32", FirmwareHash(source));
+        // [radio] The HAL ABI version is part of the cache key: DLLs built for an older ABI are rebuilt, not loaded.
+        private static string Esp32Dir(string source) => Path.Combine(BuildRoot, "esp32", "abi" + RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation.AbiVersion + "-" + FirmwareHash(source));
 
         private static string FirmwareHash(string source) => RobotTwin.CoreSim.Formats.FirmwareSource.HashOf(source);
 

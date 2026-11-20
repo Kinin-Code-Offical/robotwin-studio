@@ -34,7 +34,10 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("two-boards", "Kabloyla bağlı iki kart", "Kendi çizilmiş güç kartı (9 V pil) ile LED kartı ayrı PCB'ler; iki kabloyla birleşince LED yanar.", TwoBoards),
             new WorldTemplate("servo-arm", "Arduino ile iki eksenli servo kol", "Arduino Uno kütüphanesiz darbe üreterek iki SG90'ı sürer; ikinci servo birinci servonun koluna vidalı, kol zincirleme döner.", ServoArm),
             new WorldTemplate("displays", "Arduino, LCD ve OLED (I²C kablolu)", "Uno, 16×2 LCD, 128×64 OLED ve potansiyometre ayrı parçalar; dört telli I²C kablolarıyla bağlı. Gerçek derlenmiş yazılım iki ekrana da yazar.", Displays),
-            new WorldTemplate("motor-wheel", "Pil, motor ve tekerlek", "4×AA pil kutusu kablolarla TT motoru sürer; tekerlek motor miline takılı, motor sehpaya vidalı.", MotorWheel)
+            new WorldTemplate("car", "İki tekerlekli araba (gerçek fizik)", "PLA şase, iki TT motor ve tekerlek, bilyeli sarhoş teker, üstte 4×AA pil. Çalıştırınca yerçekimi, sürtünme ve motor yükleriyle zeminde yol alır.", Car),
+            new WorldTemplate("motor-wheel", "Pil, motor ve tekerlek", "4×AA pil kutusu kablolarla TT motoru sürer; tekerlek motor miline takılı, motor sehpaya vidalı.", MotorWheel),
+            // [radio]
+            new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "ESP32 Bluepad32 çizimi eşli DualSense kumandayı okur, DRV8833 ile iki TT motoru sürer. ESP32 bilgisayara USB kablosuyla bağlı; kumanda gerçek (USB/Bluetooth) veya ekrandaki sanal kumanda olabilir.", Ps5Car)
         };
 
         public static WorldTemplate? Find(string id)
@@ -161,6 +164,70 @@ namespace RobotWin.Studio.Examples
             return w;
         }
 
+        /// <summary>The car, laid out for the detailed TT motor model (its shaft position and gearbox height).</summary>
+        private static WorldDocument Car()
+        {
+            var (pivot, _, height) = World.ObjectModels.Mount(Lib, "motor-tt");
+            return pivot.Y > 0.005
+                ? RobotTwin.CoreSim.Sandbox.WorldExamples.Car(Lib, height, pivot.X, pivot.Z, pivot.Y)
+                : RobotTwin.CoreSim.Sandbox.WorldExamples.Car(Lib);
+        }
+
+        /// <summary>[radio] ESP32 + DRV8833 + 2 TT motors with wheels on a chassis, a paired DualSense and a PC on USB.</summary>
+        private static WorldDocument Ps5Car()
+        {
+            var w = new WorldDocument { Title = "Kumandalı araba" };
+            var chassis = w.AddBody("plate", 0.20, 0.13, 0.003, new WorldPose { X = 0, Y = 0, Z = 0.027 }, "AKRİLİK");
+            chassis.Name = "Şase";
+            chassis.Color = "#3E7CC8";
+            var esp = w.AddComponent(Lib, "esp32-devkit-v1", new WorldPose { X = 0.045, Y = 0, Z = 0.030 });
+            esp.Name = "ESP32 (araba beyni)";
+            esp.Parameters["firmware"] = "builtin:esp32-gamepad-car.ino";
+            var drv = w.AddComponent(Lib, "drv8833", new WorldPose { X = -0.02, Y = 0, Z = 0.030 });
+            var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = -0.07, Y = 0, Z = 0.030, Yaw = 90 });
+            // Motors under the rear half, shafts pointing outwards (+Y right, −Y left); wheels slide on 13 mm out.
+            var right = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = 0.04, Z = 0.030 });
+            right.Name = "Sağ motor";
+            var left = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = -0.04, Z = 0.030, Yaw = 180 });
+            left.Name = "Sol motor";
+            var wheelR = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = right.Pose.X - 0.011, Y = right.Pose.Y + 0.0185 + 0.015, Z = right.Pose.Z + 0.0094 - 0.0325 }, "KAUÇUK");
+            var wheelL = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = left.Pose.X + 0.011, Y = left.Pose.Y - 0.0185 - 0.015, Z = left.Pose.Z + 0.0094 - 0.0325, Yaw = 180 }, "KAUÇUK");
+            foreach (var part in new[] { esp, drv, bat, right, left })
+            {
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = part.Id, ObjectB = chassis.Id });
+            }
+
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheelR.Id, ObjectB = right.Id, PortB = "shaft" });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheelL.Id, ObjectB = left.Id, PortB = "shaft" });
+
+            // Power: 4×AA → DRV8833 VM; common ground with the ESP32.
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = drv.Id, Pin = "VM" }, 22, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = drv.Id, Pin = "GND" }, 22, "#1F1F23");
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "GND1" }, new CableEnd { ObjectId = drv.Id, Pin = "GND" }, 26, "#1F1F23");
+            // Control: IO25/26 left motor, IO27/14 right motor (see esp32-gamepad-car.ino).
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO25" }, new CableEnd { ObjectId = drv.Id, Pin = "AIN1" }, 26, "#F2A33B");
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO26" }, new CableEnd { ObjectId = drv.Id, Pin = "AIN2" }, 26, "#F2D04B");
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO27" }, new CableEnd { ObjectId = drv.Id, Pin = "BIN1" }, 26, "#3CD064");
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO14" }, new CableEnd { ObjectId = drv.Id, Pin = "BIN2" }, 26, "#3E7CC8");
+            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "AOUT1" }, new CableEnd { ObjectId = left.Id, Pin = "A" }, 22, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "AOUT2" }, new CableEnd { ObjectId = left.Id, Pin = "B" }, 22, "#1F1F23");
+            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "BOUT1" }, new CableEnd { ObjectId = right.Id, Pin = "A" }, 22, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "BOUT2" }, new CableEnd { ObjectId = right.Id, Pin = "B" }, 22, "#1F1F23");
+
+            // The PC powers the ESP32 and shows its serial output over the USB cable.
+            var pc = w.AddComponent(Lib, "usb-pc", new WorldPose { X = 0.42, Y = 0.05, Z = 0, Yaw = 180 });
+            pc.Name = "Bilgisayar";
+            pc.Parameters["target"] = esp.Id;
+            pc.Parameters["plugged"] = "true";
+
+            // The controller lies on the table in front of the car, already bonded to the ESP32.
+            var pad = w.AddComponent(Lib, "dualsense", new WorldPose { X = 0.05, Y = -0.32, Z = 0, Yaw = 90 });
+            pad.Name = "DualSense";
+            pad.Parameters["pairedWith"] = esp.Id;
+            pad.Parameters["source"] = "otomatik";
+            return w;
+        }
+
         private static WorldDocument MotorWheel()
         {
             var w = new WorldDocument { Title = "Motor ve tekerlek" };
@@ -169,8 +236,9 @@ namespace RobotWin.Studio.Examples
             stand.Name = "Sehpa";
             stand.IsStatic = true;
             var motor = w.AddComponent(Lib, "motor-tt", new WorldPose { X = 0.03, Y = 0, Z = 0.03 });
-            // TT output shaft: 11 mm behind centre, 9.4 mm up, pointing +Y; wheel hub slides on 13 mm out.
-            var wheel = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = motor.Pose.X - 0.011, Y = 0.0185 + 0.015, Z = motor.Pose.Z + 0.0094 - 0.0325 }, "KAUÇUK");
+            // The wheel hub slides onto the end of the TT output shaft (from the model).
+            var (pivot, _, _) = World.ObjectModels.Mount(Lib, "motor-tt");
+            var wheel = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = motor.Pose.X + pivot.X, Y = pivot.Y + 0.015, Z = motor.Pose.Z + pivot.Z - 0.0325 }, "KAUÇUK");
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = motor.Id, ObjectB = stand.Id });
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheel.Id, ObjectB = motor.Id, PortB = "shaft" });
             w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = motor.Id, Pin = "A" }, 22, "#E5484D");

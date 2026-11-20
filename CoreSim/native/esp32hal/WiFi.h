@@ -1,9 +1,16 @@
 /*
- * WiFi - SIMULATOR STUB. There is no radio and no network: begin() reports
- * WL_CONNECTED about one simulated second later, with a fixed IP / MAC / RSSI.
- * The radio state is reported to the host (supply current) and blocks ADC2 like a
- * real ESP32. WiFiClient/WiFiServer/WiFiUDP exist so sketches compile, but every
- * network operation fails (connect() returns 0).
+ * WiFi for the RoboTwin ESP32 HAL model.
+ *
+ * Inside a RobotWin world (host with a radio medium, ABI 2) the station really
+ * associates with an access point that exists in the world (a router object or another
+ * ESP32 in soft-AP mode; without any router an implicit "virtual home network" accepts
+ * any SSID). RSSI, scan results, association loss when out of range, IP addresses and
+ * UDP / TCP-like traffic between ESP32s in the same world go through the medium.
+ * There is no Internet and no DNS: hostByName() only parses dotted addresses.
+ *
+ * Without a medium (a lone board in a test bench) it is the old stub: begin() reports
+ * WL_CONNECTED about one simulated second later with a fixed IP / MAC / RSSI, and every
+ * network operation fails.
  */
 #ifndef RW_WIFI_H
 #define RW_WIFI_H
@@ -56,6 +63,7 @@ typedef enum {
 
 #define WIFI_SCAN_RUNNING (-1)
 #define WIFI_SCAN_FAILED (-2)
+#define RW_WIFI_MAX_SCAN 20
 
 class WiFiClass {
 public:
@@ -100,7 +108,7 @@ public:
     uint8_t* BSSID(uint8_t* bssid = nullptr);
     String BSSIDstr();
     int8_t RSSI();
-    int32_t channel() { return isConnectedConst() ? 6 : 0; }
+    int32_t channel();
 
     bool softAP(const char* ssid, const char* passphrase = nullptr, int channel = 1, int ssid_hidden = 0, int max_connection = 4, bool ftm_responder = false);
     bool softAP(const String& ssid, const String& passphrase = String(), int channel = 1, int ssid_hidden = 0, int max_connection = 4) {
@@ -108,7 +116,7 @@ public:
     }
     bool softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet) { _apIP = local_ip; (void)gateway; (void)subnet; return true; }
     bool softAPdisconnect(bool wifioff = false);
-    uint8_t softAPgetStationNum() { return 0; }
+    uint8_t softAPgetStationNum();
     IPAddress softAPIP() { return _apIP; }
     IPAddress softAPBroadcastIP() { return IPAddress(_apIP[0], _apIP[1], _apIP[2], 255); }
     String softAPmacAddress();
@@ -121,11 +129,17 @@ public:
     wifi_auth_mode_t encryptionType(uint8_t networkItem);
     int32_t RSSI(uint8_t networkItem);
     int32_t channel(uint8_t networkItem);
+    uint8_t* BSSID(uint8_t networkItem, uint8_t* bssid = nullptr);
+    String BSSIDstr(uint8_t networkItem);
 
     static int hostByName(const char* aHostname, IPAddress& aResult);
 
+    /* Simulator: true when this board runs inside a RobotWin world radio medium. */
+    static bool simulatedMedium();
+
 private:
     bool isConnectedConst() const;
+    void refresh();
     wifi_mode_t _mode = WIFI_MODE_NULL;
     bool _began = false;
     uint64_t _connectAtNs = 0;
@@ -139,73 +153,111 @@ private:
     IPAddress _dns = IPAddress(192, 168, 1, 1);
     IPAddress _apIP = IPAddress(192, 168, 4, 1);
     int16_t _scanCount = WIFI_SCAN_FAILED;
+    /* medium state (refreshed by status()) */
+    int _medStatus = WL_IDLE_STATUS;
+    int _medRssi = 0;
+    uint32_t _medIp = 0;
+    uint32_t _medGw = 0;
+    int _medChannel = 0;
+    uint8_t _medBssid[6] = {0};
+    struct ScanItem {
+        char ssid[33];
+        int8_t rssi;
+        uint8_t channel;
+        uint8_t auth;
+        uint8_t bssid[6];
+    } _scan[RW_WIFI_MAX_SCAN];
     void setRadio();
 };
 
 extern WiFiClass WiFi;
 
-/* ---- network objects: present so sketches compile; nothing is transmitted ---- */
+/* ---- TCP-like stream between ESP32s of the same world (reliable, ordered, with link latency) ---- */
 class WiFiClient : public Stream {
 public:
     WiFiClient() {}
+    explicit WiFiClient(int id) : _id(id) {}
     int connect(IPAddress ip, uint16_t port);
     int connect(const char* host, uint16_t port);
     int connect(IPAddress ip, uint16_t port, int32_t) { return connect(ip, port); }
     int connect(const char* host, uint16_t port, int32_t) { return connect(host, port); }
-    size_t write(uint8_t) override { return 0; }
-    size_t write(const uint8_t*, size_t) override { return 0; }
+    size_t write(uint8_t b) override { return write(&b, 1); }
+    size_t write(const uint8_t* buf, size_t size) override;
     using Print::write;
-    int available() override { return 0; }
-    int read() override { return -1; }
-    int read(uint8_t*, size_t) { return -1; }
-    int peek() override { return -1; }
+    int available() override;
+    int read() override;
+    int read(uint8_t* buf, size_t size);
+    int peek() override;
     void flush() override {}
-    void stop() {}
-    uint8_t connected() { return 0; }
-    void setTimeout(uint32_t) {}
+    void stop();
+    uint8_t connected();
     void setNoDelay(bool) {}
-    operator bool() { return false; }
-    IPAddress remoteIP() const { return IPAddress(); }
-    uint16_t remotePort() const { return 0; }
+    operator bool() { return _id > 0 && connected(); }
+    IPAddress remoteIP();
+    uint16_t remotePort();
+    int fd() const { return _id; }
+
+private:
+    int fill();
+    int _id = 0;
+    uint8_t _rx[256];
+    int _rxLen = 0;
+    int _rxPos = 0;
 };
 
 class WiFiServer {
 public:
     explicit WiFiServer(uint16_t port = 80, uint8_t max_clients = 4) : _port(port) { (void)max_clients; }
     void begin(uint16_t port = 0);
-    void end() {}
-    void close() {}
-    void stop() {}
-    WiFiClient available() { return WiFiClient(); }
-    WiFiClient accept() { return WiFiClient(); }
-    bool hasClient() { return false; }
+    void end();
+    void close() { end(); }
+    void stop() { end(); }
+    WiFiClient available() { return accept(); }
+    WiFiClient accept();
+    bool hasClient();
     void setNoDelay(bool) {}
-    operator bool() { return true; }
+    operator bool() { return _listening; }
 
 private:
     uint16_t _port;
+    bool _listening = false;
+    int _pending = 0;
 };
 
 class WiFiUDP : public Stream {
 public:
-    uint8_t begin(uint16_t) { return 1; }
-    uint8_t begin(IPAddress, uint16_t) { return 1; }
-    void stop() {}
-    int beginPacket(IPAddress, uint16_t) { return 0; }
-    int beginPacket(const char*, uint16_t) { return 0; }
-    int endPacket() { return 0; }
-    size_t write(uint8_t) override { return 0; }
-    size_t write(const uint8_t*, size_t) override { return 0; }
+    uint8_t begin(uint16_t port);
+    uint8_t begin(IPAddress, uint16_t port) { return begin(port); }
+    uint8_t beginMulticast(IPAddress, uint16_t port) { return begin(port); }
+    void stop();
+    int beginPacket(IPAddress ip, uint16_t port);
+    int beginPacket(const char* host, uint16_t port);
+    int beginPacket() { return beginPacket(_remoteIP, _remotePort); }
+    int endPacket();
+    size_t write(uint8_t b) override { return write(&b, 1); }
+    size_t write(const uint8_t* buf, size_t size) override;
     using Print::write;
-    int parsePacket() { return 0; }
-    int available() override { return 0; }
-    int read() override { return -1; }
-    int read(unsigned char*, size_t) { return 0; }
-    int read(char*, size_t) { return 0; }
-    int peek() override { return -1; }
-    void flush() override {}
-    IPAddress remoteIP() { return IPAddress(); }
-    uint16_t remotePort() { return 0; }
+    int parsePacket();
+    int available() override { return _rxLen - _rxPos; }
+    int read() override { return _rxPos < _rxLen ? _rx[_rxPos++] : -1; }
+    int read(unsigned char* buf, size_t len);
+    int read(char* buf, size_t len) { return read(reinterpret_cast<unsigned char*>(buf), len); }
+    int peek() override { return _rxPos < _rxLen ? _rx[_rxPos] : -1; }
+    void flush() override { _rxPos = _rxLen; }
+    IPAddress remoteIP() { return _remoteIP; }
+    uint16_t remotePort() { return _remotePort; }
+
+private:
+    uint16_t _port = 0;
+    uint32_t _txIp = 0;
+    uint16_t _txPort = 0;
+    int _txLen = -1;
+    uint8_t _tx[1472];
+    uint8_t _rx[1472];
+    int _rxLen = 0;
+    int _rxPos = 0;
+    IPAddress _remoteIP;
+    uint16_t _remotePort = 0;
 };
 
 #endif

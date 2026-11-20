@@ -20,14 +20,20 @@ namespace RobotWin.Studio.Editor
         Select,
         Wire,
         Label,
-        Place
+        Place,
+
+        /// <summary>Global label (KiCad Ctrl+L).</summary>
+        GlobalLabel,
+
+        /// <summary>No-connect flag on a pin (KiCad Q).</summary>
+        NoConnect
     }
 
     /// <summary>
     /// The schematic editor surface: an infinite grid with parts, wires and net
     /// labels, editing tools, and the live simulation overlay.
     /// </summary>
-    public sealed class SchematicCanvas : FrameworkElement
+    public sealed partial class SchematicCanvas : FrameworkElement
     {
         private const double MinScale = 4, MaxScale = 60;
 
@@ -54,18 +60,14 @@ namespace RobotWin.Studio.Editor
         private Point _mouse;
         private GridPoint _mouseGrid;
 
-        private enum DragMode { None, Pan, Move, Box, Interact }
+        private enum DragMode { None, Pan, Move, Box, Interact, Segment }
         private DragMode _drag;
         private Point _dragStart;
         private GridPoint _dragStartGrid;
         private Vector _panStartOffset;
-        private bool _moved;
-        private Dictionary<object, object>? _moveOriginals;
-        private List<(SchematicWire Wire, int Index, List<GridPoint> Original)>? _rubber;
         private SchematicPart? _pressedButton;
 
         private List<GridPoint>? _wirePoints;
-        private bool _verticalFirst;
 
         private Netlist? _netlist;
         private double _flowPhase;
@@ -90,6 +92,7 @@ namespace RobotWin.Studio.Editor
             W.DocumentReplaced += (_, _) =>
             {
                 _selection.Clear();
+                ResetEditorState();
                 Dispatcher.BeginInvoke(new Action(FitToContent), System.Windows.Threading.DispatcherPriority.Loaded);
             };
             W.Simulation.Updated += (_, _) =>
@@ -130,6 +133,7 @@ namespace RobotWin.Studio.Editor
                     _placePreset = null;
                 }
 
+                CancelFloating();
                 Cursor = value == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
                 ToolChanged?.Invoke(this, EventArgs.Empty);
                 InvalidateVisual();
@@ -141,6 +145,21 @@ namespace RobotWin.Studio.Editor
         public double Zoom => _scale / 14.0;
 
         public event EventHandler? SelectionChanged;
+
+        /// <summary>Selects a part and centres the view on it (used by the PCB editor's "show in schematic").</summary>
+        public bool RevealPart(string refDes)
+        {
+            var part = Doc.Parts.FirstOrDefault(p => string.Equals(p.RefDes, refDes, StringComparison.OrdinalIgnoreCase));
+            if (part == null) return false;
+            _selection.Clear();
+            _selection.Add(part);
+            _scale = Math.Max(_scale, 18);
+            if (ActualWidth > 0) _offset = new Vector(ActualWidth / 2 - part.Position.X * _scale, ActualHeight / 2 - part.Position.Y * _scale);
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+            InvalidateVisual();
+            return true;
+        }
+
         public event EventHandler? ToolChanged;
 
         /// <summary>Starts placing a part from the library (follows the mouse until clicked).</summary>
@@ -220,7 +239,8 @@ namespace RobotWin.Studio.Editor
             _netlist = null;
             _selection.RemoveWhere(o => o is SchematicPart p && !Doc.Parts.Contains(p) ||
                                         o is SchematicWire w && !Doc.Wires.Contains(w) ||
-                                        o is NetLabel l && !Doc.Labels.Contains(l));
+                                        o is NetLabel l && !Doc.Labels.Contains(l) ||
+                                        o is NoConnectFlag nc && !Doc.NoConnects.Contains(nc));
             InvalidateVisual();
         }
 
@@ -307,6 +327,11 @@ namespace RobotWin.Studio.Editor
         private object? HitObject(GridPoint g)
         {
             double tol = Math.Max(0.35, 6 / _scale);
+            foreach (var nc in Doc.NoConnects)
+            {
+                if (Math.Abs(nc.Position.X - g.X) <= tol && Math.Abs(nc.Position.Y - g.Y) <= tol) return nc;
+            }
+
             foreach (var label in Doc.Labels)
             {
                 var r = LabelRect(label);
@@ -356,39 +381,6 @@ namespace RobotWin.Studio.Editor
             return false;
         }
 
-        /// <summary>Snap target for wire drawing: pin tip, wire vertex/segment, label, or grid.</summary>
-        private GridPoint WireSnap(GridPoint g)
-        {
-            var pin = HitPin(g);
-            if (pin != null) return pin.Value.Part.Transform(pin.Value.Pin.X, pin.Value.Pin.Y);
-            return Snap(g);
-        }
-
-        private bool IsConnectionPoint(GridPoint p, bool excludeCurrent)
-        {
-            if (HitPin(p) is { } pin)
-            {
-                var tip = pin.Part.Transform(pin.Pin.X, pin.Pin.Y);
-                if (tip.Equals(p)) return true;
-            }
-
-            foreach (var w in Doc.Wires)
-            {
-                for (int i = 0; i < w.Points.Count; i++)
-                {
-                    if (w.Points[i].Equals(p)) return true;
-                    if (i + 1 < w.Points.Count &&
-                        RobotTwin.CoreSim.Pcb.Geometry.PointSegmentDistance(p.X, p.Y, w.Points[i].X, w.Points[i].Y, w.Points[i + 1].X, w.Points[i + 1].Y) < 1e-6)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            foreach (var l in Doc.Labels) if (l.Position.Equals(p)) return true;
-            return false;
-        }
-
         // ================================================================ rendering
 
         private double Dpi => VisualTreeHelper.GetDpi(this).PixelsPerDip;
@@ -411,13 +403,15 @@ namespace RobotWin.Studio.Editor
             return p;
         }
 
-        protected override void OnRender(DrawingContext dc)
+        protected override void OnRender(DrawingContext dc) => RenderScene(dc, new Rect(0, 0, ActualWidth, ActualHeight));
+
+        private void RenderScene(DrawingContext dc, Rect size)
         {
-            var size = new Rect(0, 0, ActualWidth, ActualHeight);
             dc.DrawRectangle(SymbolRenderer.Brush(CanvasColor), null, size);
-            DrawGrid(dc, size);
+            if (!_exporting) DrawGrid(dc, size);
 
             var netlist = Netlist;
+            DrawNetHighlightUnderlay(dc, netlist);
             double vmax = 1.0;
             if (Simulating)
             {
@@ -438,6 +432,7 @@ namespace RobotWin.Studio.Editor
                 }
 
                 bool selected = _selection.Contains(wire);
+                if (!Simulating && net != null && _netHighlight != null && string.Equals(net, _netHighlight, StringComparison.OrdinalIgnoreCase)) color = HighlightColor;
                 bool hovered = ReferenceEquals(_hover, wire) || (Simulating && net != null && _hover is SchematicWire hw &&
                                                                   Doc.Wires.IndexOf(hw) is int hi && hi >= 0 && hi < netlist.WireNets.Count && netlist.WireNets[hi] == net);
                 var geo = Polyline(wire.Points);
@@ -457,40 +452,16 @@ namespace RobotWin.Studio.Editor
             // Net labels
             for (int i = 0; i < Doc.Labels.Count; i++) DrawLabel(dc, Doc.Labels[i], i < netlist.LabelNets.Count ? netlist.LabelNets[i] : null);
 
-            // Wire in progress
-            if (_wirePoints != null && _wirePoints.Count > 0)
-            {
-                var pts = new List<GridPoint>(_wirePoints);
-                pts.AddRange(PreviewCorner(_wirePoints[^1], WireSnap(_mouseGrid)));
-                var dash = MakePen(Accent, Math.Max(1.3, _scale * 0.1));
-                dc.DrawGeometry(null, dash, Polyline(pts));
-                foreach (var p in _wirePoints) dc.DrawEllipse(SymbolRenderer.Brush(Accent), null, ToScreen(p), 2.5, 2.5);
-            }
+            DrawNoConnects(dc);
+            DrawEditorOverlay(dc);
 
-            // Ghost part
-            if (_tool == EditorTool.Place && _ghost != null) DrawPart(dc, _ghost, true);
-
-            // Hover pin
-            if (_hoverPin is { } hp && !Simulating)
-            {
-                var tip = ToScreen(hp.Part.Transform(hp.Pin.X, hp.Pin.Y));
-                dc.DrawEllipse(null, MakePen(Accent, 1.4), tip, 5, 5);
-                var ft = Text(hp.Part.RefDes + "." + hp.Pin.Name, 11, TextColor);
-                DrawPill(dc, new Point(tip.X + 10, tip.Y - 22), ft, PanelColor);
-            }
-
-            // Box selection
-            if (_drag == DragMode.Box)
-            {
-                var r = new Rect(_dragStart, _mouse);
-                dc.DrawRectangle(SymbolRenderer.Brush(Color.FromArgb(0x14, Accent.R, Accent.G, Accent.B)), MakePen(Color.FromArgb(0xA0, Accent.R, Accent.G, Accent.B), 1, false), r);
-            }
-
+            if (_exporting) return;
             if (Simulating) DrawSimulationOverlay(dc, netlist);
             _effects.Draw(dc, (x, y) => ToScreen(x, y), _scale);
             DrawScopeProbes(dc, netlist);
             DrawMeterLeads(dc);
             DrawHighlight(dc);
+            DrawHud(dc, size);
         }
 
         private void DrawGrid(DrawingContext dc, Rect size)
@@ -498,6 +469,12 @@ namespace RobotWin.Studio.Editor
             var g0 = ToGrid(new Point(0, 0));
             var g1 = ToGrid(new Point(size.Width, size.Height));
             int step = _scale >= 9 ? 1 : (_scale >= 4.5 ? 2 : 5);
+            if (_gridStyle == GridStyle.None) return;
+            if (_gridStyle == GridStyle.Lines)
+            {
+                DrawGridLines(dc, g0, g1, step);
+                return;
+            }
 
             var dotGeo = new StreamGeometry();
             using (var s = dotGeo.Open())
@@ -646,6 +623,7 @@ namespace RobotWin.Studio.Editor
             if (def.Symbol == SymbolKind.Board)
             {
                 dc.DrawText(refText, new Point(r.Left + 4, r.Top - refText.Height - 2));
+                if (!ghost) RememberLabelRects(part, new Rect(r.Left + 4, r.Top - refText.Height - 2, refText.Width, refText.Height), null);
                 return;
             }
 
@@ -657,6 +635,7 @@ namespace RobotWin.Studio.Editor
                 double y = r.Top - refText.Height - 1;
                 dc.DrawText(refText, new Point(x, y));
                 if (valText != null) dc.DrawText(valText, new Point(x + refText.Width + 6, y + (refText.Height - valText.Height) / 2));
+                if (!ghost) RememberLabelRects(part, new Rect(x, y, refText.Width, refText.Height), valText == null ? null : new Rect(x + refText.Width + 6, y + (refText.Height - valText.Height) / 2, valText.Width, valText.Height));
             }
             else
             {
@@ -664,6 +643,7 @@ namespace RobotWin.Studio.Editor
                 double y = r.Top + r.Height / 2 - refText.Height;
                 dc.DrawText(refText, new Point(x, y));
                 if (valText != null) dc.DrawText(valText, new Point(x, y + refText.Height));
+                if (!ghost) RememberLabelRects(part, new Rect(x, y, refText.Width, refText.Height), valText == null ? null : new Rect(x, y + refText.Height, valText.Width, valText.Height));
             }
         }
 
@@ -693,7 +673,8 @@ namespace RobotWin.Studio.Editor
             var r = LabelRect(label);
             bool left = LabelFacesLeft(label);
             bool selected = _selection.Contains(label);
-            var color = selected ? Accent : LabelColor;
+            bool lit = !Simulating && _netHighlight != null && net != null && string.Equals(net, _netHighlight, StringComparison.OrdinalIgnoreCase);
+            var color = selected ? Accent : lit ? HighlightColor : LabelColor;
             var g = new StreamGeometry();
             using (var s = g.Open())
             {
@@ -716,7 +697,8 @@ namespace RobotWin.Studio.Editor
             }
 
             g.Freeze();
-            dc.DrawGeometry(SymbolRenderer.Brush(CanvasColor), MakePen(selected ? Accent : PanelBorder, 1), g);
+            var border = selected ? Accent : lit ? HighlightColor : label.Global ? LabelColor : PanelBorder;
+            dc.DrawGeometry(SymbolRenderer.Brush(label.Global ? PanelColor : CanvasColor), MakePen(border, label.Global ? 1.4 : 1), g);
             var ft = Text(label.Name, 11.5, color, false);
             dc.DrawText(ft, new Point(left ? r.Left + 6 : r.Left + 12, r.Top + 3));
             dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, ToScreen(label.Position), 2.2, 2.2);
@@ -737,18 +719,6 @@ namespace RobotWin.Studio.Editor
             var r = new Rect(at.X, at.Y, text.Width + 12, text.Height + 4);
             dc.DrawRoundedRectangle(SymbolRenderer.Brush(background), MakePen(PanelBorder, 1, false), r, 4, 4);
             dc.DrawText(text, new Point(at.X + 6, at.Y + 2));
-        }
-
-        private IEnumerable<GridPoint> PreviewCorner(GridPoint from, GridPoint to)
-        {
-            if (from.X == to.X || from.Y == to.Y)
-            {
-                yield return to;
-                yield break;
-            }
-
-            yield return _verticalFirst ? new GridPoint(from.X, to.Y) : new GridPoint(to.X, from.Y);
-            yield return to;
         }
 
         // ================================================================ simulation overlay
@@ -1166,117 +1136,6 @@ namespace RobotWin.Studio.Editor
             return false;
         }
 
-        protected override void OnMouseDown(MouseButtonEventArgs e)
-        {
-            Focus();
-            _mouse = e.GetPosition(this);
-            _mouseGrid = ToGrid(_mouse);
-            CaptureMouse();
-
-            if (e.ChangedButton == MouseButton.Middle || (e.ChangedButton == MouseButton.Left && Keyboard.IsKeyDown(Key.Space)))
-            {
-                _drag = DragMode.Pan;
-                _dragStart = _mouse;
-                _panStartOffset = _offset;
-                Cursor = Cursors.SizeAll;
-                return;
-            }
-
-            if (e.ChangedButton == MouseButton.Right)
-            {
-                if (_wirePoints != null)
-                {
-                    FinishWire();
-                    return;
-                }
-
-                if (_tool == EditorTool.Place)
-                {
-                    Tool = EditorTool.Select;
-                    return;
-                }
-
-                var hit = HitObject(_mouseGrid);
-                if (hit != null && !_selection.Contains(hit))
-                {
-                    _selection.Clear();
-                    _selection.Add(hit);
-                    SelectionChanged?.Invoke(this, EventArgs.Empty);
-                }
-
-                ShowContextMenu(hit);
-                return;
-            }
-
-            if (e.ChangedButton != MouseButton.Left) return;
-
-            if (_placingLead != null)
-            {
-                PlaceLead();
-                return;
-            }
-
-            if (Simulating)
-            {
-                HandleSimulationClick(e);
-                return;
-            }
-
-            switch (_tool)
-            {
-                case EditorTool.Place:
-                    PlaceGhost();
-                    return;
-                case EditorTool.Wire:
-                    WireClick(e.ClickCount >= 2);
-                    return;
-                case EditorTool.Label:
-                    PlaceLabel();
-                    return;
-            }
-
-            // Select tool: clicking a pin starts a wire directly.
-            var pinHit = HitPin(_mouseGrid);
-            if (pinHit != null && e.ClickCount == 1 && !Keyboard.IsKeyDown(Key.LeftCtrl))
-            {
-                _wirePoints = new List<GridPoint> { pinHit.Value.Part.Transform(pinHit.Value.Pin.X, pinHit.Value.Pin.Y) };
-                InvalidateVisual();
-                return;
-            }
-
-            var target = HitObject(_mouseGrid);
-            if (e.ClickCount >= 2 && target is SchematicPart)
-            {
-                PartDoubleClicked?.Invoke(this, (SchematicPart)target);
-                return;
-            }
-
-            bool additive = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            if (target == null)
-            {
-                if (!additive) _selection.Clear();
-                _drag = DragMode.Box;
-                _dragStart = _mouse;
-                SelectionChanged?.Invoke(this, EventArgs.Empty);
-                InvalidateVisual();
-                return;
-            }
-
-            if (additive)
-            {
-                if (!_selection.Remove(target)) _selection.Add(target);
-            }
-            else if (!_selection.Contains(target))
-            {
-                _selection.Clear();
-                _selection.Add(target);
-            }
-
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-            BeginMove();
-            InvalidateVisual();
-        }
-
         public event EventHandler<SchematicPart>? PartDoubleClicked;
 
         /// <summary>Net and exact sheet point under the mouse (pin tip, point on a wire, or a label).</summary>
@@ -1395,502 +1254,6 @@ namespace RobotWin.Studio.Editor
                 var (net, at) = NetAt(_mouseGrid);
                 if (net != null) Sim.AddVoltageProbe(net, null, at);
             }
-        }
-
-        protected override void OnMouseMove(MouseEventArgs e)
-        {
-            _mouse = e.GetPosition(this);
-            _mouseGrid = ToGrid(_mouse);
-            MouseGridChanged?.Invoke(this, _mouseGrid);
-
-            switch (_drag)
-            {
-                case DragMode.Pan:
-                    _offset = _panStartOffset + (_mouse - _dragStart);
-                    InvalidateVisual();
-                    return;
-                case DragMode.Move:
-                    UpdateMove();
-                    return;
-                case DragMode.Box:
-                    InvalidateVisual();
-                    return;
-            }
-
-            if (_tool == EditorTool.Place && _ghost != null)
-            {
-                _ghost.Position = Snap(_mouseGrid);
-                InvalidateVisual();
-                return;
-            }
-
-            var oldHover = _hover;
-            var oldPin = _hoverPin;
-            if (_placingLead != null)
-            {
-                _hover = HitObject(_mouseGrid);
-                _hoverPin = null;
-                InvalidateVisual();
-                return;
-            }
-
-            _hoverPin = Simulating ? null : HitPin(_mouseGrid);
-            _hover = _hoverPin != null ? null : HitObject(_mouseGrid);
-            if (!Equals(oldHover, _hover) || !Equals(oldPin, _hoverPin) || _wirePoints != null || Simulating)
-            {
-                InvalidateVisual();
-            }
-        }
-
-        public event EventHandler<GridPoint>? MouseGridChanged;
-
-        protected override void OnMouseUp(MouseButtonEventArgs e)
-        {
-            var mode = _drag;
-            _drag = DragMode.None;
-            ReleaseMouseCapture();
-            Cursor = _tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
-
-            if (mode == DragMode.Interact && _pressedButton != null)
-            {
-                Sim.SetSwitch(_pressedButton.RefDes, false);
-                _pressedButton = null;
-            }
-            else if (mode == DragMode.Move)
-            {
-                EndMove();
-            }
-            else if (mode == DragMode.Box)
-            {
-                var a = ToGrid(_dragStart);
-                var b = _mouseGrid;
-                var r = new Rect(new Point(a.X, a.Y), new Point(b.X, b.Y));
-                foreach (var part in Doc.Parts) if (r.Contains(PartBounds(part))) _selection.Add(part);
-                foreach (var wire in Doc.Wires) if (wire.Points.All(p => r.Contains(new Point(p.X, p.Y)))) _selection.Add(wire);
-                foreach (var label in Doc.Labels) if (r.Contains(new Point(label.Position.X, label.Position.Y))) _selection.Add(label);
-                SelectionChanged?.Invoke(this, EventArgs.Empty);
-            }
-
-            InvalidateVisual();
-        }
-
-        protected override void OnMouseLeave(MouseEventArgs e)
-        {
-            _hover = null;
-            _hoverPin = null;
-            InvalidateVisual();
-        }
-
-        protected override void OnKeyDown(KeyEventArgs e)
-        {
-            var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            switch (e.Key)
-            {
-                case Key.Escape when _placingLead != null:
-                    _placingLead = null;
-                    Cursor = _tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
-                    InvalidateVisual();
-                    break;
-                case Key.Escape:
-                    if (_wirePoints != null) FinishWire();
-                    else if (_tool != EditorTool.Select) Tool = EditorTool.Select;
-                    else
-                    {
-                        _selection.Clear();
-                        SelectionChanged?.Invoke(this, EventArgs.Empty);
-                    }
-
-                    break;
-                case Key.Delete:
-                case Key.Back:
-                    DeleteSelection();
-                    break;
-                case Key.R when !ctrl:
-                    RotateSelection();
-                    break;
-                case Key.X when !ctrl:
-                    MirrorSelection();
-                    break;
-                case Key.W when !ctrl:
-                    Tool = EditorTool.Wire;
-                    break;
-                case Key.L when !ctrl:
-                    Tool = EditorTool.Label;
-                    break;
-                case Key.F when !ctrl:
-                    FitToContent();
-                    break;
-                case Key.Z when ctrl:
-                    W.Undo();
-                    break;
-                case Key.Y when ctrl:
-                    W.Redo();
-                    break;
-                case Key.A when ctrl:
-                    SelectAll();
-                    break;
-                case Key.D when ctrl:
-                    DuplicateSelection();
-                    break;
-                case Key.OemQuestion:
-                case Key.Divide:
-                    _verticalFirst = !_verticalFirst;
-                    InvalidateVisual();
-                    break;
-                default:
-                    return;
-            }
-
-            e.Handled = true;
-        }
-
-        // ================================================================ editing operations
-
-        private void PlaceGhost()
-        {
-            if (_ghost == null || _placePreset == null) return;
-            if (Simulating) return;
-            W.BeginChange();
-            var part = Doc.AddPart(Lib, _placePreset, Snap(_mouseGrid), _ghost.Rotation);
-            part.Mirror = _ghost.Mirror;
-            W.CommitChange($"{part.RefDes} yerleştirildi");
-            _selection.Clear();
-            _selection.Add(part);
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void PlaceLabel()
-        {
-            W.BeginChange();
-            var at = WireSnap(_mouseGrid);
-            int n = 1;
-            while (Doc.Labels.Any(l => l.Name == "NET" + n)) n++;
-            var label = new NetLabel { Name = "NET" + n, Position = at };
-            Doc.Labels.Add(label);
-            W.CommitChange("Hat etiketi eklendi");
-            _selection.Clear();
-            _selection.Add(label);
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-            Tool = EditorTool.Select;
-        }
-
-        private void WireClick(bool doubleClick)
-        {
-            var p = WireSnap(_mouseGrid);
-            if (_wirePoints == null)
-            {
-                _wirePoints = new List<GridPoint> { p };
-                InvalidateVisual();
-                return;
-            }
-
-            var last = _wirePoints[^1];
-            foreach (var q in PreviewCorner(last, p))
-            {
-                if (!q.Equals(_wirePoints[^1])) _wirePoints.Add(q);
-            }
-
-            bool endsOnSomething = !p.Equals(_wirePoints[0]) && IsConnectionPoint(p, true);
-            if (doubleClick || endsOnSomething) FinishWire();
-            else InvalidateVisual();
-        }
-
-        private void FinishWire()
-        {
-            var pts = _wirePoints;
-            _wirePoints = null;
-            if (pts != null)
-            {
-                // Remove duplicate and collinear points.
-                var clean = new List<GridPoint>();
-                foreach (var p in pts)
-                {
-                    if (clean.Count > 0 && clean[^1].Equals(p)) continue;
-                    if (clean.Count >= 2)
-                    {
-                        var a = clean[^2];
-                        var b = clean[^1];
-                        if ((a.X == b.X && b.X == p.X) || (a.Y == b.Y && b.Y == p.Y))
-                        {
-                            clean[^1] = p;
-                            continue;
-                        }
-                    }
-
-                    clean.Add(p);
-                }
-
-                if (clean.Count >= 2)
-                {
-                    W.BeginChange();
-                    Doc.Wires.Add(new SchematicWire { Points = clean });
-                    W.CommitChange("Kablo eklendi");
-                }
-            }
-
-            InvalidateVisual();
-        }
-
-        private void BeginMove()
-        {
-            _drag = DragMode.Move;
-            _dragStartGrid = Snap(_mouseGrid);
-            _moved = false;
-            _moveOriginals = new Dictionary<object, object>();
-            foreach (var o in _selection)
-            {
-                switch (o)
-                {
-                    case SchematicPart p: _moveOriginals[o] = p.Position; break;
-                    case SchematicWire w: _moveOriginals[o] = new List<GridPoint>(w.Points); break;
-                    case NetLabel l: _moveOriginals[o] = l.Position; break;
-                }
-            }
-
-            // Wires whose ends sit on pins of moving parts stretch along (rubber-banding).
-            _rubber = new List<(SchematicWire, int, List<GridPoint>)>();
-            var tips = new HashSet<GridPoint>();
-            foreach (var p in _selection.OfType<SchematicPart>())
-            {
-                var def = Lib.Find(p.PartId);
-                if (def == null) continue;
-                foreach (var pin in def.Pins) tips.Add(p.Transform(pin.X, pin.Y));
-            }
-
-            foreach (var w in Doc.Wires)
-            {
-                if (_selection.Contains(w) || w.Points.Count < 2) continue;
-                if (tips.Contains(w.Points[0])) _rubber.Add((w, 0, new List<GridPoint>(w.Points)));
-                if (tips.Contains(w.Points[^1])) _rubber.Add((w, w.Points.Count - 1, new List<GridPoint>(w.Points)));
-            }
-
-            W.BeginChange();
-        }
-
-        private void UpdateMove()
-        {
-            if (_moveOriginals == null) return;
-            var now = Snap(_mouseGrid);
-            var d = now - _dragStartGrid;
-            if (d.X != 0 || d.Y != 0) _moved = true;
-            foreach (var kv in _moveOriginals)
-            {
-                switch (kv.Key)
-                {
-                    case SchematicPart p: p.Position = (GridPoint)kv.Value + d; break;
-                    case NetLabel l: l.Position = (GridPoint)kv.Value + d; break;
-                    case SchematicWire w:
-                        var orig = (List<GridPoint>)kv.Value;
-                        for (int i = 0; i < orig.Count; i++) w.Points[i] = orig[i] + d;
-                        break;
-                }
-            }
-
-            if (_rubber != null)
-            {
-                // Rebuild every stretched wire from its original, moving one or both ends.
-                foreach (var group in _rubber.GroupBy(r => r.Wire))
-                {
-                    var wire = group.Key;
-                    var pts = new List<GridPoint>(group.First().Original);
-                    foreach (var (_, index, _) in group) pts[index] = pts[index] + d;
-                    wire.Points = Orthogonalize(pts, group.Select(g => g.Index).ToList());
-                }
-            }
-
-            _netlist = null;
-            InvalidateVisual();
-        }
-
-        /// <summary>Keeps wire segments horizontal/vertical after an end moved by inserting an elbow.</summary>
-        private static List<GridPoint> Orthogonalize(List<GridPoint> pts, List<int> movedEnds)
-        {
-            var result = new List<GridPoint>(pts);
-            if (movedEnds.Contains(result.Count - 1) && result.Count >= 2)
-            {
-                var a = result[^2];
-                var b = result[^1];
-                if (a.X != b.X && a.Y != b.Y) result.Insert(result.Count - 1, new GridPoint(a.X, b.Y));
-            }
-
-            if (movedEnds.Contains(0) && result.Count >= 2)
-            {
-                var a = result[1];
-                var b = result[0];
-                if (a.X != b.X && a.Y != b.Y) result.Insert(1, new GridPoint(a.X, b.Y));
-            }
-
-            return result;
-        }
-
-        private void EndMove()
-        {
-            _moveOriginals = null;
-            _rubber = null;
-            if (_moved) W.CommitChange("Taşındı");
-            else W.CancelChange();
-        }
-
-        public void DeleteSelection()
-        {
-            if (_selection.Count == 0 || Simulating) return;
-            W.BeginChange();
-            foreach (var o in _selection)
-            {
-                switch (o)
-                {
-                    case SchematicPart p: Doc.Parts.Remove(p); break;
-                    case SchematicWire w: Doc.Wires.Remove(w); break;
-                    case NetLabel l: Doc.Labels.Remove(l); break;
-                }
-            }
-
-            int n = _selection.Count;
-            _selection.Clear();
-            W.CommitChange($"{n} öğe silindi");
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-        }
-
-        public void RotateSelection()
-        {
-            if (_tool == EditorTool.Place && _ghost != null)
-            {
-                _ghost.Rotation = (_ghost.Rotation + 90) % 360;
-                InvalidateVisual();
-                return;
-            }
-
-            var parts = _selection.OfType<SchematicPart>().ToList();
-            if (parts.Count == 0 || Simulating) return;
-            W.BeginChange();
-            foreach (var p in parts) p.Rotation = (p.Rotation + 90) % 360;
-            W.CommitChange("Döndürüldü");
-        }
-
-        public void MirrorSelection()
-        {
-            if (_tool == EditorTool.Place && _ghost != null)
-            {
-                _ghost.Mirror = !_ghost.Mirror;
-                InvalidateVisual();
-                return;
-            }
-
-            var parts = _selection.OfType<SchematicPart>().ToList();
-            if (parts.Count == 0 || Simulating) return;
-            W.BeginChange();
-            foreach (var p in parts) p.Mirror = !p.Mirror;
-            W.CommitChange("Aynalandı");
-        }
-
-        /// <summary>Selects a part and centres the view on it (used by the PCB editor's "show in schematic").</summary>
-        public bool RevealPart(string refDes)
-        {
-            var part = Doc.Parts.FirstOrDefault(p => string.Equals(p.RefDes, refDes, StringComparison.OrdinalIgnoreCase));
-            if (part == null) return false;
-            _selection.Clear();
-            _selection.Add(part);
-            _scale = Math.Max(_scale, 18);
-            if (ActualWidth > 0) _offset = new Vector(ActualWidth / 2 - part.Position.X * _scale, ActualHeight / 2 - part.Position.Y * _scale);
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-            InvalidateVisual();
-            return true;
-        }
-
-        public void SelectAll()
-        {
-            _selection.Clear();
-            foreach (var p in Doc.Parts) _selection.Add(p);
-            foreach (var w in Doc.Wires) _selection.Add(w);
-            foreach (var l in Doc.Labels) _selection.Add(l);
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-            InvalidateVisual();
-        }
-
-        public void DuplicateSelection()
-        {
-            var parts = _selection.OfType<SchematicPart>().ToList();
-            if (parts.Count == 0 || Simulating) return;
-            W.BeginChange();
-            _selection.Clear();
-            foreach (var p in parts)
-            {
-                var def = Lib.Get(p.PartId);
-                var copy = new SchematicPart
-                {
-                    RefDes = Doc.NextRefDes(def.RefPrefix),
-                    PartId = p.PartId,
-                    PresetId = p.PresetId,
-                    Position = p.Position + new GridPoint(4, 4),
-                    Rotation = p.Rotation,
-                    Mirror = p.Mirror,
-                    Parameters = new Dictionary<string, string>(p.Parameters, StringComparer.OrdinalIgnoreCase)
-                };
-                Doc.Parts.Add(copy);
-                _selection.Add(copy);
-            }
-
-            W.CommitChange("Çoğaltıldı");
-            SelectionChanged?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void ShowContextMenu(object? hit)
-        {
-            var menu = new ContextMenu();
-            MenuItem Item(string header, string gesture, Action action, bool enabled = true)
-            {
-                var mi = new MenuItem { Header = header, InputGestureText = gesture, IsEnabled = enabled };
-                mi.Click += (_, _) => action();
-                menu.Items.Add(mi);
-                return mi;
-            }
-
-            var (hitNet, hitAt) = NetAt(_mouseGrid);
-            if (hitNet != null && (hit is SchematicWire || hit is NetLabel || HitPin(_mouseGrid) != null))
-            {
-                for (int ch = 0; ch < 4; ch++)
-                {
-                    int c = ch;
-                    Item($"{hitNet} → osiloskop CH{ch + 1}", ch == 0 ? "Tık" : "", () =>
-                    {
-                        if (!Simulating) W.Status = "Prob takıldı; simülasyon başlayınca ölçer.";
-                        Sim.AddVoltageProbe(hitNet, c, hitAt);
-                    });
-                }
-
-                menu.Items.Add(new Separator());
-                Item($"Multimetre kırmızı ucu → {hitNet}", "", () => Sim.SetMeterLead(true, hitNet, hitAt));
-                Item($"Multimetre siyah ucu (COM) → {hitNet}", "", () => Sim.SetMeterLead(false, hitNet, hitAt));
-                menu.Items.Add(new Separator());
-            }
-
-            if (Simulating)
-            {
-                if (hit is SchematicPart part)
-                {
-                    Item($"{part.RefDes} akımını osiloskoba ekle", "Ctrl+Tık", () => Sim.AddCurrentProbe(part.RefDes, null, PartCenter(part)));
-                    if (Sim.IsPartFailed(part.RefDes)) Item($"{part.RefDes} parçasını onar (yenisiyle değiştir)", "", () => Sim.RepairPart(part.RefDes));
-                }
-
-                Item("Hasarlı parçaları onar", "", Sim.RepairAll);
-            }
-            else
-            {
-                bool any = _selection.Count > 0;
-                Item("Döndür", "R", RotateSelection, any);
-                Item("Aynala", "X", MirrorSelection, any);
-                Item("Çoğalt", "Ctrl+D", DuplicateSelection, _selection.OfType<SchematicPart>().Any());
-                menu.Items.Add(new Separator());
-                Item("Sil", "Del", DeleteSelection, any);
-                menu.Items.Add(new Separator());
-                Item("Multimetre uçlarını yerleştir", "", () => BeginLeadPlacement(true));
-                Item("Kablo çiz", "W", () => Tool = EditorTool.Wire);
-                Item("Hat etiketi", "L", () => Tool = EditorTool.Label);
-                Item("Tümünü sığdır", "F", FitToContent);
-            }
-
-            menu.PlacementTarget = this;
-            menu.IsOpen = true;
         }
     }
 }

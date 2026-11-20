@@ -62,6 +62,9 @@ namespace RobotWin.Studio.World
         /// <summary>Local bounding box in metres.</summary>
         public Rect3D Bounds { get; set; }
 
+        /// <summary>Solid body for physics when it differs from <see cref="Bounds"/> (no cable pigtails or leads).</summary>
+        public Rect3D CollisionBounds { get; set; } = Rect3D.Empty;
+
         /// <summary>Emissive layer of LEDs/lamps on the object (lit by the simulation), by inner refdes.</summary>
         public Dictionary<string, EmissiveMaterial> Lights { get; } = new Dictionary<string, EmissiveMaterial>(StringComparer.OrdinalIgnoreCase);
 
@@ -72,7 +75,22 @@ namespace RobotWin.Studio.World
         public string ScreenStyle { get; set; } = string.Empty;
 
         /// <summary>Emissive glow used for heat / burn tint of the whole object.</summary>
-        public EmissiveMaterial Heat { get; } = new EmissiveMaterial(new SolidColorBrush(Colors.Black));
+        public EmissiveMaterial Heat { get; set; } = new EmissiveMaterial(new SolidColorBrush(Colors.Black));
+
+        /// <summary>Detailed model of a free-standing part (live hooks: heat, charring, light, screen).</summary>
+        public Models3D.ComponentInstance? Instance { get; set; }
+
+        /// <summary>Detailed models of the parts on a board, by inner refdes.</summary>
+        public List<(string RefDes, Models3D.ComponentInstance Instance)> Parts { get; } = new List<(string, Models3D.ComponentInstance)>();
+
+        /// <summary>Rotation of the detailed model's own moving part (used instead of <see cref="Moving"/>).</summary>
+        public AxisAngleRotation3D? PortSpin { get; set; }
+
+        /// <summary>+1, or -1 when the port axis was flipped to point out of the attachment side.</summary>
+        public double PortSign { get; set; } = 1;
+
+        /// <summary>Display surface whose brush becomes <see cref="Screen"/> once a picture is shown.</summary>
+        public DiffuseMaterial? ScreenMaterial { get; set; }
     }
 
     /// <summary>
@@ -88,8 +106,8 @@ namespace RobotWin.Studio.World
         {
             var model = o.Kind switch
             {
-                WorldObjectKind.Board => BuildBoard(o, world, library),
-                WorldObjectKind.Component => BuildComponent(o, library),
+                WorldObjectKind.Board => DetailedBoard(o, world, library) ?? BuildBoard(o, world, library),
+                WorldObjectKind.Component => DetailedComponent(o, library) ?? BuildComponent(o, library),
                 WorldObjectKind.Model => BuildMesh(o),
                 _ => BuildBody(o)
             };
@@ -190,6 +208,160 @@ namespace RobotWin.Studio.World
         }
 
         // ================================================================ boards
+
+        // ================================================================ detailed models (Models3D library)
+
+        private static readonly Matrix3D MmToM = new Matrix3D(Mm, 0, 0, 0, 0, Mm, 0, 0, 0, 0, Mm, 0, 0, 0, 0, 1);
+
+        private static Rect3D Scale(Rect3D r) => r.IsEmpty ? r : new Rect3D(r.X * Mm, r.Y * Mm, r.Z * Mm, r.SizeX * Mm, r.SizeY * Mm, r.SizeZ * Mm);
+
+        private static bool Recoverable(Exception ex) =>
+            ex is InvalidOperationException || ex is ArgumentException || ex is NullReferenceException || ex is IndexOutOfRangeException || ex is KeyNotFoundException;
+
+        /// <summary>
+        /// Free-standing part from the detailed model library: real geometry, the servo horn / motor
+        /// shaft as its port, cable anchors at the actual pin, lead and connector positions.
+        /// </summary>
+        private static ObjectModel? DetailedComponent(WorldObject o, PartLibrary library)
+        {
+            var def = o.PartId != null ? library.Find(o.PartId) : null;
+            if (def == null) return null;
+            // Radio gear has its own models with live hooks (controller lightbar, USB port).
+            var w = RobotTwin.CoreSim.Design.WirelessParts.GamepadId;
+            if (def.Id == w || def.Id == RobotTwin.CoreSim.Design.WirelessParts.UsbHostId || def.Id == RobotTwin.CoreSim.Design.WirelessParts.RouterId ||
+                def.Id == RobotTwin.CoreSim.Design.WirelessParts.BeaconId || def.Id == RobotTwin.CoreSim.Design.WirelessParts.IrRemoteId)
+            {
+                return null;
+            }
+
+            try
+            {
+                var preset = o.PresetId != null ? library.FindPreset(o.PresetId) : null;
+                var p = library.ResolveParameters(def, preset, o.Parameters);
+                var inst = Models3D.ComponentModels.Create(def, p, true);
+                if (inst.Bounds.IsEmpty) return null;
+                var m = new ObjectModel { Instance = inst };
+                var root = new Model3DGroup { Transform = new MatrixTransform3D(MmToM) };
+                root.Children.Add(inst.Root);
+                m.Body.Children.Add(root);
+                m.Bounds = Scale(inst.Bounds);
+                if (inst.Glow != null) m.Heat = inst.Glow;
+
+                // Physics body: the main shell only (no cable pigtail, leads, horn or shaft).
+                foreach (var child in inst.Root.Children)
+                {
+                    if (child is GeometryModel3D gm && gm.Material is MaterialGroup mg && inst.Body != null && mg.Children.Contains(inst.Body))
+                    {
+                        m.CollisionBounds = Scale(gm.Bounds);
+                    }
+                }
+
+                // The lowest point (pin tails, feet) rests on the floor; a shell much smaller than the part
+                // (the chip of a module board) would let the rest sink, so the whole footprint is used then.
+                if (!m.CollisionBounds.IsEmpty)
+                {
+                    var c = m.CollisionBounds;
+                    var full = m.Bounds;
+                    bool small = c.SizeX * c.SizeY < 0.3 * full.SizeX * full.SizeY;
+                    double z0 = Math.Min(c.Z, full.Z);
+                    m.CollisionBounds = small
+                        ? new Rect3D(full.X, full.Y, z0, full.SizeX, full.SizeY, c.Z + c.SizeZ - z0)
+                        : new Rect3D(c.X, c.Y, z0, c.SizeX, c.SizeY, c.Z + c.SizeZ - z0);
+                }
+
+                var spin = inst.Moving.FirstOrDefault(x => x.Name == "horn" || x.Name == "shaft") ?? inst.Moving.FirstOrDefault();
+                if (spin != null)
+                {
+                    // The port sits where things attach (horn top, shaft end) and points out of the part.
+                    var axis = spin.Axis;
+                    var tip = spin.Tip;
+                    double sign = 1;
+                    if (Math.Abs(axis.Y) > 0.9 && axis.Y < 0)
+                    {
+                        // Gearbox shafts come out of both sides: use the +Y end like the other parts.
+                        axis = -axis;
+                        tip = new Point3D(tip.X, spin.Pivot.Y + (spin.Pivot.Y - tip.Y), tip.Z);
+                        sign = -1;
+                    }
+
+                    string label = spin.Name switch { "horn" => "Servo kolu", "shaft" => "Motor mili", "knob" => "Düğme", _ => spin.Name };
+                    m.Port = new PortFrame(spin.Name, label, new Point3D(tip.X * Mm, tip.Y * Mm, tip.Z * Mm), axis);
+                    m.PortSpin = spin.Rotation;
+                    m.PortSign = sign;
+                }
+
+                foreach (var (pin, pos, _) in Models3D.ComponentModels.MapPins(def, p, inst.PadAnchors))
+                {
+                    m.Pins.Add(new PinAnchor(pin, pin, new Point3D(pos.X * Mm, pos.Y * Mm, pos.Z * Mm)));
+                }
+
+                // A model without cable anchors cannot be wired: fall back to the simple one.
+                if (m.Pins.Count == 0 && def.Pins.Count > 0) return null;
+                if (inst.Screen != null)
+                {
+                    m.ScreenMaterial = inst.Screen;
+                    m.Screen = new ImageBrush { Stretch = Stretch.Fill };
+                    m.ScreenStyle = inst.ScreenStyle;
+                }
+
+                return m;
+            }
+            catch (Exception ex) when (Recoverable(ex))
+            {
+                return null;
+            }
+        }
+
+        /// <summary>User board from its PCB layout with every part as a detailed model.</summary>
+        private static ObjectModel? DetailedBoard(WorldObject o, WorldDocument world, PartLibrary library)
+        {
+            var sch = world.FindDesign(o.DesignId)?.Package.Schematic;
+            if (sch == null) return null;
+            try
+            {
+                var board = sch.Board;
+                if (board == null || board.Components.Count == 0)
+                {
+                    board = BoardDocument.Synchronize(sch, library);
+                    AutoPlacer.Place(board);
+                }
+
+                var scene = Models3D.BoardModels.BuildScene(board, sch, library);
+                var m = new ObjectModel();
+                var root = new Model3DGroup { Transform = new MatrixTransform3D(MmToM) };
+                root.Children.Add(scene.Root);
+                m.Body.Children.Add(root);
+                foreach (var part in scene.Parts) m.Parts.Add((part.RefDes, part.Instance));
+                foreach (var (refDes, pin, pos, _) in Models3D.BoardModels.ConnectorAnchors(board, sch, library))
+                {
+                    m.Pins.Add(new PinAnchor(refDes + "." + pin, refDes + "." + pin, new Point3D(pos.X * Mm, pos.Y * Mm, pos.Z * Mm)));
+                }
+
+                var b = scene.Root.Bounds;
+                double w = board.Width, h = board.Height;
+                m.Bounds = b.IsEmpty ? new Rect3D(-w / 2 * Mm, -h / 2 * Mm, 0, w * Mm, h * Mm, 13 * Mm) : Scale(b);
+                double top = b.IsEmpty ? 12 : Math.Max(1.6, Math.Min(b.Z + b.SizeZ, 25));
+                m.CollisionBounds = new Rect3D(-w / 2 * Mm, -h / 2 * Mm, 0, w * Mm, h * Mm, top * Mm);
+                return m;
+            }
+            catch (Exception ex) when (Recoverable(ex))
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Port of a catalogue part in its own frame (metres): where a wheel or arm attaches, and the
+        /// top of the part's body. Templates use this to place what they mount on it.
+        /// </summary>
+        public static (Point3D Pivot, Vector3D Axis, double Height) Mount(PartLibrary library, string presetId)
+        {
+            var world = new WorldDocument();
+            var o = world.AddComponent(library, presetId, new WorldPose());
+            var m = Build(o, world, library);
+            var body = m.CollisionBounds.IsEmpty ? m.Bounds : m.CollisionBounds;
+            return m.Port is { } pf ? (pf.Pivot, pf.Axis, body.Z + body.SizeZ) : (new Point3D(), new Vector3D(0, 0, 1), body.Z + body.SizeZ);
+        }
 
         private static ObjectModel BuildBoard(WorldObject o, WorldDocument world, PartLibrary library)
         {
@@ -310,7 +482,7 @@ namespace RobotWin.Studio.World
                     Battery(m, o.PresetId ?? string.Empty, p);
                     break;
                 default:
-                    Generic(m, def, p);
+                    if (!RadioModels.TryBuild(m, def, p)) Generic(m, def, p);   // [radio] World/RadioModels.cs
                     break;
             }
 
@@ -344,6 +516,7 @@ namespace RobotWin.Studio.World
             m.Pins.Add(new PinAnchor("V+", "V+ (kırmızı)", new Point3D((cx + 4) * Mm, 0, cz * Mm)));
             m.Pins.Add(new PinAnchor("SIG", "SIG (turuncu)", new Point3D((cx + 4) * Mm, 2.54 * Mm, cz * Mm)));
             m.Bounds = new Rect3D(-L / 2 * Mm, -W / 2 * Mm, 0, (L + 50) * Mm, W * Mm, (hz + 2) * Mm);
+            m.CollisionBounds = new Rect3D(-L / 2 * Mm, -W / 2 * Mm, 0, L * Mm, W * Mm, (H + 4 * k) * Mm);
         }
 
         /// <summary>Yellow TT gear motor (70 × 22.5 × 18.8 mm, shaft across), or a round can motor.</summary>
@@ -413,6 +586,7 @@ namespace RobotWin.Studio.World
 
         private static void Leads(ObjectModel m, double x, double z)
         {
+            m.CollisionBounds = m.Body.Bounds;
             Box(m.Body, x + 15, -2, z, 30, 1.4, 1.4, Color.FromRgb(0xC4, 0x2B, 0x1C), 0.05);
             Box(m.Body, x + 15, 2, z, 30, 1.4, 1.4, Color.FromRgb(0x1A, 0x1A, 0x1D), 0.05);
             m.Pins.Add(new PinAnchor("+", "+ (kırmızı)", new Point3D((x + 30) * Mm, -2 * Mm, z * Mm)));

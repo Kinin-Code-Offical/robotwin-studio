@@ -70,6 +70,7 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ToggleButton x:Name="FollowToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Kamera seçili nesneyi takip etsin (T)" Click="OnFollow"><t:Icon Data="{StaticResource I.Eye}" Size="16"/></ToggleButton>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Üstten görünüm" Click="OnTop"><t:Icon Data="{StaticResource I.Layers}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Hepsini sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
                     </StackPanel>
@@ -88,12 +89,13 @@
 
                 <!-- Palette -->
                 <DockPanel Grid.Column="0" Margin="12,12,6,0">
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-                        <RadioButton x:Name="TabBoards" Style="{StaticResource Chip}" Content="Kartlar" GroupName="pal" IsChecked="True" Click="OnPaletteTab"/>
-                        <RadioButton x:Name="TabParts" Style="{StaticResource Chip}" Content="Parçalar" GroupName="pal" Margin="4,0" Click="OnPaletteTab"/>
-                        <RadioButton x:Name="TabMech" Style="{StaticResource Chip}" Content="Mekanik" GroupName="pal" Click="OnPaletteTab"/>
-                        <RadioButton x:Name="TabEnv" Style="{StaticResource Chip}" Content="Ortam" GroupName="pal" Margin="4,0,0,0" Click="OnPaletteTab"/>
-                    </StackPanel>
+                    <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                        <RadioButton x:Name="TabScene" Style="{StaticResource Chip}" Content="Sahne" GroupName="pal" IsChecked="True" Margin="0,0,0,4" Click="OnPaletteTab" ToolTip="Dünyadaki her şey: neyin neye bağlı olduğu, durumları"/>
+                        <RadioButton x:Name="TabBoards" Style="{StaticResource Chip}" Content="Kartlar" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab"/>
+                        <RadioButton x:Name="TabParts" Style="{StaticResource Chip}" Content="Parçalar" GroupName="pal" Margin="4,0,4,4" Click="OnPaletteTab"/>
+                        <RadioButton x:Name="TabMech" Style="{StaticResource Chip}" Content="Mekanik" GroupName="pal" Margin="0,0,0,4" Click="OnPaletteTab"/>
+                        <RadioButton x:Name="TabEnv" Style="{StaticResource Chip}" Content="Ortam" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab"/>
+                    </WrapPanel>
                     <Grid x:Name="SearchRow" DockPanel.Dock="Top" Margin="0,0,6,8" Visibility="Collapsed">
                         <TextBox x:Name="SearchBox" Tag="Parça ara (servo, motor, pil, sensör…)" Padding="28,4,8,4" TextChanged="OnSearch"/>
                         <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{StaticResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="9,0,0,0" IsHitTestVisible="False"/>
@@ -121,6 +123,7 @@
                     <RadioButton x:Name="DockLog" Style="{StaticResource Chip}" Content="Olaylar" GroupName="dock" IsChecked="True" Click="OnDockTab"/>
                     <RadioButton x:Name="DockSerial" Style="{StaticResource Chip}" Content="Seri monitör" GroupName="dock" Margin="4,0" Click="OnDockTab"/>
                     <RadioButton x:Name="DockCables" Style="{StaticResource Chip}" Content="Kablolar ve ölçümler" GroupName="dock" Click="OnDockTab"/>
+                    <RadioButton x:Name="DockRf" Style="{StaticResource Chip}" Content="RF" GroupName="dock" Margin="4,0,0,0" Click="OnDockTab" ToolTip="Radyo: cihazlar, RSSI, kanal, paket/s (World/RadioOverlay)"/>
                 </StackPanel>
                 <Grid Margin="12,0,12,8">
                     <ListBox x:Name="LogList" BorderThickness="0" Background="Transparent" FontFamily="{StaticResource F.Mono}" FontSize="12">
@@ -146,6 +149,10 @@
                     </DockPanel>
                     <ScrollViewer x:Name="CablePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="CableTable"/>
+                    </ScrollViewer>
+                    <!-- [radio] RF panel (Pages/WorldPage.Radio.cs) -->
+                    <ScrollViewer x:Name="RfPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="RfTable"/>
                     </ScrollViewer>
                 </Grid>
             </DockPanel>

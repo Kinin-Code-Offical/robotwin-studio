@@ -32,6 +32,9 @@ namespace RobotWin.Studio.Pages
 
         private readonly MainWindow _main;
         private readonly WorldSession _session = new WorldSession(PartLibrary.Default);
+
+        /// <summary>State and time of the world simulation (for the navigation rail).</summary>
+        public (Simulation.SimState State, double Time) SimulationState => (_session.State, _session.Time);
         private WorldDocument? _shown;
         private int _serialShown;
         private DateTime _lastPanels = DateTime.MinValue;
@@ -41,8 +44,13 @@ namespace RobotWin.Studio.Pages
             _main = main;
             InitializeComponent();
             Scene.Session = _session;
+            Scene.MassOf = o => W.ActiveWorld is { } w ? EstimateMass(w, o) / 1000.0 : 0.01;
             Scene.Grid = AppSettings.Current.WorldGridMm / 1000.0;
-            Scene.SelectionChanged += _ => BuildInspector();
+            Scene.SelectionChanged += _ =>
+            {
+                BuildInspector();
+                if (TabScene.IsChecked == true) BuildPalette();
+            };
             Scene.BeginEdit += () => W.BeginWorldChange();
             Scene.EditCommitted += msg => Commit(msg, rebuild: false);
             Scene.CableRequested += AddCable;
@@ -67,6 +75,7 @@ namespace RobotWin.Studio.Pages
             PreviewKeyDown += OnKeys;
             BuildPalette();
             UpdateRunButton();
+            InitRadio();   // [radio] Pages/WorldPage.Radio.cs
         }
 
         private static Workspace W => Workspace.Current;
@@ -92,7 +101,7 @@ namespace RobotWin.Studio.Pages
         private void Refresh()
         {
             Scene.Rebuild();
-            if (TabBoards.IsChecked == true || TabEnv.IsChecked == true) BuildPalette();
+            if (TabScene.IsChecked == true || TabBoards.IsChecked == true || TabEnv.IsChecked == true) BuildPalette();
             BuildInspector();
         }
 
@@ -145,7 +154,8 @@ namespace RobotWin.Studio.Pages
         {
             Palette.Children.Clear();
             SearchRow.Visibility = TabParts.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            if (TabBoards.IsChecked == true) BuildBoardsPalette();
+            if (TabScene.IsChecked == true) BuildScenePalette();
+            else if (TabBoards.IsChecked == true) BuildBoardsPalette();
             else if (TabParts.IsChecked == true) BuildPartsPalette();
             else if (TabMech.IsChecked == true) BuildMechPalette();
             else BuildEnvironmentPalette();
@@ -211,6 +221,8 @@ namespace RobotWin.Studio.Pages
                 if (preset == null) continue;
                 Palette.Children.Add(Row(preset.Name, preset.Description, () => AddComponent(id)));
             }
+
+            RadioPalette();   // [radio]
         }
 
         private void BuildPartsPalette()
@@ -630,6 +642,7 @@ namespace RobotWin.Studio.Pages
             }
 
             if (o.Kind == WorldObjectKind.Component) ComponentSection(o);
+            RadioSection(world, o);   // [radio] controller pairing, USB plug, IR keys, ESP32 radio
             PortSection(world, o);
             CablesSection(world, o);
             JointsSection(world, o);
@@ -1074,6 +1087,12 @@ namespace RobotWin.Studio.Pages
 
         private void OnTop(object sender, RoutedEventArgs e) => Scene.TopView();
 
+        private void OnFollow(object sender, RoutedEventArgs e)
+        {
+            Scene.Follow = FollowToggle.IsChecked == true;
+            W.Status = Scene.Follow ? "Kamera seçili nesneyi takip ediyor" : "Kamera takibi kapalı";
+        }
+
         private void OnFit(object sender, RoutedEventArgs e) => Scene.FrameAll();
 
         private void OnKeys(object sender, KeyEventArgs e)
@@ -1096,6 +1115,10 @@ namespace RobotWin.Studio.Pages
                     break;
                 case Key.Y when ctrl:
                     W.Redo();
+                    break;
+                case Key.T:
+                    FollowToggle.IsChecked = FollowToggle.IsChecked != true;
+                    OnFollow(this, new RoutedEventArgs());
                     break;
                 case Key.K:
                     SetTool(WorldTool.Cable);
@@ -1141,7 +1164,7 @@ namespace RobotWin.Studio.Pages
                 default:
                     W.FlushActiveDesign();
                     Scene.ClearEffects();
-                    if (!_session.Start(world, Scene.CableLength, out var message))
+                    if (!_session.Start(world, Scene.CableLength, Scene.GeometryOf, out var message))
                     {
                         W.Status = message;
                         return;
@@ -1187,6 +1210,7 @@ namespace RobotWin.Studio.Pages
             SimStatus.Text = $"t = {SiValue.Format(_session.Time, "s")}" + (_session.RealtimeFactor < 0.9 * _session.Speed ? $" · gerçek zamanın {_session.RealtimeFactor:P0}'i" : string.Empty);
             UpdateSerial();
             UpdateLive();
+            UpdateRadioLive();   // [radio]
             if (DockCables.IsChecked == true) BuildCableTable();
         }
 
@@ -1220,6 +1244,7 @@ namespace RobotWin.Studio.Pages
             SerialPanel.Visibility = DockSerial.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             CablePanel.Visibility = DockCables.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             if (DockCables.IsChecked == true) BuildCableTable();
+            ShowRfPanel(DockRf.IsChecked == true);   // [radio]
         }
 
         private void BuildCableTable()
@@ -1273,6 +1298,7 @@ namespace RobotWin.Studio.Pages
                 OnSimUpdated();
                 DockSerial.IsChecked = true;
                 OnDockTab(this, new RoutedEventArgs());
+                Scene.FrameCurrent();
             }
 
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();

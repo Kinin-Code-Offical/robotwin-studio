@@ -292,6 +292,7 @@ namespace RobotWin.Studio.Simulation
             if (State != SimState.Running) return;
             State = SimState.Paused;
             Hook(false);
+            _sounds.Silence();
         }
 
         public void Resume()
@@ -306,6 +307,7 @@ namespace RobotWin.Studio.Simulation
         public void Stop()
         {
             Hook(false);
+            _sounds.Reset();
             _firmware.Clear();
             DisposeEsp32();
             Mechanics = null;
@@ -357,7 +359,10 @@ namespace RobotWin.Studio.Simulation
             Updated?.Invoke(this, EventArgs.Empty);
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(Time));
+            if (Compiled != null && State == SimState.Running) _sounds.Update(Compiled.Circuit.Devices, Speed);
         }
+
+        private readonly Audio.SimSounds _sounds = new Audio.SimSounds("sch:");
 
         /// <summary>Simulates up to <paramref name="seconds"/>; returns the simulated time actually covered.</summary>
         private double Advance(double seconds, Stopwatch? budget = null, double maxWallSeconds = double.PositiveInfinity)
@@ -423,6 +428,7 @@ namespace RobotWin.Studio.Simulation
                 {
                     string? part = PartOfDevice(e.DeviceId);
                     if (part != null) BurnTimes[part] = _wallClock.Elapsed.TotalSeconds;
+                    _sounds.OnEvent(e.Kind, e.DeviceId, e.Message, Simulator.Circuit.Devices.FirstOrDefault(d => d.Id == e.DeviceId));
                     Failure?.Invoke(this, entry);
                     if (Shell.AppSettings.Current.PauseOnFailure && State == SimState.Running) Pause();
                 }

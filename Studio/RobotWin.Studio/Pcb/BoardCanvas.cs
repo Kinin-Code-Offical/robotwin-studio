@@ -76,7 +76,6 @@ namespace RobotWin.Studio.Pcb
         private bool _panning;
         private Point _panStartPoint;
         private Vector _panStart;
-        private List<(Track Track, CopperLayer Layer, string Net)>? _ratsCache;
         private readonly Dictionary<Zone, (object Key, StreamGeometry Geo)> _zoneGeo = new Dictionary<Zone, (object, StreamGeometry)>();
 
         public BoardCanvas()
@@ -186,7 +185,6 @@ namespace RobotWin.Studio.Pcb
 
         private void Edited(string message)
         {
-            _ratsCache = null;
             BoardEdited?.Invoke(this, message);
             InvalidateVisual();
         }
@@ -196,7 +194,6 @@ namespace RobotWin.Studio.Pcb
         /// <summary>Drops cached geometry (call after the board changed outside the canvas).</summary>
         public void Refresh()
         {
-            _ratsCache = null;
             _zoneGeo.Clear();
             if (_board != null) _sel.RemoveAll(o => !Exists(o));
             InvalidateVisual();

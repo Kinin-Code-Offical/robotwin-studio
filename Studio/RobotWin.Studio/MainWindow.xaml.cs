@@ -64,7 +64,6 @@ namespace RobotWin.Studio
             InitializeComponent();
             LogoImage.Source = Logo.Image;
             Icon = Logo.Render(64);
-            NavIconsSmaller();
 
             _home = new HomePage(this);
             _world = new WorldPage(this);
@@ -128,6 +127,7 @@ namespace RobotWin.Studio
             Bind(Key.K, ModifierKeys.Control, OpenPalette);
             Bind(Key.P, ModifierKeys.Control | ModifierKeys.Shift, OpenPalette);
             ApplyStartupSettings();
+            SetupRail();
             AppSettings.Changed += (_, _) => ApplyUiScale(AppSettings.Current.UiScale);
             _autosave.Tick += (_, _) => Autosave();
             _autosave.Start();
@@ -192,6 +192,15 @@ namespace RobotWin.Studio
                 else W.Simulation.Start();
             }, "F5");
             yield return new PaletteCommand(sim, "Simülasyonu durdur", () => W.Simulation.Stop(), "Shift+F5");
+            foreach (var (title, cmd, keys) in Pages.SchematicPage.PaletteEntries)
+            {
+                var c = cmd;
+                yield return new PaletteCommand("Devre şeması", title, () =>
+                {
+                    Navigate("schematic");
+                    _schematic.RunEditorCommand(c);
+                }, keys);
+            }
             foreach (var t in Examples.WorldTemplates.All)
             {
                 var template = t;
@@ -339,14 +348,6 @@ namespace RobotWin.Studio
 
         // ================================================================ navigation
 
-        private void NavIconsSmaller()
-        {
-            foreach (var nav in new[] { NavHome, NavWorld, NavSchematic, NavPcb, NavCode, NavAssembly, NavLibrary, NavSettings })
-            {
-                if (nav.Content is Theme.Icon icon) icon.Size = 18;
-            }
-        }
-
         public string CurrentPage => _current;
 
         public void Navigate(string page)
@@ -375,14 +376,114 @@ namespace RobotWin.Studio
 
         private void UpdateNav(string page)
         {
-            NavHome.IsChecked = page == "home";
-            NavWorld.IsChecked = page == "world";
-            NavSchematic.IsChecked = page == "schematic";
-            NavPcb.IsChecked = page == "pcb";
-            NavAssembly.IsChecked = page == "assembly";
-            NavCode.IsChecked = page == "code";
-            NavLibrary.IsChecked = page == "library";
-            NavSettings.IsChecked = page == "settings";
+            Rail.Active = page;
+            Rail.Refresh();
+        }
+
+        private readonly System.Windows.Threading.DispatcherTimer _railTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        private DateTime _ercAt;
+        private (int Errors, int Warnings) _erc;
+
+        /// <summary>Wires the design-to-real line: navigation, shortcuts and the live status of every stage.</summary>
+        private bool _snapshotRail;
+
+        /// <summary>Expands the rail for a snapshot without saving the preference.</summary>
+        public void ExpandRailForSnapshot()
+        {
+            _snapshotRail = true;
+            Rail.IsExpanded = true;
+        }
+
+        private void SetupRail()
+        {
+            Rail.Navigate += Navigate;
+            Rail.StatusProvider = StageStatus;
+            Rail.IsExpanded = AppSettings.Current.NavExpanded;
+            Rail.ExpandedChanged += (_, _) =>
+            {
+                if (_snapshotRail) return;
+                AppSettings.Current.NavExpanded = Rail.IsExpanded;
+                AppSettings.Current.Save();
+            };
+            Bind(Key.D0, ModifierKeys.Control, () => Navigate("home"));
+            Bind(Key.D1, ModifierKeys.Control, () => Navigate("schematic"));
+            Bind(Key.D2, ModifierKeys.Control, () => Navigate("pcb"));
+            Bind(Key.D3, ModifierKeys.Control, () => Navigate("code"));
+            Bind(Key.D4, ModifierKeys.Control, () => Navigate("assembly"));
+            Bind(Key.D5, ModifierKeys.Control, () => Navigate("world"));
+            Bind(Key.D6, ModifierKeys.Control, () => Navigate("library"));
+            Bind(Key.B, ModifierKeys.Control, () => Rail.IsExpanded = !Rail.IsExpanded);
+            _railTimer.Tick += (_, _) => Rail.Refresh();
+            _railTimer.Start();
+        }
+
+        private RailStatus StageStatus(string stage)
+        {
+            var sch = W.Schematic;
+            var lib = W.Library;
+            switch (stage)
+            {
+                case "schematic":
+                {
+                    if ((DateTime.UtcNow - _ercAt).TotalSeconds > 3)
+                    {
+                        _ercAt = DateTime.UtcNow;
+                        try
+                        {
+                            var v = RobotTwin.CoreSim.Design.ElectricalRulesChecker.Check(sch, lib);
+                            _erc = (v.Count(x => x.Severity == RobotTwin.CoreSim.Design.ErcSeverity.Error), v.Count(x => x.Severity == RobotTwin.CoreSim.Design.ErcSeverity.Warning));
+                        }
+                        catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is NullReferenceException || ex is KeyNotFoundException)
+                        {
+                            _erc = (0, 0);
+                        }
+                    }
+
+                    bool running = W.Simulation.State == SimState.Running;
+                    string text = sch.Parts.Count == 0 ? "Boş şema" : $"{sch.Parts.Count} parça · {sch.Wires.Count + sch.Labels.Count} bağlantı";
+                    if (_erc.Errors > 0) text += $" · {_erc.Errors} ERC hatası";
+                    else if (_erc.Warnings > 0) text += $" · {_erc.Warnings} uyarı";
+                    if (running) text = "Simülasyon çalışıyor · " + text;
+                    var sev = sch.Parts.Count == 0 ? RailSeverity.None : _erc.Errors > 0 ? RailSeverity.Error : _erc.Warnings > 0 ? RailSeverity.Warning : RailSeverity.Ok;
+                    return new RailStatus(text, sev, running);
+                }
+
+                case "pcb":
+                {
+                    var b = sch.Board;
+                    if (b == null || b.Components.Count == 0)
+                    {
+                        return new RailStatus(sch.Parts.Count == 0 ? "Kart yok" : "Yerleşim bekliyor", sch.Parts.Count == 0 ? RailSeverity.None : RailSeverity.Warning);
+                    }
+
+                    return new RailStatus($"{b.Width:0}×{b.Height:0} mm · {b.Components.Count} parça · {b.Tracks.Count} yol", b.Tracks.Count > 0 ? RailSeverity.Ok : RailSeverity.Warning);
+                }
+
+                case "code":
+                {
+                    int boards = sch.Parts.Count(p => lib.Find(p.PartId)?.Symbol == RobotTwin.CoreSim.Design.SymbolKind.Board);
+                    return new RailStatus(boards == 0 ? "Programlanabilir kart yok" : $"{boards} programlanabilir kart", boards == 0 ? RailSeverity.None : RailSeverity.Ok);
+                }
+
+                case "assembly":
+                {
+                    var a = sch.Assembly;
+                    bool vehicle = a != null && a.Kind != RobotTwin.CoreSim.Mechanics.VehicleKind.None;
+                    return new RailStatus(vehicle ? "Araç: " + a!.Kind : "Mekanik tanımlı değil", vehicle ? RailSeverity.Ok : RailSeverity.None);
+                }
+
+                case "world":
+                {
+                    var world = W.ActiveWorld ?? W.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World)?.World;
+                    if (world == null) return new RailStatus("Açık dünya yok");
+                    var (state, time) = _world.SimulationState;
+                    bool live = state == SimState.Running;
+                    string text = live ? $"Çalışıyor · t = {time:0.0} s" : state == SimState.Paused ? $"Duraklatıldı · t = {time:0.0} s" : $"{world.Objects.Count} nesne · {world.Cables.Count} kablo";
+                    return new RailStatus(text, state == SimState.Paused ? RailSeverity.Warning : RailSeverity.None, live);
+                }
+            }
+
+            return new RailStatus(string.Empty);
         }
 
         private void Shown(string page)
@@ -418,7 +519,6 @@ namespace RobotWin.Studio
             _schematic.BeginPlace(presetId);
         }
 
-        private void OnNav(object sender, RoutedEventArgs e) => Navigate((string)((RadioButton)sender).CommandParameter);
 
         private void OnActiveDocumentChanged()
         {
@@ -440,6 +540,25 @@ namespace RobotWin.Studio
             }
 
             Tabs.UpdateLayout();
+        }
+
+        /// <summary>Cross-probe from the schematic: opens the PCB page centred on a component.</summary>
+        public void ShowPartInPcb(string refDes)
+        {
+            CrossProbe.ProbePart(this, refDes);
+            Navigate("pcb");
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var comp = W.Schematic.Board?.Components.FirstOrDefault(c => string.Equals(c.RefDes, refDes, StringComparison.OrdinalIgnoreCase));
+                if (comp == null)
+                {
+                    W.Status = $"{refDes} PCB'de yok (önce PCB sayfasında kartı güncelleyin)";
+                    return;
+                }
+
+                _pcb.Canvas.ZoomTo(comp.X, comp.Y);
+                W.Status = $"PCB: {refDes} ({comp.X:0.0}, {comp.Y:0.0}) mm";
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         /// <summary>Used by --snapshot: puts the page in a representative state.</summary>
@@ -510,6 +629,8 @@ namespace RobotWin.Studio
                     _schematic.FinishSnapshot(fault);
                 }
             }
+
+            if (page == "schematic" && simulate == null) _schematic.PrepareEditorSnapshot(fault);
 
             if (fault == "split")
             {
@@ -954,7 +1075,7 @@ namespace RobotWin.Studio
         public void SetFocusMode(bool on)
         {
             _focusMode = on;
-            NavColumn.Width = new GridLength(on ? 0 : 68);
+            NavColumn.Width = on ? new GridLength(0) : GridLength.Auto;
             NavBar.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
             StatusRow.Height = new GridLength(on ? 0 : 26);
             StatusBar.Visibility = on ? Visibility.Collapsed : Visibility.Visible;

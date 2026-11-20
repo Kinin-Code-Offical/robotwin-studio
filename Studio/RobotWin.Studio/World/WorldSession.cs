@@ -23,7 +23,7 @@ namespace RobotWin.Studio.World
     /// I²C devices on their buses, and the moving parts (servo horns, motor shafts)
     /// with everything fixed onto them.
     /// </summary>
-    public sealed class WorldSession
+    public sealed partial class WorldSession
     {
 
         public const double FirmwareSlice = 50e-6;
@@ -66,10 +66,18 @@ namespace RobotWin.Studio.World
 
         // ================================================================ start / stop
 
-        public bool Start(WorldDocument world, Func<WorldCable, double> cableLength, out string message)
+        /// <summary>Gravity, contacts, joints and actuators of the world (null when no geometry was given).</summary>
+        public WorldPhysics? Physics { get; private set; }
+
+        private int _impactLogged;
+
+        public bool Start(WorldDocument world, Func<WorldCable, double> cableLength, out string message) => Start(world, cableLength, null, out message);
+
+        public bool Start(WorldDocument world, Func<WorldCable, double> cableLength, Func<WorldObject, WorldBodyGeometry>? geometry, out string message)
         {
             Stop();
             Log.Clear();
+            _impactLogged = 0;
             _serial.Clear();
             _failedObjects.Clear();
             World = world;
@@ -101,7 +109,21 @@ namespace RobotWin.Studio.World
                 Simulator.Initialize(InitialState.Zero);
             }
 
+            StartRadio();   // [radio] World/WorldSession.Radio.cs
             AttachFirmware();
+            if (geometry != null)
+            {
+                try
+                {
+                    Physics = WorldPhysics.Build(world, geometry, Circuit);
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+                {
+                    Physics = null;
+                    Log.Add(new SimLogEntry(0, "fizik", "Fizik sahnesi kurulamadı: " + ex.Message, AnalogEventKind.Warning));
+                }
+            }
+
             Simulator.SubstepAccepted = t =>
             {
                 for (int i = 0; i < _esp.Count; i++) _esp[i].OnSubstep(t);
@@ -122,6 +144,7 @@ namespace RobotWin.Studio.World
         {
             if (State != SimState.Running) return;
             State = SimState.Paused;
+            _sounds.Silence();
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -136,12 +159,15 @@ namespace RobotWin.Studio.World
 
         public void Stop()
         {
+            _sounds.Reset();
             foreach (var e in _esp) e.Dispose();
             _esp.Clear();
             _avr.Clear();
+            StopRadio();   // [radio]
             if (Simulator != null) Simulator.SubstepAccepted = null;
             Simulator = null;
             Circuit = null;
+            Physics = null;
             if (State != SimState.Stopped)
             {
                 State = SimState.Stopped;
@@ -158,15 +184,30 @@ namespace RobotWin.Studio.World
             _lastWall = now;
             if (wallDt <= 0) return;
             var budget = Stopwatch.StartNew();
+            RadioFrame();   // [radio] controller input / feedback, radio events
             double done = Advance(wallDt * Speed, budget, 0.022);
             _realtime = 0.85 * _realtime + 0.15 * (done / wallDt);
             Updated?.Invoke(this, EventArgs.Empty);
+            if (State == SimState.Running && Simulator != null && World != null)
+            {
+                double hot = double.NaN;
+                foreach (var o in World.Objects)
+                {
+                    double t = Temperature(o);
+                    if (!double.IsNaN(t) && (double.IsNaN(hot) || t > hot)) hot = t;
+                }
+
+                _sounds.Update(Simulator.Circuit.Devices, Speed, hot);
+            }
         }
+
+        private readonly Audio.SimSounds _sounds = new Audio.SimSounds("world:");
 
         public void StepOnce(double seconds)
         {
             if (Simulator == null) return;
             Advance(seconds);
+            RadioFrame();   // [radio]
             Updated?.Invoke(this, EventArgs.Empty);
         }
 
@@ -184,7 +225,9 @@ namespace RobotWin.Studio.World
                     double dt = Math.Min(chunk, seconds - covered);
                     for (int i = 0; i < _avr.Count; i++) _avr[i].Advance(dt, Simulator.Time);
                     for (int i = 0; i < _esp.Count; i++) _esp[i].Advance(dt, Simulator.Time);
+                    AdvanceRadio(Simulator.Time, dt);   // [radio] IR receiver outputs, radio housekeeping
                     Simulator.Step(dt);
+                    Physics?.Advance(dt, Simulator);
                     covered += dt;
                     DrainEvents();
                     if (budget != null && budget.Elapsed.TotalSeconds > maxWall) break;
@@ -201,6 +244,21 @@ namespace RobotWin.Studio.World
 
         private void DrainEvents()
         {
+            if (Physics != null)
+            {
+                foreach (var pe in Physics.DrainEvents())
+                {
+                    var o = World?.Find(pe.Source);
+                    // Knocks are information; only something that actually breaks or comes off is a failure.
+                    bool broke = pe.Kind != RobotTwin.CoreSim.Mechanics.PhysicsEventKind.Impact;
+                    if (broke) _sounds.OnEvent(AnalogEventKind.Failure, pe.Source, pe.Message);
+                    else _sounds.Impact(pe.Value);
+                    if (!broke && _impactLogged++ > 20) continue;
+                    Log.Add(new SimLogEntry(Time, o?.Name ?? pe.Source, pe.Message, broke ? AnalogEventKind.Failure : AnalogEventKind.StateChange));
+                    if (broke && o != null) Failure?.Invoke(o.Id, pe.Message);
+                }
+            }
+
             foreach (var e in Simulator!.DrainEvents())
             {
                 string obj = ObjectOfDevice(e.DeviceId);
@@ -212,6 +270,7 @@ namespace RobotWin.Studio.World
                 Log.Add(entry);
                 if (e.Kind == AnalogEventKind.Failure)
                 {
+                    _sounds.OnEvent(e.Kind, e.DeviceId, e.Message, Simulator.Circuit.Devices.FirstOrDefault(d => d.Id == e.DeviceId));
                     _failedObjects.Add(obj);
                     Failure?.Invoke(obj, e.Message);
                     if (AppSettings.Current.PauseOnFailure) Pause();
@@ -266,8 +325,12 @@ namespace RobotWin.Studio.World
                     mcu.LoadHex(hex);
                     string refDes = prog.RefDes;
                     var cosim = new FirmwareCoSimulation(mcu, circuit.Compiled, refDes, () => Simulator == null ? 0 : circuit.Compiled.PinVoltage(Simulator, refDes, "5V"));
-                    cosim.SerialOutput += text => AppendSerial(where, text);
+                    cosim.SerialOutput += text =>
+                    {
+                        if (SerialRouted(cosim)) AppendSerial(where, text);   // [radio] only while the USB cable is plugged
+                    };
                     _avr.Add(cosim);
+                    TrackBoard(cosim, prog);   // [radio]
                     Log.Add(new SimLogEntry(0, where, $"Yazılım çalışıyor: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, prog);
                 }
@@ -309,8 +372,12 @@ namespace RobotWin.Studio.World
             try
             {
                 var cosim = new Esp32CoSimulation(dll, Circuit!.Compiled, prog.RefDes);
-                cosim.SerialOutput += text => AppendSerial(where, text);
+                cosim.SerialOutput += text =>
+                {
+                    if (SerialRouted(cosim)) AppendSerial(where, text);   // [radio] only while the USB cable is plugged
+                };
                 _esp.Add(cosim);
+                TrackBoard(cosim, prog);   // [radio] radio medium bridge
                 Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (ESP32 HAL modeli)", AnalogEventKind.StateChange));
                 AttachI2c(cosim.I2c, prog);
             }
@@ -337,8 +404,8 @@ namespace RobotWin.Studio.World
 
         public void SendSerial(string text)
         {
-            foreach (var a in _avr) a.Mcu.WriteSerial(text);
-            foreach (var e in _esp) e.SendSerial(text);
+            foreach (var a in _avr) if (SerialRouted(a)) a.Mcu.WriteSerial(text);   // [radio] USB-connected boards only
+            foreach (var e in _esp) if (SerialRouted(e)) e.SendSerial(text);
         }
 
         private readonly Dictionary<string, II2cDevice> _i2c = new Dictionary<string, II2cDevice>(StringComparer.OrdinalIgnoreCase);
@@ -356,7 +423,7 @@ namespace RobotWin.Studio.World
             foreach (var (fullRef, def, parameters) in AllParts())
             {
                 if (def.FindPin("SDA") == null || def.FindPin("SCL") == null || def.Symbol == SymbolKind.Board) continue;
-                int a = Circuit.Compiled.PinNode(fullRef, "SDA"), b = Circuit.Compiled.PinNode(fullRef, "SCL");
+                int a = Circuit!.Compiled.PinNode(fullRef, "SDA"), b = Circuit.Compiled.PinNode(fullRef, "SCL");
                 if (!sdaReach.Contains(a) || !sclReach.Contains(b)) continue;
                 byte address = ParseAddress(parameters.TryGetValue("address", out var ad) ? ad : null);
                 II2cDevice? device = def.Id switch
@@ -493,6 +560,23 @@ namespace RobotWin.Studio.World
                 _heatSignals[o.Id] = list;
             }
         }
+
+        /// <summary>Temperature of one part on a board object (°C), or NaN.</summary>
+        public double PartTemperature(WorldObject o, string innerRefDes)
+        {
+            if (Circuit == null || Simulator == null) return double.NaN;
+            double max = double.NaN;
+            foreach (var d in Circuit.Compiled.DevicesOf(Circuit.FullRefDes(o.Id, innerRefDes)))
+            {
+                if (Simulator.Signals.TryGetValue(d.Id + ":T", out double t) && (double.IsNaN(max) || t > max)) max = t;
+            }
+
+            return max;
+        }
+
+        /// <summary>True when a device of a part on a board object has failed.</summary>
+        public bool PartFailed(WorldObject o, string innerRefDes) =>
+            Circuit != null && Circuit.Compiled.DevicesOf(Circuit.FullRefDes(o.Id, innerRefDes)).Any(d => d.IsFailed);
 
         /// <summary>Hottest part temperature on an object (°C), or NaN.</summary>
         public double Temperature(WorldObject o)

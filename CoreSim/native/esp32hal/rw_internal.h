@@ -83,6 +83,13 @@ int serial_rx_push(int port, const uint8_t* data, int length);
 void run_serial_events();                                  /* after each loop() */
 void hal_wifi_reset();
 
+/* ---- radio medium (rw_radio.cpp): RW_RADIO_UNSUPPORTED when the host has none ---- */
+int radio(int op, const void* in, int in_len, void* out, int out_cap);
+bool radio_available();
+const uint8_t* radio_mac();   /* base MAC (from the host, or the stub default) */
+void hal_ble_reset();         /* BLE.cpp */
+void hal_bp32_reset();        /* Bluepad32.cpp */
+
 }  // namespace rw
 
 #endif

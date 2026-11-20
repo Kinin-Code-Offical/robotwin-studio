@@ -47,6 +47,15 @@ namespace RobotWin.Studio.Shell
         /// <summary>Particle effects (smoke, sparks, fire) in 2D and 3D.</summary>
         public bool Effects { get; set; } = true;
 
+        /// <summary>Navigation rail shows stage names and live status (Ctrl+B).</summary>
+        public bool NavExpanded { get; set; }
+
+        /// <summary>Simulation sounds (motors, servos, buzzers, relays, failures).</summary>
+        public bool Sound { get; set; } = true;
+
+        /// <summary>Master volume of the simulation sounds, 0..1.</summary>
+        public double Volume { get; set; } = 0.6;
+
         /// <summary>3D quality: "low", "medium", "high".</summary>
         public string Quality3D { get; set; } = "high";
 

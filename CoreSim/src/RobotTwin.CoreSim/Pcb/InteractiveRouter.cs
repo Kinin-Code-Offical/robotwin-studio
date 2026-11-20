@@ -27,7 +27,6 @@ namespace RobotTwin.CoreSim.Pcb
         private sealed class LayerObstacles
         {
             public readonly Dictionary<long, List<Obstacle>> Buckets = new Dictionary<long, List<Obstacle>>();
-            public double Reach;
         }
 
         private const double Bucket = 2.0;

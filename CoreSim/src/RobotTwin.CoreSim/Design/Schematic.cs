@@ -78,6 +78,19 @@ namespace RobotTwin.CoreSim.Design
     {
         public string Name { get; set; } = string.Empty;
         public GridPoint Position { get; set; }
+
+        /// <summary>
+        /// Drawn as a global label (KiCad's flag shape). A sheet is a single page, so local and
+        /// global labels connect the same way: every label with the same name is one net.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool Global { get; set; }
+    }
+
+    /// <summary>A "no connection" flag (KiCad's X marker) on a pin that is deliberately left open.</summary>
+    public sealed class NoConnectFlag
+    {
+        public GridPoint Position { get; set; }
     }
 
     public sealed class NetConnection
@@ -134,6 +147,9 @@ namespace RobotTwin.CoreSim.Design
         public List<SchematicPart> Parts { get; set; } = new List<SchematicPart>();
         public List<SchematicWire> Wires { get; set; } = new List<SchematicWire>();
         public List<NetLabel> Labels { get; set; } = new List<NetLabel>();
+
+        /// <summary>No-connect flags on pins that are intentionally unconnected (silences ERC).</summary>
+        public List<NoConnectFlag> NoConnects { get; set; } = new List<NoConnectFlag>();
 
         /// <summary>Optional PCB layout saved alongside the schematic.</summary>
         public Pcb.BoardDocument? Board { get; set; }
@@ -361,7 +377,9 @@ namespace RobotTwin.CoreSim.Design
                     var only = net.Connections[0];
                     var owner = FindPart(only.RefDes);
                     var ownerDef = owner != null ? library.Find(owner.PartId) : null;
-                    if (ownerDef != null && ownerDef.Pins.Count <= 3)
+                    var pinDef = ownerDef?.FindPin(only.Pin);
+                    bool flagged = owner != null && pinDef != null && NoConnects.Any(nc => nc.Position.Equals(owner.Transform(pinDef.X, pinDef.Y)));
+                    if (ownerDef != null && ownerDef.Pins.Count <= 3 && !flagged)
                     {
                         netlist.Warnings.Add($"{only.RefDes}.{only.Pin} hiçbir yere bağlı değil.");
                     }
@@ -454,6 +472,7 @@ namespace RobotTwin.CoreSim.Design
                 part.Parameters = new Dictionary<string, string>(part.Parameters ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase);
             }
 
+            doc.NoConnects ??= new List<NoConnectFlag>();
             return doc;
         }
 

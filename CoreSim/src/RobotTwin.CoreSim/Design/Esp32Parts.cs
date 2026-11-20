@@ -97,11 +97,10 @@ namespace RobotTwin.CoreSim.Design
         {
             int vin = c.Pin(supplyPin), v3 = c.Pin("3V3"), gnd = c.Pin(ground), en = c.Pin("EN");
 
-            if (c.Flag("usb"))
+            if (c.Flag("usb") || WirelessParts.UsbFromCable(c))
             {
                 // USB VBUS through the reverse-protection Schottky to the 5 V / VIN rail.
-                int usb = c.Internal("usb");
-                c.Add(new VoltageSource(c.Sub("USB"), usb, gnd, 5.0) { SeriesResistance = 0.2 });
+                int usb = WirelessParts.UsbSupply(c, gnd, 0.2);   // [radio] usb=cable: VBUS switched by the world's USB cable
                 c.Add(new Diode(c.Sub("D1"), usb, vin)
                 {
                     SaturationCurrent = 31.7e-6, Ideality = 1.373, SeriesResistance = 0.051, BreakdownVoltage = 40,

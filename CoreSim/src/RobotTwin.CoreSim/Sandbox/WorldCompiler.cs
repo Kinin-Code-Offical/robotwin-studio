@@ -219,6 +219,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
                     if (def.Build == null) continue;
                     var parameters = u.Schematic.ResolveParameters(library, part);
+                    parameters = Radio.WorldUsb.Override(world, u.Object, part.RefDes, def, parameters, library);   // [radio] USB cable drives VBUS
                     var devices = new List<AnalogDevice>();
                     int PinNode(string pin)
                     {

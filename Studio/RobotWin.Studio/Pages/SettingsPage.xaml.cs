@@ -49,6 +49,8 @@ namespace RobotWin.Studio.Pages
                     (Window.GetWindow(this) as MainWindow)?.ApplyUiScale(v);
                 }, "Yüksek çözünürlüklü ekranlarda veya sunumlarda büyütün."));
                 c.Children.Add(Toggle("Parçacık efektleri (duman, kıvılcım, alev)", S.Effects, v => S.Effects = v, "Yanma ve aşırı ısınma görselleri. Kapatmak zayıf ekran kartlarında akıcılığı artırır."));
+                c.Children.Add(Toggle("Simülasyon sesleri", S.Sound, v => S.Sound = v, "Motor uğultusu, servo dişli sesi, buzzer, röle tıkırtısı, yanan parçanın patlaması."));
+                c.Children.Add(Choice("Ses düzeyi", new[] { ("%25", 0.25), ("%50", 0.5), ("%60", 0.6), ("%80", 0.8), ("%100", 1.0) }, S.Volume, v => S.Volume = v));
                 c.Children.Add(Toggle("Akım akışı animasyonu", S.ShowCurrentFlow, v => S.ShowCurrentFlow = v));
                 c.Children.Add(Choice("3D kalitesi", new[] { ("Düşük", "low"), ("Orta", "medium"), ("Yüksek", "high") }, S.Quality3D, v => S.Quality3D = v, "Düşük: kenar yumuşatma kapalı, daha az parçacık."));
                 c.Children.Add(Toggle("Açılışta başlangıç sayfasını göster", S.ShowHomeOnStart, v => S.ShowHomeOnStart = v, "Kapalıyken son açılan proje veya dünya doğrudan açılır."));

@@ -1002,7 +1002,6 @@ namespace RobotWin.Studio.Pcb
             }
 
             ApplyMove(Snap(_cursor.X) - _moveOrigin.X, Snap(_cursor.Y) - _moveOrigin.Y);
-            _ratsCache = null;
             InvalidateVisual();
         }
 

@@ -159,6 +159,7 @@ namespace RobotWin.Studio
                 if (ex != null) Workspace.Current.Load(ex.Build(), null);
             }
 
+            if (Environment.GetCommandLineArgs().Contains("--nav-expanded")) window.ExpandRailForSnapshot();
             window.Navigate(page);
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
             int phase = 0;

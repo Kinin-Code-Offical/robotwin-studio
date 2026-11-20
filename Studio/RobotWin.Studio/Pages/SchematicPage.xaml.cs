@@ -46,6 +46,7 @@ namespace RobotWin.Studio.Pages
             BuildCategories();
             FilterLibrary();
 
+            InitEditor();
             _scopePanel = new ScopePanel(Scope);
             ScopePanelHost.Child = _scopePanel;
             BuildMeterPanel();
@@ -205,6 +206,7 @@ namespace RobotWin.Studio.Pages
             {
                 "Wire" => EditorTool.Wire,
                 "Label" => EditorTool.Label,
+                "NoConnect" => EditorTool.NoConnect,
                 _ => EditorTool.Select
             };
             Canvas.Tool = tool;
@@ -215,7 +217,8 @@ namespace RobotWin.Studio.Pages
         {
             ToolSelect.IsChecked = Canvas.Tool == EditorTool.Select || Canvas.Tool == EditorTool.Place;
             ToolWire.IsChecked = Canvas.Tool == EditorTool.Wire;
-            ToolLabel.IsChecked = Canvas.Tool == EditorTool.Label;
+            ToolLabel.IsChecked = Canvas.Tool == EditorTool.Label || Canvas.Tool == EditorTool.GlobalLabel;
+            ToolNoConnect.IsChecked = Canvas.Tool == EditorTool.NoConnect;
         }
 
         private void OnRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
@@ -579,7 +582,7 @@ namespace RobotWin.Studio.Pages
             {
                 Section("Seçim");
                 Inspector.Children.Add(new TextBlock { Text = $"{selection.Count} öğe seçili", Style = (Style)FindResource("Text.Subtitle") });
-                Inspector.Children.Add(Hint("R ile döndür, X ile aynala, Del ile sil, sürükleyerek taşı. Ctrl+D parçaları çoğaltır."));
+                BuildMultiSelectionInspector(selection);
             }
             else
             {
@@ -864,9 +867,10 @@ namespace RobotWin.Studio.Pages
             Section("Kısayollar");
             foreach (var (key, what) in new[]
             {
-                ("Tık (pin)", "Kablo başlat / bitir"), ("W · L", "Kablo · Etiket aracı"), ("R · X", "Döndür · Aynala"),
-                ("Del", "Sil"), ("Ctrl+D", "Çoğalt"), ("Ctrl+Z / Y", "Geri al / Yinele"), ("Tekerlek", "Yakınlaştır"),
-                ("Orta tuş", "Kaydır"), ("F", "Sığdır"), ("F5", "Simülasyon")
+                ("A · P", "Parça · güç sembolü ekle"), ("W · L · Q", "Kablo · etiket · NC"), ("M · G", "Taşı · sürükle"),
+                ("R · X · Y", "Döndür · aynala"), ("E · V", "Özellikler · değer"), ("Ctrl+C/V", "Kopyala / yapıştır"),
+                ("Ctrl+D", "Çoğalt"), ("Ctrl+F", "Bul / değiştir"), ("`", "Hattı vurgula"), ("Ctrl+Z / Y", "Geri al / Yinele"),
+                ("F · Home", "Sığdır"), ("F5", "Simülasyon"), ("F1 · ?", "Tüm kısayollar")
             })
             {
                 var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };
@@ -1005,6 +1009,7 @@ namespace RobotWin.Studio.Pages
 
             // The toolbar and the instrument dock compress too.
             EditTools.Visibility = width < 820 ? Visibility.Collapsed : Visibility.Visible;
+            EditorExtras.Visibility = width < 1150 ? Visibility.Collapsed : Visibility.Visible;
             ToolSep0.Visibility = width < 820 ? Visibility.Collapsed : Visibility.Visible;
             SimStatus.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
             SpeedBox.Width = narrow ? 118 : 124;

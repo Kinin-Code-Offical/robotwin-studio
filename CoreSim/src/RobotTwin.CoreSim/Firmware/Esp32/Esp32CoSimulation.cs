@@ -154,6 +154,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private readonly Esp32Abi.I2cReadFn _i2cRead;
         private readonly Esp32Abi.I2cStopFn _i2cStop;
         private readonly Esp32Abi.SystemEventFn _systemEvent;
+        private readonly Esp32Abi.RadioRequestFn _radioRequest;
+        private readonly byte[] _radioIn = new byte[8192];
+        private readonly byte[] _radioOut = new byte[8192];
         private Esp32Abi.HostApi _api;
 
         private Esp32SketchModule? _module;
@@ -211,6 +214,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _i2cRead = OnI2cRead;
             _i2cStop = OnI2cStop;
             _systemEvent = OnSystemEvent;
+            _radioRequest = OnRadioRequest;
             _api = new Esp32Abi.HostApi
             {
                 AbiVersion = Esp32Abi.Version,
@@ -230,9 +234,19 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 I2cWrite = Marshal.GetFunctionPointerForDelegate(_i2cWrite),
                 I2cRead = Marshal.GetFunctionPointerForDelegate(_i2cRead),
                 I2cStop = Marshal.GetFunctionPointerForDelegate(_i2cStop),
-                SystemEvent = Marshal.GetFunctionPointerForDelegate(_systemEvent)
+                SystemEvent = Marshal.GetFunctionPointerForDelegate(_systemEvent),
+                RadioRequest = Marshal.GetFunctionPointerForDelegate(_radioRequest)
             };
         }
+
+        /// <summary>Version of the host ABI (rw_host_api.h RW_ABI_VERSION) sketch DLLs must be built for.</summary>
+        public static int AbiVersion => Esp32Abi.Version;
+
+        /// <summary>
+        /// Wi-Fi / BLE / game-controller medium (null: the HAL uses its stand-alone stub: Wi-Fi
+        /// "connects" after ~1 s, BLE and Bluepad32 see nothing).
+        /// </summary>
+        public IEsp32Radio? Radio { get; set; }
 
         public string DllPath { get; }
         public string BoardRefDes { get; }
@@ -911,6 +925,28 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         {
             try { Bus(bus).EndTransfer(); }
             catch (Exception ex) { Note("I2C device error: " + ex.Message); }
+        }
+
+        private int OnRadioRequest(IntPtr user, int op, IntPtr input, int inputLength, IntPtr output, int outputCapacity)
+        {
+            var radio = Radio;
+            if (radio == null) return Esp32RadioOp.NotSupported;
+            try
+            {
+                int n = Math.Max(0, Math.Min(inputLength, _radioIn.Length));
+                if (n > 0 && input != IntPtr.Zero) Marshal.Copy(input, _radioIn, 0, n);
+                int cap = output == IntPtr.Zero ? 0 : Math.Max(0, Math.Min(outputCapacity, _radioOut.Length));
+                Array.Clear(_radioOut, 0, cap);
+                int rc = radio.Request(op, _radioIn, n, _radioOut, cap, NativeNow());
+                if (cap > 0) Marshal.Copy(_radioOut, 0, output, cap);
+                return rc;
+            }
+            catch (Exception ex)
+            {
+                // Never let an exception cross into native code.
+                Note("radio error: " + ex.Message);
+                return -2;
+            }
         }
 
         private void OnSystemEvent(IntPtr user, int kind, long arg)

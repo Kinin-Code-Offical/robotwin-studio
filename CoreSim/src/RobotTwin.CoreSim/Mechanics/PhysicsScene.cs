@@ -482,6 +482,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
         internal void Report(PhysicsEvent e) => _events.Add(e);
 
+        /// <summary>Extra body pairs that never collide (parts of one assembly modelled with approximate shapes).</summary>
+        public List<(SceneBody A, SceneBody B)> NoCollide { get; } = new List<(SceneBody A, SceneBody B)>();
+
         public SceneBody AddBody(SceneBody body)
         {
             if (!Bodies.Contains(body)) Bodies.Add(body);
@@ -611,6 +614,11 @@ namespace RobotTwin.CoreSim.Mechanics
                 j.StepTorqueImpulse = Vec3.Zero;
                 if (!j.Enabled || j.Broken || j.CollideConnected || j.ParentSlot < 0) continue;
                 _noCollide.Add(PairKey(j.ParentSlot, j.ChildSlot));
+            }
+
+            foreach (var (a, b) in NoCollide)
+            {
+                if (a.Slot >= 0 && b.Slot >= 0 && a.Slot != b.Slot) _noCollide.Add(PairKey(a.Slot, b.Slot));
             }
 
             PeakContactForce = 0;
