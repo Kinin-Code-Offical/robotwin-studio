@@ -29,6 +29,7 @@ namespace RobotTwin.CoreSim.Automation
 
         public WorldBodyGeometry GeometryOf(WorldObject o)
         {
+            if (ReadyParts.Geometry(o) is { } ready) return ready;   // ready props, wheels, casters: same shapes as in the app (a prop is its swept disc)
             switch (o.Kind)
             {
                 case WorldObjectKind.Body:
@@ -109,6 +110,16 @@ namespace RobotTwin.CoreSim.Automation
             var def = o.PartId != null ? _library.Find(o.PartId) : null;
             if (part == "dc-motor" || def?.Id == "dc-motor")
             {
+                if (model.Contains("KV") || model.Contains("BRUSHLESS") || model.Contains("2204"))
+                {
+                    // [esc] outrunner standing on its base, prop shaft up (same as the 3D model).
+                    return new WorldBodyGeometry
+                    {
+                        Min = new Vec3(-0.014, -0.014, 0), Max = new Vec3(0.014, 0.014, 0.0215), MassKg = 0.028,
+                        PortName = "shaft", PortPivot = new Vec3(0, 0, 0.026), PortAxis = Vec3.UnitZ
+                    };
+                }
+
                 bool coreless = model.Contains("8520") || model.Contains("0720");
                 bool tt = model.Contains("TT") || (!coreless && !model.Contains("25GA") && !model.Contains("JGA") && !model.Contains("N20") && !model.Contains("130"));
                 if (tt)
@@ -169,6 +180,7 @@ namespace RobotTwin.CoreSim.Automation
                 return Box(0.05, 0.03, 0.015, 0.05);
             }
 
+            if (def?.Id == "esc") return Box(0.030, 0.016, 0.006, 0.008);   // [esc] 20 A ESC, shrink-wrapped
             if (def?.Symbol == SymbolKind.Board)
             {
                 // Real board outlines, in the 3D model's frame (origin at the pin-1 corner): a Nano is not an Uno.

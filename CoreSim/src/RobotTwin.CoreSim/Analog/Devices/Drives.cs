@@ -67,6 +67,13 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public double ArmTime { get; set; } = 0.3;
         public double SignalTimeout { get; set; } = 0.25;
 
+        /// <summary>
+        /// Current limit (A): above it the ESC pulls its duty back, as BLHeli's start-up power limit
+        /// does — a stopped motor is nearly a short (0.1 Ω) and would otherwise draw tens of amps.
+        /// 0 = 1.5 × <see cref="CurrentRating"/>.
+        /// </summary>
+        public double CurrentLimit { get; set; }
+
         /// <summary>Throttle slew (full scale per second): an ESC ramps, it does not step.</summary>
         public double ThrottleSlew { get; set; } = 25;
 
@@ -111,7 +118,11 @@ namespace RobotTwin.CoreSim.Analog.Devices
             _pulseHigh = high;
             if (_lastPulse >= 0 && ctx.Time - _lastPulse > SignalTimeout) Throttle = 0.0;   // signal lost: failsafe stop
             double step = ThrottleSlew * ctx.Dt;
-            Duty = _duty + AnalogMath.Clamp(Throttle - _duty, -step, step);
+            double next = _duty + AnalogMath.Clamp(Throttle - _duty, -step, step);
+            double limit = CurrentLimit > 0 ? CurrentLimit : 1.5 * CurrentRating;
+            double i = Math.Abs(OutputCurrent);
+            if (i > limit) next = Math.Min(next, _duty * limit / i);   // current limit: back off in proportion
+            Duty = next;
         }
 
         public override int BranchCount => 1;

@@ -370,7 +370,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     it.RotorJoint.Drive = JointDrive.Velocity;
                     it.RotorJoint.TargetSpeed = it.Motor.AngularVelocity / Math.Max(1e-9, it.Motor.GearRatio);
                     it.RotorJoint.Damping = 0;
-                    it.RotorJoint.MaxTorque = Math.Abs(it.Motor.MotorConstant * 3.0 * it.Motor.GearRatio) + 1e-3;
+                    it.RotorJoint.MaxTorque = Math.Abs(it.Motor.MotorConstant * it.Motor.GearRatio) * Math.Max(3.0, 1.5 * Math.Abs(it.Motor.Current) + 1.0) + 1e-3;   // [esc] what the winding current can deliver (a brushless motor draws tens of amps)
                 }
                 else
                 {

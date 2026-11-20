@@ -59,6 +59,9 @@ namespace RobotTwin.CoreSim.Automation
         public IWorldGeometry Geometry { get; }
         public WorldCircuit? Circuit { get; private set; }
         public WorldPhysics? Physics { get; private set; }
+
+        /// <summary>[esc] Sensors that read the world's motion (IMUs on a board's I²C bus feel the body they ride on).</summary>
+        public Sandbox.Sensing.WorldSensing? Sensing { get; private set; }
         public override string Kind => "world";
         public override string Title => World.Title;
 
@@ -83,6 +86,7 @@ namespace RobotTwin.CoreSim.Automation
             {
                 Physics = WorldPhysics.Build(World, Geometry.GeometryOf, Circuit);
                 Physics.DriveOverride = DrivePort;
+                BindMotionSensors();
             }
             catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
             {
@@ -94,9 +98,33 @@ namespace RobotTwin.CoreSim.Automation
                 $"{World.Objects.Count} nesne, {World.Cables.Count} kablo, {Compiled.DevicesByPart.Count} parça tek devrede çözülüyor"));
         }
 
+        /// <summary>IMUs a firmware reads over I²C get the real accelerations and rotation rates of their object (as in the app).</summary>
+        private void BindMotionSensors()
+        {
+            Sensing = null;
+            if (Circuit == null || Physics == null || !I2cDevices.Values.Any(d => d is Firmware.Devices.Mpu6050)) return;
+            try
+            {
+                Sensing = Sandbox.Sensing.WorldSensing.Build(World, Circuit, Physics);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is NullReferenceException)
+            {
+                AddEvent(new RunnerEvent(0, "sensör", RunnerEventKind.Warning, "Sensörler kurulamadı: " + ex.Message));
+                return;
+            }
+
+            var bound = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in I2cDevices)
+            {
+                string objectId = kv.Key.Split('/')[0];
+                if (kv.Value is Firmware.Devices.Mpu6050 mpu && bound.Add(objectId)) Sensing.BindMpu6050(objectId, mpu);
+            }
+        }
+
         protected override void Teardown()
         {
             base.Teardown();
+            Sensing = null;
             Physics = null;
             Circuit = null;
         }
@@ -216,7 +244,11 @@ namespace RobotTwin.CoreSim.Automation
             return slash > 0 ? deviceId.Substring(0, slash) : deviceId;
         }
 
-        protected override void AdvanceMechanics(double dt) => Physics?.Advance(dt, Simulator);
+        protected override void AdvanceMechanics(double dt)
+        {
+            Physics?.Advance(dt, Simulator);
+            if (Sensing != null && Simulator != null) Sensing.Advance(Simulator.Time, dt, Simulator);   // [esc] IMU readings follow the motion
+        }
 
         protected override void DrainMechanicsEvents()
         {

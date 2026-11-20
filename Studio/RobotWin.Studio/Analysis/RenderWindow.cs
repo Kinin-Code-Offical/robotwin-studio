@@ -892,12 +892,11 @@ namespace RobotWin.Studio.Analysis
                 var img = HeatImage.Render(th, f);
                 if (img == null) continue;
                 double w = th.Nx * th.Dx, h = th.Ny * th.Dy, z = th.Nz * th.Dz / 2 + 0.0025;
-                // A thermal-camera layer 1 mm above the board's copper: the PCB's underside is the object's
-                // origin (pins reach below it), plus the board thickness; components stand through it,
-                // as on a real thermal image.
-                if (AnalysisRun.RecordedPose(store, th.ObjectId, i) is { } origin)
-                    z = pose.Orientation.Rotate(Vec3.UnitZ).Dot(origin.Position - pose.Position) + Math.Max(th.Kind == "board" ? th.Nz * th.Dz : 0.0016, 0.0016) + 0.001;
-                var brush = new ImageBrush(img) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1), Opacity = 0.8 };
+                // Like a thermal camera's picture laid over the part: just above its tallest component and
+                // partly see-through, so the board and its parts show under the colours.
+                if (_scene.WorldBoundsOf(th.ObjectId) is { } mb && pose.Orientation.Rotate(Vec3.UnitZ).Z > 0.9)
+                    z = mb.Z + mb.SizeZ + 0.001 - pose.Position.Z;
+                var brush = new ImageBrush(img) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1), Opacity = 0.75 };
                 var mesh = new MeshGeometry3D();
                 foreach (var (x, y, u, v) in new[] { (-w / 2, -h / 2, 0.0, 1.0), (w / 2, -h / 2, 1.0, 1.0), (w / 2, h / 2, 1.0, 0.0), (-w / 2, h / 2, 0.0, 0.0) })
                 {
@@ -908,7 +907,8 @@ namespace RobotWin.Studio.Analysis
 
                 Tri(mesh, 0, 1, 2);
                 Tri(mesh, 0, 2, 3);
-                var mat = new EmissiveMaterial(brush);
+                // Alpha-blended like a picture laid over the part (an EmissiveMaterial alone adds light: dark blues vanish on a bright board).
+                var mat = new MaterialGroup { Children = { new DiffuseMaterial(brush), new EmissiveMaterial(new ImageBrush(img) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1), Opacity = 0.35 }) } };
                 g.Children.Add(new GeometryModel3D(mesh, mat) { BackMaterial = mat });
             }
         }

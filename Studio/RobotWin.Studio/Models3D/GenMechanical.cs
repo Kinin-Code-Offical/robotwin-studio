@@ -129,7 +129,8 @@ namespace RobotWin.Studio.Models3D
             string m = r.Model.ToUpperInvariant();
             var a = r.Def?.FindPin("A") != null ? PadOfPin(r, "A", "1") : "1";
             var bb = r.Def?.FindPin("B") != null ? PadOfPin(r, "B", "2") : "2";
-            if (m.Contains("CORELESS") || m.Contains("8520") || m.Contains("0720") || m.Contains("720"))
+            if (m.Contains("KV") || m.Contains("BRUSHLESS") || m.Contains("2204") || m.Contains("2306")) Outrunner(b, a, bb);   // [esc]
+            else if (m.Contains("CORELESS") || m.Contains("8520") || m.Contains("0720") || m.Contains("720"))
                 Coreless(b, m.Contains("0720") || m.StartsWith("07", StringComparison.Ordinal) ? 7.0 : 8.5, a, bb);
             else if (m.Contains("N20")) N20(b, a, bb);
             else if (m.Contains("25GA") || m.Contains("JGA25") || m.Contains("370")) Gear370(b, m.Contains("JGA") || m.Contains("ENC"), a, bb);
@@ -259,6 +260,28 @@ namespace RobotWin.Studio.Models3D
             {
                 b[Mat.Brass].Block(11.8, dy - 0.8, cz - 0.2, 14.2, dy + 0.8, cz + 0.2);
                 b.Anchor(pad, P(14.2, dy, cz), V(1, 0, 0));
+            }
+        }
+
+        /// <summary>[esc] 2204-class outrunner: Ø28 base with four M3 holes, Ø27 bell turning with the 5 mm prop shaft, three phase leads.</summary>
+        private static void Outrunner(PartBuilder b, string padA, string padB)
+        {
+            const double baseH = 3.0, bellH = 17.0, top = baseH + bellH;
+            b[Mat.Plastic(0x1A1A1Cu, 0.3)].Cylinder(14.0, 0, baseH, 36);
+            b.Heat(P(0, 0, top * 0.6));
+            var bell = b.Rotating("shaft", P(0, 0, top), V(0, 0, 1), P(0, 0, top + 6.0));
+            bell[Mat.Plastic(0xC8282Cu, 0.6)].Lathe(new[] { new Point(13.5, baseH + 0.4), new Point(13.5, top - 1.0), new Point(12.5, top), new Point(3.0, top), new Point(3.0, top + 1.5), new Point(0, top + 1.5) }, 40);
+            bell[Mat.Chrome].CylinderZ(0, 0, top + 1.5, top + 6.0, 2.5, 14);
+            // Three phase leads (the ESC drives them; two are named for the averaged model).
+            int k = 0;
+            foreach (var (dy, colour, pad) in new[] { (-2.0, 0x1E1E22u, padA), (0.0, 0x1E1E22u, (string?)null), (2.0, 0x1E1E22u, padB) })
+            {
+                var path = MeshBuilder.Smooth(new[] { P(0, dy, 1.5), P(16.0, dy, 1.5), P(45.0, dy, 1.0) }, 2.0, 6);
+                b[Mat.Plastic(colour, 0.35, 30)].Tube(path, 0.55, 8, true, false);
+                var end = path[path.Count - 1];
+                b[Mat.Copper].Rod(end, end + V(2.0, 0, 0), 0.35, 6);
+                if (pad != null) b.Anchor(pad, end + V(2.0, 0, 0), V(1, 0, 0));
+                k++;
             }
         }
 
