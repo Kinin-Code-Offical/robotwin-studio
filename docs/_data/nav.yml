@@ -1,0 +1,55 @@
+# Sidebar navigation. Each entry names a source file; the layouts look up its
+# final URL, so renamed permalinks keep working.
+
+guide:
+  - path: kullanim/README.md
+    title: Kılavuz ana sayfası
+    short: Giriş
+  - path: kullanim/01-baslarken.md
+    title: 1. Başlarken
+  - path: kullanim/02-devre.md
+    title: 2. Devre
+    stage: devre
+  - path: kullanim/03-pcb.md
+    title: 3. PCB
+    stage: pcb
+  - path: kullanim/04-kod.md
+    title: 4. Kod
+    stage: kod
+  - path: kullanim/05-modelle.md
+    title: 5. Modelle
+    stage: modelle
+  - path: kullanim/06-montaj.md
+    title: 6. Montaj
+    stage: montaj
+  - path: kullanim/07-dunya.md
+    title: 7. Dünya
+    stage: dunya
+  - path: kullanim/08-olcu-aletleri.md
+    title: 8. Ölçü aletleri
+  - path: kullanim/09-kisayollar.md
+    title: 9. Klavye kısayolları
+  - path: kullanim/10-sss.md
+    title: 10. Sık sorulan sorular
+
+docs:
+  - path: README.md
+    title: Docs index
+  - path: ARCHITECTURE.md
+    title: Architecture
+  - path: SETUP_WINDOWS.md
+    title: Setup on Windows
+  - path: PROJECT_STRUCTURE.md
+    title: Project structure
+  - path: TESTING.md
+    title: Testing
+  - path: BUILD_RELEASE.md
+    title: Build and release
+  - path: TOOLS.md
+    title: Tools
+  - path: TROUBLESHOOTING.md
+    title: Troubleshooting
+  - path: API.md
+    title: Automation API
+  - path: archive/README.md
+    title: Archive (1.x)

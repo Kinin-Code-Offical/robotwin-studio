@@ -1,0 +1,13 @@
+{%- comment -%} Shared variables. Each layout renders in its own scope, so every layout includes this. {%- endcomment -%}
+{%- assign lang = page.lang | default: site.lang | default: "en" -%}
+{%- assign t = site.data.ui[lang] | default: site.data.ui.en -%}
+{%- if lang == "tr" -%}
+{%- assign home_url = "/tr/" | relative_url -%}
+{%- assign news_url = "/tr/haberler/" | relative_url -%}
+{%- else -%}
+{%- assign home_url = "/" | relative_url -%}
+{%- assign news_url = "/news/" | relative_url -%}
+{%- endif -%}
+{%- capture guide_url -%}{% include url.html path="kullanim/README.md" %}{%- endcapture -%}
+{%- capture docs_url -%}{% include url.html path="README.md" %}{%- endcapture -%}
+{%- assign sec = page.section | default: "dev" -%}

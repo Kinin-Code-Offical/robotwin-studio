@@ -1,0 +1,6 @@
+{%- comment -%}
+  Final URL of a source file (e.g. kullanim/02-devre.md), whatever permalink
+  the plugins gave it. Usage: include url.html with path="kullanim/02-devre.md".
+{%- endcomment -%}
+{%- assign _u = site.pages | where: "path", include.path | first -%}
+{%- if _u -%}{{ _u.url | relative_url }}{%- else -%}{{ include.path | replace: ".md", ".html" | prepend: "/" | relative_url }}{%- endif -%}

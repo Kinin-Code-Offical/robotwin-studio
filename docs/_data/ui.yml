@@ -1,0 +1,73 @@
+# Interface strings of the site chrome (header, sidebar, footer, search).
+tr:
+  home: Ana sayfa
+  features: Özellikler
+  guide: Kılavuz
+  guide_long: Kullanım kılavuzu
+  docs: Belgeler
+  dev_docs: Geliştirici belgeleri (English)
+  news: Haberler
+  download: İndir
+  download_windows: İndir (Windows)
+  releases: Tüm sürümler
+  search: Ara
+  search_placeholder: Kılavuzda ara…
+  search_empty: Sonuç yok. Başka bir kelime deneyin.
+  search_hint: Yazmaya başlayın. Kılavuz ve belgeler içinde arar.
+  search_loading: Dizin yükleniyor…
+  search_error: Arama dizini yüklenemedi.
+  on_this_page: Bu sayfada
+  prev: Önceki
+  next: Sonraki
+  edit: Bu sayfayı GitHub'da düzenle
+  menu: Menü
+  close: Kapat
+  copy: Kopyala
+  copied: Kopyalandı
+  skip: İçeriğe geç
+  license: MIT lisansı ile açık kaynak.
+  other_lang: English
+  other_lang_short: EN
+  footer_product: Ürün
+  footer_help: Yardım
+  footer_project: Proje
+  changelog: Değişiklik günlüğü
+  issues: Sorun bildir
+  source: Kaynak kod
+  back_top: Başa dön
+en:
+  home: Home
+  features: Features
+  guide: Guide
+  guide_long: User guide (Turkish)
+  docs: Docs
+  dev_docs: Developer docs
+  news: News
+  download: Download
+  download_windows: Download (Windows)
+  releases: All releases
+  search: Search
+  search_placeholder: Search the guide…
+  search_empty: No results. Try another word.
+  search_hint: Start typing. Searches the guide and the docs.
+  search_loading: Loading index…
+  search_error: Could not load the search index.
+  on_this_page: On this page
+  prev: Previous
+  next: Next
+  edit: Edit this page on GitHub
+  menu: Menu
+  close: Close
+  copy: Copy
+  copied: Copied
+  skip: Skip to content
+  license: Open source under the MIT license.
+  other_lang: Türkçe
+  other_lang_short: TR
+  footer_product: Product
+  footer_help: Help
+  footer_project: Project
+  changelog: Changelog
+  issues: Report an issue
+  source: Source code
+  back_top: Back to top

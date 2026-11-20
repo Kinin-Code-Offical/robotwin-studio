@@ -1,0 +1,22 @@
+---
+layout: null
+permalink: /search.json
+sitemap: false
+---
+{%- assign sep = false -%}
+[
+{%- for item in site.data.nav.guide -%}
+{%- assign p = site.pages | where: "path", item.path | first -%}
+{%- if p -%}
+{%- if sep -%},{%- endif -%}{%- assign sep = true %}
+{"title":{{ item.title | jsonify }},"url":{{ p.url | relative_url | jsonify }},"group":"guide","html":{{ p.content | markdownify | jsonify }}}
+{%- endif -%}
+{%- endfor -%}
+{%- for item in site.data.nav.docs -%}
+{%- assign p = site.pages | where: "path", item.path | first -%}
+{%- if p -%}
+{%- if sep -%},{%- endif -%}{%- assign sep = true %}
+{"title":{{ item.title | jsonify }},"url":{{ p.url | relative_url | jsonify }},"group":"docs","html":{{ p.content | markdownify | jsonify }}}
+{%- endif -%}
+{%- endfor %}
+]

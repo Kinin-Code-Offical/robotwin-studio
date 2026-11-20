@@ -1,0 +1,28 @@
+{%- assign cc = include.c -%}
+<div class="code-card" role="img" aria-label="{{ cc.title }}: {{ cc.sketch }}">
+  <div class="code-bar">
+    <span class="pill">{{ cc.board }}</span>
+    <span class="pill">{{ cc.sketch }}</span>
+    <span class="sp"></span>
+    <span class="act">{{ cc.build }} <kbd>F7</kbd></span>
+    <span class="act run">{{ cc.run }} <kbd>F5</kbd></span>
+  </div>
+<pre><span class="ln">1</span><span class="tok-k">void</span> <span class="tok-f">setup</span>() {
+<span class="ln">2</span>  <span class="tok-f">pinMode</span>(<span class="tok-n">13</span>, OUTPUT);
+<span class="ln">3</span>  Serial.<span class="tok-f">begin</span>(<span class="tok-n">9600</span>);
+<span class="ln">4</span>}
+<span class="ln">5</span>
+<span class="ln">6</span><span class="tok-k">void</span> <span class="tok-f">loop</span>() {
+<span class="ln">7</span>  <span class="tok-f">digitalWrite</span>(<span class="tok-n">13</span>, HIGH);
+<span class="ln">8</span>  Serial.<span class="tok-f">println</span>(<span class="tok-s">"{{ cc.led }}"</span>);
+<span class="ln">9</span>  <span class="tok-f">delay</span>(<span class="tok-n">500</span>);  <span class="tok-c">// {{ cc.comment }}</span>
+<span class="ln">10</span>  <span class="tok-f">digitalWrite</span>(<span class="tok-n">13</span>, LOW);
+<span class="ln">11</span>  <span class="tok-f">delay</span>(<span class="tok-n">500</span>);
+<span class="ln">12</span>}</pre>
+  <div class="code-serial">
+    <p>{{ cc.serial }}</p>
+<pre>{{ cc.led }}
+{{ cc.led }}
+{{ cc.led }}</pre>
+  </div>
+</div>

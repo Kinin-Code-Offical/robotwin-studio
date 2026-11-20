@@ -1,0 +1,13 @@
+<!doctype html>
+{% include vars.html %}
+<html lang="{{ lang }}">
+<head>
+{% include head.html %}
+</head>
+<body class="layout-{{ page.layout | default: 'base' }}">
+<a class="skip-link" href="#main">{{ t.skip }}</a>
+{% include header.html %}
+{{ content }}
+{% include footer.html %}
+</body>
+</html>

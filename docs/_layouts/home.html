@@ -1,0 +1,266 @@
+---
+layout: base
+---
+{% include vars.html %}
+{%- assign L = site.data.landing[lang] -%}
+{%- capture faq_url -%}{% include url.html path="kullanim/10-sss.md" %}{%- endcapture -%}
+{%- capture instr_url -%}{% include url.html path="kullanim/08-olcu-aletleri.md" %}{%- endcapture -%}
+{%- assign cols = "1,2,3,4" | split: "," -%}
+{%- assign has_video = false -%}
+{%- if site.demo.mp4 and site.demo.mp4 != "" -%}{%- assign has_video = true -%}{%- endif -%}
+{%- if site.demo.webm and site.demo.webm != "" -%}{%- assign has_video = true -%}{%- endif -%}
+{%- assign has_gif = false -%}
+{%- if site.demo.gif and site.demo.gif != "" -%}{%- assign has_gif = true -%}{%- endif -%}
+<main id="main" class="landing">
+
+  <section class="hero">
+    <div class="wrap hero-copy">
+      <p class="eyebrow-pill"><img src="{{ '/assets/img/robotwin-logo-64.png' | relative_url }}" width="20" height="20" alt="">RobotWin Studio<span class="sep" aria-hidden="true"></span><span class="muted">{{ L.hero.eyebrow }}</span></p>
+      <h1>{{ L.hero.title }}</h1>
+      <p class="pitch">{{ L.hero.pitch }}</p>
+      <div class="hero-cta">
+        {% include download.html %}
+        <a class="btn btn-lg" href="{{ guide_url }}">{{ L.hero.guide }}</a>
+        <a class="btn btn-lg btn-ghost" href="{{ site.github_url }}">{% include icon.html name="github" %}{{ L.hero.github }}</a>
+      </div>
+      <p class="hero-note">{{ L.hero.note }}</p>
+    </div>
+    <div class="wrap wrap-wide">
+      <figure class="hero-media" aria-label="{{ L.hero.demo_label }}">
+        <div class="stage-bar" aria-hidden="true">{% for s in site.data.stages %}<span style="background:{{ s.color }}"></span>{% endfor %}</div>
+        {%- if has_video %}
+        <video class="demo" autoplay muted loop playsinline preload="metadata" width="1600" height="960" poster="{{ site.demo.poster | relative_url }}" data-demo>
+          {%- if site.demo.webm and site.demo.webm != "" %}<source src="{{ site.demo.webm | relative_url }}" type="video/webm">{% endif %}
+          {%- if site.demo.mp4 and site.demo.mp4 != "" %}<source src="{{ site.demo.mp4 | relative_url }}" type="video/mp4">{% endif %}
+          <img src="{{ site.demo.poster | relative_url }}" alt="{{ L.hero.image_alt }}">
+        </video>
+        {%- elsif has_gif %}
+        <img src="{{ site.demo.gif | relative_url }}" width="1600" height="960" alt="{{ L.hero.image_alt }}">
+        {%- else %}
+        <img src="{{ site.demo.poster | relative_url }}" width="1600" height="960" alt="{{ L.hero.image_alt }}" data-zoom fetchpriority="high">
+        {%- endif %}
+      </figure>
+    </div>
+  </section>
+
+  <section class="stats-strip" aria-label="RobotWin Studio">
+    <div class="wrap">
+      <ul class="stats">
+        {%- for st in L.stats %}
+        <li><strong>{{ st.value }}</strong><span>{{ st.label }}</span></li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">{{ L.line.kicker }}</p>
+        <h2>{{ L.line.title }}</h2>
+        <p>{{ L.line.text }}</p>
+      </header>
+      <ol class="flow" aria-hidden="true">
+        {%- for s in site.data.stages %}
+        <li style="--c:{{ s.color }}">
+          <a href="#{{ s.key }}" tabindex="-1">
+            <span class="flow-node">{% include icon.html name=s.key %}</span>
+            <span class="flow-name">{% if lang == "tr" %}{{ s.name }}{% else %}{{ s.en }}{% endif %}</span>
+          </a>
+        </li>
+        {%- endfor %}
+      </ol>
+      <ul class="stage-cards">
+        {%- for s in site.data.stages %}
+        {%- assign c = L.stages[s.key] %}
+        <li style="--c:{{ s.color }}">
+          <a class="stage-card" href="#{{ s.key }}">
+            <span class="stage-card-head"><span class="stage-icon">{% include icon.html name=s.key %}</span><strong>{% if lang == "tr" %}{{ s.name }}{% else %}{{ s.en }}{% endif %}</strong><kbd>{{ s.shortcut }}</kbd></span>
+            <span class="stage-card-text">{{ c.short }}</span>
+          </a>
+        </li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section id="stages">
+    <div class="wrap features">
+      {%- for s in site.data.stages %}
+      {%- assign c = L.stages[s.key] -%}
+      {%- assign odd = forloop.index | modulo: 2 -%}
+      {%- capture stage_url -%}{% include url.html path=s.guide %}{%- endcapture %}
+      <article class="feature{% if odd == 0 %} flip{% endif %}" id="{{ s.key }}" style="--c:{{ s.color }}">
+        <div class="feature-copy">
+          <p class="stage-tag"><span class="dot"></span><span class="num">0{{ forloop.index }}</span>{% if lang == "tr" %}{{ s.name }}{% else %}{{ s.en }}{% endif %} <kbd>{{ s.shortcut }}</kbd></p>
+          <h3>{{ c.title }}</h3>
+          <p>{{ c.text }}</p>
+          <ul class="checks">
+            {%- for b in c.bullets %}
+            <li>{{ b }}</li>
+            {%- endfor %}
+          </ul>
+          <a class="more" href="{{ stage_url }}"{% if lang != "tr" %} hreflang="tr"{% endif %}>{{ L.guide_link }} <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="feature-media">
+          {%- if s.image %}
+          <figure class="shot">
+            <img src="{{ s.image | relative_url }}" width="1600" height="960" alt="{{ c.image_alt }}" loading="lazy" data-zoom>
+          </figure>
+          {%- elsif s.key == "kod" %}
+          {% include code-card.html c=c %}
+          {%- elsif s.key == "montaj" %}
+          <div class="data-card">
+            <div class="data-card-icon">{% include icon.html name="montaj" %}</div>
+            <table>
+              <thead><tr><th>{{ c.table_head[0] }}</th><th>{{ c.table_head[1] }}</th></tr></thead>
+              <tbody>
+                {%- for row in c.table %}
+                <tr><td>{{ row[0] }}</td><td>{{ row[1] }}</td></tr>
+                {%- endfor %}
+              </tbody>
+            </table>
+          </div>
+          {%- endif %}
+          {%- if c.gallery %}
+          <div class="gallery">
+            {%- for g in c.gallery %}
+            <figure class="shot">
+              <img src="{{ g.src | relative_url }}" width="1600" height="960" alt="{{ g.caption }}" loading="lazy" data-zoom>
+              <figcaption>{{ g.caption }}</figcaption>
+            </figure>
+            {%- endfor %}
+          </div>
+          {%- endif %}
+        </div>
+      </article>
+      {%- endfor %}
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">{{ L.compare.kicker }}</p>
+        <h2>{{ L.compare.title }}</h2>
+        <p>{{ L.compare.text }}</p>
+      </header>
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr>
+              <td></td>
+              {%- for h in L.compare.cols %}
+              <th scope="col"{% if forloop.last %} class="us"{% endif %}>{% if forloop.last %}<img src="{{ '/assets/img/robotwin-logo-64.png' | relative_url }}" width="22" height="22" alt="">{% endif %}{{ h }}</th>
+              {%- endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {%- for row in L.compare.rows %}
+            <tr>
+              <th scope="row">{{ row[0] }}</th>
+              {%- for i in cols %}
+              {%- assign n = i | plus: 0 -%}
+              {%- assign v = row[n] %}
+              <td class="v-{{ v }}{% if forloop.last %} us{% endif %}">{% if v == "yes" %}<span class="mark yes" aria-hidden="true"></span><span class="visually-hidden">{{ L.compare.legend.full }}</span>{% elsif v == "part" %}<span class="mark part" aria-hidden="true"></span><span class="visually-hidden">{{ L.compare.legend.partial }}</span>{% else %}<span class="mark no" aria-hidden="true"></span><span class="visually-hidden">{{ L.compare.legend.none }}</span>{% endif %}</td>
+              {%- endfor %}
+            </tr>
+            {%- endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="compare-legend"><span><span class="mark yes"></span>{{ L.compare.legend.full }}</span><span><span class="mark part"></span>{{ L.compare.legend.partial }}</span><span><span class="mark no"></span>{{ L.compare.legend.none }}</span></p>
+      <p class="compare-note">{{ L.compare.note }}</p>
+    </div>
+  </section>
+
+  <section id="instruments">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">{{ L.instruments.kicker }}</p>
+        <h2>{{ L.instruments.title }}</h2>
+        <p>{{ L.instruments.text }}</p>
+      </header>
+      {%- assign st = site.data.stages[0] %}
+      <div class="cards">
+        {%- for it in L.instruments.items %}
+        <div class="card">
+          <span class="dot" style="--c:{{ st.color }}"></span>
+          <h3>{{ it.title }}</h3>
+          <p>{{ it.text }}</p>
+        </div>
+        {%- endfor %}
+      </div>
+      <p class="after-cards"><a class="more" href="{{ instr_url }}" style="--c:{{ st.color }}">{{ L.instruments.link }} <span aria-hidden="true">→</span></a></p>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">{{ L.requirements.kicker }}</p>
+        <h2>{{ L.requirements.title }}</h2>
+      </header>
+      <div class="req-grid">
+        <dl class="req-list">
+          {%- for row in L.requirements.rows %}
+          <div><dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd></div>
+          {%- endfor %}
+        </dl>
+        <div>
+          <p class="pkg-title">{{ L.requirements.packages_title }}</p>
+          <a class="pkg" href="{{ site.releases_url }}" data-pkg="full">
+            <span class="pkg-head"><strong>{{ L.requirements.full_title }}</strong><span class="badge">{{ L.download.full }}</span></span>
+            <p>{{ L.requirements.full_text }}</p>
+            <span class="pkg-head"><code data-pkg-name>RobotWinStudio-Setup-&lt;{% if lang == "tr" %}sürüm{% else %}version{% endif %}&gt;-tam.exe</code><span class="pkg-size" data-pkg-size></span></span>
+          </a>
+          <a class="pkg" href="{{ site.releases_url }}" data-pkg="small">
+            <span class="pkg-head"><strong>{{ L.requirements.small_title }}</strong></span>
+            <p>{{ L.requirements.small_text }}</p>
+            <span class="pkg-head"><code data-pkg-name>RobotWinStudio-Setup-&lt;{% if lang == "tr" %}sürüm{% else %}version{% endif %}&gt;.exe</code><span class="pkg-size" data-pkg-size></span></span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">{{ L.faq.kicker }}</p>
+        <h2>{{ L.faq.title }}</h2>
+      </header>
+      <div class="faq">
+        {%- for f in L.faq.items %}
+        <details>
+          <summary>{{ f.q }}</summary>
+          <p>{{ f.a }}</p>
+        </details>
+        {%- endfor %}
+      </div>
+      <p class="after-cards"><a class="more" href="{{ faq_url }}"{% if lang != "tr" %} hreflang="tr"{% endif %}>{{ L.faq.more }} <span aria-hidden="true">→</span></a></p>
+    </div>
+  </section>
+
+  <section id="news">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">{{ L.news.kicker }}</p>
+        <h2>{{ L.news.title }}</h2>
+      </header>
+      <div class="news-teaser" data-news data-limit="3">
+        <p class="news-msg"><a href="{{ news_url }}">{{ L.news.more }} →</a></p>
+      </div>
+      <p class="after-cards"><a class="more" href="{{ news_url }}">{{ L.news.more }} <span aria-hidden="true">→</span></a></p>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap">
+      <h2>{{ L.closing.title }}</h2>
+      <p>{{ L.closing.text }}</p>
+      <div class="hero-cta">{% include download.html %}</div>
+    </div>
+  </section>
+
+</main>

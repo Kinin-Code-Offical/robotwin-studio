@@ -1,11 +1,86 @@
 title: RobotWin Studio
-description: Devre, PCB, kod, 3D modelleme ve gerçek fizikli açık dünyada robot simülasyonu — kullanım kılavuzu ve belgeler.
-lang: tr
-theme: jekyll-theme-primer
+tagline: Design, code and simulate robots with real physics
+description: RobotWin Studio is a Windows app for robot and electronics projects — circuit simulation, PCB layout, Arduino and ESP32 firmware in emulation, 3D modelling and an open world with real physics, all running together.
+lang: en
+locale: en_US
+
+# Site address (GitHub Pages project site). Explicit so links, canonical URLs,
+# Open Graph tags and the sitemap do not depend on the metadata lookup.
+url: https://kinin-code-offical.github.io
+baseurl: /robotwin-studio
+repository: Kinin-Code-Offical/robotwin-studio
+
+logo: /assets/img/robotwin-logo-512.png
+github_url: https://github.com/Kinin-Code-Offical/robotwin-studio
+releases_url: https://github.com/Kinin-Code-Offical/robotwin-studio/releases
+repo_api: https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio
+
+# Hero demo on the landing pages. Leave mp4/webm/gif empty to show the poster
+# screenshot. To add the demo later, drop the file into assets/demo/ and set
+# the path here, e.g. mp4: /assets/demo/robotwin-demo.mp4 (muted, looping,
+# about 10-20 s, 1600x960 or 1280x768, a few MB at most).
+demo:
+  mp4: ""
+  webm: ""
+  gif: ""
+  poster: /images/world-ps5-car.png
+
+# No remote theme: the layouts, includes and styles live in this folder.
+# Only plugins from the GitHub Pages set (actions/jekyll-build-pages).
 plugins:
   - jekyll-relative-links
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-titles-from-headings
+  - jekyll-default-layout
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
 relative_links:
   enabled: true
   collections: false
+
+titles_from_headings:
+  enabled: true
+  strip_title: false
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
 exclude:
   - archive/U1
+
+# Layout and language per folder. Pages without front matter (the Markdown
+# guide and docs) pick these up, so the Markdown files stay untouched.
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      lang: en
+      image: /assets/img/og-image.png
+  - scope:
+      path: "kullanim"
+    values:
+      lang: tr
+      locale: tr_TR
+      section: guide
+      image: /assets/img/og-image-tr.png
+      description: RobotWin Studio kullanım kılavuzu — devre, PCB, kod, 3D modelleme, montaj ve gerçek fizikli dünya, adım adım ve ekran görüntülü.
+  - scope:
+      path: "tr"
+    values:
+      lang: tr
+      locale: tr_TR
+      image: /assets/img/og-image-tr.png
+  - scope:
+      path: "README.md"
+    values:
+      section: docs
+      permalink: /docs/
+  - scope:
+      path: "archive"
+    values:
+      section: archive
+      sitemap: false
