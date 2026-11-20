@@ -218,19 +218,65 @@ namespace RobotWin.Studio.Models3D
         {
             double w = board.Width, h = board.Height, t = Thickness;
             var g = new Model3DGroup();
+            // The board's real outline (straight edges, arcs, per-corner radii, cut-outs drawn in the
+            // PCB editor) — not a rectangle.
+            var outline = OutlinePoints(board, 1.0);
             var core = new MeshBuilder(new Frame());
-            core.RoundedBox(0, 0, 0, w, h, t, Math.Max(0.2, Math.Min(board.CornerRadius, Math.Min(w, h) / 4)), 4, false, false);
+            core.Extrude(outline, 0, t, false, false, false);
             g.Children.Add(new GeometryModel3D(core.ToGeometry(), Mat.Plastic(0xB9AE7E, 0.15)));
             var top = new ImageBrush(PcbTexture.Render(board)) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
             top.Freeze();
             var topMat = new MaterialGroup();
             topMat.Children.Add(new DiffuseMaterial(top));
             topMat.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), 25));
-            g.Children.Add(new GeometryModel3D(Quad(w, h, t + 0.002, true), topMat));
+            g.Children.Add(new GeometryModel3D(OutlineCap(outline, w, h, t + 0.002, true, 1.0), topMat));
             var bottom = new ImageBrush(BottomTexture(board)) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
             bottom.Freeze();
-            g.Children.Add(new GeometryModel3D(Quad(w, h, -0.002, false), new DiffuseMaterial(bottom)));
+            g.Children.Add(new GeometryModel3D(OutlineCap(outline, w, h, -0.002, false, 1.0), new DiffuseMaterial(bottom)));
             return g;
+        }
+
+        /// <summary>
+        /// Board outline centred on the board (x right, y up, units × <paramref name="scale"/>), counter-clockwise
+        /// seen from above. Layout coordinates have y down, so y flips.
+        /// </summary>
+        public static List<Point> OutlinePoints(BoardDocument board, double scale)
+        {
+            var pts = board.OutlinePolygon(0.02).Select(p => new Point((p.X - board.Width / 2) * scale, (board.Height / 2 - p.Y) * scale)).ToList();
+            if (pts.Count < 3)
+                pts = new List<Point> { new Point(-board.Width / 2 * scale, -board.Height / 2 * scale), new Point(board.Width / 2 * scale, -board.Height / 2 * scale), new Point(board.Width / 2 * scale, board.Height / 2 * scale), new Point(-board.Width / 2 * scale, board.Height / 2 * scale) };
+            double area = 0;
+            for (int i = 0; i < pts.Count; i++)
+            {
+                var a = pts[i];
+                var b = pts[(i + 1) % pts.Count];
+                area += a.X * b.Y - b.X * a.Y;
+            }
+
+            if (area < 0) pts.Reverse();
+            return pts;
+        }
+
+        /// <summary>The board face inside its outline, textured like <see cref="Quad"/> (u along x, v down the layout).</summary>
+        public static MeshGeometry3D OutlineCap(List<Point> outline, double w, double h, double z, bool up, double scale)
+        {
+            var m = new MeshGeometry3D();
+            var n = new Vector3D(0, 0, up ? 1 : -1);
+            foreach (var p in outline)
+            {
+                m.Positions.Add(new Point3D(p.X, p.Y, z));
+                m.Normals.Add(n);
+                m.TextureCoordinates.Add(new Point(p.X / scale / w + 0.5, 0.5 - p.Y / scale / h));
+            }
+
+            foreach (var (a, b, c) in MeshBuilder.Triangulate(outline))
+            {
+                m.TriangleIndices.Add(a);
+                m.TriangleIndices.Add(up ? b : c);
+                m.TriangleIndices.Add(up ? c : b);
+            }
+
+            return m;
         }
 
         /// <summary>Board-sized quad; texture u along x, v down the board (layout Y).</summary>

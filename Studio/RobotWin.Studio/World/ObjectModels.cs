@@ -407,11 +407,15 @@ namespace RobotWin.Studio.World
             }
 
             double w = board.Width, h = board.Height, t = 1.6;
-            Box(m.Body, 0, 0, t / 2, w, h, t, Color.FromRgb(0x1E, 0x56, 0x31), 0.08, m.Heat);
+            // The board's own outline from the PCB editor (cut corners, arcs, notches), not a rectangle.
+            var outline = Models3D.BoardModels.OutlinePoints(board, Mm);
+            var core = new Models3D.MeshBuilder(new Models3D.Frame());
+            core.Extrude(outline, 0, t * Mm, false, false, true);
+            m.Body.Children.Add(new GeometryModel3D(core.ToGeometry(), Mat(Color.FromRgb(0x1E, 0x56, 0x31), 0.08, m.Heat)));
             try
             {
                 var top = Pcb.Editor3DTextures.BoardTop(board);
-                m.Body.Children.Add(new GeometryModel3D(M.TexturedTop(0, 0, (t + 0.01) * Mm, w * Mm, h * Mm), new DiffuseMaterial(new ImageBrush(top))));
+                m.Body.Children.Add(new GeometryModel3D(Models3D.BoardModels.OutlineCap(outline, w, h, (t + 0.01) * Mm, true, Mm), new DiffuseMaterial(new ImageBrush(top) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new System.Windows.Rect(0, 0, 1, 1) })));
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
             {

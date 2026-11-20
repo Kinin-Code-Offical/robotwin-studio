@@ -702,6 +702,16 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "shape3d":
+                {
+                    // A chamfered board with a connector notch, shown in 3D (outline → 3D and world).
+                    double w = board.Width, h = board.Height, c = Math.Min(w, h) * 0.15, nw = w / 4, nd = h / 5, x0 = (w - nw) / 2;
+                    board.Outline = new List<OutlinePoint> { new(c, 0), new(w - c, 0), new(w, c), new(w, h - c), new(w - c, h), new(x0 + nw, h, 1), new(x0 + nw, h - nd, 1), new(x0, h - nd, 1), new(x0, h, 1), new(c, h), new(0, h - c), new(0, c) };
+                    Canvas.Refresh();
+                    Show3D(true);
+                    break;
+                }
+
                 case "measure":
                     Canvas.SetTool(PcbTool.Measure);
                     Canvas.SimulateMeasureForSnapshot(5, 5, board.Width * 0.6, board.Height * 0.45);
@@ -1251,6 +1261,31 @@ namespace RobotWin.Studio.Pages
                 BoardPanel.Children.Add(Buttons(Button("Dikdörtgene dön", (_, _) => Edit("Dikdörtgen kart kenarı", () => board.Outline.Clear()))));
             }
 
+            // Ready outlines on the current width × height (then drag their corners, or draw your own with the edge tool).
+            BoardPanel.Children.Add(Caption("Hazır kart şekli", 8));
+            void Shape(string name, Func<double, double, List<OutlinePoint>> make) =>
+                Edit("Kart şekli: " + name, () => board.Outline = make(board.Width, board.Height));
+            BoardPanel.Children.Add(Buttons(
+                Button("Pah kırık köşe", (_, _) => Shape("pah kırık köşe", (w, h) =>
+                {
+                    double c = Math.Min(w, h) * 0.15;
+                    return new List<OutlinePoint> { new(c, 0), new(w - c, 0), new(w, c), new(w, h - c), new(w - c, h), new(c, h), new(0, h - c), new(0, c) };
+                })),
+                Button("Daire / oval", (_, _) => Shape("daire / oval", (w, h) =>
+                {
+                    double r = Math.Min(w, h) / 2 - 0.01;
+                    return new List<OutlinePoint> { new(0, 0, r), new(w, 0, r), new(w, h, r), new(0, h, r) };
+                })),
+                Button("Altıgen", (_, _) => Shape("altıgen", (w, h) =>
+                    new List<OutlinePoint> { new(w * 0.25, 0), new(w * 0.75, 0), new(w, h / 2), new(w * 0.75, h), new(w * 0.25, h), new(0, h / 2) }))));
+            BoardPanel.Children.Add(Buttons(
+                Button("Kenarda çentik (konnektör / servo)", (_, _) => Shape("çentikli", (w, h) =>
+                {
+                    double nw = w / 3, nd = h / 4, x0 = (w - nw) / 2;
+                    return new List<OutlinePoint> { new(0, 0), new(w, 0), new(w, h), new(x0 + nw, h, 1), new(x0 + nw, h - nd, 1), new(x0, h - nd, 1), new(x0, h, 1), new(0, h) };
+                })),
+                Button("L şekli", (_, _) => Shape("L", (w, h) =>
+                    new List<OutlinePoint> { new(0, 0), new(w * 0.45, 0), new(w * 0.45, h * 0.55), new(w, h * 0.55), new(w, h), new(0, h) }))));
             BoardPanel.Children.Add(Row("Yeni kenar köşe yarıçapı", Number(Canvas.OutlineCornerRadius, v => Canvas.OutlineCornerRadius = v, 0, 50, true), tip: "Kart kenarı aracıyla çizilen çokgenin köşelerine uygulanır"));
             BoardPanel.Children.Add(Row("Montaj deliği Ø (mm)", Number(Canvas.HoleDrill, v => Canvas.HoleDrill = v, 0.3, 20)));
             BoardPanel.Children.Add(Row("Delik pedi Ø (0 = kaplamasız)", Number(Canvas.HolePad, v => Canvas.HolePad = v, 0, 30, true)));
