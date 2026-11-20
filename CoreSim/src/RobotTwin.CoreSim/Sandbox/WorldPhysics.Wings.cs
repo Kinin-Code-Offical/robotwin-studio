@@ -117,7 +117,9 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>
         /// Hand launch: an object with a "launch" parameter (m/s) starts moving along its own +x with
-        /// that speed, together with everything joined to it (the whole aircraft).
+        /// that speed, together with everything joined to it (the whole aircraft). With "launch.delay"
+        /// (s) it is first held still in the hand — ESCs arm and a flight controller calibrates its IMU
+        /// on a still airframe, as before a real throw — and thrown at that time.
         /// </summary>
         private void ApplyLaunches(WorldDocument world)
         {
@@ -127,19 +129,53 @@ namespace RobotTwin.CoreSim.Sandbox
                 double speed = Param(o, "launch", 0);
                 if (speed == 0 || it.Body == null || PoseOf(o.Id) is not { } pose) continue;
                 var v = pose.Orientation.Rotate(Vec3.UnitX) * speed;
+                double delay = Param(o, "launch.delay", 0);
+                var thrown = new List<SceneBody>();
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { o.Id };
                 var queue = new Queue<string>();
                 queue.Enqueue(o.Id);
                 while (queue.Count > 0)
                 {
                     string id = queue.Dequeue();
-                    if (_items.TryGetValue(id, out var x) && x.Body != null && !x.Body.IsStatic) x.Body.Velocity = v;
+                    if (_items.TryGetValue(id, out var x) && x.Body != null && !x.Body.IsStatic)
+                    {
+                        // The body with its rotors and shell walls: they move as one.
+                        thrown.Add(x.Body);
+                        if (x.Rotor != null) thrown.Add(x.Rotor);
+                        if (x.Walls != null) thrown.AddRange(x.Walls);
+                    }
+
                     foreach (var j in world.Joints)
                     {
                         string? other = j.ObjectA == id ? j.ObjectB : j.ObjectB == id ? j.ObjectA : null;
                         if (other != null && seen.Add(other)) queue.Enqueue(other);
                     }
                 }
+
+                if (delay <= 0)
+                {
+                    foreach (var b in thrown) b.Velocity = v;
+                    continue;
+                }
+
+                // Held in the hand: welded to the world at its centre until the throw.
+                var hold = Scene.AddJoint(JointKind.Fixed, it.Body, null, it.Body.Position, Vec3.UnitZ, o.Id + ":el");
+                _pendingLaunches.Add((hold, thrown, v, delay));
+            }
+        }
+
+        private readonly List<(SceneJoint Hold, List<SceneBody> Bodies, Vec3 Velocity, double At)> _pendingLaunches = new List<(SceneJoint, List<SceneBody>, Vec3, double)>();
+
+        /// <summary>Throws the aircraft still held in the hand once their launch time has come.</summary>
+        private void ReleaseLaunches()
+        {
+            for (int k = _pendingLaunches.Count - 1; k >= 0; k--)
+            {
+                var (hold, bodies, v, at) = _pendingLaunches[k];
+                if (Scene.Time < at) continue;
+                hold.Enabled = false;
+                foreach (var b in bodies) b.Velocity = v;
+                _pendingLaunches.RemoveAt(k);
             }
         }
 

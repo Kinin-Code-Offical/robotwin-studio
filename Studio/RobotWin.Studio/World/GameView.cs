@@ -28,7 +28,7 @@ namespace RobotWin.Studio.World
         private readonly Border _frame = new Border { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, ClipToBounds = true };
         private readonly Grid _stage = new Grid();
         private readonly Image _sensorImage = new Image { Stretch = Stretch.Uniform, Visibility = Visibility.Collapsed };
-        private readonly TextBlock _hud = new TextBlock { Margin = new Thickness(8), Padding = new Thickness(8, 4, 8, 4), FontSize = 11.5, Foreground = Brushes.White };
+        private readonly TextBlock _hud = new TextBlock { Margin = new Thickness(8), Padding = new Thickness(8, 4, 8, 4), FontSize = 12, Foreground = Brushes.White };
         private readonly Border _hudBox = new Border { Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x0B, 0x0B, 0x0D)), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(4), IsHitTestVisible = false, Margin = new Thickness(8) };
         private readonly ComboBox _source = new ComboBox { MinWidth = 220, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly CheckBox _sensorMode = new CheckBox { Content = "Sensör çıktısı (gerçek piksel)", Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Foreground = new SolidColorBrush(Color.FromRgb(0xB8, 0xB8, 0xC0)) };

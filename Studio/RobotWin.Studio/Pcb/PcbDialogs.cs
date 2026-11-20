@@ -61,7 +61,7 @@ namespace RobotWin.Studio.Pcb
                     var name = new TextBlock { Text = l.Copper.HasValue ? $"{l.Name}  ({PcbLayers.DisplayName(l.Copper.Value)})" : $"{l.Name} · {l.Type} · {l.Material} εr {l.EpsilonR:0.##}", Style = S("Text.Caption") };
                     Grid.SetColumn(name, 1);
                     row.Children.Add(name);
-                    var th = new TextBlock { Text = l.Thickness.ToString("0.000", CultureInfo.InvariantCulture) + " mm", Style = S("Text.Mono"), FontSize = 11, HorizontalAlignment = HorizontalAlignment.Right };
+                    var th = new TextBlock { Text = l.Thickness.ToString("0.000", CultureInfo.InvariantCulture) + " mm", Style = S("Text.Mono"), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
                     Grid.SetColumn(th, 2);
                     row.Children.Add(th);
                     table.Children.Add(row);

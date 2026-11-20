@@ -284,6 +284,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]
                 Sdk?.BeforeStep(Step, sim);   // [sdk]
+                ReleaseLaunches();   // [uav] hand launch after a hold
                 StepWings(Step);   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
                 Scene.Step(Step);
                 FeedBack();

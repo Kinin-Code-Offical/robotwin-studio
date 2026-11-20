@@ -70,8 +70,8 @@ namespace RobotWin.Studio.World
             _effects.Project = Project;
             _effects.IsHitTestVisible = false;
             Children.Add(_effects);
-            _hint.Foreground = new SolidColorBrush(Color.FromRgb(0x6C, 0x6C, 0x74));
-            _hint.FontSize = 11.5;
+            _hint.Foreground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x97));   // TextMuted: 5.9:1 on the canvas
+            _hint.FontSize = 12;
             _hint.Margin = new Thickness(14, 0, 0, 10);
             _hint.VerticalAlignment = VerticalAlignment.Bottom;
             _hint.HorizontalAlignment = HorizontalAlignment.Left;
@@ -1069,6 +1069,7 @@ namespace RobotWin.Studio.World
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
+            UpdateThermalHover(e.GetPosition(_view));   // [thermal] World/WorldScene.Thermal.cs
             var p = e.GetPosition(this);
             if (EditorMouseMove(e, p)) return; // [terrain]
             if (_drag != null && World?.Find(_drag) is { } o && _items.TryGetValue(_drag, out var it))

@@ -510,6 +510,18 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public double GearRatio { get; set; } = 1.0;
         public double GearEfficiency { get; set; } = 1.0;
 
+        /// <summary>[thermal] Copper's temperature coefficient (1/K): the winding resistance rises ~0.39 %/°C.</summary>
+        public double CopperTempCo { get; set; } = 0.00393;
+
+        /// <summary>Winding resistance at its present temperature (<see cref="Resistance"/> is the 25 °C value).</summary>
+        public double HotResistance => Resistance * Math.Max(0.5, 1.0 + CopperTempCo * (Thermal.TemperatureC - 25.0));
+
+        /// <summary>Copper loss in the winding right now (W), at the hot resistance.</summary>
+        public double CopperLoss => Current * Current * HotResistance;
+
+        /// <summary>Friction loss right now (W): brushes, bearings and, in a gear motor, the gear train.</summary>
+        public double FrictionLoss { get; private set; }
+
         /// <summary>Torque applied by the mechanism at the output shaft, opposing rotation when positive.</summary>
         public double LoadTorque { get; set; }
 
@@ -622,7 +634,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
                 // V(A) - V(B) - (R + Req) i - Ke w = Veq
                 ctx.AddRowNode(ki, A, 1.0);
                 ctx.AddRowNode(ki, B, -1.0);
-                ctx.AddMatrix(ki, ki, -(Resistance + _req));
+                ctx.AddMatrix(ki, ki, -(HotResistance + _req));
                 ctx.AddMatrix(ki, kw, -MotorConstant);
                 ctx.AddRhs(ki, _veq);
             }
@@ -645,7 +657,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
             double i = ctx.Unknown(BranchBase);
             double w = ctx.Unknown(BranchBase + 1);
             double v = ctx.V(A, B);
-            double vL = v - Resistance * i - MotorConstant * w;
+            double vL = v - HotResistance * i - MotorConstant * w;
             double wDot = TotalInertia > 0.0
                 ? (MotorConstant * i - ViscousFriction * w - _friction) / TotalInertia
                 : 0.0;
@@ -659,7 +671,9 @@ namespace RobotTwin.CoreSim.Analog.Devices
             Voltage = v;
 
             if (ctx.IsDc) return;
-            Thermal.Advance(i * i * Resistance, ctx.Dt, ctx.AmbientTempC);
+            // Only the motor's own friction is heat here; the load torque is shaft power delivered to the load.
+            FrictionLoss = Math.Abs(CoulombFriction * Math.Tanh(w / 0.5) * w) + ViscousFriction * w * w;
+            Thermal.Advance(i * i * HotResistance, ctx.Dt, ctx.AmbientTempC);
             if (ctx.EnableDamage && !IsFailed && Thermal.TemperatureC > MaxWindingTempC)
             {
                 Fail(FailureMode.Open, $"sargı {Thermal.TemperatureC:F0} °C'de yandı ({Math.Abs(i):F2} A, motor zorlanıyor/kilitli olabilir)", ctx);

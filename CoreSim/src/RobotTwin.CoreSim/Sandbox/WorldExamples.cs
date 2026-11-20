@@ -72,7 +72,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var pod = w.AddBody("box", 0.26, 0.045, 0.050, new WorldPose { X = 0.07, Z = z0 }, "BALSA");
             pod.Name = "Gövde (balsa kabin)";
             pod.MassKg = 0.035;                       // hollow 2 mm balsa box with a ply former
-            pod.Parameters["launch"] = "7";
+            pod.Parameters["launch"] = "5.5";   // a gentle throw near the trim speed (~5 m/s)
             pod.Parameters["shell"] = "true";        // [shell] really hollow: 2 mm balsa walls the electronics sit between
             pod.Parameters["wall"] = "0.002";
             pod.Parameters["holes"] = "-x";           // pushrod and cable exit at the rear
@@ -89,7 +89,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
             // Electronics inside the pod, lengthwise between its 2 mm walls (the fit check holds them to it):
             // battery and lead forward for the CG, servos under the wing.
-            var bat = w.AddComponent(lib, "bat-2s-lipo", new WorldPose { X = 0.165, Z = z0 + 0.004 });
+            var bat = w.AddComponent(lib, "bat-2s-lipo", new WorldPose { X = 0.165, Z = z0 + 0.004, Yaw = 180 });   // leads aft, inside the pod
             bat.Name = "LiPo 2S 450 mAh";
             bat.MassKg = 0.028;
             bat.Parameters["capacity"] = "0.45";   // a 2S 450 mAh pack: ≈ 62 × 20 × 10 mm
@@ -381,6 +381,231 @@ void loop() {
   if (millis() - lastPrint > 250) {
     lastPrint = millis();
     Serial.printf(""t=%.2f gaz=%.0f yatis=%.1f yunus=%.1f\n"", t, thr, roll * RAD_TO_DEG, pitch * RAD_TO_DEG);
+  }
+}
+";
+
+        /// <summary>
+        /// [uav] The glider as an electric UAV, built the way a real 1 m motor glider is: a 2212 1000KV
+        /// outrunner on the nose with an 8 × 4.5" prop (≈ 5 N static thrust on 3S, sized for a ≈ 300 g
+        /// plane), a 20 A ESC, a 3S 850 mAh pack placed for a 33 % CG — no nose lead — and an ESP32 +
+        /// MPU-6050 flight controller running <see cref="PlaneSketch"/>. It is held still for 2.5 s
+        /// (ESC arming, IMU calibration) and then hand-launched.
+        /// </summary>
+        public static WorldDocument MotorGlider(PartLibrary lib, double batteryX = 0.059, double height = 1.6)
+        {
+            var w = new WorldDocument { Title = "Motorlu planör (İHA)" };
+            double z0 = height, podTop = z0 + 0.050, boomZ = z0 + 0.025;
+            const double tailX = -0.50;
+
+            var pod = w.AddBody("box", 0.26, 0.045, 0.050, new WorldPose { X = 0.07, Z = z0 }, "BALSA");
+            pod.Name = "Gövde (balsa kabin)";
+            pod.MassKg = 0.035;
+            pod.Parameters["launch"] = "8";
+            pod.Parameters["launch.delay"] = "2.5";   // held for ESC arming and IMU calibration, then thrown
+            pod.Parameters["shell"] = "true";
+            pod.Parameters["wall"] = "0.002";
+            pod.Parameters["holes"] = "-x,+x";        // pushrods out the back, motor leads through the firewall
+            var boom = w.AddBody("cylinder", 0.008, 0.008, 0.50, new WorldPose { X = tailX - 0.04, Z = boomZ, Pitch = 90 }, "KARBON");
+            boom.Name = "Kuyruk borusu (karbon Ø8)";
+            boom.MassKg = 0.012;
+            var wing = w.AddBody("wing", 0.15, 1.0, 0.012, new WorldPose { X = 0.005, Z = podTop }, "BALSA");
+            wing.Name = "Kanat (Clark Y, 6° dihedral)";
+            wing.MassKg = 0.060;
+            wing.Parameters["airfoil"] = "clarky";
+            wing.Parameters["incidence"] = "2";
+            wing.Parameters["dihedral"] = "6";
+
+            // Nose: motor on the firewall, shaft forward; the prop on its shaft.
+            var motor = w.AddComponent(lib, "motor-2212-1000kv", new WorldPose { X = 0.200, Z = z0 + 0.025, Pitch = 90 });
+            motor.Name = "Motor 2212 1000KV";
+            var prop = ReadyParts.Add(w, "prop-8045-ccw", new WorldPose());
+            ReadyParts.AttachToPort(w, prop, motor, "shaft", new Vec3(0, 0, 0.040), Vec3.UnitZ);
+            var esc = w.AddComponent(lib, "esc-20a", new WorldPose { X = 0.180, Z = z0 + 0.002 });
+            esc.Name = "ESC 20 A";
+            var bat = w.AddComponent(lib, "bat-3s-lipo", new WorldPose { X = batteryX, Z = z0 + 0.002, Yaw = 180 });   // leads aft, into the pod
+            bat.Name = "LiPo 3S 850 mAh";
+            bat.MassKg = 0.075;
+            bat.Parameters["capacity"] = "0.85";
+            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.135, Z = z0 + 0.002 });
+            esp.Name = "Uçuş kartı (ESP32)";
+            esp.Firmware = new Formats.FirmwareSource { FileName = "esp32-plane-fc.ino", Target = "esp32:esp32:esp32", Source = PlaneSketch };
+            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = 0.0, Z = z0 + 0.002 });
+            imu.Name = "IMU (MPU-6050)";
+            var elevServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = 0.011, Z = z0 + 0.002 });
+            elevServo.Name = "İrtifa servosu";
+            var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = -0.011, Z = z0 + 0.002 });
+            rudServo.Name = "Yön servosu";
+
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            rodE.Name = "İtme çubuğu (irtifa)";
+            rodE.MassKg = 0.0008;
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            rodR.Name = "İtme çubuğu (yön)";
+            rodR.MassKg = 0.0008;
+            var stab = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = tailX, Z = boomZ + 0.004 }, "BALSA");
+            stab.Name = "Yatay kuyruk + irtifa dümeni";
+            stab.MassKg = 0.008;
+            stab.Parameters["airfoil"] = "naca0012";
+            stab.Parameters["incidence"] = "-2";
+            stab.Parameters["control"] = "elevator";
+            stab.Parameters["control.chord"] = "0.35";
+            stab.Parameters["control.servo"] = elevServo.Id;
+            stab.Parameters["control.horn"] = "0.012";
+            stab.Parameters["control.arm"] = "0.024";
+            stab.Parameters["control.rod"] = "0.45";
+            stab.Parameters["downwash"] = wing.Id;
+            var fin = w.AddBody("wing", 0.08, 0.11, 0.005, new WorldPose { X = tailX, Z = boomZ + 0.010 }, "BALSA");
+            fin.Name = "Dikey kuyruk + yön dümeni";
+            fin.MassKg = 0.005;
+            fin.Parameters["airfoil"] = "naca0012";
+            fin.Parameters["symmetric"] = "false";
+            fin.Parameters["control"] = "rudder";
+            fin.Parameters["control.chord"] = "0.4";
+            fin.Parameters["control.servo"] = rudServo.Id;
+            fin.Parameters["control.horn"] = "0.012";
+            fin.Parameters["control.arm"] = "0.024";
+            fin.Parameters["control.rod"] = "0.45";
+
+            foreach (var part in new WorldObject[] { boom, wing, motor, esc, bat, esp, imu, elevServo, rudServo })
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = pod.Id });
+            foreach (var part in new WorldObject[] { stab, fin, rodE, rodR })
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = boom.Id });
+
+            void Wire(WorldObject a, string pa, WorldObject b, string pb, double awg, string colour, bool soldered = false)
+            {
+                var cable = w.Connect(new CableEnd { ObjectId = a.Id, Pin = pa }, new CableEnd { ObjectId = b.Id, Pin = pb }, awg, colour);
+                double run = Math.Sqrt(Math.Pow(a.Pose.X - b.Pose.X, 2) + Math.Pow(a.Pose.Y - b.Pose.Y, 2) + Math.Pow(a.Pose.Z - b.Pose.Z, 2));
+                cable.Length = Math.Max(0.04, 1.15 * run + 0.02);   // cut to the run: nothing hangs out of the pod
+                cable.SolderedA = cable.SolderedB = soldered;
+            }
+
+            Wire(bat, "+", esc, "B+", 18, "#E5484D", true);
+            Wire(bat, "-", esc, "B-", 18, "#1F1F23", true);
+            Wire(esc, "M+", motor, "A", 18, "#1F1F23", true);
+            Wire(esc, "M-", motor, "B", 18, "#1F1F23", true);
+            Wire(esc, "5V", esp, "VIN", 26, "#E5484D");
+            Wire(esp, "GND1", bat, "-", 26, "#1F1F23");
+            Wire(esp, "IO25", esc, "SIG", 26, "#F2F2F2");
+            Wire(esc, "5V", elevServo, "V+", 26, "#E5484D");
+            Wire(esp, "GND2", elevServo, "GND", 26, "#5A3A22");
+            Wire(esp, "IO26", elevServo, "SIG", 26, "#F2A33B");
+            Wire(esc, "5V", rudServo, "V+", 26, "#E5484D");
+            Wire(esp, "GND2", rudServo, "GND", 26, "#5A3A22");
+            Wire(esp, "IO27", rudServo, "SIG", 26, "#F2A33B");
+            Wire(esp, "3V3", imu, "VCC", 28, "#E5484D");
+            Wire(esp, "GND1", imu, "GND", 28, "#1F1F23");
+            Wire(esp, "IO21", imu, "SDA", 28, "#2F7FD8");
+            Wire(esp, "IO22", imu, "SCL", 28, "#F2A33B");
+            return w;
+        }
+
+        /// <summary>[uav] Flight controller sketch for <see cref="MotorGlider"/>: IMU attitude, throttle schedule, pitch hold on the elevator, yaw damper / wing leveller on the rudder.</summary>
+        public const string PlaneSketch = @"// ESP32 motorlu planör uçuş kartı: MPU-6050 (I²C), 20 A ESC + 2212 1000KV, irtifa ve yön servoları.
+// Gerçek bir kartta da çalışan Arduino-ESP32 kodu; RobotWin dünyasında aynı kod çalışır.
+//
+// Eksenler (gövde): x ileri, y sol, z yukarı. yunuslama + = burun aşağı, yatış + = sol kanat yukarı.
+// Akış: elde tutulurken ESC 1000 us ile kurulur, jiroskop sıfırı ve düzlük ölçülür; 2,5 s'de atılır.
+// Motor tırmanışta %70 gaz, irtifa dümeni burnu 8° yukarıda tutar; 9 s'de motor durur, süzülüşte 2°.
+// Yön dümeni ortada kalır: 6° dihedral kanatları kendiliğinden düzler.
+
+#include <Arduino.h>
+#include <Wire.h>
+#include <ESP32Servo.h>
+
+const int ESC_PIN = 25, ELEV_PIN = 26, RUD_PIN = 27;
+Servo esc, elev, rud;
+
+const uint8_t MPU = 0x68;
+float gyroBias[3] = {0, 0, 0};
+float rollTrim = 0, pitchTrim = 0;
+float roll = 0, pitch = 0;
+unsigned long lastUs = 0, startMs = 0, lastPrint = 0;
+
+void mpuWrite(uint8_t reg, uint8_t val) {
+  Wire.beginTransmission(MPU);
+  Wire.write(reg);
+  Wire.write(val);
+  Wire.endTransmission();
+}
+
+bool mpuRead(float a[3], float g[3]) {
+  Wire.beginTransmission(MPU);
+  Wire.write(0x3B);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom(MPU, (uint8_t)14, (uint8_t)1) != 14) return false;
+  int16_t raw[7];
+  for (int i = 0; i < 7; i++) raw[i] = (int16_t)((Wire.read() << 8) | Wire.read());
+  for (int i = 0; i < 3; i++) a[i] = raw[i] / 8192.0f;
+  for (int i = 0; i < 3; i++) g[i] = raw[4 + i] / 65.5f * DEG_TO_RAD;
+  return true;
+}
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(21, 22, 400000);
+  mpuWrite(0x6B, 0x00);
+  mpuWrite(0x1A, 0x03);
+  mpuWrite(0x1B, 0x08);
+  mpuWrite(0x1C, 0x08);
+  esc.setPeriodHertz(400);
+  esc.attach(ESC_PIN, 1000, 2000);
+  esc.writeMicroseconds(1000);
+  elev.attach(ELEV_PIN);
+  rud.attach(RUD_PIN);
+  elev.write(90);
+  rud.write(90);
+  // Elde tutulurken: jiroskop sıfırı ve düzlük.
+  float a[3], g[3];
+  int n = 0;
+  unsigned long t0 = millis();
+  while (millis() - t0 < 1500) {
+    if (mpuRead(a, g)) {
+      for (int k = 0; k < 3; k++) gyroBias[k] += g[k];
+      rollTrim += atan2f(a[1], a[2]);
+      pitchTrim += atan2f(-a[0], a[2]);
+      n++;
+    }
+    delay(4);
+  }
+  if (n > 0) {
+    for (int k = 0; k < 3; k++) gyroBias[k] /= n;
+    rollTrim /= n;
+    pitchTrim /= n;
+  }
+  Serial.printf(""Hazir: %d ornek, duzluk %.1f %.1f derece\n"", n, rollTrim * RAD_TO_DEG, pitchTrim * RAD_TO_DEG);
+  startMs = millis();
+  lastUs = micros();
+}
+
+void loop() {
+  unsigned long now = micros();
+  if (now - lastUs < 5000) return;   // 200 Hz
+  float dt = (now - lastUs) * 1e-6f;
+  lastUs = now;
+  float a[3], g[3];
+  if (!mpuRead(a, g)) return;
+  for (int k = 0; k < 3; k++) g[k] -= gyroBias[k];
+  float accRoll = atan2f(a[1], a[2]) - rollTrim, accPitch = atan2f(-a[0], a[2]) - pitchTrim;
+  roll = 0.999f * (roll + g[0] * dt) + 0.001f * accRoll;
+  pitch = 0.999f * (pitch + g[1] * dt) + 0.001f * accPitch;
+
+  float t = (millis() - startMs) * 1e-3f;   // atış ~1 s sonra
+  bool motor = t > 0.8f && t < 7.5f;
+  esc.writeMicroseconds(motor ? 1700 : 1000);
+
+  float pitchTarget = (motor ? -8.0f : -2.0f) * DEG_TO_RAD;   // burun yukarı = eksi
+  float e = -1.6f * (pitch - pitchTarget) * RAD_TO_DEG - 0.12f * g[1] * RAD_TO_DEG;
+  e = constrain(e, -35.0f, 35.0f);
+  elev.write(90 + (int)e);
+
+  // Yön dümeni ortada: 6° dihedral kanatları kendiliğinden düzler (polihedral planörlerde olduğu gibi).
+  float r = 0;
+  rud.write(90);
+
+  if (millis() - lastPrint > 500) {
+    lastPrint = millis();
+    Serial.printf(""t=%.1f motor=%d yunus=%.1f yatis=%.1f irtifa_dumeni=%.0f yon=%.0f\n"", t, motor, pitch * RAD_TO_DEG, roll * RAD_TO_DEG, e, r);
   }
 }
 ";

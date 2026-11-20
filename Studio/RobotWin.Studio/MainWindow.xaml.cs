@@ -402,6 +402,12 @@ namespace RobotWin.Studio
 
         public void Navigate(string page)
         {
+            if (page == "assembly")
+            {
+                OpenProjectAssembly();   // [assembly] the real assembly, not a vehicle template
+                return;
+            }
+
             if (!_pages.ContainsKey(page)) page = "home";
             if (_detached.TryGetValue(page, out var floating))
             {
@@ -521,9 +527,9 @@ namespace RobotWin.Studio
 
                 case "assembly":
                 {
-                    var a = sch.Assembly;
-                    bool vehicle = a != null && a.Kind != RobotTwin.CoreSim.Mechanics.VehicleKind.None;
-                    return new RailStatus(vehicle ? "Araç: " + a!.Kind : "Mekanik tanımlı değil", vehicle ? RailSeverity.Ok : RailSeverity.None);
+                    // [assembly] the circuit's parts as real 3D parts in a world
+                    int physical = sch.Parts.Count(p => W.Library.Find(p.PartId) is { } d && d.Symbol != RobotTwin.CoreSim.Design.SymbolKind.Ground && d.Pins.Count > 0);
+                    return new RailStatus(physical == 0 ? "Devrede parça yok" : $"{physical} parça gerçek montaja", physical == 0 ? RailSeverity.None : RailSeverity.Ok);
                 }
 
                 case "world":
@@ -756,6 +762,29 @@ namespace RobotWin.Studio
         {
             W.NewDocument();
             Navigate("schematic");
+        }
+
+        /// <summary>
+        /// [assembly] Montaj: the current project's circuit as a real assembly in a world tab — the PCB
+        /// with what is soldered on it, every other part as its own real 3D part, cabled pin to pin by
+        /// the nets. Built once per project; afterwards the same tab is brought back.
+        /// </summary>
+        public void OpenProjectAssembly()
+        {
+            var sch = W.Schematic;
+            string title = (string.IsNullOrWhiteSpace(sch.Title) ? "Proje" : sch.Title) + " — montaj";
+            var open = W.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World && d.World?.Title == title);
+            if (open != null)
+            {
+                W.Activate(open);
+                Navigate("world");
+                return;
+            }
+
+            var package = new ProjectPackage { Schematic = sch, Firmware = W.Project.Firmware, Parts = W.Project.Parts };
+            var world = RobotTwin.CoreSim.Sandbox.ProjectAssembly.Build(package, W.Library, W.FilePath);
+            NewWorld(world);
+            W.Status = $"Montaj: {world.Objects.Count} gerçek parça, {world.Cables.Count} kablo. Gövdeyi, eklemleri ve kabukları dünya araçlarıyla kurun; her şey gerçek fizikle çalışır.";
         }
 
         public void NewWorld(WorldDocument? world = null)

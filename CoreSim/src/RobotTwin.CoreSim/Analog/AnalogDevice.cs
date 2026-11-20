@@ -272,8 +272,22 @@ namespace RobotTwin.CoreSim.Analog
             Initialized = true;
         }
 
+        /// <summary>
+        /// [thermal] The temperature is set from outside (a world thermal network that also knows the
+        /// part's mounting, airflow and neighbours); <see cref="Advance"/> then leaves it alone.
+        /// </summary>
+        public bool Driven { get; set; }
+
+        /// <summary>Sets the temperature computed by the outside model (see <see cref="Driven"/>).</summary>
+        public void Set(double temperatureC)
+        {
+            TemperatureC = temperatureC;
+            Initialized = true;
+        }
+
         public void Advance(double powerW, double dt, double ambientC)
         {
+            if (Driven) return;
             if (!Initialized) Reset(ambientC);
             if (dt <= 0.0 || ThermalResistance <= 0.0) return;
             if (ThermalCapacitance <= 0.0)

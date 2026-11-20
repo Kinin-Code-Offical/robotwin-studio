@@ -1311,6 +1311,7 @@ namespace RobotWin.Studio.Pages
             UpdateSdkLive();   // [sdk]
             RecordCableHistory();
             UpdateCableDiagnostics();
+            UpdateThermalView();   // [thermal] Pages/WorldPage.Thermal.cs
             if (DockCables.IsChecked == true) BuildCableTable();
         }
 

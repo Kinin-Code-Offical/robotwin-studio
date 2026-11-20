@@ -31,7 +31,7 @@ namespace RobotWin.Studio.Analysis
     /// timeline, colour every part by its stress, show contact forces and the flow, click a graph to
     /// jump to that second.
     /// </summary>
-    public sealed class RenderWindow : Window
+    public sealed partial class RenderWindow : Window
     {
         private readonly WorldDocument _world;
         private readonly IWorldGeometry _geometry;
@@ -139,6 +139,7 @@ namespace RobotWin.Studio.Analysis
             var view = new Grid();
             view.Children.Add(_scene);
             view.Children.Add(new Border { Background = new SolidColorBrush(Color.FromArgb(0xA0, 0x10, 0x10, 0x14)), Child = _legend, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8), IsHitTestVisible = false });
+            AttachThermalHover(view);   // [thermal] Analysis/RenderWindow.Thermal.cs
             center.Children.Add(view);
             var bar = BuildTimeline();
             Grid.SetRow(bar, 1);
@@ -674,9 +675,9 @@ namespace RobotWin.Studio.Analysis
 
             if (_mode.SelectedIndex == 0) StressOverlay(overlay, i, t + t0, hidden, legend);
             else if (_mode.SelectedIndex == 2) SpeedOverlay(overlay, i, legend);
-            _scene.SetTints(_mode.SelectedIndex == 3 ? TemperatureTints(i, legend) : _mode.SelectedIndex == 4 ? ElectricTints(i, legend) : null);
+            _scene.SetTints(_mode.SelectedIndex == 4 ? ElectricTints(i, legend) : null);
             _scene.CableColor = _mode.SelectedIndex == 4 ? CableCurrentColor(i, legend) : null;
-            if (_mode.SelectedIndex == 3) BoardHeatOverlay(overlay, i, t);
+            ThermalCamera(_mode.SelectedIndex == 3, i, t, legend);   // [thermal] the models themselves coloured like a thermal camera
             if (_forces.IsChecked == true) ForceOverlay(overlay, i, t + t0, legend);
             if (_air.IsChecked == true) AirOverlay(overlay, t, legend);
             _scene.SetHidden(hidden);
@@ -869,79 +870,6 @@ namespace RobotWin.Studio.Analysis
 
             var hot = power.OrderByDescending(kv => kv.Value).Take(3).Select(kv => (_world.Find(kv.Key)?.Name ?? kv.Key) + " " + SiValue.Format(kv.Value, "W"));
             legend.AppendLine("Parçalar harcadığı elektrik gücüyle parlıyor; en çok: " + string.Join(", ", hot));
-            return tints;
-        }
-
-        /// <summary>[thermal] Each board's computed heat map painted on the board in 3D at this time.</summary>
-        private void BoardHeatOverlay(Model3DGroup g, int i, double t)
-        {
-            if (_result == null) return;
-            foreach (var th in _result.Thermal)
-            {
-                if (th.Frames.Count == 0) continue;
-                // The heat grid spans the part's physical body, centred on it: place it by the recorded body pose.
-                var store = _result.Channels;
-                double B(string k) => store.Find("body/" + th.ObjectId + "/" + k) is { } c && i < c.Count ? c[i] : double.NaN;
-                (Vec3 Position, Quat Orientation) pose;
-                if (!double.IsNaN(B("px"))) pose = (new Vec3(B("px"), B("py"), B("pz")), new Quat(B("qw"), B("qx"), B("qy"), B("qz")));
-                else if (AnalysisRun.RecordedPose(store, th.ObjectId, i) is { } op) pose = (op.Position + op.Orientation.Rotate(th.BodyOffset), op.Orientation);   // static body: not in the body channels
-                else continue;
-                int f = 0;
-                for (int k = 0; k < th.Times.Count; k++)
-                    if (th.Times[k] <= t + 1e-9) f = k;
-                var img = HeatImage.Render(th, f);
-                if (img == null) continue;
-                double w = th.Nx * th.Dx, h = th.Ny * th.Dy, z = th.Nz * th.Dz / 2 + 0.0025;
-                // Like a thermal camera's picture laid over the part: just above its tallest component and
-                // partly see-through, so the board and its parts show under the colours.
-                if (_scene.WorldBoundsOf(th.ObjectId) is { } mb && pose.Orientation.Rotate(Vec3.UnitZ).Z > 0.9)
-                    z = mb.Z + mb.SizeZ + 0.001 - pose.Position.Z;
-                var brush = new ImageBrush(img) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1), Opacity = 0.75 };
-                var mesh = new MeshGeometry3D();
-                foreach (var (x, y, u, v) in new[] { (-w / 2, -h / 2, 0.0, 1.0), (w / 2, -h / 2, 1.0, 1.0), (w / 2, h / 2, 1.0, 0.0), (-w / 2, h / 2, 0.0, 0.0) })
-                {
-                    var p = pose.Position + pose.Orientation.Rotate(new Vec3(x, y, z));
-                    mesh.Positions.Add(new Point3D(p.X, p.Y, p.Z));
-                    mesh.TextureCoordinates.Add(new Point(u, v));
-                }
-
-                Tri(mesh, 0, 1, 2);
-                Tri(mesh, 0, 2, 3);
-                // Alpha-blended like a picture laid over the part (an EmissiveMaterial alone adds light: dark blues vanish on a bright board).
-                var mat = new MaterialGroup { Children = { new DiffuseMaterial(brush), new EmissiveMaterial(new ImageBrush(img) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1), Opacity = 0.35 }) } };
-                g.Children.Add(new GeometryModel3D(mesh, mat) { BackMaterial = mat });
-            }
-        }
-
-        /// <summary>[thermal] Every part glows by its recorded temperature (ambient dark → hottest of the render red).</summary>
-        private Dictionary<string, Color> TemperatureTints(int i, StringBuilder legend)
-        {
-            var tints = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
-            if (_result == null) return tints;
-            var store = _result.Channels;
-            double amb = _world.Environment.AmbientC, max = amb + 1;
-            foreach (var o in _world.Objects)
-                if (store.Find("pose/" + o.Id + "/temp") is { } c)
-                    max = Math.Max(max, c.ToArray().Where(double.IsFinite).DefaultIfEmpty(amb).Max());
-            string hottest = string.Empty;
-            double hot = double.MinValue;
-            foreach (var o in _world.Objects)
-            {
-                if (store.Find("pose/" + o.Id + "/temp") is not { } c || i >= c.Count) continue;
-                double tc = c[i];
-                double k = Math.Max(0, Math.Min(1, (tc - amb) / (max - amb)));
-                var h = LinePlot.Heat(0.15 + 0.85 * k);
-                tints[o.Id] = Color.FromRgb((byte)(h.R * k), (byte)(h.G * k), (byte)(h.B * k));
-                if (tc > hot)
-                {
-                    hot = tc;
-                    var mat = RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.For(o.Material);
-                    hottest = $"{o.Name} {tc:0.0} °C ({mat.Name}: {mat.StateAt(tc)}" + (double.IsNaN(mat.GlassTransition) ? ")" : $", camsı geçiş {mat.GlassTransition:0} °C)");
-                }
-            }
-
-            legend.AppendLine($"Renk: parça sıcaklığı, ortam {amb:0} °C → kırmızı {max:0.0} °C");
-            if (hottest.Length > 0) legend.AppendLine("En sıcak: " + hottest);
             return tints;
         }
 

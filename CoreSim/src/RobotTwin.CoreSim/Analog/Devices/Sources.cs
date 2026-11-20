@@ -228,6 +228,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             StateOfCharge = AnalogMath.Clamp(InitialStateOfCharge, 0.0, 1.0);
             Thermal.Reset(25.0);
+            _polarization = 0.0;
             UpdateModel();
         }
 
@@ -254,7 +255,36 @@ namespace RobotTwin.CoreSim.Analog.Devices
                                (soc <= 0.0 ? 1e6 : 0.0);
         }
 
-        protected override double SourceVoltage(double time) => _ocv;
+        protected override double SourceVoltage(double time) => _ocv - _polarization;
+
+        // [thermal] Polarization: besides the instant I·R drop, a cell's voltage keeps sagging for seconds
+        // under load (diffusion in the electrolyte) and recovers slowly afterwards — an alkaline AA
+        // feeding a stalled motor "collapses", a LiPo much less. First-order RC per chemistry.
+        private double _polarization;
+
+        /// <summary>Polarization resistance of the pack (Ω) and its time constant (s).</summary>
+        public double PolarizationResistance { get; set; } = -1;
+
+        public double PolarizationTime { get; set; } = -1;
+
+        private (double R, double Tau) Polarization()
+        {
+            double r = PolarizationResistance >= 0 ? PolarizationResistance : Cells * Chemistry switch
+            {
+                BatteryChemistry.Alkaline => 0.25,
+                BatteryChemistry.ZincCarbon => 0.6,
+                BatteryChemistry.NiMH => 0.02,
+                BatteryChemistry.LithiumIon => 0.02,
+                BatteryChemistry.LiFePO4 => 0.015,
+                BatteryChemistry.LeadAcid => 0.01,
+                _ => 0.05
+            };
+            double tau = PolarizationTime > 0 ? PolarizationTime : Chemistry == BatteryChemistry.Alkaline || Chemistry == BatteryChemistry.ZincCarbon ? 15.0 : 30.0;
+            return (r, tau);
+        }
+
+        /// <summary>Present polarization drop (V).</summary>
+        public double PolarizationVoltage => _polarization;
 
         /// <summary>Fault injection: a short of this resistance across the terminals (0 = none).</summary>
         public double ShortCircuitResistance
@@ -289,6 +319,8 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             base.Accept(ctx);
             if (ctx.IsDc || CapacityAh <= 0.0) return;
+            var (rp, tp) = Polarization();
+            _polarization += (Current * rp - _polarization) * (1.0 - Math.Exp(-ctx.Dt / tp));   // exact first-order step
 
             // Heat from the internal resistance; small packs heat fast, big packs slowly.
             Thermal.ThermalCapacitance = Math.Max(1.5, 27.0 * CapacityAh * Cells);

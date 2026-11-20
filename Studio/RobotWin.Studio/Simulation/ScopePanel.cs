@@ -213,7 +213,7 @@ namespace RobotWin.Studio.Simulation
                 Content = text,
                 Margin = new Thickness(0, 0, 6, 4),
                 Padding = new Thickness(10, 3, 10, 3),
-                FontSize = 11.5,
+                FontSize = 12,
                 ToolTip = tip
             };
             if (primary) b.Style = Res("Btn.Primary");
@@ -249,7 +249,7 @@ namespace RobotWin.Studio.Simulation
                 TextAlignment = TextAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 FontFamily = (FontFamily)FindResource("F.Mono"),
-                FontSize = 11.5,
+                FontSize = 12,
                 Foreground = (Brush)FindResource("B.Text")
             };
             row.Children.Add(Small("−", () => step(-1)));

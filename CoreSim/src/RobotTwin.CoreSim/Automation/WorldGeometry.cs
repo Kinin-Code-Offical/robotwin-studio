@@ -110,6 +110,16 @@ namespace RobotTwin.CoreSim.Automation
             var def = o.PartId != null ? _library.Find(o.PartId) : null;
             if (part == "dc-motor" || def?.Id == "dc-motor")
             {
+                if (model.Contains("2212"))
+                {
+                    // [uav] 2212 outrunner (Ø28 × 32 mm, 50 g), prop shaft along +z like the 2204.
+                    return new WorldBodyGeometry
+                    {
+                        Min = new Vec3(-0.014, -0.014, 0), Max = new Vec3(0.014, 0.014, 0.032), MassKg = 0.050,
+                        PortName = "shaft", PortPivot = new Vec3(0, 0, 0.040), PortAxis = Vec3.UnitZ
+                    };
+                }
+
                 if (model.Contains("KV") || model.Contains("BRUSHLESS") || model.Contains("2204"))
                 {
                     // [esc] outrunner standing on its base, prop shaft up (same as the 3D model).

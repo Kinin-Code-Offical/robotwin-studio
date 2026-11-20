@@ -801,7 +801,7 @@ namespace RobotWin.Studio.Pcb
                     _selection.Children.Add(Row("X / Y (mm)", PairEditor(pad.X, pad.Y, v => { pad.X = v; _canvas.InvalidateVisual(); }, v => { pad.Y = v; _canvas.InvalidateVisual(); }), 130));
                     if (pad.IsThroughHole && !pad.NonPlated && (Math.Min(pad.Width, pad.Height) - pad.Drill) / 2 < 0.13)
                     {
-                        _selection.Children.Add(new TextBlock { Text = "Halka 0.13 mm'den dar: DRC hatası verir.", Foreground = B("B.Warning"), FontSize = 11.5, TextWrapping = TextWrapping.Wrap });
+                        _selection.Children.Add(new TextBlock { Text = "Halka 0.13 mm'den dar: DRC hatası verir.", Foreground = B("B.Warning"), FontSize = 12, TextWrapping = TextWrapping.Wrap });
                     }
 
                     _selection.Children.Add(Buttons(

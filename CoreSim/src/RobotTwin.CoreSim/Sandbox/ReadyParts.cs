@@ -234,6 +234,9 @@ namespace RobotTwin.CoreSim.Sandbox
             list.AddRange(Prop("prop-55", "55 mm 2 kanat", "8520 / 0720 coreless motor için, 1 mm mile geçme", 0.055, 0.030, 2, 0.00045, 0.10, 0.057, 0.0042, 0.0050, 0.0008, "#F2F2EE", "#1E1E22"));
             list.AddRange(Prop("prop-65", "65 mm 2 kanat", "8520 coreless motor için büyük pervane", 0.065, 0.036, 2, 0.00075, 0.105, 0.060, 0.0045, 0.0055, 0.0008, "#F2F2EE", "#1E1E22"));
             list.AddRange(Prop("prop-5045", "5045 (5 × 4.5\") 2 kanat", "130 motor / fırçasız 2204 için, 5 mm mil", 0.127, 0.1143, 2, 0.0034, 0.115, 0.055, 0.012, 0.0070, 0.005, "#F28C28", "#1E1E22"));
+            // [uav] slow-fly props for 1 m class electric planes (static CT/CP of APC SF data, 5 mm prop adapter)
+            list.AddRange(Prop("prop-8045", "8045 (8 × 4.5\") 2 kanat", "2212 fırçasız / 1 m motorlu planör için, 5 mm adaptör", 0.2032, 0.1143, 2, 0.010, 0.110, 0.045, 0.018, 0.0090, 0.005, "#1E1E22", "#2A2A2E"));
+            list.AddRange(Prop("prop-1047", "1047 (10 × 4.7\") 2 kanat", "2212 1000 Kv eğitim uçağı pervanesi, 5 mm adaptör", 0.254, 0.1194, 2, 0.014, 0.112, 0.042, 0.020, 0.0100, 0.005, "#E8E8E2", "#2A2A2E"));
             list.AddRange(Prop("prop-5040x3", "5040 (5 × 4\") 3 kanat", "Yarış dronu pervanesi, 5 mm mil", 0.127, 0.1016, 3, 0.0042, 0.140, 0.072, 0.013, 0.0075, 0.005, "#2FC2B0", "#E5484D"));
             return list;
         }

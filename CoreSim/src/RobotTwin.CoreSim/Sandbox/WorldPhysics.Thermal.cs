@@ -28,6 +28,18 @@ namespace RobotTwin.CoreSim.Sandbox
             public List<AnalogDevice> Devices = new List<AnalogDevice>();
             public string State = "katı";
             public bool Melted;
+
+            /// <summary>What this node is inside its part ("dişli kutusu", "motor gövdesi", "sargı"…); empty for a one-piece part.</summary>
+            public string Label = string.Empty;
+
+            /// <summary>An inner node (a winding, a can inside a gearbox): no joints, no structural response.</summary>
+            public bool Inner;
+
+            /// <summary>Extra air speed over this node's surface (m/s), e.g. an outrunner's spinning bell.</summary>
+            public double SelfAir;
+
+            /// <summary>Conductance to the ambient air at the last step (W/K).</summary>
+            public double GAmbient;
         }
 
         private sealed class ThermalLink
@@ -36,8 +48,25 @@ namespace RobotTwin.CoreSim.Sandbox
             public double G;                 // W/K
         }
 
+        /// <summary>
+        /// [thermal] A motor seen as the parts heat really flows through: the winding (copper loss at its
+        /// hot resistance), the can or stator it sits in, and — on a yellow TT gear motor — the plastic
+        /// gearbox that the mounting screws actually go through. Friction losses heat the can (brushes,
+        /// bearings) and the gearbox (gear mesh).
+        /// </summary>
+        private sealed class MotorThermal
+        {
+            public DcMotor Motor = null!;
+            public ThermalNode Winding = null!, Can = null!, Mount = null!;
+            public double GearShare;          // share of the friction loss that is in the gear train
+            public double BellRadius;         // outrunner: the rotating bell cools itself
+        }
+
         private readonly Dictionary<string, ThermalNode> _thermal = new Dictionary<string, ThermalNode>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<ThermalNode> _thermalNodes = new List<ThermalNode>();
         private readonly List<ThermalLink> _thermalLinks = new List<ThermalLink>();
+        private readonly List<MotorThermal> _motorThermal = new List<MotorThermal>();
+        private readonly List<(Battery Battery, ThermalNode Node)> _batteryThermal = new List<(Battery, ThermalNode)>();
         private readonly Dictionary<SceneJoint, double> _baseBreak = new Dictionary<SceneJoint, double>();
         private double _thermalPending;
         private double _ambient = 25;
@@ -51,7 +80,10 @@ namespace RobotTwin.CoreSim.Sandbox
         private void BuildThermal(WorldDocument world)
         {
             _thermal.Clear();
+            _thermalNodes.Clear();
             _thermalLinks.Clear();
+            _motorThermal.Clear();
+            _batteryThermal.Clear();
             _ambient = world.Environment.AmbientC;
             foreach (var it in _items.Values)
             {
@@ -70,6 +102,16 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
 
                 _thermal[o.Id] = node;
+                _thermalNodes.Add(node);
+                if (node.Devices.OfType<DcMotor>().FirstOrDefault() is { } motor) SplitMotor(o, node, motor, mass);
+                if (node.Devices.OfType<Battery>().FirstOrDefault() is { } battery)
+                {
+                    // A cell stack: ~1 J/gK whatever the wrapping is.
+                    node.Capacity = Math.Max(0.05, mass * 1000);
+                    battery.Thermal.Driven = true;
+                    battery.Thermal.Set(node.T);
+                    _batteryThermal.Add((battery, node));
+                }
             }
 
             foreach (var j in world.Joints)
@@ -81,6 +123,66 @@ namespace RobotTwin.CoreSim.Sandbox
 
             foreach (var sj in Scene.Joints)
                 if (!double.IsInfinity(sj.BreakForce)) _baseBreak[sj] = sj.BreakForce;
+        }
+
+        /// <summary>The motor's inner nodes by its construction (see <see cref="MotorThermal"/>).</summary>
+        private void SplitMotor(WorldObject o, ThermalNode mount, DcMotor motor, double mass)
+        {
+            string model = ((o.Parameters.TryGetValue("model", out var m) ? m : string.Empty) + " " + (o.PresetId ?? o.PartId ?? string.Empty)).ToUpperInvariant();
+            bool outrunner = model.Contains("KV") || model.Contains("BRUSHLESS") || model.Contains("BLDC") || model.Contains("2204") || model.Contains("2212");
+            bool coreless = model.Contains("8520") || model.Contains("0720") || model.Contains("CORELESS");
+            bool metalGear = model.Contains("N20") || model.Contains("25GA") || model.Contains("JGA") || model.Contains("370");
+            bool tt = !outrunner && !coreless && !metalGear;
+            var copper = StructuralMaterial.For("BAKIR");
+            var steel = StructuralMaterial.For("ÇELİK");
+            var mt = new MotorThermal { Motor = motor, Mount = mount };
+            ThermalNode Inner(string label, StructuralMaterial mat, double kg, double cp, double areaM2) =>
+                new ThermalNode { Item = mount.Item, Material = mat, Capacity = Math.Max(0.02, kg * cp), Area = areaM2, T = mount.T, Label = label, Inner = true };
+            void Link(ThermalNode a, ThermalNode b, double g) => _thermalLinks.Add(new ThermalLink { A = a, B = b, G = g });
+
+            if (outrunner)
+            {
+                // Stator (copper + laminations) pressed onto the aluminium base the screws go into; the bell around it.
+                mount.Material = StructuralMaterial.For("ALÜMİNYUM");
+                mount.Label = "gövde (alüminyum)";
+                double stator = 0.45 * mass;
+                mount.Capacity = Math.Max(0.05, (mass - stator) * mount.Material.SpecificHeat);
+                mt.Winding = Inner("stator sargısı", copper, stator, 420, 1e-5);
+                mt.Can = mount;
+                Link(mt.Winding, mount, 0.6 * mass / 0.028);
+                mt.BellRadius = 0.0135;
+            }
+            else if (tt)
+            {
+                // Yellow TT (or a bare 130 can): a steel can clipped into an ABS gearbox; the screws hold the gearbox.
+                mount.Material = StructuralMaterial.For("ABS");
+                mount.Label = "dişli kutusu (ABS)";
+                mount.Capacity = Math.Max(0.05, 0.53 * mass * mount.Material.SpecificHeat);
+                mount.Area *= 0.7;
+                mt.Can = Inner("motor gövdesi (çelik)", steel, 0.33 * mass, 470, 1.9e-3);
+                mt.Winding = Inner("sargı", copper, 0.14 * mass, 420, 1e-5);
+                Link(mt.Winding, mt.Can, 0.12);   // ≈ 8 K/W winding to can, a 130-size motor
+                Link(mt.Can, mount, 0.02);        // through the plastic clip and bosses: k(ABS) = 0.17 W/mK
+                mt.GearShare = 0.5;
+            }
+            else
+            {
+                // Coreless or metal gear motor: the can / steel gearbox is what is clamped.
+                mount.Material = steel;
+                mount.Label = coreless ? "motor gövdesi (çelik)" : "gövde + metal dişli kutusu";
+                double w = (coreless ? 0.15 : 0.12) * mass;
+                mount.Capacity = Math.Max(0.02, (mass - w) * steel.SpecificHeat);
+                mt.Winding = Inner("sargı", copper, w, 420, 1e-5);
+                mt.Can = mount;
+                Link(mt.Winding, mount, coreless ? 0.04 : 0.10 * Math.Max(0.3, mass / 0.03));   // ≈ 25 K/W in an 8520, ≈ 10 K/W in a 25GA
+                mt.GearShare = metalGear ? 0.5 : 0;
+            }
+
+            if (mt.Can != mount) _thermalNodes.Add(mt.Can);
+            _thermalNodes.Add(mt.Winding);
+            motor.Thermal.Driven = true;
+            motor.Thermal.Set(mt.Winding.T);
+            _motorThermal.Add(mt);
         }
 
         private static Vec3 SizeOf(SceneBody body)
@@ -96,17 +198,80 @@ namespace RobotTwin.CoreSim.Sandbox
             return Math.Max(s.X * s.Y, Math.Max(s.Y * s.Z, s.Z * s.X));
         }
 
-        /// <summary>Temperature of an object (°C); ambient when unknown.</summary>
-        public double TemperatureOf(string objectId) => _thermal.TryGetValue(objectId, out var n) ? n.T : _ambient;
+        /// <summary>Temperature of an object (°C): its hottest outer surface (a TT motor's can, not its gearbox); ambient when unknown.</summary>
+        public double TemperatureOf(string objectId)
+        {
+            if (!_thermal.TryGetValue(objectId, out var n)) return _ambient;
+            double t = n.T;
+            foreach (var mt in _motorThermal)
+                if (mt.Mount == n) t = Math.Max(t, mt.Can.T);
+            return t;
+        }
 
-        /// <summary>Heat currently generated in an object (W).</summary>
-        public double HeatOf(string objectId) => _thermal.TryGetValue(objectId, out var n) ? n.Power : 0;
+        /// <summary>Every thermal node of an object with its temperature (gearbox, can, winding …).</summary>
+        public IReadOnlyList<(string Label, double T)> PartTemperatures(string objectId)
+        {
+            var list = new List<(string, double)>();
+            if (!_thermal.TryGetValue(objectId, out var n)) return list;
+            list.Add((n.Label.Length > 0 ? n.Label : n.Material.Name, n.T));
+            foreach (var mt in _motorThermal)
+            {
+                if (mt.Mount != n) continue;
+                if (mt.Can != n) list.Add((mt.Can.Label, mt.Can.T));
+                list.Add((mt.Winding.Label, mt.Winding.T));
+            }
+
+            return list;
+        }
+
+        /// <summary>Temperature of the part's mounting face (what its screws touch: a TT's gearbox), °C.</summary>
+        public double MountTemperatureOf(string objectId) => _thermal.TryGetValue(objectId, out var n) ? n.T : _ambient;
+
+        /// <summary>Heat currently generated in an object, all its nodes together (W).</summary>
+        public double HeatOf(string objectId)
+        {
+            if (!_thermal.TryGetValue(objectId, out var n)) return 0;
+            double p = n.Power;
+            foreach (var mt in _motorThermal)
+                if (mt.Mount == n) p += mt.Winding.Power + (mt.Can != n ? mt.Can.Power : 0);
+            return p;
+        }
 
         /// <summary>Material state at the object's temperature ("katı", "yumuşamaya yaklaşıyor", "yumuşadı", "eriyor").</summary>
         public string MaterialStateOf(string objectId) => _thermal.TryGetValue(objectId, out var n) ? n.State : "katı";
 
         /// <summary>The structural material of an object at its current temperature.</summary>
         public StructuralMaterial? MaterialOf(string objectId) => _thermal.TryGetValue(objectId, out var n) ? n.Material : null;
+
+        /// <summary>Air speed over a part's surface (m/s): its motion through the wind plus any propeller slipstream it sits in.</summary>
+        public double AirSpeedOver(string objectId) => _thermal.TryGetValue(objectId, out var n) ? AirSpeedAt(n) : 0;
+
+        private double AirSpeedAt(ThermalNode n)
+        {
+            var body = n.Item.Body;
+            var p = body.Position;
+            double v = body.IsStatic ? Scene.WindAt(p).Length : (body.Velocity - Scene.WindAt(p)).Length;
+            double rho = Scene.AirDensity;
+            if (rho <= 0) return 0;
+            foreach (var pr in Scene.Propellers)
+            {
+                if (pr.Body == null || pr.Detached || Math.Abs(pr.Thrust) < 1e-4) continue;
+                var axis = pr.Body.Orientation.Rotate(pr.Axis).Normalized();
+                var dir = axis * -Math.Sign(pr.Thrust);   // the slipstream leaves against the thrust
+                double r = pr.Diameter / 2, area = Math.PI * r * r;
+                double vi = Math.Sqrt(Math.Abs(pr.Thrust) / (2 * rho * area));   // induced velocity at the disc
+                var d = p - pr.Body.Position;
+                double along = d.Dot(dir);
+                if (along < -0.02 || along > 8 * pr.Diameter) continue;
+                double radial = (d - dir * along).Length;
+                if (radial > 1.1 * r) continue;
+                // Actuator disc: v_i at the disc, rising to 2·v_i in the contracted wake.
+                double slip = vi * (1 + Math.Max(0, along) / Math.Sqrt(along * along + r * r));
+                v = Math.Max(v, slip);
+            }
+
+            return v + n.SelfAir;
+        }
 
         private void StepThermal(double dt, AnalogSimulator? sim)
         {
@@ -116,21 +281,39 @@ namespace RobotTwin.CoreSim.Sandbox
             double h = _thermalPending;
             _thermalPending = 0;
 
-            foreach (var n in _thermal.Values) n.Power = sim == null ? 0 : HeatOf(n, sim);
-
-            // Backward Euler on the network, two Gauss–Seidel sweeps (unconditionally stable).
-            const double sigma = 5.670374419e-8;
-            for (int sweep = 0; sweep < 2; sweep++)
+            foreach (var n in _thermalNodes) n.Power = sim == null || n.Inner ? 0 : HeatOf(n, sim);
+            if (sim != null)
             {
-                foreach (var n in _thermal.Values)
+                foreach (var mt in _motorThermal)
                 {
-                    var body = n.Item.Body;
-                    double v = body.IsStatic ? 0 : (body.Velocity - Scene.WindAt(body.Position)).Length;
-                    double hc = Math.Max(6, 10.45 - v + 10 * Math.Sqrt(v));   // natural → forced convection (W/m²K)
-                    double tk = n.T + 273.15, ta = _ambient + 273.15;
-                    double hr = n.Material.Emissivity * sigma * (tk * tk + ta * ta) * (tk + ta);   // linearised radiation
-                    double gAmb = (hc + hr) * n.Area;
-                    double num = n.Capacity / h * n.T + n.Power + gAmb * _ambient, den = n.Capacity / h + gAmb;
+                    mt.Winding.Power = mt.Motor.CopperLoss;
+                    double friction = mt.Motor.FrictionLoss;
+                    mt.Can.Power += friction * (1 - mt.GearShare);
+                    mt.Mount.Power += friction * mt.GearShare;
+                    if (mt.BellRadius > 0) mt.Mount.SelfAir = 0.3 * Math.Abs(mt.Motor.AngularVelocity) * mt.BellRadius;
+                }
+
+                foreach (var (b, n) in _batteryThermal)
+                    n.Power += Math.Abs(b.Current) * (Math.Abs(b.Current) * b.SeriesResistance + Math.Abs(b.PolarizationVoltage));
+            }
+
+            // Convection (natural → forced by the real air speed) and linearised radiation to ambient.
+            const double sigma = 5.670374419e-8;
+            foreach (var n in _thermalNodes)
+            {
+                double v = AirSpeedAt(n);
+                double hc = Math.Max(6, 10.45 - v + 10 * Math.Sqrt(v));
+                double tk = n.T + 273.15, ta = _ambient + 273.15;
+                double hr = n.Material.Emissivity * sigma * (tk * tk + ta * ta) * (tk + ta);
+                n.GAmbient = (hc + hr) * n.Area;
+            }
+
+            // Backward Euler on the network, Gauss–Seidel sweeps (unconditionally stable).
+            for (int sweep = 0; sweep < 3; sweep++)
+            {
+                foreach (var n in _thermalNodes)
+                {
+                    double num = n.Capacity / h * n.T + n.Power + n.GAmbient * _ambient, den = n.Capacity / h + n.GAmbient;
                     foreach (var l in _thermalLinks)
                     {
                         if (l.A == n)
@@ -149,10 +332,13 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
             }
 
-            foreach (var n in _thermal.Values) Respond(n);
+            foreach (var mt in _motorThermal) mt.Motor.Thermal.Set(mt.Winding.T);   // the copper resistance follows the winding
+            foreach (var (b, n) in _batteryThermal) b.Thermal.Set(n.T);
+            foreach (var n in _thermalNodes)
+                if (!n.Inner) Respond(n);
         }
 
-        /// <summary>Heat produced inside an object by its devices (W).</summary>
+        /// <summary>Heat produced inside an object by its devices (W); motors and batteries are handled with their inner nodes.</summary>
         private double HeatOf(ThermalNode n, AnalogSimulator sim)
         {
             double p = 0;
@@ -160,8 +346,8 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 switch (d)
                 {
-                    case DcMotor m:
-                        p += m.Current * m.Current * m.Resistance;   // winding copper loss
+                    case DcMotor:
+                    case Battery:
                         break;
                     case Servo s:
                         // Micro servos turn ~85 % of their input into heat (motor, gears, driver); at stall all of it.

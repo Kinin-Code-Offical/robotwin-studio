@@ -59,8 +59,8 @@ namespace RobotWin.Studio.Pcb
             Children.Add(new TextBlock
             {
                 Text = "Sol tuş: döndür · Sağ tuş: kaydır · Teker: yakınlaştır · Çift tık: üstten",
-                Foreground = new SolidColorBrush(Color.FromRgb(0x6C, 0x6C, 0x74)),
-                FontSize = 11.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x97)),
+                FontSize = 12,
                 Margin = new Thickness(14, 0, 0, 10),
                 VerticalAlignment = VerticalAlignment.Bottom,
                 HorizontalAlignment = HorizontalAlignment.Left,
