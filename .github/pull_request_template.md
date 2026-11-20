@@ -83,7 +83,6 @@ builds/native/PhysicsDeepValidation.exe
 - [ ] Code follows project style guidelines (see CONTRIBUTING.md)
 - [ ] No unrelated changes included
 - [ ] Minimal, focused scope
-- [ ] `docs/repo_files.txt` updated (`python tools/rt_tool.py update-repo-snapshot`)
 - [ ] CI checks pass (if configured)
 - [ ] Self-reviewed for obvious issues
 

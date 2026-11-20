@@ -1,76 +1,59 @@
-# Tooling and CLI
+# Tools
 
-The primary entry point is `tools/rt_tool.py`.
+Everyday development needs only the .NET CLI, the app's own command-line modes and one PowerShell script.
 
-Run `python tools/rt_tool.py help` for the full command list and short descriptions.
+## .NET CLI
 
-## Setup
+| Task | Command |
+| --- | --- |
+| Build (debug) | `dotnet build RobotWinStudio.sln -c Debug` |
+| Build (release) | `dotnet build RobotWinStudio.sln -c Release` |
+| Unit tests | `dotnet test RobotWinStudio.sln` |
+| Run the app | `builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe` |
+| Clean | `dotnet clean RobotWinStudio.sln` (or delete `builds\`) |
+| Vulnerable packages | `dotnet list RobotWinStudio.sln package --vulnerable` |
 
-```powershell
-python tools/rt_tool.py setup
-python tools/rt_tool.py setup --check-only
-```
+## App command-line modes
 
-Optional flags:
+`RobotWinStudio.exe` doubles as a tool. All modes exit when done.
 
-- `--qa`: also run Node/Jest integration tests.
-- `--install-com0com`: install/create virtual COM pairs (may require admin).
-- `--no-native`, `--no-firmware`, `--no-plugins`: skip selected steps.
-- `--standalone`: also build the Unity Windows player.
-- `--unity-path <path>`: Unity.exe path used with `--standalone`.
+| Mode | Use |
+| --- | --- |
+| `--selftest [--selftest-out file]` | Headless end-to-end check of every example (see [TESTING.md](TESTING.md#self-test)). |
+| `--snapshot out.png --page <page> [...]` | Renders a page to PNG for documentation and visual checks (see [TESTING.md](TESTING.md#snapshot-testing)). |
+| `--gallery <dir> [--gallery-filter text] [--gallery-columns 4] [--gallery-tile 460x340]` | Contact sheets of every code-generated 3D component model. |
+| `--export-logo <dir>` | Exports the logo as PNG sizes + ICO (also on Settings → *Hakkında*). |
+| `--register-file-types`, `--unregister-file-types` | Registers / removes `.rwproj`, `.rwworld`, `.rwsim`, `.rwpart`, `.rwlib`, `.rwfp`, `.rwmodel` for the current user (HKCU). Used by the installer. |
+| `<file>` | Opens a RobotWin file. |
 
-## Build
-
-```powershell
-python tools/rt_tool.py build-native
-python tools/rt_tool.py build-firmware
-python tools/rt_tool.py build-standalone
-python tools/rt_tool.py update-unity-plugins
-```
-
-## Validation
+### Refreshing the README screenshots
 
 ```powershell
-python tools/rt_tool.py validate-uxml
-python tools/rt_tool.py audit-runtime
-python tools/rt_tool.py audit-build-outputs
-python tools/rt_tool.py validate-physical-overrides
+$exe = "builds\RobotWin.Studio\Release\net9.0-windows\RobotWinStudio.exe"
+& $exe --snapshot docs\images\home.png --page home
+& $exe --snapshot docs\images\world-ps5-car.png --page world --fault ps5-car
+& $exe --snapshot docs\images\world-sonar.png --page world --fault sonar
+& $exe --snapshot docs\images\world-servo-arm.png --page world --fault servo-arm
+& $exe --snapshot docs\images\modeler.png --page model
 ```
 
-## Tests
+Pick the `--example`, `--simulate` and `--size` values that show the feature best; the exact arguments used for the committed images are not recorded.
+
+## tools/build-installer.ps1
+
+Publishes the app, compiles the native setup stub with MSVC and packs everything into `builds\installer\RobotWinStudio-Setup-<version>.exe` (`-SelfContained` adds the `-tam` variant). See [BUILD_RELEASE.md](BUILD_RELEASE.md).
 
 ```powershell
-python tools/rt_tool.py run-unity-smoke
-python tools/rt_tool.py run-qa
-python tools/rt_tool.py record-golden-trace
-python tools/rt_tool.py rpi-smoke
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0
 ```
 
-Notes:
+## External tools the app calls
 
-- `run-qa` executes `tests/integration` via `npm install` + `npm test` (see `tools/scripts/run_qa.ps1`).
-- `run-unity-smoke` compiles the Unity project in batchmode and writes `logs/unity/smoke.log` (see `tools/scripts/run_unity_smoke.ps1`).
+| Tool | Called by | For |
+| --- | --- | --- |
+| `arduino-cli` | `Studio/Firmware/ArduinoCompiler.cs` | `arduino-cli compile --fqbn arduino:avr:uno` (or `arduino:avr:nano`) → `sketch.ino.hex` in `%LOCALAPPDATA%\RobotWinStudio\Build` |
+| MSVC `cl.exe`, `lib.exe` (via `vcvars64.bat`) | `CoreSim/.../Firmware/Esp32/Esp32SketchCompiler.cs` | ESP32 sketch DLLs and the `rw_esp32hal.lib` HAL library, cached in `%LOCALAPPDATA%\RobotWin\esp32hal-cache` |
 
-## Utilities
+## Legacy tools
 
-```powershell
-python tools/rt_tool.py debug-console
-python tools/rt_tool.py monitor-unity
-python tools/rt_tool.py console --url http://localhost:8085
-python tools/rt_tool.py help
-```
-
-## Component packages
-
-To (re)build `.rtcomp` packages for bundled components and convert STEP/STP models to `.glb`:
-
-```powershell
-py -3.12 -m venv .venv_step
-.\.venv_step\Scripts\python -m pip install cadquery-ocp==7.7.2
-.\.venv_step\Scripts\python tools/scripts/build_rtcomp_from_components.py
-```
-
-## Outputs
-
-- Build artifacts: `builds/`
-- Logs: `logs/` (per-subsystem folders plus tool logs)
+The rest of `tools/` belongs to the 1.x Unity-based design and is not needed for the current app: `rt_tool.py` (setup/build orchestration for Unity and the C++ engines), `scripts/` (native/firmware build scripts, Blender/FBX/GLB conversion, QA helpers), `debug_console/`, `RobotWinFirmwareMonitor/`, `GoldenTraceRecorder/`, `RpiSmokeTest/`, `rpi/`, `fixtures/`, `issue_bodies/`. Their documentation is in [archive/](archive/README.md).

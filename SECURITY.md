@@ -1,130 +1,36 @@
-# 🔒 Security Policy
+# Security Policy
 
-## Supported Versions
+## Supported versions
 
-We actively maintain security updates for the following versions:
+| Version | Supported |
+| --- | --- |
+| Latest 2.x release | Yes |
+| `main` branch | Yes (development) |
+| 1.x (Unity-based design) | No |
 
-| Version | Supported  | Notes               |
-| ------- | ---------- | ------------------- |
-| main    | ✅ Yes     | Active development  |
-| 1.x.x   | ⚠️ Limited | Critical fixes only |
-| < 1.0   | ❌ No      | No longer supported |
+Please always use the [latest release](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest).
 
-**Note**: Only the `main` branch receives regular security updates. We recommend always using the latest stable release.
+## Reporting a vulnerability
 
-## Reporting a Vulnerability
+- Report privately through **GitHub Security Advisories**: the repository's [Security tab](https://github.com/Kinin-Code-Offical/robotwin-studio/security) → *Report a vulnerability*.
+- If that is not possible, open a minimal issue titled "Security concern - private contact needed" **without** any details, and wait for a maintainer to reply.
+- Include a description, steps to reproduce (a sample `.rwproj`/`.rwworld` file if relevant), the affected version and the impact you expect.
+- Do not publish details before a fix is released.
 
-### 🚨 Security Issues
+We aim to acknowledge reports within a few days and will coordinate disclosure with you. There is no bug bounty.
 
-If you discover a security vulnerability in RobotWin Studio, please help us protect our users by following responsible disclosure practices:
+## Security considerations
 
-### ✅ DO:
+RobotWin Studio is an offline desktop application, but some parts deserve care:
 
-1. **Use GitHub Security Advisories** (preferred method):
+- **Project files.** `.rwproj`, `.rwworld`, `.rwpart`, `.rwlib`, `.rwsim`, `.rwmodel` and `.rwfp` are ZIP containers with JSON. Only open files from sources you trust; parsing bugs in these readers are in scope.
+- **Native code from sketches.** ESP32 sketches are compiled with MSVC into a DLL that is loaded into the app process and runs with your user's rights. A sketch is ordinary C++: opening someone else's project and running its ESP32 board runs their code on your PC. Treat ESP32 sketches like any program you download.
+- **External tools.** The app starts `arduino-cli` and the Visual Studio build tools (`vcvars64.bat`, `cl.exe`, `lib.exe`) from configured or well-known locations. Keep those installations trustworthy.
+- **Installer.** The setup program can download the .NET 9 Desktop Runtime from Microsoft (`aka.ms`). File-type registration writes to the current user's registry (HKCU); only an all-users install writes its uninstall entry under HKLM.
+- **No network services.** Simulated Wi-Fi/BLE traffic stays inside the simulation; the app does not open listening sockets.
 
-   - Navigate to the [Security tab](https://github.com/Kinin-Code-Offical/robotwin-studio/security)
-   - Click "Report a vulnerability"
-   - Fill out the advisory form with details
+## For contributors
 
-2. **Contact maintainers privately** if Security Advisories are unavailable:
-
-   - Open a minimal issue titled "Security Concern - Private Discussion Required"
-   - Do NOT include exploit details in the public issue
-   - Wait for maintainer response to establish secure communication
-
-3. **Provide detailed information**:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact assessment
-   - Suggested fix (if available)
-   - Your contact information for follow-up
-
-### ❌ DON'T:
-
-- **Do NOT open public issues** with detailed exploit information
-- **Do NOT share vulnerabilities** on social media or public forums
-- **Do NOT exploit vulnerabilities** beyond proof-of-concept testing
-- **Do NOT demand compensation** (we don't have a bug bounty program)
-
-## Our Commitment
-
-### Response Timeline
-
-- **Initial response**: Within 48 hours of report
-- **Severity assessment**: Within 5 business days
-- **Fix deployment**: Varies by severity (see below)
-- **Public disclosure**: Coordinated with reporter after fix
-
-### Severity Levels
-
-| Severity | Response Time | Example                            |
-| -------- | ------------- | ---------------------------------- |
-| Critical | 1-3 days      | Remote code execution, data breach |
-| High     | 1-2 weeks     | Privilege escalation, DoS          |
-| Medium   | 2-4 weeks     | Information disclosure             |
-| Low      | Next release  | Minor issues with limited impact   |
-
-## Security Best Practices
-
-### For Users
-
-- **Keep software updated** to the latest stable version
-- **Review dependencies** regularly using `dotnet list package --vulnerable`
-- **Use strong authentication** for any external integrations
-- **Limit permissions** to minimum required for operation
-- **Monitor logs** for unusual activity
-
-### For Contributors
-
-- **Never commit secrets** (API keys, passwords, tokens) to the repository
-- **Use `.gitignore`** to prevent accidental exposure of sensitive files
-- **Validate all inputs** from external sources (files, network, user input)
-- **Follow secure coding practices** (see `docs/CONTRIBUTING.md`)
-- **Run static analysis** tools before submitting PRs
-
-## Known Security Considerations
-
-### Named Pipe Communication
-
-RobotWin Studio uses named pipes for IPC between components. Be aware:
-
-- Named pipes are accessible to any process on the local machine
-- Do not transmit sensitive data through pipes without encryption
-- Validate all data received from pipes
-
-### Native Code
-
-The C++ engines (NativeEngine, FirmwareEngine) run with Unity's permissions:
-
-- Buffer overflows could affect the entire Unity process
-- Ensure proper bounds checking in all native code
-- Use AddressSanitizer during development
-
-### Unity Integration
-
-Unity plugins have full access to the Unity runtime:
-
-- Validate all calls from managed to native code
-- Use safe marshalling for string and pointer data
-- Handle native exceptions gracefully
-
-## Security Updates
-
-Security fixes are announced through:
-
-- **GitHub Security Advisories** (subscribers notified automatically)
-- **Release notes** with `[SECURITY]` prefix
-- **Repository README** security notice section
-
-## Questions?
-
-For security-related questions that are not sensitive:
-
-- Open a [Discussion](https://github.com/Kinin-Code-Offical/robotwin-studio/discussions)
-- Tag with `security` label
-
-For sensitive security concerns, always use private reporting methods described above.
-
----
-
-**Thank you for helping keep RobotWin Studio secure!**
+- Never commit secrets (keys, tokens, passwords).
+- Validate everything read from files and from external tool output.
+- Check dependencies with `dotnet list RobotWinStudio.sln package --vulnerable`.

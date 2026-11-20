@@ -1,49 +1,85 @@
 # Testing
 
-This document lists the common local test and validation flows.
+Three layers of checks, all runnable on a developer machine and in CI:
 
-## CoreSim tests
+| Layer | Command | What it proves |
+| --- | --- | --- |
+| Unit tests | `dotnet test RobotWinStudio.sln` | CoreSim behaves correctly (solver, firmware, PCB, physics, world, formats). |
+| Self-test | `RobotWinStudio.exe --selftest` | Every bundled example builds, simulates, places, routes and passes DRC end to end. |
+| Snapshot rendering | `RobotWinStudio.exe --snapshot …` | A page renders the way it should (visual check, documentation screenshots). |
 
-```powershell
-dotnet test CoreSim/CoreSim.sln
-```
-
-## .rtwin format notes
-
-- Magic: `RTWN` (little-endian in the file).
-- Version: `1` (see `CoreSim/src/RobotTwin.CoreSim/Serialization/SimulationSerializer.cs`).
-- Fixtures live under `CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/`.
-
-## Unity smoke test
+## Unit tests
 
 ```powershell
-python tools/rt_tool.py run-unity-smoke
+dotnet test RobotWinStudio.sln
+# one area only:
+dotnet test RobotWinStudio.sln --filter "FullyQualifiedName~WorldPhysicsTests"
 ```
 
-## Integration tests (Node)
+The xUnit project is `CoreSim/tests/RobotTwin.CoreSim.Tests`. It needs no UI and no external tools. Main test files:
+
+| Area | Tests |
+| --- | --- |
+| Analog solver | `AnalogSimulatorTests`, `AnalogActiveDeviceTests`, `SparseSolverTests`, `ThermalModelTests`, `ComponentVariationTests`, `ToleranceAndSourceTests`, `DeterministicNoiseTests` |
+| Instruments, diagnostics | `OscilloscopeTests`, `MultimeterTests`, `DiagnosticsTests` |
+| Schematic, PCB, KiCad | `SchematicEditorTests`, `DesignAndPcbTests`, `PcbEditorTests`, `PcbPolygonTests`, `KiCadExportTests`, `KiCadImportTests` |
+| Firmware | `FirmwareCoSimTests`, `I2cDeviceTests`, `Esp32Tests`, `Esp32RadioTests`, `FirmwareProtocolTests`, `ProtocolFramingTests` |
+| Mechanics, modelling | `PhysicsSceneTests`, `VehicleDynamicsTests`, `MechatronicsTests`, `MeshTests`, `ModelingTests`, `PartModel3DTests` |
+| World, radio | `WorldTests`, `WorldPhysicsTests`, `RadioTests` |
+| Files, repo hygiene | `FileFormatTests`, `RtwinRoundTripTests`, `TemplateTests`, `GoldenTraceHarnessTests`, `WorkflowReferenceTests` |
+
+ESP32 tests compile real sketches with MSVC. On a machine without the Visual Studio C++ tools (`vcvars64.bat` not found) they are reported as **skipped**, not failed.
+
+## Self-test
 
 ```powershell
-python tools/rt_tool.py run-qa
+dotnet build RobotWinStudio.sln -c Debug
+builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
+Get-Content selftest.txt
 ```
 
-The integration tests are in `tests/integration/` and use Jest (see `tests/integration/package.json`).
+For every example in `Studio/RobotWin.Studio/Examples/ExampleProjects.cs` it:
 
-## Physical overrides validation
+1. compiles the schematic and runs the analog simulator (100 steps of 2 ms; 1500 steps when the example has a vehicle or drone, which is armed and given throttle);
+2. synchronises a 90 × 70 mm PCB, auto-places, auto-routes and runs DRC.
+
+Each example prints one line (`parts`, `nets`, `warn`, `sim=OK`, `routed=x/y`, `vias`, `drcErrors`, plus vehicle mass/distance/altitude). An example fails on an exception, incomplete routing or any DRC error. The last line is `SELFTEST PASS` or `SELFTEST FAIL (n)`; the exit code is 0 on success, 1 on failure.
+
+## Snapshot testing
+
+`--snapshot` renders a page off screen to PNG without user interaction, then exits. It is how the screenshots in `docs/images/` are made and how UI changes are verified.
 
 ```powershell
-python tools/rt_tool.py validate-physical-overrides
+$exe = "builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe"
+& $exe --snapshot out\home.png --page home
+& $exe --snapshot out\schematic.png --page schematic --example arduino-displays --simulate 1.5
+& $exe --snapshot out\pcb.png --page pcb --example motor-driver
+& $exe --snapshot out\world.png --page world --fault ps5-car --simulate 2
+& $exe --snapshot out\model.png --page model --size 1600x960
 ```
 
-## Golden trace capture
+| Option | Meaning |
+| --- | --- |
+| `--page` | `home`, `schematic`, `pcb`, `code`, `model`, `assembly`, `world`, `library`, `settings` |
+| `--example <id>` | Loads a circuit example first (`led-button`, `arduino-blink`, `arduino-displays`, `esp32-dimmer`, `motor-driver`, `opamp-amp`, `power-7805`, `rc-filter`, `relay-lamp`, `nand-logic`, `line-follower`, `obstacle-avoider`, `quadcopter`) |
+| `--simulate <s>` | Runs the simulation for that many simulated seconds before capturing |
+| `--fault <name>` | Page-specific scenario. World page: the world template id (`empty`, `two-boards`, `servo-arm`, `displays`, `car`, `sonar`, `motor-wheel`, `ps5-car`). Schematic: e.g. `scope`, `dmm`, `burn`, `diag`, `montecarlo`, `tolerance`, `erc`, `find`, `help`. PCB: `3d`, `fpeditor`, `module`. Any page: `split` (split view). |
+| `--size WxH` | Window size (default 1600x960); narrow sizes emulate split view / detached windows |
+| `--wait <s>` | Extra seconds before capturing |
+| `--nav-expanded` | Captures with the navigation rail expanded |
 
-```powershell
-python tools/rt_tool.py record-golden-trace
-```
+Compare the PNGs by eye or with an image diff tool; there is no automated pixel comparison in CI.
 
-Golden trace fixtures are stored under `CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/` and are intended to catch deterministic drift across changes.
+Related: `--gallery <dir>` writes contact sheets of every generated 3D component model (`--gallery-filter`, `--gallery-columns`, `--gallery-tile WxH`), useful after changes in `Models3D/`.
 
-## Raspberry Pi shared memory smoke
+## Continuous integration
 
-```powershell
-python tools/rt_tool.py rpi-smoke
-```
+`.github/workflows/ci.yml` runs on pushes and pull requests to `main` (`windows-latest`):
+
+1. checks that `global.json` exists and no build artifacts are tracked;
+2. `dotnet restore`, `dotnet build -c Release`, `dotnet test -c Release`;
+3. runs `RobotWinStudio.exe --selftest` and fails the job if it does not pass.
+
+## Legacy test suites
+
+`tests/native` (C++ physics/sensor validation for `NativeEngine`), `tests/integration` (Node) and `tests/python` belong to the 1.x Unity-based design. They are not built by the solution or CI.

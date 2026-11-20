@@ -122,7 +122,7 @@ All physics formulas verified against textbook solutions:
 | Spring Oscillator   | T = 2π√(m/k)      | 0.628s period      | ✓ (formula) |
 | Pendulum            | T = 2π√(L/g)      | 2.006s @ 1m        | ✓ (formula) |
 
-**Script**: [tests/native/VerifyAlgorithms.ps1](../tests/native/VerifyAlgorithms.ps1)
+**Script**: [tests/native/VerifyAlgorithms.ps1](../../tests/native/VerifyAlgorithms.ps1)
 
 ---
 
