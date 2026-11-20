@@ -224,6 +224,11 @@ namespace RobotWin.Studio
                 _world.ToggleRun();
             }, world));
             m.Items.Add(Item("Dünyayı durdur", null, () => _world.StopSimulation(), ws != SimState.Stopped));
+            m.Items.Add(Item("Analiz modu (gerilme, akış, grafikler)…", "Ctrl+F5", () =>
+            {
+                Navigate("world");
+                _world.OpenAnalysis();
+            }, world));
             m.Items.Add(new Separator());
             var cfg = AppSettings.Current;
             m.Items.Add(Check("Parça hasarı (yanma, sigorta)", null, cfg.EnableDamage, v => { cfg.EnableDamage = v; cfg.Save(); }));

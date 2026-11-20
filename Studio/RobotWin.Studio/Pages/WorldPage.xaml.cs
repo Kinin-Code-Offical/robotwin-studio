@@ -1175,6 +1175,7 @@ namespace RobotWin.Studio.Pages
                     break;
                 case Key.F5:
                     if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) StopSimulation();
+                    else if (ctrl) OpenAnalysis();
                     else Run();
                     break;
                 default:
@@ -1370,6 +1371,7 @@ namespace RobotWin.Studio.Pages
             if (first != null) Scene.Select(first.Id);
             SenseSnapshotFinish();   // [sense]
             SdkSnapshot();   // [sdk]
+            AnalysisSnapshot();   // [analysis] Pages/WorldPage.Analysis.cs
             FinishTerrainSnapshot(simulate != null); // [terrain]
         }
     }
