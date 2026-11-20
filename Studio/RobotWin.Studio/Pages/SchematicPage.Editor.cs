@@ -204,7 +204,7 @@ namespace RobotWin.Studio.Pages
                         Inlines =
                         {
                             new System.Windows.Documents.Run(p.Name) { Foreground = Res<Brush>("B.Text") },
-                            new System.Windows.Documents.Run("   " + p.Category) { Foreground = Res<Brush>("B.TextMuted"), FontSize = 11 }
+                            new System.Windows.Documents.Run("   " + p.Category) { Foreground = Res<Brush>("B.TextMuted"), FontSize = 12 }
                         }
                     },
                     Tag = p,
@@ -643,9 +643,9 @@ namespace RobotWin.Studio.Pages
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         Inlines =
                         {
-                            new System.Windows.Documents.Run(h.KindText.PadRight(7)) { Foreground = Res<Brush>("B.TextMuted"), FontSize = 11 },
+                            new System.Windows.Documents.Run(h.KindText.PadRight(7)) { Foreground = Res<Brush>("B.TextMuted"), FontSize = 12 },
                             new System.Windows.Documents.Run(h.Title) { Foreground = Res<Brush>("B.Text") },
-                            new System.Windows.Documents.Run("  " + h.Detail) { Foreground = Res<Brush>("B.TextMuted"), FontSize = 11 }
+                            new System.Windows.Documents.Run("  " + h.Detail) { Foreground = Res<Brush>("B.TextMuted"), FontSize = 12 }
                         }
                     },
                     Tag = h
@@ -847,7 +847,7 @@ namespace RobotWin.Studio.Pages
                     var row = new Grid { Margin = new Thickness(0, 0, 0, 3) };
                     row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(118) });
                     row.ColumnDefinitions.Add(new ColumnDefinition());
-                    row.Children.Add(new TextBlock { Text = keys, FontFamily = Res<FontFamily>("F.Mono"), FontSize = 11.5, Foreground = Res<Brush>("B.Accent"), TextWrapping = TextWrapping.Wrap });
+                    row.Children.Add(new TextBlock { Text = keys, FontFamily = Res<FontFamily>("F.Mono"), FontSize = 12, Foreground = Res<Brush>("B.Accent"), TextWrapping = TextWrapping.Wrap });
                     var t = new TextBlock { Text = what, Foreground = Res<Brush>("B.Text"), FontSize = 12, TextWrapping = TextWrapping.Wrap };
                     Grid.SetColumn(t, 1);
                     row.Children.Add(t);

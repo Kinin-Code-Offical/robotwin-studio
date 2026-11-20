@@ -63,7 +63,7 @@
                     </Grid.ColumnDefinitions>
                     <ListBox x:Name="Problems" MouseDoubleClick="OnProblemPick" SelectionChanged="OnProblemPick" Margin="6"/>
                     <Border Grid.Column="1" Background="{StaticResource B.Border}"/>
-                    <TextBox x:Name="BuildLog" Grid.Column="2" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="11.5"
+                    <TextBox x:Name="BuildLog" Grid.Column="2" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12"
                              TextWrapping="NoWrap" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" BorderThickness="0" Margin="6"/>
                 </Grid>
             </TabItem>

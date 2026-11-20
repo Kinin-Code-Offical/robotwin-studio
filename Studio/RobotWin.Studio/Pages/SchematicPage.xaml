@@ -142,7 +142,7 @@
                                     <ed:SymbolPreview PresetId="{Binding Id}" Margin="2,5,10,5"/>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" Foreground="{StaticResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource B.TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource B.TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -215,7 +215,7 @@
                         <StackPanel x:Name="McPanel" Margin="14,8,10,10"/>
                     </ScrollViewer>
                     <DockPanel Grid.Column="1" Margin="4,8,10,8">
-                        <TextBlock x:Name="McStats" DockPanel.Dock="Bottom" Style="{StaticResource Text.Mono}" FontSize="11.5" Margin="4,6,0,0" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="McStats" DockPanel.Dock="Bottom" Style="{StaticResource Text.Mono}" FontSize="12" Margin="4,6,0,0" TextWrapping="Wrap"/>
                         <sim:HistogramView x:Name="Histogram"/>
                     </DockPanel>
                 </Grid>
@@ -246,8 +246,8 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{StaticResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="11.5"/>
-                                <TextBlock Text="{Binding KindText}" Width="64" Foreground="{StaticResource B.TextSecondary}" FontSize="11.5"/>
+                                <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{StaticResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="12"/>
+                                <TextBlock Text="{Binding KindText}" Width="64" Foreground="{StaticResource B.TextSecondary}" FontSize="12"/>
                                 <TextBlock Text="{Binding Device}" Width="96" Foreground="{StaticResource B.Text}" FontSize="12"/>
                                 <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>

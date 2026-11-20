@@ -373,7 +373,7 @@ namespace RobotWin.Studio.Pages
         private static TextBlock MenuTitle(string text) => new TextBlock
         {
             Text = text,
-            FontSize = 11,
+            FontSize = 12,
             Foreground = (Brush)Application.Current.FindResource("B.TextMuted"),
             Margin = new Thickness(10, 6, 10, 4),
             IsHitTestVisible = false

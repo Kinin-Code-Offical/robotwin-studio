@@ -249,7 +249,7 @@ namespace RobotWin.Studio.Pages
                 var l = new TextBlock { Text = label, Foreground = muted, Margin = new Thickness(0, 2, 12, 2) };
                 var v = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2) };
                 v.Inlines.Add(new System.Windows.Documents.Run(value) { FontWeight = FontWeights.SemiBold, Foreground = warn ? Brushes.OrangeRed : text });
-                if (note.Length > 0) v.Inlines.Add(new System.Windows.Documents.Run("  " + note) { Foreground = warn ? Brushes.OrangeRed : muted, FontSize = 11 });
+                if (note.Length > 0) v.Inlines.Add(new System.Windows.Documents.Run("  " + note) { Foreground = warn ? Brushes.OrangeRed : muted, FontSize = 12 });
                 Grid.SetRow(l, k);
                 Grid.SetRow(v, k);
                 Grid.SetColumn(v, 1);

@@ -1160,7 +1160,7 @@ namespace RobotWin.Studio.Pages
                         var row = new Grid { Margin = new Thickness(0, 0, 0, 3) };
                         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
                         row.ColumnDefinitions.Add(new ColumnDefinition());
-                        row.Children.Add(new TextBlock { Text = key, Style = S("Text.Mono"), Foreground = B("B.Text"), FontSize = 11.5 });
+                        row.Children.Add(new TextBlock { Text = key, Style = S("Text.Mono"), Foreground = B("B.Text"), FontSize = 12 });
                         var t = new TextBlock { Text = text, Style = S("Text.Body"), FontSize = 12 };
                         Grid.SetColumn(t, 1);
                         row.Children.Add(t);

@@ -141,7 +141,7 @@ namespace RobotWin.Studio.Pages
         {
             private readonly WorldPage _page;
             private readonly TextBlock _title = new TextBlock { FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
-            private readonly TextBlock _text = new TextBlock { FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
+            private readonly TextBlock _text = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap };
             private readonly Image _image = new Image { Stretch = Stretch.Uniform, Height = 150, HorizontalAlignment = HorizontalAlignment.Left };
             private readonly StackPanel _channels = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4) };
             private WriteableBitmap? _bitmap;
@@ -156,10 +156,10 @@ namespace RobotWin.Studio.Pages
                 var head = new DockPanel();
                 if (r is CameraReading)
                 {
-                    var open = new Button { Content = "Oyun görünümünde", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), FontSize = 11 };
+                    var open = new Button { Content = "Oyun görünümünde", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), FontSize = 12 };
                     string id = r.ObjectId;
                     open.Click += (_, _) => page.ShowInGame(id, true);
-                    var win = new Button { Content = "Ayrı pencere", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), FontSize = 11 };
+                    var win = new Button { Content = "Ayrı pencere", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), FontSize = 12 };
                     win.Click += (_, _) => page.OpenCameraWindow(id);
                     DockPanel.SetDock(win, Dock.Right);
                     DockPanel.SetDock(open, Dock.Right);
@@ -319,7 +319,7 @@ namespace RobotWin.Studio.Pages
         {
             var image = new Image { Stretch = Stretch.Uniform };
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
-            var info = new TextBlock { Margin = new Thickness(8, 4, 8, 6), Foreground = Brushes.White, FontSize = 11.5 };
+            var info = new TextBlock { Margin = new Thickness(8, 4, 8, 6), Foreground = Brushes.White, FontSize = 12 };
             var dock = new DockPanel { Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0B, 0x0D)) };
             DockPanel.SetDock(info, Dock.Bottom);
             dock.Children.Add(info);

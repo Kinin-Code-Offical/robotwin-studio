@@ -113,7 +113,7 @@ namespace RobotWin.Studio.Pages
             var t = new TextBlock
             {
                 FontFamily = (FontFamily)FindResource("F.Mono"),
-                FontSize = 11.5,
+                FontSize = 12,
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (Brush)FindResource("B.Text"),
                 Margin = new Thickness(0, 2, 0, 8)
@@ -321,7 +321,7 @@ namespace RobotWin.Studio.Pages
             AcceptsTab = false,
             TextWrapping = TextWrapping.NoWrap,
             FontFamily = (FontFamily)FindResource("F.Mono"),
-            FontSize = 11.5,
+            FontSize = 12,
             Height = height,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,

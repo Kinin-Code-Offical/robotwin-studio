@@ -24,9 +24,9 @@
 
     <!-- Text -->
     <Color x:Key="C.Text">#EDEDEF</Color>
-    <Color x:Key="C.TextSecondary">#A0A0A8</Color>
-    <Color x:Key="C.TextMuted">#6C6C74</Color>
-    <Color x:Key="C.TextDisabled">#45454B</Color>
+    <Color x:Key="C.TextSecondary">#B4B4BC</Color>
+    <Color x:Key="C.TextMuted">#8E8E97</Color>
+    <Color x:Key="C.TextDisabled">#5C5C63</Color>
 
     <!-- The one accent -->
     <Color x:Key="C.Accent">#6E9BFF</Color>
@@ -62,7 +62,7 @@
     <FontFamily x:Key="F.Ui">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="F.Display">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="F.Mono">Cascadia Mono, Consolas</FontFamily>
-    <sys:Double x:Key="T.Caption">11.5</sys:Double>
+    <sys:Double x:Key="T.Caption">12</sys:Double>
     <sys:Double x:Key="T.Body">13</sys:Double>
     <sys:Double x:Key="T.Subtitle">14</sys:Double>
     <sys:Double x:Key="T.Title">20</sys:Double>

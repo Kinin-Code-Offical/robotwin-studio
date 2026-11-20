@@ -172,7 +172,7 @@ namespace RobotWin.Studio.Libraries
                 line.Children.Add(chip);
                 var names = new StackPanel();
                 names.Children.Add(new TextBlock { Text = row.Name, Foreground = B("B.Text"), TextTrimming = TextTrimming.CharacterEllipsis });
-                names.Children.Add(new TextBlock { Text = row.Kind, Foreground = B("B.TextMuted"), FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis });
+                names.Children.Add(new TextBlock { Text = row.Kind, Foreground = B("B.TextMuted"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
                 line.Children.Add(names);
                 var item = new ListBoxItem { Content = line, Tag = row, Padding = new Thickness(6, 4, 6, 4) };
                 _list.Items.Add(item);
@@ -513,7 +513,7 @@ namespace RobotWin.Studio.Libraries
             if (item.AutoDetails.Length > 0)
             {
                 p.Children.Add(Overline("Otomatik eşleme ayrıntısı"));
-                p.Children.Add(new TextBlock { Text = item.AutoDetails, Style = S("Text.Mono"), FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = B("B.TextMuted") });
+                p.Children.Add(new TextBlock { Text = item.AutoDetails, Style = S("Text.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = B("B.TextMuted") });
             }
 
             return p;
@@ -580,7 +580,7 @@ namespace RobotWin.Studio.Libraries
                     wrap.Children.Add(new Border
                     {
                         BorderBrush = B("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 6, 6),
-                        Child = new TextBlock { Text = kv.Key + " = " + kv.Value.ToString("G4", CultureInfo.InvariantCulture), Style = S("Text.Mono"), FontSize = 11.5 }
+                        Child = new TextBlock { Text = kv.Key + " = " + kv.Value.ToString("G4", CultureInfo.InvariantCulture), Style = S("Text.Mono"), FontSize = 12 }
                     });
                 }
 
@@ -630,7 +630,7 @@ namespace RobotWin.Studio.Libraries
                 p.Children.Add(Overline("Kaynak"));
                 p.Children.Add(new TextBox
                 {
-                    Text = string.Join("\n", sub.Source), IsReadOnly = true, FontFamily = (FontFamily)Application.Current.FindResource("F.Mono"), FontSize = 11.5,
+                    Text = string.Join("\n", sub.Source), IsReadOnly = true, FontFamily = (FontFamily)Application.Current.FindResource("F.Mono"), FontSize = 12,
                     MaxHeight = 220, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, TextWrapping = TextWrapping.NoWrap
                 });
             }
@@ -730,7 +730,7 @@ namespace RobotWin.Studio.Libraries
                 {
                     BorderBrush = B("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 6, 6),
                     ToolTip = c.Description.Length > 0 ? c.Description : null,
-                    Child = new TextBlock { Text = $"{i++}: {c.Name}", Style = S("Text.Mono"), FontSize = 11.5 }
+                    Child = new TextBlock { Text = $"{i++}: {c.Name}", Style = S("Text.Mono"), FontSize = 12 }
                 });
             }
 

@@ -731,9 +731,10 @@ namespace RobotWin.Studio.Pages
         private FrameworkElement Labeled(string label, FrameworkElement control)
         {
             var grid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+            // Labels wrap instead of being cut off ("Kilitlenme akımı (A)" no longer loses its unit).
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(118) });
             grid.ColumnDefinitions.Add(new ColumnDefinition());
-            grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("B.TextSecondary") });
+            grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("B.TextSecondary"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 6, 0), ToolTip = label });
             Grid.SetColumn(control, 1);
             grid.Children.Add(control);
             return grid;

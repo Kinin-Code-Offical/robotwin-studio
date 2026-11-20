@@ -170,7 +170,7 @@ namespace RobotWin.Studio.Shell
     /// <summary>Small overlay with FPS, frame time and the costliest sections (Ctrl+Shift+F).</summary>
     public sealed class PerfOverlay : Border
     {
-        private readonly TextBlock _text = new TextBlock { FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 11, Foreground = Brushes.White, LineHeight = 15 };
+        private readonly TextBlock _text = new TextBlock { FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, Foreground = Brushes.White, LineHeight = 15 };
 
         public PerfOverlay()
         {

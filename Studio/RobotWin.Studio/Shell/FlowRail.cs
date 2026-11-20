@@ -274,7 +274,7 @@ namespace RobotWin.Studio.Shell
             s.Caption = new TextBlock
             {
                 Text = label,
-                FontSize = 10.5,
+                FontSize = 12,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 // A label sitting on the trace: the canvas colour behind it breaks the line neatly.
                 Background = Res<Brush>("B.Canvas"),
@@ -292,7 +292,7 @@ namespace RobotWin.Studio.Shell
             host.Children.Add(captionLane);
             var text = new StackPanel { Margin = new Thickness(Cx + Pad / 2 + 14, 6, 10, 0), VerticalAlignment = VerticalAlignment.Top };
             s.Title = new TextBlock { Text = label, FontSize = 13.5, FontWeight = FontWeights.SemiBold };
-            s.Status = new TextBlock { FontSize = 11.5, Foreground = Res<Brush>("B.TextMuted"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 0) };
+            s.Status = new TextBlock { FontSize = 12, Foreground = Res<Brush>("B.TextMuted"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 0) };
             text.Children.Add(s.Title);
             text.Children.Add(s.Status);
             host.Children.Add(text);
@@ -355,7 +355,7 @@ namespace RobotWin.Studio.Shell
             var host = new Grid { Height = 36, Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = "Hattı genişlet / daralt (Ctrl+B)", Margin = new Thickness(8, 4, 8, 0) };
             _toggleIcon = new Icon { Size = 14, Foreground = Res<Brush>("B.TextMuted"), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(Cx - 8 - 7, 0, 0, 0) };
             host.Children.Add(_toggleIcon);
-            _toggleLabel = new TextBlock { Text = "Daralt", FontSize = 11.5, Foreground = Res<Brush>("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(Cx + Pad / 2 + 6, 0, 0, 0) };
+            _toggleLabel = new TextBlock { Text = "Daralt", FontSize = 12, Foreground = Res<Brush>("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(Cx + Pad / 2 + 6, 0, 0, 0) };
             host.Children.Add(_toggleLabel);
             host.MouseEnter += (_, _) => host.Background = Res<Brush>("B.Hover");
             host.MouseLeave += (_, _) => host.Background = Brushes.Transparent;

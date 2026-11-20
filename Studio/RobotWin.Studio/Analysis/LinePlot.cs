@@ -88,7 +88,7 @@ namespace RobotWin.Studio.Analysis
             dc.DrawRectangle(Res("B.Base", Brushes.Black), null, new Rect(0, 0, w, h));
             var face = new Typeface("Segoe UI");
             double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            FormattedText T(string s, Brush b, double size = 11) => new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, b, dpi);
+            FormattedText T(string s, Brush b, double size = 12) => new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, b, dpi);
 
             var live = Series.Where(s => s.X.Length > 0 && s.X.Length == s.Y.Length).ToList();
             if (Title.Length > 0) dc.DrawText(T(Title, Res("B.Text", Brushes.White), 12), new Point(8, 4));
@@ -131,18 +131,18 @@ namespace RobotWin.Studio.Analysis
             foreach (double v in Ticks(y0, y1, Math.Max(2, (int)(area.Height / 40))))
             {
                 dc.DrawLine(grid, new Point(area.Left, Y(v)), new Point(area.Right, Y(v)));
-                var ft = T(SiValue.Format(v, unit), text, 10);
+                var ft = T(SiValue.Format(v, unit), text, 11.5);
                 dc.DrawText(ft, new Point(area.Left - ft.Width - 6, Y(v) - ft.Height / 2));
             }
 
             foreach (double v in Ticks(x0, x1, Math.Max(2, (int)(area.Width / 90))))
             {
                 dc.DrawLine(grid, new Point(X(v), area.Top), new Point(X(v), area.Bottom));
-                var ft = T(v.ToString("0.###", CultureInfo.InvariantCulture), text, 10);
+                var ft = T(v.ToString("0.###", CultureInfo.InvariantCulture), text, 11.5);
                 dc.DrawText(ft, new Point(X(v) - ft.Width / 2, area.Bottom + 4));
             }
 
-            var xl = T(XLabel, text, 10);
+            var xl = T(XLabel, text, 11.5);
             dc.DrawText(xl, new Point(area.Right - xl.Width, area.Bottom + 18));
             _vx0 = x0;
             _vx1 = x1;
@@ -163,7 +163,7 @@ namespace RobotWin.Studio.Analysis
             {
                 var b = new SolidColorBrush(s.Color);
                 dc.DrawRectangle(b, null, new Rect(lx, ly + 4, 10, 3));
-                var ft = T(s.Name, text, 10);
+                var ft = T(s.Name, text, 11.5);
                 dc.DrawText(ft, new Point(lx + 14, ly - 2));
                 lx += ft.Width + 30;
             }

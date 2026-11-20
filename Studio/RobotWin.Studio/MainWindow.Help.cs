@@ -42,7 +42,7 @@ namespace RobotWin.Studio
                     Padding = new Thickness(8, 0, 8, 0),
                     MinHeight = 0,
                     Height = 20,
-                    FontSize = 11.5,
+                    FontSize = 12,
                     Margin = new Thickness(0, 0, 12, 0),
                     Foreground = (Brush)FindResource("B.Accent"),
                     Visibility = Visibility.Collapsed

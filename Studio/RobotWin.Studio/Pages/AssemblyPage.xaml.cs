@@ -554,7 +554,7 @@ namespace RobotWin.Studio.Pages
                 Margin = new Thickness(0, 0, 0, 6)
             };
             var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = source, FontSize = 11, Foreground = danger ? (Brush)FindResource("B.Danger") : (Brush)FindResource("B.TextMuted") });
+            sp.Children.Add(new TextBlock { Text = source, FontSize = 12, Foreground = danger ? (Brush)FindResource("B.Danger") : (Brush)FindResource("B.TextMuted") });
             sp.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
             border.Child = sp;
             Toasts.Children.Insert(0, border);

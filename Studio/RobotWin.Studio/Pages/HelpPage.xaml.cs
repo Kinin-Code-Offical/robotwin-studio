@@ -218,7 +218,7 @@ namespace RobotWin.Studio.Pages
                 {
                     Style = (Style)FindResource("Badge"),
                     Background = (Brush)FindResource("B.AccentSoft"),
-                    Child = new TextBlock { Text = badge, FontSize = 11, Foreground = (Brush)FindResource("B.Accent") },
+                    Child = new TextBlock { Text = badge, FontSize = 12, Foreground = (Brush)FindResource("B.Accent") },
                     Margin = new Thickness(6, 0, 0, 0),
                     VerticalAlignment = VerticalAlignment.Center
                 };
@@ -611,7 +611,7 @@ namespace RobotWin.Studio.Pages
                     Background = (Brush)FindResource("B.AccentSoft"),
                     Margin = new Thickness(0, 0, 10, 0),
                     VerticalAlignment = VerticalAlignment.Center,
-                    Child = new TextBlock { Text = "Yeni", FontSize = 11, Foreground = (Brush)FindResource("B.Accent") }
+                    Child = new TextBlock { Text = "Yeni", FontSize = 12, Foreground = (Brush)FindResource("B.Accent") }
                 };
                 title.Children.Add(badge);
             }
@@ -915,7 +915,7 @@ namespace RobotWin.Studio.Pages
             Style = (Style)FindResource("Badge"),
             Margin = new Thickness(0, 0, 6, 0),
             VerticalAlignment = VerticalAlignment.Center,
-            Child = new TextBlock { Text = text, FontSize = 11, Foreground = (Brush)FindResource(brush) }
+            Child = new TextBlock { Text = text, FontSize = 12, Foreground = (Brush)FindResource(brush) }
         };
 
         private FrameworkElement Switch(string label, bool value, Action<bool> set)

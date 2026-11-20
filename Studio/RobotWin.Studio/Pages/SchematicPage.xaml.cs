@@ -490,7 +490,7 @@ namespace RobotWin.Studio.Pages
             var head = new DockPanel();
             var name = new TextBlock { Text = pin, Foreground = (Brush)FindResource("B.Text"), FontSize = 13 };
             var volts = new TextBlock { Foreground = (Brush)FindResource("B.Text"), FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
-            var level = new TextBlock { Foreground = (Brush)FindResource("B.TextMuted"), FontSize = 11, Margin = new Thickness(8, 1, 0, 0) };
+            var level = new TextBlock { Foreground = (Brush)FindResource("B.TextMuted"), FontSize = 12, Margin = new Thickness(8, 1, 0, 0) };
             DockPanel.SetDock(volts, Dock.Right);
             head.Children.Add(volts);
             head.Children.Add(name);
@@ -501,7 +501,7 @@ namespace RobotWin.Studio.Pages
             var buttons = new List<ToggleButton>();
             void ModeButton(string text, Action apply, bool initial)
             {
-                var b = new ToggleButton { Content = text, Style = (Style)FindResource("Chip"), Margin = new Thickness(0, 0, 4, 0), Padding = new Thickness(7, 2, 7, 2), FontSize = 11, IsChecked = initial };
+                var b = new ToggleButton { Content = text, Style = (Style)FindResource("Chip"), Margin = new Thickness(0, 0, 4, 0), Padding = new Thickness(7, 2, 7, 2), FontSize = 12, IsChecked = initial };
                 b.Click += (_, _) =>
                 {
                     foreach (var other in buttons) other.IsChecked = ReferenceEquals(other, b);
@@ -876,7 +876,7 @@ namespace RobotWin.Studio.Pages
                 var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(92) });
                 row.ColumnDefinitions.Add(new ColumnDefinition());
-                row.Children.Add(new TextBlock { Text = key, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 11.5, Foreground = (Brush)FindResource("B.TextMuted") });
+                row.Children.Add(new TextBlock { Text = key, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, Foreground = (Brush)FindResource("B.TextMuted") });
                 var t = new TextBlock { Text = what, Style = (Style)FindResource("Text.Body") };
                 Grid.SetColumn(t, 1);
                 row.Children.Add(t);
@@ -1196,7 +1196,7 @@ namespace RobotWin.Studio.Pages
                 {
                     Text = "marj " + (margin > -1000 ? margin.ToString("+0;-0", CultureInfo.InvariantCulture) + " %" : "≪ 0"),
                     FontFamily = (FontFamily)FindResource("F.Mono"),
-                    FontSize = 11.5,
+                    FontSize = 12,
                     Foreground = brush,
                     Margin = new Thickness(10, 2, 0, 0)
                 };

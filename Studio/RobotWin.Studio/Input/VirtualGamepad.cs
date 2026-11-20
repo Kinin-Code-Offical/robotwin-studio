@@ -407,7 +407,7 @@ namespace RobotWin.Studio.Input
                 Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0xA4)),
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 520,
-                FontSize = 11.5,
+                FontSize = 12,
                 Margin = new Thickness(0, 8, 0, 0)
             });
             Content = panel;

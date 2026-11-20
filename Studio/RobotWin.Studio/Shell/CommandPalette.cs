@@ -77,7 +77,7 @@ namespace RobotWin.Studio.Shell
             stack.Children.Add(_scroll);
             _empty.SetResourceReference(TextBlock.ForegroundProperty, "B.TextMuted");
             stack.Children.Add(_empty);
-            var hint = new TextBlock { Text = "↑↓ seç · Enter çalıştır · Esc kapat", FontSize = 11, Margin = new Thickness(14, 4, 14, 10) };
+            var hint = new TextBlock { Text = "↑↓ seç · Enter çalıştır · Esc kapat", FontSize = 12, Margin = new Thickness(14, 4, 14, 10) };
             hint.SetResourceReference(TextBlock.ForegroundProperty, "B.TextMuted");
             stack.Children.Add(hint);
             panel.Child = stack;
@@ -158,7 +158,7 @@ namespace RobotWin.Studio.Shell
                 var c = _shown[i];
                 if (c.Group != lastGroup && _query.Text.Trim().Length == 0)
                 {
-                    var head = new TextBlock { Text = c.Group, FontSize = 11, Margin = new Thickness(14, i == 0 ? 2 : 8, 0, 2) };
+                    var head = new TextBlock { Text = c.Group, FontSize = 12, Margin = new Thickness(14, i == 0 ? 2 : 8, 0, 2) };
                     head.SetResourceReference(TextBlock.ForegroundProperty, "B.TextMuted");
                     _list.Children.Add(head);
                     lastGroup = c.Group;
@@ -186,7 +186,7 @@ namespace RobotWin.Studio.Shell
                 row.Children.Add(left);
                 if (c.Shortcut.Length > 0)
                 {
-                    var sc = new TextBlock { Text = c.Shortcut, FontSize = 11.5 };
+                    var sc = new TextBlock { Text = c.Shortcut, FontSize = 12 };
                     sc.SetResourceReference(TextBlock.FontFamilyProperty, "F.Mono");
                     sc.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
                     Grid.SetColumn(sc, 1);

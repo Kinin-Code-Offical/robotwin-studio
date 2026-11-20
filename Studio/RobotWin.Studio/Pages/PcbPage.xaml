@@ -110,7 +110,7 @@
             <pcb:Board3DView x:Name="View3D" Grid.Column="1" Visibility="Collapsed"/>
             <Border x:Name="StatusBar" Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="120,0,10,6" IsHitTestVisible="False">
                 <DockPanel LastChildFill="True">
-                    <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="11" Foreground="{StaticResource B.TextMuted}" Margin="12,0,0,0"/>
+                    <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="12" Foreground="{StaticResource B.TextMuted}" Margin="12,0,0,0"/>
                     <TextBlock x:Name="HintText" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"/>
                 </DockPanel>
             </Border>
@@ -169,7 +169,7 @@
                                             <Ellipse Width="7" Height="7" VerticalAlignment="Top" Margin="0,5,0,0" Fill="{Binding Tag}" HorizontalAlignment="Left"/>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="{Binding Rule}" Foreground="{StaticResource B.Text}" FontSize="12"/>
-                                                <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="11.5" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Grid>
                                     </DataTemplate>

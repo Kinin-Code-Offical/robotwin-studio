@@ -92,7 +92,7 @@ namespace RobotWin.Studio.Updates
             Visibility = items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
             if (items.Count == 0) return;
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var all = new Button { Content = "Tümü", Style = R<Style>("Btn.Ghost"), Padding = new Thickness(8, 2, 8, 2), MinHeight = 0, FontSize = 11.5, Margin = new Thickness(0, -6, -8, 0) };
+            var all = new Button { Content = "Tümü", Style = R<Style>("Btn.Ghost"), Padding = new Thickness(8, 2, 8, 2), MinHeight = 0, FontSize = 12, Margin = new Thickness(0, -6, -8, 0) };
             all.Click += (_, _) => _openHelp("news");
             DockPanel.SetDock(all, Dock.Right);
             head.Children.Add(all);

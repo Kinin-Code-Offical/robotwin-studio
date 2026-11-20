@@ -206,7 +206,7 @@ namespace RobotWin.Studio.Pages
         {
             var g = new Grid { Margin = new Thickness(0, Props.Children.Count == 0 ? 2 : 16, 0, 8) };
             g.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Res("B.Text") });
-            if (sub != null) g.Children.Add(new TextBlock { Text = sub, FontSize = 11, Foreground = Res("B.TextMuted"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center });
+            if (sub != null) g.Children.Add(new TextBlock { Text = sub, FontSize = 12, Foreground = Res("B.TextMuted"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center });
             Props.Children.Add(g);
         }
 
@@ -386,7 +386,7 @@ namespace RobotWin.Studio.Pages
                 int index = ++i;
                 var hole = h;
                 var head = new Grid { Margin = new Thickness(0, 4, 0, 2) };
-                head.Children.Add(new TextBlock { Text = $"Delik {index}", FontSize = 11.5, Foreground = Res("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center });
+                head.Children.Add(new TextBlock { Text = $"Delik {index}", FontSize = 12, Foreground = Res("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center });
                 var rm = new Button { Style = (Style)FindResource("Btn.Icon"), Width = 22, Height = 22, HorizontalAlignment = HorizontalAlignment.Right, ToolTip = "Deliği kaldır", Content = new Icon { Data = Icon("I.Close"), Size = 12 } };
                 rm.Click += (_, _) => _ed.Do("Delik kaldırıldı", () => spec.Holes.Remove(hole));
                 head.Children.Add(rm);
@@ -417,7 +417,7 @@ namespace RobotWin.Studio.Pages
                 int index = ++i;
                 var hole = h;
                 var head = new Grid { Margin = new Thickness(0, 4, 0, 2) };
-                head.Children.Add(new TextBlock { Text = $"Delik {index}", FontSize = 11.5, Foreground = Res("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center });
+                head.Children.Add(new TextBlock { Text = $"Delik {index}", FontSize = 12, Foreground = Res("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center });
                 var rm = new Button { Style = (Style)FindResource("Btn.Icon"), Width = 22, Height = 22, HorizontalAlignment = HorizontalAlignment.Right, ToolTip = "Deliği kaldır", Content = new Icon { Data = Icon("I.Close"), Size = 12 } };
                 rm.Click += (_, _) => _ed.Do("Delik kaldırıldı", () => sk.Holes.Remove(hole));
                 head.Children.Add(rm);
@@ -751,7 +751,7 @@ namespace RobotWin.Studio.Pages
                 var k = kind;
                 var content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
                 content.Children.Add(new Icon { Data = Icon(icon), Size = 22, HorizontalAlignment = HorizontalAlignment.Center });
-                content.Children.Add(new TextBlock { Text = PrimitiveSchema.Name(k), FontSize = 11, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+                content.Children.Add(new TextBlock { Text = PrimitiveSchema.Name(k), FontSize = 12, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
                 var b = new Button { Content = content, Height = 62, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(2), ToolTip = PrimitiveSchema.Name(k) + " ekle" };
                 b.Click += (_, _) => AddPrimitive(k);
                 grid.Children.Add(b);
@@ -777,8 +777,8 @@ namespace RobotWin.Studio.Pages
                 g.Children.Add(swatch);
                 var text = new StackPanel();
                 text.Children.Add(new TextBlock { Text = id == "enclosure" ? "Muhafaza kutusu + kapak" : t.Name, FontSize = 12.5, Foreground = Res("B.Text") });
-                text.Children.Add(new TextBlock { Text = t.Description, FontSize = 11.5, Foreground = Res("B.TextMuted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
-                text.Children.Add(new TextBlock { Text = $"{t.Material} · {t.Params.Count} parametre", FontSize = 11, Foreground = Res("B.TextDisabled"), Margin = new Thickness(0, 4, 0, 0) });
+                text.Children.Add(new TextBlock { Text = t.Description, FontSize = 12, Foreground = Res("B.TextMuted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+                text.Children.Add(new TextBlock { Text = $"{t.Material} · {t.Params.Count} parametre", FontSize = 12, Foreground = Res("B.TextDisabled"), Margin = new Thickness(0, 4, 0, 0) });
                 Grid.SetColumn(text, 1);
                 g.Children.Add(text);
                 card.Child = g;

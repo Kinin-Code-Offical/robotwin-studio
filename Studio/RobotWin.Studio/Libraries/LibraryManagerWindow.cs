@@ -164,7 +164,7 @@ namespace RobotWin.Studio.Libraries
 
                     var lab = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
                     lab.Inlines.Add(new System.Windows.Documents.Run(name) { Foreground = B("B.Text") });
-                    lab.Inlines.Add(new System.Windows.Documents.Run("   " + id + " · " + lib.Name + (lib.Enabled ? string.Empty : " (kapalı)")) { Foreground = B("B.TextMuted"), FontSize = 11.5 });
+                    lab.Inlines.Add(new System.Windows.Documents.Run("   " + id + " · " + lib.Name + (lib.Enabled ? string.Empty : " (kapalı)")) { Foreground = B("B.TextMuted"), FontSize = 12 });
                     line.Children.Add(lab);
                     _list.Children.Add(line);
                 }

@@ -50,7 +50,7 @@
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Bottom">
                                     <TextBlock Text="{Binding Name}" Foreground="{StaticResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Category}" Foreground="{StaticResource B.TextMuted}" FontSize="11"/>
+                                    <TextBlock Text="{Binding Category}" Foreground="{StaticResource B.TextMuted}" FontSize="12"/>
                                 </StackPanel>
                                 <ed:SymbolPreview PresetId="{Binding Id}" Margin="10,4,10,10"/>
                             </DockPanel>

@@ -82,7 +82,7 @@ namespace RobotWin.Studio.Pages
                 FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, VerticalContentAlignment = VerticalAlignment.Top,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Tag = hint, ToolTip = hint
             };
-            var error = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 11, Foreground = DangerBrush, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
+            var error = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, Foreground = DangerBrush, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
             var initial = source.Length > 0 ? check(source) : null;
             if (initial != null)
             {
@@ -378,7 +378,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(add);
 
             Inspector.Children.Add(Caption("Hava ve betik kuvvetleri (canlı)"));
-            _sdkLive = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
+            _sdkLive = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
             Inspector.Children.Add(_sdkLive);
             UpdateSdkLive();
         }
@@ -543,7 +543,7 @@ namespace RobotWin.Studio.Pages
             Palette.Children.Add(Note("Kendi fizik kodunuz: ifadeler (anında), C# betikleri (.NET SDK ile derlenir) ve eklenti DLL'leri. Hepsi sabit 1 ms fizik adımının içinde, tekrarlanabilir şekilde çalışır."));
 
             Palette.Children.Add(Caption("Çalışma durumu", 4));
-            _sdkStatus = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
+            _sdkStatus = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
             _sdkStatus.Text = StatusText(_session.State != SimState.Stopped ? _session.Sdk : null);
             Palette.Children.Add(_sdkStatus);
 
@@ -603,7 +603,7 @@ namespace RobotWin.Studio.Pages
                     Palette.Children.Add(Note(lastBuild.Summary));
                     foreach (var d in lastBuild.Diagnostics.Where(d => d.IsError).Take(8))
                     {
-                        Palette.Children.Add(new TextBlock { Text = d.ToString(), Foreground = DangerBrush, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
+                        Palette.Children.Add(new TextBlock { Text = d.ToString(), Foreground = DangerBrush, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
                     }
                 }
             }
@@ -723,7 +723,7 @@ namespace RobotWin.Studio.Pages
             var bottom = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
             var diag = new TextBox
             {
-                IsReadOnly = true, Height = 110, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 11, TextWrapping = TextWrapping.Wrap,
+                IsReadOnly = true, Height = 110, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalContentAlignment = VerticalAlignment.Top,
                 Text = ScriptCompiler.Detect().Explanation + "\nPublic sınıflar IWorldBehavior / WorldBehavior, IForceField veya IWindSource uygulamalıdır. Derleme önbelleğe alınır."
             };

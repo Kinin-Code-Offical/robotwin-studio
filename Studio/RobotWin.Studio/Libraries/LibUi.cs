@@ -95,7 +95,7 @@ namespace RobotWin.Studio.Libraries
                 BorderBrush = B(brushKey),
                 BorderThickness = new Thickness(1),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = text, FontSize = 11, Foreground = B(brushKey) }
+                Child = new TextBlock { Text = text, FontSize = 12, Foreground = B(brushKey) }
             };
         }
 
