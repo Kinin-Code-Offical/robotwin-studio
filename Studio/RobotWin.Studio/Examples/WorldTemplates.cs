@@ -111,12 +111,15 @@ namespace RobotWin.Studio.Examples
         private static WorldDocument ServoArm()
         {
             var w = new WorldDocument { Title = "Servo kol" };
-            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = -0.09, Y = 0 });
+            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = -0.15, Y = 0 });   // [phys] beside the wider base
             uno.Parameters["firmware"] = "builtin:servo-sweep.hex";
-            var table = w.AddBody("box", 0.06, 0.04, 0.012, new WorldPose { X = 0.04, Y = 0 }, "AHŞAP");
-            table.Name = "Taban";
-            table.IsStatic = true;
-            var s1 = w.AddComponent(Lib, "servo-sg90", new WorldPose { X = 0.04, Y = 0, Z = 0.012 });
+            // [phys] A free, heavy plywood base (140×100×18 mm ≈ 150 g): the arm's centre of mass stays
+            // inside its footprint at every angle, so it stands by its own weight — nothing is clamped.
+            // (The former 60×40×12 mm block weighed 17 g and only stood because it was marked "Sabit".)
+            const double baseH = 0.018;
+            var table = w.AddBody("box", 0.14, 0.10, baseH, new WorldPose { X = 0.04, Y = 0 }, "AHŞAP");
+            table.Name = "Taban (18 mm kontrplak)";
+            var s1 = w.AddComponent(Lib, "servo-sg90", new WorldPose { X = 0.04, Y = 0, Z = baseH });
             s1.Name = "Omuz servosu";
             // Horn pivot of an SG90 sits 5.4 mm from the body centre, 31 mm above its base.
             double pivotX = s1.Pose.X - 0.0054, pivotZ = s1.Pose.Z + 0.031;
@@ -178,18 +181,23 @@ namespace RobotWin.Studio.Examples
         private static WorldDocument Ps5Car()
         {
             var w = new WorldDocument { Title = "Kumandalı araba" };
-            var chassis = w.AddBody("plate", 0.20, 0.13, 0.003, new WorldPose { X = 0, Y = 0, Z = 0.027 }, "AKRİLİK");
+            // [phys] Heights chosen so the 65 mm wheels stand on the floor (hub = shaft 9.4 mm above the
+            // motor base = wheel radius) and a ball caster carries the front: the car rests on three
+            // points instead of hovering 7 mm up and nosing onto its plate. Plate 120 mm wide so the
+            // wheels clear its edges.
+            const double deck = 0.0325 - 0.0094, plateZ = deck - 0.003;
+            var chassis = w.AddBody("plate", 0.20, 0.12, 0.003, new WorldPose { X = 0, Y = 0, Z = plateZ }, "AKRİLİK");
             chassis.Name = "Şase";
             chassis.Color = "#3E7CC8";
-            var esp = w.AddComponent(Lib, "esp32-devkit-v1", new WorldPose { X = 0.045, Y = 0, Z = 0.030 });
+            var esp = w.AddComponent(Lib, "esp32-devkit-v1", new WorldPose { X = 0.045, Y = 0, Z = deck });
             esp.Name = "ESP32 (araba beyni)";
             esp.Parameters["firmware"] = "builtin:esp32-gamepad-car.ino";
-            var drv = w.AddComponent(Lib, "drv8833", new WorldPose { X = -0.02, Y = 0, Z = 0.030 });
-            var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = -0.07, Y = 0, Z = 0.030, Yaw = 90 });
+            var drv = w.AddComponent(Lib, "drv8833", new WorldPose { X = -0.02, Y = 0, Z = deck });
+            var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = -0.07, Y = 0, Z = deck, Yaw = 90 });
             // Motors under the rear half, shafts pointing outwards (+Y right, −Y left); wheels slide on 13 mm out.
-            var right = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = 0.04, Z = 0.030 });
+            var right = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = 0.04, Z = deck });
             right.Name = "Sağ motor";
-            var left = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = -0.04, Z = 0.030, Yaw = 180 });
+            var left = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = -0.04, Z = deck, Yaw = 180 });
             left.Name = "Sol motor";
             var wheelR = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = right.Pose.X - 0.011, Y = right.Pose.Y + 0.0185 + 0.015, Z = right.Pose.Z + 0.0094 - 0.0325 }, "KAUÇUK");
             var wheelL = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = left.Pose.X + 0.011, Y = left.Pose.Y - 0.0185 - 0.015, Z = left.Pose.Z + 0.0094 - 0.0325, Yaw = 180 }, "KAUÇUK");
@@ -200,6 +208,14 @@ namespace RobotWin.Studio.Examples
 
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheelR.Id, ObjectB = right.Id, PortB = "shaft" });
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheelL.Id, ObjectB = left.Id, PortB = "shaft" });
+            // [phys] Steel ball caster on a short post under the front of the plate.
+            const double ball = 0.016;
+            var caster = w.AddBody("sphere", ball, ball, ball, new WorldPose { X = 0.075, Z = 0 }, "ÇELİK");
+            caster.Name = "Sarhoş teker";
+            var post = w.AddBody("box", 0.012, 0.012, plateZ - ball * 0.8, new WorldPose { X = 0.075, Z = ball * 0.8 }, "PLA");
+            post.Name = "Teker ayağı";
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = post.Id, ObjectB = chassis.Id });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = caster.Id, ObjectB = chassis.Id });
 
             // Power: 4×AA → DRV8833 VM; common ground with the ESP32.
             w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = drv.Id, Pin = "VM" }, 22, "#E5484D");
@@ -233,7 +249,7 @@ namespace RobotWin.Studio.Examples
         {
             var w = new WorldDocument { Title = "Ultrasonik mesafe" };
             var stand = w.AddBody("box", 0.06, 0.04, 0.02, new WorldPose(), "AHŞAP");
-            stand.Name = "Sehpa";
+            stand.Name = "Sehpa (masaya vidalı)";   // [phys] shown as clamped: it is "Sabit"
             stand.IsStatic = true;
             var sensor = w.AddComponent(Lib, "hc-sr04", new WorldPose { Z = 0.02 });
             sensor.Name = "HC-SR04";
@@ -250,10 +266,13 @@ namespace RobotWin.Studio.Examples
         {
             var w = new WorldDocument { Title = "Motor ve tekerlek" };
             var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = -0.11, Y = 0 });
-            var stand = w.AddBody("box", 0.06, 0.04, 0.03, new WorldPose { X = 0.03, Y = 0 }, "AHŞAP");
-            stand.Name = "Sehpa";
+            // [phys] A bench test: the stand is screwed to the table ("Sabit") and tall enough that the
+            // wheel clearly spins in the air instead of hovering a few millimetres above the floor.
+            const double standH = 0.05;
+            var stand = w.AddBody("box", 0.06, 0.04, standH, new WorldPose { X = 0.03, Y = 0 }, "AHŞAP");
+            stand.Name = "Test sehpası (masaya vidalı)";
             stand.IsStatic = true;
-            var motor = w.AddComponent(Lib, "motor-tt", new WorldPose { X = 0.03, Y = 0, Z = 0.03 });
+            var motor = w.AddComponent(Lib, "motor-tt", new WorldPose { X = 0.03, Y = 0, Z = standH });
             // The wheel hub slides onto the end of the TT output shaft (from the model).
             var (pivot, _, _) = World.ObjectModels.Mount(Lib, "motor-tt");
             var wheel = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = motor.Pose.X + pivot.X, Y = pivot.Y + 0.015, Z = motor.Pose.Z + pivot.Z - 0.0325 }, "KAUÇUK");

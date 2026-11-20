@@ -93,7 +93,7 @@ namespace RobotWin.Studio.World
             Ball(m.Body, 18, 55, -32, 10, shell);
             Box(m.Body, 0, -6, 20, 66, 30, 6, black, 0.3);                            // black centre face
             Box(m.Body, 0, 16, 23.2, 44, 22, 1.2, Color.FromRgb(0x2A, 0x2A, 0x30), 0.5);   // touchpad
-            var glow = new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x30, 0xA0)));
+            var glow = new EmissiveMaterial(new SolidColorBrush(Colors.Black));   // [phys] lit only by the running world
             Box(m.Body, -23.5, 16, 23.4, 1.8, 20, 1.2, Color.FromRgb(0x20, 0x20, 0x24), 0.2, glow);   // lightbar strips
             Box(m.Body, 23.5, 16, 23.4, 1.8, 20, 1.2, Color.FromRgb(0x20, 0x20, 0x24), 0.2, glow);
             Cyl(m.Body, 8, 6, 2, -20, -12, 24, black, 0.3);                           // sticks

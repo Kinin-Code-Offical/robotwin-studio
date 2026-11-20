@@ -193,7 +193,7 @@ namespace RobotWin.Studio.Pages
 
             var sim = W.Simulation;
             var mech = sim.Mechanics;
-            if (_scene != null && mech != null)
+            if (_scene != null && mech != null && sim.State != SimState.Stopped) // [phys] a failed run leaves Mechanics behind
             {
                 if (_sceneMech != mech)
                 {
@@ -204,15 +204,16 @@ namespace RobotWin.Studio.Pages
                     _onFire.Clear();
                 }
 
-                ApplyPilot(mech, dt);
+                if (sim.State == SimState.Running) ApplyPilot(mech, dt); // [phys] no throttle build-up while paused
                 _scene.Update(mech, Temperature, Failed);
                 _scene.UpdateScreens(r => sim.I2cDeviceOf(r));
-                EmitEffects(dt);
+                if (sim.State == SimState.Running) EmitEffects(dt); // [phys]
             }
             else if (_scene != null && _sceneMech != null)
             {
                 _sceneMech = null;
                 _scene.PlaceAtStart();
+                Effects.Clear(); // [phys] stopped: no smoke or fire keeps rising
                 _scene.UpdateHeat(_ => 25, _ => false);
             }
 

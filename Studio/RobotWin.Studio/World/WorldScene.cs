@@ -177,6 +177,7 @@ namespace RobotWin.Studio.World
                 var model = ObjectModels.Build(o, World, Library);
                 var group = new Model3DGroup();
                 group.Children.Add(model.Body);
+                if (FixingMarks(o, model) is { } fixings) group.Children.Add(fixings);   // [phys] "Sabit" shown as screwed/clamped
                 RotateTransform3D? rot = null;
                 if (model.Moving != null && model.Port is { } port)
                 {
@@ -194,6 +195,7 @@ namespace RobotWin.Studio.World
 
             if (Selected != null && !_items.ContainsKey(Selected)) Select(null);
             UpdateKinematics();
+            _cableLayoutStale = true;   // [phys] parts changed: lay the cables out again
             RebuildCables();
             RebuildOverlay();
         }
@@ -341,14 +343,7 @@ namespace RobotWin.Studio.World
         /// <summary>Length of a cable as drawn (sagging between its ends) in metres.</summary>
         public double CableLength(WorldCable cable)
         {
-            if (World == null) return 0.2;
-            var a = World.Find(cable.A.ObjectId);
-            var b = World.Find(cable.B.ObjectId);
-            if (a == null || b == null) return 0.2;
-            var pts = CablePath(WorldAnchor(a, cable.A.Pin), WorldAnchor(b, cable.B.Pin));
-            double len = 0;
-            for (int i = 1; i < pts.Count; i++) len += (pts[i] - pts[i - 1]).Length;
-            return Math.Max(0.03, len);
+            return RopeLength(cable);   // [phys] the same length the rope gets (World/WorldScene.Cables.cs)
         }
 
         // ================================================================ scene building
@@ -576,7 +571,8 @@ namespace RobotWin.Studio.World
                     if (load > 0.8) mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb((byte)Math.Min(255, 120 * load), (byte)Math.Min(120, 30 * load), 0))));
                 }
 
-                g.Children.Add(new GeometryModel3D(Tube(CablePath(pa, pb), r, 8), mat));
+                // [phys] along the rope (drapes over parts, pulled-out plugs hang free)
+                g.Children.Add(new GeometryModel3D(Tube(RopePath(c, pa, pb, out pa, out pb, out _, out _), r, 8), mat));
                 // Plugs at the ends.
                 g.Children.Add(M.Model(M.Box(pa.X, pa.Y, pa.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
                 g.Children.Add(M.Model(M.Box(pb.X, pb.Y, pb.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));

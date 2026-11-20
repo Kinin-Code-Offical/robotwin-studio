@@ -60,7 +60,7 @@ namespace RobotWin.Studio.World
                 if (RadioModels.ExtrasOf(it.Model) is not { Lightbar: { } bar }) continue;
                 var pad = medium?.Find(it.Object.Id) as GamepadNode;
                 Color c;
-                if (pad == null || !pad.PoweredOn) c = medium == null ? Color.FromRgb(0x10, 0x30, 0xA0) : Colors.Black;
+                if (pad == null || !pad.PoweredOn) c = Colors.Black;   // [phys] dark until the world runs and the pad is on
                 else if (pad.PairingMode) c = ((int)(t * 8) % 2 == 0) ? Color.FromRgb(0xC0, 0xD8, 0xFF) : Color.FromRgb(0x10, 0x20, 0x60);   // fast double blink
                 else if (pad.Connected && pad.Feedback.ColorSet) c = Color.FromRgb(pad.Feedback.Red, pad.Feedback.Green, pad.Feedback.Blue);
                 else if (pad.Connected) c = Color.FromRgb(0x20, 0x50, 0xFF);

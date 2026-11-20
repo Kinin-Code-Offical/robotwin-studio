@@ -37,7 +37,7 @@ namespace RobotTwin.CoreSim.Sandbox
     /// ways: servos read their pulse command and report their supply current; DC motors drive their
     /// shaft at the electrically computed speed and feel the shaft's load torque.
     /// </summary>
-    public sealed class WorldPhysics
+    public sealed partial class WorldPhysics // [phys] partial: cables as ropes, floor materials, sleeping in WorldPhysics.Cables.cs
     {
         private sealed class Item
         {
@@ -87,7 +87,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.Scene.RelaxIterations = 4;
             // Small light parts see large accelerations on ordinary touches; report real knocks only.
             p.Scene.ImpactReportG = 40;
-            p.Scene.GroundFriction = env.Friction;
+            p.ConfigureGround(env); // [phys] material-pair floor friction scaled to the tyre grip μ, regions, sleeping
             foreach (var ob in env.Obstacles)
             {
                 p.Scene.AddBody(SceneBody.StaticBox("obstacle", new Vec3(ob.SizeX, ob.SizeY, ob.Height), new Vec3(ob.X, ob.Y, ob.Height / 2), Quat.Identity));
@@ -240,6 +240,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var axis = new Vec3(j.AxisX, j.AxisY, j.AxisZ);
             if (axis.Length < 1e-9) axis = Vec3.UnitZ;
             var kind = j.Kind switch { WorldJointKind.Hinge => JointKind.Hinge, WorldJointKind.Slider => JointKind.Slider, _ => JointKind.Fixed };
+            kind = CasterKind(kind, child, parent); // [phys] a ball held in a socket rolls freely
             // Parent first so Angle measures the child.
             var joint = parent != null ? Scene.AddJoint(kind, parent, child.Body, anchor, axis.Normalized(), j.Id) : Scene.AddJoint(kind, child.Body, null, anchor, axis.Normalized(), j.Id);
             if (j.Lower.HasValue) joint.Lower = kind == JointKind.Hinge ? j.Lower.Value * Math.PI / 180 : j.Lower.Value;
@@ -255,6 +256,7 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 _pending -= Step;
                 DriveActuators(sim);
+                StepCables(Step); // [phys] ropes pull on their plugs before the bodies move
                 Scene.Step(Step);
                 FeedBack();
                 if (++_sonarTick % 5 == 0) Ranging();

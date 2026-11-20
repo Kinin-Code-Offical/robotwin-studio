@@ -44,6 +44,8 @@ namespace RobotWin.Studio.Pages
             _main = main;
             InitializeComponent();
             Scene.Session = _session;
+            _session.CablePins = Scene.CablePinsOf;   // [phys] cables become ropes in the running world
+            _session.CableSeed = Scene.CableSeedOf;   // [phys]
             Scene.MassOf = o => W.ActiveWorld is { } w ? EstimateMass(w, o) / 1000.0 : 0.01;
             Scene.Grid = AppSettings.Current.WorldGridMm / 1000.0;
             Scene.SelectionChanged += _ =>

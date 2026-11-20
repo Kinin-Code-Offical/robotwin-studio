@@ -122,6 +122,8 @@ namespace RobotWin.Studio.World
                     Physics = null;
                     Log.Add(new SimLogEntry(0, "fizik", "Fizik sahnesi kurulamadı: " + ex.Message, AnalogEventKind.Warning));
                 }
+
+                AttachCablePhysics();   // [phys] World/WorldSession.Cables.cs
             }
 
             Simulator.SubstepAccepted = t =>

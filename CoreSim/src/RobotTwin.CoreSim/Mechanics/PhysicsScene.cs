@@ -327,7 +327,7 @@ namespace RobotTwin.CoreSim.Mechanics
     /// soft position correction, relax pass, restitution, warm starting) of contacts with
     /// Coulomb cone friction (static/kinetic), rolling resistance and joints. Deterministic.
     /// </summary>
-    public sealed class PhysicsScene
+    public sealed partial class PhysicsScene // [phys] partial: sleeping, CCD, torsional friction, grip in PhysicsScene.Phys.cs
     {
         private struct BodyState
         {
@@ -345,12 +345,14 @@ namespace RobotTwin.CoreSim.Mechanics
             public double Mu, E, Crr, RollR, Stiff, Vn0;
             public bool Rolling;
             public long Key;
+            public double Ps, MassS, SpinR; // [phys] torsional (spin) friction
         }
 
         private struct WarmImpulse
         {
             public double Pn;
             public Vec3 Pt, Pr;
+            public double Ps; // [phys]
         }
 
         private enum RowType : byte
@@ -559,6 +561,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 return new ContactProperties(mu, mu, 0.05, 0, steel.Stiffness);
             }
 
+            if (GroundGrip is double grip && !inRegion) return GripScaled(bodyMaterial, floor, grip); // [phys] material pairs scaled to the floor's tyre grip
+
             if (GroundFriction.HasValue && !inRegion)
             {
                 double mu = GroundFriction.Value;
@@ -587,6 +591,7 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             if (dt <= 0) return;
             int n = Math.Max(1, (int)Math.Ceiling(dt / MaxSubstep - 1e-9));
+            n = CcdSubsteps(dt, n); // [phys] more substeps for fast thin bodies
             double h = dt / n;
             _h = h;
             int count = Bodies.Count;
@@ -622,11 +627,12 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             PeakContactForce = 0;
+            BeginSleep(dt); // [phys]
             for (int s = 0; s < n; s++) Substep(h);
 
             foreach (var j in Joints)
             {
-                if (!j.Enabled || j.Broken) continue;
+                if (!j.Enabled || j.Broken || JointAsleep(j)) continue; // [phys] sleeping joints keep their last loads
                 j.DriveTorque = j.StepDriveImpulse / dt;
                 j.ReactionForce = j.StepForceImpulse / dt;
                 j.ReactionTorque = j.StepTorqueImpulse / dt;
@@ -648,6 +654,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 b.StepContactImpulse = Vec3.Zero;
                 PeakContactForce = Math.Max(PeakContactForce, b.PeakContactForce);
             }
+
+            EndSleep(dt); // [phys]
         }
 
         private static long PairKey(int a, int b) => a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
@@ -690,7 +698,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var b = Bodies[i];
-                if (b.IsStatic)
+                if (b.IsStatic || Asleep(i)) // [phys]
                 {
                     b.Force = Vec3.Zero;
                     b.Torque = Vec3.Zero;
@@ -725,7 +733,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 st.X = b.Position;
                 st.DX = Vec3.Zero;
                 st.DTheta = Vec3.Zero;
-                if (b.IsStatic)
+                if (b.IsStatic || Asleep(i)) // [phys]
                 {
                     st.V = Vec3.Zero;
                     st.W = Vec3.Zero;
@@ -760,7 +768,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var b = Bodies[i];
-                if (b.IsStatic) continue;
+                if (b.IsStatic || Asleep(i)) continue; // [phys]
                 ref var st = ref _state[i];
                 b.Velocity = st.V;
                 b.AngularVelocity = st.W;
@@ -781,7 +789,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var b = Bodies[i];
-                if (b.IsStatic) continue;
+                if (b.IsStatic || Asleep(i)) continue; // [phys]
                 b.Velocity = _state[i].V;
                 b.AngularVelocity = _state[i].W;
             }
@@ -904,17 +912,17 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 int a = _order[ii];
                 var ba = Bodies[a];
-                if (!ba.IsStatic && GroundEnabled) CollideGround(a, h);
+                if (!ba.IsStatic && GroundEnabled && !Asleep(a)) CollideGround(a, h); // [phys]
                 double maxX = _hi[a].X;
                 for (int jj = ii + 1; jj < m; jj++)
                 {
                     int b = _order[jj];
                     if (_minX[b] > maxX) break;
                     var bb = Bodies[b];
-                    if (ba.IsStatic && bb.IsStatic) continue;
+                    if ((ba.IsStatic || Asleep(a)) && (bb.IsStatic || Asleep(b))) continue; // [phys]
                     if (!Overlap(a, b)) continue;
                     if (_noCollide.Count > 0 && _noCollide.Contains(PairKey(a, b))) continue;
-                    if (ba.IsStatic) CollidePair(b, a, h);
+                    if (ba.IsStatic || (Asleep(a) && !bb.IsStatic)) CollidePair(b, a, h); // [phys]
                     else CollidePair(a, b, h);
                 }
             }
@@ -1323,6 +1331,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 c.MassR2 = r2 > 0 ? 1 / r2 : 0;
             }
 
+            SetupSpin(ref c, sa.InvI, invIB, props, rollRadius); // [phys]
             c.MaxPn = 0;
             c.Key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)(feature & 0x1FFFFF);
             if (_warm.TryGetValue(c.Key, out var ws))
@@ -1332,10 +1341,12 @@ namespace RobotTwin.CoreSim.Mechanics
                 c.Pt2 = ws.Pt.Dot(c.T2);
                 c.Pr1 = c.Rolling ? ws.Pr.Dot(c.T1) : 0;
                 c.Pr2 = c.Rolling ? ws.Pr.Dot(c.T2) : 0;
+                c.Ps = c.SpinR > 0 ? ws.Ps : 0; // [phys]
             }
             else
             {
                 c.Pn = c.Pt1 = c.Pt2 = c.Pr1 = c.Pr2 = 0;
+                c.Ps = 0; // [phys]
             }
         }
 
@@ -1399,6 +1410,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (c.Pn == 0 && c.Pt1 == 0 && c.Pt2 == 0) continue;
                 ApplyImpulse(c.A, c.B, c.RA, c.RB, c.N * c.Pn + c.T1 * c.Pt1 + c.T2 * c.Pt2);
                 if (c.Rolling && (c.Pr1 != 0 || c.Pr2 != 0)) ApplyAngular(c.A, c.B, c.T1 * c.Pr1 + c.T2 * c.Pr2);
+                if (c.Ps != 0) ApplyAngular(c.A, c.B, c.N * c.Ps); // [phys]
             }
 
             for (int i = 0; i < _pointCount; i++)
@@ -1499,11 +1511,16 @@ namespace RobotTwin.CoreSim.Mechanics
                     c.Pr2 = r2;
                     if (d1 != 0 || d2 != 0) ApplyAngular(c.A, c.B, c.T1 * d1 + c.T2 * d2);
                 }
+
+                if (c.SpinR > 0) SolveSpin(ref c); // [phys] torsional friction of the contact patch
             }
         }
 
         private void ApplyRestitution(double h)
         {
+            // [phys] several Gauss-Seidel passes: one pass over a face's corners is order-dependent
+            // and made flat-dropped boxes spin and tumble on landing.
+            for (int pass = 0; pass < Math.Max(1, RestitutionPasses); pass++)
             for (int i = 0; i < _contactCount; i++)
             {
                 ref var c = ref _contacts[i];
@@ -1524,7 +1541,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < _contactCount; i++)
             {
                 ref var c = ref _contacts[i];
-                _warmNext[c.Key] = new WarmImpulse { Pn = c.Pn, Pt = c.T1 * c.Pt1 + c.T2 * c.Pt2, Pr = c.T1 * c.Pr1 + c.T2 * c.Pr2 };
+                _warmNext[c.Key] = new WarmImpulse { Pn = c.Pn, Pt = c.T1 * c.Pt1 + c.T2 * c.Pt2, Pr = c.T1 * c.Pr1 + c.T2 * c.Pr2, Ps = c.Ps }; // [phys] Ps
 
                 // Net contact impulse per body (averaged over the step later); an impact is
                 // spread over the physical contact time π·√(m/k) of the material pair.
@@ -1605,6 +1622,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (!j.Enabled || j.Broken) continue;
                 int p = j.ParentSlot, c = j.ChildSlot;
                 if (c < 0 || (p >= 0 && Bodies[p].IsStatic && Bodies[c].IsStatic)) continue;
+                if (JointAsleep(j)) continue; // [phys]
                 var qP = p >= 0 ? Bodies[p].Orientation : Quat.Identity;
                 var xP = p >= 0 ? Bodies[p].Position : Vec3.Zero;
                 var qC = Bodies[c].Orientation;
@@ -1971,7 +1989,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int ji = 0; ji < Joints.Count; ji++)
             {
                 var j = Joints[ji];
-                if (!j.Enabled || j.Broken) continue;
+                if (!j.Enabled || j.Broken || JointAsleep(j)) continue; // [phys]
                 var force = j.SubForce;
                 var torque = j.SubTorque;
                 j.StepDriveImpulse += j.SubDrive;

@@ -40,7 +40,7 @@ namespace RobotWin.Studio.Assembly3D
     /// propellers, boards, batteries and sensors — and moves it every frame from
     /// the rigid-body state.
     /// </summary>
-    public sealed class AssemblyScene
+    public sealed partial class AssemblyScene // [phys] partial: Assembly3D/AssemblyScene.Rest.cs
     {
         private readonly MatrixTransform3D _bodyTransform = new MatrixTransform3D();
         private readonly TranslateTransform3D _shadowTransform = new TranslateTransform3D();
@@ -114,7 +114,8 @@ namespace RobotWin.Studio.Assembly3D
             _comOffset.OffsetX = _comOffset.OffsetY = _comOffset.OffsetZ = 0;
             double x = Assembly.StartX ?? Arena.StartX, y = Assembly.StartY ?? Arena.StartY;
             double yaw = Assembly.StartYaw.HasValue ? Assembly.StartYaw.Value * Math.PI / 180 : Arena.StartYaw;
-            SetPose(new Vec3(x, y, RideHeight), Quat.FromYaw(yaw));
+            SetPose(new Vec3(x, y, Arena.GroundHeight(x, y) + RideHeight), Quat.FromYaw(yaw)); // [phys] on the floor or terrain where it starts
+            ResetMotion(); // [phys] wheels, props and pushed objects back at rest
         }
 
         public void SetPose(Vec3 position, Quat q)
@@ -252,7 +253,7 @@ namespace RobotWin.Studio.Assembly3D
             var floor = new GeometryModel3D(TexturedTop(0, 0, 0, w, d), new DiffuseMaterial(new ImageBrush(RenderFloor(a, margin))));
             Root.Children.Add(floor);
             // A large dark ground plane so the horizon is not empty.
-            Root.Children.Add(Model(Box(0, 0, -0.03, 40, 40, 0.02), Matte(Rgb(0x141416))));
+            Root.Children.Add(Model(Box(0, 0, -0.012, 40, 40, 0.02), Matte(Rgb(0x141416)))); // [phys] top 2 mm under the floor: nothing seems to hover past the arena edge
 
             if (a.Walls)
             {
