@@ -356,6 +356,7 @@ Task* new_task(void (*fn)(void*), const char* name, int prio, bool is_sys) {
 void loop_task_main(void*) {
     setup();
     for (;;) {
+        twdt_loop_iteration();
         loop();
         run_serial_events();
         charge(cost(1000.0));  // loopTask bookkeeping per iteration (keeps an empty loop() advancing time)

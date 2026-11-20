@@ -413,6 +413,7 @@ rw_hw_timer* timer_alloc(int index, uint32_t freq) {
 namespace rw {
 
 void hal_reset() {
+    twdt_reset();
     memset(g_pins, 0, sizeof g_pins);
     for (int p = 0; p < 40; p++) {
         g_pins[p].ledc = -1;
@@ -1238,6 +1239,17 @@ extern "C" void esp_fill_random(void* buf, size_t len) {
     uint8_t* b = static_cast<uint8_t*>(buf);
     for (size_t i = 0; i < len; i++) b[i] = (uint8_t)random32();
 }
+
+namespace rw {
+void system_restart(int reset_reason) {
+    if (has_api && api.system_event) {
+        ApiScope s;
+        api.system_event(api.user, RW_EVENT_RESTART, reset_reason);
+    }
+
+    block_forever();
+}
+}  // namespace rw
 
 extern "C" void esp_restart(void) {
     rw::log(RW_LOG_INFO, "esp_restart() requested by the sketch");

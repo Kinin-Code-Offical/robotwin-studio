@@ -54,6 +54,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public const int PadForget = 0x43;
         public const int PadDisconnect = 0x44;    // in: i32 index
 
+        // SPI master (handled by the board itself, not the radio medium).
+        public const int SpiBegin = 0x60;         // in: i32 bus, i32 sck, i32 miso, i32 mosi, i32 ss   ret: 0
+        public const int SpiTransfer = 0x61;      // in: i32 bus, u32 hz, u8 mode, u8 lsb_first, u16 n, n bytes   out: n bytes   ret: n
+        public const int SpiEnd = 0x62;           // in: i32 bus
+
         public const int PadRecordSize = 96;
         public const int BleScanRecordSize = 112;
         public const int WifiScanRecordSize = 42;

@@ -446,6 +446,7 @@ namespace RobotTwin.CoreSim.Automation
                         int.TryParse(parameters.TryGetValue("columns", out var cs) ? cs : "16", out var cc) ? cc : 16,
                         int.TryParse(parameters.TryGetValue("rows", out var rs) ? rs : "2", out var rr) ? rr : 2, address == 0 ? (byte)0x27 : address),
                     "mpu6050" => SeededMpu(address == 0 ? (byte)0x68 : address, gravity, J.StableHash(fullRef) ^ (Seed * 7919 + ++index)),
+                    "bmp280" => Firmware.SpiWiring.Barometer(fullRef, parameters, new Firmware.SpiWiring.Context { AmbientC = () => AmbientC, AltitudeOf = AltitudeOf, Seed = Seed * 7919 + 17 }),
                     _ => null
                 };
                 if (device == null) continue;
@@ -455,6 +456,34 @@ namespace RobotTwin.CoreSim.Automation
                 I2cDevices[r] = device;
                 AddEvent(new RunnerEvent(0, r, RunnerEventKind.Info, $"I²C veri yoluna bağlandı ({boardRef}, 0x{device.Address:X2})"));
             }
+        }
+
+        /// <summary>Ambient temperature for sensor models (°C).</summary>
+        protected virtual double AmbientC => 25;
+
+        /// <summary>Height above sea level of the part with this designator (m), for barometers.</summary>
+        protected virtual double AltitudeOf(string fullRef) => 0;
+
+        /// <summary>Puts the SPI devices wired to an ESP32's GPIOs on its SPI master (same rules as the app).</summary>
+        protected void AttachSpi(Firmware.Esp32.Esp32CoSimulation esp, string boardRef)
+        {
+            var c = Compiled!;
+            var ctx = new Firmware.SpiWiring.Context
+            {
+                PinVolts = (r, p) => Simulator == null ? 0 : c.PinVoltage(Simulator, r, p),
+                AmbientC = () => AmbientC,
+                AltitudeOf = AltitudeOf,
+                Seed = Seed * 7919 + 17
+            };
+            var slaves = Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => c.PinNode(boardRef, "IO" + g), Reach,
+                r =>
+                {
+                    if (Simulator == null) return false;
+                    double vcc = c.PinNode(r, "VDD") > 0 ? c.PinVoltage(Simulator, r, "VDD") - c.PinVoltage(Simulator, r, "DGND") : c.PinVoltage(Simulator, r, "VCC") - c.PinVoltage(Simulator, r, "GND");
+                    return vcc > 2.5;
+                },
+                ctx, m => AddEvent(new RunnerEvent(0, boardRef, RunnerEventKind.Info, m)));
+            esp.Spi.Slaves.AddRange(slaves);
         }
 
         private static Firmware.Devices.Mpu6050 SeededMpu(byte address, double gravity, int seed)

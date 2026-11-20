@@ -164,6 +164,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private bool _enHigh = true;
         private bool _resetRequested;
         private bool _pendingRestart;
+        private int _pendingRestartReason = 3;
         private bool _pendingSleep;
         private long _pendingSleepUs = -1;
         private int _ext0Gpio = -1;
@@ -214,6 +215,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _i2cRead = OnI2cRead;
             _i2cStop = OnI2cStop;
             _systemEvent = OnSystemEvent;
+            Spi.Warning += m => Note("SPI: " + m);
             _radioRequest = OnRadioRequest;
             _api = new Esp32Abi.HostApi
             {
@@ -391,8 +393,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 }
                 else if (_pendingRestart)
                 {
-                    Note("ESP.restart()");
-                    Boot(end, 3);
+                    Note(_pendingRestartReason == 6 ? "task watchdog reset" : _pendingRestartReason == 4 ? "panic reset" : "ESP.restart()");
+                    if (_pendingRestartReason == 6) WatchdogResets++;
+                    Boot(end, _pendingRestartReason);
                 }
                 else if (_pendingSleep)
                 {
@@ -422,6 +425,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _wakeAt = double.NaN;
             _wifiOn = false;
             ResetReason = resetReason;
+            for (int b = 0; b < _spiPins.Length; b++) _spiPins[b] = (-1, -1, -1);
+            foreach (var slave in Spi.Slaves)
+                if (slave.Selected) Spi.PinChanged(slave.Cs, true);   // pins are released at reset: CS floats high
             I2c.EndTransfer();
             I2c1.EndTransfer();
 
@@ -822,6 +828,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             bool v = level != 0;
             if (s.Out == v) return;
             s.Out = v;
+            if ((s.Mode & ModeOutputBit) != 0) Spi.PinChanged(gpio, v);   // CS edges frame SPI transfers
             if (s.Pin != null && (s.Mode & ModeOutputBit) != 0 && (s.Mode & ModeOpenDrain) == 0 && !s.Pwm && !s.Dac && Options.ExactOutputEdges)
             {
                 try
@@ -927,8 +934,70 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             catch (Exception ex) { Note("I2C device error: " + ex.Message); }
         }
 
+        /// <summary>SPI devices wired to this board (see <see cref="SpiWiring"/>).</summary>
+        public SpiBus Spi { get; } = new SpiBus();
+
+        /// <summary>Pins each SPI host uses (bus 1 FSPI, 2 HSPI, 3 VSPI) after SPI.begin(); −1 before.</summary>
+        private readonly (int Sck, int Miso, int Mosi)[] _spiPins = { (-1, -1, -1), (-1, -1, -1), (-1, -1, -1), (-1, -1, -1) };
+
+        private int OnSpiRequest(int op, IntPtr input, int inputLength, IntPtr output, int outputCapacity)
+        {
+            try
+            {
+                int n = Math.Max(0, Math.Min(inputLength, _radioIn.Length));
+                if (n > 0 && input != IntPtr.Zero) Marshal.Copy(input, _radioIn, 0, n);
+                int I32(int at) => at + 4 <= n ? BitConverter.ToInt32(_radioIn, at) : -1;
+                int bus = Math.Max(0, Math.Min(3, I32(0)));
+                switch (op)
+                {
+                    case Esp32RadioOp.SpiBegin:
+                        _spiPins[bus] = (I32(4), I32(8), I32(12));
+                        Note($"SPI.begin: SCK IO{_spiPins[bus].Sck}, MISO IO{_spiPins[bus].Miso}, MOSI IO{_spiPins[bus].Mosi}" +
+                             (Spi.Slaves.Count == 0 ? " — bu veri yoluna bağlı SPI cihazı yok" : $", {Spi.Slaves.Count} cihaz kablolu"));
+                        return 0;
+                    case Esp32RadioOp.SpiEnd:
+                        _spiPins[bus] = (-1, -1, -1);
+                        return 0;
+                    case Esp32RadioOp.SpiTransfer:
+                    {
+                        if (n < 12) return -1;
+                        uint hz = BitConverter.ToUInt32(_radioIn, 4);
+                        int mode = _radioIn[8];
+                        bool lsb = _radioIn[9] != 0;
+                        int count = Math.Min(BitConverter.ToUInt16(_radioIn, 10), Math.Min(n - 12, outputCapacity));
+                        var (sck, miso, mosi) = _spiPins[bus];
+                        for (int i = 0; i < count; i++)
+                        {
+                            byte b = _radioIn[12 + i];
+                            if (lsb) b = Reverse(b);
+                            byte r = sck < 0 ? (byte)0xFF : Spi.Transfer(sck, miso, mosi, b, mode, hz);
+                            _radioOut[i] = lsb ? Reverse(r) : r;
+                        }
+
+                        if (count > 0 && output != IntPtr.Zero) Marshal.Copy(_radioOut, 0, output, count);
+                        return count;
+                    }
+                }
+
+                return -1;
+            }
+            catch (Exception ex)
+            {
+                Note("SPI device error: " + ex.Message);
+                return -2;
+            }
+        }
+
+        private static byte Reverse(byte b)
+        {
+            int r = 0;
+            for (int i = 0; i < 8; i++) r |= ((b >> i) & 1) << (7 - i);
+            return (byte)r;
+        }
+
         private int OnRadioRequest(IntPtr user, int op, IntPtr input, int inputLength, IntPtr output, int outputCapacity)
         {
+            if (op >= Esp32RadioOp.SpiBegin && op <= Esp32RadioOp.SpiEnd) return OnSpiRequest(op, input, inputLength, output, outputCapacity);
             var radio = Radio;
             if (radio == null) return Esp32RadioOp.NotSupported;
             try
@@ -955,6 +1024,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             {
                 case Esp32Abi.EventRestart:
                     _pendingRestart = true;
+                    _pendingRestartReason = arg > 0 && arg < 32 ? (int)arg : 3;   // the HAL passes the reset reason (6 = task watchdog)
                     break;
                 case Esp32Abi.EventDeepSleep:
                     _pendingSleep = true;

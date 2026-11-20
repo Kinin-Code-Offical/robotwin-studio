@@ -76,7 +76,10 @@ void heap_free(void* p);
 size_t heap_in_use();
 
 /* ---- implemented by the HAL files, called by the runtime ---- */
-void hal_reset();                                          /* rw_init */
+void hal_reset();
+void twdt_reset();                                         /* chip reset: TWDT back to boot defaults (rw_task_wdt.cpp) */
+void twdt_loop_iteration();                                /* before every loop(): feeds the loop WDT when enabled */
+void system_restart(int reset_reason);                     /* reboot the chip with an esp_reset_reason_t (rw_hal.cpp) */                                          /* rw_init */
 void hal_pin_changed(int gpio, int level, uint64_t time_ns);   /* rw_pin_changed (host thread) */
 void hal_slice_start();                                    /* start of every rw_run_until */
 int serial_rx_push(int port, const uint8_t* data, int length);

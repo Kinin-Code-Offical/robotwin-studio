@@ -399,6 +399,7 @@ namespace RobotWin.Studio.World
                 AttachCamera(cosim, prog);   // [sense] esp_camera bridge
                 Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (ESP32 HAL modeli)", AnalogEventKind.StateChange));
                 AttachI2c(cosim.I2c, prog);
+                AttachSpi(cosim, prog);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is InvalidOperationException || ex is System.IO.IOException)
             {
@@ -435,6 +436,34 @@ namespace RobotWin.Studio.World
         /// <summary>Protocol model of an I²C module (display, IMU) by world designator ("O4/DS1", or the component object's part).</summary>
         public II2cDevice? I2cDeviceOf(string fullRefDes) => _i2c.TryGetValue(fullRefDes, out var d) ? d : null;
 
+        private RobotTwin.CoreSim.Firmware.SpiWiring.Context SensorContext() => new RobotTwin.CoreSim.Firmware.SpiWiring.Context
+        {
+            PinVolts = (r, p) => Simulator == null || Circuit == null ? 0 : Circuit.Compiled.PinVoltage(Simulator, r, p),
+            AmbientC = () => World?.Environment.AmbientC ?? 25,
+            AltitudeOf = fullRef =>
+            {
+                int slash = fullRef.IndexOf('/');
+                string id = slash > 0 ? fullRef.Substring(0, slash) : fullRef;
+                return Physics?.PoseOf(id)?.Position.Z ?? World?.Find(id)?.Pose.Z ?? 0;
+            },
+            Seed = 17
+        };
+
+        /// <summary>SPI devices (MCP3008, BMP280 in SPI mode …) wired to an ESP32's GPIOs.</summary>
+        private void AttachSpi(Esp32CoSimulation esp, WorldProgrammable prog)
+        {
+            var c = Circuit!.Compiled;
+            var slaves = RobotTwin.CoreSim.Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => c.PinNode(prog.RefDes, "IO" + g), Reach,
+                r =>
+                {
+                    if (Simulator == null) return false;
+                    double vcc = c.PinNode(r, "VDD") > 0 ? c.PinVoltage(Simulator, r, "VDD") - c.PinVoltage(Simulator, r, "DGND") : c.PinVoltage(Simulator, r, "VCC") - c.PinVoltage(Simulator, r, "GND");
+                    return vcc > 2.5;
+                },
+                SensorContext(), m => Log.Add(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)));
+            esp.Spi.Slaves.AddRange(slaves);
+        }
+
         private void AttachI2c(I2cBus bus, WorldProgrammable prog)
         {
             // On the board itself, then across cables: the two nets are joined by a wire resistor, so compare nodes instead of names.
@@ -455,6 +484,7 @@ namespace RobotWin.Studio.World
                         int.TryParse(parameters.TryGetValue("columns", out var cs) ? cs : "16", out var cc) ? cc : 16,
                         int.TryParse(parameters.TryGetValue("rows", out var rs) ? rs : "2", out var rr) ? rr : 2, address == 0 ? (byte)0x27 : address),
                     "mpu6050" => new RobotTwin.CoreSim.Firmware.Devices.Mpu6050(address == 0 ? (byte)0x68 : address) { AccelNoise = 0.02, GyroNoise = 0.002, AccelZ = World!.Environment.Gravity },
+                    "bmp280" => RobotTwin.CoreSim.Firmware.SpiWiring.Barometer(fullRef, parameters, SensorContext()),
                     _ => SenseI2c(def.Id, parameters, address, fullRef)   // [sense] HMC5883L compass
                 };
                 if (device == null) continue;

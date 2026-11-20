@@ -164,4 +164,9 @@ void analogSetPinAttenuation(uint8_t pin, int attenuation);
 
 #endif /* __cplusplus */
 
+/* Arduino loop watchdog (subscribes loopTask to the task watchdog; loop() feeds it every iteration). */
+void enableLoopWDT();
+void disableLoopWDT();
+void feedLoopWDT();
+
 #endif

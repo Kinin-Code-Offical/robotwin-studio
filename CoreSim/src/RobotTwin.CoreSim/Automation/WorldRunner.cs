@@ -132,7 +132,11 @@ namespace RobotTwin.CoreSim.Automation
                     }
 
                     board.Firmware = prog.Firmware?.FileName ?? fw ?? string.Empty;
-                    if (AttachEsp32(board, source) is { } esp) AttachI2c(esp.I2c, prog.RefDes, World.Environment.Gravity);
+                    if (AttachEsp32(board, source) is { } esp)
+                    {
+                        AttachI2c(esp.I2c, prog.RefDes, World.Environment.Gravity);
+                        AttachSpi(esp, prog.RefDes);
+                    }
                     continue;
                 }
 
@@ -232,6 +236,17 @@ namespace RobotTwin.CoreSim.Automation
             ?? throw ApiException.Missing("Nesne / object '" + key + "'");
 
         public override IEnumerable<string> ObjectIds() => World.Objects.Select(o => o.Id);
+
+        protected override double AmbientC => World.Environment.AmbientC;
+
+        /// <summary>Height of the object carrying a part ("O4/U1" → O4; a component object is its own part).</summary>
+        protected override double AltitudeOf(string fullRef)
+        {
+            int slash = fullRef.IndexOf('/');
+            string id = slash > 0 ? fullRef.Substring(0, slash) : fullRef;
+            if (TryGetBody(id, out var b)) return b.Position.Z;
+            return World.Find(id)?.Pose.Z ?? 0;
+        }
 
         public override bool TryGetBody(string objectId, out BodyState state)
         {
