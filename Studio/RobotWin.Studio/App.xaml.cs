@@ -82,6 +82,18 @@ namespace RobotWin.Studio
 
             if (Arg("--snapshot") is { } snapshotPath)
             {
+                if (Arg("--page") == "model")
+                {
+                    // 3D modeller: rendered on its own while it is not part of MainWindow's navigation.
+                    window.Navigate("model");
+                    Pages.ModelPage.E2eLogPath = Path.ChangeExtension(snapshotPath, ".txt");
+                    if (window.CurrentPage != "model")
+                    {
+                        Pages.ModelPage.RunSnapshot(snapshotPath, Arg("--size"), Arg("--fault"), () => Shutdown(0));
+                        return;
+                    }
+                }
+
                 RunSnapshot(window, snapshotPath, Arg("--page") ?? "home", Arg("--example"), Arg("--simulate"), Arg("--size"), Arg("--fault"), Arg("--wait"));
                 return;
             }

@@ -39,13 +39,14 @@ namespace RobotWin.Studio
         private readonly SchematicPage _schematic;
         private readonly PcbPage _pcb;
         private readonly AssemblyPage _assembly;
+        private readonly ModelPage _model;
         private readonly CodePage _code;
         private readonly LibraryPage _library;
         private readonly SettingsPage _settings;
         private readonly Dictionary<string, UserControl> _pages = new Dictionary<string, UserControl>();
         private readonly Dictionary<string, string> _pageNames = new Dictionary<string, string>
         {
-            ["world"] = "Dünya", ["schematic"] = "Devre", ["pcb"] = "PCB", ["code"] = "Kod", ["assembly"] = "Montaj",
+            ["world"] = "Dünya", ["schematic"] = "Devre", ["pcb"] = "PCB", ["code"] = "Kod", ["assembly"] = "Montaj", ["model"] = "Modelle",
             ["library"] = "Kütüphane", ["home"] = "Başla", ["settings"] = "Ayarlar"
         };
 
@@ -70,6 +71,7 @@ namespace RobotWin.Studio
             _schematic = new SchematicPage();
             _pcb = new PcbPage();
             _assembly = new AssemblyPage();
+            _model = new ModelPage(this);
             _code = new CodePage();
             _library = new LibraryPage(this);
             _settings = new SettingsPage();
@@ -78,6 +80,7 @@ namespace RobotWin.Studio
             _pages["schematic"] = _schematic;
             _pages["pcb"] = _pcb;
             _pages["assembly"] = _assembly;
+            _pages["model"] = _model;
             _pages["code"] = _code;
             _pages["library"] = _library;
             _pages["settings"] = _settings;
@@ -409,9 +412,10 @@ namespace RobotWin.Studio
             Bind(Key.D1, ModifierKeys.Control, () => Navigate("schematic"));
             Bind(Key.D2, ModifierKeys.Control, () => Navigate("pcb"));
             Bind(Key.D3, ModifierKeys.Control, () => Navigate("code"));
-            Bind(Key.D4, ModifierKeys.Control, () => Navigate("assembly"));
-            Bind(Key.D5, ModifierKeys.Control, () => Navigate("world"));
-            Bind(Key.D6, ModifierKeys.Control, () => Navigate("library"));
+            Bind(Key.D4, ModifierKeys.Control, () => Navigate("model"));
+            Bind(Key.D5, ModifierKeys.Control, () => Navigate("assembly"));
+            Bind(Key.D6, ModifierKeys.Control, () => Navigate("world"));
+            Bind(Key.D7, ModifierKeys.Control, () => Navigate("library"));
             Bind(Key.B, ModifierKeys.Control, () => Rail.IsExpanded = !Rail.IsExpanded);
             _railTimer.Tick += (_, _) => Rail.Refresh();
             _railTimer.Start();
@@ -464,6 +468,9 @@ namespace RobotWin.Studio
                     int boards = sch.Parts.Count(p => lib.Find(p.PartId)?.Symbol == RobotTwin.CoreSim.Design.SymbolKind.Board);
                     return new RailStatus(boards == 0 ? "Programlanabilir kart yok" : $"{boards} programlanabilir kart", boards == 0 ? RailSeverity.None : RailSeverity.Ok);
                 }
+
+                case "model":
+                    return new RailStatus("Parça ve gövde modelle, dünyaya gönder");
 
                 case "assembly":
                 {
@@ -564,6 +571,7 @@ namespace RobotWin.Studio
         /// <summary>Used by --snapshot: puts the page in a representative state.</summary>
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
+            if (page == "model") _model.PrepareSnapshot(fault);
             if (page == "pcb") _pcb.AutoLayoutForSnapshot(fault);
             if (page == "pcb" && fault == "fpeditor")
             {

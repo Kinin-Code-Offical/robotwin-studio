@@ -127,11 +127,12 @@ namespace RobotWin.Studio.Shell
             AddStage("schematic", "Devre", "I.Schematic", 0x5B8DFF, "Şema çiz, parçaları bağla, simüle et (Ctrl+1)");
             AddStage("pcb", "PCB", "I.Pcb", 0x4CC07E, "Kartı yerleştir, yolları çiz, üretime hazırla (Ctrl+2)");
             AddStage("code", "Kod", "I.Chip", 0xA77BFF, "Kartların yazılımını yaz ve derle (Ctrl+3)");
-            AddStage("assembly", "Montaj", "I.Cube", 0xF08A3C, "Gövde, motorlar ve mekanik (Ctrl+4)");
-            AddStage("world", "Dünya", "I.World", 0x2FC2B0, "Hepsini bir arada gerçek fizikle dene (Ctrl+5)");
+            AddStage("model", "Modelle", "I.Part", 0xE0B04A, "Şase, braket, kutu: 3D parça modelle, birleştir, dünyaya gönder (Ctrl+4)");
+            AddStage("assembly", "Montaj", "I.Cube", 0xF08A3C, "Gövde, motorlar ve mekanik (Ctrl+5)");
+            AddStage("world", "Dünya", "I.World", 0x2FC2B0, "Hepsini bir arada gerçek fizikle dene (Ctrl+6)");
 
             var tools = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
-            tools.Children.Add(Tool("library", "Kütüphane", "I.Library", "Parçalar, modeller, ayak izleri (Ctrl+6)"));
+            tools.Children.Add(Tool("library", "Kütüphane", "I.Library", "Parçalar, modeller, ayak izleri (Ctrl+7)"));
             tools.Children.Add(Tool("settings", "Ayarlar", "I.Settings", "Uygulama ayarları"));
             tools.Children.Add(ExpandToggle());
             SetRow(tools, 2);
