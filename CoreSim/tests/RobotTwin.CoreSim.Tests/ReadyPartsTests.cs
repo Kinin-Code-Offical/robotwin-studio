@@ -241,8 +241,9 @@ namespace RobotTwin.CoreSim.Tests
             // The prop turns with the shaft, in its working direction.
             Assert.InRange(r.Rpm, motor.OutputRpm * 0.95, motor.OutputRpm * 1.05);
             // Thrust and torque from the coefficient laws at the simulated speed.
-            Assert.Equal(PropellerAero.Thrust(spec, r.Rpm), r.Thrust, 6);
-            Assert.Equal(PropellerAero.Torque(spec, r.Rpm), r.Torque, 9);
+            // At the scene's air density (the world environment computes it from temperature/pressure).
+            Assert.Equal(PropellerAero.Thrust(spec, r.Rpm, p.Scene.AirDensity), r.Thrust, 6);
+            Assert.Equal(PropellerAero.Torque(spec, r.Rpm, p.Scene.AirDensity), r.Torque, 9);
             // The motor feels the drag torque: well below its 48 000 rpm no-load speed, many times its 0.15 A no-load current.
             Assert.True(motor.OutputRpm < 0.75 * 48000, "the prop must load the motor");
             Assert.True(motor.Current > 5 * 0.15, "loaded motor draws more current");

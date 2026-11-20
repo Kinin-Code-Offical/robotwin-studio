@@ -115,6 +115,7 @@ namespace RobotWin.Studio.World
 
             StartRadio();   // [radio] World/WorldSession.Radio.cs
             AttachFirmware();
+            if (geometry != null) PrepareSdk(world);   // [sdk] World/WorldSession.Sdk.cs: plugins, scripts
             if (geometry != null)
             {
                 try
@@ -172,6 +173,7 @@ namespace RobotWin.Studio.World
             _avr.Clear();
             StopRadio();   // [radio]
             StopSense();   // [sense]
+            StopSdk();   // [sdk]
             if (Simulator != null) Simulator.SubstepAccepted = null;
             Simulator = null;
             Circuit = null;
@@ -254,6 +256,7 @@ namespace RobotWin.Studio.World
         private void DrainEvents()
         {
             DrainCellMessages();   // [arm] World/WorldSession.Cell.cs
+            DrainSdkEvents();   // [sdk]
             if (Physics != null)
             {
                 foreach (var pe in Physics.DrainEvents())

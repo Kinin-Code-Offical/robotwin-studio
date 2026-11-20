@@ -1,0 +1,10 @@
+{
+  "id": "robotwin.samples",
+  "name": "SDK örnekleri",
+  "version": "1.0.0",
+  "author": "RobotWin",
+  "description": "Rüzgâr türbini, dipol mıknatıs, Reynolds sayısına bağlı sürükleme, termal yükselme, yumuşak sınır alanı ve rüzgâr hızı sensörü (özel devre elemanı).",
+  "assembly": "RobotWinPlugin.Samples.dll",
+  "entryTypes": [],
+  "sdkVersion": 1
+}

@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    RobotWin Studio plugin template.
+
+    Build:   dotnet build -c Release
+    Install: dotnet build -c Release -p:Deploy=true
+             (copies the DLL and plugin.json to %APPDATA%\RobotWinStudio\Plugins\<AssemblyName>\)
+    Then in the app: Dünya → Betikler → "Eklentileri yeniden yükle" (or restart).
+
+    The SDK assembly (RobotTwin.CoreSim.dll) is referenced but NOT copied: the app shares its own copy
+    with every plugin, so your types implement the app's interfaces.
+    Inside the RobotWin repository the template references CoreSim's project; elsewhere set
+    RobotWinDir to the folder that contains RobotTwin.CoreSim.dll (the app's install folder):
+             dotnet build -p:RobotWinDir="C:\Program Files\RobotWin Studio\"
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>RobotWinPlugin.Samples</AssemblyName>
+    <RootNamespace>RobotWinPlugin.Samples</RootNamespace>
+    <Deterministic>true</Deterministic>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <RepoCoreSim>$(MSBuildThisFileDirectory)..\..\..\CoreSim\src\RobotTwin.CoreSim\RobotTwin.CoreSim.csproj</RepoCoreSim>
+    <PluginInstallDir>$(APPDATA)\RobotWinStudio\Plugins\$(AssemblyName)\</PluginInstallDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RobotWinDir)' == '' And Exists('$(RepoCoreSim)')">
+    <ProjectReference Include="$(RepoCoreSim)" Private="false" SetTargetFramework="TargetFramework=net9.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RobotWinDir)' != '' Or !Exists('$(RepoCoreSim)')">
+    <Reference Include="RobotTwin.CoreSim">
+      <HintPath>$(RobotWinDir)RobotTwin.CoreSim.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="RobotTwin.CoreSim.Sdk" />
+    <Using Include="RobotTwin.CoreSim.Mechanics" />
+    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Deploy)' == 'true'">
+    <MakeDir Directories="$(PluginInstallDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb;$(TargetDir)plugin.json" DestinationFolder="$(PluginInstallDir)" SkipUnchangedFiles="false" ContinueOnError="true" />
+    <Message Importance="high" Text="Eklenti kuruldu: $(PluginInstallDir)" />
+  </Target>
+</Project>

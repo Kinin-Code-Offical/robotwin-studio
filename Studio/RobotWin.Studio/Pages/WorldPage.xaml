@@ -95,6 +95,8 @@
                         <RadioButton x:Name="TabParts" Style="{StaticResource Chip}" Content="Parçalar" GroupName="pal" Margin="4,0,4,4" Click="OnPaletteTab"/>
                         <RadioButton x:Name="TabMech" Style="{StaticResource Chip}" Content="Mekanik" GroupName="pal" Margin="0,0,0,4" Click="OnPaletteTab"/>
                         <RadioButton x:Name="TabEnv" Style="{StaticResource Chip}" Content="Ortam" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab"/>
+                        <!-- [sdk] Pages/WorldPage.Sdk.cs -->
+                        <RadioButton x:Name="TabSdk" Style="{StaticResource Chip}" Content="Betikler" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab" ToolTip="Betikler ve eklentiler: kendi fizik kodunuz, ifadeler, kuvvet alanları"/>
                     </WrapPanel>
                     <Grid x:Name="SearchRow" DockPanel.Dock="Top" Margin="0,0,6,8" Visibility="Collapsed">
                         <TextBox x:Name="SearchBox" Tag="Parça ara (servo, motor, pil, sensör…)" Padding="28,4,8,4" TextChanged="OnSearch"/>

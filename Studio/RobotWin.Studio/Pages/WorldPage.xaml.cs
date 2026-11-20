@@ -80,6 +80,7 @@ namespace RobotWin.Studio.Pages
             InitRadio();   // [radio] Pages/WorldPage.Radio.cs
             InitReady();   // [objs] Pages/WorldPage.Ready.cs
             InitSense();   // [sense] Pages/WorldPage.Sense.cs
+            InitSdk();   // [sdk] Pages/WorldPage.Sdk.cs
         }
 
         private static Workspace W => Workspace.Current;
@@ -106,6 +107,7 @@ namespace RobotWin.Studio.Pages
         {
             Scene.Rebuild();
             if (TabScene.IsChecked == true || TabBoards.IsChecked == true || TabEnv.IsChecked == true) BuildPalette();
+            else if (TabSdk.IsChecked == true) BuildPalette();   // [sdk]
             BuildInspector();
         }
 
@@ -162,6 +164,7 @@ namespace RobotWin.Studio.Pages
             else if (TabBoards.IsChecked == true) BuildBoardsPalette();
             else if (TabParts.IsChecked == true) BuildPartsPalette();
             else if (TabMech.IsChecked == true) BuildMechPalette();
+            else if (TabSdk.IsChecked == true) BuildSdkPalette();   // [sdk]
             else BuildEnvironmentPalette();
         }
 
@@ -325,6 +328,7 @@ namespace RobotWin.Studio.Pages
             })));
             if (env.Obstacles.Count > 0) Palette.Children.Add(Action($"Engelleri temizle ({env.Obstacles.Count})", () => Edit("Engeller silindi", () => env.Obstacles.Clear())));
             SenseEnvironmentPalette(world);   // [sense] light, floor, tapes, GPS origin
+            SdkEnvironmentPalette(world);   // [sdk] atmosphere, wind, aerodynamics, force fields
         }
 
         private FrameworkElement NumberField(string label, double value, Action<double> set, double min = double.MinValue, double max = double.MaxValue, string format = "0.###")
@@ -657,6 +661,7 @@ namespace RobotWin.Studio.Pages
             PortSection(world, o);
             CablesSection(world, o);
             JointsSection(world, o);
+            SdkSection(world, o);   // [sdk] aerodynamics, behaviours, expressions
             LiveSection(o);
 
             Inspector.Children.Add(Caption("İşlemler"));
@@ -1227,6 +1232,7 @@ namespace RobotWin.Studio.Pages
             UpdateLive();
             UpdateRadioLive();   // [radio]
             UpdateCellLive();   // [arm]
+            UpdateSdkLive();   // [sdk]
             if (DockCables.IsChecked == true) BuildCableTable();
         }
 
@@ -1323,6 +1329,7 @@ namespace RobotWin.Studio.Pages
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
             if (first != null) Scene.Select(first.Id);
             SenseSnapshotFinish();   // [sense]
+            SdkSnapshot();   // [sdk]
         }
     }
 

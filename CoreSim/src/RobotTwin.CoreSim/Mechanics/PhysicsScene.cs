@@ -576,9 +576,13 @@ namespace RobotTwin.CoreSim.Mechanics
             return Materials.Pair(bodyMaterial, floor);
         }
 
+        /// <summary>Replaces <see cref="Wind"/>/<see cref="GustIntensity"/>: air velocity at a point and time (world environment model).</summary>
+        public Func<Vec3, double, Vec3>? WindProvider { get; set; }   // [sdk] Sdk/WorldSdkRuntime.cs
+
         /// <summary>Wind at a point including deterministic gusts.</summary>
         public Vec3 WindAt(Vec3 p)
         {
+            if (WindProvider != null) return WindProvider(p, Time);   // [sdk]
             if (GustIntensity <= 0) return Wind;
             double t = Time, k = GustIntensity;
             double phase = 0.7 * p.X + 0.4 * p.Y;

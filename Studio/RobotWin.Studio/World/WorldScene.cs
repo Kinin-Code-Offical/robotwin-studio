@@ -77,6 +77,7 @@ namespace RobotWin.Studio.World
             _hint.IsHitTestVisible = false;
             Children.Add(_hint);
             InitRadio();   // [radio] World/WorldScene.Radio.cs
+            InitSdk();   // [sdk] World/WorldScene.Sdk.cs
             Focusable = true;
 
             MouseDown += OnMouseDown;
@@ -698,6 +699,7 @@ namespace RobotWin.Studio.World
             using (Shell.Perf.Measure("hazır parçalar")) ReadyFrame();   // [objs] listener, propeller blur, LED / lamp lights
             using (Shell.Perf.Measure("radyo")) RadioFrame();   // [radio] waves, RF links, controller lightbars
             using (Shell.Perf.Measure("sensörler")) SenseFrame();   // [sense] sensor overlays, camera sensors (World/WorldScene.Sense.cs)
+            using (Shell.Perf.Measure("rüzgâr")) SdkFrame();   // [sdk] wind arrows, wind sock, force-field regions
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();

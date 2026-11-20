@@ -236,6 +236,8 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>[objs] Workshop lighting 0 (dark room) … 1 (bright); the world's own lights matter more in the dark.</summary>
         public double RoomLight { get; set; } = 1.0;
+        /// <summary>Atmosphere, wind, force fields, behaviours, scripts and plugins of the world (Sdk/WorldSdkSettings.cs).</summary>
+        public RobotTwin.CoreSim.Sdk.WorldSdkSettings Sdk { get; set; } = new RobotTwin.CoreSim.Sdk.WorldSdkSettings();   // [sdk]
 
         [JsonIgnore]
         public List<WorldDesign> Designs { get; set; } = new List<WorldDesign>();

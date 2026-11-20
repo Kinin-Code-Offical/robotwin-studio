@@ -141,6 +141,8 @@ namespace RobotWin.Studio.Pages
                 c.Children.Add(row);
             });
 
+            SdkCard();   // [sdk] Pages/SettingsPage.Sdk.cs
+
             Card("Klavye kısayolları", "Tüm sayfalarda geçerli tuşlar.", c =>
             {
                 foreach (var (keys, what) in new[]

@@ -68,6 +68,9 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public PhysicsScene Scene { get; } = new PhysicsScene();
 
+        /// <summary>Wind, drag, force fields and user behaviours of the world (Sdk/WorldSdkRuntime.cs).</summary>
+        public RobotTwin.CoreSim.Sdk.WorldSdkRuntime? Sdk { get; private set; }   // [sdk]
+
         /// <summary>Simulated mechanical time step (s).</summary>
         public double Step { get; set; } = 1e-3;
 
@@ -101,6 +104,7 @@ namespace RobotTwin.CoreSim.Sandbox
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.IgnoreSelfCollisions();
+            p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
             return p;
         }
 
@@ -268,9 +272,11 @@ namespace RobotTwin.CoreSim.Sandbox
                 StepCables(Step); // [phys] ropes pull on their plugs before the bodies move
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]
+                Sdk?.BeforeStep(Step, sim);   // [sdk]
                 Scene.Step(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia
+                Sdk?.AfterStep(Step, sim);   // [sdk]
                 if (++_sonarTick % 5 == 0) Ranging();
             }
         }
