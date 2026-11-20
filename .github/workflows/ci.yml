@@ -33,7 +33,7 @@ jobs:
       - name: Verify no tracked build artifacts
         shell: pwsh
         run: |
-          $artifacts = git ls-files | Select-String -Pattern "(\bin\)|(\obj\)|(TestResults)|(^builds/)" -AllMatches
+          $artifacts = git ls-files | Select-String -Pattern '(^|/)(bin|obj)/|TestResults/|^builds/'
           if ($artifacts) {
             Write-Error "Found tracked build artifacts. These must be gitignored:`n$artifacts"
             exit 1
