@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -20,7 +20,7 @@ namespace RobotTwin.CoreSim.Formats
     public static class RobotWinFormats
     {
         public const string AppName = "RobotWin Studio";
-        public const string AppVersion = "2.0";
+        public const string AppVersion = "1.0";
 
         public const string ProjectExtension = ".rwproj";
         public const string PartExtension = ".rwpart";
