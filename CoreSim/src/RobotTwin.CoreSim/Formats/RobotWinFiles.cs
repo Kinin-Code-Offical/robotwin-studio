@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -533,6 +533,9 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>The user's own 3D model (from an STL/OBJ/PLY file) shown instead of the generated one.</summary>
         public PartModel3D? Model3D { get; set; }
 
+        /// <summary>[libs] Own pins, symbol and simulation model (Parça oluşturucu / importers); BasePartId names the definition it registers.</summary>
+        public RobotTwin.CoreSim.Libraries.UserPartSpec? Definition { get; set; }
+
         /// <summary>Packages a design as a reusable module part.</summary>
         public static CustomPart FromDesign(Schematic design, PartLibrary library, string id, string name, IEnumerable<string>? portNets = null)
         {
@@ -554,6 +557,11 @@ namespace RobotTwin.CoreSim.Formats
             if (Module != null && library.Find(BasePartId) == null)
             {
                 library.Add(ModuleBuilder.ToDefinition(BasePartId, Name, Category, Description, Module));
+            }
+
+            if (Definition != null && library.Find(BasePartId) == null) // [libs] user-defined part
+            {
+                library.Add(Definition.ToDefinition(BasePartId, Name, Category, Description, Footprint?.Id ?? (Parameters.TryGetValue("footprint", out var udfp) ? udfp : string.Empty), library));
             }
 
             if (library.Find(BasePartId) == null)
@@ -622,12 +630,16 @@ namespace RobotTwin.CoreSim.Formats
         public string Description { get; set; } = string.Empty;
         public List<CustomPart> Parts { get; set; } = new List<CustomPart>();
 
+        /// <summary>[libs] Library version shown by the library manager.</summary>
+        public string Version { get; set; } = "1.0";
+
         public void Save(string path)
         {
             RobotWinFormats.SaveAtomically(path, zip =>
             {
                 var m = new Manifest { Format = Format, FormatVersion = FormatVersion, Title = Name, Author = Author, Description = Description };
                 m.Summary["parts"] = Parts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                m.Summary["version"] = Version; // [libs]
                 RobotWinFormats.WriteText(zip, "manifest.json", JsonSerializer.Serialize(m, RobotWinFormats.Json));
                 foreach (var p in Parts) RobotWinFormats.WriteText(zip, "parts/" + p.Id + ".json", JsonSerializer.Serialize(p, RobotWinFormats.Json));
             });
@@ -638,6 +650,7 @@ namespace RobotTwin.CoreSim.Formats
             using var zip = ZipFile.OpenRead(path);
             var m = RobotWinFormats.ReadManifest(zip, Format, FormatVersion);
             var lib = new PartLibraryFile { Name = m.Title, Author = m.Author, Description = m.Description };
+            if (m.Summary.TryGetValue("version", out var version)) lib.Version = version; // [libs]
             foreach (var e in zip.Entries.Where(e => e.FullName.StartsWith("parts/", StringComparison.Ordinal) && e.FullName.EndsWith(".json", StringComparison.Ordinal)))
             {
                 var p = JsonSerializer.Deserialize<CustomPart>(RobotWinFormats.ReadText(zip, e.FullName)!, RobotWinFormats.Json);

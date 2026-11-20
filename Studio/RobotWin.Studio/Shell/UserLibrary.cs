@@ -60,18 +60,21 @@ namespace RobotWin.Studio.Shell
         {
             LoadFootprints();
             if (!Directory.Exists(Folder)) return;
-            foreach (var file in Directory.EnumerateFiles(Folder).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            foreach (var file in RobotWin.Studio.Libraries.LibraryManager.LoadOrder(Folder)) // [libs] enabled libraries, by priority
             {
                 try
                 {
-                    foreach (var part in Read(file)) Register(library, part);
+                    foreach (var part in Read(file).Where(p => RobotWin.Studio.Libraries.LibraryManager.Accepts(file, p))) Register(library, part); // [libs] conflict resolution
                 }
-                catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is System.Text.Json.JsonException || ex is UnauthorizedAccessException)
+                catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is System.Text.Json.JsonException || ex is UnauthorizedAccessException || ex is InvalidOperationException) // [libs] + duplicate definitions
                 {
                     LoadErrors.Add(Path.GetFileName(file) + ": " + ex.Message);
                 }
             }
         }
+
+        /// <summary>[libs] Raises <see cref="Changed"/> for changes made by the library manager.</summary>
+        public static void NotifyChanged() => Changed?.Invoke(null, EventArgs.Empty);
 
         private static IEnumerable<CustomPart> Read(string file)
         {
@@ -96,6 +99,7 @@ namespace RobotWin.Studio.Shell
             Directory.CreateDirectory(Folder);
             string target = Path.Combine(Folder, Path.GetFileName(path));
             if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase)) File.Copy(path, target, true);
+            RobotWin.Studio.Libraries.LibraryManager.Refresh(); // [libs] list the copied file in the library manager
             var added = parts.Where(p => Register(library, p)).ToList();
             Changed?.Invoke(null, EventArgs.Empty);
             return added;

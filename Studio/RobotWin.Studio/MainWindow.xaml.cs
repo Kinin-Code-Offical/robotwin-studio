@@ -601,6 +601,7 @@ namespace RobotWin.Studio
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
             if (page == "model") _model.PrepareSnapshot(fault);
+            if (page == "library") _library.PrepareSnapshot(fault); // [libs] part creator / manager / import previews
             if (page == "pcb") _pcb.AutoLayoutForSnapshot(fault);
             if (page == "pcb" && fault == "fpeditor")
             {

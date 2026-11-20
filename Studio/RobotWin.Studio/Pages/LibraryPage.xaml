@@ -17,9 +17,11 @@
                 <Grid>
                     <TextBlock Text="Bileşen kütüphanesi" Style="{StaticResource Text.Title}"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="İçe aktar…" Click="OnImport" ToolTip=".rwpart parça veya .rwlib kütüphane dosyası ekle"/>
-                        <Button Content="KiCad dosyası…" Margin="6,0,0,0" Click="OnImportKiCadFiles" ToolTip="KiCad sembol (.kicad_sym) ve footprint (.kicad_mod) dosyalarından parça oluştur; simülasyon modeli otomatik eşlenir"/>
-                        <Button Content="KiCad .pretty klasörü…" Margin="6,0,0,0" Click="OnImportKiCadFolder" ToolTip="Bütün bir KiCad footprint kütüphanesini (.pretty klasörü) içe aktar"/>
+                        <!-- [libs] part creator, external libraries, library manager -->
+                        <Button Content="Parça oluştur" Style="{StaticResource Btn.Primary}" Click="OnCreatePart" ToolTip="Kendi parçanız: bacaklar, sembol, kılıf, simülasyon modeli, parametreler, 3B model"/>
+                        <Button Content="İçe aktar…" Margin="6,0,0,0" Click="OnImport" ToolTip=".rwpart parça veya .rwlib kütüphane dosyası ekle"/>
+                        <Button Content="Dış kütüphane ▾" Margin="6,0,0,0" Click="OnExternalMenu" ToolTip="KiCad, SPICE, Fritzing ve Arduino kütüphaneleri (önizleme ve eşlemeyle) ya da toplu içe aktarma"/>
+                        <Button Content="Kütüphaneler" Margin="6,0,0,0" Click="OnOpenManager" ToolTip="Kurulu kütüphaneler: sürüm, aç/kapat, güncelle, kaldır, çakışmalar, arama"/>
                         <Button Content="Kütüphanemi dışa aktar" Margin="6,0,0,0" Click="OnExportLibrary" ToolTip="Kendi parçalarınızı tek .rwlib dosyasında paylaşın"/>
                     </StackPanel>
                 </Grid>

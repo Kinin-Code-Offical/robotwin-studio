@@ -251,6 +251,22 @@ namespace RobotTwin.CoreSim.Design
 
         public PartDefinition? Find(string id) => _parts.TryGetValue(id, out var part) ? part : null;
 
+        /// <summary>[libs] Removes a preset (user library disabled/removed); returns false if unknown.</summary>
+        public bool RemovePreset(string id)
+        {
+            if (!_presetById.TryGetValue(id, out var preset)) return false;
+            _presetById.Remove(id);
+            _presets.Remove(preset);
+            return true;
+        }
+
+        /// <summary>[libs] Removes a part definition no preset uses any more; returns false if unknown or still used.</summary>
+        public bool Remove(string partId)
+        {
+            if (!_parts.ContainsKey(partId) || _presets.Any(p => string.Equals(p.PartId, partId, StringComparison.OrdinalIgnoreCase))) return false;
+            return _parts.Remove(partId);
+        }
+
         public PartPreset? FindPreset(string id) => _presetById.TryGetValue(id, out var preset) ? preset : null;
 
         public PartDefinition Get(string id) =>

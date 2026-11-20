@@ -23,11 +23,12 @@ namespace RobotWin.Studio.Models3D
         /// </summary>
         public static PartModel3D Load(string path)
         {
-            var mesh = MeshModel.Load(path);
+            var mesh = RobotTwin.CoreSim.Libraries.PartModelFiles.LoadMesh(path); // [libs] + VRML (.wrl); STEP gives a clear message
             if (mesh.TriangleCount == 0) throw new InvalidDataException("Modelde üçgen yok.");
             var size = mesh.Bounds.Size;
             double extent = Math.Max(size.X, Math.Max(size.Y, size.Z));
-            if (MeshModel.FormatFromExtension(path) != MeshFileFormat.Stl && extent > 0.5) mesh = mesh.Scale(0.001);
+            var format = MeshModel.FormatFromExtension(path);
+            if ((format == MeshFileFormat.Obj || format == MeshFileFormat.Ply) && extent > 0.5) mesh = mesh.Scale(0.001); // [libs] VRML units are decided by its reader
             // Rest the model on the board: its lowest point on z = 0, centred in x/y.
             var b = mesh.Bounds;
             mesh = mesh.Translate(new Vec3(-(b.Min.X + b.Max.X) / 2, -(b.Min.Y + b.Max.Y) / 2, -b.Min.Z));

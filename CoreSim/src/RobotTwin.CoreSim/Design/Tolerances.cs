@@ -206,6 +206,16 @@ namespace RobotTwin.CoreSim.Design
                     Vary("rpm", "Yüksüz devir", "rpm", Band("tolerance", 10));
                     Vary("istall", "Kilitlenme akımı", "A", Band("tolerance", 10));
                     break;
+
+                default: // [libs] user-made parts: "tol.<key>" parameters give per-parameter bands
+                    foreach (var tp in def.Parameters.Where(x => x.Key.StartsWith("tol.", StringComparison.OrdinalIgnoreCase)).ToList())
+                    {
+                        string key = tp.Key.Substring(4);
+                        var vp = def.Parameters.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase));
+                        Vary(key, vp?.Label ?? key, vp?.Unit ?? string.Empty, Band(tp.Key, 0));
+                    }
+
+                    break;
             }
 
             return draws;

@@ -515,6 +515,7 @@ namespace RobotWin.Studio.Shell
             {
             }
 
+            RobotWin.Studio.Libraries.LibraryManager.EmbedUsedParts(Project); // [libs] projects carry their user/imported parts
             Project.Save(path);
             _design.FilePath = path;
             SetDesignDirty(false);

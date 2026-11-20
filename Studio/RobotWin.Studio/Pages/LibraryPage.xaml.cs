@@ -76,7 +76,7 @@ namespace RobotWin.Studio.Pages
             place.Click += (_, _) => _shell.PlacePart(preset.Id);
             var derive = new Button { Content = "Bundan yeni parça", Margin = new Thickness(8, 0, 0, 0), ToolTip = "Aynı simülasyon modeliyle kendi parametrelerinizle bir parça oluşturun (.rwpart)" };
             derive.Click += (_, _) => ShowEditor(preset);
-            var actions = new StackPanel { Orientation = Orientation.Horizontal };
+            var actions = new WrapPanel(); // [libs] wraps when a part has more actions
             actions.Children.Add(place);
             actions.Children.Add(derive);
             if (UserLibrary.PartIds.Contains(preset.Id))
@@ -87,6 +87,7 @@ namespace RobotWin.Studio.Pages
             }
 
             Detail.Children.Add(actions);
+            AddUserPartDetail(preset, actions); // [libs] edit in the part creator, datasheet, origin, breadboard picture
 
             Detail.Children.Add(new TextBlock { Text = "Şematik sembol", Style = (Style)FindResource("Text.Overline"), Margin = new Thickness(0, 22, 0, 8) });
             Detail.Children.Add(new Border

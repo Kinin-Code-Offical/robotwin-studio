@@ -172,6 +172,11 @@ namespace RobotWin.Studio.Firmware
                 StandardErrorEncoding = Encoding.UTF8
             };
             foreach (var a in new[] { "compile", "--fqbn", fqbn, "--output-dir", outDir, "--warnings", "default", "--no-color", sketchDir }) psi.ArgumentList.Add(a);
+            if (Directory.Exists(RobotWin.Studio.Libraries.LibraryManager.ArduinoFolder)) // [libs] libraries installed from the Kütüphane page
+            {
+                psi.ArgumentList.Add("--libraries");
+                psi.ArgumentList.Add(RobotWin.Studio.Libraries.LibraryManager.ArduinoFolder);
+            }
 
             var log = new StringBuilder();
             using (var p = new Process { StartInfo = psi })
