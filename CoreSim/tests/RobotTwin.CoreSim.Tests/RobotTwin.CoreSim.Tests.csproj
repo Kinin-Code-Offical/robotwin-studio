@@ -28,9 +28,16 @@
     </None>
   </ItemGroup>
 
+
   <ItemGroup>
     <None Update="Fixtures\*.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Fixtures\*.hex">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

@@ -1,0 +1,195 @@
+<Window x:Class="RobotWin.Studio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:t="clr-namespace:RobotWin.Studio.Theme"
+        Title="RobotWin Studio" Width="1480" Height="900" MinWidth="1080" MinHeight="640"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource B.Canvas}"
+        WindowStyle="None" ResizeMode="CanResize"
+        TextElement.Foreground="{StaticResource B.Text}" FontFamily="{StaticResource F.Ui}" FontSize="13"
+        UseLayoutRounding="True">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="42" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="TitleRow" Height="42"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition x:Name="StatusRow" Height="26"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===================== Title bar ===================== -->
+        <Border x:Name="TitleBar" Grid.Row="0" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Image x:Name="LogoImage" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <TextBlock Text="RobotWin" FontFamily="{StaticResource F.Display}" FontSize="14" Margin="10,0,0,1" VerticalAlignment="Center"/>
+                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="16,0,8,0"/>
+                    <StackPanel Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="NewButton" Style="{StaticResource Btn.Icon}" ToolTip="Yeni proje veya dünya (Ctrl+N)" Click="OnNewMenu" Width="30" Height="30"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Aç (Ctrl+O)" Click="OnOpen" Width="30" Height="30"><t:Icon Data="{StaticResource I.Folder}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Kaydet (Ctrl+S)" Click="OnSave" Width="30" Height="30"><t:Icon Data="{StaticResource I.Save}" Size="16"/></Button>
+                    </StackPanel>
+                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0,4,0"/>
+                </StackPanel>
+
+                <!-- Open documents: circuits and worlds -->
+                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" WindowChrome.IsHitTestVisibleInChrome="True"
+                              VerticalAlignment="Center" HorizontalAlignment="Left" PreviewMouseWheel="OnTabsWheel" x:Name="TabScroll">
+                    <ItemsControl x:Name="Tabs">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="TabBorder" Height="30" Margin="2,0" CornerRadius="6" Padding="10,0,4,0" Background="Transparent" Cursor="Hand"
+                                        MouseLeftButtonUp="OnTabClick" MouseUp="OnTabMiddle" MouseRightButtonUp="OnTabMenu" ToolTip="{Binding KindText}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <t:Icon x:Name="TabIcon" Data="{StaticResource I.Schematic}" Size="13" Foreground="{StaticResource B.TextMuted}" Margin="0,0,7,0"/>
+                                        <TextBlock x:Name="TabText" Text="{Binding Title}" MaxWidth="190" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource B.TextSecondary}" FontSize="12.5"/>
+                                        <Button Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabClose" ToolTip="Kapat (Ctrl+W)">
+                                            <t:Icon Data="{StaticResource I.Close}" Size="10"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                        <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource B.Raised}"/>
+                                        <Setter TargetName="TabText" Property="Foreground" Value="{StaticResource B.Text}"/>
+                                        <Setter TargetName="TabIcon" Property="Foreground" Value="{StaticResource B.Accent}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Kind}" Value="World">
+                                        <Setter TargetName="TabIcon" Property="Data" Value="{StaticResource I.World}"/>
+                                    </DataTrigger>
+                                    <Trigger SourceName="TabBorder" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource B.Hover}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnPalette" ToolTip="Komut paleti: her şeyi ara ve çalıştır (Ctrl+K)">
+                        <t:Icon Data="{StaticResource I.Search}" Size="15"/>
+                    </Button>
+                    <Button x:Name="SplitButton" Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnSplitMenu" ToolTip="Bölünmüş görünüm: iki sayfayı yan yana aç (Ctrl+\)">
+                        <t:Icon Data="{StaticResource I.Split}" Size="15"/>
+                    </Button>
+                    <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnDetach" ToolTip="Bu sayfayı ayrı pencereye al (ikinci ekran için)">
+                        <t:Icon Data="{StaticResource I.Window}" Size="15"/>
+                    </Button>
+                    <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnFocusMode" ToolTip="Odak modu / tam ekran (F11)">
+                        <t:Icon Data="{StaticResource I.Focus}" Size="15"/>
+                    </Button>
+                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="6,0"/>
+                    <Button Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMinimize" ToolTip="Simge durumuna küçült">
+                        <t:Icon Data="{StaticResource I.Minimize}" Size="14"/>
+                    </Button>
+                    <Button Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMaximize" ToolTip="Ekranı kapla">
+                        <t:Icon x:Name="MaxIcon" Data="{StaticResource I.Maximize}" Size="13"/>
+                    </Button>
+                    <Button x:Name="CloseButton" Width="44" Height="42" Click="OnCloseClick" ToolTip="Kapat">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource Btn.Icon}">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Background" Value="#C42B1C"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <t:Icon Data="{StaticResource I.Close}" Size="14"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===================== Body ===================== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="NavColumn" Width="68"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border x:Name="NavBar" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,1,0">
+                <DockPanel Margin="0,8">
+                    <RadioButton x:Name="NavSettings" DockPanel.Dock="Bottom" Style="{StaticResource Nav.Item}" Tag="Ayarlar" GroupName="nav" Click="OnNav" CommandParameter="settings">
+                        <t:Icon Data="{StaticResource I.Settings}" Size="20"/>
+                    </RadioButton>
+                    <StackPanel>
+                        <RadioButton x:Name="NavHome" Style="{StaticResource Nav.Item}" Tag="Başla" GroupName="nav" Click="OnNav" CommandParameter="home" IsChecked="True">
+                            <t:Icon Data="{StaticResource I.Home}" Size="20"/>
+                        </RadioButton>
+                        <RadioButton x:Name="NavWorld" Style="{StaticResource Nav.Item}" Tag="Dünya" GroupName="nav" Click="OnNav" CommandParameter="world">
+                            <t:Icon Data="{StaticResource I.World}" Size="20"/>
+                        </RadioButton>
+                        <RadioButton x:Name="NavSchematic" Style="{StaticResource Nav.Item}" Tag="Devre" GroupName="nav" Click="OnNav" CommandParameter="schematic">
+                            <t:Icon Data="{StaticResource I.Schematic}" Size="20"/>
+                        </RadioButton>
+                        <RadioButton x:Name="NavPcb" Style="{StaticResource Nav.Item}" Tag="PCB" GroupName="nav" Click="OnNav" CommandParameter="pcb">
+                            <t:Icon Data="{StaticResource I.Pcb}" Size="20"/>
+                        </RadioButton>
+                        <RadioButton x:Name="NavCode" Style="{StaticResource Nav.Item}" Tag="Kod" GroupName="nav" Click="OnNav" CommandParameter="code">
+                            <t:Icon Data="{StaticResource I.Chip}" Size="20"/>
+                        </RadioButton>
+                        <RadioButton x:Name="NavAssembly" Style="{StaticResource Nav.Item}" Tag="Montaj" GroupName="nav" Click="OnNav" CommandParameter="assembly">
+                            <t:Icon Data="{StaticResource I.Cube}" Size="20"/>
+                        </RadioButton>
+                        <RadioButton x:Name="NavLibrary" Style="{StaticResource Nav.Item}" Tag="Kütüphane" GroupName="nav" Click="OnNav" CommandParameter="library">
+                            <t:Icon Data="{StaticResource I.Library}" Size="20"/>
+                        </RadioButton>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Grid Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="MainColumn" Width="*" MinWidth="320"/>
+                    <ColumnDefinition x:Name="SplitterColumn" Width="0"/>
+                    <ColumnDefinition x:Name="SecondColumn" Width="0"/>
+                </Grid.ColumnDefinitions>
+                <ContentControl x:Name="PageHost" Focusable="False"/>
+                <GridSplitter x:Name="Splitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource B.Border}" Visibility="Collapsed" ResizeBehavior="PreviousAndNext"/>
+                <DockPanel x:Name="SecondPane" Grid.Column="2" Visibility="Collapsed">
+                    <Border DockPanel.Dock="Top" Height="30" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+                        <DockPanel Margin="10,0,4,0">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn.Icon}" Width="24" Height="24" Click="OnCloseSplit" ToolTip="Bölünmüş görünümü kapat">
+                                <t:Icon Data="{StaticResource I.Close}" Size="11"/>
+                            </Button>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn.Icon}" Width="24" Height="24" Click="OnSwapSplit" ToolTip="İki tarafı değiştir">
+                                <t:Icon Data="{StaticResource I.Mirror}" Size="12"/>
+                            </Button>
+                            <ComboBox x:Name="SecondPageBox" Width="150" Height="24" HorizontalAlignment="Left" SelectionChanged="OnSecondPageChanged" FontSize="12"/>
+                        </DockPanel>
+                    </Border>
+                    <ContentControl x:Name="SecondHost" Focusable="False"/>
+                </DockPanel>
+            </Grid>
+        </Grid>
+
+        <!-- ===================== Status bar ===================== -->
+        <Border x:Name="StatusBar" Grid.Row="2" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+            <Grid Margin="12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="SimDot" Width="7" Height="7" Fill="{StaticResource B.TextMuted}" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="StatusText" Style="{StaticResource Text.Caption}" Foreground="{StaticResource B.TextSecondary}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatsText" Style="{StaticResource Text.Caption}" Margin="0,0,16,0"/>
+                    <TextBlock Text="RobotWin Studio 2.0" Style="{StaticResource Text.Caption}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

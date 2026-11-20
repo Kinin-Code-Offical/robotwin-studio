@@ -1,0 +1,246 @@
+<UserControl x:Class="RobotWin.Studio.Pages.SchematicPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:RobotWin.Studio.Theme"
+             xmlns:ed="clr-namespace:RobotWin.Studio.Editor"
+             xmlns:sim="clr-namespace:RobotWin.Studio.Simulation"
+             Background="{StaticResource B.Base}">
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44"/>
+            <RowDefinition Height="*" MinHeight="120"/>
+            <RowDefinition Height="1"/>
+            <RowDefinition x:Name="DockRow" Height="300" MinHeight="36"/>
+        </Grid.RowDefinitions>
+
+        <!-- ================= Toolbar ================= -->
+        <Border Grid.Row="0" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+            <Grid Margin="8,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ToggleButton x:Name="LibraryToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Parça kütüphanesini göster / gizle" Click="OnToggleLibrary" IsChecked="True" Margin="0,0,6,0">
+                        <t:Icon Data="{StaticResource I.Library}" Size="16"/>
+                    </ToggleButton>
+                    <Border x:Name="ToolSep0" Width="1" Height="16" Background="{StaticResource B.Border}" Margin="2,0,8,0"/>
+                    <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" ToolTip="Seç ve taşı  (Esc)" Click="OnToolClick" Tag="Select" IsChecked="True">
+                        <t:Icon Data="{StaticResource I.Pointer}" Size="16"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="ToolWire" Style="{StaticResource Toggle.Tool}" ToolTip="Kablo  (W) — bir pine tıklayarak da başlar" Click="OnToolClick" Tag="Wire" Margin="2,0">
+                        <t:Icon Data="{StaticResource I.Wire}" Size="16"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="ToolLabel" Style="{StaticResource Toggle.Tool}" ToolTip="Hat etiketi  (L)" Click="OnToolClick" Tag="Label">
+                        <t:Icon Data="{StaticResource I.Label}" Size="16"/>
+                    </ToggleButton>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Multimetre uçlarını devreye tak (kırmızı, sonra siyah)" Click="OnPlaceLeads" Margin="2,0,0,0">
+                        <t:Icon Data="{StaticResource I.Meter}" Size="16"/>
+                    </Button>
+                    <StackPanel x:Name="EditTools" Orientation="Horizontal">
+                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Döndür  (R)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Aynala  (X)" Click="OnMirror"><t:Icon Data="{StaticResource I.Mirror}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Sil  (Del)" Click="OnDelete"><t:Icon Data="{StaticResource I.Delete}" Size="16"/></Button>
+                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
+                        <Button x:Name="UndoButton" Style="{StaticResource Btn.Icon}" ToolTip="Geri al  (Ctrl+Z)" Click="OnUndo"><t:Icon Data="{StaticResource I.Undo}" Size="16"/></Button>
+                        <Button x:Name="RedoButton" Style="{StaticResource Btn.Icon}" ToolTip="Yinele  (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0">
+                    <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnRun" ToolTip="Başlat / duraklat  (F5)">
+                        <StackPanel Orientation="Horizontal">
+                            <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="12" Filled="True" Foreground="{StaticResource B.OnPrimary}"/>
+                            <TextBlock x:Name="RunText" Text="Simüle et" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource B.OnPrimary}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="1 ms ilerlet" Click="OnStep" Margin="6,0,0,0"><t:Icon Data="{StaticResource I.Step}" Size="14"/></Button>
+                    <Button x:Name="StopButton" Style="{StaticResource Btn.Icon}" ToolTip="Durdur  (Shift+F5)" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}" Size="14"/></Button>
+                    <ComboBox x:Name="SpeedBox" Width="124" Margin="6,0,0,0" SelectionChanged="OnSpeedChanged" ToolTip="Simülasyon hızı">
+                        <ComboBoxItem Content="0.01×" Tag="0.01"/>
+                        <ComboBoxItem Content="0.1×" Tag="0.1"/>
+                        <ComboBoxItem Content="Gerçek zaman" Tag="1" IsSelected="True"/>
+                        <ComboBoxItem Content="5×" Tag="5"/>
+                        <ComboBoxItem Content="20×" Tag="20"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="300" TextTrimming="CharacterEllipsis"/>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Sığdır  (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
+                    <ToggleButton x:Name="InspectorToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Özellikler panelini göster / gizle" Click="OnToggleInspector" IsChecked="True" Margin="6,0,0,0">
+                        <t:Icon Data="{StaticResource I.Layers}" Size="16"/>
+                    </ToggleButton>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ================= Main area ================= -->
+        <Grid Grid.Row="1" x:Name="MainArea">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LibraryColumn" Width="272" MinWidth="200"/>
+                <ColumnDefinition x:Name="LibrarySplitColumn" Width="1"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="InspectorSplitColumn" Width="1"/>
+                <ColumnDefinition x:Name="InspectorColumn" Width="288" MinWidth="220"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Canvas -->
+            <Grid Grid.Column="2">
+                <ed:SchematicCanvas x:Name="Canvas"/>
+                <StackPanel x:Name="EmptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" MaxWidth="340">
+                    <TextBlock Text="Boş sayfa" Style="{StaticResource Text.Subtitle}" HorizontalAlignment="Center" FontWeight="Normal"/>
+                    <TextBlock Style="{StaticResource Text.Caption}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="17"
+                               Text="Soldan bir parça seçip tuvale tıklayın. Bir pinden başlayıp başka bir pine tıklayarak kablo çekin."/>
+                </StackPanel>
+                <Border x:Name="ToastHost" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="12,12,12,0" Visibility="Collapsed"
+                        Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="12,8"
+                        Effect="{StaticResource E.Popup}" Panel.ZIndex="5">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="6" Height="6" Fill="{StaticResource B.Danger}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ToastText" Foreground="{StaticResource B.Text}" Margin="9,0,0,0" VerticalAlignment="Center" MaxWidth="560" TextWrapping="Wrap"/>
+                        <Button x:Name="ToastAction" Style="{StaticResource Btn.Ghost}" Content="Neden?" Margin="10,0,0,0" Padding="8,2" Visibility="Collapsed" Click="OnToastAction"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Library -->
+            <Border x:Name="LibraryHost" Grid.Column="0" Background="{StaticResource B.Base}" Panel.ZIndex="3">
+                <DockPanel Margin="14,14,6,0">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,8,8">
+                        <TextBox x:Name="SearchBox" Tag="Parça ara" Padding="28,4,8,4" TextChanged="OnSearchChanged"/>
+                        <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{StaticResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="9,0,0,0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,8,8">
+                        <TextBlock x:Name="LibraryCount" DockPanel.Dock="Right" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="10,0,2,0"/>
+                        <ComboBox x:Name="CategoryBox" SelectionChanged="OnCategoryChanged"/>
+                    </DockPanel>
+                    <ListBox x:Name="PartList" SelectionChanged="OnPartPicked" PreviewMouseLeftButtonUp="OnPartListClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Height="34" ToolTip="{Binding Description}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ed:SymbolPreview PresetId="{Binding Id}" Margin="2,5,10,5"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource B.TextMuted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+            <Border x:Name="LibrarySplit" Grid.Column="1" Background="{StaticResource B.Border}"/>
+
+            <Border x:Name="InspectorSplit" Grid.Column="3" Background="{StaticResource B.Border}"/>
+
+            <!-- Inspector -->
+            <Border x:Name="InspectorHost" Grid.Column="4" Background="{StaticResource B.Base}" Panel.ZIndex="3">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="Inspector" Margin="18,16,16,16"/>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{StaticResource B.Border}"/>
+        <GridSplitter Grid.Row="2" Grid.RowSpan="2" VerticalAlignment="Top" HorizontalAlignment="Stretch" Height="4" Margin="0,-2,0,0"
+                      Background="Transparent" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Cursor="SizeNS"/>
+
+        <!-- ================= Dock ================= -->
+        <TabControl x:Name="DockTabs" Grid.Row="3" Margin="0,2,0,0">
+            <TabItem Header="Osiloskop">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="200"/>
+                        <ColumnDefinition x:Name="ScopePanelColumn" Width="318"/>
+                    </Grid.ColumnDefinitions>
+                    <sim:ScopeView x:Name="Scope" Margin="8,8,4,8"/>
+                    <Border x:Name="ScopePanelHost" Grid.Column="1" BorderBrush="{StaticResource B.Border}" BorderThickness="1,0,0,0"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Multimetre">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="MeterColumn" Width="470"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <sim:MultimeterView x:Name="Meter" Margin="6,4,0,4"/>
+                    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="MeterPanel" Margin="16,10,16,10"/>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock x:Name="DiagHeader" Text="Arıza tespiti"/>
+                </TabItem.Header>
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="12,8,12,4">
+                        <Button DockPanel.Dock="Left" Content="Analiz et" Click="OnAnalyze" Padding="12,3"/>
+                        <CheckBox x:Name="DiagAuto" DockPanel.Dock="Left" Style="{StaticResource Switch}" Content="Simülasyonda canlı" IsChecked="True" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="DiagSummary" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="DiagList" Margin="12,4,12,10"/>
+                    </ScrollViewer>
+                </DockPanel>
+            </TabItem>
+            <TabItem Header="Monte Carlo">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="McPanel" Margin="14,8,10,10"/>
+                    </ScrollViewer>
+                    <DockPanel Grid.Column="1" Margin="4,8,10,8">
+                        <TextBlock x:Name="McStats" DockPanel.Dock="Bottom" Style="{StaticResource Text.Mono}" FontSize="11.5" Margin="4,6,0,0" TextWrapping="Wrap"/>
+                        <sim:HistogramView x:Name="Histogram"/>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Kart pinleri">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="PinPanel" Margin="14,10"/>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Seri monitör">
+                <DockPanel Margin="12,10">
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <Button DockPanel.Dock="Right" Content="Gönder" Margin="8,0,0,0" Click="OnSerialSend"/>
+                        <Button DockPanel.Dock="Right" Content="Temizle" Margin="8,0,0,0" Click="OnSerialClear" Style="{StaticResource Btn.Ghost}"/>
+                        <TextBlock x:Name="BaudText" DockPanel.Dock="Right" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <TextBox x:Name="SerialInput" Tag="Karta gönder (Enter)" KeyDown="OnSerialKey" FontFamily="{StaticResource F.Mono}"/>
+                    </DockPanel>
+                    <TextBox x:Name="SerialOutput" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextWrapping="Wrap"
+                             VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Background="{StaticResource B.Canvas}"
+                             Foreground="{StaticResource B.Text}" Padding="10,8"/>
+                </DockPanel>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock x:Name="LogHeader" Text="Olaylar"/>
+                </TabItem.Header>
+                <ListBox x:Name="LogList" Margin="10,6">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{StaticResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="11.5"/>
+                                <TextBlock Text="{Binding KindText}" Width="64" Foreground="{StaticResource B.TextSecondary}" FontSize="11.5"/>
+                                <TextBlock Text="{Binding Device}" Width="96" Foreground="{StaticResource B.Text}" FontSize="12"/>
+                                <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

@@ -19,4 +19,9 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <!-- ESP32 HAL shim sources, extracted and compiled by Esp32SketchCompiler. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\native\esp32hal\**\*.h;..\..\native\esp32hal\**\*.cpp" LogicalName="esp32hal/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

@@ -7,6 +7,47 @@
 
 **RobotWin Studio** is a deterministic robotics simulation platform engineered for Windows environments. It provides real-time hardware-in-the-loop (HIL) simulation by integrating a Unity-based visualization front-end with deterministic .NET orchestration and native C++ physics and firmware emulation engines.
 
+## RobotWin Studio 2 (yeni masaüstü uygulaması)
+
+Unity'ye bağlı olmayan, kendi tasarım sistemiyle sıfırdan yazılmış yeni stüdyo `Studio/` altında. Çekirdek motorlar `CoreSim/` içinde.
+
+| Katman | Ne yapar | Kod |
+| --- | --- | --- |
+| Analog çözücü | Modifiye düğüm analizi, Newton-Raphson, trapez/BE integrasyon, hata kontrollü uyarlamalı adım, olay (breakpoint) zamanlaması, termal model ve parça hasarı (yanma, patlama, termal kaçak, sargı yanması) | `CoreSim/src/RobotTwin.CoreSim/Analog` |
+| Parça kataloğu | 240+ gerçek parça: pasifler, yarı iletkenler, op-amp, regülatör, lojik, röle, motor (TT, N20, coreless), motor sürücü (TB6612, L298N), servo, sensörler (TCRT5000, HC-SR04, IR), I²C ekranlar (SSD1306 OLED, 1602/2004 LCD), MPU-6050, bataryalar, Arduino Uno/Nano, uçuş kontrolcüsü | `CoreSim/src/RobotTwin.CoreSim/Design` |
+| AVR çekirdeği | ATmega328P: tam komut seti, kesmeler, Timer0/1/2, USART, ADC, EEPROM, GPIO, INT0/1, PCINT, watchdog, zamanlamalı TWI (I²C) master. Gerçek derlenmiş `.hex` firmware'i devreyle lockstep çalıştırır | `CoreSim/src/RobotTwin.CoreSim/Firmware` |
+| I²C cihazları | SSD1306 (tüm adresleme modları), PCF8574 + HD44780 (4 bit, CGRAM), MPU-6050 (kayıt dosyası, ölçek ayarları) | `Firmware/Devices` |
+| 3D fizik | Rijit cisim (kuaterniyon), zemin/engel/duvar teması, ışın-tekerlek lastik modeli, pervane itki/tork (kT·ω², kQ·ω², yer etkisi), arena (çizgi pisti, engeller) | `CoreSim/src/RobotTwin.CoreSim/Mechanics` |
+| Mekatronik | Motor mili ↔ tekerlek/pervane çift yönlü bağlantı (yük torku, atalet), sensörlerin arenayı okuması, uçuş kontrolcüsü (açı→hız kaskad PID, irtifa tutma, X mikser), çarpma/pervane kırılması/devrilme | `Mechanics/Mechatronics.cs` |
+| PCB motoru | Senkron, otomatik yerleşim, 2 katman A* rota, DRC (IPC-2221 akım kapasitesi), Gerber RS-274X + Excellon + BOM + CPL, **KiCad 8 projesi** (`.kicad_pro/.kicad_sch/.kicad_pcb`, netlist, sembol ve footprint kütüphaneleri), SPICE netlisti | `CoreSim/src/RobotTwin.CoreSim/Pcb` |
+| Dosya biçimleri | `.rwproj` proje paketi, `.rwpart` parça, `.rwlib` kütüphane, `.rwsim` simülasyon kaydı | `CoreSim/src/RobotTwin.CoreSim/Formats` |
+| Stüdyo | Şematik editör, canlı simülasyon, osiloskop, seri monitör, PCB editörü, **Kod** (editör + arduino-cli derleme + emüle karta yükleme), **Montaj** (3D robot/drone, pilot kontrolü, arıza efektleri), kütüphane | `Studio/RobotWin.Studio` |
+
+### Dosya biçimleri
+
+Hepsi sürümlü ZIP kapsayıcılarıdır ve içlerinde `manifest.json` (biçim adı, sürüm, uygulama, özet) bulunur. Ayarlar → *Dosya türleri* ile Windows'ta simgeleri ve çift tıkla açmayı (yalnızca bu kullanıcı için, HKCU) etkinleştirebilirsiniz.
+
+| Uzantı | İçerik |
+| --- | --- |
+| `.rwproj` | `schematic.json`, `pcb/board.json`, `mechanics/assembly.json`, `firmware/<kart>/sketch.ino` + `.hex`, `library/parts.json`, `settings.json`, `preview.png`. Eski tek dosyalık JSON projeler de açılır ve kaydedilince pakete dönüşür. |
+| `.rwpart` | Tek kullanıcı parçası: dayandığı simülasyon modeli, parametreler, isteğe bağlı PCB izdüşümü. |
+| `.rwlib` | Parça koleksiyonu (paylaşım için). Kullanıcı kütüphanesi `%APPDATA%\RobotWinStudio\Library` altındadır. |
+| `.rwsim` | Simülasyon kaydı: osiloskop kanalları (CSV), olay günlüğü, seri çıktı, araç yörüngesi ve projenin kendisi. |
+
+### Kod yazma ve kartlara yükleme
+
+*Kod* sayfasında her programlanabilir kartın yazılımı proje içinde saklanır. **Derle (F7)** gerçek avr-gcc ile `arduino-cli` üzerinden derler; hatalar satırında işaretlenir. **Yükle ve çalıştır (F5)** derlenmiş HEX'i emüle karta yükleyip simülasyonu başlatır. Gerekli araç: `winget install ArduinoSA.CLI` ve `arduino-cli core install arduino:avr`.
+
+Derleme ve çalıştırma (.NET 9 SDK yeterli):
+
+```powershell
+dotnet build RobotWinStudio.sln -c Release
+dotnet test CoreSim/tests/RobotTwin.CoreSim.Tests
+builds/RobotWin.Studio/Release/net9.0-windows/RobotWinStudio.exe
+```
+
+Komut satırı modları: `--selftest --selftest-out rapor.txt` (tüm örnekler: simülasyon + araç fiziği + PCB + DRC), `--snapshot ekran.png --page home|schematic|pcb|code|assembly|library|settings [--example quadcopter] [--simulate 1.5] [--fault battery|motor|syntax] [--wait sn]`, `--export-logo klasör`.
+
 ## Key Features
 
 - **Deterministic Simulation**: Fixed-step execution scheduling that ensures reproducible simulation states across runs.

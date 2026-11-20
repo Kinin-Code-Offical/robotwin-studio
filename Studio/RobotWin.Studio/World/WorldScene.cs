@@ -1,0 +1,933 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
+using RobotTwin.CoreSim.Design;
+using RobotTwin.CoreSim.Sandbox;
+using RobotWin.Studio.Assembly3D;
+using M = RobotWin.Studio.Assembly3D.Mesh;
+
+namespace RobotWin.Studio.World
+{
+    public enum WorldTool
+    {
+        Select,
+        Cable,
+        Joint
+    }
+
+    /// <summary>3D editor and live view of a <see cref="WorldDocument"/>.</summary>
+    public sealed class WorldScene : Grid
+    {
+        private sealed class Item
+        {
+            public WorldObject Object = null!;
+            public ObjectModel Model = null!;
+            public ModelVisual3D Visual = null!;
+            public Matrix3D Placed;
+            public Matrix3D Current;
+            public RotateTransform3D? PortRotation;
+            public double PortAngle;
+        }
+
+        private readonly Viewport3D _view = new Viewport3D { ClipToBounds = true };
+        private readonly PerspectiveCamera _camera = new PerspectiveCamera { FieldOfView = 45, NearPlaneDistance = 0.005, FarPlaneDistance = 200 };
+        private readonly ModelVisual3D _environment = new ModelVisual3D();
+        private readonly ModelVisual3D _cables = new ModelVisual3D();
+        private readonly ModelVisual3D _overlay = new ModelVisual3D();
+        private readonly EffectsLayer _effects = new EffectsLayer();
+        private readonly TextBlock _hint = new TextBlock();
+        private readonly Dictionary<string, Item> _items = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<Visual3D, (string ObjectId, string Pin)> _anchorVisuals = new Dictionary<Visual3D, (string, string)>();
+        private readonly Dictionary<string, Point3D> _smoke = new Dictionary<string, Point3D>(StringComparer.OrdinalIgnoreCase);
+        private double _yaw = 1.15, _pitch = 0.62, _distance = 0.9;   // from the front (−Y), +X to the right
+        private Point3D _target = new Point3D(0, 0, 0.02);
+        private Point? _orbit;
+        private bool _pan;
+        private string? _drag;
+        private Point3D _dragOffset;
+        private double _dragPlaneZ;
+        private Point _dragStartScreen;
+        private double _dragStartZ;
+        private bool _dragMoved;
+        private DateTime _lastFrame = DateTime.Now;
+
+        public WorldScene()
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0B, 0x0D));
+            ClipToBounds = true;
+            _view.Camera = _camera;
+            _view.Children.Add(_environment);
+            _view.Children.Add(_cables);
+            _view.Children.Add(_overlay);
+            Children.Add(_view);
+            _effects.Project = Project;
+            _effects.IsHitTestVisible = false;
+            Children.Add(_effects);
+            _hint.Foreground = new SolidColorBrush(Color.FromRgb(0x6C, 0x6C, 0x74));
+            _hint.FontSize = 11.5;
+            _hint.Margin = new Thickness(14, 0, 0, 10);
+            _hint.VerticalAlignment = VerticalAlignment.Bottom;
+            _hint.HorizontalAlignment = HorizontalAlignment.Left;
+            _hint.IsHitTestVisible = false;
+            Children.Add(_hint);
+            Focusable = true;
+
+            MouseDown += OnMouseDown;
+            MouseMove += OnMouseMove;
+            MouseUp += OnMouseUp;
+            MouseWheel += (_, e) =>
+            {
+                _distance = Math.Max(0.05, Math.Min(60, _distance * Math.Pow(0.9986, e.Delta)));
+                UpdateCamera();
+            };
+            IsVisibleChanged += (_, _) =>
+            {
+                if (IsVisible) CompositionTarget.Rendering += OnFrame;
+                else CompositionTarget.Rendering -= OnFrame;
+            };
+            UpdateHint();
+            UpdateCamera();
+            ApplyQuality();
+            Shell.AppSettings.Changed += (_, _) => ApplyQuality();
+        }
+
+        /// <summary>Ayarlar → 3D kalitesi: low turns edge antialiasing off.</summary>
+        private void ApplyQuality() =>
+            RenderOptions.SetEdgeMode(_view, Shell.AppSettings.Current.Quality3D == "low" ? EdgeMode.Aliased : EdgeMode.Unspecified);
+
+        // ================================================================ public surface
+
+        public WorldDocument? World { get; private set; }
+        public PartLibrary Library { get; set; } = PartLibrary.Default;
+        public WorldSession? Session { get; set; }
+
+        private WorldTool _tool;
+
+        public WorldTool Tool
+        {
+            get => _tool;
+            set
+            {
+                _tool = value;
+                _pendingPin = null;
+                _pinTip.IsOpen = false;
+                RebuildOverlay();
+                UpdateHint();
+            }
+        }
+
+        public string? Selected { get; private set; }
+
+        /// <summary>Snap grid in metres (0 = off).</summary>
+        public double Grid { get; set; } = 0.005;
+
+        public event Action<string?>? SelectionChanged;
+
+        /// <summary>Raised once before an interactive move changes the document (for undo).</summary>
+        public event Action? BeginEdit;
+
+        /// <summary>Raised when an interactive edit finished.</summary>
+        public event Action<string>? EditCommitted;
+
+        /// <summary>Cable tool: both ends picked.</summary>
+        public event Action<CableEnd, CableEnd>? CableRequested;
+
+        /// <summary>Joint tool: an object was clicked (the page pairs it with the selection).</summary>
+        public event Action<string>? JointTargetPicked;
+
+        private CableEnd? _pendingPin;
+
+        public void Load(WorldDocument? world)
+        {
+            World = world;
+            Rebuild();
+            if (world != null) FrameAll();
+        }
+
+        /// <summary>Re-creates every object visual (after an edit of the document).</summary>
+        public void Rebuild()
+        {
+            _items.Clear();
+            for (int i = _view.Children.Count - 1; i >= 0; i--)
+            {
+                var c = _view.Children[i];
+                if (c != _environment && c != _cables && c != _overlay) _view.Children.RemoveAt(i);
+            }
+
+            BuildEnvironment();
+            if (World == null)
+            {
+                _cables.Content = null;
+                _overlay.Content = null;
+                return;
+            }
+
+            foreach (var o in World.Objects)
+            {
+                var model = ObjectModels.Build(o, World, Library);
+                var group = new Model3DGroup();
+                group.Children.Add(model.Body);
+                RotateTransform3D? rot = null;
+                if (model.Moving != null && model.Port is { } port)
+                {
+                    rot = new RotateTransform3D(new AxisAngleRotation3D(port.Axis, 0), port.Pivot);
+                    model.Moving.Transform = rot;
+                    group.Children.Add(model.Moving);
+                }
+
+                var visual = new ModelVisual3D { Content = group };
+                var placed = PoseMatrix(o.Pose);
+                visual.Transform = new MatrixTransform3D(placed);
+                _view.Children.Add(visual);
+                _items[o.Id] = new Item { Object = o, Model = model, Visual = visual, Placed = placed, Current = placed, PortRotation = rot };
+            }
+
+            if (Selected != null && !_items.ContainsKey(Selected)) Select(null);
+            UpdateKinematics();
+            RebuildCables();
+            RebuildOverlay();
+        }
+
+        public void Select(string? id)
+        {
+            if (Selected == id) return;
+            Selected = id;
+            RebuildOverlay();
+            SelectionChanged?.Invoke(id);
+        }
+
+        /// <summary>Moves the camera so every object is in view.</summary>
+        public void FrameAll()
+        {
+            if (World == null || World.Objects.Count == 0)
+            {
+                _target = new Point3D(0, 0, 0.02);
+                _distance = 0.9;
+                UpdateCamera();
+                return;
+            }
+
+            var b = Rect3D.Empty;
+            foreach (var it in _items.Values) b.Union(it.Visual.Content.Bounds is { IsEmpty: false } bb ? it.Visual.Transform.TransformBounds(bb) : Rect3D.Empty);
+            if (b.IsEmpty) return;
+            _target = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 3);
+            _distance = Math.Max(0.25, Math.Max(b.SizeX, Math.Max(b.SizeY, b.SizeZ)) * 1.9);
+            UpdateCamera();
+        }
+
+        public void FrameSelected()
+        {
+            if (Selected == null || !_items.TryGetValue(Selected, out var it)) return;
+            var b = it.Visual.Transform.TransformBounds(it.Visual.Content.Bounds);
+            _target = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
+            _distance = Math.Max(0.12, Math.Max(b.SizeX, Math.Max(b.SizeY, b.SizeZ)) * 3);
+            UpdateCamera();
+        }
+
+        public void TopView()
+        {
+            _yaw = Math.PI / 2;   // +X right, +Y up on screen
+            _pitch = 1.5;
+            UpdateCamera();
+        }
+
+        /// <summary>Point on the ground in front of the camera where new objects appear.</summary>
+        public Point3D DropPoint() => new Point3D(Snap(_target.X), Snap(_target.Y), 0);
+
+        public Point3D WorldAnchor(WorldObject o, string pin)
+        {
+            if (!_items.TryGetValue(o.Id, out var it)) return new Point3D(o.Pose.X, o.Pose.Y, o.Pose.Z);
+            var a = it.Model.Pins.FirstOrDefault(p => p.Pin == pin);
+            return a.Pin == null ? new Point3D(o.Pose.X, o.Pose.Y, o.Pose.Z) : it.Current.Transform(a.Local);
+        }
+
+        public IReadOnlyList<PinAnchor> PinsOf(string objectId) =>
+            _items.TryGetValue(objectId, out var it) ? it.Model.Pins : (IReadOnlyList<PinAnchor>)Array.Empty<PinAnchor>();
+
+        public PortFrame? PortOf(string objectId) => _items.TryGetValue(objectId, out var it) ? it.Model.Port : null;
+
+        public Rect3D BoundsOf(string objectId) => _items.TryGetValue(objectId, out var it) ? it.Model.Bounds : Rect3D.Empty;
+
+        /// <summary>Length of a cable as drawn (sagging between its ends) in metres.</summary>
+        public double CableLength(WorldCable cable)
+        {
+            if (World == null) return 0.2;
+            var a = World.Find(cable.A.ObjectId);
+            var b = World.Find(cable.B.ObjectId);
+            if (a == null || b == null) return 0.2;
+            var pts = CablePath(WorldAnchor(a, cable.A.Pin), WorldAnchor(b, cable.B.Pin));
+            double len = 0;
+            for (int i = 1; i < pts.Count; i++) len += (pts[i] - pts[i - 1]).Length;
+            return Math.Max(0.03, len);
+        }
+
+        // ================================================================ scene building
+
+        public static Matrix3D PoseMatrix(WorldPose p)
+        {
+            var m = Matrix3D.Identity;
+            m.Rotate(new Quaternion(new Vector3D(1, 0, 0), p.Roll));
+            m.Rotate(new Quaternion(new Vector3D(0, 1, 0), p.Pitch));
+            m.Rotate(new Quaternion(new Vector3D(0, 0, 1), p.Yaw));
+            m.Translate(new Vector3D(p.X, p.Y, p.Z));
+            return m;
+        }
+
+        private void BuildEnvironment()
+        {
+            var g = new Model3DGroup();
+            g.Children.Add(new AmbientLight(Color.FromRgb(0x58, 0x58, 0x60)));
+            g.Children.Add(new DirectionalLight(Color.FromRgb(0xE6, 0xE2, 0xDA), new Vector3D(-0.45, 0.6, -1)));
+            g.Children.Add(new DirectionalLight(Color.FromRgb(0x48, 0x4C, 0x58), new Vector3D(0.6, -0.4, -0.3)));
+            var env = World?.Environment;
+            double w = env?.Width ?? 4, d = env?.Depth ?? 3;
+            var ground = new MeshGeometry3D
+            {
+                Positions = new Point3DCollection { new Point3D(-w / 2, -d / 2, 0), new Point3D(w / 2, -d / 2, 0), new Point3D(w / 2, d / 2, 0), new Point3D(-w / 2, d / 2, 0) },
+                TextureCoordinates = new PointCollection { new Point(0, w), new Point(w, w), new Point(w, 0), new Point(0, 0) },
+                TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 },
+                Normals = new Vector3DCollection { new Vector3D(0, 0, 1), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1) }
+            };
+            var tile = new ImageBrush(GridTile()) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
+            g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
+            if (env != null)
+            {
+                var wall = M.Matte(Color.FromRgb(0x2A, 0x2A, 0x30), 0.05);
+                if (env.Walls)
+                {
+                    g.Children.Add(M.Model(M.Box(0, -d / 2 - 0.01, 0.05, w, 0.02, 0.1), wall));
+                    g.Children.Add(M.Model(M.Box(0, d / 2 + 0.01, 0.05, w, 0.02, 0.1), wall));
+                    g.Children.Add(M.Model(M.Box(-w / 2 - 0.01, 0, 0.05, 0.02, d, 0.1), wall));
+                    g.Children.Add(M.Model(M.Box(w / 2 + 0.01, 0, 0.05, 0.02, d, 0.1), wall));
+                }
+
+                foreach (var ob in env.Obstacles)
+                {
+                    g.Children.Add(M.Model(M.Box(ob.X, ob.Y, ob.Height / 2, ob.SizeX, ob.SizeY, ob.Height), M.Matte(Color.FromRgb(0x6A, 0x5C, 0x4A), 0.05)));
+                }
+            }
+
+            _environment.Content = g;
+        }
+
+        private static BitmapSource? _gridTile;
+
+        /// <summary>One metre of floor: 10 cm lines, faint 1 cm lines.</summary>
+        private static BitmapSource GridTile()
+        {
+            if (_gridTile != null) return _gridTile;
+            const int px = 1000;
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x15, 0x15, 0x18)), null, new Rect(0, 0, px, px));
+                var minor = new Pen(new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x20)), 1);
+                var major = new Pen(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30)), 2);
+                for (int i = 0; i <= 100; i++)
+                {
+                    var pen = i % 10 == 0 ? major : minor;
+                    double x = i * px / 100.0;
+                    dc.DrawLine(pen, new Point(x, 0), new Point(x, px));
+                    dc.DrawLine(pen, new Point(0, x), new Point(px, x));
+                }
+            }
+
+            var bmp = new RenderTargetBitmap(px, px, 96, 96, PixelFormats.Pbgra32);
+            bmp.Render(dv);
+            bmp.Freeze();
+            _gridTile = bmp;
+            return bmp;
+        }
+
+        private void RebuildOverlay()
+        {
+            foreach (var v in _anchorVisuals.Keys.ToList()) _view.Children.Remove(v);
+            _anchorVisuals.Clear();
+            var g = new Model3DGroup();
+            if (World != null && Selected != null && _items.TryGetValue(Selected, out var sel))
+            {
+                var b = sel.Model.Bounds;
+                if (!b.IsEmpty)
+                {
+                    var accent = new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(0xFF, 0x6E, 0x9B, 0xFF)));
+                    double e = 0.0012;
+                    var box = new Model3DGroup();
+                    foreach (var (a, c) in BoxEdges(b)) box.Children.Add(new GeometryModel3D(Edge(a, c, e), accent));
+                    box.Transform = new MatrixTransform3D(sel.Current);
+                    g.Children.Add(box);
+                }
+            }
+
+            _overlay.Content = g;
+
+            if (Tool == WorldTool.Cable && World != null)
+            {
+                foreach (var it in _items.Values)
+                {
+                    foreach (var pin in it.Model.Pins)
+                    {
+                        bool pending = _pendingPin != null && _pendingPin.ObjectId == it.Object.Id && _pendingPin.Pin == pin.Pin;
+                        var mat = new MaterialGroup();
+                        mat.Children.Add(new DiffuseMaterial(new SolidColorBrush(pending ? Color.FromRgb(0x3C, 0xD0, 0x64) : Color.FromRgb(0xF2, 0xB8, 0x3B))));
+                        mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(pending ? Color.FromRgb(0x20, 0x80, 0x30) : Color.FromRgb(0x60, 0x40, 0x10))));
+                        var p = it.Current.Transform(pin.Local);
+                        var v = new ModelVisual3D { Content = M.Model(M.Sphere(pending ? 0.0026 : 0.0018, p.X, p.Y, p.Z, 10), mat) };
+                        _view.Children.Add(v);
+                        _anchorVisuals[v] = (it.Object.Id, pin.Pin);
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<(Point3D, Point3D)> BoxEdges(Rect3D b)
+        {
+            var p = new Point3D[8];
+            for (int i = 0; i < 8; i++) p[i] = new Point3D(b.X + ((i & 1) != 0 ? b.SizeX : 0), b.Y + ((i & 2) != 0 ? b.SizeY : 0), b.Z + ((i & 4) != 0 ? b.SizeZ : 0));
+            int[,] e = { { 0, 1 }, { 2, 3 }, { 4, 5 }, { 6, 7 }, { 0, 2 }, { 1, 3 }, { 4, 6 }, { 5, 7 }, { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 } };
+            for (int i = 0; i < 12; i++) yield return (p[e[i, 0]], p[e[i, 1]]);
+        }
+
+        private static MeshGeometry3D Edge(Point3D a, Point3D b, double r) => Tube(new List<Point3D> { a, b }, r, 4);
+
+        /// <summary>Tube mesh along a polyline.</summary>
+        public static MeshGeometry3D Tube(IReadOnlyList<Point3D> pts, double radius, int sides = 8)
+        {
+            var mesh = new MeshGeometry3D();
+            for (int i = 0; i < pts.Count; i++)
+            {
+                var dir = i + 1 < pts.Count ? pts[i + 1] - pts[i] : pts[i] - pts[i - 1];
+                if (dir.Length < 1e-9) dir = new Vector3D(1, 0, 0);
+                dir.Normalize();
+                var up = Math.Abs(dir.Z) < 0.9 ? new Vector3D(0, 0, 1) : new Vector3D(1, 0, 0);
+                var u = Vector3D.CrossProduct(dir, up);
+                u.Normalize();
+                var v = Vector3D.CrossProduct(dir, u);
+                for (int s = 0; s < sides; s++)
+                {
+                    double a = 2 * Math.PI * s / sides;
+                    var n = u * Math.Cos(a) + v * Math.Sin(a);
+                    mesh.Positions.Add(pts[i] + n * radius);
+                    mesh.Normals.Add(n);
+                }
+            }
+
+            for (int i = 0; i + 1 < pts.Count; i++)
+            {
+                for (int s = 0; s < sides; s++)
+                {
+                    int a = i * sides + s, b = i * sides + (s + 1) % sides, c = a + sides, d = b + sides;
+                    mesh.TriangleIndices.Add(a);
+                    mesh.TriangleIndices.Add(c);
+                    mesh.TriangleIndices.Add(b);
+                    mesh.TriangleIndices.Add(b);
+                    mesh.TriangleIndices.Add(c);
+                    mesh.TriangleIndices.Add(d);
+                }
+            }
+
+            return mesh;
+        }
+
+        /// <summary>A hanging cable: quadratic curve sagging between the ends, never below the floor.</summary>
+        private static List<Point3D> CablePath(Point3D a, Point3D b)
+        {
+            double span = (b - a).Length;
+            var mid = new Point3D((a.X + b.X) / 2, (a.Y + b.Y) / 2, Math.Max(0.003, Math.Min(a.Z, b.Z) - 0.18 * span));
+            var pts = new List<Point3D>();
+            const int n = 18;
+            for (int i = 0; i <= n; i++)
+            {
+                double t = i / (double)n, u = 1 - t;
+                var p = new Point3D(u * u * a.X + 2 * u * t * mid.X + t * t * b.X, u * u * a.Y + 2 * u * t * mid.Y + t * t * b.Y, u * u * a.Z + 2 * u * t * mid.Z + t * t * b.Z);
+                p.Z = Math.Max(0.0015, p.Z);
+                pts.Add(p);
+            }
+
+            return pts;
+        }
+
+        public void RebuildCables()
+        {
+            if (World == null)
+            {
+                _cables.Content = null;
+                return;
+            }
+
+            var g = new Model3DGroup();
+            foreach (var c in World.Cables)
+            {
+                var a = World.Find(c.A.ObjectId);
+                var b = World.Find(c.B.ObjectId);
+                if (a == null || b == null) continue;
+                var pa = WorldAnchor(a, c.A.Pin);
+                var pb = WorldAnchor(b, c.B.Pin);
+                double r = Math.Max(0.0006, Math.Sqrt(WorldCable.CrossSection(c.Awg) / Math.PI) + 0.0003);
+                Color color;
+                try
+                {
+                    color = (Color)ColorConverter.ConvertFromString(c.Color);
+                }
+                catch (FormatException)
+                {
+                    color = Colors.OrangeRed;
+                }
+
+                var state = Session?.CableState(c);
+                if (state is { Burned: true }) color = Color.FromRgb(0x2A, 0x20, 0x1A);
+                var mat = new MaterialGroup();
+                mat.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
+                mat.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x50, 255, 255, 255)), 30));
+                if (state is { Burned: false } s && s.Power > 0)
+                {
+                    // Glows as it heats toward its rating.
+                    double amp = WorldCable.Ampacity(c.Awg);
+                    double load = Math.Abs(s.Current) / amp;
+                    if (load > 0.8) mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb((byte)Math.Min(255, 120 * load), (byte)Math.Min(120, 30 * load), 0))));
+                }
+
+                g.Children.Add(new GeometryModel3D(Tube(CablePath(pa, pb), r, 8), mat));
+                // Plugs at the ends.
+                g.Children.Add(M.Model(M.Box(pa.X, pa.Y, pa.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
+                g.Children.Add(M.Model(M.Box(pb.X, pb.Y, pb.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
+            }
+
+            _cables.Content = g;
+        }
+
+        // ================================================================ kinematics (servo horns, motor shafts and what is fixed to them)
+
+        private void UpdateKinematics()
+        {
+            if (World == null) return;
+            foreach (var it in _items.Values)
+            {
+                double angle = Session != null && Session.State != Simulation.SimState.Stopped ? Session.PortAngle(it.Object) : 0;
+                it.PortAngle = angle;
+                if (it.PortRotation != null) ((AxisAngleRotation3D)it.PortRotation.Rotation).Angle = angle * 180 / Math.PI;
+            }
+
+            var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var it in _items.Values) Resolve(it, done, 0);
+            foreach (var it in _items.Values) ((MatrixTransform3D)it.Visual.Transform).Matrix = it.Current;
+        }
+
+        private Matrix3D Resolve(Item it, HashSet<string> done, int depth)
+        {
+            if (done.Contains(it.Object.Id) || depth > 12) return it.Current;
+            done.Add(it.Object.Id);
+            it.Current = it.Placed;
+            foreach (var j in World!.Joints)
+            {
+                if (j.Kind != WorldJointKind.Fixed) continue;
+                string? parentId = null, port = null;
+                if (j.ObjectA == it.Object.Id && j.ObjectB != null)
+                {
+                    parentId = j.ObjectB;
+                    port = j.PortB;
+                }
+                else if (j.ObjectB == it.Object.Id && !string.IsNullOrEmpty(j.PortA))
+                {
+                    parentId = j.ObjectA;
+                    port = j.PortA;
+                }
+
+                if (parentId == null || !_items.TryGetValue(parentId, out var parent)) continue;
+                var parentNow = Resolve(parent, done, depth + 1);
+                var inv = parent.Placed;
+                inv.Invert();
+                var motion = Matrix3D.Identity;
+                if (!string.IsNullOrEmpty(port) && parent.Model.Port is { } pf && pf.Name == port)
+                {
+                    motion.RotateAt(new Quaternion(pf.Axis, parent.PortAngle * 180 / Math.PI), pf.Pivot);
+                }
+
+                it.Current = it.Placed * inv * motion * parentNow;
+                break;
+            }
+
+            return it.Current;
+        }
+
+        // ================================================================ live frame
+
+        private void OnFrame(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            double dt = Math.Min(0.1, (now - _lastFrame).TotalSeconds);
+            _lastFrame = now;
+            var s = Session;
+            if (s != null && s.State == Simulation.SimState.Running) s.Frame();
+            if (World != null && s != null && s.State != Simulation.SimState.Stopped)
+            {
+                UpdateKinematics();
+                UpdateLive(dt);
+                RebuildCables();
+                if (Selected != null) RebuildOverlay();
+            }
+
+            _effects.Step(dt);
+            _effects.InvalidateVisual();
+        }
+
+        private void UpdateLive(double dt)
+        {
+            foreach (var it in _items.Values)
+            {
+                double t = Session!.Temperature(it.Object);
+                bool failed = Session.IsFailed(it.Object.Id);
+                // Red-hot tint from 70 °C, full at 250 °C.
+                double heat = double.IsNaN(t) ? 0 : Math.Max(0, Math.Min(1, (t - 70) / 180));
+                ((SolidColorBrush)it.Model.Heat.Brush).Color = failed ? Color.FromRgb(0x18, 0x08, 0x02) : Color.FromRgb((byte)(200 * heat), (byte)(50 * heat * heat), 0);
+                foreach (var kv in it.Model.Lights)
+                {
+                    double b = Session.Brightness(it.Object, kv.Key);
+                    ((SolidColorBrush)kv.Value.Brush).Color = Color.FromRgb((byte)(255 * b), (byte)(90 * b), (byte)(70 * b));
+                }
+
+                if (it.Model.Screen != null)
+                {
+                    switch (Session.DisplayOf(it.Object))
+                    {
+                        case RobotTwin.CoreSim.Firmware.Devices.Ssd1306 oled:
+                            it.Model.Screen.ImageSource = Editor.DisplayRenderer.Oled(oled, it.Model.ScreenStyle);
+                            break;
+                        case RobotTwin.CoreSim.Firmware.Devices.Pcf8574Lcd lcd:
+                            it.Model.Screen.ImageSource = Editor.DisplayRenderer.Lcd(lcd, it.Model.ScreenStyle);
+                            break;
+                    }
+                }
+
+                if (failed || heat > 0.55)
+                {
+                    var bb = it.Visual.Transform.TransformBounds(it.Visual.Content.Bounds);
+                    var top = new Point3D(bb.X + bb.SizeX / 2, bb.Y + bb.SizeY / 2, bb.Z + bb.SizeZ);
+                    if (Shell.AppSettings.Current.Effects) _effects.EmitSmoke(top, failed ? 6 : 10 * heat, dt, failed);
+                }
+            }
+        }
+
+        /// <summary>Spark burst where a part failed.</summary>
+        public void Burst(string objectId)
+        {
+            if (!Shell.AppSettings.Current.Effects || !_items.TryGetValue(objectId, out var it)) return;
+            var bb = it.Visual.Transform.TransformBounds(it.Visual.Content.Bounds);
+            _effects.Burst(new Point3D(bb.X + bb.SizeX / 2, bb.Y + bb.SizeY / 2, bb.Z + bb.SizeZ), false);
+        }
+
+        public void ClearEffects()
+        {
+            _effects.Clear();
+            UpdateKinematics();
+            foreach (var it in _items.Values)
+            {
+                ((SolidColorBrush)it.Model.Heat.Brush).Color = Colors.Black;
+                foreach (var l in it.Model.Lights.Values) ((SolidColorBrush)l.Brush).Color = Colors.Black;
+            }
+
+            RebuildCables();
+        }
+
+        // ================================================================ camera & projection
+
+        private void UpdateCamera()
+        {
+            var dir = new Vector3D(Math.Cos(_pitch) * Math.Cos(_yaw), Math.Cos(_pitch) * Math.Sin(_yaw), -Math.Sin(_pitch));
+            _camera.Position = _target - dir * _distance;
+            _camera.LookDirection = dir * _distance;
+            _camera.UpDirection = new Vector3D(0, 0, 1);
+        }
+
+        private (Point Screen, double Depth, bool Visible) Project(Point3D p)
+        {
+            var look = _camera.LookDirection;
+            look.Normalize();
+            var right = Vector3D.CrossProduct(look, _camera.UpDirection);
+            right.Normalize();
+            var up = Vector3D.CrossProduct(right, look);
+            var d = p - _camera.Position;
+            double z = Vector3D.DotProduct(d, look);
+            if (z <= 0.001) return (default, z, false);
+            double w = Math.Max(1, ActualWidth), h = Math.Max(1, ActualHeight);
+            double f = w / 2 / Math.Tan(_camera.FieldOfView * Math.PI / 360);
+            _effects.Focal = f;
+            return (new Point(w / 2 + Vector3D.DotProduct(d, right) / z * f, h / 2 - Vector3D.DotProduct(d, up) / z * f), z, true);
+        }
+
+        /// <summary>Ray from the camera through a screen point.</summary>
+        private (Point3D Origin, Vector3D Dir) Ray(Point screen)
+        {
+            var look = _camera.LookDirection;
+            look.Normalize();
+            var right = Vector3D.CrossProduct(look, _camera.UpDirection);
+            right.Normalize();
+            var up = Vector3D.CrossProduct(right, look);
+            double w = Math.Max(1, ActualWidth), h = Math.Max(1, ActualHeight);
+            double f = w / 2 / Math.Tan(_camera.FieldOfView * Math.PI / 360);
+            var dir = look * f + right * (screen.X - w / 2) - up * (screen.Y - h / 2);
+            dir.Normalize();
+            return (_camera.Position, dir);
+        }
+
+        private Point3D? OnPlane(Point screen, double z)
+        {
+            var (o, d) = Ray(screen);
+            if (Math.Abs(d.Z) < 1e-6) return null;
+            double t = (z - o.Z) / d.Z;
+            if (t <= 0) return null;
+            return o + d * t;
+        }
+
+        private double Snap(double v) => Grid > 0 && !Keyboard.IsKeyDown(Key.LeftAlt) ? Math.Round(v / Grid) * Grid : v;
+
+        // ================================================================ interaction
+
+        private (string? ObjectId, string? Pin) Pick(Point p)
+        {
+            string? obj = null, pin = null;
+            VisualTreeHelper.HitTest(_view, null, r =>
+            {
+                if (r is RayMeshGeometry3DHitTestResult hit)
+                {
+                    if (_anchorVisuals.TryGetValue(hit.VisualHit, out var a))
+                    {
+                        obj = a.ObjectId;
+                        pin = a.Pin;
+                        return HitTestResultBehavior.Stop;
+                    }
+
+                    foreach (var it in _items.Values)
+                    {
+                        if (it.Visual == hit.VisualHit)
+                        {
+                            obj ??= it.Object.Id;
+                            if (Tool != WorldTool.Cable) return HitTestResultBehavior.Stop;
+                            break;
+                        }
+                    }
+                }
+
+                return HitTestResultBehavior.Continue;
+            }, new PointHitTestParameters(p));
+            return (obj, pin);
+        }
+
+        private void OnMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            Focus();
+            var p = e.GetPosition(this);
+            if (e.ChangedButton != MouseButton.Left)
+            {
+                _orbit = p;
+                _pan = true;
+                CaptureMouse();
+                return;
+            }
+
+            if (e.ClickCount == 2)
+            {
+                if (Pick(p).ObjectId is { } dbl)
+                {
+                    Select(dbl);
+                    FrameSelected();
+                }
+                else
+                {
+                    TopView();
+                }
+
+                return;
+            }
+
+            var (id, pin) = Pick(p);
+            switch (Tool)
+            {
+                case WorldTool.Cable:
+                    if (id != null && pin != null)
+                    {
+                        if (_pendingPin == null)
+                        {
+                            _pendingPin = new CableEnd { ObjectId = id, Pin = pin };
+                            RebuildOverlay();
+                            UpdateHint();
+                        }
+                        else if (!(_pendingPin.ObjectId == id && _pendingPin.Pin == pin))
+                        {
+                            var a = _pendingPin;
+                            _pendingPin = null;
+                            CableRequested?.Invoke(a, new CableEnd { ObjectId = id, Pin = pin });
+                            RebuildOverlay();
+                            UpdateHint();
+                        }
+
+                        return;
+                    }
+
+                    break;
+                case WorldTool.Joint:
+                    if (id != null)
+                    {
+                        JointTargetPicked?.Invoke(id);
+                        return;
+                    }
+
+                    break;
+                default:
+                    if (id != null && World?.Find(id) is { } o)
+                    {
+                        Select(id);
+                        if (Session == null || Session.State == Simulation.SimState.Stopped)
+                        {
+                            _drag = id;
+                            _dragMoved = false;
+                            _dragPlaneZ = o.Pose.Z;
+                            _dragStartScreen = p;
+                            _dragStartZ = o.Pose.Z;
+                            var hitPlane = OnPlane(p, _dragPlaneZ);
+                            _dragOffset = hitPlane.HasValue ? new Point3D(o.Pose.X - hitPlane.Value.X, o.Pose.Y - hitPlane.Value.Y, 0) : new Point3D();
+                            CaptureMouse();
+                        }
+
+                        return;
+                    }
+
+                    Select(null);
+                    break;
+            }
+
+            _orbit = p;
+            _pan = false;
+            CaptureMouse();
+        }
+
+        private void OnMouseMove(object sender, MouseEventArgs e)
+        {
+            var p = e.GetPosition(this);
+            if (_drag != null && World?.Find(_drag) is { } o && _items.TryGetValue(_drag, out var it))
+            {
+                if (!_dragMoved)
+                {
+                    if ((p - _dragStartScreen).Length < 3) return;
+                    BeginEdit?.Invoke();
+                    _dragMoved = true;
+                }
+
+                double nx = o.Pose.X, ny = o.Pose.Y, nz = o.Pose.Z;
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    double dz = -(p.Y - _dragStartScreen.Y) * _distance * 0.0016;
+                    nz = Math.Max(0, Snap(_dragStartZ + dz));
+                }
+                else if (OnPlane(p, _dragPlaneZ) is { } q)
+                {
+                    nx = Snap(q.X + _dragOffset.X);
+                    ny = Snap(q.Y + _dragOffset.Y);
+                }
+
+                // Whatever is mounted on the object (arms on a servo horn, a wheel on a shaft …) comes along.
+                World.MoveAssembly(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
+                foreach (var moved in new[] { o }.Concat(World.MountedOn(o.Id)))
+                {
+                    if (_items.TryGetValue(moved.Id, out var mi)) mi.Placed = PoseMatrix(moved.Pose);
+                }
+
+                UpdateKinematics();
+                RebuildCables();
+                RebuildOverlay();
+                return;
+            }
+
+            if (_orbit == null)
+            {
+                if (Tool == WorldTool.Cable) ShowPinTip(p);
+                return;
+            }
+
+            var d = p - _orbit.Value;
+            _orbit = p;
+            if (_pan)
+            {
+                var right = Vector3D.CrossProduct(_camera.LookDirection, new Vector3D(0, 0, 1));
+                right.Normalize();
+                var fwd = new Vector3D(_camera.LookDirection.X, _camera.LookDirection.Y, 0);
+                if (fwd.Length > 1e-6) fwd.Normalize();
+                double k = _distance * 0.0016;
+                _target += -right * d.X * k + fwd * d.Y * k;
+            }
+            else
+            {
+                _yaw -= d.X * 0.008;
+                _pitch = Math.Max(-0.1, Math.Min(1.55, _pitch + d.Y * 0.006));
+            }
+
+            UpdateCamera();
+        }
+
+        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_drag != null && _dragMoved && World?.Find(_drag) is { } o)
+            {
+                EditCommitted?.Invoke($"{o.Name} taşındı ({o.Pose.X * 1000:F0}, {o.Pose.Y * 1000:F0}, {o.Pose.Z * 1000:F0} mm)");
+            }
+
+            _drag = null;
+            _orbit = null;
+            ReleaseMouseCapture();
+        }
+
+        private readonly ToolTip _pinTip = new ToolTip { Placement = System.Windows.Controls.Primitives.PlacementMode.Relative };
+
+        /// <summary>Cable tool: names the pin under the cursor (and its voltage while simulating).</summary>
+        private void ShowPinTip(Point p)
+        {
+            var (id, pin) = Pick(p);
+            var o = id != null ? World?.Find(id) : null;
+            if (o == null || pin == null || !_items.TryGetValue(o.Id, out var it))
+            {
+                _pinTip.IsOpen = false;
+                return;
+            }
+
+            var anchor = it.Model.Pins.FirstOrDefault(a => a.Pin == pin);
+            string text = $"{o.Name} · {anchor.Label}";
+            if (Session != null && Session.State != Simulation.SimState.Stopped)
+            {
+                double v = Session.Voltage(new CableEnd { ObjectId = o.Id, Pin = pin });
+                if (!double.IsNaN(v)) text += "  ·  " + RobotTwin.CoreSim.Design.SiValue.Format(v, "V");
+            }
+
+            int wired = World!.Cables.Count(c => (c.A.ObjectId == o.Id && c.A.Pin == pin) || (c.B.ObjectId == o.Id && c.B.Pin == pin));
+            if (wired > 0) text += $"  ·  {wired} kablo";
+            _pinTip.Content = text;
+            _pinTip.PlacementTarget = this;
+            _pinTip.HorizontalOffset = p.X + 14;
+            _pinTip.VerticalOffset = p.Y + 10;
+            _pinTip.IsOpen = true;
+        }
+
+        public void CancelTool()
+        {
+            _pendingPin = null;
+            RebuildOverlay();
+            UpdateHint();
+        }
+
+        private void UpdateHint()
+        {
+            _hint.Text = Tool switch
+            {
+                WorldTool.Cable => _pendingPin == null
+                    ? "Kablo: ilk pini seçin (sarı noktalar) · Esc: iptal"
+                    : $"Kablo: {_pendingPin.Pin} seçildi, ikinci pini tıklayın · Esc: iptal",
+                WorldTool.Joint => "Bağla: seçili nesnenin takılacağı nesneyi tıklayın (servo kolu, motor mili, gövde) · Esc: iptal",
+                _ => "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız) · boşlukta sol: döndür · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten"
+            };
+        }
+    }
+}

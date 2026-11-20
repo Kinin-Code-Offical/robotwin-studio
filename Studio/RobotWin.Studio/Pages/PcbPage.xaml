@@ -1,0 +1,184 @@
+<UserControl x:Class="RobotWin.Studio.Pages.PcbPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:RobotWin.Studio.Theme"
+             xmlns:pcb="clr-namespace:RobotWin.Studio.Pcb"
+             Background="{StaticResource B.Base}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar: labels, then icons only, then an overflow menu as the page narrows (see ApplyToolbarLevel). -->
+        <Border Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+            <Grid x:Name="ToolbarGrid" Margin="10,0" ClipToBounds="True">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel x:Name="ToolbarLeft" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="AddPartButton" Click="OnAddPart" ToolTip="Kütüphaneden doğrudan karta parça yerleştir (şemaya da eklenir)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Plus}" Size="14"/><TextBlock Text="Parça ekle" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Popup x:Name="AddPartPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=AddPartButton}" AllowsTransparency="True">
+                        <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="8" Width="380">
+                            <StackPanel>
+                                <TextBox x:Name="AddPartSearch" Tag="Parça ara…" TextChanged="OnAddPartSearch"/>
+                                <ListBox x:Name="AddPartList" Height="300" Margin="0,8,0,0" MouseDoubleClick="OnAddPartPick" MouseLeftButtonUp="OnAddPartPick"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                    <Button x:Name="SyncButton" Click="OnSync" Margin="6,0,0,0" ToolTip="Şematikteki değişiklikleri karta aktar (yerleşim korunur)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Reset}" Size="14"/><TextBlock Text="Güncelle" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="PlaceButton" Click="OnPlace" Margin="6,0,0,0" ToolTip="Bağlantılara göre otomatik yerleşim (kilitli parçalar yerinde kalır)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Place}" Size="14"/><TextBlock Text="Yerleştir" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="AutoRouteButton" Click="OnRoute" Margin="6,0,0,0" ToolTip="Otomatik rota: tüm katmanlarda A* labirent, hat sınıfı genişlik ve boşlukları, iç düzlemlere via">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Route}" Size="14"/><TextBlock Text="Rota çiz" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="DrcButton" Click="OnDrc" Margin="6,0,0,0" ToolTip="Tasarım kural denetimi (hat sınıfı boşlukları, halka, delik, kenar, serigrafi, bağlantı, dolgu, akım)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Drc}" Size="14"/><TextBlock Text="DRC" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Border x:Name="Sep1" Width="1" Height="22" Background="{StaticResource B.Border}" Margin="10,0"/>
+                    <Ellipse x:Name="ActiveLayerDot" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ComboBox x:Name="ActiveLayerBox" Width="118" SelectionChanged="OnActiveLayerPick" ToolTip="Etkin bakır katmanı (PgUp/PgDn)"/>
+                    <Button x:Name="FillButton" Click="OnFillZones" Margin="6,0,0,0" ToolTip="Tüm dolgu alanlarını yeniden doldur">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Fill}" Size="14"/><TextBlock Text="Doldur" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <ToggleButton x:Name="View3DToggle" Style="{StaticResource Chip}" Content="3D" Margin="8,0,0,0" Click="OnToggle3D" ToolTip="Kartı ve parçaları 3D gösterir; simülasyon sırasında LED'ler yanar, ısınan parçalar kızarır"/>
+                </StackPanel>
+                <StackPanel x:Name="ToolbarRight" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}"/></Button>
+                    <Button x:Name="SetupButton" Margin="6,0,0,0" Click="OnBoardSetup" ToolTip="Kart ayarları: katman sayısı (2/4/6), kalınlık, bakır ağırlıkları, dielektrik, kör/gömülü via, üretim kuralları">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Stackup}" Size="14"/><TextBlock Text="Kart ayarları" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="FootprintButton" Margin="6,0,0,0" Click="OnFootprintEditor" ToolTip="Footprint düzenleyici: SMD/THT pedler, serigrafi, courtyard, fab; kullanıcı kütüphanesine kaydet">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="14"/><TextBlock Text="Footprint" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="ModuleButton" Margin="6,0,0,0" Click="OnSaveAsModule" ToolTip="Bu kartı kütüphaneye modül parça olarak kaydet: başka devrelere tek parça olarak eklenir, içi tam simüle edilir">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Part}" Size="14"/><TextBlock Text="Modül yap" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="KiCadButton" Margin="6,0,0,0" Click="OnExportKiCad" ToolTip="KiCad 8 projesi: .kicad_pro (hat sınıfları), .kicad_sch, .kicad_pcb (tüm katmanlar, yığın, dolgular), netlist, kütüphaneler, SPICE ve Gerber">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="14"/><TextBlock Text="KiCad'e aktar" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
+                    <Button x:Name="OverflowButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnOverflow" ToolTip="Diğer işlemler" Visibility="Collapsed"><t:Icon Data="{StaticResource I.More}"/></Button>
+                    <Popup x:Name="OverflowPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=OverflowButton}" AllowsTransparency="True">
+                        <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="6" MinWidth="200">
+                            <StackPanel x:Name="OverflowList"/>
+                        </Border>
+                    </Popup>
+                    <Button x:Name="ExportButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="32" Margin="8,0,0,0" Click="OnExport" ToolTip="Üretim dosyaları: tüm bakır katmanlarının Gerber'i, maske, pasta, serigrafi, kenar, PTH/NPTH/kör delikler, BOM ve dizgi (CPL)">
+                        <StackPanel Orientation="Horizontal">
+                            <t:Icon Data="{StaticResource I.Export}" Size="15" Foreground="{StaticResource B.OnPrimary}"/>
+                            <TextBlock Text="Üretim" Margin="7,0,0,0" Foreground="{StaticResource B.OnPrimary}" Tag="label"/>
+                        </StackPanel>
+                    </Button>
+                    <ToggleButton x:Name="PanelToggle" Style="{StaticResource Toggle.Tool}" Width="32" Height="30" Margin="6,0,0,0" Click="OnPanelToggle" ToolTip="Özellik panelini göster/gizle" Visibility="Collapsed">
+                        <t:Icon Data="{StaticResource I.Panel}" Size="16"/>
+                    </ToggleButton>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid x:Name="ContentGrid" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="44"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="SplitColumn" Width="1"/>
+                <ColumnDefinition x:Name="PanelColumn" Width="320"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tool strip -->
+            <Border Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,1,0">
+                <StackPanel x:Name="ToolStrip" Margin="0,8,0,0" HorizontalAlignment="Center">
+                    <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Select" Click="OnTool" ToolTip="Seç (Esc): tıkla, Shift+tıkla, kutu seçimi · sağ tık menüsü · F1 kısayollar"><t:Icon Data="{StaticResource I.Pointer}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolRoute" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Route" Click="OnTool" ToolTip="Etkileşimli yol (X): engellerin etrafından dolaşır, V ile via, / açı, Boşluk 45°/90°"><t:Icon Data="{StaticResource I.Wire}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolZone" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Zone" Click="OnTool" ToolTip="Dolgu alanı çiz (Z)"><t:Icon Data="{StaticResource I.Zone}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolMeasure" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Measure" Click="OnTool" ToolTip="Ölç (Ctrl+Shift+M): mesafe ve açı"><t:Icon Data="{StaticResource I.Measure}" Size="16"/></ToggleButton>
+                    <Border Height="1" Background="{StaticResource B.Border}" Margin="6,4,6,8"/>
+                    <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Text" Click="OnTool" ToolTip="Serigrafi yazısı (T)"><t:Icon Data="{StaticResource I.Text}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolDimension" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Dimension" Click="OnTool" ToolTip="Ölçü çizgisi (Ctrl+Shift+H)"><t:Icon Data="{StaticResource I.Dimension}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolOutline" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Outline" Click="OnTool" ToolTip="Kart kenarını çokgen olarak çiz"><t:Icon Data="{StaticResource I.Outline}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolHole" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Hole" Click="OnTool" ToolTip="Montaj deliği yerleştir"><t:Icon Data="{StaticResource I.Hole}" Size="16"/></ToggleButton>
+                </StackPanel>
+            </Border>
+
+            <pcb:BoardCanvas x:Name="Canvas" Grid.Column="1"/>
+            <pcb:Board3DView x:Name="View3D" Grid.Column="1" Visibility="Collapsed"/>
+            <Border x:Name="StatusBar" Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="120,0,10,6" IsHitTestVisible="False">
+                <DockPanel LastChildFill="True">
+                    <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="11" Foreground="{StaticResource B.TextMuted}" Margin="12,0,0,0"/>
+                    <TextBlock x:Name="HintText" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"/>
+                </DockPanel>
+            </Border>
+
+            <!-- F1 / ? shortcut overlay -->
+            <Border x:Name="HelpOverlay" Grid.Column="1" Visibility="Collapsed" Background="#D80E0E10" MouseLeftButtonUp="OnHelpClose" Cursor="Hand">
+                <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="10"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22,18" Margin="16" MaxWidth="900" Effect="{StaticResource E.Popup}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <TextBlock DockPanel.Dock="Right" Text="F1 / ? / Esc: kapat" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
+                            <TextBlock Text="PCB kısayolları" Style="{StaticResource Text.Title}" FontSize="18"/>
+                        </DockPanel>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <WrapPanel x:Name="HelpColumns"/>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Border>
+
+            <Border x:Name="Splitter" Grid.Column="2" Background="{StaticResource B.Border}"/>
+            <Border x:Name="SidePanel" Grid.Column="3" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0">
+                <TabControl x:Name="Tabs">
+                    <TabItem Header="Kart">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="BoardPanel" Margin="16,6,16,16"/>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="Katmanlar">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="LayersPanel" Margin="16,6,16,16"/>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="Hatlar">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="ClassesPanel" Margin="16,6,16,16"/>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem x:Name="DrcTab" Header="DRC">
+                        <DockPanel Margin="16,10,16,12">
+                            <StackPanel DockPanel.Dock="Top">
+                                <WrapPanel>
+                                    <Button Click="OnDrc" Margin="0,0,8,6" Style="{StaticResource Btn.Primary}">DRC çalıştır</Button>
+                                    <CheckBox x:Name="RefillBeforeDrc" Style="{StaticResource Switch}" IsChecked="True" Content="Önce doldur" Margin="0,0,0,6" VerticalAlignment="Center"/>
+                                </WrapPanel>
+                                <TextBlock x:Name="DrcSummary" Style="{StaticResource Text.Body}" Margin="0,4,0,8"/>
+                            </StackPanel>
+                            <ListBox x:Name="DrcList" SelectionChanged="OnDrcPick" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="14"/>
+                                                <ColumnDefinition/>
+                                            </Grid.ColumnDefinitions>
+                                            <Ellipse Width="7" Height="7" VerticalAlignment="Top" Margin="0,5,0,0" Fill="{Binding Tag}" HorizontalAlignment="Left"/>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Rule}" Foreground="{StaticResource B.Text}" FontSize="12"/>
+                                                <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="11.5" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </TabItem>
+                </TabControl>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

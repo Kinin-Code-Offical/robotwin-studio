@@ -1,0 +1,181 @@
+using System;
+using System.Collections.Generic;
+using RobotTwin.CoreSim.Design;
+using RobotTwin.CoreSim.Formats;
+using RobotTwin.CoreSim.Mechanics;
+using RobotTwin.CoreSim.Sandbox;
+
+namespace RobotWin.Studio.Examples
+{
+    public sealed class WorldTemplate
+    {
+        public WorldTemplate(string id, string title, string description, Func<WorldDocument> build)
+        {
+            Id = id;
+            Title = title;
+            Description = description;
+            Build = build;
+        }
+
+        public string Id { get; }
+        public string Title { get; }
+        public string Description { get; }
+        public Func<WorldDocument> Build { get; }
+    }
+
+    /// <summary>Ready-made worlds that show boards, parts, cables and joints working together.</summary>
+    public static class WorldTemplates
+    {
+        private static PartLibrary Lib => PartLibrary.Default;
+
+        public static IReadOnlyList<WorldTemplate> All { get; } = new List<WorldTemplate>
+        {
+            new WorldTemplate("empty", "Boş atölye", "4 × 3 m zemin, 25 °C. Kartlarınızı ve parçalarınızı ekleyin.", () => new WorldDocument { Title = "Atölye" }),
+            new WorldTemplate("two-boards", "Kabloyla bağlı iki kart", "Kendi çizilmiş güç kartı (9 V pil) ile LED kartı ayrı PCB'ler; iki kabloyla birleşince LED yanar.", TwoBoards),
+            new WorldTemplate("servo-arm", "Arduino ile iki eksenli servo kol", "Arduino Uno kütüphanesiz darbe üreterek iki SG90'ı sürer; ikinci servo birinci servonun koluna vidalı, kol zincirleme döner.", ServoArm),
+            new WorldTemplate("displays", "Arduino, LCD ve OLED (I²C kablolu)", "Uno, 16×2 LCD, 128×64 OLED ve potansiyometre ayrı parçalar; dört telli I²C kablolarıyla bağlı. Gerçek derlenmiş yazılım iki ekrana da yazar.", Displays),
+            new WorldTemplate("motor-wheel", "Pil, motor ve tekerlek", "4×AA pil kutusu kablolarla TT motoru sürer; tekerlek motor miline takılı, motor sehpaya vidalı.", MotorWheel)
+        };
+
+        public static WorldTemplate? Find(string id)
+        {
+            foreach (var t in All)
+            {
+                if (t.Id == id) return t;
+            }
+
+            return null;
+        }
+
+        private static void Tie(Schematic s, SchematicPart p, string pin, string net) => VehicleTemplates.Tie(s, Lib, p, pin, net);
+
+        public static ProjectPackage PowerBoard()
+        {
+            var s = new Schematic { Title = "Güç kartı" };
+            var bat = s.AddPart(Lib, "bat-9v", new GridPoint(0, 0));
+            var sw = s.AddPart(Lib, "toggle-spst", new GridPoint(14, -6));
+            var j = s.AddPart(Lib, "hdr-1x2", new GridPoint(28, 0));
+            Tie(s, bat, "+", "VBAT");
+            Tie(s, bat, "-", "GND");
+            if (s.FindPart(sw.RefDes) is { } swp && Lib.Find(swp.PartId)?.FindPin("A") != null)
+            {
+                Tie(s, sw, "A", "VBAT");
+                Tie(s, sw, "B", "VOUT");
+                sw.Parameters["closed"] = "true";
+            }
+            else
+            {
+                s.Parts.Remove(sw);
+            }
+
+            Tie(s, j, "1", s.Parts.Contains(sw) ? "VOUT" : "VBAT");
+            Tie(s, j, "2", "GND");
+            return new ProjectPackage { Schematic = s };
+        }
+
+        public static ProjectPackage LedBoard()
+        {
+            var s = new Schematic { Title = "LED kartı" };
+            var j = s.AddPart(Lib, "hdr-1x2", new GridPoint(0, 0));
+            var r1 = s.AddPart(Lib, "res-470", new GridPoint(16, -4));
+            var r2 = s.AddPart(Lib, "res-470", new GridPoint(16, 4));
+            var d1 = s.AddPart(Lib, "led5-red", new GridPoint(32, -4));
+            var d2 = s.AddPart(Lib, "led5-green", new GridPoint(32, 4));
+            Tie(s, j, "1", "VIN");
+            Tie(s, j, "2", "GND");
+            Tie(s, r1, "A", "VIN");
+            Tie(s, r1, "B", "A1");
+            Tie(s, d1, "A", "A1");
+            Tie(s, d1, "K", "GND");
+            Tie(s, r2, "A", "VIN");
+            Tie(s, r2, "B", "A2");
+            Tie(s, d2, "A", "A2");
+            Tie(s, d2, "K", "GND");
+            return new ProjectPackage { Schematic = s };
+        }
+
+        private static WorldDocument TwoBoards()
+        {
+            var w = new WorldDocument { Title = "İki kart" };
+            var power = w.AddBoard(w.AddDesign(PowerBoard()), new WorldPose { X = -0.06 });
+            var leds = w.AddBoard(w.AddDesign(LedBoard()), new WorldPose { X = 0.06, Yaw = 0 });
+            w.Connect(new CableEnd { ObjectId = power.Id, Pin = "J1.1" }, new CableEnd { ObjectId = leds.Id, Pin = "J1.1" }, 24, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = power.Id, Pin = "J1.2" }, new CableEnd { ObjectId = leds.Id, Pin = "J1.2" }, 24, "#1F1F23");
+            return w;
+        }
+
+        private static WorldDocument ServoArm()
+        {
+            var w = new WorldDocument { Title = "Servo kol" };
+            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = -0.09, Y = 0 });
+            uno.Parameters["firmware"] = "builtin:servo-sweep.hex";
+            var table = w.AddBody("box", 0.06, 0.04, 0.012, new WorldPose { X = 0.04, Y = 0 }, "AHŞAP");
+            table.Name = "Taban";
+            table.IsStatic = true;
+            var s1 = w.AddComponent(Lib, "servo-sg90", new WorldPose { X = 0.04, Y = 0, Z = 0.012 });
+            s1.Name = "Omuz servosu";
+            // Horn pivot of an SG90 sits 5.4 mm from the body centre, 31 mm above its base.
+            double pivotX = s1.Pose.X - 0.0054, pivotZ = s1.Pose.Z + 0.031;
+            var arm1 = w.AddBody("box", 0.11, 0.018, 0.003, new WorldPose { X = pivotX + 0.045, Z = pivotZ + 0.0002 }, "PLA");
+            arm1.Name = "Kol 1";
+            arm1.Color = "#E87A2C";
+            var s2 = w.AddComponent(Lib, "servo-sg90", new WorldPose { X = pivotX + 0.085, Z = arm1.Pose.Z + 0.003 });
+            s2.Name = "Dirsek servosu";
+            double pivot2X = s2.Pose.X - 0.0054, pivot2Z = s2.Pose.Z + 0.031;
+            var arm2 = w.AddBody("box", 0.08, 0.014, 0.003, new WorldPose { X = pivot2X + 0.032, Z = pivot2Z + 0.0002 }, "PLA");
+            arm2.Name = "Kol 2";
+            arm2.Color = "#2E7DB8";
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = s1.Id, ObjectB = table.Id });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = arm1.Id, ObjectB = s1.Id, PortB = "horn" });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = s2.Id, ObjectB = arm1.Id });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = arm2.Id, ObjectB = s2.Id, PortB = "horn" });
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = s1.Id, Pin = "V+" }, 24, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND1" }, new CableEnd { ObjectId = s1.Id, Pin = "GND" }, 24, "#5A3A22");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "D9" }, new CableEnd { ObjectId = s1.Id, Pin = "SIG" }, 24, "#F2A33B");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = s2.Id, Pin = "V+" }, 24, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND2" }, new CableEnd { ObjectId = s2.Id, Pin = "GND" }, 24, "#5A3A22");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "D10" }, new CableEnd { ObjectId = s2.Id, Pin = "SIG" }, 24, "#F2A33B");
+            return w;
+        }
+
+        private static WorldDocument Displays()
+        {
+            var w = new WorldDocument { Title = "Ekranlar" };
+            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = -0.06, Y = 0 });
+            uno.Parameters["firmware"] = "builtin:i2c-displays.hex";
+            var lcd = w.AddComponent(Lib, "lcd1602-i2c", new WorldPose { X = 0.08, Y = 0.05, Z = 0.0 });
+            var oled = w.AddComponent(Lib, "oled-128x64", new WorldPose { X = 0.08, Y = -0.04 });
+            var pot = w.AddComponent(Lib, "pot-10k", new WorldPose { X = -0.06, Y = -0.08 });
+            pot.Parameters["position"] = "0.7";
+            foreach (var d in new[] { lcd, oled })
+            {
+                w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = d.Id, Pin = "VCC" }, 26, "#E5484D");
+                w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND2" }, new CableEnd { ObjectId = d.Id, Pin = "GND" }, 26, "#1F1F23");
+                w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "A4" }, new CableEnd { ObjectId = d.Id, Pin = "SDA" }, 26, "#3E7CC8");
+                w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "A5" }, new CableEnd { ObjectId = d.Id, Pin = "SCL" }, 26, "#F2D04B");
+            }
+
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = pot.Id, Pin = "A" }, 26, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND3" }, new CableEnd { ObjectId = pot.Id, Pin = "B" }, 26, "#1F1F23");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "A0" }, new CableEnd { ObjectId = pot.Id, Pin = "W" }, 26, "#F2A33B");
+            return w;
+        }
+
+        private static WorldDocument MotorWheel()
+        {
+            var w = new WorldDocument { Title = "Motor ve tekerlek" };
+            var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = -0.11, Y = 0 });
+            var stand = w.AddBody("box", 0.06, 0.04, 0.03, new WorldPose { X = 0.03, Y = 0 }, "AHŞAP");
+            stand.Name = "Sehpa";
+            stand.IsStatic = true;
+            var motor = w.AddComponent(Lib, "motor-tt", new WorldPose { X = 0.03, Y = 0, Z = 0.03 });
+            // TT output shaft: 11 mm behind centre, 9.4 mm up, pointing +Y; wheel hub slides on 13 mm out.
+            var wheel = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = motor.Pose.X - 0.011, Y = 0.0185 + 0.015, Z = motor.Pose.Z + 0.0094 - 0.0325 }, "KAUÇUK");
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = motor.Id, ObjectB = stand.Id });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheel.Id, ObjectB = motor.Id, PortB = "shaft" });
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = motor.Id, Pin = "A" }, 22, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = motor.Id, Pin = "B" }, 22, "#1F1F23");
+            return w;
+        }
+    }
+}

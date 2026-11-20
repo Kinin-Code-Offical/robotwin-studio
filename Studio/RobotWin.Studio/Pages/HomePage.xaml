@@ -1,0 +1,48 @@
+<UserControl x:Class="RobotWin.Studio.Pages.HomePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource B.Base}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="72,56,72,48" MaxWidth="1100" HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="520"/>
+                <ColumnDefinition Width="64"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <Image x:Name="HeroLogo" Width="64" Height="64" HorizontalAlignment="Left" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <TextBlock Text="RobotWin Studio" Style="{StaticResource Text.Hero}" Margin="0,24,0,0"/>
+                <TextBlock Text="Kartlarını tasarla, dünyaya koy, kablola ve hepsini birlikte gerçek fizikle simüle et." Style="{StaticResource Text.Body}" FontSize="14" Margin="0,8,0,26" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource Btn.Primary}" Content="Yeni dünya" Padding="16,7" Click="OnNewWorld"/>
+                    <Button Content="Yeni devre / kart" Padding="16,7" Margin="8,0,0,0" Click="OnNew"/>
+                    <Button Content="Aç…" Padding="16,7" Margin="8,0,0,0" Click="OnOpen"/>
+                </StackPanel>
+                <TextBlock x:Name="Facts" Style="{StaticResource Text.Caption}" Margin="0,20,0,0" TextWrapping="Wrap"/>
+
+                <TextBlock Text="Dünyalar" Style="{StaticResource Text.Overline}" Margin="0,48,0,6"/>
+                <Border BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+                    <StackPanel x:Name="WorldList"/>
+                </Border>
+
+                <TextBlock Text="Devre ve robot örnekleri" Style="{StaticResource Text.Overline}" Margin="0,36,0,6"/>
+                <Border BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+                    <StackPanel x:Name="ExampleList"/>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Margin="0,88,0,0">
+                <TextBlock x:Name="RecentTitle" Text="Son açılanlar" Style="{StaticResource Text.Overline}"/>
+                <StackPanel x:Name="RecentList"/>
+                <TextBlock x:Name="RecentEmpty" Text="Henüz kaydedilmiş bir proje yok." Style="{StaticResource Text.Caption}"/>
+
+                <TextBlock x:Name="BackupTitle" Text="Otomatik yedekler" Style="{StaticResource Text.Overline}" Margin="0,32,0,4"/>
+                <StackPanel x:Name="BackupList"/>
+
+                <TextBlock Text="Kısayollar" Style="{StaticResource Text.Overline}" Margin="0,32,0,8"/>
+                <StackPanel x:Name="Shortcuts"/>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

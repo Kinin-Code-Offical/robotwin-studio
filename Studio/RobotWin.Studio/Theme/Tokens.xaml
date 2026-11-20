@@ -1,0 +1,79 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ============================================================
+         RobotWin design tokens — neutral, flat, one accent.
+         No gradients, glows or decorative colour: grey surfaces,
+         hairline borders, and a single blue reserved for selection,
+         focus and live values. Semantic colours appear as text only.
+         ============================================================ -->
+
+    <!-- Surfaces -->
+    <Color x:Key="C.Canvas">#0E0E10</Color>
+    <Color x:Key="C.Base">#111113</Color>
+    <Color x:Key="C.Surface">#161618</Color>
+    <Color x:Key="C.Raised">#1C1C1F</Color>
+    <Color x:Key="C.Overlay">#202023</Color>
+    <Color x:Key="C.Hover">#222226</Color>
+    <Color x:Key="C.Pressed">#29292D</Color>
+
+    <!-- Lines -->
+    <Color x:Key="C.Border">#242428</Color>
+    <Color x:Key="C.BorderStrong">#323237</Color>
+
+    <!-- Text -->
+    <Color x:Key="C.Text">#EDEDEF</Color>
+    <Color x:Key="C.TextSecondary">#A0A0A8</Color>
+    <Color x:Key="C.TextMuted">#6C6C74</Color>
+    <Color x:Key="C.TextDisabled">#45454B</Color>
+
+    <!-- The one accent -->
+    <Color x:Key="C.Accent">#6E9BFF</Color>
+    <Color x:Key="C.AccentSoft">#1F6E9BFF</Color>
+
+    <!-- Semantic (text only) -->
+    <Color x:Key="C.Success">#5BB98B</Color>
+    <Color x:Key="C.Warning">#D4A84B</Color>
+    <Color x:Key="C.Danger">#E5484D</Color>
+
+    <SolidColorBrush x:Key="B.Canvas" Color="{StaticResource C.Canvas}"/>
+    <SolidColorBrush x:Key="B.Base" Color="{StaticResource C.Base}"/>
+    <SolidColorBrush x:Key="B.Surface" Color="{StaticResource C.Surface}"/>
+    <SolidColorBrush x:Key="B.Raised" Color="{StaticResource C.Raised}"/>
+    <SolidColorBrush x:Key="B.Overlay" Color="{StaticResource C.Overlay}"/>
+    <SolidColorBrush x:Key="B.Hover" Color="{StaticResource C.Hover}"/>
+    <SolidColorBrush x:Key="B.Pressed" Color="{StaticResource C.Pressed}"/>
+    <SolidColorBrush x:Key="B.Border" Color="{StaticResource C.Border}"/>
+    <SolidColorBrush x:Key="B.BorderStrong" Color="{StaticResource C.BorderStrong}"/>
+    <SolidColorBrush x:Key="B.Text" Color="{StaticResource C.Text}"/>
+    <SolidColorBrush x:Key="B.TextSecondary" Color="{StaticResource C.TextSecondary}"/>
+    <SolidColorBrush x:Key="B.TextMuted" Color="{StaticResource C.TextMuted}"/>
+    <SolidColorBrush x:Key="B.TextDisabled" Color="{StaticResource C.TextDisabled}"/>
+    <SolidColorBrush x:Key="B.Accent" Color="{StaticResource C.Accent}"/>
+    <SolidColorBrush x:Key="B.AccentSoft" Color="{StaticResource C.AccentSoft}"/>
+    <SolidColorBrush x:Key="B.Success" Color="{StaticResource C.Success}"/>
+    <SolidColorBrush x:Key="B.Warning" Color="{StaticResource C.Warning}"/>
+    <SolidColorBrush x:Key="B.Danger" Color="{StaticResource C.Danger}"/>
+    <SolidColorBrush x:Key="B.OnPrimary" Color="#111113"/>
+    <SolidColorBrush x:Key="B.Transparent" Color="Transparent"/>
+
+    <!-- Typography -->
+    <FontFamily x:Key="F.Ui">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="F.Display">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="F.Mono">Cascadia Mono, Consolas</FontFamily>
+    <sys:Double x:Key="T.Caption">11.5</sys:Double>
+    <sys:Double x:Key="T.Body">13</sys:Double>
+    <sys:Double x:Key="T.Subtitle">14</sys:Double>
+    <sys:Double x:Key="T.Title">20</sys:Double>
+    <sys:Double x:Key="T.Hero">30</sys:Double>
+
+    <!-- Geometry -->
+    <CornerRadius x:Key="R.Small">4</CornerRadius>
+    <CornerRadius x:Key="R.Medium">6</CornerRadius>
+    <CornerRadius x:Key="R.Large">8</CornerRadius>
+    <CornerRadius x:Key="R.Pill">999</CornerRadius>
+
+    <!-- The only shadow: popups need separation from what is under them. -->
+    <DropShadowEffect x:Key="E.Popup" BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.35" Color="#000000"/>
+</ResourceDictionary>
