@@ -22,51 +22,36 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      - name: Guardrail - Check Ignored Files
+      - name: Verify pinned SDK
         shell: pwsh
         run: |
-          # Fail if workspace_snapshot is tracked
-          $snap = git ls-files workspace_snapshot.txt
-          if ($snap) {
-              Write-Error "CRITICAL: workspace_snapshot.txt is tracked!"
-              exit 1
-          }
-          Write-Host "Guardrail passed: No forbidden files tracked."
-
-      - name: Verify UXML validity
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/validate_uxml.ps1
-
-      - name: Verify Unity plugins sync
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/update_unity_plugins.ps1 -Check
-
-      - name: Verify repo snapshot (README tree + repo_files)
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File ./tools/scripts/update_repo_snapshot.ps1
-          git diff --exit-code
-
-      - name: Verify no tracked build artifacts
-        run: |
-          $artifacts = git ls-files | Select-String -Pattern "(\\bin\\)|(\\obj\\)|(TestResults)" -AllMatches
-          if ($artifacts) {
-            Write-Error "Found tracked build artifacts. These must be gitignored:`n$artifacts"
-          }
-        shell: pwsh
-
-      - name: Verify global.json existence
-        run: |
-          if (!(Test-Path "global.json")) {
+          if (!(Test-Path ./global.json)) {
             Write-Error "global.json is missing. Please ensure the .NET SDK is pinned."
             exit 1
           }
-        shell: powershell
 
-      - name: Restore CoreSim
-        run: dotnet restore CoreSim/CoreSim.sln
+      - name: Verify no tracked build artifacts
+        shell: pwsh
+        run: |
+          $artifacts = git ls-files | Select-String -Pattern "(\bin\)|(\obj\)|(TestResults)|(^builds/)" -AllMatches
+          if ($artifacts) {
+            Write-Error "Found tracked build artifacts. These must be gitignored:`n$artifacts"
+            exit 1
+          }
 
-      - name: Test CoreSim
-        run: dotnet test CoreSim/CoreSim.sln --no-restore --verbosity normal
+      - name: Restore
+        run: dotnet restore RobotWinStudio.sln
+
+      - name: Build
+        run: dotnet build RobotWinStudio.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test RobotWinStudio.sln -c Release --no-build --verbosity normal
+
+      - name: Self-test (examples, simulation, PCB, DRC)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse -Filter RobotWinStudio.exe builds/RobotWin.Studio/Release | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList "--selftest","--selftest-out","selftest.txt" -Wait -PassThru
+          Get-Content selftest.txt
+          if ($p.ExitCode -ne 0) { exit 1 }

@@ -4,32 +4,39 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build the installer for (e.g. v2.0.0)"
+        required: true
 
 permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  installer:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
-      - name: Build CoreSim
-        run: dotnet publish CoreSim/CoreSim.sln -c Release -o ./publish/CoreSim
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Build MockFirmware
-        run: dotnet publish CoreSim/src/MockFirmware/MockFirmware.csproj -c Release -r win-x64 --self-contained false -o ./publish/MockFirmware
-
-      - name: Archive artifacts
-        run: Compress-Archive -Path ./publish/* -DestinationPath ./release_artifacts.zip
-
-      - name: Create Release
+      - name: Upload to the release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./release_artifacts.zip
-          generate_release_notes: true
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: builds/installer/RobotWinStudio-Setup-${{ env.VERSION }}.exe
+          fail_on_unmatched_files: true

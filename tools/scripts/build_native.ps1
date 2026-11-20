@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 # Ensure Output Dir
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\\..")
-$DllDir = Join-Path $RepoRoot "RobotWin/Assets/Plugins/x86_64"
+$DllDir = Join-Path $RepoRoot "builds/native"
 $OutDir = Join-Path $RepoRoot "builds/native"
 if (-not (Test-Path $DllDir)) { New-Item -ItemType Directory -Force -Path $DllDir | Out-Null }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
@@ -14,7 +14,7 @@ $MainSrc = "NativeEngine/src/main.cpp"
 
 Push-Location $RepoRoot
 Write-Host "[NativeEngine] Building DLL..." -ForegroundColor Cyan
-# Build DLL (Unity Plugin)
+# Build DLL
 # Use -I"path" to ensure correct parsing
 g++ -shared -o "$DllDir/NativeEngine.dll" $Sources -I"NativeEngine/include" -static-libgcc -static-libstdc++ -g
 if ($LASTEXITCODE -ne 0) { Write-Error "DLL Build Failed"; exit 1 }
