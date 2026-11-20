@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>RobotWinStudio</AssemblyName>
+    <RootNamespace>RobotWin.Studio</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Product>RobotWin Studio</Product>
+    <Version>1.0.0</Version>
+    <TieredPGO>true</TieredPGO>
+    <ApplicationIcon>Branding/robotwin.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Firmware\*.hex;Firmware\*.ino" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CoreSim\src\RobotTwin.CoreSim\RobotTwin.CoreSim.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shown natively by WPF the moment the process starts, faded out when the main window is ready. -->
+    <SplashScreen Include="Branding\splash.png" />
+  </ItemGroup>
+</Project>
