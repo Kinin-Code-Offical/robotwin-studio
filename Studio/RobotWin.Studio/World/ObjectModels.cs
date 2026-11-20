@@ -129,6 +129,9 @@ namespace RobotWin.Studio.World
         {
             "KAUÇUK" or "KAUCUK" or "RUBBER" => Color.FromRgb(0x24, 0x24, 0x27),
             "AHŞAP" or "AHSAP" or "MDF" or "KONTRPLAK" => Color.FromRgb(0xC8, 0xA0, 0x6E),
+            "BALSA" => Color.FromRgb(0xE6, 0xCF, 0xA0),
+            "KARBON" or "CARBON" => Color.FromRgb(0x2B, 0x2C, 0x30),
+            "KURŞUN" or "KURSUN" or "LEAD" => Color.FromRgb(0x7A, 0x7F, 0x88),
             "FR4" => Color.FromRgb(0x1E, 0x56, 0x31),
             _ => MeshVisual.MaterialColor(material ?? "PLA")
         };

@@ -520,6 +520,11 @@ namespace RobotTwin.CoreSim.Mechanics
         public const double Steel = 7850;
         public const double Brass = 8500;
         public const double CarbonFibre = 1600;
+        public const double Wood = 500;        // pine / spruce
+        public const double Balsa = 160;       // model-aircraft grade (100–200)
+        public const double Lead = 11340;
+        public const double Rubber = 1100;
+        public const double Copper = 8960;
 
         /// <summary>Rough effective density of an FDM print: solid walls/skins plus infill (fractions 0..1).</summary>
         public static double Printed(double material, double infill, double shellFraction = 0.35) =>

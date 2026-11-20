@@ -578,6 +578,11 @@ namespace RobotTwin.CoreSim.Mechanics
             "ALÜMİNYUM" or "ALUMINIUM" or "ALUMINUM" => MaterialDensity.Aluminium,
             "ÇELİK" or "STEEL" => MaterialDensity.Steel,
             "KARBON" or "CARBON" => MaterialDensity.CarbonFibre,
+            "AHŞAP" or "AHSAP" or "WOOD" => MaterialDensity.Wood,
+            "BALSA" => MaterialDensity.Balsa,
+            "KURŞUN" or "KURSUN" or "LEAD" => MaterialDensity.Lead,
+            "KAUÇUK" or "KAUCUK" or "RUBBER" => MaterialDensity.Rubber,
+            "BAKIR" or "COPPER" => MaterialDensity.Copper,
             _ => MaterialDensity.Pla
         };
 

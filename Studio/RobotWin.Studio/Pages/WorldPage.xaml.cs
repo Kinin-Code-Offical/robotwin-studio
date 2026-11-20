@@ -28,7 +28,7 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class WorldPage : UserControl
     {
-        private static readonly string[] Materials = { "PLA", "PETG", "ABS", "AKRİLİK", "ALÜMİNYUM", "ÇELİK", "KARBON", "AHŞAP", "MDF", "KAUÇUK", "FR4" };
+        private static readonly string[] Materials = { "PLA", "PETG", "ABS", "AKRİLİK", "ALÜMİNYUM", "ÇELİK", "KARBON", "AHŞAP", "BALSA", "KURŞUN", "MDF", "KAUÇUK", "FR4" };
 
         private readonly MainWindow _main;
         private readonly WorldSession _session = new WorldSession(PartLibrary.Default);

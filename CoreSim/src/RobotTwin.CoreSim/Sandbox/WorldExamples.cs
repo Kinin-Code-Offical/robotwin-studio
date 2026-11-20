@@ -17,46 +17,131 @@ namespace RobotTwin.CoreSim.Sandbox
         /// the Studio and the headless runner use, so the wheels sit exactly on their axles.
         /// </summary>
         /// <summary>
-        /// [aero] 1 m model glider: Clark Y wing (2° incidence), NACA 0012 tail with an elevator linked
-        /// to an SG90 servo by a 0.5 pushrod, fin, nose weight for a stable CG; hand-launched at
-        /// 12 m/s from 40 m. Static margin ≈ 25 % of the chord: it settles into a ~7:1 glide.
+        /// [aero] A 1 m RC thermal glider built the way a real one is: a balsa fuselage pod carrying a
+        /// 2S LiPo, an Arduino Nano and two SG90 servos (elevator, rudder) with lead in the nose, a
+        /// carbon tail boom with the pushrods running beside it, a 6° dihedral Clark Y wing on the
+        /// pod's wing saddle (rudder-steered, no ailerons: dihedral turns yaw into roll), and the
+        /// tailplane and fin on the end of the boom. CG ≈ 33 % of the chord, tail volume ≈ 0.57.
+        /// Hand-launched at 7 m/s from 40 m; the sketch holds trim, then flies a gentle turn.
         /// </summary>
         public static WorldDocument Glider(PartLibrary lib)
         {
             var w = new WorldDocument { Title = "Planör" };
-            double z = 40;
-            var fus = w.AddBody("box", 0.60, 0.05, 0.05, new WorldPose { Z = z }, "PLA");
-            fus.Name = "Gövde";
-            fus.MassKg = 0.25;
-            fus.Parameters["launch"] = "12";
-            var nose = w.AddBody("box", 0.05, 0.04, 0.04, new WorldPose { X = 0.25, Z = z + 0.005 }, "ÇELİK");
-            nose.Name = "Burun ağırlığı";
-            nose.MassKg = 0.07;
-            var wing = w.AddBody("wing", 0.15, 1.0, 0.012, new WorldPose { X = -0.02, Z = z + 0.05 }, "AHŞAP");
-            wing.Name = "Kanat";
-            wing.MassKg = 0.08;
+            const double z0 = 40;                    // pod bottom
+            const double podTop = z0 + 0.050;
+            const double boomZ = z0 + 0.025;          // boom axis
+            const double tailX = -0.50;
+
+            var pod = w.AddBody("box", 0.26, 0.045, 0.050, new WorldPose { X = 0.07, Z = z0 }, "BALSA");
+            pod.Name = "Gövde (balsa kabin)";
+            pod.MassKg = 0.035;                       // hollow 2 mm balsa box with a ply former
+            pod.Parameters["launch"] = "7";
+            var boom = w.AddBody("cylinder", 0.008, 0.008, 0.50, new WorldPose { X = tailX - 0.04, Z = boomZ, Pitch = 90 }, "KARBON");
+            boom.Name = "Kuyruk borusu (karbon Ø8)";
+            boom.MassKg = 0.012;
+
+            var wing = w.AddBody("wing", 0.15, 1.0, 0.012, new WorldPose { X = 0.005, Z = podTop }, "BALSA");
+            wing.Name = "Kanat (Clark Y, 6° dihedral)";
+            wing.MassKg = 0.060;
             wing.Parameters["airfoil"] = "clarky";
             wing.Parameters["incidence"] = "2";
-            var servo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.10, Y = 0.0, Z = z + 0.05 });
-            var tail = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = -0.28, Z = z + 0.05 }, "AHŞAP");
-            tail.Name = "Yatay kuyruk";
-            tail.MassKg = 0.015;
-            tail.Parameters["airfoil"] = "naca0012";
-            tail.Parameters["incidence"] = "-3";
-            tail.Parameters["control"] = "elevator";
-            tail.Parameters["control.chord"] = "0.35";
-            tail.Parameters["control.servo"] = servo.Id;
-            tail.Parameters["control.gain"] = "0.5";
-            tail.Parameters["downwash"] = wing.Id;
-            var fin = w.AddBody("wing", 0.08, 0.10, 0.006, new WorldPose { X = -0.28, Z = z + 0.056 }, "AHŞAP");
-            fin.Name = "Dikey kuyruk";
-            fin.MassKg = 0.008;
+            wing.Parameters["dihedral"] = "6";
+
+            // Electronics inside the pod: battery and lead forward for the CG, servos under the wing.
+            var bat = w.AddComponent(lib, "bat-2s-lipo", new WorldPose { X = 0.165, Z = z0 + 0.004 });
+            bat.Name = "LiPo 2S 450 mAh";
+            bat.MassKg = 0.028;
+            var nano = w.AddComponent(lib, "arduino-nano", new WorldPose { X = 0.110, Z = z0 + 0.004 });
+            nano.Name = "Uçuş kartı (Arduino Nano)";
+            nano.MassKg = 0.007;
+            nano.Firmware = new Formats.FirmwareSource
+            {
+                FileName = "planor.ino",
+                Target = "arduino:avr:nano",
+                Source = GliderSketch
+            };
+            var elevServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.055, Y = 0.011, Z = z0 + 0.004 });
+            elevServo.Name = "İrtifa servosu";
+            var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.055, Y = -0.011, Z = z0 + 0.004 });
+            rudServo.Name = "Yön servosu";
+            var lead = w.AddBody("box", 0.020, 0.020, 0.008, new WorldPose { X = 0.190, Z = z0 + 0.034 }, "KURŞUN");
+            lead.Name = "Burun kurşunu";
+            lead.MassKg = 0.038;
+
+            // Pushrods: 1 mm carbon rods from the pod's rear exit along the boom to the control horns.
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            rodE.Name = "İtme çubuğu (irtifa)";
+            rodE.MassKg = 0.0008;
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            rodR.Name = "İtme çubuğu (yön)";
+            rodR.MassKg = 0.0008;
+
+            var stab = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = tailX, Z = boomZ + 0.004 }, "BALSA");
+            stab.Name = "Yatay kuyruk + irtifa dümeni";
+            stab.MassKg = 0.008;
+            stab.Parameters["airfoil"] = "naca0012";
+            stab.Parameters["incidence"] = "-2";
+            stab.Parameters["control"] = "elevator";
+            stab.Parameters["control.chord"] = "0.35";
+            stab.Parameters["control.servo"] = elevServo.Id;
+            stab.Parameters["control.gain"] = "0.5";   // horn 12 mm / control horn 24 mm
+            stab.Parameters["downwash"] = wing.Id;
+            var fin = w.AddBody("wing", 0.08, 0.11, 0.005, new WorldPose { X = tailX, Z = boomZ + 0.010 }, "BALSA");
+            fin.Name = "Dikey kuyruk + yön dümeni";
+            fin.MassKg = 0.005;
             fin.Parameters["airfoil"] = "naca0012";
             fin.Parameters["symmetric"] = "false";
-            foreach (var part in new WorldObject[] { nose, wing, tail, fin, servo })
-                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = fus.Id });
+            fin.Parameters["control"] = "rudder";
+            fin.Parameters["control.chord"] = "0.4";
+            fin.Parameters["control.servo"] = rudServo.Id;
+            fin.Parameters["control.gain"] = "0.5";
+
+            foreach (var part in new WorldObject[] { boom, wing, bat, nano, elevServo, rudServo, lead })
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = pod.Id });
+            foreach (var part in new WorldObject[] { stab, fin, rodE, rodR })
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = boom.Id });
+
+            // Wiring: LiPo → Nano VIN (on-board regulator), servos from the Nano's 5 V, signals D9 / D10.
+            WorldCable C(WorldObject a, string pa, WorldObject b, string pb, string color)
+            {
+                var c = w.Connect(new CableEnd { ObjectId = a.Id, Pin = pa }, new CableEnd { ObjectId = b.Id, Pin = pb }, 26, color);
+                c.Length = 0.10;
+                return c;
+            }
+
+            C(bat, "+", nano, "VIN", "#E5484D");
+            C(bat, "-", nano, "GND1", "#1F1F23");
+            C(nano, "5V", elevServo, "V+", "#E5484D");
+            C(nano, "GND2", elevServo, "GND", "#5A3A22");
+            C(nano, "D9", elevServo, "SIG", "#F2A33B");
+            C(nano, "5V", rudServo, "V+", "#E5484D");
+            C(nano, "GND1", rudServo, "GND", "#5A3A22");
+            C(nano, "D10", rudServo, "SIG", "#F2A33B");
             return w;
         }
+
+        /// <summary>Glider flight sketch: trim for 3 s, a gentle rudder turn, then straight again.</summary>
+        public const string GliderSketch = @"#include <Servo.h>
+// Planör uçuş kartı: irtifa dümeni D9, yön dümeni D10.
+Servo elevator, rudder;
+const int ELEV_TRIM = 90;   // derece; 90 = nötr
+const int RUD_TRIM = 90;
+
+void setup() {
+  elevator.attach(9);
+  rudder.attach(10);
+  elevator.write(ELEV_TRIM);
+  rudder.write(RUD_TRIM);
+}
+
+void loop() {
+  unsigned long t = millis();
+  // 3 s düz süzül, 4 s hafif sola dönüş (dihedral yalpayı yatışa çevirir), sonra düz.
+  rudder.write(t > 3000 && t < 7000 ? RUD_TRIM + 20 : RUD_TRIM);
+  elevator.write(ELEV_TRIM);
+  delay(20);
+}
+";
 
         public static WorldDocument CarDetailed(PartLibrary lib) => Car(lib, 0.0224, -0.0227, 0.0112, 0.0184);
 

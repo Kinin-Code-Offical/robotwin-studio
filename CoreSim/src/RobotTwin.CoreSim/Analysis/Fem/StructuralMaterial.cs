@@ -100,6 +100,9 @@ namespace RobotTwin.CoreSim.Analysis.Fem
             ["KONTRPLAK"] = new StructuralMaterial { Name = "Kontrplak", E = 8e9, Nu = 0.3, Yield = 35e6, Density = 600, Conductivity = 0.13, SpecificHeat = 1700, Emissivity = 0.9, Alpha = 6e-6, SofteningPerK = 0.002, MeltingPoint = 270 },
             ["FR4"] = new StructuralMaterial { Name = "FR4", E = 22e9, Nu = 0.14, Yield = 300e6, Density = 1850, Conductivity = 0.3, SpecificHeat = 1100, Emissivity = 0.9, Alpha = 14e-6, GlassTransition = 135, MeltingPoint = 300, RubberyRatio = 0.3 },
             ["KAUÇUK"] = new StructuralMaterial { Name = "Kauçuk", E = 5e6, Nu = 0.48, Yield = 15e6, Density = 1100, Conductivity = 0.16, SpecificHeat = 2000, Emissivity = 0.92, Alpha = 200e-6, SofteningPerK = 0.003, MeltingPoint = 200 },
+            ["BALSA"] = new StructuralMaterial { Name = "Balsa (lif yönü)", E = 3.4e9, Nu = 0.3, Yield = 12e6, Density = 160, Conductivity = 0.05, SpecificHeat = 2900, Emissivity = 0.9, Alpha = 4e-6, SofteningPerK = 0.002, MeltingPoint = 270 },
+            ["KARBON"] = new StructuralMaterial { Name = "Karbon fiber (pultrüzyon)", E = 110e9, Nu = 0.3, Yield = 1200e6, Density = 1600, Conductivity = 5, SpecificHeat = 800, Emissivity = 0.9, Alpha = 1e-6, GlassTransition = 120, MeltingPoint = 300, RubberyRatio = 0.6 },
+            ["KURŞUN"] = new StructuralMaterial { Name = "Kurşun", E = 16e9, Nu = 0.44, Yield = 12e6, Density = 11340, Conductivity = 35, SpecificHeat = 130, Emissivity = 0.08, Alpha = 29e-6, SofteningPerK = 0.002, MeltingPoint = 327 },
             ["BAKIR"] = new StructuralMaterial { Name = "Bakır", E = 117e9, Nu = 0.34, Yield = 70e6, Density = 8960, Conductivity = 400, SpecificHeat = 385, Emissivity = 0.05, Alpha = 17e-6, SofteningPerK = 0.0004, MeltingPoint = 1085 }
         };
 
@@ -113,6 +116,8 @@ namespace RobotTwin.CoreSim.Analysis.Fem
                 "AHSAP" or "WOOD" => "AHŞAP",
                 "KAUCUK" or "RUBBER" => "KAUÇUK",
                 "COPPER" => "BAKIR",
+                "CARBON" => "KARBON",
+                "KURSUN" or "LEAD" => "KURŞUN",
                 var k => k
             };
             return Table.TryGetValue(key, out var m) ? m.Clone() : Table["PLA"].Clone();

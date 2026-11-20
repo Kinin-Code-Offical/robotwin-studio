@@ -183,16 +183,39 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void GliderExampleFliesInTheHeadlessRunner()
         {
-            var w = WorldExamples.Glider(RobotTwin.CoreSim.Design.PartLibrary.Default);
-            var fus = w.Objects.First(o => o.Name == "Gövde");
-            using var r = new RobotTwin.CoreSim.Automation.WorldRunner(w, new RobotTwin.CoreSim.Automation.RunnerOptions { Firmware = false });
-            Assert.True(r.TryGetBody(fus.Id, out var s0));
-            r.Step(5.0);
-            Assert.True(r.TryGetBody(fus.Id, out var s1));
-            double dx = s1.Position.X - s0.Position.X, dz = s0.Position.Z - s1.Position.Z;
-            _out.WriteLine($"5 s: {dx:F1} m forward, {dz:F1} m down, speed {s1.Velocity.Length:F1} m/s");
-            Assert.True(dx > 35, "it flies forward");
-            Assert.InRange(dz, 2, 20);
+            {
+                string inc = "-2";
+                var w = WorldExamples.Glider(RobotTwin.CoreSim.Design.PartLibrary.Default);
+                var pod = w.Objects.First(o => o.Name.StartsWith("Gövde"));
+                using var r = new RobotTwin.CoreSim.Automation.WorldRunner(w, new RobotTwin.CoreSim.Automation.RunnerOptions { Firmware = false });
+                Assert.True(r.TryGetBody(pod.Id, out var s0));
+                double mass = 0;
+                Vec3 cg = Vec3.Zero;
+                foreach (var b in r.Physics!.Scene.Bodies.Where(b => !b.IsStatic))
+                {
+                    mass += b.Mass;
+                    cg += b.Position * b.Mass;
+                }
+
+                cg /= mass;
+                double maxPitch = 0;
+                for (int k = 0; k < 50; k++)
+                {
+                    r.Step(0.1);
+                    Assert.True(r.TryGetBody(pod.Id, out var sk));
+                    double pitch = Math.Asin(Math.Max(-1, Math.Min(1, sk.Orientation.Rotate(Vec3.UnitX).Z))) * 180 / Math.PI;
+                    if (k >= 20) maxPitch = Math.Max(maxPitch, Math.Abs(pitch));
+                }
+
+                Assert.True(r.TryGetBody(pod.Id, out var s1));
+                double dx = s1.Position.X - s0.Position.X, dz = s0.Position.Z - s1.Position.Z;
+                _out.WriteLine($"tail {inc}°: mass {mass * 1000:F0} g, CG x {cg.X * 1000:F1} mm (wing LE at 80 mm → {(0.08 - cg.X) / 0.15 * 100:F0} % chord); 5 s: {dx:F1} m fwd, {dz:F1} m down, L/D {dx / Math.Max(1e-6, dz):F1}, speed {s1.Velocity.Length:F1} m/s, max |pitch| 2–5 s {maxPitch:F0}°");
+                Assert.InRange(mass, 0.20, 0.26);                       // a 1 m balsa/carbon glider with electronics
+                Assert.InRange((0.08 - cg.X) / 0.15, 0.28, 0.38);       // CG at ~1/3 of the chord
+                Assert.InRange(dx / dz, 7, 14);                          // model thermal glider glide ratio
+                Assert.InRange(s1.Velocity.Length, 4, 8);
+                Assert.True(maxPitch < 15, "settles into a steady glide");
+            }
         }
 }
 }
