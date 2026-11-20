@@ -82,6 +82,17 @@ namespace RobotWin.Studio
             var window = new MainWindow();
             MainWindow = window;
 
+            if (Arg("--overlap-report") is { } overlapPath)
+            {
+                window.Left = -2000;
+                window.ShowActivated = false;
+                window.ShowInTaskbar = false;
+                window.Show();
+                File.WriteAllText(overlapPath, window.OverlapReportAllTemplates());
+                window.ForceClose();
+                return;
+            }
+
             if (Arg("--bench") is { } benchPath)
             {
                 RunBench(window, benchPath, Arg("--bench-seconds"));

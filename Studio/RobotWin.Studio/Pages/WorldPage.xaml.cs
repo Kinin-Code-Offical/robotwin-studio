@@ -1166,6 +1166,15 @@ namespace RobotWin.Studio.Pages
 
         private void OnRun(object sender, RoutedEventArgs e) => Run();
 
+        /// <summary>Parts of the active world that start inside each other (for --overlap-report and checks).</summary>
+        public System.Collections.Generic.IReadOnlyList<string> OverlapReport()
+        {
+            var world = World;
+            if (world == null) return System.Array.Empty<string>();
+            var physics = RobotTwin.CoreSim.Sandbox.WorldPhysics.Build(world, Scene.GeometryOf, null);
+            return physics.FindInterpenetrations(0.001).Select(o => $"{world.Find(o.A)?.Name ?? o.A} ↔ {world.Find(o.B)?.Name ?? o.B}: {o.Depth * 1000:F1} mm").ToList();
+        }
+
         /// <summary>Run / pause / resume the world simulation (menu bar).</summary>
         public void ToggleRun() => Run();
 

@@ -59,7 +59,7 @@ namespace RobotWin.Studio.Examples
             double motorZ = r - shaftZ, plateZ = motorZ + motorHeight;
             double x0 = -0.385, y0 = -0.45;   // sensor bar starts on the bottom straight, heading +X
 
-            var plate = w.AddBody("plate", 0.22, 0.14, 0.003, new WorldPose { X = x0, Y = y0, Z = plateZ }, "AKRİLİK");
+            var plate = w.AddBody("plate", 0.22, 0.09, 0.003, new WorldPose { X = x0, Y = y0, Z = plateZ }, "AKRİLİK");   // 90 mm: the wheels run clear of the edges
             plate.Name = "Şase";
             plate.Color = "#3E7CC8";
             var ml = w.AddComponent(Lib, "motor-tt", new WorldPose { X = x0 - 0.04, Y = y0 + 0.03, Z = motorZ });
@@ -79,7 +79,7 @@ namespace RobotWin.Studio.Examples
             uno.Parameters["firmware"] = "builtin:line-follower.hex";
             uno.Parameters["usb"] = "false";
             var drv = w.AddComponent(Lib, "drv8833", new WorldPose { X = x0 + 0.045, Y = y0 + 0.035, Z = plateZ + 0.003 });
-            var bat = w.AddComponent(Lib, "bat-2s-lipo", new WorldPose { X = x0 + 0.01, Y = y0 - 0.045, Z = plateZ + 0.003 });
+            var bat = w.AddComponent(Lib, "bat-2s-lipo", new WorldPose { X = x0 + 0.03, Y = y0 - 0.012, Z = plateZ + 0.003 });   // between the wheels, not over them
             bat.Name = "LiPo 2S";
             var bar = w.AddComponent(Lib, "line-5ch-module", new WorldPose { X = x0 + 0.085, Y = y0, Z = 0.006 });
             bar.Name = "Çizgi sensörü (6 mm)";

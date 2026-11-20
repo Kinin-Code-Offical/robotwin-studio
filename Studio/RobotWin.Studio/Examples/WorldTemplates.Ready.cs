@@ -91,7 +91,7 @@ namespace RobotWin.Studio.Examples
             var wheel = ReadyParts.Find("mecanum-65-a")!;
             double R = wheel.Radius;
             double top = R + 0.0112;
-            var chassis = w.AddBody("plate", 0.19, 0.10, 0.003, new WorldPose { Z = top }, "AKRİLİK");
+            var chassis = w.AddBody("plate", 0.19, 0.07, 0.003, new WorldPose { Z = top }, "AKRİLİK");   // wheels run clear of the edge
             chassis.Name = "Şase";
             chassis.Color = "#3E7CC8";
             var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { Z = top + 0.003, Yaw = 90 });

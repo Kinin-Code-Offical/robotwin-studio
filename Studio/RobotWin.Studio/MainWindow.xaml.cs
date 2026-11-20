@@ -60,6 +60,23 @@ namespace RobotWin.Studio
         private WindowBehavior? _behavior;
         private readonly PerfOverlay _perf = new PerfOverlay();
 
+        /// <summary>--overlap-report: interpenetrating parts of every world template.</summary>
+        public string OverlapReportAllTemplates()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var t in Examples.WorldTemplates.All)
+            {
+                NewWorld(t.Build());
+                Navigate("world");
+                UpdateLayout();
+                var list = _world.OverlapReport();
+                sb.AppendLine($"{t.Id}: {(list.Count == 0 ? "temiz" : list.Count + " çakışma")}");
+                foreach (var l in list) sb.AppendLine("    " + l);
+            }
+
+            return sb.ToString();
+        }
+
         /// <summary>--bench: run / stop the active world.</summary>
         public void RunWorldForBench() => _world.ToggleRun();
 

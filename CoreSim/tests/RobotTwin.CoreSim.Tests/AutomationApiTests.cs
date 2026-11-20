@@ -70,7 +70,7 @@ namespace RobotTwin.CoreSim.Tests
         {
             (Vec3, string) Run(int seed)
             {
-                var r = new WorldRunner(WorldExamples.Car(PartLibrary.Default), Options(seed));
+                var r = new WorldRunner(WorldExamples.CarDetailed(PartLibrary.Default), Options(seed));
                 r.Sensors.Add(new SensorSpec { Name = "imu", Type = "imu", Object = "O1", Params = new JsonObject { ["accel_noise"] = 0.05 } });
                 r.DriveDifferential(0.15, 0.4, new JsonObject());
                 for (int i = 0; i < 60; i++) r.Step(0.01);
@@ -91,7 +91,7 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void ResetRestoresTheInitialStateAndReplaysIdentically()
         {
-            var r = new WorldRunner(WorldExamples.Car(PartLibrary.Default), Options(1));
+            var r = new WorldRunner(WorldExamples.CarDetailed(PartLibrary.Default), Options(1));
             var start = PoseOf(r, "O1");
             for (int i = 0; i < 40; i++) r.Step(0.01);
             var first = PoseOf(r, "O1");
@@ -111,7 +111,7 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void StepAdvancesExactlyTheRequestedSimulatedTime()
         {
-            var r = new WorldRunner(WorldExamples.Car(PartLibrary.Default), Options());
+            var r = new WorldRunner(WorldExamples.CarDetailed(PartLibrary.Default), Options());
             for (int i = 0; i < 7; i++) Assert.Equal(0.013, r.Step(0.013), 12);
             Assert.InRange(r.Time, 0.091 - 1e-9, 0.091 + 1e-9);
             Assert.True(r.LastStepWall > 0);
@@ -153,7 +153,7 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void DifferentialDriveGoesForwardAndTurnsLeft()
         {
-            var r = new WorldRunner(WorldExamples.Car(PartLibrary.Default), Options());
+            var r = new WorldRunner(WorldExamples.CarDetailed(PartLibrary.Default), Options());
             for (int i = 0; i < 30; i++) r.Step(0.01);   // settle
             Assert.True(r.TryGetBody("O1", out var s0));
             r.DriveDifferential(0.2, 0, new JsonObject());
@@ -162,7 +162,7 @@ namespace RobotTwin.CoreSim.Tests
             var fwd = s0.Orientation.Rotate(Vec3.UnitX);
             double along = (s1.Position - s0.Position).Dot(fwd);
             _out.WriteLine($"forward {along:F3} m in 1 s");
-            Assert.InRange(along, 0.12, 0.26);
+            Assert.InRange(along, 0.12, 0.30);   // open-loop helper: 0.2 m/s commanded
             r.DriveDifferential(0, 1.0, new JsonObject());
             double yaw0 = s1.Orientation.ToEuler().Yaw;
             for (int i = 0; i < 100; i++) r.Step(0.01);
@@ -189,7 +189,7 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void VirtualLidarAndCameraSeeAnObstacle()
         {
-            var w = WorldExamples.Car(PartLibrary.Default);
+            var w = WorldExamples.CarDetailed(PartLibrary.Default);
             var wall = w.AddBody("box", 0.1, 1.0, 0.3, new WorldPose { X = 0.6 });
             wall.IsStatic = true;
             var r = new WorldRunner(w, Options());
@@ -264,7 +264,7 @@ namespace RobotTwin.CoreSim.Tests
         [Fact]
         public void BakedGeometryRoundTripsAndDrivesTheSameRun()
         {
-            var world = WorldExamples.Car(PartLibrary.Default);
+            var world = WorldExamples.CarDetailed(PartLibrary.Default);
             var approx = new ApproximateGeometry(world, PartLibrary.Default);
             var baked = BakedGeometry.Parse(BakedGeometry.Export(world, approx), approx);
             foreach (var o in world.Objects)

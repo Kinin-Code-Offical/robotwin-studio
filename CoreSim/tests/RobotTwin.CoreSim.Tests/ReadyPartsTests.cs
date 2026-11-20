@@ -290,7 +290,7 @@ namespace RobotTwin.CoreSim.Tests
         {
             var w = new WorldDocument();
             double motorZ = 0.0325 - TtPivot.Z;
-            var chassis = w.AddBody("plate", 0.17, 0.10, 0.003, new WorldPose { Z = motorZ + 0.0188 });
+            var chassis = w.AddBody("plate", 0.17, 0.08, 0.003, new WorldPose { Z = motorZ + 0.0188 });   // wheels run clear of the edge
             chassis.MassKg = 0.06;
             var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { Z = chassis.Pose.Z + 0.003 });
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = bat.Id, ObjectB = chassis.Id });

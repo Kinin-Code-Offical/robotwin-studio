@@ -103,7 +103,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
-            p.IgnoreSelfCollisions();
+            p.FilterAssemblyCollisions(); // only parts within two joints of each other skip collisions (WorldPhysics.Overlap.cs)
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
             return p;
         }

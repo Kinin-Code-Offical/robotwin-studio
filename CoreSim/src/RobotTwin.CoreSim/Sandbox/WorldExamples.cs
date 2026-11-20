@@ -11,13 +11,21 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <param name="shaftX">Output shaft position along the motor (m, motor frame).</param>
         /// <param name="shaftZ">Output shaft height above the motor base (m).</param>
         /// <param name="shaftTip">Where the wheel hub sits on the shaft, sideways from the motor centre (m).</param>
+        /// <summary>
+        /// The car laid out for the app's detailed TT gear motor (gearbox 22.4 mm high, output shaft
+        /// 22.7 mm behind the motor origin, 11.2 mm up, shaft end 18.4 mm to the side) — the geometry
+        /// the Studio and the headless runner use, so the wheels sit exactly on their axles.
+        /// </summary>
+        public static WorldDocument CarDetailed(PartLibrary lib) => Car(lib, 0.0224, -0.0227, 0.0112, 0.0184);
+
         public static WorldDocument Car(PartLibrary lib, double motorHeight = 0.0188, double shaftX = -0.011, double shaftZ = 0.0094, double shaftTip = 0.0185)
         {
             var w = new WorldDocument { Title = "Araba" };
             // Motors hang under the plate with their shafts at wheel-radius height, so the 65 mm wheels touch the floor.
             const double r = 0.0325;
             double motorZ = r - shaftZ, plateZ = motorZ + motorHeight;
-            var plate = w.AddBody("plate", 0.16, 0.10, 0.003, new WorldPose { X = 0, Z = plateZ }, "PLA");
+            // 90 mm wide: the wheels run 5 mm clear of the chassis edge (they collide with it like in reality).
+            var plate = w.AddBody("plate", 0.16, 0.09, 0.003, new WorldPose { X = 0, Z = plateZ }, "PLA");
             var ml = w.AddComponent(lib, "motor-tt", new WorldPose { X = -0.03, Y = 0.03, Z = motorZ });
             var mr = w.AddComponent(lib, "motor-tt", new WorldPose { X = -0.03, Y = -0.03, Z = motorZ, Yaw = 180 });
             var wl = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = -0.03 + shaftX, Y = 0.03 + shaftTip + 0.015, Z = 0 });

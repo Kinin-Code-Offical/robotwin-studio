@@ -169,6 +169,16 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void CarExampleStartsWithoutPartsInsideEachOther()
+        {
+            var w = WorldExamples.Car(Lib);
+            var p = WorldPhysics.Build(w, Geometry, null);
+            var overlaps = p.FindInterpenetrations();
+            foreach (var (a, b, d) in overlaps) _out.WriteLine($"{w.Find(a)?.Name} ↔ {w.Find(b)?.Name}: {d * 1000:F1} mm");
+            Assert.Empty(overlaps);
+        }
+
+        [Fact]
         public void TwoWheelCarDrivesAcrossTheFloor()
         {
             var w = WorldExamples.Car(Lib);

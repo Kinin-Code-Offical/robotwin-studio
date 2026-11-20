@@ -121,6 +121,11 @@ namespace RobotWin.Studio.World
                 try
                 {
                     Physics = WorldPhysics.Build(world, geometry, Circuit);
+                    // Parts that start inside each other would be pushed apart violently: say which ones.
+                    foreach (var (oa, ob, depth) in Physics.FindInterpenetrations(0.001))
+                    {
+                        Log.Add(new SimLogEntry(0, "fizik", $"{world.Find(oa)?.Name ?? oa} ile {world.Find(ob)?.Name ?? ob} iç içe başlıyor ({depth * 1000:F1} mm); konumlarını ayırın.", AnalogEventKind.Warning));
+                    }
                 }
                 catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
                 {

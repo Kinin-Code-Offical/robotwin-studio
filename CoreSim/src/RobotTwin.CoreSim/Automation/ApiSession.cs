@@ -395,7 +395,7 @@ namespace RobotTwin.CoreSim.Automation
             {
                 if (example == "car")
                 {
-                    var world = WorldExamples.Car(options.Library);
+                    var world = WorldExamples.CarDetailed(options.Library);
                     ApplyEnvironment(world, p);
                     runner = new WorldRunner(world, options, GeometryFor(world, null, J.Str(p, "geometry")));
                 }
