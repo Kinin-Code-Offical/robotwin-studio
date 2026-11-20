@@ -100,6 +100,13 @@ namespace RobotTwin.CoreSim.Analysis
 
         public bool Aero3D { get; set; }
 
+        /// <summary>
+        /// Extra runs with every part's values drawn from its tolerance band (clones from their wider
+        /// spread): the result keeps the min–max envelope of every channel, so a reading shows how far
+        /// the real hardware may be from the model. 0 = off.
+        /// </summary>
+        public int UncertaintyRuns { get; set; }
+
         /// <summary>Lattice cells across the body's frontal size.</summary>
         public int AeroResolution { get; set; } = 32;
 
@@ -211,7 +218,8 @@ namespace RobotTwin.CoreSim.Analysis
                 ["aero_3d"] = Aero3D,
                 ["aero_resolution"] = AeroResolution,
                 ["aero_passes"] = AeroPasses,
-                ["aero_smagorinsky"] = AeroSmagorinsky
+                ["aero_smagorinsky"] = AeroSmagorinsky,
+                ["uncertainty_runs"] = UncertaintyRuns
             };
         }
 
@@ -253,7 +261,8 @@ namespace RobotTwin.CoreSim.Analysis
                 Aero3D = B("aero_3d", false),
                 AeroResolution = I("aero_resolution", 32),
                 AeroPasses = D("aero_passes", 30),
-                AeroSmagorinsky = D("aero_smagorinsky", 0.17)
+                AeroSmagorinsky = D("aero_smagorinsky", 0.17),
+                UncertaintyRuns = I("uncertainty_runs", 0)
             };
             return s;
         }

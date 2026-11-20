@@ -9,6 +9,7 @@ using RobotTwin.CoreSim.Analysis.Jobs;
 using RobotTwin.CoreSim.Analysis.Numerics;
 using RobotTwin.CoreSim.Analysis.Recording;
 using RobotTwin.CoreSim.Automation;
+using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
 
@@ -97,8 +98,82 @@ namespace RobotTwin.CoreSim.Analysis
                 if (s.Thermal && !cancel.IsCancellationRequested) result.Thermal.AddRange(Thermal(world, scene, result, s, cancel, progress));
             }
 
+            if (s.UncertaintyRuns > 0 && !cancel.IsCancellationRequested) UncertaintyBands(world, s, geometry, result, cancel, progress);
             result.WallSeconds = watch.Elapsed.TotalSeconds;
             return result;
+        }
+
+        /// <summary>
+        /// Repeats the run with part values drawn from their tolerance bands (Monte Carlo) and keeps
+        /// the min–max envelope of every recorded channel (the nominal run included).
+        /// </summary>
+        private static void UncertaintyBands(WorldDocument world, AnalysisSettings s, IWorldGeometry? geometry, AnalysisResult result,
+            CancellationToken cancel, Action<string, double>? progress)
+        {
+            var main = result.Channels;
+            int n = main.Count;
+            var acc = s.AccuracyValues;
+            var lo = new Dictionary<string, double[]>(StringComparer.Ordinal);
+            var hi = new Dictionary<string, double[]>(StringComparer.Ordinal);
+            foreach (var c in main.Channels)
+            {
+                if (c.Name.StartsWith("pose/", StringComparison.Ordinal)) continue;
+                var a = c.ToArray();
+                lo[c.Name] = (double[])a.Clone();
+                hi[c.Name] = (double[])a.Clone();
+            }
+
+            var tol = new ToleranceSettings { Mode = ToleranceMode.MonteCarlo, Seed = s.Seed * 31 + 7, Runs = s.UncertaintyRuns };
+            int runs = 0;
+            for (int k = 1; k <= s.UncertaintyRuns; k++)
+            {
+                if (cancel.IsCancellationRequested) break;
+                var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol, Tolerances = tol, ToleranceRun = k };
+                var temp = new AnalysisResult { Settings = s };
+                using (var runner = new WorldRunner(world, options, geometry))
+                {
+                    var scene = runner.Physics?.Scene;
+                    if (scene != null)
+                    {
+                        scene.MaxSubstep = acc.MaxSubstep;
+                        scene.Iterations = Math.Max(scene.Iterations, acc.Iterations);
+                        scene.SleepEnabled = acc.Sleep;
+                    }
+
+                    var probe = new WorldProbe(runner, s, temp, Array.Empty<string>());
+                    double dt = 1.0 / s.OutputRate;
+                    probe.Sample();
+                    for (int i = 1; i < n && !cancel.IsCancellationRequested; i++)
+                    {
+                        runner.Step(dt);
+                        probe.Sample();
+                        if (runner.Halted) break;
+                        if ((i & 31) == 0) progress?.Invoke($"Belirsizlik: tolerans koşusu {k}/{s.UncertaintyRuns}", (double)i / n);
+                    }
+
+                    probe.Detach();
+                }
+
+                foreach (var c in temp.Channels.Channels)
+                {
+                    if (!lo.TryGetValue(c.Name, out var l)) continue;
+                    var h = hi[c.Name];
+                    int m = Math.Min(c.Count, l.Length);
+                    for (int i = 0; i < m; i++)
+                    {
+                        double v = c[i];
+                        if (!double.IsFinite(v)) continue;
+                        if (v < l[i] || !double.IsFinite(l[i])) l[i] = v;
+                        if (v > h[i] || !double.IsFinite(h[i])) h[i] = v;
+                    }
+                }
+
+                runs++;
+            }
+
+            foreach (var kv in lo) result.Bands[kv.Key] = (kv.Value, hi[kv.Key]);
+            result.BandRuns = runs;
+            result.Note($"Belirsizlik bandı: {runs} tolerans koşusu (parçalar tolerans bantlarından, klonlar geniş yayılımlarından çekildi).");
         }
 
         /// <summary>Geometry, material and pose of an object's physical body.</summary>

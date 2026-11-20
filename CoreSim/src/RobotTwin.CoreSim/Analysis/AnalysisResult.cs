@@ -252,6 +252,12 @@ namespace RobotTwin.CoreSim.Analysis
         public List<ThermalResult> Thermal { get; } = new List<ThermalResult>();
         public CfdResult? Aero { get; set; }
 
+        /// <summary>Min–max envelope of each channel over the tolerance runs (channel name → per-sample bounds).</summary>
+        public Dictionary<string, (double[] Lo, double[] Hi)> Bands { get; } = new Dictionary<string, (double[] Lo, double[] Hi)>(StringComparer.Ordinal);
+
+        /// <summary>Number of tolerance runs behind <see cref="Bands"/>.</summary>
+        public int BandRuns { get; set; }
+
         /// <summary>Flow around the whole assembly at keyframes of the recording (render mode).</summary>
         public List<CfdResult> AeroFrames { get; } = new List<CfdResult>();
         public List<string> Log { get; } = new List<string>();

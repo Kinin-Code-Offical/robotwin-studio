@@ -94,6 +94,62 @@ namespace RobotWin.Studio.Pages
             return box;
         }
 
+        // ================================================================ honest readings
+
+        /// <summary>
+        /// How far the real current in a cable may be from the model: the widest current spread of the
+        /// parts on either end (a clone servo ±40 %, a datasheet motor ±15 %, a resistor its tolerance).
+        /// </summary>
+        private (double Fraction, string Reason) CableSpread(WorldCable c)
+        {
+            var circuit = _session.Circuit;
+            double best = 0;
+            string reason = string.Empty;
+            if (circuit == null) return (0, reason);
+            foreach (var id in new[] { c.A.ObjectId, c.B.ObjectId })
+            {
+                string prefix = RobotTwin.CoreSim.Sandbox.WorldCircuit.Prefix(id);
+                foreach (var kv in circuit.PartDefinitions)
+                {
+                    if (!kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                    var def = Scene.Library.Find(kv.Value);
+                    if (def == null || !circuit.PartParameters.TryGetValue(kv.Key, out var p)) continue;
+                    var (f, r) = RobotTwin.CoreSim.Design.ToleranceModel.CurrentSpread(def, p);
+                    if (f > best)
+                    {
+                        best = f;
+                        reason = r;
+                    }
+                }
+            }
+
+            return (best, reason);
+        }
+
+        /// <summary>What this physical part really is when it differs from the datasheet (clone variants).</summary>
+        private void RealValuesSection(WorldObject o)
+        {
+            var circuit = _session.Circuit;
+            bool clone = o.Parameters.TryGetValue("variant", out var v) && RobotTwin.CoreSim.Design.ToleranceModel.IsClone(v);
+            if (!clone) return;
+            Inspector.Children.Add(Caption("Bu parçanın gerçek değerleri"));
+            if (circuit == null)
+            {
+                Inspector.Children.Add(Note("Klon parça: kilitlenme / hareket akımı ±%35–40, hız ±%20 sapar. Değerler simülasyon başlayınca görünür."));
+                return;
+            }
+
+            string prefix = RobotTwin.CoreSim.Sandbox.WorldCircuit.Prefix(o.Id);
+            foreach (var kv in circuit.Draws)
+            {
+                if (!kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (var d in kv.Value)
+                    Inspector.Children.Add(Note($"{d.Label}: {SiValue.Format(d.Actual, d.Unit)}  (datasheet {SiValue.Format(d.Nominal, d.Unit)}, {d.DeviationPercent:+0;-0} %, {d.Note})"));
+            }
+
+            Inspector.Children.Add(Note("Yan sanayi parçaların sargısı ve sürücü çipi farklıdır; aynı modelin iki klonu bile birbirinden farklı akım çeker. Güç kaynağını seçerken tezgâhta ölçerek doğrulayın."));
+        }
+
         // ================================================================ history
 
         private void RecordCableHistory()
@@ -174,7 +230,9 @@ namespace RobotWin.Studio.Pages
             if (live)
             {
                 double load = Math.Abs(i) / amp;
-                rows.Add(("Akım", burned ? "YANDI" : SiValue.Format(Math.Abs(i), "A"), $"yük %{load * 100:0} (en çok {amp:0.#} A)", burned || load > 1));
+                var (spread, why) = CableSpread(c);
+                rows.Add(("Akım", burned ? "YANDI" : SiValue.Format(Math.Abs(i), "A") + (spread > 0 ? $" ±%{spread * 100:0}" : string.Empty),
+                    $"yük %{load * 100:0} (en çok {amp:0.#} A)" + (spread > 0 ? $" · belirsizlik: {why}" : string.Empty), burned || load > 1));
                 rows.Add(("Gerilim düşümü", SiValue.Format(drop, "V"), supply > 0.1 ? $"hattın %{drop / supply * 100:0.0}'i" : string.Empty, supply > 0.5 && drop / supply > 0.03));
                 rows.Add(("Isı kaybı", SiValue.Format(p, "W"), string.Empty, false));
                 rows.Add(("Uçlarda", $"{SiValue.Format(va, "V")} → {SiValue.Format(vb, "V")}", string.Empty, false));
@@ -275,6 +333,12 @@ namespace RobotWin.Studio.Pages
                 yield return "• Akım yok: bu hat bir sinyal hattı, bağlı yük kapalı ya da devre başka bir yerde açık.";
             }
 
+            if (live && CableSpread(c) is { Fraction: >= 0.15 } sp)
+            {
+                n++;
+                yield return $"• Bu akım bir model değeridir (±%{sp.Fraction * 100:0}, {sp.Reason}). Hareket mantığı için güvenilir; güç kaynağı ve kablo kesiti seçerken tezgâhta ölçerek doğrulayın. Render'da 'belirsizlik bandı' gerçek parçaların dağılımını gösterir.";
+            }
+
             if (n == 0) yield return live ? "• Sorun görünmüyor." : "• Simülasyonu başlatınca akım, düşüm ve olası sorunlar burada görünür.";
         }
 
@@ -355,7 +419,8 @@ namespace RobotWin.Studio.Pages
                         continue;
                     }
 
-                    Cell(SiValue.Format(Math.Abs(i), "A"), 6, null, false, c.Id);
+                    var (spread, _) = CableSpread(c);
+                    Cell(SiValue.Format(Math.Abs(i), "A") + (spread > 0 ? $" ±%{spread * 100:0}" : string.Empty), 6, null, false, c.Id);
                     Cell(SiValue.Format(CableDrop(c), "V"), 7, null, false, c.Id);
                     Cell(SiValue.Format(p, "W"), 8, null, false, c.Id);
                     Cell($"%{load * 100:0}", 9, load > 1 ? Brushes.OrangeRed : load > 0.8 ? Brushes.Orange : null, false, c.Id);

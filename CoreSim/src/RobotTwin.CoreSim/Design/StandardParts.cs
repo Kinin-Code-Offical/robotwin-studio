@@ -747,6 +747,7 @@ namespace RobotTwin.CoreSim.Design
                 },
                 P("model", "Model", "TT Motor 1:48"), P("voltage", "Nominal gerilim", "6", "V"), P("rpm", "Yüksüz devir (çıkış)", "200", "rpm"),
                 P("i0", "Yüksüz akım", "0.15", "A"), P("istall", "Kilitlenme akımı", "1.5", "A"), P("gear", "Dişli oranı", "48"),
+                P("variant", "Üretim", "datasheet", "", "datasheet", "klon"),
                 P("inductance", "Endüktans", "1m", "H"), P("load", "Yük torku", "0", "N·m"), P("inertia", "Rotor ataleti (0 = otomatik)", "0", "kg·m²"),
                 P("rth", "Isıl direnç (0 = varsayılan)", "0", "K/W"), P("cth", "Isıl kapasite (0 = varsayılan)", "0", "J/K"),
                 P("tolerance", "Üretim toleransı", "10", "%"))
@@ -775,7 +776,8 @@ namespace RobotTwin.CoreSim.Design
                     MaxAngleDeg = c.Num("range", 180)
                 }),
                 P("model", "Model", "SG90"), P("speed", "Hız (s/60°)", "0.1", "s"), P("istall", "Kilitlenme akımı", "0.65", "A"),
-                P("imove", "Hareket akımı", "0.25", "A"), P("range", "Açı aralığı", "180", "°"), P("pinmap", "Pin eşleme", "GND:1,V+:2,SIG:3"))
+                P("imove", "Hareket akımı", "0.25", "A"), P("range", "Açı aralığı", "180", "°"),
+                P("variant", "Üretim", "datasheet", "", "datasheet", "klon"), P("pinmap", "Pin eşleme", "GND:1,V+:2,SIG:3"))
                 .Pin("SIG", "3", -4, -2).Pin("V+", "2", -4, 0).Pin("GND", "1", -4, 2).Size(3, 3);
 
             Preset(lib, "servo-sg90", "SG90 Mikro Servo", "servo", Electromechanical, "9 g, 1.8 kg·cm");

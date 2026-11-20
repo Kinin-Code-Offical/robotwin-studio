@@ -38,6 +38,15 @@ namespace RobotTwin.CoreSim.Sandbox
         public List<WorldProgrammable> Programmables { get; } = new List<WorldProgrammable>();
         public Dictionary<string, Resistor> CableDevices { get; } = new Dictionary<string, Resistor>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Values that differ from the datasheet per part (clone variants, tolerance draws), by full designator.</summary>
+        public Dictionary<string, List<ToleranceDraw>> Draws { get; } = new Dictionary<string, List<ToleranceDraw>>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Resolved parameters of every part (after variants / draws), by full designator.</summary>
+        public Dictionary<string, IReadOnlyDictionary<string, string>> PartParameters { get; } = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Part definition id of every part, by full designator.</summary>
+        public Dictionary<string, string> PartDefinitions { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Designator a component object's single part gets inside its object ("M1").</summary>
         public Dictionary<string, string> ComponentRefDes { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -85,7 +94,8 @@ namespace RobotTwin.CoreSim.Sandbox
             public ProjectPackage? Package;
         }
 
-        public static WorldCircuit Compile(WorldDocument world, PartLibrary library, Func<WorldCable, double>? cableLength = null)
+        public static WorldCircuit Compile(WorldDocument world, PartLibrary library, Func<WorldCable, double>? cableLength = null,
+            ToleranceSettings? tolerances = null, int toleranceRun = 0)
         {
             if (world == null) throw new ArgumentNullException(nameof(world));
             if (library == null) throw new ArgumentNullException(nameof(library));
@@ -220,6 +230,11 @@ namespace RobotTwin.CoreSim.Sandbox
                     if (def.Build == null) continue;
                     var parameters = u.Schematic.ResolveParameters(library, part);
                     parameters = Radio.WorldUsb.Override(world, u.Object, part.RefDes, def, parameters, library);   // [radio] USB cable drives VBUS
+                    var draws = ToleranceModel.ApplyVariant(def, parameters, fullRef);   // clone parts differ from the datasheet
+                    draws.AddRange(ToleranceModel.Apply(def, parameters, fullRef, tolerances, toleranceRun, world.Environment.AmbientC));
+                    if (draws.Count > 0) result.Draws[fullRef] = draws;
+                    result.PartParameters[fullRef] = new Dictionary<string, string>(parameters, StringComparer.OrdinalIgnoreCase);
+                    result.PartDefinitions[fullRef] = def.Id;
                     var devices = new List<AnalogDevice>();
                     int PinNode(string pin)
                     {

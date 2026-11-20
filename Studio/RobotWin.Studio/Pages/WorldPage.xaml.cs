@@ -976,6 +976,7 @@ namespace RobotWin.Studio.Pages
 
         private void LiveSection(WorldObject o)
         {
+            RealValuesSection(o);
             Inspector.Children.Add(Caption("Canlı ölçüm"));
             _live = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
             Inspector.Children.Add(_live);

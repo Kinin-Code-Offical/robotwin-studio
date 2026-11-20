@@ -46,6 +46,7 @@ namespace RobotWin.Studio.Analysis
         private readonly CheckBox _aero = new CheckBox { Content = "Hava akışı (tüm montaj, 3B)", IsChecked = true };
         private readonly TextBox _aeroSpeed = new TextBox { Width = 70, Text = "2" };
         private readonly CheckBox _thermal = new CheckBox { Content = "Isınma (kartlar, motorlar)", IsChecked = true };
+        private readonly CheckBox _bands = new CheckBox { Content = "Belirsizlik bandı (4 tolerans koşusu)", IsChecked = false, ToolTip = "Parça değerleri tolerans bantlarından (klonlar ±%35–40) çekilerek 4 kez daha çalıştırılır; grafiklerde gerçek parçaların düşebileceği aralık gölge olarak görünür. Render süresi ~5 katına çıkar." };
         private readonly Button _render = new Button { Content = "Render al", Padding = new Thickness(14, 6, 14, 6) };
         private readonly ProgressBar _progress = new ProgressBar { Height = 6, Maximum = 1, Margin = new Thickness(0, 10, 0, 4) };
         private readonly TextBlock _status = new TextBlock { TextWrapping = TextWrapping.Wrap };
@@ -125,7 +126,7 @@ namespace RobotWin.Studio.Analysis
             root.Children.Add(center);
             Content = root;
 
-            foreach (var cb in new[] { _aero, _thermal, _forces, _air }) cb.Foreground = Res("B.Text");
+            foreach (var cb in new[] { _aero, _thermal, _bands, _forces, _air }) cb.Foreground = Res("B.Text");
             _timer.Tick += (_, _) => Tick();
             Closed += (_, _) =>
             {
@@ -182,6 +183,7 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(new Border { Child = _aero, Margin = new Thickness(0, 10, 0, 0) });
             left.Children.Add(Row("Duran montajda test hızı (m/s)", _aeroSpeed));
             left.Children.Add(new Border { Child = _thermal, Margin = new Thickness(0, 8, 0, 0) });
+            left.Children.Add(new Border { Child = _bands, Margin = new Thickness(0, 8, 0, 0) });
             _render.Style = (Style)Application.Current.FindResource("Btn.Primary");
             _render.Margin = new Thickness(0, 16, 0, 0);
             _render.Click += (_, _) =>
@@ -224,7 +226,8 @@ namespace RobotWin.Studio.Analysis
                 AeroPasses = 15,
                 Thermal = _thermal.IsChecked == true,
                 ThermalExtend = 0,
-                ThermalFrames = Math.Max(10, (int)(duration * 10))
+                ThermalFrames = Math.Max(10, (int)(duration * 10)),
+                UncertaintyRuns = _bands.IsChecked == true ? 4 : 0
             };
         }
 
@@ -471,7 +474,8 @@ namespace RobotWin.Studio.Analysis
             {
                 var c = _result.Channels.Find((string)item.Tag);
                 if (c == null) continue;
-                _plot.Series.Add(new PlotSeries { Name = c.Label, Unit = c.Unit, X = t, Y = c.ToArray(), Color = LinePlot.Palette[k++ % LinePlot.Palette.Length] });
+                var band = _result.Bands.TryGetValue(c.Name, out var bb) && bb.Lo.Length == t.Length ? bb : ((double[]?)null, (double[]?)null);
+                _plot.Series.Add(new PlotSeries { Name = c.Label + (band.Item1 != null ? $" (gölge: {_result.BandRuns} tolerans koşusu)" : string.Empty), Unit = c.Unit, X = t, Y = c.ToArray(), Lo = band.Item1, Hi = band.Item2, Color = LinePlot.Palette[k++ % LinePlot.Palette.Length] });
                 if (k >= 6) break;
             }
 

@@ -16,6 +16,11 @@ namespace RobotWin.Studio.Analysis
         public double[] X { get; set; } = Array.Empty<double>();
         public double[] Y { get; set; } = Array.Empty<double>();
         public Color Color { get; set; } = Colors.SteelBlue;
+
+        /// <summary>Optional uncertainty band (same length as <see cref="X"/>), drawn as a translucent fill.</summary>
+        public double[]? Lo { get; set; }
+
+        public double[]? Hi { get; set; }
     }
 
     /// <summary>
@@ -97,12 +102,16 @@ namespace RobotWin.Studio.Analysis
             double y0 = double.PositiveInfinity, y1 = double.NegativeInfinity;
             foreach (var s in live)
             {
-                foreach (double v in s.Y)
+                foreach (var arr in new[] { s.Y, s.Lo, s.Hi })
                 {
-                    if (double.IsFinite(v))
+                    if (arr == null) continue;
+                    foreach (double v in arr)
                     {
-                        if (v < y0) y0 = v;
-                        if (v > y1) y1 = v;
+                        if (double.IsFinite(v))
+                        {
+                            if (v < y0) y0 = v;
+                            if (v > y1) y1 = v;
+                        }
                     }
                 }
             }
@@ -139,6 +148,7 @@ namespace RobotWin.Studio.Analysis
             _vx1 = x1;
             _varea = area;
             dc.PushClip(new RectangleGeometry(area));
+            foreach (var s in live) DrawBand(dc, s, X, Y);
             foreach (var s in live) DrawSeries(dc, s, area, X, Y);
             if (Cursor is double cur && cur >= x0 && cur <= x1)
             {
@@ -157,6 +167,24 @@ namespace RobotWin.Studio.Analysis
                 dc.DrawText(ft, new Point(lx + 14, ly - 2));
                 lx += ft.Width + 30;
             }
+        }
+
+        private static void DrawBand(DrawingContext dc, PlotSeries s, Func<double, double> X, Func<double, double> Y)
+        {
+            if (s.Lo == null || s.Hi == null || s.Lo.Length != s.X.Length || s.Hi.Length != s.X.Length || s.X.Length < 2) return;
+            int step = Math.Max(1, s.X.Length / 1500);
+            var geo = new StreamGeometry();
+            using (var g = geo.Open())
+            {
+                g.BeginFigure(new Point(X(s.X[0]), Y(s.Hi[0])), true, true);
+                for (int i = step; i < s.X.Length; i += step) g.LineTo(new Point(X(s.X[i]), Y(s.Hi[i])), false, false);
+                for (int i = s.X.Length - 1; i >= 0; i -= step) g.LineTo(new Point(X(s.X[i]), Y(s.Lo[i])), false, false);
+            }
+
+            geo.Freeze();
+            var fill = new SolidColorBrush(Color.FromArgb(0x40, s.Color.R, s.Color.G, s.Color.B));
+            fill.Freeze();
+            dc.DrawGeometry(fill, null, geo);
         }
 
         private static void DrawSeries(DrawingContext dc, PlotSeries s, Rect area, Func<double, double> X, Func<double, double> Y)

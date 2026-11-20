@@ -86,6 +86,11 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Parts overheat, burn and fail like in the app.</summary>
         public bool EnableDamage { get; set; } = true;
 
+        /// <summary>Tolerance analysis: draw part values from their bands (run index = <see cref="ToleranceRun"/>).</summary>
+        public Design.ToleranceSettings? Tolerances { get; set; }
+
+        public int ToleranceRun { get; set; }
+
         /// <summary>Where "builtin:xxx.hex" firmware references are looked up (the app's Firmware folder).</summary>
         public List<string> FirmwareSearchPath { get; } = new List<string>();
 

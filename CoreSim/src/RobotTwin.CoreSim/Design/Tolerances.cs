@@ -205,6 +205,12 @@ namespace RobotTwin.CoreSim.Design
                 case "dc-motor":
                     Vary("rpm", "Yüksüz devir", "rpm", Band("tolerance", 10));
                     Vary("istall", "Kilitlenme akımı", "A", Band("tolerance", 10));
+                    Vary("i0", "Yüksüz akım", "A", Band("tolerance", 15));
+                    break;
+                case "servo":
+                    Vary("istall", "Kilitlenme akımı", "A", Band("tolerance", 10));
+                    Vary("imove", "Hareket akımı", "A", Band("tolerance", 10));
+                    Vary("speed", "Hız", "s", Band("tolerance", 8));
                     break;
 
                 default: // [libs] user-made parts: "tol.<key>" parameters give per-parameter bands
@@ -219,6 +225,67 @@ namespace RobotTwin.CoreSim.Design
             }
 
             return draws;
+        }
+
+        /// <summary>
+        /// Clone ("yan sanayi") parts: a different winding and controller chip than the datasheet part.
+        /// Bench measurements of SG90 / TT-motor clones differ from the datasheet by up to 30–40 % in
+        /// current and ~20 % in speed. The deviation is fixed per physical part (seeded by its
+        /// designator), so it applies in every run — not only in a tolerance analysis.
+        /// </summary>
+        public static List<ToleranceDraw> ApplyVariant(PartDefinition def, Dictionary<string, string> parameters, string refDes)
+        {
+            var draws = new List<ToleranceDraw>();
+            if (!parameters.TryGetValue("variant", out var v) || !IsClone(v)) return draws;
+            void Vary(string key, string label, string unit, double percent)
+            {
+                if (!parameters.TryGetValue(key, out var raw) || !SiValue.TryParse(raw, out double nominal)) return;
+                double g = Sample(0x6C6F6E, 0, refDes, "clone." + key);
+                double actual = nominal * (1.0 + g * percent / 100.0);
+                parameters[key] = actual.ToString("R", CultureInfo.InvariantCulture);
+                draws.Add(new ToleranceDraw(key, label, unit, nominal, actual, I($"klon ±{percent:0} %")));
+            }
+
+            switch (def.Id)
+            {
+                case "servo":
+                    Vary("istall", "Kilitlenme akımı", "A", 35);
+                    Vary("imove", "Hareket akımı", "A", 40);
+                    Vary("speed", "Hız", "s", 20);
+                    break;
+                case "dc-motor":
+                    Vary("istall", "Kilitlenme akımı", "A", 35);
+                    Vary("i0", "Yüksüz akım", "A", 40);
+                    Vary("rpm", "Yüksüz devir", "rpm", 20);
+                    break;
+            }
+
+            return draws;
+        }
+
+        public static bool IsClone(string? variant) =>
+            variant != null && (variant.Equals("klon", StringComparison.OrdinalIgnoreCase) || variant.Equals("clone", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// How far a part's real current may sit from the model (fraction) and why — used to show
+        /// readings with their honest uncertainty instead of false precision.
+        /// </summary>
+        public static (double Fraction, string Reason) CurrentSpread(PartDefinition def, IReadOnlyDictionary<string, string> parameters)
+        {
+            bool clone = parameters.TryGetValue("variant", out var v) && IsClone(v);
+            string model = parameters.TryGetValue("model", out var m) ? m : def.Name;
+            switch (def.Id)
+            {
+                case "servo":
+                case "dc-motor":
+                    return clone ? (0.40, model + " klon: sargı ve sürücü farkı") : (0.15, model + ": datasheet tipik değeri");
+                case "resistor":
+                    return (ToleranceBand.Parse(parameters.TryGetValue("tolerance", out var t) ? t : null, 5).Upper, "direnç toleransı");
+                case "led":
+                    return (0.10, "LED ileri gerilim yayılımı");
+                default:
+                    return def.Symbol == SymbolKind.Board || def.Symbol == SymbolKind.Module ? (0.20, model + ": besleme akımı tipik değer") : (0, string.Empty);
+            }
         }
 
         /// <summary>The draws a part would get, without compiling (for the property panel).</summary>
