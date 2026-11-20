@@ -63,6 +63,7 @@ namespace RobotWin.Studio.Analysis
         private readonly ComboBox _scale = new ComboBox { Width = 220 };
         private readonly CheckBox _forces = new CheckBox { Content = "Kuvvetler", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
         private readonly CheckBox _air = new CheckBox { Content = "Hava", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
+        private readonly CheckBox _follow = new CheckBox { Content = "Kamera takip", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
         private readonly TextBlock _legend = new TextBlock { Margin = new Thickness(10), Foreground = Brushes.White, FontSize = 12, IsHitTestVisible = false };
 
         // results
@@ -86,6 +87,22 @@ namespace RobotWin.Studio.Analysis
         private double _stressMax = 1;
         private double _forceMax = 1;
         private bool _seeking;
+        private bool _framed;
+
+        /// <summary>Largest extent of the moving objects' positions at a frame (for the follow camera's distance).</summary>
+        private double AssemblySize(RobotTwin.CoreSim.Analysis.Recording.ChannelStore store, int i)
+        {
+            Vec3 lo = new Vec3(double.MaxValue, double.MaxValue, double.MaxValue), hi = new Vec3(double.MinValue, double.MinValue, double.MinValue);
+            foreach (var o in _world.Objects)
+            {
+                if (o.IsStatic || AnalysisRun.RecordedPose(store, o.Id, i) is not { } pp) continue;
+                double r = Math.Max(o.SizeX, Math.Max(o.SizeY, o.SizeZ)) / 2;
+                lo = new Vec3(Math.Min(lo.X, pp.Position.X - r), Math.Min(lo.Y, pp.Position.Y - r), Math.Min(lo.Z, pp.Position.Z - r));
+                hi = new Vec3(Math.Max(hi.X, pp.Position.X + r), Math.Max(hi.Y, pp.Position.Y + r), Math.Max(hi.Z, pp.Position.Z + r));
+            }
+
+            return hi.X >= lo.X ? Math.Max(0.15, (hi - lo).Length) : 0.5;
+        }
         private static readonly ImageBrush HeatBrush = MakeHeatBrush();
 
         public RenderWindow(WorldDocument world, IWorldGeometry geometry, double duration, PartLibrary library, Func<WorldObject, double>? massOf)
@@ -127,7 +144,7 @@ namespace RobotWin.Studio.Analysis
             root.Children.Add(center);
             Content = root;
 
-            foreach (var cb in new[] { _aero, _thermal, _bands, _meshCheck, _forces, _air }) cb.Foreground = Res("B.Text");
+            foreach (var cb in new[] { _aero, _thermal, _bands, _meshCheck, _forces, _air, _follow }) cb.Foreground = Res("B.Text");
             _timer.Tick += (_, _) => Tick();
             Closed += (_, _) =>
             {
@@ -317,6 +334,8 @@ namespace RobotWin.Studio.Analysis
             rightSide.Children.Add(_forces);
             rightSide.Children.Add(new Border { Width = 10 });
             rightSide.Children.Add(_air);
+            rightSide.Children.Add(new Border { Width = 10 });
+            rightSide.Children.Add(_follow);
             DockPanel.SetDock(rightSide, Dock.Right);
             bar.Children.Add(rightSide);
             _timeline.Margin = new Thickness(8, 0, 12, 0);
@@ -591,6 +610,21 @@ namespace RobotWin.Studio.Analysis
             if (_air.IsChecked == true) AirOverlay(overlay, t, legend);
             _scene.SetHidden(hidden);
             _scene.ShowPlayback(overlay);
+            if (_follow.IsChecked == true)
+            {
+                // Keep the moving assembly in view: centre on the mean of everything that moves.
+                Vec3 sum = Vec3.Zero;
+                int count = 0;
+                foreach (var o in _world.Objects)
+                {
+                    if (o.IsStatic || AnalysisRun.RecordedPose(store, o.Id, i) is not { } pp) continue;
+                    sum += pp.Position;
+                    count++;
+                }
+
+                if (count > 0) _scene.CenterOn(sum / count, _framed ? 0 : AssemblySize(store, i) * 2.2);
+                _framed = true;
+            }
             _legend.Text = legend.ToString().TrimEnd();
 
             _plot.Cursor = t;
@@ -849,7 +883,7 @@ namespace RobotWin.Studio.Analysis
                     px[o] = col.B;
                     px[o + 1] = col.G;
                     px[o + 2] = col.R;
-                    px[o + 3] = 120;
+                    px[o + 3] = 70;
                 }
             }
 
@@ -872,10 +906,77 @@ namespace RobotWin.Studio.Analysis
             Tri(mesh, 0, 2, 3);
             var mat = new EmissiveMaterial(brush);
             g.Children.Add(new GeometryModel3D(mesh, mat) { BackMaterial = mat });
+            // 3D streamlines through the solved flow, coloured by local speed.
+            if (a.Streamlines.Count > 0)
+            {
+                var lines = new MeshGeometry3D();
+                double radius = Math.Max(0.0005, Math.Min(0.003, a.Dx * 0.04));
+                foreach (var pl in a.Streamlines) StreamTube(lines, pl, radius, a.Speed * 1.3);
+                var lm = new MaterialGroup();
+                lm.Children.Add(new DiffuseMaterial(HeatBrush));
+                lm.Children.Add(new EmissiveMaterial(HeatBrush) { Color = Color.FromRgb(150, 150, 150) });
+                g.Children.Add(new GeometryModel3D(lines, lm) { BackMaterial = lm });
+            }
             var centre = a.Origin + a.AxisX * ((x0 + d) * a.Dx) + a.AxisY * (ny * a.Dx / 2) + a.AxisZ * ((z0 + z1) * a.Dx / 2);
             _ = nxFull + nzFull;
             if (a.Force.Length > 0) g.Children.Add(Arrow(centre, centre + a.Force.Normalized() * 0.08, Color.FromRgb(0xA8, 0x55, 0xF7), 0.0025));
-            legend.AppendLine($"Hava (t = {a.Time:0.00} s): {a.Speed:0.##} m/s bağıl rüzgâr, montaja kuvvet {SiValue.Format(a.Force.Length, "N")}, Cd {a.MeanCd:0.00} (mor ok); kesit: mavi durgun hava, sarı serbest akış, kırmızı hızlanan hava");
+            bool coarse = a.Notes.Any(n => n.Contains("bir hücre kalınlığında"));
+            var store = _result.Channels;
+            int si = AnalysisRun.SampleAt(store, t);
+            double lift = 0, drag = 0;
+            foreach (var c in store.Channels)
+            {
+                if (c.Name.StartsWith("aero/", StringComparison.Ordinal) && c.Name.EndsWith("/lift", StringComparison.Ordinal) && si < c.Count) lift += c[si];
+                if (c.Name.StartsWith("aero/", StringComparison.Ordinal) && c.Name.EndsWith("/drag", StringComparison.Ordinal) && si < c.Count) drag += c[si];
+            }
+
+            if (coarse)
+                legend.AppendLine($"Hava (t = {a.Time:0.00} s): {a.Speed:0.##} m/s bağıl rüzgâr; 3B akım çizgileri ve kesit (hücre {a.Dx * 1000:0} mm, ince yüzeyler kalın görünür: akış görselleştirmesi)."
+                    + (lift != 0 ? $" Kuvvetler kanat modelinden: kaldırma {SiValue.Format(lift, "N")}, sürükleme {SiValue.Format(drag, "N")}, L/D {lift / Math.Max(1e-9, drag):0.0}" : string.Empty));
+            else
+                legend.AppendLine($"Hava (t = {a.Time:0.00} s): {a.Speed:0.##} m/s bağıl rüzgâr, montaja kuvvet {SiValue.Format(a.Force.Length, "N")}, Cd {a.MeanCd:0.00} (mor ok); kesit ve 3B akım çizgileri: mavi yavaşlayan, sarı serbest akış, kırmızı hızlanan hava");
+        }
+
+        /// <summary>A thin tube along a streamline (x, y, z, speed per point), texture u = speed / max for the heat colours.</summary>
+        private static void StreamTube(MeshGeometry3D mesh, float[] pl, double radius, double vmax)
+        {
+            int n = pl.Length / 4;
+            if (n < 2) return;
+            const int seg = 5;
+            int b0 = mesh.Positions.Count;
+            Vec3 prevSide = Vec3.UnitY;
+            for (int i = 0; i < n; i++)
+            {
+                var p = new Vec3(pl[4 * i], pl[4 * i + 1], pl[4 * i + 2]);
+                var q = new Vec3(pl[4 * Math.Min(n - 1, i + 1)], pl[4 * Math.Min(n - 1, i + 1) + 1], pl[4 * Math.Min(n - 1, i + 1) + 2]);
+                var o = new Vec3(pl[4 * Math.Max(0, i - 1)], pl[4 * Math.Max(0, i - 1) + 1], pl[4 * Math.Max(0, i - 1) + 2]);
+                var t = q - o;
+                if (t.LengthSquared < 1e-18) t = Vec3.UnitX;
+                t = t.Normalized();
+                var side = prevSide - t * prevSide.Dot(t);
+                if (side.LengthSquared < 1e-12) side = Math.Abs(t.Z) < 0.9 ? t.Cross(Vec3.UnitZ) : t.Cross(Vec3.UnitX);
+                side = side.Normalized();
+                prevSide = side;
+                var up = t.Cross(side);
+                double u = Math.Max(0.002, Math.Min(0.998, pl[4 * i + 3] / vmax));
+                for (int k = 0; k < seg; k++)
+                {
+                    double ang = 2 * Math.PI * k / seg;
+                    var w = p + (side * Math.Cos(ang) + up * Math.Sin(ang)) * radius;
+                    mesh.Positions.Add(new Point3D(w.X, w.Y, w.Z));
+                    mesh.TextureCoordinates.Add(new Point(u, 0.5));
+                }
+            }
+
+            for (int i = 0; i + 1 < n; i++)
+            {
+                for (int k = 0; k < seg; k++)
+                {
+                    int a = b0 + i * seg + k, b = b0 + i * seg + (k + 1) % seg, c = b0 + (i + 1) * seg + (k + 1) % seg, d = b0 + (i + 1) * seg + k;
+                    Tri(mesh, a, b, c);
+                    Tri(mesh, a, c, d);
+                }
+            }
         }
 
         private static Model3D Arrow(Vec3 from, Vec3 to, Color color, double radius)

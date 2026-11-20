@@ -41,6 +41,14 @@ namespace RobotWin.Studio.World
             }
         }
 
+        /// <summary>Points the camera at a world point keeping its distance and angle (replay follow).</summary>
+        public void CenterOn(Vec3 p, double distance = 0)
+        {
+            _target = new System.Windows.Media.Media3D.Point3D(p.X, p.Y, p.Z);
+            if (distance > 0) _distance = distance;
+            UpdateCamera();
+        }
+
         /// <summary>Tints objects (emissive) during a replay, e.g. by temperature; null clears every tint.</summary>
         public void SetTints(System.Collections.Generic.IReadOnlyDictionary<string, System.Windows.Media.Color>? tints)
         {

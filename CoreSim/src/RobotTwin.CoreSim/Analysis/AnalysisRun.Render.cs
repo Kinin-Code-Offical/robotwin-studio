@@ -22,6 +22,7 @@ namespace RobotTwin.CoreSim.Analysis
         {
             public string Id = string.Empty;
             public Channel Px = null!, Py = null!, Pz = null!, Qw = null!, Qx = null!, Qy = null!, Qz = null!, Port = null!, Temp = null!;
+            public Channel? Lift, Drag, Deflection;
         }
 
         private static List<PoseChannels> PoseRecorder(WorldDocument world, ChannelStore store)
@@ -38,7 +39,10 @@ namespace RobotTwin.CoreSim.Analysis
                     Px = C("px", "x", "m"), Py = C("py", "y", "m"), Pz = C("pz", "z", "m"),
                     Qw = C("qw", "qw", ""), Qx = C("qx", "qx", ""), Qy = C("qy", "qy", ""), Qz = C("qz", "qz", ""),
                     Port = C("port", "mil / kol açısı", "rad"),
-                    Temp = store.Get("pose/" + id + "/temp", o.Name + " · sıcaklık", "°C", "Isı/Parça sıcaklıkları")
+                    Temp = store.Get("pose/" + id + "/temp", o.Name + " · sıcaklık", "°C", "Isı/Parça sıcaklıkları"),
+                    Lift = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/lift", o.Name + " · kaldırma (yüzey normali)", "N", "Uçuş/Kanat kuvvetleri") : null,
+                    Drag = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/drag", o.Name + " · sürükleme (akış yönü)", "N", "Uçuş/Kanat kuvvetleri") : null,
+                    Deflection = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/delta", o.Name + " · kumanda yüzeyi açısı", "°", "Uçuş/Kanat kuvvetleri") : null
                 });
             }
 
@@ -72,6 +76,16 @@ namespace RobotTwin.CoreSim.Analysis
                 store.Set(p.Qz, q.Z);
                 store.Set(p.Port, physics?.PortAngle(p.Id) ?? 0);
                 store.Set(p.Temp, physics?.TemperatureOf(p.Id) ?? world.Environment.AmbientC);
+                if (p.Lift != null && physics?.WingLoads(p.Id) is { } wl)
+                {
+                    // Wind axes from the reference angle of attack (sideslip is small for these parts).
+                    double a = wl.Alpha;
+                    var flow = new Vec3(-Math.Cos(a), 0, Math.Sin(a));
+                    double drag = wl.Force.Dot(flow);
+                    store.Set(p.Lift, (wl.Force - flow * drag).Length * Math.Sign(wl.Force.Z));
+                    store.Set(p.Drag!, drag);
+                    store.Set(p.Deflection!, physics.WingDeflection(p.Id));
+                }
             }
         }
 
@@ -201,7 +215,9 @@ namespace RobotTwin.CoreSim.Analysis
                         bool solid = false;
                         foreach (var so in solids)
                         {
-                            if (so.Contains(w))
+                            // Conservative voxels: a cell is solid when the part passes through it, so thin
+                            // plates and wings thinner than a cell are still seen by the flow (one cell thick).
+                            if (so.Distance(w) < 0.5 * dx)
                             {
                                 solid = true;
                                 break;
@@ -276,8 +292,76 @@ namespace RobotTwin.CoreSim.Analysis
                 AxisZ = gz,
                 Force = force
             };
-            result.Notes.Add($"{parts.Count} parça birlikte, bağıl hava {speed:0.##} m/s, Re = {re:0}" + (re > reLat ? $" (ağda {reLat:0} + Smagorinsky LES)" : string.Empty) + ".");
+            result.Notes.Add($"{parts.Count} parça birlikte, bağıl hava {speed:0.##} m/s, Re = {re:0}" + (re > reLat ? $" (ağda {reLat:0} + Smagorinsky LES)" : string.Empty) + $", hücre {dx * 1000:0.#} mm"
+                + (parts.Any(p => Math.Min(p.Size.Z, Math.Min(p.Size.X, p.Size.Y)) * 2 < dx) ? "; hücreden ince yüzeyler bir hücre kalınlığında temsil edildi (kanat kuvvetleri kanat modelinden gelir)." : "."));
+            Streamlines(lbm, result, (lo.Y + hi.Y) / 2 - origin.Y, (lo.Z + hi.Z) / 2 - origin.Z, d, u, speed);
             return result;
+        }
+
+        /// <summary>
+        /// Streamlines through the solved 3D velocity field (RK2, trilinear interpolation), seeded on a
+        /// grid across the oncoming flow around the assembly. Stored in world coordinates with the
+        /// local speed (m/s): x, y, z, speed, x, y, z, speed, …
+        /// </summary>
+        private static void Streamlines(Lbm3D lbm, CfdResult r, double cy, double cz, double d, double u, double speed)
+        {
+            int nx = lbm.Nx, ny = lbm.Ny, nz = lbm.Nz;
+            double dx = r.Dx;
+            bool Inside(double x, double y, double z) => x >= 0 && y >= 0 && z >= 0 && x < nx - 1 && y < ny - 1 && z < nz - 1;
+            Vec3 Vel(double x, double y, double z)
+            {
+                int i = (int)x, j = (int)y, k = (int)z;
+                double fx = x - i, fy = y - j, fz = z - k;
+                double vx = 0, vy = 0, vz = 0;
+                for (int c = 0; c < 8; c++)
+                {
+                    int ii = i + (c & 1), jj = j + ((c >> 1) & 1), kk = k + ((c >> 2) & 1);
+                    double w = ((c & 1) != 0 ? fx : 1 - fx) * (((c >> 1) & 1) != 0 ? fy : 1 - fy) * (((c >> 2) & 1) != 0 ? fz : 1 - fz);
+                    int n = lbm.Index(ii, jj, kk);
+                    if (lbm.Solid[n]) continue;
+                    vx += w * lbm.Ux[n];
+                    vy += w * lbm.Uy[n];
+                    vz += w * lbm.Uz[n];
+                }
+
+                return new Vec3(vx, vy, vz);
+            }
+
+            int seedsY = 9, seedsZ = 7;
+            double spanY = 1.4 * d / dx, spanZ = 1.1 * d / dx;
+            for (int a = 0; a < seedsY; a++)
+            {
+                for (int b = 0; b < seedsZ; b++)
+                {
+                    double y = cy / dx + (a / (seedsY - 1.0) - 0.5) * spanY, z = cz / dx + (b / (seedsZ - 1.0) - 0.5) * spanZ;
+                    double x = 1.5;
+                    if (!Inside(x, y, z)) continue;
+                    var pts = new List<float>();
+                    for (int step = 0; step < 6 * nx && Inside(x, y, z); step++)
+                    {
+                        var v1 = Vel(x, y, z);
+                        double m1 = v1.Length;
+                        if (m1 < 1e-5 * u) break;
+                        if ((step & 1) == 0)
+                        {
+                            var w = r.Origin + r.AxisX * (x * dx) + r.AxisY * (y * dx) + r.AxisZ * (z * dx);
+                            pts.Add((float)w.X);
+                            pts.Add((float)w.Y);
+                            pts.Add((float)w.Z);
+                            pts.Add((float)(m1 / u * speed));
+                        }
+
+                        double h = 0.6 / m1;   // ~0.6 cells per step
+                        var mid = Vel(x + 0.5 * h * v1.X, y + 0.5 * h * v1.Y, z + 0.5 * h * v1.Z);
+                        x += h * mid.X;
+                        y += h * mid.Y;
+                        z += h * mid.Z;
+                        if (Inside(x, y, z) && lbm.Solid[lbm.Index((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(z))]) break;
+                    }
+
+                    if (pts.Count >= 16) r.Streamlines.Add(pts.ToArray());
+                }
+            }
         }
 
         /// <summary>World position of a part's body centre from the object pose (geometry offset in the object frame).</summary>
