@@ -169,6 +169,70 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void PushrodLinkageFollowsTheFourBarGeometry()
+        {
+            var lk = new WorldPhysics.PushrodLinkage { HornRadius = 0.012, ControlArm = 0.024, RodLength = 0.45 };
+            double small = lk.SurfaceFor(10 * Math.PI / 180) * 180 / Math.PI, big = lk.SurfaceFor(45 * Math.PI / 180) * 180 / Math.PI;
+            _out.WriteLine($"horn 10° → surface {small:F2}°, horn 45° → {big:F2}° (fixed 0.5 gain would say 22.5°)");
+            Assert.InRange(small, 4.9, 5.1);    // small angles: r/a
+            Assert.InRange(big, 20.2, 21.2);    // asin(r/a·sin 45°) = 20.7°: the ratio falls with angle
+            Assert.InRange(lk.SurfaceFor(-45 * Math.PI / 180) * 180 / Math.PI, -21.2, -20.2);
+        }
+
+        /// <summary>A static tail in a wind tunnel, its elevator on a pushrod from an SG90 commanded +20°.</summary>
+        private (double Horn, double Surface, double Current, WorldPhysics.PushrodLinkage Link) TunnelLinkage(double wind, double stallTorque, double span)
+        {
+            var lib = RobotTwin.CoreSim.Design.PartLibrary.Default;
+            var w = new WorldDocument();
+            var servo = w.AddComponent(lib, "servo-sg90", new WorldPose());
+            servo.IsStatic = true;
+            var bat = w.AddComponent(lib, "bat-4aa", new WorldPose { X = -0.2 });
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = servo.Id, Pin = "V+" });
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = servo.Id, Pin = "GND" });
+            var tail = w.AddBody("wing", 0.10, span, 0.006, new WorldPose { X = 0.3, Z = 0.5 }, "AHŞAP");
+            tail.IsStatic = true;
+            tail.Parameters["airfoil"] = "naca0012";
+            tail.Parameters["control"] = "elevator";
+            tail.Parameters["control.chord"] = "0.4";
+            tail.Parameters["control.servo"] = servo.Id;
+            tail.Parameters["control.horn"] = "0.012";
+            tail.Parameters["control.arm"] = "0.012";
+            tail.Parameters["control.rod"] = "0.3";
+            tail.Parameters["control.torque"] = stallTorque.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            w.Environment.WindX = -wind;
+            var wc = WorldCompiler.Compile(w, lib, c => 0.2);
+            var s = wc.Compiled.DevicesOf(wc.ComponentRef(servo.Id)!).OfType<RobotTwin.CoreSim.Analog.Devices.Servo>().Single();
+            var sim = new RobotTwin.CoreSim.Analog.AnalogSimulator(wc.Compiled.Circuit, new RobotTwin.CoreSim.Analog.AnalogOptions { MaxStep = 1e-3 });
+            sim.Initialize(RobotTwin.CoreSim.Analog.InitialState.OperatingPoint);
+            var p = WorldPhysics.Build(w, Geometry, wc);
+            typeof(RobotTwin.CoreSim.Analog.Devices.Servo).GetProperty("TargetAngleDeg")!.SetValue(s, 110.0);   // +20° from centre
+            for (int i = 0; i < 1500; i++)
+            {
+                sim.Step(1e-3);
+                p.Advance(1e-3, sim);
+            }
+
+            var lk = p.LinkageOf(tail.Id)!;
+            return (lk.Horn * 180 / Math.PI, p.WingDeflection(tail.Id), s.SupplyCurrent, lk);
+        }
+
+        [Fact]
+        public void PushrodCarriesTheHingeMomentBackToTheServo()
+        {
+            var calm = TunnelLinkage(8, 0.176, 0.3);
+            var fast = TunnelLinkage(35, 0.176, 0.6);
+            var weak = TunnelLinkage(35, 0.03, 0.6);
+            foreach (var (n, r) in new[] { ("8 m/s, SG90", calm), ("35 m/s, SG90, 2× span", fast), ("35 m/s, weak servo", weak) })
+                _out.WriteLine($"{n}: horn {r.Horn:F1}°, elevator {r.Surface:F1}°, hinge load on servo {r.Link.ServoLoad * 1000:F1} mN·m, rod {r.Link.RodForce:F2} N, current {r.Current * 1000:F0} mA, blown back {r.Link.BlownBack}");
+            Assert.InRange(calm.Surface, 18, 20.5);                              // light load: it gets where it is told
+            Assert.True(Math.Abs(fast.Link.ServoLoad) > 5 * Math.Abs(calm.Link.ServoLoad), "hinge load grows with q·area");
+            Assert.True(fast.Surface < calm.Surface - 0.5, "the servo sags under the air load");
+            Assert.True(fast.Current > calm.Current, "a loaded servo draws more current");
+            Assert.True(weak.Link.BlownBack, "a too-weak servo is blown back");
+            Assert.True(weak.Surface < fast.Surface - 3, "blown back: far less deflection than commanded");
+        }
+
+        [Fact]
         public void UpElevatorRaisesTheNoseAndClimbs()
         {
             var (w0, f0, _) = Glider(0);
@@ -189,6 +253,10 @@ namespace RobotTwin.CoreSim.Tests
                 var pod = w.Objects.First(o => o.Name.StartsWith("Gövde"));
                 using var r = new RobotTwin.CoreSim.Automation.WorldRunner(w, new RobotTwin.CoreSim.Automation.RunnerOptions { Firmware = false });
                 Assert.True(r.TryGetBody(pod.Id, out var s0));
+                var fit = r.Physics!.ShellFit(w);
+                foreach (var i in fit) _out.WriteLine("fit: " + i.Message);
+                Assert.Empty(fit);   // [shell] battery, Nano, servos and lead fit between the pod's walls
+                Assert.Equal(4, r.Physics.WallsOf(pod.Id).Count);
                 double mass = 0;
                 Vec3 cg = Vec3.Zero;
                 foreach (var b in r.Physics!.Scene.Bodies.Where(b => !b.IsStatic))

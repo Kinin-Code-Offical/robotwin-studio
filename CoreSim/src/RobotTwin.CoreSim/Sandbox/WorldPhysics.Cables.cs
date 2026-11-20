@@ -174,6 +174,17 @@ namespace RobotTwin.CoreSim.Sandbox
                 it.Body.Position = it.Object.Pose.Position + q.Rotate(it.Centre);
                 it.Body.Velocity = Vec3.Zero;
                 it.Body.AngularVelocity = Vec3.Zero;
+                if (it.Walls != null)   // [shell] walls ride along with the floor
+                {
+                    foreach (var wall in it.Walls)
+                    {
+                        var rw = oldQ.Conjugate * wall.Orientation;
+                        var ow = oldQ.InverseRotate(wall.Position - oldX);
+                        wall.Orientation = it.Body.Orientation * rw;
+                        wall.Position = it.Body.Position + it.Body.Orientation.Rotate(ow);
+                    }
+                }
+
                 if (it.Rotor != null)
                 {
                     // The rotor rides along rigidly with its body.

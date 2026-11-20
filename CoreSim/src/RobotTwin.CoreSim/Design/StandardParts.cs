@@ -761,6 +761,10 @@ namespace RobotTwin.CoreSim.Design
                 "model=25GA-370;voltage=6;rpm=280;i0=0.12;istall=2;gear=21.3;inductance=1.5m");
             Preset(lib, "motor-jga25-12v", "JGA25-370 12 V 100 rpm", "dc-motor", Electromechanical, "Encoder'lı robot motoru",
                 "model=JGA25-370;voltage=12;rpm=100;i0=0.08;istall=1.6;gear=78;inductance=2m");
+            // [esc] 2204 2300 KV brushless (5" quad class), seen from its ESC as an averaged DC machine:
+            // 2300 rpm/V, 90 mΩ winding, 0.7 A no-load; outrunner bell inertia.
+            Preset(lib, "bldc-2204", "2204 2300KV Fırçasız Motor", "dc-motor", Electromechanical, "5\" drone motoru, 3S 11.1 V ~25500 rpm, ESC ile sürülür",
+                "model=2204 2300KV;voltage=11.1;rpm=25530;i0=0.7;istall=123;gear=1;inductance=20u;inertia=1.7e-6;rth=8;cth=6");
             Preset(lib, "motor-8520", "8520 Coreless Motor", "dc-motor", Electromechanical, "Mikro drone motoru, 3.7 V 48000 rpm",
                 "model=8520 Coreless;voltage=3.7;rpm=48000;i0=0.15;istall=3.5;gear=1;inductance=30u;inertia=1.5e-8;rth=40;cth=1.5");
             Preset(lib, "motor-0720", "0720 Coreless Motor", "dc-motor", Electromechanical, "Küçük drone motoru, 3.7 V 52000 rpm",
@@ -976,6 +980,29 @@ namespace RobotTwin.CoreSim.Design
             Preset(lib, "tb6612-ch", "TB6612FNG Motor Sürücü (1 kanal)", "motor-driver", Electromechanical, "PWM girişli MOSFET köprü, 1.2 A");
             Preset(lib, "l298n-ch", "L298N Motor Sürücü (1 kanal)", "motor-driver", Electromechanical, "Bipolar köprü, ~2 V düşümlü, 2 A",
                 "model=L298N (1 kanal);rds=2.0;imax=2");
+
+            // [esc] Brushless ESC: battery in, motor out at the throttle the servo pulse asks for
+            // (averaged three-phase stage), arms on low throttle, stops on signal loss, 5 V BEC.
+            Def(lib, "esc", "Fırçasız ESC", Electromechanical, "U", SymbolKind.Module, "HDR-1x6", "model",
+                c =>
+                {
+                    int bp = c.Pin("B+"), bm = c.Pin("B-");
+                    var d = c.Add(new AveragedPwmDriver(c.RefDes, bp, c.Pin("M+"), bm)
+                    {
+                        Resistance = c.Num("rds", 0.012),
+                        CurrentRating = c.Num("imax", 20),
+                        ThermalResistance = 25
+                    });
+                    d.PulseNode = c.Pin("SIG");
+                    c.Add(new Resistor(c.Sub("RIN"), c.Pin("SIG"), bm, 100e3));
+                    c.Add(new Resistor(c.Sub("MRET"), c.Pin("M-"), bm, 1e-3));   // the motor's return is the battery minus
+                    c.Add(new Resistor(c.Sub("MCU"), bp, bm, 11.1 / 0.025));     // ESC MCU and gate drive, ~25 mA
+                    c.Add(new LinearRegulator(c.Sub("BEC"), bp, bm, c.Pin("5V"), 5.0));
+                },
+                P("model", "Model", "BLHeli_S 20A"), P("rds", "Anahtar direnci", "0.012", "Ω"), P("imax", "Sürekli akım", "20", "A"),
+                P("pinmap", "Pin eşleme", "B+:1,B-:2,SIG:3,5V:4,M+:5,M-:6"))
+                .Pin("B+", "1", -4, -4).Pin("B-", "2", -4, -2).Pin("SIG", "3", -4, 0).Pin("5V", "4", -4, 2).Pin("M+", "5", 4, -1).Pin("M-", "6", 4, 1).Size(3, 5);
+            Preset(lib, "esc-20a", "Fırçasız ESC 20 A (BLHeli_S)", "esc", Electromechanical, "1000–2000 µs servo darbesi, düşük gazda kurulur, sinyal kesilince durur, 5 V BEC");
 
             var fc = Def(lib, "flight-controller", "Fırçalı Uçuş Kontrolcüsü", Boards, "U", SymbolKind.Board, "HDR-1x6", "model",
                 c =>

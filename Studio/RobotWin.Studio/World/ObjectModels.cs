@@ -188,8 +188,28 @@ namespace RobotWin.Studio.World
                 case "sphere":
                     m.Body.Children.Add(M.Model(M.Sphere(sx / 2 * Mm, 0, 0, sx / 2 * Mm, 24), Mat(c, 0.25, m.Heat)));
                     break;
+                case var _ when WorldPhysics.IsShell(o):
+                {
+                    // [shell] hollow body: floor plus four walls, open top (the lid is its own part).
+                    double t = Math.Min(WorldPhysics.WallOf(o) * 1000, Math.Min(sx, sy) / 2);
+                    Box(m.Body, 0, 0, t / 2, sx, sy, t, c, 0.12, m.Heat);
+                    Box(m.Body, sx / 2 - t / 2, 0, sz / 2 + t / 2, t, sy, sz - t, c, 0.12, m.Heat);
+                    Box(m.Body, -sx / 2 + t / 2, 0, sz / 2 + t / 2, t, sy, sz - t, c, 0.12, m.Heat);
+                    Box(m.Body, 0, sy / 2 - t / 2, sz / 2 + t / 2, sx - 2 * t, t, sz - t, c, 0.12, m.Heat);
+                    Box(m.Body, 0, -sy / 2 + t / 2, sz / 2 + t / 2, sx - 2 * t, t, sz - t, c, 0.12, m.Heat);
+                    break;
+                }
+
                 default:
                     Box(m.Body, 0, 0, sz / 2, sx, sy, sz, c, 0.12, m.Heat);
+                    if (WorldPhysics.LidOf(o) != null && o.Parameters.TryGetValue("screwed", out var sc) && sc == "true")
+                    {
+                        // [shell] screw heads in the lid's corners
+                        double ins = Math.Min(5, Math.Min(sx, sy) / 6);
+                        foreach (var (px, py) in new[] { (1, 1), (1, -1), (-1, 1), (-1, -1) })
+                            Cyl(m.Body, 1.4, 0.8, 2, px * (sx / 2 - ins), py * (sy / 2 - ins), sz + 0.4, Color.FromRgb(0xB8, 0xBC, 0xC4), 0.5, null, 14);
+                    }
+
                     break;
             }
 

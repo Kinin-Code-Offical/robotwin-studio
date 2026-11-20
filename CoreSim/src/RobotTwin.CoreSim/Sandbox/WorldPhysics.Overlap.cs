@@ -30,6 +30,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
             foreach (var j in Scene.Joints)
             {
+                if (_shellJoints.Contains(j)) continue;   // [shell] walls collide with what sits inside
                 if (j.B != null) Link(j.A, j.B);
             }
 

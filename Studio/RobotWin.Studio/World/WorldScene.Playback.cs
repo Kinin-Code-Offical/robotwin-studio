@@ -17,6 +17,9 @@ namespace RobotWin.Studio.World
     {
         private readonly ModelVisual3D _replay = new ModelVisual3D();
 
+        /// <summary>Cable colour override during a replay (e.g. by recorded current); null = normal colours.</summary>
+        public System.Func<RobotTwin.CoreSim.Sandbox.WorldCable, System.Windows.Media.Color?>? CableColor { get; set; }
+
         /// <summary>Recorded poses to show instead of the live simulation (null = normal scene).</summary>
         public IScenePlayback? Playback { get; set; }
 
@@ -39,6 +42,15 @@ namespace RobotWin.Studio.World
                 _hidden[id] = it.Visual.Content;
                 it.Visual.Content = null;
             }
+        }
+
+        /// <summary>World-space bounds of an object's visible model as currently posed (null when it has none).</summary>
+        public System.Windows.Media.Media3D.Rect3D? WorldBoundsOf(string id)
+        {
+            if (!_items.TryGetValue(id, out var it) || it.Visual.Content is not { } m) return null;
+            var b = m.Bounds;
+            if (b.IsEmpty) return null;
+            return it.Visual.Transform is { } tf ? tf.TransformBounds(b) : b;
         }
 
         /// <summary>Points the camera at a world point keeping its distance and angle (replay follow).</summary>

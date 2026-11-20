@@ -70,7 +70,8 @@ namespace RobotWin.Studio
                 Navigate("world");
                 UpdateLayout();
                 var list = _world.OverlapReport();
-                sb.AppendLine($"{t.Id}: {(list.Count == 0 ? "temiz" : list.Count + " çakışma")}");
+                int problems = list.Count(l => !l.StartsWith("geo ", StringComparison.Ordinal));
+                sb.AppendLine($"{t.Id}: {(problems == 0 ? "temiz" : problems + " sorun")}");
                 foreach (var l in list) sb.AppendLine("    " + l);
             }
 

@@ -24,6 +24,41 @@ namespace RobotTwin.CoreSim.Sandbox
         /// tailplane and fin on the end of the boom. CG ≈ 33 % of the chord, tail volume ≈ 0.57.
         /// Hand-launched at 7 m/s from 40 m; the sketch holds trim, then flies a gentle turn.
         /// </summary>
+        /// <summary>
+        /// [shell] An electronics box: 120 × 80 × 40 mm PLA enclosure with 2 mm walls and a screw-on
+        /// lid, an Arduino Uno screwed to its floor, a 9 V battery standing upright beside it (48 mm:
+        /// too tall, the lid cannot close) and a servo outside, wired through the rear cable hole.
+        /// </summary>
+        public static WorldDocument ShellBox(PartLibrary lib)
+        {
+            var w = new WorldDocument { Title = "Elektronik kutusu" };
+            var box = w.AddBody("box", 0.12, 0.08, 0.04, new WorldPose(), "PLA");
+            box.Name = "Kutu (içi boş)";
+            box.IsStatic = true;
+            box.Parameters["shell"] = "true";
+            box.Parameters["wall"] = "0.002";
+            box.Parameters["holes"] = "-x";
+            var uno = w.AddComponent(lib, "arduino-uno", new WorldPose { X = -0.0506, Y = 0.0266, Z = 0.002 });
+            uno.Name = "Arduino Uno";
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = uno.Id, ObjectB = box.Id });   // M3 standoffs
+            var bat = w.AddComponent(lib, "bat-9v", new WorldPose { X = 0.036, Z = 0.002 });   // standing on its end
+            bat.Name = "9 V pil (dik)";
+            var lid = w.AddBody("box", 0.12, 0.08, 0.002, new WorldPose { Z = 0.04 + 0.06 }, "PLA");
+            lid.Name = "Kutu kapağı";
+            lid.IsStatic = true;   // held open above the box until it is closed
+            lid.Parameters["lid.of"] = box.Id;
+            lid.Parameters["screwed"] = "true";
+            var servo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.11, Y = 0.0, Z = 0 });
+            servo.Name = "Servo (kutu dışında)";
+            servo.IsStatic = true;
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = uno.Id, Pin = "VIN" }, 24, "#E5484D").Length = 0.10;
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = uno.Id, Pin = "GND1" }, 24, "#1F1F23").Length = 0.10;
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = servo.Id, Pin = "V+" }, 26, "#E5484D").Length = 0.15;
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND2" }, new CableEnd { ObjectId = servo.Id, Pin = "GND" }, 26, "#5A3A22").Length = 0.15;
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "D9" }, new CableEnd { ObjectId = servo.Id, Pin = "SIG" }, 26, "#F2A33B").Length = 0.15;
+            return w;
+        }
+
         public static WorldDocument Glider(PartLibrary lib)
         {
             var w = new WorldDocument { Title = "Planör" };
@@ -36,6 +71,9 @@ namespace RobotTwin.CoreSim.Sandbox
             pod.Name = "Gövde (balsa kabin)";
             pod.MassKg = 0.035;                       // hollow 2 mm balsa box with a ply former
             pod.Parameters["launch"] = "7";
+            pod.Parameters["shell"] = "true";        // [shell] really hollow: 2 mm balsa walls the electronics sit between
+            pod.Parameters["wall"] = "0.002";
+            pod.Parameters["holes"] = "-x";           // pushrod and cable exit at the rear
             var boom = w.AddBody("cylinder", 0.008, 0.008, 0.50, new WorldPose { X = tailX - 0.04, Z = boomZ, Pitch = 90 }, "KARBON");
             boom.Name = "Kuyruk borusu (karbon Ø8)";
             boom.MassKg = 0.012;
@@ -47,11 +85,13 @@ namespace RobotTwin.CoreSim.Sandbox
             wing.Parameters["incidence"] = "2";
             wing.Parameters["dihedral"] = "6";
 
-            // Electronics inside the pod: battery and lead forward for the CG, servos under the wing.
+            // Electronics inside the pod, lengthwise between its 2 mm walls (the fit check holds them to it):
+            // battery and lead forward for the CG, servos under the wing.
             var bat = w.AddComponent(lib, "bat-2s-lipo", new WorldPose { X = 0.165, Z = z0 + 0.004 });
             bat.Name = "LiPo 2S 450 mAh";
             bat.MassKg = 0.028;
-            var nano = w.AddComponent(lib, "arduino-nano", new WorldPose { X = 0.110, Z = z0 + 0.004 });
+            bat.Parameters["capacity"] = "0.45";   // a 2S 450 mAh pack: ≈ 62 × 20 × 10 mm
+            var nano = w.AddComponent(lib, "arduino-nano", new WorldPose { X = 0.080, Y = -0.0076, Z = z0 + 0.004, Yaw = 90 });
             nano.Name = "Uçuş kartı (Arduino Nano)";
             nano.MassKg = 0.007;
             nano.Firmware = new Formats.FirmwareSource
@@ -64,7 +104,7 @@ namespace RobotTwin.CoreSim.Sandbox
             elevServo.Name = "İrtifa servosu";
             var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.055, Y = -0.011, Z = z0 + 0.004 });
             rudServo.Name = "Yön servosu";
-            var lead = w.AddBody("box", 0.020, 0.020, 0.008, new WorldPose { X = 0.190, Z = z0 + 0.034 }, "KURŞUN");
+            var lead = w.AddBody("box", 0.020, 0.020, 0.008, new WorldPose { X = 0.185, Z = z0 + 0.034 }, "KURŞUN");
             lead.Name = "Burun kurşunu";
             lead.MassKg = 0.038;
 
@@ -84,7 +124,10 @@ namespace RobotTwin.CoreSim.Sandbox
             stab.Parameters["control"] = "elevator";
             stab.Parameters["control.chord"] = "0.35";
             stab.Parameters["control.servo"] = elevServo.Id;
-            stab.Parameters["control.gain"] = "0.5";   // horn 12 mm / control horn 24 mm
+            // [linkage] real pushrod geometry: 12 mm servo horn hole, 24 mm control horn, 450 mm carbon rod.
+            stab.Parameters["control.horn"] = "0.012";
+            stab.Parameters["control.arm"] = "0.024";
+            stab.Parameters["control.rod"] = "0.45";
             stab.Parameters["downwash"] = wing.Id;
             var fin = w.AddBody("wing", 0.08, 0.11, 0.005, new WorldPose { X = tailX, Z = boomZ + 0.010 }, "BALSA");
             fin.Name = "Dikey kuyruk + yön dümeni";
@@ -94,7 +137,9 @@ namespace RobotTwin.CoreSim.Sandbox
             fin.Parameters["control"] = "rudder";
             fin.Parameters["control.chord"] = "0.4";
             fin.Parameters["control.servo"] = rudServo.Id;
-            fin.Parameters["control.gain"] = "0.5";
+            fin.Parameters["control.horn"] = "0.012";
+            fin.Parameters["control.arm"] = "0.024";
+            fin.Parameters["control.rod"] = "0.45";
 
             foreach (var part in new WorldObject[] { boom, wing, bat, nano, elevServo, rudServo, lead })
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = pod.Id });

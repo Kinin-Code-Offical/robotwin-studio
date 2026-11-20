@@ -49,6 +49,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
             public Vec3 Centre;
             public SceneBody? Rotor;
+            public List<SceneBody>? Walls;   // [shell] Sandbox/WorldPhysics.Shells.cs
             public SceneJoint? RotorJoint;
             public string? PortName;
             public Servo? Servo;
@@ -106,6 +107,7 @@ namespace RobotTwin.CoreSim.Sandbox
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.FilterAssemblyCollisions(); // only parts within two joints of each other skip collisions (WorldPhysics.Overlap.cs)
+            p.ScrewLids();   // [shell] lids seated on their shell's rim are screwed down (Sandbox/WorldPhysics.Shells.cs)
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
             p.BuildWings();   // [aero] lifting surfaces replace the generic drag the environment just gave every body (Sandbox/WorldPhysics.Wings.cs)
             p.ApplyLaunches(world);   // [aero] hand-launched aircraft
@@ -136,6 +138,9 @@ namespace RobotTwin.CoreSim.Sandbox
             SceneBody body;
             switch (g.Shape)
             {
+                case var _ when IsShell(o):   // [shell] hollow body: floor here, walls below
+                    body = ShellFloor(o, size, centre, mass, material, it);
+                    break;
                 case "omni-y" or "mecanum-y" or "caster" or "prop-z":   // [objs]
                     body = ReadyBody(o, g, size, mass, it);
                     break;
@@ -177,6 +182,7 @@ namespace RobotTwin.CoreSim.Sandbox
             body.Tag = o;
             Scene.AddBody(body);
             it.Body = body;
+            if (IsShell(o)) AddShellWalls(it, size, mass, material);   // [shell]
 
             // A moving output becomes its own small rotor on a hinge.
             if (g.PortName != null)
@@ -278,7 +284,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]
                 Sdk?.BeforeStep(Step, sim);   // [sdk]
-                StepWings();   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
+                StepWings(Step);   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
                 Scene.Step(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia

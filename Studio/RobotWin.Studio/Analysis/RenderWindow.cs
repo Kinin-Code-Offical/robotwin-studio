@@ -62,7 +62,7 @@ namespace RobotWin.Studio.Analysis
         private readonly ComboBox _mode = new ComboBox { Width = 210 };
         private readonly ComboBox _scale = new ComboBox { Width = 220 };
         private readonly CheckBox _forces = new CheckBox { Content = "Kuvvetler", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
-        private readonly CheckBox _air = new CheckBox { Content = "Hava", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
+        private readonly CheckBox _air = new CheckBox { Content = "Hava", IsChecked = false, VerticalAlignment = VerticalAlignment.Center };
         private readonly CheckBox _follow = new CheckBox { Content = "Kamera takip", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
         private readonly TextBlock _legend = new TextBlock { Margin = new Thickness(10), Foreground = Brushes.White, FontSize = 12, IsHitTestVisible = false };
 
@@ -160,6 +160,9 @@ namespace RobotWin.Studio.Analysis
         }
 
         public AnalysisResult? Result => _result;
+
+        /// <summary>Colour mode of the replay (0 stress, 1 none, 2 speed, 3 temperature, 4 electrical).</summary>
+        public void SetColourMode(int mode) => _mode.SelectedIndex = Math.Max(0, Math.Min(_mode.Items.Count - 1, mode));
 
         /// <summary>Jumps the replay to a time (s from the start of the render).</summary>
         public void SeekTo(double t) => Seek(t);
@@ -322,7 +325,7 @@ namespace RobotWin.Studio.Analysis
             bar.Children.Add(leftSide);
 
             var rightSide = new StackPanel { Orientation = Orientation.Horizontal };
-            foreach (var m in new[] { "Renk: gerilme (von Mises)", "Renk: yok", "Renk: hız oku", "Renk: sıcaklık" }) _mode.Items.Add(m);
+            foreach (var m in new[] { "Renk: gerilme (von Mises)", "Renk: yok", "Renk: hız oku", "Renk: sıcaklık", "Renk: elektrik (akım, güç)" }) _mode.Items.Add(m);
             _mode.SelectedIndex = 0;
             foreach (var m in new[] { "Ölçek: render'ın en yükseği", "Ölçek: malzemenin akma sınırı" }) _scale.Items.Add(m);
             _scale.SelectedIndex = 0;
@@ -671,7 +674,9 @@ namespace RobotWin.Studio.Analysis
 
             if (_mode.SelectedIndex == 0) StressOverlay(overlay, i, t + t0, hidden, legend);
             else if (_mode.SelectedIndex == 2) SpeedOverlay(overlay, i, legend);
-            _scene.SetTints(_mode.SelectedIndex == 3 ? TemperatureTints(i, legend) : null);
+            _scene.SetTints(_mode.SelectedIndex == 3 ? TemperatureTints(i, legend) : _mode.SelectedIndex == 4 ? ElectricTints(i, legend) : null);
+            _scene.CableColor = _mode.SelectedIndex == 4 ? CableCurrentColor(i, legend) : null;
+            if (_mode.SelectedIndex == 3) BoardHeatOverlay(overlay, i, t);
             if (_forces.IsChecked == true) ForceOverlay(overlay, i, t + t0, legend);
             if (_air.IsChecked == true) AirOverlay(overlay, t, legend);
             _scene.SetHidden(hidden);
@@ -814,6 +819,98 @@ namespace RobotWin.Studio.Analysis
             int e = 4 * (n - 1);
             Tri(mesh, e, e + 1, e + 2);
             Tri(mesh, e, e + 2, e + 3);
+        }
+
+        /// <summary>Cable colours by recorded current at frame <paramref name="i"/> (dark blue no current, red the render's peak).</summary>
+        private Func<WorldCable, Color?> CableCurrentColor(int i, StringBuilder legend)
+        {
+            var store = _result!.Channels;
+            double peak = 1e-9;
+            var now = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in _world.Cables)
+            {
+                if (store.Find("dev/cable:" + c.Id + ":I") is not { } ch) continue;
+                peak = Math.Max(peak, ch.ToArray().Where(double.IsFinite).Select(Math.Abs).DefaultIfEmpty(0).Max());
+                if (i < ch.Count && double.IsFinite(ch[i])) now[c.Id] = Math.Abs(ch[i]);
+            }
+
+            var top = now.OrderByDescending(kv => kv.Value).Take(3)
+                .Select(kv => (_world.Cables.FirstOrDefault(x => x.Id == kv.Key) is { } cb ? CableName(cb) : kv.Key) + " " + SiValue.Format(kv.Value, "A"));
+            legend.AppendLine($"Kablolar akımla renkli: koyu mavi akım yok, kırmızı {SiValue.Format(peak, "A")}; en yüklü: " + string.Join(", ", top));
+            return c => now.TryGetValue(c.Id, out double a) ? LinePlot.Heat(0.08 + 0.92 * Math.Min(1, a / peak)) : (Color?)null;
+        }
+
+        private string CableName(WorldCable c) => $"{_world.Find(c.A.ObjectId)?.Name} {c.A.Pin} → {_world.Find(c.B.ObjectId)?.Name} {c.B.Pin}";
+
+        /// <summary>Parts glow by the electrical power their devices dissipate at frame <paramref name="i"/>.</summary>
+        private Dictionary<string, Color> ElectricTints(int i, StringBuilder legend)
+        {
+            var store = _result!.Channels;
+            var power = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var peak = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in store.Channels)
+            {
+                if (!c.Name.StartsWith("dev/", StringComparison.Ordinal) || c.Unit != "W" || c.Name.StartsWith("dev/cable:", StringComparison.Ordinal)) continue;
+                string key = c.Name.Substring(4);
+                int slash = key.IndexOf('/');
+                string obj = slash > 0 ? key.Substring(0, slash) : key.Split(':')[0];
+                if (i < c.Count && double.IsFinite(c[i])) power[obj] = (power.TryGetValue(obj, out var p) ? p : 0) + Math.Abs(c[i]);
+                peak[obj] = (peak.TryGetValue(obj, out var q) ? q : 0) + c.ToArray().Where(double.IsFinite).Select(Math.Abs).DefaultIfEmpty(0).Max();
+            }
+
+            double max = Math.Max(1e-6, peak.Values.DefaultIfEmpty(0).Max());
+            var tints = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in power)
+            {
+                double k = Math.Min(1, kv.Value / max);
+                var h = LinePlot.Heat(0.15 + 0.85 * k);
+                tints[kv.Key] = Color.FromRgb((byte)(h.R * k), (byte)(h.G * k), (byte)(h.B * k));
+            }
+
+            var hot = power.OrderByDescending(kv => kv.Value).Take(3).Select(kv => (_world.Find(kv.Key)?.Name ?? kv.Key) + " " + SiValue.Format(kv.Value, "W"));
+            legend.AppendLine("Parçalar harcadığı elektrik gücüyle parlıyor; en çok: " + string.Join(", ", hot));
+            return tints;
+        }
+
+        /// <summary>[thermal] Each board's computed heat map painted on the board in 3D at this time.</summary>
+        private void BoardHeatOverlay(Model3DGroup g, int i, double t)
+        {
+            if (_result == null) return;
+            foreach (var th in _result.Thermal)
+            {
+                if (th.Frames.Count == 0) continue;
+                // The heat grid spans the part's physical body, centred on it: place it by the recorded body pose.
+                var store = _result.Channels;
+                double B(string k) => store.Find("body/" + th.ObjectId + "/" + k) is { } c && i < c.Count ? c[i] : double.NaN;
+                (Vec3 Position, Quat Orientation) pose;
+                if (!double.IsNaN(B("px"))) pose = (new Vec3(B("px"), B("py"), B("pz")), new Quat(B("qw"), B("qx"), B("qy"), B("qz")));
+                else if (AnalysisRun.RecordedPose(store, th.ObjectId, i) is { } op) pose = (op.Position + op.Orientation.Rotate(th.BodyOffset), op.Orientation);   // static body: not in the body channels
+                else continue;
+                int f = 0;
+                for (int k = 0; k < th.Times.Count; k++)
+                    if (th.Times[k] <= t + 1e-9) f = k;
+                var img = HeatImage.Render(th, f);
+                if (img == null) continue;
+                double w = th.Nx * th.Dx, h = th.Ny * th.Dy, z = th.Nz * th.Dz / 2 + 0.0025;
+                // A thermal-camera layer 1 mm above the board's copper: the PCB's underside is the object's
+                // origin (pins reach below it), plus the board thickness; components stand through it,
+                // as on a real thermal image.
+                if (AnalysisRun.RecordedPose(store, th.ObjectId, i) is { } origin)
+                    z = pose.Orientation.Rotate(Vec3.UnitZ).Dot(origin.Position - pose.Position) + Math.Max(th.Kind == "board" ? th.Nz * th.Dz : 0.0016, 0.0016) + 0.001;
+                var brush = new ImageBrush(img) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1), Opacity = 0.8 };
+                var mesh = new MeshGeometry3D();
+                foreach (var (x, y, u, v) in new[] { (-w / 2, -h / 2, 0.0, 1.0), (w / 2, -h / 2, 1.0, 1.0), (w / 2, h / 2, 1.0, 0.0), (-w / 2, h / 2, 0.0, 0.0) })
+                {
+                    var p = pose.Position + pose.Orientation.Rotate(new Vec3(x, y, z));
+                    mesh.Positions.Add(new Point3D(p.X, p.Y, p.Z));
+                    mesh.TextureCoordinates.Add(new Point(u, v));
+                }
+
+                Tri(mesh, 0, 1, 2);
+                Tri(mesh, 0, 2, 3);
+                var mat = new EmissiveMaterial(brush);
+                g.Children.Add(new GeometryModel3D(mesh, mat) { BackMaterial = mat });
+            }
         }
 
         /// <summary>[thermal] Every part glows by its recorded temperature (ambient dark → hottest of the render red).</summary>

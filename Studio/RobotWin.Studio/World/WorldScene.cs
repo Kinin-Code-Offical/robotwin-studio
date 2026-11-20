@@ -596,6 +596,7 @@ namespace RobotWin.Studio.World
 
                 var state = Session?.CableState(c);
                 if (state is { Burned: true }) color = Color.FromRgb(0x2A, 0x20, 0x1A);
+                if (CableColor?.Invoke(c) is Color replay) color = replay;   // [render] current colours in a replay
                 var mat = new MaterialGroup();
                 mat.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
                 mat.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x50, 255, 255, 255)), 30));
@@ -666,7 +667,7 @@ namespace RobotWin.Studio.World
                 foreach (var it in _items.Values) Resolve(it, done, 0);
             }
             UpdateCell();   // [arm] arm links, tools on flanges, belts, feeder cartons (World/WorldScene.Cell.cs)
-            foreach (var it in _items.Values) ((MatrixTransform3D)it.Visual.Transform).Matrix = it.Current;
+            foreach (var it in _items.Values) ((MatrixTransform3D)it.Visual.Transform).Matrix = ExplodedMatrix(it.Object.Id, it.Current);   // [shell] World/WorldScene.Shells.cs
         }
 
         private Matrix3D Resolve(Item it, HashSet<string> done, int depth)

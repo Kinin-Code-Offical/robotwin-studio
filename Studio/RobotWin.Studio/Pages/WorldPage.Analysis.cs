@@ -112,7 +112,13 @@ namespace RobotWin.Studio.Pages
             App.SnapshotTarget = w.Content as FrameworkElement;
             int at = Array.IndexOf(args, "--render-at");
             double seek = at >= 0 && at + 1 < args.Length && double.TryParse(args[at + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double sv) ? sv : secs / 2;
-            w.RenderNow().ContinueWith(_ => w.SeekTo(seek), System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
+            int mi = Array.IndexOf(args, "--render-mode");
+            int mode = mi >= 0 && mi + 1 < args.Length && int.TryParse(args[mi + 1], out int mv) ? mv : 0;
+            w.RenderNow().ContinueWith(_ =>
+            {
+                w.SetColourMode(mode);
+                w.SeekTo(seek);
+            }, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
         }
     }
 }

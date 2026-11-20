@@ -34,6 +34,7 @@ namespace RobotTwin.CoreSim.Sandbox
             public Analog.Devices.Servo? ServoDevice;
             public double Gain = 1, Offset, Fixed;
             public AeroLoads Last;
+            public PushrodLinkage? Linkage;   // [linkage] Sandbox/WorldPhysics.Linkage.cs
         }
 
         private readonly List<WingLink> _wings = new List<WingLink>();
@@ -99,6 +100,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 link.Gain = Param(o, "control.gain", 1);
                 link.Offset = Param(o, "control.offset", 0);
                 link.Fixed = Param(o, "control.deflection", 0);
+                link.Linkage = LinkageOf(o);
                 // The surface's own aerodynamics replace the body's generic box drag.
                 it.Body.DragArea = Vec3.Zero;
                 _wings.Add(link);
@@ -158,7 +160,7 @@ namespace RobotTwin.CoreSim.Sandbox
             return null;
         }
 
-        private void StepWings()
+        private void StepWings(double dt)
         {
             if (_wings.Count == 0) return;
             double rho = Scene.AirDensity;
@@ -174,8 +176,24 @@ namespace RobotTwin.CoreSim.Sandbox
                     // Horn angle from the physics when something is mounted on the horn, else the
                     // servo's own geared output (a pushrod carries no body of its own).
                     bool onPhysics = _items.TryGetValue(w.ServoId, out var sit) && sit.RotorJoint != null;
-                    double horn = onPhysics ? PortAngle(w.ServoId) * 180 / Math.PI : w.ServoDevice != null ? w.ServoDevice.AngleDeg - 90 : 0;
-                    delta = w.Offset + w.Gain * horn;
+                    if (w.Linkage is { } lk && !onPhysics && w.ServoDevice is { } sd)
+                    {
+                        // [linkage] four-bar geometry; the hinge moment loads the servo through the rod.
+                        double s = w.Gain < 0 ? -1 : 1;
+                        double hinge = 0;
+                        foreach (var (c, sign) in w.Controls) hinge += c.HingeMoment * sign * s;
+                        double command = double.IsNaN(sd.TargetAngleDeg) ? lk.Horn * 180 / Math.PI : sd.TargetAngleDeg - 90;
+                        lk.Step(command, hinge, sd.SpeedDegPerSec, dt);
+                        sd.MechanicallyDriven = true;
+                        sd.DrivenAngleDeg = 90 + lk.Horn * 180 / Math.PI;
+                        sd.DrivenCurrent = lk.Current(sd.IdleCurrent, sd.StallCurrent);
+                        delta = w.Offset + s * lk.Surface * 180 / Math.PI;
+                    }
+                    else
+                    {
+                        double horn = onPhysics ? PortAngle(w.ServoId) * 180 / Math.PI : w.ServoDevice != null ? w.ServoDevice.AngleDeg - 90 : 0;
+                        delta = w.Offset + w.Gain * horn;
+                    }
                 }
                 foreach (var (c, sign) in w.Controls)
                     c.Deflection = Math.Max(-c.MaxDeflection, Math.Min(c.MaxDeflection, sign * delta * Math.PI / 180));

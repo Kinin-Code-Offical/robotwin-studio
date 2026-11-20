@@ -151,6 +151,9 @@ namespace RobotTwin.CoreSim.Analysis
         public string ObjectId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Kind { get; set; } = "board";
+
+        /// <summary>Centre of the heated body relative to the object origin (object frame): where the grid sits.</summary>
+        public Vec3 BodyOffset { get; set; }
         public int Nx { get; set; }
         public int Ny { get; set; }
         public int Nz { get; set; }

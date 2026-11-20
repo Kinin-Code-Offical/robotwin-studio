@@ -95,7 +95,7 @@ namespace RobotTwin.CoreSim.Automation
                     return new WorldBodyGeometry
                     {
                         Min = new Vec3(-o.SizeX / 2, -o.SizeY / 2, 0), Max = new Vec3(o.SizeX / 2, o.SizeY / 2, o.SizeZ),
-                        MassKg = Math.Max(1e-4, o.SizeX * o.SizeY * o.SizeZ * density)
+                        MassKg = Math.Max(1e-4, WorldPhysics.MaterialVolume(o) * density)   // [shell] hollow bodies weigh their walls
                     };
             }
         }
@@ -155,13 +155,32 @@ namespace RobotTwin.CoreSim.Automation
             {
                 if (id.Contains("4aa")) return Box(0.0575, 0.0616, 0.0155, 0.11);
                 if (id.Contains("2aa")) return Box(0.058, 0.031, 0.016, 0.055);
-                if (id.Contains("9v")) return Box(0.048, 0.026, 0.017, 0.045);
+                if (id.Contains("9v")) return Box(0.0264, 0.0176, 0.0464, 0.045);   // stands on its end, like the 3D model
                 if (id.Contains("1s")) return Box(0.045, 0.02, 0.008, 0.009);
-                if (id.Contains("lipo")) return Box(0.07, 0.035, 0.015, 0.1);
+                if (id.Contains("lipo"))
+                {
+                    // Same rule as the 3D model: a 2S 2200 mAh pack is 105 × 34 × 16 mm, smaller packs scale with capacity × cells.
+                    double cap = o.Parameters.TryGetValue("capacity", out var cs) && double.TryParse(cs, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var cv) ? cv : 2.2;
+                    int cells = id.Contains("3s") ? 3 : id.Contains("1s") ? 1 : 2;
+                    double k = Math.Max(0.45, Math.Min(2.0, Math.Cbrt(cap * cells / 4.4)));
+                    return Box(0.105 * k, 0.034 * k, (0.0068 * cells + 0.0026) * k, 0.1 * k * k * k);
+                }
+
                 return Box(0.05, 0.03, 0.015, 0.05);
             }
 
-            if (def?.Symbol == SymbolKind.Board) return Box(0.0686, 0.0533, 0.012, 0.025);
+            if (def?.Symbol == SymbolKind.Board)
+            {
+                // Real board outlines, in the 3D model's frame (origin at the pin-1 corner): a Nano is not an Uno.
+                if (id.Contains("nano")) return new WorldBodyGeometry { Min = new Vec3(-0.0014, -0.041, -0.0029), Max = new Vec3(0.0166, 0.0043, 0.0051), MassKg = 0.007 };
+                if (id.Contains("uno")) return new WorldBodyGeometry { Min = new Vec3(-0.0064, -0.0533, -0.0029), Max = new Vec3(0.0686, 0, 0.0084), MassKg = 0.025 };
+                if (id.Contains("mini")) return Box(0.033, 0.018, 0.006, 0.004);
+                if (id.Contains("mega")) return Box(0.1016, 0.0533, 0.012, 0.037);
+                if (id.Contains("esp32")) return Box(0.052, 0.028, 0.009, 0.01);
+                if (id.Contains("esp8266") || id.Contains("nodemcu")) return Box(0.049, 0.026, 0.009, 0.009);
+                if (id.Contains("pico")) return Box(0.051, 0.021, 0.004, 0.003);
+                return Box(0.0686, 0.0533, 0.012, 0.025);
+            }
             return Box(0.03, 0.02, 0.012, 0.01);
         }
 

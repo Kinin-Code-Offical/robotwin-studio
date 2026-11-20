@@ -283,6 +283,7 @@ namespace RobotWin.Studio.Pages
             Palette.Children.Add(Row("Silindir", "Ø 40 × 60 mm", () => AddBody("cylinder", 0.04, 0.04, 0.06)));
             Palette.Children.Add(Row("Tekerlek", "Ø 65 × 26 mm kauçuk lastik", () => AddBody("wheel", 0.065, 0.026, 0.026)));
             Palette.Children.Add(Row("Küre / bilye", "Ø 40 mm", () => AddBody("sphere", 0.04, 0.04, 0.04)));
+            ShellPalette();   // [shell] hollow bodies with lids (Pages/WorldPage.Shells.cs)
             Palette.Children.Add(Caption("Uçuş yüzeyleri (gerçek kaldırma, sürükleme, moment)"));
             Palette.Children.Add(Row("Kanat", "1000 mm açıklık, 150 mm veter, Clark Y", () => AddBody("wing", 0.15, 1.0, 0.012, o => { o.Material = "AHŞAP"; o.MassKg = 0.08; o.Name = World!.UniqueName("Kanat"); o.Parameters["airfoil"] = "clarky"; o.Parameters["incidence"] = "2"; o.Parameters["control"] = "aileron"; })));
             Palette.Children.Add(Row("Yatay kuyruk + irtifa dümeni", "300 × 80 mm, NACA 0012", () => AddBody("wing", 0.08, 0.30, 0.006, o => { o.Material = "AHŞAP"; o.MassKg = 0.015; o.Name = World!.UniqueName("Yatay kuyruk"); o.Parameters["airfoil"] = "naca0012"; o.Parameters["incidence"] = "-2"; o.Parameters["control"] = "elevator"; o.Parameters["control.chord"] = "0.35"; })));
@@ -621,6 +622,8 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(name);
             Inspector.Children.Add(Note(KindText(o)));
             CellSection(world, o);   // [arm] teach pendant / tool / conveyor / light curtain (Pages/WorldPage.Cell.cs)
+            WingSection(world, o);   // [linkage] servo, horn, control horn, pushrod (Pages/WorldPage.Wings.cs)
+            ShellSection(world, o);   // [shell] fit check first, then wall, cable holes, lid, X-ray / exploded (Pages/WorldPage.Shells.cs)
 
             if (o.Kind == WorldObjectKind.Board) BoardSection(world, o);
 
@@ -1031,6 +1034,7 @@ namespace RobotWin.Studio.Pages
             }
 
             ReadyLive(o, lines);   // [objs] propeller thrust, roller load, light flux
+            WingLive(o, lines);   // [linkage] deflection, lift, pushrod and servo load (Pages/WorldPage.Wings.cs)
             foreach (var pin in Scene.PinsOf(o.Id).Take(16))
             {
                 double v = _session.Voltage(new CableEnd { ObjectId = o.Id, Pin = pin.Pin });
@@ -1052,7 +1056,7 @@ namespace RobotWin.Studio.Pages
                         "cylinder" => Math.PI * o.SizeX * o.SizeX / 4 * o.SizeZ,
                         "wheel" => Math.PI * o.SizeX * o.SizeX / 4 * o.SizeZ * 0.55,
                         "sphere" => Math.PI / 6 * o.SizeX * o.SizeX * o.SizeX,
-                        _ => o.SizeX * o.SizeY * o.SizeZ
+                        _ => RobotTwin.CoreSim.Sandbox.WorldPhysics.MaterialVolume(o)   // [shell] hollow bodies weigh their walls
                     };
                     return v * density * 1000;
                 case WorldObjectKind.Model when o.Mesh != null:
@@ -1224,7 +1228,18 @@ namespace RobotWin.Studio.Pages
             var world = World;
             if (world == null) return System.Array.Empty<string>();
             var physics = RobotTwin.CoreSim.Sandbox.WorldPhysics.Build(world, Scene.GeometryOf, null);
-            return physics.FindInterpenetrations(0.001).Select(o => $"{world.Find(o.A)?.Name ?? o.A} ↔ {world.Find(o.B)?.Name ?? o.B}: {o.Depth * 1000:F1} mm").ToList();
+            var lines = physics.FindInterpenetrations(0.001).Select(o => $"{world.Find(o.A)?.Name ?? o.A} ↔ {world.Find(o.B)?.Name ?? o.B}: {o.Depth * 1000:F1} mm").ToList();
+            // [shell] fit problems, and where each part of a shelled world really is (pose, collision box)
+            lines.AddRange(physics.ShellFit(world).Select(i => "sığma: " + i.Message));
+            if (world.Objects.Any(RobotTwin.CoreSim.Sandbox.WorldPhysics.IsShell))
+                foreach (var o in world.Objects)
+                {
+                    var g = Scene.GeometryOf(o);
+                    var at = physics.PoseOf(o.Id)?.Position;
+                    lines.Add(FormattableString.Invariant($"geo {o.Name}: poz ({o.Pose.X * 1000:F1}, {o.Pose.Y * 1000:F1}, {o.Pose.Z * 1000:F1}) dön ({o.Pose.Roll:F0}, {o.Pose.Pitch:F0}, {o.Pose.Yaw:F0}) kutu [{g.Min.X * 1000:F1}..{g.Max.X * 1000:F1}, {g.Min.Y * 1000:F1}..{g.Max.Y * 1000:F1}, {g.Min.Z * 1000:F1}..{g.Max.Z * 1000:F1}] gövde {(at is { } a ? FormattableString.Invariant($"({a.X * 1000:F1}, {a.Y * 1000:F1}, {a.Z * 1000:F1})") : "-")}"));
+                }
+
+            return lines;
         }
 
         /// <summary>Run / pause / resume the world simulation (menu bar).</summary>
@@ -1375,6 +1390,7 @@ namespace RobotWin.Studio.Pages
 
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
             if (first != null) Scene.Select(first.Id);
+            ShellSnapshot();   // [shell] --select-shell, --xray, --exploded (Pages/WorldPage.Shells.cs)
             SenseSnapshotFinish();   // [sense]
             SdkSnapshot();   // [sdk]
             AnalysisSnapshot();   // [analysis] Pages/WorldPage.Analysis.cs

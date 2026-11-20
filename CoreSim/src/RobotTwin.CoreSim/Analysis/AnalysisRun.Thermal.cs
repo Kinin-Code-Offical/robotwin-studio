@@ -24,7 +24,7 @@ namespace RobotTwin.CoreSim.Analysis
         /// steady temperature of a regulator.
         /// </summary>
         public static List<ThermalResult> Thermal(WorldDocument world, PhysicsScene? scene, AnalysisResult result, AnalysisSettings s,
-            CancellationToken cancel, Action<string, double>? progress = null)
+            CancellationToken cancel, Action<string, double>? progress = null, WorldPhysics? physics = null)
         {
             var list = new List<ThermalResult>();
             var power = PowerChannels(result);
@@ -36,7 +36,7 @@ namespace RobotTwin.CoreSim.Analysis
                 if (cancel.IsCancellationRequested) break;
                 var o = world.Find(id);
                 if (o == null || !power.TryGetValue(id, out var channels)) continue;
-                var part = PartOf(world, scene, id);
+                var part = PartOf(world, scene, id, physics);
                 list.Add(ThermalOf(world, o, part, channels, result, s, cancel, p => progress?.Invoke("Isı: " + o.Name, p)));
             }
 
@@ -122,6 +122,7 @@ namespace RobotTwin.CoreSim.Analysis
             {
                 ObjectId = o.Id,
                 Name = o.Name,
+                BodyOffset = part?.BodyOffset ?? Vec3.Zero,
                 Kind = isBoard ? "board" : "part",
                 Nx = nx,
                 Ny = ny,

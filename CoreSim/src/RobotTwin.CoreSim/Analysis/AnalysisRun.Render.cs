@@ -22,7 +22,7 @@ namespace RobotTwin.CoreSim.Analysis
         {
             public string Id = string.Empty;
             public Channel Px = null!, Py = null!, Pz = null!, Qw = null!, Qx = null!, Qy = null!, Qz = null!, Port = null!, Temp = null!;
-            public Channel? Lift, Drag, Deflection;
+            public Channel? Lift, Drag, Deflection, Horn, ServoLoad, RodForce;
         }
 
         private static List<PoseChannels> PoseRecorder(WorldDocument world, ChannelStore store)
@@ -42,7 +42,11 @@ namespace RobotTwin.CoreSim.Analysis
                     Temp = store.Get("pose/" + id + "/temp", o.Name + " · sıcaklık", "°C", "Isı/Parça sıcaklıkları"),
                     Lift = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/lift", o.Name + " · kaldırma (yüzey normali)", "N", "Uçuş/Kanat kuvvetleri") : null,
                     Drag = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/drag", o.Name + " · sürükleme (akış yönü)", "N", "Uçuş/Kanat kuvvetleri") : null,
-                    Deflection = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/delta", o.Name + " · kumanda yüzeyi açısı", "°", "Uçuş/Kanat kuvvetleri") : null
+                    Deflection = WorldPhysics.IsWing(o) ? store.Get("aero/" + id + "/delta", o.Name + " · kumanda yüzeyi açısı", "°", "Uçuş/Kanat kuvvetleri") : null,
+                    // [linkage] the pushrod: where the servo horn really is, what the air puts on it
+                    Horn = WorldPhysics.HasLinkage(o) ? store.Get("aero/" + id + "/horn", o.Name + " · servo kolu açısı (yük altında)", "°", "Uçuş/İtme çubuğu") : null,
+                    ServoLoad = WorldPhysics.HasLinkage(o) ? store.Get("aero/" + id + "/servo-load", o.Name + " · servoya binen menteşe yükü", "N·m", "Uçuş/İtme çubuğu") : null,
+                    RodForce = WorldPhysics.HasLinkage(o) ? store.Get("aero/" + id + "/rod", o.Name + " · itme çubuğu kuvveti (+ çekme)", "N", "Uçuş/İtme çubuğu") : null
                 });
             }
 
@@ -85,6 +89,12 @@ namespace RobotTwin.CoreSim.Analysis
                     store.Set(p.Lift, (wl.Force - flow * drag).Length * Math.Sign(wl.Force.Z));
                     store.Set(p.Drag!, drag);
                     store.Set(p.Deflection!, physics.WingDeflection(p.Id));
+                    if (p.Horn != null && physics.LinkageOf(p.Id) is { } lk)
+                    {
+                        store.Set(p.Horn, lk.Horn * 180 / Math.PI);
+                        store.Set(p.ServoLoad!, lk.ServoLoad);
+                        store.Set(p.RodForce!, lk.RodForce);
+                    }
                 }
             }
         }

@@ -53,12 +53,78 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public double LogicHigh { get; set; } = 5.0;
         public double ControlTimeConstant { get; set; } = 2e-3;
 
+        // ---------------------------------------------------------------- [esc] servo-pulse throttle
+
+        /// <summary>
+        /// ESC mode: the duty follows a servo pulse on this node (1000 µs = stop, 2000 µs = full, as
+        /// BLHeli / SimonK ESCs read it). The ESC arms only after it has seen low-throttle pulses for
+        /// <see cref="ArmTime"/>, and stops the motor when pulses are lost for <see cref="SignalTimeout"/>.
+        /// </summary>
+        public int PulseNode { get; set; } = -1;
+
+        public double PulseMin { get; set; } = 1.05e-3;
+        public double PulseMax { get; set; } = 1.95e-3;
+        public double ArmTime { get; set; } = 0.3;
+        public double SignalTimeout { get; set; } = 0.25;
+
+        /// <summary>Throttle slew (full scale per second): an ESC ramps, it does not step.</summary>
+        public double ThrottleSlew { get; set; } = 25;
+
+        public bool Armed { get; private set; }
+
+        /// <summary>Throttle decoded from the last valid pulse (0..1).</summary>
+        public double Throttle { get; private set; }
+
+        public double LastPulseWidth { get; private set; }
+
+        private bool _pulseHigh;
+        private double _pulseRise = -1, _lastPulse = -1, _lowSince = -1;
+
+        private void DecodePulse(AcceptContext ctx)
+        {
+            double v = ctx.V(PulseNode, Ground);
+            bool high = _pulseHigh ? v > 0.8 : v > 1.6;   // 3.3 V and 5 V logic both read
+            if (high && !_pulseHigh) _pulseRise = ctx.Time;
+            if (!high && _pulseHigh && _pulseRise >= 0)
+            {
+                double w = ctx.Time - _pulseRise;
+                if (w > 0.7e-3 && w < 2.3e-3)
+                {
+                    LastPulseWidth = w;
+                    _lastPulse = ctx.Time;
+                    double thr = AnalogMath.Clamp((w - PulseMin) / (PulseMax - PulseMin), 0.0, 1.0);
+                    if (!Armed)
+                    {
+                        // Arming: a run of stop-throttle pulses (no motor start on power-up at half stick).
+                        if (thr <= 0.0)
+                        {
+                            if (_lowSince < 0) _lowSince = ctx.Time;
+                            if (ctx.Time - _lowSince >= ArmTime) Armed = true;
+                        }
+                        else _lowSince = -1;
+                    }
+
+                    Throttle = Armed ? thr : 0.0;
+                }
+            }
+
+            _pulseHigh = high;
+            if (_lastPulse >= 0 && ctx.Time - _lastPulse > SignalTimeout) Throttle = 0.0;   // signal lost: failsafe stop
+            double step = ThrottleSlew * ctx.Dt;
+            Duty = _duty + AnalogMath.Clamp(Throttle - _duty, -step, step);
+        }
+
         public override int BranchCount => 1;
 
         public override void Reset()
         {
             Thermal.Reset(25.0);
             OutputCurrent = OutputVoltage = Power = 0.0;
+            Armed = false;
+            Throttle = LastPulseWidth = 0.0;
+            _pulseHigh = false;
+            _pulseRise = _lastPulse = _lowSince = -1;
+            if (PulseNode >= 0) _duty = 0.0;
         }
 
         /// <summary>A replacement part: cold, undamaged.</summary>
@@ -95,7 +161,8 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             OutputCurrent = ctx.Unknown(BranchBase);
             OutputVoltage = ctx.V(Output, Ground);
-            if (ControlNode >= 0 && !ctx.IsDc)
+            if (PulseNode >= 0 && !ctx.IsDc) DecodePulse(ctx);   // [esc]
+            else if (ControlNode >= 0 && !ctx.IsDc)
             {
                 double target = AnalogMath.Clamp(ctx.V(ControlNode, Ground) / LogicHigh, 0.0, 1.0);
                 double a = 1.0 - Math.Exp(-ctx.Dt / ControlTimeConstant);
@@ -123,6 +190,11 @@ namespace RobotTwin.CoreSim.Analog.Devices
             sink.Write(Id, "I", OutputCurrent);
             sink.Write(Id, "V", OutputVoltage);
             sink.Write(Id, "T", Thermal.TemperatureC);
+            if (PulseNode >= 0)
+            {
+                sink.Write(Id, "ARMED", Armed ? 1 : 0);
+                sink.Write(Id, "PULSE", LastPulseWidth);
+            }
         }
     }
 

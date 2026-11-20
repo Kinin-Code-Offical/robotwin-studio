@@ -105,7 +105,7 @@ namespace RobotTwin.CoreSim.Analysis
                 else if (s.Aero && !cancel.IsCancellationRequested && s.AeroObject is { } aeroId && PartOf(world, scene, aeroId) is { } aeroPart)
                     result.Aero = Aero2D(aeroPart, s, scene?.AirDensity ?? 1.2, cancel, p => progress?.Invoke("Akış: " + aeroPart.Name, p));
 
-                if (s.Thermal && !cancel.IsCancellationRequested) result.Thermal.AddRange(Thermal(world, scene, result, s, cancel, progress));
+                if (s.Thermal && !cancel.IsCancellationRequested) result.Thermal.AddRange(Thermal(world, scene, result, s, cancel, progress, runner.Physics));
             }
 
             if (s.UncertaintyRuns > 0 && !cancel.IsCancellationRequested) UncertaintyBands(world, s, geometry, result, cancel, progress);

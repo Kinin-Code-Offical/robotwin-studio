@@ -422,8 +422,10 @@ namespace RobotWin.Studio.Models3D
             bool lipo = chem == "LithiumIon" && !model.Contains("18650");
             if (lipo)
             {
-                bool micro = cap < 1.0;
-                double L = micro ? 40 : 105, W = micro ? 19 : 34, H = micro ? 7 : 6.8 * cells + 2.6;
+                bool micro = cap < 1.0 && cells == 1;
+                // Pack size follows the energy: a 2S 2200 mAh pack is 105 × 34 × 16 mm, a 2S 450 mAh one ≈ 62 × 20 × 10 mm.
+                double k = micro ? 1 : Math.Max(0.45, Math.Min(2.0, Math.Cbrt(cap * cells / 4.4)));
+                double L = micro ? 40 : 105 * k, W = micro ? 19 : 34 * k, H = micro ? 7 : (6.8 * cells + 2.6) * k;
                 string label = micro ? $"{cap * 1000:0}mAh\n1S 3.7V LiPo" : $"{cap * 1000:0}mAh {cells}S1P\n{cells * 3.7:0.0}V  25C  LiPo";
                 using (b.At(Mx.Ry(90) * Mx.T(-L / 2, 0, H / 2)))
                 {
