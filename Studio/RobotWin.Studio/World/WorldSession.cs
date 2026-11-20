@@ -134,6 +134,7 @@ namespace RobotWin.Studio.World
             {
                 for (int i = 0; i < _esp.Count; i++) _esp[i].OnSubstep(t);
             };
+            StartSense();   // [sense] World/WorldSession.Sense.cs
             IndexHeat();
             int parts = Circuit.Compiled.DevicesByPart.Count;
             Log.Add(new SimLogEntry(0, "dünya", $"{world.Objects.Count} nesne, {world.Cables.Count} kablo, {parts} parça tek devrede çözülüyor", AnalogEventKind.StateChange));
@@ -170,6 +171,7 @@ namespace RobotWin.Studio.World
             _esp.Clear();
             _avr.Clear();
             StopRadio();   // [radio]
+            StopSense();   // [sense]
             if (Simulator != null) Simulator.SubstepAccepted = null;
             Simulator = null;
             Circuit = null;
@@ -234,6 +236,7 @@ namespace RobotWin.Studio.World
                     AdvanceRadio(Simulator.Time, dt);   // [radio] IR receiver outputs, radio housekeeping
                     Simulator.Step(dt);
                     Physics?.Advance(dt, Simulator);
+                    AdvanceSense(dt);   // [sense] line sensors, LiDAR, GPS, IMU, compass, encoders
                     covered += dt;
                     DrainEvents();
                     if (budget != null && budget.Elapsed.TotalSeconds > maxWall) break;
@@ -384,6 +387,7 @@ namespace RobotWin.Studio.World
                 };
                 _esp.Add(cosim);
                 TrackBoard(cosim, prog);   // [radio] radio medium bridge
+                AttachCamera(cosim, prog);   // [sense] esp_camera bridge
                 Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (ESP32 HAL modeli)", AnalogEventKind.StateChange));
                 AttachI2c(cosim.I2c, prog);
             }
@@ -442,7 +446,7 @@ namespace RobotWin.Studio.World
                         int.TryParse(parameters.TryGetValue("columns", out var cs) ? cs : "16", out var cc) ? cc : 16,
                         int.TryParse(parameters.TryGetValue("rows", out var rs) ? rs : "2", out var rr) ? rr : 2, address == 0 ? (byte)0x27 : address),
                     "mpu6050" => new RobotTwin.CoreSim.Firmware.Devices.Mpu6050(address == 0 ? (byte)0x68 : address) { AccelNoise = 0.02, GyroNoise = 0.002, AccelZ = World!.Environment.Gravity },
-                    _ => null
+                    _ => SenseI2c(def.Id, parameters, address, fullRef)   // [sense] HMC5883L compass
                 };
                 if (device == null) continue;
                 string r = fullRef;

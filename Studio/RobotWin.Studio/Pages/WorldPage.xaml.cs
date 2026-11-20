@@ -79,6 +79,7 @@ namespace RobotWin.Studio.Pages
             UpdateRunButton();
             InitRadio();   // [radio] Pages/WorldPage.Radio.cs
             InitReady();   // [objs] Pages/WorldPage.Ready.cs
+            InitSense();   // [sense] Pages/WorldPage.Sense.cs
         }
 
         private static Workspace W => Workspace.Current;
@@ -322,6 +323,7 @@ namespace RobotWin.Studio.Pages
                 env.Obstacles.Add(new WorldObstacle { X = p.X + 0.3, Y = p.Y });
             })));
             if (env.Obstacles.Count > 0) Palette.Children.Add(Action($"Engelleri temizle ({env.Obstacles.Count})", () => Edit("Engeller silindi", () => env.Obstacles.Clear())));
+            SenseEnvironmentPalette(world);   // [sense] light, floor, tapes, GPS origin
         }
 
         private FrameworkElement NumberField(string label, double value, Action<double> set, double min = double.MinValue, double max = double.MaxValue, string format = "0.###")
@@ -1298,6 +1300,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>--snapshot --page world --fault &lt;template id&gt; [--simulate s]: loads a world template and runs it.</summary>
         public void PrepareSnapshot(string? template, string? simulate)
         {
+            template = SenseSnapshotTemplate(template);   // [sense] "id:studio:sensors…" view modes
             var t = WorldTemplates.Find(template ?? "servo-arm") ?? WorldTemplates.All[1];
             if (World == null || World.Title != t.Build().Title) _main.NewWorld(t.Build());
             OnShown();
@@ -1316,6 +1319,7 @@ namespace RobotWin.Studio.Pages
 
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
             if (first != null) Scene.Select(first.Id);
+            SenseSnapshotFinish();   // [sense]
         }
     }
 

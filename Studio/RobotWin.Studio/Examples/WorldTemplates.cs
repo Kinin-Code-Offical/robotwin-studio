@@ -43,7 +43,11 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("mini-drone", "Mini drone kalkışı", "Dört 8520 motor, çapraz CCW/CW pervaneler ve 1S LiPo, 40 g'lık X gövde. İtki ağırlığı geçince havalanır (kontrolcü yok, düz yükselir).", MiniDrone),
             new WorldTemplate("mecanum", "Mekanum tekerlekli araba (yana kayar)", "Dört TT motor ve A/B mekanum tekerlekler. Ön motorlar düz, arka motorlar ters bağlı: makaraların 45° itişi araba yana kaydırır.", Mecanum),
             new WorldTemplate("lights", "Işıklar: LED'ler ve lambalar (karanlık oda)", "Dirençli 5 mm LED'ler, RGB LED (kırmızı + mavi = mor), 3 W güç LED'i, fener ampulü ve 12 V LED şerit karanlık odayı aydınlatır.", Lights),
-            new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "ESP32 Bluepad32 çizimi eşli DualSense kumandayı okur, DRV8833 ile iki TT motoru sürer. ESP32 bilgisayara USB kablosuyla bağlı; kumanda gerçek (USB/Bluetooth) veya ekrandaki sanal kumanda olabilir.", Ps5Car)
+            new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "ESP32 Bluepad32 çizimi eşli DualSense kumandayı okur, DRV8833 ile iki TT motoru sürer. ESP32 bilgisayara USB kablosuyla bağlı; kumanda gerçek (USB/Bluetooth) veya ekrandaki sanal kumanda olabilir.", Ps5Car),
+            // [sense] Examples/SenseTemplates.cs
+            new WorldTemplate("line-follower", "Çizgi izleyen robot (mat, solmuş, parlak bant)", "Arduino Uno + 5 kanallı TCRT5000 modülü 6 mm yükseklikte, DRV8833 ve iki TT motor. Pist mat bantta sorunsuz; solmuş bantta sensörler beyaz görür, parlak bant pencere ışığını sensöre yansıtır ve robot çizgiyi kaybeder.", SenseTemplates.LineFollower),
+            new WorldTemplate("sensor-rover", "Sensör gezgini (kamera, LiDAR, GPS, IMU)", "Duvarlı odada daire çizen gezgin: OV2640 kamera kendi çözünürlüğüyle görür, 360° LiDAR taraması çizilir, GPS/IMU/pusula/enkoder okumaları Sensörler panelinde canlı.", SenseTemplates.SensorRover),
+            new WorldTemplate("camera-line", "ESP32 + OV2640 kamera ile bant bulma", "Direkteki kamera pisti yukarıdan görür; ESP32 çizimi esp_camera.h ile 160×120 gri kare alır, en koyu sütunu bant sayar. Işığı azaltınca pozlama, kazanç ve gürültü değişir.", SenseTemplates.CameraLine)
         };
 
         public static WorldTemplate? Find(string id)

@@ -110,7 +110,7 @@ namespace RobotWin.Studio.World
             var model = o.Kind switch
             {
                 WorldObjectKind.Board => DetailedBoard(o, world, library) ?? BuildBoard(o, world, library),
-                WorldObjectKind.Component => DetailedComponent(o, library) ?? BuildComponent(o, library),
+                WorldObjectKind.Component => SenseModels.TryBuild(o, library) ?? DetailedComponent(o, library) ?? BuildComponent(o, library),   // [sense] World/SenseModels.cs
                 WorldObjectKind.Model => BuildMesh(o),
                 _ => BuildBody(o)
             };

@@ -162,6 +162,9 @@ namespace RobotTwin.CoreSim.Mechanics
         public double StartY { get; set; }
         public double StartYaw { get; set; }
 
+        /// <summary>[sense] Light, floor optics, taped tracks, GPS origin and magnetic field for the world's sensors (null = defaults).</summary>
+        public RobotTwin.CoreSim.Sandbox.Sensing.SensingEnvironment? Sensing { get; set; }   // [sense]
+
         public Arena ToArena()
         {
             var a = new Arena

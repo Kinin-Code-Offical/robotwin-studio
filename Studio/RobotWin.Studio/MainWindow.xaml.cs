@@ -1156,6 +1156,8 @@ namespace RobotWin.Studio
                 WindowState = _stateBeforeFull;
                 OnStateChanged();
             }
+
+            _world.OnFullScreenChanged(_fullScreen, _current == "world");   // [sense] full screen opens Scene + Game
         }
 
         private void ApplyStartupSettings()

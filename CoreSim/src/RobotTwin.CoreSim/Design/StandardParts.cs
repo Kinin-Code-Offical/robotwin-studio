@@ -35,6 +35,7 @@ namespace RobotTwin.CoreSim.Design
             RegisterDisplays(lib);
             Esp32Parts.Register(lib);
             WirelessParts.Register(lib);   // [radio] wireless / USB parts (Design/WirelessParts.cs)
+            SensingParts.Register(lib);    // [sense] line sensors, cameras, LiDAR, GPS, compass, encoder motors (Design/SensingParts.cs)
             RegisterConnectors(lib);
             RegisterBoards(lib);
         }
