@@ -902,12 +902,16 @@ namespace RobotWin.Studio.Pages
                 line.Children.Add(dot);
                 line.Children.Add(new TextBlock { Text = $"{mine.Pin} → {otherObj?.Name} {other.Pin}", TextTrimming = TextTrimming.CharacterEllipsis });
                 sp.Children.Add(line);
-                double len = c.Length > 0 ? c.Length : Scene.CableLength(c);
+                var (span, len, verdict, bad) = CableFit(c);
+                double drop = CableDrop(c, len);
                 sp.Children.Add(new TextBlock
                 {
-                    Text = $"AWG {c.Awg:0} · {len * 100:0} cm · {WorldCable.Resistance(c.Awg, len) * 1000:0.#} mΩ · en çok {WorldCable.Ampacity(c.Awg):0.#} A",
-                    Style = (Style)FindResource("Text.Caption")
+                    Text = $"AWG {c.Awg:0} · {len * 100:0} cm (uçlar arası {span * 100:0} cm, {verdict}) · {WorldCable.Resistance(c.Awg, len) * 1000:0.#} mΩ"
+                        + (drop > 0 ? $" · düşüm {SiValue.Format(drop, "V")}" : string.Empty) + $" · en çok {WorldCable.Ampacity(c.Awg):0.#} A",
+                    Style = (Style)FindResource("Text.Caption"),
+                    TextWrapping = TextWrapping.Wrap
                 });
+                if (bad) ((TextBlock)sp.Children[sp.Children.Count - 1]).Foreground = Brushes.OrangeRed;
                 grid.Children.Add(sp);
                 var awg = new ComboBox { Width = 64, Margin = new Thickness(4, 0, 4, 0), ToolTip = "Kablo kesiti (AWG)" };
                 foreach (var g in new[] { 30, 28, 26, 24, 22, 20, 18, 16, 14, 12 }) awg.Items.Add(new ComboBoxItem { Content = g.ToString(CultureInfo.InvariantCulture), Tag = (double)g, IsSelected = Math.Abs(g - c.Awg) < 0.5 });
@@ -916,8 +920,11 @@ namespace RobotWin.Studio.Pages
                 {
                     if (awg.SelectedItem is ComboBoxItem it && Math.Abs((double)it.Tag - cable.Awg) > 0.1) Edit("Kablo kesiti değişti", () => cable.Awg = (double)it.Tag);
                 };
-                Grid.SetColumn(awg, 1);
-                grid.Children.Add(awg);
+                var sizes = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                sizes.Children.Add(awg);
+                sizes.Children.Add(JumperLengthBox(cable));
+                Grid.SetColumn(sizes, 1);
+                grid.Children.Add(sizes);
                 var del = new Button { Style = (Style)FindResource("Btn.Icon"), Width = 26, Height = 26, ToolTip = "Kabloyu sök", Content = new Theme.Icon { Data = (Geometry)FindResource("I.Delete"), Size = 13 } };
                 del.Click += (_, _) => Edit("Kablo söküldü", () => world.Cables.Remove(cable));
                 Grid.SetColumn(del, 2);
@@ -1310,21 +1317,23 @@ namespace RobotWin.Studio.Pages
             {
                 var a = world.Find(c.A.ObjectId);
                 var b = world.Find(c.B.ObjectId);
-                double len = c.Length > 0 ? c.Length : Scene.CableLength(c);
+                var (span, len, verdict, bad) = CableFit(c);
                 string live = string.Empty;
                 if (_session.State != SimState.Stopped)
                 {
                     var (i, burned, p) = _session.CableState(c);
                     double amp = WorldCable.Ampacity(c.Awg);
-                    live = burned ? "  YANDI" : $"  {SiValue.Format(Math.Abs(i), "A"),-10} {SiValue.Format(p, "W"),-10} yük %{Math.Abs(i) / amp * 100:0}";
+                    live = burned ? "  YANDI" : $"  {SiValue.Format(Math.Abs(i), "A"),-10} {SiValue.Format(p, "W"),-10} düşüm {SiValue.Format(CableDrop(c, len), "V"),-9} yük %{Math.Abs(i) / amp * 100:0}";
                 }
 
-                CableTable.Children.Add(new TextBlock
+                var row = new TextBlock
                 {
                     FontFamily = (FontFamily)FindResource("F.Mono"),
                     FontSize = 12,
-                    Text = $"{a?.Name} {c.A.Pin} → {b?.Name} {c.B.Pin}".PadRight(48) + $" AWG{c.Awg:0} {len * 100,5:0} cm" + live
-                });
+                    Text = $"{a?.Name} {c.A.Pin} → {b?.Name} {c.B.Pin}".PadRight(48) + $" AWG{c.Awg:0} {len * 100,5:0} cm / {span * 100,4:0} cm {verdict,-24}" + live
+                };
+                if (bad) row.Foreground = Brushes.OrangeRed;
+                CableTable.Children.Add(row);
             }
         }
 
@@ -1349,6 +1358,12 @@ namespace RobotWin.Studio.Pages
                 DockSerial.IsChecked = true;
                 OnDockTab(this, new RoutedEventArgs());
                 Scene.FrameCurrent();
+            }
+
+            if (Environment.GetCommandLineArgs().Contains("--dock-cables"))
+            {
+                DockCables.IsChecked = true;
+                OnDockTab(this, new RoutedEventArgs());
             }
 
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
