@@ -37,6 +37,8 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("car", "İki tekerlekli araba (gerçek fizik)", "PLA şase, iki TT motor ve tekerlek, bilyeli sarhoş teker, üstte 4×AA pil. Çalıştırınca yerçekimi, sürtünme ve motor yükleriyle zeminde yol alır.", Car),
             new WorldTemplate("sonar", "Ultrasonik mesafe sensörü ve engeller", "HC-SR04 dünyadaki nesnelere gerçekten ölçüm yapar: ışını önündeki ilk nesneye kadar çizilir, mesafe renkle gösterilir. Kutuları sürükleyip yaklaştırın.", Sonar),
             new WorldTemplate("motor-wheel", "Pil, motor ve tekerlek", "4×AA pil kutusu kablolarla TT motoru sürer; tekerlek motor miline takılı, motor sehpaya vidalı.", MotorWheel),
+            new WorldTemplate("factory-cell", "Fabrika hücresi (robot kol + konveyör)", "Konveyör kutuları getirir, 6 eksenli kol vakumla alıp palete 3×2×2 dizer; fotosel kolun DI1 girişine, ışık perdesi SAFE girişine kablolu. Öğretme panelinden programı değiştirin.", RobotTwin.CoreSim.Sandbox.FactoryCell.Build),   // [arm]
+            new WorldTemplate("scara-cell", "SCARA al-bırak (paralel tutucu)", "SCARA robot yükselticinin üstünde; paralel tutucu dört alüminyum bloğu sürtünmeyle kavrayıp bir sıradan diğerine taşır ve geri getirir.", RobotTwin.CoreSim.Sandbox.FactoryCell.Scara),   // [arm]
             // [radio]
             // [objs]
             new WorldTemplate("prop-stand", "Pervane itki standı", "8520 coreless motorlar 55 ve 65 mm pervaneyle 1S LiPo'dan dönüyor: devir, itki (g), sürükleme torku ve motor akımı canlı okunur.", PropStand),

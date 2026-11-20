@@ -97,6 +97,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             foreach (var o in world.Objects) p.AddObject(o, geometry(o));
+            p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.IgnoreSelfCollisions();
@@ -266,6 +267,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 DriveActuators(sim);
                 StepCables(Step); // [phys] ropes pull on their plugs before the bodies move
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
+                StepMachines(sim);   // [arm]
                 Scene.Step(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia

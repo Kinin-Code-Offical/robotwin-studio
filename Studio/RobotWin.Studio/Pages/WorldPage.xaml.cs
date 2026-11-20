@@ -280,6 +280,7 @@ namespace RobotWin.Studio.Pages
             ReadyMechPalette();   // [objs] ready wheels, casters, propellers
             Palette.Children.Add(Caption("Dışarıdan model"));
             Palette.Children.Add(Action("3D model içe aktar (STL, OBJ, PLY)…", ImportModel, "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır."));
+            CellPalette();   // [arm] robot cell parts (Pages/WorldPage.Cell.cs)
         }
 
         private void BuildEnvironmentPalette()
@@ -597,6 +598,7 @@ namespace RobotWin.Studio.Pages
             };
             Inspector.Children.Add(name);
             Inspector.Children.Add(Note(KindText(o)));
+            CellSection(world, o);   // [arm] teach pendant / tool / conveyor / light curtain (Pages/WorldPage.Cell.cs)
 
             if (o.Kind == WorldObjectKind.Board) BoardSection(world, o);
 
@@ -1224,6 +1226,7 @@ namespace RobotWin.Studio.Pages
             UpdateSerial();
             UpdateLive();
             UpdateRadioLive();   // [radio]
+            UpdateCellLive();   // [arm]
             if (DockCables.IsChecked == true) BuildCableTable();
         }
 
@@ -1328,6 +1331,7 @@ namespace RobotWin.Studio.Pages
     {
         public static double ComponentMass(WorldObject o)
         {
+            if (RobotTwin.CoreSim.Sandbox.CellGeometry.MassOf(o) is double cell) return cell;   // [arm]
             string id = (o.PresetId ?? o.PartId ?? string.Empty).ToLowerInvariant();
             if (id.Contains("sg90") || id.Contains("mg90")) return 0.009;
             if (id.Contains("996")) return 0.055;

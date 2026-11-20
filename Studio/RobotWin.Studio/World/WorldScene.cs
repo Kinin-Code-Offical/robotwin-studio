@@ -619,6 +619,7 @@ namespace RobotWin.Studio.World
             {
                 foreach (var it in _items.Values) Resolve(it, done, 0);
             }
+            UpdateCell();   // [arm] arm links, tools on flanges, belts, feeder cartons (World/WorldScene.Cell.cs)
             foreach (var it in _items.Values) ((MatrixTransform3D)it.Visual.Transform).Matrix = it.Current;
         }
 

@@ -97,6 +97,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
         public bool Broken { get; internal set; }
 
+        /// <summary>Surface speed of a static body (a conveyor belt): contacts feel it through friction.</summary>
+        public Vec3 SurfaceVelocity { get; set; }   // [arm]
+
         /// <summary>Places the source model's origin at <paramref name="modelOrigin"/> with the given orientation.</summary>
         public void PlaceModel(Vec3 modelOrigin, Quat orientation)
         {
@@ -735,7 +738,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 st.DTheta = Vec3.Zero;
                 if (b.IsStatic || Asleep(i)) // [phys]
                 {
-                    st.V = Vec3.Zero;
+                    st.V = b.IsStatic ? b.SurfaceVelocity : Vec3.Zero;   // [arm] conveyor belts; zero for ordinary static bodies
                     st.W = Vec3.Zero;
                     st.InvMass = 0;
                     st.InvI = Mat3.Zero;

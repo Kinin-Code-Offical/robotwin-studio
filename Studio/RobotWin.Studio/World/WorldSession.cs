@@ -253,6 +253,7 @@ namespace RobotWin.Studio.World
 
         private void DrainEvents()
         {
+            DrainCellMessages();   // [arm] World/WorldSession.Cell.cs
             if (Physics != null)
             {
                 foreach (var pe in Physics.DrainEvents())
