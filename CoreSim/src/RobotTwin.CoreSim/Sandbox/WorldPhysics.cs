@@ -99,7 +99,9 @@ namespace RobotTwin.CoreSim.Sandbox
                 p.Scene.AddBody(SceneBody.StaticBox("obstacle", new Vec3(ob.SizeX, ob.SizeY, ob.Height), new Vec3(ob.X, ob.Y, ob.Height / 2), Quat.Identity));
             }
 
-            foreach (var o in world.Objects) p.AddObject(o, geometry(o));
+            p.ConfigureTerrain(world); // [terrain] sculpted ground, painted layers
+            foreach (var o in world.Objects)
+                if (!p.TryAddProp(o)) p.AddObject(o, geometry(o)); // [terrain] static props collide piecewise
             p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors

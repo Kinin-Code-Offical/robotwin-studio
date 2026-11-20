@@ -50,7 +50,10 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("line-follower", "Çizgi izleyen robot (mat, solmuş, parlak bant)", "Arduino Uno + 5 kanallı TCRT5000 modülü 6 mm yükseklikte, DRV8833 ve iki TT motor. Pist mat bantta sorunsuz; solmuş bantta sensörler beyaz görür, parlak bant pencere ışığını sensöre yansıtır ve robot çizgiyi kaybeder.", SenseTemplates.LineFollower),
             new WorldTemplate("sensor-rover", "Sensör gezgini (kamera, LiDAR, GPS, IMU)", "Duvarlı odada daire çizen gezgin: OV2640 kamera kendi çözünürlüğüyle görür, 360° LiDAR taraması çizilir, GPS/IMU/pusula/enkoder okumaları Sensörler panelinde canlı.", SenseTemplates.SensorRover),
             new WorldTemplate("camera-line", "ESP32 + OV2640 kamera ile bant bulma", "Direkteki kamera pisti yukarıdan görür; ESP32 çizimi esp_camera.h ile 160×120 gri kare alır, en koyu sütunu bant sayar. Işığı azaltınca pozlama, kazanç ve gürültü değişir.", SenseTemplates.CameraLine),
-            new WorldTemplate("wind-lab", "Rüzgâr, fan, konveyör ve ifadeler", "Türbülanslı rüzgâr, bir masa fanının üflediği pinpon topu, konveyör bölgesi, ifadeyle havada tutulan plaka ve mıknatısa çekilen bilye. Ortam ve Betikler sekmelerine bakın.", SdkWorldTemplates.WindLab)   // [sdk]
+            new WorldTemplate("wind-lab", "Rüzgâr, fan, konveyör ve ifadeler", "Türbülanslı rüzgâr, bir masa fanının üflediği pinpon topu, konveyör bölgesi, ifadeyle havada tutulan plaka ve mıknatısa çekilen bilye. Ortam ve Betikler sekmelerine bakın.", SdkWorldTemplates.WindLab),   // [sdk]
+            // [terrain] sculpted terrain worlds (Examples/TerrainTemplates.cs)
+            new WorldTemplate("arazi-parkuru", "Arazi parkuru", "10 × 6 m engebeli dış mekân: tepeler, asfalt yol, hız kesiciler, bordür, çakıl, çamur ve kum (gerçek batma ve kayma), rampa, merdiven, koniler, kayalar, ağaçlar. Araba yolun başında.", () => TerrainTemplates.Parkour(Car)),
+            new WorldTemplate("kapali-atolye", "Kapalı atölye", "6 × 4 m fayans zemin; kauçuk paspas, halı, beton ve ıslak zemin bölgeleri, duvarlar, rampa ve basamaklar. Araba fayansın üstünde.", () => TerrainTemplates.Workshop(Car))
         };
 
         public static WorldTemplate? Find(string id)

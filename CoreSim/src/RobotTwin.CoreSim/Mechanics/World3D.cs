@@ -609,6 +609,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 muS = props.StaticFriction;
                 muK = Math.Min(props.KineticFriction, 0.9 * muS);
                 crr = props.RollingResistance;
+                if (hit.Body == null && scene.Terrain is TerrainSurface soil && soil.WheelSoil(this, hit.Point, ref n, ref muS, ref muK, out double soilCrr)) crr = Math.Max(crr, soilCrr); // [terrain] terramechanics: sinkage, soil shear traction vs slip
                 var f = axle.Cross(nrm);
                 if (f.Length < 0.2) f = forward - nrm * forward.Dot(nrm);
                 f = f.Normalized();

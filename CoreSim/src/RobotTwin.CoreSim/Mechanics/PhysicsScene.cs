@@ -531,6 +531,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = Regions.Count - 1; i >= 0; i--)
                 if (Regions[i].Contains(x, y))
                     return Regions[i].Material;
+            if (Terrain is TerrainSurface ts) return ts.MaterialAt(x, y); // [terrain] painted surface layer
             return GroundMaterial;
         }
 
@@ -554,6 +555,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 inRegion = true;
                 break;
             }
+
+            if (!inRegion && Terrain is TerrainSurface surface) return SoilContact(surface, bodyMaterial, x, y, caster); // [terrain] painted surface layers, soil shear
 
             if (caster)
             {
@@ -663,6 +666,7 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             EndSleep(dt); // [phys]
+            UpdateSoil(dt); // [terrain] sinkage / traction of bodies on loose ground
         }
 
         private static long PairKey(int a, int b) => a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
@@ -919,7 +923,7 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 int a = _order[ii];
                 var ba = Bodies[a];
-                if (!ba.IsStatic && GroundEnabled && !Asleep(a)) CollideGround(a, h); // [phys]
+                if (!ba.IsStatic && GroundEnabled && !Asleep(a)) CollideGroundSoil(a, h); // [phys] [terrain] soil state of the body
                 double maxX = _hi[a].X;
                 for (int jj = ii + 1; jj < m; jj++)
                 {
@@ -943,7 +947,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 return p.Z;
             }
 
-            return Terrain.Separation(p, out normal, out _);
+            return Terrain.Separation(p, out normal, out _) + SoilSink(p); // [terrain] sunk into loose ground
         }
 
         private void CollideGround(int a, double h)

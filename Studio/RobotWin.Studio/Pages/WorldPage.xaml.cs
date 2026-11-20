@@ -71,7 +71,7 @@ namespace RobotWin.Studio.Pages
             };
             W.WorldChanged += (_, _) =>
             {
-                if (W.ActiveWorld != null && W.ActiveWorld == _shown) Refresh();
+                if (W.ActiveWorld != null && W.ActiveWorld == _shown && !_terrainQuiet) Refresh(); // [terrain] strokes do not rebuild the scene
             };
             AppSettings.Changed += (_, _) => Scene.Grid = AppSettings.Current.WorldGridMm / 1000.0;
             PreviewKeyDown += OnKeys;
@@ -81,6 +81,7 @@ namespace RobotWin.Studio.Pages
             InitReady();   // [objs] Pages/WorldPage.Ready.cs
             InitSense();   // [sense] Pages/WorldPage.Sense.cs
             InitSdk();   // [sdk] Pages/WorldPage.Sdk.cs
+            InitTerrain(); // [terrain] Pages/WorldPage.Terrain.cs
         }
 
         private static Workspace W => Workspace.Current;
@@ -160,6 +161,7 @@ namespace RobotWin.Studio.Pages
         {
             Palette.Children.Clear();
             SearchRow.Visibility = TabParts.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            if (TerrainPalette()) return; // [terrain] Arazi tab
             if (TabScene.IsChecked == true) BuildScenePalette();
             else if (TabBoards.IsChecked == true) BuildBoardsPalette();
             else if (TabParts.IsChecked == true) BuildPartsPalette();
@@ -374,7 +376,7 @@ namespace RobotWin.Studio.Pages
             double x = p.X, y = p.Y;
             var world = World!;
             for (int i = 0; i < 20 && world.Objects.Any(o => Math.Abs(o.Pose.X - x) < 0.03 && Math.Abs(o.Pose.Y - y) < 0.03 && o.Pose.Z < 0.01); i++) x += 0.06;
-            return new WorldPose { X = x, Y = y };
+            return new WorldPose { X = x, Y = y, Z = Scene.GroundZAt(x, y) }; // [terrain] on the terrain
         }
 
         private void EnsureWorld()
@@ -664,6 +666,7 @@ namespace RobotWin.Studio.Pages
             SdkSection(world, o);   // [sdk] aerodynamics, behaviours, expressions
             LiveSection(o);
 
+            EditorSection(world, o); // [terrain] hide / lock / group / prop size
             Inspector.Children.Add(Caption("İşlemler"));
             Inspector.Children.Add(Action("Çoğalt (Ctrl+D)", Duplicate));
             Inspector.Children.Add(Action("Sil (Del)", Delete));
@@ -1093,14 +1096,20 @@ namespace RobotWin.Studio.Pages
         {
             var world = World;
             var o = world?.Find(Scene.Selected);
-            if (world == null || o == null) return;
+            if (world == null || o == null || DeleteBlocked(o)) return; // [terrain] locked
             Edit($"{o.Name} silindi", () => world.Remove(o));
             Scene.Select(null);
         }
 
-        private void OnUndo(object sender, RoutedEventArgs e) => W.Undo();
+        private void OnUndo(object sender, RoutedEventArgs e)
+        {
+            if (!TerrainUndoRedo(false)) W.Undo(); // [terrain] terrain strokes in the Arazi tab
+        }
 
-        private void OnRedo(object sender, RoutedEventArgs e) => W.Redo();
+        private void OnRedo(object sender, RoutedEventArgs e)
+        {
+            if (!TerrainUndoRedo(true)) W.Redo(); // [terrain]
+        }
 
         private void OnTop(object sender, RoutedEventArgs e) => Scene.TopView();
 
@@ -1115,6 +1124,12 @@ namespace RobotWin.Studio.Pages
         private void OnKeys(object sender, KeyEventArgs e)
         {
             if (e.OriginalSource is TextBox) return;
+            if (TerrainKeys(e)) // [terrain] Arazi tab keys
+            {
+                e.Handled = true;
+                return;
+            }
+
             bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
             switch (e.Key)
             {
@@ -1319,6 +1334,7 @@ namespace RobotWin.Studio.Pages
         public void PrepareSnapshot(string? template, string? simulate)
         {
             template = SenseSnapshotTemplate(template);   // [sense] "id:studio:sensors…" view modes
+            template = ParseTerrainSnapshot(template); // [terrain] "+arazi", "+boya", "+yakın"
             var t = WorldTemplates.Find(template ?? "servo-arm") ?? WorldTemplates.All[1];
             if (World == null || World.Title != t.Build().Title) _main.NewWorld(t.Build());
             OnShown();
@@ -1339,6 +1355,7 @@ namespace RobotWin.Studio.Pages
             if (first != null) Scene.Select(first.Id);
             SenseSnapshotFinish();   // [sense]
             SdkSnapshot();   // [sdk]
+            FinishTerrainSnapshot(simulate != null); // [terrain]
         }
     }
 

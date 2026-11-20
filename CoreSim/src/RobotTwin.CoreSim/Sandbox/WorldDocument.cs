@@ -248,6 +248,10 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore]
         public byte[]? Preview { get; set; }
 
+        /// <summary>Sculpted ground with painted surface layers (saved as terrain.bin, kept out of the JSON and its undo snapshots).</summary>
+        [JsonIgnore]
+        public TerrainMap? Terrain { get; set; } // [terrain]
+
         public WorldObject? Find(string? id) =>
             id == null ? null : Objects.FirstOrDefault(o => string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
 
@@ -450,6 +454,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 RobotWinFormats.WriteText(zip, "designs/index.json", JsonSerializer.Serialize(index, RobotWinFormats.Json));
                 foreach (var d in Designs) RobotWinFormats.WriteBytes(zip, "designs/" + d.Id + ProjectPackage.Extension, d.Package.ToBytes());
                 if (Preview != null) RobotWinFormats.WriteBytes(zip, "preview.png", Preview);
+                if (Terrain != null) RobotWinFormats.WriteBytes(zip, "terrain.bin", Terrain.ToBytes()); // [terrain]
             });
         }
 
@@ -472,6 +477,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             world.Preview = RobotWinFormats.ReadBytes(zip, "preview.png");
+            if (RobotWinFormats.ReadBytes(zip, "terrain.bin") is { } terrain) world.Terrain = TerrainMap.FromBytes(terrain); // [terrain]
             return world;
         }
 
@@ -481,6 +487,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var copy = JsonSerializer.Deserialize<WorldDocument>(JsonSerializer.Serialize(this, RobotWinFormats.Json), RobotWinFormats.Json)!;
             copy.Designs = Designs.Select(d => new WorldDesign { Id = d.Id, Name = d.Name, SourcePath = d.SourcePath, Package = d.Package }).ToList();
             copy.Preview = Preview;
+            copy.Terrain = Terrain?.Clone(); // [terrain]
             return copy;
         }
 

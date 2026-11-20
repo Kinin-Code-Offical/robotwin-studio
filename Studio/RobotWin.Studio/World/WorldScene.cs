@@ -178,7 +178,7 @@ namespace RobotWin.Studio.World
                 var model = ObjectModels.Build(o, World, Library);
                 var group = new Model3DGroup();
                 group.Children.Add(model.Body);
-                if (FixingMarks(o, model) is { } fixings) group.Children.Add(fixings);   // [phys] "Sabit" shown as screwed/clamped
+                if (!WorldBuilding.IsProp(o) && FixingMarks(o, model) is { } fixings) group.Children.Add(fixings); // [terrain] props are scenery, not clamped parts   // [phys] "Sabit" shown as screwed/clamped
                 RotateTransform3D? rot = null;
                 if (model.Moving != null && model.Port is { } port)
                 {
@@ -190,7 +190,7 @@ namespace RobotWin.Studio.World
                 var visual = new ModelVisual3D { Content = group };
                 var placed = PoseMatrix(o.Pose);
                 visual.Transform = new MatrixTransform3D(placed);
-                _view.Children.Add(visual);
+                if (!EditorHidden(o)) _view.Children.Add(visual); // [terrain] hidden in the editor
                 _items[o.Id] = new Item { Object = o, Model = model, Visual = visual, Placed = placed, Current = placed, PortRotation = rot };
             }
 
@@ -272,7 +272,7 @@ namespace RobotWin.Studio.World
         }
 
         /// <summary>Point on the ground in front of the camera where new objects appear.</summary>
-        public Point3D DropPoint() => new Point3D(Snap(_target.X), Snap(_target.Y), 0);
+        public Point3D DropPoint() => new Point3D(Snap(_target.X), Snap(_target.Y), GroundZAt(Snap(_target.X), Snap(_target.Y))); // [terrain] on the terrain
 
         public Point3D WorldAnchor(WorldObject o, string pin)
         {
@@ -376,8 +376,9 @@ namespace RobotWin.Studio.World
                 TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 },
                 Normals = new Vector3DCollection { new Vector3D(0, 0, 1), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1) }
             };
+            SyncTerrain(); // [terrain] sculpted terrain replaces the flat floor
             var tile = new ImageBrush(GridTile()) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
-            g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
+            if (!TerrainReplacesFloor) g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
             if (env != null)
             {
                 var wall = M.Matte(Color.FromRgb(0x2A, 0x2A, 0x30), 0.05);
@@ -447,6 +448,7 @@ namespace RobotWin.Studio.World
                 }
             }
 
+            AppendGizmo(g); // [terrain] move/rotate/scale gizmo
             _overlay.Content = g;
 
             if (Tool == WorldTool.Cable && World != null)
@@ -668,6 +670,7 @@ namespace RobotWin.Studio.World
             var now = DateTime.Now;
             double dt = Math.Min(0.1, (now - _lastFrame).TotalSeconds);
             _lastFrame = now;
+            TerrainFrame(dt); // [terrain] LOD, brush strokes
             var s = Session;
             if (s != null && s.State == Simulation.SimState.Running)
             {
@@ -875,7 +878,7 @@ namespace RobotWin.Studio.World
         private (string? ObjectId, string? Pin) Pick(Point p)
         {
             string? obj = null, pin = null;
-            VisualTreeHelper.HitTest(_view, null, r =>
+            VisualTreeHelper.HitTest(_view, PickFilter, r => // [terrain] skip floor/terrain
             {
                 if (r is RayMeshGeometry3DHitTestResult hit)
                 {
@@ -906,6 +909,7 @@ namespace RobotWin.Studio.World
         {
             Focus();
             var p = e.GetPosition(this);
+            if (EditorMouseDown(e, p)) return; // [terrain] terrain brush, prop placement, gizmo
             if (e.ChangedButton != MouseButton.Left)
             {
                 _orbit = p;
@@ -966,7 +970,7 @@ namespace RobotWin.Studio.World
                     if (id != null && World?.Find(id) is { } o)
                     {
                         Select(id);
-                        if (Session == null || Session.State == Simulation.SimState.Stopped)
+                        if ((Session == null || Session.State == Simulation.SimState.Stopped) && !EditorLocked(o)) // [terrain] locked objects stay
                         {
                             _drag = id;
                             _dragMoved = false;
@@ -993,6 +997,7 @@ namespace RobotWin.Studio.World
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
             var p = e.GetPosition(this);
+            if (EditorMouseMove(e, p)) return; // [terrain]
             if (_drag != null && World?.Find(_drag) is { } o && _items.TryGetValue(_drag, out var it))
             {
                 if (!_dragMoved)
@@ -1014,6 +1019,8 @@ namespace RobotWin.Studio.World
                     ny = Snap(q.Y + _dragOffset.Y);
                 }
 
+                SnapDrag(o, p, ref nx, ref ny, ref nz); // [terrain] follow the terrain surface
+                MoveGroupMates(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z); // [terrain] groups move together
                 // Whatever is mounted on the object (arms on a servo horn, a wheel on a shaft …) comes along.
                 World.MoveAssembly(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
                 foreach (var moved in new[] { o }.Concat(World.MountedOn(o.Id)))
@@ -1055,6 +1062,7 @@ namespace RobotWin.Studio.World
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
+            if (EditorMouseUp(e)) return; // [terrain]
             if (_drag != null && _dragMoved && World?.Find(_drag) is { } o)
             {
                 EditCommitted?.Invoke($"{o.Name} taşındı ({o.Pose.X * 1000:F0}, {o.Pose.Y * 1000:F0}, {o.Pose.Z * 1000:F0} mm)");

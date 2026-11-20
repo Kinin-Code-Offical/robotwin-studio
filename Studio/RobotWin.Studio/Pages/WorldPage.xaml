@@ -97,6 +97,8 @@
                         <RadioButton x:Name="TabEnv" Style="{StaticResource Chip}" Content="Ortam" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab"/>
                         <!-- [sdk] Pages/WorldPage.Sdk.cs -->
                         <RadioButton x:Name="TabSdk" Style="{StaticResource Chip}" Content="Betikler" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab" ToolTip="Betikler ve eklentiler: kendi fizik kodunuz, ifadeler, kuvvet alanları"/>
+                        <!-- [terrain] terrain / world editor (Pages/WorldPage.Terrain.cs) -->
+                        <RadioButton x:Name="TabTerrain" Style="{StaticResource Chip}" Content="Arazi" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab" ToolTip="Arazi düzenleyici: şekillendir, boya, yol, nesneler (Unity Terrain gibi)"/>
                     </WrapPanel>
                     <Grid x:Name="SearchRow" DockPanel.Dock="Top" Margin="0,0,6,8" Visibility="Collapsed">
                         <TextBox x:Name="SearchBox" Tag="Parça ara (servo, motor, pil, sensör…)" Padding="28,4,8,4" TextChanged="OnSearch"/>
