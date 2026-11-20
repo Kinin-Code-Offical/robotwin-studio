@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using RobotTwin.CoreSim.Sandbox;
 
 namespace RobotWin.Studio.Audio
 {
@@ -36,7 +37,9 @@ namespace RobotWin.Studio.Audio
     /// <summary>
     /// Small real-time synthesizer on the Windows waveOut API (no extra packages):
     /// continuous voices keyed by name (frequency/gain glide smoothly) plus one-shot
-    /// effects, mixed at 44.1 kHz with a soft limiter. Thread-safe setters.
+    /// effects, mixed at 44.1 kHz stereo with a soft limiter. Every voice and one-shot can be
+    /// placed in 3D (<see cref="SetSpatial"/>): per-ear gain, per-ear low-pass (head shadow,
+    /// sounds from behind, air absorption) and Doppler pitch. Thread-safe setters.
     /// </summary>
     public sealed class SoundEngine : IDisposable
     {
@@ -53,6 +56,12 @@ namespace RobotWin.Studio.Audio
             public double Filter;
             public double Load;
             public DateTime Touched;
+
+            // [objs] stereo placement: ear gains, low-pass coefficients, Doppler (targets glide like the gain).
+            public double L = 1, R = 1, TargetL = 1, TargetR = 1;
+            public double CutL = 1, CutR = 1, TargetCutL = 1, TargetCutR = 1;
+            public double Pitch = 1, TargetPitch = 1;
+            public double ZL, ZR;
         }
 
         private sealed class Shot
@@ -62,6 +71,10 @@ namespace RobotWin.Studio.Audio
             public int Pos;
             public int Length;
             public double Seed;
+
+            // [objs] fixed stereo placement of the shot.
+            public double L = 1, R = 1, CutL = 1, CutR = 1;
+            public double ZL, ZR;
         }
 
         private readonly Dictionary<string, Voice> _voices = new Dictionary<string, Voice>(StringComparer.Ordinal);
@@ -128,7 +141,27 @@ namespace RobotWin.Studio.Audio
             }
         }
 
-        public void Play(OneShot kind, double gain = 1.0)
+        /// <summary>[objs] Places a continuous voice in 3D (call after <see cref="SetVoice"/>); unplaced voices play centred.</summary>
+        public void SetSpatial(string key, SpatialMix mix)
+        {
+            lock (_gate)
+            {
+                if (!_voices.TryGetValue(key, out var v)) return;
+                v.TargetL = mix.Left;
+                v.TargetR = mix.Right;
+                v.TargetCutL = Coefficient(mix.CutoffLeft);
+                v.TargetCutR = Coefficient(mix.CutoffRight);
+                v.TargetPitch = Math.Max(0.5, Math.Min(2, mix.Pitch));
+            }
+        }
+
+        /// <summary>One-pole low-pass coefficient for a cut-off frequency.</summary>
+        private static double Coefficient(double cutoff) => 1 - Math.Exp(-2 * Math.PI * Math.Max(20, Math.Min(Rate * 0.45, cutoff)) / Rate);
+
+        public void Play(OneShot kind, double gain = 1.0) => Play(kind, gain, SpatialMix.Centre);
+
+        /// <summary>[objs] One-shot heard from a place.</summary>
+        public void Play(OneShot kind, double gain, SpatialMix mix)
         {
             if (!Enabled) return;
             EnsureStarted();
@@ -144,15 +177,32 @@ namespace RobotWin.Studio.Audio
             lock (_gate)
             {
                 if (_shots.Count > 24) _shots.RemoveAt(0);
-                _shots.Add(new Shot { Kind = kind, Gain = Math.Max(0, Math.Min(1.5, gain)), Length = Rate * ms / 1000, Seed = _rnd.NextDouble() });
+                _shots.Add(new Shot
+                {
+                    Kind = kind, Gain = Math.Max(0, Math.Min(1.5, gain)), Length = Rate * ms / 1000, Seed = _rnd.NextDouble(),
+                    L = mix.Left, R = mix.Right, CutL = Coefficient(mix.CutoffLeft), CutR = Coefficient(mix.CutoffRight)
+                });
             }
         }
 
         // ================================================================ synthesis
 
+        private double[] _mixL = Array.Empty<double>(), _mixR = Array.Empty<double>();
+
+        /// <summary>Fills an interleaved stereo buffer (L, R, L, R ...).</summary>
         private void Mix(short[] output)
         {
-            var mix = new double[output.Length];
+            int frames = output.Length / 2;
+            if (_mixL.Length != frames)
+            {
+                _mixL = new double[frames];
+                _mixR = new double[frames];
+            }
+
+            var mixL = _mixL;
+            var mixR = _mixR;
+            Array.Clear(mixL, 0, frames);
+            Array.Clear(mixR, 0, frames);
             lock (_gate)
             {
                 var now = DateTime.UtcNow;
@@ -168,34 +218,39 @@ namespace RobotWin.Studio.Audio
                         continue;
                     }
 
-                    Render(v, mix);
+                    Render(v, mixL, mixR);
                 }
 
                 foreach (var k in dead) _voices.Remove(k);
                 for (int i = _shots.Count - 1; i >= 0; i--)
                 {
-                    if (RenderShot(_shots[i], mix)) _shots.RemoveAt(i);
+                    if (RenderShot(_shots[i], mixL, mixR)) _shots.RemoveAt(i);
                 }
             }
 
             double master = Volume;
-            for (int i = 0; i < output.Length; i++)
+            for (int i = 0; i < frames; i++)
             {
-                double x = Math.Tanh(mix[i] * master * 1.2);   // soft limiter
-                output[i] = (short)(x * 30000);
+                output[2 * i] = (short)(Math.Tanh(mixL[i] * master * 1.2) * 30000);   // soft limiter
+                output[2 * i + 1] = (short)(Math.Tanh(mixR[i] * master * 1.2) * 30000);
             }
         }
 
         private double Noise() => _rnd.NextDouble() * 2 - 1;
 
-        private void Render(Voice v, double[] mix)
+        private void Render(Voice v, double[] mixL, double[] mixR)
         {
             double dt = 1.0 / Rate;
-            for (int i = 0; i < mix.Length; i++)
+            for (int i = 0; i < mixL.Length; i++)
             {
                 v.Freq += (v.TargetFreq - v.Freq) * 0.0015;
                 v.Gain += (v.TargetGain - v.Gain) * 0.002;
-                v.Phase += v.Freq * dt;
+                v.L += (v.TargetL - v.L) * 0.002;
+                v.R += (v.TargetR - v.R) * 0.002;
+                v.CutL += (v.TargetCutL - v.CutL) * 0.002;
+                v.CutR += (v.TargetCutR - v.CutR) * 0.002;
+                v.Pitch += (v.TargetPitch - v.Pitch) * 0.0015;
+                v.Phase += v.Freq * v.Pitch * dt;
                 if (v.Phase >= 1) v.Phase -= Math.Floor(v.Phase);
                 double s;
                 switch (v.Timbre)
@@ -239,14 +294,18 @@ namespace RobotWin.Studio.Audio
                     }
                 }
 
-                mix[i] += s * v.Gain;
+                s *= v.Gain;
+                v.ZL += (s * v.L - v.ZL) * v.CutL;
+                v.ZR += (s * v.R - v.ZR) * v.CutR;
+                mixL[i] += v.ZL;
+                mixR[i] += v.ZR;
             }
         }
 
         /// <summary>Adds one buffer of a one-shot; true when it has finished.</summary>
-        private bool RenderShot(Shot sh, double[] mix)
+        private bool RenderShot(Shot sh, double[] mixL, double[] mixR)
         {
-            for (int i = 0; i < mix.Length && sh.Pos < sh.Length; i++, sh.Pos++)
+            for (int i = 0; i < mixL.Length && sh.Pos < sh.Length; i++, sh.Pos++)
             {
                 double t = sh.Pos / (double)Rate, k = sh.Pos / (double)sh.Length;
                 double s;
@@ -275,7 +334,11 @@ namespace RobotWin.Studio.Audio
                         break;
                 }
 
-                mix[i] += s * sh.Gain;
+                s *= sh.Gain;
+                sh.ZL += (s * sh.L - sh.ZL) * sh.CutL;
+                sh.ZR += (s * sh.R - sh.ZR) * sh.CutR;
+                mixL[i] += sh.ZL;
+                mixR[i] += sh.ZR;
             }
 
             return sh.Pos >= sh.Length;
@@ -324,7 +387,7 @@ namespace RobotWin.Studio.Audio
             lock (_gate)
             {
                 if (_thread != null) return;
-                var fmt = new WaveFormatEx { wFormatTag = 1, nChannels = 1, nSamplesPerSec = Rate, wBitsPerSample = 16, nBlockAlign = 2, nAvgBytesPerSec = Rate * 2 };
+                var fmt = new WaveFormatEx { wFormatTag = 1, nChannels = 2, nSamplesPerSec = Rate, wBitsPerSample = 16, nBlockAlign = 4, nAvgBytesPerSec = Rate * 4 };   // [objs] stereo
                 try
                 {
                     if (waveOutOpen(out _device, -1, ref fmt, IntPtr.Zero, IntPtr.Zero, 0) != 0) _device = IntPtr.Zero;
@@ -344,14 +407,14 @@ namespace RobotWin.Studio.Audio
         {
             var headers = new IntPtr[BufferCount];
             var data = new IntPtr[BufferCount];
-            var samples = new short[BufferSamples];
+            var samples = new short[BufferSamples * 2];   // [objs] interleaved stereo frames
             for (int b = 0; b < BufferCount; b++)
             {
-                data[b] = Marshal.AllocHGlobal(BufferSamples * 2);
+                data[b] = Marshal.AllocHGlobal(samples.Length * 2);
                 headers[b] = Marshal.AllocHGlobal(HeaderSize);
                 for (int i = 0; i < HeaderSize; i++) Marshal.WriteByte(headers[b], i, 0);
                 Marshal.WriteIntPtr(headers[b], 0, data[b]);
-                Marshal.WriteInt32(headers[b], IntPtr.Size, BufferSamples * 2);
+                Marshal.WriteInt32(headers[b], IntPtr.Size, samples.Length * 2);
                 Marshal.WriteInt32(headers[b], FlagsOffset, WhdrDone);   // free to fill
             }
 

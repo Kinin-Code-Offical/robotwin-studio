@@ -7,7 +7,7 @@ using RobotTwin.CoreSim.Analog.Devices;
 namespace RobotTwin.CoreSim.Design
 {
     /// <summary>Built-in component catalog.</summary>
-    internal static class StandardParts
+    internal static partial class StandardParts   // [objs] lights in Design/StandardParts.Lights.cs
     {
         public const string Passive = "Pasif";
         public const string Semiconductor = "Yarı İletken";
@@ -30,6 +30,7 @@ namespace RobotTwin.CoreSim.Design
             RegisterPower(lib);
             RegisterSwitching(lib);
             RegisterElectromechanical(lib);
+            RegisterLights(lib);   // [objs]
             RegisterSensors(lib);
             RegisterDisplays(lib);
             Esp32Parts.Register(lib);

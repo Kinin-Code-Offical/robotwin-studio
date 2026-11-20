@@ -95,6 +95,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
             foreach (var o in world.Objects) p.AddObject(o, geometry(o));
             foreach (var j in world.Joints) p.AddJoint(world, j);
+            p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.IgnoreSelfCollisions();
             return p;
         }
@@ -122,6 +123,9 @@ namespace RobotTwin.CoreSim.Sandbox
             SceneBody body;
             switch (g.Shape)
             {
+                case "omni-y" or "mecanum-y" or "caster" or "prop-z":   // [objs]
+                    body = ReadyBody(o, g, size, mass, it);
+                    break;
                 case "sphere":
                     body = SceneBody.Sphere(o.Id, Math.Max(size.X, Math.Max(size.Y, size.Z)) / 2, mass, default, material);
                     break;
@@ -197,6 +201,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             _items[o.Id] = it;
+            RegisterReady(o, it);   // [objs]
         }
 
         /// <summary>Parts joined into one assembly do not collide with each other (their shapes are approximate boxes).</summary>
@@ -257,8 +262,10 @@ namespace RobotTwin.CoreSim.Sandbox
                 _pending -= Step;
                 DriveActuators(sim);
                 StepCables(Step); // [phys] ropes pull on their plugs before the bodies move
+                DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 Scene.Step(Step);
                 FeedBack();
+                FeedBackReady();   // [objs] propeller load without the hub's inertia
                 if (++_sonarTick % 5 == 0) Ranging();
             }
         }

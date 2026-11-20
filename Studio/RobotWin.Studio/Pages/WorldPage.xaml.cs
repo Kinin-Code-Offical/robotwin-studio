@@ -78,6 +78,7 @@ namespace RobotWin.Studio.Pages
             BuildPalette();
             UpdateRunButton();
             InitRadio();   // [radio] Pages/WorldPage.Radio.cs
+            InitReady();   // [objs] Pages/WorldPage.Ready.cs
         }
 
         private static Workspace W => Workspace.Current;
@@ -230,6 +231,7 @@ namespace RobotWin.Studio.Pages
         private void BuildPartsPalette()
         {
             string q = SearchBox.Text.Trim();
+            if (q.Length == 0) ReadyLightsPalette();   // [objs] lights and room light
             var order = new[] { "Geliştirme", "Elektromekanik", "Güç", "Sensör", "Ekran", "Anahtarlama" };
             int Rank(string cat)
             {
@@ -274,6 +276,7 @@ namespace RobotWin.Studio.Pages
             {
                 AddBody("box", 0.6, 0.4, 0.02, o => { o.IsStatic = true; o.Material = "AHŞAP"; o.Name = World!.UniqueName("Masa"); });
             }));
+            ReadyMechPalette();   // [objs] ready wheels, casters, propellers
             Palette.Children.Add(Caption("Dışarıdan model"));
             Palette.Children.Add(Action("3D model içe aktar (STL, OBJ, PLY)…", ImportModel, "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır."));
         }
@@ -544,6 +547,7 @@ namespace RobotWin.Studio.Pages
 
         private void MakeJoint(string childId, string parentId, WorldJointKind kind, string port)
         {
+            if (TryAttachReady(childId, parentId, kind, port)) return;   // [objs] snaps a ready wheel / propeller onto the shaft
             var world = World!;
             var child = world.Find(childId)!;
             var parent = world.Find(parentId)!;
@@ -644,6 +648,7 @@ namespace RobotWin.Studio.Pages
             }
 
             if (o.Kind == WorldObjectKind.Component) ComponentSection(o);
+            ReadySection(world, o);   // [objs]
             RadioSection(world, o);   // [radio] controller pairing, USB plug, IR keys, ESP32 radio
             PortSection(world, o);
             CablesSection(world, o);
@@ -691,7 +696,7 @@ namespace RobotWin.Studio.Pages
                 case WorldObjectKind.Model:
                     return "3D model · " + (o.MeshName ?? "?") + " · " + o.Material;
                 default:
-                    return "Mekanik · " + o.Shape + " · " + o.Material;
+                    return ReadyKind(o) ?? "Mekanik · " + o.Shape + " · " + o.Material;   // [objs]
             }
         }
 
@@ -980,6 +985,7 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
+            ReadyLive(o, lines);   // [objs] propeller thrust, roller load, light flux
             foreach (var pin in Scene.PinsOf(o.Id).Take(16))
             {
                 double v = _session.Voltage(new CableEnd { ObjectId = o.Id, Pin = pin.Pin });

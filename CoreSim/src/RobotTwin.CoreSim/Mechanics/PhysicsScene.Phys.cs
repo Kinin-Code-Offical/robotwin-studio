@@ -88,7 +88,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (b.IsStatic || !b.Collides) continue;
                 var s = b.EffectiveShape;
                 if (s == null || s.Kind == ShapeKind.Mesh) continue;
-                double speed = b.Velocity.Length + b.AngularVelocity.Length * s.BoundingRadius;
+                // Linear speed only: a body spinning in place (propeller, wheel, rotor) does not tunnel,
+                // and counting its tip speed forced up to MaxCcdSubsteps for the whole scene.
+                double speed = b.Velocity.Length;
                 if (speed < 1e-6) continue;
                 double thin = Thickness(s);
                 double allowed = Math.Max(2e-4, MaxTravelFraction * thin);

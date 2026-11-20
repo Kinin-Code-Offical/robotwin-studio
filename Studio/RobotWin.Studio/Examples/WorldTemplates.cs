@@ -24,7 +24,7 @@ namespace RobotWin.Studio.Examples
     }
 
     /// <summary>Ready-made worlds that show boards, parts, cables and joints working together.</summary>
-    public static class WorldTemplates
+    public static partial class WorldTemplates   // [objs] ready-part and light worlds in Examples/WorldTemplates.Ready.cs
     {
         private static PartLibrary Lib => PartLibrary.Default;
 
@@ -38,6 +38,11 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("sonar", "Ultrasonik mesafe sensörü ve engeller", "HC-SR04 dünyadaki nesnelere gerçekten ölçüm yapar: ışını önündeki ilk nesneye kadar çizilir, mesafe renkle gösterilir. Kutuları sürükleyip yaklaştırın.", Sonar),
             new WorldTemplate("motor-wheel", "Pil, motor ve tekerlek", "4×AA pil kutusu kablolarla TT motoru sürer; tekerlek motor miline takılı, motor sehpaya vidalı.", MotorWheel),
             // [radio]
+            // [objs]
+            new WorldTemplate("prop-stand", "Pervane itki standı", "8520 coreless motorlar 55 ve 65 mm pervaneyle 1S LiPo'dan dönüyor: devir, itki (g), sürükleme torku ve motor akımı canlı okunur.", PropStand),
+            new WorldTemplate("mini-drone", "Mini drone kalkışı", "Dört 8520 motor, çapraz CCW/CW pervaneler ve 1S LiPo, 40 g'lık X gövde. İtki ağırlığı geçince havalanır (kontrolcü yok, düz yükselir).", MiniDrone),
+            new WorldTemplate("mecanum", "Mekanum tekerlekli araba (yana kayar)", "Dört TT motor ve A/B mekanum tekerlekler. Ön motorlar düz, arka motorlar ters bağlı: makaraların 45° itişi araba yana kaydırır.", Mecanum),
+            new WorldTemplate("lights", "Işıklar: LED'ler ve lambalar (karanlık oda)", "Dirençli 5 mm LED'ler, RGB LED (kırmızı + mavi = mor), 3 W güç LED'i, fener ampulü ve 12 V LED şerit karanlık odayı aydınlatır.", Lights),
             new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "ESP32 Bluepad32 çizimi eşli DualSense kumandayı okur, DRV8833 ile iki TT motoru sürer. ESP32 bilgisayara USB kablosuyla bağlı; kumanda gerçek (USB/Bluetooth) veya ekrandaki sanal kumanda olabilir.", Ps5Car)
         };
 

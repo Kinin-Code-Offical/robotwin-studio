@@ -223,6 +223,7 @@ namespace RobotWin.Studio.Models3D
         {
             // A model the user attached to the part wins.
             if (CustomModels.TryBuild(b, r)) return;
+            if (Gen.TryLightModel(b, r)) return;   // [objs] RGB / power LED, LED strip (Models3D/GenReadyParts.cs)
 
             string id = r.Id;
             string fp = r.FpId;

@@ -198,6 +198,7 @@ namespace RobotWin.Studio.World
             _cableLayoutStale = true;   // [phys] parts changed: lay the cables out again
             RebuildCables();
             RebuildOverlay();
+            RebuildReady();   // [objs] lights, glows, room light
         }
 
         public void Select(string? id)
@@ -288,6 +289,7 @@ namespace RobotWin.Studio.World
         /// <summary>Physical body of an object for the world physics, taken from its 3D model.</summary>
         public WorldBodyGeometry GeometryOf(WorldObject o)
         {
+            if (ReadyParts.Geometry(o) is { } readyGeometry) return readyGeometry;   // [objs] World/WorldScene.Ready.cs
             var g = new WorldBodyGeometry { MassKg = MassOf?.Invoke(o) ?? 0.01 };
             if (_items.TryGetValue(o.Id, out var it) && !it.Model.Bounds.IsEmpty)
             {
@@ -691,6 +693,7 @@ namespace RobotWin.Studio.World
                 _effects.InvalidateVisual();
             }
 
+            using (Shell.Perf.Measure("hazır parçalar")) ReadyFrame();   // [objs] listener, propeller blur, LED / lamp lights
             using (Shell.Perf.Measure("radyo")) RadioFrame();   // [radio] waves, RF links, controller lightbars
         }
 
@@ -1052,6 +1055,7 @@ namespace RobotWin.Studio.World
                 EditCommitted?.Invoke($"{o.Name} taşındı ({o.Pose.X * 1000:F0}, {o.Pose.Y * 1000:F0}, {o.Pose.Z * 1000:F0} mm)");
             }
 
+            if (_drag != null && _dragMoved) TrySnapDropped(_drag);   // [objs] drop a wheel / propeller onto a shaft
             _drag = null;
             _orbit = null;
             ReleaseMouseCapture();

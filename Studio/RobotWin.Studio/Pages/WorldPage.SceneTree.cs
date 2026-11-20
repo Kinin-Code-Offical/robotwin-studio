@@ -103,7 +103,7 @@ namespace RobotWin.Studio.Pages
                 WorldObjectKind.Board => "Kart" + (World?.FindDesign(o.DesignId) is { } d ? " · " + d.Package.Schematic.Parts.Count + " parça" : string.Empty),
                 WorldObjectKind.Component => Lib.Find(o.PartId ?? string.Empty)?.Name ?? o.PartId ?? "Parça",
                 WorldObjectKind.Model => "3D model",
-                _ => o.Shape + (string.IsNullOrEmpty(o.Material) ? string.Empty : " · " + o.Material)
+                _ => RobotTwin.CoreSim.Sandbox.ReadyParts.Of(o)?.Name ?? o.Shape + (string.IsNullOrEmpty(o.Material) ? string.Empty : " · " + o.Material)   // [objs]
             };
             if (parent.TryGetValue(o.Id, out var pp) && !string.IsNullOrEmpty(pp.Port)) sub += pp.Port == "horn" ? " · servo koluna takılı" : pp.Port == "shaft" ? " · mile takılı" : " · " + pp.Port;
             if (o.IsStatic) sub += " · sabit";

@@ -18,7 +18,7 @@ namespace RobotWin.Studio.Models3D
     /// Renders every component model into PNG contact sheets (used by
     /// <c>--gallery &lt;folder&gt;</c> for visual checks of the model library).
     /// </summary>
-    public static class ModelGallery
+    public static partial class ModelGallery   // [objs] ready parts and lights in Models3D/ModelGallery.Ready.cs
     {
         private sealed class Item
         {
@@ -217,6 +217,7 @@ namespace RobotWin.Studio.Models3D
                 return i;
             }, false);
             yield return new Item(G, "Bench supply", () => Part("dc-source"), false);
+            foreach (var ready in ReadyItems()) yield return ready;   // [objs]
         }
 
         private static ComponentInstance Wrap(Model3DGroup g) =>

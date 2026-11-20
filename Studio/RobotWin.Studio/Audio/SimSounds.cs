@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Analog;
 using RobotTwin.CoreSim.Analog.Devices;
+using RobotTwin.CoreSim.Mechanics;
+using RobotTwin.CoreSim.Sandbox;
 using RobotWin.Studio.Shell;
 
 namespace RobotWin.Studio.Audio
@@ -11,6 +13,8 @@ namespace RobotWin.Studio.Audio
     /// servos buzz while their gear train moves, active buzzers beep, relays click when
     /// their contacts change over, hot parts sizzle and failing parts pop, bang or spark.
     /// One instance per simulation session; voices are keyed by device id under a prefix.
+    /// [objs] With <see cref="Locate"/> and <see cref="Listener"/> set, every sound is heard
+    /// from where its device is in the 3D world, relative to the camera.
     /// </summary>
     public sealed class SimSounds
     {
@@ -23,6 +27,29 @@ namespace RobotWin.Studio.Audio
         public SimSounds(string prefix)
         {
             _prefix = prefix;
+        }
+
+        /// <summary>[objs] Where a device (or object) is in the world and how fast it moves; null = not placed (centred).</summary>
+        public Func<string, (Vec3 Position, Vec3 Velocity)?>? Locate { get; set; }
+
+        /// <summary>[objs] The ears (3D camera); null = everything centred, as before.</summary>
+        public AudioListener? Listener { get; set; }
+
+        /// <summary>[objs] Device or object id the overheating sizzle comes from.</summary>
+        public string? HotSource { get; set; }
+
+        /// <summary>[objs] How a sound from this device/object reaches the listener.</summary>
+        public SpatialMix MixFor(string? source)
+        {
+            if (source == null || Locate == null || Listener is not { } ear) return SpatialMix.Centre;
+            var at = Locate(source);
+            return at is { } a ? SpatialAudio.Compute(ear, a.Position, a.Velocity) : SpatialMix.Centre;
+        }
+
+        private void Place(string key, string? source)
+        {
+            if (Locate == null || Listener == null) return;
+            Engine.SetSpatial(key, MixFor(source));
         }
 
         private static SoundEngine Engine => SoundEngine.Shared;
@@ -67,6 +94,7 @@ namespace RobotWin.Studio.Audio
                         double load = Math.Min(1, Math.Abs(m.Current) / 0.8);
                         double gain = Math.Min(0.5, 0.12 + 0.35 * Math.Min(1, rpm / 12000)) * (0.7 + 0.3 * load);
                         Engine.SetVoice(key, Timbre.Motor, f, gain, load);
+                        Place(key, d.Id);   // [objs]
                         _active.Add(key);
                         motors++;
                         break;
@@ -80,6 +108,7 @@ namespace RobotWin.Studio.Audio
                         if (!moving) break;
                         double load = Math.Min(1, s.SupplyCurrent / Math.Max(1e-3, s.StallCurrent));
                         Engine.SetVoice(key, Timbre.Gear, (180 + 220 * load) * pitch, 0.18 + 0.2 * load, load);
+                        Place(key, d.Id);   // [objs]
                         _active.Add(key);
                         servos++;
                         break;
@@ -88,6 +117,7 @@ namespace RobotWin.Studio.Audio
                     case Buzzer b when !b.IsFailed && buzzers < 4:
                         if (b.Loudness <= 0) break;
                         Engine.SetVoice(key, Timbre.Square, 2400, 0.25 * b.Loudness);
+                        Place(key, d.Id);   // [objs]
                         _active.Add(key);
                         buzzers++;
                         break;
@@ -95,7 +125,7 @@ namespace RobotWin.Studio.Audio
                     case Relay r:
                     {
                         bool on = r.Energized;
-                        if (_relays.TryGetValue(d.Id, out var was) && was != on) Shot(OneShot.Click, on ? 0.9 : 0.6);
+                        if (_relays.TryGetValue(d.Id, out var was) && was != on) Shot(OneShot.Click, on ? 0.9 : 0.6, d.Id);
                         _relays[d.Id] = on;
                         break;
                     }
@@ -106,6 +136,7 @@ namespace RobotWin.Studio.Audio
             {
                 string key = _prefix + "~sizzle";
                 Engine.SetVoice(key, Timbre.Sizzle, 900, Math.Min(0.35, (hottestC - 110) / 200.0));
+                Place(key, HotSource);   // [objs]
                 _active.Add(key);
             }
 
@@ -120,26 +151,26 @@ namespace RobotWin.Studio.Audio
             string text = message.ToLowerInvariant();
             if (deviceId.StartsWith("cable:", StringComparison.Ordinal) || text.Contains("kablo") || text.Contains("sigorta"))
             {
-                Shot(OneShot.Spark, 0.9);
-                Shot(OneShot.Hiss, 0.5);
+                Shot(OneShot.Spark, 0.9, deviceId);
+                Shot(OneShot.Hiss, 0.5, deviceId);
             }
             else if (device is Capacitor || text.Contains("kondansat") || text.Contains("patla") || text.Contains("dielektrik"))
             {
-                Shot(OneShot.Bang, 1.0);
-                Shot(OneShot.Hiss, 0.6);
+                Shot(OneShot.Bang, 1.0, deviceId);
+                Shot(OneShot.Hiss, 0.6, deviceId);
             }
             else
             {
-                Shot(OneShot.Pop, 0.9);
-                Shot(OneShot.Crackle, 0.5);
+                Shot(OneShot.Pop, 0.9, deviceId);
+                Shot(OneShot.Crackle, 0.5, deviceId);
             }
         }
 
         /// <summary>A mechanical knock (impact of the given strength in g).</summary>
-        public void Impact(double g)
+        public void Impact(double g, string? source = null)
         {
             if (!On) return;
-            Shot(OneShot.Click, Math.Min(1, 0.25 + g / 120));
+            Shot(OneShot.Click, Math.Min(1, 0.25 + g / 120), source);
         }
 
         public void Silence()
@@ -154,13 +185,13 @@ namespace RobotWin.Studio.Audio
             _relays.Clear();
         }
 
-        private void Shot(OneShot kind, double gain)
+        private void Shot(OneShot kind, double gain, string? source = null)
         {
             // Many parts failing in the same instant would otherwise add up to a wall of noise.
             var now = DateTime.UtcNow;
             if ((now - _lastShot).TotalMilliseconds < 25 && kind != OneShot.Hiss && kind != OneShot.Crackle) return;
             _lastShot = now;
-            Engine.Play(kind, gain);
+            Engine.Play(kind, gain, MixFor(source));   // [objs] heard from where it happened
         }
     }
 }

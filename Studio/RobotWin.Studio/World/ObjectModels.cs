@@ -161,6 +161,7 @@ namespace RobotWin.Studio.World
 
         private static ObjectModel BuildBody(WorldObject o)
         {
+            if (ReadyModels.TryBuild(o) is { } ready) return ready;   // [objs] ready wheels, casters, propellers (World/ReadyModels.cs)
             var m = new ObjectModel();
             var c = ParseColor(o.Color, MaterialColor(o.Material));
             double sx = o.SizeX * 1000, sy = o.SizeY * 1000, sz = o.SizeZ * 1000;
@@ -266,6 +267,8 @@ namespace RobotWin.Studio.World
                     var c = m.CollisionBounds;
                     var full = m.Bounds;
                     bool small = c.SizeX * c.SizeY < 0.3 * full.SizeX * full.SizeY;
+                    if (p.TryGetValue("model", out var cm) && cm.Contains("Coreless", StringComparison.OrdinalIgnoreCase)) small = false;   // [objs] its footprint is two 30 mm wires, not body
+
                     double z0 = Math.Min(c.Z, full.Z);
                     m.CollisionBounds = small
                         ? new Rect3D(full.X, full.Y, z0, full.SizeX, full.SizeY, c.Z + c.SizeZ - z0)
