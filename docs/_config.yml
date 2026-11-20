@@ -1,0 +1,11 @@
+title: RobotWin Studio
+description: Devre, PCB, kod, 3D modelleme ve gerçek fizikli açık dünyada robot simülasyonu — kullanım kılavuzu ve belgeler.
+lang: tr
+theme: jekyll-theme-primer
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: false
+exclude:
+  - archive/U1
