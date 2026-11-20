@@ -168,6 +168,50 @@ namespace RobotWin.Studio.Branding
             foreach (var frame in frames) w.Write(frame);
         }
 
+        /// <summary>
+        /// Start-up splash (shown natively by WPF before .NET has loaded the UI): 624 × 386 px,
+        /// width : height = φ, the mark on the golden section, flat near-black like the icon tile.
+        /// </summary>
+        public static BitmapSource RenderSplash()
+        {
+            const double phi = 1.6180339887498949;
+            const int w = 624, h = 386;
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                dc.DrawRectangle(new SolidColorBrush(TileColor), new Pen(new SolidColorBrush(Color.FromRgb(0x32, 0x32, 0x37)), 1), new Rect(0.5, 0.5, w - 1, h - 1));
+                double mark = h / (phi * phi);                  // ≈ 147 px
+                double mx = w / (phi * phi * phi) - mark / 2;   // centre on the minor golden section
+                double my = h / (phi * phi) - mark / 2 + 18;
+                dc.DrawImage(Render((int)mark), new Rect(mx, my, mark, mark));
+                var display = new Typeface(new FontFamily("Segoe UI Variable Display, Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+                var text = new Typeface(new FontFamily("Segoe UI Variable Text, Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+                double tx = mx + mark + mark / phi / phi;
+                var title = new FormattedText("RobotWin Studio", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, display, 34, new SolidColorBrush(Color.FromRgb(0xED, 0xED, 0xEF)), 1.0);
+                dc.DrawText(title, new Point(tx, my + mark / 2 - title.Height + 4));
+                var sub = new FormattedText("Devre · PCB · Kod · Modelle · Montaj · Dünya", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, text, 14, new SolidColorBrush(Color.FromRgb(0xA0, 0xA0, 0xA8)), 1.0);
+                dc.DrawText(sub, new Point(tx + 1, my + mark / 2 + 10));
+                // The design-to-real line: one trace with a pad per stage, in the stage colours.
+                var stages = new[] { 0x5B8DFF, 0x4CC07E, 0xA77BFF, 0xE0B04A, 0xF08A3C, 0x2FC2B0 };
+                double ly = h - h / (phi * phi * phi * phi) - 6, lx0 = 40, lx1 = w - 40;
+                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromRgb(0x32, 0x32, 0x37)), 2), new Point(lx0, ly), new Point(lx1, ly));
+                for (int i = 0; i < stages.Length; i++)
+                {
+                    double x = lx0 + (lx1 - lx0) * i / (stages.Length - 1);
+                    var c = Color.FromRgb((byte)(stages[i] >> 16), (byte)(stages[i] >> 8), (byte)stages[i]);
+                    dc.DrawRoundedRectangle(new SolidColorBrush(TileColor), new Pen(new SolidColorBrush(c), 2), new Rect(x - 7, ly - 7, 14, 14), 4, 4);
+                }
+
+                var ver = new FormattedText("Sürüm 2.0 · yükleniyor…", System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, text, 12, new SolidColorBrush(Color.FromRgb(0x6C, 0x6C, 0x74)), 1.0);
+                dc.DrawText(ver, new Point(lx0 - 2, ly + 16));
+            }
+
+            var bmp = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+            bmp.Render(dv);
+            bmp.Freeze();
+            return bmp;
+        }
+
         public static void Export(string directory)
         {
             Directory.CreateDirectory(directory);
@@ -177,6 +221,7 @@ namespace RobotWin.Studio.Branding
             }
 
             WriteIco(Path.Combine(directory, "robotwin.ico"));
+            File.WriteAllBytes(Path.Combine(directory, "splash.png"), EncodePng(RenderSplash()));
 
             // File-type icons, plus a preview sheet (256 / 48 / 32 / 16 px per type).
             var types = Shell.FileIcons.Extensions;

@@ -157,7 +157,23 @@ namespace RobotWin.Studio.Shell
             {
                 if (_expanded == value) return;
                 _expanded = value;
-                Width = value ? ExpandedWidth : CollapsedWidth;
+                // Slide open / closed (ease-out, 180 ms); the first layout pass jumps straight to the size.
+                double target = value ? ExpandedWidth : CollapsedWidth;
+                if (!IsLoaded || double.IsNaN(Width))
+                {
+                    BeginAnimation(WidthProperty, null);
+                    Width = target;
+                }
+                else
+                {
+                    var slide = new DoubleAnimation(ActualWidth, target, TimeSpan.FromMilliseconds(180)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    slide.Completed += (_, _) =>
+                    {
+                        BeginAnimation(WidthProperty, null);
+                        Width = target;
+                    };
+                    BeginAnimation(WidthProperty, slide);
+                }
                 ApplyMode();
                 ExpandedChanged?.Invoke(this, EventArgs.Empty);
             }

@@ -57,6 +57,7 @@ namespace RobotWin.Studio
         private bool _focusMode;
         private bool _fullScreen;
         private WindowState _stateBeforeFull;
+        private WindowBehavior? _behavior;
 
         private static Workspace W => Workspace.Current;
 
@@ -104,6 +105,12 @@ namespace RobotWin.Studio
 
             StateChanged += (_, _) => OnStateChanged();
             SourceInitialized += (_, _) => ApplyWindowsCorners();
+            _behavior = new WindowBehavior(this, MaxButton);
+            Activated += (_, _) => AppTitle.Opacity = 1;
+            Deactivated += (_, _) => AppTitle.Opacity = 0.55;
+            BuildMenuBar();
+            Bind(Key.OemComma, ModifierKeys.Control, () => Navigate("settings"));
+            SetupTabDrag();
 
             Bind(Key.N, ModifierKeys.Control, () => NewProject());
             Bind(Key.N, ModifierKeys.Control | ModifierKeys.Shift, () => NewWorld());
@@ -937,11 +944,15 @@ namespace RobotWin.Studio
             W.Simulation.Stop();
             _world.StopSimulation();
             foreach (var w in _detached.Values.ToList()) w.Close();
-            AppSettings.Current.WindowMaximized = WindowState == WindowState.Maximized;
-            if (WindowState == WindowState.Normal)
+            AppSettings.Current.WindowMaximized = WindowState == WindowState.Maximized && !_fullScreen;
+            // Normal-state bounds even when closed maximised or minimised, so the next start opens where it was.
+            var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+            if (!bounds.IsEmpty && bounds.Width > 400 && bounds.Height > 300)
             {
-                AppSettings.Current.WindowWidth = Width;
-                AppSettings.Current.WindowHeight = Height;
+                AppSettings.Current.WindowWidth = bounds.Width;
+                AppSettings.Current.WindowHeight = bounds.Height;
+                AppSettings.Current.WindowLeft = bounds.Left;
+                AppSettings.Current.WindowTop = bounds.Top;
             }
 
             AppSettings.Current.Save();
@@ -1096,6 +1107,7 @@ namespace RobotWin.Studio
             if (_fullScreen)
             {
                 _stateBeforeFull = WindowState;
+                if (_behavior != null) _behavior.FullScreen = true;
                 SetFocusMode(true);
                 TitleRow.Height = new GridLength(0);
                 TitleBar.Visibility = Visibility.Collapsed;
@@ -1109,6 +1121,8 @@ namespace RobotWin.Studio
                 TitleRow.Height = new GridLength(42);
                 TitleBar.Visibility = Visibility.Visible;
                 SetFocusMode(false);
+                if (_behavior != null) _behavior.FullScreen = false;
+                WindowState = WindowState.Normal;
                 WindowState = _stateBeforeFull;
                 OnStateChanged();
             }
@@ -1119,6 +1133,12 @@ namespace RobotWin.Studio
             var s = AppSettings.Current;
             if (s.WindowWidth > 400) Width = s.WindowWidth;
             if (s.WindowHeight > 300) Height = s.WindowHeight;
+            if (!double.IsNaN(s.WindowLeft) && !double.IsNaN(s.WindowTop) && WindowBehavior.IsOnScreen(s.WindowLeft, s.WindowTop, Width))
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = s.WindowLeft;
+                Top = s.WindowTop;
+            }
             if (s.WindowMaximized) WindowState = WindowState.Maximized;
             ApplyUiScale(s.UiScale);
             RecentFiles.Limit = Math.Max(3, s.RecentFileCount);
@@ -1184,8 +1204,9 @@ namespace RobotWin.Studio
 
         private void OnStateChanged()
         {
-            // A chrome-less maximised window overhangs the screen by the resize border.
-            Root.Margin = WindowState == WindowState.Maximized && !_fullScreen ? new Thickness(7) : new Thickness(0);
+            // WindowBehavior sizes the maximised window to the monitor's work area, so nothing overhangs.
+            Root.Margin = new Thickness(0);
+            MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Önceki boyuta getir" : "Ekranı kapla (üzerine gelince Windows yerleşim düzenleri)";
             MaxIcon.Data = (Geometry)FindResource(WindowState == WindowState.Maximized ? "I.Restore" : "I.Maximize");
         }
 

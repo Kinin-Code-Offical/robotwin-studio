@@ -680,4 +680,49 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!-- ===================== Menu bar (title bar) ===================== -->
+    <Style x:Key="MenuBar" TargetType="Menu">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource B.TextSecondary}"/>
+        <Setter Property="FontFamily" Value="{StaticResource F.Ui}"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Menu">
+                    <StackPanel Orientation="Horizontal" IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="MenuBar.Top" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource B.TextSecondary}"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid SnapsToDevicePixels="True">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="5" Padding="9,4" Margin="1,0">
+                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                        </Border>
+                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="240">
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource B.Hover}"/>
+                            <Setter Property="Foreground" Value="{StaticResource B.Text}"/>
+                        </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource B.Raised}"/>
+                            <Setter Property="Foreground" Value="{StaticResource B.Text}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

@@ -1149,6 +1149,9 @@ namespace RobotWin.Studio.Pages
 
         private void OnRun(object sender, RoutedEventArgs e) => Run();
 
+        /// <summary>Run / pause / resume the world simulation (menu bar).</summary>
+        public void ToggleRun() => Run();
+
         private void Run()
         {
             var world = World;

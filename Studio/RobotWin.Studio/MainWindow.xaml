@@ -5,7 +5,7 @@
         xmlns:shell="clr-namespace:RobotWin.Studio.Shell"
         Title="RobotWin Studio" Width="1480" Height="900" MinWidth="1080" MinHeight="640"
         WindowStartupLocation="CenterScreen" Background="{StaticResource B.Canvas}"
-        WindowStyle="None" ResizeMode="CanResize"
+        WindowStyle="SingleBorderWindow" ResizeMode="CanResize"
         TextElement.Foreground="{StaticResource B.Text}" FontFamily="{StaticResource F.Ui}" FontSize="13"
         UseLayoutRounding="True">
     <WindowChrome.WindowChrome>
@@ -29,8 +29,9 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                     <Image x:Name="LogoImage" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <TextBlock Text="RobotWin" FontFamily="{StaticResource F.Display}" FontSize="14" Margin="10,0,0,1" VerticalAlignment="Center"/>
-                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="16,0,8,0"/>
+                    <TextBlock x:Name="AppTitle" Text="RobotWin" FontFamily="{StaticResource F.Display}" FontSize="14" Margin="10,0,0,1" VerticalAlignment="Center"/>
+                    <Border x:Name="MenuHost" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0,8,0"/>
                     <StackPanel Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button x:Name="NewButton" Style="{StaticResource Btn.Icon}" ToolTip="Yeni proje veya dünya (Ctrl+N)" Click="OnNewMenu" Width="30" Height="30"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Aç (Ctrl+O)" Click="OnOpen" Width="30" Height="30"><t:Icon Data="{StaticResource I.Folder}" Size="16"/></Button>
@@ -96,7 +97,7 @@
                     <Button Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMinimize" ToolTip="Simge durumuna küçült">
                         <t:Icon Data="{StaticResource I.Minimize}" Size="14"/>
                     </Button>
-                    <Button Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMaximize" ToolTip="Ekranı kapla">
+                    <Button x:Name="MaxButton" Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMaximize" ToolTip="Ekranı kapla (üzerine gelince Windows yerleşim düzenleri)">
                         <t:Icon x:Name="MaxIcon" Data="{StaticResource I.Maximize}" Size="13"/>
                     </Button>
                     <Button x:Name="CloseButton" Width="44" Height="42" Click="OnCloseClick" ToolTip="Kapat">

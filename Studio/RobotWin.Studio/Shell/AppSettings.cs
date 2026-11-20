@@ -92,6 +92,8 @@ namespace RobotWin.Studio.Shell
         public double WindowWidth { get; set; }
         public double WindowHeight { get; set; }
         public bool WindowMaximized { get; set; }
+        public double WindowLeft { get; set; } = double.NaN;
+        public double WindowTop { get; set; } = double.NaN;
 
         private static AppSettings Load()
         {
