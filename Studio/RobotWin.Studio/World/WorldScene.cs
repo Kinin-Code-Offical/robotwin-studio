@@ -668,19 +668,34 @@ namespace RobotWin.Studio.World
             double dt = Math.Min(0.1, (now - _lastFrame).TotalSeconds);
             _lastFrame = now;
             var s = Session;
-            if (s != null && s.State == Simulation.SimState.Running) s.Frame();
-            if (World != null && s != null && s.State != Simulation.SimState.Stopped)
+            if (s != null && s.State == Simulation.SimState.Running)
             {
-                UpdateKinematics();
-                if (Follow) FollowTarget();
-                UpdateLive(dt);
-                RebuildCables();
-                if (Selected != null) RebuildOverlay();
+                using (Shell.Perf.Measure("simülasyon")) s.Frame();
             }
 
-            _effects.Step(dt);
-            _effects.InvalidateVisual();
-            RadioFrame();   // [radio] waves, RF links, controller lightbars
+            if (World != null && s != null && s.State != Simulation.SimState.Stopped)
+            {
+                using (Shell.Perf.Measure("kinematik"))
+                {
+                    UpdateKinematics();
+                    if (Follow) FollowTarget();
+                }
+
+                using (Shell.Perf.Measure("canlı")) UpdateLive(dt);
+                using (Shell.Perf.Measure("kablolar")) RebuildCables();
+                if (Selected != null)
+                {
+                    using (Shell.Perf.Measure("seçim")) RebuildOverlay();
+                }
+            }
+
+            using (Shell.Perf.Measure("efektler"))
+            {
+                _effects.Step(dt);
+                _effects.InvalidateVisual();
+            }
+
+            using (Shell.Perf.Measure("radyo")) RadioFrame();   // [radio] waves, RF links, controller lightbars
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();

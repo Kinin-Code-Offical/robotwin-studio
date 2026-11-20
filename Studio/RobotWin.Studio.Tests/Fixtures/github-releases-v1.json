@@ -1,0 +1,54 @@
+[
+ {
+  "url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/452495532",
+  "assets_url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/452495532/assets",
+  "upload_url": "https://uploads.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/452495532/assets{?name,label}",
+  "html_url": "https://github.com/Kinin-Code-Offical/robotwin-studio/releases/tag/v1.0.0",
+  "id": 452495532,
+  "node_id": "RE_kwDOQtZSF84a-Iis",
+  "tag_name": "v1.0.0",
+  "target_commitish": "3fd2de3c1e10cca311c86613d153959e2e64c4d4",
+  "name": "RobotWin Studio v1.0.0",
+  "draft": false,
+  "immutable": false,
+  "prerelease": false,
+  "created_at": "2026-11-20T09:31:55Z",
+  "updated_at": "2026-11-20T09:35:43Z",
+  "published_at": "2026-11-20T09:32:04Z",
+  "assets": [
+   {
+    "url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/assets/771233708",
+    "id": 771233708,
+    "node_id": "RA_kwDOQtZSF84t-Bes",
+    "name": "RobotWinStudio-Setup-1.0.0-tam.exe",
+    "label": "",
+    "content_type": "application/x-msdos-program",
+    "state": "uploaded",
+    "size": 56055834,
+    "digest": "sha256:f4e58c9af2f9b8ed99e1d0bd0fd07368b7779d9d76e5b6ede2e38f24ec5b78d3",
+    "download_count": 1,
+    "created_at": "2026-11-20T09:34:39Z",
+    "updated_at": "2026-11-20T09:34:42Z",
+    "browser_download_url": "https://github.com/Kinin-Code-Offical/robotwin-studio/releases/download/v1.0.0/RobotWinStudio-Setup-1.0.0-tam.exe"
+   },
+   {
+    "url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/assets/771233728",
+    "id": 771233728,
+    "node_id": "RA_kwDOQtZSF84t-BfA",
+    "name": "RobotWinStudio-Setup-1.0.0.exe",
+    "label": "",
+    "content_type": "application/x-msdos-program",
+    "state": "uploaded",
+    "size": 1776312,
+    "digest": "sha256:73539e9ec6640951b900b1af29a454fde62d59d319e880f641d93edf47ce1d25",
+    "download_count": 1,
+    "created_at": "2026-11-20T09:34:39Z",
+    "updated_at": "2026-11-20T09:34:40Z",
+    "browser_download_url": "https://github.com/Kinin-Code-Offical/robotwin-studio/releases/download/v1.0.0/RobotWinStudio-Setup-1.0.0.exe"
+   }
+  ],
+  "tarball_url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/tarball/v1.0.0",
+  "zipball_url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/zipball/v1.0.0",
+  "body": "## RobotWin Studio v1.0.0 — ilk genel sürüm\r\n\r\nKartlarını tasarla, dünyaya koy, kablola ve hepsini birlikte gerçek fizikle simüle et.\r\n\r\n### Kurulum\r\n1. **RobotWinStudio-Setup-1.0.0-tam.exe** (.NET dahil, en kolayı) veya daha küçük **RobotWinStudio-Setup-1.0.0.exe** dosyasını indirip çalıştırın (yalnızca bu kullanıcı için ya da tüm kullanıcılar için kurulabilir).\r\n2. Uygulama **.NET 9 Desktop Runtime** ister. Bilgisayarda yoksa kurulum sihirbazındaki düğme indirme sayfasını açar.\r\n3. Sessiz kurulum: `RobotWinStudio-Setup-1.0.0.exe /S`. Taşınabilir kurulum: `/PORTABLE /D=klasör`.\r\n\r\n### Neler var\r\n- **Menü ve pencere:** başlık çubuğunda Dosya · Düzen · Görünüm · Simülasyon · Pencere · Yardım menüleri (Alt / F10); Windows'un kendi pencere davranışları (küçült/büyüt animasyonları, Aero Snap, Win+ok tuşları, ekranı kapla düğmesinde Windows 11 yerleşim düzenleri); konum ve boyut hatırlanır; sekmeler sürüklenerek sıralanır; açılış ekranı.\r\n- **Açık dünya:** birden çok kendi tasarladığınız kart, servo, motor, pil, sensör, ekran ve 3D model tek dünyada. Pinler kablolarla, gövdeler mekanik bağlantılarla birleşir. Hepsi tek devre ve tek fizik ortamı olarak simüle edilir: yerçekimi, sürtünme, çarpışma, motor yükü, servo tutma momenti.\r\n- **Tasarımdan gerçeğe hattı:** yeni sol menü. Devre → PCB → Kod → Modelle → Montaj → Dünya bir bakır yol üzerindeki pedler olarak dizilir.\r\n  - Her aşamanın canlı durumu görünür: ERC hataları, yol sayısı, simülasyonun çalıştığı.\r\n  - Ctrl+B genişletir, Ctrl+0…7 aşamalar arasında geçer.\r\n- **Modelle (Blender benzeri 3D modelleme):** kutu, silindir, küre, tüp, delikli plaka, çizimden ekstrüzyon ve döndürme; birleşim, fark ve kesişim işlemleri; düzenleme modunda ekstrüzyon, iç kenar, alt bölme ve yumuşatma.\r\n  - Hazır robot parçaları: 2WD şasi, SG90 braketi, L braket, tekerlek göbeği, vidalı muhafaza kutusu.\r\n  - Kütle ve hacim ölçümü; STL/OBJ/PLY içe ve dışa aktarma.\r\n  - \"Dünyaya gönder\" düğmesi modeli gerçek kütlesiyle dünyaya koyar.\r\n- **Gerçek sensör ölçümü:** HC-SR04 dünyadaki nesnelere ışın atarak gerçekten mesafe ölçer; ışın 3D görünümde çizilir.\r\n- **Sahne ağacı:** dünyadaki her nesne, neyin neye takılı olduğu hiyerarşisiyle (servo koluna takılı kol, motor miline takılı tekerlek) ve durumuyla birlikte görünür.\r\n- **Gerçekçi 3D modeller:** Arduino Uno/Nano, ESP32, SG90/MG996R servo, TT motor, pil paketleri, ekranlar ve sensörler gerçek ölçüleriyle modellenir.\r\n  - Isınma, yanık görünümü, yanan LED'ler ve canlı OLED/LCD ekranlar.\r\n- **Simülasyon sesleri:** motor uğultusu, servo dişli sesi, buzzer, röle tıkırtısı. Yanan parça patlar, kıvılcım çıkarır, aşırı ısınan parça cızırdar.\r\n- **Radyo, kumanda ve USB:**\r\n  - BLE, Wi-Fi ve IR yayılımı (mesafe ve engeller).\r\n  - PS5/DS4/Xbox kumandası Bluepad32 ile ESP32'ye sanal olarak eşleşir; gerçek kumanda USB veya Bluetooth üzerinden okunur.\r\n  - USB kablosunu takıp çıkarmak kartı açıp kapatır ve seri bağlantıyı keser.\r\n  - \"Kumandalı araba\" şablonu hazır gelir.\r\n- **Şema editörü (KiCad düzeyi):** sağ tık menüleri, klavye kısayolları, ERC, BOM, bul/değiştir, kopyala/yapıştır, PCB'de göster.\r\n- **PCB:** katmanlar, bakır dolgu bölgeleri, etkileşimli yol çizimi, DRC, ayak izi editörü ve üretim çıktıları.\r\n- **Ölçü aletleri:**\r\n  - Osiloskop, multimetre ve tezgah güç kaynağı.\r\n  - Parça toleransları, Monte Carlo analizi ve arıza tespiti.\r\n  - Yanma, duman ve kıvılcım efektleri.\r\n- **Kod:** Arduino (ATmega328P emülasyonu) ve ESP32 çizimleri kartın içinde gerçek zamanlı çalışır.\r\n- **Çok sekmeli çalışma:** dünyalar ve devreler ayrı sekmelerde açılır; bölünmüş görünüm, pencereyi ayırma, odak modu, komut paleti (Ctrl+K), otomatik yedekleme.\r\n- **Kendi dosya türleri:** .rwproj, .rwworld, .rwpart, .rwlib, .rwrec — her birinin kendi simgesi var ve çift tıklayınca uygulamada açılır.\r\n\r\n### Bilinen sınırlar\r\n- Radyo yayılımı gerçek donanım kullanmadan, modelle hesaplanır.\r\n- DualSense/DS4 HID okuma kodu fiziksel bir kumandayla henüz denenmedi.\r\n- Kurulum programı imzasız. Windows SmartScreen uyarı verirse \"Ek bilgi → Yine de çalıştır\" ile devam edin.\r\n\r\nSHA-256 (RobotWinStudio-Setup-1.0.0-tam.exe): `f4e58c9af2f9b8ed99e1d0bd0fd07368b7779d9d76e5b6ede2e38f24ec5b78d3`\r\nSHA-256 (RobotWinStudio-Setup-1.0.0.exe): `73539e9ec6640951b900b1af29a454fde62d59d319e880f641d93edf47ce1d25`\r\n"
+ }
+]

@@ -47,6 +47,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Particle effects (smoke, sparks, fire) in 2D and 3D.</summary>
         public bool Effects { get; set; } = true;
 
+        /// <summary>FPS / frame-time overlay (Ctrl+Shift+F).</summary>
+        public bool ShowPerf { get; set; }
+
         /// <summary>Navigation rail shows stage names and live status (Ctrl+B).</summary>
         public bool NavExpanded { get; set; }
 
@@ -86,6 +89,17 @@ namespace RobotWin.Studio.Shell
 
         /// <summary>vcvars64.bat override for ESP32 builds (empty = find Visual Studio automatically).</summary>
         public string VcVarsPath { get; set; } = string.Empty;
+
+        // ---------------------------------------------------------------- updates
+
+        /// <summary>Ask GitHub for a new version at start-up (at most once a day).</summary>
+        public bool AutoCheckUpdates { get; set; } = true;
+
+        /// <summary>Offer pre-releases (beta, rc) too.</summary>
+        public bool IncludePrereleases { get; set; }
+
+        /// <summary>"Bu sürümü bir daha sorma": this version is not offered (a newer one is).</summary>
+        public string SkippedUpdateVersion { get; set; } = string.Empty;
 
         // ---------------------------------------------------------------- window
 

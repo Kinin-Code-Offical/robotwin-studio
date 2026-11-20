@@ -196,6 +196,8 @@ namespace RobotWin.Studio
 
             m.Items.Add(scale);
             m.Items.Add(new Separator());
+            m.Items.Add(Check("Performans göstergesi (FPS)", "Ctrl+Shift+F", _perf.Visibility == Visibility.Visible, ShowPerf));
+            m.Items.Add(new Separator());
             m.Items.Add(Check("Odak modu", null, _focusMode, v => SetFocusMode(v)));
             m.Items.Add(Check("Tam ekran", "F11", _fullScreen, _ => ToggleFullScreen()));
         }
@@ -282,14 +284,19 @@ namespace RobotWin.Studio
 
         private void HelpMenu(MenuItem m)
         {
-            m.Items.Add(Item("Klavye kısayolları", "Ctrl+K", OpenPalette));
+            m.Items.Add(Item("_Yardım ve belgeler", "F1", () => ShowHelp(null)));
+            m.Items.Add(Item("Klavye kısayolları", null, () => ShowHelp("shortcuts")));
+            m.Items.Add(Item("Komut paleti", "Ctrl+K", OpenPalette));
+            m.Items.Add(Item("Haberler", null, () => ShowHelp("news")));
             m.Items.Add(Item("Başlangıç sayfası", "Ctrl+0", () => Navigate("home")));
             m.Items.Add(new Separator());
+            m.Items.Add(Item("Güncellemeleri denetle…", null, CheckForUpdates));
+            m.Items.Add(Item("Eski sürümler…", null, () => ShowHelp("versions")));
+            m.Items.Add(new Separator());
             m.Items.Add(Item("GitHub sayfası", null, () => OpenUrl(RepoUrl)));
-            m.Items.Add(Item("Sürüm notları", null, () => OpenUrl(RepoUrl + "/releases")));
             m.Items.Add(Item("Sorun bildir…", null, () => OpenUrl(RepoUrl + "/issues/new")));
             m.Items.Add(new Separator());
-            m.Items.Add(Item("Hakkında", null, ShowAbout));
+            m.Items.Add(Item("Hakkında", null, () => ShowHelp("about")));
         }
 
         private static void OpenUrl(string url)
@@ -303,12 +310,5 @@ namespace RobotWin.Studio
             }
         }
 
-        private void ShowAbout()
-        {
-            var v = typeof(MainWindow).Assembly.GetName().Version;
-            MessageBox.Show(this,
-                $"RobotWin Studio {v?.ToString(3) ?? "2"}\n\nDevre, PCB, kod, 3D modelleme ve gerçek fizikli açık dünyada robot simülasyonu.\n\n.NET {Environment.Version} · {(Environment.Is64BitProcess ? "64" : "32")} bit\n{RepoUrl}",
-                "Hakkında", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
     }
 }

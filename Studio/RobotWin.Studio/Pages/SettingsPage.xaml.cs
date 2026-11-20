@@ -105,6 +105,42 @@ namespace RobotWin.Studio.Pages
                     msvc ? "Visual Studio C++ araçları bulundu (ESP32 çizimleri yerel olarak derlenir)." : "Bulunamadı. Visual Studio Build Tools 'C++ ile masaüstü geliştirme' gerekir (ESP32)."));
             });
 
+            Card("Güncellemeler", "Yeni sürümler GitHub'dan denetlenir; kurulum tek tıkla yapılır, projeleriniz ve ayarlarınız korunur.", c =>
+            {
+                var um = Updates.UpdateManager.Current;
+                c.Children.Add(Toggle("Açılışta yeni sürümü denetle", S.AutoCheckUpdates, v => S.AutoCheckUpdates = v, "Günde en çok bir kez, uygulama açıldıktan birkaç saniye sonra arka planda sorulur."));
+                c.Children.Add(Toggle("Ön sürümleri de öner (beta, rc)", S.IncludePrereleases, v =>
+                {
+                    S.IncludePrereleases = v;
+                    um.Refresh();
+                }));
+                string skipped = string.IsNullOrEmpty(S.SkippedUpdateVersion) ? string.Empty : $" · atlanan sürüm: {S.SkippedUpdateVersion}";
+                c.Children.Add(new TextBlock { Text = $"Yüklü sürüm {um.CurrentVersion} · {um.Install.ModeText}{skipped}", Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 0, 0, 10) });
+                var row = new StackPanel { Orientation = Orientation.Horizontal };
+                var check = new Button { Content = "Güncellemeleri denetle" };
+                check.Click += (_, _) =>
+                {
+                    (Window.GetWindow(this) as MainWindow)?.ShowHelp("updates");
+                    _ = um.CheckAsync();
+                };
+                row.Children.Add(check);
+                var older = new Button { Content = "Eski sürümler", Style = (Style)FindResource("Btn.Ghost"), Margin = new Thickness(8, 0, 0, 0) };
+                older.Click += (_, _) => (Window.GetWindow(this) as MainWindow)?.ShowHelp("versions");
+                row.Children.Add(older);
+                if (!string.IsNullOrEmpty(S.SkippedUpdateVersion))
+                {
+                    var unskip = new Button { Content = "Atlanan sürümü yine öner", Style = (Style)FindResource("Btn.Ghost"), Margin = new Thickness(8, 0, 0, 0) };
+                    unskip.Click += (_, _) =>
+                    {
+                        um.ClearSkip();
+                        Build();
+                    };
+                    row.Children.Add(unskip);
+                }
+
+                c.Children.Add(row);
+            });
+
             Card("Klavye kısayolları", "Tüm sayfalarda geçerli tuşlar.", c =>
             {
                 foreach (var (keys, what) in new[]

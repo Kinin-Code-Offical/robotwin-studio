@@ -21,6 +21,7 @@
 #include <shellapi.h>
 #include <compressapi.h>
 #include <urlmon.h>
+#include <tlhelp32.h>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -244,6 +245,78 @@ static void RunAndWait(const std::wstring& exe, const std::wstring& args, bool h
     }
 }
 
+static std::wstring NormPath(const fs::path& p)
+{
+    std::error_code ec;
+    fs::path n = fs::weakly_canonical(p, ec);
+    return (ec ? p.lexically_normal() : n).wstring();
+}
+
+// Waits until no RobotWin Studio started from the target folder is running. A running copy is asked to
+// close (WM_CLOSE: it offers to save open work first); the in-app updater has already exited by itself.
+static bool CloseRunningCopies(const std::wstring& dir, DWORD timeoutMs)
+{
+    std::wstring want = NormPath(fs::path(dir) / ExeName);
+    DWORD start = GetTickCount();
+    bool asked = false;
+    for (;;)
+    {
+        std::vector<DWORD> pids;
+        HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snap == INVALID_HANDLE_VALUE) return true;
+        PROCESSENTRY32W pe{};
+        pe.dwSize = sizeof(pe);
+        for (BOOL ok = Process32FirstW(snap, &pe); ok; ok = Process32NextW(snap, &pe))
+        {
+            if (_wcsicmp(pe.szExeFile, ExeName) != 0 || pe.th32ProcessID == GetCurrentProcessId()) continue;
+            HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pe.th32ProcessID);
+            if (!h) continue;
+            wchar_t path[MAX_PATH * 2];
+            DWORD n = (DWORD)std::size(path);
+            if (QueryFullProcessImageNameW(h, 0, path, &n) && _wcsicmp(NormPath(path).c_str(), want.c_str()) == 0) pids.push_back(pe.th32ProcessID);
+            CloseHandle(h);
+        }
+
+        CloseHandle(snap);
+        if (pids.empty()) return true;
+        if (GetTickCount() - start > timeoutMs) return false;
+        if (!asked)
+        {
+            for (DWORD pid : pids)
+            {
+                EnumWindows([](HWND w, LPARAM p) -> BOOL
+                {
+                    DWORD owner = 0;
+                    GetWindowThreadProcessId(w, &owner);
+                    if (owner == (DWORD)p && IsWindowVisible(w) && !GetWindow(w, GW_OWNER)) PostMessageW(w, WM_CLOSE, 0, 0);
+                    return TRUE;
+                }, (LPARAM)pid);
+            }
+
+            asked = true;
+        }
+
+        Status(L"RobotWin Studio'nun kapanması bekleniyor…", 2);
+        Sleep(250);
+    }
+}
+
+// Starts the installed app. When this setup runs elevated (all-users install), the app is started through
+// Explorer so it runs as the signed-in user, not as administrator.
+static void LaunchApp(const std::wstring& dir)
+{
+    std::wstring exe = (fs::path(dir) / ExeName).wstring();
+    if (IsUserAnAdmin())
+    {
+        std::wstring quoted = L"\"" + exe + L"\"";
+        ShellExecuteW(nullptr, L"open", L"explorer.exe", quoted.c_str(), nullptr, SW_SHOWNORMAL);
+    }
+    else
+    {
+        ShellExecuteW(nullptr, L"open", exe.c_str(), nullptr, dir.c_str(), SW_SHOWNORMAL);
+    }
+}
+
 static std::wstring Install(const Options& o)
 {
     std::vector<char> self;
@@ -258,6 +331,7 @@ static std::wstring Install(const Options& o)
 
     // Close a running copy first.
     Status(L"Çalışan RobotWin Studio aranıyor…", 2);
+    if (!CloseRunningCopies(o.dir, 60000)) return L"RobotWin Studio hâlâ açık. Uygulamayı kapatıp kurulumu yeniden başlatın.";
     std::error_code ec;
     fs::create_directories(o.dir, ec);
     if (ec) return L"Klasör oluşturulamadı: " + o.dir;
@@ -559,7 +633,7 @@ static LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l)
                 return 0;
             }
 
-            if (g_opt.launch) ShellExecuteW(nullptr, L"open", (fs::path(g_opt.dir) / ExeName).c_str(), nullptr, g_opt.dir.c_str(), SW_SHOWNORMAL);
+            if (g_opt.launch) LaunchApp(g_opt.dir);
             else MessageBoxW(h, L"RobotWin Studio kuruldu. Başlat menüsünden açabilirsiniz.", AppName, MB_ICONINFORMATION);
             DestroyWindow(h);
             return 0;
@@ -622,8 +696,14 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show)
         g_opt.launch = HasArg(argc, argv, L"/LAUNCH");
         g_opt.portable = HasArg(argc, argv, L"/PORTABLE");
         std::wstring err = Install(g_opt);
-        if (!err.empty()) return 1;
-        if (g_opt.launch) ShellExecuteW(nullptr, L"open", (fs::path(g_opt.dir) / ExeName).c_str(), nullptr, g_opt.dir.c_str(), SW_SHOWNORMAL);
+        if (!err.empty())
+        {
+            // /LAUNCH means someone is waiting for the app (the in-app updater): say why it did not come back.
+            if (g_opt.launch) MessageBoxW(nullptr, (L"RobotWin Studio güncellenemedi.\n\n" + err).c_str(), L"RobotWin Studio Kurulum", MB_ICONERROR);
+            return 1;
+        }
+
+        if (g_opt.launch) LaunchApp(g_opt.dir);
         return 0;
     }
 

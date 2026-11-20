@@ -1,0 +1,39 @@
+[
+ {
+  "url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/452477897",
+  "assets_url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/452477897/assets",
+  "upload_url": "https://uploads.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/452477897/assets{?name,label}",
+  "html_url": "https://github.com/Kinin-Code-Offical/robotwin-studio/releases/tag/v2.0.0",
+  "id": 452477897,
+  "node_id": "RE_kwDOQtZSF84a-EPJ",
+  "tag_name": "v2.0.0",
+  "target_commitish": "robotwin-studio-2-dunya",
+  "name": "RobotWin Studio 2.0 — Açık dünya",
+  "draft": false,
+  "immutable": false,
+  "prerelease": false,
+  "created_at": "2026-11-20T09:13:15Z",
+  "updated_at": "2026-11-20T09:13:35Z",
+  "published_at": "2026-11-20T09:13:27Z",
+  "assets": [
+   {
+    "url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/releases/assets/771171821",
+    "id": 771171821,
+    "node_id": "RA_kwDOQtZSF84t9yXt",
+    "name": "RobotWinStudio-Setup-2.0.0.exe",
+    "label": "",
+    "content_type": "application/octet-stream",
+    "state": "uploaded",
+    "size": 1745344,
+    "digest": "sha256:ca21592785de7f9c3ef39c4506b800e5f997499f36d2d621f3e3760ae4ec0803",
+    "download_count": 1,
+    "created_at": "2026-11-20T09:13:32Z",
+    "updated_at": "2026-11-20T09:13:35Z",
+    "browser_download_url": "https://github.com/Kinin-Code-Offical/robotwin-studio/releases/download/v2.0.0/RobotWinStudio-Setup-2.0.0.exe"
+   }
+  ],
+  "tarball_url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/tarball/v2.0.0",
+  "zipball_url": "https://api.github.com/repos/Kinin-Code-Offical/robotwin-studio/zipball/v2.0.0",
+  "body": "## RobotWin Studio 2.0 — Açık dünya\n\nKartlarını tasarla, dünyaya koy, kablola ve hepsini birlikte gerçek fizikle simüle et.\n\n### Kurulum\n1. **RobotWinStudio-Setup-2.0.0.exe** dosyasını indirip çalıştırın (yalnızca bu kullanıcı için ya da tüm kullanıcılar için kurulabilir).\n2. Uygulama **.NET 9 Desktop Runtime** ister. Bilgisayarda yoksa kurulum sihirbazındaki düğme indirme sayfasını açar.\n3. Sessiz kurulum: `RobotWinStudio-Setup-2.0.0.exe /S`. Taşınabilir kurulum: `/PORTABLE /D=klasör`.\n\n### Neler var\n- **Açık dünya:** birden çok kendi tasarladığınız kart, servo, motor, pil, sensör, ekran ve 3D model tek dünyada. Pinler kablolarla, gövdeler mekanik bağlantılarla birleşir. Hepsi tek devre ve tek fizik ortamı olarak simüle edilir: yerçekimi, sürtünme, çarpışma, motor yükü, servo tutma momenti.\n- **Tasarımdan gerçeğe hattı:** yeni sol menü. Devre → PCB → Kod → Modelle → Montaj → Dünya bir bakır yol üzerindeki pedler olarak dizilir.\n  - Her aşamanın canlı durumu görünür: ERC hataları, yol sayısı, simülasyonun çalıştığı.\n  - Ctrl+B genişletir, Ctrl+0…7 aşamalar arasında geçer.\n- **Modelle (Blender benzeri 3D modelleme):** kutu, silindir, küre, tüp, delikli plaka, çizimden ekstrüzyon ve döndürme; birleşim, fark ve kesişim işlemleri; düzenleme modunda ekstrüzyon, iç kenar, alt bölme ve yumuşatma.\n  - Hazır robot parçaları: 2WD şasi, SG90 braketi, L braket, tekerlek göbeği, vidalı muhafaza kutusu.\n  - Kütle ve hacim ölçümü; STL/OBJ/PLY içe ve dışa aktarma.\n  - \"Dünyaya gönder\" düğmesi modeli gerçek kütlesiyle dünyaya koyar.\n- **Gerçek sensör ölçümü:** HC-SR04 dünyadaki nesnelere ışın atarak gerçekten mesafe ölçer; ışın 3D görünümde çizilir.\n- **Sahne ağacı:** dünyadaki her nesne, neyin neye takılı olduğu hiyerarşisiyle (servo koluna takılı kol, motor miline takılı tekerlek) ve durumuyla birlikte görünür.\n- **Gerçekçi 3D modeller:** Arduino Uno/Nano, ESP32, SG90/MG996R servo, TT motor, pil paketleri, ekranlar ve sensörler gerçek ölçüleriyle modellenir.\n  - Isınma, yanık görünümü, yanan LED'ler ve canlı OLED/LCD ekranlar.\n- **Simülasyon sesleri:** motor uğultusu, servo dişli sesi, buzzer, röle tıkırtısı. Yanan parça patlar, kıvılcım çıkarır, aşırı ısınan parça cızırdar.\n- **Radyo, kumanda ve USB:**\n  - BLE, Wi-Fi ve IR yayılımı (mesafe ve engeller).\n  - PS5/DS4/Xbox kumandası Bluepad32 ile ESP32'ye sanal olarak eşleşir; gerçek kumanda USB veya Bluetooth üzerinden okunur.\n  - USB kablosunu takıp çıkarmak kartı açıp kapatır ve seri bağlantıyı keser.\n  - \"Kumandalı araba\" şablonu hazır gelir.\n- **Şema editörü (KiCad düzeyi):** sağ tık menüleri, klavye kısayolları, ERC, BOM, bul/değiştir, kopyala/yapıştır, PCB'de göster.\n- **PCB:** katmanlar, bakır dolgu bölgeleri, etkileşimli yol çizimi, DRC, ayak izi editörü ve üretim çıktıları.\n- **Ölçü aletleri:**\n  - Osiloskop, multimetre ve tezgah güç kaynağı.\n  - Parça toleransları, Monte Carlo analizi ve arıza tespiti.\n  - Yanma, duman ve kıvılcım efektleri.\n- **Kod:** Arduino (ATmega328P emülasyonu) ve ESP32 çizimleri kartın içinde gerçek zamanlı çalışır.\n- **Çok sekmeli çalışma:** dünyalar ve devreler ayrı sekmelerde açılır; bölünmüş görünüm, pencereyi ayırma, odak modu, komut paleti (Ctrl+K), otomatik yedekleme.\n- **Kendi dosya türleri:** .rwproj, .rwworld, .rwpart, .rwlib, .rwrec — her birinin kendi simgesi var ve çift tıklayınca uygulamada açılır.\n\n### Bilinen sınırlar\n- Radyo yayılımı gerçek donanım kullanmadan, modelle hesaplanır.\n- DualSense/DS4 HID okuma kodu fiziksel bir kumandayla henüz denenmedi.\n- Kurulum programı imzasız. Windows SmartScreen uyarı verirse \"Ek bilgi → Yine de çalıştır\" ile devam edin.\n\n\nSHA-256 (RobotWinStudio-Setup-2.0.0.exe): `ca21592785de7f9c3ef39c4506b800e5f997499f36d2d621f3e3760ae4ec0803`\n"
+ }
+]

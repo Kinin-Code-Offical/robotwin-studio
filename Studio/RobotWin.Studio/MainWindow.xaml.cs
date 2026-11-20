@@ -58,6 +58,20 @@ namespace RobotWin.Studio
         private bool _fullScreen;
         private WindowState _stateBeforeFull;
         private WindowBehavior? _behavior;
+        private readonly PerfOverlay _perf = new PerfOverlay();
+
+        /// <summary>--bench: run / stop the active world.</summary>
+        public void RunWorldForBench() => _world.ToggleRun();
+
+        public void StopWorldForBench() => _world.StopSimulation();
+
+        /// <summary>FPS / frame-time overlay (Görünüm → Performans göstergesi, Ctrl+Shift+F).</summary>
+        public void ShowPerf(bool on)
+        {
+            _perf.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            AppSettings.Current.ShowPerf = on;
+            AppSettings.Current.Save();
+        }
 
         private static Workspace W => Workspace.Current;
 
@@ -109,6 +123,12 @@ namespace RobotWin.Studio
             Activated += (_, _) => AppTitle.Opacity = 1;
             Deactivated += (_, _) => AppTitle.Opacity = 0.55;
             BuildMenuBar();
+            Perf.Start();
+            Grid.SetRowSpan(_perf, 3);
+            Panel.SetZIndex(_perf, 900);
+            Root.Children.Add(_perf);
+            _perf.Visibility = AppSettings.Current.ShowPerf ? Visibility.Visible : Visibility.Collapsed;
+            Bind(Key.F, ModifierKeys.Control | ModifierKeys.Shift, () => ShowPerf(_perf.Visibility != Visibility.Visible));
             Bind(Key.OemComma, ModifierKeys.Control, () => Navigate("settings"));
             SetupTabDrag();
 
@@ -138,6 +158,7 @@ namespace RobotWin.Studio
             Bind(Key.P, ModifierKeys.Control | ModifierKeys.Shift, OpenPalette);
             ApplyStartupSettings();
             SetupRail();
+            SetupHelp();
             AppSettings.Changed += (_, _) => ApplyUiScale(AppSettings.Current.UiScale);
             _autosave.Tick += (_, _) => Autosave();
             _autosave.Start();
@@ -184,6 +205,7 @@ namespace RobotWin.Studio
             yield return new PaletteCommand(view, "Bu sayfayı ayrı pencereye al", () => Detach(_current));
             yield return new PaletteCommand(view, "Odak modu", () => SetFocusMode(!_focusMode));
             yield return new PaletteCommand(view, "Tam ekran", ToggleFullScreen, "F11");
+            foreach (var c in HelpPaletteCommands()) yield return c;
             foreach (var (label, scale) in new[] { ("Arayüz ölçeği %90", 0.9), ("Arayüz ölçeği %100", 1.0), ("Arayüz ölçeği %125", 1.25) })
             {
                 double sc = scale;
@@ -628,6 +650,7 @@ namespace RobotWin.Studio
 
             if (page == "code") _code.SnapshotBuildAndRun(fault);
             if (page == "world") _world.PrepareSnapshot(fault, simulate);
+            if (page == "help") _help?.PrepareSnapshot(fault);
             if (page == "assembly" && simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
             {
                 _assembly.PrepareSnapshot(secs, fault);

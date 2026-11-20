@@ -21,6 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- In-app help (Yardım, F1): the Turkish user guide, its pictures and the news fallback, copied to Docs\. -->
+    <Content Include="..\..\docs\kullanim\**\*" LinkBase="Docs\kullanim" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <Content Include="..\..\docs\images\**\*" LinkBase="Docs\images" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <Content Include="..\..\docs\news.json" Link="Docs\news.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\CoreSim\src\RobotTwin.CoreSim\RobotTwin.CoreSim.csproj" />
   </ItemGroup>
 

@@ -20,6 +20,7 @@
                     <Button Content="Aç…" Padding="16,7" Margin="8,0,0,0" Click="OnOpen"/>
                 </StackPanel>
                 <TextBlock x:Name="Facts" Style="{StaticResource Text.Caption}" Margin="0,20,0,0" TextWrapping="Wrap"/>
+                <ContentControl x:Name="UpdateHost" Focusable="False"/>
 
                 <TextBlock Text="Dünyalar" Style="{StaticResource Text.Overline}" Margin="0,48,0,6"/>
                 <Border BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
@@ -33,6 +34,7 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Margin="0,88,0,0">
+                <ContentControl x:Name="NewsHost" Focusable="False"/>
                 <TextBlock x:Name="RecentTitle" Text="Son açılanlar" Style="{StaticResource Text.Overline}"/>
                 <StackPanel x:Name="RecentList"/>
                 <TextBlock x:Name="RecentEmpty" Text="Henüz kaydedilmiş bir proje yok." Style="{StaticResource Text.Caption}"/>

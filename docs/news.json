@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "2026-11-hosgeldiniz",
+      "date": "2026-11-20",
+      "title": "RobotWin Studio'ya hoş geldiniz",
+      "body": "Uygulamanın içinde artık **Yardım** sayfası (F1), **Haberler** ve **otomatik güncelleme** var.\n\n- Kullanım kılavuzu: *Yardım → Yardım ve belgeler* veya sol menüdeki **Yardım**.\n- Yeni bir sürüm çıktığında başlangıç sayfasında ve durum çubuğunda haber verilir; **Şimdi güncelle** ile tek tıkla kurulur, projeleriniz ve ayarlarınız korunur.\n- Önceki sürümlere *Yardım → Eski sürümler* bölümünden ulaşabilirsiniz.\n\nSorun ya da öneriniz varsa GitHub'da bildirebilirsiniz.",
+      "link": "https://github.com/Kinin-Code-Offical/robotwin-studio/issues"
+    }
+  ]
+}

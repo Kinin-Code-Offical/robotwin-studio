@@ -80,6 +80,12 @@ namespace RobotWin.Studio
             var window = new MainWindow();
             MainWindow = window;
 
+            if (Arg("--bench") is { } benchPath)
+            {
+                RunBench(window, benchPath, Arg("--bench-seconds"));
+                return;
+            }
+
             if (Arg("--snapshot") is { } snapshotPath)
             {
                 if (Arg("--page") == "model")
@@ -200,6 +206,66 @@ namespace RobotWin.Studio
                 using (var fs = File.Create(path)) enc.Save(fs);
                 Workspace.Current.Simulation.Stop();
                 window.ForceClose();
+            };
+            timer.Start();
+        }
+
+        /// <summary>
+        /// Frame-rate benchmark: every world template runs live for a few seconds in a real
+        /// 1600×960 window (off screen) and the frame times and per-subsystem costs are written out.
+        /// </summary>
+        private void RunBench(MainWindow window, string path, string? seconds)
+        {
+            double secs = seconds != null ? double.Parse(seconds, CultureInfo.InvariantCulture) : 4;
+            window.Width = 1600;
+            window.Height = 960;
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = -1800;
+            window.Top = 0;
+            window.ShowActivated = false;
+            window.ShowInTaskbar = false;
+            window.Show();
+            Perf.Start();
+            var templates = Examples.WorldTemplates.All.ToList();
+            var log = new StringBuilder($"RobotWin Studio kare hızı ölçümü · {DateTime.Now:yyyy-MM-dd HH:mm} · {secs:0.#} s/şablon · 1600×960{Environment.NewLine}");
+            int index = -1;
+            var phaseStart = DateTime.Now;
+            int phase = 0;   // 0 = load, 1 = idle, 2 = running
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            timer.Tick += (_, _) =>
+            {
+                double elapsed = (DateTime.Now - phaseStart).TotalSeconds;
+                switch (phase)
+                {
+                    case 0:
+                        index++;
+                        if (index >= templates.Count)
+                        {
+                            timer.Stop();
+                            File.WriteAllText(path, log.ToString());
+                            window.ForceClose();
+                            return;
+                        }
+
+                        window.NewWorld(templates[index].Build());
+                        window.Navigate("world");
+                        phase = 1;
+                        phaseStart = DateTime.Now;
+                        Perf.BeginRecording();
+                        break;
+                    case 1 when elapsed > 1.5:
+                        log.AppendLine($"{templates[index].Id,-14} durgun     {Perf.EndRecording()}");
+                        window.RunWorldForBench();
+                        phase = 2;
+                        phaseStart = DateTime.Now;
+                        Perf.BeginRecording();
+                        break;
+                    case 2 when elapsed > secs:
+                        log.AppendLine($"{templates[index].Id,-14} çalışırken {Perf.EndRecording()}");
+                        window.StopWorldForBench();
+                        phase = 0;
+                        break;
+                }
             };
             timer.Start();
         }

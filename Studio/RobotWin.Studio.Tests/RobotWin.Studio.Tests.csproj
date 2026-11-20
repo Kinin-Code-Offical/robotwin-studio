@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Unit tests for the WPF-free logic of the studio (updater, news, Markdown, help search).
+       The sources are linked, not referenced, so these tests run without WPF and prove the
+       logic has no UI dependency. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RobotWin.Studio\Updates\UpdateCore.cs" Link="Linked\UpdateCore.cs" />
+    <Compile Include="..\RobotWin.Studio\Help\Markdown.cs" Link="Linked\Markdown.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\docs\news.json" Link="Fixtures\news.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

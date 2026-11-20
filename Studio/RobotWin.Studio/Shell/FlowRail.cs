@@ -134,6 +134,7 @@ namespace RobotWin.Studio.Shell
             var tools = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
             tools.Children.Add(Tool("library", "Kütüphane", "I.Library", "Parçalar, modeller, ayak izleri (Ctrl+7)"));
             tools.Children.Add(Tool("settings", "Ayarlar", "I.Settings", "Uygulama ayarları"));
+            tools.Children.Add(Tool("help", "Yardım", "I.Help", "Kullanım kılavuzu, haberler ve güncellemeler (F1)"));
             tools.Children.Add(ExpandToggle());
             SetRow(tools, 2);
             Children.Add(tools);
@@ -316,6 +317,34 @@ namespace RobotWin.Studio.Shell
             host.MouseLeftButtonUp += (_, _) => Navigate?.Invoke(key);
             _tools.Add((host, tb, key));
             return host;
+        }
+
+        private readonly Dictionary<string, Ellipse> _toolBadges = new Dictionary<string, Ellipse>();
+
+        /// <summary>A small accent dot on a tool (e.g. Yardım: an update or unread news).</summary>
+        public void SetToolBadge(string key, bool on)
+        {
+            if (!_toolBadges.TryGetValue(key, out var dot))
+            {
+                var host = _tools.Find(t => t.Key == key).Host;
+                if (host == null) return;
+                dot = new Ellipse
+                {
+                    Width = 8,
+                    Height = 8,
+                    Fill = Res<Brush>("B.Accent"),
+                    Stroke = Res<Brush>("B.Canvas"),
+                    StrokeThickness = 1.5,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(Cx - 8 + 2, -14, 0, 0),
+                    IsHitTestVisible = false
+                };
+                host.Children.Add(dot);
+                _toolBadges[key] = dot;
+            }
+
+            dot.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private TextBlock? _toggleLabel;

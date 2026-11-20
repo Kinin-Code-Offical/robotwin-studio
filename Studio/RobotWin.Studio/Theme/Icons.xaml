@@ -33,6 +33,7 @@
     <Geometry x:Key="I.Meter">M4,15 A8,8 0 0 1 20,15 M12,15 L16,9 M4,19 H20</Geometry>
     <Geometry x:Key="I.Warning">M12,4 L21,20 H3 Z M12,10 V14 M12,17 V17.01</Geometry>
     <Geometry x:Key="I.Info">M12,3 A9,9 0 1 1 11.99,3 M12,11 V16.5 M12,7.6 V7.61</Geometry>
+    <Geometry x:Key="I.Help">M12,3 A9,9 0 1 1 11.99,3 M9.6,9.4 A2.5,2.5 0 1 1 12,12 V13.6 M12,16.9 V16.91</Geometry>
     <Geometry x:Key="I.Close">M6.5,6.5 L17.5,17.5 M17.5,6.5 L6.5,17.5</Geometry>
     <Geometry x:Key="I.Minimize">M6,12 H18</Geometry>
     <Geometry x:Key="I.Maximize">M6.5,6.5 H17.5 V17.5 H6.5 Z</Geometry>
