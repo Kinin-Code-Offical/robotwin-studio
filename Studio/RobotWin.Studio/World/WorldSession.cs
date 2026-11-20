@@ -622,6 +622,16 @@ namespace RobotWin.Studio.World
             return (i, r.IsFailed, i * i * r.Resistance);
         }
 
+        /// <summary>
+        /// Resistance the circuit sees in a cable right now (copper + both plug contacts, rising
+        /// while a plug is pulled) and the voltage across it (V, end A minus end B).
+        /// </summary>
+        public (double Resistance, double Drop) CableElectrical(WorldCable cable)
+        {
+            if (Circuit == null || Simulator == null || !Circuit.CableDevices.TryGetValue(cable.Id, out var r)) return (double.NaN, 0);
+            return (r.EffectiveResistance, r.IsFailed ? 0 : Simulator.NodeVoltage(r.A) - Simulator.NodeVoltage(r.B));
+        }
+
         public double Voltage(CableEnd end) => Circuit == null || Simulator == null ? double.NaN : Circuit.Voltage(Simulator, end);
 
         /// <summary>Live screen of a display object (OLED framebuffer / LCD text), if any.</summary>

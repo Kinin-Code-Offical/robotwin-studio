@@ -202,8 +202,36 @@ namespace RobotWin.Studio.World
             RebuildReady();   // [objs] lights, glows, room light
         }
 
+        /// <summary>Cable picked in the scene (select tool), or null.</summary>
+        public string? SelectedCable { get; private set; }
+
+        /// <summary>A cable was picked (or the cable selection cleared).</summary>
+        public event Action<string?>? CableSelectionChanged;
+
+        public void SelectCable(string? cableId)
+        {
+            if (SelectedCable == cableId) return;
+            SelectedCable = cableId;
+            if (cableId != null && Selected != null)
+            {
+                Selected = null;
+                RebuildOverlay();
+                SelectionChanged?.Invoke(null);
+            }
+
+            RebuildCables();
+            CableSelectionChanged?.Invoke(cableId);
+        }
+
         public void Select(string? id)
         {
+            if (id != null && SelectedCable != null)
+            {
+                SelectedCable = null;
+                RebuildCables();
+                CableSelectionChanged?.Invoke(null);
+            }
+
             if (Selected == id) return;
             Selected = id;
             RebuildOverlay();
@@ -546,6 +574,7 @@ namespace RobotWin.Studio.World
             }
 
             var g = new Model3DGroup();
+            _cableModels.Clear();
             foreach (var c in World.Cables)
             {
                 var a = World.Find(c.A.ObjectId);
@@ -577,8 +606,17 @@ namespace RobotWin.Studio.World
                     if (load > 0.8) mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb((byte)Math.Min(255, 120 * load), (byte)Math.Min(120, 30 * load), 0))));
                 }
 
+                if (c.Id == SelectedCable)
+                {
+                    // Selected: thicker and lit in the accent colour.
+                    mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6))));
+                    r *= 1.8;
+                }
+
                 // [phys] along the rope (drapes over parts, pulled-out plugs hang free)
-                g.Children.Add(new GeometryModel3D(Tube(RopePath(c, pa, pb, out pa, out pb, out _, out _), r, 8), mat));
+                var tube = new GeometryModel3D(Tube(RopePath(c, pa, pb, out pa, out pb, out _, out _), r, 8), mat);
+                _cableModels[tube] = c.Id;
+                g.Children.Add(tube);
                 // Plugs at the ends.
                 g.Children.Add(M.Model(M.Box(pa.X, pa.Y, pa.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
                 g.Children.Add(M.Model(M.Box(pb.X, pb.Y, pb.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
@@ -875,13 +913,26 @@ namespace RobotWin.Studio.World
 
         // ================================================================ interaction
 
+        private readonly Dictionary<Model3D, string> _cableModels = new Dictionary<Model3D, string>();
+
+        /// <summary>Cable under the cursor in the last <see cref="Pick"/> (only when no object was hit first).</summary>
+        private string? _pickedCable;
+
         private (string? ObjectId, string? Pin) Pick(Point p)
         {
             string? obj = null, pin = null;
+            _pickedCable = null;
             VisualTreeHelper.HitTest(_view, PickFilter, r => // [terrain] skip floor/terrain
             {
                 if (r is RayMeshGeometry3DHitTestResult hit)
                 {
+                    if (hit.VisualHit == _cables && hit.ModelHit != null && _cableModels.TryGetValue(hit.ModelHit, out var cid))
+                    {
+                        if (Tool == WorldTool.Cable) return HitTestResultBehavior.Continue;
+                        _pickedCable = cid;
+                        return HitTestResultBehavior.Stop;
+                    }
+
                     if (_anchorVisuals.TryGetValue(hit.VisualHit, out var a))
                     {
                         obj = a.ObjectId;
@@ -985,7 +1036,14 @@ namespace RobotWin.Studio.World
                         return;
                     }
 
+                    if (_pickedCable != null)
+                    {
+                        SelectCable(_pickedCable);
+                        return;
+                    }
+
                     Select(null);
+                    SelectCable(null);
                     break;
             }
 

@@ -101,7 +101,27 @@ namespace RobotTwin.CoreSim.Sandbox
 
         private void StepCables(double dt)
         {
-            foreach (var c in _cables) c.Rope.Step(Scene, dt, true);
+            foreach (var c in _cables)
+            {
+                c.Rope.Step(Scene, dt, true);
+                UpdateContacts(c);
+            }
+        }
+
+        /// <summary>
+        /// A plug under pull sits less firmly in its socket: its contact resistance rises with the
+        /// rope tension (relative to the pull-out force) until it comes out and the circuit opens.
+        /// </summary>
+        private void UpdateContacts(CableLink c)
+        {
+            if (_circuit == null || !_circuit.CableDevices.TryGetValue(c.Cable.Id, out var wire)) return;
+            var rope = c.Rope;
+            if (!rope.A.Attached || !rope.B.Attached) return;
+            double pullOut = Math.Max(1e-6, rope.PullOutForce);
+            double r = WorldCable.Resistance(c.Cable.Awg, rope.Length)
+                + c.Cable.EndContact(true, rope.A.Tension / pullOut)
+                + c.Cable.EndContact(false, rope.B.Tension / pullOut);
+            if (Math.Abs(r - wire.Resistance) > 1e-6) wire.Resistance = r;
         }
 
         private void OnUnplugged(CableLink link, RopeEnd end, double force)

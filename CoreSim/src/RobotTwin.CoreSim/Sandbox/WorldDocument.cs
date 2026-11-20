@@ -148,6 +148,32 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public string Color { get; set; } = "#E5484D";
 
+        /// <summary>
+        /// Contact resistance of one plugged-in end (Dupont / 2.54 mm header socket): 10–30 mΩ new,
+        /// 50–100 mΩ worn. Every world cable is plugged in unless an end is marked soldered.
+        /// </summary>
+        public const double PlugContactResistance = 0.025;
+
+        /// <summary>A wire soldered to a pad or terminal: the joint itself is a fraction of a milliohm.</summary>
+        public const double SolderJointResistance = 0.0005;
+
+        /// <summary>End A is soldered (no plug contact).</summary>
+        public bool SolderedA { get; set; }
+
+        /// <summary>End B is soldered (no plug contact).</summary>
+        public bool SolderedB { get; set; }
+
+        /// <summary>Contact resistance of one end; a plug being pulled loosens (tension / pull-out force, 0…1).</summary>
+        public double EndContact(bool endA, double pull = 0)
+        {
+            if (endA ? SolderedA : SolderedB) return SolderJointResistance;
+            double k = Math.Max(0, Math.Min(1, pull));
+            return PlugContactResistance * (1 + 6 * k * k);
+        }
+
+        /// <summary>Contact resistance of both ends at rest (Ω).</summary>
+        public double ContactResistance => EndContact(true) + EndContact(false);
+
         /// <summary>Copper resistance at 20 °C for the given length (Ω).</summary>
         public static double Resistance(double awg, double length)
         {

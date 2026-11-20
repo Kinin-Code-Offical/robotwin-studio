@@ -259,7 +259,8 @@ namespace RobotTwin.CoreSim.Sandbox
             foreach (var (cable, keyA, keyB, _, _, _, _) in cableEnds)
             {
                 double length = cable.Length > 0 ? cable.Length : cableLength?.Invoke(cable) ?? 0.2;
-                double r = WorldCable.Resistance(cable.Awg, length);
+                double copper = WorldCable.Resistance(cable.Awg, length);
+                double r = copper + cable.ContactResistance;   // plug contacts at both ends
                 double amp = WorldCable.Ampacity(cable.Awg);
                 var wire = new Resistor("cable:" + cable.Id, circuit.Node(keyA), circuit.Node(keyB), r)
                 {

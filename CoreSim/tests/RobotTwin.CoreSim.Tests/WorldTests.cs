@@ -80,9 +80,9 @@ namespace RobotTwin.CoreSim.Tests
             _out.WriteLine($"LED {led.Current * 1000:F2} mA");
             Assert.InRange(led.Current, 0.012, 0.018);   // (9 − 1.9) / 470 ≈ 15 mA
 
-            // The cable drops I·R: 30 cm of AWG 24 ≈ 25 mΩ.
+            // The cable drops I·R: 30 cm of AWG 24 ≈ 25 mΩ of copper plus two plug contacts (2 × 25 mΩ).
             var cable = lit.CableDevices.Values.First();
-            Assert.InRange(cable.Resistance, 0.02, 0.03);
+            Assert.InRange(cable.Resistance - 2 * WorldCable.PlugContactResistance, 0.02, 0.03);
         }
 
         [Fact]

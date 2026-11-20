@@ -48,6 +48,11 @@ namespace RobotWin.Studio.Pages
             _session.CableSeed = Scene.CableSeedOf;   // [phys]
             Scene.MassOf = o => W.ActiveWorld is { } w ? EstimateMass(w, o) / 1000.0 : 0.01;
             Scene.Grid = AppSettings.Current.WorldGridMm / 1000.0;
+            Scene.CableSelectionChanged += _ =>
+            {
+                BuildInspector();
+                if (DockCables.IsChecked == true) BuildCableTable();
+            };
             Scene.SelectionChanged += _ =>
             {
                 BuildInspector();
@@ -590,6 +595,13 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Clear();
             var world = World;
             if (world == null) return;
+            _diagValues = null;
+            if (Scene.SelectedCable is { } cableId && world.Cables.FirstOrDefault(x => x.Id == cableId) is { } cable)
+            {
+                BuildCableDiagnostics(world, cable);
+                return;
+            }
+
             var o = world.Find(Scene.Selected);
             if (o == null)
             {
@@ -903,7 +915,7 @@ namespace RobotWin.Studio.Pages
                 line.Children.Add(new TextBlock { Text = $"{mine.Pin} → {otherObj?.Name} {other.Pin}", TextTrimming = TextTrimming.CharacterEllipsis });
                 sp.Children.Add(line);
                 var (span, len, verdict, bad) = CableFit(c);
-                double drop = CableDrop(c, len);
+                double drop = CableDrop(c);
                 sp.Children.Add(new TextBlock
                 {
                     Text = $"AWG {c.Awg:0} · {len * 100:0} cm (uçlar arası {span * 100:0} cm, {verdict}) · {WorldCable.Resistance(c.Awg, len) * 1000:0.#} mΩ"
@@ -1265,6 +1277,8 @@ namespace RobotWin.Studio.Pages
             UpdateRadioLive();   // [radio]
             UpdateCellLive();   // [arm]
             UpdateSdkLive();   // [sdk]
+            RecordCableHistory();
+            UpdateCableDiagnostics();
             if (DockCables.IsChecked == true) BuildCableTable();
         }
 
@@ -1303,40 +1317,6 @@ namespace RobotWin.Studio.Pages
             ShowRfPanel(DockRf.IsChecked == true);   // [radio]
         }
 
-        private void BuildCableTable()
-        {
-            CableTable.Children.Clear();
-            var world = World;
-            if (world == null) return;
-            if (world.Cables.Count == 0)
-            {
-                CableTable.Children.Add(Note("Henüz kablo yok."));
-                return;
-            }
-
-            foreach (var c in world.Cables)
-            {
-                var a = world.Find(c.A.ObjectId);
-                var b = world.Find(c.B.ObjectId);
-                var (span, len, verdict, bad) = CableFit(c);
-                string live = string.Empty;
-                if (_session.State != SimState.Stopped)
-                {
-                    var (i, burned, p) = _session.CableState(c);
-                    double amp = WorldCable.Ampacity(c.Awg);
-                    live = burned ? "  YANDI" : $"  {SiValue.Format(Math.Abs(i), "A"),-10} {SiValue.Format(p, "W"),-10} düşüm {SiValue.Format(CableDrop(c, len), "V"),-9} yük %{Math.Abs(i) / amp * 100:0}";
-                }
-
-                var row = new TextBlock
-                {
-                    FontFamily = (FontFamily)FindResource("F.Mono"),
-                    FontSize = 12,
-                    Text = $"{a?.Name} {c.A.Pin} → {b?.Name} {c.B.Pin}".PadRight(48) + $" AWG{c.Awg:0} {len * 100,5:0} cm / {span * 100,4:0} cm {verdict,-24}" + live
-                };
-                if (bad) row.Foreground = Brushes.OrangeRed;
-                CableTable.Children.Add(row);
-            }
-        }
 
         // ================================================================ snapshot hook
 
@@ -1365,6 +1345,15 @@ namespace RobotWin.Studio.Pages
             {
                 DockCables.IsChecked = true;
                 OnDockTab(this, new RoutedEventArgs());
+            }
+
+            if (Environment.GetCommandLineArgs().Contains("--select-cable") && World is { } cw && cw.Cables.Count > 0)
+            {
+                // The cable carrying the most current (or the first one when stopped).
+                var busiest = cw.Cables.OrderByDescending(c => Math.Abs(_session.CableState(c).Current)).First();
+                RecordCableHistory();
+                Scene.SelectCable(busiest.Id);
+                return;
             }
 
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
