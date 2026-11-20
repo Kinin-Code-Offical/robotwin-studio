@@ -55,6 +55,16 @@ namespace RobotTwin.CoreSim.Tests
                 };
             }
 
+            if (o.PartId == "hc-sr04")
+            {
+                // Module standing up, transducers looking along -Y.
+                return new WorldBodyGeometry
+                {
+                    Min = new Vec3(-0.0225, -0.008, 0), Max = new Vec3(0.0225, 0.004, 0.023), MassKg = 0.009,
+                    SensorOrigin = new Vec3(0, -0.008, 0.014), SensorAxis = new Vec3(0, -1, 0)
+                };
+            }
+
             return new WorldBodyGeometry { Min = new Vec3(-0.03, -0.02, 0), Max = new Vec3(0.03, 0.02, 0.015), MassKg = 0.05 };
         }
 
@@ -136,6 +146,28 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(deg, 38, 52);
             Assert.InRange(s.AngleDeg, 128, 142);
         }
+        [Fact]
+        public void UltrasonicSensorMeasuresTheBoxInFrontOfIt()
+        {
+            var w = new WorldDocument();
+            var sonar = w.AddComponent(Lib, "hc-sr04", new WorldPose());
+            sonar.IsStatic = true;
+            var wall = w.AddBody("box", 0.2, 0.02, 0.05, new WorldPose { Y = -0.31 });
+            wall.IsStatic = true;
+            var wc = WorldCompiler.Compile(w, Lib, c => 0.2);
+            var dev = wc.Compiled.DevicesOf(wc.ComponentRef(sonar.Id)!).OfType<UltrasonicSensor>().Single();
+            var p = WorldPhysics.Build(w, Geometry, wc);
+            for (int i = 0; i < 50; i++) p.Advance(1e-3, null);
+            _out.WriteLine($"sonar reads {dev.Distance * 1000:F1} mm (wall face at 292 mm from the sensor face)");
+            Assert.InRange(dev.Distance, 0.285, 0.30);
+
+            // Nothing in front: beyond the maximum range.
+            wall.Pose = new WorldPose { Y = 0.5 };
+            var p2 = WorldPhysics.Build(w, Geometry, wc);
+            for (int i = 0; i < 50; i++) p2.Advance(1e-3, null);
+            Assert.True(dev.Distance > dev.MaxRange);
+        }
+
         [Fact]
         public void TwoWheelCarDrivesAcrossTheFloor()
         {

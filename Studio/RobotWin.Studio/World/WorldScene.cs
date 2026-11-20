@@ -292,6 +292,12 @@ namespace RobotWin.Studio.World
                 var b = it.Model.CollisionBounds.IsEmpty ? it.Model.Bounds : it.Model.CollisionBounds;
                 g.Min = new RobotTwin.CoreSim.Mechanics.Vec3(b.X, b.Y, b.Z);
                 g.Max = new RobotTwin.CoreSim.Mechanics.Vec3(b.X + b.SizeX, b.Y + b.SizeY, b.Z + b.SizeZ);
+                if (it.Model.Sensor is { } sr)
+                {
+                    g.SensorOrigin = new RobotTwin.CoreSim.Mechanics.Vec3(sr.Origin.X, sr.Origin.Y, sr.Origin.Z);
+                    g.SensorAxis = new RobotTwin.CoreSim.Mechanics.Vec3(sr.Axis.X, sr.Axis.Y, sr.Axis.Z);
+                }
+
                 if (it.Model.Port is { } pf)
                 {
                     g.PortName = pf.Name;
@@ -677,8 +683,38 @@ namespace RobotWin.Studio.World
             RadioFrame();   // [radio] waves, RF links, controller lightbars
         }
 
+        private readonly ModelVisual3D _beams = new ModelVisual3D();
+
+        /// <summary>Ultrasonic beams: a thin line to what the sensor sees, a dot where it hits, coloured by distance.</summary>
+        private void UpdateBeams()
+        {
+            var physics = Session?.Physics;
+            if (physics == null || Session!.State == Simulation.SimState.Stopped)
+            {
+                if (_beams.Content != null) _beams.Content = null;
+                return;
+            }
+
+            if (!_view.Children.Contains(_beams)) _view.Children.Add(_beams);
+            var g = new Model3DGroup();
+            foreach (var it in _items.Values)
+            {
+                if (it.Model.Sensor == null || physics.SonarBeam(it.Object.Id) is not { } beam) continue;
+                var a = new Point3D(beam.From.X, beam.From.Y, beam.From.Z);
+                var b = new Point3D(beam.To.X, beam.To.Y, beam.To.Z);
+                bool hit = !double.IsInfinity(beam.Range);
+                var color = !hit ? Color.FromRgb(0x6C, 0x6C, 0x74) : beam.Range < 0.15 ? Color.FromRgb(0xE5, 0x48, 0x4D) : beam.Range < 0.5 ? Color.FromRgb(0xD4, 0xA8, 0x4B) : Color.FromRgb(0x2F, 0xC2, 0xB0);
+                var mat = new EmissiveMaterial(new SolidColorBrush(color));
+                g.Children.Add(new GeometryModel3D(Tube(new List<Point3D> { a, b }, 0.0007, 6), mat));
+                if (hit) g.Children.Add(new GeometryModel3D(Assembly3D.Mesh.Sphere(0.003, b.X, b.Y, b.Z, 10), mat));
+            }
+
+            _beams.Content = g;
+        }
+
         private void UpdateLive(double dt)
         {
+            UpdateBeams();
             foreach (var it in _items.Values)
             {
                 double t = Session!.Temperature(it.Object);

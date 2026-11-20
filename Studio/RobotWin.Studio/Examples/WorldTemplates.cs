@@ -35,6 +35,7 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("servo-arm", "Arduino ile iki eksenli servo kol", "Arduino Uno kütüphanesiz darbe üreterek iki SG90'ı sürer; ikinci servo birinci servonun koluna vidalı, kol zincirleme döner.", ServoArm),
             new WorldTemplate("displays", "Arduino, LCD ve OLED (I²C kablolu)", "Uno, 16×2 LCD, 128×64 OLED ve potansiyometre ayrı parçalar; dört telli I²C kablolarıyla bağlı. Gerçek derlenmiş yazılım iki ekrana da yazar.", Displays),
             new WorldTemplate("car", "İki tekerlekli araba (gerçek fizik)", "PLA şase, iki TT motor ve tekerlek, bilyeli sarhoş teker, üstte 4×AA pil. Çalıştırınca yerçekimi, sürtünme ve motor yükleriyle zeminde yol alır.", Car),
+            new WorldTemplate("sonar", "Ultrasonik mesafe sensörü ve engeller", "HC-SR04 dünyadaki nesnelere gerçekten ölçüm yapar: ışını önündeki ilk nesneye kadar çizilir, mesafe renkle gösterilir. Kutuları sürükleyip yaklaştırın.", Sonar),
             new WorldTemplate("motor-wheel", "Pil, motor ve tekerlek", "4×AA pil kutusu kablolarla TT motoru sürer; tekerlek motor miline takılı, motor sehpaya vidalı.", MotorWheel),
             // [radio]
             new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "ESP32 Bluepad32 çizimi eşli DualSense kumandayı okur, DRV8833 ile iki TT motoru sürer. ESP32 bilgisayara USB kablosuyla bağlı; kumanda gerçek (USB/Bluetooth) veya ekrandaki sanal kumanda olabilir.", Ps5Car)
@@ -225,6 +226,23 @@ namespace RobotWin.Studio.Examples
             pad.Name = "DualSense";
             pad.Parameters["pairedWith"] = esp.Id;
             pad.Parameters["source"] = "otomatik";
+            return w;
+        }
+
+        private static WorldDocument Sonar()
+        {
+            var w = new WorldDocument { Title = "Ultrasonik mesafe" };
+            var stand = w.AddBody("box", 0.06, 0.04, 0.02, new WorldPose(), "AHŞAP");
+            stand.Name = "Sehpa";
+            stand.IsStatic = true;
+            var sensor = w.AddComponent(Lib, "hc-sr04", new WorldPose { Z = 0.02 });
+            sensor.Name = "HC-SR04";
+            var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = 0.12 });
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = sensor.Id, Pin = "VCC" }, 24, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = sensor.Id, Pin = "GND" }, 24, "#1F1F23");
+            var near = w.AddBody("box", 0.08, 0.08, 0.08, new WorldPose { X = -0.35, Y = 0.02 }, "AHŞAP");
+            near.Name = "Engel";
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = sensor.Id, ObjectB = stand.Id });
             return w;
         }
 

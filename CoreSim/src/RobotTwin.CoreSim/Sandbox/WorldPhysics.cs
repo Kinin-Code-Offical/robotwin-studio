@@ -24,6 +24,10 @@ namespace RobotTwin.CoreSim.Sandbox
         public string? PortName { get; set; }
         public Vec3 PortPivot { get; set; }
         public Vec3 PortAxis { get; set; } = Vec3.UnitZ;
+
+        /// <summary>Ranging sensor (ultrasonic): where its beam leaves the part and which way it looks (object frame).</summary>
+        public Vec3? SensorOrigin { get; set; }
+        public Vec3 SensorAxis { get; set; } = Vec3.UnitX;
     }
 
     /// <summary>
@@ -51,6 +55,11 @@ namespace RobotTwin.CoreSim.Sandbox
             public ServoMotor? ServoMotor;
             public DcMotor? Motor;
             public string? ServoRef;
+            public UltrasonicSensor? Sonar;
+            public Vec3 SonarOrigin;
+            public Vec3 SonarAxis;
+            public double SonarRange = double.NaN;
+            public Vec3 SonarHit;
         }
 
         private readonly Dictionary<string, Item> _items = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
@@ -135,6 +144,13 @@ namespace RobotTwin.CoreSim.Sandbox
                 default:
                     body = SceneBody.Box(o.Id, size, mass, default, material);
                     break;
+            }
+
+            if (g.SensorOrigin is { } so && _circuit?.ComponentRef(o.Id) is { } sref)
+            {
+                it.Sonar = _circuit.Compiled.DevicesOf(sref).OfType<UltrasonicSensor>().FirstOrDefault();
+                it.SonarOrigin = so;
+                it.SonarAxis = g.SensorAxis.Normalized();
             }
 
             var q = o.Pose.Orientation;
@@ -241,7 +257,62 @@ namespace RobotTwin.CoreSim.Sandbox
                 DriveActuators(sim);
                 Scene.Step(Step);
                 FeedBack();
+                if (++_sonarTick % 5 == 0) Ranging();
             }
+        }
+
+        private long _sonarTick;
+
+        /// <summary>
+        /// Ultrasonic sensors measure the distance to whatever their beam meets in the world
+        /// (other objects, obstacles, the floor when tilted); their own assembly is ignored.
+        /// </summary>
+        private void Ranging()
+        {
+            foreach (var it in _items.Values)
+            {
+                if (it.Sonar == null) continue;
+                var pose = PoseOf(it.Object.Id);
+                if (pose == null) continue;
+                var (pos, q) = pose.Value;
+                var origin = pos + q.Rotate(it.SonarOrigin);
+                var dir = q.Rotate(it.SonarAxis);
+                var own = it.Body;
+                var rotor = it.Rotor;
+                double max = it.Sonar.MaxRange + 0.5;
+                if (Scene.Raycast(origin, dir, max, out var hit, b => b != own && b != rotor && !SameAssembly(own, b)))
+                {
+                    it.SonarRange = hit.Distance;
+                    it.SonarHit = hit.Point;
+                }
+                else
+                {
+                    it.SonarRange = double.PositiveInfinity;
+                    it.SonarHit = origin + dir * max;
+                }
+
+                it.Sonar.Distance = Math.Min(it.SonarRange, max);
+            }
+        }
+
+        private bool SameAssembly(SceneBody a, SceneBody b)
+        {
+            foreach (var (x, y) in Scene.NoCollide)
+            {
+                if ((x == a && y == b) || (x == b && y == a)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Beam of an object's ultrasonic sensor: start, end (hit or max range) and the measured distance.</summary>
+        public (Vec3 From, Vec3 To, double Range)? SonarBeam(string objectId)
+        {
+            if (!_items.TryGetValue(objectId, out var it) || it.Sonar == null || double.IsNaN(it.SonarRange)) return null;
+            var pose = PoseOf(objectId);
+            if (pose == null) return null;
+            var (pos, q) = pose.Value;
+            return (pos + q.Rotate(it.SonarOrigin), it.SonarHit, it.SonarRange);
         }
 
         private void DriveActuators(AnalogSimulator? sim)

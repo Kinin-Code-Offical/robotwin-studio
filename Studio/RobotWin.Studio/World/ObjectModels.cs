@@ -91,6 +91,9 @@ namespace RobotWin.Studio.World
 
         /// <summary>Display surface whose brush becomes <see cref="Screen"/> once a picture is shown.</summary>
         public DiffuseMaterial? ScreenMaterial { get; set; }
+
+        /// <summary>Ultrasonic sensor: where the beam leaves the part and its direction (object frame, metres).</summary>
+        public (Point3D Origin, Vector3D Axis)? Sensor { get; set; }
     }
 
     /// <summary>
@@ -293,6 +296,21 @@ namespace RobotWin.Studio.World
                 foreach (var (pin, pos, _) in Models3D.ComponentModels.MapPins(def, p, inst.PadAnchors))
                 {
                     m.Pins.Add(new PinAnchor(pin, pin, new Point3D(pos.X * Mm, pos.Y * Mm, pos.Z * Mm)));
+                }
+
+                // Ultrasonic modules look away from their pin header, out of the transducer face.
+                if (def.Id == "hc-sr04" || def.Name.Contains("HC-SR04", StringComparison.OrdinalIgnoreCase) || def.Id.Contains("ultrason", StringComparison.OrdinalIgnoreCase))
+                {
+                    var b = m.Bounds;
+                    var centre = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
+                    var pins = m.Pins.Count > 0 ? new Point3D(m.Pins.Average(x => x.Local.X), m.Pins.Average(x => x.Local.Y), 0) : new Point3D(b.X + b.SizeX, centre.Y, 0);
+                    var look = new Vector3D(centre.X - pins.X, centre.Y - pins.Y, 0);
+                    if (look.Length < 1e-6) look = new Vector3D(-1, 0, 0);
+                    look.Normalize();
+                    // Snap to the dominant axis and start at the face of the bounds.
+                    look = Math.Abs(look.X) >= Math.Abs(look.Y) ? new Vector3D(Math.Sign(look.X), 0, 0) : new Vector3D(0, Math.Sign(look.Y), 0);
+                    var face = new Point3D(look.X < 0 ? b.X : look.X > 0 ? b.X + b.SizeX : centre.X, look.Y < 0 ? b.Y : look.Y > 0 ? b.Y + b.SizeY : centre.Y, centre.Z);
+                    m.Sensor = (face, look);
                 }
 
                 // A model without cable anchors cannot be wired: fall back to the simple one.
