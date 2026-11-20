@@ -283,6 +283,10 @@ namespace RobotWin.Studio.Pages
             Palette.Children.Add(Row("Silindir", "Ø 40 × 60 mm", () => AddBody("cylinder", 0.04, 0.04, 0.06)));
             Palette.Children.Add(Row("Tekerlek", "Ø 65 × 26 mm kauçuk lastik", () => AddBody("wheel", 0.065, 0.026, 0.026)));
             Palette.Children.Add(Row("Küre / bilye", "Ø 40 mm", () => AddBody("sphere", 0.04, 0.04, 0.04)));
+            Palette.Children.Add(Caption("Uçuş yüzeyleri (gerçek kaldırma, sürükleme, moment)"));
+            Palette.Children.Add(Row("Kanat", "1000 mm açıklık, 150 mm veter, Clark Y", () => AddBody("wing", 0.15, 1.0, 0.012, o => { o.Material = "AHŞAP"; o.MassKg = 0.08; o.Name = World!.UniqueName("Kanat"); o.Parameters["airfoil"] = "clarky"; o.Parameters["incidence"] = "2"; o.Parameters["control"] = "aileron"; })));
+            Palette.Children.Add(Row("Yatay kuyruk + irtifa dümeni", "300 × 80 mm, NACA 0012", () => AddBody("wing", 0.08, 0.30, 0.006, o => { o.Material = "AHŞAP"; o.MassKg = 0.015; o.Name = World!.UniqueName("Yatay kuyruk"); o.Parameters["airfoil"] = "naca0012"; o.Parameters["incidence"] = "-2"; o.Parameters["control"] = "elevator"; o.Parameters["control.chord"] = "0.35"; })));
+            Palette.Children.Add(Row("Dikey kuyruk + yön dümeni", "100 × 80 mm, NACA 0012", () => AddBody("wing", 0.08, 0.10, 0.006, o => { o.Material = "AHŞAP"; o.MassKg = 0.008; o.Name = World!.UniqueName("Dikey kuyruk"); o.Parameters["airfoil"] = "naca0012"; o.Parameters["symmetric"] = "false"; o.Parameters["control"] = "rudder"; })));
             Palette.Children.Add(Row("Masa / sabit zemin", "600 × 400 × 20 mm, sabit", () =>
             {
                 AddBody("box", 0.6, 0.4, 0.02, o => { o.IsStatic = true; o.Material = "AHŞAP"; o.Name = World!.UniqueName("Masa"); });

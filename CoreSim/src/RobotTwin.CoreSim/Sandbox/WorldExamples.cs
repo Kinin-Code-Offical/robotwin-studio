@@ -16,6 +16,48 @@ namespace RobotTwin.CoreSim.Sandbox
         /// 22.7 mm behind the motor origin, 11.2 mm up, shaft end 18.4 mm to the side) — the geometry
         /// the Studio and the headless runner use, so the wheels sit exactly on their axles.
         /// </summary>
+        /// <summary>
+        /// [aero] 1 m model glider: Clark Y wing (2° incidence), NACA 0012 tail with an elevator linked
+        /// to an SG90 servo by a 0.5 pushrod, fin, nose weight for a stable CG; hand-launched at
+        /// 12 m/s from 40 m. Static margin ≈ 25 % of the chord: it settles into a ~7:1 glide.
+        /// </summary>
+        public static WorldDocument Glider(PartLibrary lib)
+        {
+            var w = new WorldDocument { Title = "Planör" };
+            double z = 40;
+            var fus = w.AddBody("box", 0.60, 0.05, 0.05, new WorldPose { Z = z }, "PLA");
+            fus.Name = "Gövde";
+            fus.MassKg = 0.25;
+            fus.Parameters["launch"] = "12";
+            var nose = w.AddBody("box", 0.05, 0.04, 0.04, new WorldPose { X = 0.25, Z = z + 0.005 }, "ÇELİK");
+            nose.Name = "Burun ağırlığı";
+            nose.MassKg = 0.07;
+            var wing = w.AddBody("wing", 0.15, 1.0, 0.012, new WorldPose { X = -0.02, Z = z + 0.05 }, "AHŞAP");
+            wing.Name = "Kanat";
+            wing.MassKg = 0.08;
+            wing.Parameters["airfoil"] = "clarky";
+            wing.Parameters["incidence"] = "2";
+            var servo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.10, Y = 0.0, Z = z + 0.05 });
+            var tail = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = -0.28, Z = z + 0.05 }, "AHŞAP");
+            tail.Name = "Yatay kuyruk";
+            tail.MassKg = 0.015;
+            tail.Parameters["airfoil"] = "naca0012";
+            tail.Parameters["incidence"] = "-3";
+            tail.Parameters["control"] = "elevator";
+            tail.Parameters["control.chord"] = "0.35";
+            tail.Parameters["control.servo"] = servo.Id;
+            tail.Parameters["control.gain"] = "0.5";
+            tail.Parameters["downwash"] = wing.Id;
+            var fin = w.AddBody("wing", 0.08, 0.10, 0.006, new WorldPose { X = -0.28, Z = z + 0.056 }, "AHŞAP");
+            fin.Name = "Dikey kuyruk";
+            fin.MassKg = 0.008;
+            fin.Parameters["airfoil"] = "naca0012";
+            fin.Parameters["symmetric"] = "false";
+            foreach (var part in new WorldObject[] { nose, wing, tail, fin, servo })
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = fus.Id });
+            return w;
+        }
+
         public static WorldDocument CarDetailed(PartLibrary lib) => Car(lib, 0.0224, -0.0227, 0.0112, 0.0184);
 
         public static WorldDocument Car(PartLibrary lib, double motorHeight = 0.0188, double shaftX = -0.011, double shaftZ = 0.0094, double shaftTip = 0.0185)

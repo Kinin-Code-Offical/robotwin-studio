@@ -639,6 +639,8 @@ namespace RobotWin.Studio.World
                 it.PortAngle = angle;
                 if (it.PortRotation != null) ((AxisAngleRotation3D)it.PortRotation.Rotation).Angle = angle * 180 / Math.PI;
                 if (it.Model.PortSpin != null) it.Model.PortSpin.Angle = it.Model.PortSign * angle * 180 / Math.PI;
+                if (it.Model.FlapRotation != null)   // [aero] elevator / rudder / ailerons follow the live deflection
+                    it.Model.FlapRotation.Angle = -it.Model.FlapSign * (live && Session!.Physics != null ? Session.Physics.WingDeflection(it.Object.Id) : 0);
             }
 
             var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

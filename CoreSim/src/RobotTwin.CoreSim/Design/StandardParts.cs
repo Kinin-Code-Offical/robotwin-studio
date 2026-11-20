@@ -38,6 +38,7 @@ namespace RobotTwin.CoreSim.Design
             SensingParts.Register(lib);    // [sense] line sensors, cameras, LiDAR, GPS, compass, encoder motors (Design/SensingParts.cs)
             BusParts.Register(lib);        // SPI / I²C parts: MCP3008 ADC, BMP280 barometer (Design/BusParts.cs)
             CellParts.Register(lib);   // [arm] robot cell parts (Design/CellParts.cs)
+            AvionicsParts.Register(lib);   // [aero] barometers, high-g IMU, depth sensor, e-match, 2212 motor (Design/AvionicsParts.cs)
             RegisterConnectors(lib);
             RegisterBoards(lib);
         }

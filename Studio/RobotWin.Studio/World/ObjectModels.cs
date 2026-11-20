@@ -56,6 +56,11 @@ namespace RobotWin.Studio.World
         /// <summary>Servo horn / motor shaft geometry, rotated about <see cref="Port"/>'s axis while simulating.</summary>
         public Model3DGroup? Moving { get; set; }
 
+        /// <summary>[aero] Control surface hinge of a wing object (rotated by the live deflection) and its sign.</summary>
+        public AxisAngleRotation3D? FlapRotation { get; set; }
+
+        public double FlapSign { get; set; } = 1;
+
         public PortFrame? Port { get; set; }
         public List<PinAnchor> Pins { get; } = new List<PinAnchor>();
 
@@ -162,6 +167,7 @@ namespace RobotWin.Studio.World
         private static ObjectModel BuildBody(WorldObject o)
         {
             if (ReadyModels.TryBuild(o) is { } ready) return ready;   // [objs] ready wheels, casters, propellers (World/ReadyModels.cs)
+            if (o.Shape == "wing") return WingModels.Build(o, ParseColor(o.Color, MaterialColor(o.Material)));   // [aero] World/WingModels.cs
             var m = new ObjectModel();
             var c = ParseColor(o.Color, MaterialColor(o.Material));
             double sx = o.SizeX * 1000, sy = o.SizeY * 1000, sz = o.SizeZ * 1000;

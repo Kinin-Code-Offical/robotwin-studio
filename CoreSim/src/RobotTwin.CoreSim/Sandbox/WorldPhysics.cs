@@ -107,6 +107,8 @@ namespace RobotTwin.CoreSim.Sandbox
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.FilterAssemblyCollisions(); // only parts within two joints of each other skip collisions (WorldPhysics.Overlap.cs)
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
+            p.BuildWings();   // [aero] lifting surfaces replace the generic drag the environment just gave every body (Sandbox/WorldPhysics.Wings.cs)
+            p.ApplyLaunches(world);   // [aero] hand-launched aircraft
             return p;
         }
 
@@ -275,6 +277,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]
                 Sdk?.BeforeStep(Step, sim);   // [sdk]
+                StepWings();   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
                 Scene.Step(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia

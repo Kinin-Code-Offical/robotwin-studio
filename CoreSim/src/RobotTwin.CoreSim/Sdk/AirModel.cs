@@ -4,7 +4,7 @@ using RobotTwin.CoreSim.Mechanics;
 namespace RobotTwin.CoreSim.Sdk
 {
     /// <summary>Air properties from temperature, pressure, altitude and humidity.</summary>
-    public static class Atmosphere
+    public static partial class Atmosphere   // [aero] ISA layers, speed of sound, hydrostatics in Sdk/AirModel.Isa.cs
     {
         public const double DryGasConstant = 287.058;
         public const double VaporGasConstant = 461.495;
