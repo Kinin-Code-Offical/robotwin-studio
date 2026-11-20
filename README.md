@@ -272,7 +272,7 @@ Aşağıdakiler üzerinde çalışılıyor; **henüz ana dala alınmadı** ve ya
 ## Katkı, güvenlik, belgeler
 
 - [Kullanım kılavuzu (Türkçe)](docs/kullanim/README.md) · [Geliştirici belgeleri](docs/README.md) · [Sürüm notları](CHANGELOG.md)
-- [Katkıda bulunma](CONTRIBUTING.md) · [Güvenlik](SECURITY.md) · [Davranış kuralları](CODE_OF_CONDUCT.md) · [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md)
+- [Katkıda bulunma](CONTRIBUTING.md) · [Güvenlik](SECURITY.md) · [Davranış kuralları](CODE_OF_CONDUCT.md) · [Erişilebilirlik](ACCESSIBILITY.md) · [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md)
 - Sorun bildirmek için: [GitHub Issues](https://github.com/Kinin-Code-Offical/robotwin-studio/issues)
 
 ## Lisans
@@ -375,4 +375,4 @@ Being worked on, **not merged yet** and not in any release:
 
 ### License
 
-MIT. See [LICENSE](LICENSE). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Changes: [CHANGELOG.md](CHANGELOG.md).
+MIT. See [LICENSE](LICENSE). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Accessibility: [ACCESSIBILITY.md](ACCESSIBILITY.md) · Changes: [CHANGELOG.md](CHANGELOG.md).
