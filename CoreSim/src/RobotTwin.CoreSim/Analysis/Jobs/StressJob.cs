@@ -149,7 +149,76 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
                 progress?.Invoke((k + 1.0) / instants.Count);
             }
 
+            // The critical instant as the exact discrete problem, so another solver (CalculiX, ANSYS,
+            // Abaqus via .inp) can reproduce it: consistent nodal loads incl. gravity and the
+            // inertia-relief body forces, and the supports that were used.
+            int ci = -1;
+            for (int k = 0; k < result.Frames.Count; k++)
+                if (ci < 0 || result.Frames[k].MaxVonMises > result.Frames[ci].MaxVonMises) ci = k;
+            if (ci >= 0)
+            {
+                var critCase = CaseOf(loads[instants[ci]], relief);
+                result.ExportForces = model.LoadVector(critCase, out _, out _);
+                var fixedDof = relief && !model.HasUserSupports ? model.ThreeTwoOne() : model.Fixed;
+                result.ExportFixed = Enumerable.Range(0, fixedDof.Length).Where(i => fixedDof[i]).ToArray();
+                result.ExportYoung = mat.E;
+                result.ExportPoisson = mat.Nu;
+                result.ExportTime = result.Frames[ci].Time;
+                if (s.StressMeshCheck) MeshConvergence(part, mat, s, result, critCase, relief, P98(result.Frames[ci].VonMises), cancel);
+            }
+
             return result;
+        }
+
+        /// <summary>98th percentile of nodal von Mises: the peak away from point-load singularities.</summary>
+        public static double P98(float[] values)
+        {
+            if (values.Length == 0) return 0;
+            var sorted = values.Select(v => (double)v).OrderBy(v => v).ToArray();
+            return sorted[(int)Math.Min(sorted.Length - 1, Math.Floor(0.98 * (sorted.Length - 1)))];
+        }
+
+        /// <summary>
+        /// Solves the critical instant again on a ~1.4× finer mesh and reports how much the
+        /// representative peak stress moved. Point contacts are singular (their peak grows without
+        /// bound under refinement in every FEM code), so the check uses the 98th percentile.
+        /// </summary>
+        private static void MeshConvergence(PartGeometry part, StructuralMaterial mat, AnalysisSettings s, StressResult result, FemLoadCase lc, bool relief,
+            double coarse, CancellationToken cancel)
+        {
+            if (result.NodeCount > 6000 || coarse <= 0)
+            {
+                result.Notes.Add("Ağ yakınsaması: ağ büyük olduğu için ayrıca denetlenmedi.");
+                return;
+            }
+
+            try
+            {
+                var fine = TetMesh.FromSolid(part.Solid, result.ElementSize / 1.4, 2);
+                if (fine.Elements.Count == 0) return;
+                var model = new ElasticModel(fine, mat) { Tolerance = s.Accuracy == AccuracyPreset.Reference ? 1e-8 : 1e-7 };
+                if (part.IsStatic)
+                {
+                    double minZ = fine.Nodes.Min(n => (part.Position + part.Orientation.Rotate(n)).Z);
+                    model.FixNodes(n => (part.Position + part.Orientation.Rotate(n)).Z < minZ + 0.5 * fine.ElementSize);
+                }
+
+                model.Assemble(cancel);
+                var sol = model.Solve(lc, cancel);
+                double fineP98 = P98(sol.VonMises.Select(v => (float)v).ToArray());
+                result.MeshChange = Math.Abs(fineP98 - coarse) / coarse;
+                result.Notes.Add($"Ağ yakınsaması (kritik an): eleman {result.ElementSize * 1000:0.##} → {fine.ElementSize * 1000:0.##} mm, temsilî tepe gerilme (%98'lik) {Design.SiValue.Format(coarse, "Pa")} → {Design.SiValue.Format(fineP98, "Pa")}, fark %{result.MeshChange * 100:0.#}"
+                    + (result.MeshChange > 0.10 ? " — ağa duyarlı, daha küçük eleman boyu seçin." : " — ağdan bağımsız sayılır.")
+                    + $" Tekil (nokta yük) tepe: {Design.SiValue.Format(sol.MaxVonMises, "Pa")}; nokta yüklerin altında gerilme her FEM kodunda ağ inceldikçe büyür.");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                result.Notes.Add("Ağ yakınsaması denetlenemedi: " + ex.Message);
+            }
         }
 
         private static StressResult RunBeam(PartGeometry part, StructuralMaterial mat, StressResult result, IReadOnlyList<LoadSample> loads, List<int> instants,

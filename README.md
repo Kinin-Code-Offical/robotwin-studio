@@ -221,6 +221,13 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --self
 
 `--selftest` her örnek projeyi derler, simüle eder, PCB'sini yerleştirip yollarını çizer ve DRC çalıştırır; sonuç `SELFTEST PASS` olmalıdır. CI (`.github/workflows/ci.yml`) her push ve PR'da derleme, birim testleri ve self-test çalıştırır. Ayrıntılar: [docs/TESTING.md](docs/TESTING.md).
 
+### Doğruluk: neye ne kadar güvenebilirsiniz
+
+- **Analitik çözümlerle doğrulananlar:** konsol kiriş sehimi ve gerilmesi, delikli plakada gerilme yığılması (Kt ≈ 3), burulma, serbest parçada atalet dengesi, Poiseuille akışı, silindir arkası girdap kopması (Strouhal), küre sürüklemesi (Schiller–Naumann), ısı iletimi, BMP280 datasheet örneği (adc_T = 519888 → 25,08 °C), motorun datasheet yüksüz akımı ve devri ile fizikteki mil turunun birbirini tutması.
+- **Sizin parçanız için:** analitik tablolar, sizin parçanızın ağının ve mesnetlerinin gerçeğe ne kadar yakın olduğunu söylemez. Bunun için iki araç vardır. **Ağ yakınsaması denetimi** en kötü anı daha ince ağla yeniden çözer ve farkı yazar. **.inp dışa aktarma** aynı durumu (ağ, malzeme, mesnetler, o anki yükler) CalculiX / ANSYS / Abaqus'a taşır; sonucu orada çözüp karşılaştırırsınız. Nokta yüklerin hemen altındaki tepe gerilme her FEM kodunda ağ inceldikçe büyür, bu yüzden karşılaştırmada %98'lik değer kullanılır.
+- **Parça yayılımı:** datasheet değeri gerçek parçanın tipik değeridir. Klon (yan sanayi) servo ve motorlar akımda %30–40 sapar. Ekranda okunan akımlar bu belirsizlikle (±%) gösterilir; render'daki belirsizlik bandı gerçek parçaların düşebileceği aralığı çizer. Güç kaynağı ve kablo kesiti seçerken tezgâh ölçümüyle doğrulayın.
+- **Firmware:** ESP32'de SPI gerçekten bağlı cihazla konuşur. Yanlış CS pini, bağlanmamış MISO, uyumsuz SPI modu ve fazla yüksek saat gerçek karttaki gibi hatalı veri verir. Görev watchdog'u ESP-IDF 5 gibi çalışır: besleme kesilirse rapor basar ve kartı yeniden başlatır.
+
 ## Komut satırı
 
 | Komut | Etki |
@@ -339,6 +346,12 @@ Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -
 ### Tests
 
 `dotnet test RobotWinStudio.sln` runs the xUnit suite in `CoreSim/tests`. `RobotWinStudio.exe --selftest --selftest-out selftest.txt` builds, simulates, auto-places, auto-routes and DRC-checks every example project and must end with `SELFTEST PASS`. `--snapshot` renders any page to PNG for visual checks. See [docs/TESTING.md](docs/TESTING.md).
+
+**How far to trust it.**
+- **Checked against analytic results:** cantilever deflection and stress, the plate-with-hole stress concentration (Kt ≈ 3), torsion, inertia relief, Poiseuille flow, cylinder shedding (Strouhal), sphere drag (Schiller–Naumann), heat conduction, the BMP280 datasheet example, and the motor's datasheet no-load current and speed against the physics shaft's turns.
+- **For your own part:** the mesh and the supports matter more than any table. Two tools address this. The *mesh convergence check* re-solves the worst instant on a finer mesh and reports the change. The *.inp export* writes the same case (mesh, material, supports, loads at that instant) for CalculiX, ANSYS or Abaqus, so you can compare against an independent solver.
+- **Part spread:** datasheet values are typical. Clone servos and motors differ by 30–40 % in current. Readings show this uncertainty, and the render's uncertainty band draws the range real parts may fall in. Bench-check before sizing a supply.
+- **ESP32 behaves like the real chip:** SPI talks to the device that is really wired, and wiring or mode mistakes give wrong data as on the bench. The ESP-IDF task watchdog fires and reboots the chip.
 
 ### Command line
 

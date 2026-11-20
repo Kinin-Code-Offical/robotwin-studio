@@ -112,6 +112,20 @@ namespace RobotTwin.CoreSim.Tests
             var hub = wp.Position + wp.Orientation.Rotate(new Vec3(0, 0, 0.0325));
             _out.WriteLine($"wheel hub at z = {hub.Z * 1000:F1} mm (shaft at 39.4 mm)");
             Assert.InRange(hub.Z, 0.036, 0.043);   // the wheel stays on the shaft (does not fall to the floor)
+
+            // The electrical side must match the TT motor's datasheet (6 V: 200 rpm, 0.15 A unloaded) —
+            // a free wheel is almost no load, so current ≈ no-load current and speed ≈ no-load speed
+            // scaled to the voltage actually on the terminals (after battery, cable and contact drops).
+            double vm = Math.Abs(wc.Compiled.PinVoltage(sim, wc.ComponentRef(motor.Id)!, "A") - wc.Compiled.PinVoltage(sim, wc.ComponentRef(motor.Id)!, "B"));
+            double expectedRpm = 200 * vm / 6.0;
+            _out.WriteLine($"terminal {vm:F2} V → datasheet no-load ≈ {expectedRpm:F0} rpm; model {Math.Abs(m.OutputRpm):F0} rpm, {Math.Abs(m.Current) * 1000:F0} mA");
+            Assert.InRange(vm, 5.0, 6.6);                                     // 4×AA under 0.15 A, minus wiring
+            Assert.InRange(Math.Abs(m.Current), 0.13, 0.22);                  // no-load 0.15 A + wheel bearing friction
+            Assert.InRange(Math.Abs(m.OutputRpm), expectedRpm * 0.88, expectedRpm * 1.02);   // slightly below no-load, never above
+            // The physics shaft and the electrical motor are the same machine: turns ≈ rpm × time minus spin-up.
+            Assert.InRange(Math.Abs(turns), Math.Abs(m.OutputRpm) / 60 * 0.80, Math.Abs(m.OutputRpm) / 60 * 1.01);
+            // Energy: electrical power in covers the shaft power out.
+            Assert.True(vm * Math.Abs(m.Current) > Math.Abs(m.LoadTorque) * Math.Abs(m.OutputRpm) * 2 * Math.PI / 60);
         }
 
         [Fact]

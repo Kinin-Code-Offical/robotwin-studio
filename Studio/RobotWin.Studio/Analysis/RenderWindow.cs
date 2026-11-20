@@ -46,6 +46,7 @@ namespace RobotWin.Studio.Analysis
         private readonly CheckBox _aero = new CheckBox { Content = "Hava akışı (tüm montaj, 3B)", IsChecked = true };
         private readonly TextBox _aeroSpeed = new TextBox { Width = 70, Text = "2" };
         private readonly CheckBox _thermal = new CheckBox { Content = "Isınma (kartlar, motorlar)", IsChecked = true };
+        private readonly CheckBox _meshCheck = new CheckBox { Content = "Ağ yakınsaması denetimi", IsChecked = false, ToolTip = "Her parçanın en kötü anı 1,4 kat daha ince ağla yeniden çözülür ve gerilmenin ne kadar değiştiği yazılır (%10'dan fazlası: sonuç ağa duyarlı)." };
         private readonly CheckBox _bands = new CheckBox { Content = "Belirsizlik bandı (4 tolerans koşusu)", IsChecked = false, ToolTip = "Parça değerleri tolerans bantlarından (klonlar ±%35–40) çekilerek 4 kez daha çalıştırılır; grafiklerde gerçek parçaların düşebileceği aralık gölge olarak görünür. Render süresi ~5 katına çıkar." };
         private readonly Button _render = new Button { Content = "Render al", Padding = new Thickness(14, 6, 14, 6) };
         private readonly ProgressBar _progress = new ProgressBar { Height = 6, Maximum = 1, Margin = new Thickness(0, 10, 0, 4) };
@@ -126,7 +127,7 @@ namespace RobotWin.Studio.Analysis
             root.Children.Add(center);
             Content = root;
 
-            foreach (var cb in new[] { _aero, _thermal, _bands, _forces, _air }) cb.Foreground = Res("B.Text");
+            foreach (var cb in new[] { _aero, _thermal, _bands, _meshCheck, _forces, _air }) cb.Foreground = Res("B.Text");
             _timer.Tick += (_, _) => Tick();
             Closed += (_, _) =>
             {
@@ -183,6 +184,7 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(new Border { Child = _aero, Margin = new Thickness(0, 10, 0, 0) });
             left.Children.Add(Row("Duran montajda test hızı (m/s)", _aeroSpeed));
             left.Children.Add(new Border { Child = _thermal, Margin = new Thickness(0, 8, 0, 0) });
+            left.Children.Add(new Border { Child = _meshCheck, Margin = new Thickness(0, 8, 0, 0) });
             left.Children.Add(new Border { Child = _bands, Margin = new Thickness(0, 8, 0, 0) });
             _render.Style = (Style)Application.Current.FindResource("Btn.Primary");
             _render.Margin = new Thickness(0, 16, 0, 0);
@@ -227,7 +229,8 @@ namespace RobotWin.Studio.Analysis
                 Thermal = _thermal.IsChecked == true,
                 ThermalExtend = 0,
                 ThermalFrames = Math.Max(10, (int)(duration * 10)),
-                UncertaintyRuns = _bands.IsChecked == true ? 4 : 0
+                UncertaintyRuns = _bands.IsChecked == true ? 4 : 0,
+                StressMeshCheck = _meshCheck.IsChecked == true
             };
         }
 
@@ -502,7 +505,8 @@ namespace RobotWin.Studio.Analysis
                         : new TextBlock
                         {
                             Text = $"{st.Name} · {st.Material}\nen kötü an t = {crit.Time:0.000} s: σ = {SiValue.Format(crit.MaxVonMises, "Pa")}, emniyet {crit.MinSafetyFactor:0.#}"
-                                   + (crit.MinSafetyFactor < 1 ? "  — AKAR / KIRILIR" : crit.MinSafetyFactor < 2 ? "  — sınırda" : string.Empty),
+                                   + (crit.MinSafetyFactor < 1 ? "  — AKAR / KIRILIR" : crit.MinSafetyFactor < 2 ? "  — sınırda" : string.Empty)
+                                   + (double.IsFinite(st.MeshChange) ? $"\nağ yakınsaması: %{st.MeshChange * 100:0.#} " + (st.MeshChange > 0.10 ? "(ağa duyarlı)" : "(ağdan bağımsız)") : string.Empty),
                             Foreground = crit.MinSafetyFactor < 1 ? Brushes.OrangeRed : crit.MinSafetyFactor < 2 ? Brushes.Orange : Foreground,
                             TextWrapping = TextWrapping.Wrap
                         },
@@ -515,6 +519,21 @@ namespace RobotWin.Studio.Analysis
                 }
 
                 _partList.Children.Add(b);
+                if (RobotTwin.CoreSim.Analysis.Export.InpExport.CanExport(st))
+                {
+                    var export = new Button { Content = "Bu durumu dışa aktar (.inp: CalculiX / ANSYS / Abaqus)", Margin = new Thickness(12, 0, 0, 8), HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(8, 2, 8, 2),
+                        ToolTip = "Aynı ağ, malzeme, mesnet ve o anki yükler (temas, eklem, yerçekimi, atalet dengesi). Başka bir çözücüyle çözüp sonucu karşılaştırın; RobotWin'in sonucu dosyada yorum olarak yazılıdır." };
+                    var part = st;
+                    export.Click += (_, _) =>
+                    {
+                        var dlg = new SaveFileDialog { Filter = "Abaqus / CalculiX girdisi (*.inp)|*.inp", FileName = part.Name + ".inp" };
+                        if (dlg.ShowDialog(this) != true) return;
+                        RobotTwin.CoreSim.Analysis.Export.InpExport.Save(part, dlg.FileName);
+                        _status.Text = "Dışa aktarıldı: " + dlg.FileName;
+                    };
+                    _partList.Children.Add(export);
+                }
+
                 if (st.Frames.Count > 0)
                 {
                     double t0 = _result.Channels.Count > 0 ? _result.Channels.Time(0) : 0;

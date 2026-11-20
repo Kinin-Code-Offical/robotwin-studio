@@ -129,5 +129,42 @@ namespace RobotTwin.CoreSim.Tests.Analysis
             Assert.True(a.Force.Dot(a.AxisX) > 0, "drag acts along the relative wind");
             Assert.InRange(a.Force.Length, 1e-4, 0.5);   // a toy car in a 3 m/s breeze: millinewtons
         }
+
+        [Fact]
+        public void StressResultsCarryAMeshCheckAndExportAsABalancedInpDeck()
+        {
+            // A 40 × 30 × 20 mm PLA block dropped from 5 cm: impact contact loads.
+            var world = new WorldDocument();
+            var plate = world.AddBody("box", 0.04, 0.03, 0.02, new WorldPose { Z = 0.05 }, "PLA");
+            var s = new AnalysisSettings
+            {
+                Preset = AnalysisPreset.Custom, Duration = 0.3, OutputRate = 200, Accuracy = AccuracyPreset.Fast, Firmware = false,
+                Stress = true, StressObjects = { plate.Id }, StressInstants = 4, StressTargetCells = 150, StressMeshCheck = true
+            };
+            var r = AnalysisRun.Run(world, s);
+            var st = Assert.Single(r.Stress);
+            foreach (var n in st.Notes) _out.WriteLine(n);
+            Assert.True(double.IsFinite(st.MeshChange), "the critical instant is re-solved on a finer mesh");
+            Assert.True(RobotTwin.CoreSim.Analysis.Export.InpExport.CanExport(st));
+            string inp = RobotTwin.CoreSim.Analysis.Export.InpExport.Write(st);
+            Assert.Contains("*ELEMENT, TYPE=C3D10", inp);
+            Assert.Contains("*CLOAD", inp);
+            Assert.Contains("*BOUNDARY", inp);
+            // Inertia relief: the exported loads (contacts + gravity + d'Alembert forces) are in balance,
+            // so the 3-2-1 supports carry (almost) nothing — the same problem RobotWin solved.
+            var f = st.ExportForces!;
+            double sx = 0, sy = 0, sz = 0, mag = 0;
+            for (int i = 0; i < f.Length; i += 3)
+            {
+                sx += f[i];
+                sy += f[i + 1];
+                sz += f[i + 2];
+                mag += System.Math.Abs(f[i]) + System.Math.Abs(f[i + 1]) + System.Math.Abs(f[i + 2]);
+            }
+
+            double residual = System.Math.Sqrt(sx * sx + sy * sy + sz * sz);
+            _out.WriteLine($"export: {inp.Length / 1024} kB, net force {residual:E2} N of {mag:E2} N applied");
+            Assert.True(residual < 1e-6 * mag + 1e-9);
+        }
 }
 }

@@ -117,6 +117,16 @@ namespace RobotTwin.CoreSim.Analysis
         public double BeamHeight { get; set; }
         public bool BeamCircular { get; set; }
 
+        /// <summary>Critical instant as the exact discrete problem (for export to another solver): nodal forces incl. body loads, fixed DOFs, material.</summary>
+        public double[]? ExportForces { get; set; }
+        public int[]? ExportFixed { get; set; }
+        public double ExportYoung { get; set; }
+        public double ExportPoisson { get; set; }
+        public double ExportTime { get; set; }
+
+        /// <summary>Mesh convergence of the representative peak (98th percentile σ) at the critical instant: relative change on a finer mesh, NaN if not checked.</summary>
+        public double MeshChange { get; set; } = double.NaN;
+
         /// <summary>Beam: direction of the section height (thinnest side) in the body frame.</summary>
         public Vec3 BeamUp { get; set; } = Vec3.UnitZ;
 
