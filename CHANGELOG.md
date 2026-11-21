@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-22
+
+The modeller gets Blender's cutting and selection tools, and every message is in one language.
+
 ### Added
 
 - **Modeller cutting tools:** knife (K) along a line drawn on the screen, with cut / delete one side and capping; slice an object into two closed pieces (K in object mode); loop cut (Ctrl+R) with a live preview; bevel (Ctrl+B) with corner patches; solidify (even wall thickness, hollow shells); extrude from edges in vertex/edge mode; loop select (Alt+click), select linked (L) and grow/shrink (Ctrl+Numpad +/−). Boolean union/difference/intersection and slicing have their own section in the properties panel.
@@ -14,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - One language per message: KiCad import log, solver errors, ESP32 events and loader errors, mesh import errors and API messages are in Turkish only (no more "Türkçe / English" pairs).
+- Part names: "Erkek Header 1×N" and "Çekirdeksiz Motor" instead of English names; the board's reset button reads "Sıfırla".
 
 ## [1.1.0] - 2026-11-21
 

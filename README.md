@@ -13,6 +13,8 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
+> **1.2.0'da yeni:** Modelle sayfasına Blender'ın kesme araçları geldi: bıçak (K) ve nesneyi iki kapalı parçaya dilimleme, halka kesim (Ctrl+R), pah kırma (Ctrl+B), kalınlık verme, kenarlardan ekstrüzyon, halka ve bağlı seçim; Boolean (fark ile kırpma, birleşim, kesişim) artık panelde. Uygulamanın bütün mesajları tek dilde (Türkçe). Ayrıntılar: [CHANGELOG.md](CHANGELOG.md).
+
 ![Başlangıç sayfası](docs/images/home.png)
 
 ## İçindekiler
@@ -55,6 +57,8 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 | **Devre:** şema editörü ve canlı simülasyon | **PCB:** katmanlar, yollar, DRC |
 | ![3D modelleyici](docs/images/modeler.png) | ![Dünya: iki eksenli servo kol](docs/images/world-servo-arm.png) |
 | **Modelle:** Blender benzeri 3D modelleyici | **Dünya:** Arduino ile iki eksenli servo kol |
+| ![Modelle: dilimleme, pah ve kalınlık](docs/images/modeler-cut.png) | ![Modelle: halka kesimler](docs/images/modeler-cut-edit.png) |
+| **Modelle:** dilimlenip döndürülmüş boru, pahlı blok, kalınlık verilmiş tepsi | **Modelle:** düzenleme modunda halka kesimler ve yeni araçlar |
 | ![Dünya: kumandalı araba](docs/images/world-ps5-car.png) | ![Dünya: ultrasonik sensör](docs/images/world-sonar.png) |
 | **Dünya:** ESP32 + PS5 kumandalı araba | **Dünya:** ultrasonik sensör ışın izleme ile ölçer |
 
@@ -70,7 +74,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.0.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.2.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -205,8 +209,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0
-# -> builds\installer\RobotWinStudio-Setup-1.0.0.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.2.0
+# -> builds\installer\RobotWinStudio-Setup-1.2.0.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -260,12 +264,11 @@ Ayrıntılar: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md), mimari: [d
 
 Aşağıdakiler üzerinde çalışılıyor; **henüz ana dala alınmadı** ve yayımlanmış sürümlerde yoktur:
 
-- **Havacılık:** sabit kanat aerodinamiği, itki eğrili (.eng) roketler, atmosfer modeli, aviyonik sensörler, paraşüt/piro.
-- **Akışkanlar:** su ve su altı, kaldırma kuvveti, sıvılar ve basınç.
+- **Akışkanlar:** su altı, kaldırma kuvveti, sıvı akışı (gaz basıncı, lüle akışı ve su roketi artık var).
 - **Tek saat ve birlikte hata ayıklama:** firmware kesme noktasında MCU, devre ve fizik birlikte durur; karışık sinyal bölümleme.
 - **Mekanik ve endüstriyel parçalar:** vida/geçme, kırılma, dişli/kayış/yay/sönümleyici, profiller, lineer raylar, step motor ve sürücüler, pnömatik, paletli araçlar, yumuşak gövdeler.
 - **Daha fazla MCU:** Mega, ATtiny, RP2040, STM32, ESP8266, ESP32-C3/S3; SPI/CAN/ESP-NOW/LoRa sürüleri; PLC (ladder/ST, Modbus).
-- **Köprüler:** STEP/URDF/KiCad proje içe aktarma, SPICE modelleri, `custom_parts` klasörü.
+- **Köprüler:** STEP/URDF/KiCad proje içe aktarma, `custom_parts` klasörü.
 - **Dil:** İngilizce varsayılan arayüz, Türkçe ve eklenebilir dil paketleri.
 
 ## Katkı, güvenlik, belgeler
@@ -284,7 +287,9 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 **RobotWin Studio** is a Windows desktop app for building robot and electronics projects end to end: draw the circuit, lay out the PCB, write the firmware, model the chassis, then drop everything into an open world with real physics, wire it up and run it all together. Arduino (ATmega328P) firmware runs as real compiled HEX on an emulated MCU, ESP32 sketches run in co-simulation with the circuit, and motors, servos, sensors, cables and parts genuinely affect each other. The user interface is in Turkish.
 
-Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (Turkish, with screenshots) and the developer docs. In the app: *Yardım → Çevrimiçi belgeler*.
+Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
+
+> **New in 1.2.0:** Blender's cutting tools in the modeller: knife (K) and slicing an object into two closed pieces, loop cut (Ctrl+R), bevel (Ctrl+B), solidify, extrude from edges, loop and linked selection; Boolean (difference to trim, union, intersection) is now in the panel. Every message of the app is in one language (Turkish). Details: [CHANGELOG.md](CHANGELOG.md). In the app: *Yardım → Çevrimiçi belgeler*.
 
 ### What's inside
 
@@ -296,7 +301,7 @@ The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) walks t
 | **PCB** | Ctrl+2 | 2/4/6-layer boards, copper zones, interactive router that walks around obstacles, auto-placement and auto-routing, DRC, Gerber RS-274X X2 + Excellon + BOM + CPL, KiCad 8 project export, footprint editor, 3D board view. |
 | Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). |
 | Model (**Modelle**) | Ctrl+4 | Blender-like modeller: primitives, edit mode (vertex/edge/face, extrude, inset, knife, loop cut, bevel, solidify, subdivide, …), slicing into two closed pieces, CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export, *send to world*. |
-| Assembly (**Montaj**) | Ctrl+5 | Auto-build a rover or X-quadcopter from the circuit, drive/fly it in arenas, run fault experiments, record `.rwsim`. |
+| Assembly (**Montaj**) | Ctrl+5 | The circuit's real assembly: parts on the PCB stay on the board, motors, servos, batteries, sensors and modules arrive as their real 3D parts wired net by net; you build the chassis, wheels, joints and shells with the world tools, then record and run fault experiments. |
 | World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. **Record and render** (● Record, Ctrl+R; Simulation › Render, Ctrl+F5): the recorded stretch is recomputed off-screen at full accuracy — every pose, force and signal, FEM stress of every part at video frame rate, 3D lattice-Boltzmann flow around the whole assembly and heating — and replayed like a video in the same 3D scene with a timeline, slow motion, per-part stress colours, force arrows, a flow slice and graphs that jump to the clicked second. |
 
 Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
@@ -340,7 +345,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0` → `builds\installer\RobotWinStudio-Setup-1.0.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds both installers and attaches them to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.2.0` → `builds\installer\RobotWinStudio-Setup-1.2.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds both installers and attaches them to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 
@@ -364,12 +369,11 @@ Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -
 
 Being worked on, **not merged yet** and not in any release:
 
-- Aerospace: fixed-wing aerodynamics, rockets with thrust curves, atmosphere, avionics sensors, parachute/pyro.
-- Fluids: water and underwater, buoyancy, liquids and pressure.
+- Fluids: underwater, buoyancy, liquid flow (gas pressure, nozzle flow and water rockets are already in).
 - One clock and co-debugging: a firmware breakpoint freezes MCU, circuit and physics together; mixed-signal partitioning.
 - Mechanical and industrial parts: fasteners and fits, breakage, gears/belts/springs/dampers, extrusions, linear rails, steppers and drivers, pneumatics, tracked vehicles, soft bodies.
 - More MCUs (Mega, ATtiny, RP2040, STM32, ESP8266, ESP32-C3/S3), SPI/CAN/ESP-NOW/LoRa swarms, PLC (ladder/ST, Modbus).
-- Bridges: STEP/URDF/KiCad project import, SPICE models, a `custom_parts` folder.
+- Bridges: STEP/URDF/KiCad project import, a `custom_parts` folder.
 - English as the default UI language, Turkish and add-on language packs.
 
 ### License
