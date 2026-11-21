@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-21
+
+One shared physics now drives everything in the world: circuits, rigid bodies, heat, air, gas and radio feed each other, so robots, aircraft, rockets and industrial cells are built from the same parts and behave as they would in reality.
+
+### Added
+
+- **Help, news and updates:** in-app Help page (F1) with the user guide, News, one-click automatic updates that keep projects and settings, older versions list, performance indicator.
+- **Real Montaj:** the assembly is built from the circuit itself. Parts on the PCB stay on the board; every other part (motor, servo, battery, sensor, module) arrives as its real 3D part, nets become real jumper cables. No ready-made vehicle; build chassis, wheels and shells with the world tools.
+- **Model-shaped rigid bodies:** every part, board and model collides with the convex outline of its own 3D model (round things roll, wheels stand on their tyres). *Görünüm → Çarpışma şekilleri* shows the shapes the physics uses.
+- **Flight:** drawn wings, tails and fins generate lift and drag with stall, validated stability and elevator authority; balsa glider, motor glider UAV and ESP32 quadcopter flown by its own firmware (brushless outrunners, ESC current limit, IMU that feels the motion).
+- **Gas physics and rockets:** ideal-gas pressure vessels with species mixing, isentropic choked and supersonic nozzle flow, water expulsion, solid propellant grains (KNSB, KNDX, APCP) with Saint-Robert burn rate and BATES geometry, wall heating, burst at the material's hoop-stress limit; ISA atmosphere. Templates: water rocket and sugar-motor test stand.
+- **Air drag of assemblies:** joined parts shield each other's faces, base drag and skin friction are separated, oblique flow blends by projected area.
+- **USB-C lithium batteries:** 18650, 2S pack, AA and 4×AA Li-ion with protection board (over-charge, over-discharge, over-current), CC/CV charger from a world USB cable, regulated 1.5 V output.
+- **PS5-controlled car rebuilt:** designed controller board (schematic, routed PCB, firmware), real 2WD kit geometry with mirrored motors, battery powered, drives straight and turns from the DualSense over Bluetooth.
+- **Heat:** thermal network across parts and boards, heat changes materials (softening, melting, thermal stress), honest motor and battery heating, thermal camera on the 3D models, board heat map in the render.
+- **Analysis and render:** offline analysis runs with full recording, FEM stress with mesh convergence and `.inp` export, 2D CFD, 3D streamlines, replay of a recorded run with stress on every part, follow camera, electrical render.
+- **Honest measurements:** per-part variance of cloned parts, uncertainty on readings, Monte Carlo bands, bench comparison against an imported measured log.
+- **Mechanics:** hollow shells with screwed lids and fit check, X-ray and exploded views, pushrod linkages, brushless ESC, ready wheels and propellers, rope cables, tyre slip, tipping, motors that stall under load, interpenetration prevented inside assemblies.
+- **Industrial robot cell:** 6-axis arm, SCARA, inverse kinematics, gripper, vacuum, conveyor, teach pendant.
+- **Sensors and cameras:** real line sensing, cameras, LiDAR, IMU, GPS; Scene + Game views.
+- **Terrain and world editor:** sculpting, surface layers, real ground mechanics; free lights and 3D positional sound.
+- **ESP32:** real SPI bus to wired devices (MCP3008, BMP280), real task watchdog.
+- **Cables:** length check (enough / taut / too short), rope tension, voltage drop, plug contact resistance, cable diagnostics.
+- **PCB:** hand routing from a ratsnest line (F finishes to the target pad), live lengths, the board's real outline in 3D and in the world, ready board shapes.
+- **Automation API and SDK:** Python/Gymnasium, ROS 2 bridge, headless runs (with radio between boards); environment SDK with atmosphere, wind, force fields and physics scripts.
+- **External libraries** and a part creator.
+- **Documentation site:** every page fully Turkish or fully English, physics and maths reference with formulas, API and physics-script how-tos with code, drawn diagrams and tables.
+
+### Changed
+
+- Installers: `RobotWinStudio-Setup-<version>.exe` is the full package and carries .NET; `RobotWinStudio-Setup-<version>-lite.exe` needs the .NET 9 Desktop Runtime.
+- Core simulation messages (battery, regulator, ESP32 build errors) are in Turkish like the rest of the interface.
+- Text contrast raised to WCAG level, no text under 12 px, labels wrap (see `docs/ACCESSIBILITY.md`).
+- Wood density corrected; balsa, carbon and lead materials added; PET, cardboard and acrylic strength data.
+
+### Fixed
+
+- Serial monitor freeze and a model lost when closing the app.
+- Solver collapse when a battery ran completely empty.
+- Wheels and other turned bodies drawn lying flat in the render.
+
 ## [1.0.0] - 2026-11-20
 
 RobotWin Studio is now a single Windows desktop application: C# .NET 9 WPF (`Studio/RobotWin.Studio`) on top of the C# simulation core `CoreSim`. The Turkish user interface follows one "design-to-real line": Devre → PCB → Kod → Modelle → Montaj → Dünya.
