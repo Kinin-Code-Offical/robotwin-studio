@@ -1,167 +1,311 @@
-# RobotWin Studio SDK — ortam, kuvvet alanları, betikler ve eklentiler
+# Physics scripts (SDK): environment, force fields, scripts and plugins
 
-*(Türkçe her bölümün başında; English follows in each section.)*
+Your own physics can be added to a world at three levels. All of them run inside the same fixed 1 ms physics step, in a fixed order, with seeded randomness, so a world gives the same result every time.
 
-## 1. Genel bakış · Overview
+| Level | Where | You need | Good for |
+| --- | --- | --- | --- |
+| **Expression** | Object → *Ortam ve davranışlar* → *Davranış ekle → İfade*, or Environment → *İfade alanı* | Nothing | Quick force laws: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
+| **C# script** | World → *Betikler* tab → *Yeni C# betiği* | .NET 9 SDK (the app downloads nothing) | Behaviours with state, sensors, controllers; saved inside the world file |
+| **Plugin DLL** | `%APPDATA%\RobotWinStudio\Plugins\<name>\` or `Plugins\` beside the world file | Any compiler (template: `sdk/templates/RobotWinPlugin`) | Libraries, custom circuit parts, shared models |
 
-**TR** — Bir dünyanın fiziğine kendi kodunuzu üç düzeyde ekleyebilirsiniz:
+## When your code runs
 
-| Düzey | Nerede | Gerekenler | Ne için |
-|---|---|---|---|
-| **İfade dili** | Nesne → *Ortam ve davranışlar* → *Davranış ekle → İfade*, ya da Ortam → *İfade alanı* | Hiçbir şey | Hızlı kuvvet yasaları: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
-| **C# betikleri** | Dünya → *Betikler* sekmesi → *Yeni C# betiği* | .NET 9 SDK (uygulama indirmez) | Durumlu davranışlar, sensörler, denetleyiciler; dünya dosyasıyla birlikte kaydedilir |
-| **Eklenti DLL'leri** | `%APPDATA%\RobotWinStudio\Plugins\<ad>\` veya dünya dosyasının yanındaki `Plugins\` | Herhangi bir derleyici (şablon: `sdk/templates/RobotWinPlugin`) | Kütüphaneler, özel devre elemanları, paylaşılan modeller |
+```mermaid
+sequenceDiagram
+    participant W as World step (1 ms)
+    participant F as Force fields & wind sources
+    participant B as Behaviours (OnStep)
+    participant S as Physics solver
+    participant A as Behaviours (OnAfterStep)
+    W->>F: Evaluate(body) for every affected body
+    F-->>W: forces, torques, added wind
+    W->>B: OnStep(ctx, dt) in the order they were added
+    B-->>W: ApplyForce / ApplyTorque / Publish
+    W->>S: contacts, joints, drag, wings, gas, integration
+    S-->>W: new positions and velocities
+    W->>A: OnAfterStep(ctx, dt) — read sensors, publish values
+```
 
-Hepsi **sabit 1 ms fizik adımının içinde**, çözücüden önce, belirli bir sırayla çalışır; rastgelelik dünya tohumundan gelir. Aynı dünya aynı sonucu verir.
+Forces you apply hold for that one step only; apply them again every step.
 
-**EN** — Custom physics can be added at three levels: the in-app **expression language** (no tools needed), **C# scripts** saved inside the world (compiled with an installed .NET 9 SDK — nothing is downloaded), and **plugin DLLs** (any compiler; template in `sdk/templates/RobotWinPlugin`). All of them run inside the fixed 1 ms physics step, before the solver, in a fixed order, with seeded randomness — runs are reproducible.
+## 1. Expressions: no tools needed
 
-## 2. Ortam modeli · Environment model
+### How to add one
 
-Ortam sekmesi (Dünya → palet → *Ortam*) · the *Ortam* palette tab.
+1. Select an object on the World page.
+2. In the right panel open **Ortam ve davranışlar** (environment and behaviours) → **Davranış ekle → İfade** (add behaviour → expression).
+3. Type the program; values you want to tune go in the **Sabitler** (constants) box, e.g. `k=20, c=0.5`.
+4. Run the world. Errors are shown with line and column, e.g. `Satır 2, sütun 7: Bilinmeyen değişken 'sped'. Bunu mu demek istediniz: speed?` (line 2, column 7: unknown variable 'sped' — did you mean speed?).
 
-### Hava · Air
-- **TR** Yoğunluk, ortam sıcaklığı *T*, deniz seviyesi basıncı *p₀*, rakım *h* ve bağıl nemden hesaplanır:
-  `p = p₀·(1 − 2.25577·10⁻⁵·h)^5.25588`, `ρ = p_d/(R_d·T) + p_v/(R_v·T)` (Tetens doymuş buhar basıncı). 15 °C, 1013.25 hPa → 1.225 kg/m³. İsterseniz sabit bir yoğunluk girin (Mars ≈ 0.02).
-- **EN** Density from temperature, sea-level pressure, altitude and humidity (barometric formula + humid-air gas law). A fixed density can override it. The older `WorldSpec.AirDensity` is still honoured.
-- Sınırlama / limitation: tek bir yoğunluk bütün dünyaya uygulanır (yükseklikle değişim ihmal edilir). One density for the whole world.
-
-### Rüzgâr · Wind
-- **Ortalama rüzgâr / mean wind**: hız, *estiği* yön (0° = +X'e doğru, 90° = +Y'ye doğru), dikey bileşen.
-- **Yükseklik profili / height profile**: düzgün; üstel yasa `u(z) = u_ref·(z/z_ref)^α`; logaritmik `u(z) = u_ref·ln(z/z₀)/ln(z_ref/z₀)`.
-- **Türbülans / turbulence** ("Dryden benzeri"): her eksende birinci dereceden Gauss–Markov süreci
-  `u[k+1] = a·u[k] + σ·√(1−a²)·n`, `a = exp(−V·Δt/L)`; σ yatay şiddet, dikey σ = oran·σ, ilinti süresi `L/V`.
-  Boyuna bileşen Dryden spektrumunun tam karşılığıdır; yanal/dikey Dryden spektrumları ikinci derecedir, burada aynı birinci derece süzgeçle yaklaşıklanır. Türbülans uzayda düzgündür (bütün dünyada tek örnek) — L'den çok küçük nesneler için uygundur.
-  *EN: first-order Gauss–Markov per axis (exact Dryden longitudinal spectrum; lateral/vertical approximated), spatially uniform.*
-- **Ani esintiler / discrete gusts**: rüzgâr yönünde `½A·(1 − cos 2πt/T)` biçimli, genliği A·[0.5, 1], aralar üstel dağılımlı.
-- **Tohum / seed**: bütün rastgele süreçler `SdkRandom` (SplitMix64) ile; .NET sürümünden bağımsız aynı dizi.
-
-### Aerodinamik · Aerodynamics
-- **Sürükleme / drag** her hareketli nesneye: `F = −½·ρ·(Cd·A)(û)·|v_rel|·v_rel`, `v_rel = v − rüzgâr`. `Cd·A` gövde eksenlerinde tutulur; eğik akışta yön kosinüsleriyle karıştırılır. Varsayılan Cd: kutu 1.05 (her yüz), küre 0.47, silindir 1.0 (yandan) / 0.9 (uçtan), gövde/model 0.8 (sınır kutusu). Nesne başına Cd, referans alan veya kapatma: sağ panel → *Ortam ve davranışlar*.
-  Sürükleme fizik motorunun alt adımlarında hesaplanır ve tek adımda hızı tersine çeviremeyecek şekilde sınırlanır.
-- **Kaldırma / buoyancy** `ρ·V·g` (isteğe bağlı; hacim çarpışma şeklinden veya elle).
-- **Dönme sönümü / rotational damping** `−c·ρ·r⁵·|ω|·ω` (r = sınır küresi yarıçapı; kaba yaklaşım).
-- **Pervaneler / propellers**: rüzgâr modeli `PhysicsScene.WindProvider` üzerinden pervane giriş havasına da girer (rotor sürüklemesi), yoğunluk itkiyi ölçekler.
-
-### Kuvvet alanları · Force fields (Ortam → *Kuvvet alanları ve hava akımları*)
-
-| Tür / kind | Davranış | Parametreler |
-|---|---|---|
-| Düzgün `uniform` | sabit kuvvet (N) veya ivme (m/s²) | yön, büyüklük |
-| Çekici/itici `radial` | merkeze doğru `S·f(r)`; `f`: 1/r² (R'de 1), doğrusal, Gauss, sabit | R, azalma |
-| Girdap `vortex` | Rankine girdabı: çekirdekte `S·r/R`, dışında `S·R/r`; içe akış, yukarı akış. Varsayılan **rüzgâr** olarak (sürükleme ve pervanelerle etkiler), isterseniz doğrudan kuvvet | eksen, R |
-| Fan `fan` | kutu bölgesinde hava akımı (rüzgâra eklenir), ~6 çaptan sonra serbest jet gibi azalır, kenarlarda yumuşar | yön, çıkış hızı |
-| Konveyör `conveyor` | bölgedeki nesnelerin yatay hızını τ = 50 ms ile bant hızına çeker, zemin sürtünmesini dengeler; en büyük kuvvet (tutuş + μ_zemin)·m·g | bant yönü/hızı, tutuş |
-| İfade `expression` | her nesneye `F.*`/`T.*` veya her noktada `wind.*` | program |
-| Eklenti `plugin` | `IForceField` / `IWindSource` uygulayan eklenti türü | eklentinin parametreleri |
-
-Alanlar bir kutu bölgesiyle sınırlanabilir (merkez, boyut, dönüş) ve belirli nesnelere hedeflenebilir.
-*EN: fields can be bounded by an oriented box and targeted to selected objects. Fans and (by default) vortices add air velocity, so they act through drag and on propellers.*
-
-### Görselleştirme · Visualisation
-3B görünümde zemin üzerinde rüzgâr okları, köşede rüzgâr çorabı (rüzgâr güçlendikçe yatayına kalkar), alan bölgelerinin çerçeveleri (fan mavi, konveyör sarı, girdap yeşil, diğerleri mor). Çalışırken canlı rüzgâr, dururken ortalama rüzgâr + fanlar. Sağ panel: nesnedeki rüzgâr, havaya göre hız, sürükleme kuvveti, Cd·A, betik kuvvetleri ve yayımlanan değerler.
-*EN: wind arrows, a wind sock, field outlines; live values in the inspector.*
-
-## 3. İfade dili · Expression language
+### Example: a spring and a damper pulling the object back to where it started
 
 ```text
-# yay + sönüm (x0 = başlangıç konumu)
+# spring + damper (x0 = starting position)
 k = 20; c = 0.5
 F.x = -k*(x - x0) - c*vx
-F.z = m*g*0.5 * (t > 1)          # karşılaştırmalar 0/1 verir
-TL.z = -0.01*wz                  # gövde ekseninde tork
+F.z = m*g*0.5 * (t > 1)          # comparisons give 0/1
+TL.z = -0.01*wz                  # torque about the body axis
 ```
-- İşleçler (öncelik sırasıyla, düşükten yükseğe) · operators: `?:`, `||`, `&&`, `< > <= >= == !=`, `+ -`, `* / %`, tekli `- + !`, `^` (üs, sağdan; `-2^2 = -4`, `2^3^2 = 512`; `**` da olur). `%` taban (floor) kalanıdır: `-7 % 3 = 2`.
-- Fonksiyonlar · functions: `sin cos tan asin acos atan atan2 sinh cosh tanh sqrt cbrt abs exp ln log log10 log2 pow min max clamp sign floor ceil round frac hypot lerp step smoothstep deg rad if noise hash square saw pulse`. Sabitler: `pi tau e g0 true false`.
-- **Nesne davranışı girdileri** · inputs: `t dt x y z vx vy vz wx wy wz speed m g x0 y0 z0 roll pitch yaw rho tempC air.x air.y air.z wind.x wind.y wind.z airspeed h` (+ *Sabitler* kutusundaki adlar, ör. `k=20, c=0.5`).
-- **Çıktılar** · outputs: `F.x F.y F.z` (N, dünya), `FL.x…` (N, gövde ekseni), `T.x…` (N·m, dünya), `TL.x…` (gövde). `Fx` = `F.x` kısaltması. Atanmayan çıktılar 0'dır.
-- **İfade alanında** ayrıca `wind.x wind.y wind.z` **çıktıdır** (o noktaya eklenen rüzgâr, m/s); temel rüzgâr `air.*` ile okunur. Rüzgâr değerlendirilirken hız girdileri 0'dır.
-- Yerel değişkenler (`k = 20`) her adımda yeniden hesaplanır; nesne ifadelerinde *Ad.değişken* olarak yayımlanır (Betikler sekmesinde ve sağ panelde görünür).
-- Hatalar Türkçe ve konumludur: `Satır 2, sütun 7: Bilinmeyen değişken 'sped'. Bunu mu demek istediniz: speed?`. Döngü ve kullanıcı fonksiyonu yoktur; her program sınırlı sürede biter (en fazla 8000 karakter, 4000 düğüm, 64 iç içe).
-- NaN/∞ kuvvet üreten ifade hata sayılır (bkz. §6).
 
-**EN** — Statements separated by `;` or new lines, `#` or `//` comments. Booleans are 0/1. Object behaviours read the body state and write `F.*`, `FL.*`, `T.*`, `TL.*`; expression fields may also write `wind.*` (added air velocity at a point; base wind readable as `air.*`). The parser/evaluator is hand-written (`RobotTwin.CoreSim.Sdk.Expressions.ExpressionProgram`), compiles to closures, and has no loops, so every program terminates.
+### Language
 
-## 4. C# API (`RobotTwin.CoreSim.Sdk`)
+| | |
+| --- | --- |
+| Statements | separated by `;` or new lines; comments `#` or `//` |
+| Operators (low → high) | `?:`, `\|\|`, `&&`, `< > <= >= == !=`, `+ -`, `* / %`, unary `- + !`, `^` (power, right-associative; `-2^2 = -4`, `2^3^2 = 512`; `**` also works). `%` is the floored remainder: `-7 % 3 = 2` |
+| Functions | `sin cos tan asin acos atan atan2 sinh cosh tanh sqrt cbrt abs exp ln log log10 log2 pow min max clamp sign floor ceil round frac hypot lerp step smoothstep deg rad if noise hash square saw pulse` |
+| Constants | `pi tau e g0 true false` |
+| Inputs (object behaviour) | `t dt x y z vx vy vz wx wy wz speed m g x0 y0 z0 roll pitch yaw rho tempC air.x air.y air.z wind.x wind.y wind.z airspeed h` and the names in the constants box |
+| Outputs | `F.x F.y F.z` (N, world), `FL.x…` (N, body axes), `T.x…` (N·m, world), `TL.x…` (body); `Fx` is short for `F.x`. Unassigned outputs are 0 |
+| Expression field | can also write `wind.x wind.y wind.z` (air velocity added at that point, m/s); the base wind is read as `air.*`; speed inputs are 0 there |
+
+Local variables (`k = 20`) are recomputed every step and published as *Name.variable* (shown in the Scripts tab and the right panel). There are no loops or user functions, so every program finishes (at most 8000 characters, 4000 nodes, 64 levels of nesting). An expression that produces a NaN/∞ force counts as an error (see §6).
+
+## 2. C# scripts inside a world
+
+### How to write and load one
+
+1. Install the **.NET 9 SDK** (the app does not download it). Without it the Scripts tab says why; expressions and plugins still work.
+2. World page → **Betikler** (scripts) tab → **Yeni C# betiği** (new C# script). A template opens in the editor.
+3. Write a class derived from `WorldBehavior` (below). Save: the script is stored inside the world file.
+4. The script compiles when the world starts (or with *Derle*). Errors appear with file, line and column.
+5. Select an object → **Davranış ekle** → your behaviour (its `[Behavior]` name). Its `[Parameter]` properties show in the inspector.
+6. Run. Values you `Publish` appear in the right panel and can be read by other code and by the *Programlanabilir sensör (SDK)* part.
+
+### Example: pull an object towards a target point
 
 ```csharp
-[Behavior("Yay ile merkeze çek", Description = "…")]          // name in the "Davranış ekle" menu
+using RobotTwin.CoreSim.Mechanics;
+using RobotTwin.CoreSim.Sdk;
+
+[Behavior("Yay ile merkeze çek", Description = "Pulls the object towards a point with a spring and a damper.")]
 public sealed class SpringToPoint : WorldBehavior
 {
-    [Parameter("Yay sabiti", Unit = "N/m")] public double K { get; set; } = 20;   // editable in the inspector
+    [Parameter("Yay sabiti", Unit = "N/m")] public double K { get; set; } = 20;    // editable in the inspector
+    [Parameter("Sönüm", Unit = "N·s/m")] public double C { get; set; } = 0.5;
     [Parameter("Hedef", Unit = "m")] public Vec3 Target { get; set; }
 
-    public override void OnStart(IBehaviorContext ctx) { }                    // once
-    public override void OnStep(IBehaviorContext ctx, double dt)             // every 1 ms, before the solver
+    public override void OnStep(IBehaviorContext ctx, double dt)                 // every 1 ms, before the solver
     {
-        var b = ctx.Self!;                                                    // the object it is attached to
-        b.ApplyForce((Target - b.Position) * K - b.Velocity * 0.5);
-        ctx.Publish("uzaklık", (Target - b.Position).Length);                // inspector, other code, SDK sensor part
+        var b = ctx.Self!;                                                         // the object it is attached to
+        b.ApplyForce((Target - b.Position) * K - b.Velocity * C);
+        ctx.Publish("distance", (Target - b.Position).Length);                     // inspector, other code, the SDK sensor part
     }
-    public override void OnAfterStep(IBehaviorContext ctx, double dt) { }   // after the solver (sensors)
-    public override void OnStop(IBehaviorContext ctx) { }
 }
 ```
 
-| Tür / type | Amaç |
-|---|---|
-| `IWorldBehavior` / `WorldBehavior` | Her adımda çalışan kod (`OnStart`, `OnStep`, `OnAfterStep`, `OnStop`). `[Behavior(AttachTo = "world")]` dünya genelinde bir örnek. |
-| `IBehaviorContext` | `Time, Dt, StepIndex, Self, Bodies, Body("ad veya O3"), Joints, Joint(id), Air (Density, TemperatureC, Pressure, WindAt), Gravity, Circuit, Parameters, Param(), Random (tohumlu), Publish/Read, Raycast, Log/Warn` |
-| `ISimBody` | `Id, Name, Object, Mass, Inertia, Position, Orientation, Velocity, AngularVelocity, Volume, Material, DragArea (yazılabilir), LocalToWorld/WorldToLocal, PointVelocity, ApplyForce, ApplyForceAtPoint, ApplyLocalForce, ApplyTorque, Teleport, SetVelocity, LastSdkForce`. Kuvvetler yalnızca o adım için geçerlidir. |
-| `ISimJoint` | `Angle, Speed, Axis, Anchor, MotorTorque (kalıcı), Drive, TargetAngle, TargetSpeed, Stiffness, Damping, MaxTorque, ReactionForce/Torque, Parent, Child` |
-| `IForceField` / `ForceField` | `Affects(body)`, `Evaluate(body, ctx) → (Force, Torque)`; `Configure(parameters, spec)` alanın konumunu/parametrelerini alır |
-| `IWindSource` | `WindAt(point, time)` → eklenen hava hızı (sürükleme + pervaneler) |
-| `ICircuitAccess` | `Voltage(nesne, pin)`, `Signal(anahtar)`, `Devices(nesne[, iç RefDes])` → cihaz modellerine doğrudan erişim (özel sensörler) |
-| `IPartProvider` | Özel devre parçaları: `PartDefinition` + `Build` içinde `AnalogDevice` alt sınıfları (`Stamp`, `Accept`) |
-| `SensorDevice` | Hazır Thevenin çıkışı (OUT–GND). Kütüphanedeki **"Programlanabilir sensör (SDK)"** parçası `signal` parametresindeki yayımlanmış değeri gerilime çevirir (`V = değer·ölçek + kayma`, sınırlı) — Arduino `analogRead` ile okunabilir. |
-| `SdkRandom` | SplitMix64 + Box–Muller; `ctx.Random` her ek için ayrı, tohumlu akış |
+### Example: a thruster that follows a board's PWM pin
 
-**EN** — Same surface: behaviours (per object or per world), fields, wind sources, circuit access, custom parts made of `AnalogDevice` subclasses, a ready `SensorDevice` and the "Programmable sensor (SDK)" part whose output follows a published value. Units are SI, world frame Z up.
+A script can read the circuit: here a "cold-gas thruster" pushes along the body's +z axis in proportion to the voltage an Arduino puts on its D9 pin.
 
-## 5. Eklentiler · Plugins
+```csharp
+using RobotTwin.CoreSim.Mechanics;
+using RobotTwin.CoreSim.Sdk;
 
-**Klasör düzeni · layout**
+[Behavior("PWM itici")]
+public sealed class PwmThruster : WorldBehavior
+{
+    [Parameter("Kart nesnesi")] public string Board { get; set; } = "O1";
+    [Parameter("En büyük itki", Unit = "N")] public double MaxThrust { get; set; } = 2.0;
+
+    public override void OnStep(IBehaviorContext ctx, double dt)
+    {
+        double v = ctx.Circuit?.Voltage(Board, "D9") ?? 0;          // averaged PWM level, 0–5 V
+        double thrust = MaxThrust * System.Math.Clamp(v / 5.0, 0, 1);
+        ctx.Self!.ApplyLocalForce(new Vec3(0, 0, thrust), Vec3.Zero);   // body frame, at the centre of mass
+        ctx.Publish("thrust", thrust);
+    }
+}
+```
+
+### Rules for scripts
+
+- Scripts are compiled with `dotnet build` in a temporary project (`%LOCALAPPDATA%\RobotWinStudio\Scripts\<hash>`), pinned to the 9.x SDK with `global.json`, with NuGet pointed at an empty local folder: **no packages, no downloads**. Results are cached by content hash.
+- A script type's key is `script:<Namespace.Type>`.
+- Use `ctx.Random` (seeded), never `System.Random`, the clock or threads — otherwise runs stop being reproducible.
+
+## 3. Plugin DLLs
+
+### Folder layout
+
 ```text
 %APPDATA%\RobotWinStudio\Plugins\
   AcmeWind\
     plugin.json
-    Acme.Wind.dll        (+ .pdb, + kendi bağımlılıkları)
-<dünya klasörü>\Plugins\...   (Ayarlar'dan kapatılabilir)
+    Acme.Wind.dll        (+ .pdb, + its own dependencies)
+<world folder>\Plugins\...   (can be switched off in Settings)
 ```
-**plugin.json**
+
 ```json
-{ "id": "acme.wind", "name": "ACME rüzgâr", "version": "1.2.0", "author": "ACME",
+{ "id": "acme.wind", "name": "ACME wind", "version": "1.2.0", "author": "ACME",
   "description": "…", "assembly": "Acme.Wind.dll", "entryTypes": [], "sdkVersion": 1 }
 ```
-- `id` benzersiz olmalı, `:` `/` `\` içeremez; `builtin` ve `script` ayrılmıştır. `entryTypes` boşsa derlemedeki bütün uygun public türler alınır. plugin.json yoksa tek DLL'li klasör dosya adıyla yüklenir.
-- Her eklenti **kendi toplanabilir `AssemblyLoadContext`'inde**, DLL'in bellekteki kopyasından yüklenir: diskteki DLL kilitlenmez; yeniden derleyip *Eklentileri yeniden yükle* deyin. `RobotTwin.CoreSim` her zaman uygulamanınkiyle paylaşılır (DLL'i eklenti klasörüne kopyalamayın).
-- **Dünya başına etkinleştirme**: bir eklentinin davranışları/alanları yalnızca dünyanın *Betikler* sekmesinde **"Bu dünyada etkin"** ise çalışır (bir eklenti türü eklediğinizde otomatik açılır). Ayarlar → *Eklentiler ve betikler* bölümünden bir eklenti tamamen kapatılabilir.
-- **Kaldırma** (unload) ancak eklentinin nesnelerini tutan bir şey kalmayınca tamamlanır. Betikler sekmesindeki *Eklentileri yeniden yükle* simülasyonu önce durdurur; Ayarlar'dakini kullanmadan önce çalışan dünyayı siz durdurun.
 
-**Şablon · template** — `sdk/templates/RobotWinPlugin`:
-`dotnet build -c Release -p:Deploy=true` → DLL ve plugin.json `%APPDATA%\RobotWinStudio\Plugins\RobotWinPlugin.Samples\` klasörüne kopyalanır. Depo dışında `-p:RobotWinDir="<RobotTwin.CoreSim.dll klasörü>\"` verin. Örnekler: rüzgâr türbini (C_P(λ), Betz sınırı, jeneratör yükü), dipol mıknatıs (`3μ₀m₁m₂/2πr⁴`), Reynolds sayısına bağlı küre sürüklemesi, termal yükselme (`IWindSource`), yumuşak sınır (`ForceField`), anemometre (özel `AnalogDevice` + `IPartProvider` + sensör davranışı).
+- `id` must be unique and may not contain `:` `/` `\`; `builtin` and `script` are reserved. With an empty `entryTypes` every suitable public type in the assembly is taken. A folder with a single DLL and no plugin.json loads by file name.
+- Every plugin loads into its **own collectible `AssemblyLoadContext`** from an in-memory copy of the DLL: the file on disk is not locked; rebuild and press *Eklentileri yeniden yükle* (reload plugins). `RobotTwin.CoreSim` is always shared with the app (do not copy it into the plugin folder).
+- **Per world**: a plugin's behaviours and fields run only if it is marked **"Bu dünyada etkin"** (enabled in this world) in the world's Scripts tab (switched on automatically when you add one of its types). Settings → *Eklentiler ve betikler* disables a plugin everywhere.
+- Unloading completes once nothing holds the plugin's objects; the Scripts tab's reload stops the simulation first.
 
-**EN** — Each plugin is a folder with a DLL and `plugin.json`. Plugins load into their own collectible `AssemblyLoadContext` from an in-memory copy (the file stays writable; rebuild and press *Reload plugins*); the SDK assembly is shared with the host. A plugin's types run in a world only if the plugin is enabled for that world. Unloading completes when nothing references the plugin's objects (the simulation is stopped first).
+### How to build one from the template
 
-## 6. Güvenlik ve yalıtım · Safety and isolation
-- **TR** Her kullanıcı çağrısı (`OnStart/OnStep/OnAfterStep/OnStop`, alan değerlendirmesi, rüzgâr kaynağı) ayrı ayrı `try/catch` içindedir. Hata Olaylar günlüğüne Türkçe yazılır (tür, mesaj, ilk yığın satırı, zaman); **3 hatadan sonra** o davranış/alan bu çalıştırma için kapatılır, gerisi çalışmaya devam eder. İfadelerin ve alanların ürettiği NaN/∞ kuvvetler uygulanmaz ve hata sayılır; `ISimBody.ApplyForce` NaN/∞ değerleri sessizce yok sayar.
-- **Adım bütçesi**: her davranış/alan için adım başına ortalama süre ölçülür; dünya ayarındaki bütçeyi (varsayılan 0.25 ms) aşan için bir kez uyarı verilir. Betikler panelinde canlı süreler görünür.
-- **Sınırlar (dürüstçe)**: .NET'te çalışan kod zorla durdurulamaz — sonsuz döngüye giren bir eklenti uygulamayı dondurur; `StackOverflowException` yakalanamaz. Eklenti ve betik kodu uygulamanın tüm yetkileriyle (dosya, ağ) çalışır: **korumalı alan (sandbox) değildir**. Yalnızca güvendiğiniz eklentileri kurun; başkalarından gelen dünyalarda dünya klasörü eklentilerini Ayarlar'dan kapatın. İfade dili ise tamamen güvenlidir (döngü yok, G/Ç yok).
-- **EN** Every user call is isolated with try/catch, reported in Turkish, and the offender is switched off after 3 errors; NaN forces are rejected; per-step time is measured with a one-time budget warning. This is *not* a sandbox: plugin/script code has full process rights and cannot be pre-empted (an infinite loop hangs the app). The expression language is safe.
+```powershell
+cd sdk/templates/RobotWinPlugin
+dotnet build -c Release -p:Deploy=true
+```
 
-## 7. C# betikleri · Scripts
-- **TR** Dünya → *Betikler* → *Yeni C# betiği*. Betikler dünya dosyasında saklanır. Derleme için bilgisayarda **.NET 9 SDK** gerekir (uygulama hiçbir şey indirmez): betikler geçici bir projeye (`%LOCALAPPDATA%\RobotWinStudio\Scripts\<özet>`) yazılır, `global.json` ile 9.x SDK'ya sabitlenir, NuGet kaynağı boş yerel bir klasöre yönlendirilir ve `dotnet build` çalıştırılır. Sonuç içerik özetine göre önbelleğe alınır; derleme hataları dosya/satır/sütunla gösterilir. Değişen betikler dünya başlatılırken otomatik derlenir (Ayarlar'dan kapatılabilir). SDK yoksa nedeni açıkça yazılır; ifade dili ve hazır eklentiler yine çalışır.
-- Betik türlerinin anahtarı `script:<Ad.Alanı.Tür>`'dür. NuGet paketi kullanılamaz.
-- **EN** Scripts live in the world file, are compiled with the user's .NET 9 SDK via `dotnet build` in a temp project (pinned SDK, empty local package source — no downloads), cached by content hash, and loaded like a plugin. If no suitable SDK is installed the UI explains why.
+The DLL and plugin.json are copied to `%APPDATA%\RobotWinStudio\Plugins\RobotWinPlugin.Samples\`. Outside the repository pass `-p:RobotWinDir="<folder of RobotTwin.CoreSim.dll>\"`. Samples in the template: a wind turbine ($`C_P(\lambda)`$, Betz limit, generator load), a dipole magnet ($`3\mu_0 m_1 m_2 / 2\pi r^4`$), Reynolds-dependent sphere drag, a thermal updraft (`IWindSource`), a soft boundary (`ForceField`) and an anemometer (custom `AnalogDevice` + `IPartProvider` + sensor behaviour).
 
-## 8. Belirlenimcilik · Determinism
-- **TR** Rüzgâr modeli, alanlar ve davranışlar `WorldPhysics.Advance` içindeki sabit adımda (`Step`, varsayılan 1 ms) çalışır; sıra sabittir (alanlar, sonra davranışlar, ekleme sırasıyla). Rastgele sayılar dünya tohumundan türetilir. Aynı dünya + aynı tohum → aynı yörünge (testle doğrulandı). Ekran kare hızı veya gerçek zaman çarpanı sonucu değiştirmez. Kendi kodunuzda `System.Random`, saat veya çok iş parçacığı kullanmayın; `ctx.Random` kullanın.
-- **EN** Everything runs inside the fixed physics step in a fixed order with seeded randomness; same world + same seed ⇒ identical trajectories (tested). Avoid wall-clock time, `System.Random` and threads in your code — use `ctx.Random`.
+### Example: a force field
 
-## 9. Doğrulama · Validation (tests in `CoreSim/tests/RobotTwin.CoreSim.Tests/SdkTests.cs`)
-- Düşen pinpon topu: `v(t) = v_t·tanh(g·t/v_t)` ve `v_t = √(2mg/ρCdA)` ile %1 / %0.5 içinde.
-- Rüzgârın hafif kutuya ilk kuvveti `½ρ·Cd·A·v²` ile %2 içinde; nesne başına Cd ve sürükleme kapatma.
-- Dryden türbülansı: ortalama ≈ 0, σ ve dikey σ %4 içinde, `ρ(τ = L/V) ≈ e⁻¹`; aynı tohum aynı dizi.
-- Esintiler, profil yasaları, ISA yoğunluğu/basıncı/viskozitesi.
-- İfade dili: öncelik, fonksiyonlar, hata konumları ve öneriler.
-- Eklenti: testte üretilen gerçek bir DLL (Reflection.Emit `PersistedAssemblyBuilder`) yüklenir, çalışır, diskte değiştirilip yeniden yüklenir, kaldırılır ve yükleme bağlamının toplandığı doğrulanır; test derlemesindeki türler aynı yoldan kaydedilir; hata yalıtımı ve bütçe uyarısı; .NET SDK varsa betik derleme.
+```csharp
+using System.Collections.Generic;
+using System.Globalization;
+using RobotTwin.CoreSim.Mechanics;
+using RobotTwin.CoreSim.Sdk;
+
+/// <summary>A magnet attracting steel parts: F ∝ 1/r⁴ (two dipoles in line).</summary>
+public sealed class DipoleMagnet : ForceField
+{
+    private Vec3 _centre;
+    private double _strength = 2e-6;   // N·m⁴
+
+    // The field's placement (Environment → force fields) and its parameters arrive here once.
+    public override void Configure(IReadOnlyDictionary<string, string> parameters, ForceFieldSpec spec)
+    {
+        _centre = new Vec3(spec.X, spec.Y, spec.Z);
+        if (parameters.TryGetValue("strength", out var s)) _strength = double.Parse(s, CultureInfo.InvariantCulture);
+    }
+
+    public override bool Affects(ISimBody body) => !body.IsStatic && body.Material == "steel";
+
+    public override (Vec3 Force, Vec3 Torque) Evaluate(ISimBody body, IBehaviorContext ctx)
+    {
+        var r = _centre - body.Position;
+        double d = System.Math.Max(0.005, r.Length);
+        return (r / d * (_strength / (d * d * d * d)), Vec3.Zero);
+    }
+}
+```
+
+### Example: a custom circuit part
+
+A part is a `PartDefinition` whose `Build` adds `AnalogDevice` subclasses to the circuit. The device stamps itself into the [MNA matrix](en/physics/01-circuit.md) every step:
+
+```csharp
+using System.Collections.Generic;
+using RobotTwin.CoreSim.Analog;
+using RobotTwin.CoreSim.Design;
+using RobotTwin.CoreSim.Sdk;
+
+/// <summary>A light-dependent resistor whose resistance follows a value another behaviour publishes.</summary>
+public sealed class LdrDevice : AnalogDevice
+{
+    public LdrDevice(string id, int a, int b) : base(id) { A = a; B = b; }
+    public int A { get; }
+    public int B { get; }
+    public double Lux { get; set; } = 100;
+
+    public override void Stamp(StampContext ctx)
+    {
+        double r = 10_000 * System.Math.Pow(Lux / 10.0, -0.7);   // a GL5528-like R(lux) curve
+        ctx.AddConductance(A, B, 1.0 / r);
+    }
+}
+
+public sealed class LdrParts : IPartProvider
+{
+    public IEnumerable<PartDefinition> Parts()
+    {
+        var part = new PartDefinition { Id = "acme-ldr", Name = "ACME LDR", Category = "Sensör", RefPrefix = "R" };
+        part.Pins.Add(new PinDefinition("A", "1", -2, 0));
+        part.Pins.Add(new PinDefinition("B", "2", 2, 0));
+        part.Build = c => c.Add(new LdrDevice(c.RefDes, c.Pin("A"), c.Pin("B")));
+        yield return part;
+    }
+
+    public IEnumerable<PartPreset> Presets() => System.Array.Empty<PartPreset>();
+}
+```
+
+The four C# examples on this page are checked by compiling them against the library.
+
+## 4. C# API reference (`RobotTwin.CoreSim.Sdk`)
+
+| Type | Purpose |
+| --- | --- |
+| `IWorldBehavior` / `WorldBehavior` | Code that runs every step (`OnStart`, `OnStep`, `OnAfterStep`, `OnStop`). `[Behavior(AttachTo = "world")]` makes one world-wide instance |
+| `IBehaviorContext` | `Time, Dt, StepIndex, Self, Bodies, Body("name or O3"), Joints, Joint(id), Air (Density, TemperatureC, Pressure, WindAt), Gravity, Circuit, Parameters, Param(), Random (seeded), Publish/Read, Raycast, Log/Warn` |
+| `ISimBody` | `Id, Name, Object, Mass, Inertia, Position, Orientation, Velocity, AngularVelocity, Volume, Material, DragArea (writable), LocalToWorld/WorldToLocal, PointVelocity, ApplyForce, ApplyForceAtPoint, ApplyLocalForce, ApplyTorque, Teleport, SetVelocity, LastSdkForce`. Forces hold for one step |
+| `ISimJoint` | `Angle, Speed, Axis, Anchor, MotorTorque (persistent), Drive, TargetAngle, TargetSpeed, Stiffness, Damping, MaxTorque, ReactionForce/Torque, Parent, Child` |
+| `IForceField` / `ForceField` | `Affects(body)`, `Evaluate(body, ctx) → (Force, Torque)`; `Configure(parameters, spec)` receives the field's placement and parameters |
+| `IWindSource` | `WindAt(point, time)` → added air velocity (acts through drag and on propellers) |
+| `ICircuitAccess` | `Voltage(object, pin)`, `Signal(key)`, `Devices(object[, inner RefDes])` → direct access to device models (custom sensors) |
+| `IPartProvider` | Custom circuit parts: a `PartDefinition` whose `Build` adds `AnalogDevice` subclasses (`Stamp`, `Accept`) |
+| `SensorDevice` | A ready Thevenin output (OUT–GND). The library part **"Programlanabilir sensör (SDK)"** turns the published value named in its `signal` parameter into a voltage (`V = value·scale + offset`, clamped), readable with Arduino `analogRead` |
+| `SdkRandom` | SplitMix64 + Box–Muller; `ctx.Random` is a separate seeded stream per attachment |
+
+Units are SI; the world frame is Z up. Setting `DragArea` from code replaces the automatic face-by-face drag of that body ([aerodynamics](en/physics/04-aerodynamics.md)) with your symmetric Cd·A.
+
+## 5. Environment model
+
+The *Ortam* (environment) palette tab.
+
+### Air
+
+Density from the ambient temperature *T*, sea-level pressure *p₀*, altitude *h* and relative humidity:
+
+```math
+p = p_0\,(1 - 2.25577\cdot10^{-5}\,h)^{5.25588}, \qquad \rho = \frac{p_d}{R_d T} + \frac{p_v}{R_v T}
+```
+
+with the Tetens saturation vapour pressure; 15 °C and 1013.25 hPa give 1.225 kg/m³. A fixed density can override it (Mars ≈ 0.02). One density applies to the whole world for drag; [gas vessels](en/physics/05-gas-and-rockets.md) take the ambient pressure at their own height from the ISA.
+
+### Wind
+
+- **Mean wind**: speed, the direction it blows *towards* (0° = +X, 90° = +Y), vertical component.
+- **Height profile**: uniform; power law $`u(z) = u_\text{ref}(z/z_\text{ref})^\alpha`$; logarithmic $`u(z) = u_\text{ref}\ln(z/z_0)/\ln(z_\text{ref}/z_0)`$.
+- **Turbulence** (Dryden-like): a first-order Gauss–Markov process per axis, $`u_{k+1} = a\,u_k + \sigma\sqrt{1-a^2}\,n`$, $`a = e^{-V\Delta t/L}`$; σ is the horizontal intensity, vertical σ = ratio·σ, correlation time $`L/V`$. The longitudinal component matches the Dryden spectrum exactly; the lateral/vertical Dryden spectra are second order and approximated by the same first-order filter. The turbulence is spatially uniform — fine for objects much smaller than L.
+- **Discrete gusts**: $`\tfrac{1}{2}A\,(1 - \cos 2\pi t/T)`$ along the wind, amplitude A·[0.5, 1], exponentially distributed gaps.
+- **Seed**: all random processes use `SdkRandom` (SplitMix64) — the same sequence on every .NET version.
+
+### Aerodynamics
+
+- **Drag** on every moving object, face by face: leading-face stagnation pressure, base suction and skin friction, with faces covered by joined parts taken out ([details](en/physics/04-aerodynamics.md)). Per-object Cd, reference area or switching drag off: right panel → *Ortam ve davranışlar*.
+- **Buoyancy** $`\rho V g`$ (optional; volume from the collision shape or typed in).
+- **Rotational damping** $`-c\,\rho\,r^5\,\lvert\omega\rvert\,\omega`$ (r = bounding-sphere radius; a rough model).
+- **Propellers**: the wind model also feeds the propellers' inflow (rotor drag); the density scales thrust.
+
+### Force fields (Environment → *Kuvvet alanları ve hava akımları*)
+
+| Kind | Behaviour | Parameters |
+| --- | --- | --- |
+| `uniform` | constant force (N) or acceleration (m/s²) | direction, magnitude |
+| `radial` | towards the centre, `S·f(r)`; `f`: 1/r² (1 at R), linear, Gaussian, constant | R, falloff |
+| `vortex` | Rankine vortex: `S·r/R` in the core, `S·R/r` outside; inflow, updraft. By default as **wind** (acts through drag and propellers), optionally as a direct force | axis, R |
+| `fan` | air flow in a box region (added to the wind), decaying like a free jet after ~6 diameters, soft edges | direction, exit speed |
+| `conveyor` | pulls the horizontal velocity of objects in the region to the belt speed with τ = 50 ms, balancing floor friction; at most (grip + μ_floor)·m·g | belt direction/speed, grip |
+| `expression` | `F.*`/`T.*` on every object, or `wind.*` at every point | program |
+| `plugin` | a plugin type implementing `IForceField` / `IWindSource` | the plugin's parameters |
+
+Fields can be bounded by an oriented box and targeted at selected objects. In the 3D view: wind arrows over the floor, a wind sock in the corner, field outlines (fan blue, conveyor yellow, vortex green, others purple).
+
+## 6. Safety and isolation
+
+- Every user call (`OnStart/OnStep/OnAfterStep/OnStop`, field evaluation, wind source) is wrapped in its own `try/catch`. Errors go to the Events log (type, message, first stack line, time); **after 3 errors** that behaviour/field is switched off for the run and the rest carries on. NaN/∞ forces from expressions and fields are not applied and count as errors; `ISimBody.ApplyForce` silently ignores NaN/∞.
+- **Step budget**: the average time per step of each behaviour/field is measured; one warning is given for any that exceed the world's budget (default 0.25 ms). The Scripts panel shows live timings.
+- **Limits, honestly**: .NET code cannot be stopped by force — a plugin in an infinite loop hangs the app; `StackOverflowException` cannot be caught. Plugin and script code runs with all the app's rights (files, network): **it is not a sandbox**. Install only plugins you trust; switch off world-folder plugins in Settings for worlds from others. The expression language is completely safe (no loops, no I/O).
+
+## 7. Determinism
+
+Wind, fields and behaviours run inside `WorldPhysics.Advance`'s fixed step (`Step`, default 1 ms) in a fixed order (fields, then behaviours, in the order they were added). Random numbers derive from the world's seed. Same world + same seed ⇒ the same trajectory (tested). Frame rate and real-time factor do not change the result.
+
+## 8. Validation (tests in `CoreSim/tests/RobotTwin.CoreSim.Tests/SdkTests.cs`)
+
+| Test | Compared with | Tolerance |
+| --- | --- | --- |
+| Falling ping-pong ball | $`v(t) = v_t\tanh(g t / v_t)`$, $`v_t = \sqrt{2mg/(\rho C_D A)}`$ | 1 % / 0.5 % |
+| Wind on a light box | first force $`\tfrac{1}{2}\rho C_D A v^2`$; per-object Cd and drag off | 2 % |
+| Dryden turbulence | mean ≈ 0, σ and vertical σ, $`\rho(\tau = L/V) \approx e^{-1}`$; same seed same sequence | 4 % |
+| Gusts, profile laws, ISA density/pressure/viscosity | closed forms | — |
+| Expression language | precedence, functions, error positions and suggestions | exact |
+| Plugins | a real DLL generated in the test (`PersistedAssemblyBuilder`) is loaded, run, changed on disk, reloaded and unloaded, and the load context is verified collected; error isolation and the budget warning; script compilation when a .NET SDK is present | — |

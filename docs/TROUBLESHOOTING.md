@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Problems with the installed app first, then problems when building from source. The Turkish user guide has a user-facing FAQ: [kullanim/10-sss.md](kullanim/10-sss.md).
+Problems with the installed app first, then problems when building from source. The user guide has a user-facing FAQ: [10. FAQ](en/guide/10-faq.md).
 
 Where to look first: the status bar at the bottom of the window, the **Olaylar** (events) tab, and the crash log `%APPDATA%\RobotWinStudio\crash.log` (Settings → *Hakkında* → *Ayar ve günlük klasörünü aç*).
 
@@ -37,6 +37,7 @@ Where to look first: the status bar at the bottom of the window, the **Olaylar**
 | A cable shows **YANDI** (burned) | The current exceeded its rating. Use a thicker gauge (lower AWG) or limit the current. |
 | Objects cannot be dragged | Objects can only be moved while the world simulation is stopped (Shift+F5). |
 | Gamepad not found | Select the controller → *Kumandaları yeniden tara*; or use *Sanal kumandayı aç (fare / klavye)*. Pair it first with *Eşleştirme modu*. |
+| A part collides oddly or does not roll | View → *Çarpışma şekilleri (dünya)* shows the bodies the physics really uses. |
 | No sound | Simulation → *Simülasyon sesleri*, and Settings → *Ses düzeyi*. |
 
 ## Building from source

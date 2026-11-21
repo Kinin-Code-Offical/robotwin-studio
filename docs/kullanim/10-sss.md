@@ -3,7 +3,7 @@
 ## Kurulum ve açılış
 
 **Uygulama açılmıyor veya .NET istiyor.**
-RobotWin Studio, .NET 9 Masaüstü Çalışma Zamanı'na ihtiyaç duyar. Kurulum dosyasını yeniden çalıştırın ve .NET kurma önerisini kabul edin ya da Microsoft'un sitesinden ".NET 9 Desktop Runtime (x64)" kurun.
+Lite paket (`-lite.exe`) .NET 9 Masaüstü Çalışma Zamanı'na ihtiyaç duyar. .NET'i içinde taşıyan tam paketi (`RobotWinStudio-Setup-<sürüm>.exe`) kurun, ya da kurulum dosyasını yeniden çalıştırıp .NET kurma önerisini kabul edin, ya da Microsoft'un sitesinden ".NET 9 Desktop Runtime (x64)" kurun.
 
 **Windows kurulum dosyası için uyarı veriyor.**
 Dosyayı projenin GitHub Sürümler sayfasından indirdiğinizden emin olun, sonra **Ek bilgi → Yine de çalıştır** seçin.
@@ -15,7 +15,7 @@ Evet. Kurulum dosyasını komut satırından `/S /PORTABLE /D=E:\RobotWin` ile �
 **Görünüm → Arayüz ölçeği** ile %75–%150 arasında ayarlayın.
 
 **Arayüz İngilizce olabilir mi?**
-Hayır, arayüz şu anda yalnızca Türkçedir.
+Arayüz şu anda yalnızca Türkçedir. Belgeler Türkçe ve İngilizce eksiksiz ayrı ayrıdır.
 
 ## Kod ve derleme
 
@@ -59,6 +59,9 @@ Nesneler yalnızca simülasyon dururken taşınabilir. **Durdur ve başa dön** 
 
 **Kumandam görünmüyor.**
 Kumandayı seçip **Kumandaları yeniden tara**'ya basın. Gerçek kumanda yoksa **Sanal kumandayı aç (fare / klavye)** ile ekrandaki kumandayı kullanın. Kumandanın ESP32 ile eşleştiğinden emin olun (**Eşleştirme modu**).
+
+**Bir parça garip çarpışıyor ya da yuvarlanmıyor.**
+**Görünüm → Çarpışma şekilleri (dünya)** fiziğin gerçekten kullandığı gövdeyi gösterir: parçanın kendi 3D modelinin dış hattı.
 
 **Ses gelmiyor.**
 **Simülasyon → Simülasyon sesleri** açık mı, **Ayarlar → Ses düzeyi** sıfır mı, kontrol edin.

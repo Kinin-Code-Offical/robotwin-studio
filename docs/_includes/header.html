@@ -8,8 +8,9 @@
       <span>RobotWin Studio</span>
     </a>
     <nav class="top-nav" aria-label="{{ t.menu }}">
-      <a href="{{ guide_url }}"{% if page.path contains 'kullanim/' %} aria-current="page"{% endif %}>{{ t.guide }}</a>
-      <a href="{{ docs_url }}"{% if page.layout == 'default' and page.path contains 'kullanim/' %}{% elsif page.layout == 'default' %} aria-current="page"{% endif %}>{{ t.docs }}</a>
+      <a href="{{ guide_url }}"{% if section == nav[0].title %} aria-current="page"{% endif %}>{{ t.guide }}</a>
+      <a href="{{ physics_url }}"{% if section == nav[1].title %} aria-current="page"{% endif %}>{{ t.physics }}</a>
+      <a href="{{ docs_url }}"{% if section == nav[2].title %} aria-current="page"{% endif %}>{{ t.docs }}</a>
       <a href="{{ home_url }}#download">{{ t.download }}</a>
       <a href="{{ site.github_url }}">GitHub</a>
     </nav>
@@ -18,7 +19,7 @@
         <input type="search" placeholder="{{ t.search_placeholder }}" aria-label="{{ t.search }}" data-search autocomplete="off">
         <ul class="search-results" data-results hidden></ul>
       </div>
-      <a class="lang" href="{% if page.alt_url %}{{ page.alt_url | relative_url }}{% else %}{{ other_url }}{% endif %}" lang="{% if lang == 'tr' %}en{% else %}tr{% endif %}">{{ t.other_lang }}</a>
+      <a class="lang" href="{{ other_url }}" lang="{% if lang == 'tr' %}en{% else %}tr{% endif %}" hreflang="{% if lang == 'tr' %}en{% else %}tr{% endif %}">{{ t.other_lang }}</a>
     </div>
   </div>
 </header>

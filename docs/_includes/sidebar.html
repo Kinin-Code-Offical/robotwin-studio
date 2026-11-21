@@ -1,16 +1,11 @@
 <nav class="side" aria-label="{{ t.docs }}" data-side>
-  <p class="side-title">{{ t.guide_long }}</p>
+  {%- for group in nav %}
+  <p class="side-title">{{ group.title }}</p>
   <ul>
-    {%- for item in site.data.nav.guide %}
+    {%- for item in group.items %}
     {%- capture item_url -%}{% include url.html path=item.path %}{%- endcapture %}
     <li><a href="{{ item_url }}"{% if item.path == page.path %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
     {%- endfor %}
   </ul>
-  <p class="side-title">{{ t.dev_docs }}</p>
-  <ul>
-    {%- for item in site.data.nav.docs %}
-    {%- capture item_url -%}{% include url.html path=item.path %}{%- endcapture %}
-    <li><a href="{{ item_url }}"{% if item.path == page.path %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
-    {%- endfor %}
-  </ul>
+  {%- endfor %}
 </nav>

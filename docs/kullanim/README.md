@@ -4,7 +4,7 @@ RobotWin Studio ile bir robot projesini baştan sona tek uygulamada yaparsınız
 
 ![RobotWin Studio başlangıç sayfası](../images/home.png)
 
-Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğrudan ihtiyacınız olan bölüme geçebilirsiniz.
+Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğrudan ihtiyacınız olan bölüme geçebilirsiniz. Her çözücünün denklemleri [Fizik ve matematik](../fizik/README.md) bölümündedir.
 
 ## İçindekiler
 
@@ -15,8 +15,8 @@ Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğruda
 | [3. PCB](03-pcb.md) | Kart tasarımı, yol çizimi, bakır alanlar, DRC, üretim dosyaları |
 | [4. Kod](04-kod.md) | Arduino ve ESP32 kodu yazma, derleme, karta yükleme, seri monitör |
 | [5. Modelle](05-modelle.md) | 3D parça modelleme: şase, braket, kutu; dünyaya gönderme |
-| [6. Montaj](06-montaj.md) | Devreden otomatik robot araba / drone, arena, arıza deneyleri |
-| [7. Dünya](07-dunya.md) | Açık dünya: kartlar, parçalar, kablolar, mekanik bağlantılar, fizik, kumandalar |
+| [6. Montaj](06-montaj.md) | Devreyi gerçek bir montaja çevirmek: kart, gerçek parçalar, pin pin kablolar |
+| [7. Dünya](07-dunya.md) | Açık dünya: kartlar, parçalar, kablolar, mekanik bağlantılar, fizik, kumandalar, basınçlı kaplar ve roketler |
 | [8. Ölçü aletleri](08-olcu-aletleri.md) | Osiloskop, multimetre, laboratuvar güç kaynağı, toleranslar, Monte Carlo, arıza tespiti |
 | [9. Klavye kısayolları](09-kisayollar.md) | Tüm sayfaların kısayolları |
 | [10. Sık sorulan sorular](10-sss.md) | Sorunlar ve çözümleri |

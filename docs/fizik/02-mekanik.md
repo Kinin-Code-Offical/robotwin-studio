@@ -1,0 +1,75 @@
+# Katı cisim ve temas
+
+Dünyadaki her nesne bir katı cisimdir: kütle merkezinde konumu, yönelimi (birim kuaterniyon), doğrusal ve açısal hızı, kütlesi ve asal eylemsizlik momentleri vardır. Servo kolları ve motor milleri, gövdeye menteşeyle bağlı ayrı küçük rotorlardır.
+
+## Hareket denklemleri
+
+```math
+m\,\dot{\mathbf{v}} = \mathbf{F}, \qquad
+I\,\dot{\boldsymbol{\omega}} + \boldsymbol{\omega} \times (I\boldsymbol{\omega}) = \boldsymbol{\tau}
+```
+
+Kuvvetler: yerçekimi, temaslar, eklemler, [hava](04-aerodinamik.md) (sürükleme, kanatlar, pervaneler), [gaz itkisi](05-gaz-ve-roket.md), kablolar (ip olarak), ortam kuvvet alanları (rüzgâr, fan, mıknatıs).
+
+## Tümleştirme
+
+Her fizik adımı (1 ms) sabit alt adımlara bölünür. Her alt adımda yarı örtük (simplektik) Euler uygulanır; jiroskopik terim örtük çözülür, böylece hızlı dönen bir pervane ya da tekerlek enerji kazanıp sapıtmaz:
+
+```math
+\mathbf{v}_{n+1} = \mathbf{v}_n + h\,\frac{\mathbf{F}}{m}, \qquad
+\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{v}_{n+1}, \qquad
+q_{n+1} = \operatorname{normalize}\!\left(q_n + \tfrac{h}{2}\,\boldsymbol{\omega}_{n+1} \otimes q_n\right)
+```
+
+İnce ve hızlı cisimler (pervane kanadı, mermi gibi düşen parça) için alt adım sayısı artırılır (sürekli çarpışma denetimi), böylece bir adımda öbür tarafa geçmezler.
+
+## Temas ve eklemler: yumuşak ardışık itme
+
+Temaslar ve eklemler hız düzeyinde kısıt olarak çözülür (Catto'nun "soft step" yöntemi). Her kısıt için itme:
+
+```math
+\lambda = -\,m_\text{eff}\,\big(J\mathbf{v} + \beta\,C/h\big)\,\gamma, \qquad m_\text{eff} = \left(J M^{-1} J^\top\right)^{-1}
+```
+
+$`C`$ kısıtın ihlali (iç içe geçme derinliği, eklem kayması), $`\beta`$ yumuşak konum düzeltmesi, $`\gamma`$ yumuşatma katsayısıdır. Kısıtlar Gauss-Seidel sırasıyla 4 kez geçilir, ardından 2 gevşetme geçişi yapılır; önceki adımın itmeleriyle başlanır (sıcak başlatma).
+
+| Kısıt | Ne sağlar |
+| --- | --- |
+| Temas (normal) | İç içe geçmeyi önler, sekme katsayısı malzeme çiftinden |
+| Sürtünme | Coulomb konisi: $`\lvert \lambda_t \rvert \le \mu\,\lambda_n`$, statik ve kinetik $`\mu`$ ayrı |
+| Yuvarlanma direnci | Lastik, bilye: $`\tau \le c_{rr}\,r\,\lambda_n`$ |
+| Sabit eklem | İki gövde tek parça (vida, yapıştırıcı) |
+| Menteşe | Tek eksende dönme; sınır, sürücü (konum: PD, hız: motor) |
+| Kızak | Tek eksende kayma |
+| Küresel | Uç noktalar çakışık, dönme serbest |
+
+Bir eklem, tasarım kuvvetini aşınca kopar; olay **Olaylar** sekmesine yazılır.
+
+## Çarpışma şekilleri
+
+```mermaid
+flowchart TD
+    M["Parçanın 3D modeli"] --> V["Köşe noktaları<br/>(nesne çerçevesinde)"]
+    V --> T{"İnce parça mı?<br/>(iki kısa kenar < 4 mm)"}
+    T -- "evet: bacak, pin, kablo" --> X["Atlanır"]
+    T -- "hayır" --> C["Çarpışma sınırına kırpılır"]
+    C --> H["Dışbükey zarf<br/>(en çok 120 köşe)"]
+    H --> B["Katı cisim<br/>kütle merkezi ve eylemsizlik zarftan"]
+```
+
+| Nesne | Çarpışma şekli |
+| --- | --- |
+| Kutu, plaka | Kutu (tam) |
+| Silindir, tekerlek | Silindir (tam, analitik) |
+| Küre, bilye | Küre (tam) |
+| Katalog parçası, kart, kanat | Kendi 3D modelinin dışbükey zarfı |
+| İçe aktarılan model (STL/OBJ) | Ağın dışbükey zarfı |
+| Sabit engel, arazi | Kutu / üçgen ağ (BVH ile) |
+
+Görmek için: **Görünüm → Çarpışma şekilleri (dünya)**.
+
+Birbirine en çok iki eklemle bağlı parçalar (ör. motor – rotor – tekerlek) birbirleriyle çarpışmaz; montajın kendi iç teması gerçekte vida ve yuvalarla sağlanır.
+
+## Malzemeler
+
+Sürtünme ve sekme, iki yüzeyin malzeme çiftinden gelir (kauçuk–zemin, çelik–çelik, PLA–ahşap…). Zemin bölgeleri (halı, fayans, kum) kendi sürtünmesini taşır. Kütle, hacim × malzeme yoğunluğu × dolulukla hesaplanır, isterseniz elle girilir.

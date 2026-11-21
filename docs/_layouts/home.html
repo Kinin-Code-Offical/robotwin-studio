@@ -2,7 +2,6 @@
 layout: base
 ---
 {% include vars.html %}
-{%- capture first_url -%}{% include url.html path="kullanim/01-baslarken.md" %}{%- endcapture -%}
 <main class="home" id="main">
   <section class="intro">
     <h1>{{ t.home_title }}</h1>
@@ -29,6 +28,7 @@ layout: base
     <div class="cards">
       <a class="card" href="{{ first_url }}"><strong>{{ t.start_first }}</strong><span>{{ t.start_first_text }}</span></a>
       <a class="card" href="{{ guide_url }}"><strong>{{ t.start_guide }}</strong><span>{{ t.start_guide_text }}</span></a>
+      <a class="card" href="{{ physics_url }}"><strong>{{ t.start_physics }}</strong><span>{{ t.start_physics_text }}</span></a>
       <a class="card" href="{{ docs_url }}"><strong>{{ t.start_dev }}</strong><span>{{ t.start_dev_text }}</span></a>
     </div>
   </section>

@@ -22,6 +22,9 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--selftest [--selftest-out file]` | Headless end-to-end check of every example (see [TESTING.md](TESTING.md#self-test)). |
 | `--snapshot out.png --page <page> [...]` | Renders a page to PNG for documentation and visual checks (see [TESTING.md](TESTING.md#snapshot-testing)). |
 | `--gallery <dir> [--gallery-filter text] [--gallery-columns 4] [--gallery-tile 460x340]` | Contact sheets of every code-generated 3D component model. |
+| `--overlap-report <file>` | Builds every world template and lists parts that overlap or do not fit their shell. |
+| `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |
+| `--bake-geometry f.rwworld [--out g.json]` | Writes the app's body geometry (model hulls included) beside a world for the headless tool. |
 | `--export-logo <dir>` | Exports the logo as PNG sizes + ICO (also on Settings → *Hakkında*). |
 | `--register-file-types`, `--unregister-file-types` | Registers / removes `.rwproj`, `.rwworld`, `.rwsim`, `.rwpart`, `.rwlib`, `.rwfp`, `.rwmodel` for the current user (HKCU). Used by the installer. |
 | `<file>` | Opens a RobotWin file. |
@@ -44,7 +47,7 @@ Pick the `--example`, `--simulate` and `--size` values that show the feature bes
 Publishes the app, compiles the native setup stub with MSVC and packs everything into `builds\installer\RobotWinStudio-Setup-<version>-lite.exe` (framework-dependent) or, with `-SelfContained`, the full `RobotWinStudio-Setup-<version>.exe`. See [BUILD_RELEASE.md](BUILD_RELEASE.md).
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.1.0
 ```
 
 ## External tools the app calls

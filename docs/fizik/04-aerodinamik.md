@@ -1,0 +1,83 @@
+# Aerodinamik
+
+## Atmosfer
+
+Hava yoğunluğu, basıncı ve sıcaklığı Uluslararası Standart Atmosfer'den (ISA) yüksekliğe göre alınır. Troposferde:
+
+```math
+T = T_0 - L\,h, \qquad p = p_0\left(\frac{T}{T_0}\right)^{g/(R L)}, \qquad \rho = \frac{p}{R\,T}
+```
+
+$`T_0 = 288{,}15`$ K, $`L = 0{,}0065`$ K/m, $`p_0 = 101\,325`$ Pa, $`R = 287{,}05`$ J/kg·K.
+
+## Sürükleme: yüzey yüzey
+
+Bir cismin havaya karşı direnci üç kısımdan oluşur ve her biri gerçekte olduğu yerde hesaplanır:
+
+| Kısım | Nerede | Katsayı |
+| --- | --- | --- |
+| Durma basıncı | Akışa bakan (öndeki) yüz | ayrık cismin basınç sürüklemesinin %70'i |
+| Taban emmesi | Arkadaki yüz | %30'u |
+| Yüzey sürtünmesi | Akış boyunca uzanan yan yüzler | $`C_f = 0{,}004`$ (türbülanslı levha, $`Re \approx 10^5\text{–}10^6`$) |
+
+```math
+\mathbf{F} = -\tfrac{1}{2}\,\rho\,(C_D A)(\hat{\mathbf{u}})\,\lvert\mathbf{u}\rvert\,\mathbf{u}, \qquad \mathbf{u} = \mathbf{v}_\text{cisim} - \mathbf{v}_\text{rüzgâr}
+```
+
+Tek başına bir cisim ölçülmüş $`C_D`$ değerini aynen korur (sürtünme bunun içindedir):
+
+| Şekil | $`C_D`$ | Kaynak |
+| --- | --- | --- |
+| Küre | 0,47 | alt kritik $`Re`$ (10³–2·10⁵) |
+| Kutu yüzü | 1,05 | düz yüzlü blok |
+| Silindir, yandan | 1,0 | çapraz akış |
+| Silindir, eksen boyunca | 0,9 | kısa silindir |
+| Model gövdesi (zarf) | 0,8 | yuvarlatılmış gövde |
+
+### Birleşik parçalar birbirini örter
+
+Bir parçanın yüzünü ona bağlı başka bir parça kapatıyorsa, o yüz ne durma basıncı ne taban emmesi görür. Örtülme, her gövdenin her eksen yüzünde, gerçek çarpışma şekillerinden geçen çizgilerle ölçülür (12 × 12 örnek):
+
+```mermaid
+flowchart LR
+    N["Burun konisi<br/>ön yüz: açık<br/>taban: borunun örttüğü"] --- B["Gövde borusu<br/>ön yüz: burnun örttüğü<br/>taban: açık<br/>yanlar: sürtünme"]
+    B --- F["Kanatçıklar<br/>kanat kuvvetleri"]
+```
+
+Böylece bir roketin direnci "ayrı ayrı uçan parçaların toplamı" değil, burnun ön yüzü + kuyruğun tabanı + boyunca sürtünmedir. Doğrulama: burun + boru eksenel $`C_D`$ ayrı parçalarda 1,37 idi, birleşikte 0,64 (gerçek küt tabanlı roketlerde 0,5–0,7); su roketinin tepe noktası 26 m'den 39,6 m'ye çıktı (yayımlanmış uçuşlar 30–50 m).
+
+### Eğik akış
+
+Eksen değerleri cismin gerçek gölge alanına göre birleştirilir: düz yüzlerde toplanır (kutunun gölgesi tam olarak budur), yuvarlak kesitte daire gibi:
+
+```math
+A_\text{kutu}(\hat{\mathbf{u}}) = \lvert u_x\rvert A_x + \lvert u_y\rvert A_y + \lvert u_z\rvert A_z, \qquad
+A_\text{silindir}(\hat{\mathbf{u}}) = \lvert u_z\rvert A_z + \sqrt{(u_x A_x)^2 + (u_y A_y)^2}
+```
+
+Küre her yönde aynı alanı gösterir. Model gövdelerinde kesitin yuvarlak mı düz mü olduğu, 45°'deki gölge alanı ölçülerek anlaşılır.
+
+## Kanatlar: şerit teorisi + kaldırma çizgisi
+
+Kanat açıklık boyunca şeritlere bölünür. Her şerit kendi yerel hava hızını görür ($`\mathbf{V} + \boldsymbol{\omega}\times\mathbf{r}`$), böylece yuvarlanma sönümü ve asimetrik tutunma kaybı geometriden çıkar.
+
+```math
+\alpha_e = \alpha - \alpha_i, \qquad \alpha_i = \frac{C_L}{\pi\,e\,AR}, \qquad C_{D,i} = \frac{C_L^2}{\pi\,e\,AR}
+```
+
+Bu, sonlu kanadın kaldırma eğimini verir: $`a = a_0 / (1 + a_0/(\pi e AR))`$. Kesit katsayıları profilin (Clark Y, NACA 0012, NACA 2412, düz levha) ±180° kutup eğrisinden gelir; tutunma kaybı ve sonrası dahildir. Kumanda yüzeyleri açıyı $`\tau\,\eta(\delta)\,\delta`$ kadar kaydırır ve menteşe momentini servoya geri verir. Kuyruk, öndeki kanadın aşağı akışını görür: $`\varepsilon = 2C_{L,w}/(\pi AR_w)`$.
+
+## Pervaneler
+
+İlerleme oranı $`J = V/(nD)`$ ile (UIUC veritabanı eğilimlerine uyum, Brandt & Selig 2011):
+
+```math
+T = C_T\,\rho\,n^2 D^4, \qquad Q = \frac{C_P}{2\pi}\,\rho\,n^2 D^5, \qquad
+C_T = C_{T0}\left(1 - \frac{J}{J_0}\right), \qquad C_P = C_{P0}\left(1 - \left(\frac{J}{1{,}2\,J_0}\right)^2\right)
+```
+
+$`J_0 \approx 1{,}05\,P/D`$ (adım/çap). Pervane torku motora yük olarak geri döner; itki gövdeye uygulanır.
+
+## Rüzgâr ve türbülans
+
+Ortalama rüzgâra Dryden modeliyle birinci derece süzülmüş rastgele sağanaklar eklenir. Rüzgâr hem sürüklemeyi hem kanatların gördüğü açıyı hem de [taşınımla soğumayı](03-isi.md) değiştirir.

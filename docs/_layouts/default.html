@@ -2,10 +2,10 @@
 layout: base
 ---
 {% include vars.html %}
-{%- assign list = site.data.nav.docs -%}
-{%- for item in site.data.nav.guide -%}{%- if item.path == page.path -%}{%- assign list = site.data.nav.guide -%}{%- endif -%}{%- endfor -%}
+{%- assign list = nil -%}
+{%- for group in nav -%}{%- for item in group.items -%}{%- if item.path == page.path -%}{%- assign list = group.items -%}{%- endif -%}{%- endfor -%}{%- endfor -%}
 {%- assign idx = nil -%}
-{%- for item in list -%}{%- if item.path == page.path -%}{%- assign idx = forloop.index0 -%}{%- endif -%}{%- endfor -%}
+{%- if list -%}{%- for item in list -%}{%- if item.path == page.path -%}{%- assign idx = forloop.index0 -%}{%- endif -%}{%- endfor -%}{%- endif -%}
 <div class="shell">
   {% include sidebar.html %}
   <main class="page" id="main">

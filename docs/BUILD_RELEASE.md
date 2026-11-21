@@ -7,19 +7,19 @@ RobotWin Studio ships as a single setup program, `RobotWinStudio-Setup-<version>
 Requirements: .NET 9 SDK and Visual Studio 2022 / Build Tools with the C++ workload (the script locates it with `vswhere`).
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.1.0
 # self-contained variant (bundles .NET, no runtime needed on the target PC):
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0 -SelfContained
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.1.0 -SelfContained
 ```
 
 Output in `builds\installer\`:
 
 | File | Contents |
 | --- | --- |
-| `RobotWinStudio-Setup-2.1.0.exe` | Full package: self-contained app with .NET inside (`-SelfContained`). |
-| `RobotWinStudio-Setup-2.1.0-lite.exe` | Lite package: framework-dependent app; the wizard offers to install the .NET 9 Desktop Runtime if missing. |
+| `RobotWinStudio-Setup-1.1.0.exe` | Full package: self-contained app with .NET inside (`-SelfContained`). |
+| `RobotWinStudio-Setup-1.1.0-lite.exe` | Lite package: framework-dependent app; the wizard offers to install the .NET 9 Desktop Runtime if missing. |
 
-Releases before 2.1 named the self-contained package `-tam.exe` and the small one plainly; the in-app updater and the download page recognise both schemes.
+Release 1.0.0 named the self-contained package `-tam.exe` and the small one plainly; the in-app updater and the download page recognise both schemes.
 
 What the script does:
 
@@ -33,7 +33,7 @@ What the script does:
 
 | Mode | Command |
 | --- | --- |
-| Wizard (per user by default, or all users with elevation) | `RobotWinStudio-Setup-1.0.0.exe` |
+| Wizard (per user by default, or all users with elevation) | `RobotWinStudio-Setup-1.1.0.exe` |
 | Silent, per user | `... /S` |
 | Silent, all users | `... /S /ALLUSERS` |
 | Custom folder | `... /S /D=<dir>` |
@@ -59,8 +59,8 @@ Default folders: `%LOCALAPPDATA%\Programs\RobotWin Studio` (per user) or `%Progr
 4. Tag and push:
 
    ```powershell
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.1.0
+   git push origin v1.1.0
    ```
 
 5. When the workflow finishes, edit the release notes on GitHub (copy the changelog section) and mention that the lite package needs the .NET 9 Desktop Runtime while the full one carries it.

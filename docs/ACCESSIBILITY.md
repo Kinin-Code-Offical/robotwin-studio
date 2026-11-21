@@ -50,10 +50,11 @@ These are real limitations today. They are listed so you can plan around them.
   world and the plots are custom-drawn, so they are invisible to screen readers. No UI Automation
   names have been added for them yet.
 - **Windows High Contrast themes** are not followed. The app always uses its own dark theme.
-- **Colour maps.** Stress, temperature and speed colouring use a blue→red "jet" scale. It is hard to
-  read for some kinds of colour blindness and is not perceptually uniform. The numbers are available
-  in the legend, the plots and the inspector, but not yet by hovering over a point on the 3D model.
-- **Language.** The interface is in Turkish only. English (and other languages) are planned.
+- **Colour maps.** Stress and speed colouring in the render window use a blue→red "jet" scale. It is
+  hard to read for some kinds of colour blindness and is not perceptually uniform. The numbers are in
+  the legend, the plots and the inspector. The world's thermal camera uses the monotonic "iron"
+  palette and shows the exact temperature of the point under the mouse.
+- **Language.** The interface is in Turkish only. English (and other languages) are planned. The documentation is complete in both Turkish and English.
 - **Motion.** Renders and replays animate continuously. There is no "reduce motion" setting yet,
   but playback can always be paused.
 - **Mouse-heavy editing.** Placing and wiring parts, routing tracks and orbiting the 3D view need

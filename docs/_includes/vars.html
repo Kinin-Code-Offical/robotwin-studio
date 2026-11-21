@@ -1,12 +1,30 @@
 {%- comment -%} Shared variables. Each layout renders in its own scope, so every layout includes this. {%- endcomment -%}
-{%- assign lang = page.lang | default: site.lang | default: "en" -%}
-{%- assign t = site.data.ui[lang] | default: site.data.ui.en -%}
+{%- assign lang = page.lang | default: site.lang | default: "tr" -%}
+{%- assign t = site.data.ui[lang] | default: site.data.ui.tr -%}
+{%- assign nav = site.data.nav[lang] -%}
 {%- if lang == "tr" -%}
-{%- assign home_url = "/tr/" | relative_url -%}
-{%- assign other_url = "/" | relative_url -%}
-{%- else -%}
 {%- assign home_url = "/" | relative_url -%}
-{%- assign other_url = "/tr/" | relative_url -%}
-{%- endif -%}
+{%- assign other_home = "/en/" | relative_url -%}
 {%- capture guide_url -%}{% include url.html path="kullanim/README.md" %}{%- endcapture -%}
+{%- capture physics_url -%}{% include url.html path="fizik/README.md" %}{%- endcapture -%}
+{%- capture docs_url -%}{% include url.html path="gelistirici/README.md" %}{%- endcapture -%}
+{%- capture first_url -%}{% include url.html path="kullanim/01-baslarken.md" %}{%- endcapture -%}
+{%- else -%}
+{%- assign home_url = "/en/" | relative_url -%}
+{%- assign other_home = "/" | relative_url -%}
+{%- capture guide_url -%}{% include url.html path="en/guide/README.md" %}{%- endcapture -%}
+{%- capture physics_url -%}{% include url.html path="en/physics/README.md" %}{%- endcapture -%}
 {%- capture docs_url -%}{% include url.html path="README.md" %}{%- endcapture -%}
+{%- capture first_url -%}{% include url.html path="en/guide/01-getting-started.md" %}{%- endcapture -%}
+{%- endif -%}
+{%- comment -%} The same page in the other language: front matter alt_url, else the nav pairing, else the other home. {%- endcomment -%}
+{%- assign other_url = other_home -%}
+{%- if page.alt_url -%}
+{%- assign other_url = page.alt_url | relative_url -%}
+{%- else -%}
+{%- for group in nav -%}{%- for item in group.items -%}{%- if item.path == page.path and item.alt -%}
+{%- capture other_url -%}{% include url.html path=item.alt %}{%- endcapture -%}
+{%- endif -%}{%- endfor -%}{%- endfor -%}
+{%- endif -%}
+{%- assign section = "" -%}
+{%- for group in nav -%}{%- for item in group.items -%}{%- if item.path == page.path -%}{%- assign section = group.title -%}{%- endif -%}{%- endfor -%}{%- endfor -%}

@@ -24,8 +24,10 @@ The xUnit project is `CoreSim/tests/RobotTwin.CoreSim.Tests`. It needs no UI and
 | Instruments, diagnostics | `OscilloscopeTests`, `MultimeterTests`, `DiagnosticsTests` |
 | Schematic, PCB, KiCad | `SchematicEditorTests`, `DesignAndPcbTests`, `PcbEditorTests`, `PcbPolygonTests`, `KiCadExportTests`, `KiCadImportTests` |
 | Firmware | `FirmwareCoSimTests`, `I2cDeviceTests`, `Esp32Tests`, `Esp32RadioTests`, `FirmwareProtocolTests`, `ProtocolFramingTests` |
-| Mechanics, modelling | `PhysicsSceneTests`, `VehicleDynamicsTests`, `MechatronicsTests`, `MeshTests`, `ModelingTests`, `PartModel3DTests` |
-| World, radio | `WorldTests`, `WorldPhysicsTests`, `RadioTests` |
+| Mechanics, modelling | `PhysicsSceneTests`, `VehicleDynamicsTests`, `MechatronicsTests`, `MeshTests`, `ModelingTests`, `PartModel3DTests`, `ModelHullTests` (model-shaped bodies roll like the real shape), `AssemblyDragTests` (covered faces, base drag, oblique flow) |
+| World, radio | `WorldTests`, `WorldPhysicsTests`, `RadioTests`, `GamepadCarTests` (designed board, one axle, drives straight and turns on the controller) |
+| Flight, gas, heat, batteries | `AeroWingTests`, `MotorGliderTests`, `QuadFlightTests`, `GasPhysicsTests` (blowdown, KNSB motor, water rocket, bursting), `ThermalWorldTests`, `UsbcBatteryTests` (CC/CV charging, protection board, regulated AA) |
+| SDK | `SdkTests` (terminal velocity, wind, turbulence, expressions, plugins) |
 | Files, repo hygiene | `FileFormatTests`, `RtwinRoundTripTests`, `TemplateTests`, `GoldenTraceHarnessTests`, `WorkflowReferenceTests` |
 
 ESP32 tests compile real sketches with MSVC. On a machine without the Visual Studio C++ tools (`vcvars64.bat` not found) they are reported as **skipped**, not failed.
@@ -63,14 +65,15 @@ $exe = "builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe"
 | `--page` | `home`, `schematic`, `pcb`, `code`, `model`, `assembly`, `world`, `library`, `settings` |
 | `--example <id>` | Loads a circuit example first (`led-button`, `arduino-blink`, `arduino-displays`, `esp32-dimmer`, `motor-driver`, `opamp-amp`, `power-7805`, `rc-filter`, `relay-lamp`, `nand-logic`, `line-follower`, `obstacle-avoider`, `quadcopter`) |
 | `--simulate <s>` | Runs the simulation for that many simulated seconds before capturing |
-| `--fault <name>` | Page-specific scenario. World page: the world template id (`empty`, `two-boards`, `servo-arm`, `displays`, `car`, `sonar`, `motor-wheel`, `ps5-car`). Schematic: e.g. `scope`, `dmm`, `burn`, `diag`, `montecarlo`, `tolerance`, `erc`, `find`, `help`. PCB: `3d`, `fpeditor`, `module`. Any page: `split` (split view). |
+| `--fault <name>` | Page-specific scenario. World page: the world template id (`empty`, `two-boards`, `servo-arm`, `displays`, `car`, `sonar`, `motor-wheel`, `ps5-car`, `esp32-quad`, `shell-box`, `motor-glider`, `glider`, `water-rocket`, `sugar-motor`, …). Schematic: e.g. `scope`, `dmm`, `burn`, `diag`, `montecarlo`, `tolerance`, `erc`, `find`, `help`. PCB: `3d`, `fpeditor`, `module`. Any page: `split` (split view). |
+| `--collision` | World page: captures with the collision shapes shown |
 | `--size WxH` | Window size (default 1600x960); narrow sizes emulate split view / detached windows |
 | `--wait <s>` | Extra seconds before capturing |
 | `--nav-expanded` | Captures with the navigation rail expanded |
 
 Compare the PNGs by eye or with an image diff tool; there is no automated pixel comparison in CI.
 
-Related: `--gallery <dir>` writes contact sheets of every generated 3D component model (`--gallery-filter`, `--gallery-columns`, `--gallery-tile WxH`), useful after changes in `Models3D/`.
+Related: `--overlap-report <file>` builds every world template and lists parts that overlap or do not fit their shell; `--gallery <dir>` writes contact sheets of every generated 3D component model (`--gallery-filter`, `--gallery-columns`, `--gallery-tile WxH`), useful after changes in `Models3D/`.
 
 ## Continuous integration
 

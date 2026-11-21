@@ -17,10 +17,27 @@
 | Kabloyla bağlı iki kart | 9 V güç kartı ve LED kartı ayrı PCB'lerde; iki kablo bağlanınca LED'ler yanar |
 | Arduino ile iki eksenli servo kol | Uno iki SG90 servoyu sürer; ikinci servo birincinin koluna vidalı |
 | Arduino, LCD ve OLED (I²C kablolu) | Uno, 16×2 LCD, 128×64 OLED ve potansiyometre I²C kablolarıyla bağlı |
-| İki tekerlekli araba (gerçek fizik) | PLA şase, iki TT motor ve tekerlek, bilyeli sarhoş teker, 4×AA pil |
+| İki tekerlekli araba (gerçek fizik) | PLA şase, iki TT motor ve tekerlek tek aks üzerinde, bilyeli sarhoş teker, 4×AA pil |
 | Ultrasonik mesafe sensörü ve engeller | HC-SR04 önündeki engele gerçekten ölçüm yapar |
 | Pil, motor ve tekerlek | 4×AA pil TT motoru sürer, tekerlek motor milinde |
-| Kumandalı araba (ESP32 + PS5 kumanda) | ESP32 + Bluepad32, DRV8833, iki TT motor, USB'li bilgisayar ve eşleşmiş DualSense |
+| Fabrika hücresi (robot kol + konveyör) | 6 eksenli kol, konveyör bandı, ışık perdesi |
+| SCARA al-bırak (paralel tutucu) | SCARA kol parçaları paralel tutucuyla taşır |
+| Pervane itki standı | 8520 motorlar ve pervaneler: devir, itki, tork, akım canlı |
+| Mini drone kalkışı | Dört 8520 motorlu 40 g X gövde itkiyle havalanır |
+| ESP32 dörtlü | Fırçasız motorlar, ESC'ler, MPU-6050; ESP32'deki uçuş yazılımı gövdeyi dengede tutar |
+| Elektronik kutusu | Kapaklı içi boş gövde, içinde Uno ve 9 V pil; sığma denetimi, röntgen ve patlatılmış görünüm |
+| Motorlu planör (İHA) | 1 m planör, 2212 fırçasız motor, ESP32 uçuş kartı; denge yalnız pilin konumuyla |
+| Planör | Balsa gövde, karbon kuyruk borusu, Nano + iki servo, itme çubukları; elden atılır |
+| Mekanum tekerlekli araba | Dört TT motor ve mekanum tekerleklerle yana kayar |
+| Işıklar: LED'ler ve lambalar | Karanlık odada LED'ler, RGB LED, güç LED'i, ampul ve LED şerit |
+| Kumandalı araba (ESP32 + PS5 kumanda) | Kendi PCB'li ESP32 + DRV8833 kartı, USB-C şarjlı 2S pil, eşleşmiş DualSense |
+| Su roketi | 2 L PET şişe, 0,6 L su, 4 bar; su jeti, hava itkisi, kanatçıklar |
+| Katı yakıtlı motor test standı (KNSB) | İki BATES şeker yakıt tanesi; basınç ve itki yanma hızından çıkar |
+| Çizgi izleyen robot | Mat, solmuş ve parlak bant üstünde 5 kanallı TCRT5000 |
+| Sensör gezgini | Kamera, LiDAR, GPS, IMU, pusula ve enkoderler canlı |
+| ESP32 + OV2640 kamera ile bant bulma | Kamera pisti yukarıdan görür, ESP32 bandı bulur |
+| Rüzgâr, fan, konveyör ve ifadeler | Türbülanslı rüzgâr, fan, konveyör ve ifadeyle yazılan kuvvetler |
+| Arazi parkuru, Kapalı atölye | Şekillendirilmiş arazi, boyalı zemin katmanları |
 
 ## Ekranın bölümleri
 
@@ -69,11 +86,11 @@ Tek başına konmuş bir Arduino veya ESP32'yi **Kart tasarımına dönüştür 
 
 ### Mekanik gövdeler
 
-**Mekanik** sekmesindeki **Temel şekiller:** Kutu, Plaka / şase, Kol / çubuk, Silindir, Tekerlek (kauçuk lastikli), Küre / bilye, Masa / sabit zemin. Boyut ve renk denetçiden ayarlanır.
+**Mekanik** sekmesindeki **Temel şekiller:** Kutu, Plaka / şase, Kol / çubuk, Silindir, Tekerlek (kauçuk lastikli), Küre / bilye, Masa / sabit zemin. Boyut ve renk denetçiden ayarlanır. **Gövde kabukları** (kapaklı içi boş gövdeler) içinde kart ve pil taşır; **Uçuş yüzeyleri** (kanat, irtifa dümenli yatay kuyruk, yön dümenli dikey kuyruk) gerçek kaldırma, sürükleme ve moment üretir.
 
 ### Çarpışma şekilleri
 
-Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir motor gövdesi yuvarlanır, kanat sivrilen biçimiyle, kumanda kendi dış hattıyla çarpışır (sınır kutusu değil). Bacaklar, pinler ve kablo uçları gibi ince parçalar gövdeye katılmaz. **Görünüm → Çarpışma şekilleri (dünya)** fiziğin gerçekten çarpıştırdığı gövdeleri modellerin üzerinde yarı saydam çizer; simülasyon çalışırken gövdelerle birlikte hareket eder.
+Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir motor gövdesi yuvarlanır, kanat sivrilen biçimiyle, kumanda kendi dış hattıyla çarpışır (sınır kutusu değil). Bacaklar, pinler ve kablo uçları gibi ince parçalar gövdeye katılmaz. **Görünüm → Çarpışma şekilleri (dünya)** fiziğin gerçekten çarpıştırdığı gövdeleri modellerin üzerinde yarı saydam çizer; simülasyon çalışırken gövdelerle birlikte hareket eder. Matematiği: [Katı cisim ve temas](../fizik/02-mekanik.md).
 
 ### Basınçlı kaplar ve roketler
 
@@ -86,7 +103,7 @@ Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir mo
 - **Katı yakıt:** KNSB, KNDX veya APCP tanesi; yanma hızı basınca bağlıdır (r = a·pⁿ). Oda basıncı, yanma yüzeyinin ürettiği gaz ile lüleden çıkan gazın dengesinden kendiliğinden çıkar; itki eğrisi hazır okunmaz. Motora bağlı bir **e-match** devreden ateşlenince ya da **Ateşleme zamanı** gelince tutuşur.
 - **Patlama:** basınç, duvarın çeper gerilmesini (σ = p·r/t) malzemenin dayanımına çıkarırsa kap patlar.
 
-Kabın kütlesi gaz, su ve yakıt azaldıkça düşer; sıcak gaz duvarı ısıtır (ısı kamerasında görünür). Çalışırken denetçide basınç, sıcaklık, itki ve durum canlı okunur. **Su roketi** ve **Katı yakıtlı motor test standı** şablonlarıyla başlayın.
+Kabın kütlesi gaz, su ve yakıt azaldıkça düşer; sıcak gaz duvarı ısıtır (ısı kamerasında görünür). Çalışırken denetçide basınç, sıcaklık, itki ve durum canlı okunur. **Su roketi** ve **Katı yakıtlı motor test standı** şablonlarıyla başlayın. Matematiği: [Gaz ve roketler](../fizik/05-gaz-ve-roket.md).
 
 ### 3D modeller
 
@@ -110,14 +127,14 @@ Bir nesne seçiliyken **Bağla** (B) aracıyla başka bir nesneye tıklayın:
 | **Menteşe ile bağla (serbest döner)** | Bir eksen etrafında serbest döner |
 | **Kızakla bağla (doğrusal kayar)** | Bir doğru boyunca kayar |
 
-Birbirine bağlı parçalar birbiriyle çarpışmaz. Bir nesneyi sürüklediğinizde ona takılı her şey de gelir. Bağlantıyı kaldırmak için denetçide **Bağlantıyı çöz**.
+En çok iki eklemle birbirine bağlı parçalar birbiriyle çarpışmaz. Bir nesneyi sürüklediğinizde ona takılı her şey de gelir. Bağlantıyı kaldırmak için denetçide **Bağlantıyı çöz**.
 
 ## Fizik ve ortam
 
 Her nesnenin denetçisinde **Fizik** bölümü:
 
 - **Sabit:** nesne zemine veya masaya sabitlenmiştir, hareket etmez.
-- **Malzeme:** PLA, PETG, ABS, Akrilik, Alüminyum, Çelik, Karbon, Ahşap, MDF, Kauçuk, FR4. Sürtünme ve sekme malzemeye göre değişir.
+- **Malzeme:** PLA, PETG, ABS, Akrilik, Alüminyum, Çelik, Karbon, Ahşap, MDF, Kauçuk, FR4, PET, Karton. Sürtünme ve sekme malzemeye göre değişir.
 - **Doluluk (%)** ve **Kütle (g, 0 = otomatik)**.
 
 **Ortam** sekmesi:
@@ -125,8 +142,13 @@ Her nesnenin denetçisinde **Fizik** bölümü:
 - **Yerçekimi:** Dünya 9.81, Ay 1.62, Mars 3.71, Jüpiter 24.8, Sıfır yerçekimi.
 - **Ortam sıcaklığı**, **zemin genişliği / derinliği**, **zemin sürtünmesi (μ)**, **çevre duvarları**.
 - **Engel ekle** / **Engelleri temizle**.
+- Hava, rüzgâr, türbülans ve kuvvet alanları: bkz. [Fizik betikleri (SDK)](../gelistirici/SDK.md).
 
-Servolar devreden gelen darbe komutunu okur; kolun açısı ve çektiği akım devreye geri döner. DC motorlar devrenin hesapladığı hızla döner; mile binen yük motora geri yansır. Sert çarpmalar ve kopan bağlantılar **Olaylar** sekmesine yazılır.
+Servolar devreden gelen darbe komutunu okur; kolun açısı ve çektiği akım devreye geri döner. DC motorlar devrenin hesapladığı hızla döner; mile binen yük motora geri yansır. Sert çarpmalar ve kopan bağlantılar **Olaylar** sekmesine yazılır. Hava sürüklemesi yüz yüz etkir: bir parçanın bağlı başka bir parçanın örttüğü yüzü havayı görmez ([Aerodinamik](../fizik/04-aerodinamik.md)).
+
+## Isı kamerası
+
+**Görünüm → Isı kamerası (dünya)** modelleri gerçek bir ısı kamerası gibi sıcaklığa göre renklendirir (demir paleti). Fare bir parçanın üstündeyken o noktanın sıcaklığı ve parçanın düğümleri (TT motorun sargısı, gövdesi, dişli kutusu) görünür. Matematiği: [Isı](../fizik/03-isi.md).
 
 ## Sensörler ve ekranlar
 
@@ -146,7 +168,7 @@ Servolar devreden gelen darbe komutunu okur; kolun açısı ve çektiği akım d
 ### Kumanda
 
 1. Kumandayı seçin. Denetçide **Eşleştirme modu (PS + Create basılı)** ile ESP32'yle eşleştirin.
-2. **Sanal kumandayı aç (fare / klavye)** ile ekrandaki kumandayı kullanın, ya da gerçek bir kumandayı USB veya Bluetooth ile bilgisayara bağlayın. Görünmezse **Kumandaları yeniden tara**.
+2. **Sanal kumandayı aç (fare / klavye)** ile ekrandaki kumandayı kullanın (W/S gaz, A/D direksiyon), ya da gerçek bir kumandayı USB veya Bluetooth ile bilgisayara bağlayın. Görünmezse **Kumandaları yeniden tara**.
 3. **ESP32'ye uzaklık** kaydırıcısı (simülasyon çalışırken) sinyalin uzaklıkla nasıl zayıfladığını gösterir.
 4. **Kumandayı aç/kapat** ve **Eşleşmeyi unut** düğmeleri de buradadır.
 
@@ -160,7 +182,7 @@ ESP32 seçiliyken **Örnek kodu yükle: kumandalı araba (Bluepad32)** hazır bi
 
 ### Radyo ortamı
 
-Wi-Fi, BLE ve Bluetooth sinyalleri uzaklıkla, engellerle ve gövdelerle zayıflar. Alttaki **RF** sekmesinde cihazlar, sinyal gücü (RSSI), kanal ve saniyedeki paket sayısı görünür. **Sönümleme**, **Dalgalar** ve **Bağlantı çizgileri** seçenekleri radyo görselleştirmesini açar / kapatır. IR kumanda yalnızca görüş hattında çalışır; tuşları denetçideki **IR kumanda tuşları (NEC)** bölümündedir.
+Wi-Fi, BLE ve Bluetooth sinyalleri uzaklıkla, engellerle ve gövdelerle zayıflar. Alttaki **RF** sekmesinde cihazlar, sinyal gücü (RSSI), kanal ve saniyedeki paket sayısı görünür. **Sönümleme**, **Dalgalar** ve **Bağlantı çizgileri** seçenekleri radyo görselleştirmesini açar / kapatır. IR kumanda yalnızca görüş hattında çalışır; tuşları denetçideki **IR kumanda tuşları (NEC)** bölümündedir. Matematiği: [Radyo](../fizik/06-radyo.md).
 
 ## Sahne ağacı
 

@@ -4,7 +4,8 @@ tr:
   guide: Kılavuz
   guide_long: Kullanım kılavuzu
   docs: Belgeler
-  dev_docs: Geliştirici belgeleri (İngilizce)
+  dev_docs: Geliştirici belgeleri
+  physics: Fizik
   download: İndir
   releases: Sürüm notları
   search: Ara
@@ -36,14 +37,17 @@ tr:
   start_guide_text: Uygulamayı adım adım, ekran görüntüleriyle anlatır.
   start_first: İlk proje
   start_first_text: Kurulum ve ilk devrenizi beş dakikada çalıştırın.
+  start_physics: Fizik ve matematik
+  start_physics_text: Her çözücünün denklemleri, varsayımları ve doğrulaması.
   start_dev: Geliştiriciler
-  start_dev_text: Mimari, derleme, testler, otomasyon API'si ve SDK.
+  start_dev_text: Otomasyon API'si, fizik betikleri (SDK), mimari, derleme ve testler.
 en:
   home: Home
   guide: Guide
-  guide_long: User guide (Turkish)
+  guide_long: User guide
   docs: Docs
   dev_docs: Developer docs
+  physics: Physics
   download: Download
   releases: Release notes
   search: Search
@@ -72,8 +76,10 @@ en:
   requirements: Windows 10/11, 64-bit
   start_title: Where to start
   start_guide: User guide
-  start_guide_text: The app step by step, with screenshots (Turkish).
+  start_guide_text: The app step by step, with screenshots.
   start_first: First project
   start_first_text: Install and run your first circuit in five minutes.
+  start_physics: Physics and maths
+  start_physics_text: The equations, assumptions and validation of every solver.
   start_dev: Developers
-  start_dev_text: Architecture, building, tests, the automation API and the SDK.
+  start_dev_text: The automation API, physics scripts (SDK), architecture, building and tests.

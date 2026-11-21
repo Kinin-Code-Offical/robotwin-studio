@@ -1,0 +1,155 @@
+# 9. Keyboard shortcuts
+
+The app has its own shortcut lists too: the **Ctrl+K** command palette shows every command with its shortcut; on the Circuit and PCB pages **F1** or **?** opens that page's list; **Ayarlar → Klavye kısayolları** (Settings → keyboard shortcuts) has a list as well.
+
+## General
+
+| Shortcut | Function |
+| --- | --- |
+| Ctrl+N | New circuit / board |
+| Ctrl+Shift+N | New world |
+| Ctrl+O | Open |
+| Ctrl+S | Save |
+| Ctrl+Shift+S | Save as |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+| Ctrl+K | Command palette: search everything |
+| Ctrl+, | Settings |
+| Ctrl+0 | Home |
+| Ctrl+1 | Circuit |
+| Ctrl+2 | PCB |
+| Ctrl+3 | Code |
+| Ctrl+4 | Model |
+| Ctrl+5 | Assembly |
+| Ctrl+6 | World |
+| Ctrl+7 | Library |
+| Ctrl+B | Expand / collapse the design line |
+| Ctrl+\\ | Split view on / off |
+| Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab |
+| Ctrl+W | Close the tab |
+| F5 | Start / pause / resume the simulation |
+| Shift+F5 | Stop the simulation |
+| F10 | Menu bar |
+| F11 | Full screen (Esc leaves it) |
+| Alt+F4 | Exit |
+
+## Circuit
+
+| Shortcut | Function |
+| --- | --- |
+| A | Add a part (searchable list) |
+| P | Power symbol (GND, +5V…) |
+| W / Shift+W | Wire tool / start a wire at the cursor |
+| L / Ctrl+L | Net label / global label |
+| Q | No-connect (NC) marker |
+| / | Wire corner direction |
+| Shift+Space | Wire mode: 90° → 45° → free |
+| Backspace | Undo the last corner |
+| Double-click or Esc | Finish the wire |
+| M / G | Move / drag (wires stretch) |
+| R / Shift+R | Rotate |
+| X / Y | Mirror horizontally / vertically |
+| Del | Delete |
+| Ctrl+D or C | Duplicate |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
+| Arrows, Shift+arrows | Nudge the selection 1 / 10 grid steps |
+| E | Properties |
+| V, F2 or double-click | Edit the value in place |
+| D | Datasheet |
+| Ctrl+F / Ctrl+H | Find / find and replace |
+| Ctrl+A / Esc | Select all / clear selection |
+| U | Select the connection |
+| Tab / Shift+Tab | Step through parts |
+| F or Home | Fit |
+| + / − or wheel | Zoom |
+| Middle button or Space + drag | Pan |
+| The key left of 1 | Highlight the net under the cursor |
+| Ctrl+Shift+X | Crosshair cursor |
+| Ctrl+P | Print / PDF |
+| F1 or ? | Shortcut list |
+
+## PCB
+
+| Shortcut | Function |
+| --- | --- |
+| X | Track tool |
+| V | Place a via and change layer (while routing); top / bottom layer (otherwise) |
+| PgUp / PgDn | Active layer (while routing: change layer through a via) |
+| / | Angle direction |
+| Space | 45° / 90° mode |
+| W / Shift+W | Track width: next / previous |
+| Enter or double-click | Finish the track |
+| Z | Draw a pour area |
+| B / Ctrl+B | Fill / empty pours |
+| T | Silkscreen text |
+| M | Move (tracks stay put) |
+| G | Drag (track ends follow) |
+| D | Drag a track segment keeping its angle |
+| R / Shift+R | Rotate |
+| F | Flip to bottom / top (fit when nothing is selected) |
+| L | Lock / unlock |
+| E | Properties |
+| U | Select the whole track |
+| Del | Delete the selection (a part is removed from the schematic too) |
+| Ctrl+C / X / V / D | Copy / cut / paste / duplicate |
+| H | Active layer only / all |
+| Home | Fit |
+| Ctrl+Shift+M | Measure |
+| Ctrl+Shift+H | Dimension line |
+| F1 or ? | Shortcut list |
+
+## Code
+
+| Shortcut | Function |
+| --- | --- |
+| F7 | Compile |
+| F5 | Compile, load into the board and run |
+
+## Model
+
+| Shortcut | Function |
+| --- | --- |
+| Tab | Object mode / edit mode |
+| 1 / 2 / 3 | (Edit mode) vertex / edge / face selection |
+| G / R / S | Move / rotate / scale; then X / Y / Z axis lock and a number |
+| Enter / Esc | Confirm / cancel |
+| Shift+A | Add menu |
+| Shift+D | Duplicate |
+| A / Alt+A / Ctrl+I | Select all / clear selection / invert selection |
+| X or Del | Delete |
+| Ctrl+J | Join |
+| Ctrl+P / Alt+P | Set parent / clear parent |
+| H / Shift+H / Alt+H | Hide / hide others / show all |
+| E / I / F / M / P | (Edit mode) extrude / inset / fill face / merge / separate |
+| Shift+N | (Edit mode) recalculate normals |
+| Z / Shift+Z / Alt+Z | Solid / wireframe / X-ray |
+| Numpad 1 / 3 / 7 | Front / right / top |
+| Numpad 5 | Perspective / orthographic |
+| Home / Numpad . | Fit all / focus on the selection |
+| W | Select tool |
+| F2 | Rename |
+| Ctrl+Z / Ctrl+Shift+Z | Undo / redo |
+| Ctrl+N / Ctrl+O / Ctrl+S | New model / open / save |
+| Middle button, Shift + middle button, wheel | Orbit, pan, zoom |
+
+## World
+
+| Shortcut | Function |
+| --- | --- |
+| K | Draw cable |
+| B | Connect |
+| Esc | Cancel / select tool |
+| R / Shift+R | Rotate 15° / the other way |
+| Ctrl+D | Duplicate |
+| Del | Delete |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+| T | Camera follows the selected object |
+| F | Fit |
+| F5 / Shift+F5 | Run-pause / stop and rewind |
+| Ctrl+R | Start / end recording |
+| Ctrl+F5 | Render |
+| Shift + drag | Height |
+| Alt + drag | Ignore the grid |
+
+---
+
+[← Previous: 8. Instruments](08-instruments.md) · [Contents](README.md) · [Next: 10. FAQ →](10-faq.md)

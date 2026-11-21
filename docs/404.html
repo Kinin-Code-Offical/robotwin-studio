@@ -1,19 +1,19 @@
 ---
 layout: base
-lang: en
-title: Page not found
+lang: tr
+title: Sayfa bulunamadı
 permalink: /404.html
 sitemap: false
 ---
 {% include vars.html %}
 <main id="main" class="home">
   <section class="intro">
-    <h1>Page not found</h1>
-    <p class="lead">This page may have moved or been removed. <span lang="tr">Aradığınız sayfa bulunamadı.</span></p>
+    <h1>Sayfa bulunamadı</h1>
+    <p class="lead">Aradığınız sayfa taşınmış ya da kaldırılmış olabilir.</p>
     <div class="downloads">
-      <a class="btn primary" href="{{ '/' | relative_url }}"><span class="btn-title">Home</span></a>
-      <a class="btn" href="{{ '/tr/' | relative_url }}" lang="tr"><span class="btn-title">Türkçe ana sayfa</span></a>
-      <a class="btn" href="{{ guide_url }}"><span class="btn-title">User guide</span></a>
+      <a class="btn primary" href="{{ '/' | relative_url }}"><span class="btn-title">Ana sayfa</span></a>
+      <a class="btn" href="{{ guide_url }}"><span class="btn-title">Kullanım kılavuzu</span></a>
+      <a class="btn" href="{{ '/en/' | relative_url }}" lang="en"><span class="btn-title">English home page</span></a>
     </div>
   </section>
 </main>

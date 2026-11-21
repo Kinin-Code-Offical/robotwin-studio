@@ -1,57 +1,78 @@
-# Sidebar navigation. Each entry names a source file; the layouts look up its
-# final URL, so renamed permalinks keep working.
+# Sidebar navigation per language. Every page names its counterpart in the other
+# language (alt), so the language switch opens the same page. Turkish is the
+# site's default language (/); English lives under /en/ and the developer docs
+# at the docs root. The layouts look up final URLs, so permalinks can change.
 
-guide:
-  - path: kullanim/README.md
-    title: Kılavuz ana sayfası
-    short: Giriş
-  - path: kullanim/01-baslarken.md
-    title: 1. Başlarken
-  - path: kullanim/02-devre.md
-    title: 2. Devre
-    stage: devre
-  - path: kullanim/03-pcb.md
-    title: 3. PCB
-    stage: pcb
-  - path: kullanim/04-kod.md
-    title: 4. Kod
-    stage: kod
-  - path: kullanim/05-modelle.md
-    title: 5. Modelle
-    stage: modelle
-  - path: kullanim/06-montaj.md
-    title: 6. Montaj
-    stage: montaj
-  - path: kullanim/07-dunya.md
-    title: 7. Dünya
-    stage: dunya
-  - path: kullanim/08-olcu-aletleri.md
-    title: 8. Ölçü aletleri
-  - path: kullanim/09-kisayollar.md
-    title: 9. Klavye kısayolları
-  - path: kullanim/10-sss.md
-    title: 10. Sık sorulan sorular
+tr:
+  - title: Kullanım kılavuzu
+    items:
+      - { path: kullanim/README.md, title: Kılavuz ana sayfası, alt: en/guide/README.md }
+      - { path: kullanim/01-baslarken.md, title: 1. Başlarken, alt: en/guide/01-getting-started.md }
+      - { path: kullanim/02-devre.md, title: 2. Devre, alt: en/guide/02-circuit.md }
+      - { path: kullanim/03-pcb.md, title: 3. PCB, alt: en/guide/03-pcb.md }
+      - { path: kullanim/04-kod.md, title: 4. Kod, alt: en/guide/04-code.md }
+      - { path: kullanim/05-modelle.md, title: 5. Modelle, alt: en/guide/05-model.md }
+      - { path: kullanim/06-montaj.md, title: 6. Montaj, alt: en/guide/06-assembly.md }
+      - { path: kullanim/07-dunya.md, title: 7. Dünya, alt: en/guide/07-world.md }
+      - { path: kullanim/08-olcu-aletleri.md, title: 8. Ölçü aletleri, alt: en/guide/08-instruments.md }
+      - { path: kullanim/09-kisayollar.md, title: 9. Klavye kısayolları, alt: en/guide/09-shortcuts.md }
+      - { path: kullanim/10-sss.md, title: 10. Sık sorulan sorular, alt: en/guide/10-faq.md }
+  - title: Fizik ve matematik
+    items:
+      - { path: fizik/README.md, title: Genel bakış, alt: en/physics/README.md }
+      - { path: fizik/01-devre.md, title: Devre çözücü, alt: en/physics/01-circuit.md }
+      - { path: fizik/02-mekanik.md, title: Katı cisim ve temas, alt: en/physics/02-mechanics.md }
+      - { path: fizik/03-isi.md, title: Isı, alt: en/physics/03-heat.md }
+      - { path: fizik/04-aerodinamik.md, title: Aerodinamik, alt: en/physics/04-aerodynamics.md }
+      - { path: fizik/05-gaz-ve-roket.md, title: Gaz ve roketler, alt: en/physics/05-gas-and-rockets.md }
+      - { path: fizik/06-radyo.md, title: Radyo, alt: en/physics/06-radio.md }
+  - title: Geliştirici belgeleri
+    items:
+      - { path: gelistirici/README.md, title: Belgeler dizini, alt: README.md }
+      - { path: gelistirici/API.md, title: Otomasyon API'si, alt: API.md }
+      - { path: gelistirici/SDK.md, title: Fizik betikleri (SDK), alt: SDK.md }
+      - { path: gelistirici/MIMARI.md, title: Mimari, alt: ARCHITECTURE.md }
+      - { path: gelistirici/KURULUM.md, title: Windows'ta kurulum, alt: SETUP_WINDOWS.md }
+      - { path: gelistirici/PROJE_YAPISI.md, title: Proje yapısı, alt: PROJECT_STRUCTURE.md }
+      - { path: gelistirici/TESTLER.md, title: Testler, alt: TESTING.md }
+      - { path: gelistirici/DERLEME.md, title: Derleme ve sürüm, alt: BUILD_RELEASE.md }
+      - { path: gelistirici/ARACLAR.md, title: Araçlar, alt: TOOLS.md }
+      - { path: gelistirici/SORUN_GIDERME.md, title: Sorun giderme, alt: TROUBLESHOOTING.md }
+      - { path: gelistirici/ERISILEBILIRLIK.md, title: Erişilebilirlik, alt: ACCESSIBILITY.md }
 
-docs:
-  - path: README.md
-    title: Docs index
-  - path: ARCHITECTURE.md
-    title: Architecture
-  - path: SETUP_WINDOWS.md
-    title: Setup on Windows
-  - path: PROJECT_STRUCTURE.md
-    title: Project structure
-  - path: TESTING.md
-    title: Testing
-  - path: BUILD_RELEASE.md
-    title: Build and release
-  - path: TOOLS.md
-    title: Tools
-  - path: TROUBLESHOOTING.md
-    title: Troubleshooting
-  - path: API.md
-    title: Automation API
-  - path: ACCESSIBILITY.md
-    title: Accessibility
-  - path: archive/README.md
-    title: Archive (1.x)
+en:
+  - title: User guide
+    items:
+      - { path: en/guide/README.md, title: Guide home, alt: kullanim/README.md }
+      - { path: en/guide/01-getting-started.md, title: 1. Getting started, alt: kullanim/01-baslarken.md }
+      - { path: en/guide/02-circuit.md, title: 2. Circuit, alt: kullanim/02-devre.md }
+      - { path: en/guide/03-pcb.md, title: 3. PCB, alt: kullanim/03-pcb.md }
+      - { path: en/guide/04-code.md, title: 4. Code, alt: kullanim/04-kod.md }
+      - { path: en/guide/05-model.md, title: 5. Model, alt: kullanim/05-modelle.md }
+      - { path: en/guide/06-assembly.md, title: 6. Assembly, alt: kullanim/06-montaj.md }
+      - { path: en/guide/07-world.md, title: 7. World, alt: kullanim/07-dunya.md }
+      - { path: en/guide/08-instruments.md, title: 8. Instruments, alt: kullanim/08-olcu-aletleri.md }
+      - { path: en/guide/09-shortcuts.md, title: 9. Keyboard shortcuts, alt: kullanim/09-kisayollar.md }
+      - { path: en/guide/10-faq.md, title: 10. FAQ, alt: kullanim/10-sss.md }
+  - title: Physics and maths
+    items:
+      - { path: en/physics/README.md, title: Overview, alt: fizik/README.md }
+      - { path: en/physics/01-circuit.md, title: Circuit solver, alt: fizik/01-devre.md }
+      - { path: en/physics/02-mechanics.md, title: Rigid bodies and contact, alt: fizik/02-mekanik.md }
+      - { path: en/physics/03-heat.md, title: Heat, alt: fizik/03-isi.md }
+      - { path: en/physics/04-aerodynamics.md, title: Aerodynamics, alt: fizik/04-aerodinamik.md }
+      - { path: en/physics/05-gas-and-rockets.md, title: Gas and rockets, alt: fizik/05-gaz-ve-roket.md }
+      - { path: en/physics/06-radio.md, title: Radio, alt: fizik/06-radyo.md }
+  - title: Developer docs
+    items:
+      - { path: README.md, title: Docs index, alt: gelistirici/README.md }
+      - { path: API.md, title: Automation API, alt: gelistirici/API.md }
+      - { path: SDK.md, title: Physics scripts (SDK), alt: gelistirici/SDK.md }
+      - { path: ARCHITECTURE.md, title: Architecture, alt: gelistirici/MIMARI.md }
+      - { path: SETUP_WINDOWS.md, title: Setup on Windows, alt: gelistirici/KURULUM.md }
+      - { path: PROJECT_STRUCTURE.md, title: Project structure, alt: gelistirici/PROJE_YAPISI.md }
+      - { path: TESTING.md, title: Testing, alt: gelistirici/TESTLER.md }
+      - { path: BUILD_RELEASE.md, title: Build and release, alt: gelistirici/DERLEME.md }
+      - { path: TOOLS.md, title: Tools, alt: gelistirici/ARACLAR.md }
+      - { path: TROUBLESHOOTING.md, title: Troubleshooting, alt: gelistirici/SORUN_GIDERME.md }
+      - { path: ACCESSIBILITY.md, title: Accessibility, alt: gelistirici/ERISILEBILIRLIK.md }

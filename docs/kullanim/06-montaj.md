@@ -1,60 +1,34 @@
 # 6. Montaj
 
-**Montaj** sayfası (Ctrl+5) devrenizden otomatik olarak bir araç kurar ve onu 3 boyutlu bir arenada çalıştırır. Devredeki motorlar tekerlekleri veya pervaneleri döndürür, sensörler arenayı okur; yük ve çarpmalar devreye geri yansır.
+**Montaj** (Ctrl+5) projenizin devresini gerçek bir montaja çevirir ve onu bir dünya sekmesinde açar. Burada hazır bir araç şablonu yoktur: devredeki her parça gerçek 3B parçası olarak gelir, şaseyi, tekerlekleri, eklemleri ve kabukları siz kurarsınız. Her şey [Dünya](07-dunya.md) sayfasındaki gerçek fizikle çalışır.
 
-> Birden çok kartı, serbest parçaları ve kendi gövdelerinizi bir arada kullanmak istiyorsanız **Dünya** sayfası daha esnektir: [7. Dünya](07-dunya.md).
 
-## Hangi devreden ne kurulur?
+## Neyi nereye koyar?
 
-| Devrede | Kurulan araç |
+| Devrede | Dünyada |
 | --- | --- |
-| İki motor | Robot araba (iki tekerlekten sürüş + sarhoş teker) |
-| Bir uçuş kontrolcüsü + dört motor | X düzeninde quadcopter |
+| PCB'ye yerleştirilmiş parçalar | Kartın üstünde kalır; kart tek bir nesnedir, devresi, PCB'si ve kodu içindedir |
+| PCB'de olmayan parçalar (motor, servo, pil, sensör, Arduino/ESP32 modülü…) | Her biri kendi gerçek 3B parçası olarak kartın çevresine yerleşir |
+| Hatlar (net) | Kartın pinleriyle parçaların pinleri arasında kablolar; atlama kabloları 5 cm adımlarla gerçek uzunlukta |
 
-TCRT5000 çizgi sensörleri, IR engel sensörleri ve HC-SR04 ultrasonik sensörler araca otomatik eklenir.
+Kartın pinleri kablolarda `RefDes.Pin` biçiminde görünür (ör. `J2.1`).
 
 ## Adım adım
 
-1. Hazır bir örnekle başlayın: **Başlangıç** sayfasında **Robot: Çizgi İzleyen**, **Robot: Engelden Kaçan (Arduino)** veya **Drone: Mikro Quadcopter**. Bu örnekler doğrudan Montaj sayfasında açılır.
-2. Kendi devreniz için **Devreden montaj oluştur** düğmesine basın. Devreyi değiştirdikten sonra **Otomatik montaj** ile aracı yeniden kurun.
-3. **Başlat** ile simülasyonu başlatın; durdurmak için yanındaki durdur düğmesini kullanın.
-4. **R** aracı başlangıç noktasına geri alır (devre çalışmaya devam eder).
+1. Bir devre açın ya da **Başlangıç** sayfasından bir robot örneği seçin (**Robot: Çizgi İzleyen**, **Robot: Engelden Kaçan (Arduino)**, **Drone: Mikro Quadcopter**).
+2. **Montaj**'a geçin (Ctrl+5). Montaj bir kez kurulur; sonraki seferlerde aynı dünya sekmesi geri gelir.
+3. **Mekanik** sekmesinden bir şase (plaka ya da [kabuk](07-dunya.md#mekanik-gövdeler)), tekerlekler, sarhoş teker ekleyin; parçaları **Bağla** (B) ile şaseye, tekerlekleri motor millerine sabitleyin.
+4. **F5** ile çalıştırın. Motorlar devrenin hesapladığı hızla döner, sensörler dünyayı ölçer, yük ve çarpmalar devreye geri yansır.
 
-## Kamera
+> Örnek: denizaltıdan çift kanatlı uçağa kadar her şeyi aynı araçlarla kurarsınız; şablon sınırı yoktur. Kanatlar, kabuklar, basınçlı kaplar ve itme çubukları için bkz. [7. Dünya](07-dunya.md).
 
-**Kamera** seçenekleri: **Takip**, **Üstten**, **Araç üstü**, **Serbest**.
+## Kartın içine bakmak
 
-## Drone kontrolü
+Kart nesnesini seçip **Kartı düzenle (devre · PCB · kod)** deyin: devre, PCB ve kod kendi sekmesinde açılır; yaptığınız değişiklik dünyadaki karta işlenir.
 
-| Tuş | İşlev |
-| --- | --- |
-| Boşluk | Motorları kur / kapat (arm / disarm) |
-| W / S | Yüksel / alçal |
-| A / D | Sola / sağa dön (yaw) |
-| Ok tuşları | İleri, geri, sola, sağa |
-| M | Uçuş modunu değiştir |
+## Kayıt ve arıza deneyleri
 
-## Ayarlar paneli
-
-- **Gövde:** şase / gövde kütlesi, tekerlek çapı, kol uzunluğu, pervane çapı.
-- **Gövde modeli (3B):** kendi STL / OBJ / PLY gövdenizi yükleyin; kütle, ağırlık merkezi ve eylemsizlik hacimden hesaplanır.
-- **Ortam:** arena (oval, sekiz, engeller, boş, rampalar), genişlik, sürtünme katsayısı, yerçekimi, sıcaklık, kenar duvarları.
-- **Telemetri:** araba için hız, alınan yol, yön, motor devri, sensörler; drone için durum, irtifa, eğim, yön, hız, motorlar.
-
-## Arıza deneyleri
-
-Gerçekte denemesi tehlikeli ya da pahalı olan durumları güvenle deneyin:
-
-- **… kısa devre** (pilin adıyla, örneğin BT1): pil uçlarını 50 mΩ ile kısa devre eder (ısınma, termal kaçak).
-- **… sıkıştır** (motorun adıyla, örneğin M1): motor milini kilitler; motor durma akımı çeker ve ısınır.
-- **Pervane 1…4 kır** (yalnızca drone): itki kaybı ve dengesizlik.
-- **Tümünü onar:** yanan parçaları onarır, arızaları kaldırır.
-
-Arızanın devreye etkisini **Devre** sayfasındaki osiloskop ve **Olaylar** sekmesinde izleyebilirsiniz.
-
-## Kayıt
-
-**Kaydı kaydet** bu koşuyu `.rwsim` dosyası olarak saklar: araç yörüngesi, olaylar, ölçüm kanalları, seri çıktı ve projenin kendisi. Kaydı daha sonra açıp inceleyebilirsiniz.
+Montaj bir dünya olduğu için dünyanın bütün araçları burada da çalışır: **Kayıt** ile simülasyonu kaydedip render penceresinde yeniden oynatabilir, pil kısa devresi ya da motor sıkışması gibi arızaları deneyebilir, **Görünüm → Isı kamerası** ve **Görünüm → Çarpışma şekilleri** ile içeri bakabilirsiniz.
 
 ---
 

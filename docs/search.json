@@ -5,18 +5,16 @@ sitemap: false
 ---
 {%- assign sep = false -%}
 [
-{%- for item in site.data.nav.guide -%}
+{%- for pair in site.data.nav -%}
+{%- assign code = pair[0] -%}
+{%- for group in pair[1] -%}
+{%- for item in group.items -%}
 {%- assign p = site.pages | where: "path", item.path | first -%}
 {%- if p -%}
 {%- if sep -%},{%- endif -%}{%- assign sep = true %}
-{"title":{{ item.title | jsonify }},"url":{{ p.url | relative_url | jsonify }},"group":"guide","html":{{ p.content | markdownify | jsonify }}}
+{"title":{{ item.title | jsonify }},"url":{{ p.url | relative_url | jsonify }},"lang":{{ code | jsonify }},"group":{{ group.title | jsonify }},"html":{{ p.content | markdownify | jsonify }}}
 {%- endif -%}
 {%- endfor -%}
-{%- for item in site.data.nav.docs -%}
-{%- assign p = site.pages | where: "path", item.path | first -%}
-{%- if p -%}
-{%- if sep -%},{%- endif -%}{%- assign sep = true %}
-{"title":{{ item.title | jsonify }},"url":{{ p.url | relative_url | jsonify }},"group":"docs","html":{{ p.content | markdownify | jsonify }}}
-{%- endif -%}
+{%- endfor -%}
 {%- endfor %}
 ]

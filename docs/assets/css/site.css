@@ -109,7 +109,7 @@ img { max-width: 100%; height: auto; }
 .shot { margin: 48px 0; }
 .shot img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 10px; }
 .start h2 { font-size: 1.35rem; margin: 0 0 16px; }
-.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .card { display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); }
 .card:hover { border-color: var(--accent); text-decoration: none; }
 .card span { color: var(--muted); font-size: 14.5px; }
@@ -129,9 +129,13 @@ img { max-width: 100%; height: auto; }
   .page { padding: 24px 16px 48px; }
   .top-nav { display: none; }
   .search input { width: 150px; }
-  .cards { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   .lang { display: none; }
   .btn { min-width: 0; width: 100%; }
 }
+
+/* ---------- maths and diagrams ---------- */
+.prose .math-block { overflow-x: auto; margin: 0 0 16px; }
+.prose .mermaid { margin: 8px 0 18px; text-align: center; overflow-x: auto; }
+.prose .mermaid svg { max-width: 100%; height: auto; }

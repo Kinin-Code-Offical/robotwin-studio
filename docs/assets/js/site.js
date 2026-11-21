@@ -38,7 +38,8 @@
   function load() {
     if (index || loading) return loading;
     loading = fetch(RW.searchUrl).then(function (r) { return r.json(); }).then(function (items) {
-      index = items.map(function (it) {
+      // Only the pages of the language being read: Turkish results on Turkish pages, English on English ones.
+      index = items.filter(function (it) { return !it.lang || it.lang === (RW.lang || 'tr'); }).map(function (it) {
         var div = document.createElement('div');
         div.innerHTML = it.html;
         return { title: it.title, url: it.url, text: div.textContent.replace(/\s+/g, ' ') };
@@ -103,6 +104,74 @@
     document.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.focus(); }
     });
+  }
+
+  // ---------- maths and diagrams ----------
+  // Formulas are written so GitHub renders them too: ```math blocks and $`…`$ inline. Here they become
+  // MathJax input; ```mermaid blocks become Mermaid diagrams. Both libraries load only where they are used.
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  // A fenced block comes out as <pre><code class="language-x"> or, through Rouge, as
+  // <div class="language-x highlighter-rouge">…<pre><code>; take the outermost wrapper and its text.
+  function fenced(lang) {
+    var found = [];
+    document.querySelectorAll('.prose .language-' + lang).forEach(function (el) {
+      var outer = el.closest('.highlighter-rouge') || el.closest('pre') || el;
+      if (found.some(function (f) { return f.outer === outer; })) return;
+      var code = outer.querySelector('code') || el;
+      found.push({ outer: outer, text: code.textContent });
+    });
+    return found;
+  }
+
+  var mathBlocks = fenced('math');
+  var inlineMath = [];
+  document.querySelectorAll('.prose code').forEach(function (code) {
+    if (code.closest('pre')) return;
+    var prev = code.previousSibling, next = code.nextSibling;
+    if (prev && next && prev.nodeType === 3 && next.nodeType === 3 && /\$$/.test(prev.nodeValue) && /^\$/.test(next.nodeValue)) inlineMath.push(code);
+  });
+  if (mathBlocks.length || inlineMath.length) {
+    mathBlocks.forEach(function (b) {
+      var div = document.createElement('div');
+      div.className = 'math-block';
+      div.textContent = '\\[' + b.text + '\\]';
+      b.outer.replaceWith(div);
+    });
+    inlineMath.forEach(function (code) {
+      code.previousSibling.nodeValue = code.previousSibling.nodeValue.replace(/\$$/, '');
+      code.nextSibling.nodeValue = code.nextSibling.nodeValue.replace(/^\$/, '');
+      var span = document.createElement('span');
+      span.className = 'math-inline';
+      span.textContent = '\\(' + code.textContent + '\\)';
+      code.replaceWith(span);
+    });
+    window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }, svg: { fontCache: 'global' } };
+    loadScript('https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js').catch(function () { /* formulas stay as TeX text */ });
+  }
+
+  var diagrams = fenced('mermaid');
+  if (diagrams.length) {
+    diagrams.forEach(function (b) {
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = b.text;
+      b.outer.replaceWith(div);
+    });
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    loadScript('https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js').then(function () {
+      window.mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'strict', fontFamily: 'inherit' });
+      window.mermaid.run({ querySelector: '.prose .mermaid' });
+    }).catch(function () { /* the diagram source stays readable */ });
   }
 
   // ---------- downloads: the latest release's two installers ----------

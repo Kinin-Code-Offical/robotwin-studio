@@ -1,61 +1,4 @@
-# RobotWin Studio Otomasyon API'si / Automation API
-
-> **Türkçe** önce, **English** below. Yöntem başvurusu (method reference) iki dil için ortaktır.
-
----
-
-## Türkçe
-
-RobotWin Studio, arayüz olmadan (başsız) çalışan, **belirlenimci** (deterministic) bir simülasyon
-çalıştırıcısı ve yerel bir **JSON-RPC API sunucusu** içerir. Böylece:
-
-- **Akademik robotik**: devre + gerçek ATmega328P/ESP32 yazılımı + fizik aynı adımda koşar; deneyler
-  aynı tohumla (seed) birebir tekrarlanır, toplu (batch) koşular komut satırından alınır.
-- **ROS 2**: `ros2/robotwin_bridge` düğümü `/clock`, `/tf`, `/odom`, `/scan`, `/imu`, `/fix`,
-  `/camera/image_raw` yayınlar, `/cmd_vel` dinler. ROS kurulu değilse `python -m robotwin.rosbridge`
-  rosbridge uyumlu bir WebSocket sunar.
-- **Otonom araç / İHA**: kara araçları için diferansiyel sürüş, mikro quadcopter için kurma (arm),
-  gaz/tutum (attitude) ve irtifa tutma komutları; LiDAR, kamera, IMU, GPS, odometri sensörleri.
-- **Yapay zekâ (pekiştirmeli / taklit öğrenme)**: `python/robotwin` paketi Gymnasium uyumlu
-  `RobotWinEnv`, paralel ortamlar (her ortam ayrı süreç), gösterim kaydı ve davranış klonlama sunar.
-
-### Sunucuyu başlatmak
-
-| Komut | Ne yapar |
-|---|---|
-| `RobotWin.Headless --api 5555` | Platformlar arası başsız sunucu (Windows/Linux/macOS, .NET 9). |
-| `RobotWin.Headless --api 0 --example car` | Boş bir port seçer, araba örneğini yükler; `ROBOTWIN_API_READY port=…` satırını yazar. |
-| `RobotWin.Headless --run 5 --world robot.rwworld` | Toplu koşu: 5 s simüle eder, durum/olay/seri çıktıyı JSON basar. |
-| `RobotWinStudio.exe --api 5555` | Uygulamanın kendisi, **pencere açmadan**; dünya gövdeleri uygulamanın 3B modellerinden alınır (arayüzle birebir aynı fizik). |
-| `RobotWinStudio.exe --bake-geometry robot.rwworld` | Uygulamanın gövde geometrisini `robot.rwworld.geometry.json` olarak yazar; başsız sunucu bunu kullanır (Linux'ta da birebir fizik). |
-
-Derleme: `dotnet build tools/RobotWin.Headless -c Release` → `builds/RobotWin.Headless/Release/net9.0/`.
-
-Sunucu varsayılan olarak yalnızca `127.0.0.1` üzerinde dinler. Başka bir makineden erişim için
-`--host 0.0.0.0 --allow-remote --token GIZLI` kullanın; istemci ilk çağrıda `hello {"token": "GIZLI"}` göndermelidir.
-
-### Simülasyon nasıl adımlanır
-
-`sim.step {dt, steps}` çağrısı, uygulamanın dünya oturumuyla **aynı dilimlemeyi** kullanır: 1 ms parçalar,
-ATmega328P varsa 50 µs, ESP32 varsa 100 µs; her dilimde önce yazılım, sonra devre çözücüsü, sonra fizik
-ilerler. Duvar saati kullanılmaz: bilgisayar ne kadar hızlıysa o kadar hızlı (çoğu zaman gerçek zamandan
-hızlı) koşar. `pace: 1.0` verilirse gerçek zamana kilitlenir (ROS köprüsü bunu kullanır).
-
-Aynı dünya + aynı `seed` + aynı komut dizisi → **bit düzeyinde aynı sonuç** (C# ve Python testleri bunu doğrular).
-`world.reset` her şeyi baştan kurar (devre, yazılım, fizik); `randomize` ile başlangıç konumu tohuma bağlı olarak saçılır.
-
-### Tam olarak aynı olmayanlar
-
-- Kartlar arası radyo (IR/RF/Wi-Fi) ve sesler başsız koşuda yoktur; USB kablosu takılı değilken de seri port okunur.
-- `RobotWin.Headless`, uygulamanın 3B modelleri olmadan gövde boyutlarını veri sayfası değerlerinden
-  **yaklaşık** hesaplar (TT motor ve 4×AA pil uygulamayla aynı; diğer parçalar kutu). Birebir fizik için
-  `RobotWinStudio.exe --api` kullanın ya da geometriyi `--bake-geometry` ile pişirin.
-- ESP32 çizimleri yalnızca `RobotWinStudio.exe --api` modunda (MSVC ile) derlenir; başsız araçta ESP32 kartları boşta kalır.
-- Sanal kamera ışın izlemeli, düz renkli ve düşük çözünürlüklüdür (öğrenme için; fotogerçekçi değildir).
-
----
-
-## English
+# Automation API
 
 RobotWin Studio ships a **headless, deterministic simulation runner** and a local **JSON-RPC API server**
 so it can be scripted for academic robotics, ROS 2, autonomous-vehicle / UAV work and robot learning:
@@ -72,7 +15,49 @@ so it can be scripted for academic robotics, ROS 2, autonomous-vehicle / UAV wor
 - circuit introspection: node voltages, per-part currents, temperatures and failures, raw solver signals;
 - serial in/out per board, firmware replacement, events (part failures, crashes, impacts, warnings).
 
-### Starting a server
+## Quick start (Python)
+
+```python
+from robotwin import launch
+
+with launch(example="car", seed=1) as server:            # a headless server in its own process
+    sim = server.client()
+    sim.add_sensor("lidar", name="scan", object="O1", offset=[0, 0, 0.05])
+    sim.add_sensor("odometry", name="odom", object="O1")
+    sim.drive(0.2, 0.0)                                   # 0.2 m/s forward
+    r = sim.step(dt=0.01, steps=100, observe=["scan", "odom"])
+    print(r["time"], r["rtf"], r["observation"]["odom"]["position"])
+    sim.reset(seed=1)                                     # same seed → the same run
+```
+
+Connect to a running server with `RobotWinClient("127.0.0.1", 5555)`. Reinforcement learning (`RobotWinEnv`, Gymnasium compatible), parallel environments and imitation learning are described in [`python/README.md`](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/python/README.md).
+
+## Without the Python client
+
+The protocol is plain JSON lines over TCP, so any language works. PowerShell:
+
+```powershell
+$c = [System.Net.Sockets.TcpClient]::new("127.0.0.1", 5555)
+$s = $c.GetStream(); $w = [System.IO.StreamWriter]::new($s); $r = [System.IO.StreamReader]::new($s)
+$w.WriteLine('{"jsonrpc":"2.0","id":1,"method":"world.load","params":{"example":"car"}}'); $w.Flush(); $r.ReadLine()
+$w.WriteLine('{"jsonrpc":"2.0","id":2,"method":"sim.step","params":{"dt":0.01,"steps":100,"observe":["pose:O1"]}}'); $w.Flush(); $r.ReadLine()
+```
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    P["Your code<br/>Python, ROS 2, C#, PowerShell…"] -- "JSON-RPC 2.0<br/>one JSON per line over TCP" --> S["API server<br/>RobotWin.Headless or RobotWinStudio.exe --api"]
+    S --> R["WorldRunner / VehicleRunner"]
+    R --> F["Firmware<br/>ATmega328P, ESP32"]
+    R --> C["Circuit solver"]
+    R --> M["World physics<br/>bodies, air, gas, heat"]
+    R --> RA["Radio medium<br/>ESP32 ↔ controllers"]
+    R -- "observation, events" --> S
+    S -- "result" --> P
+```
+
+## Starting a server
 
 | Command | What it does |
 |---|---|
@@ -86,7 +71,7 @@ Common options: `--seed N`, `--no-firmware`, `--firmware-dir DIR` (for `builtin:
 `--host ADDR --allow-remote` (non-loopback), `--token T`. Build the tool with
 `dotnet build tools/RobotWin.Headless -c Release` (output in `builds/RobotWin.Headless/Release/net9.0/`).
 
-### Wire protocol
+## Wire protocol
 
 JSON-RPC 2.0 over TCP, **one JSON value per line** (UTF-8, `\n`). Requests may be batched (a JSON array).
 Notifications (no `id`) get no reply. Non-finite numbers are sent as `null` (e.g. a LiDAR beam with no return).
@@ -106,7 +91,7 @@ params, `-32603` internal, `-32001` nothing loaded, `-32002` not found, `-32003`
 Units: SI (m, s, rad, V, A, °C); `rpy_deg`/`angle` in degrees where named so. Frames: world Z-up,
 x forward / y left / z up for bodies and sensors (ROS REP-103). Quaternions are `[x, y, z, w]`.
 
-### Timing model
+## Timing model
 
 `sim.step {dt, steps}` advances `steps × dt` simulated seconds. Internally each `dt` is cut into the app's
 lockstep slices (1 ms; 50 µs with an ATmega328P; 100 µs with an ESP32): firmware → circuit solver
@@ -116,7 +101,7 @@ call to wall-clock time (0.5 = half speed). Typical RTF on a desktop CPU: micro 
 line follower ≈ 14×, two-wheel world car ≈ 1.7× (world physics, 16 solver iterations), Arduino robot with
 firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throughput.
 
-### Modes
+## Modes
 
 * **World** (`.rwworld`, or `example: "car"`): sandbox worlds of the World page. Objects have ids `O1`, `O2` …;
   components with a moving port (motor shaft, servo horn) are actuators; boards are programmable.
@@ -124,9 +109,9 @@ firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throug
   the robot car / quadcopter of the schematic simulation with its arena. The body is object `vehicle`;
   built-in sensors `odom`, `imu`, `gps` plus one per mounted sensor (by refdes).
 
-### Method reference
+## Method reference
 
-#### Session
+### Session
 
 | Method | Params | Result |
 |---|---|---|
@@ -135,7 +120,7 @@ firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throug
 | `methods` | – | `{method: help}` |
 | `shutdown` | – | `true`; the process exits |
 
-#### World
+### World
 
 | Method | Params | Result |
 |---|---|---|
@@ -145,7 +130,7 @@ firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throug
 | `world.save` | `path` | saves the loaded world (with `environment` edits) as `.rwworld` — opens in the app's World page |
 | `world.export_geometry` | `path?` | body geometry + cable lengths (the `.geometry.json` format) |
 
-#### Stepping and events
+### Stepping and events
 
 | Method | Params | Result |
 |---|---|---|
@@ -159,7 +144,7 @@ firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throug
 `observe` names: any sensor name, `pose:<object>`, `pin:<board>.<pin>` (or `pin:<pin>`), `part:<ref>`,
 `status`, `flight`.
 
-#### Objects
+### Objects
 
 | Method | Params | Result |
 |---|---|---|
@@ -167,7 +152,7 @@ firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throug
 | `object.get_pose` | `id` (id or name) | `position`, `orientation` [x,y,z,w], `rpy` (rad), `linear_velocity`, `angular_velocity` (world frame) |
 | `object.set_pose` | `id`, `position?`, `orientation?` or `rpy_deg?`, `keep_velocity?` | new pose — the whole jointed assembly is moved rigidly, velocities zeroed |
 
-#### Sensors
+### Sensors
 
 | Method | Params | Result |
 |---|---|---|
@@ -199,7 +184,7 @@ Extending (C#): other modules register part sensors with
 `SensorRegistry.RegisterType("name", (runner, spec) => ISimSensor)`; they then appear in `sensor.list`,
 `sensor.read`, `sim.step observe` and the ROS bridges without API changes.
 
-#### Actuators
+### Actuators
 
 | Method | Params | Result |
 |---|---|---|
@@ -229,7 +214,7 @@ attached wheels, then commands output-shaft speeds. It is open loop: close the l
 (caster scrub and slip make the real turn rate lower). In vehicle mode it sets the drivers' duty
 (`side speed / max_speed`; single-direction drivers cannot reverse).
 
-#### Flight (UAV, vehicle mode, quadcopter)
+### Flight (UAV, vehicle mode, quadcopter)
 
 | Method | Params | Result |
 |---|---|---|
@@ -242,7 +227,7 @@ Arming in altitude mode centres the throttle (0.5) and holds the current height 
 `target_altitude` is given. Positive pitch tilts nose-down (accelerates +x), positive roll rolls right
 (accelerates −y), positive yaw turns left.
 
-#### Serial, firmware, circuit
+### Serial, firmware, circuit
 
 | Method | Params | Result |
 |---|---|---|
@@ -254,17 +239,18 @@ Arming in altitude mode centres the throttle (0.5) and holds the current height 
 | `circuit.part` | `ref`: component object id, `object/R2` (part on a board), or a refdes | `devices` (id, type, failed, failure, `signals`: I, V, P, T …), `temperature`, `failed` |
 | `circuit.signals` | `prefix`, `max`=500 | raw solver signals |
 
-### Python, ROS 2, rosbridge
+## Python, ROS 2, rosbridge
 
 * Python client, Gymnasium env, vector envs, imitation learning: [`python/README.md`](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/python/README.md).
 * ROS 2 node, launch file, URDF export: [`ros2/robotwin_bridge/README.md`](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/ros2/robotwin_bridge/README.md).
 * No-ROS WebSocket (rosbridge v2 subset, for roslibjs / web dashboards): `python -m robotwin.rosbridge --example car --port 9090`.
 
-### Fidelity notes (what is not identical to the app)
+## Fidelity notes (what is not identical to the app)
 
-* Radio links between boards (IR, 433 MHz, Wi-Fi), sounds and the USB-cable gating of the serial monitor are
+* Wi-Fi, BLE and Bluetooth links between ESP32 boards and game controllers run headless too (`WorldRunner.Radio`:
+  set a controller's `Input` to drive it). IR remotes, sounds and the USB-cable gating of the serial monitor are
   not part of headless runs.
-* `RobotWin.Headless` approximates body geometry from datasheet sizes when no baked geometry exists (TT motor
+* `RobotWin.Headless` approximates body geometry from datasheet sizes when no baked geometry exists (TT motor, ESP32, Nano, Uno
   and 4×AA pack match the app; other parts are boxes). `RobotWinStudio.exe --api` or `--bake-geometry` give the
   app's exact bodies.
 * ESP32 boards run only when the host can build sketches (the app with MSVC); the headless tool leaves them idle.

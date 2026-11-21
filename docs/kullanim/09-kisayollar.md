@@ -131,17 +131,6 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | Ctrl+N / Ctrl+O / Ctrl+S | Yeni model / aç / kaydet |
 | Orta tuş, Shift + orta tuş, tekerlek | Döndür, kaydır, yakınlaştır |
 
-## Montaj (drone)
-
-| Kısayol | İşlev |
-| --- | --- |
-| Boşluk | Motorları kur / kapat |
-| W / S | Yüksel / alçal |
-| A / D | Sola / sağa dön |
-| Ok tuşları | İleri / geri / sola / sağa |
-| M | Uçuş modu |
-| R | Aracı başlangıca al |
-
 ## Dünya
 
 | Kısayol | İşlev |
@@ -156,6 +145,8 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | T | Kamera seçili nesneyi takip etsin |
 | F | Sığdır |
 | F5 / Shift+F5 | Çalıştır-duraklat / durdur ve başa dön |
+| Ctrl+R | Kaydı başlat / bitir |
+| Ctrl+F5 | Render |
 | Shift + sürükle | Yükseklik |
 | Alt + sürükle | Izgarayı yok say |
 

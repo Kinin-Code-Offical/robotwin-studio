@@ -4,10 +4,11 @@ Bu bölümde RobotWin Studio'yu kurar, ekranın bölümlerini tanır ve ilk proj
 
 ## Kurulum
 
-1. [GitHub Sürümler sayfasından](https://github.com/Kinin-Code-Offical/robotwin-studio/releases) en son `RobotWinStudio-Setup-<sürüm>.exe` dosyasını indirin.
+1. [GitHub Sürümler sayfasından](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) iki paketten birini indirin:
+   - `RobotWinStudio-Setup-<sürüm>.exe`: .NET içindedir, başka bir şey kurmanız gerekmez (önerilen).
+   - `RobotWinStudio-Setup-<sürüm>-lite.exe`: daha küçüktür ama **.NET 9 Masaüstü Çalışma Zamanı** ister; yoksa sihirbaz kurmayı önerir.
 2. Dosyayı çalıştırın ve sihirbazı izleyin.
-3. Uygulama **.NET 9 Masaüstü Çalışma Zamanı** ister. Bilgisayarınızda yoksa sihirbaz onu kurmayı önerir; kabul edin.
-4. Kurulum bitince Başlat menüsünden **RobotWin Studio**'yu açın.
+3. Kurulum bitince Başlat menüsünden **RobotWin Studio**'yu açın.
 
 Kurulum varsayılan olarak yalnızca sizin kullanıcınız için yapılır ve yönetici izni istemez. Kaldırmak için Windows **Ayarlar → Uygulamalar** listesini kullanın.
 

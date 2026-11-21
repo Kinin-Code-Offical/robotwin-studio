@@ -1,8 +1,8 @@
 title: RobotWin Studio
 tagline: Design, code and simulate robots with real physics
 description: RobotWin Studio is a Windows app for robot and electronics projects — circuit simulation, PCB layout, Arduino and ESP32 firmware in emulation, 3D modelling and an open world with real physics, all running together.
-lang: en
-locale: en_US
+lang: tr
+locale: tr_TR
 
 # Site address (GitHub Pages project site). Explicit so links, canonical URLs,
 # Open Graph tags and the sitemap do not depend on the metadata lookup.
@@ -69,11 +69,25 @@ defaults:
       image: /assets/img/og-image-tr.png
       description: RobotWin Studio kullanım kılavuzu — devre, PCB, kod, 3D modelleme, montaj ve gerçek fizikli dünya, adım adım ve ekran görüntülü.
   - scope:
-      path: "tr"
+      path: "fizik"
     values:
       lang: tr
       locale: tr_TR
+      section: physics
       image: /assets/img/og-image-tr.png
+      description: RobotWin Studio'daki her çözücünün denklemleri, varsayımları ve doğrulaması — devre, katı cisim, ısı, aerodinamik, gaz ve radyo.
+  - scope:
+      path: "gelistirici"
+    values:
+      lang: tr
+      locale: tr_TR
+      section: docs
+      image: /assets/img/og-image-tr.png
+  - scope:
+      path: "en"
+    values:
+      lang: en
+      locale: en_US
   - scope:
       path: "README.md"
     values:
