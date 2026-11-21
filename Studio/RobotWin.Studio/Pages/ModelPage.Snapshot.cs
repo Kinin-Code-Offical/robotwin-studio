@@ -67,6 +67,19 @@ namespace RobotWin.Studio.Pages
                     MeshEdit.DeleteFaces(mesh, Enumerable.Range(0, mesh.Faces.Count).Where(f => mesh.FaceNormal(f).Z > 0.9).ToList());
                     MeshCut.Solidify(mesh, 2.5);
                     block.SetMesh(mesh);
+
+                    // a block with every edge chamfered (Ctrl+B)
+                    var bev = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
+                    bev.Name = "Pahlı blok";
+                    bev.Primitive!.Set("x", 36);
+                    bev.Primitive.Set("y", 36);
+                    bev.Primitive.Set("z", 24);
+                    bev.Transform.Position = new Vec3(5, -62, 12);
+                    bev.Color = "#D9A441";
+                    ModelOps.ConvertToMesh(bev);
+                    var bm = bev.LocalMesh().Clone();
+                    MeshCut.Bevel(bm, bm.Edges(), 4);
+                    bev.SetMesh(bm);
                     _ed.Load(doc, null);
                     if (demo == "cutedit")
                     {
@@ -398,6 +411,16 @@ namespace RobotWin.Studio.Pages
                 double hollow = _ed.EditMesh!.Volume();
                 Check("solidify (hollow)", _ed.EditMesh.IsClosed && hollow > 1 && hollow < blockVolume * 0.95, "vol " + blockVolume.ToString("0") + " -> " + hollow.ToString("0"));
                 _ed.Undo();
+
+                _ed.SetElementMode(ElementMode.Edge);
+                _ed.SelectAll();
+                int facesBeforeBevel = _ed.EditMesh!.Faces.Count;
+                _vp.StartModal(ModalKind.Bevel, mid);
+                _vp.SimulateModal(new Point(mid.X + 12, mid.Y));
+                _vp.ConfirmModal();
+                Check("bevel all edges", _ed.EditMesh!.IsClosed && _ed.EditMesh.Faces.Count > facesBeforeBevel && _ed.EditMesh.Volume() < blockVolume, "faces " + facesBeforeBevel + " -> " + _ed.EditMesh.Faces.Count + ", vol " + _ed.EditMesh.Volume().ToString("0"));
+                _ed.Undo();
+                _ed.SetElementMode(ElementMode.Vertex);
                 _ed.ToggleEditMode();
 
                 _ed.Select(blk.Id);

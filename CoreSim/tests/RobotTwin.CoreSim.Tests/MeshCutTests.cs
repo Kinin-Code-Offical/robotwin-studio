@@ -138,6 +138,50 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void BevelOfOneEdgeCutsAChamferPrism()
+        {
+            var m = Box();
+            // the top edge running along X at the front (y = -20)
+            var e = m.Edges().First(x =>
+            {
+                var a = m.Vertices[x.A];
+                var b = m.Vertices[x.B];
+                return a.Z > 9 && b.Z > 9 && a.Y < -19 && b.Y < -19;
+            });
+            var r = MeshCut.Bevel(m, new[] { e }, 3);
+            Closed(m, "one chamfer");
+            Assert.Equal(7, m.Faces.Count);
+            Assert.Single(r.Faces);
+            Assert.Equal(60 * 40 * 20 - 3 * 3 / 2.0 * 60, m.Volume(), 6);
+        }
+
+        [Fact]
+        public void BevelOfAllEdgesAddsCornerPatches()
+        {
+            var m = Box();
+            double v0 = m.Volume();
+            MeshCut.Bevel(m, m.Edges(), 2);
+            Closed(m, "chamfered box");
+            Assert.Equal(6 + 12 + 8, m.Faces.Count);
+            // all twelve chamfer prisms, less their overlaps at the eight corners
+            double prisms = 2 * 2 / 2.0 * 4 * (60 + 40 + 20);
+            Assert.True(m.Volume() < v0 - prisms + 8 * 8 && m.Volume() > v0 - prisms, "volume " + m.Volume());
+        }
+
+        [Fact]
+        public void BevelOfTwoEdgesMeetingAtACornerStaysClosed()
+        {
+            var m = Box();
+            var top = m.Edges().Where(x => m.Vertices[x.A].Z > 9 && m.Vertices[x.B].Z > 9).ToList();
+            var corner = top.First();
+            var pair = top.Where(x => x.A == corner.A || x.B == corner.A).Take(2).ToList();
+            Assert.Equal(2, pair.Count);
+            MeshCut.Bevel(m, pair, 4);
+            Closed(m, "two chamfers");
+            Assert.Equal(8, m.Faces.Count);
+        }
+
+        [Fact]
         public void EdgeExtrudeGrowsAnOpenBorder()
         {
             var m = new PolyMesh();

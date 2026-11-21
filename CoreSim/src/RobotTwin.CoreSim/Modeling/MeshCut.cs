@@ -623,6 +623,222 @@ namespace RobotTwin.CoreSim.Modeling
             return result;
         }
 
+        // ================================================================ bevel
+
+        /// <summary>
+        /// Bevel (Ctrl+B): replaces the selected edges with flat chamfer faces <paramref name="width"/> mm
+        /// wide on each side. Every face corner at a bevelled vertex moves inside its face so that it sits
+        /// <paramref name="width"/> from each selected edge of that face; where three or more chamfers meet
+        /// a corner patch closes the hole. The result lists the vertices of the new faces.
+        /// </summary>
+        public static EditResult Bevel(PolyMesh m, IEnumerable<(int A, int B)> edges, double width)
+        {
+            var result = new EditResult();
+            var sel = new HashSet<long>(edges.Select(e => PolyMesh.EdgeKey(e.A, e.B)));
+            if (sel.Count == 0 || width <= 0) return result;
+            var ef = m.EdgeFaces();
+            sel.RemoveWhere(k => !ef.TryGetValue(k, out var l) || l.Count != 2); // only edges between two faces
+            if (sel.Count == 0) return result;
+
+            var bevelVerts = new HashSet<int>();
+            foreach (long k in sel)
+            {
+                var (a, b) = PolyMesh.EdgeOf(k);
+                bevelVerts.Add(a);
+                bevelVerts.Add(b);
+            }
+
+            // corner points: (face, vertex) → new vertex index
+            var corner = new Dictionary<(int Face, int Vert), int>();
+            var onEdge = new Dictionary<(int Vert, int Other), List<Vec3>>(); // points that one-sided corners put on an unselected edge
+            var oneSided = new List<(int Face, int Vert, int Other)>();
+            for (int fi = 0; fi < m.Faces.Count; fi++)
+            {
+                var f = m.Faces[fi];
+                for (int k = 0; k < f.Length; k++)
+                {
+                    int v = f[k];
+                    if (!bevelVerts.Contains(v)) continue;
+                    int prev = f[(k - 1 + f.Length) % f.Length], next = f[(k + 1) % f.Length];
+                    bool sp = sel.Contains(PolyMesh.EdgeKey(prev, v)), sn = sel.Contains(PolyMesh.EdgeKey(v, next));
+                    if (!sp && !sn) continue;
+                    var pv = m.Vertices[v];
+                    var dp = m.Vertices[prev] - pv;
+                    var dn = m.Vertices[next] - pv;
+                    double lp = dp.Length, ln = dn.Length;
+                    if (lp < 1e-12 || ln < 1e-12) continue;
+                    dp /= lp;
+                    dn /= ln;
+                    double sin = Math.Max(0.05, dp.Cross(dn).Length);
+                    double reach = width / sin;
+                    // stay short of the far end of each edge so neighbouring bevels cannot cross
+                    double ap = Math.Min(reach, 0.49 * lp), an = Math.Min(reach, 0.49 * ln);
+                    Vec3 c;
+                    if (sp && sn) c = pv + dp * ap + dn * an;
+                    else if (sp) c = pv + dn * an;
+                    else c = pv + dp * ap;
+                    if (sp && sn)
+                    {
+                        corner[(fi, v)] = m.AddVertex(c);
+                        continue;
+                    }
+
+                    int other = sp ? next : prev;
+                    if (!onEdge.TryGetValue((v, other), out var list)) onEdge[(v, other)] = list = new List<Vec3>(2);
+                    list.Add(c);
+                    oneSided.Add((fi, v, other));
+                }
+            }
+
+            // one point per unselected edge end, shared by the faces on both sides
+            var edgePoint = new Dictionary<(int Vert, int Other), int>();
+            foreach (var kv in onEdge)
+            {
+                var avg = Vec3.Zero;
+                foreach (var p in kv.Value) avg += p;
+                edgePoint[kv.Key] = m.AddVertex(avg / kv.Value.Count);
+            }
+
+            foreach (var (face, vert, other) in oneSided) corner[(face, vert)] = edgePoint[(vert, other)];
+
+            int Point(int face, int vert, int other) =>
+                edgePoint.TryGetValue((vert, other), out int p) ? p : vert;
+
+            var output = new List<int[]>(m.Faces.Count + sel.Count);
+            for (int fi = 0; fi < m.Faces.Count; fi++)
+            {
+                var f = m.Faces[fi];
+                var loop = new List<int>(f.Length + 4);
+                for (int k = 0; k < f.Length; k++)
+                {
+                    int v = f[k];
+                    if (!bevelVerts.Contains(v))
+                    {
+                        loop.Add(v);
+                        continue;
+                    }
+
+                    if (corner.TryGetValue((fi, v), out int c))
+                    {
+                        loop.Add(c);
+                        continue;
+                    }
+
+                    int prev = f[(k - 1 + f.Length) % f.Length], next = f[(k + 1) % f.Length];
+                    int a = Point(fi, v, prev), b = Point(fi, v, next);
+                    loop.Add(a);
+                    if (b != a) loop.Add(b);
+                }
+
+                output.Add(Dedup(loop));
+            }
+
+            // chamfer face along every selected edge
+            foreach (long key in sel)
+            {
+                var (a, b) = PolyMesh.EdgeOf(key);
+                var faces = ef[key];
+                int fl = -1, fr = -1;
+                foreach (int f in faces)
+                {
+                    var loop = m.Faces[f];
+                    for (int k = 0; k < loop.Length; k++)
+                    {
+                        if (loop[k] == a && loop[(k + 1) % loop.Length] == b) fl = f;
+                        if (loop[k] == b && loop[(k + 1) % loop.Length] == a) fr = f;
+                    }
+                }
+
+                if (fl < 0 || fr < 0) continue;
+                var quad = Dedup(new List<int> { corner[(fl, b)], corner[(fl, a)], corner[(fr, a)], corner[(fr, b)] });
+                if (quad.Length >= 3)
+                {
+                    output.Add(quad);
+                    result.Faces.Add(output.Count - 1);
+                    result.Vertices.AddRange(quad);
+                }
+            }
+
+            // corner patches where three or more chamfers meet
+            var vf = m.VertexFaces();
+            foreach (int v in bevelVerts)
+            {
+                var ring = RingAround(m, v, vf[v]);
+                if (ring == null) continue;
+                var pts = new List<int>();
+                foreach (int f in ring)
+                {
+                    var loop = m.Faces[f];
+                    int k = Array.IndexOf(loop, v);
+                    int prev = loop[(k - 1 + loop.Length) % loop.Length], next = loop[(k + 1) % loop.Length];
+                    if (corner.TryGetValue((f, v), out int c)) pts.Add(c);
+                    else
+                    {
+                        pts.Add(Point(f, v, next));
+                        pts.Add(Point(f, v, prev));
+                    }
+                }
+
+                var patch = Dedup(pts);
+                if (patch.Length < 3) continue;
+                var normal = Vec3.Zero;
+                foreach (int f in ring) normal += m.FaceNormalRaw(f);
+                if (PolyMesh.NewellNormal(patch, m.Vertices).Dot(normal) < 0) Array.Reverse(patch);
+                output.Add(patch);
+                result.Faces.Add(output.Count - 1);
+                result.Vertices.AddRange(patch);
+            }
+
+            m.Faces.Clear();
+            m.Faces.AddRange(output);
+            var remap = Compact(m);
+            var verts = result.Vertices.Where(v => remap[v] >= 0).Select(v => remap[v]).Distinct().ToList();
+            result.Vertices.Clear();
+            result.Vertices.AddRange(verts);
+            return result;
+        }
+
+        /// <summary>Faces around a vertex in rotation order (stepping across each face's edge before the vertex); null at an open border.</summary>
+        private static List<int>? RingAround(PolyMesh m, int v, List<int> faces)
+        {
+            if (faces.Count < 3) return null;
+            var byOutgoing = new Dictionary<int, int>(); // first vertex after v → face
+            foreach (int f in faces)
+            {
+                var loop = m.Faces[f];
+                int k = Array.IndexOf(loop, v);
+                if (k < 0) return null;
+                byOutgoing[loop[(k + 1) % loop.Length]] = f;
+            }
+
+            var ring = new List<int>(faces.Count);
+            int cur = faces[0];
+            for (int guard = 0; guard < faces.Count; guard++)
+            {
+                ring.Add(cur);
+                var loop = m.Faces[cur];
+                int k = Array.IndexOf(loop, v);
+                int prev = loop[(k - 1 + loop.Length) % loop.Length];
+                if (!byOutgoing.TryGetValue(prev, out int nf)) return null; // open border
+                if (nf == faces[0]) return ring.Count == faces.Count ? ring : null;
+                cur = nf;
+            }
+
+            return null;
+        }
+
+        private static int[] Dedup(List<int> loop)
+        {
+            var r = new List<int>(loop.Count);
+            foreach (int v in loop)
+            {
+                if (r.Count == 0 || r[r.Count - 1] != v) r.Add(v);
+            }
+
+            while (r.Count > 1 && r[0] == r[r.Count - 1]) r.RemoveAt(r.Count - 1);
+            return r.ToArray();
+        }
+
         // ================================================================ helpers
 
         private static int[] InsertOnEdges(int[] face, Func<int, int, int[]?> between)

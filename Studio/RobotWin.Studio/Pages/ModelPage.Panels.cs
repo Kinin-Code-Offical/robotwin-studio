@@ -696,7 +696,7 @@ namespace RobotWin.Studio.Pages
                      {
                          ("Shift+A", "şekil / parça ekle"), ("G · R · S", "taşı · döndür · ölçekle"), ("  ardından X/Y/Z", "eksen, Shift+X düzlem"), ("  sayı + Enter", "kesin değer (mm, °)"),
                          ("Tab", "düzenleme modu"), ("1 · 2 · 3", "nokta · kenar · yüz"), ("E · I", "çıkar · içe kaydır"), ("M · F · X", "birleştir · yüz · sil"),
-                         ("K", "bıçak / dilimle"), ("Ctrl+R", "halka kesim"), ("Ctrl+J", "birleştir (join)"), ("Sağ tık", "Boolean ve diğer işlemler"), ("Orta tuş", "döndür, Shift ile kaydır"), ("Numpad 1/3/7", "ön / sağ / üst görünüm"),
+                         ("K", "bıçak / dilimle"), ("Ctrl+R", "halka kesim"), ("Ctrl+B", "pah kır (bevel)"), ("Ctrl+J", "birleştir (join)"), ("Sağ tık", "Boolean ve diğer işlemler"), ("Orta tuş", "döndür, Shift ile kaydır"), ("Numpad 1/3/7", "ön / sağ / üst görünüm"),
                          ("Numpad . · Home", "seçimi / hepsini sığdır"), ("Z · Alt+Z", "görünüm · X-ray"), ("Ctrl (sürüklerken)", "ızgara adımı"), ("Ctrl+Z", "geri al")
                      }) Line(k, v);
         }
@@ -741,6 +741,7 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("İçe kaydır  I", () => _vp.StartModal(ModalKind.Inset)));
             wrap.Children.Add(SmallButton("Bıçak  K", () => _vp.StartModal(ModalKind.Knife), "Ekrana çizdiğiniz çizgi boyunca keser (seçim varsa yalnız seçili yüzleri). C ile kip: kes / sağ tarafı sil / sol tarafı sil; silinen taraf kapatılır"));
             wrap.Children.Add(SmallButton("Halka kes  Ctrl+R", () => _vp.StartModal(ModalKind.LoopCut), "Fareyle bir kenarın üzerine gelin: dörtgen halkası boyunca yeni kenar halkaları ekler; tekerlek kesim sayısını değiştirir"));
+            wrap.Children.Add(SmallButton("Pah kır  Ctrl+B", () => _vp.StartModal(ModalKind.Bevel), "Seçili kenarların yerine düz pah yüzü koyar; fareyle genişliği ayarlayın veya mm yazın"));
             wrap.Children.Add(SmallButton("Kalınlık ver", () => _vp.StartModal(ModalKind.Solidify), "Yüzeye içe doğru et kalınlığı verir: açık yüzey kalın bir duvar, kapalı gövde içi boş kabuk olur"));
             wrap.Children.Add(SmallButton("Alt böl", _ed.Subdivide));
             wrap.Children.Add(SmallButton("Yumuşat", _ed.SmoothSubdivide, "Catmull–Clark: tüm ağ"));
@@ -750,7 +751,7 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Ayır  P", _ed.Separate));
             wrap.Children.Add(SmallButton("Sil  X", _ed.DeleteElements));
             Props.Children.Add(wrap);
-            Caption("G/R/S seçimi taşır/döndürür/ölçekler · K bıçak · Ctrl+R halka kesim · Shift+tık seçime ekler · sürükleyerek kutu seçimi · X-ray (Alt+Z) arkadakileri de seçer");
+            Caption("G/R/S seçimi taşır/döndürür/ölçekler · K bıçak · Ctrl+R halka kesim · Ctrl+B pah · Shift+tık seçime ekler · sürükleyerek kutu seçimi · X-ray (Alt+Z) arkadakileri de seçer");
         }
 
         // ================================================================ library

@@ -171,6 +171,9 @@ namespace RobotWin.Studio.Pages
                 case Key.R when ctrl && edit:
                     _vp.StartModal(ModalKind.LoopCut);
                     break;
+                case Key.B when ctrl && edit:
+                    _vp.StartModal(ModalKind.Bevel);
+                    break;
                 case Key.K:
                     _vp.StartModal(ModalKind.Knife);
                     break;

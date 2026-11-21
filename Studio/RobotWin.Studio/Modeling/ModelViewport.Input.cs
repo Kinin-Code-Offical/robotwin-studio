@@ -24,7 +24,10 @@ namespace RobotWin.Studio.Modeling
         LoopCut,
 
         /// <summary>Wall thickness for the whole surface.</summary>
-        Solidify
+        Solidify,
+
+        /// <summary>Ctrl+B: chamfer faces in place of the selected edges.</summary>
+        Bevel
     }
 
     public sealed partial class ModelViewport
@@ -67,6 +70,7 @@ namespace RobotWin.Studio.Modeling
 
             // loop cut: number of cuts and the preview of the new edges (world)
             public int Cuts = 1;
+            public List<(int A, int B)> Edges = new List<(int, int)>();
             public (int A, int B)? Ring;
             public readonly List<(Vec3 A, Vec3 B)> Preview = new List<(Vec3, Vec3)>();
 
@@ -456,8 +460,15 @@ namespace RobotWin.Studio.Modeling
                     return false;
                 }
 
-                if (kind == ModalKind.Knife || kind == ModalKind.LoopCut || kind == ModalKind.Solidify)
+                if (kind == ModalKind.Bevel && _ed.SelectedEdges().Count == 0)
                 {
+                    _ed.Status("Pah kırmak için kenar seçin (2: kenar modu)");
+                    return false;
+                }
+
+                if (kind == ModalKind.Knife || kind == ModalKind.LoopCut || kind == ModalKind.Solidify || kind == ModalKind.Bevel)
+                {
+                    m.Edges = kind == ModalKind.Bevel ? _ed.SelectedEdges() : new List<(int, int)>();
                     _ed.BeginChange();
                     m.Base = _ed.EditMesh!.Clone();
                     m.Faces = kind == ModalKind.Knife ? _ed.SelectedFaceList() : new List<int>();
@@ -514,9 +525,9 @@ namespace RobotWin.Studio.Modeling
             else
             {
                 if (kind == ModalKind.Extrude || kind == ModalKind.Inset) return false;
-                if (kind == ModalKind.LoopCut || kind == ModalKind.Solidify)
+                if (kind == ModalKind.LoopCut || kind == ModalKind.Solidify || kind == ModalKind.Bevel)
                 {
-                    _ed.Status((kind == ModalKind.LoopCut ? "Halka kesim" : "Kalınlık verme") + " düzenleme modunda çalışır (Tab)");
+                    _ed.Status((kind == ModalKind.LoopCut ? "Halka kesim" : kind == ModalKind.Bevel ? "Pah kırma" : "Kalınlık verme") + " düzenleme modunda çalışır (Tab)");
                     return false;
                 }
 
@@ -747,6 +758,20 @@ namespace RobotWin.Studio.Modeling
                     return;
                 }
 
+                case ModalKind.Bevel:
+                {
+                    double px = Cam.PixelSize(m.Pivot);
+                    double width = typed ?? Math.Max(0, (p.X - m.Start.X) * px);
+                    if (snap && typed == null) width = Math.Round(width / (grid / 2)) * (grid / 2);
+                    var mesh = m.Base!.Clone();
+                    var r = MeshCut.Bevel(mesh, m.Edges, width * m.LocalPerWorld);
+                    _ed.SetEditMesh(mesh);
+                    _ed.SelectResult(r);
+                    m.Header = $"Pah kır ({m.Edges.Count} kenar): {typedText}{width:0.###} mm   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal";
+                    RefreshEditMesh();
+                    return;
+                }
+
                 case ModalKind.Solidify:
                 {
                     double px = Cam.PixelSize(m.Pivot);
@@ -855,6 +880,7 @@ namespace RobotWin.Studio.Modeling
                 ModalKind.Scale => "Ölçeklendi",
                 ModalKind.Extrude => "Çıkarıldı (extrude)",
                 ModalKind.Solidify => "Kalınlık verildi",
+                ModalKind.Bevel => "Pah kırıldı (bevel)",
                 _ => "İçe kaydırıldı (inset)"
             };
             if (m.Kind == ModalKind.Extrude || m.Kind == ModalKind.Inset || (m.Kind == ModalKind.Move && m.Done != null))
