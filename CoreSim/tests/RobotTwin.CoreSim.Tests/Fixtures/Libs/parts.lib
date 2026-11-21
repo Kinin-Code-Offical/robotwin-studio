@@ -1,0 +1,46 @@
+* RobotWin test model library (SPICE3 / PSpice / LTspice syntax mix)
+.param RTOP=10k
+.model D1N4148 D(IS=2.52n RS=0.568 N=1.752 BV=100 IBV=100u CJO=4p TT=20n mfg=OnSemi)
+.model Q2N3904 NPN(IS=6.734f BF=416.4 BR=.7371 VAF=74.03 CJE=4.493p CJC=3.638p XTB=1.5)
+.model BS170X NMOS(LEVEL=1 VTO=2.1 KP=0.12 LAMBDA=0.01)
+.model IRF540X VDMOS(Rg=3 Vto=4 Rd=10m Rs=8m Kp=25 lambda=.003 mfg=Vishay)
+.model SW1 SW(Ron=1 Roff=1Meg Vt=2.5)
+
+* Voltage divider with a parameter
+.subckt DIVIDER IN OUT GND PARAMS: RBOT=10k
+R1 IN OUT {RTOP}
+R2 OUT GND {RBOT}
+.ends DIVIDER
+
+* Ideal amplifier: gain 10 with an output resistor, plus elements we cannot simulate
+.subckt AMP10 INP INN OUT
+E1 N1 0 INP INN 10
+ROUT N1 OUT 1
+CIN INP INN 1p
+B1 X 0 V=V(INP)*2
+K1 L1 L2 0.9
+.ends AMP10
+
+* Current mirror built from NPN transistors and a nested subcircuit
+.subckt MIRROR IREF IOUT VEE
+Q1 IREF IREF VEE Q2N3904
+Q2 IOUT IREF VEE Q2N3904
+XD IREF VEE CLAMP
+.ends MIRROR
+
+.subckt CLAMP A K
+D1 A K D1N4148
+.ends
+
+* A pulse source with a continued line
+.subckt CLOCK OUT GND
+V1 OUT GND PULSE(0 5 0 1n 1n
++ 0.5m 1m)
+.ends CLOCK
+
+* Current-controlled sources
+.subckt SENSE IN OUT MON
+VS IN OUT 0
+H1 MON 0 VS 100
+F1 0 MON VS 0
+.ends SENSE

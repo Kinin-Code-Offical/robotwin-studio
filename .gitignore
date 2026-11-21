@@ -14,6 +14,8 @@
 *.obj
 *.o
 *.lib
+# ...but SPICE model libraries used as test fixtures are source, not build output
+!CoreSim/tests/**/Fixtures/**/*.lib
 *.a
 *.tlog
 *.lastbuildstate
