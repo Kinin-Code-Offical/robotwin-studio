@@ -196,6 +196,32 @@ namespace RobotTwin.CoreSim.Modeling
             return c;
         }
 
+        // ------------------------------------------------------------------ slice
+
+        /// <summary>
+        /// Cuts an object in two with a world plane: <paramref name="o"/> keeps the part behind the plane,
+        /// a new object gets the part in front; both openings are capped so each piece is a closed solid
+        /// again. Returns null when the plane misses the object.
+        /// </summary>
+        public static ModelObject? Slice(ModelDocument doc, ModelObject o, Vec3 worldPoint, Vec3 worldNormal)
+        {
+            var src = o.LocalMesh();
+            if (src.IsEmpty) return null;
+            var w = doc.WorldMatrix(o);
+            var lp = w.Inverse().Apply(worldPoint);
+            // a plane's normal maps with the transpose of the linear part (exact under non-uniform scale)
+            var n = worldNormal;
+            var ln = new Vec3(w.M00 * n.X + w.M10 * n.Y + w.M20 * n.Z, w.M01 * n.X + w.M11 * n.Y + w.M21 * n.Z, w.M02 * n.X + w.M12 * n.Y + w.M22 * n.Z);
+            var (front, back) = MeshCut.Slice(src, lp, ln);
+            if (front.IsEmpty || back.IsEmpty) return null;
+            o.SetMesh(back);
+            var c = o.Clone();
+            c.Name = o.Name;
+            doc.Add(c);
+            c.SetMesh(front);
+            return c;
+        }
+
         // ------------------------------------------------------------------ mirror & arrays
 
         private static bool IsSymmetricPrimitive(ModelObject o) =>

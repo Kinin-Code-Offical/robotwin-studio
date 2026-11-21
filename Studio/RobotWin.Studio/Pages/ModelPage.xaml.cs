@@ -168,6 +168,12 @@ namespace RobotWin.Studio.Pages
                 case Key.G:
                     _vp.StartModal(ModalKind.Move);
                     break;
+                case Key.R when ctrl && edit:
+                    _vp.StartModal(ModalKind.LoopCut);
+                    break;
+                case Key.K:
+                    _vp.StartModal(ModalKind.Knife);
+                    break;
                 case Key.R:
                     _vp.StartModal(ModalKind.Rotate);
                     break;

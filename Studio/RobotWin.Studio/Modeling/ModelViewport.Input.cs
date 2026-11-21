@@ -15,7 +15,16 @@ namespace RobotWin.Studio.Modeling
         Rotate,
         Scale,
         Extrude,
-        Inset
+        Inset,
+
+        /// <summary>K: a line drawn on the screen cuts through (Blender Knife through / Bisect); in object mode it slices the object in two.</summary>
+        Knife,
+
+        /// <summary>Ctrl+R: edge loops across a ring of quads.</summary>
+        LoopCut,
+
+        /// <summary>Wall thickness for the whole surface.</summary>
+        Solidify
     }
 
     public sealed partial class ModelViewport
@@ -50,6 +59,19 @@ namespace RobotWin.Studio.Modeling
             public double Angle;
             public bool Individual;
             public string Header = string.Empty;
+
+            // knife: two screen points; 0 cut, 1 delete the right-hand side, 2 delete the left-hand side
+            public Point? KnifeA;
+            public Point KnifeB;
+            public int KnifeMode;
+
+            // loop cut: number of cuts and the preview of the new edges (world)
+            public int Cuts = 1;
+            public (int A, int B)? Ring;
+            public readonly List<(Vec3 A, Vec3 B)> Preview = new List<(Vec3, Vec3)>();
+
+            /// <summary>Undo text when the operator confirms (overrides the default for its kind).</summary>
+            public string? Done;
         }
 
         private Nav _nav;
@@ -72,7 +94,12 @@ namespace RobotWin.Studio.Modeling
             var p = e.GetPosition(this);
             if (_modal != null)
             {
-                if (e.ChangedButton == MouseButton.Left) ConfirmModal();
+                if (e.ChangedButton == MouseButton.Left && _modal.Kind == ModalKind.Knife && _modal.KnifeA == null)
+                {
+                    _modal.KnifeA = p;
+                    UpdateModal(p);
+                }
+                else if (e.ChangedButton == MouseButton.Left) ConfirmModal();
                 else if (e.ChangedButton == MouseButton.Right) CancelModal();
                 e.Handled = true;
                 return;
@@ -289,6 +316,15 @@ namespace RobotWin.Studio.Modeling
 
         private void OnWheel(object sender, MouseWheelEventArgs e)
         {
+            if (_modal is { Kind: ModalKind.LoopCut } lc)
+            {
+                lc.Typed = string.Empty;
+                lc.Cuts = Math.Max(1, Math.Min(64, lc.Cuts + Math.Sign(e.Delta)));
+                UpdateModal(e.GetPosition(this));
+                e.Handled = true;
+                return;
+            }
+
             if (_modal != null) return;
             Cam.Distance = ClampDistance(Cam.Distance * Math.Pow(0.85, e.Delta / 120.0));
             UpdateCamera();
@@ -322,11 +358,23 @@ namespace RobotWin.Studio.Modeling
                 case Key.Space:
                     ConfirmModal();
                     return true;
+                case Key.C when _modal.Kind == ModalKind.Knife && _ed.Mode == EditorMode.Edit:
+                    _modal.KnifeMode = (_modal.KnifeMode + 1) % 3;
+                    UpdateModal(Mouse.GetPosition(this));
+                    return true;
+                case Key.OemPlus when _modal.Kind == ModalKind.LoopCut:
+                case Key.Add when _modal.Kind == ModalKind.LoopCut:
+                case Key.OemMinus when _modal.Kind == ModalKind.LoopCut:
+                case Key.Subtract when _modal.Kind == ModalKind.LoopCut:
+                    _modal.Typed = string.Empty;
+                    _modal.Cuts = Math.Max(1, Math.Min(64, _modal.Cuts + (key == Key.OemPlus || key == Key.Add ? 1 : -1)));
+                    UpdateModal(Mouse.GetPosition(this));
+                    return true;
                 case Key.X:
                 case Key.Y:
                 case Key.Z:
                 {
-                    if (_modal.Kind == ModalKind.Extrude || _modal.Kind == ModalKind.Inset) return true;
+                    if (_modal.Kind != ModalKind.Move && _modal.Kind != ModalKind.Rotate && _modal.Kind != ModalKind.Scale) return true;
                     int axis = key == Key.X ? 0 : key == Key.Y ? 1 : 2;
                     if (_modal.Axis == axis && _modal.Plane == shift)
                     {
@@ -389,6 +437,40 @@ namespace RobotWin.Studio.Modeling
             {
                 var ent = EditEntry;
                 if (ent == null) return false;
+                if (kind == ModalKind.Extrude && _ed.SelectedFaceList().Count == 0 && _ed.SelectedEdges().Count > 0)
+                {
+                    // edges (vertex / edge mode): faces grow off the selected edges and their copies move (Blender E)
+                    _ed.BeginChange();
+                    var r = MeshCut.ExtrudeEdges(_ed.EditMesh!, _ed.SelectedEdges());
+                    _ed.SelFaces.Clear();
+                    _ed.SelVerts.Clear();
+                    _ed.SelVerts.UnionWith(r.Vertices);
+                    RefreshEditMesh();
+                    if (StartModal(ModalKind.Move, p))
+                    {
+                        _modal!.Done = "Kenarlar çıkarıldı (extrude)";
+                        return true;
+                    }
+
+                    _ed.CancelChange();
+                    return false;
+                }
+
+                if (kind == ModalKind.Knife || kind == ModalKind.LoopCut || kind == ModalKind.Solidify)
+                {
+                    _ed.BeginChange();
+                    m.Base = _ed.EditMesh!.Clone();
+                    m.Faces = kind == ModalKind.Knife ? _ed.SelectedFaceList() : new List<int>();
+                    m.EW = ent.World;
+                    m.EI = ent.Inverse;
+                    m.LocalPerWorld = 1 / Math.Max(1e-9, Math.Pow(Math.Abs(m.EW.Determinant), 1.0 / 3));
+                    m.Pivot = Pivot() ?? m.EW.Apply(m.Base.Bounds.Center);
+                    _modal = m;
+                    CaptureMouse();
+                    UpdateModal(p);
+                    return true;
+                }
+
                 if (kind == ModalKind.Extrude || kind == ModalKind.Inset)
                 {
                     var faces = _ed.SelectedFaceList();
@@ -432,6 +514,29 @@ namespace RobotWin.Studio.Modeling
             else
             {
                 if (kind == ModalKind.Extrude || kind == ModalKind.Inset) return false;
+                if (kind == ModalKind.LoopCut || kind == ModalKind.Solidify)
+                {
+                    _ed.Status((kind == ModalKind.LoopCut ? "Halka kesim" : "Kalınlık verme") + " düzenleme modunda çalışır (Tab)");
+                    return false;
+                }
+
+                if (kind == ModalKind.Knife)
+                {
+                    var target = _ed.Active;
+                    if (target == null || !ModelEditor.IsMeshLike(target))
+                    {
+                        _ed.Status("Dilimlemek için bir nesne seçin");
+                        return false;
+                    }
+
+                    m.Objects.Add((target, _ed.Doc.WorldMatrix(target)));
+                    m.Pivot = ModelOps.WorldBounds(_ed.Doc, new[] { target }).Center;
+                    _modal = m;
+                    CaptureMouse();
+                    UpdateModal(p);
+                    return true;
+                }
+
                 var roots = _ed.SelectedRoots();
                 if (roots.Count == 0)
                 {
@@ -460,6 +565,21 @@ namespace RobotWin.Studio.Modeling
 
         /// <summary>Feeds a mouse position to the running modal operator (scripted demos).</summary>
         public void SimulateModal(Point p) => UpdateModal(p);
+
+        /// <summary>A left click while a modal operator runs (scripted demos): the knife's first point, otherwise confirm.</summary>
+        public void SimulateClick(Point p)
+        {
+            if (_modal == null) return;
+            if (_modal.Kind == ModalKind.Knife && _modal.KnifeA == null)
+            {
+                _modal.KnifeA = p;
+                UpdateModal(p);
+                return;
+            }
+
+            UpdateModal(p);
+            ConfirmModal();
+        }
 
         private double? Typed()
         {
@@ -583,6 +703,65 @@ namespace RobotWin.Studio.Modeling
                     return;
                 }
 
+                case ModalKind.Knife:
+                {
+                    m.KnifeB = p;
+                    bool edit = _ed.Mode == EditorMode.Edit;
+                    string what = !edit ? "Dilimle: nesne iki kapalı parçaya ayrılır"
+                        : m.KnifeMode == 0 ? (m.Faces.Count > 0 ? "Bıçak: seçili yüzleri keser" : "Bıçak: tüm ağı keser")
+                        : m.KnifeMode == 1 ? "Bıçak: kesip çizginin sağ tarafını siler (kesit kapatılır)"
+                        : "Bıçak: kesip çizginin sol tarafını siler (kesit kapatılır)";
+                    m.Header = m.KnifeA == null
+                        ? what + "   ·   çizginin başlangıcına tıklayın · Esc iptal"
+                        : what + $"   ·   bitişe tıklayın (Enter){(edit ? " · C kip" : string.Empty)} · Esc iptal";
+                    RefreshOverlays();
+                    return;
+                }
+
+                case ModalKind.LoopCut:
+                {
+                    if (typed is { } tc) m.Cuts = Math.Max(1, Math.Min(64, (int)Math.Round(tc)));
+                    m.Ring = NearestEdge(p);
+                    m.Preview.Clear();
+                    _ed.SetEditMesh(m.Base!.Clone());
+                    if (m.Ring is { } edge)
+                    {
+                        var probe = m.Base!.Clone();
+                        var r = MeshCut.LoopCut(probe, edge.A, edge.B, m.Cuts);
+                        var fresh = new HashSet<int>(r.Vertices);
+                        var seen = new HashSet<long>();
+                        foreach (var f in probe.Faces)
+                        {
+                            for (int k = 0; k < f.Length; k++)
+                            {
+                                int a = f[k], b = f[(k + 1) % f.Length];
+                                if (fresh.Contains(a) && fresh.Contains(b) && seen.Add(PolyMesh.EdgeKey(a, b)))
+                                    m.Preview.Add((m.EW.Apply(probe.Vertices[a]), m.EW.Apply(probe.Vertices[b])));
+                            }
+                        }
+                    }
+
+                    m.Header = $"Halka kesim: {typedText}{m.Cuts} kesim{(m.Ring == null ? " · bir kenarın üzerine gelin" : string.Empty)}   ·   tekerlek veya +/− kesim sayısı · tık onay · Esc iptal";
+                    RefreshEditMesh();
+                    RefreshOverlays();
+                    return;
+                }
+
+                case ModalKind.Solidify:
+                {
+                    double px = Cam.PixelSize(m.Pivot);
+                    double thick = typed ?? Math.Max(0, (p.X - m.Start.X) * px);
+                    if (snap && typed == null) thick = Math.Round(thick / (grid / 2)) * (grid / 2);
+                    var mesh = m.Base!.Clone();
+                    MeshCut.Solidify(mesh, thick * m.LocalPerWorld);
+                    _ed.SetEditMesh(mesh);
+                    _ed.SelVerts.Clear();
+                    _ed.SelFaces.Clear();
+                    m.Header = $"Kalınlık ver: {typedText}{thick:0.###} mm (içe doğru)   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal";
+                    RefreshEditMesh();
+                    return;
+                }
+
                 default:
                 {
                     double px = Cam.PixelSize(m.Pivot);
@@ -640,17 +819,45 @@ namespace RobotWin.Studio.Modeling
         {
             var m = _modal;
             if (m == null) return;
+            if (m.Kind == ModalKind.Knife && m.KnifeA == null) return; // still waiting for the first point
+            if (m.Kind == ModalKind.LoopCut && m.Ring == null)
+            {
+                _ed.Status("Halka kesim için bir kenarın üzerine gelin");
+                return;
+            }
+
             _modal = null;
             ReleaseMouseCapture();
-            string what = m.Kind switch
+            if (m.Kind == ModalKind.Knife)
+            {
+                ConfirmKnife(m);
+                return;
+            }
+
+            if (m.Kind == ModalKind.LoopCut)
+            {
+                var mesh = m.Base!.Clone();
+                var r = MeshCut.LoopCut(mesh, m.Ring!.Value.A, m.Ring.Value.B, m.Cuts);
+                _ed.SetEditMesh(mesh);
+                _ed.SelFaces.Clear();
+                _ed.SelVerts.Clear();
+                if (_ed.Element != ElementMode.Face) _ed.SelVerts.UnionWith(r.Vertices);
+                m.Preview.Clear();
+                _ed.CommitChange($"Halka kesildi ({m.Cuts} kesim)", ModelChange.Geometry);
+                RefreshOverlays();
+                return;
+            }
+
+            string what = m.Done ?? m.Kind switch
             {
                 ModalKind.Move => "Taşındı",
                 ModalKind.Rotate => "Döndürüldü",
                 ModalKind.Scale => "Ölçeklendi",
                 ModalKind.Extrude => "Çıkarıldı (extrude)",
+                ModalKind.Solidify => "Kalınlık verildi",
                 _ => "İçe kaydırıldı (inset)"
             };
-            if (m.Kind == ModalKind.Extrude || m.Kind == ModalKind.Inset)
+            if (m.Kind == ModalKind.Extrude || m.Kind == ModalKind.Inset || (m.Kind == ModalKind.Move && m.Done != null))
             {
                 // drop zero-length walls of an extrusion cancelled at zero distance
                 var mesh = _ed.EditMesh!;
@@ -672,6 +879,85 @@ namespace RobotWin.Studio.Modeling
             ReleaseMouseCapture();
             _ed.CancelChange();
             _ed.Status("İptal edildi");
+            RefreshOverlays();
+        }
+
+        /// <summary>
+        /// The plane of a knife line: it holds both screen rays, so it cuts exactly along what was drawn
+        /// (through the eye in perspective, along the view in orthographic).
+        /// </summary>
+        private (Vec3 Point, Vec3 Normal)? KnifePlane(Point a, Point b)
+        {
+            if ((a - b).Length < 4) return null;
+            var (o0, d0) = Cam.Ray(a);
+            var (o1, d1) = Cam.Ray(b);
+            var n = (o1 - o0).Length < 1e-9 ? d0.Cross(d1) : d0.Cross(o1 - o0);
+            if (n.Length < 1e-12) return null;
+            return (o0, n.Normalized());
+        }
+
+        private void ConfirmKnife(Modal m)
+        {
+            var plane = KnifePlane(m.KnifeA!.Value, m.KnifeB);
+            if (plane == null)
+            {
+                _ed.CancelChange();
+                _ed.Status("Çizgi çok kısa: iptal edildi");
+                RefreshOverlays();
+                return;
+            }
+
+            var (pt, n) = plane.Value;
+            if (_ed.Mode == EditorMode.Edit)
+            {
+                // world plane → mesh space (normals map with the transpose of the linear part)
+                var w = m.EW;
+                var lp = m.EI.Apply(pt);
+                var ln = new Vec3(w.M00 * n.X + w.M10 * n.Y + w.M20 * n.Z, w.M01 * n.X + w.M11 * n.Y + w.M21 * n.Z, w.M02 * n.X + w.M12 * n.Y + w.M22 * n.Z);
+                var mesh = m.Base!.Clone();
+                var mode = m.KnifeMode == 1 ? BisectMode.ClearPositive : m.KnifeMode == 2 ? BisectMode.ClearNegative : BisectMode.Cut;
+                var r = MeshCut.Bisect(mesh, lp, ln, m.Faces.Count > 0 ? m.Faces : null, mode);
+                _ed.SetEditMesh(mesh);
+                _ed.SelFaces.Clear();
+                _ed.SelVerts.Clear();
+                if (_ed.Element != ElementMode.Face) _ed.SelVerts.UnionWith(r.Vertices);
+                _ed.CommitChange(r.Vertices.Count == 0 ? "Bıçak hiçbir yüzü kesmedi" : mode == BisectMode.Cut ? "Bıçakla kesildi" : "Kesildi, bir taraf silindi ve kapatıldı", ModelChange.Geometry);
+                RefreshEditMesh();
+                RefreshOverlays();
+                return;
+            }
+
+            var target = m.Objects.Count > 0 ? m.Objects[0].O : null;
+            if (target != null) _ed.Slice(target, pt, n);
+            RefreshOverlays();
+        }
+
+        /// <summary>The mesh edge nearest to the cursor on screen (within 40 px) in the edited object.</summary>
+        private (int A, int B)? NearestEdge(Point p)
+        {
+            var m = _modal;
+            var mesh = m?.Base;
+            if (m == null || mesh == null) return null;
+            var screen = mesh.Vertices.Select(v => Cam.ProjectPoint(m.EW.Apply(v))).ToArray();
+            double best = 40;
+            (int, int)? hit = null;
+            foreach (var (a, b) in mesh.Edges())
+            {
+                var s0 = screen[a];
+                var s1 = screen[b];
+                var d = s1 - s0;
+                double len2 = d.X * d.X + d.Y * d.Y;
+                double t = len2 < 1e-9 ? 0 : Math.Max(0, Math.Min(1, ((p.X - s0.X) * d.X + (p.Y - s0.Y) * d.Y) / len2));
+                var q = s0 + d * t;
+                double dist = (p - q).Length;
+                if (dist < best)
+                {
+                    best = dist;
+                    hit = (a, b);
+                }
+            }
+
+            return hit;
         }
 
         /// <summary>Draws the constraint axis line through the pivot while a modal transform runs.</summary>
@@ -679,6 +965,24 @@ namespace RobotWin.Studio.Modeling
         {
             var m = _modal;
             if (m == null) return;
+            if (m.Kind == ModalKind.Knife)
+            {
+                var knife = System.Windows.Media.Color.FromRgb(0xF2, 0xC2, 0x4B);
+                if (m.KnifeA is not { } ka) return;
+                var a = Cam.OnPlane(ka, m.Pivot, Cam.Forward);
+                var b = Cam.OnPlane(m.KnifeB, m.Pivot, Cam.Forward);
+                if (a != null) rb.Dot(a.Value, knife, 8);
+                if (a != null && b != null) rb.Line(a.Value, b.Value, knife, 2);
+                return;
+            }
+
+            if (m.Kind == ModalKind.LoopCut)
+            {
+                var cut = System.Windows.Media.Color.FromRgb(0xF2, 0xC2, 0x4B);
+                foreach (var (a, b) in m.Preview) rb.Line(a, b, cut, 2);
+                return;
+            }
+
             if (m.Kind == ModalKind.Extrude)
             {
                 double len = Cam.PixelSize(m.Pivot) * 4000;

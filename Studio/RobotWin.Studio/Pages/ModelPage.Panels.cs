@@ -291,10 +291,26 @@ namespace RobotWin.Studio.Pages
             var o = _ed.Active ?? objs.Last();
             ObjectHeader(o, objs.Count);
             TransformSection(o);
+            ShapeOpsSection(objs);
             if (o.Primitive != null) PrimitiveSection(o);
             MaterialSection(o);
             ShadingSection(o);
             StatsSection(o, objs);
+        }
+
+        /// <summary>Boolean and slicing in plain sight (they were only in the right-click menu).</summary>
+        private void ShapeOpsSection(List<ModelObject> objs)
+        {
+            Section("Kes, kırp, birleştir", objs.Count > 1 ? $"{objs.Count} nesne seçili" : null);
+            var wrap = new WrapPanel();
+            wrap.Children.Add(SmallButton("Dilimle  K", () => _vp.StartModal(ModalKind.Knife), "Ekrana bir çizgi çizin: etkin nesne o çizgi boyunca iki kapalı parçaya ayrılır; parçaları ayrı ayrı taşıyıp döndürebilirsiniz"));
+            wrap.Children.Add(SmallButton("Fark (kırp)", () => _ed.Boolean(BooleanOp.Difference), "Hedeften, ona geçen araç nesnelerinin hacmini oyar (iç içe geçen kısım kırpılır)"));
+            wrap.Children.Add(SmallButton("Birleşim", () => _ed.Boolean(BooleanOp.Union), "İç içe geçen nesneleri tek kapalı gövdede birleştirir"));
+            wrap.Children.Add(SmallButton("Kesişim", () => _ed.Boolean(BooleanOp.Intersection), "Yalnız nesnelerin ortak hacmi kalır"));
+            Props.Children.Add(wrap);
+            Caption(objs.Count > 1
+                ? "Boolean hedefi en son seçilen (etkin) nesnedir; diğerleri araçtır ve işlemden sonra kaldırılır."
+                : "Boolean için önce araç nesnesini, sonra Shift+tık ile hedefi seçin. Ayrıntılı nokta/kenar/yüz düzenleme: Tab.");
         }
 
         private void ObjectHeader(ModelObject o, int count)
@@ -680,7 +696,7 @@ namespace RobotWin.Studio.Pages
                      {
                          ("Shift+A", "şekil / parça ekle"), ("G · R · S", "taşı · döndür · ölçekle"), ("  ardından X/Y/Z", "eksen, Shift+X düzlem"), ("  sayı + Enter", "kesin değer (mm, °)"),
                          ("Tab", "düzenleme modu"), ("1 · 2 · 3", "nokta · kenar · yüz"), ("E · I", "çıkar · içe kaydır"), ("M · F · X", "birleştir · yüz · sil"),
-                         ("Ctrl+J", "birleştir (join)"), ("Sağ tık", "Boolean ve diğer işlemler"), ("Orta tuş", "döndür, Shift ile kaydır"), ("Numpad 1/3/7", "ön / sağ / üst görünüm"),
+                         ("K", "bıçak / dilimle"), ("Ctrl+R", "halka kesim"), ("Ctrl+J", "birleştir (join)"), ("Sağ tık", "Boolean ve diğer işlemler"), ("Orta tuş", "döndür, Shift ile kaydır"), ("Numpad 1/3/7", "ön / sağ / üst görünüm"),
                          ("Numpad . · Home", "seçimi / hepsini sığdır"), ("Z · Alt+Z", "görünüm · X-ray"), ("Ctrl (sürüklerken)", "ızgara adımı"), ("Ctrl+Z", "geri al")
                      }) Line(k, v);
         }
@@ -721,8 +737,11 @@ namespace RobotWin.Studio.Pages
 
             Section("İşlemler");
             var wrap = new WrapPanel();
-            wrap.Children.Add(SmallButton("Çıkar  E", () => _vp.StartModal(ModalKind.Extrude), "Seçili yüzleri normal yönünde çıkar"));
+            wrap.Children.Add(SmallButton("Çıkar  E", () => _vp.StartModal(ModalKind.Extrude), "Seçili yüzleri normal yönünde çıkarır; nokta/kenar modunda seçili kenarlardan yeni yüz çeker"));
             wrap.Children.Add(SmallButton("İçe kaydır  I", () => _vp.StartModal(ModalKind.Inset)));
+            wrap.Children.Add(SmallButton("Bıçak  K", () => _vp.StartModal(ModalKind.Knife), "Ekrana çizdiğiniz çizgi boyunca keser (seçim varsa yalnız seçili yüzleri). C ile kip: kes / sağ tarafı sil / sol tarafı sil; silinen taraf kapatılır"));
+            wrap.Children.Add(SmallButton("Halka kes  Ctrl+R", () => _vp.StartModal(ModalKind.LoopCut), "Fareyle bir kenarın üzerine gelin: dörtgen halkası boyunca yeni kenar halkaları ekler; tekerlek kesim sayısını değiştirir"));
+            wrap.Children.Add(SmallButton("Kalınlık ver", () => _vp.StartModal(ModalKind.Solidify), "Yüzeye içe doğru et kalınlığı verir: açık yüzey kalın bir duvar, kapalı gövde içi boş kabuk olur"));
             wrap.Children.Add(SmallButton("Alt böl", _ed.Subdivide));
             wrap.Children.Add(SmallButton("Yumuşat", _ed.SmoothSubdivide, "Catmull–Clark: tüm ağ"));
             wrap.Children.Add(SmallButton("Birleştir  M", _ed.MergeAtCenter));
@@ -731,7 +750,7 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Ayır  P", _ed.Separate));
             wrap.Children.Add(SmallButton("Sil  X", _ed.DeleteElements));
             Props.Children.Add(wrap);
-            Caption("G/R/S seçimi taşır/döndürür/ölçekler · Shift+tık seçime ekler · sürükleyerek kutu seçimi · X-ray (Alt+Z) arkadakileri de seçer");
+            Caption("G/R/S seçimi taşır/döndürür/ölçekler · K bıçak · Ctrl+R halka kesim · Shift+tık seçime ekler · sürükleyerek kutu seçimi · X-ray (Alt+Z) arkadakileri de seçer");
         }
 
         // ================================================================ library

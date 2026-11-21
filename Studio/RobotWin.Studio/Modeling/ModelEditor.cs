@@ -659,6 +659,23 @@ namespace RobotWin.Studio.Modeling
             Status($"{name} tamam · {active.LocalMesh().Faces.Count} yüz · {(topo.IsClosed ? "kapalı (su geçirmez)" : "açık ağ: " + topo)} · {sw.ElapsedMilliseconds} ms");
         }
 
+        /// <summary>Cuts <paramref name="target"/> in two closed pieces along a world plane; both pieces end up selected.</summary>
+        public ModelObject? Slice(ModelObject target, Vec3 point, Vec3 normal)
+        {
+            ModelObject? piece = null;
+            Do($"'{target.Name}' dilimlendi", () =>
+            {
+                piece = ModelOps.Slice(Doc, target, point, normal);
+                if (piece == null) return;
+                Selected.Clear();
+                Selected.Add(target.Id);
+                Selected.Add(piece.Id);
+                ActiveId = piece.Id;
+            }, ModelChange.All);
+            Status(piece == null ? "Çizgi nesneyi kesmiyor" : $"'{target.Name}' iki kapalı parçaya ayrıldı · bir parçayı seçip G ile taşıyın, R ile döndürün");
+            return piece;
+        }
+
         public void MirrorCopy(Axis axis)
         {
             var objs = SelectedRoots();

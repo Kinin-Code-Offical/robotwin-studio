@@ -36,6 +36,53 @@ namespace RobotWin.Studio.Pages
             var doc = new ModelDocument { Title = "2WD robot gövdesi" };
             switch (demo)
             {
+                case "cut":
+                case "cutedit":
+                {
+                    // a tube sliced at an angle, the top piece lifted and turned; a block with loop cuts and a hollow shell
+                    var tube = ModelOps.AddPrimitive(doc, PrimitiveKind.Tube);
+                    tube.Name = "Boru";
+                    tube.Primitive!.Set("do", 50);
+                    tube.Primitive.Set("di", 34);
+                    tube.Primitive.Set("h", 70);
+                    tube.Color = "#3B82C4";
+                    tube.Transform.Position = new Vec3(-45, 0, 35);
+                    var top = ModelOps.Slice(doc, tube, new Vec3(-45, 0, 42), new Vec3(0.45, 0, 1))!;
+                    top.Name = "Boru (üst parça)";
+                    top.Transform.Position = new Vec3(-52, 0, 58);
+                    top.Transform.Rotation = new Vec3(0, -24, 0);
+
+                    var block = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
+                    block.Name = "Kutu";
+                    block.Primitive!.Set("x", 60);
+                    block.Primitive.Set("y", 40);
+                    block.Primitive.Set("z", 30);
+                    block.Transform.Position = new Vec3(45, 0, 15);
+                    ModelOps.ConvertToMesh(block);
+                    var mesh = block.LocalMesh().Clone();
+                    int t0 = Enumerable.Range(0, mesh.Faces.Count).First(f => mesh.FaceNormal(f).Z > 0.9);
+                    var tf = mesh.Faces[t0];
+                    MeshCut.LoopCut(mesh, tf[0], tf[1], 3);
+                    // open the top (all quads of the cut top face) and give the walls 2.5 mm: a tray
+                    MeshEdit.DeleteFaces(mesh, Enumerable.Range(0, mesh.Faces.Count).Where(f => mesh.FaceNormal(f).Z > 0.9).ToList());
+                    MeshCut.Solidify(mesh, 2.5);
+                    block.SetMesh(mesh);
+                    _ed.Load(doc, null);
+                    if (demo == "cutedit")
+                    {
+                        _ed.Select(block.Id);
+                        _ed.ToggleEditMode();
+                        _ed.SetElementMode(ElementMode.Edge);
+                    }
+                    else
+                    {
+                        _ed.Select(tube.Id);
+                        _ed.Select(top.Id, true);
+                    }
+
+                    break;
+                }
+
                 case "edit":
                 case "editv":
                 {
@@ -312,6 +359,67 @@ namespace RobotWin.Studio.Pages
                 Check("send to world", wo != null && wo.Kind == RobotTwin.CoreSim.Sandbox.WorldObjectKind.Model && wo.MassKg > 0 && wo.Mesh != null,
                     wo == null ? "" : wo.Name + " " + (wo.MassKg * 1000)?.ToString("0.#", CultureInfo.InvariantCulture) + " g, " + RobotTwin.CoreSim.Mechanics.MeshModel.FromEmbedded(wo.Mesh!).TriangleCount + " tris");
                 Check("world contains it", wo != null && Shell.Workspace.Current.ActiveWorld?.Objects.Contains(wo) == true);
+
+                // cutting tools on a fresh block: knife in edit mode, loop cut, solidify, then slice in object mode
+                _ed.Load(new ModelDocument { Title = "Kesme araçları" }, null);
+                var blk = _ed.AddPrimitive(PrimitiveKind.Box, new Vec3(0, 0, 0));
+                _ed.Select(blk.Id);
+                _vp.FrameAll();
+                Point Screen(Vec3 local) => _vp.Cam.ProjectPoint(_ed.Doc.WorldMatrix(blk).Apply(local));
+                var mid = Screen(blk.LocalMesh().Bounds.Center);
+                double blockVolume = blk.LocalMesh().Volume();
+
+                _ed.ToggleEditMode();
+                _ed.SetElementMode(ElementMode.Vertex);
+                _ed.DeselectAll();
+                var cm = _ed.EditMesh!;
+                int topFace = Enumerable.Range(0, cm.Faces.Count).Where(f => cm.FaceNormal(f).Z > 0.9).OrderByDescending(f => cm.FaceArea(f)).First();
+                var tf = cm.Faces[topFace];
+                int faces1 = cm.Faces.Count;
+                var edgeMid = Screen((cm.Vertices[tf[0]] + cm.Vertices[tf[1]]) / 2);
+                _vp.StartModal(ModalKind.LoopCut, edgeMid);
+                _vp.SimulateClick(edgeMid);
+                Check("loop cut", _ed.EditMesh!.IsClosed && _ed.EditMesh.Faces.Count > faces1 && Math.Abs(_ed.EditMesh.Volume() - blockVolume) < 1e-6,
+                    "faces " + faces1 + " -> " + _ed.EditMesh.Faces.Count);
+                _ed.Undo();
+                Check("undo loop cut", _ed.EditMesh!.Faces.Count == faces1);
+
+                int faces0 = _ed.EditMesh!.Faces.Count;
+                _vp.StartModal(ModalKind.Knife, mid);
+                _vp.SimulateClick(new Point(mid.X - 400, mid.Y - 20));
+                _vp.SimulateModal(new Point(mid.X + 400, mid.Y + 20));
+                _vp.SimulateClick(new Point(mid.X + 400, mid.Y + 20));
+                Check("knife cut", _ed.EditMesh!.IsClosed && _ed.EditMesh.Faces.Count > faces0 && Math.Abs(_ed.EditMesh.Volume() - blockVolume) < 1e-6 && _ed.SelVerts.Count >= 4,
+                    "faces " + faces0 + " -> " + _ed.EditMesh.Faces.Count + ", loop " + _ed.SelVerts.Count);
+
+                _vp.StartModal(ModalKind.Solidify, mid);
+                _vp.SimulateModal(new Point(mid.X + 25, mid.Y));
+                _vp.ConfirmModal();
+                double hollow = _ed.EditMesh!.Volume();
+                Check("solidify (hollow)", _ed.EditMesh.IsClosed && hollow > 1 && hollow < blockVolume * 0.95, "vol " + blockVolume.ToString("0") + " -> " + hollow.ToString("0"));
+                _ed.Undo();
+                _ed.ToggleEditMode();
+
+                _ed.Select(blk.Id);
+                _vp.StartModal(ModalKind.Knife, mid);
+                _vp.SimulateClick(new Point(mid.X - 60, mid.Y - 400));
+                _vp.SimulateClick(new Point(mid.X + 60, mid.Y + 400));
+                var pieces = _ed.Doc.Objects.ToList();
+                double pieceSum = pieces.Sum(o => o.LocalMesh().Volume());
+                Check("slice in two", pieces.Count == 2 && pieces.All(o => o.LocalMesh().IsClosed) && Math.Abs(pieceSum - blockVolume) < 1e-3,
+                    "pieces " + pieces.Count + ", vol " + blockVolume.ToString("0") + " = " + string.Join(" + ", pieces.Select(o => o.LocalMesh().Volume().ToString("0"))));
+
+                // move and turn the new piece the way a user would (G, R)
+                var front = _ed.Active!;
+                _ed.Select(front.Id);
+                var fc = _vp.Cam.ProjectPoint(ModelOps.WorldBounds(_ed.Doc, new[] { front }).Center);
+                _vp.StartModal(ModalKind.Move, fc, false, 0);
+                _vp.SimulateModal(new Point(fc.X + 120, fc.Y));
+                _vp.ConfirmModal();
+                _vp.StartModal(ModalKind.Rotate, new Point(fc.X + 100, fc.Y), false, 2);
+                _vp.SimulateModal(new Point(fc.X + 60, fc.Y - 90));
+                _vp.ConfirmModal();
+                Check("piece moved and turned", Math.Abs(front.Transform.RZ) > 1, "rz=" + front.Transform.RZ.ToString("0.#", CultureInfo.InvariantCulture));
             }
             catch (Exception ex)
             {
