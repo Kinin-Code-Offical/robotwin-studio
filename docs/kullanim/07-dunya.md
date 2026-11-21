@@ -71,6 +71,23 @@ Tek başına konmuş bir Arduino veya ESP32'yi **Kart tasarımına dönüştür 
 
 **Mekanik** sekmesindeki **Temel şekiller:** Kutu, Plaka / şase, Kol / çubuk, Silindir, Tekerlek (kauçuk lastikli), Küre / bilye, Masa / sabit zemin. Boyut ve renk denetçiden ayarlanır.
 
+### Çarpışma şekilleri
+
+Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir motor gövdesi yuvarlanır, kanat sivrilen biçimiyle, kumanda kendi dış hattıyla çarpışır (sınır kutusu değil). Bacaklar, pinler ve kablo uçları gibi ince parçalar gövdeye katılmaz. **Görünüm → Çarpışma şekilleri (dünya)** fiziğin gerçekten çarpıştırdığı gövdeleri modellerin üzerinde yarı saydam çizer; simülasyon çalışırken gövdelerle birlikte hareket eder.
+
+### Basınçlı kaplar ve roketler
+
+**Mekanik → Basınçlı kaplar ve roketler** bölümünde PET şişe (su roketi), hava tankı, katı yakıtlı motor ve roket kanatçığı vardır. Silindir, kutu veya küre bir gövdeyi denetçide **İçinde gaz tutan kapalı kap** yapabilirsiniz:
+
+- **Gaz, basınç, iç hacim, duvar, su:** kabın içindekiler. Gaz ideal gaz yasasıyla (p·V = m·R·T) hesaplanır.
+- **Lüle:** boğaz ve çıkış çapı, jetin çıktığı yüz. Akış izentropiktir; basınç oranı yeterince yüksekse boğazda ses hızına ulaşır, genişleyen lüle gazı süpersonik hızlandırır. İtki ṁ·vₑ + (pₑ − pₐ)·Aₑ olarak gövdeye lülenin olduğu yerden uygulanır.
+- **Vana açılır (s):** rampa lüleyi bu ana kadar kapalı tutar.
+- **Su:** lüleyi kapattığı sürece önce su çıkar (Bernoulli; roketin ivmesi suyu lüleye bastırır), sonra hava.
+- **Katı yakıt:** KNSB, KNDX veya APCP tanesi; yanma hızı basınca bağlıdır (r = a·pⁿ). Oda basıncı, yanma yüzeyinin ürettiği gaz ile lüleden çıkan gazın dengesinden kendiliğinden çıkar; itki eğrisi hazır okunmaz. Motora bağlı bir **e-match** devreden ateşlenince ya da **Ateşleme zamanı** gelince tutuşur.
+- **Patlama:** basınç, duvarın çeper gerilmesini (σ = p·r/t) malzemenin dayanımına çıkarırsa kap patlar.
+
+Kabın kütlesi gaz, su ve yakıt azaldıkça düşer; sıcak gaz duvarı ısıtır (ısı kamerasında görünür). Çalışırken denetçide basınç, sıcaklık, itki ve durum canlı okunur. **Su roketi** ve **Katı yakıtlı motor test standı** şablonlarıyla başlayın.
+
 ### 3D modeller
 
 **Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY)…** ile kendi modelinizi ekleyin. Kütle, ağırlık merkezi ve eylemsizlik malzemeden hesaplanır. Modelle sayfasında yaptığınız parçaları **Dünyaya gönder** ile doğrudan buraya getirebilirsiniz ([5. Modelle](05-modelle.md)).
@@ -138,6 +155,8 @@ ESP32 seçiliyken **Örnek kodu yükle: kumandalı araba (Bluepad32)** hazır bi
 ### USB
 
 **Bilgisayar** nesnesini bir karta yöneltip **USB'yi tak** deyin. Kablo takılıyken kart 5 V ile beslenir ve kartın seri portu **Seri monitör** sekmesine bağlanır. **USB'yi çıkar** ile ayırın.
+
+**USB-C şarjlı lityum piller** (**Parçalar → Güç**): USB-C girişli 18650 hücre, 2S 18650 paket (7.4 V) ve sabit 1.5 V veren USB-C AA hücreler. İçlerinde gerçek elektronik çalışır: koruma devresi (aşırı deşarj 2.4 V, aşırı şarj, aşırı akımda keser; boş bir paket ancak şarj cihazı takılınca uyanır) ve sabit akım / sabit gerilim şarj devresi (4.2 V'a kadar 1 A, sonra akım azalır). **Bilgisayar + USB kablosu** nesnesini pile yöneltip takın: pil şarj olur, çıkarınca şarj durur.
 
 ### Radyo ortamı
 

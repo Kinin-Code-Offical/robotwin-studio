@@ -5,7 +5,7 @@ using RobotTwin.CoreSim.Mechanics;
 namespace RobotTwin.CoreSim.Sandbox
 {
     /// <summary>Worlds built in code (used by the app's templates and by tests).</summary>
-    public static class WorldExamples
+    public static partial class WorldExamples
     {
         /// <summary>Two-wheel car: plate chassis, two TT motors on wheels, a ball caster, a 4×AA pack on top.</summary>
         /// <param name="lib">Part library.</param>
@@ -427,7 +427,8 @@ void loop() {
             bat.Name = "LiPo 3S 850 mAh";
             bat.MassKg = 0.075;
             bat.Parameters["capacity"] = "0.85";
-            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.135, Z = z0 + 0.002 });
+            // The 52 mm DevKit lies lengthwise in the 45 mm pod (turned 90°, centred: its origin is off the board centre).
+            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.1216, Y = -0.01275, Z = z0 + 0.002, Yaw = 90 });
             esp.Name = "Uçuş kartı (ESP32)";
             esp.Firmware = new Formats.FirmwareSource { FileName = "esp32-plane-fc.ino", Target = "esp32:esp32:esp32", Source = PlaneSketch };
             var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = 0.0, Z = z0 + 0.002 });
@@ -643,10 +644,13 @@ void loop() {
             double motorZ = r - shaftZ, plateZ = motorZ + motorHeight;
             // 90 mm wide: the wheels run 5 mm clear of the chassis edge (they collide with it like in reality).
             var plate = w.AddBody("plate", 0.16, 0.09, 0.003, new WorldPose { X = 0, Z = plateZ }, "PLA");
-            var ml = w.AddComponent(lib, "motor-tt", new WorldPose { X = -0.03, Y = 0.03, Z = motorZ });
-            var mr = w.AddComponent(lib, "motor-tt", new WorldPose { X = -0.03, Y = -0.03, Z = motorZ, Yaw = 180 });
-            var wl = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = -0.03 + shaftX, Y = 0.03 + shaftTip + 0.015, Z = 0 });
-            var wr = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = -0.03 - shaftX, Y = -0.03 - shaftTip - 0.015, Z = 0 });
+            // The shaft sits off the gearbox centre: the right motor is the same motor flipped upside down
+            // (rolled 180°), as in a real kit, so both shafts share one axle and the motors mirror each other.
+            const double axleX = -0.03 - 0.011;
+            var ml = w.AddComponent(lib, "motor-tt", new WorldPose { X = axleX - shaftX, Y = 0.03, Z = motorZ });
+            var mr = w.AddComponent(lib, "motor-tt", new WorldPose { X = axleX - shaftX, Y = -0.03, Z = motorZ + motorHeight, Roll = 180 });
+            var wl = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = axleX, Y = 0.03 + shaftTip + 0.015, Z = 0 });
+            var wr = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = axleX, Y = -0.03 - shaftTip - 0.015, Z = motorHeight - 2 * shaftZ });
             // Ball caster on a post under the front of the plate.
             double ball = 0.016;
             var caster = w.AddBody("sphere", ball, ball, ball, new WorldPose { X = 0.06, Z = 0 }, "ÇELİK");

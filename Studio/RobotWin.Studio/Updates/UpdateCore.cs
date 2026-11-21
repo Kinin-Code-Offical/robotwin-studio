@@ -109,13 +109,13 @@ namespace RobotWin.Studio.Updates
         public string? Sha256 { get; set; }
 
         /// <summary>
-        /// The self-contained installer (carries .NET, no runtime needed). Releases from 2.1 on name it
+        /// The self-contained installer (carries .NET, no runtime needed). Releases from 1.1 on name it
         /// plainly and the small one "-lite"; older ones called the full one "-tam". Set by
         /// <see cref="ReleaseInfo.ClassifyInstallers"/> because the plain name means either, by release.
         /// </summary>
         public bool IsSelfContained { get; set; }
 
-        /// <summary>The small installer that needs the .NET 9 Desktop Runtime (2.1 and later).</summary>
+        /// <summary>The small installer that needs the .NET 9 Desktop Runtime (1.1 and later).</summary>
         public bool IsLite => Name.EndsWith("-lite.exe", StringComparison.OrdinalIgnoreCase);
 
         public bool IsInstaller => Name.StartsWith("RobotWinStudio-Setup-", StringComparison.OrdinalIgnoreCase) && Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
@@ -124,7 +124,7 @@ namespace RobotWin.Studio.Updates
     public sealed class ReleaseInfo
     {
         /// <summary>
-        /// Which installer carries .NET: with a "-lite" asset (2.1 and later) the plain one is the full
+        /// Which installer carries .NET: with a "-lite" asset (1.1 and later) the plain one is the full
         /// package; without one (older releases) only "-tam" is.
         /// </summary>
         public void ClassifyInstallers()

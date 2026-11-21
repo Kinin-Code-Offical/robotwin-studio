@@ -247,13 +247,18 @@ namespace RobotTwin.CoreSim.Analog.Devices
         private void UpdateModel()
         {
             double soc = AnalogMath.Clamp(StateOfCharge, 0.0, 1.0);
-            _ocv = soc <= 0.0 ? 0.0 : Cells * CellVoltage(Chemistry, soc);
+            // The last 0.2 % of the charge: the voltage falls off the knee to zero instead of dropping in one
+            // step (a cliff the solver cannot follow); a lithium pack's protection board cuts on the way down.
+            _ocv = soc <= 0.0 ? 0.0 : Cells * CellVoltage(Chemistry, soc) * Math.Min(1.0, soc / EmptyKnee);
 
             // Resistance climbs steeply over the last part of the discharge.
             double depletion = 1.0 - soc;
             SeriesResistance = _baseResistance * (1.0 + 3.0 * depletion * depletion * depletion * depletion) +
                                (soc <= 0.0 ? 1e6 : 0.0);
         }
+
+        /// <summary>Charge fraction below which the open-circuit voltage falls linearly to zero.</summary>
+        public const double EmptyKnee = 0.002;
 
         protected override double SourceVoltage(double time) => _ocv - _polarization;
 

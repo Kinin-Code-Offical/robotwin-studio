@@ -297,6 +297,10 @@ namespace RobotTwin.CoreSim.Sandbox
                     n.Power += Math.Abs(b.Current) * (Math.Abs(b.Current) * b.SeriesResistance + Math.Abs(b.PolarizationVoltage));
             }
 
+            if (_vessels.Count > 0)
+                foreach (var n in _thermalNodes)
+                    if (!n.Inner) n.Power += TakeGasHeat(n.Item.Object.Id, h);   // [gas] hot gas heats the vessel wall
+
             // Convection (natural → forced by the real air speed) and linearised radiation to ambient.
             const double sigma = 5.670374419e-8;
             foreach (var n in _thermalNodes)

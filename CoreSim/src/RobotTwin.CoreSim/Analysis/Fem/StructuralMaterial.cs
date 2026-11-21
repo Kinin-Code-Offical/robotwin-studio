@@ -103,6 +103,10 @@ namespace RobotTwin.CoreSim.Analysis.Fem
             ["BALSA"] = new StructuralMaterial { Name = "Balsa (lif yönü)", E = 3.4e9, Nu = 0.3, Yield = 12e6, Density = 160, Conductivity = 0.05, SpecificHeat = 2900, Emissivity = 0.9, Alpha = 4e-6, SofteningPerK = 0.002, MeltingPoint = 270 },
             ["KARBON"] = new StructuralMaterial { Name = "Karbon fiber (pultrüzyon)", E = 110e9, Nu = 0.3, Yield = 1200e6, Density = 1600, Conductivity = 5, SpecificHeat = 800, Emissivity = 0.9, Alpha = 1e-6, GlassTransition = 120, MeltingPoint = 300, RubberyRatio = 0.6 },
             ["KURŞUN"] = new StructuralMaterial { Name = "Kurşun", E = 16e9, Nu = 0.44, Yield = 12e6, Density = 11340, Conductivity = 35, SpecificHeat = 130, Emissivity = 0.08, Alpha = 29e-6, SofteningPerK = 0.002, MeltingPoint = 327 },
+            // [gas] bottle PET is biaxially stretched (much stronger than moulded PET); kraft paper tube for airframes.
+            ["PET"] = new StructuralMaterial { Name = "PET (şişe, çift yönlü gerilmiş)", E = 4e9, Nu = 0.38, Yield = 160e6, Density = 1380, Conductivity = 0.15, SpecificHeat = 1100, Emissivity = 0.9, Alpha = 60e-6, GlassTransition = 75, MeltingPoint = 250, RubberyRatio = 0.02 },
+            ["KARTON"] = new StructuralMaterial { Name = "Karton boru (kraft)", E = 3e9, Nu = 0.3, Yield = 25e6, Density = 700, Conductivity = 0.07, SpecificHeat = 1400, Emissivity = 0.9, Alpha = 10e-6, SofteningPerK = 0.002, MeltingPoint = 230 },
+            ["AKRİLİK"] = new StructuralMaterial { Name = "Akrilik (PMMA)", E = 3.2e9, Nu = 0.37, Yield = 70e6, Density = 1180, Conductivity = 0.19, SpecificHeat = 1470, Emissivity = 0.9, Alpha = 70e-6, GlassTransition = 105, MeltingPoint = 160, RubberyRatio = 0.01 },
             ["BAKIR"] = new StructuralMaterial { Name = "Bakır", E = 117e9, Nu = 0.34, Yield = 70e6, Density = 8960, Conductivity = 400, SpecificHeat = 385, Emissivity = 0.05, Alpha = 17e-6, SofteningPerK = 0.0004, MeltingPoint = 1085 }
         };
 

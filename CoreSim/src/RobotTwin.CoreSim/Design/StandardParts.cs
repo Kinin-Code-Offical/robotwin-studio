@@ -99,6 +99,63 @@ namespace RobotTwin.CoreSim.Design
         private static ParameterDefinition P(string key, string label, string value, string unit = "", params string[] choices) =>
             new ParameterDefinition(key, label, value, unit, choices.Length > 0 ? choices : null);
 
+        /// <summary>
+        /// A battery: its cells, and for [usbc] lithium packs the electronics inside them — a protection
+        /// board (FET + body diode in the − lead, cut on over-discharge / over-charge / over-current), a
+        /// regulated output (USB-C AA cells give a flat 1.5 V until empty) and a CC/CV charger fed from
+        /// the USB-C port. The charger is the TP4056 shape: constant current up to 4.2 V per cell, then
+        /// constant voltage while the current tapers; a multi-cell pack's step-up charger is modelled the
+        /// same way at the pack voltage (its USB current is the charge current, not the boosted input current).
+        /// </summary>
+        private static void BuildBattery(PartBuildContext c)
+        {
+            var chem = (BatteryChemistry)Enum.Parse(typeof(BatteryChemistry), c.Text("chemistry"), true);
+            int cells = (int)Math.Max(1, c.Num("cells", 1));
+            int plus = c.Pin("+"), minus = c.Pin("-");
+            double charge = c.Num("charge", 0), regulated = c.Num("regulated", 0);
+            bool protect = c.Flag("protect") || charge > 0;
+            int cellPlus = regulated > 0 ? c.Internal("cell+") : plus;
+            int cellMinus = protect ? c.Internal("cell-") : minus;
+            var b = c.Add(new Battery(c.RefDes, cellPlus, cellMinus, chem, cells, c.Num("capacity", 2.5))
+            {
+                InitialStateOfCharge = c.Num("soc", 1)
+            });
+            double rint = c.Num("rint", 0);
+            if (rint > 0) b.InternalResistance = rint;
+            if (protect)
+            {
+                var fet = c.Add(new Switch(c.Sub("FET"), cellMinus, minus, true) { OnResistance = 0.025 * cells });
+                c.Add(new Diode(c.Sub("DBODY"), cellMinus, minus));
+                // A single cell's DW01 trips near 3 A; a multi-cell pack's BMS carries a few amps more.
+                c.Add(new LithiumProtection(c.Sub("BMS"), cellPlus, cellMinus, fet, cells) { OverCurrentA = cells == 1 || regulated > 0 ? 3.0 : 6.0 });
+            }
+
+            if (regulated > 0)
+            {
+                c.Add(new LinearRegulator(c.Sub("REG"), cellPlus, minus, plus, regulated)
+                {
+                    Dropout = 0.05, CurrentLimit = 2.0 * Math.Max(1, cells / 4.0), OutputResistance = 0.05, QuiescentCurrent = 5e-5, ThermalResistance = 0
+                });
+            }
+
+            string usb = c.Text("usb").Trim();
+            if (charge > 0 && (usb.Equals("true", StringComparison.OrdinalIgnoreCase) || usb.Equals("cable", StringComparison.OrdinalIgnoreCase)))
+            {
+                int vbus = WirelessParts.UsbSupply(c, minus, 0.1);
+                double full = (chem == BatteryChemistry.LiFePO4 ? 3.6 : 4.2) * cells;
+                c.Add(new LinearRegulator(c.Sub("CHG"), vbus, minus, cellPlus, full)
+                {
+                    CurrentLimit = charge,
+                    // One cell: a linear charger with ~0.15 V headroom. Several: a step-up charger reaches above VBUS.
+                    Dropout = cells == 1 ? 0.15 : 5.0 - full - 0.5,
+                    OutputResistance = 0.05,
+                    QuiescentCurrent = 1e-3,
+                    MaxInputVoltage = 8.0,
+                    ThermalResistance = 0
+                });
+            }
+        }
+
         private static void Preset(PartLibrary lib, string id, string name, string partId, string category,
             string description, string parameters = "")
         {
@@ -554,20 +611,16 @@ namespace RobotTwin.CoreSim.Design
                 "model=MCP1700-3.3;vout=3.3;dropout=0.18;ilim=0.25;iq=1.6u;vinmax=6;rth=200;pinout=GIO;footprint=TO92");
 
             Def(lib, "battery", "Batarya", Power, "BT", SymbolKind.Battery, "WIRE-2", "model",
-                c =>
-                {
-                    var chem = (BatteryChemistry)Enum.Parse(typeof(BatteryChemistry), c.Text("chemistry"), true);
-                    var b = c.Add(new Battery(c.RefDes, c.Pin("+"), c.Pin("-"), chem, (int)Math.Max(1, c.Num("cells", 1)), c.Num("capacity", 2.5))
-                    {
-                        InitialStateOfCharge = c.Num("soc", 1)
-                    });
-                    double rint = c.Num("rint", 0);
-                    if (rint > 0) b.InternalResistance = rint;
-                },
+                BuildBattery,
                 P("model", "Model", "AA Alkalin"),
                 P("chemistry", "Kimya", "Alkaline", "", Enum.GetNames(typeof(BatteryChemistry))),
                 P("cells", "Hücre sayısı", "1"), P("capacity", "Kapasite", "2.5", "Ah"), P("soc", "Doluluk", "1", "0-1"),
-                P("rint", "İç direnç (0 = varsayılan)", "0", "Ω"))
+                P("rint", "İç direnç (0 = varsayılan)", "0", "Ω"),
+                P("charge", "USB-C şarj akımı (0 = şarj girişi yok)", "0", "A"),
+                P("usb", "USB-C şarj kablosu", "false", "", "false", "true", "cable"),
+                P("usbplugged", "USB-C takılı (dünyada)", "false", "", "false", "true"),
+                P("protect", "Koruma devresi (BMS)", "false", "", "false", "true"),
+                P("regulated", "Sabit çıkış (0 = hücre gerilimi)", "0", "V"))
                 .Vertical();
 
             Preset(lib, "bat-aa", "AA Pil 1.5 V", "battery", Power, "Alkalin AA, 2500 mAh");
@@ -582,6 +635,19 @@ namespace RobotTwin.CoreSim.Design
             Preset(lib, "bat-cr2032", "CR2032 3 V", "battery", Power, "Lityum düğme pil 220 mAh", "model=CR2032;chemistry=LithiumCoin;cells=1;capacity=0.22");
             Preset(lib, "bat-12v-sla", "Kurşun Asit 12 V 7 Ah", "battery", Power, "Bakımsız akü", "model=12V SLA;chemistry=LeadAcid;cells=6;capacity=7");
             Preset(lib, "bat-lifepo4-4s", "LiFePO4 4S 12.8 V", "battery", Power, "4S LiFePO4 6 Ah", "model=LiFePO4 4S;chemistry=LiFePO4;cells=4;capacity=6");
+            // [usbc] Lithium packs that charge from a USB-C cable: built-in CC/CV charger and protection board.
+            Preset(lib, "bat-18650-usbc", "18650 Li-ion USB-C şarjlı 3.7 V", "battery", Power,
+                "Korumalı 18650 hücre, ucunda USB-C şarj girişi (1 A CC/CV, 4.2 V), 2600 mAh",
+                "model=18650 USB-C;chemistry=LithiumIon;cells=1;capacity=2.6;charge=1;protect=true");
+            Preset(lib, "bat-2s-usbc", "2S Li-ion paket USB-C şarjlı 7.4 V", "battery", Power,
+                "2×18650 paket: BMS + USB-C girişli yükseltici şarj devresi (8.4 V, 1 A), 2600 mAh",
+                "model=2S 18650 USB-C;chemistry=LithiumIon;cells=2;capacity=2.6;charge=1;protect=true");
+            Preset(lib, "bat-aa-usbc", "AA Li-ion USB-C şarjlı 1.5 V", "battery", Power,
+                "AA boyunda Li-ion: içindeki düşürücü sabit 1.5 V verir, sonuna kadar düşmez; USB-C ile şarj",
+                "model=AA USB-C Li-ion;chemistry=LithiumIon;cells=1;capacity=1.7;charge=0.6;protect=true;regulated=1.5");
+            Preset(lib, "bat-4aa-usbc", "4×AA Li-ion USB-C şarjlı 6 V", "battery", Power,
+                "Yuvada 4 adet USB-C şarjlı 1.5 V AA (sabit 6 V; 4'lü USB-C kablosuyla şarj)",
+                "model=4×AA USB-C Li-ion;chemistry=LithiumIon;cells=4;capacity=1.7;charge=0.6;protect=true;regulated=6");
 
             Def(lib, "dc-source", "DC Güç Kaynağı", Instruments, "V", SymbolKind.VoltageSource, "WIRE-2", "voltage",
                 c => c.Add(new VoltageSource(c.RefDes, c.Pin("+"), c.Pin("-"), c.Num("voltage", 5))

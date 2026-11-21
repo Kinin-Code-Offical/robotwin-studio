@@ -348,6 +348,18 @@ namespace RobotWin.Studio.World
             if (o.Kind == WorldObjectKind.Body)
             {
                 g.Shape = o.Shape switch { "wheel" => "cylinder-y", "cylinder" => "cylinder-z", "sphere" => "sphere", _ => "box" };
+                // Exact primitives stay primitives; anything else (a wing's airfoil, taper and sweep) takes its model's shape.
+                if (g.Shape == "box" && o.Shape != "box" && o.Shape != "plate" && !WorldPhysics.IsShell(o) && it != null && ModelHulls.Of(it.Model) is { } wingHull)
+                {
+                    g.Hull = wingHull;
+                    g.Shape = "hull";
+                }
+            }
+            else if ((o.Kind == WorldObjectKind.Component || o.Kind == WorldObjectKind.Board) && it != null && ModelHulls.Of(it.Model) is { } hull)
+            {
+                // [hull] the part's own 3D model, not its bounding box: round cans roll, boards keep their outline.
+                g.Hull = hull;
+                g.Shape = "hull";
             }
             else if (o.Kind == WorldObjectKind.Model && o.Mesh != null)
             {

@@ -8,6 +8,7 @@ using RobotTwin.CoreSim.Analog.Devices;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
+using RobotTwin.CoreSim.Sandbox.Radio;
 
 namespace RobotTwin.CoreSim.Automation
 {
@@ -62,6 +63,9 @@ namespace RobotTwin.CoreSim.Automation
 
         /// <summary>[esc] Sensors that read the world's motion (IMUs on a board's I²C bus feel the body they ride on).</summary>
         public Sandbox.Sensing.WorldSensing? Sensing { get; private set; }
+
+        /// <summary>[radio] Wireless links: ESP32 Wi-Fi/Bluetooth, bonded game controllers (set their <c>Input</c>), IR.</summary>
+        public RadioMedium? Radio { get; private set; }
         public override string Kind => "world";
         public override string Title => World.Title;
 
@@ -94,6 +98,8 @@ namespace RobotTwin.CoreSim.Automation
                 AddEvent(new RunnerEvent(0, "fizik", RunnerEventKind.Warning, "Fizik sahnesi kurulamadı: " + ex.Message));
             }
 
+            StartRadio();
+
             AddEvent(new RunnerEvent(0, "dünya", RunnerEventKind.Info,
                 $"{World.Objects.Count} nesne, {World.Cables.Count} kablo, {Compiled.DevicesByPart.Count} parça tek devrede çözülüyor"));
         }
@@ -121,9 +127,31 @@ namespace RobotTwin.CoreSim.Automation
             }
         }
 
+        /// <summary>[radio] The world's radio medium with every running ESP32 attached (as the app's world session does).</summary>
+        private void StartRadio()
+        {
+            Radio = null;
+            try
+            {
+                Radio = WorldRadio.Build(World, Circuit, Library, o => Physics?.PoseOf(o.Id)?.Position ?? o.Pose.Position);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
+            {
+                AddEvent(new RunnerEvent(0, "radyo", RunnerEventKind.Warning, "Radyo ortamı kurulamadı: " + ex.Message));
+                return;
+            }
+
+            foreach (var prog in Circuit!.Programmables)
+            {
+                var board = Boards.FirstOrDefault(b => b.ObjectId == prog.ObjectId && b.RefDes == prog.RefDes);
+                if (board?.Esp != null && WorldRadio.NodeOf(Radio, prog, World) is { } node) Esp32RadioBridge.Attach(Radio, node, board.Esp);
+            }
+        }
+
         protected override void Teardown()
         {
             base.Teardown();
+            Radio = null;
             Sensing = null;
             Physics = null;
             Circuit = null;
@@ -246,6 +274,7 @@ namespace RobotTwin.CoreSim.Automation
 
         protected override void AdvanceMechanics(double dt)
         {
+            if (Radio != null && Simulator != null) Radio.Advance(Simulator.Time - dt, dt);   // [radio]
             Physics?.Advance(dt, Simulator);
             if (Sensing != null && Simulator != null) Sensing.Advance(Simulator.Time, dt, Simulator);   // [esc] IMU readings follow the motion
         }

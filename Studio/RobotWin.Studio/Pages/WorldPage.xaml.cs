@@ -106,12 +106,14 @@ namespace RobotWin.Studio.Pages
             BuildPalette();
             BuildInspector();
             UpdateRunButton();
+            RefreshCollisionView();   // [hull]
         }
 
         /// <summary>After any change of the world document.</summary>
         private void Refresh()
         {
             Scene.Rebuild();
+            RefreshCollisionView();   // [hull] the parts moved or changed: rebuild their bodies
             if (TabScene.IsChecked == true || TabBoards.IsChecked == true || TabEnv.IsChecked == true) BuildPalette();
             else if (TabSdk.IsChecked == true) BuildPalette();   // [sdk]
             BuildInspector();
@@ -136,6 +138,7 @@ namespace RobotWin.Studio.Pages
             _session.Stop();
             Scene.ClearEffects();
             UpdateRunButton();
+            RefreshCollisionView();   // [hull] back to the bodies a run would build
         }
 
         private void OnNewWorld(object sender, RoutedEventArgs e) => _main.NewWorld();
@@ -284,6 +287,7 @@ namespace RobotWin.Studio.Pages
             Palette.Children.Add(Row("Tekerlek", "Ø 65 × 26 mm kauçuk lastik", () => AddBody("wheel", 0.065, 0.026, 0.026)));
             Palette.Children.Add(Row("Küre / bilye", "Ø 40 mm", () => AddBody("sphere", 0.04, 0.04, 0.04)));
             ShellPalette();   // [shell] hollow bodies with lids (Pages/WorldPage.Shells.cs)
+            GasPalette();   // [gas] pressure vessels, motors, fins (Pages/WorldPage.Gas.cs)
             Palette.Children.Add(Caption("Uçuş yüzeyleri (gerçek kaldırma, sürükleme, moment)"));
             Palette.Children.Add(Row("Kanat", "1000 mm açıklık, 150 mm veter, Clark Y", () => AddBody("wing", 0.15, 1.0, 0.012, o => { o.Material = "AHŞAP"; o.MassKg = 0.08; o.Name = World!.UniqueName("Kanat"); o.Parameters["airfoil"] = "clarky"; o.Parameters["incidence"] = "2"; o.Parameters["control"] = "aileron"; })));
             Palette.Children.Add(Row("Yatay kuyruk + irtifa dümeni", "300 × 80 mm, NACA 0012", () => AddBody("wing", 0.08, 0.30, 0.006, o => { o.Material = "AHŞAP"; o.MassKg = 0.015; o.Name = World!.UniqueName("Yatay kuyruk"); o.Parameters["airfoil"] = "naca0012"; o.Parameters["incidence"] = "-2"; o.Parameters["control"] = "elevator"; o.Parameters["control.chord"] = "0.35"; })));
@@ -624,6 +628,7 @@ namespace RobotWin.Studio.Pages
             CellSection(world, o);   // [arm] teach pendant / tool / conveyor / light curtain (Pages/WorldPage.Cell.cs)
             WingSection(world, o);   // [linkage] servo, horn, control horn, pushrod (Pages/WorldPage.Wings.cs)
             ShellSection(world, o);   // [shell] fit check first, then wall, cable holes, lid, X-ray / exploded (Pages/WorldPage.Shells.cs)
+            GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
 
             if (o.Kind == WorldObjectKind.Board) BoardSection(world, o);
 
@@ -1307,11 +1312,14 @@ namespace RobotWin.Studio.Pages
             UpdateSerial();
             UpdateLive();
             UpdateRadioLive();   // [radio]
+            UpdateGasLive();   // [gas]
+            UpdateJets();   // [gas] nozzle jets (Pages/WorldPage.Gas.cs)
             UpdateCellLive();   // [arm]
             UpdateSdkLive();   // [sdk]
             RecordCableHistory();
             UpdateCableDiagnostics();
             UpdateThermalView();   // [thermal] Pages/WorldPage.Thermal.cs
+            UpdateCollisionView();   // [hull] Pages/WorldPage.Collision.cs
             if (DockCables.IsChecked == true) BuildCableTable();
         }
 
@@ -1391,6 +1399,7 @@ namespace RobotWin.Studio.Pages
 
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
             if (first != null) Scene.Select(first.Id);
+            if (Environment.GetCommandLineArgs().Contains("--collision")) SetCollisionView(true);   // [hull]
             ShellSnapshot();   // [shell] --select-shell, --xray, --exploded (Pages/WorldPage.Shells.cs)
             SenseSnapshotFinish();   // [sense]
             SdkSnapshot();   // [sdk]
@@ -1414,7 +1423,9 @@ namespace RobotWin.Studio.Pages
             if (id.Contains("8520")) return 0.0045;
             if (id.Contains("0720")) return 0.002;
             if (id.Contains("bat-9v")) return 0.045;
+            if (id.Contains("2s-usbc")) return 0.1;   // [usbc]
             if (id.Contains("18650")) return 0.046;
+            if (id.Contains("aa-usbc") && !id.Contains("4aa")) return 0.022;
             if (id.Contains("4aa")) return 0.11;
             if (id.Contains("2aa")) return 0.055;
             if (id.Contains("lipo")) return id.Contains("300") ? 0.009 : id.Contains("3s") ? 0.19 : 0.12;

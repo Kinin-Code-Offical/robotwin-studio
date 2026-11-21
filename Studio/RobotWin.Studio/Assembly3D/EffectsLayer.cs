@@ -12,7 +12,10 @@ namespace RobotWin.Studio.Assembly3D
         Fire,
         Spark,
         Flash,
-        Ring
+        Ring,
+
+        /// <summary>[gas] Water drops from a water rocket's nozzle (they fall).</summary>
+        Water
     }
 
     /// <summary>
@@ -41,6 +44,7 @@ namespace RobotWin.Studio.Assembly3D
         private static readonly Brush FireBrush = Soft(Color.FromRgb(0xFF, 0x8A, 0x1F));
         private static readonly Brush FireCoreBrush = Soft(Color.FromRgb(0xFF, 0xE0, 0x7A));
         private static readonly Brush FlashBrush = Soft(Color.FromRgb(0xFF, 0xF4, 0xD6));
+        private static readonly Brush WaterBrush = Soft(Color.FromRgb(0x9C, 0xD4, 0xFF));
 
         public EffectsLayer()
         {
@@ -113,6 +117,35 @@ namespace RobotWin.Studio.Assembly3D
             EmitSmoke(new Point3D(at.X, at.Y, at.Z + 0.03), rate * 0.25, dt, true);
         }
 
+        /// <summary>
+        /// [gas] The jet leaving a nozzle at <paramref name="at"/> along <paramref name="dir"/>: hot exhaust
+        /// (flame core, then smoke), a water jet (drops that fall) or cold gas (a faint mist). The density
+        /// follows the mass flow; the drawn speed is capped so the jet stays on screen.
+        /// </summary>
+        public void EmitJet(Point3D at, Vector3D dir, double speed, double massFlow, ParticleKind kind, double dt)
+        {
+            if (!Shell.AppSettings.Current.Effects || massFlow <= 0) return;
+            dir.Normalize();
+            double n = Math.Min(900, 220 * Math.Sqrt(massFlow * 1000)) * dt;
+            int count = (int)n + (_rnd.NextDouble() < n - (int)n ? 1 : 0);
+            double v = Math.Min(speed, kind == ParticleKind.Water ? 18 : 30);
+            for (int i = 0; i < count; i++)
+            {
+                var spread = new Vector3D(R(-1, 1), R(-1, 1), R(-1, 1)) * (0.08 * v);
+                _particles.Add(new Particle
+                {
+                    Kind = kind,
+                    Pos = new Vector3D(at.X, at.Y, at.Z) + dir * R(0, 0.01),
+                    Vel = dir * v * R(0.7, 1.0) + spread,
+                    Life = kind == ParticleKind.Water ? R(0.8, 1.4) : kind == ParticleKind.Fire ? R(0.06, 0.16) : R(0.25, 0.6),
+                    Size = kind == ParticleKind.Water ? R(0.003, 0.006) : R(0.008, 0.016),
+                    Seed = kind == ParticleKind.Smoke ? 0 : _rnd.NextDouble()
+                });
+            }
+
+            if (kind == ParticleKind.Fire) EmitSmoke(at + dir * 0.1, Math.Min(120, 40 * Math.Sqrt(massFlow * 1000)), dt, false);
+        }
+
         public void Burst(Point3D at, bool explosion)
         {
             if (!Shell.AppSettings.Current.Effects) return;
@@ -176,6 +209,11 @@ namespace RobotWin.Studio.Assembly3D
                     case ParticleKind.Fire:
                         p.Vel += new Vector3D(0, 0, 0.6 * dt);
                         break;
+                    case ParticleKind.Water:
+                        p.Vel += new Vector3D(0, 0, -9.81 * dt);
+                        p.Vel *= Math.Max(0, 1 - 0.4 * dt);
+                        if (p.Pos.Z < 0 && p.Vel.Z < 0) p.Age = p.Life;   // soaked into the floor
+                        break;
                 }
 
                 p.Pos += p.Vel * dt;
@@ -235,6 +273,15 @@ namespace RobotWin.Studio.Assembly3D
                         double r = p.Size * (0.6 + 1.2 * k) * px;
                         dc.PushOpacity(1 - k);
                         dc.DrawEllipse(FlashBrush, null, s, r, r);
+                        dc.Pop();
+                        break;
+                    }
+
+                    case ParticleKind.Water:
+                    {
+                        double r = p.Size * px;
+                        dc.PushOpacity(0.85 * (1 - k * k));
+                        dc.DrawEllipse(WaterBrush, null, s, r, r);
                         dc.Pop();
                         break;
                     }

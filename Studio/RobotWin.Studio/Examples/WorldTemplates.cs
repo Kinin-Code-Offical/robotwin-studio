@@ -49,7 +49,9 @@ namespace RobotWin.Studio.Examples
             new WorldTemplate("glider", "Planör: balsa gövde, karbon kuyruk borusu, Arduino Nano + 2 servo", "1 m açıklıklı RC planör gerçek yapısıyla: balsa kabinde 2S LiPo, Arduino Nano, irtifa ve yön servoları ve burun kurşunu; karbon kuyruk borusu boyunca itme çubukları; 6° dihedral Clark Y kanat; 233 g, ağırlık merkezi veterin %33'ünde. 40 m'den 7 m/s ile elden atılır, ~10:1 süzülür; çizim 3 s düz uçup yön dümeniyle hafifçe döner.", () => RobotTwin.CoreSim.Sandbox.WorldExamples.Glider(Lib)),   // [aero]
             new WorldTemplate("mecanum", "Mekanum tekerlekli araba (yana kayar)", "Dört TT motor ve A/B mekanum tekerlekler. Ön motorlar düz, arka motorlar ters bağlı: makaraların 45° itişi araba yana kaydırır.", Mecanum),
             new WorldTemplate("lights", "Işıklar: LED'ler ve lambalar (karanlık oda)", "Dirençli 5 mm LED'ler, RGB LED (kırmızı + mavi = mor), 3 W güç LED'i, fener ampulü ve 12 V LED şerit karanlık odayı aydınlatır.", Lights),
-            new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "ESP32 Bluepad32 çizimi eşli DualSense kumandayı okur, DRV8833 ile iki TT motoru sürer. ESP32 bilgisayara USB kablosuyla bağlı; kumanda gerçek (USB/Bluetooth) veya ekrandaki sanal kumanda olabilir.", Ps5Car),
+            new WorldTemplate("ps5-car", "Kumandalı araba (ESP32 + PS5 kumanda)", "Arabanın kendi kartı var: ESP32 ve DRV8833 vidalı klemensli taşıyıcı PCB'de, USB-C ile şarj edilen 2S 18650 paketle çalışır (bilgisayara bağlı değil). Motorlar gerçek bir kitteki gibi aynalı takılı, iki mil tek aks üzerinde. Kartı seçip 'Kartı düzenle' ile devresini, PCB'sini ve Bluepad32 kodunu açın. R2 gaz, L2 geri, sol çubuk direksiyon. Kumanda: bilgisayara USB ya da Bluetooth ile bağlı gerçek DualSense, yoksa ekrandaki sanal kumanda (klavye: W/S gaz, A/D direksiyon).", Ps5Car),
+            new WorldTemplate("water-rocket", "Su roketi: 2 L PET şişe, 0.6 L su, 4 bar", "Rampadaki şişe 0.5 s sonra bırakılır: basınçlı hava önce suyu 21.5 mm ağızdan Bernoulli hızıyla iter (~0.1 s, yüzlerce newton itki), sonra kalan hava püskürür. Kütle düşer, sürükleme ve üç kanatçığın kaldırma kuvveti roketi dik tutar. Suyu ya da basıncı değiştirin; 9 bar'ı aşan basınçta PET şişe patlar.", () => RobotTwin.CoreSim.Sandbox.WorldExamples.WaterRocket(Lib)),   // [gas]
+            new WorldTemplate("sugar-motor", "Katı yakıtlı motor test standı (KNSB)", "Alüminyum gövdede iki BATES şeker yakıt tanesi, 6 mm boğazlı genişleyen lüle. 0.1 s'de ateşlenir; yanma hızı basınca bağlı (r = a·pⁿ), basınç yanma yüzeyi ile lüle akışının dengesinden çıkar, itki ve yanma süresi buradan gelir. Boğazı küçültün: basınç yükselir, gövde patlar.", () => RobotTwin.CoreSim.Sandbox.WorldExamples.SugarMotorStand(Lib)),   // [gas]
             // [sense] Examples/SenseTemplates.cs
             new WorldTemplate("line-follower", "Çizgi izleyen robot (mat, solmuş, parlak bant)", "Arduino Uno + 5 kanallı TCRT5000 modülü 6 mm yükseklikte, DRV8833 ve iki TT motor. Pist mat bantta sorunsuz; solmuş bantta sensörler beyaz görür, parlak bant pencere ışığını sensöre yansıtır ve robot çizgiyi kaybeder.", SenseTemplates.LineFollower),
             new WorldTemplate("sensor-rover", "Sensör gezgini (kamera, LiDAR, GPS, IMU)", "Duvarlı odada daire çizen gezgin: OV2640 kamera kendi çözünürlüğüyle görür, 360° LiDAR taraması çizilir, GPS/IMU/pusula/enkoder okumaları Sensörler panelinde canlı.", SenseTemplates.SensorRover),
@@ -196,72 +198,15 @@ namespace RobotWin.Studio.Examples
                 : RobotTwin.CoreSim.Sandbox.WorldExamples.Car(Lib);
         }
 
-        /// <summary>[radio] ESP32 + DRV8833 + 2 TT motors with wheels on a chassis, a paired DualSense and a PC on USB.</summary>
+        /// <summary>
+        /// [radio] The gamepad car (CoreSim WorldExamples.GamepadCar): its controller board is a real design
+        /// (schematic, routed PCB, Bluepad32 firmware) running on the car's own battery, laid out for the
+        /// detailed TT motor model so each wheel sits on its shaft and both shafts share one axle.
+        /// </summary>
         private static WorldDocument Ps5Car()
         {
-            var w = new WorldDocument { Title = "Kumandalı araba" };
-            // [phys] Heights chosen so the 65 mm wheels stand on the floor (hub = shaft 9.4 mm above the
-            // motor base = wheel radius) and a ball caster carries the front: the car rests on three
-            // points instead of hovering 7 mm up and nosing onto its plate. Plate 120 mm wide so the
-            // wheels clear its edges.
-            const double deck = 0.0325 - 0.0094, plateZ = deck - 0.003;
-            var chassis = w.AddBody("plate", 0.20, 0.12, 0.003, new WorldPose { X = 0, Y = 0, Z = plateZ }, "AKRİLİK");
-            chassis.Name = "Şase";
-            chassis.Color = "#3E7CC8";
-            var esp = w.AddComponent(Lib, "esp32-devkit-v1", new WorldPose { X = 0.045, Y = 0, Z = deck });
-            esp.Name = "ESP32 (araba beyni)";
-            esp.Parameters["firmware"] = "builtin:esp32-gamepad-car.ino";
-            var drv = w.AddComponent(Lib, "drv8833", new WorldPose { X = -0.02, Y = 0, Z = deck });
-            var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = -0.07, Y = 0, Z = deck, Yaw = 90 });
-            // Motors under the rear half, shafts pointing outwards (+Y right, −Y left); wheels slide on 13 mm out.
-            var right = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = 0.04, Z = deck });
-            right.Name = "Sağ motor";
-            var left = w.AddComponent(Lib, "motor-tt", new WorldPose { X = -0.03, Y = -0.04, Z = deck, Yaw = 180 });
-            left.Name = "Sol motor";
-            var wheelR = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = right.Pose.X - 0.011, Y = right.Pose.Y + 0.0185 + 0.015, Z = right.Pose.Z + 0.0094 - 0.0325 }, "KAUÇUK");
-            var wheelL = w.AddBody("wheel", 0.065, 0.026, 0.026, new WorldPose { X = left.Pose.X + 0.011, Y = left.Pose.Y - 0.0185 - 0.015, Z = left.Pose.Z + 0.0094 - 0.0325, Yaw = 180 }, "KAUÇUK");
-            foreach (var part in new[] { esp, drv, bat, right, left })
-            {
-                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = part.Id, ObjectB = chassis.Id });
-            }
-
-            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheelR.Id, ObjectB = right.Id, PortB = "shaft" });
-            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = wheelL.Id, ObjectB = left.Id, PortB = "shaft" });
-            // [phys] Steel ball caster on a short post under the front of the plate.
-            const double ball = 0.016;
-            var caster = w.AddBody("sphere", ball, ball, ball, new WorldPose { X = 0.075, Z = 0 }, "ÇELİK");
-            caster.Name = "Sarhoş teker";
-            var post = w.AddBody("box", 0.012, 0.012, plateZ - ball * 0.8, new WorldPose { X = 0.075, Z = ball * 0.8 }, "PLA");
-            post.Name = "Teker ayağı";
-            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = post.Id, ObjectB = chassis.Id });
-            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = caster.Id, ObjectB = chassis.Id });
-
-            // Power: 4×AA → DRV8833 VM; common ground with the ESP32.
-            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = drv.Id, Pin = "VM" }, 22, "#E5484D");
-            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = drv.Id, Pin = "GND" }, 22, "#1F1F23");
-            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "GND1" }, new CableEnd { ObjectId = drv.Id, Pin = "GND" }, 26, "#1F1F23");
-            // Control: IO25/26 left motor, IO27/14 right motor (see esp32-gamepad-car.ino).
-            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO25" }, new CableEnd { ObjectId = drv.Id, Pin = "AIN1" }, 26, "#F2A33B");
-            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO26" }, new CableEnd { ObjectId = drv.Id, Pin = "AIN2" }, 26, "#F2D04B");
-            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO27" }, new CableEnd { ObjectId = drv.Id, Pin = "BIN1" }, 26, "#3CD064");
-            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO14" }, new CableEnd { ObjectId = drv.Id, Pin = "BIN2" }, 26, "#3E7CC8");
-            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "AOUT1" }, new CableEnd { ObjectId = left.Id, Pin = "A" }, 22, "#E5484D");
-            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "AOUT2" }, new CableEnd { ObjectId = left.Id, Pin = "B" }, 22, "#1F1F23");
-            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "BOUT1" }, new CableEnd { ObjectId = right.Id, Pin = "A" }, 22, "#E5484D");
-            w.Connect(new CableEnd { ObjectId = drv.Id, Pin = "BOUT2" }, new CableEnd { ObjectId = right.Id, Pin = "B" }, 22, "#1F1F23");
-
-            // The PC powers the ESP32 and shows its serial output over the USB cable.
-            var pc = w.AddComponent(Lib, "usb-pc", new WorldPose { X = 0.42, Y = 0.05, Z = 0, Yaw = 180 });
-            pc.Name = "Bilgisayar";
-            pc.Parameters["target"] = esp.Id;
-            pc.Parameters["plugged"] = "true";
-
-            // The controller lies on the table in front of the car, already bonded to the ESP32.
-            var pad = w.AddComponent(Lib, "dualsense", new WorldPose { X = 0.05, Y = -0.32, Z = 0, Yaw = 90 });
-            pad.Name = "DualSense";
-            pad.Parameters["pairedWith"] = esp.Id;
-            pad.Parameters["source"] = "otomatik";
-            return w;
+            var (pivot, _, height) = World.ObjectModels.Mount(Lib, "motor-tt");
+            return RobotTwin.CoreSim.Sandbox.WorldExamples.GamepadCar(Lib, height, pivot.X, pivot.Z, pivot.Y);
         }
 
         private static WorldDocument Sonar()

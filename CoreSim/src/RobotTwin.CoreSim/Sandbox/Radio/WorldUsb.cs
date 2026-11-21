@@ -50,7 +50,8 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
         /// </summary>
         public static Dictionary<string, string> Override(WorldDocument world, WorldObject o, string innerRefDes, PartDefinition def, Dictionary<string, string> parameters, PartLibrary library)
         {
-            if (def.Symbol != SymbolKind.Board || def.Parameters.All(p => p.Key != "usb")) return parameters;
+            // Boards take power and serial from the cable; [usbc] a USB-C battery charges from it.
+            if ((def.Symbol != SymbolKind.Board && def.Symbol != SymbolKind.Battery) || def.Parameters.All(p => p.Key != "usb")) return parameters;
             var host = HostFor(world, o.Id, innerRefDes);
             if (host == null) return parameters;
             if (o.Kind == WorldObjectKind.Board && !host.Parameters.ContainsKey("part"))
@@ -78,6 +79,13 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
                 var sw = circuit.Compiled.Device<Switch>(prog.RefDes + ".USBSW");
                 if (sw == null) continue;
                 sw.Closed = plugged;
+                any = true;
+            }
+
+            // [usbc] a USB-C battery's charging input
+            if (circuit.ComponentRef(objectId) is { } part && circuit.Compiled.Device<Switch>(part + ".USBSW") is { } charger)
+            {
+                charger.Closed = plugged;
                 any = true;
             }
 

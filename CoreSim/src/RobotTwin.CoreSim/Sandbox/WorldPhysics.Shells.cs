@@ -156,7 +156,8 @@ namespace RobotTwin.CoreSim.Sandbox
                 foreach (var it in _items.Values)
                 {
                     if (it == shell || it == lid || it.Body == null) continue;
-                    var c = ToShell(shell, it.Body.Position);
+                    var (centre, _, _) = Obb(it.Body);   // [hull] a model-shaped body's box is not centred on its mass centre
+                    var c = ToShell(shell, centre);
                     var e = ExtentIn(shell, it.Body);
                     if (Math.Abs(c.X) > ix || Math.Abs(c.Y) > iy || c.Z >= rim || c.Z < 0) continue;   // not inside (a wing or lid on top has its centre above the rim)
                     string name = NameOf(it.Object);

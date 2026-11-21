@@ -56,6 +56,9 @@ namespace RobotWin.Studio.World
         /// <summary>Servo horn / motor shaft geometry, rotated about <see cref="Port"/>'s axis while simulating.</summary>
         public Model3DGroup? Moving { get; set; }
 
+        /// <summary>The detailed model's own moving output (inside <see cref="Body"/>): a separate rotor in the physics.</summary>
+        public Model3DGroup? PortGroup { get; set; }
+
         /// <summary>[aero] Control surface hinge of a wing object (rotated by the live deflection) and its sign.</summary>
         public AxisAngleRotation3D? FlapRotation { get; set; }
 
@@ -323,6 +326,7 @@ namespace RobotWin.Studio.World
                     m.Port = new PortFrame(spin.Name, label, new Point3D(tip.X * Mm, tip.Y * Mm, tip.Z * Mm), axis);
                     m.PortSpin = spin.Rotation;
                     m.PortSign = sign;
+                    if (spin.Name == "horn" || spin.Name == "shaft") m.PortGroup = spin.Group;
                 }
 
                 foreach (var (pin, pos, _) in Models3D.ComponentModels.MapPins(def, p, inst.PadAnchors))

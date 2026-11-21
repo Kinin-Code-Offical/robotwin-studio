@@ -115,7 +115,7 @@
       var rel = rels.filter(function (r) { return !r.draft && !r.prerelease; })[0];
       if (!rel) return;
       var exes = rel.assets.filter(function (a) { return /^RobotWinStudio-Setup-.+\.exe$/i.test(a.name); });
-      // From 2.1 the full package has the plain name and the small one ends in -lite;
+      // From 1.1 the full package has the plain name and the small one ends in -lite;
       // older releases called the full one -tam and the small one plain.
       var lite = exes.filter(function (a) { return /-lite\.exe$/i.test(a.name); })[0];
       var full, small;

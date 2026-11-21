@@ -374,6 +374,14 @@ namespace RobotWin.Studio.Models3D
             if (padMinus != null) b.Anchor(padMinus, P(cx - sign * (len / 2 + 0.05), cy, cz), V(-sign, 0, 0));
         }
 
+        /// <summary>[usbc] A USB-C receptacle (8.9 × 3.2 mm shell) facing ±X, centred at <paramref name="at"/>.</summary>
+        private static void UsbCPort(PartBuilder b, Point3D at, int facing)
+        {
+            b[Mat.Nickel].RoundedBox(at.X, at.Y, at.Z - 1.6, 1.4, 8.9, 3.2, 1.5, 4);
+            b[Mat.Plastic(0x101012u, 0.2)].RoundedBox(at.X + facing * 0.66, at.Y, at.Z - 1.15, 0.12, 7.9, 2.3, 1.1, 4);
+            b[Mat.Plastic(0x2A2A2Eu, 0.3)].BoxZ(at.X + facing * 0.55, at.Y, at.Z - 0.35, 0.4, 6.6, 0.7);
+        }
+
         private static void Leads(PartBuilder b, Point3D from, Vector3D dir, double length, string padPlus, string padMinus, double r = 0.7, double gap = 2.0)
         {
             var side = Vector3D.CrossProduct(dir, V(0, 0, 1));
@@ -442,7 +450,10 @@ namespace RobotWin.Studio.Models3D
                 return;
             }
 
-            bool lipo = chem == "LithiumIon" && !model.Contains("18650");
+            // [usbc] lithium cells with a USB-C charging port: an 18650, a 2S 18650 pack, or AA-size 1.5 V cells.
+            bool usbc = model.Contains("USB-C");
+            bool aaFormat = model.Contains("AA") && !model.Contains("18650");
+            bool lipo = chem == "LithiumIon" && !model.Contains("18650") && !aaFormat;
             if (lipo)
             {
                 bool micro = cap < 1.0 && cells == 1;
@@ -482,14 +493,24 @@ namespace RobotWin.Studio.Models3D
             {
                 bool big = chem == "LiFePO4";
                 double dia = big ? 32.0 : 18.6, len = big ? 70.0 : 65.2;
-                string text = big ? "LiFePO4 32700\n3.2V 6000mAh" : "18650 Li-ion\n3.7V 3000mAh";
-                int n = Math.Max(1, big ? cells : 1);
+                string text = big ? "LiFePO4 32700\n3.2V 6000mAh" : usbc ? $"18650 Li-ion USB-C\n3.7V {cap * 1000:0}mAh" : "18650 Li-ion\n3.7V 3000mAh";
+                int n = Math.Max(1, big || model.Contains("18650") ? cells : 1);
                 for (int i = 0; i < n; i++)
                     Cell(b, 0, (i - (n - 1) / 2.0) * (dia + 0.2), dia, len, big ? 0x2F8F5Au : 0x2D6FB0u, 0xF0F0F0u, text, i == 0, n == 1 ? plus : null, n == 1 ? minus : null, double.NaN, i % 2 == 1);
                 if (n > 1)
                 {
                     b[Mat.Clear(0x2F6CF2u, 70, 0.6)].RoundedBox(0, 0, -0.3, len + 2.0, n * (dia + 0.2) + 1.0, dia + 0.6, dia / 2, 4);
                     Leads(b, P(len / 2 + 1, 0, dia / 2), V(1, 0, 0), 35, plus, minus, 1.0, 3.0);
+                    if (usbc)
+                    {
+                        // Charge/BMS board across the far end with its USB-C receptacle.
+                        b[Mat.Plastic(0x1E5A3Au, 0.3)].BoxZ(-len / 2 - 1.8, 0, 1.0, 1.6, n * (dia + 0.2) - 2.0, dia - 2.0);
+                        UsbCPort(b, P(-len / 2 - 2.6, 0, dia / 2), -1);
+                    }
+                }
+                else if (usbc)
+                {
+                    UsbCPort(b, P(len / 2 + 0.4, 0, dia / 2), 1);
                 }
 
                 b.Heat(P(0, 0, dia));
@@ -498,11 +519,13 @@ namespace RobotWin.Studio.Models3D
 
             // AA / AAA alkaline or NiMH: a loose cell or a holder with leads.
             bool nimh = chem == "NiMH";
-            uint wrapRgb = nimh ? 0x2F8F5Au : 0x2D3E8Cu;
-            string cellText = nimh ? "NiMH  AA\n1.2V 2000mAh" : "AA  1.5V\nALKALINE  LR6";
+            bool liAa = chem == "LithiumIon" && aaFormat;
+            uint wrapRgb = liAa ? 0x1C1C20u : nimh ? 0x2F8F5Au : 0x2D3E8Cu;
+            string cellText = liAa ? "Li-ion  1.5V\nUSB-C  2600mWh" : nimh ? "NiMH  AA\n1.2V 2000mAh" : "AA  1.5V\nALKALINE  LR6";
             if (cells == 1 && !model.Contains("×") && !model.Contains("X"))
             {
                 Cell(b, 0, 0, 14.5, 50.5, wrapRgb, 0xF2F2F2u, cellText, true, plus, minus);
+                if (liAa) UsbCPort(b, P(25.25 + 0.4, 0, 7.25), 1);
                 b.Heat(P(0, 0, 14.5));
                 return;
             }

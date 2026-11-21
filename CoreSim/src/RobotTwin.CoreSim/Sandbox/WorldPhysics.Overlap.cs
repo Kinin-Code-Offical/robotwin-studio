@@ -98,6 +98,21 @@ namespace RobotTwin.CoreSim.Sandbox
         private static (Vec3 C, Vec3[] Axes, Vec3 Half) Obb(SceneBody body)
         {
             var s = body.EffectiveShape!;
+            if (s.Kind == ShapeKind.ConvexHull && s.Vertices.Count >= 4)
+            {
+                // A part shaped by its model: the tight box around its hull in the body frame.
+                var lo = new Vec3(double.MaxValue, double.MaxValue, double.MaxValue);
+                var hi = new Vec3(double.MinValue, double.MinValue, double.MinValue);
+                foreach (var v in s.Vertices)
+                {
+                    lo = new Vec3(Math.Min(lo.X, v.X), Math.Min(lo.Y, v.Y), Math.Min(lo.Z, v.Z));
+                    hi = new Vec3(Math.Max(hi.X, v.X), Math.Max(hi.Y, v.Y), Math.Max(hi.Z, v.Z));
+                }
+
+                var bq = body.Orientation;
+                return (body.Position + bq.Rotate((lo + hi) * 0.5), new[] { bq.Rotate(Vec3.UnitX), bq.Rotate(Vec3.UnitY), bq.Rotate(Vec3.UnitZ) }, (hi - lo) * 0.5);
+            }
+
             Vec3 half = s.Kind switch
             {
                 ShapeKind.Box => s.HalfExtents,

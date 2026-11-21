@@ -64,7 +64,7 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 2. Çalıştırın ve sihirbazı izleyin.
 3. Kurulum varsayılan olarak yalnızca sizin kullanıcınız için `%LOCALAPPDATA%\Programs\RobotWin Studio` klasörüne yapılır; Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve dosya türü ilişkilendirmeleri eklenir. Kaldırmak için Windows *Uygulamalar* listesini veya kurulum klasöründeki `Uninstall.exe` dosyasını kullanın.
 
-Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçüktür ama **.NET 9 Masaüstü Çalışma Zamanı** ister; yoksa kurulum sihirbazı kurmayı önerir. (1.x sürümlerinde .NET dahil paketin adı `-tam.exe` idi.)
+Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçüktür ama **.NET 9 Masaüstü Çalışma Zamanı** ister; yoksa kurulum sihirbazı kurmayı önerir. (1.0.0 sürümünde .NET dahil paketin adı `-tam.exe` idi.)
 
 **Komut satırından kurulum seçenekleri:**
 
@@ -305,7 +305,7 @@ Screenshots are shown in the [Turkish section above](#ekran-görüntüleri).
 ### Download and install
 
 1. Download `RobotWinStudio-Setup-<version>.exe` (carries .NET, nothing else to install) or the smaller **lite** package `RobotWinStudio-Setup-<version>-lite.exe` from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest).
-2. Run it. The lite package needs the **.NET 9 Desktop Runtime**; its wizard offers to install it if missing. (In 1.x the package with .NET was named `-tam.exe`.)
+2. Run it. The lite package needs the **.NET 9 Desktop Runtime**; its wizard offers to install it if missing. (In 1.0.0 the package with .NET was named `-tam.exe`.)
 3. Default install is per user in `%LOCALAPPDATA%\Programs\RobotWin Studio`. Silent: `/S`; all users: `/S /ALLUSERS`; target folder: `/D=<dir>`; portable unpack: `/S /PORTABLE /D=<dir>`; also `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
 
 Optional compilers for your own firmware (bundled examples ship precompiled): `winget install ArduinoSA.CLI` then `arduino-cli core install arduino:avr` for AVR; Visual Studio 2022 / Build Tools with the **Desktop development with C++** workload for ESP32. Paths can be overridden in **Settings → Compilers** (*Ayarlar → Derleyiciler*).

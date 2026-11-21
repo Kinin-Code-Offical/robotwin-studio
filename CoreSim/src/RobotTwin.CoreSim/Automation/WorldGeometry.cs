@@ -92,6 +92,13 @@ namespace RobotTwin.CoreSim.Automation
                         Min = new Vec3(-o.SizeX / 2, -o.SizeX / 2, 0), Max = new Vec3(o.SizeX / 2, o.SizeX / 2, o.SizeX),
                         Shape = "sphere", MassKg = Math.Max(1e-4, Math.PI / 6 * o.SizeX * o.SizeX * o.SizeX * density)
                     };
+                case "wing" when o.Parameters.TryGetValue("symmetric", out var sym) && string.Equals(sym, "false", StringComparison.OrdinalIgnoreCase):
+                    // [gas] a single panel (fin) stands on its root: span along its z, thickness across y.
+                    return new WorldBodyGeometry
+                    {
+                        Min = new Vec3(-o.SizeX / 2, -o.SizeZ / 2, 0), Max = new Vec3(o.SizeX / 2, o.SizeZ / 2, o.SizeY),
+                        MassKg = Math.Max(1e-4, o.SizeX * o.SizeY * o.SizeZ * density)
+                    };
                 default:
                     return new WorldBodyGeometry
                     {
@@ -175,6 +182,9 @@ namespace RobotTwin.CoreSim.Automation
             if (id.Contains("bat"))
             {
                 if (id.Contains("4aa")) return Box(0.0575, 0.0616, 0.0155, 0.11);
+                if (id.Contains("2s-usbc")) return Box(0.072, 0.039, 0.019, 0.1);   // [usbc] 2×18650 pack with its charge board
+                if (id.Contains("18650")) return Box(0.0704, 0.0186, 0.0186, 0.047);   // lying cell (+ USB-C cap)
+                if (id.Contains("aa-usbc")) return Box(0.0513, 0.0145, 0.0145, 0.022);
                 if (id.Contains("2aa")) return Box(0.058, 0.031, 0.016, 0.055);
                 if (id.Contains("9v")) return Box(0.0264, 0.0176, 0.0464, 0.045);   // stands on its end, like the 3D model
                 if (id.Contains("1s")) return Box(0.045, 0.02, 0.008, 0.009);
@@ -198,7 +208,7 @@ namespace RobotTwin.CoreSim.Automation
                 if (id.Contains("uno")) return new WorldBodyGeometry { Min = new Vec3(-0.0064, -0.0533, -0.0029), Max = new Vec3(0.0686, 0, 0.0084), MassKg = 0.025 };
                 if (id.Contains("mini")) return Box(0.033, 0.018, 0.006, 0.004);
                 if (id.Contains("mega")) return Box(0.1016, 0.0533, 0.012, 0.037);
-                if (id.Contains("esp32")) return Box(0.052, 0.028, 0.009, 0.01);
+                if (id.Contains("esp32")) return new WorldBodyGeometry { Min = new Vec3(-0.0014, -0.0396, -0.0029), Max = new Vec3(0.0269, 0.0127, 0.0072), MassKg = 0.01 };   // DevKit V1, long side along Y
                 if (id.Contains("esp8266") || id.Contains("nodemcu")) return Box(0.049, 0.026, 0.009, 0.009);
                 if (id.Contains("pico")) return Box(0.051, 0.021, 0.004, 0.003);
                 return Box(0.0686, 0.0533, 0.012, 0.025);
@@ -239,7 +249,7 @@ namespace RobotTwin.CoreSim.Automation
             var copy = new WorldBodyGeometry
             {
                 Min = g.Min, Max = g.Max, MassKg = g.MassKg, Shape = g.Shape, PortName = g.PortName, PortPivot = g.PortPivot, PortAxis = g.PortAxis,
-                SensorOrigin = g.SensorOrigin, SensorAxis = g.SensorAxis
+                SensorOrigin = g.SensorOrigin, SensorAxis = g.SensorAxis, Hull = g.Hull
             };
             if (copy.Shape == "mesh")
             {
@@ -275,6 +285,13 @@ namespace RobotTwin.CoreSim.Automation
                     j["sensor_axis"] = J.VExact(g.SensorAxis);
                 }
 
+                if (g.Shape == "hull" && g.Hull != null)
+                {
+                    var hull = new JsonArray();
+                    foreach (var p in g.Hull) hull.Add(J.VExact(p));
+                    j["hull"] = hull;
+                }
+
                 objects[o.Id] = j;
             }
 
@@ -305,6 +322,16 @@ namespace RobotTwin.CoreSim.Automation
                         SensorOrigin = J.Vec(o, "sensor_origin"),
                         SensorAxis = J.Vec(o, "sensor_axis") ?? Vec3.UnitX
                     };
+                    if (o["hull"] is JsonArray hull)
+                    {
+                        g.Hull = new List<Vec3>(hull.Count);
+                        foreach (var p in hull)
+                        {
+                            if (p is JsonArray a && a.Count >= 3 && J.TryNumber(a[0], out double x) && J.TryNumber(a[1], out double y) && J.TryNumber(a[2], out double z))
+                                g.Hull.Add(new Vec3(x, y, z));
+                        }
+                    }
+
                     baked._bodies[kv.Key] = g;
                 }
             }

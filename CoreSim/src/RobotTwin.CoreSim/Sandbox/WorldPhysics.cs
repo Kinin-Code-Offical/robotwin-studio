@@ -15,10 +15,16 @@ namespace RobotTwin.CoreSim.Sandbox
         public Vec3 Max { get; set; }
         public double MassKg { get; set; } = 0.01;
 
-        /// <summary>"box", "sphere", "cylinder-x/y/z" (rolls about that local axis), or "mesh".</summary>
+        /// <summary>"box", "sphere", "cylinder-x/y/z" (rolls about that local axis), "hull" or "mesh".</summary>
         public string Shape { get; set; } = "box";
 
         public MeshModel? Mesh { get; set; }
+
+        /// <summary>
+        /// Shape "hull": points of the part's own 3D model (object frame, metres) whose convex hull is
+        /// the rigid body, so a round motor rolls and a tapered wing is tapered instead of a bounding box.
+        /// </summary>
+        public List<Vec3>? Hull { get; set; }
 
         /// <summary>Moving output (servo horn, motor shaft): name, pivot and axis in the object frame.</summary>
         public string? PortName { get; set; }
@@ -112,6 +118,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.BuildWings();   // [aero] lifting surfaces replace the generic drag the environment just gave every body (Sandbox/WorldPhysics.Wings.cs)
             p.ApplyLaunches(world);   // [aero] hand-launched aircraft
             p.BuildThermal(world);   // [thermal] part temperatures, softening, melting (Sandbox/WorldPhysics.Thermal.cs)
+            p.BuildGas(world);   // [gas] pressure vessels, propellant grains, nozzles, water (Sandbox/WorldPhysics.Gas.cs)
             return p;
         }
 
@@ -161,6 +168,10 @@ namespace RobotTwin.CoreSim.Sandbox
                     break;
                 case "mesh" when g.Mesh != null:
                     body = SceneBody.FromMesh(o.Id, g.Mesh, null, mass, material);
+                    it.Centre = body.ModelOffset;
+                    break;
+                case "hull" when HullBody(o.Id, g.Hull, mass, material) is { } hull:
+                    body = hull;
                     it.Centre = body.ModelOffset;
                     break;
                 default:
@@ -221,6 +232,26 @@ namespace RobotTwin.CoreSim.Sandbox
 
             _items[o.Id] = it;
             RegisterReady(o, it);   // [objs]
+        }
+
+        /// <summary>
+        /// Rigid body whose collision shape is the convex hull of <paramref name="points"/> (object frame),
+        /// mass spread uniformly through it; null when the points span no volume.
+        /// </summary>
+        public static SceneBody? HullBody(string id, IReadOnlyList<Vec3>? points, double mass, string material)
+        {
+            if (points == null || points.Count < 4) return null;
+            var hull = ConvexHull.Compute(points);
+            if (hull.IsDegenerate || hull.Vertices.Count < 4) return null;
+            try
+            {
+                // Round parts need enough contact points to roll smoothly rather than as a coarse polygon.
+                return SceneBody.FromMesh(id, hull.ToMesh(), null, mass, material, default, 64);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
 
         /// <summary>Parts joined into one assembly do not collide with each other (their shapes are approximate boxes).</summary>
@@ -286,6 +317,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 Sdk?.BeforeStep(Step, sim);   // [sdk]
                 ReleaseLaunches();   // [uav] hand launch after a hold
                 StepWings(Step);   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
+                StepGas(Step, sim);   // [gas] vessels: burn, flow, thrust (Sandbox/WorldPhysics.Gas.cs)
                 Scene.Step(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia

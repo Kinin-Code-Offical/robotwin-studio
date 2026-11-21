@@ -205,6 +205,10 @@ namespace RobotWin.Studio.Models3D
             yield return new Item(G, "4×AA NiMH", () => Part("battery", "bat-4nimh"), false);
             yield return new Item(G, "9 V", () => Part("battery", "bat-9v"), false);
             yield return new Item(G, "18650", () => Part("battery", "bat-18650"), false);
+            yield return new Item(G, "18650 USB-C", () => Part("battery", "bat-18650-usbc"), false);   // [usbc]
+            yield return new Item(G, "2S 18650 USB-C", () => Part("battery", "bat-2s-usbc"), false);
+            yield return new Item(G, "AA Li-ion USB-C", () => Part("battery", "bat-aa-usbc"), false);
+            yield return new Item(G, "4×AA Li-ion USB-C", () => Part("battery", "bat-4aa-usbc"), false);
             yield return new Item(G, "LiPo 2S 2200", () => Part("battery", "bat-2s-lipo"), false);
             yield return new Item(G, "LiPo 1S 300", () => Part("battery", "bat-1s-lipo-300"), false);
             yield return new Item(G, "CR2032", () => Part("battery", "bat-cr2032"), false);
