@@ -383,7 +383,7 @@ namespace RobotWin.Studio.Pages
 
         private const string MissingMarkdown =
             "# Kullanım kılavuzu\n\nKullanım kılavuzu bu kopyada bulunamadı (uygulama klasöründe `Docs\\kullanim` yok).\n\n" +
-            "Kılavuzu çevrimiçi okuyabilirsiniz: [GitHub'da kullanım kılavuzu](" + HelpLibrary.OnlineGuide + ")\n\n" +
+            "Kılavuzu çevrimiçi okuyabilirsiniz: [belge sitesinde kullanım kılavuzu](" + HelpLibrary.OnlineGuide + ")\n\n" +
             "Soldaki **Klavye kısayolları**, **Haberler**, **Güncellemeler** ve **Hakkında** bölümleri her zaman kullanılabilir.";
 
         private void ShowMarkdown(MarkdownDocument md, string? baseDir, string? highlight, string? anchor)
@@ -860,7 +860,7 @@ namespace RobotWin.Studio.Pages
                 var other = r.Assets.Where(a => a.IsInstaller && a != asset).ToList();
                 foreach (var o in other)
                 {
-                    var alt = ActionButton(o.IsSelfContained ? "Tam kurulumu indir…" : ".NET'siz kurulumu indir…", () => UpdateFlow.Download(Window.GetWindow(this), r, o),
+                    var alt = ActionButton(o.IsSelfContained ? ".NET dahil paketi indir…" : "Lite paketi indir (.NET 9 gerekir)…", () => UpdateFlow.Download(Window.GetWindow(this), r, o),
                         tip: o.Name + " · " + UpdateLogic.FormatSize(o.Size));
                     alt.Padding = new Thickness(12, 4, 12, 4);
                     alt.Style = (Style)FindResource("Btn.Ghost");

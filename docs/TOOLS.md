@@ -41,7 +41,7 @@ Pick the `--example`, `--simulate` and `--size` values that show the feature bes
 
 ## tools/build-installer.ps1
 
-Publishes the app, compiles the native setup stub with MSVC and packs everything into `builds\installer\RobotWinStudio-Setup-<version>.exe` (`-SelfContained` adds the `-tam` variant). See [BUILD_RELEASE.md](BUILD_RELEASE.md).
+Publishes the app, compiles the native setup stub with MSVC and packs everything into `builds\installer\RobotWinStudio-Setup-<version>-lite.exe` (framework-dependent) or, with `-SelfContained`, the full `RobotWinStudio-Setup-<version>.exe`. See [BUILD_RELEASE.md](BUILD_RELEASE.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.0.0

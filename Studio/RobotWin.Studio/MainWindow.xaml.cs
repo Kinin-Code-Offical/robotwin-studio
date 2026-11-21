@@ -38,7 +38,6 @@ namespace RobotWin.Studio
         private readonly WorldPage _world;
         private readonly SchematicPage _schematic;
         private readonly PcbPage _pcb;
-        private readonly AssemblyPage _assembly;
         private readonly ModelPage _model;
         private readonly CodePage _code;
         private readonly LibraryPage _library;
@@ -103,7 +102,6 @@ namespace RobotWin.Studio
             _world = new WorldPage(this);
             _schematic = new SchematicPage();
             _pcb = new PcbPage();
-            _assembly = new AssemblyPage();
             _model = new ModelPage(this);
             _code = new CodePage();
             _library = new LibraryPage(this);
@@ -112,7 +110,6 @@ namespace RobotWin.Studio
             _pages["world"] = _world;
             _pages["schematic"] = _schematic;
             _pages["pcb"] = _pcb;
-            _pages["assembly"] = _assembly;
             _pages["model"] = _model;
             _pages["code"] = _code;
             _pages["library"] = _library;
@@ -551,7 +548,6 @@ namespace RobotWin.Studio
             switch (page)
             {
                 case "pcb": _pcb.OnShown(); break;
-                case "assembly": _assembly.OnShown(); break;
                 case "code": _code.OnShown(); break;
                 case "home": _home.OnShown(); break;
                 case "world": _world.OnShown(); break;
@@ -676,10 +672,6 @@ namespace RobotWin.Studio
             if (page == "code") _code.SnapshotBuildAndRun(fault);
             if (page == "world") _world.PrepareSnapshot(fault, simulate);
             if (page == "help") _help?.PrepareSnapshot(fault);
-            if (page == "assembly" && simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
-            {
-                _assembly.PrepareSnapshot(secs, fault);
-            }
 
             if (page == "schematic" && simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds))
             {

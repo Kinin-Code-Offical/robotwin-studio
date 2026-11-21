@@ -1,5 +1,7 @@
-﻿# Builds RobotWinStudio-Setup-<version>.exe:
-#   1. publishes the app (framework-dependent, win-x64; the setup offers .NET 9 if it is missing)
+﻿# Builds the installers:
+#   RobotWinStudio-Setup-<version>.exe       full package, carries .NET (-SelfContained)
+#   RobotWinStudio-Setup-<version>-lite.exe  small package, needs the .NET 9 Desktop Runtime (the setup offers it)
+#   1. publishes the app (win-x64; self-contained or framework-dependent)
 #   2. compiles the native setup stub (Installer/setup.cpp) with MSVC
 #   3. packs the published files into the stub (LZMS, Windows Compression API)
 # Usage:  powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 [-Version 1.0.0] [-SelfContained]
@@ -41,8 +43,8 @@ cmd /c $cmd | Out-Host
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $stub)) { throw "setup.cpp derlenemedi" }
 
 Write-Host "3/3 Paketleniyor…"
-# The self-contained build carries .NET itself ("tam" = complete, no runtime needed on the PC).
-$suffix = if ($SelfContained) { "-tam" } else { "" }
+# The full package carries .NET itself and keeps the plain name; the small one is "-lite".
+$suffix = if ($SelfContained) { "" } else { "-lite" }
 $setup = Join-Path $out "RobotWinStudio-Setup-$Version$suffix.exe"
 $p = Start-Process -FilePath $stub -ArgumentList "--pack", "`"$publish`"", "`"$setup`"" -Wait -PassThru -NoNewWindow
 if ($p.ExitCode -ne 0 -or -not (Test-Path $setup)) { throw "Paketleme başarısız ($($p.ExitCode))" }

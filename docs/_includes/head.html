@@ -1,40 +1,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#111113">
+<meta name="color-scheme" content="light dark">
 {% seo %}
 {%- if page.alt_url %}
 <link rel="alternate" hreflang="{{ lang }}" href="{{ page.url | absolute_url }}">
-{%- if lang == "tr" %}
-<link rel="alternate" hreflang="en" href="{{ page.alt_url | absolute_url }}">
-<link rel="alternate" hreflang="x-default" href="{{ page.alt_url | absolute_url }}">
-{%- else %}
-<link rel="alternate" hreflang="tr" href="{{ page.alt_url | absolute_url }}">
-<link rel="alternate" hreflang="x-default" href="{{ page.url | absolute_url }}">
-{%- endif %}
-{%- endif %}
-{%- if page.url == "/" %}
-<script>
-  /* A visitor who chose Türkçe before lands on the Turkish home page. */
-  try { if (localStorage.getItem('rw.lang') === 'tr' && !location.hash) location.replace({{ '/tr/' | relative_url | jsonify }}); } catch (e) {}
-</script>
+<link rel="alternate" hreflang="{% if lang == 'tr' %}en{% else %}tr{% endif %}" href="{{ page.alt_url | absolute_url }}">
 {%- endif %}
 <link rel="icon" href="{{ '/assets/img/favicon.ico' | relative_url }}" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ '/assets/img/robotwin-logo-32.png' | relative_url }}">
-<link rel="icon" type="image/png" sizes="64x64" href="{{ '/assets/img/robotwin-logo-64.png' | relative_url }}">
 <link rel="apple-touch-icon" href="{{ '/assets/img/apple-touch-icon.png' | relative_url }}">
 <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
 <script>
   window.RW = {
     lang: {{ lang | jsonify }},
-    base: {{ site.baseurl | default: "" | jsonify }},
-    path: {{ page.path | jsonify }},
     searchUrl: {{ '/search.json' | relative_url | jsonify }},
-    newsUrl: {{ '/news.json' | relative_url | jsonify }},
-    newsPage: {{ news_url | jsonify }},
     api: {{ site.repo_api | jsonify }},
     releases: {{ site.releases_url | jsonify }},
-    repo: {{ site.github_url | jsonify }},
     t: {{ t | jsonify }}
   };
 </script>

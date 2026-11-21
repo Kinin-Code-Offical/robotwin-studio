@@ -122,6 +122,21 @@ public class ReleaseParsingTests
     }
 
     [Fact]
+    public void NewNamingThePlainInstallerIsTheFullOneAndLiteIsTheSmallOne()
+    {
+        const string json = """
+        { "tag_name": "v2.1.0", "published_at": "2026-11-21T09:00:00Z",
+          "assets": [ { "name": "RobotWinStudio-Setup-2.1.0.exe", "size": 80000000, "browser_download_url": "https://example.invalid/full" },
+                      { "name": "RobotWinStudio-Setup-2.1.0-lite.exe", "size": 2000000, "browser_download_url": "https://example.invalid/lite" } ] }
+        """;
+        var r = Assert.Single(ReleaseParser.Parse(json));
+        Assert.Equal("RobotWinStudio-Setup-2.1.0.exe", UpdateLogic.SelectAsset(r, selfContained: true, runtimeAvailable: false)!.Name);
+        Assert.Equal("RobotWinStudio-Setup-2.1.0-lite.exe", UpdateLogic.SelectAsset(r, selfContained: false, runtimeAvailable: true)!.Name);
+        Assert.True(r.Assets.Single(a => !a.IsLite).IsSelfContained);
+        Assert.False(r.Assets.Single(a => a.IsLite).IsSelfContained);
+    }
+
+    [Fact]
     public void AcceptsASingleReleaseObject() =>
         Assert.Single(ReleaseParser.Parse("""{ "tag_name": "v2.0.1", "body": "a\r\nb" }"""));
 }

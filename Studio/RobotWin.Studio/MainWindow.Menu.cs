@@ -291,6 +291,7 @@ namespace RobotWin.Studio
         private void HelpMenu(MenuItem m)
         {
             m.Items.Add(Item("_Yardım ve belgeler", "F1", () => ShowHelp(null)));
+            m.Items.Add(Item("Çevrimiçi belgeler (web sitesi)", null, () => OpenUrl(Help.HelpLibrary.DocsSite)));
             m.Items.Add(Item("Klavye kısayolları", null, () => ShowHelp("shortcuts")));
             m.Items.Add(Item("Komut paleti", "Ctrl+K", OpenPalette));
             m.Items.Add(Item("Haberler", null, () => ShowHelp("news")));

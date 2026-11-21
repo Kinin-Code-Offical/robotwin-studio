@@ -41,5 +41,5 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             builds/installer/RobotWinStudio-Setup-${{ env.VERSION }}.exe
-            builds/installer/RobotWinStudio-Setup-${{ env.VERSION }}-tam.exe
+            builds/installer/RobotWinStudio-Setup-${{ env.VERSION }}-lite.exe
           fail_on_unmatched_files: true

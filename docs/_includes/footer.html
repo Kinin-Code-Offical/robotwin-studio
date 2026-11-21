@@ -1,60 +1,10 @@
-{%- capture faq_url -%}{% include url.html path="kullanim/10-sss.md" %}{%- endcapture -%}
-<footer class="site-footer">
-  <div class="ftr-inner">
-    <div class="ftr-brand">
-      <a class="brand" href="{{ home_url }}"><img src="{{ '/assets/img/robotwin-logo-64.png' | relative_url }}" width="28" height="28" alt=""><span>RobotWin Studio</span></a>
-      <p>{% if lang == "tr" %}Devre, PCB, kod, 3D modelleme ve gerçek fizikli açık dünya, tek bir Windows uygulamasında.{% else %}Circuit, PCB, firmware, 3D modelling and an open world with real physics, in one Windows app.{% endif %}</p>
-      <p>{{ t.license }}</p>
-    </div>
-    <div class="ftr-cols">
-      <div>
-        <h2>{{ t.footer_product }}</h2>
-        <ul>
-          <li><a href="{{ home_url }}#download">{{ t.download }}</a></li>
-          <li><a href="{{ site.releases_url }}">{{ t.releases }}</a></li>
-          <li><a href="{{ news_url }}">{{ t.news }}</a></li>
-          <li><a href="{{ home_url }}#features">{{ t.features }}</a></li>
-        </ul>
-      </div>
-      <div>
-        <h2>{{ t.footer_help }}</h2>
-        <ul>
-          <li><a href="{{ guide_url }}">{{ t.guide_long }}</a></li>
-          <li><a href="{{ faq_url }}">{% if lang == "tr" %}Sık sorulan sorular{% else %}FAQ (Turkish){% endif %}</a></li>
-          <li><a href="{{ docs_url }}">{{ t.docs }}</a></li>
-          <li><a href="{{ site.github_url }}/issues">{{ t.issues }}</a></li>
-        </ul>
-      </div>
-      <div>
-        <h2>{{ t.footer_project }}</h2>
-        <ul>
-          <li><a href="{{ site.github_url }}">{{ t.source }}</a></li>
-          <li><a href="{{ site.github_url }}/blob/main/CHANGELOG.md">{{ t.changelog }}</a></li>
-          <li><a href="{{ site.github_url }}/blob/main/LICENSE">MIT</a></li>
-          <li><a href="{{ site.github_url }}/blob/main/CONTRIBUTING.md">{% if lang == "tr" %}Katkıda bulunma{% else %}Contributing{% endif %}</a></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="ftr-bottom">
-    <span>© {{ site.time | date: "%Y" }} {% if lang == "tr" %}RobotWin Studio katkıda bulunanlar{% else %}RobotWin Studio contributors{% endif %}</span>
-    <span>Windows 10 / 11 · .NET 9 · WPF</span>
+<footer class="foot">
+  <div class="foot-inner">
+    <span>RobotWin Studio · {{ t.license }}</span>
+    <span class="foot-links">
+      <a href="{{ site.releases_url }}">{{ t.releases }}</a>
+      <a href="{{ site.github_url }}/issues">{{ t.issues }}</a>
+      <a href="{{ site.github_url }}">{{ t.source }}</a>
+    </span>
   </div>
 </footer>
-
-<dialog class="search-dialog" id="search-dialog" aria-label="{{ t.search }}">
-  <div class="search-box">
-    {% include icon.html name="search" %}
-    <input type="search" id="search-input" placeholder="{{ t.search_placeholder }}" autocomplete="off" spellcheck="false" aria-controls="search-results" aria-label="{{ t.search }}">
-    <button class="icon-btn" type="button" data-search-close aria-label="{{ t.close }}">{% include icon.html name="close" %}</button>
-  </div>
-  <div class="search-results" id="search-results" role="listbox"><p class="search-msg">{{ t.search_hint }}</p></div>
-  <div class="search-foot"><span><kbd>↑</kbd> <kbd>↓</kbd></span><span><kbd>Enter</kbd></span><span><kbd>Esc</kbd> {{ t.close }}</span></div>
-</dialog>
-
-<dialog class="lightbox" id="lightbox" aria-label="{% if lang == 'tr' %}Görsel{% else %}Image{% endif %}">
-  <button class="lb-close" type="button" data-lb-close aria-label="{{ t.close }}">{% include icon.html name="close" %}</button>
-  <button class="lb-nav lb-prev" type="button" data-lb-prev aria-label="{{ t.prev }}">{% include icon.html name="left" %}</button>
-  <button class="lb-nav lb-next" type="button" data-lb-next aria-label="{{ t.next }}">{% include icon.html name="right" %}</button>
-  <figure><img alt=""><figcaption></figcaption></figure>
-</dialog>

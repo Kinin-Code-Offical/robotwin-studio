@@ -1,25 +1,24 @@
-<header class="site-header">
-  <div class="hdr-inner">
-    <button class="icon-btn nav-toggle" type="button" aria-label="{{ t.menu }}" aria-expanded="false" data-nav-toggle>{% include icon.html name="menu" %}</button>
-    <a class="brand" href="{{ home_url }}"><img src="{{ '/assets/img/robotwin-logo-64.png' | relative_url }}" width="28" height="28" alt=""><span>RobotWin Studio</span></a>
-    <nav class="hdr-nav" aria-label="{{ t.menu }}">
-      {%- if page.layout == "home" %}
-      <a href="#features">{{ t.features }}</a>
-      {%- else %}
-      <a href="{{ home_url }}">{{ t.home }}</a>
-      {%- endif %}
-      <a href="{{ guide_url }}"{% if page.layout == "default" and sec == "guide" %} class="active"{% endif %}>{{ t.guide }}</a>
-      <a href="{{ docs_url }}"{% if page.layout == "default" and sec != "guide" %} class="active"{% endif %}>{{ t.docs }}</a>
-      <a href="{{ news_url }}"{% if page.layout == "news" %} aria-current="page"{% endif %}>{{ t.news }}</a>
+<header class="top">
+  <div class="top-inner">
+    <button class="menu-btn" type="button" aria-label="{{ t.menu }}" aria-expanded="false" data-menu>
+      <span></span><span></span><span></span>
+    </button>
+    <a class="brand" href="{{ home_url }}">
+      <img src="{{ '/assets/img/robotwin-logo-64.png' | relative_url }}" alt="" width="24" height="24">
+      <span>RobotWin Studio</span>
+    </a>
+    <nav class="top-nav" aria-label="{{ t.menu }}">
+      <a href="{{ guide_url }}"{% if page.path contains 'kullanim/' %} aria-current="page"{% endif %}>{{ t.guide }}</a>
+      <a href="{{ docs_url }}"{% if page.layout == 'default' and page.path contains 'kullanim/' %}{% elsif page.layout == 'default' %} aria-current="page"{% endif %}>{{ t.docs }}</a>
+      <a href="{{ home_url }}#download">{{ t.download }}</a>
+      <a href="{{ site.github_url }}">GitHub</a>
     </nav>
-    <div class="hdr-actions">
-      <button class="search-btn" type="button" data-search-open aria-label="{{ t.search }}">{% include icon.html name="search" %}<span>{{ t.search }}</span><kbd>Ctrl K</kbd></button>
-      {%- if page.alt_url %}
-      {%- if lang == "tr" %}{% assign alt_lang = "en" %}{% else %}{% assign alt_lang = "tr" %}{% endif %}
-      <a class="lang-link" href="{{ page.alt_url | relative_url }}" hreflang="{{ alt_lang }}" lang="{{ alt_lang }}" title="{{ t.other_lang }}" data-lang-switch="{{ alt_lang }}">{{ t.other_lang_short }}</a>
-      {%- endif %}
-      <a class="icon-btn" href="{{ site.github_url }}" aria-label="GitHub">{% include icon.html name="github" %}</a>
-      <a class="btn btn-primary btn-sm hdr-dl" href="{% if page.layout == 'home' %}#download{% else %}{{ home_url }}#download{% endif %}">{{ t.download }}</a>
+    <div class="top-tools">
+      <div class="search">
+        <input type="search" placeholder="{{ t.search_placeholder }}" aria-label="{{ t.search }}" data-search autocomplete="off">
+        <ul class="search-results" data-results hidden></ul>
+      </div>
+      <a class="lang" href="{% if page.alt_url %}{{ page.alt_url | relative_url }}{% else %}{{ other_url }}{% endif %}" lang="{% if lang == 'tr' %}en{% else %}tr{% endif %}">{{ t.other_lang }}</a>
     </div>
   </div>
 </header>

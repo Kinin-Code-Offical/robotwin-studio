@@ -1,6 +1,6 @@
 # Windows setup
 
-How to set up a Windows machine to build, run and test RobotWin Studio from source. To just *use* the app, install it from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases) instead (see the [README](../README.md#indirme-ve-kurulum)).
+How to set up a Windows machine to build, run and test RobotWin Studio from source. To just *use* the app, install it from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases) instead (see the [README](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/README.md#indirme-ve-kurulum)).
 
 ## Requirements
 

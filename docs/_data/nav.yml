@@ -51,5 +51,7 @@ docs:
     title: Troubleshooting
   - path: API.md
     title: Automation API
+  - path: ACCESSIBILITY.md
+    title: Accessibility
   - path: archive/README.md
     title: Archive (1.x)

@@ -1,6 +1,0 @@
-{%- assign D = site.data.landing[lang].download -%}
-<div class="dl" data-dl data-s-full="{{ D.full }}" data-s-small="{{ D.small }}" data-s-fallback="{{ D.fallback }}" data-s-version="{{ D.version }}">
-  <a class="btn btn-primary btn-lg" href="{{ site.releases_url }}" data-dl-main>{% include icon.html name="windows" %}<span>{{ D.label }}</span></a>
-  <p class="dl-meta" data-dl-meta aria-live="polite"><noscript><a href="{{ site.releases_url }}">{{ D.fallback }}</a></noscript></p>
-  <a class="dl-alt" href="{{ site.releases_url }}" data-dl-small hidden>{{ D.small }}</a>
-</div>

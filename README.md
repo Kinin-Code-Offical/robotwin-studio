@@ -5,13 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Kinin-Code-Offical/robotwin-studio?label=release)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest)
 
-**Türkçe** · [English](#english)
+**Türkçe** · [English](#english) · **Belgeler / Docs: [kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)**
 
 ![RobotWin Studio açılış ekranı](docs/images/splash.png)
 
 **RobotWin Studio**, robot ve elektronik projelerini baştan sona tek bir Windows uygulamasında yapmanızı sağlar: devreyi çizin, PCB'sini çıkarın, kodunu yazın, şasesini modelleyin, sonra her şeyi gerçek fizikli bir açık dünyaya koyup kablolayın ve birlikte çalıştırın. Arduino (ATmega328P) kodu gerçek derlenmiş HEX olarak emüle edilir, ESP32 kodu devreyle eş zamanlı (co-simulation) çalışır; motorlar, servolar, sensörler, kablolar ve parçalar birbirini gerçekten etkiler.
 
-> **Kılavuz:** Adım adım, ekran görüntülü Türkçe kullanım kılavuzu için **[docs/kullanim](docs/kullanim/README.md)** klasörüne bakın.
+> **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
 ![Başlangıç sayfası](docs/images/home.png)
 
@@ -60,11 +60,11 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 
 ## İndirme ve kurulum
 
-1. [Sürümler (Releases)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases) sayfasından en son `RobotWinStudio-Setup-<sürüm>-tam.exe` (.NET dahil, en kolayı) ya da daha küçük `RobotWinStudio-Setup-<sürüm>.exe` dosyasını indirin (örneğin `RobotWinStudio-Setup-1.0.0-tam.exe`).
-2. Çalıştırın ve sihirbazı izleyin. Uygulama **.NET 9 Masaüstü Çalışma Zamanı** (Desktop Runtime) ister; bilgisayarda yoksa sihirbaz kurmayı önerir.
+1. [Sürümler (Releases)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) sayfasından `RobotWinStudio-Setup-<sürüm>.exe` (.NET dahil, en kolayı) ya da daha küçük **lite** paketi `RobotWinStudio-Setup-<sürüm>-lite.exe` dosyasını indirin.
+2. Çalıştırın ve sihirbazı izleyin.
 3. Kurulum varsayılan olarak yalnızca sizin kullanıcınız için `%LOCALAPPDATA%\Programs\RobotWin Studio` klasörüne yapılır; Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve dosya türü ilişkilendirmeleri eklenir. Kaldırmak için Windows *Uygulamalar* listesini veya kurulum klasöründeki `Uninstall.exe` dosyasını kullanın.
 
-Sürüm iş akışı ayrıca .NET'i içinde taşıyan, çalışma zamanı gerektirmeyen `RobotWinStudio-Setup-<sürüm>-tam.exe` paketini de üretir.
+Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçüktür ama **.NET 9 Masaüstü Çalışma Zamanı** ister; yoksa kurulum sihirbazı kurmayı önerir. (1.x sürümlerinde .NET dahil paketin adı `-tam.exe` idi.)
 
 **Komut satırından kurulum seçenekleri:**
 
@@ -132,9 +132,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 
 ### Montaj
 
-- Devreden otomatik montaj: iki motorlu gezgin (rover) veya dört motorlu X quadcopter; sensörler (TCRT5000, IR, HC-SR04) otomatik eklenir.
-- Arenalar (oval, sekiz, engeller, rampalar), kameralar (takip, üstten, araç üstü, serbest), drone kontrolü (Space, W/S, A/D, oklar).
-- Arıza deneyleri: pil kısa devresi, motor milini sıkıştırma, pervane kırma; simülasyon kaydı (`.rwsim`).
+- Devrenin gerçek montajı: PCB'ye lehimli parçalar kartın üzerinde kalır; motor, servo, pil, sensör ve kontrol kartı modülleri ayrı gerçek 3D parçalar olarak dünyaya gelir ve devredeki ağlara göre pin-pin kablolanır. Araç şablonu yok: şaseyi, tekerleri, eklemleri ve kabukları dünya araçlarıyla kurarsınız, her şey gerçek fizikle çalışır.
 
 ### Dünya
 
@@ -272,7 +270,7 @@ Aşağıdakiler üzerinde çalışılıyor; **henüz ana dala alınmadı** ve ya
 ## Katkı, güvenlik, belgeler
 
 - [Kullanım kılavuzu (Türkçe)](docs/kullanim/README.md) · [Geliştirici belgeleri](docs/README.md) · [Sürüm notları](CHANGELOG.md)
-- [Katkıda bulunma](CONTRIBUTING.md) · [Güvenlik](SECURITY.md) · [Davranış kuralları](CODE_OF_CONDUCT.md) · [Erişilebilirlik](ACCESSIBILITY.md) · [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md)
+- [Katkıda bulunma](CONTRIBUTING.md) · [Güvenlik](SECURITY.md) · [Davranış kuralları](CODE_OF_CONDUCT.md) · [Erişilebilirlik](docs/ACCESSIBILITY.md) · [Üçüncü taraf bildirimleri](THIRD_PARTY_NOTICES.md)
 - Sorun bildirmek için: [GitHub Issues](https://github.com/Kinin-Code-Offical/robotwin-studio/issues)
 
 ## Lisans
@@ -285,7 +283,7 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 **RobotWin Studio** is a Windows desktop app for building robot and electronics projects end to end: draw the circuit, lay out the PCB, write the firmware, model the chassis, then drop everything into an open world with real physics, wire it up and run it all together. Arduino (ATmega328P) firmware runs as real compiled HEX on an emulated MCU, ESP32 sketches run in co-simulation with the circuit, and motors, servos, sensors, cables and parts genuinely affect each other. The user interface is in Turkish.
 
-The step-by-step user guide (Turkish, with screenshots) lives in [docs/kullanim](docs/kullanim/README.md). Developer documentation: [docs/README.md](docs/README.md).
+Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (Turkish, with screenshots) and the developer docs. In the app: *Yardım → Çevrimiçi belgeler*.
 
 ### What's inside
 
@@ -306,8 +304,8 @@ Screenshots are shown in the [Turkish section above](#ekran-görüntüleri).
 
 ### Download and install
 
-1. Download `RobotWinStudio-Setup-<version>.exe` from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases) (e.g. `RobotWinStudio-Setup-1.0.0.exe`).
-2. Run it. The app needs the **.NET 9 Desktop Runtime**; the wizard offers to install it if missing. The release workflow also builds a self-contained `RobotWinStudio-Setup-<version>-tam.exe` that needs no runtime.
+1. Download `RobotWinStudio-Setup-<version>.exe` (carries .NET, nothing else to install) or the smaller **lite** package `RobotWinStudio-Setup-<version>-lite.exe` from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest).
+2. Run it. The lite package needs the **.NET 9 Desktop Runtime**; its wizard offers to install it if missing. (In 1.x the package with .NET was named `-tam.exe`.)
 3. Default install is per user in `%LOCALAPPDATA%\Programs\RobotWin Studio`. Silent: `/S`; all users: `/S /ALLUSERS`; target folder: `/D=<dir>`; portable unpack: `/S /PORTABLE /D=<dir>`; also `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
 
 Optional compilers for your own firmware (bundled examples ship precompiled): `winget install ArduinoSA.CLI` then `arduino-cli core install arduino:avr` for AVR; Visual Studio 2022 / Build Tools with the **Desktop development with C++** workload for ESP32. Paths can be overridden in **Settings → Compilers** (*Ayarlar → Derleyiciler*).
@@ -375,4 +373,4 @@ Being worked on, **not merged yet** and not in any release:
 
 ### License
 
-MIT. See [LICENSE](LICENSE). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Accessibility: [ACCESSIBILITY.md](ACCESSIBILITY.md) · Changes: [CHANGELOG.md](CHANGELOG.md).
+MIT. See [LICENSE](LICENSE). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Accessibility: [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) · Changes: [CHANGELOG.md](CHANGELOG.md).

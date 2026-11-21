@@ -108,14 +108,32 @@ namespace RobotWin.Studio.Updates
         /// <summary>SHA-256 reported by GitHub for the uploaded file (hex, lower case), when available.</summary>
         public string? Sha256 { get; set; }
 
-        /// <summary>The self-contained installer ("-tam": carries .NET, no runtime needed).</summary>
-        public bool IsSelfContained => Name.EndsWith("-tam.exe", StringComparison.OrdinalIgnoreCase);
+        /// <summary>
+        /// The self-contained installer (carries .NET, no runtime needed). Releases from 2.1 on name it
+        /// plainly and the small one "-lite"; older ones called the full one "-tam". Set by
+        /// <see cref="ReleaseInfo.ClassifyInstallers"/> because the plain name means either, by release.
+        /// </summary>
+        public bool IsSelfContained { get; set; }
+
+        /// <summary>The small installer that needs the .NET 9 Desktop Runtime (2.1 and later).</summary>
+        public bool IsLite => Name.EndsWith("-lite.exe", StringComparison.OrdinalIgnoreCase);
 
         public bool IsInstaller => Name.StartsWith("RobotWinStudio-Setup-", StringComparison.OrdinalIgnoreCase) && Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
     }
 
     public sealed class ReleaseInfo
     {
+        /// <summary>
+        /// Which installer carries .NET: with a "-lite" asset (2.1 and later) the plain one is the full
+        /// package; without one (older releases) only "-tam" is.
+        /// </summary>
+        public void ClassifyInstallers()
+        {
+            bool newNaming = Assets.Any(a => a.IsInstaller && a.IsLite);
+            foreach (var a in Assets)
+                a.IsSelfContained = a.IsInstaller && (newNaming ? !a.IsLite : a.Name.EndsWith("-tam.exe", StringComparison.OrdinalIgnoreCase));
+        }
+
         public string Tag { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public SemVersion? Version { get; set; }
@@ -193,6 +211,7 @@ namespace RobotWin.Studio.Updates
                 }
             }
 
+            r.ClassifyInstallers();
             return r;
         }
 
@@ -310,6 +329,7 @@ namespace RobotWin.Studio.Updates
         /// </summary>
         public static ReleaseAsset? SelectAsset(ReleaseInfo release, bool selfContained, bool runtimeAvailable)
         {
+            release.ClassifyInstallers();   // whichever naming scheme the release uses
             var installers = release.Assets.Where(a => a.IsInstaller).ToList();
             var full = installers.FirstOrDefault(a => a.IsSelfContained);
             var light = installers.FirstOrDefault(a => !a.IsSelfContained);

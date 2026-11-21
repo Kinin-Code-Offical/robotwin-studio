@@ -256,8 +256,8 @@ Arming in altitude mode centres the throttle (0.5) and holds the current height 
 
 ### Python, ROS 2, rosbridge
 
-* Python client, Gymnasium env, vector envs, imitation learning: [`python/README.md`](../python/README.md).
-* ROS 2 node, launch file, URDF export: [`ros2/robotwin_bridge/README.md`](../ros2/robotwin_bridge/README.md).
+* Python client, Gymnasium env, vector envs, imitation learning: [`python/README.md`](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/python/README.md).
+* ROS 2 node, launch file, URDF export: [`ros2/robotwin_bridge/README.md`](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/ros2/robotwin_bridge/README.md).
 * No-ROS WebSocket (rosbridge v2 subset, for roslibjs / web dashboards): `python -m robotwin.rosbridge --example car --port 9090`.
 
 ### Fidelity notes (what is not identical to the app)

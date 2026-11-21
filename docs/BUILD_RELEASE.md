@@ -16,8 +16,10 @@ Output in `builds\installer\`:
 
 | File | Contents |
 | --- | --- |
-| `RobotWinStudio-Setup-1.0.0.exe` | Framework-dependent app; the wizard offers to install the .NET 9 Desktop Runtime if missing. |
-| `RobotWinStudio-Setup-1.0.0-tam.exe` | Self-contained app (`-SelfContained`; "tam" = complete). |
+| `RobotWinStudio-Setup-2.1.0.exe` | Full package: self-contained app with .NET inside (`-SelfContained`). |
+| `RobotWinStudio-Setup-2.1.0-lite.exe` | Lite package: framework-dependent app; the wizard offers to install the .NET 9 Desktop Runtime if missing. |
+
+Releases before 2.1 named the self-contained package `-tam.exe` and the small one plainly; the in-app updater and the download page recognise both schemes.
 
 What the script does:
 
@@ -47,12 +49,12 @@ Default folders: `%LOCALAPPDATA%\Programs\RobotWin Studio` (per user) or `%Progr
 
 1. Checks out the tag on `windows-latest`, sets up .NET 9.
 2. Runs `tools/build-installer.ps1 -Version <tag without v>` twice, normal and `-SelfContained`.
-3. Uploads `RobotWinStudio-Setup-<version>.exe` and `RobotWinStudio-Setup-<version>-tam.exe` to the GitHub release for that tag (`softprops/action-gh-release`).
+3. Uploads `RobotWinStudio-Setup-<version>.exe` (full) and `RobotWinStudio-Setup-<version>-lite.exe` to the GitHub release for that tag (`softprops/action-gh-release`).
 
 ## Release checklist
 
 1. `main` is green in CI (`.github/workflows/ci.yml`: build, `dotnet test`, `--selftest`).
-2. Add a `## [x.y.z] - YYYY-MM-DD` section to [CHANGELOG.md](../CHANGELOG.md).
+2. Add a `## [x.y.z] - YYYY-MM-DD` section to [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 3. Optionally build the installer locally and smoke-test it (install, open an example, run a world, uninstall).
 4. Tag and push:
 
@@ -61,4 +63,4 @@ Default folders: `%LOCALAPPDATA%\Programs\RobotWin Studio` (per user) or `%Progr
    git push origin v1.0.0
    ```
 
-5. When the workflow finishes, edit the release notes on GitHub (copy the changelog section) and mention that the app needs the .NET 9 Desktop Runtime (or point to the `-tam` installer).
+5. When the workflow finishes, edit the release notes on GitHub (copy the changelog section) and mention that the lite package needs the .NET 9 Desktop Runtime while the full one carries it.

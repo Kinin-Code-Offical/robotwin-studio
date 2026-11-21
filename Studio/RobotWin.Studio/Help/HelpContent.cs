@@ -40,7 +40,9 @@ namespace RobotWin.Studio.Help
     /// </summary>
     public sealed class HelpLibrary
     {
-        public const string OnlineGuide = "https://github.com/Kinin-Code-Offical/robotwin-studio/tree/main/docs/kullanim";
+        /// <summary>The documentation site (GitHub Pages): guide, developer docs, downloads.</summary>
+        public const string DocsSite = "https://kinin-code-offical.github.io/robotwin-studio/";
+        public const string OnlineGuide = DocsSite + "kullanim/";
         private const string RepoBlob = "https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/docs/kullanim/";
 
         private readonly Dictionary<string, MarkdownDocument> _docs = new Dictionary<string, MarkdownDocument>(StringComparer.OrdinalIgnoreCase);

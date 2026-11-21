@@ -1,3 +1,7 @@
+---
+title: Belgeler / Docs
+permalink: /docs/
+---
 # RobotWin Studio belgeleri / documentation
 
 ## Kullanım kılavuzu (Türkçe)
@@ -24,7 +28,7 @@ Uygulamayı kullananlar için adım adım, ekran görüntülü kılavuz: **[kull
 | [TOOLS.md](TOOLS.md) | .NET CLI, the app's command-line modes, `build-installer.ps1`, external compilers |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common problems when installing, compiling firmware, simulating and building |
 
-Also in the repository root: [README](../README.md), [CHANGELOG](../CHANGELOG.md), [CONTRIBUTING](../CONTRIBUTING.md), [SECURITY](../SECURITY.md).
+Also in the repository root: [README](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/README.md), [CHANGELOG](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md), [CONTRIBUTING](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CONTRIBUTING.md), [SECURITY](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/SECURITY.md).
 
 ## Archive
 

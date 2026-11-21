@@ -2,68 +2,33 @@
 layout: base
 ---
 {% include vars.html %}
-{%- assign guide = site.data.nav.guide -%}
-{%- assign gi = nil -%}
-{%- for item in guide -%}{%- if item.path == page.path -%}{%- assign gi = forloop.index0 -%}{%- endif -%}{%- endfor -%}
-<div class="docs-shell">
-  <aside class="sidebar" id="sidebar">
-    {% include sidebar.html %}
-  </aside>
-  <div class="sidebar-scrim" data-nav-close></div>
-
-  <main class="docs-main" id="main">
-    <nav class="crumbs" aria-label="breadcrumb">
-      {%- if sec == "guide" %}
-      <a href="{{ guide_url }}">{{ site.data.ui.tr.guide_long }}</a>
-      {%- else %}
-      <a href="{{ docs_url }}">{{ t.docs }}</a>
-      {%- if sec == "archive" %}
-      <span aria-hidden="true">/</span>
-      {%- capture arch_url -%}{% include url.html path="archive/README.md" %}{%- endcapture %}
-      <a href="{{ arch_url }}">Archive</a>
-      {%- endif %}
-      {%- endif %}
-      {%- if page.title %}
-      <span aria-hidden="true">/</span>
-      <span>{{ page.title }}</span>
-      {%- endif %}
-    </nav>
-
-    <details class="toc-inline" hidden>
-      <summary>{{ t.on_this_page }}</summary>
-      <ol class="toc-list"></ol>
-    </details>
-
-    <article class="prose" id="content">
+{%- assign list = site.data.nav.docs -%}
+{%- for item in site.data.nav.guide -%}{%- if item.path == page.path -%}{%- assign list = site.data.nav.guide -%}{%- endif -%}{%- endfor -%}
+{%- assign idx = nil -%}
+{%- for item in list -%}{%- if item.path == page.path -%}{%- assign idx = forloop.index0 -%}{%- endif -%}{%- endfor -%}
+<div class="shell">
+  {% include sidebar.html %}
+  <main class="page" id="main">
+    <article class="prose">
 {{ content }}
     </article>
-
-    {%- if gi != nil %}
-    {%- assign pi = gi | minus: 1 -%}
-    {%- assign ni = gi | plus: 1 -%}
+    {%- if idx != nil %}
+    {%- assign pi = idx | minus: 1 -%}
+    {%- assign ni = idx | plus: 1 -%}
     <nav class="pager" aria-label="{{ t.prev }} / {{ t.next }}">
-      {%- if gi > 0 %}
-      {%- assign prev = guide[pi] -%}
+      {%- if idx > 0 %}
+      {%- assign prev = list[pi] -%}
       {%- capture prev_url -%}{% include url.html path=prev.path %}{%- endcapture %}
-      <a class="prev" href="{{ prev_url }}" rel="prev"><small>← {{ t.prev }}</small>{{ prev.title }}</a>
+      <a class="prev" href="{{ prev_url }}" rel="prev"><small>{{ t.prev }}</small>{{ prev.title }}</a>
+      {%- else %}<span></span>
       {%- endif %}
-      {%- if ni < guide.size %}
-      {%- assign next = guide[ni] -%}
+      {%- if ni < list.size %}
+      {%- assign next = list[ni] -%}
       {%- capture next_url -%}{% include url.html path=next.path %}{%- endcapture %}
-      <a class="next" href="{{ next_url }}" rel="next"><small>{{ t.next }} →</small>{{ next.title }}</a>
+      <a class="next" href="{{ next_url }}" rel="next"><small>{{ t.next }}</small>{{ next.title }}</a>
       {%- endif %}
     </nav>
     {%- endif %}
-
-    <div class="page-meta">
-      <a href="{{ site.github_url }}/edit/main/docs/{{ page.path }}">{{ t.edit }}</a>
-    </div>
+    <p class="edit"><a href="{{ site.github_url }}/edit/main/docs/{{ page.path }}">{{ t.edit }}</a></p>
   </main>
-
-  <aside class="toc-aside" aria-label="{{ t.on_this_page }}">
-    <div class="toc-sticky" hidden>
-      <p class="toc-title">{{ t.on_this_page }}</p>
-      <ol class="toc-list"></ol>
-    </div>
-  </aside>
 </div>
