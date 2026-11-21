@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Modeller cutting tools:** knife (K) along a line drawn on the screen, with cut / delete one side and capping; slice an object into two closed pieces (K in object mode); loop cut (Ctrl+R) with a live preview; bevel (Ctrl+B) with corner patches; solidify (even wall thickness, hollow shells); extrude from edges in vertex/edge mode. Boolean union/difference/intersection and slicing have their own section in the properties panel.
+- **Modeller cutting tools:** knife (K) along a line drawn on the screen, with cut / delete one side and capping; slice an object into two closed pieces (K in object mode); loop cut (Ctrl+R) with a live preview; bevel (Ctrl+B) with corner patches; solidify (even wall thickness, hollow shells); extrude from edges in vertex/edge mode; loop select (Alt+click), select linked (L) and grow/shrink (Ctrl+Numpad +/−). Boolean union/difference/intersection and slicing have their own section in the properties panel.
 
 ### Changed
 

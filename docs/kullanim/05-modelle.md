@@ -56,7 +56,9 @@ Diğer nesne işlemleri: **Ctrl+J** birleştir, ayna kopya (X / Y / Z), doğrusa
 
 ## Düzenleme modu
 
-**Tab** ile düzenleme moduna geçin. **1**, **2**, **3** tuşları nokta, kenar ve yüz seçimidir.
+**Tab** ile düzenleme moduna geçin. **1**, **2**, **3** tuşları nokta, kenar ve yüz seçimidir. Seçili noktaları, kenarları ya da yüzleri **G** / **R** / **S** ile taşıyın, döndürün, ölçekleyin (nesne modundaki gibi eksen kilidi ve sayı girişiyle).
+
+Seçim: **Alt+tık** (sürüklemeden) tıklanan kenarın halkasını seçer, yüz modunda yüz halkasını; **Shift+Alt+tık** ekler. **L** seçimle bağlantılı bütün parçayı seçer. **Ctrl+Numpad +/−** seçimi bir halka büyütür ya da küçültür.
 
 | Tuş | İşlev |
 | --- | --- |

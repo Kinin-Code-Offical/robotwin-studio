@@ -696,7 +696,7 @@ namespace RobotWin.Studio.Pages
                      {
                          ("Shift+A", "şekil / parça ekle"), ("G · R · S", "taşı · döndür · ölçekle"), ("  ardından X/Y/Z", "eksen, Shift+X düzlem"), ("  sayı + Enter", "kesin değer (mm, °)"),
                          ("Tab", "düzenleme modu"), ("1 · 2 · 3", "nokta · kenar · yüz"), ("E · I", "çıkar · içe kaydır"), ("M · F · X", "birleştir · yüz · sil"),
-                         ("K", "bıçak / dilimle"), ("Ctrl+R", "halka kesim"), ("Ctrl+B", "pah kır (bevel)"), ("Ctrl+J", "birleştir (join)"), ("Sağ tık", "Boolean ve diğer işlemler"), ("Orta tuş", "döndür, Shift ile kaydır"), ("Numpad 1/3/7", "ön / sağ / üst görünüm"),
+                         ("K", "bıçak / dilimle"), ("Ctrl+R", "halka kesim"), ("Ctrl+B", "pah kır (bevel)"), ("L · Alt+tık", "bağlı parça · halka seçimi"), ("Ctrl+J", "birleştir (join)"), ("Sağ tık", "Boolean ve diğer işlemler"), ("Orta tuş", "döndür, Shift ile kaydır"), ("Numpad 1/3/7", "ön / sağ / üst görünüm"),
                          ("Numpad . · Home", "seçimi / hepsini sığdır"), ("Z · Alt+Z", "görünüm · X-ray"), ("Ctrl (sürüklerken)", "ızgara adımı"), ("Ctrl+Z", "geri al")
                      }) Line(k, v);
         }
@@ -751,6 +751,13 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Ayır  P", _ed.Separate));
             wrap.Children.Add(SmallButton("Sil  X", _ed.DeleteElements));
             Props.Children.Add(wrap);
+            Section("Seçim");
+            var selWrap = new WrapPanel();
+            selWrap.Children.Add(SmallButton("Bağlıları seç  L", () => { _ed.SelectLinked(); _vp.RefreshEditMesh(); }, "Seçimle bağlantılı bütün parçayı seçer (dilimlenmiş ya da birleştirilmiş parçaları ayırmak için)"));
+            selWrap.Children.Add(SmallButton("Büyüt  Ctrl+Num+", () => { _ed.GrowSelection(true); _vp.RefreshEditMesh(); }));
+            selWrap.Children.Add(SmallButton("Küçült  Ctrl+Num−", () => { _ed.GrowSelection(false); _vp.RefreshEditMesh(); }));
+            Props.Children.Add(selWrap);
+            Caption("Alt+tık (sürüklemeden): kenar halkasını seçer, yüz modunda yüz halkasını · Shift+Alt+tık ekler");
             Caption("G/R/S seçimi taşır/döndürür/ölçekler · K bıçak · Ctrl+R halka kesim · Ctrl+B pah · Shift+tık seçime ekler · sürükleyerek kutu seçimi · X-ray (Alt+Z) arkadakileri de seçer");
         }
 

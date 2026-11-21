@@ -123,6 +123,7 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | K | Bıçak (düzenleme modunda) · dilimle (nesne modunda); C kip değiştirir |
 | Ctrl+R | (Düzenleme modunda) halka kesim; tekerlek kesim sayısı |
 | Ctrl+B | (Düzenleme modunda) pah kır (bevel) |
+| Alt+tık · L · Ctrl+Numpad +/− | (Düzenleme modunda) halka seçimi · bağlı parça · seçimi büyüt / küçült |
 | Shift+N | (Düzenleme modunda) normalleri yeniden hesapla |
 | Z / Shift+Z / Alt+Z | Katı / tel kafes / X-ray |
 | Numpad 1 / 3 / 7 | Önden / sağdan / üstten |

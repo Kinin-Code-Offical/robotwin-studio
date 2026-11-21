@@ -483,6 +483,64 @@ namespace RobotWin.Studio.Modeling
             return EditMesh.Edges().Where(e => vs.Contains(e.A) && vs.Contains(e.B)).ToList();
         }
 
+        /// <summary>Replaces the element selection with a vertex set (faces fully inside it in face mode).</summary>
+        private void SetVertexSelection(HashSet<int> verts, bool extend = false)
+        {
+            if (EditMesh == null) return;
+            if (!extend)
+            {
+                SelVerts.Clear();
+                SelFaces.Clear();
+            }
+
+            if (Element == ElementMode.Face) SelFaces.UnionWith(MeshEdit.FacesOfVertices(EditMesh, verts));
+            else SelVerts.UnionWith(verts);
+            Changed?.Invoke(ModelChange.Selection);
+        }
+
+        /// <summary>L / Ctrl+L: the whole connected piece of the selection.</summary>
+        public void SelectLinked()
+        {
+            if (EditMesh == null) return;
+            var seeds = SelectedVertexSet();
+            if (seeds.Count == 0)
+            {
+                Status("Bağlı parçayı seçmek için önce bir nokta, kenar ya da yüz seçin");
+                return;
+            }
+
+            SetVertexSelection(MeshSelect.Linked(EditMesh, seeds));
+        }
+
+        /// <summary>Ctrl+Numpad + / −: grows or shrinks the selection by one ring of faces.</summary>
+        public void GrowSelection(bool grow)
+        {
+            if (EditMesh == null) return;
+            var vs = SelectedVertexSet();
+            if (vs.Count == 0) return;
+            SetVertexSelection(grow ? MeshSelect.Grow(EditMesh, vs) : MeshSelect.Shrink(EditMesh, vs));
+        }
+
+        /// <summary>Alt+click: the edge loop through (a, b); in face mode the face loop across it.</summary>
+        public void SelectLoop(int a, int b, bool extend)
+        {
+            if (EditMesh == null) return;
+            if (Element == ElementMode.Face)
+            {
+                if (!extend)
+                {
+                    SelVerts.Clear();
+                    SelFaces.Clear();
+                }
+
+                SelFaces.UnionWith(MeshSelect.FaceLoop(EditMesh, a, b));
+                Changed?.Invoke(ModelChange.Selection);
+                return;
+            }
+
+            SetVertexSelection(new HashSet<int>(MeshSelect.EdgeLoop(EditMesh, a, b)), extend);
+        }
+
         public bool HasElementSelection => Element == ElementMode.Face ? SelFaces.Count > 0 : SelVerts.Count > 0;
 
         public void SelectElements(IEnumerable<int> verts, IEnumerable<int> faces, bool extend, bool subtract = false)

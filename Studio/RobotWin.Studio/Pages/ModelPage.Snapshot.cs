@@ -394,6 +394,15 @@ namespace RobotWin.Studio.Pages
                 _vp.SimulateClick(edgeMid);
                 Check("loop cut", _ed.EditMesh!.IsClosed && _ed.EditMesh.Faces.Count > faces1 && Math.Abs(_ed.EditMesh.Volume() - blockVolume) < 1e-6,
                     "faces " + faces1 + " -> " + _ed.EditMesh.Faces.Count);
+                var loopVerts = new System.Collections.Generic.HashSet<int>(_ed.SelVerts);
+                var lm = _ed.EditMesh!;
+                var loopEdge = lm.Edges().First(e => loopVerts.Contains(e.A) && loopVerts.Contains(e.B));
+                _ed.DeselectAll();
+                _vp.SelectLoopAt(Screen((lm.Vertices[loopEdge.A] + lm.Vertices[loopEdge.B]) / 2), false);
+                Check("alt+click loop select", _ed.SelVerts.SetEquals(loopVerts), "selected " + _ed.SelVerts.Count + " of " + loopVerts.Count);
+                _ed.SelectElements(new[] { loopEdge.A }, Array.Empty<int>(), false);
+                _ed.SelectLinked();
+                Check("select linked", _ed.SelVerts.Count == _ed.EditMesh!.Vertices.Count);
                 _ed.Undo();
                 Check("undo loop cut", _ed.EditMesh!.Faces.Count == faces1);
 

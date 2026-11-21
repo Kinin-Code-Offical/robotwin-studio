@@ -86,6 +86,7 @@ namespace RobotWin.Studio.Modeling
         private Point? _rightPress;
         private Modal? _modal;
         private Vec3? _measureA, _measureB;
+        private Point? _altClick;
         private bool _measureFixed;
 
         public bool IsModal => _modal != null;
@@ -132,6 +133,8 @@ namespace RobotWin.Studio.Modeling
             bool alt = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
             if (e.ChangedButton == MouseButton.Middle || (e.ChangedButton == MouseButton.Left && alt))
             {
+                // Alt+click without dragging selects a loop in edit mode; dragging still orbits
+                _altClick = e.ChangedButton == MouseButton.Left && _ed.Mode == EditorMode.Edit ? p : null;
                 var mods = Keyboard.Modifiers;
                 _nav = mods.HasFlag(ModifierKeys.Shift) ? Nav.Pan : mods.HasFlag(ModifierKeys.Control) ? Nav.Zoom : Nav.Orbit;
                 _navLast = p;
@@ -269,6 +272,8 @@ namespace RobotWin.Studio.Modeling
             {
                 _nav = Nav.None;
                 ReleaseMouseCapture();
+                if (_altClick is { } ac && e.ChangedButton == MouseButton.Left && (p - ac).Length < 4) SelectLoopAt(p, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
+                _altClick = null;
                 return;
             }
 
@@ -958,13 +963,28 @@ namespace RobotWin.Studio.Modeling
             RefreshOverlays();
         }
 
+        /// <summary>Alt+click in edit mode: the edge loop (face loop in face mode) through the edge under the cursor.</summary>
+        public void SelectLoopAt(Point p, bool extend)
+        {
+            var ent = EditEntry;
+            var mesh = _ed.EditMesh;
+            if (ent == null || mesh == null) return;
+            var edge = NearestEdge(p, mesh, ent.World);
+            if (edge == null) return;
+            _ed.SelectLoop(edge.Value.A, edge.Value.B, extend);
+            RefreshEditMesh();
+        }
+
         /// <summary>The mesh edge nearest to the cursor on screen (within 40 px) in the edited object.</summary>
         private (int A, int B)? NearestEdge(Point p)
         {
             var m = _modal;
-            var mesh = m?.Base;
-            if (m == null || mesh == null) return null;
-            var screen = mesh.Vertices.Select(v => Cam.ProjectPoint(m.EW.Apply(v))).ToArray();
+            return m?.Base == null ? null : NearestEdge(p, m.Base, m.EW);
+        }
+
+        private (int A, int B)? NearestEdge(Point p, PolyMesh mesh, Affine world)
+        {
+            var screen = mesh.Vertices.Select(v => Cam.ProjectPoint(world.Apply(v))).ToArray();
             double best = 40;
             (int, int)? hit = null;
             foreach (var (a, b) in mesh.Edges())

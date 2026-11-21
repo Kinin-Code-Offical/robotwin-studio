@@ -56,7 +56,9 @@ Other object operations: **Ctrl+J** join, mirror copy (X / Y / Z), linear and ci
 
 ## Edit mode
 
-Enter edit mode with **Tab**. **1**, **2**, **3** select vertices, edges and faces.
+Enter edit mode with **Tab**. **1**, **2**, **3** select vertices, edges and faces. Move, rotate and scale the selected vertices, edges or faces with **G** / **R** / **S** (with axis locks and typed numbers, as in object mode).
+
+Selection: **Alt+click** (without dragging) selects the loop of the clicked edge, the face loop in face mode; **Shift+Alt+click** adds to it. **L** selects the whole piece connected to the selection. **Ctrl+Numpad +/−** grows or shrinks the selection by one ring.
 
 | Key | Function |
 | --- | --- |

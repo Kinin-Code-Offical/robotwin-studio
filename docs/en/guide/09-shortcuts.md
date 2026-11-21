@@ -123,6 +123,7 @@ The app has its own shortcut lists too: the **Ctrl+K** command palette shows eve
 | K | Knife (edit mode) · slice (object mode); C switches the mode |
 | Ctrl+R | (Edit mode) loop cut; the wheel sets the number of cuts |
 | Ctrl+B | (Edit mode) bevel |
+| Alt+click · L · Ctrl+Numpad +/− | (Edit mode) loop select · linked piece · grow / shrink the selection |
 | Shift+N | (Edit mode) recalculate normals |
 | Z / Shift+Z / Alt+Z | Solid / wireframe / X-ray |
 | Numpad 1 / 3 / 7 | Front / right / top |

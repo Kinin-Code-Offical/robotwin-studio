@@ -182,6 +182,39 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void LoopSelectionFollowsTheLoopCut()
+        {
+            var m = Box();
+            int top = Enumerable.Range(0, m.Faces.Count).First(f => m.FaceNormal(f).Z > 0.9);
+            var f = m.Faces[top];
+            var cut = MeshCut.LoopCut(m, f[0], f[1], 1);
+            // the new loop runs round the box: four vertices with four edges each
+            var a = cut.Vertices[0];
+            int b = m.Edges().Where(e => e.A == a || e.B == a).Select(e => e.A == a ? e.B : e.A).First(cut.Vertices.Contains);
+            var loop = MeshSelect.EdgeLoop(m, a, b);
+            Assert.Equal(4, loop.Count);
+            Assert.True(loop.All(cut.Vertices.Contains));
+            var fresh = Box();
+            var ff = fresh.Faces[top];
+            Assert.Equal(4, MeshSelect.FaceLoop(fresh, ff[0], ff[1]).Count);
+        }
+
+        [Fact]
+        public void LinkedGrowAndShrinkWorkOnPieces()
+        {
+            var m = Box();
+            var other = Box().Translate(new Vec3(100, 0, 0));
+            m.Append(other);
+            var linked = MeshSelect.Linked(m, new[] { 0 });
+            Assert.Equal(8, linked.Count);
+            var one = new HashSet<int> { 0 };
+            var grown = MeshSelect.Grow(m, one);
+            Assert.Equal(7, grown.Count);               // a box corner touches three faces: all but the far corner
+            Assert.Contains(0, MeshSelect.Shrink(m, grown));    // shrinking the grown set keeps the start corner
+            Assert.Empty(MeshSelect.Shrink(m, one));
+        }
+
+        [Fact]
         public void EdgeExtrudeGrowsAnOpenBorder()
         {
             var m = new PolyMesh();
