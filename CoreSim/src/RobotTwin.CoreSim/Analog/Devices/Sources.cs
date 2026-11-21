@@ -349,7 +349,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
             StateOfCharge = AnalogMath.Clamp(StateOfCharge - deltaAh / CapacityAh, 0.0, 1.0);
             if (wasAlive && StateOfCharge <= 0.0)
             {
-                ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.StateChange, "battery depleted"));
+                ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.StateChange, "pil bitti"));
                 ctx.RequestDiscontinuity();
             }
         }

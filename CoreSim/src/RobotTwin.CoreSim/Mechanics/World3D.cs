@@ -34,8 +34,79 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Rotational damping torque per rad/s (N·m·s).</summary>
         public double AngularDrag { get; set; } = 2e-6;
 
+        private Vec3 _dragArea;
+
         /// <summary>Aerodynamic drag area Cd·A (m²) for flow along the body x, y and z axes.</summary>
-        public Vec3 DragArea { get; set; }
+        /// <remarks>Setting it clears the directional split (<see cref="DirectionalDrag"/>).</remarks>
+        public Vec3 DragArea
+        {
+            get => _dragArea;
+            set
+            {
+                _dragArea = value;
+                DirectionalDrag = false;
+            }
+        }
+
+        /// <summary>
+        /// [drag] Cd·A (m²) when the body moves towards +x, +y, +z (that face leads) and towards −x, −y, −z,
+        /// with the faces that joined parts cover taken out and skin friction on the exposed sides added
+        /// (see <see cref="AssemblyDrag"/>). Used instead of <see cref="DragArea"/> while
+        /// <see cref="DirectionalDrag"/> is set.
+        /// </summary>
+        public Vec3 DragForward { get; private set; }
+
+        public Vec3 DragBackward { get; private set; }
+
+        public bool DirectionalDrag { get; private set; }
+
+        public void SetDirectionalDrag(Vec3 forward, Vec3 backward)
+        {
+            DragForward = forward;
+            DragBackward = backward;
+            DirectionalDrag = true;
+        }
+
+        /// <summary>
+        /// [drag] Round cross-section for oblique flow: −1 none (a box: the projected areas add up),
+        /// 0/1/2 round about that body axis (a cylinder: circular in the other two), 3 round every way (a sphere).
+        /// </summary>
+        public int DragRound { get; set; } = -1;
+
+        /// <summary>
+        /// Cd·A (m²) for motion along the body-frame unit direction <paramref name="u"/>. The per-axis values
+        /// combine by the body's real projected area: added for flat faces (|u·x|·A_x + …, exact for a box),
+        /// as a circle where the cross-section is round (√((u_x·A_x)² + (u_y·A_y)²) for a cylinder about z).
+        /// </summary>
+        public double DragAreaAlong(Vec3 u)
+        {
+            double x, y, z;
+            if (DirectionalDrag)
+            {
+                x = u.X >= 0 ? u.X * DragForward.X : -u.X * DragBackward.X;
+                y = u.Y >= 0 ? u.Y * DragForward.Y : -u.Y * DragBackward.Y;
+                z = u.Z >= 0 ? u.Z * DragForward.Z : -u.Z * DragBackward.Z;
+            }
+            else
+            {
+                x = Math.Abs(u.X) * _dragArea.X;
+                y = Math.Abs(u.Y) * _dragArea.Y;
+                z = Math.Abs(u.Z) * _dragArea.Z;
+            }
+
+            return DragRound switch
+            {
+                3 => Math.Sqrt(x * x + y * y + z * z),
+                0 => x + Math.Sqrt(y * y + z * z),
+                1 => y + Math.Sqrt(x * x + z * z),
+                2 => z + Math.Sqrt(x * x + y * y),
+                _ => x + y + z
+            };
+        }
+
+        public bool HasDrag => DirectionalDrag
+            ? DragForward.LengthSquared > 0 || DragBackward.LengthSquared > 0
+            : _dragArea.X > 0 || _dragArea.Y > 0 || _dragArea.Z > 0;
 
         /// <summary>Contact points in the body frame (chassis corners, landing legs).</summary>
         public List<Vec3> ContactPoints { get; } = new List<Vec3>();

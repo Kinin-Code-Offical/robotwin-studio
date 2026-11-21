@@ -212,7 +212,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     {
                         Severity = CompilerSeverity.Error,
                         Code = "RW0002",
-                        Message = "Build failed (exit code " + exit.ToString(CultureInfo.InvariantCulture) + "). See the build log."
+                        Message = "Derleme başarısız (çıkış kodu " + exit.ToString(CultureInfo.InvariantCulture) + "). Ayrıntı derleme günlüğünde."
                     });
                 }
             }
@@ -314,7 +314,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                         {
                             log.Append(output);
                             ParseDiagnostics(output, null, Array.Empty<SketchSourceFile>(), result.Diagnostics);
-                            result.Diagnostics.Add(new CompilerDiagnostic { Severity = CompilerSeverity.Error, Code = "RW0005", Message = "Building the ESP32 HAL shim failed." });
+                            result.Diagnostics.Add(new CompilerDiagnostic { Severity = CompilerSeverity.Error, Code = "RW0005", Message = "ESP32 HAL katmanı derlenemedi." });
                             return null;
                         }
 
@@ -323,7 +323,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                         if (exit != 0)
                         {
                             log.Append(output);
-                            result.Diagnostics.Add(new CompilerDiagnostic { Severity = CompilerSeverity.Error, Code = "RW0005", Message = "Archiving the ESP32 HAL shim failed." });
+                            result.Diagnostics.Add(new CompilerDiagnostic { Severity = CompilerSeverity.Error, Code = "RW0005", Message = "ESP32 HAL katmanı arşivlenemedi." });
                             return null;
                         }
 

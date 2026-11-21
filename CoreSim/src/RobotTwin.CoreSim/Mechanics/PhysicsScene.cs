@@ -718,14 +718,14 @@ namespace RobotTwin.CoreSim.Mechanics
 
                 b.Force += b.ExternalForce + g * b.Mass;
                 b.Torque += b.ExternalTorque;
-                if (air && (b.DragArea.X > 0 || b.DragArea.Y > 0 || b.DragArea.Z > 0))
+                if (air && b.HasDrag)
                 {
                     var rel = b.Velocity - WindAt(b.Position);
                     double sp = rel.Length;
                     if (sp > 1e-9)
                     {
                         var lb = b.Orientation.InverseRotate(rel) / sp;
-                        double cda = Math.Abs(lb.X) * b.DragArea.X + Math.Abs(lb.Y) * b.DragArea.Y + Math.Abs(lb.Z) * b.DragArea.Z;
+                        double cda = b.DragAreaAlong(lb);   // [drag] leading face, base, exposed sides (Mechanics/AssemblyDrag.cs)
                         // Quadratic drag ½ρ·CdA·|v|·v, limited so that it can never reverse the velocity within a step.
                         double k = 0.5 * AirDensity * cda * sp;
                         k = Math.Min(k, b.Mass / h);

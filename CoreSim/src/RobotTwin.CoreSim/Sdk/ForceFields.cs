@@ -84,8 +84,7 @@ namespace RobotTwin.CoreSim.Sdk
             double sp = relativeAirVelocity.Length;
             if (sp < 1e-12) return Vec3.Zero;
             var lb = body.Orientation.InverseRotate(relativeAirVelocity) / sp;
-            var da = body.DragArea;
-            double cda = Math.Abs(lb.X) * da.X + Math.Abs(lb.Y) * da.Y + Math.Abs(lb.Z) * da.Z;
+            double cda = body.DragAreaAlong(lb);
             return relativeAirVelocity * (-0.5 * density * cda * sp);
         }
     }

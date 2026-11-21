@@ -176,6 +176,7 @@ namespace RobotTwin.CoreSim.Sdk
             RefreshBodies();
             RefreshJoints();
             var aero = _s.Aero;
+            var shapeDrag = new List<RobotTwin.CoreSim.Mechanics.SceneBody>();
             foreach (var sb in _bodies)
             {
                 if (sb.Raw.IsStatic) continue;
@@ -184,6 +185,7 @@ namespace RobotTwin.CoreSim.Sdk
                     var ov = _s.AeroOf(o.Id);
                     bool drag = aero.Drag && (ov?.Drag ?? true);
                     sb.Raw.DragArea = drag ? Aerodynamics.DragArea(sb.Raw.Shape, ov?.Cd, ov?.AreaM2) : Vec3.Zero;
+                    if (drag && ov?.Cd == null && ov?.AreaM2 == null) shapeDrag.Add(sb.Raw);   // a user's Cd / area stays as given
                     if (aero.Buoyancy || ov?.Buoyancy == true)
                     {
                         _buoyant.Add(sb.Raw);
@@ -193,6 +195,8 @@ namespace RobotTwin.CoreSim.Sdk
                 else if (!aero.Drag) sb.Raw.DragArea = Vec3.Zero;
             }
 
+            // [drag] joined parts shield each other's faces: leading face, base and skin friction (Mechanics/AssemblyDrag.cs)
+            RobotTwin.CoreSim.Mechanics.AssemblyDrag.Apply(Scene, shapeDrag);
             Scene.AirDensity = AirDensity;
             BuildFields();
             BuildBehaviors();

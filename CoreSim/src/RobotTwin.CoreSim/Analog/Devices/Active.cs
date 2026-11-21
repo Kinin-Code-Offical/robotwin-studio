@@ -453,7 +453,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
                 {
                     _shutdown = false;
                     _stage.Mode = StageMode.Regulating;
-                    ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.StateChange, "recovered from thermal shutdown"));
+                    ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.StateChange, "ısıl kapanmadan çıktı (soğudu, yeniden çalışıyor)"));
                     ctx.RequestDiscontinuity();
                 }
             }
