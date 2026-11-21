@@ -189,7 +189,7 @@ namespace RobotTwin.CoreSim.Analog
             {
                 if (!SolveOperatingPoint())
                 {
-                    throw new AnalogSimulationException("DC operating point did not converge.");
+                    throw new AnalogSimulationException("DC çalışma noktası yakınsamadı: devre kararlı bir başlangıç durumuna oturmuyor.");
                 }
             }
 
@@ -202,7 +202,7 @@ namespace RobotTwin.CoreSim.Analog
         {
             if (!_circuit.TryGetNode(name, out int node))
             {
-                throw new ArgumentException($"Unknown node '{name}'.", nameof(name));
+                throw new ArgumentException($"Bilinmeyen düğüm '{name}'.", nameof(name));
             }
 
             return NodeVoltage(node);
@@ -214,7 +214,7 @@ namespace RobotTwin.CoreSim.Analog
         public double Signal(string deviceId, string key) =>
             _signals.TryGetValue(deviceId + ":" + key, out double value)
                 ? value
-                : throw new KeyNotFoundException($"Signal '{deviceId}:{key}' is not published.");
+                : throw new KeyNotFoundException($"'{deviceId}:{key}' sinyali yayımlanmıyor.");
 
         void ISignalSink.Write(string deviceId, string key, double value) =>
             _signals[_signalKeys.Get(deviceId, key)] = value;
@@ -248,7 +248,7 @@ namespace RobotTwin.CoreSim.Analog
                 if (++guard > MaxSubstepsPerCall)
                 {
                     throw new AnalogSimulationException(
-                        $"Time step collapsed: more than {MaxSubstepsPerCall} sub-steps for a {dt:G3} s step at t = {Time:G6} s.");
+                        $"Zaman adımı çöktü: t = {Time:G6} s anında {dt:G3} s'lik adım için {MaxSubstepsPerCall} alt adımdan fazlası gerekti.");
                 }
 
                 double h =Math.Min(Math.Min(_hNext, Options.MaxStep), tEnd - Time);
@@ -277,7 +277,7 @@ namespace RobotTwin.CoreSim.Analog
                         forced = true;
                         Statistics.ForcedSteps++;
                         _events.Add(new AnalogEvent(Time + h, "solver", AnalogEventKind.Warning,
-                            "Newton iteration did not converge at the minimum time step."));
+                            "Newton yinelemesi en küçük zaman adımında yakınsamadı."));
                     }
                     else
                     {
@@ -641,19 +641,19 @@ namespace RobotTwin.CoreSim.Analog
         {
             if (index >= 0 && index < _nodeCount)
             {
-                return $"Circuit matrix is singular at node '{_circuit.NodeNames[index + 1]}'.";
+                return $"Devre matrisi '{_circuit.NodeNames[index + 1]}' düğümünde tekil (çözülemiyor).";
             }
 
             foreach (var device in _devices)
             {
                 if (device.BranchBase >= 0 && index >= device.BranchBase && index < device.BranchBase + device.BranchCount)
                 {
-                    return $"Circuit matrix is singular at device '{device.Id}' " +
-                           "(voltage sources or inductors probably form a loop).";
+                    return $"Devre matrisi '{device.Id}' parçasında tekil (çözülemiyor); " +
+                           "büyük olasılıkla gerilim kaynakları ya da bobinler bir döngü oluşturuyor.";
                 }
             }
 
-            return "Circuit matrix is singular.";
+            return "Devre matrisi tekil (çözülemiyor).";
         }
     }
 }

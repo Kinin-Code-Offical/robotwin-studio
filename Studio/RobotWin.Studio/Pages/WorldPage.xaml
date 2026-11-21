@@ -128,7 +128,7 @@
                     <RadioButton x:Name="DockLog" Style="{StaticResource Chip}" Content="Olaylar" GroupName="dock" IsChecked="True" Click="OnDockTab"/>
                     <RadioButton x:Name="DockSerial" Style="{StaticResource Chip}" Content="Seri monitör" GroupName="dock" Margin="4,0" Click="OnDockTab"/>
                     <RadioButton x:Name="DockCables" Style="{StaticResource Chip}" Content="Kablolar ve ölçümler" GroupName="dock" Click="OnDockTab"/>
-                    <RadioButton x:Name="DockRf" Style="{StaticResource Chip}" Content="RF" GroupName="dock" Margin="4,0,0,0" Click="OnDockTab" ToolTip="Radyo: cihazlar, RSSI, kanal, paket/s (World/RadioOverlay)"/>
+                    <RadioButton x:Name="DockRf" Style="{StaticResource Chip}" Content="RF" GroupName="dock" Margin="4,0,0,0" Click="OnDockTab" ToolTip="Radyo: cihazlar, RSSI, kanal, saniyede paket"/>
                 </StackPanel>
                 <Grid Margin="12,0,12,8">
                     <ListBox x:Name="LogList" BorderThickness="0" Background="Transparent" FontFamily="{StaticResource F.Mono}" FontSize="12">

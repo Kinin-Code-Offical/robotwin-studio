@@ -345,7 +345,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                         Emit(0, "\r\nBrownout detector was triggered\r\n\r\n");
                     }
 
-                    Note(!powerOk ? $"brown-out at {vdd:F2} V" : "EN held low (reset)");
+                    Note(!powerOk ? $"besleme düştü (brown-out): {vdd:F2} V" : "EN pini düşük tutuldu (sıfırlama)");
                     Shutdown();
                     State = Esp32BoardState.Off;
                     _minVddWhileOff = vdd;
@@ -388,19 +388,19 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     LastCrashMessage = msg;
                     if (status == Esp32Abi.StatusWatchdog) WatchdogResets++;
                     Emit(0, "\r\n" + msg + "\r\n\r\nRebooting...\r\n");
-                    Note((status == Esp32Abi.StatusWatchdog ? "watchdog: " : "panic: ") + msg);
+                    Note((status == Esp32Abi.StatusWatchdog ? "görev bekçisi (watchdog): " : "çökme (panic): ") + msg);
                     Boot(end, status == Esp32Abi.StatusWatchdog ? 6 : 4);
                 }
                 else if (_pendingRestart)
                 {
-                    Note(_pendingRestartReason == 6 ? "task watchdog reset" : _pendingRestartReason == 4 ? "panic reset" : "ESP.restart()");
+                    Note(_pendingRestartReason == 6 ? "görev bekçisi kartı sıfırladı" : _pendingRestartReason == 4 ? "çökme sonrası yeniden başladı" : "ESP.restart() ile yeniden başladı");
                     if (_pendingRestartReason == 6) WatchdogResets++;
                     Boot(end, _pendingRestartReason);
                 }
                 else if (_pendingSleep)
                 {
                     long us = _pendingSleepUs;
-                    Note(us >= 0 ? $"deep sleep for {us} us" : "deep sleep (no timer wake-up)");
+                    Note(us >= 0 ? $"derin uyku: {us} µs" : "derin uyku (zamanlayıcıyla uyanma yok)");
                     Shutdown();
                     State = Esp32BoardState.DeepSleep;
                     _wakeAt = us >= 0 ? end + us * 1e-6 : double.NaN;
@@ -454,7 +454,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             {
                 _module.Dispose();
                 _module = null;
-                throw new InvalidOperationException("rw_init failed (" + rc.ToString(CultureInfo.InvariantCulture) + ").");
+                throw new InvalidOperationException("ESP32 yazılımı başlatılamadı (rw_init, kod " + rc.ToString(CultureInfo.InvariantCulture) + ").");
             }
 
             // Initial input levels (the first report of each pin is not an edge).
@@ -466,7 +466,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             }
 
             rc = _module.Start(Ns(time + Math.Max(0.0, Options.BootDelay)));
-            if (rc != 0) throw new InvalidOperationException("rw_start failed (" + rc.ToString(CultureInfo.InvariantCulture) + ").");
+            if (rc != 0) throw new InvalidOperationException("ESP32 yazılımı çalıştırılamadı (rw_start, kod " + rc.ToString(CultureInfo.InvariantCulture) + ").");
             State = Esp32BoardState.Running;
             BootCount++;
             _everRan = true;
@@ -913,25 +913,25 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private int OnI2cStart(IntPtr user, int bus, int address, int read)
         {
             try { return Bus(bus).BeginTransfer((byte)(address & 0x7F), read != 0) ? 1 : 0; }
-            catch (Exception ex) { Note("I2C device error: " + ex.Message); return 0; }
+            catch (Exception ex) { Note("I²C cihaz hatası: " + ex.Message); return 0; }
         }
 
         private int OnI2cWrite(IntPtr user, int bus, int value)
         {
             try { return Bus(bus).WriteByte((byte)value) ? 1 : 0; }
-            catch (Exception ex) { Note("I2C device error: " + ex.Message); return 0; }
+            catch (Exception ex) { Note("I²C cihaz hatası: " + ex.Message); return 0; }
         }
 
         private int OnI2cRead(IntPtr user, int bus, int ack)
         {
             try { return Bus(bus).ReadByte(ack != 0); }
-            catch (Exception ex) { Note("I2C device error: " + ex.Message); return 0xFF; }
+            catch (Exception ex) { Note("I²C cihaz hatası: " + ex.Message); return 0xFF; }
         }
 
         private void OnI2cStop(IntPtr user, int bus)
         {
             try { Bus(bus).EndTransfer(); }
-            catch (Exception ex) { Note("I2C device error: " + ex.Message); }
+            catch (Exception ex) { Note("I²C cihaz hatası: " + ex.Message); }
         }
 
         /// <summary>SPI devices wired to this board (see <see cref="SpiWiring"/>).</summary>
@@ -983,7 +983,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             }
             catch (Exception ex)
             {
-                Note("SPI device error: " + ex.Message);
+                Note("SPI cihaz hatası: " + ex.Message);
                 return -2;
             }
         }
@@ -1013,7 +1013,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             catch (Exception ex)
             {
                 // Never let an exception cross into native code.
-                Note("radio error: " + ex.Message);
+                Note("radyo hatası: " + ex.Message);
                 return -2;
             }
         }

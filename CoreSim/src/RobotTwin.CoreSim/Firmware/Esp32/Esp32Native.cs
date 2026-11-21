@@ -109,12 +109,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new PlatformNotSupportedException("ESP32 sketch DLLs are built with MSVC and run on Windows x64 only.");
+                throw new PlatformNotSupportedException("ESP32 kodu MSVC ile derlenir ve yalnızca Windows x64'te çalışır.");
             }
 
-            if (IntPtr.Size != 8) throw new PlatformNotSupportedException("ESP32 sketch DLLs are x64; run the host as a 64-bit process.");
+            if (IntPtr.Size != 8) throw new PlatformNotSupportedException("ESP32 kodu x64 olarak derlenir; uygulamanın 64 bit çalışması gerekir.");
             string full = Path.GetFullPath(dllPath);
-            if (!File.Exists(full)) throw new FileNotFoundException("Sketch DLL not found.", full);
+            if (!File.Exists(full)) throw new FileNotFoundException("Derlenmiş ESP32 kodu (DLL) bulunamadı.", full);
 
             lock (Gate)
             {
@@ -133,7 +133,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 if (_handle == IntPtr.Zero)
                 {
                     int err = Marshal.GetLastWin32Error();
-                    throw new InvalidOperationException($"LoadLibrary failed for '{_loadedPath}' (Win32 error {err}).");
+                    throw new InvalidOperationException($"Derlenmiş ESP32 kodu yüklenemedi: '{_loadedPath}' (Win32 hata kodu {err}).");
                 }
 
                 LoadedPaths[_loadedPath] = LoadedPaths.TryGetValue(_loadedPath, out int n) ? n + 1 : 1;
@@ -152,7 +152,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             if (abi != Esp32Abi.Version)
             {
                 Dispose();
-                throw new InvalidOperationException($"Sketch DLL ABI {abi} does not match the simulator (ABI {Esp32Abi.Version}); rebuild the sketch.");
+                throw new InvalidOperationException($"Derlenmiş ESP32 kodu bu sürümle uyumsuz (ABI {abi}, beklenen {Esp32Abi.Version}); kodu yeniden derleyin.");
             }
         }
 
@@ -177,7 +177,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private T Get<T>(string name) where T : Delegate
         {
             IntPtr p = Kernel32.GetProcAddress(_handle, name);
-            if (p == IntPtr.Zero) throw new InvalidOperationException($"Sketch DLL does not export '{name}' (not built with the RoboTwin ESP32 shim?).");
+            if (p == IntPtr.Zero) throw new InvalidOperationException($"Derlenmiş ESP32 kodunda '{name}' yok; kod RobotWin'in ESP32 katmanıyla derlenmemiş olabilir, yeniden derleyin.");
             return Marshal.GetDelegateForFunctionPointer<T>(p);
         }
 

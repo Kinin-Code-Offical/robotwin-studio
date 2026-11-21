@@ -79,7 +79,7 @@ namespace RobotTwin.CoreSim.Automation
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is AnalogSimulationException)
             {
-                throw new ApiException(ApiException.InvalidParams, "Dünya devresi kurulamadı / world circuit failed: " + ex.Message);
+                throw new ApiException(ApiException.InvalidParams, "Dünya devresi kurulamadı: " + ex.Message);
             }
 
             Compiled = Circuit.Compiled;
@@ -173,7 +173,7 @@ namespace RobotTwin.CoreSim.Automation
                 Boards.Add(board);
                 if (!Options.Firmware)
                 {
-                    board.Firmware = "(kapalı / disabled)";
+                    board.Firmware = "(kapalı)";
                     continue;
                 }
 
@@ -294,7 +294,7 @@ namespace RobotTwin.CoreSim.Automation
 
         public WorldObject ResolveObject(string key) =>
             World.Find(key) ?? World.Objects.FirstOrDefault(o => string.Equals(o.Name, key, StringComparison.OrdinalIgnoreCase))
-            ?? throw ApiException.Missing("Nesne / object '" + key + "'");
+            ?? throw ApiException.Missing("Nesne '" + key + "'");
 
         public override IEnumerable<string> ObjectIds() => World.Objects.Select(o => o.Id);
 
@@ -425,8 +425,8 @@ namespace RobotTwin.CoreSim.Automation
         public override void SetPose(string objectId, Vec3? position, Quat? orientation, bool zeroVelocity)
         {
             var o = ResolveObject(objectId);
-            if (Physics == null) throw new ApiException(ApiException.Unsupported, "Fizik yok / no physics");
-            var current = Physics.PoseOf(o.Id) ?? throw ApiException.Missing("Gövde / body '" + o.Id + "'");
+            if (Physics == null) throw new ApiException(ApiException.Unsupported, "Fizik yok");
+            var current = Physics.PoseOf(o.Id) ?? throw ApiException.Missing("Gövde '" + o.Id + "'");
             var p = position ?? current.Position;
             var q = orientation ?? current.Orientation;
             var turn = (q * current.Orientation.Conjugate).Normalized();
@@ -563,12 +563,12 @@ namespace RobotTwin.CoreSim.Automation
             switch (mode)
             {
                 case "voltage":
-                    if (motor == null) throw new ApiException(ApiException.Unsupported, o.Name + ": DC motor değil / not a DC motor");
+                    if (motor == null) throw new ApiException(ApiException.Unsupported, o.Name + ": DC motor değil");
                     cmd.Mode = PortMode.Voltage;
                     cmd.Value = Need(value, "value");
                     break;
                 case "duty":
-                    if (motor == null) throw new ApiException(ApiException.Unsupported, o.Name + ": DC motor değil / not a DC motor");
+                    if (motor == null) throw new ApiException(ApiException.Unsupported, o.Name + ": DC motor değil");
                     cmd.Mode = PortMode.Voltage;
                     cmd.Value = Math.Max(-1, Math.Min(1, Need(value, "value"))) * supply;
                     break;
@@ -595,12 +595,12 @@ namespace RobotTwin.CoreSim.Automation
                     throw ApiException.BadParam("mode", "voltage | duty | speed | torque | angle | release");
             }
 
-            if (SafeGeometry(o)?.PortName == null) throw new ApiException(ApiException.Unsupported, o.Name + ": hareketli çıkışı yok / has no moving port");
+            if (SafeGeometry(o)?.PortName == null) throw new ApiException(ApiException.Unsupported, o.Name + ": hareketli çıkışı yok");
             _ports[o.Id] = cmd;
             return new JsonObject { ["name"] = o.Id, ["type"] = motor != null ? "motor" : servo != null ? "servo" : "joint", ["mode"] = mode, ["value"] = J.N(cmd.Value) };
         }
 
-        private static double Need(double v, string name) => double.IsNaN(v) ? throw ApiException.BadParam(name, "gerekli / required") : v;
+        private static double Need(double v, string name) => double.IsNaN(v) ? throw ApiException.BadParam(name, "gerekli") : v;
 
         /// <summary>Output-shaft stall torque of a DC motor at a supply voltage (N·m).</summary>
         public static double StallTorque(DcMotor m, double volts) =>
@@ -687,16 +687,16 @@ namespace RobotTwin.CoreSim.Automation
 
         public override JsonObject DriveDifferential(double v, double w, JsonObject p)
         {
-            if (Physics == null) throw new ApiException(ApiException.Unsupported, "Fizik yok / no physics");
+            if (Physics == null) throw new ApiException(ApiException.Unsupported, "Fizik yok");
             var left = J.StrList(p, "left").Select(x => ResolveObject(x).Id).ToList();
             var right = J.StrList(p, "right").Select(x => ResolveObject(x).Id).ToList();
             string? baseId = J.Str(p, "base");
             var wheels = new List<(string Motor, double Lateral, double Sign, double Radius)>();
             var motors = World.Objects.Where(o => Actuated(o).Motor != null && SafeGeometry(o)?.PortName != null).ToList();
             if (left.Count > 0 || right.Count > 0) motors = motors.Where(o => left.Contains(o.Id) || right.Contains(o.Id)).ToList();
-            if (motors.Count == 0) throw new ApiException(ApiException.Unsupported, "Tekerlek motoru bulunamadı / no wheel motors found");
+            if (motors.Count == 0) throw new ApiException(ApiException.Unsupported, "Tekerlek motoru bulunamadı");
             baseId ??= BaseOf(motors[0].Id);
-            var basePose = Physics.PoseOf(baseId) ?? throw ApiException.Missing("Taban / base '" + baseId + "'");
+            var basePose = Physics.PoseOf(baseId) ?? throw ApiException.Missing("Taban '" + baseId + "'");
             var fwd = basePose.Orientation.Rotate(Vec3.UnitX);
             var leftAxis = basePose.Orientation.Rotate(Vec3.UnitY);
             foreach (var m in motors)
@@ -717,7 +717,7 @@ namespace RobotTwin.CoreSim.Automation
                 wheels.Add((m.Id, lateral, Math.Sign(s), radius));
             }
 
-            if (wheels.Count == 0) throw new ApiException(ApiException.Unsupported, "Yatay akslı tekerlek motoru yok / no motor with a sideways axle");
+            if (wheels.Count == 0) throw new ApiException(ApiException.Unsupported, "Yatay akslı tekerlek motoru yok");
             var lefts = wheels.Where(x => x.Lateral > 0).ToList();
             var rights = wheels.Where(x => x.Lateral <= 0).ToList();
             double track = J.Num(p, "track") ?? (lefts.Count > 0 && rights.Count > 0 ? lefts.Average(x => x.Lateral) - rights.Average(x => x.Lateral) : 0.12);
@@ -786,7 +786,7 @@ namespace RobotTwin.CoreSim.Automation
 
         public override double NodeVoltage(string node)
         {
-            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok / nothing loaded");
+            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok");
             int colon = node.IndexOf(':');
             if (colon > 0 && Circuit != null && World.Find(node.Substring(0, colon)) is { } o)
             {
@@ -800,7 +800,7 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Full refdes of a part: "object" (component), "object/R1" or "object R1" (part on a board).</summary>
         public string PartRef(string key)
         {
-            if (Circuit == null) throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok / nothing loaded");
+            if (Circuit == null) throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok");
             if (Compiled!.DevicesOf(key).Count > 0) return key;
             var parts = key.Split(new[] { '/', ' ' }, 2);
             var o = World.Find(parts[0]) ?? World.Objects.FirstOrDefault(x => string.Equals(x.Name, parts[0], StringComparison.OrdinalIgnoreCase));

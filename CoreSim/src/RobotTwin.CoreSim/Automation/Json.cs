@@ -30,7 +30,7 @@ namespace RobotTwin.CoreSim.Automation
 
         public int Code { get; }
 
-        public static ApiException Missing(string what) => new ApiException(NotFound, what + " bulunamadı / not found");
+        public static ApiException Missing(string what) => new ApiException(NotFound, what + " bulunamadı");
 
         public static ApiException BadParam(string name, string why) => new ApiException(InvalidParams, "'" + name + "': " + why);
     }
@@ -94,7 +94,7 @@ namespace RobotTwin.CoreSim.Automation
         }
 
         public static string ReqStr(JsonObject? p, string name) =>
-            Str(p, name) ?? throw ApiException.BadParam(name, "gerekli / required");
+            Str(p, name) ?? throw ApiException.BadParam(name, "gerekli");
 
         /// <summary>Any numeric JSON value (parsed, or created from int/long/float/decimal in-process).</summary>
         public static bool TryNumber(JsonNode? n, out double d)
@@ -124,14 +124,14 @@ namespace RobotTwin.CoreSim.Automation
                 if (v.TryGetValue(out bool b)) return b ? 1 : 0;
             }
 
-            if (n != null) throw ApiException.BadParam(name, "sayı bekleniyor / number expected");
+            if (n != null) throw ApiException.BadParam(name, "sayı bekleniyor");
             return null;
         }
 
         public static double Num(JsonObject? p, string name, double fallback) => Num(p, name) ?? fallback;
 
         public static double ReqNum(JsonObject? p, string name) =>
-            Num(p, name) ?? throw ApiException.BadParam(name, "gerekli / required");
+            Num(p, name) ?? throw ApiException.BadParam(name, "gerekli");
 
         public static int Int(JsonObject? p, string name, int fallback) => (int)Math.Round(Num(p, name) ?? fallback);
 
@@ -151,7 +151,7 @@ namespace RobotTwin.CoreSim.Automation
         public static Vec3? Vec(JsonObject? p, string name)
         {
             if (!(Get(p, name) is JsonArray a)) return null;
-            if (a.Count < 3) throw ApiException.BadParam(name, "[x, y, z] bekleniyor / expected");
+            if (a.Count < 3) throw ApiException.BadParam(name, "[x, y, z] bekleniyor");
             return new Vec3(Item(a, 0), Item(a, 1), Item(a, 2));
         }
 
@@ -159,7 +159,7 @@ namespace RobotTwin.CoreSim.Automation
         public static Quat? Quat(JsonObject? p, string name)
         {
             if (!(Get(p, name) is JsonArray a)) return null;
-            if (a.Count < 4) throw ApiException.BadParam(name, "[x, y, z, w] bekleniyor / expected");
+            if (a.Count < 4) throw ApiException.BadParam(name, "[x, y, z, w] bekleniyor");
             return new Mechanics.Quat(Item(a, 3), Item(a, 0), Item(a, 1), Item(a, 2)).Normalized();
         }
 

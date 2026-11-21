@@ -156,7 +156,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     {
                         Severity = CompilerSeverity.Error,
                         Code = "RW0001",
-                        Message = "MSVC (Visual Studio Build Tools, C++ x64) was not found. Install 'Desktop development with C++' or set ROBOTWIN_VCVARS64."
+                        Message = "MSVC (Visual Studio Build Tools, C++ x64) bulunamadı. Visual Studio Installer'da 'Desktop development with C++' iş yükünü kurun ya da Ayarlar → Derleyiciler → vcvars64.bat yolunu girin."
                     });
                     return result;
                 }
@@ -198,7 +198,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 int exit = Esp32Toolchain.Run(env, "cl.exe", args.ToString(), buildDir, out string output);
                 log.AppendLine("cl " + args);
                 log.Append(output);
-                log.AppendLine(string.Format(CultureInfo.InvariantCulture, "compile+link: {0:F2} s (exit {1})", compile.Elapsed.TotalSeconds, exit));
+                log.AppendLine(string.Format(CultureInfo.InvariantCulture, "derleme + bağlama: {0:F2} s (çıkış kodu {1})", compile.Elapsed.TotalSeconds, exit));
 
                 ParseDiagnostics(output, cppPath, files, result.Diagnostics);
                 result.Success = exit == 0 && File.Exists(dllPath);
@@ -226,8 +226,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             finally
             {
                 result.BuildTime = total.Elapsed - result.ShimBuildTime;
-                log.AppendLine(string.Format(CultureInfo.InvariantCulture, "total: {0:F2} s (shim {1}: {2:F2} s, toolchain setup {3:F2} s)",
-                    total.Elapsed.TotalSeconds, result.ShimFromCache ? "cached" : "built", result.ShimBuildTime.TotalSeconds,
+                log.AppendLine(string.Format(CultureInfo.InvariantCulture, "toplam: {0:F2} s (ESP32 katmanı {1}: {2:F2} s, derleyici hazırlığı {3:F2} s)",
+                    total.Elapsed.TotalSeconds, result.ShimFromCache ? "önbellekten" : "derlendi", result.ShimBuildTime.TotalSeconds,
                     result.ToolchainSetupTime.TotalSeconds));
                 result.Log = log.ToString();
                 if (buildDir != null && !KeepIntermediateFiles)
@@ -262,7 +262,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 {
                     Severity = CompilerSeverity.Error,
                     Code = "RW0004",
-                    Message = "ESP32 HAL shim sources (native/esp32hal) were not found."
+                    Message = "ESP32 donanım katmanının kaynakları (native/esp32hal) bulunamadı; uygulamayı yeniden kurun."
                 });
                 return null;
             }
@@ -271,7 +271,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             string dir = Path.Combine(CacheDirectory, hash);
             string include = Path.Combine(dir, "include");
             string lib = Path.Combine(dir, "rw_esp32hal.lib");
-            log.AppendLine("shim: " + origin + " -> " + dir);
+            log.AppendLine("ESP32 katmanı: " + origin + " -> " + dir);
             if (File.Exists(lib))
             {
                 result.ShimFromCache = true;
@@ -309,7 +309,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                             .Select(k => "\"" + Path.Combine(tempInclude, k) + "\""));
                         string args = CommonFlags + " /c /MP /I\"" + tempInclude + "\" /Fo\"" + objDir + "\\\\\" " + cppList;
                         int exit = Esp32Toolchain.Run(env, "cl.exe", args, temp, out string output);
-                        log.AppendLine("shim cl: exit " + exit.ToString(CultureInfo.InvariantCulture));
+                        log.AppendLine("ESP32 katmanı derlemesi: çıkış kodu " + exit.ToString(CultureInfo.InvariantCulture));
                         if (exit != 0)
                         {
                             log.Append(output);
@@ -347,7 +347,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             }
 
             result.ShimBuildTime = sw.Elapsed;
-            log.AppendLine(string.Format(CultureInfo.InvariantCulture, "shim built in {0:F2} s", sw.Elapsed.TotalSeconds));
+            log.AppendLine(string.Format(CultureInfo.InvariantCulture, "ESP32 katmanı {0:F2} s'de derlendi", sw.Elapsed.TotalSeconds));
             return File.Exists(lib) ? (include, lib) : ((string, string)?)null;
         }
 
@@ -381,7 +381,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 dir = FindShimDirectory();
             }
 
-            origin = dir ?? "(not found)";
+            origin = dir ?? "(bulunamadı)";
             if (dir == null || !Directory.Exists(dir)) return files;
             foreach (var path in Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories))
             {
@@ -480,8 +480,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     string code = m.Groups["code"].Value;
                     if (code == "LNK2019" || code == "LNK2001")
                     {
-                        if (message.Contains("void __cdecl setup(void)")) message = "undefined reference to 'setup()' - the sketch must define void setup() (" + message + ")";
-                        else if (message.Contains("void __cdecl loop(void)")) message = "undefined reference to 'loop()' - the sketch must define void loop() (" + message + ")";
+                        if (message.Contains("void __cdecl setup(void)")) message = "'setup()' tanımlı değil: kodda void setup() işlevi olmalı (" + message + ")";
+                        else if (message.Contains("void __cdecl loop(void)")) message = "'loop()' tanımlı değil: kodda void loop() işlevi olmalı (" + message + ")";
                     }
 
                     into.Add(new CompilerDiagnostic
@@ -603,7 +603,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
-                using (var p = Process.Start(psi) ?? throw new InvalidOperationException("Could not start cmd.exe"))
+                using (var p = Process.Start(psi) ?? throw new InvalidOperationException("cmd.exe başlatılamadı"))
                 {
                     var err = p.StandardError.ReadToEndAsync();
                     string text = p.StandardOutput.ReadToEnd();
@@ -618,10 +618,10 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
                     if (!env.ContainsKey("VCToolsInstallDir"))
                     {
-                        throw new InvalidOperationException("vcvars64.bat did not set up the MSVC environment: " + err.Result);
+                        throw new InvalidOperationException("vcvars64.bat MSVC ortamını kuramadı: " + err.Result);
                     }
 
-                    log.AppendLine("MSVC tools " + (env.TryGetValue("VCToolsVersion", out var v) ? v : "?"));
+                    log.AppendLine("MSVC araçları " + (env.TryGetValue("VCToolsVersion", out var v) ? v : "?"));
                     Environments[vcvars] = env;
                     return env;
                 }
@@ -669,7 +669,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             };
             psi.Environment.Clear();
             foreach (var kv in env) psi.Environment[kv.Key] = kv.Value;
-            using (var p = Process.Start(psi) ?? throw new InvalidOperationException("Could not start " + exe))
+            using (var p = Process.Start(psi) ?? throw new InvalidOperationException(exe + " başlatılamadı"))
             {
                 var err = p.StandardError.ReadToEndAsync();
                 string stdout = p.StandardOutput.ReadToEnd();

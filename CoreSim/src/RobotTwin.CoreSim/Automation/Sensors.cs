@@ -139,14 +139,14 @@ namespace RobotTwin.CoreSim.Automation
         {
             Func<SimRunner, SensorSpec, ISimSensor>? factory;
             lock (Gate) TypesMap.TryGetValue(spec.Type, out factory);
-            if (factory == null) throw ApiException.BadParam("type", "bilinmeyen sensör türü / unknown sensor type '" + spec.Type + "' (" + string.Join(", ", Types) + ")");
+            if (factory == null) throw ApiException.BadParam("type", "bilinmeyen sensör türü '" + spec.Type + "' (" + string.Join(", ", Types) + ")");
             return factory(_runner, spec);
         }
 
         public ISimSensor Add(SensorSpec spec)
         {
             if (string.IsNullOrWhiteSpace(spec.Name)) spec.Name = spec.Type + (_specs.Count(s => s.Type == spec.Type) + 1);
-            if (spec.Object != null && !_runner.TryGetBody(spec.Object, out _)) throw ApiException.Missing("Nesne / object '" + spec.Object + "'");
+            if (spec.Object != null && !_runner.TryGetBody(spec.Object, out _)) throw ApiException.Missing("Nesne '" + spec.Object + "'");
             var sensor = Create(spec);
             _specs.RemoveAll(s => string.Equals(s.Name, spec.Name, StringComparison.OrdinalIgnoreCase));
             _specs.Add(spec);
@@ -168,7 +168,7 @@ namespace RobotTwin.CoreSim.Automation
             return had;
         }
 
-        public ISimSensor Get(string name) => _sensors.TryGetValue(name, out var s) ? s : throw ApiException.Missing("Sensör / sensor '" + name + "'");
+        public ISimSensor Get(string name) => _sensors.TryGetValue(name, out var s) ? s : throw ApiException.Missing("Sensör '" + name + "'");
 
         public bool TryGet(string name, out ISimSensor sensor) => _sensors.TryGetValue(name, out sensor!);
 

@@ -243,7 +243,7 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>Adds or replaces a footprint (user libraries, imported parts).</summary>
         public static void Register(Footprint footprint)
         {
-            if (string.IsNullOrWhiteSpace(footprint.Id)) throw new ArgumentException("Footprint needs an id.");
+            if (string.IsNullOrWhiteSpace(footprint.Id)) throw new ArgumentException("Footprint'in bir kimliği (adı) olmalı.");
             lock (Gate)
             {
                 Cache[footprint.Id] = footprint;
@@ -393,7 +393,7 @@ namespace RobotTwin.CoreSim.Pcb
                 case "HDR":
                 {
                     int n = int.Parse(parts[1].Substring(2), CultureInfo.InvariantCulture);
-                    var fp = new Footprint { Description = $"Pin header 1×{n}", Height = 8.5 };
+                    var fp = new Footprint { Description = $"Erkek header 1×{n}", Height = 8.5 };
                     for (int i = 0; i < n; i++)
                     {
                         fp.Tht((i + 1).ToString(CultureInfo.InvariantCulture), 0, i * 2.54, 1.7, 1.0, i == 0 ? PadShape.Rect : PadShape.Oval);

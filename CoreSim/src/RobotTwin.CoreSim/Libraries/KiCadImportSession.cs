@@ -88,8 +88,8 @@ namespace RobotTwin.CoreSim.Libraries
             s.Report = report;
             s.LibraryName = file.Name;
             s.Footprints.AddRange(report.Footprints);
-            foreach (var e in report.Errors) s.Log.Error(TranslateKiCad(e));
-            foreach (var w in report.Warnings) s.Log.Warn(TranslateKiCad(w));
+            foreach (var e in report.Errors) s.Log.Error(e);
+            foreach (var w in report.Warnings) s.Log.Warn(w);
             foreach (var dir in s.Paths.Where(Directory.Exists)) s.ModelFolders.Add(dir);
             foreach (var p in s.Paths)
             {
@@ -421,30 +421,6 @@ namespace RobotTwin.CoreSim.Libraries
             }
 
             return file;
-        }
-
-        /// <summary>English KiCad importer messages, the frequent ones in Turkish.</summary>
-        public static string TranslateKiCad(string message)
-        {
-            (string Pattern, string Replacement)[] table =
-            {
-                (@"^(.*): not found\.$", "$1: bulunamadı."),
-                (@"^(.*): not a KiCad library file \(.*\)\.$", "$1: KiCad kütüphane dosyası değil (.kicad_sym, .kicad_mod veya .pretty klasörü bekleniyor)."),
-                (@"^(.*): KiCad 5 legacy symbol libraries \(\.lib\) are not supported.*$", "$1: KiCad 5 eski sembol kütüphanesi (.lib) desteklenmiyor; KiCad 6+ ile açıp kaydederek .kicad_sym üretin."),
-                (@"^footprint '(.*)' has the id of a built-in footprint; imported as '(.*)'\.$", "'$1' footprint'i yerleşik bir kılıfla aynı adda; '$2' olarak alındı."),
-                (@"^footprint '(.*)' imported twice; the later one \((.*)\) is used\.$", "'$1' footprint'i iki kez geldi; sonraki ($2) kullanıldı."),
-                (@"no courtyard graphics; courtyard derived from the pad outline \+ 0\.25 mm\.", "courtyard çizimi yok; pad sınırı + 0.25 mm kullanıldı."),
-                (@"custom shape imported as its bounding rectangle\.", "özel şekilli pad sınırlayan dikdörtgen olarak alındı."),
-                (@"trapezoid imported as its bounding rectangle\.", "yamuk pad sınırlayan dikdörtgen olarak alındı."),
-                (@"drill offset ignored \(copper and hole share one centre here\)\.", "delik kaçıklığı yok sayıldı (bakır ve delik aynı merkezde)."),
-                (@"^(.*): Not a KiCad footprint: .*$", "$1: KiCad footprint dosyası değil."),
-            };
-            foreach (var (p, r) in table)
-            {
-                if (Regex.IsMatch(message, p)) return Regex.Replace(message, p, r);
-            }
-
-            return message;
         }
     }
 }

@@ -41,7 +41,7 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
             Tau = tau;
             Ux0 = inletUx;
             long n = (long)nx * ny * nz;
-            if (n * 19 > int.MaxValue) throw new ArgumentException("ızgara çok büyük / grid too large");
+            if (n * 19 > int.MaxValue) throw new ArgumentException("ızgara çok büyük");
             Solid = new bool[n];
             _f = new float[19 * n];
             _g = new float[19 * n];

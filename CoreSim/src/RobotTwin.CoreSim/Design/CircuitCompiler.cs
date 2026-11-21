@@ -120,7 +120,7 @@ namespace RobotTwin.CoreSim.Design
                 {
                     int node;
                     if (netOfPin.TryGetValue(refDes + "\u0001" + pin, out var netName)) node = circuit.Node(netName);
-                    else if (def.FindPin(pin) == null) throw new InvalidOperationException($"{def.Id} has no pin '{pin}'.");
+                    else if (def.FindPin(pin) == null) throw new InvalidOperationException($"{def.Id} parçasında '{pin}' bacağı yok.");
                     else node = circuit.Node(refDes + "." + pin + "#open");
                     compiled.NodeByPin[refDes + "." + pin] = node;
                     return node;

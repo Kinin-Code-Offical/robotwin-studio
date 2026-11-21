@@ -158,7 +158,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 {
                     s = s.Negated();
                     inverted = true;
-                    notes.Add("mesh is wound inside-out; volume sign corrected");
+                    notes.Add("ağ ters yüzlü (içi dışına dönük); hacmin işareti düzeltildi");
                 }
 
                 double ext = mesh.Bounds.Size.Length;
@@ -168,16 +168,16 @@ namespace RobotTwin.CoreSim.Mechanics
                     r.IsClosed = true;
                     r.WindingInverted = inverted;
                     r.SurfaceArea = mesh.SurfaceArea();
-                    if (topo.DegenerateTriangles > 0) notes.Add($"{topo.DegenerateTriangles} degenerate triangles ignored");
+                    if (topo.DegenerateTriangles > 0) notes.Add($"{topo.DegenerateTriangles} bozuk (alansız) üçgen yok sayıldı");
                     r._warnings.AddRange(notes);
                     return r;
                 }
 
-                notes.Add("closed mesh encloses no volume");
+                notes.Add("kapalı ağın içinde hacim yok");
             }
             else
             {
-                notes.Add($"mesh is not closed ({topo}); using an estimate");
+                notes.Add($"ağ kapalı değil ({topo}); yaklaşık değer kullanıldı");
             }
 
             var mode = o.OpenMeshFallback;
@@ -215,7 +215,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             result.SurfaceArea = mesh.SurfaceArea();
             result._warnings.InsertRange(0, notes);
-            result._warnings.Add($"mass properties estimated with method {result.Method}");
+            result._warnings.Add($"kütle özellikleri yaklaşık hesaplandı ({result.Method})");
             return result;
         }
 
@@ -230,7 +230,7 @@ namespace RobotTwin.CoreSim.Mechanics
             var b = mesh.Bounds;
             var size = b.Size;
             double vol = size.X * size.Y * size.Z;
-            if (vol <= 0) notes.Add("bounding box is flat; mass from density is zero");
+            if (vol <= 0) notes.Add("sınırlayan kutu düz; yoğunluktan bulunan kütle sıfır");
             double m = mass ?? (density ?? 0) * vol;
             var r = Box(m, size, b.Center);
             r.Method = MassPropertiesMethod.BoundingBox;

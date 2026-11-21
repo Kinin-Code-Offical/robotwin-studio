@@ -68,7 +68,7 @@ namespace RobotWin.Studio.Automation
                 }
                 catch (ApiException ex)
                 {
-                    Console.Error.WriteLine("Yüklenemedi / load failed: " + ex.Message);
+                    Console.Error.WriteLine("Yüklenemedi: " + ex.Message);
                     app.Shutdown(2);
                     return true;
                 }
@@ -90,7 +90,7 @@ namespace RobotWin.Studio.Automation
             }
             catch (System.Net.Sockets.SocketException ex)
             {
-                Console.Error.WriteLine("Port açılamadı / cannot listen: " + ex.Message);
+                Console.Error.WriteLine("Port açılamadı: " + ex.Message);
                 app.Shutdown(3);
                 return true;
             }

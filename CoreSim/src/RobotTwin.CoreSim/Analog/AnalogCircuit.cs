@@ -34,7 +34,7 @@ namespace RobotTwin.CoreSim.Analog
         /// <summary>Returns the node with this name, creating it on first use.</summary>
         public int Node(string name)
         {
-            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Node name is empty.", nameof(name));
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Düğüm adı boş.", nameof(name));
             if (_nodeByName.TryGetValue(name, out int index)) return index;
             index = _nodeNames.Count;
             _nodeNames.Add(name);
@@ -49,7 +49,7 @@ namespace RobotTwin.CoreSim.Analog
         {
             if (_nodeByName.TryGetValue(name, out int existing) && existing != Ground)
             {
-                throw new InvalidOperationException($"Node '{name}' already exists and cannot become ground.");
+                throw new InvalidOperationException($"'{name}' düğümü zaten var, toprak yapılamaz.");
             }
 
             _nodeByName[name] = Ground;
@@ -63,7 +63,7 @@ namespace RobotTwin.CoreSim.Analog
             if (device == null) throw new ArgumentNullException(nameof(device));
             if (_deviceById.ContainsKey(device.Id))
             {
-                throw new InvalidOperationException($"Duplicate device id '{device.Id}'.");
+                throw new InvalidOperationException($"'{device.Id}' parça kimliği iki kez kullanılmış.");
             }
 
             _devices.Add(device);

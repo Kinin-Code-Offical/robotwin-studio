@@ -85,7 +85,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             double vt = Ideality * AnalogMath.ThermalVoltage(NominalTempC);
             double vj = forwardVoltage - forwardCurrent * SeriesResistance;
-            if (vj <= 0.0) throw new ArgumentException("Series resistance drops more than the forward voltage.");
+            if (vj <= 0.0) throw new ArgumentException("Seri direnç üzerindeki düşüm ileri gerilimden büyük.");
             SaturationCurrent = forwardCurrent / (Math.Exp(vj / vt) - 1.0);
         }
 
@@ -566,7 +566,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public void SetOnResistance(double rdsOn, double atGateVoltage)
         {
             double overdrive = Math.Abs(atGateVoltage) - Threshold;
-            if (overdrive <= 0.0) throw new ArgumentException("Gate voltage must exceed the threshold.");
+            if (overdrive <= 0.0) throw new ArgumentException("Kapı gerilimi eşik geriliminden büyük olmalı.");
             Transconductance = 1.0 / (rdsOn * overdrive);
         }
 

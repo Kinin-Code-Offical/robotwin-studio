@@ -233,7 +233,7 @@ namespace RobotTwin.CoreSim.Design
 
         public void Add(PartDefinition part)
         {
-            if (_parts.ContainsKey(part.Id)) throw new InvalidOperationException($"Duplicate part '{part.Id}'.");
+            if (_parts.ContainsKey(part.Id)) throw new InvalidOperationException($"'{part.Id}' parçası kütüphanede iki kez var.");
             _parts[part.Id] = part;
         }
 
@@ -241,10 +241,10 @@ namespace RobotTwin.CoreSim.Design
         {
             if (!_parts.ContainsKey(preset.PartId))
             {
-                throw new InvalidOperationException($"Preset '{preset.Id}' refers to unknown part '{preset.PartId}'.");
+                throw new InvalidOperationException($"'{preset.Id}' hazır ayarı bilinmeyen '{preset.PartId}' parçasına bağlı.");
             }
 
-            if (_presetById.ContainsKey(preset.Id)) throw new InvalidOperationException($"Duplicate preset '{preset.Id}'.");
+            if (_presetById.ContainsKey(preset.Id)) throw new InvalidOperationException($"'{preset.Id}' hazır ayarı iki kez var.");
             _presets.Add(preset);
             _presetById[preset.Id] = preset;
         }
@@ -270,7 +270,7 @@ namespace RobotTwin.CoreSim.Design
         public PartPreset? FindPreset(string id) => _presetById.TryGetValue(id, out var preset) ? preset : null;
 
         public PartDefinition Get(string id) =>
-            Find(id) ?? throw new KeyNotFoundException($"Unknown part '{id}'.");
+            Find(id) ?? throw new KeyNotFoundException($"Bilinmeyen parça '{id}'.");
 
         /// <summary>Full parameter set for a part: definition defaults, then preset values, then overrides.</summary>
         public Dictionary<string, string> ResolveParameters(PartDefinition part, PartPreset? preset,

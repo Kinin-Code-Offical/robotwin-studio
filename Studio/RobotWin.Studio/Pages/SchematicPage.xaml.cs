@@ -456,7 +456,7 @@ namespace RobotWin.Studio.Pages
                 W.CommitChange($"{board.RefDes}: firmware kaldırıldı");
                 BuildPinPanel();
             };
-            var reset = new Button { Content = "Reset", Margin = new Thickness(6, 0, 0, 0), IsEnabled = W.Simulation.FirmwareOf(board.RefDes) != null };
+            var reset = new Button { Content = "Sıfırla", ToolTip = "Kartı sıfırlar (RESET düğmesi)", Margin = new Thickness(6, 0, 0, 0), IsEnabled = W.Simulation.FirmwareOf(board.RefDes) != null };
             reset.Click += (_, _) => W.Simulation.ResetBoard(board.RefDes);
             buttons.Children.Add(load);
             buttons.Children.Add(remove);

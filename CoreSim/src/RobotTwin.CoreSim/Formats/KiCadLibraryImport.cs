@@ -194,11 +194,11 @@ namespace RobotTwin.CoreSim.Formats
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append("KiCad import: ").Append(Footprints.Count).Append(" footprint(s), ").Append(Symbols.Count).Append(" symbol(s); ")
-                .Append(Count(KiCadImportStatus.Mapped)).Append(" mapped, ").Append(Count(KiCadImportStatus.Generic)).Append(" generic, ")
-                .Append(Count(KiCadImportStatus.Skipped)).Append(" skipped, ").Append(Count(KiCadImportStatus.Failed)).Append(" failed.\n");
-            foreach (var e in Errors) sb.Append("ERROR: ").Append(e).Append('\n');
-            foreach (var w in Warnings) sb.Append("warning: ").Append(w).Append('\n');
+            sb.Append("KiCad içe aktarımı: ").Append(Footprints.Count).Append(" footprint, ").Append(Symbols.Count).Append(" sembol; ")
+                .Append(Count(KiCadImportStatus.Mapped)).Append(" eşlendi, ").Append(Count(KiCadImportStatus.Generic)).Append(" genel, ")
+                .Append(Count(KiCadImportStatus.Skipped)).Append(" atlandı, ").Append(Count(KiCadImportStatus.Failed)).Append(" başarısız.\n");
+            foreach (var e in Errors) sb.Append("HATA: ").Append(e).Append('\n');
+            foreach (var w in Warnings) sb.Append("uyarı: ").Append(w).Append('\n');
             foreach (var e in Entries)
             {
                 sb.Append("- ").Append(e.Symbol).Append(" [").Append(e.Status).Append(']');
@@ -270,7 +270,7 @@ namespace RobotTwin.CoreSim.Formats
                     string fileName = Path.GetFileNameWithoutExtension(file);
                     if (!string.Equals(fp.Id, fileName, StringComparison.Ordinal))
                     {
-                        GetFootprintInfo(fp)?.Warnings.Add($"internal name '{fp.Id}' differs from the file name; using '{fileName}'.");
+                        GetFootprintInfo(fp)?.Warnings.Add($"iç ad '{fp.Id}' dosya adından farklı; '{fileName}' kullanıldı.");
                         fp.Id = fileName;
                         var info = GetFootprintInfo(fp);
                         if (info != null) info.Name = fileName;
@@ -291,7 +291,7 @@ namespace RobotTwin.CoreSim.Formats
         {
             if (root.Head != "footprint" && root.Head != "module")
             {
-                throw new FormatException($"Not a KiCad footprint: the file starts with '({root.Head} ...)', expected '(footprint ...)' or '(module ...)'.");
+                throw new FormatException($"KiCad footprint dosyası değil: dosya '({root.Head} ...)' ile başlıyor, '(footprint ...)' ya da '(module ...)' bekleniyor.");
             }
 
             info = new KiCadFootprintInfo { IsLegacyModule = root.Head == "module" };
@@ -308,7 +308,7 @@ namespace RobotTwin.CoreSim.Formats
             var fp = new Footprint { Id = name, Description = info.Description };
             double fpAngle = root.Child("at")?.Number(3, 0.0) ?? 0.0;
             bool flipped = (root.ChildText("layer") ?? "F.Cu").StartsWith("B.", StringComparison.Ordinal);
-            if (flipped) info.Warnings.Add("footprint is placed on B.Cu (copied from a board); converted back to its top-side library form.");
+            if (flipped) info.Warnings.Add("footprint B.Cu katmanında (bir karttan kopyalanmış); kütüphanedeki üst yüz biçimine çevrildi.");
 
             // ---- pads
             foreach (var padNode in root.Children("pad"))
@@ -350,7 +350,7 @@ namespace RobotTwin.CoreSim.Formats
             if (!cy.IsEmpty)
             {
                 info.CourtyardFromFile = true;
-                if (court.IsEmpty) info.Warnings.Add("no F.CrtYd graphics; courtyard taken from B.CrtYd.");
+                if (court.IsEmpty) info.Warnings.Add("F.CrtYd çizimi yok; courtyard B.CrtYd'den alındı.");
                 fp.CourtyardMinX = cy.MinX;
                 fp.CourtyardMinY = cy.MinY;
                 fp.CourtyardMaxX = cy.MaxX;
@@ -382,7 +382,7 @@ namespace RobotTwin.CoreSim.Formats
                 fp.CourtyardMinY = pads.MinY - Margin;
                 fp.CourtyardMaxX = pads.MaxX + Margin;
                 fp.CourtyardMaxY = pads.MaxY + Margin;
-                info.Warnings.Add("no courtyard graphics; courtyard derived from the pad outline + 0.25 mm.");
+                info.Warnings.Add("courtyard çizimi yok; ped sınırı + 0.25 mm kullanıldı.");
             }
 
             // ---- 3D models (metadata only)
@@ -450,14 +450,14 @@ namespace RobotTwin.CoreSim.Formats
                 var offset = drillNode.Child("offset");
                 if (offset != null && (Math.Abs(offset.Number(1)) > 1e-9 || Math.Abs(offset.Number(2)) > 1e-9))
                 {
-                    info.Warnings.Add($"{label}: drill offset ignored (copper and hole share one centre here).");
+                    info.Warnings.Add($"{label}: delik kaçıklığı yok sayıldı (bakır ve delik aynı merkezde).");
                 }
             }
 
             if (w <= 0 && h <= 0)
             {
                 w = h = drill > 0 ? drill * 1.6 : 1.0;
-                info.Warnings.Add($"{label}: no size; assumed {w.ToString("0.###", CultureInfo.InvariantCulture)} mm.");
+                info.Warnings.Add($"{label}: boyut yok; {w.ToString("0.###", CultureInfo.InvariantCulture)} mm varsayıldı.");
             }
 
             PadShape ps;
@@ -485,7 +485,7 @@ namespace RobotTwin.CoreSim.Formats
                     w += Math.Abs(dy);
                     h += Math.Abs(dx);
                     ps = PadShape.Rect;
-                    info.Warnings.Add($"{label}: trapezoid imported as its bounding rectangle.");
+                    info.Warnings.Add($"{label}: yamuk ped sınırlayan dikdörtgen olarak alındı.");
                     break;
                 }
 
@@ -516,13 +516,13 @@ namespace RobotTwin.CoreSim.Formats
                     ox = (b.MinX + b.MaxX) / 2;
                     oy = (b.MinY + b.MaxY) / 2;
                     ps = PadShape.Rect;
-                    info.Warnings.Add($"{label}: custom shape imported as its bounding rectangle.");
+                    info.Warnings.Add($"{label}: özel şekilli ped sınırlayan dikdörtgen olarak alındı.");
                     break;
                 }
 
                 default:
                     ps = PadShape.Rect;
-                    info.Warnings.Add($"{label}: unknown shape '{shape}', imported as a rectangle.");
+                    info.Warnings.Add($"{label}: bilinmeyen şekil '{shape}', dikdörtgen olarak alındı.");
                     break;
             }
 
@@ -553,7 +553,7 @@ namespace RobotTwin.CoreSim.Formats
                     w = bw;
                     h = bh;
                     ps = PadShape.Rect;
-                    info.Warnings.Add($"{label}: rotated by {a.ToString("0.##", CultureInfo.InvariantCulture)}°, imported as its bounding rectangle.");
+                    info.Warnings.Add($"{label}: {a.ToString("0.##", CultureInfo.InvariantCulture)}° döndürülmüş, sınırlayan dikdörtgen olarak alındı.");
                 }
             }
 
@@ -568,7 +568,7 @@ namespace RobotTwin.CoreSim.Formats
                     if (drill <= 0)
                     {
                         drill = Math.Min(w, h) * 0.5;
-                        info.Warnings.Add($"{label}: through-hole pad without drill; assumed {drill.ToString("0.###", CultureInfo.InvariantCulture)} mm.");
+                        info.Warnings.Add($"{label}: deliksiz THT ped; {drill.ToString("0.###", CultureInfo.InvariantCulture)} mm delik varsayıldı.");
                     }
 
                     pad.Drill = drill;
@@ -586,7 +586,7 @@ namespace RobotTwin.CoreSim.Formats
                 case "connect":
                     if (!front && !back)
                     {
-                        info.Warnings.Add($"{label}: no copper layer ({string.Join(" ", layers)}); skipped.");
+                        info.Warnings.Add($"{label}: bakır katmanı yok ({string.Join(" ", layers)}); atlandı.");
                         return null;
                     }
 
@@ -594,7 +594,7 @@ namespace RobotTwin.CoreSim.Formats
                     break;
 
                 default:
-                    info.Warnings.Add($"{label}: unknown pad type '{type}'.");
+                    info.Warnings.Add($"{label}: bilinmeyen ped türü '{type}'.");
                     if (drill > 0) pad.Drill = drill;
                     else if (!front && back) pad.Layer = CopperLayer.Bottom;
                     break;
@@ -820,7 +820,7 @@ namespace RobotTwin.CoreSim.Formats
                     return null;
 
                 default:
-                    warnings.Add($"graphic '{head}' not understood; ignored.");
+                    warnings.Add($"'{head}' çizimi anlaşılamadı; yok sayıldı.");
                     return null;
             }
         }
@@ -948,7 +948,7 @@ namespace RobotTwin.CoreSim.Formats
                     nodes = new[] { root };
                     break;
                 default:
-                    throw new FormatException($"Not a KiCad symbol library: the file starts with '({root.Head} ...)', expected '(kicad_symbol_lib ...)'.");
+                    throw new FormatException($"KiCad sembol kütüphanesi değil: dosya '({root.Head} ...)' ile başlıyor, '(kicad_symbol_lib ...)' bekleniyor.");
             }
 
             var symbols = nodes.Select(n => ParseSymbol(n, libraryName)).ToList();
@@ -974,13 +974,13 @@ namespace RobotTwin.CoreSim.Formats
 
             if (!visiting.Add(s))
             {
-                s.Warnings.Add($"circular 'extends' chain at '{s.Name}'.");
+                s.Warnings.Add($"'{s.Name}' sembolünde döngüsel 'extends' zinciri.");
                 return;
             }
 
             if (!byName.TryGetValue(s.Extends!, out var parent))
             {
-                s.Warnings.Add($"parent symbol '{s.Extends}' is not in this library; pins and graphics are missing.");
+                s.Warnings.Add($"üst sembol '{s.Extends}' bu kütüphanede yok; bacaklar ve çizimler eksik.");
                 done.Add(s);
                 return;
             }
@@ -1192,12 +1192,12 @@ namespace RobotTwin.CoreSim.Formats
             if (symbol == null) throw new ArgumentNullException(nameof(symbol));
             if (library == null) throw new ArgumentNullException(nameof(library));
             log = new List<string>();
-            foreach (var w in symbol.Warnings) log.Add("warning: " + w);
+            foreach (var w in symbol.Warnings) log.Add("uyarı: " + w);
 
             if (symbol.IsPower)
             {
                 status = KiCadImportStatus.Skipped;
-                log.Add("power symbol (only names a net); use the built-in ground / power-rail symbols instead.");
+                log.Add("güç sembolü (yalnızca bir neti adlandırır); yerine yerleşik toprak / besleme hattı sembollerini kullanın.");
                 return null;
             }
 
@@ -1205,7 +1205,7 @@ namespace RobotTwin.CoreSim.Formats
             if (pins.Count == 0)
             {
                 status = KiCadImportStatus.Failed;
-                log.Add("symbol has no pins; nothing to connect.");
+                log.Add("sembolün bacağı yok; bağlanacak bir şey yok.");
                 return null;
             }
 
@@ -1226,7 +1226,7 @@ namespace RobotTwin.CoreSim.Formats
                 log.AddRange(mapNotes);
                 var parameters = BuildParameters(def, cand.Preset, symbol, words, log);
                 parameters["pinmap"] = string.Join(",", def.Pins.Select(p => p.Name + ":" + map[p.Name].Number));
-                log.Add("pinmap " + parameters["pinmap"] + ".");
+                log.Add("bacak eşlemesi " + parameters["pinmap"] + ".");
                 status = KiCadImportStatus.Mapped;
                 return Finish(symbol, def, parameters, footprint, map.Values.Select(p => p.Number), library, embed, log);
             }
@@ -1245,19 +1245,19 @@ namespace RobotTwin.CoreSim.Formats
                 status = KiCadImportStatus.Failed;
                 if (candidates.Count > 0 && !isConnector)
                 {
-                    log.Add("no candidate model accepted the pins (" + string.Join(", ", candidates.Select(c => c.PartId)) + ").");
+                    log.Add("aday modellerin hiçbiri bacaklara uymadı (" + string.Join(", ", candidates.Select(c => c.PartId)) + ").");
                 }
 
-                log.Add($"no simulation model fits and there is no generic {count}-pin part (generic parts exist for "
-                        + string.Join("/", HeaderSizes) + " pins (pin headers) and " + string.Join("/", TerminalSizes) + " pins (terminal blocks)); not imported.");
+                log.Add($"uyan bir simülasyon modeli ve {count} bacaklı genel parça yok (genel parçalar "
+                        + string.Join("/", HeaderSizes) + " bacaklı pin başlıkları ve " + string.Join("/", TerminalSizes) + " bacaklı klemensler için var); alınmadı.");
                 return null;
             }
 
-            if (isConnector) log.Add($"connector: mapped onto '{generic.Id}' ({generic.Name}); connectors have no electrical model.");
+            if (isConnector) log.Add($"konnektör: '{generic.Id}' ({generic.Name}) parçasına eşlendi; konnektörlerin elektriksel modeli yoktur.");
             else
             {
-                if (candidates.Count > 0) log.Add("candidate models rejected the pins: " + string.Join(", ", candidates.Where(c => c.PartId != "#connector").Select(c => c.PartId)) + ".");
-                log.Add($"no simulation model fits: imported as a connector-like passive part '{generic.Id}' (no electrical behaviour, pins only carry nets).");
+                if (candidates.Count > 0) log.Add("aday modeller bacaklara uymadı: " + string.Join(", ", candidates.Where(c => c.PartId != "#connector").Select(c => c.PartId)) + ".");
+                log.Add($"uyan simülasyon modeli yok: konnektör gibi pasif bir parça olarak alındı '{generic.Id}' (elektriksel davranışı yok, bacaklar yalnızca netleri taşır).");
             }
 
             var byNumber = pins.ToDictionary(p => p.Number, StringComparer.Ordinal);
@@ -1269,12 +1269,12 @@ namespace RobotTwin.CoreSim.Formats
                 pinmap.Add(modelPin + ":" + kp.Number);
                 if (!isConnector || kp.CleanName.Length > 0 && !Regex.IsMatch(kp.CleanName, @"^(Pin_?)?\d+$", RegexOptions.IgnoreCase))
                 {
-                    log.Add($"  pin {modelPin} = KiCad pin {kp.Number}" + (kp.CleanName.Length > 0 ? " (" + kp.CleanName + ")" : string.Empty));
+                    log.Add($"  bacak {modelPin} = KiCad bacağı {kp.Number}" + (kp.CleanName.Length > 0 ? " (" + kp.CleanName + ")" : string.Empty));
                 }
             }
 
             var genericParams = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["pinmap"] = string.Join(",", pinmap) };
-            log.Add("pinmap " + genericParams["pinmap"] + ".");
+            log.Add("bacak eşlemesi " + genericParams["pinmap"] + ".");
             status = isConnector ? KiCadImportStatus.Mapped : KiCadImportStatus.Generic;
             return Finish(symbol, generic, genericParams, footprint, numbers, library, embed, log);
         }
@@ -1287,19 +1287,19 @@ namespace RobotTwin.CoreSim.Formats
             {
                 parameters["footprint"] = footprint.Id;
                 var missing = pads.Where(n => footprint.FindPad(n) == null).ToList();
-                if (missing.Count > 0) log.Add($"warning: footprint '{footprint.Id}' has no pad(s) {string.Join(", ", missing)}.");
-                log.Add($"footprint '{footprint.Id}' ({footprint.Pads.Count} pads).");
+                if (missing.Count > 0) log.Add($"uyarı: '{footprint.Id}' footprint'inde {string.Join(", ", missing)} pedi yok.");
+                log.Add($"footprint '{footprint.Id}' ({footprint.Pads.Count} ped).");
             }
             else
             {
                 string fallback = def.ResolveFootprint(parameters);
                 var fp = SafeGet(fallback);
-                if (!string.IsNullOrEmpty(symbol.FootprintRef)) log.Add($"warning: footprint '{symbol.FootprintRef}' not available; model default '{fallback}' used.");
-                else if (!string.IsNullOrEmpty(fallback)) log.Add($"no footprint given; model default '{fallback}' used.");
+                if (!string.IsNullOrEmpty(symbol.FootprintRef)) log.Add($"uyarı: '{symbol.FootprintRef}' footprint'i yok; modelin varsayılanı '{fallback}' kullanıldı.");
+                else if (!string.IsNullOrEmpty(fallback)) log.Add($"footprint belirtilmemiş; modelin varsayılanı '{fallback}' kullanıldı.");
                 if (fp != null)
                 {
                     var missing = pads.Where(n => fp.FindPad(n) == null).ToList();
-                    if (missing.Count > 0) log.Add($"warning: default footprint '{fallback}' has no pad(s) {string.Join(", ", missing)}; assign a footprint before PCB layout.");
+                    if (missing.Count > 0) log.Add($"uyarı: varsayılan '{fallback}' footprint'inde {string.Join(", ", missing)} pedi yok; PCB yerleşiminden önce bir footprint atayın.");
                 }
             }
 
@@ -1315,7 +1315,7 @@ namespace RobotTwin.CoreSim.Formats
                 Description = string.IsNullOrEmpty(description) ? "KiCad " + symbol.FullName : description,
                 Datasheet = symbol.Datasheet == "~" ? string.Empty : symbol.Datasheet,
                 Manufacturer = symbol.Property("Manufacturer") ?? symbol.Property("MF") ?? string.Empty,
-                Author = "KiCad import",
+                Author = "KiCad içe aktarımı",
                 Parameters = parameters,
                 Footprint = embed && footprint != null ? CustomFootprint.From(footprint) : null
             };
@@ -1362,12 +1362,12 @@ namespace RobotTwin.CoreSim.Formats
                 result.Add(p);
             }
 
-            if (dropped.Count > 0) log.Add("no-connect pin(s) " + string.Join(", ", dropped) + " ignored.");
+            if (dropped.Count > 0) log.Add("bağlantısız (NC) bacaklar yok sayıldı: " + string.Join(", ", dropped) + ".");
             if (s.UnitCount > 1)
             {
                 var ignored = Enumerable.Range(2, s.UnitCount - 1).Where(u => !powerUnits.Contains(u)).ToList();
-                log.Add($"symbol has {s.UnitCount} units: unit 1" + (powerUnits.Count > 0 ? " and power unit " + string.Join(", ", powerUnits) : string.Empty)
-                        + " mapped" + (ignored.Count > 0 ? "; unit " + string.Join(", ", ignored) + " not modelled (place another part for it)" : string.Empty) + ".");
+                log.Add($"sembolde {s.UnitCount} birim var: birim 1" + (powerUnits.Count > 0 ? " ve güç birimi " + string.Join(", ", powerUnits) : string.Empty)
+                        + " eşlendi" + (ignored.Count > 0 ? "; birim " + string.Join(", ", ignored) + " modellenmedi (onun için ayrı bir parça yerleştirin)" : string.Empty) + ".");
             }
 
             return result;
@@ -1402,29 +1402,29 @@ namespace RobotTwin.CoreSim.Formats
                 case "NTC":
                 case "LDR":
                     if (prefix == "RV" || prefix == "VR" || prefix == "POT" || w.Any("potentiometer", "pot", "trimmer", "trimpot", "variable") || pins.Count == 3)
-                        Add("potentiometer", $"reference '{prefix}' / potentiometer keywords");
+                        Add("potentiometer", $"'{prefix}' referansı / potansiyometre sözcükleri");
                     else if (prefix == "TH" || prefix == "RT" || prefix == "NTC" || w.Any("thermistor", "ntc"))
-                        Add("ntc", "thermistor");
+                        Add("ntc", "termistör");
                     else if (prefix == "LDR" || w.Any("ldr", "photoresistor", "photocell", "photo resistor", "light dependent"))
-                        Add("ldr", "photoresistor");
-                    else Add("resistor", "reference prefix R");
+                        Add("ldr", "foto direnç");
+                    else Add("resistor", "R referans öneki");
                     break;
 
                 case "F":
                 case "FU":
                 case "FUSE":
-                    Add("fuse", "reference prefix " + prefix);
+                    Add("fuse", prefix + " referans öneki");
                     break;
 
                 case "C":
                 case "CP":
                 case "CE":
-                    if (prefix == "CP" || polarized) Add("electrolytic", "polarized capacitor");
-                    Add("capacitor", "reference prefix C");
+                    if (prefix == "CP" || polarized) Add("electrolytic", "kutuplu kondansatör");
+                    Add("capacitor", "C referans öneki");
                     break;
 
                 case "L":
-                    Add("inductor", "reference prefix L");
+                    Add("inductor", "L referans öneki");
                     break;
 
                 case "D":
@@ -1434,11 +1434,11 @@ namespace RobotTwin.CoreSim.Formats
                 case "CR":
                 case "Z":
                 case "ZD":
-                    if (prefix == "LED" || w.Any("led") || name.StartsWith("LED", StringComparison.Ordinal)) Add("led", "LED keyword");
-                    else if (prefix == "Z" || prefix == "ZD" || w.Any("zener")) Add("zener", "zener keyword");
-                    else if (w.Any("schottky")) Add("schottky", "schottky keyword");
-                    else Add("diode", "reference prefix " + prefix);
-                    if (!c.Any(x => x.PartId == "diode")) Add("diode", "diode fallback");
+                    if (prefix == "LED" || w.Any("led") || name.StartsWith("LED", StringComparison.Ordinal)) Add("led", "LED sözcüğü");
+                    else if (prefix == "Z" || prefix == "ZD" || w.Any("zener")) Add("zener", "zener sözcüğü");
+                    else if (w.Any("schottky")) Add("schottky", "schottky sözcüğü");
+                    else Add("diode", prefix + " referans öneki");
+                    if (!c.Any(x => x.PartId == "diode")) Add("diode", "diyot (yedek seçenek)");
                     break;
 
                 case "Q":
@@ -1457,48 +1457,48 @@ namespace RobotTwin.CoreSim.Formats
                 case "XS":
                 case "XP":
                 case "JP":
-                    Add("#connector", "connector");
+                    Add("#connector", "konnektör");
                     break;
 
                 case "SW":
                 case "S":
                 case "BTN":
                 case "KEY":
-                    if (w.Any("push", "button", "pushbutton", "tactile", "momentary", "tact")) Add("button", "push button");
-                    Add("switch", "reference prefix " + prefix);
+                    if (w.Any("push", "button", "pushbutton", "tactile", "momentary", "tact")) Add("button", "buton");
+                    Add("switch", prefix + " referans öneki");
                     break;
 
                 case "BT":
                 case "BAT":
-                    Add("battery", "reference prefix " + prefix);
+                    Add("battery", prefix + " referans öneki");
                     break;
 
                 case "M":
                 case "MOT":
-                    if (w.Any("servo")) Add("servo", "servo keyword");
-                    Add("dc-motor", "reference prefix " + prefix);
+                    if (w.Any("servo")) Add("servo", "servo sözcüğü");
+                    Add("dc-motor", prefix + " referans öneki");
                     break;
 
                 case "K":
                 case "RL":
                 case "RLY":
                 case "REL":
-                    Add("relay", "reference prefix " + prefix);
+                    Add("relay", prefix + " referans öneki");
                     break;
 
                 case "BZ":
                 case "BUZ":
-                    Add("buzzer", "reference prefix " + prefix);
+                    Add("buzzer", prefix + " referans öneki");
                     break;
 
                 case "LA":
                 case "HL":
-                    if (w.Any("lamp", "bulb", "incandescent")) Add("lamp", "lamp keyword");
+                    if (w.Any("lamp", "bulb", "incandescent")) Add("lamp", "lamba sözcüğü");
                     break;
 
                 case "V":
                 case "VS":
-                    if (w.Any("vdc", "dc", "source", "voltage")) Add("dc-source", "voltage source");
+                    if (w.Any("vdc", "dc", "source", "voltage")) Add("dc-source", "gerilim kaynağı");
                     break;
             }
 
@@ -1506,19 +1506,19 @@ namespace RobotTwin.CoreSim.Formats
             if (c.Count == 0 || prefix == "U" || prefix == "IC" || prefix == "A" || prefix == "AR" || prefix == "N")
             {
                 if (w.Any("opamp", "op-amp", "op amp", "operational amplifier") || Regex.IsMatch(name, @"^(LM358|LM324|LM741|LM2904|TL0[678]\d|NE5532|MCP60\d\d|OPA\d|LMV3\d\d)"))
-                    Add("opamp", "op-amp keywords");
+                    Add("opamp", "op-amp sözcükleri");
                 if (w.Any("regulator", "ldo") || Regex.IsMatch(name, @"^(L?M?78[ML]?\d\d|AMS1117|LD1117|LM1117|MCP1700)"))
-                    Add("regulator", "voltage regulator keywords");
+                    Add("regulator", "gerilim regülatörü sözcükleri");
                 var gate = GateFunction(w, name);
                 if (gate != null) Add(gate == "Not" || gate == "Buffer" ? "gate1" : "gate2", gate + " gate");
                 if (c.Count == 0)
                 {
-                    if (w.Any("buzzer")) Add("buzzer", "buzzer keyword");
-                    if (w.Any("servo")) Add("servo", "servo keyword");
-                    if (w.Any("motor")) Add("dc-motor", "motor keyword");
-                    if (w.Any("relay")) Add("relay", "relay keyword");
-                    if (w.Any("battery")) Add("battery", "battery keyword");
-                    if (w.Any("connector", "header", "socket", "terminal")) Add("#connector", "connector keywords");
+                    if (w.Any("buzzer")) Add("buzzer", "buzzer sözcüğü");
+                    if (w.Any("servo")) Add("servo", "servo sözcüğü");
+                    if (w.Any("motor")) Add("dc-motor", "motor sözcüğü");
+                    if (w.Any("relay")) Add("relay", "röle sözcüğü");
+                    if (w.Any("battery")) Add("battery", "pil sözcüğü");
+                    if (w.Any("connector", "header", "socket", "terminal")) Add("#connector", "konnektör sözcükleri");
                 }
             }
 
@@ -1528,25 +1528,25 @@ namespace RobotTwin.CoreSim.Formats
         private static void AddTransistor(List<Candidate> c, Words w, string name, Func<string[], bool> hasPins)
         {
             void Add(string id, string why) => c.Add(new Candidate(id, why));
-            if (w.Any("darlington")) Add("darlington", "darlington keyword");
+            if (w.Any("darlington")) Add("darlington", "darlington sözcüğü");
             bool npn = w.Any("npn"), pnp = w.Any("pnp");
             bool nmos = w.Any("nmos", "n-mos", "n-channel", "n-ch", "nfet", "n-fet", "n-mosfet");
             bool pmos = w.Any("pmos", "p-mos", "p-channel", "p-ch", "pfet", "p-fet", "p-mosfet");
-            if (npn) Add("npn", "NPN keyword");
-            if (pnp) Add("pnp", "PNP keyword");
-            if (nmos) Add("nmos", "N-channel keyword");
-            if (pmos) Add("pmos", "P-channel keyword");
+            if (npn) Add("npn", "NPN sözcüğü");
+            if (pnp) Add("pnp", "PNP sözcüğü");
+            if (nmos) Add("nmos", "N kanal sözcüğü");
+            if (pmos) Add("pmos", "P kanal sözcüğü");
             if (npn || pnp || nmos || pmos) return;
             if (w.Any("jfet", "igbt", "triac", "scr", "thyristor")) return;   // no model
             if (hasPins(new[] { "B", "C", "E" }))
             {
-                Add("npn", "pins B/C/E, polarity not stated: assumed NPN");
-                Add("pnp", "pins B/C/E");
+                Add("npn", "B/C/E bacakları, kutup belirtilmemiş: NPN varsayıldı");
+                Add("pnp", "B/C/E bacakları");
             }
             else if (hasPins(new[] { "G", "D", "S" }))
             {
-                Add("nmos", "pins G/D/S, channel not stated: assumed N-channel");
-                Add("pmos", "pins G/D/S");
+                Add("nmos", "G/D/S bacakları, kanal belirtilmemiş: N kanal varsayıldı");
+                Add("pmos", "G/D/S bacakları");
             }
         }
 
@@ -1609,7 +1609,7 @@ namespace RobotTwin.CoreSim.Formats
                     string firstToken = preset.Name.Split(new[] { ' ', '(' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
                     if (Alnum(preset.Id) != key && Alnum(firstToken) != key) continue;
                     var existing = candidates.FirstOrDefault(x => x.PartId == preset.PartId);
-                    var chosen = new Candidate(preset.PartId, (existing?.Why ?? "same family") + $"; part number matches preset '{preset.Id}'") { Preset = preset };
+                    var chosen = new Candidate(preset.PartId, (existing?.Why ?? "aynı aile") + $"; parça numarası '{preset.Id}' hazır ayarıyla eşleşiyor") { Preset = preset };
                     if (existing != null) candidates.Remove(existing);
                     candidates.Insert(0, chosen);
                     return;
@@ -1742,7 +1742,7 @@ namespace RobotTwin.CoreSim.Formats
                 {
                     case Strategy.Symmetric:
                         for (int i = 0; i < open.Count && i < free.Count; i++) Take(open[i].Name, free[i]);
-                        if (open.Count == 2) notes.Add("pins assigned by number (interchangeable terminals).");
+                        if (open.Count == 2) notes.Add("bacaklar numarayla atandı (uçlar yer değiştirebilir).");
                         break;
 
                     case Strategy.Polar:
@@ -1755,8 +1755,8 @@ namespace RobotTwin.CoreSim.Formats
                             Take(order[0], free[0]);
                             Take(order[1], free[1]);
                             notes.Add(diode
-                                ? $"polarity from KiCad numbering: pin {free[0].Number} = cathode, pin {free[1].Number} = anode."
-                                : $"polarity from KiCad numbering: pin {free[0].Number} = +, pin {free[1].Number} = -.");
+                                ? $"kutup KiCad numaralandırmasından: bacak {free[0].Number} = katot, bacak {free[1].Number} = anot."
+                                : $"kutup KiCad numaralandırmasından: bacak {free[0].Number} = +, bacak {free[1].Number} = -.");
                         }
                         else if (open.Count == 1 && free.Count == 1)
                         {
@@ -1774,7 +1774,7 @@ namespace RobotTwin.CoreSim.Formats
 
             if (def.Pins.Any(p => !map.ContainsKey(p.Name)))
             {
-                rejectLog.Add($"'{def.Id}' rejected: model pin(s) {string.Join(", ", def.Pins.Where(p => !map.ContainsKey(p.Name)).Select(p => p.Name))} found no symbol pin.");
+                rejectLog.Add($"'{def.Id}' uymadı: model bacakları {string.Join(", ", def.Pins.Where(p => !map.ContainsKey(p.Name)).Select(p => p.Name))} sembolde karşılık bulamadı.");
                 return null;
             }
 
@@ -1783,7 +1783,7 @@ namespace RobotTwin.CoreSim.Formats
             {
                 if (strategy != Strategy.Named || leftovers.Count > map.Count)
                 {
-                    rejectLog.Add($"'{def.Id}' rejected: symbol pin(s) {string.Join(", ", leftovers.Select(p => p.Number))} have no counterpart.");
+                    rejectLog.Add($"'{def.Id}' uymadı: sembol bacakları {string.Join(", ", leftovers.Select(p => p.Number))} modelde karşılık bulamadı.");
                     return null;
                 }
 
@@ -1791,8 +1791,8 @@ namespace RobotTwin.CoreSim.Formats
                 {
                     var same = map.FirstOrDefault(kv => p.CleanName.Length > 0 && Norm(kv.Value.CleanName) == Norm(p.CleanName));
                     notes.Add(same.Value != null
-                        ? $"pin {p.Number} ({p.CleanName}) duplicates {same.Key} (pin {same.Value.Number}); only one pad per model pin is mapped."
-                        : $"pin {p.Number}" + (p.CleanName.Length > 0 ? " (" + p.CleanName + ")" : string.Empty) + " has no model counterpart; left unconnected in simulation.");
+                        ? $"bacak {p.Number} ({p.CleanName}) {same.Key} ile aynı (bacak {same.Value.Number}); her model bacağına tek ped eşlenir."
+                        : $"bacak {p.Number}" + (p.CleanName.Length > 0 ? " (" + p.CleanName + ")" : string.Empty) + " modelde karşılık bulamadı; simülasyonda bağlantısız kaldı.");
                 }
             }
 
@@ -1820,13 +1820,13 @@ namespace RobotTwin.CoreSim.Formats
                     case "gate2/Y":
                     case "gate1/Y":
                         hit = Next(IsOut);
-                        if (hit != null) notes.Add($"{mp.Name} = output pin {hit.Number}.");
+                        if (hit != null) notes.Add($"{mp.Name} = çıkış bacağı {hit.Number}.");
                         break;
                     case "gate2/A":
                     case "gate2/B":
                     case "gate1/A":
                         hit = Next(IsIn);
-                        if (hit != null) notes.Add($"{mp.Name} = input pin {hit.Number} (inputs in pin order).");
+                        if (hit != null) notes.Add($"{mp.Name} = giriş bacağı {hit.Number} (girişler bacak sırasıyla).");
                         break;
                     case "regulator/IN":
                         hit = Next(p => p.ElectricalType == "power_in" && !Regex.IsMatch(p.CleanName, "GND|VSS|COM", RegexOptions.IgnoreCase));
@@ -1838,7 +1838,7 @@ namespace RobotTwin.CoreSim.Formats
                     case "potentiometer/W":
                     case "potentiometer/B":
                         hit = Next(_ => true);
-                        if (hit != null) notes.Add($"{mp.Name} = pin {hit.Number} (by number).");
+                        if (hit != null) notes.Add($"{mp.Name} = bacak {hit.Number} (numarayla).");
                         break;
                 }
 
@@ -1868,7 +1868,7 @@ namespace RobotTwin.CoreSim.Formats
                     parameters[kv.Key] = kv.Value;
                 }
 
-                log.Add($"parameters copied from preset '{preset.Id}' ({preset.Name}).");
+                log.Add($"parametreler '{preset.Id}' ({preset.Name}) hazır ayarından alındı.");
             }
 
             string value = (symbol.Value ?? string.Empty).Trim();
@@ -1879,11 +1879,11 @@ namespace RobotTwin.CoreSim.Formats
                 if (TryParseValue(value, out string text))
                 {
                     parameters[key] = text;
-                    log.Add($"{key} = {text} (from Value).");
+                    log.Add($"{key} = {text} (Value alanından).");
                 }
                 else
                 {
-                    log.Add($"Value '{value}' is not a number; {key} keeps the model default {def.DefaultParameter(key)}.");
+                    log.Add($"Value '{value}' bir sayı değil; {key} modelin varsayılanında kaldı: {def.DefaultParameter(key)}.");
                 }
             }
 
@@ -1915,11 +1915,11 @@ namespace RobotTwin.CoreSim.Formats
                     {
                         parameters["color"] = color.Color;
                         parameters["vf"] = color.Vf.ToString("R", CultureInfo.InvariantCulture);
-                        log.Add($"LED colour {color.Color}, Vf {parameters["vf"]} V.");
+                        log.Add($"LED rengi {color.Color}, Vf {parameters["vf"]} V.");
                     }
                     else
                     {
-                        log.Add($"LED colour not stated; model default {def.DefaultParameter("color")} (Vf {def.DefaultParameter("vf")} V).");
+                        log.Add($"LED rengi belirtilmemiş; modelin varsayılanı {def.DefaultParameter("color")} (Vf {def.DefaultParameter("vf")} V).");
                     }
 
                     break;
@@ -1932,7 +1932,7 @@ namespace RobotTwin.CoreSim.Formats
                     {
                         string v = m.Groups[1].Success ? m.Groups[1].Value + "." + m.Groups[2].Value : m.Groups[3].Value;
                         parameters["voltage"] = v;
-                        log.Add($"zener voltage {v} V (from Value).");
+                        log.Add($"zener gerilimi {v} V (Value alanından).");
                     }
 
                     break;
@@ -1951,9 +1951,9 @@ namespace RobotTwin.CoreSim.Formats
                         if (vout != null)
                         {
                             parameters["vout"] = vout;
-                            log.Add($"output voltage {vout} V (from the part number).");
+                            log.Add($"çıkış gerilimi {vout} V (parça numarasından).");
                         }
-                        else log.Add($"output voltage not found in '{value}'; model default {def.DefaultParameter("vout")} V.");
+                        else log.Add($"'{value}' içinde çıkış gerilimi bulunamadı; modelin varsayılanı {def.DefaultParameter("vout")} V.");
                     }
 
                     break;
@@ -2129,10 +2129,10 @@ namespace RobotTwin.CoreSim.Formats
                         }
 
                         case ".lib":
-                            rep.Errors.Add($"{file}: KiCad 5 legacy symbol libraries (.lib) are not supported; open and save the library in KiCad 6 or newer to get a .kicad_sym.");
+                            rep.Errors.Add($"{file}: KiCad 5 eski sembol kütüphanesi (.lib) desteklenmiyor; .kicad_sym üretmek için kütüphaneyi KiCad 6 veya daha yenisinde açıp kaydedin.");
                             break;
                         default:
-                            rep.Errors.Add($"{file}: not a KiCad library file (.kicad_sym, .kicad_mod or a .pretty folder).");
+                            rep.Errors.Add($"{file}: KiCad kütüphane dosyası değil (.kicad_sym, .kicad_mod veya .pretty klasörü bekleniyor).");
                             break;
                     }
                 }
@@ -2161,7 +2161,7 @@ namespace RobotTwin.CoreSim.Formats
                 }
                 else
                 {
-                    rep.Errors.Add($"{path}: not found.");
+                    rep.Errors.Add($"{path}: bulunamadı.");
                 }
             }
 
@@ -2175,13 +2175,13 @@ namespace RobotTwin.CoreSim.Formats
                 if (IsBuiltInFootprint(fp.Id))
                 {
                     string renamed = (lib.Length > 0 ? lib : "KiCad") + "_" + fp.Id;
-                    rep.Warnings.Add($"footprint '{original}' has the id of a built-in footprint; imported as '{renamed}'.");
+                    rep.Warnings.Add($"'{original}' footprint'i yerleşik bir footprint ile aynı adda; '{renamed}' olarak alındı.");
                     fp.Id = renamed;
                 }
 
                 if (finalIds.TryGetValue(fp.Id, out var previous))
                 {
-                    rep.Warnings.Add($"footprint '{fp.Id}' imported twice; the later one ({(lib.Length > 0 ? lib : "?")}) is used.");
+                    rep.Warnings.Add($"'{fp.Id}' footprint'i iki kez geldi; sonraki ({(lib.Length > 0 ? lib : "?")}) kullanıldı.");
                     rep.Footprints.Remove(previous);
                 }
 
@@ -2223,13 +2223,13 @@ namespace RobotTwin.CoreSim.Formats
                         else if (byName.TryGetValue(fpName, out var named))
                         {
                             fp = named;
-                            if (fpLib != null) notes.Add($"footprint '{fpRef}' matched by name.");
+                            if (fpLib != null) notes.Add($"'{fpRef}' footprint'i adıyla eşlendi.");
                         }
                         else if (SafeGet(fpName) is Footprint builtIn && !FootprintLibrary.UserIds.Contains(fpName))
                         {
                             fp = builtIn;
                             embed = false;
-                            notes.Add($"footprint '{fpRef}' is the built-in footprint '{builtIn.Id}'.");
+                            notes.Add($"'{fpRef}' footprint'i yerleşik '{builtIn.Id}' footprint'i.");
                         }
                     }
                     else
@@ -2241,11 +2241,11 @@ namespace RobotTwin.CoreSim.Formats
                             if (hits.Count == 1)
                             {
                                 fp = hits[0];
-                                notes.Add($"no Footprint property; the only imported footprint matching the filters ({string.Join(" ", sym.FootprintFilters)}) is '{fp.Id}'.");
+                                notes.Add($"Footprint özelliği yok; süzgeçlere ({string.Join(" ", sym.FootprintFilters)}) uyan tek alınan footprint '{fp.Id}'.");
                             }
                             else if (hits.Count > 1)
                             {
-                                notes.Add($"no Footprint property; {hits.Count} imported footprints match the filters, none chosen.");
+                                notes.Add($"Footprint özelliği yok; süzgeçlere {hits.Count} footprint uyuyor, hiçbiri seçilmedi.");
                             }
                         }
                     }
@@ -2275,9 +2275,9 @@ namespace RobotTwin.CoreSim.Formats
 
             var names = libNames.Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             file.Name = names.Count > 0 ? "KiCad: " + string.Join(", ", names) : "KiCad";
-            file.Author = "KiCad import";
-            file.Description = $"Imported from KiCad: {rep.Symbols.Count} symbol(s), {rep.Footprints.Count} footprint(s); "
-                               + $"{rep.Count(KiCadImportStatus.Mapped)} mapped to simulation models, {rep.Count(KiCadImportStatus.Generic)} generic.";
+            file.Author = "KiCad içe aktarımı";
+            file.Description = $"KiCad'den alındı: {rep.Symbols.Count} sembol, {rep.Footprints.Count} footprint; "
+                               + $"{rep.Count(KiCadImportStatus.Mapped)} simülasyon modeline eşlendi, {rep.Count(KiCadImportStatus.Generic)} genel parça.";
             return file;
         }
 

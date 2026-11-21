@@ -59,7 +59,7 @@ namespace RobotTwin.CoreSim.Libraries
             PackageFamily.Soic => "SOIC / SSOP / TSSOP (SMD, iki sıra)",
             PackageFamily.Qfn => "QFN / DFN (bacaksız, dört kenar)",
             PackageFamily.Qfp => "QFP / TQFP (dört kenar, bacaklı)",
-            PackageFamily.Header => "Pin header (1×N / 2×N)",
+            PackageFamily.Header => "Erkek header (1×N / 2×N)",
             PackageFamily.Sot23 => "SOT-23 (3, 5, 6 bacak)",
             _ => f.ToString()
         };
@@ -225,7 +225,7 @@ namespace RobotTwin.CoreSim.Libraries
             }
 
             Box(fp, -s.Pitch / 2, -s.Pitch / 2, (s.Rows - 0.5) * s.Pitch, (cols - 0.5) * s.Pitch);
-            fp.Description = $"Pin header {s.Rows}×{cols}, {F(s.Pitch)} mm";
+            fp.Description = $"Erkek header {s.Rows}×{cols}, {F(s.Pitch)} mm";
         }
 
         private static void Sot23(Footprint fp, PackageSpec s)

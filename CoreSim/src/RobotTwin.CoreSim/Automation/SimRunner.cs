@@ -283,7 +283,7 @@ namespace RobotTwin.CoreSim.Automation
         /// </summary>
         public double Step(double seconds)
         {
-            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok / nothing loaded");
+            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok");
             if (Halted || seconds <= 0) return 0;
             var watch = Stopwatch.StartNew();
             double chunk = Math.Min(seconds, 1e-3);
@@ -399,7 +399,7 @@ namespace RobotTwin.CoreSim.Automation
             string? dll = Options.Esp32Builder?.Invoke(source!);
             if (dll == null)
             {
-                AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, "ESP32 çizimi bu modda derlenemiyor (MSVC yok) — kart boşta. / ESP32 sketch not built in this host; board idle."));
+                AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, "ESP32 çizimi bu modda derlenemiyor (MSVC yok) — kart boşta."));
                 return null;
             }
 
@@ -569,7 +569,7 @@ namespace RobotTwin.CoreSim.Automation
                 }
             }
 
-            if (sent == 0) throw new ApiException(ApiException.NotFound, "Yazılımı çalışan kart yok / no board is running firmware");
+            if (sent == 0) throw new ApiException(ApiException.NotFound, "Yazılımı çalışan kart yok");
         }
 
         /// <summary>A board by object id, object name, refdes (full or inner) — or the only board.</summary>
@@ -578,7 +578,7 @@ namespace RobotTwin.CoreSim.Automation
             if (string.IsNullOrEmpty(key))
             {
                 if (Boards.Count == 1) return Boards[0];
-                throw ApiException.BadParam("board", Boards.Count == 0 ? "programlanabilir kart yok / no programmable board" : "birden çok kart var, birini seçin / several boards, name one");
+                throw ApiException.BadParam("board", Boards.Count == 0 ? "programlanabilir kart yok" : "birden çok kart var, birini seçin");
             }
 
             foreach (var b in Boards)
@@ -588,7 +588,7 @@ namespace RobotTwin.CoreSim.Automation
                     return b;
             }
 
-            throw ApiException.Missing("Kart / board '" + key + "'");
+            throw ApiException.Missing("Kart '" + key + "'");
         }
 
         // ================================================================ pins and drivers (electrical actuation)
@@ -731,16 +731,16 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Voltage of a net/node by name (or "object:pin" in a world).</summary>
         public virtual double NodeVoltage(string node)
         {
-            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok / nothing loaded");
+            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok");
             return sim.NodeVoltage(node);
         }
 
         /// <summary>Devices of a part (full refdes) with their live signals (current, voltage, temperature …).</summary>
         public JsonObject PartState(string fullRef)
         {
-            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok / nothing loaded");
+            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok");
             var devices = Compiled!.DevicesOf(fullRef);
-            if (devices.Count == 0) throw ApiException.Missing("Parça / part '" + fullRef + "'");
+            if (devices.Count == 0) throw ApiException.Missing("Parça '" + fullRef + "'");
             var list = new JsonArray();
             double hottest = double.NaN;
             foreach (var d in devices)
@@ -770,7 +770,7 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Raw solver signals whose key starts with a prefix (device id) — up to <paramref name="max"/>.</summary>
         public JsonObject Signals(string prefix, int max)
         {
-            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok / nothing loaded");
+            var sim = Simulator ?? throw new ApiException(ApiException.NotLoaded, "Yüklü dünya yok");
             var o = new JsonObject();
             int n = 0;
             foreach (var kv in sim.Signals.OrderBy(k => k.Key, StringComparer.Ordinal))

@@ -195,7 +195,7 @@ namespace RobotTwin.CoreSim.Mechanics
         public bool IsClosed => Edges > 0 && BoundaryEdges == 0 && NonManifoldEdges == 0 && InconsistentEdges == 0;
 
         public override string ToString() =>
-            $"edges {Edges}, boundary {BoundaryEdges}, non-manifold {NonManifoldEdges}, inconsistent {InconsistentEdges}, degenerate {DegenerateTriangles}";
+            $"kenar {Edges}, açık kenar {BoundaryEdges}, manifold olmayan {NonManifoldEdges}, yönü tutarsız {InconsistentEdges}, bozuk üçgen {DegenerateTriangles}";
     }
 
     /// <summary>

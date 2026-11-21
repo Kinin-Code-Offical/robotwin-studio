@@ -90,7 +90,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 case MeshFileFormat.Stl: return ReadStl(reader, stream, options);
                 case MeshFileFormat.Obj: return ReadObj(reader, options, resolver);
                 case MeshFileFormat.Ply: return ReadPly(reader, options);
-                default: throw new NotSupportedException("Unknown model format.");
+                default: throw new NotSupportedException("Bilinmeyen model biçimi (STL, OBJ veya PLY bekleniyor).");
             }
         }
 
@@ -163,7 +163,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private static MeshModel ReadStlBinary(ByteReader r, long remaining, MeshLoadOptions o)
         {
-            if (!r.Ensure(84)) throw new FormatException("STL file is too short.");
+            if (!r.Ensure(84)) throw new FormatException("STL dosyası çok kısa (bozuk ya da yarım).");
             var header = r.Peek(84);
             string headerText = Encoding.ASCII.GetString(header.Slice(0, 80).ToArray());
             long count = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(80, 4));
@@ -560,7 +560,7 @@ namespace RobotTwin.CoreSim.Mechanics
         private static int ResolveIndex(long raw, int count, int lineNo, string what)
         {
             long idx = raw < 0 ? count + raw : raw - 1;
-            if (raw == 0 || idx < 0 || idx >= count) throw new FormatException($"OBJ line {lineNo}: {what} index {raw} out of range (have {count}).");
+            if (raw == 0 || idx < 0 || idx >= count) throw new FormatException($"OBJ satır {lineNo}: {(what == "vertex" ? "köşe" : what == "normal" ? "normal" : what)} indisi {raw} aralık dışında (toplam {count}).");
             return (int)idx;
         }
 
@@ -613,7 +613,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 case "float32": return PlyType.Float32;
                 case "double":
                 case "float64": return PlyType.Float64;
-                default: throw new FormatException($"PLY: unknown property type '{s}'.");
+                default: throw new FormatException($"PLY: bilinmeyen özellik türü '{s}'.");
             }
         }
 
@@ -623,12 +623,12 @@ namespace RobotTwin.CoreSim.Mechanics
         private static MeshModel ReadPly(ByteReader r, MeshLoadOptions o)
         {
             if (!r.ReadLine(out int s0, out int l0) || Encoding.ASCII.GetString(r.Slice(s0, l0).ToArray()).Trim() != "ply")
-                throw new FormatException("Not a PLY file.");
+                throw new FormatException("PLY dosyası değil.");
             int format = -1; // 0 ascii, 1 LE, 2 BE
             var elements = new List<PlyElement>();
             while (true)
             {
-                if (!r.ReadLine(out int s, out int l)) throw new FormatException("PLY: unexpected end of header.");
+                if (!r.ReadLine(out int s, out int l)) throw new FormatException("PLY: başlık beklenmedik yerde bitti.");
                 var parts = Encoding.ASCII.GetString(r.Slice(s, l).ToArray()).Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length == 0) continue;
                 if (parts[0] == "end_header") break;
@@ -636,13 +636,13 @@ namespace RobotTwin.CoreSim.Mechanics
                 {
                     case "format":
                         format = parts[1] == "ascii" ? 0 : parts[1] == "binary_little_endian" ? 1 : parts[1] == "binary_big_endian" ? 2 : -1;
-                        if (format < 0) throw new FormatException($"PLY: unsupported format '{parts[1]}'.");
+                        if (format < 0) throw new FormatException($"PLY: desteklenmeyen biçim '{parts[1]}'.");
                         break;
                     case "element":
                         elements.Add(new PlyElement { Name = parts[1], Count = long.Parse(parts[2], CultureInfo.InvariantCulture) });
                         break;
                     case "property":
-                        if (elements.Count == 0) throw new FormatException("PLY: property before element.");
+                        if (elements.Count == 0) throw new FormatException("PLY: özellik, öğeden (element) önce geliyor.");
                         var prop = new PlyProperty();
                         if (parts[1] == "list")
                         {
@@ -662,7 +662,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
             }
 
-            if (format < 0) throw new FormatException("PLY: missing format line.");
+            if (format < 0) throw new FormatException("PLY: format satırı yok.");
             var m = new MeshModel();
             double f = o.Factor(MeshFileFormat.Ply);
             var src = new PlyValueSource(r, format);
@@ -686,7 +686,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 List<Vec3>? vnormals = hasNormal ? new List<Vec3>() : null;
                 if (isVertex)
                 {
-                    if (ix < 0 || iy < 0 || iz < 0) throw new FormatException("PLY: vertex element without x/y/z.");
+                    if (ix < 0 || iy < 0 || iz < 0) throw new FormatException("PLY: köşe öğesinde x/y/z yok.");
                     m.Vertices.Capacity = (int)Math.Min(el.Count, int.MaxValue / 2);
                     if (hasColor) m.VertexColors = new List<MeshColor>(m.Vertices.Capacity);
                 }
@@ -728,7 +728,7 @@ namespace RobotTwin.CoreSim.Mechanics
                         {
                             int a = (int)list[0], b = (int)list[k], cc = (int)list[k + 1];
                             if ((uint)a >= (uint)m.Vertices.Count || (uint)b >= (uint)m.Vertices.Count || (uint)cc >= (uint)m.Vertices.Count)
-                                throw new FormatException($"PLY: face {item} references a missing vertex.");
+                                throw new FormatException($"PLY: {item}. yüz olmayan bir köşeye bağlanıyor.");
                             m.AddTriangle(a, b, cc);
                             if (hasColor) m.TriangleColors!.Add(c);
                         }
@@ -781,7 +781,7 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 if (_format == 0) return ReadAscii();
                 int size = PlySize(t);
-                if (!_r.Ensure(size)) throw new FormatException("PLY: unexpected end of data.");
+                if (!_r.Ensure(size)) throw new FormatException("PLY: veri beklenmedik yerde bitti.");
                 var s = _r.Peek(size);
                 bool le = _format == 1;
                 double v;
@@ -824,7 +824,7 @@ namespace RobotTwin.CoreSim.Mechanics
                         }
                     }
 
-                    if (!_r.ReadLine(out _lineStart, out _lineLen)) throw new FormatException("PLY: unexpected end of data.");
+                    if (!_r.ReadLine(out _lineStart, out _lineLen)) throw new FormatException("PLY: veri beklenmedik yerde bitti.");
                     _lineNo++;
                     _cursor = 0;
                 }
@@ -1081,7 +1081,7 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             using var bw = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
-            if (!BitConverter.IsLittleEndian) throw new PlatformNotSupportedException("Binary PLY export needs a little-endian host.");
+            if (!BitConverter.IsLittleEndian) throw new PlatformNotSupportedException("İkili PLY dışa aktarımı little-endian bir işlemci gerektirir.");
             for (int i = 0; i < Vertices.Count; i++)
             {
                 var p = ToFile(Vertices[i], f, up);
@@ -1133,7 +1133,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private static double Num(ref Tokenizer tk, int lineNo)
         {
-            if (!tk.Next(out var t)) throw new FormatException($"Line {lineNo}: number expected.");
+            if (!tk.Next(out var t)) throw new FormatException($"Satır {lineNo}: sayı bekleniyor.");
             return ParseDouble(t, lineNo);
         }
 
@@ -1143,12 +1143,12 @@ namespace RobotTwin.CoreSim.Mechanics
             Span<char> chars = tok.Length <= 128 ? stackalloc char[tok.Length] : new char[tok.Length];
             for (int i = 0; i < tok.Length; i++) chars[i] = (char)tok[i];
             if (double.TryParse(chars, NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return v;
-            throw new FormatException($"Line {lineNo}: invalid number '{new string(chars.ToArray())}'.");
+            throw new FormatException($"Satır {lineNo}: geçersiz sayı '{new string(chars.ToArray())}'.");
         }
 
         private static long ParseInt(ReadOnlySpan<byte> tok, int lineNo)
         {
-            if (tok.Length == 0) throw new FormatException($"Line {lineNo}: index expected.");
+            if (tok.Length == 0) throw new FormatException($"Satır {lineNo}: indis bekleniyor.");
             int i = 0;
             bool neg = false;
             if (tok[0] == '-' || tok[0] == '+')
@@ -1158,11 +1158,11 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             long v = 0;
-            if (i >= tok.Length) throw new FormatException($"Line {lineNo}: invalid index.");
+            if (i >= tok.Length) throw new FormatException($"Satır {lineNo}: geçersiz indis.");
             for (; i < tok.Length; i++)
             {
                 int d = tok[i] - '0';
-                if (d < 0 || d > 9) throw new FormatException($"Line {lineNo}: invalid index '{Encoding.ASCII.GetString(tok.ToArray())}'.");
+                if (d < 0 || d > 9) throw new FormatException($"Satır {lineNo}: geçersiz indis '{Encoding.ASCII.GetString(tok.ToArray())}'.");
                 v = v * 10 + d;
             }
 

@@ -446,7 +446,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
                 {
                     _shutdown = true;
                     ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.Warning,
-                        $"thermal shutdown at {Thermal.TemperatureC:F0} C ({Power:F1} W)"));
+                        $"ısıl kapanma: {Thermal.TemperatureC:F0} °C ({Power:F1} W)"));
                     ctx.RequestDiscontinuity();
                 }
                 else if (_shutdown && cool)
@@ -778,7 +778,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
             _no!.Closed = energized;
             _nc!.Closed = !energized;
             ctx.RequestDiscontinuity();
-            ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.StateChange, energized ? "energized" : "released"));
+            ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.StateChange, energized ? "çekti" : "bıraktı"));
         }
 
         public override void Report(ISignalSink sink)
@@ -985,7 +985,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
             else if (Math.Abs(Current) > AbsoluteMaxCurrent)
             {
                 ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.Warning,
-                    $"pin current {Current * 1000.0:F0} mA exceeds {AbsoluteMaxCurrent * 1000.0:F0} mA"));
+                    $"pin akımı {Current * 1000.0:F0} mA, sınırı ({AbsoluteMaxCurrent * 1000.0:F0} mA) aşıyor"));
             }
         }
 

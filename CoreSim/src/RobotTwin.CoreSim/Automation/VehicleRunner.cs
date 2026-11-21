@@ -25,7 +25,7 @@ namespace RobotTwin.CoreSim.Automation
             Schematic = schematic ?? throw new ArgumentNullException(nameof(schematic));
             Package = package;
             if (schematic.Assembly == null || schematic.Assembly.Kind == VehicleKind.None)
-                throw new ApiException(ApiException.Unsupported, "Projede araç montajı yok / the project has no vehicle assembly");
+                throw new ApiException(ApiException.Unsupported, "Projede araç montajı yok");
             Reset();
         }
 
@@ -52,7 +52,7 @@ namespace RobotTwin.CoreSim.Automation
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
             {
-                throw new ApiException(ApiException.InvalidParams, "Devre derlenemedi / circuit failed: " + ex.Message);
+                throw new ApiException(ApiException.InvalidParams, "Devre derlenemedi: " + ex.Message);
             }
 
             foreach (var w in Compiled.Warnings) AddEvent(new RunnerEvent(0, "derleyici", RunnerEventKind.Warning, w));
@@ -82,7 +82,7 @@ namespace RobotTwin.CoreSim.Automation
                 Boards.Add(board);
                 if (!Options.Firmware)
                 {
-                    board.Firmware = "(kapalı / disabled)";
+                    board.Firmware = "(kapalı)";
                     continue;
                 }
 
@@ -241,7 +241,7 @@ namespace RobotTwin.CoreSim.Automation
 
         public override void SetPose(string objectId, Vec3? position, Quat? orientation, bool zeroVelocity)
         {
-            var b = BodyOf(objectId) ?? throw ApiException.Missing("Nesne / object '" + objectId + "'");
+            var b = BodyOf(objectId) ?? throw ApiException.Missing("Nesne '" + objectId + "'");
             TryGetBody(objectId, out var current);
             var p = position ?? current.Position;
             var q = orientation ?? current.Orientation;
@@ -318,10 +318,10 @@ namespace RobotTwin.CoreSim.Automation
             {
                 DcMotor? motor = Mechanics.Wheels.FirstOrDefault(w => string.Equals(w.Mount.RefDes, name, StringComparison.OrdinalIgnoreCase))?.Motor
                     ?? Mechanics.Props.FirstOrDefault(p => string.Equals(p.Mount?.RefDes ?? "M" + (p.Index + 1), name, StringComparison.OrdinalIgnoreCase))?.Motor;
-                if (motor != null) return DriverOf(motor) ?? throw new ApiException(ApiException.Unsupported, name + ": motoru süren PWM sürücü yok / no PWM driver feeds this motor");
+                if (motor != null) return DriverOf(motor) ?? throw new ApiException(ApiException.Unsupported, name + ": motoru süren PWM sürücü yok");
             }
 
-            throw ApiException.Missing("Eyleyici / actuator '" + name + "'");
+            throw ApiException.Missing("Eyleyici '" + name + "'");
         }
 
         public override JsonObject SetActuator(string name, JsonObject p)
@@ -334,7 +334,7 @@ namespace RobotTwin.CoreSim.Automation
                 return new JsonObject { ["name"] = name, ["released"] = true };
             }
 
-            if (mode != "duty") throw ApiException.BadParam("mode", "duty | release (araç modunda / in vehicle mode)");
+            if (mode != "duty") throw ApiException.BadParam("mode", "duty | release (araç modunda)");
             double duty = J.Num(p, "value") ?? J.ReqNum(p, "duty");
             SetDriverDuty(driver, duty);
             return new JsonObject { ["name"] = name, ["driver"] = driver.Id, ["duty"] = J.N(driver.Duty) };
@@ -344,7 +344,7 @@ namespace RobotTwin.CoreSim.Automation
 
         public override JsonObject DriveDifferential(double v, double w, JsonObject p)
         {
-            if (Mechanics == null || Mechanics.Kind != VehicleKind.Rover) throw new ApiException(ApiException.Unsupported, "Kara aracı değil / not a ground vehicle");
+            if (Mechanics == null || Mechanics.Kind != VehicleKind.Rover) throw new ApiException(ApiException.Unsupported, "Kara aracı değil");
             var a = Mechanics.Assembly;
             double track = J.Num(p, "track") ?? a.Width;
             double vmax = J.Num(p, "max_speed", 0.6);
@@ -367,13 +367,13 @@ namespace RobotTwin.CoreSim.Automation
                 });
             }
 
-            if (result.Count == 0) throw new ApiException(ApiException.Unsupported, "Tekerlek motorlarını süren PWM sürücü yok / no PWM driver on the wheel motors");
-            return new JsonObject { ["track"] = J.N(track), ["max_speed"] = J.N(vmax), ["wheels"] = result, ["note"] = "tek yönlü sürücü: geri gidiş yok / single-direction drivers: no reverse" };
+            if (result.Count == 0) throw new ApiException(ApiException.Unsupported, "Tekerlek motorlarını süren PWM sürücü yok");
+            return new JsonObject { ["track"] = J.N(track), ["max_speed"] = J.N(vmax), ["wheels"] = result, ["note"] = "tek yönlü sürücü: geri gidiş yok" };
         }
 
         // ================================================================ flight
 
-        public FlightController Flight => Mechanics?.Flight ?? throw new ApiException(ApiException.Unsupported, "Uçuş kontrolcüsü yok / no flight controller (not a quadcopter)");
+        public FlightController Flight => Mechanics?.Flight ?? throw new ApiException(ApiException.Unsupported, "Uçuş kontrolcüsü yok");
 
         public JsonObject FlightStatus()
         {

@@ -65,7 +65,7 @@ Kullanım / usage:
             }
             catch (ApiException ex)
             {
-                Console.Error.WriteLine("Yüklenemedi / load failed: " + ex.Message);
+                Console.Error.WriteLine("Yüklenemedi: " + ex.Message);
                 return 2;
             }
 
@@ -89,7 +89,7 @@ Kullanım / usage:
             var address = IPAddress.Parse(Arg("--host") ?? "127.0.0.1");
             if (!IPAddress.IsLoopback(address) && !Flag("--allow-remote"))
             {
-                Console.Error.WriteLine("Yerel olmayan adres için --allow-remote gerekli (ve --token önerilir). / Non-loopback address needs --allow-remote (and a --token).");
+                Console.Error.WriteLine("Yerel olmayan adres için --allow-remote gerekli (ve --token önerilir).");
                 return 1;
             }
 
@@ -112,7 +112,7 @@ Kullanım / usage:
             }
             catch (System.Net.Sockets.SocketException ex)
             {
-                Console.Error.WriteLine("Port açılamadı / cannot listen: " + ex.Message);
+                Console.Error.WriteLine("Port açılamadı: " + ex.Message);
                 return 3;
             }
 

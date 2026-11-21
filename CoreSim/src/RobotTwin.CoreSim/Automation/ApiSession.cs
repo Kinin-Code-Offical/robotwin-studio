@@ -77,7 +77,7 @@ namespace RobotTwin.CoreSim.Automation
             }
             catch (JsonException ex)
             {
-                return Error(null, ApiException.ParseError, "JSON çözümlenemedi / parse error: " + ex.Message).ToJsonString(J.Wire);
+                return Error(null, ApiException.ParseError, "JSON çözümlenemedi: " + ex.Message).ToJsonString(J.Wire);
             }
 
             if (node is JsonArray batch)
@@ -104,19 +104,19 @@ namespace RobotTwin.CoreSim.Automation
 
         private JsonObject? HandleOne(JsonObject? req, ref bool authorized)
         {
-            if (req == null) return Error(null, ApiException.InvalidRequest, "İstek bir JSON nesnesi olmalı / request must be an object");
+            if (req == null) return Error(null, ApiException.InvalidRequest, "İstek bir JSON nesnesi olmalı");
             var id = req["id"]?.DeepClone();
             bool notification = !req.ContainsKey("id");
             string? method = J.Str(req, "method");
-            if (method == null) return Error(id, ApiException.InvalidRequest, "'method' yok / missing");
+            if (method == null) return Error(id, ApiException.InvalidRequest, "'method' yok");
             var p = req["params"] as JsonObject;
-            if (req["params"] is JsonArray) return Error(id, ApiException.InvalidParams, "params bir nesne olmalı / params must be an object");
+            if (req["params"] is JsonArray) return Error(id, ApiException.InvalidParams, "params bir nesne olmalı");
             try
             {
                 if (_host.Token != null && !authorized)
                 {
                     if (method != "hello" || J.Str(p, "token") != _host.Token)
-                        throw new ApiException(ApiException.Unauthorized, "Önce hello {token} gönderin / send hello {token} first");
+                        throw new ApiException(ApiException.Unauthorized, "Önce hello {token} gönderin");
                     authorized = true;
                 }
 
@@ -146,15 +146,15 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Runs one method with its params (throws <see cref="ApiException"/> on errors).</summary>
         public JsonNode? Call(string method, JsonObject? p)
         {
-            if (!_methods.TryGetValue(method, out var m)) throw new ApiException(ApiException.MethodNotFound, "Bilinmeyen yöntem / unknown method: " + method);
+            if (!_methods.TryGetValue(method, out var m)) throw new ApiException(ApiException.MethodNotFound, "Bilinmeyen yöntem: " + method);
             return m.Run(p);
         }
 
-        private SimRunner R => Runner ?? throw new ApiException(ApiException.NotLoaded, "Önce world.load çağırın / call world.load first");
+        private SimRunner R => Runner ?? throw new ApiException(ApiException.NotLoaded, "Önce world.load çağırın");
 
-        private WorldRunner W => R as WorldRunner ?? throw new ApiException(ApiException.Unsupported, "Bu yöntem dünya (.rwworld) modunda çalışır / world mode only");
+        private WorldRunner W => R as WorldRunner ?? throw new ApiException(ApiException.Unsupported, "Bu yöntem dünya (.rwworld) modunda çalışır");
 
-        private VehicleRunner V => R as VehicleRunner ?? throw new ApiException(ApiException.Unsupported, "Bu yöntem araç modunda çalışır / vehicle mode only");
+        private VehicleRunner V => R as VehicleRunner ?? throw new ApiException(ApiException.Unsupported, "Bu yöntem araç modunda çalışır");
 
         private void Add(string name, string help, Func<JsonObject?, JsonNode?> run) => _methods[name] = (run, help);
 
@@ -162,24 +162,24 @@ namespace RobotTwin.CoreSim.Automation
 
         private void Register()
         {
-            Add("hello", "{token?} → sunucu bilgisi / server info", p => new JsonObject
+            Add("hello", "{token?} → sunucu bilgisi", p => new JsonObject
             {
                 ["name"] = "RobotWin Studio",
                 ["api_version"] = ApiVersion,
-                ["protocol"] = "JSON-RPC 2.0, one JSON object per line (UTF-8, \\n)",
+                ["protocol"] = "JSON-RPC 2.0, satır başına bir JSON nesnesi (UTF-8, \\n)",
                 ["backend"] = _host.Backend,
                 ["loaded"] = Runner != null,
                 ["sensor_types"] = J.Strs(SensorRegistry.Types),
                 ["examples"] = J.Strs(new[] { "car", "line-follower", "obstacle-avoider", "quadcopter" })
             });
             Add("ping", "→ \"pong\"", p => "pong");
-            Add("methods", "→ yöntem listesi / method list with help", p =>
+            Add("methods", "→ yöntem listesi", p =>
             {
                 var o = new JsonObject();
                 foreach (var kv in _methods.OrderBy(k => k.Key, StringComparer.Ordinal)) o[kv.Key] = kv.Value.Help;
                 return o;
             });
-            Add("shutdown", "sunucuyu kapatır / stops the server", p =>
+            Add("shutdown", "sunucuyu kapatır", p =>
             {
                 _host.Shutdown?.Invoke();
                 return true;
@@ -192,15 +192,15 @@ namespace RobotTwin.CoreSim.Automation
                 return R.Describe();
             });
             Add("world.reset", "{seed?, randomize?: {position, yaw_deg}, observe?[]} → {time, seed, observation}", Reset);
-            Add("world.describe", "→ nesneler, kartlar, eyleyiciler, sensörler / objects, boards, actuators, sensors", p => R.Describe());
-            Add("world.save", "{path} — yüklü dünyayı .rwworld olarak kaydeder (uygulamada açılır) / saves the loaded world", p =>
+            Add("world.describe", "→ nesneler, kartlar, eyleyiciler, sensörler", p => R.Describe());
+            Add("world.save", "{path} — yüklü dünyayı .rwworld olarak kaydeder (uygulamada açılır)", p =>
             {
                 string path = J.ReqStr(p, "path");
                 if (!path.EndsWith(WorldDocument.Extension, StringComparison.OrdinalIgnoreCase)) path += WorldDocument.Extension;
                 W.World.Save(path);
                 return path;
             });
-            Add("world.export_geometry", "{path?} → bu dünyanın gövde geometrisi (JSON) / baked body geometry", p =>
+            Add("world.export_geometry", "{path?} → bu dünyanın gövde geometrisi (JSON)", p =>
             {
                 var w = W;
                 string json = BakedGeometry.Export(w.World, w.Geometry);
@@ -210,8 +210,8 @@ namespace RobotTwin.CoreSim.Automation
 
             // ---------------------------------------------------------------- stepping
             Add("sim.step", "{dt=0.01, steps=1, actions?[], observe?[], pace?, stop_on_failure?, events?} → {time, rtf, observation, ...}", Step);
-            Add("sim.status", "→ zaman, gerçek-zaman oranı, arızalar / time, real-time factor, failures", p => R.Status());
-            Add("events.poll", "{max?} → olaylar (arıza, uyarı, çarpma) / events since last poll", p =>
+            Add("sim.status", "→ zaman, gerçek-zaman oranı, arızalar", p => R.Status());
+            Add("events.poll", "{max?} → olaylar (arıza, uyarı, çarpma)", p =>
                 new JsonArray(R.DrainEvents(J.Int(p, "max", 1000)).Select(e => (JsonNode)e.ToJson()).ToArray()));
 
             // ---------------------------------------------------------------- objects
@@ -230,7 +230,7 @@ namespace RobotTwin.CoreSim.Automation
                 return a;
             });
             Add("object.get_pose", "{id} → {position, orientation[x,y,z,w], rpy, linear_velocity, angular_velocity}", p => Pose(ObjectId(J.ReqStr(p, "id"))));
-            Add("object.set_pose", "{id, position?, orientation?[x,y,z,w] | rpy_deg?, keep_velocity?} — tüm montaj birlikte taşınır / moves the whole assembly", p =>
+            Add("object.set_pose", "{id, position?, orientation?[x,y,z,w] | rpy_deg?, keep_velocity?} — tüm montaj birlikte taşınır", p =>
             {
                 string id = ObjectId(J.ReqStr(p, "id"));
                 var q = J.Quat(p, "orientation");
@@ -241,8 +241,8 @@ namespace RobotTwin.CoreSim.Automation
 
             // ---------------------------------------------------------------- sensors
             Add("sensor.list", "→ [{name, type, object, ...}]", p => R.Sensors.List());
-            Add("sensor.types", "→ sensor.add türleri / types for sensor.add", p => J.Strs(SensorRegistry.Types));
-            Add("sensor.read", "{name | names[]} → okuma(lar) / reading(s)", p =>
+            Add("sensor.types", "→ sensor.add türleri", p => J.Strs(SensorRegistry.Types));
+            Add("sensor.read", "{name | names[]} → okuma(lar)", p =>
             {
                 var names = J.StrList(p, "names");
                 if (names.Count == 0 && J.Str(p, "name") is { } one) return R.Sensors.Read(one);
@@ -250,7 +250,7 @@ namespace RobotTwin.CoreSim.Automation
                 foreach (var n in names.Count > 0 ? names : R.Sensors.All.Where(s => s.Type != "camera" && s.Type != "depth").Select(s => s.Name).ToList()) o[n] = Observe(n);
                 return o;
             });
-            Add("sensor.add", "{name?, type, object?, offset?[x,y,z], rpy_deg?[r,p,y], ...params} → sensör / sensor", p =>
+            Add("sensor.add", "{name?, type, object?, offset?[x,y,z], rpy_deg?[r,p,y], ...params} → sensör", p =>
             {
                 var spec = new SensorSpec
                 {
@@ -274,9 +274,9 @@ namespace RobotTwin.CoreSim.Automation
             Add("sensor.remove", "{name} → bool", p => R.Sensors.Remove(J.ReqStr(p, "name")));
 
             // ---------------------------------------------------------------- actuators
-            Add("actuator.list", "→ motorlar, servolar, sürücüler / motors, servos, drivers", p => R.ListActuators());
+            Add("actuator.list", "→ motorlar, servolar, sürücüler", p => R.ListActuators());
             Add("actuator.set", "{name, mode: voltage|duty|speed|torque|angle|release, value, max_torque?, supply?}", p => R.SetActuator(J.ReqStr(p, "name"), p!));
-            Add("actuator.release", "{name? (yoksa hepsi / all when omitted)}", p =>
+            Add("actuator.release", "{name? (yoksa hepsi)}", p =>
             {
                 if (J.Str(p, "name") is { } n) R.ReleaseActuator(n);
                 else R.ReleaseAll();
@@ -290,7 +290,7 @@ namespace RobotTwin.CoreSim.Automation
             Add("pin.read", "{board?, pin} → {voltage, level, mode, pwm_duty}", p => R.ReadPin(J.Str(p, "board"), J.ReqStr(p, "pin")));
             Add("drive.differential", "{v (m/s), w (rad/s), left?[], right?[], wheel_radius?, track?, mode?: speed|voltage, max_speed?}", p =>
                 R.DriveDifferential(J.ReqNum(p, "v"), J.Num(p, "w", 0), p ?? new JsonObject()));
-            Add("drive.stop", "tekerlekleri bırakır / releases wheel commands", p =>
+            Add("drive.stop", "tekerlekleri bırakır", p =>
             {
                 R.ReleaseAll();
                 return true;
@@ -300,7 +300,7 @@ namespace RobotTwin.CoreSim.Automation
             Add("flight.status", "→ {armed, mode, throttle, altitude, roll, pitch, yaw, ...}", p => V.FlightStatus());
             Add("flight.arm", "{armed=true}", p => V.SetFlight(new JsonObject { ["armed"] = J.Bool(p, "armed", true) }));
             Add("flight.set", "{throttle 0..1, roll/pitch/yaw −1..1, mode: angle|altitude, target_altitude m, armed?}", p => V.SetFlight(p ?? new JsonObject()));
-            Add("flight.motors", "{duty[4]} — kuruluyken FC'yi ezer / raw motor duties (overrides the FC)", p =>
+            Add("flight.motors", "{duty[4]} — kuruluyken FC'yi ezer", p =>
             {
                 var fc = V.Flight;
                 if (!(J.Get(p, "duty") is JsonArray d)) throw ApiException.BadParam("duty", "[d1, d2, d3, d4]");
@@ -328,7 +328,7 @@ namespace RobotTwin.CoreSim.Automation
                 R.WriteSerial(J.ReqStr(p, "text"), J.Str(p, "board"));
                 return true;
             });
-            Add("firmware.set", "{board, hex? | path?} — sıfırlamada yüklenir / applied on the next reset", p =>
+            Add("firmware.set", "{board, hex? | path?} — sıfırlamada yüklenir", p =>
             {
                 var b = R.ResolveBoard(J.Str(p, "board"));
                 string? hex = J.Str(p, "hex") ?? (J.Str(p, "path") is { } path ? File.ReadAllText(path) : null);
@@ -336,7 +336,7 @@ namespace RobotTwin.CoreSim.Automation
                 else R.FirmwareOverrides[b.RefDes] = hex;
                 return b.ToJson();
             });
-            Add("firmware.enable", "{enabled} — kart yazılımlarını aç/kapa (sıfırlar) / run firmware or not (resets)", p =>
+            Add("firmware.enable", "{enabled} — kart yazılımlarını aç/kapa (sıfırlar)", p =>
             {
                 R.Options.Firmware = J.Bool(p, "enabled", true);
                 R.Reset();
@@ -345,9 +345,9 @@ namespace RobotTwin.CoreSim.Automation
 
             // ---------------------------------------------------------------- circuit
             Add("circuit.voltage", "{node: net adı | \"nesne:pin\"} → V", p => J.N(R.NodeVoltage(J.ReqStr(p, "node"))));
-            Add("circuit.part", "{ref: \"O3\" | \"O1/R2\" | refdes} → akım, sıcaklık, arıza / currents, temperature, failure", p =>
+            Add("circuit.part", "{ref: \"O3\" | \"O1/R2\" | refdes} → akım, sıcaklık, arıza", p =>
                 R.PartState(R is WorldRunner wr ? wr.PartRef(J.ReqStr(p, "ref")) : J.ReqStr(p, "ref")));
-            Add("circuit.signals", "{prefix, max=500} → çözücü sinyalleri / raw solver signals", p => R.Signals(J.Str(p, "prefix") ?? string.Empty, J.Int(p, "max", 500)));
+            Add("circuit.signals", "{prefix, max=500} → çözücü sinyalleri", p => R.Signals(J.Str(p, "prefix") ?? string.Empty, J.Int(p, "max", 500)));
         }
 
         // ================================================================ load / reset / step
@@ -371,7 +371,7 @@ namespace RobotTwin.CoreSim.Automation
             string? json = J.Str(p, "world_json");
             if (path != null)
             {
-                if (!File.Exists(path)) throw ApiException.Missing("Dosya / file '" + path + "'");
+                if (!File.Exists(path)) throw ApiException.Missing("Dosya '" + path + "'");
                 if (path.EndsWith(WorldDocument.Extension, StringComparison.OrdinalIgnoreCase))
                 {
                     var world = WorldDocument.Load(path);
@@ -408,7 +408,7 @@ namespace RobotTwin.CoreSim.Automation
             }
             else
             {
-                throw ApiException.BadParam("path", "path, example veya world_json gerekli / one of path, example, world_json is required");
+                throw ApiException.BadParam("path", "path, example veya world_json gerekli");
             }
 
             Runner?.Dispose();
@@ -585,19 +585,19 @@ namespace RobotTwin.CoreSim.Automation
 
             if (name == "status") return r.Status();
             if (name == "flight") return V.FlightStatus();
-            throw ApiException.Missing("Gözlem / observation '" + name + "'");
+            throw ApiException.Missing("Gözlem '" + name + "'");
         }
 
         private string ObjectId(string key)
         {
             if (R is WorldRunner w) return w.ResolveObject(key).Id;
             if (R.TryGetBody(key, out _)) return key;
-            throw ApiException.Missing("Nesne / object '" + key + "'");
+            throw ApiException.Missing("Nesne '" + key + "'");
         }
 
         private JsonObject Pose(string id)
         {
-            if (!R.TryGetBody(id, out var s)) throw ApiException.Missing("Gövde / body '" + id + "'");
+            if (!R.TryGetBody(id, out var s)) throw ApiException.Missing("Gövde '" + id + "'");
             var (roll, pitch, yaw) = s.Orientation.ToEuler();
             return new JsonObject
             {

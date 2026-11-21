@@ -831,9 +831,9 @@ namespace RobotTwin.CoreSim.Design
             // 2300 rpm/V, 90 mΩ winding, 0.7 A no-load; outrunner bell inertia.
             Preset(lib, "bldc-2204", "2204 2300KV Fırçasız Motor", "dc-motor", Electromechanical, "5\" drone motoru, 3S 11.1 V ~25500 rpm, ESC ile sürülür",
                 "model=2204 2300KV;voltage=11.1;rpm=25530;i0=0.7;istall=123;gear=1;inductance=20u;inertia=1.7e-6;rth=8;cth=6");
-            Preset(lib, "motor-8520", "8520 Coreless Motor", "dc-motor", Electromechanical, "Mikro drone motoru, 3.7 V 48000 rpm",
+            Preset(lib, "motor-8520", "8520 Çekirdeksiz Motor", "dc-motor", Electromechanical, "Mikro drone motoru, 3.7 V 48000 rpm",
                 "model=8520 Coreless;voltage=3.7;rpm=48000;i0=0.15;istall=3.5;gear=1;inductance=30u;inertia=1.5e-8;rth=40;cth=1.5");
-            Preset(lib, "motor-0720", "0720 Coreless Motor", "dc-motor", Electromechanical, "Küçük drone motoru, 3.7 V 52000 rpm",
+            Preset(lib, "motor-0720", "0720 Çekirdeksiz Motor", "dc-motor", Electromechanical, "Küçük drone motoru, 3.7 V 52000 rpm",
                 "model=0720 Coreless;voltage=3.7;rpm=52000;i0=0.08;istall=1.6;gear=1;inductance=20u;inertia=6e-9;rth=55;cth=0.8");
             Preset(lib, "motor-130", "130 DC Motor", "dc-motor", Electromechanical, "3 V 12000 rpm dişlisiz",
                 "model=130;voltage=3;rpm=12000;i0=0.15;istall=2.2;gear=1;inductance=0.2m");
@@ -971,7 +971,7 @@ namespace RobotTwin.CoreSim.Design
         {
             foreach (int n in new[] { 2, 3, 4, 5, 6, 8 })
             {
-                var part = Def(lib, "header-" + n, $"Pin Header 1×{n}", Connectors, "J", SymbolKind.Connector, "HDR-1x" + n, "", null);
+                var part = Def(lib, "header-" + n, $"Erkek Header 1×{n}", Connectors, "J", SymbolKind.Connector, "HDR-1x" + n, "", null);
                 for (int i = 0; i < n; i++)
                 {
                     string name = (i + 1).ToString(CultureInfo.InvariantCulture);
@@ -979,7 +979,7 @@ namespace RobotTwin.CoreSim.Design
                 }
 
                 part.Size(1.5, n);
-                Preset(lib, "hdr-1x" + n, $"Pin Header 1×{n}", "header-" + n, Connectors, "2.54 mm erkek header");
+                Preset(lib, "hdr-1x" + n, $"Erkek Header 1×{n}", "header-" + n, Connectors, "2.54 mm erkek header");
             }
 
             foreach (int n in new[] { 2, 3 })

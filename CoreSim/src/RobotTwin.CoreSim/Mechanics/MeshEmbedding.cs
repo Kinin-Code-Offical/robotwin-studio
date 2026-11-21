@@ -60,7 +60,7 @@ namespace RobotTwin.CoreSim.Mechanics
         public string ToJson() => JsonSerializer.Serialize(this, Json);
 
         public static EmbeddedMesh FromJson(string json) =>
-            JsonSerializer.Deserialize<EmbeddedMesh>(json, Json) ?? throw new FormatException("Empty embedded mesh.");
+            JsonSerializer.Deserialize<EmbeddedMesh>(json, Json) ?? throw new FormatException("Gömülü model boş.");
     }
 
     public sealed class EmbeddedMeshGroup
@@ -129,8 +129,8 @@ namespace RobotTwin.CoreSim.Mechanics
 
         public static MeshModel FromEmbedded(EmbeddedMesh e)
         {
-            if (e.Format != EmbeddedMesh.FormatId) throw new FormatException($"Not an embedded mesh ('{e.Format}').");
-            if (e.Version > 1) throw new FormatException($"Embedded mesh version {e.Version} is newer than supported.");
+            if (e.Format != EmbeddedMesh.FormatId) throw new FormatException($"Gömülü model değil ('{e.Format}').");
+            if (e.Version > 1) throw new FormatException($"Gömülü model sürümü {e.Version} bu uygulamadan yeni; uygulamayı güncelleyin.");
             bool compressed = e.Compression == "deflate";
             var m = new MeshModel { Name = e.Name ?? string.Empty };
 
@@ -139,7 +139,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < e.VertexCount; i++) m.Vertices.Add(GetVec(pos, i * 12));
 
             int ib = e.IndexBits / 8;
-            if (ib != 2 && ib != 4) throw new FormatException("Embedded mesh: IndexBits must be 16 or 32.");
+            if (ib != 2 && ib != 4) throw new FormatException("Gömülü model: IndexBits 16 ya da 32 olmalı.");
             var idx = Decode(e.Indices, compressed, e.TriangleCount * 3L * ib);
             m.Indices.Capacity = e.TriangleCount * 3;
             for (int i = 0; i < e.TriangleCount * 3; i++)
@@ -229,7 +229,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 data = ms.ToArray();
             }
 
-            if (data.Length != expected) throw new FormatException($"Embedded mesh: array has {data.Length} bytes, expected {expected}.");
+            if (data.Length != expected) throw new FormatException($"Gömülü model: dizi {data.Length} bayt, {expected} bayt bekleniyordu.");
             return data;
         }
     }

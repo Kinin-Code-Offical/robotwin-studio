@@ -238,7 +238,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     var devices = new List<AnalogDevice>();
                     int PinNode(string pin)
                     {
-                        if (def.FindPin(pin) == null && !netOfPin.ContainsKey(fullRef + "\u0001" + pin)) throw new InvalidOperationException($"{def.Id} has no pin '{pin}'.");
+                        if (def.FindPin(pin) == null && !netOfPin.ContainsKey(fullRef + "\u0001" + pin)) throw new InvalidOperationException($"{def.Id} parçasında '{pin}' bacağı yok.");
                         int node = circuit.Node(KeyOf(fullRef, pin));
                         compiled.NodeByPin[fullRef + "." + pin] = node;
                         return node;

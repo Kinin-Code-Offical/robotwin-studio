@@ -183,9 +183,9 @@ namespace RobotTwin.CoreSim.Analysis.Recording
         public static ChannelStore Read(Stream s)
         {
             using var r = new BinaryReader(s, Encoding.UTF8, leaveOpen: true);
-            if (r.ReadInt32() != Magic) throw new InvalidDataException("kanal verisi değil / not a channel block");
+            if (r.ReadInt32() != Magic) throw new InvalidDataException("kanal verisi değil");
             int version = r.ReadInt32();
-            if (version != 1) throw new InvalidDataException("kanal sürümü / channel version " + version);
+            if (version != 1) throw new InvalidDataException("desteklenmeyen kanal sürümü " + version);
             var store = new ChannelStore();
             int n = r.ReadInt32();
             store._time = new double[Math.Max(256, n)];

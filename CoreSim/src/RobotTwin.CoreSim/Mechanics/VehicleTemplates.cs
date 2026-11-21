@@ -10,7 +10,7 @@ namespace RobotTwin.CoreSim.Mechanics
         public static void Tie(Schematic sch, PartLibrary lib, SchematicPart part, string pin, string net)
         {
             var def = lib.Get(part.PartId);
-            var p = def.FindPin(pin) ?? throw new ArgumentException($"{part.RefDes} has no pin {pin}");
+            var p = def.FindPin(pin) ?? throw new ArgumentException($"{part.RefDes} parçasında {pin} bacağı yok");
             sch.Labels.Add(new NetLabel { Name = net, Position = part.Transform(p.X, p.Y) });
         }
 

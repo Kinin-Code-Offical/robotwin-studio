@@ -127,8 +127,8 @@ namespace RobotTwin.CoreSim.Mechanics
 
         public HeightMapTerrain(int columns, int rows, double cellSize, double originX, double originY, IReadOnlyList<double> heights)
         {
-            if (columns < 2 || rows < 2) throw new ArgumentException("height map needs at least 2×2 samples");
-            if (heights.Count < columns * rows) throw new ArgumentException("not enough height samples");
+            if (columns < 2 || rows < 2) throw new ArgumentException("yükseklik haritası en az 2×2 örnek gerektirir");
+            if (heights.Count < columns * rows) throw new ArgumentException("yükseklik örnekleri yetersiz");
             Columns = columns;
             Rows = rows;
             CellSize = Math.Max(1e-4, cellSize);

@@ -366,7 +366,7 @@ namespace RobotTwin.CoreSim.Analysis
             using var zip = ZipFile.OpenRead(path);
             var manifest = JsonNode.Parse(ReadText(zip, "manifest.json") ?? throw new InvalidDataException("manifest.json yok")) as JsonObject
                 ?? throw new InvalidDataException("manifest");
-            if ((string?)manifest["format"] != Format) throw new InvalidDataException("RobotWin analiz dosyası değil / not an analysis file");
+            if ((string?)manifest["format"] != Format) throw new InvalidDataException("RobotWin analiz dosyası değil");
             var r = new AnalysisResult
             {
                 WorldTitle = (string?)manifest["world"] ?? string.Empty,

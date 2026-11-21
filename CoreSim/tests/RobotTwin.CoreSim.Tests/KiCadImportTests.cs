@@ -565,7 +565,7 @@ namespace RobotTwin.CoreSim.Tests
             AssertCourtyard(fp, -1.2 - 0.25, -1.5 - 0.25, 10 + Math.Sqrt(2) + 0.25, 5.6 + 0.25);
             var info = KiCadLibraryImport.GetFootprintInfo(fp)!;
             Assert.False(info.CourtyardFromFile);
-            Assert.Contains(info.Warnings, w => w.Contains("no copper layer"));
+            Assert.Contains(info.Warnings, w => w.Contains("bakır katmanı yok"));
             Assert.Contains(info.Warnings, w => w.Contains("45"));
         }
 
@@ -740,7 +740,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal("resistor", part.BasePartId);
             Assert.Equal(new Dictionary<string, string> { ["A"] = "1", ["B"] = "2" }, PinMap(part));
             Assert.False(part.Parameters.ContainsKey("resistance"));
-            Assert.Contains("not a number", report);
+            Assert.Contains("bir sayı değil", report);
 
             r.Properties["Value"] = "4k7";
             var fp = KiCadLibraryImport.ImportFootprint(R0805, "Resistor_SMD");
@@ -752,7 +752,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(2, part.Footprint.Pads.Count);
             Assert.Equal("kicad-test-r", part.Id);
             Assert.Equal("R (4k7)", part.Name);
-            Assert.DoesNotContain("warning", report);
+            Assert.DoesNotContain("uyarı", report);
 
             var cp = Sym(all, "C_Polarized");
             cp.Properties["Value"] = "100u";
@@ -760,7 +760,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal("electrolytic", part.BasePartId);
             Assert.Equal(new Dictionary<string, string> { ["+"] = "1", ["-"] = "2" }, PinMap(part));
             Assert.Equal("100u", part.Parameters["capacitance"]);
-            Assert.Contains("pin 1 = +", report);
+            Assert.Contains("bacak 1 = +", report);
             Assert.Equal("Polarized capacitor", part.Description);
 
             var led = Sym(all, "LED");
@@ -783,7 +783,7 @@ namespace RobotTwin.CoreSim.Tests
             var npn = KiCadLibraryImport.ToCustomPart(Sym(all, "Q_NPN_BCE"), null, lib, out string report)!;
             Assert.Equal("npn", npn.BasePartId);
             Assert.Equal(new Dictionary<string, string> { ["B"] = "1", ["C"] = "2", ["E"] = "3" }, PinMap(npn));
-            Assert.Contains("NPN keyword", report);
+            Assert.Contains("NPN sözcüğü", report);
 
             // Pin names B/C/E alone decide the model family; the part number picks the polarity preset.
             var q = Sym(all, "Q_NPN_BCE");
@@ -801,10 +801,10 @@ namespace RobotTwin.CoreSim.Tests
             var opamp = KiCadLibraryImport.ToCustomPart(Sym(all, "LM358"), fp, lib, out report)!;
             Assert.Equal("opamp", opamp.BasePartId);
             Assert.Equal(new Dictionary<string, string> { ["IN-"] = "2", ["IN+"] = "3", ["OUT"] = "1", ["V+"] = "8", ["V-"] = "4" }, PinMap(opamp));
-            Assert.Contains("preset 'lm358'", report);
-            Assert.Contains("unit 2 not modelled", report);
+            Assert.Contains("'lm358' hazır ayarıyla", report);
+            Assert.Contains("birim 2 modellenmedi", report);
             Assert.Equal("DIP-8_W7.62mm_LongPads", opamp.Parameters["footprint"]);
-            Assert.DoesNotContain("warning", report);
+            Assert.DoesNotContain("uyarı", report);
 
             var parent = KiCadLibraryImport.ToCustomPart(Sym(all, "LM2904"), null, lib, out _)!;
             Assert.Equal("opamp", parent.BasePartId);
@@ -832,17 +832,17 @@ namespace RobotTwin.CoreSim.Tests
             var mcu = KiCadLibraryImport.ToCustomPart(Sym(all, "ATtiny85-20P"), null, lib, out report)!;
             Assert.Equal("header-8", mcu.BasePartId);
             Assert.StartsWith("Test:ATtiny85-20P: Generic", report);
-            Assert.Contains("connector-like", report);
-            Assert.Contains("pin 4 = KiCad pin 4 (GND)", report);
+            Assert.Contains("konnektör gibi", report);
+            Assert.Contains("bacak 4 = KiCad bacağı 4 (GND)", report);
 
             Assert.Null(KiCadLibraryImport.ToCustomPart(Sym(all, "GND"), null, lib, out report));
-            Assert.Contains("power symbol", report);
+            Assert.Contains("güç sembolü", report);
 
             var wide = KiCadLibraryImport.ImportSymbolLibrary("(kicad_symbol_lib (symbol \"Conn_01x10\" (property \"Reference\" \"J\") (symbol \"Conn_01x10_1_1\" "
                 + string.Concat(Enumerable.Range(1, 10).Select(i => $"(pin passive line (at 0 {-2.54 * i} 0) (length 3.81) (name \"Pin_{i}\") (number \"{i}\"))"))
                 + ")))").Single();
             Assert.Null(KiCadLibraryImport.ToCustomPart(wide, null, lib, out report));
-            Assert.Contains("no generic 10-pin part", report);
+            Assert.Contains("10 bacaklı genel parça yok", report);
         }
 
         // ================================================================== whole libraries + simulation
@@ -919,7 +919,7 @@ namespace RobotTwin.CoreSim.Tests
             File.WriteAllText(Path.Combine(pretty, "SOT23.kicad_mod"), Sot23.Replace("\"SOT-23\"", "\"SOT23\""));
             KiCadLibraryImport.ImportLibraries(new[] { pretty }, FreshLibrary(), out var report);
             Assert.Equal("Clash_SOT23", report.Footprints.Single().Id);
-            Assert.Contains(report.Warnings, w => w.Contains("built-in"));
+            Assert.Contains(report.Warnings, w => w.Contains("yerleşik"));
             Assert.Equal("SOT-23", FootprintLibrary.Get("SOT23")!.Description);
         }
 
