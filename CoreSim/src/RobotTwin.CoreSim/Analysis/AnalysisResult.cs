@@ -137,6 +137,10 @@ namespace RobotTwin.CoreSim.Analysis
 
         /// <summary>Body centre relative to the object origin (object frame): the mesh nodes are in the body frame.</summary>
         public Vec3 BodyOffset { get; set; }
+
+        /// <summary>Rotation of the body relative to the object (object frame): a wheel's body is its model turned so the
+        /// cylinder axis runs along the axle. Mesh and grid coordinates are in the body frame.</summary>
+        public Quat BodyTurn { get; set; } = Quat.Identity;
         public List<string> Notes { get; } = new List<string>();
         public int NodeCount => Nodes.Length / 3;
         public int NodesPerElement => Method == "beam" ? 2 : Order == 2 ? 10 : 4;
@@ -154,6 +158,10 @@ namespace RobotTwin.CoreSim.Analysis
 
         /// <summary>Centre of the heated body relative to the object origin (object frame): where the grid sits.</summary>
         public Vec3 BodyOffset { get; set; }
+
+        /// <summary>Rotation of the body relative to the object (object frame): a wheel's body is its model turned so the
+        /// cylinder axis runs along the axle. Mesh and grid coordinates are in the body frame.</summary>
+        public Quat BodyTurn { get; set; } = Quat.Identity;
         public int Nx { get; set; }
         public int Ny { get; set; }
         public int Nz { get; set; }

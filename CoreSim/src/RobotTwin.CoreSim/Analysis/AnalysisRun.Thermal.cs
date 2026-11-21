@@ -123,6 +123,7 @@ namespace RobotTwin.CoreSim.Analysis
                 ObjectId = o.Id,
                 Name = o.Name,
                 BodyOffset = part?.BodyOffset ?? Vec3.Zero,
+                BodyTurn = part?.BodyTurn ?? Quat.Identity,
                 Kind = isBoard ? "board" : "part",
                 Nx = nx,
                 Ny = ny,

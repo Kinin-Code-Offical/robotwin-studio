@@ -216,6 +216,7 @@ namespace RobotTwin.CoreSim.Analysis
                 Shape = kind,
                 Size = size,
                 BodyOffset = physics?.PoseOf(objectId) is { } op ? op.Orientation.InverseRotate(body.Position - op.Position) : Vec3.Zero,
+                BodyTurn = physics?.PoseOf(objectId) is { } ot ? (ot.Orientation.Conjugate * body.Orientation).Normalized() : Quat.Identity,
                 ReferenceTemperature = world.Environment.AmbientC
             };
         }

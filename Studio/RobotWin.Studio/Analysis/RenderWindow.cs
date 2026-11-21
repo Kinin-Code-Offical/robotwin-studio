@@ -734,13 +734,14 @@ namespace RobotWin.Studio.Analysis
                 for (int n = 0; n < st.NodeCount; n++) size = Math.Max(size, st.Node(n).Length);
                 double exaggerate = maxDisp > 0 ? 0.04 * size / maxDisp : 0;
                 var centre = pos + q.Rotate(st.BodyOffset);
+                var qb = q * st.BodyTurn;   // the body frame the mesh is in (a wheel stands on its edge)
                 var mesh = new MeshGeometry3D();
                 for (int n = 0; n < st.NodeCount; n++)
                 {
                     var p = st.Node(n);
                     if (f.Displacement.Length >= 3 * st.NodeCount)
                         p += new Vec3(f.Displacement[3 * n], f.Displacement[3 * n + 1], f.Displacement[3 * n + 2]) * exaggerate;
-                    var w = centre + q.Rotate(p);
+                    var w = centre + qb.Rotate(p);
                     mesh.Positions.Add(new Point3D(w.X, w.Y, w.Z));
                     mesh.TextureCoordinates.Add(new Point(Math.Max(0.002, Math.Min(0.998, f.VonMises[n] / vmax)), 0.5));
                 }
@@ -921,11 +922,12 @@ namespace RobotWin.Studio.Analysis
                 var ls = list[lo];
                 var st = _result.Stress.FirstOrDefault(x => x.ObjectId == kv.Key);
                 var centre = pose.Position + pose.Orientation.Rotate(st?.BodyOffset ?? Vec3.Zero);
+                var qb = pose.Orientation * (st?.BodyTurn ?? Quat.Identity);
                 foreach (var (p, f, kind) in ls.Loads)
                 {
                     if (f.Length < _forceMax * 0.01) continue;
-                    var wp = centre + pose.Orientation.Rotate(p);
-                    var wf = pose.Orientation.Rotate(f);
+                    var wp = centre + qb.Rotate(p);
+                    var wf = qb.Rotate(f);
                     var color = kind == LoadSample.KindContact ? Color.FromRgb(0xF5, 0x9E, 0x0B) : Color.FromRgb(0x06, 0xB6, 0xD4);
                     g.Children.Add(Arrow(wp, wp + wf / _forceMax * 0.06, color, 0.0012));
                     n++;

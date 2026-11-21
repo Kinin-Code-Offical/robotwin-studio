@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using RobotTwin.CoreSim.Analysis;
+using RobotTwin.CoreSim.Mechanics;
 
 namespace RobotWin.Studio.Analysis
 {
@@ -67,9 +68,10 @@ namespace RobotWin.Studio.Analysis
                 for (int k = 0; k < th.Times.Count; k++)
                     if (th.Times[k] <= _thermalTime + 1e-9) f = k;
                 var field = th.Frames[Math.Min(f, th.Frames.Count - 1)];
-                double gx = (p.X - th.BodyOffset.X + th.Nx * th.Dx / 2) / th.Dx - 0.5;
-                double gy = (p.Y - th.BodyOffset.Y + th.Ny * th.Dy / 2) / th.Dy - 0.5;
-                int kz = th.Nz <= 1 ? 0 : Math.Clamp((int)Math.Floor((p.Z - th.BodyOffset.Z + th.Nz * th.Dz / 2) / th.Dz), 0, th.Nz - 1);
+                var b = th.BodyTurn.InverseRotate(new Vec3(p.X, p.Y, p.Z) - th.BodyOffset);   // into the grid's body frame
+                double gx = (b.X + th.Nx * th.Dx / 2) / th.Dx - 0.5;
+                double gy = (b.Y + th.Ny * th.Dy / 2) / th.Dy - 0.5;
+                int kz = th.Nz <= 1 ? 0 : Math.Clamp((int)Math.Floor((b.Z + th.Nz * th.Dz / 2) / th.Dz), 0, th.Nz - 1);
                 gx = Math.Clamp(gx, 0, th.Nx - 1);
                 gy = Math.Clamp(gy, 0, th.Ny - 1);
                 int i0 = (int)Math.Floor(gx), j0 = (int)Math.Floor(gy), i1 = Math.Min(i0 + 1, th.Nx - 1), j1 = Math.Min(j0 + 1, th.Ny - 1);

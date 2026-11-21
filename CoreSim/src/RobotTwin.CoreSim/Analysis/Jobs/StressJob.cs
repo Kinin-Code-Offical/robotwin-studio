@@ -29,6 +29,10 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
         /// <summary>Body centre relative to the object origin, in the object frame (replay placement).</summary>
         public Vec3 BodyOffset { get; set; }
 
+        /// <summary>Rotation of the body relative to the object (object frame): a wheel's body is its model turned so the
+        /// cylinder axis runs along the axle. Mesh and grid coordinates are in the body frame.</summary>
+        public Quat BodyTurn { get; set; } = Quat.Identity;
+
         /// <summary>"box", "cylinder", "sphere", "hull", "mesh".</summary>
         public string Shape { get; set; } = "box";
 
@@ -66,7 +70,7 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
         public static StressResult Run(PartGeometry part, AnalysisSettings s, IReadOnlyList<LoadSample> loads, CancellationToken cancel, Action<double>? progress = null)
         {
             var mat = StructuralMaterial.For(part.MaterialName);
-            var result = new StressResult { ObjectId = part.ObjectId, Name = part.Name, Material = mat.Name, Yield = mat.Yield, BodyOffset = part.BodyOffset };
+            var result = new StressResult { ObjectId = part.ObjectId, Name = part.Name, Material = mat.Name, Yield = mat.Yield, BodyOffset = part.BodyOffset, BodyTurn = part.BodyTurn };
             var instants = ChooseInstants(loads, s.StressInstants);
             if (instants.Count == 0)
             {

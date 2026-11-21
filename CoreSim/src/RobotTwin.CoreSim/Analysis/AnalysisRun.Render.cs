@@ -169,7 +169,7 @@ namespace RobotTwin.CoreSim.Analysis
                 var pos = pose?.Position ?? p.Position;
                 var q = pose?.Orientation ?? p.Orientation;
                 // The part's solid is in its body frame; the body centre is offset from the object origin.
-                solids.Add(p.Solid.Transformed(BodyCentre(p, pos, q), q));
+                solids.Add(p.Solid.Transformed(BodyCentre(p, pos, q), q * p.BodyTurn));
                 double V(string key) => store.Find("body/" + p.ObjectId + "/" + key) is { } c && sample < c.Count ? c[sample] : 0;
                 momentum += new Vec3(V("vx"), V("vy"), V("vz")) * p.Mass;
                 mass += p.Mass;
