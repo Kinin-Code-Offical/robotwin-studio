@@ -38,11 +38,19 @@ Ekrandaki taşıma / döndürme / ölçekleme tutamaçlarını da sürükleyebil
 
 Delik açmak, cep oymak veya parçaları birleştirmek için:
 
-1. Önce "araç" nesneleri, en son asıl nesneyi seçin (en son seçilen etkin nesnedir).
-2. Araç çubuğundan seçin:
-   - **Birleşim (∪):** araçları etkin nesneyle birleştirir.
-   - **Fark (−):** araçları etkin nesneden çıkarır (delik, cep).
-   - **Kesişim (∩):** yalnızca ortak hacmi bırakır.
+1. Önce "araç" nesneleri, en son asıl nesneyi seçin (en son seçilen etkin nesnedir; Shift+tık seçime ekler).
+2. Özellikler panelindeki **Kes, kırp, birleştir** bölümünden (ya da araç çubuğundan, sağ tık menüsünden) seçin:
+   - **Fark (kırp):** iç içe geçen araçların hacmini etkin nesneden oyar (delik, cep, kırpma).
+   - **Birleşim:** araçları etkin nesneyle tek kapalı gövdede birleştirir.
+   - **Kesişim:** yalnızca ortak hacmi bırakır.
+
+Araç nesneleri işlemden sonra kaldırılır; sonuç yine kapalı (su geçirmez) bir gövdedir.
+
+## Dilimleme
+
+Bir nesneyi iki parçaya ayırmak için nesneyi seçin ve **K**'ye (ya da **Dilimle**) basın. Ekranda kesme çizgisinin başına ve sonuna tıklayın: nesne o çizgi boyunca, bakış yönünde kesilir. İki parça da kesit yüzüyle kapatılır, yani ikisi de kapalı gövdedir. Kesitteki delikler açık kalır (boru kesilince halka kesit çıkar). Sonra parçalardan birini seçip **G** ile taşıyabilir, **R** ile döndürebilirsiniz.
+
+![Dilimlenmiş boru, pah kırılmış blok, kalınlık verilmiş tepsi](../images/modeler-cut.png)
 
 Diğer nesne işlemleri: **Ctrl+J** birleştir, ayna kopya (X / Y / Z), doğrusal ve dairesel dizi, **Ctrl+P** ebeveyn yap, **Alt+P** ebeveyni kaldır, **Shift+D** çoğalt, **H** gizle, **Alt+H** hepsini göster.
 
@@ -52,15 +60,22 @@ Diğer nesne işlemleri: **Ctrl+J** birleştir, ayna kopya (X / Y / Z), doğrusa
 
 | Tuş | İşlev |
 | --- | --- |
-| E | Ekstrüzyon (yüzü dışarı çek) |
+| E | Ekstrüzyon: yüzleri normal yönünde çıkarır; nokta/kenar modunda seçili kenarlardan yeni yüz çekip taşır |
 | I | İçe öteleme (inset) |
+| K | Bıçak: ekrana çizilen çizgi boyunca keser (seçim varsa yalnız seçili yüzleri). **C** kipi değiştirir: kes / sağ tarafı sil / sol tarafı sil; silinen tarafın açıklığı kapatılır |
+| Ctrl+R | Halka kesim: fareyle bir kenarın üzerine gelin, dörtgen halkası boyunca yeni kenar halkaları eklenir; tekerlek veya +/− kesim sayısını değiştirir |
+| Ctrl+B | Pah kır (bevel): seçili kenarların yerine düz pah yüzü; fareyle genişlik ya da mm yazın. Üç pahın buluştuğu köşeye köşe yüzü eklenir |
 | F | Yüz doldur |
 | M | Birleştir |
 | P | Seçimi ayrı nesne yap |
 | X veya Del | Sil |
 | Shift+N | Normalleri yeniden hesapla |
 
+**Kalınlık ver** yüzeye içe doğru et kalınlığı verir: açık bir yüzey kalın bir duvar olur, kapalı bir gövde içi boş kabuğa döner (örneğin üst yüzü silinmiş kutu → tepsi). Köşelerde kalınlık eşit kalır.
+
 **Alt böl**, **Yumuşat** (Catmull–Clark), mesafeye göre birleştirme, üçgenleme ve normalleri ters çevirme gibi işlemler panelde ve sağ tık menüsündedir.
+
+![Düzenleme modu: halka kesimler ve kalınlık verilmiş tepsi](../images/modeler-cut-edit.png)
 
 ## Malzeme ve kütle
 

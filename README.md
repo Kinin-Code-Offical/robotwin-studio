@@ -41,7 +41,7 @@ Uygulamanın sol tarafındaki **"Tasarımdan gerçeğe hattı"** bir projenin a�
 | **Devre** | Ctrl+1 | Şema çizin, 256 gerçek parçadan seçin, analog çözücüyle canlı simüle edin; osiloskop, multimetre, Monte Carlo, arıza tespiti. |
 | **PCB** | Ctrl+2 | 2/4/6 katmanlı kart, bakır alanlar, etkileşimli ve otomatik yol çizimi, DRC, Gerber/Excellon ve KiCad 8 dışa aktarımı. |
 | **Kod** | Ctrl+3 | Arduino Uno/Nano (arduino-cli ile) ve ESP32 (MSVC ile) kodu yazın, derleyin, emüle karta yükleyip çalıştırın. |
-| **Modelle** | Ctrl+4 | Blender benzeri 3D modelleyici: temel şekiller, düzenleme modu, CSG (birleşim/fark/kesişim), hazır robot parçaları, STL/OBJ/PLY. |
+| **Modelle** | Ctrl+4 | Blender benzeri 3D modelleyici: temel şekiller, nokta/kenar/yüz düzenleme, ekstrüzyon, bıçak ve dilimleme, halka kesim, pah, kalınlık, CSG (birleşim/fark/kesişim), hazır robot parçaları, STL/OBJ/PLY. |
 | **Montaj** | Ctrl+5 | Devreden otomatik 3D araç veya drone oluşturun, arenada sürün/uçurun, arıza deneyleri yapın. |
 | **Dünya** | Ctrl+6 | Kartları, parçaları, gövdeleri ve modelleri gerçek fizikli bir dünyaya koyun; kablolayın, mekanik olarak bağlayın, çalıştırın. |
 
@@ -125,8 +125,9 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 ### Modelle
 
 - Kutu, silindir, koni, küre, simit, boru, kama, delikli plaka, profil (ekstrüzyon), döndürme.
-- Düzenleme modu (Tab): köşe/kenar/yüz seçimi, ekstrüzyon (E), içe öteleme (I), bölme, yumuşatma, birleştirme.
-- CSG: birleşim, fark, kesişim; ayna, dizi, ebeveyn bağlama.
+- Düzenleme modu (Tab): köşe/kenar/yüz seçimi ve G/R/S ile taşıma-döndürme-ölçekleme, ekstrüzyon (E, yüzlerden ya da kenarlardan), içe öteleme (I), bıçak (K), halka kesim (Ctrl+R), pah kırma (Ctrl+B), kalınlık verme, bölme, yumuşatma, birleştirme.
+- Dilimleme (K): nesneyi çizilen çizgi boyunca iki kapalı parçaya ayırır; parçalar ayrı ayrı taşınıp döndürülür.
+- CSG: birleşim, fark (iç içe geçen kısmı kırpma), kesişim; ayna, dizi, ebeveyn bağlama.
 - Hazır robot parçaları: 2WD şasi plakası, SG90 servo braketi, L braket, tekerlek göbeği, muhafaza kutusu + kapak.
 - Malzeme ve doluluk oranından kütle; STL/OBJ/PLY içe/dışa aktarma; **Dünyaya gönder**.
 
@@ -294,7 +295,7 @@ The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) walks t
 | Circuit (**Devre**) | Ctrl+1 | Schematic capture with 256 real parts, live analog simulation, 4-channel oscilloscope, multimeter, bench supply, tolerances, Monte Carlo, fault diagnosis, ERC; BOM/KiCad/SPICE/PNG/SVG export. |
 | **PCB** | Ctrl+2 | 2/4/6-layer boards, copper zones, interactive router that walks around obstacles, auto-placement and auto-routing, DRC, Gerber RS-274X X2 + Excellon + BOM + CPL, KiCad 8 project export, footprint editor, 3D board view. |
 | Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). |
-| Model (**Modelle**) | Ctrl+4 | Blender-like modeller: primitives, edit mode (extrude, inset, subdivide, …), CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export, *send to world*. |
+| Model (**Modelle**) | Ctrl+4 | Blender-like modeller: primitives, edit mode (vertex/edge/face, extrude, inset, knife, loop cut, bevel, solidify, subdivide, …), slicing into two closed pieces, CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export, *send to world*. |
 | Assembly (**Montaj**) | Ctrl+5 | Auto-build a rover or X-quadcopter from the circuit, drive/fly it in arenas, run fault experiments, record `.rwsim`. |
 | World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. **Record and render** (● Record, Ctrl+R; Simulation › Render, Ctrl+F5): the recorded stretch is recomputed off-screen at full accuracy — every pose, force and signal, FEM stress of every part at video frame rate, 3D lattice-Boltzmann flow around the whole assembly and heating — and replayed like a video in the same 3D scene with a timeline, slow motion, per-part stress colours, force arrows, a flow slice and graphs that jump to the clicked second. |
 

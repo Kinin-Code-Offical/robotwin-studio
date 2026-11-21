@@ -120,6 +120,9 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | Ctrl+P / Alt+P | Ebeveyn yap / ebeveyni kaldır |
 | H / Shift+H / Alt+H | Gizle / diğerlerini gizle / hepsini göster |
 | E / I / F / M / P | (Düzenleme modunda) ekstrüzyon / içe öteleme / yüz doldur / birleştir / ayır |
+| K | Bıçak (düzenleme modunda) · dilimle (nesne modunda); C kip değiştirir |
+| Ctrl+R | (Düzenleme modunda) halka kesim; tekerlek kesim sayısı |
+| Ctrl+B | (Düzenleme modunda) pah kır (bevel) |
 | Shift+N | (Düzenleme modunda) normalleri yeniden hesapla |
 | Z / Shift+Z / Alt+Z | Katı / tel kafes / X-ray |
 | Numpad 1 / 3 / 7 | Önden / sağdan / üstten |

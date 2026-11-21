@@ -38,11 +38,19 @@ You can also drag the on-screen move / rotate / scale handles. With **Yapış** 
 
 To drill holes, cut pockets or join parts:
 
-1. Select the "tool" objects first and the main object last (the last selected is the active one).
-2. Pick on the toolbar:
-   - **Birleşim (∪)** (union): joins the tools with the active object.
-   - **Fark (−)** (difference): subtracts the tools from the active object (hole, pocket).
-   - **Kesişim (∩)** (intersection): keeps only the shared volume.
+1. Select the "tool" objects first and the main object last (the last selected is the active one; Shift+click adds to the selection).
+2. Pick in the **Kes, kırp, birleştir** (cut, trim, join) section of the properties panel (or on the toolbar or the right-click menu):
+   - **Fark (kırp)** (difference, trim): carves the volume of the overlapping tools out of the active object (hole, pocket, trim).
+   - **Birleşim** (union): joins the tools with the active object into one closed body.
+   - **Kesişim** (intersection): keeps only the shared volume.
+
+The tool objects are removed afterwards; the result is again a closed (watertight) body.
+
+## Slicing
+
+To split an object in two, select it and press **K** (or **Dilimle**, slice). Click the start and the end of the cut line on the screen: the object is cut along that line, in the viewing direction. Both pieces are capped with the section, so both are closed bodies. Holes in the section stay open (a sliced tube shows a ring). Then select one piece and move it with **G** or turn it with **R**.
+
+![A sliced tube, a bevelled block and a solidified tray](../../images/modeler-cut.png)
 
 Other object operations: **Ctrl+J** join, mirror copy (X / Y / Z), linear and circular array, **Ctrl+P** set parent, **Alt+P** clear parent, **Shift+D** duplicate, **H** hide, **Alt+H** show all.
 
@@ -52,15 +60,22 @@ Enter edit mode with **Tab**. **1**, **2**, **3** select vertices, edges and fac
 
 | Key | Function |
 | --- | --- |
-| E | Extrude (pull a face out) |
+| E | Extrude: pulls faces out along their normal; in vertex/edge mode new faces grow from the selected edges and move with the mouse |
 | I | Inset |
+| K | Knife: cuts along a line drawn on the screen (only the selected faces when there is a selection). **C** switches the mode: cut / delete the right side / delete the left side; the opening of the deleted side is capped |
+| Ctrl+R | Loop cut: hover over an edge and new edge loops are added along its ring of quads; the wheel or +/− changes the number of cuts |
+| Ctrl+B | Bevel: flat chamfer faces in place of the selected edges; set the width with the mouse or type mm. A corner face closes the corner where three chamfers meet |
 | F | Fill a face |
 | M | Merge |
 | P | Separate the selection into its own object |
 | X or Del | Delete |
 | Shift+N | Recalculate normals |
 
+**Kalınlık ver** (solidify) gives the surface a wall thickness inward: an open surface becomes a thick wall, a closed body becomes a hollow shell (for example a box without its top face → a tray). The thickness stays even at the corners.
+
 **Alt böl** (subdivide), **Yumuşat** (smooth, Catmull–Clark), merge by distance, triangulate and flip normals are in the panel and the right-click menu.
+
+![Edit mode: loop cuts and a solidified tray](../../images/modeler-cut-edit.png)
 
 ## Material and mass
 

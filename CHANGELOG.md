@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Modeller cutting tools:** knife (K) along a line drawn on the screen, with cut / delete one side and capping; slice an object into two closed pieces (K in object mode); loop cut (Ctrl+R) with a live preview; bevel (Ctrl+B) with corner patches; solidify (even wall thickness, hollow shells); extrude from edges in vertex/edge mode. Boolean union/difference/intersection and slicing have their own section in the properties panel.
+
+### Changed
+
+- One language per message: KiCad import log, solver errors, ESP32 events and loader errors, mesh import errors and API messages are in Turkish only (no more "Türkçe / English" pairs).
+
 ## [1.1.0] - 2026-11-21
 
 One shared physics now drives everything in the world: circuits, rigid bodies, heat, air, gas and radio feed each other, so robots, aircraft, rockets and industrial cells are built from the same parts and behave as they would in reality.
