@@ -42,8 +42,8 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 double a = k * 120.0;
                 double ca = Math.Cos(a * Math.PI / 180), sa = Math.Sin(a * Math.PI / 180);
-                // A single panel: chord along its x (leading edge up), span along its z (outwards).
-                var fin = w.AddBody("wing", finChord, finSpan, 0.003, new WorldPose { X = ca * d / 2, Y = sa * d / 2, Z = finChord / 2, Pitch = -90, Yaw = a + 180 }, "BALSA");
+                // A single panel: chord along its x (leading edge up), span along its y straight out from the bottle.
+                var fin = w.AddBody("wing", finChord, finSpan, 0.003, new WorldPose { X = ca * d / 2, Y = sa * d / 2, Z = finChord / 2, Pitch = -90, Yaw = a - 90 }, "BALSA");
                 fin.Name = "Kanatçık " + (k + 1);
                 fin.MassKg = 0.012;
                 fin.Color = "#F2A33B";

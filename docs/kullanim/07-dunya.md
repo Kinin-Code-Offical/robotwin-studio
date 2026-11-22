@@ -33,6 +33,7 @@
 | Kumandalı araba (ESP32 + PS5 kumanda) | Kendi PCB'li ESP32 + DRV8833 kartı, USB-C şarjlı 2S pil, eşleşmiş DualSense |
 | Su roketi | 2 L PET şişe, 0,6 L su, 4 bar; su jeti, hava itkisi, kanatçıklar |
 | Katı yakıtlı motor test standı (KNSB) | İki BATES şeker yakıt tanesi; basınç ve itki yanma hızından çıkar |
+| Katı yakıtlı roket: e-kibritle fırlatma ve paraşüt | G sınıfı KNSB motorlu 41 mm roket; 2 s geri sayımla kapanan anahtar e-kibriti ateşler, roket ~1 km'ye çıkar, tepe noktasında paraşüt açılır |
 | Kap ve bilyeler: içi boş parçalar | Modelleyicide yapılmış tepsi ve boru; bilyeler ve küpler tepsinin içine, bir bilye borunun deliğinden yere düşer |
 | Çizgi izleyen robot | Mat, solmuş ve parlak bant üstünde 5 kanallı TCRT5000 |
 | Sensör gezgini | Kamera, LiDAR, GPS, IMU, pusula ve enkoderler canlı |
@@ -106,7 +107,28 @@ Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir mo
 - **Katı yakıt:** KNSB, KNDX veya APCP tanesi; yanma hızı basınca bağlıdır (r = a·pⁿ). Oda basıncı, yanma yüzeyinin ürettiği gaz ile lüleden çıkan gazın dengesinden kendiliğinden çıkar; itki eğrisi hazır okunmaz. Motora bağlı bir **e-match** devreden ateşlenince ya da **Ateşleme zamanı** gelince tutuşur.
 - **Patlama:** basınç, duvarın çeper gerilmesini (σ = p·r/t) malzemenin dayanımına çıkarırsa kap patlar.
 
-Kabın kütlesi gaz, su ve yakıt azaldıkça düşer; sıcak gaz duvarı ısıtır (ısı kamerasında görünür). Çalışırken denetçide basınç, sıcaklık, itki ve durum canlı okunur. **Su roketi** ve **Katı yakıtlı motor test standı** şablonlarıyla başlayın. Matematiği: [Gaz ve roketler](../fizik/05-gaz-ve-roket.md).
+Kabın kütlesi gaz, su ve yakıt azaldıkça düşer; sıcak gaz duvarı ve lüle boğazını ısıtır (ısı kamerasında görünür). Çalışırken denetçide basınç, sıcaklık, itki, yakıt yüzeyinin sıcaklığı, yanan yüzey oranı ve durum canlı okunur. **Su roketi**, **Katı yakıtlı motor test standı** ve **Katı yakıtlı roket** şablonlarıyla başlayın. Matematiği: [Gaz ve roketler](../fizik/05-gaz-ve-roket.md).
+
+### Ateşleme ve fırlatma
+
+Katı yakıt, e-kibrit ateşlendiği an yanmaz. E-kibrit ve üzerindeki ateşleyici barutu yanar, sıcak gazı yakıt yüzeyini ısıtır; yüzeyi tutuşma sıcaklığına çıkan bölge yanar ve alev lüleye doğru yayılır. Denetçide **Ateşleyici barutu (g)** ve **Ateşleyici yanma süresi (ms)** ayarlanır. Barutu 0 yaparsanız yalnız e-kibrit başı kalır; şekerli yakıt çoğu zaman tutuşmaz ve olay günlüğü nedenini yazar ("yakıt yüzeyi en çok 122 °C oldu").
+
+E-kibriti ateşlemenin iki yolu var:
+
+- **Fırlatma kontrolcüsü:** pil → anahtar → e-kibrit → pil. Anahtarın denetçisinde **Kendiliğinden kapanır (s)** bir geri sayım verir. Simülasyon çalışırken **Kapat** düğmesi anahtarı elle kapatır.
+- **Kartla:** bir MOSFET'i karttan sürüp e-kibriti ateşleyin (ör. altimetre ya da uzaktan kumanda ile).
+
+E-kibrit, motorun **Ateşleme** ayarında seçilir ya da motora mekanik olarak bağlanır.
+
+### Paraşüt
+
+Herhangi bir gövdenin denetçisinde **Kanopi çapı (m)** verin. Paraşüt, altimetre tırmanmanın bittiğini görünce (ya da **Açılma zamanı**nda) atılır. Kanopi, ipler gerilince dolma süresiyle açılır; açılma şoku ve iniş hızı fizikten çıkar. Çalışırken kanopi sahnede çizilir.
+
+![Katı yakıtlı roket rampada: karton gövde, kanatçıklar, pil ve fırlatma anahtarı](../images/world-rocket-pad.png)
+
+![Ateşlemeden 0,1 s sonra: 24 bar, 1275 °C, 100 N itki; yakıt yüzeyinin tamamı yanıyor](../images/world-rocket-ignite.png)
+
+![Tepe noktasında açılan 45 cm paraşütle iniş](../images/world-rocket-chute.png)
 
 ### 3D modeller
 

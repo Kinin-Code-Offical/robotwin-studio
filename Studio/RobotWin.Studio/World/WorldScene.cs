@@ -759,6 +759,8 @@ namespace RobotWin.Studio.World
             using (Shell.Perf.Measure("radyo")) RadioFrame();   // [radio] waves, RF links, controller lightbars
             using (Shell.Perf.Measure("sensörler")) SenseFrame();   // [sense] sensor overlays, camera sensors (World/WorldScene.Sense.cs)
             using (Shell.Perf.Measure("rüzgâr")) SdkFrame();   // [sdk] wind arrows, wind sock, force-field regions
+            using (Shell.Perf.Measure("paraşüt")) ChuteFrame();   // [launch] canopies (World/WorldScene.Parachutes.cs)
+            using (Shell.Perf.Measure("jetler")) JetFrame(dt);   // [gas] nozzle jets every frame, also while paused
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();
@@ -868,6 +870,7 @@ namespace RobotWin.Studio.World
         public void ClearEffects()
         {
             _effects.Clear();
+            ClearParachutes();   // [launch]
             UpdateKinematics();
             foreach (var it in _items.Values)
             {

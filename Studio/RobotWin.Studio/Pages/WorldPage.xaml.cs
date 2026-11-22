@@ -629,6 +629,7 @@ namespace RobotWin.Studio.Pages
             WingSection(world, o);   // [linkage] servo, horn, control horn, pushrod (Pages/WorldPage.Wings.cs)
             ShellSection(world, o);   // [shell] fit check first, then wall, cable holes, lid, X-ray / exploded (Pages/WorldPage.Shells.cs)
             GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
+            LaunchSection(world, o);   // [launch] switches on a countdown or by hand, parachutes (Pages/WorldPage.Launch.cs)
 
             if (o.Kind == WorldObjectKind.Board) BoardSection(world, o);
 
@@ -1313,7 +1314,6 @@ namespace RobotWin.Studio.Pages
             UpdateLive();
             UpdateRadioLive();   // [radio]
             UpdateGasLive();   // [gas]
-            UpdateJets();   // [gas] nozzle jets (Pages/WorldPage.Gas.cs)
             UpdateCellLive();   // [arm]
             UpdateSdkLive();   // [sdk]
             RecordCableHistory();
@@ -1400,6 +1400,7 @@ namespace RobotWin.Studio.Pages
             var first = World?.Objects.FirstOrDefault(o => o.Kind == WorldObjectKind.Component && o.PartId == "servo") ?? World?.Objects.FirstOrDefault();
             if (first != null) Scene.Select(first.Id);
             if (Environment.GetCommandLineArgs().Contains("--collision")) SetCollisionView(true);   // [hull]
+            LaunchSnapshot();   // [launch] --frame <name>, --thermal (Pages/WorldPage.Launch.cs)
             ShellSnapshot();   // [shell] --select-shell, --xray, --exploded (Pages/WorldPage.Shells.cs)
             SenseSnapshotFinish();   // [sense]
             SdkSnapshot();   // [sdk]

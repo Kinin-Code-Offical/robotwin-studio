@@ -65,9 +65,93 @@ namespace RobotTwin.CoreSim.Mechanics
                     pressure.X * (LeadingShare * (1 - lead.X) + (1 - LeadingShare) * (1 - trail.X)),
                     pressure.Y * (LeadingShare * (1 - lead.Y) + (1 - LeadingShare) * (1 - trail.Y)),
                     pressure.Z * (LeadingShare * (1 - lead.Z) + (1 - LeadingShare) * (1 - trail.Z)));
-                body.SetDirectionalDrag(Pressure(coverPlus, coverMinus) + friction, Pressure(coverMinus, coverPlus) + friction);
+                if (shape.Kind == ShapeKind.ConvexHull && HullFaces(shape) is { } hf)
+                {
+                    // A model's own surface: how steeply each face meets the flow, not a box around it.
+                    static Vec3 Mul(Vec3 a, Vec3 b) => new Vec3(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
+                    var one = new Vec3(1, 1, 1);
+                    var fwd = Mul(hf.LeadPlus, one - coverPlus) + Mul(hf.BaseMinus, one - coverMinus);
+                    var back = Mul(hf.LeadMinus, one - coverMinus) + Mul(hf.BasePlus, one - coverPlus);
+                    var hullFriction = Friction(new Vec3(
+                        area.X * (2 - coverPlus.X - coverMinus.X),
+                        area.Y * (2 - coverPlus.Y - coverMinus.Y),
+                        area.Z * (2 - coverPlus.Z - coverMinus.Z)));
+                    body.SetDirectionalDrag(fwd + hullFriction, back + hullFriction);
+                }
+                else body.SetDirectionalDrag(Pressure(coverPlus, coverMinus) + friction, Pressure(coverMinus, coverPlus) + friction);
                 body.DragRound = RoundAxis(body, shape, area);
             }
+        }
+
+        /// <summary>Stagnation-side pressure coefficient of a face square to the flow (disc front, Hoerner ch. 3).</summary>
+        public const double FrontPressure = 0.8;
+
+        /// <summary>Base pressure coefficient behind a blunt trailing face with an attached boundary layer ahead of it.</summary>
+        public const double BasePressure = 0.15;
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<CollisionShape, HullDrag> HullCache =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<CollisionShape, HullDrag>();
+
+        /// <summary>Cd·A (m², body axes) of a hull's faces that point along +axis / −axis, as leading faces and as base.</summary>
+        public sealed class HullDrag
+        {
+            public Vec3 LeadPlus, LeadMinus, BasePlus, BaseMinus;
+        }
+
+        /// <summary>
+        /// Pressure drag of a convex model from its faces. A face meeting the flow at angle θ (θ = 90° square on)
+        /// carries C_p ≈ 0.8·sin²θ on its projected area — Hoerner's subsonic forebody estimate, which gives a flat
+        /// face 0.8, a 20° cone ≈ 0.09 and a slender ogive almost nothing; a trailing face carries base pressure
+        /// ≈ 0.15·sin²θ, so a boat-tail recovers it and a blunt base does not.
+        /// </summary>
+        public static HullDrag? HullFaces(CollisionShape shape)
+        {
+            lock (HullCache)
+            {
+                if (HullCache.TryGetValue(shape, out var cached)) return cached;
+            }
+
+            if (shape.Vertices.Count < 4) return null;
+            var hull = ConvexHull.Compute(shape.Vertices);
+            if (hull.IsDegenerate) return null;
+            var mesh = hull.ToMesh();
+            var d = new HullDrag();
+            double[] lp = new double[3], lm = new double[3], bp = new double[3], bm = new double[3];
+            for (int t = 0; t < mesh.TriangleCount; t++)
+            {
+                var (a, b, c) = mesh.Triangle(t);
+                var n = (b - a).Cross(c - a);
+                double twice = n.Length;
+                if (twice < 1e-15) continue;
+                n /= twice;
+                double area = twice / 2;
+                double[] comp = { n.X, n.Y, n.Z };
+                for (int k = 0; k < 3; k++)
+                {
+                    double cos = comp[k], weight = area * Math.Abs(cos * cos * cos);   // projected area · sin²θ
+                    if (cos > 0)
+                    {
+                        lp[k] += FrontPressure * weight;
+                        bp[k] += BasePressure * weight;
+                    }
+                    else if (cos < 0)
+                    {
+                        lm[k] += FrontPressure * weight;
+                        bm[k] += BasePressure * weight;
+                    }
+                }
+            }
+
+            d.LeadPlus = new Vec3(lp[0], lp[1], lp[2]);
+            d.LeadMinus = new Vec3(lm[0], lm[1], lm[2]);
+            d.BasePlus = new Vec3(bp[0], bp[1], bp[2]);
+            d.BaseMinus = new Vec3(bm[0], bm[1], bm[2]);
+            lock (HullCache)
+            {
+                if (!HullCache.TryGetValue(shape, out _)) HullCache.Add(shape, d);
+            }
+
+            return d;
         }
 
         /// <summary>
@@ -124,21 +208,24 @@ namespace RobotTwin.CoreSim.Mechanics
         public static (Vec3 Area, Vec3 CoverPlus, Vec3 CoverMinus) Faces(SceneBody body, IReadOnlyList<SceneBody>? near)
         {
             var shape = body.EffectiveShape!;
-            double r = Math.Max(1e-4, shape.BoundingRadius);
-            double cell = 2 * r / Samples;
+            var (lo, hi) = LocalBounds(shape);
             var q = body.Orientation;
             double[] area = new double[3], plus = new double[3], minus = new double[3];
+            double[] lo3 = { lo.X, lo.Y, lo.Z }, hi3 = { hi.X, hi.Y, hi.Z };
             for (int axis = 0; axis < 3; axis++)
             {
+                // Sample the face over the body's own extent across this axis (a slender part is not missed).
+                int ua = (axis + 1) % 3, va = (axis + 2) % 3;
                 var d = q.Rotate(axis == 0 ? Vec3.UnitX : axis == 1 ? Vec3.UnitY : Vec3.UnitZ);
-                var u = q.Rotate(axis == 0 ? Vec3.UnitY : axis == 1 ? Vec3.UnitZ : Vec3.UnitX);
-                var v = d.Cross(u);
+                var u = q.Rotate(ua == 0 ? Vec3.UnitX : ua == 1 ? Vec3.UnitY : Vec3.UnitZ);
+                var v = q.Rotate(va == 0 ? Vec3.UnitX : va == 1 ? Vec3.UnitY : Vec3.UnitZ);
+                double cu = (hi3[ua] - lo3[ua]) / Samples, cv = (hi3[va] - lo3[va]) / Samples;
                 int hits = 0, coveredPlus = 0, coveredMinus = 0;
                 for (int i = 0; i < Samples; i++)
                 {
                     for (int j = 0; j < Samples; j++)
                     {
-                        var origin = body.Position + u * (-r + (i + 0.5) * cell) + v * (-r + (j + 0.5) * cell);
+                        var origin = body.Position + u * (lo3[ua] + (i + 0.5) * cu) + v * (lo3[va] + (j + 0.5) * cv);
                         if (Interval(body, origin, d) is not { } own) continue;
                         hits++;
                         if (near == null) continue;
@@ -156,12 +243,39 @@ namespace RobotTwin.CoreSim.Mechanics
                     }
                 }
 
-                area[axis] = hits * cell * cell;
+                area[axis] = hits * cu * cv;
                 plus[axis] = hits > 0 ? (double)coveredPlus / hits : 0;
                 minus[axis] = hits > 0 ? (double)coveredMinus / hits : 0;
             }
 
             return (new Vec3(area[0], area[1], area[2]), new Vec3(plus[0], plus[1], plus[2]), new Vec3(minus[0], minus[1], minus[2]));
+        }
+
+        /// <summary>The shape's extent in its body frame (m).</summary>
+        public static (Vec3 Min, Vec3 Max) LocalBounds(CollisionShape s)
+        {
+            switch (s.Kind)
+            {
+                case ShapeKind.Box: return (-s.HalfExtents, s.HalfExtents);
+                case ShapeKind.Sphere: return (new Vec3(-s.Radius, -s.Radius, -s.Radius), new Vec3(s.Radius, s.Radius, s.Radius));
+                case ShapeKind.Cylinder: return (new Vec3(-s.Radius, -s.Radius, -s.HalfHeight), new Vec3(s.Radius, s.Radius, s.HalfHeight));
+            }
+
+            if (s.Vertices.Count > 0)
+            {
+                var min = s.Vertices[0];
+                var max = s.Vertices[0];
+                foreach (var p in s.Vertices)
+                {
+                    min = Vec3.Min(min, p);
+                    max = Vec3.Max(max, p);
+                }
+
+                return (min, max);
+            }
+
+            double r = Math.Max(1e-4, s.BoundingRadius);
+            return (new Vec3(-r, -r, -r), new Vec3(r, r, r));
         }
 
         /// <summary>Where the line origin + t·dir runs through the body's solid (t range), or null.</summary>

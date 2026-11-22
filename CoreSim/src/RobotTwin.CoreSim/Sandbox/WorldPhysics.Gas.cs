@@ -46,6 +46,22 @@ namespace RobotTwin.CoreSim.Sandbox
         public double FlameTemperature { get; init; }        // K, delivered (not ideal)
         public GasSpecies Products { get; init; }
 
+        /// <summary>Surface temperature at which the propellant lights (K).</summary>
+        public double IgnitionTemperature { get; init; } = 600;
+
+        /// <summary>Temperature of the burning surface (K), for erosive burning.</summary>
+        public double BurningSurfaceTemperature { get; init; } = 800;
+
+        /// <summary>Solid propellant thermal conductivity (W/m·K) and specific heat (J/kg·K).</summary>
+        public double SolidConductivity { get; init; } = 0.4;
+        public double SolidHeatCapacity { get; init; } = 1300;
+
+        /// <summary>Emissivity of the particle-laden products towards the grain and the wall.</summary>
+        public double GasEmissivity { get; init; } = 0.3;
+
+        /// <summary>Noble–Abel co-volume of the products (m³/kg): p·(V − m·b) = m·R·T.</summary>
+        public double Covolume { get; init; } = 1.0e-3;
+
         /// <summary>(upper pressure MPa, a in mm/s·MPa⁻ⁿ, n) segments, ascending.</summary>
         public (double UpToMPa, double A, double N)[] BurnRate { get; init; } = Array.Empty<(double, double, double)>();
 
@@ -69,25 +85,39 @@ namespace RobotTwin.CoreSim.Sandbox
             "KNDX" => new Propellant
             {
                 Name = "KNDX", Density = 1785, FlameTemperature = 1500, Products = new GasSpecies("KNDX ürünleri", 8314.46 / 42.4, 1.131),
-                BurnRate = new[] { (0.779, 7.0, 0.30), (2.572, 8.875, 0.619), (5.930, 7.553, 0.0), (8.502, 3.841, 0.688), (11.2, 17.2, -0.148) }
+                BurnRate = new[] { (0.779, 7.0, 0.30), (2.572, 8.875, 0.619), (5.930, 7.553, 0.0), (8.502, 3.841, 0.688), (11.2, 17.2, -0.148) },
+                IgnitionTemperature = 580, BurningSurfaceTemperature = 800
             },
             "APCP" => new Propellant
             {
                 Name = "APCP", Density = 1700, FlameTemperature = 2800, Products = new GasSpecies("APCP ürünleri", 8314.46 / 25.0, 1.20),
-                BurnRate = new[] { (30.0, 3.5, 0.35) }
+                BurnRate = new[] { (30.0, 3.5, 0.35) },
+                IgnitionTemperature = 690, BurningSurfaceTemperature = 950, SolidHeatCapacity = 1250, GasEmissivity = 0.4
             },
             _ => new Propellant
             {
                 Name = "KNSB", Density = 1800, FlameTemperature = 1600, Products = new GasSpecies("KNSB ürünleri", 8314.46 / 39.9, 1.137),
-                BurnRate = new[] { (0.807, 10.708, 0.625), (1.503, 8.763, 0.0), (3.792, 7.852, -0.013), (7.033, 3.907, 0.535), (10.67, 9.653, 0.064), (30.0, 9.653, 0.064) }
+                BurnRate = new[] { (0.807, 10.708, 0.625), (1.503, 8.763, 0.0), (3.792, 7.852, -0.013), (7.033, 3.907, 0.535), (10.67, 9.653, 0.064), (30.0, 9.653, 0.064) },
+                IgnitionTemperature = 590, BurningSurfaceTemperature = 800
             }
+        };
+
+        /// <summary>
+        /// Igniter pyrogen (black-powder class, KNO₃-based like the sugar propellants): two-phase effective
+        /// products at a delivered ≈ 2000 K. An e-match head alone is ≈ 0.03 g of it.
+        /// </summary>
+        public static Propellant Pyrogen { get; } = new Propellant
+        {
+            Name = "ateşleyici", Density = 1700, FlameTemperature = 2000, Products = new GasSpecies("ateşleyici ürünleri", 8314.46 / 40.0, 1.14),
+            BurnRate = new[] { (30.0, 10.0, 0.3) }
         };
     }
 
     /// <summary>What a pressure vessel is doing right now (for the inspector, the API and tests).</summary>
     public sealed record GasReadout(
         double GaugePressure, double TemperatureK, double GasMass, double WaterLitres, double GrainLeft,
-        double Thrust, double MassFlow, double ExitVelocity, bool Choked, bool Burning, bool Burst, string Phase);
+        double Thrust, double MassFlow, double ExitVelocity, bool Choked, bool Burning, bool Burst, string Phase,
+        double LitFraction = 0, double SurfaceK = 0, bool IgniterBurning = false);
 
     /// <summary>
     /// [gas] Pressure vessels in the world, one physics for all of them: a PET bottle pumped up with
@@ -115,6 +145,7 @@ namespace RobotTwin.CoreSim.Sandbox
             public double Volume;                 // m³ interior
             public double Wall;                   // m
             public double InnerRadius;            // m (for hoop stress and the water column area)
+            public double InnerLength;            // m along the casing
             public double CrossArea;              // m² across the nozzle axis
             public double BurstGauge;             // Pa
             public double DryMass;                // kg (body without contents)
@@ -126,16 +157,22 @@ namespace RobotTwin.CoreSim.Sandbox
             public double IgniteAt = double.NaN;
             public string? Igniter;
 
+            // igniter: an e-match head plus an optional pyrogen charge, burning for IgniterTime
+            public double IgniterCharge = 0.5e-3;      // kg
+            public double IgniterTime = 0.02;          // s
+            public double IgniterStart = double.NaN;   // s
+            public double IgniterLeft;                 // kg not yet burned
+            public bool IgnitionFailed, FlameSpreadReported, FirstLitReported, BurnoutReported;
+            public double HottestSurface;               // K, before the grain lit (for the failure report)
+
             // contents
-            public double AirMass, ProductMass;   // kg of the initial gas and of combustion products
+            public double AirMass, ProductMass, IgniterGasMass;   // kg of the initial gas, grain products, igniter products
             public GasSpecies Gas;
             public double U;                      // J internal energy of the gas
             public double WaterVolume;            // m³
             public Propellant? Grain;
-            public double GrainOuter, GrainCore, GrainLength;
-            public int Segments;
-            public double Web;                    // m burned from each surface
-            public bool Ignited, BurnedOut, Burst, WaterOut;
+            public SolidGrain? Charge;
+            public bool Ignited, Burst, WaterOut;   // Ignited: the igniter has been fired
 
             // readout
             public double Thrust, MassFlow, ExitVelocity;
@@ -143,49 +180,47 @@ namespace RobotTwin.CoreSim.Sandbox
             public Vec3 PrevVelocity;
             public double HeatJ;                  // J into the wall since the last thermal step
 
-            public double GasMass => AirMass + ProductMass;
+            public double GasMass => AirMass + ProductMass + IgniterGasMass;
+
+            public bool BurnedOut => Charge != null && Charge.EverLit && Charge.BurnedOut;
+
+            public bool Burning => Charge != null && Charge.AnyLit;
+
+            public bool IgniterBurning(double time) => !double.IsNaN(IgniterStart) && time >= IgniterStart && IgniterLeft > 0;
 
             public GasSpecies Mix
             {
                 get
                 {
-                    double m = Math.Max(1e-12, GasMass);
-                    if (ProductMass <= 0 || Grain == null) return Gas;
-                    var p = Grain.Products;
-                    double r = (AirMass * Gas.R + ProductMass * p.R) / m;
-                    double cp = (AirMass * Gas.Cp + ProductMass * p.Cp) / m;
-                    return new GasSpecies(ProductMass > AirMass ? p.Name : Gas.Name, r, cp / (cp - r));
+                    double m = GasMass;
+                    if (m <= 1e-15 || ProductMass + IgniterGasMass <= 0) return Gas;
+                    var pr = Grain?.Products ?? Propellant.Pyrogen.Products;
+                    var ig = Propellant.Pyrogen.Products;
+                    double r = (AirMass * Gas.R + ProductMass * pr.R + IgniterGasMass * ig.R) / m;
+                    double cp = (AirMass * Gas.Cp + ProductMass * pr.Cp + IgniterGasMass * ig.Cp) / m;
+                    string name = ProductMass >= AirMass && ProductMass >= IgniterGasMass ? pr.Name : IgniterGasMass > AirMass ? ig.Name : Gas.Name;
+                    return new GasSpecies(name, r, cp / (cp - r));
                 }
             }
 
-            public double GrainVolume
-            {
-                get
-                {
-                    if (Grain == null || BurnedOut) return 0;
-                    double d = GrainCore + 2 * Web, l = GrainLength - 2 * Web;
-                    if (d >= GrainOuter || l <= 0) return 0;
-                    return Segments * Math.PI / 4 * (GrainOuter * GrainOuter - d * d) * l;
-                }
-            }
+            public double GrainVolume => Charge?.Volume ?? 0;
 
-            /// <summary>Burning surface of BATES segments: the core and both ends of each.</summary>
-            public double BurningArea
-            {
-                get
-                {
-                    if (Grain == null || !Ignited || BurnedOut) return 0;
-                    double d = GrainCore + 2 * Web, l = GrainLength - 2 * Web;
-                    if (d >= GrainOuter || l <= 0) return 0;
-                    return Segments * (Math.PI * d * l + 2 * Math.PI / 4 * (GrainOuter * GrainOuter - d * d));
-                }
-            }
+            public double BurningArea => Charge?.LitArea ?? 0;
 
             public double GasVolume => Math.Max(1e-9, Volume - WaterVolume - GrainVolume);
 
             public double Temperature => U / Math.Max(1e-12, GasMass * Mix.Cv);
 
-            public double Pressure => GasMass * Mix.R * Temperature / GasVolume;
+            /// <summary>Noble–Abel: the hot products' own volume (co-volume b) is not free to the gas.</summary>
+            public double Pressure
+            {
+                get
+                {
+                    double b = (Grain?.Covolume ?? Propellant.Pyrogen.Covolume) * (ProductMass + IgniterGasMass);
+                    double free = Math.Max(0.1 * GasVolume, GasVolume - b);
+                    return GasMass * Mix.R * Temperature / free;
+                }
+            }
         }
 
         private readonly List<Vessel> _vessels = new List<Vessel>();
@@ -255,17 +290,22 @@ namespace RobotTwin.CoreSim.Sandbox
                     Igniter = o.Parameters.TryGetValue("igniter", out var ig) && ig.Trim().Length > 0 ? ig.Trim() : null,
                     IgniteAt = Num(o, "ignite.at", double.NaN)
                 };
+                v.InnerLength = o.Shape == "sphere" ? 2 * rIn : Math.Max(1e-3, (Math.Abs(axis.X) > 0.5 ? o.SizeX : Math.Abs(axis.Y) > 0.5 ? o.SizeY : o.SizeZ) - 2 * wall);
                 if (o.Parameters.TryGetValue("grain", out var grain) && grain.Trim().Length > 0)
                 {
                     v.Grain = Propellant.For(grain);
-                    v.GrainOuter = Num(o, "grain.diameter", 2 * rIn * 1000 - 0.5) / 1000;
-                    v.GrainCore = Num(o, "grain.core", v.GrainOuter * 1000 / 3) / 1000;
-                    v.Segments = Math.Max(1, (int)Num(o, "grain.segments", 1));
-                    v.GrainLength = Num(o, "grain.length", Math.Max(5, (o.SizeZ - 2 * wall) * 1000 / v.Segments - 1)) / 1000;
+                    double outer = Num(o, "grain.diameter", 2 * rIn * 1000 - 0.5) / 1000;
+                    double core = Num(o, "grain.core", outer * 1000 / 3) / 1000;
+                    int segments = Math.Max(1, (int)Num(o, "grain.segments", 1));
+                    double length = Num(o, "grain.length", Math.Max(5, (o.SizeZ - 2 * wall) * 1000 / segments - 1)) / 1000;
+                    v.Charge = new SolidGrain(v.Grain, outer, core, length, segments, ambientK);
+                    // Igniter: an e-match head (≈ 0.03 g) plus the pyrogen charge given in grams (default 0.5 g).
+                    v.IgniterCharge = (0.03 + Math.Max(0, Num(o, "igniter.charge", 0.5))) / 1000;
+                    v.IgniterTime = Math.Max(1e-3, Num(o, "igniter.time", 20) / 1000);
                     // The igniter: named, or an e-match jointed to the motor.
                     v.Igniter ??= world.Joints.Where(j => j.ObjectA == o.Id || j.ObjectB == o.Id)
                         .Select(j => j.ObjectA == o.Id ? j.ObjectB : j.ObjectA)
-                        .FirstOrDefault(id => id != null && world.Find(id) is { } e && (e.PartId ?? string.Empty).Contains("ematch", StringComparison.OrdinalIgnoreCase));
+                        .FirstOrDefault(id => id != null && world.Find(id) is { } e && (e.PartId ?? string.Empty).Replace("-", string.Empty).Contains("ematch", StringComparison.OrdinalIgnoreCase));
                 }
 
                 double p0 = AmbientPressure(it) + Num(o, "pressure", 0) * 1e5;
@@ -300,10 +340,19 @@ namespace RobotTwin.CoreSim.Sandbox
             var v = _vessels.FirstOrDefault(x => string.Equals(x.Item.Object.Id, objectId, StringComparison.OrdinalIgnoreCase));
             if (v == null) return null;
             double pa = AmbientPressure(v.Item);
-            string phase = v.Burst ? "patladı" : v.Ignited && !v.BurnedOut ? "yanıyor" : v.WaterVolume > 1e-7 && v.MassFlow > 0 ? "su püskürtüyor"
+            var c = v.Charge;
+            double lit = c?.LitFraction ?? 0;
+            string phase = v.Burst ? "patladı"
+                : v.IgnitionFailed ? "ateşlenemedi (yakıt yüzeyi tutuşma sıcaklığına çıkmadı)"
+                : v.IgniterBurning(Scene.Time) && !(c?.AnyLit ?? false) ? "ateşleyici yanıyor, yakıt ısınıyor"
+                : v.Burning && lit < 0.98 ? $"alev yayılıyor (yüzeyin %{lit * 100:0}'i yanıyor)"
+                : v.Burning ? "yanıyor"
+                : v.WaterVolume > 1e-7 && v.MassFlow > 0 ? "su püskürtüyor"
                 : v.MassFlow > 1e-6 ? "gaz çıkıyor" : Scene.Time < v.ValveAt ? "rampada (vana kapalı)" : "dengede";
-            double grainLeft = v.Grain == null ? 0 : v.GrainVolume / Math.Max(1e-12, v.Segments * Math.PI / 4 * (v.GrainOuter * v.GrainOuter - v.GrainCore * v.GrainCore) * v.GrainLength);
-            return new GasReadout(v.Pressure - pa, v.Temperature, v.GasMass, v.WaterVolume * 1000, grainLeft, v.Thrust, v.MassFlow, v.ExitVelocity, v.Choked, v.Ignited && !v.BurnedOut, v.Burst, phase);
+            double grainLeft = c == null ? 0 : c.Volume / Math.Max(1e-12, c.InitialVolume);
+            double surface = c == null ? 0 : c.AnyLit ? c.Propellant.BurningSurfaceTemperature : c.HottestUnlitSurface;
+            return new GasReadout(v.Pressure - pa, v.Temperature, v.GasMass, v.WaterVolume * 1000, grainLeft, v.Thrust, v.MassFlow, v.ExitVelocity, v.Choked, v.Burning, v.Burst, phase,
+                lit, surface, v.IgniterBurning(Scene.Time));
         }
 
         /// <summary>Where a vessel's jet leaves (world) and which way it goes; null without a vessel.</summary>
@@ -311,12 +360,14 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var v = _vessels.FirstOrDefault(x => string.Equals(x.Item.Object.Id, objectId, StringComparison.OrdinalIgnoreCase));
             if (v == null || PoseOf(objectId) is not { } pose) return null;
-            return (pose.Position + pose.Orientation.Rotate(v.NozzleLocal), pose.Orientation.Rotate(v.AxisLocal).Normalized(), v.WaterVolume > 1e-9, v.Ignited && !v.BurnedOut);
+            return (pose.Position + pose.Orientation.Rotate(v.NozzleLocal), pose.Orientation.Rotate(v.AxisLocal).Normalized(), v.WaterVolume > 1e-9, v.Burning || v.IgniterBurning(Scene.Time));
         }
 
-        /// <summary>One physics step of every vessel: burn, flow, thrust, heat, mass, burst.</summary>
+        /// <summary>One physics step of every vessel: ignite, burn, flow, thrust, heat, mass, burst.</summary>
         private void StepGas(double dt, Analog.AnalogSimulator? sim)
         {
+            var lit = new List<int>();
+            var pyro = Propellant.Pyrogen;
             foreach (var v in _vessels)
             {
                 var body = v.Item.Body;
@@ -332,16 +383,24 @@ namespace RobotTwin.CoreSim.Sandbox
                 v.PrevVelocity = body.Velocity;
                 var felt = accel - Scene.Gravity;
 
-                // Ignition: an e-match whose bridgewire fired, or a set time.
-                if (v.Grain != null && !v.Ignited && !v.BurnedOut)
+                // Firing — an e-match whose bridgewire fired, or a set time — lights the igniter, not the grain:
+                // the grain lights where its surface has soaked up enough heat from the igniter's gas.
+                if (v.Charge != null && !v.Ignited)
                 {
-                    bool fire = !double.IsNaN(v.IgniteAt) && Scene.Time >= v.IgniteAt;
-                    if (!fire && v.Igniter != null && _circuit?.ComponentRef(v.Igniter) is { } er)
-                        fire = _circuit.Compiled.DevicesOf(er).OfType<Design.EMatch>().Any(e => e.Fired);
-                    if (fire)
+                    double at = !double.IsNaN(v.IgniteAt) && Scene.Time >= v.IgniteAt ? v.IgniteAt : double.NaN;
+                    if (double.IsNaN(at) && v.Igniter != null && _circuit?.ComponentRef(v.Igniter) is { } er)
+                    {
+                        var fired = _circuit.Compiled.DevicesOf(er).OfType<Design.EMatch>().FirstOrDefault(e => e.Fired);
+                        if (fired != null) at = double.IsNaN(fired.FireTime) ? Scene.Time : Math.Min(Scene.Time, fired.FireTime);
+                    }
+
+                    if (!double.IsNaN(at))
                     {
                         v.Ignited = true;
-                        Scene.Report(new PhysicsEvent(Scene.Time, o.Id, PhysicsEventKind.Impact, $"{o.Name}: yakıt ({v.Grain.Name}) ateşlendi", 0, false));
+                        v.IgniterStart = Math.Max(at, Scene.Time - dt);
+                        v.IgniterLeft = v.IgniterCharge;
+                        Scene.Report(new PhysicsEvent(Scene.Time, o.Id, PhysicsEventKind.Impact,
+                            $"{o.Name}: ateşleyici yandı ({v.IgniterCharge * 1000:0.00} g barut, {v.IgniterTime * 1000:0} ms)", 0, false));
                     }
                 }
 
@@ -352,17 +411,17 @@ namespace RobotTwin.CoreSim.Sandbox
                 // The chamber's time constant can be well under a millisecond: sub-step the gas.
                 double t = 0;
                 int guard = 0;
-                while (t < dt - 1e-12 && guard++ < 4000)
+                while (t < dt - 1e-12 && guard++ < 6000)
                 {
                     var mix = v.Mix;
                     double T = Math.Max(50, v.Temperature), p = v.Pressure, m = v.GasMass;
                     double area = v.Burst ? Math.Max(v.Throat, 0.3 * v.CrossArea) : v.Throat;
                     double exit = v.Burst ? area : v.Exit;
+                    double now = Scene.Time - dt + t;
 
-                    // Gas generated by the burning grain (hot products at the flame temperature).
-                    double gen = 0;
-                    if (v.Grain != null && v.Ignited && !v.BurnedOut)
-                        gen = v.Grain.Density * v.BurningArea * v.Grain.Rate(p);
+                    // The igniter's hot gas (entering at the head end) and the grain's products.
+                    double ign = v.IgniterLeft > 0 && now >= v.IgniterStart - 1e-12 ? v.IgniterCharge / v.IgniterTime : 0;
+                    double gen = v.Charge?.Evaluate(p, ign) ?? 0;
 
                     // Water first, while it covers the nozzle under the felt acceleration.
                     double feltAlong = felt.Dot(-axisW);   // > 0: pressed towards the nozzle
@@ -388,17 +447,26 @@ namespace RobotTwin.CoreSim.Sandbox
                             ch = true;
                             outGas = v.Cd * area * p * Math.Sqrt(g / (r * T)) * Math.Pow(2 / (g + 1), (g + 1) / (2 * (g - 1)));
                             double me = exit > area * 1.0001 ? SupersonicMach(exit / area, g) : 1.0;
-                            double tExit = T / (1 + (g - 1) / 2 * me * me);
                             pe = p * Math.Pow(1 + (g - 1) / 2 * me * me, -g / (g - 1));
-                            if (pe < 0.4 * pa)
+                            // Over-expanded far enough, the boundary layer separates where the wall pressure falls to
+                            // Schmucker's limit p_sep = p_a·(1.88·M − 1)^−0.64, and the jet leaves the wall there.
+                            if (me > 1.05 && pe < pa * Math.Pow(1.88 * me - 1, -0.64))
                             {
-                                // Over-expanded far enough to separate: the jet leaves the wall nearer the throat.
-                                pe = 0.4 * pa;
-                                me = Math.Sqrt(2 / (g - 1) * (Math.Pow(p / pe, (g - 1) / g) - 1));
-                                tExit = T / (1 + (g - 1) / 2 * me * me);
-                                ae = area / AreaRatioAt(me, g);
+                                double lo = 1.0, hi = me;
+                                for (int it = 0; it < 50; it++)
+                                {
+                                    double mid = 0.5 * (lo + hi);
+                                    double pm = p * Math.Pow(1 + (g - 1) / 2 * mid * mid, -g / (g - 1));
+                                    if (pm > pa * Math.Pow(Math.Max(1e-6, 1.88 * mid - 1), -0.64)) lo = mid;
+                                    else hi = mid;
+                                }
+
+                                me = 0.5 * (lo + hi);
+                                pe = p * Math.Pow(1 + (g - 1) / 2 * me * me, -g / (g - 1));
+                                ae = area * AreaRatioAt(me, g);
                             }
 
+                            double tExit = T / (1 + (g - 1) / 2 * me * me);
                             ve = me * Math.Sqrt(g * r * tExit);
                         }
                         else
@@ -416,27 +484,66 @@ namespace RobotTwin.CoreSim.Sandbox
                         outGas = -v.Cd * area * pa * Math.Sqrt(2 * air.Gamma / ((air.Gamma - 1) * air.R * ta) * (Math.Pow(pr, 2 / air.Gamma) - Math.Pow(pr, (air.Gamma + 1) / air.Gamma)));
                     }
 
-                    // Step size: keep each sub-step a small part of the gas's turnover time.
-                    double flow = Math.Abs(outGas) + gen + 1e-12;
+                    // Step size: keep each sub-step a small part of the gas's turnover time, and short while the grain soaks.
+                    double flow = Math.Abs(outGas) + gen + ign + 1e-12;
                     double h = Math.Min(dt - t, Math.Max(1e-7, 0.05 * Math.Max(1e-9, m) / flow));
                     if (water) h = Math.Min(h, Math.Max(1e-6, 0.02 * v.WaterVolume / Math.Max(1e-12, outWater / 998.0)));
+                    if (v.Ignited && v.Charge is { } soaking && soaking.LitFraction < 0.999 && !soaking.BurnedOut && now < v.IgniterStart + v.IgniterTime + 0.5)
+                        h = Math.Min(h, 2e-4);
 
-                    // Wall heat: forced convection inside a burning chamber, natural otherwise.
-                    double hc = v.Ignited && !v.BurnedOut ? 1500 : 20;
+                    // Wall heat: forced convection along the bore (Dittus–Boelter) and radiation over the casing the grain does
+                    // not cover, plus the nozzle throat (Bartz) while hot gas is choked through it.
                     double wallT = (_thermal.TryGetValue(o.Id, out var tn) ? tn.T : _ambient) + 273.15;
-                    double wallArea = 2 * Math.PI * v.InnerRadius * (o.SizeZ) + 2 * Math.PI * v.InnerRadius * v.InnerRadius;
-                    double qWall = hc * wallArea * (T - wallT);
+                    double bore = 2 * v.InnerRadius;
+                    double hBore = Math.Max(20, SolidGrain.TubeConvection(mix, T, Math.Max(0, outGas) / Math.Max(1e-9, v.CrossArea), bore));
+                    double covered = v.Charge == null ? 0 : Math.Max(0, Math.PI * bore * v.Charge.Segments * v.Charge.SegmentLength - v.Charge.ExposedWall * bore / Math.Max(1e-6, v.Charge.Outer));
+                    double exposed = 2 * Math.PI * v.InnerRadius * v.InnerRadius + Math.Max(0, Math.PI * bore * v.InnerLength - covered);
+                    double eps = v.ProductMass + v.IgniterGasMass > 0.1 * m ? (v.Grain ?? pyro).GasEmissivity : 0;
+                    double qWall = hBore * exposed * (T - wallT) + eps * 5.670374e-8 * exposed * (Math.Pow(T, 4) - Math.Pow(wallT, 4));
+                    if (ch && T > 500)
+                    {
+                        double dt0 = Math.Sqrt(4 * area / Math.PI), g = mix.Gamma;
+                        double cStar = Math.Sqrt(mix.R * T) / (Math.Sqrt(g) * Math.Pow(2 / (g + 1), (g + 1) / (2 * (g - 1))));
+                        double mu = SolidGrain.Viscosity(mix, T), prn = SolidGrain.Prandtl(mix);
+                        double hBartz = 0.026 / Math.Pow(dt0, 0.2) * Math.Pow(mu, 0.2) * mix.Cp / Math.Pow(prn, 0.6) * Math.Pow(p / cStar, 0.8);
+                        double recovery = T * (1 + Math.Pow(prn, 1.0 / 3) * (g - 1) / 2) / (1 + (g - 1) / 2);
+                        qWall += hBartz * Math.PI * dt0 * 2 * dt0 * (recovery - wallT);   // throat region: ± one throat diameter
+                    }
 
-                    // Energy: products in at the flame temperature, stagnation enthalpy out, work on the water, heat to the wall.
+                    // The grain: regression, and the soak of the surfaces not yet burning (heat drawn from the gas).
+                    lit.Clear();
+                    double soak = v.Charge?.Advance(h, ign, pyro.FlameTemperature, T, mix, lit) ?? 0;
+                    if (lit.Count > 0 && v.Charge is { } gch)
+                    {
+                        if (!v.FirstLitReported)
+                        {
+                            v.FirstLitReported = true;
+                            int z = lit[0];
+                            string where = z < gch.Zones / 3.0 ? "baş tarafında" : z >= 2 * gch.Zones / 3.0 ? "lüle tarafında" : "ortasında";
+                            Scene.Report(new PhysicsEvent(now, o.Id, PhysicsEventKind.Impact,
+                                $"{o.Name}: yakıt ({v.Grain!.Name}) {where} tutuştu, ateşleyiciden {(now - v.IgniterStart) * 1000:0.0} ms sonra", 0, false));
+                        }
+
+                        if (!v.FlameSpreadReported && gch.LitFraction > 0.999)
+                        {
+                            v.FlameSpreadReported = true;
+                            Scene.Report(new PhysicsEvent(now, o.Id, PhysicsEventKind.Impact,
+                                $"{o.Name}: alev tüm yüzeye yayıldı ({(now - v.IgniterStart) * 1000:0.0} ms)", 0, false));
+                        }
+                    }
+
+                    // Energy: products in at their flame temperatures, stagnation enthalpy out, work on the water, heat to the wall and grain.
                     double dVgas = outWater / 998.0 * h;
                     double hOut = outGas >= 0 ? mix.Cp * T : GasSpecies.Air.Cp * (_ambient + 273.15);
-                    v.U += (gen * (v.Grain?.Products.Cp ?? 0) * (v.Grain?.FlameTemperature ?? 0) - outGas * hOut - qWall) * h - p * dVgas;
+                    v.U += (gen * (v.Grain?.Products.Cp ?? 0) * (v.Grain?.FlameTemperature ?? 0) + ign * pyro.Products.Cp * pyro.FlameTemperature
+                            - outGas * hOut - qWall) * h - soak - p * dVgas;
                     v.HeatJ += qWall * h;
                     if (outGas >= 0)
                     {
-                        double frac = v.ProductMass / Math.Max(1e-12, m);
-                        v.ProductMass = Math.Max(0, v.ProductMass - outGas * h * frac);
-                        v.AirMass = Math.Max(0, v.AirMass - outGas * h * (1 - frac));
+                        double share = Math.Min(1, outGas * h / Math.Max(1e-12, m));
+                        v.ProductMass = Math.Max(0, v.ProductMass * (1 - share));
+                        v.IgniterGasMass = Math.Max(0, v.IgniterGasMass * (1 - share));
+                        v.AirMass = Math.Max(0, v.AirMass * (1 - share));
                     }
                     else
                     {
@@ -444,21 +551,18 @@ namespace RobotTwin.CoreSim.Sandbox
                     }
 
                     v.ProductMass += gen * h;
-                    if (v.Grain != null && v.Ignited && !v.BurnedOut)
+                    if (ign > 0)
                     {
-                        v.Web += v.Grain.Rate(p) * h;
-                        if (v.GrainCore + 2 * v.Web >= v.GrainOuter || v.GrainLength - 2 * v.Web <= 0)
-                        {
-                            v.BurnedOut = true;
-                            Scene.Report(new PhysicsEvent(Scene.Time + t, o.Id, PhysicsEventKind.Impact, $"{o.Name}: yakıt bitti", 0, false));
-                        }
+                        double burned = Math.Min(v.IgniterLeft, ign * h);
+                        v.IgniterGasMass += burned;
+                        v.IgniterLeft -= burned;
                     }
 
                     v.WaterVolume = Math.Max(0, v.WaterVolume - dVgas);
                     if (v.WaterVolume <= 1e-9 && !v.WaterOut && water)
                     {
                         v.WaterOut = true;
-                        Scene.Report(new PhysicsEvent(Scene.Time + t, o.Id, PhysicsEventKind.Impact, $"{o.Name}: su bitti, hava çıkıyor", 0, false));
+                        Scene.Report(new PhysicsEvent(now, o.Id, PhysicsEventKind.Impact, $"{o.Name}: su bitti, hava çıkıyor", 0, false));
                     }
 
                     if (v.U < 0) v.U = Math.Max(1e-9, v.GasMass) * v.Mix.Cv * 50;
@@ -469,6 +573,23 @@ namespace RobotTwin.CoreSim.Sandbox
                     vExit = ve;
                     choked |= ch;
                     t += h;
+                }
+
+                if (v.Charge is { } c)
+                {
+                    if (v.Ignited && !c.EverLit && !v.IgnitionFailed && v.IgniterLeft <= 0 && Scene.Time > v.IgniterStart + v.IgniterTime + 0.3)
+                    {
+                        v.IgnitionFailed = true;
+                        Scene.Report(new PhysicsEvent(Scene.Time, o.Id, PhysicsEventKind.Impact,
+                            $"{o.Name}: ateşlenemedi — yakıt yüzeyi en çok {v.HottestSurface - 273.15:0} °C oldu, {v.Grain!.Name} {v.Grain.IgnitionTemperature - 273.15:0} °C'de tutuşur (ateşleyici {v.IgniterCharge * 1000:0.00} g)", 0, false));
+                    }
+
+                    if (!c.EverLit) v.HottestSurface = Math.Max(v.HottestSurface, c.HottestUnlitSurface);
+                    if (c.EverLit && c.BurnedOut && !v.BurnoutReported)
+                    {
+                        v.BurnoutReported = true;
+                        Scene.Report(new PhysicsEvent(Scene.Time, o.Id, PhysicsEventKind.Impact, $"{o.Name}: yakıt bitti", 0, false));
+                    }
                 }
 
                 v.Thrust = thrustImpulse / dt;

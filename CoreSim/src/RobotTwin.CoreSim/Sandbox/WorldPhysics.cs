@@ -119,6 +119,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.ApplyLaunches(world);   // [aero] hand-launched aircraft
             p.BuildThermal(world);   // [thermal] part temperatures, softening, melting (Sandbox/WorldPhysics.Thermal.cs)
             p.BuildGas(world);   // [gas] pressure vessels, propellant grains, nozzles, water (Sandbox/WorldPhysics.Gas.cs)
+            p.BuildChutes();   // [launch] recovery parachutes (Sandbox/WorldPhysics.Launch.cs)
             return p;
         }
 
@@ -310,6 +311,7 @@ namespace RobotTwin.CoreSim.Sandbox
             while (_pending >= Step)
             {
                 _pending -= Step;
+                StepSwitches();   // [launch] timed and clicked switches (Sandbox/WorldPhysics.Launch.cs)
                 DriveActuators(sim);
                 StepCables(Step); // [phys] ropes pull on their plugs before the bodies move
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
@@ -318,6 +320,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 ReleaseLaunches();   // [uav] hand launch after a hold
                 StepWings(Step);   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
                 StepGas(Step, sim);   // [gas] vessels: burn, flow, thrust (Sandbox/WorldPhysics.Gas.cs)
+                StepChutes();   // [launch] recovery parachutes
                 Scene.Step(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia

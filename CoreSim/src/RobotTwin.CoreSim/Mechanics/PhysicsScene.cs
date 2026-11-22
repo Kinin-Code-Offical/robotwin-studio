@@ -735,12 +735,12 @@ namespace RobotTwin.CoreSim.Mechanics
                     double sp = rel.Length;
                     if (sp > 1e-9)
                     {
-                        var lb = b.Orientation.InverseRotate(rel) / sp;
-                        double cda = b.DragAreaAlong(lb);   // [drag] leading face, base, exposed sides (Mechanics/AssemblyDrag.cs)
-                        // Quadratic drag ½ρ·CdA·|v|·v, limited so that it can never reverse the velocity within a step.
-                        double k = 0.5 * AirDensity * cda * sp;
-                        k = Math.Min(k, b.Mass / h);
-                        b.Force -= rel * k;
+                        // [drag] ½ρ·Cd·A·|v_i|·v_i per body axis: leading face, base, exposed sides (Mechanics/AssemblyDrag.cs)
+                        // and cross-flow (RigidBody.DragVector); limited so that it can never reverse the velocity within a step.
+                        var f = b.Orientation.Rotate(b.DragVector(b.Orientation.InverseRotate(rel))) * (0.5 * AirDensity);
+                        double fl = f.Length, cap = b.Mass / h * sp;
+                        if (fl > cap) f *= cap / fl;
+                        b.Force -= f;
                     }
                 }
 

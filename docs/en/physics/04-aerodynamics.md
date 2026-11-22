@@ -32,7 +32,9 @@ A body on its own keeps its measured $`C_D`$ exactly (friction is part of it):
 | Box face | 1.05 | flat-faced block |
 | Cylinder, side-on | 1.0 | cross-flow |
 | Cylinder, along its axis | 0.9 | short cylinder |
-| Model body (hull) | 0.8 | rounded body |
+| Model body (hull) | from its faces | see below |
+
+A body from the modeller or a file gets its drag from its own faces, not from the box around it. A face meeting the flow at angle $`\theta`$ carries $`C_p \approx 0.8\,\sin^2\theta`$ on its projected area (Hoerner's subsonic forebody estimate): a flat face 0.8, a 20° cone ≈ 0.09, a slender ogive nose almost nothing. Trailing faces see a base suction of $`0.15\,\sin^2\theta`$; a tapering tail recovers it, a blunt base does not.
 
 ### Joined parts shield each other
 
@@ -44,18 +46,18 @@ flowchart LR
     B --- F["Fins<br/>wing forces"]
 ```
 
-So a rocket's drag is not "the sum of its parts flying alone" but the nose's front + the tail's base + friction along it. Validation: nose + tube axial $`C_D`$ was 1.37 as separate parts and is 0.64 as an assembly (real blunt-based rockets: 0.5–0.7); the water rocket's apogee went from 26 m to 39.6 m (published flights: 30–50 m).
+So a rocket's drag is not "the sum of its parts flying alone" but the nose's front + the tail's base + friction along it. Coverage is sampled over each body's own extent, so a slender tube (Ø41 × 500 mm) is measured correctly too. Validation: nose + tube axial $`C_D`$ was 1.37 as separate parts and is 0.64 as an assembly (real blunt-based rockets: 0.5–0.7); the solid rocket with an ogive nose and three square-edged fins has 0.62 (OpenRocket-class estimates 0.5–0.7) and keeps it through the flight; the water rocket's apogee went from 26 m to 39.6 m (published flights: 30–50 m).
 
 ### Oblique flow
 
-The axis values combine by the body's real projected area: added for flat faces (exactly a box's shadow), as a circle where the section is round:
+Each axis sees the dynamic pressure of its own velocity component (Allen and Perkins' cross-flow principle). The force need not be exactly against the flow; a tilted flat face also pushes sideways:
 
 ```math
-A_\text{box}(\hat{\mathbf{u}}) = \lvert u_x\rvert A_x + \lvert u_y\rvert A_y + \lvert u_z\rvert A_z, \qquad
-A_\text{cylinder}(\hat{\mathbf{u}}) = \lvert u_z\rvert A_z + \sqrt{(u_x A_x)^2 + (u_y A_y)^2}
+F_i = -\tfrac{1}{2}\,\rho\,(C_D A)_i\,\lvert u_i\rvert\,u_i \quad (\text{box, each axis on its own}), \qquad
+\mathbf{F}_\perp = -\tfrac{1}{2}\,\rho\,(C_D A)_\text{side}\,\lvert\mathbf{u}_\perp\rvert\,\mathbf{u}_\perp \quad (\text{a cylinder's round section})
 ```
 
-A sphere shows the same area every way. For model bodies, whether a section is round or flat is found by measuring the shadow at 45°.
+So the cross-flow drag a slender body adds at a small angle of attack ($`\alpha`$) grows as $`\sin^2\alpha`$, not as $`\sin\alpha`$: a 2° wobble barely changes a rocket's drag. A sphere shows the same area every way and sees the whole speed. For model bodies, whether a section is round or flat is found by measuring the shadow at 45°.
 
 ## Wings: strip theory + lifting line
 

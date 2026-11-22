@@ -24,7 +24,7 @@ namespace RobotWin.Studio.Pages
         private void GasPalette()
         {
             Palette.Children.Add(Caption("Basınçlı kaplar ve roketler (gaz fiziği)"));
-            Palette.Children.Add(Note("Kabın içindeki gaz ideal gaz yasasıyla, lüleden çıkış izentropik akışla (boğazda kısılma), su Bernoulli ile, katı yakıt basınca bağlı yanma hızıyla hesaplanır; itki, kütle kaybı, duvarın ısınması ve basınç fazlaysa patlama aynı fizikten çıkar."));
+            Palette.Children.Add(Note("Kabın içindeki gaz ideal gaz yasasıyla (sıcak yanma ürünlerinde Noble–Abel gerçek gaz düzeltmesi), lüleden çıkış izentropik akışla (boğazda kısılma, aşırı genişlemede Schmucker ayrılması), su Bernoulli ile hesaplanır. Katı yakıtı ateşleyicinin sıcak gazı ısıtır, yüzey tutuşma sıcaklığına çıkınca yanar ve alev yayılır; yanma hızı basınca ve kanal akışına (aşındırıcı yanma) bağlıdır. İtki, kütle kaybı, çeper ve lüle ısınması, patlama aynı fizikten çıkar."));
             Palette.Children.Add(Row("PET şişe 2 L (su roketi)", "0.6 L su, 4 bar hava, 21.5 mm ağız, 1 s sonra rampadan bırakılır", () => AddBody("cylinder", 0.105, 0.105, 0.30, o =>
             {
                 o.Material = "PET";
@@ -103,7 +103,12 @@ namespace RobotWin.Studio.Pages
                 Inspector.Children.Add(Field(o, "grain.length", "Tane boyu (mm)", ""));
                 Inspector.Children.Add(Field(o, "grain.segments", "Tane sayısı (BATES)", "1"));
                 Inspector.Children.Add(Field(o, "ignite.at", "Ateşleme zamanı (s, boş = e-match)", ""));
-                Inspector.Children.Add(Note("E-match (elektrikli ateşleyici) motora mekanik olarak bağlıysa, devreden ateşlendiği an yakıt tutuşur."));
+                var matches = world.Objects.Where(x => string.Equals(x.PartId, RobotTwin.CoreSim.Design.AvionicsParts.EMatchId, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => (x.Id, x.Name)).Prepend((string.Empty, "motora bağlı olan")).ToArray();
+                Inspector.Children.Add(Choice(o, "igniter", "Ateşleme (e-kibrit)", matches, string.Empty));
+                Inspector.Children.Add(Field(o, "igniter.charge", "Ateşleyici barutu (g, e-match başına ek)", "0.5"));
+                Inspector.Children.Add(Field(o, "igniter.time", "Ateşleyici yanma süresi (ms)", "20"));
+                Inspector.Children.Add(Note("E-match (elektrikli ateşleyici) motora mekanik olarak bağlıysa, devreden ateşlendiği an ateşleyici yanar. Yakıt hemen yanmaz: ateşleyicinin sıcak gazı yüzeyi ısıtır, yüzey tutuşma sıcaklığına (KNSB ≈ 317 °C) çıkan bölge yanar ve alev lüleye doğru yayılır. Yalnız e-match başı (≈ 0.03 g) şekerli yakıtı genellikle tutuşturamaz."));
             }
 
             // What the wall can hold: thin-wall hoop stress at the material's strength.
@@ -113,24 +118,6 @@ namespace RobotWin.Studio.Pages
             double burst = r > 0 ? mat.Yield * wall / r * (o.Shape == "sphere" ? 2 : 1) / 1e5 : 0;
             Inspector.Children.Add(Field(o, "burst", "Patlama basıncı (bar, boş = malzemeden)", ""));
             Inspector.Children.Add(Note($"{mat.Name}, {wall * 1000:0.0#} mm duvar: çeper gerilmesi σ = p·r/t malzemenin dayanımına ({mat.Yield / 1e6:0} MPa) ≈ {burst:0.0} bar'da ulaşır."));
-        }
-
-        private DateTime _lastJet = DateTime.Now;
-
-        /// <summary>Exhaust, water and gas jets of every vessel that is blowing (called per simulation update).</summary>
-        private void UpdateJets()
-        {
-            var now = DateTime.Now;
-            double dt = Math.Min(0.05, (now - _lastJet).TotalSeconds);
-            _lastJet = now;
-            var physics = _session.State == SimState.Stopped ? null : _session.Physics;
-            if (physics == null || World == null || dt <= 0) return;
-            foreach (var o in World.Objects)
-            {
-                if (!WorldPhysics.IsVessel(o) || physics.GasOf(o.Id) is not { MassFlow: > 1e-5 } g || physics.NozzleOf(o.Id) is not { } n) continue;
-                var kind = n.Water ? Assembly3D.ParticleKind.Water : n.Hot ? Assembly3D.ParticleKind.Fire : Assembly3D.ParticleKind.Smoke;
-                Scene.Jet(new System.Windows.Media.Media3D.Point3D(n.Point.X, n.Point.Y, n.Point.Z), new System.Windows.Media.Media3D.Vector3D(n.Direction.X, n.Direction.Y, n.Direction.Z), g.ExitVelocity, g.MassFlow, kind, dt);
-            }
         }
 
         private TextBlock LiveGasText() => new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary"), Margin = new Thickness(0, 0, 0, 8) };
@@ -151,6 +138,7 @@ namespace RobotWin.Studio.Pages
             sb.AppendLine($"Durum   : {g.Phase}");
             sb.AppendLine($"Basınç  : {g.GaugePressure / 1e5:0.00} bar (gösterge) · {g.TemperatureK - 273.15:0} °C");
             sb.AppendLine($"Gaz     : {g.GasMass * 1000:0.0} g" + (g.WaterLitres > 0 ? $" · su {g.WaterLitres:0.000} L" : string.Empty) + (g.GrainLeft > 0 || g.Burning ? $" · yakıt %{g.GrainLeft * 100:0}" : string.Empty));
+            if (g.SurfaceK > 0) sb.AppendLine($"Yakıt   : yüzey {g.SurfaceK - 273.15:0} °C · yanan yüzey %{g.LitFraction * 100:0}" + (g.IgniterBurning ? " · ateşleyici yanıyor" : string.Empty));
             sb.Append($"İtki    : {g.Thrust:0.0} N · {g.MassFlow * 1000:0.0} g/s · çıkış {g.ExitVelocity:0} m/s{(g.Choked ? " (boğazda ses hızı)" : string.Empty)}");
             _gasLive.Text = sb.ToString();
         }

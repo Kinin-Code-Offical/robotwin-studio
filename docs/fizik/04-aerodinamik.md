@@ -32,7 +32,9 @@ Tek başına bir cisim ölçülmüş $`C_D`$ değerini aynen korur (sürtünme b
 | Kutu yüzü | 1,05 | düz yüzlü blok |
 | Silindir, yandan | 1,0 | çapraz akış |
 | Silindir, eksen boyunca | 0,9 | kısa silindir |
-| Model gövdesi (zarf) | 0,8 | yuvarlatılmış gövde |
+| Model gövdesi (zarf) | yüzlerinden | aşağıya bakın |
+
+Modelleyiciden ya da dosyadan gelen bir gövdenin direnci, onu saran kutudan değil kendi yüzlerinden hesaplanır. Akışa $`\theta`$ açısıyla bakan bir yüz, izdüşüm alanı üzerinde $`C_p \approx 0{,}8\,\sin^2\theta`$ taşır (Hoerner'in ses altı ön gövde kestirimi): düz yüz 0,8, 20°'lik koni ≈ 0,09, ince bir ogive burun neredeyse sıfır. Arkada kalan yüzler $`0{,}15\,\sin^2\theta`$ taban emmesi görür; daralan kuyruk bu emmeyi geri kazanır, küt taban kazanmaz.
 
 ### Birleşik parçalar birbirini örter
 
@@ -44,18 +46,18 @@ flowchart LR
     B --- F["Kanatçıklar<br/>kanat kuvvetleri"]
 ```
 
-Böylece bir roketin direnci "ayrı ayrı uçan parçaların toplamı" değil, burnun ön yüzü + kuyruğun tabanı + boyunca sürtünmedir. Doğrulama: burun + boru eksenel $`C_D`$ ayrı parçalarda 1,37 idi, birleşikte 0,64 (gerçek küt tabanlı roketlerde 0,5–0,7); su roketinin tepe noktası 26 m'den 39,6 m'ye çıktı (yayımlanmış uçuşlar 30–50 m).
+Böylece bir roketin direnci "ayrı ayrı uçan parçaların toplamı" değil, burnun ön yüzü + kuyruğun tabanı + boyunca sürtünmedir. Örtülme, her gövdenin kendi boyutları üzerinde örneklenir; ince uzun bir boru da (Ø41 × 500 mm) doğru ölçülür. Doğrulama: burun + boru eksenel $`C_D`$ ayrı parçalarda 1,37 idi, birleşikte 0,64 (gerçek küt tabanlı roketlerde 0,5–0,7); ogive burunlu, üç köşeli kanatçıklı katı yakıtlı roket 0,62 (OpenRocket sınıfı kestirimler 0,5–0,7) ve uçuş boyunca böyle kalır; su roketinin tepe noktası 26 m'den 39,6 m'ye çıktı (yayımlanmış uçuşlar 30–50 m).
 
 ### Eğik akış
 
-Eksen değerleri cismin gerçek gölge alanına göre birleştirilir: düz yüzlerde toplanır (kutunun gölgesi tam olarak budur), yuvarlak kesitte daire gibi:
+Her eksen, hızın kendi bileşeninin dinamik basıncını görür (Allen ve Perkins'in çapraz akış ilkesi). Kuvvet akışa tam ters olmak zorunda değildir; eğik duran düz bir yüz yana da iter:
 
 ```math
-A_\text{kutu}(\hat{\mathbf{u}}) = \lvert u_x\rvert A_x + \lvert u_y\rvert A_y + \lvert u_z\rvert A_z, \qquad
-A_\text{silindir}(\hat{\mathbf{u}}) = \lvert u_z\rvert A_z + \sqrt{(u_x A_x)^2 + (u_y A_y)^2}
+F_i = -\tfrac{1}{2}\,\rho\,(C_D A)_i\,\lvert u_i\rvert\,u_i \quad (\text{kutu, her eksen ayrı}), \qquad
+\mathbf{F}_\perp = -\tfrac{1}{2}\,\rho\,(C_D A)_\text{yan}\,\lvert\mathbf{u}_\perp\rvert\,\mathbf{u}_\perp \quad (\text{silindirin yuvarlak kesiti})
 ```
 
-Küre her yönde aynı alanı gösterir. Model gövdelerinde kesitin yuvarlak mı düz mü olduğu, 45°'deki gölge alanı ölçülerek anlaşılır.
+Bu yüzden ince uzun bir gövdenin küçük hücum açısında ($`\alpha`$) yan akıştan gelen ek direnci $`\sin^2\alpha`$ ile büyür, $`\sin\alpha`$ ile değil: 2°'lik yalpa bir roketin direncini neredeyse değiştirmez. Küre her yönde aynı alanı gösterir ve tüm hızı görür. Model gövdelerinde kesitin yuvarlak mı düz mü olduğu, 45°'deki gölge alanı ölçülerek anlaşılır.
 
 ## Kanatlar: şerit teorisi + kaldırma çizgisi
 

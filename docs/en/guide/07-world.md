@@ -33,6 +33,7 @@ The **Dünya** (world) page (Ctrl+6) is where everything comes together. Put the
 | Kumandalı araba (remote-controlled car, ESP32 + PS5 controller) | Its own ESP32 + DRV8833 PCB, a USB-C rechargeable 2S pack, a paired DualSense |
 | Su roketi (water rocket) | 2 L PET bottle, 0.6 L water, 4 bar; water jet, air thrust, fins |
 | Katı yakıtlı motor test standı (solid motor test stand, KNSB) | Two BATES sugar grains; pressure and thrust follow from the burn rate |
+| Katı yakıtlı roket (solid rocket: e-match launch and parachute) | A 41 mm rocket on a G-class KNSB motor; a switch closed by a 2 s countdown fires the e-match, the rocket climbs to ~1 km and throws its parachute at apogee |
 | Kap ve bilyeler: içi boş parçalar (containers: hollow parts) | A tray and a tube made in the modeller; balls and cubes fall into the tray, one ball drops down the tube's bore to the ground |
 | Çizgi izleyen robot (line follower) | A 5-channel TCRT5000 over matte, faded and glossy tape |
 | Sensör gezgini (sensor rover) | Camera, LiDAR, GPS, IMU, compass and encoders live |
@@ -106,7 +107,28 @@ The **Mekanik → Basınçlı kaplar ve roketler** (mechanical → pressure vess
 - **Solid propellant:** a KNSB, KNDX or APCP grain; the burn rate depends on pressure (r = a·pⁿ). The chamber pressure comes out of the balance between the gas the burning surface makes and the gas leaving the nozzle; no ready thrust curve is read. It ignites when an **e-match** joined to the motor is fired from the circuit, or at the **Ateşleme zamanı** (ignition time).
 - **Bursting:** if the pressure brings the wall's hoop stress (σ = p·r/t) to the material's strength, the vessel bursts.
 
-The vessel's mass falls as gas, water and propellant leave; hot gas heats the wall (visible in the thermal camera). While running, the inspector shows pressure, temperature, thrust and state live. Start with the **Su roketi** (water rocket) and **Katı yakıtlı motor test standı** (solid motor test stand) templates. The maths: [Gas and rockets](../physics/05-gas-and-rockets.md).
+The vessel's mass falls as gas, water and propellant leave; hot gas heats the wall and the nozzle throat (visible in the thermal camera). While running, the inspector shows pressure, temperature, thrust, the grain surface temperature, the burning share of the surface and the state live. Start with the **Su roketi** (water rocket), **Katı yakıtlı motor test standı** (solid motor test stand) and **Katı yakıtlı roket** (solid rocket) templates. The maths: [Gas and rockets](../physics/05-gas-and-rockets.md).
+
+### Ignition and launch
+
+A solid grain does not burn the moment the e-match fires. The match and the pyrogen on it burn; their hot gas heats the grain surface, a zone whose surface reaches the ignition temperature lights and the flame spreads towards the nozzle. In the inspector set **Ateşleyici barutu (g)** (igniter charge) and **Ateşleyici yanma süresi (ms)** (igniter burn time). With the charge at 0 only the match head is left; a sugar motor usually fails to light and the event log says why ("the grain surface reached at most 122 °C").
+
+There are two ways to fire the e-match:
+
+- **Launch controller:** battery → switch → e-match → battery. In the switch's inspector, **Kendiliğinden kapanır (s)** (closes by itself) gives a countdown. While the simulation runs, the **Kapat** (close) button closes the switch by hand.
+- **From a board:** drive a MOSFET from a board to fire the e-match (for example from an altimeter or a radio).
+
+The e-match is chosen in the motor's **Ateşleme** (ignition) setting or mechanically joined to the motor.
+
+### Parachute
+
+Give any body a **Kanopi çapı (m)** (canopy diameter) in its inspector. The parachute is thrown when the altimeter sees the climb end (or at **Açılma zamanı**, the deploy time). The canopy opens over its filling time once the lines are taut; the opening shock and the descent rate come out of the physics. While running, the canopy is drawn in the scene.
+
+![The solid rocket on its pad: kraft tube, fins, battery and launch switch](../../images/world-rocket-pad.png)
+
+![0.1 s after ignition: 24 bar, 1275 °C, 100 N of thrust; the whole grain surface is burning](../../images/world-rocket-ignite.png)
+
+![Descending under the 45 cm parachute thrown at apogee](../../images/world-rocket-chute.png)
 
 ### 3D models
 

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Hollow parts collide as their real shape:** a closed model mesh whose convex hull clearly exceeds it (tray, cup, tube, U bracket) is split into convex pieces (greedy plane cuts: along the faces at inside corners for flat-walled parts, the plane that removes the most hull volume for curved insides; separate parts on one side of a cut become separate pieces). Bodies collide piece by piece, rays, cables and the start overlap check use the pieces, and the collision view draws them. Mass and inertia still come from the mesh. New world template **Kap ve bilyeler**.
 - **Real part models:** the TT gear motor, the 130 motor and the 9 g micro servos (SG90, MG90S) are drawn from the makers' CAD models (Adafruit, MIT) instead of approximations: real gearbox and case shapes, smooth shading, the turning shaft and servo spline, the servo cable leaving under the output shaft. Heat glow and charring still work on their bodies. Licences in THIRD_PARTY_NOTICES.md.
+- **Rocket ignition the way it happens:** firing an e-match lights the igniter (match head + pyrogen, "Ateşleyici barutu"), not the grain. The grain is split into axial zones; each unlit surface soaks up heat from the gas flowing past it (Dittus–Boelter convection from the local port mass flux plus radiation, implicit 1-D conduction into the propellant, checked against the semi-infinite-solid solution within 1 %) and lights at the propellant's ignition temperature, so ignition delay and flame spread from the head end come out of the physics. A bare e-match head fails to light a sugar motor and the log says why.
+- **Erosive burning** (Lenoir–Robillard) from each zone's port mass flux: a narrow port burns faster towards the nozzle, the start-up pressure spikes, the core reaches the casing first at the aft end.
+- **Real gas and nozzle:** Noble–Abel co-volume for hot products; over-expanded nozzles separate at Schmucker's pressure instead of a fixed 40 % rule; air, propellant and igniter products are mixed as three components.
+- **Motor heating:** the casing heats only where the grain does not cover it (closures, burned-through zones), by convection and radiation; the nozzle throat by Bartz's correlation.
+- **Launch switches and parachutes:** a switch or button in the world can close on a countdown ("close.at", "open.at") or by hand while running (inspector **Kapat / Aç**); any body can carry a parachute thrown at apogee or at a set time, opening by Knacke's filling model and drawn in the scene.
+- **New world template Katı yakıtlı roket:** a 41 mm model rocket on a G-class KNSB motor fired through a 9 V battery, a countdown switch and an e-match; it climbs to ≈ 1 km (270 m/s) and lands at 7 m/s under a 45 cm canopy.
+
+### Fixed
+
+- **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).
+- **Joined parts' drag on slender bodies:** face coverage was sampled over the bounding sphere and missed a long thin tube entirely; it is now sampled over each body's own extent.
+- **Cross-flow drag:** drag grew with |sin α| of the angle of attack; each body axis now sees the dynamic pressure of its own velocity component (Allen & Perkins), so cross-flow drag grows with sin²α.
+- **Rocket fins** in the water-rocket template were mounted tangent to the bottle; they now stand straight out as single panels.
+- The igniter of a motor was not found when an e-match was joined to it.
 
 ## [1.2.0] - 2026-11-22
 

@@ -104,6 +104,56 @@ namespace RobotTwin.CoreSim.Mechanics
             };
         }
 
+        /// <summary>
+        /// [drag] Σ Cd·A·|v|·v over the body axes for the airspeed <paramref name="v"/> (body frame, m/s); the force is
+        /// −½ρ times it. Each axis sees the dynamic pressure of its own velocity component — the cross-flow
+        /// (independence) principle of Allen &amp; Perkins — so a slender body at a small angle of attack adds
+        /// cross-flow drag as sin²α rather than as sin α, a plate square to the flow keeps its full drag, a round
+        /// section treats its two cross axes as one cross-flow, and a sphere sees the whole speed.
+        /// </summary>
+        public Vec3 DragVector(Vec3 v)
+        {
+            double A(int k, double c)
+            {
+                if (DirectionalDrag)
+                {
+                    var f = c >= 0 ? DragForward : DragBackward;
+                    return k == 0 ? f.X : k == 1 ? f.Y : f.Z;
+                }
+
+                return k == 0 ? _dragArea.X : k == 1 ? _dragArea.Y : _dragArea.Z;
+            }
+
+            double sp = v.Length;
+            if (sp < 1e-12) return Vec3.Zero;
+            if (DragRound == 3) return v * (DragAreaAlong(v / sp) * sp);
+            double[] c = { v.X, v.Y, v.Z };
+            double[] r = new double[3];
+            int round = DragRound;
+            for (int k = 0; k < 3; k++)
+                if (k != round || round < 0) r[k] = A(k, c[k]) * Math.Abs(c[k]) * c[k];
+            if (round is >= 0 and <= 2)
+            {
+                // Round about axis `round`: the axial component on its own; the cross-flow in the other two as one.
+                int i = (round + 1) % 3, j = (round + 2) % 3;
+                double cross = Math.Sqrt(c[i] * c[i] + c[j] * c[j]);
+                r[round] = A(round, c[round]) * Math.Abs(c[round]) * c[round];
+                if (cross > 1e-12)
+                {
+                    double side = (A(i, c[i]) * Math.Abs(c[i]) + A(j, c[j]) * Math.Abs(c[j])) / (Math.Abs(c[i]) + Math.Abs(c[j]));
+                    r[i] = side * cross * c[i];
+                    r[j] = side * cross * c[j];
+                }
+                else
+                {
+                    r[i] = 0;
+                    r[j] = 0;
+                }
+            }
+
+            return new Vec3(r[0], r[1], r[2]);
+        }
+
         public bool HasDrag => DirectionalDrag
             ? DragForward.LengthSquared > 0 || DragBackward.LengthSquared > 0
             : _dragArea.X > 0 || _dragArea.Y > 0 || _dragArea.Z > 0;
