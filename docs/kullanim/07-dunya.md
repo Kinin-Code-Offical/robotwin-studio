@@ -154,6 +154,28 @@ Bir nesne seçiliyken **Bağla** (B) aracıyla başka bir nesneye tıklayın:
 
 En çok iki eklemle birbirine bağlı parçalar birbiriyle çarpışmaz. Bir nesneyi sürüklediğinizde ona takılı her şey de gelir. Bağlantıyı kaldırmak için denetçide **Bağlantıyı çöz**.
 
+### Vidalama, yapıştırma, bant, kelepçe, lehim
+
+Sabit bir bağlantının denetçide **bağlantı türü** seçilir. Seçim yalnız bir etiket değildir; bağlantının üç fiziğini belirler:
+
+1. **Dayanım:** Vidada parça başına taşınan yük × vida sayısı, yapıştırıcıda kayma dayanımı × yapışan alan alınır. Yapışan alan, küçük parçanın en geniş yüzünün yarısı sayılır. Bağlantıdan geçen kuvvet bunu aşarsa bağlantı kopar ve olay günlüğüne yazılır.
+2. **Isı geçişi:** Isı, bağlantı katmanından (iletkenlik ÷ kalınlık) ve gerçekten değen yüzey payından geçer. İnce yapıştırıcı katmanı ısıyı vida başlarından çok daha iyi geçirir: epoksiyle birleşen iki alüminyum blok bir dakikada aynı sıcaklığa gelir, kelepçeyle aralarında 55 K fark kalır.
+3. **Sıcaklık:** Yapıştırıcılar ve plastik dişler ısınınca yumuşar. Dayanım, yumuşama sıcaklığından bırakma sıcaklığına kadar doğrusal düşer. Bağlantının sıcaklığı, iki parçanın ısı ağındaki ortalamasıdır. Sıcak tutkalla tavana yapıştırılmış 1 kg'lık blok 25 °C'de tutar, parçalar 95 °C'deyken düşer.
+
+| Bağlantı türü | Dayanım | Isı geçişi (katman, temas payı) | Yumuşar → bırakır |
+| --- | --- | --- | --- |
+| Sabit (belirtilmemiş) | kırılmaz | 400 W/m²K, %15 | — |
+| M3 vida + somun (2 adet) | 2 × 1000 N | 400 W/m²K, %15 | — |
+| Plastiğe vida (M3, 2 adet) | 2 × 250 N | 400 W/m²K, %12 | 60 → 110 °C |
+| Japon yapıştırıcısı (siyanoakrilat) | 6 MPa × alan | 4000 W/m²K, %50 | 80 → 120 °C |
+| Epoksi | 15 MPa × alan | 2000 W/m²K, %70 | 60 → 110 °C |
+| Sıcak tutkal | 1,5 MPa × alan | 400 W/m²K, %30 | 55 → 85 °C |
+| Çift taraflı köpük bant | 0,5 MPa × alan | 100 W/m²K, %80 | 90 → 150 °C |
+| Kelepçe (zip bağı) | 220 N | 400 W/m²K, %5 | 80 → 160 °C |
+| Lehim (Sn63/Pb37) | 30 MPa × alan | 200 000 W/m²K, %30 | 150 → 183 °C |
+
+Kapak (kutu kapağı) ayrıca **vidalı** işaretlenebilir; kenara oturduğunda vidalanır, oturmazsa "vidalanamıyor" uyarısı çıkar.
+
 ## Fizik ve ortam
 
 Her nesnenin denetçisinde **Fizik** bölümü:
@@ -186,12 +208,39 @@ Servolar devreden gelen darbe komutunu okur; kolun açısı ve çektiği akım d
 
 ## Sensörler ve ekranlar
 
-- **HC-SR04 ultrasonik sensör** dünyadaki nesnelere ışın göndererek gerçekten ölçer. Işın ve çarptığı nokta mesafeye göre renklenerek çizilir.
+Sensörler hazır değer üretmez. Gerçek veri sayfası özellikleriyle dünyayı ölçerler: ışın atarlar, zemine bakarlar, gövdenin hareketini alırlar. Sonra kendi gürültülerini ve hatalarını eklerler. Hepsi **Parçalar** sekmesindedir.
 
-  ![Ultrasonik sensör ve engel](../images/world-sonar.png)
+| Sensör | Ne ölçer | Nasıl hesaplanır | Hata ve sınırlar |
+| --- | --- | --- | --- |
+| **HC-SR04 ultrasonik** | Engele uzaklık | Fizik sahnesine ışın atılır; ilk çarpan cisim, sensörün kendi montajı sayılmaz | Yankı süresi ses hızından; menzil ve açı veri sayfasından |
+| **Çizgi sensörü** (TCRT5000, QRE1113, TCRT/QTR dizileri) | Zemindeki çizgi | Kızılötesi LED ve fototransistör: zeminin dağınık yansıtması, parlak bantta ayna yansıması, güneş ve lamba ışığı. Fototransistör devrede gerçek akım kaynağıdır, doyuma girer | Yükseklikle sinyal değişir (TCRT5000'de tepe 2,5 mm, 0,2–15 mm). Mat siyah bant ≈ %6 yansıtır |
+| **LiDAR** (A1 sınıfı, LD06 sınıfı) | 360° mesafe taraması | Her örnekte sahneye ışın atılır; tarama hızı ve örnek sayısı veri sayfasından | A1: 8000 örnek/s, 5,5 Hz, 0,15–12 m, ≈ %1. LD06: 4500 örnek/s, 10 Hz, 0,02–12 m, ±45 mm. Koyu yüzey daha kısa menzil verir |
+| **IMU** (MPU-6050, GY-521) | İvme ve açısal hız | Gövdenin fizikteki gerçek hareketinden özgül kuvvet ve dönme hızı alınır | Açılışta sapma, yavaş sapma kayması, beyaz gürültü (400 µg/√Hz, 0,005 °/s/√Hz), sayısal alçak geçiren süzgeç |
+| **GPS** (NEO-6M, NEO-M8N) | Konum, hız | Ortamın coğrafi konumundan; NMEA çıkışı | CEP 2,5 m (M8N: 2,0 m), gökyüzü görüşüne göre büyür; soğuk başlatma 27 s, sıcak 1 s; en çok 5 Hz (M8N: 10 Hz) |
+| **Pusula** | Manyetik yön | Ortamın manyetik alanı ve gövdenin yönü | Sapma ve gürültü |
+| **Barometre** (BMP280, MS5611) | Basınç, yükseklik | Standart atmosfer (ISA), sensörün yüksekliğinde | MS5611: 10 cm çözünürlük, dönüşüm süreleri ve PROM doğrulaması |
+| **İvmeölçer ±200 g** (ADXL375) | Kalkış ve çarpma ivmesi | Gövdenin gerçek ivmesi ve motor titreşimi | 49 mg/LSB, 13 bit, veri sayfası gürültüsü |
+| **Derinlik** (MS5837) | Su basıncı, derinlik | p = p_atm + ρ·g·h | Sıvının yoğunluğu okumayı belirler |
+| **Enkoderli motor** | Dönüş | Motor milinin fizikteki açısı | Darbe sayısı motor modelinden |
+| **Kamera** | Görüntü | Aşağıya bakın | |
 
 - **I²C ekranlar** (SSD1306 OLED, 16×2 LCD) kartın yazdıklarını 3D modelin üzerinde canlı gösterir.
 - LED'ler ve lambalar yanar; aşırı ısınan parçalar kızarır, bozulan parçalardan kıvılcım çıkar.
+
+### Kamera nasıl çalışır
+
+Kamera (OV7670, OV2640 / ESP32-CAM, 720p USB, Pi kamera v2 / IMX219), sahneyi kendi merceğinden gerçekten görüntüler. Görüntü, sensörün yapacağı işlemlerden sırayla geçer:
+
+1. **Çekim:** Kamera, merceğinin konumundan (nesnenin +X yönüne bakar) ve modelin yatay görüş açısıyla, seçilen çözünürlükte sahneyi çizer. Örneğin OV2640 için 54,5°, IMX219 için 62,2°.
+2. **Pozlama:** Otomatik pozlama önce örtücü süresini, sonra kazancı ayarlar. Sahne ne kadar karanlıksa görüntü o kadar gürültülü olur.
+3. **Gürültü:** Foton atış gürültüsü (piksel kuyusunun doluluğuna göre) ve okuma gürültüsü kazançla birlikte büyür. Değerler modelin piksel boyutundan ve kuyu kapasitesinden gelir.
+4. **Hareket:** Kamera dönerken pozlama süresi boyunca bulanıklık oluşur. Yuvarlanan örtücü satırları sırayla okuduğu için hızlı dönüşte görüntü eğilir.
+5. **Mercek ve çıkış:** Kenarlarda vinyet oluşur, sonra nicemleme yapılır. Sürücü JPEG istediyse görüntü JPEG'e sıkıştırılır.
+6. **Kare hızı:** Sensörün o çözünürlükteki sınırına uyar (OV2640: UXGA'da 15, SVGA'da 30, CIF'te 60 kare/s). Bir ESP32 sürüyorsa DVP bağlantısının sınırı da geçerlidir.
+
+ESP32 taslakları kamerayı gerçek `esp_camera` arayüzüyle kullanır: `esp_camera_init`, `esp_camera_fb_get`, `sensor->set_framesize`. Kamera kart tarafından beslenmiyorsa başlatma hata döndürür. **Sensörler** sekmesi her sensörün son ölçümünü ve kameranın son karesini gösterir.
+
+![Ultrasonik sensör ve engel](../images/world-sonar.png)
 
 ## Kumandalar, radyo ve USB
 

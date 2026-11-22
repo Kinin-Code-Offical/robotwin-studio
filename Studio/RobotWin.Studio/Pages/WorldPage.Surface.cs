@@ -34,6 +34,22 @@ namespace RobotWin.Studio.Pages
                    (soft.Length + melt.Length > 0 ? " · " + soft + melt : string.Empty);
         }
 
+        /// <summary>[fasten] How a fixed joint is fastened: its strength, heat path and softening come with it.</summary>
+        private void FasteningRow(WorldJoint j)
+        {
+            var combo = new ComboBox { Margin = new Thickness(14, 0, 0, 2) };
+            foreach (var f in Fastening.All) combo.Items.Add(new ComboBoxItem { Content = f.Name, Tag = f.Id, IsSelected = string.Equals(f.Id, j.Fastening, StringComparison.OrdinalIgnoreCase) });
+            if (combo.SelectedIndex < 0) combo.SelectedIndex = 0;
+            combo.SelectionChanged += (_, _) =>
+            {
+                if (combo.SelectedItem is ComboBoxItem it && it.Tag is string id && id != j.Fastening) Edit("Bağlantı türü: " + it.Content, () => j.Fastening = id);
+            };
+            Inspector.Children.Add(combo);
+            var spec = Fastening.For(j.Fastening);
+            string soft = double.IsNaN(spec.SoftenC) ? string.Empty : $" {spec.SoftenC:0} °C'den sonra zayıflar, {spec.FailC:0} °C'de bırakır.";
+            if (spec.Id.Length > 0) Inspector.Children.Add(new TextBlock { Text = spec.Note + soft, Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(14, 0, 0, 6) });
+        }
+
         private void SurfaceSection(WorldObject o)
         {
             if (o.Kind != WorldObjectKind.Body && o.Kind != WorldObjectKind.Model) return;

@@ -976,6 +976,7 @@ namespace RobotWin.Studio.Pages
                     TextTrimming = TextTrimming.CharacterEllipsis
                 });
                 Inspector.Children.Add(grid);
+                if (j.Kind == WorldJointKind.Fixed && string.IsNullOrEmpty(j.PortB)) FasteningRow(j);   // [fasten] Pages/WorldPage.Surface.cs
             }
 
             Inspector.Children.Add(Action("Başka bir nesneye bağla (B)", () => SetTool(WorldTool.Joint)));

@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Materials, colours and surface finishes in the world:** the material list shows every material the physics knows (plywood, PET, cardboard, copper were missing) with a card of its numbers; colour swatches and a colour box for bodies and imported models; a **Yüzey** (finish) for each part: matte/gloss paint, polished, brushed, anodised, rusty metal, wood grain, carbon twill, kraft, rubber, 3D-print layers. Textures are drawn at real size on any shape (per-triangle planar projection). The finish sets the thermal emissivity used by the heat network: a black anodised block cools clearly faster than a polished one (51 °C against 72 °C after 10 minutes from 150 °C). New template **Malzeme ve yüzey vitrini**.
 
+- **Screwing and gluing as real physics:** a fixed joint gets a fastening (M3 screw + nut, screw into plastic, super glue, epoxy, hot glue, foam tape, zip tie, solder). It sets the joint's break force (per screw, or lap-shear strength over the bonded area), its heat path in the heat network (glue conducts far better than screw heads) and its softening with temperature: a hot-glued 1 kg block holds at 25 °C and falls at 95 °C.
+- **User guide:** a sensor table (what each sensor measures, how it is computed, its errors), how the camera pipeline works, and the fastenings with their numbers.
+
 ### Fixed
 
 - **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).

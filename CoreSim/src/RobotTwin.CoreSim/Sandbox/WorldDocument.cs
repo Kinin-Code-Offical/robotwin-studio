@@ -238,8 +238,11 @@ namespace RobotTwin.CoreSim.Sandbox
         public double? Lower { get; set; }
         public double? Upper { get; set; }
 
-        /// <summary>Force (N) above which the joint breaks; 0 = unbreakable.</summary>
+        /// <summary>Force (N) above which the joint breaks; 0 = from the fastening (unbreakable when none is set).</summary>
         public double BreakForce { get; set; }
+
+        /// <summary>[fasten] How a fixed joint is fastened: screws, glue, tape, zip tie, solder (<see cref="Sandbox.Fastening"/>); empty = unspecified.</summary>
+        public string Fastening { get; set; } = string.Empty;
     }
 
     /// <summary>

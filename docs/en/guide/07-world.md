@@ -154,6 +154,28 @@ With an object selected, click another object with the **Bağla** (connect, B) t
 
 Parts joined by at most two joints do not collide with each other. Dragging an object brings everything attached to it. Remove a joint with **Bağlantıyı çöz** (release joint) in the inspector.
 
+### Screwing, gluing, tape, zip ties, solder
+
+For a fixed joint, choose its **fastening** in the inspector. It is not just a label; it sets three pieces of the joint's physics:
+
+1. **Strength:** for screws, the load one screw carries × the number of screws; for adhesives, the lap-shear strength × the bonded area. The bonded area is taken as half of the smaller part's largest face. When the force through the joint exceeds this, the joint breaks and the event log says so.
+2. **Heat path:** heat crosses the fastening layer (conductivity ÷ thickness) over the share of the footprint that really touches. A thin glue line passes heat far better than screw heads: two aluminium blocks joined with epoxy reach the same temperature within a minute, while with a zip tie they stay 55 K apart.
+3. **Temperature:** adhesives and plastic threads soften. Strength falls linearly from the softening to the release temperature. The joint's temperature is the mean of the two parts in the heat network. A 1 kg block hot-glued under a beam holds at 25 °C and falls when the parts are at 95 °C.
+
+| Fastening | Strength | Heat path (layer, contact share) | Softens → lets go |
+| --- | --- | --- | --- |
+| Fixed (unspecified) | unbreakable | 400 W/m²K, 15 % | — |
+| M3 screw + nut (2) | 2 × 1000 N | 400 W/m²K, 15 % | — |
+| Screw into plastic (M3, 2, self-tapping) | 2 × 250 N | 400 W/m²K, 12 % | 60 → 110 °C |
+| Cyanoacrylate (super glue) | 6 MPa × area | 4000 W/m²K, 50 % | 80 → 120 °C |
+| Epoxy | 15 MPa × area | 2000 W/m²K, 70 % | 60 → 110 °C |
+| Hot glue | 1.5 MPa × area | 400 W/m²K, 30 % | 55 → 85 °C |
+| Double-sided foam tape | 0.5 MPa × area | 100 W/m²K, 80 % | 90 → 150 °C |
+| Zip tie | 220 N | 400 W/m²K, 5 % | 80 → 160 °C |
+| Solder (Sn63/Pb37) | 30 MPa × area | 200 000 W/m²K, 30 % | 150 → 183 °C |
+
+A box lid can also be marked **vidalı** (screwed); it is screwed down when it seats on the rim, and a "cannot be screwed" warning appears when it does not.
+
 ## Physics and environment
 
 Every object's inspector has a **Fizik** (physics) section:
@@ -186,12 +208,39 @@ Servos read the pulse command from the circuit; the horn's angle and the current
 
 ## Sensors and displays
 
-- The **HC-SR04 ultrasonic sensor** really measures by casting a beam at the objects in the world. The beam and its hit point are drawn, coloured by distance.
+Sensors do not produce ready-made values. They measure the world with their datasheet properties: they cast rays, look at the floor or take the body's motion, then add their own noise and errors. All of them are on the **Parçalar** (parts) tab.
 
-  ![Ultrasonic sensor and an obstacle](../../images/world-sonar.png)
+| Sensor | Measures | How it is computed | Errors and limits |
+| --- | --- | --- | --- |
+| **HC-SR04 ultrasonic** | Distance to an obstacle | A ray is cast into the physics scene; the first body hit counts, the sensor's own assembly does not | Echo time from the speed of sound; range and beam angle from the datasheet |
+| **Line sensor** (TCRT5000, QRE1113, TCRT/QTR arrays) | A line on the floor | IR LED and phototransistor: the floor's diffuse reflectance, mirror-like reflection on glossy tape, sun and lamp light. The phototransistor is a real current source in the circuit and saturates | Signal changes with height (TCRT5000 peaks at 2.5 mm, 0.2–15 mm). Matte black tape reflects ≈ 6 % |
+| **LiDAR** (A1 class, LD06 class) | 360° range scan | A ray per sample into the scene; scan rate and sample count from the datasheet | A1: 8000 samples/s, 5.5 Hz, 0.15–12 m, ≈ 1 %. LD06: 4500 samples/s, 10 Hz, 0.02–12 m, ±45 mm. Dark surfaces return from shorter |
+| **IMU** (MPU-6050, GY-521) | Acceleration and rate | The body's real motion in the physics gives specific force and angular rate | Turn-on bias, slow bias drift, white noise (400 µg/√Hz, 0.005 °/s/√Hz), digital low-pass |
+| **GPS** (NEO-6M, NEO-M8N) | Position, velocity | From the environment's geographic position; NMEA output | CEP 2.5 m (M8N: 2.0 m), growing with poor sky view; cold start 27 s, hot 1 s; up to 5 Hz (M8N: 10 Hz) |
+| **Compass** | Magnetic heading | The environment's magnetic field and the body's orientation | Bias and noise |
+| **Barometer** (BMP280, MS5611) | Pressure, altitude | Standard atmosphere (ISA) at the sensor's height | MS5611: 10 cm resolution, conversion times and PROM checksum |
+| **±200 g accelerometer** (ADXL375) | Launch and impact acceleration | The body's real acceleration plus motor vibration | 49 mg/LSB, 13 bit, datasheet noise |
+| **Depth** (MS5837) | Water pressure, depth | p = p_atm + ρ·g·h | The liquid's density sets the reading |
+| **Motor with encoder** | Rotation | The motor shaft's angle in the physics | Pulse count from the motor model |
+| **Camera** | Image | See below | |
 
 - **I²C displays** (SSD1306 OLED, 16×2 LCD) show what the board writes, live on the 3D model.
 - LEDs and lamps light up; overheated parts glow red, failing parts spark.
+
+### How the camera works
+
+A camera (OV7670, OV2640 / ESP32-CAM, 720p USB, Pi camera v2 / IMX219) really images the scene through its own lens. The image goes through the steps the sensor itself would take, in order:
+
+1. **Capture:** the camera draws the scene from its lens position (it looks along the object's +X) at the model's horizontal field of view and the chosen resolution. For example 54.5° for the OV2640 and 62.2° for the IMX219.
+2. **Exposure:** auto exposure sets the shutter first, then the gain. The darker the scene, the noisier the image.
+3. **Noise:** photon shot noise (from how full the pixel well gets) and read noise grow with gain. The values come from the model's pixel size and well capacity.
+4. **Motion:** while the camera turns, motion blur builds up over the exposure. The rolling shutter reads rows one after another, so a fast turn skews the image.
+5. **Lens and output:** vignetting darkens the corners, then the image is quantised. If the driver asked for JPEG, the frame is compressed to JPEG.
+6. **Frame rate:** limited by the sensor at that resolution (OV2640: 15 fps at UXGA, 30 at SVGA, 60 at CIF). When an ESP32 drives it, its DVP port's limit applies too.
+
+ESP32 sketches use the camera through the real `esp_camera` interface: `esp_camera_init`, `esp_camera_fb_get`, `sensor->set_framesize`. If the camera is not powered by the board, initialisation returns an error. The **Sensörler** (sensors) tab shows each sensor's latest reading and the camera's latest frame.
+
+![Ultrasonic sensor and an obstacle](../../images/world-sonar.png)
 
 ## Controllers, radio and USB
 

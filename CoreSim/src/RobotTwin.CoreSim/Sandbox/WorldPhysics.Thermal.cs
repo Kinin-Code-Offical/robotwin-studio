@@ -119,7 +119,8 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 if (j.ObjectB == null || !_thermal.TryGetValue(j.ObjectA, out var a) || !_thermal.TryGetValue(j.ObjectB, out var b)) continue;
                 double fa = Footprint(a), fb = Footprint(b);
-                _thermalLinks.Add(new ThermalLink { A = a, B = b, G = ContactConductance * ContactShare * Math.Min(fa, fb) });
+                var fastening = j.Kind == WorldJointKind.Fixed && j.Fastening.Length > 0 ? Fastening.For(j.Fastening) : null;   // [fasten] glue conducts far better than screw heads
+                _thermalLinks.Add(new ThermalLink { A = a, B = b, G = (fastening?.Conductance ?? ContactConductance) * (fastening?.ContactShare ?? ContactShare) * Math.Min(fa, fb) });
             }
 
             foreach (var sj in Scene.Joints)
@@ -281,6 +282,7 @@ namespace RobotTwin.CoreSim.Sandbox
             if (_thermalPending < ThermalStep) return;
             double h = _thermalPending;
             _thermalPending = 0;
+            if (_fastened.Count > 0) WeakenFastenings();   // [fasten] from the temperatures of the last thermal step
 
             foreach (var n in _thermalNodes) n.Power = sim == null || n.Inner ? 0 : HeatOf(n, sim);
             if (sim != null)

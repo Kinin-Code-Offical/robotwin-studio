@@ -302,6 +302,66 @@ namespace RobotTwin.CoreSim.Sandbox
             if (j.Lower.HasValue) joint.Lower = kind == JointKind.Hinge ? j.Lower.Value * Math.PI / 180 : j.Lower.Value;
             if (j.Upper.HasValue) joint.Upper = kind == JointKind.Hinge ? j.Upper.Value * Math.PI / 180 : j.Upper.Value;
             if (j.BreakForce > 0) joint.BreakForce = j.BreakForce;
+            else if (kind == JointKind.Fixed && j.Fastening.Length > 0)
+            {
+                // [fasten] screws by count, adhesives by strength over the bonded area (Sandbox/Fastening.cs)
+                var spec = Fastening.For(j.Fastening);
+                double area = Math.Min(FaceOf(child.Body), parent != null ? FaceOf(parent) : double.MaxValue);
+                double force = spec.BreakForce(area);
+                if (force > 0)
+                {
+                    joint.BreakForce = force;
+                    _fastened.Add(new Fastened { Joint = joint, Spec = spec, Force = force, A = j.ObjectA, B = j.ObjectB });
+                }
+            }
+        }
+
+        private sealed class Fastened
+        {
+            public SceneJoint Joint = null!;
+            public Fastening Spec = null!;
+            public double Force;
+            public string A = string.Empty;
+            public string? B;
+            public bool Softening, Gone;
+        }
+
+        private readonly List<Fastened> _fastened = new List<Fastened>();
+
+        private static double FaceOf(SceneBody body)
+        {
+            var s = SizeOf(body);
+            return Math.Max(s.X * s.Y, Math.Max(s.X * s.Z, s.Y * s.Z));
+        }
+
+        /// <summary>[fasten] Glues and plastics soften as the joined parts warm up; past the failure temperature the joint lets go.</summary>
+        private void WeakenFastenings()
+        {
+            foreach (var f in _fastened)
+            {
+                if (f.Joint.Broken || f.Gone || double.IsNaN(f.Spec.SoftenC)) continue;
+                double t = f.B != null ? (TemperatureOf(f.A) + TemperatureOf(f.B)) / 2 : TemperatureOf(f.A);
+                double k = f.Spec.StrengthFactor(t);
+                f.Joint.BreakForce = Math.Max(1e-3, f.Force * k);
+                if (k < 1)
+                {
+                    // A weakening joint is loaded: keep its bodies awake so the solver measures the load on it.
+                    Scene.Wake(f.Joint.ChildBody);
+                    if (f.Joint.ParentBody != null) Scene.Wake(f.Joint.ParentBody);
+                }
+                if (k < 1 && !f.Softening)
+                {
+                    f.Softening = true;
+                    Scene.Report(new PhysicsEvent(Scene.Time, f.A, PhysicsEventKind.Impact, $"{f.Spec.Name}: {t:0} °C, bağlantı zayıflıyor (dayanım %{k * 100:0})", t, false));
+                }
+
+                if (k <= 0)
+                {
+                    f.Gone = true;
+                    f.Joint.Broken = true;   // nothing left to hold
+                    Scene.Report(new PhysicsEvent(Scene.Time, f.A, PhysicsEventKind.BodyBroken, $"{f.Spec.Name} {t:0} °C'de tuttuğunu bıraktı", t, true));
+                }
+            }
         }
 
         /// <summary>Advances the mechanics by <paramref name="dt"/> (accumulated into fixed steps) and couples actuators to the circuit.</summary>
