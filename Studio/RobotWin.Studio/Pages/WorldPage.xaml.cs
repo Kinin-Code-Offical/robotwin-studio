@@ -1374,7 +1374,11 @@ namespace RobotWin.Studio.Pages
             {
                 Run();
                 _session.Pause();
-                for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++) _session.StepOnce(0.01);
+                for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++)
+                {
+                    _session.StepOnce(0.01);
+                    if (secs - i * 0.01 < 1.5) Scene.PlumeTick();   // [gas] the last second and a half of exhaust
+                }
                 UpdateRunButton();
                 OnSimUpdated();
                 DockSerial.IsChecked = true;

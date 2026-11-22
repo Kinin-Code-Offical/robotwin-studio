@@ -1166,6 +1166,11 @@ namespace RobotWin.Studio.Analysis
 
             public double PortAngle(string objectId) =>
                 Store != null && AnalysisRun.RecordedPose(Store, objectId, Index) is { } p ? p.Port : 0;
+
+            public double Value(string channel) =>
+                Store?.Find(channel) is { } c && Index >= 0 && Index < c.Count ? c[Index] : double.NaN;
+
+            public double Time => Store != null && Index >= 0 && Index < Store.Count ? Store.Time(Index) : 0;
         }
     }
 }

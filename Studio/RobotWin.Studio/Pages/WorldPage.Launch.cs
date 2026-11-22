@@ -34,7 +34,16 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
+            int d = Array.IndexOf(args, "--distance");
+            if (d >= 0 && d + 1 < args.Length && double.TryParse(args[d + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double dist)) Scene.CameraDistance = dist;
             if (args.Contains("--thermal")) SetThermalView(true);
+            if (args.Contains("--run"))
+            {
+                // Keep the world running through the snapshot's wait, the camera following the selection.
+                Scene.Follow = true;
+                _session.Resume();
+                UpdateRunButton();
+            }
         }
 
         private void LaunchSection(WorldDocument world, WorldObject o)

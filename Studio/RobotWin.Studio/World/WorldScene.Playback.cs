@@ -9,6 +9,12 @@ namespace RobotWin.Studio.World
         (Vec3 Position, Quat Orientation)? PoseOf(string objectId);
 
         double PortAngle(string objectId);
+
+        /// <summary>A recorded channel's value at the replay frame (NaN when it was not recorded).</summary>
+        double Value(string channel);
+
+        /// <summary>Simulation time of the replay frame (s).</summary>
+        double Time { get; }
     }
 
     // [render] The scene can show a rendered run: objects take their recorded poses and an overlay

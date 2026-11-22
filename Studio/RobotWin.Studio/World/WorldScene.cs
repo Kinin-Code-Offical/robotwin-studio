@@ -258,6 +258,17 @@ namespace RobotWin.Studio.World
             UpdateCamera();
         }
 
+        /// <summary>Camera distance from its target (m).</summary>
+        public double CameraDistance
+        {
+            get => _distance;
+            set
+            {
+                _distance = Math.Max(0.02, value);
+                UpdateCamera();
+            }
+        }
+
         public void FrameSelected()
         {
             if (Selected == null || !_items.TryGetValue(Selected, out var it)) return;
@@ -272,8 +283,10 @@ namespace RobotWin.Studio.World
             var id = Selected ?? World?.Objects.FirstOrDefault(o => !o.IsStatic)?.Id;
             if (id == null || !_items.TryGetValue(id, out var it)) return;
             var c = it.Current.Transform(new Point3D(0, 0, 0));
-            // Glide towards the object so the view does not jerk.
-            _target = new Point3D(_target.X + (c.X - _target.X) * 0.15, _target.Y + (c.Y - _target.Y) * 0.15, _target.Z + (c.Z + 0.02 - _target.Z) * 0.15);
+            // Glide towards the object so the view does not jerk; the further it has got away (a rocket), the faster the catch-up.
+            double gap = Math.Sqrt((c.X - _target.X) * (c.X - _target.X) + (c.Y - _target.Y) * (c.Y - _target.Y) + (c.Z + 0.02 - _target.Z) * (c.Z + 0.02 - _target.Z));
+            double k = Math.Min(1, 0.15 + gap / Math.Max(0.05, _distance));
+            _target = new Point3D(_target.X + (c.X - _target.X) * k, _target.Y + (c.Y - _target.Y) * k, _target.Z + (c.Z + 0.02 - _target.Z) * k);
             UpdateCamera();
         }
 
@@ -760,7 +773,7 @@ namespace RobotWin.Studio.World
             using (Shell.Perf.Measure("sensörler")) SenseFrame();   // [sense] sensor overlays, camera sensors (World/WorldScene.Sense.cs)
             using (Shell.Perf.Measure("rüzgâr")) SdkFrame();   // [sdk] wind arrows, wind sock, force-field regions
             using (Shell.Perf.Measure("paraşüt")) ChuteFrame();   // [launch] canopies (World/WorldScene.Parachutes.cs)
-            using (Shell.Perf.Measure("jetler")) JetFrame(dt);   // [gas] nozzle jets every frame, also while paused
+            using (Shell.Perf.Measure("jetler")) PlumeFrame();   // [gas] exhaust flames and smoke in the 3D scene (World/WorldScene.Plume.cs)
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();
@@ -871,6 +884,7 @@ namespace RobotWin.Studio.World
         {
             _effects.Clear();
             ClearParachutes();   // [launch]
+            ClearPlume();   // [gas]
             UpdateKinematics();
             foreach (var it in _items.Values)
             {

@@ -23,6 +23,8 @@ namespace RobotTwin.CoreSim.Analysis
             public string Id = string.Empty;
             public Channel Px = null!, Py = null!, Pz = null!, Qw = null!, Qx = null!, Qy = null!, Qz = null!, Port = null!, Temp = null!;
             public Channel? Lift, Drag, Deflection, Horn, ServoLoad, RodForce;
+            public Channel? GasP, GasT, Thrust, MassFlow, ExitV, Lit, Surface, Grain, Smoke, Hot, Water;   // [gas]
+            public Channel? ChuteOpen, ChuteX, ChuteY, ChuteZ;   // [launch]
         }
 
         private static List<PoseChannels> PoseRecorder(WorldDocument world, ChannelStore store)
@@ -48,6 +50,35 @@ namespace RobotTwin.CoreSim.Analysis
                     ServoLoad = WorldPhysics.HasLinkage(o) ? store.Get("aero/" + id + "/servo-load", o.Name + " · servoya binen menteşe yükü", "N·m", "Uçuş/İtme çubuğu") : null,
                     RodForce = WorldPhysics.HasLinkage(o) ? store.Get("aero/" + id + "/rod", o.Name + " · itme çubuğu kuvveti (+ çekme)", "N", "Uçuş/İtme çubuğu") : null
                 });
+                var pc = list[list.Count - 1];
+                if (WorldPhysics.IsVessel(o))
+                {
+                    // [gas] the chamber and the jet, for graphs and for drawing the plume in the replay
+                    Channel Gas(string key, string label, string unit) => store.Get("gas/" + id + "/" + key, o.Name + " · " + label, unit, "Gaz ve roket/" + o.Name);
+                    pc.GasP = Gas("p", "oda basıncı (gösterge)", "bar");
+                    pc.GasT = Gas("t", "gaz sıcaklığı", "°C");
+                    pc.Thrust = Gas("thrust", "itki", "N");
+                    pc.MassFlow = Gas("mdot", "kütle akışı", "g/s");
+                    pc.ExitV = Gas("ve", "çıkış hızı", "m/s");
+                    pc.Smoke = Gas("smoke", "duman (yoğuşmuş ürün) akışı", "g/s");
+                    pc.Hot = Gas("hot", "sıcak jet (1 = yanıyor)", "");
+                    pc.Water = Gas("water", "kalan su", "L");
+                    if (o.Parameters.ContainsKey("grain"))
+                    {
+                        pc.Lit = Gas("lit", "yanan yüzey", "%");
+                        pc.Surface = Gas("surface", "yakıt yüzeyi sıcaklığı", "°C");
+                        pc.Grain = Gas("grain", "kalan yakıt", "%");
+                    }
+                }
+
+                if (o.Parameters.ContainsKey("parachute"))
+                {
+                    Channel Chute(string key, string label, string unit) => store.Get("chute/" + id + "/" + key, o.Name + " · " + label, unit, "Paraşüt/" + o.Name);
+                    pc.ChuteOpen = Chute("open", "paraşüt açıklığı", "");
+                    pc.ChuteX = Chute("px", "çekme yönü x", "");
+                    pc.ChuteY = Chute("py", "çekme yönü y", "");
+                    pc.ChuteZ = Chute("pz", "çekme yönü z", "");
+                }
             }
 
             return list;
@@ -80,6 +111,33 @@ namespace RobotTwin.CoreSim.Analysis
                 store.Set(p.Qz, q.Z);
                 store.Set(p.Port, physics?.PortAngle(p.Id) ?? 0);
                 store.Set(p.Temp, physics?.TemperatureOf(p.Id) ?? world.Environment.AmbientC);
+                if (p.GasP != null)
+                {
+                    var g = physics?.GasOf(p.Id);
+                    store.Set(p.GasP, g != null ? g.GaugePressure / 1e5 : 0);
+                    store.Set(p.GasT!, g != null ? g.TemperatureK - 273.15 : world.Environment.AmbientC);
+                    store.Set(p.Thrust!, g?.Thrust ?? 0);
+                    store.Set(p.MassFlow!, (g?.MassFlow ?? 0) * 1000);
+                    store.Set(p.ExitV!, g?.ExitVelocity ?? 0);
+                    store.Set(p.Smoke!, (g?.SmokeRate ?? 0) * 1000);
+                    store.Set(p.Hot!, g != null && (g.Burning || g.IgniterBurning) ? 1 : 0);
+                    store.Set(p.Water!, g?.WaterLitres ?? 0);
+                    if (p.Lit != null)
+                    {
+                        store.Set(p.Lit, (g?.LitFraction ?? 0) * 100);
+                        store.Set(p.Surface!, g != null && g.SurfaceK > 0 ? g.SurfaceK - 273.15 : world.Environment.AmbientC);
+                        store.Set(p.Grain!, (g?.GrainLeft ?? 1) * 100);
+                    }
+                }
+
+                if (p.ChuteOpen != null)
+                {
+                    var c = physics?.ParachuteOf(p.Id);
+                    store.Set(p.ChuteOpen, c is { Deployed: true } ? Math.Max(0.05, c.Value.Open) : 0);
+                    store.Set(p.ChuteX!, c?.Pull.X ?? 0);
+                    store.Set(p.ChuteY!, c?.Pull.Y ?? 0);
+                    store.Set(p.ChuteZ!, c?.Pull.Z ?? 1);
+                }
                 if (p.Lift != null && physics?.WingLoads(p.Id) is { } wl)
                 {
                     // Wind axes from the reference angle of attack (sideslip is small for these parts).

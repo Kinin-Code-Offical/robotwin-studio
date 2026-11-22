@@ -172,6 +172,20 @@ This heat goes to the motor's node in the heat network; View → Thermal camera 
 | Bare e-match head (0.03 g), KNSB | usually fails | surface peaks at 122 °C, no ignition |
 | Ø8 mm port, 4 MPa | aft end burns erosively | head 8.2, aft end 10.4 mm/s; 3 % difference with an Ø18 mm port |
 
+## Smoke, lift-off and what the flame hits
+
+- **Smoke:** part of the products is not gas but condensed particles: 44 % K₂CO₃ for KNSB, 43 % for KNDX, 32 % Al₂O₃ for aluminised APCP, 56 % for black powder. The smoke flow leaving the nozzle follows from that share ($`\dot m_\text{smoke} = \chi\,\dot m`$, ≈ 44 g/s for the KNSB motor). The scene draws the smoke as thick as that flow.
+- **How the smoke moves:** the gas leaves the nozzle at the exit velocity on top of the vessel's own velocity. The air stops it within a few flame lengths, so a climbing rocket leaves its smoke behind in the air.
+- **Flame:** the visible flame is about 15 exit diameters long. Smoke and flame are drawn inside the 3D scene, so a body in front of them hides them.
+- **Lift-off:** when the thrust beats the weight of everything joined to the motor and the motor has risen 1 cm, the event log gives the thrust, the weight and their ratio. The example rocket beats its 4.4 N weight with 133.7 N at 2.019 s (ratio 30).
+- **What the flame hits:** the hot jet heats the first surface in its path (a pad, a test-stand plate, a wall; the vehicle's own parts are left out). The heat follows the impinging round-jet correlation below and goes into that part's node of the heat network. In the example the flame puts 109 J into the pad. The motor's own heat passes to the parts joined to it (kraft tube, fins) through their contact.
+
+```math
+h = \tfrac{1}{2}\,\frac{k}{D_e}\,Re^{1/2}\,Pr^{0.4}\cdot\min\!\left(1,\ \frac{6\,D_e}{H}\right), \qquad Re = \frac{4\,\dot m}{\pi\,D_e\,\mu}, \qquad A = \pi\left(\frac{D_e}{2} + 0.2\,H\right)^2
+```
+
+The render (Record) recomputes the same physics. Chamber pressure, gas temperature, thrust, mass flow, exit velocity, burning surface, grain surface temperature, grain left, smoke flow and parachute opening are recorded as channels and appear in the graphs. The replay draws the flame, smoke and parachute from the recording.
+
 ## Parachute
 
 Any body can carry a recovery parachute ("Canopy diameter"). It is thrown when the altimeter sees the climb end (or at a set time). Once the lines are taut the canopy opens by Knacke's filling model: filling time $`t_f = n\,D_0 / v`$ ($`n \approx 8`$), drag area growing as $`(C_D S)(t) = (C_D S)_0\,(t/t_f)^2`$, $`C_D \approx 0.75`$. The force acts at the top of the body; the opening shock and the swing come out of the rigid-body physics.

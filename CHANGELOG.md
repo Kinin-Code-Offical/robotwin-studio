@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Launch switches and parachutes:** a switch or button in the world can close on a countdown ("close.at", "open.at") or by hand while running (inspector **Kapat / Aç**); any body can carry a parachute thrown at apogee or at a set time, opening by Knacke's filling model and drawn in the scene.
 - **New world template Katı yakıtlı roket:** a 41 mm model rocket on a G-class KNSB motor fired through a 9 V battery, a countdown switch and an e-match; it climbs to ≈ 1 km (270 m/s) and lands at 7 m/s under a 45 cm canopy.
 
+- **Exhaust in the 3D scene:** flames and smoke are drawn inside the scene, so bodies in front hide them (they used to be painted over everything). A layered flame (white-hot core, orange body, pink afterburning envelope) about fifteen exit diameters long; gas leaves at the exit velocity on top of the vessel's velocity and the still air stops it within a few flame lengths, so a climbing rocket leaves an unbroken smoke trail behind. The smoke's thickness follows the condensed share of the products (KNSB 44 % K₂CO₃, KNDX 43 %, aluminised APCP 32 % Al₂O₃, black powder 56 %), now part of the gas readout. The follow camera keeps up with fast objects.
+- **Lift-off and jet heating:** the event log reports when the thrust lifts the motor off the pad, with the thrust, the weight of everything joined to it and their ratio. A hot jet heats the first surface it hits (impinging round-jet convection into that part's heat-network node).
+- **Rockets in the render:** recordings carry chamber pressure, gas temperature, thrust, mass flow, exit velocity, burning surface, grain surface temperature, grain left, smoke flow and parachute opening; the replay draws flame, smoke and parachute from the recording.
+
 ### Fixed
 
 - **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).

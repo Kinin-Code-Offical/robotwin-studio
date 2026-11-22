@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using RobotTwin.CoreSim.Analysis;
 using RobotTwin.CoreSim.Automation;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Mechanics;
@@ -37,6 +38,7 @@ namespace RobotTwin.CoreSim.Tests
                 var pose = p.PoseOf(body.Id)!.Value;
                 double t = p.Scene.Time;
                 if (double.IsNaN(lit) && g.Burning) lit = t;
+                if (g.Burning && g.MassFlow > 0.01) Assert.InRange(g.SmokeRate / g.MassFlow, 0.40, 0.46);   // K2CO3 share of KNSB products
                 apogee = Math.Max(apogee, pose.Position.Z);
                 var axis = pose.Orientation.Rotate(Vec3.UnitZ);
                 if (g.Burning) maxTilt = Math.Max(maxTilt, Math.Acos(Math.Min(1, axis.Z)) * 180 / Math.PI);
@@ -58,6 +60,11 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Contains(events, e => e.Contains("köprü teli açıldı"));   // the e-match bridgewire fired
             Assert.Contains(events, e => e.Contains("ateşleyici yandı"));    // and lit the igniter
             Assert.Contains(events, e => e.Contains("tutuştu"));
+            var liftoff = events.FirstOrDefault(e => e.Contains("rampadan kalktı"));
+            Assert.NotNull(liftoff);                                         // thrust beat the weight of the joined rocket
+            var pad = w.Objects.First(o => o.Name.StartsWith("Fırlatma rampası"));
+            _out.WriteLine(FormattableString.Invariant($"{liftoff}; the flame put {p.JetHeatTotal(pad.Id):0.0} J into the pad"));
+            Assert.True(p.JetHeatTotal(pad.Id) > 1, "the exhaust heats the pad it blasts");
             Assert.InRange(lit, 2.0, 2.06);                                 // e-match, igniter and soak take milliseconds
             Assert.InRange(impulse, 100, 150);                              // a G-class motor
             Assert.InRange(maxSpeed, 150, 330);
@@ -98,5 +105,37 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(early, 0.4, 0.8);   // OpenRocket-class estimates for this layout: ≈ 0.5–0.7
             Assert.InRange(late / early, 0.9, 1.1);
         }
-    }
+    
+        [Fact]
+        public void TheRenderRecordsTheChamberTheJetAndTheParachute()
+        {
+            var world = WorldExamples.SolidRocket(PartLibrary.Default);
+            var motor = world.Objects.First(o => o.Name.StartsWith("KNSB"));
+            var s = new AnalysisSettings { Preset = AnalysisPreset.Custom, Duration = 2.6, OutputRate = 200, Accuracy = AccuracyPreset.Fast, Firmware = false };
+            var r = AnalysisRun.Run(world, s);
+            var p = r.Channels.Find("gas/" + motor.Id + "/p");
+            var thrust = r.Channels.Find("gas/" + motor.Id + "/thrust");
+            var lit = r.Channels.Find("gas/" + motor.Id + "/lit");
+            var smoke = r.Channels.Find("gas/" + motor.Id + "/smoke");
+            Assert.NotNull(p);
+            Assert.NotNull(thrust);
+            Assert.NotNull(lit);
+            Assert.NotNull(smoke);
+            double peakP = 0, peakF = 0, peakLit = 0, peakSmoke = 0;
+            for (int i = 0; i < p!.Count; i++)
+            {
+                peakP = Math.Max(peakP, p[i]);
+                peakF = Math.Max(peakF, thrust![i]);
+                peakLit = Math.Max(peakLit, lit![i]);
+                peakSmoke = Math.Max(peakSmoke, smoke![i]);
+            }
+
+            _out.WriteLine(FormattableString.Invariant($"render: {p.Count} samples, peak {peakP:0.0} bar, {peakF:0} N, {peakLit:0} % lit, smoke {peakSmoke:0.0} g/s"));
+            Assert.InRange(peakP, 20, 40);
+            Assert.InRange(peakF, 100, 160);
+            Assert.InRange(peakLit, 99, 100.01);
+            Assert.InRange(peakSmoke, 20, 60);
+            Assert.NotNull(r.Channels.Find("chute/" + world.Objects.First(o => o.Name.StartsWith("Gövde")).Id + "/open"));
+        }
+}
 }

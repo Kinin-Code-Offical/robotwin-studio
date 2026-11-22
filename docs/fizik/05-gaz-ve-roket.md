@@ -172,6 +172,20 @@ Bu ısı, ısı ağında motorun düğümüne gider; Görünüm → Isı kameras
 | Yalnız e-kibrit başı (0,03 g), KNSB | çoğu zaman tutuşmaz | yüzey en çok 122 °C, ateşlenemedi |
 | Ø8 mm kanal, 4 MPa | lüle ucu aşındırıcı yanar | baş 8,2, lüle ucu 10,4 mm/s; Ø18 mm kanalda fark %3 |
 
+## Duman, kalkış ve alevin çarptığı yüzey
+
+- **Duman:** Yanma ürünlerinin bir kısmı gaz değil, yoğuşmuş taneciktir: KNSB'de %44 K₂CO₃, KNDX'te %43, alüminyumlu APCP'de %32 Al₂O₃, barutta %56. Lüleden çıkan duman akışı bu orandan hesaplanır ($`\dot m_\text{duman} = \chi\,\dot m`$, KNSB motorda ≈ 44 g/s). Sahnedeki dumanın yoğunluğu bu akışa göre çizilir.
+- **Dumanın hareketi:** Gaz, lüleden aracın kendi hızına eklenmiş çıkış hızıyla çıkar. Hava onu birkaç alev boyu içinde durdurur; bu yüzden yükselen roket dumanını havada bırakır.
+- **Alev:** Görünür alev çıkış çapının ≈ 15 katıdır. Duman ve alev 3B sahnenin içinde çizilir; önlerindeki cisim onları kapatır.
+- **Kalkış:** İtki, motora bağlı her şeyin ağırlığını yenip motor 1 cm yükselince olay günlüğüne itki, ağırlık ve itki/ağırlık oranı yazılır. Örnekteki roket 2,019 s'de 133,7 N itki ile 4,4 N'luk ağırlığını yener (oran 30).
+- **Alevin çarptığı yüzey:** Sıcak jet, yolundaki ilk yüzeyi ısıtır (rampa, test standı plakası, duvar; aracın kendi parçaları sayılmaz). Isı, çarpan yuvarlak jet bağıntısıyla hesaplanır ve o parçanın ısı ağındaki düğümüne gider. Örnekte alev rampaya 109 J verir. Motorun ısısı, ona bağlı parçalara (karton gövde, kanatçıklar) bağlantı yüzeyinden iletilir.
+
+```math
+h = \tfrac{1}{2}\,\frac{k}{D_e}\,Re^{1/2}\,Pr^{0{,}4}\cdot\min\!\left(1,\ \frac{6\,D_e}{H}\right), \qquad Re = \frac{4\,\dot m}{\pi\,D_e\,\mu}, \qquad A = \pi\left(\frac{D_e}{2} + 0{,}2\,H\right)^2
+```
+
+Render (Kayıt) aynı fiziği baştan hesaplar. Oda basıncı, gaz sıcaklığı, itki, kütle akışı, çıkış hızı, yanan yüzey, yakıt yüzeyi sıcaklığı, kalan yakıt, duman akışı ve paraşüt açıklığı kanal olarak kaydedilir ve grafiklerde görünür. Oynatmada alev, duman ve paraşüt kayıttan çizilir.
+
 ## Paraşüt
 
 Herhangi bir gövdeye kurtarma paraşütü verilebilir ("Kanopi çapı"). Altimetre tırmanmanın bittiğini görünce (ya da belirlenen anda) paraşüt atılır. İpler gerilince kanopi Knacke'nin dolma modeliyle açılır: dolma süresi $`t_f = n\,D_0 / v`$ ($`n \approx 8`$), sürükleme alanı $`(C_D S)(t) = (C_D S)_0\,(t/t_f)^2`$ ile büyür, $`C_D \approx 0{,}75`$. Kuvvet gövdenin üstüne bağlanır; açılma şoku ve sallanma katı cisim fiziğinden çıkar.

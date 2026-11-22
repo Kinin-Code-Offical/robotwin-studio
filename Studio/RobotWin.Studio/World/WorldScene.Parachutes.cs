@@ -119,11 +119,11 @@ namespace RobotWin.Studio.World
             _chutes[objectId] = model;
         }
 
-        /// <summary>Per frame: every body with a parachute, as far open as the physics says.</summary>
+        /// <summary>Per frame: every body with a parachute, as far open as the physics (or the replayed run) says.</summary>
         private void ChuteFrame()
         {
             var physics = Session != null && Session.State != Simulation.SimState.Stopped ? Session.Physics : null;
-            if (physics == null || World == null)
+            if (World == null || physics == null && Playback == null)
             {
                 if (_chutes.Count > 0) ClearParachutes();
                 return;
@@ -131,30 +131,34 @@ namespace RobotWin.Studio.World
 
             foreach (var o in World.Objects)
             {
-                if (!o.Parameters.ContainsKey("parachute") || physics.ParachuteOf(o.Id) is not { } c) continue;
-                if (!c.Deployed)
+                if (!o.Parameters.ContainsKey("parachute")) continue;
+                double open, diameter = double.TryParse(o.Parameters["parachute"], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dv) ? dv : 0.45;
+                Point3D attach;
+                Vector3D pull;
+                if (Playback is { } pb)
+                {
+                    open = pb.Value("chute/" + o.Id + "/open");
+                    if (double.IsNaN(open) || pb.PoseOf(o.Id) is not { } pose) continue;
+                    var top = pose.Position + pose.Orientation.Rotate(new RobotTwin.CoreSim.Mechanics.Vec3(0, 0, o.Shape == "sphere" ? o.SizeX : o.SizeZ));
+                    attach = new Point3D(top.X, top.Y, top.Z);
+                    pull = new Vector3D(pb.Value("chute/" + o.Id + "/px"), pb.Value("chute/" + o.Id + "/py"), pb.Value("chute/" + o.Id + "/pz"));
+                }
+                else
+                {
+                    if (physics!.ParachuteOf(o.Id) is not { } c) continue;
+                    open = c.Deployed ? Math.Max(0.05, c.Open) : 0;
+                    attach = new Point3D(c.Attach.X, c.Attach.Y, c.Attach.Z);
+                    pull = new Vector3D(c.Pull.X, c.Pull.Y, c.Pull.Z);
+                    diameter = c.Diameter;
+                }
+
+                if (open <= 0)
                 {
                     if (_chutes.ContainsKey(o.Id)) Parachute(o.Id, 0, default, default, 0);
                     continue;
                 }
 
-                Parachute(o.Id, Math.Max(0.05, c.Open), new Point3D(c.Attach.X, c.Attach.Y, c.Attach.Z), new Vector3D(c.Pull.X, c.Pull.Y, c.Pull.Z), c.Diameter);
-            }
-        }
-
-        /// <summary>
-        /// [gas] Exhaust, water and gas jets of every vessel that is blowing, each frame: particles leave the nozzle at
-        /// the exit velocity in proportion to the mass flow, and a paused world keeps its frozen flame.
-        /// </summary>
-        private void JetFrame(double dt)
-        {
-            var physics = Session != null && Session.State != Simulation.SimState.Stopped ? Session.Physics : null;
-            if (physics == null || World == null || dt <= 0 || !Shell.AppSettings.Current.Effects) return;
-            foreach (var o in World.Objects)
-            {
-                if (!WorldPhysics.IsVessel(o) || physics.GasOf(o.Id) is not { MassFlow: > 1e-5 } g || physics.NozzleOf(o.Id) is not { } n) continue;
-                var kind = n.Water ? Assembly3D.ParticleKind.Water : n.Hot ? Assembly3D.ParticleKind.Fire : Assembly3D.ParticleKind.Smoke;
-                Jet(new Point3D(n.Point.X, n.Point.Y, n.Point.Z), new Vector3D(n.Direction.X, n.Direction.Y, n.Direction.Z), g.ExitVelocity, g.MassFlow, kind, Math.Min(dt, 0.05));
+                Parachute(o.Id, open, attach, pull, diameter);
             }
         }
 

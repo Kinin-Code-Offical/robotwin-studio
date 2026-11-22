@@ -62,6 +62,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Noble–Abel co-volume of the products (m³/kg): p·(V − m·b) = m·R·T.</summary>
         public double Covolume { get; init; } = 1.0e-3;
 
+        /// <summary>Mass share of the products that is condensed (liquid or solid particles): the visible smoke.</summary>
+        public double CondensedFraction { get; init; } = 0.4;
+
         /// <summary>(upper pressure MPa, a in mm/s·MPa⁻ⁿ, n) segments, ascending.</summary>
         public (double UpToMPa, double A, double N)[] BurnRate { get; init; } = Array.Empty<(double, double, double)>();
 
@@ -86,19 +89,21 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 Name = "KNDX", Density = 1785, FlameTemperature = 1500, Products = new GasSpecies("KNDX ürünleri", 8314.46 / 42.4, 1.131),
                 BurnRate = new[] { (0.779, 7.0, 0.30), (2.572, 8.875, 0.619), (5.930, 7.553, 0.0), (8.502, 3.841, 0.688), (11.2, 17.2, -0.148) },
-                IgnitionTemperature = 580, BurningSurfaceTemperature = 800
+                IgnitionTemperature = 580, BurningSurfaceTemperature = 800, CondensedFraction = 0.43
             },
             "APCP" => new Propellant
             {
                 Name = "APCP", Density = 1700, FlameTemperature = 2800, Products = new GasSpecies("APCP ürünleri", 8314.46 / 25.0, 1.20),
                 BurnRate = new[] { (30.0, 3.5, 0.35) },
-                IgnitionTemperature = 690, BurningSurfaceTemperature = 950, SolidHeatCapacity = 1250, GasEmissivity = 0.4
+                IgnitionTemperature = 690, BurningSurfaceTemperature = 950, SolidHeatCapacity = 1250, GasEmissivity = 0.4,
+                CondensedFraction = 0.32   // Al₂O₃ from the aluminium of a typical hobby composite
             },
             _ => new Propellant
             {
                 Name = "KNSB", Density = 1800, FlameTemperature = 1600, Products = new GasSpecies("KNSB ürünleri", 8314.46 / 39.9, 1.137),
                 BurnRate = new[] { (0.807, 10.708, 0.625), (1.503, 8.763, 0.0), (3.792, 7.852, -0.013), (7.033, 3.907, 0.535), (10.67, 9.653, 0.064), (30.0, 9.653, 0.064) },
-                IgnitionTemperature = 590, BurningSurfaceTemperature = 800
+                IgnitionTemperature = 590, BurningSurfaceTemperature = 800,
+                CondensedFraction = 0.44   // K₂CO₃: the thick white smoke of sugar motors (Nakka)
             }
         };
 
@@ -109,7 +114,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public static Propellant Pyrogen { get; } = new Propellant
         {
             Name = "ateşleyici", Density = 1700, FlameTemperature = 2000, Products = new GasSpecies("ateşleyici ürünleri", 8314.46 / 40.0, 1.14),
-            BurnRate = new[] { (30.0, 10.0, 0.3) }
+            BurnRate = new[] { (30.0, 10.0, 0.3) }, CondensedFraction = 0.56
         };
     }
 
@@ -117,7 +122,7 @@ namespace RobotTwin.CoreSim.Sandbox
     public sealed record GasReadout(
         double GaugePressure, double TemperatureK, double GasMass, double WaterLitres, double GrainLeft,
         double Thrust, double MassFlow, double ExitVelocity, bool Choked, bool Burning, bool Burst, string Phase,
-        double LitFraction = 0, double SurfaceK = 0, bool IgniterBurning = false);
+        double LitFraction = 0, double SurfaceK = 0, bool IgniterBurning = false, double SmokeRate = 0);
 
     /// <summary>
     /// [gas] Pressure vessels in the world, one physics for all of them: a PET bottle pumped up with
@@ -164,6 +169,9 @@ namespace RobotTwin.CoreSim.Sandbox
             public double IgniterLeft;                 // kg not yet burned
             public bool IgnitionFailed, FlameSpreadReported, FirstLitReported, BurnoutReported;
             public double HottestSurface;               // K, before the grain lit (for the failure report)
+            public double SmokeRate;                    // kg/s of condensed products leaving the nozzle
+            public Vec3 StartPosition;
+            public bool LiftoffReported;
 
             // contents
             public double AirMass, ProductMass, IgniterGasMass;   // kg of the initial gas, grain products, igniter products
@@ -312,6 +320,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 v.AirMass = p0 * v.GasVolume / (v.Gas.R * ambientK);
                 v.U = v.AirMass * v.Gas.Cv * ambientK;
                 v.PrevVelocity = it.Body.Velocity;
+                v.StartPosition = it.Body.Position;
                 _vessels.Add(v);
                 UpdateVesselMass(v);
             }
@@ -352,7 +361,7 @@ namespace RobotTwin.CoreSim.Sandbox
             double grainLeft = c == null ? 0 : c.Volume / Math.Max(1e-12, c.InitialVolume);
             double surface = c == null ? 0 : c.AnyLit ? c.Propellant.BurningSurfaceTemperature : c.HottestUnlitSurface;
             return new GasReadout(v.Pressure - pa, v.Temperature, v.GasMass, v.WaterVolume * 1000, grainLeft, v.Thrust, v.MassFlow, v.ExitVelocity, v.Choked, v.Burning, v.Burst, phase,
-                lit, surface, v.IgniterBurning(Scene.Time));
+                lit, surface, v.IgniterBurning(Scene.Time), v.SmokeRate);
         }
 
         /// <summary>Where a vessel's jet leaves (world) and which way it goes; null without a vessel.</summary>
@@ -361,6 +370,17 @@ namespace RobotTwin.CoreSim.Sandbox
             var v = _vessels.FirstOrDefault(x => string.Equals(x.Item.Object.Id, objectId, StringComparison.OrdinalIgnoreCase));
             if (v == null || PoseOf(objectId) is not { } pose) return null;
             return (pose.Position + pose.Orientation.Rotate(v.NozzleLocal), pose.Orientation.Rotate(v.AxisLocal).Normalized(), v.WaterVolume > 1e-9, v.Burning || v.IgniterBurning(Scene.Time));
+        }
+
+        /// <summary>Velocity (m/s, world) of the point <paramref name="p"/> moving with an object's body.</summary>
+        public Vec3 VelocityAt(string objectId, Vec3 p) =>
+            _items.TryGetValue(objectId, out var it) && it.Body != null ? it.Body.Velocity + it.Body.AngularVelocity.Cross(p - it.Body.Position) : Vec3.Zero;
+
+        /// <summary>Nozzle exit diameter (m) of a vessel; 0 when it has none.</summary>
+        public double NozzleExitDiameter(string objectId)
+        {
+            var v = _vessels.FirstOrDefault(x => string.Equals(x.Item.Object.Id, objectId, StringComparison.OrdinalIgnoreCase));
+            return v == null ? 0 : Math.Sqrt(4 * Math.Max(v.Exit, v.Throat) / Math.PI);
         }
 
         /// <summary>One physics step of every vessel: ignite, burn, flow, thrust, heat, mass, burst.</summary>
@@ -405,7 +425,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
 
                 bool open = v.Throat > 0 && Scene.Time >= v.ValveAt || v.Burst;
-                double thrustImpulse = 0, flowMass = 0, vExit = 0;
+                double thrustImpulse = 0, flowMass = 0, vExit = 0, smokeMass = 0;
                 bool choked = false;
 
                 // The chamber's time constant can be well under a millisecond: sub-step the gas.
@@ -538,6 +558,8 @@ namespace RobotTwin.CoreSim.Sandbox
                     v.U += (gen * (v.Grain?.Products.Cp ?? 0) * (v.Grain?.FlameTemperature ?? 0) + ign * pyro.Products.Cp * pyro.FlameTemperature
                             - outGas * hOut - qWall) * h - soak - p * dVgas;
                     v.HeatJ += qWall * h;
+                    if (outGas > 0)
+                        smokeMass += outGas * h * ((v.Grain?.CondensedFraction ?? 0) * v.ProductMass + pyro.CondensedFraction * v.IgniterGasMass) / Math.Max(1e-12, m);
                     if (outGas >= 0)
                     {
                         double share = Math.Min(1, outGas * h / Math.Max(1e-12, m));
@@ -594,6 +616,17 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 v.Thrust = thrustImpulse / dt;
                 v.MassFlow = flowMass / dt;
+                v.SmokeRate = smokeMass / dt;
+                if (v.Thrust > 0 && !v.LiftoffReported && !o.IsStatic && (body.Position - v.StartPosition).Dot(-axisW) > 0.01)
+                {
+                    // Off the pad: the thrust has beaten the weight of everything joined to the motor.
+                    v.LiftoffReported = true;
+                    double weight = AssemblyMass(body) * Scene.Gravity.Length;
+                    Scene.Report(new PhysicsEvent(Scene.Time, o.Id, PhysicsEventKind.Impact,
+                        $"{o.Name}: rampadan kalktı — itki {v.Thrust:0.0} N, kalkan kütlenin ağırlığı {weight:0.0} N (itki/ağırlık {v.Thrust / Math.Max(1e-9, weight):0.0})", v.Thrust, false));
+                }
+
+                ImpingeJet(v, nozzleW, axisW, dt);
                 v.ExitVelocity = vExit;
                 v.Choked = choked;
                 if (Math.Abs(v.Thrust) > 1e-9) body.AddForceAtPoint(-axisW * v.Thrust, nozzleW);
