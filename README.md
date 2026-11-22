@@ -146,7 +146,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 
   ![Kablolar ve ölçümler: boy, uçlar arası mesafe, voltaj düşümü](docs/images/world-cables.png)
 - **Mekanik bağlantılar:** sabit (vida/yapıştırıcı), servo koluna/motor miline sabitleme, menteşe, kızak.
-- **Fizik:** yerçekimi (Dünya, Ay, Mars, Jüpiter, sıfır), malzemeye göre sürtünme ve sekme, kutu/küre/silindir/üçgen ağ çarpışmaları, 1 ms sabit adım; servolar ve DC motorlar devreyle çift yönlü bağlıdır (yük devreye geri döner).
+- **Fizik:** yerçekimi (Dünya, Ay, Mars, Jüpiter, sıfır), malzemeye göre sürtünme ve sekme, kutu/küre/silindir/üçgen ağ çarpışmaları, her parça kendi 3D modelinin biçimiyle çarpışır ve içi boş modeller (tepsi, kap, boru) dışbükey parçalara ayrılarak içlerine bir şey konabilir, 1 ms sabit adım; servolar ve DC motorlar devreyle çift yönlü bağlıdır (yük devreye geri döner).
 - **Sensörler:** HC-SR04 ultrasonik sensör dünyadaki nesnelere ışın izleme ile gerçekten ölçer; I²C ekranlar 3D model üzerinde canlı görünür.
 - **Radyo ve USB:** 2.4 GHz ortamı (BLE, Wi-Fi, Bluetooth Classic kumandalar), uzaklık ve engelle zayıflama, IR (NEC) kumanda; DualSense/DualShock 4/Xbox kumandalar (gerçek kumanda veya ekrandaki sanal kumanda); bilgisayar + USB kablosu ile besleme ve seri monitör.
 - **Sahne ağacı**, olay günlüğü, kablo ölçümleri, RF paneli; simülasyon sesleri (motor, servo, buzzer, röle, yanma).

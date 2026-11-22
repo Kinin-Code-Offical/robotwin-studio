@@ -33,6 +33,7 @@
 | Kumandalı araba (ESP32 + PS5 kumanda) | Kendi PCB'li ESP32 + DRV8833 kartı, USB-C şarjlı 2S pil, eşleşmiş DualSense |
 | Su roketi | 2 L PET şişe, 0,6 L su, 4 bar; su jeti, hava itkisi, kanatçıklar |
 | Katı yakıtlı motor test standı (KNSB) | İki BATES şeker yakıt tanesi; basınç ve itki yanma hızından çıkar |
+| Kap ve bilyeler: içi boş parçalar | Modelleyicide yapılmış tepsi ve boru; bilyeler ve küpler tepsinin içine, bir bilye borunun deliğinden yere düşer |
 | Çizgi izleyen robot | Mat, solmuş ve parlak bant üstünde 5 kanallı TCRT5000 |
 | Sensör gezgini | Kamera, LiDAR, GPS, IMU, pusula ve enkoderler canlı |
 | ESP32 + OV2640 kamera ile bant bulma | Kamera pisti yukarıdan görür, ESP32 bandı bulur |
@@ -90,7 +91,9 @@ Tek başına konmuş bir Arduino veya ESP32'yi **Kart tasarımına dönüştür 
 
 ### Çarpışma şekilleri
 
-Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir motor gövdesi yuvarlanır, kanat sivrilen biçimiyle, kumanda kendi dış hattıyla çarpışır (sınır kutusu değil). Bacaklar, pinler ve kablo uçları gibi ince parçalar gövdeye katılmaz. **Görünüm → Çarpışma şekilleri (dünya)** fiziğin gerçekten çarpıştırdığı gövdeleri modellerin üzerinde yarı saydam çizer; simülasyon çalışırken gövdelerle birlikte hareket eder. Matematiği: [Katı cisim ve temas](../fizik/02-mekanik.md).
+Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir motor gövdesi yuvarlanır, kanat sivrilen biçimiyle, kumanda kendi dış hattıyla çarpışır (sınır kutusu değil). Bacaklar, pinler ve kablo uçları gibi ince parçalar gövdeye katılmaz. **Görünüm → Çarpışma şekilleri (dünya)** fiziğin gerçekten çarpıştırdığı gövdeleri modellerin üzerinde yarı saydam çizer; simülasyon çalışırken gövdelerle birlikte hareket eder. İçi boş modeller (modelleyicide yapılmış ya da içe aktarılmış tepsi, kap, boru, U braket) dışbükey parçalara ayrılır; böylece içlerine bir şey konabilir, bir bilye borunun deliğinden geçer. Örnek: **Kap ve bilyeler** şablonu. Matematiği: [Katı cisim ve temas](../fizik/02-mekanik.md).
+
+![Kap ve bilyeler: tepsinin zemin ve duvar parçaları, borunun dilimleri](../images/world-containers.png)
 
 ### Basınçlı kaplar ve roketler
 

@@ -42,7 +42,7 @@ namespace RobotWin.Studio.World
             foreach (var b in physics.Scene.Bodies)
             {
                 if (b.IsStatic && b.Tag is not WorldObject) continue;   // floor, obstacles and terrain are not parts
-                var mesh = ShapeMesh(b.EffectiveShape);
+                var mesh = b.Pieces is { Length: > 0 } pieces ? PiecesMesh(pieces) : ShapeMesh(b.EffectiveShape);
                 if (mesh == null) continue;
                 var tf = new MatrixTransform3D(BodyMatrix(b));
                 var mat = b.IsStatic ? fixedMat : moving;
@@ -83,6 +83,34 @@ namespace RobotWin.Studio.World
         }
 
         /// <summary>The collision shape as a mesh in the body frame.</summary>
+        /// <summary>A concave body's convex pieces in one mesh (body frame): the tray's floor and walls, the tube's wedges.</summary>
+        private static MeshGeometry3D? PiecesMesh(CollisionShape[] pieces)
+        {
+            var mesh = new MeshGeometry3D();
+            foreach (var p in pieces)
+            {
+                if (p.Vertices.Count < 4) continue;
+                var hull = ConvexHull.Compute(p.Vertices);
+                if (hull.IsDegenerate) continue;
+                var hm = hull.ToMesh();
+                // shrink each piece a hair towards its centre so the seams between pieces show
+                var c = Vec3.Zero;
+                foreach (var v in hm.Vertices) c += v;
+                c /= hm.Vertices.Count;
+                for (int i = 0; i + 2 < hm.Indices.Count; i += 3)
+                {
+                    for (int k = 0; k < 3; k++)
+                    {
+                        var v = c + (hm.Vertices[hm.Indices[i + k]] - c) * 0.985;
+                        mesh.Positions.Add(new Point3D(v.X, v.Y, v.Z));
+                        mesh.TriangleIndices.Add(mesh.Positions.Count - 1);
+                    }
+                }
+            }
+
+            return mesh.Positions.Count == 0 ? null : Frozen(mesh);
+        }
+
         private static MeshGeometry3D? ShapeMesh(CollisionShape? s)
         {
             if (s == null) return null;

@@ -33,6 +33,7 @@ The **Dünya** (world) page (Ctrl+6) is where everything comes together. Put the
 | Kumandalı araba (remote-controlled car, ESP32 + PS5 controller) | Its own ESP32 + DRV8833 PCB, a USB-C rechargeable 2S pack, a paired DualSense |
 | Su roketi (water rocket) | 2 L PET bottle, 0.6 L water, 4 bar; water jet, air thrust, fins |
 | Katı yakıtlı motor test standı (solid motor test stand, KNSB) | Two BATES sugar grains; pressure and thrust follow from the burn rate |
+| Kap ve bilyeler: içi boş parçalar (containers: hollow parts) | A tray and a tube made in the modeller; balls and cubes fall into the tray, one ball drops down the tube's bore to the ground |
 | Çizgi izleyen robot (line follower) | A 5-channel TCRT5000 over matte, faded and glossy tape |
 | Sensör gezgini (sensor rover) | Camera, LiDAR, GPS, IMU, compass and encoders live |
 | ESP32 + OV2640 kamera ile bant bulma (tape finding with a camera) | The camera sees the track from above, the ESP32 finds the tape |
@@ -90,7 +91,9 @@ The **Temel şekiller** (basic shapes) in the **Mekanik** (mechanical) tab: box,
 
 ### Collision shapes
 
-Every part's rigid body comes from its own 3D model: a round motor can rolls, a wing collides with its tapered shape, a controller with its own outline (not a bounding box). Thin pieces such as leads, pins and cable ends are left out. **Görünüm → Çarpışma şekilleri (dünya)** (View → collision shapes) draws the bodies the physics really collides, translucent over the models; they move with the bodies while the simulation runs. The maths: [Rigid bodies and contact](../physics/02-mechanics.md).
+Every part's rigid body comes from its own 3D model: a round motor can rolls, a wing collides with its tapered shape, a controller with its own outline (not a bounding box). Thin pieces such as leads, pins and cable ends are left out. **Görünüm → Çarpışma şekilleri (dünya)** (View → collision shapes) draws the bodies the physics really collides, translucent over the models; they move with the bodies while the simulation runs. Hollow models (a tray, cup, tube or U bracket made in the modeller or imported) are split into convex pieces, so things can be put inside them and a ball passes down a tube's bore. Example: the **Kap ve bilyeler** (containers) template. The maths: [Rigid bodies and contact](../physics/02-mechanics.md).
+
+![Containers: the tray's floor and wall pieces, the tube's slices](../../images/world-containers.png)
 
 ### Pressure vessels and rockets
 

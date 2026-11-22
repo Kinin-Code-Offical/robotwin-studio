@@ -120,6 +120,55 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Collision geometry; when null the contact/caster points are used.</summary>
         public CollisionShape? Shape { get; set; }
 
+        /// <summary>
+        /// Convex pieces of a concave body (body frame, see <see cref="ConvexDecomposition"/>): the solid other
+        /// bodies hit is their union, so a tray or a tube can hold things. <see cref="Shape"/> stays their common
+        /// hull and is used for bounds, the ground and drag.
+        /// </summary>
+        public CollisionShape[]? Pieces { get; set; }
+
+        /// <summary>Ray against the body's solid (its pieces when it has them), in the body frame.</summary>
+        internal bool RaycastSolid(CollisionShape shape, Vec3 localOrigin, Vec3 localDir, double maxDistance, out double t, out Vec3 normal)
+        {
+            var pieces = Pieces;
+            if (pieces == null) return shape.RaycastLocal(localOrigin, localDir, maxDistance, out t, out normal);
+            t = maxDistance;
+            normal = default;
+            bool hit = false;
+            foreach (var p in pieces)
+            {
+                if (p.RaycastLocal(localOrigin, localDir, t, out double tp, out var np) && tp < t)
+                {
+                    t = tp;
+                    normal = np;
+                    hit = true;
+                }
+            }
+
+            return hit;
+        }
+
+        /// <summary>Signed distance to the body's solid (the union of its pieces when it has them), in the body frame.</summary>
+        internal bool SignedDistanceSolid(CollisionShape shape, Vec3 local, double maxDistance, out double distance, out Vec3 normal)
+        {
+            var pieces = Pieces;
+            if (pieces == null) return shape.SignedDistance(local, maxDistance, out distance, out normal);
+            distance = double.MaxValue;
+            normal = default;
+            bool any = false;
+            foreach (var p in pieces)
+            {
+                if (p.SignedDistance(local, maxDistance, out double dp, out var np) && dp < distance)
+                {
+                    distance = dp;
+                    normal = np;
+                    any = true;
+                }
+            }
+
+            return any;
+        }
+
         private string _material = Materials.Default;
 
         /// <summary>Surface material (see <see cref="Materials"/>); stored in canonical form.</summary>

@@ -63,10 +63,31 @@ flowchart TD
 | Cylinder, wheel | Cylinder (exact, analytic) |
 | Sphere, ball | Sphere (exact) |
 | Catalogue part, board, wing | Convex hull of its own 3D model |
-| Imported model (STL/OBJ) | Convex hull of the mesh |
+| Model from the modeller or imported (STL/OBJ) | The mesh itself: its hull when convex, the union of convex pieces when hollow (tray, cup, tube, U bracket) |
 | Static obstacle, terrain | Box / triangle mesh (with a BVH) |
 
 To see them: **Görünüm → Çarpışma şekilleri (dünya)** (View → Collision shapes).
+
+### Hollow parts: convex decomposition
+
+A single convex hull fills the inside of a tray or a tube, so nothing could be put in it. A closed model mesh whose hull clearly exceeds the solid is therefore split into convex pieces, and collisions use their union. Mass, centre of mass and inertia always come from the mesh itself.
+
+The "slack" of a piece is how much its hull exceeds it:
+
+```math
+E = V_{\text{hull}} - V
+```
+
+The split is greedy: the piece with the largest $`E`$ is cut by a plane into two closed pieces (the sections are capped, holes in a section stay open), and each side splits into its separate solids. Planes come in two kinds:
+
+| Inside of the piece | Candidate planes | Choice |
+| --- | --- | --- |
+| A few flat inside faces (tray, bracket, pocket) | Planes of the faces next to reflex (inside-corner) edges | Least remaining hull volume; cut even when the volume does not drop yet, as every cut removes an inside corner |
+| Curved inside (bore, bend) | Axis planes at vertex coordinates and planes through the deepest notch | Largest drop of $`\sum V_{\text{hull}}`$ |
+
+It stops when every piece has $`E \le 0.03\,V_{\text{total}}`$ or at 24 pieces. Example: a 90 × 60 × 30 mm tray with 2.5 mm walls splits into exactly 5 pieces (floor and four walls), a Ø40/Ø30 mm tube into 14 slices.
+
+When two bodies collide every pair of pieces is tested; rays (ultrasonic, LiDAR, cameras) and cable contact use the pieces too, so a ray from above hits the tray's inner floor.
 
 Parts joined by at most two joints (e.g. motor – rotor – wheel) do not collide with each other; in reality screws and sockets hold an assembly together.
 

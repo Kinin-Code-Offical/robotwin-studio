@@ -167,7 +167,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     body = SceneBody.Cylinder(o.Id, Math.Max(size.X, size.Y) / 2, size.Z, mass, default, material);
                     break;
                 case "mesh" when g.Mesh != null:
-                    body = SceneBody.FromMesh(o.Id, g.Mesh, null, mass, material);
+                    body = SceneBody.FromMesh(o.Id, g.Mesh, null, mass, material, concave: true);   // hollow models hold things
                     it.Centre = body.ModelOffset;
                     break;
                 case "hull" when HullBody(o.Id, g.Hull, mass, material) is { } hull:

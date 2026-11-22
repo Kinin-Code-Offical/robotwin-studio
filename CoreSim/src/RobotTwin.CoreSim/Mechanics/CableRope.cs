@@ -510,7 +510,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     var shape = b.EffectiveShape!;
                     if (shape.Kind != ShapeKind.Mesh && (mid - b.Position).LengthSquared > (shape.BoundingRadius + r) * (shape.BoundingRadius + r)) continue;
                     var local = b.Orientation.InverseRotate(mid - b.Position);
-                    if (!shape.SignedDistance(local, r, out double d, out var nl) || d >= r) continue;
+                    if (!b.SignedDistanceSolid(shape, local, r, out double d, out var nl) || d >= r) continue;
                     var n = b.Orientation.Rotate(nl);
                     var push = n * (r - d);
                     if (!pi) _x[i] += pj ? push * 2 : push;
@@ -525,7 +525,7 @@ namespace RobotTwin.CoreSim.Mechanics
             double r = Radius;
             if (shape.Kind != ShapeKind.Mesh && (x - b.Position).LengthSquared > (shape.BoundingRadius + r) * (shape.BoundingRadius + r)) return;
             var local = b.Orientation.InverseRotate(x - b.Position);
-            if (!shape.SignedDistance(local, r, out double d, out var nl) || d >= r) return;
+            if (!b.SignedDistanceSolid(shape, local, r, out double d, out var nl) || d >= r) return;
             var n = b.Orientation.Rotate(nl);
             double pen = (r - d) * scale;
             x += n * pen;
@@ -557,7 +557,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     var shape = b.EffectiveShape!;
                     var local = b.Orientation.InverseRotate(x - b.Position);
                     if (shape.Kind != ShapeKind.Mesh && local.LengthSquared > (shape.BoundingRadius + Radius) * (shape.BoundingRadius + Radius)) continue;
-                    if (shape.SignedDistance(local, Radius, out double d, out _) && d < Radius) worst = Math.Max(worst, Radius - d);
+                    if (b.SignedDistanceSolid(shape, local, Radius, out double d, out _) && d < Radius) worst = Math.Max(worst, Radius - d);
                 }
             }
 

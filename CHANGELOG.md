@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Hollow parts collide as their real shape:** a closed model mesh whose convex hull clearly exceeds it (tray, cup, tube, U bracket) is split into convex pieces (greedy plane cuts: along the faces at inside corners for flat-walled parts, the plane that removes the most hull volume for curved insides; separate parts on one side of a cut become separate pieces). Bodies collide piece by piece, rays, cables and the start overlap check use the pieces, and the collision view draws them. Mass and inertia still come from the mesh. New world template **Kap ve bilyeler**.
+
 ## [1.2.0] - 2026-11-22
 
 The modeller gets Blender's cutting and selection tools, and every message is in one language.

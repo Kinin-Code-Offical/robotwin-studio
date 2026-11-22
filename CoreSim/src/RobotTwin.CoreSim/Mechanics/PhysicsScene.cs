@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RobotTwin.CoreSim.Mechanics
 {
@@ -161,7 +162,7 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <paramref name="modelOrigin"/>.
         /// </summary>
         public static SceneBody FromMesh(string id, MeshModel mesh, double? densityKgPerM3 = null, double? massKg = null, string material = Materials.Default,
-            Vec3 modelOrigin = default, int maxHullVertices = 32)
+            Vec3 modelOrigin = default, int maxHullVertices = 32, bool concave = false)
         {
             string mat = Materials.Canonical(material);
             var mp = massKg is double m && m > 0
@@ -172,6 +173,16 @@ namespace RobotTwin.CoreSim.Mechanics
             foreach (var v in mesh.Vertices) pts.Add(v - com);
             var b = Make(id, mp, CollisionShape.ConvexHull(pts, maxHullVertices), mat, modelOrigin + com);
             b.ModelOffset = com;
+            if (concave)
+            {
+                // a hollow part (tray, cup, tube, bracket) collides as the union of convex pieces, not as its filled hull
+                var pieces = ConvexDecomposition.Decompose(mesh);
+                if (pieces.Count > 1)
+                {
+                    b.Pieces = pieces.Select(p => CollisionShape.ConvexHull(p.Select(v => v - com).ToList(), maxHullVertices)).ToArray();
+                }
+            }
+
             return b;
         }
 
@@ -1019,12 +1030,37 @@ namespace RobotTwin.CoreSim.Mechanics
         }
 
         /// <summary>Narrow phase between dynamic body a and body b (dynamic or static). Normals point from b to a.</summary>
+        /// <summary>Added to contact feature ids while a pair of convex pieces of concave bodies is tested (keeps warm starts apart).</summary>
+        private int _featureBase;
+
         private void CollidePair(int a, int b, double h)
+        {
+            var pa = Bodies[a].Pieces;
+            var pb = Bodies[b].Pieces;
+            if (pa == null && pb == null)
+            {
+                CollideShapes(a, b, _shapes[a]!, _shapes[b]!, h);
+                return;
+            }
+
+            // concave bodies: every convex piece of one against every piece (or the shape) of the other
+            int na = pa?.Length ?? 1, nb = pb?.Length ?? 1;
+            for (int i = 0; i < na; i++)
+            {
+                for (int j = 0; j < nb; j++)
+                {
+                    _featureBase = (i * nb + j + 1) << 13;
+                    CollideShapes(a, b, pa != null ? pa[i] : _shapes[a]!, pb != null ? pb[j] : _shapes[b]!, h);
+                }
+            }
+
+            _featureBase = 0;
+        }
+
+        private void CollideShapes(int a, int b, CollisionShape sa, CollisionShape sb, double h)
         {
             var A = Bodies[a];
             var B = Bodies[b];
-            var sa = _shapes[a]!;
-            var sb = _shapes[b]!;
             double margin = Margin(a, b, h);
             var props = Materials.Pair(A.MaterialIndex, B.MaterialIndex);
             var xa = A.Position;
@@ -1344,7 +1380,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             SetupSpin(ref c, sa.InvI, invIB, props, rollRadius); // [phys]
             c.MaxPn = 0;
-            c.Key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)(feature & 0x1FFFFF);
+            c.Key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)((feature + _featureBase) & 0x1FFFFF);
             if (_warm.TryGetValue(c.Key, out var ws))
             {
                 c.Pn = ws.Pn;
@@ -2043,7 +2079,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if ((oc - d * tc).LengthSquared > r * r) continue;
                 var lo = b.Orientation.InverseRotate(origin - b.Position);
                 var ld = b.Orientation.InverseRotate(d);
-                if (!shape.RaycastLocal(lo, ld, best, out double t, out var nl) || t >= best) continue;
+                if (!b.RaycastSolid(shape, lo, ld, best, out double t, out var nl) || t >= best) continue;
                 best = t;
                 found = true;
                 hit = new SceneRayHit { Distance = t, Point = origin + d * t, Normal = b.Orientation.Rotate(nl), Body = b, Material = b.Material };
@@ -2075,7 +2111,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (s == null || !s.HasSolid) continue;
                 var local = b.Orientation.InverseRotate(p - b.Position);
                 if (local.LengthSquared > (s.BoundingRadius + margin) * (s.BoundingRadius + margin)) continue;
-                if (s.SignedDistance(local, margin, out double d, out _) && d < margin) return true;
+                if (b.SignedDistanceSolid(s, local, margin, out double d, out _) && d < margin) return true;
             }
 
             return false;
@@ -2134,7 +2170,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 var shape = _shapes[i]!;
                 var lo = b.Orientation.InverseRotate(origin - b.Position);
                 var ld = b.Orientation.InverseRotate(d);
-                if (!shape.RaycastLocal(lo, ld, best, out double t, out var nl) || t >= best) continue;
+                if (!b.RaycastSolid(shape, lo, ld, best, out double t, out var nl) || t >= best) continue;
                 best = t;
                 found = true;
                 hit = new SceneRayHit { Distance = t, Point = origin + d * t, Normal = b.Orientation.Rotate(nl), Body = b, Material = b.Material };

@@ -63,10 +63,31 @@ flowchart TD
 | Silindir, tekerlek | Silindir (tam, analitik) |
 | Küre, bilye | Küre (tam) |
 | Katalog parçası, kart, kanat | Kendi 3D modelinin dışbükey zarfı |
-| İçe aktarılan model (STL/OBJ) | Ağın dışbükey zarfı |
+| Modelleyiciden ya da içe aktarılan model (STL/OBJ) | Ağın kendisi: dışbükeyse zarfı, içi boşsa (tepsi, kap, boru, U braket) dışbükey parçaların birleşimi |
 | Sabit engel, arazi | Kutu / üçgen ağ (BVH ile) |
 
 Görmek için: **Görünüm → Çarpışma şekilleri (dünya)**.
+
+### İçi boş parçalar: dışbükey parçalara ayırma
+
+Tek bir dışbükey zarf, tepsinin ya da borunun içini doldurur; içine hiçbir şey konamaz. Bu yüzden kapalı bir model ağı, zarfı gövdeyi belirgin biçimde aşıyorsa dışbükey parçalara ayrılır ve çarpışma bu parçaların birleşimiyle hesaplanır. Kütle, kütle merkezi ve eylemsizlik ise her zaman ağın kendisinden gelir.
+
+Bir parçanın "boşluk payı", zarfının gövdeden ne kadar büyük olduğudur:
+
+```math
+E = V_{\text{zarf}} - V
+```
+
+Ayırma açgözlüdür: $`E`$ değeri en büyük olan parça bir düzlemle iki kapalı parçaya kesilir (kesit yüzeyleri kapatılır, kesitteki delikler açık kalır), her taraf kendi ayrı katılarına bölünür. Düzlem iki türden seçilir:
+
+| Parçanın içi | Aday düzlemler | Seçim |
+| --- | --- | --- |
+| Az sayıda düz iç yüz (tepsi, braket, cep) | İçbükey kenarlara (iç köşelere) komşu yüzlerin düzlemleri | Kalan zarf hacmi en küçük olan; hacim hemen azalmasa da kesilir, çünkü her kesim bir iç köşeyi yok eder |
+| Eğri iç yüz (delik, büküm) | Köşe koordinatlarındaki eksen düzlemleri ve en derin girintiden geçen düzlemler | $`\sum V_{\text{zarf}}`$ en çok azalan |
+
+Her parçada $`E \le 0{,}03\,V_{\text{toplam}}`$ olunca ya da 24 parçaya ulaşınca durulur. Örnek: 2,5 mm duvarlı 90 × 60 × 30 mm tepsi tam olarak zemin ve dört duvar olmak üzere 5 parçaya, Ø40/Ø30 mm boru 14 dilime ayrılır.
+
+İki gövde çarpışırken her parça çifti ayrı ayrı denenir; ışın (ultrasonik, LiDAR, kamera) ve kablo teması da parçalara göre hesaplanır, yani yukarıdan atılan bir ışın tepsinin iç zeminine çarpar.
 
 Birbirine en çok iki eklemle bağlı parçalar (ör. motor – rotor – tekerlek) birbirleriyle çarpışmaz; montajın kendi iç teması gerçekte vida ve yuvalarla sağlanır.
 

@@ -95,6 +95,30 @@ namespace RobotTwin.CoreSim.Sandbox
             return result;
         }
 
+        /// <summary>Boxes of a body: one per convex piece of a concave body (a tray's floor and walls), else one.</summary>
+        private static List<(Vec3 C, Vec3[] Axes, Vec3 Half)> Obbs(SceneBody body)
+        {
+            if (body.Pieces is not { Length: > 0 } pieces) return new List<(Vec3, Vec3[], Vec3)> { Obb(body) };
+            var q = body.Orientation;
+            var axes = new[] { q.Rotate(Vec3.UnitX), q.Rotate(Vec3.UnitY), q.Rotate(Vec3.UnitZ) };
+            var list = new List<(Vec3, Vec3[], Vec3)>(pieces.Length);
+            foreach (var p in pieces)
+            {
+                if (p.Vertices.Count == 0) continue;
+                var lo = new Vec3(double.MaxValue, double.MaxValue, double.MaxValue);
+                var hi = new Vec3(double.MinValue, double.MinValue, double.MinValue);
+                foreach (var v in p.Vertices)
+                {
+                    lo = new Vec3(Math.Min(lo.X, v.X), Math.Min(lo.Y, v.Y), Math.Min(lo.Z, v.Z));
+                    hi = new Vec3(Math.Max(hi.X, v.X), Math.Max(hi.Y, v.Y), Math.Max(hi.Z, v.Z));
+                }
+
+                list.Add((body.Position + q.Rotate((lo + hi) * 0.5), axes, (hi - lo) * 0.5));
+            }
+
+            return list;
+        }
+
         private static (Vec3 C, Vec3[] Axes, Vec3 Half) Obb(SceneBody body)
         {
             var s = body.EffectiveShape!;
@@ -127,8 +151,17 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Penetration depth of two oriented boxes (0 when separated), minimum over the 15 SAT axes.</summary>
         private static double ObbOverlap(SceneBody ba, SceneBody bb)
         {
-            var a = Obb(ba);
-            var b = Obb(bb);
+            double worst = 0;
+            foreach (var a in Obbs(ba))
+            {
+                foreach (var b in Obbs(bb)) worst = Math.Max(worst, BoxOverlap(a, b));
+            }
+
+            return worst;
+        }
+
+        private static double BoxOverlap((Vec3 C, Vec3[] Axes, Vec3 Half) a, (Vec3 C, Vec3[] Axes, Vec3 Half) b)
+        {
             var d = b.C - a.C;
             double min = double.PositiveInfinity;
             IEnumerable<Vec3> Axes()
