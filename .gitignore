@@ -12,6 +12,8 @@
 *.iobj
 *.ipdb
 *.obj
+# ...but the bundled part models (Wavefront OBJ) are source
+!Studio/RobotWin.Studio/Models3D/Bundled/*.obj
 *.o
 *.lib
 # ...but SPICE model libraries used as test fixtures are source, not build output

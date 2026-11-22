@@ -58,6 +58,7 @@ namespace RobotWin.Studio.Models3D
             bool big = model.Contains("996") || model.Contains("3218") || model.Contains("995") || model.Contains("STANDARD");
             bool metal = model.Contains("MG") || model.Contains("DS");
             uint caseRgb = big || metal ? 0x1D1D20u : 0x2F63C8u;
+            if (!big && RealMicroServo(b, r, metal, caseRgb)) return;
             double L = big ? 40.7 : 22.8, W = big ? 19.7 : 12.2, tabZ = big ? 26.9 : 15.9, tabT = 2.5, topZ = big ? 36.5 : 22.7;
             double span = big ? 54.0 : 32.3, sx = -L / 2 + (big ? 10.0 : 5.9), dome = big ? 7.0 : 5.9, domeH = big ? 3.0 : 4.0;
             var body = b.Body(caseRgb, 0.3);
@@ -122,6 +123,66 @@ namespace RobotWin.Studio.Models3D
             for (int i = 0; i < 3; i++) b.Anchor(PadOfPin(r, order[i], (i + 1).ToString(CultureInfo.InvariantCulture)), sockets[i], V(1, 0, 0));
         }
 
+        /// <summary>
+        /// 9 g micro servo from the maker's CAD model (case 22.6 × 12 mm, tabs 31.3 mm, spline top at 30.7 mm):
+        /// the output shaft sits 6 mm from the −x end and the cable leaves under it. SG90 gets the same
+        /// case in translucent-looking blue; MG90S keeps the dark case.
+        /// </summary>
+        private static bool RealMicroServo(PartBuilder b, ModelRequest r, bool metal, uint caseRgb)
+        {
+            const uint caseCad = 0x323232u;   // the CAD case colour; its purple sticker is 0x37004C
+            Color Recolour(Color c)
+            {
+                if (Math.Abs(c.R - 0x32) <= 6 && Math.Abs(c.G - 0x32) <= 6 && Math.Abs(c.B - 0x32) <= 6) return Mat.C(caseRgb);
+                if (c.R == 0x37 && c.G == 0 && c.B == 0x4C) return metal ? Color.FromRgb(0x24, 0x24, 0x2A) : Color.FromRgb(0x23, 0x4D, 0xA0);
+                return c;
+            }
+
+            if (!BundledModels.Draw(b, "servo-micro", caseCad, null, Recolour, metal ? 0.3 : 0.45)) return false;
+            const double sx = -5.3, top = 22.7, splineTop = 30.68, W = 12.0, tabZ = 15.9;
+            b.Heat(P(0, 0, top));
+            var ink = metal ? Color.FromRgb(0xD8, 0xD8, 0xD8) : Color.FromRgb(0xF2, 0xF2, 0xF2);
+            string name = r.Model.Length > 0 ? r.Model : "SG90";
+            FrontLabel(b, name, P(1.0, W / 2 + 0.05, tabZ * 0.62), V(0, 1, 0), V(0, 0, 1), 12.0, tabZ * 0.24, ink, true);
+            FrontLabel(b, metal ? "Metal Gear" : "9g Micro Servo", P(1.0, W / 2 + 0.05, tabZ * 0.34), V(0, 1, 0), V(0, 0, 1), 13.0, tabZ * 0.15, ink);
+
+            // Spline (from the CAD model) and the horn turn together about the output shaft.
+            double hz = splineTop - 2.6;
+            var horn = b.Rotating("horn", P(sx, 0, hz), V(0, 0, 1), P(sx, 0, hz + 4.5));
+            BundledModels.Draw(horn, "servo-micro-spline", null, c => metal || BundledModels.IsBrightMetal(c) ? Mat.Brass : null);
+            var hornMat = Mat.Plastic(0xF4F4F0u, 0.25);
+            double hubR = 3.5, hubH = 3.8, armT = 1.6, az = hz + hubH - armT, armLen = 15.5;
+            horn[hornMat].CylinderZ(sx, 0, hz + 0.5, hz + hubH, hubR, 24);
+            using (b.At(Mx.T(sx, 0, 0)))
+            {
+                var outline = new List<Point> { new Point(0, -hubR * 0.85) };
+                for (int i = 0; i <= 8; i++)
+                {
+                    double t = -Math.PI / 2 + Math.PI * i / 8;
+                    outline.Add(new Point(armLen + 1.8 * Math.Cos(t), 1.8 * Math.Sin(t)));
+                }
+
+                outline.Add(new Point(0, hubR * 0.85));
+                horn[hornMat].Extrude(outline, az, az + armT, false);
+                for (int i = 0; i < 5; i++) horn[Mat.Plastic(0x2A2A2Cu, 0)].CylinderZ(armLen - i * 2.6, 0, az + armT, az + armT + 0.01, 0.55, 10, false, true);
+            }
+
+            horn[Mat.Steel].CylinderZ(sx, 0, hz + hubH, hz + hubH + 0.4, 1.2, 12, false, true);
+
+            // Cable: leaves the case bottom under the output shaft (−x), brown / red / orange to a Dupont plug.
+            using (b.At(Mx.Rz(180)))
+            {
+                const double ex = 13.0, cz = 1.0;
+                var path = MeshBuilder.Smooth(new[] { P(ex, 0, cz), P(ex + 8.0, 0, cz), P(ex + 20.0, 0, 1.0), P(ex + 55.0, 0, 1.3) }, 6.0, 8);
+                var order = new[] { "GND", "V+", "SIG" };
+                Ribbon(b, path, new[] { 0x6B4428u, 0xC8282Cu, 0xF08A1Eu }, 0.55, 1.15);
+                var sockets = DupontHousing(b, ex + 55.0, 0, 1.3, 3);
+                for (int i = 0; i < 3; i++) b.Anchor(PadOfPin(r, order[i], (i + 1).ToString(CultureInfo.InvariantCulture)), sockets[i], V(1, 0, 0));
+            }
+
+            return true;
+        }
+
         // ================================================================== DC motors
 
         internal static void Motor(PartBuilder b, ModelRequest r)
@@ -135,8 +196,32 @@ namespace RobotWin.Studio.Models3D
             else if (m.Contains("N20")) N20(b, a, bb);
             else if (m.Contains("25GA") || m.Contains("JGA25") || m.Contains("370")) Gear370(b, m.Contains("JGA") || m.Contains("ENC"), a, bb);
             else if (m.Contains("TT")) TtMotor(b, a, bb);
-            else if (m.Contains("130")) Can130(b, -13.75, 0, 7.5, a, bb, true);
+            else if (m.Contains("130"))
+            {
+                if (!Real130(b, a, bb)) Can130(b, -13.75, 0, 7.5, a, bb, true);
+            }
             else TtMotor(b, a, bb);
+        }
+
+        /// <summary>Two solder tabs on a motor's end face at <paramref name="xEnd"/> (axis height cz), with the cable anchors.</summary>
+        private static void EndTabs(PartBuilder b, double xEnd, double cz, string padA, string padB)
+        {
+            foreach (var (dy, pad) in new[] { (-5.2, padA), (5.2, padB) })
+            {
+                double x = xEnd + 2.0;
+                b[Mat.Brass].Block(xEnd - 1.0, dy - 1.0, cz - 3.4, x + 0.6, dy + 1.0, cz - 3.0);
+                b[Mat.Brass].Block(x - 0.2, dy - 1.0, cz - 3.4, x + 0.3, dy + 1.0, cz + 1.8);
+                b.Anchor(pad, P(x + 0.3, dy, cz + 1.0), V(1, 0, 0));
+            }
+        }
+
+        /// <summary>130-size motor from the maker's CAD model: axis along x at z = 7.5, shaft tip at x = −22.75, end cap toward +x.</summary>
+        private static bool Real130(PartBuilder b, string padA, string padB)
+        {
+            if (!BundledModels.Draw(b, "motor-130", 0x5A5A5Au, c => c.R == 0x73 ? Mat.Plastic(0x2C2C30u, 0.2) : null, c => c.R == 0x5A ? Color.FromRgb(0xC9, 0xCC, 0xD2) : c, 0.8)) return false;
+            EndTabs(b, 15.25, 7.5, padA, padB);
+            b.Heat(P(-1.75, 0, 15.0));
+            return true;
         }
 
         /// <summary>130-size can (flattened Ø20, 27.5 long) along +x from x0, axis at height cz; terminals at the rear.</summary>
@@ -167,6 +252,7 @@ namespace RobotWin.Studio.Models3D
 
         private static void TtMotor(PartBuilder b, string padA, string padB)
         {
+            if (RealTt(b, padA, padB)) return;
             // Yellow gearbox 37.5 × 18.8 × 22.4 mm with the double-flat output shaft 11.3 mm from its front.
             double gx0 = -34.0, gx1 = gx0 + 37.5, hw = 9.4, gh = 22.4, sx = gx0 + 11.3, sz = 11.2;
             var box = b.Body(0xF2C230u, 0.25);
@@ -194,6 +280,22 @@ namespace RobotWin.Studio.Models3D
                 shaft[Mat.Plastic(0xF6F2E2u, 0.3)].Extrude(dd, -hw - 9.0, hw + 9.0, true);
                 shaft[Mat.Plastic(0xF6F2E2u, 0.3)].Cylinder(4.2, -hw - 1.0, hw + 1.0, 24);
             }
+        }
+
+        /// <summary>
+        /// TT gear motor from the maker's CAD model: output shaft along y at (−22.7, 11.2), gearbox 22.4 mm
+        /// tall from z = 0, the 130 can toward +x with its end face at x = 29.9.
+        /// </summary>
+        private static bool RealTt(PartBuilder b, string padA, string padB)
+        {
+            Material? Own(Color c) => BundledModels.IsBrightMetal(c) ? Mat.Nickel : c.R < 10 ? Mat.Plastic(0x1A1A1Cu, 0.2) : null;
+            if (!BundledModels.Draw(b, "tt-motor", 0xFFF23Cu, Own, c => c.R == 0xFF && c.G == 0xF2 ? Color.FromRgb(0xF2, 0xC2, 0x30) : c, 0.25)) return false;
+            const double sx = -22.7, sz = 11.2;
+            b.Heat(P(-12.0, 0, 22.4));
+            EndTabs(b, 29.9, sz, padA, padB);
+            var shaft = b.Rotating("shaft", P(sx, 0, sz), V(0, 1, 0), P(sx, 18.3, sz));
+            BundledModels.Draw(shaft, "tt-motor-shaft", null, null, null, 0.3);
+            return true;
         }
 
         private static void Gear370(PartBuilder b, bool encoder, string padA, string padB)

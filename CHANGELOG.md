@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Hollow parts collide as their real shape:** a closed model mesh whose convex hull clearly exceeds it (tray, cup, tube, U bracket) is split into convex pieces (greedy plane cuts: along the faces at inside corners for flat-walled parts, the plane that removes the most hull volume for curved insides; separate parts on one side of a cut become separate pieces). Bodies collide piece by piece, rays, cables and the start overlap check use the pieces, and the collision view draws them. Mass and inertia still come from the mesh. New world template **Kap ve bilyeler**.
+- **Real part models:** the TT gear motor, the 130 motor and the 9 g micro servos (SG90, MG90S) are drawn from the makers' CAD models (Adafruit, MIT) instead of approximations: real gearbox and case shapes, smooth shading, the turning shaft and servo spline, the servo cable leaving under the output shaft. Heat glow and charring still work on their bodies. Licences in THIRD_PARTY_NOTICES.md.
 
 ## [1.2.0] - 2026-11-22
 
