@@ -123,6 +123,8 @@ namespace RobotWin.Studio.World
                 _ => BuildBody(o)
             };
             if (model.Bounds.IsEmpty) model.Bounds = model.Body.Bounds;
+            if (o.Kind is WorldObjectKind.Body or WorldObjectKind.Model)
+                SurfaceLook.Apply(model.Body, o, ParseColor(o.Color, MaterialColor(o.Material)), model.Heat);   // [surface] World/SurfaceLook.cs
             return model;
         }
 

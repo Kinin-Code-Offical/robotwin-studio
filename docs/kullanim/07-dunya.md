@@ -159,8 +159,17 @@ En çok iki eklemle birbirine bağlı parçalar birbiriyle çarpışmaz. Bir nes
 Her nesnenin denetçisinde **Fizik** bölümü:
 
 - **Sabit:** nesne zemine veya masaya sabitlenmiştir, hareket etmez.
-- **Malzeme:** PLA, PETG, ABS, Akrilik, Alüminyum, Çelik, Karbon, Ahşap, MDF, Kauçuk, FR4, PET, Karton. Sürtünme ve sekme malzemeye göre değişir.
+- **Malzeme:** fiziğin bildiği her malzeme: PLA, PETG, ABS, PET, Akrilik, Alüminyum, Çelik, Bakır, Kurşun, Karbon, Ahşap, Kontrplak, Balsa, MDF, Karton, Kauçuk, FR4. Sürtünme ve sekme malzemeye göre değişir. Listenin altındaki kart malzemenin sayılarını gösterir: yoğunluk, elastisite modülü, akma dayanımı, ısı iletimi, özgül ısı, ışınım ve yumuşama/erime sıcaklığı.
 - **Doluluk (%)** ve **Kütle (g, 0 = otomatik)**.
+
+**Görünüş ve yüzey** bölümü (gövdeler ve içe aktarılan modeller):
+
+- **Renk:** hazır renk kutularından birine tıklayın, **Renk kodu**na `#RRGGBB` yazın ya da **Malzeme rengi** ile malzemenin kendi rengine dönün.
+- **Yüzey:** mat boya, parlak boya/vernik, parlatılmış metal, fırçalanmış metal, siyah eloksal, oksitli/paslı, ahşap damarı, karbon örgü, kraft kâğıt, kauçuk kaplama, 3B baskı katmanları. Doku gerçek ölçekte çizilir (0,2 mm baskı katmanı, 2×2 dimi karbon örgü…). Yüzey yalnız görüntü değildir: ısıl ışınımı (ε) belirler. Parlatılmış alüminyum (ε 0,05) ısısını çok az ışınımla verir, siyah eloksal (ε 0,85) çok daha hızlı soğur. Isı ağı, soğuma ve ısı kamerası bu değerle hesaplanır. Örnek: **Malzeme ve yüzey vitrini** şablonu.
+
+![Malzeme ve yüzey vitrini: ahşap, karbon, fırçalanmış alüminyum, pas, kraft, kauçuk, PLA baskı](../images/world-surfaces.png)
+
+![180 s sonra ısı kamerası: parlatılmış blok hâlâ sıcak, siyah eloksal blok soğumuş](../images/world-surfaces-thermal.png)
 
 **Ortam** sekmesi:
 

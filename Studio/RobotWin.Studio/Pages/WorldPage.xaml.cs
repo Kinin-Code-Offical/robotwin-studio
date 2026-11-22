@@ -28,7 +28,6 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class WorldPage : UserControl
     {
-        private static readonly string[] Materials = { "PLA", "PETG", "ABS", "AKRİLİK", "ALÜMİNYUM", "ÇELİK", "KARBON", "AHŞAP", "BALSA", "KURŞUN", "MDF", "KAUÇUK", "FR4" };
 
         private readonly MainWindow _main;
         private readonly WorldSession _session = new WorldSession(PartLibrary.Default);
@@ -651,12 +650,13 @@ namespace RobotWin.Studio.Pages
             if (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model)
             {
                 var mat = new ComboBox { Margin = new Thickness(0, 0, 0, 6) };
-                foreach (var m in Materials) mat.Items.Add(new ComboBoxItem { Content = m, IsSelected = string.Equals(m, o.Material, StringComparison.OrdinalIgnoreCase) });
+                foreach (var m in RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.Names) mat.Items.Add(new ComboBoxItem { Content = m, IsSelected = string.Equals(m, o.Material, StringComparison.OrdinalIgnoreCase) });
                 mat.SelectionChanged += (_, _) =>
                 {
                     if (mat.SelectedItem is ComboBoxItem it && (string)it.Content != o.Material) Edit("Malzeme değişti", () => o.Material = (string)it.Content);
                 };
                 Inspector.Children.Add(Labeled("Malzeme", mat));
+                Inspector.Children.Add(Note(MaterialCard(o.Material ?? "PLA")));   // [surface] Pages/WorldPage.Surface.cs
                 Inspector.Children.Add(NumberField("Doluluk (%)", o.Infill * 100, v => Edit("Doluluk değişti", () => o.Infill = v / 100), 5, 100, "0"));
             }
 
@@ -673,14 +673,9 @@ namespace RobotWin.Studio.Pages
                         o.SizeY = Math.Max(0.001, y / 1000);
                         o.SizeZ = Math.Max(0.0005, z / 1000);
                     })));
-                var color = new TextBox { Text = o.Color ?? string.Empty, Tag = "#RRGGBB (boş = malzeme rengi)" };
-                color.LostFocus += (_, _) =>
-                {
-                    string c = color.Text.Trim();
-                    if (c != (o.Color ?? string.Empty)) Edit("Renk değişti", () => o.Color = c.Length == 0 ? null : c);
-                };
-                Inspector.Children.Add(Labeled("Renk", color));
             }
+
+            SurfaceSection(o);   // [surface] colour swatches, finish (look + emissivity)
 
             if (o.Kind == WorldObjectKind.Component) ComponentSection(o);
             ReadySection(world, o);   // [objs]

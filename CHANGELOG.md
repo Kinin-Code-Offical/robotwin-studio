@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lift-off and jet heating:** the event log reports when the thrust lifts the motor off the pad, with the thrust, the weight of everything joined to it and their ratio. A hot jet heats the first surface it hits (impinging round-jet convection into that part's heat-network node).
 - **Rockets in the render:** recordings carry chamber pressure, gas temperature, thrust, mass flow, exit velocity, burning surface, grain surface temperature, grain left, smoke flow and parachute opening; the replay draws flame, smoke and parachute from the recording.
 
+- **Materials, colours and surface finishes in the world:** the material list shows every material the physics knows (plywood, PET, cardboard, copper were missing) with a card of its numbers; colour swatches and a colour box for bodies and imported models; a **Yüzey** (finish) for each part: matte/gloss paint, polished, brushed, anodised, rusty metal, wood grain, carbon twill, kraft, rubber, 3D-print layers. Textures are drawn at real size on any shape (per-triangle planar projection). The finish sets the thermal emissivity used by the heat network: a black anodised block cools clearly faster than a polished one (51 °C against 72 °C after 10 minutes from 150 °C). New template **Malzeme ve yüzey vitrini**.
+
 ### Fixed
 
 - **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).

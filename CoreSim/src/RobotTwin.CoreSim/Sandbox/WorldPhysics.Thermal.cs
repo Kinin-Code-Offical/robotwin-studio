@@ -90,6 +90,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (it.Body == null) continue;
                 var o = it.Object;
                 var mat = StructuralMaterial.For(o.Kind == WorldObjectKind.Board ? "FR4" : o.Material);
+                mat.Emissivity = SurfaceFinish.EmissivityOf(o, mat.Emissivity);   // [surface] polished, anodised, painted…
                 var size = SizeOf(it.Body);
                 double area = 2 * (size.X * size.Y + size.Y * size.Z + size.Z * size.X);
                 double mass = it.Body.IsStatic ? mat.Density * Math.Max(1e-7, size.X * size.Y * size.Z) : it.Body.Mass;

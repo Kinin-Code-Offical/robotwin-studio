@@ -159,7 +159,16 @@ Parts joined by at most two joints do not collide with each other. Dragging an o
 Every object's inspector has a **Fizik** (physics) section:
 
 - **Sabit** (fixed): the object is fixed to the floor or table and does not move.
-- **Malzeme** (material): PLA, PETG, ABS, acrylic, aluminium, steel, carbon, wood, MDF, rubber, FR4, PET, cardboard. Friction and bounce depend on the material.
+- **Malzeme** (material): every material the physics knows: PLA, PETG, ABS, PET, acrylic, aluminium, steel, copper, lead, carbon, wood, plywood, balsa, MDF, cardboard, rubber, FR4. Friction and bounce depend on the material. The card under the list gives the material's numbers: density, Young's modulus, yield strength, thermal conductivity, specific heat, emissivity and softening/melting temperature.
+
+The **Görünüş ve yüzey** (look and surface) section, for bodies and imported models:
+
+- **Renk** (colour): click a swatch, type `#RRGGBB` in **Renk kodu**, or go back to the material's own colour with **Malzeme rengi**.
+- **Yüzey** (finish): matte paint, gloss paint/varnish, polished metal, brushed metal, black anodising, oxidised/rusty, wood grain, carbon twill, kraft paper, rubber coating, 3D-print layers. The texture is drawn at real size (0.2 mm print layers, 2×2 twill carbon…). The finish is not only a look: it sets the thermal emissivity (ε). Polished aluminium (ε 0.05) radiates very little heat, black anodising (ε 0.85) cools much faster. The heat network, cooling and the thermal camera use this value. Example: the **Malzeme ve yüzey vitrini** (materials and finishes) template.
+
+![Materials and finishes: wood, carbon, brushed aluminium, rust, kraft, rubber, printed PLA](../../images/world-surfaces.png)
+
+![Thermal camera after 180 s: the polished block is still hot, the black anodised one has cooled](../../images/world-surfaces-thermal.png)
 - **Doluluk (%)** (infill) and **Kütle (g, 0 = otomatik)** (mass, 0 = automatic).
 
 The **Ortam** (environment) tab:
