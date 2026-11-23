@@ -69,6 +69,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 wall.DragArea = Vec3.Zero;   // the shell's outer drag is the floor body's job
                 Scene.AddBody(wall);
                 var joint = Scene.AddJoint(JointKind.Fixed, floor, wall, wall.Position, Vec3.UnitZ, o.Id + ":duvar" + k);
+                joint.Weld = true;   // [weld] the walls and floor are one moulded / glued piece
                 _shellJoints.Add(joint);
                 Scene.NoCollide.Add((floor, wall));
                 foreach (var other in it.Walls) Scene.NoCollide.Add((other, wall));
@@ -95,6 +96,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 var (gap, _) = LidGap(shell, lid);
                 if (Math.Abs(gap) > 0.003) continue;   // not seated on the rim: the screws do not reach
                 var joint = Scene.AddJoint(JointKind.Fixed, shell.Body, lid.Body, lid.Body.Position, Vec3.UnitZ, lid.Object.Id + ":vida");
+                joint.Weld = true;   // [weld] screwed down: the lid moves with the box
                 _shellJoints.Add(joint);
                 Scene.NoCollide.Add((shell.Body, lid.Body));
                 foreach (var w in shell.Walls) Scene.NoCollide.Add((w, lid.Body));

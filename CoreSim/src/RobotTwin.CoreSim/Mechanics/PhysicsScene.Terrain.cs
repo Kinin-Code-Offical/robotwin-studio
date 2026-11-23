@@ -76,7 +76,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 ref var c = ref _contacts[i];
                 if (c.B >= 0 || c.Pn <= 0) continue;
                 double n = c.Pn / h;
-                var p = Bodies[c.A].Position + c.RA;
+                var p = _state[c.SA].X + c.RA;   // [weld] RA is from the solver body's centre
                 load[c.A] = load.TryGetValue(c.A, out var prev) ? (prev.N + n, prev.P + p * n) : (n, p * n);
             }
 

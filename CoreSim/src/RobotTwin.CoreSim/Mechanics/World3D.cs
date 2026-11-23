@@ -262,6 +262,9 @@ namespace RobotTwin.CoreSim.Mechanics
         internal Vec3 Force;
         internal Vec3 Torque;
         internal Vec3 ExternalForce, ExternalTorque, StepContactImpulse;
+
+        /// <summary>[weld] Impulses on this part over the step (applied forces, contact torque, other joints), for the loads of the welds it sits in.</summary>
+        internal Vec3 StepApplied, StepAppliedAngular, StepContactAngular, StepJointImpulse, StepJointAngular;
         internal int Slot = -1;
         internal Aabb CachedBounds;
         internal Vec3 CachedBoundsPos;

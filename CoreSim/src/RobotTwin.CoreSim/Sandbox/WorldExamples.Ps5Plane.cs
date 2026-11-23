@@ -9,7 +9,7 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>
         /// [ps5plane] A 1 m park flyer flown from a PS5 DualSense over Bluetooth, built like a real one:
         /// a hollow balsa pod with a carbon tail boom, a 4° dihedral Clark Y wing with ailerons on its outer
-        /// halves (one SG90 in the wing bay, torque rods), elevator and rudder on pushrods along the boom,
+        /// halves (one SG90 in the pod under the wing, torque rods), elevator and rudder on pushrods along the boom,
         /// a 2212 1000KV outrunner with an 8 × 4.5" prop on a 20 A ESC, a 3S 850 mAh pack placed for the CG,
         /// and an ESP32 + MPU-6050 flight controller running <see cref="Ps5PlaneSketch"/> (Bluepad32).
         /// It stands on a tricycle gear (steel wire legs, free-rolling wheels on axles) at the end of an
@@ -25,7 +25,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 Description = "ESP32 uçuş kartı ve DualSense ile pistten kalkan 1 m'lik eğitim uçağı."
             };
             const double z0 = 0.115;                 // pod bottom: the gear keeps the 8" prop 3 cm off the runway
-            const double podTop = z0 + 0.050, boomZ = z0 + 0.025, tailX = -0.50;
+            const double podTop = z0 + 0.052, boomZ = z0 + 0.025, tailX = -0.50;   // the wing sits on the 2 mm hatch
 
             var pod = w.AddBody("box", 0.26, 0.045, 0.050, new WorldPose { X = 0.07, Z = z0 }, "BALSA");
             pod.Name = "Gövde (balsa kabin)";
@@ -33,6 +33,12 @@ namespace RobotTwin.CoreSim.Sandbox
             pod.Parameters["shell"] = "true";
             pod.Parameters["wall"] = "0.002";
             pod.Parameters["holes"] = "-x,+x";
+            // The hatch closing the pod under the wing, screwed onto the rim: the wiring stays inside.
+            var hatch = w.AddBody("box", 0.26, 0.045, 0.002, new WorldPose { X = 0.07, Z = z0 + 0.050 }, "BALSA");
+            hatch.Name = "Kabin kapağı (balsa)";
+            hatch.MassKg = 0.005;
+            hatch.Parameters["lid.of"] = pod.Id;
+            hatch.Parameters["screwed"] = "true";
             var boom = w.AddBody("cylinder", 0.008, 0.008, 0.50, new WorldPose { X = tailX - 0.04, Z = boomZ, Pitch = 90 }, "KARBON");
             boom.Name = "Kuyruk borusu (karbon Ø8)";
             boom.MassKg = 0.012;
@@ -65,13 +71,14 @@ namespace RobotTwin.CoreSim.Sandbox
             elevServo.Name = "İrtifa servosu";
             var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = -0.011, Z = z0 + 0.002 });
             rudServo.Name = "Yön servosu";
-            // The aileron servo sits in the wing's centre bay and turns both torque rods.
-            var ailServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.03, Z = podTop + 0.012 });
+            // The aileron servo stands in the pod right under the wing's centre, on a ply shelf over the IMU, its horn
+            // up to the wing's torque rods (as in pod-and-boom gliders): out of the airflow and clear of the wing.
+            var ailServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.003, Z = z0 + 0.008 });
             ailServo.Name = "Kanatçık servosu";
             wing.Parameters["control.servo"] = ailServo.Id;
             wing.Parameters["control.horn"] = "0.010";
             wing.Parameters["control.arm"] = "0.012";
-            wing.Parameters["control.rod"] = "0.06";
+            wing.Parameters["control.rod"] = "0.03";
 
             var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
             rodE.Name = "İtme çubuğu (irtifa)";
@@ -132,16 +139,18 @@ namespace RobotTwin.CoreSim.Sandbox
             noseWheel.Name = "Burun tekeri";
             noseWheel.MassKg = 0.007;
 
-            foreach (var part in new WorldObject[] { boom, wing, motor, esc, bat, esp, imu, elevServo, rudServo, ailServo, strap, noseLeg, legs[0], legs[1] })
+            foreach (var part in new WorldObject[] { boom, wing, motor, esc, bat, esp, imu, elevServo, rudServo, ailServo, strap, noseLeg })
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = pod.Id });
+            foreach (var leg in legs)
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = leg.Id, ObjectB = strap.Id });   // wire legs bent into the strap
             foreach (var part in new WorldObject[] { stab, fin, rodE, rodR })
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = boom.Id });
-            // Each wheel's nylon hub turns on the end of its steel wire (μ ≈ 0.3 under ≈ 2 N on a 1.25 mm radius: ≈ 0.8 mN·m).
-            // The axle is carried by the airframe the stiff wire legs are welded to: a joint chain through a 6 g leg body is
-            // far softer in the solver than real 2.5 mm steel (it let the wheels toe in by degrees), so the hinge sits on the pod.
+            // Each wheel's nylon hub turns on the end of its steel wire leg (μ ≈ 0.3 under ≈ 2 N on a 1.25 mm radius:
+            // ≈ 0.8 mN·m). The legs are welded into the strap and the strap into the pod, so the whole airframe is one
+            // rigid body and the axles hold their alignment as real 2.5 mm steel does.
             foreach (var (wheel, leg, y) in wheels)
-                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Hinge, ObjectA = wheel.Id, ObjectB = pod.Id, AnchorX = mainX, AnchorY = y, AnchorZ = mainD / 2, AxisX = 0, AxisY = 1, AxisZ = 0, Friction = 0.0008 });
-            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Hinge, ObjectA = noseWheel.Id, ObjectB = pod.Id, AnchorX = noseX, AnchorY = 0, AnchorZ = noseD / 2, AxisX = 0, AxisY = 1, AxisZ = 0, Friction = 0.0005 });
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Hinge, ObjectA = wheel.Id, ObjectB = leg.Id, AnchorX = mainX, AnchorY = y, AnchorZ = mainD / 2, AxisX = 0, AxisY = 1, AxisZ = 0, Friction = 0.0008 });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Hinge, ObjectA = noseWheel.Id, ObjectB = noseLeg.Id, AnchorX = noseX, AnchorY = 0, AnchorZ = noseD / 2, AxisX = 0, AxisY = 1, AxisZ = 0, Friction = 0.0005 });
 
             void Wire(WorldObject a, string pa, WorldObject b, string pb, double awg, string colour, bool soldered = false)
             {

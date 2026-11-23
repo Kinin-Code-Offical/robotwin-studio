@@ -71,9 +71,16 @@ namespace RobotTwin.CoreSim.Sandbox
                 // A wire shorter than the distance between its pins could not be plugged in: it starts stretched and pulls the parts together.
                 if (cable.Length > 0 && cable.Length < span) ShortCables.Add((cable.Id, span, cable.Length));
                 var rope = new CableRope(cable.Id, endA, endB, length, cable.Awg);
+                // Propeller discs are swept volumes, not solids; wires rest on everything else.
+                var ignore = new HashSet<SceneBody>();
+                foreach (var pm in _props) ignore.Add(pm.It.Body);
+                rope.Ignore = ignore;
+                var rigid = WeldedSet(ia.Body);   // [weld] both plugs on one rigid body: its forces on that body are internal
+                if (rigid.Contains(ib.Body)) rope.InternalTo = rigid;
                 var link = new CableLink { Cable = cable, Rope = rope };
                 rope.Unplugged += (end, force) => OnUnplugged(link, end, force);
                 if (seed?.Invoke(cable.Id) is { Count: >= 2 } previous) rope.Lay(previous);
+                else rope.LayClear(Scene);   // routed clear of the parts around it
                 if (relaxSteps > 0) rope.Relax(Scene, relaxSteps);
                 _cables.Add(link);
             }
@@ -81,6 +88,26 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>Cables whose set length is shorter than the distance between their pins (id, pin distance, length; m).</summary>
         public List<(string CableId, double Span, double Length)> ShortCables { get; } = new List<(string, double, double)>();
+
+        /// <summary>Bodies welded rigidly to <paramref name="body"/> (fixed, unbreakable joints), itself included.</summary>
+        private HashSet<SceneBody> WeldedSet(SceneBody body)
+        {
+            var set = new HashSet<SceneBody> { body };
+            var queue = new Queue<SceneBody>();
+            queue.Enqueue(body);
+            while (queue.Count > 0)
+            {
+                var b = queue.Dequeue();
+                foreach (var j in Scene.Joints)
+                {
+                    if (!j.Weld || !j.Enabled || j.Broken || j.ParentBody == null) continue;
+                    var other = ReferenceEquals(j.ChildBody, b) ? j.ParentBody : ReferenceEquals(j.ParentBody, b) ? j.ChildBody : null;
+                    if (other != null && set.Add(other)) queue.Enqueue(other);
+                }
+            }
+
+            return set;
+        }
 
         private RopeEnd MakeEnd(Item it, Vec3 objectLocal)
         {

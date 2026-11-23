@@ -1384,8 +1384,14 @@ namespace RobotWin.Studio.Pages
                     sb.AppendLine("---- gövdeler (simülasyon sonunda) ----");
                     if (_session.Physics is { } ph)
                         foreach (var body in ph.Scene.Bodies.Where(x => !x.IsStatic))
-                            sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} {1} | p ({2:0.0000},{3:0.0000},{4:0.0000}) | v ({5:0.000},{6:0.000},{7:0.000}) | m {8:0.0000}",
-                                body.Id, (body.Tag as WorldObject)?.Name, body.Position.X, body.Position.Y, body.Position.Z, body.Velocity.X, body.Velocity.Y, body.Velocity.Z, body.Mass));
+                            sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} {1} | p ({2:0.0000},{3:0.0000},{4:0.0000}) | v ({5:0.000},{6:0.000},{7:0.000}) | w {9:0.0} rad/s | m {8:0.0000}",
+                                body.Id, (body.Tag as WorldObject)?.Name, body.Position.X, body.Position.Y, body.Position.Z, body.Velocity.X, body.Velocity.Y, body.Velocity.Z, body.Mass, body.AngularVelocity.Length));
+                    sb.AppendLine("---- kablolar ----");
+                    if (_session.Physics is { } phc && World != null)
+                        foreach (var c in World.Cables)
+                            if (phc.RopeOf(c.Id) is { } rope && phc.CablePoints(c.Id) is { } pts)
+                                sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} {1}.{2} – {3}.{4}: gerilim {5:0.00} / {6:0.00} N, en alçak z {7:0.0000}, en yüksek z {8:0.0000}",
+                                    c.Id, World.Find(c.A.ObjectId)?.Name, c.A.Pin, World.Find(c.B.ObjectId)?.Name, c.B.Pin, rope.A.Tension, rope.B.Tension, pts.Min(q => q.Z), pts.Max(q => q.Z)));
                     sb.AppendLine("---- geometri ----");
                     if (World != null)
                         foreach (var o in World.Objects)

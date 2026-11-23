@@ -19,6 +19,7 @@ namespace RobotTwin.CoreSim.Sandbox
             public ReadyPartSpec Spec = null!;
             public HashSet<SceneBody>? Assembly;
             public double Normal;
+            public double LoadFilter;   // [weld] the wheel's ground load, smoothed
             public double Traction;
             public bool InContact;
         }
@@ -229,7 +230,10 @@ namespace RobotTwin.CoreSim.Sandbox
             var t = rw.Spec.Kind == ReadyPartKind.MecanumWheel
                 ? (roll * Math.Sin(ang) + side * (rw.Spec.Hand * Math.Cos(ang))).Normalized()
                 : roll;
-            double normal = Math.Max(0, b.PeakContactForce);
+            // The load the rollers carry: the contact force of the last step comes and goes as each roller's
+            // facets touch (0 N one millisecond, 6 N the next); a real wheel's load does not. Smoothed over 20 ms.
+            rw.LoadFilter += (Math.Max(0, b.PeakContactForce) - rw.LoadFilter) * (1 - Math.Exp(-Step / 0.02));
+            double normal = rw.LoadFilter;
             rw.Normal = normal;
             rw.InContact = true;
             if (normal <= 0) return;

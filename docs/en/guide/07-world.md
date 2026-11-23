@@ -280,7 +280,7 @@ With an ESP32 selected, **Örnek kodu yükle: kumandalı araba (Bluepad32)** (lo
 
 The **PS5 kumandalı uçak** (PS5-controlled plane) template is a 1 m trainer standing at the end of an asphalt runway on a model airfield. Nothing is scripted: you fly it, and the physics and the flight controller's firmware decide what happens.
 
-- **Airframe:** hollow balsa pod, Ø8 carbon tail boom, 4° dihedral Clark Y wing (ailerons on the outer halves, driven by one SG90 in the middle through torque rods), elevator and rudder on pushrods.
+- **Airframe:** hollow balsa pod (closed by a screwed balsa hatch under the wing), Ø8 carbon tail boom, 4° dihedral Clark Y wing (ailerons on the outer halves, driven through torque rods by one SG90 standing in the pod right under the wing), elevator and rudder on pushrods.
 - **Power:** 2212 1000KV brushless motor, 8×4.5" prop, 20 A ESC, 3S 850 mAh LiPo. 402 g; the centre of gravity sits at 30 % of the chord from the battery position alone, no nose weight.
 - **Gear:** steel wire legs and an aluminium strap. The wheels turn freely on their axles, with the friction of a nylon hub on steel wire.
 - **Flight controller:** ESP32 + MPU-6050, reading the DualSense through Bluepad32. The code also runs on a real ESP32 (select the ESP32 and open **Kod**).

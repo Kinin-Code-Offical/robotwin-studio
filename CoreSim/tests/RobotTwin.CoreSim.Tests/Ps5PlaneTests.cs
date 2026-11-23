@@ -124,11 +124,8 @@ namespace RobotTwin.CoreSim.Tests
                         break;
                     case "tırmanış":
                         input.Throttle = 1023;
-                        if (alt > 8) (phase, since) = ("seyir", t);
-                        break;
-                    case "seyir":
-                        input.Throttle = 560;
-                        if (t - since > 1) (phase, since, turned, turnStartAlt) = ("sağ dönüş", t, 0, alt);
+                        // Turn back while well inside Bluetooth range (the link fades out around 85–90 m).
+                        if (alt > 6) (phase, since, turned, turnStartAlt) = ("sağ dönüş", t, 0, alt);
                         break;
                     case "sağ dönüş":
                         input.Throttle = 620;
@@ -196,7 +193,7 @@ namespace RobotTwin.CoreSim.Tests
 
             Assert.True(connected, "the bonded controller connects");
             Assert.Contains("Motor kuruldu", serial);
-            Assert.True(peakAlt > 8, "full throttle and a pull on the stick take it off the runway and up");
+            Assert.True(peakAlt > 6, "full throttle and a pull on the stick take it off the runway and up");
             Assert.Equal("bitti", phase);
             Assert.True(turnedRight, "right stick turns it right through 150°");
             Assert.InRange(maxBank, 18, 45);   // Dengeli mode: the stick asks for a bank angle

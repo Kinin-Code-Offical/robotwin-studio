@@ -54,15 +54,15 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private void SolveSpin(ref Contact c)
         {
-            ref var sa = ref _state[c.A];
+            ref var sa = ref _state[c.SA];
             var dw = sa.W;
-            if (c.B >= 0) dw -= _state[c.B].W;
+            if (c.B >= 0) dw -= _state[c.SB].W;
             double lambda = -c.MassS * dw.Dot(c.N);
             double max = c.Mu * c.Pn * c.SpinR;
             double next = Math.Max(-max, Math.Min(max, c.Ps + lambda));
             double d = next - c.Ps;
             c.Ps = next;
-            if (d != 0) ApplyAngular(c.A, c.B, c.N * d);
+            if (d != 0) ApplyAngular(c.SA, c.SB, c.N * d);
         }
 
         // ================================================================== CCD guard

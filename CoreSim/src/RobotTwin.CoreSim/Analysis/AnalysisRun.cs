@@ -239,6 +239,23 @@ namespace RobotTwin.CoreSim.Analysis
         /// pressure and vorticity fields. Above lattice Re ≈ 1000 a Smagorinsky model stands in for
         /// the unresolved turbulence, so the result is a large-eddy estimate there.
         /// </summary>
+        /// <summary>
+        /// A lattice cell is solid when the part fills any of 3 × 3 points across it, not only its centre: a part thinner
+        /// than a cell (a 3 mm plate on a 3.3 mm lattice) would otherwise fall between the cell centres and vanish.
+        /// </summary>
+        private static bool CellSolid(Solid world, Vec3 centre, Vec3 along, Vec3 across)
+        {
+            if (world.Contains(centre)) return true;
+            for (int i = -1; i <= 1; i++)
+            for (int k = -1; k <= 1; k++)
+            {
+                if ((i | k) == 0) continue;
+                if (world.Contains(centre + along * (0.4 * i) + across * (0.4 * k))) return true;
+            }
+
+            return false;
+        }
+
         public static CfdResult Aero2D(PartGeometry part, AnalysisSettings s, double airDensity, CancellationToken cancel, Action<double>? progress = null)
         {
             Vec3 flow = AxisVector(s.AeroAxis);
@@ -268,7 +285,7 @@ namespace RobotTwin.CoreSim.Analysis
                 for (int x = 0; x < nx; x++)
                 {
                     var p = c + flow * ((x + 0.5) * dx - x0) + up * ((y + 0.5 - ny / 2.0) * dx);
-                    lbm.Solid[lbm.Index(x, y)] = world.Contains(p);
+                    lbm.Solid[lbm.Index(x, y)] = CellSolid(world, p, flow * dx, up * dx);
                 }
             }
 

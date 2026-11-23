@@ -280,7 +280,7 @@ ESP32 seçiliyken **Örnek kodu yükle: kumandalı araba (Bluepad32)** hazır bi
 
 **PS5 kumandalı uçak** şablonu, bir model uçak sahasında asfalt pistin başında duran 1 m'lik bir eğitim uçağıdır. Hiçbir şey betikli değildir: uçağı siz uçurursunuz, fizik ve uçuş kartının yazılımı sonucu belirler.
 
-- **Gövde:** içi boş balsa kabin, Ø8 karbon kuyruk borusu, 4° dihedralli Clark Y kanat (dış yarılarında kanatçıklar, ortadaki SG90'dan burulma çubuklarıyla), itme çubuklarıyla irtifa ve yön dümenleri.
+- **Gövde:** içi boş balsa kabin (kanadın altında vidalı balsa kapak), Ø8 karbon kuyruk borusu, 4° dihedralli Clark Y kanat (dış yarılarında kanatçıklar; onları gövdenin içinde, kanadın tam altında duran bir SG90 burulma çubuklarıyla oynatır), itme çubuklarıyla irtifa ve yön dümenleri.
 - **Güç:** 2212 1000KV fırçasız motor, 8×4,5" pervane, 20 A ESC, 3S 850 mAh LiPo. Kütle 402 g; ağırlık merkezi, kurşun konmadan yalnız pilin yeriyle veterin %30'unda.
 - **İniş takımı:** çelik tel bacaklar ve alüminyum lama. Tekerlekler akslarında serbest döner; naylon göbeğin çelik tel üzerindeki sürtünmesi de hesaplanır.
 - **Uçuş kartı:** ESP32 + MPU-6050, Bluepad32 ile DualSense'i okur. Kod gerçek bir ESP32'de de çalışır (ESP32'yi seçip **Kod**'a bakın).

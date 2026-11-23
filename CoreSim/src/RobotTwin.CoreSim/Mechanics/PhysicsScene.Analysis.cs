@@ -46,7 +46,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (p.LengthSquared == 0) continue;
                 var a = Bodies[c.A];
                 var b = c.B >= 0 && c.B < Bodies.Count ? Bodies[c.B] : null;
-                into.Add(new ContactSample(a, b, _state[c.A].X + c.RA, c.N, p / _h));
+                into.Add(new ContactSample(a, b, _state[c.SA].X + c.RA, c.N, p / _h));   // [weld] RA is from the solver body's centre
             }
         }
     }

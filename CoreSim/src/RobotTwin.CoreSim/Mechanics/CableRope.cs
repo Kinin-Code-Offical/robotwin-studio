@@ -173,6 +173,13 @@ namespace RobotTwin.CoreSim.Mechanics
                 return;
             }
 
+            LayBow(Vec3.UnitZ);
+        }
+
+        /// <summary>The slack as a parabolic bow towards <paramref name="bow"/> (perpendicular to the pins' line).</summary>
+        private void LayBow(Vec3 bow)
+        {
+            int count = Segments + 1;
             var a = A.World + A.ExitWorld * SegmentLength;
             var b = B.World + B.ExitWorld * SegmentLength;
             double span = (b - a).Length;
@@ -183,11 +190,60 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 double t = i / (double)Segments;
                 var p = a + (b - a) * t;
-                _x[i] = p + new Vec3(0, 0, 4 * rise * t * (1 - t));
+                _x[i] = p + bow * (4 * rise * t * (1 - t));
                 _v[i] = Vec3.Zero;
             }
 
             Pin();
+        }
+
+        /// <summary>
+        /// Lays the cable the way a person would route it: its slack bowed up, down or to either side, whichever runs
+        /// through the fewest solids (a wire between two parts inside a closed fuselage stays inside it instead of
+        /// arching through the lid and being pushed out over the wing).
+        /// </summary>
+        public void LayClear(PhysicsScene scene)
+        {
+            var along = B.World - A.World;
+            var side = along.Cross(Vec3.UnitZ);
+            side = side.Length > 1e-9 ? side.Normalized() : Vec3.UnitX;
+            Vec3 best = Vec3.UnitZ;
+            double bestPen = double.MaxValue;
+            foreach (var bow in new[] { Vec3.UnitZ, side, -side, -Vec3.UnitZ })
+            {
+                LayBow(bow);
+                Gather(scene, 0.01);
+                double pen = Penetration(scene) + Depth(scene);
+                if (pen < bestPen - 1e-6)
+                {
+                    bestPen = pen;
+                    best = bow;
+                }
+            }
+
+            LayBow(best);
+        }
+
+        /// <summary>Sum of how deep the free particles sit inside bodies and the floor (m), for choosing a lay.</summary>
+        private double Depth(PhysicsScene scene)
+        {
+            double sum = 0;
+            for (int i = 0; i < _x.Length; i++)
+            {
+                if (IsPinned(i)) continue;
+                var x = _x[i];
+                if (scene.GroundEnabled) sum += Math.Max(0, scene.GroundHeight(x.X, x.Y) + Radius - x.Z);
+                foreach (var b in _near)
+                {
+                    if (Ignored(b, i)) continue;
+                    var shape = b.EffectiveShape!;
+                    var local = b.Orientation.InverseRotate(x - b.Position);
+                    if (shape.Kind != ShapeKind.Mesh && local.LengthSquared > (shape.BoundingRadius + Radius) * (shape.BoundingRadius + Radius)) continue;
+                    if (b.SignedDistanceSolid(shape, local, Radius, out double d, out _) && d < Radius) sum += Radius - d;
+                }
+            }
+
+            return sum;
         }
 
         private void Pin()
@@ -220,6 +276,7 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             if (dt <= 0) return;
             _scene = scene;
+            _coupleDt = couple ? dt : 0;
             if (couple && Sleeping(scene, dt))
             {
                 // A cable at rest keeps pulling with the force it had (its weight on the plugs).
@@ -277,6 +334,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             Couple(A, 0, _pinned);
             Couple(B, Segments, Segments - _pinned);
+            if (InternalTo != null) return;   // [weld] its tension is internal to the frame both plugs sit on
             if (A.Attached && A.Tension > PullOutForce) Release(A, A.Tension);
             if (B.Attached && B.Tension > PullOutForce) Release(B, B.Tension);
         }
@@ -367,6 +425,7 @@ namespace RobotTwin.CoreSim.Mechanics
         private void Couple(RopeEnd end, int pin, int next)
         {
             if (!end.Attached || end.Body == null || end.Body.IsStatic || end.Tension <= 0) return;
+            if (InternalTo != null && InternalTo.Contains(end.Body)) return;   // [weld] internal to one rigid body
             var d = _x[next] - _x[pin];
             double len = d.Length;
             if (len < 1e-9) return;
@@ -445,7 +504,7 @@ namespace RobotTwin.CoreSim.Mechanics
             hi += new Vec3(pad, pad, pad);
             foreach (var b in scene.Bodies)
             {
-                if (!b.Collides) continue;
+                if (!b.Collides || (Ignore != null && Ignore.Contains(b))) continue;
                 var s = b.EffectiveShape;
                 if (s == null || !s.HasSolid) continue;
                 if (s.Kind == ShapeKind.Mesh)
@@ -460,6 +519,22 @@ namespace RobotTwin.CoreSim.Mechanics
                 _near.Add(b);
             }
         }
+
+        /// <summary>
+        /// Bodies the wire does not touch: propellers, whose body is the disc the blades sweep, not a solid. (A wire in a
+        /// real prop disc would be struck and cut; that is not modelled.)
+        /// </summary>
+        public HashSet<SceneBody>? Ignore { get; set; }
+
+        /// <summary>
+        /// [weld] The rigid body both plugs sit on (its welded parts), when they do. The wire still lies on it, but the
+        /// forces between them are internal: its pull on the plugs and its push on the frame cancel, so neither is
+        /// applied (a lagging, filtered plug tension against an instant contact push used to kick the frame), and a
+        /// fight between the wire's length and the frame it is laid through does not pull its plugs out.
+        /// </summary>
+        public HashSet<SceneBody>? InternalTo { get; set; }
+
+        private double _coupleDt;
 
         private bool Ignored(SceneBody body, int i)
         {
@@ -513,8 +588,22 @@ namespace RobotTwin.CoreSim.Mechanics
                     if (!b.SignedDistanceSolid(shape, local, r, out double d, out var nl) || d >= r) continue;
                     var n = b.Orientation.Rotate(nl);
                     var push = n * (r - d);
-                    if (!pi) _x[i] += pj ? push * 2 : push;
-                    if (!pj) _x[j] += pi ? push * 2 : push;
+                    var moved = Vec3.Zero;   // mass-weighted push given to the wire
+                    if (!pi)
+                    {
+                        var di = pj ? push * 2 : push;
+                        _x[i] += di;
+                        moved += di * (1.0 / _w[i]);
+                    }
+
+                    if (!pj)
+                    {
+                        var dj = pi ? push * 2 : push;
+                        _x[j] += dj;
+                        moved += dj * (1.0 / _w[j]);
+                    }
+
+                    if (_coupleDt > 0 && !b.IsStatic && (InternalTo == null || !InternalTo.Contains(b))) b.AddForceAtPoint(moved * (-1.0 / (h * h) * (h / _coupleDt)), mid);   // [phys] reaction on the body
                 }
             }
         }
@@ -528,8 +617,15 @@ namespace RobotTwin.CoreSim.Mechanics
             if (!b.SignedDistanceSolid(shape, local, r, out double d, out var nl) || d >= r) return;
             var n = b.Orientation.Rotate(nl);
             double pen = (r - d) * scale;
+            var before = x;
             x += n * pen;
+            _x[i] = x;
             ApplyFriction(i, n, pen, b.IsStatic ? Vec3.Zero : b.PointVelocity(x) * h, h);
+            x = _x[i];
+            // [phys] Newton's third law: the push that kept this bit of wire out of the body (and the friction that
+            // dragged it along) pushes the body back, as an average force over the outer step.
+            if (_coupleDt > 0 && !b.IsStatic && _w[i] > 0 && (InternalTo == null || !InternalTo.Contains(b)))
+                b.AddForceAtPoint((before - x) * (1.0 / _w[i] / (h * h) * (h / _coupleDt)), x);
         }
 
         /// <summary>Positional Coulomb friction: tangential slip relative to the surface is cancelled up to μ·penetration.</summary>

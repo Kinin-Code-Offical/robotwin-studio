@@ -45,6 +45,25 @@ $`C`$ kısıtın ihlali (iç içe geçme derinliği, eklem kayması), $`\beta`$ 
 
 Bir eklem, tasarım kuvvetini aşınca kopar; olay **Olaylar** sekmesine yazılır.
 
+### Kaynaklı parçalar: tek rijit gövde
+
+Yumuşak kısıtın sertliği gövdenin kütlesiyle orantılıdır. Ağır bir gövdeyle hafif bir parça arasındaki zincir, örneğin 400 g'lık bir uçak gövdesi → 6 g'lık tel bacak → 10 g'lık tekerlek, bu yüzden gerçek çelikten çok daha esnek davranır: tekerlek yükte birkaç derece rot açısı yapar. Bu nedenle **kırılmaz sabit bağlantılar** (kırılma kuvveti ya da bağlantı türü verilmemiş sabit eklemler, kabuk duvarları, vidalı kapaklar) ayrı kısıt olarak çözülmez. Bunlarla birleşen parçalar her adımda tek bir rijit gövdede toplanır:
+
+```math
+M = \sum m_i, \qquad \mathbf{x}_G = \frac{\sum m_i \mathbf{x}_i}{M}, \qquad I_G = \sum \Big( R_i I_i R_i^\top + m_i \big(\lVert\mathbf{d}_i\rVert^2 E - \mathbf{d}_i\mathbf{d}_i^\top\big) \Big), \quad \mathbf{d}_i = \mathbf{x}_i - \mathbf{x}_G
+```
+
+- **Grubun hızı:** Parçaların momentumundan ve açısal momentumundan bulunur. Böylece adımlar arasında bir parçaya ne yapıldıysa (fırlatma, itme) kaybolmaz.
+- **Kuvvetler:** Her parçaya etkiyen kuvvet ve tork (yerçekimi, sürükleme, kanat, pervane, motor) gruba toplanır. Grup tek gövde olarak, tam eylemsizlik tensörüyle ve örtük dönme terimiyle tümleştirilir.
+- **Temas ve eklemler:** Her parça kendi şekliyle çarpışır. Temas ve başka gövdelere giden eklemler gruba, kütle merkezinden ölçülen kollarla uygulanır.
+- **İç yükler:** Grup içindeki kaynakların taşıdığı kuvvet ve tork ters dinamikle bulunur. Kaynağın bir yanındaki parçaların adım boyunca momentum değişiminden dış itmeler (uygulanan, temas, diğer eklemler) çıkarılır. Kayıtlar, gerilme ölçümleri ve render'daki FEM yükleri bu değerleri kullanır.
+
+Doğrulama: bir bloğun üstüne kaynaklı 0,5 kg'lık parçada kaynak 4,905 N taşır (0,5 × 9,81). 0,2 kg'lık, ağırlık merkezi 0,1 m dışarıda olan bir konsolda kaynağın momenti 0,196 N·m çıkar (beklenen 0,1962). Hafif ucu 2 N ile itilen bir zincirde parçalar birbirine göre 10⁻⁶ dereceden fazla dönmez. Vida ve yapıştırıcı gibi kırılabilir bağlantılar ayrı eklem olarak kalır, çünkü kopmaları eklemin kendi kuvvetiyle sınanır.
+
+### Kablolar: etki ve tepki
+
+Kablolar kütleli birer iptir. Bir gövdeye dayanan kablo o gövdeyi iter; kablonun gördüğü düzeltme $`m\,\Delta x/h^2`$ eşit ve zıt yönde gövdeye uygulanır. Önceki sürümde temas tek yönlüydü: kablo pinlerini çekiyordu ama dayandığı gövde hiçbir tepki almıyordu. Bu, yerde duran bir dörtlüyü motorlar çalışmadan havaya kaldırıyordu. İki ucu aynı rijit gövdede olan bir kablo o gövdeye yine dayanır (şekli için), ama aralarındaki kuvvetler içtir: pinlere çekişi ve gövdeye itişi birbirini götürür, bu yüzden ikisi de uygulanmaz. Uygulansaydı gecikmeli fiş gerilimi ile anlık temas itmesi arasındaki fark gövdeye bir tekme verirdi. Kablo ilk serilirken gevşekliği yukarı, aşağı ya da iki yana doğru kavislenir; hangisi çevredeki parçaların en azından geçiyorsa o seçilir. Böylece kapalı bir gövdenin içindeki kablo içeride kalır, kapaktan taşıp kanadın üstüne itilmez. Pervane diskleri kablolar için katı sayılmaz, çünkü disk yalnızca palların süpürdüğü hacimdir. Pervane diskinden geçen bir kablonun gerçekte kesilmesi henüz modellenmiyor.
+
 ## Çarpışma şekilleri
 
 ```mermaid

@@ -264,6 +264,12 @@ namespace RobotTwin.CoreSim.Mechanics
         public bool Enabled { get; set; } = true;
         public bool CollideConnected { get; set; }
 
+        /// <summary>
+        /// [weld] A rigid, unbreakable bond (glue, solder, a part cut from one piece): with a fixed kind and no break
+        /// force, the two bodies are solved as one rigid body (see PhysicsScene.Welds.cs) instead of through a soft constraint.
+        /// </summary>
+        public bool Weld { get; set; }
+
         /// <summary>Lower/upper limit of the angle (rad) or position (m); null = free.</summary>
         public double? Lower { get; set; }
 
@@ -352,7 +358,8 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private struct Contact
         {
-            public int A, B;
+            /// <summary>Bodies in contact (accounting, reports); SA / SB are the solver bodies (a welded group's representative).</summary>
+            public int A, B, SA, SB;
             public Vec3 RA, RB, N, T1, T2;
             public double Sep, MassN, MassT1, MassT2, MassR1, MassR2;
             public double Pn, Pt1, Pt2, Pr1, Pr2, MaxPn;
@@ -649,6 +656,8 @@ namespace RobotTwin.CoreSim.Mechanics
 
             PeakContactForce = 0;
             BeginSleep(dt); // [phys]
+            foreach (var b in Bodies) ClearWeldAccumulators(b);
+            BuildWelds(count);   // [weld] welded parts move as one rigid body (Mechanics/PhysicsScene.Welds.cs)
             for (int s = 0; s < n; s++) Substep(h);
 
             foreach (var j in Joints)
@@ -658,6 +667,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 j.ReactionForce = j.StepForceImpulse / dt;
                 j.ReactionTorque = j.StepTorqueImpulse / dt;
             }
+
+            WeldReactions(dt);   // [weld] loads of the welds inside the groups, by inverse dynamics
 
             foreach (var b in Bodies)
             {
@@ -744,8 +755,10 @@ namespace RobotTwin.CoreSim.Mechanics
                     }
                 }
 
-                b.IntegrateVelocity(h);
+                if (!InWeldGroup(i)) b.IntegrateVelocity(h);
             }
+
+            IntegrateWeldVelocities(h);   // [weld]
 
             // ---------------------------------------------------------- state
             for (int i = 0; i < count; i++)
@@ -771,6 +784,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
             }
 
+            LoadWeldStates();   // [weld] a group is one solver body at its centre of mass
+
             // ---------------------------------------------------------- contacts & joints
             _contactCount = 0;
             Detect(h);
@@ -790,7 +805,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var b = Bodies[i];
-                if (b.IsStatic || Asleep(i)) continue; // [phys]
+                if (b.IsStatic || Asleep(i) || InWeldGroup(i)) continue; // [phys] [weld]
                 ref var st = ref _state[i];
                 b.Velocity = st.V;
                 b.AngularVelocity = st.W;
@@ -799,6 +814,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 st.DX = b.Position - x0;
                 st.DTheta = st.W * h;
             }
+
+            IntegrateWeldPositions(h);   // [weld]
 
             for (int it = 0; it < RelaxIterations; it++)
             {
@@ -811,10 +828,12 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var b = Bodies[i];
-                if (b.IsStatic || Asleep(i)) continue; // [phys]
+                if (b.IsStatic || Asleep(i) || InWeldGroup(i)) continue; // [phys] [weld]
                 b.Velocity = _state[i].V;
                 b.AngularVelocity = _state[i].W;
             }
+
+            FinishWeldVelocities();   // [weld]
 
             StoreAndReport(h);
             FinishJoints(h);
@@ -944,6 +963,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     if ((ba.IsStatic || Asleep(a)) && (bb.IsStatic || Asleep(b))) continue; // [phys]
                     if (!Overlap(a, b)) continue;
                     if (_noCollide.Count > 0 && _noCollide.Contains(PairKey(a, b))) continue;
+                    if (SameWeldGroup(a, b)) continue;   // [weld] parts of one rigid body do not collide with each other
                     if (ba.IsStatic || (Asleep(a) && !bb.IsStatic)) CollidePair(b, a, h); // [phys]
                     else CollidePair(a, b, h);
                 }
@@ -1220,7 +1240,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 bool duplicate = false;
                 for (int c = first; c < fromA; c++)
                 {
-                    if ((_state[a].X + _contacts[c].RA - u).LengthSquared < 1e-6)
+                    if ((_state[_contacts[c].SA].X + _contacts[c].RA - u).LengthSquared < 1e-6)
                     {
                         duplicate = true;
                         break;
@@ -1328,9 +1348,14 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             if (_contactCount == _contacts.Length) Array.Resize(ref _contacts, _contacts.Length * 2);
             ref var c = ref _contacts[_contactCount++];
-            ref var sa = ref _state[a];
             c.A = a;
             c.B = b;
+            long key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)((feature + _featureBase) & 0x1FFFFF);
+            a = SolverIndex(a);   // [weld] the contact acts on the welded group, from its centre of mass
+            b = SolverIndex(b);
+            c.SA = a;
+            c.SB = b;
+            ref var sa = ref _state[a];
             c.N = n;
             c.Sep = sep;
             c.RA = p - sa.X;
@@ -1380,7 +1405,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             SetupSpin(ref c, sa.InvI, invIB, props, rollRadius); // [phys]
             c.MaxPn = 0;
-            c.Key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)((feature + _featureBase) & 0x1FFFFF);
+            c.Key = key;
             if (_warm.TryGetValue(c.Key, out var ws))
             {
                 c.Pn = ws.Pn;
@@ -1438,11 +1463,11 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private Vec3 RelativeVelocity(in Contact c)
         {
-            ref var sa = ref _state[c.A];
+            ref var sa = ref _state[c.SA];
             var v = sa.V + sa.W.Cross(c.RA);
             if (c.B >= 0)
             {
-                ref var sb = ref _state[c.B];
+                ref var sb = ref _state[c.SB];
                 v -= sb.V + sb.W.Cross(c.RB);
             }
 
@@ -1455,9 +1480,9 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 ref var c = ref _contacts[i];
                 if (c.Pn == 0 && c.Pt1 == 0 && c.Pt2 == 0) continue;
-                ApplyImpulse(c.A, c.B, c.RA, c.RB, c.N * c.Pn + c.T1 * c.Pt1 + c.T2 * c.Pt2);
-                if (c.Rolling && (c.Pr1 != 0 || c.Pr2 != 0)) ApplyAngular(c.A, c.B, c.T1 * c.Pr1 + c.T2 * c.Pr2);
-                if (c.Ps != 0) ApplyAngular(c.A, c.B, c.N * c.Ps); // [phys]
+                ApplyImpulse(c.SA, c.SB, c.RA, c.RB, c.N * c.Pn + c.T1 * c.Pt1 + c.T2 * c.Pt2);
+                if (c.Rolling && (c.Pr1 != 0 || c.Pr2 != 0)) ApplyAngular(c.SA, c.SB, c.T1 * c.Pr1 + c.T2 * c.Pr2);
+                if (c.Ps != 0) ApplyAngular(c.SA, c.SB, c.N * c.Ps); // [phys]
             }
 
             for (int i = 0; i < _pointCount; i++)
@@ -1485,11 +1510,11 @@ namespace RobotTwin.CoreSim.Mechanics
                 double s = c.Sep;
                 if (relax)
                 {
-                    ref var sa = ref _state[c.A];
+                    ref var sa = ref _state[c.SA];
                     var d = sa.DX + sa.DTheta.Cross(c.RA);
                     if (c.B >= 0)
                     {
-                        ref var sb = ref _state[c.B];
+                        ref var sb = ref _state[c.SB];
                         d -= sb.DX + sb.DTheta.Cross(c.RB);
                     }
 
@@ -1515,7 +1540,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 lambda = pn - c.Pn;
                 c.Pn = pn;
                 if (pn > c.MaxPn) c.MaxPn = pn;
-                if (lambda != 0) ApplyImpulse(c.A, c.B, c.RA, c.RB, c.N * lambda);
+                if (lambda != 0) ApplyImpulse(c.SA, c.SB, c.RA, c.RB, c.N * lambda);
 
                 // Friction (cone).
                 if (c.Mu > 0)
@@ -1534,15 +1559,15 @@ namespace RobotTwin.CoreSim.Mechanics
                     double d1 = l1 - c.Pt1, d2 = l2 - c.Pt2;
                     c.Pt1 = l1;
                     c.Pt2 = l2;
-                    if (d1 != 0 || d2 != 0) ApplyImpulse(c.A, c.B, c.RA, c.RB, c.T1 * d1 + c.T2 * d2);
+                    if (d1 != 0 || d2 != 0) ApplyImpulse(c.SA, c.SB, c.RA, c.RB, c.T1 * d1 + c.T2 * d2);
                 }
 
                 // Rolling resistance: bounded torque against relative rolling.
                 if (c.Rolling)
                 {
-                    ref var sa = ref _state[c.A];
+                    ref var sa = ref _state[c.SA];
                     var dw = sa.W;
-                    if (c.B >= 0) dw -= _state[c.B].W;
+                    if (c.B >= 0) dw -= _state[c.SB].W;
                     double r1 = c.Pr1 - c.MassR1 * dw.Dot(c.T1);
                     double r2 = c.Pr2 - c.MassR2 * dw.Dot(c.T2);
                     double max = c.Crr * c.RollR * c.Pn, len = Math.Sqrt(r1 * r1 + r2 * r2);
@@ -1556,7 +1581,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     double d1 = r1 - c.Pr1, d2 = r2 - c.Pr2;
                     c.Pr1 = r1;
                     c.Pr2 = r2;
-                    if (d1 != 0 || d2 != 0) ApplyAngular(c.A, c.B, c.T1 * d1 + c.T2 * d2);
+                    if (d1 != 0 || d2 != 0) ApplyAngular(c.SA, c.SB, c.T1 * d1 + c.T2 * d2);
                 }
 
                 if (c.SpinR > 0) SolveSpin(ref c); // [phys] torsional friction of the contact patch
@@ -1578,7 +1603,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 double pn = Math.Max(c.Pn + lambda, 0);
                 lambda = pn - c.Pn;
                 c.Pn = pn;
-                if (lambda != 0) ApplyImpulse(c.A, c.B, c.RA, c.RB, c.N * lambda);
+                if (lambda != 0) ApplyImpulse(c.SA, c.SB, c.RA, c.RB, c.N * lambda);
             }
         }
 
@@ -1593,13 +1618,20 @@ namespace RobotTwin.CoreSim.Mechanics
                 // Net contact impulse per body (averaged over the step later); an impact is
                 // spread over the physical contact time π·√(m/k) of the material pair.
                 var p = c.N * c.Pn + c.T1 * c.Pt1 + c.T2 * c.Pt2;
+                var point = _state[c.SA].X + c.RA;
+                var couple = c.T1 * c.Pr1 + c.T2 * c.Pr2 + c.N * c.Ps;   // rolling resistance and spin friction act as torques
                 Bodies[c.A].StepContactImpulse += p;
-                if (c.B >= 0) Bodies[c.B].StepContactImpulse -= p;
+                Bodies[c.A].StepContactAngular += (point - Bodies[c.A].Position).Cross(p) + couple;   // [weld]
+                if (c.B >= 0)
+                {
+                    Bodies[c.B].StepContactImpulse -= p;
+                    Bodies[c.B].StepContactAngular -= (point - Bodies[c.B].Position).Cross(p) + couple;
+                }
                 if (c.Vn0 < -RestitutionThreshold && c.Pn > 0)
                 {
                     double tau = Math.Max(h, Math.PI * Math.Sqrt(c.MassN / c.Stiff));
                     double force = c.Pn / tau;
-                    var at = _state[c.A].X + c.RA;
+                    var at = _state[c.SA].X + c.RA;
                     var other = c.B >= 0 ? Bodies[c.B] : null;
                     Record(Bodies[c.A], force, at, -c.Vn0, c.MassN, tau, other);
                     if (other != null && !other.IsStatic) Record(other, force, at, -c.Vn0, c.MassN, tau, Bodies[c.A]);
@@ -1684,6 +1716,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 var pC = xC + rC;
                 var d = pC - pP;
                 var axis = qP.Rotate(j.AxisP);
+                if (SameWeldGroup(p, c)) continue;   // [weld] inside one rigid body: nothing to solve (loads by inverse dynamics)
 
                 // Joint coordinate along the axis.
                 double value, speed;
@@ -1712,6 +1745,20 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
 
                 j.Speed = speed;
+
+                // [weld] Rows act on the solver bodies (a welded group's representative), with arms from their centres of mass.
+                if (InWeldGroup(p))
+                {
+                    p = SolverIndex(p);
+                    rP = pP - _state[p].X;
+                }
+
+                if (InWeldGroup(c))
+                {
+                    c = SolverIndex(c);
+                    rC = pC - _state[c].X;
+                    stC = ref _state[c];
+                }
 
                 // Point constraint.
                 if (j.Kind != JointKind.Slider)
@@ -2022,7 +2069,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int ji = 0; ji < Joints.Count; ji++)
             {
                 var j = Joints[ji];
-                j.SubForce = j.Enabled && !j.Broken ? j.PointImpulse : Vec3.Zero;
+                j.SubForce = j.Enabled && !j.Broken && !SameWeldGroup(j.ParentSlot, j.ChildSlot) ? j.PointImpulse : Vec3.Zero;   // [weld] no rows inside a group
                 j.SubTorque = Vec3.Zero;
                 j.SubDrive = 0;
             }
@@ -2046,6 +2093,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 j.StepDriveImpulse += j.SubDrive;
                 j.StepForceImpulse += force;
                 j.StepTorqueImpulse += torque;
+                if (!SameWeldGroup(j.ParentSlot, j.ChildSlot)) NoteJointImpulse(j, force, torque);   // [weld]
                 double f = force.Length / h, t = torque.Length / h;
                 double a = h / (1e-3 + h);
                 j.ForceFilter += (f - j.ForceFilter) * a;

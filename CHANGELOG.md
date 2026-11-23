@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pilot's-eye camera:** a world with a controller and an aircraft opens the game view from where the pilot stands, zooming with the distance. The chase camera sits back by the size of what it follows (a 1 m plane, not 45 cm behind a car's chassis).
 - **Hinge friction:** a hinge or slider joint can carry Coulomb friction (a hub on an axle, a bushing).
 - **Impacts name what was hit** ("· zemin", or the other part).
+- **Welded parts are one rigid body:** parts joined by unbreakable fixed bonds (no break force or fastening set, shell walls, screwed lids) are solved as a single rigid body: summed mass, centre of mass and full inertia tensor, the group's motion from the parts' momentum, each part still colliding with its own shape. A chain through a light part no longer bends (a 6 g wire leg let a plane's wheel toe in by 1–4°; now under 0.03°). The welds' loads come from inverse dynamics, so recordings and FEM loads keep them (a weld under a 0.5 kg part carries 4.905 N, a cantilever's weld moment matches m·g·d within 0.1 %). Breakable fastenings stay joints. Fewer solver bodies also make worlds faster (the plane runs at real time, the test suite 40 % quicker).
+- **The PS5 plane's wheels sit on their wire legs** again, now that welded legs hold their alignment. Its aileron servo moved from on top of the wing into the pod under it (its horn was caught in the dihedral wing's convex collision hull, which locked the ailerons at −8.5° in the app), and a screwed balsa hatch closes the pod under the wing.
 - **Snapshot log:** `ROBOTWIN_SNAPSHOT_LOG=<file>` writes a snapshot run's events, serial output, body states and the app's collision geometry (as a baked-geometry file a headless run can load), so a world can be checked without a screen.
 
 ### Fixed
@@ -47,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pushrods ran into the servo models** in the glider and motor glider; they now stop at the pod's rear wall.
 - **The model rocket stood inside its launch pad:** its swept fins' tips reach 3.8 mm below their roots; it now stands on them.
 - **The game view and the camera sensors did not draw the terrain** (grass, runway, roads); they do, with a sky backdrop outdoors.
+- **Cables pushed on nothing:** a wire resting against a body was pushed out of it while the body felt no reaction; a resting quad was lifted off the floor by its own wiring before its motors ran. The body now gets the reaction. A wire whose plugs both sit on one rigid body still rests on it, but those forces are internal and not applied; propeller discs are swept volumes, not solids, for wires. New cables are laid with their slack bowed whichever way runs through the fewest parts, so wiring inside a closed fuselage stays inside.
+- **2D flow missed thin parts:** a 3 mm plate lying level on a 3.3 mm lattice fell between the cell centres and showed no drag; cells are now solid when the part fills any of 3 × 3 points across them.
+- **Mecanum roller traction** followed the contact force of the last step, which flickers between 0 and 6 N as the rollers' facets touch; it now uses the load smoothed over 20 ms.
 - **The chase camera could not stay selected:** the game view switched back to its default view whenever the scene refreshed.
 
 - **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).

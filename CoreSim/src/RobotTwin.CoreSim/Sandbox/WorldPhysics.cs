@@ -316,6 +316,9 @@ namespace RobotTwin.CoreSim.Sandbox
                     _fastened.Add(new Fastened { Joint = joint, Spec = spec, Force = force, A = j.ObjectA, B = j.ObjectB });
                 }
             }
+
+            // [weld] A fixed joint that cannot break is a rigid bond: both parts are solved as one rigid body.
+            joint.Weld = kind == JointKind.Fixed && double.IsPositiveInfinity(joint.BreakForce);
         }
 
         private sealed class Fastened

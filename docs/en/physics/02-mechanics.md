@@ -43,7 +43,26 @@ $`C`$ is the constraint error (penetration depth, joint drift), $`\beta`$ the so
 | Slider | Translation along one axis |
 | Ball | Anchors coincide, rotation free |
 
-A joint breaks when its design force is exceeded; the event goes to the **Events** tab.
+A joint breaks when its design force is exceeded; the event is written to the **Olaylar** (events) tab.
+
+### Welded parts: one rigid body
+
+A soft constraint is as stiff as the bodies it joins are heavy. A chain between a heavy body and a light part, such as a 400 g airframe → a 6 g wire leg → a 10 g wheel, is therefore far softer than real steel: the wheel toes in by degrees under load. So **unbreakable fixed bonds** (fixed joints with no break force or fastening set, shell walls, screwed lids) are not solved as separate constraints. Every step, the parts they join are gathered into one rigid body:
+
+```math
+M = \sum m_i, \qquad \mathbf{x}_G = \frac{\sum m_i \mathbf{x}_i}{M}, \qquad I_G = \sum \Big( R_i I_i R_i^\top + m_i \big(\lVert\mathbf{d}_i\rVert^2 E - \mathbf{d}_i\mathbf{d}_i^\top\big) \Big), \quad \mathbf{d}_i = \mathbf{x}_i - \mathbf{x}_G
+```
+
+- **The group's velocity** comes from the parts' momentum and angular momentum, so nothing done to a part between steps (a launch, a push) is lost.
+- **Forces:** forces and torques on any part (gravity, drag, wings, propellers, motors) are summed onto the group, which is integrated as one body with its full inertia tensor and an implicit gyroscopic term.
+- **Contacts and joints:** each part still collides with its own shape. Contacts, and joints to other bodies, act on the group with arms from its centre of mass.
+- **Internal loads:** what the welds inside a group carry comes from inverse dynamics. For the parts on one side of a weld, the change of momentum over the step minus every outside impulse (applied, contact, other joints) is the weld's load. Recordings, strain readings and the render's FEM loads use these values.
+
+Validation: a 0.5 kg part welded on a block makes its weld carry 4.905 N (0.5 × 9.81). A 0.2 kg cantilever with its centre 0.1 m out gives a weld moment of 0.196 N·m (expected 0.1962). In a chain shoved with 2 N at its light end, the parts turn less than 10⁻⁶ degrees relative to each other. Breakable fastenings (screws, glue) stay ordinary joints, because their failure is tested against the joint's own force.
+
+### Cables: action and reaction
+
+Cables are ropes with mass. A cable resting against a body pushes it: the correction the wire receives, $`m\,\Delta x/h^2`$, is applied to the body equal and opposite. In earlier versions the contact was one-way: a wire pulled on its plugs while the body it rested on felt nothing, which lifted a resting quad off the floor before its motors ran. A cable with both plugs on the same rigid body still rests on it (for its shape), but the forces between them are internal: its pull on the plugs and its push on the frame cancel, so neither is applied. If they were, the difference between a lagging, filtered plug tension and an instant contact push would kick the frame. A new cable's slack is bowed up, down or to either side, whichever runs through the fewest surrounding parts, so a wire inside a closed fuselage stays inside instead of arching through the lid and being pushed out over the wing. Propeller discs are not solid to cables, because the disc is only the volume the blades sweep. A wire in a real prop disc would be cut; that is not modelled yet.
 
 ## Collision shapes
 
