@@ -69,7 +69,7 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 | ![Dünya: sarkaç](docs/images/world-pendulum.png) | ![Dünya: katı yakıtlı roket rampada](docs/images/world-rocket-pad.png) |
 | **Dünya:** sarkaç; periyodu teoriyle %0,1 içinde | **Dünya:** katı yakıtlı roket, radyal kanatçıklar |
 | ![Dünya: su bardağı dökülüyor](docs/images/world-glass-pour.png) | |
-| **Dünya:** servo su dolu cam bardağı devirir; su gerçek yoğunluk, viskozite ve yüzey gerilimiyle kâseye dökülür | |
+| **Render:** servo su dolu cam bardağı devirir; 15 000 parçacıklı su gerçek yoğunluk, viskozite ve yüzey gerilimiyle kâseye dökülür | |
 
 ### Dünya şablonları
 
@@ -142,7 +142,7 @@ Her çözücü sonucu bilinen problemlerle sınanır: analitik çözümler, yay�
 | Elektrik | Motorun yüksüz devri (datasheet) | ≈209 rpm | 210 rpm | +0,5 % | −12 / +2 % |
 | Sensör | GPS medyan yatay hatası (datasheet CEP) | 2,5 m | 2,64 m | +6 % | 1,2–4,5 m |
 
-Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Sekiz alandaki 50 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
+Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Sekiz alandaki 53 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
 
 ## İndirme ve kurulum
 
@@ -427,7 +427,7 @@ Every solver is checked against problems with a known answer: analytic solutions
 | Gas | Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
 | Electrical | Motor no-load speed (datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
 
-All 50 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
+All 53 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
 
 ### Download and install
 

@@ -25,6 +25,9 @@ $`\Phi`$ and $`A`$ are tabulated once. This has three consequences:
 - A particle is pushed back without ever touching the wall.
 - The reaction to that push is the force on the wall's body.
 
+Simple flat-faced bodies (a box, the ground) use this flat-wall formula. For bodies made of pieces or meshes (a glass), the kernel integral of the solid itself is precomputed on a grid in the body's frame: $`\Phi(x) = \int_	ext{solid} W(\lVert x - y
+Vert)\,\mathrm{d}y`$, each cell's solid share taken from the signed distance and convolved with the kernel. The inside corner of a glass, its thin wall and a part behind that wall then press as much as they really do. Of two flat faces facing the same way, the one behind adds no pressure: it lies in the nearer one's shadow.
+
 The distance comes from each body's signed distance function. For bodies made of pieces or meshes, such as a glass built from 25 convex pieces, it is sampled once on a grid in the body's own frame. The cell is a third of the particle spacing. A query is then a trilinear interpolation, and the normal is the field's gradient.
 
 **No tunnelling:** a particle may not cross a solid within a step. This is judged in the body's own frame, because the glass may be turning. The distance can change by at most the distance moved, so a particle whose clearances at both ends together exceed its move skips the exact ray test; most particles pass this cheap check.
@@ -56,13 +59,13 @@ No particle moves more than 0.3 spacing in a substep (the CFL condition). As the
 
 **The live view** is interactive:
 
-- A slow liquid is stepped less often than the bodies, at most every 3 ms.
+- The liquid is solved every 1 ms (about 3000 particles, 4 iterations). A longer step let a resting column compress by 8 %; at 1 ms it stays under 1 %.
 - Still water in a still glass sleeps.
-- The liquid's push on its container is applied on every physics step, including between liquid steps.
 
 **A render** computes everything in full, however long it takes:
 
-- The liquid is solved on every physics step, with no sleeping.
+- No liquid substep is longer than the accuracy's physics step (0.1 ms on the finest setting), and there is no sleeping.
+- When the world starts, the liquid is laid out on a lattice that fills its whole volume (a whole number of layers in height), its mass is set to ρ·V, and the density constraint is projected without time passing: the water starts still, at its real mass and density.
 - It uses 6000–30 000 particles and 5–12 pressure iterations, depending on the accuracy setting.
 - The surface is extracted on a finer grid.
 
@@ -88,7 +91,8 @@ Glass and acrylic parts are drawn after the liquid, so water shows through a gla
 
 The numbers are on the [12. Validation](../guide/12-validation.md) page:
 
-- **Water at rest:** 6 cm of water presses on a side wall with its hydrostatic force within 2 %. The interior density is within 0.2 % of the real density, and the largest compression is under 1 %.
+- **Water at rest:** 6 cm of water presses on a side wall with its hydrostatic force within 2 %. The interior density is within 0.2 % of the real density, and the largest compression is under 1 % (0.01 % at a render's 0.1 ms step).
+- **Start:** the water in a glass has exactly its ρV mass and is still when the world starts.
 - **Free container:** a free container on the floor carries the weight of its water within 0.1 %.
 - **Dam break:** the surge front runs 4–8 % ahead of the Martin & Moyce (1952) experiment. Numerical methods usually lead this experiment, because its gate was not removed at once.
 

@@ -123,6 +123,16 @@ namespace RobotWin.Studio.Pages
             double seek = at >= 0 && at + 1 < args.Length && double.TryParse(args[at + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double sv) ? sv : secs / 2;
             int mi = Array.IndexOf(args, "--render-mode");
             int mode = mi >= 0 && mi + 1 < args.Length && int.TryParse(args[mi + 1], out int mv) ? mv : 0;
+            int fi = Array.IndexOf(args, "--analysis-file");
+            if (fi >= 0 && fi + 1 < args.Length)
+            {
+                // A saved render, replayed without computing it again.
+                w.ShowSaved(RobotTwin.CoreSim.Analysis.AnalysisResult.Load(args[fi + 1]));
+                w.SetColourMode(mode);
+                w.SeekTo(seek);
+                return;
+            }
+
             w.RenderNow().ContinueWith(_ =>
             {
                 w.SetColourMode(mode);

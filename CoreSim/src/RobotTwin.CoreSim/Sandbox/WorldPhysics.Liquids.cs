@@ -31,13 +31,13 @@ namespace RobotTwin.CoreSim.Sandbox
         public sealed class LiquidQuality
         {
             /// <summary>Particles per liquid whose spacing is not set (more = finer surface and flow).</summary>
-            public int Particles { get; set; } = 4000;
+            public int Particles { get; set; } = 3000;
 
             /// <summary>Pressure iterations per substep (more = less compression).</summary>
             public int Iterations { get; set; } = 4;
 
-            /// <summary>Longest liquid step (s); a slow liquid is stepped less often than the bodies up to this.</summary>
-            public double MaxStep { get; set; } = 3e-3;
+            /// <summary>Longest liquid (sub)step (s): 1 ms live (a resting column stays within 1 % of its density), the physics step in a render.</summary>
+            public double MaxStep { get; set; } = 1e-3;
 
             /// <summary>Liquid at rest stops being stepped until something moves.</summary>
             public bool Sleep { get; set; } = true;
@@ -81,6 +81,9 @@ namespace RobotTwin.CoreSim.Sandbox
                     ? sv
                     : Math.Pow(volume / Math.Max(100, LiquidParticles), 1.0 / 3);
                 spacing = Math.Max(0.0012, Math.Min(0.03, spacing));
+                // A whole number of layers fills an upright volume to its top: the lattice holds the whole height, so the
+                // liquid has its full mass (a floored count lost up to half a layer at each end).
+                if (Math.Abs(o.Pose.Orientation.Rotate(Vec3.UnitZ).Z) > 0.999) spacing = o.SizeZ / Math.Max(1, Math.Round(o.SizeZ / spacing));
                 var liquid = new LiquidBody(o.Id, kind, spacing);
                 // The volume from the object's own size (its origin is the bottom centre, as for every primitive body),
                 // never from a drawn model: the liquid must start exactly where it was placed.
@@ -101,7 +104,9 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 var lo = origin - new Vec3(ex, ey, ez);
                 var hi = origin + new Vec3(ex, ey, ez);
-                double clear = liquid.Radius * 0.9;
+                // Every lattice cell whose centre lies in the liquid's volume is a particle, so particles × spacing³ is the
+                // real volume (the cells against a wall included); only centres inside a solid are left out.
+                double clear = 0;
                 var points = LiquidBody.Lattice(lo, hi, spacing, p =>
                 {
                     var l = q.InverseRotate(p - origin);
@@ -114,7 +119,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     else if (Math.Abs(l.X) > half.X || Math.Abs(l.Y) > half.Y) return false;
 
                     // Not inside a solid (the glass it was poured into, a stone lying in it).
-                    if (Scene.GroundEnabled && p.Z < Scene.GroundHeight(p.X, p.Y) + clear) return false;
+                    if (Scene.GroundEnabled && p.Z < Scene.GroundHeight(p.X, p.Y)) return false;
                     foreach (var b in Scene.Bodies)
                     {
                         if (!b.Collides) continue;
@@ -122,7 +127,7 @@ namespace RobotTwin.CoreSim.Sandbox
                         if (shape == null || !shape.HasSolid) continue;
                         if (shape.Kind != ShapeKind.Mesh && (p - b.Position).Length > shape.BoundingRadius + clear) continue;
                         var local = b.Orientation.InverseRotate(p - b.Position);
-                        if (b.SignedDistanceSolid(shape, local, clear, out double d, out _) && d < clear) return false;
+                        if (b.SignedDistanceSolid(shape, local, 1e-9, out double d, out _) && d < clear) return false;
                     }
 
                     return true;
@@ -132,6 +137,8 @@ namespace RobotTwin.CoreSim.Sandbox
                 liquid.MaxStep = Liquid.MaxStep;
                 liquid.SleepEnabled = Liquid.Sleep;
                 if (o.Parameters.TryGetValue("liquid.iterations", out var its) && int.TryParse(its, out int iv)) liquid.Iterations = Math.Max(1, Math.Min(20, iv));
+                liquid.SetTotalMass(kind.Density * volume);
+                liquid.Settle(Scene);   // at rest, at the real density, before the world starts
                 _liquids.Add(new LiquidItem(o, liquid));
             }
         }

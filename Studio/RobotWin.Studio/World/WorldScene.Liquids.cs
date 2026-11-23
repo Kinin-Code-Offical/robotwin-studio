@@ -30,7 +30,7 @@ namespace RobotWin.Studio.World
                 _liquidPlaybackTime = pb.Time;
                 foreach (var o in World.Objects)
                     if (WorldPhysics.IsLiquid(o) && pb.LiquidAt(o.Id) is { } rec)
-                        sources.Add((o, LiquidKind.Find(rec.Kind), rec.Positions, rec.Spacing, null));
+                        sources.Add((o, LiquidKind.Find(rec.Kind), rec.Positions, rec.Spacing, rec.Velocities));
             }
             else if (physics != null)
             {

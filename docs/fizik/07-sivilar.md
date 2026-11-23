@@ -25,6 +25,9 @@ $`\Phi`$ ve $`A`$ bir kez tablolanır. Bunun üç sonucu vardır:
 - Parçacık duvara değmeden geri itilir.
 - Bu itişin tepkisi duvarın cismine kuvvet olarak uygulanır.
 
+Düz yüzlü basit cisimlerde (kutu, zemin) bu düz duvar formülü kullanılır. Çok parçalı ya da örgü cisimlerde (bir bardak gibi) cismin kendi çerçevesindeki bir ızgarada katının çekirdek integrali doğrudan önceden hesaplanır: $`\Phi(x) = \int_	ext{katı} W(\lVert x - y
+Vert)\,\mathrm{d}y`$, her hücrenin katı payı işaretli uzaklıktan bulunup çekirdekle evriştirilerek. Böylece bardağın iç köşesi, ince duvarı ve duvarın arkasındaki bir parça gerçekte olduğu kadar basınç uygular. Aynı yöne bakan iki düz yüzden arkadaki, öndekinin gölgesinde kaldığı için basınç katmaz.
+
 Uzaklık, her cismin işaretli uzaklık fonksiyonundan gelir. Çok parçalı ya da örgü cisimlerde (25 dışbükey parçadan oluşan bir bardak gibi) bu fonksiyon, cismin kendi çerçevesinde bir ızgarada bir kez örneklenir. Hücre, parçacık aralığının üçte biridir. Sorgu bu ızgarada üç doğrusal ara değerlemedir, normal de alanın gradyanından gelir.
 
 **Tünelleme yok:** bir parçacık bir adımda katı bir duvarı aşamaz. Bu, cismin kendi çerçevesinde denetlenir (bardak dönüyor olabilir). Uzaklık en fazla gidilen yol kadar değişebildiği için iki uçtaki boşluk toplamı hareketten büyükse kesin ışın atılmaz. Çoğu parçacık bu sayede ucuzca geçer.
@@ -56,13 +59,13 @@ Bir alt adımda hiçbir parçacık, parçacık aralığının 0,3'ünden fazla y
 
 **Canlı görüntü** etkileşimlidir:
 
-- Yavaş bir sıvı, cisimlerden daha seyrek adımlanır (en çok 3 ms).
+- Sıvı her 1 ms'de çözülür (yaklaşık 3000 parçacık, 4 yineleme). Daha uzun adım, durgun bir su sütununu %8 sıkıştırıyordu; 1 ms'de sıkışma %1'in altında kalır.
 - Durgun bardaktaki durgun su "uyur".
-- Sıvının kaba itişi, sıvı adımları arasındaki her fizik adımında uygulanır.
 
 **Render** her şeyi tam hesaplar; ne kadar sürdüğü önemsizdir:
 
-- Sıvı her fizik adımında çözülür, uyku yoktur.
+- Sıvının alt adımı doğruluk ayarının fizik adımından uzun olmaz (Hassas'ta 0,1 ms); uyku yoktur.
+- Sıvı, dünya başlarken hacmini tam dolduran bir ızgarayla (yükseklikte tam sayıda katman) kurulur, kütlesi ρ·V'ye eşitlenir ve zaman ilerlemeden yoğunluk kısıtı izdüşürülerek durgun hâle getirilir: su ilk andan gerçek kütlesinde ve yoğunluğunda, hareketsiz başlar.
 - Doğruluk ayarına göre 6000–30 000 parçacık ve 5–12 basınç yinelemesi kullanılır.
 - Yüzey daha ince bir ızgarada çıkarılır.
 
@@ -88,7 +91,8 @@ Cam ve akrilik parçalar sıvıdan sonra çizilir; bu sayede su bardağın için
 
 Sayılar [12. Doğrulama](../kullanim/12-dogrulama.md) sayfasındadır:
 
-- **Durgun su:** 6 cm su, yan duvara hidrostatik kuvvetini %2 içinde uygular. İç yoğunluk gerçek yoğunluğun %0,2 içindedir, en büyük sıkışma %1'in altındadır.
+- **Durgun su:** 6 cm su, yan duvara hidrostatik kuvvetini %2 içinde uygular. İç yoğunluk gerçek yoğunluğun %0,2 içindedir, en büyük sıkışma %1'in altındadır (render'ın 0,1 ms adımında %0,01).
+- **Başlangıç:** bardaktaki su dünya başlarken tam ρV kütlesinde ve hareketsizdir.
 - **Serbest kap:** zemindeki serbest bir kap, içindeki suyun ağırlığını %0,1 içinde taşır.
 - **Baraj yıkılması:** su cephesi Martin ve Moyce (1952) deneyinin %4–8 önündedir. Sayısal yöntemler bu deneyde genelde önde gider, çünkü deneyde kapak bir anda kalkmamıştır.
 

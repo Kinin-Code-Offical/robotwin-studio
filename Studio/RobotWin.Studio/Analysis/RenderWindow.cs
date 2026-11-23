@@ -53,6 +53,7 @@ namespace RobotWin.Studio.Analysis
         private readonly TextBlock _status = new TextBlock { TextWrapping = TextWrapping.Wrap };
         private readonly Button _csv = new Button { Content = "Tüm kanallar CSV", IsEnabled = false, Margin = new Thickness(0, 6, 0, 0) };
         private readonly Button _save = new Button { Content = "Kaydet (.rwanalysis)", IsEnabled = false, Margin = new Thickness(0, 6, 0, 0) };
+        private readonly Button _open = new Button { Content = "Kayıtlı render'ı aç…", Margin = new Thickness(0, 6, 0, 0), ToolTip = "Bu dünya için daha önce kaydedilmiş bir render'ı (.rwanalysis) yeniden hesaplamadan oynatır." };
 
         // timeline
         private readonly Button _play = new Button { Content = "▶", Width = 34 };
@@ -112,6 +113,7 @@ namespace RobotWin.Studio.Analysis
 
         public RenderWindow(WorldDocument world, IWorldGeometry geometry, double duration, PartLibrary library, Func<WorldObject, double>? massOf)
         {
+            AnalysisRun.Esp32Builder ??= RobotWin.Studio.Automation.StudioApiHost.BuildEsp32;   // ESP32 boards run their firmware in the render too
             _world = world;
             _geometry = geometry;
             Title = "Render — " + world.Title;
@@ -203,7 +205,7 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(Row("Doğruluk", _accuracy));
             left.Children.Add(Row("Gerilme kare hızı (fps)", _stressFps));
             left.Children.Add(Caption("Gerilmesi hesaplanacak parçalar"));
-            foreach (var o in _world.Objects.Where(o => !o.IsStatic && (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model)))
+            foreach (var o in _world.Objects.Where(o => !o.IsStatic && (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model) && !WorldPhysics.IsLiquid(o)))
                 _parts.Children.Add(new CheckBox { Content = o.Name, Tag = o.Id, IsChecked = true, Foreground = Foreground, Margin = new Thickness(0, 1, 0, 1) });
             if (_parts.Children.Count == 0) _parts.Children.Add(new TextBlock { Text = "(hareketli gövde / model yok)", Style = (Style)Application.Current.FindResource("Text.Caption") });
             left.Children.Add(_parts);
@@ -224,8 +226,10 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(_status);
             _csv.Click += (_, _) => ExportCsv();
             _save.Click += (_, _) => Save();
+            _open.Click += (_, _) => Open();
             left.Children.Add(_csv);
             left.Children.Add(_save);
+            left.Children.Add(_open);
         }
 
         private static double Num(TextBox box, double fallback) =>
@@ -1137,6 +1141,28 @@ namespace RobotWin.Studio.Analysis
             return brush;
         }
 
+        /// <summary>Shows a saved render of this world (its poses are matched to the world's objects by id).</summary>
+        public void ShowSaved(AnalysisResult r)
+        {
+            Show(r);
+            if (!string.Equals(r.WorldTitle, _world.Title, StringComparison.Ordinal))
+                _status.Text = $"Uyarı: bu render \"{r.WorldTitle}\" dünyasına ait; nesneler kimliklerine göre eşleştirildi.";
+        }
+
+        private void Open()
+        {
+            var dlg = new OpenFileDialog { Filter = "RobotWin analizi (*.rwanalysis)|*.rwanalysis" };
+            if (dlg.ShowDialog(this) != true) return;
+            try
+            {
+                ShowSaved(AnalysisResult.Load(dlg.FileName));
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is UnauthorizedAccessException || ex is System.Text.Json.JsonException)
+            {
+                _status.Text = "Açılamadı: " + ex.Message;
+            }
+        }
+
         private void Save()
         {
             if (_result == null) return;
@@ -1180,14 +1206,29 @@ namespace RobotWin.Studio.Analysis
             /// <summary>[liquid] Recorded liquids of the shown result.</summary>
             public System.Collections.Generic.List<RobotTwin.CoreSim.Analysis.LiquidTrack>? Liquids { get; set; }
 
-            public (float[] Positions, double Spacing, string Kind)? LiquidAt(string objectId)
+            public (float[] Positions, double Spacing, string Kind, float[]? Velocities)? LiquidAt(string objectId)
             {
                 if (Liquids == null) return null;
                 foreach (var l in Liquids)
                 {
                     if (!string.Equals(l.ObjectId, objectId, System.StringComparison.OrdinalIgnoreCase)) continue;
                     int f = l.FrameAt(Time + 1e-9);
-                    return f < 0 ? null : (l.Positions(f), l.Spacing, l.Kind);
+                    if (f < 0) return null;
+                    var pos = l.Positions(f);
+                    float[]? vel = null;
+                    if (f > 0)
+                    {
+                        // Particles keep their numbers between frames: the move since the last frame is each one's velocity.
+                        var prev = l.Positions(f - 1);
+                        double dt = l.Times[f] - l.Times[f - 1];
+                        if (prev.Length == pos.Length && dt > 0)
+                        {
+                            vel = new float[pos.Length];
+                            for (int i = 0; i < pos.Length; i++) vel[i] = (float)((pos[i] - prev[i]) / dt);
+                        }
+                    }
+
+                    return (pos, l.Spacing, l.Kind, vel);
                 }
 
                 return null;

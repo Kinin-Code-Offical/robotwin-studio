@@ -160,7 +160,7 @@ Give any body a parachute with **Özellik ekle → Kurtarma paraşütü** (add f
 
 - The liquid is solved as particles and presses on its container's walls with its real pressure. A glass carries the weight of its water, a part dropped in water feels buoyancy, honey flows slowly.
 - Glass (material **CAM**) and acrylic are drawn see-through, so water shows through a glass. A cylinder with a wall thickness (**tube.wall**) and a bottom (**tube.bottom**) becomes a glass or a cup.
-- The live view uses about 4000 particles per liquid. Still water sleeps, and slow water is stepped less often.
+- The live view uses about 3000 particles per liquid, solved every 1 ms; still water sleeps.
 - A render computes everything in full (6000–30 000 particles by accuracy, on every physics step) and replays the liquid with a finer surface.
 
 Equations and validation: [Liquids](../physics/07-liquids.md).

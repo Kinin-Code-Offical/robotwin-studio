@@ -26,6 +26,12 @@ namespace RobotTwin.CoreSim.Analysis
         /// <summary>Kinematic viscosity of air at about 20 °C (m²/s).</summary>
         public const double AirViscosity = 1.5e-5;
 
+        /// <summary>
+        /// Compiles an ESP32 sketch for the run (source → co-simulation DLL), set by the app. Without it an ESP32 board
+        /// sits idle in the render: the render must run the same firmware as the live world.
+        /// </summary>
+        public static Func<string, string?>? Esp32Builder { get; set; }
+
         public static AnalysisResult Run(WorldDocument world, AnalysisSettings settings, IWorldGeometry? geometry = null,
             CancellationToken cancel = default, Action<string, double>? progress = null)
         {
@@ -33,7 +39,7 @@ namespace RobotTwin.CoreSim.Analysis
             var result = new AnalysisResult { Settings = s, WorldTitle = world.Title };
             var watch = Stopwatch.StartNew();
             var acc = s.AccuracyValues;
-            var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol, Liquid = s.LiquidQuality };
+            var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol, Liquid = s.LiquidQuality, Esp32Builder = Esp32Builder };
             var stressIds = s.Stress ? s.StressObjects.Where(id => world.Find(id) != null).ToList() : new List<string>();
 
             using (var runner = new WorldRunner(world, options, geometry))
@@ -164,7 +170,7 @@ namespace RobotTwin.CoreSim.Analysis
             for (int k = 1; k <= s.UncertaintyRuns; k++)
             {
                 if (cancel.IsCancellationRequested) break;
-                var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol, Tolerances = tol, ToleranceRun = k };
+                var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol, Tolerances = tol, ToleranceRun = k, Liquid = s.LiquidQuality, Esp32Builder = Esp32Builder };
                 var temp = new AnalysisResult { Settings = s };
                 using (var runner = new WorldRunner(world, options, geometry))
                 {

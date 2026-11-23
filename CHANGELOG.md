@@ -10,10 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Liquids:** water, sea water, ethanol, milk, sunflower oil, glycerol and honey as particles (position-based fluids) at their real density, viscosity (implicit SPH Laplacian, no-slip walls) and surface tension (continuum surface force). Walls carry the liquid's pressure through density maps from each body's signed distance, and their reaction acts on the body: a glass carries its water's weight, a part in water feels buoyancy. No particle crosses a wall within a step, judged in the turning body's own frame. A liquid object is a box or cylinder the liquid fills when the world starts.
+- **Density maps for every rigid body:** the share of the kernel a body's solid covers (Koschier & Bender) is precomputed on a grid in the body's frame, so the inside corner of a glass, its thin wall and a part behind it press on the liquid as they really are; flat analytic faces use the half-space formula, and a flat face behind a nearer one facing the same way adds no pressure.
 - **Liquid surface:** smoothed particles, a density field and surface nets give a closed surface with smooth normals; Fresnel reflectance per vertex (clear looking in, sky at grazing angles), a sun highlight, drops for loose particles. Glass and acrylic are drawn after the liquid, so water shows through a glass.
 - **Glass and cups:** a "CAM" (soda-lime glass) material, and `tube.bottom` closes a hollow cylinder into a cup; the editor draws hollow tubes and cups.
 - **Template "Su bardağı":** an ESP32 tips a glass of water held on a sideways SG90's horn and pours it into a bowl.
-- **Renders compute liquids in full:** every physics step, no sleeping, 6000–30 000 particles and 5–12 pressure iterations by accuracy, recorded at 60 frames per second and replayed with a finer surface. The live view steps a slow liquid less often (at most 3 ms) and lets still water sleep.
+- **Renders compute liquids in full:** substeps no longer than the accuracy's physics step (every 0.1 ms on "Hassas"), no sleeping, 6000–30 000 particles and 5–12 pressure iterations by accuracy, recorded at 60 frames per second and replayed with a finer surface; falling drops are drawn with the streak they make between two frames. The live view solves about 3000 particles every 1 ms (a coarser step let a resting column compress by 8 %) and lets still water sleep.
+- **A liquid starts with its exact mass, at rest:** a lattice that fills the whole volume (a whole number of layers in height), the mass set to ρ·V, then the liquid poured to rest beforehand (stepped under gravity with its motion damped, at the step it will run with), so the water stands still at its real density, in hydrostatic balance, when the world starts.
+- **Open a saved render:** **Kayıtlı render'ı aç…** in the render window replays a `.rwanalysis` without computing it again.
 
 - **Validation page:** **Yardım → 12. Doğrulama** (and the README) lists, for every solver, the theory or benchmark value, what the simulation gives, the deviation and the tolerance its test enforces.
 - **Flow benchmarks:** the Schäfer–Turek DFG cylinder benchmarks 2D-1 (Re 20, steady) and 2D-2 (Re 100, periodic shedding) are tests now, along with sphere drag at Re 20 and Re 100 against the standard drag curve.
@@ -28,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Sphere drag was 30 % high** at Re 20; with the changes above it is within about 10 % of the standard drag curve, and the DFG cylinder drag is within 1 % of the benchmark.
+- **ESP32 boards were idle in renders:** the render's runner had no sketch compiler, so an ESP32 world (the gamepad car, the plane, the traffic light) recorded its boards doing nothing; the render now compiles and runs the same firmware as the live world.
 - **Help tables with many columns:** a wide table squeezed its last column to one letter per line; column widths are now normalized.
 
 ## [1.3.0] - 2026-11-23

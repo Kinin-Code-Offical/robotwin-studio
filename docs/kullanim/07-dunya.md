@@ -160,7 +160,7 @@ Herhangi bir gövdeye denetçide **Özellik ekle → Kurtarma paraşütü** ile 
 
 - Sıvı parçacıklarla çözülür ve kabın duvarlarına gerçek basıncını uygular. Bir bardak suyun ağırlığını taşır, suya bırakılan bir parça kaldırma kuvveti görür, bal yavaş akar.
 - Cam (malzeme **CAM**) ve akrilik saydam çizilir; su bardağın içinden görünür. Bir silindire **tube.wall** ile et kalınlığı, **tube.bottom** ile taban verilince bardak ya da kap olur.
-- Canlı görüntüde sıvı başına yaklaşık 4000 parçacık kullanılır. Durgun su "uyur", yavaş su seyrek adımlanır.
+- Canlı görüntüde sıvı başına yaklaşık 3000 parçacık kullanılır ve sıvı her 1 ms'de çözülür; durgun su "uyur".
 - Render her şeyi tam hesaplar (doğruluk ayarına göre 6000–30 000 parçacık, her fizik adımında) ve sıvıyı daha ince bir yüzeyle yeniden oynatır.
 
 Denklemler ve doğrulama: [Sıvılar](../fizik/07-sivilar.md).

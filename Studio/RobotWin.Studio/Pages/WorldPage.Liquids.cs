@@ -77,7 +77,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Note(string.Format(CultureInfo.CurrentCulture,
                 "{0:0.#} ml · {1:0.#} g · yoğunluk {2:0} kg/m³ · viskozite {3:0.###} mPa·s · yüzey gerilimi {4:0.#} mN/m (20 °C)",
                 v * 1e6, kind.Density * v * 1000, kind.Density, kind.Viscosity * 1000, kind.SurfaceTension * 1000)));
-            Inspector.Children.Add(Note("Kutu ya da silindir, dünya başlarken sıvının dolduracağı hacimdir; içindeki katı parçaların yeri boş kalır. Canlı görüntüde yaklaşık 4000 parçacık, render'da doğruluk ayarına göre 6000–30 000 parçacık kullanılır."));
+            Inspector.Children.Add(Note("Kutu ya da silindir, dünya başlarken sıvının dolduracağı hacimdir; içindeki katı parçaların yeri boş kalır. Canlı görüntüde yaklaşık 3000 parçacık, render'da doğruluk ayarına göre 6000–30 000 parçacık kullanılır."));
 
             Inspector.Children.Add(Caption("Hacim"));
             Inspector.Children.Add(Vector3Row("Konum (mm)", o.Pose.X * 1000, o.Pose.Y * 1000, o.Pose.Z * 1000, (x, y, z) =>

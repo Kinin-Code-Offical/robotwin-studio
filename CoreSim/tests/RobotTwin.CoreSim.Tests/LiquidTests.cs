@@ -137,6 +137,28 @@ namespace RobotTwin.CoreSim.Tests
             Assert.True(worst < 0.12, "the surge front within 12 % of the experiment (its gate was pulled, not removed at once)");
         }
 
+        [Fact]
+        public void ALiquidStartsAtRestWithItsExactMass()
+        {
+            var w = WorldExamples.GlassPour(PartLibrary.Default);
+            var physics = WorldPhysics.Build(w, new ApproximateGeometry(w, PartLibrary.Default).GeometryOf, null);
+            var water = physics.Liquids.Single();
+            double exact = 998.2 * WorldPhysics.LiquidVolume(water.Object);
+            _out.WriteLine($"{water.Body.Count} particles, {water.Body.TotalMass * 1000:F2} g (ρV = {exact * 1000:F2} g), kinetic energy {water.Body.KineticEnergy():E2} J");
+            Assert.InRange(water.Body.TotalMass / exact, 0.9999, 1.0001);
+            Assert.Equal(0, water.Body.KineticEnergy());
+            for (int i = 0; i < 200; i++) physics.Advance(1e-3, null);
+            double vrms = Math.Sqrt(2 * water.Body.KineticEnergy() / water.Body.TotalMass);
+            double vmax = Enumerable.Range(0, water.Body.Count).Max(i => water.Body.Velocity(i).Length);
+            _out.WriteLine($"after 0.2 s: rms speed {vrms * 1000:F1} mm/s, fastest particle {vmax * 1000:F1} mm/s, max compression {water.Body.MaxCompression * 100:F2} %");
+            // The glass hangs on an unpowered servo here: what is left is a gentle slosh, not the splash of water poured in
+            // at the start; the water stays at its density and in the glass.
+            Assert.True(vrms < 0.03, "no splash when the world starts: the water was poured to rest beforehand");
+            Assert.True(water.Body.MaxCompression < 0.02, "and it is not squeezed");
+            var (lo, hi) = water.Body.Bounds();
+            Assert.True(hi.Z - lo.Z < 0.075 && lo.Z > 0.08, "all of it still in the glass");
+        }
+
         [Esp32Fact]
         public void TheGlassOfWaterIsPouredIntoTheBowl()
         {

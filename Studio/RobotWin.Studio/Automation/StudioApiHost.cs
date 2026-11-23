@@ -129,7 +129,7 @@ namespace RobotWin.Studio.Automation
             timer.Start();
         }
 
-        private static string? BuildEsp32(string source)
+        internal static string? BuildEsp32(string source)
         {
             string? dll = Firmware.ArduinoCompiler.CachedEsp32Dll(source);
             if (dll != null) return dll;

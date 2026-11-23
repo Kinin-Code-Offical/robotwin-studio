@@ -16,8 +16,11 @@ namespace RobotWin.Studio.World
         /// <summary>Simulation time of the replay frame (s).</summary>
         double Time { get; }
 
-        /// <summary>[liquid] A liquid's recorded particles at the replay frame (null when none were recorded).</summary>
-        (float[] Positions, double Spacing, string Kind)? LiquidAt(string objectId) => null;
+        /// <summary>
+        /// [liquid] A liquid's recorded particles at the replay frame (null when none were recorded), and their velocity from
+        /// the previous recorded frame (null for the first one).
+        /// </summary>
+        (float[] Positions, double Spacing, string Kind, float[]? Velocities)? LiquidAt(string objectId) => null;
     }
 
     // [render] The scene can show a rendered run: objects take their recorded poses and an overlay
