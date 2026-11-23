@@ -472,8 +472,8 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Note("Bant üstündeki parçaları sürtünmeyle taşır; sonda dayama ve fotosel (SENSOR) vardır. RUN pini kabloluysa bant yalnızca RUN yüksekken döner."));
             StatusBlock();
             var row = new WrapPanel();
-            row.Children.Add(Small("Bandı başlat", () => _session.Physics?.ConveyorOf(o.Id)?.SetRunning(true)));
-            row.Children.Add(Small("Bandı durdur", () => _session.Physics?.ConveyorOf(o.Id)?.SetRunning(false)));
+            row.Children.Add(Small("Bandı başlat", () => _session.SetConveyor(o.Id, true)));
+            row.Children.Add(Small("Bandı durdur", () => _session.SetConveyor(o.Id, false)));
             Inspector.Children.Add(row);
         }
 
@@ -482,7 +482,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Caption("Güvenlik ışık perdesi"));
             Inspector.Children.Add(Note("Işınlardan biri kesilince OSSD düşer; SAFE girişine bağlı kol (veya SAFE'i bağlı olmayan bütün kollar) kontrollü durur ve yeniden başlatma bekler."));
             StatusBlock();
-            Inspector.Children.Add(Small("Test: perdeye el sok (2 s)", () => _session.Physics?.InterruptCurtain(o.Id, 2.0), "Bir kişinin perdeden geçmesini taklit eder"));
+            Inspector.Children.Add(Small("Test: perdeye el sok (2 s)", () => _session.InterruptCurtain(o.Id, 2.0), "Bir kişinin perdeden geçmesini taklit eder"));
         }
 
         // ================================================================ live readout

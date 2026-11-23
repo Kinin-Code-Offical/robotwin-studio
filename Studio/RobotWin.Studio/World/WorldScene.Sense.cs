@@ -37,6 +37,9 @@ namespace RobotWin.Studio.World
 
         internal Model3D? EnvironmentModel => _environment.Content as Model3D;
 
+        /// <summary>The sculpted ground (grass, runway, roads), or null for a flat floor.</summary>
+        internal Model3D? TerrainModel => _terrainView?.Model;
+
         /// <summary>Every object's model and its current placement (physics pose while simulating).</summary>
         internal List<(string Id, Model3D Content, Matrix3D Matrix)> LiveItems() =>
             _items.Values.Select(it => (it.Object.Id, (Model3D)it.Visual.Content, CurrentMatrix(it))).ToList();
@@ -448,7 +451,7 @@ namespace RobotWin.Studio.World
                 if (sw.Elapsed.TotalMilliseconds > 35) break;   // the computer cannot keep up: the frame comes later
                 if (!synced)
                 {
-                    _offscreen.Sync(EnvironmentModel, LiveItems().Select(x => (x.Content, x.Matrix)).ToList(), _senseGeneration);
+                    _offscreen.Sync(EnvironmentModel, LiveItems().Select(x => (x.Content, x.Matrix)).ToList(), _senseGeneration, TerrainModel);
                     synced = true;
                 }
 

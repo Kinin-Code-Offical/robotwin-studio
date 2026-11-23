@@ -231,6 +231,9 @@ namespace RobotWin.Studio.Analysis
         private static double Num(TextBox box, double fallback) =>
             double.TryParse(box.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && v > 0 ? v : fallback;
 
+        /// <summary>[replay] Inputs of the recorded live run; the render feeds them back at their times.</summary>
+        public RobotTwin.CoreSim.Automation.InputJournal? Inputs { get; set; }
+
         private AnalysisSettings ReadSettings()
         {
             double duration = Math.Min(120, Num(_duration, 2));
@@ -256,7 +259,8 @@ namespace RobotWin.Studio.Analysis
                 ThermalExtend = 0,
                 ThermalFrames = Math.Max(10, (int)(duration * 10)),
                 UncertaintyRuns = _bands.IsChecked == true ? 4 : 0,
-                StressMeshCheck = _meshCheck.IsChecked == true
+                StressMeshCheck = _meshCheck.IsChecked == true,
+                Inputs = Inputs
             };
         }
 

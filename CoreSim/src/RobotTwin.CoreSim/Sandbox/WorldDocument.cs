@@ -241,6 +241,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Force (N) above which the joint breaks; 0 = from the fastening (unbreakable when none is set).</summary>
         public double BreakForce { get; set; }
 
+        /// <summary>Coulomb friction of a hinge (N·m: a hub turning on an axle, a bushing) or slider (N); 0 = an ideal bearing.</summary>
+        public double Friction { get; set; }
+
         /// <summary>[fasten] How a fixed joint is fastened: screws, glue, tape, zip tie, solder (<see cref="Sandbox.Fastening"/>); empty = unspecified.</summary>
         public string Fastening { get; set; } = string.Empty;
     }

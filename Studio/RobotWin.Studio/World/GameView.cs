@@ -24,6 +24,15 @@ namespace RobotWin.Studio.World
         private readonly Viewport3D _view = new Viewport3D { ClipToBounds = true, IsHitTestVisible = false };
         private readonly PerspectiveCamera _camera = new PerspectiveCamera { FieldOfView = 60, NearPlaneDistance = 0.002, FarPlaneDistance = 150 };
         private readonly ModelVisual3D _environment = new ModelVisual3D();
+        private readonly ModelVisual3D _terrain = new ModelVisual3D();   // [terrain] grass, runway, roads
+        private static readonly SolidColorBrush SkyBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xA7, 0xC0, 0xD8)));
+        private static readonly SolidColorBrush IndoorBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x5A, 0x5C, 0x62)));
+
+        private static SolidColorBrush Freeze(SolidColorBrush b)
+        {
+            b.Freeze();
+            return b;
+        }
         private readonly List<ModelVisual3D> _items = new List<ModelVisual3D>();
         private readonly Border _frame = new Border { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, ClipToBounds = true };
         private readonly Grid _stage = new Grid();
@@ -60,6 +69,7 @@ namespace RobotWin.Studio.World
             Children.Add(bar);
 
             _view.Camera = _camera;
+            _view.Children.Add(_terrain);
             _view.Children.Add(_environment);
             _stage.Children.Add(_view);
             _stage.Children.Add(_sensorImage);
@@ -107,6 +117,7 @@ namespace RobotWin.Studio.World
             public string Label = string.Empty;
             public string? CameraId;
             public bool Top;
+            public string? PilotId;   // [ps5plane] eye of the pilot holding this controller
             public override string ToString() => Label;
         }
 
@@ -114,12 +125,22 @@ namespace RobotWin.Studio.World
         public void RefreshSources()
         {
             var world = Scene?.World;
-            string? keep = (_source.SelectedItem as Source)?.CameraId ?? ((_source.SelectedItem as Source)?.Top == true ? "#top" : null);
+            var was = _source.SelectedItem as Source;
+            // What the user is looking at now; null only when nothing was chosen yet (then the world's default view).
+            string? keep = was == null ? null : was.CameraId ?? was.PilotId ?? (was.Top ? "#top" : "#chase");
             _source.Items.Clear();
             _source.Items.Add(new Source { Label = "Takip kamerası (robotun arkası)" });
             _source.Items.Add(new Source { Label = "Üstten takip", Top = true });
+            int pilotIndex = -1;
             if (world != null)
             {
+                // [ps5plane] An RC pilot flies by eye from where they stand: look at the model from the controller.
+                foreach (var pad in world.Objects.Where(o => o.PartId == WirelessParts.GamepadId))
+                {
+                    if (pilotIndex < 0 && world.Objects.Any(o => WorldPhysics.IsWing(o))) pilotIndex = _source.Items.Count;
+                    _source.Items.Add(new Source { Label = "Pilot gözü: " + pad.Name, PilotId = pad.Id });
+                }
+
                 foreach (var o in world.Objects.Where(o => o.PartId == SensingParts.CameraId))
                 {
                     _source.Items.Add(new Source { Label = "Kamera: " + o.Name, CameraId = o.Id });
@@ -130,19 +151,35 @@ namespace RobotWin.Studio.World
             for (int i = 0; i < _source.Items.Count; i++)
             {
                 var s = (Source)_source.Items[i];
-                if ((keep == "#top" && s.Top) || (keep != null && s.CameraId == keep)) index = i;
+                if ((keep == "#top" && s.Top) || (keep != null && (s.CameraId == keep || s.PilotId == keep))) index = i;
             }
 
-            // A world with a camera opens on it.
-            if (keep == null && _source.Items.Count > 2) index = 2;
+            // A world with a camera opens on it; an aircraft with a controller opens on the pilot's eye.
+            if (keep == null && pilotIndex >= 0) index = pilotIndex;
+            else if (keep == null && _source.Items.Count > 2) index = 2;
             _source.SelectedIndex = index;
+        }
+
+        /// <summary>[ps5plane] Switches to the first pilot's-eye view (a world with a controller).</summary>
+        public void ShowPilot()
+        {
+            RefreshSources();
+            for (int i = 0; i < _source.Items.Count; i++)
+            {
+                if (((Source)_source.Items[i]).PilotId != null)
+                {
+                    _source.SelectedIndex = i;
+                    return;
+                }
+            }
         }
 
         /// <summary>Shows a camera object (or the chase camera for null).</summary>
         public void ShowCamera(string? cameraObjectId, bool sensorOutput)
         {
             RefreshSources();
-            for (int i = 0; i < _source.Items.Count; i++)
+            if (cameraObjectId == null) _source.SelectedIndex = 0;   // the chase camera (not the top view or a pilot's eye)
+            for (int i = 0; i < _source.Items.Count && cameraObjectId != null; i++)
             {
                 if (((Source)_source.Items[i]).CameraId == cameraObjectId) _source.SelectedIndex = i;
             }
@@ -211,6 +248,9 @@ namespace RobotWin.Studio.World
             {
                 _generation = scene.Generation;
                 _environment.Content = scene.EnvironmentModel;
+                _terrain.Content = scene.TerrainModel;
+                // Outdoors (a terrain) the camera sees a hazy sky above the horizon; indoors the neutral backdrop.
+                _frame.Background = scene.TerrainModel != null ? SkyBrush : IndoorBrush;
                 foreach (var v in _items) _view.Children.Remove(v);
                 _items.Clear();
                 foreach (var it in items)
@@ -256,6 +296,10 @@ namespace RobotWin.Studio.World
                                  (Session?.Sensing == null ? " · simülasyon çalışınca sensör görüntüsü gelir" : string.Empty);
                 }
             }
+            else if (src?.PilotId != null && world.Find(src.PilotId) is { } pilot)
+            {
+                PilotEye(items, world, pilot, dt);
+            }
             else
             {
                 Chase(items, world, src?.Top == true, dt);
@@ -278,28 +322,85 @@ namespace RobotWin.Studio.World
             _bitmap.WritePixels(new Int32Rect(0, 0, frame.Width, frame.Height), frame.Bgra, frame.Width * 4, 0);
         }
 
-        /// <summary>Chase camera behind (or above) the selected or first moving object.</summary>
-        private void Chase(List<(string Id, Model3D Content, Matrix3D Matrix)> items, WorldDocument world, bool top, double dt)
+        /// <summary>The selected moving object, else the first moving body.</summary>
+        private WorldObject? ChaseTarget(WorldDocument world)
         {
             string? id = Scene?.Selected;
             var target = id != null ? world.Find(id) : null;
             if (target == null || target.IsStatic) target = world.Objects.FirstOrDefault(o => !o.IsStatic && o.Kind == WorldObjectKind.Body) ?? world.Objects.FirstOrDefault(o => !o.IsStatic);
+            return target;
+        }
+
+        private string? _radiusKey;
+        private double _radius = 0.15;
+
+        /// <summary>How far the parts joined to <paramref name="target"/> reach from it (m): a car about 0.15, a 1 m plane about 0.6.</summary>
+        private double AssemblyRadius(WorldDocument world, WorldObject target)
+        {
+            string key = target.Id + "/" + world.Joints.Count + "/" + world.Objects.Count;
+            if (key == _radiusKey) return _radius;
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { target.Id };
+            var queue = new Queue<string>();
+            queue.Enqueue(target.Id);
+            double r = 0;
+            while (queue.Count > 0)
+            {
+                var o = world.Find(queue.Dequeue());
+                if (o == null) continue;
+                double reach = (o.Pose.Position - target.Pose.Position).Length + 0.5 * Math.Max(o.SizeX, Math.Max(o.SizeY, o.SizeZ));
+                r = Math.Max(r, reach);
+                foreach (var j in world.Joints)
+                {
+                    string? other = j.ObjectA == o.Id ? j.ObjectB : j.ObjectB == o.Id ? j.ObjectA : null;
+                    if (other != null && seen.Add(other)) queue.Enqueue(other);
+                }
+            }
+
+            _radiusKey = key;
+            _radius = Math.Max(0.15, Math.Min(5, r));
+            return _radius;
+        }
+
+        /// <summary>[ps5plane] From the pilot's eyes (60 cm above the controller in their hands), zoomed to keep the model in view.</summary>
+        private void PilotEye(List<(string Id, Model3D Content, Matrix3D Matrix)> items, WorldDocument world, WorldObject pad, double dt)
+        {
+            var target = ChaseTarget(world);
             if (target == null) return;
+            var pos = items.FirstOrDefault(x => x.Id == target.Id).Matrix.Transform(new Point3D(0, 0, 0));
+            var eye = new Point3D(pad.Pose.X, pad.Pose.Y, pad.Pose.Z + 0.6);
+            double k = 1 - Math.Exp(-dt * 10);
+            _chaseLook = new Point3D(_chaseLook.X + (pos.X - _chaseLook.X) * k, _chaseLook.Y + (pos.Y - _chaseLook.Y) * k, _chaseLook.Z + (pos.Z - _chaseLook.Z) * k);
+            double dist = Math.Max(0.5, (pos - eye).Length);
+            double fov = 2 * Math.Atan(3 * AssemblyRadius(world, target) / dist) * 180 / Math.PI;
+            _camera.Position = eye;
+            _camera.LookDirection = _chaseLook - eye;
+            _camera.UpDirection = new Vector3D(0, 0, 1);
+            _camera.FieldOfView = Math.Max(8, Math.Min(60, fov));
+            _camera.NearPlaneDistance = 0.05;
+        }
+
+        /// <summary>Chase camera behind (or above) the selected or first moving object, set back by its size.</summary>
+        private void Chase(List<(string Id, Model3D Content, Matrix3D Matrix)> items, WorldDocument world, bool top, double dt)
+        {
+            var target = ChaseTarget(world);
+            if (target == null) return;
+            double scale = AssemblyRadius(world, target) / 0.15;
             var m = items.FirstOrDefault(x => x.Id == target.Id).Matrix;
             var pos = m.Transform(new Point3D(0, 0, 0));
             var fwd = m.Transform(new Vector3D(1, 0, 0));
             fwd.Z = 0;
             if (fwd.Length < 1e-6) fwd = new Vector3D(1, 0, 0);
             fwd.Normalize();
-            var desired = top ? pos + new Vector3D(-0.001, 0, 1.2) : pos - fwd * 0.45 + new Vector3D(0, 0, 0.22);
+            var desired = top ? pos + new Vector3D(-0.001, 0, 1.2 * scale) : pos - fwd * (0.45 * scale) + new Vector3D(0, 0, 0.22 * scale);
             double k = 1 - Math.Exp(-dt * 4);
             _chasePos = new Point3D(_chasePos.X + (desired.X - _chasePos.X) * k, _chasePos.Y + (desired.Y - _chasePos.Y) * k, _chasePos.Z + (desired.Z - _chasePos.Z) * k);
-            var look = top ? pos : pos + fwd * 0.15;
+            var look = top ? pos : pos + fwd * (0.15 * scale);
             _chaseLook = new Point3D(_chaseLook.X + (look.X - _chaseLook.X) * k, _chaseLook.Y + (look.Y - _chaseLook.Y) * k, _chaseLook.Z + (look.Z - _chaseLook.Z) * k);
             _camera.Position = _chasePos;
             _camera.LookDirection = _chaseLook - _chasePos;
             _camera.UpDirection = top ? fwd : new Vector3D(0, 0, 1);
             _camera.FieldOfView = 60;
+            _camera.NearPlaneDistance = 0.002 * scale;
         }
     }
 }

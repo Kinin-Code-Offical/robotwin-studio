@@ -79,12 +79,14 @@ namespace RobotTwin.CoreSim.Sandbox
                 double cr = Param(o, "control.chord", 0.3);
                 if (kind == "aileron")
                 {
-                    var left = new ControlSurface { Name = "Sol kanatçık", EtaStart = -1, EtaEnd = -0.5, ChordRatio = cr };
-                    var right = new ControlSurface { Name = "Sağ kanatçık", EtaStart = 0.5, EtaEnd = 1, ChordRatio = cr };
-                    surface.Controls.Add(left);
+                    // Negative eta is the -y half (the right wing, y points left): a positive command lowers the
+                    // right aileron's trailing edge and raises the left one, rolling the aircraft to the left.
+                    var right = new ControlSurface { Name = "Sağ kanatçık", EtaStart = -1, EtaEnd = -0.5, ChordRatio = cr };
+                    var left = new ControlSurface { Name = "Sol kanatçık", EtaStart = 0.5, EtaEnd = 1, ChordRatio = cr };
                     surface.Controls.Add(right);
-                    link.Controls.Add((left, 1));
-                    link.Controls.Add((right, -1));
+                    surface.Controls.Add(left);
+                    link.Controls.Add((right, 1));
+                    link.Controls.Add((left, -1));
                 }
                 else if (kind != "none" && kind.Length > 0)
                 {

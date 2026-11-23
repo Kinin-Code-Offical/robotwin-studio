@@ -1364,15 +1364,42 @@ namespace RobotWin.Studio.Pages
             Scene.FrameAll();
             if (simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
             {
+                PlaneSnapshotSetup();   // [ps5plane]
                 Run();
                 _session.Pause();
                 for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++)
                 {
+                    if (_snapshotModes.Contains("fly")) PlaneSnapshotPilot(_session.Time);   // [ps5plane] scripted hands on the virtual pad
                     _session.StepOnce(0.01);
                     if (secs - i * 0.01 < 1.5) Scene.PlumeTick();   // [gas] the last second and a half of exhaust
                 }
                 UpdateRunButton();
                 OnSimUpdated();
+                // ROBOTWIN_SNAPSHOT_LOG=<file>: the run's events and serial output, to check a world without a screen.
+                if (Environment.GetEnvironmentVariable("ROBOTWIN_SNAPSHOT_LOG") is { Length: > 0 } logPath)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var e in _session.Log) sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "[{0:0.000}] {1}: {2}", e.Time, e.Device, e.Message));
+                    sb.AppendLine("---- seri ----").Append(_session.SerialText);
+                    sb.AppendLine("---- gövdeler (simülasyon sonunda) ----");
+                    if (_session.Physics is { } ph)
+                        foreach (var body in ph.Scene.Bodies.Where(x => !x.IsStatic))
+                            sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} {1} | p ({2:0.0000},{3:0.0000},{4:0.0000}) | v ({5:0.000},{6:0.000},{7:0.000}) | m {8:0.0000}",
+                                body.Id, (body.Tag as WorldObject)?.Name, body.Position.X, body.Position.Y, body.Position.Z, body.Velocity.X, body.Velocity.Y, body.Velocity.Z, body.Mass));
+                    sb.AppendLine("---- geometri ----");
+                    if (World != null)
+                        foreach (var o in World.Objects)
+                        {
+                            var g = Scene.GeometryOf(o);
+                            sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} | {1} | min ({2:0.0000},{3:0.0000},{4:0.0000}) max ({5:0.0000},{6:0.0000},{7:0.0000}) | {8:0.0000} kg | port {9}",
+                                o.Name, g.Shape, g.Min.X, g.Min.Y, g.Min.Z, g.Max.X, g.Max.Y, g.Max.Z, g.MassKg, g.PortName));
+                        }
+                    System.IO.File.WriteAllText(logPath, sb.ToString());
+                    if (World != null)   // the app's bodies, so a headless run can use exactly them
+                        System.IO.File.WriteAllText(logPath + RobotTwin.CoreSim.Automation.BakedGeometry.Suffix,
+                            RobotTwin.CoreSim.Automation.BakedGeometry.Export(World, new CapturedGeometry(World, Scene.GeometryOf, Scene.CableLength)));
+                }
+
                 DockSerial.IsChecked = true;
                 OnDockTab(this, new RoutedEventArgs());
                 Scene.FrameCurrent();
@@ -1402,34 +1429,24 @@ namespace RobotWin.Studio.Pages
             SdkSnapshot();   // [sdk]
             AnalysisSnapshot();   // [analysis] Pages/WorldPage.Analysis.cs
             FinishTerrainSnapshot(simulate != null); // [terrain]
+            PlaneSnapshotFinish();   // [ps5plane] Pages/WorldPage.Plane.cs (after the terrain framing)
         }
     }
 
     /// <summary>Rough masses of free-standing catalogue parts.</summary>
     internal static class AssemblyEstimates
     {
+        private static readonly RobotTwin.CoreSim.Automation.ApproximateGeometry Datasheet =
+            new RobotTwin.CoreSim.Automation.ApproximateGeometry(new WorldDocument(), RobotTwin.CoreSim.Design.PartLibrary.Default);
+
+        /// <summary>
+        /// Mass of a free-standing part (kg). One source for the app and the headless runner: the datasheet geometry in
+        /// CoreSim (a 2212 outrunner is 50 g, a 20 A ESC 8 g), so an aircraft balances the same in both.
+        /// </summary>
         public static double ComponentMass(WorldObject o)
         {
             if (RobotTwin.CoreSim.Sandbox.CellGeometry.MassOf(o) is double cell) return cell;   // [arm]
-            string id = (o.PresetId ?? o.PartId ?? string.Empty).ToLowerInvariant();
-            if (id.Contains("sg90") || id.Contains("mg90")) return 0.009;
-            if (id.Contains("996")) return 0.055;
-            if (id.Contains("ds3218")) return 0.06;
-            if (id.Contains("motor-tt")) return 0.03;
-            if (id.Contains("25ga") || id.Contains("jga")) return 0.09;
-            if (id.Contains("8520")) return 0.0045;
-            if (id.Contains("0720")) return 0.002;
-            if (id.Contains("bat-9v")) return 0.045;
-            if (id.Contains("2s-usbc")) return 0.1;   // [usbc]
-            if (id.Contains("18650")) return 0.046;
-            if (id.Contains("aa-usbc") && !id.Contains("4aa")) return 0.022;
-            if (id.Contains("4aa")) return 0.11;
-            if (id.Contains("2aa")) return 0.055;
-            if (id.Contains("lipo")) return id.Contains("300") ? 0.009 : id.Contains("3s") ? 0.19 : 0.12;
-            if (id.Contains("arduino-uno")) return 0.025;
-            if (id.Contains("nano")) return 0.007;
-            if (id.Contains("esp32")) return 0.01;
-            return 0.005;
+            return Datasheet.GeometryOf(o).MassKg;
         }
     }
 }

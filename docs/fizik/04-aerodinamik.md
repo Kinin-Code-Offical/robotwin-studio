@@ -80,6 +80,17 @@ C_T = C_{T0}\left(1 - \frac{J}{J_0}\right), \qquad C_P = C_{P0}\left(1 - \left(\
 
 $`J_0 \approx 1{,}05\,P/D`$ (adım/çap). Pervane torku motora yük olarak geri döner; itki gövdeye uygulanır.
 
+Dünyadaki her pervane bu eğriyi kullanır: itki, pervaneye eksenden giren hava hızıyla azalır, uçak pervanenin adım hızına yaklaşınca sıfıra iner, ötesinde pervane frenler (rüzgârla döner). Örnek: 8×4,5" pervane 8 200 dev/dk'da yerde ≈ 4,2 N iter; 12 m/s ileri hızda (J ≈ 0,4) ≈ 1,3 N. Önceki sürümlerde dünya pervaneleri yalnızca statik $`k_T\,\omega^2`$ kullanıyordu; bu sayfa ile kod uyuşmuyordu, düzeltildi.
+
+**Pervanenin gövde olarak direnci.** Dönen pervanenin bütün kuvvetleri yukarıdaki modeldedir. Durdukça eksenel akış yalnız palların kendi alanına çarpar: katılık $`\sigma \approx 0{,}1`$ ile disk alanının onda biri ($`C_D \approx 1{,}1`$), ve bu pay pallar hızlandıkça $`V^2/(V^2 + (0{,}75\,\omega R)^2)`$ ile söner. Yandan akış pal kalınlığını çap boyunca görür. Pervane dolu bir disk gibi direnç görmez (8" pervanede bu, 8 m/s'de 1,1 N'luk hayalî bir fren olurdu).
+
+## Sınırlar ve doğrulama
+
+- **Gerçek zamanlı uçuş** her fizik adımında yukarıdaki şerit + kaldırma çizgisi modeliyle hesaplanır. Modellenmeyenler: pervane rüzgârının (slipstream) kanada ve kuyruğa etkisi, gövde–kanat girişimi, esnek kanat. Kuyruk yalnızca kanadın aşağı akışını görür.
+- **3B akış (lattice-Boltzmann)** yalnızca render'da, kaydın birkaç anında (her yarım saniyeye bir an, en çok altı) çözülür ve uçuşa geri beslenmez. Izgara kabadır; gerçek ölçekteki Reynolds sayısı (1 m'lik bir model uçakta ≈ 10⁵) bu ızgarada çözülemediği için sayısal viskozite büyütülür. Sonuç akışın biçimini ve kuvvetlerin büyüklük sırasını gösterir; endüstriyel bir CFD çözücüsünün yerine geçmez.
+- **Doğrulama testleri** her sürümde çalışır: Poiseuille kanal akışı (parabolden sapma %1'in altında), Re = 100 silindir izinde girdap kopması (Strouhal 0,15–0,23; literatürde ≈ 0,165), Re = 20 kürede sürükleme (Schiller–Naumann'ın 0,7–1,45 katı, kaba voksel küre), FEM'de ısıl genleşme ve serbest ivmelenen çubukta atalet dengesi (%1–2). Bunların hepsi düşük Reynolds sayılarındadır. Model uçak ölçeğindeki akış için bağımsız bir doğrulama (rüzgâr tüneli ya da uçuş verisi) henüz yapılmadı.
+- **Parçaların kapalı gövde içindeki direnci:** içi boş bir gövdenin (kabuk) içindeki parçalar havayı görmez; direnç kabuğun dış yüzlerindedir.
+
 ## Rüzgâr ve türbülans
 
 Ortalama rüzgâra Dryden modeliyle birinci derece süzülmüş rastgele sağanaklar eklenir. Rüzgâr hem sürüklemeyi hem kanatların gördüğü açıyı hem de [taşınımla soğumayı](03-isi.md) değiştirir.

@@ -1600,8 +1600,9 @@ namespace RobotTwin.CoreSim.Mechanics
                     double tau = Math.Max(h, Math.PI * Math.Sqrt(c.MassN / c.Stiff));
                     double force = c.Pn / tau;
                     var at = _state[c.A].X + c.RA;
-                    Record(Bodies[c.A], force, at, -c.Vn0, c.MassN, tau);
-                    if (c.B >= 0 && !Bodies[c.B].IsStatic) Record(Bodies[c.B], force, at, -c.Vn0, c.MassN, tau);
+                    var other = c.B >= 0 ? Bodies[c.B] : null;
+                    Record(Bodies[c.A], force, at, -c.Vn0, c.MassN, tau, other);
+                    if (other != null && !other.IsStatic) Record(other, force, at, -c.Vn0, c.MassN, tau, Bodies[c.A]);
                 }
             }
 
@@ -1609,7 +1610,10 @@ namespace RobotTwin.CoreSim.Mechanics
             (_warm, _warmNext) = (_warmNext, _warm);
         }
 
-        private void Record(SceneBody b, double force, Vec3 point, double speed, double mass, double duration)
+        /// <summary>What a body hit, for the event text: the object's name, the body id, or the ground.</summary>
+        private static string HitName(SceneBody? other) => other == null ? "zemin" : other.Tag is RobotTwin.CoreSim.Sandbox.WorldObject o ? o.Name : other.Id;
+
+        private void Record(SceneBody b, double force, Vec3 point, double speed, double mass, double duration, SceneBody? other = null)
         {
             if (force > b.PeakContactForce) b.PeakContactForce = force;
             double acc = force / b.Mass;
@@ -1633,7 +1637,7 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 if (_lastImpactReport.TryGetValue(b, out double last) && Time - last < 0.25) return;
                 _lastImpactReport[b] = Time;
-                Report(new PhysicsEvent(Time, b.Id, PhysicsEventKind.Impact, $"darbe {force:F1} N ({force / weight:F0} g)", force, force > 4 * ImpactReportG * weight));
+                Report(new PhysicsEvent(Time, b.Id, PhysicsEventKind.Impact, $"darbe {force:F1} N ({force / weight:F0} g) · {HitName(other)}", force, force > 4 * ImpactReportG * weight));
             }
         }
 

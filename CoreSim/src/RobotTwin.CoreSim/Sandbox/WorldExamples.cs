@@ -53,11 +53,11 @@ namespace RobotTwin.CoreSim.Sandbox
             var servo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.11, Y = 0.0, Z = 0 });
             servo.Name = "Servo (kutu dışında)";
             servo.IsStatic = true;
-            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = uno.Id, Pin = "VIN" }, 24, "#E5484D").Length = 0.10;
-            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = uno.Id, Pin = "GND1" }, 24, "#1F1F23").Length = 0.10;
-            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = servo.Id, Pin = "V+" }, 26, "#E5484D").Length = 0.15;
-            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND2" }, new CableEnd { ObjectId = servo.Id, Pin = "GND" }, 26, "#5A3A22").Length = 0.15;
-            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "D9" }, new CableEnd { ObjectId = servo.Id, Pin = "SIG" }, 26, "#F2A33B").Length = 0.15;
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = uno.Id, Pin = "VIN" }, 24, "#E5484D");
+            w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "-" }, new CableEnd { ObjectId = uno.Id, Pin = "GND1" }, 24, "#1F1F23");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "5V" }, new CableEnd { ObjectId = servo.Id, Pin = "V+" }, 26, "#E5484D");   // lengths left to the pins (+ slack)
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "GND2" }, new CableEnd { ObjectId = servo.Id, Pin = "GND" }, 26, "#5A3A22");
+            w.Connect(new CableEnd { ObjectId = uno.Id, Pin = "D9" }, new CableEnd { ObjectId = servo.Id, Pin = "SIG" }, 26, "#F2A33B");
             return w;
         }
 
@@ -111,10 +111,10 @@ namespace RobotTwin.CoreSim.Sandbox
             lead.MassKg = 0.038;
 
             // Pushrods: 1 mm carbon rods from the pod's rear exit along the boom to the control horns.
-            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
             rodE.Name = "İtme çubuğu (irtifa)";
             rodE.MassKg = 0.0008;
-            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
             rodR.Name = "İtme çubuğu (yön)";
             rodR.MassKg = 0.0008;
 
@@ -152,7 +152,7 @@ namespace RobotTwin.CoreSim.Sandbox
             WorldCable C(WorldObject a, string pa, WorldObject b, string pb, string color)
             {
                 var c = w.Connect(new CableEnd { ObjectId = a.Id, Pin = pa }, new CableEnd { ObjectId = b.Id, Pin = pb }, 26, color);
-                c.Length = 0.10;
+                c.Length = 0;   // cut to the pins with a little slack (a fixed 10 cm is shorter than some pin distances)
                 return c;
             }
 
@@ -209,8 +209,7 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 var cable = w.Connect(new CableEnd { ObjectId = a.Id, Pin = pa }, new CableEnd { ObjectId = b.Id, Pin = pb }, awg, colour);
                 // Cut to the run plus a little slack: a loose loop of motor wire ends up in the prop.
-                double run = Math.Sqrt(Math.Pow(a.Pose.X - b.Pose.X, 2) + Math.Pow(a.Pose.Y - b.Pose.Y, 2) + Math.Pow(a.Pose.Z - b.Pose.Z, 2));
-                cable.Length = Math.Max(0.04, 1.15 * run + 0.02);
+                cable.Length = 0;   // cut to the pins with a little slack: a wire measured between part centres can be shorter than the pin distance
                 cable.SolderedA = cable.SolderedB = soldered;   // power leads are soldered on a real quad: no plug contact resistance
             }
             foreach (var c in corners)
@@ -438,10 +437,10 @@ void loop() {
             var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = -0.011, Z = z0 + 0.002 });
             rudServo.Name = "Yön servosu";
 
-            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
             rodE.Name = "İtme çubuğu (irtifa)";
             rodE.MassKg = 0.0008;
-            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.45, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
             rodR.Name = "İtme çubuğu (yön)";
             rodR.MassKg = 0.0008;
             var stab = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = tailX, Z = boomZ + 0.004 }, "BALSA");
@@ -476,8 +475,7 @@ void loop() {
             void Wire(WorldObject a, string pa, WorldObject b, string pb, double awg, string colour, bool soldered = false)
             {
                 var cable = w.Connect(new CableEnd { ObjectId = a.Id, Pin = pa }, new CableEnd { ObjectId = b.Id, Pin = pb }, awg, colour);
-                double run = Math.Sqrt(Math.Pow(a.Pose.X - b.Pose.X, 2) + Math.Pow(a.Pose.Y - b.Pose.Y, 2) + Math.Pow(a.Pose.Z - b.Pose.Z, 2));
-                cable.Length = Math.Max(0.04, 1.15 * run + 0.02);   // cut to the run: nothing hangs out of the pod
+                cable.Length = 0;   // cut to the pins with a little slack: a wire measured between part centres can be shorter than the pin distance
                 cable.SolderedA = cable.SolderedB = soldered;
             }
 

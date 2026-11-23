@@ -82,7 +82,8 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(mass, 0.27, 0.34);
             Assert.InRange(cgChord, 0.28, 0.38);                // balanced by the battery position alone
             Assert.InRange(rpm, 7000, 11000);                   // 2212 1000KV on 3S, loaded by an 8" prop
-            Assert.True(thrust > 1.5, "a real-size prop pulls the plane");
+            // In forward flight the prop sees an advance ratio J ≈ 0.4: an 8 × 4.5" makes about a third of its ≈ 4 N static thrust.
+            Assert.True(thrust > 1.0 && thrust < 3.5, "a real-size prop pulls the plane, less than on the stand");
             Assert.True(maxClimb > 3, "it climbs under power");
             Assert.True(maxRoll < 45, "the flight controller keeps the wings level");
         }

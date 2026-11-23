@@ -31,6 +31,7 @@
 | Mekanum tekerlekli araba | Dört TT motor ve mekanum tekerleklerle yana kayar |
 | Işıklar: LED'ler ve lambalar | Karanlık odada LED'ler, RGB LED, güç LED'i, ampul ve LED şerit |
 | Kumandalı araba (ESP32 + PS5 kumanda) | Kendi PCB'li ESP32 + DRV8833 kartı, USB-C şarjlı 2S pil, eşleşmiş DualSense |
+| PS5 kumandalı uçak: pistten kalkış, ESP32 uçuş kartı | 1 m eğitim uçağı, kanatçıklar, üç tekerlekli iniş takımı, Bluepad32 uçuş kartı, model uçak sahası ([ayrıntı](#ps5-kumandalı-uçak)) |
 | Su roketi | 2 L PET şişe, 0,6 L su, 4 bar; su jeti, hava itkisi, kanatçıklar |
 | Katı yakıtlı motor test standı (KNSB) | İki BATES şeker yakıt tanesi; basınç ve itki yanma hızından çıkar |
 | Katı yakıtlı roket: e-kibritle fırlatma ve paraşüt | G sınıfı KNSB motorlu 41 mm roket; 2 s geri sayımla kapanan anahtar e-kibriti ateşler, roket ~1 km'ye çıkar, tepe noktasında paraşüt açılır |
@@ -273,6 +274,36 @@ ESP32 taslakları kamerayı gerçek `esp_camera` arayüzüyle kullanır: `esp_ca
 
 ESP32 seçiliyken **Örnek kodu yükle: kumandalı araba (Bluepad32)** hazır bir araba kodu yükler.
 
+### PS5 kumandalı uçak
+
+![Pistin başında PS5 kumandalı uçak: balsa kabin, karbon kuyruk borusu, kanatçıklı kanat, üç tekerlekli iniş takımı](../images/world-ps5-plane.png)
+
+**PS5 kumandalı uçak** şablonu, bir model uçak sahasında asfalt pistin başında duran 1 m'lik bir eğitim uçağıdır. Hiçbir şey betikli değildir: uçağı siz uçurursunuz, fizik ve uçuş kartının yazılımı sonucu belirler.
+
+- **Gövde:** içi boş balsa kabin, Ø8 karbon kuyruk borusu, 4° dihedralli Clark Y kanat (dış yarılarında kanatçıklar, ortadaki SG90'dan burulma çubuklarıyla), itme çubuklarıyla irtifa ve yön dümenleri.
+- **Güç:** 2212 1000KV fırçasız motor, 8×4,5" pervane, 20 A ESC, 3S 850 mAh LiPo. Kütle 402 g; ağırlık merkezi, kurşun konmadan yalnız pilin yeriyle veterin %30'unda.
+- **İniş takımı:** çelik tel bacaklar ve alüminyum lama. Tekerlekler akslarında serbest döner; naylon göbeğin çelik tel üzerindeki sürtünmesi de hesaplanır.
+- **Uçuş kartı:** ESP32 + MPU-6050, Bluepad32 ile DualSense'i okur. Kod gerçek bir ESP32'de de çalışır (ESP32'yi seçip **Kod**'a bakın).
+
+| Kumanda | Klavye (sanal kumanda) | İşlev |
+| --- | --- | --- |
+| Options (≡), R2 bırakıkken | Enter | Motoru kurar (ışık çubuğu yeşil, kısa titreşim) |
+| ✕ | Space | Motoru kilitler, gaz hemen kesilir (ışık kırmızı) |
+| R2 | F | Gaz |
+| Sağ çubuk sağ / sol | L / J | Kanatçıklar (yatış) |
+| Sağ çubuk geri / ileri | K / I | İrtifa dümeni (burun yukarı / aşağı) |
+| Sol çubuk sağ / sol | D / A | Yön dümeni |
+| △ | R | **Dengeli** / **Manuel** mod (ışık yeşil / turuncu) |
+| Yön tuşu yukarı / aşağı | ↑ / ↓ | Yunuslama trimi (0,5°) |
+
+**Uçmak:** Options ile kurun, R2'yi sonuna kadar basın. Uçak pistte hızlanır; yaklaşık 9–10 m/s'de sağ çubuğu biraz geri çekin, kalkar. **Dengeli** modda çubuk bir açı ister (en çok 45° yatış, 25° yunuslama), bırakınca uçak kendini düzler. Gaz azaldıkça burun kendiliğinden biraz iner, böylece gazı kestiğinizde uçak hız kaybedip düşmez, süzülür (yaklaşık 7 m/s, 6:1). **Manuel** modda çubuk dümenleri doğrudan oynatır.
+
+**Menzil ve arıza modu:** DualSense ile ESP32 arasındaki Bluetooth bağlantısı gerçek bir radyo bağlantısı gibi uzaklıkla zayıflar; açık sahada yaklaşık 90 m'de kopar (**RF** sekmesinde RSSI görünür). Bağlantı koparsa uçuş kartı motoru keser ve uçak burnu hafif aşağıda, 10° yatışla geniş bir daire çizerek süzülür. Kumanda yeniden menzile girince kontrol hemen geri gelir.
+
+**Kamera:** **Sahne + Oyun** görünümünde (G) oyun tarafı **Pilot gözü** ile açılır: bir RC pilotunun gördüğü gibi, kumandanın durduğu yerden uçağa bakar ve uzaklığa göre yakınlaşır. **Takip kamerası** uçağın boyuna göre arkasından izler.
+
+![Takip kamerası: tırmanan uçak, asfalt pist ve çim saha](../images/world-ps5-plane-flight.png)
+
 ### USB
 
 **Bilgisayar** nesnesini bir karta yöneltip **USB'yi tak** deyin. Kablo takılıyken kart 5 V ile beslenir ve kartın seri portu **Seri monitör** sekmesine bağlanır. **USB'yi çıkar** ile ayırın.
@@ -323,7 +354,9 @@ Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir
 - **Parçalar · gerilme:** her parçanın en kötü anı ve emniyet katsayısı. Satıra tıklayınca o ana gidilir.
 - **Isı** ve **Günlük** sekmeleri; sonuçlar `.rwanalysis` ya da CSV olarak saklanır.
 
-Elle verilen kumanda girdileri (gamepad, sahnedeki düğmeler) render'da henüz yeniden oynatılmıyor. Render dünyanın programlı davranışını (firmware, motorlar, fizik) baştan hesaplar.
+**Canlı girdiler de kaydedilir.** Kayıt sürerken elle verdiğiniz her girdi, etkili olduğu simülasyon anıyla birlikte saklanır: kumanda raporları (çubuklar, tetikler, tuşlar, hareket; yalnızca değiştiklerinde), kumandayı açıp kapama, eşleştirme, seri monitörden gönderilen metin, USB tak / çıkar, IR tuşları, bant başlat / durdur, ışık perdesi testi ve fırlatma anahtarı. Render bunları aynı anlarda yeniden uygular; **Günlük** sekmesi kaç girdinin oynatıldığını yazar. Nesneleri fareyle sürüklemek henüz kaydedilmez.
+
+Render seçtiğiniz doğrulukla (adım boyu) hesaplar. Girdiler aynı olsa da kaotik bir hareket (ör. tutunma kaybındaki bir uçak) canlı koşudan zamanla biraz ayrışabilir.
 
 ## Tezgâhla karşılaştırma
 

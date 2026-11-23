@@ -117,6 +117,7 @@ namespace RobotWin.Studio.World
                 {
                     if (!src.Read(pad.Input)) pad.Input.Clear();
                     src.SetFeedback(pad.Feedback, Time);
+                    Journal?.AddPad(Time, pad.Id, pad.Input);   // [replay] the report as the world receives it
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is ObjectDisposedException || ex is DllNotFoundException)
                 {
@@ -157,19 +158,23 @@ namespace RobotWin.Studio.World
         {
             if (GamepadNodeOf(objectId) is not { } pad || Radio == null) return false;
             Radio.StartPairing(pad);
+            Note(RobotTwin.CoreSim.Automation.InputEvent.Pairing, objectId);
             Log.Add(new SimLogEntry(Time, World?.Find(objectId)?.Name ?? objectId, "Eşleştirme modu: Bluepad32 çalıştıran bir ESP32 aranıyor (ışık çubuğu yanıp sönüyor)", AnalogEventKind.StateChange));
             return true;
         }
 
         public void SetGamepadPower(string objectId, bool on)
         {
-            if (GamepadNodeOf(objectId) is { } pad) pad.PoweredOn = on;
+            if (GamepadNodeOf(objectId) is not { } pad) return;
+            pad.PoweredOn = on;
+            Note(RobotTwin.CoreSim.Automation.InputEvent.GamepadPower, objectId, on ? 1 : 0);
         }
 
         /// <summary>Plugs / unplugs a USB cable while simulating: VBUS switch and serial routing follow the "plugged" parameter.</summary>
         public void SetUsbPlugged(WorldObject host, bool plugged)
         {
             host.Parameters["plugged"] = plugged ? "true" : "false";
+            Note(RobotTwin.CoreSim.Automation.InputEvent.Usb, host.Id, plugged ? 1 : 0);
             if (Circuit == null || World == null) return;
             if (!host.Parameters.TryGetValue("target", out var target) || string.IsNullOrWhiteSpace(target)) return;
             bool switched = WorldUsb.SetPlugged(Circuit, target, plugged);
@@ -188,6 +193,7 @@ namespace RobotWin.Studio.World
             if (e == null) return false;
             byte address = WorldRadio.ParseByte(o.Parameters.TryGetValue("address", out var a) ? a : null);
             Radio.Ir.SendNec(e, Time + 1e-4, address, command);
+            Note(RobotTwin.CoreSim.Automation.InputEvent.Ir, objectId, command);
             int seen = Radio.Ir.Receivers.Count(r => Radio.Ir.LineOfSight(e, r));
             Log.Add(new SimLogEntry(Time, o.Name, $"IR NEC adres 0x{address:X2} komut 0x{command:X2} gönderildi · görüş hattındaki alıcı: {seen}", AnalogEventKind.StateChange));
             return true;

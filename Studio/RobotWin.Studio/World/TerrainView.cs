@@ -34,6 +34,9 @@ namespace RobotWin.Studio.World
         private readonly Chunk[] _chunks;
         private readonly int _nx, _ny;
         private readonly Model3DGroup _group = new Model3DGroup();
+
+        /// <summary>Every chunk as one model: the game view and the camera sensors show the same ground.</summary>
+        public Model3D Model => _group;
         private Point3D _lastCamera = new Point3D(double.NaN, 0, 0);
         private bool _anyDirty = true;
 

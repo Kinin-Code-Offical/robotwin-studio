@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Analog;
 using RobotTwin.CoreSim.Mechanics;
@@ -22,6 +23,12 @@ namespace RobotWin.Studio.World
             try
             {
                 Physics.AttachCables(World, CablePins, 120, CableSeed);
+                foreach (var (id, span, length) in Physics.ShortCables)
+                {
+                    var c = World.Cables.FirstOrDefault(x => x.Id == id);
+                    string ends = c == null ? id : $"{World.Find(c.A.ObjectId)?.Name ?? c.A.ObjectId} {c.A.Pin} – {World.Find(c.B.ObjectId)?.Name ?? c.B.ObjectId} {c.B.Pin}";
+                    Log.Add(new SimLogEntry(0, "fizik", $"Kablo kısa: {ends} {length * 1000:F0} mm, pinler arası {span * 1000:F0} mm. Gerçekte takılamaz; gergin başlar ve parçaları çeker. Uzunluğu artırın ya da boş bırakın (otomatik).", AnalogEventKind.Warning));
+                }
             }
             catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
             {

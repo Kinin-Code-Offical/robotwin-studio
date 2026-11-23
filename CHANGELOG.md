@@ -29,9 +29,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Movable panels in the world:** the palette, the inspector and every bottom tab (events, serial monitor, cables, RF, sensors) can sit on the left or right (stacked, with resizable heights and column widths), be a bottom tab, or tear off into their own window by dragging their header or tab. Dragging a panel window over the page shows **Sol / Sağ / Alt** guides and highlights where it will dock; closing the window docks it back. Each panel has a menu (left, right, bottom, own window, move up / down, hidden), and the toolbar's **Panel düzeni** button and **Görünüm → Dünya panelleri** list every panel, swap the sides, dock all windows and reset the layout. The layout, including window positions, is kept between sessions (%APPDATA%\RobotWinStudio\layout.json).
 
+- **New world template PS5 kumandalı uçak:** a 1 m trainer on a model airfield, flown from a DualSense: balsa pod, carbon boom, 4° dihedral Clark Y wing with ailerons, elevator and rudder on pushrods, 2212 1000KV + 8×4.5" prop + 20 A ESC + 3S LiPo (402 g, CG at 30 % from the battery position), tricycle gear with free-rolling wheels. Its ESP32 + MPU-6050 flight controller (Bluepad32) arms on Options, flies in a self-levelling or manual mode, mixes a little nose-down with low throttle so a power-off glide keeps its speed, and on a lost Bluetooth link (≈ 90 m) cuts the motor and circles down. It takes off from the runway, turns, glides at ≈ 7 m/s (6:1) and lands on its wheels, tested end to end through the controller.
+- **Live inputs are replayed in the render:** while recording, every controller report (when it changes), controller power and pairing, serial text, USB plugging, IR key, conveyor command, light-curtain test and launch switch is stored with its simulation time; the render feeds them back at exactly those instants (each step is split at the input), and its log says how many were replayed.
+- **Pilot's-eye camera:** a world with a controller and an aircraft opens the game view from where the pilot stands, zooming with the distance. The chase camera sits back by the size of what it follows (a 1 m plane, not 45 cm behind a car's chassis).
+- **Hinge friction:** a hinge or slider joint can carry Coulomb friction (a hub on an axle, a bushing).
+- **Impacts name what was hit** ("· zemin", or the other part).
+- **Snapshot log:** `ROBOTWIN_SNAPSHOT_LOG=<file>` writes a snapshot run's events, serial output, body states and the app's collision geometry (as a baked-geometry file a headless run can load), so a world can be checked without a screen.
+
 ### Fixed
 
 - **Multi-line text boxes** (serial monitor) filled from the middle of their height; their text now starts at the top.
+- **Propeller thrust in forward flight:** world propellers used the static k_T·ω² at any airspeed (the physics guide already described the advance-ratio model, the code did not use it). Thrust and torque now follow J = V/(n·D): an 8×4.5" prop that pushes 4.2 N on the ground gives ≈ 1.3 N at 12 m/s and brakes beyond its pitch speed.
+- **A propeller dragged like a solid disc** (≈ 1.1 N at 8 m/s on an 8" prop). A spinning prop's forces are its thrust model; standing still, only its blades' area (solidity ≈ 0.1) meets the flow, edgewise their thickness.
+- **Parts inside a closed shell had air drag** (a battery inside a fuselage); they are now out of the airflow.
+- **Part masses differed between the app and the headless runner:** the app gave a 2212 motor 5 g instead of 50 g (and other parts generic masses), which moved an aircraft's balance by 15 % of the chord. Both now use the datasheet masses.
+- **Cables shorter than the distance between their pins** started stretched and yanked the parts they joined: the glider, the motor glider, the ESP32 quad and the electronics box had wires measured between part centres, too short for the pins of the app's part models. Their lengths are now left to the pins (+ slack), and a run warns about any cable that could not be plugged in.
+- **Pushrods ran into the servo models** in the glider and motor glider; they now stop at the pod's rear wall.
+- **The model rocket stood inside its launch pad:** its swept fins' tips reach 3.8 mm below their roots; it now stands on them.
+- **The game view and the camera sensors did not draw the terrain** (grass, runway, roads); they do, with a sky backdrop outdoors.
+- **The chase camera could not stay selected:** the game view switched back to its default view whenever the scene refreshed.
 
 - **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).
 - **Joined parts' drag on slender bodies:** face coverage was sampled over the bounding sphere and missed a long thin tube entirely; it is now sampled over each body's own extent.

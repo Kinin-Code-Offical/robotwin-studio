@@ -52,7 +52,8 @@ namespace RobotTwin.CoreSim.Sandbox
         public static WorldDocument SolidRocket(PartLibrary lib)
         {
             var w = new WorldDocument { Title = "Katı yakıtlı roket (e-kibritle fırlatma)" };
-            const double padTop = 0.012, finChord = 0.09, tube = 0.041, tubeLength = 0.50, tubeBottom = padTop + 0.02, motorBottom = tubeBottom - 0.01;
+            // The swept fins' tips reach below their roots (0.065·tan 30° − (0.09 − 0.045)·¾ ≈ 3.8 mm): the rocket stands on its fin tips.
+            const double padTop = 0.012, tipDrop = 0.004, finChord = 0.09, tube = 0.041, tubeLength = 0.50, tubeBottom = padTop + tipDrop + 0.02, motorBottom = tubeBottom - 0.01;
 
             var pad = w.AddBody("box", 0.35, 0.35, padTop, new WorldPose(), "ÇELİK");
             pad.Name = "Fırlatma rampası";
@@ -94,7 +95,7 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 double a = k * 120.0, ca = Math.Cos(a * Math.PI / 180), sa = Math.Sin(a * Math.PI / 180);
                 // Chord along the airframe (leading edge up), span straight out from the tube, the thin side across.
-                var fin = w.AddBody("wing", finChord, 0.065, 0.003, new WorldPose { X = ca * tube / 2, Y = sa * tube / 2, Z = padTop + finChord / 2, Pitch = -90, Yaw = a - 90 }, "AHŞAP");
+                var fin = w.AddBody("wing", finChord, 0.065, 0.003, new WorldPose { X = ca * tube / 2, Y = sa * tube / 2, Z = padTop + tipDrop + finChord / 2, Pitch = -90, Yaw = a - 90 }, "AHŞAP");
                 fin.Name = "Kanatçık " + (k + 1) + " (3 mm kontrplak)";
                 fin.MassKg = 0.016;
                 fin.Color = "#2F2F35";

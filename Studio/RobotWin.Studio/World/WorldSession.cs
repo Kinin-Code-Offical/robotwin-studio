@@ -427,6 +427,7 @@ namespace RobotWin.Studio.World
 
         public void SendSerial(string text)
         {
+            Note(RobotTwin.CoreSim.Automation.InputEvent.Serial, string.Empty, 0, text);   // [replay]
             foreach (var a in _avr) if (SerialRouted(a)) a.Mcu.WriteSerial(text);   // [radio] USB-connected boards only
             foreach (var e in _esp) if (SerialRouted(e)) e.SendSerial(text);
         }

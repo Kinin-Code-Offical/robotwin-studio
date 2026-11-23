@@ -833,7 +833,10 @@ namespace RobotTwin.CoreSim.Mechanics
     /// <summary>
     /// Propeller on any body: thrust kT·ω² along the mount axis with ground effect, reaction
     /// torque kQ·ω², and rotor drag (blade flapping and induced drag, H-force ∝ T·v⊥/(ωR))
-    /// against the in-plane air velocity, including wind.
+    /// against the in-plane air velocity, including wind. With a geometric <see cref="Pitch"/> the
+    /// thrust and torque follow the advance ratio J = V/(n·D) of the axial inflow
+    /// (<see cref="RobotTwin.CoreSim.Aero.PropellerPerformance"/>): thrust fades as the aircraft
+    /// approaches the pitch speed and turns into drag beyond it (windmilling).
     /// </summary>
     public sealed class Propeller
     {
@@ -853,6 +856,17 @@ namespace RobotTwin.CoreSim.Mechanics
         public double ThrustCoefficient { get; set; } = 2.95e-8;
         public double TorqueCoefficient { get; set; } = 1.4e-10;
 
+        /// <summary>Geometric pitch (m); 0 = static coefficients only (no forward-flight falloff).</summary>
+        public double Pitch { get; set; }
+
+        /// <summary>Advance ratio J = V/(n·D) seen in the last step (0 without a pitch).</summary>
+        public double AdvanceRatio { get; private set; }
+
+        /// <summary>Axial inflow speed into the disc in the last step (m/s, + = air arriving from ahead).</summary>
+        public double AxialInflow { get; private set; }
+
+        private double _torqueRatio = 1.0;
+
         /// <summary>Rotor drag factor: H = factor·T·v⊥/(ω·R) (≈1 for small fixed-pitch props).</summary>
         public double RotorDragFactor { get; set; } = 1.0;
 
@@ -871,7 +885,7 @@ namespace RobotTwin.CoreSim.Mechanics
         public double DensityRatio { get; private set; } = 1.0;
 
         /// <summary>Aerodynamic drag torque on the motor shaft.</summary>
-        public double DragTorque => TorqueCoefficient * DensityRatio * AngularVelocity * Math.Abs(AngularVelocity);
+        public double DragTorque => TorqueCoefficient * DensityRatio * _torqueRatio * AngularVelocity * Math.Abs(AngularVelocity);
 
         internal void Apply(PhysicsScene scene, double dt)
         {
@@ -879,10 +893,24 @@ namespace RobotTwin.CoreSim.Mechanics
             Angle += AngularVelocity * SpinDirection * dt;
             double w = AngularVelocity;
             DensityRatio = Math.Max(0, scene.AirDensity / 1.225);
-            Thrust = ThrustCoefficient * DensityRatio * w * Math.Abs(w);
             var up = body.Orientation.Rotate(Axis).Normalized();
-            // Ground effect: up to 25 % more thrust just above the floor.
             var at = body.ToWorld(Mount);
+            double thrustRatio = 1.0;
+            _torqueRatio = 1.0;
+            AdvanceRatio = 0;
+            AxialInflow = 0;
+            if (Pitch > 0)
+            {
+                // Air arriving at the disc from ahead (the side the thrust points to) at the aircraft's speed.
+                AxialInflow = (body.PointVelocity(at) - scene.WindAt(at)).Dot(up);
+                double j0 = RobotTwin.CoreSim.Aero.PropellerPerformance.ZeroThrustAdvance(Pitch, Diameter);
+                AdvanceRatio = RobotTwin.CoreSim.Aero.PropellerPerformance.AdvanceRatio(AxialInflow, w, Diameter);
+                thrustRatio = RobotTwin.CoreSim.Aero.PropellerPerformance.ThrustRatio(AdvanceRatio, j0);
+                _torqueRatio = RobotTwin.CoreSim.Aero.PropellerPerformance.PowerRatio(AdvanceRatio, j0);
+            }
+
+            Thrust = ThrustCoefficient * DensityRatio * thrustRatio * w * Math.Abs(w);
+            // Ground effect: up to 25 % more thrust just above the floor.
             double h = Math.Max(0.0, at.Z - scene.GroundHeight(at.X, at.Y));
             double groundEffect = 1.0 + 0.25 * Math.Exp(-h / (Diameter * 0.6));
             var force = up * (Thrust * groundEffect);

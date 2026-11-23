@@ -50,6 +50,9 @@ namespace RobotTwin.CoreSim.Analysis
                 var poses = PoseRecorder(world, result.Channels);
                 int n = s.SampleCount;
                 double dt = 1.0 / s.OutputRate;
+                // [replay] the live run's controller reports and interventions, at the times they were made
+                var replay = s.Inputs is { Count: > 0 } journal ? new RobotTwin.CoreSim.Automation.InputReplay(journal) : null;
+                replay?.Start(runner);
                 probe.Sample();
                 RecordPoses(runner.Physics, result.Channels, poses, world);
                 for (int i = 1; i <= n; i++)
@@ -60,7 +63,8 @@ namespace RobotTwin.CoreSim.Analysis
                         break;
                     }
 
-                    runner.Step(dt);
+                    if (replay != null) replay.Step(runner, dt);
+                    else runner.Step(dt);
                     probe.Sample();
                     RecordPoses(runner.Physics, result.Channels, poses, world);
                     if (runner.Halted)
@@ -74,6 +78,11 @@ namespace RobotTwin.CoreSim.Analysis
 
                 probe.Detach();
                 result.SimulatedSeconds = runner.Time;
+                if (replay != null)
+                {
+                    result.Note($"Canlı girişler yeniden oynatıldı: {s.Inputs!.Summary()} ({replay.Applied} olay uygulandı).");
+                    if (replay.Skipped.Count > 0) result.Note($"Uygulanamayan giriş: {replay.Skipped.Count} (nesne dünyada yok): " + string.Join("; ", replay.Skipped.Take(3)));
+                }
 
                 foreach (var id in stressIds)
                 {
@@ -152,10 +161,13 @@ namespace RobotTwin.CoreSim.Analysis
 
                     var probe = new WorldProbe(runner, s, temp, Array.Empty<string>());
                     double dt = 1.0 / s.OutputRate;
+                    var replay = s.Inputs is { Count: > 0 } journal ? new RobotTwin.CoreSim.Automation.InputReplay(journal) : null;
+                    replay?.Start(runner);
                     probe.Sample();
                     for (int i = 1; i < n && !cancel.IsCancellationRequested; i++)
                     {
-                        runner.Step(dt);
+                        if (replay != null) replay.Step(runner, dt);
+                        else runner.Step(dt);
                         probe.Sample();
                         if (runner.Halted) break;
                         if ((i & 31) == 0) progress?.Invoke($"Belirsizlik: tolerans koşusu {k}/{s.UncertaintyRuns}", (double)i / n);

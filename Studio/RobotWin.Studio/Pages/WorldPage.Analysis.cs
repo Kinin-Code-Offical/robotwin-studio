@@ -42,14 +42,16 @@ namespace RobotWin.Studio.Pages
                 Run();
                 _recording = _session.State != SimState.Stopped;
                 _recordStart = _session.Time;
-                if (_recording) Shell.Workspace.Current.Status = "Kayıt alınıyor… Bitirmek için Kayıt düğmesine yeniden basın.";
+                if (_recording) _session.BeginJournal();   // [replay] controller reports and interventions, time-stamped
+                if (_recording) Shell.Workspace.Current.Status = "Kayıt alınıyor: kumanda ve müdahaleler de kaydediliyor. Bitirmek için Kayıt düğmesine yeniden basın.";
             }
             else
             {
                 double end = _session.Time;
                 _recording = false;
+                var inputs = _session.EndJournal();
                 StopSimulation();
-                OpenRender(Math.Max(0.05, end - _recordStart), autoStart: true);
+                OpenRender(Math.Max(0.05, end - _recordStart), autoStart: true, inputs);
             }
 
             RecordButton.IsChecked = _recording;
@@ -57,7 +59,7 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>Opens the render window on a private copy of the world (later edits do not affect it).</summary>
-        public RenderWindow? OpenRender(double duration = 2, bool autoStart = false)
+        public RenderWindow? OpenRender(double duration = 2, bool autoStart = false, RobotTwin.CoreSim.Automation.InputJournal? inputs = null)
         {
             var world = World;
             if (world == null)
@@ -85,7 +87,7 @@ namespace RobotWin.Studio.Pages
             }
 
             var geometry = new CapturedGeometry(copy, o => Scene.GeometryOf(world.Find(o.Id) ?? o), c => Scene.CableLength(world.Cables.FirstOrDefault(x => x.Id == c.Id) ?? c));
-            var w = new RenderWindow(copy, geometry, duration, Scene.Library, Scene.MassOf) { Owner = Window.GetWindow(this) };
+            var w = new RenderWindow(copy, geometry, duration, Scene.Library, Scene.MassOf) { Owner = Window.GetWindow(this), Inputs = inputs };
             w.Show();
             if (autoStart) _ = w.RenderNow();
             return w;

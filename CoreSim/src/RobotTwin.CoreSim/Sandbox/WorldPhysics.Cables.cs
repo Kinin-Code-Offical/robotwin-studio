@@ -59,6 +59,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public void AttachCables(WorldDocument world, Func<WorldCable, CablePins?> pins, int relaxSteps = 300, Func<string, IReadOnlyList<Vec3>?>? seed = null)
         {
             _cables.Clear();
+            ShortCables.Clear();
             foreach (var cable in world.Cables)
             {
                 if (!_items.TryGetValue(cable.A.ObjectId, out var ia) || !_items.TryGetValue(cable.B.ObjectId, out var ib)) continue;
@@ -67,6 +68,8 @@ namespace RobotTwin.CoreSim.Sandbox
                 var endB = MakeEnd(ib, p.B);
                 double span = (endA.World - endB.World).Length;
                 double length = cable.Length > 0 ? cable.Length : CableRope.DefaultLength(span);
+                // A wire shorter than the distance between its pins could not be plugged in: it starts stretched and pulls the parts together.
+                if (cable.Length > 0 && cable.Length < span) ShortCables.Add((cable.Id, span, cable.Length));
                 var rope = new CableRope(cable.Id, endA, endB, length, cable.Awg);
                 var link = new CableLink { Cable = cable, Rope = rope };
                 rope.Unplugged += (end, force) => OnUnplugged(link, end, force);
@@ -75,6 +78,9 @@ namespace RobotTwin.CoreSim.Sandbox
                 _cables.Add(link);
             }
         }
+
+        /// <summary>Cables whose set length is shorter than the distance between their pins (id, pin distance, length; m).</summary>
+        public List<(string CableId, double Span, double Length)> ShortCables { get; } = new List<(string, double, double)>();
 
         private RopeEnd MakeEnd(Item it, Vec3 objectLocal)
         {

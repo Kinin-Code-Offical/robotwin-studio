@@ -48,6 +48,9 @@ namespace RobotTwin.CoreSim.Analysis
         public int Seed { get; set; }
         public bool Firmware { get; set; } = true;
 
+        /// <summary>[replay] Inputs of a recorded live run (controller reports, serial, switches …), applied at their recorded times.</summary>
+        public RobotTwin.CoreSim.Automation.InputJournal? Inputs { get; set; }
+
         public bool RecordBodies { get; set; } = true;
         public bool RecordJoints { get; set; } = true;
         public bool RecordCircuit { get; set; } = true;
@@ -185,7 +188,12 @@ namespace RobotTwin.CoreSim.Analysis
             _ => "Referans (50 µs)"
         };
 
-        public AnalysisSettings Clone() => FromJson(ToJson());
+        public AnalysisSettings Clone()
+        {
+            var c = FromJson(ToJson());
+            c.Inputs = Inputs;   // [replay] shared, read-only during a run
+            return c;
+        }
 
         public JsonObject ToJson()
         {

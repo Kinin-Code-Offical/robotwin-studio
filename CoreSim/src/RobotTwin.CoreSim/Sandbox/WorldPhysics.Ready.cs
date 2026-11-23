@@ -128,7 +128,8 @@ namespace RobotTwin.CoreSim.Sandbox
                     Diameter = spec.Diameter,
                     ThrustCoefficient = PropellerAero.ThrustPerOmega2(spec),
                     TorqueCoefficient = PropellerAero.TorquePerOmega2(spec),
-                    SpinDirection = spec.Hand
+                    SpinDirection = spec.Hand,
+                    Pitch = spec.Pitch   // [aero] thrust falls with the advance ratio in forward flight
                 };
                 Scene.Propellers.Add(prop);
                 var mount = world.Joints.FirstOrDefault(j => string.Equals(j.ObjectA, it.Object.Id, StringComparison.OrdinalIgnoreCase) && j.ObjectB != null);
@@ -171,6 +172,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 var b = pm.It.Body;
                 double w = b.AngularVelocity.Dot(b.Orientation.Rotate(Vec3.UnitZ));
                 pm.Prop.AngularVelocity = pm.Spec.Hand * w;
+                PropBladeDrag(pm);   // [drag] Sandbox/WorldPhysics.Drag.cs
             }
 
             foreach (var rw in _rollers) RollerTraction(rw);

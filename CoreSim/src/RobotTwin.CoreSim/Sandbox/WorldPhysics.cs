@@ -116,6 +116,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.ScrewLids();   // [shell] lids seated on their shell's rim are screwed down (Sandbox/WorldPhysics.Shells.cs)
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
             p.BuildWings();   // [aero] lifting surfaces replace the generic drag the environment just gave every body (Sandbox/WorldPhysics.Wings.cs)
+            p.ShieldEnclosedDrag();   // [drag] parts inside a closed shell are out of the airflow (Sandbox/WorldPhysics.Drag.cs)
             p.ApplyLaunches(world);   // [aero] hand-launched aircraft
             p.BuildThermal(world);   // [thermal] part temperatures, softening, melting (Sandbox/WorldPhysics.Thermal.cs)
             p.BuildGas(world);   // [gas] pressure vessels, propellant grains, nozzles, water (Sandbox/WorldPhysics.Gas.cs)
@@ -301,6 +302,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var joint = parent != null ? Scene.AddJoint(kind, parent, child.Body, anchor, axis.Normalized(), j.Id) : Scene.AddJoint(kind, child.Body, null, anchor, axis.Normalized(), j.Id);
             if (j.Lower.HasValue) joint.Lower = kind == JointKind.Hinge ? j.Lower.Value * Math.PI / 180 : j.Lower.Value;
             if (j.Upper.HasValue) joint.Upper = kind == JointKind.Hinge ? j.Upper.Value * Math.PI / 180 : j.Upper.Value;
+            if (j.Friction > 0 && kind != JointKind.Fixed) joint.Friction = j.Friction;   // [phys] bushing / bearing friction
             if (j.BreakForce > 0) joint.BreakForce = j.BreakForce;
             else if (kind == JointKind.Fixed && j.Fastening.Length > 0)
             {

@@ -80,6 +80,18 @@ C_T = C_{T0}\left(1 - \frac{J}{J_0}\right), \qquad C_P = C_{P0}\left(1 - \left(\
 
 $`J_0 \approx 1.05\,P/D`$ (pitch / diameter). The propeller's torque loads its motor; the thrust acts on the body.
 
+
+Every propeller in a world uses this curve: thrust falls with the speed of the air entering the disc along its axis, reaches zero as the aircraft approaches the prop's pitch speed, and beyond it the prop brakes (windmills). Example: an 8×4.5" prop at 8,200 rpm pushes ≈ 4.2 N on the ground and ≈ 1.3 N at 12 m/s (J ≈ 0.4). Earlier versions used only the static $`k_T\,\omega^2`$ for world propellers, so this page and the code disagreed; fixed.
+
+**The propeller as a body.** A spinning propeller's forces are all in the model above. Standing still, the axial flow only meets the blades' own area: solidity $`\sigma \approx 0.1`$, a tenth of the disc ($`C_D \approx 1.1`$), fading as $`V^2/(V^2 + (0.75\,\omega R)^2)`$ while the blades speed up. Edgewise the flow sees the blade thickness across the diameter. A propeller does not drag like a solid disc (on an 8" prop that would be a phantom 1.1 N brake at 8 m/s).
+
+## Limits and validation
+
+- **Real-time flight** uses the strip + lifting-line model above at every physics step. Not modelled: the propeller slipstream on the wing and tail, wing–body interference, flexible wings. The tail sees only the wing's downwash.
+- **3D flow (lattice-Boltzmann)** is solved only in the render, at a few instants of the recording (one per half second, at most six), and is not fed back into the flight. The grid is coarse; the real-scale Reynolds number (≈ 10⁵ on a 1 m model plane) cannot be resolved on it, so the numerical viscosity is raised. The result shows the shape of the flow and the order of magnitude of the forces; it does not replace an industrial CFD solver.
+- **Validation tests** run with every release: Poiseuille channel flow (under 1 % off the parabola), vortex shedding behind a cylinder at Re = 100 (Strouhal 0.15–0.23; literature ≈ 0.165), drag of a sphere at Re = 20 (0.7–1.45 × Schiller–Naumann, coarse voxel sphere), and in FEM thermal expansion and the inertia-relief balance of a freely accelerating bar (1–2 %). All of these are at low Reynolds numbers. Flow at model-aircraft scale has not been validated independently (wind tunnel or flight data) yet.
+- **Parts inside a closed body:** parts inside a hollow body (a shell) do not see the air; the drag is on the shell's outer faces.
+
 ## Wind and turbulence
 
 Random gusts filtered to first order with the Dryden model are added to the mean wind. Wind changes the drag, the angle the wings see and [convective cooling](03-heat.md).

@@ -31,6 +31,7 @@ The **Dünya** (world) page (Ctrl+6) is where everything comes together. Put the
 | Mekanum tekerlekli araba (mecanum car) | Four TT motors on mecanum wheels slide sideways |
 | Işıklar (lights) | LEDs, an RGB LED, a power LED, a bulb and an LED strip in a dark room |
 | Kumandalı araba (remote-controlled car, ESP32 + PS5 controller) | Its own ESP32 + DRV8833 PCB, a USB-C rechargeable 2S pack, a paired DualSense |
+| PS5 kumandalı uçak (PS5-controlled plane, take-off from a runway) | 1 m trainer, ailerons, tricycle gear, Bluepad32 flight controller, model airfield ([details](#the-ps5-controlled-plane)) |
 | Su roketi (water rocket) | 2 L PET bottle, 0.6 L water, 4 bar; water jet, air thrust, fins |
 | Katı yakıtlı motor test standı (solid motor test stand, KNSB) | Two BATES sugar grains; pressure and thrust follow from the burn rate |
 | Katı yakıtlı roket (solid rocket: e-match launch and parachute) | A 41 mm rocket on a G-class KNSB motor; a switch closed by a 2 s countdown fires the e-match, the rocket climbs to ~1 km and throws its parachute at apogee |
@@ -273,6 +274,36 @@ In **Parçalar → Kablosuz ve USB** (parts → wireless and USB): DualSense (PS
 
 With an ESP32 selected, **Örnek kodu yükle: kumandalı araba (Bluepad32)** (load sample code: remote-controlled car) loads a ready car program.
 
+### The PS5-controlled plane
+
+![The PS5-controlled plane at the end of the runway: balsa pod, carbon tail boom, wing with ailerons, tricycle gear](../../images/world-ps5-plane.png)
+
+The **PS5 kumandalı uçak** (PS5-controlled plane) template is a 1 m trainer standing at the end of an asphalt runway on a model airfield. Nothing is scripted: you fly it, and the physics and the flight controller's firmware decide what happens.
+
+- **Airframe:** hollow balsa pod, Ø8 carbon tail boom, 4° dihedral Clark Y wing (ailerons on the outer halves, driven by one SG90 in the middle through torque rods), elevator and rudder on pushrods.
+- **Power:** 2212 1000KV brushless motor, 8×4.5" prop, 20 A ESC, 3S 850 mAh LiPo. 402 g; the centre of gravity sits at 30 % of the chord from the battery position alone, no nose weight.
+- **Gear:** steel wire legs and an aluminium strap. The wheels turn freely on their axles, with the friction of a nylon hub on steel wire.
+- **Flight controller:** ESP32 + MPU-6050, reading the DualSense through Bluepad32. The code also runs on a real ESP32 (select the ESP32 and open **Kod**).
+
+| Controller | Keyboard (on-screen controller) | Does |
+| --- | --- | --- |
+| Options (≡), with R2 released | Enter | Arms the motor (light bar green, short rumble) |
+| ✕ | Space | Disarms: throttle cut at once (light bar red) |
+| R2 | F | Throttle |
+| Right stick right / left | L / J | Ailerons (roll) |
+| Right stick back / forward | K / I | Elevator (nose up / down) |
+| Left stick right / left | D / A | Rudder |
+| △ | R | **Dengeli** (self-levelling) / **Manuel** mode (light bar green / orange) |
+| D-pad up / down | ↑ / ↓ | Pitch trim (0.5°) |
+
+**Flying:** arm with Options, squeeze R2 fully. The plane accelerates down the runway; at about 9–10 m/s pull the right stick back a little and it lifts off. In **Dengeli** mode the stick asks for an angle (up to 45° of bank, 25° of pitch) and the plane levels itself when you let go. As the throttle comes back the nose drops slightly by itself, so with the power off it keeps its speed and glides (about 7 m/s, 6:1) instead of stalling. In **Manuel** mode the stick moves the surfaces directly.
+
+**Range and failsafe:** the Bluetooth link between the DualSense and the ESP32 weakens with distance like a real radio link and drops at about 90 m in the open (the **RF** tab shows the RSSI). If the link is lost the flight controller cuts the motor and the plane glides down in a wide circle, nose slightly down, banked 10°. As soon as the controller is back in range, control returns.
+
+**Camera:** in the **Scene + Game** view (G) the game side opens on **Pilot gözü** (pilot's eye): it looks at the plane from where the controller is, as an RC pilot sees it, and zooms with the distance. The **chase camera** follows from behind at a distance set by the plane's size.
+
+![Chase camera: the plane climbing out over the asphalt runway and the grass field](../../images/world-ps5-plane-flight.png)
+
 ### USB
 
 Point the **Bilgisayar** (PC) object at a board and press **USB'yi tak** (plug in USB). While plugged, the board is powered with 5 V and its serial port is connected to the **Seri monitör** (serial monitor) tab. **USB'yi çıkar** (unplug USB) disconnects it.
@@ -323,7 +354,9 @@ Real-time running has to keep up with the screen. A **render** recomputes a reco
 - **Parçalar · gerilme** (parts · stress): each part's worst moment and safety factor. Clicking a row goes to that moment.
 - **Isı** (heat) and **Günlük** (log) tabs; results are saved as `.rwanalysis` or CSV.
 
-Manual controller inputs (gamepad, buttons in the scene) are not replayed in the render yet. The render recomputes the world's programmed behaviour (firmware, motors, physics) from the start.
+**Live inputs are recorded too.** While recording, every input you give is kept with the simulation time it took effect at: controller reports (sticks, triggers, buttons, motion; only when they change), switching a controller on or off, pairing, text sent from the serial monitor, plugging a USB cable in or out, IR key presses, conveyor start / stop, light-curtain tests and launch switches. The render applies them again at the same instants; the **Günlük** (log) tab says how many were replayed. Dragging objects with the mouse is not recorded yet.
+
+The render computes at the accuracy (step size) you choose. With the same inputs, a chaotic motion (a stalling plane, say) can still drift slightly away from the live run over time.
 
 ## Comparing with the bench
 

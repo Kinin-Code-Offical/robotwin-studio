@@ -35,12 +35,17 @@ namespace RobotWin.Studio.World
         public Color Background { get; set; } = Color.FromRgb(0x5A, 0x5C, 0x62);
 
         /// <summary>Re-links the models after the scene was rebuilt, then updates the matrices.</summary>
-        public void Sync(Model3D? environment, IReadOnlyList<(Model3D Content, Matrix3D Matrix)> items, int generation)
+        private readonly ModelVisual3D _terrain = new ModelVisual3D();
+
+        public void Sync(Model3D? environment, IReadOnlyList<(Model3D Content, Matrix3D Matrix)> items, int generation, Model3D? terrain = null)
         {
             if (generation != _generation || items.Count != _items.Count)
             {
                 _generation = generation;
                 _environment.Content = environment;
+                // [terrain] a camera looking at the ground sees the sculpted terrain too
+                _terrain.Content = terrain;
+                if (!_viewport.Children.Contains(_terrain)) _viewport.Children.Insert(0, _terrain);
                 foreach (var v in _items) _viewport.Children.Remove(v);
                 _items.Clear();
                 foreach (var (content, _) in items)

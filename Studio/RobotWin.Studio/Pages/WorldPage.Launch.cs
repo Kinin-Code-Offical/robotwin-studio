@@ -66,7 +66,7 @@ namespace RobotWin.Studio.Pages
                 toggle.Click += (_, _) =>
                 {
                     if (_session.Physics is not { } ph || ph.SwitchState(o.Id) is not { } now) return;
-                    ph.SetSwitch(o.Id, !now);
+                    _session.SetSwitch(o.Id, !now);   // [replay] recorded
                     W.Status = $"{o.Name}: {(now ? "açıldı" : "kapandı")}";
                     BuildInspector();
                 };
