@@ -284,8 +284,9 @@
                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource R.Medium}">
                         <Grid>
                             <TextBlock x:Name="Hint" Text="{TemplateBinding Tag}" Foreground="{StaticResource B.TextMuted}"
-                                       Margin="{TemplateBinding Padding}" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False"/>
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                                       Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Visibility="Collapsed" IsHitTestVisible="False"/>
+                            <!-- multi-line boxes (serial monitor, logs) set VerticalContentAlignment="Top" and fill from the top -->
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>

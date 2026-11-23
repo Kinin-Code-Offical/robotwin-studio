@@ -27,7 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Screwing and gluing as real physics:** a fixed joint gets a fastening (M3 screw + nut, screw into plastic, super glue, epoxy, hot glue, foam tape, zip tie, solder). It sets the joint's break force (per screw, or lap-shear strength over the bonded area), its heat path in the heat network (glue conducts far better than screw heads) and its softening with temperature: a hot-glued 1 kg block holds at 25 °C and falls at 95 °C.
 - **User guide:** a sensor table (what each sensor measures, how it is computed, its errors), how the camera pipeline works, and the fastenings with their numbers.
 
+- **Movable panels in the world:** the palette, the inspector and every bottom tab (events, serial monitor, cables, RF, sensors) can sit on the left or right (stacked, with resizable heights and column widths), be a bottom tab, or tear off into their own window by dragging their header or tab. Dragging a panel window over the page shows **Sol / Sağ / Alt** guides and highlights where it will dock; closing the window docks it back. Each panel has a menu (left, right, bottom, own window, move up / down, hidden), and the toolbar's **Panel düzeni** button and **Görünüm → Dünya panelleri** list every panel, swap the sides, dock all windows and reset the layout. The layout, including window positions, is kept between sessions (%APPDATA%\RobotWinStudio\layout.json).
+
 ### Fixed
+
+- **Multi-line text boxes** (serial monitor) filled from the middle of their height; their text now starts at the top.
 
 - **Drag of model meshes:** a mesh body's drag came from its bounding box (an ogive nose was a flat 41 mm plate); it now comes from its faces (0.8·sin²θ on faces meeting the flow, Hoerner; base suction behind).
 - **Joined parts' drag on slender bodies:** face coverage was sampled over the bounding sphere and missed a long thin tube entirely; it is now sampled over each body's own extent.

@@ -47,7 +47,23 @@ The **Dünya** (world) page (Ctrl+6) is where everything comes together. Put the
 - **Left panel tabs:** **Sahne** (scene), **Kartlar** (boards), **Parçalar** (parts), **Mekanik** (mechanical), **Ortam** (environment).
 - **Centre:** the 3D view.
 - **Right:** the inspector: the selected object's name, position, physics, cables and joints.
-- **Bottom tabs:** **Olaylar** (events), **Seri monitör** (serial monitor), **Kablolar ve ölçümler** (cables and measurements), **RF**.
+- **Bottom tabs:** **Olaylar** (events), **Seri monitör** (serial monitor), **Kablolar ve ölçümler** (cables and measurements), **RF**, **Sensörler** (sensors).
+
+### Arranging the panels
+
+The palette, the inspector and each bottom tab (events, serial monitor, cables and measurements, RF, sensors) are movable panels:
+
+- **Into its own window:** drag a panel's header or its bottom tab. The panel tears off into its own window and follows the mouse; the window button in the header does the same. Move the window to a second screen if you like. A panel in its own window keeps updating live while the world runs.
+- **Docking:** drag the window by its title over the main window and the **Sol** (left), **Sağ** (right) and **Alt** (bottom) guides appear. Near an edge, the area the panel will take is highlighted; release to dock it there. A window released in the middle stays a window. The **Sola / Sağa / Alta** buttons at the top of the window dock it without dragging. Closing the window puts the panel back where it last was.
+- **Several panels on one side:** panels docked on the same side stack. Drag the line between them to share the height, and the edge line to set the column width. For example, put the serial monitor under the inspector and the events under the palette, then hide the bottom panel to give the scene more room.
+- **Panel menu:** the **⋯** button in the header, or a right click on the header or tab: **Solda** (left), **Sağda** (right), **Alt bölmede (sekme)** (bottom tab), **Ayrı pencerede** (own window), **Yukarı / Aşağı taşı** (move up / down), **Gizli** (hidden). The palette and the inspector cannot go in the bottom panel.
+- **Panel layout** (the button at the right end of the toolbar) or **Görünüm → Dünya panelleri** (View → world panels): shows and changes where each panel is. Hidden panels come back from here. It also has **Alt bölmeyi göster** (show the bottom panel), **Sol ve sağ panelleri yer değiştir** (swap left and right), **Ayrı pencereleri geri yerleştir** (dock all windows) and **Düzeni sıfırla** (reset layout).
+
+The layout is kept, including the position and size of each panel window, and comes back the next time you start the program. In the Scene + Game view (G) with **Paneller** off, the side columns and the bottom panel are hidden; panels in their own windows stay open.
+
+![The inspector and serial monitor on the left, the palette and events on the right; cables and measurements at the bottom](../../images/world-panels.png)
+
+![The docking guides shown while a panel window is dragged; the left edge is picked and the area the panel will take is highlighted](../../images/world-panel-guides.png)
 
 ## Step by step: your first world
 

@@ -50,7 +50,7 @@ namespace RobotWin.Studio.Pages
             Scene.CableSelectionChanged += _ =>
             {
                 BuildInspector();
-                if (DockCables.IsChecked == true) BuildCableTable();
+                if (DockShowing("cables", DockCables)) BuildCableTable();
             };
             Scene.SelectionChanged += _ =>
             {
@@ -86,6 +86,7 @@ namespace RobotWin.Studio.Pages
             InitSense();   // [sense] Pages/WorldPage.Sense.cs
             InitSdk();   // [sdk] Pages/WorldPage.Sdk.cs
             InitTerrain(); // [terrain] Pages/WorldPage.Terrain.cs
+            InitLayout();  // [dock] Pages/WorldPage.Layout.cs (after the sensors tab exists)
         }
 
         private static Workspace W => Workspace.Current;
@@ -104,6 +105,7 @@ namespace RobotWin.Studio.Pages
             Scene.Load(world);
             BuildPalette();
             BuildInspector();
+            if (DockShowing("cables", DockCables)) BuildCableTable();   // [dock] the cable table may be open on a side or in a window
             UpdateRunButton();
             RefreshCollisionView();   // [hull]
         }
@@ -1316,7 +1318,7 @@ namespace RobotWin.Studio.Pages
             UpdateCableDiagnostics();
             UpdateThermalView();   // [thermal] Pages/WorldPage.Thermal.cs
             UpdateCollisionView();   // [hull] Pages/WorldPage.Collision.cs
-            if (DockCables.IsChecked == true) BuildCableTable();
+            if (DockShowing("cables", DockCables)) BuildCableTable();
         }
 
         private void UpdateSerial()
@@ -1345,14 +1347,8 @@ namespace RobotWin.Studio.Pages
             if (e.Key == Key.Enter) OnSerialSend(sender, e);
         }
 
-        private void OnDockTab(object sender, RoutedEventArgs e)
-        {
-            LogList.Visibility = DockLog.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            SerialPanel.Visibility = DockSerial.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            CablePanel.Visibility = DockCables.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            if (DockCables.IsChecked == true) BuildCableTable();
-            ShowRfPanel(DockRf.IsChecked == true);   // [radio]
-        }
+        /// <summary>A bottom tab was picked: the dock manager shows it (and refreshes it through its Shown event).</summary>
+        private void OnDockTab(object sender, RoutedEventArgs e) => _dock?.SyncTabs();   // [dock] Pages/WorldPage.Layout.cs
 
 
         // ================================================================ snapshot hook

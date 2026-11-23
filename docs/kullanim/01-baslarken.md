@@ -56,6 +56,7 @@ Başlangıç sayfasında şunlar vardır:
 - **Bölünmüş görünüm (Ctrl+\\):** iki sayfayı yan yana gösterir; örneğin devre ile PCB'yi birlikte görürsünüz.
 - **Ayrı pencereye al:** **Pencere → Bu sayfayı ayrı pencereye al** ile bir sayfayı ikinci bir pencereye (örneğin ikinci monitöre) taşıyın.
 - **Odak modu:** **Görünüm → Odak modu** gezinme çubuğunu gizler.
+- **Panelleri taşımak (Dünya):** Dünya sayfasında palet, denetçi ve alt sekmeler başlıklarından sürüklenerek ayrı pencereye alınır; pencereyi kenara bırakınca sola, sağa ya da alt bölmeye yerleşir. Düzen saklanır. Bkz. [Dünya → Panelleri yerleştirme](07-dunya.md#panelleri-yerleştirme).
 - **Tam ekran (F11):** **Esc** veya **F11** ile çıkılır.
 - **Arayüz ölçeği:** **Görünüm → Arayüz ölçeği** (%75–%150).
 

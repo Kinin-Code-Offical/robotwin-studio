@@ -199,6 +199,9 @@ namespace RobotWin.Studio
             m.Items.Add(Check("Performans göstergesi (FPS)", "Ctrl+Shift+F", _perf.Visibility == Visibility.Visible, ShowPerf));
             m.Items.Add(Check("Isı kamerası (dünya)", null, _world.ThermalView, v => _world.SetThermalView(v)));   // [thermal]
             m.Items.Add(Check("Çarpışma şekilleri (dünya)", null, _world.CollisionView, v => _world.SetCollisionView(v)));   // [hull]
+            var panels = new MenuItem { Header = "Dünya panelleri" };   // [dock] where the palette, inspector and bottom tabs sit
+            _world.FillLayoutMenu(panels);
+            m.Items.Add(panels);
             m.Items.Add(new Separator());
             m.Items.Add(Check("Odak modu", null, _focusMode, v => SetFocusMode(v)));
             m.Items.Add(Check("Tam ekran", "F11", _fullScreen, _ => ToggleFullScreen()));

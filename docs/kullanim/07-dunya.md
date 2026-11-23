@@ -47,7 +47,23 @@
 - **Sol panel sekmeleri:** **Sahne**, **Kartlar**, **Parçalar**, **Mekanik**, **Ortam**.
 - **Ortada** 3D görünüm.
 - **Sağda** denetçi: seçili nesnenin adı, konumu, fiziği, kabloları ve bağlantıları.
-- **Alt sekmeler:** **Olaylar**, **Seri monitör**, **Kablolar ve ölçümler**, **RF**.
+- **Alt sekmeler:** **Olaylar**, **Seri monitör**, **Kablolar ve ölçümler**, **RF**, **Sensörler**.
+
+### Panelleri yerleştirme
+
+Palet, denetçi ve alt sekmelerin her biri (Olaylar, Seri monitör, Kablolar ve ölçümler, RF, Sensörler) taşınabilir bir paneldir:
+
+- **Ayrı pencereye almak:** Panelin başlığını ya da alttaki sekmesini tutup sürükleyin. Panel kendi penceresine kopar ve fareyle birlikte gelir; başlıktaki pencere düğmesi de aynı işi yapar. Pencereyi ikinci ekrana taşıyabilirsiniz. Ayrı penceredeki panel de simülasyon sırasında canlı güncellenir.
+- **Kenara yerleştirmek:** Ayrı pencereyi başlığından sürükleyip ana pencerenin üzerine getirince **Sol**, **Sağ** ve **Alt** kılavuzları çıkar. Fare bir kenara yaklaşınca panelin oturacağı alan vurgulanır, bırakınca panel oraya yerleşir. Ortada bırakılan pencere ayrı kalır. Pencerenin üstündeki **Sola / Sağa / Alta** düğmeleri sürüklemeden yerleştirir. Pencereyi kapatmak paneli son durduğu yere geri koyar.
+- **Aynı kenarda birden çok panel:** Aynı kenara konan paneller üst üste dizilir. Aralarındaki çizgiyi sürükleyerek yüksekliklerini, kenar çizgisini sürükleyerek sütun genişliğini ayarlayın. Örneğin Seri monitörü denetçinin altına, Olaylar'ı paletin altına alıp alt bölmeyi kapatarak sahneyi büyütebilirsiniz.
+- **Panel menüsü:** Başlıktaki **⋯** düğmesi ya da başlığa veya sekmeye sağ tık: **Solda**, **Sağda**, **Alt bölmede (sekme)**, **Ayrı pencerede**, **Yukarı / Aşağı taşı**, **Gizli**. Palet ve denetçi alt bölmeye konamaz.
+- **Panel düzeni** (araç çubuğunun sağ ucundaki düğme) ya da **Görünüm → Dünya panelleri:** her panelin nerede olduğunu gösterir ve değiştirir. Gizlenen paneller buradan geri açılır. Ayrıca **Alt bölmeyi göster**, **Sol ve sağ panelleri yer değiştir**, **Ayrı pencereleri geri yerleştir** ve **Düzeni sıfırla** buradadır.
+
+Düzen, ayrı pencerelerin konumu ve boyutu dahil saklanır; programı kapatıp açtığınızda aynen gelir. Sahne + Oyun görünümünde (G) **Paneller** kapalıyken kenar sütunları ve alt bölme gizlenir, ayrı penceredeki paneller açık kalır.
+
+![Denetçi ve Seri monitör solda, Palet ve Olaylar sağda; Kablolar ve ölçümler altta](../images/world-panels.png)
+
+![Ayrı pencere sürüklenirken çıkan yerleştirme kılavuzları; sol kenar seçili, panelin oturacağı alan vurgulu](../images/world-panel-guides.png)
 
 ## Adım adım: ilk dünyanız
 

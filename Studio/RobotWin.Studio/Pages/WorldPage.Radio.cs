@@ -300,13 +300,7 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
-            if (DockRf.IsChecked == true) UpdateRfPanel();
-        }
-
-        private void ShowRfPanel(bool visible)
-        {
-            RfPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-            if (visible) UpdateRfPanel();
+            if (DockShowing("rf", DockRf)) UpdateRfPanel();   // [dock] also when it sits on a side or in its own window
         }
 
         private DateTime _lastRf = DateTime.MinValue;

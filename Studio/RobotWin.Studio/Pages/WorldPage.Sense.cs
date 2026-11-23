@@ -13,6 +13,7 @@ using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
 using RobotTwin.CoreSim.Sandbox.Sensing;
 using RobotWin.Studio.Examples;
+using RobotWin.Studio.Shell;
 using RobotWin.Studio.Simulation;
 using RobotWin.Studio.World;
 
@@ -43,8 +44,6 @@ namespace RobotWin.Studio.Pages
         private readonly List<RadioButton> _studioTabs = new List<RadioButton>();
         private CheckBox? _studioTabbedBox, _studioPanelsBox;
         private TextBlock? _studioHint;
-        private readonly List<(ColumnDefinition Column, GridLength Width, double Min)> _savedColumns = new List<(ColumnDefinition, GridLength, double)>();
-        private (GridLength Height, double Min)? _savedDock;
         private string[] _snapshotModes = Array.Empty<string>();
 
         private void InitSense()
@@ -54,11 +53,11 @@ namespace RobotWin.Studio.Pages
                 Scene.RenderDueCameras();
                 if ((DateTime.Now - _lastSensorPanel).TotalMilliseconds < 125) return;
                 _lastSensorPanel = DateTime.Now;
-                if (_dockSensors?.IsChecked == true) UpdateSensorsPanel();
+                if (DockShowing("sensors", _dockSensors)) UpdateSensorsPanel();
             };
             _session.StateChanged += (_, _) => Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (_session.State == SimState.Stopped && _dockSensors?.IsChecked == true) UpdateSensorsPanel();
+                if (_session.State == SimState.Stopped && DockShowing("sensors", _dockSensors)) UpdateSensorsPanel();
             }));
             W.WorldChanged += (_, _) => _game?.RefreshSources();
             BuildSensorsDock();
@@ -90,15 +89,10 @@ namespace RobotWin.Studio.Pages
             host.Children.Add(_sensorsPanel);
             _dockSensors.Checked += (_, _) =>
             {
-                LogList.Visibility = Visibility.Collapsed;
-                SerialPanel.Visibility = Visibility.Collapsed;
-                CablePanel.Visibility = Visibility.Collapsed;
-                RfPanel.Visibility = Visibility.Collapsed;
-                _sensorsPanel.Visibility = Visibility.Visible;
-                if (DockRow.Height.Value < 260) DockRow.Height = new GridLength(280);
-                UpdateSensorsPanel();
+                // [dock] the dock manager shows the tab and refreshes it; camera frames want a taller bottom panel
+                if ((_dock == null || _dock.PlaceOf("sensors") == DockPlace.Bottom) && DockRow.Height.Value is > 0 and < 260) DockRow.Height = new GridLength(280);
+                if (_dock == null) UpdateSensorsPanel();
             };
-            _dockSensors.Unchecked += (_, _) => _sensorsPanel.Visibility = Visibility.Collapsed;
         }
 
         private void UpdateSensorsPanel()
@@ -517,40 +511,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>In Scene + Game mode the palette, inspector and dock make room unless "Paneller" is on.</summary>
         private void ApplyStudioPanels()
         {
-            if (_viewHost?.Parent is not Grid main) return;
-            bool hide = _studio && !_studioPanels;
-            if (hide && _savedColumns.Count == 0)
-            {
-                for (int i = 0; i < main.ColumnDefinitions.Count; i++)
-                {
-                    if (i == Grid.GetColumn(_viewHost)) continue;
-                    var c = main.ColumnDefinitions[i];
-                    _savedColumns.Add((c, c.Width, c.MinWidth));
-                    c.MinWidth = 0;
-                    c.Width = new GridLength(0);
-                }
-
-                _savedDock = (DockRow.Height, DockRow.MinHeight);
-                DockRow.MinHeight = 0;
-                DockRow.Height = new GridLength(0);
-            }
-            else if (!hide && _savedColumns.Count > 0)
-            {
-                foreach (var (c, w, min) in _savedColumns)
-                {
-                    c.Width = w;
-                    c.MinWidth = min;
-                }
-
-                _savedColumns.Clear();
-                if (_savedDock is { } d)
-                {
-                    DockRow.Height = d.Height;
-                    DockRow.MinHeight = d.Min;
-                }
-
-                _savedDock = null;
-            }
+            if (_dock != null) _dock.Collapsed = _studio && !_studioPanels;   // [dock] panels in their own windows stay open
         }
 
         /// <summary>Called by the main window when it enters or leaves full screen.</summary>
@@ -750,6 +711,8 @@ namespace RobotWin.Studio.Pages
             {
                 Scene.Follow = true;
             }
+
+            DockSnapshot();   // [dock]
         }
     }
 }

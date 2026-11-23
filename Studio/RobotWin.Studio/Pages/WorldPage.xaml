@@ -4,7 +4,7 @@
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:w="clr-namespace:RobotWin.Studio.World"
              Background="{StaticResource B.Base}">
-    <Grid>
+    <Grid x:Name="PageRoot">
         <!-- Shown when the active tab is not a world -->
         <Grid x:Name="NoWorld" Visibility="Collapsed" Background="{StaticResource B.Base}" Panel.ZIndex="5">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
@@ -24,7 +24,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="44"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="1"/>
+                <RowDefinition x:Name="DockLineRow" Height="1"/>
                 <RowDefinition x:Name="DockRow" Height="190" MinHeight="36"/>
             </Grid.RowDefinitions>
 
@@ -74,12 +74,14 @@
                         <ToggleButton x:Name="FollowToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Kamera seçili nesneyi takip etsin (T)" Click="OnFollow"><t:Icon Data="{StaticResource I.Eye}" Size="16"/></ToggleButton>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Üstten görünüm" Click="OnTop"><t:Icon Data="{StaticResource I.Layers}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Hepsini sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
+                        <!-- [dock] Pages/WorldPage.Layout.cs -->
+                        <Button x:Name="LayoutButton" Style="{StaticResource Btn.Icon}" ToolTip="Panel düzeni: paneller solda, sağda, altta ya da ayrı pencerede; gizle, sıfırla" Click="OnLayoutMenu"><t:Icon Data="{StaticResource I.Panel}" Size="16"/></Button>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- ================= Main area ================= -->
-            <Grid Grid.Row="1">
+            <Grid x:Name="MainArea" Grid.Row="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="268" MinWidth="200"/>
                     <ColumnDefinition Width="1"/>
@@ -89,7 +91,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Palette -->
-                <DockPanel Grid.Column="0" Margin="12,12,6,0">
+                <DockPanel x:Name="PalettePane" Grid.Column="0" Margin="12,12,6,0">
                     <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
                         <RadioButton x:Name="TabScene" Style="{StaticResource Chip}" Content="Sahne" GroupName="pal" IsChecked="True" Margin="0,0,0,4" Click="OnPaletteTab" ToolTip="Dünyadaki her şey: neyin neye bağlı olduğu, durumları"/>
                         <RadioButton x:Name="TabBoards" Style="{StaticResource Chip}" Content="Kartlar" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab"/>
@@ -114,23 +116,23 @@
                 <w:WorldScene x:Name="Scene" Grid.Column="2"/>
 
                 <Border Grid.Column="3" Background="{StaticResource B.Border}"/>
-                <ScrollViewer Grid.Column="4" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="InspectorPane" Grid.Column="4" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="Inspector" Margin="14,12,14,16"/>
                 </ScrollViewer>
             </Grid>
 
-            <GridSplitter Grid.Row="2" Height="5" Margin="0,-2" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows"/>
-            <Border Grid.Row="2" Background="{StaticResource B.Border}" IsHitTestVisible="False"/>
+            <GridSplitter x:Name="DockSplitter" Grid.Row="2" Height="5" Margin="0,-2" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows" Panel.ZIndex="5"/>
+            <Border x:Name="DockLine" Grid.Row="2" Background="{StaticResource B.Border}" IsHitTestVisible="False"/>
 
             <!-- ================= Bottom dock ================= -->
-            <DockPanel Grid.Row="3">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="12,6,0,4">
+            <DockPanel x:Name="BottomArea" Grid.Row="3">
+                <StackPanel x:Name="DockTabs" DockPanel.Dock="Top" Orientation="Horizontal" Margin="12,6,0,4">
                     <RadioButton x:Name="DockLog" Style="{StaticResource Chip}" Content="Olaylar" GroupName="dock" IsChecked="True" Click="OnDockTab"/>
                     <RadioButton x:Name="DockSerial" Style="{StaticResource Chip}" Content="Seri monitör" GroupName="dock" Margin="4,0" Click="OnDockTab"/>
                     <RadioButton x:Name="DockCables" Style="{StaticResource Chip}" Content="Kablolar ve ölçümler" GroupName="dock" Click="OnDockTab"/>
                     <RadioButton x:Name="DockRf" Style="{StaticResource Chip}" Content="RF" GroupName="dock" Margin="4,0,0,0" Click="OnDockTab" ToolTip="Radyo: cihazlar, RSSI, kanal, saniyede paket"/>
                 </StackPanel>
-                <Grid Margin="12,0,12,8">
+                <Grid x:Name="DockHost" Margin="12,0,12,8">
                     <ListBox x:Name="LogList" BorderThickness="0" Background="Transparent" FontFamily="{StaticResource F.Mono}" FontSize="12">
                         <ListBox.ItemTemplate>
                             <DataTemplate>

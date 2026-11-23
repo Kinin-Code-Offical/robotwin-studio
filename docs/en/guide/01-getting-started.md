@@ -56,6 +56,7 @@ The home page has:
 - **Split view (Ctrl+\\):** shows two pages side by side, e.g. the circuit and the PCB together.
 - **Detach:** **Pencere → Bu sayfayı ayrı pencereye al** (Window → move this page to its own window) moves a page to a second window (e.g. a second monitor).
 - **Focus mode:** **Görünüm → Odak modu** (View → focus mode) hides the navigation rail.
+- **Moving panels (world):** on the world page, drag the palette, the inspector or a bottom tab by its header into its own window; drop the window on an edge to dock it left, right or in the bottom panel. The layout is kept. See [World → Arranging the panels](07-world.md#arranging-the-panels).
 - **Full screen (F11):** leave with **Esc** or **F11**.
 - **Interface scale:** **Görünüm → Arayüz ölçeği** (View → interface scale), 75–150 %.
 
