@@ -102,7 +102,8 @@ namespace RobotTwin.CoreSim.Sandbox
             var bat = w.AddComponent(lib, "bat-2s-usbc", new WorldPose { X = -0.055, Z = deck });
             bat.Name = "2S Li-ion paket (USB-C)";
             var design = w.AddDesign(GamepadCarBoard(lib));
-            var board = w.AddBoard(design, new WorldPose { X = 0.045, Z = deck + 0.004 });
+            // 12 mm ahead of the pack's leads: their plug lies on the deck in front of the board, not among its parts.
+            var board = w.AddBoard(design, new WorldPose { X = 0.057, Z = deck + 0.004 });
             board.Name = "Araba kartı";
 
             foreach (var o in new[] { right, left, post, caster, bat, board })

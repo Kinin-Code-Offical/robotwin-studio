@@ -17,6 +17,9 @@ namespace RobotTwin.CoreSim.Automation
     {
         WorldBodyGeometry GeometryOf(WorldObject o);
         double CableLength(WorldCable cable);
+
+        /// <summary>[route] Where a cable's two plugs sit, each in its object's frame (the app's 3D model pins), or null.</summary>
+        CablePins? PinsOf(WorldCable cable) => null;
     }
 
     /// <summary>
@@ -89,6 +92,9 @@ namespace RobotTwin.CoreSim.Automation
             try
             {
                 Physics = WorldPhysics.Build(World, Geometry.GeometryOf, Circuit);
+                // [route] With the app's pin positions (a baked geometry file) the cables are the same physical ropes as in
+                // the app: routed, laid, settled, colliding and pulling on their plugs.
+                if (World.Cables.Any(c => Geometry.PinsOf(c) != null)) Physics.AttachCables(World, Geometry.PinsOf, 320);
                 Physics.DriveOverride = DrivePort;
                 BindMotionSensors();
             }

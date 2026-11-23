@@ -62,7 +62,30 @@ Doğrulama: bir bloğun üstüne kaynaklı 0,5 kg'lık parçada kaynak 4,905 N t
 
 ### Kablolar: etki ve tepki
 
-Kablolar kütleli birer iptir. Bir gövdeye dayanan kablo o gövdeyi iter; kablonun gördüğü düzeltme $`m\,\Delta x/h^2`$ eşit ve zıt yönde gövdeye uygulanır. Önceki sürümde temas tek yönlüydü: kablo pinlerini çekiyordu ama dayandığı gövde hiçbir tepki almıyordu. Bu, yerde duran bir dörtlüyü motorlar çalışmadan havaya kaldırıyordu. İki ucu aynı rijit gövdede olan bir kablo o gövdeye yine dayanır (şekli için), ama aralarındaki kuvvetler içtir: pinlere çekişi ve gövdeye itişi birbirini götürür, bu yüzden ikisi de uygulanmaz. Uygulansaydı gecikmeli fiş gerilimi ile anlık temas itmesi arasındaki fark gövdeye bir tekme verirdi. Kablo ilk serilirken gevşekliği yukarı, aşağı ya da iki yana doğru kavislenir; hangisi çevredeki parçaların en azından geçiyorsa o seçilir. Böylece kapalı bir gövdenin içindeki kablo içeride kalır, kapaktan taşıp kanadın üstüne itilmez. Pervane diskleri kablolar için katı sayılmaz, çünkü disk yalnızca palların süpürdüğü hacimdir. Pervane diskinden geçen bir kablonun gerçekte kesilmesi henüz modellenmiyor.
+Kablolar kütleli birer iptir. Bir gövdeye dayanan kablo o gövdeyi iter; kablonun gördüğü düzeltme $`m\,\Delta x/h^2`$ eşit ve zıt yönde gövdeye uygulanır. Önceki sürümde temas tek yönlüydü: kablo pinlerini çekiyordu ama dayandığı gövde hiçbir tepki almıyordu. Bu, yerde duran bir dörtlüyü motorlar çalışmadan havaya kaldırıyordu. İki ucu aynı rijit gövdede olan bir kablo o gövdeye yine dayanır (şekli için), ama aralarındaki kuvvetler içtir: pinlere çekişi ve gövdeye itişi birbirini götürür, bu yüzden ikisi de uygulanmaz. Uygulansaydı gecikmeli fiş gerilimi ile anlık temas itmesi arasındaki fark gövdeye bir tekme verirdi. Pervane diskleri kablolar için katı sayılmaz, çünkü disk yalnızca palların süpürdüğü hacimdir. Pervane diskinden geçen bir kablonun gerçekte kesilmesi henüz modellenmiyor.
+
+### Kablo yolu, delikler ve sürekli çarpışma
+
+Bir kablo yalnızca gerçek bir telin gidebileceği yerden gider:
+
+- **Yol bulma:** Fişlerin çevresindeki boşluk hücrelere bölünür. Bir katının (ya da zeminin) merkezine telin yarıçapı artı hücrenin üçte biri kadar yaklaştığı hücre doludur; 2 mm'lik bir duvar bile 4 mm'lik hücrelerden bir katmanı kapatır. Boş hücrelerin en kısa zinciri (A*) bulunur, sonra gerilir: düz çizginin hiçbir katıya değmediği yerde düz gider. Kaba ızgara dar bir açıklıktan (10 mm'lik bir kablo deliği, iki servo arası) geçemezse daha ince ızgarayla yeniden aranır; bulunan yol kesin ışın testiyle doğrulanır. Otomatik kablo boyu bu yolun %10 fazlası artı 15 mm'dir.
+- **Fiş çıkışı:** Tel pinden parçanın yukarı ekseninde çıkar; orada başka bir parça varsa (bir plakanın altındaki motorun uçları) parçanın ekseninden ilk açık yönü seçer.
+- **Gerçek delikler:** Kabukta `holes` ile işaretli bir duvar, deliğin çevresindeki dört parçalı çerçevedir (`hole`, `hole.z`, `hole.u`; tek bir yüz için `hole.+x.size` gibi). Tel ve itme çubuğu yalnızca açıklıktan geçer. Editördeki model de aynı tanımdan çizilir.
+- **İçi boş borular:** `tube.wall` (m) verilen bir silindir iki ucu açık bir borudur: 16 duvar parçasıyla çarpışır, boru eylemsizliğine sahiptir. Bir roketin motoru gövde borusunun deliğinde merkezleme halkalarıyla durur.
+- **Sürekli çarpışma:** Bir tel parçacığının bir alt adımdaki hareketi, gövdenin kendi çerçevesinde (gövde de hareket etmiş olabilir) bir katıya girerse eriştiği yüzde durdurulur. 1 cm'lik bir hareket 2 mm'lik bir duvarı tek adımda geçer; yalnızca dışarı itme teli öbür taraftan çıkarırdı. İki parçacık arasındaki parça telin yarıçapında bir kapsül olarak ele alınır: ayırıcı eksenlerle onu en kısa yoldan dışarı çıkaran itme bulunur. Deliğin üst kenarına çekilen bir tel duvarın içinden değil, deliğe geri kayar. Bu temaslar uzunluk düzeltmesinden sonra bir kez daha uygulanır, böylece köşeden dönen gergin bir telin kirişi köşeyi kesmez.
+- **Adım sırası:** Kablolar gövdelerden sonra adımlanır ve temasları parçaların o anki yerine göre çözülür. Önceden kablolar önce adımlanıyordu: 12 m/s'deki bir uçağın içindeki tel gövdenin 12 mm gerisinde kalıyordu. Fişlere çekiş bir sonraki adımda uygulanır.
+- **Sönüm ve hava:** Telin kendi (malzeme) sönümü uçlarına göre bağıl hareketine etki eder, dünyaya göre değil; dünyaya göre sönüm 12 m/s'deki bir uçağın içindeki teli yaklaşık 4 g ile geriye iterdi. Hava sürüklemesi ayrıdır ve gerçektir: akışa dik bir silindir (Cd ≈ 1,2), açıktaki tel için rüzgâra göre, iki fişi de kapalı bir gövdede olan tel için o gövdeyle taşınan havaya göre.
+- **Gövdeyle taşınan teller:** İki fişi aynı rijit gövdede olan ve çevresinde o gövdeden başka bir şey (5 mm içinde) bulunmayan bir tel, gövdeye göre 0,2 s durduktan sonra gövdeyle birlikte taşınır. Bu, gövdenin hissettiği etkin yerçekimi (g − a) gövde çerçevesinde g'nin %15'i içinde kaldıkça sürer. Bunun dışında tel yeniden adımlanır (kalkış, dönüş, iniş). Düz uçuşta bir uçağın kablolaması, tezgâhta duran bir kablo gibi hesap tutmaz.
+
+### Tutarlılık denetimi
+
+Birbirine bağlı parçalar birbirleriyle çarpışmaz, çünkü bağlantı yüzeylerinde değerler. Bu yüzden bağlandığı güvenlik duvarına yarısı gömülü bir motor fizikte hiç fark edilmezdi. Denetim çarpışma süzgecinin gizlediğini raporlar:
+
+- **gömülü:** Bağlı iki parça 1 mm'den fazla iç içe (yataklı parçalar hariç: mil yatağın içinden geçer). Kart ve modüllerin altındaki pin ve bacaklar 2,9 mm iner; bir kart yüzeye bu pinlerin üstünde konur.
+- **kablo:** Bir tel bir katının içinden geçiyor, ya da bir fiş başka bir parçanın içinde kalıyor.
+- **yol yok:** İki uç arasında bir katının içinden geçmeyen yol yok (deliksiz kapalı bir kutu).
+
+Denetim simülasyon başlarken **Olaylar** sekmesine, anlık görüntü günlüğüne ve tüm şablonların çakışma raporuna (`--overlap-report`) yazılır. Bilinen sınır: dolu bir kart dışbükey zarfıyla çarpışır. Bileşenlerinin arasından geçen bir tel zarfın içinde sayılabilir.
 
 ## Çarpışma şekilleri
 

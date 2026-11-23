@@ -18,12 +18,19 @@ namespace RobotWin.Studio.Pages
         {
             private readonly Dictionary<string, WorldBodyGeometry> _bodies = new Dictionary<string, WorldBodyGeometry>(StringComparer.OrdinalIgnoreCase);
             private readonly Dictionary<string, double> _cables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, RobotTwin.CoreSim.Sandbox.CablePins> _pins = new Dictionary<string, RobotTwin.CoreSim.Sandbox.CablePins>(StringComparer.OrdinalIgnoreCase);
 
-            public CapturedGeometry(WorldDocument world, Func<WorldObject, WorldBodyGeometry> body, Func<WorldCable, double> cable)
+            public CapturedGeometry(WorldDocument world, Func<WorldObject, WorldBodyGeometry> body, Func<WorldCable, double> cable, Func<WorldCable, RobotTwin.CoreSim.Sandbox.CablePins?>? pins = null)
             {
                 foreach (var o in world.Objects) _bodies[o.Id] = body(o);
-                foreach (var c in world.Cables) _cables[c.Id] = cable(c);
+                foreach (var c in world.Cables)
+                {
+                    _cables[c.Id] = cable(c);
+                    if (pins?.Invoke(c) is { } p) _pins[c.Id] = p;   // [route] so a headless run lays the same ropes
+                }
             }
+
+            public RobotTwin.CoreSim.Sandbox.CablePins? PinsOf(WorldCable cable) => _pins.TryGetValue(cable.Id, out var p) ? p : null;
 
             public WorldBodyGeometry GeometryOf(WorldObject o) => _bodies.TryGetValue(o.Id, out var g) ? g : new WorldBodyGeometry { Min = new RobotTwin.CoreSim.Mechanics.Vec3(-0.01, -0.01, 0), Max = new RobotTwin.CoreSim.Mechanics.Vec3(0.01, 0.01, 0.02), MassKg = 0.01 };
 

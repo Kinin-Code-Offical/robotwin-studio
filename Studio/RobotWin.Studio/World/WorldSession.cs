@@ -126,6 +126,10 @@ namespace RobotWin.Studio.World
                     {
                         Log.Add(new SimLogEntry(0, "fizik", $"{world.Find(oa)?.Name ?? oa} ile {world.Find(ob)?.Name ?? ob} iç içe başlıyor ({depth * 1000:F1} mm); konumlarını ayırın.", AnalogEventKind.Warning));
                     }
+
+                    // [audit] Joined parts do not collide with each other, so one sunk into the other would go unnoticed.
+                    foreach (var issue in Physics.JoinedOverlaps())
+                        Log.Add(new SimLogEntry(0, "fizik", issue.Message + "; gerçekte böyle monte edilemez, konumunu düzeltin.", AnalogEventKind.Warning));
                 }
                 catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
                 {

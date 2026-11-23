@@ -45,18 +45,33 @@ namespace RobotWin.Studio.Examples
             var w = new WorldDocument { Title = "Mini drone" };
             var (pivot, axis, _) = World.ObjectModels.Mount(Lib, "motor-8520");
             const double arm = 0.13, th = 0.002, r = 0.0424;
-            var a1 = w.AddBody("box", arm, 0.010, th, new WorldPose { Yaw = 45 }, "KARBON");
-            var a2 = w.AddBody("box", arm, 0.010, th, new WorldPose { Yaw = 135 }, "KARBON");
+            // One arm through the middle, the other diagonal as two half arms butted against its sides: two bars cannot
+            // cross through each other.
+            // The body plate is underneath and the arms are screwed on top of it, so the motors' leads run over the arms
+            // to the middle instead of into the plate's edge.
+            var a1 = w.AddBody("box", arm, 0.010, th, new WorldPose { Yaw = 45, Z = th }, "KARBON");
             a1.Name = "Kol 1";
-            a2.Name = "Kol 2";
-            a1.MassKg = a2.MassKg = 0.003;
-            a1.Color = a2.Color = "#2A2A2E";
-            var plate = w.AddBody("plate", 0.04, 0.04, th, new WorldPose { Z = th }, "KARBON");
+            a1.MassKg = 0.003;
+            a1.Color = "#2A2A2E";
+            WorldObject HalfArm(double angle, string name)
+            {
+                double len = arm / 2 - 0.005, rc = 0.005 + len / 2;
+                var half = w.AddBody("box", len, 0.010, th, new WorldPose { X = rc * Math.Cos(angle * Math.PI / 180), Y = rc * Math.Sin(angle * Math.PI / 180), Z = th, Yaw = angle }, "KARBON");
+                half.Name = name;
+                half.MassKg = 0.0015;
+                half.Color = "#2A2A2E";
+                return half;
+            }
+
+            var a2 = HalfArm(-45, "Kol 2 (ön sağ)");
+            var a3 = HalfArm(135, "Kol 2 (arka sol)");
+            var plate = w.AddBody("plate", 0.04, 0.04, th, new WorldPose(), "KARBON");
             plate.Name = "Gövde";
             plate.MassKg = 0.004;
             plate.Color = "#2A2A2E";
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = a1.Id, ObjectB = plate.Id });
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = a2.Id, ObjectB = plate.Id });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = a3.Id, ObjectB = plate.Id });
             var bat = w.AddComponent(Lib, "bat-1s-lipo-300", new WorldPose { Z = 2 * th, Yaw = 90 });
             bat.Name = "1S LiPo";
             // Without a flight controller nothing corrects a tilt: the pack's centre of mass must sit on the frame's centre.
@@ -67,11 +82,11 @@ namespace RobotWin.Studio.Examples
             bat.Pose.Y -= off.Y;
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = bat.Id, ObjectB = plate.Id });
             // Front-right and rear-left spin CCW, the other diagonal CW (reversed leads, CW props): yaw torques cancel.
-            var corners = new[] { (X: r, Y: r, Ccw: true, Arm: a1, Name: "Ön sol"), (X: r, Y: -r, Ccw: false, Arm: a2, Name: "Ön sağ"), (X: -r, Y: -r, Ccw: true, Arm: a1, Name: "Arka sağ"), (X: -r, Y: r, Ccw: false, Arm: a2, Name: "Arka sol") };
+            var corners = new[] { (X: r, Y: r, Ccw: true, Arm: a1, Name: "Ön sol"), (X: r, Y: -r, Ccw: false, Arm: a2, Name: "Ön sağ"), (X: -r, Y: -r, Ccw: true, Arm: a1, Name: "Arka sağ"), (X: -r, Y: r, Ccw: false, Arm: a3, Name: "Arka sol") };
             foreach (var c in corners)
             {
                 // Leads toward the middle of the frame, where the battery is.
-                var m = w.AddComponent(Lib, "motor-8520", new WorldPose { X = c.X, Y = c.Y, Z = th, Yaw = Math.Atan2(-c.Y, -c.X) * 180 / Math.PI });
+                var m = w.AddComponent(Lib, "motor-8520", new WorldPose { X = c.X, Y = c.Y, Z = 2 * th, Yaw = Math.Atan2(-c.Y, -c.X) * 180 / Math.PI });
                 m.Name = c.Name + " motor";
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = m.Id, ObjectB = c.Arm.Id });
                 var prop = ReadyParts.Add(w, c.Ccw ? "prop-55-ccw" : "prop-55-cw", new WorldPose());

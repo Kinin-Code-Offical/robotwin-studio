@@ -219,7 +219,7 @@ namespace RobotWin.Studio.Examples
             var stand = w.AddBody("box", 0.06, 0.04, 0.02, new WorldPose(), "AHŞAP");
             stand.Name = "Sehpa (masaya vidalı)";   // [phys] shown as clamped: it is "Sabit"
             stand.IsStatic = true;
-            var sensor = w.AddComponent(Lib, "hc-sr04", new WorldPose { Z = 0.02 });
+            var sensor = w.AddComponent(Lib, "hc-sr04", new WorldPose { Z = RobotTwin.CoreSim.Sandbox.WorldExamples.OnPins(0.02) });   // on its header pins
             sensor.Name = "HC-SR04";
             var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = 0.12 });
             w.Connect(new CableEnd { ObjectId = bat.Id, Pin = "+" }, new CableEnd { ObjectId = sensor.Id, Pin = "VCC" }, 24, "#E5484D");

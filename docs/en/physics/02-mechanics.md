@@ -62,7 +62,30 @@ Validation: a 0.5 kg part welded on a block makes its weld carry 4.905 N (0.5 ×
 
 ### Cables: action and reaction
 
-Cables are ropes with mass. A cable resting against a body pushes it: the correction the wire receives, $`m\,\Delta x/h^2`$, is applied to the body equal and opposite. In earlier versions the contact was one-way: a wire pulled on its plugs while the body it rested on felt nothing, which lifted a resting quad off the floor before its motors ran. A cable with both plugs on the same rigid body still rests on it (for its shape), but the forces between them are internal: its pull on the plugs and its push on the frame cancel, so neither is applied. If they were, the difference between a lagging, filtered plug tension and an instant contact push would kick the frame. A new cable's slack is bowed up, down or to either side, whichever runs through the fewest surrounding parts, so a wire inside a closed fuselage stays inside instead of arching through the lid and being pushed out over the wing. Propeller discs are not solid to cables, because the disc is only the volume the blades sweep. A wire in a real prop disc would be cut; that is not modelled yet.
+Cables are ropes with mass. A cable resting against a body pushes it: the correction the wire receives, $`m\,\Delta x/h^2`$, is applied to the body equal and opposite. In earlier versions the contact was one-way: a wire pulled on its plugs while the body it rested on felt nothing, which lifted a resting quad off the floor before its motors ran. A cable with both plugs on the same rigid body still rests on it (for its shape), but the forces between them are internal: its pull on the plugs and its push on the frame cancel, so neither is applied. If they were, the difference between a lagging, filtered plug tension and an instant contact push would kick the frame. Propeller discs are not solid to cables, because the disc is only the volume the blades sweep. A wire in a real prop disc would be cut; that is not modelled yet.
+
+### Cable routes, holes and continuous collision
+
+A cable runs only where a real wire can:
+
+- **Routing:** The space around the plugs is cut into cells. A cell is blocked when a solid (or the floor) comes closer to its centre than the wire's radius plus a third of a cell, so even a 2 mm wall blocks a whole layer of 4 mm cells. The shortest chain of free cells (A*) is then pulled taut and runs straight wherever the straight line touches no solid. When the coarse grid cannot pass a narrow opening (a 10 mm cable hole, the gap between two servos), a finer one is searched, and the path is checked with exact ray tests. The automatic cable length is that run plus 10 % and 15 mm.
+- **Plug exit:** A wire leaves its pin along the part's up axis, or the first clear direction of the part's frame when another part is right there (a motor's terminals under a plate).
+- **Real holes:** A shell wall listed in `holes` is the four-piece frame around its opening (`hole`, `hole.z`, `hole.u`, or per side such as `hole.+x.size`). Wires and pushrods pass through the opening only, and the editor draws the same frame.
+- **Hollow tubes:** A cylinder with `tube.wall` (m) is a tube open at both ends. It collides as 16 wall segments and has a tube's inertia. A rocket's motor sits in its body tube's bore on centering rings.
+- **Continuous collision:** A wire particle's move over a substep, judged in the body's frame (the body may have moved too), stops on the face it reached instead of entering or crossing a solid. A 1 cm move crosses a 2 mm wall in one step, and the push-out alone would put the wire out on the far side. Each segment is a capsule of the wire's radius, and separating axes give the least push that frees it, so a wire drawn against the top edge of a cable hole slides back into the hole instead of through the wall. These contacts are applied once more after the length pass, so a taut wire's chords do not cut the corners it wraps.
+- **Step order:** Cables are stepped after the bodies and collide with where the parts are now. Stepped first, a wire inside a plane at 12 m/s trailed its fuselage by 12 mm. Their pull on the plugs is applied in the next step.
+- **Damping and air:** The wire's own (material) damping acts on its motion relative to its plugged ends, not relative to the world, which would push a wire inside a plane at 12 m/s back with about 4 g. Air drag is separate and real: a cylinder across the flow (Cd ≈ 1.2), against the wind for an exposed wire, and against the air carried inside a closed fuselage when both plugs sit in it.
+- **Wiring carried with its body:** A wire with both plugs on one rigid body, and nothing else within 5 mm of it, is carried rigidly with that body once it has lain still relative to it for 0.2 s. This holds while the effective gravity the body feels (g − a, in its frame) stays within 15 % of g. Beyond that (a take-off run, a turn, a landing) the wire is stepped again. An aircraft's wiring in steady flight costs nothing, as a still cable on a bench already does.
+
+### Consistency audit
+
+Parts joined to each other do not collide, because they touch at their mounting faces, so a motor sunk halfway into the firewall it is screwed to would never be noticed by the physics. The audit reports what the collision filter hides:
+
+- **gömülü** (sunk in): two joined parts overlap by more than 1 mm. Bearings are excluded, because an axle runs through its bore. The pins and leads under boards and modules reach 2.9 mm below them, and a board is set on a surface standing on those pins.
+- **kablo** (wire): a wire runs through a solid, or a plug sits inside another part.
+- **yol yok** (no way): there is no way between a wire's ends that avoids every solid (a closed box with no hole).
+
+It is written to the **Olaylar** (events) tab when a run starts, to the snapshot log, and to the all-templates overlap report (`--overlap-report`). A known limit: a populated board collides as its convex hull, so a wire running between its components can count as inside it.
 
 ## Collision shapes
 

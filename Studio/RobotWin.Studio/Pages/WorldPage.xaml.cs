@@ -1233,6 +1233,7 @@ namespace RobotWin.Studio.Pages
             if (world == null) return System.Array.Empty<string>();
             var physics = RobotTwin.CoreSim.Sandbox.WorldPhysics.Build(world, Scene.GeometryOf, null);
             var lines = physics.FindInterpenetrations(0.001).Select(o => $"{world.Find(o.A)?.Name ?? o.A} ↔ {world.Find(o.B)?.Name ?? o.B}: {o.Depth * 1000:F1} mm").ToList();
+            lines.AddRange(physics.JoinedOverlaps().Select(i => "bağlı: " + i.Message));   // [audit]
             // [shell] fit problems, and where each part of a shelled world really is (pose, collision box)
             lines.AddRange(physics.ShellFit(world).Select(i => "sığma: " + i.Message));
             if (world.Objects.Any(RobotTwin.CoreSim.Sandbox.WorldPhysics.IsShell))
@@ -1392,6 +1393,24 @@ namespace RobotWin.Studio.Pages
                             if (phc.RopeOf(c.Id) is { } rope && phc.CablePoints(c.Id) is { } pts)
                                 sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} {1}.{2} – {3}.{4}: gerilim {5:0.00} / {6:0.00} N, en alçak z {7:0.0000}, en yüksek z {8:0.0000}",
                                     c.Id, World.Find(c.A.ObjectId)?.Name, c.A.Pin, World.Find(c.B.ObjectId)?.Name, c.B.Pin, rope.A.Tension, rope.B.Tension, pts.Min(q => q.Z), pts.Max(q => q.Z)));
+                    if (_session.Physics is { } phs) sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "kablo adımı: {0:0.00} s", phs.CableSeconds));
+                    sb.AppendLine("---- denetim ----");   // [audit] what the collision filter hides: joined parts in each other, wires through solids
+                    if (_session.Physics is { } pha && World != null)
+                    {
+                        foreach (var i in pha.JoinedOverlaps()) sb.AppendLine("gömülü: " + i.Message);
+                        foreach (var i in pha.CableCrossings()) sb.AppendLine("kablo: " + i.Message);
+                        foreach (var i in pha.ShellFit(World)) sb.AppendLine("sığma: " + i.Message);
+                        foreach (var c in World.Cables)
+                        {
+                            var route = pha.RopeOf(c.Id) is { } rp ? pha.RouteOf(c.Id) : null;
+                            if (pha.RopeOf(c.Id) is not { } rope) continue;
+                            sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "rota {0}: {1} | uç A ({2:0.000},{3:0.000},{4:0.000}) çıkış ({5:0.00},{6:0.00},{7:0.00}) | uç B ({8:0.000},{9:0.000},{10:0.000}) çıkış ({11:0.00},{12:0.00},{13:0.00}) | kablo {14:0} mm",
+                                c.Id, route == null ? "yok" : $"{route.Count} nokta, {RobotTwin.CoreSim.Mechanics.CableRouter.Length(route) * 1000:0} mm",
+                                rope.A.World.X, rope.A.World.Y, rope.A.World.Z, rope.A.ExitWorld.X, rope.A.ExitWorld.Y, rope.A.ExitWorld.Z,
+                                rope.B.World.X, rope.B.World.Y, rope.B.World.Z, rope.B.ExitWorld.X, rope.B.ExitWorld.Y, rope.B.ExitWorld.Z, rope.Length * 1000));
+                        }
+                    }
+
                     sb.AppendLine("---- geometri ----");
                     if (World != null)
                         foreach (var o in World.Objects)
@@ -1403,7 +1422,7 @@ namespace RobotWin.Studio.Pages
                     System.IO.File.WriteAllText(logPath, sb.ToString());
                     if (World != null)   // the app's bodies, so a headless run can use exactly them
                         System.IO.File.WriteAllText(logPath + RobotTwin.CoreSim.Automation.BakedGeometry.Suffix,
-                            RobotTwin.CoreSim.Automation.BakedGeometry.Export(World, new CapturedGeometry(World, Scene.GeometryOf, Scene.CableLength)));
+                            RobotTwin.CoreSim.Automation.BakedGeometry.Export(World, new CapturedGeometry(World, Scene.GeometryOf, Scene.CableLength, Scene.CablePinsOf)));
                 }
 
                 DockSerial.IsChecked = true;

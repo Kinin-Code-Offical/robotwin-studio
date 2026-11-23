@@ -40,7 +40,7 @@ namespace RobotTwin.CoreSim.Sandbox
             box.Parameters["shell"] = "true";
             box.Parameters["wall"] = "0.002";
             box.Parameters["holes"] = "-x";
-            var uno = w.AddComponent(lib, "arduino-uno", new WorldPose { X = -0.0506, Y = 0.0266, Z = 0.002 });
+            var uno = w.AddComponent(lib, "arduino-uno", new WorldPose { X = -0.0506, Y = 0.0266, Z = OnPins(0.002) });
             uno.Name = "Arduino Uno";
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = uno.Id, ObjectB = box.Id });   // M3 standoffs
             var bat = w.AddComponent(lib, "bat-9v", new WorldPose { X = 0.036, Z = 0.002 });   // standing on its end
@@ -93,7 +93,7 @@ namespace RobotTwin.CoreSim.Sandbox
             bat.Name = "LiPo 2S 450 mAh";
             bat.MassKg = 0.028;
             bat.Parameters["capacity"] = "0.45";   // a 2S 450 mAh pack: ≈ 62 × 20 × 10 mm
-            var nano = w.AddComponent(lib, "arduino-nano", new WorldPose { X = 0.080, Y = -0.0076, Z = z0 + 0.004, Yaw = 90 });
+            var nano = w.AddComponent(lib, "arduino-nano", new WorldPose { X = 0.080, Y = 0.0025, Z = OnPins(z0 + 0.002), Yaw = 90 });   // on its pins in foam tape, beside the battery's plug
             nano.Name = "Uçuş kartı (Arduino Nano)";
             nano.MassKg = 0.007;
             nano.Firmware = new Formats.FirmwareSource
@@ -111,10 +111,10 @@ namespace RobotTwin.CoreSim.Sandbox
             lead.MassKg = 0.038;
 
             // Pushrods: 1 mm carbon rods from the pod's rear exit along the boom to the control horns.
-            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.0025, Pitch = 90 }, "KARBON");
             rodE.Name = "İtme çubuğu (irtifa)";
             rodE.MassKg = 0.0008;
-            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.0025, Pitch = 90 }, "KARBON");
             rodR.Name = "İtme çubuğu (yön)";
             rodR.MassKg = 0.0008;
 
@@ -178,32 +178,45 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var w = new WorldDocument { Title = "ESP32 dörtlü (quad)" };
             const double th = 0.004, d = 0.0778;   // arm thickness; motor offset along x and y (110 mm from centre)
+            // One 220 mm arm through the middle; the other diagonal is two half arms butted against its sides (the two
+            // bars cannot pass through each other), all held between the arms and the top plate by the frame screws.
             var a1 = w.AddBody("box", 0.22, 0.02, th, new WorldPose { Yaw = 45 }, "KARBON");
-            var a2 = w.AddBody("box", 0.22, 0.02, th, new WorldPose { Yaw = 135 }, "KARBON");
             a1.Name = "Kol (ön sol – arka sağ)";
-            a2.Name = "Kol (ön sağ – arka sol)";
-            a1.MassKg = a2.MassKg = 0.012;
+            a1.MassKg = 0.012;
+            WorldObject HalfArm(double angle, string name)
+            {
+                double r = 0.01 + 0.05, c = Math.Cos(angle * Math.PI / 180), sn = Math.Sin(angle * Math.PI / 180);
+                var half = w.AddBody("box", 0.10, 0.02, th, new WorldPose { X = r * c, Y = r * sn, Yaw = angle }, "KARBON");
+                half.Name = name;
+                half.MassKg = 0.006;
+                return half;
+            }
+
+            var a2 = HalfArm(-45, "Kol (ön sağ)");
+            var a3 = HalfArm(135, "Kol (arka sol)");
             var plate = w.AddBody("plate", 0.09, 0.09, 0.003, new WorldPose { Z = th }, "KARBON");
             plate.Name = "Üst plaka";
             plate.MassKg = 0.010;
-            foreach (var arm in new[] { a1, a2 })
+            foreach (var arm in new[] { a1, a2, a3 })
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = arm.Id, ObjectB = plate.Id });
             double deck = th + 0.003;
             var bat = w.AddComponent(lib, "bat-3s-lipo", new WorldPose { X = batteryX, Z = deck });
             bat.Name = "LiPo 3S 850 mAh";
             bat.MassKg = 0.075;
             bat.Parameters["capacity"] = "0.85";   // 88 × 28 mm: clears the 5" prop discs on a 220 mm frame (a 1300 mAh pack reaches into them)
-            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.0, Y = 0.034, Z = deck });
+            // The pack lies along x in the middle; the flight board (turned lengthwise) and the IMU sit on their header
+            // pins in foam tape in the strips beside it.
+            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = -0.01345, Y = 0.0162, Z = OnPins(deck), Yaw = 90 });
             esp.Name = "Uçuş kartı (ESP32)";
             esp.Firmware = new Formats.FirmwareSource { FileName = "esp32-quad-fc.ino", Target = "esp32:esp32:esp32", Source = QuadSketch };
-            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = 0.0, Y = -0.034, Z = deck });
+            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = -0.0064, Y = -0.0162, Z = OnPins(deck) });
             imu.Name = "IMU (MPU-6050)";
             foreach (var part in new[] { bat, esp, imu })
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = part.Id, ObjectB = plate.Id });
 
             // Motors: M1 front-left CCW, M2 front-right CW, M3 rear-right CCW, M4 rear-left CW (as in the sketch).
             var corners = new[] { (X: d, Y: d, Ccw: true, Arm: a1, Pin: "IO25", Name: "M1 ön sol"), (X: d, Y: -d, Ccw: false, Arm: a2, Pin: "IO26", Name: "M2 ön sağ"),
-                                  (X: -d, Y: -d, Ccw: true, Arm: a1, Pin: "IO27", Name: "M3 arka sağ"), (X: -d, Y: d, Ccw: false, Arm: a2, Pin: "IO14", Name: "M4 arka sol") };
+                                  (X: -d, Y: -d, Ccw: true, Arm: a1, Pin: "IO27", Name: "M3 arka sağ"), (X: -d, Y: d, Ccw: false, Arm: a3, Pin: "IO14", Name: "M4 arka sol") };
             WorldObject? firstEsc = null;
             void Wire(WorldObject a, string pa, WorldObject b, string pb, double awg, string colour, bool soldered = false)
             {
@@ -391,20 +404,27 @@ void loop() {
         /// MPU-6050 flight controller running <see cref="PlaneSketch"/>. It is held still for 2.5 s
         /// (ESC arming, IMU calibration) and then hand-launched.
         /// </summary>
-        public static WorldDocument MotorGlider(PartLibrary lib, double batteryX = 0.059, double height = 1.6)
+        public static WorldDocument MotorGlider(PartLibrary lib, double batteryX = 0.073, double height = 1.6)
         {
             var w = new WorldDocument { Title = "Motorlu planör (İHA)" };
             double z0 = height, podTop = z0 + 0.050, boomZ = z0 + 0.025;
             const double tailX = -0.50;
 
-            var pod = w.AddBody("box", 0.26, 0.045, 0.050, new WorldPose { X = 0.07, Z = z0 }, "BALSA");
+            // Long enough aft to hold the servos' own 8 cm leads and plugs; the boom and both pushrods pass a 16 mm hole
+            // in the rear bulkhead, the motor leads a 7 mm hole in the firewall beside the motor, low down.
+            var pod = w.AddBody("box", 0.337, 0.045, 0.050, new WorldPose { X = 0.0315, Z = z0 }, "BALSA");
             pod.Name = "Gövde (balsa kabin)";
-            pod.MassKg = 0.035;
+            pod.MassKg = 0.045;
             pod.Parameters["launch"] = "8";
             pod.Parameters["launch.delay"] = "2.5";   // held for ESC arming and IMU calibration, then thrown
             pod.Parameters["shell"] = "true";
             pod.Parameters["wall"] = "0.002";
-            pod.Parameters["holes"] = "-x,+x";        // pushrods out the back, motor leads through the firewall
+            pod.Parameters["holes"] = "-x,+x";
+            pod.Parameters["hole.-x.size"] = "0.016";
+            pod.Parameters["hole.-x.z"] = "0.023";
+            pod.Parameters["hole.+x.size"] = "0.007";
+            pod.Parameters["hole.+x.z"] = "0.0035";
+            pod.Parameters["hole.+x.u"] = "0.0185";
             var boom = w.AddBody("cylinder", 0.008, 0.008, 0.50, new WorldPose { X = tailX - 0.04, Z = boomZ, Pitch = 90 }, "KARBON");
             boom.Name = "Kuyruk borusu (karbon Ø8)";
             boom.MassKg = 0.012;
@@ -420,27 +440,27 @@ void loop() {
             motor.Name = "Motor 2212 1000KV";
             var prop = ReadyParts.Add(w, "prop-8045-ccw", new WorldPose());
             ReadyParts.AttachToPort(w, prop, motor, "shaft", new Vec3(0, 0, 0.040), Vec3.UnitZ);
-            var esc = w.AddComponent(lib, "esc-20a", new WorldPose { X = 0.180, Z = z0 + 0.002 });
+            var esc = w.AddComponent(lib, "esc-20a", new WorldPose { X = 0.180, Z = OnPins(z0 + 0.002) });
             esc.Name = "ESC 20 A";
-            var bat = w.AddComponent(lib, "bat-3s-lipo", new WorldPose { X = batteryX, Z = z0 + 0.002, Yaw = 180 });   // leads aft, into the pod
+            var bat = w.AddComponent(lib, "bat-3s-lipo", new WorldPose { X = batteryX, Y = 0.006, Z = z0 + 0.002, Yaw = 180 });   // leads aft, ending between the tail servos
             bat.Name = "LiPo 3S 850 mAh";
             bat.MassKg = 0.075;
             bat.Parameters["capacity"] = "0.85";
             // The 52 mm DevKit lies lengthwise in the 45 mm pod (turned 90°, centred: its origin is off the board centre).
-            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.1216, Y = -0.01275, Z = z0 + 0.002, Yaw = 90 });
+            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.1316, Y = -0.01275, Z = OnPins(z0 + 0.002), Yaw = 90 });   // on its pins in foam tape
             esp.Name = "Uçuş kartı (ESP32)";
             esp.Firmware = new Formats.FirmwareSource { FileName = "esp32-plane-fc.ino", Target = "esp32:esp32:esp32", Source = PlaneSketch };
-            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = 0.0, Z = z0 + 0.002 });
+            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = -0.105, Y = 0.009, Z = OnPins(z0 + 0.002) });   // rear bay, under the boom
             imu.Name = "IMU (MPU-6050)";
             var elevServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = 0.011, Z = z0 + 0.002 });
             elevServo.Name = "İrtifa servosu";
             var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = -0.011, Z = z0 + 0.002 });
             rudServo.Name = "Yön servosu";
 
-            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.0025, Pitch = 90 }, "KARBON");
             rodE.Name = "İtme çubuğu (irtifa)";
             rodE.MassKg = 0.0008;
-            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.0025, Pitch = 90 }, "KARBON");
             rodR.Name = "İtme çubuğu (yön)";
             rodR.MassKg = 0.0008;
             var stab = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = tailX, Z = boomZ + 0.004 }, "BALSA");

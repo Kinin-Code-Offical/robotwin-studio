@@ -181,6 +181,8 @@ namespace RobotTwin.CoreSim.Sandbox
                     break;
             }
 
+            if (g.Shape is "cylinder-z" or "cylinder-x" or "cylinder-y" && Param(o, "tube.wall", 0) > 0) MakeTube(body, Param(o, "tube.wall", 0));   // [tube]
+
             if (g.SensorOrigin is { } so && _circuit?.ComponentRef(o.Id) is { } sref)
             {
                 it.Sonar = _circuit.Compiled.DevicesOf(sref).OfType<UltrasonicSensor>().FirstOrDefault();
@@ -378,7 +380,6 @@ namespace RobotTwin.CoreSim.Sandbox
                 _pending -= Step;
                 StepSwitches();   // [launch] timed and clicked switches (Sandbox/WorldPhysics.Launch.cs)
                 DriveActuators(sim);
-                StepCables(Step); // [phys] ropes pull on their plugs before the bodies move
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]
                 Sdk?.BeforeStep(Step, sim);   // [sdk]
@@ -387,6 +388,10 @@ namespace RobotTwin.CoreSim.Sandbox
                 StepGas(Step, sim);   // [gas] vessels: burn, flow, thrust (Sandbox/WorldPhysics.Gas.cs)
                 StepChutes();   // [launch] recovery parachutes
                 Scene.Step(Step);
+                // [phys] The ropes after the bodies: their contacts are solved against where the parts are now (stepped
+                // first, a wire inside a plane at 12 m/s trailed its fuselage by 12 mm), and their pull on the plugs is
+                // applied in the next step.
+                StepCables(Step);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia
                 Sdk?.AfterStep(Step, sim);   // [sdk]

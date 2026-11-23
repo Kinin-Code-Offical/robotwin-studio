@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RobotTwin.CoreSim.Mechanics
 {
@@ -51,13 +52,13 @@ namespace RobotTwin.CoreSim.Mechanics
             Awg = awg;
             double span = (a.World - b.World).Length;
             Length = Math.Max(Math.Max(0.02, length), span * 1.001);
-            int n = (int)Math.Ceiling(Length / 0.012);
-            Segments = Math.Max(6, Math.Min(48, n));
+            int n = (int)Math.Ceiling(Length / 0.010);
+            Segments = Math.Max(6, Math.Min(64, n));
             SegmentLength = Length / Segments;
 
             double area = CrossSection(awg);
             double rCu = Math.Sqrt(area / Math.PI);
-            Radius = rCu + 0.0003;
+            Radius = RadiusOf(awg);
             // Copper (8960 kg/m³) plus soft-PVC insulation (1400 kg/m³).
             LinearDensity = area * 8960 + Math.PI * (Radius * Radius - rCu * rCu) * 1400;
             // Elastic bending comes from the soft-PVC jacket (E ≈ 10 MPa for flexible jumper insulation);
@@ -132,6 +133,12 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>True while the cable lies still and nothing near it moves (it is then not stepped).</summary>
         public bool Resting => _asleep;
 
+        /// <summary>[phys] Carried with the rigid body it lies in (see <see cref="Carried"/>).</summary>
+        public bool Carrying => _carry;
+
+        /// <summary>Bodies close enough to touch the wire at its last step.</summary>
+        public IReadOnlyList<SceneBody> NearBodies => _near;
+
         private PhysicsScene? _scene;
         private bool _asleep;
         private double _still;
@@ -147,7 +154,14 @@ namespace RobotTwin.CoreSim.Mechanics
         }
 
         /// <summary>Default cable length when none is given: the distance between the pins plus slack (m).</summary>
-        public static double DefaultLength(double span) => Math.Max(0.05, 1.15 * span + 0.03);
+        /// <summary>Outer radius of an insulated wire of the gauge (m): the copper plus 0.3 mm of PVC.</summary>
+        public static double RadiusOf(double awg) => Math.Sqrt(CrossSection(awg) / Math.PI) + 0.0003;
+
+        /// <summary>
+        /// A wire cut to its run (the way between the pins, see <see cref="CableRouter"/>) with 10 % and 15 mm to spare:
+        /// a few centimetres of extra lead bunched up in a crowded fuselage would be pressed into the parts around it.
+        /// </summary>
+        public static double DefaultLength(double span) => Math.Max(0.04, 1.1 * span + 0.015);
 
         // ================================================================ layout
 
@@ -174,6 +188,66 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             LayBow(Vec3.UnitZ);
+        }
+
+        /// <summary>
+        /// [route] Lays the wire along a path found through free space (world points from just past plug A to just past
+        /// plug B, see <see cref="CableRouter"/>): its particles spread evenly along it, the slack left to settle.
+        /// </summary>
+        public void LayAlong(IReadOnlyList<Vec3> path)
+        {
+            Pin();
+            int count = Segments + 1;
+            var pts = new List<Vec3>(path.Count + 2) { _x[1] };
+            pts.AddRange(path);
+            pts.Add(_x[count - 2]);
+            var cum = new double[pts.Count];
+            for (int k = 1; k < pts.Count; k++) cum[k] = cum[k - 1] + (pts[k] - pts[k - 1]).Length;
+            double total = cum[pts.Count - 1];
+            int seg = 0;
+            for (int i = 2; i <= count - 3; i++)
+            {
+                double target = total * (i - 1) / (count - 2);
+                while (seg < pts.Count - 2 && cum[seg + 1] < target) seg++;
+                double l = cum[seg + 1] - cum[seg];
+                double f = l > 1e-12 ? (target - cum[seg]) / l : 0;
+                _x[i] = pts[seg] + (pts[seg + 1] - pts[seg]) * f;
+            }
+
+            for (int i = 0; i < count; i++) _v[i] = Vec3.Zero;
+        }
+
+        /// <summary>
+        /// [route] Solids the wire passes through as laid: a segment that enters a body and leaves it again, or a point
+        /// deeper in one than the wire's radius, with how much wire is inside (m). The plug's own part near its pin
+        /// (the plug housing) and propeller discs do not count.
+        /// </summary>
+        public List<(SceneBody Body, double Inside)> Crossings(PhysicsScene scene)
+        {
+            Gather(scene, 0);
+            var found = new Dictionary<SceneBody, double>();
+            for (int k = 0; k < Segments; k++)
+            {
+                var p = _x[k];
+                var q = _x[k + 1];
+                double len = (q - p).Length;
+                if (len < 1e-9) continue;
+                foreach (var b in _near)
+                {
+                    if (Ignored(b, k) || Ignored(b, k + 1)) continue;
+                    var shape = b.EffectiveShape!;
+                    var lp = b.Orientation.InverseRotate(p - b.Position);
+                    var lq = b.Orientation.InverseRotate(q - b.Position);
+                    var dir = (lq - lp) / len;
+                    if (!b.RaycastSolid(shape, lp, dir, len, out double t1, out _)) continue;
+                    if (!b.RaycastSolid(shape, lq, -dir, len, out double t2, out _)) continue;
+                    double inside = len - t1 - t2;
+                    if (inside <= Radius) continue;
+                    found[b] = (found.TryGetValue(b, out double sum) ? sum : 0) + inside;
+                }
+            }
+
+            return found.Select(kv => (kv.Key, kv.Value)).ToList();
         }
 
         /// <summary>The slack as a parabolic bow towards <paramref name="bow"/> (perpendicular to the pins' line).</summary>
@@ -285,6 +359,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 return;
             }
 
+            if (couple && Carried(scene, dt)) return;   // [phys] at rest inside a moving rigid body
+
             Gather(scene, dt);
             int subs = Math.Max(1, Substeps);
             double h = dt / subs;
@@ -292,13 +368,29 @@ namespace RobotTwin.CoreSim.Mechanics
             double keep = Math.Exp(-Damping * h);
             int count = Segments + 1;
             double tensionA = 0, tensionB = 0;
+            // [phys] Damping is the jacket's own (material) loss: it acts on the wire's motion relative to its plugged ends,
+            // not relative to the world, which would act as a drag of 3/s × speed (≈ 4 g on a wire inside a plane at
+            // 12 m/s). The air's drag is separate and real: a cylinder across the flow (Cd ≈ 1.2) against the wind,
+            // or against the air carried inside a closed fuselage when both plugs sit in it.
+            var frame = InternalTo != null && A.Attached ? A.Body : null;
+            var vA = A.Attached && A.Body != null ? A.Body.PointVelocity(A.World) : Vec3.Zero;
+            var vB = B.Attached && B.Body != null ? B.Body.PointVelocity(B.World) : Vec3.Zero;
+            double kAir = LinearDensity > 0 ? 0.5 * scene.AirDensity * 1.2 * (2 * Radius) / LinearDensity : 0;
             for (int s = 0; s < subs; s++)
             {
                 for (int i = 0; i < count; i++)
                 {
                     _p[i] = _x[i];
                     if (IsPinned(i)) continue;
-                    _v[i] = (_v[i] + g * h) * keep;
+                    double t = i / (double)Segments;
+                    var u = vA * (1 - t) + vB * t;
+                    var v = _v[i] + g * h;
+                    v = u + (v - u) * keep;
+                    var air = frame != null ? frame.PointVelocity(_x[i]) : scene.Wind;
+                    var rel = v - air;
+                    double rl = rel.Length;
+                    if (rl > 1e-9 && kAir > 0) v = air + rel / (1 + kAir * rl * h);
+                    _v[i] = v;
                     _x[i] += _v[i] * h;
                 }
 
@@ -314,6 +406,11 @@ namespace RobotTwin.CoreSim.Mechanics
                 Collide(scene, h);
                 // Collisions shift particles; one more length pass keeps the chain inextensible.
                 SolveStretch(h);
+                // That pass pulls a taut wire's chords back across the corners it wraps: the segments are kept out once
+                // more (a hair of stretch is left to the next substep instead of a wire cutting through a part).
+                CollideSegments(h);
+                SweepAll(h);
+                NotePoses();
                 for (int i = 0; i < count; i++)
                 {
                     if (IsPinned(i)) _v[i] = Vec3.Zero;
@@ -327,6 +424,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             tensionA /= subs;
             tensionB /= subs;
+            if (couple) NoteRest(dt);
             double a = Math.Min(1, dt / 0.004);
             A.Tension += ((A.Attached ? tensionA : 0) - A.Tension) * a;
             B.Tension += ((B.Attached ? tensionB : 0) - B.Tension) * a;
@@ -337,6 +435,99 @@ namespace RobotTwin.CoreSim.Mechanics
             if (InternalTo != null) return;   // [weld] its tension is internal to the frame both plugs sit on
             if (A.Attached && A.Tension > PullOutForce) Release(A, A.Tension);
             if (B.Attached && B.Tension > PullOutForce) Release(B, B.Tension);
+        }
+
+        private bool _carry, _frameSeen;
+        private double _relStill;
+        private Vec3 _frameV, _gLocal, _gRest, _carryX;
+        private Quat _carryQ = Quat.Identity;
+
+        /// <summary>
+        /// [phys] The resting wire of a moving rigid body. A wire with both plugs on one rigid body (a fuselage and
+        /// everything welded into it) and nothing else around it, lying still relative to that body, stays where it is as
+        /// long as what it feels there does not change: gravity less the body's own acceleration, seen in the body's
+        /// frame. While that holds within 15 % of g it is carried rigidly with the body instead of being stepped; a
+        /// change beyond it (a pull-up, a landing, a crash) lets it move again until it settles anew. In steady flight
+        /// the wiring of an aircraft costs nothing, as a still cable on a still bench already does.
+        /// </summary>
+        private bool Carried(PhysicsScene scene, double dt)
+        {
+            var frame = A.Body;
+            if (InternalTo == null || frame == null || !A.Attached || !B.Attached)
+            {
+                _carry = false;
+                return false;
+            }
+
+            var acc = _frameSeen ? (frame.Velocity - _frameV) / dt : Vec3.Zero;
+            _frameV = frame.Velocity;
+            _frameSeen = true;
+            _gLocal = frame.Orientation.InverseRotate(scene.Gravity - acc);
+            if (!_carry) return false;
+            if ((_gLocal - _gRest).Length > 0.15 * Math.Max(1, _gRest.Length) || !OnlyFrameNear(scene))
+            {
+                _carry = false;
+                _relStill = 0;
+                return false;
+            }
+
+            var turn = frame.Orientation * _carryQ.Conjugate;
+            for (int i = 0; i < _x.Length; i++)
+            {
+                _x[i] = frame.Position + turn.Rotate(_x[i] - _carryX);
+                _v[i] = frame.PointVelocity(_x[i]);
+            }
+
+            _carryX = frame.Position;
+            _carryQ = frame.Orientation;
+            Pin();
+            NotePoses();
+            return true;
+        }
+
+        /// <summary>After a stepped move: once the wire has lain still relative to its rigid body for 0.2 s, carry it.</summary>
+        private void NoteRest(double dt)
+        {
+            var frame = A.Body;
+            if (InternalTo == null || frame == null || !A.Attached || !B.Attached || !_frameSeen) return;
+            double vmax = 0;
+            for (int i = 0; i < _x.Length; i++)
+            {
+                if (IsPinned(i)) continue;
+                vmax = Math.Max(vmax, (_v[i] - frame.PointVelocity(_x[i])).LengthSquared);
+            }
+
+            _relStill = vmax < 1e-4 ? _relStill + dt : 0;   // under 1 cm/s
+            if (_relStill < 0.2 || !OnlyFrameNear(_scene!)) return;
+            _carry = true;
+            _gRest = _gLocal;
+            _carryX = frame.Position;
+            _carryQ = frame.Orientation;
+        }
+
+        /// <summary>
+        /// Whether nothing but the rigid body it is carried with can touch the wire: any other part near it (a servo horn
+        /// swinging, a motor's rotor) is at least 5 mm clear of it, and so is the floor.
+        /// </summary>
+        private bool OnlyFrameNear(PhysicsScene scene)
+        {
+            double clear = Radius + 0.005;
+            foreach (var b in _near)
+            {
+                if (InternalTo!.Contains(b) || (Ignore != null && Ignore.Contains(b))) continue;
+                var shape = b.EffectiveShape!;
+                double reach = shape.BoundingRadius + clear;
+                foreach (var x in _x)
+                {
+                    if (shape.Kind != ShapeKind.Mesh && (x - b.Position).LengthSquared > reach * reach) continue;
+                    if (b.SignedDistanceSolid(shape, b.Orientation.InverseRotate(x - b.Position), clear, out double d, out _) && d < clear) return false;
+                }
+            }
+
+            if (!scene.GroundEnabled) return true;
+            foreach (var x in _x)
+                if (x.Z < scene.GroundHeight(x.X, x.Y) + Radius + 0.01) return false;
+            return true;
         }
 
         /// <summary>
@@ -536,6 +727,10 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private double _coupleDt;
 
+        /// <summary>[phys] Each nearby body's pose at the last collision pass, to see the wire's motion from the body.</summary>
+        private readonly Dictionary<SceneBody, (Vec3 X, Quat Q, int Pass)> _poses = new Dictionary<SceneBody, (Vec3, Quat, int)>();
+        private int _pass;
+
         private bool Ignored(SceneBody body, int i)
         {
             double arc = i * SegmentLength;
@@ -568,44 +763,223 @@ namespace RobotTwin.CoreSim.Mechanics
                 foreach (var b in _near)
                 {
                     if (Ignored(b, i)) continue;
+                    Sweep(b, ref x, i, h);
                     PushOut(b, ref x, i, h, 1.0);
                 }
             }
 
-            // Segment midpoints, so a thin part cannot slip between two particles.
+            CollideSegments(h);
+        }
+
+        /// <summary>
+        /// Segments as capsules of the wire's radius, so a thin part (a wall's edge, a plate) cannot slip in between two
+        /// particles, and is pushed off the way that frees the segment soonest: a wire drawn up against the top edge of a
+        /// cable hole slides back into the hole instead of being squeezed through the wall above it.
+        /// </summary>
+        private void CollideSegments(double h)
+        {
+            double r = Radius;
             for (int s = 0; s < Segments; s++)
             {
                 int i = s, j = s + 1;
                 bool pi = IsPinned(i), pj = IsPinned(j);
                 if (pi && pj) continue;
-                var mid = (_x[i] + _x[j]) * 0.5;
                 foreach (var b in _near)
                 {
                     if (Ignored(b, i) || Ignored(b, j)) continue;
                     var shape = b.EffectiveShape!;
-                    if (shape.Kind != ShapeKind.Mesh && (mid - b.Position).LengthSquared > (shape.BoundingRadius + r) * (shape.BoundingRadius + r)) continue;
-                    var local = b.Orientation.InverseRotate(mid - b.Position);
-                    if (!b.SignedDistanceSolid(shape, local, r, out double d, out var nl) || d >= r) continue;
-                    var n = b.Orientation.Rotate(nl);
-                    var push = n * (r - d);
-                    var moved = Vec3.Zero;   // mass-weighted push given to the wire
-                    if (!pi)
+                    var mid = (_x[i] + _x[j]) * 0.5;
+                    double half = 0.5 * (_x[j] - _x[i]).Length;
+                    if (shape.Kind != ShapeKind.Mesh && (mid - b.Position).LengthSquared > (shape.BoundingRadius + r + half) * (shape.BoundingRadius + r + half)) continue;
+                    if (b.Pieces is { Length: > 0 } pieces)
                     {
-                        var di = pj ? push * 2 : push;
-                        _x[i] += di;
-                        moved += di * (1.0 / _w[i]);
+                        foreach (var piece in pieces) SegmentContact(b, piece, i, j, pi, pj, h);
                     }
-
-                    if (!pj)
+                    else
                     {
-                        var dj = pi ? push * 2 : push;
-                        _x[j] += dj;
-                        moved += dj * (1.0 / _w[j]);
+                        SegmentContact(b, shape, i, j, pi, pj, h);
                     }
-
-                    if (_coupleDt > 0 && !b.IsStatic && (InternalTo == null || !InternalTo.Contains(b))) b.AddForceAtPoint(moved * (-1.0 / (h * h) * (h / _coupleDt)), mid);   // [phys] reaction on the body
                 }
             }
+        }
+
+        /// <summary>
+        /// The least push that takes a segment, a capsule of the wire's radius, out of one convex solid (body frame):
+        /// separating axes of the solid's faces and of the segment crossed with its edges for polyhedra; the deepest point
+        /// along the segment for round shapes. Applied to the segment's free particles; the body gets the reaction.
+        /// </summary>
+        private void SegmentContact(SceneBody b, CollisionShape shape, int i, int j, bool pi, bool pj, double h)
+        {
+            double r = Radius;
+            var la = b.Orientation.InverseRotate(_x[i] - b.Position);
+            var lb = b.Orientation.InverseRotate(_x[j] - b.Position);
+            // Every point of the segment is within half its length of its middle: a solid farther than that (plus the
+            // wire's radius) from the middle cannot touch it, which settles most pairs before the separating axes.
+            double reach = 0.5 * (lb - la).Length + r;
+            if (shape.Kind != ShapeKind.Mesh && !shape.SignedDistance((la + lb) * 0.5, reach, out _, out _)) return;
+            Vec3 pushLocal;
+            if (shape.Kind == ShapeKind.Box || shape.Kind == ShapeKind.ConvexHull || shape.Kind == ShapeKind.Points)
+            {
+                if (shape.Planes.Length == 0 && shape.Kind != ShapeKind.Box) return;
+                var d = lb - la;
+                double len = d.Length;
+                if (len < 1e-12) return;
+                var u = d / len;
+                double best = double.MaxValue;
+                var bestN = Vec3.Zero;
+                bool Overlaps(Vec3 n)
+                {
+                    double nl = n.Length;
+                    if (nl < 1e-9) return true;
+                    n /= nl;
+                    double lo, hi;
+                    if (shape.Kind == ShapeKind.Box)
+                    {
+                        var e = shape.HalfExtents;
+                        hi = e.X * Math.Abs(n.X) + e.Y * Math.Abs(n.Y) + e.Z * Math.Abs(n.Z);
+                        lo = -hi;
+                    }
+                    else
+                    {
+                        lo = double.MaxValue;
+                        hi = double.MinValue;
+                        foreach (var v in shape.Vertices)
+                        {
+                            double q = v.Dot(n);
+                            if (q < lo) lo = q;
+                            if (q > hi) hi = q;
+                        }
+                    }
+
+                    double pa = la.Dot(n), pb = lb.Dot(n);
+                    double smin = Math.Min(pa, pb) - r, smax = Math.Max(pa, pb) + r;
+                    double up = hi - smin, down = smax - lo;
+                    if (up <= 0 || down <= 0) return false;
+                    if (up < best)
+                    {
+                        best = up;
+                        bestN = n;
+                    }
+
+                    if (down < best)
+                    {
+                        best = down;
+                        bestN = -n;
+                    }
+
+                    return true;
+                }
+
+                if (shape.Kind == ShapeKind.Box)
+                {
+                    if (!Overlaps(Vec3.UnitX) || !Overlaps(Vec3.UnitY) || !Overlaps(Vec3.UnitZ)) return;
+                }
+                else
+                {
+                    foreach (var pl in shape.Planes)
+                        if (!Overlaps(pl.Normal)) return;
+                }
+
+                if (!Overlaps(u.Cross(Vec3.UnitX)) || !Overlaps(u.Cross(Vec3.UnitY)) || !Overlaps(u.Cross(Vec3.UnitZ))) return;
+                pushLocal = bestN * best;
+            }
+            else if (shape.Kind == ShapeKind.Mesh)
+            {
+                var mid = (la + lb) * 0.5;
+                if (!shape.SignedDistance(mid, r, out double dm, out var nm) || dm >= r) return;
+                pushLocal = nm * (r - dm);
+            }
+            else
+            {
+                // Round solid: the signed distance along a segment is convex, so its deepest point is found by bisection.
+                double Dist(double t) => shape.SignedDistance(la + (lb - la) * t, double.MaxValue, out double dd, out _) ? dd : double.MaxValue;
+                double a0 = 0, a1 = 1;
+                for (int k = 0; k < 24; k++)
+                {
+                    double m1 = a0 + (a1 - a0) / 3, m2 = a1 - (a1 - a0) / 3;
+                    if (Dist(m1) < Dist(m2)) a1 = m2;
+                    else a0 = m1;
+                }
+
+                double tm = 0.5 * (a0 + a1);
+                if (!shape.SignedDistance(la + (lb - la) * tm, r, out double dr, out var nr) || dr >= r) return;
+                pushLocal = nr * (r - dr);
+            }
+
+            var push = b.Orientation.Rotate(pushLocal);
+            var moved = Vec3.Zero;   // mass-weighted push given to the wire
+            if (!pi)
+            {
+                var di = pj ? push * 2 : push;
+                _x[i] += di;
+                moved += di * (1.0 / _w[i]);
+            }
+
+            if (!pj)
+            {
+                var dj = pi ? push * 2 : push;
+                _x[j] += dj;
+                moved += dj * (1.0 / _w[j]);
+            }
+
+            if (_coupleDt > 0 && !b.IsStatic && (InternalTo == null || !InternalTo.Contains(b)))
+                b.AddForceAtPoint(moved * (-1.0 / (h * h) * (h / _coupleDt)), (_x[i] + _x[j]) * 0.5);   // [phys] reaction on the body
+        }
+
+        /// <summary>[phys] Continuous collision again after the last length pass, which also moves particles.</summary>
+        private void SweepAll(double h)
+        {
+            for (int i = 0; i < _x.Length; i++)
+            {
+                if (IsPinned(i)) continue;
+                var x = _x[i];
+                foreach (var b in _near)
+                    if (!Ignored(b, i)) Sweep(b, ref x, i, h);
+            }
+        }
+
+        /// <summary>Where each nearby body stood at the end of this substep (the next one's start).</summary>
+        private void NotePoses()
+        {
+            _pass++;
+            foreach (var b in _near) _poses[b] = (b.Position, b.Orientation, _pass);
+        }
+
+        /// <summary>
+        /// [phys] Continuous collision. A bit of wire may not move into or through a solid within a substep, judged in the
+        /// body's frame (the body may have moved too): a 1 cm move crosses a 2 mm wall in one step, and the push-out alone
+        /// would then put the wire out on the far side. The move stops on the face it reached and keeps its slide along it;
+        /// the push that stopped it acts back on the body.
+        /// </summary>
+        private void Sweep(SceneBody b, ref Vec3 x, int i, double h)
+        {
+            var shape = b.EffectiveShape!;
+            var start = _p[i];
+            var ls = _poses.TryGetValue(b, out var pose) && pose.Pass == _pass
+                ? pose.Q.InverseRotate(start - pose.X)
+                : b.Orientation.InverseRotate(start - b.Position);
+            var le = b.Orientation.InverseRotate(x - b.Position);
+            var d = le - ls;
+            double len = d.Length;
+            if (len < 1e-7) return;
+            if (shape.Kind != ShapeKind.Mesh)
+            {
+                double reach = shape.BoundingRadius + Radius;
+                double f = Math.Max(0, Math.Min(1, -ls.Dot(d) / (len * len)));
+                if ((ls + d * f).LengthSquared > reach * reach) return;
+            }
+
+            // A bit of wire that already started inside is pushed out by its nearest face instead.
+            if (b.SignedDistanceSolid(shape, ls, 0, out double ds, out _) && ds < 0) return;
+            var dir = d / len;
+            if (!b.RaycastSolid(shape, ls, dir, len, out double t, out var nl)) return;
+            var hit = ls + dir * t;
+            var stopped = le + nl * ((hit - le).Dot(nl) + Radius);   // on the face it reached, its radius off it
+            var before = x;
+            x = b.Position + b.Orientation.Rotate(stopped);
+            _x[i] = x;
+            if (_coupleDt > 0 && !b.IsStatic && _w[i] > 0 && (InternalTo == null || !InternalTo.Contains(b)))
+                b.AddForceAtPoint((before - x) * (1.0 / _w[i] / (h * h) * (h / _coupleDt)), x);
         }
 
         private void PushOut(SceneBody b, ref Vec3 x, int i, double h, double scale)
@@ -658,6 +1032,18 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             return worst;
+        }
+
+        /// <summary>Momentum of the wire's free particles (kg·m/s), for checking that its contacts act and react.</summary>
+        public Vec3 Momentum
+        {
+            get
+            {
+                var sum = Vec3.Zero;
+                for (int i = 0; i < _v.Length; i++)
+                    if (!IsPinned(i) && _w[i] > 0) sum += _v[i] * (1.0 / _w[i]);
+                return sum;
+            }
         }
 
         /// <summary>Current length of the polyline (m); above <see cref="Length"/> when stretched.</summary>

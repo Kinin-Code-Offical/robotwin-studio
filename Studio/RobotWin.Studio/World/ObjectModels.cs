@@ -198,10 +198,9 @@ namespace RobotWin.Studio.World
                     // [shell] hollow body: floor plus four walls, open top (the lid is its own part).
                     double t = Math.Min(WorldPhysics.WallOf(o) * 1000, Math.Min(sx, sy) / 2);
                     Box(m.Body, 0, 0, t / 2, sx, sy, t, c, 0.12, m.Heat);
-                    Box(m.Body, sx / 2 - t / 2, 0, sz / 2 + t / 2, t, sy, sz - t, c, 0.12, m.Heat);
-                    Box(m.Body, -sx / 2 + t / 2, 0, sz / 2 + t / 2, t, sy, sz - t, c, 0.12, m.Heat);
-                    Box(m.Body, 0, sy / 2 - t / 2, sz / 2 + t / 2, sx - 2 * t, t, sz - t, c, 0.12, m.Heat);
-                    Box(m.Body, 0, -sy / 2 + t / 2, sz / 2 + t / 2, sx - 2 * t, t, sz - t, c, 0.12, m.Heat);
+                    // The walls as the physics builds them: a wall with a cable hole is the frame around the opening.
+                    foreach (var (_, wc, ws) in WorldPhysics.WallBoxes(o, new RobotTwin.CoreSim.Mechanics.Vec3(o.SizeX, o.SizeY, o.SizeZ)))
+                        Box(m.Body, wc.X * 1000, wc.Y * 1000, wc.Z * 1000, ws.X * 1000, ws.Y * 1000, ws.Z * 1000, c, 0.12, m.Heat);
                     break;
                 }
 

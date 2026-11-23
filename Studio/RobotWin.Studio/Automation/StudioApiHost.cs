@@ -175,6 +175,8 @@ namespace RobotWin.Studio.Automation
             public WorldBodyGeometry GeometryOf(WorldObject o) => _scene.GeometryOf(o);
 
             public double CableLength(WorldCable cable) => _scene.CableLength(cable);
+
+            public CablePins? PinsOf(WorldCable cable) => _scene.CablePinsOf(cable);
         }
 
         /// <summary>Mass in grams — mirrors WorldPage.EstimateMass (kept in step with it).</summary>

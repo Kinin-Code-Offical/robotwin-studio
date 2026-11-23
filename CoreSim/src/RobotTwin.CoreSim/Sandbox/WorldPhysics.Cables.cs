@@ -60,34 +60,116 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             _cables.Clear();
             ShortCables.Clear();
+            BlockedCables.Clear();
+            _routes.Clear();
+            // Propeller discs are swept volumes, not solids; wires rest on everything else.
+            var ignore = new HashSet<SceneBody>();
+            foreach (var pm in _props) ignore.Add(pm.It.Body);
             foreach (var cable in world.Cables)
             {
                 if (!_items.TryGetValue(cable.A.ObjectId, out var ia) || !_items.TryGetValue(cable.B.ObjectId, out var ib)) continue;
                 if (pins(cable) is not { } p) continue;
                 var endA = MakeEnd(ia, p.A);
                 var endB = MakeEnd(ib, p.B);
+                FreeExit(endA, ia, ignore, CableRope.RadiusOf(cable.Awg));
+                FreeExit(endB, ib, ignore, CableRope.RadiusOf(cable.Awg));
                 double span = (endA.World - endB.World).Length;
-                double length = cable.Length > 0 ? cable.Length : CableRope.DefaultLength(span);
-                // A wire shorter than the distance between its pins could not be plugged in: it starts stretched and pulls the parts together.
-                if (cable.Length > 0 && cable.Length < span) ShortCables.Add((cable.Id, span, cable.Length));
+                // [route] Where the wire can really run: around the parts, through openings, never through a solid.
+                var route = RouteOf(endA, endB, ia.Body, ib.Body, cable.Awg, ignore);
+                double run = route != null ? CableRouter.Length(route) + 2 * RouteLead : span;
+                if (route == null) BlockedCables.Add(cable.Id);
+                _routes[cable.Id] = route;
+                double length = cable.Length > 0 ? cable.Length : CableRope.DefaultLength(Math.Max(span, run));
+                // A wire shorter than its way between the pins could not be plugged in: it starts stretched and pulls the parts together.
+                if (cable.Length > 0 && cable.Length < Math.Max(span, run)) ShortCables.Add((cable.Id, Math.Max(span, run), cable.Length));
                 var rope = new CableRope(cable.Id, endA, endB, length, cable.Awg);
-                // Propeller discs are swept volumes, not solids; wires rest on everything else.
-                var ignore = new HashSet<SceneBody>();
-                foreach (var pm in _props) ignore.Add(pm.It.Body);
                 rope.Ignore = ignore;
                 var rigid = WeldedSet(ia.Body);   // [weld] both plugs on one rigid body: its forces on that body are internal
                 if (rigid.Contains(ib.Body)) rope.InternalTo = rigid;
                 var link = new CableLink { Cable = cable, Rope = rope };
                 rope.Unplugged += (end, force) => OnUnplugged(link, end, force);
                 if (seed?.Invoke(cable.Id) is { Count: >= 2 } previous) rope.Lay(previous);
-                else rope.LayClear(Scene);   // routed clear of the parts around it
+                else rope.LayClear(Scene);   // its slack bowed the way with the fewest parts in it
+                // A shape through a solid (a bow through a fuselage wall, an earlier shape a part was moved onto) is not
+                // where a wire can be: it is laid along the route instead.
+                if (route != null && rope.Crossings(Scene).Count > 0) rope.LayAlong(route.GetRange(1, route.Count - 2));
                 if (relaxSteps > 0) rope.Relax(Scene, relaxSteps);
                 _cables.Add(link);
             }
         }
 
-        /// <summary>Cables whose set length is shorter than the distance between their pins (id, pin distance, length; m).</summary>
+        private readonly Dictionary<string, List<Vec3>?> _routes = new Dictionary<string, List<Vec3>?>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>[route] The way found for a cable between its plugs (world points), null when it has none.</summary>
+        public IReadOnlyList<Vec3>? RouteOf(string cableId) => _routes.TryGetValue(cableId, out var r) ? r : null;
+
+        /// <summary>How far the plugged end of a wire leaves its pin straight before it can turn (m).</summary>
+        private const double RouteLead = 0.012;
+
+        /// <summary>
+        /// [route] A wire leaves its pin straight out along the part's up axis, unless another part is right there (a
+        /// motor's terminals pressed up against the plate it hangs under): then the first clear direction of the part's
+        /// frame, sideways before downwards, as a wire really bends off the terminal.
+        /// </summary>
+        private void FreeExit(RopeEnd end, Item it, HashSet<SceneBody> ignore, double radius)
+        {
+            var pin = end.World;
+            var q = it.Body.Orientation;
+            var up = end.ExitWorld.Normalized();
+            var frame = PoseOf(it.Object.Id)?.Orientation ?? q;
+            var candidates = new[]
+            {
+                up, frame.Rotate(Vec3.UnitX), frame.Rotate(-Vec3.UnitX), frame.Rotate(Vec3.UnitY), frame.Rotate(-Vec3.UnitY), -up
+            };
+            for (int k = 0; k < candidates.Length; k++)
+            {
+                if (ExitBlocked(pin, candidates[k], it.Body, ignore, radius)) continue;
+                if (k > 0) end.Exit = q.InverseRotate(candidates[k]);
+                return;
+            }
+        }
+
+        private bool ExitBlocked(Vec3 pin, Vec3 dir, SceneBody own, HashSet<SceneBody> ignore, double radius)
+        {
+            var tip = pin + dir * RouteLead;
+            if (Scene.GroundEnabled && tip.Z < Scene.GroundHeight(tip.X, tip.Y) + radius) return true;
+            foreach (var b in Scene.Bodies)
+            {
+                if (ReferenceEquals(b, own) || ignore.Contains(b) || !b.Collides || b.EffectiveShape is not { HasSolid: true } shape) continue;
+                if (shape.Kind != ShapeKind.Mesh && (tip - b.Position).Length > shape.BoundingRadius + RouteLead + radius) continue;
+                var lo = b.Orientation.InverseRotate(pin + dir * 0.001 - b.Position);
+                var ld = b.Orientation.InverseRotate(dir);
+                if (b.RaycastSolid(shape, lo, ld, RouteLead, out _, out _)) return true;
+                var lt = b.Orientation.InverseRotate(tip - b.Position);
+                if (b.SignedDistanceSolid(shape, lt, radius, out double d, out _) && d < radius) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>[route] Path a wire between two plugs can take through free space (null when there is none).</summary>
+        private List<Vec3>? RouteOf(RopeEnd a, RopeEnd b, SceneBody bodyA, SceneBody bodyB, double awg, HashSet<SceneBody> ignore)
+        {
+            var pinA = a.World;
+            var pinB = b.World;
+            var from = pinA + a.ExitWorld.Normalized() * RouteLead;
+            var to = pinB + b.ExitWorld.Normalized() * RouteLead;
+            const double housing = 0.025;   // the plug and its housing sit in the part around the pin
+            bool Passable(SceneBody body, Vec3 x) =>
+                ignore.Contains(body)
+                || (ReferenceEquals(body, bodyA) && (x - pinA).Length < housing)
+                || (ReferenceEquals(body, bodyB) && (x - pinB).Length < housing);
+            return CableRouter.Route(Scene, from, to, CableRope.RadiusOf(awg), Passable);
+        }
+
+        /// <summary>Cables whose set length is shorter than their way between the pins (id, that way, length; m).</summary>
         public List<(string CableId, double Span, double Length)> ShortCables { get; } = new List<(string, double, double)>();
+
+        /// <summary>
+        /// [route] Cables that have no way between their plugs except through a solid: a wire into a closed box with no
+        /// cable hole. They are laid through it, and reported, since a real one could not be.
+        /// </summary>
+        public List<string> BlockedCables { get; } = new List<string>();
 
         /// <summary>Bodies welded rigidly to <paramref name="body"/> (fixed, unbreakable joints), itself included.</summary>
         private HashSet<SceneBody> WeldedSet(SceneBody body)
@@ -134,12 +216,18 @@ namespace RobotTwin.CoreSim.Sandbox
 
         private void StepCables(double dt)
         {
+            long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             foreach (var c in _cables)
             {
                 c.Rope.Step(Scene, dt, true);
                 UpdateContacts(c);
             }
+
+            CableSeconds += (System.Diagnostics.Stopwatch.GetTimestamp() - t0) / (double)System.Diagnostics.Stopwatch.Frequency;
         }
+
+        /// <summary>Wall-clock time spent stepping the cables so far (s), for the performance overlay and checks.</summary>
+        public double CableSeconds { get; private set; }
 
         /// <summary>
         /// A plug under pull sits less firmly in its socket: its contact resistance rises with the

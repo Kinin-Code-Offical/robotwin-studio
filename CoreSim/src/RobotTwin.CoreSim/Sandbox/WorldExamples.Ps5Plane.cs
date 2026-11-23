@@ -27,16 +27,24 @@ namespace RobotTwin.CoreSim.Sandbox
             const double z0 = 0.115;                 // pod bottom: the gear keeps the 8" prop 3 cm off the runway
             const double podTop = z0 + 0.052, boomZ = z0 + 0.025, tailX = -0.50;   // the wing sits on the 2 mm hatch
 
-            var pod = w.AddBody("box", 0.26, 0.045, 0.050, new WorldPose { X = 0.07, Z = z0 }, "BALSA");
+            // The pod runs back far enough to hold the servos' own 8 cm leads and their plugs; the boom enters it through
+            // a 16 mm hole in the rear bulkhead (the two pushrods beside it), and the motor leads come in through a 7 mm
+            // hole in the firewall beside the motor, low down.
+            var pod = w.AddBody("box", 0.337, 0.045, 0.050, new WorldPose { X = 0.0315, Z = z0 }, "BALSA");
             pod.Name = "Gövde (balsa kabin)";
-            pod.MassKg = 0.035;
+            pod.MassKg = 0.045;
             pod.Parameters["shell"] = "true";
             pod.Parameters["wall"] = "0.002";
             pod.Parameters["holes"] = "-x,+x";
+            pod.Parameters["hole.-x.size"] = "0.016";
+            pod.Parameters["hole.-x.z"] = "0.023";
+            pod.Parameters["hole.+x.size"] = "0.007";
+            pod.Parameters["hole.+x.z"] = "0.0035";
+            pod.Parameters["hole.+x.u"] = "0.0185";
             // The hatch closing the pod under the wing, screwed onto the rim: the wiring stays inside.
-            var hatch = w.AddBody("box", 0.26, 0.045, 0.002, new WorldPose { X = 0.07, Z = z0 + 0.050 }, "BALSA");
+            var hatch = w.AddBody("box", 0.337, 0.045, 0.002, new WorldPose { X = 0.0315, Z = z0 + 0.050 }, "BALSA");
             hatch.Name = "Kabin kapağı (balsa)";
-            hatch.MassKg = 0.005;
+            hatch.MassKg = 0.0065;
             hatch.Parameters["lid.of"] = pod.Id;
             hatch.Parameters["screwed"] = "true";
             var boom = w.AddBody("cylinder", 0.008, 0.008, 0.50, new WorldPose { X = tailX - 0.04, Z = boomZ, Pitch = 90 }, "KARBON");
@@ -58,21 +66,30 @@ namespace RobotTwin.CoreSim.Sandbox
             ReadyParts.AttachToPort(w, prop, motor, "shaft", new Vec3(0, 0, 0.040), Vec3.UnitZ);
             var esc = w.AddComponent(lib, "esc-20a", new WorldPose { X = 0.180, Z = z0 + 0.002 });
             esc.Name = "ESC 20 A";
-            var bat = w.AddComponent(lib, "bat-3s-lipo", new WorldPose { X = 0.059, Z = z0 + 0.002, Yaw = 180 });
+            esc.Pose.Z = OnPins(z0 + 0.002);
+            // 6 mm to the left: its two leads end in the 10 mm gap between the tail servos, not inside the rudder servo.
+            var bat = w.AddComponent(lib, "bat-3s-lipo", new WorldPose { X = 0.073, Y = 0.006, Z = z0 + 0.002, Yaw = 180 });
             bat.Name = "LiPo 3S 850 mAh";
             bat.MassKg = 0.075;
             bat.Parameters["capacity"] = "0.85";
-            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.1216, Y = -0.01275, Z = z0 + 0.002, Yaw = 90 });
+            // The flight board stands on its header pins on a strip of foam tape (pins in the foam, not in the floor).
+            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = 0.1316, Y = -0.01275, Z = z0 + 0.002, Yaw = 90 });
+            esp.Pose.Z = OnPins(z0 + 0.002);
             esp.Name = "Uçuş kartı (ESP32)";
             esp.Firmware = new Formats.FirmwareSource { FileName = "esp32-ps5-plane.ino", Target = "esp32:esp32:esp32", Source = Ps5PlaneSketch };
-            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = 0.0, Z = z0 + 0.002 });
+            // The IMU sits flat on the floor in the rear bay, under the boom and clear of the servos' plugs.
+            var imu = w.AddComponent(lib, "gy-521", new WorldPose { X = -0.105, Y = 0.009, Z = z0 + 0.002 });
             imu.Name = "IMU (MPU-6050)";
+            imu.Pose.Z = OnPins(z0 + 0.002);
             var elevServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = 0.011, Z = z0 + 0.002 });
             elevServo.Name = "İrtifa servosu";
             var rudServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = -0.035, Y = -0.011, Z = z0 + 0.002 });
             rudServo.Name = "Yön servosu";
-            // The aileron servo stands in the pod right under the wing's centre, on a ply shelf over the IMU, its horn
-            // up to the wing's torque rods (as in pod-and-boom gliders): out of the airflow and clear of the wing.
+            // The aileron servo stands in the pod right under the wing's centre on a 6 mm balsa block glued to the floor,
+            // its horn up to the wing's torque rods (as in pod-and-boom gliders): out of the airflow and clear of the wing.
+            var riser = w.AddBody("box", 0.032, 0.013, 0.006, new WorldPose { X = 0.003, Z = z0 + 0.002 }, "BALSA");
+            riser.Name = "Servo yatağı (balsa)";
+            riser.MassKg = 0.0004;
             var ailServo = w.AddComponent(lib, "servo-sg90", new WorldPose { X = 0.003, Z = z0 + 0.008 });
             ailServo.Name = "Kanatçık servosu";
             wing.Parameters["control.servo"] = ailServo.Id;
@@ -80,10 +97,11 @@ namespace RobotTwin.CoreSim.Sandbox
             wing.Parameters["control.arm"] = "0.012";
             wing.Parameters["control.rod"] = "0.03";
 
-            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            // Under the stabiliser's root (its control horns hang below it) and through the rear bulkhead's hole.
+            var rodE = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = 0.006, Z = boomZ + 0.0025, Pitch = 90 }, "KARBON");
             rodE.Name = "İtme çubuğu (irtifa)";
             rodE.MassKg = 0.0008;
-            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.004, Pitch = 90 }, "KARBON");
+            var rodR = w.AddBody("cylinder", 0.001, 0.001, 0.43, new WorldPose { X = tailX + 0.01, Y = -0.006, Z = boomZ + 0.0025, Pitch = 90 }, "KARBON");
             rodR.Name = "İtme çubuğu (yön)";
             rodR.MassKg = 0.0008;
             var stab = w.AddBody("wing", 0.08, 0.30, 0.006, new WorldPose { X = tailX, Z = boomZ + 0.004 }, "BALSA");
@@ -139,8 +157,9 @@ namespace RobotTwin.CoreSim.Sandbox
             noseWheel.Name = "Burun tekeri";
             noseWheel.MassKg = 0.007;
 
-            foreach (var part in new WorldObject[] { boom, wing, motor, esc, bat, esp, imu, elevServo, rudServo, ailServo, strap, noseLeg })
+            foreach (var part in new WorldObject[] { boom, wing, motor, esc, bat, esp, imu, elevServo, rudServo, riser, strap, noseLeg })
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = part.Id, ObjectB = pod.Id });
+            w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = ailServo.Id, ObjectB = riser.Id });
             foreach (var leg in legs)
                 w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = leg.Id, ObjectB = strap.Id });   // wire legs bent into the strap
             foreach (var part in new WorldObject[] { stab, fin, rodE, rodR })

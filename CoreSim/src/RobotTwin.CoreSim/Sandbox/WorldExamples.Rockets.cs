@@ -8,6 +8,15 @@ namespace RobotTwin.CoreSim.Sandbox
     {
         private static string Inv(double v) => v.ToString(CultureInfo.InvariantCulture);
 
+        /// <summary>How far the header pins and leads of a through-hole board or module reach below its PCB in the part models (m).</summary>
+        public const double PinLength = 0.0029;
+
+        /// <summary>
+        /// [audit] Pose height of a through-hole board or module set on a surface at <paramref name="surfaceZ"/>: it
+        /// stands on the pins under it (pressed into foam tape or a breadboard) instead of having them sunk into the plate.
+        /// </summary>
+        public static double OnPins(double surfaceZ) => surfaceZ + PinLength;
+
         /// <summary>
         /// [gas] A 2 L PET bottle water rocket on its fins: <paramref name="waterLitres"/> of water and air
         /// pumped to <paramref name="gaugeBar"/> bar; the launcher holds the 21.5 mm neck closed for half
@@ -43,7 +52,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 double a = k * 120.0;
                 double ca = Math.Cos(a * Math.PI / 180), sa = Math.Sin(a * Math.PI / 180);
                 // A single panel: chord along its x (leading edge up), span along its y straight out from the bottle.
-                var fin = w.AddBody("wing", finChord, finSpan, 0.003, new WorldPose { X = ca * d / 2, Y = sa * d / 2, Z = finChord / 2, Pitch = -90, Yaw = a - 90 }, "BALSA");
+                var fin = w.AddBody("wing", finChord, finSpan, 0.003, new WorldPose { X = ca * d / 2, Y = sa * d / 2, Z = finChord / 2, Pitch = -90, Yaw = a - 180 }, "BALSA");
                 fin.Name = "Kanatçık " + (k + 1);
                 fin.MassKg = 0.012;
                 fin.Color = "#F2A33B";

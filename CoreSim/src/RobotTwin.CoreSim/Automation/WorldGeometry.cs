@@ -264,6 +264,11 @@ namespace RobotTwin.CoreSim.Automation
 
         public double CableLength(WorldCable cable) => _cables.TryGetValue(cable.Id, out var l) ? l : _fallback.CableLength(cable);
 
+        private readonly Dictionary<string, CablePins> _pins = new Dictionary<string, CablePins>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>[route] The cable's plug positions as the app's models place them, when the file has them.</summary>
+        public CablePins? PinsOf(WorldCable cable) => _pins.TryGetValue(cable.Id, out var p) ? p : (CablePins?)null;
+
         /// <summary>Writes every object's geometry and cable length of <paramref name="world"/> as JSON.</summary>
         public static string Export(WorldDocument world, IWorldGeometry geometry)
         {
@@ -296,8 +301,15 @@ namespace RobotTwin.CoreSim.Automation
             }
 
             var cables = new JsonObject();
-            foreach (var c in world.Cables) cables[c.Id] = J.Exact(c.Length > 0 ? c.Length : geometry.CableLength(c));
+            var pins = new JsonObject();
+            foreach (var c in world.Cables)
+            {
+                cables[c.Id] = J.Exact(c.Length > 0 ? c.Length : geometry.CableLength(c));
+                if (geometry.PinsOf(c) is { } p) pins[c.Id] = new JsonObject { ["a"] = J.VExact(p.A), ["b"] = J.VExact(p.B) };
+            }
+
             var root = new JsonObject { ["format"] = "robotwin.world-geometry", ["version"] = 1, ["title"] = world.Title, ["objects"] = objects, ["cables"] = cables };
+            if (pins.Count > 0) root["pins"] = pins;
             return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
         }
 
@@ -341,6 +353,14 @@ namespace RobotTwin.CoreSim.Automation
                 foreach (var kv in cables)
                 {
                     if (J.TryNumber(kv.Value, out double len)) baked._cables[kv.Key] = len;
+                }
+            }
+
+            if (root["pins"] is JsonObject pinMap)
+            {
+                foreach (var kv in pinMap)
+                {
+                    if (kv.Value is JsonObject pin && J.Vec(pin, "a") is { } a && J.Vec(pin, "b") is { } b) baked._pins[kv.Key] = new CablePins(a, b);
                 }
             }
 

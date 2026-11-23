@@ -84,7 +84,20 @@ namespace RobotTwin.CoreSim.Sandbox
             body.Color = "#E8E2D4";
             body.Parameters["parachute"] = "0.45";
             body.Parameters["parachute.deploy"] = "apogee";
+            body.Parameters["tube.wall"] = "0.0008";   // [tube] spiral-wound kraft: a hollow tube, the motor in its Ø39.4 mm bore
             w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = motor.Id, ObjectB = body.Id });
+            // Two 3 mm plywood centering rings hold the Ø32 motor case in the middle of the bore (glued in).
+            foreach (double z in new[] { tubeBottom + 0.004, motorBottom + 0.16 - 0.003 })
+            {
+                var ring = w.AddBody("cylinder", tube - 0.0016, tube - 0.0016, 0.003, new WorldPose { Z = z }, "AHŞAP");
+                ring.Name = z < 0.1 ? "Merkezleme halkası (alt)" : "Merkezleme halkası (üst)";
+                ring.MassKg = 0.0008;
+                ring.Color = "#C8A878";
+                ring.Parameters["tube.wall"] = Inv((tube - 0.0016 - 0.032) / 2);
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = ring.Id, ObjectB = body.Id });
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = motor.Id, ObjectB = ring.Id });
+            }
+
 
             var nose = w.AddModel(Ogive(tube * 1000 / 2, 110).ToMeshModel(), "Burun konisi (ogive)", new WorldPose { Z = tubeBottom + tubeLength }, "PLA");
             nose.MassKg = 0.05;
@@ -93,9 +106,10 @@ namespace RobotTwin.CoreSim.Sandbox
 
             for (int k = 0; k < 3; k++)
             {
-                double a = k * 120.0, ca = Math.Cos(a * Math.PI / 180), sa = Math.Sin(a * Math.PI / 180);
+                // At 60°, 180° and 300°: the e-match and its leads on the pad (+x) lie between two fins, not under one.
+                double a = 60 + k * 120.0, ca = Math.Cos(a * Math.PI / 180), sa = Math.Sin(a * Math.PI / 180);
                 // Chord along the airframe (leading edge up), span straight out from the tube, the thin side across.
-                var fin = w.AddBody("wing", finChord, 0.065, 0.003, new WorldPose { X = ca * tube / 2, Y = sa * tube / 2, Z = padTop + tipDrop + finChord / 2, Pitch = -90, Yaw = a - 90 }, "AHŞAP");
+                var fin = w.AddBody("wing", finChord, 0.065, 0.003, new WorldPose { X = ca * tube / 2, Y = sa * tube / 2, Z = padTop + tipDrop + finChord / 2, Pitch = -90, Yaw = a - 180 }, "AHŞAP");
                 fin.Name = "Kanatçık " + (k + 1) + " (3 mm kontrplak)";
                 fin.MassKg = 0.016;
                 fin.Color = "#2F2F35";

@@ -262,7 +262,7 @@ namespace RobotTwin.CoreSim.Robotics
             m.Links.Add(L("1. kol", a1 / 2 + 0.01, 0, hTop + 0.035, a1 + 0.14, 0.13, 0.07, 4.5));
             m.Links.Add(L("2. kol", a1 + a2 / 2 + 0.02, 0, hTop + 0.06, a2 + 0.12, 0.11, 0.09, 3.5));
             m.Links.Add(L("Mil", a1 + a2, 0, hTop - 0.08, 0.02, 0.02, 0.28, 0.6, "cylinder-z"));
-            m.Links.Add(L("Flanş", a1 + a2, 0, hTop - 0.215, 0.05, 0.05, 0.012, 0.15, "cylinder-z"));
+            m.Links.Add(L("Flanş", a1 + a2, 0, hTop - 0.214, 0.05, 0.05, 0.012, 0.15, "cylinder-z"));   // its face on the flange frame, where the tool sits
             return m;
         }
 

@@ -74,12 +74,13 @@ namespace RobotWin.Studio.Examples
             var post = w.AddBody("box", 0.012, 0.012, plateZ - ball * 0.8, new WorldPose { X = x0 + 0.055, Y = y0, Z = ball * 0.8 }, "PLA");
             post.Name = "Teker ayağı";
 
-            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = x0 - 0.045, Y = y0 + 0.012, Z = plateZ + 0.003 });
+            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = x0 - 0.0646, Y = y0 + 0.012, Z = WorldExamples.OnPins(plateZ + 0.003) });   // on its standoffs, at the back
             uno.Name = "Arduino Uno";
             uno.Parameters["firmware"] = "builtin:line-follower.hex";
             uno.Parameters["usb"] = "false";
             var drv = w.AddComponent(Lib, "drv8833", new WorldPose { X = x0 + 0.045, Y = y0 + 0.035, Z = plateZ + 0.003 });
-            var bat = w.AddComponent(Lib, "bat-2s-lipo", new WorldPose { X = x0 + 0.03, Y = y0 - 0.012, Z = plateZ + 0.003 });   // between the wheels, not over them
+            // Ahead of the Uno (not on top of it), between the wheels' tracks: the pack's weight rides on the caster.
+            var bat = w.AddComponent(Lib, "bat-2s-lipo", new WorldPose { X = x0 + 0.0575, Y = y0 - 0.012, Z = plateZ + 0.003 });
             bat.Name = "LiPo 2S";
             var bar = w.AddComponent(Lib, "line-5ch-module", new WorldPose { X = x0 + 0.085, Y = y0, Z = 0.006 });
             bar.Name = "Çizgi sensörü (6 mm)";
@@ -167,20 +168,21 @@ namespace RobotWin.Studio.Examples
             var post = w.AddBody("box", 0.014, 0.014, plateZ - ball * 0.8, new WorldPose { X = 0.09, Y = -0.35, Z = ball * 0.8 }, "PLA");
 
             double top = plateZ + 0.004;
-            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = -0.07, Y = -0.35, Z = top });
+            var uno = w.AddComponent(Lib, "arduino-uno", new WorldPose { X = -0.07, Y = -0.35, Z = WorldExamples.OnPins(top) });
             uno.Name = "Güç dağıtımı (Uno, USB)";
             var bat = w.AddComponent(Lib, "bat-4aa", new WorldPose { X = 0.03, Y = -0.35 - 0.05, Z = top });
-            var res = w.AddComponent(Lib, "res-10R-2W", new WorldPose { X = 0.03, Y = -0.35 + 0.06, Z = top });
-            var lidar = w.AddComponent(Lib, "lidar-a1", new WorldPose { X = 0.0, Y = -0.35, Z = top + 0.03 });
+            var res = w.AddComponent(Lib, "res-10R-2W", new WorldPose { X = 0.03, Y = -0.35 + 0.06, Z = WorldExamples.OnPins(top) });   // standing on its leads
+            // A 20 mm post in the free strip between the Uno, the battery and the resistor lifts the scanner above them all.
+            var lidar = w.AddComponent(Lib, "lidar-a1", new WorldPose { X = 0.0, Y = -0.32, Z = top + 0.03 });
             lidar.Name = "2D LiDAR";
-            var lidarMast = w.AddBody("box", 0.05, 0.05, 0.03, new WorldPose { X = 0.0, Y = -0.35, Z = top }, "PLA");
+            var lidarMast = w.AddBody("box", 0.02, 0.02, 0.03, new WorldPose { X = 0.0, Y = -0.32, Z = top }, "PLA");
             lidarMast.Name = "LiDAR ayağı";
             var cam = w.AddComponent(Lib, "cam-ov2640", new WorldPose { X = 0.11, Y = -0.35, Z = top });
             cam.Name = "Ön kamera";
             cam.Parameters["framesize"] = "QVGA";
             cam.Parameters["format"] = "RGB565";
             var gps = w.AddComponent(Lib, "gps-neo6m", new WorldPose { X = -0.1, Y = -0.35 + 0.06, Z = top });
-            var imu = w.AddComponent(Lib, "gy-521", new WorldPose { X = -0.1, Y = -0.35 - 0.06, Z = top });
+            var imu = w.AddComponent(Lib, "gy-521", new WorldPose { X = -0.1, Y = -0.35 - 0.06, Z = WorldExamples.OnPins(top) });
             imu.Name = "IMU";
             var mag = w.AddComponent(Lib, "gy-271", new WorldPose { X = 0.06, Y = -0.35 + 0.06, Z = top });
             mag.Name = "Pusula";
