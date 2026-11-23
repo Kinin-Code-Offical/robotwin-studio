@@ -23,6 +23,7 @@ This guide walks through the app step by step. Read it in order or jump straight
 | [9. Keyboard shortcuts](09-shortcuts.md) | Shortcuts of every page |
 | [10. FAQ](10-faq.md) | Problems and their fixes |
 | [11. What's new](11-whats-new.md) | What each release brought, changed and fixed |
+| [12. Validation](12-validation.md) | How far each solver is from theory and benchmark problems, with tolerances |
 
 ## What can I do in five minutes?
 

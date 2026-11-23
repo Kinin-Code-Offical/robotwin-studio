@@ -21,6 +21,7 @@ Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğruda
 | [9. Klavye kısayolları](09-kisayollar.md) | Tüm sayfaların kısayolları |
 | [10. Sık sorulan sorular](10-sss.md) | Sorunlar ve çözümleri |
 | [11. Yenilikler](11-yenilikler.md) | Her sürümde neler geldi, neler değişti ve düzeltildi |
+| [12. Doğrulama](12-dogrulama.md) | Her çözücünün teoriden ve kıyaslama problemlerinden sapması, hata payları |
 
 ## Beş dakikada ne yapabilirim?
 

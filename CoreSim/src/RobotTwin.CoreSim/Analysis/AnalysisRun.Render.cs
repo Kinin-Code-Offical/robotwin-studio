@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using RobotTwin.CoreSim.Analysis.Cfd;
 using RobotTwin.CoreSim.Analysis.Geometry;
 using RobotTwin.CoreSim.Analysis.Jobs;
@@ -207,7 +208,8 @@ namespace RobotTwin.CoreSim.Analysis
                 if (cancel.IsCancellationRequested) break;
                 double t = keys == 1 ? r.Channels.Duration / 2 : r.Channels.Duration * (k + 0.5) / keys;
                 int i = SampleAt(r.Channels, t);
-                var cfd = AeroFrame(world, parts, r, s, i, cancel, p => progress?.Invoke((k + p) / keys));
+                // The first frame is also solved on a coarser grid for the grid-convergence estimate.
+                var cfd = AeroFrame(world, parts, r, s, i, k == 0, cancel, p => progress?.Invoke((k + p) / keys));
                 if (cfd != null) frames.Add(cfd);
             }
 
@@ -215,7 +217,7 @@ namespace RobotTwin.CoreSim.Analysis
         }
 
         private static CfdResult? AeroFrame(WorldDocument world, List<PartGeometry> parts, AnalysisResult r, AnalysisSettings s, int sample,
-            CancellationToken cancel, Action<double>? progress)
+            bool gridStudy, CancellationToken cancel, Action<double>? progress)
         {
             var store = r.Channels;
             var solids = new List<Solid>();
@@ -257,75 +259,36 @@ namespace RobotTwin.CoreSim.Analysis
                 }
             }
 
-            double length = hi.X - lo.X, width = hi.Y - lo.Y, height = hi.Z - lo.Z;
+            double width = hi.Y - lo.Y, height = hi.Z - lo.Z;
             double d = Math.Max(Math.Max(width, height), 1e-3);
             int res = Math.Max(10, Math.Min(40, s.AeroResolution));
-            double dx = d / res;
-            int nx = (int)Math.Ceiling((length + 4 * d) / dx), ny = (int)Math.Ceiling(2.4 * d / dx), nz = (int)Math.Ceiling(2.4 * d / dx);
-            nx = Math.Min(nx, 360);
-            double u = 0.06;
             double re = speed * d / AirViscosity;
-            double reLat = Math.Min(re, 1500);
-            double tau = 3 * u * res / reLat + 0.5;
-            var lbm = new Lbm3D(nx, ny, nz, tau, u) { Smagorinsky = re > reLat ? 0.17 : 0 };
-            // Domain origin (grid frame): one diameter upstream, centred across.
-            var origin = new Vec3(lo.X - d, (lo.Y + hi.Y) / 2 - ny * dx / 2, (lo.Z + hi.Z) / 2 - nz * dx / 2);
-            int frontal = 0;
-            var proj = new bool[ny * nz];
-            for (int z = 0; z < nz; z++)
+            var thickness = parts.Select(p => Math.Min(p.Size.X, Math.Min(p.Size.Y, p.Size.Z))).ToList();
+            double share = gridStudy ? 0.8 : 1;
+            var flow = SolveAssembly(solids, thickness, dir, gy, gz, lo, hi, d, res, re, s, cancel, p => progress?.Invoke(p * share));
+            if (flow == null) return null;
+            double gci = double.NaN;
+            if (gridStudy)
             {
-                for (int y = 0; y < ny; y++)
+                var coarse = SolveAssembly(solids, thickness, dir, gy, gz, lo, hi, d, Math.Max(8, (int)Math.Round(res / 1.5)), re, s, cancel,
+                    p => progress?.Invoke(share + p * (1 - share)));
+                if (coarse != null && Math.Abs(flow.Cd) > 1e-9)
                 {
-                    for (int x = 0; x < nx; x++)
-                    {
-                        var l = origin + new Vec3((x + 0.5) * dx, (y + 0.5) * dx, (z + 0.5) * dx);
-                        var w = dir * l.X + gy * l.Y + gz * l.Z;
-                        bool solid = false;
-                        foreach (var so in solids)
-                        {
-                            // Conservative voxels: a cell is solid when the part passes through it, so thin
-                            // plates and wings thinner than a cell are still seen by the flow (one cell thick).
-                            if (so.Distance(w) < 0.5 * dx)
-                            {
-                                solid = true;
-                                break;
-                            }
-                        }
-
-                        if (!solid) continue;
-                        lbm.Solid[lbm.Index(x, y, z)] = true;
-                        if (!proj[z * ny + y])
-                        {
-                            proj[z * ny + y] = true;
-                            frontal++;
-                        }
-                    }
+                    // Roache's grid convergence index from two grids: safety factor 3, formal order 2.
+                    double ratio = coarse.Dx / flow.Dx;
+                    if (ratio > 1.05) gci = 3 * Math.Abs((coarse.Cd - flow.Cd) / flow.Cd) / (ratio * ratio - 1);
                 }
             }
 
-            int steps = Math.Max(600, (int)(Math.Max(2, s.AeroPasses / 5) * (nx) / u / 4));
-            steps = Math.Min(steps, 6000);
-            int record = steps * 2 / 3;
-            Vec3 fsum = Vec3.Zero;
-            int fn = 0;
-            for (int step = 0; step < steps; step++)
-            {
-                if (cancel.IsCancellationRequested) return null;
-                lbm.Step();
-                if (step >= record)
-                {
-                    fsum += new Vec3(lbm.BodyFx, lbm.BodyFy, lbm.BodyFz);
-                    fn++;
-                }
-
-                if ((step & 63) == 0) progress?.Invoke((double)step / steps);
-            }
-
-            var fl = fn > 0 ? fsum / fn : Vec3.Zero;
+            var lbm = flow.Lbm;
+            double dx = flow.Dx, u = flow.U;
+            var origin = flow.Origin;
+            int nx = lbm.Nx, ny = lbm.Ny, nz = lbm.Nz;
+            var fl = flow.Force;
             double rho = world.Environment.AirDensity ?? 1.2;
             double scale = rho * speed * speed * dx * dx / (u * u);   // lattice force → newtons
             var force = (dir * fl.X + gy * fl.Y + gz * fl.Z) * scale;
-            double area = Math.Max(1, frontal) * dx * dx;
+            double area = flow.Area * dx * dx;
             var speedField = new float[lbm.Ux.Length];
             for (int c = 0; c < speedField.Length; c++)
             {
@@ -345,13 +308,16 @@ namespace RobotTwin.CoreSim.Analysis
                 ReferenceLength = d,
                 ReferenceArea = area,
                 ReynoldsPhysical = re,
-                ReynoldsLattice = reLat,
-                Tau = tau,
+                ReynoldsLattice = flow.ReLattice,
+                Tau = flow.Tau,
                 LatticeSpeed = u,
                 AirDensity = rho,
                 TimeStep = dx * u / speed,
-                MeanCd = fl.X / (0.5 * u * u * Math.Max(1, frontal)),
-                MeanCl = fl.Z / (0.5 * u * u * Math.Max(1, frontal)),
+                MeanCd = flow.Cd,
+                MeanCl = flow.Cl,
+                BlockageRatio = flow.Area / ((double)ny * nz),
+                GridUncertainty = gci,
+                Converged = flow.Converged,
                 Speed3D = speedField,
                 Solid = (bool[])lbm.Solid.Clone(),
                 Origin = dir * origin.X + gy * origin.Y + gz * origin.Z,
@@ -360,10 +326,192 @@ namespace RobotTwin.CoreSim.Analysis
                 AxisZ = gz,
                 Force = force
             };
-            result.Notes.Add($"{parts.Count} parça birlikte, bağıl hava {speed:0.##} m/s, Re = {re:0}" + (re > reLat ? $" (ağda {reLat:0} + Smagorinsky LES)" : string.Empty) + $", hücre {dx * 1000:0.#} mm"
-                + (parts.Any(p => Math.Min(p.Size.Z, Math.Min(p.Size.X, p.Size.Y)) * 2 < dx) ? "; hücreden ince yüzeyler bir hücre kalınlığında temsil edildi (kanat kuvvetleri kanat modelinden gelir)." : "."));
+            result.Notes.Add($"{parts.Count} parça birlikte, bağıl hava {speed:0.##} m/s, Re = {re:0}; hücre {dx * 1000:0.#} mm (boyda {d / dx:0} hücre), ağ {nx}×{ny}×{nz}.");
+            result.Notes.Add(flow.CappedRe
+                ? $"Gerçek Re'de çözüm kararsız kaldı; ağda Re {flow.ReLattice:0} + Smagorinsky ile çözüldü: sürükleme yaklaşıktır."
+                : re > 1500 ? "Gerçek Reynolds sayısıyla çözüldü (düzenlenmiş çarpışma + Smagorinsky LES)." : "Gerçek Reynolds sayısıyla, türbülans modeli olmadan çözüldü.");
+            result.Notes.Add($"Eğri duvar: {lbm.CurvedLinks} bağlantıda gerçek yüzey konumu kullanıldı (ikinci derece sınır). Tıkanma oranı %{result.BlockageRatio * 100:0.#}, yanlar açık sınır (ortam basıncı).");
+            // Boundary layer against the cell: laminar Blasius below Re 5·10⁵, turbulent 1/7 power law above.
+            bool turbulent = re > 5e5;
+            double delta = turbulent ? 0.37 * d * Math.Pow(re, -0.2) : 5 * d / Math.Sqrt(Math.Max(re, 1));
+            double cf = turbulent ? 0.0576 * Math.Pow(re, -0.2) : 0.664 / Math.Sqrt(Math.Max(re, 1));
+            double yPlus = 0.5 * dx * speed * Math.Sqrt(cf / 2) / AirViscosity;
+            result.WallYPlus = yPlus;
+            result.Notes.Add(delta < 2 * dx
+                ? $"Sınır tabaka ≈ {delta * 1000:0.##} mm, hücre {dx * 1000:0.#} mm (y+ ≈ {yPlus:0}): sınır tabaka çözülmüyor; yüzey sürtünmesi eksik, keskin kenarlı küt cisimlerin basınç sürüklemesi geçerlidir."
+                : $"Sınır tabaka ≈ {delta * 1000:0.##} mm, en az iki hücre (y+ ≈ {yPlus:0}).");
+            result.Notes.Add(flow.Converged ? "Kuvvet oturdu (son pencereler %1 içinde)." : "Kuvvet salınımlı (girdap kopması ya da süre yetmedi): son pencerelerin ortalaması.");
+            if (!double.IsNaN(gci)) result.Notes.Add($"Izgara belirsizliği (GCI, iki ızgara): Cd ±%{gci * 100:0.#}.");
+            if (thickness.Any(t => t < 2 * dx)) result.Notes.Add("Hücreden ince yüzeyler bir hücre kalınlığında temsil edildi (kanat kuvvetleri kanat modelinden gelir).");
             Streamlines(lbm, result, (lo.Y + hi.Y) / 2 - origin.Y, (lo.Z + hi.Z) / 2 - origin.Z, d, u, speed);
             return result;
+        }
+
+        private sealed class AssemblyFlow
+        {
+            public Lbm3D Lbm = null!;
+            public Vec3 Origin, Force;
+            public double Dx, U, Tau, ReLattice, Area, Cd, Cl;
+            public bool Converged, CappedRe;
+        }
+
+        /// <summary>
+        /// One 3D flow solution around the assembly: cell-centred grid (x along the wind), solids by their signed distance
+        /// (cells whose centre is inside; parts thinner than two cells conservatively), the true surface position on every
+        /// fluid–solid link for the curved wall, an open far field 3.2 d across, 1.5 d upstream and 4 d behind, an absorbing
+        /// layer along the edges. Runs in windows until the force settles. At the real Reynolds number; if that goes
+        /// unstable, once more at Re 1500.
+        /// </summary>
+        private static AssemblyFlow? SolveAssembly(List<Solid> solids, List<double> thickness, Vec3 dir, Vec3 gy, Vec3 gz, Vec3 lo, Vec3 hi,
+            double d, int res, double re, AnalysisSettings s, CancellationToken cancel, Action<double>? progress)
+        {
+            double length = hi.X - lo.X;
+            double dx = d / res;
+            const double maxCells = 3.2e6;
+            int nx = (int)Math.Ceiling((length + 5.5 * d) / dx), ny = (int)Math.Ceiling(3.2 * d / dx);
+            double cells = (double)nx * ny * ny;
+            if (cells > maxCells)
+            {
+                dx *= Math.Pow(cells / maxCells, 1.0 / 3) * 1.01;
+                nx = (int)Math.Ceiling((length + 5.5 * d) / dx);
+                ny = (int)Math.Ceiling(3.2 * d / dx);
+            }
+
+            int nz = ny, n = nx * ny * nz;
+            double u = 0.06;
+            var origin = new Vec3(lo.X - 1.5 * d, (lo.Y + hi.Y) / 2 - ny * dx / 2, (lo.Z + hi.Z) / 2 - nz * dx / 2);
+            var bounds = solids.Select(so => so.Bounds).ToArray();
+            var solid = new bool[n];
+            var dist = new float[n];
+            Parallel.For(0, nz, z =>
+            {
+                for (int y = 0; y < ny; y++)
+                for (int x = 0; x < nx; x++)
+                {
+                    var l = origin + new Vec3((x + 0.5) * dx, (y + 0.5) * dx, (z + 0.5) * dx);
+                    var w = dir * l.X + gy * l.Y + gz * l.Z;
+                    double best = double.MaxValue;
+                    bool inside = false;
+                    for (int k = 0; k < solids.Count; k++)
+                    {
+                        // Far from a part's box only "outside" matters: the box distance stands in for the surface distance.
+                        var b = bounds[k];
+                        double ox = Math.Max(0, Math.Max(b.Min.X - w.X, w.X - b.Max.X));
+                        double oy = Math.Max(0, Math.Max(b.Min.Y - w.Y, w.Y - b.Max.Y));
+                        double oz = Math.Max(0, Math.Max(b.Min.Z - w.Z, w.Z - b.Max.Z));
+                        double boxDist = Math.Sqrt(ox * ox + oy * oy + oz * oz);
+                        double dk = boxDist > 2 * dx ? boxDist : solids[k].Distance(w);
+                        if (dk < best) best = dk;
+                        if (dk < 0 || (thickness[k] < 2 * dx && dk < 0.5 * dx)) inside = true;
+                    }
+
+                    int i = (z * ny + y) * nx + x;
+                    solid[i] = inside;
+                    dist[i] = (float)(best / dx);
+                }
+            });
+
+            // Frontal area (cells): per column across the wind, the share of the cell the silhouette covers.
+            double frontal = 0;
+            for (int z = 0; z < nz; z++)
+            for (int y = 0; y < ny; y++)
+            {
+                double min = double.MaxValue;
+                bool any = false;
+                for (int x = 0; x < nx; x++)
+                {
+                    int i = (z * ny + y) * nx + x;
+                    min = Math.Min(min, dist[i]);
+                    any |= solid[i];
+                }
+
+                frontal += any && min >= 0 ? 1 : Math.Max(0, Math.Min(1, 0.5 - min));
+            }
+
+            frontal = Math.Max(frontal, 1);
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                double reLat = attempt == 0 ? re : Math.Min(re, 1500);
+                if (attempt == 1 && reLat >= re) break;
+                double tau = 3 * u * (d / dx) / reLat + 0.5;
+                var lbm = new Lbm3D(nx, ny, nz, tau, u)
+                {
+                    Smagorinsky = re > 1500 ? s.AeroSmagorinsky : 0,
+                    FarField = LbmFarField.Open,
+                    // Absorbing layer 0.2 d deep: at high Re the air barely damps pressure waves and eddies by itself.
+                    Sponge = Math.Max(4, (int)Math.Round(0.2 * d / dx))
+                };
+                Array.Copy(solid, lbm.Solid, n);
+                lbm.SetWallFractions((x, y, z, q) =>
+                {
+                    double d0 = dist[(z * ny + y) * nx + x];
+                    double d1 = dist[((z + Lbm3D.Cz[q]) * ny + y + Lbm3D.Cy[q]) * nx + x + Lbm3D.Cx[q]];
+                    // The signed distance is linear along a link across a flat face: Δ where it crosses zero.
+                    return d0 > 0 && d1 < 0 ? d0 / (d0 - d1) : double.NaN;
+                });
+
+                int maxSteps = Math.Min(6000, Math.Max(600, (int)(Math.Max(2, s.AeroPasses / 5) * nx / u / 4)));
+                int window = Math.Max(60, maxSteps / 10);
+                var means = new List<Vec3>();
+                Vec3 acc = Vec3.Zero;
+                int count = 0;
+                bool unstable = false, converged = false;
+                for (int step = 0; step < maxSteps; step++)
+                {
+                    if (cancel.IsCancellationRequested) return null;
+                    lbm.Step();
+                    acc += new Vec3(lbm.BodyFx, lbm.BodyFy, lbm.BodyFz);
+                    if (++count == window)
+                    {
+                        var m = acc / count;
+                        acc = Vec3.Zero;
+                        count = 0;
+                        if (double.IsNaN(m.X) || double.IsInfinity(m.X) || m.Length > 10 * frontal)
+                        {
+                            unstable = true;
+                            break;
+                        }
+
+                        means.Add(m);
+                        int c = means.Count;
+                        if (c >= 4 && step >= maxSteps / 3)
+                        {
+                            double tol = 0.01 * Math.Max(Math.Abs(means[c - 1].X), 1e-12);
+                            if ((means[c - 1] - means[c - 2]).Length < tol && (means[c - 2] - means[c - 3]).Length < tol)
+                            {
+                                converged = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ((step & 63) == 0) progress?.Invoke((double)step / maxSteps);
+                }
+
+                if (unstable || means.Count == 0) continue;
+                int take = Math.Max(2, means.Count / 3);
+                take = Math.Min(take, means.Count);
+                var f = Vec3.Zero;
+                for (int k = means.Count - take; k < means.Count; k++) f += means[k];
+                f /= take;
+                return new AssemblyFlow
+                {
+                    Lbm = lbm,
+                    Origin = origin,
+                    Force = f,
+                    Dx = dx,
+                    U = u,
+                    Tau = tau,
+                    ReLattice = reLat,
+                    Area = frontal,
+                    Cd = f.X / (0.5 * u * u * frontal),
+                    Cl = f.Z / (0.5 * u * u * frontal),
+                    Converged = converged,
+                    CappedRe = attempt == 1
+                };
+            }
+
+            return null;
         }
 
         /// <summary>

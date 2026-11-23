@@ -18,6 +18,7 @@ tr:
       - { path: kullanim/09-kisayollar.md, title: 9. Klavye kısayolları, alt: en/guide/09-shortcuts.md }
       - { path: kullanim/10-sss.md, title: 10. Sık sorulan sorular, alt: en/guide/10-faq.md }
       - { path: kullanim/11-yenilikler.md, title: 11. Yenilikler, alt: en/guide/11-whats-new.md }
+      - { path: kullanim/12-dogrulama.md, title: 12. Doğrulama, alt: en/guide/12-validation.md }
       - { path: haberler.md, title: Haberler, alt: en/news.md }
   - title: Fizik ve matematik
     items:
@@ -57,6 +58,7 @@ en:
       - { path: en/guide/09-shortcuts.md, title: 9. Keyboard shortcuts, alt: kullanim/09-kisayollar.md }
       - { path: en/guide/10-faq.md, title: 10. FAQ, alt: kullanim/10-sss.md }
       - { path: en/guide/11-whats-new.md, title: 11. What's new, alt: kullanim/11-yenilikler.md }
+      - { path: en/guide/12-validation.md, title: 12. Validation, alt: kullanim/12-dogrulama.md }
       - { path: en/news.md, title: News, alt: haberler.md }
   - title: Physics and maths
     items:

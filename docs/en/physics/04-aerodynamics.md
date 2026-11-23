@@ -88,8 +88,18 @@ Every propeller in a world uses this curve: thrust falls with the speed of the a
 ## Limits and validation
 
 - **Real-time flight** uses the strip + lifting-line model above at every physics step. Not modelled: the propeller slipstream on the wing and tail, wing–body interference, flexible wings. The tail sees only the wing's downwash.
-- **3D flow (lattice-Boltzmann)** is solved only in the render, at a few instants of the recording (one per half second, at most six), and is not fed back into the flight. The grid is coarse; the real-scale Reynolds number (≈ 10⁵ on a 1 m model plane) cannot be resolved on it, so the numerical viscosity is raised. The result shows the shape of the flow and the order of magnitude of the forces; it does not replace an industrial CFD solver.
-- **Validation tests** run with every release: Poiseuille channel flow (under 1 % off the parabola), vortex shedding behind a cylinder at Re = 100 (Strouhal 0.15–0.23; literature ≈ 0.165), drag of a sphere at Re = 20 (0.7–1.45 × Schiller–Naumann, coarse voxel sphere), and in FEM thermal expansion and the inertia-relief balance of a freely accelerating bar (1–2 %). All of these are at low Reynolds numbers. Flow at model-aircraft scale has not been validated independently (wind tunnel or flight data) yet.
+- **3D flow (lattice-Boltzmann)** is solved only in the render, at a few instants of the recording (one per half second, at most six), and is not fed back into the flight. The solver is a D3Q19 lattice:
+  - **Collision:** regularized BGK; the non-equilibrium part is rebuilt from its second moment. This stays stable down to a relaxation time τ → ½, so the flow is solved at the **real Reynolds number** (≈ 10⁵ on a 1 m model plane). Eddies smaller than a cell are represented by the Smagorinsky sub-grid model (LES, C = 0.17).
+  - **Walls:** from each part's signed distance function, the true surface position on every lattice link is found and interpolated bounce-back (Bouzidi) is applied. Curved surfaces are seen with second-order accuracy instead of as a staircase. Parts thinner than a cell are represented one cell thick.
+  - **Boundaries:** the inlet is a moving-wall velocity boundary (Ladd) that delivers the exact flow rate. The sides are open at ambient pressure, so air displaced by the parts can leave sideways. An absorbing layer along the edges keeps pressure waves and eddies from reflecting back off the boundary.
+  - **Domain:** 1.5 assembly sizes ahead, 4 behind, 3.2 across. The force is read once successive averaging windows agree within 1 %.
+  - **Trust:** each result's notes give the blockage ratio, the boundary-layer thickness and the y+ of the first cell, and a grid uncertainty (GCI, Roache) from solving the first instant on two grids. When the boundary layer is thinner than a cell, skin friction is under-resolved; the pressure drag of sharp-edged bluff bodies is still valid. The result does not replace a mesh study with an industrial CFD solver.
+- **Validation tests** run with every release. All the numbers are on the [12. Validation](../guide/12-validation.md) page:
+  - Poiseuille channel flow;
+  - the Schäfer–Turek DFG cylinder benchmarks: 2D-1 (Re 20) drag within 1 %, 2D-2 (Re 100) Strouhal number within 0.1 %;
+  - sphere drag at Re 20 and Re 100, 8–11 % above the standard drag curve (Schiller–Naumann), a finite-domain effect;
+  - in FEM, thermal expansion and the inertia-relief balance of a freely accelerating bar.
+  Flow at model-aircraft scale has not been validated independently (wind tunnel or flight data) yet.
 - **Parts inside a closed body:** parts inside a hollow body (a shell) do not see the air; the drag is on the shell's outer faces.
 
 ## Wind and turbulence

@@ -346,7 +346,7 @@ Real-time running has to keep up with the screen. A **render** recomputes a reco
 
 - **Every frame:** every object's position and orientation, servo horn and motor shaft angles, velocities, accelerations, contact and joint forces, every part's current, voltage, power and temperature signals, circuit nodes, serial output.
 - **Stress:** every part you mark is solved with FEM at the "stress frame rate" (default 15 frames/s) and at its most loaded moments, with its real loads at that instant. Slender parts use beam elements.
-- **Air flow:** all moving parts are solved together at their current positions with 3D lattice-Boltzmann. The wind is the world's wind minus the assembly's own velocity; a test speed is used if the assembly stands still. The result is the force on the assembly and its drag coefficient (Cd).
+- **Air flow:** all moving parts are solved together at their current positions with 3D lattice-Boltzmann. The wind is the world's wind minus the assembly's own velocity; a test speed is used if the assembly stands still. The result is the force on the assembly and its drag coefficient (Cd). The flow is solved at the real Reynolds number; the result's notes say how far to trust it: whether the boundary layer is resolved (y+), whether the force settled, and the grid uncertainty from solving the first instant on two grids. How far each solver is from theory: [12. Validation](12-validation.md).
 - **Heating:** conduction, convection and radiation from the components' power losses on the boards.
 
 **Playback**

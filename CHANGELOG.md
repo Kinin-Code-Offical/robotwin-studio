@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Validation page:** **Yardım → 12. Doğrulama** (and the README) lists, for every solver, the theory or benchmark value, what the simulation gives, the deviation and the tolerance its test enforces.
+- **Flow benchmarks:** the Schäfer–Turek DFG cylinder benchmarks 2D-1 (Re 20, steady) and 2D-2 (Re 100, periodic shedding) are tests now, along with sphere drag at Re 20 and Re 100 against the standard drag curve.
+- **Trust notes on the 3D flow analysis:** each result states the real Reynolds number, cell size, blockage ratio, whether the boundary layer is resolved (y+), whether the force settled, and a grid uncertainty (GCI) from solving the first instant again on a coarser grid.
+
+### Changed
+
+- **CFD at the real Reynolds number:** the lattice-Boltzmann solvers use a regularized collision with Smagorinsky LES, stable down to τ → ½, instead of lowering the Reynolds number to 1000–1500 on the grid. An absorbing layer along the domain edges keeps pressure waves and eddies from reflecting back at the body.
+- **Curved walls are second order:** where the true surface is known (from each part's signed distance), the wall sits at its real position on every lattice link (Bouzidi interpolated bounce-back) instead of a staircase of cells.
+- **Inflow and far field:** the inlet is a velocity boundary that delivers the exact flow rate (it used to lose about 7 % in a channel), and the sides of the 3D domain are open at ambient pressure rather than held at the free-stream speed, which over-confined the flow. The 3D domain is wider (3.2 body sizes) and the run stops once the force settles.
+
+### Fixed
+
+- **Sphere drag was 30 % high** at Re 20; with the changes above it is within about 10 % of the standard drag curve, and the DFG cylinder drag is within 1 % of the benchmark.
+- **Help tables with many columns:** a wide table squeezed its last column to one letter per line; column widths are now normalized.
+
 ## [1.3.0] - 2026-11-23
 
 ### Added

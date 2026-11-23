@@ -21,6 +21,7 @@
 
 - [Ne yapabilirsiniz?](#ne-yapabilirsiniz)
 - [Ekran görüntüleri](#ekran-görüntüleri)
+- [Doğrulama: teoriden ne kadar sapıyor?](#doğrulama-teoriden-ne-kadar-sapıyor)
 - [İndirme ve kurulum](#indirme-ve-kurulum)
 - [Hızlı başlangıç: ilk dünyanız 5 adımda](#hızlı-başlangıç-ilk-dünyanız-5-adımda)
 - [Aşama aşama özellikler](#aşama-aşama-özellikler)
@@ -112,6 +113,31 @@ Başlangıç sayfasındaki **Dünyalar** listesinde 33 hazır dünya vardır. He
 | Kapalı atölye | Fayans, paspas, halı, ıslak zemin |
 
 </details>
+
+## Doğrulama: teoriden ne kadar sapıyor?
+
+Her çözücü sonucu bilinen problemlerle sınanır: analitik çözümler, yayımlanmış kıyaslama problemleri ve datasheet değerleri. Aşağıdaki her satır, her derlemede çalışan bir otomatik testtir; sapma kabul sınırını aşarsa derleme başarısız olur.
+
+| Alan | Ölçüm | Teori / referans | Simülasyon | Sapma | Kabul sınırı |
+| --- | --- | --- | --- | --- | --- |
+| Mekanik | Menteşeli sarkacın periyodu | 0,89769 s | 0,89767 s | −0,002 % | ±0,5 % |
+| Mekanik | Havada düşen kürenin son hızı | 8,5568 m/s | 8,5567 m/s | −0,001 % | ±0,5 % |
+| Mekanik | Sabit torkla araba ivmesi | 0,9714 m/s² | 0,9715 m/s² | +0,01 % | ±5 % |
+| FEM | Konsol uç sehimi (Timoshenko) | 0,20156 mm | 0,19993 mm | −0,81 % | −3 / +2 % |
+| FEM | Konsol kök gerilmesi | 60,00 MPa | 60,06 MPa | +0,11 % | ±5 % |
+| FEM | Delikli plakada gerilme yığılması Kt | 3,133 | 2,946 | −6,0 % | ±8 % |
+| Isı | Isıtılan plakanın enerji dengesi | 18,797 K | 18,798 K | +0,005 % | ±2 % |
+| Aerodinamik | Kanat C_L (AR 6, 4°), taşıyıcı çizgi | 0,318 | 0,319 | +0,3 % | ±7 % |
+| Akış (CFD) | Kanal akışı (Poiseuille) u_max | 1,0837·10⁻³ | 1,0770·10⁻³ | −0,6 % | ±1 % |
+| Akış (CFD) | Silindir Cd, Schäfer–Turek 2D-1 (Re 20) | 5,5795 | 5,624 | +0,8 % | ±2 % |
+| Akış (CFD) | Silindir Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0,300 | 0,2999 | −0,03 % | ±5 % |
+| Akış (CFD) | Küre Cd (Re 100, Schiller–Naumann) | 1,092 | 1,176 | +7,7 % | −8 / +10 % |
+| Akış (CFD) | Küp Cd, Re 10⁵ (gerçek Re, LES) | ≈1,05 | 0,883 | −15,9 % | −22 / +15 % |
+| Gaz | Hava tankı boşalması, 0,5 s (adyabatik) | 4,671 bar | 4,709 bar | +0,8 % | −2 / +3 % |
+| Elektrik | Motorun yüksüz devri (datasheet) | ≈209 rpm | 210 rpm | +0,5 % | −12 / +2 % |
+| Sensör | GPS medyan yatay hatası (datasheet CEP) | 2,5 m | 2,64 m | +6 % | 1,2–4,5 m |
+
+Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Yedi alandaki 45 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
 
 ## İndirme ve kurulum
 
@@ -292,7 +318,7 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --self
 
 ### Doğruluk: neye ne kadar güvenebilirsiniz
 
-- **Analitik çözümlerle doğrulananlar:** konsol kiriş sehimi ve gerilmesi, delikli plakada gerilme yığılması (Kt ≈ 3), burulma, serbest parçada atalet dengesi, Poiseuille akışı, silindir arkası girdap kopması (Strouhal), küre sürüklemesi (Schiller–Naumann), ısı iletimi, BMP280 datasheet örneği (adc_T = 519888 → 25,08 °C), motorun datasheet yüksüz akımı ve devri ile fizikteki mil turunun birbirini tutması.
+- **Analitik çözümlerle ve kıyaslama problemleriyle doğrulananlar:** konsol kiriş sehimi ve gerilmesi, delikli plakada gerilme yığılması (Kt ≈ 3), burulma, serbest parçada atalet dengesi, Poiseuille akışı, Schäfer–Turek silindir kıyaslamaları (Re 20 sürüklemesi, Re 100 girdap kopması), küre ve küp sürüklemesi, ısı iletimi, BMP280 datasheet örneği (adc_T = 519888 → 25,08 °C), motorun datasheet yüksüz akımı ve devri ile fizikteki mil turunun birbirini tutması. Sapmalar ve hata payları: [Doğrulama](#doğrulama-teoriden-ne-kadar-sapıyor).
 - **Sizin parçanız için:** analitik tablolar, sizin parçanızın ağının ve mesnetlerinin gerçeğe ne kadar yakın olduğunu söylemez. Bunun için iki araç vardır. **Ağ yakınsaması denetimi** en kötü anı daha ince ağla yeniden çözer ve farkı yazar. **.inp dışa aktarma** aynı durumu (ağ, malzeme, mesnetler, o anki yükler) CalculiX / ANSYS / Abaqus'a taşır; sonucu orada çözüp karşılaştırırsınız. Nokta yüklerin hemen altındaki tepe gerilme her FEM kodunda ağ inceldikçe büyür, bu yüzden karşılaştırmada %98'lik değer kullanılır.
 - **Parça yayılımı:** datasheet değeri gerçek parçanın tipik değeridir. Klon (yan sanayi) servo ve motorlar akımda %30–40 sapar. Ekranda okunan akımlar bu belirsizlikle (±%) gösterilir; render'daki belirsizlik bandı gerçek parçaların düşebileceği aralığı çizer. Güç kaynağı ve kablo kesiti seçerken tezgâh ölçümüyle doğrulayın.
 - **Firmware:** ESP32'de SPI gerçekten bağlı cihazla konuşur. Yanlış CS pini, bağlanmamış MISO, uyumsuz SPI modu ve fazla yüksek saat gerçek karttaki gibi hatalı veri verir. Görev watchdog'u ESP-IDF 5 gibi çalışır: besleme kesilirse rapor basar ve kartı yeniden başlatır.
@@ -373,6 +399,27 @@ The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) walks t
 Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
 
 Screenshots are shown in the [Turkish section above](#ekran-görüntüleri).
+
+### Validation: how far from theory?
+
+Every solver is checked against problems with a known answer: analytic solutions, published benchmarks and datasheet values. Each row is an automated test that runs on every build and fails it when the deviation exceeds the tolerance.
+
+| Area | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- | --- |
+| Mechanics | Hinged pendulum period | 0.89769 s | 0.89767 s | −0.002 % | ±0.5 % |
+| Mechanics | Terminal velocity of a sphere in air | 8.5568 m/s | 8.5567 m/s | −0.001 % | ±0.5 % |
+| FEM | Cantilever tip deflection (Timoshenko) | 0.20156 mm | 0.19993 mm | −0.81 % | −3 / +2 % |
+| FEM | Plate with a hole, Kt | 3.133 | 2.946 | −6.0 % | ±8 % |
+| Heat | Energy balance of a heated plate | 18.797 K | 18.798 K | +0.005 % | ±2 % |
+| Aerodynamics | Wing C_L (AR 6, 4°), lifting line | 0.318 | 0.319 | +0.3 % | ±7 % |
+| Flow (CFD) | Cylinder Cd, Schäfer–Turek 2D-1 (Re 20) | 5.5795 | 5.624 | +0.8 % | ±2 % |
+| Flow (CFD) | Cylinder Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0.300 | 0.2999 | −0.03 % | ±5 % |
+| Flow (CFD) | Sphere Cd (Re 100, Schiller–Naumann) | 1.092 | 1.176 | +7.7 % | −8 / +10 % |
+| Flow (CFD) | Cube Cd, Re 10⁵ (real Re, LES) | ≈1.05 | 0.883 | −15.9 % | −22 / +15 % |
+| Gas | Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
+| Electrical | Motor no-load speed (datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
+
+All 45 measurements in seven areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
 
 ### Download and install
 

@@ -233,6 +233,18 @@ namespace RobotTwin.CoreSim.Analysis
         public double MeanCl { get; set; }
         public double Strouhal { get; set; }
 
+        /// <summary>3D: frontal area over the domain cross-section.</summary>
+        public double BlockageRatio { get; set; }
+
+        /// <summary>Grid convergence index of Cd (fraction; NaN when no grid study was run).</summary>
+        public double GridUncertainty { get; set; } = double.NaN;
+
+        /// <summary>True when the force settled (successive averaging windows within 1 %).</summary>
+        public bool Converged { get; set; }
+
+        /// <summary>Estimated y+ of the first fluid node off the wall (boundary-layer resolution).</summary>
+        public double WallYPlus { get; set; }
+
         /// <summary>Mean drag force (N) at the physical speed.</summary>
         public double DragForce => Is3D ? Force.Length : 0.5 * AirDensity * Speed * Speed * ReferenceArea * MeanCd;
 

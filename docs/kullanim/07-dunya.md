@@ -346,7 +346,7 @@ Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir
 
 - **Her kare:** her nesnenin konumu ve yönü, servo kolu ve motor mili açıları, hızlar, ivmeler, temas ve eklem kuvvetleri, her parçanın akım, gerilim, güç ve sıcaklık sinyalleri, devre düğümleri, seri port çıktısı.
 - **Gerilme:** işaretlediğiniz her parça, "gerilme kare hızında" (varsayılan 15 kare/s) ve en yüklü anlarda, o anki gerçek yükleriyle FEM ile çözülür. İnce uzun parçalarda kiriş elemanları kullanılır.
-- **Hava akışı:** bütün hareketli parçalar o anki konumlarında birlikte, 3B lattice-Boltzmann ile çözülür. Rüzgâr, dünyanın rüzgârı eksi montajın kendi hızıdır; montaj duruyorsa test hızı kullanılır. Sonuç montaja etkiyen kuvvet ve sürükleme katsayısıdır (Cd).
+- **Hava akışı:** bütün hareketli parçalar o anki konumlarında birlikte, 3B lattice-Boltzmann ile çözülür. Rüzgâr, dünyanın rüzgârı eksi montajın kendi hızıdır; montaj duruyorsa test hızı kullanılır. Sonuç montaja etkiyen kuvvet ve sürükleme katsayısıdır (Cd). Akış gerçek Reynolds sayısında çözülür; sonucun notları ne kadar güvenilir olduğunu yazar: sınır tabakanın çözülüp çözülmediği (y+), kuvvetin oturup oturmadığı ve ilk anın iki ızgarada çözülmesinden gelen ızgara belirsizliği. Çözücülerin teoriden sapması: [12. Doğrulama](12-dogrulama.md).
 - **Isınma:** kartlardaki bileşenlerin güç kaybından iletim, taşınım ve ışınım çözülür.
 
 **Oynatma**

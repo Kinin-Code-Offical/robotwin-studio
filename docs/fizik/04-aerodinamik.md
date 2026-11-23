@@ -87,8 +87,18 @@ Dünyadaki her pervane bu eğriyi kullanır: itki, pervaneye eksenden giren hava
 ## Sınırlar ve doğrulama
 
 - **Gerçek zamanlı uçuş** her fizik adımında yukarıdaki şerit + kaldırma çizgisi modeliyle hesaplanır. Modellenmeyenler: pervane rüzgârının (slipstream) kanada ve kuyruğa etkisi, gövde–kanat girişimi, esnek kanat. Kuyruk yalnızca kanadın aşağı akışını görür.
-- **3B akış (lattice-Boltzmann)** yalnızca render'da, kaydın birkaç anında (her yarım saniyeye bir an, en çok altı) çözülür ve uçuşa geri beslenmez. Izgara kabadır; gerçek ölçekteki Reynolds sayısı (1 m'lik bir model uçakta ≈ 10⁵) bu ızgarada çözülemediği için sayısal viskozite büyütülür. Sonuç akışın biçimini ve kuvvetlerin büyüklük sırasını gösterir; endüstriyel bir CFD çözücüsünün yerine geçmez.
-- **Doğrulama testleri** her sürümde çalışır: Poiseuille kanal akışı (parabolden sapma %1'in altında), Re = 100 silindir izinde girdap kopması (Strouhal 0,15–0,23; literatürde ≈ 0,165), Re = 20 kürede sürükleme (Schiller–Naumann'ın 0,7–1,45 katı, kaba voksel küre), FEM'de ısıl genleşme ve serbest ivmelenen çubukta atalet dengesi (%1–2). Bunların hepsi düşük Reynolds sayılarındadır. Model uçak ölçeğindeki akış için bağımsız bir doğrulama (rüzgâr tüneli ya da uçuş verisi) henüz yapılmadı.
+- **3B akış (lattice-Boltzmann)** yalnızca render'da, kaydın birkaç anında (her yarım saniyeye bir an, en çok altı) çözülür ve uçuşa geri beslenmez. Çözücü D3Q19 kafesidir:
+  - **Çarpışma:** düzenlenmiş (regularized) BGK; dengesiz kısım ikinci momentinden yeniden kurulur. Bu, gevşeme süresi τ → ½'ye kadar kararlıdır, böylece akış **gerçek Reynolds sayısında** çözülür (1 m'lik model uçakta ≈ 10⁵). Hücreden küçük girdaplar Smagorinsky alt ızgara modeliyle (LES, C = 0,17) temsil edilir.
+  - **Duvar:** her parçanın işaretli uzaklık fonksiyonundan, her kafes bağlantısında yüzeyin gerçek konumu bulunur ve ara değerli geri sekme (Bouzidi) uygulanır. Eğri yüzeyler basamaklı değil, ikinci derece doğrulukla görülür. Hücreden ince parçalar bir hücre kalınlığında temsil edilir.
+  - **Sınırlar:** giriş, debiyi tam veren hareketli duvar hız sınırıdır (Ladd). Yanlar ortam basıncında açıktır; parçanın ittiği hava yana çıkabilir. Kenarlar boyunca bir sönüm bölgesi basınç dalgalarının ve girdapların sınırdan geri yansımasını önler.
+  - **Alan:** montajın 1,5 boyu önde, 4 boyu arkada, 3,2 boyu enine. Kuvvet, ardışık ortalama pencereleri %1 içinde kalınca okunur.
+  - **Güvenilirlik:** her sonucun notlarında tıkanma oranı, sınır tabaka kalınlığı ve ilk hücrenin y+ değeri, ilk anın iki ızgarada çözülmesinden gelen ızgara belirsizliği (GCI, Roache) yazar. Sınır tabaka hücreden inceyse yüzey sürtünmesi eksik çözülür; keskin kenarlı küt cisimlerin basınç sürüklemesi yine geçerlidir. Sonuç endüstriyel bir CFD çözücüsünün ağ çalışmasının yerini tutmaz.
+- **Doğrulama testleri** her sürümde çalışır. Sayıların tamamı [12. Doğrulama](../kullanim/12-dogrulama.md) sayfasındadır:
+  - Poiseuille kanal akışı;
+  - Schäfer–Turek DFG silindir kıyaslamaları: 2D-1 (Re 20) sürüklemesi %1 içinde, 2D-2 (Re 100) Strouhal sayısı %0,1 içinde;
+  - Re 20 ve Re 100 kürede sürükleme, standart sürükleme eğrisinin (Schiller–Naumann) %8–11 üstünde (sonlu alan etkisi);
+  - FEM'de ısıl genleşme ve serbest ivmelenen çubukta atalet dengesi.
+  Model uçak ölçeğindeki akış için bağımsız bir doğrulama (rüzgâr tüneli ya da uçuş verisi) henüz yapılmadı.
 - **Parçaların kapalı gövde içindeki direnci:** içi boş bir gövdenin (kabuk) içindeki parçalar havayı görmez; direnç kabuğun dış yüzlerindedir.
 
 ## Rüzgâr ve türbülans

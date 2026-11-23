@@ -1,0 +1,120 @@
+# 12. Validation: how far from theory?
+
+Every solver in RobotWin Studio is checked against problems with a known answer: analytic solutions, published benchmark problems and datasheet values. Each row below is an automated test. The tests run on every build (CI), and a build fails when a deviation exceeds its **tolerance**.
+
+- **Theory / reference:** the analytic formula, the published benchmark value or the manufacturer's data.
+- **Simulation:** what the test measured on its last run.
+- **Deviation:** the difference between the simulation and the reference.
+- **Tolerance:** the largest error the test accepts.
+
+To run the tests yourself: `dotnet test RobotWinStudio.sln`. Each test prints what it measured.
+
+## 1. Mechanics (rigid bodies, joints, welds)
+
+| Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Hinged physical pendulum period | 0.89769 s | 0.89767 s | −0.002 % | ±0.5 % |
+| Pendulum template period (28°, large-amplitude corrected) | 1.1069 s | 1.1073 s | +0.04 % | ±1 % |
+| Pendulum energy conservation | 0 | −0.80 % | −0.80 % | ±3 % |
+| Bounce height e²·h | 0.2113 m | 0.2111 m | −0.09 % | ±5 % |
+| Car acceleration under constant torque | 0.9714 m/s² | 0.9715 m/s² | +0.01 % | ±5 % |
+| Sliding acceleration on a slope | 2.894 m/s² | 2.894 m/s² | ≈0 % | ±5 % |
+| Droop of a P-controlled arm | 1.405° | 1.405° | ≈0 % | ±1 % |
+| Weight carried by a weld (0.5 kg) | 4.905 N | 4.905 N | ≈0 % | ±2 % |
+| Bending moment in a weld | 0.1962 N·m | 0.196 N·m | −0.1 % | ±5 % |
+| Freely spinning welded group, angular momentum | conserved | −1.10 % | −1.10 % | ±1.5 % |
+| Momentum between a wire and a block (action–reaction) | 0 | 3.1·10⁻⁵ kg·m/s | ≈3.6 % of the exchange | 5·10⁻⁵ |
+| Terminal velocity of a sphere falling in air | 8.5568 m/s | 8.5567 m/s | −0.001 % | ±0.5 % |
+| Wind force on a box | 0.31607 N | 0.31557 N | −0.16 % | ±2 % |
+
+## 2. Stress analysis (FEM, quadratic T10 elements)
+
+| Measurement | Theory | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Cantilever tip deflection (Timoshenko) | 0.20156 mm | 0.19993 mm | −0.81 % | −3 / +2 % |
+| Cantilever root stress | 60.00 MPa | 60.06 MPa | +0.11 % | ±5 % |
+| Cantilever σxx at L/4 | 45.00 MPa | 45.06 MPa | +0.13 % | ±5 % |
+| Beam element tip deflection and root stress | 0.2000 mm / 60 MPa | same | 0 % | ±0.01 % / ±0.1 % |
+| Plate with a hole, stress concentration Kt (Peterson, finite width) | 3.133 | 2.946 | −6.0 % | ±8 % |
+| Freely accelerating bar (inertia relief), mid stress | 250.00 kPa | 250.00 kPa | ≈0 % | ±10 % |
+
+## 3. Heat
+
+| Measurement | Theory | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| 1D transient conduction (Fourier series), largest error | — | 0.0174 K / 80 K | 0.02 % | 0.1 K |
+| Convective energy balance of a heated plate | 18.797 K | 18.798 K | +0.005 % | ±2 % |
+
+## 4. Aerodynamics and flight
+
+| Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Rectangular wing C_L (AR 6, 4°), lifting line | 0.318 | 0.319 | +0.3 % | ±7 % |
+| Induced drag (6°) | 0.0121 | 0.0139 | +15 % | −20 / +40 % |
+| Four-bar linkage, 45° horn → surface | 20.7° | 20.69° | −0.05 % | ±0.5° |
+| Model rocket Cd (OpenRocket class) | 0.5–0.7 | 0.64 | in range | 0.4–0.8 |
+
+## 5. Flow (CFD, lattice Boltzmann)
+
+The flow solver runs at the real Reynolds number with a regularized collision and Smagorinsky LES. On curved walls it uses the true wall position (Bouzidi, a second-order boundary). The inlet is a velocity boundary that delivers the exact flow rate; the sides are open at ambient pressure.
+
+| Measurement | Reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Channel flow (Poiseuille) u_max | 1.0837·10⁻³ | 1.0770·10⁻³ | −0.6 % | ±1 % |
+| Cylinder, Schäfer–Turek 2D-1 (Re 20) Cd | 5.5795 | 5.624 | +0.8 % | ±2 % |
+| Same, lift Cl | 0.0106 | 0.0100 | −6 % | 0.005–0.016 |
+| Cylinder, Schäfer–Turek 2D-2 (Re 100) Strouhal | 0.300 | 0.2999 | −0.03 % | ±5 % |
+| Same, peak Cd | 3.23 | 3.337 | +3.3 % | ±5 % |
+| Same, peak Cl | 1.00 | 0.966 | −3.4 % | 0.8–1.1 |
+| Sphere Re 100, Cd (Schiller–Naumann) | 1.092 | 1.176 | +7.7 % | −8 / +10 % |
+| Sphere Re 20, Cd (Schiller–Naumann) | 2.610 | 2.900 | +11.1 % | −8 / +15 % |
+| Cube face-on, Re 10⁵ (real Re, LES), Cd | ≈1.05 (Hoerner) | 0.883 | −15.9 % | −22 / +15 % |
+
+Most of the sphere's remaining deviation comes from the finite domain: at low Re a sphere disturbs the flow far out. Widening the domain from 4 to 6 diameters brings it from 11.1 % to 7.8 % at Re 20 and from 11.1 % to 7.7 % at Re 100. The standard drag curve (Schiller–Naumann) itself is within ±5 % of measurements.
+
+**As the grid gets finer:** the solver converges at second order; halving the cell size cuts the deviation to about a quarter. Measurements on finer grids than the tests use:
+
+| Measurement | Coarse grid | Fine grid |
+| --- | --- | --- |
+| DFG 2D-1 Cd (20 → 40 cells per diameter) | +0.80 % | +0.20 % |
+| DFG 2D-2 Strouhal / peak Cd / peak Cl (20 → 40) | −0.03 % / +3.3 % / −3.4 % | +0.27 % / +1.8 % / −1.6 % |
+| Cube Re 10⁵ Cd (12 → 16 → 20 cells per side) | −15.9 % / −12.7 % | −3.9 % |
+
+**Before and after** (this release's flow improvements):
+
+| Measurement | Before | Now |
+| --- | --- | --- |
+| Sphere Re 20, Cd deviation | +30 % | +11 % |
+| Cylinder Re 100 | Strouhal +21 % in a confined domain | −0.03 % on the DFG benchmark |
+| Flow rate delivered by a channel inlet | 93 % | 100 % |
+| Flow at Re 10⁵ | lowered to Re 1500 on the grid | real Re (τ0 − ½ ≈ 2·10⁻⁵) |
+
+**The 3D flow analysis in the app** prints how far to trust each result: the real Reynolds number, the cell size, the blockage ratio, whether the boundary layer is resolved (y+), whether the force settled, and the **grid uncertainty (GCI)** from solving the first instant again on a second grid. When the boundary layer is thinner than a cell, skin friction is under-resolved; the pressure drag of sharp-edged bluff bodies (a box, a car body) is still valid.
+
+## 6. Gas and rockets
+
+| Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
+| Same tank, 2 s (between adiabatic and isothermal with wall heat transfer) | 1.563–2.121 bar | 1.818 bar | in range | must lie between |
+| KNSB motor chamber pressure | 2.26 MPa (steady) | 2.58 MPa | +14 % (start-up transient) | −20 / +25 % |
+| KNSB specific impulse | 110–140 s (literature) | 136 s | in range | 100–165 s |
+
+## 7. Electrical, electromechanical, sensors
+
+| Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Motor no-load speed (6.28 V, datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
+| Motor current rise on a 10 % slope | 0.059 A | 0.055 A | −7 % | ±25 % |
+| Current rise while pushing a box | 0.052 A | 0.054 A | +4 % | ±35 % |
+| Encoder edge count | 1940 | 1940 | 0 % | ±10 % |
+| GPS median horizontal error (datasheet CEP) | 2.5 m | 2.64 m | +6 % | 1.2–4.5 m |
+| Wheel mesh radius (mean / worst) | — | 0.07 % / 1.47 % | — | worst ≤ 3 % |
+
+## For your own model
+
+These tables show how accurate the solvers are. How close your model is to reality also depends on your mesh, supports and part data:
+
+- **FEM:** the *mesh convergence check* re-solves the worst instant on a finer mesh and reports the change. The *.inp export* writes the same case for CalculiX, ANSYS or Abaqus.
+- **CFD:** look at the grid uncertainty (GCI) and y+ in the notes of the 3D analysis.
+- **Part spread:** datasheet values are typical; clone servos and motors can differ by 30–40 % in current. The render's uncertainty band draws that range.

@@ -256,13 +256,19 @@ namespace RobotWin.Studio.Help
         {
             var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 2, 0, 16), BorderBrush = R<Brush>("B.Border"), BorderThickness = new Thickness(1, 1, 0, 0) };
             int cols = Math.Max(1, t.Header.Count);
-            // FlowDocument tables cannot size columns to their content; weight them by their longest text instead.
+            // FlowDocument tables cannot size columns to their content; weight them by their longest text instead. The
+            // weights are normalized to sum to 1: with large raw star values the layout squeezed the last column to a
+            // letter's width.
+            var weights = new double[cols];
             for (int c = 0; c < cols; c++)
             {
                 int longest = new[] { c < t.Header.Count ? t.Header[c] : null }.Concat(t.Rows.Select(r => c < r.Count ? r[c] : null))
                     .Where(x => x != null).Select(x => MdInline.PlainText(x!).Length).DefaultIfEmpty(0).Max();
-                table.Columns.Add(new TableColumn { Width = new GridLength(Math.Clamp(longest, 8, 60), GridUnitType.Star) });
+                weights[c] = Math.Clamp(longest, 8, 60);
             }
+
+            double total = weights.Sum();
+            foreach (double w in weights) table.Columns.Add(new TableColumn { Width = new GridLength(w / total, GridUnitType.Star) });
             var group = new TableRowGroup();
             table.RowGroups.Add(group);
             bool emptyHeader = t.Header.All(h => MdInline.PlainText(h).Trim().Length == 0);
