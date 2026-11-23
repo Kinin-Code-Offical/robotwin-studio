@@ -95,14 +95,15 @@ Most of the sphere's remaining deviation comes from the finite domain: at low Re
 
 | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
 | --- | --- | --- | --- | --- |
-| Force of 6 cm of still water on a side wall (ρgD²L/2) | 1.0576 N | 1.0772 N | +1.9 % | ±5 % |
-| Interior density of still water | 998.2 kg/m³ | 999.7 kg/m³ | +0.15 % | ±1 % |
-| Largest compression | 0 | 0.95 % | — | 3 % |
-| Weight of the water carried by a free container | 1.6922 N | 1.6928 N | +0.04 % | ±3 % |
+| Force of 6 cm of still water on a side wall (ρgD²L/2) | 1.0576 N | 1.0795 N | +2.1 % | ±5 % |
+| Interior density of still water | 998.2 kg/m³ | 999.8 kg/m³ | +0.16 % | ±1 % |
+| Largest compression | 0 | 1.02 % | — | 3 % |
+| Weight of the water carried by a free container | 1.6922 N | 1.6922 N | 0.0 % | ±3 % |
 | Mass of the water in the glass when the world starts (ρV) | 192.67 g | 192.67 g | 0 % | ±0.01 % |
-| Water in the glass 0.2 s after the start: rms speed / compression | 0 / 0 | 22.8 mm/s / 0.90 % | — | < 30 mm/s / < 2 % |
+| Water in the glass 0.2 s after the start: rms speed / compression | 0 / 0 | 21.9 mm/s / 1.04 % | — | < 30 mm/s / < 2 % |
 | Glass of water template: water poured into the bowl (ESP32 + SG90) | — | 97 % | — | > 60 % |
-| Dam break, front x/a (Martin & Moyce 1952), T = 0.84 … 2.98 | 1.22 … 3.67 | 1.26 … 3.82 | +3.6 … +8.2 % | ±12 % |
+| Dam break, front x/a (Martin & Moyce 1952), T = 0.84 … 2.98 | 1.22 … 3.67 | 1.25 … 3.82 | +2.8 … +7.8 % | ±12 % |
+| Hassas render, glass of water: particles / mass / largest compression | — / 192.67 g / 0 | 41 760 / 192.7 g / 0.01 % | — | tolerance 0.2 % |
 
 The water's speed just after the start comes from the glass rocking slightly on its unpowered servo in this test and from a few free-surface particles chattering (position-based fluids); at a render's 0.1 ms step the compression drops to 0.01 %.
 

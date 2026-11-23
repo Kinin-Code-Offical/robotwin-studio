@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-23
+
 ### Added
 
 - **Liquids:** water, sea water, ethanol, milk, sunflower oil, glycerol and honey as particles (position-based fluids) at their real density, viscosity (implicit SPH Laplacian, no-slip walls) and surface tension (continuum surface force). Walls carry the liquid's pressure through density maps from each body's signed distance, and their reaction acts on the body: a glass carries its water's weight, a part in water feels buoyancy. No particle crosses a wall within a step, judged in the turning body's own frame. A liquid object is a box or cylinder the liquid fills when the world starts.
 - **Density maps for every rigid body:** the share of the kernel a body's solid covers (Koschier & Bender) is precomputed on a grid in the body's frame, so the inside corner of a glass, its thin wall and a part behind it press on the liquid as they really are; flat analytic faces use the half-space formula, and a flat face behind a nearer one facing the same way adds no pressure.
+- **Surface tension as cohesion, wetting by contact angle:** a pair attraction between particles whose strength follows from the liquid's real σ (Kirkwood–Buff: σ = (π n²/8)∫F(r)r⁴dr) holds sheets and streams together at any particle spacing; each wall pulls with Young–Dupré's work of adhesion σ(1 + cos θ), θ from its material (glass 25°, PLA 75°, PTFE 110° …), and carries the reaction. Replaces the continuum surface force, which only acted on resolved surfaces.
+- **Air drag on spray:** exposed particles are dragged by the world's air and wind as spheres of their volume (Schiller–Naumann).
+- **Anisotropic surface kernels** (Yu & Turk): each particle's kernel follows the shape of its neighbourhood, so a sheet one particle thick and a thin stream are drawn continuous; only particles with fewer than two neighbours are drops.
+- **Renders iterate the pressure to a tolerance:** until no particle is compressed by more than 0.2 % ("Hassas", 40 000 particles) or 0.05 % ("Referans", 120 000), instead of a fixed number of iterations.
 - **Liquid surface:** smoothed particles, a density field and surface nets give a closed surface with smooth normals; Fresnel reflectance per vertex (clear looking in, sky at grazing angles), a sun highlight, drops for loose particles. Glass and acrylic are drawn after the liquid, so water shows through a glass.
 - **Glass and cups:** a "CAM" (soda-lime glass) material, and `tube.bottom` closes a hollow cylinder into a cup; the editor draws hollow tubes and cups.
 - **Template "Su bardağı":** an ESP32 tips a glass of water held on a sideways SG90's horn and pours it into a bowl.

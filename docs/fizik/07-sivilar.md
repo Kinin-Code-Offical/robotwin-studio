@@ -25,7 +25,7 @@ $`\Phi`$ ve $`A`$ bir kez tablolanır. Bunun üç sonucu vardır:
 - Parçacık duvara değmeden geri itilir.
 - Bu itişin tepkisi duvarın cismine kuvvet olarak uygulanır.
 
-Düz yüzlü basit cisimlerde (kutu, zemin) bu düz duvar formülü kullanılır. Çok parçalı ya da örgü cisimlerde (bir bardak gibi) cismin kendi çerçevesindeki bir ızgarada katının çekirdek integrali doğrudan önceden hesaplanır: $`\Phi(x) = \int_	ext{katı} W(\lVert x - y
+Düz yüzlü basit cisimlerde (kutu, zemin) bu düz duvar formülü kullanılır. Çok parçalı ya da örgü cisimlerde (bir bardak gibi) cismin kendi çerçevesindeki bir ızgarada katının çekirdek integrali doğrudan önceden hesaplanır: $`\Phi(x) = \int_\text{katı} W(\lVert x - y
 Vert)\,\mathrm{d}y`$, her hücrenin katı payı işaretli uzaklıktan bulunup çekirdekle evriştirilerek. Böylece bardağın iç köşesi, ince duvarı ve duvarın arkasındaki bir parça gerçekte olduğu kadar basınç uygular. Aynı yöne bakan iki düz yüzden arkadaki, öndekinin gölgesinde kaldığı için basınç katmaz.
 
 Uzaklık, her cismin işaretli uzaklık fonksiyonundan gelir. Çok parçalı ya da örgü cisimlerde (25 dışbükey parçadan oluşan bir bardak gibi) bu fonksiyon, cismin kendi çerçevesinde bir ızgarada bir kez örneklenir. Hücre, parçacık aralığının üçte biridir. Sorgu bu ızgarada üç doğrusal ara değerlemedir, normal de alanın gradyanından gelir.
@@ -41,7 +41,21 @@ Uzaklık, her cismin işaretli uzaklık fonksiyonundan gelir. Çok parçalı ya 
   ```
 
   Örtük olarak alınır; bu yüzden bal ($`\nu \approx 7\cdot10^{-3}`$ m²/s) da aynı adımda kararlıdır. Duvar, cisimle birlikte hareket eden kaymasız bir sınırdır. Katkısı, duvarın gerisindeki yarı uzay üzerinden $`\int -W'(r)/r\,\mathrm{d}V = 2\pi\int_d^h W(z)\,\mathrm{d}z`$ ile hesaplanır.
-- **Yüzey gerilimi:** sıvının gerçek $`\sigma`$ değeri, sürekli yüzey kuvveti olarak (Brackbill 1992) uygulanır: $`f = \sigma\,\kappa\,\nabla c`$. Renk alanı gradyanı $`\nabla c`$ yalnızca yüzeyde sıfırdan farklıdır. Eğrilik komşulardan hesaplanır: $`\kappa = -\nabla\cdot\hat m`$, burada $`\hat m = \nabla c/\lvert\nabla c\rvert`$.
+- **Yüzey gerilimi:** parçacıklar arası bir çekim (kohezyon) olarak uygulanır: $`F(r) = \varepsilon \sin(\pi r/h)`$. Kuvvet $`\varepsilon`$, sıvının gerçek $`\sigma`$ değerinden Kirkwood–Buff (Fowler) bağıntısıyla hesaplanır. Bu bağıntı, düz bir kesitin enerjisini verir; $`n`$ m³ başına parçacık sayısıdır:
+
+  ```math
+  \sigma = \frac{\pi n^2}{8}\int_0^h F(r)\,r^4\,\mathrm{d}r
+  ```
+
+  Sıvının içinde çekimler birbirini götürür. Yüzeyde, ince bir tabakada ve bir akış boyunca sıvıyı bir arada tutar; seyrek parçacıklarda da çalışır.
+- **Islanma:** her duvar, sıvı dolu bir yarı uzay gibi çeker; çekim $`(1 + \cos\theta)/2`$ ile ölçeklenir. Bu, Young–Dupré tutunma işini verir: $`W = \sigma(1 + \cos\theta)`$. Temas açısı $`\theta`$ cismin malzemesinden gelir:
+
+  | Malzeme | Cam | Çelik | PLA | ABS | Akrilik | Ahşap | Kauçuk | PTFE |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | Su ile temas açısı θ | 25° | 70° | 75° | 80° | 70° | 60° | 100° | 110° |
+
+  Yağ ve alkol çoğu yüzeyi daha iyi ıslatır (≈20°). Duvar da sıvının çekişini tepki olarak taşır.
+- **Hava direnci:** havaya açık parçacıklar (sprey, damla, ince akış) dünyanın havasında sürüklenir. Her parçacık, kendi hacminde bir küre olarak ele alınır; sürükleme katsayısı Schiller–Naumann bağıntısından gelir ($`C_D = 24/Re\,(1 + 0{,}15\,Re^{0{,}687})`$, Re 1000'in üstünde 0,44). Rüzgâr da hesaba katılır. Sıvının iç kütlesi kendini korur.
 
 | Sıvı (20 °C) | Yoğunluk (kg/m³) | Viskozite (mPa·s) | Yüzey gerilimi (mN/m) |
 | --- | --- | --- | --- |
@@ -66,7 +80,8 @@ Bir alt adımda hiçbir parçacık, parçacık aralığının 0,3'ünden fazla y
 
 - Sıvının alt adımı doğruluk ayarının fizik adımından uzun olmaz (Hassas'ta 0,1 ms); uyku yoktur.
 - Sıvı, dünya başlarken hacmini tam dolduran bir ızgarayla (yükseklikte tam sayıda katman) kurulur, kütlesi ρ·V'ye eşitlenir ve zaman ilerlemeden yoğunluk kısıtı izdüşürülerek durgun hâle getirilir: su ilk andan gerçek kütlesinde ve yoğunluğunda, hareketsiz başlar.
-- Doğruluk ayarına göre 6000–30 000 parçacık ve 5–12 basınç yinelemesi kullanılır.
+- Basınç, en büyük sıkışma bir toleransın altına inene kadar yinelenir (Hassas'ta %0,2, Referans'ta %0,05); sabit bir yineleme sayısıyla yetinilmez.
+- Doğruluk ayarına göre 8 000–120 000 parçacık kullanılır (Hassas'ta 40 000).
 - Yüzey daha ince bir ızgarada çıkarılır.
 
 ## Görünüş
@@ -74,9 +89,15 @@ Bir alt adımda hiçbir parçacık, parçacık aralığının 0,3'ünden fazla y
 Yüzey parçacıklardan şu adımlarla kurulur:
 
 1. Parçacık merkezleri komşularına doğru yumuşatılır (Yu ve Turk 2013). Bu, durgun yüzeyi düzleştirir.
-2. $`\phi = \sum_j W/S_0`$ alanı bir ızgarada örneklenir.
-3. $`\phi = 0{,}4`$ yüzeyi "surface nets" yöntemiyle çıkarılır (½ yerine 0,4: kuru bir yüzeye yayılan tek parçacık kalınlığındaki su da kesintisiz bir tabaka olur); normaller alanın gradyanından gelir.
-4. Tek başına uçan parçacıklar damlacık olarak çizilir. Canlı görüntüde her damla, gerçek bir kameranın 1/60 s'lik pozlamasında çizeceği iz kadar hızı yönünde uzatılır; düşen ince bir akış kopuk toplar değil, bir şerit olarak görünür.
+2. Her parçacığın çekirdeği, komşularının dağılımına göre (kovaryansının ana eksenleri) gerilir. Bunlar Yu ve Turk'ün anizotropik çekirdekleri:
+   - ince bir tabakada düzlem içinde uzar, normal yönde incelir;
+   - ince bir akışta akış yönünde uzar;
+   - sıvının içinde yuvarlak kalır.
+
+   Böylece kuru bir tabana yayılan tabaka ve düşen akış kesintisiz görünür.
+3. $`\phi = \sum_j W(\lvert G_j(x - \bar x_j)\rvert)\det G_j / S_0`$ alanı bir ızgarada örneklenir.
+4. $`\phi = 1/2`$ yüzeyi "surface nets" yöntemiyle çıkarılır; normaller alanın gradyanından gelir.
+5. İkiden az komşusu olan, tek başına uçan parçacıklar damlacık olarak çizilir. Canlı görüntüde her damla, gerçek bir kameranın 1/60 s'lik pozlamasında çizeceği iz kadar hızı yönünde uzatılır; düşen ince bir akış kopuk toplar değil, bir şerit olarak görünür.
 
 WPF'te gölgelendirici olmadığı için optik köşe başına hesaplanır:
 
@@ -94,10 +115,10 @@ Sayılar [12. Doğrulama](../kullanim/12-dogrulama.md) sayfasındadır:
 - **Durgun su:** 6 cm su, yan duvara hidrostatik kuvvetini %2 içinde uygular. İç yoğunluk gerçek yoğunluğun %0,2 içindedir, en büyük sıkışma %1'in altındadır (render'ın 0,1 ms adımında %0,01).
 - **Başlangıç:** bardaktaki su dünya başlarken tam ρV kütlesinde ve hareketsizdir.
 - **Serbest kap:** zemindeki serbest bir kap, içindeki suyun ağırlığını %0,1 içinde taşır.
-- **Baraj yıkılması:** su cephesi Martin ve Moyce (1952) deneyinin %4–8 önündedir. Sayısal yöntemler bu deneyde genelde önde gider, çünkü deneyde kapak bir anda kalkmamıştır.
+- **Baraj yıkılması:** su cephesi Martin ve Moyce (1952) deneyinin %3–8 önündedir. Sayısal yöntemler bu deneyde genelde önde gider, çünkü deneyde kapak bir anda kalkmamıştır.
 
 ## Sınırlar
 
-- **Islanma yok:** sıvı yüzeye yapışmaz, temas açısı ve ince film modellenmez. Döken bir bardağın dış yüzünden süzülen ince su tabakası görünmez.
-- **Parçacık aralığından ince akış yok:** canlı görüntüde 3–4 mm'den ince damla ve tabakalar parçacık boyundadır. Render'da daha incedir.
-- **Hava yok:** sıvının içinde hava kabarcığı oluşmaz ve hava direnci sıvıya etkimez.
+- **Parçacıktan ince film yok:** bir parçacıktan ince bir tabaka (kuru tabana yayılan ilk su gibi) parçalara bölünür. Canlı görüntüde parçacık 3–4 mm'dir, Hassas render'da 1,7 mm, Referans'ta 1,2 mm. Döken bir bardağın dış yüzünden süzülen ince film de bu yüzden görünmez.
+- **Kaba çözünürlükte yüzey gerilimi:** birkaç parçacık yarıçaplı bir damla salınmaz. Parçacıklar düzenli bir dizide kilitlenir ve küçük Laplace basıncı onları yeniden dizemez. Yüzey gerilimi büyük ölçekte (akışı ve tabakayı bir arada tutmak, ıslatma) doğru etkir, milimetre altı dinamikte etkimez.
+- **Hava kabarcığı yok:** sıvının içinde hava kabarcığı oluşmaz.

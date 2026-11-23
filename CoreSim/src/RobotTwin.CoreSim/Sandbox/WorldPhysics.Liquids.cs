@@ -42,6 +42,9 @@ namespace RobotTwin.CoreSim.Sandbox
             /// <summary>Liquid at rest stops being stepped until something moves.</summary>
             public bool Sleep { get; set; } = true;
 
+            /// <summary>Iterate the pressure until no particle is compressed by more than this (0 = a fixed number of iterations).</summary>
+            public double CompressionTolerance { get; set; }
+
             /// <summary>The live view: interactive.</summary>
             public static LiquidQuality Live => new LiquidQuality();
         }
@@ -136,6 +139,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 liquid.Iterations = Liquid.Iterations;
                 liquid.MaxStep = Liquid.MaxStep;
                 liquid.SleepEnabled = Liquid.Sleep;
+                liquid.CompressionTolerance = Liquid.CompressionTolerance;
                 if (o.Parameters.TryGetValue("liquid.iterations", out var its) && int.TryParse(its, out int iv)) liquid.Iterations = Math.Max(1, Math.Min(20, iv));
                 liquid.SetTotalMass(kind.Density * volume);
                 liquid.Settle(Scene);   // at rest, at the real density, before the world starts

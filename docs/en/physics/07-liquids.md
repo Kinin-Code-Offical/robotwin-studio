@@ -25,7 +25,7 @@ $`\Phi`$ and $`A`$ are tabulated once. This has three consequences:
 - A particle is pushed back without ever touching the wall.
 - The reaction to that push is the force on the wall's body.
 
-Simple flat-faced bodies (a box, the ground) use this flat-wall formula. For bodies made of pieces or meshes (a glass), the kernel integral of the solid itself is precomputed on a grid in the body's frame: $`\Phi(x) = \int_	ext{solid} W(\lVert x - y
+Simple flat-faced bodies (a box, the ground) use this flat-wall formula. For bodies made of pieces or meshes (a glass), the kernel integral of the solid itself is precomputed on a grid in the body's frame: $`\Phi(x) = \int_\text{solid} W(\lVert x - y
 Vert)\,\mathrm{d}y`$, each cell's solid share taken from the signed distance and convolved with the kernel. The inside corner of a glass, its thin wall and a part behind that wall then press as much as they really do. Of two flat faces facing the same way, the one behind adds no pressure: it lies in the nearer one's shadow.
 
 The distance comes from each body's signed distance function. For bodies made of pieces or meshes, such as a glass built from 25 convex pieces, it is sampled once on a grid in the body's own frame. The cell is a third of the particle spacing. A query is then a trilinear interpolation, and the normal is the field's gradient.
@@ -41,7 +41,21 @@ The distance comes from each body's signed distance function. For bodies made of
   ```
 
   It is taken implicitly, so honey ($`\nu \approx 7\cdot10^{-3}`$ m²/s) is stable at the same step. The wall is a no-slip boundary moving with its body. Its share is computed over the half-space beyond it as $`\int -W'(r)/r\,\mathrm{d}V = 2\pi\int_d^h W(z)\,\mathrm{d}z`$.
-- **Surface tension:** the real $`\sigma`$, applied as the continuum surface force (Brackbill 1992): $`f = \sigma\,\kappa\,\nabla c`$. The colour gradient $`\nabla c`$ is non-zero only at the surface. The curvature comes from the neighbours: $`\kappa = -\nabla\cdot\hat m`$, where $`\hat m = \nabla c/\lvert\nabla c\rvert`$.
+- **Surface tension:** applied as an attraction between particles (cohesion): $`F(r) = \varepsilon \sin(\pi r/h)`$. The strength $`\varepsilon`$ follows from the liquid's real $`\sigma`$ through the Kirkwood–Buff (Fowler) relation for the energy of a flat cut, where $`n`$ is the number of particles per m³:
+
+  ```math
+  \sigma = \frac{\pi n^2}{8}\int_0^h F(r)\,r^4\,\mathrm{d}r
+  ```
+
+  Inside the liquid the pulls cancel. At a surface, in a thin sheet and along a stream they hold the liquid together, sparse particles included.
+- **Wetting:** each wall pulls like a liquid-filled half-space, scaled by $`(1 + \cos\theta)/2`$. This gives Young–Dupré's work of adhesion $`W = \sigma(1 + \cos\theta)`$. The contact angle $`\theta`$ comes from the body's material:
+
+  | Material | Glass | Steel | PLA | ABS | Acrylic | Wood | Rubber | PTFE |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | Water contact angle θ | 25° | 70° | 75° | 80° | 70° | 60° | 100° | 110° |
+
+  Oil and alcohol wet most surfaces better (≈20°). The wall carries the liquid's pull as a reaction.
+- **Air drag:** particles exposed to the air (spray, drops, thin streams) are dragged by the world's air. Each one is treated as a sphere of its own volume, with the drag coefficient from Schiller–Naumann ($`C_D = 24/Re\,(1 + 0.15\,Re^{0.687})`$, 0.44 above Re 1000). The wind is included. The bulk of the liquid shields itself.
 
 | Liquid (20 °C) | Density (kg/m³) | Viscosity (mPa·s) | Surface tension (mN/m) |
 | --- | --- | --- | --- |
@@ -66,7 +80,8 @@ No particle moves more than 0.3 spacing in a substep (the CFL condition). As the
 
 - No liquid substep is longer than the accuracy's physics step (0.1 ms on the finest setting), and there is no sleeping.
 - When the world starts, the liquid is laid out on a lattice that fills its whole volume (a whole number of layers in height), its mass is set to ρ·V, and the density constraint is projected without time passing: the water starts still, at its real mass and density.
-- It uses 6000–30 000 particles and 5–12 pressure iterations, depending on the accuracy setting.
+- The pressure is iterated until the largest compression falls below a tolerance (0.2 % on the finest everyday setting, 0.05 % on Reference), not for a fixed number of iterations.
+- It uses 8 000–120 000 particles depending on the accuracy setting (40 000 on Hassas).
 - The surface is extracted on a finer grid.
 
 ## Look
@@ -74,9 +89,15 @@ No particle moves more than 0.3 spacing in a substep (the CFL condition). As the
 The surface is built from the particles in four steps:
 
 1. Particle centres are smoothed towards their neighbours (Yu & Turk 2013), which flattens a resting surface.
-2. The field $`\phi = \sum_j W/S_0`$ is sampled on a grid.
-3. The surface $`\phi = 0.4`$ is extracted with surface nets (0.4 rather than ½, so water one particle thick spreading over a dry floor still closes into a sheet); normals come from the field's gradient.
-4. Particles flying alone are drawn as drops. In the live view each drop is stretched along its velocity by the streak a real camera would record in a 1/60 s exposure, so a thin falling stream reads as a stream rather than separate beads.
+2. Each particle's kernel is stretched along the principal axes of its neighbours' covariance. These are Yu & Turk's anisotropic kernels:
+   - flat in a thin sheet;
+   - long along a thin stream;
+   - round inside the liquid.
+
+   A sheet spreading over a dry floor and a falling stream therefore read as continuous.
+3. The field $`\phi = \sum_j W(\lvert G_j(x - \bar x_j)\rvert)\det G_j / S_0`$ is sampled on a grid.
+4. The surface $`\phi = 1/2`$ is extracted with surface nets; normals come from the field's gradient.
+5. Particles flying alone, with fewer than two neighbours, are drawn as drops. In the live view each drop is stretched along its velocity by the streak a real camera would record in a 1/60 s exposure, so a thin falling stream reads as a stream rather than separate beads.
 
 WPF has no shaders, so the optics are computed per vertex:
 
@@ -94,10 +115,10 @@ The numbers are on the [12. Validation](../guide/12-validation.md) page:
 - **Water at rest:** 6 cm of water presses on a side wall with its hydrostatic force within 2 %. The interior density is within 0.2 % of the real density, and the largest compression is under 1 % (0.01 % at a render's 0.1 ms step).
 - **Start:** the water in a glass has exactly its ρV mass and is still when the world starts.
 - **Free container:** a free container on the floor carries the weight of its water within 0.1 %.
-- **Dam break:** the surge front runs 4–8 % ahead of the Martin & Moyce (1952) experiment. Numerical methods usually lead this experiment, because its gate was not removed at once.
+- **Dam break:** the surge front runs 3–8 % ahead of the Martin & Moyce (1952) experiment. Numerical methods usually lead this experiment, because its gate was not removed at once.
 
 ## Limits
 
-- **No wetting:** the liquid does not stick to surfaces, and contact angles and thin films are not modelled. The thin film that runs down the outside of a pouring glass does not appear.
-- **No flow thinner than a particle:** in the live view, drops and sheets thinner than 3–4 mm are particle-sized. They are finer in a render.
-- **No air:** no bubbles form in the liquid, and air drag does not act on it.
+- **No film thinner than a particle:** a sheet thinner than one particle (the first water spreading over a dry floor) breaks into pieces. Particles are 3–4 mm in the live view, 1.7 mm in a Hassas render and 1.2 mm on Reference. The film running down the outside of a pouring glass does not appear for the same reason.
+- **Surface tension at coarse resolution:** a drop a few particles in radius does not oscillate. Its particles lock into a regular arrangement that a small Laplace pressure cannot rearrange. Surface tension acts correctly at large scale (holding a stream and a sheet together, wetting), not in sub-millimetre dynamics.
+- **No bubbles:** no air bubbles form in the liquid.

@@ -135,10 +135,13 @@ namespace RobotTwin.CoreSim.Analysis
         /// </summary>
         public Sandbox.WorldPhysics.LiquidQuality LiquidQuality => Accuracy switch
         {
-            AccuracyPreset.Fast => new Sandbox.WorldPhysics.LiquidQuality { Particles = 6000, Iterations = 5, MaxStep = AccuracyValues.PhysicsStep, Sleep = false },
-            AccuracyPreset.Standard => new Sandbox.WorldPhysics.LiquidQuality { Particles = 10000, Iterations = 6, MaxStep = AccuracyValues.PhysicsStep, Sleep = false },
-            AccuracyPreset.Reference => new Sandbox.WorldPhysics.LiquidQuality { Particles = 30000, Iterations = 12, MaxStep = AccuracyValues.PhysicsStep, Sleep = false },
-            _ => new Sandbox.WorldPhysics.LiquidQuality { Particles = 16000, Iterations = 8, MaxStep = AccuracyValues.PhysicsStep, Sleep = false }
+            // Incompressible to a stated accuracy (the pressure is iterated until no particle is compressed more than the
+            // tolerance), at the physics step, with many times the live view's particles. (Water itself compresses by
+            // 0.005 % per bar.)
+            AccuracyPreset.Fast => new Sandbox.WorldPhysics.LiquidQuality { Particles = 8000, Iterations = 6, MaxStep = AccuracyValues.PhysicsStep, Sleep = false, CompressionTolerance = 0.01 },
+            AccuracyPreset.Standard => new Sandbox.WorldPhysics.LiquidQuality { Particles = 16000, Iterations = 8, MaxStep = AccuracyValues.PhysicsStep, Sleep = false, CompressionTolerance = 0.005 },
+            AccuracyPreset.Reference => new Sandbox.WorldPhysics.LiquidQuality { Particles = 120000, Iterations = 12, MaxStep = AccuracyValues.PhysicsStep, Sleep = false, CompressionTolerance = 0.0005 },
+            _ => new Sandbox.WorldPhysics.LiquidQuality { Particles = 40000, Iterations = 10, MaxStep = AccuracyValues.PhysicsStep, Sleep = false, CompressionTolerance = 0.002 }
         };
 
         public int SampleCount => Math.Max(1, (int)Math.Ceiling(Duration * OutputRate - 1e-9));

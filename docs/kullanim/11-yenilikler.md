@@ -2,6 +2,32 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.4.0 — 23 Kasım 2026
+
+**Sıvılar gerçek fizikle akar; akış analizi gerçek Reynolds sayısında; her çözücünün teoriden sapması bir sayfada.**
+
+### Yenilikler
+
+- **Sıvılar:** su, deniz suyu, alkol, süt, ayçiçek yağı, gliserin ve bal parçacıklarla akar. Her birinin gerçek yoğunluğu, viskozitesi ve yüzey gerilimi kullanılır. Sıvı kabın duvarlarına gerçek basıncını uygular; kap suyun ağırlığını taşır, suya bırakılan bir parça kaldırma kuvveti görür. Su malzemeye göre ıslatır: camı çok iyi, PLA'yı daha az, PTFE'yi hiç. Havadaki damlacıklar dünyanın havasında sürüklenir.
+- **Cam ve kaplar:** **CAM** malzemesi saydam çizilir; su bardağın içinden görünür. Silindire **tube.wall** ile et kalınlığı, **tube.bottom** ile taban verilince bardak ya da kâse olur. **Mekanik → Sıvılar** bölümünden su dolu ya da boş bir bardak ve su hacmi eklenir.
+- **Su bardağı şablonu:** ESP32, yan yatırılmış bir SG90'ın kolundaki cam bardağı 90° devirir; 193 ml su kâseye dökülür.
+- **Su gibi görünen su:** yüzey parçacıklardan kesintisiz kurulur. İnce tabaka ve düşen akış sürekli görünür. Fresnel yansıması (dik bakınca saydam, yatık bakınca gökyüzü), güneş parlaması ve 1/60 s pozlamalı damla izi var.
+- **Render her şeyi tam hesaplar:**
+  - sıvı doğruluk ayarının fizik adımında (Hassas'ta 0,1 ms) çözülür;
+  - basınç, sıkışma %0,2'nin altına inene kadar yinelenir;
+  - 40 000 parçacığa kadar (Referans'ta 120 000) kullanılır;
+  - sıvı kaydı daha ince bir yüzeyle oynatılır.
+- **Kayıtlı render'ı aç:** render penceresi bir `.rwanalysis` dosyasını yeniden hesaplamadan oynatır.
+- **Akış analizi gerçek Reynolds sayısında:** düzenlenmiş çarpışma ve LES ile, eğri duvarlar gerçek konumlarında. Her sonuç, ne kadar güvenilir olduğunu yazar: ızgara belirsizliği (GCI), sınır tabaka (y+) ve tıkanma oranı.
+- **Doğrulama sayfası:** **Yardım → 12. Doğrulama** ve README, her çözücünün teoriden ve kıyaslama problemlerinden sapmasını ve hata payını gösterir. Örneğin Schäfer–Turek silindiri %0,8, hidrostatik su basıncı %2,1, baraj yıkılması deneyi %4–8.
+
+### Düzeltmeler
+
+- **ESP32 kartlar render'da boşta kalıyordu:** render'ın çalıştırıcısında çizim derleyicisi yoktu. Artık render canlı dünyadaki yazılımın aynısını çalıştırır.
+- **Küre sürüklemesi %30 yüksekti** (Re 20); şimdi standart eğrinin %8–11 içinde.
+- **Kanal girişi debinin %93'ünü veriyordu;** giriş artık tam debiyi veren bir hız sınırı.
+- **Yardım'daki çok sütunlu tablolar** son sütunu tek harf genişliğine eziyordu.
+
 ## 1.3.0 — 23 Kasım 2026
 
 **Kablolar gerçek bir telin gidebildiği yerden gider; birbirine bağlı parçalar artık iç içe geçmez; PS5 kumandalı uçak; roket ateşlemesi gerçekteki zinciriyle.**

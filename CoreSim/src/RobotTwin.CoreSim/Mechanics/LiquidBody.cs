@@ -42,6 +42,7 @@ namespace RobotTwin.CoreSim.Mechanics
         private double[] _wd = Array.Empty<double>(), _wn = Array.Empty<double>(), _wv = Array.Empty<double>();
         private double[] _wphi = Array.Empty<double>(), _wg = Array.Empty<double>();   // wall's kernel share Φ and ∇Φ (world)
         private bool[] _wfield = Array.Empty<bool>();   // Φ from the body's precomputed density map (else a flat face)
+        private double[] _wangle = Array.Empty<double>();   // the liquid's contact angle on that wall (degrees)
         private double[] _imp = Array.Empty<double>();   // positional push each slot gave its wall this substep (m)
         private int[] _cell = Array.Empty<int>(), _cellStart = Array.Empty<int>(), _sorted = Array.Empty<int>();
         private readonly List<SceneBody> _near = new List<SceneBody>();
@@ -86,6 +87,14 @@ namespace RobotTwin.CoreSim.Mechanics
                 double z1 = _h * (t + 1) / Table;
                 _visc[t] = t == Table ? 0 : _visc[t + 1] + 2 * Math.PI * 0.5 * (W(z) + W(z1)) * (_h / Table);
             }
+
+            // Wall adhesion profile: G(z) = ∫_z^h sin(π r/h) dr = (h/π)(1 + cos(π z/h)); pull(d) = 2π ∫_d^h z G(z) dz.
+            for (int t = Table; t >= 0; t--)
+            {
+                double z = _h * t / Table, z1 = _h * (t + 1) / Table;
+                double g0 = z * _h / Math.PI * (1 + Math.Cos(Math.PI * z / _h)), g1 = z1 * _h / Math.PI * (1 + Math.Cos(Math.PI * z1 / _h));
+                _adh[t] = t == Table ? 0 : _adh[t + 1] + 2 * Math.PI * 0.5 * (g0 + g1) * (_h / Table);
+            }
         }
 
         private readonly double[] _visc = new double[Table + 1];
@@ -122,8 +131,25 @@ namespace RobotTwin.CoreSim.Mechanics
         public double LatticeSum { get; }
         public int Count { get; private set; }
 
-        /// <summary>Solver iterations per substep (more = stiffer, less compression).</summary>
+        /// <summary>Solver iterations per substep (more = stiffer, less compression); the minimum when a tolerance is set.</summary>
         public int Iterations { get; set; } = 4;
+
+        /// <summary>
+        /// When above 0, the pressure solve is iterated until no particle is compressed by more than this (0.002 = 0.2 %),
+        /// up to <see cref="MaxIterations"/>: incompressible to a stated accuracy rather than to a fixed effort (renders).
+        /// </summary>
+        public double CompressionTolerance { get; set; }
+
+        public int MaxIterations { get; set; } = 40;
+
+        /// <summary>Pressure iterations the last substep used.</summary>
+        public int LastIterations { get; private set; }
+
+        /// <summary>
+        /// Air drag on spray, drops and thin streams (particles with few neighbours, i.e. exposed to the air): a sphere of the
+        /// particle's volume, Schiller–Naumann drag, the world's air density and wind. The bulk is shielded by itself.
+        /// </summary>
+        public bool AirDrag { get; set; } = true;
 
         /// <summary>Bodies the liquid passes through (propeller discs: the disc is not a solid).</summary>
         public HashSet<SceneBody>? Ignore { get; set; }
@@ -284,6 +310,7 @@ namespace RobotTwin.CoreSim.Mechanics
             _wphi = new double[cap * Slots];
             _wg = new double[3 * cap * Slots];
             _wfield = new bool[cap * Slots];
+            _wangle = new double[cap * Slots];
             _imp = new double[3 * cap * Slots];
             _cell = new int[cap];
             _sorted = new int[cap];
@@ -517,6 +544,7 @@ namespace RobotTwin.CoreSim.Mechanics
             Viscosity(h);
             Lap(3);
             SurfaceTension(h);
+            if (AirDrag) Drag(scene, h);
             Lap(4);
             double rho0 = Kind.Density, maxComp = 0, sumRho = 0;
             int interior = 0;
@@ -544,9 +572,12 @@ namespace RobotTwin.CoreSim.Mechanics
             double rho0 = Kind.Density, m = Mass, eps = 1e-2 / (Spacing * Spacing);
             double wallScale = m / (_s3 * rho0);
             double w0 = W(0);
-            for (int it = 0; it < iterations; it++)
+            double tol = CompressionTolerance;
+            int cap = tol > 0 ? Math.Max(iterations, MaxIterations) : iterations;
+            LastIterations = cap;
+            for (int it = 0; it < cap; it++)
             {
-                bool last = it == iterations - 1;
+                bool last = it == cap - 1;
                 Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
                 {
                     for (int i = range.Item1; i < range.Item2; i++)
@@ -587,6 +618,17 @@ namespace RobotTwin.CoreSim.Mechanics
                         _lam[i] = -c / (g2 + gx * gx + gy * gy + gz * gz + eps);
                     }
                 });
+
+                if (tol > 0 && it >= iterations - 1)
+                {
+                    double worst = 0;
+                    for (int i = 0; i < n; i++) worst = Math.Max(worst, _rho[i] / rho0 - 1);
+                    if (worst < tol)
+                    {
+                        LastIterations = it + 1;
+                        break;
+                    }
+                }
 
                 Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
                 {
@@ -904,6 +946,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private void SetSlot(int ws, int body, double d, Vec3 n, Vec3 v)
         {
+            _wangle[ws] = ContactAngle(body >= 0 ? _near[body].Material : "concrete", Kind);
             _wb[ws] = body;
             _wd[ws] = d;
             _wn[3 * ws] = n.X;
@@ -1138,84 +1181,147 @@ namespace RobotTwin.CoreSim.Mechanics
             });
         }
 
+        /// <summary>∫₀¹ sin(πq) q⁴ dq: the cohesion profile's moment in the surface-tension relation.</summary>
+        private static readonly double CohesionMoment = Integrate(q => Math.Sin(Math.PI * q) * Math.Pow(q, 4));
+
+        private static double Integrate(Func<double, double> f)
+        {
+            const int n = 4000;
+            double sum = 0;
+            for (int i = 0; i < n; i++) sum += f((i + 0.5) / n);
+            return sum / n;
+        }
+
         /// <summary>
-        /// The real surface tension as a continuum surface force: f = σ κ ∇c, with the colour gradient ∇c (non-zero only at
-        /// the surface) and the curvature κ = −∇·n̂ from the neighbours.
+        /// Water's contact angle (degrees) on a body's material: how much it wets it (Young). Handbook values for clean
+        /// surfaces; other liquids than water wet most solids better (oils, alcohol ≈ 20°).
+        /// </summary>
+        public static double ContactAngle(string? material, LiquidKind kind)
+        {
+            if (kind == LiquidKind.Ethanol || kind == LiquidKind.Oil) return 20;
+            return (material ?? string.Empty) switch
+            {
+                "glass" => 25,
+                "steel" => 70,
+                "aluminium" => 80,
+                "pla" => 75,
+                "petg" => 72,
+                "abs" => 80,
+                "acrylic" => 70,
+                "nylon" => 63,
+                "wood" or "mdf" or "paper" => 60,
+                "concrete" or "tile" => 40,
+                "rubber" => 100,
+                "ptfe" => 110,
+                "carbon" or "fr4" => 75,
+                _ => 70
+            };
+        }
+
+        /// <summary>
+        /// The real surface tension as cohesion between particles: a pair attraction F(r) = ε sin(π r/h) for r &lt; h, whose
+        /// strength follows from the liquid's σ through the Kirkwood–Buff (Fowler) relation for the work of a flat cut,
+        /// σ = (π n²/8) ∫ F(r) r⁴ dr with n the particles per m³. Inside the liquid the pulls cancel; at a surface, in a thin
+        /// sheet and along a stream they hold the liquid together, at any resolution: a film spreading over a floor stays a
+        /// film and a falling stream stays a stream.
+        /// Wetting: each wall pulls like a liquid-filled half-space scaled by (1 + cos θ)/2, which gives the work of
+        /// adhesion σ(1 + cos θ) of Young–Dupré with θ the contact angle on that body's material: water spreads over glass
+        /// (25°), less over PLA (75°), beads on PTFE (110°).
         /// </summary>
         private void SurfaceTension(double h)
         {
             int n = Count;
-            double sigma = Kind.SurfaceTension, m = Mass;
+            double sigma = Kind.SurfaceTension;
             if (sigma <= 0) return;
+            double nd = Kind.Density / Mass;   // particles per m³ at rest
+            double eps = 8 * sigma / (Math.PI * nd * nd * Math.Pow(_h, 5) * CohesionMoment);
+            double a0 = eps / Mass;
+            double wallA = nd * a0;   // the half-space pull per unit of its tabulated profile
             Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
                     int k = 3 * i;
                     double px = _p[k], py = _p[k + 1], pz = _p[k + 2];
-                    double cx = 0, cy = 0, cz = 0;
+                    double ax = 0, ay = 0, az = 0;
                     int cnt = _nbCount[i], b0 = i * MaxNeighbours;
                     for (int a = 0; a < cnt; a++)
                     {
                         int j = _nb[b0 + a], kj = 3 * j;
-                        double dx = px - _p[kj], dy = py - _p[kj + 1], dz = pz - _p[kj + 2];
+                        double dx = _p[kj] - px, dy = _p[kj + 1] - py, dz = _p[kj + 2] - pz;
                         double r = Math.Sqrt(dx * dx + dy * dy + dz * dz);
                         if (r >= _h || r < 1e-12) continue;
-                        double f = m / Math.Max(_rho[j], 1e-9) * Wd(r) / r;
-                        cx += f * dx;
-                        cy += f * dy;
-                        cz += f * dz;
+                        double f = a0 * Math.Sin(Math.PI * r / _h) / r;
+                        ax += f * dx;
+                        ay += f * dy;
+                        az += f * dz;
                     }
 
-                    // The walls are liquid-filled for the colour field too: no false surface against a glass.
                     for (int s = 0; s < Slots; s++)
                     {
                         int ws = i * Slots + s;
-                        if (_wb[ws] == -1) continue;
-                        double f = 1 / (LatticeSum * _s3);
-                        cx += f * _wg[3 * ws];
-                        cy += f * _wg[3 * ws + 1];
-                        cz += f * _wg[3 * ws + 2];
+                        if (_wb[ws] == -1 || _wd[ws] >= _h) continue;
+                        double wet = (1 + Math.Cos(_wangle[ws] * Math.PI / 180)) / 2;
+                        double pull = wallA * wet * WallAdhesion(_wd[ws]);   // towards the wall: −n
+                        ax -= pull * _wn[3 * ws];
+                        ay -= pull * _wn[3 * ws + 1];
+                        az -= pull * _wn[3 * ws + 2];
+                        // Newton's third law: the liquid pulls the wall as much (booked like the wall's pushes).
+                        _imp[3 * ws] -= pull * _wn[3 * ws] * h * h;
+                        _imp[3 * ws + 1] -= pull * _wn[3 * ws + 1] * h * h;
+                        _imp[3 * ws + 2] -= pull * _wn[3 * ws + 2] * h * h;
                     }
 
-                    // ∇c points into the liquid (c = 1 inside); the sum above is −∇c.
-                    _c[k] = -cx;
-                    _c[k + 1] = -cy;
-                    _c[k + 2] = -cz;
+                    _c[k] = ax;
+                    _c[k + 1] = ay;
+                    _c[k + 2] = az;
                 }
             });
 
-            double threshold = 0.25 / _l;
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            for (int i = 0; i < 3 * n; i++) _v[i] += h * _c[i];
+        }
+
+        private readonly double[] _adh = new double[Table + 1];
+
+        /// <summary>
+        /// The normal pull of a half-space of unit particle density on a particle at distance d, per unit ε:
+        /// 2π ∫_d^h z G(z) dz with G(z) = ∫_z^h sin(π r/h) dr.
+        /// </summary>
+        private double WallAdhesion(double d)
+        {
+            double u = Math.Max(0, Math.Min(_h, d)) / _h * Table;
+            int t = Math.Min(Table - 1, (int)u);
+            return _adh[t] + (_adh[t + 1] - _adh[t]) * (u - t);
+        }
+
+        /// <summary>
+        /// Air drag on exposed particles: a = (3/8)(ρ_air/ρ)(C_d/r)|u|u with u the velocity relative to the wind, r the radius
+        /// of a sphere of the particle's volume and C_d = 24/Re (1 + 0.15 Re^0.687) up to Re 1000, 0.44 above; integrated
+        /// implicitly (u ← u / (1 + k|u|h)), so it never overshoots.
+        /// </summary>
+        private void Drag(PhysicsScene scene, double h)
+        {
+            double rhoAir = scene.AirDensity;
+            if (rhoAir <= 0) return;
+            const double nuAir = 1.5e-5;
+            double r = Math.Pow(3 * Mass / (4 * Math.PI * Kind.Density), 1.0 / 3);
+            double ratio = 0.375 * rhoAir / Kind.Density / r;
+            for (int i = 0; i < Count; i++)
             {
-                for (int i = range.Item1; i < range.Item2; i++)
-                {
-                    int k = 3 * i;
-                    double ci = Math.Sqrt(_c[k] * _c[k] + _c[k + 1] * _c[k + 1] + _c[k + 2] * _c[k + 2]);
-                    if (ci < threshold) continue;
-                    double nix = _c[k] / ci, niy = _c[k + 1] / ci, niz = _c[k + 2] / ci;
-                    double px = _p[k], py = _p[k + 1], pz = _p[k + 2], kappa = 0;
-                    int cnt = _nbCount[i], b0 = i * MaxNeighbours;
-                    for (int a = 0; a < cnt; a++)
-                    {
-                        int j = _nb[b0 + a], kj = 3 * j;
-                        double cj = Math.Sqrt(_c[kj] * _c[kj] + _c[kj + 1] * _c[kj + 1] + _c[kj + 2] * _c[kj + 2]);
-                        if (cj < threshold) continue;
-                        double dx = px - _p[kj], dy = py - _p[kj + 1], dz = pz - _p[kj + 2];
-                        double r = Math.Sqrt(dx * dx + dy * dy + dz * dz);
-                        if (r >= _h || r < 1e-12) continue;
-                        double f = m / Math.Max(_rho[j], 1e-9) * Wd(r) / r;
-                        // With m̂ = ∇c/|∇c| (pointing into the liquid), κ = −∇·m̂ ≈ −Σ V_j (m̂_j − m̂_i)·∇W_ij: +2/R on a
-                        // drop of radius R, so σκ∇c pulls the surface in.
-                        kappa -= f * ((_c[kj] / cj - nix) * dx + (_c[kj + 1] / cj - niy) * dy + (_c[kj + 2] / cj - niz) * dz);
-                    }
-
-                    double a2 = sigma * kappa / Math.Max(_rho[i], 1e-9);
-                    _v[k] += h * a2 * _c[k];
-                    _v[k + 1] += h * a2 * _c[k + 1];
-                    _v[k + 2] += h * a2 * _c[k + 2];
-                }
-            });
+                if (_nbCount[i] >= 12) continue;
+                int k = 3 * i;
+                var p = new Vec3(_x[k], _x[k + 1], _x[k + 2]);
+                var wind = scene.WindAt(p);
+                double ux = _v[k] - wind.X, uy = _v[k + 1] - wind.Y, uz = _v[k + 2] - wind.Z;
+                double u = Math.Sqrt(ux * ux + uy * uy + uz * uz);
+                if (u < 1e-6) continue;
+                double re = 2 * r * u / nuAir;
+                double cd = re < 1000 ? 24 / re * (1 + 0.15 * Math.Pow(re, 0.687)) : 0.44;
+                double f = 1 / (1 + ratio * cd * u * h);
+                _v[k] = wind.X + ux * f;
+                _v[k + 1] = wind.Y + uy * f;
+                _v[k + 2] = wind.Z + uz * f;
+            }
         }
 
         /// <summary>Particles that fell far below the ground (off the world) are dropped.</summary>

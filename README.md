@@ -13,7 +13,7 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
-> **1.3.0'da yeni:** Kablolar gerçek bir telin gidebildiği yerden gider: iki fiş arasında katı parçalara değmeyen yoldan döşenir, kapalı bir gövdeden yalnızca gerçek bir delikten çıkar, ince duvarlardan sızmaz. Birbirine bağlı parçaların iç içe geçmesi ve parçaların içinden geçen teller artık raporlanıyor; şablonlardaki bütün bu hatalar düzeltildi. PS5 kumandalı uçak, gerçek zinciriyle roket ateşlemesi, sade bir denetçi ve üç yeni şablon (kapalı gövdeli gezgin, trafik ışığı, sarkaç). Güncellemeden sonraki ilk açılışta başlangıç sayfası yenilikleri gösterir. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
+> **1.4.0'da yeni:** Sıvılar gerçek fizikle akar: su, yağ, bal … gerçek yoğunluk, viskozite ve yüzey gerilimiyle parçacık olarak; kaba basınç ve ağırlık, içindekilere kaldırma kuvveti uygular, malzemeye göre ıslatır, su gibi görünür. **Su bardağı** şablonunda ESP32 ve servo suyu kâseye döker. Render her şeyi tam hesaplar (sıvı 0,1 ms adımda, 40 000 parçacığa kadar; ESP32 kartları render'da da çalışır). Akış analizi gerçek Reynolds sayısında. Her çözücünün teoriden sapması [Doğrulama](#doğrulama-teoriden-ne-kadar-sapıyor) tablosunda. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
 
 ![Başlangıç sayfası](docs/images/home.png)
 
@@ -69,7 +69,7 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 | ![Dünya: sarkaç](docs/images/world-pendulum.png) | ![Dünya: katı yakıtlı roket rampada](docs/images/world-rocket-pad.png) |
 | **Dünya:** sarkaç; periyodu teoriyle %0,1 içinde | **Dünya:** katı yakıtlı roket, radyal kanatçıklar |
 | ![Dünya: su bardağı dökülüyor](docs/images/world-glass-pour.png) | |
-| **Render:** servo su dolu cam bardağı devirir; 15 000 parçacıklı su gerçek yoğunluk, viskozite ve yüzey gerilimiyle kâseye dökülür | |
+| **Render (Hassas):** servo su dolu cam bardağı devirir; 40 000 parçacıklı su gerçek yoğunluk, viskozite ve yüzey gerilimiyle kâseye dökülür | |
 
 ### Dünya şablonları
 
@@ -136,13 +136,13 @@ Her çözücü sonucu bilinen problemlerle sınanır: analitik çözümler, yay�
 | Akış (CFD) | Silindir Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0,300 | 0,2999 | −0,03 % | ±5 % |
 | Akış (CFD) | Küre Cd (Re 100, Schiller–Naumann) | 1,092 | 1,176 | +7,7 % | −8 / +10 % |
 | Akış (CFD) | Küp Cd, Re 10⁵ (gerçek Re, LES) | ≈1,05 | 0,883 | −15,9 % | −22 / +15 % |
-| Sıvı | 6 cm durgun suyun yan duvara kuvveti (ρgD²L/2) | 1,0576 N | 1,0775 N | +1,9 % | ±5 % |
+| Sıvı | 6 cm durgun suyun yan duvara kuvveti (ρgD²L/2) | 1,0576 N | 1,0795 N | +2,1 % | ±5 % |
 | Sıvı | Baraj yıkılması cephesi (Martin ve Moyce 1952), T = 2,98 | 3,67 | 3,82 | +4,1 % | ±12 % |
 | Gaz | Hava tankı boşalması, 0,5 s (adyabatik) | 4,671 bar | 4,709 bar | +0,8 % | −2 / +3 % |
 | Elektrik | Motorun yüksüz devri (datasheet) | ≈209 rpm | 210 rpm | +0,5 % | −12 / +2 % |
 | Sensör | GPS medyan yatay hatası (datasheet CEP) | 2,5 m | 2,64 m | +6 % | 1,2–4,5 m |
 
-Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Sekiz alandaki 53 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
+Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Sekiz alandaki 54 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
 
 ## İndirme ve kurulum
 
@@ -168,7 +168,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.3.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.4.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -307,8 +307,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.3.0
-# -> builds\installer\RobotWinStudio-Setup-1.3.0.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.0
+# -> builds\installer\RobotWinStudio-Setup-1.4.0.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -387,7 +387,7 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
-> **New in 1.3.0:** Cables run where a real wire can: laid along a way between their plugs that touches no solid, out of a closed body only through a real hole, never leaking through thin walls. Joined parts sunk into each other and wires through parts are reported, and every such error in the templates is fixed. A PS5-controlled plane, rocket ignition along its real chain, a tidier inspector and three new templates (enclosed rover, traffic light, pendulum). After an update the start page shows what is new. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
+> **New in 1.4.0:** Liquids flow with real physics: water, oil, honey … as particles at their real density, viscosity and surface tension; they press on and weigh down their containers, buoy what is in them, wet by material and look like liquids. In the **glass of water** template an ESP32 and a servo pour water into a bowl. Renders compute everything in full (the liquid at a 0.1 ms step with up to 40 000 particles; ESP32 boards now run in renders too). Flow analysis runs at the real Reynolds number. Every solver's deviation from theory is in the [validation](#validation-how-far-from-theory) table. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
 
 ### What's inside
 
@@ -422,12 +422,12 @@ Every solver is checked against problems with a known answer: analytic solutions
 | Flow (CFD) | Cylinder Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0.300 | 0.2999 | −0.03 % | ±5 % |
 | Flow (CFD) | Sphere Cd (Re 100, Schiller–Naumann) | 1.092 | 1.176 | +7.7 % | −8 / +10 % |
 | Flow (CFD) | Cube Cd, Re 10⁵ (real Re, LES) | ≈1.05 | 0.883 | −15.9 % | −22 / +15 % |
-| Liquids | Force of 6 cm of still water on a side wall | 1.0576 N | 1.0775 N | +1.9 % | ±5 % |
+| Liquids | Force of 6 cm of still water on a side wall | 1.0576 N | 1.0795 N | +2.1 % | ±5 % |
 | Liquids | Dam-break front (Martin & Moyce 1952), T = 2.98 | 3.67 | 3.82 | +4.1 % | ±12 % |
 | Gas | Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
 | Electrical | Motor no-load speed (datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
 
-All 53 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
+All 54 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
 
 ### Download and install
 
@@ -466,7 +466,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.3.0` → `builds\installer\RobotWinStudio-Setup-1.3.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.0` → `builds\installer\RobotWinStudio-Setup-1.4.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

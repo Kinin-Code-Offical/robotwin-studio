@@ -55,7 +55,7 @@ namespace RobotWin.Studio.World
                 HideLiquidVolume(o.Id);
                 using (Shell.Perf.Measure("sıvı yüzeyi"))
                 {
-                    var surface = LiquidSurface.Build(xyz, spacing, Playback != null ? Math.Min(LiquidSurfaceCell, 0.33) : LiquidSurfaceCell, Playback != null ? 6_000_000 : 2_000_000, vel);
+                    var surface = LiquidSurface.Build(xyz, spacing, Playback != null ? (xyz.Length / 3 > 20000 ? 0.5 : 0.33) : LiquidSurfaceCell, Playback != null ? 6_000_000 : 2_000_000, vel);
                     group.Children.Add(new GeometryModel3D(LiquidLook.Mesh(surface, 0.55 * spacing, eye), LiquidLook.Surface(kind)));
                 }
             }

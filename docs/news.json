@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-4-0",
+      "date": "2026-11-23",
+      "title": "1.4.0: sıvılar gerçek fizikle akar",
+      "body": "Bu sürümde:\n\n- **Sıvılar:** su, yağ, bal … gerçek yoğunluk, viskozite ve yüzey gerilimiyle akar; kaba basınç ve ağırlık, içindekilere kaldırma kuvveti uygular, malzemeye göre ıslatır.\n- **Su bardağı şablonu:** ESP32 ve servo, cam bardaktaki suyu kâseye döker.\n- **Render her şeyi tam hesaplar:** sıvı 0,1 ms adımda, 40 000 parçacığa kadar; ESP32 kartları render'da da çalışır.\n- **Akış analizi gerçek Reynolds sayısında**, güvenilirlik notlarıyla.\n- **Doğrulama sayfası:** her çözücünün teoriden sapması ve hata payı (**Yardım → 12. Doğrulama**).\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-3-0",
       "date": "2026-11-23",
       "title": "1.3.0: kablolar gerçek yoldan gider, parçalar iç içe geçmez",

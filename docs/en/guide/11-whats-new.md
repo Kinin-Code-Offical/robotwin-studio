@@ -2,6 +2,32 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.4.0 — 23 November 2026
+
+**Liquids flow with real physics; flow analysis at the real Reynolds number; every solver's deviation from theory on one page.**
+
+### New
+
+- **Liquids:** water, sea water, ethanol, milk, sunflower oil, glycerol and honey flow as particles. Each one's real density, viscosity and surface tension are used. A liquid presses on its container's walls with its real pressure; a container carries its water's weight, and a part dropped in water feels buoyancy. Water wets by material: glass very well, PLA less, PTFE not at all. Drops in the air are dragged by the world's air.
+- **Glass and containers:** the **CAM** (glass) material is drawn see-through, so water shows through a glass. A cylinder with a wall thickness (**tube.wall**) and a bottom (**tube.bottom**) becomes a glass or a bowl. **Mekanik → Sıvılar** adds a glass, full or empty, and a volume of water.
+- **Glass of water template:** an ESP32 tips a glass held on a sideways SG90's horn by 90°; 193 ml of water pours into a bowl.
+- **Water that looks like water:** the surface is built continuously from the particles. A thin sheet and a falling stream read as continuous. Fresnel reflection (clear looking in, sky at grazing angles), a sun highlight and drops streaked by a 1/60 s exposure.
+- **Renders compute everything in full:**
+  - the liquid is solved at the accuracy's physics step (0.1 ms on Hassas);
+  - the pressure is iterated until the compression is under 0.2 %;
+  - up to 40 000 particles are used (120 000 on Reference);
+  - the replay draws a finer surface.
+- **Open a saved render:** the render window replays a `.rwanalysis` without computing it again.
+- **Flow analysis at the real Reynolds number:** a regularized collision with LES, and curved walls at their true position. Each result states how far to trust it: grid uncertainty (GCI), boundary layer (y+) and blockage.
+- **Validation page:** **Yardım → 12. Doğrulama** and the README list every solver's deviation from theory and benchmarks, with tolerances. For example: the Schäfer–Turek cylinder 0.8 %, hydrostatic water pressure 2.1 %, the dam-break experiment 4–8 %.
+
+### Fixed
+
+- **ESP32 boards sat idle in renders:** the render's runner had no sketch compiler. A render now runs the same firmware as the live world.
+- **Sphere drag was 30 % high** (Re 20); it is now within 8–11 % of the standard curve.
+- **A channel inlet delivered 93 % of its flow rate;** it is now a velocity boundary with the exact rate.
+- **Help tables with many columns** squeezed their last column to one letter.
+
 ## 1.3.0 — 23 November 2026
 
 **Cables run where a real wire can; joined parts no longer sink into each other; a PS5-controlled plane; rocket ignition along its real chain.**
