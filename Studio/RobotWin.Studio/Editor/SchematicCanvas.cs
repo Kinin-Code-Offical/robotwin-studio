@@ -93,6 +93,10 @@ namespace RobotWin.Studio.Editor
             {
                 _selection.Clear();
                 ResetEditorState();
+                // Probes and meter leads belong to the drawing they were put on: another document starts without them.
+                W.Simulation.ClearProbes();
+                W.Simulation.SetMeterLead(true, null, null);
+                W.Simulation.SetMeterLead(false, null, null);
                 Dispatcher.BeginInvoke(new Action(FitToContent), System.Windows.Threading.DispatcherPriority.Loaded);
             };
             W.Simulation.Updated += (_, _) =>
@@ -458,8 +462,11 @@ namespace RobotWin.Studio.Editor
             if (_exporting) return;
             if (Simulating) DrawSimulationOverlay(dc, netlist);
             _effects.Draw(dc, (x, y) => ToScreen(x, y), _scale);
-            DrawScopeProbes(dc, netlist);
-            DrawMeterLeads(dc);
+            if (Doc.Parts.Count > 0)
+            {
+                DrawScopeProbes(dc, netlist);
+                DrawMeterLeads(dc);
+            }
             DrawHighlight(dc);
             DrawHud(dc, size);
         }

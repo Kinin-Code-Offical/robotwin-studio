@@ -118,8 +118,15 @@ namespace RobotWin.Studio.World
             endA = pa;
             endB = pb;
             plugA = plugB = true;
-            IReadOnlyList<Vec3>? pts = Session?.CablePoints(cable);
-            if (pts != null)
+            IReadOnlyList<Vec3>? pts;
+            if (Playback != null)
+            {
+                // [render] a replay draws the rope exactly as it was simulated, never the editor's layout
+                var rec = Playback.CableAt(cable.Id);
+                pts = rec?.Points;
+                if (rec is { } r) (plugA, plugB) = (r.PlugA, r.PlugB);
+            }
+            else if ((pts = Session?.CablePoints(cable)) != null)
             {
                 (plugA, plugB) = Session!.PlugState(cable);
             }

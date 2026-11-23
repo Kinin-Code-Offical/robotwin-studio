@@ -764,6 +764,21 @@ namespace RobotWin.Studio
         public void OpenProjectAssembly()
         {
             var sch = W.Schematic;
+            int physical = sch.Parts.Count(p => W.Library.Find(p.PartId) is { } d && d.Symbol != RobotTwin.CoreSim.Design.SymbolKind.Ground && d.Pins.Count > 0);
+            if (physical == 0)
+            {
+                // [assembly] Nothing to assemble: say what Montaj is for, and where the open world's boards are edited.
+                bool hasWorld = W.ActiveWorld != null || W.Documents.Any(d => d.Kind == DocumentKind.World);
+                int pick = Shell.Dialog.Show(this, "Montaj: projenin gerçek parçaları",
+                    "Montaj, bu projenin devresini gerçek 3B parçalara çevirir: kart, üstüne lehimlenen parçalar ve ayrı parçalar kablolarıyla bir dünyaya kurulur; gövdeyi, motorları ve mekaniği orada ekleyip gerçek fizikle denersiniz.\n\n"
+                    + "Bu projenin devresinde henüz parça yok. Önce Devre'de parçaları yerleştirin."
+                    + (hasWorld ? "\n\nDünya şablonları (servo kol, araba …) projeden ayrı belgelerdir. İçlerindeki bir kartın devresini ve kodunu görmek için Dünya'da kartı seçip \"Kartı düzenle\" deyin; Devre sayfası da açık dünyanın kartlarını listeler." : string.Empty),
+                    hasWorld ? new[] { "Devre'ye git", "Dünya'ya dön", "Kapat" } : new[] { "Devre'ye git", "Kapat" });
+                if (pick == 0) Navigate("schematic");
+                else if (pick == 1 && hasWorld) Navigate("world");
+                return;
+            }
+
             string title = (string.IsNullOrWhiteSpace(sch.Title) ? "Proje" : sch.Title) + " — montaj";
             var open = W.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World && d.World?.Title == title);
             if (open != null)
@@ -774,10 +789,14 @@ namespace RobotWin.Studio
             }
 
             var package = new ProjectPackage { Schematic = sch, Firmware = W.Project.Firmware, Parts = W.Project.Parts };
+            W.Status = "Montaj kuruluyor: devrenin parçaları gerçek 3B parçalara çevriliyor …";
             var world = RobotTwin.CoreSim.Sandbox.ProjectAssembly.Build(package, W.Library, W.FilePath);
             NewWorld(world);
             W.Status = $"Montaj: {world.Objects.Count} gerçek parça, {world.Cables.Count} kablo. Gövdeyi, eklemleri ve kabukları dünya araçlarıyla kurun; her şey gerçek fizikle çalışır.";
         }
+
+        /// <summary>[boards] Opens a board of the active world in the circuit / code pages (Pages/WorldPage.xaml.cs).</summary>
+        public void OpenWorldBoard(RobotTwin.CoreSim.Sandbox.WorldObject board) => _world.OpenBoard(board);
 
         public void NewWorld(WorldDocument? world = null)
         {

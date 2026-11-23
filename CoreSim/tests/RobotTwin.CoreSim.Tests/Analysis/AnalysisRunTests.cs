@@ -105,8 +105,9 @@ namespace RobotTwin.CoreSim.Tests.Analysis
                 Firmware = false,
                 Aero = true,
                 Aero3D = true,
+                AeroTunnel = true,          // an explicit wind-tunnel test: 3 m/s of air blowing towards −X
                 AeroSpeed = 3,
-                AeroAxis = "+X",
+                AeroDirectionDeg = 180,
                 AeroResolution = 12,
                 AeroPasses = 10
             };
@@ -128,6 +129,87 @@ namespace RobotTwin.CoreSim.Tests.Analysis
             var a = r.AeroFrames[0];
             Assert.True(a.Force.Dot(a.AxisX) > 0, "drag acts along the relative wind");
             Assert.InRange(a.Force.Length, 1e-4, 0.5);   // a toy car in a 3 m/s breeze: millinewtons
+        }
+
+        [Fact]
+        public void StillAirAroundAPartThatDoesNotMoveHasNoFlow()
+        {
+            // [air] A block resting on the floor in a world without wind: the render must not invent air (it used to blow a
+            // 2 m/s "test speed" at anything that did not move).
+            var world = new WorldDocument();
+            world.AddBody("box", 0.04, 0.03, 0.02, new WorldPose { Z = 0.0 }, "PLA");
+            var s = new AnalysisSettings
+            {
+                Preset = AnalysisPreset.Custom, Duration = 0.3, OutputRate = 100, Accuracy = AccuracyPreset.Fast, Firmware = false,
+                Aero = true, Aero3D = true, AeroResolution = 12
+            };
+
+            var r = AnalysisRun.Run(world, s);
+            foreach (var l in r.Log) _out.WriteLine(l);
+            foreach (var f in r.AeroFrames.Take(1)) foreach (var n in f.Notes) _out.WriteLine("  " + n);
+            Assert.Empty(r.AeroFrames);
+            Assert.Contains(r.Log, l => l.StartsWith("Hava akışı"));
+        }
+
+        [Fact]
+        public void AFallingBlockPushesTheAirAndTheAirBrakesIt()
+        {
+            // [air] A 40 × 30 × 20 mm block falls 0.25 m in still air: the air it pushes moves, the force on it points up,
+            // and its size is that of the drag of a box at the speed it has (½ρv²·Cd·A, Cd ≈ 1.05 face-on).
+            var world = new WorldDocument();
+            var block = world.AddBody("box", 0.04, 0.03, 0.02, new WorldPose { Z = 0.25 }, "PLA");
+            var s = new AnalysisSettings
+            {
+                Preset = AnalysisPreset.Custom, Duration = 0.2, OutputRate = 200, Accuracy = AccuracyPreset.Fast, Firmware = false,
+                Aero = true, Aero3D = true, AeroResolution = 12
+            };
+
+            var r = AnalysisRun.Run(world, s);
+            foreach (var l in r.Log) _out.WriteLine(l);
+            Assert.NotEmpty(r.AeroFrames);
+            foreach (var f in r.AeroFrames.Where((_, i) => i % 2 == 0))
+                _out.WriteLine($"t {f.Time:0.000} s: smoke {f.Tracers!.Length / 6}, F = ({f.Force.X * 1000:0.00}, {f.Force.Y * 1000:0.00}, {f.Force.Z * 1000:0.00}) mN");
+            foreach (var n in r.AeroFrames[0].Notes) _out.WriteLine("  " + n);
+
+            // Just before the end: the block falls at about g·t.
+            var last = r.AeroFrames[r.AeroFrames.Count - 1];
+            double v = 9.81 * last.Time;
+            double drag = 0.5 * 1.2 * v * v * 1.05 * 0.04 * 0.03;
+            _out.WriteLine($"expected drag at {v:0.00} m/s: {drag * 1000:0.00} mN");
+            Assert.True(last.Force.Z > 0, "the air pushes up against the fall");
+            Assert.InRange(last.Force.Z, 0.6 * drag, 1.4 * drag);   // coarse (3.3 mm) transient flow: measured −12 %
+            Assert.True(last.Tracers!.Length / 6 > 20, "the pushed air carries smoke");
+            Assert.All(r.AeroFrames, f => Assert.True(f.Tracers != null));
+        }
+
+        [Fact]
+        public void TheRenderKeepsTheCableRopesAndTheAirInItsFile()
+        {
+            // [render] The replay draws cables where they were simulated, and a saved render keeps its air frames.
+            var world = new WorldDocument();
+            var block = world.AddBody("box", 0.04, 0.03, 0.02, new WorldPose { Z = 0.1 }, "PLA");
+            var r = new AnalysisResult();
+            r.Cables.Add(new CableTrack { CableId = "C1" });
+            r.Cables[0].Add(0, new[] { new Vec3(0, 0, 0), new Vec3(0.05, 0, -0.01), new Vec3(0.1, 0, 0) }, true, true);
+            r.Cables[0].Add(0.1, new[] { new Vec3(0, 0, 0), new Vec3(0.05, 0, -0.03), new Vec3(0.1, 0, 0) }, true, false);
+            r.AeroFrames.Add(new CfdResult { Name = "Hava", Is3D = true, Time = 0.05, Nx = 4, Ny = 4, Nz = 4, Dx = 0.01, Speed = 1, Force = new Vec3(0, 0, 0.002), Tracers = new float[] { 0, 0, 0.1f, 0, 0, 0.5f } });
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rw-cable-air-" + System.Guid.NewGuid().ToString("N") + AnalysisResult.Extension);
+            try
+            {
+                r.Save(path);
+                var back = AnalysisResult.Load(path);
+                var mid = back.Cables.Single().At(0.05)!.Value;
+                Assert.Equal(-0.02, mid.Points[1].Z, 4);        // blended halfway between the two frames
+                Assert.True(back.Cables[0].At(0.1)!.Value.PlugA && !back.Cables[0].At(0.1)!.Value.PlugB);
+                var a = back.AeroFrames.Single();
+                Assert.Equal(0.05, a.Time, 6);
+                Assert.Equal(0.002, a.Force.Z, 6);
+                Assert.Equal(6, a.Tracers!.Length);
+            }
+            finally
+            {
+                System.IO.File.Delete(path);
+            }
         }
 
         [Fact]

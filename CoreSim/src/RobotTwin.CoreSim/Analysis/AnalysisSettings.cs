@@ -104,6 +104,29 @@ namespace RobotTwin.CoreSim.Analysis
         public bool Aero3D { get; set; }
 
         /// <summary>
+        /// [air] Wind-tunnel test instead of the real air: the assembly is held at its recorded pose at a few instants and
+        /// air of <see cref="AeroSpeed"/> is blown at it from the chosen direction (air the world does not have).
+        /// Off: the real air (the world's wind and the parts' own motion) solved over the whole recording.
+        /// </summary>
+        public bool AeroTunnel { get; set; }
+
+        /// <summary>[air] Tunnel air direction: where it blows to, degrees from +X towards +Y (0 = +X, 90 = +Y).</summary>
+        public double AeroDirectionDeg { get; set; }
+
+        /// <summary>[air] Tunnel air elevation, degrees (+ = blowing upwards).</summary>
+        public double AeroElevationDeg { get; set; }
+
+        /// <summary>[air] The tunnel's air velocity (m/s, world).</summary>
+        public Mechanics.Vec3 TunnelAir
+        {
+            get
+            {
+                double a = AeroDirectionDeg * Math.PI / 180, e = AeroElevationDeg * Math.PI / 180;
+                return new Mechanics.Vec3(Math.Cos(e) * Math.Cos(a), Math.Cos(e) * Math.Sin(a), Math.Sin(e)) * AeroSpeed;
+            }
+        }
+
+        /// <summary>
         /// Extra runs with every part's values drawn from its tolerance band (clones from their wider
         /// spread): the result keeps the min–max envelope of every channel, so a reading shows how far
         /// the real hardware may be from the model. 0 = off.
@@ -242,6 +265,9 @@ namespace RobotTwin.CoreSim.Analysis
                 ["aero_speed"] = AeroSpeed,
                 ["aero_axis"] = AeroAxis,
                 ["aero_3d"] = Aero3D,
+                ["aero_tunnel"] = AeroTunnel,
+                ["aero_dir"] = AeroDirectionDeg,
+                ["aero_elev"] = AeroElevationDeg,
                 ["aero_resolution"] = AeroResolution,
                 ["aero_passes"] = AeroPasses,
                 ["aero_smagorinsky"] = AeroSmagorinsky,
@@ -286,6 +312,9 @@ namespace RobotTwin.CoreSim.Analysis
                 AeroSpeed = D("aero_speed", 2),
                 AeroAxis = S("aero_axis") ?? "+X",
                 Aero3D = B("aero_3d", false),
+                AeroTunnel = B("aero_tunnel", false),
+                AeroDirectionDeg = D("aero_dir", 0),
+                AeroElevationDeg = D("aero_elev", 0),
                 AeroResolution = I("aero_resolution", 32),
                 AeroPasses = D("aero_passes", 30),
                 AeroSmagorinsky = D("aero_smagorinsky", 0.17),

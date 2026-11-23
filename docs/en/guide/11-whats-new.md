@@ -2,6 +2,37 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.4.1 — 24 November 2026
+
+**The render's air is the real air; cables in a render are the simulated ropes; the circuit page's bottom panels can be moved, closed and opened in their own windows.**
+
+### Changed
+
+- **The render's air is the real air**, solved over the whole recording. The parts move as recorded and push the air with their own surface velocity; the world's wind blows in at the box's faces; the ground is a wall. With no wind and nothing moving there is no flow. Before, a 2 m/s "test speed" was blown at an assembly that stood still.
+- **The air is shown as 3D smoke:** particles carried by the air leave short streaks along their velocity (blue slow, red fast). The flat cut plane is gone.
+- **The wind-tunnel test** is a separate option with its own speed, direction (0° = +X, 90° = +Y) and elevation.
+- **Stress for servos, motors and boards:** components are in the render's list; the ones something is fastened to (a servo carrying a second servo) are marked by default.
+- **The circuit page's bottom tabs** (oscilloscope, multimeter, fault finding, Monte Carlo, board pins, serial monitor, events) work like the world page's panels:
+  - resized by dragging their top edge;
+  - closed, docked beside the drawing or opened in their own window;
+  - buttons at the right of the strip float, place or close the picked tab, or fold the pane.
+
+  Closed ones come back with **Görünüm → Devre panelleri**.
+- **The rail:** the project's stages (Circuit → PCB → Code → Model → Assembly) share the line; the world, a document of its own, sits below a divider.
+- **Montaj explains itself** when the project's circuit is empty instead of opening an empty world.
+- **A world's boards from the circuit page:** an empty circuit page lists the open world's Arduino / ESP32 boards; one click opens a board's circuit and code, and a template's built-in program becomes editable code.
+- **Attach to a servo horn / motor shaft:** "…ne tak" lays the part flat on the output; a long part such as an arm reaches out with its end over the pivot. "Olduğu yerde sabitle" is the old behaviour.
+
+### Fixed
+
+- **Cables in a render stretched into long streaks:** they were drawn from the editor's layout, and the render did not lay them as ropes at all. Renders now simulate, record and replay the same ropes as the live world.
+- **Parts and cables could be dragged in a render;** the render is for watching only now.
+- **A saved render lost its air;** the air is written to the file now, with the cables.
+- **Space and the arrow keys did not type in the render's channel search.**
+- **A servo case read 10¹³ MPa:** mid-edge nodes moved onto the curved surface nearly folded some elements. Curved elements that would be distorted now stay straight, and loose bits not face-connected to the part are left out of the mesh.
+- **A saved render showed the window's default settings** on the left; it now shows the ones it was computed with.
+- **Stray probe badges and meter leads on an empty circuit page.**
+
 ## 1.4.0 — 23 November 2026
 
 **Liquids flow with real physics; flow analysis at the real Reynolds number; every solver's deviation from theory on one page.**

@@ -2,6 +2,37 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.4.1 — 24 Kasım 2026
+
+**Render'daki hava gerçek hava; kablolar render'da simülasyondaki gibi; Devre'nin alt panelleri taşınır, kapanır, ayrı pencereye alınır.**
+
+### Değişenler
+
+- **Render'daki hava gerçek hava:** kaydın tamamı boyunca zamanla çözülür. Parçalar kayıttaki gibi hareket eder ve havayı kendi yüzey hızlarıyla iter; dünyanın rüzgârı kutunun yüzlerinden girer; zemin duvardır. Rüzgâr yoksa ve hiçbir şey kıpırdamıyorsa akış da yoktur. Eskiden duran montaja 2 m/s'lik bir "test hızı" üfleniyordu.
+- **Hava 3B duman olarak görünür:** havayla taşınan parçacıklar hız yönünde kısa izler bırakır (mavi yavaş, kırmızı hızlı). Düz kesit düzlemi kalktı.
+- **Rüzgâr tüneli testi** ayrı bir seçenek: hızı, yönü (0° = +X, 90° = +Y) ve eğimi seçilir.
+- **Servoların, motorların ve kartların gerilmesi:** render listesinde artık bileşenler de var. Üstüne bir şey takılı olanlar (ör. ikinci servoyu taşıyan servo) varsayılan olarak işaretli.
+- **Devre'nin alt sekmeleri** (osiloskop, multimetre, arıza tespiti, Monte Carlo, kart pinleri, seri monitör, olaylar) Dünya'nın panelleri gibi çalışır:
+  - üst kenardan sürüklenerek boyutlandırılır;
+  - kapatılır, çizimin yanına yerleştirilir ya da ayrı pencereye alınır;
+  - şeridin sağındaki düğmeler seçili sekmeyi ayrı pencereye alır, yerini seçtirir ya da kapatır; bölmeyi gizler.
+
+  Kapatılanlar **Görünüm → Devre panelleri** ile geri açılır.
+- **Sol ray:** projenin aşamaları (Devre → PCB → Kod → Modelle → Montaj) aynı çizgide. Dünya ayrı bir belge olduğu için bir ayraçla altta duruyor.
+- **Montaj kendini anlatır:** projenin devresinde parça yoksa boş bir dünya açmak yerine ne yaptığını söyler.
+- **Dünyadaki kartlar Devre'den açılır:** Devre sayfası boşken açık dünyanın Arduino / ESP32 kartlarını listeler. Tek tıkla kartın devresi ve kodu açılır; şablondaki hazır program düzenlenebilir koda dönüşür.
+- **Servo başlığına / motor miline tak:** "…ne tak" parçanın yüzünü çıkışa yatırır; kol gibi uzun bir parçanın ucu eksenin üstüne gelir ve kol dışarı uzanır. "Olduğu yerde sabitle" eski davranıştır.
+
+### Düzeltmeler
+
+- **Render'da kablolar uzun izler halinde uzuyordu:** editördeki kablo düzeninden çiziliyorlardı. Render kabloları ip olarak hiç kurmuyordu da. Artık canlı dünyadaki iplerin aynısı simüle edilir, kaydedilir ve oynatılır.
+- **Render sahnesinde parçalar ve kablolar sürüklenebiliyordu;** render artık yalnızca izlenir.
+- **Kaydedilen render'da hava akışı kayboluyordu;** artık kablolarla birlikte dosyaya yazılır.
+- **Render'daki kanal aramasında Boşluk ve ok tuşları yazmıyordu.**
+- **Servo gövdesinde gerilme 10¹³ MPa çıkıyordu:** eğri yüzeye taşınan ara düğümler bazı elemanları neredeyse katlıyordu. Artık bozulacak eğri elemanlar düz kalır. Ağ, yüzeyle bağlı olmayan ayrık parçacıkları da dışarıda bırakır.
+- **Kayıtlı render açılınca soldaki ayarlar** pencerenin varsayılanlarını gösteriyordu; artık render'ın kendi ayarlarını gösterir.
+- **Boş devre sayfasında başıboş prob rozetleri ve ölçü aleti kabloları** görünüyordu.
+
 ## 1.4.0 — 23 Kasım 2026
 
 **Sıvılar gerçek fizikle akar; akış analizi gerçek Reynolds sayısında; her çözücünün teoriden sapması bir sayfada.**

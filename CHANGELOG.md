@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-11-24
+
+### Changed
+
+- **The render's air is the real air, solved over time:** one 3D lattice-Boltzmann run through the whole recording in a box fixed to the world. The parts move through it exactly as recorded and push and drag the air with their own surface velocity (moving walls, Ladd; curved walls from each part's signed distance, re-placed whenever a part has moved a third of a cell); the world's wind with its gusts blows in at the faces, everywhere else the faces are open at ambient pressure; the ground is a wall. The box is fitted around the parts that really move, with cells a quarter of the thinnest moving part's width (coarser only if the accuracy's budget says so). Nothing else drives the air: with no wind and nothing moving there is no flow. Force on the moving parts per frame is the gauge force (ambient pressure removed), by Wen et al.'s Galilean-invariant momentum exchange.
+- **The air is shown in 3D as smoke:** particles carried by the solved air, each drawn as a short streak along its velocity and coloured by speed; still air stays invisible. The flat velocity cut plane is gone.
+- **Wind-tunnel test is an explicit option** with its own speed, direction (0° = +X, 90° = +Y) and elevation; it replaces the "test speed" the render used to blow at any assembly that stood still.
+- **Stress for servos, motors and boards:** the render's part list now includes components, and the ones something is fastened to (a servo carrying a second servo) are marked by default.
+- **The circuit page's bottom tabs** (oscilloscope, multimeter, fault finding, Monte Carlo, board pins, serial monitor, events) work like the world page's panels: resized by a 7 px handle, hidden, docked beside the drawing or opened in their own window; buttons at the right end of the tab strip float, place or close the picked tab or fold the pane. **Görünüm → Devre panelleri** brings them back.
+- **The rail sets the world apart:** the project's stages (circuit → PCB → code → model → assembly) share the trace; the world, a document of its own, sits below a divider.
+- **Montaj explains itself:** with nothing in the project's circuit it says what it does instead of opening an empty world tab, and points to where a world's boards are edited.
+- **A world's boards from the circuit page:** an empty circuit page lists the open world's Arduino / ESP32 boards; one click opens a board's circuit and code (a plain board becomes a one-board design whose built-in program is editable code).
+- **Attaching to a servo horn or a motor shaft** offers "…ne tak": the part's face lies flat on the output and a long part (an arm) reaches out from it with its end over the pivot; "olduğu yerde sabitle" keeps the old behaviour.
+
+### Fixed
+
+- **Render cables were drawn from the editor's layout** while the parts took their recorded poses, which stretched them into long streaks; and the render did not lay the cables as ropes at all (their pin positions were not passed to it). Renders now simulate the same ropes as the live world, record them at up to 60 frames per second and replay them exactly (sag, tension, a pulled plug).
+- **Render scenes could be edited:** parts and cables could be dragged and rewired in a replay. The render scene is read-only now.
+- **Render air frames were not saved** in `.rwanalysis` files; they are now, together with the cable ropes.
+- **Space and the arrow keys did not type in the render's channel search** (they played / stepped the replay).
+- **Stress could read 10¹³ MPa from a 0.02 mm displacement** (a servo case): moving mid-edge nodes onto the true surface next to an already snapped thin element nearly folded some curved (T10) elements. Each curved element is now checked at its corners, mid-edges and centre, and where its Jacobian drops below a fifth of the straight element's, its mid-edge nodes go back onto the straight edges. A part's cells that are not face-connected to its largest piece (edge- or corner-only contacts, separate bits) are left out of the mesh instead of making it singular.
+- **A saved render opened with the window's default settings** shown on the left; it now shows the settings it was computed with.
+- **Stray scope-probe badges and meter leads on an empty circuit page** (left from another document); probes and leads are cleared when the document changes and not drawn on an empty page.
+
 ## [1.4.0] - 2026-11-23
 
 ### Added

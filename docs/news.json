@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-4-1",
+      "date": "2026-11-24",
+      "title": "1.4.1: render'daki hava gerçek hava, kablolar simülasyondaki gibi",
+      "body": "Bu sürümde:\n\n- **Render'daki hava gerçek hava:** kayıt boyunca zamanla çözülür; parçalar havayı kendi hareketleriyle iter, rüzgâr dünyadan gelir. Rüzgâr yoksa ve hiçbir şey kıpırdamıyorsa akış yoktur. Hava 3B duman olarak görünür.\n- **Rüzgâr tüneli testi** ayrı bir seçenek: hızı, yönü ve eğimi seçilir.\n- **Render'da kablolar** simülasyondaki iplerin kendisi; render sahnesi yalnızca izlenir.\n- **Servoların gerilmesi:** üstüne servo takılı bir servonun yükü artık görünür.\n- **Devre'nin alt panelleri** boyutlandırılır, kapanır, ayrı pencereye alınır.\n- **Dünyadaki kartlar** Devre sayfasından tek tıkla açılır; **Montaj** ne yaptığını anlatır; servo başlığına takılan kol başlığa oturur.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-4-0",
       "date": "2026-11-23",
       "title": "1.4.0: sıvılar gerçek fizikle akar",

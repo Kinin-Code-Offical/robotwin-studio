@@ -359,15 +359,29 @@ Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir
 **Hesaplananlar**
 
 - **Her kare:** her nesnenin konumu ve yönü, servo kolu ve motor mili açıları, hızlar, ivmeler, temas ve eklem kuvvetleri, her parçanın akım, gerilim, güç ve sıcaklık sinyalleri, devre düğümleri, seri port çıktısı.
-- **Gerilme:** işaretlediğiniz her parça, "gerilme kare hızında" (varsayılan 15 kare/s) ve en yüklü anlarda, o anki gerçek yükleriyle FEM ile çözülür. İnce uzun parçalarda kiriş elemanları kullanılır.
-- **Hava akışı:** bütün hareketli parçalar o anki konumlarında birlikte, 3B lattice-Boltzmann ile çözülür. Rüzgâr, dünyanın rüzgârı eksi montajın kendi hızıdır; montaj duruyorsa test hızı kullanılır. Sonuç montaja etkiyen kuvvet ve sürükleme katsayısıdır (Cd). Akış gerçek Reynolds sayısında çözülür; sonucun notları ne kadar güvenilir olduğunu yazar: sınır tabakanın çözülüp çözülmediği (y+), kuvvetin oturup oturmadığı ve ilk anın iki ızgarada çözülmesinden gelen ızgara belirsizliği. Çözücülerin teoriden sapması: [12. Doğrulama](12-dogrulama.md).
+- **Gerilme:** işaretlediğiniz her parça, "gerilme kare hızında" (varsayılan 15 kare/s) ve en yüklü anlarda, o anki gerçek yükleriyle FEM ile çözülür. İnce uzun parçalarda kiriş elemanları kullanılır. Gövdeler ve modellerin yanında servolar, motorlar ve kartlar da listededir. Üstüne bir şey takılı olanlar (ör. üstünde ikinci servo taşıyan servo) varsayılan olarak işaretlidir.
+- **Hava akışı (3B, zamanla):** dünyadaki gerçek hava, kaydın tamamı boyunca zamanla çözülür (3B lattice-Boltzmann). Parçaları kayıttaki gibi hareket eden, dünyaya sabit bir kutu kullanılır:
+  - hareket eden her parça havayı kendi yüzey hızıyla iter ve sürükler;
+  - dünyanın rüzgârı (esintileriyle) kutunun yüzlerinden girer;
+  - zemin bir duvardır;
+  - kutu gerçekten hareket eden parçaların çevresine kurulur, hücre en ince hareketli parçayı çözecek kadar küçüktür.
+
+  Hava başka hiçbir şeyle sürülmez. Dünyada rüzgâr yoksa ve hiçbir parça kıpırdamıyorsa akış da yoktur; **Günlük** bunu yazar. Hava, havayla taşınan **duman parçacıklarıyla** 3B gösterilir: her parçacık hızı yönünde kısa bir iz bırakır (mavi yavaş, kırmızı hızlı), durgun hava görünmez. Her karede havanın hareketli parçalara uyguladığı kuvvet de yazılır.
+- **Rüzgâr tüneli testi (isteğe bağlı):** dünyada olmayan sabit bir havayla ölçüm yapar. Montaj birkaç anda kayıttaki duruşunda tutulur ve seçtiğiniz **hız**, **yön** (0° = +X, 90° = +Y) ve **eğimde** hava üflenir. Sonuç montaja etkiyen kuvvet, sürükleme katsayısı (Cd) ve akım çizgileridir. Notlar sonucun ne kadar güvenilir olduğunu yazar:
+  - y+;
+  - kuvvetin oturup oturmadığı;
+  - iki ızgarada çözülen ilk andan gelen ızgara belirsizliği.
+
+  Çözücülerin teoriden sapması: [12. Doğrulama](12-dogrulama.md).
 - **Isınma:** kartlardaki bileşenlerin güç kaybından iletim, taşınım ve ışınım çözülür.
 
 **Oynatma**
 
 - **Oynat / duraklat:** Boşluk tuşu. **Kare kare ilerleme:** ← →. **Başa / sona:** Home / End. Hız ×0,05 ile ×2 arasında seçilir (ağır çekim).
 - **Renk:** gerilme (von Mises, deforme şekil büyütülmüş) ya da hız okları. **Ölçek:** render'ın en yüksek değeri ya da her malzemenin akma sınırı.
-- **Kuvvetler:** temas kuvvetleri turuncu, eklem kuvvetleri camgöbeği ok. **Hava:** montajın ortasından geçen hız kesiti (mavi durgun, sarı serbest akış, kırmızı hızlanan hava) ve aerodinamik kuvvet (mor ok).
+- **Kuvvetler:** temas kuvvetleri turuncu, eklem kuvvetleri camgöbeği ok. **Hava:** o anki duman (rüzgâr tünelinde akım çizgileri ve aerodinamik kuvvet, mor ok).
+- **Kablolar** render'da simülasyondaki iplerin kendisi olarak çizilir: sarkar, gerilir ve çekilen fiş yuvasından çıkar. Render sahnesi yalnızca izlenir; içindeki parçalar ve kablolar taşınamaz.
+- Kanal aramasında yazarken Boşluk ve ok tuşları metne gider; oynatma kısayolları ancak kutunun dışındayken çalışır.
 - **Grafikler:** kaydedilen her kanal. Grafiğe tıklayınca ya da sürükleyince o saniyeye atlanır.
 - **Parçalar · gerilme:** her parçanın en kötü anı ve emniyet katsayısı. Satıra tıklayınca o ana gidilir.
 - **Isı** ve **Günlük** sekmeleri; sonuçlar `.rwanalysis` ya da CSV olarak saklanır.

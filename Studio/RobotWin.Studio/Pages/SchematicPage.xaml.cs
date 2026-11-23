@@ -54,7 +54,7 @@ namespace RobotWin.Studio.Pages
             Canvas.MeterPartClicked += (_, part) =>
             {
                 W.Simulation.MeterPart = part.RefDes;
-                DockTabs.SelectedIndex = 1;
+                ShowDock(1);
                 BuildMeterPanel();
                 Meter.InvalidateVisual();
             };
@@ -62,17 +62,15 @@ namespace RobotWin.Studio.Pages
             W.Simulation.InstrumentsChanged += (_, _) => UpdateMeterPanel();
             _diagTimer.Tick += (_, _) =>
             {
-                if (W.Simulation.State == SimState.Running && DiagAuto.IsChecked == true && DockTabs.SelectedIndex == 2) RunDiagnosis();
+                if (W.Simulation.State == SimState.Running && DiagAuto.IsChecked == true && DockShowing(2)) RunDiagnosis();
             };
             _diagTimer.Start();
-            DockTabs.SelectionChanged += (_, e) =>
-            {
-                if (e.OriginalSource != DockTabs) return;
-                if (DockTabs.SelectedIndex == 2) RunDiagnosis();
-                if (DockTabs.SelectedIndex == 1) BuildMeterPanel();
-                if (DockTabs.SelectedIndex == 3) RefreshMonteCarloNets();
-            };
+            InitLayout();   // [dock] Pages/SchematicPage.Layout.cs
             SizeChanged += (_, _) => ApplyLayout();
+            IsVisibleChanged += (_, _) =>
+            {
+                if (IsVisible) ListWorldBoards();
+            };
 
             Canvas.SelectionChanged += (_, _) => BuildInspector();
             Canvas.ToolChanged += (_, _) => SyncTools();
@@ -143,7 +141,7 @@ namespace RobotWin.Studio.Pages
             }
 
             BuildPinPanel();
-            if (W.Simulation.Firmware.Count > 0) DockTabs.SelectedIndex = 2;
+            if (W.Simulation.Firmware.Count > 0) ShowDock(2);
         }
 
         // ================================================================ library
@@ -233,6 +231,35 @@ namespace RobotWin.Studio.Pages
             UndoButton.IsEnabled = W.CanUndo;
             RedoButton.IsEnabled = W.CanRedo;
             EmptyHint.Visibility = W.Schematic.Parts.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            ListWorldBoards();
+        }
+
+        /// <summary>
+        /// [boards] This page draws the project's circuit. A world (a template, a test bench) is a document of its own; when
+        /// one is open and this page is empty, its boards are listed here, each opened for its circuit and code in one click.
+        /// </summary>
+        private void ListWorldBoards()
+        {
+            WorldBoards.Children.Clear();
+            var world = W.ActiveWorld;
+            var boards = world == null || W.Schematic.Parts.Count > 0
+                ? new List<RobotTwin.CoreSim.Sandbox.WorldObject>()
+                : world.Objects.Where(o => o.Kind == RobotTwin.CoreSim.Sandbox.WorldObjectKind.Board
+                                           || (o.PartId != null && W.Library.Find(o.PartId)?.Symbol == SymbolKind.Board)).ToList();
+            WorldBoards.Visibility = boards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (boards.Count == 0) return;
+            WorldBoards.Children.Add(new TextBlock
+            {
+                Text = $"Açık dünya \u201C{world!.Title}\u201D projeden ayrı bir belgedir. Kartları:",
+                Style = (Style)FindResource("Text.Caption"), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8)
+            });
+            foreach (var o in boards.Take(8))
+            {
+                var b = new Button { Content = o.Name + " \u2014 devresini ve kodunu aç", Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Center, Padding = new Thickness(12, 4, 12, 4) };
+                var target = o;
+                b.Click += (_, _) => (Window.GetWindow(this) as MainWindow)?.OpenWorldBoard(target);
+                WorldBoards.Children.Add(b);
+            }
         }
 
         private void OnPreviewKey(object sender, KeyEventArgs e)
@@ -312,7 +339,7 @@ namespace RobotWin.Studio.Pages
         private void OnPlaceLeads(object sender, RoutedEventArgs e)
         {
             Canvas.BeginLeadPlacement(true);
-            DockTabs.SelectedIndex = 1;
+            ShowDock(1);
         }
 
         private void OnSpeedChanged(object sender, SelectionChangedEventArgs e)
@@ -365,7 +392,7 @@ namespace RobotWin.Studio.Pages
         private void OnToastAction(object sender, RoutedEventArgs e)
         {
             ToastHost.Visibility = Visibility.Collapsed;
-            DockTabs.SelectedIndex = 2;
+            ShowDock(2);
             RunDiagnosis();
             if (!string.IsNullOrEmpty(_toastPart)) Canvas.HighlightParts(new[] { _toastPart! });
         }
@@ -745,7 +772,7 @@ namespace RobotWin.Studio.Pages
                 open.Click += (_, _) =>
                 {
                     W.Simulation.MeterPart = part.RefDes;
-                    DockTabs.SelectedIndex = 1;
+                    ShowDock(1);
                     BuildMeterPanel();
                 };
                 Inspector.Children.Add(open);
@@ -1134,7 +1161,7 @@ namespace RobotWin.Studio.Pages
 
         private void MarkDiagnosisDirty()
         {
-            if (DockTabs.SelectedIndex == 2) RunDiagnosis();
+            if (DockShowing(2)) RunDiagnosis();
             else DiagHeader.Text = "Arıza tespiti •";
         }
 
@@ -1425,7 +1452,7 @@ namespace RobotWin.Studio.Pages
                         if (sim.Compiled?.NodeByNet.ContainsKey(name) == true) sim.AddVoltageProbe(name);
                     }
 
-                    DockTabs.SelectedIndex = 0;
+                    ShowDock(0);
                     break;
                 case "dmm":
                 {
@@ -1438,16 +1465,16 @@ namespace RobotWin.Studio.Pages
                         sim.SetMeterLead(false, gnd.Name, WireAnchor(gnd.Name));
                     }
 
-                    DockTabs.SelectedIndex = 1;
+                    ShowDock(1);
                     BuildMeterPanel();
                     break;
                 }
 
                 case "diag":
-                    DockTabs.SelectedIndex = 2;
+                    ShowDock(2);
                     break;
                 case "montecarlo":
-                    DockTabs.SelectedIndex = 3;
+                    ShowDock(3);
                     break;
                 case "library":
                     LibraryToggle.IsChecked = true;

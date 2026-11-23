@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -48,6 +49,7 @@ namespace RobotWin.Studio.Shell
         private const double Cx = 38;            // trace x (centre of the pads)
         private const double Row = 66;           // stage pitch
         private const double Pad = 38;           // pad size
+        private const double SeparateGap = 22;   // [rail] space and divider above the world, which is not on the project's trace
 
         private sealed class Stage
         {
@@ -128,8 +130,10 @@ namespace RobotWin.Studio.Shell
             AddStage("pcb", "PCB", "I.Pcb", 0x4CC07E, "Kartı yerleştir, yolları çiz, üretime hazırla (Ctrl+2)");
             AddStage("code", "Kod", "I.Chip", 0xA77BFF, "Kartların yazılımını yaz ve derle (Ctrl+3)");
             AddStage("model", "Modelle", "I.Part", 0xE0B04A, "Şase, braket, kutu: 3D parça modelle, birleştir, dünyaya gönder (Ctrl+4)");
-            AddStage("assembly", "Montaj", "I.Cube", 0xF08A3C, "Gövde, motorlar ve mekanik (Ctrl+5)");
-            AddStage("world", "Dünya", "I.World", 0x2FC2B0, "Hepsini bir arada gerçek fizikle dene (Ctrl+6)");
+            AddStage("assembly", "Montaj", "I.Cube", 0xF08A3C, "Bu projenin devresini gerçek parçalarla 3B montaja çevirir: kart, parçalar ve kablolar bir dünyada; gövde, motor ve mekaniği orada eklersiniz (Ctrl+5)");
+            // [rail] Worlds are documents of their own, not a step of the project: set apart, off the project's trace.
+            _line.Children.Add(new Border { Height = 1, Margin = new Thickness(18, SeparateGap / 2, 18, SeparateGap / 2 - 1), Background = Res<Brush>("B.Border") });
+            AddStage("world", "Dünya", "I.World", 0x2FC2B0, "Dünyalar (şablonlar, kendi test alanlarınız) projeden ayrı belgelerdir: hepsini bir arada gerçek fizikle deneyin (Ctrl+6)");
 
             var tools = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
             tools.Children.Add(Tool("library", "Kütüphane", "I.Library", "Parçalar, modeller, ayak izleri (Ctrl+7)"));
@@ -465,7 +469,8 @@ namespace RobotWin.Studio.Shell
 
             protected override void OnRender(DrawingContext dc)
             {
-                int n = _rail._stages.Count;
+                // The project's stages share the trace; the world (last) stands apart below a divider.
+                int n = _rail._stages.Count(s => s.Key != "world");
                 if (n == 0) return;
                 double top = 6 + 4 + Pad / 2;                 // centre of the first pad
                 double y0 = -8, y1 = top + (n - 1) * Row;      // from the mark down to the last pad
@@ -473,6 +478,7 @@ namespace RobotWin.Studio.Shell
                 dc.DrawLine(dim, new Point(Cx, y0), new Point(Cx, y1));
 
                 int ai = _rail._stages.FindIndex(s => s.Key == _rail._active);
+                if (ai >= n) ai = -1;   // the world lights only its own pad
                 if (ai >= 0)
                 {
                     var acc = _rail._stages[ai].Accent;
@@ -490,7 +496,7 @@ namespace RobotWin.Studio.Shell
                 for (int i = 0; i < n - 1 && _rail._expanded; i++)
                 {
                     double y = top + i * Row + Row / 2;
-                    var ring = i < ai ? new Pen(new SolidColorBrush(_rail._stages[ai].Accent), 1.5) : viaRing;
+                    var ring = ai >= 0 && i < ai ? new Pen(new SolidColorBrush(_rail._stages[ai].Accent), 1.5) : viaRing;
                     dc.DrawEllipse(viaFill, ring, new Point(Cx, y), 3.2, 3.2);
                 }
 

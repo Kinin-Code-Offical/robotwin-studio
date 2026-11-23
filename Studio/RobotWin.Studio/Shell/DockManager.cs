@@ -126,6 +126,7 @@ namespace RobotWin.Studio.Shell
             main.Children.Add(_rightStack);
             _leftSplit = ColumnSplitter(leftCol + 1);
             _rightSplit = ColumnSplitter(rightCol - 1);
+            StripButtons();
 
             Grid.SetRowSpan(_overlay, 99);
             Grid.SetColumnSpan(_overlay, 99);
@@ -582,6 +583,44 @@ namespace RobotWin.Studio.Shell
             Panel.SetZIndex(s, 10);
             _main.Children.Add(s);
             return s;
+        }
+
+        /// <summary>
+        /// Buttons at the right end of the bottom tab strip for the picked tab: its own window, its place (menu), hide it;
+        /// and one that folds the whole bottom pane away (the View menu's "Alt bölmeyi göster" brings it back).
+        /// </summary>
+        private void StripButtons()
+        {
+            if (_tabStrip.Parent is not Panel parent) return;
+            int at = parent.Children.IndexOf(_tabStrip);
+            var row = new DockPanel { Margin = _tabStrip.Margin, LastChildFill = true };
+            DockPanel.SetDock(row, DockPanel.GetDock(_tabStrip));
+            _tabStrip.Margin = new Thickness(0);
+            parent.Children.RemoveAt(at);
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(8, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
+            DockPanel.SetDock(buttons, System.Windows.Controls.Dock.Right);
+            DockItem? Picked() => _items.FirstOrDefault(i => i.Place == DockPlace.Bottom && i.Chip?.IsChecked == true);
+            var pop = IconButton("I.Window", 13, "Bu sekmeyi ayrı pencereye al");
+            pop.Click += (_, _) =>
+            {
+                if (Picked() is { } it) Float(it);
+            };
+            var more = IconButton("I.More", 13, "Bu sekmenin yeri: sol, sağ, alt bölme, ayrı pencere, gizli");
+            more.Click += (_, _) =>
+            {
+                if (Picked() is { } it) OpenMenu(more, it);
+            };
+            var close = IconButton("I.Close", 10, "Bu sekmeyi kapat (Görünüm menüsündeki panel düzeninden geri açılır)");
+            close.Click += (_, _) =>
+            {
+                if (Picked() is { } it) Hide(it);
+            };
+            var fold = IconButton("I.ChevronDown", 12, "Alt bölmeyi gizle (Görünüm → panel düzeni → Alt bölmeyi göster)");
+            fold.Click += (_, _) => BottomHidden = true;
+            foreach (var b in new[] { pop, more, close, fold }) buttons.Children.Add(b);
+            row.Children.Add(buttons);
+            row.Children.Add(_tabStrip);
+            parent.Children.Insert(at, row);
         }
 
         // ================================================================ side frames

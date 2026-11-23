@@ -1005,7 +1005,7 @@ namespace RobotWin.Studio.World
         {
             Focus();
             var p = e.GetPosition(this);
-            if (EditorMouseDown(e, p)) return; // [terrain] terrain brush, prop placement, gizmo
+            if (!ReadOnly && EditorMouseDown(e, p)) return; // [terrain] terrain brush, prop placement, gizmo
             if (e.ChangedButton != MouseButton.Left)
             {
                 _orbit = p;
@@ -1030,7 +1030,7 @@ namespace RobotWin.Studio.World
             }
 
             var (id, pin) = Pick(p);
-            switch (Tool)
+            switch (ReadOnly ? WorldTool.Select : Tool)
             {
                 case WorldTool.Cable:
                     if (id != null && pin != null)
@@ -1066,7 +1066,7 @@ namespace RobotWin.Studio.World
                     if (id != null && World?.Find(id) is { } o)
                     {
                         Select(id);
-                        if ((Session == null || Session.State == Simulation.SimState.Stopped) && !EditorLocked(o)) // [terrain] locked objects stay
+                        if (!ReadOnly && (Session == null || Session.State == Simulation.SimState.Stopped) && !EditorLocked(o)) // [terrain] locked objects stay
                         {
                             _drag = id;
                             _dragMoved = false;

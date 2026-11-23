@@ -359,15 +359,29 @@ Real-time running has to keep up with the screen. A **render** recomputes a reco
 **What is computed**
 
 - **Every frame:** every object's position and orientation, servo horn and motor shaft angles, velocities, accelerations, contact and joint forces, every part's current, voltage, power and temperature signals, circuit nodes, serial output.
-- **Stress:** every part you mark is solved with FEM at the "stress frame rate" (default 15 frames/s) and at its most loaded moments, with its real loads at that instant. Slender parts use beam elements.
-- **Air flow:** all moving parts are solved together at their current positions with 3D lattice-Boltzmann. The wind is the world's wind minus the assembly's own velocity; a test speed is used if the assembly stands still. The result is the force on the assembly and its drag coefficient (Cd). The flow is solved at the real Reynolds number; the result's notes say how far to trust it: whether the boundary layer is resolved (y+), whether the force settled, and the grid uncertainty from solving the first instant on two grids. How far each solver is from theory: [12. Validation](12-validation.md).
+- **Stress:** every part you mark is solved with FEM at the "stress frame rate" (default 15 frames/s) and at its most loaded moments, with its real loads at that instant. Slender parts use beam elements. Besides bodies and models, servos, motors and boards are listed too; the ones something is fastened to (a servo carrying a second servo, say) are marked by default.
+- **Air flow (3D, over time):** the real air of the world, solved through the whole recording (3D lattice-Boltzmann) in a box fixed to the world in which the parts move exactly as recorded:
+  - every moving part pushes and drags the air with its own surface velocity;
+  - the world's wind (with its gusts) blows in at the faces;
+  - the ground is a wall;
+  - the box is fitted around the parts that really move, with cells small enough for the thinnest moving part.
+
+  Nothing else drives the air: with no wind and nothing moving there is no flow, and the **Log** says so. The air is shown in 3D as **smoke** carried by it: each particle leaves a short streak along its velocity (blue slow, red fast), and still air stays invisible. Each frame also gives the force of the air on the moving parts.
+- **Wind-tunnel test (optional):** a measurement with steady air the world does not have. The assembly is held at its recorded pose at a few instants and air of the chosen **speed**, **direction** (0° = +X, 90° = +Y) and **elevation** is blown at it. The result is the force on the assembly, its drag coefficient (Cd) and streamlines. The notes say how far to trust it:
+  - y+;
+  - whether the force settled;
+  - the grid uncertainty from the first instant solved on two grids.
+
+  How far each solver is from theory: [12. Validation](12-validation.md).
 - **Heating:** conduction, convection and radiation from the components' power losses on the boards.
 
 **Playback**
 
 - **Play / pause:** Space. **Frame by frame:** ← →. **Start / end:** Home / End. Speed from ×0.05 to ×2 (slow motion).
 - **Colour:** stress (von Mises, deformed shape exaggerated) or velocity arrows. **Scale:** the render's maximum, or each material's yield strength.
-- **Forces:** contact forces as orange arrows, joint forces as cyan arrows. **Air:** a velocity slice through the middle of the assembly (blue still, yellow free stream, red accelerated air) and the aerodynamic force (purple arrow).
+- **Forces:** contact forces as orange arrows, joint forces as cyan arrows. **Air:** the smoke at that instant (in the wind tunnel: streamlines and the aerodynamic force, purple arrow).
+- **Cables** are drawn in the render as the simulated ropes themselves: they sag, tighten, and a pulled plug comes out of its pin. The render scene is for watching only; its parts and cables cannot be moved.
+- While you type in the channel search, Space and the arrow keys go to the text; the playback shortcuts work outside the box.
 - **Graphs:** every recorded channel. Clicking or dragging on a graph jumps to that second.
 - **Parçalar · gerilme** (parts · stress): each part's worst moment and safety factor. Clicking a row goes to that moment.
 - **Isı** (heat) and **Günlük** (log) tabs; results are saved as `.rwanalysis` or CSV.

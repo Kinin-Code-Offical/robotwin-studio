@@ -21,6 +21,9 @@ namespace RobotWin.Studio.World
         /// the previous recorded frame (null for the first one).
         /// </summary>
         (float[] Positions, double Spacing, string Kind, float[]? Velocities)? LiquidAt(string objectId) => null;
+
+        /// <summary>[render] A cable's simulated rope at the replay frame (null when it was not recorded).</summary>
+        (System.Collections.Generic.IReadOnlyList<Vec3> Points, bool PlugA, bool PlugB)? CableAt(string cableId) => null;
     }
 
     // [render] The scene can show a rendered run: objects take their recorded poses and an overlay

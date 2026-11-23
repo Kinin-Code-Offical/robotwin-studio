@@ -185,11 +185,10 @@ namespace RobotTwin.CoreSim.Analysis
         }
 
         /// <summary>
-        /// 3D lattice-Boltzmann flow around every moving part together, at a few instants of the
-        /// recording: the parts sit where they were, the air comes at the assembly with the
-        /// world's wind minus the assembly's own velocity (or the test speed along the chosen axis
-        /// when it barely moves). Result per keyframe: force on the assembly (N, world frame), its
-        /// drag coefficient and the flow speed field for the replay.
+        /// Wind-tunnel test: 3D lattice-Boltzmann flow around every moving part together, at a few instants of the
+        /// recording. The parts are held where they were and air of the test speed is blown at them from the chosen
+        /// direction (<see cref="AnalysisSettings.TunnelAir"/>). Result per keyframe: force on the assembly (N, world
+        /// frame), its drag coefficient, the grid uncertainty and streamlines. The real air over time is <see cref="AirFlow"/>.
         /// </summary>
         public static List<CfdResult> AeroAssembly(WorldDocument world, PhysicsScene? scene, AnalysisResult r, AnalysisSettings s,
             CancellationToken cancel, Action<double>? progress = null, WorldPhysics? physics = null)
@@ -221,8 +220,6 @@ namespace RobotTwin.CoreSim.Analysis
         {
             var store = r.Channels;
             var solids = new List<Solid>();
-            Vec3 momentum = Vec3.Zero;
-            double mass = 0;
             foreach (var p in parts)
             {
                 var pose = RecordedPose(store, p.ObjectId, sample);
@@ -230,16 +227,12 @@ namespace RobotTwin.CoreSim.Analysis
                 var q = pose?.Orientation ?? p.Orientation;
                 // The part's solid is in its body frame; the body centre is offset from the object origin.
                 solids.Add(p.Solid.Transformed(BodyCentre(p, pos, q), q * p.BodyTurn));
-                double V(string key) => store.Find("body/" + p.ObjectId + "/" + key) is { } c && sample < c.Count ? c[sample] : 0;
-                momentum += new Vec3(V("vx"), V("vy"), V("vz")) * p.Mass;
-                mass += p.Mass;
             }
 
-            var velocity = mass > 0 ? momentum / mass : Vec3.Zero;
-            var wind = new Vec3(world.Environment.WindX, world.Environment.WindY, world.Environment.WindZ);
-            var rel = wind - velocity;
-            if (rel.Length < 0.2) rel = AxisVector(s.AeroAxis) * s.AeroSpeed;
+            // Wind tunnel: the assembly is held at this instant's pose and the chosen air is blown at it.
+            var rel = s.TunnelAir;
             double speed = rel.Length;
+            if (speed < 1e-3) return null;
             var dir = rel / speed;
 
             // Grid frame: x along the relative wind, z as close to world up as possible.

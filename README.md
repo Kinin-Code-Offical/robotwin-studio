@@ -13,7 +13,7 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
-> **1.4.0'da yeni:** Sıvılar gerçek fizikle akar: su, yağ, bal … gerçek yoğunluk, viskozite ve yüzey gerilimiyle parçacık olarak; kaba basınç ve ağırlık, içindekilere kaldırma kuvveti uygular, malzemeye göre ıslatır, su gibi görünür. **Su bardağı** şablonunda ESP32 ve servo suyu kâseye döker. Render her şeyi tam hesaplar (sıvı 0,1 ms adımda, 40 000 parçacığa kadar; ESP32 kartları render'da da çalışır). Akış analizi gerçek Reynolds sayısında. Her çözücünün teoriden sapması [Doğrulama](#doğrulama-teoriden-ne-kadar-sapıyor) tablosunda. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
+> **1.4.1'de yeni:** Render'daki hava artık gerçek hava: kayıt boyunca zamanla çözülür, parçalar havayı kendi hareketleriyle iter, rüzgâr dünyadan gelir; rüzgâr yoksa ve hiçbir şey kıpırdamıyorsa akış yoktur. Hava 3B duman olarak görünür; rüzgâr tüneli testi yönüyle ayrı bir seçenek. Render'da kablolar simülasyondaki iplerin kendisi, servoların gerilmesi hesaplanır, Devre'nin alt panelleri taşınır ve ayrı pencereye alınır. **1.4.0:** sıvılar gerçek fizikle akar. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
 
 ![Başlangıç sayfası](docs/images/home.png)
 
@@ -168,7 +168,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.4.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.4.1.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -307,8 +307,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.0
-# -> builds\installer\RobotWinStudio-Setup-1.4.0.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.1
+# -> builds\installer\RobotWinStudio-Setup-1.4.1.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -387,7 +387,7 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
-> **New in 1.4.0:** Liquids flow with real physics: water, oil, honey … as particles at their real density, viscosity and surface tension; they press on and weigh down their containers, buoy what is in them, wet by material and look like liquids. In the **glass of water** template an ESP32 and a servo pour water into a bowl. Renders compute everything in full (the liquid at a 0.1 ms step with up to 40 000 particles; ESP32 boards now run in renders too). Flow analysis runs at the real Reynolds number. Every solver's deviation from theory is in the [validation](#validation-how-far-from-theory) table. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
+> **New in 1.4.1:** The render's air is now the real air: solved over the whole recording, pushed by the parts' own motion, blown by the world's wind; with no wind and nothing moving there is no flow. The air is shown as 3D smoke; the wind-tunnel test is a separate option with a direction. Cables in a render are the simulated ropes, servos get their stress, and the circuit page's bottom panels can be moved and opened in their own windows. **1.4.0:** liquids flow with real physics. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
 
 ### What's inside
 
@@ -466,7 +466,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.0` → `builds\installer\RobotWinStudio-Setup-1.4.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.1` → `builds\installer\RobotWinStudio-Setup-1.4.1.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

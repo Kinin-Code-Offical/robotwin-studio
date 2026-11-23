@@ -9,7 +9,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
             <RowDefinition Height="*" MinHeight="120"/>
-            <RowDefinition Height="1"/>
+            <RowDefinition x:Name="DockLineRow" Height="1"/>
             <RowDefinition x:Name="DockRow" Height="300" MinHeight="36"/>
         </Grid.RowDefinitions>
 
@@ -101,7 +101,15 @@
                 <ColumnDefinition x:Name="InspectorColumn" Width="288" MinWidth="220"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Canvas -->
+            <!-- Canvas (with room on both sides for docked panels: Pages/SchematicPage.Layout.cs) -->
+            <Grid x:Name="CanvasArea" Grid.Column="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="0"/>
+            </Grid.ColumnDefinitions>
             <Grid Grid.Column="2">
                 <ed:SchematicCanvas x:Name="Canvas"/>
                 <StackPanel x:Name="EmptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" MaxWidth="340">
@@ -109,6 +117,7 @@
                     <TextBlock Style="{StaticResource Text.Caption}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="17"
                                Text="Soldan bir parça seçip tuvale tıklayın. Bir pinden başlayıp başka bir pine tıklayarak kablo çekin."/>
                 </StackPanel>
+                <StackPanel x:Name="WorldBoards" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,170,0,0" MaxWidth="420" Visibility="Collapsed"/>
                 <Border x:Name="ToastHost" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="12,12,12,0" Visibility="Collapsed"
                         Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="12,8"
                         Effect="{StaticResource E.Popup}" Panel.ZIndex="5">
@@ -118,6 +127,7 @@
                         <Button x:Name="ToastAction" Style="{StaticResource Btn.Ghost}" Content="Neden?" Margin="10,0,0,0" Padding="8,2" Visibility="Collapsed" Click="OnToastAction"/>
                     </StackPanel>
                 </Border>
+            </Grid>
             </Grid>
 
             <!-- Library -->
@@ -162,99 +172,90 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="2" Background="{StaticResource B.Border}"/>
-        <GridSplitter Grid.Row="2" Grid.RowSpan="2" VerticalAlignment="Top" HorizontalAlignment="Stretch" Height="4" Margin="0,-2,0,0"
-                      Background="Transparent" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Cursor="SizeNS"/>
+        <GridSplitter x:Name="DockSplitter" Grid.Row="2" Height="7" Margin="0,-3" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows"
+                      ResizeBehavior="PreviousAndNext" Cursor="SizeNS" Panel.ZIndex="5" ToolTip="Sürükleyerek alt bölmeyi büyütün / küçültün"/>
+        <Border x:Name="DockLine" Grid.Row="2" Background="{StaticResource B.Border}" IsHitTestVisible="False"/>
 
-        <!-- ================= Dock ================= -->
-        <TabControl x:Name="DockTabs" Grid.Row="3" Margin="0,2,0,0">
-            <TabItem Header="Osiloskop">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="200"/>
-                        <ColumnDefinition x:Name="ScopePanelColumn" Width="318"/>
-                    </Grid.ColumnDefinitions>
-                    <sim:ScopeView x:Name="Scope" Margin="8,8,4,8"/>
-                    <Border x:Name="ScopePanelHost" Grid.Column="1" BorderBrush="{StaticResource B.Border}" BorderThickness="1,0,0,0"/>
-                </Grid>
-            </TabItem>
-            <TabItem Header="Multimetre">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="MeterColumn" Width="470"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <sim:MultimeterView x:Name="Meter" Margin="6,4,0,4"/>
-                    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="MeterPanel" Margin="16,10,16,10"/>
-                    </ScrollViewer>
-                </Grid>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock x:Name="DiagHeader" Text="Arıza tespiti"/>
-                </TabItem.Header>
-                <DockPanel>
-                    <DockPanel DockPanel.Dock="Top" Margin="12,8,12,4">
-                        <Button DockPanel.Dock="Left" Content="Analiz et" Click="OnAnalyze" Padding="12,3"/>
-                        <CheckBox x:Name="DiagAuto" DockPanel.Dock="Left" Style="{StaticResource Switch}" Content="Simülasyonda canlı" IsChecked="True" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="DiagSummary" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
-                    </DockPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="DiagList" Margin="12,4,12,10"/>
-                    </ScrollViewer>
-                </DockPanel>
-            </TabItem>
-            <TabItem Header="Monte Carlo">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="250"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="McPanel" Margin="14,8,10,10"/>
-                    </ScrollViewer>
-                    <DockPanel Grid.Column="1" Margin="4,8,10,8">
-                        <TextBlock x:Name="McStats" DockPanel.Dock="Bottom" Style="{StaticResource Text.Mono}" FontSize="12" Margin="4,6,0,0" TextWrapping="Wrap"/>
-                        <sim:HistogramView x:Name="Histogram"/>
-                    </DockPanel>
-                </Grid>
-            </TabItem>
-            <TabItem Header="Kart pinleri">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="PinPanel" Margin="14,10"/>
+        <!-- ================= Dock: tabs the user can resize, hide, move to a side or into a window (Pages/SchematicPage.Layout.cs) ================= -->
+        <DockPanel x:Name="BottomArea" Grid.Row="3">
+            <StackPanel x:Name="DockTabs" DockPanel.Dock="Top" Orientation="Horizontal" Margin="12,6,0,4">
+                <RadioButton x:Name="DockScope" Style="{StaticResource Chip}" GroupName="schdock" Content="Osiloskop" IsChecked="True"/>
+                <RadioButton x:Name="DockMeter" Style="{StaticResource Chip}" GroupName="schdock" Content="Multimetre" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockDiag" Style="{StaticResource Chip}" GroupName="schdock" Margin="4,0,0,0"><TextBlock x:Name="DiagHeader" Text="Arıza tespiti"/></RadioButton>
+                <RadioButton x:Name="DockMc" Style="{StaticResource Chip}" GroupName="schdock" Content="Monte Carlo" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockPins" Style="{StaticResource Chip}" GroupName="schdock" Content="Kart pinleri" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockSerial" Style="{StaticResource Chip}" GroupName="schdock" Content="Seri monitör" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockLog" Style="{StaticResource Chip}" GroupName="schdock" Margin="4,0,0,0"><TextBlock x:Name="LogHeader" Text="Olaylar"/></RadioButton>
+            </StackPanel>
+            <Grid x:Name="DockHost">
+            <Grid x:Name="ScopePane">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="200"/>
+                    <ColumnDefinition x:Name="ScopePanelColumn" Width="318"/>
+                </Grid.ColumnDefinitions>
+                <sim:ScopeView x:Name="Scope" Margin="8,8,4,8"/>
+                <Border x:Name="ScopePanelHost" Grid.Column="1" BorderBrush="{StaticResource B.Border}" BorderThickness="1,0,0,0"/>
+            </Grid>
+            <Grid Visibility="Collapsed" x:Name="MeterPane">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="MeterColumn" Width="470"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <sim:MultimeterView x:Name="Meter" Margin="6,4,0,4"/>
+                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="MeterPanel" Margin="16,10,16,10"/>
                 </ScrollViewer>
-            </TabItem>
-            <TabItem Header="Seri monitör">
-                <DockPanel Margin="12,10">
-                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                        <Button DockPanel.Dock="Right" Content="Gönder" Margin="8,0,0,0" Click="OnSerialSend"/>
-                        <Button DockPanel.Dock="Right" Content="Temizle" Margin="8,0,0,0" Click="OnSerialClear" Style="{StaticResource Btn.Ghost}"/>
-                        <TextBlock x:Name="BaudText" DockPanel.Dock="Right" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                        <TextBox x:Name="SerialInput" Tag="Karta gönder (Enter)" KeyDown="OnSerialKey" FontFamily="{StaticResource F.Mono}"/>
-                    </DockPanel>
-                    <TextBox x:Name="SerialOutput" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextWrapping="Wrap"
-                             VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Background="{StaticResource B.Canvas}"
-                             Foreground="{StaticResource B.Text}" Padding="10,8"/>
+            </Grid>
+            <DockPanel Visibility="Collapsed" x:Name="DiagPane">
+                <DockPanel DockPanel.Dock="Top" Margin="12,8,12,4">
+                    <Button DockPanel.Dock="Left" Content="Analiz et" Click="OnAnalyze" Padding="12,3"/>
+                    <CheckBox x:Name="DiagAuto" DockPanel.Dock="Left" Style="{StaticResource Switch}" Content="Simülasyonda canlı" IsChecked="True" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="DiagSummary" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
                 </DockPanel>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock x:Name="LogHeader" Text="Olaylar"/>
-                </TabItem.Header>
-                <ListBox x:Name="LogList" Margin="10,6">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{StaticResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="12"/>
-                                <TextBlock Text="{Binding KindText}" Width="64" Foreground="{StaticResource B.TextSecondary}" FontSize="12"/>
-                                <TextBlock Text="{Binding Device}" Width="96" Foreground="{StaticResource B.Text}" FontSize="12"/>
-                                <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </TabItem>
-        </TabControl>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="DiagList" Margin="12,4,12,10"/>
+                </ScrollViewer>
+            </DockPanel>
+            <Grid Visibility="Collapsed" x:Name="McPane">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="McPanel" Margin="14,8,10,10"/>
+                </ScrollViewer>
+                <DockPanel Grid.Column="1" Margin="4,8,10,8">
+                    <TextBlock x:Name="McStats" DockPanel.Dock="Bottom" Style="{StaticResource Text.Mono}" FontSize="12" Margin="4,6,0,0" TextWrapping="Wrap"/>
+                    <sim:HistogramView x:Name="Histogram"/>
+                </DockPanel>
+            </Grid>
+            <ScrollViewer Visibility="Collapsed" x:Name="PinsPane" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="PinPanel" Margin="14,10"/>
+            </ScrollViewer>
+            <DockPanel Visibility="Collapsed" x:Name="SerialPane" Margin="12,10">
+                <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Content="Gönder" Margin="8,0,0,0" Click="OnSerialSend"/>
+                    <Button DockPanel.Dock="Right" Content="Temizle" Margin="8,0,0,0" Click="OnSerialClear" Style="{StaticResource Btn.Ghost}"/>
+                    <TextBlock x:Name="BaudText" DockPanel.Dock="Right" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <TextBox x:Name="SerialInput" Tag="Karta gönder (Enter)" KeyDown="OnSerialKey" FontFamily="{StaticResource F.Mono}"/>
+                </DockPanel>
+                <TextBox x:Name="SerialOutput" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextWrapping="Wrap"
+                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Background="{StaticResource B.Canvas}"
+                         Foreground="{StaticResource B.Text}" Padding="10,8"/>
+            </DockPanel>
+            <ListBox Visibility="Collapsed" x:Name="LogList" Margin="10,6">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{StaticResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="12"/>
+                            <TextBlock Text="{Binding KindText}" Width="64" Foreground="{StaticResource B.TextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding Device}" Width="96" Foreground="{StaticResource B.Text}" FontSize="12"/>
+                            <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            </Grid>
+        </DockPanel>
     </Grid>
 </UserControl>

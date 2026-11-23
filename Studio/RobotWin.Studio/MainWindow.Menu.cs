@@ -202,6 +202,9 @@ namespace RobotWin.Studio
             var panels = new MenuItem { Header = "Dünya panelleri" };   // [dock] where the palette, inspector and bottom tabs sit
             _world.FillLayoutMenu(panels);
             m.Items.Add(panels);
+            var circuitPanels = new MenuItem { Header = "Devre panelleri" };   // [dock] oscilloscope, multimeter, serial monitor … tabs
+            _schematic.FillLayoutMenu(circuitPanels);
+            m.Items.Add(circuitPanels);
             m.Items.Add(new Separator());
             m.Items.Add(Check("Odak modu", null, _focusMode, v => SetFocusMode(v)));
             m.Items.Add(Check("Tam ekran", "F11", _fullScreen, _ => ToggleFullScreen()));

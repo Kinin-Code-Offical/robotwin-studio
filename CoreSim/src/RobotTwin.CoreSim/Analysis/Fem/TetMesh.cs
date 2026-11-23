@@ -33,6 +33,9 @@ namespace RobotTwin.CoreSim.Analysis.Fem
         /// <summary>Corner nodes that could not be moved onto the curved surface (would invert an element).</summary>
         public int UnsnappedNodes { get; private set; }
 
+        /// <summary>Cells left out because they were not face-connected to the largest piece of the part.</summary>
+        public int DroppedCells { get; private set; }
+
         public double Volume()
         {
             double v = 0;
@@ -72,12 +75,69 @@ namespace RobotTwin.CoreSim.Analysis.Fem
                 keep[(k * ny + j) * nx + i] = solid.Distance(c) < 0;
             }
 
+            // Cells joined only at an edge or a corner, or not at all (a servo's case, flange and horn as separate pieces),
+            // would be mechanisms or floating islands: the stiffness matrix is singular and the stresses meaningless. Only the
+            // largest face-connected piece is meshed; loads on what is left out go to the nearest surface of the rest.
+            int dropped = KeepLargestPiece(keep, nx, ny, nz);
             var mesh = BuildFromCells(nx, ny, nz, hx, hy, hz, o, keep);
+            mesh.DroppedCells = dropped;
             mesh.ElementSize = Math.Min(hx, Math.Min(hy, hz));
             mesh.Snap(solid);
             if (order == 2) mesh.MakeQuadratic(solid);
             mesh.FindSurface();
             return mesh;
+        }
+
+        /// <summary>Keeps only the largest face-connected group of kept cells; returns how many cells were dropped.</summary>
+        private static int KeepLargestPiece(bool[] keep, int nx, int ny, int nz)
+        {
+            var label = new int[keep.Length];
+            var sizes = new List<int> { 0 };
+            var stack = new Stack<int>();
+            for (int s = 0; s < keep.Length; s++)
+            {
+                if (!keep[s] || label[s] != 0) continue;
+                int id = sizes.Count, count = 0;
+                label[s] = id;
+                stack.Push(s);
+                while (stack.Count > 0)
+                {
+                    int c = stack.Pop();
+                    count++;
+                    int i = c % nx, j = c / nx % ny, k = c / (nx * ny);
+                    void Visit(int ii, int jj, int kk)
+                    {
+                        if (ii < 0 || jj < 0 || kk < 0 || ii >= nx || jj >= ny || kk >= nz) return;
+                        int n = (kk * ny + jj) * nx + ii;
+                        if (!keep[n] || label[n] != 0) return;
+                        label[n] = id;
+                        stack.Push(n);
+                    }
+
+                    Visit(i - 1, j, k);
+                    Visit(i + 1, j, k);
+                    Visit(i, j - 1, k);
+                    Visit(i, j + 1, k);
+                    Visit(i, j, k - 1);
+                    Visit(i, j, k + 1);
+                }
+
+                sizes.Add(count);
+            }
+
+            if (sizes.Count <= 2) return 0;
+            int best = 1;
+            for (int id = 2; id < sizes.Count; id++)
+                if (sizes[id] > sizes[best]) best = id;
+            int dropped = 0;
+            for (int c = 0; c < keep.Length; c++)
+            {
+                if (!keep[c] || label[c] == best) continue;
+                keep[c] = false;
+                dropped++;
+            }
+
+            return dropped;
         }
 
         /// <summary>Structured mesh of a box [min, max] with nx·ny·nz cells.</summary>
@@ -268,6 +328,92 @@ namespace RobotTwin.CoreSim.Analysis.Fem
             }
 
             Order = 2;
+            if (solid != null) StraightenBadElements();
+        }
+
+        /// <summary>Mid-edge nodes put back on the straight edge because the curved element would have been distorted.</summary>
+        public int StraightenedNodes { get; private set; }
+
+        /// <summary>
+        /// A curved (T10) element is only valid while its Jacobian stays positive and well away from zero everywhere inside
+        /// it; moving mid-edge nodes onto the true surface next to an already snapped, thin corner element can nearly fold
+        /// it, and the stresses there blow up (a 0.02 mm displacement read as 10¹³ MPa). Each element is checked at its
+        /// corners, mid-edges and centre; where the Jacobian drops below a fifth of the straight element's, its mid-edge
+        /// nodes go back to the straight midpoints (always valid when the corners are).
+        /// </summary>
+        private void StraightenBadElements()
+        {
+            var probes = new List<double[]>
+            {
+                new[] { 1.0, 0, 0, 0 }, new[] { 0, 1.0, 0, 0 }, new[] { 0, 0, 1.0, 0 }, new[] { 0, 0, 0, 1.0 },
+                new[] { 0.25, 0.25, 0.25, 0.25 }
+            };
+            for (int k = 0; k < 6; k++)
+            {
+                var l = new double[4];
+                l[Edges[k, 0]] = 0.5;
+                l[Edges[k, 1]] = 0.5;
+                probes.Add(l);
+            }
+
+            var straight = new HashSet<int>();
+            for (int pass = 0; pass < 4; pass++)
+            {
+                bool changed = false;
+                foreach (var q in Elements)
+                {
+                    double vol = TetVolume(Nodes[q[0]], Nodes[q[1]], Nodes[q[2]], Nodes[q[3]]);
+                    double reference = 6 * Math.Abs(vol);
+                    if (reference <= 0) continue;
+                    double worst = double.MaxValue;
+                    foreach (var l in probes) worst = Math.Min(worst, DetJ(q, l) * Math.Sign(vol));
+                    if (worst >= 0.2 * reference) continue;
+                    for (int k = 0; k < 6; k++)
+                    {
+                        int m = q[4 + k];
+                        var mid = (Nodes[q[Edges[k, 0]]] + Nodes[q[Edges[k, 1]]]) * 0.5;
+                        if ((Nodes[m] - mid).LengthSquared < 1e-24) continue;
+                        Nodes[m] = mid;
+                        straight.Add(m);
+                        changed = true;
+                    }
+                }
+
+                if (!changed) break;
+            }
+
+            StraightenedNodes = straight.Count;
+        }
+
+        /// <summary>det(∂x/∂ξ) of a T10 element at volume coordinates l (ξ = L2, L3, L4).</summary>
+        private double DetJ(int[] q, double[] l)
+        {
+            // dN/dL_i for every node, then dx/dξ_a = Σ x (dN/dL_{a+1} − dN/dL_1).
+            var j = new double[9];
+            void Add(Vec3 x, double d1, double d2, double d3, double d4)
+            {
+                double a = d2 - d1, b = d3 - d1, c = d4 - d1;
+                j[0] += x.X * a; j[1] += x.X * b; j[2] += x.X * c;
+                j[3] += x.Y * a; j[4] += x.Y * b; j[5] += x.Y * c;
+                j[6] += x.Z * a; j[7] += x.Z * b; j[8] += x.Z * c;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                double d = 4 * l[i] - 1;
+                Add(Nodes[q[i]], i == 0 ? d : 0, i == 1 ? d : 0, i == 2 ? d : 0, i == 3 ? d : 0);
+            }
+
+            for (int k = 0; k < 6; k++)
+            {
+                int a = Edges[k, 0], b = Edges[k, 1];
+                var dl = new double[4];
+                dl[a] = 4 * l[b];
+                dl[b] = 4 * l[a];
+                Add(Nodes[q[4 + k]], dl[0], dl[1], dl[2], dl[3]);
+            }
+
+            return j[0] * (j[4] * j[8] - j[5] * j[7]) - j[1] * (j[3] * j[8] - j[5] * j[6]) + j[2] * (j[3] * j[7] - j[4] * j[6]);
         }
 
         private void FindSurface()

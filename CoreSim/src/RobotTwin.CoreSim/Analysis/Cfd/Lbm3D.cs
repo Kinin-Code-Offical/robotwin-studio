@@ -107,6 +107,37 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
         public double SpongeViscosity { get; set; } = 0.03;
 
         public double Ux0 { get; set; }
+
+        /// <summary>
+        /// [air] A box in still or moving ambient air instead of a wind tunnel: there is no inlet, and every face is a far
+        /// field. A population entering along the ambient air's direction carries the ambient air
+        /// (<see cref="AmbientX"/>, …); every other one enters at ambient pressure (ρ = 1) with the velocity the edge
+        /// already has, so air pushed by a moving part leaves the box freely.
+        /// </summary>
+        public bool WorldBox { get; set; }
+
+        /// <summary>[air] Ambient air velocity at the faces of a <see cref="WorldBox"/> (lattice units).</summary>
+        public double AmbientX { get; set; }
+
+        public double AmbientY { get; set; }
+        public double AmbientZ { get; set; }
+
+        /// <summary>
+        /// [air] Velocity of the solid surface in each solid cell (lattice units, x, y, z per cell; null = every wall at
+        /// rest). A moving wall gives the air its own velocity (Ladd 1994): air is pushed and dragged by moving parts.
+        /// </summary>
+        public float[]? WallVelocity { get; set; }
+
+        /// <summary>
+        /// [air] Signed distance to the nearest solid surface per cell (cells; negative inside). When set and no
+        /// <see cref="SetWallFractions"/> table exists, each fluid–solid link takes its true wall position Δ = d₀/(d₀ − d₁)
+        /// from it, so a moving part keeps a curved wall without rebuilding a table.
+        /// </summary>
+        public float[]? WallDistance { get; set; }
+
+        /// <summary>[air] Only links into these solid cells add to <see cref="BodyFx"/> (null = every solid).</summary>
+        public bool[]? ForceMask { get; set; }
+
         public bool[] Solid { get; }
         public float[] Ux { get; }
         public float[] Uy { get; }
@@ -133,6 +164,34 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
         {
             int n = Nx * Ny * Nz, i = Index(x, y, z);
             for (int q = 0; q < 19; q++) _f[q * n + i] = (float)Equilibrium(q, 1, ux, uy, uz);
+        }
+
+        /// <summary>
+        /// [air] A cell a moving part has just left becomes air again: it starts at equilibrium with the density of the
+        /// air around it and the velocity of the wall that left it. Set <see cref="Solid"/>[i] = false as well.
+        /// </summary>
+        public void Uncover(int i, double ux, double uy, double uz)
+        {
+            int nx = Nx, ny = Ny, nz = Nz, n = nx * ny * nz;
+            int x = i % nx, y = i / nx % ny, z = i / (nx * ny);
+            double rho = 0;
+            int count = 0;
+            for (int q = 1; q < 7; q++)
+            {
+                int ax = x + Cx[q], ay = y + Cy[q], az = z + Cz[q];
+                if (ax < 0 || ay < 0 || az < 0 || ax >= nx || ay >= ny || az >= nz) continue;
+                int a = (az * ny + ay) * nx + ax;
+                if (Solid[a]) continue;
+                rho += Rho[a];
+                count++;
+            }
+
+            rho = count > 0 ? rho / count : 1;
+            for (int q = 0; q < 19; q++) _f[q * n + i] = (float)Equilibrium(q, rho, ux, uy, uz);
+            Rho[i] = (float)rho;
+            Ux[i] = (float)ux;
+            Uy[i] = (float)uy;
+            Uz[i] = (float)uz;
         }
 
         /// <summary>
@@ -201,6 +260,13 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
             var wall = _wall;
             var feqIn = new double[19];
             for (int q = 0; q < 19; q++) feqIn[q] = Equilibrium(q, 1, u0, 0, 0);
+            bool box = WorldBox;
+            double ax0 = AmbientX, ay0 = AmbientY, az0 = AmbientZ;
+            var feqAmb = new double[19];
+            for (int q = 0; q < 19; q++) feqAmb[q] = Equilibrium(q, 1, ax0, ay0, az0);
+            var wv = WallVelocity;
+            var wd = wallBase == null ? WallDistance : null;
+            var mask = ForceMask;
             Parallel.For(0, nz, z =>
             {
                 Span<double> fq = stackalloc double[19];
@@ -220,6 +286,13 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
                     for (int q = 0; q < 19; q++)
                     {
                         int sx = x - Cx[q], sy = y - Cy[q], sz = z - Cz[q];
+                        if (box && (sx < 0 || sx >= nx || sy < 0 || sy >= ny || sz < 0 || sz >= nz))
+                        {
+                            // [air] Ambient air flows in along its own direction; elsewhere the face is open at ambient pressure.
+                            fq[q] = Cx[q] * ax0 + Cy[q] * ay0 + Cz[q] * az0 > 0 ? feqAmb[q] : Equilibrium(q, 1, Ux[i], Uy[i], Uz[i]);
+                            continue;
+                        }
+
                         if (sx < 0)
                         {
                             // Velocity inlet as a moving wall half a cell upstream (Ladd): the mass flux is exactly ρ·u0.
@@ -253,6 +326,13 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
                         double fo = src[o * n + i];
                         double fin = fo;
                         double delta = wb >= 0 ? wall[wb + o] : double.NaN;
+                        if (wd != null)
+                        {
+                            // [air] The signed distance is linear along a link across a flat face: Δ where it crosses zero.
+                            double d0 = wd[i], d1 = wd[j];
+                            if (d0 > 0 && d1 < 0) delta = Math.Max(1e-3, Math.Min(1, d0 / (d0 - d1)));
+                        }
+
                         if (!double.IsNaN(delta))
                         {
                             if (delta < 0.5)
@@ -272,12 +352,33 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
                             }
                         }
 
+                        double uwx = 0, uwy = 0, uwz = 0;
+                        if (wv != null)
+                        {
+                            // [air] Moving wall (Ladd): + 2 w ρ (c_q·u_w)/c_s²; Bouzidi's far-side rule scales it by 1/2Δ.
+                            uwx = wv[3 * j];
+                            uwy = wv[3 * j + 1];
+                            uwz = wv[3 * j + 2];
+                            double cu = Cx[q] * uwx + Cy[q] * uwy + Cz[q] * uwz;
+                            if (cu != 0)
+                            {
+                                double add = 6 * W[q] * Rho[i] * cu;
+                                if (!double.IsNaN(delta) && delta >= 0.5) add /= 2 * delta;
+                                fin += add;
+                            }
+                        }
+
                         fq[q] = fin;
-                        // Momentum given to the body over this link (Mei et al.): (f*_o + f_q) c_o.
-                        double mom = fo + fin;
-                        sfx += Cx[o] * mom;
-                        sfy += Cy[o] * mom;
-                        sfz += Cz[o] * mom;
+                        if (mask != null && !mask[j]) continue;
+                        // Momentum given to the body over this link (Mei et al.): (f*_o + f_q) c_o; on a moving wall the
+                        // Galilean-invariant form of Wen et al. (2014) subtracts u_w (f*_o − f_q).
+                        double mom = fo + fin, slip = fo - fin;
+                        // [air] Gauge force: the ambient pressure (ρ = 1 at rest: 2 w_o per link) pushes on every side of a
+                        // part in air; on a part resting on the ground it would otherwise press it down through the floor.
+                        if (box) mom -= 2 * W[o];
+                        sfx += Cx[o] * mom - uwx * slip;
+                        sfy += Cy[o] * mom - uwy * slip;
+                        sfz += Cz[o] * mom - uwz * slip;
                     }
 
                     double rho = 0, mx = 0, my = 0, mz = 0;

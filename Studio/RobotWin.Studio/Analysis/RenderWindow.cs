@@ -43,8 +43,11 @@ namespace RobotWin.Studio.Analysis
         private readonly ComboBox _accuracy = new ComboBox();
         private readonly TextBox _stressFps = new TextBox { Width = 70, Text = "15" };
         private readonly StackPanel _parts = new StackPanel();
-        private readonly CheckBox _aero = new CheckBox { Content = "Hava akışı (tüm montaj, 3B)", IsChecked = true };
+        private readonly CheckBox _aero = new CheckBox { Content = "Hava akışı (3B, zamanla)", IsChecked = true, ToolTip = "Dünyadaki gerçek hava: rüzgâr ve parçaların kendi hareketi havayı iter. Hava durgunsa ve parçalar kıpırdamıyorsa akış yoktur." };
+        private readonly CheckBox _tunnel = new CheckBox { Content = "Rüzgâr tüneli testi", IsChecked = false, ToolTip = "Dünyada olmayan sabit bir hava: montaj birkaç anda kayıttaki duruşunda tutulur ve seçilen hız ve yönde hava üflenir (sürükleme katsayısı, ızgara belirsizliği)." };
         private readonly TextBox _aeroSpeed = new TextBox { Width = 70, Text = "2" };
+        private readonly TextBox _aeroDir = new TextBox { Width = 70, Text = "0" };
+        private readonly TextBox _aeroElev = new TextBox { Width = 70, Text = "0" };
         private readonly CheckBox _thermal = new CheckBox { Content = "Isınma (kartlar, motorlar)", IsChecked = true };
         private readonly CheckBox _meshCheck = new CheckBox { Content = "Ağ yakınsaması denetimi", IsChecked = false, ToolTip = "Her parçanın en kötü anı 1,4 kat daha ince ağla yeniden çözülür ve gerilmenin ne kadar değiştiği yazılır (%10'dan fazlası: sonuç ağa duyarlı)." };
         private readonly CheckBox _bands = new CheckBox { Content = "Belirsizlik bandı (4 tolerans koşusu)", IsChecked = false, ToolTip = "Parça değerleri tolerans bantlarından (klonlar ±%35–40) çekilerek 4 kez daha çalıştırılır; grafiklerde gerçek parçaların düşebileceği aralık gölge olarak görünür. Render süresi ~5 katına çıkar." };
@@ -126,6 +129,7 @@ namespace RobotWin.Studio.Analysis
             _scene = new WorldScene { Library = library, MassOf = massOf };
             _scene.Load(world);
             _scene.Playback = _playback;
+            _scene.ReadOnly = true;   // a replay shows what was simulated: nothing in it can be moved or rewired
 
             var root = new DockPanel { Background = Res("B.Surface") };
             var left = new StackPanel { Width = 290, Margin = new Thickness(14) };
@@ -152,7 +156,7 @@ namespace RobotWin.Studio.Analysis
             root.Children.Add(center);
             Content = root;
 
-            foreach (var cb in new[] { _aero, _thermal, _bands, _meshCheck, _forces, _air, _follow }) cb.Foreground = Res("B.Text");
+            foreach (var cb in new[] { _aero, _tunnel, _thermal, _bands, _meshCheck, _forces, _air, _follow }) cb.Foreground = Res("B.Text");
             _timer.Tick += (_, _) => Tick();
             Closed += (_, _) =>
             {
@@ -201,16 +205,35 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(Row("Süre (s)", _duration));
             foreach (AccuracyPreset a in Enum.GetValues(typeof(AccuracyPreset))) _accuracy.Items.Add(new ComboBoxItem { Content = AnalysisSettings.AccuracyName(a), Tag = a });
             _accuracy.SelectedIndex = (int)AccuracyPreset.Fine;
+            int ra = Array.IndexOf(Environment.GetCommandLineArgs(), "--render-accuracy");   // snapshot runs
+            if (ra >= 0 && ra + 1 < Environment.GetCommandLineArgs().Length && Enum.TryParse<AccuracyPreset>(Environment.GetCommandLineArgs()[ra + 1], out var acc)) _accuracy.SelectedIndex = (int)acc;
             _accuracy.MinWidth = 150;
             left.Children.Add(Row("Doğruluk", _accuracy));
             left.Children.Add(Row("Gerilme kare hızı (fps)", _stressFps));
             left.Children.Add(Caption("Gerilmesi hesaplanacak parçalar"));
-            foreach (var o in _world.Objects.Where(o => !o.IsStatic && (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model) && !WorldPhysics.IsLiquid(o)))
-                _parts.Children.Add(new CheckBox { Content = o.Name, Tag = o.Id, IsChecked = true, Foreground = Foreground, Margin = new Thickness(0, 1, 0, 1) });
-            if (_parts.Children.Count == 0) _parts.Children.Add(new TextBlock { Text = "(hareketli gövde / model yok)", Style = (Style)Application.Current.FindResource("Text.Caption") });
+            // Every physical part: bodies and models, and components (servos, motors, boards) too, which carry the
+            // loads of what is mounted on them. A fixed part counts when something is fastened to it.
+            bool Jointed(WorldObject o) => _world.Joints.Any(j => j.ObjectA == o.Id || j.ObjectB == o.Id) || _world.MountedOn(o.Id).Any();
+            foreach (var o in _world.Objects.Where(o => (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model || o.Kind == WorldObjectKind.Component)
+                                                        && !WorldPhysics.IsLiquid(o) && (!o.IsStatic || Jointed(o))))
+            {
+                bool on = o.Kind != WorldObjectKind.Component ? !o.IsStatic : Jointed(o);
+                _parts.Children.Add(new CheckBox { Content = o.Name, Tag = o.Id, IsChecked = on, Foreground = Foreground, Margin = new Thickness(0, 1, 0, 1) });
+            }
+            if (_parts.Children.Count == 0) _parts.Children.Add(new TextBlock { Text = "(gerilme taşıyan parça yok)", Style = (Style)Application.Current.FindResource("Text.Caption") });
             left.Children.Add(_parts);
             left.Children.Add(new Border { Child = _aero, Margin = new Thickness(0, 10, 0, 0) });
-            left.Children.Add(Row("Duran montajda test hızı (m/s)", _aeroSpeed));
+            var tunnel = new StackPanel { Margin = new Thickness(18, 2, 0, 0), Visibility = Visibility.Collapsed };
+            tunnel.Children.Add(Row("Hava hızı (m/s)", _aeroSpeed));
+            tunnel.Children.Add(Row("Estiği yön (°, 0 = +X, 90 = +Y)", _aeroDir));
+            tunnel.Children.Add(Row("Eğim (°, + yukarı)", _aeroElev));
+            _tunnel.Margin = new Thickness(18, 4, 0, 0);
+            _tunnel.Checked += (_, _) => tunnel.Visibility = Visibility.Visible;
+            _tunnel.Unchecked += (_, _) => tunnel.Visibility = Visibility.Collapsed;
+            _aero.Checked += (_, _) => _tunnel.IsEnabled = true;
+            _aero.Unchecked += (_, _) => _tunnel.IsEnabled = false;
+            left.Children.Add(_tunnel);
+            left.Children.Add(tunnel);
             left.Children.Add(new Border { Child = _thermal, Margin = new Thickness(0, 8, 0, 0) });
             left.Children.Add(new Border { Child = _meshCheck, Margin = new Thickness(0, 8, 0, 0) });
             left.Children.Add(new Border { Child = _bands, Margin = new Thickness(0, 8, 0, 0) });
@@ -235,6 +258,9 @@ namespace RobotWin.Studio.Analysis
         private static double Num(TextBox box, double fallback) =>
             double.TryParse(box.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && v > 0 ? v : fallback;
 
+        private static double Any(TextBox box, double fallback) =>
+            double.TryParse(box.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && !double.IsNaN(v) && !double.IsInfinity(v) ? v : fallback;
+
         /// <summary>[replay] Inputs of the recorded live run; the render feeds them back at their times.</summary>
         public RobotTwin.CoreSim.Automation.InputJournal? Inputs { get; set; }
 
@@ -255,8 +281,10 @@ namespace RobotWin.Studio.Analysis
                 StressTargetCells = 700,
                 Aero = _aero.IsChecked == true,
                 Aero3D = true,
+                AeroTunnel = _tunnel.IsChecked == true,
                 AeroSpeed = Num(_aeroSpeed, 2),
-                AeroAxis = "+X",
+                AeroDirectionDeg = Any(_aeroDir, 0),
+                AeroElevationDeg = Math.Max(-90, Math.Min(90, Any(_aeroElev, 0))),
                 AeroResolution = 18,
                 AeroPasses = 15,
                 Thermal = _thermal.IsChecked == true,
@@ -364,6 +392,9 @@ namespace RobotWin.Studio.Analysis
             PreviewKeyDown += (_, e) =>
             {
                 if (_result == null) return;
+                // Typing in a box (the channel search, settings) keeps its keys: Space, arrows, Home and End edit the text.
+                if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || e.OriginalSource is PasswordBox
+                    || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase || Keyboard.FocusedElement is ComboBox { IsEditable: true }) return;
                 double frame = 1.0 / Math.Max(1, _result.Settings.OutputRate);
                 if (e.Key == Key.Space) TogglePlay();
                 else if (e.Key == Key.Right) Seek(_t + frame);
@@ -469,6 +500,8 @@ namespace RobotWin.Studio.Analysis
             _result = r;
             _playback.Store = r.Channels;
             _playback.Liquids = r.Liquids;
+            _playback.Cables = r.Cables;
+            if (r.AeroFrames.Count > 0) _air.IsChecked = true;   // the air was computed: show it
             _csv.IsEnabled = _save.IsEnabled = true;
             _status.Text = $"{r.SimulatedSeconds:0.###} s hesaplandı: {r.Channels.Count} kare × {r.Channels.Channels.Count} kanal, {r.Stress.Count} parçada {r.Stress.Sum(x => x.Frames.Count)} gerilme çözümü, {r.AeroFrames.Count} akış karesi; {r.WallSeconds:0.0} s sürdü."
                 + (r.HaltReason.Length > 0 ? " Durdu: " + r.HaltReason : string.Empty);
@@ -496,7 +529,7 @@ namespace RobotWin.Studio.Analysis
                 foreach (var note in st.Notes) log.AppendLine("  " + note);
             }
 
-            foreach (var a in r.AeroFrames) log.AppendLine($"[akış t={a.Time:0.00} s] " + string.Join(" ", a.Notes));
+            foreach (var a in r.AeroFrames.Where(a => a.Notes.Count > 0)) log.AppendLine($"[akış t={a.Time:0.00} s] " + string.Join(" ", a.Notes));
             log.AppendLine();
             foreach (var e in r.Events.Take(500)) log.AppendLine($"{e.Time,9:0.0000} s  {e.Source}: {e.Message}");
             foreach (var s in r.Serial.Take(500)) log.AppendLine($"{s.Time,9:0.0000} s  [{s.Board}] {s.Text.TrimEnd()}");
@@ -950,65 +983,13 @@ namespace RobotWin.Studio.Analysis
         {
             if (_result == null || _result.AeroFrames.Count == 0) return;
             var a = _result.AeroFrames.OrderBy(x => Math.Abs(x.Time - t)).First();
-            if (a.Speed3D == null || a.Speed3D.Length < a.Nx * a.Ny * a.Nz) return;
-            int nx = a.Nx, ny = a.Ny, nz = a.Nz, j = ny / 2;
-            // Crop to the assembly and its near wake: half a diameter around the solid cells, 1.5 D behind.
-            int x0 = nx, x1 = 0, z0 = nz, z1 = 0;
-            for (int z = 0; z < nz; z++)
-                for (int y = 0; y < ny; y++)
-                    for (int x = 0; x < nx; x++)
-                        if (a.Solid[(z * ny + y) * nx + x])
-                        {
-                            x0 = Math.Min(x0, x);
-                            x1 = Math.Max(x1, x);
-                            z0 = Math.Min(z0, z);
-                            z1 = Math.Max(z1, z);
-                        }
-
-            if (x1 < x0) return;
-            int d = (int)Math.Round(a.ReferenceLength / a.Dx);
-            x0 = Math.Max(0, x0 - d / 2);
-            x1 = Math.Min(nx - 1, x1 + 3 * d / 2);
-            z0 = Math.Max(0, z0 - d / 3);
-            z1 = Math.Min(nz - 1, z1 + d / 3);
-            int w = x1 - x0 + 1, h = z1 - z0 + 1;
-            double vmax = a.Speed * 1.3;   // colour: still air blue, free stream yellow-green, speeded-up red
-            var px = new byte[w * h * 4];
-            for (int z = z0; z <= z1; z++)
+            if (a.Tracers != null)
             {
-                for (int x = x0; x <= x1; x++)
-                {
-                    int c = (z * ny + j) * nx + x;
-                    int o = ((z1 - z) * w + (x - x0)) * 4;
-                    if (a.Solid[c]) continue;
-                    var col = LinePlot.Heat(a.Speed3D[c] / vmax);
-                    px[o] = col.B;
-                    px[o + 1] = col.G;
-                    px[o + 2] = col.R;
-                    px[o + 3] = 70;
-                }
+                Smoke(g, a, legend);
+                return;
             }
 
-            int nxFull = nx, nzFull = nz;
-            nx = w;
-            nz = h;
-            var bmp = BitmapSource.Create(nx, nz, 96, 96, PixelFormats.Bgra32, null, px, nx * 4);
-            bmp.Freeze();
-            var brush = new ImageBrush(bmp) { ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
-            Vec3 P(double x, double z) => a.Origin + a.AxisX * ((x + x0) * a.Dx) + a.AxisY * ((j + 0.5) * a.Dx) + a.AxisZ * ((z + z0) * a.Dx);
-            var mesh = new MeshGeometry3D();
-            foreach (var (x, z, u, v) in new[] { (0.0, 0.0, 0.0, 1.0), ((double)nx, 0.0, 1.0, 1.0), ((double)nx, (double)nz, 1.0, 0.0), (0.0, (double)nz, 0.0, 0.0) })
-            {
-                var wp = P(x, z);
-                mesh.Positions.Add(new Point3D(wp.X, wp.Y, wp.Z));
-                mesh.TextureCoordinates.Add(new Point(u, v));
-            }
-
-            Tri(mesh, 0, 1, 2);
-            Tri(mesh, 0, 2, 3);
-            var mat = new EmissiveMaterial(brush);
-            g.Children.Add(new GeometryModel3D(mesh, mat) { BackMaterial = mat });
-            // 3D streamlines through the solved flow, coloured by local speed.
+            // Wind tunnel: 3D streamlines through the solved flow, coloured by local speed.
             if (a.Streamlines.Count > 0)
             {
                 var lines = new MeshGeometry3D();
@@ -1019,24 +1000,97 @@ namespace RobotWin.Studio.Analysis
                 lm.Children.Add(new EmissiveMaterial(HeatBrush) { Color = Color.FromRgb(150, 150, 150) });
                 g.Children.Add(new GeometryModel3D(lines, lm) { BackMaterial = lm });
             }
-            var centre = a.Origin + a.AxisX * ((x0 + d) * a.Dx) + a.AxisY * (ny * a.Dx / 2) + a.AxisZ * ((z0 + z1) * a.Dx / 2);
-            _ = nxFull + nzFull;
-            if (a.Force.Length > 0) g.Children.Add(Arrow(centre, centre + a.Force.Normalized() * 0.08, Color.FromRgb(0xA8, 0x55, 0xF7), 0.0025));
-            bool coarse = a.Notes.Any(n => n.Contains("bir hücre kalınlığında"));
-            var store = _result.Channels;
-            int si = AnalysisRun.SampleAt(store, t);
-            double lift = 0, drag = 0;
-            foreach (var c in store.Channels)
+
+            // The force arrow at the middle of the assembly's cells.
+            double cx = 0, cy = 0, cz = 0;
+            int cn = 0;
+            int nx = a.Nx, ny = a.Ny, nz = a.Nz;
+            if (a.Solid.Length == nx * ny * nz)
+                for (int z = 0; z < nz; z++)
+                for (int y = 0; y < ny; y++)
+                for (int x = 0; x < nx; x++)
+                    if (a.Solid[(z * ny + y) * nx + x])
+                    {
+                        cx += x;
+                        cy += y;
+                        cz += z;
+                        cn++;
+                    }
+
+            if (cn > 0 && a.Force.Length > 0)
             {
-                if (c.Name.StartsWith("aero/", StringComparison.Ordinal) && c.Name.EndsWith("/lift", StringComparison.Ordinal) && si < c.Count) lift += c[si];
-                if (c.Name.StartsWith("aero/", StringComparison.Ordinal) && c.Name.EndsWith("/drag", StringComparison.Ordinal) && si < c.Count) drag += c[si];
+                var centre = a.Origin + a.AxisX * ((cx / cn + 0.5) * a.Dx) + a.AxisY * ((cy / cn + 0.5) * a.Dx) + a.AxisZ * ((cz / cn + 0.5) * a.Dx);
+                g.Children.Add(Arrow(centre, centre + a.Force.Normalized() * 0.08, Color.FromRgb(0xA8, 0x55, 0xF7), 0.0025));
             }
 
-            if (coarse)
-                legend.AppendLine($"Hava (t = {a.Time:0.00} s): {a.Speed:0.##} m/s bağıl rüzgâr; 3B akım çizgileri ve kesit (hücre {a.Dx * 1000:0} mm, ince yüzeyler kalın görünür: akış görselleştirmesi)."
-                    + (lift != 0 ? $" Kuvvetler kanat modelinden: kaldırma {SiValue.Format(lift, "N")}, sürükleme {SiValue.Format(drag, "N")}, L/D {lift / Math.Max(1e-9, drag):0.0}" : string.Empty));
-            else
-                legend.AppendLine($"Hava (t = {a.Time:0.00} s): {a.Speed:0.##} m/s bağıl rüzgâr, montaja kuvvet {SiValue.Format(a.Force.Length, "N")}, Cd {a.MeanCd:0.00} (mor ok); kesit ve 3B akım çizgileri: mavi yavaşlayan, sarı serbest akış, kırmızı hızlanan hava");
+            legend.AppendLine($"Rüzgâr tüneli (t = {a.Time:0.00} s): {a.Speed:0.##} m/s hava, montaja kuvvet {SiValue.Format(a.Force.Length, "N")}, Cd {a.MeanCd:0.00} (mor ok); akım çizgileri: mavi yavaşlayan, sarı serbest akış, kırmızı hızlanan hava. Dünyada bu hava yoktur.");
+        }
+
+        /// <summary>
+        /// [air] The real air as smoke: every particle the air carries is a short streak along its velocity, as a camera
+        /// would see it in a 1/25 s exposure, coloured by speed. Still air leaves no streak.
+        /// </summary>
+        private void Smoke(Model3DGroup g, RobotTwin.CoreSim.Analysis.CfdResult a, StringBuilder legend)
+        {
+            var tr = a.Tracers!;
+            int n = tr.Length / 6;
+            if (n == 0)
+            {
+                legend.AppendLine($"Hava (t = {a.Time:0.00} s): bu anda hava durgun.");
+                return;
+            }
+
+            var mesh = new MeshGeometry3D();
+            double vmax = Math.Max(1e-6, a.Speed);
+            double r = Math.Max(0.0008, Math.Min(0.0025, a.Dx * 0.12));
+            const double exposure = 0.04;
+            var pos = new Point3DCollection(n * 6);
+            var uv = new PointCollection(n * 6);
+            var idx = new Int32Collection(n * 18);
+            for (int i = 0; i < n; i++)
+            {
+                var p = new Vec3(tr[6 * i], tr[6 * i + 1], tr[6 * i + 2]);
+                var v = new Vec3(tr[6 * i + 3], tr[6 * i + 4], tr[6 * i + 5]);
+                double sp = v.Length;
+                var dir = sp > 1e-9 ? v / sp : Vec3.UnitX;
+                double len = Math.Max(3 * r, sp * exposure);
+                var tail = p - dir * len;
+                var side = dir.AnyPerpendicular().Normalized();
+                var up = dir.Cross(side).Normalized();
+                double u = Math.Min(0.999, sp / vmax);
+                int b0 = pos.Count;
+                for (int k = 0; k < 3; k++)
+                {
+                    double ang = k * 2 * Math.PI / 3;
+                    var off = (side * Math.Cos(ang) + up * Math.Sin(ang)) * r;
+                    var h = p + off;
+                    var tl = tail + off * 0.3;   // the streak thins out behind
+                    pos.Add(new Point3D(h.X, h.Y, h.Z));
+                    pos.Add(new Point3D(tl.X, tl.Y, tl.Z));
+                    uv.Add(new Point(u, 0.5));
+                    uv.Add(new Point(u, 0.5));
+                }
+
+                for (int k = 0; k < 3; k++)
+                {
+                    int h0 = b0 + 2 * k, t0 = h0 + 1, h1 = b0 + 2 * ((k + 1) % 3), t1 = h1 + 1;
+                    idx.Add(h0);
+                    idx.Add(t0);
+                    idx.Add(t1);
+                    idx.Add(h0);
+                    idx.Add(t1);
+                    idx.Add(h1);
+                }
+            }
+
+            mesh.Positions = pos;
+            mesh.TextureCoordinates = uv;
+            mesh.TriangleIndices = idx;
+            var mat = new MaterialGroup();
+            mat.Children.Add(new DiffuseMaterial(HeatBrush));
+            mat.Children.Add(new EmissiveMaterial(HeatBrush) { Color = Color.FromRgb(170, 170, 170) });
+            g.Children.Add(new GeometryModel3D(mesh, mat) { BackMaterial = mat });
+            legend.AppendLine($"Hava (t = {a.Time:0.00} s): havayla taşınan duman, {n} parçacık hareket ediyor; mavi yavaş, kırmızı {vmax:0.##} m/s. Havanın hareketli parçalara kuvveti {SiValue.Format(a.Force.Length, "N")}.");
         }
 
         /// <summary>A thin tube along a streamline (x, y, z, speed per point), texture u = speed / max for the heat colours.</summary>
@@ -1144,6 +1198,19 @@ namespace RobotWin.Studio.Analysis
         /// <summary>Shows a saved render of this world (its poses are matched to the world's objects by id).</summary>
         public void ShowSaved(AnalysisResult r)
         {
+            // The settings column shows what the opened render was computed with, not this window's defaults.
+            var s = r.Settings;
+            _duration.Text = s.Duration.ToString("0.###", CultureInfo.InvariantCulture);
+            _accuracy.SelectedIndex = (int)s.Accuracy;
+            _aero.IsChecked = s.Aero;
+            _tunnel.IsChecked = s.AeroTunnel;
+            _aeroSpeed.Text = s.AeroSpeed.ToString("0.##", CultureInfo.InvariantCulture);
+            _aeroDir.Text = s.AeroDirectionDeg.ToString("0.#", CultureInfo.InvariantCulture);
+            _aeroElev.Text = s.AeroElevationDeg.ToString("0.#", CultureInfo.InvariantCulture);
+            _thermal.IsChecked = s.Thermal;
+            _meshCheck.IsChecked = s.StressMeshCheck;
+            _bands.IsChecked = s.UncertaintyRuns > 0;
+            foreach (var cb in _parts.Children.OfType<CheckBox>()) cb.IsChecked = s.StressObjects.Contains((string)cb.Tag);
             Show(r);
             if (!string.Equals(r.WorldTitle, _world.Title, StringComparison.Ordinal))
                 _status.Text = $"Uyarı: bu render \"{r.WorldTitle}\" dünyasına ait; nesneler kimliklerine göre eşleştirildi.";
@@ -1171,6 +1238,9 @@ namespace RobotWin.Studio.Analysis
             _result.Save(dlg.FileName);
             _status.Text = "Kaydedildi: " + dlg.FileName;
         }
+
+        /// <summary>Saves the shown result to a file (snapshot runs: --render-save).</summary>
+        public void SaveResult(string path) => _result?.Save(path);
 
         private void ExportCsv()
         {
@@ -1205,6 +1275,18 @@ namespace RobotWin.Studio.Analysis
 
             /// <summary>[liquid] Recorded liquids of the shown result.</summary>
             public System.Collections.Generic.List<RobotTwin.CoreSim.Analysis.LiquidTrack>? Liquids { get; set; }
+
+            /// <summary>[render] Recorded cable ropes of the shown result.</summary>
+            public System.Collections.Generic.List<RobotTwin.CoreSim.Analysis.CableTrack>? Cables { get; set; }
+
+            public (System.Collections.Generic.IReadOnlyList<Vec3> Points, bool PlugA, bool PlugB)? CableAt(string cableId)
+            {
+                if (Cables == null) return null;
+                foreach (var c in Cables)
+                    if (string.Equals(c.CableId, cableId, System.StringComparison.OrdinalIgnoreCase))
+                        return c.At(Time + 1e-9) is { } r ? (r.Points, r.PlugA, r.PlugB) : null;
+                return null;
+            }
 
             public (float[] Positions, double Spacing, string Kind, float[]? Velocities)? LiquidAt(string objectId)
             {

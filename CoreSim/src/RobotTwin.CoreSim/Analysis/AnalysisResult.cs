@@ -260,6 +260,12 @@ namespace RobotTwin.CoreSim.Analysis
         /// <summary>3D: aerodynamic force on the assembly (N, world frame).</summary>
         public Vec3 Force { get; set; }
 
+        /// <summary>
+        /// [air] Smoke particles carried by the air at this instant: x, y, z (m, world) and vx, vy, vz (m/s) each. Only the
+        /// ones moving faster than a few per cent of the run's top speed are kept: still air stays invisible.
+        /// </summary>
+        public float[]? Tracers { get; set; }
+
         public List<string> Notes { get; } = new List<string>();
     }
 
@@ -267,6 +273,66 @@ namespace RobotTwin.CoreSim.Analysis
     /// [analysis] Everything an offline run produced. Saved as a .rwanalysis file (zip: JSON metadata,
     /// binary channel data, meshes and fields), normally next to the world file.
     /// </summary>
+    /// <summary>[render] A cable's rope over the recording: its points (world, m) and whether each plug is still in its pin.</summary>
+    public sealed class CableTrack
+    {
+        public string CableId { get; set; } = string.Empty;
+
+        public List<double> Times { get; } = new List<double>();
+        public List<float[]> Points { get; } = new List<float[]>();
+        public List<byte> Plugs { get; } = new List<byte>();
+
+        public void Add(double time, IReadOnlyList<Vec3> pts, bool plugA, bool plugB)
+        {
+            var a = new float[pts.Count * 3];
+            for (int i = 0; i < pts.Count; i++)
+            {
+                a[3 * i] = (float)pts[i].X;
+                a[3 * i + 1] = (float)pts[i].Y;
+                a[3 * i + 2] = (float)pts[i].Z;
+            }
+
+            Times.Add(time);
+            Points.Add(a);
+            Plugs.Add((byte)((plugA ? 1 : 0) | (plugB ? 2 : 0)));
+        }
+
+        /// <summary>The rope at a time: the recorded frames around it blended (they hold the same number of points).</summary>
+        public (Vec3[] Points, bool PlugA, bool PlugB)? At(double time)
+        {
+            int n = Times.Count;
+            if (n == 0) return null;
+            int lo = 0, hi = n - 1;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                if (Times[mid] <= time) lo = mid;
+                else hi = mid - 1;
+            }
+
+            int j = Math.Min(n - 1, lo + 1);
+            var a = Points[lo];
+            var b = Points[j];
+            double w = j == lo || Times[j] <= Times[lo] || b.Length != a.Length ? 0 : Math.Max(0, Math.Min(1, (time - Times[lo]) / (Times[j] - Times[lo])));
+            var r = new Vec3[a.Length / 3];
+            for (int i = 0; i < r.Length; i++)
+            {
+                double x = a[3 * i], y = a[3 * i + 1], z = a[3 * i + 2];
+                if (w > 0)
+                {
+                    x += (b[3 * i] - x) * w;
+                    y += (b[3 * i + 1] - y) * w;
+                    z += (b[3 * i + 2] - z) * w;
+                }
+
+                r[i] = new Vec3(x, y, z);
+            }
+
+            byte plugs = Plugs[lo];
+            return (r, (plugs & 1) != 0, (plugs & 2) != 0);
+        }
+    }
+
     /// <summary>[liquid] A liquid's particles over the recording (quantized to 16 bits within each frame's box).</summary>
     public sealed class LiquidTrack
     {
@@ -370,6 +436,9 @@ namespace RobotTwin.CoreSim.Analysis
 
         /// <summary>[liquid] Every liquid's particles over the recording, for the replay.</summary>
         public List<LiquidTrack> Liquids { get; } = new List<LiquidTrack>();
+
+        /// <summary>[render] Cable ropes as simulated, for the replay.</summary>
+        public List<CableTrack> Cables { get; } = new List<CableTrack>();
         public List<string> Log { get; } = new List<string>();
 
         /// <summary>Device id → part designator (for thermal source placement).</summary>
@@ -431,6 +500,31 @@ namespace RobotTwin.CoreSim.Analysis
                 {
                     using var s = zip.CreateEntry($"liquids/{i}.bin", CompressionLevel.Optimal).Open();
                     WriteLiquid(s, Liquids[i]);
+                }
+
+                for (int i = 0; i < Cables.Count; i++)
+                {
+                    using var s = zip.CreateEntry($"cables/{i}.bin", CompressionLevel.Optimal).Open();
+                    WriteCable(s, Cables[i]);
+                }
+
+                for (int i = 0; i < AeroFrames.Count; i++)
+                {
+                    using var s = zip.CreateEntry($"air/{i}.bin", CompressionLevel.Optimal).Open();
+                    WriteCfd(s, AeroFrames[i]);
+                    using var w = new BinaryWriter(s, Encoding.UTF8, true);
+                    var a = AeroFrames[i];
+                    w.Write(a.Time);
+                    W(w, a.Origin);
+                    W(w, a.AxisX);
+                    W(w, a.AxisY);
+                    W(w, a.AxisZ);
+                    W(w, a.Force);
+                    w.Write(a.BlockageRatio);
+                    w.Write(a.GridUncertainty);
+                    w.Write(a.Converged);
+                    w.Write(a.WallYPlus);
+                    W(w, a.Tracers);
                 }
             }
 
@@ -495,6 +589,24 @@ namespace RobotTwin.CoreSim.Analysis
             for (int i = 0; zip.GetEntry($"thermal/{i}.bin") != null; i++) Binary(zip, $"thermal/{i}.bin", rd => r.Thermal.Add(ReadThermal(rd)));
             Binary(zip, "cfd.bin", rd => r.Aero = ReadCfd(rd));
             for (int i = 0; zip.GetEntry($"liquids/{i}.bin") != null; i++) Binary(zip, $"liquids/{i}.bin", rd => r.Liquids.Add(ReadLiquid(rd)));
+            for (int i = 0; zip.GetEntry($"cables/{i}.bin") != null; i++) Binary(zip, $"cables/{i}.bin", rd => r.Cables.Add(ReadCable(rd)));
+            for (int i = 0; zip.GetEntry($"air/{i}.bin") != null; i++)
+                Binary(zip, $"air/{i}.bin", rd =>
+                {
+                    var a = ReadCfd(rd);
+                    a.Time = rd.ReadDouble();
+                    a.Origin = V(rd);
+                    a.AxisX = V(rd);
+                    a.AxisY = V(rd);
+                    a.AxisZ = V(rd);
+                    a.Force = V(rd);
+                    a.BlockageRatio = rd.ReadDouble();
+                    a.GridUncertainty = rd.ReadDouble();
+                    a.Converged = rd.ReadBoolean();
+                    a.WallYPlus = rd.ReadDouble();
+                    a.Tracers = Fa(rd);
+                    r.AeroFrames.Add(a);
+                });
             return r;
         }
 
@@ -783,6 +895,41 @@ namespace RobotTwin.CoreSim.Analysis
             n = r.ReadInt32();
             for (int i = 0; i < n; i++) x.Sources.Add((r.ReadString(), r.ReadDouble(), r.ReadDouble()));
             Sl(r, x.Notes);
+            return x;
+        }
+
+        private static void WriteCable(Stream s, CableTrack x)
+        {
+            using var w = new BinaryWriter(s, Encoding.UTF8, true);
+            w.Write(x.CableId);
+            w.Write(x.Times.Count);
+            for (int i = 0; i < x.Times.Count; i++)
+            {
+                w.Write(x.Times[i]);
+                w.Write(x.Plugs[i]);
+                var a = x.Points[i];
+                w.Write(a.Length);
+                var bytes = new byte[a.Length * 4];
+                Buffer.BlockCopy(a, 0, bytes, 0, bytes.Length);
+                w.Write(bytes);
+            }
+        }
+
+        private static CableTrack ReadCable(BinaryReader r)
+        {
+            var x = new CableTrack { CableId = r.ReadString() };
+            int n = r.ReadInt32();
+            for (int i = 0; i < n; i++)
+            {
+                x.Times.Add(r.ReadDouble());
+                x.Plugs.Add(r.ReadByte());
+                int m = r.ReadInt32();
+                var bytes = r.ReadBytes(m * 4);
+                var a = new float[m];
+                Buffer.BlockCopy(bytes, 0, a, 0, bytes.Length);
+                x.Points.Add(a);
+            }
+
             return x;
         }
 

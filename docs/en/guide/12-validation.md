@@ -91,6 +91,15 @@ Most of the sphere's remaining deviation comes from the finite domain: at low Re
 
 **The 3D flow analysis in the app** prints how far to trust each result: the real Reynolds number, the cell size, the blockage ratio, whether the boundary layer is resolved (y+), whether the force settled, and the **grid uncertainty (GCI)** from solving the first instant again on a second grid. When the boundary layer is thinner than a cell, skin friction is under-resolved; the pressure drag of sharp-edged bluff bodies (a box, a car body) is still valid.
 
+**The real air in a render (over time, moving walls):**
+
+| Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| 40 × 30 × 20 mm block falling for 0.2 s, force of the air on it (½ρv²·Cd·A, Cd 1.05) | 2.91 mN | 2.55 mN | −12 % | ±40 % |
+| Part resting on the floor in a world without wind: air flow | none | none | — | no flow frame at all |
+
+While the block falls, the cell is 3.3 mm and the flow is still developing (the body accelerates). The previous release blew a 2 m/s "test speed" at an assembly standing still; now the air comes only from the wind and from the parts' own motion.
+
 ## 6. Liquids (particle fluid)
 
 | Measurement | Theory / reference | Simulation | Deviation | Tolerance |

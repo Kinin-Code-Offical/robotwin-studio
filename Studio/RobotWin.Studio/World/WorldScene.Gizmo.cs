@@ -39,9 +39,12 @@ namespace RobotWin.Studio.World
         /// <summary>The move/rotate/scale gizmo is shown on the selection (Seç aracı, not simulating).</summary>
         public bool ShowGizmo { get; set; } = true;
 
+        /// <summary>[render] A replay: nothing can be moved, wired or edited; the camera still orbits and parts can be selected.</summary>
+        public bool ReadOnly { get; set; }
+
         private WorldObject? GizmoTarget()
         {
-            if (!ShowGizmo || _terrainEditing || Tool != WorldTool.Select || World == null || Selected == null) return null;
+            if (!ShowGizmo || ReadOnly || _terrainEditing || Tool != WorldTool.Select || World == null || Selected == null) return null;
             if (Session != null && Session.State != Simulation.SimState.Stopped) return null;
             var o = World.Find(Selected);
             return o == null || WorldBuilding.IsLocked(o) ? null : o;

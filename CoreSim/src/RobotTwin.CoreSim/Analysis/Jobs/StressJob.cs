@@ -121,6 +121,8 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
             result.Surface = mesh.Surface.SelectMany(f => f).ToArray();
             result.Notes.Add($"{mesh.Elements.Count} ikinci derece dörtyüzlü (T10), {mesh.Nodes.Count} düğüm, eleman boyu {mesh.ElementSize * 1000:0.##} mm.");
             if (mesh.UnsnappedNodes > 0) result.Notes.Add($"{mesh.UnsnappedNodes} sınır düğümü eğri yüzeye taşınamadı (basamaklı kaldı).");
+            if (mesh.StraightenedNodes > 0) result.Notes.Add($"{mesh.StraightenedNodes} ara düğüm, eğri yüzeye taşınınca elemanı bozacağı için düz kenarda bırakıldı.");
+            if (mesh.DroppedCells > 0) result.Notes.Add($"Gövdeye yüzeyle bağlanmayan {mesh.DroppedCells} hücre (ayrı parçacık, ör. servo başlığı) ağdan çıkarıldı; onlara gelen yükler gövdenin en yakın yüzeyine aktarıldı.");
             // Relative CG residual by accuracy: thin parts are ill-conditioned, and 1e-6 already gives
             // stresses within a fraction of a percent of the 1e-8 reference.
             double tol = s.Accuracy switch { AccuracyPreset.Reference => 1e-8, AccuracyPreset.Fine => 1e-7, _ => 1e-6 };

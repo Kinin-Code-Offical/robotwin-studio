@@ -553,7 +553,15 @@ namespace RobotWin.Studio.Pages
             var port = Scene.PortOf(targetId);
             if (port is { } pf)
             {
-                var portItem = new MenuItem { Header = $"{target.Name} · {pf.Label}ne sabitle (birlikte döner)" };
+                // [mount] Usually wanted: the part's end sits on the horn / shaft, flat against it, and turns with it.
+                var snapItem = new MenuItem { Header = $"{target.Name} · {pf.Label}ne tak: ucu {pf.Label.ToLowerInvariant()}ne oturur, birlikte döner", FontWeight = FontWeights.SemiBold };
+                snapItem.Click += (_, _) =>
+                {
+                    SnapToPort(source, targetId, pf);
+                    MakeJoint(source, targetId, WorldJointKind.Fixed, pf.Name);
+                };
+                menu.Items.Add(snapItem);
+                var portItem = new MenuItem { Header = $"{target.Name} · {pf.Label}ne olduğu yerde sabitle (birlikte döner)" };
                 portItem.Click += (_, _) => MakeJoint(source, targetId, WorldJointKind.Fixed, pf.Name);
                 menu.Items.Add(portItem);
             }
@@ -568,6 +576,50 @@ namespace RobotWin.Studio.Pages
             slider.Click += (_, _) => MakeJoint(source, targetId, WorldJointKind.Slider, string.Empty);
             menu.Items.Add(slider);
             menu.IsOpen = true;
+        }
+
+        /// <summary>
+        /// [mount] Puts a part onto a horn / shaft the way it is screwed on in reality: its face lies flat on the output
+        /// (just above the pivot along the axis) and, for a long part such as an arm, one end is over the pivot so the arm
+        /// reaches out from it, on the side where the part already was; a compact part is centred on it. Its orientation
+        /// is kept. Whatever is mounted on the part comes along.
+        /// </summary>
+        private void SnapToPort(string childId, string parentId, PortFrame pf)
+        {
+            var world = World;
+            var child = world?.Find(childId);
+            var parent = world?.Find(parentId);
+            if (world == null || child == null || parent == null) return;
+            var qp = parent.Pose.Orientation;
+            var pivot = new Vec3(parent.Pose.X, parent.Pose.Y, parent.Pose.Z) + qp.Rotate(ToVec(pf.Pivot));
+            var axis = qp.Rotate(ToVec(pf.Axis)).Normalized();
+            var g = Scene.GeometryOf(child);
+            var qc = child.Pose.Orientation;
+            var centreLocal = (g.Min + g.Max) * 0.5;
+            var half = (g.Max - g.Min) * 0.5;
+            // The child's own axes in the world and its half sizes along them.
+            var axes = new[] { (qc.Rotate(Vec3.UnitX), half.X), (qc.Rotate(Vec3.UnitY), half.Y), (qc.Rotate(Vec3.UnitZ), half.Z) };
+            // Thickness along the output axis: the part rests on the pivot plane.
+            double along = axes.Sum(a => Math.Abs(a.Item1.Dot(axis)) * a.Item2);
+            // The longest of its axes across the output axis: an arm reaches out along it.
+            var across = axes.Select(a => (Dir: (a.Item1 - axis * a.Item1.Dot(axis)), a.Item2)).Where(a => a.Dir.Length > 0.7).OrderByDescending(a => a.Item2).ToList();
+            var centreNow = new Vec3(child.Pose.X, child.Pose.Y, child.Pose.Z) + qc.Rotate(centreLocal);
+            var centre = pivot + axis * (along + 0.0002);
+            if (across.Count >= 2 && across[0].Item2 > 1.6 * across[1].Item2)
+            {
+                var d = across[0].Dir.Normalized();
+                if ((centreNow - pivot).Dot(d) < 0) d = -d;
+                double reach = Math.Max(0, across[0].Item2 - Math.Min(across[1].Item2, 0.008));   // the end overlaps the horn by up to 8 mm
+                centre += d * reach;
+            }
+
+            var target = centre - qc.Rotate(centreLocal);
+            double dx = target.X - child.Pose.X, dy = target.Y - child.Pose.Y, dz = target.Z - child.Pose.Z;
+            if (Math.Abs(dx) + Math.Abs(dy) + Math.Abs(dz) < 1e-6) return;
+            Edit($"{child.Name}, {parent.Name} {pf.Label.ToLowerInvariant()}ne oturtuldu", () =>
+            {
+                world.MoveAssembly(child, dx, dy, dz);
+            });
         }
 
         private void MakeJoint(string childId, string parentId, WorldJointKind kind, string port)
@@ -810,6 +862,21 @@ namespace RobotWin.Studio.Pages
                 d.Package.Save(dlg.FileName);
                 W.Status = "Kart dışa aktarıldı: " + Path.GetFileName(dlg.FileName);
             }));
+        }
+
+        /// <summary>
+        /// [boards] Opens a board of the active world in the circuit, PCB and code pages: a board design directly, a plain
+        /// Arduino / ESP32 component after turning it into a one-board design (its built-in program becomes editable code).
+        /// </summary>
+        public void OpenBoard(WorldObject o)
+        {
+            if (o.Kind == WorldObjectKind.Board)
+            {
+                EditBoard(o);
+                return;
+            }
+
+            if (o.PartId != null && Lib.Find(o.PartId)?.Symbol == SymbolKind.Board) ConvertToBoard(o);
         }
 
         private void EditBoard(WorldObject o)

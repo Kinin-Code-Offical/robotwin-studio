@@ -67,10 +67,21 @@ namespace RobotTwin.CoreSim.Analysis
                 if (runner.Physics != null)
                     foreach (var l in runner.Physics.Liquids)
                         liquids.Add(new LiquidTrack { ObjectId = l.Object.Id, Name = l.Object.Name, Kind = l.Body.Kind.Id, Spacing = l.Body.Spacing });
+                // [render] the cables' ropes as simulated, so the replay draws them where they really were
+                var cables = new List<CableTrack>();
+                if (runner.Physics != null)
+                    foreach (var c in world.Cables)
+                        if (runner.Physics.CablePoints(c.Id) != null) cables.Add(new CableTrack { CableId = c.Id });
                 void RecordLiquids()
                 {
                     if (runner.Physics == null) return;
                     for (int k = 0; k < liquids.Count; k++) liquids[k].Add(runner.Time, runner.Physics.Liquids[k].Body.Snapshot());
+                    foreach (var c in cables)
+                    {
+                        if (runner.Physics.CablePoints(c.CableId) is not { } pts) continue;
+                        var (a, b) = runner.Physics.PlugState(c.CableId);
+                        c.Add(runner.Time, pts, a, b);
+                    }
                 }
 
                 RecordLiquids();
@@ -98,6 +109,7 @@ namespace RobotTwin.CoreSim.Analysis
 
                 probe.Detach();
                 result.Liquids.AddRange(liquids);
+                result.Cables.AddRange(cables);
                 foreach (var l in runner.Physics?.Liquids ?? (IReadOnlyList<WorldPhysics.LiquidItem>)Array.Empty<WorldPhysics.LiquidItem>())
                     result.Note($"Sıvı {l.Object.Name}: {l.Body.Kind.Name}, {l.Body.Count} parçacık ({l.Body.Spacing * 1000:0.#} mm aralık), {l.Body.TotalMass * 1000:0.#} g; son adımda en büyük sıkışma %{l.Body.MaxCompression * 100:0.##}.");
                 result.SimulatedSeconds = runner.Time;
@@ -133,7 +145,9 @@ namespace RobotTwin.CoreSim.Analysis
                 }
 
                 if (s.Aero && s.Aero3D && !cancel.IsCancellationRequested)
-                    result.AeroFrames.AddRange(AeroAssembly(world, scene, result, s, cancel, p => progress?.Invoke("Akış: tüm montaj (3B)", p), runner.Physics));
+                    result.AeroFrames.AddRange(s.AeroTunnel
+                        ? AeroAssembly(world, scene, result, s, cancel, p => progress?.Invoke("Rüzgâr tüneli (3B)", p), runner.Physics)
+                        : AirFlow(world, scene, result, s, cancel, p => progress?.Invoke("Hava akışı (3B, zamanla)", p), runner.Physics));
                 else if (s.Aero && !cancel.IsCancellationRequested && s.AeroObject is { } aeroId && PartOf(world, scene, aeroId) is { } aeroPart)
                     result.Aero = Aero2D(aeroPart, s, scene?.AirDensity ?? 1.2, cancel, p => progress?.Invoke("Akış: " + aeroPart.Name, p));
 

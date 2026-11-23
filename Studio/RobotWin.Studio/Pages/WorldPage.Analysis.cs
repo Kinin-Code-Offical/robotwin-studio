@@ -93,7 +93,9 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
-            var geometry = new CapturedGeometry(copy, o => Scene.GeometryOf(world.Find(o.Id) ?? o), c => Scene.CableLength(world.Cables.FirstOrDefault(x => x.Id == c.Id) ?? c));
+            // The cables' pin positions go along too: the render lays, settles and pulls the same physical ropes as the live world.
+            var geometry = new CapturedGeometry(copy, o => Scene.GeometryOf(world.Find(o.Id) ?? o), c => Scene.CableLength(world.Cables.FirstOrDefault(x => x.Id == c.Id) ?? c),
+                c => Scene.CablePinsOf(world.Cables.FirstOrDefault(x => x.Id == c.Id) ?? c));
             var w = new RenderWindow(copy, geometry, duration, Scene.Library, Scene.MassOf) { Owner = Window.GetWindow(this), Inputs = inputs };
             w.Show();
             if (autoStart) _ = w.RenderNow();
@@ -133,10 +135,12 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            int si = Array.IndexOf(args, "--render-save");
             w.RenderNow().ContinueWith(_ =>
             {
                 w.SetColourMode(mode);
                 w.SeekTo(seek);
+                if (si >= 0 && si + 1 < args.Length) w.SaveResult(args[si + 1]);   // keep the result to replay or inspect
             }, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
         }
     }

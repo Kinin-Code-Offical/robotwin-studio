@@ -601,11 +601,14 @@ namespace RobotTwin.CoreSim.Mechanics
         public Func<Vec3, double, Vec3>? WindProvider { get; set; }   // [sdk] Sdk/WorldSdkRuntime.cs
 
         /// <summary>Wind at a point including deterministic gusts.</summary>
-        public Vec3 WindAt(Vec3 p)
+        public Vec3 WindAt(Vec3 p) => WindAt(p, Time);
+
+        /// <summary>Wind at a point and any time (s): the same air model at another instant (e.g. replaying a recording).</summary>
+        public Vec3 WindAt(Vec3 p, double time)
         {
-            if (WindProvider != null) return WindProvider(p, Time);   // [sdk]
+            if (WindProvider != null) return WindProvider(p, time);   // [sdk]
             if (GustIntensity <= 0) return Wind;
-            double t = Time, k = GustIntensity;
+            double t = time, k = GustIntensity;
             double phase = 0.7 * p.X + 0.4 * p.Y;
             double gx = Math.Sin(1.3 * t + phase) * 0.6 + Math.Sin(3.7 * t + 1.1 + phase) * 0.35 + Math.Sin(7.9 * t + 2.3) * 0.2;
             double gy = Math.Sin(1.1 * t + 0.5 + phase) * 0.6 + Math.Sin(4.3 * t + 2.0) * 0.35 + Math.Sin(8.7 * t + 0.3 + phase) * 0.2;

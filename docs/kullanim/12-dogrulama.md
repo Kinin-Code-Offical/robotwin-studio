@@ -91,6 +91,15 @@ Kürede kalan farkın çoğu çözüm alanının sonlu olmasından gelir: düş�
 
 **Uygulamadaki 3B akış analizi** her sonucun yanına güvenilirliğini yazar: gerçek Reynolds sayısı, hücre boyu, tıkanma oranı, sınır tabakanın çözülüp çözülmediği (y+), kuvvetin oturup oturmadığı ve ilk anın iki ızgarayla yeniden çözülmesinden gelen **ızgara belirsizliği (GCI)**. Sınır tabaka hücreden inceyse yüzey sürtünmesi eksik çözülür; keskin kenarlı küt cisimlerin (kutu, araba gövdesi) basınç sürüklemesi yine geçerlidir.
 
+**Render'daki gerçek hava (zamanla, hareketli duvarlar):**
+
+| Ölçüm | Teori / kaynak | Simülasyon | Sapma | Tolerans |
+| --- | --- | --- | --- | --- |
+| 40 × 30 × 20 mm blok 0,2 s düşer, havanın ona kuvveti (½ρv²·Cd·A, Cd 1,05) | 2,91 mN | 2,55 mN | −12 % | ±40 % |
+| Rüzgârsız dünyada yerde duran parça: hava akışı | yok | yok | — | hiç akış karesi yok |
+
+Blok düşerken hücre 3,3 mm'dir ve akış hâlâ gelişmektedir (cisim ivmelenir). Önceki sürüm duran bir montaja 2 m/s'lik bir "test hızı" üflüyordu; artık hava yalnızca rüzgârdan ve parçaların kendi hareketinden gelir.
+
 ## 6. Sıvılar (parçacıklı akışkan)
 
 | Ölçüm | Teori / referans | Simülasyon | Sapma | Kabul sınırı |
