@@ -13,7 +13,7 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
-> **1.2.0'da yeni:** Modelle sayfasına Blender'ın kesme araçları geldi: bıçak (K) ve nesneyi iki kapalı parçaya dilimleme, halka kesim (Ctrl+R), pah kırma (Ctrl+B), kalınlık verme, kenarlardan ekstrüzyon, halka ve bağlı seçim; Boolean (fark ile kırpma, birleşim, kesişim) artık panelde. Uygulamanın bütün mesajları tek dilde (Türkçe). Ayrıntılar: [CHANGELOG.md](CHANGELOG.md).
+> **1.3.0'da yeni:** Kablolar gerçek bir telin gidebildiği yerden gider: iki fiş arasında katı parçalara değmeyen yoldan döşenir, kapalı bir gövdeden yalnızca gerçek bir delikten çıkar, ince duvarlardan sızmaz. Birbirine bağlı parçaların iç içe geçmesi ve parçaların içinden geçen teller artık raporlanıyor; şablonlardaki bütün bu hatalar düzeltildi. PS5 kumandalı uçak, gerçek zinciriyle roket ateşlemesi, sade bir denetçi ve üç yeni şablon (kapalı gövdeli gezgin, trafik ışığı, sarkaç). Güncellemeden sonraki ilk açılışta başlangıç sayfası yenilikleri gösterir. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
 
 ![Başlangıç sayfası](docs/images/home.png)
 
@@ -61,10 +61,73 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 | **Modelle:** dilimlenip döndürülmüş boru, pahlı blok, kalınlık verilmiş tepsi | **Modelle:** düzenleme modunda halka kesimler ve yeni araçlar |
 | ![Dünya: kumandalı araba](docs/images/world-ps5-car.png) | ![Dünya: ultrasonik sensör](docs/images/world-sonar.png) |
 | **Dünya:** ESP32 + PS5 kumandalı araba | **Dünya:** ultrasonik sensör ışın izleme ile ölçer |
+| ![Dünya: PS5 kumandalı uçak pistte](docs/images/world-ps5-plane.png) | ![Dünya: uçak kalkışta, takip kamerası](docs/images/world-ps5-plane-flight.png) |
+| **Dünya:** PS5 kumandalı uçak: balsa kabin, kanatçıklı kanat, üç tekerlekli iniş takımı | **Dünya:** pistten kalkış, takip kamerası |
+| ![Dünya: kapalı gövdeli gezgin, röntgen görünümü](docs/images/world-enclosed-rover.png) | ![Dünya: trafik ışığı ve yaya butonu](docs/images/world-traffic-light.png) |
+| **Dünya:** kapalı kutudaki elektronik; kablolar arka duvardaki delikten çıkar (röntgen) | **Dünya:** ESP32 trafik ışığı, yayaya yeşil |
+| ![Dünya: sarkaç](docs/images/world-pendulum.png) | ![Dünya: katı yakıtlı roket rampada](docs/images/world-rocket-pad.png) |
+| **Dünya:** sarkaç; periyodu teoriyle %0,1 içinde | **Dünya:** katı yakıtlı roket, radyal kanatçıklar |
+
+### Dünya şablonları
+
+Başlangıç sayfasındaki **Dünyalar** listesinde 33 hazır dünya vardır. Hepsi açılınca çalışır; hiçbirinde iç içe geçmiş parça ya da katı bir parçadan geçen kablo yoktur (tutarlılık denetimi). Tek bilinçli istisna: elektronik kutusundaki dik pil, sığma denetimini göstermek için kapağa çarpar.
+
+<details>
+<summary>Tüm şablonlar</summary>
+
+| Şablon | Ne gösterir |
+| --- | --- |
+| Boş atölye | 4 × 3 m zemin; kendi kartlarınız ve parçalarınız için |
+| Kabloyla bağlı iki kart | Ayrı PCB'ler, aralarında kablo; güç kartı LED kartını besler |
+| Arduino ile iki eksenli servo kol | Uno iki SG90'ı sürer; kol kendi ağırlığıyla durur |
+| Arduino, LCD ve OLED | I²C ekranlar 3B modelde canlı |
+| İki tekerlekli araba | TT motorlar, sarhoş teker, zeminde gerçek sürtünme |
+| Ultrasonik mesafe sensörü | HC-SR04 dünyaya ışın atarak ölçer |
+| Pil, motor ve tekerlek | Test sehpasında dönen tekerlek |
+| Fabrika hücresi | 6 eksenli kol, vakum tutucu, konveyör |
+| SCARA al-bırak | Paralel tutucuyla blok taşıma |
+| Pervane itki standı | Devir, itki ve akım |
+| Mini drone kalkışı | Dört çekirdeksiz motor, X gövde |
+| ESP32 dörtlü | Fırçasız motorlar, ESC, IMU, kendi uçuş yazılımı |
+| Elektronik kutusu | Kapaklı içi boş gövde ve sığma denetimi |
+| Motorlu planör (İHA) | ESP32 uçuş kartı, ağırlık merkezi pil ile |
+| Planör | Balsa gövde, karbon kuyruk borusu, Arduino Nano |
+| Mekanum araba | Yana kayan tekerlekler |
+| Işıklar | LED'ler, güç LED'i, lamba, LED şerit (karanlık oda) |
+| Trafik ışığı ve yaya butonu | ESP32 araç ve yaya ışıklarını yönetir |
+| Kumandalı araba | ESP32 + PS5 kumanda, tasarlanmış kontrol kartı |
+| Kapalı gövdeli gezgin | Kablo delikleri; ESP32 kare çizer |
+| PS5 kumandalı uçak | Pistten kalkış, dengeleme, failsafe |
+| Su roketi | 2 L PET şişe, 4 bar |
+| Katı yakıtlı motor test standı | KNSB yanma, basınç ve itki |
+| Katı yakıtlı roket | E-kibritle ateşleme, ~1 km, paraşüt |
+| Malzeme ve yüzey vitrini | Ahşap, karbon, alüminyum yüzeyler |
+| Kap ve bilyeler | İçi boş modellere bir şey konur |
+| Sarkaç | Periyot ve sönüm, teoriyle karşılaştırma |
+| Çizgi izleyen robot | Mat, solmuş ve parlak bant |
+| Sensör gezgini | Kamera, LiDAR, GPS, IMU |
+| ESP32 + OV2640 kamera | Kameradan bant bulma |
+| Rüzgâr, fan, konveyör | Türbülanslı rüzgâr ve ifadeler |
+| Arazi parkuru | Tepeler, asfalt yol, hız kesiciler |
+| Kapalı atölye | Fayans, paspas, halı, ıslak zemin |
+
+</details>
 
 ## İndirme ve kurulum
 
-1. [Sürümler (Releases)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) sayfasından `RobotWinStudio-Setup-<sürüm>.exe` (.NET dahil, en kolayı) ya da daha küçük **lite** paketi `RobotWinStudio-Setup-<sürüm>-lite.exe` dosyasını indirin.
+1. [Sürümler (Releases)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) sayfasından `RobotWinStudio-Setup-<sürüm>.exe` (.NET dahil, en kolayı) ya da daha küçük **lite** paketi `RobotWinStudio-Setup-<sürüm>-lite.exe` dosyasını indirin. Her sürümde şu dosyalar ayrı ayrı bulunur:
+
+   | Dosya | Ne için |
+   | --- | --- |
+   | `RobotWinStudio-Setup-<sürüm>.exe` | Windows x64 kurulum, .NET içinde |
+   | `RobotWinStudio-Setup-<sürüm>-lite.exe` | Windows x64 kurulum, .NET 9 Masaüstü Çalışma Zamanı ister |
+   | `RobotWinStudio-<sürüm>-win-x64-portable.zip` | Kurulumsuz: açın ve `RobotWinStudio.exe`'yi çalıştırın |
+   | `RobotWin-Headless-<sürüm>-win-x64.zip` | Ekransız simülatör ve otomasyon API'si (Windows) |
+   | `RobotWin-Headless-<sürüm>-linux-x64.tar.gz` | Ekransız simülatör ve otomasyon API'si (Linux; içindeki `OKUBENI.txt`'ye bakın) |
+   | `RobotWinStudio-<sürüm>-source.zip` / `.tar.gz` | Kaynak kodu |
+   | `SHA256SUMS.txt` | Her dosyanın SHA-256 özeti |
+
+   Grafik arayüz Windows içindir; Linux'ta simülasyon çekirdeği ekransız çalışır (ESP32 kodu orada derlenemez).
 2. Çalıştırın ve sihirbazı izleyin.
 3. Kurulum varsayılan olarak yalnızca sizin kullanıcınız için `%LOCALAPPDATA%\Programs\RobotWin Studio` klasörüne yapılır; Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve dosya türü ilişkilendirmeleri eklenir. Kaldırmak için Windows *Uygulamalar* listesini veya kurulum klasöründeki `Uninstall.exe` dosyasını kullanın.
 
@@ -74,7 +137,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.2.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.3.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -212,8 +275,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.2.0
-# -> builds\installer\RobotWinStudio-Setup-1.2.0.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.3.0
+# -> builds\installer\RobotWinStudio-Setup-1.3.0.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -292,7 +355,7 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
-> **New in 1.2.0:** Blender's cutting tools in the modeller: knife (K) and slicing an object into two closed pieces, loop cut (Ctrl+R), bevel (Ctrl+B), solidify, extrude from edges, loop and linked selection; Boolean (difference to trim, union, intersection) is now in the panel. Every message of the app is in one language (Turkish). Details: [CHANGELOG.md](CHANGELOG.md). In the app: *Yardım → Çevrimiçi belgeler*.
+> **New in 1.3.0:** Cables run where a real wire can: laid along a way between their plugs that touches no solid, out of a closed body only through a real hole, never leaking through thin walls. Joined parts sunk into each other and wires through parts are reported, and every such error in the templates is fixed. A PS5-controlled plane, rocket ignition along its real chain, a tidier inspector and three new templates (enclosed rover, traffic light, pendulum). After an update the start page shows what is new. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
 
 ### What's inside
 
@@ -313,7 +376,7 @@ Screenshots are shown in the [Turkish section above](#ekran-görüntüleri).
 
 ### Download and install
 
-1. Download `RobotWinStudio-Setup-<version>.exe` (carries .NET, nothing else to install) or the smaller **lite** package `RobotWinStudio-Setup-<version>-lite.exe` from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest).
+1. Download `RobotWinStudio-Setup-<version>.exe` (carries .NET, nothing else to install) or the smaller **lite** package `RobotWinStudio-Setup-<version>-lite.exe` from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest). Each release also has, as separate files: `RobotWinStudio-<version>-win-x64-portable.zip` (no installation: unzip and run), `RobotWin-Headless-<version>-win-x64.zip` and `RobotWin-Headless-<version>-linux-x64.tar.gz` (the windowless simulator and automation API; the graphical app is Windows-only), the source as `RobotWinStudio-<version>-source.zip` / `.tar.gz`, and `SHA256SUMS.txt`.
 2. Run it. The lite package needs the **.NET 9 Desktop Runtime**; its wizard offers to install it if missing. (In 1.0.0 the package with .NET was named `-tam.exe`.)
 3. Default install is per user in `%LOCALAPPDATA%\Programs\RobotWin Studio`. Silent: `/S`; all users: `/S /ALLUSERS`; target folder: `/D=<dir>`; portable unpack: `/S /PORTABLE /D=<dir>`; also `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
 
@@ -348,7 +411,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.2.0` → `builds\installer\RobotWinStudio-Setup-1.2.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds both installers and attaches them to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.3.0` → `builds\installer\RobotWinStudio-Setup-1.3.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

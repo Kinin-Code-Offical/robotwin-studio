@@ -1,0 +1,33 @@
+RobotWin.Headless — RobotWin Studio'nun ekransız (başsız) simülatörü
+=====================================================================
+
+Aynı simülasyon çekirdeği (devre, fizik, kablolar, gaz, radyo), pencere olmadan:
+toplu koşular, otomasyon API'si (Python/Gymnasium, ROS 2 köprüsü), sürekli entegrasyon.
+
+Linux'ta:
+  tar xzf RobotWin-Headless-<sürüm>-linux-x64.tar.gz
+  cd RobotWin-Headless-<sürüm>-linux-x64
+  ./RobotWin.Headless --run 2 --example car          (2 s koşu, JSON çıktı)
+  ./RobotWin.Headless --run 5 --world dunya.rwworld   (kendi dünyanız)
+  ./RobotWin.Headless --api 0                          (otomasyon API'si)
+
+Windows'ta aynı komutlar RobotWin.Headless.exe ile çalışır.
+
+Sınırlar:
+- ESP32 kodu MSVC ile bir Windows DLL'ine derlenir: Linux'ta ESP32 kartları
+  yazılımsız çalışır (devre ve fizik yine çalışır).
+- Arduino (ATmega328P) emülasyonu her yerde çalışır; hazır .hex dosyaları
+  doğrudan, çizimler arduino-cli kuruluysa derlenerek.
+- Parçaların biçimi ve kabloların fiş konumları uygulamanın 3B modellerinden
+  gelir. Windows'ta "RobotWinStudio.exe --bake-geometry dunya.rwworld" ile
+  dünyanın yanına dunya.rwworld.geometry.json yazın; başsız koşu bu dosyayı
+  bulursa parçaları ve kabloları uygulamadakiyle aynı fizikle simüle eder.
+- Grafik arayüz (RobotWin Studio) yalnızca Windows'ta çalışır.
+
+Ayrıntılar: https://kinin-code-offical.github.io/robotwin-studio/
+
+----------------------------------------------------------------------
+English: the same simulation core without a window, for batch runs, the
+automation API and CI. ESP32 sketches compile to Windows DLLs with MSVC, so on
+Linux ESP32 boards run without firmware; the ATmega328P emulator runs anywhere
+(.hex files directly, sketches through arduino-cli). Run "./RobotWin.Headless" without arguments for the usage.

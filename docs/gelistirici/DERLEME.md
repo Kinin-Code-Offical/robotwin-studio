@@ -55,9 +55,21 @@ Varsayılan klasörler: `%LOCALAPPDATA%\Programs\RobotWin Studio` (kullanıcıya
 
 `.github/workflows/release.yml`, `v*` ile eşleşen her gönderilen etikette (ve var olan bir etiketle elle, *workflow_dispatch*) çalışır:
 
-1. Etiketi `windows-latest` üzerinde çeker, .NET 9 kurar.
-2. `tools/build-installer.ps1 -Version <v'siz etiket>`'i iki kez çalıştırır: normal ve `-SelfContained`.
-3. `RobotWinStudio-Setup-<sürüm>.exe` (tam) ve `RobotWinStudio-Setup-<sürüm>-lite.exe`'yi o etiketin GitHub sürümüne yükler (`softprops/action-gh-release`).
+1. **windows** (`windows-latest`): `tools/build-installer.ps1 -Version <v'siz etiket>`'i iki kez çalıştırır (normal ve `-SelfContained`); `.NET` içeren yayın klasörünü `RobotWinStudio-<sürüm>-win-x64-portable.zip` olarak sıkıştırır ve `--selftest` ile başlatıp dener; `tools/RobotWin.Headless`'ı `win-x64` için yayınlar, araba örneğiyle 1 s'lik toplu koşu yapıp `RobotWin-Headless-<sürüm>-win-x64.zip` olarak paketler.
+2. **linux** (`ubuntu-latest`): ekransız simülatörü `linux-x64` için (.NET içinde) yayınlar, aynı toplu koşuyu Linux'ta çalıştırır ve `RobotWin-Headless-<sürüm>-linux-x64.tar.gz` yapar; etiketteki kaynağı `RobotWinStudio-<sürüm>-source.zip` ve `.tar.gz` olarak yazar (`git archive`).
+3. **publish**: iki işin dosyalarını toplar, `SHA256SUMS.txt` yazar (`sha256sum`) ve hepsini o etiketin GitHub sürümüne ekler (`softprops/action-gh-release`).
+
+| Dosya | İçerik |
+| --- | --- |
+| `RobotWinStudio-Setup-<sürüm>.exe` | Windows x64 kurulum, .NET içinde |
+| `RobotWinStudio-Setup-<sürüm>-lite.exe` | Windows x64 kurulum, .NET 9 Masaüstü Çalışma Zamanı ister |
+| `RobotWinStudio-<sürüm>-win-x64-portable.zip` | Kurulumsuz uygulama klasörü: açın ve çalıştırın |
+| `RobotWin-Headless-<sürüm>-win-x64.zip` | Ekransız simülatör ve otomasyon sunucusu, Windows |
+| `RobotWin-Headless-<sürüm>-linux-x64.tar.gz` | Ekransız simülatör ve otomasyon sunucusu, Linux (ESP32 kartları orada yazılımsız çalışır: çizimler Windows DLL'ine derlenir) |
+| `RobotWinStudio-<sürüm>-source.zip`, `.tar.gz` | Etiketteki kaynak kodu |
+| `SHA256SUMS.txt` | Her dosyanın SHA-256 özeti |
+
+Uygulama içi güncelleyici yalnızca iki kurulum dosyasına bakar; diğerleri isteyenler içindir.
 
 ## Sürüm denetim listesi
 

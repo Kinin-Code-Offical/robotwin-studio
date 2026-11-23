@@ -20,7 +20,7 @@ namespace RobotTwin.CoreSim.Formats
     public static class RobotWinFormats
     {
         public const string AppName = "RobotWin Studio";
-        public const string AppVersion = "1.2";
+        public const string AppVersion = "1.3";
 
         public const string ProjectExtension = ".rwproj";
         public const string PartExtension = ".rwpart";

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-23
+
 ### Added
 
 - **What's new in the app:** after an update, the start page shows the new version's headlines once; **Yardım → 11. Yenilikler** keeps every release's news in Turkish, and the documentation site has a news page fed by the same `news.json` as the app.

@@ -1,5 +1,14 @@
 name: Release
 
+# A pushed tag v* builds every release file, each on the system it is for, checks them and attaches them to the
+# GitHub release with a SHA256SUMS.txt:
+#   RobotWinStudio-Setup-<v>.exe               Windows x64 installer, .NET inside (full)
+#   RobotWinStudio-Setup-<v>-lite.exe          Windows x64 installer, needs the .NET 9 Desktop Runtime
+#   RobotWinStudio-<v>-win-x64-portable.zip    the full app as a folder: unzip and run, nothing installed
+#   RobotWin-Headless-<v>-win-x64.zip          headless simulator / automation server for Windows
+#   RobotWin-Headless-<v>-linux-x64.tar.gz     headless simulator / automation server for Linux
+#   RobotWinStudio-<v>-source.zip / .tar.gz    the source at the tag
+
 on:
   push:
     tags:
@@ -7,39 +16,125 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build the installer for (e.g. v2.0.0)"
+        description: "Existing tag to build the release files for (e.g. v1.3.0)"
         required: true
 
 permissions:
   contents: write
 
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
-  installer:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ env.TAG }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
-      - name: Build installer
+      - name: Installers and portable app
         shell: pwsh
         run: |
-          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
-          $version = $tag.TrimStart('v')
-          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version
-          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version -SelfContained
+          $version = "$env:TAG".TrimStart('v')
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version -SelfContained
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          # The self-contained publish folder the full installer packed is the portable app.
+          New-Item -ItemType Directory -Force out | Out-Null
+          $portable = "RobotWinStudio-$version-win-x64-portable"
+          Copy-Item builds/installer/publish -Destination "out/$portable" -Recurse
+          Compress-Archive -Path "out/$portable" -DestinationPath "out/$portable.zip"
+          Remove-Item "out/$portable" -Recurse -Force
+          Copy-Item "builds/installer/RobotWinStudio-Setup-$version.exe", "builds/installer/RobotWinStudio-Setup-$version-lite.exe" out/
 
-      - name: Upload to the release
+      - name: Portable app starts (self-test)
+        shell: pwsh
+        run: |
+          Expand-Archive "out/RobotWinStudio-$env:VERSION-win-x64-portable.zip" -DestinationPath check
+          $exe = Get-ChildItem check -Recurse -Filter RobotWinStudio.exe | Select-Object -First 1
+          $p = Start-Process $exe.FullName -ArgumentList '--selftest' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "selftest failed with $($p.ExitCode)" }
+
+      - name: Headless simulator (Windows)
+        shell: pwsh
+        run: |
+          $name = "RobotWin-Headless-$env:VERSION-win-x64"
+          dotnet publish tools/RobotWin.Headless/RobotWin.Headless.csproj -c Release -r win-x64 --self-contained true -p:Version=$env:VERSION -o "out/$name"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Copy-Item tools/RobotWin.Headless/OKUBENI.txt "out/$name/"
+          & "out/$name/RobotWin.Headless.exe" --run 1 --example car | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "headless run failed" }
+          Compress-Archive -Path "out/$name" -DestinationPath "out/$name.zip"
+          Remove-Item "out/$name" -Recurse -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/*
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Headless simulator (Linux)
+        run: |
+          version="${TAG#v}"
+          name="RobotWin-Headless-$version-linux-x64"
+          mkdir -p out
+          dotnet publish tools/RobotWin.Headless/RobotWin.Headless.csproj -c Release -r linux-x64 --self-contained true -p:Version=$version -o "out/$name"
+          cp tools/RobotWin.Headless/OKUBENI.txt "out/$name/"
+          # It really runs on Linux: a 1 s batch run of the car example, JSON on stdout.
+          "out/$name/RobotWin.Headless" --run 1 --example car > run.json
+          grep -q '"sim_time"' run.json
+          tar -C out -czf "out/$name.tar.gz" "$name"
+          rm -rf "out/$name"
+
+      - name: Source archives
+        run: |
+          version="${TAG#v}"
+          git archive --format=zip --prefix="robotwin-studio-$version/" -o "out/RobotWinStudio-$version-source.zip" "$TAG"
+          git archive --format=tar.gz --prefix="robotwin-studio-$version/" -o "out/RobotWinStudio-$version-source.tar.gz" "$TAG"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: out/*
+
+  publish:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd files
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Attach to the release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            builds/installer/RobotWinStudio-Setup-${{ env.VERSION }}.exe
-            builds/installer/RobotWinStudio-Setup-${{ env.VERSION }}-lite.exe
+          tag_name: ${{ env.TAG }}
+          files: files/*
           fail_on_unmatched_files: true

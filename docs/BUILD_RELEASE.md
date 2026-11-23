@@ -47,9 +47,21 @@ Default folders: `%LOCALAPPDATA%\Programs\RobotWin Studio` (per user) or `%Progr
 
 `.github/workflows/release.yml` runs on every pushed tag matching `v*` (and manually via *workflow_dispatch* with an existing tag):
 
-1. Checks out the tag on `windows-latest`, sets up .NET 9.
-2. Runs `tools/build-installer.ps1 -Version <tag without v>` twice, normal and `-SelfContained`.
-3. Uploads `RobotWinStudio-Setup-<version>.exe` (full) and `RobotWinStudio-Setup-<version>-lite.exe` to the GitHub release for that tag (`softprops/action-gh-release`).
+1. **windows** (`windows-latest`): runs `tools/build-installer.ps1 -Version <tag without v>` twice (normal and `-SelfContained`), zips the self-contained publish folder as `RobotWinStudio-<version>-win-x64-portable.zip` and starts it with `--selftest`, and publishes `tools/RobotWin.Headless` for `win-x64` as `RobotWin-Headless-<version>-win-x64.zip` after a one-second batch run of the car example.
+2. **linux** (`ubuntu-latest`): publishes the headless simulator for `linux-x64` (self-contained), runs the same batch run on Linux and packs `RobotWin-Headless-<version>-linux-x64.tar.gz`; writes the source at the tag as `RobotWinStudio-<version>-source.zip` and `.tar.gz` (`git archive`).
+3. **publish**: collects both jobs' files, writes `SHA256SUMS.txt` (`sha256sum`) and attaches everything to the GitHub release for that tag (`softprops/action-gh-release`).
+
+| File | Contents |
+| --- | --- |
+| `RobotWinStudio-Setup-<version>.exe` | Windows x64 installer, .NET inside |
+| `RobotWinStudio-Setup-<version>-lite.exe` | Windows x64 installer, needs the .NET 9 Desktop Runtime |
+| `RobotWinStudio-<version>-win-x64-portable.zip` | The full app as a folder: unzip and run |
+| `RobotWin-Headless-<version>-win-x64.zip` | Headless simulator and automation server, Windows |
+| `RobotWin-Headless-<version>-linux-x64.tar.gz` | Headless simulator and automation server, Linux (ESP32 boards run without firmware there: sketches compile to Windows DLLs) |
+| `RobotWinStudio-<version>-source.zip`, `.tar.gz` | The source at the tag |
+| `SHA256SUMS.txt` | SHA-256 of every file |
+
+The in-app updater only looks at the two installers; the other files are for people who want them.
 
 ## Release checklist
 
