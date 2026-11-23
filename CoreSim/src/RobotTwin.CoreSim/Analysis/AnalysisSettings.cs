@@ -129,6 +129,18 @@ namespace RobotTwin.CoreSim.Analysis
             _ => (1e-4, 1e-4, 24, 2e-5, 1e-4, false)
         };
 
+        /// <summary>
+        /// [liquid] Liquids in the analysis run: computed in full whatever it costs (no coarse step, no sleeping), more
+        /// particles and pressure iterations the higher the accuracy. The live view uses 4000 particles and 4 iterations.
+        /// </summary>
+        public Sandbox.WorldPhysics.LiquidQuality LiquidQuality => Accuracy switch
+        {
+            AccuracyPreset.Fast => new Sandbox.WorldPhysics.LiquidQuality { Particles = 6000, Iterations = 5, MaxStep = AccuracyValues.PhysicsStep, Sleep = false },
+            AccuracyPreset.Standard => new Sandbox.WorldPhysics.LiquidQuality { Particles = 10000, Iterations = 6, MaxStep = AccuracyValues.PhysicsStep, Sleep = false },
+            AccuracyPreset.Reference => new Sandbox.WorldPhysics.LiquidQuality { Particles = 30000, Iterations = 12, MaxStep = AccuracyValues.PhysicsStep, Sleep = false },
+            _ => new Sandbox.WorldPhysics.LiquidQuality { Particles = 16000, Iterations = 8, MaxStep = AccuracyValues.PhysicsStep, Sleep = false }
+        };
+
         public int SampleCount => Math.Max(1, (int)Math.Ceiling(Duration * OutputRate - 1e-9));
 
         /// <summary>Settings of one of the named presets ("Gerilme", "Isı", "Aerodinamik", "Tam analiz") for a world.</summary>

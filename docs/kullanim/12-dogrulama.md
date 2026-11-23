@@ -91,7 +91,19 @@ Kürede kalan farkın çoğu çözüm alanının sonlu olmasından gelir: düş�
 
 **Uygulamadaki 3B akış analizi** her sonucun yanına güvenilirliğini yazar: gerçek Reynolds sayısı, hücre boyu, tıkanma oranı, sınır tabakanın çözülüp çözülmediği (y+), kuvvetin oturup oturmadığı ve ilk anın iki ızgarayla yeniden çözülmesinden gelen **ızgara belirsizliği (GCI)**. Sınır tabaka hücreden inceyse yüzey sürtünmesi eksik çözülür; keskin kenarlı küt cisimlerin (kutu, araba gövdesi) basınç sürüklemesi yine geçerlidir.
 
-## 6. Gaz ve roket
+## 6. Sıvılar (parçacıklı akışkan)
+
+| Ölçüm | Teori / referans | Simülasyon | Sapma | Kabul sınırı |
+| --- | --- | --- | --- | --- |
+| 6 cm durgun suyun yan duvara kuvveti (ρgD²L/2) | 1,0576 N | 1,0775 N | +1,9 % | ±5 % |
+| Durgun suyun iç yoğunluğu | 998,2 kg/m³ | 999,7 kg/m³ | +0,15 % | ±1 % |
+| En büyük sıkışma | 0 | %0,88 | — | %3 |
+| Serbest kabın taşıdığı su ağırlığı | 1,6922 N | 1,6914 N | −0,05 % | ±3 % |
+| Baraj yıkılması, cephe x/a (Martin ve Moyce 1952), T = 0,84 … 2,98 | 1,22 … 3,67 | 1,26 … 3,82 | +3,6 … +8,2 % | ±12 % |
+
+Baraj yıkılması deneyinde kapak bir anda kalkmadığı için sayısal yöntemler deneyin genelde %5–10 önünde gider. Ayrıntılar: [Sıvılar](../fizik/07-sivilar.md).
+
+## 7. Gaz ve roket
 
 | Ölçüm | Teori / referans | Simülasyon | Sapma | Kabul sınırı |
 | --- | --- | --- | --- | --- |
@@ -100,7 +112,7 @@ Kürede kalan farkın çoğu çözüm alanının sonlu olmasından gelir: düş�
 | KNSB motor oda basıncı | 2,26 MPa (kararlı) | 2,58 MPa | +14 % (başlangıç geçişi) | −20 / +25 % |
 | KNSB özgül itki | 110–140 s (literatür) | 136 s | aralıkta | 100–165 s |
 
-## 7. Elektrik, elektromekanik, sensörler
+## 8. Elektrik, elektromekanik, sensörler
 
 | Ölçüm | Teori / referans | Simülasyon | Sapma | Kabul sınırı |
 | --- | --- | --- | --- | --- |

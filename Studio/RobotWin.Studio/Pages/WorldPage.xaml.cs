@@ -289,6 +289,7 @@ namespace RobotWin.Studio.Pages
             Palette.Children.Add(Row("Küre / bilye", "Ø 40 mm", () => AddBody("sphere", 0.04, 0.04, 0.04)));
             ShellPalette();   // [shell] hollow bodies with lids (Pages/WorldPage.Shells.cs)
             GasPalette();   // [gas] pressure vessels, motors, fins (Pages/WorldPage.Gas.cs)
+            LiquidPalette();   // [liquid] water, oil, honey; a glass (Pages/WorldPage.Liquids.cs)
             Palette.Children.Add(Caption("Uçuş yüzeyleri (gerçek kaldırma, sürükleme, moment)"));
             Palette.Children.Add(Row("Kanat", "1000 mm açıklık, 150 mm veter, Clark Y", () => AddBody("wing", 0.15, 1.0, 0.012, o => { o.Material = "AHŞAP"; o.MassKg = 0.08; o.Name = World!.UniqueName("Kanat"); o.Parameters["airfoil"] = "clarky"; o.Parameters["incidence"] = "2"; o.Parameters["control"] = "aileron"; })));
             Palette.Children.Add(Row("Yatay kuyruk + irtifa dümeni", "300 × 80 mm, NACA 0012", () => AddBody("wing", 0.08, 0.30, 0.006, o => { o.Material = "AHŞAP"; o.MassKg = 0.015; o.Name = World!.UniqueName("Yatay kuyruk"); o.Parameters["airfoil"] = "naca0012"; o.Parameters["incidence"] = "-2"; o.Parameters["control"] = "elevator"; o.Parameters["control.chord"] = "0.35"; })));
@@ -626,6 +627,12 @@ namespace RobotWin.Studio.Pages
             };
             Inspector.Children.Add(name);
             Inspector.Children.Add(Note(KindText(o)));
+            if (WorldPhysics.IsLiquid(o))
+            {
+                LiquidSection(world, o);   // [liquid] Pages/WorldPage.Liquids.cs
+                return;
+            }
+
             // What the object is for comes first (a robot's pendant, a switch, a wing's linkage, a shell's fit check);
             // features a body can be given (vessel, parachute, own air settings, behaviours) only when it has them,
             // the rest under "Özellik ekle" further down (Pages/WorldPage.Features.cs).
@@ -1392,6 +1399,16 @@ namespace RobotWin.Studio.Pages
                         foreach (var body in ph.Scene.Bodies.Where(x => !x.IsStatic))
                             sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0} {1} | p ({2:0.0000},{3:0.0000},{4:0.0000}) | v ({5:0.000},{6:0.000},{7:0.000}) | w {9:0.0} rad/s | m {8:0.0000}",
                                 body.Id, (body.Tag as WorldObject)?.Name, body.Position.X, body.Position.Y, body.Position.Z, body.Velocity.X, body.Velocity.Y, body.Velocity.Z, body.Mass, body.AngularVelocity.Length));
+                    if (_session.Physics is { } phl)   // [liquid]
+                        foreach (var l in phl.Liquids)
+                        {
+                            var (llo, lhi) = l.Body.Bounds();
+                            var mesh = RobotTwin.CoreSim.Mechanics.LiquidSurface.Build(l.Body.Snapshot(), l.Body.Spacing);
+                            sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "sıvı {0}: {1} parçacık, kutu ({2:0.000},{3:0.000},{4:0.000})–({5:0.000},{6:0.000},{7:0.000}), sıkışma {8:0.000}, yüzey {9} köşe / {10} üçgen, {11} damla, ağırlık merkezi ({12:0.000},{13:0.000},{14:0.000})",
+                                l.Object.Name, l.Body.Count, llo.X, llo.Y, llo.Z, lhi.X, lhi.Y, lhi.Z, l.Body.MaxCompression, mesh.VertexCount, mesh.TriangleCount, mesh.Drops.Length / 3,
+                                l.Body.CentreOfMass().X, l.Body.CentreOfMass().Y, l.Body.CentreOfMass().Z));
+                        }
+
                     sb.AppendLine("---- kablolar ----");
                     if (_session.Physics is { } phc && World != null)
                         foreach (var c in World.Cables)

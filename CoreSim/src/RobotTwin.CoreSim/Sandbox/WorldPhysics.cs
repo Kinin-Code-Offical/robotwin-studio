@@ -89,7 +89,7 @@ namespace RobotTwin.CoreSim.Sandbox
             _circuit = circuit;
         }
 
-        public static WorldPhysics Build(WorldDocument world, Func<WorldObject, WorldBodyGeometry> geometry, WorldCircuit? circuit)
+        public static WorldPhysics Build(WorldDocument world, Func<WorldObject, WorldBodyGeometry> geometry, WorldCircuit? circuit, LiquidQuality? liquid = null)
         {
             var p = new WorldPhysics(circuit);
             var env = world.Environment;
@@ -108,10 +108,15 @@ namespace RobotTwin.CoreSim.Sandbox
 
             p.ConfigureTerrain(world); // [terrain] sculpted ground, painted layers
             foreach (var o in world.Objects)
+            {
+                if (IsLiquid(o)) continue;   // [liquid] particles, built once every solid stands (Sandbox/WorldPhysics.Liquids.cs)
                 if (!p.TryAddProp(o)) p.AddObject(o, geometry(o)); // [terrain] static props collide piecewise
+            }
             p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
+            p.Liquid = liquid ?? LiquidQuality.Live;
+            p.BuildLiquids(world, geometry);   // [liquid] water, oil, honey … as particles (Sandbox/WorldPhysics.Liquids.cs)
             p.FilterAssemblyCollisions(); // only parts within two joints of each other skip collisions (WorldPhysics.Overlap.cs)
             p.ScrewLids();   // [shell] lids seated on their shell's rim are screwed down (Sandbox/WorldPhysics.Shells.cs)
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
@@ -133,6 +138,8 @@ namespace RobotTwin.CoreSim.Sandbox
             "ABS" => "abs",
             "PETG" => "petg",
             "FR4" => "fr4",
+            "CAM" or "GLASS" => "glass",
+            "AKRİLİK" or "AKRILIK" => "acrylic",
             _ => "pla"
         };
 
@@ -181,7 +188,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     break;
             }
 
-            if (g.Shape is "cylinder-z" or "cylinder-x" or "cylinder-y" && Param(o, "tube.wall", 0) > 0) MakeTube(body, Param(o, "tube.wall", 0));   // [tube]
+            if (g.Shape is "cylinder-z" or "cylinder-x" or "cylinder-y" && Param(o, "tube.wall", 0) > 0) MakeTube(body, Param(o, "tube.wall", 0), Param(o, "tube.bottom", 0));   // [tube]
 
             if (g.SensorOrigin is { } so && _circuit?.ComponentRef(o.Id) is { } sref)
             {
@@ -392,6 +399,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 // first, a wire inside a plane at 12 m/s trailed its fuselage by 12 mm), and their pull on the plugs is
                 // applied in the next step.
                 StepCables(Step);
+                StepLiquids(Step);   // [liquid] after the bodies too; its push on them acts in their next step
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia
                 Sdk?.AfterStep(Step, sim);   // [sdk]

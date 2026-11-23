@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Liquids:** water, sea water, ethanol, milk, sunflower oil, glycerol and honey as particles (position-based fluids) at their real density, viscosity (implicit SPH Laplacian, no-slip walls) and surface tension (continuum surface force). Walls carry the liquid's pressure through density maps from each body's signed distance, and their reaction acts on the body: a glass carries its water's weight, a part in water feels buoyancy. No particle crosses a wall within a step, judged in the turning body's own frame. A liquid object is a box or cylinder the liquid fills when the world starts.
+- **Liquid surface:** smoothed particles, a density field and surface nets give a closed surface with smooth normals; Fresnel reflectance per vertex (clear looking in, sky at grazing angles), a sun highlight, drops for loose particles. Glass and acrylic are drawn after the liquid, so water shows through a glass.
+- **Glass and cups:** a "CAM" (soda-lime glass) material, and `tube.bottom` closes a hollow cylinder into a cup; the editor draws hollow tubes and cups.
+- **Template "Su bardağı":** an ESP32 tips a glass of water held on a sideways SG90's horn and pours it into a bowl.
+- **Renders compute liquids in full:** every physics step, no sleeping, 6000–30 000 particles and 5–12 pressure iterations by accuracy, recorded at 60 frames per second and replayed with a finer surface. The live view steps a slow liquid less often (at most 3 ms) and lets still water sleep.
+
 - **Validation page:** **Yardım → 12. Doğrulama** (and the README) lists, for every solver, the theory or benchmark value, what the simulation gives, the deviation and the tolerance its test enforces.
 - **Flow benchmarks:** the Schäfer–Turek DFG cylinder benchmarks 2D-1 (Re 20, steady) and 2D-2 (Re 100, periodic shedding) are tests now, along with sphere drag at Re 20 and Re 100 against the standard drag curve.
 - **Trust notes on the 3D flow analysis:** each result states the real Reynolds number, cell size, blockage ratio, whether the boundary layer is resolved (y+), whether the force settled, and a grid uncertainty (GCI) from solving the first instant again on a coarser grid.

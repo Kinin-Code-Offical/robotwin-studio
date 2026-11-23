@@ -91,7 +91,19 @@ Most of the sphere's remaining deviation comes from the finite domain: at low Re
 
 **The 3D flow analysis in the app** prints how far to trust each result: the real Reynolds number, the cell size, the blockage ratio, whether the boundary layer is resolved (y+), whether the force settled, and the **grid uncertainty (GCI)** from solving the first instant again on a second grid. When the boundary layer is thinner than a cell, skin friction is under-resolved; the pressure drag of sharp-edged bluff bodies (a box, a car body) is still valid.
 
-## 6. Gas and rockets
+## 6. Liquids (particle fluid)
+
+| Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- |
+| Force of 6 cm of still water on a side wall (ρgD²L/2) | 1.0576 N | 1.0775 N | +1.9 % | ±5 % |
+| Interior density of still water | 998.2 kg/m³ | 999.7 kg/m³ | +0.15 % | ±1 % |
+| Largest compression | 0 | 0.88 % | — | 3 % |
+| Weight of the water carried by a free container | 1.6922 N | 1.6914 N | −0.05 % | ±3 % |
+| Dam break, front x/a (Martin & Moyce 1952), T = 0.84 … 2.98 | 1.22 … 3.67 | 1.26 … 3.82 | +3.6 … +8.2 % | ±12 % |
+
+Numerical methods usually run 5–10 % ahead of the dam-break experiment, whose gate was not removed at once. Details: [Liquids](../physics/07-liquids.md).
+
+## 7. Gas and rockets
 
 | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
 | --- | --- | --- | --- | --- |
@@ -100,7 +112,7 @@ Most of the sphere's remaining deviation comes from the finite domain: at low Re
 | KNSB motor chamber pressure | 2.26 MPa (steady) | 2.58 MPa | +14 % (start-up transient) | −20 / +25 % |
 | KNSB specific impulse | 110–140 s (literature) | 136 s | in range | 100–165 s |
 
-## 7. Electrical, electromechanical, sensors
+## 8. Electrical, electromechanical, sensors
 
 | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
 | --- | --- | --- | --- | --- |

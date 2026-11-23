@@ -774,6 +774,7 @@ namespace RobotWin.Studio.World
             using (Shell.Perf.Measure("rüzgâr")) SdkFrame();   // [sdk] wind arrows, wind sock, force-field regions
             using (Shell.Perf.Measure("paraşüt")) ChuteFrame();   // [launch] canopies (World/WorldScene.Parachutes.cs)
             using (Shell.Perf.Measure("jetler")) PlumeFrame();   // [gas] exhaust flames and smoke in the 3D scene (World/WorldScene.Plume.cs)
+            if (Playback == null) LiquidFrame();   // [liquid] water and other liquids (World/WorldScene.Liquids.cs)
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();

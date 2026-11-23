@@ -1,0 +1,99 @@
+# Sıvılar
+
+Su, yağ, bal gibi sıvılar dünyada parçacıklarla çözülür. Her parçacık sıvının kütlesinden eşit bir pay taşır; parçacıklar gerçek yoğunlukta durur, gerçek viskozite ve yüzey gerilimiyle akar. Sıvı katı parçaları iter, parçalar da sıvıyı iter: bir bardak suyun ağırlığını taşır, suya bırakılan bir parça kaldırma kuvveti görür.
+
+## Sıvının kendisi: konum tabanlı akışkan (PBF)
+
+Sıkıştırılamazlık, her parçacık için bir yoğunluk kısıtıdır (Macklin ve Müller 2013). Bu kısıt, sahnedeki diğer XPBD kısıtları (kabloların teli gibi) ile aynı biçimde çözülür.
+
+- **Yoğunluk:** komşulardan SPH toplamı, $`\rho_i = \sum_j m\,W(\lVert x_i - x_j\rVert, h)`$. $`W`$ kübik spline çekirdektir; $`h`$ parçacık aralığının iki katıdır, yaklaşık 33 komşu.
+- **Parçacık kütlesi:** $`m = \rho_0 / S_0`$. Burada $`S_0`$ kusursuz kübik kafesin çekirdek toplamıdır, yani dinlenmedeki sıvı tam olarak gerçek yoğunluktadır.
+- **Kısıt:** $`C_i = \max(\rho_i/\rho_0 - 1,\ 0)`$. Basınç yalnızca iter; serbest yüzey serbesttir.
+- **Düzeltme:** $`\lambda_i = -C_i / (\sum_k \lvert\nabla_k C_i\rvert^2 + \varepsilon)`$ ve $`\Delta x_i = \tfrac{m}{\rho_0}\sum_j (\lambda_i + \lambda_j)\nabla W_{ij}`$. Bu her alt adımda birkaç kez yinelenir (canlı görüntüde 4, render'da 5–12).
+
+## Duvarlar: yoğunluk haritası
+
+Her katı parça ve zemin, duvarın gerisinde "sıvı varmış gibi" yoğunluk katkısı verir (Koschier ve Bender 2017). Katkı, parçacığın duvara uzaklığı $`d`$'nin bir fonksiyonudur ve yerelde düz bir duvar varsayılır:
+
+```math
+\rho_\text{duvar}(d) = \frac{m}{s^3}\,\Phi(d), \qquad \Phi(d) = \int_{z>d} W\,\mathrm{d}V = \int_d^h A(z)\,\mathrm{d}z, \qquad A(z) = 2\pi\int_z^h W(r)\,r\,\mathrm{d}r
+```
+
+$`\Phi`$ ve $`A`$ bir kez tablolanır. Bunun üç sonucu vardır:
+
+- Duvar, arkasındaki sıvının hidrostatik basıncını taşır.
+- Parçacık duvara değmeden geri itilir.
+- Bu itişin tepkisi duvarın cismine kuvvet olarak uygulanır.
+
+Uzaklık, her cismin işaretli uzaklık fonksiyonundan gelir. Çok parçalı ya da örgü cisimlerde (25 dışbükey parçadan oluşan bir bardak gibi) bu fonksiyon, cismin kendi çerçevesinde bir ızgarada bir kez örneklenir. Hücre, parçacık aralığının üçte biridir. Sorgu bu ızgarada üç doğrusal ara değerlemedir, normal de alanın gradyanından gelir.
+
+**Tünelleme yok:** bir parçacık bir adımda katı bir duvarı aşamaz. Bu, cismin kendi çerçevesinde denetlenir (bardak dönüyor olabilir). Uzaklık en fazla gidilen yol kadar değişebildiği için iki uçtaki boşluk toplamı hareketten büyükse kesin ışın atılmaz. Çoğu parçacık bu sayede ucuzca geçer.
+
+## Viskozite ve yüzey gerilimi
+
+- **Viskozite:** sıvının gerçek kinematik viskozitesi $`\nu = \mu/\rho`$. Morris ve arkadaşlarının (1997) SPH Laplace operatörü kullanılır:
+
+  ```math
+  \frac{\mathrm{d}v_i}{\mathrm{d}t} = \sum_j \frac{2\nu\,m}{\rho_j}\,\frac{r_{ij}\cdot\nabla W_{ij}}{r_{ij}^2 + 0{,}01\,\ell^2}\,(v_i - v_j)
+  ```
+
+  Örtük olarak alınır; bu yüzden bal ($`\nu \approx 7\cdot10^{-3}`$ m²/s) da aynı adımda kararlıdır. Duvar, cisimle birlikte hareket eden kaymasız bir sınırdır. Katkısı, duvarın gerisindeki yarı uzay üzerinden $`\int -W'(r)/r\,\mathrm{d}V = 2\pi\int_d^h W(z)\,\mathrm{d}z`$ ile hesaplanır.
+- **Yüzey gerilimi:** sıvının gerçek $`\sigma`$ değeri, sürekli yüzey kuvveti olarak (Brackbill 1992) uygulanır: $`f = \sigma\,\kappa\,\nabla c`$. Renk alanı gradyanı $`\nabla c`$ yalnızca yüzeyde sıfırdan farklıdır. Eğrilik komşulardan hesaplanır: $`\kappa = -\nabla\cdot\hat m`$, burada $`\hat m = \nabla c/\lvert\nabla c\rvert`$.
+
+| Sıvı (20 °C) | Yoğunluk (kg/m³) | Viskozite (mPa·s) | Yüzey gerilimi (mN/m) |
+| --- | --- | --- | --- |
+| Su | 998,2 | 1,002 | 72,8 |
+| Deniz suyu | 1024,8 | 1,08 | 73,5 |
+| Etil alkol | 789,3 | 1,20 | 22,3 |
+| Süt | 1030 | 2,0 | 45 |
+| Ayçiçek yağı | 919 | 55,8 | 33,5 |
+| Gliserin | 1261 | 1410 | 63,4 |
+| Bal | 1420 | ≈10 000 | 50 |
+
+## Zaman adımı
+
+Bir alt adımda hiçbir parçacık, parçacık aralığının 0,3'ünden fazla yol almaz (CFL koşulu). Su hızlandıkça alt adım sayısı kendiliğinden artar.
+
+**Canlı görüntü** etkileşimlidir:
+
+- Yavaş bir sıvı, cisimlerden daha seyrek adımlanır (en çok 3 ms).
+- Durgun bardaktaki durgun su "uyur".
+- Sıvının kaba itişi, sıvı adımları arasındaki her fizik adımında uygulanır.
+
+**Render** her şeyi tam hesaplar; ne kadar sürdüğü önemsizdir:
+
+- Sıvı her fizik adımında çözülür, uyku yoktur.
+- Doğruluk ayarına göre 6000–30 000 parçacık ve 5–12 basınç yinelemesi kullanılır.
+- Yüzey daha ince bir ızgarada çıkarılır.
+
+## Görünüş
+
+Yüzey parçacıklardan şu adımlarla kurulur:
+
+1. Parçacık merkezleri komşularına doğru yumuşatılır (Yu ve Turk 2013). Bu, durgun yüzeyi düzleştirir.
+2. $`\phi = \sum_j W/S_0`$ alanı bir ızgarada örneklenir.
+3. $`\phi = 0{,}4`$ yüzeyi "surface nets" yöntemiyle çıkarılır (½ yerine 0,4: kuru bir yüzeye yayılan tek parçacık kalınlığındaki su da kesintisiz bir tabaka olur); normaller alanın gradyanından gelir.
+4. Tek başına uçan parçacıklar damlacık olarak çizilir. Canlı görüntüde her damla, gerçek bir kameranın 1/60 s'lik pozlamasında çizeceği iz kadar hızı yönünde uzatılır; düşen ince bir akış kopuk toplar değil, bir şerit olarak görünür.
+
+WPF'te gölgelendirici olmadığı için optik köşe başına hesaplanır:
+
+- Yüzeyin kameraya göre Fresnel yansıması Schlick yaklaşımıyla bulunur; su için $`F_0 = ((n-1)/(n+1))^2 \approx 0{,}02`$.
+- Dik bakınca sıvı neredeyse saydamdır ve kendi rengini gösterir.
+- Yatık bakınca gökyüzünü yansıtır.
+- Keskin bir parlama güneşi taşır.
+
+Cam ve akrilik parçalar sıvıdan sonra çizilir; bu sayede su bardağın içinden görünür.
+
+## Doğrulama
+
+Sayılar [12. Doğrulama](../kullanim/12-dogrulama.md) sayfasındadır:
+
+- **Durgun su:** 6 cm su, yan duvara hidrostatik kuvvetini %2 içinde uygular. İç yoğunluk gerçek yoğunluğun %0,2 içindedir, en büyük sıkışma %1'in altındadır.
+- **Serbest kap:** zemindeki serbest bir kap, içindeki suyun ağırlığını %0,1 içinde taşır.
+- **Baraj yıkılması:** su cephesi Martin ve Moyce (1952) deneyinin %4–8 önündedir. Sayısal yöntemler bu deneyde genelde önde gider, çünkü deneyde kapak bir anda kalkmamıştır.
+
+## Sınırlar
+
+- **Islanma yok:** sıvı yüzeye yapışmaz, temas açısı ve ince film modellenmez. Döken bir bardağın dış yüzünden süzülen ince su tabakası görünmez.
+- **Parçacık aralığından ince akış yok:** canlı görüntüde 3–4 mm'den ince damla ve tabakalar parçacık boyundadır. Render'da daha incedir.
+- **Hava yok:** sıvının içinde hava kabarcığı oluşmaz ve hava direnci sıvıya etkimez.

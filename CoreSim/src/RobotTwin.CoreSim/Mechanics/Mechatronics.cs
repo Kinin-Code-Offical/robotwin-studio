@@ -583,6 +583,7 @@ namespace RobotTwin.CoreSim.Mechanics
             "KURŞUN" or "KURSUN" or "LEAD" => MaterialDensity.Lead,
             "KAUÇUK" or "KAUCUK" or "RUBBER" => MaterialDensity.Rubber,
             "BAKIR" or "COPPER" => MaterialDensity.Copper,
+            "CAM" or "GLASS" => MaterialDensity.Glass,
             _ => MaterialDensity.Pla
         };
 

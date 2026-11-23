@@ -525,6 +525,7 @@ namespace RobotTwin.CoreSim.Mechanics
         public const double Lead = 11340;
         public const double Rubber = 1100;
         public const double Copper = 8960;
+        public const double Glass = 2500;        // soda-lime
 
         /// <summary>Rough effective density of an FDM print: solid walls/skins plus infill (fractions 0..1).</summary>
         public static double Printed(double material, double infill, double shellFraction = 0.35) =>

@@ -29,6 +29,7 @@ tr:
       - { path: fizik/04-aerodinamik.md, title: Aerodinamik, alt: en/physics/04-aerodynamics.md }
       - { path: fizik/05-gaz-ve-roket.md, title: Gaz ve roketler, alt: en/physics/05-gas-and-rockets.md }
       - { path: fizik/06-radyo.md, title: Radyo, alt: en/physics/06-radio.md }
+      - { path: fizik/07-sivilar.md, title: Sıvılar, alt: en/physics/07-liquids.md }
   - title: Geliştirici belgeleri
     items:
       - { path: gelistirici/README.md, title: Belgeler dizini, alt: README.md }
@@ -69,6 +70,7 @@ en:
       - { path: en/physics/04-aerodynamics.md, title: Aerodynamics, alt: fizik/04-aerodinamik.md }
       - { path: en/physics/05-gas-and-rockets.md, title: Gas and rockets, alt: fizik/05-gaz-ve-roket.md }
       - { path: en/physics/06-radio.md, title: Radio, alt: fizik/06-radyo.md }
+      - { path: en/physics/07-liquids.md, title: Liquids, alt: fizik/07-sivilar.md }
   - title: Developer docs
     items:
       - { path: README.md, title: Docs index, alt: gelistirici/README.md }

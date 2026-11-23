@@ -138,6 +138,7 @@ namespace RobotWin.Studio.World
             "KARBON" or "CARBON" => Color.FromRgb(0x2B, 0x2C, 0x30),
             "KURŞUN" or "KURSUN" or "LEAD" => Color.FromRgb(0x7A, 0x7F, 0x88),
             "FR4" => Color.FromRgb(0x1E, 0x56, 0x31),
+            "CAM" or "GLASS" => Color.FromArgb(0x3A, 0xD8, 0xEC, 0xF0),   // [liquid] clear glass: the liquid shows through
             _ => MeshVisual.MaterialColor(material ?? "PLA")
         };
 
@@ -163,12 +164,71 @@ namespace RobotWin.Studio.World
             return g;
         }
 
+        /// <summary>[liquid] Clear glass: barely tinted, with a small sharp highlight (a broad one reads as metal).</summary>
+        private static Material Glass(Color c, EmissiveMaterial? heat)
+        {
+            var g = new MaterialGroup();
+            g.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(0x26, c.R, c.G, c.B))));
+            if (heat != null) g.Children.Add(heat);
+            g.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0xB0, 255, 255, 255)), 160));
+            return g;
+        }
+
         private static void Box(Model3DGroup g, double cx, double cy, double cz, double sx, double sy, double sz, Color c, double spec = 0.1, EmissiveMaterial? heat = null) =>
             g.Children.Add(M.Model(M.Box(cx * Mm, cy * Mm, cz * Mm, sx * Mm, sy * Mm, sz * Mm), Mat(c, spec, heat)));
 
         /// <summary>Cylinder along an axis (0 = X, 1 = Y, 2 = Z), centred at (cx, cy, cz), sizes in mm.</summary>
         private static void Cyl(Model3DGroup g, double radius, double length, int axis, double cx, double cy, double cz, Color c, double spec = 0.2, EmissiveMaterial? heat = null, int seg = 28) =>
             g.Children.Add(M.Model(M.Cylinder(radius * Mm, length * Mm, axis, seg, cx * Mm, cy * Mm, cz * Mm), Mat(c, spec, heat)));
+
+        /// <summary>
+        /// [tube] A hollow cylinder standing on z = 0: outer and inner wall, the rim, and with a bottom (m) the base: its
+        /// underside and the floor inside.
+        /// </summary>
+        private static MeshGeometry3D Hollow(double ro, double ri, double h, double bottom, int seg)
+        {
+            var mesh = new MeshGeometry3D();
+            void Quad(Point3D a, Point3D b, Point3D c, Point3D d, Vector3D na, Vector3D nb)
+            {
+                int i = mesh.Positions.Count;
+                mesh.Positions.Add(a);
+                mesh.Positions.Add(b);
+                mesh.Positions.Add(c);
+                mesh.Positions.Add(d);
+                mesh.Normals.Add(na);
+                mesh.Normals.Add(nb);
+                mesh.Normals.Add(nb);
+                mesh.Normals.Add(na);
+                foreach (int k in new[] { 0, 1, 2, 0, 2, 3 }) mesh.TriangleIndices.Add(i + k);
+            }
+
+            double z0 = bottom;   // the inside starts on the base
+            for (int k = 0; k < seg; k++)
+            {
+                double a0 = 2 * Math.PI * k / seg, a1 = 2 * Math.PI * (k + 1) / seg;
+                var u0 = new Vector3D(Math.Cos(a0), Math.Sin(a0), 0);
+                var u1 = new Vector3D(Math.Cos(a1), Math.Sin(a1), 0);
+                Point3D P(Vector3D u, double r, double z) => new Point3D(u.X * r, u.Y * r, z);
+                // outer wall (outward), inner wall (towards the axis), rim (up), underside (down)
+                Quad(P(u0, ro, 0), P(u1, ro, 0), P(u1, ro, h), P(u0, ro, h), u0, u1);
+                Quad(P(u1, ri, z0), P(u0, ri, z0), P(u0, ri, h), P(u1, ri, h), -u1, -u0);
+                Quad(P(u0, ri, h), P(u0, ro, h), P(u1, ro, h), P(u1, ri, h), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1));
+                if (bottom > 0)
+                {
+                    var down = new Vector3D(0, 0, -1);
+                    var up = new Vector3D(0, 0, 1);
+                    Quad(P(u1, ro, 0), P(u0, ro, 0), new Point3D(0, 0, 0), new Point3D(0, 0, 0), down, down);
+                    Quad(P(u0, ri, z0), P(u1, ri, z0), new Point3D(0, 0, z0), new Point3D(0, 0, z0), up, up);
+                }
+                else
+                {
+                    Quad(P(u1, ro, 0), P(u0, ro, 0), P(u0, ri, 0), P(u1, ri, 0), new Vector3D(0, 0, -1), new Vector3D(0, 0, -1));
+                }
+            }
+
+            mesh.Freeze();
+            return mesh;
+        }
 
         // ================================================================ mechanical bodies
 
@@ -179,8 +239,27 @@ namespace RobotWin.Studio.World
             var m = new ObjectModel();
             var c = ParseColor(o.Color, MaterialColor(o.Material));
             double sx = o.SizeX * 1000, sy = o.SizeY * 1000, sz = o.SizeZ * 1000;
+            if (WorldPhysics.IsLiquid(o))
+            {
+                // [liquid] The volume the liquid fills when the world starts; while running, its surface is drawn instead.
+                var kind = RobotTwin.CoreSim.Mechanics.LiquidKind.Find(o.Parameters["liquid"]);
+                var look = LiquidLook.Material(kind, 0.5);
+                var mesh = o.Shape == "cylinder" ? M.Cylinder(sx / 2 * Mm, sz * Mm, 2, 48, 0, 0, sz / 2 * Mm) : M.Box(0, 0, sz / 2 * Mm, sx * Mm, sy * Mm, sz * Mm);
+                m.Body.Children.Add(M.Model(mesh, look));
+                return m;
+            }
+
             switch (o.Shape)
             {
+                case "cylinder" when WorldPhysics.TubeWall(o) > 0:
+                {
+                    // [tube] a hollow tube; with a bottom, a cup or a glass
+                    double ro = sx / 2, ri = Math.Max(0.1, ro - WorldPhysics.TubeWall(o) * 1000), bottom = Math.Min(sz - 0.1, WorldPhysics.TubeBottom(o) * 1000);
+                    bool clear = (o.Material ?? string.Empty).ToUpperInvariant() is "CAM" or "GLASS";
+                    m.Body.Children.Add(M.Model(Hollow(ro * Mm, ri * Mm, sz * Mm, bottom * Mm, 64), clear ? Glass(c, m.Heat) : Mat(c, 0.6, m.Heat)));
+                    break;
+                }
+
                 case "cylinder":
                     Cyl(m.Body, sx / 2, sz, 2, 0, 0, sz / 2, c, 0.15, m.Heat, 40);
                     break;

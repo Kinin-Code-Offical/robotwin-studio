@@ -120,15 +120,18 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>
         /// [tube] A cylinder with "tube.wall" (m) is a tube, open at both ends: an airframe's body tube with the motor in
-        /// its bore, a pipe. It collides as a ring of 16 wall segments and has a tube's inertia (the mass at the rim).
+        /// its bore, a pipe. It collides as a ring of wall segments and has a tube's inertia (the mass at the rim). With
+        /// "tube.bottom" (m) the lower end is closed by a disc of that thickness: a cup, a glass, a bottle without its neck.
         /// </summary>
-        private static void MakeTube(SceneBody body, double wall)
+        private static void MakeTube(SceneBody body, double wall, double bottom = 0)
         {
             if (body.Shape is not { Kind: ShapeKind.Cylinder } cyl) return;
             double ro = cyl.Radius, ri = Math.Max(0, ro - Math.Min(wall, ro)), h = cyl.HalfHeight;
             if (ri <= 1e-5) return;
-            const int n = 16;
-            var pieces = new CollisionShape[n];
+            bottom = Math.Max(0, Math.Min(bottom, 2 * h - 1e-4));
+            // A vessel's inside is seen by liquids: a finer ring keeps its wall round (24 segments of 15°).
+            int n = bottom > 0 ? 24 : 16;
+            var pieces = new CollisionShape[n + (bottom > 0 ? 1 : 0)];
             for (int k = 0; k < n; k++)
             {
                 double a0 = 2 * Math.PI * k / n, a1 = 2 * Math.PI * (k + 1) / n;
@@ -140,9 +143,28 @@ namespace RobotTwin.CoreSim.Sandbox
                 pieces[k] = CollisionShape.ConvexHull(pts, 8);
             }
 
-            body.Pieces = pieces;
             double m = body.Mass, r2 = ro * ro + ri * ri;
-            body.Inertia = new Vec3(m * (3 * r2 + 4 * h * h) / 12, m * (3 * r2 + 4 * h * h) / 12, m * r2 / 2);
+            var inertia = new Vec3(m * (3 * r2 + 4 * h * h) / 12, m * (3 * r2 + 4 * h * h) / 12, m * r2 / 2);
+            if (bottom > 0)
+            {
+                // The base: a polygon prism inside the ring, from the lower rim up to the bottom's thickness.
+                var pts = new List<Vec3>(2 * n);
+                for (int k = 0; k < n; k++)
+                {
+                    double a = 2 * Math.PI * (k + 0.5) / n;
+                    foreach (double z in new[] { -h, -h + bottom }) pts.Add(new Vec3(ri * 1.02 * Math.Cos(a), ri * 1.02 * Math.Sin(a), z));
+                }
+
+                pieces[n] = CollisionShape.ConvexHull(pts, 2 * n);
+                // Mass shared by volume between the wall and the base; inertia about the shape centre (the base sits low).
+                double vWall = Math.PI * (ro * ro - ri * ri) * 2 * h, vBase = Math.PI * ri * ri * bottom;
+                double mw = m * vWall / (vWall + vBase), mb = m - mw, zb = -h + bottom / 2;
+                double iw = mw * (3 * r2 + 4 * h * h) / 12, ib = mb * (3 * ri * ri + bottom * bottom) / 12 + mb * zb * zb;
+                inertia = new Vec3(iw + ib, iw + ib, mw * r2 / 2 + mb * ri * ri / 2);
+            }
+
+            body.Pieces = pieces;
+            body.Inertia = inertia;
         }
 
         private static CollisionShape BoxPiece(Vec3 centre, Vec3 size)

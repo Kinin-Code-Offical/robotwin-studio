@@ -267,6 +267,77 @@ namespace RobotTwin.CoreSim.Analysis
     /// [analysis] Everything an offline run produced. Saved as a .rwanalysis file (zip: JSON metadata,
     /// binary channel data, meshes and fields), normally next to the world file.
     /// </summary>
+    /// <summary>[liquid] A liquid's particles over the recording (quantized to 16 bits within each frame's box).</summary>
+    public sealed class LiquidTrack
+    {
+        public string ObjectId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>Liquid kind id (see <c>LiquidKind</c>).</summary>
+        public string Kind { get; set; } = "water";
+
+        /// <summary>Particle spacing at rest (m).</summary>
+        public double Spacing { get; set; }
+
+        public List<double> Times { get; } = new List<double>();
+        public List<(Vec3 Lo, Vec3 Hi, ushort[] Q)> Frames { get; } = new List<(Vec3, Vec3, ushort[])>();
+
+        public void Add(double time, float[] xyz)
+        {
+            var lo = new Vec3(double.MaxValue, double.MaxValue, double.MaxValue);
+            var hi = new Vec3(double.MinValue, double.MinValue, double.MinValue);
+            for (int i = 0; i + 2 < xyz.Length; i += 3)
+            {
+                lo = new Vec3(Math.Min(lo.X, xyz[i]), Math.Min(lo.Y, xyz[i + 1]), Math.Min(lo.Z, xyz[i + 2]));
+                hi = new Vec3(Math.Max(hi.X, xyz[i]), Math.Max(hi.Y, xyz[i + 1]), Math.Max(hi.Z, xyz[i + 2]));
+            }
+
+            if (xyz.Length == 0) lo = hi = Vec3.Zero;
+            var q = new ushort[xyz.Length];
+            double sx = 65535 / Math.Max(hi.X - lo.X, 1e-9), sy = 65535 / Math.Max(hi.Y - lo.Y, 1e-9), sz = 65535 / Math.Max(hi.Z - lo.Z, 1e-9);
+            for (int i = 0; i + 2 < xyz.Length; i += 3)
+            {
+                q[i] = (ushort)Math.Round((xyz[i] - lo.X) * sx);
+                q[i + 1] = (ushort)Math.Round((xyz[i + 1] - lo.Y) * sy);
+                q[i + 2] = (ushort)Math.Round((xyz[i + 2] - lo.Z) * sz);
+            }
+
+            Times.Add(time);
+            Frames.Add((lo, hi, q));
+        }
+
+        /// <summary>Particle positions (x, y, z) of a frame.</summary>
+        public float[] Positions(int frame)
+        {
+            var (lo, hi, q) = Frames[frame];
+            var a = new float[q.Length];
+            double sx = (hi.X - lo.X) / 65535, sy = (hi.Y - lo.Y) / 65535, sz = (hi.Z - lo.Z) / 65535;
+            for (int i = 0; i + 2 < q.Length; i += 3)
+            {
+                a[i] = (float)(lo.X + q[i] * sx);
+                a[i + 1] = (float)(lo.Y + q[i + 1] * sy);
+                a[i + 2] = (float)(lo.Z + q[i + 2] * sz);
+            }
+
+            return a;
+        }
+
+        /// <summary>The recorded frame at or before a time (s from the recording's start).</summary>
+        public int FrameAt(double time)
+        {
+            int lo = 0, hi = Times.Count - 1;
+            if (hi < 0) return -1;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                if (Times[mid] <= time) lo = mid;
+                else hi = mid - 1;
+            }
+
+            return lo;
+        }
+    }
+
     public sealed class AnalysisResult
     {
         public const string Extension = ".rwanalysis";
@@ -296,6 +367,9 @@ namespace RobotTwin.CoreSim.Analysis
 
         /// <summary>Flow around the whole assembly at keyframes of the recording (render mode).</summary>
         public List<CfdResult> AeroFrames { get; } = new List<CfdResult>();
+
+        /// <summary>[liquid] Every liquid's particles over the recording, for the replay.</summary>
+        public List<LiquidTrack> Liquids { get; } = new List<LiquidTrack>();
         public List<string> Log { get; } = new List<string>();
 
         /// <summary>Device id → part designator (for thermal source placement).</summary>
@@ -351,6 +425,12 @@ namespace RobotTwin.CoreSim.Analysis
                 {
                     using var s = zip.CreateEntry("cfd.bin", CompressionLevel.Optimal).Open();
                     WriteCfd(s, Aero);
+                }
+
+                for (int i = 0; i < Liquids.Count; i++)
+                {
+                    using var s = zip.CreateEntry($"liquids/{i}.bin", CompressionLevel.Optimal).Open();
+                    WriteLiquid(s, Liquids[i]);
                 }
             }
 
@@ -414,6 +494,7 @@ namespace RobotTwin.CoreSim.Analysis
             for (int i = 0; zip.GetEntry($"stress/{i}.bin") != null; i++) Binary(zip, $"stress/{i}.bin", rd => r.Stress.Add(ReadStress(rd)));
             for (int i = 0; zip.GetEntry($"thermal/{i}.bin") != null; i++) Binary(zip, $"thermal/{i}.bin", rd => r.Thermal.Add(ReadThermal(rd)));
             Binary(zip, "cfd.bin", rd => r.Aero = ReadCfd(rd));
+            for (int i = 0; zip.GetEntry($"liquids/{i}.bin") != null; i++) Binary(zip, $"liquids/{i}.bin", rd => r.Liquids.Add(ReadLiquid(rd)));
             return r;
         }
 
@@ -702,6 +783,47 @@ namespace RobotTwin.CoreSim.Analysis
             n = r.ReadInt32();
             for (int i = 0; i < n; i++) x.Sources.Add((r.ReadString(), r.ReadDouble(), r.ReadDouble()));
             Sl(r, x.Notes);
+            return x;
+        }
+
+        private static void WriteLiquid(Stream s, LiquidTrack x)
+        {
+            using var w = new BinaryWriter(s, Encoding.UTF8, true);
+            w.Write(x.ObjectId);
+            w.Write(x.Name);
+            w.Write(x.Kind);
+            w.Write(x.Spacing);
+            w.Write(x.Frames.Count);
+            for (int i = 0; i < x.Frames.Count; i++)
+            {
+                var (lo, hi, q) = x.Frames[i];
+                w.Write(x.Times[i]);
+                W(w, lo);
+                W(w, hi);
+                w.Write(q.Length);
+                var bytes = new byte[q.Length * 2];
+                Buffer.BlockCopy(q, 0, bytes, 0, bytes.Length);
+                w.Write(bytes);
+            }
+        }
+
+        private static LiquidTrack ReadLiquid(BinaryReader r)
+        {
+            var x = new LiquidTrack { ObjectId = r.ReadString(), Name = r.ReadString(), Kind = r.ReadString(), Spacing = r.ReadDouble() };
+            int n = r.ReadInt32();
+            for (int i = 0; i < n; i++)
+            {
+                double t = r.ReadDouble();
+                var lo = V(r);
+                var hi = V(r);
+                int m = r.ReadInt32();
+                var bytes = r.ReadBytes(m * 2);
+                var q = new ushort[m];
+                Buffer.BlockCopy(bytes, 0, q, 0, bytes.Length);
+                x.Times.Add(t);
+                x.Frames.Add((lo, hi, q));
+            }
+
             return x;
         }
 

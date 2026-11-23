@@ -33,7 +33,7 @@ namespace RobotTwin.CoreSim.Analysis
             var result = new AnalysisResult { Settings = s, WorldTitle = world.Title };
             var watch = Stopwatch.StartNew();
             var acc = s.AccuracyValues;
-            var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol };
+            var options = new RunnerOptions { Seed = s.Seed, Firmware = s.Firmware, MaxStep = acc.AnalogMaxStep, RelTol = acc.RelTol, Liquid = s.LiquidQuality };
             var stressIds = s.Stress ? s.StressObjects.Where(id => world.Find(id) != null).ToList() : new List<string>();
 
             using (var runner = new WorldRunner(world, options, geometry))
@@ -55,6 +55,19 @@ namespace RobotTwin.CoreSim.Analysis
                 replay?.Start(runner);
                 probe.Sample();
                 RecordPoses(runner.Physics, result.Channels, poses, world);
+                // [liquid] the particles at up to 60 frames per second for the replay
+                int liquidStride = Math.Max(1, (int)Math.Round(s.OutputRate / 60.0));
+                var liquids = new List<LiquidTrack>();
+                if (runner.Physics != null)
+                    foreach (var l in runner.Physics.Liquids)
+                        liquids.Add(new LiquidTrack { ObjectId = l.Object.Id, Name = l.Object.Name, Kind = l.Body.Kind.Id, Spacing = l.Body.Spacing });
+                void RecordLiquids()
+                {
+                    if (runner.Physics == null) return;
+                    for (int k = 0; k < liquids.Count; k++) liquids[k].Add(runner.Time, runner.Physics.Liquids[k].Body.Snapshot());
+                }
+
+                RecordLiquids();
                 for (int i = 1; i <= n; i++)
                 {
                     if (cancel.IsCancellationRequested)
@@ -67,6 +80,7 @@ namespace RobotTwin.CoreSim.Analysis
                     else runner.Step(dt);
                     probe.Sample();
                     RecordPoses(runner.Physics, result.Channels, poses, world);
+                    if (i % liquidStride == 0) RecordLiquids();
                     if (runner.Halted)
                     {
                         result.HaltReason = runner.HaltReason;
@@ -77,6 +91,9 @@ namespace RobotTwin.CoreSim.Analysis
                 }
 
                 probe.Detach();
+                result.Liquids.AddRange(liquids);
+                foreach (var l in runner.Physics?.Liquids ?? (IReadOnlyList<WorldPhysics.LiquidItem>)Array.Empty<WorldPhysics.LiquidItem>())
+                    result.Note($"Sıvı {l.Object.Name}: {l.Body.Kind.Name}, {l.Body.Count} parçacık ({l.Body.Spacing * 1000:0.#} mm aralık), {l.Body.TotalMass * 1000:0.#} g; son adımda en büyük sıkışma %{l.Body.MaxCompression * 100:0.##}.");
                 result.SimulatedSeconds = runner.Time;
                 if (replay != null)
                 {

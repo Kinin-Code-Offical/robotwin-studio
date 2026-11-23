@@ -40,6 +40,7 @@ Sağdaki **Denetçi** seçili nesnenin yalnızca gerçekten kullandığı bölü
 | Katı yakıtlı motor test standı (KNSB) | İki BATES şeker yakıt tanesi; basınç ve itki yanma hızından çıkar |
 | Katı yakıtlı roket: e-kibritle fırlatma ve paraşüt | G sınıfı KNSB motorlu 41 mm roket; 2 s geri sayımla kapanan anahtar e-kibriti ateşler, roket ~1 km'ye çıkar, tepe noktasında paraşüt açılır |
 | Kap ve bilyeler: içi boş parçalar | Modelleyicide yapılmış tepsi ve boru; bilyeler ve küpler tepsinin içine, bir bilye borunun deliğinden yere düşer |
+| Su bardağı: servo suyu döker | ESP32, yan yatırılmış bir SG90'ın kolundaki cam bardağı 90° devirir; 193 ml su kâseye dökülür ([sıvılar](#sıvılar)) |
 | Çizgi izleyen robot | Mat, solmuş ve parlak bant üstünde 5 kanallı TCRT5000 |
 | Sensör gezgini | Kamera, LiDAR, GPS, IMU, pusula ve enkoderler canlı |
 | ESP32 + OV2640 kamera ile bant bulma | Kamera pisti yukarıdan görür, ESP32 bandı bulur |
@@ -150,6 +151,19 @@ Herhangi bir gövdeye denetçide **Özellik ekle → Kurtarma paraşütü** ile 
 ![Ateşlemeden 0,1 s sonra: 24 bar, 1275 °C, 100 N itki; yakıt yüzeyinin tamamı yanıyor](../images/world-rocket-ignite.png)
 
 ![Tepe noktasında açılan 45 cm paraşütle iniş](../images/world-rocket-chute.png)
+
+### Sıvılar
+
+![Su bardağı şablonu: servo cam bardağı deviriyor, su kâseye dökülüyor](../images/world-glass-pour.png)
+
+**Mekanik → Sıvılar** bölümünden su dolu ya da boş bir cam bardak, veya bir su hacmi (kutu ya da silindir) eklenir. Sıvı nesnesinin kutusu ya da silindiri, dünya başlarken sıvının dolduracağı hacimdir; içinde duran katı parçaların yeri boş kalır. Denetçide sıvının türü seçilir: su, deniz suyu, etil alkol, süt, ayçiçek yağı, gliserin, bal. Her birinin gerçek yoğunluğu, viskozitesi ve yüzey gerilimi kullanılır.
+
+- Sıvı parçacıklarla çözülür ve kabın duvarlarına gerçek basıncını uygular. Bir bardak suyun ağırlığını taşır, suya bırakılan bir parça kaldırma kuvveti görür, bal yavaş akar.
+- Cam (malzeme **CAM**) ve akrilik saydam çizilir; su bardağın içinden görünür. Bir silindire **tube.wall** ile et kalınlığı, **tube.bottom** ile taban verilince bardak ya da kap olur.
+- Canlı görüntüde sıvı başına yaklaşık 4000 parçacık kullanılır. Durgun su "uyur", yavaş su seyrek adımlanır.
+- Render her şeyi tam hesaplar (doğruluk ayarına göre 6000–30 000 parçacık, her fizik adımında) ve sıvıyı daha ince bir yüzeyle yeniden oynatır.
+
+Denklemler ve doğrulama: [Sıvılar](../fizik/07-sivilar.md).
 
 ### 3D modeller
 

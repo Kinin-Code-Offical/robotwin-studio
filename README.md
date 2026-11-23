@@ -68,10 +68,12 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 | **Dünya:** kapalı kutudaki elektronik; kablolar arka duvardaki delikten çıkar (röntgen) | **Dünya:** ESP32 trafik ışığı, yayaya yeşil |
 | ![Dünya: sarkaç](docs/images/world-pendulum.png) | ![Dünya: katı yakıtlı roket rampada](docs/images/world-rocket-pad.png) |
 | **Dünya:** sarkaç; periyodu teoriyle %0,1 içinde | **Dünya:** katı yakıtlı roket, radyal kanatçıklar |
+| ![Dünya: su bardağı dökülüyor](docs/images/world-glass-pour.png) | |
+| **Dünya:** servo su dolu cam bardağı devirir; su gerçek yoğunluk, viskozite ve yüzey gerilimiyle kâseye dökülür | |
 
 ### Dünya şablonları
 
-Başlangıç sayfasındaki **Dünyalar** listesinde 33 hazır dünya vardır. Hepsi açılınca çalışır; hiçbirinde iç içe geçmiş parça ya da katı bir parçadan geçen kablo yoktur (tutarlılık denetimi). Tek bilinçli istisna: elektronik kutusundaki dik pil, sığma denetimini göstermek için kapağa çarpar.
+Başlangıç sayfasındaki **Dünyalar** listesinde 34 hazır dünya vardır. Hepsi açılınca çalışır; hiçbirinde iç içe geçmiş parça ya da katı bir parçadan geçen kablo yoktur (tutarlılık denetimi). Tek bilinçli istisna: elektronik kutusundaki dik pil, sığma denetimini göstermek için kapağa çarpar.
 
 <details>
 <summary>Tüm şablonlar</summary>
@@ -104,6 +106,7 @@ Başlangıç sayfasındaki **Dünyalar** listesinde 33 hazır dünya vardır. He
 | Katı yakıtlı roket | E-kibritle ateşleme, ~1 km, paraşüt |
 | Malzeme ve yüzey vitrini | Ahşap, karbon, alüminyum yüzeyler |
 | Kap ve bilyeler | İçi boş modellere bir şey konur |
+| Su bardağı | Servo cam bardağı devirir, su kâseye dökülür (parçacıklı sıvı) |
 | Sarkaç | Periyot ve sönüm, teoriyle karşılaştırma |
 | Çizgi izleyen robot | Mat, solmuş ve parlak bant |
 | Sensör gezgini | Kamera, LiDAR, GPS, IMU |
@@ -133,11 +136,13 @@ Her çözücü sonucu bilinen problemlerle sınanır: analitik çözümler, yay�
 | Akış (CFD) | Silindir Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0,300 | 0,2999 | −0,03 % | ±5 % |
 | Akış (CFD) | Küre Cd (Re 100, Schiller–Naumann) | 1,092 | 1,176 | +7,7 % | −8 / +10 % |
 | Akış (CFD) | Küp Cd, Re 10⁵ (gerçek Re, LES) | ≈1,05 | 0,883 | −15,9 % | −22 / +15 % |
+| Sıvı | 6 cm durgun suyun yan duvara kuvveti (ρgD²L/2) | 1,0576 N | 1,0775 N | +1,9 % | ±5 % |
+| Sıvı | Baraj yıkılması cephesi (Martin ve Moyce 1952), T = 2,98 | 3,67 | 3,82 | +4,1 % | ±12 % |
 | Gaz | Hava tankı boşalması, 0,5 s (adyabatik) | 4,671 bar | 4,709 bar | +0,8 % | −2 / +3 % |
 | Elektrik | Motorun yüksüz devri (datasheet) | ≈209 rpm | 210 rpm | +0,5 % | −12 / +2 % |
 | Sensör | GPS medyan yatay hatası (datasheet CEP) | 2,5 m | 2,64 m | +6 % | 1,2–4,5 m |
 
-Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Yedi alandaki 45 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
+Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapmalar akışta, kaba ağlarda ve sonlu çözüm alanındadır. Akış çözücüsü ağ inceldikçe ikinci derece yakınsar (küp 20 hücreyle −%3,9, DFG silindiri 40 hücreyle +%0,2). Sekiz alandaki 50 ölçümün tamamı, ağ yakınsaması ve önce/sonra karşılaştırması: **[12. Doğrulama](docs/kullanim/12-dogrulama.md)** (uygulamada **Yardım → 12. Doğrulama**).
 
 ## İndirme ve kurulum
 
@@ -239,6 +244,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 - **Gaz ve roketler:** basınçlı kaplar, su roketi ve katı yakıtlı motorlar tek gaz fiziğiyle çalışır. Sıcak ürünlerde Noble–Abel gerçek gaz, izentropik lüle akışı ve Schmucker ayrılması hesaplanır. Ateşleme gerçek zincirle olur: e-kibritin köprü teli ısınır, ateşleyici barutu yanar, yakıt yüzeyi taşınım ve ışınımla ısınıp tutuşma sıcaklığına çıkar, alev baştan lüleye yayılır. Ateşleyici zayıfsa motor ateşlenmez. Yanma hızı r = a·pⁿ ile dar kanallarda aşındırıcı yanmayı (Lenoir–Robillard) içerir. Çeper ve lüle boğazı ısınır (Dittus–Boelter, Bartz) ve ısı kamerasında görünür. Geri sayımla kapanan fırlatma anahtarı ve tepe noktasında açılan paraşüt de vardır. **Katı yakıtlı roket** şablonu ~1 km'ye çıkıp paraşütle iner.
 
   ![Katı yakıtlı roket: ateşlemeden 0,1 s sonra 24 bar, 1275 °C, 100 N](docs/images/world-rocket-ignite.png)
+- **Sıvılar:** su, deniz suyu, alkol, süt, yağ, gliserin, bal; gerçek yoğunluk, viskozite ve yüzey gerilimiyle parçacık olarak akar (konum tabanlı akışkan). Duvarlara gerçek basıncını uygular; kap suyun ağırlığını taşır, içindeki parçalar kaldırma kuvveti görür. Cam ve akrilik saydam çizilir, su yüzeyi Fresnel yansımasıyla görünür. Render'da sıvı tam hesaplanır (30 000 parçacığa kadar). **Su bardağı** şablonunda servo bardağı devirip suyu kâseye döker.
 - **Sensörler:** HC-SR04 ultrasonik sensör dünyadaki nesnelere ışın izleme ile gerçekten ölçer; I²C ekranlar 3D model üzerinde canlı görünür.
 - **Radyo ve USB:** 2.4 GHz ortamı (BLE, Wi-Fi, Bluetooth Classic kumandalar), uzaklık ve engelle zayıflama, IR (NEC) kumanda; DualSense/DualShock 4/Xbox kumandalar (gerçek kumanda veya ekrandaki sanal kumanda); bilgisayar + USB kablosu ile besleme ve seri monitör.
 - **Sahne ağacı**, olay günlüğü, kablo ölçümleri, RF paneli; simülasyon sesleri (motor, servo, buzzer, röle, yanma).
@@ -416,10 +422,12 @@ Every solver is checked against problems with a known answer: analytic solutions
 | Flow (CFD) | Cylinder Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0.300 | 0.2999 | −0.03 % | ±5 % |
 | Flow (CFD) | Sphere Cd (Re 100, Schiller–Naumann) | 1.092 | 1.176 | +7.7 % | −8 / +10 % |
 | Flow (CFD) | Cube Cd, Re 10⁵ (real Re, LES) | ≈1.05 | 0.883 | −15.9 % | −22 / +15 % |
+| Liquids | Force of 6 cm of still water on a side wall | 1.0576 N | 1.0775 N | +1.9 % | ±5 % |
+| Liquids | Dam-break front (Martin & Moyce 1952), T = 2.98 | 3.67 | 3.82 | +4.1 % | ±12 % |
 | Gas | Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
 | Electrical | Motor no-load speed (datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
 
-All 45 measurements in seven areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
+All 50 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
 
 ### Download and install
 

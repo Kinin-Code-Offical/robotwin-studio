@@ -464,6 +464,7 @@ namespace RobotWin.Studio.Analysis
         {
             _result = r;
             _playback.Store = r.Channels;
+            _playback.Liquids = r.Liquids;
             _csv.IsEnabled = _save.IsEnabled = true;
             _status.Text = $"{r.SimulatedSeconds:0.###} s hesaplandı: {r.Channels.Count} kare × {r.Channels.Channels.Count} kanal, {r.Stress.Count} parçada {r.Stress.Sum(x => x.Frames.Count)} gerilme çözümü, {r.AeroFrames.Count} akış karesi; {r.WallSeconds:0.0} s sürdü."
                 + (r.HaltReason.Length > 0 ? " Durdu: " + r.HaltReason : string.Empty);
@@ -1175,6 +1176,22 @@ namespace RobotWin.Studio.Analysis
                 Store?.Find(channel) is { } c && Index >= 0 && Index < c.Count ? c[Index] : double.NaN;
 
             public double Time => Store != null && Index >= 0 && Index < Store.Count ? Store.Time(Index) : 0;
+
+            /// <summary>[liquid] Recorded liquids of the shown result.</summary>
+            public System.Collections.Generic.List<RobotTwin.CoreSim.Analysis.LiquidTrack>? Liquids { get; set; }
+
+            public (float[] Positions, double Spacing, string Kind)? LiquidAt(string objectId)
+            {
+                if (Liquids == null) return null;
+                foreach (var l in Liquids)
+                {
+                    if (!string.Equals(l.ObjectId, objectId, System.StringComparison.OrdinalIgnoreCase)) continue;
+                    int f = l.FrameAt(Time + 1e-9);
+                    return f < 0 ? null : (l.Positions(f), l.Spacing, l.Kind);
+                }
+
+                return null;
+            }
         }
     }
 }

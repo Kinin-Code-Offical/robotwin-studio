@@ -53,6 +53,7 @@ sequenceDiagram
 | Air | Direction-dependent drag (leading face, base, friction; joined parts shield each other), strip theory + lifting line, propeller C_T/C_P | 1 ms | [Aerodynamics](04-aerodynamics.md) |
 | Gas | Ideal gas, isentropic nozzle flow, Bernoulli water jet, pressure-dependent solid propellant burning | 1 ms, internally sub-stepped | [Gas and rockets](05-gas-and-rockets.md) |
 | Radio | Free-space + log-distance path loss, obstacle loss, log-normal shadowing, FSK bit errors | per packet | [Radio](06-radio.md) |
+| Liquids | Position-based fluids (PBF), density-map walls, real viscosity and surface tension, two-way coupling | substeps (CFL), at most 3 ms live | [Liquids](07-liquids.md) |
 
 ## Determinism
 

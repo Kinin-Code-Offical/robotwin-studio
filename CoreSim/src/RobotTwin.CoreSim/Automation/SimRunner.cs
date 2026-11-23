@@ -78,6 +78,9 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Run the boards' firmware; false = boards are idle and the client drives their pins.</summary>
         public bool Firmware { get; set; } = true;
 
+        /// <summary>[liquid] How finely liquids are solved (the live view's settings by default).</summary>
+        public Sandbox.WorldPhysics.LiquidQuality Liquid { get; set; } = Sandbox.WorldPhysics.LiquidQuality.Live;
+
         /// <summary>Largest analog solver step (the app's default, Ayarlar → Simülasyon).</summary>
         public double MaxStep { get; set; } = 2e-4;
 

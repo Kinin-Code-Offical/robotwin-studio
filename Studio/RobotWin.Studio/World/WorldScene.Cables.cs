@@ -85,7 +85,7 @@ namespace RobotWin.Studio.World
                 bool seeded = World.Cables.All(c => _ropeShapes.ContainsKey(c.Id));
                 if (_cableLayoutStale || _cableLayout == null)
                 {
-                    _cableLayout = WorldPhysics.Build(World, GeometryOf, null);
+                    _cableLayout = WorldPhysics.Build(World, GeometryOf, null, new WorldPhysics.LiquidQuality { Particles = 0 });   // [liquid] no liquid to lay cables
                 }
                 else
                 {

@@ -53,6 +53,7 @@ sequenceDiagram
 | Hava | Yön bağımlı sürükleme (ön yüz, taban, sürtünme; birleşik parçalar birbirini örter), şerit teorisi + kaldırma çizgisi, pervane C_T/C_P | 1 ms | [Aerodinamik](04-aerodinamik.md) |
 | Gaz | İdeal gaz, izentropik lüle akışı, Bernoulli su jeti, basınca bağlı katı yakıt yanması | 1 ms, iç alt adımlı | [Gaz ve roketler](05-gaz-ve-roket.md) |
 | Radyo | Serbest uzay + log-mesafe yol kaybı, engel kaybı, log-normal gölgeleme, FSK bit hatası | paket başına | [Radyo](06-radyo.md) |
+| Sıvılar | Konum tabanlı akışkan (PBF), yoğunluk haritalı duvarlar, gerçek viskozite ve yüzey gerilimi, iki yönlü etkileşim | alt adım (CFL), canlıda en çok 3 ms | [Sıvılar](07-sivilar.md) |
 
 ## Belirlenimcilik
 

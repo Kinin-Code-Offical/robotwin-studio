@@ -91,7 +91,7 @@ namespace RobotTwin.CoreSim.Automation
             AttachFirmware();
             try
             {
-                Physics = WorldPhysics.Build(World, Geometry.GeometryOf, Circuit);
+                Physics = WorldPhysics.Build(World, Geometry.GeometryOf, Circuit, Options.Liquid);
                 // [route] With the app's pin positions (a baked geometry file) the cables are the same physical ropes as in
                 // the app: routed, laid, settled, colliding and pulling on their plugs.
                 if (World.Cables.Any(c => Geometry.PinsOf(c) != null)) Physics.AttachCables(World, Geometry.PinsOf, 320);

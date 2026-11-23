@@ -40,6 +40,7 @@ The **Denetçi** (inspector) on the right shows only the sections the selected o
 | Katı yakıtlı motor test standı (solid motor test stand, KNSB) | Two BATES sugar grains; pressure and thrust follow from the burn rate |
 | Katı yakıtlı roket (solid rocket: e-match launch and parachute) | A 41 mm rocket on a G-class KNSB motor; a switch closed by a 2 s countdown fires the e-match, the rocket climbs to ~1 km and throws its parachute at apogee |
 | Kap ve bilyeler: içi boş parçalar (containers: hollow parts) | A tray and a tube made in the modeller; balls and cubes fall into the tray, one ball drops down the tube's bore to the ground |
+| Su bardağı: servo suyu döker (glass of water poured by a servo) | An ESP32 tips a glass held on a sideways SG90's horn by 90°; 193 ml of water pours into a bowl ([liquids](#liquids)) |
 | Çizgi izleyen robot (line follower) | A 5-channel TCRT5000 over matte, faded and glossy tape |
 | Sensör gezgini (sensor rover) | Camera, LiDAR, GPS, IMU, compass and encoders live |
 | ESP32 + OV2640 kamera ile bant bulma (tape finding with a camera) | The camera sees the track from above, the ESP32 finds the tape |
@@ -150,6 +151,19 @@ Give any body a parachute with **Özellik ekle → Kurtarma paraşütü** (add f
 ![0.1 s after ignition: 24 bar, 1275 °C, 100 N of thrust; the whole grain surface is burning](../../images/world-rocket-ignite.png)
 
 ![Descending under the 45 cm parachute thrown at apogee](../../images/world-rocket-chute.png)
+
+### Liquids
+
+![The glass of water template: a servo tips the glass, the water pours into a bowl](../../images/world-glass-pour.png)
+
+**Mekanik → Sıvılar** (mechanics → liquids) adds a glass, full of water or empty, or a volume of water (a box or a cylinder). A liquid object's box or cylinder is the volume the liquid fills when the world starts; solid parts standing in it are left out. In the inspector you pick the liquid: water, sea water, ethanol, milk, sunflower oil, glycerol or honey. Each one's real density, viscosity and surface tension are used.
+
+- The liquid is solved as particles and presses on its container's walls with its real pressure. A glass carries the weight of its water, a part dropped in water feels buoyancy, honey flows slowly.
+- Glass (material **CAM**) and acrylic are drawn see-through, so water shows through a glass. A cylinder with a wall thickness (**tube.wall**) and a bottom (**tube.bottom**) becomes a glass or a cup.
+- The live view uses about 4000 particles per liquid. Still water sleeps, and slow water is stepped less often.
+- A render computes everything in full (6000–30 000 particles by accuracy, on every physics step) and replays the liquid with a finer surface.
+
+Equations and validation: [Liquids](../physics/07-liquids.md).
 
 ### 3D models
 
