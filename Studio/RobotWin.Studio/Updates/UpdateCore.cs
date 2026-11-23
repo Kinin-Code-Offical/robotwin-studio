@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -468,5 +469,47 @@ namespace RobotWin.Studio.Updates
         // Only web links are opened from the feed.
         private static string? Url(string s) =>
             Uri.TryCreate(s, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp) ? s : null;
+    }
+
+    /// <summary>[news] What a version brought, read from the guide's "Yenilikler" page.</summary>
+    public static class WhatsNew
+    {
+        /// <summary>
+        /// This version's section of the bundled guide page: its bold summary line and the bold lead-ins of its first
+        /// bullets ("**Kablo yolu:** …" → "Kablo yolu").
+        /// </summary>
+        public static (string? Summary, List<string> Headlines) Headlines(string version, string file, int max = 7)
+        {
+            var list = new List<string>();
+            if (!File.Exists(file)) return (null, list);
+            string? summary = null;
+            bool inside = false;
+            foreach (string raw in File.ReadLines(file))
+            {
+                string line = raw.Trim();
+                if (line.StartsWith("## ", StringComparison.Ordinal))
+                {
+                    if (inside) break;
+                    inside = line.Substring(3).StartsWith(version + " ", StringComparison.Ordinal) || line.Substring(3) == version;
+                    continue;
+                }
+
+                if (!inside) continue;
+                if (summary == null && line.StartsWith("**", StringComparison.Ordinal) && line.EndsWith("**", StringComparison.Ordinal) && line.Length > 4)
+                {
+                    summary = line.Trim('*');
+                    continue;
+                }
+
+                if (line.StartsWith("### ", StringComparison.Ordinal) && list.Count > 0) break;   // the first list only (what is new)
+                if (!line.StartsWith("- **", StringComparison.Ordinal)) continue;
+                int end = line.IndexOf("**", 4, StringComparison.Ordinal);
+                if (end < 0) continue;
+                list.Add(line.Substring(4, end - 4).TrimEnd(':', ' '));
+                if (list.Count >= max) break;
+            }
+
+            return (summary, list);
+        }
     }
 }

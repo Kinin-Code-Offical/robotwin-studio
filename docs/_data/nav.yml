@@ -17,6 +17,8 @@ tr:
       - { path: kullanim/08-olcu-aletleri.md, title: 8. Ölçü aletleri, alt: en/guide/08-instruments.md }
       - { path: kullanim/09-kisayollar.md, title: 9. Klavye kısayolları, alt: en/guide/09-shortcuts.md }
       - { path: kullanim/10-sss.md, title: 10. Sık sorulan sorular, alt: en/guide/10-faq.md }
+      - { path: kullanim/11-yenilikler.md, title: 11. Yenilikler, alt: en/guide/11-whats-new.md }
+      - { path: haberler.md, title: Haberler, alt: en/news.md }
   - title: Fizik ve matematik
     items:
       - { path: fizik/README.md, title: Genel bakış, alt: en/physics/README.md }
@@ -54,6 +56,8 @@ en:
       - { path: en/guide/08-instruments.md, title: 8. Instruments, alt: kullanim/08-olcu-aletleri.md }
       - { path: en/guide/09-shortcuts.md, title: 9. Keyboard shortcuts, alt: kullanim/09-kisayollar.md }
       - { path: en/guide/10-faq.md, title: 10. FAQ, alt: kullanim/10-sss.md }
+      - { path: en/guide/11-whats-new.md, title: 11. What's new, alt: kullanim/11-yenilikler.md }
+      - { path: en/news.md, title: News, alt: haberler.md }
   - title: Physics and maths
     items:
       - { path: en/physics/README.md, title: Overview, alt: fizik/README.md }

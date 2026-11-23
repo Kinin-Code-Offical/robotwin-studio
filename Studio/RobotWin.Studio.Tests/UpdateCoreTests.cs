@@ -356,3 +356,30 @@ public class NewsTests
         Assert.Equal("notlar", feed[2].Body);
     }
 }
+
+public class WhatsNewTests
+{
+    private static string Guide([System.Runtime.CompilerServices.CallerFilePath] string here = "") =>
+        System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(here)!, "..", "..", "docs", "kullanim", "11-yenilikler.md"));
+
+    [Fact]
+    public void ReadsTheHeadlinesOfAVersionFromTheGuidePage()
+    {
+        var (summary, headlines) = WhatsNew.Headlines("1.3.0", Guide());
+        Assert.NotNull(summary);
+        Assert.Contains("Kablolar", summary);
+        Assert.Equal("Kablo yolu", headlines[0]);
+        Assert.Equal(7, headlines.Count);   // the "Yenilikler" list only, capped
+        Assert.DoesNotContain(headlines, h => h.StartsWith("Teller", System.StringComparison.Ordinal));   // not the fixes
+    }
+
+    [Fact]
+    public void AnOlderVersionHasItsOwnSectionAndAnUnknownOneNone()
+    {
+        var (_, older) = WhatsNew.Headlines("1.2.0", Guide());
+        Assert.Contains(older, h => h.StartsWith("Bıçak", System.StringComparison.Ordinal));
+        var (none, empty) = WhatsNew.Headlines("9.9.9", Guide());
+        Assert.Null(none);
+        Assert.Empty(empty);
+    }
+}

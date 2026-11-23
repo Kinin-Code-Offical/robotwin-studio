@@ -4,7 +4,7 @@ Your own physics can be added to a world at three levels. All of them run inside
 
 | Level | Where | You need | Good for |
 | --- | --- | --- | --- |
-| **Expression** | Object → *Ortam ve davranışlar* → *Davranış ekle → İfade*, or Environment → *İfade alanı* | Nothing | Quick force laws: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
+| **Expression** | Object → *Özellik ekle → Davranış* → *İfade*, or Environment → *İfade alanı* | Nothing | Quick force laws: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
 | **C# script** | World → *Betikler* tab → *Yeni C# betiği* | .NET 9 SDK (the app downloads nothing) | Behaviours with state, sensors, controllers; saved inside the world file |
 | **Plugin DLL** | `%APPDATA%\RobotWinStudio\Plugins\<name>\` or `Plugins\` beside the world file | Any compiler (template: `sdk/templates/RobotWinPlugin`) | Libraries, custom circuit parts, shared models |
 
@@ -33,7 +33,7 @@ Forces you apply hold for that one step only; apply them again every step.
 ### How to add one
 
 1. Select an object on the World page.
-2. In the right panel open **Ortam ve davranışlar** (environment and behaviours) → **Davranış ekle → İfade** (add behaviour → expression).
+2. In the right panel (inspector) open **Özellik ekle → Davranış (ifade, hazır davranış, betik)** (add feature → behaviour) → **İfade** (expression).
 3. Type the program; values you want to tune go in the **Sabitler** (constants) box, e.g. `k=20, c=0.5`.
 4. Run the world. Errors are shown with line and column, e.g. `Satır 2, sütun 7: Bilinmeyen değişken 'sped'. Bunu mu demek istediniz: speed?` (line 2, column 7: unknown variable 'sped' — did you mean speed?).
 
@@ -69,7 +69,7 @@ Local variables (`k = 20`) are recomputed every step and published as *Name.vari
 2. World page → **Betikler** (scripts) tab → **Yeni C# betiği** (new C# script). A template opens in the editor.
 3. Write a class derived from `WorldBehavior` (below). Save: the script is stored inside the world file.
 4. The script compiles when the world starts (or with *Derle*). Errors appear with file, line and column.
-5. Select an object → **Davranış ekle** → your behaviour (its `[Behavior]` name). Its `[Parameter]` properties show in the inspector.
+5. Select an object → **Özellik ekle → Davranış** (add feature → behaviour) → your behaviour (its `[Behavior]` name). Its `[Parameter]` properties show in the inspector.
 6. Run. Values you `Publish` appear in the right panel and can be read by other code and by the *Programlanabilir sensör (SDK)* part.
 
 ### Example: pull an object towards a target point

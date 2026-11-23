@@ -626,11 +626,13 @@ namespace RobotWin.Studio.Pages
             };
             Inspector.Children.Add(name);
             Inspector.Children.Add(Note(KindText(o)));
+            // What the object is for comes first (a robot's pendant, a switch, a wing's linkage, a shell's fit check);
+            // features a body can be given (vessel, parachute, own air settings, behaviours) only when it has them,
+            // the rest under "Özellik ekle" further down (Pages/WorldPage.Features.cs).
             CellSection(world, o);   // [arm] teach pendant / tool / conveyor / light curtain (Pages/WorldPage.Cell.cs)
             WingSection(world, o);   // [linkage] servo, horn, control horn, pushrod (Pages/WorldPage.Wings.cs)
             ShellSection(world, o);   // [shell] fit check first, then wall, cable holes, lid, X-ray / exploded (Pages/WorldPage.Shells.cs)
-            GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
-            LaunchSection(world, o);   // [launch] switches on a countdown or by hand, parachutes (Pages/WorldPage.Launch.cs)
+            if (IsSwitchPart(o)) LaunchSection(world, o);   // [launch] a switch on a countdown or by hand
 
             if (o.Kind == WorldObjectKind.Board) BoardSection(world, o);
 
@@ -682,10 +684,13 @@ namespace RobotWin.Studio.Pages
             if (o.Kind == WorldObjectKind.Component) ComponentSection(o);
             ReadySection(world, o);   // [objs]
             RadioSection(world, o);   // [radio] controller pairing, USB plug, IR keys, ESP32 radio
+            GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
+            if (!IsSwitchPart(o)) LaunchSection(world, o);   // [launch] parachute
+            SdkSection(world, o);   // [sdk] its own air settings, behaviours, live forces
+            FeaturesSection(world, o);   // "Özellik ekle ▾"
             PortSection(world, o);
             CablesSection(world, o);
             JointsSection(world, o);
-            SdkSection(world, o);   // [sdk] aerodynamics, behaviours, expressions
             LiveSection(o);
 
             EditorSection(world, o); // [terrain] hide / lock / group / prop size

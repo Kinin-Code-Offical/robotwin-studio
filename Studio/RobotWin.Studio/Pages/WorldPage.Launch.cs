@@ -77,9 +77,12 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            if (o.Kind != WorldObjectKind.Body || WorldPhysics.IsWing(o)) return;
-            Inspector.Children.Add(Caption("Kurtarma paraşütü", 8));
-            Inspector.Children.Add(Field(o, "parachute", "Kanopi çapı (m, boş = yok)", ""));
+            if (o.Kind != WorldObjectKind.Body || WorldPhysics.IsWing(o) || !o.Parameters.ContainsKey("parachute")) return;   // else under "Özellik ekle"
+            Inspector.Children.Add(FeatureHeader("Kurtarma paraşütü", "Paraşüt kaldırıldı", () =>
+            {
+                foreach (var key in new[] { "parachute", "parachute.deploy", "parachute.cd" }) o.Parameters.Remove(key);
+            }));
+            Inspector.Children.Add(Field(o, "parachute", "Kanopi çapı (m)", ""));
             if (o.Parameters.ContainsKey("parachute"))
             {
                 Inspector.Children.Add(Field(o, "parachute.deploy", "Açılma zamanı (s, boş = tepe noktasında)", ""));

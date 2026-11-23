@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **What's new in the app:** after an update, the start page shows the new version's headlines once; **Yardım → 11. Yenilikler** keeps every release's news in Turkish, and the documentation site has a news page fed by the same `news.json` as the app.
+- **New world templates:** an enclosed rover (electronics in a closed box, motor leads out through a grommet, an ESP32 driving a square), a traffic light with a pedestrian button on an ESP32, and a compound pendulum whose period matches theory within 0.1 %.
 - **Cables run where a real wire can:** each cable is routed through free space between its plugs (A* over a grid of cells around them, pulled taut, checked with exact ray tests) and its automatic length is that run plus 10 % and 15 mm. A wire between two parts in a closed fuselage stays in it, one that must leave goes out through a real opening, and a plug whose straight exit is blocked by another part leaves the first clear way.
 - **Real cable holes:** a shell wall with a hole is the frame around the opening, in the physics and in the editor's model, with the hole's size, height and offset settable per side (`hole.+x.size`, `hole.+x.z`, `hole.+x.u`).
 - **Hollow tubes:** a cylinder with `tube.wall` is a tube open at both ends (a rocket's body tube, a pipe), with a tube's inertia.
@@ -43,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Welded parts are one rigid body:** parts joined by unbreakable fixed bonds (no break force or fastening set, shell walls, screwed lids) are solved as a single rigid body: summed mass, centre of mass and full inertia tensor, the group's motion from the parts' momentum, each part still colliding with its own shape. A chain through a light part no longer bends (a 6 g wire leg let a plane's wheel toe in by 1–4°; now under 0.03°). The welds' loads come from inverse dynamics, so recordings and FEM loads keep them (a weld under a 0.5 kg part carries 4.905 N, a cantilever's weld moment matches m·g·d within 0.1 %). Breakable fastenings stay joints. Fewer solver bodies also make worlds faster (the plane runs at real time, the test suite 40 % quicker).
 - **The PS5 plane's wheels sit on their wire legs** again, now that welded legs hold their alignment. Its aileron servo moved from on top of the wing into the pod under it (its horn was caught in the dihedral wing's convex collision hull, which locked the ailerons at −8.5° in the app), and a screwed balsa hatch closes the pod under the wing.
 - **Snapshot log:** `ROBOTWIN_SNAPSHOT_LOG=<file>` writes a snapshot run's events, serial output, body states and the app's collision geometry (as a baked-geometry file a headless run can load), so a world can be checked without a screen.
+
+### Changed
+
+- **The world inspector shows what an object has, not everything it could have:** position, physics, size and look come first; a pressure vessel, a parachute, its own air settings and behaviours appear only when they are on, each with **Kaldır** (remove), and the rest are under **Özellik ekle ▾** (add feature). Every box, cylinder and sphere used to open with a gas-vessel switch and a parachute field.
+- **Automatic cable length** is the routed run plus 10 % and 15 mm (it was the straight pin distance plus 15 % and 30 mm).
 
 ### Fixed
 

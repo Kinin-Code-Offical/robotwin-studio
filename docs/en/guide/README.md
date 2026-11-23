@@ -22,6 +22,7 @@ This guide walks through the app step by step. Read it in order or jump straight
 | [8. Instruments](08-instruments.md) | Oscilloscope, multimeter, bench supply, tolerances, Monte Carlo, fault finding |
 | [9. Keyboard shortcuts](09-shortcuts.md) | Shortcuts of every page |
 | [10. FAQ](10-faq.md) | Problems and their fixes |
+| [11. What's new](11-whats-new.md) | What each release brought, changed and fixed |
 
 ## What can I do in five minutes?
 

@@ -20,6 +20,7 @@ Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğruda
 | [8. Ölçü aletleri](08-olcu-aletleri.md) | Osiloskop, multimetre, laboratuvar güç kaynağı, toleranslar, Monte Carlo, arıza tespiti |
 | [9. Klavye kısayolları](09-kisayollar.md) | Tüm sayfaların kısayolları |
 | [10. Sık sorulan sorular](10-sss.md) | Sorunlar ve çözümleri |
+| [11. Yenilikler](11-yenilikler.md) | Her sürümde neler geldi, neler değişti ve düzeltildi |
 
 ## Beş dakikada ne yapabilirim?
 

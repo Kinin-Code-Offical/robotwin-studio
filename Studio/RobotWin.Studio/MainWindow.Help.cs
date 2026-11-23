@@ -30,7 +30,7 @@ namespace RobotWin.Studio
             Bind(Key.F1, ModifierKeys.None, () => ShowHelp(null));
 
             // Start page: update notice under the buttons, news at the top of the right column.
-            _home.UpdateHost.Content = new UpdateNotice(ShowHelp);
+            _home.UpdateHost.Content = new StackPanel { Children = { new WhatsNewNotice(ShowHelp), new UpdateNotice(ShowHelp) } };
             _home.NewsHost.Content = new HomeNews(ShowHelp);
 
             // Status bar: a quiet "Güncelleme var" link next to the product name.

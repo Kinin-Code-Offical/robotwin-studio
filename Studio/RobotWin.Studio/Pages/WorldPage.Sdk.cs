@@ -360,7 +360,30 @@ namespace RobotWin.Studio.Pages
         {
             var s = world.Sdk;
             var aero = s.AeroOf(o.Id);
-            Inspector.Children.Add(Caption("Ortam ve davranışlar"));
+            if (aero != null)
+            {
+                // Its own air settings (offered under "Özellik ekle"); without them the body's drag comes from its shape.
+                Inspector.Children.Add(FeatureHeader("Hava (özel ayar)", "Hava ayarı kaldırıldı", () => s.ObjectAero.Remove(aero), sdk: true));
+                AeroFields(s, o, aero);
+            }
+
+            var list = s.BehaviorsOf(o.Id).ToList();
+            if (list.Count > 0)
+            {
+                Inspector.Children.Add(Caption("Davranışlar"));
+                foreach (var a in list) Inspector.Children.Add(BehaviorCard(world, a));
+            }
+
+            _sdkLive = null;
+            if (_session.State == SimState.Stopped) return;
+            Inspector.Children.Add(Caption("Hava ve betik kuvvetleri (canlı)"));
+            _sdkLive = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
+            Inspector.Children.Add(_sdkLive);
+            UpdateSdkLive();
+        }
+
+        private void AeroFields(RobotTwin.CoreSim.Sdk.WorldSdkSettings s, WorldObject o, RobotTwin.CoreSim.Sdk.AeroOverride? aero)
+        {
             Inspector.Children.Add(SdkSwitch("Hava sürüklemesi", aero?.Drag ?? true, v => SdkEdit("Sürükleme değişti", () => s.AeroFor(o.Id).Drag = v)));
             if (aero?.Drag ?? true)
             {
@@ -370,17 +393,6 @@ namespace RobotWin.Studio.Pages
 
             Inspector.Children.Add(SdkSwitch("Kaldırma kuvveti (ρ·V·g)", aero?.Buoyancy ?? false, v => SdkEdit("Kaldırma değişti", () => s.AeroFor(o.Id).Buoyancy = v),
                 "Hafif ve hacimli nesneler (balon, köpük) için. Hacim çarpışma şeklinden alınır."));
-
-            var list = s.BehaviorsOf(o.Id).ToList();
-            foreach (var a in list) Inspector.Children.Add(BehaviorCard(world, a));
-            var add = Action("Davranış ekle ▾", () => { }, "Bu nesneye ifade, hazır davranış, eklenti veya betik ekleyin.");
-            add.Click += (_, _) => BehaviorMenu(world, o.Id, add);
-            Inspector.Children.Add(add);
-
-            Inspector.Children.Add(Caption("Hava ve betik kuvvetleri (canlı)"));
-            _sdkLive = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary") };
-            Inspector.Children.Add(_sdkLive);
-            UpdateSdkLive();
         }
 
         private void BehaviorMenu(WorldDocument world, string? objectId, FrameworkElement anchor)

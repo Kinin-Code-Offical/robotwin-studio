@@ -69,6 +69,64 @@ namespace RobotWin.Studio.Updates
         }
     }
 
+    /// <summary>
+    /// Start page, first start after an update: "Bu sürümde yenilikler" with the headlines of this version's section of
+    /// the bundled guide page 11-yenilikler.md, a button to the whole page and one to put the card away until the next
+    /// update. A first installation records its version without showing it.
+    /// </summary>
+    public sealed class WhatsNewNotice : Border
+    {
+        public const string GuidePage = "11-yenilikler.md";
+
+        public WhatsNewNotice(Action<string> openHelp)
+        {
+            Margin = new Thickness(0, 22, 0, 0);
+            Padding = new Thickness(16, 14, 16, 14);
+            CornerRadius = (CornerRadius)Application.Current.FindResource("R.Large");
+            BorderThickness = new Thickness(1);
+            BorderBrush = R<Brush>("B.BorderStrong");
+            Background = R<Brush>("B.Surface");
+            Visibility = Visibility.Collapsed;
+
+            var settings = Shell.AppSettings.Current;
+            string version = InstallEnvironment.CurrentVersion.ToString();
+            if (string.IsNullOrEmpty(settings.LastRunVersion))
+            {
+                settings.LastRunVersion = version;
+                settings.Save();
+                return;
+            }
+
+            if (string.Equals(settings.LastRunVersion, version, StringComparison.Ordinal)) return;
+            var (summary, headlines) = WhatsNew.Headlines(version, System.IO.Path.Combine(AppContext.BaseDirectory, "Docs", "kullanim", GuidePage));
+            if (summary == null && headlines.Count == 0) return;
+
+            var sp = new StackPanel();
+            sp.Children.Add(new TextBlock { Text = $"RobotWin Studio {version} kuruldu: bu sürümde yenilikler", Foreground = R<Brush>("B.Text"), FontSize = 14, FontWeight = FontWeights.SemiBold });
+            if (summary != null)
+                sp.Children.Add(new TextBlock { Text = summary, Style = R<Style>("Text.Caption"), Foreground = R<Brush>("B.TextSecondary"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 6) });
+            foreach (var h in headlines)
+                sp.Children.Add(new TextBlock { Text = "• " + h, Foreground = R<Brush>("B.Text"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 1, 0, 1) });
+            var buttons = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+            var all = new Button { Content = "Tüm yenilikler", Style = R<Style>("Btn.Primary"), Padding = new Thickness(14, 5, 14, 5), Margin = new Thickness(0, 0, 8, 0) };
+            all.Click += (_, _) => openHelp(GuidePage);
+            buttons.Children.Add(all);
+            var close = new Button { Content = "Kapat", Style = R<Style>("Btn.Ghost"), Padding = new Thickness(10, 5, 10, 5) };
+            close.Click += (_, _) =>
+            {
+                settings.LastRunVersion = version;
+                settings.Save();
+                Visibility = Visibility.Collapsed;
+            };
+            buttons.Children.Add(close);
+            sp.Children.Add(buttons);
+            Child = sp;
+            Visibility = Visibility.Visible;
+        }
+
+        private static T R<T>(string key) => (T)Application.Current.FindResource(key);
+    }
+
     /// <summary>Start page: the latest news items (unread ones marked) and a link to all of them.</summary>
     public sealed class HomeNews : StackPanel
     {

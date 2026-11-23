@@ -4,6 +4,10 @@
 
 ![Arduino ile iki eksenli servo kol](../images/world-servo-arm.png)
 
+## Denetçi: nesnenin özellikleri
+
+Sağdaki **Denetçi** seçili nesnenin yalnızca gerçekten kullandığı bölümleri gösterir: önce ad, konum ve yön, fizik (sabitlik, malzeme, kütle), boyut ve görünüş; sonra nesnenin türüne özgü bölümler (kart, bileşen, kanat bağlantısı, kabuk, anahtar, kumanda). Bir gövdeye eklenebilen ek fizikler (**Kabuk**, **Basınçlı kap**, **Kurtarma paraşütü**, **Hava (özel ayar)**, **Davranış**) yalnızca açıksa görünür ve başlıklarında **Kaldır** vardır; diğerleri **Özellikler → Özellik ekle ▾** menüsündedir.
+
 ## Bir dünya açmak
 
 - **Yeni dünya** (Ctrl+Shift+N): 4 × 3 m'lik boş bir atölye.
@@ -115,7 +119,7 @@ Her parçanın katı gövdesi kendi 3D modelinden çıkarılır: yuvarlak bir mo
 
 ### Basınçlı kaplar ve roketler
 
-**Mekanik → Basınçlı kaplar ve roketler** bölümünde PET şişe (su roketi), hava tankı, katı yakıtlı motor ve roket kanatçığı vardır. Silindir, kutu veya küre bir gövdeyi denetçide **İçinde gaz tutan kapalı kap** yapabilirsiniz:
+**Mekanik → Basınçlı kaplar ve roketler** bölümünde PET şişe (su roketi), hava tankı, katı yakıtlı motor ve roket kanatçığı vardır. Silindir, kutu veya küre bir gövdeyi denetçide **Özellik ekle → Basınçlı kap (gaz fiziği)** ile basınçlı kap yapabilirsiniz:
 
 - **Gaz, basınç, iç hacim, duvar, su:** kabın içindekiler. Gaz ideal gaz yasasıyla (p·V = m·R·T) hesaplanır.
 - **Lüle:** boğaz ve çıkış çapı, jetin çıktığı yüz. Akış izentropiktir; basınç oranı yeterince yüksekse boğazda ses hızına ulaşır, genişleyen lüle gazı süpersonik hızlandırır. İtki ṁ·vₑ + (pₑ − pₐ)·Aₑ olarak gövdeye lülenin olduğu yerden uygulanır.
@@ -139,7 +143,7 @@ E-kibrit, motorun **Ateşleme** ayarında seçilir ya da motora mekanik olarak b
 
 ### Paraşüt
 
-Herhangi bir gövdenin denetçisinde **Kanopi çapı (m)** verin. Paraşüt, altimetre tırmanmanın bittiğini görünce (ya da **Açılma zamanı**nda) atılır. Kanopi, ipler gerilince dolma süresiyle açılır; açılma şoku ve iniş hızı fizikten çıkar. Çalışırken kanopi sahnede çizilir.
+Herhangi bir gövdeye denetçide **Özellik ekle → Kurtarma paraşütü** ile paraşüt verin ve **Kanopi çapı (m)** girin. Paraşüt, altimetre tırmanmanın bittiğini görünce (ya da **Açılma zamanı**nda) atılır. Kanopi, ipler gerilince dolma süresiyle açılır; açılma şoku ve iniş hızı fizikten çıkar. Çalışırken kanopi sahnede çizilir.
 
 ![Katı yakıtlı roket rampada: karton gövde, kanatçıklar, pil ve fırlatma anahtarı](../images/world-rocket-pad.png)
 

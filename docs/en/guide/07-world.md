@@ -4,6 +4,10 @@ The **Dünya** (world) page (Ctrl+6) is where everything comes together. Put the
 
 ![A two-axis servo arm driven by an Arduino](../../images/world-servo-arm.png)
 
+## Inspector: an object's properties
+
+The **Denetçi** (inspector) on the right shows only the sections the selected object really uses: first its name, position and orientation, physics (fixed, material, mass), size and look, then the sections of its kind (board, component, wing linkage, shell, switch, controller). The extra physics a body can be given (**Kabuk** shell, **Basınçlı kap** pressure vessel, **Kurtarma paraşütü** parachute, **Hava (özel ayar)** own air settings, **Davranış** behaviour) appear only when they are on, with **Kaldır** (remove) in their header; the others are under **Özellikler → Özellik ekle ▾** (add feature).
+
 ## Opening a world
 
 - **Yeni dünya** (new world, Ctrl+Shift+N): an empty 4 × 3 m workshop.
@@ -115,7 +119,7 @@ Every part's rigid body comes from its own 3D model: a round motor can rolls, a 
 
 ### Pressure vessels and rockets
 
-The **Mekanik → Basınçlı kaplar ve roketler** (mechanical → pressure vessels and rockets) section has a PET bottle (water rocket), an air tank, a solid-propellant motor and a rocket fin. Any cylinder, box or sphere body becomes a vessel with **İçinde gaz tutan kapalı kap** (a closed vessel holding gas) in the inspector:
+The **Mekanik → Basınçlı kaplar ve roketler** (mechanical → pressure vessels and rockets) section has a PET bottle (water rocket), an air tank, a solid-propellant motor and a rocket fin. Any cylinder, box or sphere body becomes a vessel with **Özellik ekle → Basınçlı kap (gaz fiziği)** (add feature → pressure vessel) in the inspector:
 
 - **Gas, pressure, inner volume, wall, water:** what the vessel holds. The gas follows the ideal gas law (p·V = m·R·T).
 - **Nozzle:** throat and exit diameter, the face the jet leaves from. The flow is isentropic; at a high enough pressure ratio it reaches the speed of sound at the throat, and an expanding nozzle accelerates the gas supersonically. The thrust ṁ·vₑ + (pₑ − pₐ)·Aₑ acts on the body where the nozzle is.
@@ -139,7 +143,7 @@ The e-match is chosen in the motor's **Ateşleme** (ignition) setting or mechani
 
 ### Parachute
 
-Give any body a **Kanopi çapı (m)** (canopy diameter) in its inspector. The parachute is thrown when the altimeter sees the climb end (or at **Açılma zamanı**, the deploy time). The canopy opens over its filling time once the lines are taut; the opening shock and the descent rate come out of the physics. While running, the canopy is drawn in the scene.
+Give any body a parachute with **Özellik ekle → Kurtarma paraşütü** (add feature → recovery parachute) in its inspector and set its **Kanopi çapı (m)** (canopy diameter). The parachute is thrown when the altimeter sees the climb end (or at **Açılma zamanı**, the deploy time). The canopy opens over its filling time once the lines are taut; the opening shock and the descent rate come out of the physics. While running, the canopy is drawn in the scene.
 
 ![The solid rocket on its pad: kraft tube, fins, battery and launch switch](../../images/world-rocket-pad.png)
 

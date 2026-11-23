@@ -4,7 +4,7 @@ Bir dünyanın fiziğine kendi kodunuzu üç düzeyde ekleyebilirsiniz. Hepsi ay
 
 | Düzey | Nerede | Gerekenler | Ne için |
 | --- | --- | --- | --- |
-| **İfade** | Nesne → *Ortam ve davranışlar* → *Davranış ekle → İfade*, ya da Ortam → *İfade alanı* | Hiçbir şey | Hızlı kuvvet yasaları: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
+| **İfade** | Nesne → *Özellik ekle → Davranış* → *İfade*, ya da Ortam → *İfade alanı* | Hiçbir şey | Hızlı kuvvet yasaları: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
 | **C# betiği** | Dünya → *Betikler* sekmesi → *Yeni C# betiği* | .NET 9 SDK (uygulama hiçbir şey indirmez) | Durumlu davranışlar, sensörler, denetleyiciler; dünya dosyasının içinde saklanır |
 | **Eklenti DLL'i** | `%APPDATA%\RobotWinStudio\Plugins\<ad>\` ya da dünya dosyasının yanındaki `Plugins\` | Herhangi bir derleyici (şablon: `sdk/templates/RobotWinPlugin`) | Kütüphaneler, özel devre elemanları, paylaşılan modeller |
 
@@ -33,7 +33,7 @@ Uyguladığınız kuvvetler yalnızca o adım için geçerlidir; her adımda yen
 ### Nasıl eklenir
 
 1. Dünya sayfasında bir nesne seçin.
-2. Sağ panelde **Ortam ve davranışlar** → **Davranış ekle → İfade**.
+2. Sağ panelde (denetçi) **Özellik ekle → Davranış (ifade, hazır davranış, betik)** → **İfade**.
 3. Programı yazın; ayarlamak istediğiniz değerleri **Sabitler** kutusuna yazın, ör. `k=20, c=0.5`.
 4. Dünyayı çalıştırın. Hatalar satır ve sütunla gösterilir: `Satır 2, sütun 7: Bilinmeyen değişken 'sped'. Bunu mu demek istediniz: speed?`
 
@@ -69,7 +69,7 @@ Yerel değişkenler (`k = 20`) her adımda yeniden hesaplanır ve *Ad.değişken
 2. Dünya sayfası → **Betikler** sekmesi → **Yeni C# betiği**. Düzenleyicide bir şablon açılır.
 3. `WorldBehavior`'dan türeyen bir sınıf yazın (aşağıda). Kaydedin: betik dünya dosyasının içinde saklanır.
 4. Betik dünya başlarken (ya da *Derle* ile) derlenir. Hatalar dosya, satır ve sütunla görünür.
-5. Bir nesne seçin → **Davranış ekle** → davranışınız (`[Behavior]` adıyla). `[Parameter]` özellikleri denetçide görünür.
+5. Bir nesne seçin → **Özellik ekle → Davranış** → davranışınız (`[Behavior]` adıyla). `[Parameter]` özellikleri denetçide görünür.
 6. Çalıştırın. `Publish` ettiğiniz değerler sağ panelde görünür; başka kod ve *Programlanabilir sensör (SDK)* parçası bunları okuyabilir.
 
 ### Örnek: nesneyi bir hedef noktaya çekmek

@@ -70,15 +70,8 @@ namespace RobotWin.Studio.Pages
             _gasLive = null;
             if (o.Kind != WorldObjectKind.Body || o.Shape is not ("cylinder" or "box" or "sphere")) return;
             bool vessel = WorldPhysics.IsVessel(o);
-            Inspector.Children.Add(Caption("Basınçlı kap (gaz fiziği)"));
-            var on = new CheckBox { Content = "İçinde gaz tutan kapalı kap", IsChecked = vessel, Foreground = (Brush)FindResource("B.Text"), Margin = new Thickness(0, 0, 0, 6) };
-            on.Click += (_, _) => Edit(on.IsChecked == true ? "Basınçlı kap" : "Basınçlı kap kaldırıldı", () =>
-            {
-                if (on.IsChecked == true) o.Parameters["vessel"] = "true";
-                else o.Parameters.Remove("vessel");
-            });
-            Inspector.Children.Add(on);
-            if (!vessel) return;
+            if (!vessel) return;   // offered under "Özellik ekle" (Pages/WorldPage.Features.cs)
+            Inspector.Children.Add(FeatureHeader("Basınçlı kap (gaz fiziği)", "Basınçlı kap kaldırıldı", () => o.Parameters.Remove("vessel")));
 
             _gasLive = LiveGasText();
             Inspector.Children.Add(_gasLive);

@@ -101,6 +101,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>"Bu sürümü bir daha sorma": this version is not offered (a newer one is).</summary>
         public string SkippedUpdateVersion { get; set; } = string.Empty;
 
+        /// <summary>The version whose news the user has seen ("Bu sürümde yenilikler" on the start page after an update).</summary>
+        public string LastRunVersion { get; set; } = string.Empty;
+
         // ---------------------------------------------------------------- window
 
         public double WindowWidth { get; set; }
