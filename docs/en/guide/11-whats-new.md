@@ -2,6 +2,24 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.6.1 — 24 November 2026
+
+**The tabs at the top: scrolling, pinning, a full list and file names.**
+
+### New
+
+- **Working with many tabs:**
+  - When the tabs do not fit, the strip scrolls with the mouse wheel and with arrows that appear. The active tab is always brought into view.
+  - The **▾** button lists every open tab, the ones out of view too.
+  - Right-click and **Sabitle** (pin): the tab stays at the left with a pin where the close button is. A middle click and the bulk closes leave it open, and the file opens pinned next time too.
+  - **Ctrl+Shift+T** opens the closed file again.
+
+### Changes
+
+- **A tab shows its file's name:** a saved project or world shows its file name instead of the title stored inside. For example, "osiloskop test.rwproj" no longer shows as "Yeni Devre". **Farklı kaydet** (save as) gives the document that name inside too (the Parça page already did).
+- Two tabs of the same name are told apart by their folder, two new documents by a number.
+- Unsaved changes are a dot where the close button is, instead of a "•" added to the name. The close button comes back under the pointer.
+
 ## 1.6.0 — 24 November 2026
 
 **Debugging: follow Arduino code line by line; when the board stops on a line, the circuit and the world stop at that instant too.**

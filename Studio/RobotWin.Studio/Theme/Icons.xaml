@@ -45,6 +45,8 @@
     <Geometry x:Key="I.Part">M12,3 L20,7.5 V16.5 L12,21 L4,16.5 V7.5 Z M12,12 L20,7.5 M12,12 V21 M12,12 L4,7.5</Geometry>
     <Geometry x:Key="I.Chevron">M9,6 L15,12 L9,18</Geometry>
     <Geometry x:Key="I.ChevronDown">M6,9 L12,15 L18,9</Geometry>
+    <Geometry x:Key="I.ChevronLeft">M15,6 L9,12 L15,18</Geometry>
+    <Geometry x:Key="I.Pin">M9,3.5 H15 M10,3.5 V9.5 L6.5,14 H17.5 L14,9.5 V3.5 M12,14 V20.5</Geometry>
     <Geometry x:Key="I.Spark">M12,3 L13.8,10.2 L21,12 L13.8,13.8 L12,21 L10.2,13.8 L3,12 L10.2,10.2 Z</Geometry>
     <Geometry x:Key="I.Pan">M12,3 V21 M3,12 H21 M9,6 L12,3 L15,6 M9,18 L12,21 L15,18 M6,9 L3,12 L6,15 M18,9 L21,12 L18,15</Geometry>
     <Geometry x:Key="I.Eye">M2.5,12 C5,7 8.5,5 12,5 C15.5,5 19,7 21.5,12 C19,17 15.5,19 12,19 C8.5,19 5,17 2.5,12 Z M12,9.5 A2.5,2.5 0 1 1 11.99,9.5</Geometry>

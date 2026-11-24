@@ -26,6 +26,7 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | Ctrl+\\ | Bölünmüş görünüm aç / kapat |
 | Ctrl+Tab / Ctrl+Shift+Tab | Sonraki / önceki sekme |
 | Ctrl+W | Sekmeyi kapat |
+| Ctrl+Shift+T | Kapatılan dosyayı yeniden aç |
 | F5 | Simülasyonu başlat / duraklat / devam ettir |
 | Shift+F5 | Simülasyonu durdur |
 | F10 | Menü çubuğu |

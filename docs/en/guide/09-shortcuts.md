@@ -26,6 +26,7 @@ The app has its own shortcut lists too: the **Ctrl+K** command palette shows eve
 | Ctrl+\\ | Split view on / off |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab |
 | Ctrl+W | Close the tab |
+| Ctrl+Shift+T | Open the closed file again |
 | F5 | Start / pause / resume the simulation |
 | Shift+F5 | Stop the simulation |
 | F10 | Menu bar |

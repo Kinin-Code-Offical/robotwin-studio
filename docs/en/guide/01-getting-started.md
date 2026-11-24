@@ -59,7 +59,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 | Part | Where | What it does |
 | --- | --- | --- |
 | Menu bar | Top | **Dosya** (File), **Düzen** (Edit), **Görünüm** (View), **Simülasyon** (Simulation), **Pencere** (Window), **Yardım** (Help). **F10** opens it from the keyboard. |
-| Document tabs | Next to the menu | Open circuits and worlds. Drag tabs to reorder them. **Ctrl+Tab** next tab, **Ctrl+W** closes a tab. |
+| Document tabs | Next to the menu | Open circuits and worlds; a saved file shows its own name. Unsaved changes show as a dot where the close button is. When the tabs do not fit, the strip scrolls with the mouse wheel or its arrows; **▾** lists every open tab. Right-click and **Sabitle** (pin) keeps a tab at the left, out of the bulk closes, and the file opens pinned next time too. Drag tabs to reorder them. **Ctrl+Tab** next tab, **Ctrl+W** closes a tab, **Ctrl+Shift+T** opens the closed file again. |
 | Design-to-real line | Left edge | The pages in three groups: **ELEKTRONİK** (electronics: Devre → PCB → Kod), **MEKANİK** (mechanics: Parça → Montaj), **TEST** (Dünya, world). Below: Başlangıç (start), Kütüphane (library), Ayarlar (settings) and Yardım (help). The logo at the top left also returns to Başlangıç. **Ctrl+B** widens the line to show what each page is for and its status. |
 | Page | Centre | The editor of the selected stage. |
 | Status bar | Bottom | Latest message, simulation state, part and cable counts. |

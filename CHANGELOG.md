@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-11-24
+
+### Added
+
+- **Document tabs that hold many files:** the strip scrolls with the wheel and with arrows that appear when the tabs do not fit, the active tab is always scrolled into view, and a list button shows every open tab (the ones out of view too). Tabs can be pinned (Sabitle in the tab menu): a pinned tab stays at the left, shows a pin instead of the close button, is left open by a middle click and by "close others / to the right / all unpinned", and a saved file opens pinned again next time. Ctrl+Shift+T opens the last closed file again (also in the tab menu and the list). The tooltip says the kind, the file and whether it is unsaved.
+
+### Changed
+
+- **A tab reads its file's name:** a saved project or world shows its file name, not the title stored inside (a file saved as "osiloskop test.rwproj" no longer shows "Yeni Devre"); Save As gives the document that name inside too, as the Parça page already did. Two tabs of the same name are told apart by their folder, two new ones by a number. Unsaved changes are a dot where the close button is (the close button comes back under the pointer) instead of a "•" added to the name.
+
 ## [1.6.0] - 2026-11-24
 
 ### Added

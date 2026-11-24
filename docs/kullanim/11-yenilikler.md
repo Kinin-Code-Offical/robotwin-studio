@@ -2,6 +2,24 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.6.1 — 24 Kasım 2026
+
+**Üstteki sekmeler: kaydırma, sabitleme, tam liste ve dosya adları.**
+
+### Yenilikler
+
+- **Çok sekmeyle rahat çalışma:**
+  - Sekmeler sığmazsa şerit fare tekerleğiyle ve beliren oklarla kayar. Etkin sekme her zaman görünür alana getirilir.
+  - **▾** düğmesi, görünmeyenler de dahil bütün açık sekmeleri listeler.
+  - Sağ tıklayıp **Sabitle**: sekme en solda kalır, kapatma düğmesinin yerinde bir iğne görünür. Orta tıkla ve toplu kapatmalarla kapanmaz; dosya bir dahaki açılışta da sabit gelir.
+  - **Ctrl+Shift+T** kapatılan dosyayı yeniden açar.
+
+### Değişenler
+
+- **Sekme dosyanın adını gösterir:** kayıtlı proje ve dünya, içindeki başlık yerine dosya adıyla görünür. Örneğin "osiloskop test.rwproj" artık "Yeni Devre" diye görünmez. **Farklı kaydet** belgenin iç adını da dosya adı yapar (Parça sayfası zaten böyleydi).
+- Aynı adlı iki sekme klasörleriyle, iki yeni belge numarayla ayrılır.
+- Kaydedilmemiş değişiklik, adın sonuna "•" eklemek yerine kapatma düğmesinin yerinde bir nokta olarak görünür. İmleç üstüne gelince kapatma düğmesi geri gelir.
+
 ## 1.6.0 — 24 Kasım 2026
 
 **Hata ayıklama: Arduino kodunu satır satır izleyin; kart bir satırda durunca devre ve dünya da o anda durur.**

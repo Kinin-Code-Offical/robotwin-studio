@@ -91,17 +91,69 @@ namespace RobotWin.Studio.Shell
 
         public bool IsEmbedded => OwnerWorld != null;
 
+        /// <summary>
+        /// The document's name: a saved file's own name (what the user named it, whatever title the file carries inside),
+        /// otherwise its title; a board opened out of a world says which world.
+        /// </summary>
         public string BaseTitle
         {
             get
             {
-                string t = Kind == DocumentKind.World ? World?.Title ?? "Dünya" : Package.Schematic.Title;
+                string t = !IsEmbedded && !IsMontaj && !string.IsNullOrEmpty(FilePath) ? Path.GetFileNameWithoutExtension(FilePath)
+                    : Kind == DocumentKind.World ? World?.Title ?? "Dünya" : Package.Schematic.Title;
                 if (string.IsNullOrWhiteSpace(t)) t = "Adsız";
                 return IsEmbedded ? t + " (" + (OwnerWorld!.World?.Title ?? "dünya") + ")" : t;
             }
         }
 
         public string Title => BaseTitle + (IsDirty ? " •" : string.Empty);
+
+        private bool _isPinned;
+        private string _titleSuffix = string.Empty;
+
+        /// <summary>
+        /// [tabs] A pinned tab stays at the left of the strip, is left open by "close others / to the right / all" and
+        /// by a middle click, and a saved file stays pinned the next time it is opened.
+        /// </summary>
+        public bool IsPinned
+        {
+            get => _isPinned;
+            set
+            {
+                if (_isPinned == value) return;
+                _isPinned = value;
+                Changed();
+            }
+        }
+
+        /// <summary>[tabs] What tells two tabs of the same name apart: the folder of a saved file, a number for a new one.</summary>
+        public string TitleSuffix
+        {
+            get => _titleSuffix;
+            internal set
+            {
+                if (_titleSuffix == value) return;
+                _titleSuffix = value;
+                Changed();
+            }
+        }
+
+        /// <summary>[tabs] The name on the tab (the unsaved state is a dot of its own, not part of the name).</summary>
+        public string TabTitle => BaseTitle + TitleSuffix;
+
+        /// <summary>[tabs] The tab's tooltip: name, kind, file and state.</summary>
+        public string TabToolTip
+        {
+            get
+            {
+                var sb = new System.Text.StringBuilder(BaseTitle).Append(" · ").Append(KindText);
+                if (IsMontaj && OwnerProject != null) sb.Append(" (").Append(OwnerProject.BaseTitle).Append(" projesinin içinde)");
+                sb.Append('\n').Append(!string.IsNullOrEmpty(FilePath) ? FilePath : IsEmbedded ? "Dünyanın içinde (dünyayla kaydedilir)" : IsMontaj ? "Projesiyle birlikte kaydedilir" : "Henüz kaydedilmedi");
+                if (IsDirty) sb.Append('\n').Append("Kaydedilmemiş değişiklikler var");
+                if (IsPinned) sb.Append('\n').Append("Sabitlenmiş");
+                return sb.ToString();
+            }
+        }
 
         public string KindText => IsMontaj ? "Montaj" : Kind == DocumentKind.World ? "Dünya" : IsEmbedded ? "Dünyadaki kart" : "Devre";
 
@@ -115,6 +167,8 @@ namespace RobotWin.Studio.Shell
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Title)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TabTitle)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TabToolTip)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BaseTitle)));
         }
     }
@@ -148,6 +202,143 @@ namespace RobotWin.Studio.Shell
             _active = _design;
             _design.IsActive = true;
             Documents.Add(_design);
+            Documents.CollectionChanged += OnTabsChanged;   // [tabs]
+        }
+
+        // ================================================================ [tabs] names, pins, closed tabs
+
+        private readonly List<string> _closed = new List<string>();
+
+        /// <summary>Files of tabs closed this session, the latest last (Ctrl+Shift+T opens them again).</summary>
+        public IReadOnlyList<string> ClosedFiles => _closed;
+
+        /// <summary>The latest closed file that still exists and is not open again (taken off the list), or null.</summary>
+        public string? TakeClosedFile()
+        {
+            for (int i = _closed.Count - 1; i >= 0; i--)
+            {
+                string p = _closed[i];
+                _closed.RemoveAt(i);
+                if (File.Exists(p) && FindOpen(p) == null) return p;
+            }
+
+            return null;
+        }
+
+        private void OnTabsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+            {
+                foreach (OpenDocument d in e.NewItems)
+                {
+                    d.PropertyChanged -= OnTabPropertyChanged;
+                    d.PropertyChanged += OnTabPropertyChanged;
+                    if (!string.IsNullOrEmpty(d.FilePath) && IsPinnedFile(d.FilePath)) d.IsPinned = true;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (OpenDocument d in e.OldItems)
+                {
+                    if (Documents.Contains(d)) continue;   // moved
+                    d.PropertyChanged -= OnTabPropertyChanged;
+                    if (!string.IsNullOrEmpty(d.FilePath) && !d.IsEmbedded)
+                    {
+                        _closed.Remove(d.FilePath);
+                        _closed.Add(d.FilePath);
+                    }
+                }
+            }
+
+            QueueKeepPinnedFirst();
+            UpdateTabTitles();
+        }
+
+        private bool _naming;
+
+        private void OnTabPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_naming || sender is not OpenDocument d) return;
+            if (e.PropertyName == nameof(OpenDocument.FilePath))
+            {
+                if (!string.IsNullOrEmpty(d.FilePath) && IsPinnedFile(d.FilePath)) d.IsPinned = true;
+                UpdateTabTitles();
+            }
+            else if (e.PropertyName == nameof(OpenDocument.IsPinned))
+            {
+                RememberPin(d);
+                QueueKeepPinnedFirst();
+            }
+        }
+
+        /// <summary>Two tabs never read the same: a saved file gets its folder's name, a new document a number.</summary>
+        internal void UpdateTabTitles()
+        {
+            _naming = true;
+            try
+            {
+                foreach (var group in Documents.GroupBy(d => d.BaseTitle, StringComparer.CurrentCultureIgnoreCase))
+                {
+                    var list = group.ToList();
+                    int n = 0;
+                    foreach (var d in list)
+                    {
+                        if (list.Count == 1) d.TitleSuffix = string.Empty;
+                        else if (!string.IsNullOrEmpty(d.FilePath) && !d.IsEmbedded) d.TitleSuffix = " — " + Path.GetFileName(Path.GetDirectoryName(d.FilePath));
+                        else d.TitleSuffix = ++n == 1 ? string.Empty : " (" + n + ")";
+                    }
+                }
+            }
+            finally
+            {
+                _naming = false;
+            }
+        }
+
+        private bool _orderQueued;
+
+        /// <summary>Puts pinned tabs first once the current change is over (a collection cannot change while it reports one).</summary>
+        private void QueueKeepPinnedFirst()
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null)
+            {
+                KeepPinnedFirst();
+                return;
+            }
+
+            if (_orderQueued) return;
+            _orderQueued = true;
+            dispatcher.BeginInvoke(new Action(() =>
+            {
+                _orderQueued = false;
+                KeepPinnedFirst();
+            }));
+        }
+
+        /// <summary>Pinned tabs first, in their order; the others after them in theirs.</summary>
+        private void KeepPinnedFirst()
+        {
+            int pinned = 0;
+            for (int i = 0; i < Documents.Count; i++)
+            {
+                if (!Documents[i].IsPinned) continue;
+                if (i != pinned) Documents.Move(i, pinned);
+                pinned++;
+            }
+        }
+
+        private static bool IsPinnedFile(string path) => AppSettings.Current.PinnedFiles.Any(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+
+        private static void RememberPin(OpenDocument d)
+        {
+            if (string.IsNullOrEmpty(d.FilePath) || d.IsEmbedded) return;
+            var list = AppSettings.Current.PinnedFiles;
+            int before = list.Count;
+            list.RemoveAll(p => string.Equals(p, d.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (d.IsPinned) list.Add(d.FilePath);
+            if (list.Count != before || d.IsPinned) AppSettings.Current.Save();
         }
 
         public PartLibrary Library => PartLibrary.Default;
@@ -569,6 +760,8 @@ namespace RobotWin.Studio.Shell
                 montajTab.IsDirty = false;
             }
 
+            // [tabs] Saved under a new name: the project takes the file's name (its title block, the Montaj say the same).
+            if (!string.Equals(_design.FilePath, path, StringComparison.OrdinalIgnoreCase)) Schematic.Title = Path.GetFileNameWithoutExtension(path);
             Project.Save(path);
             _design.FilePath = path;
             SetDesignDirty(false);
@@ -661,6 +854,7 @@ namespace RobotWin.Studio.Shell
                 child.IsDirty = false;
             }
 
+            if (!string.Equals(doc.FilePath, path, StringComparison.OrdinalIgnoreCase)) doc.World.Title = Path.GetFileNameWithoutExtension(path);   // [tabs]
             doc.World.Save(path);
             doc.FilePath = path;
             doc.IsDirty = false;

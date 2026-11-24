@@ -147,6 +147,7 @@ namespace RobotWin.Studio
             Bind(Key.F, ModifierKeys.Control | ModifierKeys.Shift, () => ShowPerf(_perf.Visibility != Visibility.Visible));
             Bind(Key.OemComma, ModifierKeys.Control, () => Navigate("settings"));
             SetupTabDrag();
+            SetupTabStrip();   // [tabs] MainWindow.Tabs.cs
 
             Bind(Key.N, ModifierKeys.Control, () => NewProject());
             Bind(Key.N, ModifierKeys.Control | ModifierKeys.Shift, () => NewWorld());
@@ -285,13 +286,23 @@ namespace RobotWin.Studio
         {
             if ((sender as FrameworkElement)?.DataContext is not OpenDocument doc) return;
             var menu = new ContextMenu();
+            // [tabs] pin, close (pinned tabs stay), open the last closed one again
+            menu.Items.Add(MenuItem(doc.IsPinned ? "Sabitlemeyi kaldır" : "Sabitle", null, () => doc.IsPinned = !doc.IsPinned));
+            menu.Items.Add(new Separator());
             menu.Items.Add(MenuItem("Kapat", "Ctrl+W", () => CloseTab(doc)));
             menu.Items.Add(MenuItem("Diğerlerini kapat", null, () => CloseOthers(doc)));
             menu.Items.Add(MenuItem("Sağdakileri kapat", null, () =>
             {
                 int i = W.Documents.IndexOf(doc);
-                foreach (var d in W.Documents.Skip(i + 1).ToList()) CloseTab(d);
+                foreach (var d in W.Documents.Skip(i + 1).Where(d => !d.IsPinned).ToList()) CloseTab(d);
             }));
+            menu.Items.Add(MenuItem("Sabitlenmemişlerin hepsini kapat", null, () =>
+            {
+                foreach (var d in W.Documents.Where(d => !d.IsPinned).ToList()) CloseTab(d);
+            }));
+            var reopen = MenuItem("Kapatılan sekmeyi yeniden aç", "Ctrl+Shift+T", ReopenClosedTab);
+            reopen.IsEnabled = W.ClosedFiles.Count > 0;
+            menu.Items.Add(reopen);
             menu.Items.Add(new Separator());
             menu.Items.Add(MenuItem(doc.IsEmbedded ? "Dünyaya işle" : "Kaydet", "Ctrl+S", () =>
             {
@@ -330,7 +341,7 @@ namespace RobotWin.Studio
 
         private void CloseOthers(OpenDocument keep)
         {
-            foreach (var d in W.Documents.Where(d => d != keep && d.OwnerWorld != keep && keep.OwnerWorld != d).ToList()) CloseTab(d);
+            foreach (var d in W.Documents.Where(d => d != keep && !d.IsPinned && d.OwnerWorld != keep && keep.OwnerWorld != d).ToList()) CloseTab(d);
         }
 
         private static void RevealInExplorer(string path, bool folder)
@@ -719,6 +730,7 @@ namespace RobotWin.Studio
             if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
             if (fault == "guide") StartGuide();   // [guide] the card at its first step
             if (fault == "debug-e2e" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [debug]
+            if (fault == "tabs" && App.SnapshotPath != null) RunTabsCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [tabs]
             if (fault == "debug-e2e-circuit" && App.SnapshotPath != null) RunCircuitDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));
             if (fault != null && fault.StartsWith("guide-e2e", StringComparison.Ordinal) && App.SnapshotPath != null)   // guide-e2e[:N] — N steps only
             {
@@ -767,7 +779,7 @@ namespace RobotWin.Studio
 
         private void OnTabMiddle(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Middle && (sender as FrameworkElement)?.DataContext is OpenDocument doc)
+            if (e.ChangedButton == MouseButton.Middle && (sender as FrameworkElement)?.DataContext is OpenDocument { IsPinned: false } doc)
             {
                 CloseTab(doc);
                 e.Handled = true;

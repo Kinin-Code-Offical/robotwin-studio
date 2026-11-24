@@ -59,7 +59,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 | Bölüm | Yeri | Ne işe yarar |
 | --- | --- | --- |
 | Menü çubuğu | En üst | **Dosya**, **Düzen**, **Görünüm**, **Simülasyon**, **Pencere**, **Yardım** menüleri. **F10** ile klavyeden açılır. |
-| Belge sekmeleri | Menünün yanında | Açık devreler ve dünyalar. Sekmeleri sürükleyerek sıralayabilirsiniz. **Ctrl+Tab** sonraki sekme, **Ctrl+W** sekmeyi kapatır. |
+| Belge sekmeleri | Menünün yanında | Açık devreler ve dünyalar; kayıtlı bir dosya kendi adıyla görünür. Kaydedilmemiş değişiklik, kapatma düğmesinin yerinde bir nokta olarak görünür. Sekmeler sığmazsa şerit fare tekerleğiyle ya da oklarla kayar; **▾** bütün açık sekmeleri listeler. Sağ tıklayıp **Sabitle** derseniz sekme en solda kalır, toplu kapatmalarda kapanmaz ve dosya bir dahaki açılışta da sabit gelir. Sekmeleri sürükleyerek sıralayabilirsiniz. **Ctrl+Tab** sonraki sekme, **Ctrl+W** sekmeyi kapatır, **Ctrl+Shift+T** kapatılan dosyayı yeniden açar. |
 | Tasarımdan gerçeğe hattı | Sol kenar | Sayfalar üç grupta: **ELEKTRONİK** (Devre → PCB → Kod), **MEKANİK** (Parça → Montaj), **TEST** (Dünya). Altta Başlangıç, Kütüphane, Ayarlar ve Yardım. Başlangıç'a sol üstteki logodan da dönülür. **Ctrl+B** hattı genişletir; her sayfanın ne işe yaradığı ve durumu yazar. |
 | Sayfa | Orta | Seçili aşamanın editörü. |
 | Durum çubuğu | En alt | Son mesaj, simülasyon durumu, parça ve kablo sayısı. |

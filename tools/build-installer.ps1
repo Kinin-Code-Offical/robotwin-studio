@@ -7,9 +7,9 @@
 #       proven by compiling a sketch before it is packed (-NoArduino leaves it out, for quick local builds)
 #   2. compiles the native setup stub (Installer/setup.cpp) with MSVC
 #   3. packs the published files into the stub (LZMS, Windows Compression API)
-# Usage:  powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 [-Version 1.6.0] [-SelfContained] [-NoArduino]
+# Usage:  powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 [-Version 1.6.1] [-SelfContained] [-NoArduino]
 param(
-    [string]$Version = "1.6.0",
+    [string]$Version = "1.6.1",
     [switch]$SelfContained,
     [switch]$NoArduino,
     [string]$ArduinoCliUrl = "https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Windows_64bit.zip",

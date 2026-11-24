@@ -13,6 +13,8 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
+> **1.6.1'de yeni:** sekmeler kaydırılır, sabitlenir ve listelenir; sekme dosyanın kendi adını gösterir.
+>
 > **1.6.0'da yeni:** Arduino kodunda kesme noktası, adım ve değişkenler. Kart bir satırda durunca devre ve dünya da aynı anda durur.
 >
 > **1.5.1'de yeni:** Arduino derleyicisi kurulumla gelir (Uno / Nano kodu hemen derlenir) ve **İlk robotun** rehberi ilk robotunuzu 5–10 dakikada çalıştırır.
@@ -172,7 +174,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.6.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.6.1.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -315,8 +317,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.6.0
-# -> builds\installer\RobotWinStudio-Setup-1.6.0.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.6.1
+# -> builds\installer\RobotWinStudio-Setup-1.6.1.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -395,6 +397,8 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
+> **New in 1.6.1:** tabs scroll, pin and list; a tab shows its file's own name.
+>
 > **New in 1.6.0:** breakpoints, steps and variables in Arduino code. When the board stops on a line, the circuit and the world stop at that instant too.
 >
 > **New in 1.5.1:** the Arduino compiler comes with the installer (Uno / Nano code builds right away), and the **İlk robotun** (your first robot) guide gets your first robot running in 5–10 minutes.
@@ -478,7 +482,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.6.0` → `builds\installer\RobotWinStudio-Setup-1.6.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.6.1` → `builds\installer\RobotWinStudio-Setup-1.6.1.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

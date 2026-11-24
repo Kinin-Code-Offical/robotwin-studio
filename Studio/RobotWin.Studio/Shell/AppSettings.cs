@@ -117,6 +117,9 @@ namespace RobotWin.Studio.Shell
         public double WindowHeight { get; set; }
         public bool WindowMaximized { get; set; }
         public double WindowLeft { get; set; } = double.NaN;
+
+        /// <summary>[tabs] Files whose tabs are pinned (they open pinned).</summary>
+        public List<string> PinnedFiles { get; set; } = new List<string>();
         public double WindowTop { get; set; } = double.NaN;
 
         private static AppSettings Load()

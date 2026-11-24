@@ -43,9 +43,18 @@
                     <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0,4,0"/>
                 </StackPanel>
 
-                <!-- Open documents: circuits and worlds -->
-                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" WindowChrome.IsHitTestVisibleInChrome="True"
-                              VerticalAlignment="Center" HorizontalAlignment="Left" PreviewMouseWheel="OnTabsWheel" x:Name="TabScroll">
+                <!-- Open documents: circuits and worlds. [tabs] The strip scrolls (wheel, arrows); the list shows every tab. -->
+                <Grid Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="TabLeft" Style="{StaticResource Btn.Icon}" Width="22" Height="26" Visibility="Collapsed" Click="OnTabsLeft" ToolTip="Soldaki sekmeler">
+                        <t:Icon Data="{StaticResource I.ChevronLeft}" Size="12"/>
+                    </Button>
+                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                              VerticalAlignment="Center" PreviewMouseWheel="OnTabsWheel" ScrollChanged="OnTabsScrolled" x:Name="TabScroll">
                     <ItemsControl x:Name="Tabs">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -55,13 +64,21 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border x:Name="TabBorder" Height="30" Margin="2,0" CornerRadius="6" Padding="10,0,4,0" Background="Transparent" Cursor="Hand"
-                                        MouseLeftButtonUp="OnTabClick" MouseUp="OnTabMiddle" MouseRightButtonUp="OnTabMenu" ToolTip="{Binding KindText}">
+                                        MouseLeftButtonUp="OnTabClick" MouseUp="OnTabMiddle" MouseRightButtonUp="OnTabMenu" ToolTip="{Binding TabToolTip}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <t:Icon x:Name="TabIcon" Data="{StaticResource I.Schematic}" Size="13" Foreground="{StaticResource B.TextMuted}" Margin="0,0,7,0"/>
-                                        <TextBlock x:Name="TabText" Text="{Binding Title}" MaxWidth="190" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                        <TextBlock x:Name="TabText" Text="{Binding TabTitle}" MaxWidth="190" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                    Foreground="{StaticResource B.TextSecondary}" FontSize="12.5"/>
-                                        <Button Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabClose" ToolTip="Kapat (Ctrl+W)">
-                                            <t:Icon Data="{StaticResource I.Close}" Size="10"/>
+                                        <!-- a pinned tab: its pin (click to unpin) instead of the close button -->
+                                        <Button x:Name="TabPin" Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabUnpin" ToolTip="Sabitlemeyi kaldır" Visibility="Collapsed">
+                                            <t:Icon Data="{StaticResource I.Pin}" Size="11" Foreground="{StaticResource B.Accent}"/>
+                                        </Button>
+                                        <!-- unsaved: a dot where the close button is (the close button again under the pointer) -->
+                                        <Button x:Name="TabClose" Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabClose" ToolTip="Kapat (Ctrl+W)">
+                                            <Grid>
+                                                <t:Icon x:Name="CloseGlyph" Data="{StaticResource I.Close}" Size="10"/>
+                                                <Ellipse x:Name="DirtyDot" Width="7" Height="7" Fill="{StaticResource B.TextSecondary}" Visibility="Collapsed"/>
+                                            </Grid>
                                         </Button>
                                     </StackPanel>
                                 </Border>
@@ -80,11 +97,45 @@
                                     <Trigger SourceName="TabBorder" Property="IsMouseOver" Value="True">
                                         <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource B.Hover}"/>
                                     </Trigger>
+                                    <DataTrigger Binding="{Binding IsDirty}" Value="True">
+                                        <Setter TargetName="CloseGlyph" Property="Visibility" Value="Collapsed"/>
+                                        <Setter TargetName="DirtyDot" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="TabClose" Property="ToolTip" Value="Kaydedilmemiş değişiklikler var · Kapat (Ctrl+W)"/>
+                                    </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsDirty}" Value="True"/>
+                                            <Condition Binding="{Binding IsMouseOver, ElementName=TabBorder}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="CloseGlyph" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="DirtyDot" Property="Visibility" Value="Collapsed"/>
+                                    </MultiDataTrigger>
+                                    <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                        <Setter TargetName="TabPin" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="TabClose" Property="Visibility" Value="Collapsed"/>
+                                        <Setter TargetName="TabText" Property="MaxWidth" Value="140"/>
+                                    </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsPinned}" Value="True"/>
+                                            <Condition Binding="{Binding IsDirty}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="TabText" Property="FontStyle" Value="Italic"/>
+                                    </MultiDataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="TabRight" Style="{StaticResource Btn.Icon}" Width="22" Height="26" Visibility="Collapsed" Click="OnTabsRight" ToolTip="Sağdaki sekmeler">
+                            <t:Icon Data="{StaticResource I.Chevron}" Size="12"/>
+                        </Button>
+                        <Button x:Name="TabList" Style="{StaticResource Btn.Icon}" Width="24" Height="26" Margin="2,0,0,0" Click="OnTabList" ToolTip="Açık sekmelerin listesi">
+                            <t:Icon Data="{StaticResource I.ChevronDown}" Size="12"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnPalette" ToolTip="Komut paleti: her şeyi ara ve çalıştır (Ctrl+K)">

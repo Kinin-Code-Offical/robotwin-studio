@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-6-1",
+      "date": "2026-11-24",
+      "title": "1.6.1: sekmelerde kaydırma, sabitleme ve dosya adları",
+      "body": "Bu sürümde:\n\n- Sekmeler sığmazsa şerit tekerlek ve oklarla kayar; **▾** bütün açık sekmeleri listeler.\n- Sağ tık → **Sabitle**: sekme en solda kalır ve toplu kapatmalarda kapanmaz.\n- **Ctrl+Shift+T** kapatılan dosyayı yeniden açar.\n- Sekme artık dosyanın kendi adını gösterir; kaydedilmemiş değişiklik bir noktayla belirtilir.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-6-0",
       "date": "2026-11-24",
       "title": "1.6.0: Arduino kodunda kesme noktası, adım ve değişkenler",
