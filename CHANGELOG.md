@@ -131,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The installed app is compiled ahead of time (ReadyToRun):** the first start and the first opening of each page no longer wait for the JIT. On a cold start the first window comes at 712 ms instead of 1174 ms; opening the World page with a template takes 2.9 s instead of 3.5–4.1 s. The package grows by about 36 MB.
 - **A new splash screen:** a flat scene of a board's traces leading to a robot arm, the name and the stages (circuit · PCB · code · model · assembly · world), then what is being loaded, a percentage and a thicker bar, and the version. In the language in use.
 - **Faster start:** the parts library and settings pages are built the first time they are shown, and the start no longer waits for the splash to draw: the studio draws its first frame about 0.2 s sooner (0.98 → 0.77 s from the process start on the test machine).
 - **Opening a world no longer holds a frame while its cables settle:** they appear along their routes at once and take their hanging shape on a worker thread a moment later. The longest frame on opening fell from 1926 to 190 ms (PS5 plane), 1018 to 45 ms (motor glider), 653 to 119 ms (sensor rover), 565 to 164 ms (two boards), 432 to 47 ms (factory cell), 426 to 84 ms (line follower); running frame rates are unchanged. Command-line runs settle at once, so pictures stay the same.

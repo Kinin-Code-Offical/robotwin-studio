@@ -18,7 +18,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
       - [ ] Dinlendirmenin 2 mm/s hız ölçütü hiç sağlanmıyor (g·h titreşimi en hızlı parçacığı ~24 mm/s'de tutuyor), her seferinde 0,4 s'nin tamamı çalışıyor: yer değişimine göre ölçülmeli.
       - [x] Kâseye dökülen su, yüzeyindeki akıntılar (dökmeden 5 s sonra 15–40 mm/s) sönünce, dökmeden ~8 s sonra uyuyor; gerçek su da bir süre döner.
     - [x] Kabın iç köşesindeki parçacıklar durgun suda 30–40 mm/s titriyordu: alanın ara değerlenmiş mesafesi köşede kısa kalıyordu. Temas artık gerçek katıyla. Durgunluk da hıza göre değil 0,2 s'deki yer değişimine göre ölçülüyor (konum tabanlı sıvı yerinde g·h² kadar titrer). Serbest bir tank suyuyla 2,6 s'de uyuyor; servonun tuttuğu kap sıvıyı mikrometrelik kıpırtısıyla uyandırmıyor.
-  - [ ] ReadyToRun ön derlemesi (crossgen2 paketi için izin gerekiyor).
+  - [x] ReadyToRun ön derlemesi: kurulum paketi önceden derleniyor. Soğuk ilk açılışta ilk pencere 1174 ms'den 712 ms'ye, Dünya sayfasının ilk açılışı 3,5–4,1 s'den 2,9 s'ye indi.
 - [~] **Ayarlar:** kategoriler ve arama.
   - [x] Yedekleme: sıklık, belge başına kopya, klasör, boyut sınırı, kaydedince önceki sürüm, çökme sonrası kurtarma.
   - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama; bütün sayfaların tuşları da (Shell/PageShortcuts.cs: Devre, PCB, Dünya, Kod, Parça).
