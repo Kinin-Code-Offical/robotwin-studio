@@ -40,6 +40,22 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private bool ReadPeripheral(uint register, out uint value)
         {
             if (ReadFlashRegister(register, out value)) return true;
+            if (register == 0x3FF4800C)
+            {
+                // RTC_CNTL_TIME_UPDATE: the latched RTC time is always valid (bit 30)
+                _registers.TryGetValue(register, out value);
+                value |= 1u << 30;
+                return true;
+            }
+
+            if (register == 0x3FF48010 || register == 0x3FF48014)
+            {
+                // RTC_CNTL_TIME0/1: the RTC slow clock's 48-bit count (150 kHz), from the PRO_CPU's cycles at 240 MHz
+                ulong rtc = Pro.Cycles * 150_000UL / 240_000_000UL;
+                value = register == 0x3FF48010 ? (uint)rtc : (uint)(rtc >> 32) & 0xFFFF;
+                return true;
+            }
+
             if (register == 0x3FF5F068 || register == 0x3FF60068)
             {
                 // Timer group's RTC slow-clock calibration: always ready (bit 15)

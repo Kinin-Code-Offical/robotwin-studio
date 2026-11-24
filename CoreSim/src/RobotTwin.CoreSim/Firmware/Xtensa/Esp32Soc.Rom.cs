@@ -217,7 +217,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 if (n.StartsWith("Cache_", StringComparison.Ordinal) || n.StartsWith("cache_", StringComparison.Ordinal) || n.StartsWith("mmu_", StringComparison.Ordinal)
                     || n.StartsWith("esp_rom_efuse_", StringComparison.Ordinal) || n.StartsWith("ets_efuse_", StringComparison.Ordinal)
                     || n.StartsWith("esp_rom_spiflash_", StringComparison.Ordinal) || n.StartsWith("SPI_", StringComparison.Ordinal) || n.StartsWith("spi_flash_", StringComparison.Ordinal)
-                    || n.StartsWith("esp_rom_output_", StringComparison.Ordinal) || n.StartsWith("esp_rom_uart_", StringComparison.Ordinal))
+                    || n.StartsWith("esp_rom_output_", StringComparison.Ordinal) || n.StartsWith("esp_rom_uart_", StringComparison.Ordinal)
+                    || n.StartsWith("gpio_matrix_", StringComparison.Ordinal) || n.StartsWith("gpio_pad_", StringComparison.Ordinal) || n.StartsWith("esp_rom_gpio_", StringComparison.Ordinal))
                     _romFunctions[pair.Key] = c => Return(c, 0);
             }
         }
