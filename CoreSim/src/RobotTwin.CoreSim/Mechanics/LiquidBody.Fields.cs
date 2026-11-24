@@ -171,10 +171,9 @@ namespace RobotTwin.CoreSim.Mechanics
         private static Vec3 Min(Vec3 a, Vec3 b) => new Vec3(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Min(a.Z, b.Z));
         private static Vec3 Max(Vec3 a, Vec3 b) => new Vec3(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y), Math.Max(a.Z, b.Z));
 
-        /// <summary>Signed distance to body b's solid at a body-frame point, and the outward normal (body frame).</summary>
-        private bool Distance(SceneBody b, CollisionShape shape, Vec3 local, double maxDistance, out double distance, out Vec3 normal)
+        /// <summary>Signed distance to body b's solid at a body-frame point, and the outward normal (body frame); f is its field, if any.</summary>
+        private static bool Distance(Field? f, SceneBody b, CollisionShape shape, Vec3 local, double maxDistance, out double distance, out Vec3 normal)
         {
-            var f = FieldOf(b);
             if (f == null) return b.SignedDistanceSolid(shape, local, maxDistance, out distance, out normal);
             double u = (local.X - f.Lo.X) / f.Cell, v = (local.Y - f.Lo.Y) / f.Cell, w = (local.Z - f.Lo.Z) / f.Cell;
             normal = Vec3.UnitZ;
@@ -221,8 +220,5 @@ namespace RobotTwin.CoreSim.Mechanics
             grad = new Vec3(gx, gy, gz) / f.Cell;
             return true;
         }
-
-        /// <summary>Grid cell of body b's distance field (0 when its distance is exact).</summary>
-        private double FieldCell(SceneBody b) => FieldOf(b)?.Cell ?? 0;
     }
 }

@@ -52,6 +52,35 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Radius of a sphere about the body origin that encloses the shape.</summary>
         public double BoundingRadius { get; private set; }
 
+        /// <summary>
+        /// The middle of the shape (body frame) and the radius about it that holds the whole solid: tighter than
+        /// <see cref="BoundingRadius"/> for a convex piece of a concave body, which lies off the body's origin.
+        /// </summary>
+        internal Vec3 LocalCentre { get; private set; }
+
+        internal double LocalRadius => _localRadius >= 0 ? _localRadius : BoundingRadius;
+        private double _localRadius = -1;
+
+        private void Enclose(IEnumerable<Vec3> points)
+        {
+            var lo = new Vec3(double.MaxValue, double.MaxValue, double.MaxValue);
+            var hi = -lo;
+            int n = 0;
+            foreach (var v in points)
+            {
+                lo = new Vec3(Math.Min(lo.X, v.X), Math.Min(lo.Y, v.Y), Math.Min(lo.Z, v.Z));
+                hi = new Vec3(Math.Max(hi.X, v.X), Math.Max(hi.Y, v.Y), Math.Max(hi.Z, v.Z));
+                n++;
+            }
+
+            if (n == 0) return;
+            var c = (lo + hi) * 0.5;
+            double r = 0;
+            foreach (var v in points) r = Math.Max(r, (v - c).Length);
+            LocalCentre = c;
+            _localRadius = r;
+        }
+
         /// <summary>Solid volume (m³), 0 for point clouds.</summary>
         public double Volume { get; private set; }
 
@@ -129,6 +158,7 @@ namespace RobotTwin.CoreSim.Mechanics
             double r = 0;
             foreach (var v in hull.Vertices) r = Math.Max(r, v.Length);
             s.BoundingRadius = r;
+            s.Enclose(hull.Vertices);
             return s;
         }
 

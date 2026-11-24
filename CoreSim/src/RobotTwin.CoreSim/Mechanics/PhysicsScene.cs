@@ -1083,18 +1083,37 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             // concave bodies: every convex piece of one against every piece (or the shape) of the other
+            // [perf] whose spheres come within the contact margin of each other: no contact is made farther apart than
+            // that, and two 25-piece bodies were otherwise 625 full tests a substep.
             int na = pa?.Length ?? 1, nb = pb?.Length ?? 1;
+            var A = Bodies[a];
+            var B = Bodies[b];
+            double margin = Margin(a, b, h);
+            if (_pieceCentres.Length < nb) _pieceCentres = new Vec3[nb * 2];
+            for (int j = 0; j < nb; j++)
+            {
+                var sj = pb != null ? pb[j] : _shapes[b]!;
+                _pieceCentres[j] = B.Position + B.Orientation.Rotate(sj.LocalCentre);
+            }
+
             for (int i = 0; i < na; i++)
             {
+                var si = pa != null ? pa[i] : _shapes[a]!;
+                var ci = A.Position + A.Orientation.Rotate(si.LocalCentre);
                 for (int j = 0; j < nb; j++)
                 {
+                    var sj = pb != null ? pb[j] : _shapes[b]!;
+                    double reach = si.LocalRadius + sj.LocalRadius + margin;
+                    if ((ci - _pieceCentres[j]).LengthSquared > reach * reach) continue;
                     _featureBase = (i * nb + j + 1) << 13;
-                    CollideShapes(a, b, pa != null ? pa[i] : _shapes[a]!, pb != null ? pb[j] : _shapes[b]!, h);
+                    CollideShapes(a, b, si, sj, h);
                 }
             }
 
             _featureBase = 0;
         }
+
+        private Vec3[] _pieceCentres = Array.Empty<Vec3>();
 
         private void CollideShapes(int a, int b, CollisionShape sa, CollisionShape sb, double h)
         {

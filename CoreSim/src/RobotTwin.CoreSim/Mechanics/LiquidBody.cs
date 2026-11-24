@@ -36,8 +36,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private double[] _x = Array.Empty<double>(), _v = Array.Empty<double>(), _p = Array.Empty<double>();
         private int[] _id = Array.Empty<int>();   // each particle's lasting number (memory order changes, this does not)
-        private double[] _rho = Array.Empty<double>(), _lam = Array.Empty<double>(), _dp = Array.Empty<double>(), _c = Array.Empty<double>();
+        private double[] _rho = Array.Empty<double>(), _lam = Array.Empty<double>(), _q = Array.Empty<double>(), _vsrc = Array.Empty<double>();
         private int[] _nb = Array.Empty<int>(), _nbCount = Array.Empty<int>();
+        private double[] _nbw = Array.Empty<double>();   // per neighbour pair: W'(r)/r · m/ρ0 at this iteration (0 = out of reach)
         private int[] _wb = Array.Empty<int>();   // body slot (index into _near), -2 = ground, -1 = none
         private double[] _wd = Array.Empty<double>(), _wn = Array.Empty<double>(), _wv = Array.Empty<double>();
         private double[] _wphi = Array.Empty<double>(), _wg = Array.Empty<double>();   // wall's kernel share Φ and ∇Φ (world)
@@ -306,11 +307,12 @@ namespace RobotTwin.CoreSim.Mechanics
             Array.Resize(ref _v, 3 * cap);
             Array.Resize(ref _id, cap);
             _p = new double[3 * cap];
-            _dp = new double[3 * cap];
-            _c = new double[3 * cap];
+            _q = new double[3 * cap];
+            _vsrc = new double[3 * cap];
             _rho = new double[cap];
             _lam = new double[cap];
             _nb = new int[cap * MaxNeighbours];
+            _nbw = new double[cap * MaxNeighbours];
             _nbCount = new int[cap];
             _wb = new int[cap * Slots];
             _wd = new double[cap * Slots];
@@ -576,15 +578,53 @@ namespace RobotTwin.CoreSim.Mechanics
                 _near.Add(b);
             }
 
-            foreach (var b in _near) FieldOf(b);   // built here, read in parallel below
-            if (_start.Length < _near.Count) _start = new (Vec3, Quat)[_near.Count];
-            if (before.Count != _near.Count) _restTime = -1;
+            int nn = _near.Count;
+            if (_start.Length < nn)
+            {
+                _start = new (Vec3, Quat)[nn];
+                _nearShape = new CollisionShape[nn];
+                _nearField = new Field?[nn];
+                _nearLo = new Vec3[nn];
+                _nearHi = new Vec3[nn];
+            }
+
+            // Built here, read in parallel below: per particle and body only array reads.
+            for (int b = 0; b < nn; b++)
+            {
+                var shape = _near[b].EffectiveShape!;
+                var field = FieldOf(_near[b]);
+                _nearShape[b] = shape;
+                _nearField[b] = field;
+                (_nearLo[b], _nearHi[b]) = LocalBounds(shape, field);
+            }
+
+            if (before.Count != nn) _restTime = -1;
+        }
+
+        // [perf] Per near body, gathered once per step: its shape, its distance field and a box in its own frame that
+        // holds its solid. A particle farther from that box than the kernel's reach plus its move cannot touch the body:
+        // the long wall of a channel is skipped by the particles across it, where its bounding sphere took them all in.
+        private CollisionShape[] _nearShape = Array.Empty<CollisionShape>();
+        private Field?[] _nearField = Array.Empty<Field?>();
+        private Vec3[] _nearLo = Array.Empty<Vec3>(), _nearHi = Array.Empty<Vec3>();
+
+        private static (Vec3 Lo, Vec3 Hi) LocalBounds(CollisionShape s, Field? f)
+        {
+            if (f != null) return (f.Lo, f.Lo + new Vec3((f.Nx - 1) * f.Cell, (f.Ny - 1) * f.Cell, (f.Nz - 1) * f.Cell));
+            var h = s.Kind switch
+            {
+                ShapeKind.Box => s.HalfExtents,
+                ShapeKind.Sphere => new Vec3(s.Radius, s.Radius, s.Radius),
+                ShapeKind.Cylinder => new Vec3(s.Radius, s.Radius, s.HalfHeight),
+                _ => new Vec3(s.BoundingRadius, s.BoundingRadius, s.BoundingRadius)
+            };
+            return (-h, h);
         }
 
         private readonly System.Diagnostics.Stopwatch _clock = new System.Diagnostics.Stopwatch();
         private readonly double[] _phase = new double[6];
 
-        /// <summary>Wall-clock seconds spent per phase since the start: walls, neighbours, pressure, viscosity, surface tension, rest.</summary>
+        /// <summary>Wall-clock seconds spent per phase since the start: walls, neighbours, pressure, viscosity and surface tension, air drag, rest.</summary>
         public IReadOnlyList<double> PhaseSeconds => _phase;
 
         private void Lap(int phase)
@@ -600,7 +640,9 @@ namespace RobotTwin.CoreSim.Mechanics
             var g = scene.Gravity;
             if (++_substeps % 16 == 1) Reorder(scene);
 
-            // 1. Predict.
+            // [perf] Each pass over the particles wakes every core; at a few thousand particles that costs about as much
+            // as the work, so passes that touch only the particle's own data are done in one.
+            // 1. Predict, then 2. walls: no crossing within the step, the walls within reach recorded for the pressure.
             Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
             {
                 for (int i = range.Item1; i < range.Item2; i++)
@@ -612,14 +654,9 @@ namespace RobotTwin.CoreSim.Mechanics
                     _p[k] = _x[k] + _v[k] * h;
                     _p[k + 1] = _x[k + 1] + _v[k + 1] * h;
                     _p[k + 2] = _x[k + 2] + _v[k + 2] * h;
+                    Array.Clear(_imp, 3 * Slots * i, 3 * Slots);
+                    Walls(scene, i, h, true);
                 }
-            });
-
-            Array.Clear(_imp, 0, 3 * n * Slots);
-            // 2. Walls: no crossing within the step, the walls within reach recorded for the pressure.
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
-            {
-                for (int i = range.Item1; i < range.Item2; i++) Walls(scene, i, h, true);
             });
 
             Lap(0);
@@ -631,17 +668,13 @@ namespace RobotTwin.CoreSim.Mechanics
             Project(n, Iterations);
 
             Lap(2);
-            // 5. Exact non-penetration against the true surfaces (the iterations tracked them to first order).
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
-            {
-                for (int i = range.Item1; i < range.Item2; i++) Walls(scene, i, h, false);
-            });
-
-            // 6. Velocities, then the real viscosity and surface tension.
+            // 5. Exact non-penetration against the true surfaces (the iterations tracked them to first order), and the
+            // velocities from the move.
             Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
+                    Walls(scene, i, h, false);
                     int k = 3 * i;
                     _v[k] = (_p[k] - _x[k]) / h;
                     _v[k + 1] = (_p[k + 1] - _x[k + 1]) / h;
@@ -650,9 +683,9 @@ namespace RobotTwin.CoreSim.Mechanics
             });
 
             Lap(0);
-            Viscosity(h);
+            // 6. The real viscosity and surface tension.
+            ViscosityAndTension(h);
             Lap(3);
-            SurfaceTension(h);
             if (AirDrag) Drag(scene, h);
             Lap(4);
             double rho0 = Kind.Density, maxComp = 0, sumRho = 0;
@@ -700,10 +733,12 @@ namespace RobotTwin.CoreSim.Mechanics
                             int j = _nb[b0 + a], kj = 3 * j;
                             double dx = px - _p[kj], dy = py - _p[kj + 1], dz = pz - _p[kj + 2];
                             double r = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                            _nbw[b0 + a] = 0;
                             if (r >= _h) continue;
                             sum += W(r);
                             if (r < 1e-12) continue;
                             double f = Wd(r) / r * m / rho0;
+                            _nbw[b0 + a] = f;   // the correction below is at the same positions
                             double ex = f * dx, ey = f * dy, ez = f * dz;
                             gx += ex;
                             gy += ey;
@@ -739,6 +774,8 @@ namespace RobotTwin.CoreSim.Mechanics
                     }
                 }
 
+                // The correction, applied to a second copy of the positions (every particle's is computed from where the
+                // others stood), so the walls are kept up in the same pass.
                 Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
                 {
                     for (int i = range.Item1; i < range.Item2; i++)
@@ -749,14 +786,13 @@ namespace RobotTwin.CoreSim.Mechanics
                         int cnt = _nbCount[i], b0 = i * MaxNeighbours;
                         for (int a = 0; a < cnt; a++)
                         {
+                            double w = _nbw[b0 + a];
+                            if (w == 0) continue;
                             int j = _nb[b0 + a], kj = 3 * j;
-                            double dx = px - _p[kj], dy = py - _p[kj + 1], dz = pz - _p[kj + 2];
-                            double r = Math.Sqrt(dx * dx + dy * dy + dz * dz);
-                            if (r >= _h || r < 1e-12) continue;
-                            double f = (li + _lam[j]) * Wd(r) / r * m / rho0;
-                            ux += f * dx;
-                            uy += f * dy;
-                            uz += f * dz;
+                            double f = (li + _lam[j]) * w;
+                            ux += f * (px - _p[kj]);
+                            uy += f * (py - _p[kj + 1]);
+                            uz += f * (pz - _p[kj + 2]);
                         }
 
                         for (int s = 0; s < Slots; s++)
@@ -773,33 +809,21 @@ namespace RobotTwin.CoreSim.Mechanics
                             _imp[3 * ws + 2] += pz2;
                         }
 
-                        _dp[k] = ux;
-                        _dp[k + 1] = uy;
-                        _dp[k + 2] = uz;
-                    }
-                });
-
-                Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
-                {
-                    for (int i = range.Item1; i < range.Item2; i++)
-                    {
-                        int k = 3 * i;
-                        _p[k] += _dp[k];
-                        _p[k + 1] += _dp[k + 1];
-                        _p[k + 2] += _dp[k + 2];
+                        double qx = px + ux, qy = py + uy, qz = pz + uz;
                         // The walls moved relative to the particle by its correction; keep it off them.
                         for (int s = 0; s < Slots; s++)
                         {
                             int ws = i * Slots + s;
                             if (_wb[ws] == -1) continue;
                             double nx = _wn[3 * ws], ny = _wn[3 * ws + 1], nz = _wn[3 * ws + 2];
-                            double d = _wd[ws] + nx * _dp[k] + ny * _dp[k + 1] + nz * _dp[k + 2];
+                            double along = nx * ux + ny * uy + nz * uz;
+                            double d = _wd[ws] + along;
                             if (d < Radius)
                             {
                                 double push = Radius - d;
-                                _p[k] += nx * push;
-                                _p[k + 1] += ny * push;
-                                _p[k + 2] += nz * push;
+                                qx += nx * push;
+                                qy += ny * push;
+                                qz += nz * push;
                                 _imp[3 * ws] += nx * push;
                                 _imp[3 * ws + 1] += ny * push;
                                 _imp[3 * ws + 2] += nz * push;
@@ -811,16 +835,21 @@ namespace RobotTwin.CoreSim.Mechanics
                             if (_wfield[ws])
                             {
                                 // First order along the move: Φ changes by ∇Φ·Δx (the push-out moved it along n).
-                                _wphi[ws] += _wg[3 * ws] * _dp[k] + _wg[3 * ws + 1] * _dp[k + 1] + _wg[3 * ws + 2] * _dp[k + 2]
-                                             + (_wg[3 * ws] * nx + _wg[3 * ws + 1] * ny + _wg[3 * ws + 2] * nz) * (moved - (nx * _dp[k] + ny * _dp[k + 1] + nz * _dp[k + 2]));
+                                _wphi[ws] += _wg[3 * ws] * ux + _wg[3 * ws + 1] * uy + _wg[3 * ws + 2] * uz
+                                             + (_wg[3 * ws] * nx + _wg[3 * ws + 1] * ny + _wg[3 * ws + 2] * nz) * (moved - along);
                                 if (_wphi[ws] < 0) _wphi[ws] = 0;
                             }
                             else PlanarSlot(ws);
                         }
+
+                        _q[k] = qx;
+                        _q[k + 1] = qy;
+                        _q[k + 2] = qz;
                     }
                 });
-            }
 
+                (_p, _q) = (_q, _p);
+            }
         }
 
         /// <summary>
@@ -898,21 +927,15 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int b = 0; b < _near.Count; b++)
             {
                 var body = _near[b];
-                var shape = body.EffectiveShape!;
-                // Far from this body (its bounding sphere, plus the kernel's reach and this move): nothing to do.
-                if (shape.Kind != ShapeKind.Mesh && body.Pieces == null)
-                {
-                    double rr = shape.BoundingRadius + reach + moved;
-                    if ((p - body.Position).LengthSquared > rr * rr) continue;
-                }
-                else if (FieldOf(body) is { } fb)
-                {
-                    var lp = body.Orientation.InverseRotate(p - body.Position);
-                    double m = reach + moved;
-                    if (lp.X < fb.Lo.X - m || lp.Y < fb.Lo.Y - m || lp.Z < fb.Lo.Z - m
-                        || lp.X > fb.Lo.X + (fb.Nx - 1) * fb.Cell + m || lp.Y > fb.Lo.Y + (fb.Ny - 1) * fb.Cell + m || lp.Z > fb.Lo.Z + (fb.Nz - 1) * fb.Cell + m)
-                        continue;
-                }
+                var shape = _nearShape[b];
+                var field = _nearField[b];
+                // Far from this body (the box of its solid in its own frame, plus the kernel's reach and this move):
+                // nothing to do.
+                var le = body.Orientation.InverseRotate(p - body.Position);
+                double m = reach + moved;
+                Vec3 blo = _nearLo[b], bhi = _nearHi[b];
+                if (le.X < blo.X - m || le.Y < blo.Y - m || le.Z < blo.Z - m || le.X > bhi.X + m || le.Y > bhi.Y + m || le.Z > bhi.Z + m)
+                    continue;
 
                 var push = Vec3.Zero;
                 if (sweep)
@@ -920,7 +943,6 @@ namespace RobotTwin.CoreSim.Mechanics
                     // Continuous: from where it was (in the body as it stood then) to where it would go (in the body now).
                     var (sx, sq) = _start[b];
                     var ls = sq.InverseRotate(new Vec3(_x[k], _x[k + 1], _x[k + 2]) - sx);
-                    var le = body.Orientation.InverseRotate(p - body.Position);
                     var dl = le - ls;
                     double len = dl.Length;
                     // A solid can only be crossed when the clearances at both ends together are shorter than the move (the
@@ -928,9 +950,9 @@ namespace RobotTwin.CoreSim.Mechanics
                     bool maybe = len > 1e-9 && (shape.Kind == ShapeKind.Mesh || ClosestOnSegment(ls, dl, len) < shape.BoundingRadius + Radius);
                     if (maybe)
                     {
-                        double slack = 2 * Radius + 4 * FieldCell(body);
-                        double ds = Distance(body, shape, ls, double.MaxValue, out double dsv, out _) ? dsv : double.MaxValue;
-                        double de = Distance(body, shape, le, double.MaxValue, out double dev, out _) ? dev : double.MaxValue;
+                        double slack = 2 * Radius + 4 * (field?.Cell ?? 0);
+                        double ds = Distance(field, body, shape, ls, double.MaxValue, out double dsv, out _) ? dsv : double.MaxValue;
+                        double de = Distance(field, body, shape, le, double.MaxValue, out double dev, out _) ? dev : double.MaxValue;
                         // Started inside: the push-out below frees it by the nearest face instead.
                         maybe = ds >= 0 && ds + de <= len + slack;
                     }
@@ -955,13 +977,13 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (near)
                 {
                     var local = body.Orientation.InverseRotate(p - body.Position);
-                    if (Distance(body, shape, local, reach, out double sd, out var nlocal) && sd < reach)
+                    if (Distance(field, body, shape, local, reach, out double sd, out var nlocal) && sd < reach)
                     {
                         // [liquid] The contact itself is with the true solid. A field's interpolated distance runs short in
                         // a concave corner (a tank's floor meeting its walls) and its gradient turns from cell to cell
                         // there, so a particle resting in the corner was pushed off a wall it did not touch, a different
                         // way every step: the liquid never came to rest. The field still gives the pressure (Φ).
-                        bool exact = FieldOf(body) is { } fc && sd < Radius + 2 * fc.Cell;
+                        bool exact = field != null && sd < Radius + 2 * field.Cell;
                         if (exact)
                         {
                             if (body.SignedDistanceSolid(shape, local, reach, out double ed, out var en) && ed < reach)
@@ -1012,7 +1034,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (slot < 0) continue;
                 var surface = body.IsStatic || dist >= reach ? Vec3.Zero : body.PointVelocity(p - nw * dist);
                 SetSlot(slot, b, Math.Min(dist, reach), nw, surface);
-                if (FieldOf(body) is { } field && SamplePhi(field, body.Orientation.InverseRotate(p - body.Position), out double fphi, out var fg))
+                if (field != null && SamplePhi(field, body.Orientation.InverseRotate(p - body.Position), out double fphi, out var fg))
                 {
                     var gw = body.Orientation.Rotate(fg);
                     _wfield[slot] = true;
@@ -1169,7 +1191,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
         // ------------------------------------------------------------------ neighbours
 
-        private int[] _visit = new int[27];
+        private int[] _fill = Array.Empty<int>();
 
         private void Neighbours(int n)
         {
@@ -1187,7 +1209,9 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             for (int c = 0; c < size; c++) _cellStart[c + 1] += _cellStart[c];
-            var fill = new int[size];
+            if (_fill.Length < size) _fill = new int[size];
+            var fill = _fill;
+            Array.Clear(fill, 0, size);
             for (int i = 0; i < n; i++)
             {
                 int c = _cell[i];
@@ -1275,57 +1299,113 @@ namespace RobotTwin.CoreSim.Mechanics
         // ------------------------------------------------------------------ viscosity, surface tension
 
         /// <summary>
+        /// The real viscosity and surface tension, in one pass over the neighbours (each reads the velocities as they
+        /// were before it, so the order of the particles does not matter).
+        /// </summary>
+        private void ViscosityAndTension(double h)
+        {
+            int n = Count;
+            double nu = Kind.KinematicViscosity, sigma = Kind.SurfaceTension;
+            if (nu <= 0 && sigma <= 0) return;
+            if (nu > 0) Array.Copy(_v, _vsrc, 3 * n);
+            double nd = Kind.Density / Mass;   // particles per m³ at rest
+            double eps = sigma > 0 ? 8 * sigma / (Math.PI * nd * nd * Math.Pow(_h, 5) * CohesionMoment) : 0;
+            double a0 = eps / Mass;
+            double wallA = nd * a0;   // the half-space pull per unit of its tabulated profile
+            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            {
+                for (int i = range.Item1; i < range.Item2; i++) ViscosityAndTension(i, h, nu, a0, wallA);
+            });
+        }
+
+        /// <summary>
         /// The real viscosity: Morris' SPH Laplacian between neighbours and a no-slip wall moving with each body, taken
         /// implicitly (one Jacobi sweep of v = v* + h·ν∇²v) so even honey (ν = 7·10⁻³ m²/s) is stable at this step.
         /// </summary>
-        private void Viscosity(double h)
+        /// <remarks>
+        /// The real surface tension as cohesion between particles: a pair attraction F(r) = ε sin(π r/h) for r &lt; h, whose
+        /// strength follows from the liquid's σ through the Kirkwood–Buff (Fowler) relation for the work of a flat cut,
+        /// σ = (π n²/8) ∫ F(r) r⁴ dr with n the particles per m³. Inside the liquid the pulls cancel; at a surface, in a thin
+        /// sheet and along a stream they hold the liquid together, at any resolution: a film spreading over a floor stays a
+        /// film and a falling stream stays a stream.
+        /// Wetting: each wall pulls like a liquid-filled half-space scaled by (1 + cos θ)/2, which gives the work of
+        /// adhesion σ(1 + cos θ) of Young–Dupré with θ the contact angle on that body's material: water spreads over glass
+        /// (25°), less over PLA (75°), beads on PTFE (110°).
+        /// </remarks>
+        private void ViscosityAndTension(int i, double h, double nu, double a0, double wallA)
         {
-            int n = Count;
-            double nu = Kind.KinematicViscosity, m = Mass, eta2 = 0.01 * _l * _l;
-            if (nu <= 0) return;
-            var src = (double[])_v.Clone();
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            double m = Mass, eta2 = 0.01 * _l * _l;
+            var src = _vsrc;
+            int k = 3 * i;
+            double px = _p[k], py = _p[k + 1], pz = _p[k + 2], rhoi = Math.Max(_rho[i], 1e-9);
+            double diag = 0, sx = 0, sy = 0, sz = 0, ax = 0, ay = 0, az = 0;
+            int cnt = _nbCount[i], b0 = i * MaxNeighbours;
+            for (int a = 0; a < cnt; a++)
             {
-                for (int i = range.Item1; i < range.Item2; i++)
+                int j = _nb[b0 + a], kj = 3 * j;
+                double dx = px - _p[kj], dy = py - _p[kj + 1], dz = pz - _p[kj + 2];
+                double r2 = dx * dx + dy * dy + dz * dz, r = Math.Sqrt(r2);
+                if (r >= _h || r < 1e-12) continue;
+                if (nu > 0)
                 {
-                    int k = 3 * i;
-                    double px = _p[k], py = _p[k + 1], pz = _p[k + 2], rhoi = Math.Max(_rho[i], 1e-9);
-                    double diag = 0, sx = 0, sy = 0, sz = 0;
-                    int cnt = _nbCount[i], b0 = i * MaxNeighbours;
-                    for (int a = 0; a < cnt; a++)
-                    {
-                        int j = _nb[b0 + a], kj = 3 * j;
-                        double dx = px - _p[kj], dy = py - _p[kj + 1], dz = pz - _p[kj + 2];
-                        double r2 = dx * dx + dy * dy + dz * dz, r = Math.Sqrt(r2);
-                        if (r >= _h || r < 1e-12) continue;
-                        // c_ij = 2ν m/ρ_j · (r·∇W)/(r² + η²) is negative; the term is −c_ij (v_i − v_j)… written as a weight.
-                        double c = -2 * nu * m / Math.Max(_rho[j], 1e-9) * (Wd(r) * r) / (r2 + eta2);
-                        diag += c;
-                        sx += c * src[kj];
-                        sy += c * src[kj + 1];
-                        sz += c * src[kj + 2];
-                    }
-
-                    for (int s = 0; s < Slots; s++)
-                    {
-                        int ws = i * Slots + s;
-                        if (_wb[ws] == -1) continue;
-                        // The wall as liquid moving with it: the same Laplacian summed over the half-space beyond it,
-                        // ∫ −W'(r)/r dV = 2π ∫_d^h W(z) dz.
-                        double c = 2 * nu * WallViscous(_wd[ws]) / (LatticeSum * _s3) * (Kind.Density / rhoi);
-                        diag += c;
-                        sx += c * _wv[3 * ws];
-                        sy += c * _wv[3 * ws + 1];
-                        sz += c * _wv[3 * ws + 2];
-                    }
-
-                    if (diag <= 0) continue;
-                    double inv = 1 / (1 + h * diag);
-                    _v[k] = (src[k] + h * sx) * inv;
-                    _v[k + 1] = (src[k + 1] + h * sy) * inv;
-                    _v[k + 2] = (src[k + 2] + h * sz) * inv;
+                    // c_ij = 2ν m/ρ_j · (r·∇W)/(r² + η²) is negative; the term is −c_ij (v_i − v_j)… written as a weight.
+                    double c = -2 * nu * m / Math.Max(_rho[j], 1e-9) * (Wd(r) * r) / (r2 + eta2);
+                    diag += c;
+                    sx += c * src[kj];
+                    sy += c * src[kj + 1];
+                    sz += c * src[kj + 2];
                 }
-            });
+
+                if (a0 > 0)
+                {
+                    // Cohesion: towards the neighbour (d points away from it).
+                    double f = a0 * Math.Sin(Math.PI * r / _h) / r;
+                    ax -= f * dx;
+                    ay -= f * dy;
+                    az -= f * dz;
+                }
+            }
+
+            for (int s = 0; s < Slots; s++)
+            {
+                int ws = i * Slots + s;
+                if (_wb[ws] == -1) continue;
+                if (nu > 0)
+                {
+                    // The wall as liquid moving with it: the same Laplacian summed over the half-space beyond it,
+                    // ∫ −W'(r)/r dV = 2π ∫_d^h W(z) dz.
+                    double c = 2 * nu * WallViscous(_wd[ws]) / (LatticeSum * _s3) * (Kind.Density / rhoi);
+                    diag += c;
+                    sx += c * _wv[3 * ws];
+                    sy += c * _wv[3 * ws + 1];
+                    sz += c * _wv[3 * ws + 2];
+                }
+
+                if (a0 > 0 && _wd[ws] < _h)
+                {
+                    double wet = (1 + Math.Cos(_wangle[ws] * Math.PI / 180)) / 2;
+                    double pull = wallA * wet * WallAdhesion(_wd[ws]);   // towards the wall: −n
+                    ax -= pull * _wn[3 * ws];
+                    ay -= pull * _wn[3 * ws + 1];
+                    az -= pull * _wn[3 * ws + 2];
+                    // Newton's third law: the liquid pulls the wall as much (booked like the wall's pushes).
+                    _imp[3 * ws] -= pull * _wn[3 * ws] * h * h;
+                    _imp[3 * ws + 1] -= pull * _wn[3 * ws + 1] * h * h;
+                    _imp[3 * ws + 2] -= pull * _wn[3 * ws + 2] * h * h;
+                }
+            }
+
+            if (nu > 0 && diag > 0)
+            {
+                double inv = 1 / (1 + h * diag);
+                _v[k] = (src[k] + h * sx) * inv;
+                _v[k + 1] = (src[k + 1] + h * sy) * inv;
+                _v[k + 2] = (src[k + 2] + h * sz) * inv;
+            }
+
+            _v[k] += h * ax;
+            _v[k + 1] += h * ay;
+            _v[k + 2] += h * az;
         }
 
         /// <summary>∫₀¹ sin(πq) q⁴ dq: the cohesion profile's moment in the surface-tension relation.</summary>
@@ -1363,69 +1443,6 @@ namespace RobotTwin.CoreSim.Mechanics
                 "carbon" or "fr4" => 75,
                 _ => 70
             };
-        }
-
-        /// <summary>
-        /// The real surface tension as cohesion between particles: a pair attraction F(r) = ε sin(π r/h) for r &lt; h, whose
-        /// strength follows from the liquid's σ through the Kirkwood–Buff (Fowler) relation for the work of a flat cut,
-        /// σ = (π n²/8) ∫ F(r) r⁴ dr with n the particles per m³. Inside the liquid the pulls cancel; at a surface, in a thin
-        /// sheet and along a stream they hold the liquid together, at any resolution: a film spreading over a floor stays a
-        /// film and a falling stream stays a stream.
-        /// Wetting: each wall pulls like a liquid-filled half-space scaled by (1 + cos θ)/2, which gives the work of
-        /// adhesion σ(1 + cos θ) of Young–Dupré with θ the contact angle on that body's material: water spreads over glass
-        /// (25°), less over PLA (75°), beads on PTFE (110°).
-        /// </summary>
-        private void SurfaceTension(double h)
-        {
-            int n = Count;
-            double sigma = Kind.SurfaceTension;
-            if (sigma <= 0) return;
-            double nd = Kind.Density / Mass;   // particles per m³ at rest
-            double eps = 8 * sigma / (Math.PI * nd * nd * Math.Pow(_h, 5) * CohesionMoment);
-            double a0 = eps / Mass;
-            double wallA = nd * a0;   // the half-space pull per unit of its tabulated profile
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
-            {
-                for (int i = range.Item1; i < range.Item2; i++)
-                {
-                    int k = 3 * i;
-                    double px = _p[k], py = _p[k + 1], pz = _p[k + 2];
-                    double ax = 0, ay = 0, az = 0;
-                    int cnt = _nbCount[i], b0 = i * MaxNeighbours;
-                    for (int a = 0; a < cnt; a++)
-                    {
-                        int j = _nb[b0 + a], kj = 3 * j;
-                        double dx = _p[kj] - px, dy = _p[kj + 1] - py, dz = _p[kj + 2] - pz;
-                        double r = Math.Sqrt(dx * dx + dy * dy + dz * dz);
-                        if (r >= _h || r < 1e-12) continue;
-                        double f = a0 * Math.Sin(Math.PI * r / _h) / r;
-                        ax += f * dx;
-                        ay += f * dy;
-                        az += f * dz;
-                    }
-
-                    for (int s = 0; s < Slots; s++)
-                    {
-                        int ws = i * Slots + s;
-                        if (_wb[ws] == -1 || _wd[ws] >= _h) continue;
-                        double wet = (1 + Math.Cos(_wangle[ws] * Math.PI / 180)) / 2;
-                        double pull = wallA * wet * WallAdhesion(_wd[ws]);   // towards the wall: −n
-                        ax -= pull * _wn[3 * ws];
-                        ay -= pull * _wn[3 * ws + 1];
-                        az -= pull * _wn[3 * ws + 2];
-                        // Newton's third law: the liquid pulls the wall as much (booked like the wall's pushes).
-                        _imp[3 * ws] -= pull * _wn[3 * ws] * h * h;
-                        _imp[3 * ws + 1] -= pull * _wn[3 * ws + 1] * h * h;
-                        _imp[3 * ws + 2] -= pull * _wn[3 * ws + 2] * h * h;
-                    }
-
-                    _c[k] = ax;
-                    _c[k + 1] = ay;
-                    _c[k + 2] = az;
-                }
-            });
-
-            for (int i = 0; i < 3 * n; i++) _v[i] += h * _c[i];
         }
 
         private readonly double[] _adh = new double[Table + 1];

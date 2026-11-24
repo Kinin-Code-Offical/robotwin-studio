@@ -14,7 +14,9 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
     - [x] Çalıştır'a basınca donma: kablolar paralel oturuyor ve yol buluyor (PS5 uçak 8,1 s → 0,85 s, gezgin 0,82 → 0,30 s).
     - [x] Sıvı yüzeyi arka planda örülüyor (su bardağı 31 → 43 FPS).
     - [x] Sensörlü gezgin 61 FPS.
-    - [ ] Sıvı çözücüsünün kendisi: 3 bin parçacıkta 1 ms'lik adım 14 ms sürüyor (gerçek zamanın ~1/14'ü), başlatmada dinlendirme ~2,3 s. Duvar testi ve basınç döngüsü algoritma düzeyinde hızlanmalı.
+    - [~] Sıvı çözücüsünün kendisi: geçişler birleşti (alt adım başına 19 yerine 12 paralel döngü), basınç düzeltmesi yoğunluk geçişinin çekirdek eğimini yeniden kullanıyor, duvar testi cismin kendi çerçevesindeki kutusuyla eleniyor. Su bardağı dökmesinin tamamı 28,2 s'den 20,2 s'ye indi (11 s simülasyon); dökme anında 1 ms'lik adım 4,1 ms'den 2,9 ms'ye. Açılışta dinlendirme 0,9 s'den 0,7 s'ye. Kalanlar:
+      - [ ] Dinlendirmenin 2 mm/s hız ölçütü hiç sağlanmıyor (g·h titreşimi en hızlı parçacığı ~24 mm/s'de tutuyor), her seferinde 0,4 s'nin tamamı çalışıyor: yer değişimine göre ölçülmeli.
+      - [ ] Su kâseye döküldükten sonra hiç uyumuyor.
     - [x] Kabın iç köşesindeki parçacıklar durgun suda 30–40 mm/s titriyordu: alanın ara değerlenmiş mesafesi köşede kısa kalıyordu. Temas artık gerçek katıyla. Durgunluk da hıza göre değil 0,2 s'deki yer değişimine göre ölçülüyor (konum tabanlı sıvı yerinde g·h² kadar titrer). Serbest bir tank suyuyla 2,6 s'de uyuyor; servonun tuttuğu kap sıvıyı mikrometrelik kıpırtısıyla uyandırmıyor.
   - [ ] ReadyToRun ön derlemesi (crossgen2 paketi için izin gerekiyor).
 - [~] **Ayarlar:** kategoriler ve arama.
