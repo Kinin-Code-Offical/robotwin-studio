@@ -280,11 +280,38 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
         }
 
+        /// <summary>
+        /// [esp32emu] Code the chip serves itself instead of running instructions (the mask ROM's functions, high-level
+        /// emulated): asked for every PC in [<see cref="TrapLow"/>, <see cref="TrapHigh"/>); true when it handled the call
+        /// (it set the result and the next PC), false to run the instruction there.
+        /// </summary>
+        public Func<XtensaCore, bool>? Trap { get; set; }
+
+        public uint TrapLow { get; set; }
+        public uint TrapHigh { get; set; }
+
+        /// <summary>
+        /// [esp32emu] Returns from a function the core entered with CALLn (or CALL0) and a trap served: its result in the
+        /// callee's a2 (and a3 for 64-bit), execution back after the call. No window was rotated, so nothing is restored.
+        /// </summary>
+        public void ReturnFromCall(uint result, uint? high = null)
+        {
+            int n = CallInc;
+            uint ra = A(n * 4);
+            SetA(n * 4 + 2, result);
+            if (high.HasValue) SetA(n * 4 + 3, high.Value);
+            Pc = n == 0 ? ra : (Pc & 0xC0000000) | (ra & 0x3FFFFFFF);
+        }
+
+        /// <summary>Argument <paramref name="index"/> of a function the core just called (a2, a3 … of the callee's window).</summary>
+        public uint Argument(int index) => A(CallInc * 4 + 2 + index);
+
         /// <summary>Runs one instruction (or takes an interrupt); its cycles.</summary>
         public int Step()
         {
             if (TakeInterrupt()) return 1;
             if (Waiting) return 1;
+            if (Trap != null && Pc >= TrapLow && Pc < TrapHigh && Trap(this)) return 10;
             uint pc = Pc;
             uint b0 = _bus.Read8(pc);
             int op0 = (int)(b0 & 0xF);

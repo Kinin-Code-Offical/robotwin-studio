@@ -1,0 +1,229 @@
+using System;
+using System.Text;
+
+namespace RobotTwin.CoreSim.Firmware.Xtensa
+{
+    public sealed partial class Esp32Soc
+    {
+        private static double Double(XtensaCore c, int index) =>
+            BitConverter.Int64BitsToDouble((long)((ulong)c.Argument(index + 1) << 32 | c.Argument(index)));
+
+        private static bool ReturnDouble(XtensaCore c, double value)
+        {
+            ulong bits = (ulong)BitConverter.DoubleToInt64Bits(value);
+            c.ReturnFromCall((uint)bits, (uint)(bits >> 32));
+            return true;
+        }
+
+        private static long Long(XtensaCore c, int index) => (long)((ulong)c.Argument(index + 1) << 32 | c.Argument(index));
+
+        private static bool ReturnLong(XtensaCore c, long value)
+        {
+            c.ReturnFromCall((uint)value, (uint)((ulong)value >> 32));
+            return true;
+        }
+
+        private static bool Return(XtensaCore c, uint value)
+        {
+            c.ReturnFromCall(value);
+            return true;
+        }
+
+        private static int Compare(double a, double b, int unordered) => double.IsNaN(a) || double.IsNaN(b) ? unordered : a < b ? -1 : a > b ? 1 : 0;
+
+        private static int Saturate(double v) => double.IsNaN(v) ? 0 : v >= int.MaxValue ? int.MaxValue : v <= int.MinValue ? int.MinValue : (int)v;
+
+        /// <summary>The mask ROM's functions a firmware links, served in C# (libgcc's soft double and 64-bit helpers, string functions, printing, RF calibration's register access, syscall stubs).</summary>
+        private void BindRom()
+        {
+            // libgcc: double precision (passed in register pairs a2:a3, a4:a5)
+            Rom("__adddf3", c => ReturnDouble(c, Double(c, 0) + Double(c, 2)));
+            Rom("__subdf3", c => ReturnDouble(c, Double(c, 0) - Double(c, 2)));
+            Rom("__muldf3", c => ReturnDouble(c, Double(c, 0) * Double(c, 2)));
+            Rom("__divdf3", c => ReturnDouble(c, Double(c, 0) / Double(c, 2)));
+            Rom("__negdf2", c => ReturnDouble(c, -Double(c, 0)));
+            Rom("__extendsfdf2", c => ReturnDouble(c, BitConverter.Int32BitsToSingle((int)c.Argument(0))));
+            Rom("__truncdfsf2", c => Return(c, (uint)BitConverter.SingleToInt32Bits((float)Double(c, 0))));
+            Rom("__fixdfsi", c => Return(c, (uint)Saturate(Math.Truncate(Double(c, 0)))));
+            Rom("__fixunsdfsi", c =>
+            {
+                double v = Math.Truncate(Double(c, 0));
+                return Return(c, double.IsNaN(v) || v <= 0 ? 0 : v >= uint.MaxValue ? uint.MaxValue : (uint)v);
+            });
+            Rom("__floatsidf", c => ReturnDouble(c, (int)c.Argument(0)));
+            Rom("__floatunsidf", c => ReturnDouble(c, c.Argument(0)));
+            Rom("__floatdidf", c => ReturnDouble(c, Long(c, 0)));
+            Rom("__floatundidf", c => ReturnDouble(c, (ulong)Long(c, 0)));
+            Rom("__fixdfdi", c => ReturnLong(c, (long)Math.Truncate(Double(c, 0))));
+            Rom("__eqdf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), 1)));
+            Rom("__nedf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), 1)));
+            Rom("__ltdf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), 1)));
+            Rom("__ledf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), 1)));
+            Rom("__gtdf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), -1)));
+            Rom("__gedf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), -1)));
+            Rom("__unorddf2", c => Return(c, double.IsNaN(Double(c, 0)) || double.IsNaN(Double(c, 2)) ? 1u : 0u));
+
+            // libgcc: 64-bit integers
+            Rom("__muldi3", c => ReturnLong(c, Long(c, 0) * Long(c, 2)));
+            Rom("__divdi3", c => ReturnLong(c, Long(c, 2) == 0 ? 0 : Long(c, 0) / Long(c, 2)));
+            Rom("__moddi3", c => ReturnLong(c, Long(c, 2) == 0 ? 0 : Long(c, 0) % Long(c, 2)));
+            Rom("__udivdi3", c => ReturnLong(c, (ulong)Long(c, 2) == 0 ? 0 : (long)((ulong)Long(c, 0) / (ulong)Long(c, 2))));
+            Rom("__umoddi3", c => ReturnLong(c, (ulong)Long(c, 2) == 0 ? 0 : (long)((ulong)Long(c, 0) % (ulong)Long(c, 2))));
+            Rom("__ashldi3", c => ReturnLong(c, Long(c, 0) << (int)(c.Argument(2) & 63)));
+            Rom("__lshrdi3", c => ReturnLong(c, (long)((ulong)Long(c, 0) >> (int)(c.Argument(2) & 63))));
+            Rom("__ashrdi3", c => ReturnLong(c, Long(c, 0) >> (int)(c.Argument(2) & 63)));
+
+            // string functions
+            Rom("memcpy", c => Copy(c, c.Argument(0), c.Argument(1), c.Argument(2)));
+            Rom("memmove", c => Copy(c, c.Argument(0), c.Argument(1), c.Argument(2)));
+            Rom("memset", c =>
+            {
+                uint d = c.Argument(0), n = c.Argument(2);
+                byte v = (byte)c.Argument(1);
+                for (uint i = 0; i < n; i++) Write8(d + i, v);
+                return Return(c, d);
+            });
+            Rom("bzero", c =>
+            {
+                for (uint i = 0; i < c.Argument(1); i++) Write8(c.Argument(0) + i, 0);
+                return Return(c, 0);
+            });
+            Rom("memcmp", c =>
+            {
+                uint a = c.Argument(0), b = c.Argument(1), n = c.Argument(2);
+                for (uint i = 0; i < n; i++)
+                {
+                    int d = Read8(a + i) - Read8(b + i);
+                    if (d != 0) return Return(c, (uint)d);
+                }
+
+                return Return(c, 0);
+            });
+            Rom("strlen", c => Return(c, (uint)CString(c.Argument(0)).Length));
+            Rom("strcmp", c => Return(c, (uint)string.CompareOrdinal(CString(c.Argument(0)), CString(c.Argument(1)))));
+
+            // printing (the boot log) and time
+            Rom("ets_printf", c => Return(c, Print(c)));
+            Rom("esp_rom_printf", c => Return(c, Print(c)));
+            Rom("ets_delay_us", c => Return(c, 0));
+            Rom("esp_rom_delay_us", c => Return(c, 0));
+
+            // start-up: reset reason (power on), the CPU clock, caches (the flash is mapped directly here), the console
+            foreach (var name in new[] { "esp_rom_get_reset_reason", "rtc_get_reset_reason" }) Rom(name, c => Return(c, 1));
+            foreach (var name in new[] { "rtc_get_wakeup_cause", "esp_rom_get_wakeup_cause" }) Rom(name, c => Return(c, 0));
+            foreach (var name in new[] { "esp_rom_get_cpu_ticks_per_us", "ets_get_cpu_frequency" }) Rom(name, c => Return(c, 240));
+            foreach (var name in new[]
+                     {
+                         "esp_rom_set_cpu_ticks_per_us", "ets_update_cpu_frequency", "Cache_Read_Enable", "Cache_Read_Disable", "Cache_Flush",
+                         "Cache_Read_Init", "mmu_init", "cache_flash_mmu_set", "cache_sram_mmu_set", "esp_rom_uart_tx_wait_idle", "uart_tx_wait_idle",
+                         "esp_rom_install_uart_printf", "ets_install_putc1", "ets_install_putc2", "ets_install_uart_printf", "esp_rom_uart_set_as_console",
+                         "ets_intr_lock", "ets_intr_unlock", "esp_rom_install_channel_putc", "uart_div_modify", "esp_rom_uart_set_clock_baudrate",
+                         "Cache_Flush_rom", "esp_rom_Cache_Flush", "spi_flash_attach", "esp_rom_spiflash_attach", "esp_rom_spiflash_unlock",
+                         "esp_rom_spiflash_config_param", "esp_rom_spiflash_config_clk", "esp_rom_spiflash_wait_idle", "esp_rom_spiflash_select_qio_pins",
+                         "esp_rom_spiflash_prepare_encrypted_data", "esp_rom_spiflash_write_disable",
+                     })
+                Rom(name, c => Return(c, 0));
+            foreach (var name in new[] { "esp_rom_uart_putc", "uart_tx_one_char", "ets_write_char_uart" })
+                Rom(name, c =>
+                {
+                    Uart0.Append((char)(c.Argument(0) & 0xFF));
+                    return Return(c, 0);
+                });
+            Rom("ets_set_appcpu_boot_addr", c =>
+            {
+                _registers[AppCpuCtrlD] = c.Argument(0);
+                return Return(c, 0);
+            });
+            Rom("intr_matrix_set", c =>
+            {
+                // (cpu, peripheral source, CPU interrupt): kept for the peripherals to raise later.
+                RouteInterrupt((int)c.Argument(0), (int)c.Argument(1), (int)c.Argument(2));
+                return Return(c, 0);
+            });
+
+            // RF calibration's internal I2C (no radio hardware here) and newlib's ROM syscall stubs
+            foreach (var name in new[] { "esp_rom_regi2c_read", "esp_rom_regi2c_read_mask", "rom_i2c_readReg", "rom_i2c_readReg_Mask" }) Rom(name, c => Return(c, 0));
+            foreach (var name in new[] { "esp_rom_regi2c_write", "esp_rom_regi2c_write_mask", "rom_i2c_writeReg", "rom_i2c_writeReg_Mask" }) Rom(name, c => Return(c, 0));
+            foreach (var name in new[] { "open", "read", "write", "close" }) Rom(name, c => Return(c, unchecked((uint)-1)));
+
+            // The caches and the flash MMU: the flash is mapped straight into IROM/DROM here, so every cache and MMU
+            // routine (whatever its ROM variant's name) succeeds without doing anything.
+            foreach (var pair in _romNames)
+            {
+                if (_romFunctions.ContainsKey(pair.Key)) continue;
+                string n = pair.Value;
+                if (n.StartsWith("Cache_", StringComparison.Ordinal) || n.StartsWith("cache_", StringComparison.Ordinal) || n.StartsWith("mmu_", StringComparison.Ordinal))
+                    _romFunctions[pair.Key] = c => Return(c, 0);
+            }
+        }
+
+        private bool Copy(XtensaCore c, uint destination, uint source, uint count)
+        {
+            var buffer = new byte[count];
+            for (uint i = 0; i < count; i++) buffer[i] = Read8(source + i);
+            for (uint i = 0; i < count; i++) Write8(destination + i, buffer[i]);
+            return Return(c, destination);
+        }
+
+        private string CString(uint address, int max = 4096)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < max; i++)
+            {
+                byte b = Read8(address + (uint)i);
+                if (b == 0) break;
+                sb.Append((char)b);
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>A printf of the ROM (%d %u %x %X %s %c %p, width and zero padding), its arguments from the callee's registers; to UART0.</summary>
+        private uint Print(XtensaCore c)
+        {
+            string format = CString(c.Argument(0));
+            var sb = new StringBuilder();
+            int arg = 1;
+            for (int i = 0; i < format.Length; i++)
+            {
+                char ch = format[i];
+                if (ch != '%' || i + 1 >= format.Length)
+                {
+                    sb.Append(ch);
+                    continue;
+                }
+
+                i++;
+                bool zero = false;
+                if (format[i] == '0')
+                {
+                    zero = true;
+                    i++;
+                }
+
+                int width = 0;
+                while (i < format.Length && char.IsDigit(format[i])) width = width * 10 + (format[i++] - '0');
+                while (i < format.Length && format[i] == 'l') i++;
+                if (i >= format.Length) break;
+                uint v = arg <= 5 ? c.Argument(arg) : 0;
+                string text = format[i] switch
+                {
+                    'd' or 'i' => ((int)v).ToString(),
+                    'u' => v.ToString(),
+                    'x' => v.ToString("x"),
+                    'X' => v.ToString("X"),
+                    'p' => "0x" + v.ToString("x8"),
+                    'c' => ((char)v).ToString(),
+                    's' => CString(v),
+                    '%' => "%",
+                    _ => string.Empty,
+                };
+                if (format[i] != '%') arg++;
+                sb.Append(text.PadLeft(width, zero ? '0' : ' '));
+            }
+
+            Uart0.Append(sb);
+            return (uint)sb.Length;
+        }
+    }
+}

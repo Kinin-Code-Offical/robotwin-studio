@@ -43,6 +43,10 @@ Gerçek firmware'i simülasyonda çalıştırmak için ESP32'nin komutlarını y
 | Hata ayıklama | Mevcut ELF/DWARF okuyucusu ve hata ayıklayıcı: kesme noktası, satır adımı, yazmaç ve bellek görünümü, iki çekirdek ayrı. |
 | Hız | C# yorumlayıcısı + çözülmüş komut önbelleği. Yoğun döngülü yazılımda gerçek zamanın altında kalabilir; bu yüzden Mod 2 doğrulama ve tek kartın derinlemesine testi içindir, çok kartlı sahne Mod 1'de kalır. Bir dünyada kartlar ayrı ayrı mod seçebilir (on kart hızlı, test edilen bir kart emülasyonda). |
 
+### Ölçüm: gerçek bir çizim ROM'dan ne kullanıyor
+
+Arduino-ESP32 3.3.13 ile derlenen `esp32-dimmer` çiziminin ELF'i: 7 yüklenecek bölüm (DROM `0x3F400020`, RTC hızlı bellek, DRAM `0x3FFBDB60`, IRAM `0x40080000`, IROM `0x400D0020`, RTC yavaş bellek), giriş `0x40081B08` (`call_start_cpu0`). Kod, maske ROM'daki 347 simgeden yalnız 12'sine başvuruyor: libgcc'nin çift duyarlıklı yardımcıları (`__adddf3`, `__subdf3`, `__divdf3`, `__extendsfdf2`, `__fixdfsi`), RF kalibrasyonunun `esp_rom_regi2c_read_mask`/`write`'ı ve newlib'in `open/read/write/close` saplamaları. FPU'nun bölme yardımcı komutlarını (DIV0.S …) hiç kullanmıyor. Sonuç: ROM görüntüsü gerekmez; bu işlevler adresleri araç zincirinin `esp32.rom*.ld` dosyalarından okunup yakalanır ve C#'ta karşılanır.
+
 ## Doğrulama
 
 - **Komut testleri:** gerçek derleyiciyle derlenen, kendi sonucunu UART'a "PASS/FAIL" diye yazan test yazılımları; her komut grubu için.

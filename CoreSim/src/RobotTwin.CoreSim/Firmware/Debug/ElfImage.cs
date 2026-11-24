@@ -47,6 +47,12 @@ namespace RobotTwin.CoreSim.Firmware.Debug
 
         public IReadOnlyList<ElfSymbol> Symbols { get; private set; } = Array.Empty<ElfSymbol>();
 
+        /// <summary>[esp32emu] Where execution starts (e_entry).</summary>
+        public uint Entry { get; private set; }
+
+        /// <summary>[esp32emu] The loadable segments (PT_LOAD): address, bytes in the file, size in memory (the rest is zero).</summary>
+        public IReadOnlyList<(uint Address, byte[] Bytes, uint MemorySize)> Segments { get; private set; } = Array.Empty<(uint, byte[], uint)>();
+
         public static ElfImage Read(byte[] data)
         {
             if (data.Length < 52 || data[0] != 0x7F || data[1] != (byte)'E' || data[2] != (byte)'L' || data[3] != (byte)'F')
@@ -57,6 +63,22 @@ namespace RobotTwin.CoreSim.Firmware.Debug
             if (data[4] != 1 || data[5] != 1) throw new InvalidDataException("Yalnız 32 bit, little-endian ELF okunur.");
             var elf = new ElfImage(data);
             elf.Machine = U16(data, 18);
+            elf.Entry = U32(data, 24);
+            int phoff = (int)U32(data, 28), phentsize = U16(data, 42), phnum = U16(data, 44);
+            var segments = new List<(uint, byte[], uint)>();
+            for (int i = 0; i < phnum && phoff > 0 && phentsize >= 32; i++)
+            {
+                int h = phoff + i * phentsize;
+                if (h + 32 > data.Length || U32(data, h) != 1) continue;   // PT_LOAD
+                int offset = (int)U32(data, h + 4), fileSize = (int)U32(data, h + 16);
+                uint address = U32(data, h + 8), memorySize = U32(data, h + 20);
+                if (offset < 0 || fileSize < 0 || (long)offset + fileSize > data.Length) continue;
+                var bytes = new byte[fileSize];
+                Array.Copy(data, offset, bytes, 0, fileSize);
+                segments.Add((address, bytes, memorySize));
+            }
+
+            elf.Segments = segments;
             int shoff = (int)U32(data, 32);
             int shentsize = U16(data, 46), shnum = U16(data, 48), shstrndx = U16(data, 50);
             if (shoff <= 0 || shentsize < 40 || shnum == 0 || shoff + (long)shnum * shentsize > data.Length)

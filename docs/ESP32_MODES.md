@@ -43,6 +43,10 @@ To run the real firmware in the simulation, we write our own emulator of the ESP
 | Debugging | The existing ELF/DWARF reader and debugger: breakpoints, line stepping, register and memory views, each core on its own. |
 | Speed | A C# interpreter with a decoded-instruction cache. Firmware with busy loops may run below real time, so Mode 2 is for validation and testing one board in depth; scenes with many boards stay in Mode 1. Boards in one world choose their mode each (ten boards fast, the board under test emulated). |
 
+### Measured: what a real sketch uses from the ROM
+
+The ELF of the `esp32-dimmer` sketch built with Arduino-ESP32 3.3.13: 7 loadable segments (DROM `0x3F400020`, RTC fast memory, DRAM `0x3FFBDB60`, IRAM `0x40080000`, IROM `0x400D0020`, RTC slow memory), entry `0x40081B08` (`call_start_cpu0`). Its code refers to only 12 of the mask ROM's 347 symbols: libgcc's double-precision helpers (`__adddf3`, `__subdf3`, `__divdf3`, `__extendsfdf2`, `__fixdfsi`), the RF calibration's `esp_rom_regi2c_read_mask`/`write`, and newlib's `open/read/write/close` stubs. It never uses the FPU's divide helper instructions (DIV0.S …). So no ROM image is needed: these functions are trapped at their addresses, read from the toolchain's `esp32.rom*.ld` files, and served in C#.
+
 ## Validation
 
 - **Instruction tests:** test firmware compiled with the real compiler that prints its own "PASS/FAIL" over UART, one per instruction group.
