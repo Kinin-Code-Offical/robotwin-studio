@@ -22,7 +22,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama. Sayfaya özel kısayollar henüz sabit.
   - [x] Temalar: koyu, siyah, yüksek karşıtlık; vurgu rengi.
   - [x] Çok sayıda tema: 9 koyu, 7 açık (pembe, şeftali, lavanta, nane, gökyüzü, kâğıt, açık), özel tema (ton, doygunluk, açık/koyu), 10 vurgu rengi; şema ve kod editörü açık temalarda açılıyor.
-  - [ ] PCB editörünün zemini açık temalarda da koyu (katman renkleri koyu zemine göre seçilmiş).
+  - [x] PCB editörü de açık temalarda açılıyor (soluk kart, koyu baskı; bakır renkleri aynı).
   - [x] Gelişmiş: ayarları dışa ve içe aktarma, tanılama.
   - [ ] Dil paketleri: önce altyapı, sonra İngilizce paket.
 - [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller).

@@ -332,6 +332,15 @@ namespace RobotWin.Studio.Shell
         public static Color GutterText { get; private set; } = Color.FromRgb(0x55, 0x55, 0x5C);
         public static Color GutterCurrent { get; private set; } = Color.FromRgb(0xC8, 0xC8, 0xCE);
 
+        /// <summary>The PCB editor: around the board, the board, its edge, the silkscreen, ratsnest, drawings and the grid.</summary>
+        public static Color PcbBack { get; private set; } = Color.FromRgb(0x0E, 0x0E, 0x10);
+        public static Color PcbSubstrate { get; private set; } = Color.FromRgb(0x15, 0x16, 0x18);
+        public static Color PcbEdge { get; private set; } = Color.FromRgb(0x6C, 0x6C, 0x74);
+        public static Color PcbSilk { get; private set; } = Color.FromRgb(0xED, 0xED, 0xEF);
+        public static Color PcbRats { get; private set; } = Color.FromRgb(0x8C, 0x8C, 0x96);
+        public static Color PcbDrawing { get; private set; } = Color.FromRgb(0x9A, 0xA4, 0xB8);
+        public static Color PcbGrid { get; private set; } = Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF);
+
         internal static void Apply(ThemePalette t, Color accent)
         {
             Light = t.Light;
@@ -354,6 +363,13 @@ namespace RobotWin.Studio.Shell
                 GutterBorder = t["Border"];
                 GutterText = Color.FromRgb(0x55, 0x55, 0x5C);
                 GutterCurrent = Color.FromRgb(0xC8, 0xC8, 0xCE);
+                PcbBack = t["Canvas"];
+                PcbSubstrate = Color.FromRgb(0x15, 0x16, 0x18);
+                PcbEdge = Color.FromRgb(0x6C, 0x6C, 0x74);
+                PcbSilk = Color.FromRgb(0xED, 0xED, 0xEF);
+                PcbRats = Color.FromRgb(0x8C, 0x8C, 0x96);
+                PcbDrawing = Color.FromRgb(0x9A, 0xA4, 0xB8);
+                PcbGrid = Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF);
                 return;
             }
 
@@ -373,6 +389,14 @@ namespace RobotWin.Studio.Shell
             GutterBorder = t["Border"];
             GutterText = t["TextDisabled"];
             GutterCurrent = t["TextSecondary"];
+            // A light PCB view: a pale board on the theme's canvas, the silkscreen as dark print; copper keeps its colours.
+            PcbBack = t["Canvas"];
+            PcbSubstrate = Color.FromRgb(0xE4, 0xE2, 0xDA);
+            PcbEdge = Color.FromRgb(0x7A, 0x7A, 0x82);
+            PcbSilk = Color.FromRgb(0x2A, 0x2A, 0x30);
+            PcbRats = Color.FromRgb(0x5A, 0x5A, 0x64);
+            PcbDrawing = Color.FromRgb(0x4A, 0x56, 0x70);
+            PcbGrid = Color.FromArgb(0x16, 0x00, 0x00, 0x00);
         }
     }
 }

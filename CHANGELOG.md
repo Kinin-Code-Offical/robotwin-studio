@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Light: light, paper, pink, peach, lavender, mint, sky.
   - Custom: a hue, a tint and light or dark; the window follows the slider while it moves.
   - Accent colours went from five to ten, with "the theme's own colour"; on light themes they are darkened for contrast.
-  - On a light theme the schematic is drawn in dark ink on paper and the code editor turns light, with its own syntax colours. 3D views and instrument screens keep their own lighting.
+  - On a light theme the schematic is drawn in dark ink on paper, the PCB editor shows a pale board with dark silkscreen (copper keeps its colours), and the code editor turns light with its own syntax colours. 3D views and instrument screens keep their own lighting.
   - Parts of the window built in code (the left rail, inspector sections, pages not shown now) are recoloured when the theme changes.
   - The primary button and the screens that cover a page take their colours from the theme too.
   - `--theme` draws a snapshot in a theme.

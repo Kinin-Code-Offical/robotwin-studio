@@ -33,16 +33,17 @@ namespace RobotWin.Studio.Pcb
     /// </summary>
     public sealed partial class BoardCanvas : FrameworkElement
     {
-        private static readonly Color Back = Color.FromRgb(0x0E, 0x0E, 0x10);
-        private static readonly Color Substrate = Color.FromRgb(0x15, 0x16, 0x18);
-        private static readonly Color SubstrateEdge = Color.FromRgb(0x6C, 0x6C, 0x74);
+        // [theme] Around the board, the board and its ink follow the theme (Shell.CanvasColors); copper keeps its colours.
+        private static Color Back => Shell.CanvasColors.PcbBack;
+        private static Color Substrate => Shell.CanvasColors.PcbSubstrate;
+        private static Color SubstrateEdge => Shell.CanvasColors.PcbEdge;
         private static readonly Color PadGold = Color.FromRgb(0xB8, 0xB8, 0xBE);
-        private static readonly Color Silk = Color.FromRgb(0xED, 0xED, 0xEF);
-        private static readonly Color Rats = Color.FromRgb(0x8C, 0x8C, 0x96);
-        private static readonly Color Accent = Color.FromRgb(0x6E, 0x9B, 0xFF);
+        private static Color Silk => Shell.CanvasColors.PcbSilk;
+        private static Color Rats => Shell.CanvasColors.PcbRats;
+        private static Color Accent => Shell.CanvasColors.Accent;
         private static readonly Color Danger = Color.FromRgb(0xE5, 0x48, 0x4D);
         private static readonly Color Warning = Color.FromRgb(0xD4, 0xA8, 0x4B);
-        private static readonly Color Drawing = Color.FromRgb(0x9A, 0xA4, 0xB8);
+        private static Color Drawing => Shell.CanvasColors.PcbDrawing;
 
         // Inner layers cycle through these (In1 green, In2 ochre, In3 violet, In4 teal …), so neighbours differ.
         private static readonly Color[] InnerColors =
@@ -87,6 +88,7 @@ namespace RobotWin.Studio.Pcb
             Focusable = true;
             FocusVisualStyle = null;
             ClipToBounds = true;
+            Shell.Themes.Changed += InvalidateVisual;   // [theme] the board and its ink
         }
 
         // ================================================================ public state
@@ -433,7 +435,7 @@ namespace RobotWin.Studio.Pcb
             double g = GridSize;
             if (g <= 0) return;
             while (g * _scale < 10) g *= 5;
-            var pen = P(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF), 1, false);
+            var pen = P(Shell.CanvasColors.PcbGrid, 1, false);
             var (x0, y0) = ToBoard(new Point(0, 0));
             var (x1, y1) = ToBoard(new Point(ActualWidth, ActualHeight));
             x0 = Math.Max(0, x0);

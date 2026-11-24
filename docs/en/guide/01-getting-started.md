@@ -120,7 +120,7 @@ The **Ayarlar** (settings, Ctrl+,) page is split into categories. Pick one in th
 ![The theme gallery: dark, light and custom themes; accent colours](../../images/settings-themes.png)
 
 - **Dark:** Grafit (graphite, the default), Siyah (black, for OLED screens), Gece mavisi (night blue), Derin okyanus (deep ocean), Orman (forest), Mürdüm (plum), Gül kurusu gece (rose night), Kahve (espresso), Yüksek karşıtlık (high contrast).
-- **Light:** Açık (light), Kâğıt (paper), Pembe (pink), Şeftali (peach), Lavanta (lavender), Nane (mint), Gökyüzü (sky). On a light theme, the schematic is drawn in dark ink as if printed on paper, the code editor turns light too, and the syntax colours switch to tones that read on a light background.
+- **Light:** Açık (light), Kâğıt (paper), Pembe (pink), Şeftali (peach), Lavanta (lavender), Nane (mint), Gökyüzü (sky). On a light theme, the schematic is drawn in dark ink as if printed on paper, the PCB shows a pale board with dark silkscreen (copper keeps its colours), the code editor turns light too, and the syntax colours switch to tones that read on a light background.
 - **Özel (custom):**
   - **Ton (hue):** 0 red, 120 green, 200 blue, 330 pink.
   - **Doygunluk (tint):** how coloured the backgrounds are.

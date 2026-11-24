@@ -120,7 +120,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 ![Tema galerisi: koyu, açık ve özel temalar; vurgu renkleri](../images/settings-themes.png)
 
 - **Koyu:** Grafit (varsayılan), Siyah (OLED ekranlar için), Gece mavisi, Derin okyanus, Orman, Mürdüm, Gül kurusu gece, Kahve, Yüksek karşıtlık.
-- **Açık:** Açık, Kâğıt, Pembe, Şeftali, Lavanta, Nane, Gökyüzü. Açık temalarda şema bir kâğıda basılmış gibi koyu mürekkeple çizilir, kod düzenleyici de açılır ve sözdizimi renkleri açık zemine uygun tonlara geçer.
+- **Açık:** Açık, Kâğıt, Pembe, Şeftali, Lavanta, Nane, Gökyüzü. Açık temalarda şema bir kâğıda basılmış gibi koyu mürekkeple çizilir, PCB soluk bir kart üstünde koyu baskıyla görünür (bakır renkleri aynı kalır), kod düzenleyici de açılır ve sözdizimi renkleri açık zemine uygun tonlara geçer.
 - **Özel:**
   - **Ton:** 0 kırmızı, 120 yeşil, 200 mavi, 330 pembe.
   - **Doygunluk:** zeminlerin ne kadar renkli olacağı.
