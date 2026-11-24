@@ -32,6 +32,62 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             }
         }
 
+        /// <summary>The GPIO's channel on its ADC unit (ADC1 0–7: GPIO36,37,38,39,32,33,34,35; ADC2 0–9: GPIO4,0,2,15,13,12,14,27,25,26); -1 when none.</summary>
+        public static int AdcChannel(int gpio)
+        {
+            switch (gpio)
+            {
+                case 36: return 0; case 37: return 1; case 38: return 2; case 39: return 3;
+                case 32: return 4; case 33: return 5; case 34: return 6; case 35: return 7;
+                case 4: return 0; case 0: return 1; case 2: return 2; case 15: return 3; case 13: return 4;
+                case 12: return 5; case 14: return 6; case 27: return 7; case 25: return 8; case 26: return 9;
+                default: return -1;
+            }
+        }
+
+        /// <summary>The GPIO of ADC unit <paramref name="unit"/>'s channel <paramref name="channel"/>; -1 when none.</summary>
+        public static int AdcGpio(int unit, int channel)
+        {
+            int[] adc1 = { 36, 37, 38, 39, 32, 33, 34, 35 }, adc2 = { 4, 0, 2, 15, 13, 12, 14, 27, 25, 26 };
+            int[] pins = unit == 1 ? adc1 : adc2;
+            return unit is 1 or 2 && channel >= 0 && channel < pins.Length ? pins[channel] : -1;
+        }
+
+        /// <summary>
+        /// The SAR ADC's 12-bit code for <paramref name="volts"/> at attenuation <paramref name="attenuation"/> (0: 0 dB,
+        /// 1: 2.5 dB, 2: 6 dB, 3: 11 dB; full scale 1.1 / 1.5 / 2.2 / 3.3 V): ideal and linear, or with
+        /// <paramref name="realistic"/> the typical ESP32 curve (a dead zone near 0 V, compression and saturation near full
+        /// scale). This is fast mode's HAL (rw_hal.cpp adc_raw12, kept identical), here for comparing the two ESP32 modes: the
+        /// emulated chip converts through Espressif's characterisation instead (Esp32Soc.CharacterisedCode).
+        /// </summary>
+        public static int AdcRaw12(double volts, int attenuation, bool realistic = false)
+        {
+            double[] fullScale = { 1.1, 1.5, 2.2, 3.3 };
+            if (double.IsNaN(volts)) volts = 0;
+            double fs = fullScale[attenuation & 3], code;
+            if (realistic)
+            {
+                double[] v = { 0.0, 0.13, 1.0, 2.0, 2.5, 2.8, 3.0, 3.13, 3.3 };
+                double[] c = { 0.0, 0.0, 1088.0, 2370.0, 2985.0, 3400.0, 3790.0, 4095.0, 4095.0 };
+                double u = volts / fs * 3.3;
+                if (u <= 0) code = 0;
+                else if (u >= v[8]) code = 4095;
+                else
+                {
+                    int i = 0;
+                    while (i < 7 && u > v[i + 1]) i++;
+                    double t = (u - v[i]) / (v[i + 1] - v[i]);
+                    code = c[i] + t * (c[i + 1] - c[i]);
+                }
+            }
+            else
+            {
+                code = volts / fs * 4095.0;
+            }
+
+            return (int)(Math.Clamp(code, 0, 4095) + 0.5);
+        }
+
         public static bool HasDac(int gpio) => gpio == 25 || gpio == 26;
 
         public static bool HasTouch(int gpio) =>

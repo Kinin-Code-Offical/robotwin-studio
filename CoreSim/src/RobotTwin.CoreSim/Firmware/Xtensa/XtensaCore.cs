@@ -192,10 +192,16 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             _nextPc = Vecbase + (UserMode ? UserExceptionVector : KernelExceptionVector);
         }
 
+        /// <summary>
+        /// [esp32emu] The level-triggered interrupt lines outside the core drives (peripherals through the interrupt matrix):
+        /// pending while held, whatever INTCLEAR does, as on the chip; they drop when the peripheral lets go.
+        /// </summary>
+        public uint ExternalLevels { get; set; }
+
         /// <summary>Takes the highest pending, enabled interrupt the current level allows; true when one was taken.</summary>
         private bool TakeInterrupt()
         {
-            uint pending = Interrupt & IntEnable;
+            uint pending = (Interrupt | ExternalLevels) & IntEnable;
             if (pending == 0) return false;
             int best = 0, bestLevel = 0;
             for (int i = 0; i < 32; i++)
@@ -251,6 +257,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 if (Waiting)
                 {
                     // WAITI: nothing runs until an interrupt; time jumps to the next CCOMPARE match or the slice's end.
+                    if (TakeInterrupt()) continue;
                     long until = end;
                     for (int i = 0; i < 3; i++)
                     {
@@ -288,6 +295,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public Func<XtensaCore, bool>? Trap { get; set; }
 
         public uint TrapLow { get; set; }
+
+        /// <summary>The cycles the trap just served took (10 unless it says otherwise: a busy-wait spends its time here).</summary>
+        public int TrapCycles { get; set; } = 10;
         public uint TrapHigh { get; set; }
 
         /// <summary>
@@ -311,7 +321,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         {
             if (TakeInterrupt()) return 1;
             if (Waiting) return 1;
-            if (Trap != null && Pc >= TrapLow && Pc < TrapHigh && Trap(this)) return 10;
+            if (Trap != null && Pc >= TrapLow && Pc < TrapHigh && Trap(this))
+            {
+                int spent = TrapCycles;
+                TrapCycles = 10;
+                return spent;
+            }
+
             uint pc = Pc;
             uint b0 = _bus.Read8(pc);
             int op0 = (int)(b0 & 0xF);
@@ -331,11 +347,24 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             {
                 // The last jumps (from, to), for bring-up reports: where control went before something went wrong.
                 _jumps[_jumpIndex++ & (_jumps.Length - 1)] = (pc, _nextPc);
+                if (JumpTargets != null)
+                {
+                    ulong edge = (ulong)pc << 32 | _nextPc;
+                    JumpTargets.TryGetValue(edge, out long n);
+                    JumpTargets[edge] = n + 1;
+                }
             }
 
             Pc = _nextPc;
             return cycles;
         }
+
+        /// <summary>
+        /// [esp32emu] When set, every jump is counted by (from &lt;&lt; 32 | to): calls land on function entries, so it is a
+        /// call graph of what the firmware runs, for bring-up and for comparing the two ESP32 modes. Off (null) by
+        /// default; it costs time.
+        /// </summary>
+        public System.Collections.Generic.Dictionary<ulong, long>? JumpTargets { get; set; }
 
         private readonly (uint From, uint To)[] _jumps = new (uint, uint)[64];
         private int _jumpIndex;

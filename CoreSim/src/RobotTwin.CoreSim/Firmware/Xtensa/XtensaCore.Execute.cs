@@ -817,7 +817,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 case 99: return AtomCtl;
                 case 192: return Depc;
                 case 224: return CpEnable;
-                case 226: return Interrupt;
+                case 226: return Interrupt | ExternalLevels;
                 case 228: return IntEnable;
                 case 230: return Ps;
                 case 231: return Vecbase;

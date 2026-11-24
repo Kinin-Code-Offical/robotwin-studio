@@ -25,6 +25,32 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             return true;
         }
 
+        /// <summary>Where the ROM keeps each core's CPU ticks per µs (from the ELF's ROM symbols; 0 when it does not link them).</summary>
+        private uint _ticksPerUsPro, _ticksPerUsApp;
+
+        /// <summary>Each core's busy-wait deadline (its cycle count), while it sits in ets_delay_us.</summary>
+        private readonly ulong?[] _delayUntil = new ulong?[2];
+
+        private uint TicksPerMicrosecond(XtensaCore c)
+        {
+            uint at = c.CoreId == 0 ? _ticksPerUsPro : _ticksPerUsApp;
+            uint ticks = at != 0 ? Read32(at) : 0;
+            return ticks != 0 ? ticks : (uint)(CpuHz / 1e6);
+        }
+
+        private bool DelayMicroseconds(XtensaCore c)
+        {
+            ulong until = _delayUntil[c.CoreId] ??= c.Cycles + (ulong)c.Argument(0) * TicksPerMicrosecond(c);
+            if (c.Cycles >= until)
+            {
+                _delayUntil[c.CoreId] = null;
+                return Return(c, 0);
+            }
+
+            c.TrapCycles = (int)Math.Min(until - c.Cycles, 1000);   // stays on the call, its clock running
+            return true;
+        }
+
         private static bool Return(XtensaCore c, uint value)
         {
             c.ReturnFromCall(value);
@@ -161,6 +187,14 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Rom("crc32_le", c => Return(c, Crc(c, 0xEDB88320u, 32)));
             Rom("crc16_le", c => Return(c, Crc(c, 0x8408u, 16)));
             Rom("crc8_le", c => Return(c, Crc(c, 0x8Cu, 8)));
+            // (data, length): the factory MAC's CRC, as burned into BLK0
+            foreach (var name in new[] { "esp_rom_efuse_mac_address_crc8", "esp_crc8" })
+                Rom(name, c =>
+                {
+                    var data = new byte[c.Argument(1)];
+                    for (uint i = 0; i < data.Length; i++) data[i] = Read8(c.Argument(0) + i);
+                    return Return(c, MacCrc8(data, data.Length));
+                });
 
             // string functions
             Rom("memcpy", c => Copy(c, c.Argument(0), c.Argument(1), c.Argument(2)));
@@ -194,16 +228,29 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             // printing (the boot log) and time
             Rom("ets_printf", c => Return(c, Print(c)));
             Rom("esp_rom_printf", c => Return(c, Print(c)));
-            Rom("ets_delay_us", c => Return(c, 0));
-            Rom("esp_rom_delay_us", c => Return(c, 0));
+            // The ROM's busy-wait: CCOUNT runs for us × the CPU's ticks per µs (interrupts still come in meanwhile).
+            Rom("ets_delay_us", DelayMicroseconds);
+            Rom("esp_rom_delay_us", DelayMicroseconds);
 
             // start-up: reset reason (power on), the CPU clock, caches (the flash is mapped directly here), the console
             foreach (var name in new[] { "esp_rom_get_reset_reason", "rtc_get_reset_reason" }) Rom(name, c => Return(c, 1));
             foreach (var name in new[] { "rtc_get_wakeup_cause", "esp_rom_get_wakeup_cause" }) Rom(name, c => Return(c, 0));
-            foreach (var name in new[] { "esp_rom_get_cpu_ticks_per_us", "ets_get_cpu_frequency" }) Rom(name, c => Return(c, 240));
+            // The CPU's ticks per µs the ROM keeps for each core (g_ticks_per_us_pro/app): IDF sets them as it switches clocks.
+            foreach (var name in new[] { "esp_rom_get_cpu_ticks_per_us", "ets_get_cpu_frequency" }) Rom(name, c => Return(c, TicksPerMicrosecond(c)));
+            foreach (var name in new[] { "esp_rom_set_cpu_ticks_per_us", "ets_update_cpu_frequency" })
+            {
+                Rom(name, c =>
+                {
+                    uint ticks = c.Argument(0);
+                    if (_ticksPerUsPro != 0) Write32(_ticksPerUsPro, ticks);
+                    if (_ticksPerUsApp != 0) Write32(_ticksPerUsApp, ticks);
+                    return Return(c, 0);
+                });
+            }
+
             foreach (var name in new[]
                      {
-                         "esp_rom_set_cpu_ticks_per_us", "ets_update_cpu_frequency", "Cache_Read_Enable", "Cache_Read_Disable", "Cache_Flush",
+                         "Cache_Read_Enable", "Cache_Read_Disable", "Cache_Flush",
                          "Cache_Read_Init", "mmu_init", "cache_flash_mmu_set", "cache_sram_mmu_set", "esp_rom_uart_tx_wait_idle", "uart_tx_wait_idle",
                          "esp_rom_install_uart_printf", "ets_install_putc1", "ets_install_putc2", "ets_install_uart_printf", "esp_rom_uart_set_as_console",
                          "ets_intr_lock", "ets_intr_unlock", "esp_rom_install_channel_putc", "uart_div_modify", "esp_rom_uart_set_clock_baudrate",
@@ -234,6 +281,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             foreach (var name in new[] { "esp_rom_regi2c_read", "esp_rom_regi2c_read_mask", "rom_i2c_readReg", "rom_i2c_readReg_Mask" }) Rom(name, c => Return(c, 0));
             foreach (var name in new[] { "esp_rom_regi2c_write", "esp_rom_regi2c_write_mask", "rom_i2c_writeReg", "rom_i2c_writeReg_Mask" }) Rom(name, c => Return(c, 0));
             foreach (var name in new[] { "open", "read", "write", "close" }) Rom(name, c => Return(c, unchecked((uint)-1)));
+
+            BindGpioRom();
 
             // The caches and the flash MMU: the flash is mapped straight into IROM/DROM here, so every cache and MMU
             // routine (whatever its ROM variant's name) succeeds without doing anything.

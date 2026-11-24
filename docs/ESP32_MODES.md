@@ -63,6 +63,12 @@ A real ESP32 becomes part of the simulation: RobotWin connects its UART and chos
 - On the code page, in both modes, **Build for the board** (`.bin`) and **Upload to board** (port choice).
 - The status bar and event log say which engine runs; in Mode 2 the memory use (IRAM/DRAM/flash) is shown.
 
+## Status (stage 3 done)
+
+The `esp32-dimmer` firmware built for the real chip by Arduino-ESP32 3.3.13 (unchanged: its `.elf` and merged `.bin`) boots on our own emulator: FreeRTOS on both cores, the IPC tasks, `setup()` prints "ESP32 dimmer hazir" over Serial, `loop()` reads the pot through the ADC, drives the LEDC at 5 kHz and prints `pot=1058  1000 mV  parlaklik= 25%` every 200 ms (1.0 V on IO34). What getting there turned up: FreeRTOS's dual-core `yield` rests on the cross-core interrupt (DPORT `FROM_CPU_INTR`); the UART FIFO is written through its AHB alias (`0x60000000` = `0x3FF40000`); esp_timer counts on the timer group's LAC counter and sets its divider from the APB clock at start-up (which is why the bootloader's 80 MHz matters); the LEDC driver waits for the hardware to clear `DUTY_START`; `analogReadMilliVolts` rests on the factory Vref in the eFuse.
+
+The ADC converts through Espressif's characterisation inverted (the line and the 11 dB curve IDF calibrates with): it gives the codes a real chip gives, and the calibrated voltage equals the pad's. Fast mode's HAL uses the ideal line (1.0 V → 1241); that difference between the modes goes into stage 6's report.
+
 ## Stages
 
 1. The run-mode setting (data model, file format, inspector) + toolchain manager + hardware build + upload to board.

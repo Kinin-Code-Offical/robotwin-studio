@@ -20,26 +20,103 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             return map;
         }
 
+        /// <summary>
+        /// CPU interrupts the matrix cannot drive (the core's own: the CCOMPARE timers 6/15/16, the software interrupts 7/29,
+        /// profiling 11). IDF parks unused sources on 6 to disconnect them.
+        /// </summary>
+        private const uint InternalInterrupts = (1u << 6) | (1u << 7) | (1u << 11) | (1u << 15) | (1u << 16) | (1u << 29);
+
+        /// <summary>Edge-triggered CPU interrupts: a rising source latches them until INTCLEAR; every other line is a level.</summary>
+        private const uint EdgeInterrupts = (1u << 10) | (1u << 22) | (1u << 28) | (1u << 30);
+
+        // The interrupt matrix's map registers, one word per source for each core.
+        private const uint ProIntrMap = 0x3FF00104, AppIntrMap = 0x3FF00218;
+
+        // DPORT_CPU_INTR_FROM_CPU_0..3: the four cross-core (and own-core) interrupt sources 24..27 software sets and clears.
+        private const uint FromCpuIntr = 0x3FF000DC;
+        private const int FromCpuSource = 24;
+
+        /// <summary>Which of the 69 peripheral sources hold their interrupt line up now.</summary>
+        private readonly bool[] _sourceLevel = new bool[69];
+
         private void RouteInterrupt(int cpu, int source, int cpuInterrupt)
         {
             if (cpu < 0 || cpu > 1 || source < 0 || source >= 69) return;
-            map(cpu, source, cpuInterrupt);
-
-            void map(int c, int s, int i) => _interruptMap[c, s] = i is >= 0 and < 32 ? i : -1;
+            _interruptMap[cpu, source] = cpuInterrupt is >= 0 and < 32 ? cpuInterrupt : -1;
+            UpdateInterruptLines();
         }
 
-        /// <summary>Raises peripheral interrupt <paramref name="source"/> on whichever core and CPU interrupt the matrix routes it to.</summary>
+        /// <summary>Raises peripheral interrupt <paramref name="source"/> once (an edge) on whichever core and CPU interrupt the matrix routes it to.</summary>
         public void RaisePeripheral(int source)
         {
             if (source < 0 || source >= 69) return;
-            if (_interruptMap[0, source] >= 0) Pro.RaiseInterrupt(_interruptMap[0, source]);
-            if (_interruptMap[1, source] >= 0) App.RaiseInterrupt(_interruptMap[1, source]);
+            for (int cpu = 0; cpu < 2; cpu++)
+            {
+                int line = _interruptMap[cpu, source];
+                if (line >= 0 && (InternalInterrupts & (1u << line)) == 0) Core(cpu).RaiseInterrupt(line);
+            }
+        }
+
+        /// <summary>
+        /// Holds (or lets go of) peripheral source <paramref name="source"/>'s interrupt line, as a peripheral's status does on
+        /// the chip: a level CPU interrupt it routes to stays pending while any of its sources hold it.
+        /// </summary>
+        public void SetPeripheralLevel(int source, bool asserted)
+        {
+            if (source < 0 || source >= 69 || _sourceLevel[source] == asserted) return;
+            _sourceLevel[source] = asserted;
+            if (asserted)
+            {
+                for (int cpu = 0; cpu < 2; cpu++)
+                {
+                    int line = _interruptMap[cpu, source];
+                    if (line >= 0 && (EdgeInterrupts & (1u << line)) != 0) Core(cpu).RaiseInterrupt(line);
+                }
+            }
+
+            UpdateInterruptLines();
+        }
+
+        /// <summary>Whether peripheral source <paramref name="source"/> holds its line up.</summary>
+        public bool PeripheralLevel(int source) => source >= 0 && source < 69 && _sourceLevel[source];
+
+        private XtensaCore Core(int cpu) => cpu == 0 ? Pro : App;
+
+        /// <summary>Each core's level lines: the OR of the held sources the matrix routes to them.</summary>
+        private void UpdateInterruptLines()
+        {
+            for (int cpu = 0; cpu < 2; cpu++)
+            {
+                uint lines = 0;
+                for (int s = 0; s < 69; s++)
+                    if (_sourceLevel[s] && _interruptMap[cpu, s] >= 0) lines |= 1u << _interruptMap[cpu, s];
+                Core(cpu).ExternalLevels = lines & ~InternalInterrupts & ~EdgeInterrupts;
+            }
         }
 
         /// <summary>Peripheral reads the chip models; false leaves the register file's value (and notes the register).</summary>
         private bool ReadPeripheral(uint register, out uint value)
         {
             if (ReadFlashRegister(register, out value)) return true;
+            if (ReadTimerRegister(register, out value)) return true;
+            if (ReadAdcRegister(register, out value)) return true;
+            if (ReadLedcRegister(register, out value)) return true;
+            if (ReadEfuseRegister(register, out value)) return true;
+            if (ReadGpioRegister(register, out value)) return true;
+            if (register >= ProIntrMap && register < AppIntrMap + 69 * 4)
+            {
+                int cpu = register >= AppIntrMap ? 1 : 0;
+                int source = (int)((register - (cpu == 0 ? ProIntrMap : AppIntrMap)) >> 2);
+                value = _interruptMap[cpu, source] is int line and >= 0 ? (uint)line : 6;
+                return true;
+            }
+
+            if (register >= FromCpuIntr && register < FromCpuIntr + 16)
+            {
+                value = _sourceLevel[FromCpuSource + (int)((register - FromCpuIntr) >> 2)] ? 1u : 0u;
+                return true;
+            }
+
             if (register == 0x3FF003F0 || register == 0x3FF00418)
             {
                 // DPORT_PRO/APP_DCACHE_DBUG0: the cache state (bits 7..18) is 1, idle, so disabling it completes at once
@@ -57,8 +134,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             if (register == 0x3FF48010 || register == 0x3FF48014)
             {
-                // RTC_CNTL_TIME0/1: the RTC slow clock's 48-bit count (150 kHz), from the PRO_CPU's cycles at 240 MHz
-                ulong rtc = Pro.Cycles * 150_000UL / 240_000_000UL;
+                // RTC_CNTL_TIME0/1: the RTC slow clock's 48-bit count (the 150 kHz RC oscillator), from chip time
+                ulong rtc = (ulong)(Seconds * 150_000.0);
                 value = register == 0x3FF48010 ? (uint)rtc : (uint)(rtc >> 32) & 0xFFFF;
                 return true;
             }
@@ -103,6 +180,24 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private bool WritePeripheral(uint register, uint value)
         {
             if (WriteFlashRegister(register, value)) return true;
+            if (WriteTimerRegister(register, value)) return true;
+            if (WriteAdcRegister(register, value)) return true;
+            if (WriteLedcRegister(register, value)) return true;
+            if (WriteEfuseRegister(register, value)) return true;
+            if (WriteGpioRegister(register, value)) return true;
+            if (register >= ProIntrMap && register < AppIntrMap + 69 * 4)
+            {
+                int cpu = register >= AppIntrMap ? 1 : 0;
+                RouteInterrupt(cpu, (int)((register - (cpu == 0 ? ProIntrMap : AppIntrMap)) >> 2), (int)(value & 0x1F));
+                return true;
+            }
+
+            if (register >= FromCpuIntr && register < FromCpuIntr + 16)
+            {
+                SetPeripheralLevel(FromCpuSource + (int)((register - FromCpuIntr) >> 2), (value & 1) != 0);
+                return true;
+            }
+
             switch (register)
             {
                 case Uart0Fifo:

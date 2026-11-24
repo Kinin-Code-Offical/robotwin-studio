@@ -63,6 +63,12 @@ Gerçek bir ESP32 simülasyonun parçası olur: RobotWin onun UART'ını ve seç
 - Kod sayfasında her iki modda **Kart için derle** (`.bin`) ve **Karta yükle** (bağlantı noktası seçimi).
 - Durum çubuğu ve olay günlüğü hangi motorun çalıştığını söyler; Mod 2'de bellek kullanımı (IRAM/DRAM/flaş) gösterilir.
 
+## Durum (3. aşama bitti)
+
+Arduino-ESP32 3.3.13 ile gerçek yonga için derlenen `esp32-dimmer` firmware'i (değiştirilmeden, `.elf` ve birleşik `.bin`) kendi emülatörümüzde açılıyor: iki çekirdekte FreeRTOS, IPC görevleri, `setup()` Serial'e "ESP32 dimmer hazir" yazıyor, `loop()` potansiyometreyi ADC'den okuyup LEDC'yi 5 kHz'de sürüyor ve 200 ms'de bir `pot=1058  1000 mV  parlaklik= 25%` basıyor (IO34'te 1,0 V). Bu noktaya gelirken bulunanlar: FreeRTOS'un iki çekirdekli `yield`'i çekirdekler arası kesmeye (DPORT `FROM_CPU_INTR`) dayanıyor; UART FIFO'su AHB eşinden (`0x60000000` = `0x3FF40000`) yazılıyor; esp_timer zamanlayıcı grubunun LAC sayacını sayıyor ve bölücüsünü açılıştaki APB saatinden kuruyor (önyükleyicinin bıraktığı 80 MHz bu yüzden önemli); LEDC sürücüsü `DUTY_START`'ın donanımca silinmesini bekliyor; `analogReadMilliVolts` eFuse'taki fabrika Vref'ine dayanıyor.
+
+ADC'nin dönüşümü Espressif'in karakterizasyonunu (IDF'nin kalibrasyonda kullandığı doğru ve 11 dB eğrisi) tersine çevirir: gerçek yonganın verdiği kodlar çıkar ve kalibre edilen gerilim pad gerilimine eşit olur. Hızlı modun HAL'i ideal doğruyu kullanır (1,0 V → 1241); iki mod arasındaki bu fark 6. aşamanın raporunda yer alacak.
+
 ## Aşamalar
 
 1. Çalışma modu ayarı (veri modeli, dosya biçimi, denetçi) + araç zinciri yöneticisi + donanım derlemesi + karta yükleme.

@@ -23,7 +23,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public const uint DromBase = 0x3F400000, DromEnd = 0x3F800000;    // flash, data bus
         public const uint RomBase = 0x40000000, RomEnd = 0x40070000;      // mask ROM, 448 KB (served by traps)
         public const uint PeripheralBase = 0x3FF00000, PeripheralEnd = 0x3FF80000;
-        public const uint AhbBase = 0x60000000, AhbEnd = 0x60080000;      // the same peripherals over the AHB
+        public const uint AhbBase = 0x60000000, AhbEnd = 0x60040000;      // the APB peripherals from 0x3FF40000 (UARTs …) over the AHB
+        private const uint AhbPeripherals = 0x3FF40000;
 
         private readonly byte[] _dram = new byte[DramSize];
         private readonly byte[] _iram = new byte[IramSize];
@@ -45,6 +46,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 core.TrapLow = RomBase;
                 core.TrapHigh = RomEnd;
             }
+
+            BurnEfuse();
         }
 
         /// <summary>The PRO_CPU (core 0): it boots.</summary>
@@ -62,8 +65,14 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>Why the chip stopped, when it did (a ROM function nobody serves, a bus error …); null while it runs.</summary>
         public string? Stopped { get; private set; }
 
-        /// <summary>Peripheral registers read or written that nothing models yet: address → (reads, writes, last value).</summary>
-        public Dictionary<uint, (int Reads, int Writes, uint Last)> Unmodelled { get; } = new Dictionary<uint, (int, int, uint)>();
+        /// <summary>
+        /// Peripheral registers read or written that nothing models yet: address → (reads, writes, last value, and the PC
+        /// and core of the last access — which driver code wants it).
+        /// </summary>
+        public Dictionary<uint, (int Reads, int Writes, uint Last, uint Pc, int Core)> Unmodelled { get; } = new Dictionary<uint, (int, int, uint, uint, int)>();
+
+        /// <summary>The core running now (the bus serves one at a time).</summary>
+        private XtensaCore? _running;
 
         // ================================================================ loading
 
@@ -76,10 +85,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 for (uint i = 0; i < memorySize; i++) Poke(address + i, i < bytes.Length ? bytes[i] : (byte)0);
             }
 
-            // The mask ROM's functions, by the names the ELF gives their addresses.
+            // The mask ROM's functions, by the names the ELF gives their addresses, and the ROM's own variables it uses.
             foreach (var symbol in elf.Symbols)
             {
                 if (symbol.Value >= RomBase && symbol.Value < RomEnd && !_romNames.ContainsKey(symbol.Value)) _romNames[symbol.Value] = symbol.Name;
+                if (symbol.Name == "g_ticks_per_us_pro") _ticksPerUsPro = symbol.Value;
+                if (symbol.Name == "g_ticks_per_us_app") _ticksPerUsApp = symbol.Value;
             }
 
             BindRom();
@@ -95,6 +106,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             _registers[0x3FF480B0] = 0x00280028;
             _registers[0x3FF480B4] = 0x4C4B4C4B;
             _registers[0x3FF48050] = 0x00355555;
+            // The bootloader's clock: the CPU on the PLL at 80 MHz (SOC_CLK_SEL 1, CPUPERIOD_SEL 0), told to the ROM.
+            _registers[RtcClkConf] = 1u << 27;
+            _registers[CpuPerConf] = 0;
+            if (_ticksPerUsPro != 0) Write32(_ticksPerUsPro, 80);
+            if (_ticksPerUsApp != 0) Write32(_ticksPerUsApp, 80);
         }
 
         /// <summary>The stack the bootloader runs on, which the application keeps until FreeRTOS starts.</summary>
@@ -132,7 +148,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             if (a >= AhbBase && a < AhbEnd)
             {
-                register = a - AhbBase + PeripheralBase;
+                register = a - AhbBase + AhbPeripherals;
                 return true;
             }
 
@@ -224,7 +240,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private void Note(uint register, bool read, uint value)
         {
             Unmodelled.TryGetValue(register, out var n);
-            Unmodelled[register] = read ? (n.Reads + 1, n.Writes, value) : (n.Reads, n.Writes + 1, value);
+            uint pc = _running?.Pc ?? 0;
+            int core = _running?.CoreId ?? -1;
+            Unmodelled[register] = read ? (n.Reads + 1, n.Writes, value, pc, core) : (n.Reads, n.Writes + 1, value, pc, core);
         }
 
         // ================================================================ running
@@ -238,11 +256,17 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 int step = (int)Math.Min(turn, cycles - done);
                 try
                 {
+                    BeginTurn();
+                    _running = Pro;
                     Pro.Run(step);
+                    _running = App;
                     if (AppRunning) App.Run(step);
+                    _running = null;
+                    EndTurn(step);
                 }
                 catch (InvalidOperationException ex)
                 {
+                    _running = null;
                     Stopped = ex.Message;
                 }
 
