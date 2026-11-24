@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Mechanics;
@@ -66,7 +66,7 @@ namespace RobotWin.Studio.Examples
             var uno = b.Add("arduino-uno", 0, 0, 0, ("firmware", "builtin:i2c-displays.hex"));
             var lcd = b.Add("lcd1602-i2c", 34, -9);
             var oled = b.Add("oled-128x64", 31, 9);
-            var pot = b.Add("pot-10k", -22, 10);
+            var pot = b.Add("pot-10k", -22, 16);   // below the A5 row: its labels clear the Uno's (A4's SDA beside the pot's GND overlapped)
             void L(SchematicPart part, string pin, string net) => VehicleTemplates.Tie(b.S, lib, part, pin, net);
             L(uno, "5V", "5V");
             L(uno, "GND1", "GND");

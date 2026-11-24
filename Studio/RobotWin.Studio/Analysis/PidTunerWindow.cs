@@ -147,7 +147,7 @@ namespace RobotWin.Studio.Analysis
 
         private static string Ms(double s) => (s * 1000).ToString(s < 0.1 ? "0.#" : "0", CultureInfo.CurrentCulture) + " ms";
 
-        private static string Pct(double v) => "%" + v.ToString("0.#", CultureInfo.CurrentCulture);
+        private static string Pct(double v) => Shell.Lang.Percent(v);   // [lang] "%15" / "15%"
 
         private static string G(double v) => double.IsInfinity(v) ? "∞" : v.ToString("G3", CultureInfo.CurrentCulture);
 

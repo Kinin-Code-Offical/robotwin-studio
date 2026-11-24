@@ -48,13 +48,13 @@ namespace RobotWin.Studio.Pages
 
         private void PickFiles(string filter, Action<IReadOnlyList<string>> run)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = filter, Multiselect = true, Title = "İçe aktarılacak dosyalar" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter(filter), Multiselect = true, Title = RobotWin.Studio.Shell.Lang.T("İçe aktarılacak dosyalar") };
             if (dlg.ShowDialog(Owner) == true) run(dlg.FileNames);
         }
 
         private void PickFolders(string title, Action<IReadOnlyList<string>> run)
         {
-            var dlg = new Microsoft.Win32.OpenFolderDialog { Title = title, Multiselect = true };
+            var dlg = new Microsoft.Win32.OpenFolderDialog { Title = RobotWin.Studio.Shell.Lang.T(title), Multiselect = true };
             if (dlg.ShowDialog(Owner) == true) run(dlg.FolderNames);
         }
 
@@ -85,7 +85,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>Scans a folder for every supported library and imports all of them with the defaults.</summary>
         private void BatchImport()
         {
-            var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Taranacak klasör (alt klasörler dahil)" };
+            var dlg = new Microsoft.Win32.OpenFolderDialog { Title = RobotWin.Studio.Shell.Lang.T("Taranacak klasör (alt klasörler dahil)") };
             if (dlg.ShowDialog(Owner) != true) return;
             var report = RunBatch(dlg.FolderName, Lib);
             Workspace.Current.Status = "Toplu içe aktarma: " + report.Summary();

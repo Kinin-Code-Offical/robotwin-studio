@@ -477,6 +477,17 @@ namespace RobotTwin.CoreSim.Tests
             Assert.StartsWith("#,Referans,Adet", csv);
             Assert.Contains("\"R1, R2\",2", csv);
             Assert.Equal(bom.Count + 1, csv.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Length);
+            // [lang] In the interface's language when the Studio sets one.
+            var keep = Localization.Translate;
+            try
+            {
+                Localization.Translate = s => s switch { "Referans" => "Reference", "Adet" => "Qty", _ => s };
+                Assert.StartsWith("#,Reference,Qty", BomBuilder.ToCsv(bom));
+            }
+            finally
+            {
+                Localization.Translate = keep;
+            }
         }
 
         // ------------------------------------------------------------- find & replace

@@ -522,7 +522,7 @@ namespace RobotTwin.CoreSim.Pcb
                 new SNode("layer", Q("F.Cu")),
                 Uid(seed),
                 At(h.X, h.Y, 0),
-                new SNode("descr", Q("Montaj deliği Ø" + h.Drill.ToString("0.0##", CultureInfo.InvariantCulture) + " mm")),
+                new SNode("descr", Q(Localization.T("Montaj deliği Ø" + h.Drill.ToString("0.0##", CultureInfo.InvariantCulture) + " mm"))),   // [lang]
                 FpProperty("Reference", "H" + (index + 1).ToString(CultureInfo.InvariantCulture), (0, -r - 1.0), 0, "F.SilkS", false, false, false, 1.0, seed + ":reference"),
                 FpProperty("Value", "MountingHole", (0, r + 1.0), 0, "F.Fab", false, false, false, 1.0, seed + ":value"),
                 FpProperty("Footprint", DefaultLibrary + ":" + id, (0, 0), 0, "F.Fab", true, true, false, 1.27, seed + ":footprint"),
@@ -1328,7 +1328,7 @@ namespace RobotTwin.CoreSim.Pcb
             foreach (var h in board.MountingHoles)
             {
                 string id = "MountingHole_" + h.Drill.ToString("0.0##", CultureInfo.InvariantCulture) + "mm" + (h.Plated ? "_Pad" : string.Empty);
-                var hole = new Footprint { Id = id, Description = "Montaj deliği Ø" + h.Drill.ToString("0.0##", CultureInfo.InvariantCulture) + " mm", Height = 0 };
+                var hole = new Footprint { Id = id, Description = Localization.T("Montaj deliği Ø" + h.Drill.ToString("0.0##", CultureInfo.InvariantCulture) + " mm"), Height = 0 };
                 hole.Pads.Add(h.Plated
                     ? new Pad { Name = "1", Width = h.PadDiameter, Height = h.PadDiameter, Drill = h.Drill, Shape = PadShape.Circle }
                     : new Pad { Name = string.Empty, Width = h.Drill, Height = h.Drill, Drill = h.Drill, Shape = PadShape.Circle, NonPlated = true });

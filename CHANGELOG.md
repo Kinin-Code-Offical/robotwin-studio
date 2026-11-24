@@ -29,7 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Searches find both languages: parts, settings and the command palette match "resistor" and "direnç" alike.
   - A pack holds exact texts and patterns whose `{…}` parts stand for numbers and names. The most particular pattern wins, a hole never cuts into a word, and a menu's access key moves to the translation ("_Yardım" → "_Help").
   - Another language is a copy of `Lang/en.json` with its values translated and its `"culture"` set; what it leaves out falls back to English, not Turkish.
-  - The English pack was made from every string in the sources (read with a C# lexer, so formatted texts keep all their parts) and from the texts the running app showed; `--lang-missing <file>` lists what a page still shows untranslated.
+  - A text that code changes later (a guide card's next step, a button that turns from Pause into Continue) is translated again at once, even when its size stays the same.
+  - Texts joined from parts are translated part by part ("Belted Conveyor · fixed", "State: Ready", "Analog IC (6)"), percentages follow the language ("15%", Turkish "%15"), and file dialogs' titles and filters are translated too.
+  - Files the app writes for people follow the language as well: the BOM's columns and part names, KiCad mounting-hole descriptions.
+  - The English guide names every control by its English label and shows English pictures (`docs/images/en/`). `docs/images/shots.json` records how each guide picture is made, and `tools/scripts/doc_images.py` renders them in either language.
+  - The English pack was made from every string in the sources (read with a C# lexer, so formatted texts keep all their parts) and from the texts the running app showed across every page, settings category, a dozen worlds and the end-to-end flows; `--lang-missing <file>` lists what a run still showed untranslated. The end-to-end checks pass in English as in Turkish.
 - **A theme gallery with 16 themes and a custom one.** Each theme is shown as a small picture of the window.
   - Dark: graphite, OLED black, night blue, deep ocean, forest, plum, rose night, espresso, high contrast.
   - Light: light, paper, pink, peach, lavender, mint, sky.
@@ -88,6 +92,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A mounted part's note read "Servo kolune takılı" and "Robot flanşıne takılı"** (the suffix ignored Turkish vowel harmony). It now reads "Servo kolu üzerinde takılı", which fits every label.
+- **A world part's material or a parameter chosen from a list was stored as the text shown,** which a translated interface would have changed (for example "Wood" instead of the material's own name). The value is now kept apart from the text shown.
+- **A part's values with an SI prefix read "5m A" in the library;** they now read "5 mA" (the prefix goes onto the unit, "u" becomes "µ").
+- **The LCD + OLED example's potentiometer sat on the Uno's A4 row,** so its GND label's voltage overlapped the SDA label's during simulation. It now sits below the A5 row.
 - **A motor on a bench voltage (the automation API's voltage and duty modes, the PID tuner) spun up without its rotor.** The torque–speed line drove the shaft directly, so a small gear motor reached speed in 3 ms instead of its tens of milliseconds. The gearbox multiplies the rotor's inertia by the ratio squared, as the circuit's motor model already had it. Now the line accelerates that inertia against the torque the mechanism takes, and the shaft follows. A TT motor on the car now has a 32 ms time constant.
 - **Wheels turned about the edge of their tread, not its middle.** A cylinder lying on its side touched the ground at its two edges. In a rigid solver, one edge took the whole load and with it all the friction. So a two-wheel car turned about its inner tyre edges: 26% faster on the spot than its wheel spacing gives, and its turn rate jumped when the load shifted in a curve.
   - The tread is now one contact patch. Its edges and middle hold the wheel up and resist rolling, and one more contact at the patch's centre carries the friction with their whole load.

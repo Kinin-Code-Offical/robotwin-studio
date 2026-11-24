@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -954,8 +954,8 @@ namespace RobotWin.Studio.Pages
             string name = ProjectFileName();
             var dlg = new SaveFileDialog
             {
-                Title = $"Üretim dosyalarını kaydet ({board.LayerCount} katman Gerber + delik + BOM + CPL)",
-                Filter = "ZIP arşivi (*.zip)|*.zip",
+                Title = RobotWin.Studio.Shell.Lang.T($"Üretim dosyalarını kaydet ({board.LayerCount} katman Gerber + delik + BOM + CPL)"),
+                Filter = RobotWin.Studio.Shell.Lang.Filter("ZIP arşivi (*.zip)|*.zip"),
                 FileName = name + "-gerber.zip"
             };
             if (dlg.ShowDialog(Owner) != true) return;
@@ -978,8 +978,8 @@ namespace RobotWin.Studio.Pages
             string name = ProjectFileName().Replace(' ', '_');
             var dlg = new SaveFileDialog
             {
-                Title = "KiCad projesi olarak dışa aktar",
-                Filter = "ZIP arşivi (*.zip)|*.zip",
+                Title = RobotWin.Studio.Shell.Lang.T("KiCad projesi olarak dışa aktar"),
+                Filter = RobotWin.Studio.Shell.Lang.Filter("ZIP arşivi (*.zip)|*.zip"),
                 FileName = name + "-kicad.zip"
             };
             if (dlg.ShowDialog(Owner) != true) return;

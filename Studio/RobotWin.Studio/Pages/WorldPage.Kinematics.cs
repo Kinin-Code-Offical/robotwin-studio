@@ -374,7 +374,7 @@ namespace RobotWin.Studio.Pages
         {
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "--arm");
-            if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => o.Name.StartsWith(args[i + 1], StringComparison.OrdinalIgnoreCase)) is not { } tip) return;
+            if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => NamedLike(o, args[i + 1])) is not { } tip) return;
             Scene.Select(tip.Id);
             BuildInspector();
             if (_arm == null) return;

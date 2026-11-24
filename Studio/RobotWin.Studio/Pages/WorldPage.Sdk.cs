@@ -660,7 +660,7 @@ namespace RobotWin.Studio.Pages
             }));
             Palette.Children.Add(Action("DLL'den eklenti yükle (bu oturum)…", () =>
             {
-                var dlg = new OpenFileDialog { Filter = ".NET eklentisi (*.dll)|*.dll", Title = "Eklenti DLL'i seç" };
+                var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter(".NET eklentisi (*.dll)|*.dll"), Title = RobotWin.Studio.Shell.Lang.T("Eklenti DLL'i seç") };
                 if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
                 var loaded = PluginHost.Shared.LoadAssemblyFile(dlg.FileName);
                 W.Status = loaded.Error != null ? "Eklenti yüklenemedi: " + loaded.Error : $"{loaded.Manifest.Name}: {loaded.Types.Count} tür yüklendi. Kalıcı olması için klasörünü eklenti klasörüne kopyalayın.";

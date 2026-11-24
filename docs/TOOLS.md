@@ -35,18 +35,18 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--register-file-types`, `--unregister-file-types` | Registers / removes `.rwproj`, `.rwworld`, `.rwsim`, `.rwpart`, `.rwlib`, `.rwfp`, `.rwmodel` for the current user (HKCU). Used by the installer. |
 | `<file>` | Opens a RobotWin file. |
 
-### Refreshing the README screenshots
+### Refreshing the guide's pictures
+
+Every picture in the guide is listed in `docs/images/shots.json` with the arguments that make it (and a crop where it is cut from the window). `tools/scripts/doc_images.py` renders them:
 
 ```powershell
 $exe = "builds\RobotWin.Studio\Release\net9.0-windows\RobotWinStudio.exe"
-& $exe --snapshot docs\images\home.png --page home
-& $exe --snapshot docs\images\world-ps5-car.png --page world --fault ps5-car
-& $exe --snapshot docs\images\world-sonar.png --page world --fault sonar
-& $exe --snapshot docs\images\world-servo-arm.png --page world --fault servo-arm
-& $exe --snapshot docs\images\modeler.png --page model
+python tools\scripts\doc_images.py $exe                         # Turkish: docs\images\
+python tools\scripts\doc_images.py $exe --lang en               # English: docs\images\en\
+python tools\scripts\doc_images.py $exe --lang en home modeler  # only these
 ```
 
-Pick the `--example`, `--simulate` and `--size` values that show the feature best; the exact arguments used for the committed images are not recorded.
+The English guide uses `docs/images/en/` and falls back to the Turkish picture where an English one is missing. Selectors such as `--frame`, `--arm` and `--pid` take an object's Turkish name; in English they also find the English name an example gives it.
 
 ## tools/build-installer.ps1
 

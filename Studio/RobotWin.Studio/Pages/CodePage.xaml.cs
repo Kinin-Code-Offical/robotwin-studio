@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -562,7 +562,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnOpenFolder(object sender, RoutedEventArgs e)
         {
-            var dlg = new OpenFolderDialog { Title = "Kod klasörü aç (Arduino çizim klasörü ya da herhangi bir kod klasörü)" };
+            var dlg = new OpenFolderDialog { Title = RobotWin.Studio.Shell.Lang.T("Kod klasörü aç (Arduino çizim klasörü ya da herhangi bir kod klasörü)") };
             if (dlg.ShowDialog(OwnerWindow) != true) return;
             string dir = Path.GetFullPath(dlg.FolderName);
             if (!AppSettings.Current.CodeFolders.Contains(dir, StringComparer.OrdinalIgnoreCase) && !dir.StartsWith(Path.GetFullPath(WorkspaceRoot), StringComparison.OrdinalIgnoreCase))
@@ -649,12 +649,12 @@ namespace RobotWin.Studio.Pages
             Add("Yeni klasör…", () => OnNewFolder(this, new RoutedEventArgs()));
             Add("Dosya içe aktar…", () =>
             {
-                var dlg = new OpenFileDialog { Multiselect = true, Filter = "Kod dosyaları|*.ino;*.h;*.hpp;*.c;*.cpp;*.cc;*.txt;*.md;*.json|Tüm dosyalar|*.*" };
+                var dlg = new OpenFileDialog { Multiselect = true, Filter = RobotWin.Studio.Shell.Lang.Filter("Kod dosyaları|*.ino;*.h;*.hpp;*.c;*.cpp;*.cc;*.txt;*.md;*.json|Tüm dosyalar|*.*") };
                 if (dlg.ShowDialog(OwnerWindow) == true) ImportFiles(folder!, Selection().Dir, dlg.FileNames);
             }, folder != null);
             Add("Klasör içe aktar…", () =>
             {
-                var dlg = new OpenFolderDialog { Title = "Bu klasöre eklenecek klasör" };
+                var dlg = new OpenFolderDialog { Title = RobotWin.Studio.Shell.Lang.T("Bu klasöre eklenecek klasör") };
                 if (dlg.ShowDialog(OwnerWindow) == true) ImportFiles(folder!, Selection().Dir, new[] { dlg.FolderName });
             }, folder != null);
             Add("Diskten klasör aç…", () => OnOpenFolder(this, new RoutedEventArgs()));
@@ -674,7 +674,7 @@ namespace RobotWin.Studio.Pages
                 m.Items.Add(upload);
                 Add("Diske kaydet (Arduino çizim klasörü olarak)…", () =>
                 {
-                    var dlg = new OpenFolderDialog { Title = "Kaydedilecek yer (içinde '" + SafeName(folder.Title) + "' klasörü açılır)" };
+                    var dlg = new OpenFolderDialog { Title = RobotWin.Studio.Shell.Lang.T("Kaydedilecek yer (içinde '" + SafeName(folder.Title) + "' klasörü açılır)") };
                     if (dlg.ShowDialog(OwnerWindow) != true) return;
                     FlushDisk();
                     string target = Path.Combine(dlg.FolderName, SafeName(folder.Title));
@@ -683,7 +683,7 @@ namespace RobotWin.Studio.Pages
                 });
                 Add("Zip olarak dışa aktar…", () =>
                 {
-                    var dlg = new SaveFileDialog { Filter = "Zip arşivi (*.zip)|*.zip", FileName = SafeName(folder.Title) + ".zip" };
+                    var dlg = new SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("Zip arşivi (*.zip)|*.zip"), FileName = SafeName(folder.Title) + ".zip" };
                     if (dlg.ShowDialog(OwnerWindow) != true) return;
                     FlushDisk();
                     folder.ZipTo(dlg.FileName, SafeName(folder.Title));

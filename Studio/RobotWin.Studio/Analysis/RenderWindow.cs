@@ -578,7 +578,7 @@ namespace RobotWin.Studio.Analysis
 
         private void ImportBench()
         {
-            var dlg = new OpenFileDialog { Filter = "Ölçüm kaydı (*.csv;*.txt)|*.csv;*.txt|Tüm dosyalar|*.*" };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("Ölçüm kaydı (*.csv;*.txt)|*.csv;*.txt|Tüm dosyalar|*.*") };
             if (dlg.ShowDialog(this) != true) return;
             try
             {
@@ -657,7 +657,7 @@ namespace RobotWin.Studio.Analysis
                     var part = st;
                     export.Click += (_, _) =>
                     {
-                        var dlg = new SaveFileDialog { Filter = "Abaqus / CalculiX girdisi (*.inp)|*.inp", FileName = part.Name + ".inp" };
+                        var dlg = new SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("Abaqus / CalculiX girdisi (*.inp)|*.inp"), FileName = part.Name + ".inp" };
                         if (dlg.ShowDialog(this) != true) return;
                         RobotTwin.CoreSim.Analysis.Export.InpExport.Save(part, dlg.FileName);
                         _status.Text = "Dışa aktarıldı: " + dlg.FileName;
@@ -1218,7 +1218,7 @@ namespace RobotWin.Studio.Analysis
 
         private void Open()
         {
-            var dlg = new OpenFileDialog { Filter = "RobotWin analizi (*.rwanalysis)|*.rwanalysis" };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin analizi (*.rwanalysis)|*.rwanalysis") };
             if (dlg.ShowDialog(this) != true) return;
             try
             {
@@ -1233,7 +1233,7 @@ namespace RobotWin.Studio.Analysis
         private void Save()
         {
             if (_result == null) return;
-            var dlg = new SaveFileDialog { Filter = "RobotWin analizi (*.rwanalysis)|*.rwanalysis", FileName = _world.Title + AnalysisResult.Extension };
+            var dlg = new SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin analizi (*.rwanalysis)|*.rwanalysis"), FileName = _world.Title + AnalysisResult.Extension };
             if (dlg.ShowDialog(this) != true) return;
             _result.Save(dlg.FileName);
             _status.Text = "Kaydedildi: " + dlg.FileName;
@@ -1245,7 +1245,7 @@ namespace RobotWin.Studio.Analysis
         private void ExportCsv()
         {
             if (_result == null) return;
-            var dlg = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = _world.Title + "-render.csv" };
+            var dlg = new SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("CSV (*.csv)|*.csv"), FileName = _world.Title + "-render.csv" };
             if (dlg.ShowDialog(this) != true) return;
             var ch = _result.Channels;
             using var w = new StreamWriter(dlg.FileName, false, new UTF8Encoding(true));

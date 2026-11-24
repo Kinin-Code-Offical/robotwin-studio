@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using RobotTwin.CoreSim.Formats;
 using System.Collections.Generic;
 using System.Globalization;
@@ -111,8 +111,8 @@ namespace RobotWin.Studio.Pages
                 string value = values.TryGetValue(p.Key, out var v) && v.Length > 0 ? v : p.DefaultValue;
                 if (value.Length == 0 && p.Choices == null) continue;
                 string word = value switch { "on" => "açık", "off" => "kapalı", "dc" => "DC", "ac" => "AC", "acdc" => "AC + DC", "true" => "evet", "false" => "hayır", _ => value };
-                string shown = word + (p.Unit.Length > 0 && !value.EndsWith(p.Unit, StringComparison.Ordinal) ? " " + p.Unit : string.Empty);
-                Row(p.Label, shown, value != p.DefaultValue, p.Choices != null ? "Seçenekler: " + string.Join(", ", p.Choices) : "Model varsayılanı: " + p.DefaultValue + " " + p.Unit);
+                string shown = word == value ? WithUnit(value, p.Unit) : word;
+                Row(p.Label, shown, value != p.DefaultValue, p.Choices != null ? "Seçenekler: " + string.Join(", ", p.Choices) : "Model varsayılanı: " + WithUnit(p.DefaultValue, p.Unit));
             }
 
             if (def.Pins.Count > 0) Row("Bacaklar", string.Join(", ", def.Pins.Select(pin => pin.Name)));
@@ -121,6 +121,19 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>The E12 resistor series goes to the end so the catalog opens on varied parts.</summary>
+        /// <summary>
+        /// A parameter's value with its unit: an SI prefix written on the number goes onto the unit ("5m" A → "5 mA",
+        /// "4.7k" Ω → "4.7 kΩ"); a value that already ends with its unit is shown as it is.
+        /// </summary>
+        public static string WithUnit(string value, string? unit)
+        {
+            if (string.IsNullOrEmpty(unit) || value.Length == 0 || value.EndsWith(unit, StringComparison.Ordinal)) return value;
+            var m = System.Text.RegularExpressions.Regex.Match(value.Trim(), @"^([-+]?[0-9]+(?:[.,][0-9]+)?(?:[eE][-+]?[0-9]+)?)\s*([pnuµmkMG])?$");
+            if (!m.Success) return value + " " + unit;
+            string prefix = m.Groups[2].Value == "u" ? "µ" : m.Groups[2].Value;
+            return m.Groups[1].Value + " " + prefix + unit;
+        }
+
         internal static bool IsSeriesResistor(PartPreset p) => p.PartId == "resistor" && !p.Id.Contains("0805") && !p.Id.Contains("W");
 
         private void OnPick(object sender, SelectionChangedEventArgs e)
@@ -214,7 +227,7 @@ namespace RobotWin.Studio.Pages
             {
                 var row = new DockPanel { Margin = new Thickness(0, 0, 0, 5) };
                 string value = parameters.TryGetValue(p.Key, out var v) ? v : p.DefaultValue;
-                var val = new TextBlock { Text = value + (string.IsNullOrEmpty(p.Unit) ? string.Empty : " " + p.Unit), Style = (Style)FindResource("Text.Mono"), HorizontalAlignment = HorizontalAlignment.Right };
+                var val = new TextBlock { Text = WithUnit(value, p.Unit), Style = (Style)FindResource("Text.Mono"), HorizontalAlignment = HorizontalAlignment.Right };
                 DockPanel.SetDock(val, Dock.Right);
                 row.Children.Add(val);
                 row.Children.Add(new TextBlock { Text = p.Label, Style = (Style)FindResource("Text.Body") });
@@ -331,7 +344,7 @@ namespace RobotWin.Studio.Pages
 
         private void AssignModel(PartPreset preset)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "3B model (*.stl, *.obj, *.ply)|*.stl;*.obj;*.ply|Tüm dosyalar (*.*)|*.*", Title = "Parça için 3B model seçin" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B model (*.stl, *.obj, *.ply)|*.stl;*.obj;*.ply|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("Parça için 3B model seçin") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             RobotTwin.CoreSim.Design.PartModel3D model;
             try
@@ -366,7 +379,7 @@ namespace RobotWin.Studio.Pages
         private void ExportPart(PartPreset preset)
         {
             var path = System.IO.Path.Combine(UserLibrary.Folder, preset.Id + RobotWinFormats.PartExtension);
-            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "RobotWin parçası (*.rwpart)|*.rwpart", FileName = preset.Name, DefaultExt = RobotWinFormats.PartExtension };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin parçası (*.rwpart)|*.rwpart"), FileName = preset.Name, DefaultExt = RobotWinFormats.PartExtension };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             try
             {
@@ -382,7 +395,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnImport(object sender, RoutedEventArgs e)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "RobotWin parça ve kütüphaneleri (*.rwpart, *.rwlib)|*.rwpart;*.rwlib", Multiselect = true, Title = "Parça içe aktar" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin parça ve kütüphaneleri (*.rwpart, *.rwlib)|*.rwpart;*.rwlib"), Multiselect = true, Title = RobotWin.Studio.Shell.Lang.T("Parça içe aktar") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             var added = new List<CustomPart>();
             foreach (var file in dlg.FileNames)
@@ -405,16 +418,16 @@ namespace RobotWin.Studio.Pages
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "KiCad kütüphaneleri (*.kicad_sym, *.kicad_mod)|*.kicad_sym;*.kicad_mod|Tüm dosyalar (*.*)|*.*",
+                Filter = RobotWin.Studio.Shell.Lang.Filter("KiCad kütüphaneleri (*.kicad_sym, *.kicad_mod)|*.kicad_sym;*.kicad_mod|Tüm dosyalar (*.*)|*.*"),
                 Multiselect = true,
-                Title = "KiCad sembol / footprint içe aktar"
+                Title = RobotWin.Studio.Shell.Lang.T("KiCad sembol / footprint içe aktar")
             };
             if (dlg.ShowDialog(Window.GetWindow(this)) == true) ImportKiCad(dlg.FileNames);
         }
 
         private void OnImportKiCadFolder(object sender, RoutedEventArgs e)
         {
-            var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "KiCad .pretty footprint klasörü seçin", Multiselect = true };
+            var dlg = new Microsoft.Win32.OpenFolderDialog { Title = RobotWin.Studio.Shell.Lang.T("KiCad .pretty footprint klasörü seçin"), Multiselect = true };
             if (dlg.ShowDialog(Window.GetWindow(this)) == true) ImportKiCad(dlg.FolderNames);
         }
 
@@ -484,7 +497,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "RobotWin kütüphanesi (*.rwlib)|*.rwlib", FileName = "Kütüphanem", DefaultExt = RobotWinFormats.LibraryExtension };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin kütüphanesi (*.rwlib)|*.rwlib"), FileName = "Kütüphanem", DefaultExt = RobotWinFormats.LibraryExtension };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             try
             {

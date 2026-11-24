@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -465,7 +465,7 @@ namespace RobotWin.Studio.Pages
             var load = new Button { Content = "HEX yükle…", IsEnabled = !running, ToolTip = "Arduino IDE: Taslak → Derlenmiş ikiliyi dışa aktar (.hex)" };
             load.Click += (_, _) =>
             {
-                var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "Intel HEX (*.hex)|*.hex", Title = board.RefDes + " için firmware seçin" };
+                var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("Intel HEX (*.hex)|*.hex"), Title = RobotWin.Studio.Shell.Lang.T(board.RefDes + " için firmware seçin") };
                 if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
                 try
                 {

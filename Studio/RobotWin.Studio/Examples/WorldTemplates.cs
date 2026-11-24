@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Formats;

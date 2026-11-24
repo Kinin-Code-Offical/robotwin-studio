@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -171,7 +171,7 @@ namespace RobotWin.Studio.Simulation
 
             if (on && reading != null && !double.IsNaN(reading.Secondary) && mode == MultimeterMode.Frequency)
             {
-                var duty = Text("%" + reading.Secondary.ToString("0.0", CultureInfo.InvariantCulture), ink, 12, true);
+                var duty = Text(RobotWin.Studio.Shell.Lang.Percent(reading.Secondary, "0.0", CultureInfo.InvariantCulture), ink, 12, true);
                 dc.DrawText(duty, new Point(lcd.Left + 10, dy + big.Height - duty.Height - 4));
             }
 

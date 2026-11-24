@@ -63,6 +63,7 @@ namespace RobotWin.Studio.Pages
                 }
 
                 added = world.AddComponent(Lib, presetId, pose);
+                added.Name = Shell.Lang.T(added.Name);   // [lang]
                 added.IsStatic = !CellParts.IsTool(preset.PartId);
                 if (CellParts.IsTool(preset.PartId) && selected?.PartId == CellParts.ArmId)
                 {

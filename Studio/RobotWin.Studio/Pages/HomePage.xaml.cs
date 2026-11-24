@@ -72,7 +72,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnOpen(object sender, RoutedEventArgs e)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = MainWindow.OpenFilter, Title = "Aç", Multiselect = true };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter(MainWindow.OpenFilter), Title = RobotWin.Studio.Shell.Lang.T("Aç"), Multiselect = true };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             foreach (var f in dlg.FileNames) _shell.OpenFile(f);
         }

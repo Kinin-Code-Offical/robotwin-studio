@@ -35,18 +35,18 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 | `--register-file-types`, `--unregister-file-types` | `.rwproj`, `.rwworld`, `.rwsim`, `.rwpart`, `.rwlib`, `.rwfp`, `.rwmodel` türlerini geçerli kullanıcı için kaydeder / kaldırır (HKCU). Kurulum programı kullanır. |
 | `<dosya>` | Bir RobotWin dosyasını açar. |
 
-### README ekran görüntülerini yenilemek
+### Kılavuz görüntülerini yenilemek
+
+Kılavuzdaki her görüntü, onu üreten argümanlarla (pencereden kesiliyorsa kırpma kutusuyla) `docs/images/shots.json` içinde kayıtlıdır. `tools/scripts/doc_images.py` hepsini üretir:
 
 ```powershell
 $exe = "builds\RobotWin.Studio\Release\net9.0-windows\RobotWinStudio.exe"
-& $exe --snapshot docs\images\home.png --page home
-& $exe --snapshot docs\images\world-ps5-car.png --page world --fault ps5-car
-& $exe --snapshot docs\images\world-sonar.png --page world --fault sonar
-& $exe --snapshot docs\images\world-servo-arm.png --page world --fault servo-arm
-& $exe --snapshot docs\images\modeler.png --page model
+python tools\scripts\doc_images.py $exe                         # Türkçe: docs\images\
+python tools\scripts\doc_images.py $exe --lang en               # İngilizce: docs\images\en\
+python tools\scripts\doc_images.py $exe --lang en home modeler  # yalnız bunlar
 ```
 
-Özelliği en iyi gösteren `--example`, `--simulate` ve `--size` değerlerini seçin; depodaki görüntüler için kullanılan argümanlar kayıtlı değildir.
+İngilizce kılavuz `docs/images/en/` klasörünü kullanır; İngilizcesi olmayan görüntüde Türkçesine düşer. `--frame`, `--arm`, `--pid` gibi seçiciler nesnenin Türkçe adını alır; İngilizcede örneğin verdiği İngilizce adı da bulur.
 
 ## tools/build-installer.ps1
 

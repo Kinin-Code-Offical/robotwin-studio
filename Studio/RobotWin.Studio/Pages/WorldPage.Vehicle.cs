@@ -224,7 +224,7 @@ namespace RobotWin.Studio.Pages
         {
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "--vehicle");
-            if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => o.Name.StartsWith(args[i + 1], StringComparison.OrdinalIgnoreCase)) is not { } chassis) return;
+            if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => NamedLike(o, args[i + 1])) is not { } chassis) return;
             Scene.Select(chassis.Id);
             BuildInspector();
         }

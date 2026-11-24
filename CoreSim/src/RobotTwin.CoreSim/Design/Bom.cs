@@ -86,14 +86,14 @@ namespace RobotTwin.CoreSim.Design
                 return "\"" + s.Replace("\"", "\"\"") + "\"";
             }
 
-            sb.Append(string.Join(separator.ToString(), new[] { "#", "Referans", "Adet", "Değer", "Parça", "Kılıf", "Açıklama" })).Append("\r\n");
+            sb.Append(string.Join(separator.ToString(), new[] { "#", "Referans", "Adet", "Değer", "Parça", "Kılıf", "Açıklama" }.Select(Localization.T))).Append("\r\n");   // [lang]
             int i = 1;
             foreach (var l in lines)
             {
                 sb.Append(string.Join(separator.ToString(), new[]
                 {
                     i++.ToString(CultureInfo.InvariantCulture), Q(l.ReferenceText), l.Quantity.ToString(CultureInfo.InvariantCulture),
-                    Q(l.Value), Q(l.Name), Q(l.Footprint), Q(l.Description)
+                    Q(l.Value), Q(Localization.T(l.Name)), Q(l.Footprint), Q(Localization.T(l.Description))
                 })).Append("\r\n");
             }
 

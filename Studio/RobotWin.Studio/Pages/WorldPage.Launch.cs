@@ -22,7 +22,7 @@ namespace RobotWin.Studio.Pages
         {
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "--frame");
-            if (i >= 0 && i + 1 < args.Length && World?.Objects.FirstOrDefault(o => o.Name.StartsWith(args[i + 1], StringComparison.OrdinalIgnoreCase)) is { } target)
+            if (i >= 0 && i + 1 < args.Length && World?.Objects.FirstOrDefault(o => NamedLike(o, args[i + 1])) is { } target)
             {
                 Scene.Select(target.Id);
                 Scene.FrameSelected();

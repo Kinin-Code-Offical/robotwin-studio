@@ -104,13 +104,13 @@ namespace RobotTwin.CoreSim.Design
             Preset(lib, "light-curtain-900", "Güvenlik Işık Perdesi · 0.9 × 1.2 m", CurtainId, "12 ışın, OSSD çıkışı");
 
             // ---------------------------------------------------------------- passive equipment
-            var pallet = Part(lib, PalletId, "Palet", "PAL",
+            var pallet = Part(lib, PalletId, "Euro palet", "PAL",   // not "Palet" (the editor's palette)
                 "Ahşap palet: robotun yerleştirdiği parçaları taşır. Dolunca program PALETSONRAKI ile değiştirir.",
                 new ParameterDefinition("size_x", "Boy", "0.8", "m"),
                 new ParameterDefinition("size_y", "En", "0.6", "m"),
                 new ParameterDefinition("height", "Yükseklik", "0.144", "m"));
-            Preset(lib, "pallet-800x600", "Palet · 800 × 600 mm", PalletId, "Yarım palet, ahşap");
-            Preset(lib, "pallet-1200x800", "Palet · 1200 × 800 mm", PalletId, "Standart ölçü, ahşap", "size_x=1.2;size_y=0.8");
+            Preset(lib, "pallet-800x600", "Euro palet · 800 × 600 mm", PalletId, "Yarım palet, ahşap");
+            Preset(lib, "pallet-1200x800", "Euro palet · 1200 × 800 mm", PalletId, "Standart ölçü, ahşap", "size_x=1.2;size_y=0.8");
             var fence = Part(lib, FenceId, "Güvenlik Çiti Paneli", "FN",
                 "Tel örgü çit paneli ve direkleri: robot hücresini çevreler, gerçek engel olarak çarpışır.",
                 new ParameterDefinition("width", "Genişlik", "1.0", "m"),

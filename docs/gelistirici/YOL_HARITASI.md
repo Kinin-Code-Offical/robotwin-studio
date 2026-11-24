@@ -27,7 +27,8 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] Dil paketleri: çalışma zamanında çeviren altyapı (Shell/Lang), yerleşik İngilizce paket, kullanıcının kendi paketleri; İngilizce artık varsayılan dil.
     - [x] Yeni diller İngilizceye düşer; paketin kültürü (sayı/tarih biçimi); iki dilli arama; dile göre kılavuz ve haberler; örneklerin adları ve kod yorumları.
     - [x] Paket, kaynaktaki bütün metinlerden (C# sözcük ayrıştırıcısı) ve çalışan uygulamanın gösterdiklerinden (`--lang-missing`) çıkarılıyor.
-    - [ ] İngilizce kılavuzun arayüz adları hâlâ Türkçe ("Genel → Dil"): İngilizce etiketlerle yazılacak; belge resimleri İngilizce arayüzle yeniden çekilecek.
+    - [x] İngilizce kılavuz arayüzü İngilizce etiketleriyle anlatıyor ve İngilizce görüntüleri gösteriyor (`docs/images/en/`); her görüntünün nasıl çekildiği `docs/images/shots.json`'da, `tools/scripts/doc_images.py` iki dilde de üretiyor.
+    - [ ] Yerleşik Uno örneklerinin (engelden kaçan, çizgi izleyen, servo tarama…) seri mesajları önceden derlenmiş `.hex` içinde ve Türkçe; İngilizce mesajlarla yeniden derlenmeli (testlerdeki beklenen çıktılar da güncellenmeli).
   - [ ] İngilizce paketin kapsamı: canlı ölçüm satırları, olay günlüğü ve CoreSim mesajları henüz Türkçe; kalıplar genişletilmeli.
 - [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller).
   - [x] Kullanıcının kendi kurduğu kollar (Robotics/WorldArm.cs): zincir, servo yükü, erişim, fizikle karşılaştırma.

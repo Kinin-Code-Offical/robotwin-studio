@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -115,6 +115,7 @@ namespace RobotWin.Studio
                 };
             }
 
+            RobotTwin.CoreSim.Localization.Translate = Shell.Lang.T;   // [lang] what the simulator writes into files (BOM …)
             Shell.Lang.Install();
             Shell.StartupSplash.Open();   // [startup] the first window, on its own thread
             Shell.Backups.BeginSession();   // [backup] a run left open by a crash shows on the start page

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -56,7 +56,12 @@ namespace RobotWin.Studio.Shell
                 case TextBlock tb:
                     // A block of formatted runs (<TextBlock><Run …/><Bold …/></TextBlock>) has no text of its own.
                     if (DependencyPropertyHelper.GetValueSource(tb, TextBlock.TextProperty).BaseValueSource == BaseValueSource.Default) Runs(tb);
-                    else Set(tb, TextBlock.TextProperty);
+                    else
+                    {
+                        Set(tb, TextBlock.TextProperty);
+                        Follow(tb, TextBlock.TextProperty);
+                    }
+
                     break;
                 case HeaderedItemsControl hi:
                     Set(hi, HeaderedItemsControl.HeaderProperty);
@@ -70,6 +75,7 @@ namespace RobotWin.Studio.Shell
                     break;
                 case ContentControl cc:
                     Set(cc, ContentControl.ContentProperty);
+                    if (cc.Content is string) Follow(cc, ContentControl.ContentProperty);
                     break;
             }
 
@@ -79,6 +85,29 @@ namespace RobotWin.Studio.Shell
         private static void Set(DependencyObject d, DependencyProperty p)
         {
             if (d.GetValue(p) is string s && T(s) is var t && t != s) d.SetCurrentValue(p, t);
+        }
+
+        /// <summary>
+        /// Watches a text that code may change later (a guide card's next step, a button that turns from "Duraklat" into
+        /// "Devam"): a text that keeps its size never raises SizeChanged again. The watcher is bound to the element's own
+        /// property and kept on the element, so it lives and dies with it (no list anywhere holds it).
+        /// </summary>
+        private static void Follow(FrameworkElement e, DependencyProperty p)
+        {
+            if (e.GetValue(WatchProperty) != null) return;
+            var w = new Watch { Owner = e };
+            e.SetValue(WatchProperty, w);
+            System.Windows.Data.BindingOperations.SetBinding(w, Watch.ValueProperty, new System.Windows.Data.Binding { Source = e, Path = new PropertyPath(p), Mode = System.Windows.Data.BindingMode.OneWay });
+        }
+
+        private static readonly DependencyProperty WatchProperty = DependencyProperty.RegisterAttached("LangWatch", typeof(Watch), typeof(Lang));
+
+        private sealed class Watch : DependencyObject
+        {
+            public static readonly DependencyProperty ValueProperty = DependencyProperty.Register("Value", typeof(object), typeof(Watch),
+                new PropertyMetadata(null, (d, _) => Translate(((Watch)d).Owner)));
+
+            public FrameworkElement? Owner;
         }
 
         private static void Runs(TextBlock tb) => Runs(tb.Inlines);

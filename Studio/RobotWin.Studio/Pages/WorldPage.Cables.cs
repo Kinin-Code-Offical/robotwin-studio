@@ -423,7 +423,7 @@ namespace RobotWin.Studio.Pages
                     Cell(SiValue.Format(Math.Abs(i), "A") + (spread > 0 ? $" ±%{spread * 100:0}" : string.Empty), 6, null, false, c.Id);
                     Cell(SiValue.Format(CableDrop(c), "V"), 7, null, false, c.Id);
                     Cell(SiValue.Format(p, "W"), 8, null, false, c.Id);
-                    Cell($"%{load * 100:0}", 9, load > 1 ? Brushes.OrangeRed : load > 0.8 ? Brushes.Orange : null, false, c.Id);
+                    Cell(Shell.Lang.Percent(load * 100, "0"), 9, load > 1 ? Brushes.OrangeRed : load > 0.8 ? Brushes.Orange : null, false, c.Id);
                 }
             }
 

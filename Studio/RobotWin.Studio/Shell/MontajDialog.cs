@@ -128,7 +128,7 @@ namespace RobotWin.Studio.Shell
             var fromFile = new Button { Content = "Dosyadan proje ekle (.rwproj)…", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 2, 0, 0), Padding = new Thickness(10, 4, 10, 4) };
             fromFile.Click += (_, _) =>
             {
-                var dlg = new OpenFileDialog { Filter = "RobotWin projesi (*.rwproj)|*.rwproj", Multiselect = true, Title = "Montaja proje ekle" };
+                var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin projesi (*.rwproj)|*.rwproj"), Multiselect = true, Title = RobotWin.Studio.Shell.Lang.T("Montaja proje ekle") };
                 if (dlg.ShowDialog(owner) != true) return;
                 foreach (var f in dlg.FileNames)
                 {

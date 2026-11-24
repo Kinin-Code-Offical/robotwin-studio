@@ -320,7 +320,7 @@ namespace RobotWin.Studio.Libraries
 
         private void Export(InstalledLibrary lib)
         {
-            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "RobotWin kütüphanesi (*.rwlib)|*.rwlib", FileName = lib.Name.Replace(':', '_'), DefaultExt = RobotWinFormats.LibraryExtension };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin kütüphanesi (*.rwlib)|*.rwlib"), FileName = lib.Name.Replace(':', '_'), DefaultExt = RobotWinFormats.LibraryExtension };
             if (dlg.ShowDialog(_w) != true) return;
             try
             {

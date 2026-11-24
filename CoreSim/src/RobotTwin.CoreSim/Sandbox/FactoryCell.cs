@@ -53,7 +53,7 @@ namespace RobotTwin.CoreSim.Sandbox
             cv.Parameters["height"] = ConveyorHeight.ToString(CultureInfo.InvariantCulture);
 
             var pallet = w.AddComponent(lib, "pallet-800x600", new WorldPose { X = PalletX, Y = PalletY });
-            pallet.Name = "Palet";
+            pallet.Name = "Euro palet";   // not "Palet": that is the editor's palette, and one text has one translation
             pallet.IsStatic = true;
 
             var curtain = w.AddComponent(lib, "light-curtain-900", new WorldPose { X = 0, Y = -1.0, Yaw = 90 });

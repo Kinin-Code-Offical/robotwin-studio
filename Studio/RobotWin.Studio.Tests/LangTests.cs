@@ -49,7 +49,7 @@ public class LangTests
         try
         {
             Assert.Equal(1, Lang.Size.Patterns);   // only "Hız {v}" has words of its own
-            Assert.Equal("Durum: Hazır", Lang.T("Durum: Hazır"));
+            Assert.Equal("Durum: Ready", Lang.T("Durum: Hazır"));   // not by the pattern: part by part
             Assert.Equal("Ready", Lang.T("Hazır"));
             Assert.Equal("Bir şey: başka", Lang.T("Bir şey: başka"));
             // A value with a stray brace leaves the text as it was.
@@ -70,6 +70,63 @@ public class LangTests
             Assert.Equal("_Help", Lang.T("_Yardım"));
             Assert.Equal("Resistor 22 kΩ", Lang.T("Direnç 22 kΩ"));
             Assert.Equal("4,7 kilo-ohm", Lang.T("4,7 kΩ"));
+        }
+        finally
+        {
+            Lang.Load("tr");
+        }
+    }
+
+    [Fact]
+    public void ASketchChangesOnlyWholeLinesAndSearchFindsBothLanguages()
+    {
+        Lang.LoadJson("de", """{ "strings": { "// Bardak dik bekler": "// The glass waits upright", "Direnç": "Resistor" }, "patterns": { "{a} ms bekle": "wait {0} ms" } }""");
+        try
+        {
+            // Code: whole lines only, never a pattern (a pattern could reach into code).
+            string sketch = "// Bardak dik bekler\r\ndelay(500); // 500 ms bekle\r\nvoid loop() {}";
+            Assert.Equal("// The glass waits upright\r\ndelay(500); // 500 ms bekle\r\nvoid loop() {}", Lang.Code(sketch));
+            // Search: the text as shown and as written, lower-cased.
+            string hay = Lang.Searchable("Direnç 220 Ω");
+            Assert.Contains(Lang.Fold("DİRENÇ"), hay);
+            Lang.LoadJson("en", """{ "strings": { "Direnç": "Resistor" } }""");
+            hay = Lang.Searchable("Direnç");
+            Assert.Contains(Lang.Fold("RESISTOR"), hay);
+            Assert.Contains("direnç", hay);
+            // English folds "I" to "i" (Turkish would make it "ı").
+            Assert.Equal("import", Lang.Fold("IMPORT"));
+        }
+        finally
+        {
+            Lang.Load("tr");
+        }
+    }
+
+    [Fact]
+    public void ATextJoinedFromPartsIsTranslatedPartByPart()
+    {
+        Lang.LoadJson("en", """{ "strings": { "Bantlı Konveyör": "Belted Conveyor", "sabit": "fixed", "Durum": "State", "Hazır": "Ready" } }""");
+        try
+        {
+            Assert.Equal("Belted Conveyor · fixed", Lang.T("Bantlı Konveyör · sabit"));
+            Assert.Equal("State: Ready", Lang.T("Durum: Hazır"));
+            Assert.Equal("Belted Conveyor → O3:V+", Lang.T("Bantlı Konveyör → O3:V+"));
+            // Nothing known: the text as it was; a time is not a "label: value".
+            Assert.Equal("Bilinmeyen · metin", Lang.T("Bilinmeyen · metin"));
+            // Two holes side by side: the first is the number ("%100" is not "1" and "00").
+            Lang.LoadJson("en", """{ "patterns": { "(sertlik %{a}{b})": "(stiffness {0}%{1})", ", camsı geçiş {t} °C": ", glass transition {0} °C" } }""");
+            Assert.Equal("(stiffness 100%, glass transition 60 °C)", Lang.T("(sertlik %100, camsı geçiş 60 °C)"));
+            Assert.Equal("12:30", Lang.T("12:30"));
+            // A readout's columns: the gap follows the number's width, the pattern takes any gap.
+            Lang.LoadJson("en", """{ "strings": { "Gövde borusu (kraft)": "Body tube (kraft)" }, "patterns": { "Sol        {n} rpm ileri": "Left        {0} rpm forward" } }""");
+            Assert.Equal("Left        59 rpm forward", Lang.T("Sol         59 rpm ileri"));
+            Assert.Equal("Left        1205 rpm forward", Lang.T("Sol 1205 rpm ileri"));
+            // An object named in English is found by its Turkish name.
+            Assert.Equal("Gövde borusu (kraft)", Lang.Source("Body tube (kraft)"));
+            // A trailing aside in brackets: the name and the aside each.
+            Lang.LoadJson("en", """{ "strings": { "Bantlı Konveyör": "Belted Conveyor", "sabit": "fixed" } }""");
+            Assert.Equal("Belted Conveyor (6)", Lang.T("Bantlı Konveyör (6)"));
+            Assert.Equal("Belted Conveyor  (fixed)", Lang.T("Bantlı Konveyör  (sabit)"));
         }
         finally
         {

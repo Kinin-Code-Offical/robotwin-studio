@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,7 +25,11 @@ namespace RobotWin.Studio.Shell
         /// <summary>A pattern: its expression, its value, and the text it must begin with and contain (checked first, cheaply).</summary>
         private sealed class Pattern
         {
-            public Regex Key = null!;
+            /// <summary>The expression, built the first time a text gets past the cheap checks (most never do).</summary>
+            public Regex Key => _key ??= new Regex(Source, RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+            private Regex? _key;
+            public string Source = string.Empty;
             public string Value = string.Empty;
             public string Prefix = string.Empty, Anchor = string.Empty, Suffix = string.Empty;
             public int Literal;
@@ -145,6 +149,7 @@ namespace RobotWin.Studio.Shell
             {
                 Cache.Clear();
                 Produced.Clear();
+                _reverse = null;
             }
 
             Current = "tr";
@@ -202,13 +207,14 @@ namespace RobotWin.Studio.Shell
                         var own = new List<Pattern>();
                         foreach (var p in patterns.EnumerateObject())
                         {
-                            if (p.Value.GetString() is { Length: > 0 } v && Compile(p.Name, v) is { } rx)
+                            if (p.Value.GetString() is not { Length: > 0 } v) continue;
+                            var parts = Holes(p.Name);
+                            if (Compile(parts, v) is { } rx)   // checked now, built on first use
                             {
-                                var parts = Regex.Split(p.Name, @"\{[^{}]*\}");
                                 own.Add(new Pattern
                                 {
-                                    Key = rx, Value = v, Prefix = parts[0], Suffix = parts[parts.Length - 1],
-                                    Anchor = parts.OrderByDescending(x => x.Length).First(), Literal = parts.Sum(x => x.Length)
+                                    Source = rx, Value = v, Prefix = Gap.Split(parts[0])[0], Suffix = Gap.Split(parts[parts.Length - 1]).Last(),
+                                    Anchor = parts.SelectMany(x => Gap.Split(x)).OrderByDescending(x => x.Length).First(), Literal = parts.Sum(x => x.Length)
                                 });
                             }
                         }
@@ -239,28 +245,84 @@ namespace RobotWin.Studio.Shell
         }
 
         /// <summary>
+        /// Two or more spaces: a column gap. Readouts align their columns to the width of the numbers ("Sol        205" /
+        /// "Sol         59"), so a pattern takes any gap of two or more spaces there.
+        /// </summary>
+        private static readonly Regex Gap = new Regex(" {2,}", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The Turkish text a translation came from (the pack's exact texts read backwards), or null: an example's object
+        /// named in the language in use is still found by its Turkish name (--frame "Gövde borusu").
+        /// </summary>
+        public static string? Source(string translated)
+        {
+            if (Current == "tr") return translated;
+            lock (Cache)
+            {
+                if (_reverse == null)
+                {
+                    _reverse = new Dictionary<string, string>(StringComparer.Ordinal);
+                    foreach (var kv in Exact) _reverse.TryAdd(kv.Value, kv.Key);
+                }
+            }
+
+            return _reverse.TryGetValue(translated, out var tr) ? tr : null;
+        }
+
+        private static Dictionary<string, string>? _reverse;
+
+        /// <summary>A key's text between its holes ("a {x} b {y}" → "a ", " b ", ""), in one pass.</summary>
+        private static string[] Holes(string key)
+        {
+            var parts = new List<string>();
+            int start = 0;
+            for (int i = 0; i < key.Length; i++)
+            {
+                if (key[i] != '{') continue;
+                int end = key.IndexOf('}', i + 1);
+                if (end < 0) break;
+                int inner = key.IndexOf('{', i + 1);
+                if (inner >= 0 && inner < end) continue;   // "{{": not a hole
+                parts.Add(key.Substring(start, i - start));
+                start = end + 1;
+                i = end;
+            }
+
+            parts.Add(key.Substring(start));
+            return parts.ToArray();
+        }
+
+        /// <summary>
         /// A pattern's key as a regular expression: "{…}" is any text (a number, a name), the value's {0}, {1} … take
         /// them in order. Null for a key that would match nearly any text ("{…}: {…}") or that changes nothing.
         /// </summary>
-        private static Regex? Compile(string key, string value)
+        private static string? Compile(string[] parts, string value)
         {
-            var parts = Regex.Split(key, @"\{[^{}]*\}");
             if (parts.Length < 2 || parts.Sum(s => s.Count(char.IsLetter)) < 2) return null;
-            int n = 0;
-            if (Regex.Replace(key, @"\{[^{}]*\}", _ => "{" + n++ + "}") == value) return null;
+            var same = new StringBuilder(parts[0]);
+            for (int i = 1; i < parts.Length; i++) same.Append('{').Append(i - 1).Append('}').Append(parts[i]);
+            if (same.ToString() == value) return null;
             var sb = new StringBuilder("^");
             for (int i = 0; i < parts.Length; i++)
             {
-                sb.Append(Regex.Escape(parts[i]));
+                sb.Append(string.Join(@"\s+", Gap.Split(parts[i]).Select(Regex.Escape)));   // a wide number leaves one space
                 if (i == parts.Length - 1) break;
                 // A hole stays a whole word: after "yol" it cannot begin with a letter, so "{…} yol{…}" leaves
                 // "yollarla" alone; before "una" it cannot end with one.
                 bool after = parts[i].Length > 0 && char.IsLetter(parts[i][parts[i].Length - 1]);
                 bool before = parts[i + 1].Length > 0 && char.IsLetter(parts[i + 1][0]);
+                // Two holes side by side ("%{value}{suffix}") cannot be told apart by text: the first is a number, as the
+                // code writes it, else "%100" would split as "1" and "00".
+                if (parts[i + 1].Length == 0 && i + 1 < parts.Length - 1)
+                {
+                    sb.Append(@"([-+]?[0-9]+(?:[.,][0-9]+)*)");
+                    continue;
+                }
+
                 sb.Append('(').Append(after ? @"(?!\p{L})" : string.Empty).Append(".+?").Append(before ? @"(?<!\p{L})" : string.Empty).Append(')');
             }
 
-            return new Regex(sb.Append('$').ToString(), RegexOptions.Singleline | RegexOptions.CultureInvariant);
+            return sb.Append('$').ToString();
         }
 
         /// <summary>A Turkish text in the language in use (itself when the pack has none).</summary>
@@ -271,6 +333,8 @@ namespace RobotWin.Studio.Shell
             lock (Cache)   // the splash window translates on its own thread
             {
                 if (Cache.TryGetValue(text, out hit)) return hit;
+                // A text the pack made (a live readout translated where it is set, seen again by its element): as it is.
+                if (Produced.Contains(text)) return text;
             }
 
             string result = text;
@@ -286,9 +350,16 @@ namespace RobotWin.Studio.Shell
                 bool any = false;
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    string t = T(lines[i]);
-                    any |= !ReferenceEquals(t, lines[i]) && t != lines[i];
-                    lines[i] = t;
+                    // A "\r\n" text: each line without its "\r" (a pattern's last hole would take it in, and what the
+                    // value puts after the hole would land on the next line).
+                    bool cr = lines[i].EndsWith("\r", StringComparison.Ordinal);
+                    string line = cr ? lines[i].Substring(0, lines[i].Length - 1) : lines[i];
+                    string t = T(line);
+                    if (!ReferenceEquals(t, line) && t != line)
+                    {
+                        any = true;
+                        lines[i] = cr ? t + "\r" : t;
+                    }
                 }
 
                 if (any) result = string.Join("\n", lines);
@@ -316,6 +387,10 @@ namespace RobotWin.Studio.Shell
 
                     break;
                 }
+
+                // Texts the interface joins from parts ("Bantlı Konveyör · sabit", "Durum: Hazır", "A → B"): each part
+                // on its own when the whole has no translation.
+                if (ReferenceEquals(result, text)) result = Joined(text);
             }
 
             lock (Cache)
@@ -327,6 +402,63 @@ namespace RobotWin.Studio.Shell
 
             return result;
         }
+
+        /// <summary>A percentage the way the language writes it: "%15" in Turkish, "15%" in English.</summary>
+        public static string Percent(double value, string format = "0.#", IFormatProvider? numbers = null)
+        {
+            var c = Current == "tr" ? Turkish : Culture;
+            string n = value.ToString(format, numbers ?? c);
+            return c.NumberFormat.PercentPositivePattern switch { 0 => n + " %", 1 => n + "%", 2 => "%" + n, _ => "% " + n };
+        }
+
+        /// <summary>
+        /// A file dialog's filter ("Ölçüm kaydı (*.csv)|*.csv|Tüm dosyalar|*.*") in the language in use: the descriptions
+        /// translated, the patterns left alone (the dialog is Windows' own, so nothing translates it on the way).
+        /// </summary>
+        public static string Filter(string filter)
+        {
+            if (Current == "tr" || string.IsNullOrEmpty(filter)) return filter;
+            var parts = filter.Split('|');
+            for (int i = 0; i < parts.Length; i += 2) parts[i] = T(parts[i]);
+            return string.Join("|", parts);
+        }
+
+        private static readonly string[] Joints = { " · ", " → ", " — ", ": " };
+
+        /// <summary>A text joined from parts, each part translated (the text itself when no part changes).</summary>
+        private static string Joined(string text)
+        {
+            foreach (var sep in Joints)
+            {
+                if (text.IndexOf(sep, StringComparison.Ordinal) <= 0) continue;
+                var parts = text.Split(new[] { sep }, StringSplitOptions.None);
+                bool any = false;
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    if (parts[i].Length == 0 || parts[i].Length >= text.Length) continue;
+                    string t = T(parts[i]);
+                    if (!ReferenceEquals(t, parts[i]) && t != parts[i])
+                    {
+                        parts[i] = t;
+                        any = true;
+                    }
+                }
+
+                if (any) return string.Join(sep, parts);
+            }
+
+            // A trailing aside in brackets: "Analog Entegre (6)", "In3.Cu  (İç 3)" — the name and the aside each.
+            var m = Aside.Match(text);
+            if (m.Success)
+            {
+                string head = T(m.Groups[1].Value), inner = T(m.Groups[3].Value);
+                if (head != m.Groups[1].Value || inner != m.Groups[3].Value) return head + m.Groups[2].Value + "(" + inner + ")";
+            }
+
+            return text;
+        }
+
+        private static readonly Regex Aside = new Regex(@"^(.*\S)(\s+)\(([^()]+)\)$", RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
         /// <summary>
         /// An example sketch in the language in use: each whole line the pack has (a comment, a printed message) is

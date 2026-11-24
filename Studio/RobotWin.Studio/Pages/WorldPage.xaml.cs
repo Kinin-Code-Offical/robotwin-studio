@@ -150,7 +150,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnOpenWorld(object sender, RoutedEventArgs e)
         {
-            var dlg = new OpenFileDialog { Filter = "RobotWin dünyası (*.rwworld)|*.rwworld", Title = "Dünya aç" };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin dünyası (*.rwworld)|*.rwworld"), Title = RobotWin.Studio.Shell.Lang.T("Dünya aç") };
             if (dlg.ShowDialog(Window.GetWindow(this)) == true) _main.OpenFile(dlg.FileName);
         }
 
@@ -416,7 +416,11 @@ namespace RobotWin.Studio.Pages
         {
             EnsureWorld();
             WorldObject? added = null;
-            Edit("Eklendi", () => added = World!.AddComponent(Lib, presetId, NewPose()));
+            Edit("Eklendi", () =>
+            {
+                added = World!.AddComponent(Lib, presetId, NewPose());
+                added.Name = Shell.Lang.T(added.Name);   // [lang] the world's own name, in the language in use
+            });
             if (added != null)
             {
                 Scene.Select(added.Id);
@@ -432,6 +436,7 @@ namespace RobotWin.Studio.Pages
             {
                 added = World!.AddBody(shape, sx, sy, sz, NewPose());
                 tweak?.Invoke(added);
+                added.Name = Shell.Lang.T(added.Name);   // [lang]
             });
             if (added != null) Scene.Select(added.Id);
         }
@@ -461,7 +466,7 @@ namespace RobotWin.Studio.Pages
 
         private void AddDesignFromFile()
         {
-            var dlg = new OpenFileDialog { Filter = "RobotWin projesi (*.rwproj)|*.rwproj", Title = "Dünyaya kart ekle", Multiselect = true };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin projesi (*.rwproj)|*.rwproj"), Title = RobotWin.Studio.Shell.Lang.T("Dünyaya kart ekle"), Multiselect = true };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             foreach (var f in dlg.FileNames)
             {
@@ -493,7 +498,7 @@ namespace RobotWin.Studio.Pages
 
         private void ImportModel()
         {
-            var dlg = new OpenFileDialog { Filter = "3D model (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply", Title = "3D model içe aktar" };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3D model (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply"), Title = RobotWin.Studio.Shell.Lang.T("3D model içe aktar") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             try
             {
@@ -728,10 +733,10 @@ namespace RobotWin.Studio.Pages
             if (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model)
             {
                 var mat = new ComboBox { Margin = new Thickness(0, 0, 0, 6) };
-                foreach (var m in RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.Names) mat.Items.Add(new ComboBoxItem { Content = m, IsSelected = string.Equals(m, o.Material, StringComparison.OrdinalIgnoreCase) });
+                foreach (var m in RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.Names) mat.Items.Add(new ComboBoxItem { Content = m, Tag = m, IsSelected = string.Equals(m, o.Material, StringComparison.OrdinalIgnoreCase) });   // [lang] the value in Tag: the shown name may be translated
                 mat.SelectionChanged += (_, _) =>
                 {
-                    if (mat.SelectedItem is ComboBoxItem it && (string)it.Content != o.Material) Edit("Malzeme değişti", () => o.Material = (string)it.Content);
+                    if (mat.SelectedItem is ComboBoxItem it && it.Tag is string m && m != o.Material) Edit("Malzeme değişti", () => o.Material = m);
                 };
                 Inspector.Children.Add(Labeled("Malzeme", mat));
                 Inspector.Children.Add(Note(MaterialCard(o.Material ?? "PLA")));   // [surface] Pages/WorldPage.Surface.cs
@@ -957,7 +962,7 @@ namespace RobotWin.Studio.Pages
             if (copies > 1) Inspector.Children.Add(Note($"Bu tasarımdan dünyada {copies} kart var; hepsi aynı devreyi paylaşır."));
             Inspector.Children.Add(Action("Ayrı proje dosyası olarak dışa aktar…", () =>
             {
-                var dlg = new SaveFileDialog { Filter = "RobotWin projesi (*.rwproj)|*.rwproj", FileName = d.Name, DefaultExt = ".rwproj" };
+                var dlg = new SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin projesi (*.rwproj)|*.rwproj"), FileName = d.Name, DefaultExt = ".rwproj" };
                 if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
                 d.Package.Save(dlg.FileName);
                 W.Status = "Kart dışa aktarıldı: " + Path.GetFileName(dlg.FileName);
@@ -1023,10 +1028,10 @@ namespace RobotWin.Studio.Pages
                 if (p.Choices != null && p.Choices.Length > 0)
                 {
                     var cb = new ComboBox();
-                    foreach (var c in p.Choices) cb.Items.Add(new ComboBoxItem { Content = c, IsSelected = c == current });
+                    foreach (var c in p.Choices) cb.Items.Add(new ComboBoxItem { Content = c, Tag = c, IsSelected = c == current });   // [lang] the value in Tag
                     cb.SelectionChanged += (_, _) =>
                     {
-                        if (cb.SelectedItem is ComboBoxItem it && (string)it.Content != current) Edit(p.Label + " değişti", () => o.Parameters[key] = (string)it.Content);
+                        if (cb.SelectedItem is ComboBoxItem it && it.Tag is string c && c != current) Edit(p.Label + " değişti", () => o.Parameters[key] = c);
                     };
                     editor = cb;
                 }
@@ -1085,7 +1090,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Caption(pf.Label));
             Inspector.Children.Add(Note(attached.Count == 0
                 ? $"{pf.Label} boşta. Bir kolu, tekerleği veya başka bir parçayı buraya takmak için o parçayı seçin, Bağla aracıyla bu nesneyi tıklayın."
-                : $"{pf.Label}ne takılı: {string.Join(", ", attached)} — simülasyonda birlikte dönerler."));
+                : $"{pf.Label} üzerinde takılı: {string.Join(", ", attached)} — simülasyonda birlikte dönerler."));   // no suffix to fit the label ("kolu" takes "-na", "mili" "-ne")
         }
 
         private void CablesSection(WorldDocument world, WorldObject o)
@@ -1591,6 +1596,14 @@ namespace RobotWin.Studio.Pages
         /// <summary>A bottom tab was picked: the dock manager shows it (and refreshes it through its Shown event).</summary>
         private void OnDockTab(object sender, RoutedEventArgs e) => _dock?.SyncTabs();   // [dock] Pages/WorldPage.Layout.cs
 
+
+        /// <summary>
+        /// [lang] A command-line selector (--arm, --frame, --pid, --vehicle): the object's name begins with it, as given
+        /// or in the language in use (an example made in English names its parts in English).
+        /// </summary>
+        private static bool NamedLike(WorldObject o, string name) =>
+            o.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase) || o.Name.StartsWith(Shell.Lang.T(name), StringComparison.OrdinalIgnoreCase)
+            || Shell.Lang.Source(o.Name) is { } tr && tr.StartsWith(name, StringComparison.OrdinalIgnoreCase);
 
         // ================================================================ snapshot hook
 

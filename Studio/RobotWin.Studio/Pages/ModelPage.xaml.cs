@@ -587,7 +587,7 @@ namespace RobotWin.Studio.Pages
         {
             var dlg = new OpenFileDialog
             {
-                Filter = "RobotWin modeli veya 3B ağ|*.rwmodel;*.stl;*.obj;*.ply|RobotWin modeli (*.rwmodel)|*.rwmodel|3B ağ (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|Tüm dosyalar|*.*"
+                Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin modeli veya 3B ağ|*.rwmodel;*.stl;*.obj;*.ply|RobotWin modeli (*.rwmodel)|*.rwmodel|3B ağ (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|Tüm dosyalar|*.*")
             };
             if (dlg.ShowDialog(Owner) != true) return;
             OpenFile(dlg.FileName);
@@ -626,7 +626,7 @@ namespace RobotWin.Studio.Pages
             {
                 var dlg = new SaveFileDialog
                 {
-                    Filter = "RobotWin modeli (*.rwmodel)|*.rwmodel",
+                    Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin modeli (*.rwmodel)|*.rwmodel"),
                     FileName = SafeName(_ed.Doc.Title) + ModelDocument.Extension
                 };
                 if (dlg.ShowDialog(Owner) != true) return false;
@@ -677,7 +677,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnImport(object sender, RoutedEventArgs e)
         {
-            var dlg = new OpenFileDialog { Filter = "3B modeller (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|Tüm dosyalar|*.*", Multiselect = true };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B modeller (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|Tüm dosyalar|*.*"), Multiselect = true };
             if (dlg.ShowDialog(Owner) != true) return;
             foreach (var f in dlg.FileNames) ImportMesh(f);
         }
@@ -720,7 +720,7 @@ namespace RobotWin.Studio.Pages
             string name = set.Count == 1 ? set[0].Name : _ed.Doc.Title;
             var dlg = new SaveFileDialog
             {
-                Filter = "STL, milimetre (*.stl)|*.stl|OBJ, metre (*.obj)|*.obj|PLY, metre (*.ply)|*.ply",
+                Filter = RobotWin.Studio.Shell.Lang.Filter("STL, milimetre (*.stl)|*.stl|OBJ, metre (*.obj)|*.obj|PLY, metre (*.ply)|*.ply"),
                 FileName = SafeName(name) + ".stl"
             };
             if (dlg.ShowDialog(Owner) != true) return;

@@ -112,7 +112,7 @@ namespace RobotWin.Studio.Pages
         {
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "--pid");
-            if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => o.Name.StartsWith(args[i + 1], StringComparison.OrdinalIgnoreCase) && IsShaftMotor(o)) is not { } motor) return;
+            if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => NamedLike(o, args[i + 1]) && IsShaftMotor(o)) is not { } motor) return;
             var w = OpenPidTuner(motor.Id);
             if (w == null) return;
             App.SnapshotTarget = w.Content as FrameworkElement;

@@ -1027,8 +1027,8 @@ namespace RobotWin.Studio
 
             var dlg = new SaveFileDialog
             {
-                Filter = "Simülasyon kaydı (*.rwsim)|*.rwsim",
-                Title = "Simülasyon kaydını kaydet",
+                Filter = RobotWin.Studio.Shell.Lang.Filter("Simülasyon kaydı (*.rwsim)|*.rwsim"),
+                Title = RobotWin.Studio.Shell.Lang.T("Simülasyon kaydını kaydet"),
                 FileName = (string.IsNullOrWhiteSpace(W.Schematic.Title) ? "kayit" : W.Schematic.Title) + " " + DateTime.Now.ToString("yyyy-MM-dd HH.mm"),
                 DefaultExt = RobotWinFormats.RecordingExtension
             };
@@ -1064,7 +1064,7 @@ namespace RobotWin.Studio
 
         private void OnOpen(object sender, RoutedEventArgs e)
         {
-            var dlg = new OpenFileDialog { Filter = OpenFilter, Title = "Aç", Multiselect = true };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter(OpenFilter), Title = RobotWin.Studio.Shell.Lang.T("Aç"), Multiselect = true };
             if (dlg.ShowDialog(this) != true) return;
             foreach (var f in dlg.FileNames) OpenFile(f);
         }
@@ -1095,7 +1095,7 @@ namespace RobotWin.Studio
             if (doc.IsEmbedded)
             {
                 // "Save as" on a board inside a world exports it as a stand-alone project.
-                var export = new SaveFileDialog { Filter = ProjectFilter, Title = "Kartı ayrı proje olarak kaydet", FileName = doc.Package.Schematic.Title, DefaultExt = ".rwproj" };
+                var export = new SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter(ProjectFilter), Title = RobotWin.Studio.Shell.Lang.T("Kartı ayrı proje olarak kaydet"), FileName = doc.Package.Schematic.Title, DefaultExt = ".rwproj" };
                 if (export.ShowDialog(this) != true) return false;
                 W.FlushActiveDesign();
                 try
@@ -1114,8 +1114,8 @@ namespace RobotWin.Studio
             bool world = doc.Kind == DocumentKind.World;
             var dlg = new SaveFileDialog
             {
-                Filter = world ? WorldFilter : ProjectFilter,
-                Title = "Farklı kaydet",
+                Filter = RobotWin.Studio.Shell.Lang.Filter(world ? WorldFilter : ProjectFilter),
+                Title = RobotWin.Studio.Shell.Lang.T("Farklı kaydet"),
                 FileName = doc.BaseTitle,
                 DefaultExt = world ? WorldDocument.Extension : ".rwproj"
             };

@@ -321,7 +321,7 @@ namespace RobotWin.Studio.Libraries
             var ds = Bound(p, "Veri sayfası (adres ya da dosya)", _part.Datasheet, v => _part.Datasheet = v, "https://… veya C:\\…\\datasheet.pdf");
             p.Children.Add(Row(Btn("Dosya seç…", () =>
             {
-                var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "PDF (*.pdf)|*.pdf|Tüm dosyalar (*.*)|*.*", Title = "Veri sayfası" };
+                var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("PDF (*.pdf)|*.pdf|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("Veri sayfası") };
                 if (dlg.ShowDialog(_w) == true) ds.Text = dlg.FileName;
             }), Btn("Aç", () => OpenDatasheet(_part.Datasheet))));
             Bound(p, "Referans öneki (R, C, U, Q, J …)", _spec.RefPrefix, v => _spec.RefPrefix = v);
@@ -634,7 +634,7 @@ namespace RobotWin.Studio.Libraries
 
         private void PickFootprintFile()
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "Footprint (*.kicad_mod, *.rwfp)|*.kicad_mod;*.rwfp|Tüm dosyalar (*.*)|*.*", Title = "Footprint dosyası" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("Footprint (*.kicad_mod, *.rwfp)|*.kicad_mod;*.rwfp|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("Footprint dosyası") };
             if (dlg.ShowDialog(_w) != true) return;
             try
             {
@@ -725,7 +725,7 @@ namespace RobotWin.Studio.Libraries
                 {
                     box.Children.Add(Row(Btn("SPICE dosyası aç…", () =>
                     {
-                        var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "SPICE (*.lib, *.mod, *.cir, *.sub, *.sp)|*.lib;*.mod;*.cir;*.sub;*.sp;*.spi|Tüm dosyalar (*.*)|*.*" };
+                        var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("SPICE (*.lib, *.mod, *.cir, *.sub, *.sp)|*.lib;*.mod;*.cir;*.sub;*.sp;*.spi|Tüm dosyalar (*.*)|*.*") };
                         if (dlg.ShowDialog(_w) != true) return;
                         var lib = SpiceParser.ParseFile(dlg.FileName);
                         string? name = lib.Subcircuits.Keys.FirstOrDefault();
@@ -1092,7 +1092,7 @@ namespace RobotWin.Studio.Libraries
 
         private void PickModel()
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = "3B model (*.stl, *.obj, *.ply, *.wrl)|*.stl;*.obj;*.ply;*.wrl;*.wrz|STEP (*.step, *.stp)|*.step;*.stp|Tüm dosyalar (*.*)|*.*", Title = "3B model" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B model (*.stl, *.obj, *.ply, *.wrl)|*.stl;*.obj;*.ply;*.wrl;*.wrz|STEP (*.step, *.stp)|*.step;*.stp|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("3B model") };
             if (dlg.ShowDialog(_w) != true) return;
             try
             {
@@ -1187,7 +1187,7 @@ namespace RobotWin.Studio.Libraries
                 return;
             }
 
-            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "RobotWin parçası (*.rwpart)|*.rwpart", FileName = part.Name, DefaultExt = RobotWinFormats.PartExtension };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin parçası (*.rwpart)|*.rwpart"), FileName = part.Name, DefaultExt = RobotWinFormats.PartExtension };
             if (dlg.ShowDialog(_w) != true) return;
             try
             {

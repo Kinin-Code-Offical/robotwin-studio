@@ -612,6 +612,17 @@ namespace RobotWin.Studio.Modeling
 
         public static bool IsMeshLike(ModelObject o) => o.Primitive != null || o.Mesh != null;
 
+        /// <summary>
+        /// [lang] A new object's name in the language in use ("Tekerlek göbeği.002" → "Wheel hub.002"): the name is the
+        /// document's own from then on.
+        /// </summary>
+        private static string Local(string name)
+        {
+            if (Shell.Lang.Current == "tr" || string.IsNullOrEmpty(name)) return name;
+            var m = System.Text.RegularExpressions.Regex.Match(name, @"^(.*)\.(\d{3})$");
+            return m.Success ? Shell.Lang.T(m.Groups[1].Value) + "." + m.Groups[2].Value : Shell.Lang.T(name);
+        }
+
         public ModelObject AddPrimitive(PrimitiveKind kind, Vec3 at)
         {
             ModelObject? added = null;
@@ -619,6 +630,7 @@ namespace RobotWin.Studio.Modeling
             {
                 if (Mode == EditorMode.Edit) ExitEditInternal(true);
                 added = ModelOps.AddPrimitive(Doc, kind, at.X, at.Y, at.Z);
+                added.Name = Local(added.Name);
                 Selected.Clear();
                 Selected.Add(added.Id);
                 ActiveId = added.Id;
@@ -633,6 +645,7 @@ namespace RobotWin.Studio.Modeling
             {
                 if (Mode == EditorMode.Edit) ExitEditInternal(true);
                 added = RobotParts.Insert(Doc, templateId, at.X, at.Y);
+                foreach (var o in added) o.Name = Local(o.Name);
                 Selected.Clear();
                 Selected.AddRange(added.Select(o => o.Id));
                 ActiveId = added[0].Id;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -471,7 +471,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnExportLogo(object sender, RoutedEventArgs e)
         {
-            var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Logo klasörü seçin", FileName = "robotwin-logo", Filter = "Klasör|*.folder" };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Title = RobotWin.Studio.Shell.Lang.T("Logo klasörü seçin"), FileName = "robotwin-logo", Filter = RobotWin.Studio.Shell.Lang.Filter("Klasör|*.folder") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             string dir = Path.Combine(Path.GetDirectoryName(dlg.FileName)!, "robotwin-logo");
             Logo.Export(dir);

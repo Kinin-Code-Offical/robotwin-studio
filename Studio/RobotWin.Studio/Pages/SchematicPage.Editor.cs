@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -888,7 +888,7 @@ namespace RobotWin.Studio.Pages
 
         private string? AskSavePath(string filter, string ext, string suffix = "")
         {
-            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = filter, DefaultExt = ext, FileName = SafeTitle + suffix + ext };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter(filter), DefaultExt = ext, FileName = SafeTitle + suffix + ext };
             return dlg.ShowDialog(Window.GetWindow(this)) == true ? dlg.FileName : null;
         }
 

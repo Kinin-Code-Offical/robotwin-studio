@@ -293,7 +293,7 @@ namespace RobotWin.Studio.Pages
 
         private void ExportSettings()
         {
-            var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Ayarları dışa aktar", FileName = "robotwin-ayarlar.json", Filter = "Ayar dosyası (*.json)|*.json" };
+            var dlg = new Microsoft.Win32.SaveFileDialog { Title = RobotWin.Studio.Shell.Lang.T("Ayarları dışa aktar"), FileName = "robotwin-ayarlar.json", Filter = RobotWin.Studio.Shell.Lang.Filter("Ayar dosyası (*.json)|*.json") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             try
             {
@@ -308,7 +308,7 @@ namespace RobotWin.Studio.Pages
 
         private void ImportSettings()
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Ayarları içe aktar", Filter = "Ayar dosyası (*.json)|*.json" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = RobotWin.Studio.Shell.Lang.T("Ayarları içe aktar"), Filter = RobotWin.Studio.Shell.Lang.Filter("Ayar dosyası (*.json)|*.json") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             try
             {

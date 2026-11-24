@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
@@ -167,7 +167,7 @@ namespace RobotWin.Studio.World
                             double t = v * 10 - Math.Floor(v * 10);
                             double bead = Math.Pow(Math.Sin(Math.PI * t), 0.6);
                             double wobble = 0.03 * (Noise(u * 8, v * 10, 8, 10, 4) - 0.5);
-                            col = Shade(c, 0.80 + 0.24 * bead + wobble);
+                            col = Shade(c, 0.90 + 0.12 * bead + wobble);   // faint from afar: a 0.2 mm layer is under a pixel there
                             break;
                         }
                         case "baski-ust":
@@ -176,7 +176,7 @@ namespace RobotWin.Studio.World
                             double t = (u + v) * 4;
                             t -= Math.Floor(t);
                             double bead = Math.Pow(Math.Sin(Math.PI * t), 0.6);
-                            col = Shade(c, 0.86 + 0.18 * bead);
+                            col = Shade(c, 0.92 + 0.09 * bead);
                             break;
                         }
                         case "fircalanmis":
