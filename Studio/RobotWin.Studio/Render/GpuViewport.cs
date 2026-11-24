@@ -34,7 +34,10 @@ namespace RobotWin.Studio.Render
         }
 
         /// <summary>The colour behind everything.</summary>
-        public Color Clear { get; set; } = Color.FromRgb(0x0B, 0x0B, 0x0D);
+        public Color Clear { get; set; } = Colors.Transparent;
+
+        /// <summary>How far ahead the view's camera looks (its orbit distance), when the view knows; the sun's shadow is sharpest there.</summary>
+        public Func<double>? Focus { get; set; }
 
         /// <summary>Things drawn last frame (for the performance overlay).</summary>
         public int LastItems { get; private set; }
@@ -46,7 +49,8 @@ namespace RobotWin.Studio.Render
         public bool Draw()
         {
             if (!IsVisible || !_image.IsFrontBufferAvailable) return false;
-            if (_source.Camera is not PerspectiveCamera camera) return false;
+            if (_source.Camera is not ProjectionCamera camera || camera is not (PerspectiveCamera or OrthographicCamera)) return false;
+            if (!_source.IsVisible) return false;
             // The size of the view it stands in for (an Image takes its size from its picture, which has none at first).
             var dpi = VisualTreeHelper.GetDpi(this);
             int w = (int)Math.Ceiling(_source.ActualWidth * dpi.DpiScaleX), h = (int)Math.Ceiling(_source.ActualHeight * dpi.DpiScaleY);
@@ -68,7 +72,9 @@ namespace RobotWin.Studio.Render
             try
             {
                 bool changed = _target.Resize(w, h);
-                renderer.Render(_target, _mirror, Camera(camera), Clear);
+                var cam = Camera(camera);
+                if (Focus?.Invoke() is double focus && focus > 0) cam = cam with { Focus = (float)focus };
+                renderer.Render(_target, _mirror, cam, Clear);
                 if (changed || _setBuffer)
                 {
                     // Software fallback on: a remote desktop or a picture of the window (RenderTargetBitmap) still shows it.
@@ -92,7 +98,7 @@ namespace RobotWin.Studio.Render
             }
         }
 
-        private static GpuRenderer.Camera Camera(PerspectiveCamera c)
+        private static GpuRenderer.Camera Camera(ProjectionCamera c)
         {
             var position = c.Position;
             var look = c.LookDirection;
@@ -105,7 +111,9 @@ namespace RobotWin.Studio.Render
                 up = m.Transform(up);
             }
 
-            return new GpuRenderer.Camera(position, look, up, c.FieldOfView, c.NearPlaneDistance, c.FarPlaneDistance);
+            return c is OrthographicCamera o
+                ? GpuRenderer.Camera.Ortho(position, look, up, o.Width, o.NearPlaneDistance, o.FarPlaneDistance)
+                : new GpuRenderer.Camera(position, look, up, ((PerspectiveCamera)c).FieldOfView, c.NearPlaneDistance, c.FarPlaneDistance);
         }
     }
 }

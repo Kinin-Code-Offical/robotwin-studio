@@ -72,6 +72,7 @@ namespace RobotWin.Studio.World
             _view.Children.Add(_terrain);
             _view.Children.Add(_environment);
             _stage.Children.Add(_view);
+            _gpu = Render.GpuHost.Attach(_stage, _view, auto: false);   // [render] our GPU renderer draws the view
             _stage.Children.Add(_sensorImage);
             RenderOptions.SetBitmapScalingMode(_sensorImage, BitmapScalingMode.NearestNeighbor);
             _frame.Child = _stage;
@@ -227,7 +228,29 @@ namespace RobotWin.Studio.World
             _view.Visibility = sensor ? Visibility.Collapsed : Visibility.Visible;
         }
 
+        private readonly Render.GpuHost _gpu;
+        private TimeSpan _lastRendering = TimeSpan.MinValue;
+
         private void OnRendering(object? sender, EventArgs e)
+        {
+            // Once per frame shown; drawn on the GPU after the frame moved everything.
+            if (e is RenderingEventArgs re)
+            {
+                if (re.RenderingTime == _lastRendering) return;
+                _lastRendering = re.RenderingTime;
+            }
+
+            try
+            {
+                Frame();
+            }
+            finally
+            {
+                _gpu.Draw();
+            }
+        }
+
+        private void Frame()
         {
             var scene = Scene;
             if (scene?.World == null) return;

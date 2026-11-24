@@ -115,6 +115,8 @@ namespace RobotWin.Studio.Modeling
             _view.Children.Add(_objects);
             _view.Children.Add(_overlay3d);
             Children.Add(_view);
+            // [render] our GPU renderer draws the view (an orthographic eye stands 20 orbit distances back).
+            Render.GpuHost.Attach(this, _view, focus: () => Cam.Ortho ? Cam.Distance * 20 : Cam.Distance);
             _overlay = new ModelOverlay(this);
             Children.Add(_overlay);
             RenderOptions.SetEdgeMode(_view, EdgeMode.Unspecified);

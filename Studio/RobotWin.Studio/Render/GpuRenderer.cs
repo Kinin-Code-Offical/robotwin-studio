@@ -324,25 +324,44 @@ namespace RobotWin.Studio.Render
             return _shared1;
         }
 
-        /// <summary>A camera as the renderer needs it.</summary>
+        /// <summary>A camera as the renderer needs it: a perspective one (WPF's field of view is horizontal) or an orthographic one.</summary>
         public readonly struct Camera
         {
             public Camera(Point3D position, Vector3D look, Vector3D up, double horizontalFov, double near, double far)
+                : this(position, look, up, near, far, false, horizontalFov * Math.PI / 180, 0)
+            {
+            }
+
+            private Camera(Point3D position, Vector3D look, Vector3D up, double near, double far, bool orthographic, double fov, double width)
             {
                 Position = new Vector3((float)position.X, (float)position.Y, (float)position.Z);
                 Look = new Vector3((float)look.X, (float)look.Y, (float)look.Z);
                 Up = new Vector3((float)up.X, (float)up.Y, (float)up.Z);
-                HorizontalFov = (float)(horizontalFov * Math.PI / 180);
+                HorizontalFov = (float)fov;
                 Near = (float)near;
-                Far = (float)far;
+                Far = double.IsInfinity(far) || far > 1e12 ? float.PositiveInfinity : (float)far;
+                Orthographic = orthographic;
+                Width = (float)width;
             }
+
+            /// <summary>An orthographic camera <paramref name="width"/> wide (WPF's OrthographicCamera.Width).</summary>
+            public static Camera Ortho(Point3D position, Vector3D look, Vector3D up, double width, double near, double far) =>
+                new Camera(position, look, up, near, far, true, 0, width);
 
             public Vector3 Position { get; }
             public Vector3 Look { get; }
             public Vector3 Up { get; }
             public float HorizontalFov { get; }
             public float Near { get; }
+
+            /// <summary>The far plane; infinite when WPF's is (its default).</summary>
             public float Far { get; }
+
+            public bool Orthographic { get; }
+            public float Width { get; }
+
+            /// <summary>How far ahead what the view looks at stands (an orbit camera's distance); 0 when not known.</summary>
+            public float Focus { get; init; }
         }
 
         /// <summary>Draws the scene from the camera onto the shared surface; the colour behind everything is <paramref name="background"/>.</summary>
@@ -351,9 +370,20 @@ namespace RobotWin.Studio.Render
             if (target.Rtv == null || target.Dsv == null || target.Shared == null || target.Msaa == null) return;
             int width = target.Width, height = target.Height;
             float aspect = width / (float)height;
-            float vfov = 2 * MathF.Atan(MathF.Tan(camera.HorizontalFov / 2) / aspect);
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Position + camera.Look, camera.Up);
-            var proj = ReversedPerspective(vfov, aspect, Math.Max(camera.Near, 1e-5f), Math.Max(camera.Far, camera.Near * 2));
+            Matrix4x4 proj;
+            if (camera.Orthographic)
+            {
+                // An orthographic view needs a far plane: the farthest the scene reaches along the view when WPF's is infinite.
+                float far = float.IsInfinity(camera.Far) ? SceneFar(scene.Items, camera) : camera.Far;
+                proj = ReversedOrtho(camera.Width, camera.Width / aspect, camera.Near, Math.Max(far, camera.Near + 1e-4f));
+            }
+            else
+            {
+                float vfov = 2 * MathF.Atan(MathF.Tan(camera.HorizontalFov / 2) / aspect);
+                float near = Math.Max(camera.Near, 1e-5f);
+                proj = float.IsInfinity(camera.Far) ? ReversedInfinite(vfov, aspect, near) : ReversedPerspective(vfov, aspect, near, Math.Max(camera.Far, near * 2));
+            }
 
             // ---- lights: the strongest directional light is the sun (it casts the shadow), the rest fill in
             var suns = scene.Suns.OrderByDescending(s => s.Color.X + s.Color.Y + s.Color.Z).ToList();
@@ -438,7 +468,9 @@ namespace RobotWin.Studio.Render
 
             // ---- the scene (reversed depth: near is 1, far 0, so a float depth buffer keeps its precision far away)
             _ctx.OMSetRenderTargets(target.Rtv, target.Dsv);
-            var clear = new Color4(background.R / 255f, background.G / 255f, background.B / 255f, 1);
+            // Premultiplied, as WPF composes the picture: a clear background lets the panel behind show through.
+            float ca = background.A / 255f;
+            var clear = new Color4(background.R / 255f * ca, background.G / 255f * ca, background.B / 255f * ca, ca);
             _ctx.ClearRenderTargetView(target.Rtv, clear);
             _ctx.ClearDepthStencilView(target.Dsv, DepthStencilClearFlags.Depth, 0, 0);
             _ctx.RSSetViewport(0, 0, width, height, 0, 1);
@@ -587,6 +619,49 @@ namespace RobotWin.Studio.Render
             _ctx.DrawIndexedInstanced((uint)gm.IndexCount, 1, 0, 0, (uint)index);
         }
 
+        /// <summary>As <see cref="ReversedPerspective"/> with the far plane at infinity (depth near / distance).</summary>
+        private static Matrix4x4 ReversedInfinite(float vfov, float aspect, float near)
+        {
+            float y = 1 / MathF.Tan(vfov / 2);
+            return new Matrix4x4(
+                y / aspect, 0, 0, 0,
+                0, y, 0, 0,
+                0, 0, 0, -1,
+                0, 0, near, 0);
+        }
+
+        /// <summary>A right-handed orthographic projection <paramref name="width"/> × <paramref name="height"/>, reversed depth.</summary>
+        private static Matrix4x4 ReversedOrtho(float width, float height, float near, float far)
+        {
+            float range = far - near;
+            return new Matrix4x4(
+                2 / width, 0, 0, 0,
+                0, 2 / height, 0, 0,
+                0, 0, 1 / range, 0,
+                0, 0, far / range, 1);
+        }
+
+        /// <summary>How far along the view the scene reaches (for an orthographic camera with WPF's infinite far plane).</summary>
+        private float SceneFar(List<DrawItem> items, Camera camera)
+        {
+            var dir = Vector3.Normalize(camera.Look);
+            float far = camera.Near + 1;
+            foreach (var it in items)
+            {
+                if (Mesh(it.Mesh) is not { } gm) continue;
+                for (int i = 0; i < 8; i++)
+                {
+                    var p = Vector3.Transform(Corner(gm, i), it.World);
+                    far = Math.Max(far, Vector3.Dot(p - camera.Position, dir));
+                }
+            }
+
+            return far * 1.05f;
+        }
+
+        private static Vector3 Corner(GpuMesh gm, int i) =>
+            new Vector3((i & 1) == 0 ? gm.Min.X : gm.Max.X, (i & 2) == 0 ? gm.Min.Y : gm.Max.Y, (i & 4) == 0 ? gm.Min.Z : gm.Max.Z);
+
         /// <summary>A right-handed perspective with reversed depth (near → 1, far → 0), as the scene pass expects.</summary>
         private static Matrix4x4 ReversedPerspective(float vfov, float aspect, float near, float far)
         {
@@ -640,26 +715,58 @@ namespace RobotWin.Studio.Render
             it.Material.Transparent || (it.Material.Albedo is { } a && Texture(a.Image) is { Clear: true });
 
         /// <summary>The middle and reach of what the shadow must cover: the scene, but no farther than a few views' depth around the look point.</summary>
+        private readonly List<float> _depths = new List<float>();
+
         private (Vector3 Center, float Radius) Bounds(List<DrawItem> items, Camera camera)
         {
             var min = new Vector3(float.MaxValue);
             var max = new Vector3(float.MinValue);
+            var dir = Vector3.Normalize(camera.Look);
+            float cone = camera.Orthographic ? -1 : MathF.Cos(MathF.Min(1.4f, camera.HorizontalFov * 0.75f));
+            _depths.Clear();
             foreach (var it in items)
             {
                 if (it.Material.Unlit || IsTransparent(it) || Mesh(it.Mesh) is not { } gm) continue;
                 for (int i = 0; i < 8; i++)
                 {
-                    var p = new Vector3((i & 1) == 0 ? gm.Min.X : gm.Max.X, (i & 2) == 0 ? gm.Min.Y : gm.Max.Y, (i & 4) == 0 ? gm.Min.Z : gm.Max.Z);
-                    p = Vector3.Transform(p, it.World);
+                    var p = Vector3.Transform(Corner(gm, i), it.World);
                     min = Vector3.Min(min, p);
                     max = Vector3.Max(max, p);
                 }
+
+                // How far along the view each thing in sight stands.
+                var v = Vector3.Transform((gm.Min + gm.Max) / 2, it.World) - camera.Position;
+                float d = Vector3.Dot(v, dir), len = v.Length();
+                if (d > camera.Near && (camera.Orthographic || d >= cone * len)) _depths.Add(d);
             }
 
             if (min.X > max.X) return (Vector3.Zero, 0);
-            float look = camera.Look.Length();
-            var target = camera.Position + camera.Look;
-            float reach = Math.Clamp(look * 2.2f, 0.4f, 40f);
+            // What the camera looks at: along its view, as far as most things in sight stand (not the middle of a
+            // kilometre of terrain). The shadow covers the scene within a few such distances of it, whatever the units:
+            // metres in the world, millimetres in the modeller.
+            float along;
+            float lookLength = camera.Look.Length();
+            if (camera.Focus > 0)
+            {
+                along = camera.Focus;
+            }
+            else if (MathF.Abs(lookLength - 1) > 0.01f)
+            {
+                along = lookLength;   // a look direction drawn to the target (the world's orbit camera)
+            }
+            else if (_depths.Count > 0)
+            {
+                _depths.Sort();
+                along = _depths[(int)(_depths.Count * 0.4)];
+            }
+            else
+            {
+                along = Vector3.Dot((min + max) / 2 - camera.Position, dir);
+            }
+
+            along = Math.Max(along, (max - min).Length() * 0.002f);
+            var target = camera.Position + dir * along;
+            float reach = Math.Max(along * 2.2f, camera.Orthographic ? camera.Width : 0);
             // The part of the scene within reach of the look point.
             var lo = Vector3.Max(min, target - new Vector3(reach));
             var hi = Vector3.Min(max, target + new Vector3(reach));
@@ -669,7 +776,7 @@ namespace RobotWin.Studio.Render
                 hi = max;
             }
 
-            return ((lo + hi) / 2, Math.Max(0.05f, (hi - lo).Length() / 2));
+            return ((lo + hi) / 2, Math.Max(1e-4f, (hi - lo).Length() / 2));
         }
 
         private static Matrix4x4 LightMatrix(Vector3 dir, Vector3 center, float radius)

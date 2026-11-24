@@ -182,6 +182,25 @@ namespace RobotWin.Studio.Render
             var right = At(px, PixelX(0.1, 1), Size / 2);
             check("resmin yönü", left.R > 2 * left.G && right.G > 2 * right.R, $"sol {left}, sağ {right}");
 
+            // 6) An orthographic camera (the modeller's side views) with WPF's infinite far plane, on a clear background:
+            //    a red square 0.2 wide in a view 1 wide; around it the panel behind shows through (alpha 0).
+            // (The sun slants: straight down, a glossy face seen straight down by an orthographic camera mirrors it everywhere.)
+            var square = new Model3DGroup();
+            square.Children.Add(Sun(new Vector3D(-0.3, 0.4, -0.85)));
+            square.Children.Add(new AmbientLight(Color.FromRgb(0x40, 0x40, 0x40)));
+            square.Children.Add(Model(Box(0, 0, 0, 0.2, 0.2, 0.01), Plastic(Color.FromRgb(0xD0, 0x20, 0x20))));
+            var ortho = GpuRenderer.Camera.Ortho(new Point3D(0, 0, 5), new Vector3D(0, 0, -1), new Vector3D(0, 1, 0), 1, 0.1, double.PositiveInfinity);
+            px = Draw(square, ortho, Colors.Transparent);
+            var mid = At(px, Size / 2, Size / 2);
+            int inside = (int)(Size / 2 + 0.08 * Size), outside = (int)(Size / 2 + 0.15 * Size);
+            check("dik kamera", mid.R > 90 && mid.R > 2 * mid.G && At(px, inside, Size / 2).R > 90 && Alpha(px, outside, Size / 2) == 0,
+                $"orta {mid}, kenar içi {At(px, inside, Size / 2)}, dışı alfa {Alpha(px, outside, Size / 2)}");
+
+            // 7) A perspective camera with WPF's infinite far plane still draws (depth near / distance).
+            px = Draw(red, new GpuRenderer.Camera(new Point3D(0.4, -0.4, 0.3), new Vector3D(-0.4, 0.4, -0.3), new Vector3D(0, 0, 1), 40, 0.01, double.PositiveInfinity), Colors.Transparent);
+            var far = At(px, Size / 2, Size / 2);
+            check("sonsuz uzak düzlem", far.R > 90 && far.R > 2 * far.G && Alpha(px, 2, 2) == 0, $"orta {far}, köşe alfa {Alpha(px, 2, 2)}");
+
             target.Dispose();
         }
 
@@ -250,6 +269,8 @@ namespace RobotWin.Studio.Render
             int i = (y * Size + x) * 4;
             return (px[i + 2], px[i + 1], px[i]);
         }
+
+        private static int Alpha(byte[] px, int x, int y) => px[(y * Size + x) * 4 + 3];
 
         private static bool Near((int R, int G, int B) c, (int R, int G, int B) want, int tolerance) =>
             Math.Abs(c.R - want.R) <= tolerance && Math.Abs(c.G - want.G) <= tolerance && Math.Abs(c.B - want.B) <= tolerance;

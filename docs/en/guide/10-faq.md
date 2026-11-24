@@ -48,7 +48,7 @@ The PC cannot keep up with the simulation in real time. Lower the speed, reduce 
 To see what slows it, open **View → Performance overlay** (Ctrl+Shift+F). While a world runs, it lists how many milliseconds each solver (circuit, board firmware, rigid bodies, liquids, cables, heat…) takes per simulated second, and its share. When they add up to more than a thousand, the world cannot keep up with real time. On the water glass, for example, most of it is the liquid; a coarser particle spacing makes it faster.
 
 **The 3D view stays black, flickers or draws wrongly.**
-The world view is drawn by RobotWin's own renderer on the graphics card: realistic materials, the sun's soft shadow, lamps and LEDs lit pixel by pixel. If the graphics card or its driver gives trouble, go back to the old drawing with **Settings → Appearance and theme → 3D renderer → WPF**. When the graphics card cannot be used at all, the app goes back to WPF by itself and says so in the status bar.
+The 3D views (the world, the game view, the modeller, the board's 3D view, part previews) are drawn by RobotWin's own renderer on the graphics card: realistic materials, the sun's soft shadow, lamps and LEDs lit pixel by pixel. If the graphics card or its driver gives trouble, go back to the old drawing with **Settings → Appearance and theme → 3D renderer → WPF**. When the graphics card cannot be used at all, the app goes back to WPF by itself and says so in the status bar.
 
 **My board in the world does nothing.**
 If the **Events** tab says "No firmware loaded (the board is idle)", the board has no code: select the board and write code with **Write the board's code**. Also make sure the board is powered (a battery cable or **Plug in USB**).

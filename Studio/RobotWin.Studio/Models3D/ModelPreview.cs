@@ -26,6 +26,7 @@ namespace RobotWin.Studio.Models3D
             _view.Camera = _camera;
             _view.Children.Add(_content);
             Children.Add(_view);
+            Render.GpuHost.Attach(this, _view, focus: () => _distance);   // [render] our GPU renderer draws the view
             MouseDown += (_, e) =>
             {
                 _drag = e.GetPosition(this);

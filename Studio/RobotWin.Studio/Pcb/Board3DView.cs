@@ -54,6 +54,7 @@ namespace RobotWin.Studio.Pcb
             _view.Camera = _camera;
             _view.Children.Add(_content);
             Children.Add(_view);
+            _gpu = Render.GpuHost.Attach(this, _view, auto: false, focus: () => _distance);   // [render] our GPU renderer draws the view
             _effects.Project = Project;
             Children.Add(_effects);
             Children.Add(new TextBlock
@@ -157,7 +158,29 @@ namespace RobotWin.Studio.Pcb
 
         // ================================================================ live state
 
+        private readonly Render.GpuHost _gpu;
+        private TimeSpan _lastRendering = TimeSpan.MinValue;
+
         private void OnFrame(object? sender, EventArgs e)
+        {
+            // Once per frame shown; drawn on the GPU after the frame moved everything.
+            if (e is RenderingEventArgs re)
+            {
+                if (re.RenderingTime == _lastRendering) return;
+                _lastRendering = re.RenderingTime;
+            }
+
+            try
+            {
+                Frame();
+            }
+            finally
+            {
+                _gpu.Draw();
+            }
+        }
+
+        private void Frame()
         {
             var now = DateTime.Now;
             double dt = Math.Min(0.05, (now - _last).TotalSeconds);

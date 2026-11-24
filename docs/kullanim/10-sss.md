@@ -48,7 +48,7 @@ Bilgisayar simülasyona gerçek zamanda yetişemiyor. Hızı düşürün, **Ayar
 Neyin yavaşlattığını görmek için **Görünüm → Performans göstergesi**'ni (Ctrl+Shift+F) açın. Dünya çalışırken her çözücünün (devre, kart yazılımı, katı cisimler, sıvılar, kablolar, ısı…) simülasyon saniyesi başına kaç milisaniye harcadığı ve payı listelenir. Toplam bini geçerse dünya gerçek zamana yetişemez. Örneğin su bardağında payın çoğu sıvınındır; sıvının parçacık aralığını büyütmek onu hızlandırır.
 
 **3B görünüm siyah kalıyor, titriyor ya da bozuk çiziliyor.**
-Dünya görünümünü RobotWin'in kendi çizicisi ekran kartında çizer: gerçekçi malzemeler, güneşin yumuşak gölgesi, lambalar ve LED'ler piksel piksel aydınlatılır. Ekran kartı ya da sürücüsü sorun çıkarırsa **Ayarlar → Görünüm ve tema → 3B çizici → WPF** ile eski çizime dönün. Ekran kartı hiç kullanılamıyorsa uygulama kendiliğinden WPF'ye döner ve durum çubuğunda söyler.
+3B görünümleri (dünya, oyun görünümü, modelleyici, kartın 3B görünümü, parça önizlemeleri) RobotWin'in kendi çizicisi ekran kartında çizer: gerçekçi malzemeler, güneşin yumuşak gölgesi, lambalar ve LED'ler piksel piksel aydınlatılır. Ekran kartı ya da sürücüsü sorun çıkarırsa **Ayarlar → Görünüm ve tema → 3B çizici → WPF** ile eski çizime dönün. Ekran kartı hiç kullanılamıyorsa uygulama kendiliğinden WPF'ye döner ve durum çubuğunda söyler.
 
 **Dünyadaki kartım hiçbir şey yapmıyor.**
 **Olaylar** sekmesinde "Yüklü yazılım yok (kart boşta)" yazıyorsa kartın kodu yoktur: kartı seçip **Kartın kodunu yaz** ile kod yazın. Ayrıca kartın beslendiğinden emin olun (pil kablosu veya **USB'yi tak**).
