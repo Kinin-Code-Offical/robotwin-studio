@@ -79,11 +79,10 @@ namespace RobotTwin.CoreSim.Mechanics
                 foreach (var b in Bodies)
                 {
                     var shape = b.EffectiveShape!;
-                    if (shape.Kind != ShapeKind.Mesh)
-                    {
-                        double reach = shape.BoundingRadius + inflate;
-                        if ((c - b.Position).LengthSquared > reach * reach) continue;
-                    }
+                    // [perf] BoundingRadius encloses every shape (a mesh's vertices included) about the body origin:
+                    // a far body is rejected before its signed distance, which for a mesh is the costly part.
+                    double reach = shape.BoundingRadius + inflate;
+                    if ((c - b.Position).LengthSquared > reach * reach) continue;
 
                     var local = b.Orientation.InverseRotate(c - b.Position);
                     if (!b.SignedDistanceSolid(shape, local, inflate, out double d, out _) || d >= inflate) continue;
@@ -122,7 +121,7 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 var shape = b.EffectiveShape;
                 if (!b.Collides || shape == null || !shape.HasSolid) continue;
-                if (shape.Kind != ShapeKind.Mesh && (b.Position - centre).Length > half + shape.BoundingRadius + g.Inflate) continue;
+                if ((b.Position - centre).Length > half + shape.BoundingRadius + g.Inflate) continue;
                 g.Bodies.Add(b);
             }
 
@@ -218,9 +217,26 @@ namespace RobotTwin.CoreSim.Mechanics
         /// </summary>
         private static List<Vec3> Pull(PhysicsScene scene, List<Vec3> path, double radius, Func<SceneBody, Vec3, bool>? passable, out bool clear)
         {
+            // [perf] only the bodies that can come near the path's box
+            var lo = path[0];
+            var hi = path[0];
+            foreach (var v in path)
+            {
+                lo = new Vec3(Math.Min(lo.X, v.X), Math.Min(lo.Y, v.Y), Math.Min(lo.Z, v.Z));
+                hi = new Vec3(Math.Max(hi.X, v.X), Math.Max(hi.Y, v.Y), Math.Max(hi.Z, v.Z));
+            }
+
             var bodies = new List<SceneBody>();
             foreach (var b in scene.Bodies)
-                if (b.Collides && b.EffectiveShape is { HasSolid: true }) bodies.Add(b);
+            {
+                if (!b.Collides || b.EffectiveShape is not { HasSolid: true } bs) continue;
+                var c = b.Position;
+                double dx = Math.Max(0, Math.Max(lo.X - c.X, c.X - hi.X));
+                double dy = Math.Max(0, Math.Max(lo.Y - c.Y, c.Y - hi.Y));
+                double dz = Math.Max(0, Math.Max(lo.Z - c.Z, c.Z - hi.Z));
+                double reach = bs.BoundingRadius + radius + 1e-3;
+                if (dx * dx + dy * dy + dz * dz <= reach * reach) bodies.Add(b);
+            }
             var probe = new Grid { Scene = scene, Passable = passable };
             probe.Bodies.AddRange(bodies);
 
@@ -233,13 +249,10 @@ namespace RobotTwin.CoreSim.Mechanics
                 foreach (var b in bodies)
                 {
                     var shape = b.EffectiveShape!;
-                    if (shape.Kind != ShapeKind.Mesh)
-                    {
-                        double reach = shape.BoundingRadius + radius;
-                        var lp0 = p - b.Position;
-                        double f = Math.Max(0, Math.Min(len, -lp0.Dot(dir)));
-                        if ((lp0 + dir * f).LengthSquared > reach * reach) continue;
-                    }
+                    double reach = shape.BoundingRadius + radius;
+                    var lp0 = p - b.Position;
+                    double f = Math.Max(0, Math.Min(len, -lp0.Dot(dir)));
+                    if ((lp0 + dir * f).LengthSquared > reach * reach) continue;
 
                     if (passable != null && (passable(b, p) || passable(b, q))) continue;
                     var lp = b.Orientation.InverseRotate(p - b.Position);

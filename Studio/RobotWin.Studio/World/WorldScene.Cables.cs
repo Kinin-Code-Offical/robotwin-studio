@@ -13,6 +13,63 @@ namespace RobotWin.Studio.World
     {
         private WorldPhysics? _cableLayout;
         private bool _cableLayoutStale = true;
+
+        /// <summary>[perf] Where the last cable layout spent its time.</summary>
+        public string LastCableProfile { get; private set; } = string.Empty;
+
+        private System.Threading.CancellationTokenSource? _settleCancel;
+        private System.Threading.Tasks.Task? _settleTask;
+
+        /// <summary>[perf] The cables of a just-opened world are still settling (on a worker thread).</summary>
+        public bool CablesSettling => _settleTask is { IsCompleted: false };
+
+        /// <summary>
+        /// [perf] Relaxes a fresh layout on a worker thread: the cables show along their routes at once and take their
+        /// hanging shape a moment later, with nothing held on the UI thread. The layout belongs to the worker until it ends
+        /// (<see cref="StopSettling"/> takes it back first whenever it has to change).
+        /// </summary>
+        private void SettleInBackground(WorldPhysics layout, int steps)
+        {
+            var cancel = new System.Threading.CancellationTokenSource();
+            _settleCancel = cancel;
+            var token = cancel.Token;
+            _settleTask = System.Threading.Tasks.Task.Run(() =>
+            {
+                for (int done = 0; done < steps; done += 8)
+                {
+                    if (token.IsCancellationRequested) return;
+                    layout.RelaxCables(done, Math.Min(8, steps - done), steps);
+                }
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (token.IsCancellationRequested || _cableLayout != layout || World == null) return;
+                    foreach (var c in World.Cables)
+                    {
+                        if (layout.CablePoints(c.Id) is { } pts) _ropeShapes[c.Id] = pts.ToArray();
+                    }
+
+                    RebuildCables();
+                }));
+            }, token);
+        }
+
+        /// <summary>Stops a background settle and waits for it (before the layout is changed or dropped).</summary>
+        private void StopSettling()
+        {
+            if (_settleTask == null) return;
+            _settleCancel?.Cancel();
+            try
+            {
+                _settleTask.Wait(2000);
+            }
+            catch (AggregateException)
+            {
+            }
+
+            _settleTask = null;
+            _settleCancel = null;
+        }
         private int _cableLayoutPoses;
         private readonly Dictionary<string, IReadOnlyList<Vec3>> _ropeShapes = new Dictionary<string, IReadOnlyList<Vec3>>(StringComparer.OrdinalIgnoreCase);
 
@@ -73,6 +130,7 @@ namespace RobotWin.Studio.World
         {
             if (World == null || World.Cables.Count == 0)
             {
+                StopSettling();
                 _cableLayout = null;
                 _ropeShapes.Clear();
                 return;
@@ -80,9 +138,11 @@ namespace RobotWin.Studio.World
 
             int poses = PoseSignature();
             if (!_cableLayoutStale && _cableLayout != null && poses == _cableLayoutPoses) return;
+            StopSettling();   // [perf] the layout is about to change: the worker gives it back first
             try
             {
                 bool seeded = World.Cables.All(c => _ropeShapes.ContainsKey(c.Id));
+                var clock = System.Diagnostics.Stopwatch.StartNew();
                 if (_cableLayoutStale || _cableLayout == null)
                 {
                     _cableLayout = WorldPhysics.Build(World, GeometryOf, null, new WorldPhysics.LiquidQuality { Particles = 0 });   // [liquid] no liquid to lay cables
@@ -92,7 +152,17 @@ namespace RobotWin.Studio.World
                     _cableLayout.SyncPoses();
                 }
 
-                _cableLayout.AttachCables(World, CablePinsOf, seeded ? (_cableLayoutStale ? 90 : 45) : 320, CableSeedOf);
+                double build = clock.Elapsed.TotalMilliseconds;
+
+                int relax = seeded ? (_cableLayoutStale ? 90 : 45) : 320;
+                // [perf] A fresh layout (a world just opened) settles on a worker thread instead of holding the first frame:
+                // the cables appear routed at once and drop into place. Command-line runs settle at once (same pictures).
+                bool later = !seeded && (!Shell.Unattended.Active || Shell.Unattended.Benchmarking);
+                _cableLayout.AttachCables(World, CablePinsOf, later ? 0 : relax, CableSeedOf);
+                if (later) SettleInBackground(_cableLayout, relax);
+                var t = _cableLayout.LastCableTimes;
+                LastCableProfile = string.Format(System.Globalization.CultureInfo.InvariantCulture, "sahne {0:F0} · çıkış {1:F0} · yol {2:F0} · serme {3:F0} · gevşetme {4:F0} ms ({5} kablo)",
+                    build, t.Exits, t.Routes, t.Laying, t.Relaxing, World.Cables.Count);
                 _ropeShapes.Clear();
                 foreach (var c in World.Cables)
                 {

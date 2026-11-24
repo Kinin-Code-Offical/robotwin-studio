@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A splash window opens first** (as Unity's editor does): the mark, the version and the step being loaded with a progress bar, on a thread of its own so it keeps drawing while the studio is built; it fades out when the studio has drawn its window.
+- **Where time goes, measured:** `--startup-report file` writes each start step's time from the process start; `--bench` prints, under each template, where opening it went (environment, each object's model, the cable layout split into scene, exits, routes, laying and relaxing).
+
+### Changed
+
+- **Faster start:** the parts library and settings pages are built the first time they are shown, and the start no longer waits for the splash to draw: the studio draws its first frame about 0.2 s sooner (0.98 → 0.77 s from the process start on the test machine).
+- **Opening a world no longer holds a frame while its cables settle:** they appear along their routes at once and take their hanging shape on a worker thread a moment later. The longest frame on opening fell from 1926 to 190 ms (PS5 plane), 1018 to 45 ms (motor glider), 653 to 119 ms (sensor rover), 565 to 164 ms (two boards), 432 to 47 ms (factory cell), 426 to 84 ms (line follower); running frame rates are unchanged. Command-line runs settle at once, so pictures stay the same.
+- **Cable routing and wire collisions skip far meshes:** a mesh's bounding sphere now rejects a distant wing, terrain or part before its signed distance is computed, as it already did for boxes and cylinders.
+
 ## [1.6.1] - 2026-11-24
 
 ### Added

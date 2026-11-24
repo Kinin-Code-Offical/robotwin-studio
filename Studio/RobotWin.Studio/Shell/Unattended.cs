@@ -12,8 +12,14 @@ namespace RobotWin.Studio.Shell
     {
         private static readonly string[] Flags =
         {
-            "--snapshot", "--bench", "--selftest", "--gallery", "--export-logo", "--overlap-report",
+            "--snapshot", "--bench", "--selftest", "--gallery", "--export-logo", "--overlap-report", "--startup-report",
         };
+
+        /// <summary>--bench: measured like the app is used (a just-opened world's cables settle over frames, as for a user).</summary>
+        public static bool Benchmarking { get; } = Environment.GetCommandLineArgs().Any(a => string.Equals(a, "--bench", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>--startup-report: a normal start (splash included) that writes its timings and exits.</summary>
+        public static bool MeasuringStartup { get; } = Environment.GetCommandLineArgs().Any(a => string.Equals(a, "--startup-report", StringComparison.OrdinalIgnoreCase));
 
         public static bool Active { get; } = Environment.GetCommandLineArgs().Any(a => Flags.Contains(a, StringComparer.OrdinalIgnoreCase));
     }

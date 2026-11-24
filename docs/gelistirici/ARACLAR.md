@@ -22,7 +22,9 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 | `--selftest [--selftest-out dosya]` | Her örneğin arayüzsüz uçtan uca denetimi (bkz. [Testler](TESTLER.md)). |
 | `--snapshot cikti.png --page <sayfa> [...]` | Belgeler ve görsel denetim için bir sayfayı PNG'ye çizer (bkz. [Testler](TESTLER.md)). |
 | `--overlap-report <dosya>` | Her dünya şablonunu kurar ve iç içe geçen ya da kabuğuna sığmayan parçaları listeler. |
-| `--bench <dosya> [--bench-seconds 4] [--bench-filter id,id]` | Kare hızı ölçümü: her dünya şablonunu (ya da adı verilenleri) açar, dururken ve çalışırken ölçer; kare hızını, kare sürelerini ve karenin her bölümünün maliyetini yazar. Günlük ölçüm sürerken yazılır; son satırı o anda yapılan adımı söyler. |
+| `--bench <dosya> [--bench-seconds 4] [--bench-filter id,id]` | Kare hızı ölçümü: her dünya şablonunu (ya da adı verilenleri) açar, dururken ve çalışırken ölçer. Kare hızını, kare sürelerini, karenin her bölümünün maliyetini ve şablonun açılışının nereye gittiğini yazar. Günlük ölçüm sürerken yazılır; son satırı o anda yapılan adımı söyler. |
+| `--startup-report <dosya>` | Normal bir açılış (açılış ekranı dahil); her adımın işlem başından itibaren zamanını yazar ve kapanır. |
+| `--snapshot cikti.png --page splash` | Açılış ekranını açılışın ortasındaki hâliyle çizer. |
 | `--api <port> [--world f.rwworld]` | Uygulama, pencere açmadan otomasyon sunucusu olarak (bkz. [Otomasyon API'si](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Uygulamanın gövde geometrisini (model zarfları dahil) başsız araç için dünyanın yanına yazar. |
 | `--gallery <klasör> [--gallery-filter metin] [--gallery-columns 4] [--gallery-tile 460x340]` | Kodla üretilen her 3B bileşen modelinin toplu görüntüsü. |

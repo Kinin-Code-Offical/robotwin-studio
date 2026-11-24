@@ -56,8 +56,26 @@ namespace RobotTwin.CoreSim.Sandbox
         /// below. <paramref name="pins"/> returns the plug positions in the objects' frames;
         /// <paramref name="seed"/> may give an earlier shape of a cable (by id) to start from.
         /// </summary>
+        /// <summary>[perf] Relaxes every cable by part of a <paramref name="total"/>-step relax (see <see cref="CableRope.RelaxPart"/>).</summary>
+        public void RelaxCables(int from, int count, int total)
+        {
+            foreach (var link in _cables) link.Rope.RelaxPart(Scene, from, count, total);
+        }
+
+        /// <summary>[perf] Time the last <see cref="AttachCables"/> spent (ms): exits, routes, laying, relaxing.</summary>
+        public (double Exits, double Routes, double Laying, double Relaxing) LastCableTimes { get; private set; }
+
         public void AttachCables(WorldDocument world, Func<WorldCable, CablePins?> pins, int relaxSteps = 300, Func<string, IReadOnlyList<Vec3>?>? seed = null)
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            double exits = 0, routes = 0, laying = 0, relaxing = 0;
+            double Lap()
+            {
+                double ms = clock.Elapsed.TotalMilliseconds;
+                clock.Restart();
+                return ms;
+            }
+
             _cables.Clear();
             ShortCables.Clear();
             BlockedCables.Clear();
@@ -71,11 +89,14 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (pins(cable) is not { } p) continue;
                 var endA = MakeEnd(ia, p.A);
                 var endB = MakeEnd(ib, p.B);
+                Lap();
                 FreeExit(endA, ia, ignore, CableRope.RadiusOf(cable.Awg));
                 FreeExit(endB, ib, ignore, CableRope.RadiusOf(cable.Awg));
+                exits += Lap();
                 double span = (endA.World - endB.World).Length;
                 // [route] Where the wire can really run: around the parts, through openings, never through a solid.
                 var route = RouteOf(endA, endB, ia.Body, ib.Body, cable.Awg, ignore);
+                routes += Lap();
                 double run = route != null ? CableRouter.Length(route) + 2 * RouteLead : span;
                 if (route == null) BlockedCables.Add(cable.Id);
                 _routes[cable.Id] = route;
@@ -93,9 +114,13 @@ namespace RobotTwin.CoreSim.Sandbox
                 // A shape through a solid (a bow through a fuselage wall, an earlier shape a part was moved onto) is not
                 // where a wire can be: it is laid along the route instead.
                 if (route != null && rope.Crossings(Scene).Count > 0) rope.LayAlong(route.GetRange(1, route.Count - 2));
+                laying += Lap();
                 if (relaxSteps > 0) rope.Relax(Scene, relaxSteps);
+                relaxing += Lap();
                 _cables.Add(link);
             }
+
+            LastCableTimes = (exits, routes, laying, relaxing);
         }
 
         private readonly Dictionary<string, List<Vec3>?> _routes = new Dictionary<string, List<Vec3>?>(StringComparer.OrdinalIgnoreCase);

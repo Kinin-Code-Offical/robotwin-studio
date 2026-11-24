@@ -40,9 +40,34 @@ namespace RobotWin.Studio
         private readonly PcbPage _pcb;
         private readonly ModelPage _model;
         private readonly CodePage _code;
-        private readonly LibraryPage _library;
-        private readonly SettingsPage _settings;
-        private readonly Dictionary<string, UserControl> _pages = new Dictionary<string, UserControl>();
+        private LibraryPage Library => (LibraryPage)_pages["library"];
+        private readonly PageSet _pages = new PageSet();
+
+        /// <summary>
+        /// [startup] The pages by key. A page registered with <see cref="Later"/> is built the first time it is shown
+        /// (the parts library and the settings cost a tenth of a second at start and are rarely the first page).
+        /// </summary>
+        private sealed class PageSet
+        {
+            private readonly Dictionary<string, UserControl> _made = new Dictionary<string, UserControl>();
+            private readonly Dictionary<string, Func<UserControl>> _makers = new Dictionary<string, Func<UserControl>>();
+
+            public UserControl this[string key]
+            {
+                get
+                {
+                    if (_made.TryGetValue(key, out var page)) return page;
+                    page = _makers[key]();
+                    _made[key] = page;
+                    return page;
+                }
+                set => _made[key] = value;
+            }
+
+            public void Later(string key, Func<UserControl> make) => _makers[key] = make;
+
+            public bool ContainsKey(string key) => _made.ContainsKey(key) || _makers.ContainsKey(key);
+        }
         private readonly Dictionary<string, string> _pageNames = new Dictionary<string, string>
         {
             ["world"] = "Dünya", ["schematic"] = "Devre", ["pcb"] = "PCB", ["code"] = "Kod", ["assembly"] = "Montaj", ["model"] = "Parça",
@@ -80,6 +105,9 @@ namespace RobotWin.Studio
         /// <summary>--bench: run / stop the active world.</summary>
         public void RunWorldForBench() => _world.ToggleRun();
 
+        /// <summary>[perf] The world scene's last load profile (for --bench).</summary>
+        public string WorldLoadProfile => _world.Scene.LastLoadProfile;
+
         public void StopWorldForBench() => _world.StopSimulation();
 
         /// <summary>FPS / frame-time overlay (Görünüm → Performans göstergesi, Ctrl+Shift+F).</summary>
@@ -94,26 +122,32 @@ namespace RobotWin.Studio
 
         public MainWindow()
         {
+            StartupTrace.Mark("Ana pencere", 0.3);
             InitializeComponent();
             LogoImage.Source = Logo.Image;
             Icon = Logo.Render(64);
 
+            StartupTrace.Mark("Başlangıç sayfası", 0.36);
             _home = new HomePage(this);
+            StartupTrace.Mark("Dünya ve 3B görünüm", 0.42);
             _world = new WorldPage(this);
+            StartupTrace.Mark("Devre düzenleyici", 0.55);
             _schematic = new SchematicPage();
+            StartupTrace.Mark("PCB düzenleyici", 0.63);
             _pcb = new PcbPage();
+            StartupTrace.Mark("Parça modelleyici", 0.7);
             _model = new ModelPage(this);
+            StartupTrace.Mark("Kod düzenleyici", 0.77);
             _code = new CodePage();
-            _library = new LibraryPage(this);
-            _settings = new SettingsPage();
+            StartupTrace.Mark("Menüler ve kısayollar", 0.83);
             _pages["home"] = _home;
             _pages["world"] = _world;
             _pages["schematic"] = _schematic;
             _pages["pcb"] = _pcb;
             _pages["model"] = _model;
             _pages["code"] = _code;
-            _pages["library"] = _library;
-            _pages["settings"] = _settings;
+            _pages.Later("library", () => new LibraryPage(this));
+            _pages.Later("settings", () => new SettingsPage());
             PageHost.Content = _home;
             SecondPageBox.ItemsSource = _pageNames.Where(kv => kv.Key != "home" && kv.Key != "settings").Select(kv => new ComboBoxItem { Content = kv.Value, Tag = kv.Key }).ToList();
 
@@ -669,7 +703,7 @@ namespace RobotWin.Studio
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
             if (page == "model") _model.PrepareSnapshot(fault);
-            if (page == "library") _library.PrepareSnapshot(fault); // [libs] part creator / manager / import previews
+            if (page == "library") Library.PrepareSnapshot(fault); // [libs] part creator / manager / import previews
             if (page == "pcb") _pcb.AutoLayoutForSnapshot(fault);
             if (page == "pcb" && fault == "fpeditor")
             {

@@ -534,14 +534,22 @@ namespace RobotTwin.CoreSim.Mechanics
         /// Lets the cable settle against frozen bodies (edit mode): gravity, contacts and strong
         /// damping, no forces on the bodies, no unplugging.
         /// </summary>
-        public void Relax(PhysicsScene scene, int steps, double dt = 0.002)
+        public void Relax(PhysicsScene scene, int steps, double dt = 0.002) => RelaxPart(scene, 0, steps, steps, dt);
+
+        /// <summary>
+        /// [perf] Steps <paramref name="from"/> … <paramref name="from"/> + <paramref name="count"/> of a
+        /// <paramref name="total"/>-step <see cref="Relax"/> (the same schedule), so a layout can settle over several
+        /// frames instead of holding one; the chunk that reaches <paramref name="total"/> leaves the rope at rest.
+        /// </summary>
+        public void RelaxPart(PhysicsScene scene, int from, int count, int total, double dt = 0.002)
         {
             double damping = Damping;
             int subs = Substeps;
             Substeps = 2;
-            for (int k = 0; k < steps; k++)
+            int end = Math.Min(total, from + count);
+            for (int k = from; k < end; k++)
             {
-                double f = k / (double)Math.Max(1, steps - 1);
+                double f = k / (double)Math.Max(1, total - 1);
                 Damping = 6 + 40 * f * f;
                 // Dropped limp first (so it drapes instead of standing as a buckled arch), then stiffened.
                 _bendScale = f < 0.5 ? 0.02 : Math.Min(1, 0.02 + (f - 0.5) / 0.3);
@@ -549,8 +557,11 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             _bendScale = 1;
+            if (end >= total)
+            {
+                for (int i = 0; i < _v.Length; i++) _v[i] = Vec3.Zero;
+            }
 
-            for (int i = 0; i < _v.Length; i++) _v[i] = Vec3.Zero;
             Damping = damping;
             Substeps = subs;
         }
@@ -698,12 +709,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (!b.Collides || (Ignore != null && Ignore.Contains(b))) continue;
                 var s = b.EffectiveShape;
                 if (s == null || !s.HasSolid) continue;
-                if (s.Kind == ShapeKind.Mesh)
-                {
-                    _near.Add(b);
-                    continue;
-                }
-
+                // [perf] a mesh's BoundingRadius encloses its vertices too: a far mesh (a wing, the terrain's far side,
+                // another part) is left out like any far body instead of being tested at every node and substep.
                 double r = s.BoundingRadius + b.Velocity.Length * dt;
                 var c = b.Position;
                 if (c.X + r < lo.X || c.X - r > hi.X || c.Y + r < lo.Y || c.Y - r > hi.Y || c.Z + r < lo.Z || c.Z - r > hi.Z) continue;

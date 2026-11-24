@@ -23,7 +23,9 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--snapshot out.png --page <page> [...]` | Renders a page to PNG for documentation and visual checks (see [TESTING.md](TESTING.md#snapshot-testing)). |
 | `--gallery <dir> [--gallery-filter text] [--gallery-columns 4] [--gallery-tile 460x340]` | Contact sheets of every code-generated 3D component model. |
 | `--overlap-report <file>` | Builds every world template and lists parts that overlap or do not fit their shell. |
-| `--bench <file> [--bench-seconds 4] [--bench-filter id,id]` | Frame-rate benchmark: opens every world template (or the ones named), measures it standing and running, and writes fps, frame times and the cost of each part of a frame. The log is written as it goes; its last line names the step under way. |
+| `--bench <file> [--bench-seconds 4] [--bench-filter id,id]` | Frame-rate benchmark: opens every world template (or the ones named), measures it standing and running, and writes fps, frame times, the cost of each part of a frame and where opening the template went. The log is written as it goes; its last line names the step under way. |
+| `--startup-report <file>` | A normal start (splash included) that writes each start step's time from the process start, then exits. |
+| `--snapshot out.png --page splash` | Draws the splash window as it looks part-way through the start. |
 | `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Writes the app's body geometry (model hulls included) beside a world for the headless tool. |
 | `--export-logo <dir>` | Exports the logo as PNG sizes + ICO (also on Settings → *Hakkında*). |

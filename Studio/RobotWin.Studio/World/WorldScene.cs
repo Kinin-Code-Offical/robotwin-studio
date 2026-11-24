@@ -197,9 +197,24 @@ namespace RobotWin.Studio.World
             if (world != null) FrameAll();
         }
 
+        /// <summary>
+        /// [perf] Where the last full rebuild of the scene spent its time (environment, each object's model, cables, overlay,
+        /// lights), slowest objects first: the benchmark prints it beside the frame times.
+        /// </summary>
+        public string LastLoadProfile { get; private set; } = string.Empty;
+
         /// <summary>Re-creates every object visual (after an edit of the document).</summary>
         public void Rebuild()
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            double Lap()
+            {
+                double ms = clock.Elapsed.TotalMilliseconds;
+                clock.Restart();
+                return ms;
+            }
+
+            var slow = new List<(string Name, double Ms)>();
             _items.Clear();
             for (int i = _view.Children.Count - 1; i >= 0; i--)
             {
@@ -208,6 +223,7 @@ namespace RobotWin.Studio.World
             }
 
             BuildEnvironment();
+            double environment = Lap();
             if (World == null)
             {
                 _cables.Content = null;
@@ -215,9 +231,14 @@ namespace RobotWin.Studio.World
                 return;
             }
 
+            double models = 0;
             foreach (var o in World.Objects)
             {
+                var one = System.Diagnostics.Stopwatch.StartNew();
                 var model = ObjectModels.Build(o, World, Library);
+                double took = one.Elapsed.TotalMilliseconds;
+                models += took;
+                slow.Add((o.Name.Length > 0 ? o.Name : o.Id, took));
                 var group = new Model3DGroup();
                 group.Children.Add(model.Body);
                 if (!WorldBuilding.IsProp(o) && FixingMarks(o, model) is { } fixings) group.Children.Add(fixings); // [terrain] props are scenery, not clamped parts   // [phys] "Sabit" shown as screwed/clamped
@@ -236,12 +257,21 @@ namespace RobotWin.Studio.World
                 _items[o.Id] = new Item { Object = o, Model = model, Visual = visual, Placed = placed, Current = placed, PortRotation = rot };
             }
 
+            double placing = Lap() - models;
             if (Selected != null && !_items.ContainsKey(Selected)) Select(null);
             UpdateKinematics();
             _cableLayoutStale = true;   // [phys] parts changed: lay the cables out again
+            Lap();
             RebuildCables();
+            double cables = Lap();
             RebuildOverlay();
+            double overlay = Lap();
             RebuildReady();   // [objs] lights, glows, room light
+            double ready = Lap();
+            var top = slow.OrderByDescending(x => x.Ms).Take(3).Where(x => x.Ms >= 5).Select(x => $"{x.Name} {x.Ms:F0}");
+            LastLoadProfile = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "ortam {0:F0} · modeller {1:F0} ({2}) · yerleştirme {3:F0} · kablolar {4:F0} [{7}] · seçim {5:F0} · ışıklar {6:F0} ms",
+                environment, models, string.Join(", ", top), placing, cables, overlay, ready, LastCableProfile);
         }
 
         /// <summary>Cable picked in the scene (select tool), or null.</summary>

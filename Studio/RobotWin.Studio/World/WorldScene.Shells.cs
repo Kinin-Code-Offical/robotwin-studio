@@ -16,8 +16,18 @@ namespace RobotWin.Studio.World
         private readonly Dictionary<GeometryModel3D, (Material? Front, Material? Back)> _xrayed = new Dictionary<GeometryModel3D, (Material?, Material?)>();
         private Dictionary<string, Vector3D>? _explode;
 
-        /// <summary>The cable-layout physics used while stopped (cables at rest), or null before cables were laid out.</summary>
-        public WorldPhysics? CableLayout => _cableLayout;
+        /// <summary>
+        /// The cable-layout physics used while stopped (cables at rest), or null before cables were laid out. [perf] A layout
+        /// still settling on its worker is waited for first (it is never used from two threads at once).
+        /// </summary>
+        public WorldPhysics? CableLayout
+        {
+            get
+            {
+                if (_settleTask is { IsCompleted: false } settling) settling.Wait(3000);
+                return _cableLayout;
+            }
+        }
 
         public bool XRay { get; private set; }
 

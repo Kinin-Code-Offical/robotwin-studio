@@ -85,9 +85,30 @@ namespace RobotWin.Studio
 
             if (Automation.StudioApiHost.TryRun(this, args)) return;   // [api] --api <port> / --bake-geometry: windowless automation server
 
+            Shell.StartupSplash.Open();   // [startup] the first window, on its own thread
+            Shell.StartupTrace.Mark("Parça kütüphanesi yükleniyor", 0.05);
             Shell.UserLibrary.LoadAll(RobotTwin.CoreSim.Design.PartLibrary.Default);
+            Shell.StartupTrace.Mark("Arayüz hazırlanıyor", 0.25);
             var window = new MainWindow();
             MainWindow = window;
+            window.ContentRendered += (_, _) =>
+            {
+                Shell.StartupTrace.Mark("İlk çizim", 1);
+                Shell.StartupSplash.Finish(window);
+                if (Arg("--startup-report") is { } report)
+                {
+                    // measured: the timings, then out (after the window has had a moment to settle)
+                    var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                    t.Tick += (_, _) =>
+                    {
+                        t.Stop();
+                        Shell.StartupTrace.Mark("İlk çizimden 400 ms sonra", 1);
+                        File.WriteAllText(report, Shell.StartupTrace.Report());
+                        window.ForceClose();
+                    };
+                    t.Start();
+                }
+            };
 
             if (Arg("--overlap-report") is { } overlapPath)
             {
@@ -103,6 +124,13 @@ namespace RobotWin.Studio
             if (Arg("--bench") is { } benchPath)
             {
                 RunBench(window, benchPath, Arg("--bench-seconds"));
+                return;
+            }
+
+            if (Arg("--snapshot") is { } splashShot && Arg("--page") == "splash")
+            {
+                Shell.StartupSplash.RenderPreview(splashShot, 1.25);   // [startup]
+                Shutdown(0);
                 return;
             }
 
@@ -127,6 +155,14 @@ namespace RobotWin.Studio
             }
 
             string? file = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal) && File.Exists(a));
+            Shell.StartupTrace.Mark("Pencere açılıyor", 0.92);
+            if (Shell.Unattended.MeasuringStartup)
+            {
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Left = -2200;
+                window.ShowActivated = false;
+            }
+
             window.Show();
             if (file != null) window.OpenFile(file);
             else if (!Shell.AppSettings.Current.ShowHomeOnStart && Shell.RecentFiles.Load().FirstOrDefault() is { } last) window.OpenFile(last);
@@ -337,6 +373,7 @@ namespace RobotWin.Studio
                         break;
                     case 1 when elapsed > 1.5:
                         log.AppendLine($"{templates[index].Id,-14} durgun     {Perf.EndRecording()}");
+                        log.AppendLine($"{string.Empty,-14} yükleme    {window.WorldLoadProfile}");   // [perf] where opening it went
                         Write($"{templates[index].Id,-14} çalıştırılıyor…");
                         window.RunWorldForBench();
                         Write($"{templates[index].Id,-14} çalışırken ölçülüyor…");
