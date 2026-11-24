@@ -6882,7 +6882,8 @@
   "Fabrika hücresi: konveyörden vakumla al, palete 3 x 2 x 2 diz": "Factory cell: pick from the conveyor with vacuum, stack on the pallet 3 x 2 x 2",
   "konveyör sonu fotoseli": "photocell at the end of the conveyor",
   "SCARA: blokları A sırasından B sırasına, sonra geri taşı": "SCARA: move the blocks from row A to row B, then back",
-  "60 mm strok, 80 N": "60 mm stroke, 80 N"
+  "60 mm strok, 80 N": "60 mm stroke, 80 N",
+  "Tek fizikle birlikte simüle edilir": "Simulated together with one physics"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

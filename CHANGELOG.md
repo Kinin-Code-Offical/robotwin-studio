@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Long-run memory checks:** `--memory-log file` writes the memory in use (after a full collection) every two seconds of a live run, and `LongRunTests` runs a factory cell for a minute of world and checks its heap stays put (+30 kB, the boxes it brought in). The car world ran four minutes at a flat 15 MB.
 - **A readability check for every theme:** `--contrast-report` lists each text of a page (its open windows and popups too) that falls under 3:1 contrast against what is behind it, so a black text on a dark theme or a pale one on a light theme is found by a run, not by eye. `tools/scripts/contrast_check.py` runs it over every page in all 16 themes, and over the guide's dialogs, popups and tuners and every Help chapter in four of them; all of it now passes.
 - **Which solver holds a world back:** while a world runs, the performance overlay (View → Performance overlay, Ctrl+Shift+F) shows how fast it runs against the clock and, for each solver, the milliseconds of computing it takes per simulated second and its share: the circuit, Arduino and ESP32 firmware, rigid bodies, liquids, cables, heat, motors and drives, air and gas, scripts and sensors. Below them, the physics step, each liquid's particles and substeps (and whether it sleeps), and the memory in use. A world keeps up with the clock while the milliseconds add up to under a thousand; on the water glass, the liquid takes 83%. `--snapshot … --perf` shows the overlay for one run.
 - **A splash window opens first** (as Unity's editor does): the mark, the version and the step being loaded with a progress bar, on a thread of its own so it keeps drawing while the studio is built; it fades out when the studio has drawn its window.
@@ -95,6 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The start showed two different splash screens in a row, and the second flashed by:** Windows' static splash image (another layout, "Yükleniyor…" in Turkish even in the English interface) came first, then the live loading window, which closed half a second later behind the studio's window. There is now one splash: the live window, shown from the start, on top until it has been seen (at least 1.15 s), its bar moving smoothly to the end, then fading as the studio comes to the front.
+- **In a long run in English the translations slowed down:** the cache of worked-out translations stopped taking new texts after 20 000, and a live readout makes a new text with every value, so after a while every text was worked out again from the patterns. The cache now keeps two generations (a text asked for again moves to the newer one, readouts' one-off values fall out), and stays a few MB at most.
 - **Running worlds in English still showed some Turkish:** every world template and circuit example was run in English and what stayed Turkish on screen or in the event log fixed:
   - A label the pack has word for word, with its unit ("İç direnç (0 = varsayılan) (Ω)"), was cut by a short pattern into "Inner direnç…". A text joined from parts the pack has exactly is now read that way before any pattern.
   - A pattern's last hole may now stay empty: the gas vessel's thrust line ("İtki : … · çıkış … m/s") has an optional ending there.
@@ -127,6 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A new splash screen:** a flat scene of a board's traces leading to a robot arm, the name and the stages (circuit · PCB · code · model · assembly · world), then what is being loaded, a percentage and a thicker bar, and the version. In the language in use.
 - **Faster start:** the parts library and settings pages are built the first time they are shown, and the start no longer waits for the splash to draw: the studio draws its first frame about 0.2 s sooner (0.98 → 0.77 s from the process start on the test machine).
 - **Opening a world no longer holds a frame while its cables settle:** they appear along their routes at once and take their hanging shape on a worker thread a moment later. The longest frame on opening fell from 1926 to 190 ms (PS5 plane), 1018 to 45 ms (motor glider), 653 to 119 ms (sensor rover), 565 to 164 ms (two boards), 432 to 47 ms (factory cell), 426 to 84 ms (line follower); running frame rates are unchanged. Command-line runs settle at once, so pictures stay the same.
 - **Cable routing and wire collisions skip far meshes:** a mesh's bounding sphere now rejects a distant wing, terrain or part before its signed distance is computed, as it already did for boxes and cylinders.

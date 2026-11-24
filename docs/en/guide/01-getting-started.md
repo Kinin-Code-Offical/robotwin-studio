@@ -23,7 +23,7 @@ To use an `arduino-cli` of your own, enter its path under **Settings → Compile
 
 ## First launch
 
-A splash screen appears while the app opens, then the **Start** page.
+A splash screen appears while the app opens: it shows what is being loaded, how far it has got and the version. Then the **Start** page.
 
 ![Splash screen](../../images/en/splash.png)
 

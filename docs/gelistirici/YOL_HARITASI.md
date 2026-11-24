@@ -72,7 +72,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [ ] Ağır çözücüleri arayüz iş parçacığından ayırma.
   - [ ] Geometri, ağ ve çözüm önbellekleri.
   - [ ] LOD.
-  - [ ] Uzun koşu bellek testleri.
+  - [x] Uzun koşu bellek testleri: `LongRunTests` (fabrika hücresi bir dakika, yığın sabit) ve `--memory-log` ile canlı koşular. Araba dünyası 4 dakika Türkçe 15 MB'da düz; İngilizcede çeviri önbelleği büyüyordu, artık iki kuşakla sınırlı.
   - [ ] Otomatik performans gerileme ölçümü.
 
 ### P1: öncelikli

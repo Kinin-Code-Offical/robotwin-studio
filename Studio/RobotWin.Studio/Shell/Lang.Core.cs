@@ -44,12 +44,61 @@ namespace RobotWin.Studio.Shell
         /// <summary>The misses so far (<see cref="Misses"/>), safely from any thread.</summary>
         public static string[] MissesSoFar()
         {
-            lock (Cache) return Misses?.ToArray() ?? Array.Empty<string>();
+            lock (Gate) return Misses?.ToArray() ?? Array.Empty<string>();
         }
 
-        /// <summary>Texts the pack produced (its values, and what its patterns made): seen again, they are not misses.</summary>
-        private static readonly HashSet<string> Produced = new HashSet<string>(StringComparer.Ordinal);
-        private static readonly Dictionary<string, string> Cache = new Dictionary<string, string>(StringComparer.Ordinal);
+        /// <summary>
+        /// Texts the pack produced (its values, and what its patterns made): seen again, they are not misses. Like the
+        /// cache it keeps two generations: live readouts (a value every frame) fill it with texts seen once, and a full
+        /// set that stopped taking new ones left every later text to be worked out again from the patterns.
+        /// </summary>
+        private static HashSet<string> Produced = new HashSet<string>(StringComparer.Ordinal), OlderProduced = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>Translations worked out so far, in two generations: a text asked for again moves to the newer one, so the interface's own texts stay while readouts' one-off values fall out.</summary>
+        private static Dictionary<string, string> Cache = new Dictionary<string, string>(StringComparer.Ordinal), OlderCache = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private const int CacheGeneration = 4000, ProducedGeneration = 8000;
+
+        /// <summary>Guards the cache, the produced texts and the misses (the splash window translates on its own thread).</summary>
+        private static readonly object Gate = new object();
+
+        private static bool Cached(string text, out string hit)
+        {
+            if (Cache.TryGetValue(text, out hit!)) return true;
+            if (!OlderCache.TryGetValue(text, out hit!)) return false;
+            Remember(text, hit);
+            return true;
+        }
+
+        private static void Remember(string text, string result)
+        {
+            if (Cache.Count >= CacheGeneration)
+            {
+                OlderCache = Cache;
+                Cache = new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+
+            Cache[text] = result;
+        }
+
+        private static bool WasProduced(string text)
+        {
+            if (Produced.Contains(text)) return true;
+            if (!OlderProduced.Contains(text)) return false;
+            AddProduced(text);
+            return true;
+        }
+
+        private static void AddProduced(string text)
+        {
+            if (Produced.Count >= ProducedGeneration)
+            {
+                OlderProduced = Produced;
+                Produced = new HashSet<string>(StringComparer.Ordinal);
+            }
+
+            Produced.Add(text);
+        }
 
         /// <summary>The language in use: "tr" (the interface's own) or a pack's id.</summary>
         public static string Current { get; private set; } = "tr";
@@ -145,10 +194,12 @@ namespace RobotWin.Studio.Shell
         {
             Exact.Clear();
             Patterns.Clear();
-            lock (Cache)
+            lock (Gate)
             {
                 Cache.Clear();
+                OlderCache.Clear();
                 Produced.Clear();
+                OlderProduced.Clear();
                 _reverse = null;
             }
 
@@ -235,7 +286,7 @@ namespace RobotWin.Studio.Shell
                     Culture = System.Globalization.CultureInfo.InvariantCulture;
                 }
 
-                lock (Cache) Produced.UnionWith(Exact.Values);
+                lock (Gate) OlderProduced.UnionWith(Exact.Values);   // the pack's own values: kept while asked for
                 Current = id;
             }
             catch (JsonException)
@@ -257,7 +308,7 @@ namespace RobotWin.Studio.Shell
         public static string? Source(string translated)
         {
             if (Current == "tr") return translated;
-            lock (Cache)
+            lock (Gate)
             {
                 if (_reverse == null)
                 {
@@ -332,11 +383,11 @@ namespace RobotWin.Studio.Shell
         {
             if (Current == "tr" || string.IsNullOrEmpty(text)) return text;
             if (Exact.TryGetValue(text, out var hit)) return hit;
-            lock (Cache)   // the splash window translates on its own thread
+            lock (Gate)
             {
-                if (Cache.TryGetValue(text, out hit)) return hit;
+                if (Cached(text, out hit)) return hit;
                 // A text the pack made (a live readout translated where it is set, seen again by its element): as it is.
-                if (Produced.Contains(text)) return text;
+                if (WasProduced(text)) return text;
             }
 
             string result = text;
@@ -401,11 +452,11 @@ namespace RobotWin.Studio.Shell
                 if (ReferenceEquals(result, text)) result = Joined(text);
             }
 
-            lock (Cache)
+            lock (Gate)
             {
-                if (Cache.Count < 20000) Cache[text] = result;
-                if (!ReferenceEquals(result, text) && Produced.Count < 50000) Produced.Add(result);
-                if (Misses != null && ReferenceEquals(result, text) && text.Any(char.IsLetter) && !Produced.Contains(text)) Misses.Add(text);
+                Remember(text, result);
+                if (!ReferenceEquals(result, text)) AddProduced(result);
+                if (Misses != null && ReferenceEquals(result, text) && text.Any(char.IsLetter) && !WasProduced(text)) Misses.Add(text);
             }
 
             return result;

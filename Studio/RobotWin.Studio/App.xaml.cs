@@ -288,6 +288,23 @@ namespace RobotWin.Studio
                 {
                     window.PrepareSnapshot(page, simulate, fault);
                     if (Environment.GetCommandLineArgs().Contains("--perf")) window.ShowPerfForSnapshot();   // [perf] this run only
+                    // [perf] --memory-log file: the world runs live through --wait while the memory in use after a full
+                    // collection is written every two seconds (a long run that leaks shows a rising line).
+                    if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--memory-log").Skip(1).FirstOrDefault() is { } memoryPath)
+                    {
+                        window.ShowPerfForSnapshot();
+                        var started = System.Diagnostics.Stopwatch.StartNew();
+                        File.WriteAllText(memoryPath, "seconds\tmanaged MB\tworking set MB\n");
+                        var sampler = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                        sampler.Tick += (_, _) =>
+                        {
+                            long managed = GC.GetTotalMemory(true);
+                            File.AppendAllText(memoryPath, string.Format(CultureInfo.InvariantCulture, "{0:0}\t{1:0.0}\t{2:0}\n",
+                                started.Elapsed.TotalSeconds, managed / 1048576.0, Environment.WorkingSet / 1048576.0));
+                        };
+                        sampler.Start();
+                    }
+
                     return;
                 }
 

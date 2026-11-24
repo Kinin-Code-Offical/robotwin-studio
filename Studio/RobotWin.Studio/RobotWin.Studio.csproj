@@ -40,6 +40,5 @@
 
   <ItemGroup>
     <!-- Shown natively by WPF the moment the process starts, faded out when the main window is ready. -->
-    <SplashScreen Include="Branding\splash.png" />
   </ItemGroup>
 </Project>

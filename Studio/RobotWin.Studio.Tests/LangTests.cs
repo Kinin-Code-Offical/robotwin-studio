@@ -166,6 +166,30 @@ public class LangTests
         }
     }
 
+    [Fact]
+    public void ALongRunOfLiveReadoutsLeavesTranslationsAsTheyWere()
+    {
+        // A readout drawn every frame asks for a new text each time (its value changes): after tens of thousands the
+        // cache has turned over, and the interface's texts still translate, from the pack and from its patterns.
+        Lang.LoadJson("en", """{ "strings": { "Ayarlar": "Settings" }, "patterns": { "Hız {v} m/s": "Speed {0} m/s" } }""");
+        try
+        {
+            for (int i = 0; i < 25000; i++)
+            {
+                Assert.Equal($"Speed {i} m/s", Lang.T($"Hız {i} m/s"));
+                if (i % 1000 == 0) Assert.Equal("Settings", Lang.T("Ayarlar"));
+            }
+
+            Assert.Equal("Speed 3 m/s", Lang.T("Hız 3 m/s"));
+            // An English text the pack produced, seen again, is left as it is.
+            Assert.Equal("Speed 24999 m/s", Lang.T("Speed 24999 m/s"));
+        }
+        finally
+        {
+            Lang.Load("tr");
+        }
+    }
+
     /// <summary>Texts English runs of every world and circuit showed Turkish, with the built-in pack.</summary>
     [Theory]
     [InlineData("Prob: OUTPUT", "Probe: OUTPUT")]
