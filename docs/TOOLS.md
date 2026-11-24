@@ -26,6 +26,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--bench <file> [--bench-seconds 4] [--bench-filter id,id]` | Frame-rate benchmark: opens every world template (or the ones named), measures it standing and running, and writes fps, frame times, the cost of each part of a frame and where opening the template went. The log is written as it goes; its last line names the step under way. |
 | `--startup-report <file>` | A normal start (splash included) that writes each start step's time from the process start, then exits. |
 | `--snapshot out.png --page splash` | Draws the splash window as it looks part-way through the start. |
+| `--snapshot out.png --page <page> --theme pembe:gul` | Draws a page in a theme and accent, for this run only (nothing is saved). |
 | `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Writes the app's body geometry (model hulls included) beside a world for the headless tool. |
 | `--export-logo <dir>` | Exports the logo as PNG sizes + ICO (also on Settings → *Hakkında*). |

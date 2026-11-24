@@ -42,11 +42,18 @@ namespace RobotWin.Studio.Shell
 
         // ---------------------------------------------------------------- appearance
 
-        /// <summary>[theme] "koyu", "siyah" (OLED) or "karsitlik" (high contrast).</summary>
+        /// <summary>[theme] A theme id of <see cref="Themes.All"/> ("koyu", "pembe", "gece" …; "ozel" = the custom one).</summary>
         public string Theme { get; set; } = "koyu";
 
-        /// <summary>[theme] Accent colour: "mavi", "turkuaz", "turuncu", "mor", "pembe".</summary>
+        /// <summary>[theme] Accent colour: an id of <see cref="Themes.Accents"/> ("mavi", "pembe" …; "tema" = the theme's own hue).</summary>
         public string Accent { get; set; } = "mavi";
+
+        /// <summary>[theme] The custom theme: hue (°), tint (the neutrals' saturation, 0–80 %) and light or dark.</summary>
+        public double ThemeHue { get; set; } = 330;
+
+        public double ThemeTint { get; set; } = 30;
+
+        public bool ThemeLight { get; set; }
 
         /// <summary>Whole-interface zoom (0.75 – 1.75).</summary>
         public double UiScale { get; set; } = 1.0;

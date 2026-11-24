@@ -15,6 +15,16 @@ namespace RobotWin.Studio.World
         private readonly Dictionary<string, Model3D?> _liquidHidden = new Dictionary<string, Model3D?>(StringComparer.OrdinalIgnoreCase);
         private DateTime _liquidBuilt;
         private double _liquidPlaybackTime = double.NaN;
+        private System.Threading.Tasks.Task? _liquidTask;
+        private int _liquidGeneration;
+        private readonly Dictionary<string, System.Windows.Media.Media3D.Material> _liquidLooks = new Dictionary<string, System.Windows.Media.Media3D.Material>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The surface material of a liquid kind, made once (its gradient brushes cost more than the frame's other work).</summary>
+        private System.Windows.Media.Media3D.Material LiquidLookOf(LiquidKind kind)
+        {
+            if (!_liquidLooks.TryGetValue(kind.Name, out var m)) _liquidLooks[kind.Name] = m = LiquidLook.Surface(kind);
+            return m;
+        }
 
         /// <summary>Grid cell of the surface as a fraction of the particle spacing (finer for a render).</summary>
         public double LiquidSurfaceCell { get; set; } = 0.5;
@@ -47,8 +57,39 @@ namespace RobotWin.Studio.World
             // Live: 30 surfaces a second are plenty (the physics runs at 1 kHz).
             var now = DateTime.Now;
             if (!force && Playback == null && (now - _liquidBuilt).TotalMilliseconds < 33) return;
-            _liquidBuilt = now;
             var eye = _view.Camera is ProjectionCamera cam ? cam.Position : new Point3D(1, 1, 1);
+            if (!force && Playback == null)
+            {
+                // [perf] Live, the surface is meshed on a worker from the particles copied now (11 ms a frame on the UI
+                // thread for the water glass); the frame shows the last finished one, and the next starts when it lands.
+                if (_liquidTask is { IsCompleted: false }) return;
+                _liquidBuilt = now;
+                int generation = ++_liquidGeneration;
+                double cell = LiquidSurfaceCell;
+                foreach (var (o, _, _, _, _) in sources) HideLiquidVolume(o.Id);
+                var jobs = sources.Select(x => (x.Kind, x.Xyz, x.Spacing, x.Vel)).ToList();
+                _liquidTask = System.Threading.Tasks.Task.Run(() =>
+                {
+                    var clock = System.Diagnostics.Stopwatch.StartNew();
+                    var meshes = jobs.Select(j => (j.Kind, Mesh: LiquidLook.Mesh(LiquidSurface.Build(j.Xyz, j.Spacing, cell, 2_000_000, j.Vel), 0.55 * j.Spacing, eye))).ToList();
+                    double ms = clock.Elapsed.TotalMilliseconds;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        Shell.Perf.Add("sıvı yüzeyi (arka)", ms);
+                        // A stopped run or a newer surface: this one is dropped.
+                        if (generation != _liquidGeneration || Session == null || Session.State == Simulation.SimState.Stopped || Playback != null) return;
+                        var live = new Model3DGroup();
+                        foreach (var (kind, mesh) in meshes) live.Children.Add(new GeometryModel3D(mesh, LiquidLookOf(kind)));
+                        live.Freeze();
+                        _liquidVisual.Content = live;
+                        OrderLiquid();
+                    }));
+                });
+                return;
+            }
+
+            _liquidBuilt = now;
+            _liquidGeneration++;   // a surface built here wins over one still on its way
             var group = new Model3DGroup();
             foreach (var (o, kind, xyz, spacing, vel) in sources)
             {
@@ -56,7 +97,7 @@ namespace RobotWin.Studio.World
                 using (Shell.Perf.Measure("sıvı yüzeyi"))
                 {
                     var surface = LiquidSurface.Build(xyz, spacing, Playback != null ? (xyz.Length / 3 > 20000 ? 0.5 : 0.33) : LiquidSurfaceCell, Playback != null ? 6_000_000 : 2_000_000, vel);
-                    group.Children.Add(new GeometryModel3D(LiquidLook.Mesh(surface, 0.55 * spacing, eye), LiquidLook.Surface(kind)));
+                    group.Children.Add(new GeometryModel3D(LiquidLook.Mesh(surface, 0.55 * spacing, eye), LiquidLookOf(kind)));
                 }
             }
 

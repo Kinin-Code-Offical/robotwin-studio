@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Keyboard shortcuts can be changed:** the window's shortcuts are commands with ids and defaults (Shell/Shortcuts); in the settings a click takes new keys (Esc cancels, Backspace removes), clashes are marked, each or all can be reset; a single letter is refused (it would fire while typing).
 - **Themes and accent colours:** dark (default), black for OLED screens, high contrast; blue, turquoise, orange, purple or pink accent; applied at once (the XAML takes the brush tokens as dynamic resources).
 - **Settings can be exported and imported** (the window placement stays this machine's).
+- **A theme gallery with 16 themes and a custom one.** Each theme is shown as a small picture of the window.
+  - Dark: graphite, OLED black, night blue, deep ocean, forest, plum, rose night, espresso, high contrast.
+  - Light: light, paper, pink, peach, lavender, mint, sky.
+  - Custom: a hue, a tint and light or dark; the window follows the slider while it moves.
+  - Accent colours went from five to ten, with "the theme's own colour"; on light themes they are darkened for contrast.
+  - On a light theme the schematic is drawn in dark ink on paper and the code editor turns light, with its own syntax colours. 3D views and instrument screens keep their own lighting.
+  - Parts of the window built in code (the left rail, inspector sections, pages not shown now) are recoloured when the theme changes.
+  - The primary button and the screens that cover a page take their colours from the theme too.
+  - `--theme` draws a snapshot in a theme.
 
 - **Kinematics of arms you build:** select a part that servos move and the inspector finds the chain from its base (servo horns, motor shafts, hinges, sliders; CoreSim Robotics/WorldArm.cs, on the same product-of-exponentials kinematics as the robot cells).
   - It shows each servo's angle and static load (share of stall torque), the tip from the model and from the physics with their difference, the distance from a singular pose and the reach.
@@ -73,6 +82,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Faster start:** the parts library and settings pages are built the first time they are shown, and the start no longer waits for the splash to draw: the studio draws its first frame about 0.2 s sooner (0.98 → 0.77 s from the process start on the test machine).
 - **Opening a world no longer holds a frame while its cables settle:** they appear along their routes at once and take their hanging shape on a worker thread a moment later. The longest frame on opening fell from 1926 to 190 ms (PS5 plane), 1018 to 45 ms (motor glider), 653 to 119 ms (sensor rover), 565 to 164 ms (two boards), 432 to 47 ms (factory cell), 426 to 84 ms (line follower); running frame rates are unchanged. Command-line runs settle at once, so pictures stay the same.
 - **Cable routing and wire collisions skip far meshes:** a mesh's bounding sphere now rejects a distant wing, terrain or part before its signed distance is computed, as it already did for boxes and cylinders.
+- **Pressing Run no longer freezes the window for seconds:** the wires settle and find their routes side by side on the processor's cores. While settling, a wire only reads the scene and never touches another, so each comes out exactly as it would alone. Measured on a 24-core machine:
+
+  | Template | Run start | Route search |
+  | --- | --- | --- |
+  | PS5 plane | 8.1 s → 0.85 s | — |
+  | Sensor rover | 0.82 s → 0.30 s | 630 → 113 ms (650 → 140 ms on opening) |
+
+  The bench log now says where each start went (circuit, operating point, firmware, physics, cables, sensors).
+- **A running liquid's surface is meshed on a worker thread:** the water glass gave 11 ms of every frame to it. The world now shows the last finished surface while the next one is built, and runs at 43 FPS instead of 31. The surface material is made once instead of every frame.
+- **A liquid's wall field is summed only near the surface:** the distance field changes by at most the distance moved, so a node farther than the kernel's reach from a solid has none of it under its kernel, and one that deep inside has all of it. The result is exact.
 
 ## [1.6.1] - 2026-11-24
 

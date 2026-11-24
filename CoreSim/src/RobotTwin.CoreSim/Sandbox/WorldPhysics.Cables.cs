@@ -57,9 +57,25 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <paramref name="seed"/> may give an earlier shape of a cable (by id) to start from.
         /// </summary>
         /// <summary>[perf] Relaxes every cable by part of a <paramref name="total"/>-step relax (see <see cref="CableRope.RelaxPart"/>).</summary>
-        public void RelaxCables(int from, int count, int total)
+        public void RelaxCables(int from, int count, int total) =>
+            Settle(_cables.Select(l => l.Rope).ToList(), rope => rope.RelaxPart(Scene, from, count, total));
+
+        /// <summary>
+        /// [perf] Settles ropes side by side on the processor's cores. While settling a rope only reads the scene (it
+        /// pushes on no body) and never touches another rope, so each comes out exactly as it would alone: 20 cables in
+        /// the PS5 plane's fuselage took 7.8 s one after another, held on the thread that pressed Run.
+        /// </summary>
+        private void Settle(List<CableRope> ropes, Action<CableRope> relax)
         {
-            foreach (var link in _cables) link.Rope.RelaxPart(Scene, from, count, total);
+            if (ropes.Count == 0) return;
+            if (ropes.Count == 1)
+            {
+                relax(ropes[0]);
+                return;
+            }
+
+            foreach (var b in Scene.Bodies) _ = b.EffectiveShape;   // built once here, not raced for by the workers
+            System.Threading.Tasks.Parallel.ForEach(ropes, relax);
         }
 
         /// <summary>[perf] Time the last <see cref="AttachCables"/> spent (ms): exits, routes, laying, relaxing.</summary>
@@ -77,26 +93,46 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             _cables.Clear();
+            var settle = new List<(CableRope Rope, int Steps)>();
             ShortCables.Clear();
             BlockedCables.Clear();
             _routes.Clear();
             // Propeller discs are swept volumes, not solids; wires rest on everything else.
             var ignore = new HashSet<SceneBody>();
             foreach (var pm in _props) ignore.Add(pm.It.Body);
+            // The plugs and the way each wire leaves its pin, in turn (each looks at the parts around its own pin).
+            var wires = new List<(WorldCable Cable, Item A, Item B, RopeEnd EndA, RopeEnd EndB)>();
             foreach (var cable in world.Cables)
             {
                 if (!_items.TryGetValue(cable.A.ObjectId, out var ia) || !_items.TryGetValue(cable.B.ObjectId, out var ib)) continue;
                 if (pins(cable) is not { } p) continue;
                 var endA = MakeEnd(ia, p.A);
                 var endB = MakeEnd(ib, p.B);
-                Lap();
                 FreeExit(endA, ia, ignore, CableRope.RadiusOf(cable.Awg));
                 FreeExit(endB, ib, ignore, CableRope.RadiusOf(cable.Awg));
-                exits += Lap();
+                wires.Add((cable, ia, ib, endA, endB));
+            }
+
+            exits += Lap();
+            // [perf] [route] Where each wire can really run, around the parts and through openings, never through a solid:
+            // the searches only read the scene, so they run side by side (20 routes took 630 ms one after another).
+            var found = new List<Vec3>?[wires.Count];
+            if (wires.Count > 1)
+            {
+                foreach (var b in Scene.Bodies) _ = b.EffectiveShape;   // built once here, not raced for by the workers
+                System.Threading.Tasks.Parallel.For(0, wires.Count, i => found[i] = RouteOf(wires[i].EndA, wires[i].EndB, wires[i].A.Body, wires[i].B.Body, wires[i].Cable.Awg, ignore));
+            }
+            else if (wires.Count == 1)
+            {
+                found[0] = RouteOf(wires[0].EndA, wires[0].EndB, wires[0].A.Body, wires[0].B.Body, wires[0].Cable.Awg, ignore);
+            }
+
+            routes += Lap();
+            for (int w = 0; w < wires.Count; w++)
+            {
+                var (cable, ia, ib, endA, endB) = wires[w];
                 double span = (endA.World - endB.World).Length;
-                // [route] Where the wire can really run: around the parts, through openings, never through a solid.
-                var route = RouteOf(endA, endB, ia.Body, ib.Body, cable.Awg, ignore);
-                routes += Lap();
+                var route = found[w];
                 double run = route != null ? CableRouter.Length(route) + 2 * RouteLead : span;
                 if (route == null) BlockedCables.Add(cable.Id);
                 _routes[cable.Id] = route;
@@ -115,11 +151,16 @@ namespace RobotTwin.CoreSim.Sandbox
                 // where a wire can be: it is laid along the route instead.
                 if (route != null && rope.Crossings(Scene).Count > 0) rope.LayAlong(route.GetRange(1, route.Count - 2));
                 laying += Lap();
-                if (relaxSteps > 0) rope.Relax(Scene, relaxSteps);
-                relaxing += Lap();
+                // Settled in full even from the editor's settled shape: a short warm-up let a wire kick its parts at the
+                // start of a run (the glass-pouring servo's world never drew its next frame).
+                if (relaxSteps > 0) settle.Add((rope, relaxSteps));
                 _cables.Add(link);
             }
 
+            Lap();
+            var bySteps = settle.ToDictionary(x => x.Rope, x => x.Steps);
+            Settle(settle.Select(x => x.Rope).ToList(), rope => rope.Relax(Scene, bySteps[rope]));
+            relaxing += Lap();
             LastCableTimes = (exits, routes, laying, relaxing);
         }
 

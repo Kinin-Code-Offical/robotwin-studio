@@ -56,6 +56,11 @@
     <SolidColorBrush x:Key="B.Warning" Color="{StaticResource C.Warning}"/>
     <SolidColorBrush x:Key="B.Danger" Color="{StaticResource C.Danger}"/>
     <SolidColorBrush x:Key="B.OnPrimary" Color="#111113"/>
+    <SolidColorBrush x:Key="B.Primary" Color="#EDEDEF"/>
+    <SolidColorBrush x:Key="B.PrimaryHover" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="B.PrimaryPressed" Color="#D4D4D8"/>
+    <SolidColorBrush x:Key="B.Scrim" Color="#F00E0E10"/>
+    <SolidColorBrush x:Key="B.ScrimSoft" Color="#D80E0E10"/>
     <SolidColorBrush x:Key="B.Transparent" Color="Transparent"/>
 
     <!-- Typography -->

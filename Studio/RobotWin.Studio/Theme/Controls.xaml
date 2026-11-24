@@ -101,8 +101,8 @@
     <!-- Primary: solid light fill, dark text. One per screen. -->
     <Style x:Key="Btn.Primary" TargetType="Button" BasedOn="{StaticResource Btn}">
         <Setter Property="Foreground" Value="{DynamicResource B.OnPrimary}"/>
-        <Setter Property="Background" Value="{DynamicResource B.Text}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource B.Text}"/>
+        <Setter Property="Background" Value="{DynamicResource B.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource B.Primary}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -112,10 +112,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#FFFFFF"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource B.PrimaryHover}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#D4D4D8"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource B.PrimaryPressed}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>

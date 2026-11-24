@@ -88,19 +88,7 @@ namespace RobotWin.Studio.Pages
             });
 
             Category("Görünüm ve tema", "Tema, vurgu rengi, arayüz boyutu, efektler ve 3B kalite.");
-            Card("Tema", "Arayüzün renkleri; değişiklik hemen uygulanır. 3B görünümün ve kod düzenleyicinin zemini koyu kalır.", c =>
-            {
-                c.Children.Add(Choice("Tema", Themes.All.Select(t => (t.Name, t.Id)).ToArray(), S.Theme, v =>
-                {
-                    S.Theme = v;
-                    ApplyTheme();
-                }));
-                c.Children.Add(Choice("Vurgu rengi", Themes.Accents.Select(a => (a.Name, a.Id)).ToArray(), S.Accent, v =>
-                {
-                    S.Accent = v;
-                    ApplyTheme();
-                }, "Seçili öğeler, odak, canlı değerler ve birincil düğmeler bu renkle görünür."));
-            });
+            ThemeCard();   // [theme] the gallery (Pages/SettingsPage.Themes.cs)
             Card("Arayüz", "Boyut ve göstergeler.", c =>
             {
                 c.Children.Add(Choice("Arayüz ölçeği", new[] { ("%75", 0.75), ("%90", 0.9), ("%100", 1.0), ("%110", 1.1), ("%125", 1.25), ("%150", 1.5) }, S.UiScale, v =>

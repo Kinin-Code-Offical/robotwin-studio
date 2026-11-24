@@ -51,7 +51,7 @@ namespace RobotWin.Studio.Editor
         {
             ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) });
             ColumnDefinitions.Add(new ColumnDefinition());
-            Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x10));
+            Background = new SolidColorBrush(Shell.CanvasColors.Paper);
 
             _box = new TextBox
             {
@@ -63,8 +63,8 @@ namespace RobotWin.Studio.Editor
                 FontFamily = new FontFamily("Cascadia Mono, Consolas"),
                 FontSize = 13.5,
                 Foreground = Brushes.Transparent,
-                CaretBrush = new SolidColorBrush(Color.FromRgb(0xED, 0xED, 0xEF)),
-                SelectionBrush = new SolidColorBrush(Color.FromRgb(0x6E, 0x9B, 0xFF)),
+                CaretBrush = new SolidColorBrush(Shell.CanvasColors.Text),
+                SelectionBrush = new SolidColorBrush(Shell.CanvasColors.Accent),
                 SelectionOpacity = 0.3,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
@@ -75,7 +75,16 @@ namespace RobotWin.Studio.Editor
                 IsUndoEnabled = true,
                 UndoLimit = 500
             };
-            _box.Template = PlainTemplate();            _layer = new HighlightLayer(this) { IsHitTestVisible = false };
+            _box.Template = PlainTemplate();
+            Shell.Themes.Changed += () =>
+            {
+                // [theme] the paper, the caret and the colours of the code follow the theme
+                Background = new SolidColorBrush(Shell.CanvasColors.Paper);
+                _box.CaretBrush = new SolidColorBrush(Shell.CanvasColors.Text);
+                _box.SelectionBrush = new SolidColorBrush(Shell.CanvasColors.Accent);
+                _layer?.InvalidateVisual();
+                _gutter?.InvalidateVisual();
+            };            _layer = new HighlightLayer(this) { IsHitTestVisible = false };
             _gutter = new Gutter(this);
             SetColumn(_layer, 1);
             SetColumn(_box, 1);
@@ -409,7 +418,7 @@ namespace RobotWin.Studio.Editor
                 int caretLine = box.GetLineIndexFromCharacterIndex(box.CaretIndex);
                 if (caretLine >= first && caretLine <= last && box.SelectionLength == 0)
                 {
-                    dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x17, 0x17, 0x1A)), null, new Rect(0, origin.Y + caretLine * lh, ActualWidth, lh));
+                    dc.DrawRectangle(new SolidColorBrush(Shell.CanvasColors.CodeLine), null, new Rect(0, origin.Y + caretLine * lh, ActualWidth, lh));
                 }
 
                 // [debug] the line a stopped program is about to run
@@ -487,8 +496,8 @@ namespace RobotWin.Studio.Editor
 
             protected override void OnRender(DrawingContext dc)
             {
-                dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x10)), null, new Rect(0, 0, ActualWidth, ActualHeight));
-                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromRgb(0x24, 0x24, 0x28)), 1), new Point(ActualWidth - 0.5, 0), new Point(ActualWidth - 0.5, ActualHeight));
+                dc.DrawRectangle(new SolidColorBrush(Shell.CanvasColors.Paper), null, new Rect(0, 0, ActualWidth, ActualHeight));
+                dc.DrawLine(new Pen(new SolidColorBrush(Shell.CanvasColors.GutterBorder), 1), new Point(ActualWidth - 0.5, 0), new Point(ActualWidth - 0.5, ActualHeight));
                 var box = _owner._box;
                 var (origin, lh, _, first, last) = _owner.Metrics();
                 int caret = box.GetLineIndexFromCharacterIndex(box.CaretIndex);
@@ -500,7 +509,7 @@ namespace RobotWin.Studio.Editor
                 for (int i = first; i <= last; i++)
                 {
                     double y = origin.Y + i * lh;
-                    var brush = i == caret ? new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xCE)) : new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x5C));
+                    var brush = i == caret ? new SolidColorBrush(Shell.CanvasColors.GutterCurrent) : new SolidColorBrush(Shell.CanvasColors.GutterText);
                     var ft = new FormattedText((i + 1).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, box.FontSize * 0.9, brush, dip);
                     dc.DrawText(ft, new Point(ActualWidth - 10 - ft.Width, y + (lh - ft.Height) / 2));
                     if (marks.TryGetValue(i + 1, out bool active))
@@ -529,7 +538,7 @@ namespace RobotWin.Studio.Editor
                             g.LineTo(new Point(3, cy + 4), true, false);
                         }
 
-                        dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0xF2, 0xC1, 0x4B)), new Pen(new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x10)), 1), arrow);
+                        dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0xF2, 0xC1, 0x4B)), new Pen(new SolidColorBrush(Shell.CanvasColors.Paper), 1), arrow);
                     }
                 }
             }
@@ -546,15 +555,25 @@ namespace RobotWin.Studio.Editor
             return b;
         }
 
-        public static readonly SolidColorBrush Default = B(0xD8D8DE);
-        private static readonly SolidColorBrush Keyword = B(0xC792EA);
-        private static readonly SolidColorBrush Type = B(0x6E9BFF);
-        private static readonly SolidColorBrush Api = B(0x5BC0BE);
-        private static readonly SolidColorBrush Constant = B(0xE5A06B);
-        private static readonly SolidColorBrush Number = B(0xE5A06B);
-        private static readonly SolidColorBrush Str = B(0x9CCC65);
-        private static readonly SolidColorBrush Comment = B(0x6C6C74);
-        private static readonly SolidColorBrush Preproc = B(0xD4A84B);
+        // [theme] Two sets of syntax colours: the dark one, and one for light themes with the same roles in darker, still
+        // distinct tones (keyword purple, type blue, API teal, constant and number orange, string green, comment grey).
+        private static readonly SolidColorBrush[] DarkSet =
+            { B(0xD8D8DE), B(0xC792EA), B(0x6E9BFF), B(0x5BC0BE), B(0xE5A06B), B(0xE5A06B), B(0x9CCC65), B(0x6C6C74), B(0xD4A84B) };
+
+        private static readonly SolidColorBrush[] LightSet =
+            { B(0x24292F), B(0x8250DF), B(0x0550AE), B(0x0F7173), B(0xB35900), B(0xB35900), B(0x2E7D32), B(0x8A8A92), B(0x9A6700) };
+
+        private static SolidColorBrush[] Set => Shell.CanvasColors.Light ? LightSet : DarkSet;
+
+        public static SolidColorBrush Default => Set[0];
+        private static SolidColorBrush Keyword => Set[1];
+        private static SolidColorBrush Type => Set[2];
+        private static SolidColorBrush Api => Set[3];
+        private static SolidColorBrush Constant => Set[4];
+        private static SolidColorBrush Number => Set[5];
+        private static SolidColorBrush Str => Set[6];
+        private static SolidColorBrush Comment => Set[7];
+        private static SolidColorBrush Preproc => Set[8];
 
         private static readonly HashSet<string> Keywords = new HashSet<string>
         {

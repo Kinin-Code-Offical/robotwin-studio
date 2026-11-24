@@ -59,9 +59,14 @@ namespace RobotWin.Studio
                     if (_made.TryGetValue(key, out var page)) return page;
                     page = _makers[key]();
                     _made[key] = page;
+                    Shell.Themes.Track(page);   // [theme] recoloured with the window even while it is not shown
                     return page;
                 }
-                set => _made[key] = value;
+                set
+                {
+                    _made[key] = value;
+                    Shell.Themes.Track(value);   // [theme]
+                }
             }
 
             public void Later(string key, Func<UserControl> make) => _makers[key] = make;
@@ -107,6 +112,9 @@ namespace RobotWin.Studio
 
         /// <summary>[perf] The world scene's last load profile (for --bench).</summary>
         public string WorldLoadProfile => _world.Scene.LastLoadProfile;
+
+        /// <summary>[perf] Where the world's last start went (for --bench).</summary>
+        public string WorldStartProfile => _world.StartProfile;
 
         public void StopWorldForBench() => _world.StopSimulation();
 

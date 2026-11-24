@@ -101,7 +101,7 @@
                 </Border>
                 <Grid>
                     <ed:CodeEditor x:Name="Editor"/>
-                    <Border x:Name="NoBoard" Background="#F00E0E10" Visibility="Collapsed">
+                    <Border x:Name="NoBoard" Background="{DynamicResource B.Scrim}" Visibility="Collapsed">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
                             <TextBlock Text="Bir kart ya da kod klasörü seçin" Style="{StaticResource Text.Subtitle}"/>
                             <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource B.TextSecondary}" Margin="0,6,0,12"

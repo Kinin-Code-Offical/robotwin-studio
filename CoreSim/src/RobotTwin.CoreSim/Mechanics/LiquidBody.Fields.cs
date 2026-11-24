@@ -134,11 +134,25 @@ namespace RobotTwin.CoreSim.Mechanics
 
             f.Phi = new float[f.D.Length];
             int nx = f.Nx, ny = f.Ny, nz = f.Nz;
+            // [perf] The distance field changes by at most the distance moved, so a node farther than the kernel's reach
+            // plus a cell from the solid has no solid under its kernel (Φ = 0), and one that deep inside has it all (Φ = the
+            // kernel's integral): only the band around the surface is summed. Exact; the glass and bowl took 2.9 s to build.
+            double band = _h + cell;
+            double full = 0;
+            foreach (var t in taps) full += t.W;
             Parallel.For(0, nz, z =>
             {
                 for (int y = 0; y < ny; y++)
                 for (int x = 0; x < nx; x++)
                 {
+                    float dn = f.D[(z * ny + y) * nx + x];
+                    if (dn > band) continue;   // Φ stays 0
+                    if (dn < -band && x >= r && y >= r && z >= r && x < nx - r && y < ny - r && z < nz - r)
+                    {
+                        f.Phi[(z * ny + y) * nx + x] = (float)full;
+                        continue;
+                    }
+
                     double sum = 0;
                     foreach (var (dx, dy, dz, w) in taps)
                     {

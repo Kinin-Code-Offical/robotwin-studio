@@ -76,8 +76,19 @@ namespace RobotWin.Studio.World
 
         public bool Start(WorldDocument world, Func<WorldCable, double> cableLength, out string message) => Start(world, cableLength, null, out message);
 
+        /// <summary>[perf] Where the last start went, step by step (ms), for --bench and the event log.</summary>
+        public string LastStartProfile { get; private set; } = string.Empty;
+
         public bool Start(WorldDocument world, Func<WorldCable, double> cableLength, Func<WorldObject, WorldBodyGeometry>? geometry, out string message)
         {
+            var clock = Stopwatch.StartNew();
+            var steps = new List<string>();
+            void Mark(string step)
+            {
+                steps.Add($"{step} {clock.Elapsed.TotalMilliseconds:0}");
+                clock.Restart();
+            }
+
             Stop();
             Log.Clear();
             _impactLogged = 0;
@@ -95,6 +106,7 @@ namespace RobotWin.Studio.World
                 return false;
             }
 
+            Mark("devre");
             foreach (var w in Circuit.Compiled.Warnings) Log.Add(new SimLogEntry(0, "derleyici", w, AnalogEventKind.Warning));
             var settings = AppSettings.Current;
             Simulator = new AnalogSimulator(Circuit.Compiled.Circuit, new AnalogOptions
@@ -113,14 +125,17 @@ namespace RobotWin.Studio.World
                 Simulator.Initialize(InitialState.Zero);
             }
 
+            Mark("çalışma noktası");
             StartRadio();   // [radio] World/WorldSession.Radio.cs
             AttachFirmware();
+            Mark("yazılım");
             if (geometry != null) PrepareSdk(world);   // [sdk] World/WorldSession.Sdk.cs: plugins, scripts
             if (geometry != null)
             {
                 try
                 {
                     Physics = WorldPhysics.Build(world, geometry, Circuit);
+                    Mark("fizik");
                     // Parts that start inside each other would be pushed apart violently: say which ones.
                     foreach (var (oa, ob, depth) in Physics.FindInterpenetrations(0.001))
                     {
@@ -137,7 +152,13 @@ namespace RobotWin.Studio.World
                     Log.Add(new SimLogEntry(0, "fizik", "Fizik sahnesi kurulamadı: " + ex.Message, AnalogEventKind.Warning));
                 }
 
+                Mark("denetim");
                 AttachCablePhysics();   // [phys] World/WorldSession.Cables.cs
+                if (Physics != null)
+                {
+                    var (exits, routes, laying, relaxing) = Physics.LastCableTimes;
+                    Mark($"kablolar [çıkış {exits:0} · yol {routes:0} · serme {laying:0} · gevşetme {relaxing:0}]");
+                }
             }
 
             Simulator.SubstepAccepted = t =>
@@ -146,6 +167,8 @@ namespace RobotWin.Studio.World
             };
             StartSense();   // [sense] World/WorldSession.Sense.cs
             IndexHeat();
+            Mark("sensörler");
+            LastStartProfile = string.Join(" · ", steps) + " ms";
             int parts = Circuit.Compiled.DevicesByPart.Count;
             Log.Add(new SimLogEntry(0, "dünya", $"{world.Objects.Count} nesne, {world.Cables.Count} kablo, {parts} parça tek devrede çözülüyor", AnalogEventKind.StateChange));
             Speed = settings.DefaultSpeed;

@@ -81,6 +81,12 @@ namespace RobotWin.Studio.Shell
         public FlowRail()
         {
             Background = Res<Brush>("B.Canvas");
+            Themes.Changed += () =>
+            {
+                // [theme] the stage pads mix the canvas with their colour: painted again from the new tokens
+                foreach (var st in _stages) Paint(st, st.Key == _active, false);
+                _trace.InvalidateVisual();
+            };
             ClipToBounds = true;
             RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });

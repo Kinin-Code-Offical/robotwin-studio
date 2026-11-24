@@ -244,6 +244,14 @@ namespace RobotWin.Studio
             }
 
             if (Environment.GetCommandLineArgs().Contains("--nav-expanded")) window.ExpandRailForSnapshot();
+            if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--theme").Skip(1).FirstOrDefault() is { } themeArg)
+            {
+                // [theme] --theme pembe:gul — this run only (nothing is saved): every page in that theme and accent.
+                var parts = themeArg.Split(':');
+                Shell.AppSettings.Current.Theme = parts[0];   // in memory only: a command-line run saves no settings
+                if (parts.Length > 1) Shell.AppSettings.Current.Accent = parts[1];
+                Shell.Themes.Apply();
+            }
             window.Navigate(page);
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
             int phase = 0;
@@ -391,6 +399,7 @@ namespace RobotWin.Studio
                         break;
                     case 2 when elapsed > secs:
                         log.AppendLine($"{templates[index].Id,-14} çalışırken {Perf.EndRecording()}");
+                        log.AppendLine($"{string.Empty,-14} başlatma   {window.WorldStartProfile}");   // [perf] where pressing Run went
                         Write($"{templates[index].Id,-14} durduruluyor…");
                         window.StopWorldForBench();
                         Write(null);

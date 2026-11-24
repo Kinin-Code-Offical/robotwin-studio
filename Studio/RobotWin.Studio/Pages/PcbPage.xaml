@@ -116,7 +116,7 @@
             </Border>
 
             <!-- F1 / ? shortcut overlay -->
-            <Border x:Name="HelpOverlay" Grid.Column="1" Visibility="Collapsed" Background="#D80E0E10" MouseLeftButtonUp="OnHelpClose" Cursor="Hand">
+            <Border x:Name="HelpOverlay" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource B.ScrimSoft}" MouseLeftButtonUp="OnHelpClose" Cursor="Hand">
                 <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="10"
                         HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22,18" Margin="16" MaxWidth="900" Effect="{StaticResource E.Popup}">
                     <DockPanel>

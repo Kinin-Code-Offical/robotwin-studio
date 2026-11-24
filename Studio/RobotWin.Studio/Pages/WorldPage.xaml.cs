@@ -34,6 +34,9 @@ namespace RobotWin.Studio.Pages
 
         /// <summary>State and time of the world simulation (for the navigation rail).</summary>
         public (Simulation.SimState State, double Time) SimulationState => (_session.State, _session.Time);
+
+        /// <summary>[perf] Where the last press of Run went (circuit, operating point, firmware, physics, cables, sensors).</summary>
+        public string StartProfile => _session.LastStartProfile;
         private WorldDocument? _shown;
         private long _serialShown;
         private DateTime _lastPanels = DateTime.MinValue;

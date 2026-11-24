@@ -10,13 +10,19 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [~] **Optimizasyon:** her değişiklikte `--bench` ile önce/sonra ölçümü.
   - [x] Açılış: ilk çizim 0,98 s'den 0,77 s'ye indi.
   - [x] Şablon açarken takılmalar: kablolar arka planda oturuyor; en uzun kare 1926 ms'den 190 ms'ye indi.
-  - [ ] Ağır simülasyonlar: sıvı (36 FPS), sensörlü gezgin (~40), PS5 uçak (~48).
+  - [~] Ağır simülasyonlar:
+    - [x] Çalıştır'a basınca donma: kablolar paralel oturuyor ve yol buluyor (PS5 uçak 8,1 s → 0,85 s, gezgin 0,82 → 0,30 s).
+    - [x] Sıvı yüzeyi arka planda örülüyor (su bardağı 31 → 43 FPS).
+    - [x] Sensörlü gezgin 61 FPS.
+    - [ ] Sıvı çözücüsünün kendisi: 3 bin parçacıkta 1 ms'lik adım 14 ms sürüyor (gerçek zamanın ~1/14'ü), başlatmada dinlendirme ~2,3 s. Duvar testi ve basınç döngüsü algoritma düzeyinde hızlanmalı.
+    - [ ] Cam bardağın tabanında birkaç parçacık durgun suda 30 mm/s titriyor; bu yüzden sıvı uykuya geçemiyor.
   - [ ] ReadyToRun ön derlemesi (crossgen2 paketi için izin gerekiyor).
 - [~] **Ayarlar:** kategoriler ve arama.
   - [x] Yedekleme: sıklık, belge başına kopya, klasör, boyut sınırı, kaydedince önceki sürüm, çökme sonrası kurtarma.
   - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama. Sayfaya özel kısayollar henüz sabit.
   - [x] Temalar: koyu, siyah, yüksek karşıtlık; vurgu rengi.
-  - [ ] Açık tema: arayüz jetonlarla çiziliyor; şema, PCB ve kod editörlerinin tuval renkleri (SymbolRenderer, SchematicCanvas, BoardCanvas, CodeEditor) temaya bağlanmalı.
+  - [x] Çok sayıda tema: 9 koyu, 7 açık (pembe, şeftali, lavanta, nane, gökyüzü, kâğıt, açık), özel tema (ton, doygunluk, açık/koyu), 10 vurgu rengi; şema ve kod editörü açık temalarda açılıyor.
+  - [ ] PCB editörünün zemini açık temalarda da koyu (katman renkleri koyu zemine göre seçilmiş).
   - [x] Gelişmiş: ayarları dışa ve içe aktarma, tanılama.
   - [ ] Dil paketleri: önce altyapı, sonra İngilizce paket.
 - [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller).

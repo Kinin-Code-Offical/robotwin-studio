@@ -106,7 +106,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 | Kategori | Neler var |
 | --- | --- |
 | Genel | Açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi |
-| Görünüm ve tema | Tema (koyu, siyah, yüksek karşıtlık), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite |
+| Görünüm ve tema | Tema galerisi (9 koyu, 7 açık tema ve özel tema), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite |
 | Kaydetme ve yedekleme | Otomatik yedek sıklığı, kaydederken önceki sürümü saklama, çökme sonrası kurtarma, yedek klasörü, belge başına kopya sayısı, klasörün boyut sınırı |
 | Klavye kısayolları | Pencerenin kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |
 | Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, zaman adımı, başlangıç hızı |
@@ -114,6 +114,22 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 | Derleyiciler | `arduino-cli` yolu, `vcvars64.bat` yolu |
 | Güncellemeler, Eklentiler | Sürüm denetimi; eklenti klasörleri ve betikler |
 | Gelişmiş | Ayarları dosyaya aktarma ve dosyadan alma, hata günlüğü, dosya türleri |
+
+**Temalar:** **Görünüm ve tema** kategorisindeki galeri her temayı pencerenin küçük bir resmi olarak gösterir. Tıkladığınız tema hemen uygulanır.
+
+![Tema galerisi: koyu, açık ve özel temalar; vurgu renkleri](../images/settings-themes.png)
+
+- **Koyu:** Grafit (varsayılan), Siyah (OLED ekranlar için), Gece mavisi, Derin okyanus, Orman, Mürdüm, Gül kurusu gece, Kahve, Yüksek karşıtlık.
+- **Açık:** Açık, Kâğıt, Pembe, Şeftali, Lavanta, Nane, Gökyüzü. Açık temalarda şema bir kâğıda basılmış gibi koyu mürekkeple çizilir, kod düzenleyici de açılır ve sözdizimi renkleri açık zemine uygun tonlara geçer.
+- **Özel:**
+  - **Ton:** 0 kırmızı, 120 yeşil, 200 mavi, 330 pembe.
+  - **Doygunluk:** zeminlerin ne kadar renkli olacağı.
+  - **Açık zemin** anahtarı.
+  - Kaydırırken pencere renk değiştirir; bırakınca kaydedilir.
+- **Vurgu rengi:**
+  - Seçili öğeler, odak ve bağlantılar için on renk; **T** işaretli olan temanın kendi rengidir.
+  - Açık temalarda vurgu, karşıtlık için koyulaşır.
+  - 3B görünümler ve ölçü aletlerinin ekranları kendi ışığıyla kalır.
 
 **Yedekler nasıl çalışır?**
 

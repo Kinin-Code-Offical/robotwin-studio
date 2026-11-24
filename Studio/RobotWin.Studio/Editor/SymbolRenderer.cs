@@ -49,10 +49,11 @@ namespace RobotWin.Studio.Editor
     /// <summary>Draws schematic symbols in symbol coordinates (1 unit = one 0.1" grid step).</summary>
     public static class SymbolRenderer
     {
-        public static readonly Color SymbolColor = Color.FromRgb(0xC8, 0xC8, 0xCE);
-        public static readonly Color PinColor = Color.FromRgb(0x6C, 0x6C, 0x74);
-        public static readonly Color FillColor = Color.FromRgb(0x0E, 0x0E, 0x10);
-        public static readonly Color BoardColor = Color.FromRgb(0x17, 0x17, 0x1A);
+        // [theme] Symbols are drawn in the paper's ink (Shell.CanvasColors): light lines on dark themes, dark on light ones.
+        public static Color SymbolColor => Shell.CanvasColors.Symbol;
+        public static Color PinColor => Shell.CanvasColors.Pin;
+        public static Color FillColor => Shell.CanvasColors.Paper;
+        public static Color BoardColor => Shell.CanvasColors.Board;
         private static readonly Dictionary<Color, SolidColorBrush> BrushCache = new Dictionary<Color, SolidColorBrush>();
 
         public static SolidColorBrush Brush(Color c)

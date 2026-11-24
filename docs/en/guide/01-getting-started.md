@@ -106,7 +106,7 @@ The **Ayarlar** (settings, Ctrl+,) page is split into categories. Pick one in th
 | Category | What it holds |
 | --- | --- |
 | Genel (general) | Home page at startup, the first-robot guide, project folder, recent files, length unit |
-| Görünüm ve tema (appearance and theme) | Theme (dark, black, high contrast), accent colour, interface scale, performance overlay, effects and sound, 3D quality |
+| Görünüm ve tema (appearance and theme) | Theme gallery (9 dark, 7 light themes and a custom one), accent colour, interface scale, performance overlay, effects and sound, 3D quality |
 | Kaydetme ve yedekleme (saving and backups) | Autosave interval, keeping the previous version on save, crash recovery, backup folder, copies kept per document, the folder's size limit |
 | Klavye kısayolları (keyboard shortcuts) | Change the window's shortcuts, clash warnings, reset one or all |
 | Simülasyon ve fizik (simulation and physics) | Part damage, pause on failure, ambient temperature, time step, starting speed |
@@ -114,6 +114,22 @@ The **Ayarlar** (settings, Ctrl+,) page is split into categories. Pick one in th
 | Derleyiciler (compilers) | `arduino-cli` path, `vcvars64.bat` path |
 | Güncellemeler, Eklentiler (updates, plug-ins) | Version checks; plug-in folders and scripts |
 | Gelişmiş (advanced) | Export settings to a file and import them, error log, file types |
+
+**Themes:** the gallery in **Görünüm ve tema** shows each theme as a small picture of the window. The theme you click is applied at once.
+
+![The theme gallery: dark, light and custom themes; accent colours](../../images/settings-themes.png)
+
+- **Dark:** Grafit (graphite, the default), Siyah (black, for OLED screens), Gece mavisi (night blue), Derin okyanus (deep ocean), Orman (forest), Mürdüm (plum), Gül kurusu gece (rose night), Kahve (espresso), Yüksek karşıtlık (high contrast).
+- **Light:** Açık (light), Kâğıt (paper), Pembe (pink), Şeftali (peach), Lavanta (lavender), Nane (mint), Gökyüzü (sky). On a light theme, the schematic is drawn in dark ink as if printed on paper, the code editor turns light too, and the syntax colours switch to tones that read on a light background.
+- **Özel (custom):**
+  - **Ton (hue):** 0 red, 120 green, 200 blue, 330 pink.
+  - **Doygunluk (tint):** how coloured the backgrounds are.
+  - The **Açık zemin** (light background) switch.
+  - The window changes colour while you drag; the setting is saved when you let go.
+- **Accent colour:**
+  - Ten colours for selected items, focus and links; the one marked **T** is the theme's own colour.
+  - On light themes the accent turns darker for contrast.
+  - 3D views and instrument screens keep their own lighting.
 
 **How backups work:**
 

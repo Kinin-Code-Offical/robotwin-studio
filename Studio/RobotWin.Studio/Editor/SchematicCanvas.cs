@@ -37,15 +37,16 @@ namespace RobotWin.Studio.Editor
     {
         private const double MinScale = 4, MaxScale = 60;
 
-        private static readonly Color CanvasColor = Color.FromRgb(0x0E, 0x0E, 0x10);
-        private static readonly Color GridDot = Color.FromRgb(0x24, 0x24, 0x28);
-        private static readonly Color WireColor = Color.FromRgb(0x8C, 0x8C, 0x94);
-        private static readonly Color Accent = Color.FromRgb(0x6E, 0x9B, 0xFF);
-        private static readonly Color TextColor = Color.FromRgb(0xED, 0xED, 0xEF);
-        private static readonly Color MutedText = Color.FromRgb(0x6C, 0x6C, 0x74);
-        private static readonly Color LabelColor = Color.FromRgb(0xA0, 0xA0, 0xA8);
-        private static readonly Color PanelColor = Color.FromRgb(0x1C, 0x1C, 0x1F);
-        private static readonly Color PanelBorder = Color.FromRgb(0x32, 0x32, 0x37);
+        // [theme] The paper and its ink follow the theme: dark on dark themes, a printed sheet on light ones.
+        private static Color CanvasColor => Shell.CanvasColors.Paper;
+        private static Color GridDot => Shell.CanvasColors.GridDot;
+        private static Color WireColor => Shell.CanvasColors.Wire;
+        private static Color Accent => Shell.CanvasColors.Accent;
+        private static Color TextColor => Shell.CanvasColors.Text;
+        private static Color MutedText => Shell.CanvasColors.MutedText;
+        private static Color LabelColor => Shell.CanvasColors.Label;
+        private static Color PanelColor => Shell.CanvasColors.Panel;
+        private static Color PanelBorder => Shell.CanvasColors.PanelBorder;
 
         private double _scale = 14;
         private Vector _offset = new Vector(320, 240);
@@ -89,6 +90,7 @@ namespace RobotWin.Studio.Editor
             SnapsToDevicePixels = true;
             Cursor = Cursors.Arrow;
             W.DocumentChanged += (_, _) => Refresh();
+            Shell.Themes.Changed += Refresh;   // [theme] the paper and its ink
             W.DocumentReplaced += (_, _) =>
             {
                 _selection.Clear();

@@ -25,6 +25,7 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 | `--bench <dosya> [--bench-seconds 4] [--bench-filter id,id]` | Kare hızı ölçümü: her dünya şablonunu (ya da adı verilenleri) açar, dururken ve çalışırken ölçer. Kare hızını, kare sürelerini, karenin her bölümünün maliyetini ve şablonun açılışının nereye gittiğini yazar. Günlük ölçüm sürerken yazılır; son satırı o anda yapılan adımı söyler. |
 | `--startup-report <dosya>` | Normal bir açılış (açılış ekranı dahil); her adımın işlem başından itibaren zamanını yazar ve kapanır. |
 | `--snapshot cikti.png --page splash` | Açılış ekranını açılışın ortasındaki hâliyle çizer. |
+| `--snapshot cikti.png --page <sayfa> --theme pembe:gul` | Sayfayı bir tema ve vurgu rengiyle çizer; yalnız bu çalıştırma için, hiçbir şey kaydedilmez. |
 | `--api <port> [--world f.rwworld]` | Uygulama, pencere açmadan otomasyon sunucusu olarak (bkz. [Otomasyon API'si](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Uygulamanın gövde geometrisini (model zarfları dahil) başsız araç için dünyanın yanına yazar. |
 | `--gallery <klasör> [--gallery-filter metin] [--gallery-columns 4] [--gallery-tile 460x340]` | Kodla üretilen her 3B bileşen modelinin toplu görüntüsü. |
