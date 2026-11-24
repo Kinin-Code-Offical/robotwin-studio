@@ -13,7 +13,7 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
-> **1.4.2'de yeni:** Kod sayfası bir kod editörü gibi çalışır: projedeki ve açık dünyadaki her kartın kendi kod klasörü, diskteki klasörler, alt klasörler, içe aktarma, zip; kod istenen karta (Uno, Nano, ESP32) yüklenir, çok dosyalı çizimler derlenir. Tamamlama kartın gerçek başlıklarından gelir, Arduino kütüphaneleri uygulamadan aranıp kurulur. Ayarlanabilir AC/DC güç kaynağı ve kategorili parça kütüphanesi geldi. **1.4.1:** render'daki hava gerçek hava. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
+> **1.5.0'da yeni:** Sol çubuk üç grupta (Elektronik, Mekanik, Test). Parça sayfasında bir dosyada birden çok parça; **Montaja gönder** her parçayı ayrı gövde yapar. Montaj robotun kendisi: projeler PCB'li ya da PCB'siz gelir, birden çok proje bir arada durur, montaj projeyle kaydedilir ve devre, PCB, kod değişikliklerini izler. Robot örnekleri gerçek araç olarak kurulur. ESP32'de Arduino kütüphaneleri, 32 katmanlı PCB. **1.4.2:** kod sayfası bir kod editörü. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
 
 ![Başlangıç sayfası](docs/images/home.png)
 
@@ -37,15 +37,15 @@
 
 ## Ne yapabilirsiniz?
 
-Uygulamanın sol tarafındaki **"Tasarımdan gerçeğe hattı"** bir projenin aşamalarını sırayla gösterir:
+Uygulamanın sol tarafındaki **"Tasarımdan gerçeğe hattı"** bir projenin aşamalarını üç grupta gösterir: **ELEKTRONİK** (Devre, PCB, Kod), **MEKANİK** (Parça, Montaj), **TEST** (Dünya).
 
 | Aşama | Kısayol | Ne yapılır |
 | --- | --- | --- |
 | **Devre** | Ctrl+1 | Şema çizin, 256 gerçek parçadan seçin, analog çözücüyle canlı simüle edin; osiloskop, multimetre, Monte Carlo, arıza tespiti. |
-| **PCB** | Ctrl+2 | 2/4/6 katmanlı kart, bakır alanlar, etkileşimli ve otomatik yol çizimi, DRC, Gerber/Excellon ve KiCad 8 dışa aktarımı. |
+| **PCB** | Ctrl+2 | 2'den 32'ye kadar katmanlı kart, bakır alanlar, etkileşimli ve otomatik yol çizimi, DRC, Gerber/Excellon ve KiCad 8 dışa aktarımı. |
 | **Kod** | Ctrl+3 | Arduino Uno/Nano (arduino-cli ile) ve ESP32 (MSVC ile) kodu yazın, derleyin, emüle karta yükleyip çalıştırın. |
-| **Modelle** | Ctrl+4 | Blender benzeri 3D modelleyici: temel şekiller, nokta/kenar/yüz düzenleme, ekstrüzyon, bıçak ve dilimleme, halka kesim, pah, kalınlık, CSG (birleşim/fark/kesişim), hazır robot parçaları, STL/OBJ/PLY. |
-| **Montaj** | Ctrl+5 | Devreden otomatik 3D araç veya drone oluşturun, arenada sürün/uçurun, arıza deneyleri yapın. |
+| **Parça** | Ctrl+4 | Blender benzeri 3D modelleyici, bir dosyada birden çok parça: temel şekiller, nokta/kenar/yüz düzenleme, ekstrüzyon, bıçak ve dilimleme, halka kesim, pah, kalınlık, CSG (birleşim/fark/kesişim), hazır robot parçaları, STL/OBJ/PLY. **Montaja gönder** her parçayı ayrı gövde yapar. |
+| **Montaj** | Ctrl+5 | Robotun kendisi: bir ya da birden çok projenin kartı ve parçaları (PCB'li ya da PCB'siz) ile Parça'da modellenen gövdeler bir arada, bağlantılarıyla. Projeyle birlikte kaydedilir, açılınca devre, PCB ve kod değişikliklerini alır; araç projeleri şasesi ve tekerlekleriyle kurulur. |
 | **Dünya** | Ctrl+6 | Kartları, parçaları, gövdeleri ve modelleri gerçek fizikli bir dünyaya koyun; kablolayın, mekanik olarak bağlayın, çalıştırın. |
 
 Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl+,) sayfaları vardır. Arayüz Türkçedir.
@@ -168,7 +168,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.4.2.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.5.0.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -220,18 +220,22 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 - **ATmega328P emülatörü:** tam komut seti, kesmeler, Timer0/1/2 (PWM), USART, ADC, EEPROM, watchdog, I²C (TWI); SSD1306, PCF8574+HD44780 LCD ve MPU-6050 cihaz modelleri. Hazır HEX dosyası da yüklenebilir.
 - **ESP32 eş zamanlı simülasyonu:** çizim MSVC ile yerel bir DLL'e derlenir ve Arduino API düzeyinde devreyle adım adım çalışır: GPIO, ADC, LEDC PWM, DAC, zamanlayıcılar, FreeRTOS görevleri/kuyrukları, Wire, Servo, Wi-Fi (dünya içinde sanal ağ), BLE alt kümesi, Bluepad32 kumandaları.
 
-### Modelle
+### Parça
 
+- Bir dosyada birden çok parça: en üstteki her nesne ayrı bir parçadır, altına bağlanan (Ctrl+P) nesneler onunla tek parça olur.
 - Kutu, silindir, koni, küre, simit, boru, kama, delikli plaka, profil (ekstrüzyon), döndürme.
 - Düzenleme modu (Tab): köşe/kenar/yüz seçimi ve G/R/S ile taşıma-döndürme-ölçekleme, ekstrüzyon (E, yüzlerden ya da kenarlardan), içe öteleme (I), bıçak (K), halka kesim (Ctrl+R), pah kırma (Ctrl+B), kalınlık verme, bölme, yumuşatma, birleştirme.
 - Dilimleme (K): nesneyi çizilen çizgi boyunca iki kapalı parçaya ayırır; parçalar ayrı ayrı taşınıp döndürülür.
 - CSG: birleşim, fark (iç içe geçen kısmı kırpma), kesişim; ayna, dizi, ebeveyn bağlama.
 - Hazır robot parçaları: 2WD şasi plakası, SG90 servo braketi, L braket, tekerlek göbeği, muhafaza kutusu + kapak.
-- Malzeme ve doluluk oranından kütle; STL/OBJ/PLY içe/dışa aktarma; **Dünyaya gönder**.
+- Malzeme ve doluluk oranından kütle; STL/OBJ/PLY içe/dışa aktarma; **Montaja gönder**: her parça ayrı gövde, yeniden gönderince yerinde güncellenir (kendi orijini ve bağlantıları korunur).
 
 ### Montaj
 
-- Devrenin gerçek montajı: PCB'ye lehimli parçalar kartın üzerinde kalır; motor, servo, pil, sensör ve kontrol kartı modülleri ayrı gerçek 3D parçalar olarak dünyaya gelir ve devredeki ağlara göre pin-pin kablolanır. Araç şablonu yok: şaseyi, tekerleri, eklemleri ve kabukları dünya araçlarıyla kurarsınız, her şey gerçek fizikle çalışır.
+- Robotun kendisi: kurulurken hangi projelerin ve nasıl geleceği sorulur. **PCB'li**: PCB'ye lehimli parçalar kartın üzerinde, motor, servo, pil, sensör ve modüller ayrı gerçek 3D parçalar olarak, ağlara göre pin pin kablolu. **PCB'siz**: her parça ayrı. Birden çok proje aynı montajda yan yana.
+- Projeyle birlikte kaydedilir. Her açılışta devre, PCB ve kod değişikliklerini alır: yeni parça eklenir, silinen kalkar, kod güncellenir; yerleştirdiğiniz yerler, bağlantılar ve kendi kablolarınız korunur.
+- Araç projeleri (iki motorlu gezgin) gerçek parçalarla kurulur: şase plakası, motor millerine takılı tekerlekler, sarhoş teker, şase üstünde birbirine değmeden kart ve modüller, arenasında. Sağ motor gerçek kitlerdeki gibi aynalı takılır ve kabloları ters bağlanır.
+- Parça sayfasındaki parçalar ayrı gövdeler olarak gelir; bağlantılar Bağla aracıyla kurulur, her şey gerçek fizikle çalışır.
 
 ### Dünya
 
@@ -265,7 +269,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 | Ctrl+O / Ctrl+S / Ctrl+Shift+S | Aç · Kaydet · Farklı kaydet |
 | Ctrl+Z / Ctrl+Y | Geri al · Yinele |
 | Ctrl+K | Komut paleti (her şeyi ara) |
-| Ctrl+0 … Ctrl+7 | Başlangıç, Devre, PCB, Kod, Modelle, Montaj, Dünya, Kütüphane |
+| Ctrl+0 … Ctrl+7 | Başlangıç, Devre, PCB, Kod, Parça, Montaj, Dünya, Kütüphane |
 | Ctrl+, | Ayarlar |
 | Ctrl+B | Tasarım hattını genişlet / daralt |
 | Ctrl+\\ | Bölünmüş görünüm aç / kapat |
@@ -307,8 +311,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.2
-# -> builds\installer\RobotWinStudio-Setup-1.4.2.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.5.0
+# -> builds\installer\RobotWinStudio-Setup-1.5.0.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -387,19 +391,19 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
-> **New in 1.4.2:** The code page works like a code editor: every board of the project and of the open world has its own code folder, folders on disk, subfolders, import and zip; code loads onto the board you pick (Uno, Nano, ESP32) and multi-file sketches compile. Completion comes from the board's real headers, and Arduino libraries are searched and installed from the app. An adjustable AC/DC power supply and a part library in categories. **1.4.1:** the render's air is the real air. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
+> **New in 1.5.0:** The rail in three groups (electronics, mechanics, test). The Parça (part) page holds several parts per file, and *send to assembly* makes each one a body of its own. The Montaj (assembly) is the robot itself: projects come in with or without their PCB, several projects share one Montaj, and it is saved with its project and follows its circuit, PCB and code. Robot examples are built as real vehicles. Arduino libraries on the ESP32, PCBs of up to 32 layers. **1.4.2:** the code page is a code editor. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
 
 ### What's inside
 
-The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) walks through the stages of a project:
+The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) shows a project's stages in three groups: **ELEKTRONİK** (electronics: circuit, PCB, code), **MEKANİK** (mechanics: part, assembly), **TEST** (world).
 
 | Stage (UI name) | Shortcut | What you do |
 | --- | --- | --- |
 | Circuit (**Devre**) | Ctrl+1 | Schematic capture with 256 real parts, live analog simulation, 4-channel oscilloscope, multimeter, bench supply, tolerances, Monte Carlo, fault diagnosis, ERC; BOM/KiCad/SPICE/PNG/SVG export. |
-| **PCB** | Ctrl+2 | 2/4/6-layer boards, copper zones, interactive router that walks around obstacles, auto-placement and auto-routing, DRC, Gerber RS-274X X2 + Excellon + BOM + CPL, KiCad 8 project export, footprint editor, 3D board view. |
+| **PCB** | Ctrl+2 | Boards of 2 to 32 copper layers, copper zones, interactive router that walks around obstacles, auto-placement and auto-routing, DRC, Gerber RS-274X X2 + Excellon + BOM + CPL, KiCad 8 project export, footprint editor, 3D board view. |
 | Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). |
-| Model (**Modelle**) | Ctrl+4 | Blender-like modeller: primitives, edit mode (vertex/edge/face, extrude, inset, knife, loop cut, bevel, solidify, subdivide, …), slicing into two closed pieces, CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export, *send to world*. |
-| Assembly (**Montaj**) | Ctrl+5 | The circuit's real assembly: parts on the PCB stay on the board, motors, servos, batteries, sensors and modules arrive as their real 3D parts wired net by net; you build the chassis, wheels, joints and shells with the world tools, then record and run fault experiments. |
+| Part (**Parça**) | Ctrl+4 | Blender-like modeller, several parts per file: primitives, edit mode (vertex/edge/face, extrude, inset, knife, loop cut, bevel, solidify, subdivide, …), slicing into two closed pieces, CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export; *send to assembly* makes each part a body of its own. |
+| Assembly (**Montaj**) | Ctrl+5 | The robot itself: the boards and parts of one or more projects (with or without their PCB) and the bodies modelled on the Parça page, joined. Saved with the project and brought up to date with its circuit, PCB and code when opened; rover projects are built on their chassis with the wheels on the motor shafts. Record and run fault experiments. |
 | World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Pressure vessels, water rockets and solid motors share one gas physics: Noble–Abel real gas for hot products, isentropic nozzle flow with Schmucker separation, ignition through the real chain (bridgewire, pyrogen, grain surface soak by convection and radiation, flame spread from the head end; a weak igniter fails), erosive burning, wall and throat heating (Dittus–Boelter, Bartz) shown in the thermal camera, launch switches on a countdown and parachutes at apogee — the **solid rocket** template climbs to ~1 km and comes down under its canopy. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. **Record and render** (● Record, Ctrl+R; Simulation › Render, Ctrl+F5): the recorded stretch is recomputed off-screen at full accuracy — every pose, force and signal, FEM stress of every part at video frame rate, 3D lattice-Boltzmann flow around the whole assembly and heating — and replayed like a video in the same 3D scene with a timeline, slow motion, per-part stress colours, force arrows, a flow slice and graphs that jump to the clicked second. |
 
 Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
@@ -466,7 +470,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.2` → `builds\installer\RobotWinStudio-Setup-1.4.2.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.5.0` → `builds\installer\RobotWinStudio-Setup-1.5.0.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

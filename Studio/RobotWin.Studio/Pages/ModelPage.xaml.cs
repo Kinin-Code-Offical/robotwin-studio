@@ -19,7 +19,7 @@ using RobotWin.Studio.Shell;
 namespace RobotWin.Studio.Pages
 {
     /// <summary>
-    /// "Modelle" page: a Blender-style 3D modelling workspace for robot parts (chassis,
+    /// "Parça" page (modelling): a Blender-style 3D modelling workspace for robot parts (chassis,
     /// brackets, arms, enclosures, wheels) that can be sent to the world as model objects.
     /// </summary>
     public partial class ModelPage : UserControl
@@ -526,7 +526,8 @@ namespace RobotWin.Studio.Pages
             menu.Items.Add(Item("Gizle", "H", () => _ed.HideSelected(), any));
             menu.Items.Add(Item("Hepsini göster", "Alt+H", _ed.UnhideAll, _ed.Doc.Objects.Any(o => !o.Visible)));
             menu.Items.Add(Item("Seçimi çerçevele", "Numpad .", _vp.FrameSelected, any));
-            menu.Items.Add(Item("Dünyaya gönder", null, () => SendToWorld(), _ed.Doc.Objects.Count > 0));
+            menu.Items.Add(Item("Montaja gönder (her parça ayrı)", null, () => SendToAssembly(), _ed.Doc.Objects.Count > 0));
+            menu.Items.Add(Item("Test dünyasına tek gövde olarak koy (engel, rampa …)", null, () => SendToWorld(), _ed.Doc.Objects.Count > 0));
             menu.Items.Add(Item("Sil", "X", _ed.DeleteSelected, any));
             Open(menu);
         }
@@ -628,6 +629,10 @@ namespace RobotWin.Studio.Pages
 
             try
             {
+                // [assembly] Saved under another name, a model is a copy: its parts are new parts, not the original's.
+                if (_ed.FilePath != null && !string.Equals(Path.GetFullPath(_ed.FilePath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
+                    _ed.Doc.Uid = Guid.NewGuid().ToString("N");
+                _ed.Doc.EnsureUid(path);
                 _ed.Doc.Preview = RenderPreview(320, 200);
                 _ed.Doc.Save(path);
                 _ed.MarkSaved(path);
@@ -727,7 +732,161 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ world
 
-        private void OnSendToWorld(object sender, RoutedEventArgs e) => SendToWorld();
+        private void OnSendToAssembly(object sender, RoutedEventArgs e) => SendToAssembly();
+
+        /// <summary>[assembly] Parts of the model: its visible root objects (each with what is parented under it).</summary>
+        public int PartCount() => _ed.Doc.Objects.Count(o => o.ParentId == null && o.Visible);
+
+        /// <summary>
+        /// [assembly] The parts to send: every root object (with what is parented under it) of the selection, or of the
+        /// whole model when nothing is selected. Hidden parts stay home unless picked.
+        /// </summary>
+        private List<ModelObject> PartRoots(out bool all)
+        {
+            _ed.FlushEditMesh();
+            var sel = _ed.SelectedRoots();
+            all = sel.Count == 0;
+            return sel.Count > 0 ? sel : _ed.Doc.Objects.Where(o => o.ParentId == null && o.Visible).ToList();
+        }
+
+        /// <summary>
+        /// [assembly] Sends each part to the project's Montaj as a body of its own (setting the Montaj up first when the
+        /// project has none). New parts keep their arrangement — a chassis and its wheels arrive arranged as modelled —
+        /// and stand together beside what is already there, on the floor, touching nothing. A part sent before is
+        /// updated (shape, mass, material, colour) where it stands: its own origin, and with it its mounting holes and
+        /// its joints, stays put even when it grew on one side. Parts deleted from the model are offered for removal.
+        /// The Parça page stays open: nothing switches to the Montaj.
+        /// </summary>
+        public List<WorldObject> SendToAssembly()
+        {
+            var roots = PartRoots(out bool all);
+            var sent = new List<WorldObject>();
+            if (roots.Count == 0)
+            {
+                _ed.Status("Montaja gönderilecek parça yok · Shift+A ile şekil ekleyin");
+                return sent;
+            }
+
+            var main = _main ?? Window.GetWindow(this) as MainWindow;
+            var world = main?.ProjectAssembly(create: true, show: false, includeParts: false, offerParts: false);
+            var w = Workspace.Current;
+            var tab = world == null ? null : w.Documents.FirstOrDefault(d => d.World == world);
+            if (main == null || world == null || tab == null) return sent;
+            string uid = _ed.Doc.EnsureUid(_ed.FilePath);
+            int added = 0, updated = 0;
+            var fresh = new List<WorldObject>();
+            var notes = new List<string>();
+            w.EditWorld(tab, () =>
+            {
+                foreach (var root in roots)
+                {
+                    var set = _ed.Doc.WithDescendants(new[] { root }).Where(o => o.Visible || o == root).ToList();
+                    var mesh = ModelOps.ToMeshModel(_ed.Doc, set, root.Name);
+                    if (mesh.Vertices.Count == 0) continue;   // nothing to show
+                    // The world shows and simulates a model about its bounding box (centred, resting on z = 0) …
+                    var b = mesh.Bounds;
+                    var frame = new Vec3((b.Min.X + b.Max.X) / 2, (b.Min.Y + b.Max.Y) / 2, b.Min.Z);
+                    mesh.Translate(-frame);
+                    // … so remember where the part's own origin is in that frame.
+                    var origin = _ed.Doc.WorldMatrix(root).Translation * 0.001 - frame;
+                    var stats = ModelMeasure.Total(_ed.Doc, set);
+                    var heaviest = set.OrderByDescending(o => ModelMeasure.Of(_ed.Doc, o).VolumeMm3).First();
+                    string key = uid + "/" + root.Id;
+                    var wo = world.Objects.FirstOrDefault(o => o.ModelSource == key);
+                    if (wo != null)
+                    {
+                        // Keep the part's origin where it is in the Montaj: shift the frame by how far the box moved.
+                        if (wo.ModelOrigin is { Length: 3 } old)
+                        {
+                            var delta = new Vec3(old[0], old[1], old[2]) - origin;
+                            var shift = wo.Pose.Orientation.Rotate(delta);
+                            wo.Pose.X += shift.X;
+                            wo.Pose.Y += shift.Y;
+                            wo.Pose.Z += shift.Z;
+                        }
+
+                        wo.Mesh = mesh.ToEmbedded();
+                        wo.MeshName = root.Name;
+                        updated++;
+                    }
+                    else
+                    {
+                        wo = world.AddModel(mesh, root.Name, new WorldPose { X = frame.X, Y = frame.Y, Z = frame.Z }, heaviest.Material);
+                        wo.ModelSource = key;
+                        fresh.Add(wo);
+                        added++;
+                    }
+
+                    wo.ModelOrigin = new[] { origin.X, origin.Y, origin.Z };
+                    wo.Material = heaviest.Material;
+                    wo.MassKg = Math.Round(stats.MassG / 1000, 6);
+                    wo.Infill = heaviest.Infill;
+                    wo.Color = heaviest.Color;
+                    sent.Add(wo);
+                }
+
+                // New parts together beside what is there, on the floor (whole group lifted: it keeps its shape).
+                RobotTwin.CoreSim.Sandbox.ProjectAssembly.MoveBeside(world, w.Library, fresh, main.MontajGeometry());
+                return sent.Count > 0;
+            });
+
+            // Parts deleted from the model, still in the Montaj (only when the whole model was sent).
+            if (all)
+            {
+                var ids = new HashSet<string>(_ed.Doc.Objects.Select(o => uid + "/" + o.Id));
+                var gone = world.Objects.Where(o => o.ModelSource != null && o.ModelSource.StartsWith(uid + "/", StringComparison.Ordinal) && !ids.Contains(o.ModelSource)).ToList();
+                if (gone.Count > 0 && Dialog.Show(Owner!, "Silinen parçalar",
+                        $"{string.Join(", ", gone.Select(o => o.Name))} bu modelde artık yok ama Montaj'da duruyor. Montaj'dan da kaldırılsın mı? (Bağlantıları da kalkar.)",
+                        "Kaldır", "Montaj'da kalsın") == 0)
+                {
+                    w.EditWorld(tab, () =>
+                    {
+                        foreach (var o in gone)
+                        {
+                            world.Objects.Remove(o);
+                            world.Cables.RemoveAll(c => c.A.ObjectId == o.Id || c.B.ObjectId == o.Id);
+                            world.Joints.RemoveAll(j => j.ObjectA == o.Id || j.ObjectB == o.Id);
+                        }
+
+                        return true;
+                    });
+                    notes.Add($"{gone.Count} silinen parça kaldırıldı");
+                }
+            }
+
+            // Parts inside each other that are not one part: a tyre on its hub sent as two bodies falls off.
+            var inside = Interpenetrating(roots).ToList();
+            if (inside.Count > 0)
+                notes.Add($"'{inside[0].A}' ile '{inside[0].B}'" + (inside.Count > 1 ? $" (ve {inside.Count - 1} çift daha)" : string.Empty) +
+                          " iç içe: tek parça olacaklarsa Ctrl+P ile birini ötekine bağlayın, değilse Montaj'da Bağla ile birleştirin");
+
+            string what = (added > 0 ? $"{added} parça eklendi" : string.Empty) + (added > 0 && updated > 0 ? ", " : string.Empty) + (updated > 0 ? $"{updated} parça güncellendi" : string.Empty);
+            string msg = $"Montaj: {what}" + (notes.Count > 0 ? " · " + string.Join(" · ", notes) : " · Montaj'da (Ctrl+5) Bağla aracıyla (B) parçaları birbirine, motor miline ya da servo koluna takın");
+            w.Status = msg;
+            _ed.Status(msg);
+            return sent;
+        }
+
+        /// <summary>Root parts whose solids overlap a good deal (more than a third of the smaller one's box).</summary>
+        private IEnumerable<(string A, string B)> Interpenetrating(List<ModelObject> roots)
+        {
+            var boxes = roots.Select(r => (Name: r.Name, Box: ModelOps.WorldBounds(_ed.Doc, _ed.Doc.WithDescendants(new[] { r })))).ToList();
+            for (int i = 0; i < boxes.Count; i++)
+            {
+                for (int k = i + 1; k < boxes.Count; k++)
+                {
+                    var a = boxes[i].Box;
+                    var c = boxes[k].Box;
+                    double ox = Math.Min(a.Max.X, c.Max.X) - Math.Max(a.Min.X, c.Min.X);
+                    double oy = Math.Min(a.Max.Y, c.Max.Y) - Math.Max(a.Min.Y, c.Min.Y);
+                    double oz = Math.Min(a.Max.Z, c.Max.Z) - Math.Max(a.Min.Z, c.Min.Z);
+                    if (ox <= 0 || oy <= 0 || oz <= 0) continue;
+                    double va = (a.Max.X - a.Min.X) * (a.Max.Y - a.Min.Y) * (a.Max.Z - a.Min.Z);
+                    double vc = (c.Max.X - c.Min.X) * (c.Max.Y - c.Min.Y) * (c.Max.Z - c.Min.Z);
+                    if (ox * oy * oz > Math.Min(va, vc) / 3) yield return (boxes[i].Name, boxes[k].Name);
+                }
+            }
+        }
 
         /// <summary>
         /// Adds the selection (or the whole visible model) to the active world as one model
@@ -751,9 +910,11 @@ namespace RobotWin.Studio.Pages
             var main = set.OrderByDescending(o => ModelMeasure.Of(_ed.Doc, o).VolumeMm3).First();
 
             var w = Workspace.Current;
-            if (w.ActiveWorld == null)
+            if (w.ActiveWorld == null || w.ActiveWorld.IsAssembly)
             {
-                var existing = w.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World && d.World != null);
+                // [assembly] One merged body is a prop for a test world (an obstacle, a ramp), never a robot's Montaj:
+                // there each part is a body of its own (Montaja gönder).
+                var existing = w.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World && d.World != null && !d.World.IsAssembly);
                 if (existing != null) w.Activate(existing);
                 else w.NewWorld();
             }

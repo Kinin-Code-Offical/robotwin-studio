@@ -167,7 +167,7 @@ Equations and validation: [Liquids](../physics/07-liquids.md).
 
 ### 3D models
 
-Add your own model with **Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY)…** (import a 3D model). Mass, centre of mass and inertia are computed from the material. Parts you made on the Model page come here directly with **Dünyaya gönder** (send to world) ([5. Model](05-model.md)).
+Add your own model with **Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY)…** (import a 3D model). Mass, centre of mass and inertia are computed from the material. A part you made on the Parça page comes here as one body with **Test dünyasına tek gövde olarak koy** (put into a test world as one body) in its right-click menu; the robot's parts go to its assembly with **Montaja gönder** (send to assembly) ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
 
 ## Cables
 

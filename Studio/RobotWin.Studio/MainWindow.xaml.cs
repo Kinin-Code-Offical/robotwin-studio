@@ -45,7 +45,7 @@ namespace RobotWin.Studio
         private readonly Dictionary<string, UserControl> _pages = new Dictionary<string, UserControl>();
         private readonly Dictionary<string, string> _pageNames = new Dictionary<string, string>
         {
-            ["world"] = "Dünya", ["schematic"] = "Devre", ["pcb"] = "PCB", ["code"] = "Kod", ["assembly"] = "Montaj", ["model"] = "Modelle",
+            ["world"] = "Dünya", ["schematic"] = "Devre", ["pcb"] = "PCB", ["code"] = "Kod", ["assembly"] = "Montaj", ["model"] = "Parça",
             ["library"] = "Kütüphane", ["home"] = "Başla", ["settings"] = "Ayarlar"
         };
 
@@ -397,6 +397,32 @@ namespace RobotWin.Studio
 
         public string CurrentPage => _current;
 
+        /// <summary>
+        /// A stage the user asked for (the rail, Ctrl+0…7, the Pencere menu). [assembly] Dünya is where robots are tried
+        /// out: asked for while a Montaj is open, it goes to a test world (the last one, or a new one), never the Montaj.
+        /// </summary>
+        public void NavigateStage(string page)
+        {
+            if (page == "world" && W.ActiveDocument.IsMontaj)
+            {
+                var test = W.Documents.LastOrDefault(d => d.Kind == DocumentKind.World && !d.IsMontaj);
+                if (test != null)
+                {
+                    W.Activate(test);
+                    if (_current != "world") Navigate("world");
+                }
+                else
+                {
+                    NewWorld();
+                    W.Status = "Yeni test dünyası açıldı. Robotu kendi montajında denemek için Montaj'da 'Denemek için ortam'ı kullanın; şablonlar Dosya → Yeni → Dünya şablonları'nda.";
+                }
+
+                return;
+            }
+
+            Navigate(page);
+        }
+
         public void Navigate(string page)
         {
             if (page == "assembly")
@@ -429,9 +455,12 @@ namespace RobotWin.Studio
 
         private void UpdateNav(string page)
         {
-            Rail.Active = page;
+            Rail.Active = RailKey(page);
             Rail.Refresh();
         }
+
+        /// <summary>[assembly] The project's Montaj is a world, but the rail shows it as the Montaj stage.</summary>
+        private string RailKey(string page) => page == "world" && W.ActiveWorld?.IsAssembly == true ? "assembly" : page;
 
         private readonly System.Windows.Threading.DispatcherTimer _railTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         private DateTime _ercAt;
@@ -449,7 +478,7 @@ namespace RobotWin.Studio
 
         private void SetupRail()
         {
-            Rail.Navigate += Navigate;
+            Rail.Navigate += NavigateStage;
             Rail.StatusProvider = StageStatus;
             Rail.IsExpanded = AppSettings.Current.NavExpanded;
             Rail.ExpandedChanged += (_, _) =>
@@ -464,10 +493,15 @@ namespace RobotWin.Studio
             Bind(Key.D3, ModifierKeys.Control, () => Navigate("code"));
             Bind(Key.D4, ModifierKeys.Control, () => Navigate("model"));
             Bind(Key.D5, ModifierKeys.Control, () => Navigate("assembly"));
-            Bind(Key.D6, ModifierKeys.Control, () => Navigate("world"));
+            Bind(Key.D6, ModifierKeys.Control, () => NavigateStage("world"));
             Bind(Key.D7, ModifierKeys.Control, () => Navigate("library"));
             Bind(Key.B, ModifierKeys.Control, () => Rail.IsExpanded = !Rail.IsExpanded);
-            _railTimer.Tick += (_, _) => Rail.Refresh();
+            _railTimer.Tick += (_, _) =>
+            {
+                string key = RailKey(_current);   // another world tab may have become active
+                if (Rail.Active != key && !_detached.ContainsKey(_current)) Rail.Active = key;
+                Rail.Refresh();
+            };
             _railTimer.Start();
         }
 
@@ -520,14 +554,14 @@ namespace RobotWin.Studio
                 }
 
                 case "model":
-                    return new RailStatus("Parça ve gövde modelle, dünyaya gönder");
+                {
+                    var doc = _model.Editor.Doc;
+                    int parts = doc.Objects.Count(o => o.ParentId == null);
+                    return new RailStatus(parts == 0 ? "Parça yok" : $"{parts} parça · {doc.Title}");
+                }
 
                 case "assembly":
-                {
-                    // [assembly] the circuit's parts as real 3D parts in a world
-                    int physical = sch.Parts.Count(p => W.Library.Find(p.PartId) is { } d && d.Symbol != RobotTwin.CoreSim.Design.SymbolKind.Ground && d.Pins.Count > 0);
-                    return new RailStatus(physical == 0 ? "Devrede parça yok" : $"{physical} parça gerçek montaja", physical == 0 ? RailSeverity.None : RailSeverity.Ok);
-                }
+                    return MontajStatus();   // [assembly] MainWindow.Montaj.cs
 
                 case "world":
                 {
@@ -581,6 +615,7 @@ namespace RobotWin.Studio
             UpdateTitle();
             UpdateStats();
             var doc = W.ActiveDocument;
+            if (doc.IsMontaj) SyncMontaj(doc, quiet: true);   // [assembly] a Montaj follows its projects
             if (doc.Kind == DocumentKind.World)
             {
                 if (_current != "world" && _second != "world") Navigate("world");
@@ -635,6 +670,15 @@ namespace RobotWin.Studio
                 App.SnapshotTarget = editor.Content as FrameworkElement;
             }
 
+            if (page == "pcb" && fault != null && fault.StartsWith("stackup", StringComparison.Ordinal) && W.Schematic.Board is { } stackBoard)
+            {
+                // "stackup:12": the board setup window with that many copper layers (not applied).
+                stackBoard.Stackup.CopperLayers = fault.Length > 8 && int.TryParse(fault.Substring(8), NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ? n : 8;
+                RobotWin.Studio.Pcb.PcbDialogs.SnapshotPreview = true;
+                try { RobotWin.Studio.Pcb.PcbDialogs.BoardSetup(this, stackBoard, out _); }
+                finally { RobotWin.Studio.Pcb.PcbDialogs.SnapshotPreview = false; }
+            }
+
             if (page == "pcb" && fault == "module")
             {
                 // Package the loaded example (with an auto-placed board) as a module and plug two of them into a carrier board.
@@ -670,6 +714,17 @@ namespace RobotWin.Studio
             }
 
             if (page == "code") _code.SnapshotBuildAndRun(fault);
+            if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
+            if (fault == "montaj-dialog")
+            {
+                // [assembly] The Montaj set-up window with a second project open beside this one.
+                var first = W.DesignDocument;
+                W.Load(RobotTwin.CoreSim.Mechanics.VehicleTemplates.LineFollower(W.Library), null);
+                W.Activate(first);
+                Shell.MontajDialog.SnapshotPreview = true;
+                try { Shell.MontajDialog.Ask(this, W, first, _model.PartCount() > 0 ? _model.PartCount() : 10, true); }
+                finally { Shell.MontajDialog.SnapshotPreview = false; }
+            }
             if (page == "world") _world.PrepareSnapshot(fault, simulate);
             if (page == "help") _help?.PrepareSnapshot(fault);
 
@@ -756,45 +811,6 @@ namespace RobotWin.Studio
             Navigate("schematic");
         }
 
-        /// <summary>
-        /// [assembly] Montaj: the current project's circuit as a real assembly in a world tab — the PCB
-        /// with what is soldered on it, every other part as its own real 3D part, cabled pin to pin by
-        /// the nets. Built once per project; afterwards the same tab is brought back.
-        /// </summary>
-        public void OpenProjectAssembly()
-        {
-            var sch = W.Schematic;
-            int physical = sch.Parts.Count(p => W.Library.Find(p.PartId) is { } d && d.Symbol != RobotTwin.CoreSim.Design.SymbolKind.Ground && d.Pins.Count > 0);
-            if (physical == 0)
-            {
-                // [assembly] Nothing to assemble: say what Montaj is for, and where the open world's boards are edited.
-                bool hasWorld = W.ActiveWorld != null || W.Documents.Any(d => d.Kind == DocumentKind.World);
-                int pick = Shell.Dialog.Show(this, "Montaj: projenin gerçek parçaları",
-                    "Montaj, bu projenin devresini gerçek 3B parçalara çevirir: kart, üstüne lehimlenen parçalar ve ayrı parçalar kablolarıyla bir dünyaya kurulur; gövdeyi, motorları ve mekaniği orada ekleyip gerçek fizikle denersiniz.\n\n"
-                    + "Bu projenin devresinde henüz parça yok. Önce Devre'de parçaları yerleştirin."
-                    + (hasWorld ? "\n\nDünya şablonları (servo kol, araba …) projeden ayrı belgelerdir. İçlerindeki bir kartın devresini ve kodunu görmek için Dünya'da kartı seçip \"Kartı düzenle\" deyin; Devre sayfası da açık dünyanın kartlarını listeler." : string.Empty),
-                    hasWorld ? new[] { "Devre'ye git", "Dünya'ya dön", "Kapat" } : new[] { "Devre'ye git", "Kapat" });
-                if (pick == 0) Navigate("schematic");
-                else if (pick == 1 && hasWorld) Navigate("world");
-                return;
-            }
-
-            string title = (string.IsNullOrWhiteSpace(sch.Title) ? "Proje" : sch.Title) + " — montaj";
-            var open = W.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World && d.World?.Title == title);
-            if (open != null)
-            {
-                W.Activate(open);
-                Navigate("world");
-                return;
-            }
-
-            var package = new ProjectPackage { Schematic = sch, Firmware = W.Project.Firmware, Parts = W.Project.Parts };
-            W.Status = "Montaj kuruluyor: devrenin parçaları gerçek 3B parçalara çevriliyor …";
-            var world = RobotTwin.CoreSim.Sandbox.ProjectAssembly.Build(package, W.Library, W.FilePath);
-            NewWorld(world);
-            W.Status = $"Montaj: {world.Objects.Count} gerçek parça, {world.Cables.Count} kablo. Gövdeyi, eklemleri ve kabukları dünya araçlarıyla kurun; her şey gerçek fizikle çalışır.";
-        }
-
         /// <summary>[code] Shows the world and runs it from the start (after code was written to one of its boards).</summary>
         public void RunWorld()
         {
@@ -804,6 +820,8 @@ namespace RobotWin.Studio
 
         /// <summary>[boards] Opens a board of the active world in the circuit / code pages (Pages/WorldPage.xaml.cs).</summary>
         public void OpenWorldBoard(RobotTwin.CoreSim.Sandbox.WorldObject board) => _world.OpenBoard(board);
+
+        private void OnLogoClick(object sender, System.Windows.Input.MouseButtonEventArgs e) => Navigate("home");
 
         public void NewWorld(WorldDocument? world = null)
         {
@@ -945,6 +963,12 @@ namespace RobotWin.Studio
         private void OnSave(object sender, RoutedEventArgs e)
         {
             var doc = W.ActiveDocument;
+            if (doc.IsMontaj)
+            {
+                SaveMontajProject(doc, saveAs: false);   // [assembly] a Montaj is saved inside its project
+                return;
+            }
+
             if (doc.IsEmbedded)
             {
                 W.SaveEmbedded();
@@ -958,6 +982,7 @@ namespace RobotWin.Studio
         private bool SaveAs()
         {
             var doc = W.ActiveDocument;
+            if (doc.IsMontaj) return SaveMontajProject(doc, saveAs: true);   // [assembly]
             if (doc.IsEmbedded)
             {
                 // "Save as" on a board inside a world exports it as a stand-alone project.
@@ -1008,7 +1033,7 @@ namespace RobotWin.Studio
         public bool ConfirmDiscard(OpenDocument doc)
         {
             bool dirty = doc.IsDirty || (doc.Kind == DocumentKind.World && W.Documents.Any(d => d.OwnerWorld == doc && d.IsDirty));
-            if (!dirty || doc.IsEmbedded) return true;
+            if (!dirty || doc.IsEmbedded || doc.IsMontaj) return true;   // a Montaj is kept in its project, which asks
             if (doc != W.ActiveDocument) W.Activate(doc);
             var answer = Dialog.Show(this, "Kaydedilmemiş değişiklikler",
                 $"'{doc.BaseTitle}' içinde kaydedilmemiş değişiklikler var.", "Kaydet", "Kaydetme", "Vazgeç");

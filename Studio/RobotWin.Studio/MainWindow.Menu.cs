@@ -161,12 +161,12 @@ namespace RobotWin.Studio
             var pages = new (string Key, string Title, string Keys)[]
             {
                 ("home", "Başlangıç", "Ctrl+0"), ("schematic", "Devre", "Ctrl+1"), ("pcb", "PCB", "Ctrl+2"), ("code", "Kod", "Ctrl+3"),
-                ("model", "Modelle", "Ctrl+4"), ("assembly", "Montaj", "Ctrl+5"), ("world", "Dünya", "Ctrl+6"), ("library", "Kütüphane", "Ctrl+7")
+                ("model", "Parça (modelle)", "Ctrl+4"), ("assembly", "Montaj", "Ctrl+5"), ("world", "Dünya", "Ctrl+6"), ("library", "Kütüphane", "Ctrl+7")
             };
             foreach (var (key, title, keys) in pages)
             {
                 var k = key;
-                var it = Item(title, keys, () => Navigate(k));
+                var it = Item(title, keys, () => NavigateStage(k));
                 it.IsCheckable = true;
                 it.IsChecked = _current == key;
                 m.Items.Add(it);

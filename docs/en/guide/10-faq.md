@@ -78,7 +78,7 @@ Press **Ayarlar → Dosya türleri → Windows'ta bu uygulamayla aç** (Settings
 Yes. **KiCad'e aktar** (export to KiCad) on the **PCB** page makes a KiCad 8 project. For a board maker, **Üretim** (manufacturing) gives the Gerber files. Details: [3. PCB](03-pcb.md).
 
 **I want to 3D-print a part.**
-Make it on the **Modelle** (model) page and export it as STL: [5. Model](05-model.md).
+Make it on the **Parça** (part) page and export it as STL: [5. Part](05-model.md).
 
 ## Reporting a bug
 

@@ -27,13 +27,17 @@ namespace RobotTwin.CoreSim.Mechanics
             Tie(sch, lib, bat, "+", "VBAT");
             Tie(sch, lib, bat, "-", "GND");
 
-            var sl = sch.AddPart(lib, "tcrt5000", new GridPoint(14, -8));
-            var sr = sch.AddPart(lib, "tcrt5000", new GridPoint(14, 8));
+            // Real optical modules (IR LED + phototransistor + LM393): DO is high over the black tape, low over white,
+            // read from the floor by the vehicle model and by a world alike.
+            var sl = sch.AddPart(lib, "tcrt5000-module", new GridPoint(14, -8));
+            var sr = sch.AddPart(lib, "tcrt5000-module", new GridPoint(14, 8));
             foreach (var (s, net) in new[] { (sl, "SL"), (sr, "SR") })
             {
                 Tie(sch, lib, s, "VCC", "VBAT");
                 Tie(sch, lib, s, "GND", "GND");
-                Tie(sch, lib, s, "OUT", net);
+                Tie(sch, lib, s, "DO", net);
+                var ao = lib.Get(s.PartId).FindPin("AO")!;
+                sch.NoConnects.Add(new NoConnectFlag { Position = s.Transform(ao.X, ao.Y) });   // the analog output is not used
             }
 
             var il = sch.AddPart(lib, "74hc04", new GridPoint(26, -8));

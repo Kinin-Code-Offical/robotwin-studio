@@ -24,6 +24,55 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            if (fault is "esp32-libs" or "esp32-libs-tab" && Window.GetWindow(this) is MainWindow m2 && Examples.WorldTemplates.Find("trafik-isigi") is { } lights)
+            {
+                // [libs] An ESP32 sketch using an installed Arduino library (a temporary library folder, not the user's).
+                string root = Path.Combine(Path.GetTempPath(), "robotwin-kod");
+                string libs = Path.Combine(root, "libraries");
+                if (Directory.Exists(libs)) Directory.Delete(libs, true);
+                void Put(string rel, string text)
+                {
+                    string p = Path.Combine(libs, rel);
+                    Directory.CreateDirectory(Path.GetDirectoryName(p)!);
+                    File.WriteAllText(p, text);
+                }
+
+                Put("Yanip/library.properties", "name=Yanip Soner\nversion=1.2.0\nauthor=RobotWin\nsentence=Bir LED'i engellemeden yakip sondurur.\narchitectures=*\nincludes=Yanip.h\n");
+                Put("Yanip/src/Yanip.h", "#pragma once\n#include <Arduino.h>\n\nclass Yanip {\npublic:\n  Yanip(int pin, unsigned long aralik) : _pin(pin), _aralik(aralik) {}\n  void baslat();\n  void guncelle();\n  unsigned long sayac() const { return _sayac; }\nprivate:\n  int _pin;\n  unsigned long _aralik, _son = 0, _sayac = 0;\n  bool _acik = false;\n};\n");
+                Put("Yanip/src/Yanip.cpp", "#include \"Yanip.h\"\n\nvoid Yanip::baslat() { pinMode(_pin, OUTPUT); }\n\nvoid Yanip::guncelle() {\n  if (millis() - _son < _aralik) return;\n  _son = millis();\n  _acik = !_acik;\n  digitalWrite(_pin, _acik ? HIGH : LOW);\n  _sayac++;\n}\n");
+                if (!Firmware.ArduinoCompiler.SessionLibraryRoots.Contains(libs)) Firmware.ArduinoCompiler.SessionLibraryRoots.Add(libs);
+
+                m2.NewWorld(lights.Build());
+                m2.Navigate("code");
+                string dir = Path.Combine(root, "yanip_soner");
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(Path.Combine(dir, "yanip_soner.ino"), "#include <Yanip.h>\n\n// Kurulu bir Arduino kütüphanesi ESP32'de: kırmızı LED 500 ms'de bir yanıp söner.\nYanip kirmizi(25, 500);\n\nvoid setup() {\n  Serial.begin(115200);\n  kirmizi.baslat();\n}\n\nvoid loop() {\n  kirmizi.guncelle();\n}\n");
+                if (!SessionFolders.Contains(dir)) SessionFolders.Add(dir);
+                Refresh();
+                var esp = _targets.FirstOrDefault(t => Firmware.ArduinoCompiler.IsEsp32(t.Fqbn));
+                if (esp != null)
+                {
+                    _loading = true;
+                    _target = esp;
+                    TargetBox.SelectedItem = esp;
+                    _loading = false;
+                }
+
+                var sketch = _folders.FirstOrDefault(x => x is DiskCode d && string.Equals(d.Folder, Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase));
+                Open(sketch, "yanip_soner.ino", rebuild: true);
+                LibrariesChanged();
+                UpdateTargetText();
+                if (fault == "esp32-libs-tab")
+                {
+                    BottomTabs.SelectedItem = _libTab;
+                    return;
+                }
+
+                OnBuild(this, new RoutedEventArgs());
+                return;
+            }
+
             if (fault is "explorer" or "explorer-upload")
             {
                 // A sketch of several files in a folder on disk (a temporary workspace, not the user's).

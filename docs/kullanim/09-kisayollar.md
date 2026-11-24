@@ -18,7 +18,7 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | Ctrl+1 | Devre |
 | Ctrl+2 | PCB |
 | Ctrl+3 | Kod |
-| Ctrl+4 | Modelle |
+| Ctrl+4 | Parça |
 | Ctrl+5 | Montaj |
 | Ctrl+6 | Dünya |
 | Ctrl+7 | Kütüphane |
@@ -104,7 +104,7 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | F7 | Derle |
 | F5 | Derle, karta yükle ve çalıştır |
 
-## Modelle
+## Parça
 
 | Kısayol | İşlev |
 | --- | --- |

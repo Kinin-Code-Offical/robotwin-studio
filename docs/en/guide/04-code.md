@@ -99,7 +99,13 @@ The **Kütüphaneler** (libraries) tab below searches the Arduino library index.
 - If the index was never downloaded, **Kütüphane listesini indir** (download the library index) runs `arduino-cli lib update-index`.
 - A header in the code that no installed library provides (e.g. `#include <Servo.h>`) is flagged, and the tab shows the library that provides it.
 
-ESP32 boards are compiled natively on your PC in the simulation, so only the simulation layer's headers can be used on them; Arduino libraries are for the Uno and Nano.
+ESP32 boards use installed Arduino libraries too:
+- When a sketch includes a library's header (`#include <AccelStepper.h>`), that library is found and compiled with the sketch against the simulation layer. Its own dependencies are found too.
+- The simulation layer's own headers (`Wire.h`, `Servo.h`, `WiFi.h` …) come first.
+- A changed or updated library rebuilds the sketch.
+- Libraries that reach into the ESP32's registers directly (say, driving an LED strip through the RMT) may not exist in the simulation layer. Then the error names the library that did not compile.
+
+![An ESP32 sketch built with an installed library](../../images/code-esp32-libraries.png)
 
 ## Arduino templates
 

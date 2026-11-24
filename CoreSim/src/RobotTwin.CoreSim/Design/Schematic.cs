@@ -144,6 +144,19 @@ namespace RobotTwin.CoreSim.Design
 
         public int Version { get; set; } = FormatVersion;
         public string Title { get; set; } = "Yeni Devre";
+
+        /// <summary>
+        /// [assembly] Stable id of the project (empty in files saved before it existed; see <see cref="EnsureProjectId"/>).
+        /// Its Montaj and the parts and cables made from it carry it, so they keep their link when the title changes.
+        /// </summary>
+        public string ProjectId { get; set; } = string.Empty;
+
+        /// <summary>Gives the project an id when it has none yet; returns it.</summary>
+        public string EnsureProjectId()
+        {
+            if (string.IsNullOrEmpty(ProjectId)) ProjectId = Guid.NewGuid().ToString("N");
+            return ProjectId;
+        }
         public List<SchematicPart> Parts { get; set; } = new List<SchematicPart>();
         public List<SchematicWire> Wires { get; set; } = new List<SchematicWire>();
         public List<NetLabel> Labels { get; set; } = new List<NetLabel>();

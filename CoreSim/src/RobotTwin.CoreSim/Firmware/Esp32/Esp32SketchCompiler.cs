@@ -58,6 +58,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>The preprocessed translation unit that was compiled (for inspection).</summary>
         public string GeneratedSource { get; set; } = string.Empty;
 
+        /// <summary>[libs] Installed Arduino libraries compiled into this build.</summary>
+        public List<ResolvedLibrary> Libraries { get; } = new List<ResolvedLibrary>();
+
         public IEnumerable<CompilerDiagnostic> Errors => Diagnostics.Where(d => d.Severity == CompilerSeverity.Error);
     }
 
@@ -93,6 +96,35 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         /// <summary>Extra preprocessor definitions ("NAME" or "NAME=VALUE").</summary>
         public List<string> Defines { get; } = new List<string>();
+
+        /// <summary>
+        /// [libs] Folders of installed Arduino libraries (each holds one folder per library). A header the HAL and the
+        /// sketch do not provide is looked up here and its library is compiled with the sketch, like the Arduino IDE.
+        /// </summary>
+        public List<string> LibraryRoots { get; } = new List<string>();
+
+        private static HashSet<string>? _halHeaders;
+
+        /// <summary>[libs] The simulation's HAL has this header (Arduino.h, Wire.h, Servo.h, freertos/task.h …).</summary>
+        public static bool HalProvides(string header)
+        {
+            var set = _halHeaders ??= new HashSet<string>(typeof(Esp32SketchCompiler).GetTypeInfo().Assembly.GetManifestResourceNames()
+                .Select(n => n.Replace('\\', '/')).Where(n => n.StartsWith(ResourcePrefix, StringComparison.Ordinal))
+                .Select(n => n.Substring(ResourcePrefix.Length)), StringComparer.OrdinalIgnoreCase);
+            return set.Contains(header.Replace('\\', '/'));
+        }
+
+        /// <summary>
+        /// [libs] A short stamp of the installed libraries a sketch (one source or a bundle) would be built with; empty when
+        /// it uses none. A cached build made before a library was installed, updated or edited is then not reused.
+        /// </summary>
+        public static string LibraryStamp(string source, IEnumerable<string> libraryRoots)
+        {
+            var files = Formats.FirmwareSource.Unbundle(source);
+            var paths = new HashSet<string>(files.Select(f => f.Path.Replace('\\', '/')), StringComparer.OrdinalIgnoreCase);
+            bool Provided(string h) => HalProvides(h) || paths.Contains(h) || paths.Contains("src/" + h);
+            return ArduinoLibraryResolver.Stamp(ArduinoLibraryResolver.Resolve(files.Select(f => f.Content), libraryRoots, Provided));
+        }
 
         /// <summary>True when MSVC (vcvars64.bat) can be found on this machine.</summary>
         public static bool IsToolchainAvailable => Esp32Toolchain.FindVcVars(null) != null;
@@ -205,14 +237,65 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                                  Guid.NewGuid().ToString("N").Substring(0, 6) + ".dll";
                 string dllPath = Path.Combine(outputDir, dllName);
 
+                // ---- [libs] installed Arduino libraries the sketch includes
+                string shimInclude = shim.Value.IncludeDir;
+                if (LibraryRoots.Count > 0)
+                {
+                    var texts = files.Select(f => f.Text).Concat(extraSources.Concat(SketchHeaders(sketchDir)).Select(ReadOrEmpty));
+                    bool Provided(string h) => File.Exists(Path.Combine(shimInclude, h)) ||
+                                               (sketchDir != null && (File.Exists(Path.Combine(sketchDir, h)) || File.Exists(Path.Combine(sketchDir, "src", h))));
+                    result.Libraries.AddRange(ArduinoLibraryResolver.Resolve(texts, LibraryRoots, Provided));
+                    foreach (var lib in result.Libraries) log.AppendLine("kütüphane: " + lib.Name + " (" + lib.Folder + ", " + lib.Sources.Count.ToString(CultureInfo.InvariantCulture) + " kaynak)");
+                }
+
+                var libIncludes = new StringBuilder();
+                foreach (var dir in result.Libraries.SelectMany(l => l.IncludeDirs)) libIncludes.Append(" /I\"").Append(dir).Append('"');
+                var defines = new StringBuilder();
+                foreach (var d in Defines) defines.Append(" /D\"").Append(d).Append('"');
+
+                var objects = new List<string>();
+                for (int i = 0; i < result.Libraries.Count; i++)
+                {
+                    var lib = result.Libraries[i];
+                    if (lib.Sources.Count == 0) continue;   // header-only (ArduinoJson …)
+                    var built = CompileObjects(env, lib.Sources, " /I\"" + shimInclude + "\"" + libIncludes + defines, Path.Combine(buildDir, "lib" + i.ToString(CultureInfo.InvariantCulture)), log, result, files);
+                    if (built == null)
+                    {
+                        result.Diagnostics.Add(new CompilerDiagnostic
+                        {
+                            Severity = CompilerSeverity.Error,
+                            Code = "RW0006",
+                            Message = "'" + lib.Name + "' kütüphanesi ESP32 simülasyonu için derlenemedi. ESP32'nin yazmaçlarına doğrudan erişen kütüphaneler simülasyon katmanında bulunmayabilir; hatalar derleme günlüğünde."
+                        });
+                        return result;
+                    }
+
+                    objects.AddRange(built);
+                }
+
+                // The sketch's own .c / .cpp files: compiled apart so src/a/motor.cpp and src/b/motor.cpp do not overwrite each other's object.
+                if (extraSources.Count > 0)
+                {
+                    string sketchIncludes = " /I\"" + shimInclude + "\"" + (sketchDir != null ? " /I\"" + sketchDir + "\"" : string.Empty) + libIncludes + defines;
+                    var built = CompileObjects(env, extraSources, sketchIncludes, Path.Combine(buildDir, "src"), log, result, files);
+                    if (built == null)
+                    {
+                        if (!result.Errors.Any())
+                            result.Diagnostics.Add(new CompilerDiagnostic { Severity = CompilerSeverity.Error, Code = "RW0002", Message = "Çizimin .cpp dosyaları derlenemedi; ayrıntı derleme günlüğünde." });
+                        return result;
+                    }
+
+                    objects.AddRange(built);
+                }
+
                 var args = new StringBuilder();
                 args.Append(CommonFlags).Append(" /LD");
-                args.Append(" /I\"").Append(shim.Value.IncludeDir).Append('"');
+                args.Append(" /I\"").Append(shimInclude).Append('"');
                 if (sketchDir != null) args.Append(" /I\"").Append(sketchDir).Append('"');
-                foreach (var d in Defines) args.Append(" /D\"").Append(d).Append('"');
+                args.Append(libIncludes).Append(defines);
                 args.Append(" /Fo\"").Append(buildDir).Append("\\\\\"");
                 args.Append(" \"").Append(cppPath).Append('"');
-                foreach (var extra in extraSources) args.Append(" \"").Append(extra).Append('"');
+                foreach (var obj in objects) args.Append(" \"").Append(obj).Append('"');
                 args.Append(" /Fe\"").Append(dllPath).Append('"');
                 args.Append(" /link /NOLOGO /INCREMENTAL:NO /WHOLEARCHIVE:\"").Append(shim.Value.Library).Append('"');
                 args.Append(" /IMPLIB:\"").Append(Path.Combine(buildDir, "sketch.lib")).Append('"');
@@ -267,6 +350,65 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             s.Length < 1024 && s.IndexOf('\n') < 0 && (s.EndsWith(".ino", StringComparison.OrdinalIgnoreCase) ||
                                                          s.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
                                                          s.IndexOf(Path.DirectorySeparatorChar) >= 0 || s.IndexOf('/') >= 0);
+
+        /// <summary>The sketch's own headers (its folder and src/), whose includes count too.</summary>
+        private static IEnumerable<string> SketchHeaders(string? sketchDir)
+        {
+            if (sketchDir == null || !Directory.Exists(sketchDir)) return Array.Empty<string>();
+            var list = Directory.GetFiles(sketchDir, "*.h").ToList();
+            string src = Path.Combine(sketchDir, "src");
+            if (Directory.Exists(src)) list.AddRange(Directory.GetFiles(src, "*.h", SearchOption.AllDirectories));
+            return list;
+        }
+
+        private static string ReadOrEmpty(string path)
+        {
+            try
+            {
+                return File.ReadAllText(path);
+            }
+            catch (IOException)
+            {
+                return string.Empty;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Compiles sources to objects under <paramref name="objRoot"/> (/c, in parallel). Files of the same name go to
+        /// separate folders so their objects do not overwrite each other. Null when the compiler failed.
+        /// </summary>
+        private static List<string>? CompileObjects(IReadOnlyDictionary<string, string> env, IReadOnlyList<string> sources, string includeArgs, string objRoot,
+            StringBuilder log, Esp32BuildResult result, IReadOnlyList<SketchSourceFile> files)
+        {
+            var buckets = new List<List<string>>();
+            foreach (var source in sources)
+            {
+                string stem = Path.GetFileNameWithoutExtension(source);
+                var bucket = buckets.FirstOrDefault(b => !b.Any(x => string.Equals(Path.GetFileNameWithoutExtension(x), stem, StringComparison.OrdinalIgnoreCase)));
+                if (bucket == null) buckets.Add(bucket = new List<string>());
+                bucket.Add(source);
+            }
+
+            var objects = new List<string>();
+            for (int i = 0; i < buckets.Count; i++)
+            {
+                string dir = Path.Combine(objRoot, i.ToString(CultureInfo.InvariantCulture));
+                Directory.CreateDirectory(dir);
+                string args = CommonFlags + " /c /MP" + includeArgs + " /Fo\"" + dir + "\\\\\" " + string.Join(" ", buckets[i].Select(s => "\"" + s + "\""));
+                int exit = Esp32Toolchain.Run(env, "cl.exe", args, dir, out string output);
+                log.AppendLine("cl " + args);
+                log.Append(output);
+                ParseDiagnostics(output, null, files, result.Diagnostics);
+                if (exit != 0) return null;
+                objects.AddRange(Directory.GetFiles(dir, "*.obj"));
+            }
+
+            return objects;
+        }
 
         private static string SafeName(string name)
         {
@@ -620,12 +762,15 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             lock (Gate)
             {
                 if (Environments.TryGetValue(vcvars, out var cached)) return cached;
-                var psi = new ProcessStartInfo("cmd.exe", "/d /s /c \"\"" + vcvars + "\" >nul 2>&1 && set\"")
+                // /u: cmd writes "set" in UTF-16, so paths with ı, ş, ğ … (a Turkish user name in TEMP) come through intact.
+                var psi = new ProcessStartInfo("cmd.exe", "/d /u /s /c \"\"" + vcvars + "\" >nul 2>&1 && set\"")
                 {
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.Unicode,
+                    StandardErrorEncoding = ToolEncoding()
                 };
                 using (var p = Process.Start(psi) ?? throw new InvalidOperationException("cmd.exe başlatılamadı"))
                 {
@@ -679,6 +824,39 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             return exe;
         }
 
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern uint GetOEMCP();
+
+        private static Encoding? _toolEncoding;
+
+        /// <summary>
+        /// cl.exe and lib.exe write their messages in the console (OEM) code page, not UTF-8: a Turkish MSVC's
+        /// "içerme dosyası açılamıyor" came out as "i�erme dosyas�". Read them in that code page.
+        /// </summary>
+        internal static Encoding ToolEncoding()
+        {
+            if (_toolEncoding != null) return _toolEncoding;
+            Encoding enc = new UTF8Encoding(false);
+#if NET5_0_OR_GREATER
+            if (Path.DirectorySeparatorChar == '\\')
+            {
+                try
+                {
+                    int cp = (int)GetOEMCP();
+                    if (cp > 0 && cp != 65001)
+                    {
+                        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                        enc = Encoding.GetEncoding(cp);
+                    }
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is DllNotFoundException || ex is EntryPointNotFoundException)
+                {
+                }
+            }
+#endif
+            return _toolEncoding = enc;
+        }
+
         public static int Run(IReadOnlyDictionary<string, string> env, string exe, string arguments, string workingDirectory, out string output)
         {
             var psi = new ProcessStartInfo(ResolveTool(env, exe), arguments)
@@ -688,8 +866,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 RedirectStandardError = true,
                 CreateNoWindow = true,
                 WorkingDirectory = workingDirectory,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8
+                StandardOutputEncoding = ToolEncoding(),
+                StandardErrorEncoding = ToolEncoding()
             };
             psi.Environment.Clear();
             foreach (var kv in env) psi.Environment[kv.Key] = kv.Value;

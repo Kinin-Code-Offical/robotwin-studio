@@ -89,11 +89,11 @@
                         <ComboBoxItem Content="10 mm" Tag="10"/>
                     </ComboBox>
                     <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="10,0"/>
-                    <Button x:Name="SendButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnSendToWorld"
-                            ToolTip="Seçili nesneleri (seçim yoksa tüm modeli) kütlesiyle birlikte etkin dünyaya model olarak ekle">
+                    <Button x:Name="SendButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnSendToAssembly"
+                            ToolTip="Seçili parçaları (seçim yoksa hepsini) projenin Montaj'ına gönder: her parça ayrı bir gövde olur, modellendiği yerde durur. Daha önce gönderilen parça güncellenir, takılı olduğu yer korunur.">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.World}" Size="13" Foreground="{StaticResource B.OnPrimary}"/>
-                            <TextBlock Text="Dünyaya gönder" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource B.OnPrimary}"/>
+                            <t:Icon Data="{StaticResource I.Assembly}" Size="13" Foreground="{StaticResource B.OnPrimary}"/>
+                            <TextBlock Text="Montaja gönder" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -134,7 +134,8 @@
                 </Grid.RowDefinitions>
                 <DockPanel Grid.Row="0">
                     <Grid DockPanel.Dock="Top" Margin="14,10,10,6">
-                        <TextBlock Text="Sahne" Style="{StaticResource Text.Subtitle}" FontSize="12.5" VerticalAlignment="Center"/>
+                        <TextBlock Text="Parçalar" Style="{StaticResource Text.Subtitle}" FontSize="12.5" VerticalAlignment="Center"
+                                   ToolTip="En üstteki her nesne ayrı bir parçadır. Altına bağlanan (Ctrl+P) nesneler onunla tek parça olur."/>
                         <TextBlock x:Name="OutlinerCount" Style="{StaticResource Text.Caption}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                     </Grid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">

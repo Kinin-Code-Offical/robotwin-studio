@@ -4,6 +4,7 @@ using System.Linq;
 using RobotTwin.CoreSim.Analog;
 using RobotTwin.CoreSim.Analog.Devices;
 using RobotTwin.CoreSim.Design;
+using RobotTwin.CoreSim.Sandbox.Sensing;
 
 namespace RobotTwin.CoreSim.Mechanics
 {
@@ -91,16 +92,23 @@ namespace RobotTwin.CoreSim.Mechanics
 
     public sealed class SensorLink
     {
-        internal SensorLink(SensorMount mount, ControlledSource? source, UltrasonicSensor? ranger)
+        internal SensorLink(SensorMount mount, ControlledSource? source, UltrasonicSensor? ranger, Phototransistor? photo = null)
         {
             Mount = mount;
             Source = source;
             Ranger = ranger;
+            Photo = photo;
         }
 
         public SensorMount Mount { get; }
         public ControlledSource? Source { get; }
         public UltrasonicSensor? Ranger { get; }
+
+        /// <summary>
+        /// A real optical line module (TCRT5000: IR LED + phototransistor + comparator) reads the floor through its own
+        /// phototransistor here too, so the same part works in this vehicle model and in a world.
+        /// </summary>
+        public Phototransistor? Photo { get; }
 
         /// <summary>Last reading: floor reflectance (line), distance in metres (obstacle, ultrasonic).</summary>
         public double Value { get; internal set; }
@@ -406,7 +414,8 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 var source = FindDevice<ControlledSource>(s.RefDes);
                 var ranger = FindDevice<UltrasonicSensor>(s.RefDes);
-                _sensors.Add(new SensorLink(s, source, ranger));
+                var photo = s.Kind == SensorKind.Line ? FindDevice<Phototransistor>(s.RefDes) : null;
+                _sensors.Add(new SensorLink(s, source, ranger, photo));
             }
         }
 
@@ -979,6 +988,13 @@ namespace RobotTwin.CoreSim.Mechanics
                         {
                             double level = AnalogMath.Clamp(0.97 - seen, 0.02, 0.97);
                             if (Math.Abs(level - s.Source.Level) > 0.004) s.Source.Level = level;
+                        }
+
+                        if (s.Photo != null)
+                        {
+                            // The module's own phototransistor: photocurrent from the reflected IR (white ≈ full, black ≈ dark).
+                            var spec = ReflectiveSensorSpec.Tcrt5000;
+                            s.Photo.Photocurrent = Math.Max(0, spec.PeakCurrent * seen + spec.DarkCurrent);
                         }
 
                         break;

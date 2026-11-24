@@ -46,6 +46,14 @@ namespace RobotWin.Studio.Shell
 
         // ---- world state
         public WorldDocument? World { get; set; }
+
+        /// <summary>
+        /// [assembly] For a project's Montaj: the project's tab. The Montaj is part of that project: it is saved inside
+        /// the project file, Ctrl+S saves the project, and its changes make the project unsaved.
+        /// </summary>
+        public OpenDocument? OwnerProject { get; set; }
+
+        public bool IsMontaj => Kind == DocumentKind.World && OwnerProject != null;
         internal Stack<string> WorldUndo { get; } = new Stack<string>();
         internal Stack<string> WorldRedo { get; } = new Stack<string>();
 
@@ -95,7 +103,7 @@ namespace RobotWin.Studio.Shell
 
         public string Title => BaseTitle + (IsDirty ? " •" : string.Empty);
 
-        public string KindText => Kind == DocumentKind.World ? "Dünya" : IsEmbedded ? "Dünyadaki kart" : "Devre";
+        public string KindText => IsMontaj ? "Montaj" : Kind == DocumentKind.World ? "Dünya" : IsEmbedded ? "Dünyadaki kart" : "Devre";
 
         /// <summary>True for a fresh, untouched "new circuit" tab that can be replaced by an opened file.</summary>
         internal bool IsPristine => Kind == DocumentKind.Design && !IsDirty && FilePath == null && !IsEmbedded &&
@@ -204,6 +212,14 @@ namespace RobotWin.Studio.Shell
                 foreach (var child in Documents.Where(d => d.OwnerWorld == doc).ToList()) Close(child);
             }
 
+            if (doc.IsMontaj) KeepMontaj(doc);   // [assembly] its work stays in the project (saved with it)
+            foreach (var montaj in Documents.Where(d => d.OwnerProject == doc).ToList())
+            {
+                KeepMontaj(montaj);
+                montaj.OwnerProject = null;
+                Close(montaj);
+            }
+
             bool wasActive = doc == _active, wasDesign = doc == _design;
             int index = Documents.IndexOf(doc);
             if (wasDesign)
@@ -245,6 +261,36 @@ namespace RobotWin.Studio.Shell
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
             ActiveDocumentChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>[assembly] The open Montaj of a project tab (null when it is not open).</summary>
+        public OpenDocument? MontajOf(OpenDocument project) => Documents.FirstOrDefault(d => d.OwnerProject == project);
+
+        /// <summary>[assembly] Writes a Montaj tab into its project (in memory; the project is saved with it).</summary>
+        public void KeepMontaj(OpenDocument montaj)
+        {
+            if (montaj.OwnerProject == null || montaj.World == null) return;
+            var owner = montaj.OwnerProject;
+            if (owner == _design) FlushActiveDesign();
+            owner.Package.Montaj = montaj.World.ToBytes();
+            if (montaj.IsDirty)
+            {
+                owner.IsDirty = true;
+                montaj.IsDirty = false;
+            }
+
+            OnPropertyChanged(nameof(IsDirty));
+        }
+
+        /// <summary>[assembly] Opens a world as a project's Montaj (after loading it from the project or building it).</summary>
+        public OpenDocument OpenMontaj(OpenDocument project, WorldDocument world, bool activate = true)
+        {
+            world.IsAssembly = true;
+            world.ProjectId = project.Package.Schematic.EnsureProjectId();
+            var doc = new OpenDocument(DocumentKind.World) { World = world, OwnerProject = project };
+            Documents.Insert(Math.Min(Documents.Count, Documents.IndexOf(project) + 1), doc);
+            if (activate) Activate(doc);
+            return doc;
         }
 
         /// <summary>Copies the live circuit state into its tab.</summary>
@@ -449,6 +495,7 @@ namespace RobotWin.Studio.Shell
         /// <summary>Opens a project package in a tab: registers its local parts, then shows it.</summary>
         public void LoadPackage(ProjectPackage package, string? path)
         {
+            package.Schematic.EnsureProjectId();   // [assembly]
             foreach (var part in package.Parts)
             {
                 try
@@ -516,6 +563,12 @@ namespace RobotWin.Studio.Shell
             }
 
             RobotWin.Studio.Libraries.LibraryManager.EmbedUsedParts(Project); // [libs] projects carry their user/imported parts
+            if (MontajOf(_design) is { World: { } montaj } montajTab)
+            {
+                Project.Montaj = montaj.ToBytes();   // [assembly] the Montaj is saved inside its project
+                montajTab.IsDirty = false;
+            }
+
             Project.Save(path);
             _design.FilePath = path;
             SetDesignDirty(false);
@@ -618,6 +671,29 @@ namespace RobotWin.Studio.Shell
             RecentFiles.Add(path);
         }
 
+        /// <summary>
+        /// [assembly] Edits a world that need not be the active tab (a Montaj, from the Parça page): one undo step on that
+        /// world, which becomes unsaved (and its project, for a Montaj). <paramref name="edit"/> returns false when it
+        /// changed nothing (no undo step then).
+        /// </summary>
+        public bool EditWorld(OpenDocument doc, Func<bool> edit, string? status = null)
+        {
+            if (doc.World == null) return false;
+            string before = doc.World.ToJson();
+            if (!edit()) return false;
+            doc.WorldUndo.Push(before);
+            Trim(doc.WorldUndo);
+            doc.WorldRedo.Clear();
+            doc.IsDirty = true;
+            if (doc.OwnerProject is { } owner) owner.IsDirty = true;
+            if (status != null) Status = status;
+            OnPropertyChanged(nameof(IsDirty));
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(CanUndo));
+            if (doc == _active) WorldChanged?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+
         /// <summary>Snapshot before editing the active world.</summary>
         public void BeginWorldChange()
         {
@@ -631,6 +707,7 @@ namespace RobotWin.Studio.Shell
         {
             if (_active.World == null) return;
             _active.IsDirty = true;
+            if (_active.OwnerProject is { } owner) owner.IsDirty = true;   // [assembly] the project holds its Montaj
             if (status != null) Status = status;
             OnPropertyChanged(nameof(IsDirty));
             OnPropertyChanged(nameof(Title));
@@ -666,6 +743,7 @@ namespace RobotWin.Studio.Shell
             w.Cables = back.Cables;
             w.Joints = back.Joints;
             w.Parts = back.Parts;
+            w.AssemblySources = back.AssemblySources;   // [assembly]
             _active.IsDirty = true;
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));

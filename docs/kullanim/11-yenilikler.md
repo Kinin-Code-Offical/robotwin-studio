@@ -2,6 +2,57 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.5.0 — 24 Kasım 2026
+
+**Sol çubuk, Parça ve Montaj baştan: robotun bütün parçaları tek yerde, Montaj projeyi izliyor. ESP32'de Arduino kütüphaneleri, 32 katmanlı PCB.**
+
+### Yenilikler
+
+- **Sol çubuk üç grupta:** **ELEKTRONİK** (Devre, PCB, Kod), **MEKANİK** (Parça, Montaj), **TEST** (Dünya).
+  - Başlangıç artık akışın bir adımı gibi durmuyor; alttaki araçlarda ve sol üstteki logoda.
+  - Montaj'ın kendi simgesi var.
+  - Genişletilince (Ctrl+B) her sayfa ne işe yaradığını ve durumunu yazar.
+- **Modelle'nin yeni adı Parça; bir dosyada istediğiniz kadar parça olur.** En üstteki her nesne ayrı bir parçadır. **Montaja gönder** her parçayı ayrı bir gövde yapar:
+  - Parçalar modellendikleri düzenle, var olanların yanına ve hiçbir şeye değmeden gelir.
+  - Değiştirip yeniden gönderince yerinde güncellenir; kendi orijini ve bağlantıları korunur.
+  - Silinen parçalar için montajdan kaldırılsın mı diye sorulur; iç içe duran ayrı parçalar için uyarı çıkar.
+- **Montaj robotun kendisi:**
+  - Kurarken hangi projelerin ve nasıl geleceği sorulur: **PCB'li** (lehimli kart + ayrı motor ve piller), **PCB'siz** (her parça ayrı) ya da **Otomatik**.
+  - Birden çok proje aynı montajda yan yana durabilir; Parça sayfasındaki parçalar da gelebilir.
+  - Projeyle birlikte kaydedilir (**Ctrl+S**).
+  - Turuncu **MONTAJ** rozeti ve **Montajı çalıştır** düğmesiyle Dünya'dan ayrılır.
+  - Ayrıntılar: [6. Montaj](06-montaj.md).
+- **Montaj projeyi izler:** her açılışta devre, PCB ve kod değişiklikleri gelir.
+  - Yeni parça eklenir, silinen kalkar, değişen parça ve kod yerinde güncellenir.
+  - Parçaları koyduğunuz yerler, kurduğunuz bağlantılar ve kendi kablolarınız korunur.
+- **Robot örnekleri Montaj'da gerçek araç:** Engelden kaçan ve çizgi izleyen robot gerçek parçalardan kurulur:
+  - şase, motor millerine takılı tekerlekler, sarhoş teker;
+  - şasenin üstünde birbirine değmeden kart, pil ve modüller;
+  - kendi arenasında, kendi koduyla.
+- **Denemek için ortam:** Montaj'ı atölye, çizgi pisti, engelli ya da rampalı alanda deneyin.
+- **ESP32'de Arduino kütüphaneleri:** çizimin içerdiği kurulu kütüphaneler, kendi bağımlılıklarıyla birlikte çizimle derlenir. Kütüphaneler sekmesi ESP32 için de arar.
+- **PCB'de 32 bakır katmana kadar** (KiCad'deki gibi). Kart ayarları penceresi, yığının sığması için en az gereken kalınlığı yazar.
+- **Çizgi izleyen örnek gerçek optik TCRT5000 modülleri kullanır** (kızılötesi LED, fototransistör, LM393). Montajında gerçek tekerleklerle oval pisti izler: 8 saniyede bir tur, en çok 22 mm sapma.
+- **Montaj açıkken soldaki Dünya** artık bir test dünyasına geçer; Montaj'ı yeniden göstermez.
+
+### Düzeltmeler
+
+- **Başsız çalıştırmada ve render'da sensörler kördü:** dünyanın sensörleri (çizgi modülleri, kamera, LiDAR, GPS, enkoder) yalnız devrede bir IMU varken kuruluyordu. Bu yüzden bir çizgi izleyenin render'ı hiçbir şey görmüyordu. Artık uygulamadaki gibi kurulurlar.
+- **Arenadan kurulan dünyada başlangıç ve zemin kayboluyordu:** oval pistin başlangıcı (alt düzlük) düşüyordu ve zemin optik sensörlere beyaz yerine koyu gri görünüyordu.
+
+- **Montaj projenin tek seferlik kopyasıydı:**
+  - Sonraki devre ve kod değişiklikleri ona hiç gitmiyordu.
+  - Proje yeniden adlandırılınca boş bir montaj kuruluyordu.
+  - Aynı adlı iki proje tek montajı paylaşıyordu.
+  - Uygulama kapanınca montaj işi kayboluyordu.
+- **Parça sayfasından gönderince Dünya sayfasına atlanıyordu.** Parçalar devrenin kartının üstüne düşüyordu ve iç içe başlıyordu.
+- **Kod sayfası Montaj'daki kartı ayrı bir kart gibi gösteriyordu.** Montaj'da "Kartı düzenle" ise bir kopyayı açıyordu.
+- **Robot örnekleri Montaj'da dağınık parçalarla açılıyordu.** Başlangıç sayfası da var olmayan bir "Başlat" düğmesini anlatıyordu.
+- **Türkçe Windows'ta MSVC iletileri bozuk karakterle okunuyordu** ("i�erme dosyas�").
+- **`src/` altında aynı adlı iki `.cpp` birbirinin çıktısını eziyordu.**
+- **Kart ayarları penceresi küçük ekranlarda ekrandan taşabiliyordu.**
+- **Uzun durum yazıları sağdaki sayıların üstüne taşıyordu.**
+
 ## 1.4.2 — 24 Kasım 2026
 
 **Kod sayfası bir kod editörü gibi çalışır: klasörler, her karta yükleme, gerçek başlıklardan tamamlama ve Arduino kütüphaneleri. Ayarlanabilir AC/DC güç kaynağı ve kategorili parça kütüphanesi.**

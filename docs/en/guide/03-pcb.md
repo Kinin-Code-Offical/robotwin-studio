@@ -15,7 +15,7 @@ The **PCB** page (Ctrl+2) turns your circuit into a printed circuit board: you p
 
 **Kart ayarları** (board settings) opens:
 
-- Copper layer count: **2**, **4** or **6** (top copper, inner layers, bottom copper).
+- Copper layer count: any even number from **2** to **32** (top copper, inner 1 … inner 30, bottom copper), as in KiCad. When the stack does not fit the board thickness, the window gives the least thickness it needs: make the board thicker or the prepreg thinner.
 - Board thickness, copper weights, dielectric.
 - Blind / buried vias.
 - Net classes (track width and clearance) and manufacturing rules.
@@ -52,9 +52,11 @@ Drag a drawn track with **G**; its connected ends follow.
 
 **Rota çiz** (route) draws every connection automatically: it searches all layers, keeps the net classes' widths and clearances, and drops vias to inner planes when needed.
 
+![Board settings: a 12-layer stack](../../images/pcb-stackup.png)
+
 ## Copper pours
 
-1. Draw a pour area with **Z**, or use the ready **+ GND (üst)** (top). Boards with 4 and 6 layers also have **+ GND düzlemi (İç 1)** (GND plane, inner 1).
+1. Draw a pour area with **Z**, or use the ready **+ GND (üst)** (top). Boards with 4 or more layers also have **+ GND düzlemi (İç 1)** (GND plane, inner 1).
 2. Fill the areas with **Doldur** (fill). **B** fills, **Ctrl+B** empties the fill.
 
 Filling follows the clearance, thermal relief, priority and island-removal rules.

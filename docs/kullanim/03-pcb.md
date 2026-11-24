@@ -15,10 +15,12 @@
 
 **Kart ayarları** düğmesi şunları açar:
 
-- Bakır katman sayısı: **2**, **4** veya **6** (Üst bakır, İç katmanlar, Alt bakır).
+- Bakır katman sayısı: **2**'den **32**'ye kadar çift sayılar (Üst bakır, İç 1 … İç 30, Alt bakır), KiCad'deki gibi. Seçilen yığın kart kalınlığına sığmıyorsa pencere en az gereken kalınlığı yazar; kalınlığı artırın ya da prepreg'i inceltin.
 - Kart kalınlığı, bakır ağırlıkları, dielektrik.
 - Kör / gömülü via'lar.
 - Hat sınıfları (yol genişliği ve boşluk) ve üretim kuralları.
+
+![Kart ayarları: 12 katmanlı yığın](../images/pcb-stackup.png)
 
 Kart kenarını sol araç çubuğundaki **kart kenarı** aracıyla çokgen olarak çizebilir, **montaj deliği** ekleyebilirsiniz.
 
@@ -54,7 +56,7 @@ Kart kenarını sol araç çubuğundaki **kart kenarı** aracıyla çokgen olara
 
 ## Bakır alanlar (dolgu)
 
-1. **Z** ile dolgu alanı çizin veya hazır **+ GND (üst)** seçeneğini kullanın. 4 ve 6 katmanlı kartlarda **+ GND düzlemi (İç 1)** de vardır.
+1. **Z** ile dolgu alanı çizin veya hazır **+ GND (üst)** seçeneğini kullanın. 4 ve daha çok katmanlı kartlarda **+ GND düzlemi (İç 1)** de vardır.
 2. **Doldur** ile alanları doldurun. **B** doldurur, **Ctrl+B** dolguyu boşaltır.
 
 Dolgu, boşluk, ısıl bağlantı (thermal relief), öncelik ve ada temizleme kurallarına göre yapılır.

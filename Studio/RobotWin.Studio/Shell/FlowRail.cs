@@ -35,12 +35,14 @@ namespace RobotWin.Studio.Shell
     }
 
     /// <summary>
-    /// The "design-to-real line": RobotWin's navigation drawn as a copper trace running down
-    /// the window edge. Every stage of building a robot (circuit → board → firmware → assembly
-    /// → world) is a pad on that trace; the trace is energised up to the stage you are on,
-    /// each pad carries a live status badge, and while a simulation runs current dots flow
-    /// along it. Collapsed it is a slim rail; expanded it reads like a build pipeline with a
-    /// status line per stage. Flat colours only (no gradients).
+    /// The "design-to-real line": RobotWin's navigation down the window edge, in three groups that
+    /// read like the work itself. ELEKTRONİK: Devre → PCB → Kod. MEKANİK: Parça (design parts,
+    /// several per file) → Montaj (put parts and electronics together with joints). TEST: Dünya
+    /// (run it in an environment). Each group's stages sit as pads on a copper trace that is lit
+    /// up to the stage you are on; pads carry a live status badge and current dots flow while a
+    /// simulation runs. Başlangıç is not a step: it lives with the tools at the bottom (and on the
+    /// logo). Collapsed it is a slim rail; expanded each stage shows what it is for and its status.
+    /// Flat colours only (no gradients).
     /// </summary>
     public sealed class FlowRail : Grid
     {
@@ -49,13 +51,14 @@ namespace RobotWin.Studio.Shell
         private const double Cx = 38;            // trace x (centre of the pads)
         private const double Row = 66;           // stage pitch
         private const double Pad = 38;           // pad size
-        private const double SeparateGap = 22;   // [rail] space and divider above the world, which is not on the project's trace
+        private const double GroupHeader = 24;   // [rail] height of a group's caption (ELEKTRONİK, MEKANİK, TEST)
 
         private sealed class Stage
         {
             public string Key = string.Empty;
             public string Label = string.Empty;
             public string Hint = string.Empty;
+            public int Group;
             public Color Accent;
             public Border PadBorder = null!;
             public Icon Glyph = null!;
@@ -70,10 +73,7 @@ namespace RobotWin.Studio.Shell
         private readonly List<Stage> _stages = new List<Stage>();
         private readonly TraceLayer _trace;
         private readonly StackPanel _line = new StackPanel();
-        private readonly TextBlock _header;
-        private readonly Grid _home;
-        private readonly Border _homeVia;
-        private readonly Icon _homeIcon;
+        private readonly List<(TextBlock Caption, string Title, string About)> _groups = new List<(TextBlock, string, string)>();
         private readonly List<(Grid Host, TextBlock Label, string Key)> _tools = new List<(Grid, TextBlock, string)>();
         private string _active = "home";
         private bool _expanded;
@@ -86,56 +86,29 @@ namespace RobotWin.Studio.Shell
             RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // Home: the mark at the top of the line (where the trace starts).
-            _home = new Grid { Height = 64, Cursor = Cursors.Hand, Background = Brushes.Transparent, ToolTip = "Başlangıç (Ctrl+0)" };
-            // The line starts at a large "origin via" carrying the home glyph.
-            _homeIcon = new Icon { Data = Res<Geometry>("I.Home"), Size = 16, Foreground = Res<Brush>("B.TextMuted"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            _homeVia = new Border
-            {
-                Width = 32,
-                Height = 32,
-                CornerRadius = new CornerRadius(16),
-                BorderThickness = new Thickness(1.5),
-                BorderBrush = Res<Brush>("B.BorderStrong"),
-                Background = Res<Brush>("B.Raised"),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(Cx - 16, 0, 0, 0),
-                Child = _homeIcon
-            };
-            _home.Children.Add(_homeVia);
-            _header = new TextBlock
-            {
-                Text = "Başlangıç",
-                FontSize = 13,
-                Foreground = Res<Brush>("B.Text"),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(Cx + 24, 0, 0, 0),
-                Visibility = Visibility.Collapsed
-            };
-            _home.Children.Add(_header);
-            _home.MouseLeftButtonUp += (_, _) => Navigate?.Invoke("home");
-            SetRow(_home, 0);
-            Children.Add(_home);
-
             var middle = new Grid();
             _trace = new TraceLayer(this);
             middle.Children.Add(_trace);
-            _line.Margin = new Thickness(0, 6, 0, 0);
+            _line.Margin = new Thickness(0, 4, 0, 0);
+            _line.LayoutUpdated += (_, _) => _trace.LayoutMaybeMoved();
             middle.Children.Add(_line);
             SetRow(middle, 1);
             Children.Add(middle);
 
-            AddStage("schematic", "Devre", "I.Schematic", 0x5B8DFF, "Şema çiz, parçaları bağla, simüle et (Ctrl+1)");
-            AddStage("pcb", "PCB", "I.Pcb", 0x4CC07E, "Kartı yerleştir, yolları çiz, üretime hazırla (Ctrl+2)");
-            AddStage("code", "Kod", "I.Chip", 0xA77BFF, "Kartların yazılımını yaz ve derle (Ctrl+3)");
-            AddStage("model", "Modelle", "I.Part", 0xE0B04A, "Şase, braket, kutu: 3D parça modelle, birleştir, dünyaya gönder (Ctrl+4)");
-            AddStage("assembly", "Montaj", "I.Cube", 0xF08A3C, "Bu projenin devresini gerçek parçalarla 3B montaja çevirir: kart, parçalar ve kablolar bir dünyada; gövde, motor ve mekaniği orada eklersiniz (Ctrl+5)");
-            // [rail] Worlds are documents of their own, not a step of the project: set apart, off the project's trace.
-            _line.Children.Add(new Border { Height = 1, Margin = new Thickness(18, SeparateGap / 2, 18, SeparateGap / 2 - 1), Background = Res<Brush>("B.Border") });
-            AddStage("world", "Dünya", "I.World", 0x2FC2B0, "Dünyalar (şablonlar, kendi test alanlarınız) projeden ayrı belgelerdir: hepsini bir arada gerçek fizikle deneyin (Ctrl+6)");
+            // [rail] Three groups, in the order the work goes.
+            AddGroup("ELEKTRONİK", "devre, kart, yazılım");
+            AddStage("schematic", "Devre", "I.Schematic", 0x5B8DFF, "Devre şeması: parçaları yerleştirip bağlayın, devreyi simüle edin (Ctrl+1)");
+            AddStage("pcb", "PCB", "I.Pcb", 0x4CC07E, "Baskı devre kartı: parçaları yerleştirin, yolları çizin, Gerber / KiCad çıktısı alın (Ctrl+2)");
+            AddStage("code", "Kod", "I.Chip", 0xA77BFF, "Kartların yazılımı: yazın, derleyin, karta yükleyip çalıştırın (Ctrl+3)");
+            AddGroup("MEKANİK", "parçalar, montaj");
+            AddStage("model", "Parça", "I.Part", 0xE0B04A, "Parça tasarımı: şase, braket, tekerlek, kutu … Bir dosyada istediğiniz kadar parça modellenir; 'Montaja gönder' her birini ayrı bir parça olarak Montaj'a koyar (Ctrl+4)");
+            AddStage("assembly", "Montaj", "I.Assembly", 0xF08A3C, "Montaj: devrenin kartı ve parçaları ile Parça'da modellediklerinizi bir araya getirin; menteşe, mil, vida gibi bağlantıları kurup robotu gerçek fizikle deneyin (Ctrl+5)");
+            AddGroup("TEST", "ortamında dene");
+            AddStage("world", "Dünya", "I.World", 0x2FC2B0, "Dünya: robotu bir ortamda deneyin (pist, arazi, su, hava). Şablonlar ve kendi test alanlarınız projeden ayrı belgelerdir (Ctrl+6)");
 
             var tools = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+            tools.Children.Add(new Border { Height = 1, Margin = new Thickness(18, 0, 18, 6), Background = Res<Brush>("B.Border") });
+            tools.Children.Add(Tool("home", "Başlangıç", "I.Home", "Başlangıç: son projeler, örnekler, yeni proje (Ctrl+0)"));
             tools.Children.Add(Tool("library", "Kütüphane", "I.Library", "Parçalar, modeller, ayak izleri (Ctrl+7)"));
             tools.Children.Add(Tool("settings", "Ayarlar", "I.Settings", "Uygulama ayarları"));
             tools.Children.Add(Tool("help", "Yardım", "I.Help", "Kullanım kılavuzu, haberler ve güncellemeler (F1)"));
@@ -190,10 +163,6 @@ namespace RobotWin.Studio.Shell
             set
             {
                 _active = value;
-                bool home = value == "home";
-                _homeVia.BorderBrush = Res<Brush>(home ? "B.Text" : "B.BorderStrong");
-                _homeIcon.Foreground = Res<Brush>(home ? "B.Text" : "B.TextMuted");
-                _header.Foreground = Res<Brush>(home ? "B.Text" : "B.TextSecondary");
                 foreach (var s in _stages) Paint(s, s.Key == value, false);
                 foreach (var (host, label, key) in _tools)
                 {
@@ -237,10 +206,26 @@ namespace RobotWin.Studio.Shell
 
         // ------------------------------------------------------------------ building
 
+        /// <summary>[rail] A group's caption over its stages: small capitals, with what it holds when expanded.</summary>
+        private void AddGroup(string title, string about)
+        {
+            var caption = new TextBlock
+            {
+                Text = title,
+                FontSize = 9.5,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Res<Brush>("B.TextMuted"),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            _line.Children.Add(new Grid { Height = GroupHeader, Margin = new Thickness(0, _groups.Count == 0 ? 0 : 8, 0, 0), Children = { caption } });
+            _groups.Add((caption, title, about));
+        }
+
         private void AddStage(string key, string label, string icon, uint rgb, string hint)
         {
             var accent = Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
-            var s = new Stage { Key = key, Label = label, Hint = hint, Accent = accent };
+            var s = new Stage { Key = key, Label = label, Hint = hint, Accent = accent, Group = _groups.Count - 1 };
             var host = new Grid { Height = Row, Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = hint };
             s.Host = host;
 
@@ -369,7 +354,14 @@ namespace RobotWin.Studio.Shell
 
         private void ApplyMode()
         {
-            _header.Visibility = _expanded ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var (caption, title, about) in _groups)
+            {
+                // Collapsed: the caption centred over the pads. Expanded: the caption and what the group holds.
+                caption.Text = _expanded ? title + "  ·  " + about : title;
+                caption.HorizontalAlignment = _expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
+                caption.Margin = _expanded ? new Thickness(16, 0, 10, 4) : new Thickness(2, 0, 2, 4);
+            }
+
             foreach (var s in _stages)
             {
                 s.Caption.Visibility = _expanded ? Visibility.Collapsed : Visibility.Visible;
@@ -385,11 +377,20 @@ namespace RobotWin.Studio.Shell
         private void Paint(Stage s, bool active, bool hover)
         {
             var muted = Res<Color>("C.TextMuted");
-            s.PadBorder.Background = new SolidColorBrush(active ? Color.FromArgb(0x2E, s.Accent.R, s.Accent.G, s.Accent.B) : hover ? Res<Color>("C.Hover") : Res<Color>("C.Raised"));
+            // Opaque fills: the trace runs behind the pads and must not show through the active one.
+            s.PadBorder.Background = new SolidColorBrush(active ? Mix(Res<Color>("C.Canvas"), s.Accent, 0.18) : hover ? Mix(Res<Color>("C.Canvas"), Res<Color>("C.Hover"), 1) : Mix(Res<Color>("C.Canvas"), Res<Color>("C.Raised"), 1));
             s.PadBorder.BorderBrush = new SolidColorBrush(active ? s.Accent : hover ? Res<Color>("C.TextMuted") : Res<Color>("C.BorderStrong"));
             s.Glyph.Foreground = new SolidColorBrush(active ? s.Accent : hover ? Res<Color>("C.TextSecondary") : muted);
             s.Caption.Foreground = Res<Brush>(active ? "B.Text" : hover ? "B.TextSecondary" : "B.TextMuted");
             s.Title.Foreground = Res<Brush>(active || hover ? "B.Text" : "B.TextSecondary");
+        }
+
+        /// <summary>Colour <paramref name="top"/> laid over <paramref name="under"/> with its own alpha times <paramref name="amount"/>, as an opaque colour.</summary>
+        private static Color Mix(Color under, Color top, double amount)
+        {
+            double a = amount * top.A / 255.0;
+            byte Ch(byte u, byte t) => (byte)Math.Round(u + (t - u) * a);
+            return Color.FromRgb(Ch(under.R, top.R), Ch(under.G, top.G), Ch(under.B, top.B));
         }
 
         private void ShowBadge(Stage s)
@@ -467,43 +468,67 @@ namespace RobotWin.Studio.Shell
                 InvalidateVisual();
             }
 
+            private double _layoutKey = double.NaN;
+
+            /// <summary>Redraws when the stages moved (expanding, a status line wrapping …).</summary>
+            public void LayoutMaybeMoved()
+            {
+                var last = _rail._stages.LastOrDefault();
+                double key = last == null ? 0 : PadY(last) + _rail.ActualWidth;
+                if (key.Equals(_layoutKey)) return;
+                _layoutKey = key;
+                InvalidateVisual();
+            }
+
+            /// <summary>Centre of a stage's pad in this layer (NaN before layout).</summary>
+            private double PadY(Stage s)
+            {
+                if (s.Host.ActualHeight <= 0 || !s.Host.IsDescendantOf(_rail)) return double.NaN;
+                return s.Host.TranslatePoint(new Point(0, 4 + Pad / 2), this).Y;
+            }
+
             protected override void OnRender(DrawingContext dc)
             {
-                // The project's stages share the trace; the world (last) stands apart below a divider.
-                int n = _rail._stages.Count(s => s.Key != "world");
-                if (n == 0) return;
-                double top = 6 + 4 + Pad / 2;                 // centre of the first pad
-                double y0 = -8, y1 = top + (n - 1) * Row;      // from the mark down to the last pad
+                // One trace per group, from its first pad to its last; lit up to the stage you are on.
                 var dim = new Pen(new SolidColorBrush(Res<Color>("C.BorderStrong")), 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-                dc.DrawLine(dim, new Point(Cx, y0), new Point(Cx, y1));
-
-                int ai = _rail._stages.FindIndex(s => s.Key == _rail._active);
-                if (ai >= n) ai = -1;   // the world lights only its own pad
-                if (ai >= 0)
-                {
-                    var acc = _rail._stages[ai].Accent;
-                    var lit = new Pen(new SolidColorBrush(acc), 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-                    double ya = top + ai * Row;
-                    dc.DrawLine(lit, new Point(Cx, y0), new Point(Cx, ya));
-                    // Stub to the expanded labels: the active stage "breaks out" of the line like a fan-out trace.
-                    if (_rail._expanded) dc.DrawLine(lit, new Point(Cx + Pad / 2, ya), new Point(Cx + Pad / 2 + 8, ya));
-                }
-
-                // Vias between the pads.
                 var viaFill = new SolidColorBrush(Res<Color>("C.Canvas"));
                 var viaRing = new Pen(new SolidColorBrush(Res<Color>("C.BorderStrong")), 1.5);
-                // (Collapsed, the stage captions sit on the trace there instead.)
-                for (int i = 0; i < n - 1 && _rail._expanded; i++)
+                var dot = new SolidColorBrush(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF));
+                var active = _rail._stages.FirstOrDefault(s => s.Key == _rail._active);
+                foreach (var group in _rail._stages.GroupBy(s => s.Group))
                 {
-                    double y = top + i * Row + Row / 2;
-                    var ring = ai >= 0 && i < ai ? new Pen(new SolidColorBrush(_rail._stages[ai].Accent), 1.5) : viaRing;
-                    dc.DrawEllipse(viaFill, ring, new Point(Cx, y), 3.2, 3.2);
+                    var stages = group.ToList();
+                    if (stages.Count < 2) continue;
+                    double y0 = PadY(stages[0]), y1 = PadY(stages[stages.Count - 1]);
+                    if (double.IsNaN(y0) || double.IsNaN(y1)) continue;
+                    dc.DrawLine(dim, new Point(Cx, y0), new Point(Cx, y1));
+                    int ai = active != null ? stages.IndexOf(active) : -1;
+                    if (ai >= 0)
+                    {
+                        var lit = new Pen(new SolidColorBrush(active!.Accent), 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+                        dc.DrawLine(lit, new Point(Cx, y0), new Point(Cx, PadY(active)));
+                    }
+
+                    // Vias between the pads (collapsed, the stage captions sit on the trace there instead).
+                    for (int i = 0; i < stages.Count - 1 && _rail._expanded; i++)
+                    {
+                        double y = (PadY(stages[i]) + PadY(stages[i + 1])) / 2;
+                        var ring = ai >= 0 && i < ai ? new Pen(new SolidColorBrush(active!.Accent), 1.5) : viaRing;
+                        dc.DrawEllipse(viaFill, ring, new Point(Cx, y), 3.2, 3.2);
+                    }
+
+                    if (_flowing)
+                    {
+                        for (double y = y0 + _phase; y < y1; y += 22) dc.DrawEllipse(dot, null, new Point(Cx, y), 1.6, 1.6);
+                    }
                 }
 
-                if (_flowing)
+                // Expanded, the active stage "breaks out" of the line towards its label like a fan-out trace.
+                if (active != null && _rail._expanded && !double.IsNaN(PadY(active)))
                 {
-                    var dot = new SolidColorBrush(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF));
-                    for (double y = y0 + _phase; y < y1; y += 22) dc.DrawEllipse(dot, null, new Point(Cx, y), 1.6, 1.6);
+                    var lit = new Pen(new SolidColorBrush(active.Accent), 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+                    double ya = PadY(active);
+                    dc.DrawLine(lit, new Point(Cx + Pad / 2, ya), new Point(Cx + Pad / 2 + 8, ya));
                 }
             }
         }

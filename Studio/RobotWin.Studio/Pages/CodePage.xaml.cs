@@ -81,6 +81,9 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ boards and folders
 
+        /// <summary>Keys of the boards the page offers ("p:U1", "w:O3" …), for checks.</summary>
+        internal List<string> TargetKeys() => FindTargets().Select(t => t.Key).ToList();
+
         /// <summary>Every programmable board: the project's circuit, then the open world (objects and board designs).</summary>
         private List<CodeTarget> FindTargets()
         {
@@ -110,6 +113,9 @@ namespace RobotWin.Studio.Pages
 
                 foreach (var o in world.Objects)
                 {
+                    // [assembly] A Montaj's boards are its projects' boards: their code is written in the project
+                    // (listed above, or in that project's tab), and the Montaj takes it when it is opened.
+                    if (world.IsAssembly && (o.ProjectRef != null || (o.Kind == WorldObjectKind.Board && world.FindDesign(o.DesignId)?.Package.Schematic.ProjectId is { Length: > 0 } bp && world.SourceOf(bp) != null))) continue;
                     if (o.PartId != null && W.Library.Find(o.PartId) is { Symbol: SymbolKind.Board } def && ArduinoCompiler.FqbnFor(def.Id) is { } fqbn)
                     {
                         var obj = o;

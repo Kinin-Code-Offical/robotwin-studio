@@ -6,19 +6,20 @@ using System.Linq;
 namespace RobotTwin.CoreSim.Pcb
 {
     /// <summary>
-    /// Copper layer helpers. A board has 2, 4 or 6 copper layers; in stack order they are
-    /// F.Cu (Top), In1.Cu .. In4.Cu, B.Cu (Bottom).
+    /// Copper layer helpers. A board has an even number of copper layers from 2 to 32 (like KiCad);
+    /// in stack order they are F.Cu (Top), In1.Cu .. In30.Cu, B.Cu (Bottom).
     /// </summary>
     public static class PcbLayers
     {
-        public const int MaxCopperLayers = 6;
+        public const int MaxCopperLayers = 32;
 
-        private static readonly CopperLayer[] Inner = { CopperLayer.In1, CopperLayer.In2, CopperLayer.In3, CopperLayer.In4 };
+        private static readonly CopperLayer[] Inner = Enumerable.Range(0, MaxCopperLayers - 2).Select(i => CopperLayer.In1 + i).ToArray();
 
-        /// <summary>Supported copper layer counts.</summary>
-        public static IReadOnlyList<int> LayerCounts { get; } = new[] { 2, 4, 6 };
+        /// <summary>Supported copper layer counts: 2, 4, 6 … 32.</summary>
+        public static IReadOnlyList<int> LayerCounts { get; } = Enumerable.Range(1, MaxCopperLayers / 2).Select(i => 2 * i).ToArray();
 
-        public static int Normalize(int count) => count >= 6 ? 6 : count >= 4 ? 4 : 2;
+        /// <summary>The nearest supported count at or below <paramref name="count"/> (an odd count rounds down).</summary>
+        public static int Normalize(int count) => Math.Max(2, Math.Min(MaxCopperLayers, count - (count & 1)));
 
         /// <summary>Copper layers of a board in stack order (top first).</summary>
         public static IReadOnlyList<CopperLayer> Stack(int count)
@@ -189,6 +190,22 @@ namespace RobotTwin.CoreSim.Pcb
             }
 
             return result;
+        }
+
+        /// <summary>Thinnest core a laminate supplier offers (mm).</summary>
+        public const double MinCoreThickness = 0.05;
+
+        /// <summary>
+        /// The thinnest finished board this stack can make (mm): copper, mask, the set prepregs and the thinnest
+        /// cores. A thinner <see cref="Thickness"/> cannot be built; with many layers raise it or thin the prepreg.
+        /// </summary>
+        public double MinimumThickness(double outerCopperUm)
+        {
+            int n = CopperLayers;
+            double cuTotal = 2 * outerCopperUm / 1000.0 + (n - 2) * InnerCopperUm / 1000.0;
+            int prepregs = n == 2 ? 0 : n / 2;
+            int cores = n - 1 - prepregs;
+            return 2 * SolderMaskThickness + cuTotal + prepregs * PrepregThickness + cores * MinCoreThickness;
         }
 
         public BoardStackup Clone() => (BoardStackup)MemberwiseClone();

@@ -50,12 +50,13 @@ namespace RobotWin.Studio.Pages
             Outliner.Children.Clear();
             _rows.Clear();
             var doc = _ed.Doc;
-            OutlinerCount.Text = doc.Objects.Count == 0 ? string.Empty : $"{doc.Objects.Count} nesne";
+            int parts = doc.Objects.Count(o => o.ParentId == null);   // [assembly] every root is a part of its own
+            OutlinerCount.Text = doc.Objects.Count == 0 ? string.Empty : parts == doc.Objects.Count ? $"{parts} parça" : $"{parts} parça · {doc.Objects.Count} nesne";
             if (doc.Objects.Count == 0)
             {
                 Outliner.Children.Add(new TextBlock
                 {
-                    Text = "Sahne boş. Shift+A ile şekil ya da Kütüphane sekmesinden robot parçası ekleyin.",
+                    Text = "Henüz parça yok. Shift+A ile şekil ya da Kütüphane sekmesinden hazır parça ekleyin. Bir dosyada istediğiniz kadar parça olur: en üstteki her nesne ayrı bir parçadır, altına bağlanan (Ctrl+P) nesneler onunla tek parça olur. Bitince 'Montaja gönder'.",
                     Style = (Style)FindResource("Text.Caption"),
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(8, 4, 8, 0)

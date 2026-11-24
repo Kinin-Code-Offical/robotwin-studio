@@ -66,8 +66,27 @@ namespace RobotWin.Studio.Firmware
 
         public static bool IsEsp32(string? target) => target == Esp32Target;
 
+        /// <summary>
+        /// [libs] Where installed Arduino libraries are: the ones installed from the Kütüphane page and arduino-cli's
+        /// sketchbook (Belgeler\Arduino\libraries, where "Kur ve ekle" puts them). Uno / Nano builds get them from
+        /// arduino-cli, ESP32 builds compile the ones a sketch includes with it.
+        /// </summary>
+        public static IReadOnlyList<string> LibraryRoots => new[]
+        {
+            RobotWin.Studio.Libraries.LibraryManager.ArduinoFolder,
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Arduino", "libraries")
+        }.Concat(SessionLibraryRoots).ToList();
+
+        /// <summary>Library folders for this run only (snapshots use a temporary one, never the user's).</summary>
+        internal static readonly List<string> SessionLibraryRoots = new List<string>();
+
         // [radio] The HAL ABI version is part of the cache key: DLLs built for an older ABI are rebuilt, not loaded.
-        private static string Esp32Dir(string source) => Path.Combine(BuildRoot, "esp32", "abi" + RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation.AbiVersion + "-" + FirmwareHash(source));
+        // [libs] So are the libraries it uses: installing or updating one rebuilds the sketch.
+        private static string Esp32Dir(string source)
+        {
+            string libs = RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler.LibraryStamp(source, LibraryRoots);
+            return Path.Combine(BuildRoot, "esp32", "abi" + RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation.AbiVersion + "-" + FirmwareHash(source) + (libs.Length > 0 ? "-l" + libs : string.Empty));
+        }
 
         private static string FirmwareHash(string source) => RobotTwin.CoreSim.Formats.FirmwareSource.HashOf(source);
 
@@ -109,6 +128,7 @@ namespace RobotWin.Studio.Firmware
             Directory.CreateDirectory(sketchDir);
             string sketch = WriteSketch(source, sketchDir);   // [code] every file of the sketch, in its folders
             var compiler = new RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler(null, Path.Combine(BuildRoot, "esp32", "shim")) { VcVarsPath = vcvars };
+            compiler.LibraryRoots.AddRange(LibraryRoots);
             var build = compiler.Compile(sketch, Path.Combine(dir, "out"));
             result.Log = build.Log;
             foreach (var d in build.Diagnostics)
@@ -293,6 +313,8 @@ namespace RobotWin.Studio.Firmware
             m = Regex.Match(msg, "^expected (.+) at end of input");
             if (m.Success) return $"dosya sonunda {m.Groups[1].Value} bekleniyordu (kapanmamış parantez?)";
             if (msg.StartsWith("unused variable", StringComparison.Ordinal)) return "kullanılmayan değişken: " + msg.Substring(15).Trim();
+            m = Regex.Match(msg, "'([^']+)': No such file or directory$");   // MSVC (ESP32), in any language: "Cannot open include file: 'x.h': …"
+            if (m.Success) return $"{m.Groups[1].Value} bulunamadı (kütüphane kurulu değil)";
             m = Regex.Match(msg, "^(.+): No such file or directory");
             if (m.Success) return $"{m.Groups[1].Value} bulunamadı (kütüphane kurulu değil)";
             return msg;

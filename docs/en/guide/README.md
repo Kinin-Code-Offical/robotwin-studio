@@ -16,7 +16,7 @@ This guide walks through the app step by step. Read it in order or jump straight
 | [2. Circuit](02-circuit.md) | Drawing a schematic, adding parts, wiring, live simulation |
 | [3. PCB](03-pcb.md) | Board design, routing, copper pours, DRC, manufacturing files |
 | [4. Code](04-code.md) | Writing, compiling and loading Arduino and ESP32 code, serial monitor |
-| [5. Model](05-model.md) | 3D part modelling: chassis, bracket, box; sending to the world |
+| [5. Part](05-model.md) | 3D part modelling: chassis, bracket, box; several parts per file; sending to the assembly |
 | [6. Assembly](06-assembly.md) | Turning the circuit into a real assembly: board, real parts, pin-to-pin cables |
 | [7. World](07-world.md) | The open world: boards, parts, cables, mechanical joints, physics, controllers, pressure vessels and rockets |
 | [8. Instruments](08-instruments.md) | Oscilloscope, multimeter, bench supply, tolerances, Monte Carlo, fault finding |
@@ -45,7 +45,7 @@ The vertical line on the left of the screen shows a project's stages in order, e
 | Devre (Circuit) | Ctrl+1 | [2. Circuit](02-circuit.md) |
 | PCB | Ctrl+2 | [3. PCB](03-pcb.md) |
 | Kod (Code) | Ctrl+3 | [4. Code](04-code.md) |
-| Modelle (Model) | Ctrl+4 | [5. Model](05-model.md) |
+| Parça (Part) | Ctrl+4 | [5. Part](05-model.md) |
 | Montaj (Assembly) | Ctrl+5 | [6. Assembly](06-assembly.md) |
 | Dünya (World) | Ctrl+6 | [7. World](07-world.md) |
 | Kütüphane (Library) | Ctrl+7 | [1. Getting started](01-getting-started.md#library) |

@@ -36,6 +36,26 @@ namespace RobotTwin.CoreSim.Tests
         // ================================================================== stackup and layers
 
         [Fact]
+        public void ATenLayerBoardExportsEveryCopperLayer()
+        {
+            var b = SmallBoard();
+            b.Stackup.CopperLayers = 10;
+            b.Tracks.Add(new Track { Net = "SIG", Layer = CopperLayer.In7, X1 = 5, Y1 = 20, X2 = 30, Y2 = 20 });
+            Assert.DoesNotContain(DesignRuleChecker.Check(b), v => v.Rule == "Katman yok");
+
+            var files = GerberExporter.Generate(b, "on");
+            var copper = files.Where(f => f.Value.Contains("%TF.FileFunction,Copper,")).ToList();
+            Assert.Equal(10, copper.Count);
+            Assert.Contains("on-In7_Cu.g7", files.Keys);
+            Assert.Contains("Copper,L8,Inr", files["on-In7_Cu.g7"]);
+            Assert.Contains("Copper,L10,Bot", files["on-B_Cu.gbl"]);
+
+            string kicad = KiCadExporter.ExportPcb(b, "on");
+            Assert.Contains("(7 \"In7.Cu\" signal)", kicad);
+            Assert.Contains("(layer \"In7.Cu\")", kicad);
+        }
+
+        [Fact]
         public void StackupHasTheRightLayersAndThickness()
         {
             Assert.Equal(new[] { CopperLayer.Top, CopperLayer.Bottom }, PcbLayers.Stack(2));
@@ -55,6 +75,32 @@ namespace RobotTwin.CoreSim.Tests
                 Assert.Equal(1.6 - 2 * st.SolderMaskThickness, layers.Sum(l => l.Thickness), 6);
                 if (n > 2) Assert.Equal("prepreg", layers[1].Type);
             }
+
+            // Boards of up to 32 copper layers, like KiCad: In1.Cu … In30.Cu.
+            Assert.Equal(16, PcbLayers.LayerCounts.Count);
+            Assert.Equal(32, PcbLayers.LayerCounts[^1]);
+            Assert.Equal(6, PcbLayers.Normalize(7));
+            Assert.Equal(32, PcbLayers.Normalize(40));
+            Assert.Equal(2, PcbLayers.Normalize(0));
+            var twelve = PcbLayers.Stack(12);
+            Assert.Equal(12, twelve.Count);
+            Assert.Equal(CopperLayer.In10, twelve[10]);
+            Assert.Equal(CopperLayer.Bottom, twelve[11]);
+            Assert.Equal("In30.Cu", PcbLayers.KiCadName(CopperLayer.In30));
+            Assert.Equal(30, PcbLayers.KiCadOrdinal(CopperLayer.In30));
+            Assert.Equal(CopperLayer.In17, PcbLayers.FromKiCadName("In17.Cu"));
+            Assert.Equal(32, PcbLayers.Stack(32).Distinct().Count());
+            foreach (int n in new[] { 8, 12, 32 })
+            {
+                var st = new BoardStackup { CopperLayers = n, PrepregThickness = 0.07 };
+                st.Thickness = Math.Max(1.6, Math.Ceiling(st.MinimumThickness(35) * 10) / 10);
+                var layers = st.Build(35);
+                Assert.Equal(n, layers.Count(l => l.Type == "copper"));
+                Assert.Equal(st.Thickness - 2 * st.SolderMaskThickness, layers.Sum(l => l.Thickness), 6);
+                Assert.All(layers.Where(l => l.Type == "core"), l => Assert.True(l.Thickness >= BoardStackup.MinCoreThickness - 1e-9));
+            }
+
+            Assert.True(new BoardStackup { CopperLayers = 32 }.MinimumThickness(35) > 1.6);   // 32 layers do not fit in 1.6 mm with 0.2 mm prepregs
 
             // Pads: SMD only on their (flipped) outer layer, THT on every layer.
             var b = SmallBoard();

@@ -78,7 +78,7 @@ Uygulama işinizi belirli aralıklarla `Belgeler\RobotWin\Yedekler` klasörüne 
 Evet. **PCB** sayfasında **KiCad'e aktar** bir KiCad 8 projesi oluşturur. Kart üreticisi için **Üretim** düğmesi Gerber dosyalarını verir. Ayrıntılar: [3. PCB](03-pcb.md).
 
 **3D yazıcıda parça basmak istiyorum.**
-Parçayı **Modelle** sayfasında yapıp STL olarak dışa aktarın: [5. Modelle](05-modelle.md).
+Parçayı **Parça** sayfasında yapıp STL olarak dışa aktarın: [5. Parça](05-modelle.md).
 
 ## Hata bildirme
 

@@ -52,7 +52,7 @@ namespace RobotWin.Studio.Pages
             return _avrHeaders ??= new ArduinoHeaders(false, LibraryRoots());
         }
 
-        private static IEnumerable<string> LibraryRoots() => new[] { Libraries.LibraryManager.ArduinoFolder, SketchbookLibraries };
+        private static IEnumerable<string> LibraryRoots() => ArduinoCompiler.LibraryRoots;
 
         /// <summary>The ESP32 simulation's headers, embedded in the simulator (what an ESP32 sketch is compiled against).</summary>
         private static Dictionary<string, string> HalHeaders()
@@ -141,11 +141,11 @@ namespace RobotWin.Studio.Pages
             string query = _libSearch.Text.Trim();
             _libList.Children.Clear();
             if (headers.Esp32)
-                _libList.Children.Add(Note("ESP32 kartları simülasyonda bilgisayarda yerel derlenir: yalnızca simülasyon katmanının (HAL) başlıkları kullanılabilir. Arduino kütüphaneleri Uno ve Nano içindir."));
+                _libList.Children.Add(Note("ESP32: kurulu kütüphaneler çizimle birlikte simülasyon katmanına (HAL) derlenir. ESP32 yazmaçlarını doğrudan kullanan kütüphaneler derlenmeyebilir."));
             else if (!headers.CoreFound)
                 _libList.Children.Add(Note("arduino-cli'nin AVR çekirdeği bulunamadı: Ayarlar'dan arduino-cli'yi kurun ve 'arduino-cli core install arduino:avr' çalıştırın. Tamamlama o zamana kadar sınırlıdır."));
 
-            var installed = headers.Libraries.Where(l => !headers.Esp32 || l.Origin == "HAL").ToList();
+            var installed = headers.Libraries.ToList();
             if (query.Length == 0)
             {
                 _libStatus.Text = $"{installed.Count} kütüphane kullanılabilir";
@@ -157,7 +157,6 @@ namespace RobotWin.Studio.Pages
             string q = query.ToLowerInvariant();
             foreach (var l in installed.Where(l => l.Name.ToLowerInvariant().Contains(q) || l.Headers.Any(h => h.ToLowerInvariant().Contains(q))))
                 _libList.Children.Add(InstalledRow(l));
-            if (headers.Esp32) return;
             _libStatus.Text = "Arduino kütüphane listesi okunuyor …";
             var index = await LoadIndexAsync();
             if (_libSearch.Text.Trim() != query) return;   // typed on meanwhile
@@ -170,7 +169,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var found = index.Search(Regex.Replace(query, @"\.h$", string.Empty), "avr");
+            var found = index.Search(Regex.Replace(query, @"\.h$", string.Empty), headers.Esp32 ? "esp32" : "avr");
             _libStatus.Text = $"{found.Count} sonuç · liste {index.Updated:d MMM yyyy}";
             foreach (var lib in found)
             {

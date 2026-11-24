@@ -18,7 +18,7 @@ The app has its own shortcut lists too: the **Ctrl+K** command palette shows eve
 | Ctrl+1 | Circuit |
 | Ctrl+2 | PCB |
 | Ctrl+3 | Code |
-| Ctrl+4 | Model |
+| Ctrl+4 | Parça (part) |
 | Ctrl+5 | Assembly |
 | Ctrl+6 | World |
 | Ctrl+7 | Library |
@@ -104,7 +104,7 @@ The app has its own shortcut lists too: the **Ctrl+K** command palette shows eve
 | F7 | Compile |
 | F5 | Compile, load into the board and run |
 
-## Model
+## Parça (part)
 
 | Shortcut | Function |
 | --- | --- |

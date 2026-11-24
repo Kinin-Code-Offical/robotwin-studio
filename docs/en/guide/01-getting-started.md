@@ -46,9 +46,11 @@ The home page has:
 | --- | --- | --- |
 | Menu bar | Top | **Dosya** (File), **Düzen** (Edit), **Görünüm** (View), **Simülasyon** (Simulation), **Pencere** (Window), **Yardım** (Help). **F10** opens it from the keyboard. |
 | Document tabs | Next to the menu | Open circuits and worlds. Drag tabs to reorder them. **Ctrl+Tab** next tab, **Ctrl+W** closes a tab. |
-| Design-to-real line | Left edge | Navigating between pages: Circuit → PCB → Code → Model → Assembly → World. Library and Settings at the bottom. |
+| Design-to-real line | Left edge | The pages in three groups: **ELEKTRONİK** (electronics: Devre → PCB → Kod), **MEKANİK** (mechanics: Parça → Montaj), **TEST** (Dünya, world). Below: Başlangıç (start), Kütüphane (library), Ayarlar (settings) and Yardım (help). The logo at the top left also returns to Başlangıç. **Ctrl+B** widens the line to show what each page is for and its status. |
 | Page | Centre | The editor of the selected stage. |
 | Status bar | Bottom | Latest message, simulation state, part and cable counts. |
+
+![The rail in groups (expanded)](../../images/rail-groups.png)
 
 ### Window features
 

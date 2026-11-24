@@ -246,7 +246,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 FloorMaterial = a.FloorMaterial,
                 Track = preset == "oval" || preset == "eight" ? preset : "none",
                 StartX = 0,
-                StartY = 0
+                StartY = 0,
+                // The arena's floor as optical sensors see it: white (0.85) with the black tape (0.06), as in the arena itself.
+                Sensing = new RobotTwin.CoreSim.Sandbox.Sensing.SensingEnvironment { FloorReflectance = 0.85, FloorGloss = 0.02 }
             };
             foreach (var o in a.Obstacles) w.Obstacles.Add(new WorldObstacle { X = o.X, Y = o.Y, SizeX = o.SizeX, SizeY = o.SizeY, Height = o.Height });
             foreach (var s in a.Shapes)

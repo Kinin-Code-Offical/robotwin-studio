@@ -20,6 +20,9 @@ namespace RobotWin.Studio.Pcb
 
         private static double Nearest(double um) => Weights.OrderBy(w => Math.Abs(w.Um - um)).First().Um;
 
+        /// <summary>--snapshot: <see cref="BoardSetup"/> shows its window without waiting and applies nothing.</summary>
+        internal static bool SnapshotPreview { get; set; }
+
         /// <summary>Stackup and rule minimums. Applies the changes and returns true on OK.</summary>
         public static bool BoardSetup(Window? owner, BoardDocument board, out string summary)
         {
@@ -41,14 +44,19 @@ namespace RobotWin.Studio.Pcb
             panel.Children.Add(columns);
 
             left.Children.Add(Overline("Bakır katmanları"));
-            var countRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+            var countRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };   // 2 … 32 layers wrap onto two rows
             var chips = new List<ToggleButton>();
             var blind = Switch("Kör / gömülü via'lara izin ver", st.AllowBlindBuriedVias, v => st.AllowBlindBuriedVias = v);
             var table = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
+            var thin = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4), Visibility = Visibility.Collapsed, Style = S("Text.Caption") };
+            thin.SetResourceReference(TextBlock.ForegroundProperty, "B.Warning");
             void Redraw()
             {
                 foreach (var c in chips) c.IsChecked = (int)c.Tag == st.CopperLayers;
                 blind.IsEnabled = st.CopperLayers >= 4;
+                double min = st.MinimumThickness(outer);
+                thin.Visibility = st.Thickness + 1e-9 < min ? Visibility.Visible : Visibility.Collapsed;
+                thin.Text = $"Bu yığın en az {min:0.00} mm kalınlık ister: kart kalınlığını artırın ya da prepreg'i inceltin.";
                 table.Children.Clear();
                 foreach (var l in st.Build(outer))
                 {
@@ -70,8 +78,11 @@ namespace RobotWin.Studio.Pcb
 
             foreach (int n in PcbLayers.LayerCounts)
             {
-                var chip = Chip(n.ToString(CultureInfo.InvariantCulture) + " katman", n == st.CopperLayers, (_, _) => { });
+                var chip = Chip(n.ToString(CultureInfo.InvariantCulture), n == st.CopperLayers, (_, _) => { });
                 chip.Tag = n;
+                chip.ToolTip = n.ToString(CultureInfo.InvariantCulture) + " bakır katman";
+                chip.MinWidth = 34;
+                chip.Margin = new Thickness(0, 0, 4, 4);
                 chip.Click += (_, _) =>
                 {
                     st.CopperLayers = (int)chip.Tag;
@@ -93,8 +104,9 @@ namespace RobotWin.Studio.Pcb
             left.Children.Add(Row("Prepreg (mm)", Number(st.PrepregThickness, v => { st.PrepregThickness = v; Redraw(); }, 0.03, 2)));
             left.Children.Add(Row("Yüzey kaplama", Combo(Finishes, Finishes.Contains(st.Finish) ? st.Finish : Finishes[0], v => st.Finish = v), 140));
             left.Children.Add(blind);
+            left.Children.Add(thin);
             left.Children.Add(Overline("Yığın"));
-            left.Children.Add(table);
+            left.Children.Add(new ScrollViewer { Content = table, MaxHeight = 240, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
 
             right.Children.Add(Overline("Üretim kuralları (en az)"));
             right.Children.Add(Row("Yol genişliği (mm)", Number(minTrack, v => minTrack = v, 0.05, 5)));
@@ -107,8 +119,20 @@ namespace RobotWin.Studio.Pcb
             right.Children.Add(Caption("Hat başına boşluk, yol ve via ölçüleri 'Hatlar' sekmesindeki hat sınıflarındadır.", 8));
             Redraw();
 
-            var dlg = MakeDialog(owner, "Kart ayarları", 680, panel, out var ok);
+            // The settings scroll when the window would not fit the screen (many layers on a laptop): OK stays visible.
+            var body = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = Math.Max(360, SystemParameters.WorkArea.Height - 190) };
+            var dlg = MakeDialog(owner, "Kart ayarları", 700, body, out var ok);
             ok.Click += (_, _) => dlg.DialogResult = true;
+            if (SnapshotPreview)
+            {
+                // --snapshot: shown without waiting, rendered instead of the main window; nothing is applied.
+                dlg.ShowActivated = false;
+                dlg.Show();
+                dlg.UpdateLayout();
+                App.SnapshotTarget = VisualTreeHelper.GetChildrenCount(dlg) > 0 ? VisualTreeHelper.GetChild(dlg, 0) as FrameworkElement : dlg.Content as FrameworkElement;
+                return false;
+            }
+
             if (dlg.ShowDialog() != true) return false;
 
             // Items on layers that no longer exist.

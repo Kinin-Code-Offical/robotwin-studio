@@ -342,6 +342,7 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             if (def.Id == "hc-sr04") return SensorKind.Ultrasonic;
             if (def.Id.IndexOf("mpu", StringComparison.OrdinalIgnoreCase) >= 0) return SensorKind.Imu;
+            if (SensingParts.IsLineSensor(def.Id)) return SensorKind.Line;   // the real optical line modules
             if (def.Id != "sensor-module") return null;
             parameters.TryGetValue("quantity", out var q);
             switch (q)

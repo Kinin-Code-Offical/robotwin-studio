@@ -99,7 +99,13 @@ Alttaki **Kütüphaneler** sekmesi Arduino kütüphane listesinde arama yapar. L
 - Liste hiç indirilmemişse **Kütüphane listesini indir** düğmesi `arduino-cli lib update-index` çalıştırır.
 - Kodda kurulu olmayan bir başlık varsa (ör. `#include <Servo.h>`) uyarı çıkar. Sekme o başlığı sağlayan kütüphaneyi gösterir.
 
-ESP32 kartları simülasyonda bilgisayarda yerel derlenir. Bu yüzden onlarda yalnızca simülasyon katmanının başlıkları kullanılabilir; Arduino kütüphaneleri Uno ve Nano içindir.
+ESP32 kartlarında da kurulu Arduino kütüphaneleri kullanılır:
+- Çizim bir kütüphanenin başlığını içerince (`#include <AccelStepper.h>`) o kütüphane bulunur ve çizimle birlikte simülasyon katmanına derlenir. Kütüphanenin kendi bağımlılıkları da bulunur.
+- Simülasyon katmanının kendi başlıkları (`Wire.h`, `Servo.h`, `WiFi.h` …) önceliklidir.
+- Kütüphane değişince ya da güncellenince çizim yeniden derlenir.
+- ESP32'nin yazmaçlarına doğrudan erişen kütüphaneler (ör. RMT ile LED şeridi süren) simülasyon katmanında bulunmayabilir. O zaman hata hangi kütüphanenin derlenemediğini söyler.
+
+![ESP32 çizimi kurulu bir kütüphaneyle derlendi](../images/code-esp32-libraries.png)
 
 ## Arduino şablonları
 
@@ -150,4 +156,4 @@ Açık dünyadaki her kart gezginin **KARTLAR** bölümünde kendi klasörüyle 
 
 ---
 
-[← Önceki: 3. PCB](03-pcb.md) · [İçindekiler](README.md) · [Sonraki: 5. Modelle →](05-modelle.md)
+[← Önceki: 3. PCB](03-pcb.md) · [İçindekiler](README.md) · [Sonraki: 5. Parça →](05-modelle.md)

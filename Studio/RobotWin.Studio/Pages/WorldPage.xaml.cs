@@ -99,6 +99,7 @@ namespace RobotWin.Studio.Pages
         {
             var world = World;
             NoWorld.Visibility = world == null ? Visibility.Visible : Visibility.Collapsed;
+            ShowMode(world);
             if (world == _shown) return;
             StopSimulation();
             _shown = world;
@@ -208,7 +209,7 @@ namespace RobotWin.Studio.Pages
         {
             var world = World;
             Palette.Children.Add(Note("Kendi tasarladığınız kartlar (devre + PCB + kod) bu dünyaya ayrı nesneler olarak girer. Aynı kartı istediğiniz kadar yerleştirebilirsiniz."));
-            if (world != null && world.Designs.Count > 0)
+            if (world != null && world.Designs.Count > 0 && !world.IsAssembly)   // [assembly] a Montaj's boards are its projects
             {
                 Palette.Children.Add(Caption("Bu dünyadaki kartlar"));
                 foreach (var d in world.Designs)
@@ -222,7 +223,15 @@ namespace RobotWin.Studio.Pages
             }
 
             Palette.Children.Add(Caption("Kart ekle"));
-            var open = W.Documents.Where(d => d.Kind == DocumentKind.Design && !d.IsEmbedded).ToList();
+            bool montaj = world?.IsAssembly == true;
+            if (montaj && W.ActiveDocument is { IsMontaj: true } montajTab)
+            {
+                // [assembly] In a Montaj a project comes in as itself (with or without its PCB) and follows its project.
+                Palette.Children.Add(Action("Montaja proje ekle… (PCB'li ya da PCB'siz)", () => _main.AddProjectsToMontaj(montajTab),
+                    "Açık bir projeyi ya da bir proje dosyasını bu montaja ekler; montaj o projeyi izler"));
+            }
+
+            var open = W.Documents.Where(d => d.Kind == DocumentKind.Design && !d.IsEmbedded && !montaj).ToList();
             foreach (var doc in open)
             {
                 var d = doc;
@@ -230,7 +239,7 @@ namespace RobotWin.Studio.Pages
                 Palette.Children.Add(Row("Açık sekmeden: " + d.BaseTitle, $"{d.Package.Schematic.Parts.Count} parça", () => AddDesignFrom(d.Package, d.FilePath)));
             }
 
-            Palette.Children.Add(Action("Proje dosyasından kart ekle (.rwproj)…", AddDesignFromFile));
+            if (!montaj) Palette.Children.Add(Action("Proje dosyasından kart ekle (.rwproj)…", AddDesignFromFile));
             Palette.Children.Add(Action("Yeni boş kart tasarla", NewEmptyBoard, "Boş bir kart oluşturur ve devre sekmesinde açar; çizdikçe dünyadaki kart güncellenir."));
             Palette.Children.Add(Caption("Hazır modül kartları"));
             foreach (var id in new[] { "arduino-uno", "arduino-nano", "esp32-devkit-v1", "esp32-devkitc", "fc-brushed" })
@@ -758,16 +767,100 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Action("Sil (Del)", Delete));
         }
 
+        /// <summary>
+        /// [assembly] A Montaj's projects (each with or without its PCB, or taken out), adding projects, bringing it up
+        /// to date, and the environment to try the robot in.
+        /// </summary>
+        private void MontajSources(WorldDocument world)
+        {
+            if (Window.GetWindow(this) is not MainWindow mw || W.ActiveDocument is not { IsMontaj: true } tab) return;
+            Inspector.Children.Add(Caption("Montajdaki projeler"));
+            foreach (var src in world.AssemblySources.ToList())
+            {
+                var box = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+                string where = src.Path != null ? " · " + System.IO.Path.GetFileName(src.Path) : " · bu proje";
+                box.Children.Add(new TextBlock { Text = src.Title + where, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+                var form = new ComboBox { Margin = new Thickness(0, 4, 0, 0), ToolTip = "Bu projenin devresi montaja nasıl gelir" };
+                foreach (var (f, text) in new[]
+                         {
+                             (AssemblyForm.Auto, "Otomatik (PCB varsa PCB'li)"),
+                             (AssemblyForm.WithPcb, "PCB'li: lehimli kart + ayrı parçalar"),
+                             (AssemblyForm.LooseParts, "PCB'siz: her parça ayrı")
+                         })
+                    form.Items.Add(new ComboBoxItem { Content = text, Tag = f });
+                form.SelectedIndex = (int)src.Form;
+                var source = src;
+                form.SelectionChanged += (_, _) =>
+                {
+                    if (form.SelectedItem is ComboBoxItem { Tag: AssemblyForm f }) mw.SetMontajForm(tab, source, f);
+                };
+                box.Children.Add(form);
+                if (src.ProjectId != world.ProjectId)
+                    box.Children.Add(Action("Montajdan çıkar", () => mw.RemoveProjectFromMontaj(tab, source)));
+                Inspector.Children.Add(box);
+            }
+
+            var more = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+            more.Children.Add(Action("+ Proje ekle", () => mw.AddProjectsToMontaj(tab), "Başka bir projenin devresini bu montaja ekler (açık sekmeden ya da dosyadan)"));
+            more.Children.Add(Action("Projeden güncelle", () => mw.SyncMontaj(tab, quiet: false), "Devre, PCB ve koddaki değişiklikleri getirir (montaj açılınca kendiliğinden de yapılır)"));
+            Inspector.Children.Add(more);
+
+            Inspector.Children.Add(Caption("Denemek için ortam"));
+            var env = new ComboBox { ToolTip = "Robot, montajıyla birlikte bu ortamın başlangıç noktasına taşınır" };
+            foreach (var (key, name) in new[] { ("", "Atölye (düz masa)"), ("empty", "Boş zemin"), ("oval", "Oval çizgi pisti"), ("eight", "Sekiz çizgi pisti"), ("obstacles", "Engelli alan"), ("ramps", "Rampalı alan") })
+                env.Items.Add(new ComboBoxItem { Content = name, Tag = key });
+            env.SelectedIndex = -1;
+            env.Text = world.Environment.Name;
+            env.SelectionChanged += (_, _) =>
+            {
+                if (env.SelectedItem is not ComboBoxItem { Tag: string key }) return;
+                Edit("Ortam: " + ((ComboBoxItem)env.SelectedItem).Content, () =>
+                {
+                    var spec = key.Length == 0
+                        ? new RobotTwin.CoreSim.Mechanics.WorldSpec { Name = "Atölye", Width = 4, Depth = 3, Walls = false, Track = "none" }
+                        : RobotTwin.CoreSim.Mechanics.WorldSpec.FromPreset(key);
+                    if (key.Length > 0) spec.Name = RobotTwin.CoreSim.Mechanics.Arena.Create(key).Name;
+                    spec.Gravity = world.Environment.Gravity;
+                    spec.AmbientC = world.Environment.AmbientC;
+                    world.Environment = spec;
+                    // The whole robot to the arena's start (the oval's straight, the eight's heading …), as it is put together.
+                    RobotTwin.CoreSim.Sandbox.ProjectAssembly.MoveToStart(world, Lib, RobotTwin.CoreSim.Sandbox.ProjectAssembly.ArenaStart(key));
+                });
+            };
+            Inspector.Children.Add(new TextBlock { Text = "Şu an: " + world.Environment.Name, Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 0, 0, 4) });
+            Inspector.Children.Add(env);
+        }
+
         private void BuildWorldSummary(WorldDocument world)
         {
-            Inspector.Children.Add(new TextBlock { Text = world.Title, FontSize = 16, Margin = new Thickness(0, 0, 0, 4) });
+            Inspector.Children.Add(new TextBlock { Text = world.Title, FontSize = 16, Margin = new Thickness(0, 0, 0, 4), TextWrapping = TextWrapping.Wrap });
             Inspector.Children.Add(Note($"{world.Objects.Count} nesne · {world.Designs.Count} kart tasarımı · {world.Cables.Count} kablo · {world.Joints.Count} mekanik bağlantı"));
-            Inspector.Children.Add(Caption("Nasıl kullanılır"));
+            if (world.IsAssembly)
+            {
+                // [assembly] What Montaj is for, in the order it is done.
+                Inspector.Children.Add(Caption("Montaj nasıl yapılır"));
+                Inspector.Children.Add(Note("Montaj, robotun bütün parçalarının bir araya geldiği yerdir: projelerin kartları ve parçaları ile Parça sayfasında modellediğiniz gövde, braket ve tekerlekler. Projeyle birlikte kaydedilir; açılınca devre, PCB ve kod değişiklikleri buraya gelir."));
+                Inspector.Children.Add(Note("1. Projelerin kartları, motorları, pilleri ve sensörleri gerçek 3B parçalar olarak kablolarıyla kuruldu (araç projeleri şase ve tekerlekleriyle)."));
+                Inspector.Children.Add(Note("2. Gövde ve braketleri Parça sayfasında modelleyin, 'Montaja gönder' deyin: her parça ayrı bir gövde olarak gelir. Değiştirip yeniden gönderince yerinde güncellenir."));
+                Inspector.Children.Add(Note("3. Bağla aracı (B): bir parçayı seçin, takılacağı yere tıklayın (başka bir parça, servo kolu, motor mili). Sağ tık menüsünde menteşe gibi hareketli bağlantılar var."));
+                Inspector.Children.Add(Note("4. Kablo aracı (K) ile kendi kablolarınızı çekin; projelerin kabloları devreyi izler."));
+                Inspector.Children.Add(Note("5. Çalıştırın: kartların yazılımı, devre ve mekanik birlikte, gerçek fizikle çalışır."));
+                var go = new WrapPanel { Margin = new Thickness(0, 4, 0, 8) };
+                go.Children.Add(Action("Parça sayfasına git", () => (Window.GetWindow(this) as MainWindow)?.Navigate("model")));
+                go.Children.Add(Action("Devre'ye git", () => (Window.GetWindow(this) as MainWindow)?.Navigate("schematic")));
+                Inspector.Children.Add(go);
+                MontajSources(world);   // [assembly] which projects, how; the environment to try it in
+            }
+            else
+            {
+                Inspector.Children.Add(Caption("Nasıl kullanılır"));
             Inspector.Children.Add(Note("1. Soldaki paletten kartlarınızı, parçaları (servo, motor, pil, sensör, ekran…), mekanik gövdeleri veya kendi 3D modelinizi ekleyin."));
             Inspector.Children.Add(Note("2. Nesneleri sürükleyerek yerleştirin; Shift ile yükseltin, R ile döndürün."));
             Inspector.Children.Add(Note("3. Kablo aracı (K) ile iki pine tıklayın: kablolar gerçek bakır direnci taşır, aşırı akımda ısınıp yanar."));
             Inspector.Children.Add(Note("4. Bağla aracı (B) ile bir nesneyi servo koluna, motor miline veya başka bir gövdeye takın."));
             Inspector.Children.Add(Note("5. 'Dünyayı çalıştır': bütün kartların yazılımları, tüm devre ve hareketli parçalar birlikte çalışır."));
+            }
+
             Inspector.Children.Add(Caption("Nesneler"));
             foreach (var o in world.Objects)
             {
@@ -884,6 +977,26 @@ namespace RobotWin.Studio.Pages
             var worldDoc = W.ActiveDocument;
             var d = World?.FindDesign(o.DesignId);
             if (d == null || worldDoc.Kind != DocumentKind.World) return;
+            if (World!.IsAssembly && d.Package.Schematic.ProjectId is { Length: > 0 } pid)
+            {
+                // [assembly] A Montaj's board is its project: edit the project; the Montaj takes the changes when opened.
+                var project = W.Documents.FirstOrDefault(x => x.Kind == DocumentKind.Design && !x.IsEmbedded && x.Package.Schematic.ProjectId == pid);
+                var src = World.SourceOf(pid);
+                if (project == null && src?.Path != null && System.IO.File.Exists(src.Path))
+                {
+                    W.Open(src.Path);
+                    project = W.Documents.FirstOrDefault(x => x.Kind == DocumentKind.Design && x.Package.Schematic.ProjectId == pid);
+                }
+
+                if (project != null)
+                {
+                    W.Activate(project);
+                    _main.Navigate("schematic");
+                    W.Status = $"'{d.Name}' projesi açıldı: değişiklikler Montaj'a, Montaj açılınca gelir";
+                    return;
+                }
+            }
+
             W.EditWorldDesign(worldDoc, d);
             _main.Navigate("schematic");
         }
@@ -1381,11 +1494,32 @@ namespace RobotWin.Studio.Pages
             if (SpeedBox?.SelectedItem is ComboBoxItem item) _session.Speed = double.Parse((string)item.Tag, CultureInfo.InvariantCulture);
         }
 
+        /// <summary>[assembly] The badge left of the tools: MONTAJ (a project's robot, orange) or DÜNYA (a test world, teal).</summary>
+        private void ShowMode(WorldDocument? world)
+        {
+            bool montaj = world?.IsAssembly == true;
+            var accent = montaj ? Color.FromRgb(0xF0, 0x8A, 0x3C) : Color.FromRgb(0x2F, 0xC2, 0xB0);
+            ModeIcon.Data = (Geometry)FindResource(montaj ? "I.Assembly" : "I.World");
+            ModeIcon.Foreground = new SolidColorBrush(accent);
+            ModeText.Text = montaj ? "MONTAJ" : "DÜNYA";
+            ModeText.Foreground = new SolidColorBrush(accent);
+            string title = world?.Title ?? string.Empty;
+            if (montaj && title.EndsWith(" — montaj", StringComparison.Ordinal)) title = title.Substring(0, title.Length - 9);
+            ModeTitle.Text = string.Empty;   // the tab shows the name; the badge stays short so the tools keep their room
+            ModeTitle.Visibility = Visibility.Collapsed;
+            ModeBadge.BorderBrush = new SolidColorBrush(Color.FromArgb(0x66, accent.R, accent.G, accent.B));
+            ModeBadge.Background = new SolidColorBrush(Color.FromArgb(0x1A, accent.R, accent.G, accent.B));
+            ModeBadge.ToolTip = montaj
+                ? $"'{title}' projesinin montajı: robotun kendisi. Projeyle birlikte kaydedilir; devre, PCB ve kod değişiklikleri açılınca gelir."
+                : $"'{title}' bir dünya: robotları ve nesneleri bir ortamda denediğiniz ayrı bir belge.";
+            RunButton.ToolTip = montaj ? "Montajı simüle et / duraklat (F5): kartların yazılımı, devre ve mekanik birlikte" : "Dünyayı simüle et / duraklat (F5)";
+        }
+
         private void UpdateRunButton()
         {
             bool running = _session.State == SimState.Running;
             RunIcon.Data = (Geometry)FindResource(running ? "I.Pause" : "I.Play");
-            RunText.Text = running ? "Duraklat" : _session.State == SimState.Paused ? "Devam" : "Dünyayı çalıştır";
+            RunText.Text = running ? "Duraklat" : _session.State == SimState.Paused ? "Devam" : World?.IsAssembly == true ? "Montajı çalıştır" : "Dünyayı çalıştır";
             SimStatus.Text = _session.State == SimState.Stopped ? string.Empty : $"t = {SiValue.Format(_session.Time, "s")}";
         }
 

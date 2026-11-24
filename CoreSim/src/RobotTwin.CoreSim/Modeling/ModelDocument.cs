@@ -498,6 +498,31 @@ namespace RobotTwin.CoreSim.Modeling
         public string Title { get; set; } = "Yeni Model";
         public string Description { get; set; } = string.Empty;
 
+        /// <summary>
+        /// [assembly] Stable id of this document: a part sent to Montaj remembers it, so sending it again updates that
+        /// part. Empty in files saved before it existed; see <see cref="EnsureUid"/>.
+        /// </summary>
+        public string Uid { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gives the document an id when it has none: one derived from its file path for an older file (so it is the
+        /// same every time that file is opened, and its parts already in a Montaj are found again), a new one otherwise.
+        /// </summary>
+        public string EnsureUid(string? path)
+        {
+            if (!string.IsNullOrEmpty(Uid)) return Uid;
+            if (string.IsNullOrEmpty(path))
+            {
+                Uid = Guid.NewGuid().ToString("N");
+                return Uid;
+            }
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant()));
+            Uid = "f" + BitConverter.ToString(hash, 0, 15).Replace("-", string.Empty).ToLowerInvariant();
+            return Uid;
+        }
+
         /// <summary>Length unit of every coordinate (always "mm").</summary>
         public string Units { get; set; } = "mm";
 

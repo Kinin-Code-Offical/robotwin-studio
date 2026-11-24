@@ -2,6 +2,57 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.5.0 — 24 November 2026
+
+**The rail, Parça and Montaj redone: all of a robot's parts in one place, and the Montaj follows its project. Arduino libraries on the ESP32, PCBs of up to 32 layers.**
+
+### New
+
+- **The rail in three groups:** **ELEKTRONİK** (electronics: Devre, PCB, Kod), **MEKANİK** (mechanics: Parça, Montaj), **TEST** (Dünya, world).
+  - Home no longer looks like a step of the flow; it is with the tools at the bottom and on the logo at the top left.
+  - Montaj has its own mark.
+  - Expanded (Ctrl+B), every page says what it is for and its status.
+- **Modelle is now Parça (part), and one file holds as many parts as you like.** Every top-level object is a part. **Montaja gönder** (send to assembly) makes each part a body of its own:
+  - The parts arrive arranged as modelled, beside what is there, touching nothing.
+  - Sending a changed part again updates it where it stands; its own origin and joints stay put.
+  - Deleted parts are offered for removal from the Montaj; separate parts inside each other get a warning.
+- **The Montaj (assembly) is the robot itself:**
+  - Setting it up asks which projects go in and how: **PCB'li** (with PCB: the soldered board plus separate motors and batteries), **PCB'siz** (without PCB: every part separate) or **Otomatik** (automatic).
+  - Several projects can share one Montaj side by side, and the Parça page's parts can come too.
+  - It is saved with its project (**Ctrl+S**).
+  - An orange **MONTAJ** badge and a **Montajı çalıştır** (run the assembly) button set it apart from the world.
+  - Details: [6. Assembly](06-assembly.md).
+- **The Montaj follows its project:** each time it opens, circuit, PCB and code changes come in.
+  - New parts are added, removed ones removed, changed parts and code updated where they stand.
+  - Where you put things, the joints you made and your own cables are kept.
+- **Robot examples are real vehicles in the Montaj:** the obstacle-avoiding and line-following robots are built from real parts:
+  - a chassis, wheels on the motor shafts, a ball caster;
+  - the board, battery and modules on the deck without touching;
+  - in their own arena, on their own code.
+- **Environment to try it in:** try the Montaj in a workshop, on a line track, or in an obstacle or ramp field.
+- **Arduino libraries on the ESP32:** the installed libraries a sketch includes compile with it, with their own dependencies. The libraries tab searches for the ESP32 too.
+- **PCBs of up to 32 copper layers** (as in KiCad). The board set-up window gives the least thickness the stack needs.
+- **The line-following example uses real optical TCRT5000 modules** (IR LED, phototransistor, LM393). In its Montaj it follows the oval track on real wheels: a lap in 8 seconds, at most 22 mm off.
+- **Dünya (world) on the rail while a Montaj is open** now goes to a test world instead of showing the Montaj again.
+
+### Fixes
+
+- **Sensors were blind in headless runs and in the render:** the world's sensors (line modules, cameras, LiDAR, GPS, encoders) were built only when an IMU was in the circuit, so a render of a line follower saw nothing. They are now built as in the app.
+- **A world made from an arena lost its start and its floor:** the oval track's start (its bottom straight) was dropped, and the floor looked dark grey instead of white to optical sensors.
+
+- **The Montaj was a one-time copy of its project:**
+  - Later circuit and code changes never reached it.
+  - Renaming the project made an empty Montaj.
+  - Two projects with the same title shared one Montaj.
+  - Closing the app lost the assembly work.
+- **Sending parts from the Parça page jumped to the world page.** The parts landed on the circuit's board and started inside each other.
+- **The code page listed a Montaj's board as a separate board.** "Kartı düzenle" (edit board) in the Montaj opened a copy.
+- **Robot examples opened a Montaj of scattered parts.** The start page also described a "Başlat" (start) button that did not exist.
+- **MSVC messages came out garbled on Turkish Windows** ("i�erme dosyas�").
+- **Two `.cpp` files of the same name under `src/` overwrote each other's output.**
+- **The board set-up window could run off small screens.**
+- **Long status messages ran over the counts on the right.**
+
 ## 1.4.2 — 24 November 2026
 
 **The code page works like a code editor: folders, loading onto any board, completion from the real headers and Arduino libraries. An adjustable AC/DC power supply and a part library in categories.**

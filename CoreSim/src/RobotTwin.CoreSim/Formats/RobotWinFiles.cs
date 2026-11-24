@@ -270,6 +270,12 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>Simulation and view settings (opaque JSON owned by the app).</summary>
         public string? Settings { get; set; }
 
+        /// <summary>
+        /// [assembly] The project's Montaj (a world, as .rwworld bytes): its boards and parts as real 3D parts, the parts
+        /// designed on the Parça page and the joints between them. Saved with the project, so the assembly work is kept.
+        /// </summary>
+        public byte[]? Montaj { get; set; }
+
         /// <summary>True when the file was an old single-JSON project.</summary>
         public bool WasLegacy { get; private set; }
 
@@ -349,6 +355,7 @@ namespace RobotTwin.CoreSim.Formats
                 if (Parts.Count > 0) RobotWinFormats.WriteText(zip, "library/parts.json", JsonSerializer.Serialize(Parts, RobotWinFormats.Json));
                 if (Settings != null) RobotWinFormats.WriteText(zip, "settings.json", Settings);
                 if (Preview != null) RobotWinFormats.WriteBytes(zip, "preview.png", Preview);
+                if (Montaj != null) RobotWinFormats.WriteBytes(zip, "montaj/montaj.rwworld", Montaj);
             }
         }
 
@@ -393,6 +400,7 @@ namespace RobotTwin.CoreSim.Formats
             if (parts != null) pkg.Parts = JsonSerializer.Deserialize<List<CustomPart>>(parts, RobotWinFormats.Json) ?? new List<CustomPart>();
             pkg.Settings = RobotWinFormats.ReadText(zip, "settings.json");
             pkg.Preview = RobotWinFormats.ReadBytes(zip, "preview.png");
+            pkg.Montaj = RobotWinFormats.ReadBytes(zip, "montaj/montaj.rwworld");
             return pkg;
         }
 

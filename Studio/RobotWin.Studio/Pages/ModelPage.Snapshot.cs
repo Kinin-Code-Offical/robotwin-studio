@@ -233,6 +233,15 @@ namespace RobotWin.Studio.Pages
                 _vp.StartModal(ModalKind.Move, new Point(c.X, c.Y), false, 0);
                 _vp.SimulateModal(new Point(c.X + 120, c.Y + 10));
             }
+
+            if (demo is "assembly" or "assembly-again" && (_main ?? Window.GetWindow(this) as MainWindow) is { } mw)
+            {
+                // [assembly] Every part of the model goes to the project's Montaj as a body of its own; sent again, they update.
+                _ed.Select(null);
+                SendToAssembly();
+                if (demo == "assembly-again") SendToAssembly();
+                mw.ProjectAssembly(create: false, show: true);
+            }
         }
 
         /// <summary>Path of the e2e log (set by <see cref="RunSnapshot"/>).</summary>

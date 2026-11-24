@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-24
+
+### Changed
+
+- **The rail in three groups:** ELEKTRONİK (circuit, PCB, code), MEKANİK (part, assembly), TEST (world), each group on its own trace. Home is no longer a step on the line: it sits with the tools at the bottom and on the logo. Montaj has its own mark (it shared the cube with Modelle); expanded, every stage says what it is for and its live status.
+- **Modelle is Parça (part), and a file holds as many parts as you like:** every top-level object is a part, objects parented under it (Ctrl+P) are one part with it. **Montaja gönder** (send to assembly) sends each part as a body of its own instead of merging everything into one lump; "one body into a test world" stays in the context menu and never targets a Montaj.
+- **Montaj is the robot, owned by its project:** a world tab that is saved inside the project file (`montaj/montaj.rwworld`), saved with Ctrl+S on the project, reopened from it, and marked as Montaj (badge, tab mark, "Montajı çalıştır"). Setting it up asks what goes in: the open projects or projects from files, each **with its PCB** (what is placed on the board soldered on one board, the rest cabled to it), **without** (every part separate, cabled pin to pin) or automatic, and the Parça page's parts. Several projects share one Montaj side by side; the inspector changes a project's form, adds or removes projects and picks an environment to try the robot in.
+- **The Montaj follows its projects:** opening it (or "Projeden güncelle") brings circuit, PCB and code changes in: added parts are added and cabled, removed ones removed, changed parts and code updated where they stand, the board takes the current PCB and code, the Montaj's cables follow the nets. Where parts were put, how they were joined and cables laid by hand are kept. A project is linked by a stable id (`Schematic.ProjectId`), not its title.
+- **Rover projects are built as real rovers:** a project whose mechanics say "rover" (the obstacle-avoiding and line-following examples) is put together from real parts: a plate, the gear motors under it with the wheels on their output shafts (the right motor mirrored on the same axle, its leads swapped as on a real kit, unless its mount says reversed), a ball caster, the boards, battery and modules packed on the deck by their real footprints without touching, the sensors where its mechanics put them, at its arena's start. It drives on its own code (1.29 m in 2 s in the test, level, wheels on their shafts).
+- **Parts sent again keep their place:** the world shows a model about its bounding box, so a part that grew on one side used to shift against its joints; its own origin is now kept (`ModelOrigin`) and the pose compensated. New parts arrive arranged as modelled, beside what is there, on the floor (never inside another body). Parts deleted from the model are offered for removal; parts inside each other that are not one part (a tyre and its hub) are pointed out.
+- **ESP32 sketches use installed Arduino libraries:** a header the HAL and the sketch do not provide is looked up in the library folders the way the Arduino builder does (the library named after the header and supporting the architecture wins; `time.h` never picks a library's `Time.h`), the library's own includes are followed, and its sources compile with the sketch (1.0 and 1.5 layouts, `utility/`, examples left out). A library that does not compile is named. The libraries tab lists installed libraries and searches the index for ESP32 too; a cached build is rebuilt when a library it uses changes.
+- **PCBs of up to 32 copper layers** (In1.Cu … In30.Cu, as in KiCad), with Gerber and KiCad output; the board set-up window wraps the layer chips, scrolls when the screen is short and gives the least thickness a stack needs.
+- **The line-following example uses real optical TCRT5000 modules** (IR LED, phototransistor, LM393; DO high over the tape): the same part reads the floor in the vehicle model (through its own phototransistor) and in a world. In its Montaj it follows the oval track on real wheels (a lap in about 8 s, at most 22 mm off the line).
+- **Dünya while a Montaj is open** goes to a test world (the last one, or a new one) instead of showing the Montaj again.
+
+### Fixed
+
+- **Headless runs and the render had blind sensors:** the world's sensors (line modules, cameras, LiDAR, GPS, encoders) were built only when an IMU was on an I²C bus, so a render of a line follower saw nothing while the app's run did. They are built as in the app.
+- **An arena turned into a world lost its start and its floor:** the oval's start (on its bottom straight) and the figure eight's heading were dropped, and the floor read dark grey (0.3) to optical sensors instead of the arena's white (0.85).
+
+- **The Montaj was a one-time copy of its project:** later circuit, PCB and code changes never reached it, renaming the project made a new empty Montaj, two projects of the same title shared one, and closing the app lost the assembly work. Boards off the PCB shared the project's firmware object while the PCB board was a copy.
+- **Sending parts to the Montaj pulled you to the world page** and put them where the circuit's board stood (bodies started inside each other); each part was lifted on its own, breaking the arrangement.
+- **The code page listed a Montaj's boards as boards of their own** beside the project's; "Kartı düzenle" on a Montaj board opened a copy. Both now lead to the project.
+- **The robot examples opened a Montaj of loose parts** and their own vehicle (chassis, wheels, arena) was ignored there; the start page told you to press a "Başlat" button that did not exist.
+- **MSVC messages came out garbled on non-English Windows** ("i�erme dosyas�"): cl.exe writes in the console code page, which is now read; the vcvars environment is captured as UTF-16, so paths with non-ASCII characters survive. A missing header is recognised in any language.
+- **Two sketch sources of the same name in different `src/` folders overwrote each other's object file.**
+- **The board set-up window could run off the bottom of a laptop screen.**
+- **A long status message ran over the counts on the right of the status bar.**
+
 ## [1.4.2] - 2026-11-24
 
 ### Added

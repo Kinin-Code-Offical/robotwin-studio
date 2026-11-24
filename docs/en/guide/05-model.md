@@ -1,6 +1,11 @@
-# 5. Model
+# 5. Part
 
-The **Modelle** (model) page (Ctrl+4) is where you model your robot's mechanical parts in 3D (chassis, bracket, box, wheel hub…). It works much like Blender: object mode, edit mode and quick keyboard transforms. Send a finished part to the world with one button.
+The **Parça** (part) page (Ctrl+4) is where you model your robot's mechanical parts (chassis, brackets, boxes, wheel hubs …) in 3D. It works like Blender: object mode, edit mode and quick keyboard transforms.
+
+One file holds as many parts as you like:
+- In the **Parçalar** (parts) list on the right, every top-level object is a part of its own.
+- Parent one object to another (**Ctrl+P**) and the two are one part, like a tyre on its hub.
+- Finished parts go into the robot's [Montaj](06-assembly.md) (assembly) with **Montaja gönder** (send to assembly); each one becomes a body of its own.
 
 ![Model page](../../images/modeler.png)
 
@@ -94,9 +99,19 @@ Give each object a material (PLA, PETG, ABS, nylon, acrylic, plywood, MDF, FR4, 
 - **İçe aktar** (import): STL, OBJ, PLY.
 - **Dışa aktar** (export): STL (mm), OBJ, PLY. Open (not closed) meshes are warned about. Use STL for 3D printers.
 
-## Send to the world
+## Send to the assembly
 
-**Dünyaya gönder** (send to world) adds the selected objects (or the whole model when nothing is selected) to the active world as one object with its computed mass. Without an open world a new one is made. Then fix the part to motors, servos and other parts in the world: [7. World](07-world.md). Its collision body is the part's own shape ([Rigid bodies and contact](../physics/02-mechanics.md)).
+**Montaja gönder** (send to assembly) sends the selected parts (all of them when nothing is selected) to the project's [Montaj](06-assembly.md):
+
+- Each part becomes a body of its own, with its computed mass.
+- The parts arrive arranged as modelled, set up beside what is in the Montaj, on the floor.
+- A project without a Montaj gets one first. You stay on the Parça page.
+- Sending a changed part again updates it where it stands. Its own origin and joints stay put.
+- Two separate parts inside each other get a warning. Deleted parts are offered for removal from the Montaj.
+
+![Parts sent to the Montaj, beside the robot](../../images/montaj-parts.png)
+
+Each part's collision body is its own shape ([Rigid bodies and contact](../physics/02-mechanics.md)). To put a part into a test world as **one body** (an obstacle, a ramp), use **Test dünyasına tek gövde olarak koy** (put into a test world as one body) in the right-click menu. It targets an open test world, never the Montaj.
 
 ---
 

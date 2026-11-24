@@ -14,8 +14,8 @@ namespace RobotTwin.CoreSim.Pcb
 
     /// <summary>
     /// Copper layers. Top/Bottom keep their historic values (files store the names);
-    /// inner layers exist on 4- and 6-layer boards. Stack order is Top, In1..In4, Bottom
-    /// (see <see cref="PcbLayers"/>). Also used for the mounting side of a component.
+    /// inner layers exist on boards of 4 to 32 layers (KiCad's range). Stack order is Top,
+    /// In1..In30, Bottom (see <see cref="PcbLayers"/>). Also used for the mounting side of a component.
     /// </summary>
     public enum CopperLayer
     {
@@ -24,7 +24,33 @@ namespace RobotTwin.CoreSim.Pcb
         In1 = 2,
         In2 = 3,
         In3 = 4,
-        In4 = 5
+        In4 = 5,
+        In5 = 6,
+        In6 = 7,
+        In7 = 8,
+        In8 = 9,
+        In9 = 10,
+        In10 = 11,
+        In11 = 12,
+        In12 = 13,
+        In13 = 14,
+        In14 = 15,
+        In15 = 16,
+        In16 = 17,
+        In17 = 18,
+        In18 = 19,
+        In19 = 20,
+        In20 = 21,
+        In21 = 22,
+        In22 = 23,
+        In23 = 24,
+        In24 = 25,
+        In25 = 26,
+        In26 = 27,
+        In27 = 28,
+        In28 = 29,
+        In29 = 30,
+        In30 = 31
     }
 
     /// <summary>A copper pad. Positions in millimetres relative to the footprint origin, Y pointing down.</summary>

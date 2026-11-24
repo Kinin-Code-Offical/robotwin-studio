@@ -73,8 +73,7 @@ namespace RobotWin.Studio.Editor.Completion
 
             foreach (var root in libraryRoots.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
                 foreach (var d in Directory.GetDirectories(root))
-                    if (!esp32) libs.Add(AddLibrary(d, "kurulu"));
-                    else libs.Add(Describe(d, "kurulu"));   // listed, but an ESP32 build does not use them
+                    if (!Path.GetFileName(d).StartsWith(".", StringComparison.Ordinal)) libs.Add(AddLibrary(d, "kurulu"));   // [libs] ESP32 builds compile them too
             Libraries = libs;
         }
 
@@ -87,7 +86,7 @@ namespace RobotWin.Studio.Editor.Completion
 
         /// <summary>Headers a sketch can include.</summary>
         public IEnumerable<string> Includable =>
-            Libraries.Where(l => !Esp32 || l.Origin == "HAL").SelectMany(l => l.Headers)
+            Libraries.SelectMany(l => l.Headers)
                 .Concat(Esp32 ? Array.Empty<string>() : new[] { "Arduino.h", "avr/pgmspace.h", "avr/io.h", "avr/interrupt.h", "util/delay.h" })
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(h => h, StringComparer.OrdinalIgnoreCase);
 

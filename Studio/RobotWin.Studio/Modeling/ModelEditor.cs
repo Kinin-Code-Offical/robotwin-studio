@@ -141,6 +141,7 @@ namespace RobotWin.Studio.Modeling
         public void Load(ModelDocument doc, string? path)
         {
             if (Mode == EditorMode.Edit) ExitEditInternal(false);
+            doc.EnsureUid(path);   // [assembly]
             Doc = doc;
             FilePath = path;
             IsDirty = false;

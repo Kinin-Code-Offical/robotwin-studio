@@ -46,9 +46,11 @@ Başlangıç sayfasında şunlar vardır:
 | --- | --- | --- |
 | Menü çubuğu | En üst | **Dosya**, **Düzen**, **Görünüm**, **Simülasyon**, **Pencere**, **Yardım** menüleri. **F10** ile klavyeden açılır. |
 | Belge sekmeleri | Menünün yanında | Açık devreler ve dünyalar. Sekmeleri sürükleyerek sıralayabilirsiniz. **Ctrl+Tab** sonraki sekme, **Ctrl+W** sekmeyi kapatır. |
-| Tasarımdan gerçeğe hattı | Sol kenar | Sayfalar arasında gezinme: Devre → PCB → Kod → Modelle → Montaj → Dünya. Altta Kütüphane ve Ayarlar. |
+| Tasarımdan gerçeğe hattı | Sol kenar | Sayfalar üç grupta: **ELEKTRONİK** (Devre → PCB → Kod), **MEKANİK** (Parça → Montaj), **TEST** (Dünya). Altta Başlangıç, Kütüphane, Ayarlar ve Yardım. Başlangıç'a sol üstteki logodan da dönülür. **Ctrl+B** hattı genişletir; her sayfanın ne işe yaradığı ve durumu yazar. |
 | Sayfa | Orta | Seçili aşamanın editörü. |
 | Durum çubuğu | En alt | Son mesaj, simülasyon durumu, parça ve kablo sayısı. |
+
+![Gruplu sol çubuk (genişletilmiş)](../images/rail-groups.png)
 
 ### Pencere özellikleri
 
@@ -66,7 +68,7 @@ Başlangıç sayfasında şunlar vardır:
 | --- | --- |
 | `.rwproj` | Bir devre / kart projesi: şema, PCB, montaj, kartların kodu |
 | `.rwworld` | Bir dünya: nesneler, kablolar, bağlantılar ve içindeki kartlar |
-| `.rwmodel` | Modelle sayfasında yaptığınız 3D model |
+| `.rwmodel` | Parça sayfasında yaptığınız 3D parçalar |
 | `.rwsim` | Simülasyon kaydı (ölçümler, olaylar, seri çıktı) |
 | `.rwpart`, `.rwlib` | Kendi parçanız / parça kütüphanesi |
 

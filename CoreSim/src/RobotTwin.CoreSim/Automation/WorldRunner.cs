@@ -110,11 +110,15 @@ namespace RobotTwin.CoreSim.Automation
                 $"{World.Objects.Count} nesne, {World.Cables.Count} kablo, {Compiled.DevicesByPart.Count} parça tek devrede çözülüyor"));
         }
 
-        /// <summary>IMUs a firmware reads over I²C get the real accelerations and rotation rates of their object (as in the app).</summary>
+        /// <summary>
+        /// The sensors that read the world — line modules on the floor, cameras, LiDAR, GPS, encoders, and the IMUs a
+        /// firmware reads over I²C — sampled as in the app. (They used to be built only when an IMU was present, so a
+        /// headless run or a render of a line follower had blind sensors while the app's run had working ones.)
+        /// </summary>
         private void BindMotionSensors()
         {
             Sensing = null;
-            if (Circuit == null || Physics == null || !I2cDevices.Values.Any(d => d is Firmware.Devices.Mpu6050)) return;
+            if (Circuit == null || Physics == null) return;
             try
             {
                 Sensing = Sandbox.Sensing.WorldSensing.Build(World, Circuit, Physics);

@@ -14,7 +14,7 @@ Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğruda
 | [2. Devre](02-devre.md) | Şema çizme, parça ekleme, kablolama, canlı simülasyon |
 | [3. PCB](03-pcb.md) | Kart tasarımı, yol çizimi, bakır alanlar, DRC, üretim dosyaları |
 | [4. Kod](04-kod.md) | Arduino ve ESP32 kodu yazma, derleme, karta yükleme, seri monitör |
-| [5. Modelle](05-modelle.md) | 3D parça modelleme: şase, braket, kutu; dünyaya gönderme |
+| [5. Parça](05-modelle.md) | 3D parça modelleme: şase, braket, kutu; bir dosyada birden çok parça; montaja gönderme |
 | [6. Montaj](06-montaj.md) | Devreyi gerçek bir montaja çevirmek: kart, gerçek parçalar, pin pin kablolar |
 | [7. Dünya](07-dunya.md) | Açık dünya: kartlar, parçalar, kablolar, mekanik bağlantılar, fizik, kumandalar, basınçlı kaplar ve roketler |
 | [8. Ölçü aletleri](08-olcu-aletleri.md) | Osiloskop, multimetre, laboratuvar güç kaynağı, toleranslar, Monte Carlo, arıza tespiti |
@@ -43,7 +43,7 @@ Ekranın solundaki dikey çizgi, bir projenin aşamalarını sırayla gösterir.
 | Devre | Ctrl+1 | [2. Devre](02-devre.md) |
 | PCB | Ctrl+2 | [3. PCB](03-pcb.md) |
 | Kod | Ctrl+3 | [4. Kod](04-kod.md) |
-| Modelle | Ctrl+4 | [5. Modelle](05-modelle.md) |
+| Parça | Ctrl+4 | [5. Parça](05-modelle.md) |
 | Montaj | Ctrl+5 | [6. Montaj](06-montaj.md) |
 | Dünya | Ctrl+6 | [7. Dünya](07-dunya.md) |
 | Kütüphane | Ctrl+7 | [1. Başlarken](01-baslarken.md#kütüphane) |

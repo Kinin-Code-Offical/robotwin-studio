@@ -97,6 +97,28 @@ namespace RobotTwin.CoreSim.Sandbox
         public EmbeddedMesh? Mesh { get; set; }
         public string? MeshName { get; set; }
 
+        /// <summary>
+        /// [assembly] The part of a Parça (model) document this object was sent from ("document id/object id"):
+        /// sending that part again updates this object (shape, mass, material) and keeps where it is mounted.
+        /// </summary>
+        public string? ModelSource { get; set; }
+
+        /// <summary>
+        /// [assembly] Where the part's own origin (as modelled) sits in the object's frame (m, x/y/z). The mesh is shown
+        /// and simulated about its bounding box, which moves when the part changes shape; this keeps the part's
+        /// origin, and so its mounting holes, where they were when it is sent again.
+        /// </summary>
+        public double[]? ModelOrigin { get; set; }
+
+        /// <summary>[assembly] The circuit part this object is ("project id/RefDes"): a Montaj follows that part.</summary>
+        public string? ProjectRef { get; set; }
+
+        /// <summary>
+        /// [assembly] Mounted mirrored (a rover's right motor on the shared axle): a Montaj lays its cables to the
+        /// opposite lead (A ↔ B), as the wires are swapped on a real kit, so "forward" in the code drives forward.
+        /// </summary>
+        public bool MirroredLeads { get; set; }
+
         /// <summary>Infill fraction for 3D-printed models and bodies (mass).</summary>
         public double Infill { get; set; } = 1.0;
 
@@ -137,6 +159,9 @@ namespace RobotTwin.CoreSim.Sandbox
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+
+        /// <summary>[assembly] Laid by a Montaj for this net of a project ("project id/net"); cables you lay yourself have none.</summary>
+        public string? ProjectNet { get; set; }
         public CableEnd A { get; set; } = new CableEnd();
         public CableEnd B { get; set; } = new CableEnd();
 
@@ -213,6 +238,34 @@ namespace RobotTwin.CoreSim.Sandbox
     /// <see cref="PortA"/>/<see cref="PortB"/> pick a moving sub-part: "horn" of a servo,
     /// "shaft" of a motor; empty = the object's main body.
     /// </summary>
+    /// <summary>[assembly] How a project's circuit came into a Montaj.</summary>
+    public enum AssemblyForm
+    {
+        /// <summary>Parts placed on the project's PCB on one board, the rest as separate parts (or all separate without a PCB).</summary>
+        Auto,
+
+        /// <summary>The PCB as made: what is placed on it is soldered on one board; motors, batteries … are separate, cabled to it.</summary>
+        WithPcb,
+
+        /// <summary>No PCB: every part is a separate part, cabled pin to pin (a prototype on jumpers).</summary>
+        LooseParts
+    }
+
+    /// <summary>[assembly] A project brought into a Montaj (its own project, or another one added to it).</summary>
+    public sealed class AssemblySource
+    {
+        public string ProjectId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+
+        /// <summary>The .rwproj it is read from when it is not the Montaj's own project (null for its own).</summary>
+        public string? Path { get; set; }
+
+        public AssemblyForm Form { get; set; } = AssemblyForm.Auto;
+
+        /// <summary>The form actually used (Auto resolved): true = with its PCB board.</summary>
+        public bool UsedPcb { get; set; }
+    }
+
     public sealed class WorldJoint
     {
         public string Id { get; set; } = string.Empty;
@@ -261,6 +314,21 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public string Title { get; set; } = "Yeni Dünya";
         public string Description { get; set; } = string.Empty;
+
+        /// <summary>
+        /// [assembly] A project's Montaj: its circuit's boards and parts as real 3D parts, the parts designed on the
+        /// Parça page and the joints between them (the Montaj stage opens it; other worlds are test environments).
+        /// </summary>
+        public bool IsAssembly { get; set; }
+
+        /// <summary>[assembly] The project (<see cref="Design.Schematic.ProjectId"/>) a Montaj belongs to.</summary>
+        public string? ProjectId { get; set; }
+
+        /// <summary>[assembly] The projects whose circuits are in this Montaj and how each was brought in.</summary>
+        public List<AssemblySource> AssemblySources { get; set; } = new List<AssemblySource>();
+
+        public AssemblySource? SourceOf(string projectId) =>
+            AssemblySources.FirstOrDefault(s => string.Equals(s.ProjectId, projectId, StringComparison.OrdinalIgnoreCase));
         public WorldSpec Environment { get; set; } = new WorldSpec { Name = "Atölye", Width = 4, Depth = 3, Walls = false, Track = "none" };
         public List<WorldObject> Objects { get; set; } = new List<WorldObject>();
         public List<WorldCable> Cables { get; set; } = new List<WorldCable>();
@@ -321,6 +389,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public WorldDesign AddDesign(ProjectPackage package, string? sourcePath = null)
         {
             var copy = ProjectPackage.FromBytes(package.ToBytes());
+            copy.Montaj = null;   // [assembly] a board inside a world does not carry its project's Montaj
             var d = new WorldDesign
             {
                 Id = NextId("D"),
@@ -472,13 +541,29 @@ namespace RobotTwin.CoreSim.Sandbox
             public string? SourcePath { get; set; }
         }
 
-        public void Save(string path)
+        /// <summary>[assembly] The world as .rwworld bytes (a project keeps its Montaj this way).</summary>
+        public byte[] ToBytes()
+        {
+            using var ms = new MemoryStream();
+            using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true)) WriteTo(zip);
+            return ms.ToArray();
+        }
+
+        public static WorldDocument FromBytes(byte[] data)
+        {
+            using var ms = new MemoryStream(data, writable: false);
+            using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
+            return ReadFrom(zip);
+        }
+
+        public void Save(string path) => RobotWinFormats.SaveAtomically(path, WriteTo);
+
+        private void WriteTo(ZipArchive zip)
         {
             var info = new Manifest { Format = Format, FormatVersion = FormatVersion, Title = Title, Description = Description };
             info.Summary["objects"] = Objects.Count.ToString(CultureInfo.InvariantCulture);
             info.Summary["boards"] = Objects.Count(o => o.Kind == WorldObjectKind.Board).ToString(CultureInfo.InvariantCulture);
             info.Summary["cables"] = Cables.Count.ToString(CultureInfo.InvariantCulture);
-            RobotWinFormats.SaveAtomically(path, zip =>
             {
                 RobotWinFormats.WriteText(zip, "manifest.json", JsonSerializer.Serialize(info, RobotWinFormats.Json));
                 RobotWinFormats.WriteText(zip, "world.json", JsonSerializer.Serialize(this, RobotWinFormats.Json));
@@ -487,12 +572,17 @@ namespace RobotTwin.CoreSim.Sandbox
                 foreach (var d in Designs) RobotWinFormats.WriteBytes(zip, "designs/" + d.Id + ProjectPackage.Extension, d.Package.ToBytes());
                 if (Preview != null) RobotWinFormats.WriteBytes(zip, "preview.png", Preview);
                 if (Terrain != null) RobotWinFormats.WriteBytes(zip, "terrain.bin", Terrain.ToBytes()); // [terrain]
-            });
+            }
         }
 
         public static WorldDocument Load(string path)
         {
             using var zip = ZipFile.OpenRead(path);
+            return ReadFrom(zip);
+        }
+
+        private static WorldDocument ReadFrom(ZipArchive zip)
+        {
             RobotWinFormats.ReadManifest(zip, Format, FormatVersion);
             var world = JsonSerializer.Deserialize<WorldDocument>(
                 RobotWinFormats.ReadText(zip, "world.json") ?? throw new InvalidDataException("Dünya dosyasında world.json yok."), RobotWinFormats.Json)

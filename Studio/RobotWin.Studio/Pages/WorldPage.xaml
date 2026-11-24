@@ -32,6 +32,14 @@
             <Border Grid.Row="0" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
                 <Grid Margin="12,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- [assembly] Which this is: a project's Montaj or a test world -->
+                        <Border x:Name="ModeBadge" CornerRadius="5" Padding="8,3,10,3" Margin="0,0,12,0" VerticalAlignment="Center" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <t:Icon x:Name="ModeIcon" Data="{StaticResource I.World}" Size="13" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ModeText" Text="DÜNYA" FontSize="11" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ModeTitle" FontSize="12" Margin="8,0,0,0" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="{StaticResource B.TextSecondary}"/>
+                            </StackPanel>
+                        </Border>
                         <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" ToolTip="Seç ve taşı (Esc)" Click="OnTool" Tag="Select" IsChecked="True">
                             <t:Icon Data="{StaticResource I.Pointer}" Size="16"/>
                         </ToggleButton>

@@ -1,8 +1,13 @@
-# 5. Modelle
+# 5. Parça
 
-**Modelle** sayfası (Ctrl+4) robotunuzun mekanik parçalarını (şase, braket, kutu, tekerlek göbeği…) 3 boyutlu modellediğiniz yerdir. Çalışma şekli Blender'a benzer: nesne modu, düzenleme modu ve klavyeyle hızlı dönüşümler. Biten parçayı tek tuşla dünyaya gönderebilirsiniz.
+**Parça** sayfası (Ctrl+4) robotunuzun mekanik parçalarını (şase, braket, kutu, tekerlek göbeği…) 3 boyutlu modellediğiniz yerdir. Çalışma şekli Blender'a benzer: nesne modu, düzenleme modu ve klavyeyle hızlı dönüşümler.
 
-![Modelle sayfası](../images/modeler.png)
+Bir dosyada istediğiniz kadar parça olur:
+- Sağdaki **Parçalar** listesinde en üstteki her nesne ayrı bir parçadır.
+- Bir nesneyi ötekine bağlarsanız (**Ctrl+P**) ikisi tek parça olur; örneğin bir göbeğe takılı lastik.
+- Biten parçaları **Montaja gönder** ile robotun [Montaj](06-montaj.md)'ına koyarsınız; her biri ayrı bir gövde olur.
+
+![Parça sayfası](../images/modeler.png)
 
 ## Gezinme
 
@@ -94,9 +99,19 @@ Her nesneye bir malzeme (PLA, PETG, ABS, Naylon, Akrilik, Kontrplak, MDF, FR4, A
 - **İçe aktar:** STL, OBJ, PLY.
 - **Dışa aktar:** STL (mm), OBJ, PLY. Açık (kapalı olmayan) ağlar için uyarı verir. 3D yazıcıya göndermek için STL kullanın.
 
-## Dünyaya gönder
+## Montaja gönder
 
-**Dünyaya gönder** düğmesi seçili nesneleri (seçim yoksa tüm modeli) hesaplanan kütlesiyle birlikte etkin dünyaya tek bir nesne olarak ekler. Açık bir dünya yoksa yeni bir dünya oluşturulur. Sonra parçayı dünyada motorlara, servolara ve diğer parçalara bağlayabilirsiniz: [7. Dünya](07-dunya.md).
+**Montaja gönder** düğmesi seçili parçaları (seçim yoksa hepsini) projenin [Montaj](06-montaj.md)'ına gönderir:
+
+- Her parça hesaplanan kütlesiyle ayrı bir gövde olur.
+- Parçalar modellendikleri düzenle gelir ve montajda var olanların yanına, yere kurulur.
+- Projenin montajı henüz yoksa önce kurulur. Parça sayfasından ayrılmazsınız.
+- Bir parçayı değiştirip yeniden gönderince yerinde güncellenir. Kendi orijini ve bağlantıları yerinde kalır.
+- İç içe duran iki ayrı parça için uyarı çıkar. Silinen parçalar montajdan kaldırılsın mı diye sorulur.
+
+![Montaja gönderilen parçalar robotun yanında](../images/montaj-parts.png)
+
+Bir parçayı test dünyasına engel ya da rampa gibi **tek bir gövde** olarak koymak için sağ tık menüsünden **Test dünyasına tek gövde olarak koy** deyin. Bu seçenek montajı değil, açık bir test dünyasını hedefler.
 
 ---
 

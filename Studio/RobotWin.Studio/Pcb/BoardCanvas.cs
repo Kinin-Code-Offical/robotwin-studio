@@ -44,15 +44,19 @@ namespace RobotWin.Studio.Pcb
         private static readonly Color Warning = Color.FromRgb(0xD4, 0xA8, 0x4B);
         private static readonly Color Drawing = Color.FromRgb(0x9A, 0xA4, 0xB8);
 
+        // Inner layers cycle through these (In1 green, In2 ochre, In3 violet, In4 teal …), so neighbours differ.
+        private static readonly Color[] InnerColors =
+        {
+            Color.FromRgb(0x5E, 0x9A, 0x6E), Color.FromRgb(0xB0, 0x92, 0x4A), Color.FromRgb(0x92, 0x6E, 0xB2), Color.FromRgb(0x4E, 0x9C, 0xA2),
+            Color.FromRgb(0xB0, 0x6A, 0x86), Color.FromRgb(0x8A, 0xA2, 0x4E), Color.FromRgb(0x6A, 0x7E, 0xC0), Color.FromRgb(0xC0, 0x7A, 0x4E)
+        };
+
         /// <summary>Display colour of a copper layer.</summary>
         public static Color LayerColor(CopperLayer layer) => layer switch
         {
             CopperLayer.Top => Color.FromRgb(0xB0, 0x82, 0x6A),
             CopperLayer.Bottom => Color.FromRgb(0x5A, 0x72, 0xB0),
-            CopperLayer.In1 => Color.FromRgb(0x5E, 0x9A, 0x6E),
-            CopperLayer.In2 => Color.FromRgb(0xB0, 0x92, 0x4A),
-            CopperLayer.In3 => Color.FromRgb(0x92, 0x6E, 0xB2),
-            _ => Color.FromRgb(0x4E, 0x9C, 0xA2)
+            _ => InnerColors[((int)layer - (int)CopperLayer.In1) % InnerColors.Length]
         };
 
         private double _scale = 8;

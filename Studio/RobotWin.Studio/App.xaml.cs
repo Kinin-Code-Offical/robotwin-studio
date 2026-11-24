@@ -21,6 +21,12 @@ namespace RobotWin.Studio
         /// <summary>Set by a snapshot preparation step to render something other than the main window (a dialog).</summary>
         internal static FrameworkElement? SnapshotTarget { get; set; }
 
+        /// <summary>A --snapshot (or other unattended) run: nothing may wait for an answer.</summary>
+        internal static bool IsSnapshot { get; private set; }
+
+        /// <summary>Where the snapshot goes (checks write their log beside it).</summary>
+        internal static string? SnapshotPath { get; private set; }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -102,6 +108,8 @@ namespace RobotWin.Studio
 
             if (Arg("--snapshot") is { } snapshotPath)
             {
+                IsSnapshot = true;
+                SnapshotPath = snapshotPath;
                 if (Arg("--page") == "model")
                 {
                     // 3D modeller: rendered on its own while it is not part of MainWindow's navigation.

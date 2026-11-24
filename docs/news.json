@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-5-0",
+      "date": "2026-11-24",
+      "title": "1.5.0: Montaj robotun kendisi, projeyi izliyor",
+      "body": "Bu sürümde:\n\n- **Sol çubuk üç grupta:** Elektronik (Devre, PCB, Kod), Mekanik (Parça, Montaj), Test (Dünya).\n- **Parça:** bir dosyada birden çok parça; **Montaja gönder** her parçayı ayrı gövde yapar, yeniden gönderince yerinde günceller.\n- **Montaj robotun kendisi:** projeler PCB'li ya da PCB'siz gelir, birden çok proje bir arada durur; montaj projeyle kaydedilir ve her açılışta devre, PCB ve kod değişikliklerini alır.\n- **Robot örnekleri gerçek araç:** şase, millerde tekerlek, sarhoş teker; kendi arenasında, kendi koduyla.\n- **ESP32'de Arduino kütüphaneleri** ve **32 katmanlı PCB**.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-4-2",
       "date": "2026-11-24",
       "title": "1.4.2: kod sayfası bir kod editörü, kod her karta yüklenir",

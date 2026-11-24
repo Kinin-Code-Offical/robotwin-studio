@@ -167,7 +167,7 @@ Denklemler ve doğrulama: [Sıvılar](../fizik/07-sivilar.md).
 
 ### 3D modeller
 
-**Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY)…** ile kendi modelinizi ekleyin. Kütle, ağırlık merkezi ve eylemsizlik malzemeden hesaplanır. Modelle sayfasında yaptığınız parçaları **Dünyaya gönder** ile doğrudan buraya getirebilirsiniz ([5. Modelle](05-modelle.md)).
+**Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY)…** ile kendi modelinizi ekleyin. Kütle, ağırlık merkezi ve eylemsizlik malzemeden hesaplanır. Parça sayfasında yaptığınız bir parçayı sağ tık menüsündeki **Test dünyasına tek gövde olarak koy** ile buraya getirebilirsiniz. Robotun parçaları ise **Montaja gönder** ile robotun montajına gider ([5. Parça](05-modelle.md), [6. Montaj](06-montaj.md)).
 
 ## Kablolar
 
