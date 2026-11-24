@@ -643,9 +643,9 @@ namespace RobotTwin.CoreSim.Mechanics
             // [perf] Each pass over the particles wakes every core; at a few thousand particles that costs about as much
             // as the work, so passes that touch only the particle's own data are done in one.
             // 1. Predict, then 2. walls: no crossing within the step, the walls within reach recorded for the pressure.
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            For(n, (from, to) =>
             {
-                for (int i = range.Item1; i < range.Item2; i++)
+                for (int i = from; i < to; i++)
                 {
                     int k = 3 * i;
                     _v[k] += g.X * h;
@@ -670,9 +670,9 @@ namespace RobotTwin.CoreSim.Mechanics
             Lap(2);
             // 5. Exact non-penetration against the true surfaces (the iterations tracked them to first order), and the
             // velocities from the move.
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            For(n, (from, to) =>
             {
-                for (int i = range.Item1; i < range.Item2; i++)
+                for (int i = from; i < to; i++)
                 {
                     Walls(scene, i, h, false);
                     int k = 3 * i;
@@ -720,9 +720,9 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int it = 0; it < cap; it++)
             {
                 bool last = it == cap - 1;
-                Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+                For(n, (from, to) =>
                 {
-                    for (int i = range.Item1; i < range.Item2; i++)
+                    for (int i = from; i < to; i++)
                     {
                         int k = 3 * i;
                         double px = _p[k], py = _p[k + 1], pz = _p[k + 2];
@@ -776,9 +776,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
                 // The correction, applied to a second copy of the positions (every particle's is computed from where the
                 // others stood), so the walls are kept up in the same pass.
-                Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+                For(n, (from, to) =>
                 {
-                    for (int i = range.Item1; i < range.Item2; i++)
+                    for (int i = from; i < to; i++)
                     {
                         int k = 3 * i;
                         double px = _p[k], py = _p[k + 1], pz = _p[k + 2], li = _lam[i];
@@ -888,6 +888,17 @@ namespace RobotTwin.CoreSim.Mechanics
         }
 
         private static int Chunk(int n) => Math.Max(64, n / (4 * Environment.ProcessorCount) + 1);
+
+        /// <summary>
+        /// A pass over the particles [0, n) on every core: on the solver's work team, which stays awake between the
+        /// passes of a step (Mechanics/WorkTeam.cs), or on the thread pool when the team is busy with another liquid.
+        /// </summary>
+        private static void For(int n, Action<int, int> body)
+        {
+            int chunk = Chunk(n);
+            if (WorkTeam.Shared.TryRun(n, chunk, body)) return;
+            Parallel.ForEach(Partitioner.Create(0, n, chunk), range => body(range.Item1, range.Item2));
+        }
 
         /// <summary>
         /// The walls near particle i: ground, and the nearest two bodies within the kernel's reach, each with its distance,
@@ -1219,10 +1230,10 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             double h2 = _h * _h;
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            For(n, (from, to) =>
             {
                 Span<int> seen = stackalloc int[27];
-                for (int i = range.Item1; i < range.Item2; i++)
+                for (int i = from; i < to; i++)
                 {
                     int k = 3 * i, cnt = 0, b0 = i * MaxNeighbours;
                     double px = _p[k], py = _p[k + 1], pz = _p[k + 2];
@@ -1312,9 +1323,9 @@ namespace RobotTwin.CoreSim.Mechanics
             double eps = sigma > 0 ? 8 * sigma / (Math.PI * nd * nd * Math.Pow(_h, 5) * CohesionMoment) : 0;
             double a0 = eps / Mass;
             double wallA = nd * a0;   // the half-space pull per unit of its tabulated profile
-            Parallel.ForEach(Partitioner.Create(0, n, Chunk(n)), range =>
+            For(n, (from, to) =>
             {
-                for (int i = range.Item1; i < range.Item2; i++) ViscosityAndTension(i, h, nu, a0, wallA);
+                for (int i = from; i < to; i++) ViscosityAndTension(i, h, nu, a0, wallA);
             });
         }
 
