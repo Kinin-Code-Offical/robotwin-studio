@@ -44,12 +44,94 @@ namespace RobotTwin.CoreSim.Mechanics
             c.SpinR = 0;
             c.MassS = 0;
             if (rollRadius <= 0 || SpinPatchFraction <= 0) return;
-            // A cylinder rolling on its tread already has two points across its width.
+            // A cylinder rolling on its tread already has points across its width (both edges and the middle).
             if (_shapes[c.A] is { Kind: ShapeKind.Cylinder }) return;
             double k = c.N.Dot((invIA + invIB) * c.N);
             if (k <= 0) return;
             c.MassS = 1 / k;
             c.SpinR = SpinPatchFraction * rollRadius * (2.0 / 3.0);
+        }
+
+        // ================================================================== tyre tread
+
+        /// <summary>The tread points of a cylinder lying on its side that touch, gathered before their contacts are made.</summary>
+        private struct TreadPoints
+        {
+            public Vec3 P0, P1, P2, N0, N1, N2;
+            public double S0, S1, S2;
+            public int F0, F1, F2, Count;
+            public ContactProperties Props;
+
+            public void Add(Vec3 p, Vec3 n, double sep, int feature, in ContactProperties props)
+            {
+                switch (Count)
+                {
+                    case 0: P0 = p; N0 = n; S0 = sep; F0 = feature; break;
+                    case 1: P1 = p; N1 = n; S1 = sep; F1 = feature; break;
+                    case 2: P2 = p; N2 = n; S2 = sep; F2 = feature; break;
+                    default: return;
+                }
+
+                if (Count == 0) Props = props;
+                Count++;
+            }
+        }
+
+        /// <summary>
+        /// [phys] A tyre's tread on the ground: its points (edges and middle) hold it up and resist its rolling, and one
+        /// more contact at the patch's centre carries the friction with their whole load. Two or three rigid points cannot
+        /// share friction: one took the whole load and stuck while the others slid, so a turning wheel rolled about its
+        /// edge, not its middle. The patch's centre weighs each point by how far it is pressed in, within
+        /// <see cref="TreadDeflection"/> of the lowest (the middle for a level wheel, the lower edge for a cambered one).
+        /// </summary>
+        private void AddTread(int a, int b, ref TreadPoints t, double radius, double halfWidth, int featureBase, double h)
+        {
+            if (t.Count == 0) return;
+            if (t.Count == 1)
+            {
+                AddContact(a, b, t.P0, t.N0, t.S0, t.F0, t.Props, radius, h);
+                return;
+            }
+
+            double low = Math.Min(t.S0, Math.Min(t.S1, t.Count > 2 ? t.S2 : double.PositiveInfinity));
+            double deflect = Math.Max(1e-6, TreadDeflection);
+            double w0 = Math.Max(0, deflect - (t.S0 - low)), w1 = Math.Max(0, deflect - (t.S1 - low)), w2 = t.Count > 2 ? Math.Max(0, deflect - (t.S2 - low)) : 0;
+            double sw = w0 + w1 + w2;
+            var centre = (t.P0 * w0 + t.P1 * w1 + t.P2 * w2) / sw;
+            var normal = (t.N0 * w0 + t.N1 * w1 + t.N2 * w2).Normalized();
+            double sep = (t.S0 * w0 + t.S1 * w1 + t.S2 * w2) / sw;
+            int first = _contactCount;
+            AddContact(a, b, t.P0, t.N0, t.S0, t.F0, t.Props, radius, h);
+            AddContact(a, b, t.P1, t.N1, t.S1, t.F1, t.Props, radius, h);
+            if (t.Count > 2) AddContact(a, b, t.P2, t.N2, t.S2, t.F2, t.Props, radius, h);
+            for (int i = first; i < _contactCount; i++)
+            {
+                _contacts[i].Mu = 0;   // their friction is the patch's
+                _contacts[i].SpinR = 0;
+            }
+
+            int count = _contactCount - first;
+            // Rolling resistance on every contact: each takes its share of the load, together the whole.
+            AddContact(a, b, centre, normal, sep, featureBase + 15, t.Props, radius, h);
+            ref var c = ref _contacts[_contactCount - 1];
+            c.TreadFirst = first;
+            c.TreadCount = count;
+            // The patch also resists turning on the spot (scrub): a line of uniform pressure across the tread, μ·N·w/4.
+            var sa = _state[c.SA];
+            var invI = sa.InvI;
+            if (c.SB >= 0) invI = invI + _state[c.SB].InvI;
+            double k = c.N.Dot(invI * c.N);
+            c.MassS = k > 0 ? 1 / k : 0;
+            c.SpinR = c.MassS > 0 ? halfWidth / 2 : 0;
+            if (c.SpinR > 0 && _warm.TryGetValue(c.Key, out var ws)) c.Ps = ws.Ps;
+        }
+
+        /// <summary>A tread's friction contact: its own normal load and its points'.</summary>
+        private double TreadLoad(in Contact c)
+        {
+            double pn = c.Pn;
+            for (int i = c.TreadFirst; i < c.TreadFirst + c.TreadCount; i++) pn += _contacts[i].Pn;
+            return pn;
         }
 
         private void SolveSpin(ref Contact c)
@@ -58,7 +140,7 @@ namespace RobotTwin.CoreSim.Mechanics
             var dw = sa.W;
             if (c.B >= 0) dw -= _state[c.SB].W;
             double lambda = -c.MassS * dw.Dot(c.N);
-            double max = c.Mu * c.Pn * c.SpinR;
+            double max = c.Mu * (c.TreadCount > 0 ? TreadLoad(in c) : c.Pn) * c.SpinR;
             double next = Math.Max(-max, Math.Min(max, c.Ps + lambda));
             double d = next - c.Ps;
             c.Ps = next;

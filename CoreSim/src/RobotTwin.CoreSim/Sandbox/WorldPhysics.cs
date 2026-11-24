@@ -84,6 +84,21 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>[api] Automation hook: called for every moving port (object id, its hinge) before the circuit drives it; return true when it was driven.</summary>
         public Func<string, SceneJoint, bool>? DriveOverride { get; set; }   // [api]
 
+        private readonly Dictionary<string, double> _servoHold = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// [kin] A servo command (°, 0–180) that replaces the firmware's pulses, as a servo tester on the signal wire does;
+        /// null gives the signal back. The servo still moves with its own motor, its speed and torque limits and its supply.
+        /// </summary>
+        public void HoldServo(string objectId, double? degrees)
+        {
+            if (degrees is { } d) _servoHold[objectId] = Math.Max(0, Math.Min(180, d));
+            else _servoHold.Remove(objectId);
+        }
+
+        /// <summary>[kin] The servos whose command is held (object ids).</summary>
+        public IReadOnlyCollection<string> HeldServos => _servoHold.Keys;
+
         private WorldPhysics(WorldCircuit? circuit)
         {
             _circuit = circuit;
@@ -473,7 +488,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     var m = it.ServoMotor;
                     m.SupplyVoltage = sim == null || _circuit == null ? 5.0
                         : _circuit.Compiled.PinVoltage(sim, it.ServoRef!, "V+") - _circuit.Compiled.PinVoltage(sim, it.ServoRef!, "GND");
-                    double target = it.Servo.TargetAngleDeg;
+                    double target = _servoHold.TryGetValue(it.Object.Id, out double held) ? held : it.Servo.TargetAngleDeg;   // [kin]
                     // Horn angle 0 = the servo's centre (90°).
                     m.CommandAngle = double.IsNaN(target) ? double.NaN : (target - 90.0) * Math.PI / 180;
                     m.Drive(it.RotorJoint);
@@ -534,6 +549,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Angle of an object's servo horn / motor shaft relative to its body (rad).</summary>
         public double PortAngle(string objectId) =>
             _items.TryGetValue(objectId, out var it) && it.RotorJoint != null ? it.RotorJoint.Angle : 0;
+
+        /// <summary>[kin] The hinge of an object's servo horn / motor shaft (its angle over turns and its speed), or null.</summary>
+        public SceneJoint? PortJoint(string objectId) => _items.TryGetValue(objectId, out var it) ? it.RotorJoint : null;
 
         public IEnumerable<PhysicsEvent> DrainEvents() => Scene.DrainEvents();
     }

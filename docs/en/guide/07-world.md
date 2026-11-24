@@ -211,6 +211,110 @@ For a fixed joint, choose its **fastening** in the inspector. It is not just a l
 
 A box lid can also be marked **vidalı** (screwed); it is screwed down when it seats on the rim, and a "cannot be screwed" warning appears when it does not.
 
+### Arm kinematics: forward and inverse
+
+Select a part of an arm you built with servos (for example **Kol 2** in the servo-arm template). The inspector shows a **Kinematik (kolun ucu)** (kinematics) section. The program follows the joints to find the chain from a base to the part you selected.
+
+- **Base:** a fixed object or a part joined to the ground. If the arm stands free, the heaviest part of the chain is the base.
+- **Axes:** each servo horn, motor shaft, hinge and slider on the chain.
+- **Tool point:** the middle of the selected part's face farthest from its last axis.
+
+![Inverse kinematics of the servo arm: reach, skeleton and the servos driven from the panel](../../images/world-arm-kinematics.png)
+
+| In the section | What it shows |
+| --- | --- |
+| Servo rows | Each servo's angle (90° as built, 0–180° travel) and the torque the weight puts on it, as a share of its stall torque. Hinges and sliders read "serbest" (free): physics decides them. |
+| Uç (model) | The tool point computed from the angles (forward kinematics). |
+| Uç (fizik) | While running, the tool point the physics measures and its difference from the model. The difference comes from joint compliance and the servo's dead band; on the servo arm it is 0.2–0.3 mm. |
+| Tekilliğe uzaklık (distance from singular) | At 0% the arm is stretched or folded: the tip moves in some directions only with very large angles. A warning shows below 10%. |
+| Erişim (reach) | The nearest and farthest the tip gets over the servos' whole travel. |
+
+**Inverse kinematics:**
+
+1. Type a target in millimetres, or press **Sahnede seç** (pick in the scene) and click in the scene. The point is taken on the plane at the tip's current height.
+2. Press **Çöz** (solve). The servo angles are found; free hinges stay as they are.
+3. Use the solution:
+   - While the world is stopped, **Önizle** (preview) turns the servos to these angles and shows the arm in the scene.
+   - While it runs, **Servoları sür** (drive the servos) gives the servos these angles. This is like a servo tester on the signal wire: it replaces the firmware's pulses, and the servo turns with its own speed, torque and supply. **Yazılıma bırak** gives the command back to the firmware.
+   - **Açıları kopyala** (copy angles) puts the angles on the clipboard as constants for your code, with the pin each servo is wired to (for example `const int OMUZ_SERVOSU = 75;   // 74.9° · D9`).
+
+If a target cannot be reached, the nearest point and the reason are shown. The reason is either that the target is out of reach or that it is past a servo's limit.
+
+If all the servo axes are parallel (as on the servo-arm template), the tip moves in one plane. The target is then brought onto that plane. If it moves by more than 1 mm, this is noted too.
+
+A warning shows when a servo spends more than half its stall torque in the solution. With **Erişim alanını sahnede göster** (show the reach in the scene) on, the scene shows:
+
+| Colour | What |
+| --- | --- |
+| Blue points | Where the tip can go |
+| Yellow line | The arm's skeleton, from the axes to the tip |
+| Orange | The target |
+| Green | The nearest point reached |
+
+### Kinematics and odometry of a wheeled robot
+
+Select a wheeled robot's chassis (for example the plate of the car template). The inspector shows a **Sürüş kinematiği** (drive kinematics) section.
+
+![The mecanum car sliding sideways: wheel speeds, speed from the wheels and the real one, odometry drift, both paths in the scene](../../images/world-vehicle-kinematics.png)
+
+The program finds the motors with wheels on their shafts and recognises the kind of drive:
+
+| Kind | What it can do |
+| --- | --- |
+| Differential (2 wheels and a ball caster) | Drives forward and turns; cannot move sideways. |
+| Skid steering (4 wheels) | The wheels slide sideways when it turns. |
+| Mecanum | Goes in every direction. |
+| Omni | Goes in every direction. |
+
+The track, wheelbase and wheel diameter are noted.
+
+| In the section | What it shows |
+| --- | --- |
+| Wheel rows | While running, each wheel's speed in rpm and whether it turns forward or back. |
+| Tekerleklerden (from the wheels) | The chassis speed and turn rate computed from the wheel speeds (forward kinematics). |
+| Gerçek (actual) | The speed the chassis really has in the physics. If the difference is large, the slip is shown as a percentage. |
+| Odometri (odometry) | The position and heading estimated from the wheel encoders. |
+| Sapma (drift) | How far the estimate is from the true pose, and that as a share of the distance driven. |
+
+**Odometriyi sıfırla** (reset odometry) puts the estimate back on the true pose. Every run also starts from zero. With **Yolları sahnede göster** (show the paths in the scene) on, two paths are drawn:
+
+- orange: the estimated path;
+- green: the true path.
+
+On a flat floor the two-wheel car drifts less than 1% of the distance over a 46 cm arc. Wheel spin, skid steering and bumps make the drift larger, as they do in reality.
+
+**Inverse kinematics:** type the forward speed you want, the sideways speed (for mecanum and omni) and the turn rate. Right below, each wheel's speed in rpm and its direction appear, with the turning radius. For a skid-steered vehicle a note says the real turn will be slower than the wheels compute.
+
+### PID tuner: a motor's speed loop
+
+Select a DC motor. In the inspector press **Hız kontrolü → PID ayarlayıcı…** (speed control → PID tuner), or right-click the motor in the scene tree. The tuner opens in a window of its own.
+
+The experiments run on a copy of the world: no firmware runs, and the physics is complete. The motor's load is the wheel you fitted and the vehicle it drives. Units are your firmware's: the command in PWM (0–255), the speed in rpm of the output shaft.
+
+![The PID tuner: step test and model, the chosen rule's response in the model and in the real physics, the PWM command](../../images/world-pid-tuner.png)
+
+1. **Step test:**
+   - Enter the supply voltage (taken from the world's battery) and the test PWM, and press **Adım testini çalıştır** (run the step test).
+   - The PWM is applied to the motor at standstill, and its speed is measured until it settles.
+   - A first-order-plus-dead-time model is fitted to it (Smith's two-point method). The gain (K), time constant (τ) and dead time (θ) are shown, and the model is drawn over the measurement.
+2. **Rule:**
+   - Enter the period your PID runs at in the firmware; half a period is added to the dead time.
+   - Optionally, also enter the closed-loop time constant (τc) and the speed to try.
+   - Four rules are listed. Each shows its gains (Kp, Ki, Kd) and the rise, overshoot and settling the model predicts:
+
+     | Rule | When to use it |
+     | --- | --- |
+     | SIMC (PI) | First choice for most motor speed loops |
+     | IMC (PID) | When dead time matters |
+     | Ziegler–Nichols | Classic, aggressive |
+     | Cohen–Coon | Large dead time |
+
+3. **Gerçek fizikte dene** (try in the real physics):
+   - The chosen gains run in the physics as the same discrete PID as the copied code: derivative on the measurement, output limits, and the integral held at a limit (anti-windup).
+   - The response the model predicts and the one the physics gives are drawn on one graph and compared in numbers.
+   - If the PWM sits at its limit most of the time, or the physics overshoots much more than the model, the reason is given.
+4. **Kodu kopyala** (copy the code): a `pidStep(setpoint, y)` function for Arduino, with the gains, the period and the limits.
+
 ## Physics and environment
 
 Every object's inspector has a **Fizik** (physics) section:

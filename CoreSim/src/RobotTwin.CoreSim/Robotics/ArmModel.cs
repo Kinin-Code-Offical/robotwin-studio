@@ -96,6 +96,12 @@ namespace RobotTwin.CoreSim.Robotics
 
         public ArmIkKind Ik { get; set; } = ArmIkKind.Numeric;
 
+        /// <summary>
+        /// [kin] Inverse kinematics places only the tool point (x, y, z) and leaves its orientation free, whatever the
+        /// number of axes: a hobby arm built in a world (Robotics/WorldArm.cs) has no wrist designed for orientation.
+        /// </summary>
+        public bool PositionOnly { get; set; }
+
         /// <summary>Spherical-wrist 6R geometry (m): J2 height, J2 forward offset, upper arm, forearm offset, forearm length, wrist→flange.</summary>
         public double D1 { get; set; }
         public double A1 { get; set; }

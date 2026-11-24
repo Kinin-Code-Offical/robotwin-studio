@@ -16,14 +16,15 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] Yedekleme: sıklık, belge başına kopya, klasör, boyut sınırı, kaydedince önceki sürüm, çökme sonrası kurtarma.
   - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama. Sayfaya özel kısayollar henüz sabit.
   - [x] Temalar: koyu, siyah, yüksek karşıtlık; vurgu rengi.
-  - [ ] Açık tema: kodda sabit yazılmış renklerin taranması gerekiyor.
+  - [ ] Açık tema: arayüz jetonlarla çiziliyor; şema, PCB ve kod editörlerinin tuval renkleri (SymbolRenderer, SchematicCanvas, BoardCanvas, CodeEditor) temaya bağlanmalı.
   - [x] Gelişmiş: ayarları dışa ve içe aktarma, tanılama.
   - [ ] Dil paketleri: önce altyapı, sonra İngilizce paket.
-- [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller). Eksikler:
-  - kullanıcının kendi kurduğu kollar;
-  - arayüz (eklem sürme, hedef poz, çalışma alanı, tekillik uyarısı);
-  - mobil robot kinematiği;
-  - PID ayar araçları.
+- [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller).
+  - [x] Kullanıcının kendi kurduğu kollar (Robotics/WorldArm.cs): zincir, servo yükü, erişim, fizikle karşılaştırma.
+  - [x] Arayüz: hedef nokta (yazarak ya da sahnede), önizleme, servoları sürme, açıları koda kopyalama, erişim ve tekillik uyarısı.
+  - [x] Mobil robot kinematiği (Robotics/WorldVehicle.cs): diferansiyel, kızaklı, mecanum, omni; ters ve ileri kinematik, kayma, enkoder odometrisi ve sapma, yolların çizimi.
+  - [x] Fizik düzeltmesi: lastik tabanı tek temas izi (dönüşler kinematikle %0,5 içinde).
+  - [x] PID ayar araçları: motor hız döngüsü için adım testi, model, dört kural, gerçek fizikte deneme, Arduino kodu (Robotics/PidTuning.cs, MotorBench.cs). Konum döngüsü ve servo için ayarlayıcı henüz yok.
 - [~] **UX:** kategorilere ayırma, sayfalar ve pencereler, daha zengin sağ tık menüleri, özel mantıklarda yardımcılar. Her yeni iş bu gözle tasarlanır.
 - [x] Tek saat ve ortak hata ayıklama (kesme noktası, adım, değişkenler; devre ve dünya aynı anda durur).
 - [x] Üstteki sekmeler: kaydırma, sabitleme, tam liste, dosya adları.

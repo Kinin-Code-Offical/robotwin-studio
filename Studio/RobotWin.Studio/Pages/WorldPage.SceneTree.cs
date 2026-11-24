@@ -209,6 +209,7 @@ namespace RobotWin.Studio.Pages
                     menu.Items.Add(fold);
                 }
 
+                AddToolItems(menu, id);   // [pid] PID tuner, arm kinematics, drive kinematics (Pages/WorldPage.Pid.cs)
                 row.ContextMenu = menu;
             }
 

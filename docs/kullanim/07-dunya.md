@@ -211,6 +211,110 @@ Sabit bir bağlantının denetçide **bağlantı türü** seçilir. Seçim yaln�
 
 Kapak (kutu kapağı) ayrıca **vidalı** işaretlenebilir; kenara oturduğunda vidalanır, oturmazsa "vidalanamıyor" uyarısı çıkar.
 
+### Kol kinematiği: ileri ve ters kinematik
+
+Servolarla kurduğunuz bir kolun bir parçasını seçin (örneğin servo kol şablonunda **Kol 2**). Denetçide **Kinematik (kolun ucu)** bölümü çıkar. Program, bağlantıları izleyerek tabandan seçtiğiniz parçaya giden zinciri kendisi bulur.
+
+- **Taban:** sabit bir nesne ya da zemine bağlı parça. Kol serbest duruyorsa zincirin en ağır parçası taban sayılır.
+- **Eksenler:** zincirdeki her servo kolu, motor mili, menteşe ve kızak.
+- **Uç noktası:** seçtiğiniz parçanın son eksene en uzak yüzünün ortası.
+
+![Servo kolun ters kinematiği: erişim alanı, iskelet ve servoların panelden sürülmesi](../images/world-arm-kinematics.png)
+
+| Bölümde | Ne gösterir |
+| --- | --- |
+| Servo satırları | Her servonun açısı (90° kurulduğu konum, 0–180° arası) ve ağırlığın o servoya yüklediği torkun kilitlenme torkuna oranı. Menteşe ve kızaklar "serbest" yazar: açılarını fizik belirler. |
+| Uç (model) | Açılardan hesaplanan uç noktası (ileri kinematik). |
+| Uç (fizik) | Çalışırken fiziğin ölçtüğü uç noktası ve modelle farkı. Fark, eklemlerin esnemesi ve servonun ölü bandı kadardır; servo kolda 0,2–0,3 mm. |
+| Tekilliğe uzaklık | %0 olduğunda kol gergin ya da katlanmıştır: ucu bazı yönlere ancak çok büyük açılarla oynatabilirsiniz. %10'un altında uyarı çıkar. |
+| Erişim | Ucun servoların bütün açılarında gidebildiği en yakın ve en uzak mesafe. |
+
+**Ters kinematik:**
+
+1. Hedef noktayı milimetre olarak yazın ya da **Sahnede seç** düğmesine basıp sahnede bir yere tıklayın. Nokta, ucun o anki yüksekliğindeki düzlemden alınır.
+2. **Çöz** düğmesine basın. Servo açıları bulunur; serbest menteşeler olduğu gibi kalır.
+3. Çözümü kullanın:
+   - Dünya dururken **Önizle**, servoları bu açılara çevirip kolu sahnede gösterir.
+   - Çalışırken **Servoları sür**, servolara bu açıları verir. Bu, sinyal kablosuna servo test cihazı takmak gibidir: yazılımın darbelerinin yerine geçer, servo ise kendi hızı, torku ve beslemesiyle döner. **Yazılıma bırak** komutu geri verir.
+   - **Açıları kopyala**, açıları koda yapıştırılacak sabitler olarak panoya alır, servonun bağlı olduğu pinle birlikte (örneğin `const int OMUZ_SERVOSU = 75;   // 74.9° · D9`).
+
+Hedef ulaşılamıyorsa en yakın nokta ve nedeni yazılır. Neden ya erişim dışı olması ya da servo sınırıdır.
+
+Bütün servo eksenleri paralelse (servo kol şablonundaki gibi) uç tek bir düzlemde gezer. Bu durumda hedef o düzleme indirilir. Fark 1 mm'den büyükse bu da yazılır.
+
+Çözümde bir servo kilitlenme torkunun yarısından fazlasını harcıyorsa uyarı çıkar. **Erişim alanını sahnede göster** açıkken şunlar çizilir:
+
+| Renk | Ne |
+| --- | --- |
+| Mavi noktalar | Ucun gidebildiği yerler |
+| Sarı çizgi | Kolun eksenlerden uca iskeleti |
+| Turuncu | Hedef |
+| Yeşil | Ulaşılan en yakın nokta |
+
+### Tekerlekli robotun kinematiği ve odometri
+
+Tekerlekli bir robotun şasisini seçin (örneğin araba şablonunda plaka). Denetçide **Sürüş kinematiği** bölümü çıkar.
+
+![Mekanum araba yana kayarken: tekerlek hızları, tekerleklerden ve gerçek hız, odometri sapması, sahnede iki yol](../images/world-vehicle-kinematics.png)
+
+Program, millerinde tekerlek olan motorları bulur ve sürüş türünü kendisi tanır:
+
+| Tür | Özelliği |
+| --- | --- |
+| Diferansiyel (2 tekerlek ve sarhoş teker) | İleri gider ve döner; yana gidemez. |
+| Kızaklı (4 tekerlek) | Dönerken tekerlekler yana kayar. |
+| Mecanum | Her yöne gider. |
+| Omni | Her yöne gider. |
+
+İz genişliği, aks aralığı ve tekerlek çapı not olarak yazılır.
+
+| Bölümde | Ne gösterir |
+| --- | --- |
+| Tekerlek satırları | Çalışırken her tekerleğin dev/dk hızı ve ileri mi geri mi döndüğü. |
+| Tekerleklerden | Tekerlek hızlarından hesaplanan şasi hızı ve dönüş hızı (ileri kinematik). |
+| Gerçek | Şasinin fizikte gerçekten gittiği hız. Fark büyükse kayma yüzdesi yazılır. |
+| Odometri | Tekerlek enkoderlerinden tahmin edilen konum ve yön. |
+| Sapma | Tahminin gerçek konumdan farkı ve gidilen yola oranı. |
+
+**Odometriyi sıfırla**, tahmini gerçek konuma getirir. Her çalıştırma da kendiliğinden sıfırdan başlar. **Yolları sahnede göster** açıkken iki yol çizilir:
+
+- turuncu: tahmin edilen yol;
+- yeşil: gerçek yol.
+
+Düz zeminde iki tekerlekli araba 46 cm'lik bir yayda yolun %1'inden az sapar. Tekerlek patinajı, kızaklı dönüş ve tümsekler sapmayı büyütür, gerçekte olduğu gibi.
+
+**Ters kinematik:** istediğiniz ileri hızı, (mecanum ve omni için) yana hızı ve dönüş hızını yazın. Her tekerleğin dev/dk olarak ne kadar ve hangi yöne dönmesi gerektiği hemen altında görünür. Dönüş yarıçapı da yazılır. Kızaklı araçta dönüşün tekerleklerin hesapladığından yavaş olacağı ayrıca belirtilir.
+
+### PID ayarlayıcı: motorun hız döngüsü
+
+Bir DC motoru seçin. Denetçide **Hız kontrolü → PID ayarlayıcı…** düğmesine basın ya da sahne ağacında motora sağ tıklayın. Ayarlayıcı kendi penceresinde açılır.
+
+Deneyler dünyanın bir kopyasında yapılır: yazılım çalışmaz, fizik tamdır. Motorun yükü, ona taktığınız tekerlek ve sürdüğü araçtır. Birimler yazılımınızdakiyle aynıdır: komut PWM (0–255), hız çıkış milinin dev/dk'sı.
+
+![PID ayarlayıcı: adım testi ve model, seçilen kuralın modeldeki ve gerçek fizikteki yanıtı, PWM komutu](../images/world-pid-tuner.png)
+
+1. **Adım testi:**
+   - Besleme gerilimini (dünyadaki pilden kendiliğinden alınır) ve test PWM'ini girin, **Adım testini çalıştır**'a basın.
+   - Duran motora PWM birden verilir ve hız oturana kadar ölçülür.
+   - Ölçümden birinci dereceden ölü zamanlı bir model çıkarılır (Smith'in iki nokta yöntemi). Kazanç (K), zaman sabiti (τ) ve ölü zaman (θ) yazılır, model ölçümün üstüne çizilir.
+2. **Kural:**
+   - Yazılımınızda PID'in çalıştığı periyodu girin; yarım periyot ölü zamana eklenir.
+   - İsterseniz kapalı çevrim zaman sabitini (τc) ve denenecek hızı da girin.
+   - Dört kural listelenir. Her birinin kazançları (Kp, Ki, Kd) ve modelde öngörülen yükselme, aşma ve oturma süreleri görünür:
+
+     | Kural | Ne zaman |
+     | --- | --- |
+     | SIMC (PI) | Çoğu motor hız döngüsü için ilk seçim |
+     | IMC (PID) | Ölü zaman belirginse |
+     | Ziegler–Nichols | Klasik, agresif |
+     | Cohen–Coon | Ölü zaman büyükse |
+
+3. **Gerçek fizikte dene:**
+   - Seçtiğiniz kazançlar, kopyaladığınız kodla aynı ayrık PID olarak fizikte çalışır: ölçümün türevi, çıkış sınırı ve sınırda integralin durması (anti-windup).
+   - Modelin öngördüğü yanıt ile fizikte olan aynı grafikte görünür, sayılarla karşılaştırılır.
+   - PWM çoğu zaman sınırdaysa ya da fizikteki aşma modelden çok fazlaysa nedeni yazılır.
+4. **Kodu kopyala:** kazançlar, periyot ve sınırlarla birlikte Arduino'ya yapıştırılacak bir `pidStep(setpoint, y)` işlevi.
+
 ## Fizik ve ortam
 
 Her nesnenin denetçisinde **Fizik** bölümü:

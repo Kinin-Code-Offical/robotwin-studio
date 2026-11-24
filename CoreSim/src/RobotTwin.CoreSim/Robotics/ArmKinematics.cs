@@ -130,7 +130,7 @@ namespace RobotTwin.CoreSim.Robotics
         private static double Scale(int row) => row >= 3 ? 0.3 : 1.0;
 
         /// <summary>Controlled task-space rows: 6 for a 6-axis arm, x/y/z/yaw for a SCARA, position for fewer axes.</summary>
-        private static int[] TaskRows(ArmModel m) => m.Ik == ArmIkKind.Scara4 || m.Dof == 4 ? new[] { 0, 1, 2, 5 } : m.Dof >= 6 ? new[] { 0, 1, 2, 3, 4, 5 } : new[] { 0, 1, 2 };
+        private static int[] TaskRows(ArmModel m) => m.PositionOnly ? new[] { 0, 1, 2 } : m.Ik == ArmIkKind.Scara4 || m.Dof == 4 ?new[] { 0, 1, 2, 5 } : m.Dof >= 6 ? new[] { 0, 1, 2, 3, 4, 5 } : new[] { 0, 1, 2 };
 
         // ================================================================ inverse kinematics
 
@@ -171,6 +171,7 @@ namespace RobotTwin.CoreSim.Robotics
         /// <summary>Orientation error that the arm can control (yaw only for a SCARA).</summary>
         private static double OrientationError(ArmModel m, Quat got, Quat want)
         {
+            if (m.PositionOnly) return 0;
             if (m.Ik == ArmIkKind.Scara4 || m.Dof == 4)
             {
                 var e = Transform3.RotationError(got, want);

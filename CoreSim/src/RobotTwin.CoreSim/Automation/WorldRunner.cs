@@ -46,6 +46,9 @@ namespace RobotTwin.CoreSim.Automation
             public DcMotor? Motor;
             public ServoMotor? Servo;
             public SceneJoint? Joint;
+
+            /// <summary>[pid] Voltage mode: the output shaft's speed the motor's own rotor has reached (rad/s).</summary>
+            public double Omega = double.NaN;
         }
 
         private readonly Dictionary<string, PortCommand> _ports = new Dictionary<string, PortCommand>(StringComparer.OrdinalIgnoreCase);
@@ -651,14 +654,26 @@ namespace RobotTwin.CoreSim.Automation
             {
                 case PortMode.Voltage:
                 {
-                    // DC motor torque–speed line at this voltage: no-load speed V/k, stall torque k·V/R (at the gearbox output).
+                    // [pid] A DC motor on a bench supply, as the circuit's motor model drives its shaft: the torque–speed
+                    // line at this voltage (no-load speed V/k, stall torque k·V/R at the gearbox output) accelerates the
+                    // rotor, whose inertia the gearbox multiplies by the ratio squared, against the torque the mechanism took
+                    // last step; the shaft is then held at the rotor's speed. Without the rotor a small gear motor spun up
+                    // in 3 ms instead of its tens of milliseconds.
                     var m = cmd.Motor!;
                     double w0 = cmd.Value / Math.Max(1e-9, m.MotorConstant) / Math.Max(1e-9, m.GearRatio);
                     double stall = StallTorque(m, cmd.Value);
+                    double h = Physics?.Step ?? 1e-3;
+                    double rotor = Math.Max(1e-12, m.Inertia * m.GearRatio * m.GearRatio);
+                    if (double.IsNaN(cmd.Omega)) cmd.Omega = joint.Speed;
+                    double slope = Math.Abs(w0) > 1e-9 ? stall / w0 : Math.Abs(StallTorque(m, 1.0)) * m.MotorConstant * m.GearRatio;
+                    double drive = slope * (w0 - cmd.Omega);   // the torque–speed line, signed
+                    double load = joint.Drive == JointDrive.Velocity ? joint.DriveTorque : 0;
+                    // Implicit in the line's own slope: stable for any step however light the rotor.
+                    cmd.Omega = (rotor * cmd.Omega + h * (drive - load + slope * cmd.Omega)) / (rotor + h * slope);
                     joint.Drive = JointDrive.Velocity;
-                    joint.TargetSpeed = w0;
-                    joint.Damping = stall / Math.Max(1e-6, Math.Abs(w0));
-                    joint.MaxTorque = stall + 1e-5;
+                    joint.TargetSpeed = cmd.Omega;
+                    joint.Damping = 0;
+                    joint.MaxTorque = 3 * Math.Abs(stall) + 1e-4;
                     joint.Friction = 0;
                     break;
                 }

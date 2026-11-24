@@ -403,6 +403,14 @@ namespace RobotTwin.CoreSim.Mechanics
         /// Contact candidates of a cylinder toward direction <paramref name="dir"/> (body frame):
         /// the deepest rim point of each cap, plus rim samples when a cap faces the direction.
         /// </summary>
+        /// <summary>
+        /// Points of the tread line a cylinder lying on its side touches with: both edges and the middle. With the edges
+        /// alone, a wheel turning on the spot stuck at one edge and slid at the other (two points cannot share the scrub
+        /// of a turn), so a differential-drive robot turned about the inner edges, 26 % faster than its wheel spacing says;
+        /// with the middle, the edges' scrub cancels and the wheel rolls about its centre line, as a tyre's patch does.
+        /// </summary>
+        internal const int TreadPoints = 3;
+
         internal int CylinderCandidates(Vec3 dir, Span<Vec3> output)
         {
             int n = 0;
@@ -414,6 +422,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 var rim = radial * (Radius / len);
                 output[n++] = rim + new Vec3(0, 0, HalfHeight);
                 output[n++] = rim + new Vec3(0, 0, -HalfHeight);
+                output[n++] = rim;   // [phys] the middle of the tread
             }
 
             // Caps facing the direction (upright cylinder on a face): a ring of samples for a stable support.

@@ -216,6 +216,7 @@ namespace RobotWin.Studio.World
 
             var slow = new List<(string Name, double Ms)>();
             _items.Clear();
+            PreviewAngles = null;   // [kin] an edited world is shown as built
             for (int i = _view.Children.Count - 1; i >= 0; i--)
             {
                 var c = _view.Children[i];
@@ -732,7 +733,7 @@ namespace RobotWin.Studio.World
             foreach (var it in _items.Values)
             {
                 bool live = Session != null && Session.State != Simulation.SimState.Stopped;
-                double angle = Playback != null ? Playback.PortAngle(it.Object.Id) : !live ? 0 : Session!.Physics != null ? Session.Physics.PortAngle(it.Object.Id) : Session.PortAngle(it.Object);
+                double angle = Playback != null ? Playback.PortAngle(it.Object.Id) : !live ? PreviewAngle(it.Object.Id) : Session!.Physics != null ? Session.Physics.PortAngle(it.Object.Id) : Session.PortAngle(it.Object);
                 it.PortAngle = angle;
                 if (it.PortRotation != null) ((AxisAngleRotation3D)it.PortRotation.Rotation).Angle = angle * 180 / Math.PI;
                 if (it.Model.PortSpin != null) it.Model.PortSpin.Angle = it.Model.PortSign * angle * 180 / Math.PI;
@@ -1076,6 +1077,7 @@ namespace RobotWin.Studio.World
         {
             Focus();
             var p = e.GetPosition(this);
+            if (PointPickDown(e, p)) return;   // [kin] a target point for an arm (World/WorldScene.Kinematics.cs)
             if (!ReadOnly && EditorMouseDown(e, p)) return; // [terrain] terrain brush, prop placement, gizmo
             if (e.ChangedButton != MouseButton.Left)
             {

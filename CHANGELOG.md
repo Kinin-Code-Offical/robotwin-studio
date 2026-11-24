@@ -18,6 +18,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Themes and accent colours:** dark (default), black for OLED screens, high contrast; blue, turquoise, orange, purple or pink accent; applied at once (the XAML takes the brush tokens as dynamic resources).
 - **Settings can be exported and imported** (the window placement stays this machine's).
 
+- **Kinematics of arms you build:** select a part that servos move and the inspector finds the chain from its base (servo horns, motor shafts, hinges, sliders; CoreSim Robotics/WorldArm.cs, on the same product-of-exponentials kinematics as the robot cells).
+  - It shows each servo's angle and static load (share of stall torque), the tip from the model and from the physics with their difference, the distance from a singular pose and the reach.
+  - Inverse kinematics takes a target typed in or clicked in the scene. It keeps free hinges as they are, gives the nearest point and the reason when the target is out of reach, and brings a target onto the plane of an arm whose servos are all parallel.
+  - The solution can be previewed before running, driven while running (a servo-tester command in place of the firmware's pulses: the servo keeps its own speed, torque and supply), or copied as constants for the code.
+  - The reach, the arm's skeleton, the target and the nearest point are drawn in the scene.
+  - 10 tests:
+    - the servo-arm template's chain;
+    - forward kinematics by hand;
+    - inverse kinematics round trips;
+    - the plane and limit cases;
+    - reach;
+    - distance from singular;
+    - the chain read from either end;
+    - the gravity load against m·g·l;
+    - the physics arm reaching the solved point within 0.3 mm;
+    - a held servo.
+
+- **Drive kinematics of wheeled robots:** select a chassis and the inspector finds the motors with wheels on their shafts (CoreSim Robotics/WorldVehicle.cs).
+  - One model covers differential drive, skid steering, mecanum and omni. Each wheel cannot slip along its grip direction: forward for a tyre or omni wheel, across the rollers for a mecanum wheel.
+  - Inverse kinematics gives each wheel's rpm and direction for a forward, sideways and turning speed. Forward kinematics gives the chassis speed from the wheel speeds by least squares.
+  - It shows the speed the chassis really has and the slip.
+  - Encoder odometry against the true pose, with both paths drawn in the scene.
+  - 8 tests:
+    - the car's layout;
+    - the textbook differential formula;
+    - mecanum round trips;
+    - the physics mecanum base sliding sideways where the kinematics says;
+    - odometry within 1% over a 46 cm arc;
+    - turn rates on the spot and on arcs within 2%.
+
+- **PID tuner for a motor's speed loop** (inspector "Hız kontrolü → PID ayarlayıcı…", or the scene tree's right-click menu). Everything runs on a copy of the world in the full physics (CoreSim Robotics/PidTuning.cs, MotorBench.cs).
+  - A PWM step identifies a first-order-plus-dead-time model (Smith's two-point method).
+  - The SIMC, IMC, Ziegler–Nichols and Cohen–Coon gains are listed, each with the rise, overshoot and settling the model predicts (half the loop period added as dead time).
+  - The chosen gains run in the physics as the same discrete PID as the copied Arduino code (derivative on the measurement, output limits, anti-windup), drawn and measured next to the model's prediction.
+  - 11 tests, among them:
+    - identification against known models and with noise;
+    - the textbook SIMC and Ziegler–Nichols formulas;
+    - SIMC damped where Z–N overshoots;
+    - anti-windup;
+    - a SIMC PI on the car's wheel answering in the physics like the model.
+- **Right-click menu of the scene tree:** a motor offers the PID tuner, an arm part its kinematics, a chassis its drive kinematics and odometry.
+
+### Fixed
+
+- **A motor on a bench voltage (the automation API's voltage and duty modes, the PID tuner) spun up without its rotor.** The torque–speed line drove the shaft directly, so a small gear motor reached speed in 3 ms instead of its tens of milliseconds. The gearbox multiplies the rotor's inertia by the ratio squared, as the circuit's motor model already had it. Now the line accelerates that inertia against the torque the mechanism takes, and the shaft follows. A TT motor on the car now has a 32 ms time constant.
+- **Wheels turned about the edge of their tread, not its middle.** A cylinder lying on its side touched the ground at its two edges. In a rigid solver, one edge took the whole load and with it all the friction. So a two-wheel car turned about its inner tyre edges: 26% faster on the spot than its wheel spacing gives, and its turn rate jumped when the load shifted in a curve.
+  - The tread is now one contact patch. Its edges and middle hold the wheel up and resist rolling, and one more contact at the patch's centre carries the friction with their whole load.
+  - The patch's centre weighs each point by how far it is pressed in, within the tread's give (0.3 mm): the middle for a level wheel, the lower edge for a cambered one. The patch also resists scrub (turning on the spot).
+  - Turn rates now match the kinematics within 0.5%, and encoder odometry of the car drifts 0.8% instead of 13% over the same arc.
+
 ### Changed
 
 - **Faster start:** the parts library and settings pages are built the first time they are shown, and the start no longer waits for the splash to draw: the studio draws its first frame about 0.2 s sooner (0.98 → 0.77 s from the process start on the test machine).

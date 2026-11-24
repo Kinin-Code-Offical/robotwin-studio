@@ -367,6 +367,12 @@ namespace RobotTwin.CoreSim.Mechanics
             public bool Rolling;
             public long Key;
             public double Ps, MassS, SpinR; // [phys] torsional (spin) friction
+
+            /// <summary>
+            /// [phys] A tread's friction contact: the normal loads of contacts [TreadFirst, TreadFirst + TreadCount) are
+            /// added to its own for the friction limit (they carry no friction themselves). 0 for an ordinary contact.
+            /// </summary>
+            public int TreadFirst, TreadCount;
         }
 
         private struct WarmImpulse
@@ -484,6 +490,13 @@ namespace RobotTwin.CoreSim.Mechanics
 
         /// <summary>Tangential speeds below this use static friction (m/s).</summary>
         public double StickVelocity { get; set; } = 0.005;
+
+        /// <summary>
+        /// [phys] How far a tyre's tread gives under load (m): tread points of a cylinder within this depth of its lowest
+        /// one share the contact patch, so a level wheel's grip sits in the middle of its tread and a cambered one's moves
+        /// to its lower edge. Rubber on robot wheels gives a few tenths of a millimetre.
+        /// </summary>
+        public double TreadDeflection { get; set; } = 3e-4;
 
         /// <summary>Impacts above this many times a body's weight are reported as events.</summary>
         public double ImpactReportG { get; set; } = 15;
@@ -1013,15 +1026,18 @@ namespace RobotTwin.CoreSim.Mechanics
                     var dirLocal = q.InverseRotate(-n0);
                     int k = shape.CylinderCandidates(dirLocal, _candidates);
                     bool support = Math.Sqrt(dirLocal.X * dirLocal.X + dirLocal.Y * dirLocal.Y) > 1e-6 * dirLocal.Length;
+                    var tread = new TreadPoints();
                     for (int i = 0; i < k; i++)
                     {
                         var p = x + q.Rotate(_candidates[i]);
                         double sep = TerrainSeparation(p, out var n);
                         if (sep >= margin) continue;
                         var props = GroundProperties(body.MaterialIndex, p.X, p.Y);
-                        AddContact(a, -1, p, n, sep, i, props, support && i < 2 ? shape.Radius : 0, h);
+                        if (support && i < CollisionShape.TreadPoints) tread.Add(p, n, sep, i, props);   // [phys] the tread shares one patch
+                        else AddContact(a, -1, p, n, sep, i, props, 0, h);
                     }
 
+                    AddTread(a, -1, ref tread, shape.Radius, shape.HalfHeight, 0, h);
                     return;
                 }
 
@@ -1314,17 +1330,25 @@ namespace RobotTwin.CoreSim.Mechanics
                 var dl = qi.InverseRotate(dirW);
                 int nc = si.CylinderCandidates(dl, _candidates);
                 bool support = Math.Sqrt(dl.X * dl.X + dl.Y * dl.Y) > 1e-6;
+                var tread = new TreadPoints();
                 for (int c = 0; c < nc; c++)
                 {
                     var p = xi + qi.Rotate(_candidates[c]);
                     if (!sk.SignedDistance(qk.InverseRotate(p - xk), margin, out double d, out var nl)) continue;
                     if (d >= margin) continue;
                     var n = qk.Rotate(nl);
-                    double rr = support && c < 2 ? si.Radius : 0;
-                    if (flip) AddContact(k, i, p, -n, d, featureBase + c, props, rr, h);
-                    else AddContact(i, k, p, n, d, featureBase + c, props, rr, h);
+                    if (support && c < CollisionShape.TreadPoints)
+                    {
+                        tread.Add(p, flip ? -n : n, d, featureBase + c, props);   // [phys] the tread shares one patch
+                        continue;
+                    }
+
+                    if (flip) AddContact(k, i, p, -n, d, featureBase + c, props, 0, h);
+                    else AddContact(i, k, p, n, d, featureBase + c, props, 0, h);
                 }
 
+                if (flip) AddTread(k, i, ref tread, si.Radius, si.HalfHeight, featureBase, h);
+                else AddTread(i, k, ref tread, si.Radius, si.HalfHeight, featureBase, h);
                 return;
             }
 
@@ -1407,6 +1431,8 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             SetupSpin(ref c, sa.InvI, invIB, props, rollRadius); // [phys]
+            c.TreadFirst = 0;
+            c.TreadCount = 0;
             c.MaxPn = 0;
             c.Key = key;
             if (_warm.TryGetValue(c.Key, out var ws))
@@ -1551,7 +1577,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     dv = RelativeVelocity(c);
                     double l1 = c.Pt1 - c.MassT1 * dv.Dot(c.T1);
                     double l2 = c.Pt2 - c.MassT2 * dv.Dot(c.T2);
-                    double max = c.Mu * c.Pn, len = Math.Sqrt(l1 * l1 + l2 * l2);
+                    double max = c.Mu * (c.TreadCount > 0 ? TreadLoad(in c) : c.Pn), len = Math.Sqrt(l1 * l1 + l2 * l2);
                     if (len > max)
                     {
                         double f = len > 0 ? max / len : 0;

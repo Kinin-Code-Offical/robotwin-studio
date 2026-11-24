@@ -668,6 +668,7 @@ namespace RobotWin.Studio.Pages
             var world = World;
             if (world == null) return;
             _diagValues = null;
+            if (_armTip != null && Scene.Selected != _armTip) ForgetArm();   // [kin] Pages/WorldPage.Kinematics.cs
             if (Scene.SelectedCable is { } cableId && world.Cables.FirstOrDefault(x => x.Id == cableId) is { } cable)
             {
                 BuildCableDiagnostics(world, cable);
@@ -699,6 +700,8 @@ namespace RobotWin.Studio.Pages
             // the rest under "Özellik ekle" further down (Pages/WorldPage.Features.cs).
             CellSection(world, o);   // [arm] teach pendant / tool / conveyor / light curtain (Pages/WorldPage.Cell.cs)
             WingSection(world, o);   // [linkage] servo, horn, control horn, pushrod (Pages/WorldPage.Wings.cs)
+            KinematicsSection(world, o);   // [kin] servo-driven arm: angles, tip, inverse kinematics, reach (Pages/WorldPage.Kinematics.cs)
+            VehicleSection(world, o);   // [mobile] a chassis on driven wheels: wheel speeds, slip, odometry (Pages/WorldPage.Vehicle.cs)
             ShellSection(world, o);   // [shell] fit check first, then wall, cable holes, lid, X-ray / exploded (Pages/WorldPage.Shells.cs)
             if (IsSwitchPart(o)) LaunchSection(world, o);   // [launch] a switch on a countdown or by hand
 
@@ -750,6 +753,7 @@ namespace RobotWin.Studio.Pages
             SurfaceSection(o);   // [surface] colour swatches, finish (look + emissivity)
 
             if (o.Kind == WorldObjectKind.Component) ComponentSection(o);
+            PidSection(world, o);   // [pid] a motor's speed loop: the PID tuner (Pages/WorldPage.Pid.cs)
             ReadySection(world, o);   // [objs]
             RadioSection(world, o);   // [radio] controller pairing, USB plug, IR keys, ESP32 radio
             GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
@@ -1521,10 +1525,12 @@ namespace RobotWin.Studio.Pages
             RunIcon.Data = (Geometry)FindResource(running ? "I.Pause" : "I.Play");
             RunText.Text = running ? "Duraklat" : _session.State == SimState.Paused ? "Devam" : World?.IsAssembly == true ? "Montajı çalıştır" : "Dünyayı çalıştır";
             SimStatus.Text = _session.State == SimState.Stopped ? string.Empty : $"t = {SiValue.Format(_session.Time, "s")}";
+            ArmRunStateChanged();   // [kin]
         }
 
         private void OnSimUpdated()
         {
+            UpdateVehicleOdometry();   // [mobile] every frame: the encoders' change, whatever the panels' rate
             var now = DateTime.Now;
             if ((now - _lastPanels).TotalMilliseconds < 120) return;
             _lastPanels = now;
@@ -1534,6 +1540,8 @@ namespace RobotWin.Studio.Pages
             UpdateRadioLive();   // [radio]
             UpdateGasLive();   // [gas]
             UpdateCellLive();   // [arm]
+            UpdateArmLive();   // [kin]
+            UpdateVehicleLive();   // [mobile]
             UpdateSdkLive();   // [sdk]
             RecordCableHistory();
             UpdateCableDiagnostics();
@@ -1586,12 +1594,14 @@ namespace RobotWin.Studio.Pages
             if (simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
             {
                 PlaneSnapshotSetup();   // [ps5plane]
+                VehicleSnapshotBegin();   // [mobile] --vehicle <name>: the chassis selected from the start, odometry on
                 Run();
                 _session.Pause();
                 for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++)
                 {
                     if (_snapshotModes.Contains("fly")) PlaneSnapshotPilot(_session.Time);   // [ps5plane] scripted hands on the virtual pad
                     _session.StepOnce(0.01);
+                    UpdateVehicleOdometry();   // [mobile]
                     if (secs - i * 0.01 < 1.5) Scene.PlumeTick();   // [gas] the last second and a half of exhaust
                 }
                 UpdateRunButton();
@@ -1679,6 +1689,8 @@ namespace RobotWin.Studio.Pages
             if (first != null) Scene.Select(first.Id);
             if (Environment.GetCommandLineArgs().Contains("--collision")) SetCollisionView(true);   // [hull]
             LaunchSnapshot();   // [launch] --frame <name>, --thermal (Pages/WorldPage.Launch.cs)
+            KinematicsSnapshot();   // [kin] --arm <name>, --arm-target, --arm-preview, --arm-reach, --arm-drive
+            PidSnapshot();   // [pid] --pid <motor>
             ShellSnapshot();   // [shell] --select-shell, --xray, --exploded (Pages/WorldPage.Shells.cs)
             SenseSnapshotFinish();   // [sense]
             SdkSnapshot();   // [sdk]
