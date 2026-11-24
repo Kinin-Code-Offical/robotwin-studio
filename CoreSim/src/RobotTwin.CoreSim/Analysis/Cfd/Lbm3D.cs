@@ -267,7 +267,7 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
             var wv = WallVelocity;
             var wd = wallBase == null ? WallDistance : null;
             var mask = ForceMask;
-            Parallel.For(0, nz, z =>
+            Mechanics.WorkTeam.For(nz, 1, z =>   // [perf] threads that stay awake from one step to the next
             {
                 Span<double> fq = stackalloc double[19];
                 Span<double> fe = stackalloc double[19];

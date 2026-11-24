@@ -111,6 +111,13 @@ namespace RobotTwin.CoreSim.Analysis.Numerics
 
             int chunks = Math.Min(Environment.ProcessorCount * 4, (n + 511) / 512);
             int size = (n + chunks - 1) / chunks;
+            // [perf] On the solver's work team, which stays awake from one iteration to the next (a CG solve makes
+            // thousands of products; the thread pool woke its threads for each one).
+            if (Mechanics.WorkTeam.Shared.TryRun(n, size, (from, to) =>
+                {
+                    for (int r = from; r < to; r++) y[r] = RowDot(r, x);
+                }))
+                return;
             Parallel.For(0, chunks, chunk =>
             {
                 int end = Math.Min(n, (chunk + 1) * size);

@@ -93,6 +93,20 @@ namespace RobotTwin.CoreSim.Mechanics
             }
         }
 
+        /// <summary>
+        /// <paramref name="body"/>(i) for every i in [0, <paramref name="count"/>), <paramref name="chunk"/> at a time,
+        /// on the shared team, or on the thread pool when the team is busy.
+        /// </summary>
+        public static void For(int count, int chunk, Action<int> body)
+        {
+            if (Shared.TryRun(count, chunk, (from, to) =>
+                {
+                    for (int i = from; i < to; i++) body(i);
+                }))
+                return;
+            System.Threading.Tasks.Parallel.For(0, count, body);
+        }
+
         /// <summary>Takes chunks of <paramref name="pass"/> until there are none left (or a later pass has begun).</summary>
         private void Work(Pass pass)
         {

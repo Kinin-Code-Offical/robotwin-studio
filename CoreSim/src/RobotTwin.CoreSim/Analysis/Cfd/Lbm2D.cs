@@ -194,7 +194,7 @@ namespace RobotTwin.CoreSim.Analysis.Cfd
             var wall = _wall;
             const int block = 8;
             int blocks = (ny + block - 1) / block;
-            Parallel.For(0, blocks, b =>
+            Mechanics.WorkTeam.For(blocks, 1, b =>   // [perf] threads that stay awake from one step to the next
             {
                 Span<double> fq = stackalloc double[9];
                 Span<double> fe = stackalloc double[9];
