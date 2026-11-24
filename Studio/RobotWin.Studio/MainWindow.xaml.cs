@@ -795,6 +795,13 @@ namespace RobotWin.Studio
             W.Status = $"Montaj: {world.Objects.Count} gerçek parça, {world.Cables.Count} kablo. Gövdeyi, eklemleri ve kabukları dünya araçlarıyla kurun; her şey gerçek fizikle çalışır.";
         }
 
+        /// <summary>[code] Shows the world and runs it from the start (after code was written to one of its boards).</summary>
+        public void RunWorld()
+        {
+            Navigate("world");
+            _world.RestartSimulation();
+        }
+
         /// <summary>[boards] Opens a board of the active world in the circuit / code pages (Pages/WorldPage.xaml.cs).</summary>
         public void OpenWorldBoard(RobotTwin.CoreSim.Sandbox.WorldObject board) => _world.OpenBoard(board);
 

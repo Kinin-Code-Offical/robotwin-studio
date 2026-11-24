@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="..\RobotWin.Studio\Updates\UpdateCore.cs" Link="Linked\UpdateCore.cs" />
     <Compile Include="..\RobotWin.Studio\Help\Markdown.cs" Link="Linked\Markdown.cs" />
+    <Compile Include="..\RobotWin.Studio\Editor\Completion\*.cs" LinkBase="Linked\Completion" />
   </ItemGroup>
 
   <ItemGroup>

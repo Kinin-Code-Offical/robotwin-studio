@@ -982,8 +982,14 @@ namespace RobotWin.Studio.Editor
             }
             else
             {
-                line1 = (SiValue(v) ?? v) + "V";
-                line2 = (SiValue(a) ?? a) + "A";
+                // [psu] AC shown as its RMS with "~" (and the frequency), AC on DC as both.
+                string mode = parameters.TryGetValue("mode", out var md) ? md : "dc";
+                string rms = parameters.TryGetValue("vrms", out var r0) ? r0 : "12";
+                string hz = parameters.TryGetValue("frequency", out var f0) ? f0 : "50";
+                line1 = mode == "ac" ? (SiValue(rms) ?? rms) + "V~"
+                    : mode == "acdc" ? (SiValue(v) ?? v) + "+" + (SiValue(rms) ?? rms) + "~"
+                    : (SiValue(v) ?? v) + "V";
+                line2 = (SiValue(a) ?? a) + "A" + (mode == "dc" ? string.Empty : " " + (SiValue(hz) ?? hz) + "Hz");
             }
 
             MonoText(c, line1, lcd.Left + 0.2, lcd.Top + 0.15, 1.0, green, true, lcd.Width - 0.4);

@@ -215,6 +215,17 @@ namespace RobotWin.Studio.Pages
         internal void PrepareSnapshot(string? fault)
         {
             Window? w = null;
+            if (fault != null && fault.StartsWith("part:", StringComparison.Ordinal) && Lib.FindPreset(fault.Substring(5)) is { } shown)
+            {
+                // [libs] A part's sheet with its category picked (docs pictures): "part:acdc-psu".
+                _category = RobotTwin.CoreSim.Design.PartCategories.PathOf(shown);
+                BuildCategoryChips();
+                Filter();
+                PartGrid.SelectedItem = shown;
+                ShowDetail(shown);
+                return;
+            }
+
             switch (fault)
             {
                 case "creator":

@@ -2,6 +2,31 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.4.2 — 24 Kasım 2026
+
+**Kod sayfası bir kod editörü gibi çalışır: klasörler, her karta yükleme, gerçek başlıklardan tamamlama ve Arduino kütüphaneleri. Ayarlanabilir AC/DC güç kaynağı ve kategorili parça kütüphanesi.**
+
+### Yenilikler
+
+- **Kod sayfasında gezgin:**
+  - **KARTLAR** bölümünde projedeki ve açık dünyadaki her programlanabilir kart kendi kod klasörüyle durur.
+  - **KOD KLASÖRLERİM** bölümünde diskteki klasörler vardır: `Belgeler\RobotWin\Kod` ve diskten açtığınız her klasör (ör. Arduino IDE çizim klasörü).
+  - Klasörlere dosya ve alt klasör (`src/`) eklenir; dosya ya da klasör içe aktarılır (sürükle-bırak da olur).
+  - Klasör istediğiniz yere Arduino çizim klasörü olarak kaydedilir, zip olarak dışa aktarılır, yeniden adlandırılır, silinir.
+- **Kod her karta yüklenir:** **Kart** listesinde projedeki ve açık dünyadaki her Arduino Uno, Nano ve ESP32 var. **Karta yükle ve çalıştır**, klasördeki kodu karta kopyalar, derler ve projeyi ya da dünyayı çalıştırır.
+- **Çok dosyalı çizimler:** ana `.ino`, yanındaki `.h` / `.cpp` dosyaları ve `src/` alt klasörleri Arduino IDE'deki gibi birlikte derlenir. Bu Uno / Nano'da da ESP32'de de geçerlidir.
+- **Kod tamamlama** kartın gerçek başlık dosyalarından gelir: `.`, `->`, `::` ve `#include <` yazınca ya da **Ctrl+Space** ile açılır. Değişkenin türünü bilir: `kol.` yazınca `Servo` üyeleri listelenir. Sağdaki panel imzayı ve açıklamayı gösterir. Parantez açınca parametreler satırın üstünde görünür.
+- **Kütüphaneler sekmesi:** yaklaşık 10 000 Arduino kütüphanesinde arama yapar. **Kur ve ekle** kütüphaneyi kurar ve `#include` satırını ekler; kurulu kütüphaneler kaldırılabilir. Kurulu olmayan bir başlık işaretlenir ve onu sağlayan kütüphane önerilir.
+- **Ayarlanabilir AC/DC güç kaynağı:** DC (CV/CC), AC (RMS gerilim, frekans, faz) ya da DC üstünde AC verir. AC'de akım sınırı iki yönde de geçerlidir ve rapor gerçek RMS değerleri verir. Hazır ayarlar: 12 V~ 50 Hz, 24 V~ 60 Hz, 230 V~ şebeke, 12 V DC + 1 V dalgalanma. Ayrıntılar: [8. Ölçü aletleri](08-olcu-aletleri.md#ayarlanabilir-acdc-güç-kaynağı).
+- **Kategorili parça kütüphanesi:** her parçanın bir ana kategorisi ve bir alt kategorisi var (ör. Pasif → Direnç, Kondansatör; Ölçüm & Kaynak → Güç kaynağı, Sinyal jeneratörü), parça sayılarıyla. **Kütüphane** sayfasında her parçanın bir **Özellikler** tablosu var.
+
+### Düzeltmeler
+
+- **Servo kol şablonunda ikinci kol kendi ekseni etrafında dönüyordu:** yazılım dirseği bütün hareket boyunca omuzun tersine sürüyordu. Artık dirsek omuzu yarım açıyla ve 2°'lik adımlarla izler.
+- **Modül kartlarındaki pin yazıları yanlış pinleri gösterebiliyordu:** kart baskıları pin isimleri olmadan önbelleğe alınıyordu. Bu yüzden pin sırası farklı bir modül (ya da pin eşlemesi değiştirilmiş bir modül) öncekinin VCC / GND yazılarını başka sinyal taşıyan pinlerin üstünde gösterebiliyordu.
+- **HC-SR04'ün ön yüzündeki yazı pinlere göre tersti:** önden bakınca "Vcc" GND pininin üstündeydi.
+- **Basit dünya modelleri:** servo kablosu üç renkli (kahverengi GND, kırmızı V+, turuncu SIG); motorların A / B uçları kırmızı / siyah.
+
 ## 1.4.1 — 24 Kasım 2026
 
 **Render'daki hava gerçek hava; kablolar render'da simülasyondaki gibi; Devre'nin alt panelleri taşınır, kapanır, ayrı pencereye alınır.**

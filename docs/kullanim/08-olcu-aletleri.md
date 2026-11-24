@@ -54,6 +54,22 @@ Kütüphanede **Lab. Güç Kaynağı 0-30 V 3 A** ve **Lab. Güç Kaynağı 5 V 
 
 Yeni bir devreyi ilk kez denerken **5 V / 100 mA** kaynağı kullanmak, hataların parça yakmasını önler.
 
+## Ayarlanabilir AC/DC güç kaynağı
+
+**Ayarlanabilir AC/DC Kaynak 0-30 V DC / 0-24 V AC, 3 A** üç çıkış tipinden birini verir. Tip, denetçideki **Çıkış tipi** ayarıyla seçilir:
+
+| Çıkış | Ne verir |
+| --- | --- |
+| **DC** | Laboratuvar kaynağı gibi ayarlı gerilim (CV) ve akım sınırı (CC) |
+| **AC** | Sinüs: **RMS gerilim**, **frekans** ve **faz** ayarlanır (tepe = √2 × RMS; 12 V~ için tepe 17 V) |
+| **DC + AC** | DC geriliminin üstünde AC dalgalanma; doğrultulmuş beslemeyi ya da gürültülü bir hattı taklit eder |
+
+- AC'de akım sınırı iki yönde de geçerlidir: kaynak akımı hem verir hem çeker ve tepe akımı sınırda tutar.
+- **OVP**, gerilimin mutlak değerine bakar.
+- Sembol ayarı gösterir, ör. `12V~` ya da `12+1~`. Devredeki gerilim göstergeleri AC hatlarda RMS değeri `V~` ile yazar; multimetrenin AC gerilim kademesi de gerçek RMS ölçer. Simülasyon raporu tam periyotlar üzerinden gerçek RMS gerilim ve akımı verir.
+
+Hazır ayarlar: **AC Kaynak 12 V RMS 50 Hz** (trafo çıkışı; köprü doğrultucu ve kondansatör denemeleri), **AC Kaynak 24 V RMS 60 Hz** (endüstriyel kontrol gerilimi), **Şebeke 230 V RMS 50 Hz** (tepe 325 V) ve **DC 12 V + 1 V RMS dalgalanma 100 Hz** (regülatör ve filtre denemeleri).
+
 ## Toleranslar
 
 Gerçek parçalar etiket değerlerinde değildir. Sağ paneldeki **Simülasyon: parça toleransı** seçeneği:

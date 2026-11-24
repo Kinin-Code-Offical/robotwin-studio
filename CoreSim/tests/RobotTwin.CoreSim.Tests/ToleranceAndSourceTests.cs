@@ -251,6 +251,74 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void AcSupplyGivesItsRmsIntoAResistorAndAPhaseShiftedCurrentIntoACapacitor()
+        {
+            // [psu] 12 V RMS, 50 Hz into 100 Ω: 120 mA RMS, peaks at ±16.97 V.
+            var c = new AnalogCircuit();
+            int p = c.Node("p");
+            var psu = c.Add(new BenchSupply("PS1", p, 0, 0.0, 1.0) { Output = SupplyOutput.Ac, AcRms = 12.0, Frequency = 50.0 });
+            c.Add(new Resistor("RL", p, 0, 100.0));
+            var sim = new AnalogSimulator(c);
+            sim.Initialize();
+            double vmax = double.MinValue, vmin = double.MaxValue;
+            for (int i = 0; i < 200; i++)
+            {
+                sim.Step(0.2e-3);   // 40 ms: two cycles
+                vmax = Math.Max(vmax, psu.OutputVoltage);
+                vmin = Math.Min(vmin, psu.OutputVoltage);
+            }
+
+            Assert.InRange(vmax, 16.8, 17.0);
+            Assert.InRange(vmin, -17.0, -16.8);
+            Assert.InRange(psu.RmsVoltage, 11.8, 12.2);
+            Assert.InRange(psu.RmsCurrent, 0.118, 0.122);
+            Assert.Equal(SupplyRegulation.ConstantVoltage, psu.Regulation);
+
+            // 10 µF behind 10 Ω at 50 Hz: |Z| = 318.5 Ω, 37.7 mA RMS, and the source sinks current half the time (four quadrants).
+            var c2 = new AnalogCircuit();
+            int q = c2.Node("q"), mid = c2.Node("m");
+            var ac = c2.Add(new BenchSupply("PS2", q, 0, 0.0, 1.0) { Output = SupplyOutput.Ac, AcRms = 12.0, Frequency = 50.0 });
+            c2.Add(new Resistor("R1", q, mid, 10.0));
+            c2.Add(new Capacitor("C1", mid, 0, 10e-6));
+            var sim2 = new AnalogSimulator(c2);
+            sim2.Initialize();
+            double imin = double.MaxValue;
+            for (int i = 0; i < 300; i++)
+            {
+                sim2.Step(0.2e-3);
+                if (i > 100) imin = Math.Min(imin, ac.OutputCurrent);
+            }
+
+            Assert.InRange(ac.RmsCurrent, 0.0360, 0.0395);
+            Assert.True(imin < -0.04, "the capacitor gives charge back: the AC source sinks current");
+        }
+
+        [Fact]
+        public void AcSupplyLimitsThePeakCurrent()
+        {
+            // 12 V RMS into 10 Ω would want 1.7 A peaks; limited to 0.5 A both ways the output clips.
+            var c = new AnalogCircuit();
+            int p = c.Node("p");
+            var psu = c.Add(new BenchSupply("PS1", p, 0, 0.0, 0.5) { Output = SupplyOutput.Ac, AcRms = 12.0, Frequency = 50.0 });
+            c.Add(new Resistor("RL", p, 0, 10.0));
+            var sim = new AnalogSimulator(c);
+            sim.Initialize();
+            double imax = 0, imin = 0;
+            bool cc = false;
+            for (int i = 0; i < 200; i++)
+            {
+                sim.Step(0.2e-3);
+                imax = Math.Max(imax, psu.OutputCurrent);
+                imin = Math.Min(imin, psu.OutputCurrent);
+                cc |= psu.Regulation == SupplyRegulation.ConstantCurrent;
+            }
+
+            Assert.True(cc);
+            Assert.InRange(imax, 0.49, 0.51);
+            Assert.InRange(imin, -0.51, -0.49);
+        }
+
+        [Fact]
         public void BenchSupplyOvpTripsWhenBackFed()
         {
             var c = new AnalogCircuit();

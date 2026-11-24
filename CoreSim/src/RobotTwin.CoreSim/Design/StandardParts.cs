@@ -705,6 +705,22 @@ namespace RobotTwin.CoreSim.Design
                 P("output", "Çıkış", "on", "", "on", "off"))
                 .Vertical().Size(3, 2.4);
 
+            // [psu] One adjustable source for DC, AC or AC on DC: the bench supply's CV/CC stage with a programmable set point.
+            Def(lib, "acdc-psu", "Ayarlanabilir AC/DC Güç Kaynağı", Instruments, "PS", SymbolKind.BenchSupply, "WIRE-2", "mode",
+                c => c.Add(new BenchSupply(c.RefDes, c.Pin("+"), c.Pin("-"), c.Num("voltage", 12), c.Num("ilimit", 1))
+                {
+                    Output = c.Text("mode") switch { "ac" => SupplyOutput.Ac, "acdc" => SupplyOutput.AcDc, _ => SupplyOutput.Dc },
+                    AcRms = Math.Max(0, c.Num("vrms", 12)),
+                    Frequency = Math.Max(0.01, c.Num("frequency", 50)),
+                    PhaseDegrees = c.Num("phase", 0),
+                    OvpLevel = c.Num("ovp", 0),
+                    OutputEnabled = c.Text("output") != "off"
+                }),
+                P("mode", "Çıkış tipi", "dc", "", "dc", "ac", "acdc"), P("voltage", "DC gerilim (CV)", "12", "V"), P("vrms", "AC gerilim (RMS)", "12", "V"),
+                P("frequency", "AC frekans", "50", "Hz"), P("phase", "AC faz", "0", "°"), P("ilimit", "Akım sınırı (CC, AC'de tepe)", "1", "A"),
+                P("ovp", "Aşırı gerilim koruması (tepe, 0 = kapalı)", "0", "V"), P("output", "Çıkış", "on", "", "on", "off"))
+                .Vertical().Size(3, 2.4);
+
             Def(lib, "multimeter", "Dijital Multimetre", Instruments, "XMM", SymbolKind.Multimeter, "", "mode",
                 c => c.Add(new RobotTwin.CoreSim.Instruments.Multimeter(c.RefDes, c.Pin("VΩ"), c.Pin("COM"), c.Pin("mA"), c.Pin("A"))
                 {
@@ -730,6 +746,16 @@ namespace RobotTwin.CoreSim.Design
             Preset(lib, "bench-psu", "Lab. Güç Kaynağı 0-30 V 3 A", "bench-psu", Instruments, "CV/CC, akım sınırlı, OVP'li", "voltage=12;ilimit=3;ovp=31");
             Preset(lib, "bench-psu-5v-100ma", "Lab. Güç Kaynağı 5 V / 100 mA", "bench-psu", Instruments, "Akım sınırı ile güvenli deneme (kısa devrede CC'ye geçer)",
                 "voltage=5;ilimit=0.1");
+            Preset(lib, "acdc-psu", "Ayarlanabilir AC/DC Kaynak 0-30 V DC / 0-24 V AC, 3 A", "acdc-psu", Instruments,
+                "DC (CV/CC), AC (RMS, frekans, faz) ya da DC üstünde AC; her iki yönde akım sınırlı, OVP'li",
+                "mode=dc;voltage=12;vrms=12;frequency=50;ilimit=3;ovp=0");
+            Preset(lib, "ac-12v-50hz", "AC Kaynak 12 V RMS 50 Hz", "acdc-psu", Instruments, "Trafo çıkışı gibi 12 V~ (tepe 17 V), 1 A sınırlı: köprü doğrultucu ve kondansatör denemeleri için",
+                "mode=ac;vrms=12;frequency=50;ilimit=1");
+            Preset(lib, "ac-24v-60hz", "AC Kaynak 24 V RMS 60 Hz", "acdc-psu", Instruments, "24 V~ 60 Hz (endüstriyel kontrol gerilimi), 2 A sınırlı", "mode=ac;vrms=24;frequency=60;ilimit=2");
+            Preset(lib, "ac-230v-50hz", "Şebeke 230 V RMS 50 Hz (yalıtılmış, 10 A)", "acdc-psu", Instruments,
+                "Şebeke gerilimi: tepe 325 V. Simülasyonda bile yalıtım ve sigorta düşünerek kullanın", "mode=ac;vrms=230;frequency=50;ilimit=10");
+            Preset(lib, "acdc-ripple", "DC 12 V + 1 V RMS dalgalanma 100 Hz", "acdc-psu", Instruments, "Doğrultulmuş beslemenin dalgalanmasını taklit eder (regülatör ve filtre denemeleri)",
+                "mode=acdc;voltage=12;vrms=1;frequency=100;ilimit=2");
             Preset(lib, "dmm", "Dijital Multimetre (6000 sayım)", "multimeter", Instruments, "True-RMS, otomatik kademe; VΩ/COM ile gerilim, mA/A ile seri akım ölçer");
             Preset(lib, "dmm-ampere", "Multimetre (akım, mA girişi)", "multimeter", Instruments, "Devreye SERİ bağlanır: mA → COM, 440 mA sigortalı", "mode=dca");
 

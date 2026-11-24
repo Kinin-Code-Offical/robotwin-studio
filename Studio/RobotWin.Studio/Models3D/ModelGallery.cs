@@ -49,9 +49,32 @@ namespace RobotWin.Studio.Models3D
             }
 
             var p = lib.ResolveParameters(def, preset, o);
-            if (standalone) return ComponentModels.Create(def, p);
-            var fp = FootprintLibrary.Get(def.ResolveFootprint(p))!;
-            return ComponentModels.CreateOnBoard(fp, def, p, ComponentModels.ValueOf(def, p), def.RefPrefix + "1");
+            ComponentInstance inst;
+            if (standalone) inst = ComponentModels.Create(def, p);
+            else
+            {
+                var fp = FootprintLibrary.Get(def.ResolveFootprint(p))!;
+                inst = ComponentModels.CreateOnBoard(fp, def, p, ComponentModels.ValueOf(def, p), def.RefPrefix + "1");
+            }
+
+            // [polarity] where each electrical pin lands on the model, for --gallery-pins
+            PinsOf.AddOrUpdate(inst, ComponentModels.MapPins(def, p, inst.PadAnchors).Select(x => (x.Pin, x.Position)).ToList());
+            return inst;
+        }
+
+        /// <summary>[polarity] Electrical pins of the gallery's parts and where they land on the model.</summary>
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ComponentInstance, List<(string Pin, Point3D At)>> PinsOf =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<ComponentInstance, List<(string Pin, Point3D At)>>();
+
+        /// <summary>[polarity] Draw a marker on every pin (--gallery-pins): red for +, A, V+, VCC; blue for −, K, GND; grey for the rest.</summary>
+        public static bool ShowPins { get; set; }
+
+        private static Color PinColor(string pin)
+        {
+            string n = pin.ToUpperInvariant();
+            if (n is "+" or "A" or "V+" or "VCC" or "VIN" or "5V" or "ANODE" or "+V") return Color.FromRgb(0xFF, 0x30, 0x30);
+            if (n is "-" or "−" or "K" or "GND" or "CATHODE" or "0V" or "V-") return Color.FromRgb(0x30, 0x80, 0xFF);
+            return Color.FromRgb(0xC0, 0xC0, 0xC0);
         }
 
         private static IEnumerable<Item> Items()
@@ -455,6 +478,20 @@ namespace RobotWin.Studio.Models3D
             }
 
             root.Children.Insert(4, inst.Root);
+            string pinText = string.Empty;
+            if (ShowPins && PinsOf.TryGetValue(inst, out var pins))
+            {
+                double r = Math.Max(0.35, radius * 0.045);
+                foreach (var (pin, at) in pins)
+                {
+                    var mb = new MeshBuilder(new Frame());
+                    mb.Box(at.X, at.Y, board ? Math.Max(at.Z, 0) + r * 1.2 : at.Z, r * 2, r * 2, r * 2);   // above the board where a lead goes through
+                    root.Children.Add(new GeometryModel3D(mb.ToGeometry(), new EmissiveMaterial(new SolidColorBrush(PinColor(pin)))));
+                }
+
+                pinText = "   ·   " + string.Join(" ", pins.Select(x => x.Pin + (PinColor(x.Pin).R == 0xFF ? "●kırmızı" : PinColor(x.Pin).B == 0xFF ? "●mavi" : "")));
+            }
+
             var dir = new Vector3D(-0.55, -1.0, 0.85);
             dir.Normalize();
             double fov = 34;
@@ -465,7 +502,7 @@ namespace RobotWin.Studio.Models3D
             var panel = new DockPanel { Width = w, Height = h, Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x1B, 0x1F)), Margin = new Thickness(1) };
             var label = new TextBlock
             {
-                Text = $"{title}   ·   {bb.SizeX:0.#}×{bb.SizeY:0.#}×{bb.SizeZ:0.#} mm",
+                Text = $"{title}   ·   {bb.SizeX:0.#}×{bb.SizeY:0.#}×{bb.SizeZ:0.#} mm{pinText}",
                 Foreground = new SolidColorBrush(Color.FromRgb(0xD8, 0xD8, 0xDC)),
                 FontSize = 14,
                 Margin = new Thickness(8, 4, 8, 4)

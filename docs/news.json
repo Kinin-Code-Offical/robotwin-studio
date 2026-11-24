@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-4-2",
+      "date": "2026-11-24",
+      "title": "1.4.2: kod sayfası bir kod editörü, kod her karta yüklenir",
+      "body": "Bu sürümde:\n\n- **Kod sayfasında klasörler:** projedeki ve dünyadaki her kartın kendi kod klasörü; diskteki klasörler, alt klasörler, içe aktarma, diske kaydetme ve zip.\n- **Kod her karta yüklenir:** projedeki ve açık dünyadaki her Arduino Uno, Nano ve ESP32; çok dosyalı çizimler.\n- **Kod tamamlama** kartın gerçek başlık dosyalarından; imza yardımı.\n- **Kütüphaneler sekmesi:** Arduino kütüphanelerini arayın, kurun, `#include` ekleyin.\n- **Ayarlanabilir AC/DC güç kaynağı** ve **kategorili parça kütüphanesi**.\n- Servo kol şablonunda ikinci kolun kendi etrafında dönmesi ve bazı modüllerde yanlış pine düşen VCC / GND yazıları düzeltildi.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-4-1",
       "date": "2026-11-24",
       "title": "1.4.1: render'daki hava gerçek hava, kablolar simülasyondaki gibi",

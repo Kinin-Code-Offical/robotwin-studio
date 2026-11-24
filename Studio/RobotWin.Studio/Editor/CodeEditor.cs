@@ -13,13 +13,17 @@ namespace RobotWin.Studio.Editor
     /// <summary>A compiler message attached to a line of the source.</summary>
     public sealed class CodeDiagnostic
     {
-        public CodeDiagnostic(int line, int column, bool isError, string message)
+        public CodeDiagnostic(int line, int column, bool isError, string message, string? file = null)
         {
             Line = line;
             Column = column;
             IsError = isError;
             Message = message;
+            File = string.IsNullOrEmpty(file) ? "sketch.ino" : file!;
         }
+
+        /// <summary>[code] The sketch file it is about ("sketch.ino" is the main one, "src/motor.cpp" …).</summary>
+        public string File { get; }
 
         /// <summary>1-based line.</summary>
         public int Line { get; }
@@ -27,7 +31,7 @@ namespace RobotWin.Studio.Editor
         public int Column { get; }
         public bool IsError { get; }
         public string Message { get; }
-        public override string ToString() => $"{(IsError ? "Hata" : "Uyarı")} · satır {Line}: {Message}";
+        public override string ToString() => $"{(IsError ? "Hata" : "Uyarı")} · {(File == "sketch.ino" ? string.Empty : File + " · ")}satır {Line}: {Message}";
     }
 
     /// <summary>
@@ -36,7 +40,7 @@ namespace RobotWin.Studio.Editor
     /// draws the same text with syntax colours, plus a line-number gutter with
     /// error markers. Monospaced font so columns line up exactly.
     /// </summary>
-    public sealed class CodeEditor : Grid
+    public sealed partial class CodeEditor : Grid
     {
         private readonly TextBox _box;
         private readonly HighlightLayer _layer;
@@ -88,6 +92,7 @@ namespace RobotWin.Studio.Editor
             _box.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, _) => Redraw()));
             _box.PreviewKeyDown += OnKey;
             _box.SizeChanged += (_, _) => Redraw();
+            InitCompletion();   // [code] Editor/CodeEditor.Completion.cs
         }
 
         public event EventHandler? TextChanged;
@@ -199,6 +204,7 @@ namespace RobotWin.Studio.Editor
         private void OnKey(object sender, KeyEventArgs e)
         {
             var box = _box;
+            if (CompletionKey(e)) return;   // [code] the completion list takes arrows, Enter, Tab, Esc while it is open
             if (e.Key == Key.Tab)
             {
                 if (Keyboard.Modifiers == ModifierKeys.Shift) Outdent();

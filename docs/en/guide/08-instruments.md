@@ -54,6 +54,22 @@ The library has **Lab. Güç Kaynağı 0-30 V 3 A** and **Lab. Güç Kaynağı 5
 
 Using the **5 V / 100 mA** supply when first trying a new circuit stops mistakes from burning parts.
 
+## Adjustable AC/DC power supply
+
+**Ayarlanabilir AC/DC Kaynak 0-30 V DC / 0-24 V AC, 3 A** (adjustable AC/DC supply) gives one of three outputs, picked with **Çıkış tipi** (output type) in the inspector:
+
+| Output | What it gives |
+| --- | --- |
+| **DC** | A set voltage (CV) with a current limit (CC), like a bench supply |
+| **AC** | A sine: **RMS voltage**, **frequency** and **phase** are set (peak = √2 × RMS; 17 V peak for 12 V~) |
+| **DC + AC** | An AC ripple on top of the DC voltage, like a rectified supply or a noisy rail |
+
+- On AC the current limit holds in both directions: the supply sources and sinks current and holds the peak current at the limit.
+- **OVP** looks at the voltage's absolute value.
+- The symbol shows the setting, e.g. `12V~` or `12+1~`. The circuit's voltage readouts print the RMS value of AC nets with `V~`; the multimeter's AC voltage range measures true RMS too. The simulation report gives the true RMS voltage and current over whole cycles.
+
+Presets: **AC Kaynak 12 V RMS 50 Hz** (a transformer's output; bridge rectifier and capacitor experiments), **AC Kaynak 24 V RMS 60 Hz** (industrial control voltage), **Şebeke 230 V RMS 50 Hz** (mains, 325 V peak) and **DC 12 V + 1 V RMS dalgalanma 100 Hz** (12 V DC with 1 V RMS ripple; regulator and filter experiments).
+
 ## Tolerances
 
 Real parts are not at their labelled values. The **Simülasyon: parça toleransı** (simulation: part tolerance) option in the right panel:

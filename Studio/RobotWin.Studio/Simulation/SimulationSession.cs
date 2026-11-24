@@ -627,7 +627,7 @@ namespace RobotWin.Studio.Simulation
         {
             var fw = _workspace.Project.FirmwareFor(part.RefDes);
             part.Parameters.TryGetValue("firmware", out var param);
-            string? source = fw?.Source, fileName = fw?.FileName;
+            string? source = fw?.Bundle(), fileName = fw?.FileName;   // [code] every file of the sketch
             bool useProject = string.IsNullOrEmpty(param) || param!.StartsWith("project", StringComparison.OrdinalIgnoreCase);
             if (!useProject || string.IsNullOrWhiteSpace(source))
             {

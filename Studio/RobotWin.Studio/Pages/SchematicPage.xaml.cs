@@ -146,16 +146,24 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ library
 
+        /// <summary>[libs] Main categories with their sub-categories indented under them, each with its part count.</summary>
         private void BuildCategories()
         {
-            CategoryBox.Items.Add("Tüm parçalar");
-            foreach (var cat in W.Library.Categories) CategoryBox.Items.Add(cat);
+            CategoryBox.Items.Clear();
+            CategoryBox.Items.Add(new ComboBoxItem { Content = $"Tüm parçalar ({W.Library.Presets.Count})", Tag = "Tümü" });
+            foreach (var (main, count, subs) in RobotTwin.CoreSim.Design.PartCategories.Tree(W.Library.Presets))
+            {
+                CategoryBox.Items.Add(new ComboBoxItem { Content = $"{main} ({count})", Tag = main, FontWeight = FontWeights.SemiBold });
+                foreach (var (s, n) in subs)
+                    CategoryBox.Items.Add(new ComboBoxItem { Content = $"{s} ({n})", Tag = main + RobotTwin.CoreSim.Design.PartCategories.Separator + s, Padding = new Thickness(22, 3, 6, 3) });
+            }
+
             CategoryBox.SelectedIndex = 0;
         }
 
         private void OnCategoryChanged(object sender, SelectionChangedEventArgs e)
         {
-            _category = CategoryBox.SelectedIndex <= 0 ? "Tümü" : (string)CategoryBox.SelectedItem;
+            _category = CategoryBox.SelectedItem is ComboBoxItem { Tag: string tag } ? tag : "Tümü";
             if (IsLoaded || PartList != null) FilterLibrary();
         }
 
@@ -168,9 +176,9 @@ namespace RobotWin.Studio.Pages
             var culture = CultureInfo.GetCultureInfo("tr-TR");
             var items = W.Library.Presets.Where(p =>
             {
-                if (_category != "Tümü" && p.Category != _category) return false;
+                if (!RobotTwin.CoreSim.Design.PartCategories.Matches(p, _category)) return false;
                 if (tokens.Length == 0) return true;
-                string hay = (p.Name + " " + p.Description + " " + p.Category + " " + p.Id).ToLower(culture);
+                string hay = (p.Name + " " + p.Description + " " + RobotTwin.CoreSim.Design.PartCategories.PathOf(p) + " " + p.Id).ToLower(culture);
                 return tokens.All(t => hay.Contains(t.ToLower(culture)));
             }).OrderBy(p => LibraryPage.IsSeriesResistor(p) && tokens.Length == 0 ? 1 : 0).ToList();
             PartList.ItemsSource = items;

@@ -25,6 +25,10 @@ The parts of the page:
 
 The library has passives, diodes and LEDs, transistors and MOSFETs, op-amps, 74HC logic ICs, regulators, batteries and power supplies, switches and relays, DC motors and servos, sensors, displays and I²C modules, motor drivers, Arduino Uno / Nano, ESP32 boards and wireless devices.
 
+The category list above the search box has two levels. Main categories (e.g. **Pasif** (passive), **Güç** (power), **Ölçüm & Kaynak** (measurement & source)) have their sub-categories under them (e.g. **Direnç** (resistor), **Kondansatör** (capacitor), **Güç kaynağı** (power supply), **Sinyal jeneratörü** (signal generator)). Each line shows how many parts it holds. Picking a sub-category lists only that kind of part. The **Kütüphane** (library) page has the same layout: below the main category buttons, the picked category's sub-categories appear on a second row. Picking a part shows an **Özellikler** (specifications) table on the right. It lists every value of its simulation model (the ones this part sets differently from the default in bold), its pins and the model's name.
+
+![The library: Ölçüm & Kaynak → Güç kaynağı (power supplies) and the adjustable AC/DC supply's specifications](../../images/library-categories.png)
+
 ## Wiring
 
 1. Click a pin; the wire starts.

@@ -648,7 +648,10 @@ namespace RobotWin.Studio.World
             m.Port = new PortFrame("horn", "Servo kolu", new Point3D(sx * Mm, 0, (hz + 0.8 * k) * Mm), new Vector3D(0, 0, 1));
             // Pigtail: brown (GND), red (V+), orange (SIG) ending in a 3-pin female connector.
             double cx = L / 2 + 40, cz = 3;
-            Box(m.Body, L / 2 + 20, 0, cz, 40, 3.6, 1.2, Color.FromRgb(0x70, 0x50, 0x30), 0.05);
+            // [polarity] Three wires side by side in the order of the plug's pins: brown GND, red V+, orange SIG.
+            Box(m.Body, L / 2 + 20, -1.2, cz, 40, 1.2, 1.2, Color.FromRgb(0x6B, 0x44, 0x28), 0.05);
+            Box(m.Body, L / 2 + 20, 0, cz, 40, 1.2, 1.2, Color.FromRgb(0xC8, 0x28, 0x2C), 0.05);
+            Box(m.Body, L / 2 + 20, 1.2, cz, 40, 1.2, 1.2, Color.FromRgb(0xF0, 0x8A, 0x1E), 0.05);
             Box(m.Body, cx, 0, cz, 7.6, 2.6, 14, Color.FromRgb(0x1A, 0x1A, 0x1D), 0.1);
             m.Pins.Add(new PinAnchor("GND", "GND (kahverengi)", new Point3D((cx + 4) * Mm, -2.54 * Mm, cz * Mm)));
             m.Pins.Add(new PinAnchor("V+", "V+ (kırmızı)", new Point3D((cx + 4) * Mm, 0, cz * Mm)));
@@ -670,6 +673,9 @@ namespace RobotWin.Studio.World
                 Cyl(m.Body, 10, 28, 0, 32, 0, 10, Color.FromRgb(0xC8, 0xCA, 0xCF), 0.6, m.Heat);   // motor can
                 Cyl(shaft, 2.7, 37, 1, -11, 0, 9.4, Colors.White, 0.3, null, 12);                    // double D-shaft
                 m.Port = new PortFrame("shaft", "Motor mili", new Point3D(-11 * Mm, 18.5 * Mm, 9.4 * Mm), new Vector3D(0, 1, 0));
+                // [polarity] Solder tabs on the end cap: red-marked A, black B, where the pins are.
+                Box(m.Body, 46.5, -4, 14, 1.2, 2.4, 3, Color.FromRgb(0xC8, 0x28, 0x2C), 0.3);
+                Box(m.Body, 46.5, 4, 14, 1.2, 2.4, 3, Color.FromRgb(0x1A, 0x1A, 0x1D), 0.3);
                 m.Pins.Add(new PinAnchor("A", "A (kırmızı)", new Point3D(47 * Mm, -4 * Mm, 14 * Mm)));
                 m.Pins.Add(new PinAnchor("B", "B (siyah)", new Point3D(47 * Mm, 4 * Mm, 14 * Mm)));
                 m.Bounds = new Rect3D(-18.5 * Mm, -18.5 * Mm, 0, 64.5 * Mm, 37 * Mm, 20 * Mm);
@@ -681,8 +687,10 @@ namespace RobotWin.Studio.World
                 Cyl(m.Body, r, len, 0, 0, 0, r, Color.FromRgb(0xC0, 0xC3, 0xCA), 0.6, m.Heat);
                 Cyl(shaft, coreless ? 0.5 : 2, coreless ? 6 : 12, 0, len / 2 + (coreless ? 3 : 6), 0, r, Colors.White, 0.4, null, 10);
                 m.Port = new PortFrame("shaft", "Motor mili", new Point3D((len / 2 + (coreless ? 6 : 12)) * Mm, 0, r * Mm), new Vector3D(1, 0, 0));
-                m.Pins.Add(new PinAnchor("A", "A", new Point3D((-len / 2 - 2) * Mm, -2 * Mm, r * Mm)));
-                m.Pins.Add(new PinAnchor("B", "B", new Point3D((-len / 2 - 2) * Mm, 2 * Mm, r * Mm)));
+                Box(m.Body, -len / 2 - 1, -2, r, 2, 1.2, 1.6, Color.FromRgb(0xC8, 0x28, 0x2C), 0.3);
+                Box(m.Body, -len / 2 - 1, 2, r, 2, 1.2, 1.6, Color.FromRgb(0x1A, 0x1A, 0x1D), 0.3);
+                m.Pins.Add(new PinAnchor("A", "A (kırmızı)", new Point3D((-len / 2 - 2) * Mm, -2 * Mm, r * Mm)));
+                m.Pins.Add(new PinAnchor("B", "B (siyah)", new Point3D((-len / 2 - 2) * Mm, 2 * Mm, r * Mm)));
                 m.Bounds = new Rect3D(-len / 2 * Mm, -r * Mm, 0, (len + 12) * Mm, 2 * r * Mm, 2 * r * Mm);
             }
 

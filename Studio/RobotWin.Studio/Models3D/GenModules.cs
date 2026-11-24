@@ -54,6 +54,13 @@ namespace RobotWin.Studio.Models3D
             }
         }
 
+        /// <summary>
+        /// [polarity] Texture key carrying the printed pin names: board textures are cached by key, so two modules whose
+        /// pins are in a different order (VCC-GND vs GND-VCC, or an edited pin map) must not share one, or the second
+        /// would show the first one's labels over pins that carry other signals.
+        /// </summary>
+        private static string Keyed(string key, IEnumerable<string> names) => key + "|" + string.Join(",", names);
+
         private static IReadOnlyList<string> PinNames(ModelRequest r, IEnumerable<(string Name, double Y)> pins) =>
             pins.Select(p => r.Def?.Pins.FirstOrDefault(d => string.Equals(r.Def.ResolvePad(d, r.P), p.Name, StringComparison.OrdinalIgnoreCase))?.Name ?? p.Name).ToList();
 
@@ -79,14 +86,17 @@ namespace RobotWin.Studio.Models3D
                 }
 
                 b[Mat.Plastic(0x1A4C95u, 0.15)].Block(px0, yc - L / 2, zb, px1, yc + L / 2, zb + H);
-                var tex = Mat.Image("hcsr04-front", () => Tex.Render(900, 400, dc =>
+                var tex = Mat.Image(Keyed("hcsr04-front", names), () => Tex.Render(900, 400, dc =>
                 {
                     dc.PushTransform(new ScaleTransform(20, 20));
                     dc.DrawRectangle(new SolidColorBrush(Mat.C(0x1C56A6u)), null, new Rect(0, 0, L, H));
                     SilkText(dc, "HC-SR04", L / 2, 3.2, 2.0, true, 0, true);
                     SilkText(dc, "T", 9.5, 18.6, 1.6, true, 0, true);
                     SilkText(dc, "R", 35.5, 18.6, 1.6, true, 0, true);
-                    SilkText(dc, "Vcc Trig Echo Gnd", L / 2, 16.7, 1.1);
+                    // [polarity] The pin names in the order the pins stand as seen from the front (the board faces -x,
+                    // so its left is +y): the print must name the pin under each word.
+                    string Shown(string n) => n.Length > 2 && n.All(char.IsLetter) ? n.Substring(0, 1) + n.Substring(1).ToLowerInvariant() : n;
+                    SilkText(dc, string.Join(" ", Enumerable.Range(0, pins.Count).OrderByDescending(i => pins[i].Y).Select(i => Shown(names[i]))), L / 2, 16.7, 1.1);
                     foreach (var (x, y) in new[] { (1.6, 1.6), (L - 1.6, 1.6), (1.6, H - 1.6), (L - 1.6, H - 1.6) }) MountHole(dc, x, y, 1.6);
                     dc.Pop();
                 }));
@@ -131,7 +141,7 @@ namespace RobotWin.Studio.Models3D
                 if (small)
                 {
                     // 0.91" 128×32: 38 × 12 mm, header on the short side.
-                    Pcb(b, -2.0, yc - 6.0, 36.0, yc + 6.0, ModZ, 0x1D1D22u, "oled32", dc =>
+                    Pcb(b, -2.0, yc - 6.0, 36.0, yc + 6.0, ModZ, 0x1D1D22u, Keyed("oled32", names), dc =>
                     {
                         PinLabels(dc, pins, names, 2.4, 0.8, -90);
                     }, 1.2, 0.6);
@@ -142,7 +152,7 @@ namespace RobotWin.Studio.Models3D
                 else
                 {
                     // 0.96" 128×64: 27.3 × 27.8 mm board, header along the top edge (here vertical).
-                    Pcb(b, -2.2, yc - 13.65, 25.6, yc + 13.65, ModZ, 0x1C4E9Au, "oled64", dc =>
+                    Pcb(b, -2.2, yc - 13.65, 25.6, yc + 13.65, ModZ, 0x1C4E9Au, Keyed("oled64", names), dc =>
                     {
                         PinLabels(dc, pins, names, 2.6, 0.9, -90);
                         foreach (var (x, y) in new[] { (0.0, yc - 11.6), (0.0, yc + 11.6), (23.5, yc - 11.6), (23.5, yc + 11.6) }) MountHole(dc, x, y, 2.0);
@@ -170,7 +180,7 @@ namespace RobotWin.Studio.Models3D
                 double top = ModZ + 1.6;
                 var names = PinNames(r, pins);
                 // PCF8574 backpack under the display.
-                Pcb(b, -1.6, yc - 8.0, 40.0, yc + 11.0, ModZ, 0x1C1C20u, "i2cpack", dc =>
+                Pcb(b, -1.6, yc - 8.0, 40.0, yc + 11.0, ModZ, 0x1C1C20u, Keyed("i2cpack", names), dc =>
                 {
                     PinLabels(dc, pins, names, 2.6, 0.85);
                     for (int i = 0; i < 16; i++) PadRing(dc, 2.6 + i * 2.54, yc + 9.4, 0.75, 0.45);
@@ -216,8 +226,10 @@ namespace RobotWin.Studio.Models3D
             {
                 ModulePins(b, pins);
                 double top = ModZ + 1.6;
-                string[] labels = { "VCC", "GND", "SCL", "SDA", "XDA", "XCL", "AD0", "INT" };
-                Pcb(b, -1.8, yc - 10.6, 14.6, yc + 10.6, ModZ, 0x1F4F9Cu, "gy521|" + pins.Count, dc =>
+                string[] usual = { "VCC", "GND", "SCL", "SDA", "XDA", "XCL", "AD0", "INT" };
+                var mapped = PinNames(r, pins);
+                var labels = mapped.Select((n, i) => n != pins[i].Name || i >= usual.Length || mapped.Contains(usual[i]) ? n : usual[i]).ToList();
+                Pcb(b, -1.8, yc - 10.6, 14.6, yc + 10.6, ModZ, 0x1F4F9Cu, Keyed("gy521", labels), dc =>
                 {
                     PinLabels(dc, pins, labels, 3.0, 0.9);
                     MountHole(dc, 11.6, yc - 7.6, 3.0);
@@ -256,7 +268,7 @@ namespace RobotWin.Studio.Models3D
                 var names = PinNames(r, pins);
                 if (!l298)
                 {
-                    Pcb(b, -1.3, yc - 10.15, 19.0, yc + 10.15, ModZ, 0x5B2C8Eu, "tb6612", dc =>
+                    Pcb(b, -1.3, yc - 10.15, 19.0, yc + 10.15, ModZ, 0x5B2C8Eu, Keyed("tb6612", names), dc =>
                     {
                         for (int i = 0; i < 8; i++)
                         {
@@ -284,7 +296,7 @@ namespace RobotWin.Studio.Models3D
         private static void L298Board(PartBuilder b, List<(string Name, double Y)> pins, IReadOnlyList<string> names, double yc, double top)
         {
             double x0 = -3.0, x1 = 40.0, y0 = yc - 21.5, y1 = yc + 21.5;
-            Pcb(b, x0, y0, x1, y1, ModZ, 0xB22A2Eu, "l298n", dc =>
+            Pcb(b, x0, y0, x1, y1, ModZ, 0xB22A2Eu, Keyed("l298n", names), dc =>
             {
                 PinLabels(dc, pins, names, 3.2, 0.95);
                 foreach (var (x, y) in new[] { (x0 + 3.0, y0 + 3.0), (x1 - 3.0, y0 + 3.0), (x0 + 3.0, y1 - 3.0), (x1 - 3.0, y1 - 3.0) }) MountHole(dc, x, y, 3.0);
@@ -348,7 +360,7 @@ namespace RobotWin.Studio.Models3D
                 ModulePins(b, pins);
                 double top = ModZ + 1.6, cx = 12.0;
                 var names = PinNames(r, pins);
-                Pcb(b, -1.6, yc - 13.0, 25.6, yc + 13.0, ModZ, 0x121214u, "fc", dc =>
+                Pcb(b, -1.6, yc - 13.0, 25.6, yc + 13.0, ModZ, 0x121214u, Keyed("fc", names), dc =>
                 {
                     PinLabels(dc, pins, names, 2.8, 0.85);
                     foreach (var (x, y) in new[] { (cx - 10, yc - 10), (cx + 10, yc - 10), (cx - 10, yc + 10), (cx + 10, yc + 10) }) MountHole(dc, x, y, 2.0);
@@ -412,7 +424,7 @@ namespace RobotWin.Studio.Models3D
 
         private static void ComparatorBoard(PartBuilder b, List<(string Name, double Y)> pins, IReadOnlyList<string> names, double yc, double top, double len, double wid, string key, string title)
         {
-            Pcb(b, -2.5, yc - wid / 2, len - 2.5, yc + wid / 2, ModZ, 0x1F55A8u, key, dc =>
+            Pcb(b, -2.5, yc - wid / 2, len - 2.5, yc + wid / 2, ModZ, 0x1F55A8u, Keyed(key, names), dc =>
             {
                 PinLabels(dc, pins, names, 2.8, 0.85);
                 MountHole(dc, len / 2 - 1.0, yc, 3.0);
@@ -480,7 +492,7 @@ namespace RobotWin.Studio.Models3D
 
         private static void Pir(PartBuilder b, List<(string Name, double Y)> pins, IReadOnlyList<string> names, double yc, double top)
         {
-            Pcb(b, -2.5, yc - 12.0, 29.5, yc + 12.0, ModZ, 0x2D7A3Au, "pir", dc =>
+            Pcb(b, -2.5, yc - 12.0, 29.5, yc + 12.0, ModZ, 0x2D7A3Au, Keyed("pir", names), dc =>
             {
                 PinLabels(dc, pins, names, 2.8, 0.85);
                 SilkText(dc, "HC-SR501", 14.0, yc + 10.6, 0.9);
@@ -512,7 +524,7 @@ namespace RobotWin.Studio.Models3D
         private static void SoilProbe(PartBuilder b, List<(string Name, double Y)> pins, IReadOnlyList<string> names, double yc, double top)
         {
             const double L = 88.0;
-            Pcb(b, -3.0, yc - 11.5, L, yc + 11.5, ModZ, 0x141416u, "soil", dc =>
+            Pcb(b, -3.0, yc - 11.5, L, yc + 11.5, ModZ, 0x141416u, Keyed("soil", names), dc =>
             {
                 PinLabels(dc, pins, names, 2.8, 0.9);
                 var white = Frozen(new SolidColorBrush(Color.FromRgb(0xEE, 0xEE, 0xEA)));
@@ -530,7 +542,7 @@ namespace RobotWin.Studio.Models3D
 
         private static void Joystick(PartBuilder b, List<(string Name, double Y)> pins, IReadOnlyList<string> names, double yc, double top)
         {
-            Pcb(b, -2.5, yc - 13.0, 31.5, yc + 13.0, ModZ, 0x1A1A1Eu, "joystick", dc =>
+            Pcb(b, -2.5, yc - 13.0, 31.5, yc + 13.0, ModZ, 0x1A1A1Eu, Keyed("joystick", names), dc =>
             {
                 PinLabels(dc, pins, names, 2.8, 0.85);
                 SilkText(dc, "KY-023", 16, yc + 11.6, 0.9);
@@ -563,7 +575,7 @@ namespace RobotWin.Studio.Models3D
         private static void GenericSensor(PartBuilder b, ModelRequest r, List<(string Name, double Y)> pins, IReadOnlyList<string> names, double yc, double top)
         {
             double wid = Math.Max(15.0, pins.Count * 2.54 + 6.0);
-            Pcb(b, -2.5, yc - wid / 2, 18.5, yc + wid / 2, ModZ, 0x1F55A8u, "sensor|" + pins.Count, dc =>
+            Pcb(b, -2.5, yc - wid / 2, 18.5, yc + wid / 2, ModZ, 0x1F55A8u, Keyed("sensor", names), dc =>
             {
                 PinLabels(dc, pins, names, 2.8, 0.85);
                 MountHole(dc, 15.5, yc, 3.0);

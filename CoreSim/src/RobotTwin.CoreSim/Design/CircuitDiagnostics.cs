@@ -335,6 +335,15 @@ namespace RobotTwin.CoreSim.Design
                     case "bench-psu":
                         AddSupply(m, refDes, "+", "-", SiValue.Parse(p.TryGetValue("voltage", out var bv) ? bv : "12", 12), refDes);
                         break;
+                    case "acdc-psu":
+                    {
+                        // [psu] The highest voltage it reaches: the DC set point plus the AC peak.
+                        string mode = p.TryGetValue("mode", out var md) ? md : "dc";
+                        double dc = mode == "ac" ? 0 : SiValue.Parse(p.TryGetValue("voltage", out var dv) ? dv : "12", 12);
+                        double peak = mode == "dc" ? 0 : Math.Sqrt(2) * SiValue.Parse(p.TryGetValue("vrms", out var rv) ? rv : "12", 12);
+                        AddSupply(m, refDes, "+", "-", dc + peak, refDes);
+                        break;
+                    }
                     case "battery":
                     {
                         var chem = Enum.TryParse(p.TryGetValue("chemistry", out var c) ? c : "Alkaline", true, out BatteryChemistry ch) ? ch : BatteryChemistry.Alkaline;
@@ -591,6 +600,7 @@ namespace RobotTwin.CoreSim.Design
                 {
                     case "dc-source":
                     case "bench-psu":
+                    case "acdc-psu":
                     case "battery":
                         plusPin = "+";
                         minusPin = "-";

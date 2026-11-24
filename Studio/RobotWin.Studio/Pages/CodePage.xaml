@@ -18,38 +18,81 @@
             <Grid Margin="12,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Kart" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="BoardBox" Width="230" SelectionChanged="OnBoardChanged"/>
+                    <ComboBox x:Name="TargetBox" Width="300" SelectionChanged="OnTargetChanged"
+                              ToolTip="Kodun yükleneceği kart: projedeki ya da açık dünyadaki her Arduino Uno, Nano ve ESP32"/>
                     <TextBlock Text="Örnek" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="16,0,8,0"/>
-                    <ComboBox x:Name="TemplateBox" Width="200" SelectionChanged="OnTemplate"/>
+                    <ComboBox x:Name="TemplateBox" Width="190" SelectionChanged="OnTemplate"/>
                     <Border Width="1" Height="22" Background="{StaticResource B.Border}" Margin="12,0"/>
                     <Button x:Name="BuildButton" Click="OnBuild" ToolTip="Derle (F7)">
                         <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="14"/><TextBlock Text="Derle" Margin="7,0,0,0"/></StackPanel>
                     </Button>
-                    <Button x:Name="UploadButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="30" Margin="6,0,0,0" Click="OnUpload" ToolTip="Derle, emüle karta yükle ve simülasyonu başlat (F5)">
+                    <Button x:Name="UploadButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="30" Margin="6,0,0,0" Click="OnUpload" ToolTip="Bu klasörü seçili karta yükle, derle ve çalıştır (F5)">
                         <StackPanel Orientation="Horizontal">
                             <t:Icon Data="{StaticResource I.Play}" Size="14" Foreground="{StaticResource B.OnPrimary}"/>
-                            <TextBlock Text="Yükle ve çalıştır" Margin="7,0,0,0" Foreground="{StaticResource B.OnPrimary}"/>
+                            <TextBlock Text="Karta yükle ve çalıştır" Margin="7,0,0,0" Foreground="{StaticResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" ToolTip="Simülasyonu durdur" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Kartı resetle" Click="OnReset"><t:Icon Data="{StaticResource I.Reset}"/></Button>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock x:Name="BuildStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BuildStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="460"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <ed:CodeEditor x:Name="Editor" Grid.Row="1"/>
+        <!-- Explorer | editor -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="270" MinWidth="170"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="1" x:Name="NoBoard" Background="#F00E0E10" Visibility="Collapsed">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
-                <TextBlock Text="Programlanabilir kart yok" Style="{StaticResource Text.Subtitle}"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource B.TextSecondary}" Margin="0,6,0,12"
-                           Text="Kod yazmak için devreye bir Arduino Uno veya Nano ekleyin. Yazdığınız kod gerçek avr-gcc ile derlenir ve kart emülatöründe çevrim doğruluğunda çalışır."/>
-                <Button HorizontalAlignment="Left" Content="Arduino Uno ekle" Click="OnAddUno"/>
-            </StackPanel>
-        </Border>
+            <DockPanel Background="{StaticResource B.Base}">
+                <DockPanel DockPanel.Dock="Top" Margin="12,8,6,4">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Yeni dosya (.ino, .h, .cpp …)" Click="OnNewFile"><t:Icon Data="{StaticResource I.Plus}" Size="14"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Yeni kod klasörü" Click="OnNewFolder"><t:Icon Data="{StaticResource I.Folder}" Size="14"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Diskten klasör aç (Arduino çizim klasörü ya da herhangi bir kod klasörü)" Click="OnOpenFolder"><t:Icon Data="{StaticResource I.Import}" Size="14"/></Button>
+                        <Button x:Name="MoreButton" Style="{StaticResource Btn.Icon}" ToolTip="İçe aktar, diske kaydet, zip, yeniden adlandır, sil" Click="OnMore"><t:Icon Data="{StaticResource I.More}" Size="14"/></Button>
+                    </StackPanel>
+                    <TextBlock Text="KOD" Style="{StaticResource Text.Caption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </DockPanel>
+                <TreeView x:Name="Explorer" BorderThickness="0" Background="Transparent" Margin="4,0,0,6"
+                          SelectedItemChanged="OnExplorerPick" MouseRightButtonUp="OnExplorerMenu" AllowDrop="True" Drop="OnExplorerDrop">
+                    <TreeView.Resources>
+                        <!-- The selected file: the theme's soft accent, not the system's white. -->
+                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{StaticResource C.AccentSoft}"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{StaticResource C.AccentSoft}"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{StaticResource C.Text}"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{StaticResource C.Text}"/>
+                    </TreeView.Resources>
+                </TreeView>
+            </DockPanel>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="{StaticResource B.Border}" ResizeDirection="Columns"/>
+
+            <DockPanel Grid.Column="2">
+                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1" Padding="12,5">
+                    <TextBlock x:Name="FileTitle" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis"/>
+                </Border>
+                <Grid>
+                    <ed:CodeEditor x:Name="Editor"/>
+                    <Border x:Name="NoBoard" Background="#F00E0E10" Visibility="Collapsed">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
+                            <TextBlock Text="Bir kart ya da kod klasörü seçin" Style="{StaticResource Text.Subtitle}"/>
+                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource B.TextSecondary}" Margin="0,6,0,12"
+                                       Text="Soldaki Kartlar bölümünde projedeki ve açık dünyadaki her Arduino Uno, Nano ve ESP32'nin kendi kodu var. Kod klasörlerim'de diskte çalışırsınız: yeni klasör açın ya da var olan bir Arduino çizim klasörünü açın, istediğiniz karta yükleyin."/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Yeni kod klasörü" Click="OnNewFolder"/>
+                                <Button Content="Klasör aç…" Margin="8,0,0,0" Click="OnOpenFolder"/>
+                                <Button Content="Devreye Arduino Uno ekle" Margin="8,0,0,0" Click="OnAddUno"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </DockPanel>
+        </Grid>
 
         <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Background="{StaticResource B.Border}" ResizeDirection="Rows"/>
 

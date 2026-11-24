@@ -365,7 +365,7 @@ namespace RobotWin.Studio.World
 
         private void AttachEsp32(WorldProgrammable prog, string where)
         {
-            string? source = prog.Firmware?.Source;
+            string? source = prog.Firmware?.Bundle();   // [code] every file of the sketch
             if (string.IsNullOrWhiteSpace(source) && prog.Parameters.TryGetValue("firmware", out var fw))
             {
                 var path = SimulationSession.ResolveFirmwarePath(fw);

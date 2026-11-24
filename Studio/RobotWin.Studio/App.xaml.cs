@@ -61,6 +61,7 @@ namespace RobotWin.Studio
 
             if (Arg("--gallery") is { } galleryDir)
             {
+                Models3D.ModelGallery.ShowPins = args.Contains("--gallery-pins");
                 // Contact sheets of every 3D component model (visual check of the model library).
                 int cols = Arg("--gallery-columns") is { } gc ? int.Parse(gc, CultureInfo.InvariantCulture) : 4;
                 var tile = (Arg("--gallery-tile") ?? "460x340").Split('x');
@@ -213,14 +214,47 @@ namespace RobotWin.Studio
                 var bmp = new RenderTargetBitmap((int)(root.ActualWidth * dpi.DpiScaleX), (int)(root.ActualHeight * dpi.DpiScaleY),
                     96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, PixelFormats.Pbgra32);
                 bmp.Render(root);
+                var shot = WithPopups(bmp, root, dpi);   // [code] open popups (completion list, call tip) are windows of their own
                 var enc = new PngBitmapEncoder();
-                enc.Frames.Add(BitmapFrame.Create(bmp));
+                enc.Frames.Add(BitmapFrame.Create(shot));
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 using (var fs = File.Create(path)) enc.Save(fs);
                 Workspace.Current.Simulation.Stop();
                 window.ForceClose();
             };
             timer.Start();
+        }
+
+        /// <summary>Popups the snapshot should draw over the page (each registers itself while open).</summary>
+        public static readonly System.Collections.Generic.List<System.Windows.Controls.Primitives.Popup> SnapshotPopups = new System.Collections.Generic.List<System.Windows.Controls.Primitives.Popup>();
+
+        private static BitmapSource WithPopups(RenderTargetBitmap page, FrameworkElement root, DpiScale dpi)
+        {
+            var open = SnapshotPopups.Where(p => p.IsOpen && p.Child is FrameworkElement { IsVisible: true }).ToList();
+            if (open.Count == 0) return page;
+            var visual = new DrawingVisual();
+            using (var dc = visual.RenderOpen())
+            {
+                dc.DrawImage(page, new Rect(0, 0, root.ActualWidth, root.ActualHeight));
+                foreach (var p in open)
+                {
+                    var child = (FrameworkElement)p.Child;
+                    child.UpdateLayout();
+                    // Where the popup asked to be (relative to its target): the snapshot window is off screen, so Windows
+                    // moves the real popup onto a monitor and its screen position says nothing.
+                    var at = p.PlacementTarget is UIElement target
+                        ? target.TranslatePoint(new Point(p.HorizontalOffset, p.VerticalOffset), root)
+                        : new Point(p.HorizontalOffset, p.VerticalOffset);
+                    var pic = new RenderTargetBitmap(Math.Max(1, (int)(child.ActualWidth * dpi.DpiScaleX)), Math.Max(1, (int)(child.ActualHeight * dpi.DpiScaleY)),
+                        96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, PixelFormats.Pbgra32);
+                    pic.Render(child);
+                    dc.DrawImage(pic, new Rect(at.X, at.Y, child.ActualWidth, child.ActualHeight));
+                }
+            }
+
+            var all = new RenderTargetBitmap(page.PixelWidth, page.PixelHeight, page.DpiX, page.DpiY, PixelFormats.Pbgra32);
+            all.Render(visual);
+            return all;
         }
 
         /// <summary>

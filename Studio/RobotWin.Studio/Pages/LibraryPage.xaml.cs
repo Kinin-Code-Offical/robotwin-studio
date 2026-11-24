@@ -26,20 +26,45 @@ namespace RobotWin.Studio.Pages
             _shell = shell;
             InitializeComponent();
             Subtitle.Text = $"{Lib.Presets.Count} gerçek parça · {Lib.Parts.Count()} simülasyon modeli · {Lib.Categories.Count()} kategori. Her parçanın elektriksel modeli, PCB kılıfı ve bacak eşleşmesi var.";
-            foreach (var cat in new[] { "Tümü" }.Concat(Lib.Categories))
-            {
-                var chip = new ToggleButton { Content = cat, Style = (Style)FindResource("Chip"), Tag = cat, IsChecked = cat == _category };
-                chip.Click += (s, _) =>
-                {
-                    _category = (string)((ToggleButton)s!).Tag;
-                    foreach (ToggleButton c in Categories.Children) c.IsChecked = (string)c.Tag == _category;
-                    Filter();
-                };
-                Categories.Children.Add(chip);
-            }
+            BuildCategoryChips();
 
             Filter();
             ShowDetail(Lib.Presets.FirstOrDefault(p => p.Id == "lm7805") ?? Lib.Presets[0]);
+        }
+
+        /// <summary>[libs] Main-category chips; picking one shows its sub-categories in a second row.</summary>
+        private void BuildCategoryChips()
+        {
+            Categories.Children.Clear();
+            var tree = RobotTwin.CoreSim.Design.PartCategories.Tree(Lib.Presets);
+            string main = _category.Split(new[] { RobotTwin.CoreSim.Design.PartCategories.Separator }, StringSplitOptions.None)[0];
+            ToggleButton Chip(string text, string tag, bool on, bool sub = false)
+            {
+                var chip = new ToggleButton { Content = text, Style = (Style)FindResource("Chip"), Tag = tag, IsChecked = on, Margin = new Thickness(0, 0, 4, 4) };
+                if (sub) chip.FontSize = 12;
+                chip.Click += (s, _) =>
+                {
+                    _category = (string)((ToggleButton)s!).Tag;
+                    BuildCategoryChips();
+                    Filter();
+                };
+                return chip;
+            }
+
+            Categories.Children.Add(Chip($"Tümü ({Lib.Presets.Count})", "Tümü", _category == "Tümü"));
+            foreach (var (m, count, _) in tree) Categories.Children.Add(Chip($"{m} ({count})", m, m == main));
+            var subs = tree.FirstOrDefault(t => t.Main == main).Subs;
+            if (subs != null && subs.Count > 1)
+            {
+                // The sub-categories of the picked one, on a line of their own.
+                Categories.Children.Add(new Border { Width = 4000, Height = 0 });
+                Categories.Children.Add(new TextBlock { Text = main + " ›", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 4), Foreground = (Brush)FindResource("B.TextMuted") });
+                foreach (var (s, n) in subs)
+                {
+                    string tag = main + RobotTwin.CoreSim.Design.PartCategories.Separator + s;
+                    Categories.Children.Add(Chip($"{s} ({n})", tag, _category == tag, true));
+                }
+            }
         }
 
         private void OnSearch(object sender, TextChangedEventArgs e) => Filter();
@@ -49,9 +74,50 @@ namespace RobotWin.Studio.Pages
             var culture = CultureInfo.GetCultureInfo("tr-TR");
             var tokens = SearchBox.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             PartGrid.ItemsSource = Lib.Presets.Where(p =>
-                (_category == "Tümü" || p.Category == _category) &&
-                tokens.All(t => (p.Name + " " + p.Description + " " + p.Id).ToLower(culture).Contains(t.ToLower(culture))))
+                RobotTwin.CoreSim.Design.PartCategories.Matches(p, _category) &&
+                tokens.All(t => (p.Name + " " + p.Description + " " + RobotTwin.CoreSim.Design.PartCategories.PathOf(p) + " " + p.Id).ToLower(culture).Contains(t.ToLower(culture))))
                 .OrderBy(p => IsSeriesResistor(p) ? 1 : 0).ToList();
+        }
+
+        /// <summary>
+        /// [libs] The part's electrical values as a datasheet table: every parameter of its simulation model with the value
+        /// this part number sets (bold where it differs from the model's default), its unit and the choices it allows; then
+        /// its pins and the model it is simulated with.
+        /// </summary>
+        private void AddSpecTable(RobotTwin.CoreSim.Design.PartDefinition def, IReadOnlyDictionary<string, string> values)
+        {
+            if (def.Parameters.Count == 0 && def.Pins.Count == 0) return;
+            Detail.Children.Add(new TextBlock { Text = "Özellikler", Style = (Style)FindResource("Text.Overline"), Margin = new Thickness(0, 0, 0, 6) });
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            int row = 0;
+            void Row(string label, string value, bool strong = false, string? tip = null)
+            {
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var l = new TextBlock { Text = label, Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 2, 10, 2), TextWrapping = TextWrapping.Wrap };
+                var v = new TextBlock { Text = value, Margin = new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap, FontWeight = strong ? FontWeights.SemiBold : FontWeights.Normal, ToolTip = tip };
+                v.SetResourceReference(TextBlock.ForegroundProperty, "B.Text");
+                Grid.SetRow(l, row);
+                Grid.SetRow(v, row);
+                Grid.SetColumn(v, 1);
+                grid.Children.Add(l);
+                grid.Children.Add(v);
+                row++;
+            }
+
+            foreach (var p in def.Parameters)
+            {
+                string value = values.TryGetValue(p.Key, out var v) && v.Length > 0 ? v : p.DefaultValue;
+                if (value.Length == 0 && p.Choices == null) continue;
+                string word = value switch { "on" => "açık", "off" => "kapalı", "dc" => "DC", "ac" => "AC", "acdc" => "AC + DC", "true" => "evet", "false" => "hayır", _ => value };
+                string shown = word + (p.Unit.Length > 0 && !value.EndsWith(p.Unit, StringComparison.Ordinal) ? " " + p.Unit : string.Empty);
+                Row(p.Label, shown, value != p.DefaultValue, p.Choices != null ? "Seçenekler: " + string.Join(", ", p.Choices) : "Model varsayılanı: " + p.DefaultValue + " " + p.Unit);
+            }
+
+            if (def.Pins.Count > 0) Row("Bacaklar", string.Join(", ", def.Pins.Select(pin => pin.Name)));
+            Row("Simülasyon modeli", def.Name + " (" + def.Id + ")");
+            Detail.Children.Add(grid);
         }
 
         /// <summary>The E12 resistor series goes to the end so the catalog opens on varied parts.</summary>
@@ -68,9 +134,10 @@ namespace RobotWin.Studio.Pages
             var def = Lib.Get(preset.PartId);
             var parameters = Lib.ResolveParameters(def, preset, null);
 
-            Detail.Children.Add(new TextBlock { Text = preset.Category, Style = (Style)FindResource("Text.Overline") });
+            Detail.Children.Add(new TextBlock { Text = RobotTwin.CoreSim.Design.PartCategories.PathOf(preset), Style = (Style)FindResource("Text.Overline") });
             Detail.Children.Add(new TextBlock { Text = preset.Name, Style = (Style)FindResource("Text.Title"), TextWrapping = TextWrapping.Wrap });
-            Detail.Children.Add(new TextBlock { Text = preset.Description, Style = (Style)FindResource("Text.Body"), Margin = new Thickness(0, 6, 0, 16) });
+            Detail.Children.Add(new TextBlock { Text = preset.Description, Style = (Style)FindResource("Text.Body"), Margin = new Thickness(0, 6, 0, 16), TextWrapping = TextWrapping.Wrap });
+            AddSpecTable(def, parameters);
 
             var place = new Button { Style = (Style)FindResource("Btn.Primary"), Content = "Devreye ekle", Padding = new Thickness(18, 8, 18, 8) };
             place.Click += (_, _) => _shell.PlacePart(preset.Id);

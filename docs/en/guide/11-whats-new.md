@@ -2,6 +2,31 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.4.2 — 24 November 2026
+
+**The code page works like a code editor: folders, loading onto any board, completion from the real headers and Arduino libraries. An adjustable AC/DC power supply and a part library in categories.**
+
+### New
+
+- **An explorer on the code page:**
+  - **KARTLAR** (boards) lists every programmable board of the project and of the open world, each with its own code folder.
+  - **KOD KLASÖRLERİM** (my code folders) lists folders on disk: `Documents\RobotWin\Kod` and every folder you open from disk (e.g. an Arduino IDE sketch folder).
+  - Folders take files and subfolders (`src/`); files and folders can be imported (drag and drop works too).
+  - A folder can be saved anywhere as an Arduino sketch folder, exported as a zip, renamed and deleted.
+- **Code loads onto any board:** the **Kart** (board) list holds every Arduino Uno, Nano and ESP32 of the project and of the open world. **Karta yükle ve çalıştır** (load onto the board and run) copies the folder's code into the board, compiles it and runs the project or the world.
+- **Multi-file sketches:** the main `.ino`, the `.h` / `.cpp` files next to it and `src/` subfolders compile together as in the Arduino IDE, on the Uno / Nano and on the ESP32 alike.
+- **Code completion** comes from the board's real header files: it opens after `.`, `->`, `::` and `#include <`, or with **Ctrl+Space**. It knows a variable's type: `kol.` lists the `Servo` members. The panel on the right shows the signature and a description. Opening a parenthesis shows the parameters above the line.
+- **Libraries tab:** searches about 10 000 Arduino libraries. **Kur ve ekle** (install and add) installs a library and adds its `#include` line; installed libraries can be removed. A header no installed library provides is flagged and the library that provides it is suggested.
+- **Adjustable AC/DC power supply:** DC (CV/CC), AC (RMS voltage, frequency, phase) or AC on top of DC. On AC the current limit holds in both directions and the report gives true RMS values. Presets: 12 V~ 50 Hz, 24 V~ 60 Hz, 230 V~ mains, 12 V DC + 1 V ripple. Details: [8. Instruments](08-instruments.md#adjustable-acdc-power-supply).
+- **A part library in categories:** every part has a main category and a sub-category (e.g. Pasif → Direnç, Kondansatör; Ölçüm & Kaynak → Güç kaynağı, Sinyal jeneratörü), with part counts. On the **Kütüphane** (library) page every part has an **Özellikler** (specifications) table.
+
+### Fixed
+
+- **The servo-arm template's second arm spun around its own joint:** the firmware drove the elbow the opposite way to the shoulder across the whole range. The elbow now follows the shoulder at half range, in 2° steps.
+- **Pin labels on module boards could name the wrong pins:** board prints were cached without the pin names, so a module with another pin order (or an edited pin map) could show the previous one's VCC / GND labels over pins that carry other signals.
+- **The HC-SR04's front print was mirrored against its pins:** seen from the front, "Vcc" stood over the GND pin.
+- **Simple world models:** the servo cable has three colours (brown GND, red V+, orange SIG); motors' A / B terminals are red / black.
+
 ## 1.4.1 — 24 November 2026
 
 **The render's air is the real air; cables in a render are the simulated ropes; the circuit page's bottom panels can be moved, closed and opened in their own windows.**

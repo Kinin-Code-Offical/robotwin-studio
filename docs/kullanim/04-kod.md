@@ -1,10 +1,17 @@
 # 4. Kod
 
-**Kod** sayfası (Ctrl+3) devredeki programlanabilir kartların (Arduino Uno, Arduino Nano, ESP32) yazılımını yazdığınız, derlediğiniz ve emüle karta yükleyip çalıştırdığınız yerdir. Her kartın kodu projenin içinde saklanır.
+**Kod** sayfası (Ctrl+3), kartların yazılımını yazdığınız yerdir. Sayfa bir kod editörü gibi çalışır:
+
+- solda klasörler ve dosyalar;
+- ortada tamamlama ve imza yardımı olan editör;
+- altta derleyici, seri monitör ve Arduino kütüphaneleri.
+
+Yazdığınız kodu projedeki ya da açık dünyadaki **herhangi bir karta** (Arduino Uno, Arduino Nano, ESP32) yükleyip çalıştırabilirsiniz.
+
+![Kod sayfası: solda kartlar ve diskteki çok dosyalı bir çizim klasörü (src/Eklem.cpp açık)](../images/code-explorer.png)
 
 ## Başlamadan önce
 
-- Devrede programlanabilir bir kart olmalıdır. Yoksa sayfa **Programlanabilir kart yok** der; **Arduino Uno ekle** düğmesiyle bir Uno ekleyebilirsiniz.
 - Arduino kodu derlemek için `arduino-cli` kurulu olmalıdır:
 
   ```text
@@ -16,15 +23,83 @@
 
 Ayrıntılar: [1. Başlarken](01-baslarken.md#kendi-kodunuzu-derlemek-için-isteğe-bağlı).
 
+## Gezgin: kartlar ve kod klasörleri
+
+Sol taraftaki gezginde iki bölüm vardır:
+
+- **KARTLAR:** projedeki ve açık dünyadaki her programlanabilir kart. Her kartın kodu kendi klasöründe, projenin (ya da dünyanın) içinde saklanır.
+- **KOD KLASÖRLERİM:** diskteki klasörler. Yeni klasörler `Belgeler\RobotWin\Kod` içinde açılır. Diskten açtığınız her klasör de burada listelenir (ör. Arduino IDE'nin bir çizim klasörü).
+
+Gezginin üstündeki düğmeler:
+
+| Düğme | Ne yapar |
+| --- | --- |
+| Yeni dosya | Seçili klasöre `.ino`, `.h`, `.cpp` … ekler |
+| Yeni kod klasörü | Diskte yeni bir çizim klasörü açar |
+| Klasör aç | Diskteki herhangi bir kod klasörünü listeye ekler |
+| ⋯ | İçe aktar, diske kaydet, zip, yeniden adlandır, sil |
+
+Bir klasöre ya da dosyaya sağ tıklayınca şunlar gelir:
+
+- **Yeni dosya…**, **Yeni klasör…**: dosya ya da alt klasör ekler, ör. `src/`.
+- **Dosya içe aktar…**, **Klasör içe aktar…**: başka yerden dosya ya da klasör kopyalar. Dosyaları Explorer'dan gezgine sürükleyip bırakmak da olur.
+- **Karta yükle:** klasörü seçtiğiniz karta yükler.
+- **Diske kaydet (Arduino çizim klasörü olarak)…**: istediğiniz yere kaydeder.
+- **Zip olarak dışa aktar…**
+- **Klasörü Explorer'da göster**, **Yeniden adlandır**, **Sil**.
+- **Listeden kaldır (diskte kalır):** klasörü yalnızca listeden çıkarır.
+
+Diskteki dosyalarda **Ctrl+S** kaydeder.
+
+### Çok dosyalı çizimler
+
+Bir çizim birden çok dosyadan oluşabilir: ana `.ino`, yanında `.h` / `.cpp` dosyaları ve `src/` altındaki alt klasörler. Arduino IDE'deki gibi hepsi birlikte derlenir. Bu hem Uno / Nano'da hem ESP32'de geçerlidir. Bir kartın klasörüne eklediğiniz dosyalar proje dosyasında saklanır.
+
 ## Adım adım: ilk kodunuz
 
-1. **Kart** listesinden kodunu yazacağınız kartı seçin.
-2. **Örnek** listesinden bir şablon seçin, örneğin **Blink (D13 LED)**.
-3. **Derle** düğmesine veya **F7**'ye basın. Alttaki **Derleyici** sekmesinde derleme çıktısı görünür. Hatalar Türkçe açıklanır ve ilgili satır işaretlenir.
-4. **Yükle ve çalıştır** düğmesine veya **F5**'e basın. Kod derlenir, emüle karta yüklenir ve simülasyon başlar.
-5. **Seri monitör** sekmesinde `Serial.print` çıktısını görün. Alttaki kutuya yazıp **Gönder** ile karta veri yollayın.
+1. Gezginde bir kart ya da kod klasörü seçin.
+2. Klasör boşsa **Örnek** listesinden bir şablon seçin, örneğin **Blink (D13 LED)**.
+3. **Kart** listesinden kodun yükleneceği kartı seçin. Listede projedeki ve açık dünyadaki her Uno, Nano ve ESP32 vardır.
+4. **Derle** düğmesine veya **F7**'ye basın. Alttaki **Derleyici** sekmesinde çıktı görünür. Hatalar Türkçe açıklanır; hatanın olduğu dosya açılır ve satır işaretlenir.
+5. **Karta yükle ve çalıştır** düğmesine veya **F5**'e basın. Klasördeki kod karta kopyalanır, derlenir ve simülasyon başlar. Kart dünyadaysa dünya çalışmaya başlar.
+6. **Seri monitör** sekmesinde `Serial.print` çıktısını görün. Alttaki kutuya yazıp **Gönder** ile karta veri yollayın.
 
 Araç çubuğundaki diğer düğmeler simülasyonu durdurur ve kartı resetler.
+
+## Kod tamamlama ve imza yardımı
+
+Editör, kartın gerçek başlık dosyalarını okur:
+
+- Uno / Nano için Arduino AVR çekirdeğini, kurulu kütüphaneleri ve çizim klasörünü;
+- ESP32 için simülasyon katmanını.
+
+![Kod tamamlama: Serial.pr yazınca print ve println, sağda imzalar ve açıklama](../images/code-complete.png)
+
+Tamamlama listesi şu durumlarda açılır:
+
+- `.`, `->` ve `::` yazınca (ör. `Serial.` → `print`, `println`, `begin` …);
+- `#include <` yazınca (kullanılabilir başlıklar);
+- **Ctrl+Space** ile her yerde.
+
+Liste sizin fonksiyonlarınızı, değişkenlerinizi ve `#define`'larınızı da bilir. Bir değişkenin türünü bildiği için `kol.` yazınca `Servo` sınıfının üyelerini gösterir.
+
+Kullanım:
+
+- **↑ ↓** ile seçin; **Enter** ya da **Tab** ile ekleyin; **Esc** kapatır.
+- Sağdaki panel seçilen öğenin imzasını ve kısa açıklamasını gösterir.
+- Parantez açınca fonksiyonun parametreleri satırın üstünde görünür ve yazdığınız parametre kalın olur. Kaybolursa **Ctrl+Shift+Space** geri getirir.
+
+## Arduino kütüphaneleri
+
+Alttaki **Kütüphaneler** sekmesi Arduino kütüphane listesinde arama yapar. Liste yaklaşık 10 000 kütüphane içerir ve bilgisayardaki `arduino-cli` listesinden okunur.
+
+- Arama kutusuna ad ya da başlık yazın, ör. `servo`, `lcd i2c`, `dht`, `Servo.h`.
+- **Kur ve ekle** düğmesi kütüphaneyi `arduino-cli lib install` ile indirir, kurar ve koda `#include` satırını ekler.
+- Kurulu bir kütüphanenin başlık düğmeleri (ör. `Servo.h`) `#include` satırını ekler; **Kütüphaneyi kaldır** kütüphaneyi siler.
+- Liste hiç indirilmemişse **Kütüphane listesini indir** düğmesi `arduino-cli lib update-index` çalıştırır.
+- Kodda kurulu olmayan bir başlık varsa (ör. `#include <Servo.h>`) uyarı çıkar. Sekme o başlığı sağlayan kütüphaneyi gösterir.
+
+ESP32 kartları simülasyonda bilgisayarda yerel derlenir. Bu yüzden onlarda yalnızca simülasyon katmanının başlıkları kullanılabilir; Arduino kütüphaneleri Uno ve Nano içindir.
 
 ## Arduino şablonları
 
@@ -71,7 +146,7 @@ Desteklenenler:
 
 ## Dünyadaki kartların kodu
 
-Dünyaya koyduğunuz bir kartın kodunu yazmak için, dünyada kartı seçin ve denetçideki **Kartın kodunu yaz** düğmesine basın. Kart, Kod sayfasında kendi sekmesinde açılır. Ayrıntılar: [7. Dünya](07-dunya.md).
+Açık dünyadaki her kart gezginin **KARTLAR** bölümünde kendi klasörüyle durur. Kodunu orada yazıp **Karta yükle ve çalıştır** ile yükleyebilirsiniz. Dünyada kartı seçip denetçideki **Kartın kodunu yaz** düğmesine basmak da aynı klasörü açar. Bir kod klasörünü dünyadaki bir karta yüklemek için klasöre sağ tıklayıp **Karta yükle** altından kartı seçin. Ayrıntılar: [7. Dünya](07-dunya.md).
 
 ---
 

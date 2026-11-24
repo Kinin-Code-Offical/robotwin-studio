@@ -186,7 +186,7 @@ namespace RobotTwin.CoreSim.Automation
                 prog.Parameters.TryGetValue("firmware", out var fw);
                 if (IsEsp32Part(prog.Definition.Id))
                 {
-                    string? source = prog.Firmware?.Source;
+                    string? source = prog.Firmware?.Bundle();   // [code] every file of the sketch
                     if (string.IsNullOrWhiteSpace(source) && !string.IsNullOrEmpty(fw))
                     {
                         var path = Options.ResolveFirmware(fw);

@@ -13,7 +13,7 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
-> **1.4.1'de yeni:** Render'daki hava artık gerçek hava: kayıt boyunca zamanla çözülür, parçalar havayı kendi hareketleriyle iter, rüzgâr dünyadan gelir; rüzgâr yoksa ve hiçbir şey kıpırdamıyorsa akış yoktur. Hava 3B duman olarak görünür; rüzgâr tüneli testi yönüyle ayrı bir seçenek. Render'da kablolar simülasyondaki iplerin kendisi, servoların gerilmesi hesaplanır, Devre'nin alt panelleri taşınır ve ayrı pencereye alınır. **1.4.0:** sıvılar gerçek fizikle akar. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
+> **1.4.2'de yeni:** Kod sayfası bir kod editörü gibi çalışır: projedeki ve açık dünyadaki her kartın kendi kod klasörü, diskteki klasörler, alt klasörler, içe aktarma, zip; kod istenen karta (Uno, Nano, ESP32) yüklenir, çok dosyalı çizimler derlenir. Tamamlama kartın gerçek başlıklarından gelir, Arduino kütüphaneleri uygulamadan aranıp kurulur. Ayarlanabilir AC/DC güç kaynağı ve kategorili parça kütüphanesi geldi. **1.4.1:** render'daki hava gerçek hava. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md), [CHANGELOG.md](CHANGELOG.md).
 
 ![Başlangıç sayfası](docs/images/home.png)
 
@@ -168,7 +168,7 @@ Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçükt
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.4.1.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.4.2.exe /S` | Sessiz kurulum (bu kullanıcı için) |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
@@ -307,8 +307,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.1
-# -> builds\installer\RobotWinStudio-Setup-1.4.1.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.2
+# -> builds\installer\RobotWinStudio-Setup-1.4.2.exe
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -387,7 +387,7 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
-> **New in 1.4.1:** The render's air is now the real air: solved over the whole recording, pushed by the parts' own motion, blown by the world's wind; with no wind and nothing moving there is no flow. The air is shown as 3D smoke; the wind-tunnel test is a separate option with a direction. Cables in a render are the simulated ropes, servos get their stress, and the circuit page's bottom panels can be moved and opened in their own windows. **1.4.0:** liquids flow with real physics. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
+> **New in 1.4.2:** The code page works like a code editor: every board of the project and of the open world has its own code folder, folders on disk, subfolders, import and zip; code loads onto the board you pick (Uno, Nano, ESP32) and multi-file sketches compile. Completion comes from the board's real headers, and Arduino libraries are searched and installed from the app. An adjustable AC/DC power supply and a part library in categories. **1.4.1:** the render's air is the real air. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
 
 ### What's inside
 
@@ -466,7 +466,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.1` → `builds\installer\RobotWinStudio-Setup-1.4.1.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.4.2` → `builds\installer\RobotWinStudio-Setup-1.4.2.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-11-24
+
+### Added
+
+- **The code page is a code workspace.** The explorer lists every programmable board of the project and of the open world (each with its own code folder) and code folders on disk (`Documents\RobotWin\Kod` and any folder opened from disk, e.g. an Arduino IDE sketch folder). Folders take new files and subfolders (`src/`), imported files and folders (also by drag and drop), and can be saved to disk anywhere as an Arduino sketch folder, exported as a zip, renamed, deleted or removed from the list; Ctrl+S saves files on disk.
+- **Code loads onto any board:** the board list holds every Arduino Uno, Nano and ESP32 of the project and of the open world. **Karta yükle ve çalıştır** copies the folder's code into the board, compiles it and runs the project's simulation or the world.
+- **Multi-file sketches** for the Uno / Nano and the ESP32: the main `.ino` with `.h` / `.cpp` files and `src/**` subfolders compile together as in the Arduino IDE. A board's files are saved in the project under `firmware/<ref>/files/`; a single-file program keeps its old form, so existing builds stay current.
+- **Code completion from the board's real headers:** the Arduino AVR core, the installed libraries and the sketchbook for the Uno / Nano, the simulation layer for the ESP32. Members after `.`, `->` and `::` (by the variable's type: `kol.` lists `Servo`'s members), headers after `#include <`, the sketch's own functions, variables and `#define`s, ranked by prefix, word starts and subsequence; a detail panel shows the signature and a description. Signature help shows the parameters of the call being typed with the current one in bold. Ctrl+Space and Ctrl+Shift+Space.
+- **Arduino libraries tab:** searches the local Arduino library index (about 10 000 libraries), installs (`arduino-cli lib install`) and adds the `#include`, uninstalls, adds an installed library's headers, downloads the index on request; a header no installed library provides is flagged and the library that provides it is suggested.
+- **Adjustable AC/DC power supply** (0-30 V DC / 0-24 V AC, 3 A): DC (CV/CC), AC (RMS voltage, frequency, phase) or AC on top of DC; on AC the current limit holds in both directions (it sources and sinks), OVP looks at |V|, and the report gives true RMS voltage and current over whole cycles. Presets: 12 V~ 50 Hz, 24 V~ 60 Hz, 230 V~ 50 Hz mains, 12 V DC + 1 V RMS 100 Hz ripple. The symbol shows the setting (`12V~`, `12+1~`); AC nets read their RMS value (`V~`).
+- **Two-level part catalogue:** every part has a main category and a sub-category from its simulation model (Pasif → Direnç, Kondansatör …; Ölçüm & Kaynak → Güç kaynağı, Sinyal jeneratörü …), with part counts, in the circuit page's list and as two rows of chips on the library page. The library page's part sheet has a specification table: every value of the part's model (bold where this part number differs from the default), its pins and its model.
+
+### Fixed
+
+- **The servo-arm template's second arm spun around its own joint:** its firmware drove the elbow the opposite way to the shoulder across the whole range. The elbow now follows the shoulder at half range, in 2° steps.
+- **Pin labels on module boards could name the wrong pins:** board prints were cached by a key without the pin names, so a module with another pin order (or an edited pin map) showed the first one's VCC / GND labels over pins that carry other signals. The key now carries the printed names; the GY-521 prints its mapped names instead of a fixed list.
+- **The HC-SR04's front print was mirrored against its pins** ("Vcc" stood over the GND pin seen from the front); it now names the pins in the order they stand.
+- **Simple world models:** the servo's pigtail is three wires (brown GND, red V+, orange SIG) in the plug's pin order, and motors show red / black terminal tabs where their A / B pins are.
+
 ## [1.4.1] - 2026-11-24
 
 ### Changed

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -81,6 +82,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Folder offered for new projects.</summary>
         public string ProjectFolder { get; set; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "RobotWin");
+
+        /// <summary>[code] Folders opened on the code page from elsewhere on disk ("Klasör aç…").</summary>
+        public List<string> CodeFolders { get; set; } = new List<string>();
 
         // ---------------------------------------------------------------- toolchains
 

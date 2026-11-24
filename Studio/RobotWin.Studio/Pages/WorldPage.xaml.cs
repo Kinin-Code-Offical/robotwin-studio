@@ -1329,6 +1329,13 @@ namespace RobotWin.Studio.Pages
         /// <summary>Run / pause / resume the world simulation (menu bar).</summary>
         public void ToggleRun() => Run();
 
+        /// <summary>[code] Starts the world from the beginning (new code was written to one of its boards).</summary>
+        public void RestartSimulation()
+        {
+            if (_session.State != Simulation.SimState.Stopped) StopSimulation();
+            Run();
+        }
+
         private void Run()
         {
             var world = World;

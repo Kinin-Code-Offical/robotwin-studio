@@ -4,9 +4,9 @@
 #   1. publishes the app (win-x64; self-contained or framework-dependent)
 #   2. compiles the native setup stub (Installer/setup.cpp) with MSVC
 #   3. packs the published files into the stub (LZMS, Windows Compression API)
-# Usage:  powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 [-Version 1.4.1] [-SelfContained]
+# Usage:  powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 [-Version 1.4.2] [-SelfContained]
 param(
-    [string]$Version = "1.4.1",
+    [string]$Version = "1.4.2",
     [switch]$SelfContained
 )
 

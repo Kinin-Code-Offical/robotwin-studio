@@ -105,19 +105,20 @@ namespace RobotWin.Studio.Firmware
 
             string dir = Esp32Dir(source);
             string sketchDir = Path.Combine(dir, "sketch");
+            if (Directory.Exists(sketchDir)) Directory.Delete(sketchDir, true);
             Directory.CreateDirectory(sketchDir);
-            string sketch = Path.Combine(sketchDir, "sketch.ino");
-            File.WriteAllText(sketch, source, new UTF8Encoding(false));
+            string sketch = WriteSketch(source, sketchDir);   // [code] every file of the sketch, in its folders
             var compiler = new RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler(null, Path.Combine(BuildRoot, "esp32", "shim")) { VcVarsPath = vcvars };
             var build = compiler.Compile(sketch, Path.Combine(dir, "out"));
             result.Log = build.Log;
             foreach (var d in build.Diagnostics)
             {
                 if (d.Severity == RobotTwin.CoreSim.Firmware.Esp32.CompilerSeverity.Note) continue;
-                bool ours = string.IsNullOrEmpty(d.File) || Path.GetFileName(d.File).Equals("sketch.ino", StringComparison.OrdinalIgnoreCase);
+                bool ours = string.IsNullOrEmpty(d.File) || Path.GetFullPath(d.File).StartsWith(sketchDir, StringComparison.OrdinalIgnoreCase) || Path.GetFileName(d.File).Equals("sketch.ino", StringComparison.OrdinalIgnoreCase);
                 if (!ours && d.Severity != RobotTwin.CoreSim.Firmware.Esp32.CompilerSeverity.Error) continue;
                 string msg = ours ? Translate(d.Message) : $"{Path.GetFileName(d.File)}:{d.Line}: {d.Message}";
-                result.Diagnostics.Add(new CodeDiagnostic(ours ? Math.Max(1, d.Line) : 1, ours ? d.Column : 0, d.Severity == RobotTwin.CoreSim.Firmware.Esp32.CompilerSeverity.Error, msg));
+                result.Diagnostics.Add(new CodeDiagnostic(ours ? Math.Max(1, d.Line) : 1, ours ? d.Column : 0, d.Severity == RobotTwin.CoreSim.Firmware.Esp32.CompilerSeverity.Error, msg,
+                    ours && !string.IsNullOrEmpty(d.File) ? SketchFileOf(d.File) : null));
             }
 
             if (build.Success && build.DllPath != null && File.Exists(build.DllPath))
@@ -133,6 +134,35 @@ namespace RobotWin.Studio.Firmware
 
             result.Duration = watch.Elapsed;
             return result;
+        }
+
+        /// <summary>
+        /// [code] Writes a sketch (one source or a <see cref="RobotTwin.CoreSim.Formats.FirmwareSource.Bundle"/> of several
+        /// files) into a folder: the main file as sketch.ino (arduino-cli wants it named after its folder), the others at
+        /// their paths. Returns the main file.
+        /// </summary>
+        public static string WriteSketch(string source, string sketchDir)
+        {
+            string main = Path.Combine(sketchDir, "sketch.ino");
+            bool first = true;
+            foreach (var (path, content) in RobotTwin.CoreSim.Formats.FirmwareSource.Unbundle(source))
+            {
+                string full = first ? main : Path.GetFullPath(Path.Combine(sketchDir, path.Replace('/', Path.DirectorySeparatorChar)));
+                first = false;
+                if (!full.StartsWith(Path.GetFullPath(sketchDir), StringComparison.OrdinalIgnoreCase)) continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+                File.WriteAllText(full, content, new UTF8Encoding(false));
+            }
+
+            return main;
+        }
+
+        /// <summary>Which file of the sketch a compiler message is about ("sketch.ino", "src/motor.cpp").</summary>
+        public static string SketchFileOf(string path)
+        {
+            string p = path.Replace('\\', '/');
+            int i = p.IndexOf("/sketch/", StringComparison.OrdinalIgnoreCase);
+            return i >= 0 ? p.Substring(i + 8) : Path.GetFileName(p);
         }
 
         private static readonly Regex DiagnosticLine = new Regex(@"^(?<file>.*?\.(ino|cpp|c|h)):(?<line>\d+):(?:(?<col>\d+):)?\s*(?<kind>fatal error|error|warning|note):\s*(?<msg>.*)$",
@@ -157,10 +187,11 @@ namespace RobotWin.Studio.Firmware
             string safeKey = new string(workKey.Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '_').ToArray());
             string sketchDir = Path.Combine(BuildRoot, safeKey, "sketch");
             string outDir = Path.Combine(BuildRoot, safeKey, "out");
+            if (Directory.Exists(sketchDir)) Directory.Delete(sketchDir, true);
             Directory.CreateDirectory(sketchDir);
             if (Directory.Exists(outDir)) Directory.Delete(outDir, true);
             Directory.CreateDirectory(outDir);
-            File.WriteAllText(Path.Combine(sketchDir, "sketch.ino"), source, new UTF8Encoding(false));
+            WriteSketch(source, sketchDir);   // [code] every file of the sketch (other tabs, headers, src/…)
 
             var psi = new ProcessStartInfo(cli)
             {
@@ -214,12 +245,13 @@ namespace RobotWin.Studio.Firmware
             {
                 string line = raw.TrimEnd('\r');
                 var m = DiagnosticLine.Match(line);
-                if (m.Success && Path.GetFileName(m.Groups["file"].Value).StartsWith("sketch", StringComparison.OrdinalIgnoreCase))
+                string where = m.Success ? m.Groups["file"].Value.Replace('\\', '/') : string.Empty;
+                if (m.Success && (where.IndexOf("/sketch/", StringComparison.OrdinalIgnoreCase) >= 0 || Path.GetFileName(where).StartsWith("sketch", StringComparison.OrdinalIgnoreCase)))
                 {
                     string kind = m.Groups["kind"].Value.ToLowerInvariant();
                     if (kind == "note") continue;
                     int col = m.Groups["col"].Success ? int.Parse(m.Groups["col"].Value) : 0;
-                    result.Diagnostics.Add(new CodeDiagnostic(int.Parse(m.Groups["line"].Value), col, kind != "warning", Translate(m.Groups["msg"].Value)));
+                    result.Diagnostics.Add(new CodeDiagnostic(int.Parse(m.Groups["line"].Value), col, kind != "warning", Translate(m.Groups["msg"].Value), SketchFileOf(where)));
                     continue;
                 }
 
@@ -264,6 +296,29 @@ namespace RobotWin.Studio.Firmware
             m = Regex.Match(msg, "^(.+): No such file or directory");
             if (m.Success) return $"{m.Groups[1].Value} bulunamadı (kütüphane kurulu değil)";
             return msg;
+        }
+
+        /// <summary>Runs arduino-cli with these arguments (library install / uninstall / update-index, run when the user asks).</summary>
+        public static async Task<(bool Ok, string Log)> RunCliAsync(params string[] args)
+        {
+            string? cli = FindCli();
+            if (cli == null) return (false, "arduino-cli bulunamadı");
+            var psi = new ProcessStartInfo(cli)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+            foreach (var a in args) psi.ArgumentList.Add(a);
+            psi.ArgumentList.Add("--no-color");
+            using var p = Process.Start(psi)!;
+            var output = p.StandardOutput.ReadToEndAsync();
+            var error = p.StandardError.ReadToEndAsync();
+            await p.WaitForExitAsync().ConfigureAwait(false);
+            return (p.ExitCode == 0, await output.ConfigureAwait(false) + await error.ConfigureAwait(false));
         }
 
         /// <summary>Installs a library from the Arduino library index (run only when the user asks).</summary>

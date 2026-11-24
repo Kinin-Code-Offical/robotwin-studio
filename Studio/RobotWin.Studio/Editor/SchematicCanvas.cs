@@ -769,7 +769,9 @@ namespace RobotWin.Studio.Editor
                 }
 
                 case BenchSupply psu:
-                    v.SupplyText = $"{psu.OutputVoltage,5:0.00}V|{Math.Max(0, psu.OutputCurrent),5:0.000}A".Replace(',', '.');
+                    v.SupplyText = psu.IsAc
+                        ? $"{psu.RmsVoltage,5:0.00}V~|{psu.RmsCurrent,5:0.000}A~".Replace(',', '.')   // [psu] true RMS on AC
+                        : $"{psu.OutputVoltage,5:0.00}V|{Math.Max(0, psu.OutputCurrent),5:0.000}A".Replace(',', '.');
                     v.SupplyMode = psu.Regulation == SupplyRegulation.ConstantCurrent ? "CC" : psu.Regulation == SupplyRegulation.Off ? "OFF" : "CV";
                     break;
             }
@@ -1065,7 +1067,15 @@ namespace RobotWin.Studio.Editor
                         lines.Add("Tıkla: multimetre panelinde aç");
                         break;
                     case BenchSupply psu:
-                        Add("V", psu.OutputVoltage, "V"); Add("I", psu.OutputCurrent, "A"); Add("P", psu.Power, "W");
+                        if (psu.IsAc)
+                        {
+                            Add("Vrms", psu.RmsVoltage, "V"); Add("Irms", psu.RmsCurrent, "A"); Add("f", psu.Frequency, "Hz");
+                        }
+                        else
+                        {
+                            Add("V", psu.OutputVoltage, "V"); Add("I", psu.OutputCurrent, "A"); Add("P", psu.Power, "W");
+                        }
+
                         lines.Add(psu.Regulation == SupplyRegulation.ConstantCurrent ? "CC (akım sınırında)" : psu.Regulation == SupplyRegulation.Off ? (psu.OvpTripped ? "OVP: çıkış kapalı" : "Çıkış kapalı") : "CV");
                         break;
                 }

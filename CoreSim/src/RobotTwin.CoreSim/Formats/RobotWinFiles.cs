@@ -152,6 +152,13 @@ namespace RobotTwin.CoreSim.Formats
 
     // ====================================================================== project
 
+    /// <summary>[code] A file of a sketch besides its main .ino: a header, a .cpp, a file under src/ (path with '/').</summary>
+    public sealed class FirmwareFile
+    {
+        public string Path { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+    }
+
     /// <summary>Source code (and its last build) for one programmable board of the project.</summary>
     public sealed class FirmwareSource
     {
@@ -171,7 +178,61 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>Hash of <see cref="Source"/> at the time of the build (detects stale builds).</summary>
         public string? BuiltFromHash { get; set; }
 
-        public bool IsBuildCurrent => Hex != null && BuiltFromHash == HashOf(Source);
+        /// <summary>[code] The sketch's other files (tabs, headers, src/…), compiled together with the main one.</summary>
+        public List<FirmwareFile> Files { get; set; } = new List<FirmwareFile>();
+
+        public bool IsBuildCurrent => Hex != null && BuiltFromHash == HashOf(Bundle());
+
+        private const string BundleHead = "//@robotwin-sketch";
+        private const string FileMark = "//@file ";
+
+        /// <summary>
+        /// [code] The whole sketch as one text (what a builder that takes a single source gets, and what a build's hash
+        /// covers): the main source alone when there are no other files, otherwise every file after a "//@file path" line.
+        /// </summary>
+        public string Bundle()
+        {
+            if (Files.Count == 0) return Source;
+            var sb = new StringBuilder(BundleHead).Append('\n');
+            sb.Append(FileMark).Append(FileName).Append('\n').Append(Source);
+            foreach (var f in Files.OrderBy(f => f.Path, StringComparer.Ordinal))
+            {
+                if (sb[sb.Length - 1] != '\n') sb.Append('\n');
+                sb.Append(FileMark).Append(f.Path).Append('\n').Append(f.Content);
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>[code] The files of a <see cref="Bundle"/> (a plain source is one file named <paramref name="mainName"/>).</summary>
+        public static List<(string Path, string Content)> Unbundle(string text, string mainName = "sketch.ino")
+        {
+            var list = new List<(string, string)>();
+            if (!text.StartsWith(BundleHead, StringComparison.Ordinal))
+            {
+                list.Add((mainName, text));
+                return list;
+            }
+
+            string? path = null;
+            var content = new StringBuilder();
+            foreach (var raw in text.Substring(BundleHead.Length).TrimStart('\r', '\n').Split('\n'))
+            {
+                string line = raw.TrimEnd('\r');
+                if (line.StartsWith(FileMark, StringComparison.Ordinal))
+                {
+                    if (path != null) list.Add((path, content.ToString().TrimEnd('\n')));
+                    path = line.Substring(FileMark.Length).Trim();
+                    content.Clear();
+                    continue;
+                }
+
+                content.Append(raw).Append('\n');
+            }
+
+            if (path != null) list.Add((path, content.ToString().TrimEnd('\n')));
+            return list;
+        }
 
         public static string HashOf(string text)
         {
@@ -274,9 +335,11 @@ namespace RobotTwin.CoreSim.Formats
                         string folder = "firmware/" + Safe(f.BoardRefDes) + "/";
                         RobotWinFormats.WriteText(zip, folder + Safe(f.FileName), f.Source);
                         if (f.Hex != null) RobotWinFormats.WriteText(zip, folder + Path.GetFileNameWithoutExtension(Safe(f.FileName)) + ".hex", f.Hex);
+                        foreach (var x in f.Files) RobotWinFormats.WriteText(zip, folder + "files/" + SafePath(x.Path), x.Content);   // [code]
                         index.Add(new FirmwareSource
                         {
-                            BoardRefDes = f.BoardRefDes, Target = f.Target, FileName = f.FileName, BuiltAt = f.BuiltAt, BuiltFromHash = f.BuiltFromHash
+                            BoardRefDes = f.BoardRefDes, Target = f.Target, FileName = f.FileName, BuiltAt = f.BuiltAt, BuiltFromHash = f.BuiltFromHash,
+                            Files = f.Files.Select(x => new FirmwareFile { Path = x.Path }).ToList()
                         });
                     }
 
@@ -321,6 +384,7 @@ namespace RobotTwin.CoreSim.Formats
                     string folder = "firmware/" + Safe(f.BoardRefDes) + "/";
                     f.Source = RobotWinFormats.ReadText(zip, folder + Safe(f.FileName)) ?? string.Empty;
                     f.Hex = RobotWinFormats.ReadText(zip, folder + Path.GetFileNameWithoutExtension(Safe(f.FileName)) + ".hex");
+                    foreach (var x in f.Files) x.Content = RobotWinFormats.ReadText(zip, folder + "files/" + SafePath(x.Path)) ?? string.Empty;   // [code]
                     pkg.Firmware.Add(f);
                 }
             }
@@ -358,6 +422,10 @@ namespace RobotTwin.CoreSim.Formats
             if (Firmware.Count > 0) d["firmware"] = string.Join(", ", Firmware.Select(f => f.BoardRefDes + ":" + f.Target));
             return d;
         }
+
+        /// <summary>A relative path with every segment made safe ("src/motor.cpp" stays a path, ".." cannot climb out).</summary>
+        private static string SafePath(string path) =>
+            string.Join("/", path.Replace('\\', '/').Split('/').Where(s => s.Length > 0 && s != "." && s != "..").Select(Safe));
 
         private static string Safe(string name)
         {

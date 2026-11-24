@@ -109,6 +109,25 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         {
             if (sketchSourceOrPath == null) throw new ArgumentNullException(nameof(sketchSourceOrPath));
             if (string.IsNullOrWhiteSpace(outputDir)) throw new ArgumentException("Output directory required.", nameof(outputDir));
+            if (sketchSourceOrPath.StartsWith("//@robotwin-sketch", StringComparison.Ordinal))
+            {
+                // [code] A sketch of several files (Formats.FirmwareSource.Bundle): laid out in a folder, compiled from its main file.
+                string dir = Path.Combine(Path.GetFullPath(outputDir), "sketch");
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                string? first = null;
+                foreach (var (path, content) in Formats.FirmwareSource.Unbundle(sketchSourceOrPath))
+                {
+                    string full = Path.Combine(dir, path.Replace('/', Path.DirectorySeparatorChar));
+                    if (!Path.GetFullPath(full).StartsWith(dir, StringComparison.OrdinalIgnoreCase)) continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+                    File.WriteAllText(full, content, new UTF8Encoding(false));
+                    first ??= full;
+                }
+
+                if (first != null) return Compile(first, outputDir);
+            }
+
             var result = new Esp32BuildResult();
             var log = new StringBuilder();
             var total = Stopwatch.StartNew();
@@ -139,6 +158,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
                         extraSources.AddRange(Directory.GetFiles(sketchDir, "*.cpp").Concat(Directory.GetFiles(sketchDir, "*.c"))
                             .Select(Path.GetFullPath).OrderBy(f => f, StringComparer.OrdinalIgnoreCase));
+                        // [code] The Arduino layout: sources under src/ (any depth) belong to the sketch too.
+                        string src = Path.Combine(sketchDir, "src");
+                        if (Directory.Exists(src))
+                            extraSources.AddRange(Directory.GetFiles(src, "*.cpp", SearchOption.AllDirectories).Concat(Directory.GetFiles(src, "*.c", SearchOption.AllDirectories))
+                                .Select(Path.GetFullPath).OrderBy(f => f, StringComparer.OrdinalIgnoreCase));
                     }
                 }
                 else
