@@ -3,5 +3,8 @@
     <BaseOutputPath>$(MSBuildThisFileDirectory)builds\$(MSBuildProjectName)\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)builds\$(MSBuildProjectName)\obj\</BaseIntermediateOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);**\bin\**;**\obj\**</DefaultItemExcludes>
+    <!-- The Studio targets Windows (WPF); this lets tools on Linux restore the whole solution too (GitHub's
+         dependency graph submission, analysers). It changes nothing on Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 </Project>
