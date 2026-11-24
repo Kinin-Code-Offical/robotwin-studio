@@ -27,6 +27,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--startup-report <file>` | A normal start (splash included) that writes each start step's time from the process start, then exits. |
 | `--snapshot out.png --page splash` | Draws the splash window as it looks part-way through the start. |
 | `--snapshot out.png --page <page> --theme pembe:gul` | Draws a page in a theme and accent, for this run only (nothing is saved). |
+| `--snapshot out.png --page world --fault <template> --simulate <s> --wait <s> --perf` | Shows the performance indicator for this run only (nothing is saved); the world, stepped for `--simulate` seconds, then runs live for `--wait` seconds, so the indicator shows each solver's cost per simulated second. |
 | `--lang en` | Runs in a language pack's language, for this run only (with `--snapshot`, draws a page in it). |
 | `--lang-missing <file>` | With `--snapshot`: adds the page's texts the pack leaves untranslated to the file, one JSON line each (`--page library` adds the whole part catalogue and the examples). |
 | `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |

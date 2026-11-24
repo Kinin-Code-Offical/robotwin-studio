@@ -1470,6 +1470,14 @@ namespace RobotWin.Studio.Pages
             Run();
         }
 
+        /// <summary>A snapshot's world, run with --simulate and paused, goes on live (--perf: the solvers' costs show).</summary>
+        public void ResumeForSnapshot()
+        {
+            if (_session.State != SimState.Paused) return;
+            _session.Resume();
+            UpdateRunButton();
+        }
+
         private void Run()
         {
             var world = World;

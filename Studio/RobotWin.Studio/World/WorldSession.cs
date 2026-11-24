@@ -23,7 +23,7 @@ namespace RobotWin.Studio.World
     /// I²C devices on their buses, and the moving parts (servo horns, motor shafts)
     /// with everything fixed onto them.
     /// </summary>
-    public sealed partial class WorldSession
+    public sealed partial class WorldSession : ISolverCosts
     {
 
         public const double FirmwareSlice = 50e-6;
@@ -175,6 +175,8 @@ namespace RobotWin.Studio.World
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
+            _costAvr = _costEsp = _costRadio = _costCircuit = _costPhysics = _costSense = _simulated = 0;
+            Perf.Solvers = this;   // [perf] the performance indicator shows this run's solvers
             message = string.Empty;
             StateChanged?.Invoke(this, EventArgs.Empty);
             return true;
@@ -212,6 +214,7 @@ namespace RobotWin.Studio.World
             Simulator = null;
             Circuit = null;
             Physics = null;
+            if (ReferenceEquals(Perf.Solvers, this)) Perf.Solvers = null;
             if (State != SimState.Stopped)
             {
                 State = SimState.Stopped;
@@ -247,6 +250,55 @@ namespace RobotWin.Studio.World
 
         private readonly Audio.SimSounds _sounds = new Audio.SimSounds("world:");
 
+        // [perf] Wall-clock seconds each solver took since the start, for the performance indicator (Shell/SolverCosts.cs).
+        private double _costAvr, _costEsp, _costRadio, _costCircuit, _costPhysics, _costSense, _simulated;
+
+        private static long Lap(ref double seconds, long since)
+        {
+            long now = Stopwatch.GetTimestamp();
+            seconds += (now - since) / (double)Stopwatch.Frequency;
+            return now;
+        }
+
+        double ISolverCosts.SimulatedSeconds => _simulated;
+
+        void ISolverCosts.Costs(List<(string Name, double Seconds)> into)
+        {
+            into.Add(("Arduino yazılımı", _costAvr));
+            into.Add(("ESP32 yazılımı", _costEsp));
+            into.Add(("radyo", _costRadio));
+            into.Add(("devre", _costCircuit));
+            into.Add(("sensörler", _costSense));
+            if (Physics?.Times is not { } t)
+            {
+                into.Add(("katı cisimler", _costPhysics));
+                return;
+            }
+
+            // The mechanics by part (its physics is built per run, as these costs start); the little it spent between
+            // its parts goes with the rigid bodies.
+            into.Add(("katı cisimler", t.Bodies + Math.Max(0, _costPhysics - t.Total)));
+            into.Add(("kablolar", t.Cables));
+            into.Add(("sıvılar", t.Liquids));
+            into.Add(("ısı", t.Thermal));
+            into.Add(("motorlar ve sürücüler", t.Drives));
+            into.Add(("hava ve gaz", t.Air));
+            into.Add(("betikler", t.Scripts));
+            into.Add(("mesafe sensörleri", t.Sensors));
+        }
+
+        string? ISolverCosts.Detail
+        {
+            get
+            {
+                if (Physics is not { } ph) return null;
+                var parts = new List<string> { Lang.T("fizik adımı") + " " + SiValue.Format(ph.Step, "s") };
+                foreach (var l in ph.Liquids)
+                    parts.Add(Lang.T(l.Object.Name) + ": " + l.Body.Count + " " + Lang.T("parçacık") + ", " + l.Body.LastSubsteps + " " + Lang.T("alt adım") + (l.Body.Asleep ? " (" + Lang.T("uykuda") + ")" : string.Empty));
+                return string.Join(" · ", parts);
+            }
+        }
+
         public void StepOnce(double seconds)
         {
             if (Simulator == null) return;
@@ -270,6 +322,7 @@ namespace RobotWin.Studio.World
                     // [debug] One clock: a program that stops at a breakpoint inside the slice stops the world at that
                     // instant (the circuit, the mechanics and the other boards go exactly as far as it did).
                     FirmwareCoSimulation? halted = null;
+                    long t0 = Stopwatch.GetTimestamp();
                     for (int i = 0; i < _avr.Count; i++)
                     {
                         double ran = _avr[i].Advance(dt, Simulator.Time);
@@ -280,14 +333,21 @@ namespace RobotWin.Studio.World
                         }
                     }
 
+                    long t1 = Lap(ref _costAvr, t0);
                     if (dt > 0)
                     {
                         for (int i = 0; i < _esp.Count; i++) _esp[i].Advance(dt, Simulator.Time);
+                        t1 = Lap(ref _costEsp, t1);
                         AdvanceRadio(Simulator.Time, dt);   // [radio] IR receiver outputs, radio housekeeping
+                        t1 = Lap(ref _costRadio, t1);
                         Simulator.Step(dt);
-                        Physics?.Advance(dt, Simulator);
+                        t1 = Lap(ref _costCircuit, t1);
+                        Physics?.Advance(dt, Simulator);   // its parts' costs: Physics.Times
+                        t1 = Lap(ref _costPhysics, t1);
                         AdvanceSense(dt);   // [sense] line sensors, LiDAR, GPS, IMU, compass, encoders
+                        Lap(ref _costSense, t1);
                         covered += dt;
+                        _simulated += dt;
                     }
 
                     DrainEvents();

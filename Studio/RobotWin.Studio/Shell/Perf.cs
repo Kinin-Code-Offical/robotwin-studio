@@ -42,6 +42,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Raised about twice a second after the averages were refreshed.</summary>
         public static event EventHandler? Updated;
 
+        /// <summary>[perf] The running simulation whose solvers the indicator shows (set when a run starts, cleared when it stops).</summary>
+        public static ISolverCosts? Solvers { get; set; }
+
         public static void Start()
         {
             if (_hooked) return;
@@ -167,10 +170,46 @@ namespace RobotWin.Studio.Shell
         }
     }
 
-    /// <summary>Small overlay with FPS, frame time and the costliest sections (Ctrl+Shift+F).</summary>
+    /// <summary>
+    /// Small overlay with FPS, frame time and the costliest sections (Ctrl+Shift+F); while a simulation runs, also how
+    /// fast it runs against the clock, what each of its solvers costs per simulated second and the memory in use.
+    /// </summary>
     public sealed class PerfOverlay : Border
     {
         private readonly TextBlock _text = new TextBlock { FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, Foreground = Brushes.White, LineHeight = 15 };
+        private readonly SolverCosts _solvers = new SolverCosts();
+        private readonly Process _process = Process.GetCurrentProcess();
+
+        /// <summary>
+        /// The solver table, built from translated pieces and padded after translation, so its columns line up in any
+        /// language: per solver, milliseconds of computing per simulated second (a run keeps up with the clock while they
+        /// add up to under a thousand) and its share.
+        /// </summary>
+        private void Solvers(StringBuilder sb)
+        {
+            var source = Perf.Solvers;
+            var (rows, realTime) = _solvers.Read(source, Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
+            if (source != null)
+            {
+                sb.AppendLine();
+                if (rows.Count == 0) sb.AppendLine(Lang.T("duraklatıldı"));
+                else
+                {
+                    sb.AppendLine($"{Lang.T("simülasyon hızı")} ×{realTime:0.00}");
+                    sb.AppendLine($"{Lang.T("çözücü"),-22}{Lang.T("ms / simülasyon sn"),20}{Lang.T("pay"),7}");
+                    foreach (var r in rows.Take(10))
+                    {
+                        if (r.MsPerSimSecond < 0.05) continue;
+                        sb.AppendLine($"{Lang.T(r.Name),-22}{r.MsPerSimSecond,20:0.0}{Lang.Percent(r.Share * 100, "0"),7}");
+                    }
+                }
+
+                if (source.Detail is { Length: > 0 } detail) sb.AppendLine(detail);
+            }
+
+            _process.Refresh();
+            sb.AppendLine($"{Lang.T("bellek")} {_process.WorkingSet64 / 1048576.0:0} MB · {Lang.T("yönetilen")} {GC.GetTotalMemory(false) / 1048576.0:0} MB");
+        }
 
         public PerfOverlay()
         {
@@ -190,9 +229,12 @@ namespace RobotWin.Studio.Shell
                 if (Visibility != Visibility.Visible) return;
                 var sb = new StringBuilder();
                 var color = Perf.Fps >= 55 ? "iyi" : Perf.Fps >= 30 ? "orta" : "düşük";
-                sb.AppendLine($"{Perf.Fps,5:0} FPS  ({color})");
-                sb.AppendLine($"kare  {Perf.FrameMs,6:0.0} ms   en kötü {Perf.FrameMaxMs,5:0.0}");
-                foreach (var (name, avg, peak) in Perf.Sections.Take(8)) sb.AppendLine($"{name,-10}{avg,6:0.00} ms   en kötü {peak,5:0.0}");
+                // Built from translated pieces and padded after translation: the columns line up in any language.
+                string worst = Lang.T("en kötü");
+                sb.AppendLine($"{Perf.Fps,5:0} FPS  ({Lang.T(color)})");
+                sb.AppendLine($"{Lang.T("kare"),-22}{Perf.FrameMs,7:0.0} ms  {worst} {Perf.FrameMaxMs,5:0.0}");
+                foreach (var (name, avg, peak) in Perf.Sections.Take(8)) sb.AppendLine($"{Lang.T(name),-22}{avg,7:0.00} ms  {worst} {peak,5:0.0}");
+                Solvers(sb);
                 _text.Text = sb.ToString().TrimEnd();
                 _text.Foreground = Perf.Fps >= 55 ? new SolidColorBrush(Color.FromRgb(0xC8, 0xF0, 0xD8)) : Perf.Fps >= 30 ? new SolidColorBrush(Color.FromRgb(0xF0, 0xDC, 0xA8)) : new SolidColorBrush(Color.FromRgb(0xF4, 0xB8, 0xB8));
             };

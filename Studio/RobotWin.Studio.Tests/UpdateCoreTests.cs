@@ -255,6 +255,7 @@ public class UpdateSelectionTests
         Assert.Null(UpdateLogic.FindUpdate(new[] { Release("v2.1.0-rc.1") }, SemVersion.Parse("2.0.0")!, false, null));
 }
 
+[Collection("Lang")]   // reads the language in use
 public class InstallModeTests
 {
     private const string Dir = @"C:\Users\a\AppData\Local\Programs\RobotWin Studio";
@@ -289,6 +290,7 @@ public class InstallModeTests
     }
 }
 
+[Collection("Lang")]   // reads the language in use
 public class NewsTests
 {
     [Fact]

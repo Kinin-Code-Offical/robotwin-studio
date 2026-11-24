@@ -45,6 +45,8 @@ The simulation computes part damage as in real life. See the reason with **Fault
 **The status bar says "…% of real time".**
 The PC cannot keep up with the simulation in real time. Lower the speed, reduce **Settings → 3D quality** or close tabs you are not using. The results are still correct; it just advances more slowly.
 
+To see what slows it, open **View → Performance overlay** (Ctrl+Shift+F). While a world runs, it lists how many milliseconds each solver (circuit, board firmware, rigid bodies, liquids, cables, heat…) takes per simulated second, and its share. When they add up to more than a thousand, the world cannot keep up with real time. On the water glass, for example, most of it is the liquid; a coarser particle spacing makes it faster.
+
 **My board in the world does nothing.**
 If the **Events** tab says "No firmware loaded (the board is idle)", the board has no code: select the board and write code with **Write the board's code**. Also make sure the board is powered (a battery cable or **Plug in USB**).
 

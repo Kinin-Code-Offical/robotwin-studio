@@ -5,6 +5,7 @@ using RobotWin.Studio.Shell;
 namespace RobotWin.Studio.Tests;
 
 /// <summary>[lang] Language packs: exact texts, patterns with numbers and names, several lines, and the built-in English pack.</summary>
+[Collection("Lang")]   // the language in use is one for the whole process: tests that load packs run one after another
 public class LangTests
 {
     private const string Pack = """

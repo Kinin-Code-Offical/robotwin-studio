@@ -400,28 +400,50 @@ namespace RobotTwin.CoreSim.Sandbox
             while (_pending >= Step)
             {
                 _pending -= Step;
+                long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 StepSwitches();   // [launch] timed and clicked switches (Sandbox/WorldPhysics.Launch.cs)
                 DriveActuators(sim);
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]
+                long t1 = Lap(ref Times.Drives, t0);
                 Sdk?.BeforeStep(Step, sim);   // [sdk]
+                t1 = Lap(ref Times.Scripts, t1);
                 ReleaseLaunches();   // [uav] hand launch after a hold
                 StepWings(Step);   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
                 StepGas(Step, sim);   // [gas] vessels: burn, flow, thrust (Sandbox/WorldPhysics.Gas.cs)
                 StepChutes();   // [launch] recovery parachutes
+                t1 = Lap(ref Times.Air, t1);
                 Scene.Step(Step);
+                t1 = Lap(ref Times.Bodies, t1);
                 // [phys] The ropes after the bodies: their contacts are solved against where the parts are now (stepped
                 // first, a wire inside a plane at 12 m/s trailed its fuselage by 12 mm), and their pull on the plugs is
                 // applied in the next step.
                 StepCables(Step);
+                t1 = Lap(ref Times.Cables, t1);
                 StepLiquids(Step);   // [liquid] after the bodies too; its push on them acts in their next step
+                t1 = Lap(ref Times.Liquids, t1);
                 FeedBack();
                 FeedBackReady();   // [objs] propeller load without the hub's inertia
+                t1 = Lap(ref Times.Drives, t1);
                 Sdk?.AfterStep(Step, sim);   // [sdk]
+                t1 = Lap(ref Times.Scripts, t1);
                 StepThermal(Step, sim);   // [thermal]
+                t1 = Lap(ref Times.Thermal, t1);
                 if (++_sonarTick % 5 == 0) Ranging();
+                Lap(ref Times.Sensors, t1);
+                Times.Steps++;
             }
         }
+
+        private static long Lap(ref double seconds, long since)
+        {
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            seconds += (now - since) / (double)System.Diagnostics.Stopwatch.Frequency;
+            return now;
+        }
+
+        /// <summary>[perf] Wall-clock seconds the mechanics spent in each of its parts since the world was built.</summary>
+        public PhysicsTimes Times { get; } = new PhysicsTimes();
 
         private long _sonarTick;
 

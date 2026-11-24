@@ -45,6 +45,8 @@ Simülasyon gerçek hayattaki gibi parça hasarı hesaplar. **Arıza tespiti →
 **Durum çubuğunda "gerçek zamanın %…'i" yazıyor.**
 Bilgisayar simülasyona gerçek zamanda yetişemiyor. Hızı düşürün, **Ayarlar → 3D kalitesi**'ni azaltın veya kullanmadığınız sekmeleri kapatın. Sonuçlar yine doğrudur, yalnızca daha yavaş ilerler.
 
+Neyin yavaşlattığını görmek için **Görünüm → Performans göstergesi**'ni (Ctrl+Shift+F) açın. Dünya çalışırken her çözücünün (devre, kart yazılımı, katı cisimler, sıvılar, kablolar, ısı…) simülasyon saniyesi başına kaç milisaniye harcadığı ve payı listelenir. Toplam bini geçerse dünya gerçek zamana yetişemez. Örneğin su bardağında payın çoğu sıvınındır; sıvının parçacık aralığını büyütmek onu hızlandırır.
+
 **Dünyadaki kartım hiçbir şey yapmıyor.**
 **Olaylar** sekmesinde "Yüklü yazılım yok (kart boşta)" yazıyorsa kartın kodu yoktur: kartı seçip **Kartın kodunu yaz** ile kod yazın. Ayrıca kartın beslendiğinden emin olun (pil kablosu veya **USB'yi tak**).
 

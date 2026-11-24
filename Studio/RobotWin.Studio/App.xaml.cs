@@ -287,6 +287,7 @@ namespace RobotWin.Studio
                 if (phase == 1)
                 {
                     window.PrepareSnapshot(page, simulate, fault);
+                    if (Environment.GetCommandLineArgs().Contains("--perf")) window.ShowPerfForSnapshot();   // [perf] this run only
                     return;
                 }
 

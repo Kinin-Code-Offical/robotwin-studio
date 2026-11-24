@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Which solver holds a world back:** while a world runs, the performance overlay (View → Performance overlay, Ctrl+Shift+F) shows how fast it runs against the clock and, for each solver, the milliseconds of computing it takes per simulated second and its share: the circuit, Arduino and ESP32 firmware, rigid bodies, liquids, cables, heat, motors and drives, air and gas, scripts and sensors. Below them, the physics step, each liquid's particles and substeps (and whether it sleeps), and the memory in use. A world keeps up with the clock while the milliseconds add up to under a thousand; on the water glass, the liquid takes 83%. `--snapshot … --perf` shows the overlay for one run.
 - **A splash window opens first** (as Unity's editor does): the mark, the version and the step being loaded with a progress bar, on a thread of its own so it keeps drawing while the studio is built; it fades out when the studio has drawn its window.
 - **Where time goes, measured:** `--startup-report file` writes each start step's time from the process start; `--bench` prints, under each template, where opening it went (environment, each object's model, the cable layout split into scene, exits, routes, laying and relaxing).
 
@@ -93,6 +94,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The performance overlay's sections stayed Turkish in the English interface** ("simülasyon … en kötü"): its lines are now built from translated pieces and padded after translation, so their columns line up in any language.
+- **Water and the robot arm's shaft were named in Turkish in the English interface** ("Su", "Mil"): two- and three-letter names had slipped past the language pack.
+- **The Studio's tests that switch the interface's language could fail at random:** they ran in parallel with tests that read the language in use (a download size read "1.7 MB" instead of "1,7 MB"). They now run one after another.
 - **Fit to screen cut off the outermost net labels on the schematic** (and their voltage badges while simulating): it counted a label as its point only. It now leaves room for them.
 - **The World page's part search found only Turkish names;** it now finds a part by its English name too, as the other pages do.
 - **A mounted part's note read "Servo kolune takılı" and "Robot flanşıne takılı"** (the suffix ignored Turkish vowel harmony). It now reads "Servo kolu üzerinde takılı", which fits every label.
