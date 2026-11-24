@@ -32,6 +32,7 @@ namespace RobotTwin.CoreSim.Tests
             // The board's whole flash (bootloader, partition table, application) when the build's merged image is beside the ELF.
             string merged = Path.ChangeExtension(elf, ".merged.bin");
             if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            soc.Pro.BreakOnIllegal = soc.App.BreakOnIllegal = Environment.GetEnvironmentVariable("RW_ESP32_BREAK_ILLEGAL") == "1";
             soc.Run(cycles);
             var report = new StringBuilder();
             report.AppendLine($"durdu: {soc.Stopped ?? (soc.Pro.AtBreak ? "BREAK" : "hayır")}");

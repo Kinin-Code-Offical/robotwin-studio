@@ -278,6 +278,15 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                     SetA(r, op2 == 1 ? A(s) & A(t) : op2 == 2 ? A(s) | A(t) : A(s) ^ A(t));
                     return 1;
                 case 4: return St1(t, s, r);
+                case 5:
+                {
+                    // Region protection (the ESP32's "TLB"): IDF marks regions at start-up; nothing is enforced here.
+                    // WITLB/WDTLB/IITLB/IDTLB write or invalidate; RITLB/RDTLB/PITLB/PDTLB read the region's base back.
+                    if (WindowCheck(Frames(s, t))) return 1;
+                    if (r == 3 || r == 5 || r == 7 || r == 0xB || r == 0xD || r == 0xF) SetA(t, A(s) & 0xE0000000);
+                    return 1;
+                }
+
                 case 6:
                     if (WindowCheck(Frames(r, t))) return 1;
                     if (s == 0)

@@ -21,7 +21,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public const uint RtcSlowBase = 0x50000000, RtcSlowSize = 0x2000;
         public const uint IromBase = 0x400C2000, IromEnd = 0x40C00000;    // flash, instruction bus
         public const uint DromBase = 0x3F400000, DromEnd = 0x3F800000;    // flash, data bus
-        public const uint RomBase = 0x40000000, RomEnd = 0x40060000;      // mask ROM (served by traps)
+        public const uint RomBase = 0x40000000, RomEnd = 0x40070000;      // mask ROM, 448 KB (served by traps)
         public const uint PeripheralBase = 0x3FF00000, PeripheralEnd = 0x3FF80000;
         public const uint AhbBase = 0x60000000, AhbEnd = 0x60080000;      // the same peripherals over the AHB
 
@@ -247,8 +247,24 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         // ================================================================ the mask ROM, served
 
+        /// <summary>The stack the ROM gives the APP_CPU when it jumps to its boot address.</summary>
+        public const uint AppBootStack = 0x3FFE7F20;
+
         private bool ServeRom(XtensaCore core)
         {
+            if (core == App && core.Pc == 0x40000400)
+            {
+                // The ROM's APP_CPU start: it waits until the PRO_CPU set the boot address, then calls it as the
+                // bootloader calls the application (windows on, user vectors, CALLINC of a CALLX4, its own stack).
+                _registers.TryGetValue(0x3FF00038, out uint boot);
+                if (boot == 0) return true;
+                core.Pc = boot;
+                core.Ps = 0x00040020 | (1u << 16);
+                core.SetA(1, AppBootStack);
+                Write32(AppBootStack - 12, AppBootStack);
+                return true;
+            }
+
             if (_romFunctions.TryGetValue(core.Pc, out var serve) && serve(core)) return true;
             _romNames.TryGetValue(core.Pc, out var name);
             Stopped = $"ROM işlevi karşılanmadı: {name ?? "?"} @0x{core.Pc:X8} (çekirdek {core.CoreId})";

@@ -362,10 +362,21 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>Where the last instruction the core does not know was (for bring-up reports).</summary>
         public uint LastIllegalPc { get; private set; }
 
+        /// <summary>Stop at the first instruction the core does not know, instead of raising the exception (bring-up).</summary>
+        public bool BreakOnIllegal { get; set; }
+
         private void Illegal()
         {
             IllegalInstructions++;
             LastIllegalPc = Pc;
+            if (BreakOnIllegal)
+            {
+                AtBreak = true;
+                _nextPc = Pc;
+                _excepted = true;
+                return;
+            }
+
             Exception(XtensaCause.IllegalInstruction);
         }
     }

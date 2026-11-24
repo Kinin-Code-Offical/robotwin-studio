@@ -63,6 +63,39 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Rom("__gedf2", c => Return(c, (uint)Compare(Double(c, 0), Double(c, 2), -1)));
             Rom("__unorddf2", c => Return(c, double.IsNaN(Double(c, 0)) || double.IsNaN(Double(c, 2)) ? 1u : 0u));
 
+            // libgcc: bit operations
+            Rom("__bswapsi2", c => Return(c, (c.Argument(0) >> 24) | ((c.Argument(0) >> 8) & 0xFF00) | ((c.Argument(0) << 8) & 0xFF0000) | (c.Argument(0) << 24)));
+            Rom("__bswapdi2", c =>
+            {
+                ulong v = (ulong)Long(c, 0), r = 0;
+                for (int i = 0; i < 8; i++) r |= ((v >> (8 * i)) & 0xFF) << (8 * (7 - i));
+                return ReturnLong(c, (long)r);
+            });
+            Rom("__clzsi2", c =>
+            {
+                uint v = c.Argument(0);
+                int n = 0;
+                while (n < 32 && (v & 0x80000000) == 0) { v <<= 1; n++; }
+                return Return(c, (uint)n);
+            });
+            Rom("__ctzsi2", c =>
+            {
+                uint v = c.Argument(0);
+                int n = 0;
+                while (n < 32 && (v & 1) == 0) { v >>= 1; n++; }
+                return Return(c, (uint)n);
+            });
+            Rom("__popcountsi2", c =>
+            {
+                uint v = c.Argument(0), n = 0;
+                while (v != 0) { n += v & 1; v >>= 1; }
+                return Return(c, n);
+            });
+            Rom("__udivsi3", c => Return(c, c.Argument(1) == 0 ? 0 : c.Argument(0) / c.Argument(1)));
+            Rom("__umodsi3", c => Return(c, c.Argument(1) == 0 ? 0 : c.Argument(0) % c.Argument(1)));
+            Rom("__divsi3", c => Return(c, c.Argument(1) == 0 ? 0 : (uint)((int)c.Argument(0) / (int)c.Argument(1))));
+            Rom("__modsi3", c => Return(c, c.Argument(1) == 0 ? 0 : (uint)((int)c.Argument(0) % (int)c.Argument(1))));
+
             // libgcc: 64-bit integers
             Rom("__muldi3", c => ReturnLong(c, Long(c, 0) * Long(c, 2)));
             Rom("__divdi3", c => ReturnLong(c, Long(c, 2) == 0 ? 0 : Long(c, 0) / Long(c, 2)));
@@ -72,6 +105,29 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Rom("__ashldi3", c => ReturnLong(c, Long(c, 0) << (int)(c.Argument(2) & 63)));
             Rom("__lshrdi3", c => ReturnLong(c, (long)((ulong)Long(c, 0) >> (int)(c.Argument(2) & 63))));
             Rom("__ashrdi3", c => ReturnLong(c, Long(c, 0) >> (int)(c.Argument(2) & 63)));
+
+            // the Xtensa runtime's interrupt helpers (XTOS): the level in PS, the enable mask
+            Rom("_xtos_set_intlevel", c =>
+            {
+                uint old = c.Ps;
+                c.Ps = (c.Ps & ~0xFu) | (c.Argument(0) & 0xF);
+                return Return(c, old);
+            });
+            Rom("_xtos_ints_on", c =>
+            {
+                uint old = c.IntEnable;
+                c.IntEnable |= c.Argument(0);
+                return Return(c, old);
+            });
+            Rom("_xtos_ints_off", c =>
+            {
+                uint old = c.IntEnable;
+                c.IntEnable &= ~c.Argument(0);
+                return Return(c, old);
+            });
+            Rom("_xtos_set_interrupt_handler", c => Return(c, 0));
+            Rom("_xtos_set_interrupt_handler_arg", c => Return(c, 0));
+            Rom("_xtos_set_exception_handler", c => Return(c, 0));
 
             // checksums, as the ROM computes them (the value passed in and returned is the complemented one)
             Rom("crc32_le", c => Return(c, Crc(c, 0xEDB88320u, 32)));
@@ -157,7 +213,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             {
                 if (_romFunctions.ContainsKey(pair.Key)) continue;
                 string n = pair.Value;
-                if (n.StartsWith("Cache_", StringComparison.Ordinal) || n.StartsWith("cache_", StringComparison.Ordinal) || n.StartsWith("mmu_", StringComparison.Ordinal))
+                // eFuse flash pins (0: the default SPI pins) and the ROM's own SPI flash helpers (the driver talks to SPI1 itself).
+                if (n.StartsWith("Cache_", StringComparison.Ordinal) || n.StartsWith("cache_", StringComparison.Ordinal) || n.StartsWith("mmu_", StringComparison.Ordinal)
+                    || n.StartsWith("esp_rom_efuse_", StringComparison.Ordinal) || n.StartsWith("ets_efuse_", StringComparison.Ordinal)
+                    || n.StartsWith("esp_rom_spiflash_", StringComparison.Ordinal) || n.StartsWith("SPI_", StringComparison.Ordinal) || n.StartsWith("spi_flash_", StringComparison.Ordinal)
+                    || n.StartsWith("esp_rom_output_", StringComparison.Ordinal) || n.StartsWith("esp_rom_uart_", StringComparison.Ordinal))
                     _romFunctions[pair.Key] = c => Return(c, 0);
             }
         }
