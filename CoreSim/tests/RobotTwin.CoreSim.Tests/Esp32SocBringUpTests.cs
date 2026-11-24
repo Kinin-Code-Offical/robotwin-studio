@@ -43,6 +43,8 @@ namespace RobotTwin.CoreSim.Tests
             report.AppendLine(soc.Uart0.ToString());
             report.AppendLine("---- son sıçramalar (eskiden yeniye) ----");
             foreach (var (from, to) in soc.Pro.RecentJumps()) report.AppendLine($"0x{from:X8} -> 0x{to:X8}");
+            report.AppendLine("---- APP son sıçramalar (eskiden yeniye) ----");
+            foreach (var (from, to) in soc.App.RecentJumps()) report.AppendLine($"0x{from:X8} -> 0x{to:X8}");
             report.AppendLine("---- modellenmemiş yazmaçlar (en çok okunan önce) ----");
             foreach (var pair in soc.Unmodelled.OrderByDescending(p => p.Value.Reads).ThenByDescending(p => p.Value.Writes).Take(40))
                 report.AppendLine($"0x{pair.Key:X8}  okuma {pair.Value.Reads,8}  yazma {pair.Value.Writes,6}  son 0x{pair.Value.Last:X8}");
