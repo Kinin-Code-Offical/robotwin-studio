@@ -102,7 +102,15 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [~] **Gömülü yazılım:** Uno/Nano AVR emülatörü ve hata ayıklayıcı var. Eksikler:
   - register ve zaman çizelgesi;
   - protokol analizörleri ve hata enjeksiyonu;
-  - ESP32 gerçek firmware emülatörü;
+  - ESP32'nin iki çalışma modu (plan: [ESP32_MODLARI.md](ESP32_MODLARI.md)):
+    - [ ] 1. Çalışma modu ayarı (kart başına, dosyada) + araç zinciri yöneticisi (paketli `arduino-cli` ile RobotWin'in veri klasörüne Arduino-ESP32 çekirdeği) + donanım derlemesi (`.bin`, `.elf`) + karta yükleme (`esptool`).
+    - [ ] 2. Kendi Xtensa LX6 çekirdeğimiz ve komut testleri.
+    - [ ] 3. Yonga: bellek haritası, ELF yükleme, ROM, iki çekirdek, kesmeler, FreeRTOS tick → Blink ve Serial.
+    - [ ] 4. Çevre birimleri (GPIO, LEDC, UART, I2C, SPI, ADC, zamanlayıcılar, RMT, MCPWM) → radyosuz şablonlar.
+    - [ ] 5. Wi-Fi/BLE giriş noktalarının yakalanıp radyo modelimize bağlanması.
+    - [ ] 6. Mod farkı raporu (iki modda seri çıktı ve pin izi), performans, belgeler.
+    - [ ] 7. (P2) Gerçek kartla donanım içeren test.
+    - [ ] Hızlı modda ESP-NOW ve bellek bütçesi uyarıları.
   - RP2040 / STM32;
   - kütüphane uyumluluk matrisi;
   - derleyici sürümünün projeyle saklanması.

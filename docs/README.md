@@ -15,6 +15,7 @@ For people who build RobotWin Studio from source, script it, or extend its physi
 | [Project structure](PROJECT_STRUCTURE.md) | What lives where in the repository |
 | [Testing](TESTING.md) | Unit tests, `--selftest`, snapshot rendering, CI |
 | [Build and release](BUILD_RELEASE.md) | Building the installers, setup options, the release workflow |
+| [The two ESP32 run modes](ESP32_MODES.md) | Fast simulation and the hardware-compatible build; the plan for our own Xtensa emulator |
 | [Tools](TOOLS.md) | .NET CLI, the app's command-line modes, `build-installer.ps1`, external compilers |
 | [Troubleshooting](TROUBLESHOOTING.md) | Common problems when installing, compiling firmware, simulating and building |
 | [Accessibility](ACCESSIBILITY.md) | What works today, known gaps, how to report a problem |

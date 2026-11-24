@@ -11,6 +11,7 @@ RobotWin Studio'yu kaynaktan derleyenler, betikleyenler ya da fiziğini genişle
 | [Proje yapısı](PROJE_YAPISI.md) | Depoda ne nerede |
 | [Testler](TESTLER.md) | Birim testleri, `--selftest`, ekran görüntüsü çizimi, CI |
 | [Derleme ve sürüm](DERLEME.md) | Kurulum paketlerini derlemek, kurulum seçenekleri, sürüm iş akışı |
+| [ESP32'nin iki çalışma modu](ESP32_MODLARI.md) | Hızlı simülasyon ve donanım uyumlu derleme; kendi Xtensa emülatörümüzün planı |
 | [Yol haritası](YOL_HARITASI.md) | Bir sonraki büyük sürüme kadar yapılacakların canlı listesi |
 | [Araçlar](ARACLAR.md) | .NET CLI, uygulamanın komut satırı kipleri, `build-installer.ps1`, dış derleyiciler |
 | [Sorun giderme](SORUN_GIDERME.md) | Kurulum, yazılım derleme, simülasyon ve derlemede sık sorunlar |
