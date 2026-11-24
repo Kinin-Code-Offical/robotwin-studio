@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-6-0",
+      "date": "2026-11-24",
+      "title": "1.6.0: Arduino kodunda kesme noktası, adım ve değişkenler",
+      "body": "Bu sürümde:\n\n- **Hata ayıklama:** Kod sayfasında bir satırın numarasına tıklayıp kesme noktası koyun. Uno o satıra gelince durur; devre ve dünya da aynı anda durur. **Adım** (F10), **İçine** (F11), **Dışına** (Shift+F11) ile ilerleyin, **Değişkenler** sekmesinde değerleri görün.\n- **Tek saat:** Uno'nun saati artık devreninkinden hiç kaymaz.\n- **Dünya arka planda çalışır:** Kod sayfasındayken dünya durmaz.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-5-1",
       "date": "2026-11-24",
       "title": "1.5.1: Arduino derleyicisi kurulumla gelir, ilk robot rehberi",

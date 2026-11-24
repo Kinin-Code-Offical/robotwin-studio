@@ -2,6 +2,25 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.6.0 — 24 Kasım 2026
+
+**Hata ayıklama: Arduino kodunu satır satır izleyin; kart bir satırda durunca devre ve dünya da o anda durur.**
+
+### Yenilikler
+
+- **Kesme noktası, adım ve değişkenler (Arduino Uno / Nano):**
+  - Kod sayfasında bir satırın numarasına tıklayın: satıra kesme noktası konur.
+  - Kart o satıra gelince durur. Devredeki simülasyon ya da dünya da aynı simüle edilmiş anda durur; kodu, gerilimleri, kabloları ve parçaları tek bir anda görürsünüz.
+  - **Devam** (F5), **Adım** (F10), **İçine** (F11), **Dışına** (Shift+F11) ve **Satırda dur** ile ilerleyin.
+  - **Değişkenler** sekmesi kodunuzdaki global ve `static` değişkenleri türleri ve adresleriyle gösterir. Değerler kart çalışırken de yenilenir; değişenler renkli görünür.
+
+  Ayrıntılar: [4. Kod](04-kod.md#hata-ayıklama-kesme-noktası-adım-değişkenler).
+
+### Düzeltmeler
+
+- **Uno'nun saati devreninkinden ileri gidiyordu:** her zaman diliminde taşan çevrimler birikiyordu (yaklaşık %0,05 hızlı). Artık program, dilimin bitiş zamanına ait çevrime kadar çalışır; bir simüle saniyenin sonunda tam 16 000 000 çevrimdedir.
+- **Çalışan dünya, sayfası görünmezken duruyordu:** Kod sayfasındayken dünya "çalışıyor" görünse de hiç ilerlemiyor, seri çıktısı da kesiliyordu. Artık arka planda çalışmayı sürdürür; 3B görünüm sayfaya dönünce yetişir.
+
 ## 1.5.1 — 24 Kasım 2026
 
 **Arduino derleyicisi kurulumla gelir; ilk robotunuzu 5–10 dakikada çalıştıran etkileşimli rehber.**

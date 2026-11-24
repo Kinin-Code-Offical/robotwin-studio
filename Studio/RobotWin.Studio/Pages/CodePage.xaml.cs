@@ -64,6 +64,7 @@ namespace RobotWin.Studio.Pages
             };
             _saveTimer.Tick += (_, _) => FlushDisk();
             PreviewKeyDown += OnKeys;
+            WireDebugger();   // [debug] Pages/CodePage.Debug.cs
             InitCompletion();   // [code] Pages/CodePage.Libraries.cs
             Libraries.LibraryManager.Changed += (_, _) => Dispatcher.BeginInvoke(new Action(LibrariesChanged));
         }
@@ -390,6 +391,7 @@ namespace RobotWin.Studio.Pages
             UpdateTargetText();
             UpdateBuildState();
             if (rebuild) BuildTree();
+            UpdateDebug();   // [debug] this file's breakpoints, the stopped line
         }
 
         private void UpdateTargetText()
@@ -772,6 +774,7 @@ namespace RobotWin.Studio.Pages
             Problems.ItemsSource = _diagnostics.Count > 0 ? _diagnostics : (System.Collections.IEnumerable)new[] { result.Success ? "Hata yok." : "Derleme başarısız (günlüğe bakın)." };
             if (result.Success && result.Hex != null)
             {
+                DebugSymbols.Remember(result.Hex, result.Elf);   // [debug] lines and variables of this build
                 if (target != null && folder.Board == target)
                 {
                     var tf = target.EnsureFirmware();
@@ -866,7 +869,7 @@ namespace RobotWin.Studio.Pages
                 {
                     _serialShown = 0;
                     SerialView.Clear();
-                    BottomTabs.SelectedIndex = 1;
+                    BottomTabs.SelectedItem = SerialTab;
                     W.Status = $"{target.Title}: kod yüklendi, simülasyon çalışıyor";
                 }
                 else
@@ -900,6 +903,12 @@ namespace RobotWin.Studio.Pages
 
         private void OnKeys(object sender, KeyEventArgs e)
         {
+            if (DebugKeys(e))   // [debug] F5 / F10 / F11 / Shift+F11 while the board is stopped
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.F7)
             {
                 OnBuild(this, new RoutedEventArgs());

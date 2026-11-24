@@ -15,6 +15,9 @@ namespace RobotWin.Studio.Firmware
     {
         public bool Success { get; set; }
         public string? Hex { get; set; }
+
+        /// <summary>[debug] The ELF avr-gcc wrote beside the HEX (line tables and variables for the debugger).</summary>
+        public byte[]? Elf { get; set; }
         public List<CodeDiagnostic> Diagnostics { get; } = new List<CodeDiagnostic>();
         public string Log { get; set; } = string.Empty;
         public TimeSpan Duration { get; set; }
@@ -374,6 +377,8 @@ namespace RobotWin.Studio.Firmware
             string hex = Path.Combine(outDir, "sketch.ino.hex");
             if (result.Success && File.Exists(hex)) result.Hex = File.ReadAllText(hex);
             else result.Success = false;
+            string elf = Path.Combine(outDir, "sketch.ino.elf");
+            if (result.Success && File.Exists(elf)) result.Elf = File.ReadAllBytes(elf);
             if (!result.Success && result.Diagnostics.Count == 0 && !cancel.IsCancellationRequested)
             {
                 string first = result.Log.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "bilinmeyen hata";

@@ -2,6 +2,25 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.6.0 — 24 November 2026
+
+**Debugging: follow Arduino code line by line; when the board stops on a line, the circuit and the world stop at that instant too.**
+
+### New
+
+- **Breakpoints, steps and variables (Arduino Uno / Nano):**
+  - Click a line number on the code page to put a breakpoint on the line.
+  - When the board reaches it, it stops. The circuit simulation or the world stops at the same simulated instant, so you see the code, the voltages, the cables and the parts at one moment.
+  - Go on with **Devam** (continue, F5), **Adım** (step, F10), **İçine** (into, F11), **Dışına** (out, Shift+F11) and **Satırda dur** (stop on a line).
+  - The **Değişkenler** (variables) tab shows your code's global and `static` variables with their types and addresses. The values also refresh while the board runs; changed ones are shown in colour.
+
+  Details: [4. Code](04-code.md#debugging-breakpoints-steps-variables).
+
+### Fixes
+
+- **The Uno's clock ran ahead of the circuit's:** the cycles that ran over at the end of each time slice piled up (about 0.05 % fast). The program now runs to the cycle that belongs to the slice's end time; after one simulated second it is at exactly 16 000 000 cycles.
+- **A running world stood still while its page was out of view:** on the code page the world said it was running but did not advance at all, and its serial output stopped. It now keeps running in the background; the 3D view catches up when you go back to it.
+
 ## 1.5.1 — 24 November 2026
 
 **The Arduino compiler comes with the installer; an interactive guide gets your first robot running in 5–10 minutes.**

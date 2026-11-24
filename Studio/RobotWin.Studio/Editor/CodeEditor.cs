@@ -97,6 +97,46 @@ namespace RobotWin.Studio.Editor
 
         public event EventHandler? TextChanged;
 
+        // ------------------------------------------------------------------ [debug] breakpoints and the stopped line
+
+        private List<(int Line, bool Active)> _breakpoints = new List<(int, bool)>();
+        private int _executionLine;
+
+        /// <summary>A click in the line-number gutter (1-based line): the code page toggles a breakpoint there.</summary>
+        public event Action<int>? GutterClicked;
+
+        /// <summary>Breakpoint marks (1-based lines); an inactive one (no code there) is drawn hollow.</summary>
+        public void SetBreakpoints(IEnumerable<(int Line, bool Active)> marks)
+        {
+            _breakpoints = marks.ToList();
+            _gutter.InvalidateVisual();
+        }
+
+        /// <summary>The line a stopped program is at (1-based; 0 = none), marked with an arrow and a band.</summary>
+        public int ExecutionLine
+        {
+            get => _executionLine;
+            set
+            {
+                if (_executionLine == value) return;
+                _executionLine = value;
+                Redraw();
+            }
+        }
+
+        /// <summary>Scrolls a line into view without moving the caret.</summary>
+        public void RevealLine(int line)
+        {
+            if (line < 1) return;
+            int count = _box.LineCount;
+            if (count <= 0) return;
+            int first = _box.GetFirstVisibleLineIndex(), last = _box.GetLastVisibleLineIndex();
+            int index = Math.Min(count - 1, line - 1);
+            if (first >= 0 && index >= first + 2 && index <= last - 2) return;
+            _box.ScrollToLine(Math.Max(0, index - 6));
+            Redraw();
+        }
+
         public string Text
         {
             get => _box.Text;
@@ -372,6 +412,13 @@ namespace RobotWin.Studio.Editor
                     dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x17, 0x17, 0x1A)), null, new Rect(0, origin.Y + caretLine * lh, ActualWidth, lh));
                 }
 
+                // [debug] the line a stopped program is about to run
+                int exec = _owner._executionLine - 1;
+                if (exec >= first && exec <= last)
+                {
+                    dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x3C, 0xF2, 0xC1, 0x4B)), null, new Rect(0, origin.Y + exec * lh, ActualWidth, lh));
+                }
+
                 foreach (var d in _owner._diagnostics)
                 {
                     int li = d.Line - 1;
@@ -423,6 +470,19 @@ namespace RobotWin.Studio.Editor
             {
                 _owner = owner;
                 ClipToBounds = true;
+                Cursor = System.Windows.Input.Cursors.Hand;
+                ToolTip = "Kesme noktası koymak ya da kaldırmak için tıklayın: kart bu satıra gelince devre, dünya ve kod aynı anda durur";
+            }
+
+            protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
+            {
+                base.OnMouseLeftButtonDown(e);
+                var (origin, lh, _, _, _) = _owner.Metrics();
+                if (lh <= 0) return;
+                int line = (int)Math.Floor((e.GetPosition(this).Y - origin.Y) / lh) + 1;
+                if (line < 1 || line > _owner.Lines.Length) return;
+                _owner.GutterClicked?.Invoke(line);
+                e.Handled = true;
             }
 
             protected override void OnRender(DrawingContext dc)
@@ -435,16 +495,41 @@ namespace RobotWin.Studio.Editor
                 var tf = new Typeface(box.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
                 double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                 var errors = _owner._diagnostics.GroupBy(d => d.Line).ToDictionary(g => g.Key, g => g.Any(x => x.IsError));
+                var marks = _owner._breakpoints.GroupBy(b => b.Line).ToDictionary(g => g.Key, g => g.Any(x => x.Active));
+                var red = new SolidColorBrush(Color.FromRgb(0xE5, 0x48, 0x4D));
                 for (int i = first; i <= last; i++)
                 {
                     double y = origin.Y + i * lh;
                     var brush = i == caret ? new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xCE)) : new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x5C));
                     var ft = new FormattedText((i + 1).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, box.FontSize * 0.9, brush, dip);
                     dc.DrawText(ft, new Point(ActualWidth - 10 - ft.Width, y + (lh - ft.Height) / 2));
-                    if (errors.TryGetValue(i + 1, out bool isError))
+                    if (marks.TryGetValue(i + 1, out bool active))
+                    {
+                        // [debug] a breakpoint: filled where the program can stop, a ring where the line has no code
+                        if (active) dc.DrawEllipse(red, null, new Point(10, y + lh / 2), 5, 5);
+                        else dc.DrawEllipse(null, new Pen(red, 1.5), new Point(10, y + lh / 2), 4.25, 4.25);
+                    }
+                    else if (errors.TryGetValue(i + 1, out bool isError))
                     {
                         var c = isError ? Color.FromRgb(0xE5, 0x48, 0x4D) : Color.FromRgb(0xD4, 0xA8, 0x4B);
                         dc.DrawEllipse(new SolidColorBrush(c), null, new Point(8, y + lh / 2), 3.5, 3.5);
+                    }
+
+                    if (i + 1 == _owner._executionLine)
+                    {
+                        // [debug] the stopped program's line: a yellow arrow over the mark
+                        double cy = y + lh / 2;
+                        var arrow = new StreamGeometry();
+                        using (var g = arrow.Open())
+                        {
+                            g.BeginFigure(new Point(3, cy - 4), true, true);
+                            g.LineTo(new Point(10, cy - 4), true, false);
+                            g.LineTo(new Point(16, cy), true, false);
+                            g.LineTo(new Point(10, cy + 4), true, false);
+                            g.LineTo(new Point(3, cy + 4), true, false);
+                        }
+
+                        dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(0xF2, 0xC1, 0x4B)), new Pen(new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x10)), 1), arrow);
                     }
                 }
             }

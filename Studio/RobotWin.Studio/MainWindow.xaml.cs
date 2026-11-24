@@ -175,6 +175,7 @@ namespace RobotWin.Studio
             ApplyStartupSettings();
             SetupRail();
             SetupHelp();
+            SetupDebugger();   // [debug] MainWindow.Debug.cs
             AppSettings.Changed += (_, _) => ApplyUiScale(AppSettings.Current.UiScale);
             _autosave.Tick += (_, _) => Autosave();
             _autosave.Start();
@@ -717,6 +718,8 @@ namespace RobotWin.Studio
             if (page == "code") _code.SnapshotBuildAndRun(fault);
             if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
             if (fault == "guide") StartGuide();   // [guide] the card at its first step
+            if (fault == "debug-e2e" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [debug]
+            if (fault == "debug-e2e-circuit" && App.SnapshotPath != null) RunCircuitDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));
             if (fault != null && fault.StartsWith("guide-e2e", StringComparison.Ordinal) && App.SnapshotPath != null)   // guide-e2e[:N] — N steps only
             {
                 RunGuideCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Length > 10 && int.TryParse(fault.Substring(10), out int steps) ? steps : int.MaxValue);

@@ -102,7 +102,10 @@ Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her 
 | Kısayol | İşlev |
 | --- | --- |
 | F7 | Derle |
-| F5 | Derle, karta yükle ve çalıştır |
+| F5 | Derle, karta yükle ve çalıştır (kart bir kesme noktasında durmuşsa: devam) |
+| F10 | (Kart durmuşken) bir sonraki satır |
+| F11 | (Kart durmuşken) çağrılan fonksiyonun içine |
+| Shift+F11 | (Kart durmuşken) fonksiyondan dışarı |
 
 ## Parça
 

@@ -67,6 +67,15 @@ namespace RobotTwin.CoreSim.Firmware
         /// <summary>Held in reset (brown-out or RESET pin low): the CPU does not run.</summary>
         public bool HoldReset { get; set; }
 
+        /// <summary>[debug] Asked before every instruction while a debugger watches the program (null: not watched, no cost).</summary>
+        internal Debug.IMcuDebugHook? DebugHook { get; set; }
+
+        /// <summary>[debug] Stopped before an instruction for the debugger: runs nothing until it is resumed.</summary>
+        public bool Halted { get; internal set; }
+
+        /// <summary>The stack pointer (SPH:SPL).</summary>
+        public int StackPointer => Sp;
+
         /// <summary>Counts instructions the core met but does not implement (should stay 0).</summary>
         public long UnknownInstructions { get; private set; }
 
@@ -107,6 +116,7 @@ namespace RobotTwin.CoreSim.Firmware
 
         public void Reset()
         {
+            Halted = false;
             Array.Clear(_d, 0, _d.Length);
             _pc = 0;
             _sleeping = false;
@@ -208,12 +218,13 @@ namespace RobotTwin.CoreSim.Firmware
 
         // ================================================================ execution
 
-        /// <summary>Runs for at least <paramref name="cycles"/> clock cycles.</summary>
+        /// <summary>Runs for at least <paramref name="cycles"/> clock cycles (fewer when the debugger stops it: <see cref="Halted"/>).</summary>
         public void RunCycles(long cycles)
         {
             long target = (long)Cycles + cycles;
             while ((long)Cycles < target)
             {
+                if (Halted) return;
                 if (HoldReset)
                 {
                     long rest = target - (long)Cycles;
@@ -234,6 +245,12 @@ namespace RobotTwin.CoreSim.Firmware
                 }
                 else
                 {
+                    if (DebugHook != null && DebugHook.ShouldStop(_pc))
+                    {
+                        Halted = true;   // before the instruction: the time it stopped at is exact
+                        return;
+                    }
+
                     if (_interruptInhibit > 0) _interruptInhibit--;
                     spent = Step();
                 }

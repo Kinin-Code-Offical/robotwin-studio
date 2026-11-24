@@ -135,6 +135,36 @@ Kodunuz gerçek `avr-gcc` ile (`arduino-cli` üzerinden) derlenir. Ortaya çıka
 
 > İpucu: Arduino IDE'de derlediğiniz bir `.hex` dosyanız varsa, **Devre** sayfasındaki **Kart pinleri** sekmesinde **HEX yükle…** ile doğrudan yükleyebilirsiniz.
 
+Program ile devre tek bir saatle ilerler. Uno, her zaman diliminin sonuna ait çevrime kadar çalışır; bir önceki dilimden taşan komut bir sonrakinden düşülür. Bu yüzden `millis()` ile devrenin zamanı arasında kayma birikmez: bir saniyenin sonunda program tam 16 000 000 çevrimdedir.
+
+## Hata ayıklama: kesme noktası, adım, değişkenler
+
+Arduino Uno ve Nano kodunu satır satır izleyebilirsiniz. Kart bir kesme noktasına geldiğinde çalıştığı yer de aynı anda durur: **Devre** sayfasındaki simülasyon ya da **Dünya**. Böylece kodu, devredeki gerilimleri ve akımları, kabloları ve dünyadaki parçaları aynı anda, aynı simüle edilmiş zamanda görürsünüz.
+
+1. Kartın kodunu açın ve durmak istediğiniz satırın numarasına tıklayın. Satırda kırmızı bir nokta belirir. Kodu olmayan bir satıra (yorum, boş satır, değişken bildirimi) konan nokta, kodu olan bir sonraki satırda durur. Hiç durulamayacak bir satırdaki nokta içi boş bir halka olarak görünür.
+2. **Karta yükle ve çalıştır** (F5) ile kodu derleyip yükleyin. Satır bilgisi derlemeyle birlikte gelir: kesme noktaları yalnız burada derlenmiş yazılımda çalışır.
+3. Kart o satıra gelince durur:
+   - satırda sarı bir ok ve bant belirir;
+   - üstteki çubukta yer, fonksiyon ve simüle edilmiş zaman yazar;
+   - **Değişkenler** sekmesi kodunuzdaki global ve `static` değişkenleri o anki değerleriyle gösterir.
+4. Buradan devam edin:
+
+| Düğme | Kısayol | Ne yapar |
+| --- | --- | --- |
+| **Devam** | F5 | Programı, devreyi ve dünyayı bir sonraki kesme noktasına kadar sürdürür |
+| **Adım** | F10 | Bir sonraki satıra geçer; çağrılan fonksiyonlar (örneğin `delay`) durmadan çalışır |
+| **İçine** | F11 | Çağrılan fonksiyonun içine, kodunuzdaki ilk satırına girer |
+| **Dışına** | Shift+F11 | İçinde bulunulan fonksiyon dönene kadar çalışır |
+| **Satırda dur** | — | Çalışan programı kodunuzun bir sonraki satırında durdurur |
+
+Değerler kart çalışırken de yenilenir. Son bakıştan beri değişen değer turuncu görünür. Duran bir dünyayı **Dünya** sayfasındaki **Devam** düğmesiyle de sürdürebilirsiniz.
+
+![Kesme noktasında duran servo kol: 29. satır, değişkenler ve durum çubuğu](../images/code-debugger.png)
+
+> `-Os` ile derlenen kodda derleyici bazı satırları birleştirir ya da başka satırların içine gömer. Bu yüzden adımlar bazen beklediğinizden farklı bir sırayla ilerler. Arduino IDE'nin hata ayıklayıcısında da durum aynıdır.
+
+ESP32 çizimleri bilgisayarın işlemcisinde yerel olarak çalıştığı için kesme noktaları şimdilik yalnız Arduino Uno / Nano (ATmega328P) içindir.
+
 ## ESP32 nasıl çalışır?
 
 ESP32 kodu (çizim) bilgisayarınızda MSVC ile yerel olarak derlenir ve devreyle eş zamanlı çalışır. İlk derleme biraz uzun sürer, çünkü ESP32 donanım katmanı da kurulur; sonraki derlemeler önbellekten hızlı gelir.

@@ -168,6 +168,7 @@ namespace RobotWin.Studio.World
         public void Resume()
         {
             if (State != SimState.Paused) return;
+            Firmware.FirmwareDebugger.ReleaseHalts(this);   // [debug] a program stopped at a breakpoint goes on too
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
@@ -176,6 +177,7 @@ namespace RobotWin.Studio.World
 
         public void Stop()
         {
+            Firmware.FirmwareDebugger.Unregister(this);   // [debug]
             _sounds.Reset();
             foreach (var e in _esp) e.Dispose();
             _esp.Clear();
@@ -242,14 +244,37 @@ namespace RobotWin.Studio.World
                 while (covered < seconds - 1e-15)
                 {
                     double dt = Math.Min(chunk, seconds - covered);
-                    for (int i = 0; i < _avr.Count; i++) _avr[i].Advance(dt, Simulator.Time);
-                    for (int i = 0; i < _esp.Count; i++) _esp[i].Advance(dt, Simulator.Time);
-                    AdvanceRadio(Simulator.Time, dt);   // [radio] IR receiver outputs, radio housekeeping
-                    Simulator.Step(dt);
-                    Physics?.Advance(dt, Simulator);
-                    AdvanceSense(dt);   // [sense] line sensors, LiDAR, GPS, IMU, compass, encoders
-                    covered += dt;
+                    // [debug] One clock: a program that stops at a breakpoint inside the slice stops the world at that
+                    // instant (the circuit, the mechanics and the other boards go exactly as far as it did).
+                    FirmwareCoSimulation? halted = null;
+                    for (int i = 0; i < _avr.Count; i++)
+                    {
+                        double ran = _avr[i].Advance(dt, Simulator.Time);
+                        if (_avr[i].Halted && (halted == null || ran < dt))
+                        {
+                            halted ??= _avr[i];
+                            dt = Math.Min(dt, ran);
+                        }
+                    }
+
+                    if (dt > 0)
+                    {
+                        for (int i = 0; i < _esp.Count; i++) _esp[i].Advance(dt, Simulator.Time);
+                        AdvanceRadio(Simulator.Time, dt);   // [radio] IR receiver outputs, radio housekeeping
+                        Simulator.Step(dt);
+                        Physics?.Advance(dt, Simulator);
+                        AdvanceSense(dt);   // [sense] line sensors, LiDAR, GPS, IMU, compass, encoders
+                        covered += dt;
+                    }
+
                     DrainEvents();
+                    if (halted != null)
+                    {
+                        Pause();
+                        Firmware.FirmwareDebugger.OnHalted(halted);
+                        break;
+                    }
+
                     if (budget != null && budget.Elapsed.TotalSeconds > maxWall) break;
                 }
             }
@@ -352,6 +377,7 @@ namespace RobotWin.Studio.World
                         if (SerialRouted(cosim)) AppendSerial(where, text);   // [radio] only while the USB cable is plugged
                     };
                     _avr.Add(cosim);
+                    Firmware.FirmwareDebugger.Register(this, DebugKeyOf(prog), where, cosim, hex, () => Time, Resume);   // [debug]
                     TrackBoard(cosim, prog);   // [radio]
                     Log.Add(new SimLogEntry(0, where, $"Yazılım çalışıyor: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, prog);
@@ -361,6 +387,23 @@ namespace RobotWin.Studio.World
                     Log.Add(new SimLogEntry(0, where, "Yazılım yüklenemedi: " + ex.Message, AnalogEventKind.Warning));
                 }
             }
+        }
+
+        /// <summary>[debug] The code page's key for a board of this world (its breakpoints are kept under it).</summary>
+        private string DebugKeyOf(WorldProgrammable prog)
+        {
+            var world = World!;
+            var o = world.Find(prog.ObjectId);
+            if (o == null) return "w:" + prog.ObjectId;
+            if (world.IsAssembly && o.ProjectRef is { } pr) return "p:" + pr.Substring(pr.IndexOf('/') + 1);   // [assembly] a Montaj runs its project's boards
+            if (o.Kind == WorldObjectKind.Board && world.FindDesign(o.DesignId) is { } design)
+            {
+                if (world.IsAssembly && design.Package.Schematic.ProjectId is { Length: > 0 } pid && world.SourceOf(pid) != null) return "p:" + prog.InnerRefDes;
+                var first = world.Objects.FirstOrDefault(x => x.DesignId == o.DesignId) ?? o;
+                return "d:" + first.Id + ":" + prog.InnerRefDes;
+            }
+
+            return "w:" + o.Id;
         }
 
         private void AttachEsp32(WorldProgrammable prog, string where)

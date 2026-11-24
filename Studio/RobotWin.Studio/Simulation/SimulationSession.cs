@@ -301,6 +301,7 @@ namespace RobotWin.Studio.Simulation
         public void Resume()
         {
             if (State != SimState.Paused) return;
+            RobotWin.Studio.Firmware.FirmwareDebugger.ReleaseHalts(this);   // [debug] a program stopped at a breakpoint goes on too
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
@@ -310,6 +311,7 @@ namespace RobotWin.Studio.Simulation
         public void Stop()
         {
             Hook(false);
+            RobotWin.Studio.Firmware.FirmwareDebugger.Unregister(this);   // [debug]
             _sounds.Reset();
             _firmware.Clear();
             DisposeEsp32();
@@ -381,7 +383,25 @@ namespace RobotWin.Studio.Simulation
                 while (covered < seconds - 1e-15)
                 {
                     double dt = Math.Min(chunk, seconds - covered);
-                    for (int f = 0; f < _firmware.Count; f++) _firmware[f].Advance(dt, Simulator.Time);
+                    // [debug] One clock: a program stopping inside the slice stops the circuit at that very instant.
+                    FirmwareCoSimulation? halted = null;
+                    for (int f = 0; f < _firmware.Count; f++)
+                    {
+                        double ran = _firmware[f].Advance(dt, Simulator.Time);
+                        if (_firmware[f].Halted && (halted == null || ran < dt))
+                        {
+                            halted ??= _firmware[f];
+                            dt = Math.Min(dt, ran);
+                        }
+                    }
+
+                    if (halted != null && dt <= 0)
+                    {
+                        Pause();
+                        RobotWin.Studio.Firmware.FirmwareDebugger.OnHalted(halted);
+                        break;
+                    }
+
                     for (int f = 0; f < _esp32.Count; f++) _esp32[f].Advance(dt, Simulator.Time);
                     Simulator.Step(dt);
                     if (Simulator.Time - _lastStressSample >= 2e-3 || Simulator.Time < _lastStressSample)
@@ -398,6 +418,13 @@ namespace RobotWin.Studio.Simulation
 
                     covered += dt;
                     DrainEvents();
+                    if (halted != null)
+                    {
+                        Pause();
+                        RobotWin.Studio.Firmware.FirmwareDebugger.OnHalted(halted);
+                        break;
+                    }
+
                     if (budget != null && budget.Elapsed.TotalSeconds > maxWallSeconds) break;
                 }
             }
@@ -726,6 +753,7 @@ namespace RobotWin.Studio.Simulation
                     var cosim = new FirmwareCoSimulation(mcu, Compiled, refDes, () => PinVoltage(refDes, "5V"));
                     cosim.SerialOutput += AppendSerial;
                     _firmware.Add(cosim);
+                    RobotWin.Studio.Firmware.FirmwareDebugger.Register(this, "p:" + refDes, refDes, cosim, hex, () => Time, Resume);   // [debug]
                     Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, part);
                 }

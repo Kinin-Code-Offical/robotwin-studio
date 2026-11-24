@@ -11,6 +11,10 @@ namespace RobotTwin.CoreSim.Firmware
     /// the CPU and its supply voltage is updated (brown-out holds it in reset);
     /// the CPU runs for the slice; its pin state (LOW, HIGH, pull-up, timer PWM)
     /// then drives the board's pin devices for the next circuit solve.
+    /// One clock: the CPU runs to the cycle that belongs to the slice's end time (an
+    /// instruction that overran the last slice is taken off this one, so the program's
+    /// time never drifts from the circuit's), and when the <see cref="Debugger"/> stops
+    /// it, <see cref="Advance"/> says how far it got so the circuit stops there too.
     /// </summary>
     public sealed class FirmwareCoSimulation
     {
@@ -36,6 +40,21 @@ namespace RobotTwin.CoreSim.Firmware
         public Atmega328P Mcu { get; }
         public string BoardRefDes { get; }
 
+        private double _epochTime = double.NaN;
+        private ulong _epochCycles;
+
+        /// <summary>[debug] Breakpoints and stepping (<see cref="AttachDebugger"/>); null until a debugger is attached.</summary>
+        public Debug.McuDebugger? Debugger { get; private set; }
+
+        /// <summary>[debug] Watches the program with its debug information (null: breakpoints cannot be placed by line).</summary>
+        public Debug.McuDebugger AttachDebugger(Debug.FirmwareDebugInfo? info) => Debugger ??= new Debug.McuDebugger(Mcu, info);
+
+        /// <summary>[debug] Stopped by the debugger: <see cref="Advance"/> runs nothing until it is resumed.</summary>
+        public bool Halted => Mcu.Halted;
+
+        /// <summary>Simulated time the program has reached (its cycles on the circuit's clock).</summary>
+        public double ProgramTime => double.IsNaN(_epochTime) ? 0 : _epochTime + ((long)Mcu.Cycles - (long)_epochCycles) / Mcu.ClockHz;
+
         /// <summary>The MCU's I²C bus (SDA = A4, SCL = A5); add device models to <see cref="I2cBus.Devices"/>.</summary>
         public I2cBus I2c => Mcu.I2c;
 
@@ -44,9 +63,19 @@ namespace RobotTwin.CoreSim.Firmware
         /// <summary>Text the firmware printed on Serial during the last slice.</summary>
         public event Action<string>? SerialOutput;
 
-        /// <summary>Runs the firmware for <paramref name="dt"/> seconds; the caller then steps the circuit by the same amount.</summary>
-        public void Advance(double dt, double now)
+        /// <summary>
+        /// Runs the firmware up to <paramref name="now"/> + <paramref name="dt"/> and returns how far the circuit should
+        /// go: <paramref name="dt"/>, or less when the debugger stopped the CPU inside the slice (then exactly where it stopped).
+        /// </summary>
+        public double Advance(double dt, double now)
         {
+            if (double.IsNaN(_epochTime))
+            {
+                _epochTime = now;
+                _epochCycles = Mcu.Cycles;
+            }
+
+            if (Mcu.Halted) return 0;
             double vcc = _supply();
             bool brownOut = double.IsNaN(vcc) || vcc < BrownOutVoltage;
             if (brownOut && !InBrownOut)
@@ -73,7 +102,8 @@ namespace RobotTwin.CoreSim.Firmware
             ulong startCycle = Mcu.Cycles;
             Mcu.PortLog.Clear();
             Mcu.RecordPortWrites = true;
-            Mcu.Run(dt);
+            long target = (long)_epochCycles + (long)Math.Round((now + dt - _epochTime) * Mcu.ClockHz);
+            if (target > (long)Mcu.Cycles) Mcu.RunCycles(target - (long)Mcu.Cycles);
             Mcu.RecordPortWrites = false;
 
             for (int i = 0; i < _pins.Length; i++)
@@ -109,6 +139,7 @@ namespace RobotTwin.CoreSim.Firmware
 
             string text = Mcu.ReadSerial();
             if (text.Length > 0) SerialOutput?.Invoke(text);
+            return Mcu.Halted ? Math.Max(0, Math.Min(dt, ProgramTime - now)) : dt;
         }
 
         /// <summary>
@@ -128,7 +159,7 @@ namespace RobotTwin.CoreSim.Firmware
                 var (output, high) = snap.Pin(index);
                 var mode = output ? (high ? PinMode.OutputHigh : PinMode.OutputLow) : (high ? PinMode.InputPullup : PinMode.Input);
                 if (mode == last) continue;
-                double t = now + (snap.Cycle - startCycle) / Mcu.ClockHz;
+                double t = Math.Max(now, _epochTime + ((long)snap.Cycle - (long)_epochCycles) / Mcu.ClockHz);
                 pin.Schedule(t, mode);
                 last = mode;
                 any = true;

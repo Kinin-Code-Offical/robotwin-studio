@@ -76,6 +76,29 @@
                 <Border DockPanel.Dock="Top" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1" Padding="12,5">
                     <TextBlock x:Name="FileTitle" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis"/>
                 </Border>
+                <!-- [debug] breakpoints and steps: the circuit, the world and the code stop at one instant -->
+                <Border x:Name="DebugBar" DockPanel.Dock="Top" Visibility="Collapsed" Background="{StaticResource B.Canvas}"
+                        BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1" Padding="10,4">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="DebugContinue" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugContinue" ToolTip="Programı (ve devreyi, dünyayı) sürdür (F5)">
+                                <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Play}" Size="12"/><TextBlock Text="Devam" Margin="5,0,0,0"/></StackPanel>
+                            </Button>
+                            <Button x:Name="DebugBreak" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugBreak" ToolTip="Kodunuzun bir sonraki satırında dur">
+                                <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Pause}" Size="12"/><TextBlock Text="Satırda dur" Margin="5,0,0,0"/></StackPanel>
+                            </Button>
+                            <Button x:Name="DebugOver" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugOver" ToolTip="Bir sonraki satıra geç; çağrılan fonksiyonlar içinde durmadan çalışır (F10)">
+                                <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Step}" Size="12"/><TextBlock Text="Adım" Margin="5,0,0,0"/></StackPanel>
+                            </Button>
+                            <Button x:Name="DebugInto" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugInto" Content="İçine" ToolTip="Çağrılan fonksiyonun içine gir (F11)"/>
+                            <Button x:Name="DebugOut" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugOut" Content="Dışına" ToolTip="İçinde bulunulan fonksiyon dönene kadar çalış (Shift+F11)"/>
+                            <Border Width="1" Height="18" Background="{StaticResource B.Border}" Margin="8,0"/>
+                            <Button x:Name="DebugClear" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugClear" Content="Kesme noktalarını kaldır" ToolTip="Bu kartın bütün kesme noktalarını kaldır"/>
+                        </StackPanel>
+                        <Ellipse x:Name="DebugDot" Width="9" Height="9" Fill="{StaticResource B.Danger}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="DebugState" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                </Border>
                 <Grid>
                     <ed:CodeEditor x:Name="Editor"/>
                     <Border x:Name="NoBoard" Background="#F00E0E10" Visibility="Collapsed">
@@ -110,13 +133,52 @@
                              TextWrapping="NoWrap" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" BorderThickness="0" Margin="6"/>
                 </Grid>
             </TabItem>
-            <TabItem Header="Seri monitör">
+            <TabItem x:Name="SerialTab" Header="Seri monitör">
                 <DockPanel Margin="10">
                     <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
                         <Button DockPanel.Dock="Right" Content="Gönder" Margin="8,0,0,0" Click="OnSerialSend"/>
                         <TextBox x:Name="SerialInput" KeyDown="OnSerialKey" Tag="Karta gönder (Enter)"/>
                     </DockPanel>
                     <TextBox x:Name="SerialView" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" BorderThickness="0"/>
+                </DockPanel>
+            </TabItem>
+            <TabItem x:Name="VariablesTab" Header="Değişkenler">
+                <DockPanel Margin="10,6,10,6">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="170"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Ad" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="1" Text="Değer" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="2" Text="Tür" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="3" Text="Adres" Style="{StaticResource Text.Caption}"/>
+                    </Grid>
+                    <TextBlock x:Name="VariablesNote" DockPanel.Dock="Bottom" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="VariablesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="220"/>
+                                            <ColumnDefinition Width="320"/>
+                                            <ColumnDefinition Width="170"/>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Where}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" Foreground="{Binding ValueBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Value}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Type}" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Address}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{StaticResource B.TextSecondary}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </DockPanel>
             </TabItem>
         </TabControl>

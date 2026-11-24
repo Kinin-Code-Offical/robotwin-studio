@@ -135,6 +135,36 @@ Your code is compiled with the real `avr-gcc` (through `arduino-cli`). The resul
 
 > Tip: if you have a `.hex` file compiled in the Arduino IDE, load it directly with **HEX yükle…** (load HEX) in the **Kart pinleri** (board pins) tab on the **Devre** (circuit) page.
 
+The program and the circuit share one clock. The Uno runs to the cycle that belongs to the end of each time slice; an instruction that ran over into the next slice is taken off that slice. So `millis()` never drifts from the circuit's time: after one second the program is at exactly 16 000 000 cycles.
+
+## Debugging: breakpoints, steps, variables
+
+You can follow Arduino Uno and Nano code line by line. When the board reaches a breakpoint, what it runs in stops at the same instant: the simulation on the **Devre** (circuit) page, or the **Dünya** (world). You see the code, the circuit's voltages and currents, the cables and the parts in the world at one moment of simulated time.
+
+1. Open the board's code and click the number of the line you want to stop on. A red dot appears. A dot on a line without code (a comment, a blank line, a declaration) stops at the next line that has code. A dot on a line where the program can never stop is drawn as a hollow ring.
+2. Build and load the code with **Karta yükle ve çalıştır** (load into the board and run, F5). The line information comes with the build: breakpoints work only in programs built here.
+3. When the board reaches the line it stops:
+   - a yellow arrow and band mark the line;
+   - the bar above names the place, the function and the simulated time;
+   - the **Değişkenler** (variables) tab shows your code's global and `static` variables with their values at that moment.
+4. Go on from there:
+
+| Button | Shortcut | What it does |
+| --- | --- | --- |
+| **Devam** (continue) | F5 | Runs the program, the circuit and the world to the next breakpoint |
+| **Adım** (step) | F10 | Goes to the next line; functions it calls (such as `delay`) run through |
+| **İçine** (into) | F11 | Goes into the called function, to its first line in your code |
+| **Dışına** (out) | Shift+F11 | Runs until the current function returns |
+| **Satırda dur** (stop on a line) | — | Stops the running program at its next line of your code |
+
+The values also refresh while the board runs. A value that changed since you last looked is shown in orange. You can also resume a stopped world with **Devam** on the **Dünya** page.
+
+![The servo arm stopped at a breakpoint: line 29, the variables and the status bar](../../images/code-debugger.png)
+
+> In code compiled with `-Os`, the compiler merges some lines or inlines them into others, so steps sometimes go in a different order than you expect. The Arduino IDE's debugger behaves the same way.
+
+ESP32 sketches run natively on the computer's processor, so for now breakpoints are only for the Arduino Uno / Nano (ATmega328P).
+
 ## How does the ESP32 work?
 
 ESP32 code (a sketch) is compiled natively on your PC with MSVC and runs in step with the circuit. The first build takes a while because the ESP32 hardware layer is built too; later builds come quickly from the cache.

@@ -102,7 +102,10 @@ The app has its own shortcut lists too: the **Ctrl+K** command palette shows eve
 | Shortcut | Function |
 | --- | --- |
 | F7 | Compile |
-| F5 | Compile, load into the board and run |
+| F5 | Compile, load into the board and run (continue, when the board stopped at a breakpoint) |
+| F10 | (Board stopped) next line |
+| F11 | (Board stopped) into the called function |
+| Shift+F11 | (Board stopped) out of the function |
 
 ## Parça (part)
 

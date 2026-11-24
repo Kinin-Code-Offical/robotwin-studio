@@ -93,6 +93,7 @@ namespace RobotWin.Studio.World
             {
                 if (IsVisible) CompositionTarget.Rendering += OnFrame;
                 else CompositionTarget.Rendering -= OnFrame;
+                UpdateBackgroundRun();
             };
             UpdateHint();
             UpdateCamera();
@@ -108,7 +109,47 @@ namespace RobotWin.Studio.World
 
         public WorldDocument? World { get; private set; }
         public PartLibrary Library { get; set; } = PartLibrary.Default;
-        public WorldSession? Session { get; set; }
+        public WorldSession? Session
+        {
+            get => _session;
+            set
+            {
+                if (_session != null) _session.StateChanged -= OnSessionState;
+                _session = value;
+                if (_session != null) _session.StateChanged += OnSessionState;
+                UpdateBackgroundRun();
+            }
+        }
+
+        private WorldSession? _session;
+        private bool _backgroundRun;
+
+        private void OnSessionState(object? sender, EventArgs e) => UpdateBackgroundRun();
+
+        /// <summary>
+        /// A running world keeps running while its page is out of view (writing code beside it, stepping a program that
+        /// stopped at a breakpoint): only the simulation advances then, the 3D view catches up when it is shown again.
+        /// </summary>
+        private void UpdateBackgroundRun()
+        {
+            bool want = !IsVisible && _session is { State: Simulation.SimState.Running };
+            if (want == _backgroundRun) return;
+            _backgroundRun = want;
+            if (want) CompositionTarget.Rendering += OnBackgroundFrame;
+            else CompositionTarget.Rendering -= OnBackgroundFrame;
+        }
+
+        private void OnBackgroundFrame(object? sender, EventArgs e)
+        {
+            var s = _session;
+            if (s == null || s.State != Simulation.SimState.Running || IsVisible)
+            {
+                UpdateBackgroundRun();
+                return;
+            }
+
+            using (Shell.Perf.Measure("simülasyon")) s.Frame();
+        }
 
         private WorldTool _tool;
 

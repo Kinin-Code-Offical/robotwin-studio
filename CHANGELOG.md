@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-24
+
+### Added
+
+- **Source-level debugging for the Arduino Uno and Nano, on one clock with the circuit and the world.** A click on a line number in the code page puts a breakpoint there (a line without code stops at the next line that has some; a ring marks one that can never stop). When the emulated ATmega328P reaches it, it stops before the line's first instruction at an exact cycle, and the circuit simulation or the world it runs in stops at that same instant, so the code, the voltages, the cables and the mechanics are seen at one moment. Devam (F5), Adım (F10, over calls), İçine (F11), Dışına (Shift+F11) and Satırda dur go on from there; the Değişkenler tab shows the sketch's globals and statics with their types and addresses, live while it runs, changed values in colour. Line tables, functions (LTO-inlined `loop()` included) and variables come from the ELF avr-gcc writes beside the HEX (`Firmware/Debug`: a DWARF 2–4 reader). Checked end to end in the app on the servo arm world and the Blink circuit (`--fault debug-e2e`, `debug-e2e-circuit`).
+
+### Fixed
+
+- **The Uno's clock ran ahead of the circuit's:** each slice ran its cycles from where the last one's final instruction ended, so the overrun piled up (about 0.05 % fast). The CPU now runs to the cycle that belongs to the slice's end time; after one simulated second it is at exactly 16 000 000 cycles.
+- **A running world stood still while its page was out of view:** on the code page (or any other) the world's simulation did not advance at all, though it said it was running, and its serial output stopped. It now goes on in the background; the 3D view catches up when shown.
+
 ## [1.5.1] - 2026-11-24
 
 ### Added
