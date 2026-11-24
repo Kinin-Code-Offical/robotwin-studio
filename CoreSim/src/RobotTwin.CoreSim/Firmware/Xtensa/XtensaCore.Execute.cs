@@ -361,9 +361,10 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
                 case 1:
                 {
-                    // MOVSP at, as: the callers' frames must be in memory first (an alloca moves the stack)
+                    // MOVSP at, as: when none of the previous three frames is live in registers, the caller's registers
+                    // sit in the save area below this stack pointer: the Alloca handler moves them before the stack moves.
                     if (WindowCheck(Frames(s, t))) return 1;
-                    if (Woe && (WindowStartAt(WindowBase - 1) || WindowStartAt(WindowBase - 2) || WindowStartAt(WindowBase - 3)))
+                    if (Woe && !WindowStartAt(WindowBase - 1) && !WindowStartAt(WindowBase - 2) && !WindowStartAt(WindowBase - 3))
                     {
                         Exception(XtensaCause.Alloca);
                         return 1;
