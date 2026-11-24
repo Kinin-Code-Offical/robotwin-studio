@@ -19,6 +19,10 @@
                     <Button Content="Yeni devre / kart" Padding="16,7" Margin="8,0,0,0" Click="OnNew"/>
                     <Button Content="Aç…" Padding="16,7" Margin="8,0,0,0" Click="OnOpen"/>
                 </StackPanel>
+                <Button HorizontalAlignment="Left" Margin="0,12,0,0" Padding="14,7" Click="OnGuide"
+                        ToolTip="Hazır servo kolu aç, Arduino kodunu değiştir, hareketi izle, akımı ölç, kaydet: her adımda neye basacağınız gösterilir">
+                    <TextBlock Text="▶  İlk robotun: 5–10 dakikalık etkileşimli rehber"/>
+                </Button>
                 <TextBlock x:Name="Facts" Style="{StaticResource Text.Caption}" Margin="0,20,0,0" TextWrapping="Wrap"/>
                 <ContentControl x:Name="UpdateHost" Focusable="False"/>
 

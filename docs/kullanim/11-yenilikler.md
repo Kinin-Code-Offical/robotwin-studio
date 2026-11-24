@@ -2,6 +2,31 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.5.1 — 24 Kasım 2026
+
+**Arduino derleyicisi kurulumla gelir; ilk robotunuzu 5–10 dakikada çalıştıran etkileşimli rehber.**
+
+### Yenilikler
+
+- **Arduino derleyicisi kurulumla gelir:** arduino-cli, Arduino AVR çekirdeği ve kütüphane listesi uygulamayla birlikte kurulur. Uno / Nano kodu kurulumdan hemen sonra derlenir; ayrıca bir şey kurmanız gerekmez. Kendi arduino-cli'nizi **Ayarlar → Derleyiciler**'den seçebilirsiniz.
+- **İlk robotun: etkileşimli rehber:** ilk açılışta önerilir; **Başlangıç** ve **Yardım** menüsünden yeniden açılır. Adımlar:
+  - hazır servo kolu açın;
+  - Arduino kodunu değiştirin ve karta yükleyin;
+  - kolun hareketini izleyin;
+  - **Kablolar ve ölçümler**'de akımı ölçün;
+  - kaydedin.
+
+  Kart her adımda neye basacağınızı gösterir ve adımı yaptığınızı kendisi fark eder. Karttaki düğme adımı sizin yerinize yapar. Ayrıntılar: [1. Başlarken](01-baslarken.md#i̇lk-robotun-etkileşimli-rehber).
+
+### Düzeltmeler
+
+- **Ağır bir simülasyon uygulamanın geri kalanını bekletiyordu:** bir kareden uzun süren dünya ya da devre her kareyi dolduruyordu. Simülasyon çalıştığı sürece kodun kaydı, otomatik yedek, sol şerit, sensör görünümleri, panel düzeninin kaydı, rehberin denetimleri ve otomasyon API'si bekliyordu (gerçek zamanın 0,7 katında koşan çizgi izleyen bunlardan biriydi). Artık bu işler 0,2 s beklediğinde sonraki kare simülasyona az zaman ayırır ve sıra onlara gelir. Ağır bir simülasyon yaklaşık onda bir yavaşlar, hafif olanlar eskisi gibi koşar. Çizgi izleyenin dünyası saniyede 36 yerine 49 kare çizer.
+- **Ekran görüntüsü, ölçüm ve öz test çalıştırmaları kullanıcının ayarlarına yazıyordu:**
+  - kendi pencere konumlarını (ekran dışı), panel düzenlerini ve son açılan dosyalarını kullanıcınınkilerin üstüne kaydediyorlardı;
+  - belgelerin ekran görüntülerinde kullanıcının son dosyalarını ve yedeklerini gösteriyorlardı.
+
+  Komut satırından yapılan çalıştırmalar artık varsayılan ayarlarla başlar ve hiçbir şey kaydetmez.
+
 ## 1.5.0 — 24 Kasım 2026
 
 **Sol çubuk, Parça ve Montaj baştan: robotun bütün parçaları tek yerde, Montaj projeyi izliyor. ESP32'de Arduino kütüphaneleri, 32 katmanlı PCB.**

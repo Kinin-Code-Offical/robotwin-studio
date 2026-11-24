@@ -239,11 +239,21 @@ namespace RobotWin.Studio
         private static BitmapSource WithPopups(RenderTargetBitmap page, FrameworkElement root, DpiScale dpi)
         {
             var open = SnapshotPopups.Where(p => p.IsOpen && p.Child is FrameworkElement { IsVisible: true }).ToList();
-            if (open.Count == 0) return page;
+            // The window's adorner layer (the guide's outline, drag marks) sits above the page, outside what was rendered.
+            var adorners = System.Windows.Documents.AdornerLayer.GetAdornerLayer(root);
+            bool adorned = adorners != null && VisualTreeHelper.GetChildrenCount(adorners) > 0;
+            if (open.Count == 0 && !adorned) return page;
             var visual = new DrawingVisual();
             using (var dc = visual.RenderOpen())
             {
                 dc.DrawImage(page, new Rect(0, 0, root.ActualWidth, root.ActualHeight));
+                if (adorned)
+                {
+                    var layer = new RenderTargetBitmap(page.PixelWidth, page.PixelHeight, page.DpiX, page.DpiY, PixelFormats.Pbgra32);
+                    layer.Render(adorners!);
+                    dc.DrawImage(layer, new Rect(0, 0, root.ActualWidth, root.ActualHeight));
+                }
+
                 foreach (var p in open)
                 {
                     var child = (FrameworkElement)p.Child;
@@ -281,11 +291,26 @@ namespace RobotWin.Studio
             window.ShowInTaskbar = false;
             window.Show();
             Perf.Start();
-            var templates = Examples.WorldTemplates.All.ToList();
+            // --bench-filter id1,id2: only these templates (quick A/B runs between versions).
+            var only = Environment.GetCommandLineArgs().SkipWhile(a => a != "--bench-filter").Skip(1).FirstOrDefault()?.Split(',');
+            var templates = Examples.WorldTemplates.All.Where(t => only == null || only.Contains(t.Id)).ToList();
             var log = new StringBuilder($"RobotWin Studio kare hızı ölçümü · {DateTime.Now:yyyy-MM-dd HH:mm} · {secs:0.#} s/şablon · 1600×960{Environment.NewLine}");
             int index = -1;
             var phaseStart = DateTime.Now;
             int phase = 0;   // 0 = load, 1 = idle, 2 = running
+            // The log is written as it grows, with the step under way last: a run that hangs or is stopped still says
+            // what it measured and where it stopped.
+            void Write(string? doing)
+            {
+                try
+                {
+                    File.WriteAllText(path, log + (doing != null ? doing + Environment.NewLine : string.Empty));
+                }
+                catch (IOException)
+                {
+                }
+            }
+
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             timer.Tick += (_, _) =>
             {
@@ -302,22 +327,28 @@ namespace RobotWin.Studio
                             return;
                         }
 
+                        Write($"{templates[index].Id,-14} açılıyor…");
                         window.NewWorld(templates[index].Build());
                         window.Navigate("world");
+                        Write($"{templates[index].Id,-14} durgun ölçülüyor…");
                         phase = 1;
                         phaseStart = DateTime.Now;
                         Perf.BeginRecording();
                         break;
                     case 1 when elapsed > 1.5:
                         log.AppendLine($"{templates[index].Id,-14} durgun     {Perf.EndRecording()}");
+                        Write($"{templates[index].Id,-14} çalıştırılıyor…");
                         window.RunWorldForBench();
+                        Write($"{templates[index].Id,-14} çalışırken ölçülüyor…");
                         phase = 2;
                         phaseStart = DateTime.Now;
                         Perf.BeginRecording();
                         break;
                     case 2 when elapsed > secs:
                         log.AppendLine($"{templates[index].Id,-14} çalışırken {Perf.EndRecording()}");
+                        Write($"{templates[index].Id,-14} durduruluyor…");
                         window.StopWorldForBench();
+                        Write(null);
                         phase = 0;
                         break;
                 }
@@ -381,6 +412,28 @@ namespace RobotWin.Studio
                 {
                     failures++;
                     log.AppendLine($"{ex.Id,-15} EXCEPTION {exn.GetType().Name}: {exn.Message}");
+                }
+            }
+
+            // [setup] The Arduino compiler that comes with the installers and the portable app really builds a sketch.
+            if (File.Exists(Firmware.ArduinoCompiler.BundledCli))
+            {
+                try
+                {
+                    var build = Firmware.ArduinoCompiler.CompileAsync("void setup() { pinMode(13, OUTPUT); }\nvoid loop() { digitalWrite(13, !digitalRead(13)); delay(500); }\n",
+                        "arduino:avr:uno", "selftest-blink").GetAwaiter().GetResult();
+                    bool ok = build.Success && build.Hex != null && build.Hex.StartsWith(":", StringComparison.Ordinal);
+                    log.AppendLine($"arduino-cli     bundled={Firmware.ArduinoCompiler.IsBundled(Firmware.ArduinoCompiler.FindCli())} build={(ok ? "OK" : "FAIL")} flash={build.FlashBytes}B in {build.Duration.TotalSeconds:F1}s");
+                    if (!ok)
+                    {
+                        failures++;
+                        log.AppendLine(build.Log);
+                    }
+                }
+                catch (Exception exn) when (exn is System.ComponentModel.Win32Exception || exn is IOException || exn is InvalidOperationException)
+                {
+                    failures++;
+                    log.AppendLine("arduino-cli     EXCEPTION " + exn.Message);
                 }
             }
 

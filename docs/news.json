@@ -2,6 +2,13 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-5-1",
+      "date": "2026-11-24",
+      "title": "1.5.1: Arduino derleyicisi kurulumla gelir, ilk robot rehberi",
+      "body": "Bu sürümde:\n\n- **Arduino derleyicisi kurulumla gelir:** arduino-cli, AVR çekirdeği ve kütüphane listesi uygulamayla birlikte kurulur; Uno / Nano kodu hemen derlenir.\n- **İlk robotun:** hazır servo kolunu açıp kodunu değiştirdiğiniz, hareketini izleyip akımını ölçtüğünüz ve kaydettiğiniz 5–10 dakikalık etkileşimli rehber. **Başlangıç** sayfasından açılır.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+    },
+    {
       "id": "2026-11-v1-5-0",
       "date": "2026-11-24",
       "title": "1.5.0: Montaj robotun kendisi, projeyi izliyor",

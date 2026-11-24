@@ -61,8 +61,7 @@ namespace RobotWin.Studio
             UpdateHelpBadges();
 
             // Background check a few seconds after start (never for snapshots, benchmarks or self-tests).
-            var args = Environment.GetCommandLineArgs();
-            if (!args.Any(a => a == "--snapshot" || a == "--bench" || a == "--selftest"))
+            if (!Unattended.Active)
             {
                 var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
                 timer.Tick += (_, _) =>

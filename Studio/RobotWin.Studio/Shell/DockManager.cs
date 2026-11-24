@@ -148,7 +148,7 @@ namespace RobotWin.Studio.Shell
         }
 
         /// <summary>Off for snapshots, so docs pictures always show the default layout (unless ROBOTWIN_LAYOUT names a test file).</summary>
-        public static bool Persist { get; set; } = !Environment.GetCommandLineArgs().Contains("--snapshot") || LayoutStore.Overridden;
+        public static bool Persist { get; set; } = !Unattended.Active || LayoutStore.Overridden;
 
         /// <summary>A panel became visible (its tab was picked, it was docked or opened in a window): refresh it.</summary>
         public event Action<string>? Shown;

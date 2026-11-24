@@ -15,7 +15,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 
 ## App command-line modes
 
-`RobotWinStudio.exe` doubles as a tool. All modes exit when done.
+`RobotWinStudio.exe` doubles as a tool. All modes exit when done. Snapshot, benchmark, self-test, gallery and overlap runs start from the default settings, panel layout and an empty recent-files list, and save none of them: the user's own settings are untouched.
 
 | Mode | Use |
 | --- | --- |
@@ -23,6 +23,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--snapshot out.png --page <page> [...]` | Renders a page to PNG for documentation and visual checks (see [TESTING.md](TESTING.md#snapshot-testing)). |
 | `--gallery <dir> [--gallery-filter text] [--gallery-columns 4] [--gallery-tile 460x340]` | Contact sheets of every code-generated 3D component model. |
 | `--overlap-report <file>` | Builds every world template and lists parts that overlap or do not fit their shell. |
+| `--bench <file> [--bench-seconds 4] [--bench-filter id,id]` | Frame-rate benchmark: opens every world template (or the ones named), measures it standing and running, and writes fps, frame times and the cost of each part of a frame. The log is written as it goes; its last line names the step under way. |
 | `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Writes the app's body geometry (model hulls included) beside a world for the headless tool. |
 | `--export-logo <dir>` | Exports the logo as PNG sizes + ICO (also on Settings → *Hakkında*). |

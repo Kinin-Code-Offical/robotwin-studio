@@ -12,16 +12,14 @@ Bu bölümde RobotWin Studio'yu kurar, ekranın bölümlerini tanır ve ilk proj
 
 Kurulum varsayılan olarak yalnızca sizin kullanıcınız için yapılır ve yönetici izni istemez. Kaldırmak için Windows **Ayarlar → Uygulamalar** listesini kullanın.
 
-### Kendi kodunuzu derlemek için (isteğe bağlı)
-
-Hazır örnekler derlenmiş olarak gelir; bu araçlar yalnızca kendi yazdığınız kodu derlemek için gerekir.
+### Kendi kodunuzu derlemek için
 
 | Kart | Gerekli araç | Kurulum |
 | --- | --- | --- |
-| Arduino Uno / Nano | `arduino-cli` | Bir terminalde `winget install ArduinoSA.CLI`, ardından `arduino-cli core install arduino:avr` |
+| Arduino Uno / Nano | Arduino derleyicisi: `arduino-cli`, AVR çekirdeği ve kütüphane listesi | **Kurulumla gelir**; ayrıca bir şey kurmanız gerekmez |
 | ESP32 | Visual Studio C++ araçları (MSVC) | Visual Studio 2022 veya Build Tools ile **"C++ ile masaüstü geliştirme"** iş yükü |
 
-Uygulama bu araçları kendisi bulur. Bulamazsa **Ayarlar → Derleyiciler** bölümünde yollarını elle girin.
+Kendi `arduino-cli`'nizi kullanmak isterseniz yolunu **Ayarlar → Derleyiciler** bölümüne yazın. Uygulama MSVC'yi kendisi bulur; bulamazsa yolunu aynı bölüme girin.
 
 ## İlk açılış
 
@@ -39,6 +37,22 @@ Başlangıç sayfasında şunlar vardır:
 ![Başlangıç sayfası](../images/home.png)
 
 > İpucu: Bir örneğe tıklamak onu yeni bir sekmede açar. Örnekleri bozmaktan korkmayın; kaydetmediğiniz sürece orijinal hali değişmez.
+
+## İlk robotun: etkileşimli rehber
+
+Uygulamayı ilk açtığınızda 5–10 dakikalık bir rehber önerilir. Daha sonra **Başlangıç** sayfasındaki **İlk robotun** düğmesiyle ya da **Yardım → İlk robotun** ile yeniden açabilirsiniz.
+
+Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağınızı yazar ve o düğmenin çevresini turuncu bir çerçeveyle gösterir. Adımı yaptığınızda kendiliğinden fark eder ve sonrakine geçer. Karttaki düğme (örneğin **Servo kolu aç**, **Yükle ve çalıştır**) adımı sizin yerinize yapar; **Bu adımı atla** sonrakine geçer.
+
+1. **Hazır servo kolunu açın:** Arduino Uno iki SG90 servoyu sürer.
+2. **Çalıştırın ve izleyin:** kol tarar.
+3. **Kodu açın:** kolun Arduino kodu Kod sayfasında açılır.
+4. **Kodu değiştirin:** 23. satırdaki `step = 2` içinde 2 seçili gelir; 6 yazın. Kol üç kat hızlı tarar.
+5. **Karta yükleyin:** kod derlenir, Uno'ya yüklenir, dünya baştan çalışır.
+6. **Akımı ölçün:** **Kablolar ve ölçümler** sekmesinde servoların kablolarındaki akım canlı görünür.
+7. **Kaydedin:** dünya, değiştirdiğiniz kodla birlikte saklanır.
+
+![İlk robotun rehberi](../images/guide.png)
 
 ## Ekranın bölümleri
 

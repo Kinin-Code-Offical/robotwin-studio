@@ -2,6 +2,31 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.5.1 — 24 November 2026
+
+**The Arduino compiler comes with the installer; an interactive guide gets your first robot running in 5–10 minutes.**
+
+### New
+
+- **The Arduino compiler comes with the installer:** arduino-cli, the Arduino AVR core and the library list are installed with the app. Uno / Nano code builds right after installing; there is nothing else to install. You can pick an arduino-cli of your own under **Ayarlar → Derleyiciler** (Settings → Compilers).
+- **İlk robotun (your first robot), an interactive guide:** offered on the first start; **Başlangıç** (start) and the **Yardım** (help) menu open it again. The steps:
+  - open the ready servo arm;
+  - change its Arduino code and load it onto the board;
+  - watch the arm move;
+  - measure the current in **Kablolar ve ölçümler** (cables and measurements);
+  - save.
+
+  At each step the card shows what to press and notices by itself when you have done it. The card's button does the step for you. Details: [1. Getting started](01-getting-started.md#your-first-robot-an-interactive-guide).
+
+### Fixes
+
+- **A heavy simulation kept the rest of the app waiting:** a world or circuit that needs more than a frame's time filled every frame. While it ran, saving code, autosave, the rail, sensor views, panel-layout saves, the guide's checks and the automation API all waited (the line follower, running at 0.7× real time, was one such world). Now, once that work has waited 0.2 s, the next frame gives the simulation only a sliver and the waiting work runs. A heavy simulation runs about a tenth slower; light ones run as before. The line follower's world draws 49 frames a second instead of 36.
+- **Snapshot, benchmark and self-test runs wrote into the user's settings:**
+  - they saved their own window placement (off screen), panel layout and recent files over the user's;
+  - documentation screenshots showed the user's recent files and backups.
+
+  Runs from the command line now start from the default settings and save nothing.
+
 ## 1.5.0 — 24 November 2026
 
 **The rail, Parça and Montaj redone: all of a robot's parts in one place, and the Montaj follows its project. Arduino libraries on the ESP32, PCBs of up to 32 layers.**

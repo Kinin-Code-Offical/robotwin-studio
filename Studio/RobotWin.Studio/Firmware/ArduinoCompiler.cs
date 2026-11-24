@@ -33,11 +33,91 @@ namespace RobotWin.Studio.Firmware
         public static string BuildRoot { get; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RobotWinStudio", "Build");
 
-        /// <summary>Locates arduino-cli.exe (installed location or PATH).</summary>
+        private static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        /// <summary>[setup] The Arduino compiler that comes with the app: arduino-cli with the AVR core and the library list.</summary>
+        public static string BundledCli => Path.Combine(AppContext.BaseDirectory, "tools", "arduino", "arduino-cli.exe");
+
+        private static string BundledDataSource => Path.Combine(AppContext.BaseDirectory, "tools", "arduino", "data");
+
+        public static bool IsBundled(string? cli) =>
+            cli != null && string.Equals(Path.GetFullPath(cli), Path.GetFullPath(BundledCli), StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Where the arduino-cli in use keeps its cores and library list (headers for completion, the library index).</summary>
+        public static string DataFolder => IsBundled(FindCli()) && Directory.Exists(BundledDataSource)
+            ? _bundledData ?? BundledDataSource
+            : Path.Combine(LocalAppData, "Arduino15");
+
+        private static string? _bundledData;
+        private static readonly object BundledGate = new object();
+
+        /// <summary>
+        /// The bundled compiler's data folder, writable (installing a library or updating the list writes there): in place
+        /// when the app's folder is writable (the per-user install, the portable app), otherwise copied once per app
+        /// version to %LOCALAPPDATA%\RobotWinStudio\arduino-data.
+        /// </summary>
+        private static string BundledData()
+        {
+            lock (BundledGate)
+            {
+                if (_bundledData != null) return _bundledData;
+                string src = BundledDataSource;
+                if (CanWrite(src)) return _bundledData = src;
+                string copy = Path.Combine(LocalAppData, "RobotWinStudio", "arduino-data");
+                string stamp = Path.Combine(copy, ".robotwin-version");
+                string version = typeof(ArduinoCompiler).Assembly.GetName().Version?.ToString() ?? "?";
+                if (!File.Exists(stamp) || File.ReadAllText(stamp) != version)
+                {
+                    if (Directory.Exists(copy)) Directory.Delete(copy, true);
+                    CopyDirectory(src, copy);
+                    File.WriteAllText(stamp, version);
+                }
+
+                return _bundledData = copy;
+            }
+        }
+
+        private static bool CanWrite(string dir)
+        {
+            try
+            {
+                string probe = Path.Combine(dir, ".rw-write-test");
+                File.WriteAllText(probe, string.Empty);
+                File.Delete(probe);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        private static void CopyDirectory(string from, string to)
+        {
+            Directory.CreateDirectory(to);
+            foreach (var dir in Directory.GetDirectories(from, "*", SearchOption.AllDirectories))
+                Directory.CreateDirectory(Path.Combine(to, Path.GetRelativePath(from, dir)));
+            foreach (var file in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
+                File.Copy(file, Path.Combine(to, Path.GetRelativePath(from, file)), true);
+        }
+
+        /// <summary>The bundled compiler runs on its own data (cores, library list); a compiler of the user's keeps theirs.</summary>
+        private static void UseBundledData(ProcessStartInfo psi, string cli)
+        {
+            if (!IsBundled(cli)) return;
+            psi.Environment["ARDUINO_DIRECTORIES_DATA"] = BundledData();
+            psi.Environment["ARDUINO_DIRECTORIES_DOWNLOADS"] = Path.Combine(LocalAppData, "RobotWinStudio", "arduino-downloads");
+        }
+
+        /// <summary>
+        /// Locates arduino-cli.exe: the one chosen in Settings, the one that comes with the app, then an installed one
+        /// (Arduino CLI folders, winget, PATH).
+        /// </summary>
         public static string? FindCli()
         {
             string custom = Shell.AppSettings.Current.ArduinoCliPath;
             if (!string.IsNullOrWhiteSpace(custom) && File.Exists(custom)) return custom;
+            if (File.Exists(BundledCli)) return BundledCli;
             var candidates = new List<string>
             {
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Arduino CLI", "arduino-cli.exe"),
@@ -199,7 +279,7 @@ namespace RobotWin.Studio.Firmware
             string? cli = FindCli();
             if (cli == null)
             {
-                result.Log = "arduino-cli bulunamadı. Ayarlar'dan veya winget ile 'ArduinoSA.CLI' kurun, ardından 'arduino-cli core install arduino:avr' çalıştırın.";
+                result.Log = "arduino-cli bulunamadı. Uygulamayı yeniden kurun (derleyici kurulumla gelir) ya da Ayarlar → Derleyiciler'den kendi arduino-cli'nizi seçin.";
                 result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, "Derleyici (arduino-cli) bulunamadı"));
                 return result;
             }
@@ -223,6 +303,7 @@ namespace RobotWin.Studio.Firmware
                 StandardErrorEncoding = Encoding.UTF8
             };
             foreach (var a in new[] { "compile", "--fqbn", fqbn, "--output-dir", outDir, "--warnings", "default", "--no-color", sketchDir }) psi.ArgumentList.Add(a);
+            await Task.Run(() => UseBundledData(psi, cli), cancel).ConfigureAwait(false);
             if (Directory.Exists(RobotWin.Studio.Libraries.LibraryManager.ArduinoFolder)) // [libs] libraries installed from the Kütüphane page
             {
                 psi.ArgumentList.Add("--libraries");
@@ -336,6 +417,7 @@ namespace RobotWin.Studio.Firmware
             };
             foreach (var a in args) psi.ArgumentList.Add(a);
             psi.ArgumentList.Add("--no-color");
+            await Task.Run(() => UseBundledData(psi, cli)).ConfigureAwait(false);
             using var p = Process.Start(psi)!;
             var output = p.StandardOutput.ReadToEndAsync();
             var error = p.StandardError.ReadToEndAsync();
@@ -358,6 +440,7 @@ namespace RobotWin.Studio.Firmware
             psi.ArgumentList.Add("lib");
             psi.ArgumentList.Add("install");
             psi.ArgumentList.Add(name);
+            await Task.Run(() => UseBundledData(psi, cli)).ConfigureAwait(false);
             using var p = Process.Start(psi)!;
             string output = await p.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
             string error = await p.StandardError.ReadToEndAsync().ConfigureAwait(false);

@@ -297,6 +297,7 @@ namespace RobotWin.Studio
 
         private void HelpMenu(MenuItem m)
         {
+            m.Items.Add(Item("İlk robotun: etkileşimli rehber (5–10 dk)", null, StartGuide));   // [guide]
             m.Items.Add(Item("_Yardım ve belgeler", "F1", () => ShowHelp(null)));
             m.Items.Add(Item("Çevrimiçi belgeler (web sitesi)", null, () => OpenUrl(Help.HelpLibrary.DocsSite)));
             m.Items.Add(Item("Klavye kısayolları", null, () => ShowHelp("shortcuts")));

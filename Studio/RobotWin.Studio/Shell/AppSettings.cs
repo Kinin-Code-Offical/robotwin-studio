@@ -54,6 +54,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Navigation rail shows stage names and live status (Ctrl+B).</summary>
         public bool NavExpanded { get; set; }
 
+        /// <summary>[guide] The first-robot guide was offered on a first start (it is offered once).</summary>
+        public bool FirstRunGuideOffered { get; set; }
+
         /// <summary>Simulation sounds (motors, servos, buzzers, relays, failures).</summary>
         public bool Sound { get; set; } = true;
 
@@ -118,6 +121,7 @@ namespace RobotWin.Studio.Shell
 
         private static AppSettings Load()
         {
+            if (Unattended.Active) return new AppSettings();   // snapshots, bench, self-test: the defaults, never the user's
             try
             {
                 if (File.Exists(StorePath)) return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(StorePath)) ?? new AppSettings();
@@ -139,8 +143,11 @@ namespace RobotWin.Studio.Shell
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-                File.WriteAllText(StorePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+                if (!Unattended.Active)   // after a snapshot, bench or self-test the user's settings are as they were
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
+                    File.WriteAllText(StorePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+                }
             }
             catch (IOException)
             {

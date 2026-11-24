@@ -347,6 +347,7 @@ namespace RobotWin.Studio.Updates
 
         private static string? ReadFile(string name)
         {
+            if (Shell.Unattended.Active) return null;   // snapshots and checks show what ships with the build, not this machine's cache
             try
             {
                 string path = Path.Combine(DataFolder, name);
@@ -360,6 +361,7 @@ namespace RobotWin.Studio.Updates
 
         private static void WriteFile(string name, string content)
         {
+            if (Shell.Unattended.Active) return;
             try
             {
                 Directory.CreateDirectory(DataFolder);

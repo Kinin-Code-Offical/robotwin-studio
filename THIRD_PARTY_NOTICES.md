@@ -15,6 +15,21 @@ If RobotWin Studio distributes QEMU binaries:
 - Provide the corresponding source code for the exact version shipped (including modifications).
 - Keep a clear version identifier (commit or tag) for the shipped build.
 
+## Arduino compiler (bundled with the installers)
+
+The installers and the portable app carry, unmodified, under `tools\arduino\`:
+
+| Component | License | Source |
+| --- | --- | --- |
+| arduino-cli | GPL-3.0 | https://github.com/arduino/arduino-cli |
+| Arduino AVR core (`arduino:avr`, the version is in `tools\arduino\data\packages\arduino\hardware\avr`) | LGPL-2.1 | https://github.com/arduino/ArduinoCore-avr |
+| avr-gcc, GNU Binutils | GPL-3.0 (with the GCC runtime library exception) | https://github.com/arduino/toolchain-avr |
+| AVR Libc | Modified BSD | https://github.com/avrdudes/avr-libc |
+| AVRDUDE | GPL-2.0 | https://github.com/avrdudes/avrdude |
+| Arduino library index (`library_index.json`) | data published by Arduino | https://downloads.arduino.cc/libraries/library_index.json |
+
+They are downloaded at build time from arduino.cc by `tools/build-installer.ps1` exactly as Arduino publishes them; each package keeps its own license file. RobotWin Studio starts `arduino-cli.exe` as a separate program and does not link to it. The source of each component, for the exact version shipped, is at the links above (tags matching the versions in `tools\arduino\data`); on request we provide a copy of it.
+
 ## Adafruit CAD Parts (3D part models)
 
 - Project: Adafruit_CAD_Parts

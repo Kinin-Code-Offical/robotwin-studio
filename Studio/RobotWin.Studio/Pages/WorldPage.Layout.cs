@@ -36,6 +36,15 @@ namespace RobotWin.Studio.Pages
             _dock.Start();
         }
 
+        /// <summary>[guide] The run button, the cables tab, and whether the cables table is on screen.</summary>
+        internal FrameworkElement RunButtonElement => RunButton;
+
+        internal FrameworkElement CablesChipElement => DockCables;
+
+        internal bool CablesShowing => DockShowing("cables", DockCables);
+
+        internal void ShowCables() => RevealDock("cables", DockCables);
+
         /// <summary>The panel is on screen (picked bottom tab, side column or its own window); falls back to the tab before the layout exists.</summary>
         private bool DockShowing(string key, ToggleButton? chip) => _dock?.IsShowing(key) ?? chip?.IsChecked == true;
 

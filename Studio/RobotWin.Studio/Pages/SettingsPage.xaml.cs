@@ -99,7 +99,9 @@ namespace RobotWin.Studio.Pages
             {
                 string? cli = Firmware.ArduinoCompiler.FindCli();
                 c.Children.Add(Text("arduino-cli yolu", S.ArduinoCliPath, v => S.ArduinoCliPath = v,
-                    cli != null ? "Bulundu: " + cli : "Bulunamadı. Arduino CLI kurun veya arduino-cli.exe yolunu yazın (Uno/Nano için avr-gcc)."));
+                    cli == null ? "Bulunamadı: derleyici kurulumla gelir; uygulamayı yeniden kurun ya da kendi arduino-cli.exe yolunuzu yazın."
+                    : Firmware.ArduinoCompiler.IsBundled(cli) ? "Kurulumla gelen derleyici kullanılıyor (arduino-cli + AVR çekirdeği). Kendi arduino-cli'nizi kullanmak için yolunu yazın."
+                    : "Bulundu: " + cli));
                 bool msvc = RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler.IsToolchainAvailable;
                 c.Children.Add(Text("vcvars64.bat yolu", S.VcVarsPath, v => S.VcVarsPath = v,
                     msvc ? "Visual Studio C++ araçları bulundu (ESP32 çizimleri yerel olarak derlenir)." : "Bulunamadı. Visual Studio Build Tools 'C++ ile masaüstü geliştirme' gerekir (ESP32)."));

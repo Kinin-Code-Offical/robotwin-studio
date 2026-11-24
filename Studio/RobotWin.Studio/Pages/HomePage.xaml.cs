@@ -58,6 +58,8 @@ namespace RobotWin.Studio.Pages
             Loaded += (_, _) => OnShown();
         }
 
+        private void OnGuide(object sender, RoutedEventArgs e) => _shell.StartGuide();   // [guide]
+
         public void OnShown()
         {
             BuildRecent();
@@ -140,7 +142,7 @@ namespace RobotWin.Studio.Pages
             try
             {
                 var dir = new DirectoryInfo(MainWindow.BackupFolder);
-                var files = dir.Exists ? dir.GetFiles().Where(f => f.Extension == RobotWinFormats.ProjectExtension || f.Extension == RobotWinFormats.WorldExtension)
+                var files = dir.Exists && !Unattended.Active ? dir.GetFiles().Where(f => f.Extension == RobotWinFormats.ProjectExtension || f.Extension == RobotWinFormats.WorldExtension)
                     .OrderByDescending(f => f.LastWriteTimeUtc).Take(5).ToList() : new System.Collections.Generic.List<FileInfo>();
                 foreach (var f in files) BackupList.Children.Add(FileButton(f.FullName, f.LastWriteTime.ToString("dd.MM.yyyy HH:mm")));
                 BackupTitle.Visibility = files.Count > 0 ? Visibility.Visible : Visibility.Collapsed;

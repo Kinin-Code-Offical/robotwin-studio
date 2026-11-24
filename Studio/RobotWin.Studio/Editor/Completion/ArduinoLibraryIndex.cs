@@ -44,7 +44,10 @@ namespace RobotWin.Studio.Editor.Completion
         /// <summary>When arduino-cli last downloaded the index.</summary>
         public DateTime Updated { get; }
 
-        public static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Arduino15", "library_index.json");
+        /// <summary>The compiler's data folder (the app sets it to its bundled compiler's; Arduino15 otherwise).</summary>
+        public static string DataFolder { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Arduino15");
+
+        public static string DefaultPath => Path.Combine(DataFolder, "library_index.json");
 
         public static ArduinoLibraryIndex? Load(string path)
         {

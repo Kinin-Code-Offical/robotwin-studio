@@ -38,7 +38,7 @@
                     <StackPanel Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button x:Name="NewButton" Style="{StaticResource Btn.Icon}" ToolTip="Yeni proje veya dünya (Ctrl+N)" Click="OnNewMenu" Width="30" Height="30"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Aç (Ctrl+O)" Click="OnOpen" Width="30" Height="30"><t:Icon Data="{StaticResource I.Folder}" Size="16"/></Button>
-                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Kaydet (Ctrl+S)" Click="OnSave" Width="30" Height="30"><t:Icon Data="{StaticResource I.Save}" Size="16"/></Button>
+                        <Button x:Name="SaveButton" Style="{StaticResource Btn.Icon}" ToolTip="Kaydet (Ctrl+S)" Click="OnSave" Width="30" Height="30"><t:Icon Data="{StaticResource I.Save}" Size="16"/></Button>
                     </StackPanel>
                     <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0,4,0"/>
                 </StackPanel>

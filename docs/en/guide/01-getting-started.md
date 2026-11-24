@@ -12,16 +12,14 @@ In this chapter you install RobotWin Studio, learn the parts of the screen and o
 
 By default it installs for your user only and does not ask for administrator rights. To uninstall, use Windows **Settings → Apps**.
 
-### To compile your own code (optional)
-
-The bundled examples come precompiled; these tools are needed only for code you write yourself.
+### To compile your own code
 
 | Board | Tool needed | How to install |
 | --- | --- | --- |
-| Arduino Uno / Nano | `arduino-cli` | In a terminal: `winget install ArduinoSA.CLI`, then `arduino-cli core install arduino:avr` |
+| Arduino Uno / Nano | The Arduino compiler: `arduino-cli`, the AVR core and the library list | **Comes with the installer**; nothing else to install |
 | ESP32 | Visual Studio C++ tools (MSVC) | Visual Studio 2022 or Build Tools with the **"Desktop development with C++"** workload |
 
-The app finds these tools itself. If it cannot, enter their paths under **Ayarlar → Derleyiciler** (Settings → Compilers).
+To use an `arduino-cli` of your own, enter its path under **Ayarlar → Derleyiciler** (Settings → Compilers). The app finds MSVC itself; if it cannot, enter its path there too.
 
 ## First launch
 
@@ -39,6 +37,22 @@ The home page has:
 ![Home page](../../images/home.png)
 
 > Tip: clicking an example opens it in a new tab. Do not be afraid of breaking examples; the original stays unchanged unless you save over it.
+
+## Your first robot: an interactive guide
+
+The first time you open the app it offers a 5–10 minute guide. You can open it again with the **İlk robotun** (your first robot) button on the **Başlangıç** (start) page or with **Yardım → İlk robotun** (help).
+
+The guide stays in the bottom right corner as a small card. At each step it says what to press and draws an orange outline around that control. It notices by itself when you have done the step and moves on. The card's button (for example **Servo kolu aç**, open the servo arm, or **Yükle ve çalıştır**, load and run) does the step for you; **Bu adımı atla** (skip this step) moves on.
+
+1. **Open the ready servo arm:** an Arduino Uno drives two SG90 servos.
+2. **Run it and watch:** the arm sweeps.
+3. **Open the code:** the arm's Arduino code opens on the Kod (code) page.
+4. **Change the code:** the 2 in `step = 2` on line 23 comes selected; type 6. The arm sweeps three times as fast.
+5. **Load it onto the board:** the code is compiled, loaded onto the Uno, and the world starts over.
+6. **Measure the current:** the **Kablolar ve ölçümler** (cables and measurements) tab shows the current in the servos' cables live.
+7. **Save:** the world is kept with the code you changed.
+
+![The first-robot guide](../../images/guide.png)
 
 ## The parts of the screen
 

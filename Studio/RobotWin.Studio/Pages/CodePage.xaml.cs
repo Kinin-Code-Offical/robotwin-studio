@@ -81,6 +81,59 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ boards and folders
 
+        /// <summary>[guide] Raised after code was written to a board, built, and its circuit or world started.</summary>
+        internal event Action<CodeTarget>? Uploaded;
+
+        internal CodeTarget? CurrentTarget => _target;
+
+        internal string EditorText => Editor.Text;
+
+        internal FrameworkElement UploadButtonElement => UploadButton;
+
+        /// <summary>[guide] "Karta yükle ve çalıştır" for the open folder.</summary>
+        internal void Upload() => OnUpload(this, new RoutedEventArgs());
+
+        /// <summary>[guide] Picks a board (by its key) and opens its own code.</summary>
+        internal bool ShowBoard(string key)
+        {
+            Refresh();
+            var t = _targets.FirstOrDefault(x => x.Key == key);
+            if (t == null) return false;
+            _loading = true;
+            _target = t;
+            TargetBox.SelectedItem = t;
+            _loading = false;
+            LibrariesChanged();
+            var own = _folders.FirstOrDefault(f => f.Board == t);
+            if (own != null) Open(own, own.MainFile, rebuild: true);
+            UpdateTargetText();
+            UpdateBuildState();
+            return true;
+        }
+
+        /// <summary>[guide] Selects a group of the first match in the editor, scrolled into view, so typing replaces it.</summary>
+        internal void SelectInEditor(System.Text.RegularExpressions.Regex pattern, int group)
+        {
+            var m = pattern.Match(Editor.Text);
+            if (!m.Success || m.Groups.Count <= group) return;
+            var g = m.Groups[group];
+            Editor.Box.Select(g.Index, g.Length);
+            int line = Editor.Box.GetLineIndexFromCharacterIndex(g.Index);
+            if (line >= 0) Editor.Box.ScrollToLine(line);
+            Editor.Focus();
+        }
+
+        /// <summary>[guide] Replaces the first match in the editor (as typing would: undoable, the build state follows).</summary>
+        internal void ReplaceInEditor(System.Text.RegularExpressions.Regex pattern, string replacement)
+        {
+            var m = pattern.Match(Editor.Text);
+            if (!m.Success) return;
+            Editor.Box.Select(m.Index, m.Length);
+            Editor.Box.SelectedText = replacement;
+            Editor.Box.Select(m.Index + replacement.Length, 0);
+            Editor.Focus();
+        }
+
         /// <summary>Keys of the boards the page offers ("p:U1", "w:O3" …), for checks.</summary>
         internal List<string> TargetKeys() => FindTargets().Select(t => t.Key).ToList();
 
@@ -827,6 +880,7 @@ namespace RobotWin.Studio.Pages
                 (Window.GetWindow(this) as MainWindow)?.RunWorld();
             }
 
+            Uploaded?.Invoke(target);   // [guide]
             Refresh();
         }
 

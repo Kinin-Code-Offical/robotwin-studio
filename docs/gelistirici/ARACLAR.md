@@ -15,13 +15,14 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 
 ## Uygulamanın komut satırı kipleri
 
-`RobotWinStudio.exe` aynı zamanda bir araçtır. Bütün kipler işini bitirince kapanır.
+`RobotWinStudio.exe` aynı zamanda bir araçtır. Bütün kipler işini bitirince kapanır. Ekran görüntüsü, ölçüm, öz test, galeri ve çakışma çalıştırmaları varsayılan ayarlar, varsayılan panel düzeni ve boş bir son dosyalar listesiyle başlar ve bunların hiçbirini kaydetmez: kullanıcının kendi ayarları olduğu gibi kalır.
 
 | Kip | Kullanım |
 | --- | --- |
 | `--selftest [--selftest-out dosya]` | Her örneğin arayüzsüz uçtan uca denetimi (bkz. [Testler](TESTLER.md)). |
 | `--snapshot cikti.png --page <sayfa> [...]` | Belgeler ve görsel denetim için bir sayfayı PNG'ye çizer (bkz. [Testler](TESTLER.md)). |
 | `--overlap-report <dosya>` | Her dünya şablonunu kurar ve iç içe geçen ya da kabuğuna sığmayan parçaları listeler. |
+| `--bench <dosya> [--bench-seconds 4] [--bench-filter id,id]` | Kare hızı ölçümü: her dünya şablonunu (ya da adı verilenleri) açar, dururken ve çalışırken ölçer; kare hızını, kare sürelerini ve karenin her bölümünün maliyetini yazar. Günlük ölçüm sürerken yazılır; son satırı o anda yapılan adımı söyler. |
 | `--api <port> [--world f.rwworld]` | Uygulama, pencere açmadan otomasyon sunucusu olarak (bkz. [Otomasyon API'si](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Uygulamanın gövde geometrisini (model zarfları dahil) başsız araç için dünyanın yanına yazar. |
 | `--gallery <klasör> [--gallery-filter metin] [--gallery-columns 4] [--gallery-tile 460x340]` | Kodla üretilen her 3B bileşen modelinin toplu görüntüsü. |

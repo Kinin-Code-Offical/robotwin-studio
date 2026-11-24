@@ -1,0 +1,18 @@
+Arduino derleyicisi (RobotWin Studio ile gelir)
+================================================
+
+Bu klasördeki araçlar Arduino Uno / Nano kodunu derlemek için RobotWin Studio ile birlikte kurulur:
+
+  arduino-cli.exe        Arduino'nun komut satırı derleme aracı (GPL-3.0)
+                         https://github.com/arduino/arduino-cli
+  data\packages\arduino  Arduino AVR çekirdeği (LGPL-2.1), avr-gcc ve GNU Binutils (GPL-3.0,
+                         GCC çalışma zamanı istisnasıyla), AVR Libc (değiştirilmiş BSD), AVRDUDE (GPL-2.0)
+                         https://github.com/arduino/ArduinoCore-avr
+                         https://github.com/arduino/toolchain-avr
+  data\library_index.json  Arduino kütüphane listesi (Kod sayfasındaki Kütüphaneler sekmesi)
+
+Hepsi Arduino'nun yayımladığı haliyle, değiştirilmeden gelir. Her paketin kendi lisans dosyası
+yanındadır. RobotWin Studio arduino-cli.exe'yi ayrı bir program olarak çalıştırır, ona bağlanmaz.
+Gönderilen sürümlerin kaynak kodu yukarıdaki bağlantılardadır; istenirse bir kopyası verilir.
+
+Kendi arduino-cli'nizi kullanmak için: Ayarlar -> Derleyiciler -> arduino-cli yolu.

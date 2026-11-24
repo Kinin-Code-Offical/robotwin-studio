@@ -358,7 +358,7 @@ namespace RobotWin.Studio.Simulation
             double target = wallDt * Speed;
             var budget = Stopwatch.StartNew();
             double done;
-            using (Shell.Perf.Measure("devre")) done = Advance(target, budget, 0.022);
+            using (Shell.Perf.Measure("devre")) done = Advance(target, budget, Shell.UiHeadroom.SimulationBudget(0.022));   // room for the rest of the UI
             _realtimeFactor = 0.85 * _realtimeFactor + 0.15 * (done / wallDt);
             Updated?.Invoke(this, EventArgs.Empty);
             OnPropertyChanged(nameof(StatusText));

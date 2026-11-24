@@ -204,7 +204,7 @@ namespace RobotWin.Studio.World
             if (wallDt <= 0) return;
             var budget = Stopwatch.StartNew();
             RadioFrame();   // [radio] controller input / feedback, radio events
-            double done = Advance(wallDt * Speed, budget, 0.022);
+            double done = Advance(wallDt * Speed, budget, Shell.UiHeadroom.SimulationBudget(0.022));   // room for the rest of the UI
             _realtime = 0.85 * _realtime + 0.15 * (done / wallDt);
             Updated?.Invoke(this, EventArgs.Empty);
             if (State == SimState.Running && Simulator != null && World != null)

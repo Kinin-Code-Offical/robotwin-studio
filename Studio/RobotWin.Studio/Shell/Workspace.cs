@@ -787,7 +787,7 @@ namespace RobotWin.Studio.Shell
         {
             try
             {
-                if (!File.Exists(StorePath)) return Array.Empty<string>();
+                if (Unattended.Active || !File.Exists(StorePath)) return Array.Empty<string>();
                 var list = new List<string>();
                 foreach (var line in File.ReadAllLines(StorePath))
                 {
@@ -808,6 +808,7 @@ namespace RobotWin.Studio.Shell
 
         public static void Add(string path)
         {
+            if (Unattended.Active) return;
             try
             {
                 var list = new List<string>(Load());

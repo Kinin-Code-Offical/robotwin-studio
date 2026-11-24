@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-24
+
+### Added
+
+- **The Arduino compiler comes with the installers and the portable app:** `tools\arduino\` carries arduino-cli, the Arduino AVR core (1.8.6, with avr-gcc and avrdude) and the Arduino library list, downloaded from arduino.cc when the release is built and proven there by compiling a sketch. Uno / Nano code builds right after installing; the app runs the bundled compiler on its own data folder (copied once to `%LOCALAPPDATA%\RobotWinStudio\arduino-data` when the install folder is read-only), completion reads its AVR core and the libraries tab its library list. A compiler chosen in Settings still wins. The self-test builds a sketch with it. Licenses: THIRD_PARTY_NOTICES.md, `tools\arduino\OKUBENI.txt`.
+- **"İlk robotun", an interactive first-run guide** (offered once on the first start; Başlangıç and Yardım open it again): the ready servo arm, its Arduino code changed (`step = 2` → 6), loaded onto the Uno, the arm seen moving, the current measured in the cables table, the world saved — 5 to 10 minutes. A card in the corner says what to do and outlines the control to press; each step notices by itself when it is done, and the card's button does it for you.
+
+### Fixed
+
+- **A heavy simulation starved the rest of the app:** a world or circuit that needs more than a frame's time filled every frame, and nothing below render priority ran while it did: saving code, autosave, the rail, sensor views, panel-layout saves, the guide's checks and the automation API waited until the simulation stopped (the line follower, at 0.7× real time, was one). Once such work has waited 0.2 s the next frame now simulates only a sliver, so it gets its turn; a heavy simulation runs about a tenth slower, a light one as before. The line follower's world now draws 49 frames a second instead of 36.
+- **Snapshots, the benchmark and the self-test wrote into the user's settings:** they saved their own window placement (off screen), panel layout and recent files over the user's and showed the user's recent files and backups in documentation screenshots. Runs from the command line now start from the default settings and save nothing. The benchmark (`--bench`) writes its log as it goes, so a run that is stopped still shows what it measured and where it stopped, and `--bench-filter id,id` measures only the templates named.
+
 ## [1.5.0] - 2026-11-24
 
 ### Changed

@@ -120,6 +120,9 @@ namespace RobotWin.Studio.Shell
             ApplyMode();
         }
 
+        /// <summary>[guide] The pad of a stage (the first-robot guide outlines it).</summary>
+        public FrameworkElement? StageElement(string key) => _stages.FirstOrDefault(s => s.Key == key)?.PadBorder;
+
         /// <summary>Raised with the page key when a stage, home or a tool is clicked.</summary>
         public event Action<string>? Navigate;
 

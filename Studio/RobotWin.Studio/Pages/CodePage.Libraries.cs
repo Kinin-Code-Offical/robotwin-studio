@@ -49,7 +49,7 @@ namespace RobotWin.Studio.Pages
         private ArduinoHeaders Headers()
         {
             if (Esp32Board) return _espHeaders ??= new ArduinoHeaders(true, LibraryRoots(), null, HalHeaders());
-            return _avrHeaders ??= new ArduinoHeaders(false, LibraryRoots());
+            return _avrHeaders ??= new ArduinoHeaders(false, LibraryRoots(), ArduinoCompiler.DataFolder);   // [setup] the bundled compiler's core
         }
 
         private static IEnumerable<string> LibraryRoots() => ArduinoCompiler.LibraryRoots;
@@ -143,7 +143,7 @@ namespace RobotWin.Studio.Pages
             if (headers.Esp32)
                 _libList.Children.Add(Note("ESP32: kurulu kütüphaneler çizimle birlikte simülasyon katmanına (HAL) derlenir. ESP32 yazmaçlarını doğrudan kullanan kütüphaneler derlenmeyebilir."));
             else if (!headers.CoreFound)
-                _libList.Children.Add(Note("arduino-cli'nin AVR çekirdeği bulunamadı: Ayarlar'dan arduino-cli'yi kurun ve 'arduino-cli core install arduino:avr' çalıştırın. Tamamlama o zamana kadar sınırlıdır."));
+                _libList.Children.Add(Note("Arduino AVR çekirdeği bulunamadı: derleyici kurulumla gelir; uygulamayı yeniden kurun ya da Ayarlar → Derleyiciler'den kendi arduino-cli'nizi seçin. Tamamlama o zamana kadar sınırlıdır."));
 
             var installed = headers.Libraries.ToList();
             if (query.Length == 0)
@@ -181,6 +181,7 @@ namespace RobotWin.Studio.Pages
         private static Task<ArduinoLibraryIndex?> LoadIndexAsync()
         {
             if (_index != null) return Task.FromResult<ArduinoLibraryIndex?>(_index);
+            ArduinoLibraryIndex.DataFolder = ArduinoCompiler.DataFolder;   // [setup] the bundled compiler's list
             return _indexLoad ??= Task.Run(() =>
             {
                 var idx = ArduinoLibraryIndex.Load(ArduinoLibraryIndex.DefaultPath);

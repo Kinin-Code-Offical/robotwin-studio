@@ -134,6 +134,7 @@ namespace RobotWin.Studio
 
             StateChanged += (_, _) => OnStateChanged();
             SourceInitialized += (_, _) => ApplyWindowsCorners();
+            ContentRendered += (_, _) => Dispatcher.BeginInvoke(new Action(OfferGuideOnFirstStart), System.Windows.Threading.DispatcherPriority.ApplicationIdle);   // [guide]
             _behavior = new WindowBehavior(this, MaxButton);
             Activated += (_, _) => AppTitle.Opacity = 1;
             Deactivated += (_, _) => AppTitle.Opacity = 0.55;
@@ -356,7 +357,7 @@ namespace RobotWin.Studio
         private void Autosave()
         {
             int minutes = AppSettings.Current.AutosaveMinutes;
-            if (minutes <= 0 || (DateTime.Now - _lastAutosave).TotalMinutes < minutes) return;
+            if (minutes <= 0 || Unattended.Active || (DateTime.Now - _lastAutosave).TotalMinutes < minutes) return;
             _lastAutosave = DateTime.Now;
             int saved = 0;
             try
@@ -715,6 +716,11 @@ namespace RobotWin.Studio
 
             if (page == "code") _code.SnapshotBuildAndRun(fault);
             if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
+            if (fault == "guide") StartGuide();   // [guide] the card at its first step
+            if (fault != null && fault.StartsWith("guide-e2e", StringComparison.Ordinal) && App.SnapshotPath != null)   // guide-e2e[:N] — N steps only
+            {
+                RunGuideCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Length > 10 && int.TryParse(fault.Substring(10), out int steps) ? steps : int.MaxValue);
+            }
             if (fault == "montaj-dialog")
             {
                 // [assembly] The Montaj set-up window with a second project open beside this one.
