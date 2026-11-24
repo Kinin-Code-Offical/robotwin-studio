@@ -19,6 +19,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private readonly uint[] _mmu = NewMmu();
         private bool _writeEnabled;
 
+        /// <summary>The flash's status registers 1 and 2 (SR2 holds QE, which quad I/O needs set and read back).</summary>
+        private byte _status1, _status2;
+
         private static uint[] NewMmu()
         {
             var mmu = new uint[256];
@@ -164,9 +167,29 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             switch (command)
             {
                 case 0x9F: SetReg(Spi1 + 0x80, 0x001640C8); break;                             // JEDEC id: C8 40 16
-                case 0x05:
-                case 0x35:
-                case 0x15: SetReg(Spi1 + 0x80, command == 0x05 && _writeEnabled ? 2u : 0u); break;   // status registers
+                case 0x05: SetReg(Spi1 + 0x80, (uint)(_status1 | (_writeEnabled ? 2 : 0))); break;       // RDSR
+                case 0x35: SetReg(Spi1 + 0x80, _status2); break;                                          // RDSR2
+                case 0x15: SetReg(Spi1 + 0x80, 0); break;                                                  // RDSR3
+                case 0x01:
+                    // WRSR: one byte (SR1) or two (SR1, SR2)
+                    if (_writeEnabled)
+                    {
+                        uint w0 = Reg(Spi1 + 0x80);
+                        _status1 = (byte)(w0 & 0xFC);
+                        if (mosiBytes >= 2) _status2 = (byte)(w0 >> 8);
+                        _writeEnabled = false;
+                    }
+
+                    break;
+                case 0x31:
+                    // WRSR2
+                    if (_writeEnabled)
+                    {
+                        _status2 = (byte)Reg(Spi1 + 0x80);
+                        _writeEnabled = false;
+                    }
+
+                    break;
                 case 0x06: _writeEnabled = true; break;
                 case 0x04: _writeEnabled = false; break;
                 case 0x03:

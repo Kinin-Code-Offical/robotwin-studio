@@ -40,6 +40,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private bool ReadPeripheral(uint register, out uint value)
         {
             if (ReadFlashRegister(register, out value)) return true;
+            if (register == 0x3FF003F0 || register == 0x3FF00418)
+            {
+                // DPORT_PRO/APP_DCACHE_DBUG0: the cache state (bits 7..18) is 1, idle, so disabling it completes at once
+                value = 1u << 7;
+                return true;
+            }
+
             if (register == 0x3FF4800C)
             {
                 // RTC_CNTL_TIME_UPDATE: the latched RTC time is always valid (bit 30)

@@ -5,6 +5,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 {
     public sealed partial class Esp32Soc
     {
+        private readonly System.Collections.Generic.Dictionary<uint, System.Collections.Generic.List<byte>> _md5 = new System.Collections.Generic.Dictionary<uint, System.Collections.Generic.List<byte>>();
+
         private static double Double(XtensaCore c, int index) =>
             BitConverter.Int64BitsToDouble((long)((ulong)c.Argument(index + 1) << 32 | c.Argument(index)));
 
@@ -128,6 +130,32 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Rom("_xtos_set_interrupt_handler", c => Return(c, 0));
             Rom("_xtos_set_interrupt_handler_arg", c => Return(c, 0));
             Rom("_xtos_set_exception_handler", c => Return(c, 0));
+
+            // MD5 (partition table and image digests): the bytes kept per context address, hashed at the end
+            foreach (var name in new[] { "esp_rom_md5_init", "MD5Init" })
+                Rom(name, c =>
+                {
+                    _md5[c.Argument(0)] = new System.Collections.Generic.List<byte>();
+                    return Return(c, 0);
+                });
+            foreach (var name in new[] { "esp_rom_md5_update", "MD5Update" })
+                Rom(name, c =>
+                {
+                    if (!_md5.TryGetValue(c.Argument(0), out var data)) _md5[c.Argument(0)] = data = new System.Collections.Generic.List<byte>();
+                    for (uint i = 0; i < c.Argument(2); i++) data.Add(Read8(c.Argument(1) + i));
+                    return Return(c, 0);
+                });
+            foreach (var name in new[] { "esp_rom_md5_final", "MD5Final" })
+                Rom(name, c =>
+                {
+                    // (digest, context)
+                    _md5.TryGetValue(c.Argument(1), out var data);
+                    using var md5 = System.Security.Cryptography.MD5.Create();
+                    byte[] digest = md5.ComputeHash((data ?? new System.Collections.Generic.List<byte>()).ToArray());
+                    for (uint i = 0; i < 16; i++) Write8(c.Argument(0) + i, digest[i]);
+                    _md5.Remove(c.Argument(1));
+                    return Return(c, 0);
+                });
 
             // checksums, as the ROM computes them (the value passed in and returned is the complemented one)
             Rom("crc32_le", c => Return(c, Crc(c, 0xEDB88320u, 32)));
