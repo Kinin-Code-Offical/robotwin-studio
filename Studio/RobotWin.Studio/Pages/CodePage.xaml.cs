@@ -397,6 +397,7 @@ namespace RobotWin.Studio.Pages
         private void UpdateTargetText()
         {
             string fqbn = Fqbn;
+            HardwareButton.Visibility = ArduinoCompiler.IsEsp32(fqbn) ? Visibility.Visible : Visibility.Collapsed;   // [esp32hw]
             TargetText.Text = ArduinoCompiler.IsEsp32(fqbn)
                 ? "ESP32 · MSVC ile yerel derleme · Arduino-ESP32 API (GPIO, ADC, LEDC, I²C, SPI, FreeRTOS, Wi-Fi ve BLE taklidi)"
                 : $"{fqbn} · avr-gcc (arduino-cli) · ATmega328P @ 16 MHz emülasyonu";

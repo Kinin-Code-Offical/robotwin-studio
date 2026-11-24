@@ -694,6 +694,9 @@ namespace RobotWin.Studio.Simulation
                 cosim.SerialOutput += AppendSerial;
                 _esp32.Add(cosim);
                 Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (ESP32 HAL modeli, 240 MHz)", AnalogEventKind.StateChange));
+                // [esp32hw] Said plainly, never silently: the hardware-compatible mode runs as the fast one until the emulator is there.
+                if (RobotTwin.CoreSim.Design.Esp32Parts.IsHardwareMode(part.Parameters))
+                    Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNotice, AnalogEventKind.Warning));
                 AttachI2c(cosim.I2c, part);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is EntryPointNotFoundException || ex is System.IO.IOException || ex is InvalidOperationException)

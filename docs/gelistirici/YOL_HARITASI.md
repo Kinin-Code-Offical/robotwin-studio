@@ -103,7 +103,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - register ve zaman çizelgesi;
   - protokol analizörleri ve hata enjeksiyonu;
   - ESP32'nin iki çalışma modu (plan: [ESP32_MODLARI.md](ESP32_MODLARI.md)):
-    - [ ] 1. Çalışma modu ayarı (kart başına, dosyada) + araç zinciri yöneticisi (paketli `arduino-cli` ile RobotWin'in veri klasörüne Arduino-ESP32 çekirdeği) + donanım derlemesi (`.bin`, `.elf`) + karta yükleme (`esptool`).
+    - [x] 1. Çalışma modu ayarı (kart başına, dosyada) + araç zinciri yöneticisi (`arduino-cli` ile RobotWin'in klasörüne Arduino-ESP32 3.3.13) + donanım derlemesi (`.bin`, `.elf`) + karta yükleme (`esptool`) + birleşik imaj; `--esp32-build`, `--esp32-compat`.
     - [ ] 2. Kendi Xtensa LX6 çekirdeğimiz ve komut testleri.
     - [ ] 3. Yonga: bellek haritası, ELF yükleme, ROM, iki çekirdek, kesmeler, FreeRTOS tick → Blink ve Serial.
     - [ ] 4. Çevre birimleri (GPIO, LEDC, UART, I2C, SPI, ADC, zamanlayıcılar, RMT, MCPWM) → radyosuz şablonlar.
@@ -111,6 +111,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
     - [ ] 6. Mod farkı raporu (iki modda seri çıktı ve pin izi), performans, belgeler.
     - [ ] 7. (P2) Gerçek kartla donanım içeren test.
     - [ ] Hızlı modda ESP-NOW ve bellek bütçesi uyarıları.
+    - [ ] Bluepad32 kullanan çizimler için Bluepad32'nin ESP32 çekirdeği (ayrı indirme, onay gerekir); tasarım içindeki kartların çizimleri de `--esp32-compat`'a.
   - RP2040 / STM32;
   - kütüphane uyumluluk matrisi;
   - derleyici sürümünün projeyle saklanması.

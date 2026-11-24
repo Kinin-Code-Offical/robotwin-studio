@@ -178,7 +178,23 @@ Supported:
 - `Serial`, `Wire` (I²C), `EEPROM`, `Servo` / `ESP32Servo`
 - `WiFi` (a virtual network inside the world; no Internet), BLE (basic features), **Bluepad32** (PS5, PS4, Xbox controllers)
 
-`SPI` is only an empty stub; SPI devices do not work.
+- `SPI`: SPI devices (the MCP3008 ADC, a BMP280 on SPI …) connect to the SPI bus in the circuit.
+
+## A real ESP32 board: two run modes
+
+In the ESP32 board's inspector, **Run mode** has two choices:
+
+- **fast simulation** (the default): the way described above. For scenes with many ESP32s and quick trials.
+- **hardware-compatible**: the sketch is compiled with Espressif's real ESP32 toolchain (Arduino-ESP32 3.3.13, `xtensa-esp32-elf-gcc`); the output can be flashed to a real board. The Xtensa emulator that will run this mode's real instructions in the simulation is not ready yet; until it is, the board runs as the fast mode in the simulation and the event log says so plainly.
+
+In either mode, with an ESP32 chosen on the Code page, the **Real board** menu does this:
+
+1. **Install the ESP32 toolchain**: only the first time. About 1.3 GB is downloaded, 4 GB installed. It goes into RobotWin's own folder and does not touch your Arduino IDE.
+2. **Build for the real board**: errors show on the sketch's lines; the status line gives the flash and RAM use.
+3. **Upload to the real board → COMx**: boards connected by USB are listed; picking one builds the sketch and writes it with `esptool`. The board enters upload mode by itself; if it does not, hold its BOOT button during the upload.
+4. **Export the merged image (.bin)**: bootloader, partition table and application in one file, written at address 0x0 by web flashers or `esptool`.
+
+The detailed plan of the two modes and the emulator's stages: [The two ESP32 run modes](../../ESP32_MODES.md).
 
 ## Code of boards in the world
 

@@ -58,6 +58,22 @@ namespace RobotTwin.CoreSim.Design
                 "ESP32-WROOM-32, 30 pin, GPIO2'de mavi LED, 3.3 V lojik", new Dictionary<string, string>()));
         }
 
+        /// <summary>[esp32hw] The board's run mode (docs/gelistirici/ESP32_MODLARI.md).</summary>
+        public const string ModeKey = "mode";
+
+        /// <summary>Mode 1: the sketch runs on RobotWin's Arduino-ESP32 model, natively (many boards, fast).</summary>
+        public const string FastMode = "hızlı simülasyon";
+
+        /// <summary>Mode 2: built by Espressif's toolchain for the real chip (and, with the Xtensa emulator, run as such).</summary>
+        public const string HardwareMode = "donanım uyumlu";
+
+        /// <summary>The board is set to the hardware-compatible mode.</summary>
+        public static bool IsHardwareMode(IReadOnlyDictionary<string, string>? parameters) =>
+            parameters != null && parameters.TryGetValue(ModeKey, out var mode) && mode == HardwareMode;
+
+        /// <summary>What a board in the hardware-compatible mode says while the Xtensa emulator is not there yet.</summary>
+        public const string HardwareModeNotice = "Donanım uyumlu mod: Xtensa emülatörü henüz hazır değil, bu kart simülasyonda hızlı modla çalışıyor. Gerçek kart için Kod → Gerçek kart.";
+
         private static PartDefinition Board(PartLibrary lib, string id, string name, string variant, string footprint,
             string[] left, string[] right, string[] grounds, string supplyPin, bool onboardLed)
         {
@@ -71,9 +87,10 @@ namespace RobotTwin.CoreSim.Design
                 SymbolVariant = variant,
                 Footprint = footprint,
                 ValueKey = string.Empty,
-                Description = "HAL seviyesinde simülasyon: çizim Arduino-ESP32 API'si ile çalışır (Xtensa emülasyonu yok)."
+                Description = "İki çalışma modu: hızlı simülasyon (çizim RobotWin'in Arduino-ESP32 modeliyle çalışır) ve donanım uyumlu (Espressif'in araç zinciriyle gerçek kart için derlenir; Xtensa emülatörü hazır olana dek simülasyonda hızlı modla çalışır)."
             };
             part.Parameters.Add(new ParameterDefinition("usb", "USB bağlı", "true", "", new[] { "true", "false" }));
+            part.Parameters.Add(new ParameterDefinition(ModeKey, "Çalışma modu", FastMode, "", new[] { FastMode, HardwareMode }));
             part.Parameters.Add(new ParameterDefinition("idle", "Çalışma akımı", "80m", "A"));
 
             int rows = Math.Max(left.Length, right.Length);

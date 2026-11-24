@@ -26,6 +26,8 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 | `--startup-report <dosya>` | Normal bir açılış (açılış ekranı dahil); her adımın işlem başından itibaren zamanını yazar ve kapanır. |
 | `--snapshot cikti.png --page splash` | Açılış ekranını açılışın ortasındaki hâliyle çizer. |
 | `--snapshot cikti.png --page world --fault <şablon> --renderer wpf` | 3B görünümü bu çalıştırma için WPF'ye (ya da `gpu` ile kendi çizicimize) çizdirir; hiçbir şey kaydedilmez. `--bench` ile de çalışır, iki çiziciyi karşılaştırmak için. |
+| `--esp32-build cizim.ino [--esp32-out klasör] [--esp32-install]` | Çizimi gerçek ESP32 için Espressif'in araç zinciriyle derler (donanım uyumlu mod); `.bin`, `.bootloader.bin`, `.partitions.bin`, `.merged.bin` ve `.elf` klasöre kopyalanır, günlük `cizim.esp32build.txt`'ye yazılır. `--esp32-install` araç zinciri yoksa önce kurar. |
+| `--esp32-compat rapor.txt` | İki modun uyumu: dünya şablonlarındaki ve örneklerdeki her ESP32 çizimi gerçek araç zinciriyle derlenir; her biri için flaş, RAM, süre ya da ilk hata. Hepsi derlenirse çıkış kodu 0. |
 | `--render-test dosya` | Çizim testi: sahne aynası ve GPU çizicisi, küçük sahneler çizilip geri okunarak denetlenir (bkz. [Testler](TESTLER.md)). |
 | `--snapshot cikti.png --page <sayfa> --theme pembe:gul` | Sayfayı bir tema ve vurgu rengiyle çizer; yalnız bu çalıştırma için, hiçbir şey kaydedilmez. |
 | `--snapshot cikti.png --page world --fault <şablon> --simulate <s> --wait <s> --perf` | Performans göstergesini yalnız bu çalıştırma için açar (hiçbir şey kaydedilmez). Dünya `--simulate` saniye adımlanır, sonra `--wait` saniye canlı çalışır; gösterge her çözücünün simülasyon saniyesi başına maliyetini gösterir. |

@@ -25,13 +25,16 @@ namespace RobotWin.Studio.Firmware
         public int FlashMax { get; set; } = -1;
         public int RamBytes { get; set; } = -1;
         public int RamMax { get; set; } = -1;
+
+        /// <summary>[esp32hw] Where a hardware build's images are (sketch.ino.bin, .merged.bin, .elf …).</summary>
+        public string? OutputFolder { get; set; }
     }
 
     /// <summary>
     /// Builds Arduino sketches with the official toolchain through arduino-cli
     /// (avr-gcc for Uno/Nano). The emulator then runs the produced Intel HEX.
     /// </summary>
-    public static class ArduinoCompiler
+    public static partial class ArduinoCompiler
     {
         public static string BuildRoot { get; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RobotWinStudio", "Build");
@@ -345,6 +348,26 @@ namespace RobotWin.Studio.Firmware
             }
 
             result.Log = log.ToString();
+            ReadLog(result);
+
+            string hex = Path.Combine(outDir, "sketch.ino.hex");
+            if (result.Success && File.Exists(hex)) result.Hex = File.ReadAllText(hex);
+            else result.Success = false;
+            string elf = Path.Combine(outDir, "sketch.ino.elf");
+            if (result.Success && File.Exists(elf)) result.Elf = File.ReadAllBytes(elf);
+            if (!result.Success && result.Diagnostics.Count == 0 && !cancel.IsCancellationRequested)
+            {
+                string first = result.Log.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "bilinmeyen hata";
+                result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, first));
+            }
+
+            result.Duration = watch.Elapsed;
+            return result;
+        }
+
+        /// <summary>The compiler's messages about the sketch (to its own lines and files) and its flash and RAM use, from the log.</summary>
+        private static void ReadLog(BuildResult result)
+        {
             foreach (var raw in result.Log.Split('\n'))
             {
                 string line = raw.TrimEnd('\r');
@@ -373,20 +396,6 @@ namespace RobotWin.Studio.Firmware
                     result.RamMax = int.Parse(r.Groups["max"].Value);
                 }
             }
-
-            string hex = Path.Combine(outDir, "sketch.ino.hex");
-            if (result.Success && File.Exists(hex)) result.Hex = File.ReadAllText(hex);
-            else result.Success = false;
-            string elf = Path.Combine(outDir, "sketch.ino.elf");
-            if (result.Success && File.Exists(elf)) result.Elf = File.ReadAllBytes(elf);
-            if (!result.Success && result.Diagnostics.Count == 0 && !cancel.IsCancellationRequested)
-            {
-                string first = result.Log.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "bilinmeyen hata";
-                result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, first));
-            }
-
-            result.Duration = watch.Elapsed;
-            return result;
         }
 
         /// <summary>Common gcc messages in Turkish (the original stays in the log).</summary>

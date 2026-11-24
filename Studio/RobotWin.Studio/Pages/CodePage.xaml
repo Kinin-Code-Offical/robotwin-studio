@@ -32,6 +32,10 @@
                             <TextBlock Text="Karta yükle ve çalıştır" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
+                    <Button x:Name="HardwareButton" Margin="6,0,0,0" Click="OnHardware" Visibility="Collapsed"
+                            ToolTip="Gerçek ESP32 için: Espressif'in araç zinciriyle derle, USB ile karta yükle ya da imajı dışa aktar">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="14"/><TextBlock Text="Gerçek kart" Margin="7,0,0,0"/></StackPanel>
+                    </Button>
                     <Button Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" ToolTip="Simülasyonu durdur" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Kartı resetle" Click="OnReset"><t:Icon Data="{StaticResource I.Reset}"/></Button>
                 </StackPanel>

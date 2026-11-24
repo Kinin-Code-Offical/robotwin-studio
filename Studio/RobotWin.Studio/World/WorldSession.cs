@@ -528,6 +528,9 @@ namespace RobotWin.Studio.World
                 TrackBoard(cosim, prog);   // [radio] radio medium bridge
                 AttachCamera(cosim, prog);   // [sense] esp_camera bridge
                 Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (ESP32 HAL modeli)", AnalogEventKind.StateChange));
+                // [esp32hw] Said plainly, never silently: the hardware-compatible mode runs as the fast one until the emulator is there.
+                if (RobotTwin.CoreSim.Design.Esp32Parts.IsHardwareMode(prog.Parameters))
+                    Log.Add(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNotice, AnalogEventKind.Warning));
                 AttachI2c(cosim.I2c, prog);
                 AttachSpi(cosim, prog);
             }

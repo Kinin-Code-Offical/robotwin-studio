@@ -82,6 +82,20 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Arg("--esp32-compat") is { } compatReport)
+            {
+                Shutdown(Esp32CompatCommand(compatReport));   // [esp32hw] every ESP32 sketch of the templates, built for the real chip
+                return;
+            }
+
+            if (Arg("--esp32-build") is { } esp32Sketch)
+            {
+                // [esp32hw] --esp32-build sketch.ino [--esp32-out folder] [--esp32-install]: the hardware-compatible build of
+                // a sketch for a real ESP32, without a window; the images go to the folder, the log to the console's file.
+                Shutdown(Esp32BuildCommand(esp32Sketch, Arg("--esp32-out"), args.Contains("--esp32-install")));
+                return;
+            }
+
             if (Arg("--render-test") is { } renderTestPath)
             {
                 Shutdown(Render.RenderSelfTest.Run(renderTestPath));   // [render] the scene mirror and the GPU renderer, drawn and read back
@@ -500,6 +514,130 @@ namespace RobotWin.Studio
         }
 
         /// <summary>Headless end-to-end check of every example: compile, simulate, lay out a PCB, run DRC.</summary>
+        /// <summary>
+        /// [esp32hw] The two modes' compatibility: every ESP32 sketch in the world templates and examples built with the
+        /// real toolchain; one line each (template, board, flash, RAM, time, or the first error). 0 when all build.
+        /// </summary>
+        private static int Esp32CompatCommand(string reportPath)
+        {
+            var lines = new System.Collections.Generic.List<string> { $"ESP32 uyumluluğu · Arduino-ESP32 {Firmware.ArduinoCompiler.Esp32CoreVersion} · {DateTime.Now:yyyy-MM-dd HH:mm}" };
+            if (!Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+            {
+                lines.Add("ESP32 araç zinciri kurulu değil (--esp32-build … --esp32-install).");
+                File.WriteAllLines(reportPath, lines);
+                return 2;
+            }
+
+            var sketches = new System.Collections.Generic.List<(string Where, string Board, string Source)>();
+            foreach (var template in Examples.WorldTemplates.All)
+            {
+                RobotTwin.CoreSim.Sandbox.WorldDocument world;
+                try
+                {
+                    world = template.Build();
+                }
+                catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is IOException)
+                {
+                    continue;
+                }
+
+                foreach (var o in world.Objects)
+                {
+                    bool esp32 = o.PartId?.StartsWith("esp32", StringComparison.OrdinalIgnoreCase) == true || o.Firmware?.Target?.StartsWith("esp32", StringComparison.OrdinalIgnoreCase) == true;
+                    if (!esp32) continue;
+                    if (o.Firmware is { } fw && fw.Source.Trim().Length > 0)
+                        sketches.Add((template.Id, o.Name, fw.Bundle()));
+                    else if (o.Parameters.TryGetValue("firmware", out var param) && Simulation.SimulationSession.ResolveFirmwarePath(param) is { } path && path.EndsWith(".ino", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+                        sketches.Add((template.Id, o.Name, new RobotTwin.CoreSim.Formats.FirmwareSource { Source = File.ReadAllText(path) }.Bundle()));
+                }
+            }
+
+            foreach (var ex in ExampleProjects.All)
+            {
+                var project = ex.Build();
+                foreach (var part in project.Parts.Where(p => p.PartId.StartsWith("esp32", StringComparison.OrdinalIgnoreCase)))
+                    if (part.Parameters.TryGetValue("firmware", out var param) && Simulation.SimulationSession.ResolveFirmwarePath(param) is { } path && File.Exists(path))
+                        sketches.Add((ex.Id, part.RefDes, new RobotTwin.CoreSim.Formats.FirmwareSource { Source = File.ReadAllText(path) }.Bundle()));
+            }
+
+            int failed = 0;
+            var seen = new System.Collections.Generic.HashSet<string>();
+            foreach (var (where, board, source) in sketches)
+            {
+                if (!seen.Add(RobotTwin.CoreSim.Formats.FirmwareSource.HashOf(source))) continue;
+                if (Firmware.ArduinoCompiler.Esp32HardwareBlocker(source) is { } blocker)
+                {
+                    lines.Add($"bekliyor {where,-14} {board,-24} {blocker}");
+                    File.WriteAllLines(reportPath, lines);
+                    continue;
+                }
+
+                var r = Firmware.ArduinoCompiler.CompileEsp32HardwareAsync(source, "compat-" + where).GetAwaiter().GetResult();
+                if (r.Success)
+                {
+                    lines.Add($"tamam  {where,-16} {board,-24} flash {r.FlashBytes * 100.0 / Math.Max(1, r.FlashMax),5:F1}%  RAM {r.RamBytes * 100.0 / Math.Max(1, r.RamMax),5:F1}%  {r.Duration.TotalSeconds,4:F0} s");
+                }
+                else
+                {
+                    failed++;
+                    var first = r.Diagnostics.FirstOrDefault(d => d.IsError);
+                    lines.Add($"HATA   {where,-16} {board,-24} {(first != null ? $"{first.File}:{first.Line}: {first.Message}" : "derlenemedi")}");
+                }
+
+                File.WriteAllLines(reportPath, lines);
+            }
+
+            int waiting = lines.Count(l => l.StartsWith("bekliyor", StringComparison.Ordinal));
+            lines.Add(failed == 0
+                ? $"sonuç: {seen.Count - waiting}/{seen.Count} çizim gerçek ESP32 için derlendi" + (waiting > 0 ? $", {waiting} çizim Bluepad32 çekirdeğini bekliyor" : string.Empty)
+                : $"sonuç: {failed}/{seen.Count} çizim derlenemedi");
+            File.WriteAllLines(reportPath, lines);
+            return failed == 0 ? 0 : 1;
+        }
+
+        /// <summary>[esp32hw] Builds a sketch for a real ESP32 (installing the toolchain first when asked); 0 on success.</summary>
+        private static int Esp32BuildCommand(string sketch, string? outFolder, bool install)
+        {
+            string logPath = Path.ChangeExtension(Path.GetFullPath(sketch), ".esp32build.txt");
+            var log = new StringBuilder();
+            void Line(string s)
+            {
+                lock (log) log.AppendLine(s);
+            }
+
+            try
+            {
+                if (!Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                {
+                    if (!install)
+                    {
+                        Line("ESP32 araç zinciri kurulu değil: --esp32-install ile kurun.");
+                        return 2;
+                    }
+
+                    if (!Firmware.ArduinoCompiler.InstallEsp32ToolchainAsync(Line).GetAwaiter().GetResult()) return 3;
+                }
+
+                string source = new RobotTwin.CoreSim.Formats.FirmwareSource { Source = File.ReadAllText(sketch) }.Bundle();
+                var result = Firmware.ArduinoCompiler.CompileEsp32HardwareAsync(source, "cli-" + Path.GetFileNameWithoutExtension(sketch), Line).GetAwaiter().GetResult();
+                foreach (var d in result.Diagnostics) Line($"{d.File}:{d.Line}:{d.Column}: {(d.IsError ? "hata" : "uyarı")}: {d.Message}");
+                if (!result.Success || result.OutputFolder == null) return 1;
+                if (outFolder != null)
+                {
+                    Directory.CreateDirectory(outFolder);
+                    foreach (var file in Directory.GetFiles(result.OutputFolder, "sketch.ino.*").Where(f => !f.EndsWith(".map", StringComparison.OrdinalIgnoreCase)))
+                        File.Copy(file, Path.Combine(outFolder, Path.GetFileNameWithoutExtension(sketch) + Path.GetFileName(file).Substring("sketch.ino".Length)), true);
+                }
+
+                Line($"tamam · flash {result.FlashBytes}/{result.FlashMax} B · RAM {result.RamBytes}/{result.RamMax} B · {result.Duration.TotalSeconds:F0} s");
+                return 0;
+            }
+            finally
+            {
+                File.WriteAllText(logPath, log.ToString());
+            }
+        }
+
         private static int SelfTest(string? outPath)
         {
             var log = new StringBuilder();

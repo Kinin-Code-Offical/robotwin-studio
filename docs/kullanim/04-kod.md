@@ -178,7 +178,23 @@ Desteklenenler:
 - `Serial`, `Wire` (I²C), `EEPROM`, `Servo` / `ESP32Servo`
 - `WiFi` (dünya içinde sanal ağ; İnternet yok), BLE (temel özellikler), **Bluepad32** (PS5, PS4, Xbox kumandaları)
 
-`SPI` yalnızca boş bir taklittir; SPI cihazları çalışmaz.
+- `SPI`: SPI cihazları (MCP3008 ADC, SPI'lı BMP280 …) devredeki SPI veri yoluna bağlanır.
+
+## Gerçek ESP32 kartı: iki çalışma modu
+
+ESP32 kartının denetçisinde **Çalışma modu** iki seçeneklidir:
+
+- **hızlı simülasyon** (varsayılan): yukarıda anlatılan yol. Çok sayıda ESP32'li sahneler ve hızlı deneme için.
+- **donanım uyumlu**: çizim, Espressif'in gerçek ESP32 araç zinciriyle (Arduino-ESP32 3.3.13, `xtensa-esp32-elf-gcc`) derlenir; çıktı gerçek karta yüklenebilir. Bu modda çalışan kartın gerçek komutlarını simülasyonda yürütecek Xtensa emülatörü henüz hazır değil; o gelene kadar kart simülasyonda hızlı modla çalışır ve olay günlüğü bunu açıkça yazar.
+
+Hangi modda olursanız olun, Kod sayfasında ESP32 seçiliyken **Gerçek kart** menüsü şunları yapar:
+
+1. **ESP32 araç zincirini kur**: yalnız ilk seferde. Yaklaşık 1,3 GB indirilir, kurulu hali 4 GB'dir. RobotWin'in kendi klasörüne kurulur, Arduino IDE'nize dokunmaz.
+2. **Gerçek kart için derle**: hatalar çizimin satırlarında gösterilir; durum satırı flaş ve RAM kullanımını yazar.
+3. **Gerçek karta yükle → COMx**: USB kablosuyla bağlı kart listelenir; seçince çizim derlenip `esptool` ile yazılır. Kart yükleme kipine kendiliğinden geçer; geçmezse yükleme sırasında kartın BOOT düğmesine basılı tutun.
+4. **Birleşik imajı (.bin) dışa aktar**: önyükleyici, bölüm tablosu ve uygulama tek dosyada; web tabanlı yükleyiciler ya da `esptool` ile 0x0 adresine yazılır.
+
+İki modun ayrıntılı planı ve emülatörün aşamaları: [ESP32'nin iki çalışma modu](../gelistirici/ESP32_MODLARI.md).
 
 ## Dünyadaki kartların kodu
 
