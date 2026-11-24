@@ -136,6 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Each step gathers the shape, distance field and solid box of the bodies near the liquid once; a particle is checked against a body only when it is within the kernel's reach of that box in the body's own frame. A channel's long wall was checked by every particle across it, because its bounding sphere took them all in.
   - No buffers are allocated per substep (the neighbour grid and the viscosity's velocity copy are kept).
 - **Concave bodies test only the pieces that can touch:** a glass or a tray is a set of convex pieces, and every piece of one body was tested against every piece of the other: two 25-piece bodies made 625 full tests a substep. Each piece now has a sphere about its own middle, and a pair is tested only when their spheres come within the contact margin; nothing farther apart can make a contact, so the contacts are the same. The glass world's bodies take 0.06 ms a step instead of 0.09 ms.
+- **Pieces that share an edge no longer each press at the same point:** two wall pieces of a bowl side by side touch the table at their common corner, each with a contact of its own, so a bowl standing on a table made 120 contacts for 72 points. The same point with the same normal is one constraint; the deeper contact is kept. The rigid bodies of the water glass, its water pressing on them, take 0.80–0.84 ms a step instead of 1.05–1.14 ms (worlds solve contacts 16 + 4 times a substep).
 
 ## [1.6.1] - 2026-11-24
 

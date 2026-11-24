@@ -1089,6 +1089,7 @@ namespace RobotTwin.CoreSim.Mechanics
             var A = Bodies[a];
             var B = Bodies[b];
             double margin = Margin(a, b, h);
+            int first = _contactCount;
             if (_pieceCentres.Length < nb) _pieceCentres = new Vec3[nb * 2];
             for (int j = 0; j < nb; j++)
             {
@@ -1111,9 +1112,47 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             _featureBase = 0;
+            MergeCoincident(first);
         }
 
         private Vec3[] _pieceCentres = Array.Empty<Vec3>();
+
+        /// <summary>
+        /// [perf] The pieces of a concave body share their edges: two wall pieces side by side touch a floor at the same
+        /// corner, each with a contact of its own. The same point with the same normal twice is one constraint solved
+        /// twice (a bowl's ring of 24 wall pieces made 120 contacts on a table for 72 points); the deeper one is kept.
+        /// Contacts from <paramref name="first"/> on are this body pair's. A wheel's tread links its contacts by
+        /// position, so a pair with one is left as it is.
+        /// </summary>
+        private void MergeCoincident(int first)
+        {
+            int end = _contactCount;
+            if (end - first < 2) return;
+            for (int i = first; i < end; i++)
+                if (_contacts[i].TreadCount != 0)
+                    return;
+            const double same2 = 1e-5 * 1e-5;   // 10 µm
+            int kept = first;
+            for (int i = first; i < end; i++)
+            {
+                bool merged = false;
+                for (int j = first; j < kept; j++)
+                {
+                    ref var k = ref _contacts[j];
+                    ref var c = ref _contacts[i];
+                    if (k.SA != c.SA || k.SB != c.SB || (k.RA - c.RA).LengthSquared > same2 || k.N.Dot(c.N) < 0.9999) continue;
+                    if (c.Sep < k.Sep) k = c;
+                    merged = true;
+                    break;
+                }
+
+                if (merged) continue;
+                if (kept != i) _contacts[kept] = _contacts[i];
+                kept++;
+            }
+
+            _contactCount = kept;
+        }
 
         private void CollideShapes(int a, int b, CollisionShape sa, CollisionShape sb, double h)
         {
