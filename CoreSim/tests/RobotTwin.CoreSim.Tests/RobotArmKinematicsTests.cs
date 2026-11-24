@@ -329,5 +329,30 @@ namespace RobotTwin.CoreSim.Tests
             Assert.True(p.Points.ContainsKey("A"));
             Assert.Equal(0.010, p.Points["A"].Joints![2], 9);
         }
+
+        [Fact]
+        public void AnExampleProgramInEnglishRunsTheSameAsInTurkish()
+        {
+            // [lang] The factory and SCARA cells open with English keywords and point names in an English interface;
+            // the parser reads both, so the same instructions come out.
+            foreach (var w in new[] { RobotTwin.CoreSim.Sandbox.FactoryCell.Build(), RobotTwin.CoreSim.Sandbox.FactoryCell.Scara() })
+            {
+                var robot = w.Objects.First(o => o.Parameters.ContainsKey("program"));
+                string program = robot.Parameters["program"], points = robot.Parameters["points"];
+                var (en, enPoints) = ArmProgram.ToEnglish(program, points, c => "EN:" + c);
+                // The arm the program is written for (its model comes with the part's preset).
+                var m = new[] { ArmCatalog.Industrial6, ArmCatalog.Scara, ArmCatalog.Desktop6 }.Select(ArmCatalog.Get).First(x => ArmProgram.Parse(program, points, x).Errors.Count == 0);
+                var tr = ArmProgram.Parse(program, points, m);
+                var english = ArmProgram.Parse(en, enPoints, m);
+                Assert.Empty(tr.Errors);
+                Assert.Empty(english.Errors);
+                Assert.Equal(tr.Instructions.Select(i => (i.Op, i.Speed, i.UsePallet, i.Offset)), english.Instructions.Select(i => (i.Op, i.Speed, i.UsePallet, i.Offset)));
+                Assert.Equal(tr.Points.Count, english.Points.Count);
+                foreach (var word in new[] { "KAVRA", "BIRAK", "BEKLE", "HIZ", "PALET", "BEKLEME", "ALMA" })
+                    Assert.DoesNotContain(word + " ", en + " ");
+                Assert.DoesNotContain("HIZ=", en);
+                if (program.Contains(';')) Assert.Contains("; EN:", en);
+            }
+        }
     }
 }

@@ -95,6 +95,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Running worlds in English still showed some Turkish:** every world template and circuit example was run in English and what stayed Turkish on screen or in the event log fixed:
+  - A label the pack has word for word, with its unit ("İç direnç (0 = varsayılan) (Ω)"), was cut by a short pattern into "Inner direnç…". A text joined from parts the pack has exactly is now read that way before any pattern.
+  - A pattern's last hole may now stay empty: the gas vessel's thrust line ("İtki : … · çıkış … m/s") has an optional ending there.
+  - Numbered copies of named things read in English ("Duvar 2" → "Wall 2").
+  - The oscilloscope's status and readings ("10k nokta", "Ort", "Doluluk", "Yükselme", "⚠ kırpıldı"), the vehicle summary ("her yöne gider. İz genişliği …") and the diagnostics count ("0 hata · 2 uyarı") are translated piece by piece before they are joined into one line.
+  - A text made empty and filled by code later without changing size (the probe label "Prob: …") was never seen; it is now watched.
+  - A robot joint's load read "%1" in English; it reads "1%". The PET material's name no longer has a comma, which split a sentence at the wrong place.
+- **The example robot cells opened with Turkish program keywords in the English interface** ("KAVRA", "TUTUSBEKLE", "HIZ=", points "ALMA", "BIRAKMA"). They now open with English keywords and point names (GRIP, WAITGRIP, SPEED=, PICK, PLACE) and their comments in English; the controller reads both languages, and `SPEED=` is accepted beside `HIZ=` and `V=`.
 - **Some texts were black on the dark themes:** Windows' own styles of checkboxes, radio buttons, labels, group boxes and expanders set their text to the system's black instead of taking the window's, so the assembly dialog's projects ("Engelden kaçan robot", "Çizgi izleyen robot", the modelled parts) read black on dark. They now take the theme's text colour, as does every window opened in code (the download window's too); their look stays Windows'.
 - **On the light themes, the World / Assembly badge and the oscilloscope's channel labels were hard to read** (a yellow CH1 at 1.1:1, the teal badge at 1.9:1). Coloured labels are now darkened on light themes, and lightened on dark ones, until they stand 4.5:1 against their surface; they follow a change of theme.
 - **The performance overlay's sections stayed Turkish in the English interface** ("simülasyon … en kötü"): its lines are now built from translated pieces and padded after translation, so their columns line up in any language.

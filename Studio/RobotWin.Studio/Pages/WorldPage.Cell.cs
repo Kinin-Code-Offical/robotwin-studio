@@ -596,7 +596,7 @@ namespace RobotWin.Studio.Pages
                 var s = model.Joints[i];
                 double load = c.JointLoad[i];
                 int bars = (int)Math.Round(Math.Min(1, load) * 10);
-                sb.AppendLine($"{s.Name,-3}{s.ToDisplay(q[i]),7:0.0}{s.Unit,-2} {new string('█', bars)}{new string('·', 10 - bars)} %{load * 100:0}");
+                sb.AppendLine($"{s.Name,-3}{s.ToDisplay(q[i]),7:0.0}{s.Unit,-2} {new string('█', bars)}{new string('·', 10 - bars)} {Shell.Lang.Percent(load * 100, "0")}");   // [lang] "1%" in English
             }
 
             var di = string.Concat(c.DigitalIn.Take(4).Select(b => b ? '1' : '0'));

@@ -42,8 +42,10 @@ namespace RobotWin.Studio.Pages
             _vehicle = v;
             Inspector.Children.Add(Caption("Sürüş kinematiği"));
             double dia = v.Wheels.Average(x => x.Radius) * 2000;
-            string geometry = $"İz genişliği {v.Track * 1000:0} mm" + (v.Wheelbase > 0.005 ? $" · aks aralığı {v.Wheelbase * 1000:0} mm" : string.Empty) + $" · tekerlek Ø{dia:0} mm";
-            Inspector.Children.Add(Note(char.ToUpper(v.Layout[0], CultureInfo.CurrentCulture) + v.Layout.Substring(1) + ". " + geometry + "."));
+            // [lang] Each piece in the language in use before they are joined (the whole, capitalised, is no text of the pack).
+            string geometry = Shell.Lang.T($"İz genişliği {v.Track * 1000:0} mm") + (v.Wheelbase > 0.005 ? Shell.Lang.T($" · aks aralığı {v.Wheelbase * 1000:0} mm") : string.Empty) + Shell.Lang.T($" · tekerlek Ø{dia:0} mm");
+            string layout = Shell.Lang.T(v.Layout);
+            Inspector.Children.Add(Note(char.ToUpper(layout[0], Shell.Lang.Culture) + layout.Substring(1) + ". " + geometry + "."));
             _vehicleLive = new TextBlock { FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("B.TextSecondary"), Margin = new Thickness(0, 0, 0, 6) };
             Inspector.Children.Add(_vehicleLive);
             var row = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) };

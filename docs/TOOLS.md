@@ -31,7 +31,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--snapshot out.png --page <page> --theme <theme> --contrast-report file` | Adds to the file every text on the page (and its open windows and popups) that cannot be read in that theme: below 3:1 WCAG contrast against the solid backgrounds behind it, translucent ones mixed in. One line per text: page, theme, ratio, colours, where, text. |
 | `python tools/scripts/contrast_check.py <RobotWinStudio.exe> [--quick]` | Runs `--contrast-report` over every page in all 16 themes, and over the guide's picture states (dialogs, popups, tuners) and every Help chapter in four of them; prints the unreadable texts grouped and exits 1 when there is any. |
 | `--lang en` | Runs in a language pack's language, for this run only (with `--snapshot`, draws a page in it). |
-| `--lang-missing <file>` | With `--snapshot`: adds the page's texts the pack leaves untranslated to the file, one JSON line each (`--page library` adds the whole part catalogue and the examples). |
+| `--lang-missing <file>` | With `--snapshot`: adds the page's texts the pack leaves untranslated to the file, one JSON line each (`--page library` adds the whole part catalogue and the examples). Every entry of the run's event logs, world and circuit, is checked too, shown or not. |
 | `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |
 | `--bake-geometry f.rwworld [--out g.json]` | Writes the app's body geometry (model hulls included) beside a world for the headless tool. |
 | `--export-logo <dir>` | Exports the logo as PNG sizes + ICO (also on Settings → *Hakkında*). |

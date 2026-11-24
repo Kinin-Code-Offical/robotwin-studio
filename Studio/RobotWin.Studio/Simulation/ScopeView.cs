@@ -230,19 +230,19 @@ namespace RobotWin.Studio.Simulation
             dc.DrawRoundedRectangle(SymbolRenderer.Brush(runColor), null, badge, 3, 3);
             dc.DrawText(runText, new Point(badge.Left + 6, badge.Top + (16 - runText.Height) / 2));
 
-            string status = (frame?.Status ?? Scope.Status) switch
+            string status = Shell.Lang.T((frame?.Status ?? Scope.Status) switch
             {
                 TriggerStatus.Triggered => "Trig'd",
                 TriggerStatus.Auto => "Auto (tetiksiz)",
                 TriggerStatus.Roll => "Roll",
                 TriggerStatus.Waiting => "Tetik bekleniyor",
                 _ => "Durduruldu"
-            };
+            });   // [lang] before it joins the status line
             double fs = Scope.SampleRate;
             var hText = Label($"H {SiValue.Format(Scope.SecondsPerDiv, "s")}/div   ◀▶ {SiValue.Format(Scope.Delay, "s")}", Text, 10.5);
             dc.DrawText(hText, new Point(_plot.Right - hText.Width, 4 + (16 - hText.Height) / 2));
             double room = _plot.Right - hText.Width - 12 - (badge.Right + 10);
-            string points = $"{(frame?.Length ?? Scope.RecordLength) / 1000.0:0.#}k nokta".Replace(',', '.');
+            string points = Shell.Lang.T($"{(frame?.Length ?? Scope.RecordLength) / 1000.0:0.#}k nokta".Replace(',', '.'));   // [lang] before it joins the line
             foreach (string candidate in new[]
             {
                 $"{status}   {SiValue.Format(fs, "Sa/s", 3)}   {points}   BW {SiValue.Format(Scope.Bandwidth, "Hz")}",
@@ -529,8 +529,9 @@ namespace RobotWin.Studio.Simulation
             }
 
             var color = MeasureChannel == 4 ? MathColor : ColorOf(trace.Channel?.Index ?? 0);
-            string head = (trace.Channel != null ? trace.Channel.Name : trace.Name) + (trace.Clipped ? " ⚠ kırpıldı" : string.Empty);
-            var ft = Label(head + "   " + string.Join("   ", items), color, 10.5);
+            // [lang] Each reading in the language in use before they are joined into one line (the line is no text of the pack).
+            string head = (trace.Channel != null ? trace.Channel.Name : trace.Name) + (trace.Clipped ? Shell.Lang.T(" ⚠ kırpıldı") : string.Empty);
+            var ft = Label(head + "   " + string.Join("   ", items.Select(Shell.Lang.T)), color, 10.5);
             double y = plot.Bottom + 27;
             if (ft.Width > plot.Width)
             {

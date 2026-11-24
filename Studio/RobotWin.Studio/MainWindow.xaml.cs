@@ -118,6 +118,9 @@ namespace RobotWin.Studio
 
         public void StopWorldForBench() => _world.StopSimulation();
 
+        /// <summary>[lang] Every event-log entry of the run (world and circuit), shown or not: --lang-missing checks them all.</summary>
+        public System.Collections.Generic.IEnumerable<Simulation.SimLogEntry> RunLogs() => _world.SessionLog.Concat(W.Simulation.Log).ToList();
+
         /// <summary>--snapshot … --perf: the performance indicator on for this run only (nothing saved), and a world run with --simulate goes on live.</summary>
         public void ShowPerfForSnapshot()
         {

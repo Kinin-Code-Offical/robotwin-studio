@@ -3995,7 +3995,6 @@
   "PCB'siz: her parça ayrı": "Without PCB: each part separate",
   "PCB'siz: her parça ayrı, pin pin kablolu": "Without PCB: each part separate, wired pin by pin",
   "PDF (*.pdf)|*.pdf|Tüm dosyalar (*.*)|*.*": "PDF (*.pdf)|*.pdf|All files (*.*)|*.*",
-  "PET (şişe, çift yönlü gerilmiş)": "PET (bottle, biaxially oriented)",
   "PET şişe": "PET bottle",
   "PET şişe 2 L (su roketi)": "PET bottle 2 L (water rocket)",
   "PID ayarlayıcı — ": "PID tuner — ",
@@ -6875,7 +6874,15 @@
   "Mil": "Shaft",
   "kare": "frame",
   "en kötü": "worst",
-  "arazi": "terrain"
+  "arazi": "terrain",
+  "PET şişe (çift yönlü gerilmiş)": "PET bottle (biaxially oriented)",
+  "Kamera & LiDAR": "Camera & LiDAR",
+  "Konum & Hareket": "Position & Motion",
+  "Paralel Tutucu": "Parallel Gripper",
+  "Fabrika hücresi: konveyörden vakumla al, palete 3 x 2 x 2 diz": "Factory cell: pick from the conveyor with vacuum, stack on the pallet 3 x 2 x 2",
+  "konveyör sonu fotoseli": "photocell at the end of the conveyor",
+  "SCARA: blokları A sırasından B sırasına, sonra geri taşı": "SCARA: move the blocks from row A to row B, then back",
+  "60 mm strok, 80 N": "60 mm stroke, 80 N"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

@@ -322,6 +322,11 @@ namespace RobotWin.Studio
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--lang-missing").Skip(1).FirstOrDefault() is { } missingPath)
                 {
                     var missing = Shell.Lang.Untranslated(window);
+                    // The event log as a whole (a list shows only the rows in view): each entry's source and message.
+                    foreach (var entry in window.RunLogs())
+                        foreach (var s in new[] { entry.Device, entry.Message })
+                            if (!string.IsNullOrWhiteSpace(s) && s.Any(char.IsLetter) && Shell.Lang.T(s) == s)
+                                missing.Add(s);
                     if (page == "library")
                     {
                         // The catalogue and the examples as a whole (a list shows only the rows in view).

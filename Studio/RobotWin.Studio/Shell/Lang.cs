@@ -55,7 +55,13 @@ namespace RobotWin.Studio.Shell
             {
                 case TextBlock tb:
                     // A block of formatted runs (<TextBlock><Run …/><Bold …/></TextBlock>) has no text of its own.
-                    if (DependencyPropertyHelper.GetValueSource(tb, TextBlock.TextProperty).BaseValueSource == BaseValueSource.Default) Runs(tb);
+                    if (DependencyPropertyHelper.GetValueSource(tb, TextBlock.TextProperty).BaseValueSource == BaseValueSource.Default)
+                    {
+                        Runs(tb);
+                        // Made empty, filled by code later ("Prob: …" set on each refresh): if its size never changes,
+                        // only a watcher sees the text come.
+                        if (tb.Inlines.Count == 0) Follow(tb, TextBlock.TextProperty);
+                    }
                     else
                     {
                         Set(tb, TextBlock.TextProperty);

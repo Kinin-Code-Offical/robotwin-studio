@@ -1471,6 +1471,9 @@ namespace RobotWin.Studio.Pages
             Run();
         }
 
+        /// <summary>The running world's event log (--lang-missing checks every entry, shown or not).</summary>
+        public System.Collections.Generic.IEnumerable<Simulation.SimLogEntry> SessionLog => _session.Log;
+
         /// <summary>A snapshot's world, run with --simulate and paused, goes on live (--perf: the solvers' costs show).</summary>
         public void ResumeForSnapshot()
         {

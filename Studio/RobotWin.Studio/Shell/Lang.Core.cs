@@ -319,7 +319,9 @@ namespace RobotWin.Studio.Shell
                     continue;
                 }
 
-                sb.Append('(').Append(after ? @"(?!\p{L})" : string.Empty).Append(".+?").Append(before ? @"(?<!\p{L})" : string.Empty).Append(')');
+                // The last hole, at the very end, may be empty: the code puts an optional ending there ("{(choked ? " (…)" : "")}").
+                bool optional = i == parts.Length - 2 && parts[parts.Length - 1].Length == 0;
+                sb.Append('(').Append(after ? @"(?!\p{L})" : string.Empty).Append(optional ? ".*?" : ".+?").Append(before ? @"(?<!\p{L})" : string.Empty).Append(')');
             }
 
             return sb.Append('$').ToString();
@@ -363,6 +365,12 @@ namespace RobotWin.Studio.Shell
                 }
 
                 if (any) result = string.Join("\n", lines);
+            }
+            // Joined from texts the pack has word for word ("İç direnç (0 = varsayılan) (Ω)", "Duvar · beton"): that
+            // reading is certain, so it goes before the patterns, one of which ("İç {…}") would cut it elsewhere.
+            else if (ExactParts(text) is { } parts)
+            {
+                result = parts;
             }
             else
             {
@@ -457,6 +465,74 @@ namespace RobotWin.Studio.Shell
 
             return text;
         }
+
+        /// <summary>
+        /// A text joined from parts the pack has exactly (a name and its aside in brackets, parts between the joints),
+        /// translated part by part; null when a part with letters has no exact translation.
+        /// </summary>
+        private static string? ExactParts(string text)
+        {
+            bool Known(string part, out string t)
+            {
+                t = part;
+                if (!part.Any(char.IsLetter)) return true;   // a number, a sign
+                if (Exact.TryGetValue(part, out var e))
+                {
+                    t = e;
+                    return true;
+                }
+
+                string core = part.Trim();
+                if (core.Length > 0 && core.Length < part.Length && Exact.TryGetValue(core, out e))
+                {
+                    t = part.Replace(core, e);
+                    return true;
+                }
+
+                // A part joined from known parts itself ("Durum: Hazır" inside "… · Durum: Hazır").
+                if (part.Length < text.Length && ExactParts(part) is { } inner)
+                {
+                    t = inner;
+                    return true;
+                }
+
+                return false;
+            }
+
+            var m = Aside.Match(text);
+            if (m.Success && Exact.ContainsKey(m.Groups[1].Value))
+            {
+                // The aside in brackets: known, or a unit the same in any language ("Ω", "mm", "V/µs").
+                string aside = m.Groups[3].Value;
+                if (Known(aside, out var inner) || IsUnit(aside)) return Exact[m.Groups[1].Value] + m.Groups[2].Value + "(" + (inner ?? aside) + ")";
+            }
+            // A numbered copy of a named thing ("Duvar 2", the second wall a world made): the name and its number.
+            var n = Numbered.Match(text);
+            if (n.Success && Exact.TryGetValue(n.Groups[1].Value, out var named)) return named + n.Groups[2].Value;
+            foreach (var sep in Joints)
+            {
+                if (text.IndexOf(sep, StringComparison.Ordinal) <= 0) continue;
+                var parts = text.Split(new[] { sep }, StringSplitOptions.None);
+                bool any = false;
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    if (!Known(parts[i], out var t)) return null;
+                    if (t != parts[i]) any = true;
+                    parts[i] = t;
+                }
+
+                return any ? string.Join(sep, parts) : null;
+            }
+
+            return null;
+        }
+
+        private static readonly char[] TurkishLetters = "çğıöşüÇĞİÖŞÜ".ToCharArray();
+
+        /// <summary>A unit or a symbol: at most three letters, none of them Turkish, no word the pack translates.</summary>
+        private static bool IsUnit(string s) => s.Count(char.IsLetter) <= 3 && s.IndexOfAny(TurkishLetters) < 0 && !Exact.ContainsKey(s.Trim());
+
+        private static readonly Regex Numbered = new Regex(@"^(.*\p{L}.*?)( \d{1,4})$", RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
         private static readonly Regex Aside = new Regex(@"^(.*\S)(\s+)\(([^()]+)\)$", RegexOptions.Singleline | RegexOptions.CultureInvariant);
 

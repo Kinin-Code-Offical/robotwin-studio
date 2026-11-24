@@ -29,6 +29,14 @@ namespace RobotWin.Studio.Examples
             {
                 o.Name = Shell.Lang.T(o.Name);
                 if (o.Firmware is { } fw) fw.Source = Shell.Lang.Code(fw.Source);
+                // A robot's program: English keywords and point names, comments in the language in use.
+                if (o.Parameters.TryGetValue("program", out var program))
+                {
+                    o.Parameters.TryGetValue("points", out var points);
+                    var (english, englishPoints) = RobotTwin.CoreSim.Robotics.ArmProgram.ToEnglish(program, points ?? string.Empty, Shell.Lang.T);
+                    o.Parameters["program"] = english;
+                    if (points != null) o.Parameters["points"] = englishPoints;
+                }
             }
 
             foreach (var d in w.Designs) d.Name = Shell.Lang.T(d.Name);

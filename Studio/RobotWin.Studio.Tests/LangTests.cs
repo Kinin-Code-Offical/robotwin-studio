@@ -135,6 +135,59 @@ public class LangTests
         }
     }
 
+    [Fact]
+    public void PartsThePackHasWordForWordWinOverAShortPatternAndOptionalEndingsAndNumbersAreKept()
+    {
+        Lang.LoadJson("en", """
+        {
+          "strings": { "İç direnç (0 = varsayılan)": "Internal resistance (0 = default)", "Duvar": "Wall", "Durum": "State", "Hazır": "Ready" },
+          "patterns": {
+            "İç {a}": "Inner {0}",
+            "İtki    : {t} N · çıkış {v} m/s{choked}": "Thrust  : {0} N · exit {1} m/s{2}"
+          }
+        }
+        """);
+        try
+        {
+            // A label and its unit: the label is in the pack as it is, so "İç {…}" does not cut it ("Inner direnç …").
+            Assert.Equal("Internal resistance (0 = default) (Ω)", Lang.T("İç direnç (0 = varsayılan) (Ω)"));
+            Assert.Equal("State: Ready", Lang.T("Durum: Hazır"));
+            // The pattern still does what it is for.
+            Assert.Equal("Inner ring", Lang.T("İç ring"));
+            // A hole at the very end may stay empty (an optional ending the code leaves out).
+            Assert.Equal("Thrust  : 0.2 N · exit 21 m/s", Lang.T("İtki    : 0.2 N · çıkış 21 m/s"));
+            // A numbered copy of a named thing.
+            Assert.Equal("Wall 2", Lang.T("Duvar 2"));
+            Assert.Equal("Wall 12", Lang.T("Duvar 12"));
+        }
+        finally
+        {
+            Lang.Load("tr");
+        }
+    }
+
+    /// <summary>Texts English runs of every world and circuit showed Turkish, with the built-in pack.</summary>
+    [Theory]
+    [InlineData("Prob: OUTPUT", "Probe: OUTPUT")]
+    [InlineData("0 hata · 2 uyarı · 0 bilgi · t = 0 s", "0 errors · 2 warnings · 0 info · t = 0 s")]
+    [InlineData("İç direnç (0 = varsayılan) (Ω)", "Internal resistance (0 = default) (Ω)")]
+    [InlineData("Duvar 2", "Wall 2")]
+    [InlineData("İtki    : 0.2 N · 8.4 g/s · çıkış 21 m/s", "Thrust  : 0.2 N · 8.4 g/s · exit 21 m/s")]
+    [InlineData("12k nokta", "12k points")]
+    [InlineData("Doluluk 40.0 %", "Duty 40.0 %")]
+    public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
+    {
+        Lang.Load("en");
+        try
+        {
+            Assert.Equal(english, Lang.T(turkish));
+        }
+        finally
+        {
+            Lang.Load("tr");
+        }
+    }
+
     /// <summary>
     /// Every Turkish label written in the Studio's XAML has its English in the built-in pack, so a label added
     /// without one fails here instead of showing Turkish in the English interface.

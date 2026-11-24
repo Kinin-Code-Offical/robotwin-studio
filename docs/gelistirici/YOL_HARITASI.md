@@ -31,7 +31,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
     - [x] Paket, kaynaktaki bütün metinlerden (C# sözcük ayrıştırıcısı) ve çalışan uygulamanın gösterdiklerinden (`--lang-missing`) çıkarılıyor.
     - [x] İngilizce kılavuz arayüzü İngilizce etiketleriyle anlatıyor ve İngilizce görüntüleri gösteriyor (`docs/images/en/`); her görüntünün nasıl çekildiği `docs/images/shots.json`'da, `tools/scripts/doc_images.py` iki dilde de üretiyor.
     - [ ] Yerleşik Uno örneklerinin (engelden kaçan, çizgi izleyen, servo tarama…) seri mesajları önceden derlenmiş `.hex` içinde ve Türkçe; İngilizce mesajlarla yeniden derlenmeli (testlerdeki beklenen çıktılar da güncellenmeli).
-  - [ ] İngilizce paketin kapsamı: canlı ölçüm satırları, olay günlüğü ve CoreSim mesajları henüz Türkçe; kalıplar genişletilmeli.
+  - [x] İngilizce paketin kapsamı: her dünya şablonu ve devre örneği İngilizce çalıştırılıp ekranda ve olay günlüğünün tamamında Türkçe kalanlar düzeltildi (`--lang-missing` artık günlüğün görünmeyen satırlarını da denetliyor). Kaynaklarda kapsanmayan metinler yalnız kasıtlı olanlar: dosya biçimleri, kimlikler, malzeme takma adları, arama sözcükleri. Hazır robot hücreleri İngilizce anahtar sözcüklerle açılıyor.
 - [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller).
   - [x] Kullanıcının kendi kurduğu kollar (Robotics/WorldArm.cs): zincir, servo yükü, erişim, fizikle karşılaştırma.
   - [x] Arayüz: hedef nokta (yazarak ya da sahnede), önizleme, servoları sürme, açıları koda kopyalama, erişim ve tekillik uyarısı.

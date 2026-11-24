@@ -100,6 +100,59 @@ namespace RobotTwin.CoreSim.Robotics
             return sb.ToString();
         }
 
+        // [lang] The Turkish keywords and their English equivalents: both are read, and an example opens in the
+        // language in use.
+        private static readonly Dictionary<string, string> EnglishOps = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["EKSEN"] = "MOVEJ", ["DOGRUSAL"] = "MOVEL", ["KAVRA"] = "GRIP", ["TUT"] = "GRIP", ["VAKUMAC"] = "GRIP",
+            ["BIRAK"] = "RELEASE", ["AC"] = "RELEASE", ["VAKUMKAPAT"] = "RELEASE", ["BEKLE"] = "WAIT", ["GIRISBEKLE"] = "WAITDI",
+            ["CIKIS"] = "SETDO", ["TUTUSBEKLE"] = "WAITGRIP", ["PALET"] = "PALLET", ["PALETSONRAKI"] = "PALLETNEXT", ["HIZ"] = "SPEED",
+            ["SON"] = "END"
+        };
+
+        /// <summary>The examples' Turkish point names and their English ones.</summary>
+        private static readonly Dictionary<string, string> EnglishPoints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["BEKLEME"] = "HOME", ["ALMA"] = "PICK", ["BIRAKMA"] = "PLACE"
+        };
+
+        private static readonly System.Text.RegularExpressions.Regex Token = new System.Text.RegularExpressions.Regex(@"[^\s;#]+");
+
+        /// <summary>
+        /// [lang] A program and its points with English keywords ("KAVRA" → "GRIP", "HIZ=" → "SPEED="), the examples'
+        /// point names in English, and each comment through <paramref name="comment"/>. It runs exactly as before: the
+        /// parser reads both languages.
+        /// </summary>
+        public static (string Program, string Points) ToEnglish(string program, string points, Func<string, string> comment)
+        {
+            string Line(string raw, bool isPoint)
+            {
+                int cut = raw.IndexOfAny(new[] { ';', '#' });
+                string code = cut >= 0 ? raw.Substring(0, cut) : raw, note = cut >= 0 ? raw.Substring(cut) : string.Empty;
+                bool first = true;
+                code = Token.Replace(code, m =>
+                {
+                    string t = m.Value, n = Normalize(t);
+                    bool wasFirst = first;
+                    first = false;
+                    if (wasFirst && !isPoint && EnglishOps.TryGetValue(n, out var op)) return op;
+                    int eq = t.IndexOf('=');
+                    if (eq > 0 && Normalize(t.Substring(0, eq)) == "HIZ") return "SPEED" + t.Substring(eq);
+                    return EnglishPoints.TryGetValue(n, out var name) ? name : t;
+                });
+                if (note.Length > 1)
+                {
+                    string text = note.Substring(1).Trim();
+                    if (text.Length > 0) note = note.Substring(0, note.IndexOf(text, StringComparison.Ordinal)) + comment(text);
+                }
+
+                return code + note;
+            }
+
+            string Each(string text, bool isPoint) => string.Join("\n", text.Replace("\r", string.Empty).Split('\n').Select(l => Line(l, isPoint)));
+            return (Each(program, false), Each(points, true));
+        }
+
         public static ArmProgram Parse(string? program, string? points, ArmModel model)
         {
             var p = new ArmProgram();
@@ -159,7 +212,7 @@ namespace RobotTwin.CoreSim.Robotics
                     {
                         ins.UsePallet = true;
                     }
-                    else if (t.StartsWith("HIZ=", StringComparison.Ordinal) || t.StartsWith("V=", StringComparison.Ordinal))
+                    else if (t.StartsWith("HIZ=", StringComparison.Ordinal) || t.StartsWith("SPEED=", StringComparison.Ordinal) || t.StartsWith("V=", StringComparison.Ordinal))
                     {
                         ins.Speed = Number(t.Substring(t.IndexOf('=') + 1).TrimEnd('%'));
                     }
