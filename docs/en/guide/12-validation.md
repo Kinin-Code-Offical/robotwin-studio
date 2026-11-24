@@ -24,6 +24,14 @@ To run the tests yourself: `dotnet test RobotWinStudio.sln`. Each test prints wh
 | Bending moment in a weld | 0.1962 N·m | 0.196 N·m | −0.1 % | ±5 % |
 | Freely spinning welded group, angular momentum | conserved | −1.10 % | −1.10 % | ±1.5 % |
 | Momentum between a wire and a block (action–reaction) | 0 | 3.1·10⁻⁵ kg·m/s | ≈3.6 % of the exchange | 5·10⁻⁵ |
+| Head-on collision, total momentum (steel, 1 kg and 3 kg) | conserved | off by 2·10⁻¹⁶ kg·m/s | ≈0 | 4·10⁻⁹ |
+| Separation / approach speed (Newton's law of restitution, e = 0.65) | 0.6500 | 0.6500 | ≈0 % | ±0.02 |
+| Energy lost in the collision, (1 − e²)·½μv² | 1.9491 J | 1.9491 J | ≈0 % | ±2 % |
+| Off-centre hit: momentum and angular momentum | conserved | 3·10⁻¹⁶ (‖L‖ 0.225) | ≈0 | 1 % |
+| Free box about its middle axis (Dzhanibekov): it flips, ‖L‖ over 6 s | conserved | −0.14 %, direction 0.02° | −0.14 % | ±2 %, 1° |
+| The same box's rotational energy, 6 s | conserved | −0.29 % | −0.29 % | ±3 % |
+| Mechanical energy of a body thrown in vacuum, 2 s | conserved | at most 0.087 % | 0.087 % | ±0.2 % |
+| Energy gained in bounces (passivity) | 0 | 5·10⁻¹¹ J | ≈0 | 1 % of the start |
 | Terminal velocity of a sphere falling in air | 8.5568 m/s | 8.5567 m/s | −0.001 % | ±0.5 % |
 | Wind force on a box | 0.31607 N | 0.31557 N | −0.16 % | ±2 % |
 

@@ -58,7 +58,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [ ] Tasarım alternatifleri.
 - [~] **Fizik doğrulama:**
   - [x] Referans testleri var.
-  - [ ] Enerji ve momentum korunumu.
+  - [x] Enerji ve momentum korunumu: `ConservationTests` (çarpışmalarda doğrusal ve açısal momentum makine hassasiyetinde, Newton'un çarpışma yasası, Dzhanibekov devrilmesi, boşlukta mekanik enerji, sekmelerde enerji artışı yok).
   - [ ] Zaman adımı yakınsaması.
   - [ ] Temas ve eklem kararlılığı.
   - [ ] Elektrik–mekanik–termal enerji bilançosu.

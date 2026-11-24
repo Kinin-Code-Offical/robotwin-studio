@@ -24,6 +24,14 @@ Testleri kendiniz çalıştırmak için: `dotnet test RobotWinStudio.sln`. Her t
 | Kaynakta eğilme momenti | 0,1962 N·m | 0,196 N·m | −0,1 % | ±5 % |
 | Serbest dönen kaynaklı grup, açısal momentum | korunur | −1,10 % | −1,10 % | ±1,5 % |
 | Tel ile blok arasında momentum (etki-tepki) | 0 | 3,1·10⁻⁵ kg·m/s | iç alışverişin ≈%3,6'sı | 5·10⁻⁵ |
+| Kafa kafaya çarpışma, toplam momentum (çelik, 1 kg ile 3 kg) | korunur | 2·10⁻¹⁶ kg·m/s fark | ≈0 | 4·10⁻⁹ |
+| Ayrılma / yaklaşma hızı (Newton'un çarpışma yasası, e = 0,65) | 0,6500 | 0,6500 | ≈0 % | ±0,02 |
+| Çarpışmada kaybolan enerji, (1 − e²)·½μv² | 1,9491 J | 1,9491 J | ≈0 % | ±2 % |
+| Merkez dışı vuruş: momentum ve açısal momentum | korunur | 3·10⁻¹⁶ (‖L‖ 0,225) | ≈0 | %1 |
+| Serbest kutu ara ekseninde (Dzhanibekov): devrilir, ‖L‖ 6 s'de | korunur | −0,14 %, yönü 0,02° | −0,14 % | ±2 %, 1° |
+| Aynı kutunun dönme enerjisi, 6 s | korunur | −0,29 % | −0,29 % | ±3 % |
+| Boşlukta atılan cismin mekanik enerjisi, 2 s | korunur | en çok %0,087 | 0,087 % | ±0,2 % |
+| Sekmelerde enerji artışı (pasiflik) | 0 | 5·10⁻¹¹ J | ≈0 | başlangıcın %1'i |
 | Havada düşen kürenin son hızı | 8,5568 m/s | 8,5567 m/s | −0,001 % | ±0,5 % |
 | Rüzgârın kutuya kuvveti | 0,31607 N | 0,31557 N | −0,16 % | ±2 % |
 
