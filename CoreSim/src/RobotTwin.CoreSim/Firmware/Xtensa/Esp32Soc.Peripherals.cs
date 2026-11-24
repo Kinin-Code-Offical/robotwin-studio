@@ -40,6 +40,23 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private bool ReadPeripheral(uint register, out uint value)
         {
             if (ReadFlashRegister(register, out value)) return true;
+            if (register == 0x3FF5F068 || register == 0x3FF60068)
+            {
+                // Timer group's RTC slow-clock calibration: always ready (bit 15)
+                _registers.TryGetValue(register, out value);
+                value |= 1u << 15;
+                return true;
+            }
+
+            if (register == 0x3FF5F06C || register == 0x3FF6006C)
+            {
+                // ... and its result: XTAL (40 MHz) cycles during the requested slow-clock (150 kHz) cycles, from bit 7
+                _registers.TryGetValue(register - 4, out uint config);
+                uint slowCycles = (config >> 16) & 0x7FFF;
+                value = (uint)(slowCycles * 40e6 / 150e3) << 7;
+                return true;
+            }
+
             switch (register)
             {
                 case Uart0Fifo:

@@ -184,7 +184,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                          "esp_rom_spiflash_prepare_encrypted_data", "esp_rom_spiflash_write_disable",
                      })
                 Rom(name, c => Return(c, 0));
-            foreach (var name in new[] { "esp_rom_uart_putc", "uart_tx_one_char", "ets_write_char_uart" })
+            foreach (var name in new[] { "esp_rom_uart_putc", "uart_tx_one_char", "ets_write_char_uart", "esp_rom_output_tx_one_char", "esp_rom_output_putc", "esp_rom_uart_tx_one_char" })
                 Rom(name, c =>
                 {
                     Uart0.Append((char)(c.Argument(0) & 0xFF));
@@ -243,6 +243,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             for (uint i = 0; i < count; i++) Write8(destination + i, buffer[i]);
             return Return(c, destination);
         }
+
+        /// <summary>A zero-terminated string in the chip's memory (reports, panics).</summary>
+        public string ReadString(uint address, int max = 512) => CString(address, max);
 
         private string CString(uint address, int max = 4096)
         {

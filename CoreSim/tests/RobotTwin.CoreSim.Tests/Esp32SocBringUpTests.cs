@@ -38,6 +38,7 @@ namespace RobotTwin.CoreSim.Tests
             report.AppendLine($"durdu: {soc.Stopped ?? (soc.Pro.AtBreak ? "BREAK" : "hayır")}");
             report.AppendLine($"PRO pc 0x{soc.Pro.Pc:X8} · döngü {soc.Pro.Cycles} · bekliyor {soc.Pro.Waiting} · son istisna {soc.Pro.LastException} · tanınmayan komut {soc.Pro.IllegalInstructions} (son 0x{soc.Pro.LastIllegalPc:X8})");
             report.AppendLine($"APP çalışıyor {soc.AppRunning} · pc 0x{soc.App.Pc:X8}");
+            report.AppendLine($"PRO a2 dizgesi: {soc.ReadString(soc.Pro.A(2), 300)}");
             report.AppendLine("---- UART0 ----");
             report.AppendLine(soc.Uart0.ToString());
             report.AppendLine("---- son sıçramalar (eskiden yeniye) ----");

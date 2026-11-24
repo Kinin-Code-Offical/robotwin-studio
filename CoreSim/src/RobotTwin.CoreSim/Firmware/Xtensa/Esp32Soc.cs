@@ -90,6 +90,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Pro.Ps = 0x00040020 | (1u << 16);
             Pro.SetA(1, BootStack);
             Write32(BootStack - 12, BootStack);
+            // What the bootloader leaves in the RTC store registers: the 40 MHz crystal and the 80 MHz APB clock (each
+            // value doubled in both halves, as rtc_clk checks), and the slow clock's calibration (150 kHz RC, Q13.19 µs).
+            _registers[0x3FF480B0] = 0x00280028;
+            _registers[0x3FF480B4] = 0x4C4B4C4B;
+            _registers[0x3FF48050] = 0x00355555;
         }
 
         /// <summary>The stack the bootloader runs on, which the application keeps until FreeRTOS starts.</summary>
