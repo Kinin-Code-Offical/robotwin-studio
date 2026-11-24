@@ -12,13 +12,13 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] Şablon açarken takılmalar: kablolar arka planda oturuyor; en uzun kare 1926 ms'den 190 ms'ye indi.
   - [ ] Ağır simülasyonlar: sıvı (36 FPS), sensörlü gezgin (~40), PS5 uçak (~48).
   - [ ] ReadyToRun ön derlemesi (crossgen2 paketi için izin gerekiyor).
-- [~] **Ayarlar:** ayrıntılı kategoriler. Eksikler:
-  - yedekleme (sıklık, sayı, klasör, boyut sınırı, kaydedince yedek, çökme sonrası kurtarma);
-  - otomatik kayıt ve kayıt sistemleri;
-  - klavye kısayollarını düzenleme (çakışma denetimi, sıfırlama);
-  - temalar;
-  - dil paketleri;
-  - gelişmiş ayarlar.
+- [~] **Ayarlar:** kategoriler ve arama.
+  - [x] Yedekleme: sıklık, belge başına kopya, klasör, boyut sınırı, kaydedince önceki sürüm, çökme sonrası kurtarma.
+  - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama. Sayfaya özel kısayollar henüz sabit.
+  - [x] Temalar: koyu, siyah, yüksek karşıtlık; vurgu rengi.
+  - [ ] Açık tema: kodda sabit yazılmış renklerin taranması gerekiyor.
+  - [x] Gelişmiş: ayarları dışa ve içe aktarma, tanılama.
+  - [ ] Dil paketleri: önce altyapı, sonra İngilizce paket.
 - [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller). Eksikler:
   - kullanıcının kendi kurduğu kollar;
   - arayüz (eklem sürme, hedef poz, çalışma alanı, tekillik uyarısı);

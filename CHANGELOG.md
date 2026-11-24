@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A splash window opens first** (as Unity's editor does): the mark, the version and the step being loaded with a progress bar, on a thread of its own so it keeps drawing while the studio is built; it fades out when the studio has drawn its window.
 - **Where time goes, measured:** `--startup-report file` writes each start step's time from the process start; `--bench` prints, under each template, where opening it went (environment, each object's model, the cable layout split into scene, exits, routes, laying and relaxing).
 
+- **Settings in categories, with search:** Genel, Görünüm ve tema, Kaydetme ve yedekleme, Klavye kısayolları, Simülasyon ve fizik, Dünya ve düzenleme, Derleyiciler, Güncellemeler, Eklentiler, Gelişmiş, Hakkında; the search box looks through every setting's name and notes.
+- **Backups:** each document keeps its newest copies (3–50) and the folder stays under a size (100 MB–2 GB), the oldest going first (it was the newest 30 of all files); saving over a file keeps its previous version as "name-önceki-stamp"; after a crash the home page points at the copies made during that run (a session note that a running window owns); "Şimdi yedekle", a backup folder of its own, usage and clean-up in the settings.
+- **Keyboard shortcuts can be changed:** the window's shortcuts are commands with ids and defaults (Shell/Shortcuts); in the settings a click takes new keys (Esc cancels, Backspace removes), clashes are marked, each or all can be reset; a single letter is refused (it would fire while typing).
+- **Themes and accent colours:** dark (default), black for OLED screens, high contrast; blue, turquoise, orange, purple or pink accent; applied at once (the XAML takes the brush tokens as dynamic resources).
+- **Settings can be exported and imported** (the window placement stays this machine's).
+
 ### Changed
 
 - **Faster start:** the parts library and settings pages are built the first time they are shown, and the start no longer waits for the splash to draw: the studio draws its first frame about 0.2 s sooner (0.98 → 0.77 s from the process start on the test machine).

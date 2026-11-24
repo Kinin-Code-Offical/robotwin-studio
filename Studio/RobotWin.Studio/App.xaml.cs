@@ -27,6 +27,12 @@ namespace RobotWin.Studio
         /// <summary>Where the snapshot goes (checks write their log beside it).</summary>
         internal static string? SnapshotPath { get; private set; }
 
+        protected override void OnExit(ExitEventArgs e)
+        {
+            Shell.Backups.EndSession();   // [backup] a normal exit
+            base.OnExit(e);
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -85,7 +91,9 @@ namespace RobotWin.Studio
 
             if (Automation.StudioApiHost.TryRun(this, args)) return;   // [api] --api <port> / --bake-geometry: windowless automation server
 
+            Shell.Themes.Apply();   // [theme] before any window takes the brushes
             Shell.StartupSplash.Open();   // [startup] the first window, on its own thread
+            Shell.Backups.BeginSession();   // [backup] a run left open by a crash shows on the start page
             Shell.StartupTrace.Mark("Parça kütüphanesi yükleniyor", 0.05);
             Shell.UserLibrary.LoadAll(RobotTwin.CoreSim.Design.PartLibrary.Default);
             Shell.StartupTrace.Mark("Arayüz hazırlanıyor", 0.25);

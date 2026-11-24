@@ -101,17 +101,28 @@ The **Kütüphane** (library, Ctrl+7) page shows every part with its schematic s
 
 ## Settings
 
-The main sections of the **Ayarlar** (settings, Ctrl+,) page:
+The **Ayarlar** (settings, Ctrl+,) page is split into categories. Pick one in the list on the left, or type a word into the **Ayarlarda ara** (search) box at the top; the search looks through every category.
 
-| Section | Example settings |
+| Category | What it holds |
 | --- | --- |
-| Görünüm (appearance) | Interface scale, particle effects, simulation sounds and volume, current-flow animation, 3D quality, home page at startup |
-| Simülasyon ve fizik (simulation and physics) | Part damage, pause on failure, ambient temperature, largest time step, starting speed |
-| Dünya ve düzenleme (world and editing) | Gravity of new worlds, world editor grid, length unit (mm / mil) |
-| Dosyalar ve otomatik kayıt (files and autosave) | Autosave interval, recent files list, project folder |
+| Genel (general) | Home page at startup, the first-robot guide, project folder, recent files, length unit |
+| Görünüm ve tema (appearance and theme) | Theme (dark, black, high contrast), accent colour, interface scale, performance overlay, effects and sound, 3D quality |
+| Kaydetme ve yedekleme (saving and backups) | Autosave interval, keeping the previous version on save, crash recovery, backup folder, copies kept per document, the folder's size limit |
+| Klavye kısayolları (keyboard shortcuts) | Change the window's shortcuts, clash warnings, reset one or all |
+| Simülasyon ve fizik (simulation and physics) | Part damage, pause on failure, ambient temperature, time step, starting speed |
+| Dünya ve düzenleme (world and editing) | Gravity of new worlds, world editor grid |
 | Derleyiciler (compilers) | `arduino-cli` path, `vcvars64.bat` path |
+| Güncellemeler, Eklentiler (updates, plug-ins) | Version checks; plug-in folders and scripts |
+| Gelişmiş (advanced) | Export settings to a file and import them, error log, file types |
 
-The **Klavye kısayolları** (keyboard shortcuts) list, **Dosya türleri** (file types: open with this app in Windows), **Hakkında** (about) and the **Varsayılanlara dön** (restore defaults) button are here too.
+**How backups work:**
+
+- Unsaved tabs are copied into the backup folder at the interval you choose; your own file is not changed.
+- When you save over a file, its old version is kept as `name-önceki-date`.
+- Each document's newest copies are kept and the folder stays under its size limit; the oldest go first.
+- If the app closes unexpectedly, the home page shows that run's backups at the next start.
+
+**Changing a shortcut:** in **Klavye kısayolları**, click the button and press the new keys. **Esc** cancels, **Backspace** removes the keys. A key that another command uses is marked with an orange note. A single letter cannot be a window shortcut, because it would fire while you type; press it with **Ctrl**, **Alt** or **Shift**. **F1–F12** work on their own.
 
 ---
 

@@ -178,22 +178,21 @@ namespace RobotWin.Studio
             Panel.SetZIndex(_perf, 900);
             Root.Children.Add(_perf);
             _perf.Visibility = AppSettings.Current.ShowPerf ? Visibility.Visible : Visibility.Collapsed;
-            Bind(Key.F, ModifierKeys.Control | ModifierKeys.Shift, () => ShowPerf(_perf.Visibility != Visibility.Visible));
-            Bind(Key.OemComma, ModifierKeys.Control, () => Navigate("settings"));
+            Command("view.perf", "Görünüm", "Performans göstergesi", "Ctrl+Shift+F", () => ShowPerf(_perf.Visibility != Visibility.Visible));
+            Command("app.settings", "Uygulama", "Ayarlar", "Ctrl+,", () => Navigate("settings"));
             SetupTabDrag();
             SetupTabStrip();   // [tabs] MainWindow.Tabs.cs
 
-            Bind(Key.N, ModifierKeys.Control, () => NewProject());
-            Bind(Key.N, ModifierKeys.Control | ModifierKeys.Shift, () => NewWorld());
-            Bind(Key.O, ModifierKeys.Control, () => OnOpen(this, new RoutedEventArgs()));
-            Bind(Key.S, ModifierKeys.Control, () => OnSave(this, new RoutedEventArgs()));
-            Bind(Key.S, ModifierKeys.Control | ModifierKeys.Shift, () => SaveAs());
-            Bind(Key.W, ModifierKeys.Control, () => CloseTab(W.ActiveDocument));
-            Bind(Key.Tab, ModifierKeys.Control, () => CycleTab(1));
-            Bind(Key.Tab, ModifierKeys.Control | ModifierKeys.Shift, () => CycleTab(-1));
-            Bind(Key.F11, ModifierKeys.None, ToggleFullScreen);
-            Bind(Key.OemBackslash, ModifierKeys.Control, ToggleSplit);
-            Bind(Key.Oem5, ModifierKeys.Control, ToggleSplit);
+            Command("file.newProject", "Dosya", "Yeni devre projesi", "Ctrl+N", () => NewProject());
+            Command("file.newWorld", "Dosya", "Yeni dünya", "Ctrl+Shift+N", () => NewWorld());
+            Command("file.open", "Dosya", "Aç", "Ctrl+O", () => OnOpen(this, new RoutedEventArgs()));
+            Command("file.save", "Dosya", "Kaydet", "Ctrl+S", () => OnSave(this, new RoutedEventArgs()));
+            Command("file.saveAs", "Dosya", "Farklı kaydet", "Ctrl+Shift+S", () => SaveAs());
+            Command("tabs.close", "Sekmeler", "Sekmeyi kapat", "Ctrl+W", () => CloseTab(W.ActiveDocument));
+            Command("tabs.next", "Sekmeler", "Sonraki sekme", "Ctrl+Tab", () => CycleTab(1));
+            Command("tabs.previous", "Sekmeler", "Önceki sekme", "Ctrl+Shift+Tab", () => CycleTab(-1));
+            Command("view.fullscreen", "Görünüm", "Tam ekran", "F11", ToggleFullScreen);
+            Command("view.split", "Görünüm", "Bölünmüş görünüm", "Ctrl+\\, Ctrl+<", ToggleSplit);
             PreviewKeyDown += (_, e) =>
             {
                 if (e.Key == Key.Escape && _fullScreen)
@@ -205,12 +204,12 @@ namespace RobotWin.Studio
             Grid.SetRowSpan(_palette, 3);
             Panel.SetZIndex(_palette, 1000);
             Root.Children.Add(_palette);
-            Bind(Key.K, ModifierKeys.Control, OpenPalette);
-            Bind(Key.P, ModifierKeys.Control | ModifierKeys.Shift, OpenPalette);
+            Command("app.palette", "Uygulama", "Komut paleti", "Ctrl+K, Ctrl+Shift+P", OpenPalette);
             ApplyStartupSettings();
             SetupRail();
             SetupHelp();
             SetupDebugger();   // [debug] MainWindow.Debug.cs
+            ApplyShortcuts();   // [keys] every Command(...) above
             AppSettings.Changed += (_, _) => ApplyUiScale(AppSettings.Current.UiScale);
             _autosave.Tick += (_, _) => Autosave();
             _autosave.Start();
@@ -398,36 +397,39 @@ namespace RobotWin.Studio
         private DateTime _lastAutosave = DateTime.Now;
 
         /// <summary>Backup folder for unsaved work (the user's own files are never overwritten).</summary>
-        public static string BackupFolder => Path.Combine(AppSettings.Current.ProjectFolder, "Yedekler");
+        public static string BackupFolder => Backups.Folder;
 
-        private void Autosave()
+        /// <summary>[backup] Ayarlar → Şimdi yedekle: the unsaved tabs now, whatever the interval.</summary>
+        public void AutosaveNow()
+        {
+            Autosave(force: true);
+            if (!W.Documents.Any(d => d.IsDirty && !d.IsEmbedded && !d.IsMontaj)) W.Status = "Yedeklenecek kaydedilmemiş sekme yok";
+        }
+
+        private void Autosave(bool force = false)
         {
             int minutes = AppSettings.Current.AutosaveMinutes;
-            if (minutes <= 0 || Unattended.Active || (DateTime.Now - _lastAutosave).TotalMinutes < minutes) return;
+            if (Unattended.Active || (!force && (minutes <= 0 || (DateTime.Now - _lastAutosave).TotalMinutes < minutes))) return;
             _lastAutosave = DateTime.Now;
             int saved = 0;
             try
             {
-                Directory.CreateDirectory(BackupFolder);
-                foreach (var doc in W.Documents.Where(d => d.IsDirty && !d.IsEmbedded).ToList())
+                foreach (var doc in W.Documents.Where(d => d.IsDirty && !d.IsEmbedded && !d.IsMontaj).ToList())
                 {
-                    string safe = new string(doc.BaseTitle.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c).ToArray());
-                    string stamp = DateTime.Now.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
                     if (doc.Kind == DocumentKind.World && doc.World != null)
                     {
-                        doc.World.Save(Path.Combine(BackupFolder, $"{safe}-{stamp}{WorldDocument.Extension}"));
+                        doc.World.Save(Backups.AutosavePath(doc.BaseTitle, WorldDocument.Extension));
                     }
                     else
                     {
                         if (doc == W.DesignDocument) W.FlushActiveDesign();
-                        doc.Package.Save(Path.Combine(BackupFolder, $"{safe}-{stamp}{RobotWinFormats.ProjectExtension}"));
+                        doc.Package.Save(Backups.AutosavePath(doc.BaseTitle, RobotWinFormats.ProjectExtension));
                     }
 
                     saved++;
                 }
 
-                // Keep the newest 30 backups.
-                foreach (var old in new DirectoryInfo(BackupFolder).GetFiles().OrderByDescending(f => f.LastWriteTimeUtc).Skip(30)) old.Delete();
+                Backups.Prune();   // [backup] each document's newest copies, the folder under its size
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -439,6 +441,46 @@ namespace RobotWin.Studio
         }
 
         private void Bind(Key key, ModifierKeys mods, Action action) => InputBindings.Add(new KeyBinding(new RelayCommand(action), key, mods));
+
+        // [keys] rebindable shortcuts (Ayarlar → Klavye kısayolları)
+        private readonly List<InputBinding> _shortcutBindings = new List<InputBinding>();
+
+        private void Command(string id, string group, string title, string defaults, Action action)
+        {
+            Shortcuts.Register(id, group, title, defaults, action);
+            if (_shortcutsWired) ApplyShortcuts();
+        }
+
+        private bool _shortcutsWired;
+
+        /// <summary>Binds every registered shortcut to its keys now (again after the user changes one).</summary>
+        private void ApplyShortcuts()
+        {
+            if (!_shortcutsWired)
+            {
+                _shortcutsWired = true;
+                Shortcuts.Changed += ApplyShortcuts;
+            }
+
+            foreach (var b in _shortcutBindings) InputBindings.Remove(b);
+            _shortcutBindings.Clear();
+            foreach (var c in Shortcuts.All)
+            {
+                foreach (var (key, mods) in Shortcuts.Gestures(c.Keys))
+                {
+                    try
+                    {
+                        var binding = new KeyBinding(new RelayCommand(c.Action), key, mods);
+                        InputBindings.Add(binding);
+                        _shortcutBindings.Add(binding);
+                    }
+                    catch (NotSupportedException)
+                    {
+                        // a plain letter without a modifier is not a window-wide key in WPF
+                    }
+                }
+            }
+        }
 
         // ================================================================ navigation
 
@@ -534,15 +576,15 @@ namespace RobotWin.Studio
                 AppSettings.Current.NavExpanded = Rail.IsExpanded;
                 AppSettings.Current.Save();
             };
-            Bind(Key.D0, ModifierKeys.Control, () => Navigate("home"));
-            Bind(Key.D1, ModifierKeys.Control, () => Navigate("schematic"));
-            Bind(Key.D2, ModifierKeys.Control, () => Navigate("pcb"));
-            Bind(Key.D3, ModifierKeys.Control, () => Navigate("code"));
-            Bind(Key.D4, ModifierKeys.Control, () => Navigate("model"));
-            Bind(Key.D5, ModifierKeys.Control, () => Navigate("assembly"));
-            Bind(Key.D6, ModifierKeys.Control, () => NavigateStage("world"));
-            Bind(Key.D7, ModifierKeys.Control, () => Navigate("library"));
-            Bind(Key.B, ModifierKeys.Control, () => Rail.IsExpanded = !Rail.IsExpanded);
+            Command("page.home", "Sayfalar", "Başlangıç", "Ctrl+0", () => Navigate("home"));
+            Command("page.schematic", "Sayfalar", "Devre", "Ctrl+1", () => Navigate("schematic"));
+            Command("page.pcb", "Sayfalar", "PCB", "Ctrl+2", () => Navigate("pcb"));
+            Command("page.code", "Sayfalar", "Kod", "Ctrl+3", () => Navigate("code"));
+            Command("page.model", "Sayfalar", "Parça", "Ctrl+4", () => Navigate("model"));
+            Command("page.assembly", "Sayfalar", "Montaj", "Ctrl+5", () => Navigate("assembly"));
+            Command("page.world", "Sayfalar", "Dünya", "Ctrl+6", () => NavigateStage("world"));
+            Command("page.library", "Sayfalar", "Kütüphane", "Ctrl+7", () => Navigate("library"));
+            Command("view.rail", "Görünüm", "Sol şeridi genişlet / daralt", "Ctrl+B", () => Rail.IsExpanded = !Rail.IsExpanded);
             _railTimer.Tick += (_, _) =>
             {
                 string key = RailKey(_current);   // another world tab may have become active
@@ -703,7 +745,8 @@ namespace RobotWin.Studio
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
             if (page == "model") _model.PrepareSnapshot(fault);
-            if (page == "library") Library.PrepareSnapshot(fault); // [libs] part creator / manager / import previews
+            if (page == "library") Library.PrepareSnapshot(fault);
+            if (page == "settings" && fault != null) ((Pages.SettingsPage)_pages["settings"]).PrepareSnapshot(fault);   // [settings] // [libs] part creator / manager / import previews
             if (page == "pcb") _pcb.AutoLayoutForSnapshot(fault);
             if (page == "pcb" && fault == "fpeditor")
             {

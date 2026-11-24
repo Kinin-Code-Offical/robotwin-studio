@@ -27,7 +27,7 @@ namespace RobotWin.Studio
             _help = new HelpPage(ShortcutList);
             _pages["help"] = _help;
             _pageNames["help"] = "Yardım";
-            Bind(Key.F1, ModifierKeys.None, () => ShowHelp(null));
+            Command("help.show", "Yardım", "Kılavuzu aç", "F1", () => ShowHelp(null));
 
             // Start page: update notice under the buttons, news at the top of the right column.
             _home.UpdateHost.Content = new StackPanel { Children = { new WhatsNewNotice(ShowHelp), new UpdateNotice(ShowHelp) } };

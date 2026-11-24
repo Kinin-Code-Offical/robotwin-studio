@@ -762,6 +762,7 @@ namespace RobotWin.Studio.Shell
 
             // [tabs] Saved under a new name: the project takes the file's name (its title block, the Montaj say the same).
             if (!string.Equals(_design.FilePath, path, StringComparison.OrdinalIgnoreCase)) Schematic.Title = Path.GetFileNameWithoutExtension(path);
+            Backups.KeepPrevious(path);   // [backup] the version being saved over
             Project.Save(path);
             _design.FilePath = path;
             SetDesignDirty(false);
@@ -855,6 +856,7 @@ namespace RobotWin.Studio.Shell
             }
 
             if (!string.Equals(doc.FilePath, path, StringComparison.OrdinalIgnoreCase)) doc.World.Title = Path.GetFileNameWithoutExtension(path);   // [tabs]
+            Backups.KeepPrevious(path);   // [backup]
             doc.World.Save(path);
             doc.FilePath = path;
             doc.IsDirty = false;

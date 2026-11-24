@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:pcb="clr-namespace:RobotWin.Studio.Pcb"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <!-- Toolbar: labels, then icons only, then an overflow menu as the page narrows (see ApplyToolbarLevel). -->
-        <Border Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+        <Border Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
             <Grid x:Name="ToolbarGrid" Margin="10,0" ClipToBounds="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -23,7 +23,7 @@
                         <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Plus}" Size="14"/><TextBlock Text="Parça ekle" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Popup x:Name="AddPartPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=AddPartButton}" AllowsTransparency="True">
-                        <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="8" Width="380">
+                        <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="8" Width="380">
                             <StackPanel>
                                 <TextBox x:Name="AddPartSearch" Tag="Parça ara…" TextChanged="OnAddPartSearch"/>
                                 <ListBox x:Name="AddPartList" Height="300" Margin="0,8,0,0" MouseDoubleClick="OnAddPartPick" MouseLeftButtonUp="OnAddPartPick"/>
@@ -42,7 +42,7 @@
                     <Button x:Name="DrcButton" Click="OnDrc" Margin="6,0,0,0" ToolTip="Tasarım kural denetimi (hat sınıfı boşlukları, halka, delik, kenar, serigrafi, bağlantı, dolgu, akım)">
                         <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Drc}" Size="14"/><TextBlock Text="DRC" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
-                    <Border x:Name="Sep1" Width="1" Height="22" Background="{StaticResource B.Border}" Margin="10,0"/>
+                    <Border x:Name="Sep1" Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="10,0"/>
                     <Ellipse x:Name="ActiveLayerDot" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox x:Name="ActiveLayerBox" Width="118" SelectionChanged="OnActiveLayerPick" ToolTip="Etkin bakır katmanı (PgUp/PgDn)"/>
                     <Button x:Name="FillButton" Click="OnFillZones" Margin="6,0,0,0" ToolTip="Tüm dolgu alanlarını yeniden doldur">
@@ -66,14 +66,14 @@
                     </Button>
                     <Button x:Name="OverflowButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnOverflow" ToolTip="Diğer işlemler" Visibility="Collapsed"><t:Icon Data="{StaticResource I.More}"/></Button>
                     <Popup x:Name="OverflowPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=OverflowButton}" AllowsTransparency="True">
-                        <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="6" MinWidth="200">
+                        <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="6" MinWidth="200">
                             <StackPanel x:Name="OverflowList"/>
                         </Border>
                     </Popup>
                     <Button x:Name="ExportButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="32" Margin="8,0,0,0" Click="OnExport" ToolTip="Üretim dosyaları: tüm bakır katmanlarının Gerber'i, maske, pasta, serigrafi, kenar, PTH/NPTH/kör delikler, BOM ve dizgi (CPL)">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Export}" Size="15" Foreground="{StaticResource B.OnPrimary}"/>
-                            <TextBlock Text="Üretim" Margin="7,0,0,0" Foreground="{StaticResource B.OnPrimary}" Tag="label"/>
+                            <t:Icon Data="{StaticResource I.Export}" Size="15" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <TextBlock Text="Üretim" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}" Tag="label"/>
                         </StackPanel>
                     </Button>
                     <ToggleButton x:Name="PanelToggle" Style="{StaticResource Toggle.Tool}" Width="32" Height="30" Margin="6,0,0,0" Click="OnPanelToggle" ToolTip="Özellik panelini göster/gizle" Visibility="Collapsed">
@@ -92,13 +92,13 @@
             </Grid.ColumnDefinitions>
 
             <!-- Tool strip -->
-            <Border Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,1,0">
+            <Border Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,1,0">
                 <StackPanel x:Name="ToolStrip" Margin="0,8,0,0" HorizontalAlignment="Center">
                     <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Select" Click="OnTool" ToolTip="Seç (Esc): tıkla, Shift+tıkla, kutu seçimi · sağ tık menüsü · F1 kısayollar"><t:Icon Data="{StaticResource I.Pointer}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolRoute" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Route" Click="OnTool" ToolTip="Etkileşimli yol (X): engellerin etrafından dolaşır, V ile via, / açı, Boşluk 45°/90°"><t:Icon Data="{StaticResource I.Wire}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolZone" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Zone" Click="OnTool" ToolTip="Dolgu alanı çiz (Z)"><t:Icon Data="{StaticResource I.Zone}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolMeasure" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Measure" Click="OnTool" ToolTip="Ölç (Ctrl+Shift+M): mesafe ve açı"><t:Icon Data="{StaticResource I.Measure}" Size="16"/></ToggleButton>
-                    <Border Height="1" Background="{StaticResource B.Border}" Margin="6,4,6,8"/>
+                    <Border Height="1" Background="{DynamicResource B.Border}" Margin="6,4,6,8"/>
                     <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Text" Click="OnTool" ToolTip="Serigrafi yazısı (T)"><t:Icon Data="{StaticResource I.Text}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolDimension" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Dimension" Click="OnTool" ToolTip="Ölçü çizgisi (Ctrl+Shift+H)"><t:Icon Data="{StaticResource I.Dimension}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolOutline" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Outline" Click="OnTool" ToolTip="Kart kenarını çokgen olarak çiz"><t:Icon Data="{StaticResource I.Outline}" Size="16"/></ToggleButton>
@@ -110,14 +110,14 @@
             <pcb:Board3DView x:Name="View3D" Grid.Column="1" Visibility="Collapsed"/>
             <Border x:Name="StatusBar" Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="120,0,10,6" IsHitTestVisible="False">
                 <DockPanel LastChildFill="True">
-                    <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="12" Foreground="{StaticResource B.TextMuted}" Margin="12,0,0,0"/>
+                    <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" Margin="12,0,0,0"/>
                     <TextBlock x:Name="HintText" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"/>
                 </DockPanel>
             </Border>
 
             <!-- F1 / ? shortcut overlay -->
             <Border x:Name="HelpOverlay" Grid.Column="1" Visibility="Collapsed" Background="#D80E0E10" MouseLeftButtonUp="OnHelpClose" Cursor="Hand">
-                <Border Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="10"
+                <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="10"
                         HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22,18" Margin="16" MaxWidth="900" Effect="{StaticResource E.Popup}">
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
@@ -131,8 +131,8 @@
                 </Border>
             </Border>
 
-            <Border x:Name="Splitter" Grid.Column="2" Background="{StaticResource B.Border}"/>
-            <Border x:Name="SidePanel" Grid.Column="3" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0">
+            <Border x:Name="Splitter" Grid.Column="2" Background="{DynamicResource B.Border}"/>
+            <Border x:Name="SidePanel" Grid.Column="3" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0">
                 <TabControl x:Name="Tabs">
                     <TabItem Header="Kart">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -168,8 +168,8 @@
                                             </Grid.ColumnDefinitions>
                                             <Ellipse Width="7" Height="7" VerticalAlignment="Top" Margin="0,5,0,0" Fill="{Binding Tag}" HorizontalAlignment="Left"/>
                                             <StackPanel Grid.Column="1">
-                                                <TextBlock Text="{Binding Rule}" Foreground="{StaticResource B.Text}" FontSize="12"/>
-                                                <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Rule}" Foreground="{DynamicResource B.Text}" FontSize="12"/>
+                                                <TextBlock Text="{Binding Message}" Foreground="{DynamicResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Grid>
                                     </DataTemplate>

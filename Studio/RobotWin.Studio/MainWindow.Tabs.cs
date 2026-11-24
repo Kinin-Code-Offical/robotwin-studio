@@ -19,7 +19,7 @@ namespace RobotWin.Studio
             W.ActiveDocumentChanged += (_, _) => RevealActiveTab();
             W.Documents.CollectionChanged += (_, _) => RevealActiveTab();
             TabScroll.SizeChanged += (_, _) => UpdateTabArrows();
-            Bind(Key.T, ModifierKeys.Control | ModifierKeys.Shift, ReopenClosedTab);
+            Command("tabs.reopen", "Sekmeler", "Kapatılan sekmeyi yeniden aç", "Ctrl+Shift+T", ReopenClosedTab);
         }
 
         /// <summary>Scrolls the strip so the active tab is in full view (after the tabs have been laid out).</summary>

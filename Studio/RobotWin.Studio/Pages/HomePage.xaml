@@ -1,7 +1,7 @@
 <UserControl x:Class="RobotWin.Studio.Pages.HomePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Margin="72,56,72,48" MaxWidth="1100" HorizontalAlignment="Left">
             <Grid.ColumnDefinitions>
@@ -27,12 +27,12 @@
                 <ContentControl x:Name="UpdateHost" Focusable="False"/>
 
                 <TextBlock Text="Dünyalar" Style="{StaticResource Text.Overline}" Margin="0,48,0,6"/>
-                <Border BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+                <Border BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
                     <StackPanel x:Name="WorldList"/>
                 </Border>
 
                 <TextBlock Text="Devre ve robot örnekleri" Style="{StaticResource Text.Overline}" Margin="0,36,0,6"/>
-                <Border BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+                <Border BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
                     <StackPanel x:Name="ExampleList"/>
                 </Border>
             </StackPanel>
@@ -44,6 +44,10 @@
                 <TextBlock x:Name="RecentEmpty" Text="Henüz kaydedilmiş bir proje yok." Style="{StaticResource Text.Caption}"/>
 
                 <TextBlock x:Name="BackupTitle" Text="Otomatik yedekler" Style="{StaticResource Text.Overline}" Margin="0,32,0,4"/>
+                <Border x:Name="CrashNote" Visibility="Collapsed" Background="{DynamicResource B.Raised}" BorderBrush="{DynamicResource B.Warning}" BorderThickness="1"
+                        CornerRadius="6" Padding="10,8" Margin="0,2,0,8">
+                    <TextBlock x:Name="CrashText" TextWrapping="Wrap" Style="{StaticResource Text.Body}"/>
+                </Border>
                 <StackPanel x:Name="BackupList"/>
 
                 <TextBlock Text="Kısayollar" Style="{StaticResource Text.Overline}" Margin="0,32,0,8"/>

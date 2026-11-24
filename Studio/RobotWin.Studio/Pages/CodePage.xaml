@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:ed="clr-namespace:RobotWin.Studio.Editor"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
-        <Border Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+        <Border Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
             <Grid Margin="12,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Kart" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -22,14 +22,14 @@
                               ToolTip="Kodun yükleneceği kart: projedeki ya da açık dünyadaki her Arduino Uno, Nano ve ESP32"/>
                     <TextBlock Text="Örnek" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                     <ComboBox x:Name="TemplateBox" Width="190" SelectionChanged="OnTemplate"/>
-                    <Border Width="1" Height="22" Background="{StaticResource B.Border}" Margin="12,0"/>
+                    <Border Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="12,0"/>
                     <Button x:Name="BuildButton" Click="OnBuild" ToolTip="Derle (F7)">
                         <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="14"/><TextBlock Text="Derle" Margin="7,0,0,0"/></StackPanel>
                     </Button>
                     <Button x:Name="UploadButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="30" Margin="6,0,0,0" Click="OnUpload" ToolTip="Bu klasörü seçili karta yükle, derle ve çalıştır (F5)">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Play}" Size="14" Foreground="{StaticResource B.OnPrimary}"/>
-                            <TextBlock Text="Karta yükle ve çalıştır" Margin="7,0,0,0" Foreground="{StaticResource B.OnPrimary}"/>
+                            <t:Icon Data="{StaticResource I.Play}" Size="14" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <TextBlock Text="Karta yükle ve çalıştır" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" ToolTip="Simülasyonu durdur" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}"/></Button>
@@ -49,7 +49,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <DockPanel Background="{StaticResource B.Base}">
+            <DockPanel Background="{DynamicResource B.Base}">
                 <DockPanel DockPanel.Dock="Top" Margin="12,8,6,4">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Yeni dosya (.ino, .h, .cpp …)" Click="OnNewFile"><t:Icon Data="{StaticResource I.Plus}" Size="14"/></Button>
@@ -70,15 +70,15 @@
                     </TreeView.Resources>
                 </TreeView>
             </DockPanel>
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="{StaticResource B.Border}" ResizeDirection="Columns"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="{DynamicResource B.Border}" ResizeDirection="Columns"/>
 
             <DockPanel Grid.Column="2">
-                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1" Padding="12,5">
+                <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1" Padding="12,5">
                     <TextBlock x:Name="FileTitle" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis"/>
                 </Border>
                 <!-- [debug] breakpoints and steps: the circuit, the world and the code stop at one instant -->
-                <Border x:Name="DebugBar" DockPanel.Dock="Top" Visibility="Collapsed" Background="{StaticResource B.Canvas}"
-                        BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1" Padding="10,4">
+                <Border x:Name="DebugBar" DockPanel.Dock="Top" Visibility="Collapsed" Background="{DynamicResource B.Canvas}"
+                        BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1" Padding="10,4">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                             <Button x:Name="DebugContinue" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugContinue" ToolTip="Programı (ve devreyi, dünyayı) sürdür (F5)">
@@ -92,10 +92,10 @@
                             </Button>
                             <Button x:Name="DebugInto" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugInto" Content="İçine" ToolTip="Çağrılan fonksiyonun içine gir (F11)"/>
                             <Button x:Name="DebugOut" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugOut" Content="Dışına" ToolTip="İçinde bulunulan fonksiyon dönene kadar çalış (Shift+F11)"/>
-                            <Border Width="1" Height="18" Background="{StaticResource B.Border}" Margin="8,0"/>
+                            <Border Width="1" Height="18" Background="{DynamicResource B.Border}" Margin="8,0"/>
                             <Button x:Name="DebugClear" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugClear" Content="Kesme noktalarını kaldır" ToolTip="Bu kartın bütün kesme noktalarını kaldır"/>
                         </StackPanel>
-                        <Ellipse x:Name="DebugDot" Width="9" Height="9" Fill="{StaticResource B.Danger}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Ellipse x:Name="DebugDot" Width="9" Height="9" Fill="{DynamicResource B.Danger}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock x:Name="DebugState" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                     </DockPanel>
                 </Border>
@@ -104,7 +104,7 @@
                     <Border x:Name="NoBoard" Background="#F00E0E10" Visibility="Collapsed">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
                             <TextBlock Text="Bir kart ya da kod klasörü seçin" Style="{StaticResource Text.Subtitle}"/>
-                            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource B.TextSecondary}" Margin="0,6,0,12"
+                            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource B.TextSecondary}" Margin="0,6,0,12"
                                        Text="Soldaki Kartlar bölümünde projedeki ve açık dünyadaki her Arduino Uno, Nano ve ESP32'nin kendi kodu var. Kod klasörlerim'de diskte çalışırsınız: yeni klasör açın ya da var olan bir Arduino çizim klasörünü açın, istediğiniz karta yükleyin."/>
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Yeni kod klasörü" Click="OnNewFolder"/>
@@ -117,7 +117,7 @@
             </DockPanel>
         </Grid>
 
-        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Background="{StaticResource B.Border}" ResizeDirection="Rows"/>
+        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Background="{DynamicResource B.Border}" ResizeDirection="Rows"/>
 
         <TabControl x:Name="BottomTabs" Grid.Row="3">
             <TabItem Header="Derleyici">
@@ -128,7 +128,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <ListBox x:Name="Problems" MouseDoubleClick="OnProblemPick" SelectionChanged="OnProblemPick" Margin="6"/>
-                    <Border Grid.Column="1" Background="{StaticResource B.Border}"/>
+                    <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
                     <TextBox x:Name="BuildLog" Grid.Column="2" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12"
                              TextWrapping="NoWrap" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" BorderThickness="0" Margin="6"/>
                 </Grid>
@@ -173,7 +173,7 @@
                                         <TextBlock Text="{Binding Name}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Where}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" Foreground="{Binding ValueBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Value}"/>
                                         <TextBlock Grid.Column="2" Text="{Binding Type}" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding Address}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{StaticResource B.TextSecondary}"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Address}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{DynamicResource B.TextSecondary}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -183,7 +183,7 @@
             </TabItem>
         </TabControl>
 
-        <Border Grid.Row="4" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="4" Background="{DynamicResource B.Canvas}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
             <Grid Margin="12,0">
                 <TextBlock x:Name="CaretText" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
                 <TextBlock x:Name="TargetText" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" HorizontalAlignment="Right"/>

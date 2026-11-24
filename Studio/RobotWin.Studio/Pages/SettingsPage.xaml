@@ -1,7 +1,7 @@
 <UserControl x:Class="RobotWin.Studio.Pages.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220"/>
@@ -10,14 +10,21 @@
         </Grid.ColumnDefinitions>
 
         <DockPanel Margin="20,30,12,20">
-            <TextBlock DockPanel.Dock="Top" Text="Ayarlar" Style="{StaticResource Text.Title}" Margin="8,0,0,16"/>
+            <TextBlock DockPanel.Dock="Top" Text="Ayarlar" Style="{StaticResource Text.Title}" Margin="8,0,0,14"/>
+            <!-- [settings] search across every category -->
+            <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Tag="Ayarlarda ara" Margin="0,0,0,14" TextChanged="OnSearch"
+                     ToolTip="Bir ayarın adını ya da açıklamasını yazın: bütün kategorilerde arar"/>
             <Button DockPanel.Dock="Bottom" Content="Varsayılanlara dön" Style="{StaticResource Btn.Ghost}" HorizontalAlignment="Left" Click="OnReset" Margin="0,12,0,0"/>
-            <StackPanel x:Name="SectionNav"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="SectionNav"/>
+            </ScrollViewer>
         </DockPanel>
-        <Border Grid.Column="1" Background="{StaticResource B.Border}"/>
+        <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
 
         <ScrollViewer x:Name="Scroll" Grid.Column="2" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="36,30,36,40" MaxWidth="780" HorizontalAlignment="Left">
+                <TextBlock x:Name="CategoryTitle" Style="{StaticResource Text.Title}" Margin="0,0,0,4"/>
+                <TextBlock x:Name="CategoryNote" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,18"/>
                 <StackPanel x:Name="Sections"/>
 
                 <Border x:Name="FileTypesCard" Style="{StaticResource Card}" Margin="0,0,0,14">

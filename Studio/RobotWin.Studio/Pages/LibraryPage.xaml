@@ -4,7 +4,7 @@
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:ed="clr-namespace:RobotWin.Studio.Editor"
              xmlns:pcb="clr-namespace:RobotWin.Studio.Pcb"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -28,7 +28,7 @@
                 <TextBlock x:Name="Subtitle" Style="{StaticResource Text.Body}" Margin="0,4,0,14"/>
                 <Grid Margin="0,0,0,10" MaxWidth="560" HorizontalAlignment="Left">
                     <TextBox x:Name="SearchBox" Width="520" Tag="Parça numarası, isim veya açıklama…" Padding="30,4,8,4" TextChanged="OnSearch"/>
-                    <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{StaticResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                    <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{DynamicResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
                 </Grid>
                 <WrapPanel x:Name="Categories" Margin="0,0,0,8"/>
             </StackPanel>
@@ -46,11 +46,11 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Width="168" Height="140" CornerRadius="6" Background="Transparent" BorderBrush="{StaticResource B.Border}" BorderThickness="1" Padding="12">
+                        <Border Width="168" Height="140" CornerRadius="6" Background="Transparent" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" Padding="12">
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Bottom">
-                                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Category}" Foreground="{StaticResource B.TextMuted}" FontSize="12"/>
+                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Category}" Foreground="{DynamicResource B.TextMuted}" FontSize="12"/>
                                 </StackPanel>
                                 <ed:SymbolPreview PresetId="{Binding Id}" Margin="10,4,10,10"/>
                             </DockPanel>
@@ -60,8 +60,8 @@
             </ListBox>
         </DockPanel>
 
-        <Border Grid.Column="1" Background="{StaticResource B.Border}"/>
-        <Border Grid.Column="2" Background="{StaticResource B.Base}">
+        <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
+        <Border Grid.Column="2" Background="{DynamicResource B.Base}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel x:Name="Detail" Margin="22,22,22,22"/>
             </ScrollViewer>

@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:w="clr-namespace:RobotWin.Studio.World"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid x:Name="PageRoot">
         <!-- Shown when the active tab is not a world -->
-        <Grid x:Name="NoWorld" Visibility="Collapsed" Background="{StaticResource B.Base}" Panel.ZIndex="5">
+        <Grid x:Name="NoWorld" Visibility="Collapsed" Background="{DynamicResource B.Base}" Panel.ZIndex="5">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
-                <t:Icon Data="{StaticResource I.World}" Size="44" Foreground="{StaticResource B.Accent}" HorizontalAlignment="Left"/>
+                <t:Icon Data="{StaticResource I.World}" Size="44" Foreground="{DynamicResource B.Accent}" HorizontalAlignment="Left"/>
                 <TextBlock Text="Dünya: her şeyi bir araya getirin" Style="{StaticResource Text.Title}" Margin="0,16,0,6"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource B.TextSecondary}"
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource B.TextSecondary}"
                            Text="Bir dünyaya istediğiniz kadar kendi tasarladığınız kartı, servoları, motorları, pilleri, sensörleri, ekranları, mekanik parçaları ve 3D modelleri koyun; pinlerini kablolarla, gövdelerini bağlantılarla birleştirin. Hepsi tek bir devre ve tek bir fizik ortamı olarak birlikte simüle edilir."/>
                 <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                     <Button Style="{StaticResource Btn.Primary}" Content="Yeni dünya" Padding="16,0" Click="OnNewWorld"/>
@@ -29,7 +29,7 @@
             </Grid.RowDefinitions>
 
             <!-- ================= Toolbar ================= -->
-            <Border Grid.Row="0" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+            <Border Grid.Row="0" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
                 <Grid Margin="12,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- [assembly] Which this is: a project's Montaj or a test world -->
@@ -37,7 +37,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <t:Icon x:Name="ModeIcon" Data="{StaticResource I.World}" Size="13" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="ModeText" Text="DÜNYA" FontSize="11" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="ModeTitle" FontSize="12" Margin="8,0,0,0" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="{StaticResource B.TextSecondary}"/>
+                                <TextBlock x:Name="ModeTitle" FontSize="12" Margin="8,0,0,0" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="{DynamicResource B.TextSecondary}"/>
                             </StackPanel>
                         </Border>
                         <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" ToolTip="Seç ve taşı (Esc)" Click="OnTool" Tag="Select" IsChecked="True">
@@ -49,11 +49,11 @@
                         <ToggleButton x:Name="ToolJoint" Style="{StaticResource Toggle.Tool}" ToolTip="Bağla: seçili nesneyi başka bir nesneye / servo koluna / motor miline tak (B)" Click="OnTool" Tag="Joint">
                             <t:Icon Data="{StaticResource I.Joint}" Size="16"/>
                         </ToggleButton>
-                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="10,0"/>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="15° döndür (R, Shift+R ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Çoğalt (Ctrl+D)" Click="OnDuplicate"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Sil (Del)" Click="OnDelete"><t:Icon Data="{StaticResource I.Delete}" Size="16"/></Button>
-                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="10,0"/>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Geri al (Ctrl+Z)" Click="OnUndo"><t:Icon Data="{StaticResource I.Undo}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Yinele (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
                     </StackPanel>
@@ -61,8 +61,8 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnRun" ToolTip="Dünyayı simüle et / duraklat (F5)">
                             <StackPanel Orientation="Horizontal">
-                                <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="12" Filled="True" Foreground="{StaticResource B.OnPrimary}"/>
-                                <TextBlock x:Name="RunText" Text="Dünyayı çalıştır" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource B.OnPrimary}"/>
+                                <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="12" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
+                                <TextBlock x:Name="RunText" Text="Dünyayı çalıştır" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="10 ms ilerlet" Click="OnStep" Margin="6,0,0,0"><t:Icon Data="{StaticResource I.Step}" Size="14"/></Button>
@@ -113,24 +113,24 @@
                     </WrapPanel>
                     <Grid x:Name="SearchRow" DockPanel.Dock="Top" Margin="0,0,6,8" Visibility="Collapsed">
                         <TextBox x:Name="SearchBox" Tag="Parça ara (servo, motor, pil, sensör…)" Padding="28,4,8,4" TextChanged="OnSearch"/>
-                        <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{StaticResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="9,0,0,0" IsHitTestVisible="False"/>
+                        <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{DynamicResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="9,0,0,0" IsHitTestVisible="False"/>
                     </Grid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="Palette" Margin="0,0,6,12"/>
                     </ScrollViewer>
                 </DockPanel>
-                <Border Grid.Column="1" Background="{StaticResource B.Border}"/>
+                <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
 
                 <w:WorldScene x:Name="Scene" Grid.Column="2"/>
 
-                <Border Grid.Column="3" Background="{StaticResource B.Border}"/>
+                <Border Grid.Column="3" Background="{DynamicResource B.Border}"/>
                 <ScrollViewer x:Name="InspectorPane" Grid.Column="4" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="Inspector" Margin="14,12,14,16"/>
                 </ScrollViewer>
             </Grid>
 
             <GridSplitter x:Name="DockSplitter" Grid.Row="2" Height="5" Margin="0,-2" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows" Panel.ZIndex="5"/>
-            <Border x:Name="DockLine" Grid.Row="2" Background="{StaticResource B.Border}" IsHitTestVisible="False"/>
+            <Border x:Name="DockLine" Grid.Row="2" Background="{DynamicResource B.Border}" IsHitTestVisible="False"/>
 
             <!-- ================= Bottom dock ================= -->
             <DockPanel x:Name="BottomArea" Grid.Row="3">
@@ -145,9 +145,9 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock>
-                                    <Run Text="{Binding Time, Mode=OneWay, StringFormat={}{0:0.000} s}" Foreground="{StaticResource B.TextMuted}"/>
+                                    <Run Text="{Binding Time, Mode=OneWay, StringFormat={}{0:0.000} s}" Foreground="{DynamicResource B.TextMuted}"/>
                                     <Run Text="  "/>
-                                    <Run Text="{Binding Device, Mode=OneWay}" Foreground="{StaticResource B.TextSecondary}"/>
+                                    <Run Text="{Binding Device, Mode=OneWay}" Foreground="{DynamicResource B.TextSecondary}"/>
                                     <Run Text="  "/>
                                     <Run Text="{Binding Message, Mode=OneWay}"/>
                                 </TextBlock>

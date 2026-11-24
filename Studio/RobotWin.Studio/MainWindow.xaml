@@ -4,9 +4,9 @@
         xmlns:t="clr-namespace:RobotWin.Studio.Theme"
         xmlns:shell="clr-namespace:RobotWin.Studio.Shell"
         Title="RobotWin Studio" Width="1480" Height="900" MinWidth="1080" MinHeight="640"
-        WindowStartupLocation="CenterScreen" Background="{StaticResource B.Canvas}"
+        WindowStartupLocation="CenterScreen" Background="{DynamicResource B.Canvas}"
         WindowStyle="SingleBorderWindow" ResizeMode="CanResize"
-        TextElement.Foreground="{StaticResource B.Text}" FontFamily="{StaticResource F.Ui}" FontSize="13"
+        TextElement.Foreground="{DynamicResource B.Text}" FontFamily="{StaticResource F.Ui}" FontSize="13"
         UseLayoutRounding="True">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="42" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- ===================== Title bar ===================== -->
-        <Border x:Name="TitleBar" Grid.Row="0" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+        <Border x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource B.Canvas}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -34,13 +34,13 @@
                         <TextBlock x:Name="AppTitle" Text="RobotWin" FontFamily="{StaticResource F.Display}" FontSize="14" Margin="10,0,0,1" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Border x:Name="MenuHost" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0,8,0"/>
+                    <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0,8,0"/>
                     <StackPanel Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button x:Name="NewButton" Style="{StaticResource Btn.Icon}" ToolTip="Yeni proje veya dünya (Ctrl+N)" Click="OnNewMenu" Width="30" Height="30"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Aç (Ctrl+O)" Click="OnOpen" Width="30" Height="30"><t:Icon Data="{StaticResource I.Folder}" Size="16"/></Button>
                         <Button x:Name="SaveButton" Style="{StaticResource Btn.Icon}" ToolTip="Kaydet (Ctrl+S)" Click="OnSave" Width="30" Height="30"><t:Icon Data="{StaticResource I.Save}" Size="16"/></Button>
                     </StackPanel>
-                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0,4,0"/>
+                    <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0,4,0"/>
                 </StackPanel>
 
                 <!-- Open documents: circuits and worlds. [tabs] The strip scrolls (wheel, arrows); the list shows every tab. -->
@@ -66,27 +66,27 @@
                                 <Border x:Name="TabBorder" Height="30" Margin="2,0" CornerRadius="6" Padding="10,0,4,0" Background="Transparent" Cursor="Hand"
                                         MouseLeftButtonUp="OnTabClick" MouseUp="OnTabMiddle" MouseRightButtonUp="OnTabMenu" ToolTip="{Binding TabToolTip}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <t:Icon x:Name="TabIcon" Data="{StaticResource I.Schematic}" Size="13" Foreground="{StaticResource B.TextMuted}" Margin="0,0,7,0"/>
+                                        <t:Icon x:Name="TabIcon" Data="{StaticResource I.Schematic}" Size="13" Foreground="{DynamicResource B.TextMuted}" Margin="0,0,7,0"/>
                                         <TextBlock x:Name="TabText" Text="{Binding TabTitle}" MaxWidth="190" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                                   Foreground="{StaticResource B.TextSecondary}" FontSize="12.5"/>
+                                                   Foreground="{DynamicResource B.TextSecondary}" FontSize="12.5"/>
                                         <!-- a pinned tab: its pin (click to unpin) instead of the close button -->
                                         <Button x:Name="TabPin" Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabUnpin" ToolTip="Sabitlemeyi kaldır" Visibility="Collapsed">
-                                            <t:Icon Data="{StaticResource I.Pin}" Size="11" Foreground="{StaticResource B.Accent}"/>
+                                            <t:Icon Data="{StaticResource I.Pin}" Size="11" Foreground="{DynamicResource B.Accent}"/>
                                         </Button>
                                         <!-- unsaved: a dot where the close button is (the close button again under the pointer) -->
                                         <Button x:Name="TabClose" Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabClose" ToolTip="Kapat (Ctrl+W)">
                                             <Grid>
                                                 <t:Icon x:Name="CloseGlyph" Data="{StaticResource I.Close}" Size="10"/>
-                                                <Ellipse x:Name="DirtyDot" Width="7" Height="7" Fill="{StaticResource B.TextSecondary}" Visibility="Collapsed"/>
+                                                <Ellipse x:Name="DirtyDot" Width="7" Height="7" Fill="{DynamicResource B.TextSecondary}" Visibility="Collapsed"/>
                                             </Grid>
                                         </Button>
                                     </StackPanel>
                                 </Border>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                        <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource B.Raised}"/>
-                                        <Setter TargetName="TabText" Property="Foreground" Value="{StaticResource B.Text}"/>
-                                        <Setter TargetName="TabIcon" Property="Foreground" Value="{StaticResource B.Accent}"/>
+                                        <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource B.Raised}"/>
+                                        <Setter TargetName="TabText" Property="Foreground" Value="{DynamicResource B.Text}"/>
+                                        <Setter TargetName="TabIcon" Property="Foreground" Value="{DynamicResource B.Accent}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Kind}" Value="World">
                                         <Setter TargetName="TabIcon" Property="Data" Value="{StaticResource I.World}"/>
@@ -95,7 +95,7 @@
                                         <Setter TargetName="TabIcon" Property="Data" Value="{StaticResource I.Assembly}"/>
                                     </DataTrigger>
                                     <Trigger SourceName="TabBorder" Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource B.Hover}"/>
+                                        <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource B.Hover}"/>
                                     </Trigger>
                                     <DataTrigger Binding="{Binding IsDirty}" Value="True">
                                         <Setter TargetName="CloseGlyph" Property="Visibility" Value="Collapsed"/>
@@ -150,7 +150,7 @@
                     <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnFocusMode" ToolTip="Odak modu / tam ekran (F11)">
                         <t:Icon Data="{StaticResource I.Focus}" Size="15"/>
                     </Button>
-                    <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="6,0"/>
+                    <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="6,0"/>
                     <Button Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMinimize" ToolTip="Simge durumuna küçült">
                         <t:Icon Data="{StaticResource I.Minimize}" Size="14"/>
                     </Button>
@@ -181,7 +181,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border x:Name="NavBar" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,1,0">
+            <Border x:Name="NavBar" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,1,0">
                 <shell:FlowRail x:Name="Rail"/>
             </Border>
 
@@ -192,9 +192,9 @@
                     <ColumnDefinition x:Name="SecondColumn" Width="0"/>
                 </Grid.ColumnDefinitions>
                 <ContentControl x:Name="PageHost" Focusable="False"/>
-                <GridSplitter x:Name="Splitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource B.Border}" Visibility="Collapsed" ResizeBehavior="PreviousAndNext"/>
+                <GridSplitter x:Name="Splitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource B.Border}" Visibility="Collapsed" ResizeBehavior="PreviousAndNext"/>
                 <DockPanel x:Name="SecondPane" Grid.Column="2" Visibility="Collapsed">
-                    <Border DockPanel.Dock="Top" Height="30" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+                    <Border DockPanel.Dock="Top" Height="30" Background="{DynamicResource B.Canvas}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
                         <DockPanel Margin="10,0,4,0">
                             <Button DockPanel.Dock="Right" Style="{StaticResource Btn.Icon}" Width="24" Height="24" Click="OnCloseSplit" ToolTip="Bölünmüş görünümü kapat">
                                 <t:Icon Data="{StaticResource I.Close}" Size="11"/>
@@ -211,15 +211,15 @@
         </Grid>
 
         <!-- ===================== Status bar ===================== -->
-        <Border x:Name="StatusBar" Grid.Row="2" Background="{StaticResource B.Canvas}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,0,0">
+        <Border x:Name="StatusBar" Grid.Row="2" Background="{DynamicResource B.Canvas}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
             <DockPanel Margin="12,0" LastChildFill="True">
                 <!-- The counts stay readable on the right; a long message is cut short (full text in its tooltip). -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                     <TextBlock x:Name="StatsText" Style="{StaticResource Text.Caption}" Margin="0,0,16,0"/>
                     <TextBlock Text="RobotWin Studio" Style="{StaticResource Text.Caption}"/>
                 </StackPanel>
-                <Ellipse x:Name="SimDot" DockPanel.Dock="Left" Width="7" Height="7" Fill="{StaticResource B.TextMuted}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock x:Name="StatusText" Style="{StaticResource Text.Caption}" Foreground="{StaticResource B.TextSecondary}" VerticalAlignment="Center"
+                <Ellipse x:Name="SimDot" DockPanel.Dock="Left" Width="7" Height="7" Fill="{DynamicResource B.TextMuted}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock x:Name="StatusText" Style="{StaticResource Text.Caption}" Foreground="{DynamicResource B.TextSecondary}" VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
             </DockPanel>
         </Border>

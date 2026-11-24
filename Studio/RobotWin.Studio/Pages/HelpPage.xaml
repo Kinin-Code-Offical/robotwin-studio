@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="272"/>
@@ -13,10 +13,10 @@
         <!-- Left: search and the topic tree -->
         <DockPanel Margin="16,26,10,14">
             <TextBlock DockPanel.Dock="Top" Text="Yardım" Style="{StaticResource Text.Title}" Margin="8,0,0,14"/>
-            <Border x:Name="SearchFrame" DockPanel.Dock="Top" Margin="0,0,6,12" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}"
+            <Border x:Name="SearchFrame" DockPanel.Dock="Top" Margin="0,0,6,12" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}"
                     BorderThickness="1" CornerRadius="{StaticResource R.Medium}">
                 <DockPanel>
-                    <t:Icon DockPanel.Dock="Left" Data="{StaticResource I.Search}" Size="14" Foreground="{StaticResource B.TextMuted}" VerticalAlignment="Center" Margin="10,0,2,0" IsHitTestVisible="False"/>
+                    <t:Icon DockPanel.Dock="Left" Data="{StaticResource I.Search}" Size="14" Foreground="{DynamicResource B.TextMuted}" VerticalAlignment="Center" Margin="10,0,2,0" IsHitTestVisible="False"/>
                     <Button x:Name="ClearSearch" DockPanel.Dock="Right" Style="{StaticResource Btn.Icon}" Width="24" Height="24" Margin="0,0,3,0"
                             Visibility="Collapsed" Click="OnClearSearch" ToolTip="Aramayı temizle (Esc)">
                         <t:Icon Data="{StaticResource I.Close}" Size="10"/>
@@ -30,7 +30,7 @@
                 <StackPanel x:Name="Nav" Margin="0,0,6,0"/>
             </ScrollViewer>
         </DockPanel>
-        <Border Grid.Column="1" Background="{StaticResource B.Border}"/>
+        <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
 
         <!-- Right: the selected topic -->
         <Grid Grid.Column="2">

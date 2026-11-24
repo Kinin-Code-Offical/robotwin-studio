@@ -101,17 +101,28 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 
 ## Ayarlar
 
-**Ayarlar** (Ctrl+,) sayfasındaki başlıca bölümler:
+**Ayarlar** (Ctrl+,) sayfası kategorilere ayrılır. Soldaki listeden bir kategori seçin ya da üstteki **Ayarlarda ara** kutusuna bir sözcük yazın; arama bütün kategorilere bakar.
 
-| Bölüm | Örnek ayarlar |
+| Kategori | Neler var |
 | --- | --- |
-| Görünüm | Arayüz ölçeği, parçacık efektleri, simülasyon sesleri ve ses düzeyi, akım akışı animasyonu, 3D kalitesi, açılışta başlangıç sayfası |
-| Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, en büyük zaman adımı, başlangıç hızı |
-| Dünya ve düzenleme | Yeni dünyaların yerçekimi, dünya editörü ızgarası, uzunluk birimi (mm / mil) |
-| Dosyalar ve otomatik kayıt | Otomatik yedek aralığı, son dosyalar listesi, proje klasörü |
+| Genel | Açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi |
+| Görünüm ve tema | Tema (koyu, siyah, yüksek karşıtlık), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite |
+| Kaydetme ve yedekleme | Otomatik yedek sıklığı, kaydederken önceki sürümü saklama, çökme sonrası kurtarma, yedek klasörü, belge başına kopya sayısı, klasörün boyut sınırı |
+| Klavye kısayolları | Pencerenin kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |
+| Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, zaman adımı, başlangıç hızı |
+| Dünya ve düzenleme | Yeni dünyaların yerçekimi, dünya editörü ızgarası |
 | Derleyiciler | `arduino-cli` yolu, `vcvars64.bat` yolu |
+| Güncellemeler, Eklentiler | Sürüm denetimi; eklenti klasörleri ve betikler |
+| Gelişmiş | Ayarları dosyaya aktarma ve dosyadan alma, hata günlüğü, dosya türleri |
 
-Ayrıca **Klavye kısayolları** listesi, **Dosya türleri** (Windows'ta bu uygulamayla aç), **Hakkında** ve **Varsayılanlara dön** düğmesi buradadır.
+**Yedekler nasıl çalışır?**
+
+- Kaydedilmemiş sekmeler seçtiğiniz aralıkla yedek klasörüne kopyalanır; asıl dosyanız değiştirilmez.
+- Bir dosyanın üstüne kaydettiğinizde eski hâli `ad-önceki-tarih` adıyla saklanır.
+- Her belgenin en yeni kopyaları tutulur ve klasör boyut sınırını aşmaz; en eskiler silinir.
+- Uygulama beklenmedik biçimde kapanırsa bir sonraki açılışta başlangıç sayfası o çalışmanın yedeklerini gösterir.
+
+**Kısayol değiştirmek:** **Klavye kısayolları** kategorisinde düğmeye tıklayıp yeni tuşlara basın. **Esc** vazgeçer, **Backspace** tuşu kaldırır. Başka bir komutla çakışan tuş turuncu bir notla işaretlenir. Tek bir harf pencere kısayolu olamaz, çünkü yazarken çalışırdı; **Ctrl**, **Alt** ya da **Shift** ile birlikte basın. **F1–F12** tek başına olur.
 
 ---
 

@@ -4,7 +4,7 @@
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:ed="clr-namespace:RobotWin.Studio.Editor"
              xmlns:sim="clr-namespace:RobotWin.Studio.Simulation"
-             Background="{StaticResource B.Base}">
+             Background="{DynamicResource B.Base}">
     <Grid x:Name="Root">
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <!-- ================= Toolbar ================= -->
-        <Border Grid.Row="0" Background="{StaticResource B.Base}" BorderBrush="{StaticResource B.Border}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
             <Grid Margin="8,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -25,7 +25,7 @@
                     <ToggleButton x:Name="LibraryToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Parça kütüphanesini göster / gizle" Click="OnToggleLibrary" IsChecked="True" Margin="0,0,6,0">
                         <t:Icon Data="{StaticResource I.Library}" Size="16"/>
                     </ToggleButton>
-                    <Border x:Name="ToolSep0" Width="1" Height="16" Background="{StaticResource B.Border}" Margin="2,0,8,0"/>
+                    <Border x:Name="ToolSep0" Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="2,0,8,0"/>
                     <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" ToolTip="Seç ve taşı  (Esc)" Click="OnToolClick" Tag="Select" IsChecked="True">
                         <t:Icon Data="{StaticResource I.Pointer}" Size="16"/>
                     </ToggleButton>
@@ -45,15 +45,15 @@
                         <t:Icon Data="{StaticResource I.Meter}" Size="16"/>
                     </Button>
                     <StackPanel x:Name="EditTools" Orientation="Horizontal">
-                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Döndür  (R)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Aynala  (X)" Click="OnMirror"><t:Icon Data="{StaticResource I.Mirror}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Sil  (Del)" Click="OnDelete"><t:Icon Data="{StaticResource I.Delete}" Size="16"/></Button>
-                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
                         <Button x:Name="UndoButton" Style="{StaticResource Btn.Icon}" ToolTip="Geri al  (Ctrl+Z)" Click="OnUndo"><t:Icon Data="{StaticResource I.Undo}" Size="16"/></Button>
                         <Button x:Name="RedoButton" Style="{StaticResource Btn.Icon}" ToolTip="Yinele  (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
                         <StackPanel x:Name="EditorExtras" Orientation="Horizontal">
-                        <Border Width="1" Height="16" Background="{StaticResource B.Border}" Margin="8,0"/>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Numaralandır (R?, çakışan tanımlayıcılar)" Click="OnAnnotate"><t:Icon Data="{StaticResource I.Spark}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Elektriksel kural denetimi (ERC)" Click="OnErc"><t:Icon Data="{StaticResource I.Drc}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Bul / değiştir  (Ctrl+F · Ctrl+H)" Click="OnFind"><t:Icon Data="{StaticResource I.Search}" Size="16"/></Button>
@@ -66,8 +66,8 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0">
                     <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnRun" ToolTip="Başlat / duraklat  (F5)">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="12" Filled="True" Foreground="{StaticResource B.OnPrimary}"/>
-                            <TextBlock x:Name="RunText" Text="Simüle et" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource B.OnPrimary}"/>
+                            <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="12" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <TextBlock x:Name="RunText" Text="Simüle et" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="1 ms ilerlet" Click="OnStep" Margin="6,0,0,0"><t:Icon Data="{StaticResource I.Step}" Size="14"/></Button>
@@ -119,11 +119,11 @@
                 </StackPanel>
                 <StackPanel x:Name="WorldBoards" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,170,0,0" MaxWidth="420" Visibility="Collapsed"/>
                 <Border x:Name="ToastHost" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="12,12,12,0" Visibility="Collapsed"
-                        Background="{StaticResource B.Overlay}" BorderBrush="{StaticResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="12,8"
+                        Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="12,8"
                         Effect="{StaticResource E.Popup}" Panel.ZIndex="5">
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="6" Height="6" Fill="{StaticResource B.Danger}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="ToastText" Foreground="{StaticResource B.Text}" Margin="9,0,0,0" VerticalAlignment="Center" MaxWidth="560" TextWrapping="Wrap"/>
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource B.Danger}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ToastText" Foreground="{DynamicResource B.Text}" Margin="9,0,0,0" VerticalAlignment="Center" MaxWidth="560" TextWrapping="Wrap"/>
                         <Button x:Name="ToastAction" Style="{StaticResource Btn.Ghost}" Content="Neden?" Margin="10,0,0,0" Padding="8,2" Visibility="Collapsed" Click="OnToastAction"/>
                     </StackPanel>
                 </Border>
@@ -131,11 +131,11 @@
             </Grid>
 
             <!-- Library -->
-            <Border x:Name="LibraryHost" Grid.Column="0" Background="{StaticResource B.Base}" Panel.ZIndex="3">
+            <Border x:Name="LibraryHost" Grid.Column="0" Background="{DynamicResource B.Base}" Panel.ZIndex="3">
                 <DockPanel Margin="14,14,6,0">
                     <Grid DockPanel.Dock="Top" Margin="0,0,8,8">
                         <TextBox x:Name="SearchBox" Tag="Parça ara" Padding="28,4,8,4" TextChanged="OnSearchChanged"/>
-                        <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{StaticResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="9,0,0,0" IsHitTestVisible="False"/>
+                        <t:Icon Data="{StaticResource I.Search}" Size="14" Foreground="{DynamicResource B.TextMuted}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="9,0,0,0" IsHitTestVisible="False"/>
                     </Grid>
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,8,8">
                         <TextBlock x:Name="LibraryCount" DockPanel.Dock="Right" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="10,0,2,0"/>
@@ -151,8 +151,8 @@
                                     </Grid.ColumnDefinitions>
                                     <ed:SymbolPreview PresetId="{Binding Id}" Margin="2,5,10,5"/>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource B.TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Description}" Foreground="{DynamicResource B.TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -160,12 +160,12 @@
                     </ListBox>
                 </DockPanel>
             </Border>
-            <Border x:Name="LibrarySplit" Grid.Column="1" Background="{StaticResource B.Border}"/>
+            <Border x:Name="LibrarySplit" Grid.Column="1" Background="{DynamicResource B.Border}"/>
 
-            <Border x:Name="InspectorSplit" Grid.Column="3" Background="{StaticResource B.Border}"/>
+            <Border x:Name="InspectorSplit" Grid.Column="3" Background="{DynamicResource B.Border}"/>
 
             <!-- Inspector -->
-            <Border x:Name="InspectorHost" Grid.Column="4" Background="{StaticResource B.Base}" Panel.ZIndex="3">
+            <Border x:Name="InspectorHost" Grid.Column="4" Background="{DynamicResource B.Base}" Panel.ZIndex="3">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="Inspector" Margin="18,16,16,16"/>
                 </ScrollViewer>
@@ -174,7 +174,7 @@
 
         <GridSplitter x:Name="DockSplitter" Grid.Row="2" Height="7" Margin="0,-3" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows"
                       ResizeBehavior="PreviousAndNext" Cursor="SizeNS" Panel.ZIndex="5" ToolTip="Sürükleyerek alt bölmeyi büyütün / küçültün"/>
-        <Border x:Name="DockLine" Grid.Row="2" Background="{StaticResource B.Border}" IsHitTestVisible="False"/>
+        <Border x:Name="DockLine" Grid.Row="2" Background="{DynamicResource B.Border}" IsHitTestVisible="False"/>
 
         <!-- ================= Dock: tabs the user can resize, hide, move to a side or into a window (Pages/SchematicPage.Layout.cs) ================= -->
         <DockPanel x:Name="BottomArea" Grid.Row="3">
@@ -194,7 +194,7 @@
                     <ColumnDefinition x:Name="ScopePanelColumn" Width="318"/>
                 </Grid.ColumnDefinitions>
                 <sim:ScopeView x:Name="Scope" Margin="8,8,4,8"/>
-                <Border x:Name="ScopePanelHost" Grid.Column="1" BorderBrush="{StaticResource B.Border}" BorderThickness="1,0,0,0"/>
+                <Border x:Name="ScopePanelHost" Grid.Column="1" BorderBrush="{DynamicResource B.Border}" BorderThickness="1,0,0,0"/>
             </Grid>
             <Grid Visibility="Collapsed" x:Name="MeterPane">
                 <Grid.ColumnDefinitions>
@@ -240,17 +240,17 @@
                     <TextBox x:Name="SerialInput" Tag="Karta gönder (Enter)" KeyDown="OnSerialKey" FontFamily="{StaticResource F.Mono}"/>
                 </DockPanel>
                 <TextBox x:Name="SerialOutput" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextWrapping="Wrap"
-                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Background="{StaticResource B.Canvas}"
-                         Foreground="{StaticResource B.Text}" Padding="10,8"/>
+                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Background="{DynamicResource B.Canvas}"
+                         Foreground="{DynamicResource B.Text}" Padding="10,8"/>
             </DockPanel>
             <ListBox Visibility="Collapsed" x:Name="LogList" Margin="10,6">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{StaticResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="12"/>
-                            <TextBlock Text="{Binding KindText}" Width="64" Foreground="{StaticResource B.TextSecondary}" FontSize="12"/>
-                            <TextBlock Text="{Binding Device}" Width="96" Foreground="{StaticResource B.Text}" FontSize="12"/>
-                            <TextBlock Text="{Binding Message}" Foreground="{StaticResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding TimeText}" Width="84" Foreground="{DynamicResource B.TextMuted}" FontFamily="{StaticResource F.Mono}" FontSize="12"/>
+                            <TextBlock Text="{Binding KindText}" Width="64" Foreground="{DynamicResource B.TextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding Device}" Width="96" Foreground="{DynamicResource B.Text}" FontSize="12"/>
+                            <TextBlock Text="{Binding Message}" Foreground="{DynamicResource B.TextSecondary}" FontSize="12" TextWrapping="Wrap"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

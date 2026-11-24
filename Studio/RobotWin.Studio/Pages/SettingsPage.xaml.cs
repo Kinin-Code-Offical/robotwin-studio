@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using RobotWin.Studio.Branding;
 using RobotWin.Studio.Shell;
@@ -20,6 +21,18 @@ namespace RobotWin.Studio.Pages
     {
         private readonly List<(string Title, FrameworkElement Card)> _cards = new List<(string, FrameworkElement)>();
         private bool _building;
+
+        // [settings] categories: the left list shows one at a time; the search box looks through all of them
+        private readonly List<(string Category, FrameworkElement Card, string Text)> _index = new List<(string, FrameworkElement, string)>();
+        private readonly List<(string Name, string Note)> _categories = new List<(string, string)>();
+        private string _category = "Genel";
+        private string _shown = "Genel";
+
+        private void Category(string name, string note)
+        {
+            _category = name;
+            _categories.Add((name, note));
+        }
 
         public SettingsPage()
         {
@@ -38,24 +51,88 @@ namespace RobotWin.Studio.Pages
         private void Build()
         {
             _building = true;
+            (FileTypesCard.Parent as Panel)?.Children.Remove(FileTypesCard);   // XAML cards: moved into their categories
+            (AboutCard.Parent as Panel)?.Children.Remove(AboutCard);
             Sections.Children.Clear();
             _cards.Clear();
+            _index.Clear();
+            _categories.Clear();
 
-            Card("Görünüm", "Arayüzün boyutu, efektler ve 3D çizim kalitesi.", c =>
+            Category("Genel", "Açılış, proje klasörü, son dosyalar ve birimler.");
+            Card("Açılış", "Uygulama açıldığında ne görüneceği.", c =>
+            {
+                c.Children.Add(Toggle("Açılışta başlangıç sayfasını göster", S.ShowHomeOnStart, v => S.ShowHomeOnStart = v, "Kapalıyken son açılan proje veya dünya doğrudan açılır."));
+                var guide = new Button { Content = "İlk robot rehberini başlat", Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left };
+                guide.Click += (_, _) => (Window.GetWindow(this) as MainWindow)?.StartGuide();
+                c.Children.Add(guide);
+            });
+            Card("Dosyalar", "Yeni projelerin klasörü ve son açılanlar listesi.", c =>
+            {
+                c.Children.Add(Text("Proje klasörü", S.ProjectFolder, v => S.ProjectFolder = v, "Yeni projeler için varsayılan klasör (yedek klasörü ayrıca seçilmediyse yedekler de burada)."));
+                c.Children.Add(Choice("Son dosyalar listesi", new[] { ("5", 5), ("10", 10), ("20", 20) }, S.RecentFileCount, v =>
+                {
+                    S.RecentFileCount = v;
+                    RecentFiles.Limit = v;
+                }));
+                var clear = new Button { Content = "Son dosyalar listesini temizle", Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0) };
+                clear.Click += (_, _) =>
+                {
+                    RecentFiles.Clear();
+                    Workspace.Current.Status = "Son dosyalar listesi temizlendi";
+                };
+                c.Children.Add(clear);
+            });
+            Card("Birimler", "Editörlerde uzunluklar.", c =>
+            {
+                c.Children.Add(Choice("Uzunluk birimi (PCB)", new[] { ("Milimetre", "mm"), ("Mil (1/1000 inç)", "mil") }, S.Units, v => S.Units = v));
+            });
+
+            Category("Görünüm ve tema", "Tema, vurgu rengi, arayüz boyutu, efektler ve 3B kalite.");
+            Card("Tema", "Arayüzün renkleri; değişiklik hemen uygulanır. 3B görünümün ve kod düzenleyicinin zemini koyu kalır.", c =>
+            {
+                c.Children.Add(Choice("Tema", Themes.All.Select(t => (t.Name, t.Id)).ToArray(), S.Theme, v =>
+                {
+                    S.Theme = v;
+                    ApplyTheme();
+                }));
+                c.Children.Add(Choice("Vurgu rengi", Themes.Accents.Select(a => (a.Name, a.Id)).ToArray(), S.Accent, v =>
+                {
+                    S.Accent = v;
+                    ApplyTheme();
+                }, "Seçili öğeler, odak, canlı değerler ve birincil düğmeler bu renkle görünür."));
+            });
+            Card("Arayüz", "Boyut ve göstergeler.", c =>
             {
                 c.Children.Add(Choice("Arayüz ölçeği", new[] { ("%75", 0.75), ("%90", 0.9), ("%100", 1.0), ("%110", 1.1), ("%125", 1.25), ("%150", 1.5) }, S.UiScale, v =>
                 {
                     S.UiScale = v;
                     (Window.GetWindow(this) as MainWindow)?.ApplyUiScale(v);
                 }, "Yüksek çözünürlüklü ekranlarda veya sunumlarda büyütün."));
+                c.Children.Add(Toggle("Performans göstergesi (FPS, kare süreleri)", S.ShowPerf, v =>
+                {
+                    S.ShowPerf = v;
+                    (Window.GetWindow(this) as MainWindow)?.ShowPerf(v);
+                }, "Ctrl+Shift+F ile de açılıp kapanır."));
+            });
+            Card("Efektler ve ses", "Görsel efektler ve simülasyon sesleri.", c =>
+            {
                 c.Children.Add(Toggle("Parçacık efektleri (duman, kıvılcım, alev)", S.Effects, v => S.Effects = v, "Yanma ve aşırı ısınma görselleri. Kapatmak zayıf ekran kartlarında akıcılığı artırır."));
                 c.Children.Add(Toggle("Simülasyon sesleri", S.Sound, v => S.Sound = v, "Motor uğultusu, servo dişli sesi, buzzer, röle tıkırtısı, yanan parçanın patlaması."));
                 c.Children.Add(Choice("Ses düzeyi", new[] { ("%25", 0.25), ("%50", 0.5), ("%60", 0.6), ("%80", 0.8), ("%100", 1.0) }, S.Volume, v => S.Volume = v));
                 c.Children.Add(Toggle("Akım akışı animasyonu", S.ShowCurrentFlow, v => S.ShowCurrentFlow = v));
+            });
+            Card("3B görünüm", "Dünya ve parça görünümlerinin çizim kalitesi.", c =>
+            {
                 c.Children.Add(Choice("3D kalitesi", new[] { ("Düşük", "low"), ("Orta", "medium"), ("Yüksek", "high") }, S.Quality3D, v => S.Quality3D = v, "Düşük: kenar yumuşatma kapalı, daha az parçacık."));
-                c.Children.Add(Toggle("Açılışta başlangıç sayfasını göster", S.ShowHomeOnStart, v => S.ShowHomeOnStart = v, "Kapalıyken son açılan proje veya dünya doğrudan açılır."));
             });
 
+            Category("Kaydetme ve yedekleme", "Otomatik yedek, önceki sürümler, yedeklerin saklanması ve çökme sonrası kurtarma.");
+            BackupCards();
+
+            Category("Klavye kısayolları", "Tuşu değiştirmek için düğmeye tıklayıp yeni tuşlara basın: Esc vazgeçer, Backspace kaldırır. Çakışan tuşlar işaretlenir.");
+            ShortcutCards();
+
+            Category("Simülasyon ve fizik", "Çözücünün doğruluğu, hızı ve parçaların gerçekteki gibi bozulması.");
             Card("Simülasyon ve fizik", "Çözücünün doğruluğu ve parçaların gerçek dünyadaki gibi bozulması.", c =>
             {
                 c.Children.Add(Toggle("Parça hasarı (yanma, sigorta atması, dielektrik delinme)", S.EnableDamage, v => S.EnableDamage = v,
@@ -68,33 +145,15 @@ namespace RobotWin.Studio.Pages
                 c.Children.Add(Choice("Başlangıç hızı", new[] { ("0.1×", 0.1), ("0.5×", 0.5), ("Gerçek zaman", 1.0), ("5×", 5.0) }, S.DefaultSpeed, v => S.DefaultSpeed = v));
             });
 
+            Category("Dünya ve düzenleme", "Yeni dünyaların ortamı ve editörlerin ızgarası.");
             Card("Dünya ve düzenleme", "Yeni dünyaların ortamı ve editörlerin ızgarası.", c =>
             {
                 c.Children.Add(Choice("Yeni dünyaların yerçekimi", new[] { ("Dünya 9.81 m/s²", 9.81), ("Ay 1.62 m/s²", 1.62), ("Mars 3.71 m/s²", 3.71), ("Sıfır", 0.0) }, S.WorldGravity, v => S.WorldGravity = v));
                 c.Children.Add(Choice("Dünya editörü ızgarası", new[] { ("Kapalı", 0.0), ("1 mm", 1.0), ("2.5 mm", 2.5), ("5 mm", 5.0), ("10 mm", 10.0) }, S.WorldGridMm, v => S.WorldGridMm = v,
                     "Nesneler taşınırken bu adıma yaslanır; sürüklerken Alt basılıysa ızgara kapanır."));
-                c.Children.Add(Choice("Uzunluk birimi (PCB)", new[] { ("Milimetre", "mm"), ("Mil (1/1000 inç)", "mil") }, S.Units, v => S.Units = v));
             });
 
-            Card("Dosyalar ve otomatik kayıt", "Çökme veya elektrik kesintisinde işinizi kaybetmeyin.", c =>
-            {
-                c.Children.Add(Choice("Otomatik yedek", new[] { ("Kapalı", 0), ("Her 2 dakikada", 2), ("Her 5 dakikada", 5), ("Her 10 dakikada", 10) }, S.AutosaveMinutes, v => S.AutosaveMinutes = v,
-                    "Kaydedilmemiş sekmelerin bir kopyası 'Belgeler\\RobotWin\\Yedekler' klasörüne yazılır; asıl dosyanız değiştirilmez."));
-                c.Children.Add(Choice("Son dosyalar listesi", new[] { ("5", 5), ("10", 10), ("20", 20) }, S.RecentFileCount, v =>
-                {
-                    S.RecentFileCount = v;
-                    RecentFiles.Limit = v;
-                }));
-                c.Children.Add(Text("Proje klasörü", S.ProjectFolder, v => S.ProjectFolder = v, "Yeni projeler ve yedekler için varsayılan klasör."));
-                var clear = new Button { Content = "Son dosyalar listesini temizle", Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0) };
-                clear.Click += (_, _) =>
-                {
-                    RecentFiles.Clear();
-                    Workspace.Current.Status = "Son dosyalar listesi temizlendi";
-                };
-                c.Children.Add(clear);
-            });
-
+            Category("Derleyiciler", "Kartların kodunu gerçek araç zinciriyle derleyen programlar.");
             Card("Derleyiciler", "Kartların kodunu gerçek araç zinciriyle derleyen programlar.", c =>
             {
                 string? cli = Firmware.ArduinoCompiler.FindCli();
@@ -107,6 +166,7 @@ namespace RobotWin.Studio.Pages
                     msvc ? "Visual Studio C++ araçları bulundu (ESP32 çizimleri yerel olarak derlenir)." : "Bulunamadı. Visual Studio Build Tools 'C++ ile masaüstü geliştirme' gerekir (ESP32)."));
             });
 
+            Category("Güncellemeler", "Yeni sürümlerin denetlenmesi ve kurulması.");
             Card("Güncellemeler", "Yeni sürümler GitHub'dan denetlenir; kurulum tek tıkla yapılır, projeleriniz ve ayarlarınız korunur.", c =>
             {
                 var um = Updates.UpdateManager.Current;
@@ -143,42 +203,75 @@ namespace RobotWin.Studio.Pages
                 c.Children.Add(row);
             });
 
+            Category("Eklentiler", "Kendi fizik ve davranış kodunuz: eklentiler, dünya betikleri, ifadeler.");
             SdkCard();   // [sdk] Pages/SettingsPage.Sdk.cs
 
-            Card("Klavye kısayolları", "Tüm sayfalarda geçerli tuşlar.", c =>
-            {
-                foreach (var (keys, what) in new[]
-                {
-                    ("Ctrl+N / Ctrl+Shift+N", "Yeni devre / yeni dünya"), ("Ctrl+O · Ctrl+S · Ctrl+Shift+S", "Aç · kaydet · farklı kaydet"),
-                    ("Ctrl+W · Ctrl+Tab", "Sekmeyi kapat · sonraki sekme"), ("Ctrl+\\", "Bölünmüş görünüm"), ("F11 · Esc", "Tam ekran · çık"),
-                    ("F5 · Shift+F5", "Simülasyon başlat/duraklat · durdur"), ("Ctrl+Z · Ctrl+Y", "Geri al · yinele"),
-                    ("W · L · R · X · Del", "Devre: kablo · etiket · döndür · aynala · sil"), ("K · B · R · Ctrl+D", "Dünya: kablo · bağla · döndür · çoğalt"),
-                    ("F7", "Kod: derle")
-                })
-                {
-                    var g = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-                    g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(230) });
-                    g.ColumnDefinitions.Add(new ColumnDefinition());
-                    g.Children.Add(new TextBlock { Text = keys, FontFamily = (FontFamily)FindResource("F.Mono"), Foreground = (Brush)FindResource("B.TextSecondary") });
-                    var t = new TextBlock { Text = what };
-                    Grid.SetColumn(t, 1);
-                    g.Children.Add(t);
-                    c.Children.Add(g);
-                }
-            });
+            Category("Gelişmiş", "Dosya türleri, tanılama, ayarların taşınması ve sıfırlanması.");
+            AdvancedCards();
+            Sections.Children.Add(FileTypesCard);
+            FileTypesCard.Margin = new Thickness(0, 0, 0, 14);
+            _index.Add(("Gelişmiş", FileTypesCard, "dosya türleri rwproj rwworld ilişkilendirme windows"));
+            Category("Hakkında", "Sürüm ve uygulama bilgisi.");
+            Sections.Children.Add(AboutCard);
+            _index.Add(("Hakkında", AboutCard, "hakkında sürüm logo"));
 
-            _cards.Add(("Dosya türleri", FileTypesCard));
-            _cards.Add(("Hakkında", AboutCard));
             SectionNav.Children.Clear();
-            foreach (var (title, card) in _cards)
+            foreach (var (name, _) in _categories)
             {
-                var b = new Button { Content = title, Style = (Style)FindResource("Btn.Ghost"), HorizontalContentAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 2) };
-                var target = card;
-                b.Click += (_, _) => target.BringIntoView(new Rect(0, 0, 1, Scroll.ViewportHeight));
+                var b = new ToggleButton { Content = name, Style = (Style)FindResource("List.Item"), Tag = name, Margin = new Thickness(0, 0, 0, 2) };
+                b.Click += (_, _) =>
+                {
+                    SearchBox.Text = string.Empty;
+                    ShowCategory(name);
+                };
                 SectionNav.Children.Add(b);
             }
 
             _building = false;
+            ShowCategory(_categories.Any(x => x.Name == _shown) ? _shown : "Genel");
+        }
+
+        /// <summary>Shows one category's cards (and marks it in the list).</summary>
+        private void ShowCategory(string name)
+        {
+            _shown = name;
+            foreach (var (category, card, _) in _index) card.Visibility = category == name ? Visibility.Visible : Visibility.Collapsed;
+            foreach (ToggleButton b in SectionNav.Children.OfType<ToggleButton>()) b.IsChecked = (string)b.Tag == name;
+            CategoryTitle.Text = name;
+            CategoryNote.Text = _categories.FirstOrDefault(c => c.Name == name).Note ?? string.Empty;
+            Scroll.ScrollToTop();
+        }
+
+        /// <summary>Search: every card whose title, notes or settings mention the words, from all categories.</summary>
+        private void OnSearch(object sender, TextChangedEventArgs e)
+        {
+            string q = SearchBox.Text.Trim();
+            if (q.Length == 0)
+            {
+                ShowCategory(_shown);
+                return;
+            }
+
+            var tr = CultureInfo.GetCultureInfo("tr-TR");
+            string[] words = q.ToLower(tr).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            int found = 0;
+            foreach (var (category, card, text) in _index)
+            {
+                bool hit = words.All(w => text.Contains(w, StringComparison.Ordinal));
+                card.Visibility = hit ? Visibility.Visible : Visibility.Collapsed;
+                if (hit) found++;
+            }
+
+            foreach (ToggleButton b in SectionNav.Children.OfType<ToggleButton>()) b.IsChecked = false;
+            CategoryTitle.Text = $"Arama: \u201c{q}\u201d";
+            CategoryNote.Text = found == 0 ? "Eşleşen ayar yok. Başka bir sözcük deneyin." : $"{found} bölümde bulundu.";
+        }
+
+        private void ApplyTheme()
+        {
+            Themes.Apply();
+            Dispatcher.BeginInvoke(new Action(Build));   // this page's own rows took their colours in code
+            Workspace.Current.Status = "Tema uygulandı";
         }
 
         // ---------------------------------------------------------------- builders
@@ -192,6 +285,45 @@ namespace RobotWin.Studio.Pages
             var card = new Border { Style = (Style)FindResource("Card"), Margin = new Thickness(0, 0, 0, 14), Child = sp };
             Sections.Children.Add(card);
             _cards.Add((title, card));
+            _index.Add((_category, card, (_category + " " + SearchText(sp)).ToLower(CultureInfo.GetCultureInfo("tr-TR"))));
+        }
+
+        /// <summary>Every text a card shows (titles, labels, notes, choices) for the search box.</summary>
+        private static string SearchText(DependencyObject root)
+        {
+            var sb = new System.Text.StringBuilder();
+            void Walk(object o)
+            {
+                switch (o)
+                {
+                    case TextBlock t:
+                        sb.Append(' ').Append(t.Text);
+                        break;
+                    case ContentControl cc when cc.Content is string s:
+                        sb.Append(' ').Append(s);
+                        break;
+                    case TextBox tb:
+                        sb.Append(' ').Append(tb.Text);
+                        break;
+                }
+
+                if (o is ItemsControl ic)
+                {
+                    foreach (var item in ic.Items)
+                    {
+                        if (item is ContentControl ci && ci.Content is string cs) sb.Append(' ').Append(cs);
+                        else if (item is string str) sb.Append(' ').Append(str);
+                    }
+                }
+
+                if (o is DependencyObject d)
+                {
+                    foreach (var child in LogicalTreeHelper.GetChildren(d)) Walk(child);
+                }
+            }
+
+            Walk(root);
+            return sb.ToString();
         }
 
         private void Saved()
@@ -291,10 +423,10 @@ namespace RobotWin.Studio.Pages
 
         private FrameworkElement Text(string label, string value, Action<string> set, string? help = null)
         {
-            var tb = new TextBox { Text = value };
+            var tb = new TextBox { Text = Unattended.Display(value) };
             tb.LostKeyboardFocus += (_, _) =>
             {
-                if (tb.Text == value) return;
+                if (tb.Text == value || Unattended.Active) return;
                 value = tb.Text.Trim();
                 set(value);
                 Saved();
@@ -307,6 +439,8 @@ namespace RobotWin.Studio.Pages
             if (Dialog.Show(Window.GetWindow(this), "Varsayılanlara dön", "Tüm tercihler ilk haline dönsün mü? (Projeleriniz etkilenmez.)", "Sıfırla", "Vazgeç") != 0) return;
             S.ResetToDefaults();
             S.Save();
+            Themes.Apply();
+            Shortcuts.Reapply();
             (Window.GetWindow(this) as MainWindow)?.ApplyUiScale(S.UiScale);
             Build();
             Workspace.Current.Status = "Ayarlar varsayılanlara döndü";

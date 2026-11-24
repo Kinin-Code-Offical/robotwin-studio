@@ -141,11 +141,13 @@ namespace RobotWin.Studio.Pages
             BackupList.Children.Clear();
             try
             {
-                var dir = new DirectoryInfo(MainWindow.BackupFolder);
-                var files = dir.Exists && !Unattended.Active ? dir.GetFiles().Where(f => f.Extension == RobotWinFormats.ProjectExtension || f.Extension == RobotWinFormats.WorldExtension)
-                    .OrderByDescending(f => f.LastWriteTimeUtc).Take(5).ToList() : new System.Collections.Generic.List<FileInfo>();
+                var files = Unattended.Active ? new System.Collections.Generic.List<FileInfo>() : Backups.Newest(5);
                 foreach (var f in files) BackupList.Children.Add(FileButton(f.FullName, f.LastWriteTime.ToString("dd.MM.yyyy HH:mm")));
                 BackupTitle.Visibility = files.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                // [backup] the last run ended in a crash: the copies made during it come first
+                var since = files.Where(f => f.LastWriteTime >= Backups.CrashedRunStart).ToList();
+                CrashNote.Visibility = Backups.CrashedLastTime && since.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                CrashText.Text = $"RobotWin Studio geçen sefer beklenmedik biçimde kapandı. O çalışmada alınan {since.Count} otomatik yedek aşağıda: kaydetmediğiniz işi buradan açıp kurtarabilirsiniz.";
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {

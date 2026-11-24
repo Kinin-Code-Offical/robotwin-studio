@@ -42,6 +42,12 @@ namespace RobotWin.Studio.Shell
 
         // ---------------------------------------------------------------- appearance
 
+        /// <summary>[theme] "koyu", "siyah" (OLED) or "karsitlik" (high contrast).</summary>
+        public string Theme { get; set; } = "koyu";
+
+        /// <summary>[theme] Accent colour: "mavi", "turkuaz", "turuncu", "mor", "pembe".</summary>
+        public string Accent { get; set; } = "mavi";
+
         /// <summary>Whole-interface zoom (0.75 – 1.75).</summary>
         public double UiScale { get; set; } = 1.0;
 
@@ -79,8 +85,23 @@ namespace RobotWin.Studio.Shell
 
         public int RecentFileCount { get; set; } = 10;
 
-        /// <summary>Autosave interval in minutes (0 = off). Saves a backup copy next to the file.</summary>
+        /// <summary>Autosave interval in minutes (0 = off): unsaved tabs are copied into the backup folder.</summary>
         public int AutosaveMinutes { get; set; } = 5;
+
+        /// <summary>[backup] Folder of autosaves and previous versions ("" = the project folder's Yedekler).</summary>
+        public string BackupFolder { get; set; } = string.Empty;
+
+        /// <summary>[backup] Copies kept per document (autosaves and previous versions each).</summary>
+        public int BackupKeepPerFile { get; set; } = 10;
+
+        /// <summary>[backup] The backup folder's size limit (MB); the oldest copies go first.</summary>
+        public int BackupMaxMb { get; set; } = 500;
+
+        /// <summary>[backup] Keep the previous version of a file each time it is saved over.</summary>
+        public bool BackupOnSave { get; set; } = true;
+
+        /// <summary>[backup] After a crash, the start page points at the latest autosaves.</summary>
+        public bool CrashRecovery { get; set; } = true;
 
         /// <summary>Folder offered for new projects.</summary>
         public string ProjectFolder { get; set; } =
@@ -117,6 +138,9 @@ namespace RobotWin.Studio.Shell
         public double WindowHeight { get; set; }
         public bool WindowMaximized { get; set; }
         public double WindowLeft { get; set; } = double.NaN;
+
+        /// <summary>[keys] Shortcuts the user changed: command id → keys ("" = none). Others keep their defaults.</summary>
+        public Dictionary<string, string> KeyBindings { get; set; } = new Dictionary<string, string>();
 
         /// <summary>[tabs] Files whose tabs are pinned (they open pinned).</summary>
         public List<string> PinnedFiles { get; set; } = new List<string>();
@@ -160,6 +184,16 @@ namespace RobotWin.Studio.Shell
             }
 
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>[settings] Takes every preference of <paramref name="other"/> (an imported file), keeping this machine's window placement.</summary>
+        public void CopyFrom(AppSettings other)
+        {
+            foreach (var p in typeof(AppSettings).GetProperties())
+            {
+                if (!p.CanWrite || p.Name.StartsWith("Window", StringComparison.Ordinal)) continue;
+                p.SetValue(this, p.GetValue(other));
+            }
         }
 
         /// <summary>Restores every preference to its default (window size is kept).</summary>
