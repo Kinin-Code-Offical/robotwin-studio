@@ -180,6 +180,7 @@ namespace RobotWin.Studio.Updates
             WindowStartupLocation = owner != null ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen;
             ShowInTaskbar = false;
             FontFamily = R<FontFamily>("F.Ui");
+            SetResourceReference(ForegroundProperty, "B.Text");   // [theme] its buttons' and texts' ink (Windows' black otherwise)
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), Width = 440 };
             _title.Style = R<Style>("Text.Title");

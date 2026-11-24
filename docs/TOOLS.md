@@ -28,6 +28,8 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | `--snapshot out.png --page splash` | Draws the splash window as it looks part-way through the start. |
 | `--snapshot out.png --page <page> --theme pembe:gul` | Draws a page in a theme and accent, for this run only (nothing is saved). |
 | `--snapshot out.png --page world --fault <template> --simulate <s> --wait <s> --perf` | Shows the performance indicator for this run only (nothing is saved); the world, stepped for `--simulate` seconds, then runs live for `--wait` seconds, so the indicator shows each solver's cost per simulated second. |
+| `--snapshot out.png --page <page> --theme <theme> --contrast-report file` | Adds to the file every text on the page (and its open windows and popups) that cannot be read in that theme: below 3:1 WCAG contrast against the solid backgrounds behind it, translucent ones mixed in. One line per text: page, theme, ratio, colours, where, text. |
+| `python tools/scripts/contrast_check.py <RobotWinStudio.exe> [--quick]` | Runs `--contrast-report` over every page in all 16 themes, and over the guide's picture states (dialogs, popups, tuners) and every Help chapter in four of them; prints the unreadable texts grouped and exits 1 when there is any. |
 | `--lang en` | Runs in a language pack's language, for this run only (with `--snapshot`, draws a page in it). |
 | `--lang-missing <file>` | With `--snapshot`: adds the page's texts the pack leaves untranslated to the file, one JSON line each (`--page library` adds the whole part catalogue and the examples). |
 | `--api <port> [--world f.rwworld]` | The app as a windowless automation server (see [API.md](API.md)). |

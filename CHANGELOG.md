@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A readability check for every theme:** `--contrast-report` lists each text of a page (its open windows and popups too) that falls under 3:1 contrast against what is behind it, so a black text on a dark theme or a pale one on a light theme is found by a run, not by eye. `tools/scripts/contrast_check.py` runs it over every page in all 16 themes, and over the guide's dialogs, popups and tuners and every Help chapter in four of them; all of it now passes.
 - **Which solver holds a world back:** while a world runs, the performance overlay (View → Performance overlay, Ctrl+Shift+F) shows how fast it runs against the clock and, for each solver, the milliseconds of computing it takes per simulated second and its share: the circuit, Arduino and ESP32 firmware, rigid bodies, liquids, cables, heat, motors and drives, air and gas, scripts and sensors. Below them, the physics step, each liquid's particles and substeps (and whether it sleeps), and the memory in use. A world keeps up with the clock while the milliseconds add up to under a thousand; on the water glass, the liquid takes 83%. `--snapshot … --perf` shows the overlay for one run.
 - **A splash window opens first** (as Unity's editor does): the mark, the version and the step being loaded with a progress bar, on a thread of its own so it keeps drawing while the studio is built; it fades out when the studio has drawn its window.
 - **Where time goes, measured:** `--startup-report file` writes each start step's time from the process start; `--bench` prints, under each template, where opening it went (environment, each object's model, the cable layout split into scene, exits, routes, laying and relaxing).
@@ -94,6 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Some texts were black on the dark themes:** Windows' own styles of checkboxes, radio buttons, labels, group boxes and expanders set their text to the system's black instead of taking the window's, so the assembly dialog's projects ("Engelden kaçan robot", "Çizgi izleyen robot", the modelled parts) read black on dark. They now take the theme's text colour, as does every window opened in code (the download window's too); their look stays Windows'.
+- **On the light themes, the World / Assembly badge and the oscilloscope's channel labels were hard to read** (a yellow CH1 at 1.1:1, the teal badge at 1.9:1). Coloured labels are now darkened on light themes, and lightened on dark ones, until they stand 4.5:1 against their surface; they follow a change of theme.
 - **The performance overlay's sections stayed Turkish in the English interface** ("simülasyon … en kötü"): its lines are now built from translated pieces and padded after translation, so their columns line up in any language.
 - **Water and the robot arm's shaft were named in Turkish in the English interface** ("Su", "Mil"): two- and three-letter names had slipped past the language pack.
 - **The Studio's tests that switch the interface's language could fail at random:** they ran in parallel with tests that read the language in use (a download size read "1.7 MB" instead of "1,7 MB"). They now run one after another.

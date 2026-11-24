@@ -2,6 +2,35 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:t="clr-namespace:RobotWin.Studio.Theme">
 
+    <!-- ===================== Windows ===================== -->
+    <!-- [theme] A window opened in code (a dialog, a tool window) takes the theme's text colour as the main window does:
+         a checkbox or a plain text in one fell back to Windows' black, unreadable on the dark themes. -->
+    <Style TargetType="Window">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+
+    <!-- [theme] Windows' own styles of these controls set their text to the system's black instead of taking it from
+         the window: a checkbox in a dialog (the assembly dialog's projects) read black on dark. Their look stays
+         Windows'; only the ink follows the theme. -->
+    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+    <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+    <Style TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+    <Style TargetType="GroupBox" BasedOn="{StaticResource {x:Type GroupBox}}">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+    <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+    <Style TargetType="RichTextBox" BasedOn="{StaticResource {x:Type RichTextBox}}">
+        <Setter Property="Foreground" Value="{DynamicResource B.Text}"/>
+    </Style>
+
     <!-- ===================== Text ===================== -->
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource F.Ui}"/>

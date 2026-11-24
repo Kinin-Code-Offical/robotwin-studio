@@ -215,6 +215,19 @@ namespace RobotWin.Studio.Shell
             return Mix(a, Color.FromRgb(0, 0, 0), 0.22);
         }
 
+        /// <summary>
+        /// A colour (a channel's, a mode's) made readable as text on a surface of the theme in use: the same hue, darkened
+        /// on a light theme or lightened on a dark one until it stands 4.5:1 against the surface (WCAG for text). A bright
+        /// yellow or teal chosen for the dark themes read 1.1–1.9:1 on the light ones.
+        /// </summary>
+        public static Color Readable(Color c, string surface = "Raised")
+        {
+            var under = Current.Colors.TryGetValue(surface, out var s) ? s : Current.Colors["Base"];
+            var toward = Current.Light ? Color.FromRgb(0, 0, 0) : Color.FromRgb(0xFF, 0xFF, 0xFF);
+            for (int i = 0; i < 20 && ContrastAudit.Ratio(c, under) < 4.5; i++) c = Mix(c, toward, 0.12);
+            return c;
+        }
+
         /// <summary>Applies the settings' theme and accent; true when everything changed at once (no restart needed).</summary>
         public static bool Apply() => Apply(AppSettings.Current.Theme, AppSettings.Current.Accent);
 

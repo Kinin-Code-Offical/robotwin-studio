@@ -66,6 +66,7 @@ namespace RobotWin.Studio.Pages
             Scene.JointTargetPicked += OnJointTarget;
             LogList.ItemsSource = _session.Log;
             _session.Updated += (_, _) => OnSimUpdated();
+            Shell.Themes.Changed += () => ShowMode(World);   // [theme] the badge's ink follows the theme
             _session.StateChanged += (_, _) => Dispatcher.BeginInvoke(new Action(UpdateRunButton));
             _session.Failure += (obj, msg) => Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -1528,10 +1529,11 @@ namespace RobotWin.Studio.Pages
         {
             bool montaj = world?.IsAssembly == true;
             var accent = montaj ? Color.FromRgb(0xF0, 0x8A, 0x3C) : Color.FromRgb(0x2F, 0xC2, 0xB0);
+            var ink = Shell.Themes.Readable(accent, "Base");   // [theme] teal and orange read 1.9–2.2:1 on the light themes
             ModeIcon.Data = (Geometry)FindResource(montaj ? "I.Assembly" : "I.World");
-            ModeIcon.Foreground = new SolidColorBrush(accent);
+            ModeIcon.Foreground = new SolidColorBrush(ink);
             ModeText.Text = montaj ? "MONTAJ" : "DÜNYA";
-            ModeText.Foreground = new SolidColorBrush(accent);
+            ModeText.Foreground = new SolidColorBrush(ink);
             string title = world?.Title ?? string.Empty;
             if (montaj && title.EndsWith(" — montaj", StringComparison.Ordinal)) title = title.Substring(0, title.Length - 9);
             ModeTitle.Text = string.Empty;   // the tab shows the name; the badge stays short so the tools keep their room

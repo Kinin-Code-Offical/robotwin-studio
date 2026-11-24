@@ -27,6 +27,8 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 | `--snapshot cikti.png --page splash` | Açılış ekranını açılışın ortasındaki hâliyle çizer. |
 | `--snapshot cikti.png --page <sayfa> --theme pembe:gul` | Sayfayı bir tema ve vurgu rengiyle çizer; yalnız bu çalıştırma için, hiçbir şey kaydedilmez. |
 | `--snapshot cikti.png --page world --fault <şablon> --simulate <s> --wait <s> --perf` | Performans göstergesini yalnız bu çalıştırma için açar (hiçbir şey kaydedilmez). Dünya `--simulate` saniye adımlanır, sonra `--wait` saniye canlı çalışır; gösterge her çözücünün simülasyon saniyesi başına maliyetini gösterir. |
+| `--snapshot cikti.png --page <sayfa> --theme <tema> --contrast-report dosya` | Sayfada (açık pencereleri ve açılır menüleriyle) o temada okunamayan her yazıyı dosyaya ekler: arkasındaki düz zeminlere (yarı saydamlar karıştırılarak) karşı WCAG karşıtlığı 3:1'in altında kalanlar. Yazı başına bir satır: sayfa, tema, oran, renkler, yeri, metin. |
+| `python tools/scripts/contrast_check.py <RobotWinStudio.exe> [--quick]` | `--contrast-report`'u her sayfada 16 temanın hepsiyle, rehberin görüntü durumlarında (diyaloglar, açılır menüler, ayarlayıcılar) ve her Yardım bölümünde dördüyle çalıştırır; okunamayan yazıları gruplayıp yazar, varsa 1 ile çıkar. |
 | `--lang en` | Bu çalıştırmayı bir dil paketinin diliyle açar (`--snapshot` ile sayfayı o dilde çizer). |
 | `--lang-missing <dosya>` | `--snapshot` ile: sayfada paketin çevirmediği metinleri dosyaya, her biri bir JSON satırı olarak ekler (`--page library` bütün parça kataloğunu ve örnekleri de ekler). |
 | `--api <port> [--world f.rwworld]` | Uygulama, pencere açmadan otomasyon sunucusu olarak (bkz. [Otomasyon API'si](API.md)). |

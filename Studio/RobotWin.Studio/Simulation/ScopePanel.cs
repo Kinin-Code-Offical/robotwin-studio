@@ -290,7 +290,8 @@ namespace RobotWin.Studio.Simulation
                 if (colored)
                 {
                     var c = index < 4 ? ScopeView.ColorOf(index) : ScopeView.MathColor;
-                    b.Foreground = new SolidColorBrush(c);
+                    b.Foreground = new SolidColorBrush(Shell.Themes.Readable(c));   // [theme] a yellow CH1 read 1.1:1 on the light themes
+                    Shell.Themes.Changed += () => b.Foreground = new SolidColorBrush(Shell.Themes.Readable(c));
                 }
 
                 b.Click += (_, _) =>

@@ -222,7 +222,8 @@ namespace RobotWin.Studio.Editor
         {
             var (mark, color) = Marks.TryGetValue(it.Kind, out var m) ? m : ("·", Colors.Gray);
             var panel = new DockPanel();
-            var badge = new TextBlock { Text = mark, Width = 18, Foreground = new SolidColorBrush(color), FontWeight = FontWeights.SemiBold, TextAlignment = TextAlignment.Center };
+            // [theme] The kinds' colours are VS Code's dark ones: on a light theme the list's own surface needs them darker.
+            var badge = new TextBlock { Text = mark, Width = 18, Foreground = new SolidColorBrush(Shell.Themes.Readable(color, "Overlay")), FontWeight = FontWeights.SemiBold, TextAlignment = TextAlignment.Center };
             DockPanel.SetDock(badge, Dock.Left);
             panel.Children.Add(badge);
             var label = new TextBlock { Text = it.Label, Margin = new Thickness(4, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };

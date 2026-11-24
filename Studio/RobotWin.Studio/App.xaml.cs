@@ -306,6 +306,18 @@ namespace RobotWin.Studio
                 enc.Frames.Add(BitmapFrame.Create(shot));
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 using (var fs = File.Create(path)) enc.Save(fs);
+                // [theme] --contrast-report file: text that cannot be read on this page in this theme (every window and open
+                // popup), added to the file (one per line).
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--contrast-report").Skip(1).FirstOrDefault() is { } contrastPath)
+                {
+                    var under = (window.TryFindResource("B.Base") as SolidColorBrush)?.Color ?? Colors.Black;
+                    var lines = new System.Collections.Generic.List<string>();
+                    foreach (var source in PresentationSource.CurrentSources.OfType<PresentationSource>().ToList())
+                        if (source.RootVisual is { } rootVisual)
+                            lines.AddRange(Shell.ContrastAudit.Find(rootVisual, under).Select(f => Shell.ContrastAudit.Line(f, page + (fault != null ? ":" + fault : string.Empty), Shell.AppSettings.Current.Theme)));
+                    File.AppendAllLines(contrastPath, lines.Distinct());
+                }
+
                 // [lang] --lang-missing file: the page's texts the pack leaves in Turkish, added to the file (one per line).
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--lang-missing").Skip(1).FirstOrDefault() is { } missingPath)
                 {
