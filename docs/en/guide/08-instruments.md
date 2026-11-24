@@ -1,12 +1,12 @@
 # 8. Instruments
 
-The instruments in RobotWin Studio behave like real ones: the oscilloscope's probe loads the circuit, the multimeter's fuse can blow, the bench supply goes into current limit. Most of them are in the tabs at the bottom of the **Devre** (circuit) page.
+The instruments in RobotWin Studio behave like real ones: the oscilloscope's probe loads the circuit, the multimeter's fuse can blow, the bench supply goes into current limit. Most of them are in the tabs at the bottom of the **Circuit** page.
 
-![Circuit page and oscilloscope](../../images/schematic.png)
+![Circuit page and oscilloscope](../../images/en/schematic.png)
 
 ## Oscilloscope
 
-The **Osiloskop** (oscilloscope) tab is a 4-channel digital oscilloscope.
+The **Oscilloscope** tab is a 4-channel digital oscilloscope.
 
 ### Attaching a probe
 
@@ -20,20 +20,20 @@ The **Osiloskop** (oscilloscope) tab is a 4-channel digital oscilloscope.
 | --- | --- |
 | Horizontal | Time/div, position, roll mode |
 | Channel | Volts/div, position, coupling (DC / AC / GND), probe 1× / 10×, 20 MHz bandwidth limit, invert, current probe |
-| Trigger | Mode (**Auto**, **Normal**, **Tek** (single)), source (1–4), slope (rising / falling), level, holdoff |
+| Trigger | Mode (**Auto**, **Normal**, **Single**), source (1–4), slope (rising / falling), level, holdoff |
 | Maths | 1+2 or 1−2 |
-| Buttons | **RUN / STOP**, **TEK** (single), **AUTOSET**, cursors |
+| Buttons | **RUN / STOP**, **SINGLE**, **AUTOSET**, cursors |
 
-With **Prob yüklemesi** (probe loading) on, the probe connects to the circuit as 1 MΩ ∥ 110 pF (1×) or 10 MΩ ∥ 12 pF (10×); in high-impedance circuits you see how the measurement disturbs the circuit.
+With **Probe loading** on, the probe connects to the circuit as 1 MΩ ∥ 110 pF (1×) or 10 MΩ ∥ 12 pF (10×); in high-impedance circuits you see how the measurement disturbs the circuit.
 
 Automatic measurements: maximum, minimum, peak-to-peak, amplitude, mean, RMS, period, frequency, duty cycle, rise and fall time.
 
 ## Multimeter
 
-The **Multimetre** (multimeter) tab is a 6000-count, true-RMS, autoranging handheld multimeter.
+The **Multimeter** tab is a 6000-count, true-RMS, autoranging handheld multimeter.
 
-1. Choose **Prob multimetre (kırmızı / siyah uçlar)** (probe multimeter: red / black leads) in the **Ölçü aleti** (instrument) list.
-2. Right-click a wire and choose **Multimetre kırmızı ucu → …** (red lead), and on another wire **Multimetre siyah ucu (COM) → …** (black lead).
+1. Choose **Probe multimeter (red / black probes)** in the **Instrument** list.
+2. Right-click a wire and choose **Multimeter red probe → …**, and on another wire **Multimeter black probe (COM) → …**.
 3. Pick the function with the rotary switch: DC V, AC V, DC A, AC A, Ω, continuity (beeps below 30 Ω), diode, capacitance, frequency + duty cycle.
 
 Things to watch (as on a real multimeter):
@@ -42,11 +42,11 @@ Things to watch (as on a real multimeter):
 - The voltage input loads the circuit with 10 MΩ.
 - Trying to measure resistance in a live circuit gives a warning.
 
-You can also put a multimeter into the circuit as a part: **Dijital Multimetre (6000 sayım)** (digital multimeter, 6000 counts) or **Multimetre (akım, mA girişi)** (multimeter, current, mA input). Then pick that part in the **Ölçü aleti** (instrument) list.
+You can also put a multimeter into the circuit as a part: **Digital Multimeter (6000 counts)** or **Multimeter (current, mA input)**. Then pick that part in the **Instrument** list.
 
 ## Bench power supply
 
-The library has **Lab. Güç Kaynağı 0-30 V 3 A** and **Lab. Güç Kaynağı 5 V / 100 mA** (bench supplies).
+The library has **Lab Power Supply 0-30 V 3 A** and **Lab Power Supply 5 V / 100 mA** (bench supplies).
 
 - **CV / CC:** gives the set voltage; at the current limit it switches to constant current (CC). A short circuit does not burn your circuit: the supply goes to CC.
 - **OVP:** over-voltage protection; when it trips it switches the output off.
@@ -56,7 +56,7 @@ Using the **5 V / 100 mA** supply when first trying a new circuit stops mistakes
 
 ## Adjustable AC/DC power supply
 
-**Ayarlanabilir AC/DC Kaynak 0-30 V DC / 0-24 V AC, 3 A** (adjustable AC/DC supply) gives one of three outputs, picked with **Çıkış tipi** (output type) in the inspector:
+**Adjustable AC/DC Supply 0-30 V DC / 0-24 V AC, 3 A** gives one of three outputs, picked with **Output type** in the inspector:
 
 | Output | What it gives |
 | --- | --- |
@@ -68,47 +68,47 @@ Using the **5 V / 100 mA** supply when first trying a new circuit stops mistakes
 - **OVP** looks at the voltage's absolute value.
 - The symbol shows the setting, e.g. `12V~` or `12+1~`. The circuit's voltage readouts print the RMS value of AC nets with `V~`; the multimeter's AC voltage range measures true RMS too. The simulation report gives the true RMS voltage and current over whole cycles.
 
-Presets: **AC Kaynak 12 V RMS 50 Hz** (a transformer's output; bridge rectifier and capacitor experiments), **AC Kaynak 24 V RMS 60 Hz** (industrial control voltage), **Şebeke 230 V RMS 50 Hz** (mains, 325 V peak) and **DC 12 V + 1 V RMS dalgalanma 100 Hz** (12 V DC with 1 V RMS ripple; regulator and filter experiments).
+Presets: **AC Source 12 V RMS 50 Hz** (a transformer's output; bridge rectifier and capacitor experiments), **AC Source 24 V RMS 60 Hz** (industrial control voltage), **Mains 230 V RMS 50 Hz (isolated, 10 A)** (325 V peak) and **DC 12 V + 1 V RMS ripple 100 Hz** (regulator and filter experiments).
 
 ## Tolerances
 
-Real parts are not at their labelled values. The **Simülasyon: parça toleransı** (simulation: part tolerance) option in the right panel:
+Real parts are not at their labelled values. The **Simulation: part tolerance** option in the right panel:
 
 | Mode | What happens |
 | --- | --- |
-| **Nominal (ideal değerler)** (ideal values) | Every part exactly at its label value |
-| **Gerçekçi (sabit tohum)** (realistic, fixed seed) | Each part takes a fixed real value within its tolerance (resistor ±5 %, ceramic ±10 %, electrolytic −20/+80 %, hFE, LED Vf…). The same **Tohum** (seed) always gives the same board; **Yeni** (new) draws another board. |
-| **Monte Carlo (N koşu)** (N runs) | Use the **Monte Carlo** tab below to see the spread |
+| **Nominal (ideal values)** | Every part exactly at its label value |
+| **Realistic (fixed seed)** | Each part takes a fixed real value within its tolerance (resistor ±5 %, ceramic ±10 %, electrolytic −20/+80 %, hFE, LED Vf…). The same **Seed** always gives the same board; **New** draws another board. |
+| **Monte Carlo (N runs)** | Use the **Monte Carlo** tab below to see the spread |
 
 ## Monte Carlo
 
 The **Monte Carlo** tab runs the circuit N times, drawing the tolerances anew each time, and measures a net you choose.
 
 1. Choose the net and the measure (final value, mean, maximum, minimum, peak-to-peak, RMS).
-2. Press **Çalıştır** (run) (**İptal** cancels).
+2. Press **Run** (**Cancel** cancels).
 3. The result appears as a histogram with the smallest and largest values, the runs they came from and the spread.
 
 Board firmware does not run during Monte Carlo; the analog circuit is examined.
 
 ## Fault finding
 
-The **Arıza tespiti** (fault finding) tab finds design mistakes in your circuit.
+The **Fault finding** tab finds design mistakes in your circuit.
 
-- **Analiz et** (analyse): scans the circuit by rules: supply short, LED without a resistor, reversed LED, reversed electrolytic capacitor, floating inputs, missing ground, driving a motor straight from a pin, missing flyback diode, regulator problems…
-- **Simülasyonda canlı** (live in the simulation): watches during simulation how close parts get to their limits, whether the battery is overloaded, whether the supply enters CC mode, and the multimeter fuse.
-- **Neden?** (why?): explains why a part burned.
+- **Analyse**: scans the circuit by rules: supply short, LED without a resistor, reversed LED, reversed electrolytic capacitor, floating inputs, missing ground, driving a motor straight from a pin, missing flyback diode, regulator problems…
+- **Live in simulation**: watches during simulation how close parts get to their limits, whether the battery is overloaded, whether the supply enters CC mode, and the multimeter fuse.
+- **Why?**: explains why a part burned.
 
 ## Measuring in the world
 
-On the **Dünya** (world) page:
+On the **World** page:
 
-- The **Kablolar ve ölçümler** (cables and measurements) tab below shows each cable's current, power and load percentage.
+- The **Cables and measurements** tab below shows each cable's current, power and load percentage.
 - With the cable tool, the live voltage of the pin under the mouse is shown.
-- The selected object's inspector has a **Canlı ölçüm** (live measurement) section.
+- The selected object's inspector has a **Live measurement** section.
 
 ## Recording
 
-**Dosya → Simülasyon kaydını kaydet (.rwsim)…** (File → save simulation recording) stores the measurement channels, events and serial output with the project. Opening the recording brings the waveforms back on the oscilloscope and the events in the log.
+**File → Save simulation recording (.rwsim)…** stores the measurement channels, events and serial output with the project. Opening the recording brings the waveforms back on the oscilloscope and the events in the log.
 
 ---
 

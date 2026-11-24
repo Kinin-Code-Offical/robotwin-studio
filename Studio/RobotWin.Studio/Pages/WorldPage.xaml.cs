@@ -271,7 +271,7 @@ namespace RobotWin.Studio.Pages
             }
 
             var groups = Lib.Presets
-                .Where(p => q.Length == 0 || p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || p.Description.Contains(q, StringComparison.OrdinalIgnoreCase) || p.Category.Contains(q, StringComparison.OrdinalIgnoreCase))
+                .Where(p => q.Length == 0 || Shell.Lang.Searchable(p.Name, p.Description, p.Category).Contains(Shell.Lang.Fold(q), StringComparison.Ordinal))   // [lang] both languages
                 .GroupBy(p => p.Category)
                 .OrderBy(g => Rank(g.Key)).ThenBy(g => g.Key, StringComparer.CurrentCulture);
             int shown = 0;

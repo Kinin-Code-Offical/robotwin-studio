@@ -578,7 +578,7 @@ namespace RobotWin.Studio.Pages
         private void OnNew(object sender, RoutedEventArgs e)
         {
             if (!ConfirmDiscard()) return;
-            _ed.Load(new ModelDocument(), null);
+            _ed.Load(ModelEditor.NewDocument(), null);
             _vp.FrameAll();
             _ed.Status("Yeni model · Shift+A ile şekil ekleyin");
         }

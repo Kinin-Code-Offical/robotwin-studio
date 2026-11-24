@@ -101,17 +101,18 @@ namespace RobotWin.Studio.Pages
         /// <summary>"Sol ön", "Sağ" …: where a wheel sits on the chassis.</summary>
         private string WheelLabel(DriveWheel w)
         {
-            string side = w.Left ? "Sol" : "Sağ";
+            // [lang] each piece in the language in use: the readout's columns are built from them
+            string side = Shell.Lang.T(w.Left ? "Sol" : "Sağ");
             if (_vehicle == null || _vehicle.Wheelbase < 0.005) return side;
             double mid = (_vehicle.Wheels.Max(x => x.Position.X) + _vehicle.Wheels.Min(x => x.Position.X)) / 2;
-            return side + (w.Position.X > mid ? " ön" : " arka");
+            return Shell.Lang.T(w.Left ? (w.Position.X > mid ? "Sol ön" : "Sol arka") : (w.Position.X > mid ? "Sağ ön" : "Sağ arka"));
         }
 
         /// <summary>A wheel's speed as people read it: revolutions per minute, rolling forward or back.</summary>
         private static string Rpm(DriveWheel w, double rate)
         {
             double rpm = rate * 60 / (2 * Math.PI) * Math.Sign(w.Roll.X == 0 ? 1 : w.Roll.X);
-            return $"{Math.Abs(rpm).ToString("0", CultureInfo.CurrentCulture),4} dev/dk {(Math.Abs(rpm) < 0.5 ? "durur" : rpm > 0 ? "ileri" : "geri")}";
+            return $"{Math.Abs(rpm).ToString("0", CultureInfo.CurrentCulture),4} {Shell.Lang.T("dev/dk")} {Shell.Lang.T(Math.Abs(rpm) < 0.5 ? "durur" : rpm > 0 ? "ileri" : "geri")}";
         }
 
         private void ShowVehicleIk()

@@ -2,11 +2,11 @@
 
 With RobotWin Studio you take a robot project from start to finish in one app: draw the circuit, lay out its PCB, write its code, model its body, then run it all together in a world with real physics.
 
-![RobotWin Studio home page](../../images/home.png)
+![RobotWin Studio home page](../../images/en/home.png)
 
 This guide walks through the app step by step. Read it in order or jump straight to the chapter you need. Every solver's equations are in [Physics and maths](../physics/README.md).
 
-> The app's interface is in Turkish. This guide gives every label as it appears on screen, in bold, followed by its meaning where it helps.
+> The app starts in English; Turkish is a choice in **Settings → General → Language**. This guide gives every label as it appears on screen, in bold.
 
 ## Contents
 
@@ -27,11 +27,11 @@ This guide walks through the app step by step. Read it in order or jump straight
 
 ## What can I do in five minutes?
 
-1. Open the app; on the **Başlangıç** (home) page pick the **Kumandalı araba (ESP32 + PS5 kumanda)** (remote-controlled car) template from the **Dünyalar** (worlds) list.
+1. Open the app; on the **Start** page pick the **Gamepad-controlled car (ESP32 + PS5 controller)** template from the **Worlds** list.
 2. Press **F5** to run the world.
-3. Select the controller and drive the car with **Sanal kumandayı aç (fare / klavye)** (open the on-screen controller: mouse / keyboard).
+3. Select the controller and drive the car with **Open the virtual gamepad (mouse / keyboard)**.
 
-![The remote-controlled car world](../../images/world-ps5-car.png)
+![The remote-controlled car world](../../images/en/world-ps5-car.png)
 
 Details: [7. World](07-world.md).
 
@@ -41,12 +41,12 @@ The vertical line on the left of the screen shows a project's stages in order, e
 
 | Stage | Shortcut | Guide |
 | --- | --- | --- |
-| Başlangıç (Home) | Ctrl+0 | [1. Getting started](01-getting-started.md) |
-| Devre (Circuit) | Ctrl+1 | [2. Circuit](02-circuit.md) |
+| Start | Ctrl+0 | [1. Getting started](01-getting-started.md) |
+| Circuit | Ctrl+1 | [2. Circuit](02-circuit.md) |
 | PCB | Ctrl+2 | [3. PCB](03-pcb.md) |
-| Kod (Code) | Ctrl+3 | [4. Code](04-code.md) |
-| Parça (Part) | Ctrl+4 | [5. Part](05-model.md) |
-| Montaj (Assembly) | Ctrl+5 | [6. Assembly](06-assembly.md) |
-| Dünya (World) | Ctrl+6 | [7. World](07-world.md) |
-| Kütüphane (Library) | Ctrl+7 | [1. Getting started](01-getting-started.md#library) |
-| Ayarlar (Settings) | Ctrl+, | [1. Getting started](01-getting-started.md#settings) |
+| Code | Ctrl+3 | [4. Code](04-code.md) |
+| Part | Ctrl+4 | [5. Part](05-model.md) |
+| Assembly | Ctrl+5 | [6. Assembly](06-assembly.md) |
+| World | Ctrl+6 | [7. World](07-world.md) |
+| Library | Ctrl+7 | [1. Getting started](01-getting-started.md#library) |
+| Settings | Ctrl+, | [1. Getting started](01-getting-started.md#settings) |

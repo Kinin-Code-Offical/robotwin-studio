@@ -1,8 +1,8 @@
 # 9. Keyboard shortcuts
 
-The app has its own shortcut lists too: the **Ctrl+K** command palette shows every command with its shortcut; on the Circuit and PCB pages **F1** or **?** opens that page's list; **Ayarlar → Klavye kısayolları** (Settings → keyboard shortcuts) has a list as well.
+The app has its own shortcut lists too: the **Ctrl+K** command palette shows every command with its shortcut; on the Circuit and PCB pages **F1** or **?** opens that page's list; **Settings → Keyboard shortcuts** has a list as well.
 
-The keys on this page are the defaults. In **Ayarlar → Klavye kısayolları** you can change the window's shortcuts and the keys of the Circuit, PCB, World, Code and Part pages.
+The keys on this page are the defaults. In **Settings → Keyboard shortcuts** you can change the window's shortcuts and the keys of the Circuit, PCB, World, Code and Part pages.
 
 - Page keys only work on their own page; on the Circuit, PCB, World and Part pages they can be single letters. On the Code page they also work while you type, so they need Ctrl/Alt/Shift or an F key.
 - When you move a tool to another key, its old key does nothing any more.
@@ -24,7 +24,7 @@ The keys on this page are the defaults. In **Ayarlar → Klavye kısayolları** 
 | Ctrl+1 | Circuit |
 | Ctrl+2 | PCB |
 | Ctrl+3 | Code |
-| Ctrl+4 | Parça (part) |
+| Ctrl+4 | Part |
 | Ctrl+5 | Assembly |
 | Ctrl+6 | World |
 | Ctrl+7 | Library |
@@ -114,7 +114,7 @@ The keys on this page are the defaults. In **Ayarlar → Klavye kısayolları** 
 | F11 | (Board stopped) into the called function |
 | Shift+F11 | (Board stopped) out of the function |
 
-## Parça (part)
+## Part
 
 | Shortcut | Function |
 | --- | --- |

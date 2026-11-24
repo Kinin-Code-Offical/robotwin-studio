@@ -1,6 +1,6 @@
 # 11. What's new
 
-What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Yardım → 11. Yenilikler** (Help). Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
+What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Help → 11. What's new**. Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
 ## 1.6.1 — 24 November 2026
 
@@ -16,7 +16,7 @@ What each release brought, changed and fixed. After an update, the first start s
 
 ### Changes
 
-- **A tab shows its file's name:** a saved project or world shows its file name instead of the title stored inside. For example, "osiloskop test.rwproj" no longer shows as "Yeni Devre". **Farklı kaydet** (save as) gives the document that name inside too (the Parça page already did).
+- **A tab shows its file's name:** a saved project or world shows its file name instead of the title stored inside. For example, "osiloskop test.rwproj" no longer shows as "New Circuit". **Save as** gives the document that name inside too (the Part page already did).
 - Two tabs of the same name are told apart by their folder, two new documents by a number.
 - Unsaved changes are a dot where the close button is, instead of a "•" added to the name. The close button comes back under the pointer.
 
@@ -29,8 +29,8 @@ What each release brought, changed and fixed. After an update, the first start s
 - **Breakpoints, steps and variables (Arduino Uno / Nano):**
   - Click a line number on the code page to put a breakpoint on the line.
   - When the board reaches it, it stops. The circuit simulation or the world stops at the same simulated instant, so you see the code, the voltages, the cables and the parts at one moment.
-  - Go on with **Devam** (continue, F5), **Adım** (step, F10), **İçine** (into, F11), **Dışına** (out, Shift+F11) and **Satırda dur** (stop on a line).
-  - The **Değişkenler** (variables) tab shows your code's global and `static` variables with their types and addresses. The values also refresh while the board runs; changed ones are shown in colour.
+  - Go on with **Continue** (F5), **Step** (F10), **Into** (F11), **Out** (Shift+F11) and **Stop at line**.
+  - The **Variables** tab shows your code's global and `static` variables with their types and addresses. The values also refresh while the board runs; changed ones are shown in colour.
 
   Details: [4. Code](04-code.md#debugging-breakpoints-steps-variables).
 
@@ -45,12 +45,12 @@ What each release brought, changed and fixed. After an update, the first start s
 
 ### New
 
-- **The Arduino compiler comes with the installer:** arduino-cli, the Arduino AVR core and the library list are installed with the app. Uno / Nano code builds right after installing; there is nothing else to install. You can pick an arduino-cli of your own under **Ayarlar → Derleyiciler** (Settings → Compilers).
-- **İlk robotun (your first robot), an interactive guide:** offered on the first start; **Başlangıç** (start) and the **Yardım** (help) menu open it again. The steps:
+- **The Arduino compiler comes with the installer:** arduino-cli, the Arduino AVR core and the library list are installed with the app. Uno / Nano code builds right after installing; there is nothing else to install. You can pick an arduino-cli of your own under **Settings → Compilers**.
+- **Your first robot, an interactive guide:** offered on the first start; **Start** and the **Help** menu open it again. The steps:
   - open the ready servo arm;
   - change its Arduino code and load it onto the board;
   - watch the arm move;
-  - measure the current in **Kablolar ve ölçümler** (cables and measurements);
+  - measure the current in **Cables and measurements**;
   - save.
 
   At each step the card shows what to press and notices by itself when you have done it. The card's button does the step for you. Details: [1. Getting started](01-getting-started.md#your-first-robot-an-interactive-guide).
@@ -66,50 +66,50 @@ What each release brought, changed and fixed. After an update, the first start s
 
 ## 1.5.0 — 24 November 2026
 
-**The rail, Parça and Montaj redone: all of a robot's parts in one place, and the Montaj follows its project. Arduino libraries on the ESP32, PCBs of up to 32 layers.**
+**The rail, Part and Assembly redone: all of a robot's parts in one place, and the Assembly follows its project. Arduino libraries on the ESP32, PCBs of up to 32 layers.**
 
 ### New
 
-- **The rail in three groups:** **ELEKTRONİK** (electronics: Devre, PCB, Kod), **MEKANİK** (mechanics: Parça, Montaj), **TEST** (Dünya, world).
+- **The rail in three groups:** **ELECTRONICS** (Circuit, PCB, Code), **MECHANICAL** (Part, Assembly), **TEST** (World).
   - Home no longer looks like a step of the flow; it is with the tools at the bottom and on the logo at the top left.
-  - Montaj has its own mark.
+  - Assembly has its own mark.
   - Expanded (Ctrl+B), every page says what it is for and its status.
-- **Modelle is now Parça (part), and one file holds as many parts as you like.** Every top-level object is a part. **Montaja gönder** (send to assembly) makes each part a body of its own:
+- **Model is now Part, and one file holds as many parts as you like.** Every top-level object is a part. **Send to assembly** makes each part a body of its own:
   - The parts arrive arranged as modelled, beside what is there, touching nothing.
   - Sending a changed part again updates it where it stands; its own origin and joints stay put.
-  - Deleted parts are offered for removal from the Montaj; separate parts inside each other get a warning.
-- **The Montaj (assembly) is the robot itself:**
+  - Deleted parts are offered for removal from the Assembly; separate parts inside each other get a warning.
+- **The Assembly is the robot itself:**
   - Setting it up asks which projects go in and how: **PCB'li** (with PCB: the soldered board plus separate motors and batteries), **PCB'siz** (without PCB: every part separate) or **Otomatik** (automatic).
-  - Several projects can share one Montaj side by side, and the Parça page's parts can come too.
+  - Several projects can share one Assembly side by side, and the Part page's parts can come too.
   - It is saved with its project (**Ctrl+S**).
-  - An orange **MONTAJ** badge and a **Montajı çalıştır** (run the assembly) button set it apart from the world.
+  - An orange **ASSEMBLY** badge and a **Run the assembly** button set it apart from the world.
   - Details: [6. Assembly](06-assembly.md).
-- **The Montaj follows its project:** each time it opens, circuit, PCB and code changes come in.
+- **The Assembly follows its project:** each time it opens, circuit, PCB and code changes come in.
   - New parts are added, removed ones removed, changed parts and code updated where they stand.
   - Where you put things, the joints you made and your own cables are kept.
-- **Robot examples are real vehicles in the Montaj:** the obstacle-avoiding and line-following robots are built from real parts:
+- **Robot examples are real vehicles in the Assembly:** the obstacle-avoiding and line-following robots are built from real parts:
   - a chassis, wheels on the motor shafts, a ball caster;
   - the board, battery and modules on the deck without touching;
   - in their own arena, on their own code.
-- **Environment to try it in:** try the Montaj in a workshop, on a line track, or in an obstacle or ramp field.
+- **Environment to try it in:** try the Assembly in a workshop, on a line track, or in an obstacle or ramp field.
 - **Arduino libraries on the ESP32:** the installed libraries a sketch includes compile with it, with their own dependencies. The libraries tab searches for the ESP32 too.
 - **PCBs of up to 32 copper layers** (as in KiCad). The board set-up window gives the least thickness the stack needs.
-- **The line-following example uses real optical TCRT5000 modules** (IR LED, phototransistor, LM393). In its Montaj it follows the oval track on real wheels: a lap in 8 seconds, at most 22 mm off.
-- **Dünya (world) on the rail while a Montaj is open** now goes to a test world instead of showing the Montaj again.
+- **The line-following example uses real optical TCRT5000 modules** (IR LED, phototransistor, LM393). In its Assembly it follows the oval track on real wheels: a lap in 8 seconds, at most 22 mm off.
+- **World on the rail while an Assembly is open** now goes to a test world instead of showing the Assembly again.
 
 ### Fixes
 
 - **Sensors were blind in headless runs and in the render:** the world's sensors (line modules, cameras, LiDAR, GPS, encoders) were built only when an IMU was in the circuit, so a render of a line follower saw nothing. They are now built as in the app.
 - **A world made from an arena lost its start and its floor:** the oval track's start (its bottom straight) was dropped, and the floor looked dark grey instead of white to optical sensors.
 
-- **The Montaj was a one-time copy of its project:**
+- **The Assembly was a one-time copy of its project:**
   - Later circuit and code changes never reached it.
-  - Renaming the project made an empty Montaj.
-  - Two projects with the same title shared one Montaj.
+  - Renaming the project made an empty Assembly.
+  - Two projects with the same title shared one Assembly.
   - Closing the app lost the assembly work.
-- **Sending parts from the Parça page jumped to the world page.** The parts landed on the circuit's board and started inside each other.
-- **The code page listed a Montaj's board as a separate board.** "Kartı düzenle" (edit board) in the Montaj opened a copy.
-- **Robot examples opened a Montaj of scattered parts.** The start page also described a "Başlat" (start) button that did not exist.
+- **Sending parts from the Part page jumped to the world page.** The parts landed on the circuit's board and started inside each other.
+- **The code page listed an Assembly's board as a separate board.** "Edit board" in the Assembly opened a copy.
+- **Robot examples opened an Assembly of scattered parts.** The start page also described a "Start" button that did not exist.
 - **MSVC messages came out garbled on Turkish Windows** ("i�erme dosyas�").
 - **Two `.cpp` files of the same name under `src/` overwrote each other's output.**
 - **The board set-up window could run off small screens.**
@@ -122,16 +122,16 @@ What each release brought, changed and fixed. After an update, the first start s
 ### New
 
 - **An explorer on the code page:**
-  - **KARTLAR** (boards) lists every programmable board of the project and of the open world, each with its own code folder.
-  - **KOD KLASÖRLERİM** (my code folders) lists folders on disk: `Documents\RobotWin\Kod` and every folder you open from disk (e.g. an Arduino IDE sketch folder).
+  - **BOARDS** lists every programmable board of the project and of the open world, each with its own code folder.
+  - **MY CODE FOLDERS** lists folders on disk: `Documents\RobotWin\Kod` and every folder you open from disk (e.g. an Arduino IDE sketch folder).
   - Folders take files and subfolders (`src/`); files and folders can be imported (drag and drop works too).
   - A folder can be saved anywhere as an Arduino sketch folder, exported as a zip, renamed and deleted.
-- **Code loads onto any board:** the **Kart** (board) list holds every Arduino Uno, Nano and ESP32 of the project and of the open world. **Karta yükle ve çalıştır** (load onto the board and run) copies the folder's code into the board, compiles it and runs the project or the world.
+- **Code loads onto any board:** the **Board** list holds every Arduino Uno, Nano and ESP32 of the project and of the open world. **Upload to board and run** copies the folder's code into the board, compiles it and runs the project or the world.
 - **Multi-file sketches:** the main `.ino`, the `.h` / `.cpp` files next to it and `src/` subfolders compile together as in the Arduino IDE, on the Uno / Nano and on the ESP32 alike.
 - **Code completion** comes from the board's real header files: it opens after `.`, `->`, `::` and `#include <`, or with **Ctrl+Space**. It knows a variable's type: `kol.` lists the `Servo` members. The panel on the right shows the signature and a description. Opening a parenthesis shows the parameters above the line.
-- **Libraries tab:** searches about 10 000 Arduino libraries. **Kur ve ekle** (install and add) installs a library and adds its `#include` line; installed libraries can be removed. A header no installed library provides is flagged and the library that provides it is suggested.
+- **Libraries tab:** searches about 10 000 Arduino libraries. **Install and add** installs a library and adds its `#include` line; installed libraries can be removed. A header no installed library provides is flagged and the library that provides it is suggested.
 - **Adjustable AC/DC power supply:** DC (CV/CC), AC (RMS voltage, frequency, phase) or AC on top of DC. On AC the current limit holds in both directions and the report gives true RMS values. Presets: 12 V~ 50 Hz, 24 V~ 60 Hz, 230 V~ mains, 12 V DC + 1 V ripple. Details: [8. Instruments](08-instruments.md#adjustable-acdc-power-supply).
-- **A part library in categories:** every part has a main category and a sub-category (e.g. Pasif → Direnç, Kondansatör; Ölçüm & Kaynak → Güç kaynağı, Sinyal jeneratörü), with part counts. On the **Kütüphane** (library) page every part has an **Özellikler** (specifications) table.
+- **A part library in categories:** every part has a main category and a sub-category (e.g. Passive → Resistor, Capacitor; Measurement & Source → Power supply, Signal generator), with part counts. On the **Library** page every part has a **Properties** table.
 
 ### Fixed
 
@@ -155,11 +155,11 @@ What each release brought, changed and fixed. After an update, the first start s
   - closed, docked beside the drawing or opened in their own window;
   - buttons at the right of the strip float, place or close the picked tab, or fold the pane.
 
-  Closed ones come back with **Görünüm → Devre panelleri**.
+  Closed ones come back with **View → Circuit panels**.
 - **The rail:** the project's stages (Circuit → PCB → Code → Model → Assembly) share the line; the world, a document of its own, sits below a divider.
-- **Montaj explains itself** when the project's circuit is empty instead of opening an empty world.
+- **Assembly explains itself** when the project's circuit is empty instead of opening an empty world.
 - **A world's boards from the circuit page:** an empty circuit page lists the open world's Arduino / ESP32 boards; one click opens a board's circuit and code, and a template's built-in program becomes editable code.
-- **Attach to a servo horn / motor shaft:** "…ne tak" lays the part flat on the output; a long part such as an arm reaches out with its end over the pivot. "Olduğu yerde sabitle" is the old behaviour.
+- **Attach to a servo horn / motor shaft:** "… · mount on …" lays the part flat on the output; a long part such as an arm reaches out with its end over the pivot. "… · fix to … where it is" is the old behaviour.
 
 ### Fixed
 
@@ -178,7 +178,7 @@ What each release brought, changed and fixed. After an update, the first start s
 ### New
 
 - **Liquids:** water, sea water, ethanol, milk, sunflower oil, glycerol and honey flow as particles. Each one's real density, viscosity and surface tension are used. A liquid presses on its container's walls with its real pressure; a container carries its water's weight, and a part dropped in water feels buoyancy. Water wets by material: glass very well, PLA less, PTFE not at all. Drops in the air are dragged by the world's air.
-- **Glass and containers:** the **CAM** (glass) material is drawn see-through, so water shows through a glass. A cylinder with a wall thickness (**tube.wall**) and a bottom (**tube.bottom**) becomes a glass or a bowl. **Mekanik → Sıvılar** adds a glass, full or empty, and a volume of water.
+- **Glass and containers:** the **Glass (soda-lime)** material is drawn see-through, so water shows through a glass. A cylinder with a wall thickness (**tube.wall**) and a bottom (**tube.bottom**) becomes a glass or a bowl. **Mechanical → Liquids (real flow with particles)** adds a glass, full or empty, and a volume of water.
 - **Glass of water template:** an ESP32 tips a glass held on a sideways SG90's horn by 90°; 193 ml of water pours into a bowl.
 - **Water that looks like water:** the surface is built continuously from the particles. A thin sheet and a falling stream read as continuous. Fresnel reflection (clear looking in, sky at grazing angles), a sun highlight and drops streaked by a 1/60 s exposure.
 - **Renders compute everything in full:**
@@ -188,7 +188,7 @@ What each release brought, changed and fixed. After an update, the first start s
   - the replay draws a finer surface.
 - **Open a saved render:** the render window replays a `.rwanalysis` without computing it again.
 - **Flow analysis at the real Reynolds number:** a regularized collision with LES, and curved walls at their true position. Each result states how far to trust it: grid uncertainty (GCI), boundary layer (y+) and blockage.
-- **Validation page:** **Yardım → 12. Doğrulama** and the README list every solver's deviation from theory and benchmarks, with tolerances. For example: the Schäfer–Turek cylinder 0.8 %, hydrostatic water pressure 2.1 %, the dam-break experiment 4–8 %.
+- **Validation page:** **Help → 12. Validation** and the README list every solver's deviation from theory and benchmarks, with tolerances. For example: the Schäfer–Turek cylinder 0.8 %, hydrostatic water pressure 2.1 %, the dam-break experiment 4–8 %.
 
 ### Fixed
 
@@ -206,12 +206,12 @@ What each release brought, changed and fixed. After an update, the first start s
 - **Cable routing:** each cable is laid along the shortest way between its plugs that touches no solid. A wire inside a closed body stays inside, and one that must leave goes out through a real hole. The automatic length is that run plus 10 % and 15 mm.
 - **Real cable holes:** a shell wall marked with a cable hole is the frame around the opening, so wires and pushrods pass through the opening only. Size, height and offset can be set per side.
 - **No tunnelling:** a fast wire cannot jump a thin wall in one step, and a wire drawn against a hole's edge slides back into the hole instead of through the wall.
-- **Consistency audit:** when a run starts, the **Olaylar** (events) tab reports joined parts sunk into each other (a board with its pins in the floor), wires through solids, plugs inside other parts, and wires with no way between their ends.
+- **Consistency audit:** when a run starts, the **Events** tab reports joined parts sunk into each other (a board with its pins in the floor), wires through solids, plugs inside other parts, and wires with no way between their ends.
 - **Hollow tubes:** a cylinder can have a wall thickness. A rocket's motor sits in the body tube's bore on centering rings.
 - **PS5-controlled plane:** a 1 m trainer takes off from a model airfield's runway and is flown with a DualSense, with stabilisation, failsafe out of range and a chase camera.
 - **Live inputs replayed in the render:** controller, serial, USB, IR, conveyor and switch events are recorded with their times, and the analysis recomputes the run with the same inputs.
 - **Welded parts as one rigid body**, **rocket ignition along its real chain** (igniter, grain heating, flame spread, erosive burning, real gas, nozzle separation, casing heating, countdown switch, parachute), **screws and glue as real physics**, **materials and finishes**, **movable panels**.
-- **A tidier inspector:** it shows only what the object uses; a pressure vessel, a parachute, own air settings and behaviours appear when on (with **Kaldır**, remove), the rest are under **Özellik ekle ▾** (add feature).
+- **A tidier inspector:** it shows only what the object uses; a pressure vessel, a parachute, own air settings and behaviours appear when on (with **Remove**), the rest are under **Add feature ▾**.
 - **Headless runs simulate the app's cables**, using the plug positions stored in the exported geometry file.
 - **New templates:** enclosed rover (cable holes; an ESP32 drives a square), traffic light with a pedestrian button (ESP32), pendulum (period within 0.1 % of theory), PS5-controlled plane, solid-fuel rocket.
 

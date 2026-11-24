@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A text that code changes later (a guide card's next step, a button that turns from Pause into Continue) is translated again at once, even when its size stays the same.
   - Texts joined from parts are translated part by part ("Belted Conveyor · fixed", "State: Ready", "Analog IC (6)"), percentages follow the language ("15%", Turkish "%15"), and file dialogs' titles and filters are translated too.
   - Files the app writes for people follow the language as well: the BOM's columns and part names, KiCad mounting-hole descriptions.
+  - A test fails when a Turkish label is added to the Studio's XAML without its English, so the English interface cannot quietly fall behind.
   - The English guide names every control by its English label and shows English pictures (`docs/images/en/`). `docs/images/shots.json` records how each guide picture is made, and `tools/scripts/doc_images.py` renders them in either language.
   - The English pack was made from every string in the sources (read with a C# lexer, so formatted texts keep all their parts) and from the texts the running app showed across every page, settings category, a dozen worlds and the end-to-end flows; `--lang-missing <file>` lists what a run still showed untranslated. The end-to-end checks pass in English as in Turkish.
 - **A theme gallery with 16 themes and a custom one.** Each theme is shown as a small picture of the window.
@@ -92,6 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fit to screen cut off the outermost net labels on the schematic** (and their voltage badges while simulating): it counted a label as its point only. It now leaves room for them.
+- **The World page's part search found only Turkish names;** it now finds a part by its English name too, as the other pages do.
 - **A mounted part's note read "Servo kolune takılı" and "Robot flanşıne takılı"** (the suffix ignored Turkish vowel harmony). It now reads "Servo kolu üzerinde takılı", which fits every label.
 - **A world part's material or a parameter chosen from a list was stored as the text shown,** which a translated interface would have changed (for example "Wood" instead of the material's own name). The value is now kept apart from the text shown.
 - **A part's values with an SI prefix read "5m A" in the library;** they now read "5 mA" (the prefix goes onto the unit, "u" becomes "µ").

@@ -134,6 +134,40 @@ public class LangTests
         }
     }
 
+    /// <summary>
+    /// Every Turkish label written in the Studio's XAML has its English in the built-in pack, so a label added
+    /// without one fails here instead of showing Turkish in the English interface.
+    /// </summary>
+    [Fact]
+    public void EveryXamlLabelHasItsEnglish()
+    {
+        string? dir = System.AppContext.BaseDirectory;
+        while (dir != null && !System.IO.Directory.Exists(System.IO.Path.Combine(dir, "Studio", "RobotWin.Studio"))) dir = System.IO.Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        var turkish = new Regex("[çğıöşüÇĞİÖŞÜ]");
+        var attr = new Regex("\\b(Text|Content|Header|ToolTip|Title)=\"([^\"{][^\"]*)\"");
+        Lang.Load("en");
+        try
+        {
+            var missing = new System.Collections.Generic.List<string>();
+            foreach (var f in System.IO.Directory.GetFiles(System.IO.Path.Combine(dir!, "Studio", "RobotWin.Studio"), "*.xaml", System.IO.SearchOption.AllDirectories))
+            {
+                if (f.Contains("\\obj\\") || f.Contains("\\bin\\")) continue;
+                foreach (Match m in attr.Matches(System.IO.File.ReadAllText(f)))
+                {
+                    string text = System.Net.WebUtility.HtmlDecode(m.Groups[2].Value).Replace("&#x0a;", "\n");
+                    if (turkish.IsMatch(text) && Lang.T(text) == text) missing.Add(System.IO.Path.GetFileName(f) + ": " + text);
+                }
+            }
+
+            Assert.True(missing.Count == 0, "XAML labels with no English:\n" + string.Join("\n", missing.Take(40)));
+        }
+        finally
+        {
+            Lang.Load("tr");
+        }
+    }
+
     [Fact]
     public void TurkishTranslatesNothing()
     {

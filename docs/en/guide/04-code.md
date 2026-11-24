@@ -1,6 +1,6 @@
 # 4. Code
 
-The **Kod** (code) page (Ctrl+3) is where you write the boards' firmware. It works like a code editor:
+The **Code** page (Ctrl+3) is where you write the boards' firmware. It works like a code editor:
 
 - folders and files on the left;
 - an editor with completion and signature help in the middle;
@@ -8,7 +8,7 @@ The **Kod** (code) page (Ctrl+3) is where you write the boards' firmware. It wor
 
 The code you write loads and runs on **any board** in the project or in the open world (Arduino Uno, Arduino Nano, ESP32).
 
-![The code page: the boards on the left and a multi-file sketch folder on disk (src/Eklem.cpp open)](../../images/code-explorer.png)
+![The code page: the boards on the left and a multi-file sketch folder on disk (src/Eklem.cpp open)](../../images/en/code-explorer.png)
 
 ## Before you start
 
@@ -27,8 +27,8 @@ Details: [1. Getting started](01-getting-started.md#to-compile-your-own-code-opt
 
 The explorer on the left has two sections:
 
-- **KARTLAR** (boards): every programmable board of the project and of the open world. Each board's code is kept in its own folder inside the project (or the world).
-- **KOD KLASÖRLERİM** (my code folders): folders on disk. New folders open in `Documents\RobotWin\Kod`. Every folder you open from disk is listed here too (e.g. an Arduino IDE sketch folder).
+- **BOARDS**: every programmable board of the project and of the open world. Each board's code is kept in its own folder inside the project (or the world).
+- **MY CODE FOLDERS**: folders on disk. New folders open in `Documents\RobotWin\Kod`. Every folder you open from disk is listed here too (e.g. an Arduino IDE sketch folder).
 
 The buttons above the explorer:
 
@@ -41,13 +41,13 @@ The buttons above the explorer:
 
 Right-clicking a folder or a file gives:
 
-- **Yeni dosya…**, **Yeni klasör…** (new file, new folder): adds a file or a subfolder such as `src/`.
-- **Dosya içe aktar…**, **Klasör içe aktar…** (import file, import folder): copies files or folders from elsewhere. Dragging files from Explorer onto the explorer works too.
-- **Karta yükle** (load onto a board): loads the folder onto the board you pick.
-- **Diske kaydet (Arduino çizim klasörü olarak)…** (save to disk as an Arduino sketch folder): saves it anywhere.
-- **Zip olarak dışa aktar…** (export as zip).
-- **Klasörü Explorer'da göster**, **Yeniden adlandır**, **Sil** (show in Explorer, rename, delete).
-- **Listeden kaldır (diskte kalır)** (remove from the list; stays on disk).
+- **New file…**, **New folder…**: adds a file or a subfolder such as `src/`.
+- **Import file…**, **Import folder…**: copies files or folders from elsewhere. Dragging files from Explorer onto the explorer works too.
+- **Upload to board**: loads the folder onto the board you pick.
+- **Save to disk (as an Arduino sketch folder)…**: saves it anywhere.
+- **Export as zip…**.
+- **Show the folder in Explorer**, **Rename**, **Delete**.
+- **Remove from the list (stays on disk)**.
 
 **Ctrl+S** saves files on disk.
 
@@ -58,11 +58,11 @@ A sketch can have several files: the main `.ino`, `.h` / `.cpp` files next to it
 ## Step by step: your first code
 
 1. Pick a board or a code folder in the explorer.
-2. If the folder is empty, pick a template from the **Örnek** (example) list, e.g. **Blink (D13 LED)**.
-3. Pick the board to load onto from the **Kart** (board) list. It lists every Uno, Nano and ESP32 of the project and of the open world.
-4. Press **Derle** (compile) or **F7**. The build output appears in the **Derleyici** (compiler) tab below. Errors are explained in Turkish; the file with the error opens and the line is marked.
-5. Press **Karta yükle ve çalıştır** (load onto the board and run) or **F5**. The folder's code is copied into the board, compiled, and the simulation starts. If the board is in a world, the world starts running.
-6. See the `Serial.print` output in the **Seri monitör** (serial monitor) tab. Type in the box below and press **Gönder** (send) to send data to the board.
+2. If the folder is empty, pick a template from the **Example** list, e.g. **Blink (D13 LED)**.
+3. Pick the board to load onto from the **Board** list. It lists every Uno, Nano and ESP32 of the project and of the open world.
+4. Press **Compile** or **F7**. The build output appears in the **Compiler** tab below. Errors are explained in Turkish; the file with the error opens and the line is marked.
+5. Press **Upload to board and run** or **F5**. The folder's code is copied into the board, compiled, and the simulation starts. If the board is in a world, the world starts running.
+6. See the `Serial.print` output in the **Serial monitor** tab. Type in the box below and press **Send** to send data to the board.
 
 The other toolbar buttons stop the simulation and reset the board.
 
@@ -73,7 +73,7 @@ The editor reads the board's real header files:
 - for the Uno / Nano, the Arduino AVR core, the installed libraries and the sketch folder;
 - for the ESP32, the simulation layer.
 
-![Code completion: typing Serial.pr offers print and println, with their signatures and a description on the right](../../images/code-complete.png)
+![Code completion: typing Serial.pr offers print and println, with their signatures and a description on the right](../../images/en/code-complete.png)
 
 The completion list opens:
 
@@ -91,12 +91,12 @@ Use:
 
 ## Arduino libraries
 
-The **Kütüphaneler** (libraries) tab below searches the Arduino library index. The index holds about 10 000 libraries and is read from `arduino-cli`'s list on your PC.
+The **Libraries** tab below searches the Arduino library index. The index holds about 10 000 libraries and is read from `arduino-cli`'s list on your PC.
 
 - Type a name or a header in the search box, e.g. `servo`, `lcd i2c`, `dht`, `Servo.h`.
-- **Kur ve ekle** (install and add) downloads and installs the library with `arduino-cli lib install` and adds its `#include` line to the code.
-- An installed library's header buttons (e.g. `Servo.h`) add the `#include` line; **Kütüphaneyi kaldır** (uninstall) removes the library.
-- If the index was never downloaded, **Kütüphane listesini indir** (download the library index) runs `arduino-cli lib update-index`.
+- **Install and add** downloads and installs the library with `arduino-cli lib install` and adds its `#include` line to the code.
+- An installed library's header buttons (e.g. `Servo.h`) add the `#include` line; **Remove library** removes the library.
+- If the index was never downloaded, **Download the library list (arduino-cli lib update-index)** runs `arduino-cli lib update-index`.
 - A header in the code that no installed library provides (e.g. `#include <Servo.h>`) is flagged, and the tab shows the library that provides it.
 
 ESP32 boards use installed Arduino libraries too:
@@ -105,21 +105,21 @@ ESP32 boards use installed Arduino libraries too:
 - A changed or updated library rebuilds the sketch.
 - Libraries that reach into the ESP32's registers directly (say, driving an LED strip through the RMT) may not exist in the simulation layer. Then the error names the library that did not compile.
 
-![An ESP32 sketch built with an installed library](../../images/code-esp32-libraries.png)
+![An ESP32 sketch built with an installed library](../../images/en/code-esp32-libraries.png)
 
 ## Arduino templates
 
 | Template | What it does |
 | --- | --- |
 | Blink (D13 LED) | Blinks the LED on D13 once a second |
-| PWM ile parlaklık (D9) (PWM brightness) | Slowly raises and lowers the power of the LED or motor on D9 |
-| Buton ile LED (LED with a button) | The LED on D13 lights while the button on D2 is pressed |
-| Analog okuma + seri (analog read + serial) | Reads the voltage on A0 and prints it to the serial monitor |
-| HC-SR04 mesafe (distance) | Prints the distance in cm from an ultrasonic sensor |
-| Engelden kaçan robot (obstacle avoider) | Avoids obstacles with an HC-SR04 and two motors |
-| Çizgi izleyen (2 sensör) (line follower, 2 sensors) | Follows a line with two TCRT5000 |
-| I²C tarayıcı (I²C scanner) | Finds the addresses of the devices on the I²C bus |
-| MPU-6050 ivme (acceleration) | Reads the accelerometer and gyroscope values |
+| Brightness with PWM (D9) | Slowly raises and lowers the power of the LED or motor on D9 |
+| LED with button | The LED on D13 lights while the button on D2 is pressed |
+| Analog read + serial | Reads the voltage on A0 and prints it to the serial monitor |
+| HC-SR04 distance | Prints the distance in cm from an ultrasonic sensor |
+| Obstacle-avoiding robot | Avoids obstacles with an HC-SR04 and two motors |
+| Line follower (2 sensors) | Follows a line with two TCRT5000 |
+| I²C scanner | Finds the addresses of the devices on the I²C bus |
+| MPU-6050 acceleration | Reads the accelerometer and gyroscope values |
 
 New code for ESP32 boards starts with an ESP32 Blink that blinks the LED on GPIO2.
 
@@ -133,33 +133,33 @@ Your code is compiled with the real `avr-gcc` (through `arduino-cli`). The resul
 - Serial port (USART), ADC (`analogRead` reads the real voltage in the circuit), EEPROM, watchdog
 - I²C (TWI); the SSD1306 OLED, PCF8574 + HD44780 LCD and MPU-6050 modules really answer
 
-> Tip: if you have a `.hex` file compiled in the Arduino IDE, load it directly with **HEX yükle…** (load HEX) in the **Kart pinleri** (board pins) tab on the **Devre** (circuit) page.
+> Tip: if you have a `.hex` file compiled in the Arduino IDE, load it directly with **Load HEX…** in the **Board pins** tab on the **Circuit** page.
 
 The program and the circuit share one clock. The Uno runs to the cycle that belongs to the end of each time slice; an instruction that ran over into the next slice is taken off that slice. So `millis()` never drifts from the circuit's time: after one second the program is at exactly 16 000 000 cycles.
 
 ## Debugging: breakpoints, steps, variables
 
-You can follow Arduino Uno and Nano code line by line. When the board reaches a breakpoint, what it runs in stops at the same instant: the simulation on the **Devre** (circuit) page, or the **Dünya** (world). You see the code, the circuit's voltages and currents, the cables and the parts in the world at one moment of simulated time.
+You can follow Arduino Uno and Nano code line by line. When the board reaches a breakpoint, what it runs in stops at the same instant: the simulation on the **Circuit** page, or the **World**. You see the code, the circuit's voltages and currents, the cables and the parts in the world at one moment of simulated time.
 
 1. Open the board's code and click the number of the line you want to stop on. A red dot appears. A dot on a line without code (a comment, a blank line, a declaration) stops at the next line that has code. A dot on a line where the program can never stop is drawn as a hollow ring.
-2. Build and load the code with **Karta yükle ve çalıştır** (load into the board and run, F5). The line information comes with the build: breakpoints work only in programs built here.
+2. Build and load the code with **Upload to board and run** (F5). The line information comes with the build: breakpoints work only in programs built here.
 3. When the board reaches the line it stops:
    - a yellow arrow and band mark the line;
    - the bar above names the place, the function and the simulated time;
-   - the **Değişkenler** (variables) tab shows your code's global and `static` variables with their values at that moment.
+   - the **Variables** tab shows your code's global and `static` variables with their values at that moment.
 4. Go on from there:
 
 | Button | Shortcut | What it does |
 | --- | --- | --- |
-| **Devam** (continue) | F5 | Runs the program, the circuit and the world to the next breakpoint |
-| **Adım** (step) | F10 | Goes to the next line; functions it calls (such as `delay`) run through |
-| **İçine** (into) | F11 | Goes into the called function, to its first line in your code |
-| **Dışına** (out) | Shift+F11 | Runs until the current function returns |
-| **Satırda dur** (stop on a line) | — | Stops the running program at its next line of your code |
+| **Continue** | F5 | Runs the program, the circuit and the world to the next breakpoint |
+| **Step** | F10 | Goes to the next line; functions it calls (such as `delay`) run through |
+| **Into** | F11 | Goes into the called function, to its first line in your code |
+| **Out** | Shift+F11 | Runs until the current function returns |
+| **Stop at line** | — | Stops the running program at its next line of your code |
 
-The values also refresh while the board runs. A value that changed since you last looked is shown in orange. You can also resume a stopped world with **Devam** on the **Dünya** page.
+The values also refresh while the board runs. A value that changed since you last looked is shown in orange. You can also resume a stopped world with **Continue** on the **World** page.
 
-![The servo arm stopped at a breakpoint: line 29, the variables and the status bar](../../images/code-debugger.png)
+![The servo arm stopped at a breakpoint: line 29, the variables and the status bar](../../images/en/code-debugger.png)
 
 > In code compiled with `-Os`, the compiler merges some lines or inlines them into others, so steps sometimes go in a different order than you expect. The Arduino IDE's debugger behaves the same way.
 
@@ -182,7 +182,7 @@ Supported:
 
 ## Code of boards in the world
 
-Every board of the open world stands in the explorer's **KARTLAR** (boards) section with its own folder. Write its code there and load it with **Karta yükle ve çalıştır**. Selecting the board in the world and pressing **Kartın kodunu yaz** (write the board's code) in the inspector opens the same folder. To load a code folder onto a board in the world, right-click the folder and pick the board under **Karta yükle**. Details: [7. World](07-world.md).
+Every board of the open world stands in the explorer's **BOARDS** section with its own folder. Write its code there and load it with **Upload to board and run**. Selecting the board in the world and pressing **Write the board's code** in the inspector opens the same folder. To load a code folder onto a board in the world, right-click the folder and pick the board under **Upload to board**. Details: [7. World](07-world.md).
 
 ---
 

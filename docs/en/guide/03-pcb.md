@@ -2,30 +2,30 @@
 
 The **PCB** page (Ctrl+2) turns your circuit into a printed circuit board: you place the parts, draw the copper tracks, check the rules and produce the files to send for manufacturing.
 
-![PCB page](../../images/pcb.png)
+![PCB page](../../images/en/pcb.png)
 
 ## From schematic to board
 
-1. Draw the circuit on the **Devre** (circuit) page.
+1. Draw the circuit on the **Circuit** page.
 2. Go to the **PCB** page. The schematic's parts come onto the board; pins that must be connected are shown with thin lines (ratsnest).
-3. If you change the schematic later, press **Güncelle** (update). The changes are carried over and your placement is kept.
-4. **Parça ekle** (add part) puts a part from the library straight onto the board; it is added to the schematic too.
+3. If you change the schematic later, press **Update**. The changes are carried over and your placement is kept.
+4. **Add part** puts a part from the library straight onto the board; it is added to the schematic too.
 
 ## Board settings
 
-**Kart ayarları** (board settings) opens:
+**Board settings** opens:
 
 - Copper layer count: any even number from **2** to **32** (top copper, inner 1 … inner 30, bottom copper), as in KiCad. When the stack does not fit the board thickness, the window gives the least thickness it needs: make the board thicker or the prepreg thinner.
 - Board thickness, copper weights, dielectric.
 - Blind / buried vias.
 - Net classes (track width and clearance) and manufacturing rules.
 
-Draw the board edge as a polygon with the **kart kenarı** (board edge) tool on the left toolbar, and add **montaj deliği** (mounting holes).
+Draw the board edge as a polygon with the **Board edge** tool on the left toolbar, and add **Mounting hole**s.
 
 ## Placement
 
 - Drag parts with the mouse. **R** rotates, **F** flips a part to the bottom / top side, **L** locks it.
-- **Yerleştir** (place) does an automatic placement by the connections; locked parts stay where they are.
+- **Place** does an automatic placement by the connections; locked parts stay where they are.
 
 ## Routing
 
@@ -50,14 +50,14 @@ Drag a drawn track with **G**; its connected ends follow.
 
 ### Automatic
 
-**Rota çiz** (route) draws every connection automatically: it searches all layers, keeps the net classes' widths and clearances, and drops vias to inner planes when needed.
+**Route** draws every connection automatically: it searches all layers, keeps the net classes' widths and clearances, and drops vias to inner planes when needed.
 
-![Board settings: a 12-layer stack](../../images/pcb-stackup.png)
+![Board settings: a 12-layer stack](../../images/en/pcb-stackup.png)
 
 ## Copper pours
 
-1. Draw a pour area with **Z**, or use the ready **+ GND (üst)** (top). Boards with 4 or more layers also have **+ GND düzlemi (İç 1)** (GND plane, inner 1).
-2. Fill the areas with **Doldur** (fill). **B** fills, **Ctrl+B** empties the fill.
+1. Draw a pour area with **Z**, or use the ready **+ GND (top)**. Boards with 4 or more layers also have **+ GND plane (Inner 1)**.
+2. Fill the areas with **Fill**. **B** fills, **Ctrl+B** empties the fill.
 
 Filling follows the clearance, thermal relief, priority and island-removal rules.
 
@@ -82,15 +82,15 @@ Errors appear in a list; clicking one shows the spot on the board.
 
 | Button | What it produces |
 | --- | --- |
-| **Üretim** (manufacturing) | `<name>-gerber.zip`: Gerber files of every copper layer, solder mask, paste, silkscreen, board edge, PTH / NPTH / blind drill (Excellon) files, BOM and pick-and-place file (CPL) |
-| **KiCad'e aktar** (export to KiCad) | `<name>-kicad.zip`: a KiCad 8 project (`.kicad_pro`, `.kicad_sch`, `.kicad_pcb`), netlist, symbol and footprint libraries, SPICE and Gerber |
+| **Manufacturing** | `<name>-gerber.zip`: Gerber files of every copper layer, solder mask, paste, silkscreen, board edge, PTH / NPTH / blind drill (Excellon) files, BOM and pick-and-place file (CPL) |
+| **Export to KiCad** | `<name>-kicad.zip`: a KiCad 8 project (`.kicad_pro`, `.kicad_sch`, `.kicad_pcb`), netlist, symbol and footprint libraries, SPICE and Gerber |
 
 Upload the Gerber ZIP straight to a board maker.
 
 ## Footprints and modules
 
 - **Footprint:** the footprint editor. Draw SMD and THT pads, silkscreen, courtyard and fabrication layers and save to your user library.
-- **Modül yap** (make module): saves this board to the library as one part. It is added to other circuits as a single part, and its inside is still fully simulated.
+- **Make module**: saves this board to the library as one part. It is added to other circuits as a single part, and its inside is still fully simulated.
 
 ## View
 

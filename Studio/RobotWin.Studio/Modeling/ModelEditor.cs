@@ -70,7 +70,15 @@ namespace RobotWin.Studio.Modeling
 
         public ModelEditor()
         {
-            Doc = new ModelDocument();
+            Doc = NewDocument();
+        }
+
+        /// <summary>[lang] A new, empty document titled in the language in use (its own data from then on).</summary>
+        public static ModelDocument NewDocument()
+        {
+            var doc = new ModelDocument();
+            doc.Title = Shell.Lang.T(doc.Title);
+            return doc;
         }
 
         public ModelDocument Doc { get; private set; }

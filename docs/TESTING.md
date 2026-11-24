@@ -30,6 +30,8 @@ The xUnit project is `CoreSim/tests/RobotTwin.CoreSim.Tests`. It needs no UI and
 | SDK | `SdkTests` (terminal velocity, wind, turbulence, expressions, plugins) |
 | Files, repo hygiene | `FileFormatTests`, `RtwinRoundTripTests`, `TemplateTests`, `GoldenTraceHarnessTests`, `WorkflowReferenceTests` |
 
+The Studio's own tests are in `Studio/RobotWin.Studio.Tests` (WPF-free parts linked in). `LangTests` checks the language packs: exact texts, patterns, joined texts, column-aligned readouts, sketch lines, two-language search, and that every Turkish label in the Studio's XAML has its English (`EveryXamlLabelHasItsEnglish`), so a label added without one fails the build's tests.
+
 ESP32 tests compile real sketches with MSVC. On a machine without the Visual Studio C++ tools (`vcvars64.bat` not found) they are reported as **skipped**, not failed.
 
 ## Self-test

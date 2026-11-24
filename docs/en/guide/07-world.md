@@ -1,162 +1,162 @@
 # 7. World
 
-The **Dünya** (world) page (Ctrl+6) is where everything comes together. Put the boards you designed, catalogue parts, mechanical bodies and 3D models into an environment with real physics, connect them with cables, join them with screws or hinges and run them all together. The circuit, the boards' firmware, the radio and the physics are computed at the same time, step by step.
+The **World** page (Ctrl+6) is where everything comes together. Put the boards you designed, catalogue parts, mechanical bodies and 3D models into an environment with real physics, connect them with cables, join them with screws or hinges and run them all together. The circuit, the boards' firmware, the radio and the physics are computed at the same time, step by step.
 
-![A two-axis servo arm driven by an Arduino](../../images/world-servo-arm.png)
+![A two-axis servo arm driven by an Arduino](../../images/en/world-servo-arm.png)
 
 ## Inspector: an object's properties
 
-The **Denetçi** (inspector) on the right shows only the sections the selected object really uses: first its name, position and orientation, physics (fixed, material, mass), size and look, then the sections of its kind (board, component, wing linkage, shell, switch, controller). The extra physics a body can be given (**Kabuk** shell, **Basınçlı kap** pressure vessel, **Kurtarma paraşütü** parachute, **Hava (özel ayar)** own air settings, **Davranış** behaviour) appear only when they are on, with **Kaldır** (remove) in their header; the others are under **Özellikler → Özellik ekle ▾** (add feature).
+The **Inspector** on the right shows only the sections the selected object really uses: first its name, position and orientation, physics (fixed, material, mass), size and look, then the sections of its kind (board, component, wing linkage, shell, switch, controller). The extra physics a body can be given (**Shell**, **Pressure vessel**, **Recovery parachute**, **Air (custom setting)**, **Behaviour**) appear only when they are on, with **Remove** in their header; the others are under **Properties → Add feature ▾**.
 
 ## Opening a world
 
-- **Yeni dünya** (new world, Ctrl+Shift+N): an empty 4 × 3 m workshop.
-- **Bu devreyi yeni bir dünyaya koy** (put this circuit into a new world): puts your open circuit into a new world as a board.
-- **Aç…** (open): a saved `.rwworld` file.
-- **World templates** (home page or **Dosya → Dünya şablonundan**, File → from a world template):
+- **New world** (Ctrl+Shift+N): an empty 4 × 3 m workshop.
+- **Put this circuit into a new world**: puts your open circuit into a new world as a board.
+- **Open…**: a saved `.rwworld` file.
+- **World templates** (home page or **File → From a world template**):
 
 | Template | Contents |
 | --- | --- |
-| Boş atölye (empty workshop) | 4 × 3 m floor, 25 °C |
-| Kabloyla bağlı iki kart (two boards joined by cables) | A 9 V power board and an LED board on separate PCBs; the LEDs light once two cables connect them |
-| Arduino ile iki eksenli servo kol (two-axis servo arm) | An Uno drives two SG90 servos; the second servo is screwed to the first one's horn |
-| Arduino, LCD ve OLED (I²C kablolu) | Uno, 16×2 LCD, 128×64 OLED and a potentiometer on I²C cables |
-| İki tekerlekli araba (two-wheel car) | PLA chassis, two TT motors and wheels on one axle, ball caster, 4×AA pack |
-| Ultrasonik mesafe sensörü ve engeller (ultrasonic sensor and obstacles) | An HC-SR04 really measures the obstacle in front of it |
-| Pil, motor ve tekerlek (battery, motor and wheel) | A 4×AA pack drives a TT motor with a wheel on its shaft |
-| Fabrika hücresi (factory cell) | Six-axis arm, conveyor belt, light curtain |
-| SCARA al-bırak (SCARA pick and place) | A SCARA arm carries parts with a parallel gripper |
-| Pervane itki standı (propeller thrust stand) | 8520 motors with propellers: speed, thrust, torque, current live |
-| Mini drone kalkışı (mini drone take-off) | A 40 g X frame with four 8520 motors lifts off on its thrust |
-| ESP32 dörtlü (ESP32 quad) | Brushless motors, ESCs, MPU-6050; the flight firmware on the ESP32 keeps the frame level |
-| Elektronik kutusu (electronics box) | A hollow body with a lid, an Uno and a 9 V battery inside; fit check, X-ray and exploded views |
-| Motorlu planör (powered glider, UAV) | A 1 m glider, a 2212 brushless motor, an ESP32 flight board; balanced by the battery's position alone |
-| Planör (glider) | Balsa pod, carbon tail boom, Nano + two servos, pushrods; hand-launched |
-| Mekanum tekerlekli araba (mecanum car) | Four TT motors on mecanum wheels slide sideways |
-| Işıklar (lights) | LEDs, an RGB LED, a power LED, a bulb and an LED strip in a dark room |
-| Kumandalı araba (remote-controlled car, ESP32 + PS5 controller) | Its own ESP32 + DRV8833 PCB, a USB-C rechargeable 2S pack, a paired DualSense |
-| PS5 kumandalı uçak (PS5-controlled plane, take-off from a runway) | 1 m trainer, ailerons, tricycle gear, Bluepad32 flight controller, model airfield ([details](#the-ps5-controlled-plane)) |
-| Su roketi (water rocket) | 2 L PET bottle, 0.6 L water, 4 bar; water jet, air thrust, fins |
-| Katı yakıtlı motor test standı (solid motor test stand, KNSB) | Two BATES sugar grains; pressure and thrust follow from the burn rate |
-| Katı yakıtlı roket (solid rocket: e-match launch and parachute) | A 41 mm rocket on a G-class KNSB motor; a switch closed by a 2 s countdown fires the e-match, the rocket climbs to ~1 km and throws its parachute at apogee |
-| Kap ve bilyeler: içi boş parçalar (containers: hollow parts) | A tray and a tube made in the modeller; balls and cubes fall into the tray, one ball drops down the tube's bore to the ground |
-| Su bardağı: servo suyu döker (glass of water poured by a servo) | An ESP32 tips a glass held on a sideways SG90's horn by 90°; 193 ml of water pours into a bowl ([liquids](#liquids)) |
-| Çizgi izleyen robot (line follower) | A 5-channel TCRT5000 over matte, faded and glossy tape |
-| Sensör gezgini (sensor rover) | Camera, LiDAR, GPS, IMU, compass and encoders live |
-| ESP32 + OV2640 kamera ile bant bulma (tape finding with a camera) | The camera sees the track from above, the ESP32 finds the tape |
-| Rüzgâr, fan, konveyör ve ifadeler (wind, fan, conveyor and expressions) | Turbulent wind, a fan, a conveyor and forces written as expressions |
-| Arazi parkuru, Kapalı atölye (terrain course, indoor workshop) | Sculpted terrain, painted floor layers |
+| Empty workshop | 4 × 3 m floor, 25 °C |
+| Two boards connected by cable | A 9 V power board and an LED board on separate PCBs; the LEDs light once two cables connect them |
+| Two-axis servo arm with Arduino | An Uno drives two SG90 servos; the second servo is screwed to the first one's horn |
+| Arduino, LCD and OLED (I²C wired) | Uno, 16×2 LCD, 128×64 OLED and a potentiometer on I²C cables |
+| Two-wheeled car (real physics) | PLA chassis, two TT motors and wheels on one axle, ball caster, 4×AA pack |
+| Ultrasonic distance sensor and obstacles | An HC-SR04 really measures the obstacle in front of it |
+| Battery, motor and wheel | A 4×AA pack drives a TT motor with a wheel on its shaft |
+| Factory cell (robot arm + conveyor) | Six-axis arm, conveyor belt, light curtain |
+| SCARA pick-and-place (parallel gripper) | A SCARA arm carries parts with a parallel gripper |
+| Propeller thrust stand | 8520 motors with propellers: speed, thrust, torque, current live |
+| Mini drone take-off | A 40 g X frame with four 8520 motors lifts off on its thrust |
+| ESP32 quad | Brushless motors, ESCs, MPU-6050; the flight firmware on the ESP32 keeps the frame level |
+| Electronics box | A hollow body with a lid, an Uno and a 9 V battery inside; fit check, X-ray and exploded views |
+| Powered glider (UAV) | A 1 m glider, a 2212 brushless motor, an ESP32 flight board; balanced by the battery's position alone |
+| Glider | Balsa pod, carbon tail boom, Nano + two servos, pushrods; hand-launched |
+| Mecanum-wheel car (moves sideways) | Four TT motors on mecanum wheels slide sideways |
+| Lights | LEDs, an RGB LED, a power LED, a bulb and an LED strip in a dark room |
+| Gamepad-controlled car (ESP32 + PS5 controller) | Its own ESP32 + DRV8833 PCB, a USB-C rechargeable 2S pack, a paired DualSense |
+| PS5 gamepad-controlled aircraft: runway take-off | 1 m trainer, ailerons, tricycle gear, Bluepad32 flight controller, model airfield ([details](#the-ps5-controlled-plane)) |
+| Water rocket | 2 L PET bottle, 0.6 L water, 4 bar; water jet, air thrust, fins |
+| Solid rocket motor test stand (KNSB) | Two BATES sugar grains; pressure and thrust follow from the burn rate |
+| Solid-fuel rocket: e-match launch and parachute | A 41 mm rocket on a G-class KNSB motor; a switch closed by a 2 s countdown fires the e-match, the rocket climbs to ~1 km and throws its parachute at apogee |
+| Container and balls: hollow parts | A tray and a tube made in the modeller; balls and cubes fall into the tray, one ball drops down the tube's bore to the ground |
+| Glass of water: a servo pours the water | An ESP32 tips a glass held on a sideways SG90's horn by 90°; 193 ml of water pours into a bowl ([liquids](#liquids)) |
+| Line-following robot | A 5-channel TCRT5000 over matte, faded and glossy tape |
+| Sensor rover | Camera, LiDAR, GPS, IMU, compass and encoders live |
+| Tape finding with ESP32 + OV2640 camera | The camera sees the track from above, the ESP32 finds the tape |
+| Wind, fan, conveyor and expressions | Turbulent wind, a fan, a conveyor and forces written as expressions |
+| Terrain course, Indoor workshop | Sculpted terrain, painted floor layers |
 
 ## The parts of the screen
 
-- **Top toolbar:** select and move, **Kablo çek** (draw cable, K), **Bağla** (connect, B), rotate, duplicate, delete, undo / redo; **Dünyayı çalıştır** (run world), **10 ms ilerlet** (step 10 ms), **Durdur ve başa dön** (stop and rewind), speed; camera follow, top view, fit all.
-- **Left panel tabs:** **Sahne** (scene), **Kartlar** (boards), **Parçalar** (parts), **Mekanik** (mechanical), **Ortam** (environment).
+- **Top toolbar:** select and move, **Draw cable** (K), **Attach** (B), rotate, duplicate, delete, undo / redo; **Run the world**, **Step 10 ms**, **Stop and rewind**, speed; camera follow, top view, fit all.
+- **Left panel tabs:** **Scene**, **Boards**, **Parts**, **Mechanical**, **Environment**.
 - **Centre:** the 3D view.
 - **Right:** the inspector: the selected object's name, position, physics, cables and joints.
-- **Bottom tabs:** **Olaylar** (events), **Seri monitör** (serial monitor), **Kablolar ve ölçümler** (cables and measurements), **RF**, **Sensörler** (sensors).
+- **Bottom tabs:** **Events**, **Serial monitor**, **Cables and measurements**, **RF**, **Sensors**.
 
 ### Arranging the panels
 
 The palette, the inspector and each bottom tab (events, serial monitor, cables and measurements, RF, sensors) are movable panels:
 
 - **Into its own window:** drag a panel's header or its bottom tab. The panel tears off into its own window and follows the mouse; the window button in the header does the same. Move the window to a second screen if you like. A panel in its own window keeps updating live while the world runs.
-- **Docking:** drag the window by its title over the main window and the **Sol** (left), **Sağ** (right) and **Alt** (bottom) guides appear. Near an edge, the area the panel will take is highlighted; release to dock it there. A window released in the middle stays a window. The **Sola / Sağa / Alta** buttons at the top of the window dock it without dragging. Closing the window puts the panel back where it last was.
+- **Docking:** drag the window by its title over the main window and the **Left**, **Right** and **Bottom** guides appear. Near an edge, the area the panel will take is highlighted; release to dock it there. A window released in the middle stays a window. The **To the left / To the right / To the bottom** buttons at the top of the window dock it without dragging. Closing the window puts the panel back where it last was.
 - **Several panels on one side:** panels docked on the same side stack. Drag the line between them to share the height, and the edge line to set the column width. For example, put the serial monitor under the inspector and the events under the palette, then hide the bottom panel to give the scene more room.
-- **Panel menu:** the **⋯** button in the header, or a right click on the header or tab: **Solda** (left), **Sağda** (right), **Alt bölmede (sekme)** (bottom tab), **Ayrı pencerede** (own window), **Yukarı / Aşağı taşı** (move up / down), **Gizli** (hidden). The palette and the inspector cannot go in the bottom panel.
-- **Panel layout** (the button at the right end of the toolbar) or **Görünüm → Dünya panelleri** (View → world panels): shows and changes where each panel is. Hidden panels come back from here. It also has **Alt bölmeyi göster** (show the bottom panel), **Sol ve sağ panelleri yer değiştir** (swap left and right), **Ayrı pencereleri geri yerleştir** (dock all windows) and **Düzeni sıfırla** (reset layout).
+- **Panel menu:** the **⋯** button in the header, or a right click on the header or tab: **On the left**, **On the right**, **In the bottom pane (tab)**, **In a separate window**, **Move up** / **Move down**, **Hidden**. The palette and the inspector cannot go in the bottom panel.
+- **Panel layout** (the button at the right end of the toolbar) or **View → World panels**: shows and changes where each panel is. Hidden panels come back from here. It also has **Show bottom pane**, **Swap the left and right panels**, **Dock separate windows back** and **Reset layout**.
 
-The layout is kept, including the position and size of each panel window, and comes back the next time you start the program. In the Scene + Game view (G) with **Paneller** off, the side columns and the bottom panel are hidden; panels in their own windows stay open.
+The layout is kept, including the position and size of each panel window, and comes back the next time you start the program. In the Scene + Game view (G) with **Panels** off, the side columns and the bottom panel are hidden; panels in their own windows stay open.
 
-![The inspector and serial monitor on the left, the palette and events on the right; cables and measurements at the bottom](../../images/world-panels.png)
+![The inspector and serial monitor on the left, the palette and events on the right; cables and measurements at the bottom](../../images/en/world-panels.png)
 
-![The docking guides shown while a panel window is dragged; the left edge is picked and the area the panel will take is highlighted](../../images/world-panel-guides.png)
+![The docking guides shown while a panel window is dragged; the left edge is picked and the area the panel will take is highlighted](../../images/en/world-panel-guides.png)
 
 ## Step by step: your first world
 
 In this example a battery turns a motor and the motor turns a wheel.
 
-1. Open a **Yeni dünya** (new world, Ctrl+Shift+N).
-2. In the **Parçalar** (parts) tab search for `pil` (battery) and add **4×AA Pil 6 V**. Then search `motor` and add **TT Redüktörlü Motor 1:48** (TT gear motor).
-3. Select the motor. In the **Fizik** (physics) section on the right switch on **Sabit (zemine/masaya sabitlenmiş)** (fixed to the floor/table), so the motor does not run away while turning.
-4. Add a **Tekerlek** (wheel) from the **Mekanik** (mechanical) tab.
-5. With the wheel selected, take the **Bağla** (connect) tool (B) and click the motor. In the menu that opens choose **"Motor miline sabitle (birlikte döner)"** (fix to the motor shaft: turns with it).
-6. Take the **Kablo çek** (draw cable) tool (K). Click the battery's `+` pin, then a pin of the motor. Do the same for the battery's `−` pin and the motor's other pin. With the mouse over a pin you see its name, live voltage and how many cables are connected.
-7. **Dünyayı çalıştır** (run world, F5). The motor turns, the wheel turns, you hear the motor.
-8. In the **Kablolar ve ölçümler** (cables and measurements) tab below, see each cable's current, power and load percentage.
-9. **Durdur ve başa dön** (stop and rewind, Shift+F5) puts everything back to the start.
+1. Open a **New world** (Ctrl+Shift+N).
+2. In the **Parts** tab search for `battery` and add **4×AA Battery 6 V**. Then search `motor` and add **TT Gear Motor 1:48**.
+3. Select the motor. In the **Physics** section on the right switch on **Fixed (anchored to the ground/table)**, so the motor does not run away while turning.
+4. Add a **Wheel** from the **Mechanical** tab.
+5. With the wheel selected, take the **Attach** tool (B) and click the motor. In the menu that opens choose **"… · fix to Motor shaft where it is (rotates with it)"**.
+6. Take the **Draw cable** tool (K). Click the battery's `+` pin, then a pin of the motor. Do the same for the battery's `−` pin and the motor's other pin. With the mouse over a pin you see its name, live voltage and how many cables are connected.
+7. **Run the world** (F5). The motor turns, the wheel turns, you hear the motor.
+8. In the **Cables and measurements** tab below, see each cable's current, power and load percentage.
+9. **Stop and rewind** (Shift+F5) puts everything back to the start.
 
 ## Object types
 
 ### Boards
 
-Your own circuit + PCB + code. In the **Kartlar** (boards) tab:
+Your own circuit + PCB + code. In the **Boards** tab:
 
-- **Açık sekmeden** (from an open tab): turns an open circuit into a board and adds it.
-- **Proje dosyasından kart ekle (.rwproj)…** (add a board from a project file)
-- **Yeni boş kart tasarla** (design a new empty board)
-- **Hazır modül kartları** (ready module boards): Arduino Uno, Arduino Nano, ESP32 DevKit V1, ESP32 DevKitC, a brushed flight controller.
+- **From open tab**: turns an open circuit into a board and adds it.
+- **Add board from project file (.rwproj)…**
+- **Design a new blank board**
+- **Ready-made module boards**: Arduino Uno, Arduino Nano, ESP32 DevKit V1, ESP32 DevKitC, a brushed flight controller.
 
 The same design can be placed several times; the copies share one circuit. With a board selected, the inspector has:
 
-- **Kartı düzenle (devre · PCB · kod)** (edit board: circuit · PCB · code): the board opens in its own tab.
-- **Kartın kodunu yaz** (write the board's code): opens its code on the Code page ([4. Code](04-code.md)).
-- **Ayrı proje dosyası olarak dışa aktar…** (export as a separate project file)
+- **Edit board (circuit · PCB · code)**: the board opens in its own tab.
+- **Write the board's code**: opens its code on the Code page ([4. Code](04-code.md)).
+- **Export as a separate project file…**
 
 ### Parts
 
-A single catalogue part: servo, motor, battery, sensor, display, Arduino… The **Parçalar** (parts) tab has a search box and categories: Geliştirme (development), Elektromekanik (electromechanical), Güç (power), Sensör (sensor), Ekran (display), Anahtarlama (switching), **Kablosuz ve USB** (wireless and USB). Change parameters in the inspector's **Parametreler** (parameters) section.
+A single catalogue part: servo, motor, battery, sensor, display, Arduino… The **Parts** tab has a search box and categories: Development, Electromechanical, Power, Sensor, Display, Switching, **Wireless and USB**. Change parameters in the inspector's **Parameters** section.
 
-A loose Arduino or ESP32 becomes a programmable board with **Kart tasarımına dönüştür ve kodunu aç** (turn into a board design and open its code).
+A loose Arduino or ESP32 becomes a programmable board with **Convert to board design and open its code**.
 
 ### Mechanical bodies
 
-The **Temel şekiller** (basic shapes) in the **Mekanik** (mechanical) tab: box, plate / chassis, arm / bar, cylinder, wheel (with a rubber tyre), sphere / ball, table / fixed floor. Set size and colour in the inspector. **Gövde kabukları** (hollow shells with a lid) hold boards and batteries inside; **Uçuş yüzeyleri** (flying surfaces: wing, tailplane with elevator, fin with rudder) produce real lift, drag and moments.
+The **Basic shapes** in the **Mechanical** tab: box, plate / chassis, arm / bar, cylinder, wheel (with a rubber tyre), sphere / ball, table / fixed floor. Set size and colour in the inspector. **Enclosure shells (hollow, with lids)** hold boards and batteries inside; **Flight surfaces** (wing, tailplane with elevator, fin with rudder) produce real lift, drag and moments.
 
 ### Collision shapes
 
-Every part's rigid body comes from its own 3D model: a round motor can rolls, a wing collides with its tapered shape, a controller with its own outline (not a bounding box). Thin pieces such as leads, pins and cable ends are left out. **Görünüm → Çarpışma şekilleri (dünya)** (View → collision shapes) draws the bodies the physics really collides, translucent over the models; they move with the bodies while the simulation runs. Hollow models (a tray, cup, tube or U bracket made in the modeller or imported) are split into convex pieces, so things can be put inside them and a ball passes down a tube's bore. Example: the **Kap ve bilyeler** (containers) template. The maths: [Rigid bodies and contact](../physics/02-mechanics.md).
+Every part's rigid body comes from its own 3D model: a round motor can rolls, a wing collides with its tapered shape, a controller with its own outline (not a bounding box). Thin pieces such as leads, pins and cable ends are left out. **View → Collision shapes (world)** draws the bodies the physics really collides, translucent over the models; they move with the bodies while the simulation runs. Hollow models (a tray, cup, tube or U bracket made in the modeller or imported) are split into convex pieces, so things can be put inside them and a ball passes down a tube's bore. Example: the **Container and balls: hollow parts** template. The maths: [Rigid bodies and contact](../physics/02-mechanics.md).
 
-![Containers: the tray's floor and wall pieces, the tube's slices](../../images/world-containers.png)
+![Containers: the tray's floor and wall pieces, the tube's slices](../../images/en/world-containers.png)
 
 ### Pressure vessels and rockets
 
-The **Mekanik → Basınçlı kaplar ve roketler** (mechanical → pressure vessels and rockets) section has a PET bottle (water rocket), an air tank, a solid-propellant motor and a rocket fin. Any cylinder, box or sphere body becomes a vessel with **Özellik ekle → Basınçlı kap (gaz fiziği)** (add feature → pressure vessel) in the inspector:
+The **Mechanical → Pressure vessels and rockets (gas physics)** section has a PET bottle (water rocket), an air tank, a solid-propellant motor and a rocket fin. Any cylinder, box or sphere body becomes a vessel with **Add feature → Pressure vessel (gas physics)** in the inspector:
 
 - **Gas, pressure, inner volume, wall, water:** what the vessel holds. The gas follows the ideal gas law (p·V = m·R·T).
 - **Nozzle:** throat and exit diameter, the face the jet leaves from. The flow is isentropic; at a high enough pressure ratio it reaches the speed of sound at the throat, and an expanding nozzle accelerates the gas supersonically. The thrust ṁ·vₑ + (pₑ − pₐ)·Aₑ acts on the body where the nozzle is.
-- **Vana açılır (s)** (valve opens): the launcher holds the nozzle closed until then.
+- **Valve opens (s, releases from the pad)**: the launcher holds the nozzle closed until then.
 - **Water:** while it covers the nozzle, water leaves first (Bernoulli; the rocket's acceleration presses the water onto the nozzle), then the air.
-- **Solid propellant:** a KNSB, KNDX or APCP grain; the burn rate depends on pressure (r = a·pⁿ). The chamber pressure comes out of the balance between the gas the burning surface makes and the gas leaving the nozzle; no ready thrust curve is read. It ignites when an **e-match** joined to the motor is fired from the circuit, or at the **Ateşleme zamanı** (ignition time).
+- **Solid propellant:** a KNSB, KNDX or APCP grain; the burn rate depends on pressure (r = a·pⁿ). The chamber pressure comes out of the balance between the gas the burning surface makes and the gas leaving the nozzle; no ready thrust curve is read. It ignites when an **e-match** joined to the motor is fired from the circuit, or at the **Ignition time (s, empty = e-match)**.
 - **Bursting:** if the pressure brings the wall's hoop stress (σ = p·r/t) to the material's strength, the vessel bursts.
 
-The vessel's mass falls as gas, water and propellant leave; hot gas heats the wall and the nozzle throat (visible in the thermal camera). While running, the inspector shows pressure, temperature, thrust, the grain surface temperature, the burning share of the surface and the state live. Start with the **Su roketi** (water rocket), **Katı yakıtlı motor test standı** (solid motor test stand) and **Katı yakıtlı roket** (solid rocket) templates. The maths: [Gas and rockets](../physics/05-gas-and-rockets.md).
+The vessel's mass falls as gas, water and propellant leave; hot gas heats the wall and the nozzle throat (visible in the thermal camera). While running, the inspector shows pressure, temperature, thrust, the grain surface temperature, the burning share of the surface and the state live. Start with the **Water rocket**, **Solid rocket motor test stand (KNSB)** and **Solid-fuel rocket** templates. The maths: [Gas and rockets](../physics/05-gas-and-rockets.md).
 
 ### Ignition and launch
 
-A solid grain does not burn the moment the e-match fires. The match and the pyrogen on it burn; their hot gas heats the grain surface, a zone whose surface reaches the ignition temperature lights and the flame spreads towards the nozzle. In the inspector set **Ateşleyici barutu (g)** (igniter charge) and **Ateşleyici yanma süresi (ms)** (igniter burn time). With the charge at 0 only the match head is left; a sugar motor usually fails to light and the event log says why ("the grain surface reached at most 122 °C").
+A solid grain does not burn the moment the e-match fires. The match and the pyrogen on it burn; their hot gas heats the grain surface, a zone whose surface reaches the ignition temperature lights and the flame spreads towards the nozzle. In the inspector set **Igniter powder (g, extra per e-match)** and **Igniter burn time (ms)**. With the charge at 0 only the match head is left; a sugar motor usually fails to light and the event log says why ("the grain surface reached at most 122 °C").
 
 There are two ways to fire the e-match:
 
-- **Launch controller:** battery → switch → e-match → battery. In the switch's inspector, **Kendiliğinden kapanır (s)** (closes by itself) gives a countdown. While the simulation runs, the **Kapat** (close) button closes the switch by hand.
+- **Launch controller:** battery → switch → e-match → battery. In the switch's inspector, **Closes by itself (s, countdown)** gives a countdown. While the simulation runs, the **Close** button closes the switch by hand.
 - **From a board:** drive a MOSFET from a board to fire the e-match (for example from an altimeter or a radio).
 
-The e-match is chosen in the motor's **Ateşleme** (ignition) setting or mechanically joined to the motor.
+The e-match is chosen in the motor's **Ignition (e-match)** setting or mechanically joined to the motor.
 
 ### Parachute
 
-Give any body a parachute with **Özellik ekle → Kurtarma paraşütü** (add feature → recovery parachute) in its inspector and set its **Kanopi çapı (m)** (canopy diameter). The parachute is thrown when the altimeter sees the climb end (or at **Açılma zamanı**, the deploy time). The canopy opens over its filling time once the lines are taut; the opening shock and the descent rate come out of the physics. While running, the canopy is drawn in the scene.
+Give any body a parachute with **Add feature → Recovery parachute** in its inspector and set its **Canopy diameter (m)**. The parachute is thrown when the altimeter sees the climb end (or at the set **Deployment time**). The canopy opens over its filling time once the lines are taut; the opening shock and the descent rate come out of the physics. While running, the canopy is drawn in the scene.
 
-![The solid rocket on its pad: kraft tube, fins, battery and launch switch](../../images/world-rocket-pad.png)
+![The solid rocket on its pad: kraft tube, fins, battery and launch switch](../../images/en/world-rocket-pad.png)
 
-![0.1 s after ignition: 24 bar, 1275 °C, 100 N of thrust; the whole grain surface is burning](../../images/world-rocket-ignite.png)
+![0.1 s after ignition: 24 bar, 1275 °C, 100 N of thrust; the whole grain surface is burning](../../images/en/world-rocket-ignite.png)
 
-![Descending under the 45 cm parachute thrown at apogee](../../images/world-rocket-chute.png)
+![Descending under the 45 cm parachute thrown at apogee](../../images/en/world-rocket-chute.png)
 
 ### Liquids
 
-![The glass of water template: a servo tips the glass, the water pours into a bowl](../../images/world-glass-pour.png)
+![The glass of water template: a servo tips the glass, the water pours into a bowl](../../images/en/world-glass-pour.png)
 
-**Mekanik → Sıvılar** (mechanics → liquids) adds a glass, full of water or empty, or a volume of water (a box or a cylinder). A liquid object's box or cylinder is the volume the liquid fills when the world starts; solid parts standing in it are left out. In the inspector you pick the liquid: water, sea water, ethanol, milk, sunflower oil, glycerol or honey. Each one's real density, viscosity and surface tension are used.
+**Mechanical → Liquids (real flow with particles)** adds a glass, full of water or empty, or a volume of water (a box or a cylinder). A liquid object's box or cylinder is the volume the liquid fills when the world starts; solid parts standing in it are left out. In the inspector you pick the liquid: water, sea water, ethanol, milk, sunflower oil, glycerol or honey. Each one's real density, viscosity and surface tension are used.
 
 - The liquid is solved as particles and presses on its container's walls with its real pressure. A glass carries the weight of its water, a part dropped in water feels buoyancy, honey flows slowly.
 - Glass (material **CAM**) and acrylic are drawn see-through, so water shows through a glass. A cylinder with a wall thickness (**tube.wall**) and a bottom (**tube.bottom**) becomes a glass or a cup.
@@ -167,27 +167,27 @@ Equations and validation: [Liquids](../physics/07-liquids.md).
 
 ### 3D models
 
-Add your own model with **Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY)…** (import a 3D model). Mass, centre of mass and inertia are computed from the material. A part you made on the Parça page comes here as one body with **Test dünyasına tek gövde olarak koy** (put into a test world as one body) in its right-click menu; the robot's parts go to its assembly with **Montaja gönder** (send to assembly) ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
+Add your own model with **External model → Import 3D model (STL, OBJ, PLY)…**. Mass, centre of mass and inertia are computed from the material. A part you made on the Part page comes here as one body with **Put into the test world as a single body (obstacle, ramp …)** in its right-click menu; the robot's parts go to its assembly with **Send to assembly** ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
 
 ## Cables
 
 - Every cable has a gauge (AWG), a length and a colour. The default is 24 AWG; 22 AWG when connecting a DC motor or a battery.
-- A cable's resistance is real copper resistance. If its current limit is exceeded the cable heats and burns; the **Kablolar ve ölçümler** (cables and measurements) tab says **YANDI** (burned).
+- A cable's resistance is real copper resistance. If its current limit is exceeded the cable heats and burns; the **Cables and measurements** tab says **BURNT**.
 - Boards are electrically separate until a cable connects them. If you carry a signal between two boards, connect GND too.
-- To remove a cable press **Kabloyu sök** (remove cable) in the inspector.
+- To remove a cable press **Disconnect cable** in the inspector.
 
 ## Mechanical joints
 
-With an object selected, click another object with the **Bağla** (connect, B) tool:
+With an object selected, click another object with the **Attach** (B) tool:
 
 | Option | What happens |
 | --- | --- |
-| **Servo kolu / Motor miline sabitle (birlikte döner)** (fix to the servo horn / motor shaft) | The object is fixed to the servo horn or motor shaft and turns with it. Only offered if the target has a horn or shaft. |
-| **… gövdesine sabitle (vida / yapıştırıcı)** (fix to the body: screw / glue) | The two objects move as one |
-| **Menteşe ile bağla (serbest döner)** (hinge: turns freely) | Turns freely about one axis |
-| **Kızakla bağla (doğrusal kayar)** (slider) | Slides along a line |
+| **… · fix to Servo horn / Motor shaft where it is (rotates with it)** | The object is fixed to the servo horn or motor shaft and turns with it. Only offered if the target has a horn or shaft. |
+| **Fix to the body of … (screw / glue)** | The two objects move as one |
+| **Attach with hinge (rotates freely)** | Turns freely about one axis |
+| **Attach with slider (slides linearly)** | Slides along a line |
 
-Parts joined by at most two joints do not collide with each other. Dragging an object brings everything attached to it. Remove a joint with **Bağlantıyı çöz** (release joint) in the inspector.
+Parts joined by at most two joints do not collide with each other. Dragging an object brings everything attached to it. Remove a joint with **Detach** in the inspector.
 
 ### Screwing, gluing, tape, zip ties, solder
 
@@ -209,40 +209,40 @@ For a fixed joint, choose its **fastening** in the inspector. It is not just a l
 | Zip tie | 220 N | 400 W/m²K, 5 % | 80 → 160 °C |
 | Solder (Sn63/Pb37) | 30 MPa × area | 200 000 W/m²K, 30 % | 150 → 183 °C |
 
-A box lid can also be marked **vidalı** (screwed); it is screwed down when it seats on the rim, and a "cannot be screwed" warning appears when it does not.
+A box lid can also be set to **Lid screwed on**; it is screwed down when it seats on the rim, and a "cannot be screwed" warning appears when it does not.
 
 ### Arm kinematics: forward and inverse
 
-Select a part of an arm you built with servos (for example **Kol 2** in the servo-arm template). The inspector shows a **Kinematik (kolun ucu)** (kinematics) section. The program follows the joints to find the chain from a base to the part you selected.
+Select a part of an arm you built with servos (for example **Arm 2** in the servo-arm template). The inspector shows a **Kinematics (arm tip)** section. The program follows the joints to find the chain from a base to the part you selected.
 
 - **Base:** a fixed object or a part joined to the ground. If the arm stands free, the heaviest part of the chain is the base.
 - **Axes:** each servo horn, motor shaft, hinge and slider on the chain.
 - **Tool point:** the middle of the selected part's face farthest from its last axis.
 
-![Inverse kinematics of the servo arm: reach, skeleton and the servos driven from the panel](../../images/world-arm-kinematics.png)
+![Inverse kinematics of the servo arm: reach, skeleton and the servos driven from the panel](../../images/en/world-arm-kinematics.png)
 
 | In the section | What it shows |
 | --- | --- |
-| Servo rows | Each servo's angle (90° as built, 0–180° travel) and the torque the weight puts on it, as a share of its stall torque. Hinges and sliders read "serbest" (free): physics decides them. |
-| Uç (model) | The tool point computed from the angles (forward kinematics). |
-| Uç (fizik) | While running, the tool point the physics measures and its difference from the model. The difference comes from joint compliance and the servo's dead band; on the servo arm it is 0.2–0.3 mm. |
-| Tekilliğe uzaklık (distance from singular) | At 0% the arm is stretched or folded: the tip moves in some directions only with very large angles. A warning shows below 10%. |
-| Erişim (reach) | The nearest and farthest the tip gets over the servos' whole travel. |
+| Servo rows | Each servo's angle (90° as built, 0–180° travel) and the torque the weight puts on it, as a share of its stall torque. Hinges and sliders read "free": physics decides them. |
+| Tip (model) | The tool point computed from the angles (forward kinematics). |
+| Tip (physics) | While running, the tool point the physics measures and its difference from the model. The difference comes from joint compliance and the servo's dead band; on the servo arm it is 0.2–0.3 mm. |
+| Distance to singularity | At 0% the arm is stretched or folded: the tip moves in some directions only with very large angles. A warning shows below 10%. |
+| Reach | The nearest and farthest the tip gets over the servos' whole travel. |
 
 **Inverse kinematics:**
 
-1. Type a target in millimetres, or press **Sahnede seç** (pick in the scene) and click in the scene. The point is taken on the plane at the tip's current height.
-2. Press **Çöz** (solve). The servo angles are found; free hinges stay as they are.
+1. Type a target in millimetres, or press **Pick in scene** and click in the scene. The point is taken on the plane at the tip's current height.
+2. Press **Solve**. The servo angles are found; free hinges stay as they are.
 3. Use the solution:
-   - While the world is stopped, **Önizle** (preview) turns the servos to these angles and shows the arm in the scene.
-   - While it runs, **Servoları sür** (drive the servos) gives the servos these angles. This is like a servo tester on the signal wire: it replaces the firmware's pulses, and the servo turns with its own speed, torque and supply. **Yazılıma bırak** gives the command back to the firmware.
-   - **Açıları kopyala** (copy angles) puts the angles on the clipboard as constants for your code, with the pin each servo is wired to (for example `const int OMUZ_SERVOSU = 75;   // 74.9° · D9`).
+   - While the world is stopped, **Preview** turns the servos to these angles and shows the arm in the scene.
+   - While it runs, **Drive servos** gives the servos these angles. This is like a servo tester on the signal wire: it replaces the firmware's pulses, and the servo turns with its own speed, torque and supply. **Hand back to firmware** gives the command back to the firmware.
+   - **Copy angles** puts the angles on the clipboard as constants for your code, with the pin each servo is wired to (for example `const int SHOULDER_SERVO = 75;   // 74.9° · D9`).
 
 If a target cannot be reached, the nearest point and the reason are shown. The reason is either that the target is out of reach or that it is past a servo's limit.
 
 If all the servo axes are parallel (as on the servo-arm template), the tip moves in one plane. The target is then brought onto that plane. If it moves by more than 1 mm, this is noted too.
 
-A warning shows when a servo spends more than half its stall torque in the solution. With **Erişim alanını sahnede göster** (show the reach in the scene) on, the scene shows:
+A warning shows when a servo spends more than half its stall torque in the solution. With **Show reach envelope in the scene** on, the scene shows:
 
 | Colour | What |
 | --- | --- |
@@ -253,9 +253,9 @@ A warning shows when a servo spends more than half its stall torque in the solut
 
 ### Kinematics and odometry of a wheeled robot
 
-Select a wheeled robot's chassis (for example the plate of the car template). The inspector shows a **Sürüş kinematiği** (drive kinematics) section.
+Select a wheeled robot's chassis (for example the plate of the car template). The inspector shows a **Drive kinematics** section.
 
-![The mecanum car sliding sideways: wheel speeds, speed from the wheels and the real one, odometry drift, both paths in the scene](../../images/world-vehicle-kinematics.png)
+![The mecanum car sliding sideways: wheel speeds, speed from the wheels and the real one, odometry drift, both paths in the scene](../../images/en/world-vehicle-kinematics.png)
 
 The program finds the motors with wheels on their shafts and recognises the kind of drive:
 
@@ -272,11 +272,11 @@ The track, wheelbase and wheel diameter are noted.
 | --- | --- |
 | Wheel rows | While running, each wheel's speed in rpm and whether it turns forward or back. |
 | Tekerleklerden (from the wheels) | The chassis speed and turn rate computed from the wheel speeds (forward kinematics). |
-| Gerçek (actual) | The speed the chassis really has in the physics. If the difference is large, the slip is shown as a percentage. |
+| Actual | The speed the chassis really has in the physics. If the difference is large, the slip is shown as a percentage. |
 | Odometri (odometry) | The position and heading estimated from the wheel encoders. |
 | Sapma (drift) | How far the estimate is from the true pose, and that as a share of the distance driven. |
 
-**Odometriyi sıfırla** (reset odometry) puts the estimate back on the true pose. Every run also starts from zero. With **Yolları sahnede göster** (show the paths in the scene) on, two paths are drawn:
+**Reset odometry** puts the estimate back on the true pose. Every run also starts from zero. With **Show paths in the scene** on, two paths are drawn:
 
 - orange: the estimated path;
 - green: the true path.
@@ -287,14 +287,14 @@ On a flat floor the two-wheel car drifts less than 1% of the distance over a 46 
 
 ### PID tuner: a motor's speed loop
 
-Select a DC motor. In the inspector press **Hız kontrolü → PID ayarlayıcı…** (speed control → PID tuner), or right-click the motor in the scene tree. The tuner opens in a window of its own.
+Select a DC motor. In the inspector press **Speed control → PID tuner…**, or right-click the motor in the scene tree. The tuner opens in a window of its own.
 
 The experiments run on a copy of the world: no firmware runs, and the physics is complete. The motor's load is the wheel you fitted and the vehicle it drives. Units are your firmware's: the command in PWM (0–255), the speed in rpm of the output shaft.
 
-![The PID tuner: step test and model, the chosen rule's response in the model and in the real physics, the PWM command](../../images/world-pid-tuner.png)
+![The PID tuner: step test and model, the chosen rule's response in the model and in the real physics, the PWM command](../../images/en/world-pid-tuner.png)
 
 1. **Step test:**
-   - Enter the supply voltage (taken from the world's battery) and the test PWM, and press **Adım testini çalıştır** (run the step test).
+   - Enter the supply voltage (taken from the world's battery) and the test PWM, and press **Run the step test**.
    - The PWM is applied to the motor at standstill, and its speed is measured until it settles.
    - A first-order-plus-dead-time model is fitted to it (Smith's two-point method). The gain (K), time constant (τ) and dead time (θ) are shown, and the model is drawn over the measurement.
 2. **Rule:**
@@ -309,45 +309,45 @@ The experiments run on a copy of the world: no firmware runs, and the physics is
      | Ziegler–Nichols | Classic, aggressive |
      | Cohen–Coon | Large dead time |
 
-3. **Gerçek fizikte dene** (try in the real physics):
+3. **Try in real physics**:
    - The chosen gains run in the physics as the same discrete PID as the copied code: derivative on the measurement, output limits, and the integral held at a limit (anti-windup).
    - The response the model predicts and the one the physics gives are drawn on one graph and compared in numbers.
    - If the PWM sits at its limit most of the time, or the physics overshoots much more than the model, the reason is given.
-4. **Kodu kopyala** (copy the code): a `pidStep(setpoint, y)` function for Arduino, with the gains, the period and the limits.
+4. **Copy code**: a `pidStep(setpoint, y)` function for Arduino, with the gains, the period and the limits.
 
 ## Physics and environment
 
-Every object's inspector has a **Fizik** (physics) section:
+Every object's inspector has a **Physics** section:
 
 - **Sabit** (fixed): the object is fixed to the floor or table and does not move.
-- **Malzeme** (material): every material the physics knows: PLA, PETG, ABS, PET, acrylic, aluminium, steel, copper, lead, carbon, wood, plywood, balsa, MDF, cardboard, rubber, FR4. Friction and bounce depend on the material. The card under the list gives the material's numbers: density, Young's modulus, yield strength, thermal conductivity, specific heat, emissivity and softening/melting temperature.
+- **Material**: every material the physics knows: PLA, PETG, ABS, PET, acrylic, aluminium, steel, copper, lead, carbon, wood, plywood, balsa, MDF, cardboard, rubber, FR4. Friction and bounce depend on the material. The card under the list gives the material's numbers: density, Young's modulus, yield strength, thermal conductivity, specific heat, emissivity and softening/melting temperature.
 
-The **Görünüş ve yüzey** (look and surface) section, for bodies and imported models:
+The **Appearance and surface** section, for bodies and imported models:
 
-- **Renk** (colour): click a swatch, type `#RRGGBB` in **Renk kodu**, or go back to the material's own colour with **Malzeme rengi**.
-- **Yüzey** (finish): matte paint, gloss paint/varnish, polished metal, brushed metal, black anodising, oxidised/rusty, wood grain, carbon twill, kraft paper, rubber coating, 3D-print layers. The texture is drawn at real size (0.2 mm print layers, 2×2 twill carbon…). The finish is not only a look: it sets the thermal emissivity (ε). Polished aluminium (ε 0.05) radiates very little heat, black anodising (ε 0.85) cools much faster. The heat network, cooling and the thermal camera use this value. Example: the **Malzeme ve yüzey vitrini** (materials and finishes) template.
+- **Colour**: click a swatch, type `#RRGGBB` in **Colour code**, or go back to the material's own colour with **Material colour**.
+- **Surface**: matte paint, gloss paint/varnish, polished metal, brushed metal, black anodising, oxidised/rusty, wood grain, carbon twill, kraft paper, rubber coating, 3D-print layers. The texture is drawn at real size (0.2 mm print layers, 2×2 twill carbon…). The finish is not only a look: it sets the thermal emissivity (ε). Polished aluminium (ε 0.05) radiates very little heat, black anodising (ε 0.85) cools much faster. The heat network, cooling and the thermal camera use this value. Example: the **Material and surface showcase** template.
 
-![Materials and finishes: wood, carbon, brushed aluminium, rust, kraft, rubber, printed PLA](../../images/world-surfaces.png)
+![Materials and finishes: wood, carbon, brushed aluminium, rust, kraft, rubber, printed PLA](../../images/en/world-surfaces.png)
 
-![Thermal camera after 180 s: the polished block is still hot, the black anodised one has cooled](../../images/world-surfaces-thermal.png)
-- **Doluluk (%)** (infill) and **Kütle (g, 0 = otomatik)** (mass, 0 = automatic).
+![Thermal camera after 180 s: the polished block is still hot, the black anodised one has cooled](../../images/en/world-surfaces-thermal.png)
+- **Infill (%)** and **Mass (g, 0 = automatic)**.
 
-The **Ortam** (environment) tab:
+The **Environment** tab:
 
-- **Yerçekimi** (gravity): Earth 9.81, Moon 1.62, Mars 3.71, Jupiter 24.8, zero gravity.
-- **Ortam sıcaklığı** (ambient temperature), floor width / depth, floor friction (μ), surrounding walls.
-- **Engel ekle** / **Engelleri temizle** (add / clear obstacles).
+- **Gravity**: Earth 9.81, Moon 1.62, Mars 3.71, Jupiter 24.8, zero gravity.
+- **Ambient temperature**, floor width / depth, floor friction (μ), surrounding walls.
+- **Add obstacle** / **Clear obstacles**.
 - Air, wind, turbulence and force fields: see [Physics scripts (SDK)](../../SDK.md).
 
-Servos read the pulse command from the circuit; the horn's angle and the current it draws go back to the circuit. DC motors turn at the speed the circuit computes; the load on the shaft reflects back into the motor. Hard impacts and broken joints are written to the **Olaylar** (events) tab. Air drag acts face by face: a part's face that a joined part covers sees no air ([Aerodynamics](../physics/04-aerodynamics.md)).
+Servos read the pulse command from the circuit; the horn's angle and the current it draws go back to the circuit. DC motors turn at the speed the circuit computes; the load on the shaft reflects back into the motor. Hard impacts and broken joints are written to the **Events** tab. Air drag acts face by face: a part's face that a joined part covers sees no air ([Aerodynamics](../physics/04-aerodynamics.md)).
 
 ## Thermal camera
 
-**Görünüm → Isı kamerası (dünya)** (View → thermal camera) colours the models by temperature like a real thermal camera (iron palette). With the mouse over a part you see the temperature of that point and the part's nodes (a TT motor's winding, can and gearbox). The maths: [Heat](../physics/03-heat.md).
+**View → Thermal camera (world)** colours the models by temperature like a real thermal camera (iron palette). With the mouse over a part you see the temperature of that point and the part's nodes (a TT motor's winding, can and gearbox). The maths: [Heat](../physics/03-heat.md).
 
 ## Sensors and displays
 
-Sensors do not produce ready-made values. They measure the world with their datasheet properties: they cast rays, look at the floor or take the body's motion, then add their own noise and errors. All of them are on the **Parçalar** (parts) tab.
+Sensors do not produce ready-made values. They measure the world with their datasheet properties: they cast rays, look at the floor or take the body's motion, then add their own noise and errors. All of them are on the **Parts** tab.
 
 | Sensor | Measures | How it is computed | Errors and limits |
 | --- | --- | --- | --- |
@@ -377,35 +377,35 @@ A camera (OV7670, OV2640 / ESP32-CAM, 720p USB, Pi camera v2 / IMX219) really im
 5. **Lens and output:** vignetting darkens the corners, then the image is quantised. If the driver asked for JPEG, the frame is compressed to JPEG.
 6. **Frame rate:** limited by the sensor at that resolution (OV2640: 15 fps at UXGA, 30 at SVGA, 60 at CIF). When an ESP32 drives it, its DVP port's limit applies too.
 
-ESP32 sketches use the camera through the real `esp_camera` interface: `esp_camera_init`, `esp_camera_fb_get`, `sensor->set_framesize`. If the camera is not powered by the board, initialisation returns an error. The **Sensörler** (sensors) tab shows each sensor's latest reading and the camera's latest frame.
+ESP32 sketches use the camera through the real `esp_camera` interface: `esp_camera_init`, `esp_camera_fb_get`, `sensor->set_framesize`. If the camera is not powered by the board, initialisation returns an error. The **Sensors** tab shows each sensor's latest reading and the camera's latest frame.
 
-![Ultrasonic sensor and an obstacle](../../images/world-sonar.png)
+![Ultrasonic sensor and an obstacle](../../images/en/world-sonar.png)
 
 ## Controllers, radio and USB
 
-![ESP32 and the PS5-controlled car](../../images/world-ps5-car.png)
+![ESP32 and the PS5-controlled car](../../images/en/world-ps5-car.png)
 
-In **Parçalar → Kablosuz ve USB** (parts → wireless and USB): DualSense (PS5), DualShock 4 and Xbox controllers, **Bilgisayar + USB kablosu** (PC + USB cable), **Wi-Fi Modem (2.4 GHz)**, **BLE Beacon Etiketi** (BLE beacon tag), **IR Kumanda (NEC, 21 tuş)** (IR remote, 21 keys), **TSOP38238 IR Alıcı** (IR receiver).
+In **Parts → Wireless and USB**: DualSense (PS5), DualShock 4 and Xbox controllers, **Computer + USB cable**, **Wi-Fi Modem (2.4 GHz)**, **BLE Beacon Tag**, **IR Remote (NEC, 21 buttons)**, **TSOP38238 IR Receiver**.
 
 ### Controller
 
-1. Select the controller. Pair it with the ESP32 with **Eşleştirme modu (PS + Create basılı)** (pairing mode: PS + Create held) in the inspector.
-2. Use the on-screen controller with **Sanal kumandayı aç (fare / klavye)** (open the on-screen controller: mouse / keyboard; W/S throttle, A/D steering), or connect a real controller to the PC over USB or Bluetooth. If it does not show, **Kumandaları yeniden tara** (rescan controllers).
-3. The **ESP32'ye uzaklık** (distance to the ESP32) slider (while running) shows how the signal weakens with distance.
-4. **Kumandayı aç/kapat** (controller on/off) and **Eşleşmeyi unut** (forget pairing) are here too.
+1. Select the controller. Pair it with the ESP32 with **Pairing mode (PS + Create held)** in the inspector.
+2. Use the on-screen controller with **Open the virtual gamepad (mouse / keyboard)** (W/S throttle, A/D steering), or connect a real controller to the PC over USB or Bluetooth. If it does not show, **Rescan gamepads**.
+3. The **Distance to ESP32** slider (while running) shows how the signal weakens with distance.
+4. **Switch gamepad on** / **Switch gamepad off** and **Forget pairing** are here too.
 
-With an ESP32 selected, **Örnek kodu yükle: kumandalı araba (Bluepad32)** (load sample code: remote-controlled car) loads a ready car program.
+With an ESP32 selected, **Upload example code: gamepad-controlled car (Bluepad32)** loads a ready car program.
 
 ### The PS5-controlled plane
 
-![The PS5-controlled plane at the end of the runway: balsa pod, carbon tail boom, wing with ailerons, tricycle gear](../../images/world-ps5-plane.png)
+![The PS5-controlled plane at the end of the runway: balsa pod, carbon tail boom, wing with ailerons, tricycle gear](../../images/en/world-ps5-plane.png)
 
-The **PS5 kumandalı uçak** (PS5-controlled plane) template is a 1 m trainer standing at the end of an asphalt runway on a model airfield. Nothing is scripted: you fly it, and the physics and the flight controller's firmware decide what happens.
+The **PS5 gamepad-controlled aircraft** template is a 1 m trainer standing at the end of an asphalt runway on a model airfield. Nothing is scripted: you fly it, and the physics and the flight controller's firmware decide what happens.
 
 - **Airframe:** hollow balsa pod (closed by a screwed balsa hatch under the wing), Ø8 carbon tail boom, 4° dihedral Clark Y wing (ailerons on the outer halves, driven through torque rods by one SG90 standing in the pod right under the wing), elevator and rudder on pushrods.
 - **Power:** 2212 1000KV brushless motor, 8×4.5" prop, 20 A ESC, 3S 850 mAh LiPo. 402 g; the centre of gravity sits at 30 % of the chord from the battery position alone, no nose weight.
 - **Gear:** steel wire legs and an aluminium strap. The wheels turn freely on their axles, with the friction of a nylon hub on steel wire.
-- **Flight controller:** ESP32 + MPU-6050, reading the DualSense through Bluepad32. The code also runs on a real ESP32 (select the ESP32 and open **Kod**).
+- **Flight controller:** ESP32 + MPU-6050, reading the DualSense through Bluepad32. The code also runs on a real ESP32 (select the ESP32 and open **Code**).
 
 | Controller | Keyboard (on-screen controller) | Does |
 | --- | --- | --- |
@@ -415,48 +415,48 @@ The **PS5 kumandalı uçak** (PS5-controlled plane) template is a 1 m trainer st
 | Right stick right / left | L / J | Ailerons (roll) |
 | Right stick back / forward | K / I | Elevator (nose up / down) |
 | Left stick right / left | D / A | Rudder |
-| △ | R | **Dengeli** (self-levelling) / **Manuel** mode (light bar green / orange) |
+| △ | R | **Stabilised** (self-levelling) / **Manual** mode (light bar green / orange) |
 | D-pad up / down | ↑ / ↓ | Pitch trim (0.5°) |
 
-**Flying:** arm with Options, squeeze R2 fully. The plane accelerates down the runway; at about 9–10 m/s pull the right stick back a little and it lifts off. In **Dengeli** mode the stick asks for an angle (up to 45° of bank, 25° of pitch) and the plane levels itself when you let go. As the throttle comes back the nose drops slightly by itself, so with the power off it keeps its speed and glides (about 7 m/s, 6:1) instead of stalling. In **Manuel** mode the stick moves the surfaces directly.
+**Flying:** arm with Options, squeeze R2 fully. The plane accelerates down the runway; at about 9–10 m/s pull the right stick back a little and it lifts off. In **Stabilised** mode the stick asks for an angle (up to 45° of bank, 25° of pitch) and the plane levels itself when you let go. As the throttle comes back the nose drops slightly by itself, so with the power off it keeps its speed and glides (about 7 m/s, 6:1) instead of stalling. In **Manuel** mode the stick moves the surfaces directly.
 
 **Range and failsafe:** the Bluetooth link between the DualSense and the ESP32 weakens with distance like a real radio link and drops at about 90 m in the open (the **RF** tab shows the RSSI). If the link is lost the flight controller cuts the motor and the plane glides down in a wide circle, nose slightly down, banked 10°. As soon as the controller is back in range, control returns.
 
-**Camera:** in the **Scene + Game** view (G) the game side opens on **Pilot gözü** (pilot's eye): it looks at the plane from where the controller is, as an RC pilot sees it, and zooms with the distance. The **chase camera** follows from behind at a distance set by the plane's size.
+**Camera:** in the **Scene + Game** view (G) the game side opens on **Pilot view**: it looks at the plane from where the controller is, as an RC pilot sees it, and zooms with the distance. The **chase camera** follows from behind at a distance set by the plane's size.
 
-![Chase camera: the plane climbing out over the asphalt runway and the grass field](../../images/world-ps5-plane-flight.png)
+![Chase camera: the plane climbing out over the asphalt runway and the grass field](../../images/en/world-ps5-plane-flight.png)
 
 ### USB
 
-Point the **Bilgisayar** (PC) object at a board and press **USB'yi tak** (plug in USB). While plugged, the board is powered with 5 V and its serial port is connected to the **Seri monitör** (serial monitor) tab. **USB'yi çıkar** (unplug USB) disconnects it.
+Point the **Computer (USB)** object at a board and press **Plug in USB**. While plugged, the board is powered with 5 V and its serial port is connected to the **Serial monitor** tab. **Unplug USB** disconnects it.
 
-**USB-C rechargeable lithium batteries** (**Parçalar → Güç**, parts → power): an 18650 cell with a USB-C input, a 2S 18650 pack (7.4 V) and USB-C AA cells with a steady 1.5 V. Real electronics run inside: a protection board (cuts at 2.4 V over-discharge, over-charge and over-current; a flat pack wakes only when a charger is connected) and a constant-current / constant-voltage charger (1 A up to 4.2 V, then the current tapers). Point the **Bilgisayar + USB kablosu** (PC + USB cable) object at the battery and plug it in: the battery charges; unplugged, charging stops.
+**USB-C rechargeable lithium batteries** (**Parts → Power**): an 18650 cell with a USB-C input, a 2S 18650 pack (7.4 V) and USB-C AA cells with a steady 1.5 V. Real electronics run inside: a protection board (cuts at 2.4 V over-discharge, over-charge and over-current; a flat pack wakes only when a charger is connected) and a constant-current / constant-voltage charger (1 A up to 4.2 V, then the current tapers). Point the **Computer + USB cable** object at the battery and plug it in: the battery charges; unplugged, charging stops.
 
 ### Radio environment
 
-Wi-Fi, BLE and Bluetooth signals weaken with distance, obstacles and bodies. The **RF** tab below lists devices, signal strength (RSSI), channel and packets per second. **Sönümleme** (fading), **Dalgalar** (waves) and **Bağlantı çizgileri** (link lines) switch the radio visualisation on and off. IR remotes work only in line of sight; their keys are in the inspector's **IR kumanda tuşları (NEC)** (IR remote keys) section. The maths: [Radio](../physics/06-radio.md).
+Wi-Fi, BLE and Bluetooth signals weaken with distance, obstacles and bodies. The **RF** tab below lists devices, signal strength (RSSI), channel and packets per second. **Fading (log-normal, σ = 4 dB)**, **Waves** and **Link lines** switch the radio visualisation on and off. IR remotes work only in line of sight; their keys are in the inspector's **IR remote buttons (NEC)** section. The maths: [Radio](../physics/06-radio.md).
 
 ## Scene tree
 
-The **Sahne** (scene) tab shows everything in the world as a tree of what is attached to what (e.g. "servo koluna takılı" on the servo horn, "mile takılı" on the shaft, "sabit" fixed). While running it shows temperatures above 60 °C and **ARIZALI** (failed) objects. The **Kablolar** (cables) list is below it. Right-click: **Odakla** (focus), **Alt nesneleri gizle/göster** (hide/show children); double-click focuses the object.
+The **Scene** tab shows everything in the world as a tree of what is attached to what (e.g. "mounted on servo horn", "mounted on shaft", "fixed"). While running it shows temperatures above 60 °C and **FAULTY** objects. The **Cables** list is below it. Right-click: **Focus**, **Hide child objects** / **Show child objects**; double-click focuses the object.
 
 ## Running
 
 | Button / key | Function |
 | --- | --- |
-| **Dünyayı çalıştır** / **Duraklat** / **Devam** (run / pause / continue, F5) | Start, pause, resume |
-| **10 ms ilerlet** (step 10 ms) | One step |
-| **Durdur ve başa dön** (stop and rewind, Shift+F5) | Stops and puts everything back to the start |
+| **Run the world** / **Pause** / **Continue** (F5) | Start, pause, resume |
+| **Step 10 ms** | One step |
+| **Stop and rewind** (Shift+F5) | Stops and puts everything back to the start |
 | Speed | 0.01×, 0.1×, 0.5×, real time, 5× |
 
-If a board has no firmware, the **Olaylar** (events) tab says "Yüklü yazılım yok (kart boşta)" (no firmware loaded, board idle).
+If a board has no firmware, the **Events** tab says "No firmware loaded (the board is idle)".
 
 ## Recording and rendering
 
 Real-time running has to keep up with the screen. A **render** recomputes a recording from start to end at the accuracy you choose, independent of the screen, then plays it like a video.
 
-1. Press **● Kayıt** (record) on the toolbar (Ctrl+R). The world restarts from the beginning.
-2. Press **Kaydı bitir** (end recording) whenever you like. The render window opens and starts computing that span. You can also enter the duration yourself with **Simülasyon › Render** (Ctrl+F5).
+1. Press **● Record** on the toolbar (Ctrl+R). The world restarts from the beginning.
+2. Press **Stop recording** whenever you like. The render window opens and starts computing that span. You can also enter the duration yourself with **Simulation → Render: full physics, stress, flow, heat…** (Ctrl+F5).
 
 ![Render: stress, forces and air flow](../../images/world-render.png)
 
@@ -487,24 +487,24 @@ Real-time running has to keep up with the screen. A **render** recomputes a reco
 - **Cables** are drawn in the render as the simulated ropes themselves: they sag, tighten, and a pulled plug comes out of its pin. The render scene is for watching only; its parts and cables cannot be moved.
 - While you type in the channel search, Space and the arrow keys go to the text; the playback shortcuts work outside the box.
 - **Graphs:** every recorded channel. Clicking or dragging on a graph jumps to that second.
-- **Parçalar · gerilme** (parts · stress): each part's worst moment and safety factor. Clicking a row goes to that moment.
-- **Isı** (heat) and **Günlük** (log) tabs; results are saved as `.rwanalysis` or CSV.
+- **Parts · stress**: each part's worst moment and safety factor. Clicking a row goes to that moment.
+- **Heat** and **Log** tabs; results are saved as `.rwanalysis` or CSV.
 
-**Live inputs are recorded too.** While recording, every input you give is kept with the simulation time it took effect at: controller reports (sticks, triggers, buttons, motion; only when they change), switching a controller on or off, pairing, text sent from the serial monitor, plugging a USB cable in or out, IR key presses, conveyor start / stop, light-curtain tests and launch switches. The render applies them again at the same instants; the **Günlük** (log) tab says how many were replayed. Dragging objects with the mouse is not recorded yet.
+**Live inputs are recorded too.** While recording, every input you give is kept with the simulation time it took effect at: controller reports (sticks, triggers, buttons, motion; only when they change), switching a controller on or off, pairing, text sent from the serial monitor, plugging a USB cable in or out, IR key presses, conveyor start / stop, light-curtain tests and launch switches. The render applies them again at the same instants; the **Log** tab says how many were replayed. Dragging objects with the mouse is not recorded yet.
 
 The render computes at the accuracy (step size) you choose. With the same inputs, a chaotic motion (a stalling plane, say) can still drift slightly away from the live run over time.
 
 ## Comparing with the bench
 
-The best way to see how close the simulation is to reality is to run the same setup on the bench and measure it. In the render window's **Grafikler** (graphs) tab open a measurement log with **Tezgâh ölçümü içe aktar (CSV)** (import a bench measurement), pick the simulation channel to compare on the left (e.g. the servo's current) and press **Seçili kanalla karşılaştır** (compare with the selected channel).
+The best way to see how close the simulation is to reality is to run the same setup on the bench and measure it. In the render window's **Charts** tab open a measurement log with **Import bench measurement (CSV)…**, pick the simulation channel to compare on the left (e.g. the servo's current) and press **Compare with selected channel**.
 
 RobotWin aligns the two signals in time, draws the measurement in orange and reports:
 
 - **gecikme** (delay): how far the log is shifted relative to the simulation;
-- **ölçüm ≈ k × sim + c** (measurement ≈ k × sim + c): the real part's proportional difference from the model (e.g. a clone servo at 1.30×);
+- **measured ≈ k × sim + c**: the real part's proportional difference from the model (e.g. a clone servo at 1.30×);
 - RMSE, the largest difference and when;
 - **uyum** (agreement): the share of time the difference stays within 10 % of the measured range;
-- **ilk ayrılma** (first divergence): the first moment the two signals part for longer than 50 ms (e.g. when the real arm caught on something).
+- **first divergence**: the first moment the two signals part for longer than 50 ms (e.g. when the real arm caught on something).
 
 Log format: the first line is a header, the first column time. If the header has `ms` or `us` that unit is used, otherwise seconds. Separators may be commas, semicolons or tabs; decimal commas work too. Columns with `mA` / `mV` in their header are converted automatically when compared with A / V channels.
 
@@ -556,11 +556,11 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | F | Fit the selection / everything |
 | Esc | Cancel, back to the select tool |
 
-Objects can only be moved while the simulation is stopped. You can also type position and angle into the inspector's **Konum ve yön** (position and orientation) fields.
+Objects can only be moved while the simulation is stopped. You can also type position and angle into the inspector's **Position and orientation** fields.
 
 ## Saving
 
-**Kaydet** (save, Ctrl+S) stores the world as a `.rwworld` file. The boards inside are saved with their full projects (circuit, PCB, code); open the file on another PC and everything is ready.
+**Save** (Ctrl+S) stores the world as a `.rwworld` file. The boards inside are saved with their full projects (circuit, PCB, code); open the file on another PC and everything is ready.
 
 ---
 

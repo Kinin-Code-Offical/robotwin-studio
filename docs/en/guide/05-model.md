@@ -1,13 +1,13 @@
 # 5. Part
 
-The **Parça** (part) page (Ctrl+4) is where you model your robot's mechanical parts (chassis, brackets, boxes, wheel hubs …) in 3D. It works like Blender: object mode, edit mode and quick keyboard transforms.
+The **Part** page (Ctrl+4) is where you model your robot's mechanical parts (chassis, brackets, boxes, wheel hubs …) in 3D. It works like Blender: object mode, edit mode and quick keyboard transforms.
 
 One file holds as many parts as you like:
-- In the **Parçalar** (parts) list on the right, every top-level object is a part of its own.
+- In the **Parts** list on the right, every top-level object is a part of its own.
 - Parent one object to another (**Ctrl+P**) and the two are one part, like a tyre on its hub.
-- Finished parts go into the robot's [Montaj](06-assembly.md) (assembly) with **Montaja gönder** (send to assembly); each one becomes a body of its own.
+- Finished parts go into the robot's [Assembly](06-assembly.md) with **Send to assembly**; each one becomes a body of its own.
 
-![Model page](../../images/modeler.png)
+![Model page](../../images/en/modeler.png)
 
 ## Navigation
 
@@ -23,12 +23,12 @@ One file holds as many parts as you like:
 
 ## Adding objects
 
-With **Ekle** (add) or **Shift+A**:
+With **Add** or **Shift+A**:
 
-- **Temel şekiller** (primitives): box, cylinder, cone, sphere, torus, tube, wedge, perforated plate.
-- **Profil** (profile): extrude a rectangle, circle, polygon, channel or a free sketch to a thickness.
-- **Döndürme** (revolve): turn a profile around an axis into a solid.
-- **Robot parçaları** (robot parts): 2WD chassis plate, SG90 servo bracket, L bracket, wheel hub, enclosure + lid. Their dimensions can be changed later.
+- **Basic shapes**: box, cylinder, cone, sphere, torus, tube, wedge, perforated plate.
+- **Profile**: extrude a rectangle, circle, polygon, channel or a free sketch to a thickness.
+- **Revolve**: turn a profile around an axis into a solid.
+- **Robot parts**: 2WD chassis plate, SG90 servo bracket, L bracket, wheel hub, enclosure + lid. Their dimensions can be changed later.
 
 ## Move, rotate, scale
 
@@ -37,25 +37,25 @@ With **Ekle** (add) or **Shift+A**:
 3. Optionally lock to an axis with **X**, **Y** or **Z** and type a number (e.g. `G` `X` `20` → 20 mm along X).
 4. **Enter** confirms, **Esc** cancels.
 
-You can also drag the on-screen move / rotate / scale handles. With **Yapış** (snap) on it snaps to the grid; holding **Ctrl** turns snapping off for the moment.
+You can also drag the on-screen move / rotate / scale handles. With **Snap** on it snaps to the grid; holding **Ctrl** turns snapping off for the moment.
 
 ## Boolean (CSG) operations
 
 To drill holes, cut pockets or join parts:
 
 1. Select the "tool" objects first and the main object last (the last selected is the active one; Shift+click adds to the selection).
-2. Pick in the **Kes, kırp, birleştir** (cut, trim, join) section of the properties panel (or on the toolbar or the right-click menu):
-   - **Fark (kırp)** (difference, trim): carves the volume of the overlapping tools out of the active object (hole, pocket, trim).
-   - **Birleşim** (union): joins the tools with the active object into one closed body.
-   - **Kesişim** (intersection): keeps only the shared volume.
+2. Pick in the **Cut, trim, join** section of the properties panel (or on the toolbar or the right-click menu):
+   - **Difference (trim)**: carves the volume of the overlapping tools out of the active object (hole, pocket, trim).
+   - **Union**: joins the tools with the active object into one closed body.
+   - **Intersection**: keeps only the shared volume.
 
 The tool objects are removed afterwards; the result is again a closed (watertight) body.
 
 ## Slicing
 
-To split an object in two, select it and press **K** (or **Dilimle**, slice). Click the start and the end of the cut line on the screen: the object is cut along that line, in the viewing direction. Both pieces are capped with the section, so both are closed bodies. Holes in the section stay open (a sliced tube shows a ring). Then select one piece and move it with **G** or turn it with **R**.
+To split an object in two, select it and press **K** (or **Slice**). Click the start and the end of the cut line on the screen: the object is cut along that line, in the viewing direction. Both pieces are capped with the section, so both are closed bodies. Holes in the section stay open (a sliced tube shows a ring). Then select one piece and move it with **G** or turn it with **R**.
 
-![A sliced tube, a bevelled block and a solidified tray](../../images/modeler-cut.png)
+![A sliced tube, a bevelled block and a solidified tray](../../images/en/modeler-cut.png)
 
 Other object operations: **Ctrl+J** join, mirror copy (X / Y / Z), linear and circular array, **Ctrl+P** set parent, **Alt+P** clear parent, **Shift+D** duplicate, **H** hide, **Alt+H** show all.
 
@@ -78,11 +78,11 @@ Selection: **Alt+click** (without dragging) selects the loop of the clicked edge
 | X or Del | Delete |
 | Shift+N | Recalculate normals |
 
-**Kalınlık ver** (solidify) gives the surface a wall thickness inward: an open surface becomes a thick wall, a closed body becomes a hollow shell (for example a box without its top face → a tray). The thickness stays even at the corners.
+**Solidify** gives the surface a wall thickness inward: an open surface becomes a thick wall, a closed body becomes a hollow shell (for example a box without its top face → a tray). The thickness stays even at the corners.
 
-**Alt böl** (subdivide), **Yumuşat** (smooth, Catmull–Clark), merge by distance, triangulate and flip normals are in the panel and the right-click menu.
+**Subdivide**, **Smooth** (Catmull–Clark), merge by distance, triangulate and flip normals are in the panel and the right-click menu.
 
-![Edit mode: loop cuts and a solidified tray](../../images/modeler-cut-edit.png)
+![Edit mode: loop cuts and a solidified tray](../../images/en/modeler-cut-edit.png)
 
 ## Material and mass
 
@@ -90,28 +90,28 @@ Give each object a material (PLA, PETG, ABS, nylon, acrylic, plywood, MDF, FR4, 
 
 ## View modes
 
-- **Katı** (solid, Z), **Tel** (wireframe, Shift+Z), **X-ray** (Alt+Z), **Kenarlar** (edges).
-- **Ölç** (measure) tool: click two points to see the distance (snaps to vertices).
+- **Solid** (Z), **Wireframe** (Shift+Z), **X-ray (transparent)** (Alt+Z), **Edges**.
+- **Measure** tool: click two points to see the distance (snaps to vertices).
 
 ## Saving and exporting
 
 - The model is saved as a `.rwmodel` file (Ctrl+S).
-- **İçe aktar** (import): STL, OBJ, PLY.
-- **Dışa aktar** (export): STL (mm), OBJ, PLY. Open (not closed) meshes are warned about. Use STL for 3D printers.
+- **Import**: STL, OBJ, PLY.
+- **Export**: STL (mm), OBJ, PLY. Open (not closed) meshes are warned about. Use STL for 3D printers.
 
 ## Send to the assembly
 
-**Montaja gönder** (send to assembly) sends the selected parts (all of them when nothing is selected) to the project's [Montaj](06-assembly.md):
+**Send to assembly** sends the selected parts (all of them when nothing is selected) to the project's [Assembly](06-assembly.md):
 
 - Each part becomes a body of its own, with its computed mass.
-- The parts arrive arranged as modelled, set up beside what is in the Montaj, on the floor.
-- A project without a Montaj gets one first. You stay on the Parça page.
+- The parts arrive arranged as modelled, set up beside what is in the Assembly, on the floor.
+- A project without an Assembly gets one first. You stay on the Part page.
 - Sending a changed part again updates it where it stands. Its own origin and joints stay put.
-- Two separate parts inside each other get a warning. Deleted parts are offered for removal from the Montaj.
+- Two separate parts inside each other get a warning. Deleted parts are offered for removal from the Assembly.
 
-![Parts sent to the Montaj, beside the robot](../../images/montaj-parts.png)
+![Parts sent to the Assembly, beside the robot](../../images/en/montaj-parts.png)
 
-Each part's collision body is its own shape ([Rigid bodies and contact](../physics/02-mechanics.md)). To put a part into a test world as **one body** (an obstacle, a ramp), use **Test dünyasına tek gövde olarak koy** (put into a test world as one body) in the right-click menu. It targets an open test world, never the Montaj.
+Each part's collision body is its own shape ([Rigid bodies and contact](../physics/02-mechanics.md)). To put a part into a test world as **one body** (an obstacle, a ramp), use **Put into the test world as a single body (obstacle, ramp …)** in the right-click menu. It targets an open test world, never the Assembly.
 
 ---
 

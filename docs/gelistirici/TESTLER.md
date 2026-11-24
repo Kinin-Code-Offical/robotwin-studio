@@ -30,6 +30,8 @@ xUnit projesi `CoreSim/tests/RobotTwin.CoreSim.Tests`'tir. Arayüz ve dış ara�
 | SDK | `SdkTests` (limit hız, rüzgâr, türbülans, ifadeler, eklentiler) |
 | Dosyalar, depo düzeni | `FileFormatTests`, `RtwinRoundTripTests`, `TemplateTests`, `GoldenTraceHarnessTests`, `WorkflowReferenceTests` |
 
+Studio'nun kendi testleri `Studio/RobotWin.Studio.Tests` içindedir (WPF'siz parçalar bağlanır). `LangTests` dil paketlerini denetler: tam metinler, kalıplar, birleşik metinler, sütun hizalı ölçümler, eskiz satırları, iki dilli arama ve Studio'nun XAML'ındaki her Türkçe etiketin İngilizcesinin olması (`EveryXamlLabelHasItsEnglish`). Böylece İngilizcesi olmadan eklenen bir etiket testlerde yakalanır.
+
 ESP32 testleri gerçek çizimleri MSVC ile derler. Visual Studio C++ araçları olmayan bir makinede (`vcvars64.bat` bulunamazsa) başarısız değil **atlandı** olarak raporlanır.
 
 ## Öz test

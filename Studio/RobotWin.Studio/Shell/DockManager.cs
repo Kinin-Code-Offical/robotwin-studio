@@ -950,7 +950,7 @@ namespace RobotWin.Studio.Shell
                 double band = Math.Min(130, area.Height * 0.25);
                 var z = new Rect(area.Left + zone, area.Bottom - band, Math.Max(10, area.Width - 2 * zone), band);
                 z.Union(new Rect(preview.Left + zone, preview.Top, Math.Max(10, preview.Width - 2 * zone), preview.Height));
-                list.Add(new Target(DockPlace.Bottom, z, new Point(area.Left + area.Width / 2, area.Bottom - 46), preview, "Alt"));
+                list.Add(new Target(DockPlace.Bottom, z, new Point(area.Left + area.Width / 2, area.Bottom - 46), preview, "Alta"));   // not "Alt": that is also a key's name
             }
 
             return list;

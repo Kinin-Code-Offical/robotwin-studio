@@ -288,7 +288,10 @@ namespace RobotWin.Studio.Editor
 
             foreach (var w in Doc.Wires) foreach (var p in w.Points) Inc(p);
             foreach (var l in Doc.Labels) Inc(l.Position);
-            double w2 = Math.Max(10, maxX - minX + 8), h2 = Math.Max(8, maxY - minY + 8);
+            // A net label reaches beyond its point by its name, and while simulating by its voltage badge too: room on
+            // both sides so the outermost ones are not cut by the edge.
+            double labelRoom = Doc.Labels.Count > 0 ? 12 : 0;
+            double w2 = Math.Max(10, maxX - minX + 8 + labelRoom), h2 = Math.Max(8, maxY - minY + 8);
             _scale = Math.Max(MinScale, Math.Min(26, Math.Min(ActualWidth / w2, ActualHeight / h2)));
             _offset = new Vector(ActualWidth / 2 - (minX + maxX) / 2 * _scale, ActualHeight / 2 - (minY + maxY) / 2 * _scale);
             InvalidateVisual();

@@ -336,9 +336,9 @@ namespace RobotWin.Studio.Pages
                 string name = a.Name.Length > width ? a.Name.Substring(0, width) : a.Name.PadRight(width);
                 string value = a.Display(q[i]).ToString("0.0", CultureInfo.CurrentCulture).PadLeft(6) + a.Unit;
                 string extra = a.Actuated && a.StallTorque > 0
-                    ? $" yük %{Math.Abs(load[i]) / a.StallTorque * 100:0}"
-                    : a.Kind is WorldAxisKind.Hinge or WorldAxisKind.Slider ? " serbest" : " mil";
-                if (physics != null && physics.HeldServos.Contains(a.ObjectId)) extra += " (panel)";
+                    ? " " + Shell.Lang.T("yük") + " " + Shell.Lang.Percent(Math.Abs(load[i]) / a.StallTorque * 100, "0")   // [lang]
+                    : " " + Shell.Lang.T(a.Kind is WorldAxisKind.Hinge or WorldAxisKind.Slider ? "serbest" : "motor mili");   // not "mil": that is also the PCB unit
+                if (physics != null && physics.HeldServos.Contains(a.ObjectId)) extra += " (" + Shell.Lang.T("panel") + ")";
                 sb.AppendLine($"{name} {value}{extra}");
             }
 

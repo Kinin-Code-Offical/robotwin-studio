@@ -1,33 +1,33 @@
 # 2. Circuit
 
-The **Devre** (circuit) page (Ctrl+1) is where you draw schematics and simulate them live. The simulation runs on a real analog circuit solver: voltages, currents, heating and part damage are computed.
+The **Circuit** page (Ctrl+1) is where you draw schematics and simulate them live. The simulation runs on a real analog circuit solver: voltages, currents, heating and part damage are computed.
 
-![Circuit page: line-follower schematic and oscilloscope](../../images/schematic.png)
+![Circuit page: line-follower schematic and oscilloscope](../../images/en/schematic.png)
 
 The parts of the page:
 
 - **Left:** a searchable part list.
-- **Centre:** the schematic canvas and the toolbar above it (**Simüle et** (simulate) button, speed selector).
+- **Centre:** the schematic canvas and the toolbar above it (**Simulate** button, speed selector).
 - **Right:** the properties panel: the selected part, project info, part tolerance, shortcuts.
-- **Bottom:** measurement and info tabs: **Osiloskop** (oscilloscope), **Multimetre** (multimeter), **Arıza tespiti** (fault finding), **Monte Carlo**, **Kart pinleri** (board pins), **Seri monitör** (serial monitor), **Olaylar** (events).
+- **Bottom:** measurement and info tabs: **Oscilloscope**, **Multimeter**, **Fault finding**, **Monte Carlo**, **Board pins**, **Serial monitor**, **Events**.
 
 ## A new circuit
 
-1. **Dosya → Yeni devre / kart** (File → new circuit / board, Ctrl+N).
+1. **File → New circuit / board** (Ctrl+N).
 2. The empty canvas says: pick a part on the left and click on the canvas; start at a pin and click another pin to draw a wire.
 
 ## Adding parts
 
-1. Type the part's name in the search box on the left (e.g. `direnç 10k` (resistor 10k), `LED`, `LM358`, `arduino`).
+1. Type the part's name in the search box on the left (e.g. `resistor 10k`, `LED`, `LM358`, `arduino`).
 2. Pick it from the list and click on the canvas to place it.
 3. The **A** key also opens the searchable part list.
 4. The **P** key adds a power symbol (GND, +5V…).
 
 The library has passives, diodes and LEDs, transistors and MOSFETs, op-amps, 74HC logic ICs, regulators, batteries and power supplies, switches and relays, DC motors and servos, sensors, displays and I²C modules, motor drivers, Arduino Uno / Nano, ESP32 boards and wireless devices.
 
-The category list above the search box has two levels. Main categories (e.g. **Pasif** (passive), **Güç** (power), **Ölçüm & Kaynak** (measurement & source)) have their sub-categories under them (e.g. **Direnç** (resistor), **Kondansatör** (capacitor), **Güç kaynağı** (power supply), **Sinyal jeneratörü** (signal generator)). Each line shows how many parts it holds. Picking a sub-category lists only that kind of part. The **Kütüphane** (library) page has the same layout: below the main category buttons, the picked category's sub-categories appear on a second row. Picking a part shows an **Özellikler** (specifications) table on the right. It lists every value of its simulation model (the ones this part sets differently from the default in bold), its pins and the model's name.
+The category list above the search box has two levels. Main categories (e.g. **Passive**, **Power**, **Measurement & Source**) have their sub-categories under them (e.g. **Resistor**, **Capacitor**, **Power supply**, **Signal generator**). Each line shows how many parts it holds. Picking a sub-category lists only that kind of part. The **Library** page has the same layout: below the main category buttons, the picked category's sub-categories appear on a second row. Picking a part shows a **Properties** table on the right. It lists every value of its simulation model (the ones this part sets differently from the default in bold), its pins and the model's name.
 
-![The library: Ölçüm & Kaynak → Güç kaynağı (power supplies) and the adjustable AC/DC supply's specifications](../../images/library-categories.png)
+![The library: Measurement & Source → Power supply and the adjustable AC/DC supply's specifications](../../images/en/library-categories.png)
 
 ## Wiring
 
@@ -46,7 +46,7 @@ Helper keys:
 | L / Ctrl+L | Net label / global label |
 | Q | No-connect (NC) marker |
 
-Labels with the same name are connected; the name `GND` means ground. Right-clicking a wire offers **Böl** (split), **segment sil** (delete segment) and **etiket** (label).
+Labels with the same name are connected; the name `GND` means ground. Right-clicking a wire offers **Split wire**, **Delete this segment** and **Add label**.
 
 ## Editing
 
@@ -64,33 +64,33 @@ Labels with the same name are connected; the name `GND` means ground. Right-clic
 | Ctrl+F / Ctrl+H | Find / find and replace (`*` and `?` wildcards) |
 | F1 or ? | All shortcuts |
 
-- **Numaralandır** (annotate): numbers part names (R1, R2, C1…) by row or column; the names on the PCB and in the assembly follow.
-- **Elektriksel kural denetimi (ERC)** (electrical rule check): finds unconnected pins, single-pin nets, output conflicts and unpowered power inputs.
-- **PCB kılıfı** (PCB footprint): choose the footprint the part uses on the PCB.
+- **Annotate**: numbers part names (R1, R2, C1…) by row or column; the names on the PCB and in the assembly follow.
+- **Electrical rules check (ERC)**: finds unconnected pins, single-pin nets, output conflicts and unpowered power inputs.
+- **PCB footprint**: choose the footprint the part uses on the PCB.
 
 ## Simulation
 
-1. Press **Simüle et** (simulate) on the toolbar, or **F5**.
+1. Press **Simulate** on the toolbar, or **F5**.
 2. While it runs:
    - Click buttons and switches.
    - Turn potentiometers with the mouse wheel.
    - Click a wire: the oscilloscope starts measuring there.
-3. **F5** again pauses, **Shift+F5** stops. **1 ms ilerlet** (step 1 ms) advances one step.
-4. Speed: **0.01×**, **0.1×**, **Gerçek zaman** (real time), **5×**, **20×**.
+3. **F5** again pauses, **Shift+F5** stops. **Step 1 ms** advances one step.
+4. Speed: **0.01×**, **0.1×**, **Real time**, **5×**, **20×**.
 
-The status bar shows simulation time. If the PC cannot keep up with real time it shows "gerçek zamanın %…'i" (…% of real time).
+The status bar shows simulation time. If the PC cannot keep up with real time it shows "…% of real time".
 
 ### Part damage
 
-A circuit that would burn in real life burns here too: an LED without a resistor, a motor drawing too much current, an electrolytic capacitor fitted backwards… A burned part is marked and written to the **Olaylar** (events) tab.
+A circuit that would burn in real life burns here too: an LED without a resistor, a motor drawing too much current, an electrolytic capacitor fitted backwards… A burned part is marked and written to the **Events** tab.
 
-- In the **Arıza tespiti** (fault finding) tab, **Neden?** (why?) explains why the part burned.
-- After fixing the circuit, renew the parts with **Hasarlı parçaları onar** (repair damaged parts).
-- To switch damage off entirely, turn off **Simülasyon → Parça hasarı (yanma, sigorta)** (Simulation → part damage: burning, fuses).
+- In the **Fault finding** tab, **Why?** explains why the part burned.
+- After fixing the circuit, renew the parts with **Repair damaged parts**.
+- To switch damage off entirely, turn off **Simulation → Part damage (burning out, fuses)**.
 
 ### Board pins
 
-You can drive the pins of an Arduino or ESP32 that has no code by hand in the **Kart pinleri** (board pins) tab: input, pull-up, LOW, HIGH or PWM.
+You can drive the pins of an Arduino or ESP32 that has no code by hand in the **Board pins** tab: input, pull-up, LOW, HIGH or PWM.
 
 ## Exporting
 

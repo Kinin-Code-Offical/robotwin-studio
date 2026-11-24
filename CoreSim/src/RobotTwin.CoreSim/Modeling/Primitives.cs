@@ -105,7 +105,7 @@ namespace RobotTwin.CoreSim.Modeling
             PrimitiveKind.Wedge => "Kama",
             PrimitiveKind.Plate => "Delikli plaka",
             PrimitiveKind.Extrude => "Profil",
-            PrimitiveKind.Revolve => "Döndürme",
+            PrimitiveKind.Revolve => "Döner gövde",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
             _ => "Parça"
         };
 
