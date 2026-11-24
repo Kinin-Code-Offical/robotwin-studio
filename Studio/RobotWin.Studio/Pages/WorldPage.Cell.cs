@@ -552,7 +552,7 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
-            _cellStatus.Text = sb.ToString().TrimEnd();
+            _cellStatus.Text = Shell.Lang.T(sb.ToString().TrimEnd());   // [lang] line by line
         }
 
         private void ArmStatus(WorldObject o, WorldPhysics? physics, StringBuilder sb)

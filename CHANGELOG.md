@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Keyboard shortcuts can be changed:** the window's shortcuts are commands with ids and defaults (Shell/Shortcuts); in the settings a click takes new keys (Esc cancels, Backspace removes), clashes are marked, each or all can be reset; a single letter is refused (it would fire while typing).
 - **Themes and accent colours:** dark (default), black for OLED screens, high contrast; blue, turquoise, orange, purple or pink accent; applied at once (the XAML takes the brush tokens as dynamic resources).
 - **Settings can be exported and imported** (the window placement stays this machine's).
+- **Every page's keys can be changed** (Settings → Keyboard shortcuts):
+  - 17 schematic tools (wire, label, rotate, mirror …);
+  - 17 PCB actions (route, fill, layer, flip …);
+  - 8 world tools (cable, join, rotate, duplicate, follow, record …);
+  - the code page's build, upload and debugging keys;
+  - 18 modelling tools (move, rotate, scale, extrude, knife, bevel …). A chosen key reaches the page as the tool's default one, so the editors' own key handling is unchanged. A moved tool's old key does nothing, clashes are flagged within a page, single letters are allowed, and the schematic's shortcut list shows the keys in use. A `keys` end-to-end check covers it.
+- **English is the main language, and more languages can be added** (Settings → General → Language). The app now starts in English; Turkish is one click away.
+  - Every element is translated when it is first laid out (text, content, header, tooltip, window title), and so are the canvases' own texts (schematic, PCB, oscilloscope, multimeter, plots, the modeller's overlay). Bound texts keep their binding: a tab's title or a list's chosen item shows translated and still follows its source.
+  - Numbers and dates follow the language (1.5 mm in English). The Help page shows the English guide, News items have their English, the part catalogue's names and descriptions are translated, and an example opens with English names and English comments in its code.
+  - Searches find both languages: parts, settings and the command palette match "resistor" and "direnç" alike.
+  - A pack holds exact texts and patterns whose `{…}` parts stand for numbers and names. The most particular pattern wins, a hole never cuts into a word, and a menu's access key moves to the translation ("_Yardım" → "_Help").
+  - Another language is a copy of `Lang/en.json` with its values translated and its `"culture"` set; what it leaves out falls back to English, not Turkish.
+  - The English pack was made from every string in the sources (read with a C# lexer, so formatted texts keep all their parts) and from the texts the running app showed; `--lang-missing <file>` lists what a page still shows untranslated.
 - **A theme gallery with 16 themes and a custom one.** Each theme is shown as a small picture of the window.
   - Dark: graphite, OLED black, night blue, deep ocean, forest, plum, rose night, espresso, high contrast.
   - Light: light, paper, pink, peach, lavender, mint, sky.
@@ -69,6 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - a SIMC PI on the car's wheel answering in the physics like the model.
 - **Right-click menu of the scene tree:** a motor offers the PID tuner, an arm part its kinematics, a chassis its drive kinematics and odometry.
 
+- **Parts look like their material.** A part with no finish of its own now shows its material's surface: wood grain on wood (plywood with its veneers on the edges), 0.2 mm layer lines on PLA, PETG and ABS with the 45° top skin above, brushed aluminium and steel, carbon twill, kraft fibres. Surface textures are drawn at 512 px with fine grain noise instead of 128 px. The look only: emissivity stays the material's.
+- **The floor looks like its material:** concrete, floorboards, asphalt, carpet, tiles, grass, sand, ice or chequer plate at real size, with faint 10 cm lines for placing things. A world without a floor material keeps the editing grid.
+- **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
+
 ### Fixed
 
 - **A motor on a bench voltage (the automation API's voltage and duty modes, the PID tuner) spun up without its rotor.** The torque–speed line drove the shaft directly, so a small gear motor reached speed in 3 ms instead of its tens of milliseconds. The gearbox multiplies the rotor's inertia by the ratio squared, as the circuit's motor model already had it. Now the line accelerates that inertia against the torque the mechanism takes, and the shaft follows. A TT motor on the car now has a 32 ms time constant.
@@ -76,6 +93,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The tread is now one contact patch. Its edges and middle hold the wheel up and resist rolling, and one more contact at the patch's centre carries the friction with their whole load.
   - The patch's centre weighs each point by how far it is pressed in, within the tread's give (0.3 mm): the middle for a level wheel, the lower edge for a cambered one. The patch also resists scrub (turning on the spot).
   - Turn rates now match the kinematics within 0.5%, and encoder odometry of the car drifts 0.8% instead of 13% over the same arc.
+- **Water standing in a tank or glass never came to rest, so it never slept and was solved every millisecond.**
+  - In a container's inside corner (floor meeting wall), the particles were pushed off a wall they did not touch. They moved a different way every step at up to 40 mm/s. A container's distance field, read between its grid points, came out short there, and its direction changed from cell to cell. Contact is now taken against the container's true solid, and a particle touching two or three faces is freed from each in turn. The field still gives the pressure.
+  - Rest is now judged by where the particles stay. A position-based liquid standing still quivers in place by about g·h² a step (10 µm at 1 ms), which reads as about 10 mm/s and never dies away. Now, over 0.2 s, no particle may move a quarter of the spacing, and their average move must stay under 3% of it.
+  - A container held by a servo no longer keeps the liquid awake by moving fractions of a micrometre. It wakes the liquid once it moves 2% of the particle spacing from where it stood, or faster than two spacings a second.
+  - A free tank of water now falls asleep with its water after 2.6 s. Asleep, it still carries the water's weight within 0.2%, and it wakes when pushed.
 
 ### Changed
 

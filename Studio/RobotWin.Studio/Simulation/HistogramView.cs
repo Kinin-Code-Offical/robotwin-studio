@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -35,7 +35,7 @@ namespace RobotWin.Studio.Simulation
         private double Dpi => VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
         private FormattedText Label(string s, Color c, double size = 10.5) =>
-            new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, size, SymbolRenderer.Brush(c), Dpi);
+            new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, size, SymbolRenderer.Brush(c), Dpi);
 
         protected override void OnRender(DrawingContext dc)
         {

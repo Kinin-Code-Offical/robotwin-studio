@@ -1059,11 +1059,15 @@ namespace RobotWin.Studio.Pcb
         {
             if (Board == null) return;
             var board = Board;
-            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
-            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            var mods = Keyboard.Modifiers;
             e.Handled = true;
+            // [keys] a key the user moved an action to becomes the action's own key; the action's old key does nothing
+            if (!Shell.Shortcuts.Translate(Shell.PageShortcuts.Pcb, ref key, ref mods)) return;
+            bool ctrl = (mods & ModifierKeys.Control) != 0;
+            bool shift = (mods & ModifierKeys.Shift) != 0;
 
-            if (e.Key == Key.F1)
+            if (key == Key.F1)
             {
                 HelpRequested?.Invoke(this, EventArgs.Empty);
                 return;
@@ -1071,7 +1075,7 @@ namespace RobotWin.Studio.Pcb
 
             if (_moving)
             {
-                switch (e.Key)
+                switch (key)
                 {
                     case Key.Escape:
                         CancelMove();
@@ -1089,7 +1093,7 @@ namespace RobotWin.Studio.Pcb
                 return;
             }
 
-            if (_keyboardSegmentDrag && e.Key == Key.Escape)
+            if (_keyboardSegmentDrag && key == Key.Escape)
             {
                 RestoreTracks();
                 _keyboardSegmentDrag = false;
@@ -1102,7 +1106,7 @@ namespace RobotWin.Studio.Pcb
 
             if (ctrl)
             {
-                switch (e.Key)
+                switch (key)
                 {
                     case Key.Z:
                         CancelInteractions();
@@ -1142,10 +1146,10 @@ namespace RobotWin.Studio.Pcb
                 return;
             }
 
-            if (_tool == PcbTool.Route && RouteKey(e.Key, shift)) return;
-            if ((_tool == PcbTool.Zone || _tool == PcbTool.Outline) && PolygonKey(e.Key)) return;
+            if (_tool == PcbTool.Route && RouteKey(key, shift)) return;
+            if ((_tool == PcbTool.Zone || _tool == PcbTool.Outline) && PolygonKey(key)) return;
 
-            switch (e.Key)
+            switch (key)
             {
                 case Key.Escape:
                     if (_routePts.Count > 0 || _polyPts.Count > 0 || _measureA != null || _dimA != null) CancelInteractions();
@@ -1187,7 +1191,7 @@ namespace RobotWin.Studio.Pcb
                 {
                     var stack = board.CopperLayers();
                     int i = stack.ToList().IndexOf(_activeLayer);
-                    i = Math.Max(0, Math.Min(stack.Count - 1, i + (e.Key == Key.PageDown ? 1 : -1)));
+                    i = Math.Max(0, Math.Min(stack.Count - 1, i + (key == Key.PageDown ? 1 : -1)));
                     ActiveLayer = stack[i];
                     Say("Etkin katman: " + PcbLayers.DisplayName(_activeLayer));
                     return;
@@ -1204,7 +1208,7 @@ namespace RobotWin.Studio.Pcb
                 return;
             }
 
-            switch (e.Key)
+            switch (key)
             {
                 case Key.R:
                     RotateSelection(shift);
@@ -1249,7 +1253,7 @@ namespace RobotWin.Studio.Pcb
                 case Key.Right:
                 case Key.Up:
                 case Key.Down:
-                    Nudge(e.Key, shift);
+                    Nudge(key, shift);
                     return;
             }
 

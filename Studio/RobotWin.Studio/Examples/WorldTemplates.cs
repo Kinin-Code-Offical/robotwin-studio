@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Formats;
@@ -14,7 +14,25 @@ namespace RobotWin.Studio.Examples
             Id = id;
             Title = title;
             Description = description;
-            Build = build;
+            Build = () => Localized(build());
+        }
+
+        /// <summary>
+        /// [lang] The example made in the language in use: its title, its objects' and boards' names, and its sketches'
+        /// comments and messages (the names are the world's own data from then on, saved with it).
+        /// </summary>
+        private static WorldDocument Localized(WorldDocument w)
+        {
+            if (Shell.Lang.Current == "tr") return w;
+            w.Title = Shell.Lang.T(w.Title);
+            foreach (var o in w.Objects)
+            {
+                o.Name = Shell.Lang.T(o.Name);
+                if (o.Firmware is { } fw) fw.Source = Shell.Lang.Code(fw.Source);
+            }
+
+            foreach (var d in w.Designs) d.Name = Shell.Lang.T(d.Name);
+            return w;
         }
 
         public string Id { get; }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -92,6 +92,30 @@ namespace RobotWin.Studio
             if (Automation.StudioApiHost.TryRun(this, args)) return;   // [api] --api <port> / --bake-geometry: windowless automation server
 
             Shell.Themes.Apply();   // [theme] before any window takes the brushes
+            // [lang] the language pack, before any window is built (--lang en: this run only)
+            // Command-line runs (pictures, checks, benches) speak Turkish unless --lang says otherwise: their checks and
+            // the guide's pictures are written for it. The app itself opens in the language of the settings.
+            bool automated = args.Any(a => a is "--snapshot" or "--selftest" or "--bench" or "--startup-report" or "--overlap-report" or "--gallery" or "--api");
+            Shell.Lang.Load(Arg("--lang") ?? (automated ? "tr" : Shell.AppSettings.Current.Language));
+            if (Shell.Lang.Current != "tr")
+            {
+                // Numbers and dates in the language's own way (1.5 mm, not 1,5 mm), on every thread from here on.
+                CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = Shell.Lang.Culture;
+                CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = Shell.Lang.Culture;
+            }
+
+            if (Arg("--lang-missing") is { } missingLog)
+            {
+                // [lang] every text the pack had no translation for in this run (windows, canvases, messages), at exit
+                Shell.Lang.Misses = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                Exit += (_, _) =>
+                {
+                    var lines = Shell.Lang.MissesSoFar().Select(s => System.Text.Json.JsonSerializer.Serialize(new { page = "run", s }, new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+                    File.AppendAllLines(missingLog, lines);
+                };
+            }
+
+            Shell.Lang.Install();
             Shell.StartupSplash.Open();   // [startup] the first window, on its own thread
             Shell.Backups.BeginSession();   // [backup] a run left open by a crash shows on the start page
             Shell.StartupTrace.Mark("Parça kütüphanesi yükleniyor", 0.05);
@@ -111,7 +135,8 @@ namespace RobotWin.Studio
                     {
                         t.Stop();
                         Shell.StartupTrace.Mark("İlk çizimden 400 ms sonra", 1);
-                        File.WriteAllText(report, Shell.StartupTrace.Report());
+                        var (exact, patterns) = Shell.Lang.Size;
+                        File.WriteAllText(report, Shell.StartupTrace.Report() + $"\ndil: {Shell.Lang.Current}, {exact} metin, {patterns} kalıp, etkin {Shell.Lang.Active}; 'Ayarlar' → '{Shell.Lang.T("Ayarlar")}'\n");
                         window.ForceClose();
                     };
                     t.Start();
@@ -279,6 +304,26 @@ namespace RobotWin.Studio
                 enc.Frames.Add(BitmapFrame.Create(shot));
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 using (var fs = File.Create(path)) enc.Save(fs);
+                // [lang] --lang-missing file: the page's texts the pack leaves in Turkish, added to the file (one per line).
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--lang-missing").Skip(1).FirstOrDefault() is { } missingPath)
+                {
+                    var missing = Shell.Lang.Untranslated(window);
+                    if (page == "library")
+                    {
+                        // The catalogue and the examples as a whole (a list shows only the rows in view).
+                        var lib = RobotTwin.CoreSim.Design.PartLibrary.Default;
+                        var data = lib.Parts.SelectMany(p => new[] { p.Name, p.Category, p.Description })
+                            .Concat(lib.Presets.SelectMany(p => new[] { p.Name, p.Category, p.Description }))
+                            .Concat(ExampleProjects.All.SelectMany(x => new[] { x.Title, x.Description, x.Level }));
+                        foreach (var s in data)
+                        {
+                            if (!string.IsNullOrWhiteSpace(s) && s.Any(char.IsLetter) && Shell.Lang.T(s) == s) missing.Add(s);
+                        }
+                    }
+
+                    File.AppendAllLines(missingPath, missing.Select(s => System.Text.Json.JsonSerializer.Serialize(new { page, s }, new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })));
+                }
+
                 Workspace.Current.Simulation.Stop();
                 window.ForceClose();
             };

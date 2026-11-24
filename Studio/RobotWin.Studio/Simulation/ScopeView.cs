@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -90,7 +90,7 @@ namespace RobotWin.Studio.Simulation
         private double Dpi => VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
         private FormattedText Label(string s, Color c, double size = 11, bool bold = false) =>
-            new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                 bold ? Typefaces.UiSemi : Typefaces.Mono, size, SymbolRenderer.Brush(c), Dpi);
 
         private static Pen Pen(Color c, double w, bool dashed = false)
@@ -131,9 +131,9 @@ namespace RobotWin.Studio.Simulation
             if (Scope.Channels.All(c => c.Source == null))
             {
                 var hint = new FormattedText(
-                    Sim.IsActive
+                    RobotWin.Studio.Shell.Lang.T(Sim.IsActive
                         ? "Probu bağlamak için şemada bir kabloya tıklayın (CH1, CH2…).\nCtrl + parçaya tıklama: akım probu."
-                        : "Simülasyonu başlatın, ardından ölçmek istediğiniz kabloya tıklayın.",
+                        : "Simülasyonu başlatın, ardından ölçmek istediğiniz kabloya tıklayın."),
                     CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, Typefaces.Ui, 12.5, SymbolRenderer.Brush(Muted), Dpi)
                 {
                     TextAlignment = TextAlignment.Center

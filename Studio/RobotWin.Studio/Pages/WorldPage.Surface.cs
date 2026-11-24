@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -27,7 +27,7 @@ namespace RobotWin.Studio.Pages
         private static string MaterialCard(string name)
         {
             var m = StructuralMaterial.For(name);
-            string F(double v, string f) => v.ToString(f, CultureInfo.GetCultureInfo("tr-TR"));
+            string F(double v, string f) => v.ToString(f, RobotWin.Studio.Shell.Lang.Culture);
             string soft = !double.IsNaN(m.GlassTransition) ? $"camsı geçiş {F(m.GlassTransition, "0")} °C, " : string.Empty;
             string melt = !double.IsNaN(m.MeltingPoint) ? $"erime/bozunma {F(m.MeltingPoint, "0")} °C" : string.Empty;
             return $"{m.Name}: yoğunluk {F(m.Density, "0")} kg/m³ · E {F(m.E / 1e9, "0.##")} GPa · akma {F(m.Yield / 1e6, "0")} MPa · ısı iletimi {F(m.Conductivity, "0.###")} W/m·K · özgül ısı {F(m.SpecificHeat, "0")} J/kg·K · ışınım ε {F(m.Emissivity, "0.##")}" +
@@ -109,7 +109,7 @@ namespace RobotWin.Studio.Pages
             var mat = StructuralMaterial.For(o.Material);
             var finish = SurfaceFinish.For(o.Parameters.TryGetValue("surface", out var s) ? s : null);
             double eps = SurfaceFinish.EmissivityOf(o, mat.Emissivity);
-            Inspector.Children.Add(Note((finish?.Note ?? "Malzemenin kendi yüzeyi.") + $" Isıl ışınım ε = {eps.ToString("0.##", CultureInfo.GetCultureInfo("tr-TR"))}: ısı ağı, soğuma ve ısı kamerası bu değerle hesaplanır."));
+            Inspector.Children.Add(Note((finish?.Note ?? "Malzemenin kendi yüzeyi.") + $" Isıl ışınım ε = {eps.ToString("0.##", RobotWin.Studio.Shell.Lang.Culture)}: ısı ağı, soğuma ve ısı kamerası bu değerle hesaplanır."));
         }
     }
 }

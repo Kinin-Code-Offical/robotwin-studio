@@ -227,24 +227,24 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>F5 (go on), F10, F11, Shift+F11 while the board is stopped; false when the key is not the debugger's.</summary>
-        private bool DebugKeys(KeyEventArgs e)
+        /// <summary>[debug] The stepping keys while the board is stopped (the key as the page knows it, after the user's own keys).</summary>
+        private bool DebugKeys(Key key, ModifierKeys mods)
         {
             var p = Current();
             bool paused = p != null && (p.IsHalted || p.Owner is World.WorldSession { State: Simulation.SimState.Paused } || p.Owner is Simulation.SimulationSession { State: Simulation.SimState.Paused });
             if (!paused) return false;
-            switch (e.Key)
+            switch (key)
             {
-                case Key.F5 when Keyboard.Modifiers == ModifierKeys.None:
+                case Key.F5 when mods == ModifierKeys.None:
                     FirmwareDebugger.Continue(p!);
                     return true;
-                case Key.F10 when Keyboard.Modifiers == ModifierKeys.None:
-                case Key.System when e.SystemKey == Key.F10:
+                case Key.F10 when mods == ModifierKeys.None:
                     DebugStep(DebugStepKind.Over);
                     return true;
-                case Key.F11 when Keyboard.Modifiers == ModifierKeys.None:
+                case Key.F11 when mods == ModifierKeys.None:
                     DebugStep(DebugStepKind.Into);
                     return true;
-                case Key.F11 when Keyboard.Modifiers == ModifierKeys.Shift:
+                case Key.F11 when mods == ModifierKeys.Shift:
                     DebugStep(DebugStepKind.Out);
                     return true;
             }

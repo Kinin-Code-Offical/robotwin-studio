@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using RobotTwin.CoreSim.Formats;
 using System.Collections.Generic;
 using System.Globalization;
@@ -71,11 +71,11 @@ namespace RobotWin.Studio.Pages
 
         private void Filter()
         {
-            var culture = CultureInfo.GetCultureInfo("tr-TR");
-            var tokens = SearchBox.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            // [lang] the shown (translated) texts and the Turkish ones alike
+            var tokens = RobotWin.Studio.Shell.Lang.Fold(SearchBox.Text).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             PartGrid.ItemsSource = Lib.Presets.Where(p =>
                 RobotTwin.CoreSim.Design.PartCategories.Matches(p, _category) &&
-                tokens.All(t => (p.Name + " " + p.Description + " " + RobotTwin.CoreSim.Design.PartCategories.PathOf(p) + " " + p.Id).ToLower(culture).Contains(t.ToLower(culture))))
+                (tokens.Length == 0 || RobotWin.Studio.Shell.Lang.Searchable(p.Name, p.Description, RobotTwin.CoreSim.Design.PartCategories.PathOf(p), p.Id) is var hay && tokens.All(t => hay.Contains(t))))
                 .OrderBy(p => IsSeriesResistor(p) ? 1 : 0).ToList();
         }
 

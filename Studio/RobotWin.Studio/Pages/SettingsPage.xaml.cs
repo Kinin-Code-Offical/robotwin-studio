@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -58,7 +58,35 @@ namespace RobotWin.Studio.Pages
             _index.Clear();
             _categories.Clear();
 
-            Category("Genel", "Açılış, proje klasörü, son dosyalar ve birimler.");
+            Category("Genel", "Dil, açılış, proje klasörü, son dosyalar ve birimler.");
+            Card("Dil", "Arayüzün dili. Yeni dil, uygulama yeniden açılınca her yerde geçerli olur.", c =>
+            {
+                c.Children.Add(Choice("Dil", Lang.Available().Select(l => (l.Name, l.Id)).ToArray(), S.Language, v => S.Language = v,
+                    "Kendi dil paketinizi de ekleyebilirsiniz: Türkçe metinlerin karşılıklarını içeren bir JSON dosyasını dil paketleri klasörüne koyun."));
+                var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+                var restart = new Button { Content = "Şimdi yeniden başlat", Style = (Style)FindResource("Btn.Ghost"), Margin = new Thickness(0, 0, 8, 0) };
+                restart.Click += (_, _) =>
+                {
+                    S.Save();
+                    (Window.GetWindow(this) as MainWindow)?.Restart();
+                };
+                row.Children.Add(restart);
+                var folder = new Button { Content = "Dil paketleri klasörü", Style = (Style)FindResource("Btn.Ghost") };
+                folder.Click += (_, _) =>
+                {
+                    try
+                    {
+                        System.IO.Directory.CreateDirectory(Lang.UserFolder);
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + Lang.UserFolder + "\"") { UseShellExecute = true });
+                    }
+                    catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is System.ComponentModel.Win32Exception)
+                    {
+                        Workspace.Current.Status = "Klasör açılamadı: " + ex.Message;
+                    }
+                };
+                row.Children.Add(folder);
+                c.Children.Add(row);
+            });
             Card("Açılış", "Uygulama açıldığında ne görüneceği.", c =>
             {
                 c.Children.Add(Toggle("Açılışta başlangıç sayfasını göster", S.ShowHomeOnStart, v => S.ShowHomeOnStart = v, "Kapalıyken son açılan proje veya dünya doğrudan açılır."));
@@ -198,10 +226,10 @@ namespace RobotWin.Studio.Pages
             AdvancedCards();
             Sections.Children.Add(FileTypesCard);
             FileTypesCard.Margin = new Thickness(0, 0, 0, 14);
-            _index.Add(("Gelişmiş", FileTypesCard, "dosya türleri rwproj rwworld ilişkilendirme windows"));
+            _index.Add(("Gelişmiş", FileTypesCard, "dosya türleri rwproj rwworld ilişkilendirme windows file types association\n" + SearchText(FileTypesCard)));
             Category("Hakkında", "Sürüm ve uygulama bilgisi.");
             Sections.Children.Add(AboutCard);
-            _index.Add(("Hakkında", AboutCard, "hakkında sürüm logo"));
+            _index.Add(("Hakkında", AboutCard, "hakkında sürüm logo about version\n" + SearchText(AboutCard)));
 
             SectionNav.Children.Clear();
             foreach (var (name, _) in _categories)
@@ -240,8 +268,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var tr = CultureInfo.GetCultureInfo("tr-TR");
-            string[] words = q.ToLower(tr).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] words = RobotWin.Studio.Shell.Lang.Fold(q).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             int found = 0;
             foreach (var (category, card, text) in _index)
             {
@@ -273,7 +300,7 @@ namespace RobotWin.Studio.Pages
             var card = new Border { Style = (Style)FindResource("Card"), Margin = new Thickness(0, 0, 0, 14), Child = sp };
             Sections.Children.Add(card);
             _cards.Add((title, card));
-            _index.Add((_category, card, (_category + " " + SearchText(sp)).ToLower(CultureInfo.GetCultureInfo("tr-TR"))));
+            _index.Add((_category, card, RobotWin.Studio.Shell.Lang.Searchable(_category) + SearchText(sp)));
         }
 
         /// <summary>Every text a card shows (titles, labels, notes, choices) for the search box.</summary>
@@ -284,14 +311,15 @@ namespace RobotWin.Studio.Pages
             {
                 switch (o)
                 {
+                    // [lang] each text as shown and as written, lower-cased
                     case TextBlock t:
-                        sb.Append(' ').Append(t.Text);
+                        sb.Append(RobotWin.Studio.Shell.Lang.Searchable(t.Text));
                         break;
                     case ContentControl cc when cc.Content is string s:
-                        sb.Append(' ').Append(s);
+                        sb.Append(RobotWin.Studio.Shell.Lang.Searchable(s));
                         break;
                     case TextBox tb:
-                        sb.Append(' ').Append(tb.Text);
+                        sb.Append(RobotWin.Studio.Shell.Lang.Searchable(tb.Text));
                         break;
                 }
 
@@ -299,8 +327,8 @@ namespace RobotWin.Studio.Pages
                 {
                     foreach (var item in ic.Items)
                     {
-                        if (item is ContentControl ci && ci.Content is string cs) sb.Append(' ').Append(cs);
-                        else if (item is string str) sb.Append(' ').Append(str);
+                        if (item is ContentControl ci && ci.Content is string cs) sb.Append(RobotWin.Studio.Shell.Lang.Searchable(cs));
+                        else if (item is string str) sb.Append(RobotWin.Studio.Shell.Lang.Searchable(str));
                     }
                 }
 

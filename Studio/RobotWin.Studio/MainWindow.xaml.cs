@@ -217,6 +217,7 @@ namespace RobotWin.Studio
             SetupRail();
             SetupHelp();
             SetupDebugger();   // [debug] MainWindow.Debug.cs
+            PageShortcuts.RegisterAll();   // [keys] the schematic and PCB editors' own keys, rebindable too
             ApplyShortcuts();   // [keys] every Command(...) above
             AppSettings.Changed += (_, _) => ApplyUiScale(AppSettings.Current.UiScale);
             _autosave.Tick += (_, _) => Autosave();
@@ -474,6 +475,7 @@ namespace RobotWin.Studio
             _shortcutBindings.Clear();
             foreach (var c in Shortcuts.All)
             {
+                if (c.Action == null) continue;   // a page's own key: its page handles it (Shell/PageShortcuts.cs)
                 foreach (var (key, mods) in Shortcuts.Gestures(c.Keys))
                 {
                     try
@@ -816,6 +818,7 @@ namespace RobotWin.Studio
             if (fault == "guide") StartGuide();   // [guide] the card at its first step
             if (fault == "debug-e2e" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [debug]
             if (fault == "tabs" && App.SnapshotPath != null) RunTabsCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [tabs]
+            if (fault == "keys" && App.SnapshotPath != null) RunKeysCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [keys]
             if (fault == "debug-e2e-circuit" && App.SnapshotPath != null) RunCircuitDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));
             if (fault != null && fault.StartsWith("guide-e2e", StringComparison.Ordinal) && App.SnapshotPath != null)   // guide-e2e[:N] — N steps only
             {
@@ -1190,6 +1193,60 @@ namespace RobotWin.Studio
         {
             _forceClose = true;
             Close();
+        }
+
+        /// <summary>
+        /// [keys] --snapshot --fault keys: the page keys move and come back (the schematic's wire tool to K, the PCB's route
+        /// to Ctrl+R, a clash between two schematic tools), in memory only. Results go to a log.
+        /// </summary>
+        private void RunKeysCheck(string logPath)
+        {
+            var log = new System.Text.StringBuilder();
+            int failures = 0;
+            void Check(string what, bool ok)
+            {
+                if (!ok) failures++;
+                log.AppendLine((ok ? "OK   " : "FAIL ") + what);
+            }
+
+            (bool Ok, string Key) Press(string page, Key key, ModifierKeys mods = ModifierKeys.None)
+            {
+                bool ok = Shortcuts.Translate(page, ref key, ref mods);
+                return (ok, Shortcuts.Format(key, mods));
+            }
+
+            Check("varsayılan: W kablo aracına gider", Press(PageShortcuts.Schematic, Key.W) == (true, "W"));
+            Shortcuts.Set("devre.kablo", "K");
+            Check("kablo K'ye taşındı: K, W olarak gider", Press(PageShortcuts.Schematic, Key.K) == (true, "W"));
+            Check("eski W artık bir şey yapmaz", !Press(PageShortcuts.Schematic, Key.W).Ok);
+            Check("başka tuşlar olduğu gibi (R döndür)", Press(PageShortcuts.Schematic, Key.R) == (true, "R"));
+            Check("PCB sayfası etkilenmez (W yol genişliği)", Press(PageShortcuts.Pcb, Key.W) == (true, "W"));
+            Shortcuts.Set("pcb.rota", "Ctrl+R");
+            Check("PCB rota Ctrl+R'ye taşındı: X olarak gider", Press(PageShortcuts.Pcb, Key.R, ModifierKeys.Control) == (true, "X"));
+            Shortcuts.Set("dunya.kablo", "Ctrl+K");
+            Check("Dünya: kablo aracı Ctrl+K'ye taşındı, K olarak gider", Press(PageShortcuts.World, Key.K, ModifierKeys.Control) == (true, "K"));
+            Shortcuts.Reset("dunya.kablo");
+            Shortcuts.Set("devre.etiket", "K");
+            var wire = Shortcuts.All.First(c => c.Id == "devre.kablo");
+            Check("iki araç aynı tuşta: çakışma bildirilir", Shortcuts.Clashes(wire).Any(c => c.Id == "devre.etiket"));
+            Check("başka sayfanın aynı tuşu çakışma sayılmaz", !Shortcuts.Clashes(wire).Any(c => c.Page != PageShortcuts.Schematic));
+            Shortcuts.Reset("devre.kablo");
+            Shortcuts.Reset("devre.etiket");
+            Shortcuts.Reset("pcb.rota");
+            Check("sıfırlayınca W yine kablo", Press(PageShortcuts.Schematic, Key.W) == (true, "W"));
+            Check("sıfırlayınca K bir şey değildir (olduğu gibi geçer)", Press(PageShortcuts.Schematic, Key.K) == (true, "K"));
+            Check("pencere bağlamalarında sayfa tuşu yok", !InputBindings.OfType<KeyBinding>().Any(b => b.Modifiers == ModifierKeys.None && b.Key == Key.W));
+            log.AppendLine(failures == 0 ? "TÜMÜ GEÇTİ" : failures + " HATA");
+            File.WriteAllText(logPath, log.ToString());
+        }
+
+        /// <summary>[lang] Closes as usual (asking about unsaved work) and, once closed, starts the studio again.</summary>
+        public void Restart()
+        {
+            Close();
+            if (IsVisible) return;   // the user chose to stay
+            if (Environment.ProcessPath is { } exe)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
         }
 
         // ================================================================ window modes

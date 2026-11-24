@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -116,7 +116,10 @@ namespace RobotWin.Studio.Pages
             }
 
             var page = _library.AllGuidePages.FirstOrDefault(t => string.Equals(Path.GetFileName(t.FilePath), section, StringComparison.OrdinalIgnoreCase));
-            Open(page ?? _library.Guide.FirstOrDefault(t => t.Kind == HelpTopicKind.Guide) ?? MissingTopic(), null);
+            // [lang] the guides of each language number their pages alike ("02-devre.md" is "02-circuit.md" in English)
+            if (page == null && section.Length > 3 && char.IsDigit(section[0]) && char.IsDigit(section[1]) && section[2] == '-')
+                page = _library.AllGuidePages.FirstOrDefault(t => Path.GetFileName(t.FilePath ?? string.Empty).StartsWith(section.Substring(0, 3), StringComparison.Ordinal));
+            Open(page ??_library.Guide.FirstOrDefault(t => t.Kind == HelpTopicKind.Guide) ?? MissingTopic(), null);
         }
 
         /// <summary>--snapshot --page help --fault news|updates|about|shortcuts|search:&lt;text&gt;|&lt;file.md&gt;</summary>
@@ -381,10 +384,10 @@ namespace RobotWin.Studio.Pages
             Open(topic, anchor, false);
         }
 
-        private const string MissingMarkdown =
-            "# Kullanım kılavuzu\n\nKullanım kılavuzu bu kopyada bulunamadı (uygulama klasöründe `Docs\\kullanim` yok).\n\n" +
-            "Kılavuzu çevrimiçi okuyabilirsiniz: [belge sitesinde kullanım kılavuzu](" + HelpLibrary.OnlineGuide + ")\n\n" +
-            "Soldaki **Klavye kısayolları**, **Haberler**, **Güncellemeler** ve **Hakkında** bölümleri her zaman kullanılabilir.";
+        private static string MissingMarkdown =>
+            Shell.Lang.T("# Kullanım kılavuzu\n\nKullanım kılavuzu bu kopyada bulunamadı (uygulama klasöründe `Docs\\kullanim` yok).\n\n") +
+            Shell.Lang.T("Kılavuzu çevrimiçi okuyabilirsiniz: [belge sitesinde kullanım kılavuzu](") + HelpLibrary.OnlineGuide + ")\n\n" +
+            Shell.Lang.T("Soldaki **Klavye kısayolları**, **Haberler**, **Güncellemeler** ve **Hakkında** bölümleri her zaman kullanılabilir.");
 
         private void ShowMarkdown(MarkdownDocument md, string? baseDir, string? highlight, string? anchor)
         {
@@ -619,7 +622,7 @@ namespace RobotWin.Studio.Pages
             title.Children.Add(new TextBlock { Text = n.Title, Style = (Style)FindResource("Text.Subtitle"), FontSize = 16, TextWrapping = TextWrapping.Wrap });
             sp.Children.Add(title);
             string kind = n.Release != null ? "Sürüm notları · " + n.Release.DisplayVersion + (n.Release.IsPrerelease ? " · ön sürüm" : string.Empty) : "Duyuru";
-            string date = n.Date == DateTimeOffset.MinValue ? string.Empty : n.Date.ToLocalTime().ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR")) + " · ";
+            string date = n.Date == DateTimeOffset.MinValue ? string.Empty : n.Date.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) + " · ";
             sp.Children.Add(new TextBlock { Text = date + kind, Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 4, 0, 10) });
 
             string docsDir = Path.Combine(AppContext.BaseDirectory, "Docs");
@@ -737,7 +740,7 @@ namespace RobotWin.Studio.Pages
                 status.Children.Add(new TextBlock { Text = um.LastError + " (Son bilinen liste gösteriliyor.)", Foreground = (Brush)FindResource("B.Warning"), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2) });
             status.Children.Add(new TextBlock
             {
-                Text = um.LastCheckUtc is { } last ? "Son denetim: " + last.ToLocalTime().ToString("d MMMM yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) : "Henüz denetlenmedi.",
+                Text = um.LastCheckUtc is { } last ? "Son denetim: " + last.ToLocalTime().ToString("d MMMM yyyy HH:mm", RobotWin.Studio.Shell.Lang.Culture) : "Henüz denetlenmedi.",
                 Style = (Style)FindResource("Text.Caption"),
                 Margin = new Thickness(0, 0, 0, 14)
             });
@@ -842,7 +845,7 @@ namespace RobotWin.Studio.Pages
             sp.Children.Add(head);
 
             var asset = UpdateLogic.SelectAsset(r, info.SelfContained, info.RuntimeAvailable);
-            string date = r.PublishedAt?.ToLocalTime().ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR")) ?? string.Empty;
+            string date = r.PublishedAt?.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) ?? string.Empty;
             string assetText = asset != null ? asset.Name + " · " + UpdateLogic.FormatSize(asset.Size) : "Bu kopya için kurulum dosyası yok";
             sp.Children.Add(new TextBlock { Text = r.DisplayVersion + (date.Length > 0 ? " · " + date : string.Empty) + " · " + assetText, Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 4, 0, 10), TextWrapping = TextWrapping.Wrap });
 

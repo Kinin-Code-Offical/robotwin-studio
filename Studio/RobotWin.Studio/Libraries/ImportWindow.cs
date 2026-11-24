@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -285,7 +285,7 @@ namespace RobotWin.Studio.Libraries
             {
                 if (fp == null)
                 {
-                    var t = new FormattedText("kılıf yok", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, Brushes.Gray, 1.0);
+                    var t = new FormattedText(RobotWin.Studio.Shell.Lang.T("kılıf yok"), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, Brushes.Gray, 1.0);
                     dc.DrawText(t, new Point(ActualWidth / 2 - t.Width / 2, ActualHeight / 2 - t.Height / 2));
                 }
 

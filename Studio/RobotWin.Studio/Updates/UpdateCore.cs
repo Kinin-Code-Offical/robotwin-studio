@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
@@ -375,7 +375,7 @@ namespace RobotWin.Studio.Updates
 
         public static string FormatSize(long bytes)
         {
-            var c = CultureInfo.GetCultureInfo("tr-TR");
+            var c = RobotWin.Studio.Shell.Lang.Culture;
             if (bytes >= 1024L * 1024) return (bytes / 1024.0 / 1024.0).ToString("0.0", c) + " MB";
             if (bytes >= 1024) return (bytes / 1024.0).ToString("0", c) + " KB";
             return bytes.ToString(c) + " B";
@@ -406,11 +406,29 @@ namespace RobotWin.Studio.Updates
     /// <summary>
     /// docs/news.json:
     /// { "version": 1, "items": [ { "id": "hosgeldin", "date": "2026-11-20", "title": "…", "body": "Markdown…",
-    ///   "link": "https://…" (optional), "image": "https://… or images/x.png" (optional) } ] }
-    /// A bare array of items is accepted too. Items without id or title are skipped.
+    ///   "link": "https://…" (optional), "image": "https://… or images/x.png" (optional),
+    ///   "en": { "title": "…", "body": "…", "link": "…" } (optional, one per language) } ] }
+    /// A bare array of items is accepted too. Items without id or title are skipped. [lang] An item is read in the
+    /// language in use when it has it, else in English, else as written (Turkish).
     /// </summary>
     public static class NewsParser
     {
+        /// <summary>The item's texts in the language in use (its own, else English); null for Turkish or none.</summary>
+        private static JsonElement? Local(JsonElement e)
+        {
+            string lang = RobotWin.Studio.Shell.Lang.Current;
+            if (lang == "tr") return null;
+            foreach (var id in new[] { lang, "en" })
+            {
+                if (e.TryGetProperty(id, out var l) && l.ValueKind == JsonValueKind.Object) return l;
+            }
+
+            return null;
+        }
+
+        private static string Pick(JsonElement? local, JsonElement e, string name) =>
+            local is { } l && Str(l, name) is { Length: > 0 } v ? v : Str(e, name);
+
         public static List<NewsItem> Parse(string json)
         {
             var list = new List<NewsItem>();
@@ -422,7 +440,8 @@ namespace RobotWin.Studio.Updates
             foreach (var e in items.EnumerateArray())
             {
                 if (e.ValueKind != JsonValueKind.Object) continue;
-                string id = Str(e, "id"), title = Str(e, "title");
+                var local = Local(e);
+                string id = Str(e, "id"), title = Pick(local, e, "title");
                 if (id.Length == 0 || title.Length == 0 || !seen.Add(id)) continue;
                 if (!DateTimeOffset.TryParse(Str(e, "date"), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)) date = DateTimeOffset.MinValue;
                 list.Add(new NewsItem
@@ -430,8 +449,8 @@ namespace RobotWin.Studio.Updates
                     Id = id,
                     Date = date,
                     Title = title,
-                    Body = Str(e, "body").Replace("\r\n", "\n"),
-                    Link = Url(Str(e, "link")),
+                    Body = Pick(local, e, "body").Replace("\r\n", "\n"),
+                    Link = Url(Pick(local, e, "link")),
                     Image = NullIfEmpty(Str(e, "image"))
                 });
             }

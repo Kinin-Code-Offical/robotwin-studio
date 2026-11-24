@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -310,7 +310,7 @@ namespace RobotWin.Studio.Models3D
         /// <summary>Bottom side: mask, bottom copper, through-hole pads and vias (in board coordinates).</summary>
         private static BitmapSource BottomTexture(BoardDocument board)
         {
-            const double ppmm = 8;
+            const double ppmm = 14;
             int w = Math.Max(8, (int)(board.Width * ppmm)), h = Math.Max(8, (int)(board.Height * ppmm));
             var dv = new DrawingVisual();
             using (var g = dv.RenderOpen())

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -42,8 +42,26 @@ namespace RobotWin.Studio.Help
     {
         /// <summary>The documentation site (GitHub Pages): guide, developer docs, downloads.</summary>
         public const string DocsSite = "https://kinin-code-offical.github.io/robotwin-studio/";
-        public const string OnlineGuide = DocsSite + "kullanim/";
-        private const string RepoBlob = "https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/docs/kullanim/";
+        /// <summary>
+        /// [lang] The guide's folder under docs/ for the language in use: Turkish "kullanim", English "en/guide", another
+        /// language its own "xx/guide" when it has one, else the English guide.
+        /// </summary>
+        public static string GuideFolder
+        {
+            get
+            {
+                string lang = Shell.Lang.Current;
+                if (lang == "tr") return "kullanim";
+                string own = lang + "/guide";
+                return Directory.Exists(Path.Combine(AppContext.BaseDirectory, "Docs", own)) ? own : "en/guide";
+            }
+        }
+
+        /// <summary>The "what's new" page of the guide in use.</summary>
+        public static string WhatsNewPage => Shell.Lang.Current == "tr" ? "11-yenilikler.md" : "11-whats-new.md";
+
+        public static string OnlineGuide => DocsSite + GuideFolder + "/";
+        private static string RepoBlob => "https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/docs/" + GuideFolder + "/";
 
         private readonly Dictionary<string, MarkdownDocument> _docs = new Dictionary<string, MarkdownDocument>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> _text = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -71,7 +89,7 @@ namespace RobotWin.Studio.Help
 
         /// <summary>
         /// Finds the guide: <c>ROBOTWIN_HELP_DIR</c> (any folder with a README.md, for previews of unreleased docs),
-        /// then <c>Docs/kullanim</c> next to the exe.
+        /// then the guide of the language in use next to the exe (<see cref="GuideFolder"/>), then the Turkish one.
         /// </summary>
         public static HelpLibrary Load()
         {
@@ -80,8 +98,15 @@ namespace RobotWin.Studio.Help
             if (!string.IsNullOrWhiteSpace(env) && Directory.Exists(env)) root = Path.GetFullPath(env);
             else
             {
-                string bundled = Path.Combine(AppContext.BaseDirectory, "Docs", "kullanim");
-                if (Directory.Exists(bundled) && Directory.EnumerateFiles(bundled, "*.md").Any()) root = bundled;
+                foreach (var folder in new[] { GuideFolder, "kullanim" })
+                {
+                    string bundled = Path.Combine(AppContext.BaseDirectory, "Docs", folder.Replace('/', Path.DirectorySeparatorChar));
+                    if (Directory.Exists(bundled) && Directory.EnumerateFiles(bundled, "*.md").Any())
+                    {
+                        root = bundled;
+                        break;
+                    }
+                }
             }
 
             var lib = new HelpLibrary(root);

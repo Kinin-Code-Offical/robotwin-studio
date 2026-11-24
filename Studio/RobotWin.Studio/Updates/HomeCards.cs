@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -46,7 +46,7 @@ namespace RobotWin.Studio.Updates
             var sp = new StackPanel();
             sp.Children.Add(new TextBlock { Text = $"Yeni sürüm: RobotWin Studio {r.DisplayVersion}", Foreground = R<Brush>("B.Text"), FontSize = 14, FontWeight = FontWeights.SemiBold });
             var asset = UpdateLogic.SelectAsset(r, um.Install.SelfContained, um.Install.RuntimeAvailable);
-            string date = r.PublishedAt?.ToLocalTime().ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR")) ?? string.Empty;
+            string date = r.PublishedAt?.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) ?? string.Empty;
             string detail = $"Şu anki sürüm {um.CurrentVersion}" + (date.Length > 0 ? " · " + date : string.Empty) + (asset != null ? " · " + UpdateLogic.FormatSize(asset.Size) : string.Empty) +
                             ". Projeleriniz ve ayarlarınız korunur.";
             sp.Children.Add(new TextBlock { Text = detail, Style = R<Style>("Text.Caption"), Foreground = R<Brush>("B.TextSecondary"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 12) });
@@ -76,7 +76,7 @@ namespace RobotWin.Studio.Updates
     /// </summary>
     public sealed class WhatsNewNotice : Border
     {
-        public const string GuidePage = "11-yenilikler.md";
+        public static string GuidePage => Help.HelpLibrary.WhatsNewPage;
 
         public WhatsNewNotice(Action<string> openHelp)
         {
@@ -98,7 +98,7 @@ namespace RobotWin.Studio.Updates
             }
 
             if (string.Equals(settings.LastRunVersion, version, StringComparison.Ordinal)) return;
-            var (summary, headlines) = WhatsNew.Headlines(version, System.IO.Path.Combine(AppContext.BaseDirectory, "Docs", "kullanim", GuidePage));
+            var (summary, headlines) = WhatsNew.Headlines(version, System.IO.Path.Combine(AppContext.BaseDirectory, "Docs", Help.HelpLibrary.GuideFolder.Replace('/', System.IO.Path.DirectorySeparatorChar), GuidePage));
             if (summary == null && headlines.Count == 0) return;
 
             var sp = new StackPanel();
@@ -165,7 +165,7 @@ namespace RobotWin.Studio.Updates
                 row.Children.Add(dot);
                 var text = new StackPanel();
                 text.Children.Add(new TextBlock { Text = n.Title, Foreground = R<Brush>(isNew ? "B.Text" : "B.TextSecondary"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 270 });
-                string date = n.Date == DateTimeOffset.MinValue ? string.Empty : n.Date.ToLocalTime().ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR"));
+                string date = n.Date == DateTimeOffset.MinValue ? string.Empty : n.Date.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture);
                 text.Children.Add(new TextBlock { Text = date + (n.IsRelease ? " · sürüm notları" : " · duyuru"), Style = R<Style>("Text.Caption") });
                 row.Children.Add(text);
                 var b = new Button

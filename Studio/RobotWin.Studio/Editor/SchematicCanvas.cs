@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -392,7 +392,7 @@ namespace RobotWin.Studio.Editor
         private double Dpi => VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
         private FormattedText Text(string text, double size, Color color, bool semibold = false, bool mono = false) =>
-            new FormattedText(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+            new FormattedText(RobotWin.Studio.Shell.Lang.T(text), CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
                 mono ? Typefaces.Mono : semibold ? Typefaces.UiSemi : Typefaces.Ui, size, SymbolRenderer.Brush(color), Dpi);
 
         private static Pen MakePen(Color c, double w, bool round = true)

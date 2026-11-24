@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -209,7 +209,7 @@ namespace RobotWin.Studio.Pages
         {
             if (!parameters.TryGetValue("firmware", out var fw) || !fw.StartsWith("builtin:", StringComparison.OrdinalIgnoreCase)) return null;
             string ino = Path.Combine(AppContext.BaseDirectory, "Firmware", Path.ChangeExtension(fw.Substring(8), ".ino"));
-            return File.Exists(ino) ? File.ReadAllText(ino) : null;
+            return File.Exists(ino) ? Shell.Lang.Code(File.ReadAllText(ino)) : null;   // [lang] its comments in the language in use
         }
 
         private void Refresh()
@@ -476,6 +476,7 @@ namespace RobotWin.Studio.Pages
         {
             if (TemplateBox.SelectedIndex <= 0) return;
             var (name, source) = SketchTemplates.All[TemplateBox.SelectedIndex - 1];
+            source = Shell.Lang.Code(source);
             TemplateBox.SelectedIndex = 0;
             if (_folder == null || _file == null) return;
             if (Editor.Text.Trim().Length > 0 && Editor.Text != source)
@@ -553,7 +554,7 @@ namespace RobotWin.Studio.Pages
             }
 
             Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, Path.GetFileName(path) + ".ino"), SketchTemplates.All[0].Source);
+            File.WriteAllText(Path.Combine(path, Path.GetFileName(path) + ".ino"), Shell.Lang.Code(SketchTemplates.All[0].Source));
             Refresh();
             var made = _folders.FirstOrDefault(f => f is DiskCode d && string.Equals(d.Folder, Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
             if (made != null) Open(made, made.MainFile, rebuild: true);
@@ -903,18 +904,27 @@ namespace RobotWin.Studio.Pages
 
         private void OnKeys(object sender, KeyEventArgs e)
         {
-            if (DebugKeys(e))   // [debug] F5 / F10 / F11 / Shift+F11 while the board is stopped
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            var mods = Keyboard.Modifiers;
+            // [keys] a key the user moved a command to becomes the command's own key; the old key does nothing
+            if (!Shell.Shortcuts.Translate(Shell.PageShortcuts.Code, ref key, ref mods))
             {
                 e.Handled = true;
                 return;
             }
 
-            if (e.Key == Key.F7)
+            if (DebugKeys(key, mods))   // [debug] F5 / F10 / F11 / Shift+F11 while the board is stopped
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (key == Key.F7 && mods == ModifierKeys.None)
             {
                 OnBuild(this, new RoutedEventArgs());
                 e.Handled = true;
             }
-            else if (e.Key == Key.F5)
+            else if (key == Key.F5 && mods == ModifierKeys.None)
             {
                 OnUpload(this, new RoutedEventArgs());
                 e.Handled = true;

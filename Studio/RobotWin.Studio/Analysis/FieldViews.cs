@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -46,7 +46,7 @@ namespace RobotWin.Studio.Analysis
             var text = TryFindResource("B.TextSecondary") as Brush ?? Brushes.Gray;
             double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             var face = new Typeface("Segoe UI");
-            FormattedText T(string s, double size = 11) => new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, text, dpi);
+            FormattedText T(string s, double size = 11) => new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, text, dpi);
             var r = _result;
             var f = _frame;
             if (r == null || f == null || r.NodeCount == 0 || f.VonMises.Length < r.NodeCount)

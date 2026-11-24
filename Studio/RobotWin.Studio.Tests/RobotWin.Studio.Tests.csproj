@@ -24,6 +24,8 @@
     <Compile Include="..\RobotWin.Studio\Updates\UpdateCore.cs" Link="Linked\UpdateCore.cs" />
     <Compile Include="..\RobotWin.Studio\Help\Markdown.cs" Link="Linked\Markdown.cs" />
     <Compile Include="..\RobotWin.Studio\Editor\Completion\*.cs" LinkBase="Linked\Completion" />
+    <Compile Include="..\RobotWin.Studio\Shell\Lang.Core.cs" Link="Linked\Lang.Core.cs" />
+    <EmbeddedResource Include="..\RobotWin.Studio\Lang\*.json" LogicalName="RobotWin.Studio.Lang.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

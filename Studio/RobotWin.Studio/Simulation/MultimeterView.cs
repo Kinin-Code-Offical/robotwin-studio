@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -51,7 +51,7 @@ namespace RobotWin.Studio.Simulation
         private double Dpi => VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
         private FormattedText Text(string s, Color c, double size, bool mono = false, bool bold = false) =>
-            new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                 mono ? Typefaces.Mono : bold ? Typefaces.UiSemi : Typefaces.Ui, size, SymbolRenderer.Brush(c), Dpi);
 
         private static Pen Pen(Color c, double w)

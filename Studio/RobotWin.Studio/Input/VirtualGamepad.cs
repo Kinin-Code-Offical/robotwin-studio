@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
@@ -378,7 +378,7 @@ namespace RobotWin.Studio.Input
 
         private static void Text(DrawingContext dc, string text, Point center, double size, Brush brush)
         {
-            var ft = new FormattedText(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, Face, size, brush, 1.0);
+            var ft = new FormattedText(RobotWin.Studio.Shell.Lang.T(text), CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, Face, size, brush, 1.0);
             dc.DrawText(ft, new Point(center.X - ft.Width / 2, center.Y - ft.Height / 2));
         }
 

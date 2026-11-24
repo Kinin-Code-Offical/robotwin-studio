@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -23,11 +23,13 @@
   <ItemGroup>
     <!-- Real part models converted from the makers' STEP files (see THIRD_PARTY_NOTICES.md). -->
     <EmbeddedResource Include="Models3D\Bundled\*.obj" LogicalName="RobotWin.Studio.Models3D.Bundled.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Lang\*.json" LogicalName="RobotWin.Studio.Lang.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- In-app help (Yardım, F1): the Turkish user guide, its pictures and the news fallback, copied to Docs\. -->
     <Content Include="..\..\docs\kullanim\**\*" LinkBase="Docs\kullanim" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <Content Include="..\..\docs\en\guide\**\*" LinkBase="Docs\en\guide" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
     <Content Include="..\..\docs\images\**\*" LinkBase="Docs\images" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
     <Content Include="..\..\docs\news.json" Link="Docs\news.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>

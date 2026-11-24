@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -54,6 +54,9 @@ namespace RobotWin.Studio.Shell
         public double ThemeTint { get; set; } = 30;
 
         public bool ThemeLight { get; set; }
+
+        /// <summary>[lang] The interface language: "tr" (its own) or a language pack's id ("en", or a user's pack).</summary>
+        public string Language { get; set; } = "en";   // [lang] English is the main language; "tr" is the interface's own
 
         /// <summary>Whole-interface zoom (0.75 – 1.75).</summary>
         public double UiScale { get; set; } = 1.0;

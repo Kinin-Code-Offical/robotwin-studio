@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -337,7 +337,7 @@ namespace RobotWin.Studio.Pcb
         private double Dip => VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
         private FormattedText Text(string s, double size, Color c, bool mono = false) =>
-            new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, mono ? Typefaces.Mono : Typefaces.Ui, size, SymbolRenderer.Brush(c), Dip);
+            new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, mono ? Typefaces.Mono : Typefaces.Ui, size, SymbolRenderer.Brush(c), Dip);
 
         private bool Visible(CopperLayer l) => !HiddenLayers.Contains(l);
 

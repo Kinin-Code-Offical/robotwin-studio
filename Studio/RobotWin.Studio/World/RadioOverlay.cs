@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -99,7 +99,7 @@ namespace RobotWin.Studio.World
                     dc.DrawLine(pen, pa.Screen, pb.Screen);
                     var mid = new Point((pa.Screen.X + pb.Screen.X) / 2, (pa.Screen.Y + pb.Screen.Y) / 2);
                     string text = string.Format(CultureInfo.InvariantCulture, "{0} {1:0} dBm", link.Label, link.RssiDbm);
-                    var ft = new FormattedText(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, new SolidColorBrush(col), 1.0);
+                    var ft = new FormattedText(RobotWin.Studio.Shell.Lang.T(text), CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, new SolidColorBrush(col), 1.0);
                     var box = new Rect(mid.X - ft.Width / 2 - 4, mid.Y - ft.Height / 2 - 1, ft.Width + 8, ft.Height + 2);
                     dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(0xB0, 0x0B, 0x0B, 0x0D)), null, box, 4, 4);
                     dc.DrawText(ft, new Point(box.X + 4, box.Y + 1));

@@ -105,15 +105,31 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 
 | Kategori | Neler var |
 | --- | --- |
-| Genel | Açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi |
+| Genel | Dil, açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi |
 | Görünüm ve tema | Tema galerisi (9 koyu, 7 açık tema ve özel tema), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite |
 | Kaydetme ve yedekleme | Otomatik yedek sıklığı, kaydederken önceki sürümü saklama, çökme sonrası kurtarma, yedek klasörü, belge başına kopya sayısı, klasörün boyut sınırı |
-| Klavye kısayolları | Pencerenin kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |
+| Klavye kısayolları | Pencerenin ve bütün sayfaların kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |
 | Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, zaman adımı, başlangıç hızı |
 | Dünya ve düzenleme | Yeni dünyaların yerçekimi, dünya editörü ızgarası |
 | Derleyiciler | `arduino-cli` yolu, `vcvars64.bat` yolu |
 | Güncellemeler, Eklentiler | Sürüm denetimi; eklenti klasörleri ve betikler |
 | Gelişmiş | Ayarları dosyaya aktarma ve dosyadan alma, hata günlüğü, dosya türleri |
+
+**Dil:**
+
+- Uygulama ilk açılışta İngilizcedir. **General → Language** (Genel → Dil) kartından English ya da Türkçe seçin. Seçtiğiniz dil, uygulama yeniden açılınca her yerde geçerli olur; kartta **Şimdi yeniden başlat** düğmesi var.
+- Dille birlikte değişenler:
+  - pencerelerin, tuvallerin ve ölçü aletlerinin bütün metinleri;
+  - sayı ve tarih biçimi (İngilizcede 1.5 mm, Türkçede 1,5 mm);
+  - Yardım sayfasındaki kılavuz ve Haberler;
+  - parça kataloğunun adları ve açıklamaları;
+  - örneklerin adları ve örnek kodların yorumları.
+- Aramalar (parça, ayar, komut paleti) iki dilde de çalışır: "resistor" da "direnç" de bulur.
+- **Kendi dil paketinizi yapmak için:**
+  1. `Lang/en.json` dosyasını kopyalayıp `de.json` gibi adlandırın. Anahtarlar arayüzün kaynak metinleridir (Türkçe), değerler İngilizceleri: değerleri kendi dilinize çevirin. `{…}` olan kalıplarda sayılar ve adlar `{0}`, `{1}` sırasıyla yerleşir.
+  2. Dosyanın başındaki `"language"` alanına dilin adını, `"culture"` alanına sayı ve tarih biçimini (örneğin `"de-DE"`) yazın.
+  3. Yeni dosyayı **Dil paketleri klasörü** düğmesinin açtığı klasöre koyun (`%APPDATA%\RobotWin\lang`). Dosyanın adı dilin kimliği olur.
+  4. Paket listede "(kendi paketiniz)" olarak görünür. Çevirmediğiniz metinler İngilizce görünür, Türkçe değil; paketi parça parça büyütebilirsiniz.
 
 **Temalar:** **Görünüm ve tema** kategorisindeki galeri her temayı pencerenin küçük bir resmi olarak gösterir. Tıkladığınız tema hemen uygulanır.
 
@@ -138,7 +154,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 - Her belgenin en yeni kopyaları tutulur ve klasör boyut sınırını aşmaz; en eskiler silinir.
 - Uygulama beklenmedik biçimde kapanırsa bir sonraki açılışta başlangıç sayfası o çalışmanın yedeklerini gösterir.
 
-**Kısayol değiştirmek:** **Klavye kısayolları** kategorisinde düğmeye tıklayıp yeni tuşlara basın. **Esc** vazgeçer, **Backspace** tuşu kaldırır. Başka bir komutla çakışan tuş turuncu bir notla işaretlenir. Tek bir harf pencere kısayolu olamaz, çünkü yazarken çalışırdı; **Ctrl**, **Alt** ya da **Shift** ile birlikte basın. **F1–F12** tek başına olur.
+**Kısayol değiştirmek:** **Klavye kısayolları** kategorisinde düğmeye tıklayıp yeni tuşlara basın. Devre, PCB, Dünya, Kod ve Parça sayfalarının tuşları da buradadır; onlar tek harf olabilir. **Esc** vazgeçer, **Backspace** tuşu kaldırır. Başka bir komutla çakışan tuş turuncu bir notla işaretlenir. Tek bir harf pencere kısayolu olamaz, çünkü yazarken çalışırdı; **Ctrl**, **Alt** ya da **Shift** ile birlikte basın. **F1–F12** tek başına olur.
 
 ---
 

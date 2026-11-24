@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -41,7 +41,7 @@ namespace RobotWin.Studio.Modeling
         private double Dip => VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
         private FormattedText Text(string s, double size, Brush b, bool bold = false) =>
-            new FormattedText(s, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, bold ? UiBold : Ui, size, b, Dip);
+            new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, bold ? UiBold : Ui, size, b, Dip);
 
         protected override void OnRender(DrawingContext dc)
         {

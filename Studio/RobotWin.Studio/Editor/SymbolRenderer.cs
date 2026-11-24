@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
@@ -405,10 +405,10 @@ namespace RobotWin.Studio.Editor
         }
 
         /// <summary>Text inside the symbol, in symbol units; flipped parts keep it readable.</summary>
-        private static void Text(Ctx c, string text, double x, double y, double size)
+        private static void Text(Ctx c, string text, double x, double y, double size, Brush? ink = null)
         {
-            var ft = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                Typefaces.Ui, size, c.Ink, 1.0);
+            var ft = new FormattedText(RobotWin.Studio.Shell.Lang.T(text), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                Typefaces.Ui, size, ink ?? c.Ink, 1.0);
             c.Dc.DrawText(ft, new Point(x, y));
         }
 
@@ -720,7 +720,8 @@ namespace RobotWin.Studio.Editor
             for (int i = 0; i < lines.Length; i++)
             {
                 double y = -0.6 * size + (i - (lines.Length - 1) / 2.0) * 1.2 * size;
-                Text(c, lines[i], -0.3 * size * lines[i].Length, y, size);
+                // Printed on the black chip itself, in light grey whatever the paper (dark ink vanished on it in light themes).
+                Text(c, lines[i], -0.3 * size * lines[i].Length, y, size, Brush(Color.FromRgb(0xC8, 0xC8, 0xCE)));
             }
             foreach (var pin in def.Pins)
             {
@@ -922,7 +923,7 @@ namespace RobotWin.Studio.Editor
 
         private static void MonoText(Ctx c, string text, double x, double y, double size, Color color, bool alignRight = false, double width = 0)
         {
-            var ft = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, size, Brush(color), 1.0);
+            var ft = new FormattedText(RobotWin.Studio.Shell.Lang.T(text), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, size, Brush(color), 1.0);
             double left = alignRight ? x + width - ft.Width : x;
             c.Dc.DrawText(ft, new Point(left, y));
         }

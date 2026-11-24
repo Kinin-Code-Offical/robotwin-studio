@@ -503,7 +503,9 @@ namespace RobotWin.Studio.World
                 Normals = new Vector3DCollection { new Vector3D(0, 0, 1), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1), new Vector3D(0, 0, 1) }
             };
             SyncTerrain(); // [terrain] sculpted terrain replaces the flat floor
-            var tile = new ImageBrush(GridTile()) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
+            // [surface] the floor as its material looks (World/FloorLook.cs), else the editing grid
+            var tile = new ImageBrush(FloorLook.Tile(env?.FloorMaterial) ?? GridTile()) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
+            RenderOptions.SetBitmapScalingMode(tile, BitmapScalingMode.HighQuality);
             if (!TerrainReplacesFloor) g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
             if (env != null)
             {

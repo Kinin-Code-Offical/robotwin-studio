@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Mechanics;
@@ -15,7 +15,13 @@ namespace RobotWin.Studio.Examples
             Description = description;
             Level = level;
             Icon = icon;
-            Build = build;
+            // [lang] the circuit made in the language in use: its title is its own data from then on
+            Build = () =>
+            {
+                var sch = build();
+                if (Shell.Lang.Current != "tr") sch.Title = Shell.Lang.T(sch.Title);
+                return sch;
+            };
         }
 
         public string Id { get; }

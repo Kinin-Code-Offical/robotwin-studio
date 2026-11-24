@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -48,7 +48,7 @@ namespace RobotTwin.CoreSim.Mechanics
         private readonly List<SceneBody> _near = new List<SceneBody>();
         private readonly Dictionary<SceneBody, (Vec3 X, Quat Q)> _poses = new Dictionary<SceneBody, (Vec3, Quat)>();
         private (Vec3 X, Quat Q)[] _start = Array.Empty<(Vec3, Quat)>();
-        private int _substeps, _still;
+        private int _substeps;
 
         public LiquidBody(string id, LiquidKind kind, double spacing)
         {
@@ -171,6 +171,12 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>The liquid stood still and did not need stepping (bodies around it at rest too).</summary>
         public bool Asleep { get; private set; }
 
+        /// <summary>Fastest particle at the start of the last <see cref="Step"/> (m/s).</summary>
+        public double LastMaxSpeed { get; private set; }
+
+        /// <summary>Fastest motion of a body around the liquid at the last <see cref="Step"/> (m/s).</summary>
+        public double LastBodyMotion { get; private set; }
+
         private readonly Dictionary<SceneBody, Vec3> _forces = new Dictionary<SceneBody, Vec3>();
         private readonly Dictionary<SceneBody, Vec3> _torques = new Dictionary<SceneBody, Vec3>();
 
@@ -179,6 +185,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
         public Vec3 Position(int i) => new Vec3(_x[3 * i], _x[3 * i + 1], _x[3 * i + 2]);
         public Vec3 Velocity(int i) => new Vec3(_v[3 * i], _v[3 * i + 1], _v[3 * i + 2]);
+
+        /// <summary>Particle i's lasting number (the memory order changes as the liquid moves; this does not).</summary>
+        public int ParticleId(int i) => _id[i];
 
         /// <summary>
         /// All positions as x, y, z floats (for drawing and recording), each particle at its lasting number: two snapshots
@@ -286,7 +295,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             Count = n;
             Asleep = false;
-            _still = 0;
+            _restTime = -1;
         }
 
         private void Grow(int n)
@@ -393,25 +402,25 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             vmax = Math.Sqrt(vmax);
+            // How fast the walls move: their own speed, or how far they went since the last step (a body moved by hand
+            // has no speed of its own).
             double bodyMove = 0;
             foreach (var b in _near)
             {
                 if (b.IsStatic) continue;
-                bodyMove = Math.Max(bodyMove, b.Velocity.Length + b.AngularVelocity.Length * (b.EffectiveShape?.BoundingRadius ?? 0));
-                if (_poses.TryGetValue(b, out var pose) && ((pose.X - b.Position).LengthSquared > 1e-14 || Math.Abs(pose.Q.W * b.Orientation.W + pose.Q.X * b.Orientation.X + pose.Q.Y * b.Orientation.Y + pose.Q.Z * b.Orientation.Z) < 1 - 1e-12))
-                    bodyMove = Math.Max(bodyMove, 1e-3);
+                double r = b.EffectiveShape?.BoundingRadius ?? 0;
+                bodyMove = Math.Max(bodyMove, b.Velocity.Length + b.AngularVelocity.Length * r);
+                if (_poses.TryGetValue(b, out var pose)) bodyMove = Math.Max(bodyMove, Moved(pose, b) / dt);
             }
 
-            // At rest in a resting container: nothing changes until something moves (the solver ran 50 steps to settle,
-            // and the container keeps carrying the liquid's last push while it sleeps).
-            if (SleepEnabled && vmax < 1.5e-3 && bodyMove < 2e-4 && ++_still > 50)
+            LastMaxSpeed = vmax;
+            LastBodyMotion = bodyMove;
+            if (SleepEnabled && Rest(dt, bodyMove))
             {
-                Asleep = true;
-                SuggestedStep = MaxStep;
+                foreach (var b in _near) _poses[b] = (b.Position, b.Orientation);   // the next step's motion is from here
                 return;
             }
 
-            if (vmax >= 1.5e-3 || bodyMove >= 2e-4) _still = 0;
             Asleep = false;
             _forces.Clear();
             _torques.Clear();
@@ -435,6 +444,106 @@ namespace RobotTwin.CoreSim.Mechanics
             foreach (var b in _near) _poses[b] = (b.Position, b.Orientation);
             double cfl = 0.3 * Spacing / Math.Max(speed, 1e-9);
             SuggestedStep = Math.Max(1e-4, Math.Min(MaxStep, 4 * cfl));
+        }
+
+        /// <summary>How far a body's surface went from a pose: its centre's move plus the turn at its bounding radius.</summary>
+        private static double Moved((Vec3 X, Quat Q) pose, SceneBody b)
+        {
+            double dot = Math.Min(1, Math.Abs(pose.Q.W * b.Orientation.W + pose.Q.X * b.Orientation.X + pose.Q.Y * b.Orientation.Y + pose.Q.Z * b.Orientation.Z));
+            return (pose.X - b.Position).Length + 2 * Math.Acos(dot) * (b.EffectiveShape?.BoundingRadius ?? 0);
+        }
+
+        // [liquid] Rest is judged by where the particles are, not by their speed. A position-based liquid standing still
+        // quivers about fixed places by about g·h² each step (10 µm at 1 ms), which reads as a speed of about g·h
+        // (10 mm/s) that never dies away, so a still liquid was never found slower than 1.5 mm/s and never slept. Over a
+        // window of 0.2 s the quiver cancels and only real flow adds up.
+        private double[] _restX = Array.Empty<double>();
+        private readonly Dictionary<SceneBody, (Vec3 X, Quat Q)> _restPoses = new Dictionary<SceneBody, (Vec3 X, Quat Q)>();
+        private double _restTime = -1;
+
+        /// <summary>The window over which the liquid must stand still before it sleeps (s).</summary>
+        public double RestWindow { get; set; } = 0.2;
+
+        /// <summary>
+        /// True when the liquid sleeps through this step. It falls asleep when, over <see cref="RestWindow"/>, no particle
+        /// went a quarter of the spacing and on average they went under 3 % of it, while the bodies around it stayed within
+        /// 2 % of the spacing of where they stood. Asleep, its containers keep carrying its last push; it wakes when a body
+        /// moves that far from where it stood when the liquid fell asleep, or faster than two spacings a second.
+        /// </summary>
+        private bool Rest(double dt, double bodyMove)
+        {
+            bool bodiesStill = bodyMove < 2 * Spacing && !BodiesMoved();
+            if (Asleep)
+            {
+                if (bodiesStill)
+                {
+                    SuggestedStep = MaxStep;
+                    return true;
+                }
+
+                _restTime = -1;
+                return false;
+            }
+
+            if (!bodiesStill || _restTime < 0)
+            {
+                BeginRest();
+                return false;
+            }
+
+            _restTime += dt;
+            if (_restTime < RestWindow) return false;
+            double worst = 0, sum = 0;
+            for (int i = 0; i < Count; i++)
+            {
+                int k = 3 * i, r = 3 * _id[i];
+                double dx = _x[k] - _restX[r], dy = _x[k + 1] - _restX[r + 1], dz = _x[k + 2] - _restX[r + 2];
+                double d = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                worst = Math.Max(worst, d);
+                sum += d;
+            }
+
+            if (worst < 0.25 * Spacing && sum / Count < 0.03 * Spacing)
+            {
+                Asleep = true;
+                Array.Clear(_v, 0, 3 * Count);   // at rest: the quiver is not motion
+                SuggestedStep = MaxStep;
+                return true;
+            }
+
+            BeginRest();
+            return false;
+        }
+
+        private void BeginRest()
+        {
+            _restTime = 0;
+            if (_restX.Length < 3 * Count) _restX = new double[_x.Length];
+            for (int i = 0; i < Count; i++)
+            {
+                int k = 3 * i, r = 3 * _id[i];
+                _restX[r] = _x[k];
+                _restX[r + 1] = _x[k + 1];
+                _restX[r + 2] = _x[k + 2];
+            }
+
+            _restPoses.Clear();
+            foreach (var b in _near)
+                if (!b.IsStatic)
+                    _restPoses[b] = (b.Position, b.Orientation);
+        }
+
+        private bool BodiesMoved()
+        {
+            int moving = 0;
+            foreach (var b in _near)
+            {
+                if (b.IsStatic) continue;
+                moving++;
+                if (!_restPoses.TryGetValue(b, out var pose) || Moved(pose, b) > 0.02 * Spacing) return true;
+            }
+
+            return moving != _restPoses.Count;
         }
 
         /// <summary>Applies the liquid's last average push to each body it touched (call once per physics step).</summary>
@@ -469,7 +578,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             foreach (var b in _near) FieldOf(b);   // built here, read in parallel below
             if (_start.Length < _near.Count) _start = new (Vec3, Quat)[_near.Count];
-            if (before.Count != _near.Count) _still = 0;
+            if (before.Count != _near.Count) _restTime = -1;
         }
 
         private readonly System.Diagnostics.Stopwatch _clock = new System.Diagnostics.Stopwatch();
@@ -848,15 +957,38 @@ namespace RobotTwin.CoreSim.Mechanics
                     var local = body.Orientation.InverseRotate(p - body.Position);
                     if (Distance(body, shape, local, reach, out double sd, out var nlocal) && sd < reach)
                     {
+                        // [liquid] The contact itself is with the true solid. A field's interpolated distance runs short in
+                        // a concave corner (a tank's floor meeting its walls) and its gradient turns from cell to cell
+                        // there, so a particle resting in the corner was pushed off a wall it did not touch, a different
+                        // way every step: the liquid never came to rest. The field still gives the pressure (Φ).
+                        bool exact = FieldOf(body) is { } fc && sd < Radius + 2 * fc.Cell;
+                        if (exact)
+                        {
+                            if (body.SignedDistanceSolid(shape, local, reach, out double ed, out var en) && ed < reach)
+                            {
+                                sd = ed;
+                                nlocal = en;
+                            }
+                            else sd = reach;
+                        }
+
                         dist = sd;
                         nw = body.Orientation.Rotate(nlocal);
-                        if (dist < Radius)
+                        // A corner touches on two or three faces: each push frees it from the nearest one in turn.
+                        for (int pass = 0; dist < Radius && pass < 3; pass++)
                         {
                             var np = p + nw * (Radius - dist);
                             push += np - p;
                             p = np;
                             dist = Radius;
+                            if (!exact) break;
+                            local = body.Orientation.InverseRotate(p - body.Position);
+                            if (!body.SignedDistanceSolid(shape, local, reach, out double ed, out var en) || ed >= Radius) break;
+                            dist = ed;
+                            nw = body.Orientation.Rotate(en);
                         }
+
+                        dist = Math.Max(dist, Radius);
                     }
                 }
 
@@ -931,6 +1063,21 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             double f = Math.Max(0, Math.Min(1, -a.Dot(d) / (len * len)));
             return (a + d * f).Length;
+        }
+
+        /// <summary>Diagnostics: particle i's wall slots after the last substep (body, distance, normal, Φ, field).</summary>
+        internal string DebugSlots(int i)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int s = 0; s < Slots; s++)
+            {
+                int ws = i * Slots + s;
+                if (_wb[ws] == -1) continue;
+                sb.Append($"[{(_wb[ws] == -2 ? "ground" : "b" + _wb[ws])} d={_wd[ws] * 1000:F2} n=({_wn[3 * ws]:F2},{_wn[3 * ws + 1]:F2},{_wn[3 * ws + 2]:F2}) Φ={_wphi[ws]:F3}{(_wfield[ws] ? " field" : "")}] ");
+            }
+
+            sb.Append($"ρ/ρ0={_rho[i] / Kind.Density:F3} nb={_nbCount[i]}");
+            return sb.ToString();
         }
 
         /// <summary>A flat face at the slot's distance: Φ(d) from the half-space table, ∇Φ = −A(d) n.</summary>
@@ -1347,6 +1494,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             if (w == n) return;
             Count = w;
+            _restTime = -1;   // the numbers change: the rest window starts again
             // Lasting numbers stay 0 … Count − 1 (in their old order), so snapshots keep lining up from here on.
             var order = new int[w];
             for (int i = 0; i < w; i++) order[i] = i;

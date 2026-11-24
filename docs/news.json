@@ -6,63 +6,107 @@
       "date": "2026-11-24",
       "title": "1.6.1: sekmelerde kaydırma, sabitleme ve dosya adları",
       "body": "Bu sürümde:\n\n- Sekmeler sığmazsa şerit tekerlek ve oklarla kayar; **▾** bütün açık sekmeleri listeler.\n- Sağ tık → **Sabitle**: sekme en solda kalır ve toplu kapatmalarda kapanmaz.\n- **Ctrl+Shift+T** kapatılan dosyayı yeniden açar.\n- Sekme artık dosyanın kendi adını gösterir; kaydedilmemiş değişiklik bir noktayla belirtilir.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.6.1: scrolling, pinned tabs and file names",
+        "body": "In this version:\n\n- When the tabs do not fit, the strip scrolls with the wheel and the arrows; **▾** lists every open tab.\n- Right-click → **Pin**: the tab stays on the far left and is not closed by \"close all\" or \"close others\".\n- **Ctrl+Shift+T** reopens the file you closed.\n- A tab now shows the file's own name; unsaved changes are marked with a dot.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-6-0",
       "date": "2026-11-24",
       "title": "1.6.0: Arduino kodunda kesme noktası, adım ve değişkenler",
       "body": "Bu sürümde:\n\n- **Hata ayıklama:** Kod sayfasında bir satırın numarasına tıklayıp kesme noktası koyun. Uno o satıra gelince durur; devre ve dünya da aynı anda durur. **Adım** (F10), **İçine** (F11), **Dışına** (Shift+F11) ile ilerleyin, **Değişkenler** sekmesinde değerleri görün.\n- **Tek saat:** Uno'nun saati artık devreninkinden hiç kaymaz.\n- **Dünya arka planda çalışır:** Kod sayfasındayken dünya durmaz.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.6.0: breakpoints, stepping and variables in Arduino code",
+        "body": "In this version:\n\n- **Debugging:** click a line number on the Code page to set a breakpoint. The Uno stops when it reaches that line, and the circuit and the world stop with it. Go on with **Step** (F10), **Into** (F11) and **Out** (Shift+F11), and see the values in the **Variables** tab.\n- **One clock:** the Uno's clock no longer drifts from the circuit's at all.\n- **The world runs in the background:** it keeps going while you are on the Code page.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-5-1",
       "date": "2026-11-24",
       "title": "1.5.1: Arduino derleyicisi kurulumla gelir, ilk robot rehberi",
       "body": "Bu sürümde:\n\n- **Arduino derleyicisi kurulumla gelir:** arduino-cli, AVR çekirdeği ve kütüphane listesi uygulamayla birlikte kurulur; Uno / Nano kodu hemen derlenir.\n- **İlk robotun:** hazır servo kolunu açıp kodunu değiştirdiğiniz, hareketini izleyip akımını ölçtüğünüz ve kaydettiğiniz 5–10 dakikalık etkileşimli rehber. **Başlangıç** sayfasından açılır.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.5.1: the Arduino compiler comes with the installer, a first-robot guide",
+        "body": "In this version:\n\n- **The Arduino compiler comes with the installer:** arduino-cli, the AVR core and the library index are installed with the app, so Uno / Nano code compiles straight away.\n- **Your first robot:** a 5–10 minute interactive guide in which you open the ready-made servo arm, change its code, watch it move, measure its current and save it. Open it from the **Start** page.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-5-0",
       "date": "2026-11-24",
       "title": "1.5.0: Montaj robotun kendisi, projeyi izliyor",
       "body": "Bu sürümde:\n\n- **Sol çubuk üç grupta:** Elektronik (Devre, PCB, Kod), Mekanik (Parça, Montaj), Test (Dünya).\n- **Parça:** bir dosyada birden çok parça; **Montaja gönder** her parçayı ayrı gövde yapar, yeniden gönderince yerinde günceller.\n- **Montaj robotun kendisi:** projeler PCB'li ya da PCB'siz gelir, birden çok proje bir arada durur; montaj projeyle kaydedilir ve her açılışta devre, PCB ve kod değişikliklerini alır.\n- **Robot örnekleri gerçek araç:** şase, millerde tekerlek, sarhoş teker; kendi arenasında, kendi koduyla.\n- **ESP32'de Arduino kütüphaneleri** ve **32 katmanlı PCB**.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.5.0: the Assembly is the robot itself and follows the project",
+        "body": "In this version:\n\n- **The left bar in three groups:** Electronics (Circuit, PCB, Code), Mechanical (Part, Assembly), Test (World).\n- **Part:** several parts in one file; **Send to assembly** makes each part a body of its own and updates it in place when sent again.\n- **The Assembly is the robot itself:** projects come with or without a PCB, and several projects sit together; the assembly is saved with the project and takes in the circuit, PCB and code changes each time it opens.\n- **Robot examples are real vehicles:** a chassis, wheels on shafts, a caster wheel; in their own arena, with their own code.\n- **Arduino libraries on the ESP32** and **32-layer PCBs**.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-4-2",
       "date": "2026-11-24",
       "title": "1.4.2: kod sayfası bir kod editörü, kod her karta yüklenir",
       "body": "Bu sürümde:\n\n- **Kod sayfasında klasörler:** projedeki ve dünyadaki her kartın kendi kod klasörü; diskteki klasörler, alt klasörler, içe aktarma, diske kaydetme ve zip.\n- **Kod her karta yüklenir:** projedeki ve açık dünyadaki her Arduino Uno, Nano ve ESP32; çok dosyalı çizimler.\n- **Kod tamamlama** kartın gerçek başlık dosyalarından; imza yardımı.\n- **Kütüphaneler sekmesi:** Arduino kütüphanelerini arayın, kurun, `#include` ekleyin.\n- **Ayarlanabilir AC/DC güç kaynağı** ve **kategorili parça kütüphanesi**.\n- Servo kol şablonunda ikinci kolun kendi etrafında dönmesi ve bazı modüllerde yanlış pine düşen VCC / GND yazıları düzeltildi.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.4.2: the Code page is a code editor, and code uploads to every board",
+        "body": "In this version:\n\n- **Folders on the Code page:** each board in the project and in the world has its own code folder; folders on disk, subfolders, import, saving to disk and zip.\n- **Code uploads to every board:** every Arduino Uno, Nano and ESP32 in the project and in the open world; sketches of several files.\n- **Code completion** from the board's real header files; signature help.\n- **Libraries tab:** search for Arduino libraries, install them, add the `#include`.\n- **An adjustable AC/DC power supply** and **a part library in categories**.\n- Fixed: the second arm of the servo arm template turning about itself, and VCC / GND labels landing on the wrong pin on some modules.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-4-1",
       "date": "2026-11-24",
       "title": "1.4.1: render'daki hava gerçek hava, kablolar simülasyondaki gibi",
       "body": "Bu sürümde:\n\n- **Render'daki hava gerçek hava:** kayıt boyunca zamanla çözülür; parçalar havayı kendi hareketleriyle iter, rüzgâr dünyadan gelir. Rüzgâr yoksa ve hiçbir şey kıpırdamıyorsa akış yoktur. Hava 3B duman olarak görünür.\n- **Rüzgâr tüneli testi** ayrı bir seçenek: hızı, yönü ve eğimi seçilir.\n- **Render'da kablolar** simülasyondaki iplerin kendisi; render sahnesi yalnızca izlenir.\n- **Servoların gerilmesi:** üstüne servo takılı bir servonun yükü artık görünür.\n- **Devre'nin alt panelleri** boyutlandırılır, kapanır, ayrı pencereye alınır.\n- **Dünyadaki kartlar** Devre sayfasından tek tıkla açılır; **Montaj** ne yaptığını anlatır; servo başlığına takılan kol başlığa oturur.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.4.1: the air in a render is real air, and cables are as in the simulation",
+        "body": "In this version:\n\n- **The air in a render is real air:** it is solved through time over the whole recording; the parts push the air by their own motion, and the wind comes from the world. With no wind and nothing moving, there is no flow. The air shows as 3D smoke.\n- **A wind tunnel test** is a separate option: choose its speed, direction and slope.\n- **Cables in a render** are the simulation's own ropes; the render scene is only watched.\n- **Servo stress:** the load on a servo that carries another servo now shows.\n- **The Circuit page's bottom panels** can be resized, closed and moved to a window of their own.\n- **Boards in the world** open from the Circuit page with one click; **Assembly** explains what it does; an arm fitted to a servo horn sits on the horn.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-4-0",
       "date": "2026-11-23",
       "title": "1.4.0: sıvılar gerçek fizikle akar",
       "body": "Bu sürümde:\n\n- **Sıvılar:** su, yağ, bal … gerçek yoğunluk, viskozite ve yüzey gerilimiyle akar; kaba basınç ve ağırlık, içindekilere kaldırma kuvveti uygular, malzemeye göre ıslatır.\n- **Su bardağı şablonu:** ESP32 ve servo, cam bardaktaki suyu kâseye döker.\n- **Render her şeyi tam hesaplar:** sıvı 0,1 ms adımda, 40 000 parçacığa kadar; ESP32 kartları render'da da çalışır.\n- **Akış analizi gerçek Reynolds sayısında**, güvenilirlik notlarıyla.\n- **Doğrulama sayfası:** her çözücünün teoriden sapması ve hata payı (**Yardım → 12. Doğrulama**).\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.4.0: liquids flow with real physics",
+        "body": "In this version:\n\n- **Liquids:** water, oil, honey … flow with their real density, viscosity and surface tension; they put pressure and weight on their container, buoy up what is in them, and wet each material in its own way.\n- **Glass of water template:** an ESP32 and a servo pour the water in a glass into a bowl.\n- **A render computes everything in full:** liquids at a 0.1 ms step with up to 40,000 particles; ESP32 boards run in renders too.\n- **Flow analysis at the real Reynolds number**, with notes on how far to trust it.\n- **Validation page:** each solver's deviation from theory and its error margin (**Help → 12. Validation**).\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-v1-3-0",
       "date": "2026-11-23",
       "title": "1.3.0: kablolar gerçek yoldan gider, parçalar iç içe geçmez",
       "body": "Bu sürümde dünyadaki her şey gerçekte olabileceği gibi kurulur:\n\n- **Kablo yolu:** her kablo iki fişi arasında katı parçalara değmeyen en kısa yoldan döşenir; kapalı bir kutudan yalnızca gerçek bir delikten çıkar.\n- **Tutarlılık denetimi:** iç içe geçmiş parçalar, parçanın içinden geçen teller ve yolu olmayan kablolar simülasyon başlarken **Olaylar** sekmesinde yazılır.\n- **PS5 kumandalı uçak:** pistten kalkan 1 m'lik eğitim uçağı, DualSense ile.\n- **Roket ateşlemesi** gerçek zinciriyle: e-kibrit, ateşleyici barutu, tutuşma, alev yayılması, paraşüt.\n- **Yeni şablonlar:** Kapalı gövdeli gezgin, Trafik ışığı ve yaya butonu, Sarkaç.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
-      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler"
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.3.0: cables take real routes, and parts don't overlap",
+        "body": "In this version, everything in the world is set up as it could be in reality:\n\n- **Cable routes:** each cable is laid along the shortest path between its two plugs that does not touch solid parts; it leaves a closed box only through a real hole.\n- **Consistency check:** overlapping parts, wires running through a part and cables with no route are listed in the **Events** tab when the simulation starts.\n- **PS5-controlled plane:** a 1 m trainer that takes off from a runway, flown with a DualSense.\n- **Rocket ignition** through its real chain: e-match, igniter powder, ignition, flame spread, parachute.\n- **New templates:** Closed-body rover, Traffic light with a pedestrian button, Pendulum.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
     },
     {
       "id": "2026-11-hosgeldiniz",
       "date": "2026-11-20",
       "title": "RobotWin Studio'ya hoş geldiniz",
       "body": "Uygulamanın içinde artık **Yardım** sayfası (F1), **Haberler** ve **otomatik güncelleme** var.\n\n- Kullanım kılavuzu: *Yardım → Yardım ve belgeler* veya sol menüdeki **Yardım**.\n- Yeni bir sürüm çıktığında başlangıç sayfasında ve durum çubuğunda haber verilir; **Şimdi güncelle** ile tek tıkla kurulur, projeleriniz ve ayarlarınız korunur.\n- Önceki sürümlere *Yardım → Eski sürümler* bölümünden ulaşabilirsiniz.\n\nSorun ya da öneriniz varsa GitHub'da bildirebilirsiniz.",
-      "link": "https://github.com/Kinin-Code-Offical/robotwin-studio/issues"
+      "link": "https://github.com/Kinin-Code-Offical/robotwin-studio/issues",
+      "en": {
+        "title": "Welcome to RobotWin Studio",
+        "body": "The app now has a **Help** page (F1), **News** and **automatic updates**.\n\n- User guide: *Help → Help and documentation*, or **Help** in the left menu.\n- When a new version comes out, the start page and the status bar say so; **Update now** installs it in one click and keeps your projects and settings.\n- Earlier versions are under *Help → Older versions*.\n\nIf you have a problem or a suggestion, you can report it on GitHub."
+      }
     }
   ]
 }

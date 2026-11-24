@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -88,7 +88,7 @@ namespace RobotWin.Studio.Analysis
             dc.DrawRectangle(Res("B.Base", Brushes.Black), null, new Rect(0, 0, w, h));
             var face = new Typeface("Segoe UI");
             double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            FormattedText T(string s, Brush b, double size = 12) => new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, b, dpi);
+            FormattedText T(string s, Brush b, double size = 12) => new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, b, dpi);
 
             var live = Series.Where(s => s.X.Length > 0 && s.X.Length == s.Y.Length).ToList();
             if (Title.Length > 0) dc.DrawText(T(Title, Res("B.Text", Brushes.White), 12), new Point(8, 4));

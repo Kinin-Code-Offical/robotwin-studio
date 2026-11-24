@@ -103,6 +103,84 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void AFreeTankOfWaterAtRestFallsAsleepAndWakesWhenPushed()
+        {
+            // A position-based liquid at rest quivers by about g·h² a step, a "speed" of ~10 mm/s that never dies away:
+            // rest is judged by where the particles stay, and the tank's floor corners no longer push a still particle
+            // a different way every step.
+            var scene = new PhysicsScene { SleepEnabled = true };
+            double L = 0.06, t = 0.005, H = 0.08, s = 0.004;
+            CollisionShape Piece(Vec3 c, Vec3 size)
+            {
+                var h = size * 0.5;
+                var pts = new List<Vec3>();
+                foreach (double x in new[] { -h.X, h.X })
+                foreach (double y in new[] { -h.Y, h.Y })
+                foreach (double z in new[] { -h.Z, h.Z })
+                    pts.Add(c + new Vec3(x, y, z));
+                return CollisionShape.ConvexHull(pts, 8);
+            }
+
+            var tank = new SceneBody { Shape = CollisionShape.Box(new Vec3(L + 2 * t, L + 2 * t, H)), Position = new Vec3(0, 0, H / 2), Mass = 0.15 };
+            tank.Pieces = new[]
+            {
+                Piece(new Vec3(0, 0, -H / 2 + t / 2), new Vec3(L + 2 * t, L + 2 * t, t)),
+                Piece(new Vec3(-L / 2 - t / 2, 0, t / 2), new Vec3(t, L + 2 * t, H - t)),
+                Piece(new Vec3(L / 2 + t / 2, 0, t / 2), new Vec3(t, L + 2 * t, H - t)),
+                Piece(new Vec3(0, -L / 2 - t / 2, t / 2), new Vec3(L, t, H - t)),
+                Piece(new Vec3(0, L / 2 + t / 2, t / 2), new Vec3(L, t, H - t))
+            };
+            scene.AddBody(tank);
+            var water = new LiquidBody("w", LiquidKind.Water, s);
+            water.Add(LiquidBody.Lattice(new Vec3(-L / 2, -L / 2, t), new Vec3(L / 2, L / 2, t + 0.05), s, _ => true));
+            water.Settle(scene);
+            int asleepAt = -1;
+            for (int i = 0; i < 4000 && asleepAt < 0; i++)
+            {
+                scene.Step(1e-3);
+                water.Step(scene, 1e-3);
+                water.ApplyForces();
+                if (i % 250 == 0) _out.WriteLine($"{i * 1e-3:F2} s  fastest particle {water.LastMaxSpeed * 1000:F1} mm/s, tank asleep {scene.IsSleeping(tank)}, liquid asleep {water.Asleep}");
+                if (water.Asleep && scene.IsSleeping(tank)) asleepAt = i;
+            }
+
+            _out.WriteLine($"liquid and tank asleep after {asleepAt * 1e-3:F2} s");
+            Assert.True(asleepAt > 0, "a tank of water left alone falls asleep, liquid and all");
+            // Asleep, the tank still carries the water's weight.
+            double weight = water.TotalMass * 9.81, fz = -water.LastForces[tank].Z;
+            _out.WriteLine($"push on the tank while asleep {fz:F4} N, the water's weight {weight:F4} N");
+            Assert.InRange(fz / weight, 0.97, 1.03);
+            for (int i = 0; i < 200; i++)
+            {
+                scene.Step(1e-3);
+                water.Step(scene, 1e-3);
+                water.ApplyForces();
+            }
+
+            Assert.True(water.Asleep, "and it stays asleep");
+            // A container quivering by a micrometre (a servo holding it) leaves it asleep.
+            var home = tank.Position;
+            for (int i = 0; i < 100; i++)
+            {
+                tank.Position = home + new Vec3((i % 2 == 0 ? 1 : -1) * 1e-6, 0, 0);
+                scene.Step(1e-3);
+                water.Step(scene, 1e-3);
+                water.ApplyForces();
+            }
+
+            Assert.True(water.Asleep, "a micrometre's quiver of its container leaves it asleep");
+            // Pushed, it wakes and moves with the tank.
+            scene.Wake(tank);
+            tank.Velocity = new Vec3(0.2, 0, 0);
+            scene.Step(1e-3);
+            water.Step(scene, 1e-3);
+            scene.Step(1e-3);
+            water.Step(scene, 1e-3);
+            _out.WriteLine($"after the push: liquid asleep {water.Asleep}, {water.LastSubsteps} substeps");
+            Assert.False(water.Asleep);
+        }
+
+        [Fact]
         public void ADamBreakFrontRunsLikeMartinAndMoyce()
         {
             // Martin & Moyce (1952), column a wide and 2a high: front Z = x/a against T = t·√(2g/a).

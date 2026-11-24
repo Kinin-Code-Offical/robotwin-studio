@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
@@ -159,7 +159,7 @@ namespace RobotWin.Studio.Models3D
         /// Text label bitmap of the given aspect ratio (width / height); lines split on '\n',
         /// centred, scaled to fit. Background may be transparent.
         /// </summary>
-        public static BitmapSource Label(string text, double aspect, Color fg, Color bg, bool bold = false, string font = "Segoe UI", int height = 64)
+        public static BitmapSource Label(string text, double aspect, Color fg, Color bg, bool bold = false, string font = "Segoe UI", int height = 128)
         {
             string key = $"lbl|{text}|{aspect:0.###}|{fg}|{bg}|{bold}|{font}|{height}";
             return Get(key, () =>
@@ -186,7 +186,7 @@ namespace RobotWin.Studio.Models3D
         }
 
         /// <summary>Material showing a text label (laser-etched marking, silkscreen, sticker).</summary>
-        public static Material LabelMat(string text, double aspect, Color fg, Color bg, bool bold = false, string font = "Segoe UI", int height = 64)
+        public static Material LabelMat(string text, double aspect, Color fg, Color bg, bool bold = false, string font = "Segoe UI", int height = 128)
         {
             bool transparent = bg.A < 255;
             string key = $"{text}|{aspect:0.###}|{fg}|{bg}|{bold}|{font}|{height}";

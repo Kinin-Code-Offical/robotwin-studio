@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -172,14 +172,13 @@ namespace RobotWin.Studio.Pages
         private void FilterLibrary()
         {
             string q = SearchBox.Text.Trim();
-            var tokens = q.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            var culture = CultureInfo.GetCultureInfo("tr-TR");
+            var tokens = RobotWin.Studio.Shell.Lang.Fold(q).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var items = W.Library.Presets.Where(p =>
             {
                 if (!RobotTwin.CoreSim.Design.PartCategories.Matches(p, _category)) return false;
                 if (tokens.Length == 0) return true;
-                string hay = (p.Name + " " + p.Description + " " + RobotTwin.CoreSim.Design.PartCategories.PathOf(p) + " " + p.Id).ToLower(culture);
-                return tokens.All(t => hay.Contains(t.ToLower(culture)));
+                string hay = RobotWin.Studio.Shell.Lang.Searchable(p.Name, p.Description, RobotTwin.CoreSim.Design.PartCategories.PathOf(p), p.Id);
+                return tokens.All(t => hay.Contains(t));
             }).OrderBy(p => LibraryPage.IsSeriesResistor(p) && tokens.Length == 0 ? 1 : 0).ToList();
             PartList.ItemsSource = items;
             LibraryCount.Text = items.Count.ToString(CultureInfo.InvariantCulture);
@@ -900,12 +899,14 @@ namespace RobotWin.Studio.Pages
             }
 
             Section("Kısayollar");
+            // [keys] the editor's own keys as they are set now (Ayarlar → Klavye kısayolları can move them)
+            static string K(params string[] ids) => string.Join(" · ", ids.Select(id => Shell.Shortcuts.All.FirstOrDefault(c => c.Id == "devre." + id)?.Keys ?? "?").Select(k => k.Length == 0 ? "—" : k.Split(',')[0].Trim()));
             foreach (var (key, what) in new[]
             {
-                ("A · P", "Parça · güç sembolü ekle"), ("W · L · Q", "Kablo · etiket · NC"), ("M · G", "Taşı · sürükle"),
-                ("R · X · Y", "Döndür · aynala"), ("E · V", "Özellikler · değer"), ("Ctrl+C/V", "Kopyala / yapıştır"),
-                ("Ctrl+D", "Çoğalt"), ("Ctrl+F", "Bul / değiştir"), ("`", "Hattı vurgula"), ("Ctrl+Z / Y", "Geri al / Yinele"),
-                ("F · Home", "Sığdır"), ("F5", "Simülasyon"), ("F1 · ?", "Tüm kısayollar")
+                (K("parca", "guc"), "Parça · güç sembolü ekle"), (K("kablo", "etiket", "nc"), "Kablo · etiket · NC"), (K("tasi", "surukle"), "Taşı · sürükle"),
+                (K("dondur", "aynala-x", "aynala-y"), "Döndür · aynala"), (K("ozellik", "deger"), "Özellikler · değer"), ("Ctrl+C/V", "Kopyala / yapıştır"),
+                ("Ctrl+D", "Çoğalt"), ("Ctrl+F", "Bul / değiştir"), (K("hat"), "Hattı vurgula"), ("Ctrl+Z / Y", "Geri al / Yinele"),
+                (K("sigdir") + " · Home", "Sığdır"), ("F5", "Simülasyon"), ("F1 · ?", "Tüm kısayollar")
             })
             {
                 var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };

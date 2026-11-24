@@ -194,7 +194,7 @@ namespace RobotWin.Studio.Pages
             var load = _arm.GravityLoad(s.Q);
             var heavy = _arm.Axes.Select((a, i) => (a, i)).Where(x => x.a.Actuated && x.a.StallTorque > 0 && Math.Abs(load[x.i]) > 0.5 * x.a.StallTorque).ToList();
             foreach (var (a, i) in heavy) sb.Append($". {a.Name} bu konumda tutma torkunun %{Math.Abs(load[i]) / a.StallTorque * 100:0}'ini harcar");
-            _armResult.Text = sb.ToString();
+            _armResult.Text = Shell.Lang.T(sb.ToString());   // [lang]
         }
 
         private void PreviewArm()
@@ -361,7 +361,7 @@ namespace RobotWin.Studio.Pages
                 sb.Append($"Erişim {_armReach.Nearest * 1000:0}–{_armReach.Farthest * 1000:0} mm" + (_armReach.Planar ? ", tek düzlemde" : string.Empty));
             }
 
-            _armLive.Text = sb.ToString();
+            _armLive.Text = Shell.Lang.T(sb.ToString());   // [lang] line by line
             if (physics != null) DrawArm();
         }
 

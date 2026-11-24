@@ -577,7 +577,7 @@ namespace RobotWin.Studio.Shell
             get => _status;
             set
             {
-                _status = value;
+                _status = Lang.T(value);   // [lang] status messages in the language in use
                 OnPropertyChanged();
             }
         }

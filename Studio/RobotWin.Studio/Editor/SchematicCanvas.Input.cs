@@ -343,9 +343,16 @@ namespace RobotWin.Studio.Editor
         protected override void OnKeyDown(KeyEventArgs e)
         {
             var mods = Keyboard.Modifiers;
-            bool ctrl = mods.HasFlag(ModifierKeys.Control), shift = mods.HasFlag(ModifierKeys.Shift), alt = mods.HasFlag(ModifierKeys.Alt);
             var key = e.Key == Key.System ? e.SystemKey : e.Key;
-            if (alt) return;
+            if (mods.HasFlag(ModifierKeys.Alt)) return;
+            // [keys] a key the user moved a tool to becomes the tool's own key; the tool's old key does nothing
+            if (!Shell.Shortcuts.Translate(Shell.PageShortcuts.Schematic, ref key, ref mods))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            bool ctrl = mods.HasFlag(ModifierKeys.Control), shift = mods.HasFlag(ModifierKeys.Shift);
             if (HandleKey(key, ctrl, shift, e.IsRepeat)) e.Handled = true;
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -85,12 +85,12 @@ namespace RobotWin.Studio.Models3D
         /// top texture drawn in footprint millimetres (<paramref name="draw"/> gets a context scaled to mm).
         /// </summary>
         private static void Pcb(PartBuilder b, double x0, double y0, double x1, double y1, double z0, uint mask, string texKey,
-            Action<DrawingContext>? draw, double t = 1.6, double corner = 0.8, double ppmm = 14)
+            Action<DrawingContext>? draw, double t = 1.6, double corner = 0.8, double ppmm = 24)
         {
             double w = x1 - x0, h = y1 - y0;
             var edge = Mat.Plastic(Mix(mask, 0x1E1E1Eu, 0.35), 0.1);
             b[edge].RoundedBox((x0 + x1) / 2, (y0 + y1) / 2, z0, w, h, t, corner, 3, false, true);
-            double scale = Math.Min(ppmm, 2400 / Math.Max(w, h));
+            double scale = Math.Min(ppmm, 4096 / Math.Max(w, h));   // sharp up close: silkscreen and part markings stay legible
             int pw = Math.Max(8, (int)(w * scale)), ph = Math.Max(8, (int)(h * scale));
             var tex = Mat.Image("pcb|" + texKey + "|" + F(w) + "x" + F(h), () => Tex.Render(pw, ph, dc =>
             {

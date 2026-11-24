@@ -88,14 +88,13 @@ namespace RobotWin.Studio.Pages
                 });
             }
 
-            Card("Sayfalara özel kısayollar", "Bu tuşlar yalnız kendi sayfalarında çalışır; şimdilik değiştirilemez.", c =>
+            Card("Diğer sayfa kısayolları", "Bu tuşlar yalnız kendi sayfalarında çalışır ve şimdilik değiştirilemez (Devre, PCB, Dünya, Kod ve Parça sayfalarınınkiler yukarıda değiştirilebilir).", c =>
             {
                 foreach (var (keys, what) in new[]
                 {
                     ("F5 · Shift+F5", "Simülasyon: başlat / duraklat · durdur"), ("Ctrl+Z · Ctrl+Y", "Geri al · yinele"),
-                    ("W · L · R · X · Del", "Devre: kablo · etiket · döndür · aynala · sil"), ("K · B · R · Ctrl+D", "Dünya: kablo · bağla · döndür · çoğalt"),
-                    ("F7 · F5", "Kod: derle · karta yükle ve çalıştır"), ("F5 · F10 · F11 · Shift+F11", "Kod, kart durmuşken: devam · adım · içine · dışına"),
-                    ("Tab · 1 / 2 / 3", "Parça: nesne / düzenleme kipi · nokta / kenar / yüz"), ("F10 · Alt", "Menü çubuğu"),
+
+                    ("1 / 2 / 3", "Parça: nokta / kenar / yüz seçimi"), ("F10 · Alt", "Menü çubuğu"),
                 })
                 {
                     var g = new Grid { Margin = new Thickness(0, 0, 0, 6) };
@@ -129,6 +128,11 @@ namespace RobotWin.Studio.Pages
             "Sayfalar" => "Sol şeritteki sayfalara geçiş.",
             "Görünüm" => "Pencere düzeni ve göstergeler.",
             "Uygulama" => "Ayarlar ve komut paleti.",
+            "Devre sayfası" => "Şema düzenleyicinin araçları; yalnız şema odaktayken çalışır, tek harf olabilir.",
+            "PCB sayfası" => "Kart düzenleyicinin araçları; yalnız kart odaktayken çalışır, tek harf olabilir.",
+            "Dünya sayfası" => "Dünya düzenleyicinin araçları; bir yazı kutusundayken çalışmaz, tek harf olabilir.",
+            "Kod sayfası" => "Derleme, yükleme ve hata ayıklama; kod yazarken de çalıştığı için Ctrl/Alt/Shift ya da F tuşlarıyla.",
+            "Parça sayfası" => "Modelleyicinin araçları; bir yazı kutusundayken çalışmaz, tek harf olabilir.",
             _ => "Kılavuz ve yardım.",
         };
 
@@ -139,6 +143,11 @@ namespace RobotWin.Studio.Pages
             "Sayfalar" => 2,
             "Görünüm" => 3,
             "Uygulama" => 4,
+            "Devre sayfası" => 6,
+            "PCB sayfası" => 7,
+            "Dünya sayfası" => 8,
+            "Kod sayfası" => 9,
+            "Parça sayfası" => 10,
             _ => 5,
         };
 
@@ -202,7 +211,7 @@ namespace RobotWin.Studio.Pages
 
                 var mods = Keyboard.Modifiers;
                 bool function = key >= Key.F1 && key <= Key.F24;
-                if (mods == ModifierKeys.None && !function)
+                if (mods == ModifierKeys.None && !function && (cmd.Page == null || cmd.Page == PageShortcuts.Code))   // a page's own keys may be single letters (not the code page's: they would go into the code)
                 {
                     keys.Content = Shown();
                     Workspace.Current.Status = "Tek bir tuş pencere kısayolu olamaz (yazarken çalışırdı): Ctrl, Alt ya da Shift ile birlikte basın; F1–F12 tek başına olur.";

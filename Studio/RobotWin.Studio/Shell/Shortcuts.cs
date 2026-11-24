@@ -9,14 +9,18 @@ namespace RobotWin.Studio.Shell
     /// <summary>[keys] A command the window binds to keys the user can change (Ayarlar → Klavye kısayolları).</summary>
     public sealed class ShortcutCommand
     {
-        internal ShortcutCommand(string id, string group, string title, string defaults, Action action)
+        internal ShortcutCommand(string id, string group, string title, string defaults, Action? action, string? page = null)
         {
             Id = id;
             Group = group;
             Title = title;
             Defaults = defaults;
             Action = action;
+            Page = page;
         }
+
+        /// <summary>The page a page command works on ("devre", "pcb"); null for a window-wide command.</summary>
+        public string? Page { get; }
 
         public string Id { get; }
         public string Group { get; }
@@ -25,7 +29,8 @@ namespace RobotWin.Studio.Shell
         /// <summary>The default keys ("Ctrl+K, Ctrl+Shift+P": alternatives separated by commas).</summary>
         public string Defaults { get; }
 
-        public Action Action { get; }
+        /// <summary>What a window-wide command does; null for a page command (its page runs it from its own keys).</summary>
+        public Action? Action { get; }
 
         /// <summary>The keys in use: the user's choice, else the defaults ("" = no keys).</summary>
         public string Keys => AppSettings.Current.KeyBindings.TryGetValue(Id, out var k) ? k : Defaults;
@@ -52,6 +57,45 @@ namespace RobotWin.Studio.Shell
             var c = new ShortcutCommand(id, group, title, defaults, action);
             Commands.Add(c);
             return c;
+        }
+
+        /// <summary>
+        /// A key of one page (a schematic tool, a PCB action): its page keeps handling its default key, and
+        /// <see cref="Translate"/> turns the key the user chose into that default before the page sees it.
+        /// </summary>
+        public static ShortcutCommand RegisterPage(string page, string id, string group, string title, string defaults)
+        {
+            Commands.RemoveAll(c => c.Id == id);
+            var c = new ShortcutCommand(id, group, title, defaults, null, page);
+            Commands.Add(c);
+            return c;
+        }
+
+        /// <summary>
+        /// [keys] A key pressed on <paramref name="page"/>, as the page knows it: a key the user gave one of the page's
+        /// commands becomes that command's default key; a default key the user moved elsewhere does nothing (false);
+        /// any other key is left as it is.
+        /// </summary>
+        public static bool Translate(string page, ref Key key, ref ModifierKeys mods)
+        {
+            var pressed = Format(key, mods);
+            ShortcutCommand? moved = null;
+            foreach (var c in Commands)
+            {
+                if (c.Page != page || !c.IsChanged) continue;
+                if (Gestures(c.Keys).Any(g => string.Equals(Format(g.Key, g.Modifiers), pressed, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var target = Gestures(c.Defaults).FirstOrDefault();
+                    if (target.Key == Key.None) return false;
+                    key = target.Key;
+                    mods = target.Modifiers;
+                    return true;
+                }
+
+                if (Gestures(c.Defaults).Any(g => string.Equals(Format(g.Key, g.Modifiers), pressed, StringComparison.OrdinalIgnoreCase))) moved = c;
+            }
+
+            return moved == null;
         }
 
         public static void Set(string id, string keys)
@@ -86,7 +130,8 @@ namespace RobotWin.Studio.Shell
         {
             var mine = Gestures(c.Keys).Select(g => Format(g.Key, g.Modifiers)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (mine.Count == 0) return Array.Empty<ShortcutCommand>();
-            return Commands.Where(o => o != c && Gestures(o.Keys).Any(g => mine.Contains(Format(g.Key, g.Modifiers))));
+            // A page's keys only meet the same page's keys (the window's take keys with modifiers, the pages' mostly plain ones).
+            return Commands.Where(o => o != c && o.Page == c.Page && Gestures(o.Keys).Any(g => mine.Contains(Format(g.Key, g.Modifiers))));
         }
 
         /// <summary>The key chords of a keys text ("Ctrl+K, Ctrl+Shift+P"); unreadable parts are skipped.</summary>

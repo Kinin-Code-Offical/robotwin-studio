@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -548,11 +548,10 @@ namespace RobotWin.Studio.Pages
 
         private void FilterAddPart()
         {
-            var culture = CultureInfo.GetCultureInfo("tr-TR");
-            var tokens = AddPartSearch.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var tokens = RobotWin.Studio.Shell.Lang.Fold(AddPartSearch.Text).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             AddPartList.ItemsSource = W.Library.Presets
                 .Where(p => W.Library.Find(p.PartId) is { } d && !string.IsNullOrEmpty(d.Footprint) && d.Symbol != SymbolKind.Ground)
-                .Where(p => tokens.All(t => (p.Name + " " + p.Id + " " + p.Category).ToLower(culture).Contains(t.ToLower(culture))))
+                .Where(p => tokens.Length == 0 || RobotWin.Studio.Shell.Lang.Searchable(p.Name, p.Id, p.Category) is var hay && tokens.All(t => hay.Contains(t)))
                 .Take(200)
                 .Select(p => new ComboBoxItem { Content = p.Name + "  ·  " + p.Category, Tag = p.Id })
                 .ToList();

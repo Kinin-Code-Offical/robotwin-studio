@@ -1244,7 +1244,7 @@ namespace RobotWin.Studio.Pages
                 if (!double.IsNaN(v)) lines.Add($"{pin.Pin,-14} : {SiValue.Format(v, "V")}");
             }
 
-            _live.Text = string.Join("\n", lines);
+            _live.Text = Shell.Lang.T(string.Join("\n", lines));   // [lang] line by line
         }
 
         private double EstimateMass(WorldDocument world, WorldObject o)
@@ -1370,14 +1370,23 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            switch (e.Key)
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            var mods = Keyboard.Modifiers;
+            // [keys] a key the user moved a tool to becomes the tool's own key; the tool's old key does nothing
+            if (!Shell.Shortcuts.Translate(Shell.PageShortcuts.World, ref key, ref mods))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            bool ctrl = mods.HasFlag(ModifierKeys.Control);
+            switch (key)
             {
                 case Key.Delete:
                     Delete();
                     break;
                 case Key.R when !ctrl:
-                    Rotate(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -15 : 15);
+                    Rotate(mods.HasFlag(ModifierKeys.Shift) ? -15 : 15);
                     break;
                 case Key.D when ctrl:
                     Duplicate();
@@ -1410,7 +1419,7 @@ namespace RobotWin.Studio.Pages
                     OnRecord(this, new RoutedEventArgs());
                     break;
                 case Key.F5:
-                    if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) StopSimulation();
+                    if (mods.HasFlag(ModifierKeys.Shift)) StopSimulation();
                     else if (ctrl) OpenAnalysis();
                     else Run();
                     break;

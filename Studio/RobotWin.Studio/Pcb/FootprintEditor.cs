@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -221,7 +221,7 @@ namespace RobotWin.Studio.Pcb
                 }
             }
 
-            var label = new FormattedText(string.Format(CultureInfo.InvariantCulture, "x {0:0.000}  y {1:0.000} mm · ızgara {2} mm", _cursor.X, _cursor.Y, Grid),
+            var label = new FormattedText(RobotWin.Studio.Shell.Lang.T(string.Format(CultureInfo.InvariantCulture, "x {0:0.000}  y {1:0.000} mm · ızgara {2} mm", _cursor.X, _cursor.Y, Grid)),
                 CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, 11, SymbolRenderer.Brush(Color.FromRgb(0x6C, 0x6C, 0x74)), dip);
             dc.DrawText(label, new Point(10, ActualHeight - 20));
         }

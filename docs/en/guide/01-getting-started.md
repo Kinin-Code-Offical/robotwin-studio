@@ -105,15 +105,31 @@ The **Ayarlar** (settings, Ctrl+,) page is split into categories. Pick one in th
 
 | Category | What it holds |
 | --- | --- |
-| Genel (general) | Home page at startup, the first-robot guide, project folder, recent files, length unit |
+| Genel (general) | Language, home page at startup, the first-robot guide, project folder, recent files, length unit |
 | Görünüm ve tema (appearance and theme) | Theme gallery (9 dark, 7 light themes and a custom one), accent colour, interface scale, performance overlay, effects and sound, 3D quality |
 | Kaydetme ve yedekleme (saving and backups) | Autosave interval, keeping the previous version on save, crash recovery, backup folder, copies kept per document, the folder's size limit |
-| Klavye kısayolları (keyboard shortcuts) | Change the window's shortcuts, clash warnings, reset one or all |
+| Klavye kısayolları (keyboard shortcuts) | Change the window's and every page's shortcuts, clash warnings, reset one or all |
 | Simülasyon ve fizik (simulation and physics) | Part damage, pause on failure, ambient temperature, time step, starting speed |
 | Dünya ve düzenleme (world and editing) | Gravity of new worlds, world editor grid |
 | Derleyiciler (compilers) | `arduino-cli` path, `vcvars64.bat` path |
 | Güncellemeler, Eklentiler (updates, plug-ins) | Version checks; plug-in folders and scripts |
 | Gelişmiş (advanced) | Export settings to a file and import them, error log, file types |
+
+**Language:**
+
+- The app starts in English. Choose English or Türkçe in **General → Language**. The language applies everywhere once the app starts again; the card has a **Restart now** button.
+- The language changes:
+  - every text of the windows, canvases and instruments;
+  - number and date formats (1.5 mm in English, 1,5 mm in Turkish);
+  - the guide on the Help page and the News;
+  - the part catalogue's names and descriptions;
+  - the examples' names and their code's comments.
+- Searches (parts, settings, the command palette) work in both languages: "resistor" and "direnç" both find it.
+- **To make a language pack of your own:**
+  1. Copy `Lang/en.json` and name it like `de.json`. Its keys are the interface's source texts (Turkish) and its values their English: translate the values into your language. In patterns with `{…}`, numbers and names go into `{0}`, `{1}` in order.
+  2. Set `"language"` at the top of the file to the language's name, and `"culture"` to its number and date format (for example `"de-DE"`).
+  3. Put the new file in the folder the **Language packs folder** button opens (`%APPDATA%\RobotWin\lang`). The file name is the language's id.
+  4. The pack shows in the list as "(your own pack)". Texts you have not translated show in English, not Turkish, so a pack can grow a piece at a time.
 
 **Themes:** the gallery in **Görünüm ve tema** shows each theme as a small picture of the window. The theme you click is applied at once.
 
@@ -138,7 +154,7 @@ The **Ayarlar** (settings, Ctrl+,) page is split into categories. Pick one in th
 - Each document's newest copies are kept and the folder stays under its size limit; the oldest go first.
 - If the app closes unexpectedly, the home page shows that run's backups at the next start.
 
-**Changing a shortcut:** in **Klavye kısayolları**, click the button and press the new keys. **Esc** cancels, **Backspace** removes the keys. A key that another command uses is marked with an orange note. A single letter cannot be a window shortcut, because it would fire while you type; press it with **Ctrl**, **Alt** or **Shift**. **F1–F12** work on their own.
+**Changing a shortcut:** in **Klavye kısayolları**, click the button and press the new keys. The keys of the Circuit, PCB, World, Code and Part pages are there too; they can be single letters. **Esc** cancels, **Backspace** removes the keys. A key that another command uses is marked with an orange note. A single letter cannot be a window shortcut, because it would fire while you type; press it with **Ctrl**, **Alt** or **Shift**. **F1–F12** work on their own.
 
 ---
 

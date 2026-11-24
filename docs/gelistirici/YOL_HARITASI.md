@@ -15,16 +15,20 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
     - [x] Sıvı yüzeyi arka planda örülüyor (su bardağı 31 → 43 FPS).
     - [x] Sensörlü gezgin 61 FPS.
     - [ ] Sıvı çözücüsünün kendisi: 3 bin parçacıkta 1 ms'lik adım 14 ms sürüyor (gerçek zamanın ~1/14'ü), başlatmada dinlendirme ~2,3 s. Duvar testi ve basınç döngüsü algoritma düzeyinde hızlanmalı.
-    - [ ] Cam bardağın tabanında birkaç parçacık durgun suda 30 mm/s titriyor; bu yüzden sıvı uykuya geçemiyor.
+    - [x] Kabın iç köşesindeki parçacıklar durgun suda 30–40 mm/s titriyordu: alanın ara değerlenmiş mesafesi köşede kısa kalıyordu. Temas artık gerçek katıyla. Durgunluk da hıza göre değil 0,2 s'deki yer değişimine göre ölçülüyor (konum tabanlı sıvı yerinde g·h² kadar titrer). Serbest bir tank suyuyla 2,6 s'de uyuyor; servonun tuttuğu kap sıvıyı mikrometrelik kıpırtısıyla uyandırmıyor.
   - [ ] ReadyToRun ön derlemesi (crossgen2 paketi için izin gerekiyor).
 - [~] **Ayarlar:** kategoriler ve arama.
   - [x] Yedekleme: sıklık, belge başına kopya, klasör, boyut sınırı, kaydedince önceki sürüm, çökme sonrası kurtarma.
-  - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama. Sayfaya özel kısayollar henüz sabit.
+  - [x] Klavye kısayollarını düzenleme: çakışma uyarısı, sıfırlama; bütün sayfaların tuşları da (Shell/PageShortcuts.cs: Devre, PCB, Dünya, Kod, Parça).
   - [x] Temalar: koyu, siyah, yüksek karşıtlık; vurgu rengi.
   - [x] Çok sayıda tema: 9 koyu, 7 açık (pembe, şeftali, lavanta, nane, gökyüzü, kâğıt, açık), özel tema (ton, doygunluk, açık/koyu), 10 vurgu rengi; şema ve kod editörü açık temalarda açılıyor.
   - [x] PCB editörü de açık temalarda açılıyor (soluk kart, koyu baskı; bakır renkleri aynı).
   - [x] Gelişmiş: ayarları dışa ve içe aktarma, tanılama.
-  - [ ] Dil paketleri: önce altyapı, sonra İngilizce paket.
+  - [x] Dil paketleri: çalışma zamanında çeviren altyapı (Shell/Lang), yerleşik İngilizce paket, kullanıcının kendi paketleri; İngilizce artık varsayılan dil.
+    - [x] Yeni diller İngilizceye düşer; paketin kültürü (sayı/tarih biçimi); iki dilli arama; dile göre kılavuz ve haberler; örneklerin adları ve kod yorumları.
+    - [x] Paket, kaynaktaki bütün metinlerden (C# sözcük ayrıştırıcısı) ve çalışan uygulamanın gösterdiklerinden (`--lang-missing`) çıkarılıyor.
+    - [ ] İngilizce kılavuzun arayüz adları hâlâ Türkçe ("Genel → Dil"): İngilizce etiketlerle yazılacak; belge resimleri İngilizce arayüzle yeniden çekilecek.
+  - [ ] İngilizce paketin kapsamı: canlı ölçüm satırları, olay günlüğü ve CoreSim mesajları henüz Türkçe; kalıplar genişletilmeli.
 - [~] **Kinematik ve ters kinematik:** çekirdek var ve hazır kol hücrelerinde kullanılıyor (ileri/ters kinematik, Jacobian, tekillik, profiller).
   - [x] Kullanıcının kendi kurduğu kollar (Robotics/WorldArm.cs): zincir, servo yükü, erişim, fizikle karşılaştırma.
   - [x] Arayüz: hedef nokta (yazarak ya da sahnede), önizleme, servoları sürme, açıları koda kopyalama, erişim ve tekillik uyarısı.
@@ -143,7 +147,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [ ] Gelişmiş motor ve rulman ısı modelleri.
 - [ ] FEM ağ ve CFD ızgara yakınsaması.
 - [ ] Yeni MCU aileleri.
-- [ ] İngilizce arayüz ve dil paketleri. Belgeler İngilizce de var; arayüz şimdilik Türkçe.
+- [x] İngilizce arayüz ve dil paketleri (varsayılan dil İngilizce).
 
 ## C. Büyük sürümden önce
 

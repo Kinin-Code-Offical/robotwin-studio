@@ -127,7 +127,7 @@ namespace RobotWin.Studio.Pages
             sb.Append(double.IsPositiveInfinity(radius) ? "Düz gider." : radius < 0.005 ? "Olduğu yerde döner." : $"Dönüş yarıçapı {radius * 1000:0} mm.");
             if (Math.Abs(want.Vy) > 1e-9 && !v.Holonomic) sb.Append(" Bu araç yana gidemez; yana hız yok sayıldı.");
             if (v.Skids && Math.Abs(ok.W) > 1e-6) sb.Append(" Kızaklı dönüşte tekerlekler yana kayar: gerçek dönüş bundan yavaştır.");
-            _vehicleIk.Text = sb.ToString();
+            _vehicleIk.Text = Shell.Lang.T(sb.ToString());   // [lang]
         }
 
         private void ResetOdometry()
@@ -208,7 +208,7 @@ namespace RobotWin.Studio.Pages
             sb.AppendLine($"Gerçek      {Mm(truth.X)} · {Mm(truth.Y)} mm · {Deg(truth.Heading)}°");
             // The drift as a share of the distance driven, in brackets.
             sb.Append($"Sapma       {drift * 1000:0} mm" + (_odometry.Distance > 0.05 ? $" (%{drift / _odometry.Distance * 100:0.0})" : string.Empty) + $" · {dh:0.0}°");
-            _vehicleLive.Text = sb.ToString();
+            _vehicleLive.Text = Shell.Lang.T(sb.ToString());   // [lang] line by line
         }
 
         /// <summary>A number rounded for display, without a "−0".</summary>

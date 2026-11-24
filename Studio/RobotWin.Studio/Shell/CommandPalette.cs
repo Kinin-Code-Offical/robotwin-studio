@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -139,7 +139,7 @@ namespace RobotWin.Studio.Shell
             }
             else
             {
-                hits = _all.Select(c => (c, s: Math.Max(Score(c.Title, q), Score(c.Group + " " + c.Title, q) - 40)))
+                hits = _all.Select(c => (c, s: Math.Max(Math.Max(Score(c.Title, q), Score(RobotWin.Studio.Shell.Lang.T(c.Title), q)), Math.Max(Score(c.Group + " " + c.Title, q), Score(RobotWin.Studio.Shell.Lang.T(c.Group) + " " + RobotWin.Studio.Shell.Lang.T(c.Title), q)) - 40)))
                     .Where(x => x.s >= 0).OrderByDescending(x => x.s).Take(60).Select(x => x.c);
             }
 

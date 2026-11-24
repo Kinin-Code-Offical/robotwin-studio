@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -186,15 +186,13 @@ namespace RobotWin.Studio.Pages
             stack.Children.Add(list);
             stack.Children.Add(new TextBlock { Text = "↑↓ seç · Enter yerleştir · Esc kapat", Style = Res<Style>("Text.Caption"), Margin = new Thickness(0, 6, 0, 0) });
             var card = Card(360, stack);
-            var culture = CultureInfo.GetCultureInfo("tr-TR");
-
             void Filter()
             {
-                var tokens = box.Text.Trim().ToLower(culture).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var tokens = RobotWin.Studio.Shell.Lang.Fold(box.Text.Trim()).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 var items = W.Library.Presets.Where(p => !power || IsPowerPreset(p, W.Library)).Where(p =>
                 {
                     if (tokens.Length == 0) return true;
-                    string hay = (p.Name + " " + p.Description + " " + p.Category + " " + p.Id).ToLower(culture);
+                    string hay = RobotWin.Studio.Shell.Lang.Searchable(p.Name, p.Description, p.Category, p.Id);
                     return tokens.All(t => hay.Contains(t));
                 }).Take(200).ToList();
                 list.ItemsSource = items.Select(p => new ListBoxItem
@@ -965,7 +963,7 @@ namespace RobotWin.Studio.Pages
                 dc.DrawDrawing(drawing);
                 dc.Pop();
                 dc.Pop();
-                var ft = new FormattedText(W.Schematic.Title + "   ·   " + DateTime.Now.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("tr-TR")) + "   ·   RobotWin Studio",
+                var ft = new FormattedText(W.Schematic.Title + "   ·   " + DateTime.Now.ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) + "   ·   RobotWin Studio",
                     CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9, Brushes.Gray, 1.0);
                 dc.DrawText(ft, new Point(margin, dlg.PrintableAreaHeight - margin + 8));
             }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -860,7 +860,7 @@ namespace RobotWin.Studio.Assembly3D
     {
         public static BitmapSource Render(BoardDocument board)
         {
-            const double ppmm = 12;
+            const double ppmm = 20;
             int w = Math.Max(8, (int)(board.Width * ppmm)), h = Math.Max(8, (int)(board.Height * ppmm));
             var dv = new DrawingVisual();
             using (var g = dv.RenderOpen())

@@ -117,6 +117,13 @@ namespace RobotWin.Studio.Pages
 
             var key = e.Key == Key.System ? e.SystemKey : e.Key;
             var mods = Keyboard.Modifiers;
+            // [keys] a key the user moved a tool to becomes the tool's own key; the tool's old key does nothing
+            if (!Shell.Shortcuts.Translate(Shell.PageShortcuts.Model, ref key, ref mods))
+            {
+                e.Handled = true;
+                return;
+            }
+
             bool ctrl = mods.HasFlag(ModifierKeys.Control), shift = mods.HasFlag(ModifierKeys.Shift), alt = mods.HasFlag(ModifierKeys.Alt);
             bool edit = _ed.Mode == EditorMode.Edit;
             bool handled = true;

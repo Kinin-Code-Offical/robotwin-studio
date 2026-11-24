@@ -2,6 +2,12 @@
 
 Uygulamanın içinde de kısayol listeleri vardır: **Ctrl+K** komut paleti her komutu kısayoluyla gösterir; Devre ve PCB sayfalarında **F1** veya **?** o sayfanın listesini açar; **Ayarlar → Klavye kısayolları** da bir liste içerir.
 
+Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, PCB, Dünya, Kod ve Parça sayfalarının tuşlarını **Ayarlar → Klavye kısayolları**'ndan değiştirebilirsiniz.
+
+- Sayfa tuşları yalnız kendi sayfalarında çalışır; Devre, PCB, Dünya ve Parça'da tek harf olabilir. Kod sayfasında yazarken de çalıştıkları için Ctrl/Alt/Shift ya da F tuşlarıyla olur.
+- Bir aracı başka tuşa taşıdığınızda eski tuşu artık bir şey yapmaz.
+- Şema sayfasının sağ panelindeki kısa liste kendi seçtiğiniz tuşları gösterir.
+
 ## Genel
 
 | Kısayol | İşlev |
