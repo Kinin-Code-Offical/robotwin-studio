@@ -6883,7 +6883,14 @@
   "konveyör sonu fotoseli": "photocell at the end of the conveyor",
   "SCARA: blokları A sırasından B sırasına, sonra geri taşı": "SCARA: move the blocks from row A to row B, then back",
   "60 mm strok, 80 N": "60 mm stroke, 80 N",
-  "Tek fizikle birlikte simüle edilir": "Simulated together with one physics"
+  "Tek fizikle birlikte simüle edilir": "Simulated together with one physics",
+  "3B çizici": "3D renderer",
+  "GPU (RobotWin)": "GPU (RobotWin)",
+  "WPF": "WPF",
+  "GPU: kendi çizicimiz, ekran kartında fiziksel tabanlı malzeme, güneş gölgesi ve 4× kenar yumuşatma. WPF: eski çizim; ekran kartı sorun çıkarırsa.": "GPU: our own renderer, on the graphics card: physically based materials, the sun's shadow and 4× anti-aliasing. WPF: the old drawing, for when the graphics card gives trouble.",
+  "3B sahne okuma": "3D scene read",
+  "GPU çizim": "GPU drawing",
+  "3B GPU çizimi kullanılamıyor, WPF çizimine dönüldü: ": "3D GPU drawing is unavailable, back to WPF drawing: "
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9683,6 +9690,7 @@
   "≈ {…} MPa; kalın katman, {…} °C'den sonra yumuşar, {…} °C'de akar.": "≈ {0} MPa; thick layer, softens above {1} °C, flows at {2} °C.",
   "≈{…} m CEP, {…} Hz'e kadar, {…} baud NMEA": "≈{0} m CEP, up to {1} Hz, {2} baud NMEA",
   "≈{…} mA test akımı, açık devrede {…} V: ileri yönde Vf, ters yönde OL.": "≈{0} mA test current, {1} V open circuit: Vf in the forward direction, OL in reverse.",
-  "▶  İlk robotun: {…}–{…} dakikalık etkileşimli rehber": "▶  Your first robot: a {0}–{1} minute interactive guide"
+  "▶  İlk robotun: {…}–{…} dakikalık etkileşimli rehber": "▶  Your first robot: a {0}–{1} minute interactive guide",
+  "3B GPU çizimi kullanılamıyor, WPF çizimine dönüldü: {…}": "3D GPU drawing is unavailable, back to WPF drawing: {0}"
  }
 }

@@ -808,8 +808,18 @@ namespace RobotWin.Studio.World
 
         // ================================================================ live frame
 
+        private TimeSpan _lastRendering = TimeSpan.MinValue;
+
         private void OnFrame(object? sender, EventArgs e)
         {
+            // WPF may raise Rendering more than once for one frame (a D3DImage that changed asks for another pass):
+            // the scene is built and drawn once per frame shown.
+            if (e is RenderingEventArgs re)
+            {
+                if (re.RenderingTime == _lastRendering) return;
+                _lastRendering = re.RenderingTime;
+            }
+
             var now = DateTime.Now;
             double dt = Math.Min(0.1, (now - _lastFrame).TotalSeconds);
             _lastFrame = now;
@@ -849,6 +859,7 @@ namespace RobotWin.Studio.World
             using (Shell.Perf.Measure("paraşüt")) ChuteFrame();   // [launch] canopies (World/WorldScene.Parachutes.cs)
             using (Shell.Perf.Measure("jetler")) PlumeFrame();   // [gas] exhaust flames and smoke in the 3D scene (World/WorldScene.Plume.cs)
             if (Playback == null) LiquidFrame();   // [liquid] water and other liquids (World/WorldScene.Liquids.cs)
+            GpuFrame();   // [render] our GPU renderer draws what the frame built (World/WorldScene.Gpu.cs)
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();

@@ -106,7 +106,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 | Kategori | Neler var |
 | --- | --- |
 | Genel | Dil, açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi |
-| Görünüm ve tema | Tema galerisi (9 koyu, 7 açık tema ve özel tema), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite |
+| Görünüm ve tema | Tema galerisi (9 koyu, 7 açık tema ve özel tema), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite, 3B çizici (kendi GPU çizicimiz ya da WPF) |
 | Kaydetme ve yedekleme | Otomatik yedek sıklığı, kaydederken önceki sürümü saklama, çökme sonrası kurtarma, yedek klasörü, belge başına kopya sayısı, klasörün boyut sınırı |
 | Klavye kısayolları | Pencerenin ve bütün sayfaların kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |
 | Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, zaman adımı, başlangıç hızı |

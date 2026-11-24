@@ -7,6 +7,7 @@ Hepsi geliştirici makinesinde ve CI'da çalıştırılabilen üç denetim katma
 | Birim testleri | `dotnet test RobotWinStudio.sln` | CoreSim doğru davranır (çözücü, yazılım, PCB, fizik, dünya, biçimler). |
 | Öz test | `RobotWinStudio.exe --selftest` | Her hazır örnek baştan sona derlenir, simüle edilir, yerleşir, yollanır ve DRC'den geçer. |
 | Ekran görüntüsü | `RobotWinStudio.exe --snapshot …` | Bir sayfa olması gerektiği gibi çizilir (görsel denetim, belge ekran görüntüleri). |
+| Çizim testi | `RobotWinStudio.exe --render-test dosya` | Kendi 3B çizicimiz WPF sahnelerini doğru okur ve ekran kartında doğru çizer (piksel piksel geri okunur). |
 
 ## Birim testleri
 
@@ -48,6 +49,15 @@ Get-Content selftest.txt
 2. 90 × 70 mm'lik bir PCB eşler, otomatik yerleştirir, otomatik yollar ve DRC çalıştırır.
 
 Her örnek bir satır yazar (`parts`, `nets`, `warn`, `sim=OK`, `routed=x/y`, `vias`, `drcErrors`, ayrıca aracın kütlesi/mesafesi/irtifası). Bir istisna, tamamlanmamış yollama ya da herhangi bir DRC hatası örneği başarısız sayar. Son satır `SELFTEST PASS` ya da `SELFTEST FAIL (n)`'dir; çıkış kodu başarıda 0, başarısızlıkta 1'dir.
+
+## Çizim testi
+
+```powershell
+builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --render-test render-test.txt
+Get-Content render-test.txt
+```
+
+Önce sahne aynası (`Render/SceneMirror.cs`) denetlenir: katmanlı gövde malzemesi (boş kömürleşme katmanı gövdeyi saydam yapmaz, yarı kömürleşmiş katman örtüsünü taşır), yalnız ışıyan malzeme (seçilen renk, arkasına eklenir), tam saydam seçim hedefi (çizilmez), donmuş geçişli fırça (resme çevrilir) ve değişen geçiş (ortalama renk), iç içe dönüşümler, güneş, lamba ve spot ışığı. Sonra küçük sahneler GPU çizicisiyle (`Render/GpuRenderer.cs`) ekran dışında çizilip piksel piksel geri okunur: güneşle aydınlanan kırmızı kutu ve zemin rengi, eğik güneşin kutu gölgesi (gölgedeki zemin ışıktakinin %60'ından karanlık), siyah üzerine kendi ışığı (tam seçilen renk), beyaz zemin üstünde yarı saydam mavi katman, resmin yönü (solda kırmızı, sağda yeşil). Ekran kartı olmayan makinede (CI) çizim Windows'un yazılım çizicisi WARP'ta yapılır; `RW_RENDER_WARP=1` WARP'ı ekran kartı olan makinede de zorlar. Çıkış kodu başarıda 0'dır.
 
 ## Ekran görüntüsü testi
 

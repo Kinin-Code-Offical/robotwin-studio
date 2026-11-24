@@ -82,6 +82,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>3D quality: "low", "medium", "high".</summary>
         public string Quality3D { get; set; } = "high";
 
+        /// <summary>[render] Who draws the 3D views: "gpu" (our own renderer on Direct3D 11) or "wpf" (WPF's own 3D).</summary>
+        public string Renderer3D { get; set; } = "gpu";
+
         /// <summary>Length unit in editors: "mm" or "mil".</summary>
         public string Units { get; set; } = "mm";
 

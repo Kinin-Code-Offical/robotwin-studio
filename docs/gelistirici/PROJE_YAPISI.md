@@ -32,6 +32,7 @@
 | `Modeling/` | 3B modelleyici görünümü, düzenleyici, kaplamalar, denetimler |
 | `Assembly3D/` | Montaj sayfasının 3B sahnesi ve efektleri (parçacıklar: duman, ateş, kıvılcım, jetler) |
 | `World/` | `WorldSession` (çalışan dünya), `WorldScene` (3B görünüm + düzenleme, ısı kamerası, çarpışma şekilleri), `ObjectModels`, `ModelHulls` (modellerden çarpışma zarfları), radyo modelleri ve kaplaması |
+| `Render/` | Kendi GPU çizicimiz: `SceneMirror` (WPF 3B sahnesini her karede okur: ağlar, dünya dönüşümleri, fiziksel tabanlı malzemeye çevrilen malzemeler, ışıklar), `GpuRenderer` (Direct3D 11: güneşin gölge haritası, GGX gölgelendirme, piksel başına lambalar, 4× çoklu örnekleme, ACES ton eşleme; ağlar ve resimler önbellekte ve havuzda), `Shaders` (HLSL), `GpuViewport` (resmi D3DImage ile gösterir), `RenderSelfTest` (`--render-test`). Vortice yalnız Direct3D bağlantısıdır. |
 | `Models3D/` | Kartların, modüllerin, kılıfların, mekanik parçaların kodla üretilen 3B modelleri; özel model geçersiz kılmaları; galeri |
 | `Examples/` | `ExampleProjects` (devre/robot örnekleri), `WorldTemplates` (dünya şablonları) |
 | `Firmware/` | `ArduinoCompiler` (arduino-cli), çizim şablonları, hazır `.ino` + önceden derlenmiş `.hex` örnekleri |

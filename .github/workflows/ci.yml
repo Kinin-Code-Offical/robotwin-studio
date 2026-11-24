@@ -55,3 +55,11 @@ jobs:
           $p = Start-Process -FilePath $exe.FullName -ArgumentList "--selftest","--selftest-out","selftest.txt" -Wait -PassThru
           Get-Content selftest.txt
           if ($p.ExitCode -ne 0) { exit 1 }
+
+      - name: Render test (scene mirror, GPU renderer drawn and read back; WARP where there is no GPU)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse -Filter RobotWinStudio.exe builds/RobotWin.Studio/Release | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList "--render-test","render-test.txt" -Wait -PassThru
+          Get-Content render-test.txt
+          if ($p.ExitCode -ne 0) { exit 1 }

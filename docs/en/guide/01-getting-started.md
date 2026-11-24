@@ -106,7 +106,7 @@ The **Settings** (Ctrl+,) page is split into categories. Pick one in the list on
 | Category | What it holds |
 | --- | --- |
 | General | Language, home page at startup, the first-robot guide, project folder, recent files, length unit |
-| Appearance and theme | Theme gallery (9 dark, 7 light themes and a custom one), accent colour, interface scale, performance overlay, effects and sound, 3D quality |
+| Appearance and theme | Theme gallery (9 dark, 7 light themes and a custom one), accent colour, interface scale, performance overlay, effects and sound, 3D quality, 3D renderer (our own GPU renderer or WPF) |
 | Saving and backup | Autosave interval, keeping the previous version on save, crash recovery, backup folder, copies kept per document, the folder's size limit |
 | Keyboard shortcuts | Change the window's and every page's shortcuts, clash warnings, reset one or all |
 | Simulation and physics | Part damage, pause on failure, ambient temperature, time step, starting speed |

@@ -30,6 +30,7 @@ Where to look first: the status bar at the bottom of the window, the **Olaylar**
 
 | Symptom | Fix |
 | --- | --- |
+| The world's 3D view is black, flickering or drawn wrongly | Our own GPU renderer may not get on with the graphics driver. Go back to the old drawing with Settings → *3B çizici* → *WPF*; `--render-test file` says whether the renderer draws right on this machine. When Direct3D 11 cannot start at all, the app goes back to WPF by itself. |
 | Status shows "gerçek zamanın %…'i" | The PC cannot keep up with real time. Pick a slower speed, close other heavy pages, lower Settings → *3D kalitesi*, or increase *En büyük zaman adımı*. |
 | A part burned / a fuse blew and nothing works | That is simulated damage. Fix the cause (see **Arıza tespiti** → *Neden?*), then *Hasarlı parçaları onar* (circuit) or *Tümünü onar* (Montaj). To ignore damage, switch off Simulation → *Parça hasarı*. |
 | A board in the world does nothing; log says "Yüklü yazılım yok (kart boşta)" | The board has no program. Open it with *Kartın kodunu yaz*, build and run. Also check it is powered (battery cable or a PC + USB cable plugged in). |

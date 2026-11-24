@@ -31,6 +31,7 @@
 | Belirti | Çözüm |
 | --- | --- |
 | Durum "gerçek zamanın %…'i" gösteriyor | Bilgisayar gerçek zamana yetişemiyor. Daha yavaş bir hız seçin, ağır sayfaları kapatın, Ayarlar → *3D kalitesi*'ni düşürün ya da *En büyük zaman adımı*'nı artırın. |
+| Dünyanın 3B görünümü siyah, titrek ya da bozuk | Kendi GPU çizicimiz ekran kartının sürücüsüyle anlaşamıyor olabilir. Ayarlar → *3B çizici* → *WPF* ile eski çizime dönün; `--render-test dosya` çizicinin bu makinede doğru çizip çizmediğini yazar. Direct3D 11 hiç açılamazsa uygulama kendiliğinden WPF'ye döner. |
 | Bir parça yandı / sigorta attı ve hiçbir şey çalışmıyor | Bu simüle edilmiş hasardır. Nedenini düzeltin (bkz. **Arıza tespiti** → *Neden?*), sonra *Hasarlı parçaları onar* (devre) ya da *Tümünü onar* (Montaj). Hasarı yok saymak için Simülasyon → *Parça hasarı*'nı kapatın. |
 | Dünyadaki bir kart hiçbir şey yapmıyor; günlükte "Yüklü yazılım yok (kart boşta)" | Kartın programı yok. *Kartın kodunu yaz* ile açın, derleyin ve çalıştırın. Beslendiğini de denetleyin (pil kablosu ya da takılı bir PC + USB kablosu). |
 | İki kart birbirinin sinyalini görmüyor | Kartlar bir kablo bağlayana kadar elektriksel olarak ayrıdır; aralarına GND'yi de bağlayın. |

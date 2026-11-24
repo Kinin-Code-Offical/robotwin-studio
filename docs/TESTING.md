@@ -7,6 +7,7 @@ Three layers of checks, all runnable on a developer machine and in CI:
 | Unit tests | `dotnet test RobotWinStudio.sln` | CoreSim behaves correctly (solver, firmware, PCB, physics, world, formats). |
 | Self-test | `RobotWinStudio.exe --selftest` | Every bundled example builds, simulates, places, routes and passes DRC end to end. |
 | Snapshot rendering | `RobotWinStudio.exe --snapshot …` | A page renders the way it should (visual check, documentation screenshots). |
+| Render test | `RobotWinStudio.exe --render-test file` | Our own 3D renderer reads WPF scenes right and draws them right on the GPU (read back pixel by pixel). |
 
 ## Unit tests
 
@@ -33,6 +34,15 @@ The xUnit project is `CoreSim/tests/RobotTwin.CoreSim.Tests`. It needs no UI and
 The Studio's own tests are in `Studio/RobotWin.Studio.Tests` (WPF-free parts linked in). `SolverCostsTests` checks the performance overlay's solver table (costs per simulated second, shares, the run's speed) and that every solver name has its English. `LangTests` checks the language packs: exact texts, patterns, joined texts, column-aligned readouts, sketch lines, two-language search, and that every Turkish label in the Studio's XAML has its English (`EveryXamlLabelHasItsEnglish`), so a label added without one fails the build's tests.
 
 ESP32 tests compile real sketches with MSVC. On a machine without the Visual Studio C++ tools (`vcvars64.bat` not found) they are reported as **skipped**, not failed.
+
+## Render test
+
+```powershell
+builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --render-test render-test.txt
+Get-Content render-test.txt
+```
+
+First the scene mirror (`Render/SceneMirror.cs`) is checked: a layered body material (an empty charring layer does not make the body clear; a half-charred one carries its cover), a material that only glows (its chosen colour, added to what is behind), a fully clear pick target (not drawn), a frozen gradient brush (turned into a picture) and a changing one (its average colour), nested transforms, the sun, a lamp and a spot. Then small scenes are drawn offscreen by the GPU renderer (`Render/GpuRenderer.cs`) and read back pixel by pixel: a red box lit by the sun and the ground colour, a box's shadow under a slanting sun (the floor in shadow darker than 60% of the lit floor), light of its own over black (exactly the chosen colour), a half see-through blue layer over a white floor, a picture's orientation (red on the left, green on the right). On a machine without a GPU (CI) the drawing runs on WARP, Windows' software rasterizer; `RW_RENDER_WARP=1` forces WARP on a machine that has one. The exit code is 0 on success.
 
 ## Self-test
 

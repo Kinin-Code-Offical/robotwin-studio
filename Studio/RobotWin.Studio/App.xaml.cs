@@ -82,6 +82,12 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Arg("--render-test") is { } renderTestPath)
+            {
+                Shutdown(Render.RenderSelfTest.Run(renderTestPath));   // [render] the scene mirror and the GPU renderer, drawn and read back
+                return;
+            }
+
             if (args.Contains("--selftest"))
             {
                 int code = SelfTest(Arg("--selftest-out"));
@@ -115,6 +121,8 @@ namespace RobotWin.Studio
                 };
             }
 
+            // [render] --renderer gpu|wpf — this run only (nothing is saved): who draws the 3D views.
+            if (Arg("--renderer") is { } rendererArg) Shell.AppSettings.Current.Renderer3D = rendererArg;
             RobotTwin.CoreSim.Localization.Translate = Shell.Lang.T;   // [lang] what the simulator writes into files (BOM …)
             Shell.Lang.Install();
             Shell.StartupSplash.Open();   // [startup] the first window, on its own thread
