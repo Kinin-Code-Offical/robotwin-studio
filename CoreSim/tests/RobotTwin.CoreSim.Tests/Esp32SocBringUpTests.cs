@@ -29,13 +29,18 @@ namespace RobotTwin.CoreSim.Tests
             long cycles = long.TryParse(Environment.GetEnvironmentVariable("RW_ESP32_CYCLES"), out var c) ? c : 50_000_000;
             var soc = new Esp32Soc();
             soc.Load(File.ReadAllBytes(elf));
+            // The board's whole flash (bootloader, partition table, application) when the build's merged image is beside the ELF.
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
             soc.Run(cycles);
             var report = new StringBuilder();
             report.AppendLine($"durdu: {soc.Stopped ?? (soc.Pro.AtBreak ? "BREAK" : "hayır")}");
-            report.AppendLine($"PRO pc 0x{soc.Pro.Pc:X8} · döngü {soc.Pro.Cycles} · bekliyor {soc.Pro.Waiting} · son istisna {soc.Pro.LastException} · tanınmayan komut {soc.Pro.IllegalInstructions}");
+            report.AppendLine($"PRO pc 0x{soc.Pro.Pc:X8} · döngü {soc.Pro.Cycles} · bekliyor {soc.Pro.Waiting} · son istisna {soc.Pro.LastException} · tanınmayan komut {soc.Pro.IllegalInstructions} (son 0x{soc.Pro.LastIllegalPc:X8})");
             report.AppendLine($"APP çalışıyor {soc.AppRunning} · pc 0x{soc.App.Pc:X8}");
             report.AppendLine("---- UART0 ----");
             report.AppendLine(soc.Uart0.ToString());
+            report.AppendLine("---- son sıçramalar (eskiden yeniye) ----");
+            foreach (var (from, to) in soc.Pro.RecentJumps()) report.AppendLine($"0x{from:X8} -> 0x{to:X8}");
             report.AppendLine("---- modellenmemiş yazmaçlar (en çok okunan önce) ----");
             foreach (var pair in soc.Unmodelled.OrderByDescending(p => p.Value.Reads).ThenByDescending(p => p.Value.Writes).Take(40))
                 report.AppendLine($"0x{pair.Key:X8}  okuma {pair.Value.Reads,8}  yazma {pair.Value.Writes,6}  son 0x{pair.Value.Last:X8}");

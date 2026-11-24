@@ -73,6 +73,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Rom("__lshrdi3", c => ReturnLong(c, (long)((ulong)Long(c, 0) >> (int)(c.Argument(2) & 63))));
             Rom("__ashrdi3", c => ReturnLong(c, Long(c, 0) >> (int)(c.Argument(2) & 63)));
 
+            // checksums, as the ROM computes them (the value passed in and returned is the complemented one)
+            Rom("crc32_le", c => Return(c, Crc(c, 0xEDB88320u, 32)));
+            Rom("crc16_le", c => Return(c, Crc(c, 0x8408u, 16)));
+            Rom("crc8_le", c => Return(c, Crc(c, 0x8Cu, 8)));
+
             // string functions
             Rom("memcpy", c => Copy(c, c.Argument(0), c.Argument(1), c.Argument(2)));
             Rom("memmove", c => Copy(c, c.Argument(0), c.Argument(1), c.Argument(2)));
@@ -155,6 +160,20 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 if (n.StartsWith("Cache_", StringComparison.Ordinal) || n.StartsWith("cache_", StringComparison.Ordinal) || n.StartsWith("mmu_", StringComparison.Ordinal))
                     _romFunctions[pair.Key] = c => Return(c, 0);
             }
+        }
+
+        /// <summary>A reflected CRC of (crc, buffer, length), complemented before and after as esp_rom_crc*_le.</summary>
+        private uint Crc(XtensaCore c, uint poly, int bits)
+        {
+            uint mask = bits == 32 ? 0xFFFFFFFFu : (1u << bits) - 1;
+            uint crc = ~c.Argument(0) & mask, buffer = c.Argument(1), length = c.Argument(2);
+            for (uint i = 0; i < length; i++)
+            {
+                crc ^= Read8(buffer + i);
+                for (int b = 0; b < 8; b++) crc = (crc & 1) != 0 ? (crc >> 1) ^ poly : crc >> 1;
+            }
+
+            return ~crc & mask;
         }
 
         private bool Copy(XtensaCore c, uint destination, uint source, uint count)

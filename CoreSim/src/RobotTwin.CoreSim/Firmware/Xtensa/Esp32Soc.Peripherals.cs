@@ -39,6 +39,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>Peripheral reads the chip models; false leaves the register file's value (and notes the register).</summary>
         private bool ReadPeripheral(uint register, out uint value)
         {
+            if (ReadFlashRegister(register, out value)) return true;
             switch (register)
             {
                 case Uart0Fifo:
@@ -61,6 +62,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>Peripheral writes the chip models; false when nothing does yet (the register is noted).</summary>
         private bool WritePeripheral(uint register, uint value)
         {
+            if (WriteFlashRegister(register, value)) return true;
             switch (register)
             {
                 case Uart0Fifo:

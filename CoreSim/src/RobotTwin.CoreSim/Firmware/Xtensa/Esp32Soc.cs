@@ -107,13 +107,15 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         {
             if (a >= DramBase && a < DramBase + DramSize) return (_dram, a - DramBase);
             if (a >= IramBase && a < IramBase + IramSize) return (_iram, a - IramBase);
-            if (a >= 0x400C2000 && a < IromEnd) return (_irom, a - 0x400C0000);
-            if (a >= DromBase && a < DromEnd) return (_drom, a - DromBase);
+            if (a >= 0x400C2000 && a < IromEnd) return _flash != null ? ThroughCache(a) : (_irom, a - 0x400C0000);
+            if (a >= DromBase && a < DromEnd) return _flash != null ? ThroughCache(a) : (_drom, a - DromBase);
             if (a >= RtcFastBase && a < RtcFastBase + RtcFastSize) return (_rtcFast, a - RtcFastBase);
             if (a >= RtcFastIBase && a < RtcFastIBase + RtcFastSize) return (_rtcFast, a - RtcFastIBase);
             if (a >= RtcSlowBase && a < RtcSlowBase + RtcSlowSize) return (_rtcSlow, a - RtcSlowBase);
             return (null, 0);
         }
+
+        private bool IsCachedFlash(uint a) => _flash != null && ((a >= 0x400C2000 && a < IromEnd) || (a >= DromBase && a < DromEnd));
 
         private static bool IsPeripheral(uint a, out uint register)
         {
@@ -157,6 +159,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public void Write8(uint a, byte value)
         {
+            if (IsCachedFlash(a)) return;   // the flash is read-only through the cache
             var (m, o) = Resolve(a);
             if (m != null)
             {
@@ -169,6 +172,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public void Write16(uint a, ushort value)
         {
+            if (IsCachedFlash(a)) return;
             var (m, o) = Resolve(a);
             if (m != null)
             {
@@ -182,6 +186,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public void Write32(uint a, uint value)
         {
+            if (IsCachedFlash(a)) return;
             var (m, o) = Resolve(a);
             if (m != null)
             {

@@ -327,8 +327,30 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 _nextPc = Lbeg;
             }
 
+            if (_branched || _excepted)
+            {
+                // The last jumps (from, to), for bring-up reports: where control went before something went wrong.
+                _jumps[_jumpIndex++ & (_jumps.Length - 1)] = (pc, _nextPc);
+            }
+
             Pc = _nextPc;
             return cycles;
+        }
+
+        private readonly (uint From, uint To)[] _jumps = new (uint, uint)[64];
+        private int _jumpIndex;
+
+        /// <summary>The last 64 jumps, calls, returns and exceptions (from, to), oldest first.</summary>
+        public (uint From, uint To)[] RecentJumps()
+        {
+            var list = new System.Collections.Generic.List<(uint, uint)>();
+            for (int i = 0; i < _jumps.Length; i++)
+            {
+                var j = _jumps[(_jumpIndex + i) & (_jumps.Length - 1)];
+                if (j.From != 0 || j.To != 0) list.Add(j);
+            }
+
+            return list.ToArray();
         }
 
         private void Branch(uint target)
@@ -337,9 +359,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             _branched = true;
         }
 
+        /// <summary>Where the last instruction the core does not know was (for bring-up reports).</summary>
+        public uint LastIllegalPc { get; private set; }
+
         private void Illegal()
         {
             IllegalInstructions++;
+            LastIllegalPc = Pc;
             Exception(XtensaCause.IllegalInstruction);
         }
     }
