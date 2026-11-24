@@ -26,7 +26,7 @@ namespace RobotWin.Studio.Render
         [StructLayout(LayoutKind.Sequential)]
         private struct FrameData
         {
-            public Matrix4x4 ViewProj, LightViewProj;
+            public Matrix4x4 ViewProj, Light0, Light1, Light2;
             public Vector3 CameraPos; public float Exposure;
             public Vector3 SunDir; public float ShadowTexel;
             public Vector3 SunColor; public float ShadowsOn;
@@ -34,6 +34,7 @@ namespace RobotWin.Studio.Render
             public Vector3 GroundColor; public float FillCount;
             public Vector4 FillDir0, FillDir1, FillDir2;
             public Vector4 FillColor0, FillColor1, FillColor2;
+            public Vector4 Cascades, CascadeBias, CameraDir;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -80,6 +81,7 @@ namespace RobotWin.Studio.Render
         private GpuMesh?[] _drawMesh = Array.Empty<GpuMesh?>();
         private Pass[] _drawPass = Array.Empty<Pass>();
         private float[] _drawDepth = Array.Empty<float>();
+        private Vector4[] _drawSphere = Array.Empty<Vector4>();
         private readonly List<int> _transparentOrder = new List<int>();
 
         /// <summary>Which pass draws a thing.</summary>
@@ -93,8 +95,13 @@ namespace RobotWin.Studio.Render
         private readonly ID3D11SamplerState _wrap, _clamp, _shadowCmp;
         private readonly ID3D11ShaderResourceView _white;
         private readonly ID3D11Texture2D _shadowTex;
-        private readonly ID3D11DepthStencilView _shadowDsv;
+        private readonly ID3D11DepthStencilView[] _shadowDsv = new ID3D11DepthStencilView[MaxCascades];
         private readonly ID3D11ShaderResourceView _shadowSrv;
+        private readonly ID3D11Buffer _cascadeCb;
+        private readonly uint[] _cascadeIndex = new uint[4];
+        private readonly Matrix4x4[] _cascadeLight = new Matrix4x4[MaxCascades];
+        private readonly float[] _cascadeRadius = new float[MaxCascades];
+        private const int MaxCascades = 3;
         private readonly ID3D11Query _done;
         private readonly uint _samples;
 
@@ -230,9 +237,16 @@ namespace RobotWin.Studio.Render
             _white = _device.CreateShaderResourceView(white);
             white.Dispose();
 
-            _shadowTex = _device.CreateTexture2D(new Texture2DDescription(Format.R32_Typeless, ShadowSize, ShadowSize, 1, 1, BindFlags.DepthStencil | BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None, 1, 0, ResourceOptionFlags.None));
-            _shadowDsv = _device.CreateDepthStencilView(_shadowTex, new DepthStencilViewDescription(DepthStencilViewDimension.Texture2D, Format.D32_Float, 0, 0, 1, DepthStencilViewFlags.None));
-            _shadowSrv = _device.CreateShaderResourceView(_shadowTex, new ShaderResourceViewDescription { Format = Format.R32_Float, ViewDimension = ShaderResourceViewDimension.Texture2D, Texture2D = new Texture2DShaderResourceView { MipLevels = 1 } });
+            _shadowTex = _device.CreateTexture2D(new Texture2DDescription(Format.R32_Typeless, ShadowSize, ShadowSize, MaxCascades, 1, BindFlags.DepthStencil | BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None, 1, 0, ResourceOptionFlags.None));
+            for (int k = 0; k < MaxCascades; k++)
+                _shadowDsv[k] = _device.CreateDepthStencilView(_shadowTex, new DepthStencilViewDescription(DepthStencilViewDimension.Texture2DArray, Format.D32_Float, 0, (uint)k, 1, DepthStencilViewFlags.None));
+            _shadowSrv = _device.CreateShaderResourceView(_shadowTex, new ShaderResourceViewDescription
+            {
+                Format = Format.R32_Float,
+                ViewDimension = ShaderResourceViewDimension.Texture2DArray,
+                Texture2DArray = new Texture2DArrayShaderResourceView { MipLevels = 1, FirstArraySlice = 0, ArraySize = MaxCascades },
+            });
+            _cascadeCb = _device.CreateBuffer(16, BindFlags.ConstantBuffer, ResourceUsage.Default, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
             _done = _device.CreateQuery(QueryType.Event, QueryFlags.None);
 
             _samples = 4;
@@ -411,11 +425,11 @@ namespace RobotWin.Studio.Render
                 else { frame.FillDir2 = d; frame.FillColor2 = c; }
             }
 
-            // ---- the sun's shadow: an orthographic view over what the camera looks at
+            // ---- the sun's shadow: up to three cascades along the view, each an orthographic map over its slice
             var items = scene.Items;
-            var bounds = Bounds(items, camera);
-            frame.LightViewProj = LightMatrix(sun.Direction, bounds.Center, bounds.Radius);
-            frame.ShadowsOn = bounds.Radius > 0 ? 1 : 0;
+            float shadowFov = camera.Orthographic ? 0 : 2 * MathF.Atan(MathF.Tan(camera.HorizontalFov / 2) / aspect);
+            int cascades = FitCascades(items, camera, aspect, shadowFov, sun.Direction, ref frame);
+            frame.ShadowsOn = cascades > 0 ? 1 : 0;
             _ctx.UpdateSubresource(ref frame, _frameCb);
 
             // ---- lamps: the nearest (to what the camera looks at) and brightest first
@@ -451,19 +465,25 @@ namespace RobotWin.Studio.Render
             _ctx.PSSetShaderResource(3, _objectsView!);
             ResetFilter();
 
-            if (frame.ShadowsOn > 0)
+            if (cascades > 0)
             {
                 _ctx.PSSetShaderResource(1, null!);
-                _ctx.OMSetRenderTargets((ID3D11RenderTargetView)null!, _shadowDsv);
-                _ctx.ClearDepthStencilView(_shadowDsv, DepthStencilClearFlags.Depth, 1, 0);
                 _ctx.RSSetViewport(0, 0, ShadowSize, ShadowSize, 0, 1);
                 _ctx.RSSetState(_shadowRaster);
                 _ctx.OMSetDepthStencilState(_depthWrite, 0);
                 _ctx.VSSetShader(_vsDepth);
                 _ctx.PSSetShader(null);
-                for (int i = 0; i < count; i++)
-                    if (_drawPass[i] == Pass.Opaque && !items[i].Back)
-                        Draw(i);
+                _ctx.VSSetConstantBuffer(3, _cascadeCb);
+                for (int k = 0; k < cascades; k++)
+                {
+                    _ctx.OMSetRenderTargets((ID3D11RenderTargetView)null!, _shadowDsv[k]);
+                    _ctx.ClearDepthStencilView(_shadowDsv[k], DepthStencilClearFlags.Depth, 1, 0);
+                    _cascadeIndex[0] = (uint)k;
+                    _ctx.UpdateSubresource(_cascadeIndex, _cascadeCb);
+                    for (int i = 0; i < count; i++)
+                        if (_drawPass[i] == Pass.Opaque && !items[i].Back && InCascade(i, k))
+                            Draw(i);
+                }
             }
 
             // ---- the scene (reversed depth: near is 1, far 0, so a float depth buffer keeps its precision far away)
@@ -529,6 +549,9 @@ namespace RobotWin.Studio.Render
                 }
 
                 _objectData[i] = Object(it, gm);
+                var w = it.World;
+                float scale = MathF.Sqrt(MathF.Max(new Vector3(w.M11, w.M12, w.M13).LengthSquared(), MathF.Max(new Vector3(w.M21, w.M22, w.M23).LengthSquared(), new Vector3(w.M31, w.M32, w.M33).LengthSquared())));
+                _drawSphere[i] = new Vector4(Vector3.Transform((gm.Min + gm.Max) / 2, w), (gm.Max - gm.Min).Length() / 2 * scale);
                 if (it.Material.Unlit)
                 {
                     _drawPass[i] = Pass.Glow;
@@ -572,6 +595,7 @@ namespace RobotWin.Studio.Render
             Array.Resize(ref _drawMesh, cap);
             Array.Resize(ref _drawPass, cap);
             Array.Resize(ref _drawDepth, cap);
+            Array.Resize(ref _drawSphere, cap);
             _objectCapacity = cap;
         }
 
@@ -717,10 +741,16 @@ namespace RobotWin.Studio.Render
         /// <summary>The middle and reach of what the shadow must cover: the scene, but no farther than a few views' depth around the look point.</summary>
         private readonly List<float> _depths = new List<float>();
 
-        private (Vector3 Center, float Radius) Bounds(List<DrawItem> items, Camera camera)
+        /// <summary>
+        /// The scene's box (what casts and takes shadows: opaque, lit) and how far ahead the camera's subject stands: the
+        /// view's orbit distance when it gives one, a look direction drawn to the target, else where most things in
+        /// sight stand (not the middle of a kilometre of terrain). False for an empty scene.
+        /// </summary>
+        private bool SceneBox(List<DrawItem> items, Camera camera, out Vector3 min, out Vector3 max, out float focus)
         {
-            var min = new Vector3(float.MaxValue);
-            var max = new Vector3(float.MinValue);
+            min = new Vector3(float.MaxValue);
+            max = new Vector3(float.MinValue);
+            focus = 0;
             var dir = Vector3.Normalize(camera.Look);
             float cone = camera.Orthographic ? -1 : MathF.Cos(MathF.Min(1.4f, camera.HorizontalFov * 0.75f));
             _depths.Clear();
@@ -734,61 +764,159 @@ namespace RobotWin.Studio.Render
                     max = Vector3.Max(max, p);
                 }
 
-                // How far along the view each thing in sight stands.
                 var v = Vector3.Transform((gm.Min + gm.Max) / 2, it.World) - camera.Position;
                 float d = Vector3.Dot(v, dir), len = v.Length();
                 if (d > camera.Near && (camera.Orthographic || d >= cone * len)) _depths.Add(d);
             }
 
-            if (min.X > max.X) return (Vector3.Zero, 0);
-            // What the camera looks at: along its view, as far as most things in sight stand (not the middle of a
-            // kilometre of terrain). The shadow covers the scene within a few such distances of it, whatever the units:
-            // metres in the world, millimetres in the modeller.
-            float along;
+            if (min.X > max.X) return false;
             float lookLength = camera.Look.Length();
             if (camera.Focus > 0)
             {
-                along = camera.Focus;
+                focus = camera.Focus;
             }
             else if (MathF.Abs(lookLength - 1) > 0.01f)
             {
-                along = lookLength;   // a look direction drawn to the target (the world's orbit camera)
+                focus = lookLength;   // a look direction drawn to the target (the world's orbit camera)
             }
             else if (_depths.Count > 0)
             {
                 _depths.Sort();
-                along = _depths[(int)(_depths.Count * 0.4)];
+                focus = _depths[(int)(_depths.Count * 0.4)];
             }
             else
             {
-                along = Vector3.Dot((min + max) / 2 - camera.Position, dir);
+                focus = Vector3.Dot((min + max) / 2 - camera.Position, dir);
             }
 
-            along = Math.Max(along, (max - min).Length() * 0.002f);
-            var target = camera.Position + dir * along;
-            float reach = Math.Max(along * 2.2f, camera.Orthographic ? camera.Width : 0);
-            // The part of the scene within reach of the look point.
-            var lo = Vector3.Max(min, target - new Vector3(reach));
-            var hi = Vector3.Min(max, target + new Vector3(reach));
-            if (lo.X > hi.X || lo.Y > hi.Y || lo.Z > hi.Z)
-            {
-                lo = min;
-                hi = max;
-            }
-
-            return ((lo + hi) / 2, Math.Max(1e-4f, (hi - lo).Length() / 2));
+            focus = Math.Max(focus, (max - min).Length() * 0.002f);
+            return true;
         }
 
-        private static Matrix4x4 LightMatrix(Vector3 dir, Vector3 center, float radius)
+        /// <summary>
+        /// Fits the sun's shadow cascades: the view split at 1.6, 5 and 20 times the subject's distance (fewer when the
+        /// scene ends sooner), each slice of the view enclosed in a sphere, shrunk to the scene when that is smaller (a
+        /// small table gets the map's whole resolution), and seen by the sun from far enough back to catch whatever in
+        /// the scene can cast into it. An orthographic view has one cascade over the scene. Returns how many.
+        /// </summary>
+        private int FitCascades(List<DrawItem> items, Camera camera, float aspect, float vfov, Vector3 sunDir, ref FrameData frame)
+        {
+            if (!SceneBox(items, camera, out var min, out var max, out float focus)) return 0;
+            var dir = Vector3.Normalize(camera.Look);
+            float sceneNear = float.MaxValue, sceneFar = float.MinValue;
+            for (int i = 0; i < 8; i++)
+            {
+                var c = new Vector3((i & 1) == 0 ? min.X : max.X, (i & 2) == 0 ? min.Y : max.Y, (i & 4) == 0 ? min.Z : max.Z);
+                float d = Vector3.Dot(c - camera.Position, dir);
+                sceneNear = Math.Min(sceneNear, d);
+                sceneFar = Math.Max(sceneFar, d);
+            }
+
+            if (!camera.Orthographic && sceneFar <= camera.Near) return 0;   // all of it behind the camera
+            Span<float> ends = stackalloc float[MaxCascades];
+            int n;
+            if (camera.Orthographic)
+            {
+                n = 1;
+                ends[0] = 1e30f;
+            }
+            else
+            {
+                n = 0;
+                float[] want = { focus * 1.6f, focus * 5f, focus * 20f };
+                for (int k = 0; k < MaxCascades; k++)
+                {
+                    ends[k] = want[k];
+                    n++;
+                    if (want[k] >= sceneFar)
+                    {
+                        ends[k] = 1e30f;   // the scene ends inside this cascade: no fading out at its end
+                        break;
+                    }
+                }
+            }
+
+            var right = Vector3.Cross(dir, camera.Up);
+            right = right.LengthSquared() > 1e-12f ? Vector3.Normalize(right) : Vector3.Normalize(Vector3.Cross(dir, MathF.Abs(dir.Z) < 0.9f ? Vector3.UnitZ : Vector3.UnitX));
+            var up = Vector3.Cross(right, dir);
+            float th = camera.Orthographic ? camera.Width / aspect / 2 : MathF.Tan(vfov / 2);
+            float tw = camera.Orthographic ? camera.Width / 2 : th * aspect;
+            float a = camera.Orthographic ? Math.Max(sceneNear, camera.Near) : Math.Max(camera.Near, 1e-5f);
+            Span<Vector3> corners = stackalloc Vector3[8];
+            for (int k = 0; k < n; k++)
+            {
+                float b = Math.Max(Math.Min(ends[k], sceneFar * 1.001f), a + 1e-4f);
+                var center = Vector3.Zero;
+                for (int i = 0; i < 8; i++)
+                {
+                    float d = (i & 4) == 0 ? a : b;
+                    float hh = camera.Orthographic ? th : d * th, hw = camera.Orthographic ? tw : d * tw;
+                    corners[i] = camera.Position + dir * d + right * ((i & 1) == 0 ? -hw : hw) + up * ((i & 2) == 0 ? -hh : hh);
+                    center += corners[i];
+                }
+
+                center /= 8;
+                float radius = 0;
+                for (int i = 0; i < 8; i++) radius = Math.Max(radius, (corners[i] - center).Length());
+                // No bigger than the scene within it.
+                var lo = Vector3.Max(min, center - new Vector3(radius));
+                var hi = Vector3.Min(max, center + new Vector3(radius));
+                if (lo.X <= hi.X && lo.Y <= hi.Y && lo.Z <= hi.Z && (hi - lo).Length() / 2 < radius)
+                {
+                    center = (lo + hi) / 2;
+                    radius = (hi - lo).Length() / 2;
+                }
+
+                radius = Math.Max(radius, 1e-4f);
+                // The sun stands back as far as the scene reaches toward it, so a tall thing outside the slice still casts in.
+                float back = radius;
+                for (int i = 0; i < 8; i++)
+                {
+                    var c = new Vector3((i & 1) == 0 ? min.X : max.X, (i & 2) == 0 ? min.Y : max.Y, (i & 4) == 0 ? min.Z : max.Z);
+                    back = Math.Max(back, Vector3.Dot(c - center, -sunDir));
+                }
+
+                back *= 1.01f;
+                var light = LightMatrix(sunDir, center, radius, back);
+                _cascadeLight[k] = light;
+                _cascadeRadius[k] = radius;
+                if (k == 0) frame.Light0 = light;
+                else if (k == 1) frame.Light1 = light;
+                else frame.Light2 = light;
+                // A shadow texel in the map's depth units (its depth spans back + radius).
+                float bias = 2 * (2 * radius / ShadowSize) / (back + radius);
+                if (k == 0) frame.CascadeBias.X = bias;
+                else if (k == 1) frame.CascadeBias.Y = bias;
+                else frame.CascadeBias.Z = bias;
+                // The next slice starts where this one begins to fade into it.
+                a = a + (b - a) * 0.85f;
+            }
+
+            frame.Cascades = new Vector4(ends[0], n > 1 ? ends[1] : ends[0], n > 2 ? ends[2] : (n > 1 ? ends[1] : ends[0]), n);
+            frame.CameraDir = new Vector4(dir, 0);
+            return n;
+        }
+
+        /// <summary>Whether a thing can cast into cascade <paramref name="k"/>: its sphere overlaps the map's square.</summary>
+        private bool InCascade(int index, int k)
+        {
+            var s = _drawSphere[index];
+            var p = Vector4.Transform(new Vector4(s.X, s.Y, s.Z, 1), _cascadeLight[k]);
+            float reach = 1 + s.W / _cascadeRadius[k];
+            return MathF.Abs(p.X) <= reach && MathF.Abs(p.Y) <= reach;
+        }
+
+        /// <summary>The sun's view of a sphere: from <paramref name="back"/> up-sun, an orthographic square around it.</summary>
+        private static Matrix4x4 LightMatrix(Vector3 dir, Vector3 center, float radius, float back)
         {
             var up = MathF.Abs(dir.Z) > 0.9f ? Vector3.UnitY : Vector3.UnitZ;
-            var eye = center - dir * radius * 2;
+            var eye = center - dir * back;
             var view = Matrix4x4.CreateLookAt(eye, center, up);
             // Snap the centre to whole shadow texels, so the shadow does not shimmer as the camera moves.
             var c = Vector3.Transform(center, view);
             float texel = 2 * radius / ShadowSize;
             var snap = Matrix4x4.CreateTranslation(-(c.X - MathF.Floor(c.X / texel) * texel), -(c.Y - MathF.Floor(c.Y / texel) * texel), 0);
-            var ortho = Matrix4x4.CreateOrthographic(2 * radius, 2 * radius, 0.001f, radius * 4);
+            var ortho = Matrix4x4.CreateOrthographic(2 * radius, 2 * radius, 0, back + radius);
             return view * snap * ortho;
         }
 
@@ -1081,8 +1209,9 @@ namespace RobotWin.Studio.Render
             foreach (var (buffer, _) in _freeIndices) buffer.Dispose();
             _done.Dispose();
             _shadowSrv.Dispose();
-            _shadowDsv.Dispose();
+            foreach (var dsv in _shadowDsv) dsv.Dispose();
             _shadowTex.Dispose();
+            _cascadeCb.Dispose();
             _white.Dispose();
             _shadowCmp.Dispose();
             _clamp.Dispose();

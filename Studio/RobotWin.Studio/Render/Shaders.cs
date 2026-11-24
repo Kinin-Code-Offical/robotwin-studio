@@ -12,7 +12,7 @@ namespace RobotWin.Studio.Render
 cbuffer Frame : register(b0)
 {
     row_major float4x4 ViewProj;
-    row_major float4x4 LightViewProj;
+    row_major float4x4 LightViewProj[3];   // the sun's shadow, one map per cascade along the view
     float3 CameraPos;   float Exposure;
     float3 SunDir;      float ShadowTexel;      // SunDir: the way the light travels
     float3 SunColor;    float ShadowsOn;
@@ -20,6 +20,15 @@ cbuffer Frame : register(b0)
     float3 GroundColor; float FillCount;
     float4 FillDir[3];
     float4 FillColor[3];
+    float4 Cascades;      // xyz: where each cascade ends along the view; w: how many
+    float4 CascadeBias;   // xyz: a shadow texel in each map's depth units
+    float4 CameraDir;     // xyz: the way the camera looks
+};
+
+cbuffer CascadePass : register(b3)
+{
+    uint CascadeIndex;   // the map the shadow pass draws now
+    uint3 CascadePad;
 };
 
 // Every object of the frame in one buffer, written once a frame; a draw names its object through the instance number.
@@ -48,14 +57,14 @@ cbuffer Lamps : register(b2)
 };
 
 Texture2D    Albedo    : register(t0);
-Texture2D    ShadowMap : register(t1);
+Texture2DArray ShadowMap : register(t1);
 Texture2D    GlowMap   : register(t2);
 SamplerState Linear    : register(s0);
 SamplerState GlowSampler : register(s2);
 SamplerComparisonState ShadowCmp : register(s1);
 
 struct VSIn  { float3 Pos : POSITION; float3 Nrm : NORMAL; float2 Uv : TEXCOORD0; uint Object : OBJECT; };
-struct PSIn  { float4 Pos : SV_POSITION; float3 WorldPos : TEXCOORD0; float3 Nrm : TEXCOORD1; float2 Uv : TEXCOORD2; float4 LightPos : TEXCOORD3; float2 GlowUv : TEXCOORD4; nointerpolation uint Object : OBJECT; };
+struct PSIn  { float4 Pos : SV_POSITION; float3 WorldPos : TEXCOORD0; float3 Nrm : TEXCOORD1; float2 Uv : TEXCOORD2; float2 GlowUv : TEXCOORD4; nointerpolation uint Object : OBJECT; };
 
 PSIn VS(VSIn v)
 {
@@ -67,14 +76,13 @@ PSIn VS(VSIn v)
     o.Nrm = mul(float4(v.Nrm, 0), ob.NormalMatrix).xyz;
     o.Uv = v.Uv * ob.UvTransform.xy + ob.UvTransform.zw;
     o.GlowUv = v.Uv * ob.GlowUv.xy + ob.GlowUv.zw;
-    o.LightPos = mul(wp, LightViewProj);
     o.Object = v.Object;
     return o;
 }
 
 float4 VSDepth(VSIn v) : SV_POSITION
 {
-    return mul(mul(float4(v.Pos, 1), Objects[v.Object].World), LightViewProj);
+    return mul(mul(float4(v.Pos, 1), Objects[v.Object].World), LightViewProj[CascadeIndex]);
 }
 
 static const float PI = 3.14159265;
@@ -109,18 +117,44 @@ float3 Light(float3 n, float3 v, float3 l, float3 radiance, float3 albedo, float
     return (diff + spec) * radiance * nl;
 }
 
-float Shadow(float4 lp, float3 n)
+float ShadowIn(float3 wp, float3 n, int k)
 {
-    if (ShadowsOn < 0.5) return 1;
+    float4 lp = mul(float4(wp, 1), LightViewProj[k]);
     float3 p = lp.xyz / lp.w;
     float2 uv = float2(p.x * 0.5 + 0.5, 0.5 - p.y * 0.5);
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1 || p.z > 1) return 1;
-    float bias = ShadowTexel * 1.5 * (1 + 2 * (1 - saturate(dot(n, -SunDir))));
+    float bias = CascadeBias[k] * 1.5 * (1 + 2 * (1 - saturate(dot(n, -SunDir))));
     float sum = 0;
     [unroll] for (int y = -1; y <= 1; y++)
     [unroll] for (int x = -1; x <= 1; x++)
-        sum += ShadowMap.SampleCmpLevelZero(ShadowCmp, uv + float2(x, y) * ShadowTexel, p.z - bias);
+        sum += ShadowMap.SampleCmpLevelZero(ShadowCmp, float3(uv + float2(x, y) * ShadowTexel, k), p.z - bias);
     return sum / 9;
+}
+
+// The sun's shadow from the cascade that covers this depth along the view; over the last 15 % of a cascade it fades
+// into the next one (the last one fades out), so no seam shows where one map hands over to the next.
+float Shadow(float3 wp, float3 n)
+{
+    if (ShadowsOn < 0.5) return 1;
+    float depth = dot(wp - CameraPos, CameraDir.xyz);
+    int count = (int)Cascades.w;
+    float start = 0;
+    for (int k = 0; k < count; k++)
+    {
+        float end = Cascades[k];
+        if (depth <= end)
+        {
+            float s = ShadowIn(wp, n, k);
+            float blend = lerp(start, end, 0.85);
+            float t = saturate((depth - blend) / max(end - blend, 1e-6));
+            if (t > 0) s = lerp(s, k + 1 < count ? ShadowIn(wp, n, k + 1) : 1, t);
+            return s;
+        }
+
+        start = end;
+    }
+
+    return 1;
 }
 
 float3 Aces(float3 x)
@@ -162,7 +196,7 @@ float4 PS(PSIn i, bool front : SV_IsFrontFace) : SV_TARGET
     float3 albedo = base.rgb;
     float3 f0 = lerp(float3(0.04, 0.04, 0.04), albedo, ob.Metallic);
 
-    float3 c = Light(n, v, -SunDir, SunColor, albedo, f0, a, ob.Metallic) * Shadow(i.LightPos, n);
+    float3 c = Light(n, v, -SunDir, SunColor, albedo, f0, a, ob.Metallic) * Shadow(i.WorldPos, n);
     for (int k = 0; k < (int)FillCount; k++)
         c += Light(n, v, -FillDir[k].xyz, FillColor[k].rgb, albedo, f0, a, ob.Metallic);
 

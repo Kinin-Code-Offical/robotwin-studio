@@ -118,11 +118,24 @@ namespace RobotWin.Studio.Render
             target.Resize(Size, Size);
             var mirror = new SceneMirror();
             var top = new GpuRenderer.Camera(new Point3D(0, 0, 1), new Vector3D(0, 0, -1), new Vector3D(0, 1, 0), 30, 0.01, 10);
+            int drawn = 0;
             byte[] Draw(Model3D scene, GpuRenderer.Camera camera, Color background)
             {
                 mirror.Read(View(scene));
                 renderer.Render(target, mirror, camera, background);
-                return renderer.ReadPixels(target);
+                var pixels = renderer.ReadPixels(target);
+                // RW_RENDER_TEST_PNG=<folder>: each drawn scene as a picture, to look at when a check fails.
+                if (Environment.GetEnvironmentVariable("RW_RENDER_TEST_PNG") is { Length: > 0 } folder)
+                {
+                    Directory.CreateDirectory(folder);
+                    var bmp = BitmapSource.Create(Size, Size, 96, 96, PixelFormats.Bgra32, null, pixels, Size * 4);
+                    var png = new PngBitmapEncoder();
+                    png.Frames.Add(BitmapFrame.Create(bmp));
+                    using var file = File.Create(Path.Combine(folder, $"sahne-{++drawn}.png"));
+                    png.Save(file);
+                }
+
+                return pixels;
             }
 
             // 1) A red box lit by the sun, on the studio's dark ground colour.
@@ -201,6 +214,23 @@ namespace RobotWin.Studio.Render
             var far = At(px, Size / 2, Size / 2);
             check("sonsuz uzak düzlem", far.R > 90 && far.R > 2 * far.G && Alpha(px, 2, 2) == 0, $"orta {far}, köşe alfa {Alpha(px, 2, 2)}");
 
+            // 8) Cascades: from 6 m up over a long floor, a box 12 m ahead and a big one 40 m ahead both cast their shadow
+            //    (one map fitted around the near one would miss the far one; one over 40 m would blur the near one).
+            var field = new Model3DGroup();
+            field.Children.Add(Sun(new Vector3D(0, 0.6, -0.8)));
+            field.Children.Add(new AmbientLight(Color.FromRgb(0x40, 0x40, 0x40)));
+            field.Children.Add(Model(Box(100, 0, -0.01, 200, 40, 0.02), Plastic(Colors.White)));
+            field.Children.Add(Model(Box(12, 0, 0.25, 0.5, 0.5, 0.5), Plastic(Colors.Gray)));
+            field.Children.Add(Model(Box(40, 0, 2, 4, 4, 4), Plastic(Colors.Gray)));
+            var ahead = new Vector3D(1, 0, -0.2);
+            ahead.Normalize();
+            var walker = new GpuRenderer.Camera(new Point3D(0, 0, 6), ahead, new Vector3D(0, 0, 1), 40, 0.05, 500) { Focus = 12 };
+            px = Draw(field, walker, Colors.Black);
+            double nearShadow = Luma(At(px, Project(walker, 12, 0.45, 0))), nearLit = Luma(At(px, Project(walker, 12, -0.6, 0)));
+            double farShadow = Luma(At(px, Project(walker, 40, 3.5, 0))), farLit = Luma(At(px, Project(walker, 40, -3.5, 0)));
+            check("kademeli gölge", nearShadow < 0.6 * nearLit && farShadow < 0.6 * farLit,
+                $"12 m: gölgede {nearShadow:0}, ışıkta {nearLit:0}; 40 m: gölgede {farShadow:0}, ışıkta {farLit:0}");
+
             target.Dispose();
         }
 
@@ -269,6 +299,17 @@ namespace RobotWin.Studio.Render
             int i = (y * Size + x) * 4;
             return (px[i + 2], px[i + 1], px[i]);
         }
+
+        /// <summary>The pixel where a world point shows, for a square target and a perspective camera.</summary>
+        private static (int X, int Y) Project(GpuRenderer.Camera camera, double x, double y, double z)
+        {
+            var view = System.Numerics.Matrix4x4.CreateLookAt(camera.Position, camera.Position + camera.Look, camera.Up);
+            var proj = System.Numerics.Matrix4x4.CreatePerspectiveFieldOfView(camera.HorizontalFov, 1, 0.01f, 1000);
+            var p = System.Numerics.Vector4.Transform(new System.Numerics.Vector4((float)x, (float)y, (float)z, 1), view * proj);
+            return ((int)Math.Round((p.X / p.W * 0.5 + 0.5) * Size), (int)Math.Round((0.5 - p.Y / p.W * 0.5) * Size));
+        }
+
+        private static (int R, int G, int B) At(byte[] px, (int X, int Y) at) => At(px, Math.Clamp(at.X, 0, Size - 1), Math.Clamp(at.Y, 0, Size - 1));
 
         private static int Alpha(byte[] px, int x, int y) => px[(y * Size + x) * 4 + 3];
 
