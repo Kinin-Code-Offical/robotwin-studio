@@ -38,6 +38,13 @@ namespace RobotTwin.CoreSim.Design
     /// <summary>A part placed on the schematic sheet.</summary>
     public sealed class SchematicPart
     {
+        /// <summary>
+        /// [integrity] The part's identity for its whole life: it stays when the designator changes, so the PCB and the
+        /// Montaj follow a renamed part instead of dropping it and adding a new one. Empty in files saved before it existed
+        /// (<see cref="Schematic.EnsurePartUids"/> gives one); a copy gets its own.
+        /// </summary>
+        public string Uid { get; set; } = string.Empty;
+
         public string RefDes { get; set; } = string.Empty;
         public string PartId { get; set; } = string.Empty;
         public string? PresetId { get; set; }
@@ -198,6 +205,7 @@ namespace RobotTwin.CoreSim.Design
             var def = preset != null ? library.Get(preset.PartId) : library.Get(presetOrPartId);
             var part = new SchematicPart
             {
+                Uid = NewPartUid(),
                 RefDes = NextRefDes(def.RefPrefix),
                 PartId = def.Id,
                 PresetId = preset?.Id,
@@ -206,6 +214,24 @@ namespace RobotTwin.CoreSim.Design
             };
             Parts.Add(part);
             return part;
+        }
+
+        /// <summary>[integrity] A new part identity (<see cref="SchematicPart.Uid"/>).</summary>
+        public static string NewPartUid() => Guid.NewGuid().ToString("N");
+
+        /// <summary>
+        /// [integrity] Gives every part an identity: one from a file saved before identities existed gets a new one, and of
+        /// parts sharing one (a pasted or duplicated copy carries its original's) the first keeps it, the others get their own.
+        /// </summary>
+        public void EnsurePartUids()
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var p in Parts)
+            {
+                if (!string.IsNullOrEmpty(p.Uid) && seen.Add(p.Uid)) continue;
+                p.Uid = NewPartUid();
+                seen.Add(p.Uid);
+            }
         }
 
         public SchematicWire AddWire(params GridPoint[] points)

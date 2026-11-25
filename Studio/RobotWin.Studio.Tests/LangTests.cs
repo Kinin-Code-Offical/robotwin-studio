@@ -199,6 +199,15 @@ public class LangTests
     [InlineData("İtki    : 0.2 N · 8.4 g/s · çıkış 21 m/s", "Thrust  : 0.2 N · 8.4 g/s · exit 21 m/s")]
     [InlineData("12k nokta", "12k points")]
     [InlineData("Doluluk 40.0 %", "Duty 40.0 %")]
+    [InlineData("R1 → R7: adı değişecek, yeri ve izleri korunur", "R1 → R7: will be renamed, keeping its place and tracks")]
+    [InlineData("1 parçanın adı değişecek, yeri korunur (R1 → R7)", "1 part will be renamed, keeping its place (R1 → R7)")]
+    [InlineData("U2 devrede yok, kaldırılacak", "U2 is no longer in the circuit and will be removed")]
+    [InlineData("1 parça kaldırılacak", "1 part will be removed")]
+    [InlineData("3 parça eklenecek", "3 parts will be added")]
+    [InlineData("Şema, PCB ve montaj arasında 2 tutarsızlık var.", "2 things are out of step between the schematic, the PCB and the assembly.")]
+    [InlineData("RW-7: şema, PCB ve montaj arasında 1 tutarsızlık var.", "RW-7: 1 thing is out of step between the schematic, the PCB and the assembly.")]
+    [InlineData("Montajın izlediği proje dosyası bulunamadı: D:\\p\\a.rwproj", "The project file this assembly follows was not found: D:\\p\\a.rwproj")]
+    [InlineData("Şema değişti. Kartı güncellemek şunları yapacak:\n1 parça kalkacak (R2)", "The schematic changed. Updating the board will make these changes:\n1 part will be removed (R2)")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

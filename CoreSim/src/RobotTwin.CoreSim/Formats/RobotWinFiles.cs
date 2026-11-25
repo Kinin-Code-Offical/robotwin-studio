@@ -164,6 +164,12 @@ namespace RobotTwin.CoreSim.Formats
     {
         public string BoardRefDes { get; set; } = string.Empty;
 
+        /// <summary>
+        /// [integrity] The board part's identity (<see cref="Design.SchematicPart.Uid"/>): the code follows its board by it
+        /// when the board is renamed (<see cref="ProjectPackage.FollowRenamedBoards"/>). Empty in files from before.
+        /// </summary>
+        public string? BoardUid { get; set; }
+
         /// <summary>"arduino:avr:uno", "arduino:avr:nano", "esp32-hal" …</summary>
         public string Target { get; set; } = "arduino:avr:uno";
 
@@ -281,6 +287,27 @@ namespace RobotTwin.CoreSim.Formats
 
         public FirmwareSource? FirmwareFor(string refDes) =>
             Firmware.FirstOrDefault(f => string.Equals(f.BoardRefDes, refDes, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// [integrity] Code follows its board by the board part's identity: a board renamed in any way (in the inspector, its
+        /// properties, by renumbering, by find and replace) keeps its code, where before only some of those carried it over
+        /// and the others left the code behind with no board. Code from before identities takes its board's by designator.
+        /// </summary>
+        public void FollowRenamedBoards()
+        {
+            if (Firmware.Count == 0) return;
+            Schematic.EnsurePartUids();
+            foreach (var f in Firmware)
+            {
+                if (!string.IsNullOrEmpty(f.BoardUid) && Schematic.Parts.FirstOrDefault(p => p.Uid == f.BoardUid) is { } board)
+                {
+                    f.BoardRefDes = board.RefDes;
+                    continue;
+                }
+
+                if (Schematic.FindPart(f.BoardRefDes) is { } named) f.BoardUid = named.Uid;   // from before, or its identity was lost
+            }
+        }
 
         public const string Extension = RobotWinFormats.ProjectExtension;
 

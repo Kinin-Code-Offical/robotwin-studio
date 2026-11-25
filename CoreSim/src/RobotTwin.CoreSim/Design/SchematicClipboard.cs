@@ -142,6 +142,7 @@ namespace RobotTwin.CoreSim.Design
                     continue;
                 }
 
+                p.Uid = Schematic.NewPartUid();   // [integrity] a copy is a part of its own
                 doc.Parts.Add(p);
                 result.Parts.Add(p);
             }

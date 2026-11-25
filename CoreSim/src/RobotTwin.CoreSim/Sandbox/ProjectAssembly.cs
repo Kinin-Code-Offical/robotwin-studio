@@ -30,7 +30,10 @@ namespace RobotTwin.CoreSim.Sandbox
         /// </summary>
         public List<(string RefDes, bool OnPcb)> Left { get; } = new List<(string RefDes, bool OnPcb)>();
 
-        public bool Changed => Added + Updated + Removed + CablesAdded + CablesRemoved > 0 || BoardUpdated;
+        /// <summary>[integrity] Parts renamed in the circuit: their objects took the new designators and stayed.</summary>
+        public List<(string From, string To)> Renamed { get; } = new List<(string From, string To)>();
+
+        public bool Changed => Added + Updated + Removed + CablesAdded + CablesRemoved + Renamed.Count > 0 || BoardUpdated;
 
         private IEnumerable<string> LeftLines(bool done) => Left.Select(l => l.OnPcb
             ? (done ? l.RefDes + " artık PCB'de, kartın üstünde" : l.RefDes + " PCB'ye geçti, kartın üstüne konacak")
@@ -43,6 +46,7 @@ namespace RobotTwin.CoreSim.Sandbox
             if (Updated > 0) parts.Add(Updated.ToString(CultureInfo.InvariantCulture) + " parça güncellendi");
             if (BoardUpdated) parts.Add("kart güncellendi");
             if (Removed > 0) parts.Add(Removed.ToString(CultureInfo.InvariantCulture) + " parça kaldırıldı");
+            if (Renamed.Count > 0) parts.Add(Renamed.Count.ToString(CultureInfo.InvariantCulture) + " parçanın adı değişti");
             if (CablesAdded + CablesRemoved > 0) parts.Add($"kablolar: +{CablesAdded} −{CablesRemoved}");
             string s = parts.Count == 0 ? "değişiklik yok" : string.Join(", ", parts);
             var notes = LeftLines(true).Concat(Notes).ToList();
@@ -61,6 +65,7 @@ namespace RobotTwin.CoreSim.Sandbox
             if (Updated > 0) lines.Add($"{N(Updated)} parça {(done ? "güncellendi" : "güncellenecek")}");
             if (BoardUpdated) lines.Add(done ? "kart güncellendi" : "kart güncellenecek");
             if (Removed > 0) lines.Add($"{N(Removed)} parça {(done ? "kaldırıldı" : "kaldırılacak")}");
+            foreach (var (from, to) in Renamed) lines.Add(done ? $"{from} → {to}: adı değişti, yeri korundu" : $"{from} → {to}: adı değişecek, yeri korunur");
             if (CablesAdded + CablesRemoved > 0) lines.Add($"kablolar: +{N(CablesAdded)} −{N(CablesRemoved)}");
             lines.AddRange(LeftLines(done));
             lines.AddRange(Notes);
@@ -118,6 +123,7 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var sch = package.Schematic;
             string pid = sch.EnsureProjectId();
+            sch.EnsurePartUids();   // [integrity] objects follow their parts by identity
             var w = new WorldDocument { Title = TitleOf(sch) + " — montaj", IsAssembly = true, ProjectId = pid };
             Add(w, package, library, form, null, geometry);
             return w;
@@ -132,6 +138,7 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var sch = package.Schematic;
             string pid = sch.EnsureProjectId();
+            sch.EnsurePartUids();   // [integrity] objects follow their parts by identity
             if (w.SourceOf(pid) is { } known)
             {
                 known.Form = form;
@@ -189,6 +196,7 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var sch = package.Schematic;
             string pid = sch.EnsureProjectId();
+            sch.EnsurePartUids();   // [integrity] objects follow their parts by identity
             var source = w.SourceOf(pid);
             if (source == null) return Add(w, package, library, AssemblyForm.Auto, sourcePath, geometry);
 
@@ -232,6 +240,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             // ---- the separate parts
+            FollowRenamedParts(w, sch, pid, report);
             var existing = w.Objects.Where(o => IsFrom(o, pid) && !o.ProjectRef!.Contains(Own))
                 .GroupBy(o => o.ProjectRef!.Substring(pid.Length + 1), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -240,6 +249,7 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 if (existing.TryGetValue(p.RefDes, out var o))
                 {
+                    o.PartUid = p.Uid;   // [integrity] an object found by designator takes its part's identity
                     if (UpdatePart(o, package, library, p)) report.Updated++;
                 }
                 else
@@ -716,9 +726,36 @@ namespace RobotTwin.CoreSim.Sandbox
             var o = w.AddComponent(library, p.PresetId ?? def.Id, pose);
             o.Name = w.UniqueName($"{p.RefDes} {def.Name}");
             o.ProjectRef = pid + "/" + p.RefDes;
+            o.PartUid = p.Uid;   // [integrity]
             foreach (var kv in p.Parameters) o.Parameters[kv.Key] = kv.Value;
             if (package.FirmwareFor(p.RefDes) is { } fw) o.Firmware = Copy(fw);   // a copy: the Montaj follows the project through Sync
             return o;
+        }
+
+        /// <summary>
+        /// [integrity] A part renamed in the circuit keeps its object: found by the part's identity, the object takes the new
+        /// designator (and the name made of it), so where it was put, how it was joined and its cables stay. An object from
+        /// before identities takes its part's by designator.
+        /// </summary>
+        private static void FollowRenamedParts(WorldDocument w, Schematic sch, string pid, AssemblyReport report)
+        {
+            var byUid = new Dictionary<string, SchematicPart>(StringComparer.Ordinal);
+            foreach (var p in sch.Parts)
+                if (!string.IsNullOrEmpty(p.Uid)) byUid.TryAdd(p.Uid, p);
+            foreach (var o in w.Objects.Where(o => IsFrom(o, pid) && !o.ProjectRef!.Contains(Own)))
+            {
+                string refDes = o.ProjectRef!.Substring(pid.Length + 1);
+                if (string.IsNullOrEmpty(o.PartUid))
+                {
+                    if (sch.FindPart(refDes) is { } owner) o.PartUid = owner.Uid;
+                    continue;
+                }
+
+                if (!byUid.TryGetValue(o.PartUid!, out var part) || string.Equals(part.RefDes, refDes, StringComparison.Ordinal)) continue;
+                o.ProjectRef = pid + "/" + part.RefDes;
+                if (o.Name.StartsWith(refDes + " ", StringComparison.Ordinal)) o.Name = w.UniqueName(part.RefDes + o.Name.Substring(refDes.Length));
+                report.Renamed.Add((refDes, part.RefDes));
+            }
         }
 
         /// <summary>A part's type, values and code from the circuit; true when something changed.</summary>

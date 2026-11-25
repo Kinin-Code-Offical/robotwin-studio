@@ -131,6 +131,7 @@ namespace RobotTwin.CoreSim.Tests
         public void DragOfAPartRubberBandsAttachedWiresAndStaysOrthogonal()
         {
             var sch = LedLoop();
+            string original = sch.ToJson();
             var before = Connectivity(sch);
             var r = sch.Parts[1];
             var drag = new SchematicDrag(sch, Lib, new object[] { r }, rubberBand: true);
@@ -148,7 +149,7 @@ namespace RobotTwin.CoreSim.Tests
             }
 
             drag.Cancel();
-            Assert.Equal(LedLoop().ToJson(), sch.ToJson());
+            Assert.Equal(original, sch.ToJson());   // exactly as it was, part identities too
         }
 
         [Fact]

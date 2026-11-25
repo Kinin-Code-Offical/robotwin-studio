@@ -7069,7 +7069,8 @@
   "Montajı güncelle": "Update the assembly",
   "Montajı projesine göre günceller: eklenen parçalar gelir, silinenler kalkar; yerleştirdikleriniz, bağlantılarınız ve kendi kablolarınız korunur.": "Brings the assembly up to date with its project: added parts come in, removed ones go; where you placed parts, how you joined them and your own cables are kept.",
   "PCB sayfasını açar: yalnız ekleyen değişiklikler kendiliğinden gelir; yerleşimden bir şey götürecekse sayfa uygulamadan önce sorar.": "Opens the PCB page: changes that only add come in by themselves; if one would take something out of the layout, the page asks before applying it.",
-  "Şema, PCB ve montaj arasında 1 tutarsızlık var.": "1 thing is out of step between the schematic, the PCB and the assembly."
+  "Şema, PCB ve montaj arasında 1 tutarsızlık var.": "1 thing is out of step between the schematic, the PCB and the assembly.",
+  "1 parçanın adı değişti": "1 part renamed"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9966,6 +9967,15 @@
   "{…}: şema, PCB ve montaj arasında {…} tutarsızlık var.": "{0}: {1} things are out of step between the schematic, the PCB and the assembly.",
   "{…}: şema, PCB ve montaj arasında 1 tutarsızlık var.": "{0}: 1 thing is out of step between the schematic, the PCB and the assembly.",
   "{…} PCB'ye geçti, kartın üstüne konacak": "{0} moved to the PCB and will go on top of the board",
-  "{…} devrede yok, kaldırılacak": "{0} is no longer in the circuit and will be removed"
+  "{…} devrede yok, kaldırılacak": "{0} is no longer in the circuit and will be removed",
+  "{…} parçanın adı değişecek, yeri korunur ({…})": "{0} parts will be renamed, keeping their places ({1})",
+  "1 parçanın adı değişecek, yeri korunur ({…})": "1 part will be renamed, keeping its place ({0})",
+  "{…} parçanın adı değişti, yeri korundu ({…})": "{0} parts renamed, their places kept ({1})",
+  "1 parçanın adı değişti, yeri korundu ({…})": "1 part renamed, its place kept ({0})",
+  "{…} → {…}: adı değişecek, yeri ve izleri korunur": "{0} → {1}: will be renamed, keeping its place and tracks",
+  "{…} → {…}: adı değişti, yeri ve izleri korundu": "{0} → {1}: renamed, its place and tracks kept",
+  "{…} → {…}: adı değişecek, yeri korunur": "{0} → {1}: will be renamed, keeping its place",
+  "{…} → {…}: adı değişti, yeri korundu": "{0} → {1}: renamed, its place kept",
+  "{…} parçanın adı değişti": "{0} parts renamed"
  }
 }

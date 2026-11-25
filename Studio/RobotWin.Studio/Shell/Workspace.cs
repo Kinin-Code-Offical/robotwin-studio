@@ -531,6 +531,7 @@ namespace RobotWin.Studio.Shell
         public void FlushActiveDesign()
         {
             Project.Schematic = Schematic;
+            Project.FollowRenamedBoards();   // [integrity] a renamed board keeps its code, however it was renamed
             SyncEmbedded(_design);
         }
 

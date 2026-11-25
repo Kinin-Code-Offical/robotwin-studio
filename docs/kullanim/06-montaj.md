@@ -56,6 +56,8 @@ Sizin yaptıklarınız korunur:
 - kurduğunuz bağlantılar,
 - kendi çektiğiniz kablolar.
 
+Montaj parçaları adlarıyla değil kimlikleriyle izler: devrede bir parçanın adını değiştirmek (R1 → R7) onu montajda yerinde bırakır, yalnız adı değişir.
+
 Durum çubuğu neyin değiştiğini yazar.
 
 Montajdaki kartın kodu projenin kodudur. **Kod** sayfası bu kartları ayrı kart diye göstermez; kodu projede yazarsınız. Montajda bir kartı seçip **Kartı düzenle** deyince kopyası değil, projenin kendisi açılır.

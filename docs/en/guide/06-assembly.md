@@ -56,6 +56,8 @@ What you did is kept:
 - the joints you made,
 - the cables you laid yourself.
 
+The assembly follows parts by their identity, not their names: renaming a part in the circuit (R1 → R7) leaves it where it is in the assembly; only its name changes.
+
 The status bar says what changed.
 
 A board's code in the Assembly is its project's code. The **Code** page does not list these boards as separate boards: you write the code in the project. Selecting a board in the Assembly and choosing **Edit board (circuit · PCB · code)** opens the project itself, not a copy.

@@ -43,6 +43,12 @@ namespace RobotTwin.CoreSim.Pcb
     public sealed class BoardComponent
     {
         public string RefDes { get; set; } = string.Empty;
+
+        /// <summary>
+        /// [integrity] The schematic part's identity (<see cref="Design.SchematicPart.Uid"/>): the component follows its part
+        /// by it, so a renamed part keeps its place. Empty on boards saved before identities (matched by designator then).
+        /// </summary>
+        public string PartUid { get; set; } = string.Empty;
         public string FootprintId { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
         public double X { get; set; }
@@ -712,7 +718,20 @@ namespace RobotTwin.CoreSim.Pcb
         {
             var board = existing ?? new BoardDocument();
             var netlist = schematic.BuildNetlist(library);
-            var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var keep = new HashSet<BoardComponent>();
+
+            // [integrity] Components follow their parts by identity: a renamed part keeps its component, and with it its place.
+            // A component from before identities takes its part's by designator; a part's new designator taken over by
+            // another part is not mistaken for it.
+            schematic.EnsurePartUids();
+            foreach (var c in board.Components)
+                if (string.IsNullOrEmpty(c.PartUid) && schematic.FindPart(c.RefDes) is { } owner)
+                    c.PartUid = owner.Uid;
+            var byUid = new Dictionary<string, BoardComponent>(StringComparer.Ordinal);
+            foreach (var c in board.Components)
+                if (!string.IsNullOrEmpty(c.PartUid)) byUid.TryAdd(c.PartUid, c);
+            var padNetsBefore = board.Components.ToDictionary(c => c, c => new Dictionary<string, string>(c.PadNets, StringComparer.OrdinalIgnoreCase));
+            var liveUids = new HashSet<string>(schematic.Parts.Select(p => p.Uid), StringComparer.Ordinal);
 
             foreach (var part in schematic.Parts)
             {
@@ -723,12 +742,16 @@ namespace RobotTwin.CoreSim.Pcb
                 var fp = FootprintLibrary.Get(fpId);
                 if (fp == null) continue;
 
-                var comp = board.Find(part.RefDes);
+                byUid.TryGetValue(part.Uid, out var comp);
+                // A component whose identity no part has any more (the part came back from an undo that predates its
+                // identity, or lost it some other way): the designator decides, as before identities.
+                if (comp == null && board.Find(part.RefDes) is { } named && !keep.Contains(named) && !liveUids.Contains(named.PartUid)) comp = named;
                 if (comp == null)
                 {
-                    comp = new BoardComponent { RefDes = part.RefDes };
-                    // [integrity] back where it stood before the schematic dropped it
-                    var was = board.Removed.FindLast(r => string.Equals(r.RefDes, part.RefDes, StringComparison.OrdinalIgnoreCase) && string.Equals(r.FootprintId, fpId, StringComparison.OrdinalIgnoreCase));
+                    comp = new BoardComponent { RefDes = part.RefDes, PartUid = part.Uid };
+                    // [integrity] back where it stood before the schematic dropped it (an undone delete has its identity back)
+                    var was = board.Removed.FindLast(r => !string.IsNullOrEmpty(r.PartUid) ? r.PartUid == part.Uid && string.Equals(r.FootprintId, fpId, StringComparison.OrdinalIgnoreCase)
+                        : string.Equals(r.RefDes, part.RefDes, StringComparison.OrdinalIgnoreCase) && string.Equals(r.FootprintId, fpId, StringComparison.OrdinalIgnoreCase));
                     if (was != null)
                     {
                         comp.X = was.X;
@@ -742,6 +765,8 @@ namespace RobotTwin.CoreSim.Pcb
                     board.Components.Add(comp);
                 }
 
+                comp.RefDes = part.RefDes;   // [integrity] renamed: the component takes the new designator
+                comp.PartUid = part.Uid;
                 comp.FootprintId = fpId;
                 comp.Value = !string.IsNullOrEmpty(def.ValueKey) && parameters.TryGetValue(def.ValueKey, out var v) ? v : def.Name;
                 comp.PadNets.Clear();
@@ -760,17 +785,18 @@ namespace RobotTwin.CoreSim.Pcb
                     if (comp.PadNets.TryGetValue("3", out var n3)) comp.PadNets["4"] = n3;
                 }
 
-                keep.Add(part.RefDes);
+                keep.Add(comp);
             }
 
-            foreach (var gone in board.Components.Where(c => !keep.Contains(c.RefDes) && (c.X != 0 || c.Y != 0)))
+            foreach (var gone in board.Components.Where(c => !keep.Contains(c) && (c.X != 0 || c.Y != 0)))
             {
-                board.Removed.RemoveAll(r => string.Equals(r.RefDes, gone.RefDes, StringComparison.OrdinalIgnoreCase));
-                board.Removed.Add(new BoardComponent { RefDes = gone.RefDes, FootprintId = gone.FootprintId, X = gone.X, Y = gone.Y, Rotation = gone.Rotation, Side = gone.Side, Locked = gone.Locked });
+                board.Removed.RemoveAll(r => !string.IsNullOrEmpty(gone.PartUid) ? r.PartUid == gone.PartUid : string.Equals(r.RefDes, gone.RefDes, StringComparison.OrdinalIgnoreCase));
+                board.Removed.Add(new BoardComponent { RefDes = gone.RefDes, PartUid = gone.PartUid, FootprintId = gone.FootprintId, X = gone.X, Y = gone.Y, Rotation = gone.Rotation, Side = gone.Side, Locked = gone.Locked });
             }
 
             if (board.Removed.Count > 64) board.Removed.RemoveRange(0, board.Removed.Count - 64);
-            board.Components.RemoveAll(c => !keep.Contains(c.RefDes));
+            board.Components.RemoveAll(c => !keep.Contains(c));
+            FollowRenamedNets(board, padNetsBefore, keep);
             var liveNets = new HashSet<string>(board.NetNames(), StringComparer.OrdinalIgnoreCase);
             board.Tracks.RemoveAll(t => !liveNets.Contains(t.Net));
             board.Vias.RemoveAll(v => !liveNets.Contains(v.Net));
@@ -792,6 +818,42 @@ namespace RobotTwin.CoreSim.Pcb
             }
 
             return board;
+        }
+
+        /// <summary>
+        /// [integrity] A net that only changed its name keeps its copper: when the pads of a net that is gone are all on one
+        /// and the same net now, that is the net under its new name (a label renamed; an unnamed net, called after its first
+        /// pin, whose part was renamed or removed), and its tracks, vias, zones and class follow it. Before, they were
+        /// deleted as the copper of a net that no longer exists. A net whose pads went to different nets keeps the old way.
+        /// </summary>
+        private static void FollowRenamedNets(BoardDocument board, Dictionary<BoardComponent, Dictionary<string, string>> before, HashSet<BoardComponent> kept)
+        {
+            var now = new HashSet<string>(board.NetNames(), StringComparer.OrdinalIgnoreCase);
+            var into = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (comp, pads) in before)
+            {
+                if (!kept.Contains(comp)) continue;   // its part left: its pads say nothing of where the net went
+                foreach (var (pad, old) in pads)
+                {
+                    if (now.Contains(old) || !comp.PadNets.TryGetValue(pad, out var fresh)) continue;   // still there, or the pad left it
+                    if (!into.TryGetValue(old, out var set)) into[old] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    set.Add(fresh);
+                }
+            }
+
+            var renamed = into.Where(kv => kv.Value.Count == 1).ToDictionary(kv => kv.Key, kv => kv.Value.First(), StringComparer.OrdinalIgnoreCase);
+            if (renamed.Count == 0) return;
+            foreach (var t in board.Tracks)
+                if (renamed.TryGetValue(t.Net, out var n)) t.Net = n;
+            foreach (var v in board.Vias)
+                if (renamed.TryGetValue(v.Net, out var n)) v.Net = n;
+            foreach (var z in board.Zones)
+                if (renamed.TryGetValue(z.Net, out var n)) z.Net = n;
+            foreach (var (old, fresh) in renamed)
+            {
+                if (board.NetClassAssignments.TryGetValue(old, out var cls) && !board.NetClassAssignments.ContainsKey(fresh)) board.NetClassAssignments[fresh] = cls;
+                board.NetClassAssignments.Remove(old);
+            }
         }
 
         /// <summary>Pads grouped by net (only nets with two or more pads need routing).</summary>

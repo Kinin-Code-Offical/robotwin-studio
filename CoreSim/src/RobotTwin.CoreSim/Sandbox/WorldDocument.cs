@@ -114,6 +114,12 @@ namespace RobotTwin.CoreSim.Sandbox
         public string? ProjectRef { get; set; }
 
         /// <summary>
+        /// [integrity] That part's identity (<see cref="Design.SchematicPart.Uid"/>): a renamed part keeps its object, and with
+        /// it where it was put and how it was joined. Empty in Montajs saved before identities (matched by designator then).
+        /// </summary>
+        public string? PartUid { get; set; }
+
+        /// <summary>
         /// [assembly] Mounted mirrored (a rover's right motor on the shared axle): a Montaj lays its cables to the
         /// opposite lead (A ↔ B), as the wires are swapped on a real kit, so "forward" in the code drives forward.
         /// </summary>

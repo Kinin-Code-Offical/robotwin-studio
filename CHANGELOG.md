@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Parts keep their identity when renamed:** every part in a schematic has an identity for its whole life, and the PCB and the assembly follow it by that, not by its designator. Renaming R1 to R7, by hand or by renumbering, leaves it where it is on the board and in the assembly; before, it was taken off both and put back as a new part. The board's preview says so (`R1 → R7: will be renamed, keeping its place and tracks`). Files from before get identities the first time they are brought up to date, and a pasted copy gets one of its own.
+
 - **The project check compares the assembly with its project too:** it runs the assembly's update on a copy and says beforehand what opening it will change (`1 part will be added`, `U2 is no longer in the circuit and will be removed`), a warning when a part placed in it goes, with **Update the assembly** to do it at once; and it says when the project file an assembly follows is gone. What this computer lacks and what is out of step between the schematic, the PCB and the assembly are now counted apart in the notice and the window, which said "missing on this computer" for both.
 
 - **Where each model holds:** the mechanics, circuit, heat and radio chapters of the physics guide now end with a validity range: what the model is, what was measured and by which test, and what lies outside it (for the circuit: within 5.2 mV of an RC charge and 1.0 mA of an RL rise at the app's step, an LC tank keeping its amplitude to 0.9999 V over 100 cycles, its period error the trapezoidal rule's (ωh)²/12). The validation chapter has a new table for long waits and stacks.
@@ -135,6 +137,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **A board renamed in the inspector or by find and replace lost its code:** only the part's properties window and renumbering carried a new designator over to the board's code; the other two left the code under the old name, with no board to run on (and an undone rename left the code under the new one). Code now follows its board by the board part's identity, whichever way it is renamed or undone.
+
+- **Renaming a net deleted its copper:** renaming a net label, or renaming the part an unnamed net is called after (`R1.2`), left that net's tracks, vias and zones on a net that no longer existed, and bringing the board up to date deleted them. A net whose pads all went to one new name is now that net renamed: its copper and net class follow it, and the preview does not count it as removed.
 
 - **A box that friction should hold slid down its slope at coarser steps:** whether a contact sticks or slides was judged from its velocity after the step's own forces, so once a step was long enough for gravity to add 5 mm/s along the slope (2 ms on 20°), kinetic friction took over and a wooden box slid 270 m in 30 s down a slope its static friction holds. It is now judged from the motion at the start of the step: the box stays put on 20° and on 25° (the limit is 26.6°) at 0.5 ms and at 2 ms, and on 30° it breaks away and slides at 2.357 m/s² (theory 2.356). A push now has to beat static friction, not kinetic, to move a resting part.
 

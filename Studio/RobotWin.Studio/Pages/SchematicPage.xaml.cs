@@ -677,7 +677,9 @@ namespace RobotWin.Studio.Pages
                 }
 
                 W.BeginChange();
+                var change = new RefDesChange(part, part.RefDes, value);
                 part.RefDes = value;
+                Annotator.ApplyToLinkedData(W.Schematic, new[] { change });   // [integrity] the vehicle's motors and sensors; the code follows on commit
                 W.CommitChange("Yeniden adlandırıldı");
             });
             Inspector.Children.Add(refBox);
