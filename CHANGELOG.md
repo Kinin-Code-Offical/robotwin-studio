@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Uno's UART on its TX pin:** the ATmega328P's USART now drives PD1 bit by bit (idle high, start bit, data, stop bit, at the baud rate the sketch set), so the line carries the real waveform: a scope decodes it and another device's input sees it. Tested with a real compiled sketch: what it prints is read back off D1's voltage with no errors.
+
 - **Serial protocol decoder on the oscilloscope:** UART (baud, parity, framing and parity errors), I²C (START/repeated START/STOP, address and R/W, ACK/NACK, data) and SPI (modes 0–3, chip select) read off the probed wires at the record's logic threshold, drawn as a decode lane under the traces.
 
 - **Manufacturers' SPICE models:** paste a `.model` card (continuations, comments, SPICE suffixes) on a diode, transistor or MOSFET and its numbers become the part's parameters in one undoable change; parameters our models do not use are listed. Validated with the 1N4148 card against Shockley's law.

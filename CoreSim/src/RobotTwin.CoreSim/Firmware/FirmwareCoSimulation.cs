@@ -131,6 +131,12 @@ namespace RobotTwin.CoreSim.Firmware
                 }
 
                 StopPwm(pin, i);
+                if (i == 1 && Mcu.UartTxEnabled)
+                {
+                    ScheduleUartTx(pin, startCycle, now, dt);   // [uart] the frames' bits on D1
+                    continue;
+                }
+
                 if (!state.IsPwm && ScheduleEdges(pin, i, startCycle, now, state)) continue;
                 if (state.IsPwm) pin.Mode = state.PwmDuty >= 1.0 ? PinMode.OutputHigh : PinMode.OutputLow;
                 else if (state.Driving) pin.Mode = state.Level ? PinMode.OutputHigh : PinMode.OutputLow;
@@ -166,6 +172,33 @@ namespace RobotTwin.CoreSim.Firmware
             }
 
             return any;
+        }
+
+        /// <summary>
+        /// [uart] The TX pin through this slice: every bit edge of the frames the USART is sending, at its time, so the line
+        /// carries the real waveform (a scope decodes it, another device's RX reads it). Frames finished before the slice go.
+        /// </summary>
+        private void ScheduleUartTx(DigitalPin pin, ulong startCycle, double now, double dt)
+        {
+            var frames = Mcu.TxFrames;
+            double bit = Mcu.UartBitCycles;
+            frames.RemoveAll(f => f.Cycle + 10 * bit < startCycle);
+            PinMode last = pin.Mode is PinMode.OutputHigh or PinMode.OutputLow ? pin.Mode : PinMode.OutputHigh;
+            if (pin.Mode != PinMode.OutputHigh && pin.Mode != PinMode.OutputLow) pin.Mode = PinMode.OutputHigh;   // the transmitter idles high
+            foreach (var (cycle, value) in frames)
+            {
+                for (int k = 0; k < 10; k++)
+                {
+                    bool high = k != 0 && (k == 9 || (value >> (k - 1) & 1) != 0);
+                    var mode = high ? PinMode.OutputHigh : PinMode.OutputLow;
+                    if (mode == last) continue;
+                    double t = _epochTime + ((double)cycle + k * bit - _epochCycles) / Mcu.ClockHz;
+                    if (t >= now + dt) break;   // the next slice's
+                    if (t >= now) pin.Schedule(t, mode);
+                    else pin.Mode = mode;   // already passed: the level it is at
+                    last = mode;
+                }
+            }
         }
 
         private void StopPwm(DigitalPin pin, int index)

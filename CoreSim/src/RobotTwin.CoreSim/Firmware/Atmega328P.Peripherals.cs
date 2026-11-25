@@ -119,6 +119,14 @@ namespace RobotTwin.CoreSim.Firmware
                 driving = false;
             }
 
+            if (pin == 1 && UartTxEnabled)
+            {
+                // [uart] The transmitter overrides PD1: an output carrying the line's level.
+                driving = true;
+                level = UartTxLevel(Cycles);
+                return new PinOutput(true, level, false, double.NaN, 0);
+            }
+
             double duty = double.NaN, freq = 0;
             if (driving) HardwarePwm(pin, out duty, out freq);
             return new PinOutput(driving, level, !driving && level, duty, freq);
@@ -585,6 +593,35 @@ namespace RobotTwin.CoreSim.Firmware
         /// <summary>Baud rate the firmware configured (0 when the transmitter is off).</summary>
         public double BaudRate => (_d[UCSR0B] & 0x08) == 0 ? 0 : ClockHz * 10.0 / UartFrameCycles();
 
+        /// <summary>
+        /// [uart] The frames the transmitter has started, by the cycle their start bit began: the TX pin (PD1) carries them bit by
+        /// bit (idle high, start bit low, eight data bits least significant first, stop bit high), as the USART drives it.
+        /// The co-simulation reads them off and prunes the finished ones.
+        /// </summary>
+        public List<(ulong Cycle, byte Value)> TxFrames { get; } = new List<(ulong, byte)>();
+
+        /// <summary>[uart] The transmitter is on: it owns PD1, whatever DDRD says.</summary>
+        public bool UartTxEnabled => (_d[UCSR0B] & 0x08) != 0;
+
+        /// <summary>[uart] One bit's length in CPU cycles.</summary>
+        public double UartBitCycles => UartFrameCycles() / 10.0;
+
+        /// <summary>[uart] The TX line's level at <paramref name="cycle"/>: the bit of the frame being sent then, or idle high.</summary>
+        public bool UartTxLevel(ulong cycle)
+        {
+            double bit = UartBitCycles;
+            for (int i = TxFrames.Count - 1; i >= 0; i--)
+            {
+                var (start, value) = TxFrames[i];
+                if (cycle < start) continue;
+                int k = (int)((cycle - start) / bit);
+                if (k >= 10) return true;
+                return k == 0 ? false : k == 9 || (value >> (k - 1) & 1) != 0;
+            }
+
+            return true;
+        }
+
         private void UartWrite(byte v)
         {
             if ((_d[UCSR0B] & 0x08) == 0) return;
@@ -592,6 +629,8 @@ namespace RobotTwin.CoreSim.Firmware
             if (_txShift < 0)
             {
                 _txShift = v;
+                TxFrames.Add((Cycles, v));   // [uart] its start bit begins now
+                if (TxFrames.Count > 64) TxFrames.RemoveRange(0, TxFrames.Count - 64);   // nobody reads them: keep the latest
                 _txCycles = UartFrameCycles();
                 _d[UCSR0A] |= 0x20;
             }
@@ -612,6 +651,7 @@ namespace RobotTwin.CoreSim.Firmware
             {
                 _txShift = _txBuffer;
                 _txBuffer = -1;
+                TxFrames.Add(((ulong)Math.Max(0, (long)Cycles + (long)Math.Round(_txCycles)), (byte)_txShift));   // [uart] right after the last stop bit
                 _txCycles += UartFrameCycles();
                 _d[UCSR0A] |= 0x20;
             }
