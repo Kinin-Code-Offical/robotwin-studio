@@ -71,6 +71,9 @@ namespace RobotWin.Studio.World
                         break;
                     }
 
+                    case CellParts.PhotoId:
+                        if (v.Lamp != null) v.Lamp.Color = physics?.PhotoOf(it.Object.Id)?.Output == true ? Color.FromRgb(0xF2, 0xA3, 0x3B) : LampOff;
+                        break;
                     case CellParts.ModbusIoId:   // [modbus] lit while the world runs it
                         if (v.Lamp != null) v.Lamp.Color = physics?.ModbusDevices.Any(d => d.Object.Id == it.Object.Id) == true ? Color.FromRgb(0x3C, 0xD0, 0x64) : LampOff;
                         break;
@@ -131,7 +134,7 @@ namespace RobotWin.Studio.World
 
         private void UpdateCellExtras(WorldPhysics? physics)
         {
-            if (physics == null || (physics.SpawnedParts.Count == 0 && physics.Curtains.Count == 0))
+            if (physics == null || (physics.SpawnedParts.Count == 0 && physics.Curtains.Count == 0 && physics.PhotoSensors.Count == 0))
             {
                 if (_cellExtras.Content != null)
                 {
@@ -184,6 +187,15 @@ namespace RobotWin.Studio.World
                     _beamGroup.Children.Add(new GeometryModel3D(Tube(pts, cut ? 0.0018 : 0.0008, 5), new EmissiveMaterial(new SolidColorBrush(color))));
                     if (cut) _beamGroup.Children.Add(new GeometryModel3D(M.Sphere(0.006, to.X, to.Y, to.Z, 8), new EmissiveMaterial(new SolidColorBrush(color))));
                 }
+            }
+
+            foreach (var ph in physics.PhotoSensors)   // [cell] the photoelectric sensors' light
+            {
+                var (from, to, hit) = ph.Beam;
+                var color = ph.Present ? Color.FromRgb(0xFF, 0x3B, 0x30) : Color.FromRgb(0x7A, 0x1E, 0x1E);
+                var pts = new List<Point3D> { new Point3D(from.X, from.Y, from.Z), new Point3D(to.X, to.Y, to.Z) };
+                _beamGroup.Children.Add(new GeometryModel3D(Tube(pts, ph.Present ? 0.0015 : 0.0007, 5), new EmissiveMaterial(new SolidColorBrush(color))));
+                if (hit) _beamGroup.Children.Add(new GeometryModel3D(M.Sphere(0.004, to.X, to.Y, to.Z, 8), new EmissiveMaterial(new SolidColorBrush(color))));
             }
         }
 

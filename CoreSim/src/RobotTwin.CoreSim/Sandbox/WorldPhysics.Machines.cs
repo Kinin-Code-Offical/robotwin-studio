@@ -318,6 +318,12 @@ namespace RobotTwin.CoreSim.Sandbox
                     case CellParts.ModbusIoId:
                         BuildModbus(o, p);   // [modbus] Sandbox/WorldPhysics.Modbus.cs
                         break;
+                    case CellParts.PhotoId:
+                        BuildPhoto(o, it, p);   // [cell] Sandbox/WorldPhysics.Switches.cs
+                        break;
+                    case CellParts.LimitId:
+                        BuildLimit(o, it, p);
+                        break;
                     case CellParts.PalletId:
                         it.Body.Material = "wood";
                         break;
@@ -605,8 +611,10 @@ namespace RobotTwin.CoreSim.Sandbox
 
         private void StepMachines(AnalogSimulator? sim)
         {
-            if (_arms.Count == 0 && _conveyors.Count == 0 && _curtains.Count == 0 && _modbus.Count == 0) return;
+            if (_arms.Count == 0 && _conveyors.Count == 0 && _curtains.Count == 0 && _modbus.Count == 0 && _photos.Count == 0 && _limits.Count == 0) return;
             _machineTick++;
+            foreach (var ph in _photos) StepPhoto(ph, Step);
+            foreach (var ls in _limits) StepLimit(ls);
             foreach (var m in _modbus) StepModbus(m, sim);
             double dt = Step;
             foreach (var cv in _conveyors) StepConveyor(cv, sim, dt);

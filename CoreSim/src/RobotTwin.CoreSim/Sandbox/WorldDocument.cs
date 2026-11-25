@@ -348,6 +348,19 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public double DriveSpeed { get; set; }
 
+        /// <summary>
+        /// [urdf] The joint this one follows (a gripper's second finger, a URDF <c>mimic</c>): its motor holds
+        /// <see cref="MimicFactor"/> × that joint's position + <see cref="MimicOffset"/> (rad or m), as the linkage that couples them.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public string? MimicOf { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double? MimicFactor { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double MimicOffset { get; set; }
+
         public const string DrivePosition = "position";
         public const string DriveSpeedMode = "speed";
 

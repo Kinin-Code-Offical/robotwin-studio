@@ -97,6 +97,11 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>The joint this one follows (<c>mimic</c>), when it does.</summary>
         public string? Mimic { get; set; }
 
+        /// <summary>The mimic's <c>multiplier</c> and <c>offset</c>: this joint = multiplier × that joint + offset (rad or m).</summary>
+        public double MimicMultiplier { get; set; } = 1;
+
+        public double MimicOffset { get; set; }
+
         public bool Moves => Type is "revolute" or "continuous" or "prismatic";
     }
 
@@ -281,6 +286,11 @@ namespace RobotTwin.CoreSim.Formats
             };
             if (j.Axis.Length < 1e-12) j.Axis = Vec3.UnitX;
             j.Axis = j.Axis.Normalized();
+            if (Child(e, "mimic") is { } mimic)
+            {
+                j.MimicMultiplier = Num(mimic.Attribute("multiplier"), 1);
+                j.MimicOffset = Num(mimic.Attribute("offset"), 0);
+            }
             if (Child(e, "limit") is { } limit)
             {
                 if (limit.Attribute("lower") != null) j.Lower = Num(limit.Attribute("lower"), 0);

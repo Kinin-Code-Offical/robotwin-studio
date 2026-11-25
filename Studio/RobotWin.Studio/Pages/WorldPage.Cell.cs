@@ -555,6 +555,28 @@ namespace RobotWin.Studio.Pages
                 case CellParts.ModbusIoId:
                     ModbusStatus(o, physics, sb);   // [modbus] Pages/WorldPage.Modbus.cs
                     break;
+                case CellParts.PhotoId:
+                {
+                    var ph = physics?.PhotoOf(o.Id);
+                    if (ph == null)
+                    {
+                        sb.Append("Dünya çalışırken sensör durumu burada görünür.");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"Cisim      : {(ph.Present ? "VAR" : "yok")}" + (double.IsNaN(ph.Distance) ? string.Empty : $" · ışık {ph.Distance * 1000:0} mm'de"));
+                        sb.Append($"OUT        : {(ph.Output ? "yüksek" : "düşük")}");
+                    }
+
+                    break;
+                }
+
+                case CellParts.LimitId:
+                {
+                    var ls = physics?.LimitOf(o.Id);
+                    sb.Append(ls == null ? "Dünya çalışırken anahtar durumu burada görünür." : ls.Pressed ? $"BASILI · makara {ls.Travel * 1000:0.0} mm · C–NO kapalı" : $"Serbest · makara {ls.Travel * 1000:0.0} mm · C–NC kapalı");
+                    break;
+                }
             }
 
             _cellStatus.Text = Shell.Lang.T(sb.ToString().TrimEnd());   // [lang] line by line

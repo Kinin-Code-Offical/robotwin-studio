@@ -104,7 +104,7 @@ namespace RobotTwin.CoreSim.Ros
             bool Theirs(SceneBody b)
             {
                 int colon = b.Id.IndexOf(':');
-                return !run.Own.Contains(b.Id) && !(colon > 0 && run.Own.Contains(b.Id.Substring(0, colon)));
+                return b.SensorVisible && !run.Own.Contains(b.Id) && !(colon > 0 && run.Own.Contains(b.Id.Substring(0, colon)));
             }
 
             for (int i = 0; i < n; i++)

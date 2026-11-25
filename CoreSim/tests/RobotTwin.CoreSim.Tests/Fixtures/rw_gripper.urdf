@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- [urdf] A parallel gripper written for these tests: the right finger mimics the left one, as ROS grippers are described. -->
+<robot name="rw_gripper">
+  <link name="world"/>
+  <link name="palm">
+    <visual><geometry><box size="0.08 0.03 0.02"/></geometry></visual>
+    <inertial><mass value="0.2"/><inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="mount" type="fixed"><parent link="world"/><child link="palm"/><origin xyz="0 0 0.3"/></joint>
+
+  <link name="finger_left">
+    <visual><geometry><box size="0.01 0.02 0.04"/></geometry></visual>
+    <inertial><mass value="0.02"/><inertia ixx="0.000003" iyy="0.000003" izz="0.000001" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="finger_left_joint" type="prismatic">
+    <parent link="palm"/><child link="finger_left"/><origin xyz="-0.02 0 -0.035"/><axis xyz="-1 0 0"/>
+    <limit lower="0" upper="0.03" effort="20" velocity="0.1"/>
+  </joint>
+
+  <link name="finger_right">
+    <visual><geometry><box size="0.01 0.02 0.04"/></geometry></visual>
+    <inertial><mass value="0.02"/><inertia ixx="0.000003" iyy="0.000003" izz="0.000001" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="finger_right_joint" type="prismatic">
+    <parent link="palm"/><child link="finger_right"/><origin xyz="0.02 0 -0.035"/><axis xyz="1 0 0"/>
+    <limit lower="0" upper="0.03" effort="20" velocity="0.1"/>
+    <mimic joint="finger_left_joint" multiplier="1" offset="0"/>
+  </joint>
+</robot>

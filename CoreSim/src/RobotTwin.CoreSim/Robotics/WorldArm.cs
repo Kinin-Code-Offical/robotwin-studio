@@ -291,7 +291,7 @@ namespace RobotTwin.CoreSim.Robotics
                     bool hinge = j.Kind == WorldJointKind.Hinge;
                     double lo = j.Lower ?? (hinge ? -180 : -0.1), hi = j.Upper ?? (hinge ? 180 : 0.1);
                     // [drive] A position motor makes it an axis inverse kinematics can set, as strong as its drive.
-                    bool motor = j.Driven && j.Drive == WorldJoint.DrivePosition;
+                    bool motor = j.Driven && j.Drive == WorldJoint.DrivePosition && j.MimicOf == null;   // a mimic follows, it is not set
                     double torque = j.DriveForce > 0 ? j.DriveForce : hinge ? 10 : 200;
                     double speed = j.DriveSpeed > 0 ? j.DriveSpeed : hinge ? 180 : 0.5;
                     found.Add(new WorldArmAxis

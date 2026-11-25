@@ -38,8 +38,14 @@ namespace RobotTwin.CoreSim.Ros
             for (int c = 0; c < names.Count; c++)
             {
                 string name = (string?)names[c] ?? string.Empty;
-                if (_byName.TryGetValue(name, out var x) && x.Joint.Drive == Sandbox.WorldJoint.DrivePosition) t.Joints.Add((x.Joint, x.Hinge, c));
-                else UnknownNames.Add(name);
+                if (_byName.TryGetValue(name, out var x) && x.Joint.Drive == Sandbox.WorldJoint.DrivePosition)
+                {
+                    if (x.Joint.MimicOf == null) t.Joints.Add((x.Joint, x.Hinge, c));   // a mimic follows its master
+                }
+                else
+                {
+                    UnknownNames.Add(name);
+                }
             }
 
             if (t.Joints.Count == 0) return;

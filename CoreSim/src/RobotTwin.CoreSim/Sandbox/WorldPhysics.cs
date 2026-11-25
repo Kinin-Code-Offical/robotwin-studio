@@ -129,6 +129,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
             p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
             foreach (var j in world.Joints) p.AddJoint(world, j);
+            p.CoupleMimics(world);   // [urdf] mimic joints follow their masters
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.Liquid = liquid ?? LiquidQuality.Live;
             p.BuildLiquids(world, geometry);   // [liquid] water, oil, honey … as particles (Sandbox/WorldPhysics.Liquids.cs)
@@ -155,7 +156,9 @@ namespace RobotTwin.CoreSim.Sandbox
             "FR4" => "fr4",
             "CAM" or "GLASS" => "glass",
             "AKRİLİK" or "AKRILIK" => "acrylic",
-            _ => "pla"
+            // Any other name the material table knows ("rubber", "kağıt", "steel" from the API or an import) is that
+            // material; it used to become PLA, with PLA's friction, density and reflectance.
+            _ => Materials.IsKnown(o.Material) ? Materials.Canonical(o.Material) : "pla"
         };
 
         private void AddObject(WorldObject o, WorldBodyGeometry g)
@@ -354,6 +357,20 @@ namespace RobotTwin.CoreSim.Sandbox
             public SceneJoint Joint = null!;
             public bool Hinge, Speed;
             public double Target, MaxSpeed;
+            public SceneJoint? Master;   // [urdf] a mimic joint: Target = Factor × Master + Offset
+            public double Factor = 1, Offset;
+        }
+
+        /// <summary>[urdf] Mimic joints get their master's scene joint once every joint is built.</summary>
+        private void CoupleMimics(WorldDocument world)
+        {
+            foreach (var j in world.Joints.Where(j => j.MimicOf != null))
+            {
+                if (!_motors.TryGetValue(j.Id, out var m) || m.Speed) continue;
+                m.Master = Scene.Joints.FirstOrDefault(s => s.Id == j.MimicOf);
+                m.Factor = j.MimicFactor ?? 1;
+                m.Offset = j.MimicOffset;
+            }
         }
 
         private readonly Dictionary<string, JointMotor> _motors = new Dictionary<string, JointMotor>(StringComparer.Ordinal);
@@ -388,6 +405,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     continue;
                 }
 
+                if (m.Master != null) m.Target = m.Factor * m.Master.Angle + m.Offset;
                 double v = DriveGain * (m.Target - m.Joint.Angle);
                 m.Joint.TargetSpeed = Math.Max(-m.MaxSpeed, Math.Min(m.MaxSpeed, v));
             }

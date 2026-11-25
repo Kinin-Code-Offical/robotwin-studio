@@ -262,9 +262,28 @@ namespace RobotTwin.CoreSim.Formats
                 }
 
                 if (j.Friction > 0 && w.Kind != WorldJointKind.Fixed) w.Friction = j.Friction;
-                if (j.Mimic != null) result.Notes.Add($"'{j.Name}' '{j.Mimic}' eklemini izliyor (mimic); kendi motoruyla ayrı sürülür.");
                 world.Joints.Add(w);
                 result.Joints.Add(w);
+            }
+
+            // A mimic joint follows its master through a motor as strong as its own limit (the linkage that couples them).
+            foreach (var j in robot.Joints.Where(x => x.Mimic != null))
+            {
+                var follower = result.Joints.FirstOrDefault(w => w.Name == j.Name);
+                var master = result.Joints.FirstOrDefault(w => w.Name == j.Mimic);
+                if (follower == null || follower.Kind == WorldJointKind.Fixed) continue;
+                if (master == null || master.Kind == WorldJointKind.Fixed)
+                {
+                    result.Notes.Add($"'{j.Name}' izlediği '{j.Mimic}' eklemini bulamadı; serbest döner.");
+                    continue;
+                }
+
+                follower.MimicOf = master.Id;
+                follower.MimicFactor = Math.Abs(j.MimicMultiplier - 1) < 1e-12 ? null : j.MimicMultiplier;
+                follower.MimicOffset = j.MimicOffset;
+                follower.Drive = WorldJoint.DrivePosition;
+                if (follower.DriveForce <= 0) follower.DriveForce = j.Effort > 0 ? j.Effort : master.DriveForce;
+                if (follower.DriveSpeed <= 0) follower.DriveSpeed = master.DriveSpeed * Math.Abs(j.MimicMultiplier);
             }
 
             // [ros] The description's sensors ride on the part that carries their link, where the link and their pose put them.

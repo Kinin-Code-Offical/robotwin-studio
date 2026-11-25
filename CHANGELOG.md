@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Photoelectric sensor and limit switch:** new robot-cell parts. A diffuse sensor's reach shortens with the target's reflectance (returned light ∝ reflectance / d²), a retro-reflective or through-beam sensor is cut by anything in its beam, both after their response time; a roller-lever limit switch changes over C–NO / C–NC past its pre-travel with half a millimetre of hysteresis, as real contacts in the circuit.
+
+- **URDF mimic joints:** a `<mimic>` joint (a gripper's second finger) follows its master through a motor (multiplier × master + offset) instead of being driven separately; inverse kinematics and ROS commands leave it to its master. Tested: the mimicking finger stays within 0.5 mm of the commanded one.
+
 - **Modbus TCP remote I/O:** a new robot-cell part with 8 digital inputs and 8 outputs on real circuit pins; while the world runs it is a Modbus TCP server (function codes 1–6, 15, 16, 23; by default 127.0.0.1:5020, unit 1) that a PLC, HMI or SCADA program reads and drives like a real module. Tested over TCP: a coil drives DO1, a cable takes it to DI3, the client reads it back.
 
 - **ROS 2 mobile robots:** a robot free on the ground publishes `/odom` (`nav_msgs/Odometry`, its root frame from where it started) and `/tf` (odom → base_footprint) and follows `/cmd_vel` (`geometry_msgs/Twist`) on its drive wheels as a differential drive, with the track and wheel radius measured from its own shapes and a 0.5 s command timeout. URDF import: a `<ros2_control>` or `<transmission>` block decides which joints have motors and how they are commanded (a caster now turns freely), and a geometry-less root other than `world` (`base_footprint`) no longer bolts the robot down. Tested: a commanded rover drives 0.390 m in 2 s at 0.2 m/s and turns 84.8° in 1.5 s at 1 rad/s. The laser scanners and IMUs a URDF declares for Gazebo (`<sensor type="ray"|"gpu_lidar"|"imu">`, with rate, pose, scan, range, noise and the plugin's topic) are simulated from the world and published as `sensor_msgs/LaserScan` and `sensor_msgs/Imu`. `/joint_trajectory` (`trajectory_msgs/JointTrajectory`) moves position-driven joints through timed points (cubic between them) and holds the last.
@@ -153,6 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **World materials by their English names:** an object whose material was given as "rubber", "steel", "paper" … (by the API or an import) was simulated as PLA (PLA's friction, density and optical reflectance); every name the material table knows is now that material.
 
 - The world debugger's end-to-end check (`--fault debug-e2e`) ran the page's first template instead of its own world and never reached the breakpoint; it passes again.
 

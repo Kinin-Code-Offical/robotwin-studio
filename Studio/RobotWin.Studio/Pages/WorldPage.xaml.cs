@@ -1265,6 +1265,16 @@ namespace RobotWin.Studio.Pages
                 max = hi * scale;
             }
 
+            if (j.MimicOf != null)
+            {
+                // [urdf] A mimic joint follows its master: it has no target of its own.
+                var master = World?.Joints.FirstOrDefault(x => x.Id == j.MimicOf);
+                string factor = j.MimicFactor is { } f ? $" × {f.ToString("0.###", CultureInfo.InvariantCulture)}" : string.Empty;
+                string offset = j.MimicOffset != 0 ? $" + {(j.MimicOffset * (hinge ? 180 / Math.PI : 1000)).ToString("0.##", CultureInfo.InvariantCulture)} {(hinge ? "°" : "mm")}" : string.Empty;
+                Inspector.Children.Add(Note("İzlediği eklem: " + (master?.RosName ?? j.MimicOf) + factor + offset));
+                return;
+            }
+
             string label = (speed ? "Motor hızı" : "Motor hedefi") + " (" + unit + ")";
             Inspector.Children.Add(NumberField(label, j.DriveTarget * scale, v =>
             {

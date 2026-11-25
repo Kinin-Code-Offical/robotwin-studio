@@ -84,6 +84,12 @@ namespace RobotWin.Studio.World
                 case CellParts.ModbusIoId:
                     visual = BuildModbusIo(m);
                     break;
+                case CellParts.PhotoId:
+                    visual = BuildPhoto(m);
+                    break;
+                case CellParts.LimitId:
+                    visual = BuildLimit(m);
+                    break;
                 default:
                     visual = BuildPedestal(m, p);
                     break;
@@ -633,6 +639,37 @@ namespace RobotWin.Studio.World
             AddPins(m, CellParts.ModbusInputs, i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, -(W / 2) * Mm, (H - 14) * Mm));
             AddPins(m, CellParts.ModbusOutputs.Append("GND"), i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, (W / 2) * Mm, (H - 14) * Mm));
             return new CellVisual { PartId = CellParts.ModbusIoId, Lamp = lamp };
+        }
+
+        // ================================================================ photoelectric sensor, limit switch
+
+        /// <summary>A rectangular photoelectric sensor, 30 × 20 × 50 mm: dark housing, the lens on +X, an output lamp on top.</summary>
+        private static CellVisual BuildPhoto(ObjectModel m)
+        {
+            var k = new Kit();
+            k[Graphite].RoundedBox(0, 0, 0, 30, 20, 50, 2);
+            k.Box(0x101114, 15.4, 0, 25, 1.2, 14, 30);   // lens window
+            k.Box(Dark, -15.5, 0, 8, 3, 12, 12);   // cable gland
+            m.Body.Children.Add(k.Build());
+            var lamp = LampBrush();
+            m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box(-6 * Mm, 0, 50.8 * Mm, 6 * Mm, 6 * Mm, 1.6 * Mm)) } });
+            AddPins(m, new[] { "OUT", "GND" }, i => new Point3D(-17 * Mm, (-3 + i * 6) * Mm, 8 * Mm));
+            return new CellVisual { PartId = CellParts.PhotoId, Lamp = lamp };
+        }
+
+        /// <summary>A roller-lever limit switch: metal body 30 × 30 × 60 mm, a lever along +X with a roller at its end.</summary>
+        private static CellVisual BuildLimit(ObjectModel m)
+        {
+            var k = new Kit();
+            k.Metal(Alu).Box(0, 0, 22, 30, 30, 44);   // body
+            k[Graphite].Box(0, 0, 50, 22, 22, 12);   // actuator head
+            k.CylY(Steel, 0, -12, 12, 52, 5);   // shaft
+            k.Metal(Steel).Box(14, 0, 52, 24, 4, 6);   // lever
+            k.CylY(Black, 27, -5, 5, 52, 8);   // roller
+            k.Box(Yellow, 0, -15.2, 22, 18, 0.6, 18);   // label
+            m.Body.Children.Add(k.Build());
+            AddPins(m, new[] { "C", "NO", "NC" }, i => new Point3D(-15.5 * Mm, (-8 + i * 8) * Mm, 10 * Mm));
+            return new CellVisual { PartId = CellParts.LimitId };
         }
 
         private static CellVisual BuildPedestal(ObjectModel m, IReadOnlyDictionary<string, string> p)

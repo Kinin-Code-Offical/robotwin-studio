@@ -73,6 +73,12 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 case CellParts.ModbusIoId:   // [modbus] a DIN-rail module, 100 × 70 × 60 mm
                     return Box(new Vec3(-0.05, -0.035, 0), new Vec3(0.05, 0.035, 0.06), mass);
+
+                case CellParts.PhotoId:   // a rectangular sensor, 30 × 20 × 50 mm, its lens facing +X
+                    return Box(new Vec3(-0.015, -0.01, 0), new Vec3(0.015, 0.01, 0.05), mass);
+
+                case CellParts.LimitId:   // the switch body, 30 × 30 × 60 mm, its roller lever reaching +X
+                    return Box(new Vec3(-0.015, -0.015, 0), new Vec3(0.015, 0.015, 0.06), mass);
             }
 
             return null;

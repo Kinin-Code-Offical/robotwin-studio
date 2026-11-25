@@ -25,6 +25,11 @@ namespace RobotTwin.CoreSim.Design
         public const string FenceId = "fence-panel";
         public const string PedestalId = "robot-pedestal";
         public const string ModbusIoId = "modbus-io";
+        public const string PhotoId = "photo-sensor";
+        public const string LimitId = "limit-switch";
+
+        /// <summary>A photoelectric sensor's ways of seeing and its output's sense.</summary>
+        public const string PhotoDiffuse = "difüz", PhotoRetro = "reflektörlü", PhotoThrough = "karşılıklı", PhotoOnPresent = "cisim varken", PhotoOnAbsent = "cisim yokken";
 
         /// <summary>Digital inputs and outputs of the arm controller, in pin order.</summary>
         public static readonly string[] ArmInputs = { "DI1", "DI2", "DI3", "DI4", "START", "STOP", "SAFE" };
@@ -36,7 +41,7 @@ namespace RobotTwin.CoreSim.Design
 
         public static bool IsCellPart(string? partId) =>
             partId == ArmId || partId == GripperId || partId == VacuumId || partId == ConveyorId || partId == CurtainId ||
-            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId;
+            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId || partId == PhotoId || partId == LimitId;
 
         public static bool IsTool(string? partId) => partId == GripperId || partId == VacuumId;
 
@@ -119,6 +124,37 @@ namespace RobotTwin.CoreSim.Design
             modbus.Build = c => BuildIo(c, ModbusInputs, ModbusOutputs);
             AddPins(modbus, ModbusInputs, ModbusOutputs);
             Preset(lib, "modbus-io-8di8do", "Modbus TCP Uzak G/Ç · 8 DI / 8 DO", ModbusIoId, "DIN raya takılır; PLC ve SCADA için port 5020");
+
+            // ---------------------------------------------------------------- photoelectric sensor and limit switch
+            var photo = Part(lib, PhotoId, "Fotoelektrik Sensör", "PE",
+                "Önündeki cismi ışıkla algılar (merceği +X yönüne bakar). Difüz: cisimden yansıyan ışığı görür; menzil beyaz kart içindir, koyu cisimde kısalır " +
+                "(yansıyan ışık uzaklığın karesiyle azalır: siyah kauçuk yaklaşık üçte bir menzilde görülür). Reflektörlü ve karşılıklı: ışın menzil uzaklığındaki reflektöre " +
+                "ya da alıcıya gider, araya giren her cisim keser. OUT seçilen durumda yüksek olur ve tepki süresi kadar gecikir.",
+                new ParameterDefinition("mode", "Algılama", PhotoDiffuse, "", new[] { PhotoDiffuse, PhotoRetro, PhotoThrough }),
+                new ParameterDefinition("range", "Menzil", "0.3", "m"),
+                new ParameterDefinition("logic", "Çıkış açık", PhotoOnPresent, "", new[] { PhotoOnPresent, PhotoOnAbsent }),
+                new ParameterDefinition("response", "Tepki süresi", "1", "ms"),
+                new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }));
+            photo.Build = c => BuildIo(c, Array.Empty<string>(), new[] { "OUT" });
+            AddPins(photo, Array.Empty<string>(), new[] { "OUT" });
+            Preset(lib, "photo-diffuse-300", "Fotoelektrik Sensör · difüz 300 mm", PhotoId, "Cisimden yansımalı, beyaz kartta 300 mm");
+            Preset(lib, "photo-retro-3000", "Fotoelektrik Sensör · reflektörlü 3 m", PhotoId, "Işın reflektöre gider, araya giren cisim keser", "mode=" + PhotoRetro + ";range=3");
+            var limit = Part(lib, LimitId, "Sınır Anahtarı (makaralı kol)", "LS",
+                "Makaralı kollu mekanik anahtar (makara +X yönünde): bir cisim makarayı ön stroktan fazla bastırınca C–NO kapanır, C–NC açılır; yarım milimetre geri " +
+                "gelince bırakır. Kontaklar devrede gerçek anahtardır: PLC girişine, röleye ya da doğrudan motor devresine bağlanır.",
+                new ParameterDefinition("pretravel", "Ön strok", "2", "mm"),
+                new ParameterDefinition("reach", "Makara erişimi", "25", "mm"));
+            limit.Build = c =>
+            {
+                int common = c.Pin("C");
+                c.Add(new Switch(c.Sub("NO"), common, c.Pin("NO")));
+                c.Add(new Switch(c.Sub("NC"), common, c.Pin("NC"), closed: true));
+            };
+            limit.Pins.Add(new PinDefinition("C", "1", -6, 0));
+            limit.Pins.Add(new PinDefinition("NO", "2", 6, -2));
+            limit.Pins.Add(new PinDefinition("NC", "3", 6, 2));
+            limit.HalfHeight = 4;
+            Preset(lib, "limit-switch-roller", "Sınır Anahtarı · makaralı kol", LimitId, "1 NO + 1 NC, 2 mm ön strok");
 
             // ---------------------------------------------------------------- passive equipment
             var pallet = Part(lib, PalletId, "Euro palet", "PAL",   // not "Palet" (the editor's palette)
@@ -253,6 +289,8 @@ namespace RobotTwin.CoreSim.Design
             FenceId => 12 * Num(p, "width", 1.0),
             PedestalId => 60.0,
             ModbusIoId => 0.2,
+            PhotoId => 0.06,
+            LimitId => 0.12,
             _ => null
         };
     }

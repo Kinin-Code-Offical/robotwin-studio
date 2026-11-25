@@ -127,6 +127,7 @@ namespace RobotTwin.CoreSim.Ros
                     continue;
                 }
 
+                if (x.Joint.MimicOf != null) continue;   // it follows its master
                 bool speed = x.Joint.Drive == WorldJoint.DriveSpeedMode;
                 var values = speed ? velocities : positions;
                 if (values == null || i >= values.Count || values[i] is null) continue;
