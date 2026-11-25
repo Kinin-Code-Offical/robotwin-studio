@@ -375,7 +375,9 @@ namespace RobotWin.Studio.Pages
         {
             UpdatePinPanel();
             var fw = W.Simulation.Firmware.FirstOrDefault();
-            BaudText.Text = fw == null ? "Firmware yok" : fw.Mcu.BaudRate > 0 ? $"{fw.Mcu.BaudRate:0} baud" : "Serial kapalı";
+            var esp = W.Simulation.Esp32Boards.FirstOrDefault();   // [esp32hw] ESP32 boards, either mode
+            double baud = fw != null ? fw.Mcu.BaudRate : esp?.SerialBaud ?? 0;
+            BaudText.Text = fw == null && esp == null ? "Firmware yok" : baud > 0 ? $"{baud:0} baud" : "Serial kapalı";
             if (W.Simulation.Log.Count != _lastLogCount)
             {
                 _lastLogCount = W.Simulation.Log.Count;
@@ -1524,6 +1526,12 @@ namespace RobotWin.Studio.Pages
                     break;
                 case "dmm":
                     UpdateMeterPanel();
+                    break;
+                case "serial":
+                    DockSerial.IsChecked = true;   // [esp32hw] what the boards printed
+                    break;
+                case "log":
+                    DockLog.IsChecked = true;      // the run's events
                     break;
                 case "burn":
                 case "diag":

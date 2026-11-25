@@ -22,6 +22,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public const uint IromBase = 0x400C2000, IromEnd = 0x40C00000;    // flash, instruction bus
         public const uint DromBase = 0x3F400000, DromEnd = 0x3F800000;    // flash, data bus
         public const uint RomBase = 0x40000000, RomEnd = 0x40070000;      // mask ROM, 448 KB (served by traps)
+        public const uint RomDataBase = 0x3FF90000, RomDataEnd = 0x3FFA0000; // the mask ROM's data (newlib's tables …), read-only
         public const uint PeripheralBase = 0x3FF00000, PeripheralEnd = 0x3FF80000;
         public const uint AhbBase = 0x60000000, AhbEnd = 0x60040000;      // the APB peripherals from 0x3FF40000 (UARTs …) over the AHB
         private const uint AhbPeripherals = 0x3FF40000;
@@ -32,6 +33,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private readonly byte[] _rtcSlow = new byte[RtcSlowSize];
         private readonly byte[] _irom = new byte[IromEnd - 0x400C0000];
         private readonly byte[] _drom = new byte[DromEnd - DromBase];
+        private readonly byte[] _romData = new byte[RomDataEnd - RomDataBase];
         private readonly Dictionary<uint, uint> _registers = new Dictionary<uint, uint>();
         private readonly Dictionary<uint, Func<XtensaCore, bool>> _romFunctions = new Dictionary<uint, Func<XtensaCore, bool>>();
         private readonly Dictionary<uint, string> _romNames = new Dictionary<uint, string>();
@@ -48,6 +50,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             BurnEfuse();
+            // UART0's reset values, which drivers keep where they pass "unchanged": CONF0 (APB clock, 8N1), CONF1 (both FIFO
+            // thresholds 0x60, RX timeout 10), CLKDIV 694 (115200 baud at 80 MHz).
+            _registers[0x3FF40020] = 0x0800001C;
+            _registers[0x3FF40024] = 0x0A006060;
+            _registers[0x3FF40014] = 0x000002B6;
         }
 
         /// <summary>The PRO_CPU (core 0): it boots.</summary>
@@ -61,6 +68,15 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         /// <summary>What the firmware wrote to UART0 (its boot log and Serial).</summary>
         public StringBuilder Uart0 { get; } = new StringBuilder();
+
+        /// <summary>
+        /// The reset the ROM reports for this start (its RESET_REASON: 1 power-on, 5 deep-sleep wake, 12 software CPU reset,
+        /// 15 brown-out …); the board sets it before loading.
+        /// </summary>
+        public int RomResetReason { get; set; } = 1;
+
+        /// <summary>The firmware asked for a restart (esp_restart: the ROM's software reset or RTC_CNTL SW_SYS_RST); the chip has stopped for it.</summary>
+        public bool RestartRequested { get; private set; }
 
         /// <summary>Why the chip stopped, when it did (a ROM function nobody serves, a bus error …); null while it runs.</summary>
         public string? Stopped { get; private set; }
@@ -94,6 +110,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             BindRom();
+            FillRomData(elf);
             // As the second-stage bootloader leaves it when it calls the application's entry (call_start_cpu0, which
             // begins with ENTRY): windows on, user vector mode, CALLINC of a CALLX4, interrupts at level 0, and its
             // stack near the top of the ROM's reserved DRAM, the caller pointer below it pointing at itself.
@@ -133,10 +150,78 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (a >= RtcFastBase && a < RtcFastBase + RtcFastSize) return (_rtcFast, a - RtcFastBase);
             if (a >= RtcFastIBase && a < RtcFastIBase + RtcFastSize) return (_rtcFast, a - RtcFastIBase);
             if (a >= RtcSlowBase && a < RtcSlowBase + RtcSlowSize) return (_rtcSlow, a - RtcSlowBase);
+            if (a >= RomDataBase && a < RomDataEnd) return (_romData, a - RomDataBase);
             return (null, 0);
         }
 
-        private bool IsCachedFlash(uint a) => _flash != null && ((a >= 0x400C2000 && a < IromEnd) || (a >= DromBase && a < DromEnd));
+        /// <summary>Memory the firmware can read but not write: the flash through the cache, the mask ROM's data.</summary>
+        private bool IsCachedFlash(uint a) => (_flash != null && ((a >= 0x400C2000 && a < IromEnd) || (a >= DromBase && a < DromEnd)))
+                                              || (a >= RomDataBase && a < RomDataEnd);
+
+        /// <summary>
+        /// The mask ROM's data the firmware reads, put where the ELF's ROM symbols say: newlib's C-locale character classes
+        /// (<c>_ctype_</c>, one flag byte per character after a leading 0, and <c>__ctype_ptr__</c> pointing at it, so
+        /// isdigit/toupper/… work), <c>__mb_cur_max</c> (1: single-byte characters), and the bit-count tables.
+        /// </summary>
+        private void FillRomData(ElfImage elf)
+        {
+            uint ctype = 0;
+            foreach (var symbol in elf.Symbols)
+            {
+                uint at = symbol.Value;
+                if (at < RomDataBase || at >= RomDataEnd) continue;
+                switch (symbol.Name)
+                {
+                    case "_ctype_":
+                        ctype = at;
+                        if (at + 257 > RomDataEnd) break;
+                        _romData[at - RomDataBase] = 0;
+                        for (int c = 0; c < 256; c++) _romData[at - RomDataBase + 1 + c] = CtypeFlags(c);
+                        break;
+                    case "__mb_cur_max":
+                        _romData[at - RomDataBase] = 1;
+                        break;
+                    case "__popcount_tab":
+                        for (int i = 0; i < 256 && at + i < RomDataEnd; i++) _romData[at - RomDataBase + i] = BitCount(i);
+                        break;
+                }
+            }
+
+            foreach (var symbol in elf.Symbols)
+            {
+                if (symbol.Name != "__ctype_ptr__" || ctype == 0 || symbol.Value < RomDataBase || symbol.Value + 4 > RomDataEnd) continue;
+                uint at = symbol.Value - RomDataBase;
+                for (int b = 0; b < 4; b++) _romData[at + b] = (byte)(ctype >> (8 * b));
+            }
+        }
+
+        private static byte BitCount(int v)
+        {
+            byte n = 0;
+            for (; v != 0; v &= v - 1) n++;
+            return n;
+        }
+
+        /// <summary>newlib's class flags for one character in the C locale: _U 1, _L 2, _N 4, _S 8, _P 16, _C 32, _X 64, _B 128.</summary>
+        private static byte CtypeFlags(int c)
+        {
+            const int U = 1, L = 2, N = 4, S = 8, P = 16, C = 32, X = 64, B = 128;
+            if (c < 0x09) return C;
+            if (c <= 0x0D) return C | S;
+            if (c < 0x20) return C;
+            if (c == 0x20) return S | B;
+            if (c <= 0x2F) return P;
+            if (c <= 0x39) return N;
+            if (c <= 0x40) return P;
+            if (c <= 0x46) return U | X;
+            if (c <= 0x5A) return U;
+            if (c <= 0x60) return P;
+            if (c <= 0x66) return L | X;
+            if (c <= 0x7A) return L;
+            if (c <= 0x7E) return P;
+            if (c == 0x7F) return C;
+            return 0;
+        }
 
         private static bool IsPeripheral(uint a, out uint register)
         {
@@ -251,7 +336,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public void Run(long cycles, int turn = 1000)
         {
             long done = 0;
-            while (done < cycles && Stopped == null && !Pro.AtBreak)
+            while (done < cycles && Stopped == null && !Pro.AtBreak && !RestartRequested)
             {
                 int step = (int)Math.Min(turn, cycles - done);
                 try

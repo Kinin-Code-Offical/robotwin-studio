@@ -70,6 +70,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             _apbTicks += cycles * ApbHz / cpu;
             for (int g = 0; g < 2; g++) ServiceTimerGroup(g);
             ServiceLedc();
+            ServiceUart0();
         }
 
         private bool ReadTimerRegister(uint register, out uint value)

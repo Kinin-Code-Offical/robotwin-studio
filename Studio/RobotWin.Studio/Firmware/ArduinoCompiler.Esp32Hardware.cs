@@ -225,6 +225,7 @@ namespace RobotWin.Studio.Firmware
                 result.OutputFolder = outDir;
                 string elf = Path.Combine(outDir, "sketch.ino.elf");
                 if (File.Exists(elf)) result.Elf = File.ReadAllBytes(elf);
+                CacheEsp32Hardware(source, outDir);
             }
             else
             {
@@ -238,6 +239,56 @@ namespace RobotWin.Studio.Firmware
 
             result.Duration = watch.Elapsed;
             return result;
+        }
+
+        /// <summary>[esp32hw] Where a sketch's real-chip build is kept for the emulator, by its source's hash.</summary>
+        private static string Esp32HardwareCacheDir(string source) => Path.Combine(BuildRoot, "esp32hw", "cache", FirmwareHash(source));
+
+        /// <summary>
+        /// [esp32hw] The real-chip build of exactly this source (its ELF and merged flash image), which the hardware-compatible
+        /// mode runs on the Xtensa emulator; null when it has not been built yet.
+        /// </summary>
+        public static (string Elf, string? Merged)? CachedEsp32Hardware(string source)
+        {
+            string dir = Esp32HardwareCacheDir(source);
+            string elf = Path.Combine(dir, "firmware.elf");
+            if (!File.Exists(elf)) return null;
+            string merged = Path.Combine(dir, "firmware.merged.bin");
+            return (elf, File.Exists(merged) ? merged : null);
+        }
+
+        private static void CacheEsp32Hardware(string source, string outDir)
+        {
+            try
+            {
+                string dir = Esp32HardwareCacheDir(source);
+                Directory.CreateDirectory(dir);
+                string merged = Path.Combine(outDir, "sketch.ino.merged.bin");
+                if (File.Exists(merged)) File.Copy(merged, Path.Combine(dir, "firmware.merged.bin"), true);
+                File.Copy(Path.Combine(outDir, "sketch.ino.elf"), Path.Combine(dir, "firmware.elf"), true);   // last: its presence marks the build whole
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // the emulator builds again next time
+            }
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<BuildResult>> HardwareBuilds =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, Task<BuildResult>>();
+
+        /// <summary>
+        /// [esp32hw] Builds the sketch for the real chip in the background, once per source (a run that finds no build starts
+        /// it; the next run finds it in <see cref="CachedEsp32Hardware"/>). A failed build is forgotten so it can be retried.
+        /// </summary>
+        public static Task<BuildResult> EnsureEsp32HardwareBuildAsync(string source)
+        {
+            string hash = FirmwareHash(source);
+            return HardwareBuilds.GetOrAdd(hash, h => Task.Run(async () =>
+            {
+                var result = await CompileEsp32HardwareAsync(source, "src-" + h).ConfigureAwait(false);
+                if (!result.Success) HardwareBuilds.TryRemove(h, out _);
+                return result;
+            }));
         }
 
         /// <summary>Writes a hardware build to a real ESP32 on <paramref name="port"/> with the core's esptool (the board resets into its bootloader by itself).</summary>

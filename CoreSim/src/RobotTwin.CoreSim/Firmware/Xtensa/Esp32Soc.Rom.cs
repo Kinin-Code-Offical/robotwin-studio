@@ -233,7 +233,18 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Rom("esp_rom_delay_us", DelayMicroseconds);
 
             // start-up: reset reason (power on), the CPU clock, caches (the flash is mapped directly here), the console
-            foreach (var name in new[] { "esp_rom_get_reset_reason", "rtc_get_reset_reason" }) Rom(name, c => Return(c, 1));
+            foreach (var name in new[] { "esp_rom_get_reset_reason", "rtc_get_reset_reason" }) Rom(name, c => Return(c, (uint)RomResetReason));
+            // esp_restart's last step: the whole chip resets (the board starts it again)
+            foreach (var name in new[] { "software_reset", "software_reset_cpu", "esp_rom_software_reset_system", "esp_rom_software_reset_cpu" })
+            {
+                Rom(name, c =>
+                {
+                    RestartRequested = true;
+                    c.AtBreak = true;
+                    return true;
+                });
+            }
+
             foreach (var name in new[] { "rtc_get_wakeup_cause", "esp_rom_get_wakeup_cause" }) Rom(name, c => Return(c, 0));
             // The CPU's ticks per µs the ROM keeps for each core (g_ticks_per_us_pro/app): IDF sets them as it switches clocks.
             foreach (var name in new[] { "esp_rom_get_cpu_ticks_per_us", "ets_get_cpu_frequency" }) Rom(name, c => Return(c, TicksPerMicrosecond(c)));

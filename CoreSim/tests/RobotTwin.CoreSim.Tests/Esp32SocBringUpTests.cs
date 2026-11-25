@@ -50,7 +50,20 @@ namespace RobotTwin.CoreSim.Tests
                 soc.App.JumpTargets = new System.Collections.Generic.Dictionary<ulong, long>();
             }
 
-            soc.Run(cycles);
+            // RW_ESP32_SEND=text and RW_ESP32_SEND_AT=cycles: the text goes to UART0's receive line at that point of the run.
+            string? send = Environment.GetEnvironmentVariable("RW_ESP32_SEND");
+            long sendAt = long.TryParse(Environment.GetEnvironmentVariable("RW_ESP32_SEND_AT"), out var at) ? Math.Min(at, cycles) : cycles / 2;
+            if (!string.IsNullOrEmpty(send))
+            {
+                soc.Run(sendAt);
+                soc.SendToUart0(Encoding.UTF8.GetBytes(send.Replace("\\n", "\n")));   // "\n" typed in the variable is a newline
+                soc.Run(cycles - sendAt);
+            }
+            else
+            {
+                soc.Run(cycles);
+            }
+
             var report = new StringBuilder();
             report.AppendLine($"durdu: {soc.Stopped ?? (soc.Pro.AtBreak ? "BREAK" : "hayır")}");
             report.AppendLine($"yonga zamanı {soc.Seconds * 1000:F3} ms · CPU {soc.CpuHz / 1e6:F0} MHz · APB {soc.ApbHz / 1e6:F0} MHz");
@@ -80,6 +93,11 @@ namespace RobotTwin.CoreSim.Tests
                 string what = !pad.Driven ? "sürülmüyor" : pad.IsPwm ? $"PWM {pad.PwmFrequency:F1} Hz %{pad.PwmDuty * 100:F2}" : pad.Level ? "YÜKSEK" : "düşük";
                 report.AppendLine($"GPIO{gpio}: {what}{(pad.PullUp ? " · yukarı çekme" : "")}{(pad.PullDown ? " · aşağı çekme" : "")}{(pad.OpenDrain ? " · açık akaç" : "")}");
             }
+            foreach (var core in new[] { soc.Pro, soc.App })
+                report.AppendLine($"çekirdek {core.CoreId} kesmeler: INTENABLE 0x{core.IntEnable:X8} INTERRUPT 0x{core.Interrupt:X8} dış 0x{core.ExternalLevels:X8}");
+            var held = Enumerable.Range(0, 69).Where(soc.PeripheralLevel).Select(s => $"{s}→PRO {soc.InterruptRoute(0, s)}/APP {soc.InterruptRoute(1, s)}");
+            report.AppendLine("tutulan kaynaklar: " + string.Join(", ", held));
+            report.AppendLine($"UART0: INT_RAW 0x{soc.Read32(0x3FF40004):X8} INT_ENA 0x{soc.Read32(0x3FF4000C):X8} CONF0 0x{soc.Read32(0x3FF40020):X8} CONF1 0x{soc.Read32(0x3FF40024):X8} kaynak 34 → PRO {soc.InterruptRoute(0, 34)}/APP {soc.InterruptRoute(1, 34)}");
             report.AppendLine("---- UART0 ----");
             report.AppendLine(soc.Uart0.ToString());
             report.AppendLine("---- son sıçramalar (eskiden yeniye) ----");

@@ -291,6 +291,11 @@ namespace RobotWin.Studio
                 if (ex != null) Workspace.Current.Load(ex.Build(), null);
             }
 
+            // [esp32hw] --esp32-mode hardware|fast: every ESP32 of this run (circuit and world) in that mode, nothing saved, to
+            // see a design on the Xtensa emulator or compare the two modes.
+            if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--esp32-mode").Skip(1).FirstOrDefault() is { } espMode)
+                RobotTwin.CoreSim.Design.Esp32Parts.RunModeOverride = espMode == "hardware" ? RobotTwin.CoreSim.Design.Esp32Parts.HardwareMode : RobotTwin.CoreSim.Design.Esp32Parts.FastMode;
+
             if (Environment.GetCommandLineArgs().Contains("--nav-expanded")) window.ExpandRailForSnapshot();
             if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--theme").Skip(1).FirstOrDefault() is { } themeArg)
             {

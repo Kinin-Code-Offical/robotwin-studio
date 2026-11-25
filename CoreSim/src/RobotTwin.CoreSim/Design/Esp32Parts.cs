@@ -67,12 +67,25 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>Mode 2: built by Espressif's toolchain for the real chip (and, with the Xtensa emulator, run as such).</summary>
         public const string HardwareMode = "donanım uyumlu";
 
-        /// <summary>The board is set to the hardware-compatible mode.</summary>
-        public static bool IsHardwareMode(IReadOnlyDictionary<string, string>? parameters) =>
-            parameters != null && parameters.TryGetValue(ModeKey, out var mode) && mode == HardwareMode;
+        /// <summary>
+        /// [esp32hw] One run's mode for every ESP32 (the command line's --esp32-mode, to see a design on the emulator or compare
+        /// the modes); null: each board's own setting. Nothing is saved.
+        /// </summary>
+        public static string? RunModeOverride { get; set; }
 
-        /// <summary>What a board in the hardware-compatible mode says while the Xtensa emulator is not there yet.</summary>
-        public const string HardwareModeNotice = "Donanım uyumlu mod: Xtensa emülatörü henüz hazır değil, bu kart simülasyonda hızlı modla çalışıyor. Gerçek kart için Kod → Gerçek kart.";
+        /// <summary>The board is set to the hardware-compatible mode (or this run puts every board in it).</summary>
+        public static bool IsHardwareMode(IReadOnlyDictionary<string, string>? parameters) =>
+            RunModeOverride != null ? RunModeOverride == HardwareMode
+                : parameters != null && parameters.TryGetValue(ModeKey, out var mode) && mode == HardwareMode;
+
+        /// <summary>A hardware-compatible board running on the Xtensa emulator: what it models and what not yet.</summary>
+        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar ve Serial (UART0) modellendi; I2C, SPI, UART1/2 ve Wi-Fi/BLE henüz yok.";
+
+        /// <summary>A hardware-compatible board whose real-chip build is not there yet: it is being built, this run is fast mode.</summary>
+        public const string HardwareModeBuilding = "Donanım uyumlu mod: çizim gerçek yonga için derleniyor; bu çalıştırma hızlı modda, derleme bitince sonraki çalıştırma emülatörde.";
+
+        /// <summary>A hardware-compatible board without Espressif's toolchain: fast mode until it is installed.</summary>
+        public const string HardwareModeNoToolchain = "Donanım uyumlu mod için ESP32 araç zinciri gerekiyor (Kod → Gerçek kart → araç zincirini kur); o zamana dek bu kart hızlı modda çalışıyor.";
 
         private static PartDefinition Board(PartLibrary lib, string id, string name, string variant, string footprint,
             string[] left, string[] right, string[] grounds, string supplyPin, bool onboardLed)

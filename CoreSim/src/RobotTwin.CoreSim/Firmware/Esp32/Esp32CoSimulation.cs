@@ -89,7 +89,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
     /// time reaches the end of the slice, and its outputs (push-pull/open-drain levels,
     /// 45 kΩ pull-ups/downs, LEDC PWM, DAC) are applied to the board's pin devices.
     /// </summary>
-    public sealed class Esp32CoSimulation : IDisposable
+    public sealed class Esp32CoSimulation : IEsp32Board
     {
         public const double BrownOutVoltage = 2.43;
         public const double BrownOutReleaseVoltage = 2.55;
@@ -424,6 +424,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _pendingSleepUs = -1;
             _wakeAt = double.NaN;
             _wifiOn = false;
+            _serialBegun = false;
             ResetReason = resetReason;
             for (int b = 0; b < _spiPins.Length; b++) _spiPins[b] = (-1, -1, -1);
             foreach (var slave in Spi.Slaves)
@@ -890,7 +891,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private void OnSerialBegin(IntPtr user, int port, uint baud)
         {
             if (port >= 0 && port < 3 && baud > 0) _baud[port] = baud;
+            if (port == 0) _serialBegun = true;
         }
+
+        private bool _serialBegun;
+
+        public double SerialBaud => State == Esp32BoardState.Running && _serialBegun ? _baud[0] : 0;
 
         private void OnSerialWrite(IntPtr user, int port, IntPtr data, int length)
         {

@@ -3,7 +3,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     public sealed partial class Esp32Soc
     {
         // UART0
-        private const uint Uart0Fifo = 0x3FF40000, Uart0Status = 0x3FF4001C;
+        private const uint Uart0Fifo = 0x3FF40000;
 
         // DPORT: the APP_CPU's reset, clock and boot address
         private const uint AppCpuCtrlA = 0x3FF0002C, AppCpuCtrlB = 0x3FF00030, AppCpuCtrlD = 0x3FF00038;
@@ -46,6 +46,22 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             UpdateInterruptLines();
         }
 
+        /// <summary>
+        /// UART0's baud rate as the firmware set it: its clock (APB, or the 1 MHz REF_TICK when CONF0's TICK_REF_ALWAYS_ON is
+        /// clear) over CLKDIV's divider (integer part and sixteenths); 0 before the driver sets one.
+        /// </summary>
+        public double Uart0Baud
+        {
+            get
+            {
+                uint clkdiv = Reg(Uart0Fifo + 0x14);
+                double divider = (clkdiv & 0xFFFFF) + ((clkdiv >> 20) & 0xF) / 16.0;
+                if (divider < 1) return 0;
+                double clock = (Reg(Uart0Fifo + 0x20) & (1u << 27)) != 0 ? ApbHz : 1e6;
+                return clock / divider;
+            }
+        }
+
         /// <summary>Raises peripheral interrupt <paramref name="source"/> once (an edge) on whichever core and CPU interrupt the matrix routes it to.</summary>
         public void RaisePeripheral(int source)
         {
@@ -77,6 +93,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             UpdateInterruptLines();
         }
 
+        /// <summary>The CPU interrupt the matrix routes peripheral source <paramref name="source"/> to on core <paramref name="cpu"/> (-1: none).</summary>
+        public int InterruptRoute(int cpu, int source) => cpu is 0 or 1 && source >= 0 && source < 69 ? _interruptMap[cpu, source] : -1;
+
         /// <summary>Whether peripheral source <paramref name="source"/> holds its line up.</summary>
         public bool PeripheralLevel(int source) => source >= 0 && source < 69 && _sourceLevel[source];
 
@@ -98,6 +117,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private bool ReadPeripheral(uint register, out uint value)
         {
             if (ReadFlashRegister(register, out value)) return true;
+            if (ReadUartRegister(register, out value)) return true;
             if (ReadTimerRegister(register, out value)) return true;
             if (ReadAdcRegister(register, out value)) return true;
             if (ReadLedcRegister(register, out value)) return true;
@@ -159,12 +179,6 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             switch (register)
             {
-                case Uart0Fifo:
-                    value = 0;
-                    return true;
-                case Uart0Status:
-                    value = 0;   // TX FIFO empty, nothing received
-                    return true;
                 case AppCpuCtrlA:
                 case AppCpuCtrlB:
                 case AppCpuCtrlD:
@@ -180,11 +194,19 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private bool WritePeripheral(uint register, uint value)
         {
             if (WriteFlashRegister(register, value)) return true;
+            if (WriteUartRegister(register, value)) return true;
             if (WriteTimerRegister(register, value)) return true;
             if (WriteAdcRegister(register, value)) return true;
             if (WriteLedcRegister(register, value)) return true;
             if (WriteEfuseRegister(register, value)) return true;
             if (WriteGpioRegister(register, value)) return true;
+            if (register == 0x3FF48000 && (value & 1u << 31) != 0)
+            {
+                // RTC_CNTL_OPTIONS0 SW_SYS_RST: the whole chip resets
+                RestartRequested = true;
+                return true;
+            }
+
             if (register >= ProIntrMap && register < AppIntrMap + 69 * 4)
             {
                 int cpu = register >= AppIntrMap ? 1 : 0;
@@ -200,9 +222,6 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             switch (register)
             {
-                case Uart0Fifo:
-                    Uart0.Append((char)(value & 0xFF));
-                    return true;
                 case AppCpuCtrlB:
                 case AppCpuCtrlD:
                     return true;

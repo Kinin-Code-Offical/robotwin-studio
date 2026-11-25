@@ -625,9 +625,9 @@ namespace RobotWin.Studio.Simulation
         /// <summary>Lockstep slice of ESP32 boards (the sketch runs natively between circuit steps).</summary>
         public const double Esp32Slice = 100e-6;
 
-        private readonly List<RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation> _esp32 = new List<RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation>();
+        private readonly List<RobotTwin.CoreSim.Firmware.Esp32.IEsp32Board> _esp32 = new List<RobotTwin.CoreSim.Firmware.Esp32.IEsp32Board>();
 
-        public IReadOnlyList<RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation> Esp32Boards => _esp32;
+        public IReadOnlyList<RobotTwin.CoreSim.Firmware.Esp32.IEsp32Board> Esp32Boards => _esp32;
 
         private void OnSubstep(double time)
         {
@@ -672,6 +672,9 @@ namespace RobotWin.Studio.Simulation
                 return;
             }
 
+            // [esp32hw] The hardware-compatible mode runs the real-chip build on our Xtensa emulator when there is one.
+            if (RobotTwin.CoreSim.Design.Esp32Parts.IsHardwareMode(part.Parameters) && AttachEmulatedEsp32(part, source!, fileName)) return;
+
             string? dll = RobotWin.Studio.Firmware.ArduinoCompiler.CachedEsp32Dll(source!);
             if (dll == null)
             {
@@ -694,14 +697,54 @@ namespace RobotWin.Studio.Simulation
                 cosim.SerialOutput += AppendSerial;
                 _esp32.Add(cosim);
                 Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (ESP32 HAL modeli, 240 MHz)", AnalogEventKind.StateChange));
-                // [esp32hw] Said plainly, never silently: the hardware-compatible mode runs as the fast one until the emulator is there.
-                if (RobotTwin.CoreSim.Design.Esp32Parts.IsHardwareMode(part.Parameters))
-                    Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNotice, AnalogEventKind.Warning));
                 AttachI2c(cosim.I2c, part);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is EntryPointNotFoundException || ex is System.IO.IOException || ex is InvalidOperationException)
             {
                 Log.Add(new SimLogEntry(0, part.RefDes, "ESP32 başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
+            }
+        }
+
+        /// <summary>
+        /// [esp32hw] Starts a hardware-compatible ESP32 on the Xtensa emulator with the sketch's real-chip build; false (after
+        /// saying why: being built, or no toolchain) when there is none yet, and the board runs as the fast mode.
+        /// </summary>
+        private bool AttachEmulatedEsp32(SchematicPart part, string source, string? fileName)
+        {
+            var cached = RobotWin.Studio.Firmware.ArduinoCompiler.CachedEsp32Hardware(source);
+            if (cached == null)
+            {
+                if (RobotWin.Studio.Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                {
+                    _ = RobotWin.Studio.Firmware.ArduinoCompiler.EnsureEsp32HardwareBuildAsync(source);
+                    Log.Add(new SimLogEntry(0, part.RefDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
+                }
+                else
+                {
+                    Log.Add(new SimLogEntry(0, part.RefDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNoToolchain, AnalogEventKind.Warning));
+                }
+
+                return false;
+            }
+
+            try
+            {
+                string refDes = part.RefDes;
+                byte[] elf = System.IO.File.ReadAllBytes(cached.Value.Elf);
+                byte[]? image = cached.Value.Merged != null ? System.IO.File.ReadAllBytes(cached.Value.Merged) : null;
+                var board = new RobotTwin.CoreSim.Firmware.Esp32.Esp32EmulatedBoard(elf, image, Compiled!, refDes);
+                board.SerialOutput += AppendSerial;
+                board.Log += m => Log.Add(new SimLogEntry(Simulator?.Time ?? 0, refDes, m, AnalogEventKind.StateChange));
+                _esp32.Add(board);
+                Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
+                Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
+                AttachI2c(board.I2c, part);
+                return true;
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
+            {
+                Log.Add(new SimLogEntry(0, part.RefDes, "ESP32 emülatörü başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
+                return false;
             }
         }
 

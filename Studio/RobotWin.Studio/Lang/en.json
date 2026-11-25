@@ -6916,10 +6916,18 @@
   "hızlı simülasyon": "fast simulation",
   "donanım uyumlu": "hardware-compatible",
   "İki çalışma modu: hızlı simülasyon (çizim RobotWin'in Arduino-ESP32 modeliyle çalışır) ve donanım uyumlu (Espressif'in araç zinciriyle gerçek kart için derlenir; Xtensa emülatörü hazır olana dek simülasyonda hızlı modla çalışır).": "Two run modes: fast simulation (the sketch runs on RobotWin's Arduino-ESP32 model) and hardware-compatible (built for the real board by Espressif's toolchain; until the Xtensa emulator is ready it runs as the fast mode in the simulation).",
-  "Donanım uyumlu mod: Xtensa emülatörü henüz hazır değil, bu kart simülasyonda hızlı modla çalışıyor. Gerçek kart için Kod → Gerçek kart.": "Hardware-compatible mode: the Xtensa emulator is not ready yet, so this board runs as the fast mode in the simulation. For the real board: Code → Real board.",
   "Birleşik imaj kaydedildi (0x0 adresine yazılır): ": "Merged image saved (written at address 0x0): ",
   "Bluepad32 kullanan çizim gerçek kart için Bluepad32'nin kendi ESP32 çekirdeğini gerektirir; RobotWin onu henüz kurmuyor (hızlı modda çalışır).": "A sketch that uses Bluepad32 needs Bluepad32's own ESP32 core for the real board; RobotWin does not install it yet (it runs in the fast mode).",
-  "ESP32 için gereken kütüphaneler kurulamadı (ESP32Servo).": "Could not install the libraries the ESP32 needs (ESP32Servo)."
+  "ESP32 için gereken kütüphaneler kurulamadı (ESP32Servo).": "Could not install the libraries the ESP32 needs (ESP32Servo).",
+  "Donanım uyumlu mod: çizim gerçek yonga için derleniyor; bu çalıştırma hızlı modda, derleme bitince sonraki çalıştırma emülatörde.": "Hardware-compatible mode: the sketch is being built for the real chip; this run is the fast mode, the next one after the build runs on the emulator.",
+  "Donanım uyumlu mod için ESP32 araç zinciri gerekiyor (Kod → Gerçek kart → araç zincirini kur); o zamana dek bu kart hızlı modda çalışıyor.": "The hardware-compatible mode needs the ESP32 toolchain (Code → Real board → install the toolchain); until then this board runs as the fast mode.",
+  "ESP32 emülatörü başlatılamadı: ": "The ESP32 emulator could not start: ",
+  "yazılım yeniden başlattı (esp_restart)": "the firmware restarted (esp_restart)",
+  "Emülatör durdu: ": "The emulator stopped: ",
+  " (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": " (real-chip firmware, RobotWin's Xtensa emulator)",
+  "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware running (real-chip firmware, RobotWin's Xtensa emulator)",
+  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar ve Serial (UART0) modellendi; I2C, SPI, UART1/2 ve Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, timers and Serial (UART0) are modelled; I2C, SPI, UART1/2 and Wi-Fi/BLE are not yet.",
+  "Donanım uyumlu mod: UART1/UART2 henüz modellenmedi, gönderilen metin karta ulaşmıyor.": "Hardware-compatible mode: UART1/UART2 are not modelled yet; text sent does not reach the board."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9731,6 +9739,9 @@
   "{…} kartına yüklendi": "Uploaded to the board on {0}",
   "{…} kartına yüklenemedi (bağlantıyı ve BOOT düğmesini deneyin)": "Could not upload to the board on {0} (check the cable and try the BOOT button)",
   "Birleşik imaj kaydedildi (0x0 adresine yazılır): {…}": "Merged image saved (written at address 0x0): {0}",
-  "Arduino-ESP32 {…} kuruluyor (derleyiciler, kütüphaneler, esptool) …": "Installing Arduino-ESP32 {0} (compilers, libraries, esptool) …"
+  "Arduino-ESP32 {…} kuruluyor (derleyiciler, kütüphaneler, esptool) …": "Installing Arduino-ESP32 {0} (compilers, libraries, esptool) …",
+  "Firmware yüklendi: {…} (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware loaded: {0} (real-chip firmware, RobotWin's Xtensa emulator)",
+  "ESP32 emülatörü başlatılamadı: {…}": "The ESP32 emulator could not start: {0}",
+  "Emülatör durdu: {…}": "The emulator stopped: {0}"
  }
 }
