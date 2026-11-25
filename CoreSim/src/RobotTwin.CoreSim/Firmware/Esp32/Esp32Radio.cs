@@ -59,6 +59,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public const int SpiTransfer = 0x61;      // in: i32 bus, u32 hz, u8 mode, u8 lsb_first, u16 n, n bytes   out: n bytes   ret: n
         public const int SpiEnd = 0x62;           // in: i32 bus
 
+        // [neopixel] A frame an RMT TX pin sent, decoded to WS2812 bytes (handled by the board: its LED strips).
+        public const int LedStripWrite = 0x63;    // in: i32 gpio, n bytes   ret: n
+
         public const int PadRecordSize = 96;
         public const int BleScanRecordSize = 112;
         public const int WifiScanRecordSize = 42;

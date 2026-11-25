@@ -69,6 +69,49 @@ void touchAttachInterrupt(uint8_t pin, voidFuncPtr userFunc, touch_value_t thres
 void touchDetachInterrupt(uint8_t pin);
 void touchSetCycles(uint16_t measure, uint16_t sleep);
 
+/* ---------------------------------------------------------------- RMT (Arduino-ESP32 3.x API)
+ * Transmission only: what a TX pin sends is decoded as a WS2812 strip decodes it (a high pulse
+ * over 0.55 us is a 1) and the bytes reach the addressable LED strip wired to the pin. */
+typedef enum { RMT_RX_MODE = 0, RMT_TX_MODE = 1 } rmt_ch_dir_t;
+typedef enum {
+    RMT_MEM_NUM_BLOCKS_1 = 1, RMT_MEM_NUM_BLOCKS_2 = 2, RMT_MEM_NUM_BLOCKS_3 = 3, RMT_MEM_NUM_BLOCKS_4 = 4,
+    RMT_MEM_NUM_BLOCKS_5 = 5, RMT_MEM_NUM_BLOCKS_6 = 6, RMT_MEM_NUM_BLOCKS_7 = 7, RMT_MEM_NUM_BLOCKS_8 = 8
+} rmt_reserve_memsize_t;
+typedef union {
+    struct {
+        uint32_t duration0 : 15;
+        uint32_t level0 : 1;
+        uint32_t duration1 : 15;
+        uint32_t level1 : 1;
+    };
+    uint32_t val;
+} rmt_data_t;
+#define RMT_WAIT_FOR_EVER ((uint32_t)0xffffffffUL)
+#define RMT_NO_WAIT 0
+#define RMT_SYMBOLS_OF(x) (sizeof(x) / sizeof(rmt_data_t))
+bool rmtInit(int pin, rmt_ch_dir_t channel_direction, rmt_reserve_memsize_t memsize, uint32_t frequency_Hz);
+bool rmtDeinit(int pin);
+bool rmtSetEOT(int pin, uint8_t EOT_Level);
+bool rmtSetCarrier(int pin, bool carrier_en, bool carrier_level, uint32_t frequency_Hz, float duty_percent);
+bool rmtSetRxMinThreshold(int pin, uint8_t filter_pulse_ticks);
+bool rmtSetRxMaxThreshold(int pin, uint16_t idle_thres_ticks);
+bool rmtWrite(int pin, rmt_data_t* data, size_t num_rmt_symbols, uint32_t timeout_ms);
+bool rmtWriteAsync(int pin, rmt_data_t* data, size_t num_rmt_symbols);
+bool rmtWriteLooping(int pin, rmt_data_t* data, size_t num_rmt_symbols);
+bool rmtWriteRepeated(int pin, rmt_data_t* data, size_t num_rmt_symbols, uint32_t loop_count);
+bool rmtTransmitCompleted(int pin);
+bool rmtRead(int pin, rmt_data_t* data, size_t* num_rmt_symbols, uint32_t timeout_ms);
+bool rmtReadAsync(int pin, rmt_data_t* data, size_t* num_rmt_symbols);
+bool rmtReceiveCompleted(int pin);
+
+/* ---------------------------------------------------------------- RGB LED (WS2812 through the RMT) */
+typedef enum {
+    LED_COLOR_ORDER_RGB, LED_COLOR_ORDER_BGR, LED_COLOR_ORDER_BRG, LED_COLOR_ORDER_RBG, LED_COLOR_ORDER_GBR, LED_COLOR_ORDER_GRB
+} rgb_led_color_order_t;
+void rgbLedWriteOrdered(uint8_t pin, rgb_led_color_order_t order, uint8_t red_val, uint8_t green_val, uint8_t blue_val);
+void rgbLedWrite(uint8_t pin, uint8_t red_val, uint8_t green_val, uint8_t blue_val);
+void neopixelWrite(uint8_t pin, uint8_t red_val, uint8_t green_val, uint8_t blue_val);   /* the 2.x name */
+
 /* ---------------------------------------------------------------- misc */
 float temperatureRead(void);
 int hallRead(void);

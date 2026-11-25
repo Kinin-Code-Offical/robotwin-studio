@@ -103,7 +103,8 @@ ESP32 kartlarında da kurulu Arduino kütüphaneleri kullanılır:
 - Çizim bir kütüphanenin başlığını içerince (`#include <AccelStepper.h>`) o kütüphane bulunur ve çizimle birlikte simülasyon katmanına derlenir. Kütüphanenin kendi bağımlılıkları da bulunur.
 - Simülasyon katmanının kendi başlıkları (`Wire.h`, `Servo.h`, `WiFi.h` …) önceliklidir.
 - Kütüphane değişince ya da güncellenince çizim yeniden derlenir.
-- ESP32'nin yazmaçlarına doğrudan erişen kütüphaneler (ör. RMT ile LED şeridi süren) simülasyon katmanında bulunmayabilir. O zaman hata hangi kütüphanenin derlenemediğini söyler.
+- Adreslenebilir LED şeritleri (WS2812B / NeoPixel) iki modda da çalışır: `rgbLedWrite`, RMT işlevleri (`rmtInit`, `rmtWrite`) ve `Adafruit_NeoPixel` sınıfı. `Adafruit_NeoPixel.h`, RobotWin'in RMT üzerine yazılmış kendi sürümüdür; gerçek kart derlemesi de onu kullanır, kurulu Adafruit kütüphanesi varsa o tercih edilir. Kartın GPIO'suna DIN'i bağlı şeritteki LED'ler gönderilen renkleri alır ve renklerine göre akım çeker.
+- ESP32'nin yazmaçlarına doğrudan erişen başka kütüphaneler simülasyon katmanında bulunmayabilir. O zaman hata hangi kütüphanenin derlenemediğini söyler.
 
 ![ESP32 çizimi kurulu bir kütüphaneyle derlendi](../images/code-esp32-libraries.png)
 

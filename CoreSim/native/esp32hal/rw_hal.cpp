@@ -434,6 +434,7 @@ void hal_reset() {
     g_wifi_on = false;
     g_min_free_heap = 0xFFFFFFFFu;
     hal_wifi_reset();
+    hal_rmt_reset();
 }
 
 void hal_pin_changed(int gpio, int level, uint64_t time_ns) {

@@ -103,7 +103,8 @@ ESP32 boards use installed Arduino libraries too:
 - When a sketch includes a library's header (`#include <AccelStepper.h>`), that library is found and compiled with the sketch against the simulation layer. Its own dependencies are found too.
 - The simulation layer's own headers (`Wire.h`, `Servo.h`, `WiFi.h` …) come first.
 - A changed or updated library rebuilds the sketch.
-- Libraries that reach into the ESP32's registers directly (say, driving an LED strip through the RMT) may not exist in the simulation layer. Then the error names the library that did not compile.
+- Addressable LED strips (WS2812B / NeoPixel) work in both modes: `rgbLedWrite`, the RMT functions (`rmtInit`, `rmtWrite`) and the `Adafruit_NeoPixel` class. `Adafruit_NeoPixel.h` is RobotWin's own, written on the RMT; the real-board build uses it too, and prefers an installed Adafruit library when there is one. The LEDs of a strip whose DIN is wired to the board's GPIO take the colours sent and draw current by their colours.
+- Other libraries that reach into the ESP32's registers directly may not exist in the simulation layer. Then the error names the library that did not compile.
 
 ![An ESP32 sketch built with an installed library](../../images/en/code-esp32-libraries.png)
 

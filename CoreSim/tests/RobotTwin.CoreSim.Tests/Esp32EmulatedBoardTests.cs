@@ -404,7 +404,8 @@ namespace RobotTwin.CoreSim.Tests
         [NeoPixelElfFact]
         public void RgbLedWriteAndRmtWriteReachTheStrips()
         {
-            // rgbLedWrite(5, 10, 20, 30), then nine GRB bytes through rmtWrite on GPIO18 (IDF's RMT TX driver, 10 MHz ticks).
+            // rgbLedWrite(5, 10, 20, 30), nine GRB bytes through rmtWrite on GPIO18 (IDF's RMT TX driver, 10 MHz ticks), then
+            // three pixels through Adafruit_NeoPixel on GPIO19.
             string elf = Environment.GetEnvironmentVariable("RW_ESP32_NEOPIXEL_ELF")!;
             string merged = Path.ChangeExtension(elf, ".merged.bin");
             var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
@@ -419,6 +420,9 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Contains("serit yazildi", text);
             Assert.Contains(frames, f => f.Gpio == 5 && f.Bytes.SequenceEqual(new byte[] { 20, 10, 30 }));
             Assert.Contains(frames, f => f.Gpio == 18 && f.Bytes.SequenceEqual(new byte[] { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99 }));
+            // Adafruit_NeoPixel (RobotWin's, on the RMT API) with three GRB pixels on GPIO19: red, green, blue.
+            Assert.Contains("kutuphane yazildi", text);
+            Assert.Contains(frames, f => f.Gpio == 19 && f.Bytes.SequenceEqual(new byte[] { 0, 255, 0, 255, 0, 0, 0, 0, 255 }));
         }
 
         [Esp32SocBringUpTests.ElfFact]

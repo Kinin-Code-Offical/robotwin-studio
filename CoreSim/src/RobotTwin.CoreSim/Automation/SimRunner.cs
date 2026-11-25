@@ -492,6 +492,20 @@ namespace RobotTwin.CoreSim.Automation
                 },
                 ctx, m => AddEvent(new RunnerEvent(0, boardRef, RunnerEventKind.Info, m)));
             esp.Spi.Slaves.AddRange(slaves);
+            AttachLedStrips(esp, boardRef);
+        }
+
+        /// <summary>[neopixel] The WS2812B strips whose DIN one of an ESP32's GPIOs drives (same rules as the app).</summary>
+        protected void AttachLedStrips(Firmware.Esp32.IEsp32Board esp, string boardRef)
+        {
+            var c = Compiled!;
+            var strips = Firmware.LedStripWiring.Attach(AllParts().Select(p => (p.FullRef, p.Def)), c.PinNode, g => c.PinNode(boardRef, "IO" + g), Reach,
+                r => c.DevicesOf(r).OfType<Firmware.Devices.Ws2812Load>().FirstOrDefault());
+            foreach (var (gpio, strip) in strips)
+            {
+                esp.AttachLedStrip(gpio, strip);
+                AddEvent(new RunnerEvent(0, strip.Id, RunnerEventKind.Info, $"LED şeridi {boardRef} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)"));
+            }
         }
 
         private static Firmware.Devices.Mpu6050 SeededMpu(byte address, double gravity, int seed)

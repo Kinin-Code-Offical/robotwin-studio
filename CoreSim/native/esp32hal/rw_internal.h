@@ -85,6 +85,7 @@ void hal_slice_start();                                    /* start of every rw_
 int serial_rx_push(int port, const uint8_t* data, int length);
 void run_serial_events();                                  /* after each loop() */
 void hal_wifi_reset();
+void hal_rmt_reset();                                      /* chip reset: every RMT channel released (rw_rmt.cpp) */
 
 /* ---- radio medium (rw_radio.cpp): RW_RADIO_UNSUPPORTED when the host has none ---- */
 int radio(int op, const void* in, int in_len, void* out, int out_cap);

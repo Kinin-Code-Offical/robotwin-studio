@@ -294,12 +294,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             return new Esp32PinState(gpio, s.Mode, s.Out, s.InLevel, s.Pwm, s.PwmFrequency, s.PwmDuty, s.Dac, s.DacVolts);
         }
 
-        /// <summary>Value returned by touchRead() for a touch pad (untouched ≈ 70-80, touched &lt; 20).</summary>
         /// <summary>[neopixel] The WS2812B strips wired to the board's GPIOs.</summary>
         public System.Collections.Generic.List<(int Gpio, Devices.Ws2812Load Strip)> LedStrips { get; } = new System.Collections.Generic.List<(int, Devices.Ws2812Load)>();
 
         public void AttachLedStrip(int gpio, Devices.Ws2812Load strip) => LedStrips.Add((gpio, strip ?? throw new ArgumentNullException(nameof(strip))));
 
+        /// <summary>Value returned by touchRead() for a touch pad (untouched ≈ 70-80, touched &lt; 20).</summary>
         public void SetTouchValue(int gpio, int value)
         {
             if (gpio < 0 || gpio >= _gpio.Length) throw new ArgumentOutOfRangeException(nameof(gpio));
@@ -999,6 +999,20 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             }
         }
 
+        /// <summary>[neopixel] A frame the RMT sent (rgbLedWrite, rmtWrite, Adafruit_NeoPixel): to the strips on that GPIO.</summary>
+        private int OnLedStripWrite(IntPtr input, int inputLength)
+        {
+            if (input == IntPtr.Zero || inputLength < 4) return -1;
+            var data = new byte[inputLength];
+            Marshal.Copy(input, data, 0, inputLength);
+            int gpio = BitConverter.ToInt32(data, 0);
+            var bytes = new byte[inputLength - 4];
+            Array.Copy(data, 4, bytes, 0, bytes.Length);
+            foreach (var (g, strip) in LedStrips)
+                if (g == gpio && strip.Powered) strip.Strip.Show(bytes);   // lit only while the strip has its supply
+            return bytes.Length;
+        }
+
         private static byte Reverse(byte b)
         {
             int r = 0;
@@ -1009,6 +1023,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private int OnRadioRequest(IntPtr user, int op, IntPtr input, int inputLength, IntPtr output, int outputCapacity)
         {
             if (op >= Esp32RadioOp.SpiBegin && op <= Esp32RadioOp.SpiEnd) return OnSpiRequest(op, input, inputLength, output, outputCapacity);
+            if (op == Esp32RadioOp.LedStripWrite) return OnLedStripWrite(input, inputLength);
             var radio = Radio;
             if (radio == null) return Esp32RadioOp.NotSupported;
             try

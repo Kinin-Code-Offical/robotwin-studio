@@ -59,6 +59,44 @@ namespace RobotWin.Studio.Firmware
                 ? "Bluepad32 kullanan çizim gerçek kart için Bluepad32'nin kendi ESP32 çekirdeğini gerektirir; RobotWin onu henüz kurmuyor (hızlı modda çalışır)."
                 : null;
 
+        /// <summary>
+        /// [neopixel] Libraries RobotWin writes itself for the real-chip build (no download), so a sketch builds the same in
+        /// both modes: RobotWin_NeoPixel, the Adafruit_NeoPixel interface on the core's RMT API, the very header the fast
+        /// mode's HAL compiles. Written from the simulator's embedded copy into the build folder; null when it cannot be.
+        /// </summary>
+        private static string? BundledEsp32Libraries()
+        {
+            try
+            {
+                var asm = typeof(RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler).Assembly;
+                string? resource = asm.GetManifestResourceNames().FirstOrDefault(n => n.Replace('\\', '/') == "esp32hal/Adafruit_NeoPixel.h");
+                if (resource == null) return null;
+                string text;
+                using (var stream = asm.GetManifestResourceStream(resource))
+                {
+                    if (stream == null) return null;
+                    using var reader = new StreamReader(stream);
+                    text = reader.ReadToEnd();
+                }
+
+                string root = Path.Combine(BuildRoot, "esp32hw", "libraries");
+                string src = Path.Combine(root, "RobotWin_NeoPixel", "src");
+                Directory.CreateDirectory(src);
+                string header = Path.Combine(src, "Adafruit_NeoPixel.h");
+                if (!File.Exists(header) || File.ReadAllText(header) != text) File.WriteAllText(header, text);
+                string properties = Path.Combine(root, "RobotWin_NeoPixel", "library.properties");
+                const string props = "name=RobotWin_NeoPixel\nversion=1.0.0\nauthor=RobotWin\nmaintainer=RobotWin\n" +
+                                     "sentence=WS2812 strips with the Adafruit_NeoPixel interface on the Arduino-ESP32 RMT API.\n" +
+                                     "paragraph=Built into RobotWin Studio for the hardware-compatible ESP32 mode.\ncategory=Display\nurl=\narchitectures=esp32\n";
+                if (!File.Exists(properties) || File.ReadAllText(properties) != props) File.WriteAllText(properties, props);
+                return root;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
         /// <summary>Where the ESP32 toolchain lives: RobotWin's own data, cores and downloads for arduino-cli.</summary>
         public static string Esp32ToolchainRoot => Path.Combine(LocalAppData, "RobotWinStudio", "toolchains", "arduino-esp32");
 
@@ -208,6 +246,13 @@ namespace RobotWin.Studio.Firmware
             {
                 args.Add("--libraries");
                 args.Add(root);
+            }
+
+            if (BundledEsp32Libraries() is { } bundled)
+            {
+                // After the user's own: arduino-cli prefers an installed library of the header's name over ours.
+                args.Add("--libraries");
+                args.Add(bundled);
             }
 
             var log = new StringBuilder();

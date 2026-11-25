@@ -159,6 +159,76 @@ void loop() { delay(100); }
         }
 
         [Esp32Fact]
+        public void NeoPixelLibraryAndRgbLedWriteLightTheWiredStrips()
+        {
+            // [neopixel] The fast mode: Adafruit_NeoPixel on an 8-LED strip at IO5, rgbLedWrite on a single LED at IO18.
+            var w = new WorldDocument();
+            var esp = w.AddComponent(Lib, Esp32Parts.DevKitCId, new WorldPose());
+            var eight = w.AddComponent(Lib, "ws2812-strip", new WorldPose { X = 0.1 });
+            var one = w.AddComponent(Lib, "ws2812-strip", new WorldPose { X = 0.2 });
+            one.Parameters["count"] = "1";
+            Wire(w, esp, "5V", eight, "VDD");
+            Wire(w, esp, "GND1", eight, "GND");
+            Wire(w, esp, "IO5", eight, "DIN");
+            Wire(w, esp, "5V", one, "VDD");
+            Wire(w, esp, "GND2", one, "GND");
+            Wire(w, esp, "IO18", one, "DIN");
+            esp.Firmware = new FirmwareSource
+            {
+                FileName = "neo.ino",
+                Source = @"
+#include <Adafruit_NeoPixel.h>
+Adafruit_NeoPixel strip(8, 5, NEO_GRB + NEO_KHZ800);
+void setup() {
+  Serial.begin(115200);
+  strip.begin();
+  strip.setPixelColor(0, strip.Color(255, 0, 0));
+  strip.setPixelColor(1, 0, 255, 0);
+  strip.setPixelColor(7, 0x0000FF);
+  strip.show();
+  rgbLedWrite(18, 10, 20, 30);
+  Serial.printf(""shown %u\n"", strip.getPixelColor(1) == strip.Color(0, 255, 0));
+}
+void loop() {
+  delay(100);
+  if (millis() < 1500) return;
+  strip.setBrightness(50);
+  strip.fill(strip.Color(200, 100, 0), 2, 3);
+  strip.show();
+}
+"
+            };
+            string dir = Path.Combine(Path.GetTempPath(), "robotwin-esp32-neo-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var options = new RunnerOptions
+            {
+                Esp32Builder = src =>
+                {
+                    var build = new Esp32SketchCompiler().Compile(src, dir);
+                    Assert.True(build.Success, string.Join("\n", build.Diagnostics) + "\n" + build.Log);
+                    return build.DllPath;
+                }
+            };
+            using var runner = new WorldRunner(w, options);
+            runner.Step(1.0);
+            var strips = runner.Compiled!.Circuit.Devices.OfType<Ws2812Load>().OrderByDescending(s => s.Strip.Count).ToList();
+            foreach (var e in runner.DrainEvents()) _out.WriteLine($"[{e.Time:0.000}] {e.Source}: {e.Message}");
+            _out.WriteLine(string.Concat(runner.ReadSerial(null, false).Values));
+            Assert.Equal(2, strips.Count);
+            var c8 = strips[0].Strip.Colors;
+            Assert.Equal(((byte)255, (byte)0, (byte)0), c8[0]);
+            Assert.Equal(((byte)0, (byte)255, (byte)0), c8[1]);
+            Assert.Equal(((byte)0, (byte)0, (byte)0), c8[2]);
+            Assert.Equal(((byte)0, (byte)0, (byte)255), c8[7]);
+            Assert.Equal(((byte)10, (byte)20, (byte)30), strips[1].Strip.Colors[0]);
+            double litCurrent = strips[0].Strip.SupplyCurrent;
+            Assert.InRange(litCurrent, 0.067, 0.069);   // 8 × 1 mA idle + three full channels × 20 mA
+
+            runner.Step(1.0);   // dimmed to 50/255: the three filled LEDs at about a fifth of (200, 100, 0)
+            Assert.Equal(((byte)39, (byte)19, (byte)0), c8[3]);
+            Assert.True(strips[0].Strip.Colors[0].R < 60);
+        }
+
+        [Esp32Fact]
         public void TaskWatchdogRebootsAStarvedTaskWithResetReasonTaskWdt()
         {
             var w = new WorldDocument();
