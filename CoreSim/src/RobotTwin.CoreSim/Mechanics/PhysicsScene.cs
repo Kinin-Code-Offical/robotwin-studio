@@ -352,6 +352,9 @@ namespace RobotTwin.CoreSim.Mechanics
         private struct BodyState
         {
             public Vec3 V, W, X, DX, DTheta;
+
+            /// <summary>[phys] The velocity at the start of the substep, before its forces: whether a contact sticks or slides.</summary>
+            public Vec3 V0, W0;
             public double InvMass;
             public Mat3 InvI;
         }
@@ -475,8 +478,13 @@ namespace RobotTwin.CoreSim.Mechanics
         public int Iterations { get; set; } = 4;
         public int RelaxIterations { get; set; } = 2;
 
-        /// <summary>Penetration allowed without push-out (m).</summary>
-        public double LinearSlop { get; set; } = 0.0005;
+        /// <summary>
+        /// Penetration allowed without push-out (m). [phys] None by default: a contact is a stiff, heavily damped spring
+        /// from the first micrometre, so a tilted interface pushes back on its pressed side. With a dead band of 0.5 mm
+        /// every interface of a stack could lean by up to 0.5 mm across its width with nothing pushing it back, and a
+        /// twenty-block stack leaned 18 mm or swayed for good.
+        /// </summary>
+        public double LinearSlop { get; set; }
 
         /// <summary>Contact stiffness of the soft step (clamped to a quarter of the substep rate).</summary>
         public double ContactHertz { get; set; } = 480;
@@ -771,6 +779,8 @@ namespace RobotTwin.CoreSim.Mechanics
                     }
                 }
 
+                _state[i].V0 = b.Velocity;   // [phys] before this substep's forces (a welded group's is set with its own)
+                _state[i].W0 = b.AngularVelocity;
                 if (!InWeldGroup(i)) b.IntegrateVelocity(h);
             }
 
@@ -788,6 +798,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 {
                     st.V = b.IsStatic ? b.SurfaceVelocity : Vec3.Zero;   // [arm] conveyor belts; zero for ordinary static bodies
                     st.W = Vec3.Zero;
+                    st.V0 = st.V;
+                    st.W0 = Vec3.Zero;
                     st.InvMass = 0;
                     st.InvI = Mat3.Zero;
                 }
@@ -1303,7 +1315,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < nva; i++)
             {
                 var v = _va[i];
-                double s = n.Dot(v) - supB;
+                double s = Gap(v, -n, _nb, _ob, npb, sb.FloorPlane, n.Dot(v) - supB);
                 if (s >= margin || !WithinSides(v, n, _nb, _ob, npb, sb.FloorPlane, lateral)) continue;
                 AddContact(a, b, v, n, s, i, props, 0, h);
             }
@@ -1312,7 +1324,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < nvb; i++)
             {
                 var u = _vb[i];
-                double s = supA - n.Dot(u);
+                double s = Gap(u, n, _na, _oa, npa, sa.FloorPlane, supA - n.Dot(u));
                 if (s >= margin || !WithinSides(u, n, _na, _oa, npa, sa.FloorPlane, lateral)) continue;
                 bool duplicate = false;
                 for (int c = first; c < fromA; c++)
@@ -1326,6 +1338,28 @@ namespace RobotTwin.CoreSim.Mechanics
 
                 if (!duplicate) AddContact(a, b, u, n, s, (1 << 12) + i, props, 0, h);
             }
+        }
+
+        /// <summary>
+        /// [phys] How far a corner is from the other convex body along <paramref name="dir"/> (negative inside it): the ray
+        /// from the corner enters the body through the facing plane it crosses last. It was the gap to the body's farthest
+        /// corner, which on a tilted interface lies up to a face width × the tilt from the face actually above the point:
+        /// that phantom penetration propped a leaning block up at its high side (and, pushed out, tipped it further), so a
+        /// twenty-block stack swayed for good. A body without face planes keeps <paramref name="fallback"/>.
+        /// </summary>
+        private static double Gap(Vec3 p, Vec3 dir, Vec3[] normals, double[] offsets, int count, bool[] floor, double fallback)
+        {
+            double gap = double.NegativeInfinity;
+            for (int f = 0; f < count; f++)
+            {
+                if (floor.Length > f && floor[f]) continue;
+                double c = -normals[f].Dot(dir);   // the plane faces the corner when the ray runs into it
+                if (c < 0.05) continue;
+                double t = (normals[f].Dot(p) - offsets[f]) / c;
+                if (t > gap) gap = t;
+            }
+
+            return double.IsNegativeInfinity(gap) ? fallback : gap;
         }
 
         private static bool WithinSides(Vec3 p, Vec3 axis, Vec3[] normals, double[] offsets, int count, bool[] floor, double tol)
@@ -1448,6 +1482,7 @@ namespace RobotTwin.CoreSim.Mechanics
             var rnA = c.RA.Cross(n);
             k += rnA.Dot(sa.InvI * rnA);
             var dv = sa.V + sa.W.Cross(c.RA);
+            var dv0 = sa.V0 + sa.W0.Cross(c.RA);
             Mat3 invIB = Mat3.Zero;
             double invMB = 0;
             if (b >= 0)
@@ -1457,6 +1492,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 var rnB = c.RB.Cross(n);
                 k += sb.InvMass + rnB.Dot(sb.InvI * rnB);
                 dv -= sb.V + sb.W.Cross(c.RB);
+                dv0 -= sb.V0 + sb.W0.Cross(c.RB);
                 invIB = sb.InvI;
                 invMB = sb.InvMass;
             }
@@ -1473,7 +1509,10 @@ namespace RobotTwin.CoreSim.Mechanics
             c.T2 = n.Cross(c.T1);
             c.MassT1 = TangentMass(sa.InvMass, sa.InvI, c.RA, invMB, invIB, c.RB, c.T1, b >= 0);
             c.MassT2 = TangentMass(sa.InvMass, sa.InvI, c.RA, invMB, invIB, c.RB, c.T2, b >= 0);
-            c.Mu = vtl < StickVelocity ? props.StaticFriction : props.KineticFriction;
+            // [phys] Sticking or sliding is the motion at the start of the substep. What this substep's forces add (gravity
+            // down a slope, a push) is what static friction is there to cancel, so it must not decide it: judged after
+            // them, a box a slope holds slipped as soon as the step was long enough for gravity to add StickVelocity.
+            c.Mu = (dv0 - n * dv0.Dot(n)).Length < StickVelocity ? props.StaticFriction : props.KineticFriction;
             c.E = props.Restitution;
             c.Vn0 = vn;
             c.Crr = props.RollingResistance;
@@ -1615,8 +1654,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (s > 0) bias = s * invH; // real gap: speculative, may close exactly
                 else if (useBias && s < -LinearSlop)
                 {
-                    // Penetration within the slop is held rigidly without push-out (no jitter, no
-                    // creeping); deeper penetration is pushed out softly.
+                    // Penetration is pushed out softly (beyond LinearSlop, if one is set; within it the contact is held
+                    // rigidly).
                     bias = Math.Max(biasRate * (s + LinearSlop), -MaxPushout);
                     ms = massScale;
                     isc = impulseScale;

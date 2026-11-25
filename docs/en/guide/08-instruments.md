@@ -21,7 +21,7 @@ The **Oscilloscope** tab is a 4-channel digital oscilloscope.
 | Horizontal | Time/div, position, roll mode |
 | Channel | Volts/div, position, coupling (DC / AC / GND), probe 1× / 10×, 20 MHz bandwidth limit, invert, current probe |
 | Trigger | Mode (**Auto**, **Normal**, **Single**), source (1–4), slope (rising / falling), level, holdoff |
-| Maths | 1+2 or 1−2 |
+| Maths | **A−B**, **A+B**, **A×B** (a voltage times a current is the power, W), **∫A** (a current's charge, C; a power's energy, J), **dA/dt** (slew rate, V/s); A and B are any two channels. The scale fits the result by itself, and the measurements work on the math channel too (the **mean** of V×I is the average power). |
 | Buttons | **RUN / STOP**, **SINGLE**, **AUTOSET**, cursors |
 
 With **Probe loading** on, the probe connects to the circuit as 1 MΩ ∥ 110 pF (1×) or 10 MΩ ∥ 12 pF (10×); in high-impedance circuits you see how the measurement disturbs the circuit.

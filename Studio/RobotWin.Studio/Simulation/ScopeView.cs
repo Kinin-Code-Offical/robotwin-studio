@@ -268,7 +268,7 @@ namespace RobotWin.Studio.Simulation
                 string coupling = ch.Coupling == ScopeCoupling.GND ? "⏚" : ch.Coupling.ToString();
                 string text = ch.Source == null
                     ? $"{ch.Index + 1}  —"
-                    : $"{ch.Index + 1} {SiValue.Format(ch.Scale, ch.Unit)}/div {coupling}{(ch.IsCurrent ? " akım" : $" {ch.ProbeAttenuation:0}×")}{(ch.BandwidthLimit ? " BW" : "")}{(ch.Invert ? " INV" : "")}";
+                    : $"{ch.Index + 1} {SiValue.Format(ch.Scale, ch.Unit)}/div {coupling}{(ch.IsCurrent ? " " + Shell.Lang.T("akım") : $" {ch.ProbeAttenuation:0}×")}{(ch.BandwidthLimit ? " BW" : "")}{(ch.Invert ? " INV" : "")}";
                 var ft = Label(text.Replace(" ", " "), color, 10.5);
                 var box = new Rect(x, y, ft.Width + 10, ft.Height + 4);
                 dc.DrawRoundedRectangle(null, Pen(ch.Index == Sim.SelectedScopeChannel ? color : Color.FromArgb(0x50, color.R, color.G, color.B), 1), box, 3, 3);
@@ -278,7 +278,8 @@ namespace RobotWin.Studio.Simulation
 
             if (Scope.MathFunction != ScopeMathFunction.Off)
             {
-                var ft = Label($"M {(Scope.MathFunction == ScopeMathFunction.Subtract ? "1−2" : "1+2")} {SiValue.Format(Scope.MathScale, "V")}/div", MathColor, 10.5);
+                var math = Scope.Frame?.Math;   // [scope] its name and unit follow the function (CH1×CH2 in W, ∫CH2 in C …)
+                var ft = Label(math != null ? $"M {math.Name} {SiValue.Format(Scope.MathScale, math.Unit)}/div" : "M —", MathColor, 10.5);
                 dc.DrawText(ft, new Point(x + 2, y + 2));
                 x += ft.Width + 12;
             }
@@ -520,12 +521,14 @@ namespace RobotWin.Studio.Simulation
             {
                 $"Vpp {F(m.PeakToPeak, u)}", $"Vrms {F(m.Rms, u)}", $"Ort {F(m.Mean, u)}", $"Maks {F(m.Max, u)}", $"Min {F(m.Min, u)}",
                 $"f {F(m.Frequency, "Hz", 4)}", $"T {F(m.Period, "s", 4)}",
-                $"Doluluk {(double.IsNaN(m.Duty) ? "?" : (m.Duty * 100).ToString("0.0", CultureInfo.InvariantCulture) + " %")}",
+                $"Doluluk {(double.IsNaN(m.Duty) ? "?" : Shell.Lang.Percent(m.Duty * 100, "0.0"))}",   // [lang] "%46,9" / "46.9%"
                 $"Yükselme {F(m.RiseTime, "s")}", $"Düşme {F(m.FallTime, "s")}"
             };
-            if (u == "A")
+            if (u != "V")
             {
-                for (int i = 0; i < 3; i++) items[i] = items[i].Replace("Vpp", "App").Replace("Vrms", "Arms");
+                // [scope] a current's readings are App / Arms; a power, a charge or a slew rate (the math) just pp / RMS
+                string pp = u == "A" ? "App" : "pp", rms = u == "A" ? "Arms" : "RMS";
+                for (int i = 0; i < 3; i++) items[i] = items[i].Replace("Vpp", pp).Replace("Vrms", rms);
             }
 
             var color = MeasureChannel == 4 ? MathColor : ColorOf(trace.Channel?.Index ?? 0);

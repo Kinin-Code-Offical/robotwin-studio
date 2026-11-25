@@ -50,4 +50,15 @@ sequenceDiagram
 
 ## IR
 
-38 kHz infrared remotes work only in line of sight: nothing between transmitter and receiver, and no more than ±30° off axis. The NEC code is generated bit by bit and fed to the receiver's output pin.
+38 kHz infrared remotes work only in line of sight: nothing opaque to the light between transmitter and receiver. The light fades smoothly off axis ($`\cos^m\theta`$; the transmitter's half-intensity angle is 25°, the receiver's 45°) and with the square of the distance; the receiver sees it when their product passes its threshold. The NEC code is generated bit by bit and fed to the receiver's output pin.
+
+## Validity range
+
+The model's accuracy has been measured over the range below; the figures come from `RadioTests`.
+
+| Subject | Model | Measured | Outside the model |
+| --- | --- | --- | --- |
+| Path loss | Free space up to 1 m, log-distance beyond ($`n`$ from the environment), the loss of obstacles on the direct ray | 40.2 dB at 1 m and 2.44 GHz (the free-space formula), $`10\,n`$ dB per decade; an obstacle beside the ray adds nothing | Reflection and diffraction, fast multipath fading on the scale of a wavelength |
+| Shadowing | Log-normal, changing slowly with time, a function of the two ends and the seed (repeatable) | At σ = 4 dB the measured spread is 3.4–4.6 dB, the mean within ±0.4 dB; the same both ways | People and objects moving about the room |
+| Packets | FSK bit error rate over the packet | 5–80 % lost at the sensitivity, all of them below it | Interference from other networks and channel overlap; antenna patterns (gain is a fixed dBi, the same in every direction) |
+| IR | Line of sight, $`\cos^m\theta`$ spread (transmitter 25°, receiver 45° to half intensity), inverse square of the distance, 38 kHz carrier, NEC timing | NEC frames decode bit for bit; steady light without the carrier does not trigger the receiver | Noise from sunlight and lamps, reflected IR |

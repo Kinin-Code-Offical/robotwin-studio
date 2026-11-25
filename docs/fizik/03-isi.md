@@ -58,3 +58,15 @@ Pilin ısısı iç direnç ve polarizasyon kaybıdır: $`P = I^2R + \lvert I\,V_
 | Isıl gerilme | $`\sigma = -E\,\alpha\,\Delta T`$ (FEM analizinde) | Gerilme haritasına eklenir |
 
 Görmek için: **Görünüm → Isı kamerası (dünya)**. Fare bir parçanın üstündeyken o noktanın sıcaklığı ve parçanın düğümleri gösterilir.
+
+## Geçerlilik aralığı
+
+Modelin doğruluğu aşağıdaki aralıkta ölçülmüştür; her sayının testi [Doğrulama](../kullanim/12-dogrulama.md) bölümündedir.
+
+| Konu | Model | Ölçülen | Model dışında kalan |
+| --- | --- | --- | --- |
+| Canlı ısı ağı | Toplu kapasite: parça bir ya da birkaç düğüm, düğüm içinde tek sıcaklık; 50 ms adım, geri Euler (koşulsuz kararlı) | Dişli motorda sargının ısısı, sıcaklık artışı ile havaya geçenin toplamına 10⁻⁶ J içinde eşit | Tek düğümlü parçanın içindeki sıcaklık dağılımı (sıcak nokta: ısıl analiz); 50 ms'den kısa ısıl olaylar (yanan direnç gibi hızlı olayları elemanın kendi ısıl modeli izler) |
+| Isıl analiz | Parçanın içinde sonlu hacim ağı | 1B geçici iletim Fourier serisinden en çok 0,0174 K (80 K'lik adımda); ısıtılan plakanın denge sıcaklığı enerji dengesinden %0,005 | Ağ hücresinden küçük ayrıntılar |
+| Taşınım | $`h_c = \max(6,\ 10{,}45 - v + 10\sqrt{v})`$, gerçek hava hızıyla | — | Yüzeyin yönüne ve şekline bağlı taşınım (dikey plaka, iç kanal), sınır tabakanın ayrıntısı |
+| Işınım | Gri cisim, ortama, doğrusallaştırılmış | — | Parçaların birbirine ışınımı (görüş faktörü), güneş ışınımı |
+| Malzeme | Camsı geçiş ve erime eşikleri, ısıl gerilme (FEM) | — | Sürünme (creep), ısıl yorulma, yanma kimyası |

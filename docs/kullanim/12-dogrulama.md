@@ -43,10 +43,24 @@ Aynı hareket, çözücünün adımı her seferinde yarıya indirilerek yeniden 
 | --- | --- | --- | --- | --- | --- |
 | Atılan cismin 1 s sonraki konum hatası | 19,6 mm | 9,8 mm | 4,9 mm | 2,45 mm | 1,23 mm |
 | Menteşeli sarkacın periyodu, bağıl hata | 3,0·10⁻⁵ | 7,4·10⁻⁶ | 1,8·10⁻⁶ | 2,2·10⁻⁷ | 1,6·10⁻⁷ |
-| Düşüp duran kutunun merkez yüksekliği (teori 30 mm) | 29,999 mm | 30,000 mm | 30,000 mm | 30,000 mm | 30,000 mm |
+| Düşüp duran kutunun merkez yüksekliği (teori 30 mm) | 29,936 mm | 29,984 mm | 29,996 mm | 29,999 mm | 29,999 mm |
 | Sallanan beş halkalı zincirde en büyük eklem ayrılması, 10 s | 0,54 mm | — | — | 0,048 mm | — |
 
-Atılan cismin hatası her yarılamada tam yarıya iner: yarı örtük (simplektik) Euler birinci derecedir, hata da a·T·h/2 formülünün verdiği kadardır. Sarkaç periyodu ikinci dereceye yakın yakınsar; 0,25 ms'deki 1,6·10⁻⁷, karşılaştırılan analitik formülün kendi kesme hatasıdır (büyük genlik düzeltmesinin θ⁴ terimi). Kutu her adımda aynı yükseklikte durur: temas, adım büyüdükçe ne gömülür ne havada kalır. Küçük ve hızlı cisimlerde çözücü çarpışmayı kaçırmamak için adımı kendisi küçültür (sürekli çarpışma algılama); atılan cisim bu etkinin dışında kalsın diye 40 cm'liktir.
+Atılan cismin hatası her yarılamada tam yarıya iner: yarı örtük (simplektik) Euler birinci derecedir, hata da a·T·h/2 formülünün verdiği kadardır. Sarkaç periyodu ikinci dereceye yakın yakınsar; 0,25 ms'deki 1,6·10⁻⁷, karşılaştırılan analitik formülün kendi kesme hatasıdır (büyük genlik düzeltmesinin θ⁴ terimi). Temas sert ve çok sönümlü bir yay gibidir: kutu yükü altında en çok 64 µm iç içe geçer (en kaba adımda, yay adımla yumuşadığı için), ne batar ne havada kalır. Küçük ve hızlı cisimlerde çözücü çarpışmayı kaçırmamak için adımı kendisi küçültür (sürekli çarpışma algılama); atılan cisim bu etkinin dışında kalsın diye 40 cm'liktir.
+
+### Uzun bekleme ve yığınlar
+
+Yavaş sürünme ve kayma ancak zamanla görünür: her adımda biraz kaybeden bir itme çözücüsü, tutması gereken eğimde kutuyu aşağı yürütür, yığını yavaş yavaş eğer. Sayılar `LongRestTests`'ten (ahşap üstünde ahşap, μs 0,50, μk 0,30):
+
+| Ölçüm | Teori | 0,5 ms (uygulama) | 2 ms |
+| --- | --- | --- | --- |
+| 20°'lik eğimdeki kutunun 30 s'de kayması | 0 | 0,000 mm | 0,000 mm |
+| 25°'lik eğimde (sınır 26,6°) | 0 | 0,000 mm | 0,000 mm |
+| 30°'lik eğimde kayma ivmesi | 2,356 m/s² | 2,357 m/s² | 2,361 m/s² |
+| Yirmi bloklu yığının tepesi, 20 s (2 ms'de on blok) | 0 | 0,029 mm | 0,009 mm |
+| 100 kat ağır bloğu taşıyan hafif bloğun gömülmesi | 0 | 0,16 mm | — |
+
+Yığında bloklar ikide bir 2 mm kaydırılmıştır, hiçbir arayüz simetrik değildir. Temasın yapışık mı kayıyor mu olduğuna adımın başındaki harekete bakılarak karar verilir: adımın kendi kuvvetlerinin eklediği hız (eğimde yerçekimi, bir itme) statik sürtünmenin karşılayacağı şeydir. Daha yüksek yığınların ve kaba adımların sınırı [Mekanik](../fizik/02-mekanik.md) bölümünün geçerlilik aralığında.
 
 ## 2. Gerilme analizi (FEM, ikinci derece T10 elemanlar)
 
@@ -152,7 +166,14 @@ Baraj yıkılması deneyinde kapak bir anda kalkmadığı için sayısal yöntem
 
 | Ölçüm | Teori / referans | Simülasyon | Sapma | Kabul sınırı |
 | --- | --- | --- | --- | --- |
+| RC şarjı (1 kΩ, 1 µF, 5 V), uygulamanın adımında üstel eğriden en büyük fark | 0 | 5,21 mV | %0,10 | 10 mV |
+| RL akımı (10 Ω, 10 mH, 10 V), aynı | 0 | 1,04 mA | %0,10 | 5 mA |
+| Kayıpsız LC tankı (1 mH, 1 µF), 100 periyot sonra genlik | 1 V | 0,9999 V | −0,01 % | ±%1 |
+| Aynı tankın periyodu, periyot başına 64 adım | 198,692 µs | 198,851 µs | +0,080 % (trapezin (ωh)²/12'si) | ±0,1 % |
+| Periyot hatasının adım yarıya inince küçülmesi (T/32 → T/256) | 4 kat (ikinci derece) | 3,89 / 4,00 / 4,00 | — | 3,6–4,4 |
 | Motorun yüksüz devri (6,28 V, datasheet) | ≈209 rpm | 210 rpm | +0,5 % | −12 / +2 % |
+| Dişli motorun enerji bilançosu, 3 s: kaynağın verdiği = kablo + sargı + sürtünme + dişli + yüke iş + depolanan (volan, sargının alanı) | 8,313 J | 8,313 J (0,434 + 3,477 + 1,041 + 0,939 + 2,191 + 0,231) | −0,001 % | ±0,5 % |
+| Aynı motorda sargı ısısı = sıcaklık artışı + havaya geçen | 3,477 J | 3,462 + 0,015 J | ≈0 | 10⁻⁶ J |
 | %10 eğimde motor akımı artışı | 0,059 A | 0,055 A | −7 % | ±25 % |
 | Kutu iterken akım artışı | 0,052 A | 0,054 A | +4 % | ±35 % |
 | Enkoder kenar sayısı | 1940 | 1940 | 0 % | ±10 % |

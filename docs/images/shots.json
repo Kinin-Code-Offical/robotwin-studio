@@ -40,6 +40,7 @@
     "world-rocket-chute": ["--page", "world", "--fault", "solid-rocket", "--simulate", "9", "--frame", "Gövde borusu", "--size", "1600x960", "--wait", "1.2"],
     "project-check": ["--page", "schematic", "--fault", "check-demo", "--size", "1600x1000", "--wait", "20"],
     "project-check-notice": ["--page", "schematic", "--fault", "check-notice", "--size", "1600x1000", "--wait", "12"],
-    "versions": ["--page", "schematic", "--example", "obstacle-avoider", "--fault", "versions-demo", "--size", "1600x1000", "--wait", "3"]
+    "versions": ["--page", "schematic", "--example", "obstacle-avoider", "--fault", "versions-demo", "--size", "1600x1000", "--wait", "3"],
+    "scope-power": ["--page", "schematic", "--example", "motor-driver", "--simulate", "0.5", "--fault", "scope-power", "--size", "1600x1000"]
   }
 }

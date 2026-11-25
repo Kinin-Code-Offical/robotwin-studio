@@ -109,3 +109,15 @@ The charger is a 4.2 V-per-cell regulator limited to $`I_\text{charge}`$: consta
 ## Losses and failures
 
 Every device reports its instantaneous power loss; the [heat network](03-heat.md) turns it into temperature. Devices driven beyond their ratings fail as real ones do: a resistor burns open, a MOSFET's gate oxide punches through, a lithium cell goes into thermal runaway, a cable melts. A failed device stays in the circuit in its new state (open / short).
+
+## Validity range
+
+The model's accuracy has been measured over the range below; the figures are from `CircuitAccuracyTests` and `AnalogSimulatorTests`, and those of time stepping are in the [Validation](../guide/12-validation.md) chapter too.
+
+| Subject | Model | Measured | Outside the model |
+| --- | --- | --- | --- |
+| Circuit equations | MNA, Newton-Raphson for nonlinear parts; the whole world is one circuit | The same inputs give bit-identical results; loops of voltage sources are reported as a singular matrix | Distributed circuits: transmission lines, reflections, antenna effects (wires only through their copper resistance) |
+| Time stepping | Trapezoidal rule, step from the local truncation error (0.2 ms at most in the app) | An RC charge (τ 1 ms) stays within 5.21 mV of the exponential (of 5 V); an RL current within 1.04 mA (of 1 A). A lossless LC tank keeps its amplitude at 0.9999 V over 100 periods; at 64 steps a period its period comes out 0.080 % long, the trapezoidal rule's (ωh)²/12: halving the step shrinks that error 3.89–4.00 times (second order) | Events faster than the step are not seen one by one: MHz clock edges, the ns transitions of a switching power stage (they enter through their average) |
+| Semiconductors | Diode: Shockley, series resistance, breakdown; BJT: Ebers-Moll + Early effect; MOSFET: Shichman-Hodges (level 1) + body diode; saturation current with temperature | An LED's current as its resistor and forward voltage give, an NPN in saturation below 0.25 V, β 140–160 in the active region, a zener at 5.1–5.35 V | Short-channel effects, subthreshold conduction, stored charge (reverse recovery), manufacturers' detailed SPICE models |
+| Battery | OCV(SoC) curve, internal resistance, polarisation (RC), by chemistry | The voltage sags under load, the charge falls with the current | Ageing, capacity fade, temperature's effect on the chemistry (the pack's temperature only for the thermal runaway and leak thresholds) |
+| Failures | A part driven beyond its limits fails and stays in the circuit open or shorted | An overloaded resistor goes open, an LED without a resistor burns out | Wear and ageing within the ratings: a part fails only beyond its limits |

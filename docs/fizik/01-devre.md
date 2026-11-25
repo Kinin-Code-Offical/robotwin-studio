@@ -109,3 +109,15 @@ flowchart LR
 ## Kayıplar ve arızalar
 
 Her eleman anlık güç kaybını raporlar; [ısı ağı](03-isi.md) bunu sıcaklığa çevirir. Sınırlarının dışında sürülen elemanlar gerçekteki gibi bozulur: direnç yanar (açık devre), MOSFET'in kapı oksidi delinir, lityum pil termal kaçağa girer, kablo erir. Bozulan eleman devrede yeni durumuyla (açık / kısa) kalır.
+
+## Geçerlilik aralığı
+
+Modelin doğruluğu aşağıdaki aralıkta ölçülmüştür; sayıların testi `CircuitAccuracyTests` ile `AnalogSimulatorTests`'tedir, zamanda ilerlemeninkiler [Doğrulama](../kullanim/12-dogrulama.md) bölümünde de.
+
+| Konu | Model | Ölçülen | Model dışında kalan |
+| --- | --- | --- | --- |
+| Devre denklemleri | MNA, doğrusal olmayan elemanlarda Newton-Raphson; tüm dünya tek devre | Aynı girdiler bit bit aynı sonucu verir; döngüsel gerilim kaynakları tekil matris olarak bildirilir | Dağıtılmış devre: iletim hattı, yansıma, anten etkisi (kablolar yalnız bakır dirençleriyle) |
+| Zamanda ilerleme | Trapez kuralı, yerel kesme hatasına göre adım (uygulamada en çok 0,2 ms) | RC şarjı (τ 1 ms) üstel eğriden en çok 5,21 mV (5 V'ta); RL akımı en çok 1,04 mA (1 A'de). Kayıpsız LC tankı 100 periyotta genliğini 0,9999 V'ta tutar; periyodu, periyot başına 64 adımda %0,080 uzun çıkar, trapez kuralının (ωh)²/12'si kadar: adım yarıya inince bu hata 3,89–4,00 kat küçülür (ikinci derece) | Adımdan hızlı olaylar ayrı ayrı görülmez: MHz'lik saat kenarları, anahtarlamalı güç katının ns'lik geçişleri (bunlar ortalama davranışıyla girer) |
+| Yarı iletkenler | Diyot: Shockley, seri direnç, kırılma; BJT: Ebers-Moll + Early etkisi; MOSFET: Shichman-Hodges (seviye 1) + gövde diyodu; sıcaklıkla doyma akımı | LED akımı direnç ve ileri gerilimden beklenen değerde, NPN doymada 0,25 V altında, aktif bölgede β 140–160, zener 5,1–5,35 V | Kısa kanal etkileri, eşik altı iletim, yük depolama (ters toparlanma), üreticinin ayrıntılı SPICE modelleri |
+| Pil | OCV(SoC) eğrisi, iç direnç, polarizasyon (RC), kimyaya göre | Yük altında gerilim düşer, doluluk akımla azalır | Yaşlanma, kapasite kaybı, sıcaklığın kimyaya etkisi (pilin sıcaklığı yalnız termal kaçak ve sızıntı eşikleri için) |
+| Arızalar | Sınırın dışında sürülen eleman bozulur ve devrede açık/kısa kalır | Aşırı yüklenen direnç açık devreye geçer, dirençsiz LED yanar | Sınırın içinde yıpranma ve yaşlanma: eleman yalnız sınırını aşınca bozulur |

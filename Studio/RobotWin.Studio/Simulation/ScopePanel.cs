@@ -138,10 +138,27 @@ namespace RobotWin.Studio.Simulation
             // ---- display
             Section("Ekran ve ölçüm");
             Chips("İmleç", new[] { "Kapalı", "Zaman", "Gerilim" }, () => (int)_view.CursorMode, i => _view.CursorMode = (ScopeCursorMode)i);
-            Chips("Matematik", new[] { "Kapalı", "1−2", "1+2" }, () => (int)Scope.MathFunction, i =>
+            // [scope] A − B, A + B, A × B (V × A = power), ∫A (charge, energy), dA/dt (slew rate); the scale fits the result
+            Chips("Matematik", new[] { "Kapalı", "A−B", "A+B", "A×B", "∫A", "dA/dt" }, () => (int)Scope.MathFunction, i =>
             {
                 Scope.MathFunction = (ScopeMathFunction)i;
-                Scope.MathScale = Scope.Channels[0].Scale;
+                Scope.MathAutoScale = true;
+            });
+            var sourceA = Chips("A", new[] { "1", "2", "3", "4" }, () => Scope.MathSourceA, i =>
+            {
+                Scope.MathSourceA = i;
+                Scope.MathAutoScale = true;
+            }, colored: true);
+            var sourceB = Chips("B", new[] { "1", "2", "3", "4" }, () => Scope.MathSourceB, i =>
+            {
+                Scope.MathSourceB = i;
+                Scope.MathAutoScale = true;
+            }, colored: true);
+            _refresh.Add(() =>
+            {
+                var f = Scope.MathFunction;
+                sourceA.Visibility = f == ScopeMathFunction.Off ? Visibility.Collapsed : Visibility.Visible;
+                sourceB.Visibility = f is ScopeMathFunction.Add or ScopeMathFunction.Subtract or ScopeMathFunction.Multiply ? Visibility.Visible : Visibility.Collapsed;
             });
             Chips("Ölçüm", new[] { "1", "2", "3", "4", "M" }, () => _view.MeasureChannel, i => _view.MeasureChannel = i, colored: true);
             var dispRow = Row();
@@ -267,7 +284,7 @@ namespace RobotWin.Studio.Simulation
             _root.Children.Add(row);
         }
 
-        private void Chips(string? label, string[] items, Func<int> get, Action<int> set, bool colored = false)
+        private WrapPanel Chips(string? label, string[] items, Func<int> get, Action<int> set, bool colored = false)
         {
             var row = new WrapPanel { Margin = new Thickness(0, 0, 0, 5) };
             if (label != null)
@@ -310,6 +327,7 @@ namespace RobotWin.Studio.Simulation
                 for (int i = 0; i < buttons.Count; i++) buttons[i].IsChecked = i == current;
             });
             _root.Children.Add(row);
+            return row;
         }
     }
 }

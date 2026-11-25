@@ -50,4 +50,15 @@ sequenceDiagram
 
 ## IR
 
-38 kHz kızılötesi kumandalar yalnız görüş hattında çalışır: verici ve alıcı arasında engel olmamalı, açı ±30°'yi aşmamalı. NEC kodlaması bit bit üretilip alıcının çıkış pinine verilir.
+38 kHz kızılötesi kumandalar yalnız görüş hattında çalışır: verici ile alıcı arasında ışığı geçirmeyen bir engel olmamalı. Işık eksenden uzaklaştıkça yumuşakça azalır ($`\cos^m\theta`$; vericinin yarım şiddet açısı 25°, alıcınınki 45°) ve uzaklığın karesiyle zayıflar; ikisinin çarpımı eşiği geçerse alıcı görür. NEC kodlaması bit bit üretilip alıcının çıkış pinine verilir.
+
+## Geçerlilik aralığı
+
+Modelin doğruluğu aşağıdaki aralıkta ölçülmüştür; sayıların testi `RadioTests`'tedir.
+
+| Konu | Model | Ölçülen | Model dışında kalan |
+| --- | --- | --- | --- |
+| Yol kaybı | 1 m'ye kadar serbest uzay, ötesinde log-mesafe ($`n`$ ortamdan), doğrudan ışının geçtiği engellerin kaybı | 2,44 GHz'de 1 m'de 40,2 dB (serbest uzay formülü), her on katta $`10\,n`$ dB; ışının yanından geçen engel kayıp eklemez | Yansıma ve kırınım, dalga boyu ölçeğindeki hızlı çok yollu sönümlenme |
+| Gölgeleme | Log-normal, zamanla yavaş değişen, iki uca ve tohuma bağlı (tekrarlanabilir) | σ = 4 dB'de ölçülen yayılım 3,4–4,6 dB, ortalama ±0,4 dB; iki yönde aynı | Ortamda hareket eden insanların ve cisimlerin etkisi |
+| Paket | FSK bit hata oranı, paket boyunca | Duyarlılık eşiğinde kayıp %5–80, eşiğin altında %100 | Başka ağların girişimi ve kanal çakışması; anten deseni (kazanç yönsüz, sabit dBi) |
+| IR | Görüş hattı, $`\cos^m\theta`$ yayılım (verici 25°, alıcı 45° yarım şiddet), uzaklığın karesi, 38 kHz taşıyıcı, NEC zamanlaması | NEC çerçevesi bit bit doğru çözülür, taşıyıcısız ışık alıcıyı tetiklemez | Güneş ve lamba ışığının gürültüsü, yansıyan IR |

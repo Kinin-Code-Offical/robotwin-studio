@@ -1456,6 +1456,13 @@ namespace RobotWin.Studio.Pages
             var sim = W.Simulation;
             switch (fault)
             {
+                case "scope-power":
+                    // [scope] the supply's voltage and the motor's current: their product is the power the motor branch draws
+                    sim.ClearProbes();
+                    sim.AddVoltageProbe("VBAT", 0);
+                    if (W.Schematic.Parts.FirstOrDefault(p => W.Library.Find(p.PartId)?.Symbol == SymbolKind.Motor) is { } motor) sim.AddCurrentProbe(motor.RefDes, 1);
+                    ShowDock(0);
+                    break;
                 case "scope":
                     sim.ClearProbes();
                     foreach (var name in new[] { "GİRİŞ", "ÇIKIŞ", "VOUT" })
@@ -1515,6 +1522,17 @@ namespace RobotWin.Studio.Pages
             var sim = W.Simulation;
             switch (fault)
             {
+                case "scope-power":
+                    sim.Scope.Autoset(sim.Time);
+                    sim.Scope.MathFunction = ScopeMathFunction.Multiply;
+                    sim.Scope.MathSourceA = 0;
+                    sim.Scope.MathSourceB = 1;
+                    sim.Scope.MathAutoScale = true;
+                    Scope.MeasureChannel = 4;   // the measurements of the math: its mean is the average power
+                    _scopePanel.Refresh();
+                    for (int i = 0; i < 40; i++) sim.StepOnce(1e-3);
+                    Scope.ForceAcquire();
+                    break;
                 case "scope":
                     sim.Scope.Autoset(sim.Time);
                     _scopePanel.Refresh();

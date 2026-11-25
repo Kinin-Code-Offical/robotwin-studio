@@ -42,7 +42,16 @@ namespace RobotTwin.CoreSim.Instruments
     {
         Off,
         Subtract,
-        Add
+        Add,
+
+        /// <summary>A × B: a voltage times a current is the power (W).</summary>
+        Multiply,
+
+        /// <summary>∫A dt from the screen's left edge: a current gives the charge (C), a power the energy (J).</summary>
+        Integrate,
+
+        /// <summary>dA/dt: a slew rate (V/s), a current's rate of change (A/s).</summary>
+        Differentiate
     }
 
     /// <summary>Vertical settings of one input channel.</summary>
@@ -231,6 +240,14 @@ namespace RobotTwin.CoreSim.Instruments
         public double MathScale { get; set; } = 1.0;
         public double MathPosition { get; set; }
 
+        /// <summary>[scope] The math's sources (channel indices): A, and B for the two-input functions.</summary>
+        public int MathSourceA { get; set; }
+
+        public int MathSourceB { get; set; } = 1;
+
+        /// <summary>[scope] The next frame sets the math's scale so its trace fills about six divisions (after the function or a source changes).</summary>
+        public bool MathAutoScale { get; set; }
+
         public ScopeFrame? Frame { get; private set; }
 
         public double SampleRate => Math.Min(MaxSampleRate, RecordLength / (HorizontalDivisions * SecondsPerDiv));
@@ -341,23 +358,21 @@ namespace RobotTwin.CoreSim.Instruments
                 frame.Traces.Add(trace);
             }
 
-            if (MathFunction != ScopeMathFunction.Off && _channels.Count >= 2)
+            if (MathFunction != ScopeMathFunction.Off && _channels.Count >= 1)
             {
-                var a = frame.TraceOf(_channels[0]);
-                var b = frame.TraceOf(_channels[1]);
-                if (a != null && b != null && a.Unit == b.Unit)
+                var a = frame.TraceOf(_channels[Math.Max(0, Math.Min(_channels.Count - 1, MathSourceA))]);
+                var b = frame.TraceOf(_channels[Math.Max(0, Math.Min(_channels.Count - 1, MathSourceB))]);
+                var math = ScopeMath.Compute(MathFunction, a, b, dt, MathSourceA, MathSourceB);
+                if (math != null)
                 {
-                    var values = new double[a.Values.Length];
-                    for (int i = 0; i < values.Length; i++)
+                    if (MathAutoScale)
                     {
-                        values[i] = MathFunction == ScopeMathFunction.Subtract ? a.Values[i] - b.Values[i] : a.Values[i] + b.Values[i];
+                        MathScale = ScopeMath.NiceScale(math.Values);
+                        MathAutoScale = false;
                     }
 
-                    frame.Math = new ScopeTrace(MathFunction == ScopeMathFunction.Subtract ? "CH1−CH2" : "CH1+CH2", a.Unit, MathScale, MathPosition, values)
-                    {
-                        Clipped = a.Clipped || b.Clipped
-                    };
-                    frame.Math.Measurements = ScopeMeasurements.Compute(values, dt, MathScale);
+                    frame.Math = new ScopeTrace(math.Name, math.Unit, MathScale, MathPosition, math.Values) { Clipped = math.Clipped };
+                    frame.Math.Measurements = ScopeMeasurements.Compute(math.Values, dt, MathScale);
                 }
             }
 

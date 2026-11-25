@@ -7048,7 +7048,9 @@
   "Bu sürüm geri yüklensin mi?": "Restore this version?",
   "Geri yüklenemedi": "Could not restore",
   "Otomatik kayıt": "Autosave",
-  "Açılamadı": "Could not open"
+  "Açılamadı": "Could not open",
+  "Mod": "Mode",
+  "%50": "50%"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

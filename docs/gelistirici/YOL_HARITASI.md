@@ -59,11 +59,11 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [~] **Fizik doğrulama:**
   - [x] Referans testleri var.
   - [x] Enerji ve momentum korunumu: `ConservationTests` (çarpışmalarda doğrusal ve açısal momentum makine hassasiyetinde, Newton'un çarpışma yasası, Dzhanibekov devrilmesi, boşlukta mekanik enerji, sekmelerde enerji artışı yok).
-  - [x] Zaman adımı yakınsaması: `TimeStepConvergenceTests` (atılan cisim tam birinci derece, sarkaç periyodu ikinci dereceye yakın, duran kutunun yüksekliği her adımda aynı, zincirin eklem ayrılması); tablo kullanım kılavuzunun Doğrulama bölümünde.
-  - [~] Temas ve eklem kararlılığı: duran kutu 4 ms'ye kadar aynı yükseklikte, sallanan beş halkalı zincirin eklemleri 0,5 ms'de 0,05 mm, 4 ms'de 0,54 mm içinde. Kalan: yığınlar, sürtünmeli eğimde uzun bekleme.
-  - [ ] Elektrik–mekanik–termal enerji bilançosu.
+  - [x] Zaman adımı yakınsaması: `TimeStepConvergenceTests` (atılan cisim tam birinci derece, sarkaç periyodu ikinci dereceye yakın, duran kutu en kaba adımda (4 ms) 64 µm, uygulamanın adımında 1 µm gömülü, zincirin eklem ayrılması); tablo kullanım kılavuzunun Doğrulama bölümünde.
+  - [x] Temas ve eklem kararlılığı: duran kutu 4 ms'de 64 µm içinde, sallanan beş halkalı zincirin eklemleri 0,5 ms'de 0,05 mm, 4 ms'de 0,54 mm içinde. `LongRestTests`: yirmi bloklu yığın 20 s'de 0,03 mm içinde duruyor (2 ms'de on blok), sürtünmenin tuttuğu ahşap kutu 25°'lik eğimde 30 s kıpırdamıyor (2 ms'de de), 30°'de kopup μk ile kayıyor, 100 kat ağır blok altındaki hafif blok 0,16 mm'de kalıyor. Bu sırada iki hata bulundu ve düzeltildi: yapışma ya da kayma adımın kendi kuvvetlerinden sonraki hıza göre seçiliyordu (2 ms'de eğimdeki kutu kayıyordu); kutu köşesinin derinliği öteki kutunun en uzak köşesine göre ölçülüyordu ve 0,5 mm'lik ölü bant eğilen arayüzü geri itmiyordu (yirmi bloklu yığın sürekli sallanıyordu).
+  - [x] Elektrik–mekanik–termal enerji bilançosu: `EnergyBalanceTests` (dişli motorda kaynağın verdiği enerji kablo, sargı, sürtünme, dişli, yüke iş ve depolanan enerjiyle %0,001 içinde kapanıyor; sargının ısısı sıcaklık artışı ve havaya geçenle). Bu sırada dişli takımının yük altındaki kaybının dünya ısı ağına hiç gitmediği bulundu ve düzeltildi (`DcMotor.GearLoss` dişli kutusunu ısıtıyor).
   - [ ] Sayısal belirsizlik raporu.
-  - [ ] Model geçerlilik aralığı.
+  - [x] Model geçerlilik aralığı: mekanik, devre, ısı ve radyo bölümleri bir tabloyla bitiyor (model, ölçülen ve testi, model dışında kalan); aerodinamik, gaz ve sıvı bölümlerinde aynı bilgi "Sınırlar" ve "Doğrulama" başlıklarında. Devrenin sayıları yeni `CircuitAccuracyTests`'ten: uygulamanın adımında RC eğrisi 5,2 mV (5 V'ta), RL 1,0 mA (1 A'de) içinde, kayıpsız LC tankı 100 periyotta genliğini 0,9999 V'ta tutuyor, periyot hatası trapez kuralının (ωh)²/12'si (ikinci derece).
 - [~] **Performans ve kararlılık:**
   - [x] Kare profili.
   - [x] `--bench`.
@@ -90,7 +90,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - AC ve frekans cevabı;
   - anahtarlamalı güç;
   - besleme açılışı;
-  - osiloskopta matematik kanalları;
+  - ~~osiloskopta matematik kanalları~~ (yapıldı: A−B, A+B, A×B güç, ∫A yük/enerji, dA/dt; herhangi iki kanal, birimler ve ölçek kendiliğinden);
   - model sınırlarını gösterme.
 - [~] **PCB ve üretim:** 32 katman, DRC, Gerber, BOM ve KiCad dışa aktarma var. Eksikler:
   - KiCad içe aktarma ve fark;

@@ -35,8 +35,8 @@ $`C`$ is the constraint error (penetration depth, joint drift), $`\beta`$ the so
 
 | Constraint | What it does |
 | --- | --- |
-| Contact (normal) | Prevents penetration; restitution from the material pair |
-| Friction | Coulomb cone: $`\lvert \lambda_t \rvert \le \mu\,\lambda_n`$, separate static and kinetic $`\mu`$ |
+| Contact (normal) | Prevents penetration: acts like a stiff, heavily damped spring from the first micrometre (no dead band), so the pressed side of a tilted interface pushes back. A corner's depth is measured against the face of the other body that it faces. Restitution from the material pair |
+| Friction | Coulomb cone: $`\lvert \lambda_t \rvert \le \mu\,\lambda_n`$, separate static and kinetic $`\mu`$. A contact slipping slower than 5 mm/s at the start of the step sticks ($`\mu_s`$); the velocity the step's own forces add (gravity along a slope, a push) does not change that, static friction cancels it |
 | Rolling resistance | Tyres, balls: $`\tau \le c_{rr}\,r\,\lambda_n`$ |
 | Fixed joint | Two bodies as one (screws, glue) |
 | Hinge | Rotation about one axis; limits, drives (position: PD, speed: motor) |
@@ -136,3 +136,17 @@ Parts joined by at most two joints (e.g. motor – rotor – wheel) do not colli
 ## Materials
 
 Friction and restitution come from the material pair of the two surfaces (rubber–floor, steel–steel, PLA–wood…). Floor regions (carpet, tiles, sand) carry their own friction. Mass is volume × material density × infill, or typed in.
+
+## Validity range
+
+The model's accuracy has been measured over the range below; the test behind each figure is in the [Validation](../guide/12-validation.md) chapter.
+
+| Subject | Model | Measured | Outside the model |
+| --- | --- | --- | --- |
+| Bodies | Rigid: parts neither bend nor stretch | Linear and angular momentum kept to machine precision | Flexing, vibration, shape change before breaking (stress is a separate, static FEM analysis) |
+| Time step | 0.5 ms substep, semi-implicit Euler (first order) | A thrown body 2.45 mm ahead after 1 s; a pendulum's period right to 2·10⁻⁷ | Oscillations above ~100 Hz (the torsion of a short stiff shaft) are not resolved at the step and behave as if damped |
+| Contact | Soft constraints that act like a stiff, heavily damped spring: micrometres of overlap under load, and the pressed side of a tilted interface pushes back | A dropped box's centre rests at 29.999 mm at 0.5 ms, 29.936 mm at 4 ms (theory 30); the top of a twenty-block (2 m) stack drifts 0.029 mm in 20 s | Deforming contact patches, surface roughness. Very tall stacks: at 0.5 ms thirty blocks sway by about 1 mm and forty creep slowly; at 2 ms fifteen blocks stand, twenty topple |
+| Friction | Coulomb, static and kinetic μ apart, from the material pair; whether a contact sticks or slides follows the motion at the start of the step | Wood on wood (μs 0.50): a box on a 25° slope (the limit is 26.6°) creeps 0.000 mm in 30 s, at 2 ms too; on 30° it breaks away and slides at 2.357 m/s² (theory 2.356) | Lubrication, μ that changes with temperature, the frequency of stick-slip |
+| Mass ratio | Sequential impulses (4 passes + 2 relaxation) | A light block under one 100 times heavier is pressed 0.16 mm into the ground and into it | Ratios beyond a thousand: joints may stretch visibly when a heavy load hangs from a light, long chain |
+| Joints | Velocity-level constraints + position correction | A swinging chain of five links separates 0.05 mm (0.54 mm at 4 ms) | Backlash and joint compliance, gear tooth contact |
+| Fast bodies | More substeps for thin fast bodies (continuous collision) | Propellers and bullet-like parts do not pass through walls | Supersonic speeds, shock waves |

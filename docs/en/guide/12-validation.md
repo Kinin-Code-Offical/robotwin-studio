@@ -43,10 +43,24 @@ The same motion, run again with the solver's step halved each time, must approac
 | --- | --- | --- | --- | --- | --- |
 | Thrown body, position error after 1 s | 19.6 mm | 9.8 mm | 4.9 mm | 2.45 mm | 1.23 mm |
 | Hinged pendulum's period, relative error | 3.0·10⁻⁵ | 7.4·10⁻⁶ | 1.8·10⁻⁶ | 2.2·10⁻⁷ | 1.6·10⁻⁷ |
-| Box dropped to rest, height of its centre (theory 30 mm) | 29.999 mm | 30.000 mm | 30.000 mm | 30.000 mm | 30.000 mm |
+| Box dropped to rest, height of its centre (theory 30 mm) | 29.936 mm | 29.984 mm | 29.996 mm | 29.999 mm | 29.999 mm |
 | Swinging chain of five links, largest joint separation in 10 s | 0.54 mm | — | — | 0.048 mm | — |
 
-The thrown body's error halves exactly with each halving: semi-implicit (symplectic) Euler is first order, and the error is what a·T·h/2 gives. The pendulum's period converges at nearly second order; the 1.6·10⁻⁷ at 0.25 ms is the truncation of the analytic formula it is compared with (the θ⁴ term of the large-amplitude correction). The box rests at the same height at every step: contacts neither sink nor float as the step grows. For small fast bodies the solver shortens the step by itself so as not to miss a collision (continuous collision detection); the thrown body is 40 cm across to stay out of that.
+The thrown body's error halves exactly with each halving: semi-implicit (symplectic) Euler is first order, and the error is what a·T·h/2 gives. The pendulum's period converges at nearly second order; the 1.6·10⁻⁷ at 0.25 ms is the truncation of the analytic formula it is compared with (the θ⁴ term of the large-amplitude correction). A contact acts like a stiff, heavily damped spring: under its weight the box overlaps the ground by at most 64 µm (at the coarsest step, where the spring softens with the step), and neither sinks nor floats. For small fast bodies the solver shortens the step by itself so as not to miss a collision (continuous collision detection); the thrown body is 40 cm across to stay out of that.
+
+### Long rest and stacks
+
+Slow creep and drift only show over time: an impulse solver that loses a little at every step walks a box down a slope it should hold and slowly tilts a stack. Figures from `LongRestTests` (wood on wood, μs 0.50, μk 0.30):
+
+| Measurement | Theory | 0.5 ms (the app) | 2 ms |
+| --- | --- | --- | --- |
+| Box on a 20° slope, distance moved in 30 s | 0 | 0.000 mm | 0.000 mm |
+| On 25° (the limit is 26.6°) | 0 | 0.000 mm | 0.000 mm |
+| Sliding acceleration on 30° | 2.356 m/s² | 2.357 m/s² | 2.361 m/s² |
+| Top of a twenty-block stack, 20 s (ten blocks at 2 ms) | 0 | 0.029 mm | 0.009 mm |
+| A light block under one 100 times heavier, pressed in by | 0 | 0.16 mm | — |
+
+Every other block of the stack is 2 mm off centre, so no interface is symmetric. Whether a contact sticks or slides is decided from the motion at the start of the step: the velocity the step's own forces add (gravity along a slope, a push) is what static friction is there to cancel. The limits of taller stacks and coarser steps are in the validity range of the [Mechanics](../physics/02-mechanics.md) chapter.
 
 ## 2. Stress analysis (FEM, quadratic T10 elements)
 
@@ -152,7 +166,14 @@ Numerical methods usually run 5–10 % ahead of the dam-break experiment, whose 
 
 | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
 | --- | --- | --- | --- | --- |
+| RC charge (1 kΩ, 1 µF, 5 V), largest difference from the exponential at the app's step | 0 | 5.21 mV | 0.10 % | 10 mV |
+| RL current (10 Ω, 10 mH, 10 V), the same | 0 | 1.04 mA | 0.10 % | 5 mA |
+| Lossless LC tank (1 mH, 1 µF), amplitude after 100 periods | 1 V | 0.9999 V | −0.01 % | ±1 % |
+| The same tank's period at 64 steps a period | 198.692 µs | 198.851 µs | +0.080 % (the trapezoidal rule's (ωh)²/12) | ±0.1 % |
+| How much the period error shrinks per halved step (T/32 → T/256) | 4 times (second order) | 3.89 / 4.00 / 4.00 | — | 3.6–4.4 |
 | Motor no-load speed (6.28 V, datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
+| A gear motor's energy over 3 s: what the supply gave = wiring + winding + friction + gears + work on the load + stored (flywheel, the winding's field) | 8.313 J | 8.313 J (0.434 + 3.477 + 1.041 + 0.939 + 2.191 + 0.231) | −0.001 % | ±0.5 % |
+| Same motor: winding heat = temperature rise + heat to the air | 3.477 J | 3.462 + 0.015 J | ≈0 | 10⁻⁶ J |
 | Motor current rise on a 10 % slope | 0.059 A | 0.055 A | −7 % | ±25 % |
 | Current rise while pushing a box | 0.052 A | 0.054 A | +4 % | ±35 % |
 | Encoder edge count | 1940 | 1940 | 0 % | ±10 % |

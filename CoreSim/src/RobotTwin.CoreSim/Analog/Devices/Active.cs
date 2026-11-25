@@ -519,8 +519,14 @@ namespace RobotTwin.CoreSim.Analog.Devices
         /// <summary>Copper loss in the winding right now (W), at the hot resistance.</summary>
         public double CopperLoss => Current * Current * HotResistance;
 
-        /// <summary>Friction loss right now (W): brushes, bearings and, in a gear motor, the gear train.</summary>
+        /// <summary>Friction loss right now (W): brushes and bearings, and a gear train's running friction (Coulomb and viscous).</summary>
         public double FrictionLoss { get; private set; }
+
+        /// <summary>
+        /// [phys] A loaded gear train's loss right now (W): the load's power over the gear efficiency, less the power that
+        /// reaches the load, (1/η − 1)·τ·ω at the output. Heat in the gearbox.
+        /// </summary>
+        public double GearLoss { get; private set; }
 
         /// <summary>Torque applied by the mechanism at the output shaft, opposing rotation when positive.</summary>
         public double LoadTorque { get; set; }
@@ -673,6 +679,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
             if (ctx.IsDc) return;
             // Only the motor's own friction is heat here; the load torque is shaft power delivered to the load.
             FrictionLoss = Math.Abs(CoulombFriction * Math.Tanh(w / 0.5) * w) + ViscousFriction * w * w;
+            GearLoss = Math.Abs(LoadTorque * w / GearRatio) * (1 / Math.Max(GearEfficiency, 0.05) - 1);
             Thermal.Advance(i * i * HotResistance, ctx.Dt, ctx.AmbientTempC);
             if (ctx.EnableDamage && !IsFailed && Thermal.TemperatureC > MaxWindingTempC)
             {

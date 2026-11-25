@@ -58,3 +58,15 @@ A battery heats by its internal resistance and polarization loss: $`P = I^2R + \
 | Thermal stress | $`\sigma = -E\,\alpha\,\Delta T`$ (in the FEM analysis) | Added to the stress map |
 
 To see it: **Görünüm → Isı kamerası (dünya)** (View → Thermal camera). With the mouse over a part, the temperature at that point and the part's nodes are shown.
+
+## Validity range
+
+The model's accuracy has been measured over the range below; the test behind each figure is in the [Validation](../guide/12-validation.md) chapter.
+
+| Subject | Model | Measured | Outside the model |
+| --- | --- | --- | --- |
+| Live heat network | Lumped capacity: a part is one or a few nodes, one temperature per node; 50 ms step, backward Euler (unconditionally stable) | In a gear motor the winding's heat equals its temperature rise plus what goes into the air, within 10⁻⁶ J | The temperature field inside a single-node part (hot spots: the thermal analysis); thermal events shorter than 50 ms (a part's own fast thermal model follows those, such as a burning resistor) |
+| Thermal analysis | Finite-volume grid inside the part | 1-D transient conduction within 0.0174 K of the Fourier series (for an 80 K step); a heated plate's equilibrium temperature within 0.005 % of the energy balance | Detail smaller than a grid cell |
+| Convection | $`h_c = \max(6,\ 10.45 - v + 10\sqrt{v})`$, with the real air speed | — | Convection that depends on a surface's orientation and shape (vertical plate, inner channel), boundary-layer detail |
+| Radiation | Grey body, to the surroundings, linearised | — | Parts radiating to each other (view factors), sunlight |
+| Material | Glass transition and melting thresholds, thermal stress (FEM) | — | Creep, thermal fatigue, combustion chemistry |

@@ -35,8 +35,8 @@ $`C`$ kısıtın ihlali (iç içe geçme derinliği, eklem kayması), $`\beta`$ 
 
 | Kısıt | Ne sağlar |
 | --- | --- |
-| Temas (normal) | İç içe geçmeyi önler, sekme katsayısı malzeme çiftinden |
-| Sürtünme | Coulomb konisi: $`\lvert \lambda_t \rvert \le \mu\,\lambda_n`$, statik ve kinetik $`\mu`$ ayrı |
+| Temas (normal) | İç içe geçmeyi önler: ilk mikrometreden geri iten sert ve çok sönümlü bir yay gibidir (ölü bant yok), böylece eğik bir arayüzün basılan tarafı geri iter. Bir köşenin derinliği öteki cismin o köşeye bakan yüzüne göre ölçülür. Sekme katsayısı malzeme çiftinden |
+| Sürtünme | Coulomb konisi: $`\lvert \lambda_t \rvert \le \mu\,\lambda_n`$, statik ve kinetik $`\mu`$ ayrı. Temas adımın başında 5 mm/s'den yavaş kayıyorsa yapışıktır ($`\mu_s`$); adımın kendi kuvvetlerinin eklediği hız (eğimde yerçekimi, bir itme) bu kararı değiştirmez, onu statik sürtünme karşılar |
 | Yuvarlanma direnci | Lastik, bilye: $`\tau \le c_{rr}\,r\,\lambda_n`$ |
 | Sabit eklem | İki gövde tek parça (vida, yapıştırıcı) |
 | Menteşe | Tek eksende dönme; sınır, sürücü (konum: PD, hız: motor) |
@@ -136,3 +136,17 @@ Birbirine en çok iki eklemle bağlı parçalar (ör. motor – rotor – tekerl
 ## Malzemeler
 
 Sürtünme ve sekme, iki yüzeyin malzeme çiftinden gelir (kauçuk–zemin, çelik–çelik, PLA–ahşap…). Zemin bölgeleri (halı, fayans, kum) kendi sürtünmesini taşır. Kütle, hacim × malzeme yoğunluğu × dolulukla hesaplanır, isterseniz elle girilir.
+
+## Geçerlilik aralığı
+
+Modelin doğruluğu aşağıdaki aralıkta ölçülmüştür; her sayının testi [Doğrulama](../kullanim/12-dogrulama.md) bölümündedir.
+
+| Konu | Model | Ölçülen | Model dışında kalan |
+| --- | --- | --- | --- |
+| Gövdeler | Katı cisim: parçalar eğilmez, uzamaz | Momentum ve açısal momentum makine hassasiyetinde korunur | Esneme, titreşim, kırılma öncesi şekil değişimi (gerilme ayrı, durağan bir FEM analizidir) |
+| Zaman adımı | 0,5 ms alt adım, yarı örtük Euler (birinci derece) | Atılan cisim 1 s'de 2,45 mm önde; sarkaç periyodu 2·10⁻⁷ doğru | ~100 Hz'in üstündeki salınımlar (kısa, sert bir milin burulması) adımda çözülmez, sönümlenmiş gibi davranır |
+| Temas | Sert ve çok sönümlü bir yay gibi davranan yumuşak kısıt: yük altında mikrometreler kadar iç içe geçer, eğik bir arayüzün basılan tarafı geri iter | Düşen kutunun merkezi 0,5 ms'de 29,999 mm, 4 ms'de 29,936 mm (teori 30); yirmi bloklu (2 m) yığının tepesi 20 s'de 0,029 mm kayar | Deformasyonlu temas alanı, yüzey pürüzlülüğü. Çok yüksek yığınlar: 0,5 ms'de otuz blok 1 mm kadar salınır, kırk blok yavaşça kayar; 2 ms'de on beş blok durur, yirmisi devrilir |
+| Sürtünme | Coulomb, statik ve kinetik μ ayrı, malzeme çiftinden; temasın yapışık mı kayıyor mu olduğu adımın başındaki harekete bakar | Ahşap üstünde ahşap (μs 0,50): kutu 25°'lik eğimde (sınır 26,6°) 30 s'de 0,000 mm sürünür, 2 ms'de de; 30°'de kopar ve 2,357 m/s² ile kayar (teori 2,356) | Yağlanma, sıcaklıkla değişen μ, yapış-kay titreşiminin frekansı |
+| Kütle oranı | Ardışık itme (4 geçiş + 2 gevşetme) | 100 kat ağır bloğu taşıyan hafif blok zemine ve üstteki bloğa 0,16 mm gömülür | Bin katın üstündeki oranlar: ağır bir yük hafif ve uzun bir zincirden asılınca eklemler belirgin uzayabilir |
+| Eklemler | Hız düzeyinde kısıt + konum düzeltmesi | Sallanan beş halkalı zincirde ayrılma 0,05 mm (4 ms'de 0,54 mm) | Eklem boşluğu (backlash) ve esnemesi, dişli diş teması |
+| Hızlı cisimler | İnce ve hızlı cisimde alt adım artar (sürekli çarpışma) | Pervane ve mermi gibi parçalar duvarın öbür yanına geçmez | Ses üstü hızlar, darbe dalgaları |

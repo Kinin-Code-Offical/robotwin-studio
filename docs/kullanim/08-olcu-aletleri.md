@@ -21,7 +21,7 @@ RobotWin Studio'daki ölçü aletleri gerçek cihazlar gibi davranır: osiloskob
 | Yatay | Zaman/div, konum, kayan (roll) mod |
 | Kanal | Volt/div, konum, kuplaj (DC / AC / GND), prob 1× / 10×, 20 MHz bant sınırı, ters çevir, akım probu |
 | Tetik | Mod (**Auto**, **Normal**, **Tek**), kaynak (1–4), eğim (yükselen / düşen), seviye, bekleme süresi |
-| Matematik | 1+2 veya 1−2 |
+| Matematik | **A−B**, **A+B**, **A×B** (bir gerilimle bir akımın çarpımı güçtür, W), **∫A** (akımdan yük, C; güçten enerji, J), **dA/dt** (yükselme hızı, V/s); A ve B herhangi iki kanal. Ölçek sonuca göre kendiliğinden ayarlanır, ölçümler matematik kanalında da çalışır (V×I'nın **ortalaması** ortalama güçtür). |
 | Düğmeler | **RUN / STOP**, **TEK**, **AUTOSET**, imleçler |
 
 **Prob yüklemesi** açıkken prob devreye 1 MΩ ∥ 110 pF (1×) veya 10 MΩ ∥ 12 pF (10×) olarak bağlanır; yüksek empedanslı devrelerde ölçümün devreyi nasıl etkilediğini görürsünüz.

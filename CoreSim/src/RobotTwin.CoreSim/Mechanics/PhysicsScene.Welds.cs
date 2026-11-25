@@ -237,6 +237,8 @@ namespace RobotTwin.CoreSim.Mechanics
 
                 var I = GroupInertia(g);
                 g.InvIWorld = I.Inverse();
+                _state[g.Rep].V0 = g.V;   // [phys] the group's velocity before this substep's forces: its contacts' stick or slip
+                _state[g.Rep].W0 = g.W;
                 g.V += force / g.Mass * h;
                 var w = g.W;
                 var iw = I * w;

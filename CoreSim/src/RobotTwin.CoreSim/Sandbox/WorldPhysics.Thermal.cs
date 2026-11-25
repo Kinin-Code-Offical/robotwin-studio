@@ -292,7 +292,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     mt.Winding.Power = mt.Motor.CopperLoss;
                     double friction = mt.Motor.FrictionLoss;
                     mt.Can.Power += friction * (1 - mt.GearShare);
-                    mt.Mount.Power += friction * mt.GearShare;
+                    mt.Mount.Power += friction * mt.GearShare + mt.Motor.GearLoss;   // [phys] a loaded gear train heats its gearbox
                     if (mt.BellRadius > 0) mt.Mount.SelfAir = 0.3 * Math.Abs(mt.Motor.AngularVelocity) * mt.BellRadius;
                 }
 
