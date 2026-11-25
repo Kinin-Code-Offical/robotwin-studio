@@ -23,7 +23,7 @@ namespace RobotWin.Studio.World
     /// I²C devices on their buses, and the moving parts (servo horns, motor shafts)
     /// with everything fixed onto them.
     /// </summary>
-    public sealed partial class WorldSession : ISolverCosts
+    public sealed partial class WorldSession : ISolverCosts, ISimThreadWork
     {
 
         public const double FirmwareSlice = 50e-6;
@@ -81,6 +81,7 @@ namespace RobotWin.Studio.World
 
         public bool Start(WorldDocument world, Func<WorldCable, double> cableLength, Func<WorldObject, WorldBodyGeometry>? geometry, out string message)
         {
+            using var gate = SimThread.Hold();
             var clock = Stopwatch.StartNew();
             var steps = new List<string>();
             void Mark(string step)
@@ -107,7 +108,7 @@ namespace RobotWin.Studio.World
             }
 
             Mark("devre");
-            foreach (var w in Circuit.Compiled.Warnings) Log.Add(new SimLogEntry(0, "derleyici", w, AnalogEventKind.Warning));
+            foreach (var w in Circuit.Compiled.Warnings) AddLog(new SimLogEntry(0, "derleyici", w, AnalogEventKind.Warning));
             var settings = AppSettings.Current;
             Simulator = new AnalogSimulator(Circuit.Compiled.Circuit, new AnalogOptions
             {
@@ -139,17 +140,17 @@ namespace RobotWin.Studio.World
                     // Parts that start inside each other would be pushed apart violently: say which ones.
                     foreach (var (oa, ob, depth) in Physics.FindInterpenetrations(0.001))
                     {
-                        Log.Add(new SimLogEntry(0, "fizik", $"{world.Find(oa)?.Name ?? oa} ile {world.Find(ob)?.Name ?? ob} iç içe başlıyor ({depth * 1000:F1} mm); konumlarını ayırın.", AnalogEventKind.Warning));
+                        AddLog(new SimLogEntry(0, "fizik", $"{world.Find(oa)?.Name ?? oa} ile {world.Find(ob)?.Name ?? ob} iç içe başlıyor ({depth * 1000:F1} mm); konumlarını ayırın.", AnalogEventKind.Warning));
                     }
 
                     // [audit] Joined parts do not collide with each other, so one sunk into the other would go unnoticed.
                     foreach (var issue in Physics.JoinedOverlaps())
-                        Log.Add(new SimLogEntry(0, "fizik", issue.Message + "; gerçekte böyle monte edilemez, konumunu düzeltin.", AnalogEventKind.Warning));
+                        AddLog(new SimLogEntry(0, "fizik", issue.Message + "; gerçekte böyle monte edilemez, konumunu düzeltin.", AnalogEventKind.Warning));
                 }
                 catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
                 {
                     Physics = null;
-                    Log.Add(new SimLogEntry(0, "fizik", "Fizik sahnesi kurulamadı: " + ex.Message, AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, "fizik", "Fizik sahnesi kurulamadı: " + ex.Message, AnalogEventKind.Warning));
                 }
 
                 Mark("denetim");
@@ -170,13 +171,16 @@ namespace RobotWin.Studio.World
             Mark("sensörler");
             LastStartProfile = string.Join(" · ", steps) + " ms";
             int parts = Circuit.Compiled.DevicesByPart.Count;
-            Log.Add(new SimLogEntry(0, "dünya", $"{world.Objects.Count} nesne, {world.Cables.Count} kablo, {parts} parça tek devrede çözülüyor", AnalogEventKind.StateChange));
+            AddLog(new SimLogEntry(0, "dünya", $"{world.Objects.Count} nesne, {world.Cables.Count} kablo, {parts} parça tek devrede çözülüyor", AnalogEventKind.StateChange));
             Speed = settings.DefaultSpeed;
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
             _costAvr = _costEsp = _costRadio = _costCircuit = _costPhysics = _costSense = _simulated = 0;
             Perf.Solvers = this;   // [perf] the performance indicator shows this run's solvers
+            _threaded = SimThread.Enabled;
+            RestartClock();
+            if (_threaded) SimThread.Add(this);
             message = string.Empty;
             StateChanged?.Invoke(this, EventArgs.Empty);
             return true;
@@ -184,6 +188,7 @@ namespace RobotWin.Studio.World
 
         public void Pause()
         {
+            using var gate = SimThread.Hold();
             if (State != SimState.Running) return;
             State = SimState.Paused;
             _sounds.Silence();
@@ -192,16 +197,21 @@ namespace RobotWin.Studio.World
 
         public void Resume()
         {
+            using var gate = SimThread.Hold();
             if (State != SimState.Paused) return;
             Firmware.FirmwareDebugger.ReleaseHalts(this);   // [debug] a program stopped at a breakpoint goes on too
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
+            RestartClock();
+            if (_threaded) SimThread.Add(this);
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void Stop()
         {
+            using var gate = SimThread.Hold();
+            SimThread.Remove(this);
             Firmware.FirmwareDebugger.Unregister(this);   // [debug]
             _sounds.Reset();
             foreach (var e in _esp) e.Dispose();
@@ -222,10 +232,107 @@ namespace RobotWin.Studio.World
             }
         }
 
+        // ================================================================ [perf] the simulation thread (Simulation/SimThread.cs)
+
+        private bool _threaded;                          // this run advances on the simulation thread
+        private double _owed;                            // simulated seconds it is behind the wall clock (simulation thread)
+        private double _threadWall;                      // wall clock at its last turn
+        private double _frameWall, _frameSim;            // wall clock and simulated time at the last frame (UI)
+        private FirmwareCoSimulation? _haltedOnThread;   // a program stopped at a breakpoint there; the UI pauses and shows it
+        private bool _stopOnThread;                      // a part failed ("pause on failure") or the solver gave up there
+        private int _eventsSeen;                         // circuit events already looked at for failures (simulation thread)
+        private readonly List<SimLogEntry> _logFromThread = new List<SimLogEntry>();   // the log lines it wrote, for the UI
+
+        private void RestartClock()
+        {
+            _owed = 0;
+            _threadWall = _frameWall = _wall.Elapsed.TotalSeconds;
+            _frameSim = Simulator?.Time ?? 0;
+            _haltedOnThread = null;
+            _stopOnThread = false;
+        }
+
+        /// <summary>A log line from wherever the run is advancing: on the simulation thread it waits for the next frame.</summary>
+        private void AddLog(SimLogEntry entry)
+        {
+            if (SimThread.OnSimThread) _logFromThread.Add(entry);
+            else Log.Add(entry);
+        }
+
+        bool ISimThreadWork.AdvanceOnSimThread(double maxWall)
+        {
+            if (!_threaded || State != SimState.Running || Simulator == null || _haltedOnThread != null || _stopOnThread) return false;
+            double now = _wall.Elapsed.TotalSeconds;
+            // Never more than 50 ms of the wall clock behind: a run the computer cannot keep up with runs as fast as it can.
+            _owed = Math.Min(_owed + (now - _threadWall) * Speed, 0.05 * Speed);
+            _threadWall = now;
+            if (_owed < 1e-4 * Speed) return false;
+            _owed -= Advance(_owed, Stopwatch.StartNew(), maxWall);
+            return _owed >= 1e-4 * Speed && State == SimState.Running && _haltedOnThread == null && !_stopOnThread;
+        }
+
+        void ISimThreadWork.FailedOnSimThread(Exception error)
+        {
+            Pause();
+            Log.Add(new SimLogEntry(Time, "çözücü", "Simülasyon durdu: " + error.Message, AnalogEventKind.Failure));
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();   // recorded like any other error
+        }
+
+        /// <summary>
+        /// A part failed in what the simulation thread just advanced and the run should pause at it ("pause on failure"):
+        /// the events stay for the UI, which logs them and pauses.
+        /// </summary>
+        private bool FailureToPauseAt()
+        {
+            if (!AppSettings.Current.PauseOnFailure || Simulator == null) return false;
+            var events = Simulator.Events;
+            bool failed = false;
+            for (int i = _eventsSeen; i < events.Count; i++) failed |= events[i].Kind == AnalogEventKind.Failure;
+            _eventsSeen = events.Count;
+            return failed;
+        }
+
+        /// <summary>A frame of a run on the simulation thread (UI): what it left — log lines, events, a stop — and the clock.</summary>
+        private void ThreadedFrame()
+        {
+            foreach (var entry in _logFromThread) Log.Add(entry);
+            _logFromThread.Clear();
+            RadioFrame();   // [radio] controller input / feedback, radio events
+            DrainEvents();
+            if (_haltedOnThread is { } halted)
+            {
+                _haltedOnThread = null;
+                Pause();
+                Firmware.FirmwareDebugger.OnHalted(halted);
+            }
+            else if (_stopOnThread)
+            {
+                _stopOnThread = false;
+                Pause();
+            }
+
+            double now = _wall.Elapsed.TotalSeconds, sim = Time;
+            if (now - _frameWall >= 0.02)
+            {
+                _realtime = 0.85 * _realtime + 0.15 * ((sim - _frameSim) / (now - _frameWall));
+                _frameWall = now;
+                _frameSim = sim;
+            }
+
+            SimThread.Kick();
+        }
+
         /// <summary>Called once per rendered frame by the page while running.</summary>
         public void Frame()
         {
             if (State != SimState.Running || Simulator == null) return;
+            if (_threaded)
+            {
+                ThreadedFrame();
+                FrameEnd();
+                return;
+            }
+
             double now = _wall.Elapsed.TotalSeconds;
             double wallDt = Math.Min(0.05, now - _lastWall);
             _lastWall = now;
@@ -234,6 +341,11 @@ namespace RobotWin.Studio.World
             RadioFrame();   // [radio] controller input / feedback, radio events
             double done = Advance(wallDt * Speed, budget, Shell.UiHeadroom.SimulationBudget(0.022));   // room for the rest of the UI
             _realtime = 0.85 * _realtime + 0.15 * (done / wallDt);
+            FrameEnd();
+        }
+
+        private void FrameEnd()
+        {
             Updated?.Invoke(this, EventArgs.Empty);
             if (State == SimState.Running && Simulator != null && World != null)
             {
@@ -301,8 +413,11 @@ namespace RobotWin.Studio.World
 
         public void StepOnce(double seconds)
         {
+            using var gate = SimThread.Hold();
             if (Simulator == null) return;
             Advance(seconds);
+            foreach (var entry in _logFromThread) Log.Add(entry);
+            _logFromThread.Clear();
             RadioFrame();   // [radio]
             Updated?.Invoke(this, EventArgs.Empty);
         }
@@ -314,6 +429,8 @@ namespace RobotWin.Studio.World
             if (_avr.Count > 0) chunk = Math.Min(chunk, FirmwareSlice);
             if (_esp.Count > 0) chunk = Math.Min(chunk, Esp32Slice);
             double covered = 0;
+            // [perf] On the simulation thread the UI does what only it may (the log, the debugger, pausing) at its next frame.
+            bool onThread = SimThread.OnSimThread;
             try
             {
                 while (covered < seconds - 1e-15)
@@ -350,12 +467,31 @@ namespace RobotWin.Studio.World
                         _simulated += dt;
                     }
 
-                    DrainEvents();
-                    if (halted != null)
+                    if (onThread)
                     {
-                        Pause();
-                        Firmware.FirmwareDebugger.OnHalted(halted);
-                        break;
+                        if (halted != null)
+                        {
+                            _haltedOnThread = halted;
+                            break;
+                        }
+
+                        if (FailureToPauseAt())
+                        {
+                            _stopOnThread = true;
+                            break;
+                        }
+
+                        if (SimThread.UiWaiting) break;
+                    }
+                    else
+                    {
+                        DrainEvents();
+                        if (halted != null)
+                        {
+                            Pause();
+                            Firmware.FirmwareDebugger.OnHalted(halted);
+                            break;
+                        }
                     }
 
                     if (budget != null && budget.Elapsed.TotalSeconds > maxWall) break;
@@ -363,8 +499,9 @@ namespace RobotWin.Studio.World
             }
             catch (AnalogSimulationException ex)
             {
-                Log.Add(new SimLogEntry(Time, "çözücü", "Simülasyon durdu: " + ex.Message, AnalogEventKind.Failure));
-                Pause();
+                AddLog(new SimLogEntry(Time, "çözücü", "Simülasyon durdu: " + ex.Message, AnalogEventKind.Failure));
+                if (onThread) _stopOnThread = true;
+                else Pause();
             }
 
             return covered;
@@ -384,12 +521,14 @@ namespace RobotWin.Studio.World
                     if (broke) _sounds.OnEvent(AnalogEventKind.Failure, pe.Source, pe.Message);
                     else _sounds.Impact(pe.Value, pe.Source);   // [objs] heard where it hit
                     if (!broke && _impactLogged++ > 20) continue;
-                    Log.Add(new SimLogEntry(Time, o?.Name ?? pe.Source, pe.Message, broke ? AnalogEventKind.Failure : AnalogEventKind.StateChange));
+                    AddLog(new SimLogEntry(Time, o?.Name ?? pe.Source, pe.Message, broke ? AnalogEventKind.Failure : AnalogEventKind.StateChange));
                     if (broke && o != null) Failure?.Invoke(o.Id, pe.Message);
                 }
             }
 
-            foreach (var e in Simulator!.DrainEvents())
+            var circuitEvents = Simulator!.DrainEvents();
+            _eventsSeen = 0;
+            foreach (var e in circuitEvents)
             {
                 string obj = ObjectOfDevice(e.DeviceId);
                 string name = World?.Find(obj)?.Name ?? obj;
@@ -397,7 +536,7 @@ namespace RobotWin.Studio.World
                     ? "Kablo " + (World?.Cables.FirstOrDefault(c => "cable:" + c.Id == e.DeviceId)?.Name ?? e.DeviceId.Substring(6))
                     : name + " · " + e.DeviceId.Substring(Math.Min(e.DeviceId.Length, obj.Length + 1));
                 var entry = new SimLogEntry(e.Time, device, e.Message, e.Kind);
-                Log.Add(entry);
+                AddLog(entry);
                 if (e.Kind == AnalogEventKind.Failure)
                 {
                     _sounds.OnEvent(e.Kind, e.DeviceId, e.Message, Simulator.Circuit.Devices.FirstOrDefault(d => d.Id == e.DeviceId));
@@ -445,7 +584,7 @@ namespace RobotWin.Studio.World
 
                 if (hex == null)
                 {
-                    Log.Add(new SimLogEntry(0, where, "Yüklü yazılım yok (kart boşta). Kartı düzenleyip Kod sayfasından yükleyin.", AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, where, "Yüklü yazılım yok (kart boşta). Kartı düzenleyip Kod sayfasından yükleyin.", AnalogEventKind.Warning));
                     continue;
                 }
 
@@ -462,12 +601,12 @@ namespace RobotWin.Studio.World
                     _avr.Add(cosim);
                     Firmware.FirmwareDebugger.Register(this, DebugKeyOf(prog), where, cosim, hex, () => Time, Resume);   // [debug]
                     TrackBoard(cosim, prog);   // [radio]
-                    Log.Add(new SimLogEntry(0, where, $"Yazılım çalışıyor: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
+                    AddLog(new SimLogEntry(0, where, $"Yazılım çalışıyor: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, prog);
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is FormatException)
                 {
-                    Log.Add(new SimLogEntry(0, where, "Yazılım yüklenemedi: " + ex.Message, AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, where, "Yazılım yüklenemedi: " + ex.Message, AnalogEventKind.Warning));
                 }
             }
         }
@@ -500,7 +639,7 @@ namespace RobotWin.Studio.World
 
             if (string.IsNullOrWhiteSpace(source))
             {
-                Log.Add(new SimLogEntry(0, where, "ESP32'de kod yok.", AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, where, "ESP32'de kod yok.", AnalogEventKind.Warning));
                 return;
             }
 
@@ -513,7 +652,7 @@ namespace RobotWin.Studio.World
                 var build = Firmware.ArduinoCompiler.CompileEsp32(source!);
                 if (!build.Success || build.Hex == null)
                 {
-                    Log.Add(new SimLogEntry(0, where, "ESP32 çizimi derlenemedi: " + (build.Diagnostics.FirstOrDefault()?.Message ?? "?"), AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, where, "ESP32 çizimi derlenemedi: " + (build.Diagnostics.FirstOrDefault()?.Message ?? "?"), AnalogEventKind.Warning));
                     return;
                 }
 
@@ -530,13 +669,13 @@ namespace RobotWin.Studio.World
                 _esp.Add(cosim);
                 TrackBoard(cosim, prog);   // [radio] radio medium bridge
                 AttachCamera(cosim, prog);   // [sense] esp_camera bridge
-                Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (ESP32 HAL modeli)", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, where, "Yazılım çalışıyor (ESP32 HAL modeli)", AnalogEventKind.StateChange));
                 AttachI2c(cosim.I2c, prog);
                 AttachSpi(cosim, prog);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is InvalidOperationException || ex is System.IO.IOException)
             {
-                Log.Add(new SimLogEntry(0, where, "ESP32 başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, where, "ESP32 başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
             }
         }
 
@@ -549,7 +688,7 @@ namespace RobotWin.Studio.World
         {
             if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) is { } gap)
             {
-                Log.Add(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeGapNotice, gap), AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeGapNotice, gap), AnalogEventKind.Warning));
                 return false;
             }
 
@@ -558,16 +697,16 @@ namespace RobotWin.Studio.World
             {
                 if (Firmware.ArduinoCompiler.FailedEsp32HardwareBuild(source) is { } failed)
                 {
-                    Log.Add(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, Firmware.ArduinoCompiler.FirstError(failed)), AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, Firmware.ArduinoCompiler.FirstError(failed)), AnalogEventKind.Warning));
                 }
                 else if (Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
                 {
-                    Log.Add(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
-                    Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => Log.Add(Simulation.SimulationSession.BuildEnded(where, r, Simulator?.Time ?? 0)));
+                    AddLog(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
+                    Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => AddLog(Simulation.SimulationSession.BuildEnded(where, r, Simulator?.Time ?? 0)));
                 }
                 else
                 {
-                    Log.Add(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNoToolchain, AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNoToolchain, AnalogEventKind.Warning));
                 }
 
                 return false;
@@ -582,18 +721,18 @@ namespace RobotWin.Studio.World
                 {
                     if (SerialRouted(board)) AppendSerial(where, text);   // [radio] only while the USB cable is plugged
                 };
-                board.Log += m => Log.Add(new SimLogEntry(Simulator?.Time ?? 0, where, m, AnalogEventKind.StateChange));
+                board.Log += m => AddLog(new SimLogEntry(Simulator?.Time ?? 0, where, m, AnalogEventKind.StateChange));
                 _esp.Add(board);
                 TrackBoard(board, prog);
-                Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
-                Log.Add(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, where, "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
                 AttachI2c(board.I2c, prog);
                 AttachSpi(board, prog);
                 return true;
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
-                Log.Add(new SimLogEntry(0, where, "ESP32 emülatörü başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, where, "ESP32 emülatörü başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
                 return false;
             }
         }
@@ -652,7 +791,7 @@ namespace RobotWin.Studio.World
                     double vcc = c.PinNode(r, "VDD") > 0 ? c.PinVoltage(Simulator, r, "VDD") - c.PinVoltage(Simulator, r, "DGND") : c.PinVoltage(Simulator, r, "VCC") - c.PinVoltage(Simulator, r, "GND");
                     return vcc > 2.5;
                 },
-                SensorContext(), m => Log.Add(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)));
+                SensorContext(), m => AddLog(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)));
             esp.Spi.Slaves.AddRange(slaves);
             AttachLedStrips(esp, prog);
         }
@@ -667,7 +806,7 @@ namespace RobotWin.Studio.World
             foreach (var (gpio, strip) in strips)
             {
                 esp.AttachLedStrip(gpio, strip);
-                Log.Add(new SimLogEntry(0, strip.Id, $"LED şeridi {prog.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, strip.Id, $"LED şeridi {prog.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
             }
         }
 
@@ -699,7 +838,7 @@ namespace RobotWin.Studio.World
                 bus.Devices.Add(new GatedI2cDevice(device, () => Simulator != null &&
                     Circuit.Compiled.PinVoltage(Simulator, r, "VCC") - Circuit.Compiled.PinVoltage(Simulator, r, "GND") > 2.7));
                 _i2c[r] = device;
-                Log.Add(new SimLogEntry(0, r, $"I²C veri yoluna bağlandı ({prog.RefDes}, 0x{device.Address:X2})", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, r, $"I²C veri yoluna bağlandı ({prog.RefDes}, 0x{device.Address:X2})", AnalogEventKind.StateChange));
             }
         }
 

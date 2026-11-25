@@ -7111,7 +7111,9 @@
   "daha yüksek doğrulukla render alın": "render at a higher accuracy",
   "Akış ızgarası (GCI)": "Flow grid (GCI)",
   "Parça toleransları": "Part tolerances",
-  "adıma az duyarlı": "slightly sensitive to the step"
+  "adıma az duyarlı": "slightly sensitive to the step",
+  "Simülasyonu ayrı iş parçacığında çalıştır": "Run the simulation on its own thread",
+  "Açıkken simülasyon kendi işlemci çekirdeğinde ilerler: ağır dünyalar daha hızlı koşar, pencere akıcı kalır. Kapalıyken arayüzün karelerinin içinde ilerler. Bir sonraki başlatmada geçerli olur.": "When on, the simulation advances on a processor core of its own: heavy worlds run faster and the window stays smooth. When off, it advances inside the window's frames. Takes effect at the next start."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

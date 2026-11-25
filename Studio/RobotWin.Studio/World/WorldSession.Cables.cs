@@ -27,16 +27,16 @@ namespace RobotWin.Studio.World
                 {
                     var c = World.Cables.FirstOrDefault(x => x.Id == id);
                     string ends = c == null ? id : $"{World.Find(c.A.ObjectId)?.Name ?? c.A.ObjectId} {c.A.Pin} – {World.Find(c.B.ObjectId)?.Name ?? c.B.ObjectId} {c.B.Pin}";
-                    Log.Add(new SimLogEntry(0, "fizik", $"Kablo kısa: {ends} {length * 1000:F0} mm, parçaların arasından geçen yolu {span * 1000:F0} mm. Gerçekte takılamaz; gergin başlar ve parçaları çeker. Uzunluğu artırın ya da boş bırakın (otomatik).", AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, "fizik", $"Kablo kısa: {ends} {length * 1000:F0} mm, parçaların arasından geçen yolu {span * 1000:F0} mm. Gerçekte takılamaz; gergin başlar ve parçaları çeker. Uzunluğu artırın ya da boş bırakın (otomatik).", AnalogEventKind.Warning));
                 }
 
                 // [route] A wire that can only run through a solid (into a closed box with no cable hole), or one laid through one.
                 foreach (var issue in Physics.CableCrossings())
-                    Log.Add(new SimLogEntry(0, "fizik", char.ToUpper(issue.Message[0]) + issue.Message.Substring(1) + ".", AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, "fizik", char.ToUpper(issue.Message[0]) + issue.Message.Substring(1) + ".", AnalogEventKind.Warning));
             }
             catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
             {
-                Log.Add(new SimLogEntry(0, "fizik", "Kablolar fizik sahnesine eklenemedi: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, "fizik", "Kablolar fizik sahnesine eklenemedi: " + ex.Message, AnalogEventKind.Warning));
             }
         }
 

@@ -160,6 +160,8 @@ namespace RobotWin.Studio.Pages
                     "Kenar ve olay anları (PWM, röle, lojik) adım sınırından bağımsız olarak tam zamanında çözülür; bu değer sakin aralıklardaki en uzun adımdır."));
                 c.Children.Add(Choice("Newton bağıl toleransı", new[] { ("1e-4 (çok hassas)", 1e-4), ("1e-3 (dengeli)", 1e-3), ("1e-2 (hızlı)", 1e-2) }, S.RelTol, v => S.RelTol = v));
                 c.Children.Add(Choice("Başlangıç hızı", new[] { ("0.1×", 0.1), ("0.5×", 0.5), ("Gerçek zaman", 1.0), ("5×", 5.0) }, S.DefaultSpeed, v => S.DefaultSpeed = v));
+                c.Children.Add(Toggle("Simülasyonu ayrı iş parçacığında çalıştır", S.SimulationThread, v => S.SimulationThread = v,
+                    "Açıkken simülasyon kendi işlemci çekirdeğinde ilerler: ağır dünyalar daha hızlı koşar, pencere akıcı kalır. Kapalıyken arayüzün karelerinin içinde ilerler. Bir sonraki başlatmada geçerli olur."));
             });
 
             Category("Dünya ve düzenleme", "Yeni dünyaların ortamı ve editörlerin ızgarası.");

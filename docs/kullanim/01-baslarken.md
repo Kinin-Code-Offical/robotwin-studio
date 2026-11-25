@@ -111,7 +111,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 | Görünüm ve tema | Tema galerisi (9 koyu, 7 açık tema ve özel tema), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite, 3B çizici (kendi GPU çizicimiz ya da WPF) |
 | Kaydetme ve yedekleme | Otomatik yedek sıklığı, kaydederken önceki sürümü saklama, çökme sonrası kurtarma, yedek klasörü, belge başına kopya sayısı, klasörün boyut sınırı |
 | Klavye kısayolları | Pencerenin ve bütün sayfaların kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |
-| Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, zaman adımı, başlangıç hızı |
+| Simülasyon ve fizik | Parça hasarı, arıza olunca duraklat, ortam sıcaklığı, zaman adımı, başlangıç hızı, simülasyonu ayrı iş parçacığında çalıştırma |
 | Dünya ve düzenleme | Yeni dünyaların yerçekimi, dünya editörü ızgarası |
 | Derleyiciler | `arduino-cli` yolu, `vcvars64.bat` yolu |
 | Güncellemeler, Eklentiler | Sürüm denetimi; eklenti klasörleri ve betikler |

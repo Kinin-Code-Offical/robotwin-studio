@@ -38,6 +38,7 @@ namespace RobotWin.Studio
             base.OnStartup(e);
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("tr-TR");
             DispatcherUnhandledException += OnUnhandled;
+            Simulation.SimThread.Install(Dispatcher);   // [perf] the UI thread holds the simulation gate while it handles anything
 
             var args = e.Args;
             string? Arg(string name)
@@ -155,6 +156,7 @@ namespace RobotWin.Studio
 
             // [render] --renderer gpu|wpf — this run only (nothing is saved): who draws the 3D views.
             if (Arg("--renderer") is { } rendererArg) Shell.AppSettings.Current.Renderer3D = rendererArg;
+            if (Arg("--sim-thread") is { } simThreadArg) Shell.AppSettings.Current.SimulationThread = simThreadArg != "off";   // [perf] A/B with --bench
             RobotTwin.CoreSim.Localization.Translate = Shell.Lang.T;   // [lang] what the simulator writes into files (BOM …)
             Shell.Lang.Install();
             Shell.StartupSplash.Open();   // [startup] the first window, on its own thread
@@ -275,6 +277,7 @@ namespace RobotWin.Studio
             {
             }
 
+            Simulation.SimThread.AfterUnhandledException();   // [perf] an input handler that threw gives its gate hold back
             Workspace.Current.Simulation.Stop();
             Workspace.Current.Status = "Beklenmeyen hata: " + e.Exception.Message;
             e.Handled = true;
@@ -476,6 +479,7 @@ namespace RobotWin.Studio
             int index = -1;
             var phaseStart = DateTime.Now;
             int phase = 0;   // 0 = load, 1 = idle, 2 = running
+            double simStart = 0;   // [perf] simulated time when the running measurement began
             // The log is written as it grows, with the step under way last: a run that hangs or is stopped still says
             // what it measured and where it stopped.
             void Write(string? doing)
@@ -521,10 +525,15 @@ namespace RobotWin.Studio
                         Write($"{templates[index].Id,-14} çalışırken ölçülüyor…");
                         phase = 2;
                         phaseStart = DateTime.Now;
+                        simStart = window.WorldSimTime;
                         Perf.BeginRecording();
                         break;
                     case 2 when elapsed > secs:
+                        // [perf] How much of real time the run kept up with, and whether it ran on the simulation thread.
+                        double pace = (window.WorldSimTime - simStart) / elapsed;
+                        string where = Shell.AppSettings.Current.SimulationThread ? "ayrı iş parçacığı" : "arayüz karelerinde";
                         log.AppendLine($"{templates[index].Id,-14} çalışırken {Perf.EndRecording()}");
+                        log.AppendLine($"{string.Empty,-14} simülasyon ×{pace.ToString("0.00", CultureInfo.InvariantCulture)} gerçek zaman ({where})");
                         log.AppendLine($"{string.Empty,-14} başlatma   {window.WorldStartProfile}");   // [perf] where pressing Run went
                         Write($"{templates[index].Id,-14} durduruluyor…");
                         window.StopWorldForBench();

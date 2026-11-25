@@ -37,6 +37,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Stop the simulation automatically when a part fails.</summary>
         public bool PauseOnFailure { get; set; }
 
+        /// <summary>[perf] Live simulations advance on their own thread (Simulation/SimThread.cs); off: inside the UI's frames.</summary>
+        public bool SimulationThread { get; set; } = true;
+
         /// <summary>Gravity of new worlds (m/s²).</summary>
         public double WorldGravity { get; set; } = 9.81;
 

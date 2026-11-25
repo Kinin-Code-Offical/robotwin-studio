@@ -81,7 +81,15 @@ namespace RobotWin.Studio.Firmware
         public FirmwareCoSimulation Cosim { get; }
         public McuDebugger Debugger => Cosim.Debugger!;
         public FirmwareDebugInfo? Info => Cosim.Debugger?.Info;
-        public bool IsHalted => Cosim.Halted;
+
+        /// <summary>
+        /// Stopped, as far as the UI is concerned: once its session has paused for it (<see cref="FirmwareDebugger.OnHalted"/>).
+        /// [perf] On the simulation thread the program stops first and the session pauses at the UI's next frame; until then
+        /// nothing may step or read it as stopped.
+        /// </summary>
+        public bool IsHalted => Cosim.Halted && Announced;
+
+        internal bool Announced { get; set; }
 
         /// <summary>Simulated time of the session.</summary>
         public Func<double> Time { get; }
@@ -168,6 +176,7 @@ namespace RobotWin.Studio.Firmware
         {
             var p = Programs.FirstOrDefault(x => x.Cosim == cosim);
             if (p == null) return;
+            p.Announced = true;
             Changed?.Invoke();
             Stopped?.Invoke(p);
         }
@@ -176,8 +185,9 @@ namespace RobotWin.Studio.Firmware
         public static void ReleaseHalts(object owner)
         {
             bool any = false;
-            foreach (var p in Programs.Where(x => x.Owner == owner && x.IsHalted))
+            foreach (var p in Programs.Where(x => x.Owner == owner && x.Cosim.Halted))
             {
+                p.Announced = false;
                 p.Debugger.Resume();
                 any = true;
             }
@@ -187,6 +197,7 @@ namespace RobotWin.Studio.Firmware
 
         public static void Continue(DebugProgram p)
         {
+            p.Announced = false;
             p.Debugger.Resume();
             p.ResumeOwner();
             Changed?.Invoke();
@@ -196,6 +207,7 @@ namespace RobotWin.Studio.Firmware
         public static bool Step(DebugProgram p, DebugStepKind kind)
         {
             if (!p.Debugger.Step(kind)) return false;
+            p.Announced = false;
             p.ResumeOwner();
             Changed?.Invoke();
             return true;
@@ -205,6 +217,7 @@ namespace RobotWin.Studio.Firmware
         public static bool BreakNow(DebugProgram p)
         {
             if (!p.Debugger.BreakAtNextLine()) return false;
+            p.Announced = false;
             p.ResumeOwner();
             Changed?.Invoke();
             return true;

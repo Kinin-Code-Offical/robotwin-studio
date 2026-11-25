@@ -40,7 +40,7 @@ namespace RobotWin.Studio.World
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is NullReferenceException)
             {
-                Log.Add(new SimLogEntry(0, "sensör", "Sensörler kurulamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, "sensör", "Sensörler kurulamadı: " + ex.Message, AnalogEventKind.Warning));
                 return;
             }
 
@@ -67,14 +67,14 @@ namespace RobotWin.Studio.World
 
             Sensing.GpsSerial += RouteGps;
             int n = Sensing.Cameras.Count;
-            if (n > 0) Log.Add(new SimLogEntry(0, "kamera", $"{n} kamera: dünya kendi çözünürlük ve kare hızlarıyla çiziliyor", AnalogEventKind.StateChange));
+            if (n > 0) AddLog(new SimLogEntry(0, "kamera", $"{n} kamera: dünya kendi çözünürlük ve kare hızlarıyla çiziliyor", AnalogEventKind.StateChange));
             SensingStarted?.Invoke(Sensing);
         }
 
         private void AdvanceSense(double dt)
         {
             if (Sensing != null && Simulator != null) Sensing.Advance(Simulator.Time, dt, Simulator);
-            while (_senseNotes.TryDequeue(out var note)) Log.Add(new SimLogEntry(Time, "kamera", note, AnalogEventKind.StateChange));
+            while (_senseNotes.TryDequeue(out var note)) AddLog(new SimLogEntry(Time, "kamera", note, AnalogEventKind.StateChange));
         }
 
         private void StopSense()
@@ -145,7 +145,7 @@ namespace RobotWin.Studio.World
 
                 if (!delivered && _gpsWarned.Add(gpsId + other))
                 {
-                    Log.Add(new SimLogEntry(Time, "GPS", $"GPS TX → {other.Pin}: bu pin bir donanım UART RX'i değil (Uno: D0, ESP32: RX/IO3 veya IO16 = Serial2); NMEA ulaşmıyor.", AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(Time, "GPS", $"GPS TX → {other.Pin}: bu pin bir donanım UART RX'i değil (Uno: D0, ESP32: RX/IO3 veya IO16 = Serial2); NMEA ulaşmıyor.", AnalogEventKind.Warning));
                 }
             }
         }

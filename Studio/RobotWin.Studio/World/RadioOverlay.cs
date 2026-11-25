@@ -61,6 +61,7 @@ namespace RobotWin.Studio.World
 
         protected override void OnRender(DrawingContext dc)
         {
+            using var gate = Simulation.SimThread.Hold();   // [perf] the radio medium advances on the simulation thread
             var m = _medium;
             if (m == null || Project == null) return;
             double now = m.Time;

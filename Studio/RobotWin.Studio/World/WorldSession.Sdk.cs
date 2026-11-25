@@ -25,20 +25,20 @@ namespace RobotWin.Studio.World
             if (scripts.Count == 0 || SdkServices.ScriptsUpToDate(world)) return;
             if (!SdkServices.Settings.AutoCompileScripts)
             {
-                Log.Add(new SimLogEntry(0, "betikler", "Betikler değişti ama otomatik derleme kapalı; Betikler sekmesinden 'Derle'ye basın.", AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, "betikler", "Betikler değişti ama otomatik derleme kapalı; Betikler sekmesinden 'Derle'ye basın.", AnalogEventKind.Warning));
                 return;
             }
 
             var info = ScriptCompiler.Detect();
             if (!info.Available)
             {
-                Log.Add(new SimLogEntry(0, "betikler", "C# betikleri derlenemiyor: " + info.Explanation, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, "betikler", "C# betikleri derlenemiyor: " + info.Explanation, AnalogEventKind.Warning));
                 return;
             }
 
             var r = SdkServices.CompileScripts(world);
-            Log.Add(new SimLogEntry(0, "betikler", r.Summary, r.Success ? AnalogEventKind.StateChange : AnalogEventKind.Failure));
-            foreach (var d in r.Diagnostics.Where(d => d.IsError).Take(10)) Log.Add(new SimLogEntry(0, "betikler", d.ToString(), AnalogEventKind.Failure));
+            AddLog(new SimLogEntry(0, "betikler", r.Summary, r.Success ? AnalogEventKind.StateChange : AnalogEventKind.Failure));
+            foreach (var d in r.Diagnostics.Where(d => d.IsError).Take(10)) AddLog(new SimLogEntry(0, "betikler", d.ToString(), AnalogEventKind.Failure));
         }
 
         private void StopSdk()
@@ -56,7 +56,7 @@ namespace RobotWin.Studio.World
             foreach (var e in sdk.DrainEvents())
             {
                 var kind = e.Level == SdkEventLevel.Error ? AnalogEventKind.Failure : e.Level == SdkEventLevel.Warning ? AnalogEventKind.Warning : AnalogEventKind.StateChange;
-                Log.Add(new SimLogEntry(e.Time, e.Source, e.Message, kind));
+                AddLog(new SimLogEntry(e.Time, e.Source, e.Message, kind));
             }
         }
     }

@@ -242,7 +242,7 @@ namespace RobotWin.Studio.World
 
             try
             {
-                Frame();
+                using (Simulation.SimThread.Hold()) Frame();   // [perf] reads the run: the simulation thread waits meanwhile
             }
             finally
             {

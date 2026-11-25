@@ -65,6 +65,7 @@ namespace RobotWin.Studio.Simulation
 
         protected override void OnRender(DrawingContext dc)
         {
+            using var gate = SimThread.Hold();   // [perf] the meter reads the circuit the simulation thread advances
             _hits.Clear();
             double w = ActualWidth, h = ActualHeight;
             dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, w, h));

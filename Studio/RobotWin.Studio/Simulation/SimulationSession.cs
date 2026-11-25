@@ -133,7 +133,7 @@ namespace RobotWin.Studio.Simulation
     /// Drives the analog simulator in real time from the render loop, samples the
     /// probes at every solver step and exposes live values to the editors.
     /// </summary>
-    public sealed class SimulationSession : INotifyPropertyChanged
+    public sealed class SimulationSession : INotifyPropertyChanged, ISimThreadWork
     {
         private static readonly Color[] ProbeColors =
         {
@@ -224,6 +224,7 @@ namespace RobotWin.Studio.Simulation
 
         public bool Start()
         {
+            using var gate = SimThread.Hold();
             Stop();
             Log.Clear();
             CompileWarnings.Clear();
@@ -275,23 +276,27 @@ namespace RobotWin.Studio.Simulation
             AttachMechanics();
             foreach (var probe in Probes) probe.Clear();
             RebindProbes();
-            foreach (var w in CompileWarnings) Log.Add(new SimLogEntry(0, "derleyici", w, AnalogEventKind.Warning));
+            foreach (var w in CompileWarnings) AddLog(new SimLogEntry(0, "derleyici", w, AnalogEventKind.Warning));
             if (_workspace.Schematic.Tolerances is { Active: true } tol)
             {
-                Log.Add(new SimLogEntry(0, "tolerans", $"Gerçekçi parça değerleri (tohum {tol.Seed}): {Compiled.ToleranceDraws.Sum(d => d.Value.Count)} değer toleransından çekildi", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, "tolerans", $"Gerçekçi parça değerleri (tohum {tol.Seed}): {Compiled.ToleranceDraws.Sum(d => d.Value.Count)} değer toleransından çekildi", AnalogEventKind.StateChange));
             }
 
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
+            _threaded = SimThread.Enabled;
+            RestartClock();
             Hook(true);
             SampleProbes(0);
+            if (_threaded) SimThread.Add(this);
             Updated?.Invoke(this, EventArgs.Empty);
             return true;
         }
 
         public void Pause()
         {
+            using var gate = SimThread.Hold();
             if (State != SimState.Running) return;
             State = SimState.Paused;
             Hook(false);
@@ -300,16 +305,21 @@ namespace RobotWin.Studio.Simulation
 
         public void Resume()
         {
+            using var gate = SimThread.Hold();
             if (State != SimState.Paused) return;
             RobotWin.Studio.Firmware.FirmwareDebugger.ReleaseHalts(this);   // [debug] a program stopped at a breakpoint goes on too
             State = SimState.Running;
             _wall.Restart();
             _lastWall = 0;
+            RestartClock();
             Hook(true);
+            if (_threaded) SimThread.Add(this);
         }
 
         public void Stop()
         {
+            using var gate = SimThread.Hold();
+            SimThread.Remove(this);
             Hook(false);
             RobotWin.Studio.Firmware.FirmwareDebugger.Unregister(this);   // [debug]
             _sounds.Reset();
@@ -328,9 +338,11 @@ namespace RobotWin.Studio.Simulation
         /// <summary>Advances by a fixed interval (used by the step button and tests).</summary>
         public void StepOnce(double seconds = 1e-3)
         {
+            using var gate = SimThread.Hold();
             if (Simulator == null && !Start()) return;
             if (State == SimState.Running) Pause();
             Advance(seconds);
+            FlushFromThread();
             Updated?.Invoke(this, EventArgs.Empty);
             OnPropertyChanged(nameof(StatusText));
         }
@@ -349,9 +361,117 @@ namespace RobotWin.Studio.Simulation
             }
         }
 
+        // ================================================================ [perf] the simulation thread (Simulation/SimThread.cs)
+
+        private bool _threaded;                          // this run advances on the simulation thread
+        private double _owed;                            // simulated seconds it is behind the wall clock (simulation thread)
+        private double _threadWall;                      // wall clock at its last turn
+        private double _frameWall, _frameSim;            // wall clock and simulated time at the last frame (UI)
+        private FirmwareCoSimulation? _haltedOnThread;   // a program stopped at a breakpoint there; the UI pauses and shows it
+        private bool _pauseOnThread;                     // a part failed there with "pause on failure" on
+        private string? _failOnThread;                   // the solver gave up there
+        private int _eventsSeen;                         // circuit events already looked at for failures (simulation thread)
+        private readonly List<SimLogEntry> _logFromThread = new List<SimLogEntry>();   // the log lines it wrote, for the UI
+        private readonly System.Text.StringBuilder _serialFromThread = new System.Text.StringBuilder();   // serial text it received
+
+        private void RestartClock()
+        {
+            _owed = 0;
+            _threadWall = _frameWall = _wall.Elapsed.TotalSeconds;
+            _frameSim = Simulator?.Time ?? 0;
+            _haltedOnThread = null;
+            _pauseOnThread = false;
+            _failOnThread = null;
+        }
+
+        /// <summary>A log line from wherever the run is advancing: on the simulation thread it waits for the next frame.</summary>
+        private void AddLog(SimLogEntry entry)
+        {
+            if (SimThread.OnSimThread) _logFromThread.Add(entry);
+            else Log.Add(entry);
+        }
+
+        /// <summary>What the simulation thread left for the UI: log lines and serial text (UI thread, gate held).</summary>
+        private void FlushFromThread()
+        {
+            foreach (var entry in _logFromThread) Log.Add(entry);
+            _logFromThread.Clear();
+            if (_serialFromThread.Length == 0) return;
+            string text = _serialFromThread.ToString();
+            _serialFromThread.Clear();
+            SerialReceived?.Invoke(this, text);
+        }
+
+        bool ISimThreadWork.AdvanceOnSimThread(double maxWall)
+        {
+            if (!_threaded || State != SimState.Running || Simulator == null || _haltedOnThread != null || _pauseOnThread || _failOnThread != null) return false;
+            double now = _wall.Elapsed.TotalSeconds;
+            // Never more than 50 ms of the wall clock behind: a circuit the computer cannot keep up with runs as fast as it can.
+            _owed = Math.Min(_owed + (now - _threadWall) * Speed, 0.05 * Speed);
+            _threadWall = now;
+            if (_owed < 1e-4 * Speed) return false;
+            _owed -= Advance(_owed, Stopwatch.StartNew(), maxWall);
+            return _owed >= 1e-4 * Speed && _haltedOnThread == null && !_pauseOnThread && _failOnThread == null;
+        }
+
+        void ISimThreadWork.FailedOnSimThread(Exception error)
+        {
+            Fail("Simülasyon durdu: " + error.Message);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();   // recorded like any other error
+        }
+
+        /// <summary>A part failed in what the simulation thread just advanced and "pause on failure" is on.</summary>
+        private bool FailureToPauseAt()
+        {
+            if (!Shell.AppSettings.Current.PauseOnFailure || Simulator == null) return false;
+            var events = Simulator.Events;
+            bool failed = false;
+            for (int i = _eventsSeen; i < events.Count; i++) failed |= events[i].Kind == AnalogEventKind.Failure;
+            _eventsSeen = events.Count;
+            return failed;
+        }
+
         private void OnFrame(object? sender, EventArgs e)
         {
+            // [perf] A frame handler runs beside the simulation thread: hold it off while this one reads the run.
+            using var gate = SimThread.Hold();
             if (State != SimState.Running || Simulator == null) return;
+            if (_threaded)
+            {
+                FlushFromThread();
+                DrainEvents();
+                if (_failOnThread is { } failure)
+                {
+                    _failOnThread = null;
+                    Fail(failure);
+                    return;
+                }
+
+                if (_haltedOnThread is { } halted)
+                {
+                    _haltedOnThread = null;
+                    Pause();
+                    RobotWin.Studio.Firmware.FirmwareDebugger.OnHalted(halted);
+                }
+                else if (_pauseOnThread)
+                {
+                    _pauseOnThread = false;
+                    Pause();
+                }
+
+                double wallNow = _wall.Elapsed.TotalSeconds, sim = Time;
+                if (wallNow - _frameWall >= 0.02)
+                {
+                    _realtimeFactor = 0.85 * _realtimeFactor + 0.15 * ((sim - _frameSim) / (wallNow - _frameWall));
+                    _frameWall = wallNow;
+                    _frameSim = sim;
+                }
+
+                SimThread.Kick();
+                FrameEnd();
+                return;
+            }
+
             double now = _wall.Elapsed.TotalSeconds;
             double wallDt = Math.Min(0.05, now - _lastWall);
             _lastWall = now;
@@ -362,6 +482,11 @@ namespace RobotWin.Studio.Simulation
             double done;
             using (Shell.Perf.Measure("devre")) done = Advance(target, budget, Shell.UiHeadroom.SimulationBudget(0.022));   // room for the rest of the UI
             _realtimeFactor = 0.85 * _realtimeFactor + 0.15 * (done / wallDt);
+            FrameEnd();
+        }
+
+        private void FrameEnd()
+        {
             Updated?.Invoke(this, EventArgs.Empty);
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(Time));
@@ -378,6 +503,8 @@ namespace RobotWin.Studio.Simulation
             if (_firmware.Count > 0) chunk = Math.Min(chunk, FirmwareSlice);
             if (_esp32.Count > 0) chunk = Math.Min(chunk, Esp32Slice);
             double covered = 0;
+            // [perf] On the simulation thread the UI does what only it may (the log, the debugger, pausing) at its next frame.
+            bool onThread = SimThread.OnSimThread;
             try
             {
                 while (covered < seconds - 1e-15)
@@ -397,6 +524,12 @@ namespace RobotWin.Studio.Simulation
 
                     if (halted != null && dt <= 0)
                     {
+                        if (onThread)
+                        {
+                            _haltedOnThread = halted;
+                            break;
+                        }
+
                         Pause();
                         RobotWin.Studio.Firmware.FirmwareDebugger.OnHalted(halted);
                         break;
@@ -417,12 +550,31 @@ namespace RobotWin.Studio.Simulation
                     }
 
                     covered += dt;
-                    DrainEvents();
-                    if (halted != null)
+                    if (onThread)
                     {
-                        Pause();
-                        RobotWin.Studio.Firmware.FirmwareDebugger.OnHalted(halted);
-                        break;
+                        if (halted != null)
+                        {
+                            _haltedOnThread = halted;
+                            break;
+                        }
+
+                        if (FailureToPauseAt())
+                        {
+                            _pauseOnThread = true;   // the frame logs the failure and pauses
+                            break;
+                        }
+
+                        if (SimThread.UiWaiting) break;
+                    }
+                    else
+                    {
+                        DrainEvents();
+                        if (halted != null)
+                        {
+                            Pause();
+                            RobotWin.Studio.Firmware.FirmwareDebugger.OnHalted(halted);
+                            break;
+                        }
                     }
 
                     if (budget != null && budget.Elapsed.TotalSeconds > maxWallSeconds) break;
@@ -430,7 +582,8 @@ namespace RobotWin.Studio.Simulation
             }
             catch (AnalogSimulationException ex)
             {
-                Fail("Simülasyon durdu: " + ex.Message);
+                if (onThread) _failOnThread = "Simülasyon durdu: " + ex.Message;
+                else Fail("Simülasyon durdu: " + ex.Message);
             }
 
             return covered;
@@ -443,17 +596,19 @@ namespace RobotWin.Studio.Simulation
                 foreach (var m in Mechanics.DrainEvents())
                 {
                     var entry = new SimLogEntry(Time, m.Source, m.Message, m.Severe ? AnalogEventKind.Failure : AnalogEventKind.StateChange);
-                    Log.Add(entry);
+                    AddLog(entry);
                     if (m.Severe) Failure?.Invoke(this, entry);
                 }
             }
 
             if (Simulator == null || Simulator.Events.Count == 0) return;
-            foreach (var e in Simulator.DrainEvents())
+            var circuitEvents = Simulator.DrainEvents();
+            _eventsSeen = 0;
+            foreach (var e in circuitEvents)
             {
                 string device = e.DeviceId == ProbeMeterId ? "Multimetre" : e.DeviceId;
                 var entry = new SimLogEntry(e.Time, device, e.Message, e.Kind);
-                Log.Add(entry);
+                AddLog(entry);
                 if (Log.Count > 500) Log.RemoveAt(0);
                 if (e.Kind == AnalogEventKind.Failure)
                 {
@@ -470,7 +625,7 @@ namespace RobotWin.Studio.Simulation
         {
             Hook(false);
             _message = message;
-            Log.Add(new SimLogEntry(Time, "solver", message, AnalogEventKind.Failure));
+            AddLog(new SimLogEntry(Time, "solver", message, AnalogEventKind.Failure));
             Simulator = null;
             Compiled = null;
             State = SimState.Stopped;
@@ -500,13 +655,13 @@ namespace RobotWin.Studio.Simulation
             try
             {
                 Mechanics = new MechatronicSystem(assembly, _workspace.Schematic, _workspace.Library, Compiled, Simulator);
-                Log.Add(new SimLogEntry(0, "montaj",
+                AddLog(new SimLogEntry(0, "montaj",
                     $"{(assembly.Kind == VehicleKind.Quadcopter ? "Quadcopter" : "Robot araba")} · {Mechanics.TotalMass * 1000:F0} g · {Mechanics.Arena.Name}",
                     AnalogEventKind.StateChange));
             }
             catch (Exception ex)
             {
-                Log.Add(new SimLogEntry(0, "montaj", "Mekanik model kurulamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, "montaj", "Mekanik model kurulamadı: " + ex.Message, AnalogEventKind.Warning));
             }
         }
 
@@ -583,7 +738,7 @@ namespace RobotWin.Studio.Simulation
             foreach (var e in rec.Events)
             {
                 Enum.TryParse(e.Kind, out AnalogEventKind kind);
-                Log.Add(new SimLogEntry(e.Time, e.Device, e.Message, kind));
+                AddLog(new SimLogEntry(e.Time, e.Device, e.Message, kind));
             }
 
             _serial.Clear();
@@ -655,7 +810,8 @@ namespace RobotWin.Studio.Simulation
             _serial.Append(text);
             SerialTotal += text.Length;
             if (_serial.Length > 200_000) _serial.Remove(0, _serial.Length - 200_000);
-            SerialReceived?.Invoke(this, text);
+            if (SimThread.OnSimThread) _serialFromThread.Append(text);   // [perf] the pages hear it at the next frame
+            else SerialReceived?.Invoke(this, text);
         }
 
         /// <summary>Starts an ESP32 board on the project's sketch (built with MSVC on first use, then cached).</summary>
@@ -677,7 +833,7 @@ namespace RobotWin.Studio.Simulation
 
             if (string.IsNullOrWhiteSpace(source))
             {
-                Log.Add(new SimLogEntry(0, part.RefDes, "ESP32'de kod yok: Kod sayfasından yazıp yükleyin.", AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, part.RefDes, "ESP32'de kod yok: Kod sayfasından yazıp yükleyin.", AnalogEventKind.Warning));
                 return;
             }
 
@@ -687,12 +843,12 @@ namespace RobotWin.Studio.Simulation
             string? dll = RobotWin.Studio.Firmware.ArduinoCompiler.CachedEsp32Dll(source!);
             if (dll == null)
             {
-                Log.Add(new SimLogEntry(0, part.RefDes, $"{fileName} MSVC ile derleniyor…", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, part.RefDes, $"{fileName} MSVC ile derleniyor…", AnalogEventKind.StateChange));
                 var build = RobotWin.Studio.Firmware.ArduinoCompiler.CompileEsp32(source!);
                 if (!build.Success || build.Hex == null)
                 {
                     string why = build.Diagnostics.FirstOrDefault()?.Message ?? "derleme başarısız";
-                    Log.Add(new SimLogEntry(0, part.RefDes, "ESP32 çizimi derlenemedi: " + why, AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, part.RefDes, "ESP32 çizimi derlenemedi: " + why, AnalogEventKind.Warning));
                     return;
                 }
 
@@ -705,13 +861,13 @@ namespace RobotWin.Studio.Simulation
                 var cosim = new RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation(dll, Compiled!, refDes);
                 cosim.SerialOutput += AppendSerial;
                 _esp32.Add(cosim);
-                Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (ESP32 HAL modeli, 240 MHz)", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (ESP32 HAL modeli, 240 MHz)", AnalogEventKind.StateChange));
                 AttachI2c(cosim.I2c, part);
                 AttachLedStrips(cosim, part);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is EntryPointNotFoundException || ex is System.IO.IOException || ex is InvalidOperationException)
             {
-                Log.Add(new SimLogEntry(0, part.RefDes, "ESP32 başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, part.RefDes, "ESP32 başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
             }
         }
 
@@ -730,7 +886,7 @@ namespace RobotWin.Studio.Simulation
         {
             if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) is { } gap)
             {
-                Log.Add(new SimLogEntry(0, part.RefDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeGapNotice, gap), AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, part.RefDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeGapNotice, gap), AnalogEventKind.Warning));
                 return false;
             }
 
@@ -739,17 +895,17 @@ namespace RobotWin.Studio.Simulation
             {
                 if (RobotWin.Studio.Firmware.ArduinoCompiler.FailedEsp32HardwareBuild(source) is { } failed)
                 {
-                    Log.Add(new SimLogEntry(0, part.RefDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, RobotWin.Studio.Firmware.ArduinoCompiler.FirstError(failed)), AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, part.RefDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, RobotWin.Studio.Firmware.ArduinoCompiler.FirstError(failed)), AnalogEventKind.Warning));
                 }
                 else if (RobotWin.Studio.Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
                 {
                     string refDes = part.RefDes;
-                    Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
-                    RobotWin.Studio.Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => Log.Add(BuildEnded(refDes, r, Simulator?.Time ?? 0)));
+                    AddLog(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
+                    RobotWin.Studio.Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => AddLog(BuildEnded(refDes, r, Simulator?.Time ?? 0)));
                 }
                 else
                 {
-                    Log.Add(new SimLogEntry(0, part.RefDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNoToolchain, AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, part.RefDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeNoToolchain, AnalogEventKind.Warning));
                 }
 
                 return false;
@@ -762,17 +918,17 @@ namespace RobotWin.Studio.Simulation
                 byte[]? image = cached.Value.Merged != null ? System.IO.File.ReadAllBytes(cached.Value.Merged) : null;
                 var board = new RobotTwin.CoreSim.Firmware.Esp32.Esp32EmulatedBoard(elf, image, Compiled!, refDes);
                 board.SerialOutput += AppendSerial;
-                board.Log += m => Log.Add(new SimLogEntry(Simulator?.Time ?? 0, refDes, m, AnalogEventKind.StateChange));
+                board.Log += m => AddLog(new SimLogEntry(Simulator?.Time ?? 0, refDes, m, AnalogEventKind.StateChange));
                 _esp32.Add(board);
-                Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
-                Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
                 AttachI2c(board.I2c, part);
                 AttachLedStrips(board, part);
                 return true;
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
-                Log.Add(new SimLogEntry(0, part.RefDes, "ESP32 emülatörü başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, part.RefDes, "ESP32 emülatörü başlatılamadı: " + ex.Message, AnalogEventKind.Warning));
                 return false;
             }
         }
@@ -814,7 +970,7 @@ namespace RobotWin.Studio.Simulation
                     }
                     catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
                     {
-                        Log.Add(new SimLogEntry(0, part.RefDes, "Firmware okunamadı: " + ex.Message, AnalogEventKind.Warning));
+                        AddLog(new SimLogEntry(0, part.RefDes, "Firmware okunamadı: " + ex.Message, AnalogEventKind.Warning));
                         continue;
                     }
                 }
@@ -829,12 +985,12 @@ namespace RobotWin.Studio.Simulation
                     cosim.SerialOutput += AppendSerial;
                     _firmware.Add(cosim);
                     RobotWin.Studio.Firmware.FirmwareDebugger.Register(this, "p:" + refDes, refDes, cosim, hex, () => Time, Resume);   // [debug]
-                    Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
+                    AddLog(new SimLogEntry(0, refDes, $"Firmware yüklendi: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, part);
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is UnauthorizedAccessException)
                 {
-                    Log.Add(new SimLogEntry(0, part.RefDes, "Firmware yüklenemedi: " + ex.Message, AnalogEventKind.Warning));
+                    AddLog(new SimLogEntry(0, part.RefDes, "Firmware yüklenemedi: " + ex.Message, AnalogEventKind.Warning));
                 }
             }
         }
@@ -861,7 +1017,7 @@ namespace RobotWin.Studio.Simulation
             foreach (var (gpio, strip) in strips)
             {
                 esp.AttachLedStrip(gpio, strip);
-                Log.Add(new SimLogEntry(0, strip.Id, $"LED şeridi {board.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, strip.Id, $"LED şeridi {board.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
             }
         }
 
@@ -904,7 +1060,7 @@ namespace RobotWin.Studio.Simulation
                 string r = part.RefDes;
                 bus.Devices.Add(new GatedI2cDevice(device, () => PinVoltage(r, "VCC") - PinVoltage(r, "GND") > 2.7));
                 _i2c[r] = device;
-                Log.Add(new SimLogEntry(0, r, $"I²C veri yoluna bağlandı ({board.RefDes}, adres 0x{device.Address:X2})", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, r, $"I²C veri yoluna bağlandı ({board.RefDes}, adres 0x{device.Address:X2})", AnalogEventKind.StateChange));
             }
         }
 
@@ -962,7 +1118,7 @@ namespace RobotWin.Studio.Simulation
         {
             FirmwareOf(boardRefDes)?.Mcu.Reset();
             _esp32.FirstOrDefault(e => string.Equals(e.BoardRefDes, boardRefDes, StringComparison.OrdinalIgnoreCase))?.Reset();
-            Log.Add(new SimLogEntry(Time, boardRefDes, "Reset", AnalogEventKind.StateChange));
+            AddLog(new SimLogEntry(Time, boardRefDes, "Reset", AnalogEventKind.StateChange));
         }
 
         // ------------------------------------------------------------------ probes
@@ -1150,7 +1306,7 @@ namespace RobotWin.Studio.Simulation
 
             BurnTimes.Clear();
             Simulator?.NotifyDiscontinuity();
-            Log.Add(new SimLogEntry(Time, "kullanıcı", "Hasarlı parçalar değiştirildi", AnalogEventKind.StateChange));
+            AddLog(new SimLogEntry(Time, "kullanıcı", "Hasarlı parçalar değiştirildi", AnalogEventKind.StateChange));
             Updated?.Invoke(this, EventArgs.Empty);
         }
 
@@ -1165,7 +1321,7 @@ namespace RobotWin.Studio.Simulation
 
             BurnTimes.Remove(refDes);
             Simulator?.NotifyDiscontinuity();
-            Log.Add(new SimLogEntry(Time, refDes, "Parça değiştirildi (onarıldı)", AnalogEventKind.StateChange));
+            AddLog(new SimLogEntry(Time, refDes, "Parça değiştirildi (onarıldı)", AnalogEventKind.StateChange));
             Updated?.Invoke(this, EventArgs.Empty);
         }
 

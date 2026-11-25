@@ -153,7 +153,15 @@ namespace RobotWin.Studio
                 while (!uploaded && (DateTime.UtcNow - t0).TotalSeconds < 90) await Task.Delay(100);
                 _code.Uploaded -= OnUp;
                 Check(uploaded, "kod derlendi ve karta yüklendi (dünya çalışıyor)");
-                Check(FirmwareDebugger.ProgramFor(key)?.Info != null, "çalışan yazılımın satır ve değişken bilgisi var (ELF)");
+                bool hasInfo = FirmwareDebugger.ProgramFor(key)?.Info != null;
+                Check(hasInfo, "çalışan yazılımın satır ve değişken bilgisi var (ELF)");
+                if (!hasInfo)
+                {
+                    // What ran instead: the status line, the programs the debugger knows and the world's first log lines.
+                    log.AppendLine("     durum: " + W.Status + " · etkin sekme: " + W.ActiveDocument.Kind + " " + W.ActiveDocument.Title + " · dünya " + _world.SimulationState.State + " · aranan " + key + " · çalışanlar: "
+                        + string.Join(", ", FirmwareDebugger.Running.Select(r => r.Key + (r.Info != null ? " (ELF)" : " (ELF yok)"))));
+                    foreach (var e in _world.SessionLog.Take(8)) log.AppendLine("     günlük: " + e.Device + ": " + e.Message);
+                }
                 Check(FirmwareDebugger.Resolve(key, FirmwareDebugger.MainFile, addLine) == addLine, "kesme noktası satırın kendi kodunda");
 
                 var p = await WaitStop(10);

@@ -37,6 +37,15 @@ namespace RobotWin.Studio.Pages
 
         /// <summary>[perf] Where the last press of Run went (circuit, operating point, firmware, physics, cables, sensors).</summary>
         public string StartProfile => _session.LastStartProfile;
+
+        /// <summary>[perf] Simulated time of the run (for --bench).</summary>
+        public double SimTime
+        {
+            get
+            {
+                using (Simulation.SimThread.Hold()) return _session.Time;
+            }
+        }
         private WorldDocument? _shown;
         private long _serialShown;
         private DateTime _lastPanels = DateTime.MinValue;

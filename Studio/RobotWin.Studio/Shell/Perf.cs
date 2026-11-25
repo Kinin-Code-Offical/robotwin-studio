@@ -66,6 +66,7 @@ namespace RobotWin.Studio.Shell
             _lastFrame = now;
             if (now - _windowStart < 500) return;
             _windowStart = now;
+            using var gate = Simulation.SimThread.Hold();   // [perf] the solver costs are read from the running simulation
 
             // Keep about one second of frames.
             double total = 0;

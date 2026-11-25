@@ -20,7 +20,7 @@ namespace RobotWin.Studio.World
                 // Repeating notices (pallet changes, curtain clear) are capped; faults always show.
                 if (!fault && _cellLogged++ > 400) continue;
                 var o = World?.Find(objectId);
-                Log.Add(new SimLogEntry(time, o?.Name ?? objectId, text, fault ? AnalogEventKind.Warning : AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(time, o?.Name ?? objectId, text, fault ? AnalogEventKind.Warning : AnalogEventKind.StateChange));
             }
         }
     }

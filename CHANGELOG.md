@@ -144,6 +144,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The world debugger's end-to-end check (`--fault debug-e2e`) ran the page's first template instead of its own world and never reached the breakpoint; it passes again.
+
 - **A board renamed in the inspector or by find and replace lost its code:** only the part's properties window and renumbering carried a new designator over to the board's code; the other two left the code under the old name, with no board to run on (and an undone rename left the code under the new one). Code now follows its board by the board part's identity, whichever way it is renamed or undone.
 
 - **Renaming a net deleted its copper:** renaming a net label, or renaming the part an unnamed net is called after (`R1.2`), left that net's tracks, vias and zones on a net that no longer existed, and bringing the board up to date deleted them. A net whose pads all went to one new name is now that net renamed: its copper and net class follow it, and the preview does not count it as removed.
@@ -203,6 +205,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A free tank of water now falls asleep with its water after 2.6 s. Asleep, it still carries the water's weight within 0.2%, and it wakes when pushed.
 
 ### Changed
+
+- **Simulations run on their own thread:** a running world or circuit no longer advances inside the window's frames but on a thread of its own, beside the drawing. Heavy worlds keep up with real time much better and the window stays smooth: the factory cell went from 0.34× to 0.70× real time and from 79 to 144 frames a second, the ESP32 quadcopter from 0.70× to 0.93× (77 → 137 fps), the PS5 plane from 0.09× to 0.25× (71 → 133 fps), the line follower from 0.47× to 0.72× (51 → 163 fps). The pages, panels and instruments read a running simulation as before; breakpoints still stop the world at the program's exact instant. *Settings → Simulation and physics* can turn it off; `--bench` now writes how close to real time each world ran.
 
 - **Circuits with PWM and boards run faster:** the circuit solver no longer ends a time slice with a sliver of a step and climbs back from it in the next one, and after a discontinuity (a PWM edge, a switch) it restarts at a hundredth of the step it was going at instead of always at 0.1 µs. The line follower (two PWM motors, five line sensors, an Uno) needs 51 000 solver steps per simulated second instead of 64 000 and runs 18 % faster (867 → 715 ms of computing per simulated second); the ESP32 quadcopter 5 %. Found with the new performance check, whose report now says per world where the time goes (the boards' code, the circuit, the mechanics' parts).
 

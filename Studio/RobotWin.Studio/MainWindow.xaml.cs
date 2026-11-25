@@ -118,6 +118,9 @@ namespace RobotWin.Studio
 
         public void StopWorldForBench() => _world.StopSimulation();
 
+        /// <summary>[perf] The running world's simulated time (for --bench: how close to real time it ran).</summary>
+        public double WorldSimTime => _world.SimTime;
+
         /// <summary>[lang] Every event-log entry of the run (world and circuit), shown or not: --lang-missing checks them all.</summary>
         public System.Collections.Generic.IEnumerable<Simulation.SimLogEntry> RunLogs() => _world.SessionLog.Concat(W.Simulation.Log).ToList();
 
@@ -866,7 +869,9 @@ namespace RobotWin.Studio
                 try { Shell.MontajDialog.Ask(this, W, first, _model.PartCount() > 0 ? _model.PartCount() : 10, true); }
                 finally { Shell.MontajDialog.SnapshotPreview = false; }
             }
-            if (page == "world") _world.PrepareSnapshot(fault, simulate);
+            // The debugger check opened its own world above: the page's template preparation would replace it with the
+            // first template ("debug-e2e" names none) and the upload would restart that one.
+            if (page == "world" && fault != "debug-e2e") _world.PrepareSnapshot(fault, simulate);
             if (page == "help") _help?.PrepareSnapshot(fault);
 
             if (page == "schematic" && simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds))

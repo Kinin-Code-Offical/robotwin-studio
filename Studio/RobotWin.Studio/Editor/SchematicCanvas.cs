@@ -412,7 +412,11 @@ namespace RobotWin.Studio.Editor
             return p;
         }
 
-        protected override void OnRender(DrawingContext dc) => RenderScene(dc, new Rect(0, 0, ActualWidth, ActualHeight));
+        protected override void OnRender(DrawingContext dc)
+        {
+            // [perf] Currents, voltages and burnt parts come from the circuit the simulation thread advances.
+            using (Simulation.SimThread.Hold()) RenderScene(dc, new Rect(0, 0, ActualWidth, ActualHeight));
+        }
 
         private void RenderScene(DrawingContext dc, Rect size)
         {

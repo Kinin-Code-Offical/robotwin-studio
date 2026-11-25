@@ -112,6 +112,7 @@ namespace RobotWin.Studio.Simulation
 
         protected override void OnRender(DrawingContext dc)
         {
+            using var gate = SimThread.Hold();   // [perf] the probes are sampled on the simulation thread
             double w = ActualWidth, h = ActualHeight;
             dc.DrawRectangle(SymbolRenderer.Brush(Back), null, new Rect(0, 0, w, h));
             var frame = Scope.Frame;

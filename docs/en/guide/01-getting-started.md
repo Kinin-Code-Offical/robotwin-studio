@@ -111,7 +111,7 @@ The **Settings** (Ctrl+,) page is split into categories. Pick one in the list on
 | Appearance and theme | Theme gallery (9 dark, 7 light themes and a custom one), accent colour, interface scale, performance overlay, effects and sound, 3D quality, 3D renderer (our own GPU renderer or WPF) |
 | Saving and backup | Autosave interval, keeping the previous version on save, crash recovery, backup folder, copies kept per document, the folder's size limit |
 | Keyboard shortcuts | Change the window's and every page's shortcuts, clash warnings, reset one or all |
-| Simulation and physics | Part damage, pause on failure, ambient temperature, time step, starting speed |
+| Simulation and physics | Part damage, pause on failure, ambient temperature, time step, starting speed, running the simulation on its own thread |
 | World and editing | Gravity of new worlds, world editor grid |
 | Compilers | `arduino-cli` path, `vcvars64.bat` path |
 | Updates, Plugins | Version checks; plug-in folders and scripts |

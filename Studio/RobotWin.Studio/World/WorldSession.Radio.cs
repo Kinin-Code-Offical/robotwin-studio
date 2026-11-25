@@ -40,7 +40,7 @@ namespace RobotWin.Studio.World
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
             {
-                Log.Add(new SimLogEntry(0, "radyo", "Radyo ortamı kurulamadı: " + ex.Message, AnalogEventKind.Warning));
+                AddLog(new SimLogEntry(0, "radyo", "Radyo ortamı kurulamadı: " + ex.Message, AnalogEventKind.Warning));
                 return;
             }
 
@@ -53,7 +53,7 @@ namespace RobotWin.Studio.World
             int pads = Radio.Nodes.OfType<GamepadNode>().Count();
             if (Radio.Nodes.Count + Radio.Ir.Emitters.Count + Radio.Ir.Receivers.Count > 0)
             {
-                Log.Add(new SimLogEntry(0, "radyo", $"Radyo ortamı: {Radio.Nodes.Count} verici/alıcı ({pads} kumanda), {Radio.Ir.Emitters.Count} IR verici, {Radio.Ir.Receivers.Count} IR alıcı, {Radio.Propagation.Obstacles.Count} engel · yol kaybı üssü {Radio.Propagation.PathLossExponent:0.0}", AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(0, "radyo", $"Radyo ortamı: {Radio.Nodes.Count} verici/alıcı ({pads} kumanda), {Radio.Ir.Emitters.Count} IR verici, {Radio.Ir.Receivers.Count} IR alıcı, {Radio.Propagation.Obstacles.Count} engel · yol kaybı üssü {Radio.Propagation.PathLossExponent:0.0}", AnalogEventKind.StateChange));
             }
         }
 
@@ -132,7 +132,7 @@ namespace RobotWin.Studio.World
             foreach (var e in radio.DrainEvents())
             {
                 string name = World.Find(e.NodeId)?.Name ?? radio.Find(e.NodeId)?.Name ?? e.NodeId;
-                Log.Add(new SimLogEntry(e.Time, name, e.Message, e.Warning ? AnalogEventKind.Warning : AnalogEventKind.StateChange));
+                AddLog(new SimLogEntry(e.Time, name, e.Message, e.Warning ? AnalogEventKind.Warning : AnalogEventKind.StateChange));
                 if (e.Message.StartsWith("Eşleştirildi", StringComparison.Ordinal) && radio.Find(e.NodeId) is GamepadNode p && p.Host != null)
                 {
                     GamepadPaired?.Invoke(p.Id, p.Host);
@@ -163,7 +163,7 @@ namespace RobotWin.Studio.World
             if (GamepadNodeOf(objectId) is not { } pad || Radio == null) return false;
             Radio.StartPairing(pad);
             Note(RobotTwin.CoreSim.Automation.InputEvent.Pairing, objectId);
-            Log.Add(new SimLogEntry(Time, World?.Find(objectId)?.Name ?? objectId, "Eşleştirme modu: Bluepad32 çalıştıran bir ESP32 aranıyor (ışık çubuğu yanıp sönüyor)", AnalogEventKind.StateChange));
+            AddLog(new SimLogEntry(Time, World?.Find(objectId)?.Name ?? objectId, "Eşleştirme modu: Bluepad32 çalıştıran bir ESP32 aranıyor (ışık çubuğu yanıp sönüyor)", AnalogEventKind.StateChange));
             return true;
         }
 
@@ -183,10 +183,10 @@ namespace RobotWin.Studio.World
             if (!host.Parameters.TryGetValue("target", out var target) || string.IsNullOrWhiteSpace(target)) return;
             bool switched = WorldUsb.SetPlugged(Circuit, target, plugged);
             string board = World.Find(target)?.Name ?? target;
-            Log.Add(new SimLogEntry(Time, host.Name, plugged
+            AddLog(new SimLogEntry(Time, host.Name, plugged
                 ? $"USB takıldı → {board}: 5 V VBUS ve seri monitör bağlı"
                 : $"USB çıkarıldı → {board}: güç ve seri bağlantı kesildi", AnalogEventKind.StateChange));
-            if (!switched) Log.Add(new SimLogEntry(Time, host.Name, "Bu kartın USB beslemesi kablo ile kurulmadı; değişiklik bir sonraki çalıştırmada geçerli olur.", AnalogEventKind.Warning));
+            if (!switched) AddLog(new SimLogEntry(Time, host.Name, "Bu kartın USB beslemesi kablo ile kurulmadı; değişiklik bir sonraki çalıştırmada geçerli olur.", AnalogEventKind.Warning));
         }
 
         /// <summary>One NEC key press from an IR remote object.</summary>
@@ -199,7 +199,7 @@ namespace RobotWin.Studio.World
             Radio.Ir.SendNec(e, Time + 1e-4, address, command);
             Note(RobotTwin.CoreSim.Automation.InputEvent.Ir, objectId, command);
             int seen = Radio.Ir.Receivers.Count(r => Radio.Ir.LineOfSight(e, r));
-            Log.Add(new SimLogEntry(Time, o.Name, $"IR NEC adres 0x{address:X2} komut 0x{command:X2} gönderildi · görüş hattındaki alıcı: {seen}", AnalogEventKind.StateChange));
+            AddLog(new SimLogEntry(Time, o.Name, $"IR NEC adres 0x{address:X2} komut 0x{command:X2} gönderildi · görüş hattındaki alıcı: {seen}", AnalogEventKind.StateChange));
             return true;
         }
     }

@@ -148,6 +148,7 @@ namespace RobotWin.Studio.World
                 return;
             }
 
+            using (Simulation.SimThread.Hold())   // [perf] drawing runs beside the simulation thread: hold it off while reading
             using (Shell.Perf.Measure("simülasyon")) s.Frame();
         }
 
@@ -820,9 +821,31 @@ namespace RobotWin.Studio.World
                 _lastRendering = re.RenderingTime;
             }
 
-            var now = DateTime.Now;
-            double dt = Math.Min(0.1, (now - _lastFrame).TotalSeconds);
-            _lastFrame = now;
+            // [perf] Drawing runs beside the simulation thread (Simulation/SimThread.cs): it is held off while the frame reads
+            // the run and builds the scene from it; the GPU draws what was built while the simulation goes on. A run that
+            // cannot keep up gets three quarters of the time: the scene is rebuilt less often, the GPU redraws it between.
+            if (Simulation.SimThread.FrameDue(_sceneStart, _sceneCost))
+            {
+                var now = DateTime.Now;
+                double dt = Math.Min(0.1, (now - _lastFrame).TotalSeconds);
+                _lastFrame = now;
+                _sceneStart = System.Diagnostics.Stopwatch.GetTimestamp();
+                using (Simulation.SimThread.Hold())
+                {
+                    long built = System.Diagnostics.Stopwatch.GetTimestamp();
+                    FrameScene(dt);
+                    _sceneCost = (System.Diagnostics.Stopwatch.GetTimestamp() - built) / (double)System.Diagnostics.Stopwatch.Frequency;
+                }
+            }
+
+            GpuFrame();   // [render] our GPU renderer draws what the frame built (World/WorldScene.Gpu.cs)
+        }
+
+        private long _sceneStart;     // [perf] when the last frame began building the scene (Stopwatch ticks)
+        private double _sceneCost;    // and how long it took (s)
+
+        private void FrameScene(double dt)
+        {
             TerrainFrame(dt); // [terrain] LOD, brush strokes
             var s = Session;
             if (s != null && s.State == Simulation.SimState.Running)
@@ -859,7 +882,6 @@ namespace RobotWin.Studio.World
             using (Shell.Perf.Measure("paraşüt")) ChuteFrame();   // [launch] canopies (World/WorldScene.Parachutes.cs)
             using (Shell.Perf.Measure("jetler")) PlumeFrame();   // [gas] exhaust flames and smoke in the 3D scene (World/WorldScene.Plume.cs)
             if (Playback == null) LiquidFrame();   // [liquid] water and other liquids (World/WorldScene.Liquids.cs)
-            GpuFrame();   // [render] our GPU renderer draws what the frame built (World/WorldScene.Gpu.cs)
         }
 
         private readonly ModelVisual3D _beams = new ModelVisual3D();
