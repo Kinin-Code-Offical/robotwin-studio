@@ -3,7 +3,7 @@ using RobotTwin.CoreSim.Sandbox;
 
 namespace RobotWin.Studio.Models3D
 {
-    /// <summary>[objs] Gallery sheets "8-ready" (wheels, casters, propellers) and "9-lights".</summary>
+    /// <summary>[objs] Gallery sheets "8-ready" (wheels, casters, propellers), "8-drive" (gears, bearings, shafts, screws) and "9-lights".</summary>
     public static partial class ModelGallery
     {
         private static IEnumerable<Item> ReadyItems()
@@ -13,6 +13,12 @@ namespace RobotWin.Studio.Models3D
             {
                 var spec = s;
                 yield return new Item(R, spec.Name, () => World.ReadyModels.Instance(spec), false);
+            }
+
+            foreach (var s in DriveParts.All)   // [drive] gears, pulleys, bearings, shafts, screws
+            {
+                var spec = s;
+                yield return new Item("8-drive", spec.Name, () => World.DriveModels.Instance(spec), false);
             }
 
             yield return new Item(L, "RGB LED 5 mm", () => Part("led-rgb", "led-rgb-5mm"));

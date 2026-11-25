@@ -32,8 +32,30 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
                 _couplings[c.Id] = coupling;
                 // The gear blanks overlap where their teeth mesh, a nut surrounds its screw: the coupling is their contact.
-                Scene.NoCollide.Add((a.ChildBody, b.ChildBody));
+                // Everything fixed to one side (the gear on its shaft, the nut on its carriage) is clear of the other.
+                foreach (var x in Rigid(a.ChildBody))
+                    foreach (var y in Rigid(b.ChildBody))
+                        if (!ReferenceEquals(x, y)) Scene.NoCollide.Add((x, y));
             }
+        }
+
+        /// <summary>The bodies fixed to this one, any number of fixed joints away (itself included).</summary>
+        private HashSet<SceneBody> Rigid(SceneBody body)
+        {
+            var group = new HashSet<SceneBody> { body };
+            var queue = new Queue<SceneBody>(group);
+            while (queue.Count > 0)
+            {
+                var b = queue.Dequeue();
+                foreach (var j in Scene.Joints)
+                {
+                    if (j.Kind != JointKind.Fixed || j.B == null) continue;
+                    var other = ReferenceEquals(j.A, b) ? j.B : ReferenceEquals(j.B, b) ? j.A : null;
+                    if (other != null && !other.IsStatic && group.Add(other)) queue.Enqueue(other);
+                }
+            }
+
+            return group;
         }
 
         /// <summary>

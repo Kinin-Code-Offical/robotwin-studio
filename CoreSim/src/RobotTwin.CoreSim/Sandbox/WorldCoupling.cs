@@ -39,7 +39,7 @@ namespace RobotTwin.CoreSim.Sandbox
         /// </summary>
         public double SizeB { get; set; } = 40;
 
-        /// <summary>A crossed belt, an idler gear between the two, a left-hand thread: the other way round.</summary>
+        /// <summary>A crossed belt, an idler gear between the two, a left-hand thread (a screw is right-handed): the other way round.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool Reverse { get; set; }
 
@@ -75,7 +75,8 @@ namespace RobotTwin.CoreSim.Sandbox
             double r;
             if (Linear(a, b))
             {
-                double perRadian = Kind == Screw ? SizeA / 1000 / (2 * Math.PI) : SizeA / 2000;
+                // A right-hand thread: the screw turning positively about the axis moves its nut back along it.
+                double perRadian = Kind == Screw ? -SizeA / 1000 / (2 * Math.PI) : SizeA / 2000;
                 r = a == WorldJointKind.Hinge ? perRadian : 1 / perRadian;
             }
             else

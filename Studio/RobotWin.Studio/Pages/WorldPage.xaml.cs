@@ -321,6 +321,7 @@ namespace RobotWin.Studio.Pages
                 AddBody("box", 0.6, 0.4, 0.02, o => { o.IsStatic = true; o.Material = "AHŞAP"; o.Name = World!.UniqueName("Masa"); });
             }));
             ReadyMechPalette();   // [objs] ready wheels, casters, propellers
+            DrivePalette();   // [drive] gears, pulleys, bearings, shafts, lead screws (Pages/WorldPage.Drive.cs)
             Palette.Children.Add(Caption("Dışarıdan model"));
             Palette.Children.Add(Action("3D model ya da robot içe aktar (STL, OBJ, PLY, STEP, IGES, URDF)…", ImportModel,
                 "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır. Bir robot tanımı (URDF ya da xacro) parçaları, eklemleri, sınırları ve motorlarıyla gelir."));
@@ -827,6 +828,7 @@ namespace RobotWin.Studio.Pages
             if (o.Kind == WorldObjectKind.Component) ComponentSection(o);
             PidSection(world, o);   // [pid] a motor's speed loop: the PID tuner (Pages/WorldPage.Pid.cs)
             ReadySection(world, o);   // [objs]
+            DriveSection(world, o);   // [drive] Pages/WorldPage.Drive.cs
             RadioSection(world, o);   // [radio] controller pairing, USB plug, IR keys, ESP32 radio
             GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
             if (!IsSwitchPart(o)) LaunchSection(world, o);   // [launch] parachute
@@ -964,7 +966,7 @@ namespace RobotWin.Studio.Pages
                 case WorldObjectKind.Model:
                     return "3D model · " + (o.MeshName ?? "?") + " · " + o.Material;
                 default:
-                    return ReadyKind(o) ?? "Mekanik · " + o.Shape + " · " + o.Material;   // [objs]
+                    return ReadyKind(o) ?? DriveKind(o) ?? "Mekanik · " + o.Shape + " · " + o.Material;   // [objs] [drive]
             }
         }
 
@@ -1333,8 +1335,11 @@ namespace RobotWin.Studio.Pages
             if (_session.Physics is { } ph && ph.MaterialOf(o.Id) is { } mat)   // [thermal]
             {
                 double tb = ph.TemperatureOf(o.Id);
-                string tg = double.IsNaN(mat.GlassTransition) ? string.Empty : $", camsı geçiş {mat.GlassTransition:0} °C";
-                lines.Add($"Gövde sıcaklığı: {tb:0.0} °C · {mat.Name}: {ph.MaterialStateOf(o.Id)} (sertlik %{mat.ModulusFactor(tb) * 100:0}{tg})");
+                // Two shapes, not one with an optional tail: a pattern with two holes side by side cut "%100" into "10" and "0".
+                double stiff = mat.ModulusFactor(tb) * 100;
+                lines.Add(double.IsNaN(mat.GlassTransition)
+                    ? $"Gövde sıcaklığı: {tb:0.0} °C · {mat.Name}: {ph.MaterialStateOf(o.Id)} (sertlik %{stiff:0})"
+                    : $"Gövde sıcaklığı: {tb:0.0} °C · {mat.Name}: {ph.MaterialStateOf(o.Id)} (sertlik %{stiff:0}, camsı geçiş {mat.GlassTransition:0} °C)");
                 double q = ph.HeatOf(o.Id);
                 if (q > 0.001) lines.Add($"Üretilen ısı   : {SiValue.Format(q, "W")}");
             }
@@ -1614,11 +1619,14 @@ namespace RobotWin.Studio.Pages
                 default:
                     W.FlushActiveDesign();
                     Scene.ClearEffects();
+                    AssembleDriveOnStart(world);   // [drive] parts placed as in a machine are joined as one
                     if (!_session.Start(world, Scene.CableLength, Scene.GeometryOf, out var message))
                     {
                         W.Status = message;
                         return;
                     }
+
+                    LogDriveReport();
 
                     _serialShown = 0;
                     SerialView.Clear();

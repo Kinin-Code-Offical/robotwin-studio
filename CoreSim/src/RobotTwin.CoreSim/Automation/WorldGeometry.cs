@@ -30,6 +30,7 @@ namespace RobotTwin.CoreSim.Automation
         public WorldBodyGeometry GeometryOf(WorldObject o)
         {
             if (ReadyParts.Geometry(o) is { } ready) return ready;   // ready props, wheels, casters: same shapes as in the app (a prop is its swept disc)
+            if (DriveParts.Geometry(o) is { } drive) return drive;   // [drive] gears, bearings, shafts, screws
             switch (o.Kind)
             {
                 case WorldObjectKind.Body:

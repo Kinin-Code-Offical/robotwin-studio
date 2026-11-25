@@ -14,6 +14,7 @@ namespace RobotWin.Studio.World
         private static Model3D? FixingMarks(WorldObject o, ObjectModel model)
         {
             if (!o.IsStatic) return null;
+            if (DriveParts.Of(o) is { } drive) return DriveFixing(drive);   // [drive] its own way of being held
             var b = model.CollisionBounds.IsEmpty ? model.Bounds : model.CollisionBounds;
             if (b.IsEmpty || b.SizeX < 0.004 || b.SizeY < 0.004) return null;
             var steel = M.Matte(Color.FromRgb(0x9A, 0x9C, 0xA2), 0.4);
@@ -42,6 +43,24 @@ namespace RobotWin.Studio.World
                     double inward = x < b.X ? 0.003 : -0.003;
                     g.Children.Add(M.Model(M.Box(x + inward, y, top + 0.0015, 0.008, w, 0.003), steel));
                 }
+            }
+
+            return g;
+        }
+
+        /// <summary>
+        /// [drive] How a fixed drive part is held: a pillow block by two M6 bolts with washers in its base slots; a bearing
+        /// pressed into its housing and a guide rod clamped in its blocks show nothing on themselves.
+        /// </summary>
+        private static Model3D? DriveFixing(DrivePartSpec s)
+        {
+            if (s.Kind != DrivePartKind.BearingHousing) return null;
+            var steel = M.Matte(Color.FromRgb(0x9A, 0x9C, 0xA2), 0.4);
+            var g = new Model3DGroup();
+            foreach (double x in new[] { -0.021, 0.021 })
+            {
+                g.Children.Add(M.Model(M.Cylinder(0.006, 0.0012, 2, 24, x, 0, 0.0056), steel));   // washer on the base
+                g.Children.Add(M.Model(M.Cylinder(0.0058, 0.004, 2, 6, x, 0, 0.0082), steel));   // hex head, 10 mm across flats
             }
 
             return g;

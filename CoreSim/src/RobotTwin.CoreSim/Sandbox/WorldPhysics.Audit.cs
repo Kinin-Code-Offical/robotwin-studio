@@ -37,6 +37,17 @@ namespace RobotTwin.CoreSim.Sandbox
                     }
             }
 
+            // [couple] Meshing gears' tip circles overlap by design (their teeth fill each other's gaps); a nut surrounds its screw.
+            foreach (var c in Scene.Couplings)
+            {
+                foreach (var x in FixedSet(c.A.ChildBody))
+                    foreach (var y in FixedSet(c.B.ChildBody))
+                    {
+                        moving.Add((x, y));
+                        moving.Add((y, x));
+                    }
+            }
+
             var result = new List<ConsistencyIssue>();
             var seen = new HashSet<(string, string)>();
             foreach (var (a, b) in Scene.NoCollide)

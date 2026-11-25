@@ -88,6 +88,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     if (a.IsStatic && b.IsStatic) continue;
                     if (ignore.Contains((a, b))) continue;
                     double depth = ObbOverlap(a, b);
+                    if (depth > tolerance) depth = Math.Min(depth, ShapeOverlap(a, b));   // boxes overlap; do the shapes?
                     if (depth > tolerance) result.Add((list[x].Object.Id, list[y].Object.Id, depth));
                 }
             }
@@ -155,6 +156,63 @@ namespace RobotTwin.CoreSim.Sandbox
             foreach (var a in Obbs(ba))
             {
                 foreach (var b in Obbs(bb)) worst = Math.Max(worst, BoxOverlap(a, b));
+            }
+
+            return worst;
+        }
+
+        /// <summary>Directions spread evenly over the sphere (a Fibonacci lattice), for separating the shapes themselves.</summary>
+        private static readonly Vec3[] Directions = Enumerable.Range(0, 128).Select(i =>
+        {
+            double z = 1 - (2 * i + 1) / 256.0, r = Math.Sqrt(1 - z * z), t = i * Math.PI * (3 - Math.Sqrt(5));
+            return new Vec3(r * Math.Cos(t), r * Math.Sin(t), z);
+        }).ToArray();
+
+        private static IReadOnlyList<CollisionShape> Convex(SceneBody b) =>
+            b.Pieces is { Length: > 0 } p ? p : b.EffectiveShape is { } s ? new[] { s } : Array.Empty<CollisionShape>();
+
+        /// <summary>
+        /// How deep two bodies' own shapes (not their boxes) overlap: the least overlap of their extents over the bodies'
+        /// axes, their cross products and 128 directions round the sphere; 0 as soon as one separates them. A pillow
+        /// block's base passing under a neighbouring shaft is clear, though its box is not.
+        /// </summary>
+        private static double ShapeOverlap(SceneBody a, SceneBody b)
+        {
+            var sa = Convex(a);
+            var sb = Convex(b);
+            if (sa.Count == 0 || sb.Count == 0) return ObbOverlap(a, b);
+            var qa = a.Orientation;
+            var qb = b.Orientation;
+            var axes = new List<Vec3>(Directions.Length + 15);
+            var ua = new[] { qa.Rotate(Vec3.UnitX), qa.Rotate(Vec3.UnitY), qa.Rotate(Vec3.UnitZ) };
+            var ub = new[] { qb.Rotate(Vec3.UnitX), qb.Rotate(Vec3.UnitY), qb.Rotate(Vec3.UnitZ) };
+            axes.AddRange(ua);
+            axes.AddRange(ub);
+            foreach (var u in ua)
+                foreach (var v in ub)
+                    if (u.Cross(v) is var c && c.LengthSquared > 1e-10) axes.Add(c.Normalized());
+            axes.AddRange(Directions);
+            double Reach(SceneBody body, CollisionShape shape, Quat q, Vec3 n) => (body.Position + q.Rotate(shape.Support(q.Conjugate.Rotate(n)))).Dot(n);
+            double worst = 0;
+            foreach (var pa in sa)
+            {
+                foreach (var pb in sb)
+                {
+                    double min = double.PositiveInfinity;
+                    foreach (var n in axes)
+                    {
+                        double overlap = Math.Min(Reach(a, pa, qa, n) + Reach(b, pb, qb, -n), Reach(b, pb, qb, n) + Reach(a, pa, qa, -n));
+                        if (overlap <= 0)
+                        {
+                            min = 0;
+                            break;
+                        }
+
+                        min = Math.Min(min, overlap);
+                    }
+
+                    worst = Math.Max(worst, min);
+                }
             }
 
             return worst;

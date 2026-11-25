@@ -312,6 +312,22 @@ Menteşeyle ya da kızakla bağlı bir parçaya **Özellik ekle ▾ → Yay ve s
 
 10 kg'lık bir volan 8 mm'lik bilyalı rulmanda 10 rad/s'den iki saniyede ancak 0,02 rad/s yavaşlar, bronz burçta 1,26 rad/s. Ağır bir parça yatağını daha çok frenler. Bağlantının **sürtünme** değeri yükten bağımsız kısım olarak kalır (keçe, gres). Çalışırken **Canlı ölçüm** yatağın o anki sürtünmesini gösterir.
 
+### Güç aktarım parçaları: gerçekteki gibi kurulan mekanizma
+
+**Mekanik** paletinin **Güç aktarımı** grubunda gerçek ölçülü parçalar vardır: POM düz dişliler (modül 1, 20/30/40/60 diş, involüt profil), pirinç z12 pinyon, GT2 kasnaklar (20/40/60 diş), 608ZZ, 688ZZ, 625ZZ ve 6000ZZ rulmanlar, KP08 yataklı rulman, Ø8 ve Ø5 çelik miller, T8 vidalı miller (hatve 8 ve 2) ile pirinç somunları, LM8UU doğrusal rulman, mil bileziği ve 5 × 8 esnek kaplin. 3B modelleri ölçülerinden kodla üretilir: dişlinin involüt dişleri, kasnağın GT2 boşlukları, rulmanın bilezikleri ve kapakları, vidanın çok ağızlı trapez dişi. Kütleleri malzemelerinden (POM, pirinç, çinko döküm, çelik, alüminyum) ya da katalog değerinden gelir. Halka biçimli parçaların çarpışma şekli de halkadır, mil deliğinden geçer.
+
+Parçaları gerçek bir makinedeki gibi yerleştirin. Bağlantıları siz çizmezsiniz; **Mekanizmayı kur** (ya da dünyayı çalıştırmak) parçaların yerinden okur:
+
+- Rulmanın ya da KP08'in deliğinden geçen mil, o rulmanda **döner**. Menteşenin sürtünmesi rulmanın türünden gelir.
+- Deliği mile oturan dişli, kasnak, bilezik ya da kaplin mile **setuskurla sabitlenir**.
+- Çubuğa geçen LM8UU çubuk boyunca **kayar**.
+- Bölüm daireleri değen, eksenleri paralel ve modülü aynı iki dişli **kavrar**: eksen mesafesi m·(z₁+z₂)/2 olmalıdır.
+- Vidalı mile geçen somun, bağlı olduğu kızaklı taşıyıcıyı **sürer**. Sağ el vida: mil üstten bakınca saat yönünde dönünce somun yükselir.
+
+Varsayım yapılmaz: mile takılı olmayan dişli düşer, rulmandan geçmeyen mil tutulmaz, dar delik takılmaz, bol delikte mil boşta kalır. Böyle durumlar **Olaylar** sekmesinde ve parçanın denetçisinde yazar. Rulmanları ve KP08'leri gövdeye bağlayın ya da **Sabit** işaretleyin; KP08 sabitse taban yuvalarında iki M6 cıvata görünür. Kurulan bağlantılar **Mekanik bağlantılar** bölümünde görünür ve düzenlenebilir.
+
+Fizik bir animasyon değildir. Dişliler ve vida kısıt çözücüyle bağlanır (sanayideki çok gövdeli dinamik programları da böyle yapar). Motorun torkunu yük, verim, boşluk ve rulman sürtünmesi belirler. Dişlerin birbirine tek tek değmesini çarpışmayla çözmek hem yavaş hem kararsız olurdu; dişliler bu yüzden kendi gövdelerinde değil, kavrama kısıtında buluşur. Kendi 3B modelinizi kullanmak isterseniz **Bağla** aracıyla menteşe ya da kızak kurun, sonra **Özellik ekle → Dişli, kayış, vidalı mil** ile eşleyin. Fizik aynı yoldan çalışır.
+
 ### Kol kinematiği: ileri ve ters kinematik
 
 Servolarla kurduğunuz bir kolun bir parçasını seçin (örneğin servo kol şablonunda **Kol 2**). Denetçide **Kinematik (kolun ucu)** bölümü çıkar. Program, bağlantıları izleyerek tabandan seçtiğiniz parçaya giden zinciri kendisi bulur.

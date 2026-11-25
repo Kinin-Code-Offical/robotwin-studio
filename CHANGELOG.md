@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Gears, pulleys, bearings, shafts and lead screws as real parts, assembled from where they are:** a Power transmission group with POM spur gears (involute teeth), GT2 pulleys, 608/688/625/6000 bearings, a KP08 pillow block, steel shafts, T8 lead screws with brass nuts, LM8UU linear bearings, collars and couplers, their 3D models generated from their dimensions and their masses from their materials. Placed as in a real machine, "Build the mechanism" (and starting the world) reads them: a shaft turns in the bearings it passes through, a gear is fixed on its shaft, gears whose pitch circles touch mesh, a nut drives the carriage it is bolted to. Parts nothing holds are named. Also: an overlap warning no longer fires for shapes whose boxes overlap but whose solids do not, meshing gears are no longer reported as sunk into each other, and new POM, brass and zinc materials.
+
 - **Backlash and belt stretch:** a gear, rack, carriage or screw can have play: inside it the two sides move apart, at either flank the teeth push, so a reversing motor leaves the driven side standing until it has crossed the gap (1° at 0.1 rad/s: 175 ms). A belt can stretch under load with its span's stiffness, as a spring between the pulleys.
 
 - **Bearings whose friction follows the load:** a hinge can turn in a ball or needle bearing, a bronze or plastic bushing or a pin in a printed hole, a slider can run on a linear bearing, a ball rail, V-slot wheels or a plain slide (inspector: Add feature → Bearing). The friction is μ × load × bore / 2 on a hinge and μ × the load across the rail on a slider, from the load the joint carries each step: a 10 kg flywheel coasts down 53 times faster on a bronze bushing than on a 608 ball bearing.
@@ -185,6 +187,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **Live body temperature in English** showed "stiffness 10%0": the line had two values side by side that the pattern could not tell apart; it now has two unambiguous shapes. Lowercase "çelik" and "alüminyum" also weighed as PLA.
 
 - **A slow lead screw froze its nut:** a nut moving slower than 2 mm/s fell asleep as a resting body while its screw kept turning; a gear, belt or screw now ties its two shafts into one island. Also, a paused or stepped world now shows the live readings of the instant it stopped (they could lag by up to 120 ms of the run).
 

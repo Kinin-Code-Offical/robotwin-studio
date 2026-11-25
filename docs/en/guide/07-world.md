@@ -312,6 +312,22 @@ Give a part on a hinge or a slider a spring of its own with **Add feature ▾ �
 
 A 10 kg flywheel at 10 rad/s on an 8 mm ball bearing loses only 0.02 rad/s in two seconds; on a bronze bushing it loses 1.26 rad/s. A heavy part brakes its bearing more. The joint's **friction** value stays as the load-free part (seals, grease). While running, **Live readings** show the bearing's friction at that moment.
 
+### Power transmission parts: a mechanism built as in reality
+
+The **Power transmission** group of the **Mechanical** palette has parts at their real sizes: POM spur gears (module 1, 20/30/40/60 teeth, involute profile), a brass z12 pinion, GT2 pulleys (20/40/60 teeth), 608ZZ, 688ZZ, 625ZZ and 6000ZZ bearings, a KP08 pillow block, Ø8 and Ø5 steel shafts, T8 lead screws (lead 8 and 2) with their brass nuts, an LM8UU linear bearing, a shaft collar and a 5 × 8 flexible coupler. Their 3D models are generated from their dimensions: the gear's involute teeth, the pulley's GT2 grooves, the bearing's rings and shields, the screw's multi-start trapezoidal thread. Their masses come from their materials (POM, brass, die-cast zinc, steel, aluminium) or the catalogue. Ring-shaped parts also collide as rings, so a shaft passes through the bore.
+
+Place the parts as in a real machine. You do not draw the joints; **Build the mechanism** (or starting the world) reads them from where the parts are:
+
+- A shaft through the bore of a bearing or a KP08 **turns** in it, with that bearing's friction.
+- A gear, pulley, collar or coupler whose bore sits on a shaft is **fixed** to it with its set screw.
+- An LM8UU on a rod **slides** along it.
+- Two gears with parallel axes and the same module whose pitch circles touch **mesh**: the centre distance must be m·(z₁+z₂)/2.
+- A nut on a lead screw **drives** the carriage on slides it is fixed to. A right-hand screw turned clockwise, seen from above, raises its nut.
+
+Nothing is assumed: a gear on no shaft falls, a shaft in no bearing is not held, a bore that is too small does not go on, and in one too large the shaft is loose. The **Events** tab and the part's inspector say so. Bolt the bearings and pillow blocks to the frame or mark them **Fixed**; a fixed KP08 shows two M6 bolts in its base slots. The joints it builds appear in **Mechanical joints**, where you can edit them.
+
+The physics is not an animation. Gears and screws are joined by constraints in the solver, as engineering multibody programs do it. The motor's torque comes from the load, the efficiency, the backlash and the bearing friction. Solving each tooth touching the next with collisions would be slow and unstable, so gears meet in the meshing constraint rather than through their bodies. If you want to use your own 3D models, join them with hinges or slides using the **Join** tool, then pair them with **Add feature → Gear, belt, lead screw**. The physics works the same way.
+
 ### Arm kinematics: forward and inverse
 
 Select a part of an arm you built with servos (for example **Arm 2** in the servo-arm template). The inspector shows a **Kinematics (arm tip)** section. The program follows the joints to find the chain from a base to the part you selected.

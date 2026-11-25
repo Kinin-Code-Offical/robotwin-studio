@@ -406,6 +406,7 @@ namespace RobotWin.Studio.World
         public WorldBodyGeometry GeometryOf(WorldObject o)
         {
             if (ReadyParts.Geometry(o) is { } readyGeometry) return readyGeometry;   // [objs] World/WorldScene.Ready.cs
+            if (DriveParts.Geometry(o) is { } driveGeometry) return driveGeometry;   // [drive] Sandbox/DriveParts.cs
             var g = new WorldBodyGeometry { MassKg = MassOf?.Invoke(o) ?? 0.01 };
             if (_items.TryGetValue(o.Id, out var it) && !it.Model.Bounds.IsEmpty)
             {

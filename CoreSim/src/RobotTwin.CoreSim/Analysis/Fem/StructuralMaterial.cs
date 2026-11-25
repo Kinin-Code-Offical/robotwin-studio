@@ -108,7 +108,11 @@ namespace RobotTwin.CoreSim.Analysis.Fem
             ["KARTON"] = new StructuralMaterial { Name = "Karton boru (kraft)", E = 3e9, Nu = 0.3, Yield = 25e6, Density = 700, Conductivity = 0.07, SpecificHeat = 1400, Emissivity = 0.9, Alpha = 10e-6, SofteningPerK = 0.002, MeltingPoint = 230 },
             ["AKRİLİK"] = new StructuralMaterial { Name = "Akrilik (PMMA)", E = 3.2e9, Nu = 0.37, Yield = 70e6, Density = 1180, Conductivity = 0.19, SpecificHeat = 1470, Emissivity = 0.9, Alpha = 70e-6, GlassTransition = 105, MeltingPoint = 160, RubberyRatio = 0.01 },
             ["CAM"] = new StructuralMaterial { Name = "Cam (soda-kireç)", E = 70e9, Nu = 0.22, Yield = 40e6, Density = 2500, Conductivity = 1.0, SpecificHeat = 840, Emissivity = 0.92, Alpha = 9e-6, GlassTransition = 560, MeltingPoint = 1000, RubberyRatio = 0.01 },
-            ["BAKIR"] = new StructuralMaterial { Name = "Bakır", E = 117e9, Nu = 0.34, Yield = 70e6, Density = 8960, Conductivity = 400, SpecificHeat = 385, Emissivity = 0.05, Alpha = 17e-6, SofteningPerK = 0.0004, MeltingPoint = 1085 }
+            ["BAKIR"] = new StructuralMaterial { Name = "Bakır", E = 117e9, Nu = 0.34, Yield = 70e6, Density = 8960, Conductivity = 400, SpecificHeat = 385, Emissivity = 0.05, Alpha = 17e-6, SofteningPerK = 0.0004, MeltingPoint = 1085 },
+            // [drive] acetal gears, brass nuts and pinions, die-cast (Zamak) bearing housings.
+            ["POM"] = new StructuralMaterial { Name = "Asetal (POM)", E = 2.8e9, Nu = 0.35, Yield = 65e6, Density = 1410, Conductivity = 0.31, SpecificHeat = 1470, Emissivity = 0.9, Alpha = 110e-6, SofteningPerK = 0.004, MeltingPoint = 175 },
+            ["PİRİNÇ"] = new StructuralMaterial { Name = "Pirinç (CuZn39Pb3)", E = 97e9, Nu = 0.34, Yield = 250e6, Density = 8470, Conductivity = 120, SpecificHeat = 380, Emissivity = 0.1, Alpha = 20e-6, SofteningPerK = 0.0004, MeltingPoint = 890 },
+            ["ÇİNKO"] = new StructuralMaterial { Name = "Çinko döküm (Zamak 3)", E = 85e9, Nu = 0.27, Yield = 210e6, Density = 6600, Conductivity = 113, SpecificHeat = 419, Emissivity = 0.1, Alpha = 27e-6, SofteningPerK = 0.001, MeltingPoint = 385 }
         };
 
         /// <summary>Material for a world object material name (Turkish or ASCII spelling); PLA when unknown.</summary>
@@ -121,6 +125,9 @@ namespace RobotTwin.CoreSim.Analysis.Fem
                 "AHSAP" or "WOOD" => "AHŞAP",
                 "KAUCUK" or "RUBBER" => "KAUÇUK",
                 "COPPER" => "BAKIR",
+                "ACETAL" or "ASETAL" or "DELRIN" => "POM",
+                "PIRINÇ" or "PIRINC" or "BRASS" => "PİRİNÇ",
+                "ÇINKO" or "CINKO" or "ZINC" or "ZAMAK" => "ÇİNKO",
                 "CARBON" => "KARBON",
                 "KURSUN" or "LEAD" => "KURŞUN",
                 var k => k

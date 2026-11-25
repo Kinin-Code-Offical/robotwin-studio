@@ -213,6 +213,10 @@ public class LangTests
     [InlineData("RW-7: şema, PCB ve montaj arasında 1 tutarsızlık var.", "RW-7: 1 thing is out of step between the schematic, the PCB and the assembly.")]
     [InlineData("Montajın izlediği proje dosyası bulunamadı: D:\\p\\a.rwproj", "The project file this assembly follows was not found: D:\\p\\a.rwproj")]
     [InlineData("Şema değişti. Kartı güncellemek şunları yapacak:\n1 parça kalkacak (R2)", "The schematic changed. Updating the board will make these changes:\n1 part will be removed (R2)")]
+    [InlineData("Gövde sıcaklığı: 25.0 °C · Asetal (POM): katı (sertlik %100)", "Body temp      : 25.0 °C · Acetal (POM): solid (stiffness 100%)")]
+    [InlineData("Dişli z20 ile Dişli z40 kavrıyor: 20:40, eksen mesafesi 30 mm.", "Dişli z20 and Dişli z40 mesh: 20:40, 30 mm between their axes.")]
+    [InlineData("Mil Ø8, KP08 içinde döner (Bilyalı rulman (608)).", "Mil Ø8 turns in KP08 (Ball bearing (608)).")]
+    [InlineData("Mekanizma kuruldu: 13 bağlantı, 2 dişli / vida bağı", "Mechanism built: 13 joints, 2 gear / screw couplings")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

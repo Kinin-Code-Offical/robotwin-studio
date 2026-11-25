@@ -584,8 +584,11 @@ namespace RobotTwin.CoreSim.Mechanics
             "KONTRPLAK" or "PLYWOOD" => MaterialDensity.Plywood,
             "MDF" => MaterialDensity.Mdf,
             "FR4" => MaterialDensity.Fr4,
-            "ALÜMİNYUM" or "ALUMINIUM" or "ALUMINUM" => MaterialDensity.Aluminium,
-            "ÇELİK" or "STEEL" => MaterialDensity.Steel,
+            "ALÜMİNYUM" or "ALÜMINYUM" or "ALUMINYUM" or "ALUMINIUM" or "ALUMINUM" => MaterialDensity.Aluminium,
+            "ÇELİK" or "ÇELIK" or "CELIK" or "STEEL" => MaterialDensity.Steel,
+            "POM" or "ASETAL" or "ACETAL" or "DELRIN" => 1410,   // [drive] acetal gears
+            "PİRİNÇ" or "PIRINÇ" or "PIRINC" or "BRASS" => 8500,   // [drive] lead screw nuts, pinions
+            "ÇİNKO" or "ÇINKO" or "CINKO" or "ZINC" or "ZAMAK" => 6600,   // [drive] die-cast bearing housings
             "KARBON" or "CARBON" => MaterialDensity.CarbonFibre,
             "AHŞAP" or "AHSAP" or "WOOD" => MaterialDensity.Wood,
             "BALSA" => MaterialDensity.Balsa,

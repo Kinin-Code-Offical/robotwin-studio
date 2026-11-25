@@ -241,6 +241,7 @@ namespace RobotWin.Studio.World
         private static ObjectModel BuildBody(WorldObject o)
         {
             if (ReadyModels.TryBuild(o) is { } ready) return ready;   // [objs] ready wheels, casters, propellers (World/ReadyModels.cs)
+            if (DriveModels.TryBuild(o) is { } drive) return drive;   // [drive] gears, bearings, shafts, screws (World/DriveModels.cs)
             if (o.Shape == "wing") return WingModels.Build(o, ParseColor(o.Color, MaterialColor(o.Material)));   // [aero] World/WingModels.cs
             var m = new ObjectModel();
             var c = ParseColor(o.Color, MaterialColor(o.Material));

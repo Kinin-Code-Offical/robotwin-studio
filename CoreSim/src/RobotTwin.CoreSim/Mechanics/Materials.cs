@@ -110,6 +110,8 @@ namespace RobotTwin.CoreSim.Mechanics
             M("aluminium", 0.61, 0.47, 0.60, 0.004, 1e6, 270e6, 2700, "aluminum", "alüminyum", "aluminyum");
             M("steel", 0.74, 0.57, 0.60, 0.002, 2e6, 350e6, 7850, "çelik", "celik");
             M("brass", 0.50, 0.40, 0.55, 0.003, 1.5e6, 200e6, 8500, "pirinç");
+            M("pom", 0.25, 0.20, 0.45, 0.008, 3e5, 65e6, 1410, "asetal", "acetal", "delrin");   // [drive] gears
+            M("zinc", 0.60, 0.50, 0.55, 0.003, 1.5e6, 210e6, 6600, "çinko", "cinko", "zamak");   // [drive] cast housings
             M("ptfe", 0.05, 0.04, 0.40, 0.010, 1e5, 20e6, 2200, "teflon");
             M("foam", 0.60, 0.50, 0.10, 0.050, 2e3, 0.3e6, 30, "köpük", "kopuk", "sünger");
 
