@@ -201,7 +201,7 @@ namespace RobotTwin.CoreSim.Automation
                     }
 
                     board.Firmware = prog.Firmware?.FileName ?? fw ?? string.Empty;
-                    if (AttachEsp32(board, source) is { } esp)
+                    if (AttachEsp32(board, source, prog.Parameters) is { } esp)
                     {
                         AttachI2c(esp.I2c, prog.RefDes, World.Environment.Gravity);
                         AttachSpi(esp, prog.RefDes);

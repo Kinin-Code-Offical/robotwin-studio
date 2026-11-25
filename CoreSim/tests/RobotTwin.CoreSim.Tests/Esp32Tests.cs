@@ -579,7 +579,7 @@ void loop() {
             var line10 = q.First(l => l.StartsWith("q=10 ", StringComparison.Ordinal)).Trim();
             int fastAt10 = int.Parse(line10.Split(' ')[1].Substring(5));
             int tAt10 = int.Parse(line10.Split(' ')[2].Substring(2));
-            Assert.InRange(tAt10, 540, 570);   // boot 50 ms + 10 * 50 ms
+            Assert.InRange(tAt10, 500, 520);   // 10 × 50 ms after setup; millis() counts from the application's start, as on the chip
             Assert.InRange(fastAt10, 48, 53);
             Assert.True(rig.CoSim.WifiOn);
         }

@@ -19,6 +19,8 @@ uint64_t now_ns();
 uint64_t uptime_ns();                 /* since the chip reset: millis()/micros() base */
 uint64_t ms_to_ns(uint64_t ms);
 uint64_t cost(double nanoseconds);    /* scaled by rw_config.cost_scale */
+/* The n-th FreeRTOS tick boundary (1 ms) from now, absolute: where vTaskDelay(n) and tick timeouts end. */
+uint64_t tick_deadline(uint32_t ticks);
 
 /* Accounts execution time of an API call. A sketch task that passes the end of the
    host's slice blocks here until the host advances; may also switch to the ISR/system

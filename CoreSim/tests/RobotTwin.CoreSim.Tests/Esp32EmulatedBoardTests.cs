@@ -66,7 +66,7 @@ namespace RobotTwin.CoreSim.Tests
                 }
             }
 
-            run(0.3);
+            run(0.6);   // the ROM and the bootloader take ~0.29 s before the application starts
             string boot = serial.ToString();
             _out.WriteLine(boot);
             Assert.Contains(string.Concat(Enumerable.Repeat("0123456789", 30)), boot);   // longer than the FIFO: the TX-empty interrupt carried it
@@ -317,7 +317,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Contains("uyandi 2 neden 4", text);   // ESP_SLEEP_WAKEUP_TIMER, the counter kept in RTC memory
             Assert.Contains("uyandi 3 neden 4", text);
             Assert.Contains("uyku bitti", text);
-            Assert.InRange(sim.Time, 0.4, 0.9);          // two 200 ms sleeps and three starts
+            Assert.InRange(sim.Time, 1.2, 1.45);         // two 200 ms sleeps and three starts, each through the ROM and the bootloader (~0.29 s)
         }
 
         /// <summary>A [Fact] skipped unless RW_ESP32_EDGES_ELF names the edge-counting sketch's real-chip ELF.</summary>
@@ -578,6 +578,47 @@ namespace RobotTwin.CoreSim.Tests
             _out.WriteLine($"encoder turned {turned} from the counter's start to the last line, counted {counted}");
             Assert.True(Math.Abs(turned) > 400, "the motor turned");
             Assert.InRange(Math.Abs(counted), Math.Abs(turned) - 4, Math.Abs(turned) + 4);
+        }
+
+        [NeoPixelElfFact]
+        public void WorldRunnerRunsTheHardwareModeOnTheEmulator()
+        {
+            // The headless world runner in the hardware-compatible mode: the NeoPixel sketch's real-chip build on the
+            // emulator, its RMT frames lighting the strips wired in the world (rgbLedWrite on IO5, Adafruit_NeoPixel on IO19).
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_NEOPIXEL_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var w = new RobotTwin.CoreSim.Sandbox.WorldDocument();
+            var esp = w.AddComponent(Lib, Esp32Parts.DevKitCId, new RobotTwin.CoreSim.Sandbox.WorldPose());
+            var one = w.AddComponent(Lib, "ws2812-strip", new RobotTwin.CoreSim.Sandbox.WorldPose { X = 0.1 });
+            var three = w.AddComponent(Lib, "ws2812-strip", new RobotTwin.CoreSim.Sandbox.WorldPose { X = 0.2 });
+            one.Parameters["count"] = "1";
+            three.Parameters["count"] = "3";
+            void Wire(RobotTwin.CoreSim.Sandbox.WorldObject a, string pa, RobotTwin.CoreSim.Sandbox.WorldObject b, string pb) =>
+                w.Connect(new RobotTwin.CoreSim.Sandbox.CableEnd { ObjectId = a.Id, Pin = pa }, new RobotTwin.CoreSim.Sandbox.CableEnd { ObjectId = b.Id, Pin = pb });
+            foreach (var (strip, pin) in new[] { (one, "IO5"), (three, "IO19") })
+            {
+                Wire(esp, "5V", strip, "VDD");
+                Wire(esp, "GND1", strip, "GND");
+                Wire(esp, pin, strip, "DIN");
+            }
+
+            esp.Firmware = new RobotTwin.CoreSim.Formats.FirmwareSource { FileName = "neopixel.ino", Source = "// the real-chip build comes from the builder\nvoid setup() {}\nvoid loop() {}\n" };
+            var options = new RobotTwin.CoreSim.Automation.RunnerOptions
+            {
+                Esp32Mode = Esp32Parts.HardwareMode,
+                Esp32HardwareBuilder = _ => (File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null)
+            };
+            using var runner = new RobotTwin.CoreSim.Automation.WorldRunner(w, options);
+            runner.Step(0.5);
+            string text = string.Concat(runner.ReadSerial(null, false).Values);
+            foreach (var e in runner.DrainEvents()) _out.WriteLine($"[{e.Time:0.000}] {e.Source}: {e.Message}");
+            _out.WriteLine(text);
+            Assert.Contains("kutuphane yazildi", text);
+            var strips = runner.Compiled!.Circuit.Devices.OfType<RobotTwin.CoreSim.Firmware.Devices.Ws2812Load>().OrderBy(s => s.Strip.Count).ToList();
+            Assert.Equal(((byte)10, (byte)20, (byte)30), strips[0].Strip.Colors[0]);
+            Assert.Equal(((byte)255, (byte)0, (byte)0), strips[1].Strip.Colors[0]);
+            Assert.Equal(((byte)0, (byte)255, (byte)0), strips[1].Strip.Colors[1]);
+            Assert.Equal(((byte)0, (byte)0, (byte)255), strips[1].Strip.Colors[2]);
         }
 
         /// <summary>A [Fact] skipped unless RW_ESP32_FLASH_ELF names the Preferences + LittleFS sketch's real-chip ELF.</summary>

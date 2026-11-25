@@ -80,5 +80,5 @@ A hardware-compatible board now runs on the emulator on the circuit page and in 
 3. The chip: memory map, ELF loading, ROM, two cores, interrupt matrix, FreeRTOS tick → Blink and Serial.
 4. Peripherals → every template without radio.
 5. Wi-Fi/BLE trapping → the radio templates.
-6. Mode difference report, speed (idle skip, decoded-block cache), docs.
+6. Mode difference report, speed (idle skip, decoded-block cache), docs. The report is in: `--esp32-compare report.md`; the six comparable templates agree in both modes (the differences it found are fixed: the RMT, boot time, `millis()`'s origin, tick-aligned `delay()`, servo ticks, the LEDC update wait). Speed is next.
 7. (P2) Hardware in the loop.

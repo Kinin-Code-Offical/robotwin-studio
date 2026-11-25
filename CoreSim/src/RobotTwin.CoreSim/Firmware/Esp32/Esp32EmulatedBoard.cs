@@ -257,7 +257,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 Emit("ets Jun  8 2016 00:22:57\r\n\r\nrst:" + RomResetText(romResetReason) + ",boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n");
             _soc = soc;
             Array.Clear(_uartSent, 0, _uartSent.Length);
-            _bootTime = time;
+            // The ROM and the 2nd-stage bootloader (not emulated: the application is loaded straight away) take their time
+            // before the application starts, so setup() comes when it does in the fast mode and on the chip.
+            _bootTime = time + Math.Max(0.0, Options.BootDelay - Options.AppStartTime);
             State = Esp32BoardState.Running;
             BootCount++;
             _everRan = true;

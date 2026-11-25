@@ -582,6 +582,31 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             return null;
         }
 
+        private static string? _shimStamp;
+
+        /// <summary>
+        /// A short stamp of the HAL shim's sources (the embedded copy): part of a sketch build's cache key, since the sketch's
+        /// DLL links the shim in. Without it a changed HAL kept running every sketch built before it.
+        /// </summary>
+        public static string ShimStamp => _shimStamp ??= ComputeShimStamp();
+
+        private static string ComputeShimStamp()
+        {
+            var asm = typeof(Esp32SketchCompiler).Assembly;
+            using var sha = SHA256.Create();
+            var ms = new MemoryStream();
+            foreach (string name in asm.GetManifestResourceNames().Where(n => n.Replace('\\', '/').StartsWith(ResourcePrefix, StringComparison.Ordinal)).OrderBy(n => n, StringComparer.Ordinal))
+            {
+                byte[] key = Encoding.UTF8.GetBytes(name + "\0");
+                ms.Write(key, 0, key.Length);
+                using var stream = asm.GetManifestResourceStream(name);
+                stream?.CopyTo(ms);
+            }
+
+            byte[] hash = sha.ComputeHash(ms.ToArray());
+            return BitConverter.ToString(hash, 0, 4).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
         private static string HashShim(SortedDictionary<string, byte[]> sources, IReadOnlyDictionary<string, string> env)
         {
             using (var sha = SHA256.Create())

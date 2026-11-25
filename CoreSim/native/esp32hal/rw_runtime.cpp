@@ -437,6 +437,11 @@ uint64_t now_ns() { return g_now; }
 
 uint64_t uptime_ns() { return g_now > config.time_origin_ns ? g_now - config.time_origin_ns : 0; }
 
+uint64_t tick_deadline(uint32_t ticks) {
+    uint64_t tick = uptime_ns() / 1000000ull;   // ticks since the scheduler started (the app's start)
+    return config.time_origin_ns + (tick + ticks) * 1000000ull;
+}
+
 uint64_t ms_to_ns(uint64_t ms) { return ms * 1000000ull; }
 
 uint64_t cost(double ns) {

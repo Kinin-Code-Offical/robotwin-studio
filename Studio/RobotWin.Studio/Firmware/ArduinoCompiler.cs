@@ -171,7 +171,9 @@ namespace RobotWin.Studio.Firmware
         private static string Esp32Dir(string source)
         {
             string libs = RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler.LibraryStamp(source, LibraryRoots);
-            return Path.Combine(BuildRoot, "esp32", "abi" + RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation.AbiVersion + "-" + FirmwareHash(source) + (libs.Length > 0 ? "-l" + libs : string.Empty));
+            // The HAL's own stamp too: the DLL links the HAL in, so a changed HAL rebuilds the sketch.
+            return Path.Combine(BuildRoot, "esp32", "abi" + RobotTwin.CoreSim.Firmware.Esp32.Esp32CoSimulation.AbiVersion + "-" + FirmwareHash(source)
+                + "-h" + RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler.ShimStamp + (libs.Length > 0 ? "-l" + libs : string.Empty));
         }
 
         private static string FirmwareHash(string source) => RobotTwin.CoreSim.Formats.FirmwareSource.HashOf(source);

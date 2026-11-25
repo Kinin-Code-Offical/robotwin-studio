@@ -100,6 +100,18 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Native DLL for an ESP32 board (sketch source in, DLL path out); null = ESP32 boards stay idle.</summary>
         public Func<string, string?>? Esp32Builder { get; set; }
 
+        /// <summary>
+        /// [esp32hw] The real-chip build of an ESP32 sketch for the hardware-compatible mode (source in; the ELF and the
+        /// merged flash image out), or null when there is none: such a board then runs as the fast mode, saying why.
+        /// </summary>
+        public Func<string, (byte[] Elf, byte[]? Image)?>? Esp32HardwareBuilder { get; set; }
+
+        /// <summary>
+        /// [esp32hw] Every ESP32 board's run mode for this run: "hardware" (or <see cref="Esp32Parts.HardwareMode"/>) or
+        /// "fast" (or <see cref="Esp32Parts.FastMode"/>); null: each board's own setting.
+        /// </summary>
+        public string? Esp32Mode { get; set; }
+
         public string? ResolveFirmware(string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
@@ -130,7 +142,12 @@ namespace RobotTwin.CoreSim.Automation
         public string Firmware { get; set; } = string.Empty;
         public bool Running { get; set; }
         internal FirmwareCoSimulation? Avr;
+
+        /// <summary>The fast mode's board (the radio medium bridges to it).</summary>
         internal Esp32CoSimulation? Esp;
+
+        /// <summary>The ESP32 board in either mode (fast, or the hardware-compatible one on the Xtensa emulator).</summary>
+        internal IEsp32Board? Esp32;
 
         public JsonObject ToJson() => new JsonObject
         {
@@ -163,7 +180,7 @@ namespace RobotTwin.CoreSim.Automation
         private readonly Dictionary<DigitalPin, PinCommand> _pinOverrides = new Dictionary<DigitalPin, PinCommand>();
         private readonly Dictionary<AveragedPwmDriver, (double Duty, int Control)> _dutyOverrides = new Dictionary<AveragedPwmDriver, (double, int)>();
         protected readonly List<FirmwareCoSimulation> Avr = new List<FirmwareCoSimulation>();
-        protected readonly List<Esp32CoSimulation> Esp = new List<Esp32CoSimulation>();
+        protected readonly List<IEsp32Board> Esp = new List<IEsp32Board>();
         protected readonly Dictionary<string, II2cDevice> I2cDevices = new Dictionary<string, II2cDevice>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Firmware replacing a board's own (board refdes or object id → Intel HEX text), applied on reset.</summary>
@@ -390,7 +407,8 @@ namespace RobotTwin.CoreSim.Automation
             }
         }
 
-        protected Esp32CoSimulation? AttachEsp32(BoardInfo board, string? source)
+        /// <param name="parameters">The board part's parameters (its run mode), unless <see cref="RunnerOptions.Esp32Mode"/> sets every board's.</param>
+        protected IEsp32Board? AttachEsp32(BoardInfo board, string? source, IReadOnlyDictionary<string, string>? parameters = null)
         {
             board.Mcu = "esp32";
             if (string.IsNullOrWhiteSpace(source))
@@ -398,6 +416,11 @@ namespace RobotTwin.CoreSim.Automation
                 AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, "ESP32'de kod yok."));
                 return null;
             }
+
+            bool hardware = Options.Esp32Mode != null
+                ? Options.Esp32Mode == Esp32Parts.HardwareMode || string.Equals(Options.Esp32Mode, "hardware", StringComparison.OrdinalIgnoreCase)
+                : Esp32Parts.IsHardwareMode(parameters);
+            if (hardware && AttachEmulatedEsp32(board, source!) is { } emulated) return emulated;
 
             string? dll = Options.Esp32Builder?.Invoke(source!);
             if (dll == null)
@@ -413,6 +436,7 @@ namespace RobotTwin.CoreSim.Automation
                 cosim.SerialOutput += text => AppendSerial(key, text);
                 Esp.Add(cosim);
                 board.Esp = cosim;
+                board.Esp32 = cosim;
                 board.Running = true;
                 AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Info, "Yazılım çalışıyor (ESP32 HAL modeli)"));
                 return cosim;
@@ -420,6 +444,45 @@ namespace RobotTwin.CoreSim.Automation
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is InvalidOperationException || ex is System.IO.IOException)
             {
                 AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, "ESP32 başlatılamadı: " + ex.Message));
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// [esp32hw] A hardware-compatible ESP32: the sketch's real-chip build on the Xtensa emulator, as the app runs it. Null
+        /// (after saying why) when the sketch needs what the emulator lacks or there is no build: the board runs as the fast mode.
+        /// </summary>
+        private IEsp32Board? AttachEmulatedEsp32(BoardInfo board, string source)
+        {
+            if (Esp32Parts.EmulatorGap(source) is { } gap)
+            {
+                AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, string.Format(System.Globalization.CultureInfo.InvariantCulture, Esp32Parts.HardwareModeGapNotice, gap)));
+                return null;
+            }
+
+            var build = Options.Esp32HardwareBuilder?.Invoke(source);
+            if (build == null)
+            {
+                AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, Esp32Parts.HardwareModeNoToolchain));
+                return null;
+            }
+
+            try
+            {
+                var emulated = new Esp32EmulatedBoard(build.Value.Elf, build.Value.Image, Compiled!, board.RefDes);
+                string key = board.RefDes;
+                emulated.SerialOutput += text => AppendSerial(key, text);
+                emulated.Log += m => AddEvent(new RunnerEvent(Simulator?.Time ?? 0, board.Name, RunnerEventKind.Info, m));
+                Esp.Add(emulated);
+                board.Esp32 = emulated;
+                board.Running = true;
+                board.Mcu = "esp32 (emülatör)";
+                AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Info, "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)"));
+                return emulated;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is System.IO.IOException || ex is ArgumentException)
+            {
+                AddEvent(new RunnerEvent(0, board.Name, RunnerEventKind.Warning, "ESP32 emülatörü başlatılamadı: " + ex.Message));
                 return null;
             }
         }
@@ -473,7 +536,7 @@ namespace RobotTwin.CoreSim.Automation
         protected virtual double AltitudeOf(string fullRef) => 0;
 
         /// <summary>Puts the SPI devices wired to an ESP32's GPIOs on its SPI master (same rules as the app).</summary>
-        protected void AttachSpi(Firmware.Esp32.Esp32CoSimulation esp, string boardRef)
+        protected void AttachSpi(Firmware.Esp32.IEsp32Board esp, string boardRef)
         {
             var c = Compiled!;
             var ctx = new Firmware.SpiWiring.Context
@@ -579,9 +642,9 @@ namespace RobotTwin.CoreSim.Automation
                     b.Avr.Mcu.WriteSerial(text);
                     sent++;
                 }
-                else if (b.Esp != null)
+                else if (b.Esp32 != null)
                 {
-                    b.Esp.SendSerial(text);
+                    b.Esp32.SendSerial(text);
                     sent++;
                 }
             }

@@ -99,7 +99,7 @@ namespace RobotTwin.CoreSim.Automation
                     }
 
                     board.Firmware = embedded?.FileName ?? fw ?? string.Empty;
-                    if (AttachEsp32(board, source) is { } e)
+                    if (AttachEsp32(board, source, part.Parameters) is { } e)
                     {
                         AttachI2c(e.I2c, part.RefDes, 9.81);
                         AttachLedStrips(e, part.RefDes);

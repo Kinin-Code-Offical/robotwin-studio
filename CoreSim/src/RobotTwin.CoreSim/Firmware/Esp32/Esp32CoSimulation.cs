@@ -13,6 +13,13 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>Time from reset to setup() (ROM + 2nd stage bootloader + app start), seconds.</summary>
         public double BootDelay { get; set; } = 0.3;
 
+        /// <summary>
+        /// [esp32hw] The part of <see cref="BootDelay"/> the application itself takes (IDF's start-up and initArduino, from
+        /// esp_timer's zero to setup()): millis() reads about this much in setup(), as on the chip, since esp_timer starts
+        /// with the application, after the ROM and the bootloader. The Xtensa emulator runs this part itself.
+        /// </summary>
+        public double AppStartTime { get; set; } = 0.007;
+
         /// <summary>Wall-clock time a sketch task may run without any API call before it is reported hung.</summary>
         public int WatchdogMilliseconds { get; set; } = 2000;
 
@@ -452,7 +459,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             {
                 StructSize = (uint)Marshal.SizeOf<Esp32Abi.Config>(),
                 WatchdogMs = (uint)Math.Max(100, Options.WatchdogMilliseconds),
-                TimeOriginNs = Ns(time),
+                TimeOriginNs = Ns(time + Math.Max(0.0, Options.BootDelay - Options.AppStartTime)),   // millis() from the app's start
                 RandomSeed = Options.RandomSeed + (ulong)BootCount,
                 AdcModel = Options.RealisticAdc ? 1 : 0,
                 ResetReason = resetReason,

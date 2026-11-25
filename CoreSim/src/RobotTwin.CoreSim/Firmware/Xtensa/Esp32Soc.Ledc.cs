@@ -167,7 +167,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             ch.FadeCycle = Math.Max(1, (conf1 >> 10) & 0x3FF);
             ch.FadeNum = (conf1 >> 20) & 0x3FF;
             ch.FadeUp = (conf1 & (1u << 30)) != 0;
-            ch.StartAt = Seconds + period;
+            // The update lands at the timer's next period boundary (the counter's overflow); IDF waits for it before the next.
+            ch.StartAt = period > 0 ? (Math.Floor(Seconds / period) + 1) * period : Seconds;
             ch.EndAt = ch.StartAt + ch.FadeNum * ch.FadeCycle * period;
         }
 

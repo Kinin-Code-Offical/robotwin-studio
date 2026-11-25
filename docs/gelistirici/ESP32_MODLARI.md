@@ -80,5 +80,5 @@ Donanım uyumlu kart artık devre sayfasında ve dünyada emülatörde çalış�
 3. Yonga: bellek haritası, ELF yükleme, ROM, iki çekirdek, kesme matrisi, FreeRTOS tick → Blink ve Serial.
 4. Çevre birimleri → radyosuz bütün şablonlar.
 5. Wi-Fi/BLE yakalama → radyolu şablonlar.
-6. Mod farkı raporu, performans (boşta atlama, çözülmüş blok önbelleği), belgeler.
+6. Mod farkı raporu, performans (boşta atlama, çözülmüş blok önbelleği), belgeler. Rapor hazır: `--esp32-compare rapor.md`; altı karşılaştırılabilir şablon iki modda uyumlu (bulduğu farklar düzeltildi: RMT, önyükleme süresi, `millis()` başlangıcı, tik hizalı `delay()`, servo tikleri, LEDC güncelleme beklemesi). Sırada hız.
 7. (P2) Donanım içeren test.

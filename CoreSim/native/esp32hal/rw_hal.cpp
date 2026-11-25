@@ -55,6 +55,7 @@ struct Channel {
     double freq;
     uint8_t res;
     uint32_t duty;
+    uint64_t pending_until;   // when the last duty update takes effect (the LEDC timer's next period boundary)
 };
 
 PinState g_pins[40];
@@ -642,8 +643,14 @@ extern "C" int64_t esp_timer_get_time(void) {
 }
 
 extern "C" void delay(uint32_t ms) {
+    // Arduino-ESP32's delay() is vTaskDelay(ms): it ends at a tick boundary, n-1 to n ms later (delay(0) yields).
     charge(cost(kCostTime));
-    sleep_until(now_ns() + ms_to_ns(ms));
+    if (ms == 0) {
+        yield_task();
+        return;
+    }
+
+    sleep_until(tick_deadline(ms));
 }
 
 extern "C" void delayMicroseconds(uint32_t us) {
@@ -900,8 +907,19 @@ bool ledcWrite(uint8_t chanOrPin, uint32_t duty) {
         return false;
     }
 
-    uint32_t full = (uint32_t)(1ull << g_ch[c].res);
-    g_ch[c].duty = duty > full ? full : duty;
+    // As IDF 5's ledc_set_duty does on the chip: while the previous duty update has not taken effect (DUTY_START still
+    // set: it lands at the LEDC timer's next period boundary) it waits a tick at a time. Writing a 50 Hz servo more often
+    // than every 20 ms holds the caller to the servo's period, on the chip and here alike.
+    Channel& ch = g_ch[c];
+    if (ch.freq > 0.0) {
+        while (on_task() && !in_isr() && now_ns() < ch.pending_until) vTaskDelay(1);
+        double period_ns = 1e9 / ch.freq;
+        double next = (floor((double)now_ns() / period_ns) + 1.0) * period_ns;
+        ch.pending_until = (uint64_t)next;
+    }
+
+    uint32_t full = (uint32_t)(1ull << ch.res);
+    ch.duty = duty > full ? full : duty;
     ledc_apply(c);
     return true;
 }

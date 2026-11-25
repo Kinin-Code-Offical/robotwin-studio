@@ -88,6 +88,14 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Arg("--esp32-compare") is { } compareReport)
+            {
+                // [esp32hw] stage 6: every ESP32 world template in both modes, the differences in a markdown report
+                double seconds = double.TryParse(Arg("--esp32-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0 ? s : 3.0;
+                Shutdown(Firmware.Esp32ModeComparison.Run(compareReport, seconds));
+                return;
+            }
+
             if (Arg("--esp32-build") is { } esp32Sketch)
             {
                 // [esp32hw] --esp32-build sketch.ino [--esp32-out folder] [--esp32-install]: the hardware-compatible build of
@@ -612,6 +620,15 @@ namespace RobotWin.Studio
 
             try
             {
+                // A sketch that is not there is said plainly (it used to throw out of the windowless run and leave the
+                // process waiting on an error dialog).
+                if (!File.Exists(sketch))
+                {
+                    Console.Error.WriteLine("Çizim bulunamadı: " + sketch);
+                    Line("Çizim bulunamadı: " + sketch);
+                    return 4;
+                }
+
                 if (!Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
                 {
                     if (!install)
@@ -637,9 +654,21 @@ namespace RobotWin.Studio
                 Line($"tamam · flash {result.FlashBytes}/{result.FlashMax} B · RAM {result.RamBytes}/{result.RamMax} B · {result.Duration.TotalSeconds:F0} s");
                 return 0;
             }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                Line("Derleme yapılamadı: " + ex.Message);
+                return 4;
+            }
             finally
             {
-                File.WriteAllText(logPath, log.ToString());
+                try
+                {
+                    File.WriteAllText(logPath, log.ToString());
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    Console.Error.WriteLine(log.ToString());
+                }
             }
         }
 

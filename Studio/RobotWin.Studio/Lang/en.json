@@ -6928,7 +6928,6 @@
   "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware running (real-chip firmware, RobotWin's Xtensa emulator)",
   "SPI: ": "SPI: ",
   "bekçi (watchdog) kartı sıfırladı": "a watchdog reset the board",
-  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, DAC, timers, watchdogs, Serial/Serial1/Serial2, I2C (Wire) and SPI are modelled; Wi-Fi/BLE are not yet.",
   "WS2812B Adreslenebilir LED Şerit": "WS2812B Addressable LED Strip",
   "Tek veri hattıyla sürülen 5 V RGB LED zinciri (WS2812B / NeoPixel). Her LED kendisine ulaşan ilk 24 bitlik GRB sözcüğünü alır, gerisini DOUT'tan sonrakine geçirir. LED başına ≈1 mA, tam beyazda 60 mA'ya kadar.": "A chain of 5 V RGB LEDs driven over one data line (WS2812B / NeoPixel). Each LED takes the first 24-bit GRB word that reaches it and passes the rest on through DOUT. About 1 mA an LED, up to 60 mA at full white.",
   "Çıkış · Adreslenebilir LED": "Output · Addressable LED",
@@ -6941,7 +6940,8 @@
   "ESP32, IO5'e bağlı 8 LED'lik WS2812B şeritte gökkuşağı döndürür (Adafruit_NeoPixel, iki modda da). Şerit 5 V'u kartın VIN'inden alır ve renklerine göre akım çeker; oda loş, LED'ler parlar.": "An ESP32 turns a rainbow along the 8-LED WS2812B strip on IO5 (Adafruit_NeoPixel, in both modes). The strip takes 5 V from the board's VIN and draws current by its colours; the room is dim, the LEDs glow.",
   "WS2812B şerit (8 LED)": "WS2812B strip (8 LEDs)",
   "NeoPixel şerit": "NeoPixel strip",
-  "ESP32, 8 LED'lik WS2812B şeritte gökkuşağı döndürür.": "An ESP32 turns a rainbow along an 8-LED WS2812B strip."
+  "ESP32, 8 LED'lik WS2812B şeritte gökkuşağı döndürür.": "An ESP32 turns a rainbow along an 8-LED WS2812B strip.",
+  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, dokunma, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire), SPI, RMT (NeoPixel), darbe sayıcı (enkoder), MCPWM, flaş (Preferences, LittleFS), derin ve hafif uyku modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, DAC, touch, timers, watchdogs, Serial/Serial1/Serial2, I2C (Wire), SPI, the RMT (NeoPixel), the pulse counter (encoders), MCPWM, flash (Preferences, LittleFS), deep and light sleep are modelled; Wi-Fi/BLE not yet."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

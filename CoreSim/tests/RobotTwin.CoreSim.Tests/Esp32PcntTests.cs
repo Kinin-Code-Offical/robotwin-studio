@@ -173,7 +173,9 @@ void loop() {
             Assert.True(timer.Count >= 2);
             foreach (var m in timer) Assert.InRange(int.Parse(m.Groups[2].Value), 499, 501);
             var gpio = wakes.Single(m => m.Groups[1].Value == "7");
-            Assert.InRange(int.Parse(gpio.Groups[3].Value), 1600, 1602);   // at the press, not at the next timer wake-up
+            // At the press (1.6 s of the world, millis() counting from the application's start 0.293 s after the reset), not
+            // at the next timer wake-up.
+            Assert.InRange(int.Parse(gpio.Groups[3].Value), 1306, 1309);
             Assert.True(board.LightSleeps >= 3);
         }
 
@@ -260,6 +262,54 @@ void loop() {
   delay(100);
 }
 ";
+
+        [Esp32Fact]
+        public void ServoPulsesComeInTheLibrarysTimerTicks()
+        {
+            // As the ESP32Servo library the hardware build uses: a 10-bit LEDC timer at 50 Hz, the pulse in 19.53 us ticks,
+            // truncated: write(87) maps to 1441 us, sent as 73 ticks (1425 us); 400 Hz for an ESC, 1700 us as 696 ticks.
+            var w = new WorldDocument();
+            var esp = w.AddComponent(Lib, Esp32Parts.DevKitCId, new WorldPose());
+            esp.Firmware = new FirmwareSource
+            {
+                FileName = "servo.ino",
+                Source = @"#include <ESP32Servo.h>
+Servo elev, esc;
+void setup() {
+  esc.setPeriodHertz(400);
+  esc.attach(25, 1000, 2000);
+  esc.writeMicroseconds(1700);
+  elev.attach(26);
+  elev.write(87);
+  Serial.begin(115200);
+  Serial.printf(""us=%d ticks=%d\n"", elev.readMicroseconds(), elev.readTicks());
+}
+void loop() { delay(10); }
+"
+            };
+            string dir = Path.Combine(Path.GetTempPath(), "robotwin-esp32-servo-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var options = new RunnerOptions
+            {
+                Esp32Builder = src =>
+                {
+                    var build = new Esp32SketchCompiler().Compile(src, dir);
+                    Assert.True(build.Success, string.Join("\n", build.Diagnostics) + "\n" + build.Log);
+                    return build.DllPath;
+                }
+            };
+            using var runner = new WorldRunner(w, options);
+            runner.Step(0.6);
+            string text = string.Concat(runner.ReadSerial(null, false).Values);
+            _out.WriteLine(text);
+            Assert.Contains("us=1425 ticks=73", text);
+            var pins = runner.Compiled!.Circuit.Devices.OfType<RobotTwin.CoreSim.Analog.Devices.DigitalPin>().ToList();
+            var servo = pins.Single(p => p.Id.EndsWith(".IO26", StringComparison.Ordinal));
+            var escPin = pins.Single(p => p.Id.EndsWith(".IO25", StringComparison.Ordinal));
+            Assert.Equal(50, servo.PwmFrequency, 3);
+            Assert.Equal(73 / 1024.0, servo.PwmDuty, 9);
+            Assert.Equal(400, escPin.PwmFrequency, 3);
+            Assert.Equal(696 / 1024.0, escPin.PwmDuty, 9);
+        }
 
         [Esp32Fact]
         public void EspErrorCheckAbortsAndRestartsTheBoardAsTheChipDoes()

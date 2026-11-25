@@ -8,9 +8,10 @@ namespace {
 
 const double kCostRtos = 300.0;
 
+/* FreeRTOS counts its 1 ms tick interrupts: a wait of n ticks ends at the n-th tick boundary from now (n-1 to n ms). */
 uint64_t ticks_to_deadline(TickType_t ticks) {
     if (ticks == portMAX_DELAY) return kForever;
-    return now_ns() + (uint64_t)ticks * 1000000ull;
+    return tick_deadline(ticks);
 }
 
 bool can_block(TickType_t ticks) { return ticks != 0 && on_task() && !in_isr(); }
@@ -50,7 +51,7 @@ extern "C" void vTaskDelay(TickType_t ticks) {
         return;
     }
 
-    sleep_until(now_ns() + (uint64_t)ticks * 1000000ull);
+    sleep_until(tick_deadline(ticks));
 }
 
 extern "C" BaseType_t xTaskDelayUntil(TickType_t* previous, TickType_t increment) {

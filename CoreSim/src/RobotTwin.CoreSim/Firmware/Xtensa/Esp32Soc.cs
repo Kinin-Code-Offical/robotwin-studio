@@ -371,7 +371,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         /// <summary>
         /// Bits the hardware clears by itself once it has acted on them, so they never read back (and a later
-        /// read-modify-write of the register does not start the action again): SPI2/3 CMD.USR, I2C0/1 CTR.TRANS_START.
+        /// read-modify-write of the register does not start the action again): SPI2/3 CMD.USR, I2C0/1 CTR.TRANS_START,
+        /// RMT CHnCONF1.TX_START and its memory resets.
         /// </summary>
         private static uint SelfClearing(uint register)
         {
@@ -384,6 +385,10 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 case 0x3FF67004:
                     return 1u << 5;
                 default:
+                    // RMT CHnCONF1: TX_START and the memory pointer resets (MEM_WR_RST, MEM_RD_RST, APB_MEM_RST). Kept, a
+                    // driver's later read-modify-write of the register (its idle level, a pointer reset) started the
+                    // channel again, which then read the last frame's end marker and ended at once.
+                    if (register >= 0x3FF56024 && register <= 0x3FF5605C && (register & 7) == 4) return 1u | 1u << 2 | 1u << 3 | 1u << 4;
                     return 0;
             }
         }
