@@ -892,7 +892,33 @@ namespace RobotWin.Studio.World
             it.Current = it.Placed;
             foreach (var j in World!.Joints)
             {
-                if (j.Kind != WorldJointKind.Fixed) continue;
+                if (j.Kind != WorldJointKind.Fixed)
+                {
+                    // [drive] A previewed hinge or slider (an imported robot's motorised axis, by joint id): the part turns
+                    // about, or slides along, the joint's axis as built, carried by its parent.
+                    if (j.ObjectA != it.Object.Id || PreviewAngles == null || !PreviewAngles.TryGetValue(j.Id, out double value)) continue;
+                    var axis = new Vector3D(j.AxisX, j.AxisY, j.AxisZ);
+                    if (axis.Length < 1e-9) axis = new Vector3D(0, 0, 1);
+                    axis.Normalize();
+                    var anchor = j.AnchorX == 0 && j.AnchorY == 0 && j.AnchorZ == 0 ? it.Placed.Transform(new Point3D()) : new Point3D(j.AnchorX, j.AnchorY, j.AnchorZ);
+                    var turn = Matrix3D.Identity;
+                    if (j.Kind == WorldJointKind.Hinge) turn.RotateAt(new Quaternion(axis, value * 180 / Math.PI), anchor);
+                    else turn.Translate(axis * value);
+                    if (j.ObjectB != null && _items.TryGetValue(j.ObjectB, out var holder))
+                    {
+                        var holderNow = Resolve(holder, done, depth + 1);
+                        var back = holder.Placed;
+                        back.Invert();
+                        it.Current = it.Placed * turn * back * holderNow;
+                    }
+                    else
+                    {
+                        it.Current = it.Placed * turn;
+                    }
+
+                    break;
+                }
+
                 string? parentId = null, port = null;
                 if (j.ObjectA == it.Object.Id && j.ObjectB != null)
                 {

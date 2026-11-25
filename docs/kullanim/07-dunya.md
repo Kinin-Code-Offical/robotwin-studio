@@ -248,6 +248,8 @@ Hedef ulaşılamıyorsa en yakın nokta ve nedeni yazılır. Neden ya erişim d�
 
 Bütün servo eksenleri paralelse (servo kol şablonundaki gibi) uç tek bir düzlemde gezer. Bu durumda hedef o düzleme indirilir. Fark 1 mm'den büyükse bu da yazılır.
 
+**Motorlu eksenler (içe aktarılan robotlar):** URDF ya da xacro ile gelen bir kolun eklemleri motorludur ([Robot tanımları](#robot-tanımları-urdf-ve-xacro)); ters kinematik onları da çözer ve satırlarında bağlantının adı görünür. Dururken **Önizle** kolu çözülen duruşta gösterir, **Motor hedefi yap** çözümü motorların hedefi olarak kaydeder (dünya çalışınca kol oraya gider; geri alınabilir). Çalışırken **Eksenleri sür** motorlara çözülen değerleri verir; her eksen URDF'deki tork ve hız sınırıyla gider, satırda motorun hedefi (→) görünür. Motorlu eksenler koda girmez; **Açıları kopyala** yalnız servolar için çıkar.
+
 Çözümde bir servo kilitlenme torkunun yarısından fazlasını harcıyorsa uyarı çıkar. **Erişim alanını sahnede göster** açıkken şunlar çizilir:
 
 | Renk | Ne |

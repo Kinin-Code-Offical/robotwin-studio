@@ -878,6 +878,7 @@ namespace RobotWin.Studio
                 NewWorld(new WorldDocument { Title = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(file)) });
                 _world.ImportRobot(file, quiet: true);
                 if (fault.Contains('#') && W.ActiveWorld?.Objects.FirstOrDefault(o => o.Name == fault.Split('#')[1]) is { } link) _world.Scene.Select(link.Id);
+                _world.RobotSnapshot();   // --arm gripper --arm-target x,y,z --arm-preview: its kinematics
             }
             else if (page == "world" && fault != "debug-e2e") _world.PrepareSnapshot(fault, simulate);
             if (page == "help") _help?.PrepareSnapshot(fault);

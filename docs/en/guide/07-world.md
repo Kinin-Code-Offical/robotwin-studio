@@ -248,6 +248,8 @@ If a target cannot be reached, the nearest point and the reason are shown. The r
 
 If all the servo axes are parallel (as on the servo-arm template), the tip moves in one plane. The target is then brought onto that plane. If it moves by more than 1 mm, this is noted too.
 
+**Motorised axes (imported robots):** the joints of an arm brought in with URDF or xacro have motors ([Robot descriptions](#robot-descriptions-urdf-and-xacro)); inverse kinematics solves them too and their rows show the link's name. While stopped, **Preview** shows the arm in the solved pose and **Make motor targets** saves the solution as the motors' targets (the arm goes there when the world runs; it can be undone). While running, **Drive the axes** gives the motors the solved values; each axis goes with the URDF's torque and speed limits and its row shows the motor's target (→). Motorised axes are not in the board's code: **Copy angles** shows only for servos.
+
 A warning shows when a servo spends more than half its stall torque in the solution. With **Show reach envelope in the scene** on, the scene shows:
 
 | Colour | What |

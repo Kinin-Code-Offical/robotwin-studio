@@ -233,6 +233,35 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void InverseKinematicsSolvesTheMotorisedAxesAndThePhysicsTakesTheTipThere()
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "rw_arm4.urdf.xacro");
+            var world = new WorldDocument();
+            UrdfImport.Import(path, world);
+            var geometry = new ApproximateGeometry(world, Design.PartLibrary.Default);
+            var tip = world.Objects.Single(o => o.Name == "gripper");
+            var arm = Robotics.WorldArm.Build(world, geometry.GeometryOf, tip.Id)!;
+            Assert.Equal(4, arm.ActuatedCount);   // every motorised joint is an axis inverse kinematics may set
+            Assert.All(arm.Axes, a => Assert.True(a.Motor));
+
+            // A point the arm can reach (from a pose inside its limits), solved from the pose as built.
+            var target = arm.Tip(new[] { 0.6, 0.4, -0.7, 0.0 });
+            var s = arm.Solve(target, new double[4]);
+            _out.WriteLine($"çözüm: {string.Join(", ", s.Q.Select(q => (q * 180 / Math.PI).ToString("0.0")))}°, hata {s.Error * 1000:0.000} mm");
+            Assert.True(s.Success);
+            Assert.True(s.Error < 1e-4);
+
+            using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false }, geometry);
+            var physics = runner.Physics!;
+            for (int i = 0; i < arm.Axes.Count; i++) Assert.True(physics.SetJointTarget(arm.Axes[i].JointId!, s.Q[i] * 180 / Math.PI));
+            runner.Step(3.0);
+            var measured = arm.MeasuredTip(physics)!.Value;
+            double miss = (measured - target).Length;
+            _out.WriteLine($"fizikte uç hedeften {miss * 1000:0.00} mm uzakta");
+            Assert.True(miss < 0.003, $"{miss * 1000:0.00} mm");
+        }
+
+        [Fact]
         public void ARobotOnWheelsKeepsAFreeBase()
         {
             var world = new WorldDocument();

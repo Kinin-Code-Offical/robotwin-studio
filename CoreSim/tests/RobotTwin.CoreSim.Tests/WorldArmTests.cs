@@ -108,7 +108,7 @@ namespace RobotTwin.CoreSim.Tests
             var inner = arm.Solve(new Vec3(p1.X + 0.06, p1.Y, on.Z), new double[2]);
             _out.WriteLine(inner.Message);
             Assert.False(inner.Success);
-            Assert.Contains("servo sınırı", inner.Message);
+            Assert.Contains("eksenin sınırı", inner.Message);   // a servo's, or a motorised joint's
             Assert.DoesNotContain("düzlem", inner.Message);
         }
 

@@ -548,6 +548,9 @@ namespace RobotWin.Studio.Pages
         /// [urdf] A robot description (ROS URDF or xacro) into the world: its links as parts, its joints as hinges and sliders
         /// with their limits and motors (Formats/UrdfImport.cs). What could not be read is listed afterwards.
         /// </summary>
+        /// <summary>[urdf] --snapshot with a robot file: the kinematics options (--arm, --arm-target, --arm-preview …) on it too.</summary>
+        public void RobotSnapshot() => KinematicsSnapshot();
+
         public void ImportRobot(string path, bool quiet = false)
         {
             EnsureWorld();

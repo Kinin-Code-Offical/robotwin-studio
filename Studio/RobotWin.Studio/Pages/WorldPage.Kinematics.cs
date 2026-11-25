@@ -70,7 +70,7 @@ namespace RobotWin.Studio.Pages
             {
                 _armTarget ??= arm.Tip(ArmQ());
                 SolveArm();
-            }, "Hedefe ulaşan servo açılarını bulur (ters kinematik); serbest menteşeler olduğu gibi kalır", primary: true));
+            }, "Hedefe ulaşan eksen açılarını bulur (ters kinematik); serbest menteşeler olduğu gibi kalır", primary: true));
             row.Children.Add(Small("Sahnede seç", () =>
             {
                 if (Scene.PickingPoint)
@@ -99,22 +99,26 @@ namespace RobotWin.Studio.Pages
 
             var act = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
             bool running = _session.State != SimState.Stopped && _session.Physics != null;
+            bool servos = arm.Axes.Any(a => a.Kind == WorldAxisKind.Servo), motors = arm.Axes.Any(a => a.Motor);   // [drive]
             if (!running)
             {
-                act.Children.Add(Small("Önizle", PreviewArm, "Servoları çözülen açılara çevirip kolu sahnede gösterir (dünya çalışmadan)"));
+                act.Children.Add(Small("Önizle", PreviewArm, "Eksenleri çözülen açılara çevirip kolu sahnede gösterir (dünya çalışmadan)"));
                 act.Children.Add(Small("Kurulduğu gibi", () =>
                 {
                     Scene.Preview(null);
                     UpdateArmLive();
-                }, "Önizlemeyi kapatır: servolar 90°"));
+                }, servos ? "Önizlemeyi kapatır: servolar 90°" : "Önizlemeyi kapatır: kol kurulduğu duruşta"));
+                if (motors) act.Children.Add(Small("Motor hedefi yap", KeepArmTargets, "Çözümü eklem motorlarının hedefi olarak kaydeder: dünya çalışınca kol oraya gider (geri alınabilir)"));
             }
             else
             {
-                act.Children.Add(Small("Servoları sür", DriveArm, "Çalışırken servolara çözülen açıları verir: sinyal kablosuna servo test cihazı takmak gibi, yazılımın darbeleri yerine geçer. Servo kendi hızı, torku ve beslemesiyle döner."));
-                act.Children.Add(Small("Yazılıma bırak", ReleaseArm, "Servoların komutunu yeniden yazılıma bırakır"));
+                act.Children.Add(Small(servos ? "Servoları sür" : "Eksenleri sür", DriveArm, servos
+                    ? "Çalışırken servolara çözülen açıları verir: sinyal kablosuna servo test cihazı takmak gibi, yazılımın darbeleri yerine geçer. Servo kendi hızı, torku ve beslemesiyle döner."
+                    : "Çalışırken eklem motorlarına çözülen değerleri verir; her eksen kendi tork ve hız sınırıyla gider."));
+                if (servos) act.Children.Add(Small("Yazılıma bırak", ReleaseArm, "Servoların komutunu yeniden yazılıma bırakır"));
             }
 
-            act.Children.Add(Small("Açıları kopyala", CopyArmAngles, "Çözülen servo açılarını Arduino koduna yapıştırılacak sabitler olarak panoya kopyalar"));
+            if (servos) act.Children.Add(Small("Açıları kopyala", CopyArmAngles, "Çözülen servo açılarını Arduino koduna yapıştırılacak sabitler olarak panoya kopyalar"));
             Inspector.Children.Add(act);
 
             var reach = new CheckBox { Content = "Erişim alanını sahnede göster", IsChecked = _armShowReach, Style = (Style)FindResource("Switch"), Margin = new Thickness(0, 2, 0, 6), ToolTip = "Servoların bütün açılarında ucun gidebildiği noktalar; sarı çizgi kolun eksenlerden uca iskeleti, turuncu hedef, yeşil ulaşılan nokta" };
@@ -140,8 +144,11 @@ namespace RobotWin.Studio.Pages
             {
                 for (int i = 0; i < q.Length; i++)
                 {
-                    // The preview turns horns by their own angle: the axis' value whichever way the chain runs through it.
-                    if (_arm.Axes[i].JointId == null && preview.TryGetValue(_arm.Axes[i].ObjectId, out double a)) q[i] = a;
+                    // The preview turns horns by their own angle (and motorised joints by theirs, keyed by the joint): the
+                    // axis' value whichever way the chain runs through it.
+                    var ax = _arm.Axes[i];
+                    if (ax.JointId == null && preview.TryGetValue(ax.ObjectId, out double a)) q[i] = a;
+                    else if (ax.JointId != null && preview.TryGetValue(ax.JointId, out double b)) q[i] = b;
                 }
             }
 
@@ -188,7 +195,7 @@ namespace RobotWin.Studio.Pages
 
             var sb = new StringBuilder();
             sb.Append(s.Success ? "Çözüm: " : "En yakın çözüm: ");
-            sb.Append(string.Join(" · ", _arm.Axes.Select((a, i) => a.Actuated ? $"{a.Name} {a.Display(s.Q[i]).ToString("0.#", CultureInfo.CurrentCulture)}{a.Unit}" : null).Where(x => x != null)));
+            sb.Append(string.Join(" · ", _arm.Axes.Select((a, i) => a.Actuated ? $"{a.Name} {(Math.Round(a.Display(s.Q[i]), 1) + 0.0).ToString("0.#", CultureInfo.CurrentCulture)}{a.Unit}" : null).Where(x => x != null)));
             if (s.Message.Length > 0) sb.Append(". ").Append(s.Message.TrimEnd('.'));
             if (s.Success && s.Dexterity < 0.1) sb.Append(". Tekil konuma yakın: kol gergin ya da katlanmış, bu yönlerde küçük hareketler büyük açı ister.");
             var load = _arm.GravityLoad(s.Q);
@@ -205,7 +212,9 @@ namespace RobotWin.Studio.Pages
             var angles = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < _arm.Axes.Count; i++)
             {
-                if (_arm.Axes[i].JointId == null) angles[_arm.Axes[i].ObjectId] = _armSolution.Q[i];
+                var a = _arm.Axes[i];
+                if (a.JointId == null) angles[a.ObjectId] = _armSolution.Q[i];
+                else if (a.Motor) angles[a.JointId] = _armSolution.Q[i];   // [drive] a motorised joint, by its id
             }
 
             Scene.Preview(angles);
@@ -218,21 +227,55 @@ namespace RobotWin.Studio.Pages
             if (_arm == null || _session.Physics is not { } physics) return;
             if (_armSolution == null) SolveArm();
             if (_armSolution == null) return;
-            int n = 0;
+            int servos = 0, motors = 0;
             for (int i = 0; i < _arm.Axes.Count; i++)
             {
-                if (!_arm.Axes[i].Actuated) continue;
-                physics.HoldServo(_arm.Axes[i].ObjectId, WorldArmAxis.ServoDegrees(_armSolution.Q[i]));
-                n++;
+                var a = _arm.Axes[i];
+                if (a.Motor && a.JointId != null)
+                {
+                    physics.SetJointTarget(a.JointId, MotorValue(a, _armSolution.Q[i]));   // [drive] the joint's motor goes there
+                    motors++;
+                }
+                else if (a.Kind == WorldAxisKind.Servo)
+                {
+                    physics.HoldServo(a.ObjectId, WorldArmAxis.ServoDegrees(_armSolution.Q[i]));
+                    servos++;
+                }
             }
 
-            Shell.Workspace.Current.Status = $"{n} servo çözülen açılara sürülüyor; yazılımın komutu yerine geçti. 'Yazılıma bırak' ile geri verin.";
+            Shell.Workspace.Current.Status = servos > 0
+                ? $"{servos} servo çözülen açılara sürülüyor; yazılımın komutu yerine geçti. 'Yazılıma bırak' ile geri verin."
+                : $"{motors} motorlu eksen çözülen değerlere gidiyor.";
+        }
+
+        /// <summary>[drive] An axis value (rad / m) as its joint motor's target: degrees for a hinge, metres for a slider.</summary>
+        private static double MotorValue(WorldArmAxis a, double q) => a.Kind == WorldAxisKind.Hinge ? q * 180 / Math.PI : q;
+
+        /// <summary>[drive] The solution as the motors' targets in the document: where the robot goes when the world runs.</summary>
+        private void KeepArmTargets()
+        {
+            var world = World;
+            if (_arm == null || world == null) return;
+            if (_armSolution == null) SolveArm();
+            if (_armSolution is not { } s) return;
+            int n = 0;
+            Edit("Motor hedefleri çözümden", () =>
+            {
+                for (int i = 0; i < _arm.Axes.Count; i++)
+                {
+                    var a = _arm.Axes[i];
+                    if (!a.Motor || world.Joints.FirstOrDefault(j => j.Id == a.JointId) is not { } joint) continue;
+                    joint.DriveTarget = MotorValue(a, s.Q[i]);
+                    n++;
+                }
+            });
+            Shell.Workspace.Current.Status = $"{n} motorun hedefi çözüme ayarlandı: dünya çalışınca kol oraya gider.";
         }
 
         private void ReleaseArm()
         {
             if (_arm == null || _session.Physics is not { } physics) return;
-            foreach (var a in _arm.Axes.Where(a => a.Actuated)) physics.HoldServo(a.ObjectId, null);
+            foreach (var a in _arm.Axes.Where(a => a.Kind == WorldAxisKind.Servo)) physics.HoldServo(a.ObjectId, null);
             Shell.Workspace.Current.Status = "Servolar yeniden yazılımın komutunda.";
         }
 
@@ -249,7 +292,7 @@ namespace RobotWin.Studio.Pages
             for (int i = 0; i < _arm.Axes.Count; i++)
             {
                 var a = _arm.Axes[i];
-                if (!a.Actuated) continue;
+                if (a.Kind != WorldAxisKind.Servo) continue;   // a motorised joint is not in the board's code
                 double deg = WorldArmAxis.ServoDegrees(s.Q[i]);
                 string pin = SignalPin(world, a.ObjectId);
                 sb.AppendLine($"const int {Identifier(a.Name)} = {Math.Round(deg).ToString(CultureInfo.InvariantCulture)};   // {deg.ToString("0.0", CultureInfo.InvariantCulture)}°{(pin.Length > 0 ? " · " + pin : string.Empty)}");
@@ -334,10 +377,13 @@ namespace RobotWin.Studio.Pages
             {
                 var a = _arm.Axes[i];
                 string name = a.Name.Length > width ? a.Name.Substring(0, width) : a.Name.PadRight(width);
-                string value = a.Display(q[i]).ToString("0.0", CultureInfo.CurrentCulture).PadLeft(6) + a.Unit;
+                string value = (Math.Round(a.Display(q[i]), 1) + 0.0).ToString("0.0", CultureInfo.CurrentCulture).PadLeft(6) + a.Unit;
                 string extra = a.Actuated && a.StallTorque > 0
                     ? " " + Shell.Lang.T("yük") + " " + Shell.Lang.Percent(Math.Abs(load[i]) / a.StallTorque * 100, "0")   // [lang]
                     : " " + Shell.Lang.T(a.Kind is WorldAxisKind.Hinge or WorldAxisKind.Slider ? "serbest" : "motor mili");   // not "mil": that is also the PCB unit
+                // [drive] A motorised joint: where its motor is told to go.
+                if (a.Motor && a.JointId != null && physics?.JointDriveState(a.JointId) is { } drive)
+                    extra += " → " + (a.Kind == WorldAxisKind.Hinge ? drive.Target : drive.Target * 1000).ToString("0.0", CultureInfo.CurrentCulture) + (a.Kind == WorldAxisKind.Hinge ? "°" : " mm");
                 if (physics != null && physics.HeldServos.Contains(a.ObjectId)) extra += " (" + Shell.Lang.T("panel") + ")";
                 sb.AppendLine($"{name} {value}{extra}");
             }

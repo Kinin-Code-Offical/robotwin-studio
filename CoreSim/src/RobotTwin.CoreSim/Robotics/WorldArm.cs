@@ -41,8 +41,17 @@ namespace RobotTwin.CoreSim.Robotics
         /// </summary>
         public ArmJointSpec Spec { get; internal set; } = new ArmJointSpec();
 
-        /// <summary>Only a servo holds an angle it is told: inverse kinematics solves servos, the other axes stay where they are.</summary>
-        public bool Actuated => Kind == WorldAxisKind.Servo;
+        /// <summary>
+        /// [drive] A hinge or slider with a position motor (an imported robot's axis, <see cref="WorldJoint.Drive"/>): it holds
+        /// the value it is told, like a servo; <see cref="WorldPhysics.SetJointTarget"/> tells it.
+        /// </summary>
+        public bool Motor { get; internal set; }
+
+        /// <summary>
+        /// Only a servo or a motorised joint holds an angle it is told: inverse kinematics solves those, the other axes stay
+        /// where they are.
+        /// </summary>
+        public bool Actuated => Kind == WorldAxisKind.Servo || Motor;
 
         /// <summary>The drive's stall torque (N·m) for a servo; 0 for a free axis.</summary>
         public double StallTorque { get; internal set; }
@@ -281,10 +290,16 @@ namespace RobotTwin.CoreSim.Robotics
                     var anchor = j.AnchorX == 0 && j.AnchorY == 0 && j.AnchorZ == 0 ? child.Pose.ToWorld((cg.Min + cg.Max) * 0.5) : new Vec3(j.AnchorX, j.AnchorY, j.AnchorZ);
                     bool hinge = j.Kind == WorldJointKind.Hinge;
                     double lo = j.Lower ?? (hinge ? -180 : -0.1), hi = j.Upper ?? (hinge ? 180 : 0.1);
+                    // [drive] A position motor makes it an axis inverse kinematics can set, as strong as its drive.
+                    bool motor = j.Driven && j.Drive == WorldJoint.DrivePosition;
+                    double torque = j.DriveForce > 0 ? j.DriveForce : hinge ? 10 : 200;
+                    double speed = j.DriveSpeed > 0 ? j.DriveSpeed : hinge ? 180 : 0.5;
                     found.Add(new WorldArmAxis
                     {
-                        Name = (hinge ? "Menteşe " : "Ray ") + child.Name,
+                        Name = motor ? child.Name : (hinge ? "Menteşe " : "Ray ") + child.Name,   // a robot's axis by its link's name
                         Kind = hinge ? WorldAxisKind.Hinge : WorldAxisKind.Slider,
+                        Motor = motor,
+                        StallTorque = motor ? torque : 0,
                         ObjectId = child.Id,
                         JointId = j.Id,
                         Spec = new ArmJointSpec
@@ -294,6 +309,8 @@ namespace RobotTwin.CoreSim.Robotics
                             Axis = dir.Normalized(),
                             Point = anchor,
                             Min = hinge ? lo * Math.PI / 180 : lo, Max = hinge ? hi * Math.PI / 180 : hi,
+                            MaxTorque = motor ? torque : 0,
+                            MaxSpeed = motor ? (hinge ? speed * Math.PI / 180 : speed) : Math.PI
                         }
                     });
                 }
@@ -520,7 +537,7 @@ namespace RobotTwin.CoreSim.Robotics
             var result = new WorldArmSolution { Q = current.ToArray() };
             if (ActuatedCount == 0)
             {
-                result.Message = "Bu zincirde servo yok: açısını yazılımın belirlediği bir eksen gerekir.";
+                result.Message = "Bu zincirde servo ya da motorlu eklem yok: açısı söylenebilen bir eksen gerekir.";
                 result.Reached = Tip(current);
                 result.Error = (result.Reached - target).Length;
                 return result;
@@ -573,12 +590,12 @@ namespace RobotTwin.CoreSim.Robotics
             string where = Math.Abs(Math.Abs(plane.PlaneNormal.Z) - 1) < 1e-6 ? $"z = {result.Reached.Z * 1000:0.#} mm düzleminde" : "tek bir düzlemde";
             if (!result.Success)
             {
-                result.Message = $"Hedef erişim dışında ya da servo sınırının ötesinde. Ulaşabildiği en yakın nokta hedeften {miss * 1000:0.#} mm uzakta.";
-                if (result.OffPlane > 1e-3) result.Message += $" Servoları paralel olduğundan uç {where} gezer; hedef bu düzlemin {result.OffPlane * 1000:0.#} mm dışındaydı.";
+                result.Message = $"Hedef erişim dışında ya da bir eksenin sınırının ötesinde. Ulaşabildiği en yakın nokta hedeften {miss * 1000:0.#} mm uzakta.";
+                if (result.OffPlane > 1e-3) result.Message += $" Eksenleri paralel olduğundan uç {where} gezer; hedef bu düzlemin {result.OffPlane * 1000:0.#} mm dışındaydı.";
             }
             else if (result.OffPlane > 1e-3)
             {
-                result.Message = $"Servoları paralel olduğundan uç {where} gezer: hedefin {result.OffPlane * 1000:0.#} mm dışındaki düzleme izdüşümüne gidildi.";
+                result.Message = $"Eksenleri paralel olduğundan uç {where} gezer: hedefin {result.OffPlane * 1000:0.#} mm dışındaki düzleme izdüşümüne gidildi.";
             }
 
             return result;

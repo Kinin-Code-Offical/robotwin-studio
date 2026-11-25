@@ -7132,7 +7132,18 @@
   "Motor hızı (°/s)": "Motor speed (°/s)",
   "Motor hızı (mm/s)": "Motor speed (mm/s)",
   "3D model ya da robot içe aktar (STL, OBJ, PLY, STEP, IGES, URDF)…": "Import 3D model or robot (STL, OBJ, PLY, STEP, IGES, URDF)…",
-  "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır. Bir robot tanımı (URDF ya da xacro) parçaları, eklemleri, sınırları ve motorlarıyla gelir.": "Any shape can be used; mass, centre of gravity and inertia are computed from the material. A robot description (URDF or xacro) comes with its parts, joints, limits and motors."
+  "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır. Bir robot tanımı (URDF ya da xacro) parçaları, eklemleri, sınırları ve motorlarıyla gelir.": "Any shape can be used; mass, centre of gravity and inertia are computed from the material. A robot description (URDF or xacro) comes with its parts, joints, limits and motors.",
+  "Bu zincirde servo ya da motorlu eklem yok: açısı söylenebilen bir eksen gerekir.": "There's no servo or motorised joint in this chain: it needs an axis that can be told an angle.",
+  "Eksenleri çözülen açılara çevirip kolu sahnede gösterir (dünya çalışmadan)": "Turns the axes to the solved angles and shows the arm in the scene (without running the world)",
+  "Hedefe ulaşan eksen açılarını bulur (ters kinematik); serbest menteşeler olduğu gibi kalır": "Finds the axis angles that reach the target (inverse kinematics); free hinges stay as they are",
+  "Motor hedefi yap": "Make motor targets",
+  "Çözümü eklem motorlarının hedefi olarak kaydeder: dünya çalışınca kol oraya gider (geri alınabilir)": "Saves the solution as the joint motors' targets: when the world runs, the arm goes there (can be undone)",
+  "Önizlemeyi kapatır: kol kurulduğu duruşta": "Turns the preview off: the arm as built",
+  "Eksenleri sür": "Drive the axes",
+  "Çalışırken eklem motorlarına çözülen değerleri verir; her eksen kendi tork ve hız sınırıyla gider.": "While running, gives the joint motors the solved values; each axis goes with its own torque and speed limits.",
+  "Motor hedefleri çözümden": "Motor targets from the solution",
+  "Çözüm": "Solution",
+  "En yakın çözüm": "Closest solution"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10094,6 +10105,11 @@
   "xacro: kapanmayan dize: {…}": "xacro: unclosed string: {0}",
   "xacro: beklenmeyen '{…}': {…}": "xacro: unexpected '{0}': {1}",
   "xacro: '{…}()' işlevi desteklenmiyor.": "xacro: the '{0}()' function isn't supported.",
-  "xacro: '{…}' bir sayı değil.": "xacro: '{0}' isn't a number."
+  "xacro: '{…}' bir sayı değil.": "xacro: '{0}' isn't a number.",
+  "Hedef erişim dışında ya da bir eksenin sınırının ötesinde. Ulaşabildiği en yakın nokta hedeften {…} mm uzakta.": "The target is out of reach or beyond an axis limit. The closest point it can reach is {0} mm from the target.",
+  " Eksenleri paralel olduğundan uç {…} gezer; hedef bu düzlemin {…} mm dışındaydı.": " Because its axes are parallel, the tip moves {0}; the target was {1} mm off this plane.",
+  "Eksenleri paralel olduğundan uç {…} gezer: hedefin {…} mm dışındaki düzleme izdüşümüne gidildi.": "Because its axes are parallel, the tip moves {0}: it went to the target's projection onto the plane, {1} mm away.",
+  "{…} motorlu eksen çözülen değerlere gidiyor.": "{0} motorised axes are going to the solved values.",
+  "{…} motorun hedefi çözüme ayarlandı: dünya çalışınca kol oraya gider.": "{0} motor targets set to the solution: when the world runs, the arm goes there."
  }
 }
