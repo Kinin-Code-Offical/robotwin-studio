@@ -155,7 +155,7 @@ namespace RobotWin.Studio.Automation
         }
 
         /// <summary>Geometry from an off-screen <see cref="WorldScene"/>: exactly what the world page hands the physics.</summary>
-        private sealed class SceneGeometry : IWorldGeometry
+        internal sealed class SceneGeometry : IWorldGeometry
         {
             private readonly WorldScene _scene;
 

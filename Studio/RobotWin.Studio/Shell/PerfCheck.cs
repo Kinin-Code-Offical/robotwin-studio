@@ -13,8 +13,9 @@ using RobotTwin.CoreSim.Mechanics;
 namespace RobotWin.Studio.Shell
 {
     /// <summary>
-    /// [perf] The automatic performance regression check (<c>--perf-check</c>): every world template runs headless for the
-    /// same simulated time, and what one simulated second costs (best of two, after a warm-up) is set against a baseline.
+    /// [perf] The automatic performance regression check (<c>--perf-check</c>): every world template runs headless, with the
+    /// bodies' shapes the world page uses, for the same simulated time, and what one simulated second costs (best of two,
+    /// after a warm-up) is set against a baseline.
     /// Each cost is also divided by a fixed CPU workload timed in the same run, so a baseline from another computer still
     /// means something; on the same computer the raw times are compared. Slower than the tolerance is a regression: the
     /// report says which and the exit code is 1. <c>--perf-update</c> makes the run the new baseline.
@@ -119,7 +120,10 @@ namespace RobotWin.Studio.Shell
         {
             var options = new RunnerOptions { Esp32Builder = Automation.StudioApiHost.BuildEsp32 };
             options.FirmwareSearchPath.Add(Path.Combine(AppContext.BaseDirectory, "Firmware"));
-            using var runner = new WorldRunner(template.Build(), options);
+            // The bodies' shapes the world page gives the physics (the parts' 3D hulls, the cables' real pins), not the
+            // headless tool's boxes: what a world costs in the app.
+            var world = template.Build();
+            using var runner = new WorldRunner(world, options, Automation.StudioApiHost.SceneGeometry.For(world));
             runner.Step(0.1);
             var t = runner.Physics?.Times;
             double[] Physics() => t == null ? new double[8] : new[] { t.Bodies, t.Cables, t.Liquids, t.Thermal, t.Drives, t.Air, t.Scripts, t.Sensors };

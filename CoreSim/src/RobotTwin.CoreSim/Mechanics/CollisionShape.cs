@@ -47,6 +47,39 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Contact candidate vertices (body frame).</summary>
         public IReadOnlyList<Vec3> Vertices => Verts;
 
+        private (double Lo, double Hi)[]? _planeSpans;
+
+        /// <summary>
+        /// [perf] How far the vertices reach along each face normal (normalised), lowest and highest: what a separating-axis
+        /// test needs for the face axes, worked out once instead of over every vertex for every axis of every test.
+        /// </summary>
+        internal (double Lo, double Hi)[] PlaneSpans
+        {
+            get
+            {
+                var spans = _planeSpans;
+                if (spans != null && spans.Length == Planes.Length) return spans;
+                spans = new (double, double)[Planes.Length];
+                for (int k = 0; k < Planes.Length; k++)
+                {
+                    var n = Planes[k].Normal;
+                    double nl = n.Length;
+                    if (nl >= 1e-9) n /= nl;
+                    double lo = double.MaxValue, hi = double.MinValue;
+                    foreach (var v in Verts)
+                    {
+                        double q = v.Dot(n);
+                        if (q < lo) lo = q;
+                        if (q > hi) hi = q;
+                    }
+
+                    spans[k] = (lo, hi);
+                }
+
+                return _planeSpans = spans;
+            }
+        }
+
         public MeshModel? Mesh { get; private set; }
 
         /// <summary>Radius of a sphere about the body origin that encloses the shape.</summary>
@@ -226,7 +259,12 @@ namespace RobotTwin.CoreSim.Mechanics
                 double worldOffset = Planes[i].Offset + n.Dot(position);
                 FloorPlane[i] = Math.Abs(worldOffset / n.Z - groundZ) < tolerance;
             }
+
+            HasFloorFace = Array.IndexOf(FloorPlane, true) >= 0;
         }
+
+        /// <summary>A face rests on the floor (see <see cref="MarkFloorFaces"/>): below it the signed distance leaves the point to the ground.</summary>
+        internal bool HasFloorFace { get; private set; }
 
         /// <summary>Exact world-space bounding box of the shape at a pose.</summary>
         public Aabb WorldBounds(Vec3 position, Quat orientation)
@@ -281,6 +319,15 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             distance = double.PositiveInfinity;
             normal = Vec3.UnitZ;
+            // [perf] A point farther than maxDistance from the sphere that holds the whole solid is farther from the solid
+            // too: settled without its faces or its tree (a cable next to a part made of many convex pieces asks every
+            // piece about every bit of wire, several times a substep).
+            if (Kind == ShapeKind.ConvexHull || Kind == ShapeKind.Points || Kind == ShapeKind.Mesh)
+            {
+                double reach = LocalRadius + maxDistance;
+                if (reach < 1e150 && (q - LocalCentre).LengthSquared > reach * reach) return false;
+            }
+
             switch (Kind)
             {
                 case ShapeKind.Sphere:
@@ -474,6 +521,18 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             t = 0;
             n = Vec3.UnitZ;
+            // [perf] A ray that passes outside the sphere holding the whole solid misses it.
+            if (Kind == ShapeKind.ConvexHull || Kind == ShapeKind.Points || Kind == ShapeKind.Mesh)
+            {
+                double dd = d.LengthSquared;
+                if (dd > 0)
+                {
+                    double along = Math.Max(0, Math.Min(maxDistance, (LocalCentre - o).Dot(d) / dd));
+                    double radius = LocalRadius;
+                    if ((o + d * along - LocalCentre).LengthSquared > radius * radius) return false;
+                }
+            }
+
             switch (Kind)
             {
                 case ShapeKind.Sphere:
@@ -518,8 +577,9 @@ namespace RobotTwin.CoreSim.Mechanics
                     // Caps
                     if (Math.Abs(d.Z) > 1e-14)
                     {
-                        foreach (double z in new[] { HalfHeight, -HalfHeight })
+                        for (int cap = 0; cap < 2; cap++)   // [perf] both caps without an array per ray
                         {
+                            double z = cap == 0 ? HalfHeight : -HalfHeight;
                             double tc = (z - o.Z) / d.Z;
                             if (tc < 0 || tc >= best) continue;
                             if ((z > 0 && d.Z > 0) || (z < 0 && d.Z < 0)) continue;

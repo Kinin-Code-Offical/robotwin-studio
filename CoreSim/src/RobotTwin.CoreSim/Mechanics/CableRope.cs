@@ -315,7 +315,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     if (Ignored(b, i)) continue;
                     var shape = b.EffectiveShape!;
                     var local = b.Orientation.InverseRotate(x - b.Position);
-                    if (shape.Kind != ShapeKind.Mesh && local.LengthSquared > (shape.BoundingRadius + Radius) * (shape.BoundingRadius + Radius)) continue;
+                    if (local.LengthSquared > (shape.BoundingRadius + Radius) * (shape.BoundingRadius + Radius)) continue;
                     if (b.SignedDistanceSolid(shape, local, Radius, out double d, out _) && d < Radius) sum += Radius - d;
                 }
             }
@@ -522,7 +522,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 double reach = shape.BoundingRadius + clear;
                 foreach (var x in _x)
                 {
-                    if (shape.Kind != ShapeKind.Mesh && (x - b.Position).LengthSquared > reach * reach) continue;
+                    if ((x - b.Position).LengthSquared > reach * reach) continue;
                     if (b.SignedDistanceSolid(shape, b.Orientation.InverseRotate(x - b.Position), clear, out double d, out _) && d < clear) return false;
                 }
             }
@@ -719,6 +719,32 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (c.X + r < lo.X || c.X - r > hi.X || c.Y + r < lo.Y || c.Y - r > hi.Y || c.Z + r < lo.Z || c.Z - r > hi.Z) continue;
                 _near.Add(b);
             }
+
+            // [perf] Each near body's tightest enclosing sphere in the world (its shape's own middle, not the body's
+            // origin, which lies at a corner of many parts): the bodies stand still while the rope steps.
+            if (_nearCentre.Length < _near.Count)
+            {
+                _nearCentre = new Vec3[_near.Count * 2];
+                _nearRadius = new double[_near.Count * 2];
+            }
+
+            for (int k = 0; k < _near.Count; k++)
+            {
+                var b = _near[k];
+                var shape = b.EffectiveShape!;
+                _nearCentre[k] = b.Position + b.Orientation.Rotate(shape.LocalCentre);
+                _nearRadius[k] = shape.LocalRadius;
+            }
+        }
+
+        private Vec3[] _nearCentre = new Vec3[8];
+        private double[] _nearRadius = new double[8];
+
+        /// <summary>Whether a point (world) is farther than <paramref name="margin"/> from near body <paramref name="k"/>'s solid, by its sphere.</summary>
+        private bool Beyond(int k, Vec3 x, double margin)
+        {
+            double reach = _nearRadius[k] + margin;
+            return (x - _nearCentre[k]).LengthSquared > reach * reach;
         }
 
         /// <summary>
@@ -787,11 +813,12 @@ namespace RobotTwin.CoreSim.Mechanics
                     }
                 }
 
-                foreach (var b in _near)
+                for (int k = 0; k < _near.Count; k++)
                 {
+                    var b = _near[k];
                     if (Ignored(b, i)) continue;
                     Sweep(b, ref x, i, h);
-                    PushOut(b, ref x, i, h, 1.0);
+                    if (!Beyond(k, x, r)) PushOut(b, ref x, i, h, 1.0);
                 }
 
                 if (KeepOut != null && KeepOut(x, r) is { } push) x += push;
@@ -813,13 +840,14 @@ namespace RobotTwin.CoreSim.Mechanics
                 int i = s, j = s + 1;
                 bool pi = IsPinned(i), pj = IsPinned(j);
                 if (pi && pj) continue;
-                foreach (var b in _near)
+                for (int k = 0; k < _near.Count; k++)
                 {
+                    var b = _near[k];
                     if (Ignored(b, i) || Ignored(b, j)) continue;
                     var shape = b.EffectiveShape!;
                     var mid = (_x[i] + _x[j]) * 0.5;
                     double half = 0.5 * (_x[j] - _x[i]).Length;
-                    if (shape.Kind != ShapeKind.Mesh && (mid - b.Position).LengthSquared > (shape.BoundingRadius + r + half) * (shape.BoundingRadius + r + half)) continue;
+                    if (Beyond(k, mid, r + half)) continue;
                     if (b.Pieces is { Length: > 0 } pieces)
                     {
                         foreach (var piece in pieces) SegmentContact(b, piece, i, j, pi, pj, h);
@@ -856,7 +884,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 var u = d / len;
                 double best = double.MaxValue;
                 var bestN = Vec3.Zero;
-                bool Overlaps(Vec3 n)
+                var spans = shape.Kind == ShapeKind.Box ? null : shape.PlaneSpans;   // [perf] the face axes' extents, kept
+                bool Overlaps(Vec3 n, int face = -1)
                 {
                     double nl = n.Length;
                     if (nl < 1e-9) return true;
@@ -867,6 +896,10 @@ namespace RobotTwin.CoreSim.Mechanics
                         var e = shape.HalfExtents;
                         hi = e.X * Math.Abs(n.X) + e.Y * Math.Abs(n.Y) + e.Z * Math.Abs(n.Z);
                         lo = -hi;
+                    }
+                    else if (face >= 0)
+                    {
+                        (lo, hi) = spans![face];
                     }
                     else
                     {
@@ -905,8 +938,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
                 else
                 {
-                    foreach (var pl in shape.Planes)
-                        if (!Overlaps(pl.Normal)) return;
+                    var planes = shape.Planes;
+                    for (int k = 0; k < planes.Length; k++)
+                        if (!Overlaps(planes[k].Normal, k)) return;
                 }
 
                 if (!Overlaps(u.Cross(Vec3.UnitX)) || !Overlaps(u.Cross(Vec3.UnitY)) || !Overlaps(u.Cross(Vec3.UnitZ))) return;
@@ -991,15 +1025,24 @@ namespace RobotTwin.CoreSim.Mechanics
             var d = le - ls;
             double len = d.Length;
             if (len < 1e-7) return;
-            if (shape.Kind != ShapeKind.Mesh)
-            {
-                double reach = shape.BoundingRadius + Radius;
-                double f = Math.Max(0, Math.Min(1, -ls.Dot(d) / (len * len)));
-                if ((ls + d * f).LengthSquared > reach * reach) return;
-            }
+            // [perf] The sphere about the shape's own middle holds all of it (a mesh's too): a move that stays outside
+            // that sphere cannot reach it.
+            var mid = shape.LocalCentre;
+            double reach = shape.LocalRadius + Radius;
+            double f = Math.Max(0, Math.Min(1, -(ls - mid).Dot(d) / (len * len)));
+            if ((ls - mid + d * f).LengthSquared > reach * reach) return;
 
             // A bit of wire that already started inside is pushed out by its nearest face instead.
-            if (b.SignedDistanceSolid(shape, ls, 0, out double ds, out _) && ds < 0) return;
+            if (b.Pieces == null && !shape.HasFloorFace)
+            {
+                // [perf] Asked up to the move's length: a start farther than that from the solid cannot reach it (the
+                // distance a convex shape reports outside it never exceeds the true one), and the ray is not cast.
+                if (!b.SignedDistanceSolid(shape, ls, len + 1e-9, out double far, out _) || far < 0) return;
+            }
+            else if (b.SignedDistanceSolid(shape, ls, 0, out double ds, out _) && ds < 0)
+            {
+                return;
+            }
             var dir = d / len;
             if (!b.RaycastSolid(shape, ls, dir, len, out double t, out var nl)) return;
             var hit = ls + dir * t;
@@ -1015,7 +1058,7 @@ namespace RobotTwin.CoreSim.Mechanics
         {
             var shape = b.EffectiveShape!;
             double r = Radius;
-            if (shape.Kind != ShapeKind.Mesh && (x - b.Position).LengthSquared > (shape.BoundingRadius + r) * (shape.BoundingRadius + r)) return;
+            if ((x - b.Position).LengthSquared > (shape.BoundingRadius + r) * (shape.BoundingRadius + r)) return;
             var local = b.Orientation.InverseRotate(x - b.Position);
             if (!b.SignedDistanceSolid(shape, local, r, out double d, out var nl) || d >= r) return;
             var n = b.Orientation.Rotate(nl);
@@ -1055,7 +1098,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     if (Ignored(b, i)) continue;
                     var shape = b.EffectiveShape!;
                     var local = b.Orientation.InverseRotate(x - b.Position);
-                    if (shape.Kind != ShapeKind.Mesh && local.LengthSquared > (shape.BoundingRadius + Radius) * (shape.BoundingRadius + Radius)) continue;
+                    if (local.LengthSquared > (shape.BoundingRadius + Radius) * (shape.BoundingRadius + Radius)) continue;
                     if (b.SignedDistanceSolid(shape, local, Radius, out double d, out _) && d < Radius) worst = Math.Max(worst, Radius - d);
                 }
             }
