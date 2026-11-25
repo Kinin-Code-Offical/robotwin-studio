@@ -82,7 +82,11 @@ namespace RobotWin.Studio.Pages
                 BuildInspector();
                 RefreshVariantBox();   // [variants]
             };
-            W.DocumentReplaced += (_, _) => RefreshVariantBox();
+            W.DocumentReplaced += (_, _) =>
+            {
+                UpdateChrome();   // a project or an example opened: "Boş sayfa" only over an empty sheet
+                RefreshVariantBox();
+            };
             Loaded += (_, _) => RefreshVariantBox();
             W.PropertyChanged += (_, e) =>
             {

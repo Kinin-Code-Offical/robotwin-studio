@@ -58,6 +58,13 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public double BeltStiffness { get; set; }
 
+        /// <summary>[drive] The two pulleys a belt runs round (objects), so the scene can draw it; null for a belt between joints alone.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public string? PulleyA { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public string? PulleyB { get; set; }
+
         /// <summary>A hinge and a slider (a rack, a belt-driven carriage, a lead screw) rather than two shafts.</summary>
         public static bool Linear(WorldJointKind a, WorldJointKind b) => a != b && a != WorldJointKind.Fixed && b != WorldJointKind.Fixed;
 

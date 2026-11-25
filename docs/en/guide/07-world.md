@@ -323,6 +323,9 @@ Place the parts as in a real machine. You do not draw the joints; **Build the me
 - An LM8UU on a rod **slides** along it.
 - Two gears with parallel axes and the same module whose pitch circles touch **mesh**: the centre distance must be m·(z₁+z₂)/2.
 - A nut on a lead screw **drives** the carriage on slides it is fixed to. A right-hand screw turned clockwise, seen from above, raises its nut.
+- Meshing gears start with a tooth in a space, not tooth on tooth: when they are assembled, the driven gear is turned by at most half a tooth pitch.
+
+**Belts:** select a pulley and press **Fit a belt → (the other pulley)** in the inspector. The axes must be parallel and the belt grooves in one plane. The belt's length comes from its two straight spans and the arcs it wraps. The inspector names the closed GT2 belt to buy and how far to move a pulley to tension it. A 20T and a 40T pulley 80 mm apart need a 220.5 mm belt; for a 232 mm belt, move a pulley 5.75 mm. The shafts are coupled at the ratio of the diameters, turning the same way. The scene draws the belt at real GT2 sizes: a 0.63 mm back, and teeth at a 2 mm pitch that sit in the first pulley's grooves and run with the belt as it turns.
 
 Nothing is assumed: a gear on no shaft falls, a shaft in no bearing is not held, a bore that is too small does not go on, and in one too large the shaft is loose. The **Events** tab and the part's inspector say so. Bolt the bearings and pillow blocks to the frame or mark them **Fixed**; a fixed KP08 shows two M6 bolts in its base slots. The joints it builds appear in **Mechanical joints**, where you can edit them.
 

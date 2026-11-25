@@ -75,6 +75,50 @@ namespace RobotWin.Studio.Pages
             foreach (var line in _driveReport.Problems) _session.Log.Add(new SimLogEntry(0, "mekanizma", line, AnalogEventKind.Warning));
         }
 
+        private string? _beltNote;
+
+        /// <summary>A pulley's belts, and a belt to each other pulley it could carry one to.</summary>
+        private void BeltRows(WorldDocument world, WorldObject o)
+        {
+            var belts = world.Couplings?.Where(c => c.Kind == WorldCoupling.Belt && (c.PulleyA == o.Id || c.PulleyB == o.Id)).ToList() ?? new List<WorldCoupling>();
+            foreach (var c in belts)
+            {
+                var other = world.Find(c.PulleyA == o.Id ? c.PulleyB : c.PulleyA);
+                Inspector.Children.Add(Note("Kayış: " + (other?.Name ?? "?") + " ile"));
+            }
+
+            foreach (var other in world.Objects.Where(x => x.Id != o.Id && DriveParts.Of(x)?.Kind == DrivePartKind.Pulley && !belts.Any(c => c.PulleyA == x.Id || c.PulleyB == x.Id)).Take(6))
+            {
+                var target = other;
+                Inspector.Children.Add(Action("Kayış tak → " + other.Name, () => FitBelt(o, target), "İki kasnağa GT2 kayış takar: boyunu hesaplar, alınacak kapalı kayışı söyler, milleri çap oranında aynı yönde bağlar."));
+            }
+
+            if (_beltNote != null) Inspector.Children.Add(Note(_beltNote));
+        }
+
+        /// <summary>Fits a belt round two pulleys (after joining what their places imply), as one undoable step.</summary>
+        private void FitBelt(WorldObject a, WorldObject b)
+        {
+            var world = World;
+            if (world == null) return;
+            var trial = WorldDocument.FromJson(world.ToJson());
+            DriveAssembly.Assemble(trial);
+            var (fits, why) = DriveAssembly.Belt(trial, trial.Find(a.Id)!, trial.Find(b.Id)!);
+            string message = why;
+            if (fits != null)
+            {
+                Edit("Kayış takıldı", () =>
+                {
+                    DriveAssembly.Assemble(world);
+                    message = DriveAssembly.Belt(world, a, b).Message;
+                });
+            }
+
+            _beltNote = message;
+            W.Status = message;
+            BuildInspector();
+        }
+
         private void DriveSection(WorldDocument world, WorldObject o)
         {
             if (DriveParts.Of(o) is not { } s) return;
@@ -83,6 +127,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Note(s.Sizes));
             if (s.Bearing != null && Bearings.Find(s.Bearing) is { } b) Inspector.Children.Add(Note("Yatak: " + b.Name));
             Inspector.Children.Add(Action("Mekanizmayı kur", AssembleDrive, "Parçaların yerinden milleri rulmanlara, dişlileri millere bağlar; kavrayan dişlileri ve vidalı mil ile somunu eşler."));
+            if (s.Kind == DrivePartKind.Pulley) BeltRows(world, o);
             if (_driveReport == null) return;
             var mine = _driveReport.Links.Concat(_driveReport.Problems).Where(l => l.Contains(o.Name, StringComparison.Ordinal)).ToList();
             foreach (var line in mine) Inspector.Children.Add(Note(line));

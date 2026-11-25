@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Automation;
 using RobotTwin.CoreSim.Sandbox;
 using Xunit;
@@ -66,6 +68,86 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(rpmB, -30.3, -29.7);
             var gearB = world.Objects.Single(o => o.PresetId == "gear-m1-z40-b8");
             Assert.InRange(runner.Physics.Scene.Bodies.Single(b => b.Id == gearB.Id).Position.Z, 0.059, 0.071);   // held on its shaft, not fallen
+        }
+
+        /// <summary>How many of B's outline corners lie inside A's tooth outline (and the other way), in the gears' plane.</summary>
+        private static int Clashes(WorldObject ga, WorldObject gb)
+        {
+            var sa = DriveParts.Of(ga)!;
+            var sb = DriveParts.Of(gb)!;
+            var n = ga.Pose.Orientation.Rotate(Vec3.UnitZ);
+            var e1 = gb.Pose.Position - ga.Pose.Position;
+            e1 = (e1 - n * e1.Dot(n)).Normalized();
+            var e2 = n.Cross(e1);
+            List<(double X, double Y)> Plane(WorldObject g, DrivePartSpec s) =>
+                GearGeometry.Outline(s.Module, s.Teeth).Select(p =>
+                {
+                    var w = g.Pose.ToWorld(new Vec3(p.X, p.Y, 0)) - ga.Pose.Position;
+                    return (w.Dot(e1), w.Dot(e2));
+                }).ToList();
+            static bool Inside(List<(double X, double Y)> poly, (double X, double Y) q)
+            {
+                bool inside = false;
+                for (int i = 0, j = poly.Count - 1; i < poly.Count; j = i++)
+                {
+                    if ((poly[i].Y > q.Y) != (poly[j].Y > q.Y) && q.X < (poly[j].X - poly[i].X) * (q.Y - poly[i].Y) / (poly[j].Y - poly[i].Y) + poly[i].X) inside = !inside;
+                }
+
+                return inside;
+            }
+
+            var a = Plane(ga, sa);
+            var b = Plane(gb, sb);
+            return b.Count(q => Inside(a, q)) + a.Count(q => Inside(b, q));
+        }
+
+        [Fact]
+        public void MeshingGearsStartWithTheirTeethInEachOthersSpaces()
+        {
+            var (world, _, _) = GearTrain();
+            var small = world.Objects.Single(o => o.PresetId == "gear-m1-z20-b8");
+            var large = world.Objects.Single(o => o.PresetId == "gear-m1-z40-b8");
+            int before = Clashes(small, large);
+            DriveAssembly.Assemble(world);
+            int after = Clashes(small, large);
+            _out.WriteLine($"diş çakışması: kurmadan önce {before} köşe, sonra {after}; büyük dişli {large.Pose.Yaw:0.00}° döndürüldü");
+            Assert.True(before > 0, "as placed, tooth 0 of each points at the other: tooth on tooth");
+            Assert.Equal(0, after);
+        }
+
+        [Fact]
+        public void ABeltRoundTwoPulleysTurnsTheSecondTheSameWayAtTheirRatio()
+        {
+            var w = new WorldDocument();
+            var shaftA = Put(w, "shaft-8-100", 0, 0, 0.02);
+            Put(w, "bearing-608zz", 0, 0, 0.025, true);
+            Put(w, "bearing-608zz", 0, 0, 0.105, true);
+            var small = Put(w, "pulley-gt2-20-b8", 0, 0, 0.06);
+            var shaftB = Put(w, "shaft-8-100", 0.06, 0, 0.02);
+            Put(w, "bearing-608zz", 0.06, 0, 0.025, true);
+            Put(w, "bearing-608zz", 0.06, 0, 0.105, true);
+            var large = Put(w, "pulley-gt2-40-b8", 0.06, 0, 0.06);
+            DriveAssembly.Assemble(w);
+            var (belt, message) = DriveAssembly.Belt(w, small, large);
+            _out.WriteLine(message);
+            Assert.NotNull(belt);
+            double expected = DriveAssembly.BeltLength(0.02 / Math.PI, 0.04 / Math.PI, 0.06);
+            Assert.InRange(expected, 0.1805, 0.1809);   // 2·59.66 + 18.65 + 42.71 mm
+            Assert.Contains("GT2 kayış 180.68 mm (90.3 diş)", message);
+            Assert.Contains("kapalı GT2 kayış 188 mm", message);   // the loop to buy, at or above it
+            var motor = w.Joints.First(j => j.ObjectA == shaftA.Id && j.Kind == WorldJointKind.Hinge);
+            motor.Drive = WorldJoint.DriveSpeedMode;
+            motor.DriveTarget = 360;
+            motor.DriveForce = 1;
+            using var runner = new WorldRunner(WorldDocument.FromJson(w.ToJson()), new RunnerOptions { Firmware = false });
+            while (runner.Time < 1 - 1e-6) runner.Step(0.01);
+            var hingeB = runner.Physics!.Scene.Joints.First(j => w.Joints.Any(wj => wj.Id == j.Id && wj.ObjectA == shaftB.Id && wj.Kind == WorldJointKind.Hinge));
+            _out.WriteLine($"büyük kasnak {hingeB.Speed * 30 / Math.PI:0.0} dev/dk");
+            Assert.InRange(hingeB.Speed * 30 / Math.PI, 29.7, 30.3);   // the same way, half the speed
+
+            var (none, why) = DriveAssembly.Belt(w, small, Put(w, "pulley-gt2-60-b8", 0.0, 0.08, 0.07));
+            _out.WriteLine(why);
+            Assert.Null(none);   // 10 mm out of the belt's plane (and on no shaft)
         }
 
         [Fact]

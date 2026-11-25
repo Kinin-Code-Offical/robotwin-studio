@@ -138,6 +138,7 @@ namespace RobotTwin.CoreSim.Sandbox
                         Id = NextCoupling(world), Kind = WorldCoupling.Gear, JointA = ja.Value.Joint.Id, JointB = jb.Value.Joint.Id, SizeA = a.S.Teeth, SizeB = b.S.Teeth,
                         Reverse = Sense(ja.Value, a.Axis) * Sense(jb.Value, a.Axis) < 0
                     });
+                    Mesh(a, b);
                     report.Couplings++;
                     report.Links.Add($"{a.O.Name} ile {b.O.Name} kavrıyor: {a.S.Teeth}:{b.S.Teeth}, eksen mesafesi {Mm(centre)} mm.");
                 }
@@ -168,6 +169,85 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             return report;
+        }
+
+        /// <summary>
+        /// Turns gear B about its own axis so that where the pitch circles touch its tooth space holds A's tooth: the
+        /// gears start meshed, not tooth on tooth, and keep meshing as the coupling turns them (Mechanics/GearGeometry.cs).
+        /// </summary>
+        private static void Mesh(Part a, Part b)
+        {
+            var n = a.Axis;
+            var line = b.Origin - a.Origin;
+            line = (line - n * line.Dot(n)).Normalized();
+            double Tooth(Part g, Vec3 towards)
+            {
+                var x = g.O.Pose.Orientation.Rotate(Vec3.UnitX);
+                x = (x - n * x.Dot(n)).Normalized();
+                return Math.Atan2(n.Dot(towards.Cross(x)), towards.Dot(x));
+            }
+
+            double turn = GearGeometry.MeshTurn(a.S.Teeth, Tooth(a, line), b.S.Teeth, Tooth(b, line * -1));
+            if (Math.Abs(turn) < 1e-9) return;
+            var (roll, pitch, yaw) = (Quat.FromAxisAngle(n, turn) * b.O.Pose.Orientation).ToEuler();
+            b.O.Pose.Roll = roll * 180 / Math.PI;
+            b.O.Pose.Pitch = pitch * 180 / Math.PI;
+            b.O.Pose.Yaw = yaw * 180 / Math.PI;
+        }
+
+        /// <summary>
+        /// The length of an open belt round two pulleys (m): both straight spans, tangent to the pitch circles, and the arcs
+        /// it wraps: 2·√(C² − (r₂ − r₁)²) + r₁(π − 2φ) + r₂(π + 2φ), φ = asin((r₂ − r₁)/C).
+        /// </summary>
+        public static double BeltLength(double r1, double r2, double centres)
+        {
+            if (r1 > r2) (r1, r2) = (r2, r1);
+            double phi = Math.Asin(Math.Min(1, (r2 - r1) / centres));
+            return 2 * Math.Sqrt(Math.Max(0, centres * centres - (r2 - r1) * (r2 - r1))) + r1 * (Math.PI - 2 * phi) + r2 * (Math.PI + 2 * phi);
+        }
+
+        /// <summary>Closed GT2 belts sold as loops (mm), so the nearest one at or above the length can be named.</summary>
+        public static readonly int[] Gt2Loops = { 100, 110, 112, 122, 140, 158, 160, 180, 188, 200, 202, 220, 232, 240, 250, 260, 280, 300, 310, 350, 400, 420, 450, 500, 550, 600, 610, 700, 752, 800, 852, 1000 };
+
+        /// <summary>
+        /// Puts a GT2 belt round two pulleys: their axes parallel and their grooves in one plane. The shafts' joints are
+        /// coupled at the ratio of the pitch diameters, turning the same way; the result says the belt's length and the
+        /// closed belt to buy, or why it cannot go on.
+        /// </summary>
+        public static (WorldCoupling? Belt, string Message) Belt(WorldDocument world, WorldObject pulleyA, WorldObject pulleyB)
+        {
+            var sa = DriveParts.Of(pulleyA);
+            var sb = DriveParts.Of(pulleyB);
+            if (sa?.Kind != DrivePartKind.Pulley || sb?.Kind != DrivePartKind.Pulley) return (null, "Kayış yalnız iki kasnağın arasına takılır.");
+            var (oa, na, _) = DriveParts.AxisOf(pulleyA, sa);
+            var (ob, nb, _) = DriveParts.AxisOf(pulleyB, sb);
+            if (Math.Abs(Math.Abs(na.Dot(nb)) - 1) > AngleTolerance * AngleTolerance) return (null, $"{pulleyA.Name} ile {pulleyB.Name} paralel değil: kayış kasnaktan çıkar.");
+            // The grooves' middles must be in one plane square to the axes.
+            var ga = oa + na * (sa.Length / 2);
+            var gb = ob + nb * (sb.Length / 2);
+            var d = gb - ga;
+            double offset = Math.Abs(d.Dot(na)), centres = (d - na * d.Dot(na)).Length;
+            if (offset > 0.001) return (null, $"{pulleyA.Name} ile {pulleyB.Name} aynı düzlemde değil ({Mm(offset)} mm kaçık): kayış yürümez.");
+            double ra = sa.PitchDiameter / 2, rb = sb.PitchDiameter / 2;
+            if (centres <= ra + rb + 0.002) return (null, $"{pulleyA.Name} ile {pulleyB.Name} birbirine çok yakın: araları en az {Mm(ra + rb + 0.002)} mm olmalı.");
+            var ja = MovingJoint(world, pulleyA, na, WorldJointKind.Hinge);
+            var jb = MovingJoint(world, pulleyB, nb, WorldJointKind.Hinge);
+            if (ja == null || jb == null)
+                return (null, $"{(ja == null ? pulleyA.Name : pulleyB.Name)} dönebileceği bir mile ya da rulmana takılı değil: önce mekanizmayı kurun.");
+            if (Coupled(world, ja.Value.Joint, jb.Value.Joint)) return (null, $"{pulleyA.Name} ile {pulleyB.Name} zaten bağlı.");
+            double length = BeltLength(ra, rb, centres);
+            var belt = new WorldCoupling
+            {
+                Id = NextCoupling(world), Kind = WorldCoupling.Belt, JointA = ja.Value.Joint.Id, JointB = jb.Value.Joint.Id,
+                SizeA = sa.PitchDiameter * 1000, SizeB = sb.PitchDiameter * 1000, PulleyA = pulleyA.Id, PulleyB = pulleyB.Id,
+                // A belt turns both pulleys the same way about a common axis.
+                Reverse = Sense(ja.Value, na) * Sense(jb.Value, na) < 0
+            };
+            (world.Couplings ??= new List<WorldCoupling>()).Add(belt);
+            double mm = length * 1000;
+            int loop = Gt2Loops.FirstOrDefault(l => l >= mm - 0.5);
+            string buy = loop > 0 ? $"; kapalı GT2 kayış {loop} mm ({loop / 2} diş)" + (loop - mm > 1 ? $", gergi için {Mm((loop - mm) / 2000)} mm kaydırın" : string.Empty) : string.Empty;
+            return (belt, $"{pulleyA.Name} → {pulleyB.Name}: GT2 kayış {Mm(length)} mm ({(mm / 2).ToString("0.#", CultureInfo.InvariantCulture)} diş){buy}.");
         }
 
         private static string Mm(double m) => (m * 1000).ToString("0.##", CultureInfo.InvariantCulture);

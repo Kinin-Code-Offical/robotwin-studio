@@ -7488,7 +7488,10 @@
   "Mil bileziği Ø8": "Shaft collar Ø8",
   "Setuskurlu çelik bilezik: mili rulmanda eksenel tutar.": "Steel collar with a set screw: keeps the shaft from sliding out of its bearing.",
   "Esnek kaplin 5 × 8": "Flexible coupler 5 × 8",
-  "Helisel yarıklı alüminyum kaplin: motorun 5 mm milini 8 mm vidalı mile bağlar, küçük eksen kaçıklığını alır.": "Aluminium coupler with a helical slot: joins a motor's 5 mm shaft to an 8 mm lead screw and takes up a little misalignment."
+  "Helisel yarıklı alüminyum kaplin: motorun 5 mm milini 8 mm vidalı mile bağlar, küçük eksen kaçıklığını alır.": "Aluminium coupler with a helical slot: joins a motor's 5 mm shaft to an 8 mm lead screw and takes up a little misalignment.",
+  "Kayış takıldı": "Belt fitted",
+  "Kayış yalnız iki kasnağın arasına takılır.": "A belt only goes round two pulleys.",
+  "İki kasnağa GT2 kayış takar: boyunu hesaplar, alınacak kapalı kayışı söyler, milleri çap oranında aynı yönde bağlar.": "Fits a GT2 belt round two pulleys: works out its length, names the closed belt to buy, and couples the shafts the same way at the ratio of the diameters."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -8184,7 +8187,6 @@
   "Göreli başlangıç: ({…}, {…}) — HUD'da dX/dY": "Relative origin: ({0}, {1}) — dX/dY in the HUD",
   "Gövde '{…}": "Body '{0}",
   "Gövde modeli ({…}": "Body model ({0}",
-  "Gövde sıcaklığı: {tb:0.0} °C · {mat.Name}: {ph.MaterialStateOf(o.Id)} (sertlik %{mat.ModulusFactor(tb) * 100:0}{tg})": "Body temp      : {0} °C · {1}: {2} (stiffness {3}%{4})",
   "Gövdeler/{…}": "Bodies/{0}",
   "Gövdeye yüzeyle bağlanmayan {…} hücre (ayrı parçacık, ör. servo başlığı) ağdan çıkarıldı; onlara gelen yükler gövdenin en yakın yüzeyine aktarıldı.": "{0} cells not connected to the body by a surface (separate pieces, e.g. a servo horn) were removed from the mesh; their loads were transferred to the nearest surface of the body.",
   "Gözlem '{…}": "Observation '{0}",
@@ -10564,6 +10566,16 @@
   "{…} dönmesini engelleyen bir kızağa bağlı değil: vidayla birlikte döner. Somunu doğrusal rulmanlı taşıyıcıya bağlayın.": "{0} is on no slide that stops it turning: it turns with the screw. Fix the nut to a carriage on linear bearings.",
   "Yatak: {…}": "Bearing: {0}",
   "Gövde sıcaklığı: {…} °C · {…}: {…} (sertlik %{…})": "Body temp      : {0} °C · {1}: {2} (stiffness {3}%)",
-  "Gövde sıcaklığı: {…} °C · {…}: {…} (sertlik %{…}, camsı geçiş {…} °C)": "Body temp      : {0} °C · {1}: {2} (stiffness {3}%, glass transition {4} °C)"
+  "Gövde sıcaklığı: {…} °C · {…}: {…} (sertlik %{…}, camsı geçiş {…} °C)": "Body temp      : {0} °C · {1}: {2} (stiffness {3}%, glass transition {4} °C)",
+  "Kayış tak → {…}": "Fit a belt → {0}",
+  "Kayış: {…} ile": "Belt: with {0}",
+  "{…} → {…}: GT2 kayış {…} mm ({…} diş); kapalı GT2 kayış {…} mm ({…} diş), gergi için {…} mm kaydırın.": "{0} → {1}: GT2 belt {2} mm ({3} teeth); closed GT2 belt {4} mm ({5} teeth), move a pulley {6} mm to tension it.",
+  "{…} → {…}: GT2 kayış {…} mm ({…} diş); kapalı GT2 kayış {…} mm ({…} diş).": "{0} → {1}: GT2 belt {2} mm ({3} teeth); closed GT2 belt {4} mm ({5} teeth).",
+  "{…} → {…}: GT2 kayış {…} mm ({…} diş).": "{0} → {1}: GT2 belt {2} mm ({3} teeth).",
+  "{…} ile {…} paralel değil: kayış kasnaktan çıkar.": "{0} and {1} are not parallel: the belt would run off.",
+  "{…} ile {…} aynı düzlemde değil ({…} mm kaçık): kayış yürümez.": "{0} and {1} are not in one plane ({2} mm apart): the belt would not run.",
+  "{…} ile {…} birbirine çok yakın: araları en az {…} mm olmalı.": "{0} and {1} are too close: they must be at least {2} mm apart.",
+  "{…} dönebileceği bir mile ya da rulmana takılı değil: önce mekanizmayı kurun.": "{0} is on no shaft or bearing it could turn on: build the mechanism first.",
+  "{…} ile {…} zaten bağlı.": "{0} and {1} are already coupled."
  }
 }

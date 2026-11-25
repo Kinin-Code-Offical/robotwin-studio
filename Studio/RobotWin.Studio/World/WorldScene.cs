@@ -64,6 +64,7 @@ namespace RobotWin.Studio.World
             _view.Camera = _camera;
             _view.Children.Add(_environment);
             _view.Children.Add(_cables);
+            _view.Children.Add(_belts);   // [drive] World/WorldScene.Belts.cs
             _view.Children.Add(_overlay);
             _view.Children.Add(_replay);   // [render] replay overlays (World/WorldScene.Playback.cs)
             Children.Add(_view);
@@ -221,7 +222,7 @@ namespace RobotWin.Studio.World
             for (int i = _view.Children.Count - 1; i >= 0; i--)
             {
                 var c = _view.Children[i];
-                if (c != _environment && c != _cables && c != _overlay && c != _replay) _view.Children.RemoveAt(i);
+                if (c != _environment && c != _cables && c != _belts && c != _overlay && c != _replay) _view.Children.RemoveAt(i);
             }
 
             BuildEnvironment();
@@ -229,6 +230,7 @@ namespace RobotWin.Studio.World
             if (World == null)
             {
                 _cables.Content = null;
+                _belts.Content = null;
                 _overlay.Content = null;
                 return;
             }
@@ -884,6 +886,7 @@ namespace RobotWin.Studio.World
             }
             UpdateCell();   // [arm] arm links, tools on flanges, belts, feeder cartons (World/WorldScene.Cell.cs)
             foreach (var it in _items.Values) ((MatrixTransform3D)it.Visual.Transform).Matrix = ExplodedMatrix(it.Object.Id, it.Current);   // [shell] World/WorldScene.Shells.cs
+            UpdateBelts();   // [drive] GT2 belts round their pulleys (World/WorldScene.Belts.cs)
         }
 
         private Matrix3D Resolve(Item it, HashSet<string> done, int depth)

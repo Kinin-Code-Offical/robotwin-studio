@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **GT2 belts round two pulleys, and gears that start meshed:** a pulley's inspector fits a belt to another pulley in its plane: the belt's length from its spans and wraps, the closed belt to buy and how far to move a pulley to tension it, the shafts coupled at the ratio of the diameters. The scene draws the belt at GT2 sizes, its teeth in the first pulley's grooves and running with it. Meshing gears are turned by up to half a tooth pitch when assembled, so they start tooth in space rather than tooth on tooth.
+
 - **Gears, pulleys, bearings, shafts and lead screws as real parts, assembled from where they are:** a Power transmission group with POM spur gears (involute teeth), GT2 pulleys, 608/688/625/6000 bearings, a KP08 pillow block, steel shafts, T8 lead screws with brass nuts, LM8UU linear bearings, collars and couplers, their 3D models generated from their dimensions and their masses from their materials. Placed as in a real machine, "Build the mechanism" (and starting the world) reads them: a shaft turns in the bearings it passes through, a gear is fixed on its shaft, gears whose pitch circles touch mesh, a nut drives the carriage it is bolted to. Parts nothing holds are named. Also: an overlap warning no longer fires for shapes whose boxes overlap but whose solids do not, meshing gears are no longer reported as sunk into each other, and new POM, brass and zinc materials.
 
 - **Backlash and belt stretch:** a gear, rack, carriage or screw can have play: inside it the two sides move apart, at either flank the teeth push, so a reversing motor leaves the driven side standing until it has crossed the gap (1° at 0.1 rad/s: 175 ms). A belt can stretch under load with its span's stiffness, as a spring between the pulleys.
@@ -187,6 +189,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **"Boş sayfa" over a circuit:** opening a project or an example did not refresh the empty-sheet hint, and the snapshot circuits were built without a document event; both now show the hint only over an empty sheet.
 
 - **Live body temperature in English** showed "stiffness 10%0": the line had two values side by side that the pattern could not tell apart; it now has two unambiguous shapes. Lowercase "çelik" and "alüminyum" also weighed as PLA.
 

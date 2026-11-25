@@ -79,46 +79,8 @@ namespace RobotWin.Studio.Models3D
         /// Involute spur-gear outline (mm, counter-clockwise): 20° pressure angle, addendum m, dedendum 1.25 m. Below the
         /// base circle the flank runs radially to the root.
         /// </summary>
-        internal static List<Point> GearOutline(double m, int z, int flankSteps = 6)
-        {
-            double alpha = 20 * Math.PI / 180, rp = m * z / 2, rb = rp * Math.Cos(alpha), ra = rp + m, rf = Math.Max(rp - 1.25 * m, 0.2 * rp);
-            static double Inv(double a) => Math.Tan(a) - a;
-            double invP = Inv(alpha);
-            // Half the tooth's angular width at a radius.
-            double Half(double r) => Math.PI / (2 * z) + invP - (r > rb ? Inv(Math.Acos(rb / r)) : 0);
-            var pts = new List<Point>();
-            void Polar(double r, double t)
-            {
-                var p = new Point(r * Math.Cos(t), r * Math.Sin(t));
-                if (pts.Count == 0 || (pts[^1] - p).Length > 1e-6) pts.Add(p);   // no zero-length edges where the root meets the base circle
-            }
-            double r0 = Math.Max(rf, Math.Min(rb, ra));
-            for (int k = 0; k < z; k++)
-            {
-                double c = 2 * Math.PI * k / z;
-                // Leading flank, root to tip.
-                Polar(rf, c - Half(r0));
-                for (int i = 0; i <= flankSteps; i++)
-                {
-                    double r = r0 + (ra - r0) * i / flankSteps;
-                    Polar(r, c - Half(r));
-                }
-
-                Polar(ra, c);
-                for (int i = flankSteps; i >= 0; i--)
-                {
-                    double r = r0 + (ra - r0) * i / flankSteps;
-                    Polar(r, c + Half(r));
-                }
-
-                Polar(rf, c + Half(r0));
-                // The root between this tooth and the next.
-                double next = 2 * Math.PI * (k + 1) / z - Half(r0), here = c + Half(r0);
-                for (int i = 1; i < 3; i++) Polar(rf, here + (next - here) * i / 3);
-            }
-
-            return pts;
-        }
+        internal static List<Point> GearOutline(double m, int z) =>
+            RobotTwin.CoreSim.Mechanics.GearGeometry.Outline(m, z).Select(p => new Point(p.X, p.Y)).ToList();
 
         private static void SpurGear(PartBuilder b, DrivePartSpec s, uint rgb)
         {

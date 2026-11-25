@@ -323,6 +323,9 @@ Parçaları gerçek bir makinedeki gibi yerleştirin. Bağlantıları siz çizme
 - Çubuğa geçen LM8UU çubuk boyunca **kayar**.
 - Bölüm daireleri değen, eksenleri paralel ve modülü aynı iki dişli **kavrar**: eksen mesafesi m·(z₁+z₂)/2 olmalıdır.
 - Vidalı mile geçen somun, bağlı olduğu kızaklı taşıyıcıyı **sürer**. Sağ el vida: mil üstten bakınca saat yönünde dönünce somun yükselir.
+- Kavrayan dişliler dişi dişe değil, dişi boşluğa gelecek biçimde başlar: kurulurken sürülen dişli en çok yarım diş adımı çevrilir.
+
+**Kayış:** bir kasnağı seçip denetçide **Kayış tak → (öteki kasnak)** düğmesine basın. Eksenler paralel, kayış olukları aynı düzlemde olmalıdır. Kayışın boyu iki düz açıklık ile sardığı yaylardan hesaplanır. Alınacak kapalı GT2 kayışın boyu ve gerdirmek için kasnağın ne kadar kaydırılacağı yazılır. 20T ile 40T kasnak 80 mm arayla 220,5 mm kayış ister; 232 mm'lik kayış için kasnak 5,75 mm kaydırılır. Miller çap oranında, aynı yönde bağlanır. Kayış sahnede gerçek GT2 ölçüleriyle çizilir: 0,63 mm sırt ve 2 mm adımlı dişler ilk kasnağın oluklarına oturur, kasnak döndükçe dişler kayışla yürür.
 
 Varsayım yapılmaz: mile takılı olmayan dişli düşer, rulmandan geçmeyen mil tutulmaz, dar delik takılmaz, bol delikte mil boşta kalır. Böyle durumlar **Olaylar** sekmesinde ve parçanın denetçisinde yazar. Rulmanları ve KP08'leri gövdeye bağlayın ya da **Sabit** işaretleyin; KP08 sabitse taban yuvalarında iki M6 cıvata görünür. Kurulan bağlantılar **Mekanik bağlantılar** bölümünde görünür ve düzenlenebilir.
 
