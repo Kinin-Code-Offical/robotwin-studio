@@ -58,6 +58,14 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 _registers[uart + 0x24] = 0x0A006060;
                 _registers[uart + 0x14] = 0x000002B6;
             }
+
+            // [motor] The MCPWM's: each timer's period 255 (TIMERn_CFG0), each operator's dead-time module bypassed on both
+            // outputs (DTn_CFG's A/B_OUTBYPASS).
+            foreach (uint mcpwm in McpwmBase)
+            {
+                for (uint t = 0; t < 3; t++) _registers[mcpwm + 0x04 + 0x10 * t] = 255u << 8;
+                for (uint op = 0; op < 3; op++) _registers[mcpwm + 0x3C + 0x38 * op + 0x1C] = 3u << 15;
+            }
         }
 
         /// <summary>The PRO_CPU (core 0): it boots.</summary>

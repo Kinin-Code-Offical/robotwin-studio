@@ -87,7 +87,9 @@ void run_serial_events();                                  /* after each loop() 
 void hal_wifi_reset();
 void hal_rmt_reset();
 void hal_pcnt_reset();
-void hal_gpio_driver_reset();                               /* chip reset: driver/gpio.h's pin configurations (rw_gpio_driver.cpp) */                                     /* chip reset: every pulse counter unit released (rw_pcnt.cpp) */
+void hal_gpio_driver_reset();
+void hal_mcpwm_reset();                                    /* chip reset: every MCPWM timer and operator released (rw_mcpwm.cpp) */
+void hal_pwm_out(int gpio, double frequency, double duty);  /* a PWM on a pin through the host (duty < 0: released) */                               /* chip reset: driver/gpio.h's pin configurations (rw_gpio_driver.cpp) */                                     /* chip reset: every pulse counter unit released (rw_pcnt.cpp) */
 void hal_pcnt_edge(int gpio, int level);                   /* an input pin changed level (host thread, from hal_pin_changed) */
 int hal_pin_level(int gpio);                               /* an input pin's level as last seen, or -1 (rw_hal.cpp) */
 bool hal_pin_drives(int gpio);                             /* the sketch drives the pin (output, LEDC, DAC, tone) */                                      /* chip reset: every RMT channel released (rw_rmt.cpp) */

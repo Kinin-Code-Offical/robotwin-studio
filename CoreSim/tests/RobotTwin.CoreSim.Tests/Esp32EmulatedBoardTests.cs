@@ -425,6 +425,39 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(int.Parse(last.Groups[3].Value), int.Parse(last.Groups[2].Value) / 100 - 1, int.Parse(last.Groups[2].Value) / 100 + 1);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_MCPWM_ELF names the MCPWM sketch's real-chip ELF.</summary>
+        public sealed class McpwmElfFactAttribute : FactAttribute
+        {
+            public McpwmElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_MCPWM_ELF"))) Skip = "RW_ESP32_MCPWM_ELF verilmedi.";
+            }
+        }
+
+        [McpwmElfFact]
+        public void McpwmDriverDrivesAHalfBridgePair()
+        {
+            // IDF's mcpwm driver: 10 MHz timer, 500 ticks (20 kHz), compare 150 (30 %), 2 µs dead time on each edge;
+            // GPIO18 carries A (30 % − 4 % = 26 %), GPIO19 the inverted B ((1 − 30 % − 4 %) = 66 %).
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_MCPWM_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            soc.Run(240_000L * 400);
+            string text = soc.Uart0.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("mcpwm hazir", text);
+            var a = soc.PadDrive(18);
+            var b = soc.PadDrive(19);
+            _out.WriteLine($"A {a.PwmFrequency} Hz {a.PwmDuty:P1}, B {b.PwmFrequency} Hz {b.PwmDuty:P1}");
+            Assert.True(a.Driven && b.Driven);
+            Assert.Equal(20000, a.PwmFrequency, 3);
+            Assert.Equal(0.26, a.PwmDuty, 6);
+            Assert.Equal(20000, b.PwmFrequency, 3);
+            Assert.Equal(0.66, b.PwmDuty, 6);
+        }
+
         /// <summary>A [Fact] skipped unless RW_ESP32_LSLEEP_ELF names the light sleep sketch's real-chip ELF.</summary>
         public sealed class LightSleepElfFactAttribute : FactAttribute
         {

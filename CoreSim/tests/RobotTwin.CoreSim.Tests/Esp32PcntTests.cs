@@ -178,6 +178,90 @@ void loop() {
         }
 
         [Esp32Fact]
+        public void McpwmDriverDrivesAHalfBridgePairInTheFastMode()
+        {
+            // [motor] The same sketch as the emulator's MCPWM check: 20 kHz, 30 %, 2 µs dead time on each edge; the pins
+            // carry A at 26 % and the inverted B at 66 %.
+            var w = new WorldDocument();
+            var esp = w.AddComponent(Lib, Esp32Parts.DevKitCId, new WorldPose());
+            esp.Firmware = new FirmwareSource { FileName = "mcpwm.ino", Source = McpwmSketch };
+            string dir = Path.Combine(Path.GetTempPath(), "robotwin-esp32-mcpwm-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var options = new RunnerOptions
+            {
+                Esp32Builder = src =>
+                {
+                    var build = new Esp32SketchCompiler().Compile(src, dir);
+                    Assert.True(build.Success, string.Join("\n", build.Diagnostics) + "\n" + build.Log);
+                    return build.DllPath;
+                }
+            };
+            using var runner = new WorldRunner(w, options);
+            runner.Step(0.6);
+            string text = string.Concat(runner.ReadSerial(null, false).Values);
+            _out.WriteLine(text);
+            Assert.Contains("mcpwm hazir", text);
+            var pins = runner.Compiled!.Circuit.Devices.OfType<RobotTwin.CoreSim.Analog.Devices.DigitalPin>().ToList();
+            var a = pins.Single(p => p.Id.EndsWith(".IO18", StringComparison.Ordinal));
+            var b = pins.Single(p => p.Id.EndsWith(".IO19", StringComparison.Ordinal));
+            _out.WriteLine($"A {a.PwmFrequency} Hz {a.PwmDuty:P1}, B {b.PwmFrequency} Hz {b.PwmDuty:P1}");
+            Assert.True(a.PwmActive && b.PwmActive);
+            Assert.Equal(20000, a.PwmFrequency, 3);
+            Assert.Equal(0.26, a.PwmDuty, 6);
+            Assert.Equal(20000, b.PwmFrequency, 3);
+            Assert.Equal(0.66, b.PwmDuty, 6);
+        }
+
+        private const string McpwmSketch = @"
+#include ""driver/mcpwm_prelude.h""
+
+void setup() {
+  Serial.begin(115200);
+  mcpwm_timer_handle_t timer = NULL;
+  mcpwm_timer_config_t tcfg = {};
+  tcfg.group_id = 0;
+  tcfg.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
+  tcfg.resolution_hz = 10000000;
+  tcfg.period_ticks = 500;
+  tcfg.count_mode = MCPWM_TIMER_COUNT_MODE_UP;
+  ESP_ERROR_CHECK(mcpwm_new_timer(&tcfg, &timer));
+  mcpwm_oper_handle_t oper = NULL;
+  mcpwm_operator_config_t ocfg = {};
+  ocfg.group_id = 0;
+  ESP_ERROR_CHECK(mcpwm_new_operator(&ocfg, &oper));
+  ESP_ERROR_CHECK(mcpwm_operator_connect_timer(oper, timer));
+  mcpwm_cmpr_handle_t cmp = NULL;
+  mcpwm_comparator_config_t ccfg = {};
+  ccfg.flags.update_cmp_on_tez = true;
+  ESP_ERROR_CHECK(mcpwm_new_comparator(oper, &ccfg, &cmp));
+  mcpwm_gen_handle_t ga = NULL, gb = NULL;
+  mcpwm_generator_config_t gcfg = {};
+  gcfg.gen_gpio_num = 18;
+  ESP_ERROR_CHECK(mcpwm_new_generator(oper, &gcfg, &ga));
+  gcfg.gen_gpio_num = 19;
+  ESP_ERROR_CHECK(mcpwm_new_generator(oper, &gcfg, &gb));
+  ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(cmp, 150));
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(ga,
+      MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)));
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(ga,
+      MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, cmp, MCPWM_GEN_ACTION_LOW)));
+  mcpwm_dead_time_config_t dt = {};
+  dt.posedge_delay_ticks = 20;
+  ESP_ERROR_CHECK(mcpwm_generator_set_dead_time(ga, ga, &dt));
+  dt.posedge_delay_ticks = 0;
+  dt.negedge_delay_ticks = 20;
+  dt.flags.invert_output = true;
+  ESP_ERROR_CHECK(mcpwm_generator_set_dead_time(ga, gb, &dt));
+  ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
+  Serial.println(""mcpwm hazir"");
+}
+
+void loop() {
+  delay(100);
+}
+";
+
+        [Esp32Fact]
         public void EspErrorCheckAbortsAndRestartsTheBoardAsTheChipDoes()
         {
             // ESP_ERROR_CHECK on a failing call (limits the wrong way round) prints the chip's report and the board

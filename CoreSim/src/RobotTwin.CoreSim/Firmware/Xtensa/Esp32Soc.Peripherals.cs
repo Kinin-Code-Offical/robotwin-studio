@@ -220,6 +220,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (WriteSpiRegister(register, value)) return true;
             if (WriteRmtRegister(register, value)) return true;
             if (WritePcntRegister(register, value)) return true;
+            if (WriteMcpwmRegister(register, value)) return true;
             WriteSleepRegister(register, value);
             if (WriteTimerRegister(register, value)) return true;
             if (WriteAdcRegister(register, value)) return true;

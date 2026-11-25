@@ -443,6 +443,7 @@ void hal_reset() {
     hal_rmt_reset();
     hal_pcnt_reset();
     hal_gpio_driver_reset();
+    hal_mcpwm_reset();
 }
 
 void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
@@ -462,6 +463,11 @@ void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
     if (!s.isr_enabled || (!s.isr0 && !s.isr1)) return;
     int m = s.isr_mode;
     if ((m == RISING && lv) || (m == FALLING && !lv) || m == CHANGE) fire_isr(gpio);
+}
+
+void hal_pwm_out(int gpio, double frequency, double duty) {
+    if (!valid_pin(gpio)) return;
+    host_pwm(gpio, frequency, duty);
 }
 
 int hal_pin_level(int gpio) {

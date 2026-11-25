@@ -169,6 +169,15 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 return true;
             }
 
+            // [motor] The MCPWM outputs: their generators' PWM after the dead-time module.
+            if (McpwmSignal(signal) is { } wave)
+            {
+                if (!wave.IsPwm) return wave.Level;
+                frequency = wave.Frequency;
+                duty = wave.Duty;
+                return true;
+            }
+
             // The I²C controllers' SCL and SDA (I2C0 29/30, I2C1 95/96): released between transfers, so on their open-drain
             // pads the pull-ups hold the lines high; the transfers themselves run on the bus, not drawn on the pins.
             if (signal == 29 || signal == 30 || signal == 95 || signal == 96) return true;

@@ -354,6 +354,65 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(0, soc.PcntCount(0));
         }
 
+        /// <summary>
+        /// [motor] MCPWM0: a 1 kHz up-counting timer, an operator setting its output A high at zero and low at compare A
+        /// (25 %), the dead-time module making A and an inverted B for a half bridge (10 µs on each edge), up-down counting,
+        /// a toggle that halves the frequency, a timer stopped at zero and a software force; the pads carry the PWM.
+        /// </summary>
+        [Fact]
+        public void McpwmGeneratesComplementaryPwmWithDeadTime()
+        {
+            var soc = Chip();
+            const uint m = 0x3FF5E000;
+            soc.Write32(0x3FF49070, 2u << 12);   // GPIO18: GPIO function
+            soc.Write32(0x3FF49074, 2u << 12);   // GPIO19
+            soc.Write32(0x3FF44530 + 18 * 4, 32);   // PWM0_OUT0A
+            soc.Write32(0x3FF44530 + 19 * 4, 33);   // PWM0_OUT0B
+            soc.Write32(m + 0x00, 15);                       // 160 MHz / 16 = 10 MHz
+            soc.Write32(m + 0x04, 9 | 999u << 8);            // timer 0: / 10 = 1 MHz, period 0..999
+            soc.Write32(m + 0x08, 2 | 1u << 3);              // start, free running, counting up
+            soc.Write32(m + 0x40, 250);                      // operator 0, compare A
+            soc.Write32(m + 0x50, 2u << 0 | 1u << 4);        // generator A: high at zero, low at A
+            var a = soc.PadDrive(18);
+            Assert.True(a.IsPwm);
+            Assert.Equal(1000, a.PwmFrequency, 6);
+            Assert.Equal(0.25, a.PwmDuty, 6);
+
+            // Active-high complementary: A's rising edge 10 µs late, B = A inverted with its falling edge 10 µs late.
+            soc.Write32(m + 0x58, 1u << 14 | 1u << 17);      // FED inverted, both paths in, delays in timer ticks
+            soc.Write32(m + 0x60, 9);                        // RED: 10 ticks (the register holds one less)
+            soc.Write32(m + 0x5C, 9);                        // FED: 10 ticks
+            Assert.Equal(0.24, soc.PadDrive(18).PwmDuty, 6);
+            var b = soc.PadDrive(19);
+            Assert.Equal(1000, b.PwmFrequency, 6);
+            Assert.Equal(0.74, b.PwmDuty, 6);
+
+            // Up-down: high from A going up to A coming down (2 × (500 − 375) ticks of 1000), still 1 kHz.
+            soc.Write32(m + 0x58, 3u << 15);                 // dead time bypassed
+            soc.Write32(m + 0x04, 9 | 500u << 8);
+            soc.Write32(m + 0x08, 2 | 3u << 3);
+            soc.Write32(m + 0x40, 375);
+            soc.Write32(m + 0x50, 2u << 4 | 1u << 16);       // UTEA high, DTEA low
+            Assert.Equal(1000, soc.PadDrive(18).PwmFrequency, 6);
+            Assert.Equal(0.25, soc.PadDrive(18).PwmDuty, 6);
+
+            // A toggle at zero, counting up: 500 Hz, half the time high.
+            soc.Write32(m + 0x04, 9 | 999u << 8);
+            soc.Write32(m + 0x08, 2 | 1u << 3);
+            soc.Write32(m + 0x50, 3u << 0);
+            Assert.Equal(500, soc.PadDrive(18).PwmFrequency, 6);
+            Assert.Equal(0.5, soc.PadDrive(18).PwmDuty, 6);
+
+            // Stopped at zero after "high at zero, low at A": the output rests high; a force low holds it low.
+            soc.Write32(m + 0x50, 2u << 0 | 1u << 4);
+            soc.Write32(m + 0x08, 0 | 1u << 3);
+            var stopped = soc.PadDrive(18);
+            Assert.False(stopped.IsPwm);
+            Assert.True(stopped.Level);
+            soc.Write32(m + 0x4C, 1u << 6);
+            Assert.False(soc.PadDrive(18).Level);
+        }
+
         [Fact]
         public void RmtSendsWs2812BitsToThePad()
         {
