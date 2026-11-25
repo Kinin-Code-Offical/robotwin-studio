@@ -392,6 +392,39 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(values[values.Count - 1], 12, 14);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_PCNT_ELF names the pulse counter sketch's real-chip ELF.</summary>
+        public sealed class PcntElfFactAttribute : FactAttribute
+        {
+            public PcntElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_PCNT_ELF"))) Skip = "RW_ESP32_PCNT_ELF verilmedi.";
+            }
+        }
+
+        [PcntElfFact]
+        public void PulseCounterCountsTheChipsOwnPwm()
+        {
+            // IDF's pulse_cnt driver counts the rising edges of LEDC's 1 kHz PWM on GPIO18: about one a millisecond, the
+            // count accumulated past the ±100 limits by the driver, and the watch point at 100 reached each time.
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_PCNT_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            soc.Run(240_000L * 1600);
+            string text = soc.Uart0.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("pcnt hazir", text);
+            var lines = Regex.Matches(text, @"t=(\d+) sayac=(\d+) esik=(\d+)").Cast<Match>().ToList();
+            Assert.True(lines.Count >= 3);
+            var last = lines[lines.Count - 1];
+            var first = lines[0];
+            double ms = int.Parse(last.Groups[1].Value) - int.Parse(first.Groups[1].Value);
+            double counted = int.Parse(last.Groups[2].Value) - int.Parse(first.Groups[2].Value);
+            Assert.InRange(counted / ms, 0.97, 1.03);                       // 1 kHz: one rising edge a millisecond
+            Assert.InRange(int.Parse(last.Groups[3].Value), int.Parse(last.Groups[2].Value) / 100 - 1, int.Parse(last.Groups[2].Value) / 100 + 1);
+        }
+
         /// <summary>A [Fact] skipped unless RW_ESP32_FLASH_ELF names the Preferences + LittleFS sketch's real-chip ELF.</summary>
         public sealed class FlashElfFactAttribute : FactAttribute
         {

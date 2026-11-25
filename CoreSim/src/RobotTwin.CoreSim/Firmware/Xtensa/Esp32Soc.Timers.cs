@@ -84,6 +84,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             ServiceI2c();
             ServiceSpi();
             ServiceRmt();
+            ServicePcnt();
         }
 
         private bool ReadTimerRegister(uint register, out uint value)

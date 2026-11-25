@@ -125,6 +125,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (ReadI2cRegister(register, out value)) return true;
             if (ReadSpiRegister(register, out value)) return true;
             if (ReadRmtRegister(register, out value)) return true;
+            if (ReadPcntRegister(register, out value)) return true;
             if (ReadTimerRegister(register, out value)) return true;
             if (ReadAdcRegister(register, out value)) return true;
             if (ReadTouchRegister(register, out value)) return true;
@@ -218,6 +219,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (WriteI2cRegister(register, value)) return true;
             if (WriteSpiRegister(register, value)) return true;
             if (WriteRmtRegister(register, value)) return true;
+            if (WritePcntRegister(register, value)) return true;
             WriteSleepRegister(register, value);
             if (WriteTimerRegister(register, value)) return true;
             if (WriteAdcRegister(register, value)) return true;

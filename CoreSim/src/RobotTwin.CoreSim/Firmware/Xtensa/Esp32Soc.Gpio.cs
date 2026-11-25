@@ -213,6 +213,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 if (fire) _gpioStatus |= 1UL << gpio;
             }
 
+            SamplePcnt();
             UpdateGpioInterrupt();
         }
 

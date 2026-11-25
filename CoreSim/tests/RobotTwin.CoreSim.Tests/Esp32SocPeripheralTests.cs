@@ -299,6 +299,61 @@ namespace RobotTwin.CoreSim.Tests
             Assert.NotEqual(0u, soc.Read32(0x3FF48884) & (1u << 10)); // MEAS_DONE
         }
 
+        /// <summary>
+        /// [encoder] A PCNT unit wired as IDF's rotary encoder example decodes quadrature ×4: channel 0 counts A's edges
+        /// steered by B, channel 1 B's edges steered by A; turning back counts down, and the high limit returns the count
+        /// to zero with its event and interrupt.
+        /// </summary>
+        [Fact]
+        public void PcntDecodesAQuadratureEncoder()
+        {
+            var soc = Chip();
+            bool a = false, b = false;
+            soc.PadVoltage = gpio => gpio == 4 ? (a ? 3.3 : 0) : gpio == 5 ? (b ? 3.3 : 0) : 0;
+            soc.SamplePads();
+            const uint pcnt = 0x3FF57000, funcIn = 0x3FF44130;
+            foreach (uint mux in new uint[] { 0x3FF49048, 0x3FF4906C }) soc.Write32(mux, 2u << 12 | 1u << 9);   // GPIO4, GPIO5: GPIO function, input on
+            soc.Write32(funcIn + 39 * 4, 1u << 7 | 4);   // unit 0, channel 0: edges from A (GPIO4)
+            soc.Write32(funcIn + 41 * 4, 1u << 7 | 5);   //                     level from B (GPIO5)
+            soc.Write32(funcIn + 40 * 4, 1u << 7 | 5);   // channel 1: edges from B
+            soc.Write32(funcIn + 42 * 4, 1u << 7 | 4);   //            level from A
+            // Channel 0: falling +1, rising −1, reversed while the level is low; channel 1: rising +1, falling −1, the same.
+            soc.Write32(pcnt + 0x00, 1u << 16 | 2u << 18 | 1u << 22 | 2u << 24 | 1u << 26 | 1u << 30 | 1u << 12);
+            soc.Write32(pcnt + 0x08, 16u | unchecked((uint)(ushort)(short)-100) << 16);   // limits +16 and −100
+            soc.Write32(pcnt + 0x88, 1);
+            soc.Write32(pcnt + 0xB0, 0x5554);                            // unit 0 out of reset, counting
+
+            void Turn(int steps)
+            {
+                // From 00, A leads B going forward (10, 11, 01, 00) and B leads A going back (01, 11, 10, 00).
+                var forward = new[] { (true, false), (true, true), (false, true), (false, false) };
+                var back = new[] { (false, true), (true, true), (true, false), (false, false) };
+                for (int i = 0; i < Math.Abs(steps); i++)
+                {
+                    var (na, nb) = steps > 0 ? forward[i % 4] : back[i % 4];
+                    a = na;
+                    b = nb;
+                    soc.SamplePads();
+                }
+            }
+
+            Turn(12);
+            Assert.Equal(12, soc.PcntCount(0));
+            Assert.Equal(12u, soc.Read32(pcnt + 0x60));
+            Turn(-4);                                                    // back one cycle: 01, 11, 10, 00
+            Assert.Equal(8, soc.PcntCount(0));
+            Assert.Equal(0u, soc.Read32(pcnt + 0x80));
+            Turn(8);                                                     // 16 reached: back to zero, H_LIM
+            Assert.Equal(0, soc.PcntCount(0));
+            Assert.Equal(1u, soc.Read32(pcnt + 0x84));                   // INT_ST, unit 0
+            Assert.NotEqual(0u, soc.Read32(pcnt + 0x90) & (1u << 5));    // STATUS: H_LIM
+            soc.Write32(pcnt + 0x8C, 1);
+            Assert.Equal(0u, soc.Read32(pcnt + 0x84));
+            soc.Write32(pcnt + 0xB0, 0x5556);                            // paused: edges do not count
+            Turn(4);
+            Assert.Equal(0, soc.PcntCount(0));
+        }
+
         [Fact]
         public void RmtSendsWs2812BitsToThePad()
         {
