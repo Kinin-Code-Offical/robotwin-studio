@@ -136,6 +136,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Pro.Ps = 0x00040020 | (1u << 16);
             Pro.SetA(1, BootStack);
             Write32(BootStack - 12, BootStack);
+            // g_rom_flashchip as the ROM and the bootloader leave it: the chip's id (C8 40 16), 4 MB, 64 KB blocks, 4 KB
+            // sectors, 256-byte pages.
+            WriteRomFlashChip(0xC84016, FlashSize, 0x10000, 0x1000, 0x100, 0xFFFF);
             // What the bootloader leaves in the RTC store registers: the 40 MHz crystal and the 80 MHz APB clock (each
             // value doubled in both halves, as rtc_clk checks), and the slow clock's calibration (150 kHz RC, Q13.19 µs).
             _registers[0x3FF480B0] = 0x00280028;
@@ -482,6 +485,19 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         }
 
         /// <summary>Serves the ROM function called <paramref name="name"/> (when the firmware links it) with <paramref name="body"/>.</summary>
+        /// <summary>The ROM's flash description (esp_rom_spiflash_chip_t g_rom_flashchip, in the ROM's reserved DRAM).</summary>
+        private const uint RomFlashChip = 0x3FFAE270;
+
+        private void WriteRomFlashChip(uint deviceId, uint chipSize, uint blockSize, uint sectorSize, uint pageSize, uint statusMask)
+        {
+            Write32(RomFlashChip, deviceId);
+            Write32(RomFlashChip + 4, chipSize);
+            Write32(RomFlashChip + 8, blockSize);
+            Write32(RomFlashChip + 12, sectorSize);
+            Write32(RomFlashChip + 16, pageSize);
+            Write32(RomFlashChip + 20, statusMask);
+        }
+
         private void Rom(string name, Func<XtensaCore, bool> body)
         {
             foreach (var pair in _romNames)

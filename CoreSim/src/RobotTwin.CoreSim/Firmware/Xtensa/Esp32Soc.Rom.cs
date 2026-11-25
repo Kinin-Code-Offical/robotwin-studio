@@ -269,7 +269,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                          "esp_rom_install_uart_printf", "ets_install_putc1", "ets_install_putc2", "ets_install_uart_printf", "esp_rom_uart_set_as_console",
                          "ets_intr_lock", "ets_intr_unlock", "esp_rom_install_channel_putc", "uart_div_modify", "esp_rom_uart_set_clock_baudrate",
                          "Cache_Flush_rom", "esp_rom_Cache_Flush", "spi_flash_attach", "esp_rom_spiflash_attach", "esp_rom_spiflash_unlock",
-                         "esp_rom_spiflash_config_param", "esp_rom_spiflash_config_clk", "esp_rom_spiflash_wait_idle", "esp_rom_spiflash_select_qio_pins",
+                         "esp_rom_spiflash_config_clk", "esp_rom_spiflash_wait_idle", "esp_rom_spiflash_select_qio_pins",
                          "esp_rom_spiflash_prepare_encrypted_data", "esp_rom_spiflash_write_disable",
                      })
                 Rom(name, c => Return(c, 0));
@@ -277,6 +277,15 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 Rom(name, c =>
                 {
                     Uart0Out((byte)c.Argument(0));
+                    return Return(c, 0);
+                });
+            // The flash geometry the SPI flash driver takes the chip's size from (g_rom_flashchip): the application sets it
+            // from its image header at start-up. Left at zero, every esp_flash_read past 0 failed with ESP_ERR_INVALID_ARG
+            // (the core dump partition at boot, NVS, SPIFFS/LittleFS).
+            foreach (var name in new[] { "esp_rom_spiflash_config_param", "SPIParamCfg" })
+                Rom(name, c =>
+                {
+                    WriteRomFlashChip(c.Argument(0), c.Argument(1), c.Argument(2), c.Argument(3), c.Argument(4), c.Argument(5));
                     return Return(c, 0);
                 });
             Rom("ets_set_appcpu_boot_addr", c =>

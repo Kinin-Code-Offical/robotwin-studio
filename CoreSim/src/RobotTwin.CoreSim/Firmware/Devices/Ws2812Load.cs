@@ -26,10 +26,27 @@ namespace RobotTwin.CoreSim.Firmware.Devices
         public Ws2812Strip Strip { get; }
 
         public double NominalVoltage { get; set; } = 5.0;
-        public double SupplyVoltage { get; private set; } = double.NaN;
+        public double SupplyVoltage { get; internal set; } = double.NaN;
 
         /// <summary>The strip has enough supply to take data and light (WS2812B: 3.5–5.3 V).</summary>
         public bool Powered => SupplyVoltage >= 3.5;
+
+        /// <summary>The strip whose DIN this strip's DOUT drives (a chain), or null.</summary>
+        public Ws2812Load? Next { get; set; }
+
+        /// <summary>
+        /// A frame arriving on DIN: the LEDs take their words and what runs past the last LED leaves through DOUT into
+        /// the next strip of the chain. A strip without its supply neither lights nor passes anything on.
+        /// </summary>
+        public void Receive(byte[] frame)
+        {
+            var strip = this;
+            for (int hops = 0; strip != null && strip.Powered && frame.Length > 0 && hops < 64; hops++)
+            {
+                frame = strip.Strip.Show(frame);
+                strip = strip.Next;
+            }
+        }
 
         public override void Stamp(StampContext ctx)
         {

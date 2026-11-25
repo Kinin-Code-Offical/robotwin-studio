@@ -931,6 +931,8 @@ namespace RobotWin.Studio.World
                     ((SolidColorBrush)kv.Value.Brush).Color = Color.FromRgb((byte)(255 * b), (byte)(90 * b), (byte)(70 * b));
                 }
 
+                if (it.Model.Pixels.Count > 0) ShowPixels(it.Model, Session.LedStripOf(it.Object));   // [neopixel]
+
                 if (it.Model.Screen != null)
                 {
                     switch (Session.DisplayOf(it.Object))
@@ -976,6 +978,7 @@ namespace RobotWin.Studio.World
             {
                 ((SolidColorBrush)it.Model.Heat.Brush).Color = Colors.Black;
                 foreach (var l in it.Model.Lights.Values) ((SolidColorBrush)l.Brush).Color = Colors.Black;
+                ShowPixels(it.Model, null);
                 it.Model.Instance?.SetCharred(false);
                 it.Model.Instance?.SetBrightness(0);
                 foreach (var (_, part) in it.Model.Parts)
@@ -987,6 +990,23 @@ namespace RobotWin.Studio.World
             }
 
             RebuildCables();
+        }
+
+        /// <summary>
+        /// [neopixel] An addressable strip's LEDs in the colours they latched while it has its supply (dark otherwise),
+        /// redrawn only when a new frame arrived. The PWM duty is shown as the eye sees it, so dim colours stay visible.
+        /// </summary>
+        private static void ShowPixels(ObjectModel model, RobotTwin.CoreSim.Firmware.Devices.Ws2812Load? strip)
+        {
+            int frame = strip != null && strip.Powered ? strip.Strip.Frames : -1;
+            if (frame == model.PixelFrame) return;
+            model.PixelFrame = frame;
+            for (int i = 0; i < model.Pixels.Count; i++)
+            {
+                (byte R, byte G, byte B) c = frame >= 0 && i < strip!.Strip.Count ? strip.Strip.Colors[i] : ((byte)0, (byte)0, (byte)0);
+                static byte Seen(byte v) => (byte)Math.Round(255 * Math.Sqrt(v / 255.0));
+                ((SolidColorBrush)model.Pixels[i].Brush).Color = Color.FromRgb(Seen(c.R), Seen(c.G), Seen(c.B));
+            }
         }
 
         // ================================================================ camera & projection

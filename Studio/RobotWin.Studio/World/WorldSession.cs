@@ -868,6 +868,14 @@ namespace RobotWin.Studio.World
         public double Voltage(CableEnd end) => Circuit == null || Simulator == null ? double.NaN : Circuit.Voltage(Simulator, end);
 
         /// <summary>Live screen of a display object (OLED framebuffer / LCD text), if any.</summary>
+        /// <summary>[neopixel] The WS2812B strip a component object is, while the world runs (null otherwise).</summary>
+        public RobotTwin.CoreSim.Firmware.Devices.Ws2812Load? LedStripOf(WorldObject o)
+        {
+            if (Circuit == null || o.Kind != WorldObjectKind.Component) return null;
+            var r = Circuit.ComponentRef(o.Id);
+            return r == null ? null : Circuit.Compiled.DevicesOf(r).OfType<RobotTwin.CoreSim.Firmware.Devices.Ws2812Load>().FirstOrDefault();
+        }
+
         public II2cDevice? DisplayOf(WorldObject o)
         {
             if (Circuit == null) return null;

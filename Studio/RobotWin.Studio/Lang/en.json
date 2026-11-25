@@ -6934,7 +6934,14 @@
   "Çıkış · Adreslenebilir LED": "Output · Addressable LED",
   "LED sayısı": "LED count",
   "WS2812B 8 LED Şerit (NeoPixel)": "WS2812B 8-LED Strip (NeoPixel)",
-  "8 adreslenebilir RGB LED, 5 V, tek veri hattı": "8 addressable RGB LEDs, 5 V, one data line"
+  "8 adreslenebilir RGB LED, 5 V, tek veri hattı": "8 addressable RGB LEDs, 5 V, one data line",
+  "ESP32: NeoPixel Gökkuşağı": "ESP32: NeoPixel Rainbow",
+  "ESP32 DevKit V1, IO5'e bağlı 8 LED'lik WS2812B şeridinde gökkuşağı döndürür (Adafruit_NeoPixel, RMT); IO34'teki potansiyometre parlaklığı ayarlar. Şerit renklerine göre 5 V'tan akım çeker.": "The ESP32 DevKit V1 turns a rainbow along the 8-LED WS2812B strip on IO5 (Adafruit_NeoPixel, RMT); the potentiometer on IO34 sets the brightness. The strip draws current from 5 V by its colours.",
+  "NeoPixel şerit (ESP32)": "NeoPixel strip (ESP32)",
+  "ESP32, IO5'e bağlı 8 LED'lik WS2812B şeritte gökkuşağı döndürür (Adafruit_NeoPixel, iki modda da). Şerit 5 V'u kartın VIN'inden alır ve renklerine göre akım çeker; oda loş, LED'ler parlar.": "An ESP32 turns a rainbow along the 8-LED WS2812B strip on IO5 (Adafruit_NeoPixel, in both modes). The strip takes 5 V from the board's VIN and draws current by its colours; the room is dim, the LEDs glow.",
+  "WS2812B şerit (8 LED)": "WS2812B strip (8 LEDs)",
+  "NeoPixel şerit": "NeoPixel strip",
+  "ESP32, 8 LED'lik WS2812B şeritte gökkuşağı döndürür.": "An ESP32 turns a rainbow along an 8-LED WS2812B strip."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9751,6 +9758,10 @@
   "ESP32 emülatörü başlatılamadı: {…}": "The ESP32 emulator could not start: {0}",
   "Emülatör durdu: {…}": "The emulator stopped: {0}",
   "Donanım uyumlu mod: bu çizim {…} kullanıyor, Xtensa emülatöründe henüz yok; bu kart hızlı modda çalışıyor.": "Hardware-compatible mode: this sketch uses {0}, which the Xtensa emulator does not have yet; this board runs as the fast mode.",
-  "LED şeridi {…} IO{…} hattına bağlandı ({…} LED)": "LED strip connected to {0} IO{1} ({2} LEDs)"
+  "LED şeridi {…} IO{…} hattına bağlandı ({…} LED)": "LED strip connected to {0} IO{1} ({2} LEDs)",
+  "{…} bağlantı": "{0} connections",
+  "{…} ERC hatası": "{0} ERC errors",
+  "{…} bağlantı · {…} ERC hatası": "{0} connections · {1} ERC errors",
+  "{…} parça · {…} bağlantı · {…} ERC hatası": "{0} parts · {1} connections · {2} ERC errors"
  }
 }

@@ -756,6 +756,7 @@ namespace RobotWin.Studio.Editor
             switch (main)
             {
                 case Led led: v.Brightness = led.Brightness; break;
+                case RobotTwin.CoreSim.Firmware.Devices.Ws2812Load strip: v.Display = strip; break;   // [neopixel] its LEDs' colours
                 case Lamp lamp: v.Brightness = lamp.IsFailed ? 0 : lamp.Brightness; break;
                 case Switch sw: v.Closed = sw.Closed; break;
                 case Relay relay: v.Energized = relay.Energized; break;

@@ -46,6 +46,35 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void ChainedStripsPassTheRestOfTheFrameOn()
+        {
+            // D1 (2 LEDs) on GPIO5; its DOUT (node 8) is wired to D2's DIN (node 9 through a wire); D2 has 1 LED.
+            var lib = RobotTwin.CoreSim.Design.PartLibrary.Default;
+            var def = lib.Get(RobotTwin.CoreSim.Firmware.LedStripWiring.PartId);
+            var d1 = new Ws2812Load("D1", 1, 0, 7, 2) { SupplyVoltage = 5 };
+            var d2 = new Ws2812Load("D2", 1, 0, 9, 1) { SupplyVoltage = 5 };
+            var found = RobotTwin.CoreSim.Firmware.LedStripWiring.Attach(
+                new[] { ("D1", def), ("D2", def) },
+                (r, pin) => (r, pin) switch { ("D1", "DIN") => 7, ("D1", "DOUT") => 8, ("D2", "DIN") => 9, _ => -1 },
+                g => g == 5 ? 7 : -1,
+                n => n == 8 || n == 9 ? new System.Collections.Generic.HashSet<int> { 8, 9 } : new System.Collections.Generic.HashSet<int> { n },
+                r => r == "D1" ? d1 : r == "D2" ? d2 : null);
+            Assert.Single(found);                      // only D1 hangs on the GPIO
+            Assert.Same(d2, d1.Next);
+            d1.Receive(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            Assert.Equal(((byte)5, (byte)4, (byte)6), d1.Strip.Colors[1]);
+            Assert.Equal(((byte)8, (byte)7, (byte)9), d2.Strip.Colors[0]);   // the third word went through D1's DOUT
+
+            d2.SupplyVoltage = 0;                      // an unpowered strip takes nothing
+            d1.Receive(new byte[] { 0, 0, 0, 0, 0, 0, 10, 20, 30 });
+            Assert.Equal(((byte)8, (byte)7, (byte)9), d2.Strip.Colors[0]);
+            d1.SupplyVoltage = 0;                      // nor passes anything on
+            d2.SupplyVoltage = 5;
+            d1.Receive(new byte[] { 0, 0, 0, 0, 0, 0, 10, 20, 30 });
+            Assert.Equal(((byte)8, (byte)7, (byte)9), d2.Strip.Colors[0]);
+        }
+
+        [Fact]
         public void CurrentFollowsTheColours()
         {
             var strip = new Ws2812Strip(2);

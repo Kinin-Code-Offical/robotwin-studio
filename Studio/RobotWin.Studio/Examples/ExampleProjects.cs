@@ -44,6 +44,7 @@ namespace RobotWin.Studio.Examples
             new ExampleProject("arduino-blink", "Arduino: Gerçek Firmware", "Uno gerçek derlenmiş Blink + Serial firmware'ini çalıştırır: D13'teki LED 1 sn yanıp söner, Seri Monitör'e mesaj yazar.", "Başlangıç", "I.Chip", ArduinoBlink),
             new ExampleProject("arduino-displays", "Arduino: LCD + OLED Ekran", "Gerçek derlenmiş firmware I²C üzerinden 16×2 LCD'ye metin, SSD1306 OLED'e grafik çizer. Potansiyometreyi çevirin.", "Orta", "I.Chip", ArduinoDisplays),
             new ExampleProject("esp32-dimmer", "ESP32: PWM Işık Ayarı", "ESP32 DevKit V1, IO34'teki potansiyometreyi ADC ile okur ve IO25'teki LED'in parlaklığını LEDC PWM ile ayarlar. Kart üstündeki mavi LED yanıp söner.", "Başlangıç", "I.Chip", Esp32Dimmer),
+            new ExampleProject("esp32-neopixel", "ESP32: NeoPixel Gökkuşağı", "ESP32 DevKit V1, IO5'e bağlı 8 LED'lik WS2812B şeridinde gökkuşağı döndürür (Adafruit_NeoPixel, RMT); IO34'teki potansiyometre parlaklığı ayarlar. Şerit renklerine göre 5 V'tan akım çeker.", "Başlangıç", "I.Chip", Esp32NeoPixel),
             new ExampleProject("motor-driver", "MOSFET ile Motor Sürme", "490 Hz PWM, lojik seviye MOSFET, serbest dolaşım diyodu ve 25GA-370 motor. Hız ve akımı izleyin.", "Orta", "I.Rotate", MotorDriver),
             new ExampleProject("opamp-amp", "Op-Amp Yükselteç", "TL072 ile 11× evirmeyen yükselteç. Giriş ve çıkışı osiloskopta karşılaştırın.", "Orta", "I.Scope", OpAmpAmplifier),
             new ExampleProject("power-7805", "7805 Güç Kaynağı", "12 V akü, 7805 regülatör ve yük. Yükü artırın, ısınmayı ve termal kapanmayı görün.", "Orta", "I.Bolt", PowerSupply),
@@ -110,6 +111,30 @@ namespace RobotWin.Studio.Examples
             L(led, "A", "LEDA");
             L(led, "K", "GND");
             pot.Parameters["position"] = "0.6";
+            return b.S;
+        }
+
+        /// <summary>[neopixel] ESP32 DevKit V1 + an 8-LED WS2812B strip on IO5 (5 V from VIN) + a brightness pot on IO34.</summary>
+        private static Schematic Esp32NeoPixel()
+        {
+            var b = new B("ESP32: NeoPixel Gökkuşağı");
+            var lib = PartLibrary.Default;
+            var esp = b.Add("esp32-devkit-v1", 0, 0, 0, ("firmware", "builtin:esp32-neopixel.ino"));
+            var pot = b.Add("pot-10k", -24, 6);
+            var strip = b.Add("ws2812-8", 26, 0);
+            void L(SchematicPart part, string pin, string net) => VehicleTemplates.Tie(b.S, lib, part, pin, net);
+            L(esp, "3V3", "3V3");
+            L(esp, "GND1", "GND");
+            L(esp, "VIN", "5V");
+            L(esp, "IO34", "POT");
+            L(esp, "IO5", "DIN");
+            L(pot, "A", "3V3");
+            L(pot, "B", "GND");
+            L(pot, "W", "POT");
+            L(strip, "VDD", "5V");
+            L(strip, "GND", "GND");
+            L(strip, "DIN", "DIN");
+            pot.Parameters["position"] = "0.5";
             return b.S;
         }
 

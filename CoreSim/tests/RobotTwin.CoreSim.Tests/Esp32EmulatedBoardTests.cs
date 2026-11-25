@@ -392,6 +392,34 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(values[values.Count - 1], 12, 14);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_FLASH_ELF names the Preferences + LittleFS sketch's real-chip ELF.</summary>
+        public sealed class FlashElfFactAttribute : FactAttribute
+        {
+            public FlashElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_FLASH_ELF"))) Skip = "RW_ESP32_FLASH_ELF verilmedi.";
+            }
+        }
+
+        [FlashElfFact]
+        public void PreferencesAndLittleFsReadAndWriteTheFlash()
+        {
+            // The flash driver takes the chip's size from g_rom_flashchip (esp_rom_spiflash_config_param): NVS keeps a
+            // boot counter, LittleFS formats its partition, writes a file and reads it back, and the boot reads the core
+            // dump partition without an error.
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_FLASH_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            soc.Run(240_000L * 3000);
+            string text = soc.Uart0.ToString();
+            _out.WriteLine(text);
+            Assert.DoesNotContain("Failed to read core dump", text);
+            Assert.Contains("nvs boots=1", text);
+            Assert.Contains("littlefs 'robotwin flash'", text);
+        }
+
         /// <summary>A [Fact] skipped unless RW_ESP32_NEOPIXEL_ELF names the NeoPixel sketch's real-chip ELF.</summary>
         public sealed class NeoPixelElfFactAttribute : FactAttribute
         {

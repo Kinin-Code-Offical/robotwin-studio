@@ -79,6 +79,12 @@ namespace RobotWin.Studio.World
         /// <summary>Live screen of an OLED/LCD module (texture refreshed from the display model while simulating).</summary>
         public ImageBrush? Screen { get; set; }
 
+        /// <summary>[neopixel] The glowing lens of each LED of an addressable strip, the one nearest DIN first.</summary>
+        public List<EmissiveMaterial> Pixels { get; } = new List<EmissiveMaterial>();
+
+        /// <summary>[neopixel] The strip frame the pixels last showed (−1: dark).</summary>
+        public int PixelFrame { get; set; } = -1;
+
         /// <summary>Pixel colour (OLED) or backlight (LCD) parameter of the screen.</summary>
         public string ScreenStyle { get; set; } = string.Empty;
 
@@ -342,6 +348,7 @@ namespace RobotWin.Studio.World
         {
             var def = o.PartId != null ? library.Find(o.PartId) : null;
             if (def == null) return null;
+            if (def.Id == RobotTwin.CoreSim.Firmware.LedStripWiring.PartId) return null;   // [neopixel] its own model, lit LED by LED
             // Radio gear has its own models with live hooks (controller lightbar, USB port).
             var w = RobotTwin.CoreSim.Design.WirelessParts.GamepadId;
             if (def.Id == w || def.Id == RobotTwin.CoreSim.Design.WirelessParts.UsbHostId || def.Id == RobotTwin.CoreSim.Design.WirelessParts.RouterId ||
@@ -619,6 +626,9 @@ namespace RobotWin.Studio.World
                 case "battery":
                     Battery(m, o.PresetId ?? string.Empty, p);
                     break;
+                case RobotTwin.CoreSim.Firmware.LedStripWiring.PartId:
+                    LedStrip(m, p);
+                    break;
                 default:
                     if (!RadioModels.TryBuild(m, def, p)) Generic(m, def, p);   // [radio] World/RadioModels.cs
                     break;
@@ -737,6 +747,45 @@ namespace RobotWin.Studio.World
             Box(m.Body, x + 15, 2, z, 30, 1.4, 1.4, Color.FromRgb(0x1A, 0x1A, 0x1D), 0.05);
             m.Pins.Add(new PinAnchor("+", "+ (kırmızı)", new Point3D((x + 30) * Mm, -2 * Mm, z * Mm)));
             m.Pins.Add(new PinAnchor("-", "− (siyah)", new Point3D((x + 30) * Mm, 2 * Mm, z * Mm)));
+        }
+
+        /// <summary>
+        /// [neopixel] A WS2812B strip as sold: a black flex board 10 mm wide with 60 LEDs a metre (5050 packages, the first
+        /// 256 drawn), the VDD, DIN and GND pads at the input end and DOUT at the far one. Each LED's lens glows in the
+        /// colour it latched (<see cref="ObjectModel.Pixels"/>).
+        /// </summary>
+        private static void LedStrip(ObjectModel m, IReadOnlyDictionary<string, string> p)
+        {
+            int count = (int)Math.Max(1, Math.Min(1024, double.TryParse(p.TryGetValue("count", out var cs) ? cs : "8",
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var cn) ? cn : 8));
+            const double pitch = 1000.0 / 60, width = 10, thick = 0.4, ends = 8;
+            double length = 2 * ends + count * pitch, x0 = -length / 2;
+            Box(m.Body, 0, 0, thick / 2, length, width, thick, Color.FromRgb(0x1C, 0x1C, 0x20), 0.15, m.Heat);
+            for (int i = 0; i < Math.Min(count, 256); i++)
+            {
+                double x = x0 + ends + (i + 0.5) * pitch;
+                Box(m.Body, x, 0, thick + 0.8, 5, 5, 1.6, Color.FromRgb(0xEE, 0xEE, 0xEA), 0.3);
+                var glow = new EmissiveMaterial(new SolidColorBrush(Colors.Black));
+                var lens = new MaterialGroup();
+                lens.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x34, 0x34, 0x38))));
+                lens.Children.Add(glow);
+                lens.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x80, 255, 255, 255)), 60));
+                m.Body.Children.Add(M.Model(M.Cylinder(1.8 * Mm, 0.3 * Mm, 2, 16, x * Mm, 0, (thick + 1.75) * Mm), lens));
+                m.Pixels.Add(glow);
+            }
+
+            // Copper pads with their pins: the input end takes VDD, DIN and GND across the strip, DOUT leaves at the far end.
+            string[] inputs = { "VDD", "DIN", "GND" };
+            for (int k = 0; k < inputs.Length; k++)
+            {
+                double y = (1 - k) * 3.0;
+                Box(m.Body, x0 + 3, y, thick + 0.05, 3.5, 2.2, 0.1, Color.FromRgb(0xD9, 0xB0, 0x4C), 0.7);
+                m.Pins.Add(new PinAnchor(inputs[k], inputs[k], new Point3D((x0 + 3) * Mm, y * Mm, (thick + 0.1) * Mm)));
+            }
+
+            Box(m.Body, -x0 - 3, 0, thick + 0.05, 3.5, 2.2, 0.1, Color.FromRgb(0xD9, 0xB0, 0x4C), 0.7);
+            m.Pins.Add(new PinAnchor("DOUT", "DOUT", new Point3D((-x0 - 3) * Mm, 0, (thick + 0.1) * Mm)));
+            m.Bounds = new Rect3D(x0 * Mm, -width / 2 * Mm, 0, length * Mm, width * Mm, (thick + 2) * Mm);
         }
 
         /// <summary>Any other part: a module/board/body sized from its footprint, with a header pin per electrical pin.</summary>

@@ -1009,7 +1009,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             var bytes = new byte[inputLength - 4];
             Array.Copy(data, 4, bytes, 0, bytes.Length);
             foreach (var (g, strip) in LedStrips)
-                if (g == gpio && strip.Powered) strip.Strip.Show(bytes);   // lit only while the strip has its supply
+                if (g == gpio) strip.Receive(bytes);   // lit only while the strip has its supply; the rest goes down the chain
             return bytes.Length;
         }
 

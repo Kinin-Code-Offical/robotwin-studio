@@ -440,6 +440,24 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void ErcTakesAnEsp32DevKitsVinAsTheUsbSupply()
+        {
+            // [neopixel] An ESP32 DevKit's VIN carries USB 5 V through its diode: a 5 V strip fed from it is powered.
+            var sch = new Schematic();
+            var esp = sch.AddPart(Lib, "esp32-devkit-v1", P(0, 0));
+            var strip = sch.AddPart(Lib, "ws2812-8", P(30, 0));
+            sch.Labels.Add(new NetLabel { Name = "5V", Position = Pin(esp, "VIN") });
+            sch.Labels.Add(new NetLabel { Name = "5V", Position = Pin(strip, "VDD") });
+            var v = ElectricalRulesChecker.Check(sch, Lib);
+            Assert.DoesNotContain(v, x => x.Code == "power-not-driven");
+
+            // A battery on VIN is the board's designed input: no conflict between two supplies.
+            var bat = sch.AddPart(Lib, "bat-9v", P(-20, 0));
+            sch.Labels.Add(new NetLabel { Name = "5V", Position = Pin(bat, "+") });
+            Assert.DoesNotContain(ElectricalRulesChecker.Check(sch, Lib), x => x.Code == "supply-conflict" || x.Code == "power-not-driven");
+        }
+
+        [Fact]
         public void ErcOutputTiedToGroundIsAnError()
         {
             var sch = new Schematic();

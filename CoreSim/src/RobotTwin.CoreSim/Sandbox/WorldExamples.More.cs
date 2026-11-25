@@ -245,6 +245,59 @@ void loop() {
             return w;
         }
 
+        /// <summary>
+        /// [neopixel] An ESP32 turns a rainbow along an 8-LED WS2812B strip in a dim room: the strip takes 5 V from the
+        /// board's VIN (USB) and its data from IO5; the sketch uses Adafruit_NeoPixel, so it runs in both ESP32 modes.
+        /// </summary>
+        public static WorldDocument NeoPixel(PartLibrary lib)
+        {
+            var w = new WorldDocument
+            {
+                Title = "NeoPixel şerit",
+                Description = "ESP32, 8 LED'lik WS2812B şeritte gökkuşağı döndürür.",
+                RoomLight = 0.2
+            };
+            var board = w.AddBody("box", 0.26, 0.12, 0.006, new WorldPose(), "AHŞAP");
+            board.Name = "Maket tabanı";
+            board.IsStatic = true;
+            const double deck = 0.006;
+            var esp = w.AddComponent(lib, "esp32-devkit-v1", new WorldPose { X = -0.07, Y = 0, Z = OnPins(deck) });
+            esp.Name = "ESP32";
+            esp.Firmware = new Formats.FirmwareSource { FileName = "neopixel.ino", Target = "esp32:esp32:esp32", Source = NeoPixelSketch };
+            var strip = w.AddComponent(lib, "ws2812-strip", new WorldPose { X = 0.05, Y = 0.02, Z = deck });
+            strip.Name = "WS2812B şerit (8 LED)";
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "VIN" }, new CableEnd { ObjectId = strip.Id, Pin = "VDD" }, 24, "#E5484D").Length = 0;
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "GND2" }, new CableEnd { ObjectId = strip.Id, Pin = "GND" }, 24, "#1F1F23").Length = 0;
+            w.Connect(new CableEnd { ObjectId = esp.Id, Pin = "IO5" }, new CableEnd { ObjectId = strip.Id, Pin = "DIN" }, 26, "#3BAA5C").Length = 0;
+            foreach (var o in new[] { esp, strip }) w.Joints.Add(new WorldJoint { Id = w.NextId("J"), ObjectA = o.Id, ObjectB = board.Id });
+            return w;
+        }
+
+        /// <summary>Sketch of <see cref="NeoPixel"/>.</summary>
+        public const string NeoPixelSketch = @"// NeoPixel şerit (ESP32): IO5'teki 8 LED'lik WS2812B şeritte gökkuşağı döner.
+// Adafruit_NeoPixel iki ESP32 modunda da çalışır (hızlı simülasyon ve donanım uyumlu, RMT ile).
+#include <Adafruit_NeoPixel.h>
+
+const int SERIT = 5, LED_SAYISI = 8;
+Adafruit_NeoPixel serit(LED_SAYISI, SERIT, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  Serial.begin(115200);
+  serit.begin();
+  serit.setBrightness(80);   // tam beyazda 8 LED 480 mA çeker; 80/255 bunun üçte biri
+  serit.show();
+  Serial.println(""NeoPixel hazir"");
+}
+
+void loop() {
+  static uint16_t ton = 0;
+  serit.rainbow(ton, 1, 255, 255, true);
+  serit.show();
+  ton += 384;
+  delay(20);
+}
+";
+
         /// <summary>Sketch of <see cref="TrafficLight"/>.</summary>
         public const string TrafficLightSketch = @"// Trafik ışığı ve yaya butonu (ESP32).
 // Araçlar yeşilde bekler. Yaya butona basınca (en az 4 s yeşilden sonra): sarı 2 s, kırmızı;

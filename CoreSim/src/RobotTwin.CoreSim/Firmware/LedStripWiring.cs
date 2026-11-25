@@ -8,7 +8,8 @@ namespace RobotTwin.CoreSim.Firmware
     /// <summary>
     /// [neopixel] Which addressable LED strips a microcontroller drives: every WS2812B strip whose DIN is wired (directly or
     /// through wires) to one of the MCU's GPIOs, found as <see cref="SpiWiring"/> finds SPI lines. The board delivers each
-    /// frame it sends on that GPIO to the strip (<see cref="Ws2812Strip.Show"/>).
+    /// frame it sends on that GPIO to the strip (<see cref="Ws2812Load.Receive"/>). Strips chained DOUT → DIN are linked
+    /// (<see cref="Ws2812Load.Next"/>), so the words past the first strip's end reach the next.
     /// </summary>
     public static class LedStripWiring
     {
@@ -34,12 +35,23 @@ namespace RobotTwin.CoreSim.Firmware
             }
 
             var list = new List<(int, Ws2812Load)>();
+            var strips = new List<(Ws2812Load Strip, int Din, int Dout)>();
             foreach (var (fullRef, def) in parts)
             {
-                if (def.Id != PartId) continue;
+                if (def.Id != PartId || device(fullRef) is not { } strip) continue;
                 int din = pinNode(fullRef, "DIN");
-                if (din <= 0 || !gpioOf.TryGetValue(din, out int gpio)) continue;
-                if (device(fullRef) is { } strip) list.Add((gpio, strip));
+                strips.Add((strip, din, pinNode(fullRef, "DOUT")));
+                if (din > 0 && gpioOf.TryGetValue(din, out int gpio)) list.Add((gpio, strip));
+            }
+
+            // DOUT → DIN: each strip passes what runs past its end to the strip wired after it.
+            foreach (var a in strips)
+            {
+                a.Strip.Next = null;
+                if (a.Dout <= 0) continue;
+                var joined = reach(a.Dout);
+                foreach (var b in strips)
+                    if (!ReferenceEquals(a.Strip, b.Strip) && b.Din > 0 && joined.Contains(b.Din)) a.Strip.Next = b.Strip;
             }
 
             return list;

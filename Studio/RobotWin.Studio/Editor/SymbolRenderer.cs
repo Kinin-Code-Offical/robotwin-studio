@@ -294,6 +294,9 @@ namespace RobotWin.Studio.Editor
                 case SymbolKind.Module when def.SymbolVariant == "OLED" || def.SymbolVariant == "LCD":
                     DisplayModule(c, def, parameters, visual.Display);
                     break;
+                case SymbolKind.Module when def.SymbolVariant == "LEDSTRIP":
+                    LedStripModule(c, def, parameters, visual.Display as RobotTwin.CoreSim.Firmware.Devices.Ws2812Load);
+                    break;
                 case SymbolKind.Module:
                     Box(c, def, parameters.TryGetValue("model", out var model) ? model : def.Name);
                     break;
@@ -770,6 +773,56 @@ namespace RobotWin.Studio.Editor
                     string model = parameters.TryGetValue("model", out var m) ? m : def.Name;
                     Text(c, model, left + 0.4, -0.45, 0.8);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// [neopixel] WS2812B strip: the flex board, pin names and its LEDs (5050 packages) in a row or two, each lit in the
+        /// colour it latched while the simulation runs and the strip has its supply; strips longer than 16 show the first 16.
+        /// </summary>
+        private static void LedStripModule(Ctx c, PartDefinition def, IReadOnlyDictionary<string, string> parameters,
+                                           RobotTwin.CoreSim.Firmware.Devices.Ws2812Load? strip)
+        {
+            double w = def.HalfWidth, h = def.HalfHeight;
+            c.Dc.DrawRoundedRectangle(Brush(Color.FromRgb(0x1A, 0x1A, 0x1E)), c.Line, new Rect(-w, -h, 2 * w, 2 * h), 0.3, 0.3);
+            var light = Brush(Color.FromRgb(0xC8, 0xC8, 0xCE));   // printed on the black board in every theme
+            foreach (var pin in def.Pins)
+            {
+                double x = pin.X < 0 ? -w + 0.35 : w - 0.35 - 0.48 * pin.Name.Length;
+                Text(c, pin.Name, x, pin.Y - 0.45, 0.75, light);
+            }
+
+            int count = strip?.Strip.Count ?? (int)Math.Max(1, Math.Min(1024, double.TryParse(parameters.TryGetValue("count", out var cs) ? cs : "8",
+                NumberStyles.Float, CultureInfo.InvariantCulture, out var cn) ? cn : 8));
+            string title = (parameters.TryGetValue("model", out var model) ? model : "WS2812B") + " ×" + count.ToString(CultureInfo.InvariantCulture);
+            Text(c, title, -w + 2.2, -h + 0.55, 0.75, light);   // beside VDD's name
+            int shown = Math.Min(count, 16), perRow = Math.Min(shown, 8), rows = (shown + 7) / 8;
+            double left = -w + 0.4, width = 2 * w - 0.8;
+            double cell = width / Math.Max(perRow, 4), top = h - 0.35 - rows * cell;
+            bool lit = strip != null && strip.Powered;
+            for (int i = 0; i < shown; i++)
+            {
+                double x = left + (i % 8) * cell, y = top + (i / 8) * cell;
+                var package = new Rect(x + cell * 0.08, y + cell * 0.08, cell * 0.84, cell * 0.84);
+                c.Dc.DrawRectangle(Brush(Color.FromRgb(0xE4, 0xE4, 0xE0)), null, package);
+                var centre = new Point(package.X + package.Width / 2, package.Y + package.Height / 2);
+                double r = package.Width * 0.32;
+                var (cr, cg, cb) = lit ? strip!.Strip.Colors[i] : ((byte)0, (byte)0, (byte)0);
+                int peak = Math.Max(cr, Math.Max(cg, cb));
+                if (peak == 0)
+                {
+                    c.Dc.DrawEllipse(Brush(Color.FromRgb(0x3A, 0x3A, 0x40)), null, centre, r, r);
+                    continue;
+                }
+
+                // The PWM duty as the eye sees it: dim colours stay visible, as they do on a real strip.
+                byte Seen(byte v) => (byte)Math.Round(255 * Math.Sqrt(v / 255.0));
+                var color = Color.FromRgb(Seen(cr), Seen(cg), Seen(cb));
+                double glow = cell * (0.55 + 0.6 * Math.Sqrt(peak / 255.0));
+                var halo = new RadialGradientBrush(Color.FromArgb((byte)(60 + 120 * peak / 255), color.R, color.G, color.B), Color.FromArgb(0, color.R, color.G, color.B));
+                halo.Freeze();
+                c.Dc.DrawEllipse(halo, null, centre, glow, glow);
+                c.Dc.DrawEllipse(Brush(color), null, centre, r, r);
             }
         }
 

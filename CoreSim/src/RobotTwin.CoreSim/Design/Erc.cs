@@ -103,6 +103,15 @@ namespace RobotTwin.CoreSim.Design
             SymbolKind.Resistor or SymbolKind.Fuse or SymbolKind.Inductor or SymbolKind.Diode or SymbolKind.Schottky or
             SymbolKind.PushButton or SymbolKind.Switch or SymbolKind.Ammeter or SymbolKind.Thermistor or SymbolKind.Photoresistor;
 
+        /// <summary>
+        /// A board pin that carries the USB supply while the board is plugged in, as the simulation powers it: an ESP32
+        /// DevKit's VIN (USB 5 V through the board's diode). A part fed from it is powered, yet the pin is an input too
+        /// (a battery on VIN is the designed use), so it is no conflicting supply.
+        /// </summary>
+        private static bool UsbSupply(PartDefinition def, string pin) =>
+            def.Symbol == SymbolKind.Board && pin.Equals("VIN", StringComparison.OrdinalIgnoreCase) &&
+            def.Id.StartsWith("esp32", StringComparison.OrdinalIgnoreCase);
+
         public static List<ErcViolation> Check(Schematic doc, PartLibrary library)
         {
             var result = new List<ErcViolation>();
@@ -157,7 +166,7 @@ namespace RobotTwin.CoreSim.Design
                 }
 
                 roles[net] = list;
-                if (net.IsGround || list.Any(x => x.Item2 == PinRole.PowerOut)) driven.Add(net.Name);
+                if (net.IsGround || list.Any(x => x.Item2 == PinRole.PowerOut || UsbSupply(x.Item4, x.Item1.Pin))) driven.Add(net.Name);
             }
 
             // Propagate "driven" through switches, fuses, resistors and diodes.

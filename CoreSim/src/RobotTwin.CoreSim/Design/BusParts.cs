@@ -69,6 +69,7 @@ namespace RobotTwin.CoreSim.Design
                 P("model", "Model", "WS2812B"), P("count", "LED sayısı", "8", ""),
                 P("pinmap", "Pin eşleme", "VDD:1,DIN:2,GND:3,DOUT:4"));
             strip.Category = LedCategory;
+            strip.SymbolVariant = "LEDSTRIP";   // the schematic draws the LEDs in their live colours
             strip.Pin("VDD", "1", -5, -3).Pin("DIN", "2", -5, -1).Pin("GND", "3", -5, 1).Pin("DOUT", "4", 5, -1).Size(4, 4);
             Preset(lib, "ws2812-8", "WS2812B 8 LED Şerit (NeoPixel)", "ws2812-strip", "8 adreslenebilir RGB LED, 5 V, tek veri hattı");
             Preset(lib, "mcp3008-dip", "MCP3008 ADC (DIP-16)", "mcp3008", "8 kanal 10 bit SPI ADC — Raspberry Pi / ESP32 için analog giriş çoğaltıcı");
