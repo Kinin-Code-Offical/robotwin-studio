@@ -226,7 +226,7 @@ namespace RobotTwin.CoreSim.Mechanics
         internal Vec3 AxisP, AxisC;
         internal Quat Rest;             // qP⁻¹·qC at creation
         internal double PrevWrapped;
-        internal readonly double[] Impulse = new double[11];
+        internal readonly double[] Impulse = new double[12];
         internal Vec3 PointImpulse;
         internal double ForceFilter, TorqueFilter, StepDriveImpulse, SubDrive;
         internal Vec3 StepForceImpulse, StepTorqueImpulse, SubForce, SubTorque;
@@ -318,6 +318,21 @@ namespace RobotTwin.CoreSim.Mechanics
 
         /// <summary>[couple] Friction of a gear mesh or a screw's thread this joint drives, from the load it carries (Mechanics/PhysicsScene.Couplings.cs).</summary>
         internal double MeshFriction;
+
+        /// <summary>
+        /// [spring] A spring in the joint itself, besides any drive: a torsion spring on a hinge, a coil spring along a slider
+        /// (N·m/rad or N/m), pulling toward <see cref="SpringRest"/>. Solved implicitly, so a stiff one stays stable.
+        /// </summary>
+        public double SpringStiffness { get; set; }
+
+        /// <summary>[spring] Where the spring is relaxed (rad or m).</summary>
+        public double SpringRest { get; set; }
+
+        /// <summary>[spring] A damper along the joint (N·m·s/rad or N·s/m): a shock absorber, a gas strut, a door closer.</summary>
+        public double SpringDamping { get; set; }
+
+        /// <summary>[spring] Torque (force) the spring and damper put on the child along the axis in the last substep.</summary>
+        public double SpringTorque { get; internal set; }
 
         /// <summary>Torque/force the built-in drive delivered, averaged over the last step.</summary>
         public double DriveTorque { get; internal set; }
@@ -417,7 +432,7 @@ namespace RobotTwin.CoreSim.Mechanics
             public Mat3 Mass;
         }
 
-        private const int RolePerp0 = 3, RolePerp1 = 4, RoleAng0 = 5, RoleAng1 = 6, RoleAng2 = 7, RoleLower = 8, RoleUpper = 9, RoleDrive = 10, RoleFriction = 2;
+        private const int RolePerp0 = 3, RolePerp1 = 4, RoleAng0 = 5, RoleAng1 = 6, RoleAng2 = 7, RoleLower = 8, RoleUpper = 9, RoleDrive = 10, RoleFriction = 2, RoleSpring = 11;
 
         private BodyState[] _state = new BodyState[16];
         private Contact[] _contacts = new Contact[64];
@@ -2028,6 +2043,18 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
                 else j.Impulse[RoleFriction] = 0;
 
+                if (j.SpringStiffness > 0 || j.SpringDamping > 0)
+                {
+                    // [spring] The joint's own spring and damper as a soft row: implicit, so stable at any stiffness.
+                    double ks = Math.Max(0, j.SpringStiffness), kd = Math.Max(0, j.SpringDamping), den = kd + h * ks;
+                    AddRow(new Row
+                    {
+                        P = p, C = c, Joint = ji, Slot = RoleSpring, LP = lp, AP = ap, LC = lc, AC = ac, Mass = mass, Err = value - j.SpringRest, Target = 0,
+                        Lo = double.NegativeInfinity, Hi = double.PositiveInfinity, Type = RowType.Spring, Gamma = 1 / (h * den), BiasCoef = ks / den, Angular = angular
+                    });
+                }
+                else j.Impulse[RoleSpring] = 0;
+
                 // Hinge axis rows are solved on the point-constraint manifold: Schur-complement
                 // mass and a compensating point impulse, so limits and drives on slender links
                 // converge in a few iterations instead of fighting the pivot.
@@ -2206,6 +2233,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 j.SubForce = j.Enabled && !j.Broken && !SameWeldGroup(j.ParentSlot, j.ChildSlot) ? j.PointImpulse : Vec3.Zero;   // [weld] no rows inside a group
                 j.SubTorque = Vec3.Zero;
                 j.SubDrive = 0;
+                j.SpringTorque = 0;
             }
 
             for (int i = 0; i < _rowCount; i++)
@@ -2214,6 +2242,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 var j = Joints[r.Joint];
                 double imp = j.Impulse[r.Slot];
                 if (r.Slot == RoleDrive) j.SubDrive = imp;
+                if (r.Slot == RoleSpring) j.SpringTorque = imp / h;   // [spring]
                 if (r.Angular) j.SubTorque += r.AC * imp;
                 else j.SubForce += r.LC * imp;
             }

@@ -7375,7 +7375,26 @@
   "Kayış yükü": "Belt load",
   "Kremayer ve pinyon yükü": "Rack and pinion load",
   "Kayışlı taşıyıcı yükü": "Belt-driven carriage load",
-  "Vidalı mil yükü": "Lead screw load"
+  "Vidalı mil yükü": "Lead screw load",
+  "Yay ve sönüm": "Spring and damper",
+  "Eklemin kendisine yay ekleyin: menteşede burulma yayı, kızakta helezon yay; isterseniz amortisör gibi sönüm. Motor olsa da olmasa da eklemi serbest konumuna çeker.": "Give the joint a spring of its own: a torsion spring on a hinge, a coil spring along a slider, with damping like a shock absorber if you like. Motor or not, it pulls the joint back to its free position.",
+  "Eklemin kendisine yay ekleyin": "Give the joint a spring of its own",
+  "menteşede burulma yayı, kızakta helezon yay; isterseniz amortisör gibi sönüm. Motor olsa da olmasa da eklemi serbest konumuna çeker.": "a torsion spring on a hinge, a coil spring along a slider, with damping like a shock absorber if you like. Motor or not, it pulls the joint back to its free position.",
+  "Burulma yayı": "Torsion spring",
+  "Helezon yay": "Coil spring",
+  "Yay kaldırıldı": "Spring removed",
+  "Yay değişti": "Spring changed",
+  "Yay sabiti (N·mm/°)": "Spring rate (N·mm/°)",
+  "Yay sabiti (N/mm)": "Spring rate (N/mm)",
+  "Serbest konum (°)": "Free position (°)",
+  "Serbest konum (mm)": "Free position (mm)",
+  "Sönüm (N·mm·s/°)": "Damping (N·mm·s/°)",
+  "Sönüm (N·s/m)": "Damping (N·s/m)",
+  "Motor olsa da olmasa da eklemi serbest konumuna çeker; sönüm hızla orantılı bir frendir (amortisör, gaz yay, kapı kapatıcı).": "Motor or not, it pulls the joint back to its free position; damping is a brake proportional to speed (a shock absorber, a gas strut, a door closer).",
+  "Motor olsa da olmasa da eklemi serbest konumuna çeker": "Motor or not, it pulls the joint back to its free position",
+  "sönüm hızla orantılı bir frendir (amortisör, gaz yay, kapı kapatıcı).": "damping is a brake proportional to speed (a shock absorber, a gas strut, a door closer).",
+  "Yay torku": "Spring torque",
+  "Yay kuvveti": "Spring force"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10417,6 +10436,8 @@
   "verim %{…}": "efficiency {0} %",
   "{…} mm/tur": "{0} mm/turn",
   "{…} rpm": "{0} rpm",
-  "{…} mm/s": "{0} mm/s"
+  "{…} mm/s": "{0} mm/s",
+  "{…}°": "{0}°",
+  "{…} mm": "{0} mm"
  }
 }

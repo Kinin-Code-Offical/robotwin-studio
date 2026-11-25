@@ -331,6 +331,7 @@ namespace RobotTwin.CoreSim.Sandbox
             if (j.Lower.HasValue) joint.Lower = kind == JointKind.Hinge ? j.Lower.Value * Math.PI / 180 : j.Lower.Value;
             if (j.Upper.HasValue) joint.Upper = kind == JointKind.Hinge ? j.Upper.Value * Math.PI / 180 : j.Upper.Value;
             if (j.Friction > 0 && kind != JointKind.Fixed) joint.Friction = j.Friction;   // [phys] bushing / bearing friction
+            AddSpring(j, joint);   // [spring] torsion / coil spring and damper (Sandbox/WorldPhysics.Springs.cs)
             if (j.BreakForce > 0) joint.BreakForce = j.BreakForce;
             else if (kind == JointKind.Fixed && j.Fastening.Length > 0)
             {

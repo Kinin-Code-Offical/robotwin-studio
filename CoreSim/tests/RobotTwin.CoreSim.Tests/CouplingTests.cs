@@ -55,6 +55,20 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(nut.Angle, pitch * screw.Angle / (2 * Math.PI) - 1e-5, pitch * screw.Angle / (2 * Math.PI) + 1e-5);
         }
 
+        [Fact]
+        public void ASlowScrewKeepsItsNutAwake()
+        {
+            // 1 mm/s is below the speed at which a resting body falls asleep: the nut must stay in its screw's island.
+            var (scene, screw, nut) = TwoShafts(JointKind.Slider);
+            scene.SleepEnabled = true;
+            scene.AddCoupling(screw, nut, 0.004 / (2 * Math.PI));
+            screw.TargetSpeed = 2 * Math.PI / 4;   // a quarter turn a second: 1 mm/s
+            for (int i = 0; i < 2000; i++) scene.Step(1e-3);
+            _out.WriteLine($"somun 2 s'de {nut.Angle * 1000:0.000} mm, uyuyor mu: {scene.IsSleeping(nut.A)}");
+            Assert.InRange(nut.Angle, 0.00195, 0.00205);
+            Assert.False(scene.IsSleeping(nut.A));
+        }
+
         /// <summary>A vertical axis on a lead screw with the motor off: the carriage's weight tries to turn the screw back.</summary>
         private static (double Drop, double Spin) HangOnAScrew(double efficiency)
         {

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Springs and dampers in joints:** a hinge can have a torsion spring and a slider a coil spring of its own, with a damper, besides any motor (inspector: Add feature → Spring and damper, rates in N·mm/° and N/mm as catalogues give them). It is solved implicitly, so stiff springs stay stable: 1 kg on 1000 N/m sags 9.81 mm and swings at the 199 ms the formula gives, and a motor holding a lever against its return spring carries exactly k·θ.
+
 - **Gears, belts and lead screws:** two joints of a world can be coupled by a gear pair, a belt, a rack and pinion, a belt-driven carriage or a lead screw (inspector: Add feature → Gear, belt, lead screw). It is a constraint in the physics solver, not a motor: the driven side's load comes back to the motor through it. The teeth's or thread's friction grows with the load (efficiency), and a lead screw's efficiency comes from its thread's angle: a T8×2 holds a vertical axis with the motor off, a T8×8 lets it down.
 
 - **The Uno's UART on its TX pin:** the ATmega328P's USART now drives PD1 bit by bit (idle high, start bit, data, stop bit, at the baud rate the sketch set), so the line carries the real waveform: a scope decodes it and another device's input sees it. Tested with a real compiled sketch: what it prints is read back off D1's voltage with no errors.
@@ -179,6 +181,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **A slow lead screw froze its nut:** a nut moving slower than 2 mm/s fell asleep as a resting body while its screw kept turning; a gear, belt or screw now ties its two shafts into one island. Also, a paused or stepped world now shows the live readings of the instant it stopped (they could lag by up to 120 ms of the run).
 
 - **Joint speeds at end stops and limits:** a joint's speed was read before the solver's constraints acted, so a slider pushed against its end stop (or a shaft against a limit) kept reporting the speed it was pushed at; it is now measured as the step ends (recordings, the API's joint readouts, the gripper's stall check and propeller loads read the real motion).
 - **World materials by their English names:** an object whose material was given as "rubber", "steel", "paper" … (by the API or an import) was simulated as PLA (PLA's friction, density and optical reflectance); every name the material table knows is now that material.

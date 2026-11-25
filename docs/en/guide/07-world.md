@@ -292,6 +292,10 @@ It is a constraint, not a motor: the two joints move together and the driven sid
 
 **Efficiency** is the friction of the teeth or the thread, proportional to the load they carry. The defaults are 98 % for spur gears, 95 % for a rack and 97 % for a belt. A lead screw's efficiency comes from its thread's angle (trapezoidal thread, plastic or bronze nut, μ = 0.15): about 66 % for a T8×8, about 36 % for a T8×2. At 50 % or less the screw is **self-locking**: with the motor stopped the load cannot turn it back. So a vertical axis on a T8×2 stays where it is, while one on a T8×8 slowly comes down. While running, **Live readings** show the coupling's load and the joint's speed.
 
+### Spring and damper
+
+Give a part on a hinge or a slider a spring of its own with **Add feature ▾ → Spring and damper**. On a hinge it is a torsion spring (**N·mm/°**), along a slider a coil spring (**N/mm**). Enter the spring rate as the catalogue gives it. The spring pulls the joint toward its **Free position** and works together with a motor: a motor holding a lever against its return spring carries the spring's k·θ torque. **Damping** is a brake proportional to speed (a shock absorber, a gas strut, a door closer). The spring is solved implicitly, so even a very stiff one stays stable. On a slider, 1 kg on a 1000 N/m spring sags 9.81 mm and swings with a 199 ms period; critically damped, it settles without overshooting. While running, **Live readings** show the spring's torque or force and the joint's position.
+
 ### Arm kinematics: forward and inverse
 
 Select a part of an arm you built with servos (for example **Arm 2** in the servo-arm template). The inspector shows a **Kinematics (arm tip)** section. The program follows the joints to find the chain from a base to the part you selected.

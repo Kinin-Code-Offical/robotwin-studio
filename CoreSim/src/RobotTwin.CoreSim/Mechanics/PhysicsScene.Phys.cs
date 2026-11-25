@@ -400,6 +400,14 @@ namespace RobotTwin.CoreSim.Mechanics
                 _uf[Find(a)] = Find(b);
             }
 
+            // [couple] A gear, belt or screw ties its two shafts into one island: a driven screw keeps its nut awake.
+            foreach (var c in Couplings)
+            {
+                int a = c.A.ChildBody.Slot, b = c.B.ChildBody.Slot;
+                if (a < 0 || b < 0 || a >= count || b >= count || Bodies[a].IsStatic || Bodies[b].IsStatic) continue;
+                _uf[Find(a)] = Find(b);
+            }
+
             // Bodies that must stay awake (driven, wheels, propellers) taint their islands.
             var awakeRoots = new HashSet<int>();
             foreach (var j in Joints)

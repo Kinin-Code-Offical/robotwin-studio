@@ -1255,6 +1255,7 @@ namespace RobotWin.Studio.Pages
                 if (j.Kind == WorldJointKind.Fixed && string.IsNullOrEmpty(j.PortB)) FasteningRow(j);   // [fasten] Pages/WorldPage.Surface.cs
                 if (j.Driven && j.ObjectA == o.Id) DriveRow(j);   // [drive] an imported robot's axis
                 if (j.Kind != WorldJointKind.Fixed && j.ObjectA == o.Id) CouplingRows(world, j, couplings);   // [couple] Pages/WorldPage.Couplings.cs
+                if (j.Sprung && j.ObjectA == o.Id) SpringRows(j);   // [spring] Pages/WorldPage.Couplings.cs
             }
 
             Inspector.Children.Add(Action("Başka bir nesneye bağla (B)", () => SetTool(WorldTool.Joint)));
@@ -1677,7 +1678,8 @@ namespace RobotWin.Studio.Pages
         {
             UpdateVehicleOdometry();   // [mobile] every frame: the encoders' change, whatever the panels' rate
             var now = DateTime.Now;
-            if ((now - _lastPanels).TotalMilliseconds < 120) return;
+            // Running, the panels follow at most every 120 ms; paused or stepped, at once, so they show the state it stopped in.
+            if (_session.State == SimState.Running && (now - _lastPanels).TotalMilliseconds < 120) return;
             _lastPanels = now;
             if (_rosStatus != null && _rosStatus.IsLoaded) _rosStatus.Text = RosStatusText();   // [ros] traffic, joints
             SimStatus.Text = $"t = {SiValue.Format(_session.Time, "s")}" + (_session.RealtimeFactor < 0.9 * _session.Speed ? $" · gerçek zamanın {_session.RealtimeFactor:P0}'i" : string.Empty);

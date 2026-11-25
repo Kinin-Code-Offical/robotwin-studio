@@ -361,6 +361,23 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public double MimicOffset { get; set; }
 
+        /// <summary>
+        /// [spring] A spring in the joint, besides any motor: a torsion spring on a hinge (N·m/rad), a coil spring along a
+        /// slider (N/m), pulling toward <see cref="SpringRest"/> (° or m); <see cref="SpringDamping"/> (N·m·s/rad or N·s/m) is a
+        /// damper along it (a shock absorber, a gas strut, a door closer). 0 = none.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SpringStiffness { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SpringRest { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SpringDamping { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool Sprung => Kind != WorldJointKind.Fixed && (SpringStiffness > 0 || SpringDamping > 0);
+
         public const string DrivePosition = "position";
         public const string DriveSpeedMode = "speed";
 

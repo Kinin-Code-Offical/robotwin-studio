@@ -292,6 +292,10 @@ Bağ bir motor değil, bir kısıttır: iki eklem birlikte hareket eder ve sür�
 
 **Verim** dişin ya da vida dişinin sürtünmesidir ve taşıdığı yükle orantılıdır. Varsayılanlar: düz dişli %98, kremayer %95, kayış %97. Vidalı milde verim dişin eğiminden hesaplanır (trapez diş, plastik ya da bronz somun, μ = 0,15): T8×8 yaklaşık %66, T8×2 yaklaşık %36. Verim %50 ya da altındaysa vida **kendini kilitler**: motor dururken yük mili geri çeviremez. Bu yüzden T8×2 milli dikey eksen olduğu yerde kalır, T8×8 milli eksen yavaşça iner. Çalışırken **Canlı ölçüm** bağın yükünü ve eklemin hızını gösterir.
 
+### Yay ve sönüm
+
+Menteşeyle ya da kızakla bağlı bir parçaya **Özellik ekle ▾ → Yay ve sönüm** ile eklemin kendi yayı verilir. Menteşede bu bir burulma yayıdır (**N·mm/°**), kızakta helezon yay (**N/mm**). Katalogdaki yay sabiti olduğu gibi girilir. Yay, eklemi **serbest konumuna** çeker ve motorla birlikte çalışır: geri dönüş yaylı bir kolu tutan motor, yayın k·θ torkunu taşır. **Sönüm** hızla orantılı bir frendir (amortisör, gaz yay, kapı kapatıcı). Yay örtük çözülür, bu yüzden çok sert yay da kararlı kalır. Kızakta 1 kg kütle 1000 N/m yayda 9,81 mm sarkar ve 199 ms periyotla salınır; kritik sönümle hiç aşmadan yerine oturur. Çalışırken **Canlı ölçüm** yayın torkunu ya da kuvvetini ve eklemin konumunu gösterir.
+
 ### Kol kinematiği: ileri ve ters kinematik
 
 Servolarla kurduğunuz bir kolun bir parçasını seçin (örneğin servo kol şablonunda **Kol 2**). Denetçide **Kinematik (kolun ucu)** bölümü çıkar. Program, bağlantıları izleyerek tabandan seçtiğiniz parçaya giden zinciri kendisi bulur.

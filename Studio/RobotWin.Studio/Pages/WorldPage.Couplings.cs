@@ -168,14 +168,46 @@ namespace RobotWin.Studio.Pages
             return coupling;
         }
 
+        /// <summary>[spring] A new spring: 0.5 N·mm/° on a hinge, 0.5 N/mm along a slider, relaxed where the joint is built.</summary>
+        private static void AddSpring(WorldJoint j)
+        {
+            j.SpringStiffness = j.Kind == WorldJointKind.Hinge ? 0.5e-3 * 180 / Math.PI : 500;
+            j.SpringRest = 0;
+            j.SpringDamping = 0;
+        }
+
+        /// <summary>
+        /// [spring] The joint's spring in a catalogue's units: N·mm/° and N·mm·s/° on a hinge, N/mm and N·s/m along a slider;
+        /// the document keeps N·m/rad and N/m.
+        /// </summary>
+        private void SpringRows(WorldJoint j)
+        {
+            bool hinge = j.Kind == WorldJointKind.Hinge;
+            double perDegree = 1000 * Math.PI / 180;   // N·m/rad → N·mm/°
+            var joint = j;
+            Inspector.Children.Add(FeatureHeader(hinge ? "Burulma yayı" : "Helezon yay", "Yay kaldırıldı", () =>
+            {
+                joint.SpringStiffness = 0;
+                joint.SpringRest = 0;
+                joint.SpringDamping = 0;
+            }));
+            Inspector.Children.Add(NumberField(hinge ? "Yay sabiti (N·mm/°)" : "Yay sabiti (N/mm)", hinge ? j.SpringStiffness * perDegree : j.SpringStiffness / 1000, v =>
+                Edit("Yay değişti", () => joint.SpringStiffness = hinge ? v / perDegree : v * 1000), 0, 1e7, "0.###"));
+            Inspector.Children.Add(NumberField(hinge ? "Serbest konum (°)" : "Serbest konum (mm)", hinge ? j.SpringRest : j.SpringRest * 1000, v =>
+                Edit("Yay değişti", () => joint.SpringRest = hinge ? v : v / 1000), -1e6, 1e6, "0.#"));
+            Inspector.Children.Add(NumberField(hinge ? "Sönüm (N·mm·s/°)" : "Sönüm (N·s/m)", hinge ? j.SpringDamping * perDegree : j.SpringDamping, v =>
+                Edit("Yay değişti", () => joint.SpringDamping = hinge ? v / perDegree : v), 0, 1e7, "0.###"));
+            Inspector.Children.Add(Note("Motor olsa da olmasa da eklemi serbest konumuna çeker; sönüm hızla orantılı bir frendir (amortisör, gaz yay, kapı kapatıcı)."));
+        }
+
         /// <summary>The load and speed of the selected part's couplings while running.</summary>
         private void CouplingLive(WorldObject o, List<string> lines)
         {
             var world = World;
-            if (world?.Couplings == null || _session.Physics is not { } ph) return;
+            if (world == null || _session.Physics is not { } ph) return;
             foreach (var j in MovingJoints(world, o))
             {
-                foreach (var c in world.Couplings.Where(c => c.JointA == j.Id || c.JointB == j.Id))
+                foreach (var c in world.Couplings?.Where(c => c.JointA == j.Id || c.JointB == j.Id) ?? Enumerable.Empty<WorldCoupling>())
                 {
                     var a = world.Joints.FirstOrDefault(x => x.Id == c.JointA);
                     var b = world.Joints.FirstOrDefault(x => x.Id == c.JointB);
@@ -183,6 +215,13 @@ namespace RobotWin.Studio.Pages
                     double speed = c.JointA == j.Id ? s.SpeedA : s.SpeedB;
                     string pace = j.Kind == WorldJointKind.Hinge ? $"{speed * 30 / Math.PI:0} rpm" : $"{speed * 1000:0.0} mm/s";
                     lines.Add($"{c.Title(a.Kind, b.Kind)} yükü: {SiValue.Format(Math.Abs(s.Load), b.Kind == WorldJointKind.Hinge ? "N·m" : "N")} · {pace}");
+                }
+
+                if (j.Sprung && ph.SpringState(j.Id) is { } sp)   // [spring]
+                {
+                    lines.Add(j.Kind == WorldJointKind.Hinge
+                        ? $"Yay torku: {SiValue.Format(Math.Abs(sp.Load), "N·m")} · {sp.Position:0.0}°"
+                        : $"Yay kuvveti: {SiValue.Format(Math.Abs(sp.Load), "N")} · {sp.Position * 1000:0.0} mm");
                 }
             }
         }

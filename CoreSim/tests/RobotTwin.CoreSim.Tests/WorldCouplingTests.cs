@@ -58,6 +58,8 @@ namespace RobotTwin.CoreSim.Tests
             var gear = runner.Physics!.CouplingState("dişli")!.Value;
             var lead = runner.Physics.CouplingState("vida")!.Value;
             double thread = runner.Physics.Scene.Couplings.Single(c => c.Id == "vida").Efficiency;
+            double travel = runner.Physics.Scene.Joints.Single(s => s.Id == nut.Id).Angle;
+            _out.WriteLine($"taşıyıcı {travel * 1000:0.00} mm yükseldi");
             _out.WriteLine($"pinyon {gear.SpeedA * 30 / Math.PI:0.0} dev/dk, çark {gear.SpeedB * 30 / Math.PI:0.0} dev/dk; mil {lead.SpeedA * 30 / Math.PI:0.0} dev/dk, taşıyıcı {lead.SpeedB * 1000:0.00} mm/s, vida yükü {lead.Load:0.00} N, verim %{thread * 100:0}");
             Assert.InRange(gear.SpeedA, 2 * Math.PI - 0.01, 2 * Math.PI + 0.01);
             Assert.InRange(gear.SpeedB, -Math.PI - 0.01, -Math.PI + 0.01);   // 20 teeth turn 40 at half the speed, the other way
