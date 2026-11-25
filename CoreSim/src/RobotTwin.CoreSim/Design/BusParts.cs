@@ -13,6 +13,9 @@ namespace RobotTwin.CoreSim.Design
     {
         public const string Category = "Sensör · Veri yolu (SPI / I²C)";
 
+        /// <summary>[neopixel] Addressable LEDs: outputs driven over a single data line.</summary>
+        public const string LedCategory = "Çıkış · Adreslenebilir LED";
+
         public static void Register(PartLibrary lib)
         {
             // MCP3008: VDD 2.7–5.5 V, 500 µA typical; analog inputs see the sample capacitor only (≈1 GΩ leakage here).
@@ -52,6 +55,22 @@ namespace RobotTwin.CoreSim.Design
             baro.Pin("VCC", "1", -5, -5).Pin("GND", "2", -5, -3).Pin("SCL", "3", -5, -1).Pin("SDA", "4", -5, 1)
                 .Pin("CSB", "5", -5, 3).Pin("SDO", "6", -5, 5).Size(4, 6);
             Preset(lib, "gy-bmp280", "GY-BMP280 Basınç Modülü", "bmp280", "300–1100 hPa, ±1 Pa çözünürlük, I²C 0x76 veya SPI");
+
+            // [neopixel] WS2812B strip: 5 V RGB LEDs on one data line (GRB words, 800 kHz); ≈1 mA an LED, up to 60 mA at full white.
+            var strip = Part(lib, "ws2812-strip", "WS2812B Adreslenebilir LED Şerit", "LED", "HDR-1x4",
+                "Tek veri hattıyla sürülen 5 V RGB LED zinciri (WS2812B / NeoPixel). Her LED kendisine ulaşan ilk 24 bitlik GRB sözcüğünü alır, gerisini DOUT'tan sonrakine geçirir. LED başına ≈1 mA, tam beyazda 60 mA'ya kadar.",
+                c =>
+                {
+                    int vdd = c.Pin("VDD"), gnd = c.Pin("GND");
+                    int count = (int)Math.Max(1, Math.Min(1024, c.Num("count", 8)));
+                    c.Add(new Firmware.Devices.Ws2812Load(c.RefDes, vdd, gnd, c.Pin("DIN"), count));
+                    c.Add(new Resistor(c.Sub("RDOUT"), c.Pin("DOUT"), gnd, 1e9));
+                },
+                P("model", "Model", "WS2812B"), P("count", "LED sayısı", "8", ""),
+                P("pinmap", "Pin eşleme", "VDD:1,DIN:2,GND:3,DOUT:4"));
+            strip.Category = LedCategory;
+            strip.Pin("VDD", "1", -5, -3).Pin("DIN", "2", -5, -1).Pin("GND", "3", -5, 1).Pin("DOUT", "4", 5, -1).Size(4, 4);
+            Preset(lib, "ws2812-8", "WS2812B 8 LED Şerit (NeoPixel)", "ws2812-strip", "8 adreslenebilir RGB LED, 5 V, tek veri hattı");
             Preset(lib, "mcp3008-dip", "MCP3008 ADC (DIP-16)", "mcp3008", "8 kanal 10 bit SPI ADC — Raspberry Pi / ESP32 için analog giriş çoğaltıcı");
         }
 

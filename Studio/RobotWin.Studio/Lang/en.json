@@ -6928,7 +6928,13 @@
   "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware running (real-chip firmware, RobotWin's Xtensa emulator)",
   "SPI: ": "SPI: ",
   "bekçi (watchdog) kartı sıfırladı": "a watchdog reset the board",
-  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, DAC, timers, watchdogs, Serial/Serial1/Serial2, I2C (Wire) and SPI are modelled; Wi-Fi/BLE are not yet."
+  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, DAC, timers, watchdogs, Serial/Serial1/Serial2, I2C (Wire) and SPI are modelled; Wi-Fi/BLE are not yet.",
+  "WS2812B Adreslenebilir LED Şerit": "WS2812B Addressable LED Strip",
+  "Tek veri hattıyla sürülen 5 V RGB LED zinciri (WS2812B / NeoPixel). Her LED kendisine ulaşan ilk 24 bitlik GRB sözcüğünü alır, gerisini DOUT'tan sonrakine geçirir. LED başına ≈1 mA, tam beyazda 60 mA'ya kadar.": "A chain of 5 V RGB LEDs driven over one data line (WS2812B / NeoPixel). Each LED takes the first 24-bit GRB word that reaches it and passes the rest on through DOUT. About 1 mA an LED, up to 60 mA at full white.",
+  "Çıkış · Adreslenebilir LED": "Output · Addressable LED",
+  "LED sayısı": "LED count",
+  "WS2812B 8 LED Şerit (NeoPixel)": "WS2812B 8-LED Strip (NeoPixel)",
+  "8 adreslenebilir RGB LED, 5 V, tek veri hattı": "8 addressable RGB LEDs, 5 V, one data line"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
