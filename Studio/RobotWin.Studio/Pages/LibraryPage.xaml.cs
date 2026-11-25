@@ -344,7 +344,7 @@ namespace RobotWin.Studio.Pages
 
         private void AssignModel(PartPreset preset)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B model (*.stl, *.obj, *.ply)|*.stl;*.obj;*.ply|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("Parça için 3B model seçin") };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B model (*.stl, *.obj, *.ply, *.wrl, *.step, *.iges)|*.stl;*.obj;*.ply;*.wrl;*.wrz;*.step;*.stp;*.iges;*.igs|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("Parça için 3B model seçin") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             RobotTwin.CoreSim.Design.PartModel3D model;
             try

@@ -20,6 +20,15 @@ namespace RobotWin.Studio.Pages
         /// </summary>
         public void PrepareSnapshot(string? demo)
         {
+            // [occt] "cad:<file>": a STEP / IGES file imported through the Open CASCADE bridge (as File → Import does).
+            if (demo != null && demo.StartsWith("cad:", StringComparison.OrdinalIgnoreCase))
+            {
+                _ed.Load(ModelEditor.NewDocument(), null);
+                ImportMesh(demo.Substring(4));
+                _vp.FrameAll();
+                return;
+            }
+
             demo = (demo ?? "parts").ToLowerInvariant();
             if (demo == "e2e")
             {

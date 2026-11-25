@@ -80,5 +80,9 @@ Donanım uyumlu kart artık devre sayfasında ve dünyada emülatörde çalış�
 3. Yonga: bellek haritası, ELF yükleme, ROM, iki çekirdek, kesme matrisi, FreeRTOS tick → Blink ve Serial.
 4. Çevre birimleri → radyosuz bütün şablonlar.
 5. Wi-Fi/BLE yakalama → radyolu şablonlar. Wi-Fi istasyonu ve softAP hazır: yazılımın kendi lwIP'si (DHCP, ARP, UDP, TCP) radyo ortamına bağlanıyor; kapalı sürücünün API'si ve çerçeve sınırı emülatörde karşılanıyor. BLE, ESP-NOW, TLS ve mDNS kullanan çizimler şimdilik hızlı modda.
-6. Mod farkı raporu, performans (boşta atlama, çözülmüş blok önbelleği), belgeler. Rapor hazır: `--esp32-compare rapor.md`; altı karşılaştırılabilir şablon iki modda uyumlu (bulduğu farklar düzeltildi: RMT, önyükleme süresi, `millis()` başlangıcı, tik hizalı `delay()`, servo tikleri, LEDC güncelleme beklemesi). Hız: getirme penceresi ve veri RAM'i kısa yolu; sürüm derlemesinde donanım modu şablonları gerçek zamanın 1,2-8 katında koşuyor (hızlı mod 1,7-15 kat).
+6. Mod farkı raporu, performans (boşta atlama, çözülmüş blok önbelleği), belgeler.
+
+**Hızlı modda çizimler için değişenler** (artık yonganın zamanlamasını izliyor): `setup()` açılıştan ~0,29 s sonra başlar, `millis()` uygulamanın başından sayar; `delay()` 1 ms'lik tikte biter; `ledcWrite` (servo ve ESC yazmaları da) önceki görev güncellemesinin zamanlayıcının bir sonraki periyodunda oturmasını bekler, yani 50 Hz servoyu 5 ms'de bir yazan döngü yongadaki gibi 50 Hz'de döner; `ESP_ERROR_CHECK` hata görünce kartı yeniden başlatır.
+
+**Donanım uyumlu modda ilk çalıştırma**, araç zinciri çizimi derlerken (ilk seferde birkaç dakika) hızlı modda olur; olay günlüğü derleme hazır olunca haber verir (durdurup yeniden çalıştırın) ya da derleyicinin ilk hatasını gösterir. Rapor hazır: `--esp32-compare rapor.md`; altı karşılaştırılabilir şablon iki modda uyumlu (bulduğu farklar düzeltildi: RMT, önyükleme süresi, `millis()` başlangıcı, tik hizalı `delay()`, servo tikleri, LEDC güncelleme beklemesi). Hız: getirme penceresi ve veri RAM'i kısa yolu; sürüm derlemesinde donanım modu şablonları gerçek zamanın 1,2-8 katında koşuyor (hızlı mod 1,7-15 kat).
 7. (P2) Donanım içeren test.

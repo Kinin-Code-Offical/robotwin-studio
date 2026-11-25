@@ -68,6 +68,23 @@ SOFTWARE.
 The conversion was done offline with cascadio (MIT; uses Open CASCADE Technology, LGPL-2.1 with exception)
 and trimesh (MIT). Neither tool ships with RobotWin Studio.
 
+## Open CASCADE Technology (STEP / IGES exchange)
+
+RobotWin Studio reads STEP, IGES and BREP files and writes STEP files through a thin bridge
+(`occt/RobotWin.Occt.dll`, source in `CoreSim/native/occt/rw_occt.cpp`) to **Open CASCADE Technology 8.0.2**,
+built from the official sources (https://github.com/Open-Cascade-SAS/OCCT, tag V8_0_2) by
+`tools/scripts/build_occt.bat` with only the toolkits the bridge needs and no third-party libraries.
+This product makes use of facilities provided by the Open CASCADE Technology software.
+
+Open CASCADE Technology is licensed under the GNU Lesser General Public License version 2.1 with the
+Open CASCADE exception (`third_party/occt/LICENSE_LGPL_21.txt`, `third_party/occt/OCCT_LGPL_EXCEPTION.txt`).
+Its libraries ship as separate DLLs in the app's `occt` folder; you may replace them with your own build of the
+same version (the bridge's source and build script are in this repository). Modelling, physics and drawing in
+RobotWin do not use Open CASCADE.
+
+The `occt` folder also carries the Microsoft Visual C++ runtime DLLs the bridge needs (msvcp140, msvcp140_2,
+vcruntime140, vcruntime140_1), redistributed app-locally under the Visual Studio redistribution terms.
+
 ## Other components
 
 Add additional third-party notices here as dependencies are introduced.

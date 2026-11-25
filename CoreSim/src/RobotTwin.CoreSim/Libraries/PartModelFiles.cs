@@ -9,31 +9,44 @@ using RobotTwin.CoreSim.Mechanics;
 
 namespace RobotTwin.CoreSim.Libraries
 {
-    // [libs] 3D model files for parts: STL/OBJ/PLY (MeshModel), VRML (VrmlReader), a clear
-    // refusal for STEP/IGES (needs a CAD kernel), procedural boxes, and resolution of
-    // KiCad (model "${KICAD8_3DMODEL_DIR}/…") references.
+    // [libs] 3D model files for parts: STL/OBJ/PLY (MeshModel), VRML (VrmlReader), STEP/IGES/BREP through the Open
+    // CASCADE bridge (OcctBridge; a clear message when it is missing), procedural boxes, and resolution of KiCad
+    // (model "${KICAD8_3DMODEL_DIR}/…") references.
 
     public static class PartModelFiles
     {
         public static readonly string[] MeshExtensions = { ".stl", ".obj", ".ply", ".wrl", ".wrz", ".vrml" };
         public static readonly string[] CadExtensions = { ".step", ".stp", ".iges", ".igs", ".brep" };
 
+        /// <summary>Why a STEP/IGES file cannot be read here: the Open CASCADE bridge (the app's occt folder) is missing.</summary>
         public const string StepMessage =
-            "STEP/IGES dosyaları üçgen ağ değil, katı (B-rep) CAD modelidir; ağa çevirmek için bir CAD çekirdeği (OpenCASCADE gibi) gerekir ve RobotWin'de yok. " +
-            "Modeli KiCad, FreeCAD veya üreticinin aracıyla STL / OBJ / WRL olarak dışa aktarıp ekleyin (KiCad kütüphanelerinde aynı adlı .wrl dosyası çoğunlukla STEP'in yanındadır).";
+            "STEP/IGES dosyaları katı (B-rep) CAD modelidir; RobotWin onları Open CASCADE köprüsüyle okur, ancak köprü bu kurulumda yok (uygulama klasöründeki 'occt'). " +
+            "Uygulamayı yeniden kurun ya da modeli KiCad, FreeCAD veya üreticinin aracıyla STL / OBJ / WRL olarak dışa aktarıp ekleyin.";
+
+        /// <summary>STEP/IGES/BREP files can be read on this installation (the Open CASCADE bridge loads).</summary>
+        public static bool CanReadCad => Formats.OcctBridge.Available;
 
         public static bool IsCad(string path) => CadExtensions.Contains(Path.GetExtension(path).ToLowerInvariant());
 
         public static bool IsMesh(string path) => MeshExtensions.Contains(Path.GetExtension(path).ToLowerInvariant());
 
-        /// <summary>Loads any supported mesh file (metres, Z up). STEP/IGES throw <see cref="NotSupportedException"/> with the reason.</summary>
+        /// <summary>
+        /// Loads any supported model file (metres, Z up): meshes, VRML, and STEP/IGES/BREP through the Open CASCADE bridge
+        /// (every body at its assembly placement, in its colours). Without the bridge a CAD file throws
+        /// <see cref="NotSupportedException"/> with the reason.
+        /// </summary>
         public static MeshModel LoadMesh(string path, VrmlUnits vrmlUnits = VrmlUnits.Auto, ImportLog? log = null)
         {
             string ext = Path.GetExtension(path).ToLowerInvariant();
-            if (IsCad(path)) throw new NotSupportedException(StepMessage);
+            if (IsCad(path))
+            {
+                if (!CanReadCad) throw new NotSupportedException(StepMessage);
+                return Formats.OcctBridge.Read(path);
+            }
+
             if (ext == ".wrl" || ext == ".wrz" || ext == ".vrml") return VrmlReader.Load(path, vrmlUnits, log);
             if (ext == ".stl" || ext == ".obj" || ext == ".ply") return MeshModel.Load(path);
-            throw new NotSupportedException($"'{ext}' 3B model biçimi desteklenmiyor (STL, OBJ, PLY, WRL kullanın).");
+            throw new NotSupportedException($"'{ext}' 3B model biçimi desteklenmiyor (STL, OBJ, PLY, WRL, STEP, IGES kullanın).");
         }
 
         /// <summary>
@@ -166,7 +179,7 @@ namespace RobotTwin.CoreSim.Libraries
 
                     if (File.Exists(path))
                     {
-                        note = "yalnız STEP dosyası var: " + StepMessage;
+                        note = CanReadCad ? "STEP modeli Open CASCADE ile okundu." : "yalnız STEP dosyası var: " + StepMessage;
                         return path;
                     }
                 }
@@ -180,7 +193,9 @@ namespace RobotTwin.CoreSim.Libraries
                     {
                         if (File.Exists(Path.ChangeExtension(path, ext)))
                         {
-                            note = $".wrl yok, yalnız '{Path.GetFileName(Path.ChangeExtension(path, ext))}' var: " + StepMessage;
+                            note = CanReadCad
+                                ? $".wrl yok; '{Path.GetFileName(Path.ChangeExtension(path, ext))}' Open CASCADE ile okundu."
+                                : $".wrl yok, yalnız '{Path.GetFileName(Path.ChangeExtension(path, ext))}' var: " + StepMessage;
                             return Path.ChangeExtension(path, ext);
                         }
                     }

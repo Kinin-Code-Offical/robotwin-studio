@@ -167,7 +167,7 @@ Equations and validation: [Liquids](../physics/07-liquids.md).
 
 ### 3D models
 
-Add your own model with **External model → Import 3D model (STL, OBJ, PLY)…**. Mass, centre of mass and inertia are computed from the material. A part you made on the Part page comes here as one body with **Put into the test world as a single body (obstacle, ramp …)** in its right-click menu; the robot's parts go to its assembly with **Send to assembly** ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
+Add your own model with **External model → Import 3D model (STL, OBJ, PLY, STEP, IGES)…**. Mass, centre of mass and inertia are computed from the material. A part you made on the Part page comes here as one body with **Put into the test world as a single body (obstacle, ramp …)** in its right-click menu; the robot's parts go to its assembly with **Send to assembly** ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
 
 ## Cables
 

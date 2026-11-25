@@ -96,8 +96,8 @@ Give each object a material (PLA, PETG, ABS, nylon, acrylic, plywood, MDF, FR4, 
 ## Saving and exporting
 
 - The model is saved as a `.rwmodel` file (Ctrl+S).
-- **Import**: STL, OBJ, PLY.
-- **Export**: STL (mm), OBJ, PLY. Open (not closed) meshes are warned about. Use STL for 3D printers.
+- **Import**: STL, OBJ, PLY and CAD files: STEP (.step, .stp) and IGES (.iges, .igs). CAD files are meshed with Open CASCADE; every body of an assembly comes at its place and in its colour.
+- **Export**: STL (mm), OBJ, PLY and STEP (mm). In STEP the triangles are sewn and, when they close, made a solid body that CAD programs such as SolidWorks, Fusion or FreeCAD open as one. Open (not closed) meshes are warned about. Use STL for 3D printers.
 
 ## Send to the assembly
 

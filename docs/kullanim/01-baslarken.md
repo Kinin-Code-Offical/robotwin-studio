@@ -95,7 +95,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 **Kütüphane** (Ctrl+7) sayfası tüm parçaları şema sembolü, PCB ayak izi ve 3D önizlemesiyle gösterir.
 
 - **Bundan yeni parça:** var olan bir parçanın simülasyon modelini kullanıp kendi değerlerinizle yeni bir parça (`.rwpart`) oluşturur.
-- **3B modeli değiştir…:** bir parçanın 3D görünümünü kendi STL / OBJ / PLY dosyanızla değiştirir. **Üretilen modele dön** eskisini geri getirir.
+- **3B modeli değiştir…:** bir parçanın 3D görünümünü kendi STL / OBJ / PLY / WRL ya da STEP / IGES dosyanızla değiştirir. **Üretilen modele dön** eskisini geri getirir.
 - **İçe aktar…:** `.rwpart` / `.rwlib` dosyaları ve KiCad sembol (`.kicad_sym`) ile ayak izi (`.kicad_mod`, `.pretty` klasörü) dosyaları.
 - **Kütüphanemi dışa aktar:** kendi parçalarınızı tek bir `.rwlib` dosyasında paylaşın.
 

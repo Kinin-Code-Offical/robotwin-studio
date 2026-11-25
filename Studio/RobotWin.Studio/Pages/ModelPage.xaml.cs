@@ -587,7 +587,7 @@ namespace RobotWin.Studio.Pages
         {
             var dlg = new OpenFileDialog
             {
-                Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin modeli veya 3B ağ|*.rwmodel;*.stl;*.obj;*.ply|RobotWin modeli (*.rwmodel)|*.rwmodel|3B ağ (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|Tüm dosyalar|*.*")
+                Filter = RobotWin.Studio.Shell.Lang.Filter("RobotWin modeli, 3B ağ veya CAD|*.rwmodel;*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs|RobotWin modeli (*.rwmodel)|*.rwmodel|3B ağ (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|CAD: STEP, IGES (*.step;*.stp;*.iges;*.igs)|*.step;*.stp;*.iges;*.igs|Tüm dosyalar|*.*")
             };
             if (dlg.ShowDialog(Owner) != true) return;
             OpenFile(dlg.FileName);
@@ -677,7 +677,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnImport(object sender, RoutedEventArgs e)
         {
-            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B modeller (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply|Tüm dosyalar|*.*"), Multiselect = true };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B modeller ve CAD (*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs)|*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs|Tüm dosyalar|*.*"), Multiselect = true };
             if (dlg.ShowDialog(Owner) != true) return;
             foreach (var f in dlg.FileNames) ImportMesh(f);
         }
@@ -686,12 +686,16 @@ namespace RobotWin.Studio.Pages
         {
             try
             {
-                var mesh = MeshModel.Load(path);
+                // [occt] STEP / IGES through the Open CASCADE bridge (millimetres in the file, metres here).
+                bool cad = RobotTwin.CoreSim.Libraries.PartModelFiles.IsCad(path);
+                var mesh = cad ? RobotTwin.CoreSim.Libraries.PartModelFiles.LoadMesh(path) : MeshModel.Load(path);
                 if (mesh.TriangleCount == 0) throw new InvalidDataException("Dosyada üçgen yok.");
                 var poly = ModelOps.FromImported(mesh);
                 _ed.AddMeshObject(poly, Path.GetFileNameWithoutExtension(path));
                 var b = poly.Bounds;
-                _ed.Status($"{Path.GetFileName(path)}: {mesh.TriangleCount:N0} üçgen → {poly.Faces.Count:N0} yüz, {b.Size.X:0.#} × {b.Size.Y:0.#} × {b.Size.Z:0.#} mm (STL mm, OBJ/PLY metre kabul edilir)");
+                _ed.Status(cad
+                    ? $"{Path.GetFileName(path)}: {mesh.TriangleCount:N0} üçgen → {poly.Faces.Count:N0} yüz, {b.Size.X:0.#} × {b.Size.Y:0.#} × {b.Size.Z:0.#} mm (CAD, Open CASCADE ile ağa çevrildi)"
+                    : $"{Path.GetFileName(path)}: {mesh.TriangleCount:N0} üçgen → {poly.Faces.Count:N0} yüz, {b.Size.X:0.#} × {b.Size.Y:0.#} × {b.Size.Z:0.#} mm (STL mm, OBJ/PLY metre kabul edilir)");
                 _vp.FrameSelected();
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is FormatException || ex is NotSupportedException || ex is UnauthorizedAccessException)
@@ -720,14 +724,17 @@ namespace RobotWin.Studio.Pages
             string name = set.Count == 1 ? set[0].Name : _ed.Doc.Title;
             var dlg = new SaveFileDialog
             {
-                Filter = RobotWin.Studio.Shell.Lang.Filter("STL, milimetre (*.stl)|*.stl|OBJ, metre (*.obj)|*.obj|PLY, metre (*.ply)|*.ply"),
+                Filter = RobotWin.Studio.Shell.Lang.Filter("STL, milimetre (*.stl)|*.stl|OBJ, metre (*.obj)|*.obj|PLY, metre (*.ply)|*.ply"
+                    + (RobotTwin.CoreSim.Formats.OcctBridge.Available ? "|STEP katı, milimetre (*.step)|*.step" : string.Empty)),
                 FileName = SafeName(name) + ".stl"
             };
             if (dlg.ShowDialog(Owner) != true) return;
             try
             {
                 var mesh = ModelOps.ToMeshModel(_ed.Doc, set, name);
-                mesh.Save(dlg.FileName);
+                string ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+                if (ext == ".step" || ext == ".stp") RobotTwin.CoreSim.Formats.OcctBridge.WriteStep(mesh, dlg.FileName);   // [occt] sewn into a solid
+                else mesh.Save(dlg.FileName);
                 var open = set.Where(o => !_ed.Doc.WorldMesh(o).IsClosed).Select(o => o.Name).ToList();
                 _ed.Status($"Dışa aktarıldı: {Path.GetFileName(dlg.FileName)} · {mesh.TriangleCount:N0} üçgen" + (open.Count > 0 ? $" · uyarı: kapalı olmayan ağ ({string.Join(", ", open)})" : string.Empty));
             }

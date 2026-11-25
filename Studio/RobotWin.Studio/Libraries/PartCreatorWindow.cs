@@ -1092,7 +1092,7 @@ namespace RobotWin.Studio.Libraries
 
         private void PickModel()
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B model (*.stl, *.obj, *.ply, *.wrl)|*.stl;*.obj;*.ply;*.wrl;*.wrz|STEP (*.step, *.stp)|*.step;*.stp|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("3B model") };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3B model (*.stl, *.obj, *.ply, *.wrl)|*.stl;*.obj;*.ply;*.wrl;*.wrz|STEP, IGES (*.step, *.stp, *.iges, *.igs)|*.step;*.stp;*.iges;*.igs|Tüm dosyalar (*.*)|*.*"), Title = RobotWin.Studio.Shell.Lang.T("3B model") };
             if (dlg.ShowDialog(_w) != true) return;
             try
             {

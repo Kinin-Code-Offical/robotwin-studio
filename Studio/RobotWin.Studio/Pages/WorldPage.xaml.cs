@@ -313,7 +313,7 @@ namespace RobotWin.Studio.Pages
             }));
             ReadyMechPalette();   // [objs] ready wheels, casters, propellers
             Palette.Children.Add(Caption("Dışarıdan model"));
-            Palette.Children.Add(Action("3D model içe aktar (STL, OBJ, PLY)…", ImportModel, "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır."));
+            Palette.Children.Add(Action("3D model içe aktar (STL, OBJ, PLY, STEP, IGES)…", ImportModel, "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır."));
             CellPalette();   // [arm] robot cell parts (Pages/WorldPage.Cell.cs)
         }
 
@@ -499,11 +499,12 @@ namespace RobotWin.Studio.Pages
 
         private void ImportModel()
         {
-            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3D model (*.stl;*.obj;*.ply)|*.stl;*.obj;*.ply"), Title = RobotWin.Studio.Shell.Lang.T("3D model içe aktar") };
+            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3D model ve CAD (*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs)|*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs"), Title = RobotWin.Studio.Shell.Lang.T("3D model içe aktar") };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
             try
             {
-                var mesh = MeshModel.Load(dlg.FileName);
+                // [occt] STEP / IGES through the Open CASCADE bridge, every body at its placement and in its colours
+                var mesh = RobotTwin.CoreSim.Libraries.PartModelFiles.IsCad(dlg.FileName) ? RobotTwin.CoreSim.Libraries.PartModelFiles.LoadMesh(dlg.FileName) : MeshModel.Load(dlg.FileName);
                 EnsureWorld();
                 WorldObject? added = null;
                 Edit("Model eklendi", () => added = World!.AddModel(mesh, Path.GetFileName(dlg.FileName), NewPose()));

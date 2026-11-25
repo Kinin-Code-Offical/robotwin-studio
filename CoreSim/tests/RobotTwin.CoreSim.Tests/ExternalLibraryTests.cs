@@ -455,9 +455,18 @@ namespace RobotTwin.CoreSim.Tests
         {
             string step = Path.Combine(_tmp, "part.step");
             File.WriteAllText(step, "ISO-10303-21;");
-            var ex = Assert.Throws<NotSupportedException>(() => PartModelFiles.LoadMesh(step));
-            Assert.Contains("STEP", ex.Message);
-            Assert.Contains("STL", ex.Message);
+            if (PartModelFiles.CanReadCad)
+            {
+                // [occt] With the Open CASCADE bridge a broken STEP file says it could not be read.
+                var bad = Assert.Throws<InvalidDataException>(() => PartModelFiles.LoadMesh(step));
+                Assert.Contains("STEP", bad.Message);
+            }
+            else
+            {
+                var ex = Assert.Throws<NotSupportedException>(() => PartModelFiles.LoadMesh(step));
+                Assert.Contains("STEP", ex.Message);
+                Assert.Contains("STL", ex.Message);
+            }
 
             string? found = PartModelFiles.ResolveKiCadModel("${KICAD8_3DMODEL_DIR}/Test.3dshapes/SOIC-8_3.9x4.9mm_P1.27mm.step", new[] { Fixtures }, out string note);
             Assert.NotNull(found);

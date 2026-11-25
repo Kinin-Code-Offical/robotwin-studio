@@ -6,6 +6,8 @@
 /publish/
 *.exe
 *.dll
+# [occt] the Open CASCADE bridge ships from the repository (tools/scripts/build_occt.bat builds it)
+!third_party/occt/win-x64/*.dll
 *.pdb
 *.ilk
 *.exp

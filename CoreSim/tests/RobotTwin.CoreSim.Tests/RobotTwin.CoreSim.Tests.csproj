@@ -42,6 +42,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- [occt] a STEP sample from Open CASCADE's own data (LGPL-2.1 with exception) -->
+    <None Update="Fixtures\*.step">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Fixtures\*.hex">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -83,8 +83,8 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - parametrik ölçüler;
   - montaj ilişkileri;
   - dişli, kayış, yay, rulman, kızak, vidalı mil;
-  - 3B baskı uygunluğu;
-  - STEP.
+  - 3B baskı uygunluğu.
+  - (STEP içe/dışa aktarma yapıldı: Open CASCADE köprüsü, aşağıda Dış biçimler.)
 - [~] **Devre simülasyonu:** çözücü, ERC, Monte Carlo ve hasar var. Eksikler:
   - üretici SPICE modelleri;
   - AC ve frekans cevabı;
@@ -146,7 +146,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [~] **Dış biçimler:**
   - [x] KiCad dışa aktarma.
   - [~] KiCad içe aktarma.
-  - [ ] STEP.
+  - [x] STEP / IGES: Open CASCADE köprüsü (`CoreSim/native/occt`, `third_party/occt/win-x64`, `tools/scripts/build_occt.bat`): STEP, IGES ve BREP her 3B model seçiminde açılır (modelleyici, dünya, parça modeli, parça oluşturucu, yalnız STEP'i olan KiCad ayak izleri); montajlar yerleşim ve renkleriyle ağa çevrilir; modelleyici STEP katısı olarak dışa aktarır. OCCT 8.0.2 yalnız dosya köprüsü, üçüncü taraf kütüphanesiz derlendi (~42 MB).
   - [ ] URDF / Xacro.
   - [ ] ROS 2.
   - [~] Python API.

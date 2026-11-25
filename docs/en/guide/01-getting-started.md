@@ -95,7 +95,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 The **Library** (Ctrl+7) page shows every part with its schematic symbol, PCB footprint and 3D preview.
 
 - **New part from this**: creates a new part (`.rwpart`) with your own values using an existing part's simulation model.
-- **Change 3D model…**: replaces a part's 3D look with your own STL / OBJ / PLY file. **Revert to the generated model** restores it.
+- **Change 3D model…**: replaces a part's 3D look with your own STL / OBJ / PLY / WRL or STEP / IGES file. **Revert to the generated model** restores it.
 - **Import…**: `.rwpart` / `.rwlib` files and KiCad symbol (`.kicad_sym`) and footprint (`.kicad_mod`, `.pretty` folder) files.
 - **Export my library**: share your parts in one `.rwlib` file.
 

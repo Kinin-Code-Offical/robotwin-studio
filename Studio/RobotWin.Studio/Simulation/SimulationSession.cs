@@ -614,7 +614,16 @@ namespace RobotWin.Studio.Simulation
             if (string.IsNullOrWhiteSpace(value)) return null;
             if (value!.StartsWith("builtin:", StringComparison.Ordinal))
             {
-                return System.IO.Path.Combine(AppContext.BaseDirectory, "Firmware", value.Substring(8));
+                string path = System.IO.Path.Combine(AppContext.BaseDirectory, "Firmware", value.Substring(8));
+                // [lang] The built-in examples print in the language in use: each Turkish build has an English one beside it
+                // (built from the same sketch with the pack's lines), which every other language uses.
+                if (Shell.Lang.Current != "tr" && path.EndsWith(".hex", StringComparison.OrdinalIgnoreCase))
+                {
+                    string english = System.IO.Path.ChangeExtension(path, ".en.hex");
+                    if (System.IO.File.Exists(english)) return english;
+                }
+
+                return path;
             }
 
             return value;
@@ -710,6 +719,13 @@ namespace RobotWin.Studio.Simulation
         /// [esp32hw] Starts a hardware-compatible ESP32 on the Xtensa emulator with the sketch's real-chip build; false (after
         /// saying why: being built, or no toolchain) when there is none yet, and the board runs as the fast mode.
         /// </summary>
+        /// <summary>[esp32hw] The log line for a background real-chip build that ended while the board ran in the fast mode.</summary>
+        internal static SimLogEntry BuildEnded(string where, RobotWin.Studio.Firmware.BuildResult r, double time) =>
+            new SimLogEntry(time, where, r.Success
+                ? string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilt, r.Duration.TotalSeconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture))
+                : string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, RobotWin.Studio.Firmware.ArduinoCompiler.FirstError(r)),
+                r.Success ? AnalogEventKind.StateChange : AnalogEventKind.Warning);
+
         private bool AttachEmulatedEsp32(SchematicPart part, string source, string? fileName)
         {
             if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) is { } gap)
@@ -721,10 +737,15 @@ namespace RobotWin.Studio.Simulation
             var cached = RobotWin.Studio.Firmware.ArduinoCompiler.CachedEsp32Hardware(source);
             if (cached == null)
             {
-                if (RobotWin.Studio.Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                if (RobotWin.Studio.Firmware.ArduinoCompiler.FailedEsp32HardwareBuild(source) is { } failed)
                 {
-                    _ = RobotWin.Studio.Firmware.ArduinoCompiler.EnsureEsp32HardwareBuildAsync(source);
-                    Log.Add(new SimLogEntry(0, part.RefDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
+                    Log.Add(new SimLogEntry(0, part.RefDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, RobotWin.Studio.Firmware.ArduinoCompiler.FirstError(failed)), AnalogEventKind.Warning));
+                }
+                else if (RobotWin.Studio.Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                {
+                    string refDes = part.RefDes;
+                    Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
+                    RobotWin.Studio.Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => Log.Add(BuildEnded(refDes, r, Simulator?.Time ?? 0)));
                 }
                 else
                 {

@@ -365,7 +365,7 @@ namespace RobotTwin.CoreSim.Libraries
                 return;
             }
 
-            if (PartModelFiles.IsCad(path))
+            if (PartModelFiles.IsCad(path) && !PartModelFiles.CanReadCad)
             {
                 log.Warn("3B model: " + note, item: item);
                 return;

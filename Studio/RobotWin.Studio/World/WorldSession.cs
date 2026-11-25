@@ -556,10 +556,14 @@ namespace RobotWin.Studio.World
             var cached = Firmware.ArduinoCompiler.CachedEsp32Hardware(source);
             if (cached == null)
             {
-                if (Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                if (Firmware.ArduinoCompiler.FailedEsp32HardwareBuild(source) is { } failed)
                 {
-                    _ = Firmware.ArduinoCompiler.EnsureEsp32HardwareBuildAsync(source);
+                    Log.Add(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, Firmware.ArduinoCompiler.FirstError(failed)), AnalogEventKind.Warning));
+                }
+                else if (Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                {
                     Log.Add(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilding, AnalogEventKind.Warning));
+                    Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => Log.Add(Simulation.SimulationSession.BuildEnded(where, r, Simulator?.Time ?? 0)));
                 }
                 else
                 {

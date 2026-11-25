@@ -96,8 +96,8 @@ Her nesneye bir malzeme (PLA, PETG, ABS, Naylon, Akrilik, Kontrplak, MDF, FR4, A
 ## Kaydetme ve dışa aktarma
 
 - Model `.rwmodel` dosyası olarak kaydedilir (Ctrl+S).
-- **İçe aktar:** STL, OBJ, PLY.
-- **Dışa aktar:** STL (mm), OBJ, PLY. Açık (kapalı olmayan) ağlar için uyarı verir. 3D yazıcıya göndermek için STL kullanın.
+- **İçe aktar:** STL, OBJ, PLY ve CAD dosyaları: STEP (.step, .stp), IGES (.iges, .igs). CAD dosyaları Open CASCADE ile ağa çevrilir; montajdaki her gövde yerinde ve renginde gelir.
+- **Dışa aktar:** STL (mm), OBJ, PLY ve STEP (mm). STEP'te üçgenler dikilip kapalıysa katı gövdeye çevrilir; SolidWorks, Fusion, FreeCAD gibi CAD programları gövde olarak açar. Açık (kapalı olmayan) ağlar için uyarı verir. 3D yazıcıya göndermek için STL kullanın.
 
 ## Montaja gönder
 

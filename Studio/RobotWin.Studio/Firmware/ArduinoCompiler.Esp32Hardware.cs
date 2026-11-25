@@ -323,7 +323,9 @@ namespace RobotWin.Studio.Firmware
 
         /// <summary>
         /// [esp32hw] Builds the sketch for the real chip in the background, once per source (a run that finds no build starts
-        /// it; the next run finds it in <see cref="CachedEsp32Hardware"/>). A failed build is forgotten so it can be retried.
+        /// it; the next run finds it in <see cref="CachedEsp32Hardware"/>). A build the compiler refused is kept, so runs say
+        /// why (<see cref="FailedEsp32HardwareBuild"/>) instead of building it again and again; changing the sketch builds anew.
+        /// A build that failed without a compiler error (a tool that did not start) is forgotten, so the next run retries it.
         /// </summary>
         public static Task<BuildResult> EnsureEsp32HardwareBuildAsync(string source)
         {
@@ -331,9 +333,37 @@ namespace RobotWin.Studio.Firmware
             return HardwareBuilds.GetOrAdd(hash, h => Task.Run(async () =>
             {
                 var result = await CompileEsp32HardwareAsync(source, "src-" + h).ConfigureAwait(false);
-                if (!result.Success) HardwareBuilds.TryRemove(h, out _);
+                if (!result.Success && !result.Diagnostics.Any(d => d.IsError)) HardwareBuilds.TryRemove(h, out _);
                 return result;
             }));
+        }
+
+        /// <summary>[esp32hw] This source's real-chip build, when it failed with compiler errors (null while it builds, after a success, or before one).</summary>
+        public static BuildResult? FailedEsp32HardwareBuild(string source) =>
+            HardwareBuilds.TryGetValue(FirmwareHash(source), out var task) && task.Status == TaskStatus.RanToCompletion && !task.Result.Success ? task.Result : null;
+
+        /// <summary>[esp32hw] A failed build in one line: its first compiler error with the file and line, or the log's last line.</summary>
+        public static string FirstError(BuildResult result)
+        {
+            var error = result.Diagnostics.FirstOrDefault(d => d.IsError);
+            if (error != null) return $"{error.File}:{error.Line}: {error.Message}";
+            string last = result.Log.Split('\n').Select(l => l.Trim()).LastOrDefault(l => l.Length > 0) ?? string.Empty;
+            return last.Length > 160 ? last.Substring(0, 160) + "…" : last;
+        }
+
+        /// <summary>
+        /// [esp32hw] Starts (or joins) this source's background real-chip build and calls <paramref name="done"/> on the UI thread
+        /// when it ends, so a run in the fast mode can say the emulator build is ready, or why it failed.
+        /// </summary>
+        public static void WhenEsp32HardwareBuilt(string source, Action<BuildResult> done)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            EnsureEsp32HardwareBuildAsync(source).ContinueWith(t =>
+            {
+                if (t.Status != TaskStatus.RanToCompletion) return;
+                if (dispatcher != null) dispatcher.BeginInvoke(new Action(() => done(t.Result)));
+                else done(t.Result);
+            }, TaskScheduler.Default);
         }
 
         /// <summary>Writes a hardware build to a real ESP32 on <paramref name="port"/> with the core's esptool (the board resets into its bootloader by itself).</summary>

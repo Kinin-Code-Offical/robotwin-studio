@@ -79,10 +79,16 @@ namespace RobotTwin.CoreSim.Design
                 : parameters != null && parameters.TryGetValue(ModeKey, out var mode) && mode == HardwareMode;
 
         /// <summary>A hardware-compatible board running on the Xtensa emulator: what it models and what not yet.</summary>
-        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, dokunma, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire), SPI, RMT (NeoPixel), darbe sayıcı (enkoder), MCPWM, flaş (Preferences, LittleFS), derin ve hafif uyku modellendi; Wi-Fi/BLE henüz yok.";
+        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, dokunma, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire), SPI, RMT (NeoPixel), darbe sayıcı (enkoder), MCPWM, flaş (Preferences, LittleFS), derin ve hafif uyku, Wi-Fi (istasyon ve erişim noktası, UDP/TCP) modellendi; Bluetooth, ESP-NOW ve TLS henüz yok.";
 
         /// <summary>A hardware-compatible board whose real-chip build is not there yet: it is being built, this run is fast mode.</summary>
-        public const string HardwareModeBuilding = "Donanım uyumlu mod: çizim gerçek yonga için derleniyor; bu çalıştırma hızlı modda, derleme bitince sonraki çalıştırma emülatörde.";
+        /// <summary>The real-chip build finished while the run went on in the fast mode ({0}: seconds it took).</summary>
+        public const string HardwareModeBuilt = "Donanım uyumlu mod: gerçek yonga derlemesi hazır ({0} s). Çalıştırmayı durdurup yeniden başlatınca bu kart Xtensa emülatöründe açılır.";
+
+        /// <summary>The real-chip build failed ({0}: its first error); the board stays in the fast mode until the sketch changes.</summary>
+        public const string HardwareModeBuildFailed = "Donanım uyumlu mod: gerçek yonga derlemesi başarısız: {0}. Bu kart hızlı modda çalışıyor; çizim değişince yeniden derlenir.";
+
+        public const string HardwareModeBuilding = "Donanım uyumlu mod: çizim gerçek yonga için derleniyor (ilk derleme birkaç dakika sürebilir). Bu çalıştırma hızlı modda; derleme bitince burada haber verilir.";
 
         /// <summary>A hardware-compatible board whose sketch needs what the emulator lacks (<see cref="EmulatorGap"/>): fast mode, said plainly.</summary>
         public const string HardwareModeGapNotice = "Donanım uyumlu mod: bu çizim {0} kullanıyor, Xtensa emülatöründe henüz yok; bu kart hızlı modda çalışıyor.";
