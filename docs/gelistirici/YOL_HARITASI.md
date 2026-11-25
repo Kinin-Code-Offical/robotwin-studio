@@ -147,7 +147,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] KiCad dışa aktarma.
   - [~] KiCad içe aktarma.
   - [x] STEP / IGES: Open CASCADE köprüsü (`CoreSim/native/occt`, `third_party/occt/win-x64`, `tools/scripts/build_occt.bat`): STEP, IGES ve BREP her 3B model seçiminde açılır (modelleyici, dünya, parça modeli, parça oluşturucu, yalnız STEP'i olan KiCad ayak izleri); montajlar yerleşim ve renkleriyle ağa çevrilir; modelleyici STEP katısı olarak dışa aktarır. OCCT 8.0.2 yalnız dosya köprüsü, üçüncü taraf kütüphanesiz derlendi (~42 MB).
-  - [ ] URDF / Xacro.
+  - [x] URDF / Xacro: `Formats/Urdf`, `Xacro`, `UrdfImport`; bağlantılar parça, eklemler sınırlarıyla menteşe/kızak ve URDF'nin effort/velocity değerlerinde motorlu (`WorldJoint.Drive`, denetçide **Motor hedefi**), `package://` arama, xacro'nun özellik/ifade/makro/include/koşul alt kümesi. Eksik: `load_yaml`, DAE ağları (görsel yerine çarpışma ağı gösterilir), mimic eklemleri ayrı sürülüyor.
   - [ ] ROS 2.
   - [~] Python API.
   - [ ] Modbus.

@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<!-- A four-axis desktop arm written for RobotWin's URDF import tests: xacro properties, a link macro with a block
+     parameter, materials and limits as ROS descriptions write them. -->
+<robot name="rw_arm4" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="base_h" value="0.06"/>
+  <xacro:property name="upper_l" value="0.22"/>
+  <xacro:property name="fore_l" value="0.18"/>
+  <xacro:property name="r" value="0.022"/>
+
+  <material name="graphite"><color rgba="0.18 0.19 0.21 1"/></material>
+  <material name="orange"><color rgba="0.95 0.45 0.12 1"/></material>
+  <material name="steel"><color rgba="0.72 0.74 0.76 1"/></material>
+
+  <!-- A link as a cylinder of length len along its local Z, starting at the joint. -->
+  <xacro:macro name="arm_link" params="name len mass color:=orange *inertia_origin">
+    <link name="${name}">
+      <inertial>
+        <xacro:insert_block name="inertia_origin"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass * len * len / 12}" iyy="${mass * len * len / 12}" izz="${mass * r * r / 2}" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 ${len / 2}"/>
+        <geometry><cylinder radius="${r}" length="${len}"/></geometry>
+        <material name="${color}"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+        <geometry><cylinder radius="${r * 1.25}" length="${r * 2.6}"/></geometry>
+        <material name="graphite"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${len / 2}"/>
+        <geometry><cylinder radius="${r}" length="${len}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <link name="world"/>
+  <link name="base_link">
+    <inertial><mass value="1.2"/></inertial>
+    <visual>
+      <origin xyz="0 0 ${base_h / 2}"/>
+      <geometry><cylinder radius="0.07" length="${base_h}"/></geometry>
+      <material name="graphite"/>
+    </visual>
+  </link>
+  <joint name="world_to_base" type="fixed"><parent link="world"/><child link="base_link"/></joint>
+
+  <link name="turret">
+    <inertial><mass value="0.4"/></inertial>
+    <visual>
+      <origin xyz="0 0 0.02"/>
+      <geometry><box size="0.09 0.07 0.04"/></geometry>
+      <material name="steel"/>
+    </visual>
+  </link>
+  <joint name="j1_yaw" type="revolute">
+    <parent link="base_link"/><child link="turret"/>
+    <origin xyz="0 0 ${base_h}"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${-radians(170)}" upper="${radians(170)}" effort="12" velocity="2.5"/>
+  </joint>
+
+  <xacro:arm_link name="upper_arm" len="${upper_l}" mass="0.35"><origin xyz="0 0 ${upper_l / 2}"/></xacro:arm_link>
+  <joint name="j2_shoulder" type="revolute">
+    <parent link="turret"/><child link="upper_arm"/>
+    <origin xyz="0 0 0.04"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${-pi / 2}" upper="${pi / 2}" effort="12" velocity="2"/>
+  </joint>
+
+  <xacro:arm_link name="forearm" len="${fore_l}" mass="0.22" color="steel"><origin xyz="0 0 ${fore_l / 2}"/></xacro:arm_link>
+  <joint name="j3_elbow" type="revolute">
+    <parent link="upper_arm"/><child link="forearm"/>
+    <origin xyz="0 0 ${upper_l}" rpy="0 ${pi / 2} 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.4" upper="2.4" effort="6" velocity="3"/>
+  </joint>
+
+  <link name="gripper">
+    <inertial><mass value="0.08"/></inertial>
+    <visual>
+      <origin xyz="0 0 0.015"/>
+      <geometry><box size="0.05 0.03 0.03"/></geometry>
+      <material name="orange"/>
+    </visual>
+  </link>
+  <joint name="j4_wrist" type="revolute">
+    <parent link="forearm"/><child link="gripper"/>
+    <origin xyz="0 0 ${fore_l}"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${-pi}" upper="${pi}" effort="2" velocity="4"/>
+  </joint>
+
+  <link name="tool0"/>
+  <joint name="tool" type="fixed"><parent link="gripper"/><child link="tool0"/><origin xyz="0 0 0.03"/></joint>
+</robot>

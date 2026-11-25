@@ -167,8 +167,14 @@ Denklemler ve doğrulama: [Sıvılar](../fizik/07-sivilar.md).
 
 ### 3D modeller
 
-**Dışarıdan model → 3D model içe aktar (STL, OBJ, PLY, STEP, IGES)…** ile kendi modelinizi ekleyin. Kütle, ağırlık merkezi ve eylemsizlik malzemeden hesaplanır. Parça sayfasında yaptığınız bir parçayı sağ tık menüsündeki **Test dünyasına tek gövde olarak koy** ile buraya getirebilirsiniz. Robotun parçaları ise **Montaja gönder** ile robotun montajına gider ([5. Parça](05-modelle.md), [6. Montaj](06-montaj.md)).
+**Dışarıdan model → 3D model ya da robot içe aktar (STL, OBJ, PLY, STEP, IGES, URDF)…** ile kendi modelinizi ekleyin. Kütle, ağırlık merkezi ve eylemsizlik malzemeden hesaplanır. Parça sayfasında yaptığınız bir parçayı sağ tık menüsündeki **Test dünyasına tek gövde olarak koy** ile buraya getirebilirsiniz. Robotun parçaları ise **Montaja gönder** ile robotun montajına gider ([5. Parça](05-modelle.md), [6. Montaj](06-montaj.md)).
 
+
+### Robot tanımları (URDF ve xacro)
+
+ROS'ta yazılmış bir robotu (`.urdf` ya da `.xacro`) aynı düğmeyle ya da **Dosya → Aç** ile getirin; Aç onu kendi dünyasında açar. Gövdesi olan her bağlantı bir parça olur, sıfır duruşunda yerine konur; şekli görsel ağlarından (STL, OBJ, PLY, STEP), okunamazsa çarpışma ağlarından gelir, renkleri URDF'nin malzemelerinden. Gövdesi olmayan çerçeveler (`tool0` gibi) üst bağlantıya katılır. Döner ve sürekli eklemler menteşe, kayar eklemler kızak olur; sınırları gelir. Her hareketli eklemin bir **motoru** vardır: URDF'nin `effort` değeri tork sınırı, `velocity` değeri en yüksek hız olur. Döner ve kayar eklemler konum tutar (başta 0), sürekli eklemler hız alır (başta durur). Böylece kol yerçekimine karşı duruşunu korur. Parçayı seçip denetçinin **Mekanik bağlantılar** bölümündeki **Motor hedefi** alanını değiştirin; çalışırken eklem hemen o açıya döner.
+
+Kök bağlantının gövdesi yoksa (ROS'taki `world`) ona sabit bağlanan parça tabana vidalanır. Yoksa kol sabit, tekerlekleri olan bir robot (adında *wheel* geçen sürekli eklemler) serbest durur. `package://paket/…` ağları URDF'nin klasöründen yukarı doğru paketin klasörü (adı ya da `package.xml`'deki adı) aranarak bulunur. xacro'da özellikler, `${…}` ifadeleri (aritmetik, karşılaştırma, `pi`, `radians()` ve öteki matematik işlevleri), varsayılan ve blok parametreli makrolar, `include`, `if`/`unless`, `insert_block`, `arg` ve `$(find …)` çalışır; YAML okuma (`load_yaml`) ve DAE (Collada) ağları henüz yoktur. Okunamayan her şey içe aktarmanın sonunda listelenir.
 ## Kablolar
 
 - Her kablonun bir kesiti (AWG), uzunluğu ve rengi vardır. Varsayılan 24 AWG'dir; DC motor veya pil bağlarken 22 AWG.

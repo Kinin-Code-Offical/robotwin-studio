@@ -343,6 +343,76 @@ namespace RobotTwin.CoreSim.Sandbox
 
             // [weld] A fixed joint that cannot break is a rigid bond: both parts are solved as one rigid body.
             joint.Weld = kind == JointKind.Fixed && double.IsPositiveInfinity(joint.BreakForce);
+            if (j.Driven && kind != JointKind.Fixed) AddDrive(j, joint, kind == JointKind.Hinge);
+        }
+
+        // ================================================================ [drive] motors on hinges and sliders
+
+        /// <summary>A motor on a world joint: its target in the joint's own units (rad or m; rad/s or m/s for a speed drive).</summary>
+        private sealed class JointMotor
+        {
+            public SceneJoint Joint = null!;
+            public bool Hinge, Speed;
+            public double Target, MaxSpeed;
+        }
+
+        private readonly Dictionary<string, JointMotor> _motors = new Dictionary<string, JointMotor>(StringComparer.Ordinal);
+
+        private void AddDrive(WorldJoint j, SceneJoint joint, bool hinge)
+        {
+            double unit = hinge ? Math.PI / 180 : 1;   // the document keeps degrees for hinges
+            // Like a servo axis (and the cell's robot arms): a rigid velocity constraint, as strong as the drive's peak torque,
+            // whose speed a position loop sets every step.
+            joint.Drive = JointDrive.Velocity;
+            joint.Damping = 0;
+            joint.TargetSpeed = 0;
+            joint.MaxTorque = j.DriveForce > 0 ? j.DriveForce : hinge ? 10 : 200;
+            _motors[j.Id] = new JointMotor
+            {
+                Joint = joint, Hinge = hinge, Speed = j.Drive == WorldJoint.DriveSpeedMode,
+                Target = j.DriveTarget * unit,
+                MaxSpeed = (j.DriveSpeed > 0 ? j.DriveSpeed : hinge ? 180 : 0.5) * unit
+            };
+        }
+
+        /// <summary>Position gain of the drives' loop (1/s): an error of 1° asks for 50 °/s, up to the drive's top speed.</summary>
+        private const double DriveGain = 50;
+
+        private void DriveJoints()
+        {
+            foreach (var m in _motors.Values)
+            {
+                if (m.Speed)
+                {
+                    m.Joint.TargetSpeed = m.Target;
+                    continue;
+                }
+
+                double v = DriveGain * (m.Target - m.Joint.Angle);
+                m.Joint.TargetSpeed = Math.Max(-m.MaxSpeed, Math.Min(m.MaxSpeed, v));
+            }
+        }
+
+        /// <summary>The world joints that have a drive.</summary>
+        public IEnumerable<string> DrivenJoints => _motors.Keys;
+
+        /// <summary>
+        /// [drive] Sets a joint drive's target while running: an angle (°) or travel (m) for a position drive, a speed (°/s or
+        /// m/s) for a speed drive. False when the joint has no drive.
+        /// </summary>
+        public bool SetJointTarget(string jointId, double value)
+        {
+            if (!_motors.TryGetValue(jointId, out var m)) return false;
+            m.Target = m.Hinge ? value * Math.PI / 180 : value;
+            return true;
+        }
+
+        /// <summary>A driven joint's target and where it is now, in the document's units (° or m; °/s or m/s); null without a drive.</summary>
+        public (double Target, double Now)? JointDriveState(string jointId)
+        {
+            if (!_motors.TryGetValue(jointId, out var m)) return null;
+            double unit = m.Hinge ? 180 / Math.PI : 1;
+            return (m.Target * unit, m.Joint.Angle * unit);
         }
 
         private sealed class Fastened
@@ -402,6 +472,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 _pending -= Step;
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 StepSwitches();   // [launch] timed and clicked switches (Sandbox/WorldPhysics.Launch.cs)
+                DriveJoints();   // [drive] motors on hinges and sliders (imported robots' axes)
                 DriveActuators(sim);
                 DriveReady();   // [objs] propeller speeds, omni/mecanum roller traction
                 StepMachines(sim);   // [arm]

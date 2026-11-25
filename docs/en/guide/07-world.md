@@ -167,8 +167,14 @@ Equations and validation: [Liquids](../physics/07-liquids.md).
 
 ### 3D models
 
-Add your own model with **External model → Import 3D model (STL, OBJ, PLY, STEP, IGES)…**. Mass, centre of mass and inertia are computed from the material. A part you made on the Part page comes here as one body with **Put into the test world as a single body (obstacle, ramp …)** in its right-click menu; the robot's parts go to its assembly with **Send to assembly** ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
+Add your own model with **External model → Import 3D model or robot (STL, OBJ, PLY, STEP, IGES, URDF)…**. Mass, centre of mass and inertia are computed from the material. A part you made on the Part page comes here as one body with **Put into the test world as a single body (obstacle, ramp …)** in its right-click menu; the robot's parts go to its assembly with **Send to assembly** ([5. Part](05-model.md), [6. Assembly](06-assembly.md)).
 
+
+### Robot descriptions (URDF and xacro)
+
+Bring in a robot written for ROS (`.urdf` or `.xacro`) with the same button, or with **File → Open**, which opens it in a world of its own. Every link with a body becomes a part, placed at the zero configuration; its shape comes from its visual meshes (STL, OBJ, PLY, STEP), or its collision meshes when a visual cannot be read, its colours from the URDF's materials. Frames without a body (such as `tool0`) fold into the link above. Revolute and continuous joints become hinges, prismatic ones sliders, with their limits. Every moving joint has a **motor**: the URDF's `effort` is its torque limit, its `velocity` its top speed. Revolute and prismatic joints hold a position (0 at first), continuous ones take a speed (standing at first), so an arm keeps its pose against gravity. Select a part and change **Motor target** in the inspector's **Mechanical joints** section; while running, the joint turns there at once.
+
+When the root link has no body (ROS's `world`), the part fixed to it is bolted down as the base. Otherwise an arm stands fixed and a robot on wheels of its own (continuous joints with *wheel* in the name) stays free. `package://pkg/…` meshes are found by looking for the package's folder (by its name or the one in its `package.xml`) from the URDF's folder upwards. In xacro, properties, `${…}` expressions (arithmetic, comparisons, `pi`, `radians()` and the other math functions), macros with default and block parameters, `include`, `if`/`unless`, `insert_block`, `arg` and `$(find …)` work; reading YAML (`load_yaml`) and DAE (Collada) meshes do not yet. Whatever could not be read is listed at the end of the import.
 ## Cables
 
 - Every cable has a gauge (AWG), a length and a colour. The default is 24 AWG; 22 AWG when connecting a DC motor or a battery.

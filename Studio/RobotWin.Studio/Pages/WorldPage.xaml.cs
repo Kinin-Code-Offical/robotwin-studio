@@ -322,7 +322,8 @@ namespace RobotWin.Studio.Pages
             }));
             ReadyMechPalette();   // [objs] ready wheels, casters, propellers
             Palette.Children.Add(Caption("Dışarıdan model"));
-            Palette.Children.Add(Action("3D model içe aktar (STL, OBJ, PLY, STEP, IGES)…", ImportModel, "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır."));
+            Palette.Children.Add(Action("3D model ya da robot içe aktar (STL, OBJ, PLY, STEP, IGES, URDF)…", ImportModel,
+                "Her şekil kullanılabilir; kütle, ağırlık merkezi ve atalet malzemeden hesaplanır. Bir robot tanımı (URDF ya da xacro) parçaları, eklemleri, sınırları ve motorlarıyla gelir."));
             CellPalette();   // [arm] robot cell parts (Pages/WorldPage.Cell.cs)
         }
 
@@ -508,8 +509,18 @@ namespace RobotWin.Studio.Pages
 
         private void ImportModel()
         {
-            var dlg = new OpenFileDialog { Filter = RobotWin.Studio.Shell.Lang.Filter("3D model ve CAD (*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs)|*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs"), Title = RobotWin.Studio.Shell.Lang.T("3D model içe aktar") };
+            var dlg = new OpenFileDialog
+            {
+                Filter = RobotWin.Studio.Shell.Lang.Filter("3D model, CAD ve robot (*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs;*.urdf;*.xacro)|*.stl;*.obj;*.ply;*.step;*.stp;*.iges;*.igs;*.urdf;*.xacro|Robot tanımı (*.urdf;*.xacro)|*.urdf;*.xacro"),
+                Title = RobotWin.Studio.Shell.Lang.T("3D model içe aktar")
+            };
             if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+            if (IsRobotDescription(dlg.FileName))
+            {
+                ImportRobot(dlg.FileName);
+                return;
+            }
+
             try
             {
                 // [occt] STEP / IGES through the Open CASCADE bridge, every body at its placement and in its colours
@@ -527,6 +538,40 @@ namespace RobotWin.Studio.Pages
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is FormatException || ex is NotSupportedException)
             {
                 Dialog.Show(Window.GetWindow(this), "Model okunamadı", ex.Message, "Tamam");
+            }
+        }
+
+        private static bool IsRobotDescription(string path) =>
+            path.EndsWith(".urdf", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".xacro", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// [urdf] A robot description (ROS URDF or xacro) into the world: its links as parts, its joints as hinges and sliders
+        /// with their limits and motors (Formats/UrdfImport.cs). What could not be read is listed afterwards.
+        /// </summary>
+        public void ImportRobot(string path, bool quiet = false)
+        {
+            EnsureWorld();
+            RobotTwin.CoreSim.Formats.UrdfImportResult? result = null;
+            try
+            {
+                Edit("Robot eklendi", () => result = RobotTwin.CoreSim.Formats.UrdfImport.Import(path, World!, new RobotTwin.CoreSim.Formats.UrdfImportOptions { Placement = NewPose() }));
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is System.Xml.XmlException || ex is FormatException || ex is NotSupportedException)
+            {
+                Dialog.Show(Window.GetWindow(this), "Robot tanımı okunamadı", ex.Message, "Tamam");
+                return;
+            }
+
+            if (result == null) return;
+            if (result.Objects.Count > 0) Scene.Select(result.Objects[0].Id);
+            Scene.FrameAll();
+            W.Status = Lang.T(result.Summary);
+            if (result.Notes.Count > 0 && !quiet)
+            {
+                // Translated line by line: the report is made of the import's own sentences.
+                var shown = result.Notes.Take(12).Select(Lang.T).ToList();
+                if (result.Notes.Count > 12) shown.Add(Lang.T($"… ve {result.Notes.Count - 12} not daha"));
+                Dialog.Show(Window.GetWindow(this), "Robot içe aktarıldı", Lang.T(result.Summary) + ".\n\n" + string.Join("\n", shown), "Tamam");
             }
         }
 
@@ -1194,9 +1239,43 @@ namespace RobotWin.Studio.Pages
                 });
                 Inspector.Children.Add(grid);
                 if (j.Kind == WorldJointKind.Fixed && string.IsNullOrEmpty(j.PortB)) FasteningRow(j);   // [fasten] Pages/WorldPage.Surface.cs
+                if (j.Driven && j.ObjectA == o.Id) DriveRow(j);   // [drive] an imported robot's axis
             }
 
             Inspector.Children.Add(Action("Başka bir nesneye bağla (B)", () => SetTool(WorldTool.Joint)));
+        }
+
+        /// <summary>
+        /// [drive] The motor of a hinge or slider (an imported robot's axis): where it holds the part (° or mm) or how fast it
+        /// turns it; while running the motor follows at once, stopped it is the part's starting command.
+        /// </summary>
+        private void DriveRow(WorldJoint j)
+        {
+            bool hinge = j.Kind == WorldJointKind.Hinge, speed = j.Drive == WorldJoint.DriveSpeedMode;
+            double scale = hinge ? 1 : 1000;   // a slider's travel and speed in mm
+            string unit = speed ? (hinge ? "°/s" : "mm/s") : hinge ? "°" : "mm";
+            double min = double.MinValue, max = double.MaxValue;
+            if (!speed && j.Lower is { } lo && j.Upper is { } hi)
+            {
+                min = lo * scale;
+                max = hi * scale;
+            }
+
+            string label = (speed ? "Motor hızı" : "Motor hedefi") + " (" + unit + ")";
+            Inspector.Children.Add(NumberField(label, j.DriveTarget * scale, v =>
+            {
+                double value = v / scale;
+                Edit("Motor hedefi değişti", () => j.DriveTarget = value);
+                _session.Physics?.SetJointTarget(j.Id, value);   // a running world: at once
+            }, min, max, "0.#"));
+            string force = j.DriveForce > 0 ? j.DriveForce.ToString("0.#", CultureInfo.InvariantCulture) + (hinge ? " N·m" : " N") : (hinge ? "10 N·m" : "200 N");
+            Inspector.Children.Add(new TextBlock
+            {
+                Text = "Tork sınırı " + force + (min > double.MinValue ? $" · aralık {min:0.#} … {max:0.#} {unit}" : string.Empty),
+                Foreground = (Brush)FindResource("B.TextSecondary"),
+                FontSize = 11.5,
+                Margin = new Thickness(0, 0, 0, 6)
+            });
         }
 
         private TextBlock? _live;

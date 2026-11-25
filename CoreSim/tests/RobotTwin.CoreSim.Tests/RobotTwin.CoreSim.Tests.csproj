@@ -54,4 +54,11 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- [urdf] a robot description written for these tests (xacro with macros and properties) -->
+    <None Update="Fixtures\*.xacro;Fixtures\*.urdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -32,7 +32,7 @@ namespace RobotWin.Studio
         public const string OpenFilter =
             "RobotWin dosyaları (*.rwproj, *.rwworld, *.rwsim, *.rwpart, *.rwlib)|*.rwproj;*.rwworld;*.rwsim;*.rwpart;*.rwlib|" +
             "RobotWin projesi (*.rwproj)|*.rwproj|RobotWin dünyası (*.rwworld)|*.rwworld|Simülasyon kaydı (*.rwsim)|*.rwsim|Parça (*.rwpart)|*.rwpart|" +
-            "Parça kütüphanesi (*.rwlib)|*.rwlib|Tüm dosyalar (*.*)|*.*";
+            "Parça kütüphanesi (*.rwlib)|*.rwlib|Robot tanımı (*.urdf, *.xacro)|*.urdf;*.xacro|Tüm dosyalar (*.*)|*.*";
 
         private readonly HomePage _home;
         private readonly WorldPage _world;
@@ -871,7 +871,15 @@ namespace RobotWin.Studio
             }
             // The debugger check opened its own world above: the page's template preparation would replace it with the
             // first template ("debug-e2e" names none) and the upload would restart that one.
-            if (page == "world" && fault != "debug-e2e") _world.PrepareSnapshot(fault, simulate);
+            if (page == "world" && fault != null && (fault.Split('#')[0].EndsWith(".urdf", StringComparison.OrdinalIgnoreCase) || fault.Split('#')[0].EndsWith(".xacro", StringComparison.OrdinalIgnoreCase)))
+            {
+                // [urdf] --fault <file.urdf|file.xacro>[#link]: the robot in a world of its own, that link selected.
+                string file = fault.Split('#')[0];
+                NewWorld(new WorldDocument { Title = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(file)) });
+                _world.ImportRobot(file, quiet: true);
+                if (fault.Contains('#') && W.ActiveWorld?.Objects.FirstOrDefault(o => o.Name == fault.Split('#')[1]) is { } link) _world.Scene.Select(link.Id);
+            }
+            else if (page == "world" && fault != "debug-e2e") _world.PrepareSnapshot(fault, simulate);
             if (page == "help") _help?.PrepareSnapshot(fault);
 
             if (page == "schematic" && simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds))
@@ -1039,6 +1047,13 @@ namespace RobotWin.Studio
                         W.OpenWorld(path);
                         Navigate("world");
                         CheckProject(quiet: true);   // [integrity]
+                        return;
+
+                    case ".urdf":
+                    case ".xacro":
+                        // [urdf] A robot description opens in a new world of its own.
+                        NewWorld(new WorldDocument { Title = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(path)) });
+                        _world.ImportRobot(path);
                         return;
 
                     default:

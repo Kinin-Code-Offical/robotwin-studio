@@ -312,6 +312,32 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>[fasten] How a fixed joint is fastened: screws, glue, tape, zip tie, solder (<see cref="Sandbox.Fastening"/>); empty = unspecified.</summary>
         public string Fastening { get; set; } = string.Empty;
+
+        /// <summary>
+        /// [drive] A motor on a hinge or slider, like a servo axis of an industrial robot: <see cref="DrivePosition"/> holds
+        /// the angle (°) or travel (m) at <see cref="DriveTarget"/>, <see cref="DriveSpeedMode"/> turns or slides at it (°/s or
+        /// m/s); never with more than <see cref="DriveForce"/> (N·m or N), a position drive no faster than
+        /// <see cref="DriveSpeed"/> (°/s or m/s). Empty: no motor, physics alone decides (a bearing, a rail).
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]   // a joint without a motor writes none of these
+        public string? Drive { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double DriveTarget { get; set; }
+
+        /// <summary>Peak torque (N·m) or force (N) of the drive; 0 = 10 N·m / 200 N.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double DriveForce { get; set; }
+
+        /// <summary>Top speed of a position drive (°/s or m/s); 0 = 180 °/s / 0.5 m/s.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double DriveSpeed { get; set; }
+
+        public const string DrivePosition = "position";
+        public const string DriveSpeedMode = "speed";
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool Driven => Kind != WorldJointKind.Fixed && (Drive == DrivePosition || Drive == DriveSpeedMode);
     }
 
     /// <summary>
