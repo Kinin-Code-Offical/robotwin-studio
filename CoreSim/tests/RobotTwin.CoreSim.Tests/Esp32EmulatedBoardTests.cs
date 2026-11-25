@@ -320,6 +320,46 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(sim.Time, 0.4, 0.9);          // two 200 ms sleeps and three starts
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_EDGES_ELF names the edge-counting sketch's real-chip ELF.</summary>
+        public sealed class EdgesElfFactAttribute : FactAttribute
+        {
+            public EdgesElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_EDGES_ELF"))) Skip = "RW_ESP32_EDGES_ELF verilmedi.";
+            }
+        }
+
+        [EdgesElfFact]
+        public void AttachInterruptCountsEveryRisingEdge()
+        {
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_EDGES_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            double volts = 0;
+            soc.PadVoltage = gpio => gpio == 4 ? volts : 0;
+            soc.Run(240_000L * 300);   // start-up, setup() attaches the interrupt
+            Assert.Contains("kesme hazir", soc.Uart0.ToString());
+            for (int i = 0; i < 10; i++)
+            {
+                // 50 Hz square wave on GPIO4: each rising edge goes through the pad's Schmitt trigger, the pin interrupt,
+                // the interrupt matrix and IDF's GPIO ISR service to the sketch's handler.
+                volts = 3.3;
+                soc.SamplePads();
+                soc.Run(240_000L * 10);
+                volts = 0;
+                soc.SamplePads();
+                soc.Run(240_000L * 10);
+            }
+
+            soc.Run(240_000L * 50);
+            string text = soc.Uart0.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("kenar 10", text);
+            Assert.DoesNotContain("kenar 11", text);
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {
