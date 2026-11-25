@@ -364,6 +364,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         {
             _registers.TryGetValue(register, out uint old);
             uint merged = (old & ~(mask << shift)) | ((value & mask) << shift);
+            PadGeneration++;
             if (!WritePeripheral(register, merged)) Note(register, false, merged);
             _registers[register] = merged & ~SelfClearing(register);
             if (register == RtcClkConf || register == CpuPerConf || register == SysClkConf) UpdateClocks();
@@ -465,6 +466,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 : ((stall >> 20) & 0x3F) == 0x21 && (options & 3) == 2;
         }
 
+        /// <summary>
+        /// Moves on whenever what the pads drive may have changed (a peripheral register written, an LEDC update or fade
+        /// under way): the board recomputes its pads only then, not every slice.
+        /// </summary>
+        public long PadGeneration { get; private set; }
+
         /// <summary>A core asleep in WAITI (or stalled) with no enabled interrupt pending.</summary>
         private bool Idle(XtensaCore c, int cpu) =>
             Stalled(cpu) || (c.Waiting && ((c.Interrupt | c.ExternalLevels) & c.IntEnable) == 0);
@@ -518,7 +525,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 return true;
             }
 
-            if (_romFunctions.TryGetValue(core.Pc, out var serve) && serve(core)) return true;
+            if (_romFunctions.TryGetValue(core.Pc, out var serve))
+            {
+                PadGeneration++;   // the ROM's GPIO helpers set pads without the bus
+                if (serve(core)) return true;
+            }
             _romNames.TryGetValue(core.Pc, out var name);
             Stopped = $"ROM işlevi karşılanmadı: {name ?? "?"} @0x{core.Pc:X8} (çekirdek {core.CoreId})";
             core.AtBreak = true;

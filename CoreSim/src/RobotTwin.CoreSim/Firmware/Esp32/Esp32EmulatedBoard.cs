@@ -310,8 +310,17 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         }
 
         /// <summary>Each pad's drive onto its pin: a level, the LEDC's PWM, or released with its pulls.</summary>
+        private long _appliedGeneration = -1;
+        private Esp32Soc? _appliedSoc;
+
         private void ApplyPins(double now)
         {
+            // Nothing the pads drive changed since the last slice (no register written, no LEDC update under way): the
+            // circuit already has them. Recomputing all forty every slice was most of the emulator's cost.
+            bool running = _soc != null && State == Esp32BoardState.Running;
+            if (running && ReferenceEquals(_soc, _appliedSoc) && _soc!.PadGeneration == _appliedGeneration) return;
+            _appliedSoc = running ? _soc : null;
+            _appliedGeneration = running ? _soc!.PadGeneration : -1;
             for (int g = 0; g < _pads.Length; g++)
             {
                 var pad = _pads[g];

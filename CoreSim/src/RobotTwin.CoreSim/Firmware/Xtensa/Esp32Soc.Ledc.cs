@@ -192,6 +192,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             {
                 var ch = _ledcChannels[c];
                 if (double.IsNaN(ch.StartAt)) continue;
+                PadGeneration++;   // the duty lands or steps: the pads follow
                 Advance(ch, now);
                 if (now < ch.EndAt) continue;
                 ch.StartAt = ch.EndAt = double.NaN;
