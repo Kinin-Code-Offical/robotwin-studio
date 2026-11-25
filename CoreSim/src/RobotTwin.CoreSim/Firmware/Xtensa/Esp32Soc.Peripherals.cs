@@ -3,7 +3,6 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     public sealed partial class Esp32Soc
     {
         // UART0
-        private const uint Uart0Fifo = 0x3FF40000;
 
         // DPORT: the APP_CPU's reset, clock and boot address
         private const uint AppCpuCtrlA = 0x3FF0002C, AppCpuCtrlB = 0x3FF00030, AppCpuCtrlD = 0x3FF00038;
@@ -39,9 +38,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>Which of the 69 peripheral sources hold their interrupt line up now.</summary>
         private readonly bool[] _sourceLevel = new bool[69];
 
+        /// <summary>When set, every routing the firmware makes (core, source, CPU interrupt, the PC that made it): for bring-up.</summary>
+        public System.Collections.Generic.List<(int Cpu, int Source, int Interrupt, uint Pc)>? RouteLog { get; set; }
+
         private void RouteInterrupt(int cpu, int source, int cpuInterrupt)
         {
             if (cpu < 0 || cpu > 1 || source < 0 || source >= 69) return;
+            RouteLog?.Add((cpu, source, cpuInterrupt, _running?.Pc ?? 0));
             _interruptMap[cpu, source] = cpuInterrupt is >= 0 and < 32 ? cpuInterrupt : -1;
             UpdateInterruptLines();
         }
@@ -50,16 +53,17 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// UART0's baud rate as the firmware set it: its clock (APB, or the 1 MHz REF_TICK when CONF0's TICK_REF_ALWAYS_ON is
         /// clear) over CLKDIV's divider (integer part and sixteenths); 0 before the driver sets one.
         /// </summary>
-        public double Uart0Baud
+        public double Uart0Baud => UartBaud(0);
+
+        /// <summary>UART <paramref name="port"/>'s baud rate as the firmware set it (see <see cref="Uart0Baud"/>).</summary>
+        public double UartBaud(int port)
         {
-            get
-            {
-                uint clkdiv = Reg(Uart0Fifo + 0x14);
-                double divider = (clkdiv & 0xFFFFF) + ((clkdiv >> 20) & 0xF) / 16.0;
-                if (divider < 1) return 0;
-                double clock = (Reg(Uart0Fifo + 0x20) & (1u << 27)) != 0 ? ApbHz : 1e6;
-                return clock / divider;
-            }
+            uint b = UartBase[Math.Clamp(port, 0, 2)];
+            uint clkdiv = Reg(b + 0x14);
+            double divider = (clkdiv & 0xFFFFF) + ((clkdiv >> 20) & 0xF) / 16.0;
+            if (divider < 1) return 0;
+            double clock = (Reg(b + 0x20) & (1u << 27)) != 0 ? ApbHz : 1e6;
+            return clock / divider;
         }
 
         /// <summary>Raises peripheral interrupt <paramref name="source"/> once (an edge) on whichever core and CPU interrupt the matrix routes it to.</summary>
@@ -139,6 +143,18 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 return true;
             }
 
+            if (register >= 0x3FF000EC && register < 0x3FF00104)
+            {
+                // DPORT_PRO/APP_INTR_STATUS_0–2: the 69 sources' raw levels, 32 a word (the high-priority handlers read
+                // them to tell which source raised a shared interrupt: the interrupt watchdog, a cache error …)
+                int word = (int)((register - 0x3FF000EC) >> 2) % 3;
+                uint bits = 0;
+                for (int i = 0; i < 32 && 32 * word + i < 69; i++)
+                    if (_sourceLevel[32 * word + i]) bits |= 1u << i;
+                value = bits;
+                return true;
+            }
+
             if (register == 0x3FF003F0 || register == 0x3FF00418)
             {
                 // DPORT_PRO/APP_DCACHE_DBUG0: the cache state (bits 7..18) is 1, idle, so disabling it completes at once
@@ -207,7 +223,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (register == 0x3FF48000 && (value & 1u << 31) != 0)
             {
                 // RTC_CNTL_OPTIONS0 SW_SYS_RST: the whole chip resets
-                RestartRequested = true;
+                RequestRestart(12);
                 return true;
             }
 

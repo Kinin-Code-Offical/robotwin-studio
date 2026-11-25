@@ -35,6 +35,7 @@ namespace RobotTwin.CoreSim.Tests
             if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
             soc.Pro.BreakOnIllegal = soc.App.BreakOnIllegal = Environment.GetEnvironmentVariable("RW_ESP32_BREAK_ILLEGAL") == "1";
             bool profile = Environment.GetEnvironmentVariable("RW_ESP32_PROFILE") == "1";
+            if (Environment.GetEnvironmentVariable("RW_ESP32_ROUTES") == "1") soc.RouteLog = new System.Collections.Generic.List<(int, int, int, uint)>();
             // RW_ESP32_PAD=34=1.0,35=2.5: pad voltages for the ADCs (a pot's wiper …); others read 0 V.
             var pads = new System.Collections.Generic.Dictionary<int, double>();
             foreach (string item in (Environment.GetEnvironmentVariable("RW_ESP32_PAD") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))
@@ -98,6 +99,12 @@ namespace RobotTwin.CoreSim.Tests
             var held = Enumerable.Range(0, 69).Where(soc.PeripheralLevel).Select(s => $"{s}→PRO {soc.InterruptRoute(0, s)}/APP {soc.InterruptRoute(1, s)}");
             report.AppendLine("tutulan kaynaklar: " + string.Join(", ", held));
             report.AppendLine($"UART0: INT_RAW 0x{soc.Read32(0x3FF40004):X8} INT_ENA 0x{soc.Read32(0x3FF4000C):X8} CONF0 0x{soc.Read32(0x3FF40020):X8} CONF1 0x{soc.Read32(0x3FF40024):X8} kaynak 34 → PRO {soc.InterruptRoute(0, 34)}/APP {soc.InterruptRoute(1, 34)}");
+            if (soc.RouteLog != null)
+            {
+                report.AppendLine("---- kesme yönlendirmeleri (çekirdek, kaynak → kesme, pc) ----");
+                foreach (var r in soc.RouteLog) report.AppendLine($"{r.Cpu} {r.Source,2} → {r.Interrupt,2}  pc 0x{r.Pc:X8}");
+            }
+
             report.AppendLine("---- UART0 ----");
             report.AppendLine(soc.Uart0.ToString());
             report.AppendLine("---- son sıçramalar (eskiden yeniye) ----");

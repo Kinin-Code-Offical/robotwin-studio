@@ -79,7 +79,7 @@ namespace RobotTwin.CoreSim.Design
                 : parameters != null && parameters.TryGetValue(ModeKey, out var mode) && mode == HardwareMode;
 
         /// <summary>A hardware-compatible board running on the Xtensa emulator: what it models and what not yet.</summary>
-        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar, Serial (UART0), I2C (Wire) ve SPI modellendi; UART1/2 ve Wi-Fi/BLE henüz yok.";
+        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.";
 
         /// <summary>A hardware-compatible board whose real-chip build is not there yet: it is being built, this run is fast mode.</summary>
         public const string HardwareModeBuilding = "Donanım uyumlu mod: çizim gerçek yonga için derleniyor; bu çalıştırma hızlı modda, derleme bitince sonraki çalıştırma emülatörde.";

@@ -1,117 +1,178 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace RobotTwin.CoreSim.Firmware.Xtensa
 {
     /// <summary>
-    /// [esp32emu] UART0 (0x3FF40000) as IDF's driver uses it: what the firmware writes to the FIFO goes out at once (to
-    /// <see cref="Uart0"/>), so the transmitter is always empty; what the world sends arrives one byte at a time at the
-    /// UART's baud rate (ten bit-times each) into the 128-byte receive FIFO, which the firmware reads byte by byte. The
+    /// [esp32emu] The three UARTs (UART0 0x3FF40000 — Serial, UART1 0x3FF50000 — Serial1, UART2 0x3FF6E000 — Serial2) as
+    /// IDF's driver uses them: what the firmware writes to a FIFO goes out at once (as UTF-8 text: <see cref="Uart0"/>,
+    /// <see cref="UartText"/>), so the transmitter is always empty; what the world sends arrives one byte at a time at the
+    /// UART's baud rate (ten bit-times each) into its 128-byte receive FIFO, which the firmware reads byte by byte. The
     /// FIFO's count (STATUS), its read and write pointers (MEM_RX_STATUS, which the driver uses on the ESP32 instead of the
     /// count), and the interrupts the driver runs on (RXFIFO_FULL at CONF1's threshold, RXFIFO_TOUT after the line has
-    /// been quiet for the timeout, RXFIFO_OVF, TXFIFO_EMPTY) on source 34.
+    /// been quiet for the timeout, RXFIFO_OVF, TXFIFO_EMPTY) on sources 34, 35 and 36.
     /// </summary>
     public sealed partial class Esp32Soc
     {
-        private const int Uart0InterruptSource = 34;
-        private const int Uart0FifoSize = 128;
+        private static readonly uint[] UartBase = { 0x3FF40000, 0x3FF50000, 0x3FF6E000 };
+        private const int UartFifoSize = 128;
         private const uint IntRxFull = 1u << 0, IntTxEmpty = 1u << 1, IntRxOverflow = 1u << 4, IntRxTimeout = 1u << 8;
 
-        private readonly Queue<(byte Value, double At)> _uart0Line = new Queue<(byte, double)>();
-        private readonly Queue<byte> _uart0Rx = new Queue<byte>();
-        private uint _uart0RxWritten, _uart0RxRead, _uart0IntRaw, _uart0IntEnable;
-        private double _uart0LastByte = double.NaN, _uart0LineFree;
-        private bool _uart0TimeoutFired;
-
-        /// <summary>Sends bytes to UART0's receive line: they arrive one after another at the UART's baud rate (115200 until the firmware sets one).</summary>
-        public void SendToUart0(byte[] bytes)
+        private sealed class UartPort
         {
-            if (bytes == null || bytes.Length == 0) return;
-            double baud = Uart0Baud > 0 ? Uart0Baud : 115200;
-            double t = Math.Max(Seconds, _uart0LineFree);
+            public UartPort(int index, StringBuilder text)
+            {
+                Index = index;
+                Text = text;
+            }
+
+            public readonly int Index;
+            public readonly StringBuilder Text;
+            public readonly Decoder Decoder = Encoding.UTF8.GetDecoder();
+            public readonly Queue<(byte Value, double At)> Line = new Queue<(byte, double)>();
+            public readonly Queue<byte> Rx = new Queue<byte>();
+            public uint RxWritten, RxRead, IntRaw, IntEnable;
+            public double LastByte = double.NaN, LineFree;
+            public bool TimeoutFired;
+        }
+
+        private UartPort[]? _uarts;
+
+        private UartPort[] Uarts => _uarts ??= new[] { new UartPort(0, Uart0), new UartPort(1, new StringBuilder()), new UartPort(2, new StringBuilder()) };
+
+        /// <summary>What the firmware wrote to UART <paramref name="port"/> (0 is <see cref="Uart0"/>: Serial; 1, 2: Serial1, Serial2).</summary>
+        public StringBuilder UartText(int port) => Uarts[Math.Clamp(port, 0, 2)].Text;
+
+        /// <summary>Sends bytes to UART0's receive line.</summary>
+        public void SendToUart0(byte[] bytes) => SendToUart(0, bytes);
+
+        /// <summary>Sends bytes to a UART's receive line: they arrive one after another at its baud rate (115200 until the firmware sets one).</summary>
+        public void SendToUart(int port, byte[] bytes)
+        {
+            if (bytes == null || bytes.Length == 0 || port < 0 || port > 2) return;
+            var u = Uarts[port];
+            double baud = UartBaud(port) > 0 ? UartBaud(port) : 115200;
+            double t = Math.Max(Seconds, u.LineFree);
             foreach (byte b in bytes)
             {
                 t += 10 / baud;
-                _uart0Line.Enqueue((b, t));
+                u.Line.Enqueue((b, t));
             }
 
-            _uart0LineFree = t;
+            u.LineFree = t;
         }
 
-        /// <summary>Bytes still on their way, or waiting in the receive FIFO for the firmware.</summary>
-        public int Uart0Pending => _uart0Line.Count + _uart0Rx.Count;
+        /// <summary>Bytes still on their way to UART0, or waiting in its receive FIFO for the firmware.</summary>
+        public int Uart0Pending => Uarts[0].Line.Count + Uarts[0].Rx.Count;
 
-        /// <summary>Each turn: the bytes whose stop bit has passed enter the FIFO; the interrupt conditions are brought up to date.</summary>
-        private void ServiceUart0()
+        /// <summary>One byte out of a UART, as UTF-8 text.</summary>
+        private void UartOut(int port, byte value)
         {
+            var u = Uarts[port];
+            _uartByte[0] = value;
+            int n = u.Decoder.GetChars(_uartByte, 0, 1, _uartChars, 0);
+            u.Text.Append(_uartChars, 0, n);
+        }
+
+        private readonly byte[] _uartByte = new byte[1];
+        private readonly char[] _uartChars = new char[4];
+
+        /// <summary>One byte out of UART0 (the ROM's putc).</summary>
+        private void Uart0Out(byte value) => UartOut(0, value);
+
+        /// <summary>Text the ROM's printf made from the firmware's bytes (one character per byte), out of UART0.</summary>
+        private void Uart0Out(string bytesAsChars)
+        {
+            foreach (char ch in bytesAsChars) UartOut(0, (byte)ch);
+        }
+
+        /// <summary>Each turn: the bytes whose stop bit has passed enter the FIFOs; the interrupt conditions are brought up to date.</summary>
+        private void ServiceUarts()
+        {
+            if (_uarts == null) return;
             double now = Seconds;
-            while (_uart0Line.Count > 0 && _uart0Line.Peek().At <= now)
+            foreach (var u in _uarts)
             {
-                var (value, at) = _uart0Line.Dequeue();
-                if (_uart0Rx.Count < Uart0FifoSize)
+                while (u.Line.Count > 0 && u.Line.Peek().At <= now)
                 {
-                    _uart0Rx.Enqueue(value);
-                    _uart0RxWritten++;
-                }
-                else
-                {
-                    _uart0IntRaw |= IntRxOverflow;
+                    var (value, at) = u.Line.Dequeue();
+                    if (u.Rx.Count < UartFifoSize)
+                    {
+                        u.Rx.Enqueue(value);
+                        u.RxWritten++;
+                    }
+                    else
+                    {
+                        u.IntRaw |= IntRxOverflow;
+                    }
+
+                    u.LastByte = at;
+                    u.TimeoutFired = false;
                 }
 
-                _uart0LastByte = at;
-                _uart0TimeoutFired = false;
+                UpdateUart(u, now);
             }
-
-            UpdateUart0(now);
         }
 
-        private void UpdateUart0(double now)
+        private void UpdateUart(UartPort u, double now)
         {
-            uint conf1 = Reg(Uart0Fifo + 0x24);
+            uint conf1 = Reg(UartBase[u.Index] + 0x24);
             uint fullThreshold = conf1 & 0x7F, emptyThreshold = (conf1 >> 8) & 0x7F;
-            if (_uart0Rx.Count > 0 && _uart0Rx.Count >= Math.Max(1u, fullThreshold)) _uart0IntRaw |= IntRxFull;
-            else _uart0IntRaw &= ~IntRxFull;
-            if (emptyThreshold > 0) _uart0IntRaw |= IntTxEmpty;   // the transmitter is always empty: count 0 is below any threshold
-            else _uart0IntRaw &= ~IntTxEmpty;
+            if (u.Rx.Count > 0 && u.Rx.Count >= Math.Max(1u, fullThreshold)) u.IntRaw |= IntRxFull;
+            else u.IntRaw &= ~IntRxFull;
+            if (emptyThreshold > 0) u.IntRaw |= IntTxEmpty;   // the transmitter is always empty: count 0 is below any threshold
+            else u.IntRaw &= ~IntTxEmpty;
             // RX timeout: data waits and the line has been quiet for RX_TOUT_THRHD bit-times (once per quiet spell).
             bool timeoutOn = (conf1 & (1u << 31)) != 0;
-            double bitTime = 1 / (Uart0Baud > 0 ? Uart0Baud : 115200);
+            double baud = UartBaud(u.Index);
+            double bitTime = 1 / (baud > 0 ? baud : 115200);
             uint timeout = Math.Max(1u, (conf1 >> 24) & 0x7F);
-            if (timeoutOn && !_uart0TimeoutFired && _uart0Rx.Count > 0 && !double.IsNaN(_uart0LastByte) && now - _uart0LastByte >= timeout * bitTime)
+            if (timeoutOn && !u.TimeoutFired && u.Rx.Count > 0 && !double.IsNaN(u.LastByte) && now - u.LastByte >= timeout * bitTime)
             {
-                _uart0IntRaw |= IntRxTimeout;
-                _uart0TimeoutFired = true;
+                u.IntRaw |= IntRxTimeout;
+                u.TimeoutFired = true;
             }
 
-            SetPeripheralLevel(Uart0InterruptSource, (_uart0IntRaw & _uart0IntEnable) != 0);
+            SetPeripheralLevel(34 + u.Index, (u.IntRaw & u.IntEnable) != 0);
+        }
+
+        private int UartIndex(uint register)
+        {
+            for (int i = 0; i < 3; i++)
+                if (register >= UartBase[i] && register < UartBase[i] + 0x80) return i;
+            return -1;
         }
 
         private bool ReadUartRegister(uint register, out uint value)
         {
             value = 0;
-            if (register < Uart0Fifo || register >= Uart0Fifo + 0x80) return false;
-            switch (register - Uart0Fifo)
+            int port = UartIndex(register);
+            if (port < 0) return false;
+            var u = Uarts[port];
+            switch (register - UartBase[port])
             {
                 case 0x00:
                     // RW_BYTE: the next received byte
-                    if (_uart0Rx.Count > 0)
+                    if (u.Rx.Count > 0)
                     {
-                        value = _uart0Rx.Dequeue();
-                        _uart0RxRead++;
-                        UpdateUart0(Seconds);
+                        value = u.Rx.Dequeue();
+                        u.RxRead++;
+                        UpdateUart(u, Seconds);
                     }
 
                     return true;
-                case 0x04: value = _uart0IntRaw; return true;
-                case 0x08: value = _uart0IntRaw & _uart0IntEnable; return true;
-                case 0x0C: value = _uart0IntEnable; return true;
+                case 0x04: value = u.IntRaw; return true;
+                case 0x08: value = u.IntRaw & u.IntEnable; return true;
+                case 0x0C: value = u.IntEnable; return true;
                 case 0x1C:
                     // STATUS: RXFIFO_CNT; the transmitter idle and empty
-                    value = (uint)_uart0Rx.Count & 0xFF;
+                    value = (uint)u.Rx.Count & 0xFF;
                     return true;
                 case 0x60:
-                    // MEM_RX_STATUS: read and write pointers in the receive RAM (0x200…0x27F), which wrap together
-                    value = (0x200 + _uart0RxRead % Uart0FifoSize) << 2 | (0x200 + _uart0RxWritten % Uart0FifoSize) << 13;
+                    // MEM_RX_STATUS: read and write pointers in the UART's receive RAM, which wrap together
+                    uint ram = 0x200 + 0x80 * (uint)port;
+                    value = (ram + u.RxRead % UartFifoSize) << 2 | (ram + u.RxWritten % UartFifoSize) << 13;
                     return true;
                 case 0x5C:
                     value = 0;   // MEM_TX_STATUS: nothing waiting to go out
@@ -124,17 +185,19 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         private bool WriteUartRegister(uint register, uint value)
         {
-            if (register < Uart0Fifo || register >= Uart0Fifo + 0x80) return false;
-            switch (register - Uart0Fifo)
+            int port = UartIndex(register);
+            if (port < 0) return false;
+            var u = Uarts[port];
+            switch (register - UartBase[port])
             {
                 case 0x00:
-                    Uart0Out((byte)value);
+                    UartOut(port, (byte)value);
                     return true;
                 case 0x0C:
-                    _uart0IntEnable = value;
+                    u.IntEnable = value;
                     break;
                 case 0x10:
-                    _uart0IntRaw &= ~value;   // INT_CLR (conditions still true come back)
+                    u.IntRaw &= ~value;   // INT_CLR (conditions still true come back)
                     break;
                 case 0x24:
                     break;   // CONF1: thresholds and timeout (the register file keeps it; read below)
@@ -143,7 +206,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             _registers[register] = value;
-            UpdateUart0(Seconds);
+            UpdateUart(u, Seconds);
             return true;
         }
     }

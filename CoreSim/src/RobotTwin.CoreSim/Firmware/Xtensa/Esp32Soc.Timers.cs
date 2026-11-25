@@ -71,7 +71,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             _apbTicks += cycles * ApbHz / cpu;
             for (int g = 0; g < 2; g++) ServiceTimerGroup(g);
             ServiceLedc();
-            ServiceUart0();
+            ServiceUarts();
             ServiceI2c();
             ServiceSpi();
         }
@@ -83,6 +83,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (g < 0) return false;
             var group = _timerGroups[g];
             uint offset = register - (g == 0 ? Timg0 : Timg1);
+            if (offset >= 0x48 && offset <= 0x64)
+            {
+                value = group.Watchdog.Read(offset);
+                return true;
+            }
+
             if (offset == 0x98) value = group.IntEnable;
             else if (offset == 0x9C) value = group.IntRaw;
             else if (offset == 0xA0) value = group.IntRaw & group.IntEnable;
@@ -97,6 +103,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (g < 0) return false;
             var group = _timerGroups[g];
             uint offset = register - (g == 0 ? Timg0 : Timg1);
+            if (offset >= 0x48 && offset <= 0x64)
+            {
+                group.Watchdog.Write(offset, value, ApbTicks);
+                return true;
+            }
+
             if (offset == 0x98) group.IntEnable = value & 0xF;
             else if (offset == 0xA4) group.IntRaw &= ~value;
             else if (offset == 0x9C || offset == 0xA0) { }   // read-only
@@ -148,6 +160,19 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             var group = _timerGroups[g];
             double apb = ApbTicks;
             uint before = group.IntRaw;
+            switch (group.Watchdog.Due(apb))
+            {
+                case WatchdogAction.Interrupt:
+                    group.IntRaw |= 4;
+                    break;
+                case WatchdogAction.ResetCpu:
+                    RequestRestart(11);   // TGWDT_CPU_RESET
+                    break;
+                case WatchdogAction.ResetSystem:
+                    RequestRestart(g == 0 ? 7 : 8);   // TG0WDT_SYS_RESET / TG1WDT_SYS_RESET
+                    break;
+            }
+
             if (group.T0.AlarmDue(apb)) group.IntRaw |= 1;
             if (group.T1.AlarmDue(apb)) group.IntRaw |= 2;
             if (group.Lact.AlarmDue(apb)) group.IntRaw |= 8;
@@ -157,6 +182,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if ((rising & 1) != 0 && group.T0.EdgeInterrupt) RaisePeripheral(group.EdgeSource + 0);
             if ((rising & 2) != 0 && group.T1.EdgeInterrupt) RaisePeripheral(group.EdgeSource + 1);
             if ((rising & 8) != 0 && group.Lact.EdgeInterrupt) RaisePeripheral(group.EdgeSource + 3);
+            if ((rising & 4) != 0 && group.Watchdog.EdgeInterrupt) RaisePeripheral(group.EdgeSource + 2);
             UpdateTimerLines(g);
         }
 
@@ -168,6 +194,94 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             SetPeripheralLevel(group.LevelSource + 0, (status & 1) != 0 && group.T0.LevelInterrupt);
             SetPeripheralLevel(group.LevelSource + 1, (status & 2) != 0 && group.T1.LevelInterrupt);
             SetPeripheralLevel(group.LevelSource + 3, (status & 8) != 0 && group.Lact.LevelInterrupt);
+            SetPeripheralLevel(group.LevelSource + 2, (status & 4) != 0 && group.Watchdog.LevelInterrupt);
+        }
+
+        private enum WatchdogAction
+        {
+            None,
+            Interrupt,
+            ResetCpu,
+            ResetSystem
+        }
+
+        /// <summary>
+        /// A timer group's main watchdog (MWDT): CONFIG0 (EN 31, the four stages' actions in 30:29, 28:27, 26:25, 24:23 —
+        /// off, interrupt, reset the CPU, reset the system —, EDGE/LEVEL_INT_EN 22/21), CONFIG1's prescaler (APB ticks per
+        /// count, 31:16), the stages' timeouts (CONFIG2–5), FEED (any write starts again at stage 0) and the write
+        /// protection (nothing changes unless WPROTECT holds 0x50D83AA1). A stage that runs out does its action and the next
+        /// stage starts counting; after stage 3 it is stage 0 again.
+        /// </summary>
+        private sealed class MainWatchdog
+        {
+            private const uint Key = 0x50D83AA1;
+            private uint _config0, _config1, _protect;
+            private readonly uint[] _timeout = new uint[4];
+            private int _stage;
+            private double _stageStart;
+
+            private bool Enabled => (_config0 & (1u << 31)) != 0;
+            public bool EdgeInterrupt => (_config0 & (1u << 22)) != 0;
+            public bool LevelInterrupt => (_config0 & (1u << 21)) != 0;
+            private double TicksPerCount => Math.Max(1u, _config1 >> 16);
+
+            public uint Read(uint offset)
+            {
+                switch (offset)
+                {
+                    case 0x48: return _config0;
+                    case 0x4C: return _config1;
+                    case 0x50: case 0x54: case 0x58: case 0x5C: return _timeout[(offset - 0x50) / 4];
+                    case 0x64: return _protect;
+                    default: return 0;
+                }
+            }
+
+            public void Write(uint offset, uint value, double apb)
+            {
+                if (offset == 0x64)
+                {
+                    _protect = value;
+                    return;
+                }
+
+                if (_protect != Key) return;   // locked: the write does nothing
+                switch (offset)
+                {
+                    case 0x48:
+                        bool was = Enabled;
+                        _config0 = value;
+                        if (Enabled && !was) Feed(apb);
+                        break;
+                    case 0x4C: _config1 = value; break;
+                    case 0x50: case 0x54: case 0x58: case 0x5C: _timeout[(offset - 0x50) / 4] = value; break;
+                    case 0x60: Feed(apb); break;
+                }
+            }
+
+            private void Feed(double apb)
+            {
+                _stage = 0;
+                _stageStart = apb;
+            }
+
+            /// <summary>The action of a stage that ran out by APB time <paramref name="apb"/> (the strongest, if several did).</summary>
+            public WatchdogAction Due(double apb)
+            {
+                if (!Enabled) return WatchdogAction.None;
+                var result = WatchdogAction.None;
+                for (int pass = 0; pass < 4; pass++)
+                {
+                    double length = Math.Max(1u, _timeout[_stage]) * TicksPerCount;
+                    if (apb - _stageStart < length) break;
+                    var action = (WatchdogAction)((_config0 >> (29 - 2 * _stage)) & 3);
+                    if (action > result) result = action;
+                    _stageStart += length;
+                    _stage = (_stage + 1) & 3;
+                }
+
+                return result;
+            }
         }
 
         private sealed class TimerGroup
@@ -179,6 +293,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             public readonly GroupTimer T0 = new GroupTimer(), T1 = new GroupTimer(), Lact = new GroupTimer();
+            public readonly MainWatchdog Watchdog = new MainWatchdog();
 
             /// <summary>INT_ENA / INT_RAW: bit 0 T0, 1 T1, 2 the watchdog, 3 LACT.</summary>
             public uint IntEnable, IntRaw;

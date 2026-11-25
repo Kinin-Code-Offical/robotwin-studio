@@ -239,7 +239,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             {
                 Rom(name, c =>
                 {
-                    RestartRequested = true;
+                    RequestRestart(12);
                     c.AtBreak = true;
                     return true;
                 });

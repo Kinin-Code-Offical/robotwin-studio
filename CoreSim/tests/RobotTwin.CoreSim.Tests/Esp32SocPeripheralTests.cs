@@ -143,6 +143,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(1u, (soc.Read32(0x3FF5A010) >> 8) & 0x1F);
             Assert.NotEqual(0u, soc.Read32(0x3FF5A00C) & (1u << 15));
             Assert.NotEqual(0u, soc.Read32(0x3FF5A014) & (1u << 20));
+            Assert.Equal(1u, (soc.Read32(0x3FF5A014) >> 24) & 3);   // minor 1: revision 3.1
             Assert.NotEqual(0u, soc.Read32(0x3FF6607C) & 0x80000000u);
         }
 
@@ -251,6 +252,25 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal((uint)'k', soc.Read32(0x3FF40000));
             Assert.Equal(0u, soc.Read32(0x3FF4001C) & 0xFF);
             Assert.Equal(0u, soc.Pro.ExternalLevels);       // emptied: the condition is gone
+        }
+
+        [Fact]
+        public void Uart2SendsAndReceivesOnItsOwn()
+        {
+            var soc = Chip();
+            foreach (byte b in System.Text.Encoding.UTF8.GetBytes("$GPGGA"))
+                soc.Write32(0x6002E000, b);                  // UART2's FIFO through its AHB address
+            Assert.Equal("$GPGGA", soc.UartText(2).ToString());
+            Assert.Equal(string.Empty, soc.Uart0.ToString());
+            soc.Write32(0x3FF6E014, 8333);                  // CLKDIV: 9600 baud at 80 MHz
+            Assert.Equal(9600, soc.UartBaud(2), 0);
+            soc.SendToUart(2, new byte[] { 1, 2, 3 });      // a byte at 9600 baud takes 1.04 ms
+            soc.Run(240 * 2200);
+            Assert.Equal(2u, soc.Read32(0x3FF6E01C) & 0xFF);
+            soc.Run(240 * 1000);
+            Assert.Equal(3u, soc.Read32(0x3FF6E01C) & 0xFF);
+            Assert.Equal(0u, soc.Read32(0x3FF4001C) & 0xFF);   // UART0 got nothing
+            Assert.Equal(1u, soc.Read32(0x3FF6E000));
         }
 
         [Fact]

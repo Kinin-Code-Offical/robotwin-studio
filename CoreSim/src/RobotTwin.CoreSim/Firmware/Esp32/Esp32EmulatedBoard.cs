@@ -34,9 +34,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         private Esp32Soc? _soc;
         private double _bootTime;
-        private int _uartSent;
+        private readonly int[] _uartSent = new int[3];
         private double _vdd = 3.3;
-        private bool _enHigh = true, _resetRequested, _everRan, _disposed, _rxNoted;
+        private bool _enHigh = true, _resetRequested, _everRan, _disposed;
         private double _minVddWhileOff = double.PositiveInfinity;
 
         /// <param name="elf">The application ELF the hardware build made (its segments and its ROM symbols).</param>
@@ -74,6 +74,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public bool InBrownOut { get; private set; }
         public double SerialBaud => State == Esp32BoardState.Running && _soc != null ? _soc.Uart0Baud : 0;
 
+        /// <summary>How many times a watchdog reset the chip.</summary>
+        public int WatchdogResets { get; private set; }
+
         /// <summary>The emulated chip of the current run (null while the board is off): its registers, cores and peripherals.</summary>
         public Esp32Soc? Chip => _soc;
 
@@ -87,6 +90,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public event Action<string>? SerialOutput;
         public event Action<string>? Log;
 
+        /// <summary>Text per UART (0 Serial, 1 Serial1, 2 Serial2) during the last slice.</summary>
+        public event Action<int, string>? SerialPortOutput;
+
         public void Reset() => _resetRequested = true;
 
         public void OnSubstep(double time)
@@ -97,16 +103,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public void SendSerial(string text, int port = 0)
         {
             if (string.IsNullOrEmpty(text)) return;
-            if (port == 0)
-            {
-                // UART0's RX line: the bytes arrive at the baud rate while the chip runs (lost while it is off, as on a board)
-                _soc?.SendToUart0(System.Text.Encoding.UTF8.GetBytes(text));
-                return;
-            }
-
-            if (_rxNoted) return;
-            _rxNoted = true;
-            Log?.Invoke("Donanım uyumlu mod: UART1/UART2 henüz modellenmedi, gönderilen metin karta ulaşmıyor.");
+            // The UART's RX line: the bytes arrive at its baud rate while the chip runs (lost while it is off, as on a board)
+            if (port >= 0 && port <= 2) _soc?.SendToUart(port, System.Text.Encoding.UTF8.GetBytes(text));
         }
 
         public void Advance(double dt, double now)
@@ -160,8 +158,18 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 FlushUart();
                 if (_soc.RestartRequested)
                 {
-                    Note("yazılım yeniden başlattı (esp_restart)");
-                    Boot(end, 12);
+                    int reason = _soc.RestartReason;
+                    if (reason == 12)
+                    {
+                        Note("yazılım yeniden başlattı (esp_restart)");
+                    }
+                    else
+                    {
+                        Note("bekçi (watchdog) kartı sıfırladı");
+                        WatchdogResets++;
+                    }
+
+                    Boot(end, reason);
                 }
                 else if (_soc.Stopped != null || _soc.Pro.AtBreak)
                 {
@@ -191,7 +199,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             if (Options.BootMessages)
                 Emit("ets Jun  8 2016 00:22:57\r\n\r\nrst:" + RomResetText(romResetReason) + ",boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n");
             _soc = soc;
-            _uartSent = 0;
+            Array.Clear(_uartSent, 0, _uartSent.Length);
             _bootTime = time;
             State = Esp32BoardState.Running;
             BootCount++;
@@ -203,6 +211,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             switch (reason)
             {
                 case 12: return "0xc (SW_CPU_RESET)";
+                case 7: return "0x7 (TG0WDT_SYS_RESET)";
+                case 8: return "0x8 (TG1WDT_SYS_RESET)";
+                case 11: return "0xb (TGWDT_CPU_RESET)";
                 case 5: return "0x5 (DEEPSLEEP_RESET)";
                 case 15: return "0xf (RTCWDT_BROWN_OUT_RESET)";
                 default: return "0x1 (POWERON_RESET)";
@@ -219,17 +230,23 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             foreach (var pad in _pads) Release(pad);
         }
 
+        /// <summary>What the UARTs printed since the last slice: UART0 to the serial monitor, every port to <see cref="SerialPortOutput"/>.</summary>
         private void FlushUart()
         {
             if (_soc == null) return;
-            var uart = _soc.Uart0;
-            if (uart.Length <= _uartSent) return;
-            Emit(uart.ToString(_uartSent, uart.Length - _uartSent));
-            _uartSent = uart.Length;
-            if (_uartSent > 1_000_000)
+            for (int port = 0; port < 3; port++)
             {
-                uart.Clear();
-                _uartSent = 0;
+                var uart = _soc.UartText(port);
+                if (uart.Length <= _uartSent[port]) continue;
+                string text = uart.ToString(_uartSent[port], uart.Length - _uartSent[port]);
+                if (port == 0) Emit(text);
+                SerialPortOutput?.Invoke(port, text);
+                _uartSent[port] = uart.Length;
+                if (_uartSent[port] > 1_000_000)
+                {
+                    uart.Clear();
+                    _uartSent[port] = 0;
+                }
             }
         }
 

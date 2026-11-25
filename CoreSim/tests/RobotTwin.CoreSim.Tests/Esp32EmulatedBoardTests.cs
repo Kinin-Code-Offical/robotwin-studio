@@ -230,6 +230,52 @@ namespace RobotTwin.CoreSim.Tests
             Assert.False(device.Selected);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_WDT_ELF names the hung sketch's real-chip ELF (interrupts off, a spin in setup).</summary>
+        public sealed class WdtElfFactAttribute : FactAttribute
+        {
+            public WdtElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_WDT_ELF"))) Skip = "RW_ESP32_WDT_ELF verilmedi.";
+            }
+        }
+
+        [WdtElfFact]
+        public void InterruptWatchdogPanicsAndRestartsAHungBoard()
+        {
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_WDT_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 emulated watchdog" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            Label(sch, board, "GND2", "GND");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var serial = new StringBuilder();
+            esp.SerialOutput += s => serial.Append(s);
+            esp.Log += s => _out.WriteLine("günlük: " + s);
+            for (int i = 0; i < 20000 && esp.BootCount < 2; i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+            }
+
+            for (int i = 0; i < 2000; i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            // As on the chip: one core reports (the other stalled), then the board starts again and the sketch with it.
+            Assert.Contains("Guru Meditation Error: Core  1 panic'ed (Interrupt wdt timeout on CPU1)", text);
+            Assert.DoesNotContain("Cache error", text);
+            Assert.True(esp.BootCount >= 2);
+            int first = text.IndexOf("bekci testi", StringComparison.Ordinal);
+            Assert.True(first >= 0 && text.IndexOf("bekci testi", first + 1, StringComparison.Ordinal) > first);
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {

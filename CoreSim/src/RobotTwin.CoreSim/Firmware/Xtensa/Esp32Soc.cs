@@ -50,11 +50,14 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             BurnEfuse();
-            // UART0's reset values, which drivers keep where they pass "unchanged": CONF0 (APB clock, 8N1), CONF1 (both FIFO
-            // thresholds 0x60, RX timeout 10), CLKDIV 694 (115200 baud at 80 MHz).
-            _registers[0x3FF40020] = 0x0800001C;
-            _registers[0x3FF40024] = 0x0A006060;
-            _registers[0x3FF40014] = 0x000002B6;
+            // The UARTs' reset values, which drivers keep where they pass "unchanged": CONF0 (APB clock, 8N1), CONF1 (both
+            // FIFO thresholds 0x60, RX timeout 10), CLKDIV 694 (115200 baud at 80 MHz).
+            foreach (uint uart in UartBase)
+            {
+                _registers[uart + 0x20] = 0x0800001C;
+                _registers[uart + 0x24] = 0x0A006060;
+                _registers[uart + 0x14] = 0x000002B6;
+            }
         }
 
         /// <summary>The PRO_CPU (core 0): it boots.</summary>
@@ -69,25 +72,6 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>What the firmware wrote to UART0 (its boot log and Serial).</summary>
         public StringBuilder Uart0 { get; } = new StringBuilder();
 
-        /// <summary>UART0's bytes become text as UTF-8 (a sketch's "ç" is two bytes on the wire), a character split across writes kept until whole.</summary>
-        private readonly Decoder _uart0Text = Encoding.UTF8.GetDecoder();
-        private readonly char[] _uart0Chars = new char[4];
-
-        /// <summary>One byte out of UART0.</summary>
-        private void Uart0Out(byte value)
-        {
-            _uart0Bytes[0] = value;
-            int n = _uart0Text.GetChars(_uart0Bytes, 0, 1, _uart0Chars, 0);
-            Uart0.Append(_uart0Chars, 0, n);
-        }
-
-        private readonly byte[] _uart0Bytes = new byte[1];
-
-        /// <summary>Text the ROM's printf made from the firmware's bytes (one character per byte), out of UART0.</summary>
-        private void Uart0Out(string bytesAsChars)
-        {
-            foreach (char ch in bytesAsChars) Uart0Out((byte)ch);
-        }
 
         /// <summary>
         /// The reset the ROM reports for this start (its RESET_REASON: 1 power-on, 5 deep-sleep wake, 12 software CPU reset,
@@ -95,8 +79,21 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// </summary>
         public int RomResetReason { get; set; } = 1;
 
-        /// <summary>The firmware asked for a restart (esp_restart: the ROM's software reset or RTC_CNTL SW_SYS_RST); the chip has stopped for it.</summary>
+        /// <summary>
+        /// The chip has to start again and has stopped for it: the firmware asked (esp_restart: the ROM's software reset or
+        /// RTC_CNTL SW_SYS_RST), or a watchdog ran out.
+        /// </summary>
         public bool RestartRequested { get; private set; }
+
+        /// <summary>Why it starts again, as the ROM will report it: 12 software CPU reset, 7/8 timer group 0/1 watchdog, 11 watchdog CPU reset.</summary>
+        public int RestartReason { get; private set; } = 12;
+
+        private void RequestRestart(int reason)
+        {
+            if (RestartRequested) return;
+            RestartRequested = true;
+            RestartReason = reason;
+        }
 
         /// <summary>Why the chip stopped, when it did (a ROM function nobody serves, a bus error …); null while it runs.</summary>
         public string? Stopped { get; private set; }
@@ -402,14 +399,18 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             long done = 0;
             while (done < cycles && Stopped == null && !Pro.AtBreak && !RestartRequested)
             {
-                int step = (int)Math.Min(turn, cycles - done);
+                // While either core is in, or about to take, a high-priority interrupt (level 4 and up), the cores take turns
+                // of a few cycles: such handlers hand over through flags (the interrupt watchdog's livelock handshake …) whose
+                // windows are shorter than a normal turn, and on the chip both cores run truly at once.
+                int quantum = AppRunning && (HighPriority(Pro) || HighPriority(App)) ? 16 : turn;
+                int step = (int)Math.Min(quantum, cycles - done);
                 try
                 {
                     BeginTurn();
                     _running = Pro;
-                    Pro.Run(step);
+                    if (!Stalled(0)) Pro.Run(step);
                     _running = App;
-                    if (AppRunning) App.Run(step);
+                    if (AppRunning && !Stalled(1)) App.Run(step);
                     _running = null;
                     EndTurn(step);
                 }
@@ -422,6 +423,34 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 done += step;
             }
         }
+
+        /// <summary>
+        /// A core the other has stalled (esp_cpu_stall, as a panic does before it reports): RTC_CNTL_SW_CPU_STALL's
+        /// SW_STALL_PROCPU/APPCPU_C1 at 0x21 with RTC_CNTL_OPTIONS0's SW_STALL_PROCPU/APPCPU_C0 at 2. It does not run until
+        /// released.
+        /// </summary>
+        public bool Stalled(int cpu)
+        {
+            uint stall = Reg(0x3FF480AC), options = Reg(0x3FF48000);
+            return cpu == 0
+                ? ((stall >> 26) & 0x3F) == 0x21 && ((options >> 2) & 3) == 2
+                : ((stall >> 20) & 0x3F) == 0x21 && (options & 3) == 2;
+        }
+
+        /// <summary>The CPU interrupts of level 4 and up (the high-priority ones: the interrupt watchdog, cache errors, IPC …).</summary>
+        private static readonly uint HighLevelInterrupts = HighLevelMask();
+
+        private static uint HighLevelMask()
+        {
+            uint mask = 0;
+            for (int i = 0; i < 32; i++)
+                if (XtensaCore.InterruptLevel[i] >= 4) mask |= 1u << i;
+            return mask;
+        }
+
+        /// <summary>A core in a high-priority handler, or with one pending and enabled.</summary>
+        private static bool HighPriority(XtensaCore c) =>
+            c.IntLevel >= 4 || ((c.Interrupt | c.ExternalLevels) & c.IntEnable & HighLevelInterrupts) != 0;
 
         // ================================================================ the mask ROM, served
 

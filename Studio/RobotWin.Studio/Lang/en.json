@@ -6926,9 +6926,9 @@
   "Emülatör durdu: ": "The emulator stopped: ",
   " (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": " (real-chip firmware, RobotWin's Xtensa emulator)",
   "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware running (real-chip firmware, RobotWin's Xtensa emulator)",
-  "Donanım uyumlu mod: UART1/UART2 henüz modellenmedi, gönderilen metin karta ulaşmıyor.": "Hardware-compatible mode: UART1/UART2 are not modelled yet; text sent does not reach the board.",
-  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar, Serial (UART0), I2C (Wire) ve SPI modellendi; UART1/2 ve Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, timers, Serial (UART0), I2C (Wire) and SPI are modelled; UART1/2 and Wi-Fi/BLE are not yet.",
-  "SPI: ": "SPI: "
+  "SPI: ": "SPI: ",
+  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, timers, Serial/Serial1/Serial2, I2C (Wire) and SPI are modelled; Wi-Fi/BLE are not yet.",
+  "bekçi (watchdog) kartı sıfırladı": "a watchdog reset the board"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

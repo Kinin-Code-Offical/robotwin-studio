@@ -4,7 +4,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 {
     /// <summary>
     /// [esp32emu] The eFuse controller (0x3FF5A000) holding what the factory burns into every ESP32, as on a typical
-    /// ESP32-D0WD-V3 (chip revision 3.0, the WROOM-32E's): the factory MAC with its CRC (BLK0), the chip revision bits
+    /// ESP32-D0WD-V3 (chip revision 3.1, today's WROOM-32E's; 3.0 has the cache-lock bug IDF works around with a livelock handler at the interrupt watchdog): the factory MAC with its CRC (BLK0), the chip revision bits
     /// (BLK0 CHIP_VER_REV1/REV2 with APB_CTRL_DATE bit 31), the package, the CPU-frequency rating, and the ADC reference
     /// calibration (ADC_VREF: 1100 mV + 7 mV steps) that IDF's line-fitting characterisation, and so
     /// analogReadMilliVolts, depends on. Reads come from the burned words; writes to the programming registers are kept
@@ -58,8 +58,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             int steps = (int)Math.Round((_vrefMillivolts - 1100) / 7.0);
             uint vref = steps >= 0 ? (uint)steps : 0x10u | (uint)-steps;
             _efuse[4] = (vref & 0x1F) << 8;
-            // RDATA5: CHIP_VER_REV2 (20); wafer minor version 0.
-            _efuse[5] = 1u << 20;
+            // RDATA5: CHIP_VER_REV2 (20); WAFER_VERSION_MINOR 1 (24–25): revision 3.1.
+            _efuse[5] = 1u << 20 | 1u << 24;
             // Revision 3's third bit lives outside the eFuse, in APB_CTRL_DATE.
             _registers[ApbCtrlDate] = (Reg(ApbCtrlDate) & 0x7FFFFFFF) | 0x80000000u;
         }
