@@ -378,6 +378,17 @@ namespace RobotTwin.CoreSim.Sandbox
         [System.Text.Json.Serialization.JsonIgnore]
         public bool Sprung => Kind != WorldJointKind.Fixed && (SpringStiffness > 0 || SpringDamping > 0);
 
+        /// <summary>
+        /// [bearing] What the joint turns in or runs on (Sandbox/Bearings.cs): a ball bearing, a bushing, a linear bearing, a
+        /// slide; its friction grows with the load. Null: only <see cref="Friction"/>.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public string? Bearing { get; set; }
+
+        /// <summary>[bearing] A hinge's bearing bore (mm); 0 = the bearing's usual one.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double BearingBore { get; set; }
+
         public const string DrivePosition = "position";
         public const string DriveSpeedMode = "speed";
 

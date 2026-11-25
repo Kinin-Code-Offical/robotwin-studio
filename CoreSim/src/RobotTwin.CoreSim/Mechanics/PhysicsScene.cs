@@ -334,6 +334,15 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>[spring] Torque (force) the spring and damper put on the child along the axis in the last substep.</summary>
         public double SpringTorque { get; internal set; }
 
+        /// <summary>
+        /// [bearing] Friction that grows with the load the joint carries: per newton, μ × bore / 2 (m) for a hinge's bearing,
+        /// μ for a slider's (across the rail). 0 = none; <see cref="Friction"/> stays the load-free part (seals, grease).
+        /// </summary>
+        public double LoadFriction { get; set; }
+
+        /// <summary>[bearing] The bearing's friction torque (force) from the last substep's load.</summary>
+        public double BearingFriction { get; internal set; }
+
         /// <summary>Torque/force the built-in drive delivered, averaged over the last step.</summary>
         public double DriveTorque { get; internal set; }
 
@@ -837,7 +846,7 @@ namespace RobotTwin.CoreSim.Mechanics
             _contactCount = 0;
             Detect(h);
             PrepareJoints(h);
-            PrepareCouplings();   // [couple] gears, belts, lead screws (Mechanics/PhysicsScene.Couplings.cs)
+            PrepareCouplings(h);   // [couple] gears, belts, lead screws (Mechanics/PhysicsScene.Couplings.cs)
 
             Soft(Math.Min(ContactHertz, 0.25 / h), ContactDampingRatio, h, out double cBias, out double cMass, out double cImp);
             Soft(Math.Min(JointHertz, 0.25 / h), JointDampingRatio, h, out double jBias, out double jMass, out double jImp);
@@ -2032,9 +2041,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
                 else j.Impulse[RoleDrive] = 0;
 
-                if (j.Friction + j.MeshFriction > 0)
+                if (j.Friction + j.MeshFriction + j.BearingFriction > 0)
                 {
-                    double f = (j.Friction + j.MeshFriction) * h;
+                    double f = (j.Friction + j.MeshFriction + j.BearingFriction) * h;
                     AddRow(new Row
                     {
                         P = p, C = c, Joint = ji, Slot = RoleFriction, LP = lp, AP = ap, LC = lc, AC = ac, Mass = mass, Target = 0, Lo = -f, Hi = f,
@@ -2258,6 +2267,19 @@ namespace RobotTwin.CoreSim.Mechanics
                 j.StepTorqueImpulse += torque;
                 if (!SameWeldGroup(j.ParentSlot, j.ChildSlot)) NoteJointImpulse(j, force, torque);   // [weld]
                 double f = force.Length / h, t = torque.Length / h;
+                if (j.LoadFriction > 0)
+                {
+                    // [bearing] The next substep's bearing friction from the load it carries now; a slider's along its own
+                    // axis is what it slides with, not a load on its bearing.
+                    var load = force / h;
+                    if (j.Kind == JointKind.Slider)
+                    {
+                        var along = (j.ParentBody?.Orientation ?? Quat.Identity).Rotate(j.AxisP);
+                        load -= along * load.Dot(along);
+                    }
+
+                    j.BearingFriction = j.LoadFriction * load.Length;
+                }
                 double a = h / (1e-3 + h);
                 j.ForceFilter += (f - j.ForceFilter) * a;
                 j.TorqueFilter += (t - j.TorqueFilter) * a;

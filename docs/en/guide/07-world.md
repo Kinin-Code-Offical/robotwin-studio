@@ -292,9 +292,25 @@ It is a constraint, not a motor: the two joints move together and the driven sid
 
 **Efficiency** is the friction of the teeth or the thread, proportional to the load they carry. The defaults are 98 % for spur gears, 95 % for a rack and 97 % for a belt. A lead screw's efficiency comes from its thread's angle (trapezoidal thread, plastic or bronze nut, μ = 0.15): about 66 % for a T8×8, about 36 % for a T8×2. At 50 % or less the screw is **self-locking**: with the motor stopped the load cannot turn it back. So a vertical axis on a T8×2 stays where it is, while one on a T8×8 slowly comes down. While running, **Live readings** show the coupling's load and the joint's speed.
 
+**Backlash** is the total play between the teeth, given at the driven side: degrees for a gear, millimetres for a rack, a belt-driven carriage or a screw. Inside the play the two sides move independently, and the teeth push only once their flanks meet. A motor that reverses does not move the driven side until it has crossed the play: 1° of play at 0.1 rad/s is a 175 ms wait. **Belt stiffness** (N/mm) is how much the belt stretches under load: a belt joins the two sides like a spring, and 0 is rigid.
+
 ### Spring and damper
 
 Give a part on a hinge or a slider a spring of its own with **Add feature ▾ → Spring and damper**. On a hinge it is a torsion spring (**N·mm/°**), along a slider a coil spring (**N/mm**). Enter the spring rate as the catalogue gives it. The spring pulls the joint toward its **Free position** and works together with a motor: a motor holding a lever against its return spring carries the spring's k·θ torque. **Damping** is a brake proportional to speed (a shock absorber, a gas strut, a door closer). The spring is solved implicitly, so even a very stiff one stays stable. On a slider, 1 kg on a 1000 N/m spring sags 9.81 mm and swings with a 199 ms period; critically damped, it settles without overshooting. While running, **Live readings** show the spring's torque or force and the joint's position.
+
+### Bearings
+
+**Add feature ▾ → Bearing** chooses what the joint turns in or slides on. Its friction grows with the load it carries. On a hinge the friction torque is μ × load × bore / 2 (SKF's simplified friction moment). On a slider the friction force is μ × the load across the rail.
+
+| Hinge | μ | Slider | μ |
+| --- | --- | --- | --- |
+| Ball bearing (608) | 0.0015 | Linear bearing (LM8UU) | 0.003 |
+| Needle bearing | 0.0025 | Ball rail (MGN) | 0.004 |
+| Bronze bushing (oiled) | 0.08 | Wheeled carriage (V-slot) | 0.005 |
+| Plastic bushing (POM / PTFE) | 0.15 | Plain slide (plastic, dry) | 0.15 |
+| Pin in a printed part (dry) | 0.3 | | |
+
+A 10 kg flywheel at 10 rad/s on an 8 mm ball bearing loses only 0.02 rad/s in two seconds; on a bronze bushing it loses 1.26 rad/s. A heavy part brakes its bearing more. The joint's **friction** value stays as the load-free part (seals, grease). While running, **Live readings** show the bearing's friction at that moment.
 
 ### Arm kinematics: forward and inverse
 

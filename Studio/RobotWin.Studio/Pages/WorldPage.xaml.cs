@@ -1256,6 +1256,7 @@ namespace RobotWin.Studio.Pages
                 if (j.Driven && j.ObjectA == o.Id) DriveRow(j);   // [drive] an imported robot's axis
                 if (j.Kind != WorldJointKind.Fixed && j.ObjectA == o.Id) CouplingRows(world, j, couplings);   // [couple] Pages/WorldPage.Couplings.cs
                 if (j.Sprung && j.ObjectA == o.Id) SpringRows(j);   // [spring] Pages/WorldPage.Couplings.cs
+                if (j.Bearing != null && j.ObjectA == o.Id) BearingRows(j);   // [bearing] Pages/WorldPage.Couplings.cs
             }
 
             Inspector.Children.Add(Action("Başka bir nesneye bağla (B)", () => SetTool(WorldTool.Joint)));

@@ -68,6 +68,10 @@ namespace RobotWin.Studio.Pages
 
                 double eta = c.EfficiencyFor(a.Kind, b.Kind);
                 Inspector.Children.Add(NumberField("Verim (%)", Math.Round(eta * 100, 1), v => Edit("Dişli verimi değişti", () => coupling.Efficiency = v / 100), 5, 100, "0.#"));
+                bool hingeB = b.Kind == WorldJointKind.Hinge;
+                Inspector.Children.Add(NumberField(hingeB ? "Boşluk (°)" : "Boşluk (mm)", c.Backlash, v => Edit("Dişli boşluğu değişti", () => coupling.Backlash = v), 0, hingeB ? 30 : 10, "0.###"));
+                if (c.Kind == WorldCoupling.Belt)
+                    Inspector.Children.Add(NumberField("Kayış rijitliği (N/mm, 0 = rijit)", c.BeltStiffness, v => Edit("Kayış rijitliği değişti", () => coupling.BeltStiffness = v), 0, 1e6, "0.#"));
                 var reverse = new CheckBox
                 {
                     Content = "Ters yön",
@@ -200,6 +204,34 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Note("Motor olsa da olmasa da eklemi serbest konumuna çeker; sönüm hızla orantılı bir frendir (amortisör, gaz yay, kapı kapatıcı)."));
         }
 
+        /// <summary>[bearing] The joint's bearing: its kind, a hinge's bore, and what it loses under load (Sandbox/Bearings.cs).</summary>
+        private void BearingRows(WorldJoint j)
+        {
+            if (Bearings.Find(j.Bearing) is not { } spec) return;
+            var joint = j;
+            Inspector.Children.Add(FeatureHeader("Yatak", "Yatak kaldırıldı", () =>
+            {
+                joint.Bearing = null;
+                joint.BearingBore = 0;
+            }));
+            var box = new ComboBox { Margin = new Thickness(0, 0, 0, 6) };
+            foreach (var b in Bearings.For(j.Kind)) box.Items.Add(new ComboBoxItem { Content = b.Name, Tag = b.Id, IsSelected = b.Id == spec.Id, ToolTip = b.Note });
+            box.SelectionChanged += (_, _) =>
+            {
+                if (box.SelectedItem is not ComboBoxItem { Tag: string id } || id == joint.Bearing) return;
+                Edit("Yatak değişti", () => joint.Bearing = id);
+                BuildInspector();
+            };
+            Inspector.Children.Add(Labeled("Tür", box));
+            bool hinge = j.Kind == WorldJointKind.Hinge;
+            if (hinge)
+                Inspector.Children.Add(NumberField("Yatak delik çapı (mm)", j.BearingBore > 0 ? j.BearingBore : spec.Bore, v => Edit("Yatak değişti", () => joint.BearingBore = v), 1, 500, "0.#"));
+            double perNewton = Bearings.LoadFriction(j);
+            string drag = hinge ? (perNewton * 100 * 1000).ToString("0.##", CultureInfo.InvariantCulture) + " N·mm" : (perNewton * 100).ToString("0.##", CultureInfo.InvariantCulture) + " N";
+            Inspector.Children.Add(Note(spec.Note));
+            Inspector.Children.Add(Note("μ = " + spec.Mu.ToString("0.####", CultureInfo.InvariantCulture) + " · 100 N yükte " + drag + " sürtünme"));
+        }
+
         /// <summary>The load and speed of the selected part's couplings while running.</summary>
         private void CouplingLive(WorldObject o, List<string> lines)
         {
@@ -217,6 +249,8 @@ namespace RobotWin.Studio.Pages
                     lines.Add($"{c.Title(a.Kind, b.Kind)} yükü: {SiValue.Format(Math.Abs(s.Load), b.Kind == WorldJointKind.Hinge ? "N·m" : "N")} · {pace}");
                 }
 
+                if (j.Bearing != null && ph.BearingState(j.Id) is { } drag)   // [bearing]
+                    lines.Add("Yatak sürtünmesi: " + SiValue.Format(drag, j.Kind == WorldJointKind.Hinge ? "N·m" : "N"));
                 if (j.Sprung && ph.SpringState(j.Id) is { } sp)   // [spring]
                 {
                     lines.Add(j.Kind == WorldJointKind.Hinge

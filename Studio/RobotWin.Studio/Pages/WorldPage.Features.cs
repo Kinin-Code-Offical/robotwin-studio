@@ -77,6 +77,9 @@ namespace RobotWin.Studio.Pages
             if (MovingJoints(world, o).FirstOrDefault(j => !j.Sprung) is { } bare)   // [spring] Pages/WorldPage.Couplings.cs
                 Item("Yay ve sönüm", "Eklemin kendisine yay ekleyin: menteşede burulma yayı, kızakta helezon yay; isterseniz amortisör gibi sönüm. Motor olsa da olmasa da eklemi serbest konumuna çeker.",
                     () => AddSpring(bare));
+            if (MovingJoints(world, o).FirstOrDefault(j => j.Bearing == null) is { } loose)   // [bearing] Pages/WorldPage.Couplings.cs
+                Item("Rulman / yatak", "Eklemin döndüğü ya da kaydığı yatağı seçin: bilyalı rulman, burç, doğrusal rulman, kayar yatak. Sürtünmesi taşıdığı yükle artar.",
+                    () => loose.Bearing = loose.Kind == WorldJointKind.Hinge ? "ball" : "linear-ball");
             if (menu.Items.Count > 0) menu.Items.Add(new Separator());
             var behaviours = new MenuItem { Header = "Davranış (ifade, hazır davranış, betik)…", ToolTip = "Bu nesneye bir ifade (F.x = …), hazır davranış, eklenti ya da betik ekleyin." };
             menu.Items.Add(behaviours);

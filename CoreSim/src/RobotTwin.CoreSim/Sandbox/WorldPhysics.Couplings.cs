@@ -23,6 +23,13 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (a == null || b == null) continue;
                 var coupling = Scene.AddCoupling(a, b, ratio, c.Id);
                 coupling.Efficiency = c.EfficiencyFor(wa.Kind, wb.Kind);
+                bool hingeB = wb.Kind == WorldJointKind.Hinge;
+                coupling.Backlash = Math.Max(0, hingeB ? c.Backlash * Math.PI / 180 : c.Backlash / 1000);
+                if (c.Kind == WorldCoupling.Belt && c.BeltStiffness > 0)
+                {
+                    double k = c.BeltStiffness * 1000, r = c.SizeB / 2000;   // N/m along the span; the driven pulley's radius
+                    coupling.Stiffness = hingeB && r > 0 ? k * r * r : k;   // at a pulley, N·m/rad
+                }
                 _couplings[c.Id] = coupling;
                 // The gear blanks overlap where their teeth mesh, a nut surrounds its screw: the coupling is their contact.
                 Scene.NoCollide.Add((a.ChildBody, b.ChildBody));

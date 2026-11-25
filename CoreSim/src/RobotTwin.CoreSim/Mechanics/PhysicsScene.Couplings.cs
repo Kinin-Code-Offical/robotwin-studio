@@ -40,6 +40,21 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private double _efficiency = 1;
 
+        /// <summary>
+        /// Free play, all of it, at <see cref="B"/> (rad or m): printed gears have a few tenths of a degree, a lead screw's
+        /// nut a tenth of a millimetre. Inside it the two move apart; at either flank the teeth push.
+        /// </summary>
+        public double Backlash { get; set; }
+
+        /// <summary>
+        /// How much the coupling gives under load, at <see cref="B"/> (N·m/rad or N/m): a belt's stretch, a long shaft's
+        /// twist. 0 = rigid.
+        /// </summary>
+        public double Stiffness { get; set; }
+
+        /// <summary>The impulse the upper flank carries (the other side of the play), ≥ 0.</summary>
+        internal double ImpulseHi;
+
         /// <summary>Where the two joints were when coupled: the teeth mesh from there on.</summary>
         internal double Offset;
 
@@ -60,6 +75,8 @@ namespace RobotTwin.CoreSim.Mechanics
             public int B0, B1, B2, B3;
             public Vec3 L0, L1, L2, L3, A0, A1, A2, A3;
             public double Mass, Err;
+            public double Half;   // half the play; 0 = none
+            public double Gamma, BiasCoef;   // a soft (stretching) coupling; Gamma 0 = rigid
         }
 
         private CouplingRow[] _couplingRows = new CouplingRow[4];
@@ -128,9 +145,12 @@ namespace RobotTwin.CoreSim.Mechanics
         }
 
         /// <summary>The couplings' rows for this substep (after the joints have measured their angles), warm-started.</summary>
-        private void PrepareCouplings()
+        private double _couplingStep = 1e-3;
+
+        private void PrepareCouplings(double h)
         {
             _couplingCount = 0;
+            _couplingStep = h;
             if (Couplings.Count == 0) return;
             if (_couplingRows.Length < Couplings.Count) Array.Resize(ref _couplingRows, Couplings.Count * 2);
             foreach (var c in Couplings)
@@ -149,8 +169,19 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (k <= 1e-15) continue;   // both sides held: nothing to solve
                 row.Mass = 1 / k;
                 row.Err = c.Ratio * c.A.Angle - c.B.Angle - c.Offset;
+                row.Half = Math.Max(0, c.Backlash) / 2;
+                if (c.Stiffness > 0)
+                {
+                    // A belt's stretch: a spring on the error, lightly damped (5 % of critical) as a real belt is.
+                    double damping = 2 * 0.05 * Math.Sqrt(c.Stiffness * row.Mass), den = damping + h * c.Stiffness;
+                    row.Gamma = 1 / (h * den);
+                    row.BiasCoef = c.Stiffness / den;
+                }
+
+                if (row.Half <= 0) c.ImpulseHi = 0;
                 _couplingRows[_couplingCount++] = row;
-                if (c.Impulse != 0) Apply(ref _couplingRows[_couplingCount - 1], c.Impulse);
+                double warm = c.Impulse - c.ImpulseHi;
+                if (warm != 0) Apply(ref _couplingRows[_couplingCount - 1], warm);
             }
         }
 
@@ -172,10 +203,42 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (r.Count > 1) cdot += Velocity(r.B1, r.L1, r.A1);
                 if (r.Count > 2) cdot += Velocity(r.B2, r.L2, r.A2);
                 if (r.Count > 3) cdot += Velocity(r.B3, r.L3, r.A3);
-                double acc = r.Coupling.Impulse;
-                double lambda = useBias ? -r.Mass * massScale * (cdot + biasRate * r.Err) - impulseScale * acc : -r.Mass * cdot;
-                r.Coupling.Impulse = acc + lambda;
-                r.Coupling.StepImpulse += lambda;
+                var c = r.Coupling;
+                double lambda;
+                if (r.Half <= 0 && r.Gamma <= 0)
+                {
+                    // Rigid, no play: an equality.
+                    double acc = c.Impulse;
+                    lambda = useBias ? -r.Mass * massScale * (cdot + biasRate * r.Err) - impulseScale * acc : -r.Mass * cdot;
+                    c.Impulse = acc + lambda;
+                }
+                else if (r.Gamma > 0)
+                {
+                    // Stretching: a spring on the error beyond the play, pushing only from the flank it is past.
+                    double excess = r.Err - Math.Max(-r.Half, Math.Min(r.Half, r.Err));
+                    double acc = c.Impulse;
+                    double next = acc - (cdot + r.BiasCoef * excess + r.Gamma * acc) / (1 / r.Mass + r.Gamma);
+                    if (r.Half > 0) next = excess > 0 ? Math.Min(0, next) : excess < 0 ? Math.Max(0, next) : 0;
+                    lambda = next - acc;
+                    c.Impulse = next;
+                }
+                else
+                {
+                    // Play: two flanks, each a one-sided limit; the gap to it closes no faster than one step allows.
+                    double gapLo = r.Err + r.Half, gapHi = r.Half - r.Err;
+                    double biasLo = gapLo > 0 ? gapLo / _couplingStep : useBias ? biasRate * gapLo : 0;
+                    double biasHi = gapHi > 0 ? gapHi / _couplingStep : useBias ? biasRate * gapHi : 0;
+                    double lo = Math.Max(0, c.Impulse - r.Mass * (cdot + biasLo));
+                    double dLo = lo - c.Impulse;
+                    c.Impulse = lo;
+                    cdot += dLo / r.Mass;
+                    double hi = Math.Max(0, c.ImpulseHi - r.Mass * (-cdot + biasHi));
+                    double dHi = hi - c.ImpulseHi;
+                    c.ImpulseHi = hi;
+                    lambda = dLo - dHi;
+                }
+
+                c.StepImpulse += lambda;
                 Apply(ref r, lambda);
             }
         }
@@ -185,7 +248,7 @@ namespace RobotTwin.CoreSim.Mechanics
             foreach (var c in Couplings) c.A.MeshFriction = 0;
             foreach (var c in Couplings)
             {
-                c.Load = c.Impulse / h;
+                c.Load = (c.Impulse - c.ImpulseHi) / h;
                 // The mesh's friction for the next substep: Coulomb, proportional to the torque (force) it carries on the
                 // driving joint. On either joint it is the same, the two move together.
                 if (c.Efficiency < 1) c.A.MeshFriction += (1 / c.Efficiency - 1) * Math.Abs(c.Load * c.Ratio);

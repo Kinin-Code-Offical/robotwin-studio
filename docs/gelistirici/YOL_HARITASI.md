@@ -82,7 +82,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - ölçülü eskiz ve kısıtlar;
   - parametrik ölçüler;
   - montaj ilişkileri;
-  - [~] dişli, kayış, kremayer, vidalı mil: iki eklem arasında çözücü kısıtı (`PhysicsScene.AddCoupling`, dünyada `WorldCoupling`); yük iki yana geçer, verim yükle orantılı sürtünme, vida dişin açısından kendini kilitler. Eklem yayı ve sönümü de var (burulma / helezon yay, amortisör; motorla birlikte, örtük). Kızak ve sürtünmeli rulman zaten var. Sırada: yüke bağlı rulman sürtünmesi, dişli boşluğu, kayış esnekliği;
+  - [~] dişli, kayış, kremayer, vidalı mil: iki eklem arasında çözücü kısıtı (`PhysicsScene.AddCoupling`, dünyada `WorldCoupling`); yük iki yana geçer, verim yükle orantılı sürtünme, vida dişin açısından kendini kilitler. Eklem yayı ve sönümü de var (burulma / helezon yay, amortisör; motorla birlikte, örtük). Rulman ve yataklar yüke bağlı sürtünmeyle (bilyalı, iğneli, burç, doğrusal rulman, ray, kayar yatak). Dişli boşluğu (iki yanak, tek yönlü sınırlar) ve kayış esnekliği (yumuşak kısıt) de var;
   - 3B baskı uygunluğu.
   - (STEP içe/dışa aktarma yapıldı: Open CASCADE köprüsü, aşağıda Dış biçimler.)
 - [~] **Devre simülasyonu:** çözücü, ERC, Monte Carlo ve hasar var. Eksikler:

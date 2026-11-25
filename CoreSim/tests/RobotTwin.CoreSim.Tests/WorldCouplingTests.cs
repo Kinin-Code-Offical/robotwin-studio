@@ -47,7 +47,7 @@ namespace RobotTwin.CoreSim.Tests
             var nut = Joint(world, carriage, WorldJointKind.Slider);
             world.Couplings = new()
             {
-                new WorldCoupling { Id = "dişli", Kind = WorldCoupling.Gear, JointA = pinion.Id, JointB = wheel.Id, SizeA = 20, SizeB = 40 },
+                new WorldCoupling { Id = "dişli", Kind = WorldCoupling.Gear, JointA = pinion.Id, JointB = wheel.Id, SizeA = 20, SizeB = 40, Backlash = 0.5 },
                 new WorldCoupling { Id = "vida", Kind = WorldCoupling.Screw, JointA = screw.Id, JointB = nut.Id, SizeA = 8, SizeB = 8 }
             };
 
@@ -61,6 +61,7 @@ namespace RobotTwin.CoreSim.Tests
             double travel = runner.Physics.Scene.Joints.Single(s => s.Id == nut.Id).Angle;
             _out.WriteLine($"taşıyıcı {travel * 1000:0.00} mm yükseldi");
             _out.WriteLine($"pinyon {gear.SpeedA * 30 / Math.PI:0.0} dev/dk, çark {gear.SpeedB * 30 / Math.PI:0.0} dev/dk; mil {lead.SpeedA * 30 / Math.PI:0.0} dev/dk, taşıyıcı {lead.SpeedB * 1000:0.00} mm/s, vida yükü {lead.Load:0.00} N, verim %{thread * 100:0}");
+            Assert.Equal(0.5 * Math.PI / 180, runner.Physics.Scene.Couplings.Single(c => c.Id == "dişli").Backlash, 12);   // 0.5° of play at the wheel
             Assert.InRange(gear.SpeedA, 2 * Math.PI - 0.01, 2 * Math.PI + 0.01);
             Assert.InRange(gear.SpeedB, -Math.PI - 0.01, -Math.PI + 0.01);   // 20 teeth turn 40 at half the speed, the other way
             Assert.InRange(lead.SpeedB, 0.0079, 0.0081);   // 8 mm a turn

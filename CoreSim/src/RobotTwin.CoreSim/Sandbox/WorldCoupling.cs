@@ -50,6 +50,14 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public double Efficiency { get; set; }
 
+        /// <summary>Free play at B, all of it: degrees for a gear or pulley, millimetres for a rack, a carriage or a nut; 0 = none.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double Backlash { get; set; }
+
+        /// <summary>A belt's stretch: its span's stiffness (N/mm); 0 = rigid.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double BeltStiffness { get; set; }
+
         /// <summary>A hinge and a slider (a rack, a belt-driven carriage, a lead screw) rather than two shafts.</summary>
         public static bool Linear(WorldJointKind a, WorldJointKind b) => a != b && a != WorldJointKind.Fixed && b != WorldJointKind.Fixed;
 

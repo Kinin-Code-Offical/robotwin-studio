@@ -69,6 +69,46 @@ namespace RobotTwin.CoreSim.Tests
             Assert.False(scene.IsSleeping(nut.A));
         }
 
+        [Fact]
+        public void PlayLetsTheDrivenGearLagUntilTheFlanksMeet()
+        {
+            // Reversing through 1° of play: the driven gear stands while the driver crosses the gap, then follows.
+            var (scene, drive, driven) = TwoShafts();
+            var gear = scene.AddCoupling(drive, driven, -1);
+            gear.Backlash = Math.PI / 180;
+            driven.Friction = 0.01;   // a little drag keeps it on the flank it was pushed to
+            drive.TargetSpeed = 0.1;   // slowly forward: the driven gear does not coast through the play
+            for (int i = 0; i < 300; i++) scene.Step(1e-3);
+            double before = driven.Angle;
+            drive.TargetSpeed = -0.1;   // reverse slowly
+            double reversedAt = drive.Angle;
+            int still = 0;
+            for (int i = 0; i < 400; i++)
+            {
+                scene.Step(1e-3);
+                if (driven.Angle - before < 1e-3) still = i + 1;   // not yet turned back
+            }
+
+            double crossed = (reversedAt - drive.Angle) * 180 / Math.PI;
+            _out.WriteLine($"geri dönüşte sürülen {still} ms bekledi (boşluk 1° / 0,1 rad/s = 175 ms), sürücü {crossed:0.00}° döndü, sonra sürülen {(driven.Angle - before) * 180 / Math.PI:0.00}°");
+            Assert.InRange(still, 165, 200);
+            Assert.InRange(driven.Angle - before, 0.0225 - 0.002, 0.0225 + 0.002);   // then it follows: 0.04 rad less the play
+        }
+
+        [Fact]
+        public void ABeltStretchesUnderLoadByItsStiffness()
+        {
+            var (scene, drive, driven) = TwoShafts();
+            var belt = scene.AddCoupling(drive, driven, 1);
+            belt.Stiffness = 2;   // 2 N·m a radian at the driven pulley
+            drive.TargetSpeed = 0;
+            driven.MotorTorque = -0.1;   // a load the belt holds
+            for (int i = 0; i < 2000; i++) scene.Step(1e-3);
+            double stretch = drive.Angle - driven.Angle;
+            _out.WriteLine($"kayış {stretch * 180 / Math.PI:0.000}° esnedi (kuram {0.1 / 2 * 180 / Math.PI:0.000}°), yük {belt.Load:0.0000} N·m");
+            Assert.InRange(stretch, 0.05 * 0.97, 0.05 * 1.03);   // 0.1 N·m / 2 N·m/rad
+        }
+
         /// <summary>A vertical axis on a lead screw with the motor off: the carriage's weight tries to turn the screw back.</summary>
         private static (double Drop, double Spin) HangOnAScrew(double efficiency)
         {

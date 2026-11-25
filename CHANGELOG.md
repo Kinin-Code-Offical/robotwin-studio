@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Backlash and belt stretch:** a gear, rack, carriage or screw can have play: inside it the two sides move apart, at either flank the teeth push, so a reversing motor leaves the driven side standing until it has crossed the gap (1° at 0.1 rad/s: 175 ms). A belt can stretch under load with its span's stiffness, as a spring between the pulleys.
+
+- **Bearings whose friction follows the load:** a hinge can turn in a ball or needle bearing, a bronze or plastic bushing or a pin in a printed hole, a slider can run on a linear bearing, a ball rail, V-slot wheels or a plain slide (inspector: Add feature → Bearing). The friction is μ × load × bore / 2 on a hinge and μ × the load across the rail on a slider, from the load the joint carries each step: a 10 kg flywheel coasts down 53 times faster on a bronze bushing than on a 608 ball bearing.
+
 - **Springs and dampers in joints:** a hinge can have a torsion spring and a slider a coil spring of its own, with a damper, besides any motor (inspector: Add feature → Spring and damper, rates in N·mm/° and N/mm as catalogues give them). It is solved implicitly, so stiff springs stay stable: 1 kg on 1000 N/m sags 9.81 mm and swings at the 199 ms the formula gives, and a motor holding a lever against its return spring carries exactly k·θ.
 
 - **Gears, belts and lead screws:** two joints of a world can be coupled by a gear pair, a belt, a rack and pinion, a belt-driven carriage or a lead screw (inspector: Add feature → Gear, belt, lead screw). It is a constraint in the physics solver, not a motor: the driven side's load comes back to the motor through it. The teeth's or thread's friction grows with the load (efficiency), and a lead screw's efficiency comes from its thread's angle: a T8×2 holds a vertical axis with the motor off, a T8×8 lets it down.

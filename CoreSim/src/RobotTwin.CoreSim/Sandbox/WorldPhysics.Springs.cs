@@ -25,5 +25,12 @@ namespace RobotTwin.CoreSim.Sandbox
             if (j == null || (j.SpringStiffness <= 0 && j.SpringDamping <= 0)) return null;
             return (j.SpringTorque, j.Kind == JointKind.Hinge ? j.Angle * 180 / Math.PI : j.Angle);
         }
+
+        /// <summary>[bearing] A joint's bearing friction now (N·m or N); null when it has no bearing.</summary>
+        public double? BearingState(string jointId)
+        {
+            var j = Scene.Joints.FirstOrDefault(s => s.Id == jointId);
+            return j == null || j.LoadFriction <= 0 ? null : j.BearingFriction;
+        }
     }
 }

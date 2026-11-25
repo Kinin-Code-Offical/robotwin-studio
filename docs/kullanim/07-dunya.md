@@ -292,9 +292,25 @@ Bağ bir motor değil, bir kısıttır: iki eklem birlikte hareket eder ve sür�
 
 **Verim** dişin ya da vida dişinin sürtünmesidir ve taşıdığı yükle orantılıdır. Varsayılanlar: düz dişli %98, kremayer %95, kayış %97. Vidalı milde verim dişin eğiminden hesaplanır (trapez diş, plastik ya da bronz somun, μ = 0,15): T8×8 yaklaşık %66, T8×2 yaklaşık %36. Verim %50 ya da altındaysa vida **kendini kilitler**: motor dururken yük mili geri çeviremez. Bu yüzden T8×2 milli dikey eksen olduğu yerde kalır, T8×8 milli eksen yavaşça iner. Çalışırken **Canlı ölçüm** bağın yükünü ve eklemin hızını gösterir.
 
+**Boşluk**, dişliler arasındaki toplam boşluktur; dişlide derece, kremayer, kayışlı taşıyıcı ve vidada milimetre olarak sürülen tarafta verilir. Boşluğun içinde iki taraf birbirinden bağımsız hareket eder, dişler ancak yanaklar değince iter. Yön değiştiren bir motor boşluğu geçene kadar sürülen tarafı oynatmaz; 1° boşluk 0,1 rad/s'de 175 ms bekleme demektir. **Kayış rijitliği** (N/mm) kayışın yük altında esnemesidir: bir kayış iki tarafı yay gibi bağlar, 0 rijittir.
+
 ### Yay ve sönüm
 
 Menteşeyle ya da kızakla bağlı bir parçaya **Özellik ekle ▾ → Yay ve sönüm** ile eklemin kendi yayı verilir. Menteşede bu bir burulma yayıdır (**N·mm/°**), kızakta helezon yay (**N/mm**). Katalogdaki yay sabiti olduğu gibi girilir. Yay, eklemi **serbest konumuna** çeker ve motorla birlikte çalışır: geri dönüş yaylı bir kolu tutan motor, yayın k·θ torkunu taşır. **Sönüm** hızla orantılı bir frendir (amortisör, gaz yay, kapı kapatıcı). Yay örtük çözülür, bu yüzden çok sert yay da kararlı kalır. Kızakta 1 kg kütle 1000 N/m yayda 9,81 mm sarkar ve 199 ms periyotla salınır; kritik sönümle hiç aşmadan yerine oturur. Çalışırken **Canlı ölçüm** yayın torkunu ya da kuvvetini ve eklemin konumunu gösterir.
+
+### Rulman ve yatak
+
+**Özellik ekle ▾ → Rulman / yatak** ile eklemin döndüğü ya da kaydığı yatak seçilir. Yatağın sürtünmesi taşıdığı yükle artar. Menteşede sürtünme torku μ × yük × delik çapı / 2'dir (SKF'nin basitleştirilmiş sürtünme momenti). Kızakta sürtünme kuvveti μ × raya dik yüktür.
+
+| Menteşe | μ | Kızak | μ |
+| --- | --- | --- | --- |
+| Bilyalı rulman (608) | 0,0015 | Doğrusal rulman (LM8UU) | 0,003 |
+| İğneli rulman | 0,0025 | Bilyalı ray (MGN) | 0,004 |
+| Bronz burç (yağlı) | 0,08 | Tekerlekli taşıyıcı (V-slot) | 0,005 |
+| Plastik burç (POM / PTFE) | 0,15 | Kayar yatak (plastik, kuru) | 0,15 |
+| Pim, baskı parçasında (kuru) | 0,3 | | |
+
+10 kg'lık bir volan 8 mm'lik bilyalı rulmanda 10 rad/s'den iki saniyede ancak 0,02 rad/s yavaşlar, bronz burçta 1,26 rad/s. Ağır bir parça yatağını daha çok frenler. Bağlantının **sürtünme** değeri yükten bağımsız kısım olarak kalır (keçe, gres). Çalışırken **Canlı ölçüm** yatağın o anki sürtünmesini gösterir.
 
 ### Kol kinematiği: ileri ve ters kinematik
 
