@@ -97,6 +97,15 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Arg("--perf-check") is { } perfReport)
+            {
+                // [perf] every world template headless, its cost per simulated second against a baseline; 1 = a regression
+                double perfSeconds = double.TryParse(Arg("--perf-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var ps) && ps > 0 ? ps : 1.0;
+                double perfTolerance = double.TryParse(Arg("--perf-tolerance"), NumberStyles.Float, CultureInfo.InvariantCulture, out var pt) && pt > 0 ? pt / 100 : 0.25;
+                Shutdown(Shell.PerfCheck.Run(perfReport, Arg("--perf-baseline"), args.Contains("--perf-update"), perfSeconds, perfTolerance, Arg("--perf-filter")?.Split(',')));
+                return;
+            }
+
             if (Arg("--esp32-build") is { } esp32Sketch)
             {
                 // [esp32hw] --esp32-build sketch.ino [--esp32-out folder] [--esp32-install]: the hardware-compatible build of

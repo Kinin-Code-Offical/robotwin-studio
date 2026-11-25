@@ -12,7 +12,7 @@ namespace RobotWin.Studio.Shell
     {
         private static readonly string[] Flags =
         {
-            "--snapshot", "--bench", "--selftest", "--gallery", "--export-logo", "--overlap-report", "--startup-report",
+            "--snapshot", "--bench", "--selftest", "--gallery", "--export-logo", "--overlap-report", "--startup-report", "--perf-check",
         };
 
         /// <summary>--bench: measured like the app is used (a just-opened world's cables settle over frames, as for a user).</summary>

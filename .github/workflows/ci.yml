@@ -56,6 +56,15 @@ jobs:
           Get-Content selftest.txt
           if ($p.ExitCode -ne 0) { exit 1 }
 
+      - name: Performance check (every world template against tools/perf/baseline.json; a warning, never a failure)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $exe = Get-ChildItem -Recurse -Filter RobotWinStudio.exe builds/RobotWin.Studio/Release | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList "--perf-check","perf.txt","--perf-baseline","tools/perf/baseline.json","--perf-tolerance","60" -Wait -PassThru
+          Get-Content perf.txt
+          if ($p.ExitCode -ne 0) { Write-Output "::warning::Performance regression: see the report above"; exit 1 }
+
       - name: Render test (scene mirror, GPU renderer drawn and read back; WARP where there is no GPU)
         shell: pwsh
         run: |
