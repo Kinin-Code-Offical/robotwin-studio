@@ -126,7 +126,7 @@ namespace RobotTwin.CoreSim.Pcb
             return changes;
         }
 
-        private static string Key(Track t) => string.Create(CultureInfo.InvariantCulture, $"{t.Net}|{t.Layer}|{t.X1:0.####}|{t.Y1:0.####}|{t.X2:0.####}|{t.Y2:0.####}");
+        private static string Key(Track t) => FormattableString.Invariant($"{t.Net}|{t.Layer}|{t.X1:0.####}|{t.Y1:0.####}|{t.X2:0.####}|{t.Y2:0.####}");   // netstandard2.1 too
 
         private static BoardDocument Clone(BoardDocument board) =>
             JsonSerializer.Deserialize<BoardDocument>(JsonSerializer.Serialize(board, RobotWinFormats.Json), RobotWinFormats.Json) ?? new BoardDocument();
