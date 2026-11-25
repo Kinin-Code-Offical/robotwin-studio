@@ -90,8 +90,8 @@ namespace RobotTwin.CoreSim.Tests
             for (int gpio = 0; gpio < 40; gpio++)
             {
                 var pad = soc.PadDrive(gpio);
-                if (!pad.Driven && !pad.PullUp && !pad.PullDown) continue;
-                string what = !pad.Driven ? "sürülmüyor" : pad.IsPwm ? $"PWM {pad.PwmFrequency:F1} Hz %{pad.PwmDuty * 100:F2}" : pad.Level ? "YÜKSEK" : "düşük";
+                if (!pad.Driven && !pad.PullUp && !pad.PullDown && !pad.IsDac) continue;
+                string what = pad.IsDac ? $"DAC {pad.DacVolts:F3} V" : !pad.Driven ? "sürülmüyor" : pad.IsPwm ? $"PWM {pad.PwmFrequency:F1} Hz %{pad.PwmDuty * 100:F2}" : pad.Level ? "YÜKSEK" : "düşük";
                 report.AppendLine($"GPIO{gpio}: {what}{(pad.PullUp ? " · yukarı çekme" : "")}{(pad.PullDown ? " · aşağı çekme" : "")}{(pad.OpenDrain ? " · açık akaç" : "")}");
             }
             foreach (var core in new[] { soc.Pro, soc.App })

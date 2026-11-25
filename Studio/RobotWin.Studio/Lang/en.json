@@ -6927,8 +6927,8 @@
   " (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": " (real-chip firmware, RobotWin's Xtensa emulator)",
   "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware running (real-chip firmware, RobotWin's Xtensa emulator)",
   "SPI: ": "SPI: ",
-  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, zamanlayıcılar, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, timers, Serial/Serial1/Serial2, I2C (Wire) and SPI are modelled; Wi-Fi/BLE are not yet.",
-  "bekçi (watchdog) kartı sıfırladı": "a watchdog reset the board"
+  "bekçi (watchdog) kartı sıfırladı": "a watchdog reset the board",
+  "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire) ve SPI modellendi; Wi-Fi/BLE henüz yok.": "Hardware-compatible mode: the firmware built for the real chip runs on RobotWin's Xtensa emulator. GPIO, LEDC, ADC, DAC, timers, watchdogs, Serial/Serial1/Serial2, I2C (Wire) and SPI are modelled; Wi-Fi/BLE are not yet."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

@@ -5,8 +5,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     /// <summary>What an emulated ESP32 pad does to its pin: drives it (a level, or a peripheral's PWM), or leaves it to the circuit.</summary>
     public readonly struct Esp32PadDrive
     {
-        public Esp32PadDrive(bool driven, bool level, bool openDrain, bool pullUp, bool pullDown, bool inputEnabled, double pwmFrequency, double pwmDuty)
+        public Esp32PadDrive(bool driven, bool level, bool openDrain, bool pullUp, bool pullDown, bool inputEnabled, double pwmFrequency, double pwmDuty,
+            bool dac = false, double dacVolts = 0)
         {
+            IsDac = dac;
+            DacVolts = dacVolts;
             Driven = driven;
             Level = level;
             OpenDrain = openDrain;
@@ -34,7 +37,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>The PWM's duty, 0–1.</summary>
         public double PwmDuty { get; }
 
-        public bool IsPwm => !double.IsNaN(PwmFrequency);
+        public bool IsPwm => PwmFrequency > 0;
+
+        /// <summary>The pad is the DAC's analog output (GPIO25: channel 1, GPIO26: channel 2), at <see cref="DacVolts"/>.</summary>
+        public bool IsDac { get; }
+
+        public double DacVolts { get; }
     }
 
     /// <summary>
@@ -82,6 +90,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public Esp32PadDrive PadDrive(int gpio)
         {
             if (gpio < 0 || gpio >= 40 || IoMuxOffset[gpio] == 0) return default;
+            if (DacOutput(gpio) is { } volts) return new Esp32PadDrive(false, false, false, false, false, false, double.NaN, 0, true, volts);
             uint mux = Reg(IoMux + IoMuxOffset[gpio]);
             bool pullUp = (mux & (1u << 8)) != 0, pullDown = (mux & (1u << 7)) != 0, inputEnabled = (mux & (1u << 9)) != 0;
             bool openDrain = (_gpioPin[gpio] & (1u << 2)) != 0;
@@ -121,6 +130,22 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             if (openDrain && enabled && level) enabled = false;   // open drain only pulls low
             return new Esp32PadDrive(enabled, level, openDrain, pullUp, pullDown, inputEnabled, frequency, duty);
+        }
+
+        /// <summary>
+        /// The DAC on a pad, when it is powered: RTC_IO_PAD_DAC1/2 (GPIO25/26) with XPD_DAC (bit 18) set put the 8-bit value
+        /// in bits 26:19 out as VDD × value / 255 (the cosine generator, SENS_SAR_DAC_CTRL2's CW_EN1/2, is not drawn: it
+        /// reads as mid-scale). Null when the DAC is off.
+        /// </summary>
+        public double? DacOutput(int gpio)
+        {
+            int channel = gpio == 25 ? 0 : gpio == 26 ? 1 : -1;
+            if (channel < 0) return null;
+            uint pad = Reg(0x3FF48484 + 4 * (uint)channel);
+            if ((pad & (1u << 18)) == 0) return null;
+            bool cosine = (Reg(0x3FF4889C) & (1u << (24 + channel))) != 0;
+            uint value = cosine ? 128u : (pad >> 19) & 0xFF;
+            return PadSupply * value / 255.0;
         }
 
         /// <summary>A matrix output signal's level, or its PWM.</summary>

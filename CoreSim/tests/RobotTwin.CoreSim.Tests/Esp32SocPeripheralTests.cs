@@ -274,6 +274,22 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void DacPutsItsValueOnThePad()
+        {
+            var soc = Chip();
+            Assert.False(soc.PadDrive(25).IsDac);
+            soc.Write32(0x3FF48484, 128u << 19 | 1u << 18 | 1u << 17);   // RTC_IO_PAD_DAC1: value 128, powered, on the pad
+            var drive = soc.PadDrive(25);
+            Assert.True(drive.IsDac);
+            Assert.False(drive.Driven);
+            Assert.Equal(3.3 * 128 / 255, drive.DacVolts, 6);
+            Assert.False(soc.PadDrive(26).IsDac);
+            soc.Write32(0x3FF48488, 255u << 19 | 1u << 18);
+            Assert.Equal(3.3, soc.PadDrive(26).DacVolts, 6);
+            Assert.False(default(Esp32PadDrive).IsPwm);
+        }
+
+        [Fact]
         public void EmulatorGapNamesWhatTheEmulatorLacks()
         {
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <Wire.h>\nvoid setup() {}"));

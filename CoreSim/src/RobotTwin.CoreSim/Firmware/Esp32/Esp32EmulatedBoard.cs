@@ -265,6 +265,21 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
                 var drive = _soc.PadDrive(g);
                 var pin = pad.Pin;
+                if (drive.IsDac)
+                {
+                    // The DAC drives the pad as an analog source (through the pad's auxiliary device, as in the fast mode).
+                    StopPwm(pad);
+                    pin.Mode = PinMode.Input;
+                    if (pad.Aux != null)
+                    {
+                        pad.Aux.Pulldown = false;
+                        pad.Aux.DacVoltage = drive.DacVolts;
+                        pad.Aux.DacEnabled = true;
+                    }
+
+                    continue;
+                }
+
                 if (pad.Aux != null) pad.Aux.DacEnabled = false;
                 if (drive.Driven && drive.IsPwm)
                 {
