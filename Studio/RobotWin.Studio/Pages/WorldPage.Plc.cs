@@ -18,6 +18,12 @@ namespace RobotWin.Studio.Pages
     {
         private void PlcPanel(WorldObject o)
         {
+            if (o.Parameters.TryGetValue("language", out var language) && language.Trim() == CellParts.PlcLadder)
+            {
+                LadderPanel(o);
+                return;
+            }
+
             Inspector.Children.Add(Caption("PLC programı (Yapısal Metin)"));
             o.Parameters.TryGetValue("program", out var text);
             var editor = Editor(string.IsNullOrWhiteSpace(text) ? CellParts.PlcExample : text!, 260);
@@ -51,6 +57,48 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Caption("Durum"));
             StatusBlock();
             Inspector.Children.Add(Note("G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS."));
+        }
+
+        /// <summary>[plc] A ladder PLC: its check, the editor window, restart, and the same live state.</summary>
+        private void LadderPanel(WorldObject o)
+        {
+            Inspector.Children.Add(Caption("PLC programı (Merdiven)"));
+            var check = Note(string.Empty);
+            void Validate()
+            {
+                var ladder = LdProgram.Load(o.Parameters.TryGetValue("ladder", out var json) ? json : string.Empty);
+                var program = ladder.Compile(out var errors);
+                check.Text = program != null ? $"Merdiven geçerli: {ladder.Rungs.Count} basamak." : string.Join("\n", errors.Take(4).Select(e => e.ToString()));
+                check.Foreground = (Brush)FindResource(program != null ? "B.Success" : "B.Danger");
+            }
+
+            Validate();
+            var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 4) };
+            row.Children.Add(Small("Merdiven düzenleyiciyi aç", () =>
+            {
+                var ladder = LdProgram.Load(o.Parameters.TryGetValue("ladder", out var json) ? json : string.Empty);
+                var window = new LadderWindow(ladder, saved =>
+                {
+                    string text = saved.Save();
+                    Edit("Merdiven diyagramı kaydedildi", () => o.Parameters["ladder"] = text);
+                    if (_session.State != SimState.Stopped && _session.Physics is { } ph)
+                    {
+                        var errors = ph.LoadPlcLadder(o.Id, saved);
+                        W.Status = errors.Count == 0 ? "PLC programı yüklendi: RUN" : "PLC programı derlenmedi: " + errors[0];
+                    }
+
+                    Validate();
+                }, name => _session.State == SimState.Stopped ? double.NaN : _session.Physics?.PlcOf(o.Id)?.Program?.Read(name) ?? double.NaN, o.Name)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+                window.Show();
+            }, "Basamakları çizin: kontaklar, bobinler, zamanlayıcılar, sayıcılar ve paralel kollar", true));
+            row.Children.Add(Small("Yeniden başlat", () => _session.Physics?.RestartPlc(o.Id), "Hatadan sonra PLC'yi STOP'tan RUN'a alır (değişkenler baştan)"));
+            Inspector.Children.Add(row);
+            Inspector.Children.Add(check);
+            Inspector.Children.Add(Caption("Durum"));
+            StatusBlock();
         }
 
         private static void PlcStatus(WorldObject o, WorldPhysics? physics, StringBuilder sb)

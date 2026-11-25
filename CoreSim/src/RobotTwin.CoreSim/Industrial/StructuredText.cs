@@ -74,7 +74,14 @@ namespace RobotTwin.CoreSim.Industrial
         public IEnumerable<(string Name, StType Type, string Value)> Watch =>
             _vars.Values.Where(v => v.Type != StType.Block).Select(v => (v.Name, v.Type, Format(v.Type, v.Value)));
 
-        public double Read(string name) => _vars.TryGetValue(name.ToUpperInvariant(), out var v) ? v.Value : double.NaN;
+        public double Read(string name)
+        {
+            string key = name.Trim().ToUpperInvariant();
+            int dot = key.IndexOf('.');
+            if (dot > 0 && !key.StartsWith("%", StringComparison.Ordinal))
+                return _vars.TryGetValue(key.Substring(0, dot), out var b) && b.Block != null ? b.Block[key.Substring(dot + 1)] : double.NaN;   // a block's member: T1.Q
+            return _vars.TryGetValue(key, out var v) ? v.Value : double.NaN;
+        }
 
         /// <summary>Compiles <paramref name="source"/>: the program, or null with the errors.</summary>
         public static StProgram? Compile(string source, out List<StError> errors)

@@ -141,7 +141,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] istasyon durum makineleri: PLC'de `CASE` adımlarıyla (örnek program: itici istasyonu);
   - çevrim süresi ve darboğaz;
   - [x] arıza senaryoları: fotosel, sınır anahtarı, silindir ve Modbus modülünde zamanlı arızalar (`Sandbox/MachineFaults.cs`);
-  - [~] PLC: Yapısal Metin (`Industrial/StProgram`, kendi derleyici ve yorumlayıcımız) dünyadaki PLC parçasında tarama döngüsüyle. PLC'nin %MW, %IX ve %QX'i Modbus TCP'den sunulur. Sırada: merdiven diyagramı (LD);
+  - [x] PLC: Yapısal Metin (`Industrial/StProgram`, kendi derleyici ve yorumlayıcımız) ve merdiven diyagramı (`Industrial/LdProgram`, görsel düzenleyiciyle) dünyadaki PLC parçasında tarama döngüsüyle; %MW, %IX ve %QX Modbus TCP'den sunulur. Sırada: kullanıcı tanımlı fonksiyon blokları, diziler;
   - Modbus, OPC UA, HMI.
 - [~] **Dış biçimler:**
   - [x] KiCad dışa aktarma.

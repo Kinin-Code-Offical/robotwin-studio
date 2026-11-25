@@ -50,9 +50,18 @@ namespace RobotTwin.CoreSim.Sandbox
         private void BuildPlc(WorldObject o, Dictionary<string, string> p)
         {
             var plc = new MachinePlc(o) { CycleMs = Math.Max(1, Math.Min(1000, CellParts.Num(p, "cycle", 10))) };
-            // A PLC placed without a program of its own runs the example it comes with.
-            string source = p.TryGetValue("program", out var text) && !string.IsNullOrWhiteSpace(text) ? text : CellParts.PlcExample;
-            plc.Program = StProgram.Compile(source, out var errors);
+            // A PLC placed without a program of its own runs the example it comes with; a ladder one runs its rungs.
+            List<StError> errors;
+            if (p.TryGetValue("language", out var language) && language.Trim() == CellParts.PlcLadder)
+            {
+                plc.Program = LdProgram.Load(p.TryGetValue("ladder", out var ladder) ? ladder : string.Empty).Compile(out errors);
+            }
+            else
+            {
+                string source = p.TryGetValue("program", out var text) && !string.IsNullOrWhiteSpace(text) ? text : CellParts.PlcExample;
+                plc.Program = StProgram.Compile(source, out errors);
+            }
+
             plc.Errors = errors;
             if (plc.Program == null)
                 MachineSay(o.Id, "PLC STOP: program derlenmedi: " + string.Join("; ", errors.Select(e => e.ToString())), true);
@@ -128,11 +137,15 @@ namespace RobotTwin.CoreSim.Sandbox
         }
 
         /// <summary>Loads a new program into a running PLC (a download): it restarts cold, or stays in STOP with the errors.</summary>
-        public List<StError> LoadPlcProgram(string objectId, string source)
+        public List<StError> LoadPlcProgram(string objectId, string source) => LoadPlcProgram(objectId, StProgram.Compile(source, out var errors), errors);
+
+        /// <summary>Loads a ladder diagram into a running PLC, as <see cref="LoadPlcProgram(string, string)"/>.</summary>
+        public List<StError> LoadPlcLadder(string objectId, LdProgram ladder) => LoadPlcProgram(objectId, ladder.Compile(out var errors), errors);
+
+        private List<StError> LoadPlcProgram(string objectId, StProgram? program, List<StError> errors)
         {
             var plc = PlcOf(objectId);
             if (plc == null) return new List<StError>();
-            var program = StProgram.Compile(source, out var errors);
             plc.Errors = errors;
             if (program == null) return errors;
             plc.Program = program;

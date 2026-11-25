@@ -30,6 +30,9 @@ namespace RobotTwin.CoreSim.Design
         public const string CylinderId = "pneumatic-cylinder";
         public const string PlcId = "plc";
 
+        /// <summary>[plc] The PLC's programming languages: its program is in "program" (ST) or "ladder" (LD, as JSON).</summary>
+        public const string PlcStructuredText = "Yapısal Metin", PlcLadder = "Merdiven";
+
         /// <summary>[plc] The PLC's inputs and outputs, in %IX0.0… / %QX0.0… order.</summary>
         public static readonly string[] PlcInputs = { "I0", "I1", "I2", "I3", "I4", "I5", "I6", "I7" };
         public static readonly string[] PlcOutputs = { "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7" };
@@ -217,6 +220,7 @@ namespace RobotTwin.CoreSim.Design
                 "8 sayısal giriş (I0–I7 → %IX0.0–%IX0.7), 8 sayısal çıkış (Q0–Q7 ← %QX0.0–%QX0.7). Programı Yapısal Metin'dir (ST): BOOL, INT, REAL, TIME; " +
                 "TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (istasyon adımları), FOR, WHILE, REPEAT. Her çevrim süresinde girişleri okur, " +
                 "programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.",
+                new ParameterDefinition("language", "Dil", PlcStructuredText, "", new[] { PlcStructuredText, PlcLadder }),
                 new ParameterDefinition("cycle", "Çevrim süresi", "10", "ms"),
                 new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }),
                 new ParameterDefinition("modbus", "Modbus TCP sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),

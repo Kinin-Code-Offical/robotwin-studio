@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Ladder diagrams (IEC 61131-3 LD) for the PLC:** a visual editor with grid rungs (contacts, edges, comparisons, TON/TOF/TP/CTU, coils, set/reset, parallel branches by vertical links), checked as it is drawn and lit live while the world runs; a ladder runs by turning into Structured Text on the same interpreter. Tested: the seal-in latch, timers, a counter, edges and a comparison.
+
 - **Fault scenarios for the cell's equipment:** a photoelectric sensor, limit switch, pneumatic cylinder or Modbus module can be given a fault that begins at a set time (dirty lens, stuck or dead output, welded contact, broken lever, seal leak, stuck valve, low supply, network down), played by the same physics, so a PLC program's reaction to it can be tried.
 
 - **PLC running Structured Text (IEC 61131-3):** our own compiler and interpreter (BOOL/INT/DINT/UINT/WORD/REAL/TIME, TON/TOF/TP, R_TRIG/F_TRIG, CTU/CTD/CTUD, SR/RS, IF/CASE/FOR/WHILE/REPEAT, direct addresses, PLC integer wrapping, faults to STOP) in a new robot-cell part scanning its 8 inputs and 8 outputs every cycle; an editor that checks as you type, download into a running PLC, restart, and live variables. Tested end to end: a Modbus output says a part is there, the PLC's example program drives a pneumatic cylinder out and back by its end sensors and counts the part. A PLC can serve its %MW memory, inputs and outputs as a Modbus TCP server for a SCADA or HMI.

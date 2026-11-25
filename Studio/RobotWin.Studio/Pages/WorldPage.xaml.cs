@@ -1732,12 +1732,23 @@ namespace RobotWin.Studio.Pages
             OnShown();
             Scene.FrameAll();
             if (select != null && World?.Objects.FirstOrDefault(o => o.Name == select) is { } chosen) Scene.Select(chosen.Id);
-            if (simulate == null || !double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs)) return;
-            Run();
-            _session.Pause();
-            for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++) _session.StepOnce(0.01);
-            UpdateRunButton();
-            OnSimUpdated();
+            if (simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
+            {
+                Run();
+                _session.Pause();
+                for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++) _session.StepOnce(0.01);
+                UpdateRunButton();
+                OnSimUpdated();
+            }
+
+            // [plc] ROBOTWIN_LADDER=1: the selected ladder PLC's editor, live, is the picture.
+            if (Environment.GetEnvironmentVariable("ROBOTWIN_LADDER") == "1" && select != null && World?.Objects.FirstOrDefault(o => o.Name == select) is { } plc)
+            {
+                var ladder = RobotTwin.CoreSim.Industrial.LdProgram.Load(plc.Parameters.TryGetValue("ladder", out var json) ? json : string.Empty);
+                var editor = new LadderWindow(ladder, _ => { }, name => _session.Physics?.PlcOf(plc.Id)?.Program?.Read(name) ?? double.NaN, plc.Name) { Owner = Window.GetWindow(this) };
+                editor.Show();
+                App.SnapshotTarget = editor.Content as FrameworkElement;
+            }
         }
 
         public void PrepareSnapshot(string? template, string? simulate)
