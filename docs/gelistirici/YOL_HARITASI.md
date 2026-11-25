@@ -87,7 +87,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - (STEP içe/dışa aktarma yapıldı: Open CASCADE köprüsü, aşağıda Dış biçimler.)
 - [~] **Devre simülasyonu:** çözücü, ERC, Monte Carlo ve hasar var. Eksikler:
   - üretici SPICE modelleri;
-  - AC ve frekans cevabı;
+  - [x] AC ve frekans cevabı: çalışma noktasında küçük işaret analizi (`AnalogSimulator.AcResponse`: cihazlar iki adım uzunluğunda damgalanıp G + jωC ayrıştırılır), devre sayfasında Bode çizimi;
   - anahtarlamalı güç;
   - besleme açılışı;
   - ~~osiloskopta matematik kanalları~~ (yapıldı: A−B, A+B, A×B güç, ∫A yük/enerji, dA/dt; herhangi iki kanal, birimler ve ölçek kendiliğinden);

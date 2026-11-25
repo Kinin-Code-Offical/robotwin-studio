@@ -90,6 +90,12 @@ Gerçek parçalar etiket değerlerinde değildir. Sağ paneldeki **Simülasyon: 
 
 Monte Carlo sırasında kart yazılımı çalışmaz; analog devre incelenir.
 
+## Frekans cevabı (AC analizi)
+
+**Frekans cevabı** sekmesi devrenin küçük işaret cevabını hesaplar (SPICE'ın .AC analizi gibi): devre yeniden derlenir, çalışma noktası çözülür ve seçilen **giriş kaynağı** 1 V'luk küçük işaretle sürülürken (öteki kaynaklar dinlenir) **çıkış ağının** gerilimi, **referansa** göre, her frekansta karmaşık sayı olarak bulunur. Kondansatörler, bobinler ve motor sargıları gerçek empedanslarıyla, transistörler, diyotlar ve işlemsel yükselteçler çalışma noktasındaki eğimleriyle (küçük işaret modelleri) girer. Sonuç Bode çizimidir: logaritmik frekans ekseninde kazanç (dB) ve faz (°); yanında en düşük frekanstaki kazanç, −3 dB köşe frekansı ve en yüksek kazanç yazılır. Çalışan simülasyona dokunulmaz.
+
+Doğrulama (`AcAnalysisTests`): 1 kΩ / 1 µF alçak geçiren süzgeç 159,15 Hz'te −3,01 dB ve −45°, on kat üstünde −20 dB; seri RLC rezonansında (1591,5 Hz) kazanç 0 dB, faz 0°; ortak emetörlü yükselticinin kazancı çalışma noktasındaki gm'den beklenenle %2 içinde.
+
 ## Arıza tespiti
 
 **Arıza tespiti** sekmesi devrenizdeki tasarım hatalarını bulur.

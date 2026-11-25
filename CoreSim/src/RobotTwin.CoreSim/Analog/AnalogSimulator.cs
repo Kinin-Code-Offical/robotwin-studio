@@ -74,7 +74,7 @@ namespace RobotTwin.CoreSim.Analog
     /// sub-stepping. Fully deterministic: the same netlist and the same sequence of
     /// calls produce bit-identical results.
     /// </summary>
-    public sealed class AnalogSimulator : ISignalSink
+    public sealed partial class AnalogSimulator : ISignalSink
     {
         private readonly AnalogCircuit _circuit;
         private readonly MnaSystem _mna = new MnaSystem();

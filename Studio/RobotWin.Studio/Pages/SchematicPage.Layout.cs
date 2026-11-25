@@ -15,7 +15,7 @@ namespace RobotWin.Studio.Pages
         private DockManager? _dock;
 
         /// <summary>The bottom tabs in their original order (the code picks them by this index).</summary>
-        private static readonly string[] DockKeys = { "scope", "meter", "diag", "mc", "pins", "serial", "log" };
+        private static readonly string[] DockKeys = { "scope", "meter", "diag", "mc", "pins", "serial", "log", "ac" };
 
         private void InitLayout()
         {
@@ -25,6 +25,8 @@ namespace RobotWin.Studio.Pages
             _dock.Add(new DockItem("meter", "Multimetre", MeterPane, DockPlace.Bottom) { CanBottom = true, Chip = DockMeter, FramedMargin = framed });
             _dock.Add(new DockItem("diag", "Arıza tespiti", DiagPane, DockPlace.Bottom) { CanBottom = true, Chip = DockDiag, FramedMargin = framed });
             _dock.Add(new DockItem("mc", "Monte Carlo", McPane, DockPlace.Bottom) { CanBottom = true, Chip = DockMc, FramedMargin = framed });
+            if (_dockAc != null && _acPane != null)
+                _dock.Add(new DockItem("ac", "Frekans cevabı", _acPane, DockPlace.Bottom) { CanBottom = true, Chip = _dockAc, FramedMargin = framed });
             _dock.Add(new DockItem("pins", "Kart pinleri", PinsPane, DockPlace.Bottom) { CanBottom = true, Chip = DockPins, FramedMargin = framed });
             _dock.Add(new DockItem("serial", "Seri monitör", SerialPane, DockPlace.Bottom) { CanBottom = true, Chip = DockSerial, FramedMargin = framed });
             _dock.Add(new DockItem("log", "Olaylar", LogList, DockPlace.Bottom) { CanBottom = true, Chip = DockLog, FramedMargin = framed });
@@ -33,6 +35,7 @@ namespace RobotWin.Studio.Pages
                 if (key == "diag") RunDiagnosis();
                 else if (key == "meter") BuildMeterPanel();
                 else if (key == "mc") RefreshMonteCarloNets();
+                else if (key == "ac") RefreshAcChoices();
             };
             _dock.Start();
         }

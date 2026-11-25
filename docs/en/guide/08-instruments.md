@@ -90,6 +90,12 @@ The **Monte Carlo** tab runs the circuit N times, drawing the tolerances anew ea
 
 Board firmware does not run during Monte Carlo; the analog circuit is examined.
 
+## Frequency response (AC analysis)
+
+The **Frequency response** tab computes the circuit's small-signal response (as SPICE's .AC): the circuit is compiled afresh, its operating point solved, and with the chosen **input source** driven by a 1 V small signal (the other sources at rest) the voltage of the **output net**, against the **reference**, is found as a complex number at every frequency. Capacitors, inductors and motor windings come in with their real impedances; transistors, diodes and op-amps with their slopes at the operating point (small-signal models). The result is a Bode plot: gain (dB) and phase (°) on a logarithmic frequency axis, with the gain at the lowest frequency, the −3 dB corner and the peak gain written beside it. The running simulation is not touched.
+
+Validation (`AcAnalysisTests`): a 1 kΩ / 1 µF low-pass is −3.01 dB and −45° at 159.15 Hz and −20 dB a decade above; a series RLC at resonance (1591.5 Hz) passes 0 dB at 0°; a common-emitter stage's gain is within 2 % of what its operating point's gm gives.
+
 ## Fault finding
 
 The **Fault finding** tab finds design mistakes in your circuit.

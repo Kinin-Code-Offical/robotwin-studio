@@ -65,6 +65,7 @@ namespace RobotWin.Studio.Pages
                 if (W.Simulation.State == SimState.Running && DiagAuto.IsChecked == true && DockShowing(2)) RunDiagnosis();
             };
             _diagTimer.Start();
+            BuildAcDock();   // [ac] Pages/SchematicPage.Ac.cs
             InitLayout();   // [dock] Pages/SchematicPage.Layout.cs
             SizeChanged += (_, _) => ApplyLayout();
             IsVisibleChanged += (_, _) =>
@@ -1571,6 +1572,32 @@ namespace RobotWin.Studio.Pages
                     var amm = sch.AddPart(W.Library, "dmm-ampere", new GridPoint(44, -2));
                     Tie(amm, "mA", "5V_PSU");
                     Tie(amm, "COM", "GND");
+                    break;
+                }
+
+                case "ac":
+                {
+                    // [ac] An RC low-pass driven by a sine generator, its frequency response computed in the tab.
+                    void Pin(SchematicPart part, int index, string net)
+                    {
+                        var pd = W.Library.Get(part.PartId).Pins[index];
+                        sch.Labels.Add(new NetLabel { Name = net, Position = part.Transform(pd.X, pd.Y) });
+                    }
+
+                    var gen = sch.AddPart(W.Library, "siggen-sine", new GridPoint(-34, 22));
+                    var r = sch.AddPart(W.Library, "res-1000", new GridPoint(-18, 22));
+                    var cap = sch.AddPart(W.Library, "cap-100n", new GridPoint(-6, 26), 270);
+                    Pin(gen, 0, "GIRIS");
+                    Pin(gen, 1, "GND");
+                    Pin(r, 0, "GIRIS");
+                    Pin(r, 1, "CIKIS");
+                    Pin(cap, 0, "CIKIS");
+                    Pin(cap, 1, "GND");
+                    ShowDock(7);
+                    RefreshAcChoices();
+                    if (_acSource?.Items.Cast<string>().FirstOrDefault(i => i.StartsWith(gen.RefDes, StringComparison.OrdinalIgnoreCase)) is { } src) _acSource.SelectedItem = src;
+                    if (_acOut != null) _acOut.SelectedItem = "CIKIS";
+                    RunAc();
                     break;
                 }
 

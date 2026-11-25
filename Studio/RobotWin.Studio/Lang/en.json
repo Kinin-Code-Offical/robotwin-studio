@@ -7306,7 +7306,20 @@
   "düğme": "button",
   "sayı": "number",
   "ayar": "set point",
-  "çubuk": "bar"
+  "çubuk": "bar",
+  "Frekans cevabı": "Frequency response",
+  "AC analizi: bir kaynaktan bir ağa küçük işaret kazancı ve faz (Bode çizimi)": "AC analysis: small-signal gain and phase from a source to a net (Bode plot)",
+  "Uyarılan gerilim kaynağı (1 V küçük işaret); öteki kaynaklar dinlenir": "The voltage source driven (1 V small signal); the other sources rest",
+  "Kazancı ölçülen ağ": "The net whose gain is measured",
+  "Çıkışın referansı (öntanımlı toprak)": "The output's reference (ground by default)",
+  "Çıkış ağı": "Output net",
+  "Hesapla": "Compute",
+  "Kazanç (dB)": "Gain (dB)",
+  "Faz (°)": "Phase (°)",
+  "frekans": "frequency",
+  "−3 dB köşesi aralıkta yok": "No −3 dB corner in the range",
+  "Devrede gerilim kaynağı yok: bir pil, güç kaynağı ya da sinyal üreteci ekleyin.": "The circuit has no voltage source: add a battery, a power supply or a signal generator.",
+  "Çözüm yok: devre bu kaynakla tekil (kaynağın uçları kısa ya da açık mı?).": "No solution: the circuit is singular with this source (are its terminals shorted or open?)."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -7785,7 +7798,7 @@
   "Derlenmiş ESP32 kodu yüklenemedi: '{…}' (Win32 hata kodu {…}).": "Couldn't load compiled ESP32 code: '{0}' (Win32 error code {1}).",
   "Derlenmiş ESP32 kodunda '{…}' yok; kod RobotWin'in ESP32 katmanıyla derlenmemiş olabilir, yeniden derleyin.": "The compiled ESP32 code has no '{0}'; it may not have been compiled against RobotWin's ESP32 layer, so recompile it.",
   "Destek ({…}/{…})": "Gusset ({0}/{1})",
-  "Devre derlenemedi: {…}": "Couldn't compile the circuit: {0}",
+  "Devre derlenemedi: {…}": "The circuit could not be compiled: {0}",
   "Devre matrisi '{…}' düğümünde tekil (çözülemiyor).": "The circuit matrix is singular at node '{0}' (cannot be solved).",
   "Devre matrisi '{…}' parçasında tekil (çözülemiyor); ": "The circuit matrix is singular at part '{0}' (cannot be solved); ",
   "Devre şeması: parçaları yerleştirip bağlayın, devreyi simüle edin (Ctrl+{…})": "Circuit schematic: place and connect parts, simulate the circuit (Ctrl+{0})",
@@ -10332,6 +10345,10 @@
   "Adım       : {…} ({…} s)": "Step       : {0} ({1} s)",
   "Çevrim     : {…} · ort. {…} s · son {…} s": "Cycles     : {0} · avg {1} s · last {2} s",
   "En uzun    : adım {…} · %{…} · ort. {…} s": "Longest    : step {0} · {1}% · avg {2} s",
-  "{…} yazılamaz (bir girişe bağlı ya da tanımlı değil).": "{0} cannot be written (it is bound to an input, or not declared)."
+  "{…} yazılamaz (bir girişe bağlı ya da tanımlı değil).": "{0} cannot be written (it is bound to an input, or not declared).",
+  "−3 dB köşesi: {…}": "−3 dB corner: {0}",
+  "En yüksek: {…} dB, {…}": "Peak: {0} dB, {1}",
+  "Hesaplanamadı: {…}": "Could not compute: {0}",
+  "'{…}' bir gerilim kaynağı değil.": "'{0}' is not a voltage source."
  }
 }
