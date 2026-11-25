@@ -175,6 +175,18 @@ Denklemler ve doğrulama: [Sıvılar](../fizik/07-sivilar.md).
 ROS'ta yazılmış bir robotu (`.urdf` ya da `.xacro`) aynı düğmeyle ya da **Dosya → Aç** ile getirin; Aç onu kendi dünyasında açar. Gövdesi olan her bağlantı bir parça olur, sıfır duruşunda yerine konur; şekli görsel ağlarından (STL, OBJ, PLY, STEP), okunamazsa çarpışma ağlarından gelir, renkleri URDF'nin malzemelerinden. Gövdesi olmayan çerçeveler (`tool0` gibi) üst bağlantıya katılır. Döner ve sürekli eklemler menteşe, kayar eklemler kızak olur; sınırları gelir. Her hareketli eklemin bir **motoru** vardır: URDF'nin `effort` değeri tork sınırı, `velocity` değeri en yüksek hız olur. Döner ve kayar eklemler konum tutar (başta 0), sürekli eklemler hız alır (başta durur). Böylece kol yerçekimine karşı duruşunu korur. Parçayı seçip denetçinin **Mekanik bağlantılar** bölümündeki **Motor hedefi** alanını değiştirin; çalışırken eklem hemen o açıya döner.
 
 Kök bağlantının gövdesi yoksa (ROS'taki `world`) ona sabit bağlanan parça tabana vidalanır. Yoksa kol sabit, tekerlekleri olan bir robot (adında *wheel* geçen sürekli eklemler) serbest durur. `package://paket/…` ağları URDF'nin klasöründen yukarı doğru paketin klasörü (adı ya da `package.xml`'deki adı) aranarak bulunur. xacro'da özellikler, `${…}` ifadeleri (aritmetik, karşılaştırma, `pi`, `radians()` ve öteki matematik işlevleri), varsayılan ve blok parametreli makrolar, `include`, `if`/`unless`, `insert_block`, `arg` ve `$(find …)` çalışır; YAML okuma (`load_yaml`) ve DAE (Collada) ağları henüz yoktur. Okunamayan her şey içe aktarmanın sonunda listelenir.
+
+### ROS 2 bağlantısı (rosbridge)
+
+Dünya, ROS 2 tarafında çalışan `rosbridge_server`'a bağlanabilir (ROS 2'de: `ros2 launch rosbridge_server rosbridge_websocket_launch.xml`, WSL ya da başka bir bilgisayar olabilir). Paletin **Ortam** sekmesinde **ROS 2 (rosbridge)** bölümüne adresi yazın (öntanımlı `ws://localhost:9090`) ve **ROS 2'ye bağlan**'a basın. Dünya çalışırken:
+
+| Konu | Yön | Tür | İçerik |
+| --- | --- | --- | --- |
+| `/clock` | yayın | `rosgraph_msgs/msg/Clock` | Simülasyonun saati, 100 Hz (`use_sim_time` ile çalışan düğümler için). |
+| `/joint_states` | yayın | `sensor_msgs/msg/JointState` | Her menteşe ve kızağın konumu (rad / m) ve hızı, URDF'deki adıyla, 50 Hz. |
+| `/joint_command` | dinleme | `sensor_msgs/msg/JointState` | Adı geçen eklemlerin motor hedefi: konum (rad / m) ya da sürekli eklemlerde hız (rad/s). |
+
+Bölümde gönderilen ve gelen mesaj sayısı, ROS'un gördüğü eklemler ve komutlardaki bilinmeyen adlar görünür. Bağlantı dünya durunca da açık kalır; bir sonraki çalıştırmada kendiliğinden kullanılır.
 ## Kablolar
 
 - Her kablonun bir kesiti (AWG), uzunluğu ve rengi vardır. Varsayılan 24 AWG'dir; DC motor veya pil bağlarken 22 AWG.

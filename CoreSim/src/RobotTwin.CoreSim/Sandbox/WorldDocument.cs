@@ -282,6 +282,12 @@ namespace RobotTwin.CoreSim.Sandbox
     public sealed class WorldJoint
     {
         public string Id { get; set; } = string.Empty;
+
+        /// <summary>[ros] The joint's own name (an imported robot's URDF joint name, what ROS calls it); null: its id.</summary>
+        public string? Name { get; set; }
+
+        [JsonIgnore]
+        public string RosName => string.IsNullOrEmpty(Name) ? Id : Name!;
         public WorldJointKind Kind { get; set; }
         public string ObjectA { get; set; } = string.Empty;
         public string PortA { get; set; } = string.Empty;

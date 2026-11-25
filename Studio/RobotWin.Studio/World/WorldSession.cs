@@ -167,6 +167,7 @@ namespace RobotWin.Studio.World
                 for (int i = 0; i < _esp.Count; i++) _esp[i].OnSubstep(t);
             };
             StartSense();   // [sense] World/WorldSession.Sense.cs
+            AttachRos();   // [ros] a connection made before the run: its link to this physics
             IndexHeat();
             Mark("sensörler");
             LastStartProfile = string.Join(" · ", steps) + " ms";
@@ -220,6 +221,7 @@ namespace RobotWin.Studio.World
             StopRadio();   // [radio]
             StopSense();   // [sense]
             StopSdk();   // [sdk]
+            _rosLink = null;   // [ros] the connection stays for the next run
             if (Simulator != null) Simulator.SubstepAccepted = null;
             Simulator = null;
             Circuit = null;
@@ -460,6 +462,7 @@ namespace RobotWin.Studio.World
                         Simulator.Step(dt);
                         t1 = Lap(ref _costCircuit, t1);
                         Physics?.Advance(dt, Simulator);   // its parts' costs: Physics.Times
+                        StepRos();   // [ros] clock, joint states out; joint commands in
                         t1 = Lap(ref _costPhysics, t1);
                         AdvanceSense(dt);   // [sense] line sensors, LiDAR, GPS, IMU, compass, encoders
                         Lap(ref _costSense, t1);

@@ -7143,7 +7143,17 @@
   "Çalışırken eklem motorlarına çözülen değerleri verir; her eksen kendi tork ve hız sınırıyla gider.": "While running, gives the joint motors the solved values; each axis goes with its own torque and speed limits.",
   "Motor hedefleri çözümden": "Motor targets from the solution",
   "Çözüm": "Solution",
-  "En yakın çözüm": "Closest solution"
+  "En yakın çözüm": "Closest solution",
+  "ROS 2 (rosbridge)": "ROS 2 (rosbridge)",
+  "rosbridge_server'ın adresi. ROS 2 tarafında: ros2 launch rosbridge_server rosbridge_websocket_launch.xml (port 9090)": "The address of rosbridge_server. On the ROS 2 side: ros2 launch rosbridge_server rosbridge_websocket_launch.xml (port 9090)",
+  "ROS 2'ye bağlan": "Connect to ROS 2",
+  "Çalışan dünya /clock ve /joint_states yayımlar, /joint_command ile gelen hedefleri eklem motorlarına verir": "The running world publishes /clock and /joint_states and gives the targets coming on /joint_command to the joint motors",
+  "Adres ws://bilgisayar:9090 biçiminde olmalı.": "The address must look like ws://computer:9090.",
+  "Bağlantıyı kes": "Disconnect",
+  "ROS 2 bağlantısı kesildi.": "Disconnected from ROS 2.",
+  "Dünya çalışınca /clock ve /joint_states yayımlanır, /joint_command dinlenir.": "When the world runs, /clock and /joint_states are published and /joint_command is listened to.",
+  "rosbridge 5 saniyede yanıt vermedi.": "rosbridge didn't answer within 5 seconds.",
+  "rosbridge bağlantıyı kapattı.": "rosbridge closed the connection."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10110,6 +10120,14 @@
   " Eksenleri paralel olduğundan uç {…} gezer; hedef bu düzlemin {…} mm dışındaydı.": " Because its axes are parallel, the tip moves {0}; the target was {1} mm off this plane.",
   "Eksenleri paralel olduğundan uç {…} gezer: hedefin {…} mm dışındaki düzleme izdüşümüne gidildi.": "Because its axes are parallel, the tip moves {0}: it went to the target's projection onto the plane, {1} mm away.",
   "{…} motorlu eksen çözülen değerlere gidiyor.": "{0} motorised axes are going to the solved values.",
-  "{…} motorun hedefi çözüme ayarlandı: dünya çalışınca kol oraya gider.": "{0} motor targets set to the solution: when the world runs, the arm goes there."
+  "{…} motorun hedefi çözüme ayarlandı: dünya çalışınca kol oraya gider.": "{0} motor targets set to the solution: when the world runs, the arm goes there.",
+  "rosbridge'e bağlanılıyor: {…}": "Connecting to rosbridge: {0}",
+  "ROS 2'ye bağlandı: {…}": "Connected to ROS 2: {0}",
+  "ROS 2'ye bağlanılamadı: {…}": "Couldn't connect to ROS 2: {0}",
+  "Bağlı: {…}": "Connected: {0}",
+  "Koptu: {…}": "Dropped: {0}",
+  "{…} mesaj gitti, {…} geldi": "{0} messages sent, {1} received",
+  "{…} eklem: {…}": "{0} joints: {1}",
+  "bilinmeyen adlar: {…}": "unknown names: {0}"
  }
 }

@@ -186,6 +186,7 @@ namespace RobotTwin.CoreSim.Formats
                 var w = new WorldJoint
                 {
                     Id = world.NextId("J"),
+                    Name = j.Name,   // [ros] ROS knows it by this name (joint_states, joint_command)
                     ObjectA = child.Id,
                     ObjectB = parent?.Id,
                     AnchorX = jf.P.X, AnchorY = jf.P.Y, AnchorZ = jf.P.Z,

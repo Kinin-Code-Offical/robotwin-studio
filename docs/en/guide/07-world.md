@@ -175,6 +175,18 @@ Add your own model with **External model → Import 3D model or robot (STL, OBJ,
 Bring in a robot written for ROS (`.urdf` or `.xacro`) with the same button, or with **File → Open**, which opens it in a world of its own. Every link with a body becomes a part, placed at the zero configuration; its shape comes from its visual meshes (STL, OBJ, PLY, STEP), or its collision meshes when a visual cannot be read, its colours from the URDF's materials. Frames without a body (such as `tool0`) fold into the link above. Revolute and continuous joints become hinges, prismatic ones sliders, with their limits. Every moving joint has a **motor**: the URDF's `effort` is its torque limit, its `velocity` its top speed. Revolute and prismatic joints hold a position (0 at first), continuous ones take a speed (standing at first), so an arm keeps its pose against gravity. Select a part and change **Motor target** in the inspector's **Mechanical joints** section; while running, the joint turns there at once.
 
 When the root link has no body (ROS's `world`), the part fixed to it is bolted down as the base. Otherwise an arm stands fixed and a robot on wheels of its own (continuous joints with *wheel* in the name) stays free. `package://pkg/…` meshes are found by looking for the package's folder (by its name or the one in its `package.xml`) from the URDF's folder upwards. In xacro, properties, `${…}` expressions (arithmetic, comparisons, `pi`, `radians()` and the other math functions), macros with default and block parameters, `include`, `if`/`unless`, `insert_block`, `arg` and `$(find …)` work; reading YAML (`load_yaml`) and DAE (Collada) meshes do not yet. Whatever could not be read is listed at the end of the import.
+
+### ROS 2 connection (rosbridge)
+
+A world can connect to `rosbridge_server` running on the ROS 2 side (in ROS 2: `ros2 launch rosbridge_server rosbridge_websocket_launch.xml`, in WSL or on another computer). In the palette's **Environment** tab, type the address in **ROS 2 (rosbridge)** (by default `ws://localhost:9090`) and press **Connect to ROS 2**. While the world runs:
+
+| Topic | Direction | Type | Content |
+| --- | --- | --- | --- |
+| `/clock` | published | `rosgraph_msgs/msg/Clock` | The simulation's clock, 100 Hz (for nodes running with `use_sim_time`). |
+| `/joint_states` | published | `sensor_msgs/msg/JointState` | Each hinge's and slider's position (rad / m) and velocity, by its URDF name, 50 Hz. |
+| `/joint_command` | subscribed | `sensor_msgs/msg/JointState` | The named joints' motor targets: a position (rad / m), or a velocity (rad/s) for continuous joints. |
+
+The section shows the messages sent and received, the joints ROS sees and unknown names in the commands. The connection stays open when the world stops and is used by the next run.
 ## Cables
 
 - Every cable has a gauge (AWG), a length and a colour. The default is 24 AWG; 22 AWG when connecting a DC motor or a battery.

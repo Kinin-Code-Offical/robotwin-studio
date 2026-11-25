@@ -370,6 +370,7 @@ namespace RobotWin.Studio.Pages
             if (env.Obstacles.Count > 0) Palette.Children.Add(Action($"Engelleri temizle ({env.Obstacles.Count})", () => Edit("Engeller silindi", () => env.Obstacles.Clear())));
             SenseEnvironmentPalette(world);   // [sense] light, floor, tapes, GPS origin
             SdkEnvironmentPalette(world);   // [sdk] atmosphere, wind, aerodynamics, force fields
+            RosPalette();   // [ros] Pages/WorldPage.Ros.cs
         }
 
         private FrameworkElement NumberField(string label, double value, Action<double> set, double min = double.MinValue, double max = double.MaxValue, string format = "0.###")
@@ -1656,6 +1657,7 @@ namespace RobotWin.Studio.Pages
             var now = DateTime.Now;
             if ((now - _lastPanels).TotalMilliseconds < 120) return;
             _lastPanels = now;
+            if (_rosStatus != null && _rosStatus.IsLoaded) _rosStatus.Text = RosStatusText();   // [ros] traffic, joints
             SimStatus.Text = $"t = {SiValue.Format(_session.Time, "s")}" + (_session.RealtimeFactor < 0.9 * _session.Speed ? $" · gerçek zamanın {_session.RealtimeFactor:P0}'i" : string.Empty);
             UpdateSerial();
             UpdateLive();
