@@ -717,7 +717,7 @@ namespace RobotWin.Studio.Pages
                     break;
                 case "drc":
                     board.Tracks.Add(new Track { Net = board.NetNames().First(), Layer = CopperLayer.Top, X1 = 2, Y1 = 2, X2 = board.Width / 2, Y2 = board.Height / 2, Width = 0.3 });
-                    OnDrc(this, new RoutedEventArgs());
+                    RunDrcNow();
                     if (DrcList.Items.Count > 0) DrcList.SelectedIndex = 0;
                     ShowPanel(3);
                     break;
@@ -759,7 +759,7 @@ namespace RobotWin.Studio.Pages
                     }
 
                     Canvas.SetTool(PcbTool.Select);
-                    OnDrc(this, new RoutedEventArgs());
+                    RunDrcNow();
                     break;
                 }
 
@@ -773,6 +773,13 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "reroute":
+                    // [perf] The routing button's own path: the copper cleared, routed again on a worker (use --wait).
+                    board.Tracks.Clear();
+                    board.Vias.Clear();
+                    Canvas.Refresh();
+                    OnRoute(this, new RoutedEventArgs());
+                    break;
                 case "measure":
                     Canvas.SetTool(PcbTool.Measure);
                     Canvas.SimulateMeasureForSnapshot(5, 5, board.Width * 0.6, board.Height * 0.45);
@@ -845,34 +852,104 @@ namespace RobotWin.Studio.Pages
             Canvas.Fit();
         }
 
-        private void OnRoute(object sender, RoutedEventArgs e)
+        // [perf] Routing and DRC run on a worker, on a copy of the board: the board's editing waits for them (the canvas and
+        // these buttons are off meanwhile), the rest of the app does not.
+        private bool _working;
+
+        private void Working(bool on)
         {
+            _working = on;
+            Canvas.IsEnabled = PlaceButton.IsEnabled = AutoRouteButton.IsEnabled = DrcButton.IsEnabled = !on;
+        }
+
+        /// <summary>The copper a worker laid on a copy of the board: its tracks, vias and zone fills.</summary>
+        private static void TakeCopper(BoardDocument board, BoardDocument copy, bool tracks)
+        {
+            if (tracks)
+            {
+                board.Tracks = copy.Tracks;
+                board.Vias = copy.Vias;
+            }
+
+            for (int i = 0; i < board.Zones.Count && i < copy.Zones.Count; i++)
+            {
+                board.Zones[i].Fill = copy.Zones[i].Fill;
+                board.Zones[i].FillHash = copy.Zones[i].FillHash;
+            }
+        }
+
+        private async void OnRoute(object sender, RoutedEventArgs e)
+        {
+            if (_working) return;
             var board = Board;
-            Mouse.OverrideCursor = Cursors.Wait;
+            var copy = board.Clone();
+            Working(true);
+            W.Status = "Otomatik rota çiziliyor…";
+            RoutingResult result;
+            List<DrcViolation> violations;
             try
             {
-                RoutingResult result = new RoutingResult();
-                Edit("Otomatik rota", () =>
+                (result, violations) = await System.Threading.Tasks.Task.Run(() =>
                 {
-                    result = new AutoRouter(board).Route();
-                    if (board.Zones.Count > 0) ZoneFiller.FillAll(board);
+                    var r = new AutoRouter(copy).Route();
+                    if (copy.Zones.Count > 0) ZoneFiller.FillAll(copy);
+                    return (r, DesignRuleChecker.Check(copy));
                 });
-                _violations = DesignRuleChecker.Check(board);
-                Canvas.Violations = _violations;
-                W.Status = result.Complete
-                    ? $"Rota tamam: {result.Routed} bağlantı ({result.PlaneConnections} düzleme), {result.ViasAdded} via, {result.TotalLength:0} mm yol"
-                    : $"{result.Failed.Count} bağlantı çizilemedi — kartı büyütün, parçaları açın veya katman ekleyin";
             }
             finally
             {
-                Mouse.OverrideCursor = null;
+                Working(false);
             }
 
+            if (Board != board) return;   // another project's board is open now: the result belongs to none
+            Edit("Otomatik rota", () => TakeCopper(board, copy, tracks: true));
+            _violations = violations;
+            Canvas.Violations = _violations;
+            W.Status = result.Complete
+                ? $"Rota tamam: {result.Routed} bağlantı ({result.PlaneConnections} düzleme), {result.ViasAdded} via, {result.TotalLength:0} mm yol"
+                : $"{result.Failed.Count} bağlantı çizilemedi — kartı büyütün, parçaları açın veya katman ekleyin";
             UpdatePanel();
             Canvas.InvalidateVisual();
         }
 
-        private void OnDrc(object sender, RoutedEventArgs e)
+        private async void OnDrc(object sender, RoutedEventArgs e)
+        {
+            if (_working) return;
+            var board = Board;
+            var copy = board.Clone();
+            bool refill = RefillBeforeDrc.IsChecked == true && board.Zones.Count > 0;
+            var circuit = CircuitForCurrents();
+            Working(true);
+            W.Status = "DRC çalışıyor…";
+            int refilled;
+            Dictionary<string, double> currents;
+            List<DrcViolation> violations;
+            try
+            {
+                (refilled, currents, violations) = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    int n = refill ? ZoneFiller.RefillOutdated(copy) : 0;
+                    var flowing = EstimateNetCurrents(circuit);
+                    return (n, flowing, DesignRuleChecker.Check(copy, flowing));
+                });
+            }
+            finally
+            {
+                Working(false);
+            }
+
+            if (Board != board) return;
+            if (refilled > 0)
+            {
+                TakeCopper(board, copy, tracks: false);
+                Canvas.Refresh();
+            }
+
+            ShowDrc(violations, currents);
+        }
+
+        /// <summary>The DRC at once, on this thread (snapshots: the picture shows its result).</summary>
+        private void RunDrcNow()
         {
             var board = Board;
             if (RefillBeforeDrc.IsChecked == true && board.Zones.Count > 0)
@@ -880,8 +957,13 @@ namespace RobotWin.Studio.Pages
                 if (ZoneFiller.RefillOutdated(board) > 0) Canvas.Refresh();
             }
 
-            var currents = EstimateNetCurrents();
-            _violations = DesignRuleChecker.Check(board, currents);
+            var currents = EstimateNetCurrents(CircuitForCurrents());
+            ShowDrc(DesignRuleChecker.Check(board, currents), currents);
+        }
+
+        private void ShowDrc(List<DrcViolation> violations, Dictionary<string, double> currents)
+        {
+            _violations = violations;
             Canvas.Violations = _violations;
             Canvas.FocusedViolation = null;
             int errors = _violations.Count(v => v.Severity == DrcSeverity.Error);
@@ -897,12 +979,15 @@ namespace RobotWin.Studio.Pages
         /// Runs the circuit briefly and takes, for every net, the largest current any
         /// part connected to it carries — the copper of that net must survive it.
         /// </summary>
-        private static Dictionary<string, double> EstimateNetCurrents()
+        /// <summary>A copy of the circuit as it is fitted now (the active alternative), for a worker to run.</summary>
+        private static Schematic CircuitForCurrents() => Schematic.FromJson(Variants.Active(W.Schematic).ToJson());   // [variants]
+
+        private static Dictionary<string, double> EstimateNetCurrents(Schematic circuit)
         {
             var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                var compiled = CircuitCompiler.Compile(Variants.Active(W.Schematic), W.Library);   // [variants]
+                var compiled = CircuitCompiler.Compile(circuit, W.Library);
                 var sim = new AnalogSimulator(compiled.Circuit) { MaxSubstepsPerCall = 50_000 };
                 sim.Initialize();
                 for (int i = 0; i < 25; i++) sim.Step(4e-3);

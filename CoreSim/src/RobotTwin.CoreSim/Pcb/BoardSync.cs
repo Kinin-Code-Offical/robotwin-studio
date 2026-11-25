@@ -174,7 +174,7 @@ namespace RobotTwin.CoreSim.Pcb
         // A track by where it lies (a renamed net's tracks keep their place under the new name).
         private static string Key(Track t) => FormattableString.Invariant($"{t.Layer}|{t.X1:0.####}|{t.Y1:0.####}|{t.X2:0.####}|{t.Y2:0.####}");   // netstandard2.1 too
 
-        private static BoardDocument Clone(BoardDocument board) =>
+        internal static BoardDocument Clone(BoardDocument board) =>
             JsonSerializer.Deserialize<BoardDocument>(JsonSerializer.Serialize(board, RobotWinFormats.Json), RobotWinFormats.Json) ?? new BoardDocument();
     }
 }

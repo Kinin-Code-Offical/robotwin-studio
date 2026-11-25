@@ -458,6 +458,9 @@ namespace RobotTwin.CoreSim.Pcb
         private List<NetClass>? _netClasses;
         private Dictionary<string, string> _assignments = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>A deep copy (the board's file form read back): what a worker routes or checks while the editor keeps this one.</summary>
+        public BoardDocument Clone() => BoardSync.Clone(this);
+
         /// <summary>Board size (the outline's bounding box from the origin).</summary>
         public double Width { get; set; } = 80;
         public double Height { get; set; } = 60;
