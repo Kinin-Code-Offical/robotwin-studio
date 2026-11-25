@@ -260,7 +260,8 @@ namespace RobotTwin.CoreSim.Tests
                 sim.Step(100e-6);
             }
 
-            for (int i = 0; i < 2000; i++)
+            // The restart passes through the ROM and the bootloader (~0.29 s) before the sketch runs again.
+            for (int i = 0; i < 5000; i++)
             {
                 esp.Advance(100e-6, sim.Time);
                 sim.Step(100e-6);

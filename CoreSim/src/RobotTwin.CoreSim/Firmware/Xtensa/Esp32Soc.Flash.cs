@@ -42,6 +42,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             for (int i = 0; i < _flash.Length; i++) _flash[i] = 0xFF;
             Array.Copy(image, _flash, Math.Min(image.Length, FlashSize));
             Array.Fill(_mmu, MmuInvalid);
+            ForgetCodeMaps();
             if (_flash[appOffset] != 0xE9) return;   // no application image
             int segments = _flash[appOffset + 1];
             uint offset = appOffset + 24;
@@ -59,6 +60,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                         int entry = MmuEntry(page << 16);
                         if (entry >= 0) _mmu[entry] = ((data & ~0xFFFFu) >> 16) + (page - firstPage);
                     }
+                    ForgetCodeMaps();
                 }
 
                 offset = data + length;
@@ -76,6 +78,46 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         }
 
         /// <summary>Where a cached IROM/DROM address lands in the flash (null when the page is not mapped).</summary>
+        /// <summary>The flash cache's MMU changed: the cores' fetch windows into the flash map again.</summary>
+        private void ForgetCodeMaps()
+        {
+            Pro?.ForgetCodeMap();
+            App?.ForgetCodeMap();
+        }
+
+        /// <summary>The span code at <paramref name="address"/> is fetched from (IRAM, RTC fast memory, a flash page through the cache).</summary>
+        public bool MapCode(uint address, out byte[]? memory, out uint baseIndex, out uint baseAddress, out uint end)
+        {
+            memory = null;
+            baseIndex = baseAddress = end = 0;
+            if (address >= IramBase && address < IramBase + IramSize)
+            {
+                (memory, baseIndex, baseAddress, end) = (_iram, 0, IramBase, IramBase + IramSize);
+                return true;
+            }
+
+            if (address >= RtcFastIBase && address < RtcFastIBase + RtcFastSize)
+            {
+                (memory, baseIndex, baseAddress, end) = (_rtcFast, 0, RtcFastIBase, RtcFastIBase + RtcFastSize);
+                return true;
+            }
+
+            if (address >= 0x400C2000 && address < IromEnd && _flash != null)
+            {
+                // One 64 KB page of the cache: contiguous in the flash only within it.
+                int entry = MmuEntry(address);
+                if (entry < 0 || _mmu[entry] >= MmuInvalid) return false;
+                uint page = address & ~0xFFFFu;
+                uint start = Math.Max(page, 0x400C2000u);
+                uint index = (_mmu[entry] << 16) | (start & 0xFFFF);
+                if (index + (page + 0x10000 - start) > FlashSize) return false;
+                (memory, baseIndex, baseAddress, end) = (_flash, index, start, Math.Min(page + 0x10000, IromEnd));
+                return true;
+            }
+
+            return false;
+        }
+
         private (byte[]? Memory, uint Offset) ThroughCache(uint address)
         {
             int entry = MmuEntry(address);
@@ -113,6 +155,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if ((register >= MmuTable && register < MmuTable + 0x400) || (register >= MmuTableApp && register < MmuTableApp + 0x400))
             {
                 _mmu[((register & 0x3FF) >> 2) & 255] = value & 0x1FF;
+                ForgetCodeMaps();
                 return true;
             }
 

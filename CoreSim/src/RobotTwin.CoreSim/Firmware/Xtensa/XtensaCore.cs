@@ -14,6 +14,18 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         void Write8(uint address, byte value);
         void Write16(uint address, ushort value);
         void Write32(uint address, uint value);
+
+        /// <summary>
+        /// The memory code at <paramref name="address"/> is fetched from, to read it straight: the array, the index that
+        /// <paramref name="baseAddress"/> stands for in it, and the span's end (exclusive). False for code the bus serves
+        /// otherwise; the core then reads byte by byte. A bus whose spans can move calls <see cref="XtensaCore.ForgetCodeMap"/>.
+        /// </summary>
+        bool MapCode(uint address, out byte[]? memory, out uint baseIndex, out uint baseAddress, out uint end)
+        {
+            memory = null;
+            baseIndex = baseAddress = end = 0;
+            return false;
+        }
     }
 
     /// <summary>Exception causes (EXCCAUSE) the core raises itself.</summary>
@@ -246,6 +258,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         // ================================================================ running
 
         private uint _nextPc;
+        private byte[]? _fetchMem;
+        private uint _fetchIndex, _fetchBase, _fetchSpan;
+
+        /// <summary>Forgets the fetch window: the bus calls it when a span it gave no longer holds (the flash cache remapped).</summary>
+        public void ForgetCodeMap() => _fetchMem = null;
         private bool _branched, _excepted;
 
         /// <summary>Runs <paramref name="cycles"/> clock cycles (or a little more: an instruction is not cut).</summary>
@@ -352,10 +369,32 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             uint pc = Pc;
-            uint b0 = _bus.Read8(pc);
-            int op0 = (int)(b0 & 0xF);
-            int length = op0 >= 8 ? 2 : 3;
-            uint insn = length == 2 ? b0 | (uint)_bus.Read8(pc + 1) << 8 : b0 | (uint)_bus.Read8(pc + 1) << 8 | (uint)_bus.Read8(pc + 2) << 16;
+            uint insn;
+            int length;
+            // The fetch window: the array the code lies in, read straight while the PC stays in its span.
+            if (_fetchMem == null || pc - _fetchBase > _fetchSpan - 3)
+            {
+                _fetchMem = _bus.MapCode(pc, out var memory, out uint index, out uint start, out uint end) && end - start >= 3 ? memory : null;
+                _fetchIndex = index;
+                _fetchBase = start;
+                _fetchSpan = end - start;
+                if (_fetchMem != null && pc - _fetchBase > _fetchSpan - 3) _fetchMem = null;
+            }
+
+            if (_fetchMem != null)
+            {
+                long i = _fetchIndex + (pc - _fetchBase);
+                uint b0 = _fetchMem[i];
+                length = (b0 & 0xF) >= 8 ? 2 : 3;
+                insn = length == 2 ? b0 | (uint)_fetchMem[i + 1] << 8 : b0 | (uint)_fetchMem[i + 1] << 8 | (uint)_fetchMem[i + 2] << 16;
+            }
+            else
+            {
+                uint b0 = _bus.Read8(pc);
+                length = (b0 & 0xF) >= 8 ? 2 : 3;
+                insn = length == 2 ? b0 | (uint)_bus.Read8(pc + 1) << 8 : b0 | (uint)_bus.Read8(pc + 1) << 8 | (uint)_bus.Read8(pc + 2) << 16;
+            }
+
             _nextPc = pc + (uint)length;
             _branched = _excepted = false;
             int cycles = length == 2 ? ExecuteNarrow(insn) : ExecuteWide(insn);

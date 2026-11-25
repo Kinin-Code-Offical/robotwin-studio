@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Text;
 using RobotTwin.CoreSim.Firmware.Debug;
@@ -295,8 +296,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             return false;
         }
 
+        // The data RAM (the stacks, the heap, .data/.bss) takes most loads and stores: it is tried before anything else.
+
         public byte Read8(uint a)
         {
+            uint d = a - DramBase;
+            if (d < DramSize) return _dram[d];
             var (m, o) = Resolve(a);
             if (m != null) return m[o];
             return (byte)(Read32(a & ~3u) >> (int)((a & 3) * 8));
@@ -304,6 +309,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public ushort Read16(uint a)
         {
+            uint d = a - DramBase;
+            if (d < DramSize - 1) return BinaryPrimitives.ReadUInt16LittleEndian(_dram.AsSpan((int)d, 2));
             var (m, o) = Resolve(a);
             if (m != null) return (ushort)(m[o] | m[o + 1] << 8);
             return (ushort)(Read32(a & ~3u) >> (int)((a & 2) * 8));
@@ -311,6 +318,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public uint Read32(uint a)
         {
+            uint d = a - DramBase;
+            if (d < DramSize - 3) return BinaryPrimitives.ReadUInt32LittleEndian(_dram.AsSpan((int)d, 4));
             var (m, o) = Resolve(a);
             if (m != null) return (uint)(m[o] | m[o + 1] << 8 | m[o + 2] << 16 | m[o + 3] << 24);
             if (IsPeripheral(a, out uint register)) return ReadRegister(register);
@@ -319,6 +328,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public void Write8(uint a, byte value)
         {
+            uint d = a - DramBase;
+            if (d < DramSize)
+            {
+                _dram[d] = value;
+                return;
+            }
+
             if (IsCachedFlash(a)) return;   // the flash is read-only through the cache
             var (m, o) = Resolve(a);
             if (m != null)
@@ -332,6 +348,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public void Write16(uint a, ushort value)
         {
+            uint d = a - DramBase;
+            if (d < DramSize - 1)
+            {
+                BinaryPrimitives.WriteUInt16LittleEndian(_dram.AsSpan((int)d, 2), value);
+                return;
+            }
+
             if (IsCachedFlash(a)) return;
             var (m, o) = Resolve(a);
             if (m != null)
@@ -346,6 +369,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public void Write32(uint a, uint value)
         {
+            uint d = a - DramBase;
+            if (d < DramSize - 3)
+            {
+                BinaryPrimitives.WriteUInt32LittleEndian(_dram.AsSpan((int)d, 4), value);
+                return;
+            }
+
             if (IsCachedFlash(a)) return;
             var (m, o) = Resolve(a);
             if (m != null)
