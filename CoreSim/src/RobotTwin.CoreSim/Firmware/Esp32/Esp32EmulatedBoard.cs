@@ -110,6 +110,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         }
 
         /// <summary>What a touch pad's measurement gives (untouched ≈ 70–80, touched &lt; 20), as in the fast mode.</summary>
+        /// <summary>[neopixel] The WS2812B strips wired to the board's GPIOs.</summary>
+        public System.Collections.Generic.List<(int Gpio, Devices.Ws2812Load Strip)> LedStrips { get; } = new System.Collections.Generic.List<(int, Devices.Ws2812Load)>();
+
+        public void AttachLedStrip(int gpio, Devices.Ws2812Load strip) => LedStrips.Add((gpio, strip ?? throw new ArgumentNullException(nameof(strip))));
+
         public void SetTouchValue(int gpio, int value)
         {
             if (gpio < 0 || gpio >= _touch.Length) throw new ArgumentOutOfRangeException(nameof(gpio));

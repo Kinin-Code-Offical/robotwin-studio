@@ -44,6 +44,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>Queues text for a UART's receive line.</summary>
         void SendSerial(string text, int port = 0);
 
+        /// <summary>[neopixel] A WS2812B strip whose DIN is wired to <paramref name="gpio"/>: the frames the firmware sends there light it.</summary>
+        void AttachLedStrip(int gpio, Devices.Ws2812Load strip);
+
         /// <summary>What touchRead() returns for a touch pad (untouched ≈ 70–80, touched &lt; 20).</summary>
         void SetTouchValue(int gpio, int value);
 
