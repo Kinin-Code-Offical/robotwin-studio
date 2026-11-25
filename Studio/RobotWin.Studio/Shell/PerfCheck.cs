@@ -33,6 +33,24 @@ namespace RobotWin.Studio.Shell
             public string Parts = string.Empty;       // where the time went, for the report
         }
 
+        /// <summary>
+        /// The check runs in a process whose code is fully optimised from its first call: with .NET's tiered compilation a
+        /// world measured early in a run still ran partly unoptimised code (the car cost 277 ms per simulated second
+        /// measured alone, 103 after four other worlds), so a world's cost depended on what was measured before it. Unless
+        /// this already is that process, the app starts itself again with tiered compilation off and returns its exit code.
+        /// </summary>
+        public static int? RunFullyOptimised(string[] args)
+        {
+            if (Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") == "0" || Environment.ProcessPath is not { } exe) return null;
+            var start = new ProcessStartInfo(exe) { UseShellExecute = false };
+            foreach (var a in args) start.ArgumentList.Add(a);
+            start.Environment["DOTNET_TieredCompilation"] = "0";
+            using var child = Process.Start(start);
+            if (child == null) return null;
+            child.WaitForExit();
+            return child.ExitCode;
+        }
+
         public static int Run(string reportPath, string? baselinePath, bool update, double seconds, double tolerance, IReadOnlyCollection<string>? only)
         {
             baselinePath ??= Path.Combine(RepoRoot() ?? AppContext.BaseDirectory, DefaultBaseline);

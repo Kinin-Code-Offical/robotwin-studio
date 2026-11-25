@@ -103,6 +103,12 @@ namespace RobotWin.Studio
                 // [perf] every world template headless, its cost per simulated second against a baseline; 1 = a regression
                 double perfSeconds = double.TryParse(Arg("--perf-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var ps) && ps > 0 ? ps : 1.0;
                 double perfTolerance = double.TryParse(Arg("--perf-tolerance"), NumberStyles.Float, CultureInfo.InvariantCulture, out var pt) && pt > 0 ? pt / 100 : 0.25;
+                if (Shell.PerfCheck.RunFullyOptimised(args) is { } childExit)
+                {
+                    Shutdown(childExit);
+                    return;
+                }
+
                 Shutdown(Shell.PerfCheck.Run(perfReport, Arg("--perf-baseline"), args.Contains("--perf-update"), perfSeconds, perfTolerance, Arg("--perf-filter")?.Split(',')));
                 return;
             }
