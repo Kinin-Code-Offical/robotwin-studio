@@ -168,6 +168,13 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Length in metres; 0 = from the distance between the ends plus slack.</summary>
         public double Length { get; set; }
 
+        /// <summary>
+        /// [route] Cut to its way and held along it with cable ties (a drone's motor and battery leads, a robot's harness):
+        /// with no length of its own it gets only a few millimetres of slack, and it is laid along its route instead of
+        /// bowed out.
+        /// </summary>
+        public bool Tied { get; set; }
+
         /// <summary>American wire gauge (24 = typical jumper wire, 18 = motor lead, 12 = battery lead).</summary>
         public double Awg { get; set; } = 24;
 

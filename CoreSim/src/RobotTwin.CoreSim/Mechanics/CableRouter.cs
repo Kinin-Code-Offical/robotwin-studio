@@ -15,9 +15,11 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>
         /// Path from <paramref name="from"/> to <paramref name="to"/> (world, both ends included), or null when no way
         /// exists within the searched region. <paramref name="passable"/> says where a body may be ignored (a plug's
-        /// own part around its pin, a propeller's swept disc).
+        /// own part around its pin). <paramref name="keepOut"/> marks space no wire may enter although no solid is there
+        /// (a propeller's swept disc: the spinning blades would cut it): it gets the point and the wire's clearance.
         /// </summary>
-        public static List<Vec3>? Route(PhysicsScene scene, Vec3 from, Vec3 to, double radius, Func<SceneBody, Vec3, bool>? passable = null, int maxCells = 250_000)
+        public static List<Vec3>? Route(PhysicsScene scene, Vec3 from, Vec3 to, double radius, Func<SceneBody, Vec3, bool>? passable = null, int maxCells = 250_000,
+            Func<Vec3, double, bool>? keepOut = null)
         {
             double span = (to - from).Length;
             foreach (double pad in new[] { Math.Max(0.03, 0.3 * span), Math.Max(0.15, span) })
@@ -28,9 +30,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 foreach (double cell in new[] { coarse, coarse * 0.55 })
                 {
                     if (cell < 0.0012) continue;
-                    var path = Search(scene, from, to, radius, passable, pad, cell, maxCells);
+                    var path = Search(scene, from, to, radius, passable, pad, cell, maxCells, keepOut);
                     if (path == null) continue;
-                    var pulled = Pull(scene, path, radius, passable, out bool clear);
+                    var pulled = Pull(scene, path, radius, passable, out bool clear, keepOut);
                     if (clear) return pulled;
                 }
             }
@@ -61,6 +63,7 @@ namespace RobotTwin.CoreSim.Mechanics
             public readonly List<SceneBody> Bodies = new List<SceneBody>();
             public PhysicsScene Scene = null!;
             public Func<SceneBody, Vec3, bool>? Passable;
+            public Func<Vec3, double, bool>? KeepOut;
 
             public int Index(int x, int y, int z) => (z * Ny + y) * Nx + x;
 
@@ -76,6 +79,7 @@ namespace RobotTwin.CoreSim.Mechanics
             public bool Blocked(Vec3 c, double inflate)
             {
                 if (Scene.GroundEnabled && c.Z < Scene.GroundHeight(c.X, c.Y) + inflate) return true;
+                if (KeepOut != null && KeepOut(c, inflate)) return true;
                 foreach (var b in Bodies)
                 {
                     var shape = b.EffectiveShape!;
@@ -94,7 +98,8 @@ namespace RobotTwin.CoreSim.Mechanics
             }
         }
 
-        private static List<Vec3>? Search(PhysicsScene scene, Vec3 from, Vec3 to, double radius, Func<SceneBody, Vec3, bool>? passable, double pad, double cell, int maxCells)
+        private static List<Vec3>? Search(PhysicsScene scene, Vec3 from, Vec3 to, double radius, Func<SceneBody, Vec3, bool>? passable, double pad, double cell, int maxCells,
+            Func<Vec3, double, bool>? keepOut = null)
         {
             var lo = new Vec3(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Min(from.Z, to.Z)) - new Vec3(pad, pad, pad);
             var hi = new Vec3(Math.Max(from.X, to.X), Math.Max(from.Y, to.Y), Math.Max(from.Z, to.Z)) + new Vec3(pad, pad, pad);
@@ -112,7 +117,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 Ny = Math.Max(1, (int)Math.Ceiling(size.Y / cell)),
                 Nz = Math.Max(1, (int)Math.Ceiling(size.Z / cell)),
                 Scene = scene,
-                Passable = passable
+                Passable = passable,
+                KeepOut = keepOut
             };
             g.State = new byte[g.Nx * g.Ny * g.Nz];
             var centre = (lo + hi) * 0.5;
@@ -215,7 +221,8 @@ namespace RobotTwin.CoreSim.Mechanics
         /// Pulls a cell path taut: from each corner, the furthest later point the straight line reaches without passing
         /// through a solid or coming closer to one than the wire's radius.
         /// </summary>
-        private static List<Vec3> Pull(PhysicsScene scene, List<Vec3> path, double radius, Func<SceneBody, Vec3, bool>? passable, out bool clear)
+        private static List<Vec3> Pull(PhysicsScene scene, List<Vec3> path, double radius, Func<SceneBody, Vec3, bool>? passable, out bool clear,
+            Func<Vec3, double, bool>? keepOut = null)
         {
             // [perf] only the bodies that can come near the path's box
             var lo = path[0];
@@ -237,7 +244,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 double reach = bs.BoundingRadius + radius + 1e-3;
                 if (dx * dx + dy * dy + dz * dz <= reach * reach) bodies.Add(b);
             }
-            var probe = new Grid { Scene = scene, Passable = passable };
+            var probe = new Grid { Scene = scene, Passable = passable, KeepOut = keepOut };
             probe.Bodies.AddRange(bodies);
 
             bool Clear(Vec3 p, Vec3 q)

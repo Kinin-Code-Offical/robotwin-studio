@@ -99,7 +99,8 @@ namespace RobotWin.Studio.World
             var a = World.Find(cable.A.ObjectId);
             var b = World.Find(cable.B.ObjectId);
             if (a == null || b == null) return 0.2;
-            return CableRope.DefaultLength((WorldAnchor(a, cable.A.Pin) - WorldAnchor(b, cable.B.Pin)).Length);
+            double span = (WorldAnchor(a, cable.A.Pin) - WorldAnchor(b, cable.B.Pin)).Length;
+            return cable.Tied ? CableRope.TiedLength(span) : CableRope.DefaultLength(span);
         }
 
         private int PoseSignature()

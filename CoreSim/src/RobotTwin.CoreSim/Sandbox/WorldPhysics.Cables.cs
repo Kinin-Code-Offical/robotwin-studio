@@ -97,9 +97,12 @@ namespace RobotTwin.CoreSim.Sandbox
             ShortCables.Clear();
             BlockedCables.Clear();
             _routes.Clear();
-            // Propeller discs are swept volumes, not solids; wires rest on everything else.
+            // Propeller discs are swept volumes, not solids: a wire never rests on one. Nor does it run through one: the
+            // spinning blades would cut it, so routes keep out of each disc with a margin (on a real quad the motor and
+            // battery leads run along the arms, under the props, held by cable ties).
             var ignore = new HashSet<SceneBody>();
             foreach (var pm in _props) ignore.Add(pm.It.Body);
+            _keepOut = PropellerKeepOut();
             // The plugs and the way each wire leaves its pin, in turn (each looks at the parts around its own pin).
             var wires = new List<(WorldCable Cable, Item A, Item B, RopeEnd EndA, RopeEnd EndB)>();
             foreach (var cable in world.Cables)
@@ -136,20 +139,22 @@ namespace RobotTwin.CoreSim.Sandbox
                 double run = route != null ? CableRouter.Length(route) + 2 * RouteLead : span;
                 if (route == null) BlockedCables.Add(cable.Id);
                 _routes[cable.Id] = route;
-                double length = cable.Length > 0 ? cable.Length : CableRope.DefaultLength(Math.Max(span, run));
+                double length = cable.Length > 0 ? cable.Length : cable.Tied ? CableRope.TiedLength(Math.Max(span, run)) : CableRope.DefaultLength(Math.Max(span, run));
                 // A wire shorter than its way between the pins could not be plugged in: it starts stretched and pulls the parts together.
                 if (cable.Length > 0 && cable.Length < Math.Max(span, run)) ShortCables.Add((cable.Id, Math.Max(span, run), cable.Length));
                 var rope = new CableRope(cable.Id, endA, endB, length, cable.Awg);
                 rope.Ignore = ignore;
+                if (_discs.Count > 0) rope.KeepOut = KeepOutPush;
                 var rigid = WeldedSet(ia.Body);   // [weld] both plugs on one rigid body: its forces on that body are internal
                 if (rigid.Contains(ib.Body)) rope.InternalTo = rigid;
                 var link = new CableLink { Cable = cable, Rope = rope };
                 rope.Unplugged += (end, force) => OnUnplugged(link, end, force);
                 if (seed?.Invoke(cable.Id) is { Count: >= 2 } previous) rope.Lay(previous);
+                else if (cable.Tied && route != null && route.Count > 2) rope.LayAlong(route.GetRange(1, route.Count - 2));   // tied along its way
                 else rope.LayClear(Scene);   // its slack bowed the way with the fewest parts in it
                 // A shape through a solid (a bow through a fuselage wall, an earlier shape a part was moved onto) is not
                 // where a wire can be: it is laid along the route instead.
-                if (route != null && rope.Crossings(Scene).Count > 0) rope.LayAlong(route.GetRange(1, route.Count - 2));
+                if (route != null && (rope.Crossings(Scene).Count > 0 || rope.KeepOutDepth() > 0)) rope.LayAlong(route.GetRange(1, route.Count - 2));
                 laying += Lap();
                 // Settled in full even from the editor's settled shape: a short warm-up let a wire kick its parts at the
                 // start of a run (the glass-pouring servo's world never drew its next frame).
@@ -195,10 +200,60 @@ namespace RobotTwin.CoreSim.Sandbox
             }
         }
 
+        /// <summary>Where no wire may go: inside a propeller's swept disc or within its margin (radius and clearance in m).</summary>
+        private Func<Vec3, double, bool>? _keepOut;
+
+        /// <summary>The discs wires keep clear of: each propeller's body, the radius and the half thickness kept out (m).</summary>
+        private List<(SceneBody Body, double Radius, double Half)> _discs = new List<(SceneBody, double, double)>();
+
+        /// <summary>A propeller's disc a wire keeps clear of: the blades' circle plus 8 mm, their height plus 6 mm above and below.</summary>
+        private Func<Vec3, double, bool>? PropellerKeepOut()
+        {
+            _discs = _props.Select(pm =>
+            {
+                var body = pm.It.Body;
+                double radius = pm.Spec.Diameter / 2;
+                // The body is the swept disc, a cylinder of the blades' height: its half height from its bounding sphere.
+                double br = body.EffectiveShape?.BoundingRadius ?? radius;
+                double half = br > radius ? Math.Sqrt(br * br - radius * radius) : 0.002;
+                return (Body: body, Radius: radius + 0.008, Half: Math.Max(0.001, half) + 0.006);
+            }).ToList();
+            if (_discs.Count == 0) return null;
+            return (x, clearance) => KeepOutPush(x, clearance) != null;
+        }
+
+        /// <summary>
+        /// The shortest move that takes a point (with a wire's clearance) out of every propeller disc it is in: above or
+        /// below the disc, or out past its rim. Null when it is in none.
+        /// </summary>
+        private Vec3? KeepOutPush(Vec3 x, double clearance)
+        {
+            Vec3? total = null;
+            foreach (var (body, radius, half) in _discs)
+            {
+                var axis = body.Orientation.Rotate(Vec3.UnitZ);
+                var d = x - body.Position;
+                double along = d.Dot(axis);
+                double h = half + clearance, r = radius + clearance;
+                if (Math.Abs(along) >= h) continue;
+                var radial = d - axis * along;
+                double rl = radial.Length;
+                if (rl >= r) continue;
+                var axial = axis * ((along >= 0 ? h : -h) - along);
+                var outward = rl > 1e-9 ? radial * ((r - rl) / rl) : axis.Cross(Vec3.UnitX).Length > 1e-6 ? axis.Cross(Vec3.UnitX).Normalized() * r : axis.Cross(Vec3.UnitY).Normalized() * r;
+                var push = axial.Length <= outward.Length ? axial : outward;
+                x += push;
+                total = (total ?? Vec3.Zero) + push;
+            }
+
+            return total;
+        }
+
         private bool ExitBlocked(Vec3 pin, Vec3 dir, SceneBody own, HashSet<SceneBody> ignore, double radius)
         {
             var tip = pin + dir * RouteLead;
             if (Scene.GroundEnabled && tip.Z < Scene.GroundHeight(tip.X, tip.Y) + radius) return true;
+            if (_keepOut != null && _keepOut(tip, radius)) return true;
             foreach (var b in Scene.Bodies)
             {
                 if (ReferenceEquals(b, own) || ignore.Contains(b) || !b.Collides || b.EffectiveShape is not { HasSolid: true } shape) continue;
@@ -225,7 +280,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 ignore.Contains(body)
                 || (ReferenceEquals(body, bodyA) && (x - pinA).Length < housing)
                 || (ReferenceEquals(body, bodyB) && (x - pinB).Length < housing);
-            return CableRouter.Route(Scene, from, to, CableRope.RadiusOf(awg), Passable);
+            return CableRouter.Route(Scene, from, to, CableRope.RadiusOf(awg), Passable, keepOut: _keepOut);
         }
 
         /// <summary>Cables whose set length is shorter than their way between the pins (id, that way, length; m).</summary>

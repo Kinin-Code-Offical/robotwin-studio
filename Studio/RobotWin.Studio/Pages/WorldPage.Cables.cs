@@ -188,6 +188,11 @@ namespace RobotWin.Studio.Pages
             sizes.Children.Add(awg);
             sizes.Children.Add(JumperLengthBox(c));
             Inspector.Children.Add(sizes);
+            // [route] cut to its way and held along it with cable ties: little slack, laid along its route
+            var tied = new CheckBox { Content = "Kelepçeli (yolu boyunca, az paylı)", IsChecked = c.Tied, Margin = new Thickness(0, 0, 0, 8), ToolTip = "Kablo yolunun boyuna kesilip kelepçeyle tutturulmuş: uzunluk verilmemişse yalnız birkaç milimetre pay alır ve dışarı bükülmeden yolu boyunca serilir" };
+            tied.Style = (Style)Application.Current.FindResource("Switch");
+            tied.Click += (_, _) => Edit(tied.IsChecked == true ? "Kablo kelepçelendi" : "Kablo kelepçesi söküldü", () => c.Tied = tied.IsChecked == true);
+            Inspector.Children.Add(tied);
 
             Inspector.Children.Add(Caption("Ölçüm"));
             _diagValues = new Grid();

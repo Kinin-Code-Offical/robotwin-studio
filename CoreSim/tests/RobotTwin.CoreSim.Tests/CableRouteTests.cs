@@ -51,6 +51,50 @@ namespace RobotTwin.CoreSim.Tests
             return new CablePins(Top(c.A.ObjectId), Top(c.B.ObjectId));
         }
 
+        /// <summary>
+        /// A propeller's swept disc lies across the straight way between two plugs: the route goes around it (a spinning
+        /// prop would cut a wire through it), and a wire laid there and left to settle stays out of it.
+        /// </summary>
+        [Fact]
+        public void AWireKeepsOutOfAPropellersDisc()
+        {
+            var scene = new PhysicsScene();
+            Vec3 centre = new Vec3(0, 0, 0.03), axis = Vec3.UnitZ;
+            const double radius = 0.05, half = 0.008;
+            Vec3? Push(Vec3 x, double clearance)
+            {
+                var d = x - centre;
+                double along = d.Dot(axis);
+                var radial = d - axis * along;
+                if (Math.Abs(along) >= half + clearance || radial.Length >= radius + clearance) return null;
+                double up = half + clearance - along, down = -half - clearance - along, outward = radius + clearance - radial.Length;
+                double vertical = Math.Abs(up) < Math.Abs(down) ? up : down;
+                return Math.Abs(vertical) <= outward ? axis * vertical : radial.Normalized() * outward;
+            }
+
+            bool Inside(Vec3 x, double clearance) => Push(x, clearance) != null;
+            var from = new Vec3(-0.09, 0, 0.03);
+            var to = new Vec3(0.09, 0, 0.03);
+            var route = CableRouter.Route(scene, from, to, 0.001, null, 250_000, Inside);
+            Assert.NotNull(route);
+            for (int i = 1; i < route!.Count; i++)
+                for (int k = 0; k <= 20; k++)
+                {
+                    var x = route[i - 1] + (route[i] - route[i - 1]) * (k / 20.0);
+                    Assert.False(Inside(x, 0.0005), $"route point ({x.X:F3}, {x.Y:F3}, {x.Z:F3}) inside the disc");
+                }
+
+            _out.WriteLine($"around the disc: {CableRouter.Length(route) * 1000:F0} mm (straight 180 mm)");
+            Assert.True(CableRouter.Length(route) > 0.18);
+
+            // A wire laid straight through the disc and settled under gravity: the keep-out moves it out.
+            var rope = new CableRope("w", new RopeEnd { Local = from, Exit = Vec3.UnitX }, new RopeEnd { Local = to, Exit = -Vec3.UnitX }, 0.2, 24) { KeepOut = Push };
+            rope.LayAlong(new[] { new Vec3(0, 0, 0.03) });
+            Assert.True(rope.KeepOutDepth() > 0);
+            rope.Relax(scene, 300);
+            Assert.True(rope.KeepOutDepth() < 1e-4, $"after settling the wire still lies {rope.KeepOutDepth() * 1000:F2} mm in the disc");
+        }
+
         [Fact]
         public void AWireBetweenTwoPartsInAClosedBoxStaysInside()
         {

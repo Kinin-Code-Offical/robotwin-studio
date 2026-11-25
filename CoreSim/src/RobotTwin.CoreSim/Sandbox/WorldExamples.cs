@@ -221,8 +221,10 @@ namespace RobotTwin.CoreSim.Sandbox
             void Wire(WorldObject a, string pa, WorldObject b, string pb, double awg, string colour, bool soldered = false)
             {
                 var cable = w.Connect(new CableEnd { ObjectId = a.Id, Pin = pa }, new CableEnd { ObjectId = b.Id, Pin = pb }, awg, colour);
-                // Cut to the run plus a little slack: a loose loop of motor wire ends up in the prop.
-                cable.Length = 0;   // cut to the pins with a little slack: a wire measured between part centres can be shorter than the pin distance
+                // Cut to their way and tied along the arms, under the props, as on a real quad: a loose loop of motor wire
+                // ends up in the prop.
+                cable.Length = 0;
+                cable.Tied = true;
                 cable.SolderedA = cable.SolderedB = soldered;   // power leads are soldered on a real quad: no plug contact resistance
             }
             foreach (var c in corners)

@@ -6984,7 +6984,11 @@
   "SIMC (PID), yumuşak": "SIMC (PID), smooth",
   "enkoderden okunan çıkış mili açısı (derece; tur aşınca da sayım sürer)": "the output shaft's angle read from the encoder (degrees; the count goes on past a turn)",
   "ölçtüğünüz çıkış mili hızı (dev/dk)": "the output shaft speed you measure (rpm)",
-  "PID kodu panoya kopyalandı: y enkoderden okunan açı (derece), dönen değer işaretiyle yön, büyüklüğüyle PWM.": "PID code copied to the clipboard: y is the angle read from the encoder (degrees); the result gives the direction by its sign and the PWM by its size."
+  "PID kodu panoya kopyalandı: y enkoderden okunan açı (derece), dönen değer işaretiyle yön, büyüklüğüyle PWM.": "PID code copied to the clipboard: y is the angle read from the encoder (degrees); the result gives the direction by its sign and the PWM by its size.",
+  "Kelepçeli (yolu boyunca, az paylı)": "Tied (along its way, little slack)",
+  "Kablo yolunun boyuna kesilip kelepçeyle tutturulmuş: uzunluk verilmemişse yalnız birkaç milimetre pay alır ve dışarı bükülmeden yolu boyunca serilir": "The cable is cut to its way and held with cable ties: without a length of its own it gets only a few millimetres of slack and is laid along its route instead of bowed out",
+  "Kablo kelepçelendi": "Cable tied",
+  "Kablo kelepçesi söküldü": "Cable ties removed"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

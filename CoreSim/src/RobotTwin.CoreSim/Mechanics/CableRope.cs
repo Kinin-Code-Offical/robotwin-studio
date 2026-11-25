@@ -163,6 +163,9 @@ namespace RobotTwin.CoreSim.Mechanics
         /// </summary>
         public static double DefaultLength(double span) => Math.Max(0.04, 1.1 * span + 0.015);
 
+        /// <summary>A cable cut to its way and tied along it: 2 % and 4 mm of slack.</summary>
+        public static double TiedLength(double run) => Math.Max(0.02, 1.02 * run + 0.004);
+
         // ================================================================ layout
 
         /// <summary>
@@ -287,7 +290,7 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 LayBow(bow);
                 Gather(scene, 0.01);
-                double pen = Penetration(scene) + Depth(scene);
+                double pen = Penetration(scene) + Depth(scene) + 10 * KeepOutDepth();   // through a prop disc counts as much as through a solid
                 if (pen < bestPen - 1e-6)
                 {
                     bestPen = pen;
@@ -720,9 +723,26 @@ namespace RobotTwin.CoreSim.Mechanics
 
         /// <summary>
         /// Bodies the wire does not touch: propellers, whose body is the disc the blades sweep, not a solid. (A wire in a
-        /// real prop disc would be struck and cut; that is not modelled.)
+        /// real prop disc would be struck and cut; that is not modelled: <see cref="KeepOut"/> keeps it out instead.)
         /// </summary>
         public HashSet<SceneBody>? Ignore { get; set; }
+
+        /// <summary>
+        /// Space the wire is kept out of although nothing solid is there (a propeller's swept disc, as cable ties keep a
+        /// quad's leads under its props): the move that takes a point, with the wire's clearance, out of it; null when it
+        /// is not in it. The wire is moved, nothing is pushed.
+        /// </summary>
+        public Func<Vec3, double, Vec3?>? KeepOut { get; set; }
+
+        /// <summary>How deep the wire lies in its keep-out space, summed over its points (m; 0: clear).</summary>
+        public double KeepOutDepth()
+        {
+            if (KeepOut == null) return 0;
+            double sum = 0;
+            for (int i = 0; i <= Segments; i++)
+                if (KeepOut(_x[i], Radius) is { } push) sum += push.Length;
+            return sum;
+        }
 
         /// <summary>
         /// [weld] The rigid body both plugs sit on (its welded parts), when they do. The wire still lies on it, but the
@@ -773,6 +793,8 @@ namespace RobotTwin.CoreSim.Mechanics
                     Sweep(b, ref x, i, h);
                     PushOut(b, ref x, i, h, 1.0);
                 }
+
+                if (KeepOut != null && KeepOut(x, r) is { } push) x += push;
             }
 
             CollideSegments(h);

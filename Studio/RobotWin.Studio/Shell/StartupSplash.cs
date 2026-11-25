@@ -123,77 +123,10 @@ namespace RobotWin.Studio.Shell
             var display = new FontFamily("Segoe UI Variable Display, Segoe UI");
             const double stageHeight = 250;
 
-            // ---- the stage: a board's traces lead from the left to a robot arm on the right
+            // ---- the stage: plain, the name on it (no drawing: the artwork is the user's to make)
             var stage = new Canvas { Width = Width, Height = stageHeight, ClipToBounds = true, Background = B(Stage) };
-            for (double x = 12; x < Width; x += 24)
-            for (double y = 12; y < stageHeight; y += 24)
-            {
-                var d = new Ellipse { Width = 2, Height = 2, Fill = B(Dot) };
-                Canvas.SetLeft(d, x - 1);
-                Canvas.SetTop(d, y - 1);
-                stage.Children.Add(d);
-            }
 
-            var trace = B(Accent, 0x55);
-            var pad = B(Accent, 0x99);
-            void Trace(params Point[] pts)
-            {
-                var geo = new PathGeometry();
-                var fig = new PathFigure { StartPoint = pts[0], IsFilled = false };
-                for (int i = 1; i < pts.Length; i++) fig.Segments.Add(new LineSegment(pts[i], true));
-                geo.Figures.Add(fig);
-                geo.Freeze();
-                stage.Children.Add(new Path { Data = geo, Stroke = trace, StrokeThickness = 2, StrokeLineJoin = PenLineJoin.Round });
-                foreach (var p in new[] { pts[0], pts[pts.Length - 1] })
-                {
-                    var e = new Ellipse { Width = 8, Height = 8, Fill = pad };
-                    Canvas.SetLeft(e, p.X - 4);
-                    Canvas.SetTop(e, p.Y - 4);
-                    stage.Children.Add(e);
-                }
-            }
-
-            // a chip the traces start from
-            var chip = new Rectangle { Width = 56, Height = 40, RadiusX = 4, RadiusY = 4, Fill = B(Line), Stroke = B(Accent, 0x77), StrokeThickness = 1.5 };
-            Canvas.SetLeft(chip, 402);
-            Canvas.SetTop(chip, 162);
-            stage.Children.Add(chip);
-            Trace(new Point(458, 172), new Point(498, 172), new Point(530, 140), new Point(560, 140));
-            Trace(new Point(458, 182), new Point(512, 182), new Point(536, 206), new Point(600, 206));
-            Trace(new Point(458, 192), new Point(484, 192), new Point(508, 216), new Point(508, 236));
-            Trace(new Point(402, 176), new Point(372, 176), new Point(346, 202), new Point(346, 236));
-            Trace(new Point(430, 162), new Point(430, 128), new Point(456, 102), new Point(492, 102));
-
-            // the robot arm: base, two links, a gripper; joints as rings
-            var arm = B(Accent);
-            var link = B(Accent, 0xCC);
-            void Bar(Point a, Point b, double width)
-            {
-                stage.Children.Add(new System.Windows.Shapes.Line { X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y, Stroke = link, StrokeThickness = width, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round });
-            }
-
-            void Joint(Point c, double r)
-            {
-                var e = new Ellipse { Width = 2 * r, Height = 2 * r, Fill = B(Stage), Stroke = arm, StrokeThickness = 3 };
-                Canvas.SetLeft(e, c.X - r);
-                Canvas.SetTop(e, c.Y - r);
-                stage.Children.Add(e);
-            }
-
-            var baseRect = new Rectangle { Width = 70, Height = 14, RadiusX = 3, RadiusY = 3, Fill = arm };
-            Canvas.SetLeft(baseRect, 611);
-            Canvas.SetTop(baseRect, 226);
-            stage.Children.Add(baseRect);
-            Point shoulder = new Point(646, 214), elbow = new Point(616, 132), wrist = new Point(548, 84);
-            Bar(shoulder, elbow, 12);
-            Bar(elbow, wrist, 9);
-            Bar(wrist, new Point(534, 104), 5);
-            Bar(wrist, new Point(528, 76), 5);
-            Joint(shoulder, 11);
-            Joint(elbow, 9);
-            Joint(wrist, 7);
-
-            // ---- name over the stage's quiet left half
+            // ---- the name
             var mark = new Image { Width = 56, Height = 56, Source = Branding.Logo.Render(112), HorizontalAlignment = HorizontalAlignment.Left };
             var title = new TextBlock { Text = "RobotWin Studio", FontFamily = display, FontSize = 32, FontWeight = FontWeights.SemiBold, Foreground = B(Text), Margin = new Thickness(0, 18, 0, 0) };
             var tagline = new TextBlock
