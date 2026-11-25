@@ -422,6 +422,15 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 // windows are shorter than a normal turn, and on the chip both cores run truly at once.
                 // In light sleep neither core runs: time goes on to the wake-up in one turn (or to the end of the run).
                 long quantum = _lightSleep ? Math.Min(CyclesToWake(), int.MaxValue) : AppRunning && (HighPriority(Pro) || HighPriority(App)) ? 16 : turn;
+                if (!_lightSleep && quantum == turn && Idle(Pro, 0) && (!AppRunning || Idle(App, 1)))
+                {
+                    // Both cores asleep in WAITI with nothing pending: a longer turn (up to 25 µs, never past a core's next
+                    // CCOMPARE, the FreeRTOS tick) keeps them asleep throughout; the peripherals catch up by time at its end.
+                    long idle = Math.Min((long)(25e-6 * CpuHz), CyclesToCompare(Pro));
+                    if (AppRunning) idle = Math.Min(idle, CyclesToCompare(App));
+                    if (idle > turn) quantum = idle;
+                }
+
                 int step = (int)Math.Min(quantum, cycles - done);
                 try
                 {
@@ -454,6 +463,24 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             return cpu == 0
                 ? ((stall >> 26) & 0x3F) == 0x21 && ((options >> 2) & 3) == 2
                 : ((stall >> 20) & 0x3F) == 0x21 && (options & 3) == 2;
+        }
+
+        /// <summary>A core asleep in WAITI (or stalled) with no enabled interrupt pending.</summary>
+        private bool Idle(XtensaCore c, int cpu) =>
+            Stalled(cpu) || (c.Waiting && ((c.Interrupt | c.ExternalLevels) & c.IntEnable) == 0);
+
+        /// <summary>Cycles until the core's next enabled CCOMPARE match (its tick), or a large number when none is armed.</summary>
+        private static long CyclesToCompare(XtensaCore c)
+        {
+            long best = long.MaxValue;
+            for (int i = 0; i < 3; i++)
+            {
+                if ((c.IntEnable & (1u << XtensaCore.TimerInterrupt[i])) == 0) continue;
+                uint left = c.Ccompare[i] - c.Ccount;
+                if (left != 0 && left < best) best = left;
+            }
+
+            return best;
         }
 
         /// <summary>The CPU interrupts of level 4 and up (the high-priority ones: the interrupt watchdog, cache errors, IPC …).</summary>
