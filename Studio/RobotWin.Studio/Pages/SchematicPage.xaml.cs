@@ -721,6 +721,7 @@ namespace RobotWin.Studio.Pages
             }
 
             if (locked && editable.Count > 0) Inspector.Children.Add(Hint("Parametreleri değiştirmek için simülasyonu durdurun."));
+            BuildSpiceSection(part, locked);   // [spice] Pages/SchematicPage.Spice.cs
             BuildVariantSection(part, def, parameters, locked);
             BuildToleranceSection(part, def);
 

@@ -86,7 +86,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - 3B baskı uygunluğu.
   - (STEP içe/dışa aktarma yapıldı: Open CASCADE köprüsü, aşağıda Dış biçimler.)
 - [~] **Devre simülasyonu:** çözücü, ERC, Monte Carlo ve hasar var. Eksikler:
-  - üretici SPICE modelleri;
+  - [~] üretici SPICE modelleri: `.model` kartları (D, NPN/PNP, NMOS/PMOS'un VTO'su) parçaya (`Design/SpiceModels.cs`); `.SUBCKT` alt devreleri henüz yok;
   - [x] AC ve frekans cevabı: çalışma noktasında küçük işaret analizi (`AnalogSimulator.AcResponse`: cihazlar iki adım uzunluğunda damgalanıp G + jωC ayrıştırılır), devre sayfasında Bode çizimi;
   - anahtarlamalı güç;
   - besleme açılışı;

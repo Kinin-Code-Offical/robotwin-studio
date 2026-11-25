@@ -7319,7 +7319,11 @@
   "frekans": "frequency",
   "−3 dB köşesi aralıkta yok": "No −3 dB corner in the range",
   "Devrede gerilim kaynağı yok: bir pil, güç kaynağı ya da sinyal üreteci ekleyin.": "The circuit has no voltage source: add a battery, a power supply or a signal generator.",
-  "Çözüm yok: devre bu kaynakla tekil (kaynağın uçları kısa ya da açık mı?).": "No solution: the circuit is singular with this source (are its terminals shorted or open?)."
+  "Çözüm yok: devre bu kaynakla tekil (kaynağın uçları kısa ya da açık mı?).": "No solution: the circuit is singular with this source (are its terminals shorted or open?).",
+  "SPICE modeli yapıştır…": "Paste a SPICE model…",
+  "Üreticinin .model kartını yapıştırın (örneğin .model 1N4148 D(IS=2.52n N=1.752 ...)): Is, N, Rs, BV, BF, VAF, Cje, VTO … parçanın değerleri olur": "Paste the manufacturer's .model card (for example .model 1N4148 D(IS=2.52n N=1.752 ...)): Is, N, Rs, BV, BF, VAF, Cje, VTO … become the part's values",
+  "Üreticinin .model kartı (birden çok satır ve + devam satırları olabilir):": "The manufacturer's .model card (it may run over several lines with + continuations):",
+  "Bu parçaya uyan bir .model kartı bulunamadı (diyot için D, NPN/PNP transistör, NMOS/PMOS).": "No .model card fits this part (D for a diode, NPN/PNP transistor, NMOS/PMOS)."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10349,6 +10353,10 @@
   "−3 dB köşesi: {…}": "−3 dB corner: {0}",
   "En yüksek: {…} dB, {…}": "Peak: {0} dB, {1}",
   "Hesaplanamadı: {…}": "Could not compute: {0}",
-  "'{…}' bir gerilim kaynağı değil.": "'{0}' is not a voltage source."
+  "'{…}' bir gerilim kaynağı değil.": "'{0}' is not a voltage source.",
+  "SPICE modeli — {…}": "SPICE model — {0}",
+  "{…}: SPICE modeli {…}": "{0}: SPICE model {1}",
+  "{…} artık {…}: {…} değer alındı": "{0} is now {1}: {2} values taken",
+  "{…} artık {…}: {…} değer alındı; modelimizde olmayanlar: {…}": "{0} is now {1}: {2} values taken; not in our model: {3}"
  }
 }

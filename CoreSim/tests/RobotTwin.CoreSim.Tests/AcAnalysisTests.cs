@@ -55,6 +55,27 @@ namespace RobotTwin.CoreSim.Tests
             Assert.True(r[0].Decibels < -15 && r[2].Decibels < -15);
         }
 
+        /// <summary>An op-amp's gain-bandwidth product sets a closed-loop stage's bandwidth: gain 10 on a 1 MHz part ends near 100 kHz.</summary>
+        [Fact]
+        public void ANonInvertingAmplifiersBandwidthIsItsGainBandwidthOverItsGain()
+        {
+            var c = new AnalogCircuit();
+            int vp = c.Node("vp"), vn = c.Node("vn"), input = c.Node("in"), fb = c.Node("fb"), output = c.Node("out");
+            c.Add(new VoltageSource("VP", vp, AnalogCircuit.Ground, 12.0));
+            c.Add(new VoltageSource("VN", vn, AnalogCircuit.Ground, -12.0));
+            c.Add(new VoltageSource("VIN", input, AnalogCircuit.Ground, 0.0));
+            c.Add(new OpAmp("U1", input, fb, output, vp, vn) { GainBandwidth = 1e6 });
+            c.Add(new Resistor("RF", output, fb, 9000));
+            c.Add(new Resistor("RG", fb, AnalogCircuit.Ground, 1000));
+            var sim = new AnalogSimulator(c);
+            sim.Initialize(InitialState.OperatingPoint);
+            var r = sim.AcResponse("VIN", output, 0, AnalogSimulator.Decades(10, 1e7, 40)).ToList();
+            double corner = AnalogSimulator.Corner(r);
+            _out.WriteLine($"10 Hz: {r[0].Decibels:0.00} dB, köşe {corner / 1000:0.0} kHz");
+            Assert.InRange(r[0].Decibels, 19.9, 20.0);   // ×10
+            Assert.InRange(corner, 85e3, 115e3);   // GBW / 10
+        }
+
         [Fact]
         public void ACommonEmitterStageGainsWhatItsOperatingPointGives()
         {

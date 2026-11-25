@@ -90,6 +90,10 @@ Gerçek parçalar etiket değerlerinde değildir. Sağ paneldeki **Simülasyon: 
 
 Monte Carlo sırasında kart yazılımı çalışmaz; analog devre incelenir.
 
+## Üretici SPICE modelleri
+
+Bir diyot, Schottky, zener, NPN/PNP transistör ya da MOSFET seçiliyken denetçideki **SPICE modeli yapıştır…** üreticinin `.model` kartını alır (veri sayfası ya da üreticinin kütüphanesindeki gibi; `+` devam satırları, `*` ve `;` yorumları, SPICE ekleri: f p n u m k MEG G, mil). Kartın değerleri parçanın değerleri olur (tek geri alınabilir değişiklik): diyotta IS, N, RS, BV, IBV, EG, CJO; transistörde IS, BF, BR, VAF, CJE, CJC; MOSFET'te VTO. Modelimizin kullanmadığı parametreler (örneğin TT, XTI) durum çubuğunda listelenir. Doğrulama: 1N4148 kartıyla diyot 9 mA'de Shockley denkleminin söylediği gerilimi düşürüyor.
+
 ## Frekans cevabı (AC analizi)
 
 **Frekans cevabı** sekmesi devrenin küçük işaret cevabını hesaplar (SPICE'ın .AC analizi gibi): devre yeniden derlenir, çalışma noktası çözülür ve seçilen **giriş kaynağı** 1 V'luk küçük işaretle sürülürken (öteki kaynaklar dinlenir) **çıkış ağının** gerilimi, **referansa** göre, her frekansta karmaşık sayı olarak bulunur. Kondansatörler, bobinler ve motor sargıları gerçek empedanslarıyla, transistörler, diyotlar ve işlemsel yükselteçler çalışma noktasındaki eğimleriyle (küçük işaret modelleri) girer. Sonuç Bode çizimidir: logaritmik frekans ekseninde kazanç (dB) ve faz (°); yanında en düşük frekanstaki kazanç, −3 dB köşe frekansı ve en yüksek kazanç yazılır. Çalışan simülasyona dokunulmaz.

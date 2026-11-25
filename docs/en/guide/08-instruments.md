@@ -90,6 +90,10 @@ The **Monte Carlo** tab runs the circuit N times, drawing the tolerances anew ea
 
 Board firmware does not run during Monte Carlo; the analog circuit is examined.
 
+## Manufacturers' SPICE models
+
+With a diode, Schottky, zener, NPN/PNP transistor or MOSFET selected, **Paste a SPICE model…** in the inspector takes the manufacturer's `.model` card (as a datasheet or the vendor's library gives it; `+` continuation lines, `*` and `;` comments, SPICE suffixes: f p n u m k MEG G, mil). The card's numbers become the part's values (one undoable change): a diode's IS, N, RS, BV, IBV, EG, CJO; a transistor's IS, BF, BR, VAF, CJE, CJC; a MOSFET's VTO. Parameters our model does not use (TT, XTI …) are listed in the status bar. Validation: with the 1N4148 card a diode drops at 9 mA what Shockley's law says.
+
 ## Frequency response (AC analysis)
 
 The **Frequency response** tab computes the circuit's small-signal response (as SPICE's .AC): the circuit is compiled afresh, its operating point solved, and with the chosen **input source** driven by a 1 V small signal (the other sources at rest) the voltage of the **output net**, against the **reference**, is found as a complex number at every frequency. Capacitors, inductors and motor windings come in with their real impedances; transistors, diodes and op-amps with their slopes at the operating point (small-signal models). The result is a Bode plot: gain (dB) and phase (°) on a logarithmic frequency axis, with the gain at the lowest frequency, the −3 dB corner and the peak gain written beside it. The running simulation is not touched.
