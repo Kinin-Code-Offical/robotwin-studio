@@ -316,6 +316,9 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Coulomb friction torque (force) in the joint.</summary>
         public double Friction { get; set; }
 
+        /// <summary>[couple] Friction of a gear mesh or a screw's thread this joint drives, from the load it carries (Mechanics/PhysicsScene.Couplings.cs).</summary>
+        internal double MeshFriction;
+
         /// <summary>Torque/force the built-in drive delivered, averaged over the last step.</summary>
         public double DriveTorque { get; internal set; }
 
@@ -538,6 +541,7 @@ namespace RobotTwin.CoreSim.Mechanics
         public bool RemoveBody(SceneBody body)
         {
             Joints.RemoveAll(j => j.A == body || j.B == body);
+            Couplings.RemoveAll(c => !Joints.Contains(c.A) || !Joints.Contains(c.B));   // [couple] a gear whose shaft is gone
             return Bodies.Remove(body);
         }
 
@@ -818,6 +822,7 @@ namespace RobotTwin.CoreSim.Mechanics
             _contactCount = 0;
             Detect(h);
             PrepareJoints(h);
+            PrepareCouplings();   // [couple] gears, belts, lead screws (Mechanics/PhysicsScene.Couplings.cs)
 
             Soft(Math.Min(ContactHertz, 0.25 / h), ContactDampingRatio, h, out double cBias, out double cMass, out double cImp);
             Soft(Math.Min(JointHertz, 0.25 / h), JointDampingRatio, h, out double jBias, out double jMass, out double jImp);
@@ -826,6 +831,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int it = 0; it < Iterations; it++)
             {
                 SolveJoints(true, jBias, jMass, jImp, h);
+                SolveCouplings(true, jBias, jMass, jImp);
                 SolveContacts(true, cBias, cMass, cImp, h, false);
             }
 
@@ -848,6 +854,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int it = 0; it < RelaxIterations; it++)
             {
                 SolveJoints(false, jBias, jMass, jImp, h);
+                SolveCouplings(false, jBias, jMass, jImp);
                 SolveContacts(false, cBias, cMass, cImp, h, true);
             }
 
@@ -865,6 +872,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
             StoreAndReport(h);
             FinishJoints(h);
+            FinishCouplings(h);
             Time += h;
         }
 
@@ -2009,9 +2017,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
                 else j.Impulse[RoleDrive] = 0;
 
-                if (j.Friction > 0)
+                if (j.Friction + j.MeshFriction > 0)
                 {
-                    double f = j.Friction * h;
+                    double f = (j.Friction + j.MeshFriction) * h;
                     AddRow(new Row
                     {
                         P = p, C = c, Joint = ji, Slot = RoleFriction, LP = lp, AP = ap, LC = lc, AC = ac, Mass = mass, Target = 0, Lo = -f, Hi = f,

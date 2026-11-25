@@ -276,6 +276,22 @@ Sabit bir bağlantının denetçide **bağlantı türü** seçilir. Seçim yaln�
 
 Kapak (kutu kapağı) ayrıca **vidalı** işaretlenebilir; kenara oturduğunda vidalanır, oturmazsa "vidalanamıyor" uyarısı çıkar.
 
+### Dişli, kayış ve vidalı mil
+
+Menteşeyle ya da kızakla bağlı bir parçayı seçip **Özellik ekle ▾ → Dişli, kayış, vidalı mil** ile dünyadaki başka bir eklemi seçin, sonra türünü:
+
+| Tür | Eklemler | Ne olur |
+| --- | --- | --- |
+| **Dişli çifti** | menteşe + menteşe | Öteki dişli diş sayılarının oranında, ters yönde döner. |
+| **Kayış** | menteşe + menteşe | Kasnak çaplarının oranında, aynı yönde döner (zincir de böyledir). |
+| **Kremayer ve pinyon** | menteşe + kızak | Pinyonun her turu çevresi kadar kaydırır. |
+| **Kayışlı taşıyıcı** | menteşe + kızak | 3B yazıcının X/Y ekseni gibi: kasnağın her turu çevresi kadar. |
+| **Vidalı mil** | menteşe + kızak | Milin her turu somunu hatvesi kadar ilerletir. |
+
+Bağ bir motor değil, bir kısıttır: iki eklem birlikte hareket eder ve sürülen taraftaki yük sürücüye geri yansır. Taşıyıcıyı kaldıran vidanın motoru ağırlığı tork olarak hisseder. Ölçüler parçadan gelir: silindirin çapı dişlinin diş sayısıdır (modül 1), kasnağın ya da vida milinin çapıdır. Silindir değilse 20 ve 40 diş, GT2 kasnağı ya da T8×8 vida alınır. **Ters yön**, çapraz kayışı, araya giren bir ara dişliyi ya da sol vidayı anlatır.
+
+**Verim** dişin ya da vida dişinin sürtünmesidir ve taşıdığı yükle orantılıdır. Varsayılanlar: düz dişli %98, kremayer %95, kayış %97. Vidalı milde verim dişin eğiminden hesaplanır (trapez diş, plastik ya da bronz somun, μ = 0,15): T8×8 yaklaşık %66, T8×2 yaklaşık %36. Verim %50 ya da altındaysa vida **kendini kilitler**: motor dururken yük mili geri çeviremez. Bu yüzden T8×2 milli dikey eksen olduğu yerde kalır, T8×8 milli eksen yavaşça iner. Çalışırken **Canlı ölçüm** bağın yükünü ve eklemin hızını gösterir.
+
 ### Kol kinematiği: ileri ve ters kinematik
 
 Servolarla kurduğunuz bir kolun bir parçasını seçin (örneğin servo kol şablonunda **Kol 2**). Denetçide **Kinematik (kolun ucu)** bölümü çıkar. Program, bağlantıları izleyerek tabandan seçtiğiniz parçaya giden zinciri kendisi bulur.

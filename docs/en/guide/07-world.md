@@ -276,6 +276,22 @@ For a fixed joint, choose its **fastening** in the inspector. It is not just a l
 
 A box lid can also be set to **Lid screwed on**; it is screwed down when it seats on the rim, and a "cannot be screwed" warning appears when it does not.
 
+### Gears, belts and lead screws
+
+Select a part on a hinge or a slider, choose **Add feature ▾ → Gear, belt, lead screw**, then another joint of the world and the kind:
+
+| Kind | Joints | What happens |
+| --- | --- | --- |
+| **Gear pair** | hinge + hinge | The other gear turns at the ratio of the teeth, the other way. |
+| **Belt** | hinge + hinge | It turns at the ratio of the pulley diameters, the same way (a chain does too). |
+| **Rack and pinion** | hinge + slider | Each turn of the pinion slides it by its circumference. |
+| **Belt-driven carriage** | hinge + slider | Like a 3D printer's X/Y axis: each turn of the pulley moves it by the pulley's circumference. |
+| **Lead screw** | hinge + slider | Each turn of the screw advances the nut by its lead. |
+
+It is a constraint, not a motor: the two joints move together and the driven side's load comes back to the driving one. The motor of a screw lifting a carriage feels its weight as torque. The sizes come from the parts: a cylinder's diameter is its gear's tooth count (module 1), or its pulley's or screw rod's diameter. Other shapes start at 20 and 40 teeth, a GT2 pulley or a T8×8 screw. **Reverse** is a crossed belt, an idler gear between the two, or a left-hand thread.
+
+**Efficiency** is the friction of the teeth or the thread, proportional to the load they carry. The defaults are 98 % for spur gears, 95 % for a rack and 97 % for a belt. A lead screw's efficiency comes from its thread's angle (trapezoidal thread, plastic or bronze nut, μ = 0.15): about 66 % for a T8×8, about 36 % for a T8×2. At 50 % or less the screw is **self-locking**: with the motor stopped the load cannot turn it back. So a vertical axis on a T8×2 stays where it is, while one on a T8×8 slowly comes down. While running, **Live readings** show the coupling's load and the joint's speed.
+
 ### Arm kinematics: forward and inverse
 
 Select a part of an arm you built with servos (for example **Arm 2** in the servo-arm template). The inspector shows a **Kinematics (arm tip)** section. The program follows the joints to find the chain from a base to the part you selected.

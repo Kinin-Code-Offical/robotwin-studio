@@ -401,6 +401,17 @@ namespace RobotTwin.CoreSim.Sandbox
         public List<WorldCable> Cables { get; set; } = new List<WorldCable>();
         public List<WorldJoint> Joints { get; set; } = new List<WorldJoint>();
 
+        /// <summary>[couple] Gears, belts and lead screws between joints (Sandbox/WorldCoupling.cs); null when the world has none.</summary>
+        public List<WorldCoupling>? Couplings { get; set; }
+
+        /// <summary>[couple] Drops the couplings whose joints are gone; an empty list becomes null again.</summary>
+        public void PruneCouplings()
+        {
+            if (Couplings == null) return;
+            Couplings.RemoveAll(c => Joints.All(j => j.Id != c.JointA) || Joints.All(j => j.Id != c.JointB));
+            if (Couplings.Count == 0) Couplings = null;
+        }
+
         /// <summary>[hmi] The operator panel's elements, bound to the PLCs' variables; null when the world has none.</summary>
         public List<HmiWidget>? Hmi { get; set; }
 
@@ -599,6 +610,7 @@ namespace RobotTwin.CoreSim.Sandbox
             Objects.Remove(o);
             Cables.RemoveAll(c => c.A.ObjectId == o.Id || c.B.ObjectId == o.Id);
             Joints.RemoveAll(j => j.ObjectA == o.Id || j.ObjectB == o.Id);
+            PruneCouplings();
             if (o.DesignId != null && Objects.All(x => x.DesignId != o.DesignId)) Designs.RemoveAll(d => d.Id == o.DesignId);
         }
 

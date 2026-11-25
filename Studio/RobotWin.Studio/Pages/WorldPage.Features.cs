@@ -73,6 +73,7 @@ namespace RobotWin.Studio.Pages
                 Item("Hava (özel ayar)", "Sürüklemeyi kapatın, Cd ve referans alanı elle verin ya da kaldırma kuvveti (balon, köpük) ekleyin. Ayarlanmadıkça sürükleme gövdenin şeklinden hesaplanır.",
                     () => world.Sdk.AeroFor(o.Id), sdk: true);
             if (FaultMenu(o) is { } faults) menu.Items.Add(faults);   // [fault] Pages/WorldPage.Faults.cs
+            if (CouplingMenu(world, o) is { } couple) menu.Items.Add(couple);   // [couple] Pages/WorldPage.Couplings.cs
             if (menu.Items.Count > 0) menu.Items.Add(new Separator());
             var behaviours = new MenuItem { Header = "Davranış (ifade, hazır davranış, betik)…", ToolTip = "Bu nesneye bir ifade (F.x = …), hazır davranış, eklenti ya da betik ekleyin." };
             menu.Items.Add(behaviours);

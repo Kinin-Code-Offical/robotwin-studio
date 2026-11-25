@@ -130,6 +130,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
             foreach (var j in world.Joints) p.AddJoint(world, j);
             p.CoupleMimics(world);   // [urdf] mimic joints follow their masters
+            p.CoupleJoints(world);   // [couple] gears, belts, lead screws (Sandbox/WorldPhysics.Couplings.cs)
             p.FinishReady(world);   // [objs] propellers on shafts, light rotors
             p.Liquid = liquid ?? LiquidQuality.Live;
             p.BuildLiquids(world, geometry);   // [liquid] water, oil, honey … as particles (Sandbox/WorldPhysics.Liquids.cs)

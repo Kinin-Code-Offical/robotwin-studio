@@ -363,6 +363,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnSimStateChanged()
         {
+            EmptyHint.Visibility = W.Schematic.Parts.Count == 0 ? Visibility.Visible : Visibility.Collapsed;   // a circuit being simulated is never an empty sheet
             var state = W.Simulation.State;
             RunText.Text = state == SimState.Running ? "Duraklat" : state == SimState.Paused ? "Devam" : "Simüle et";
             RunIcon.Data = (Geometry)FindResource(state == SimState.Running ? "I.Pause" : "I.Play");
@@ -1513,6 +1514,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>--fault before the run: break the loaded example the way a beginner would, or switch tolerances on.</summary>
         public void PrepareSnapshotCircuit(string? fault)
         {
+            W.BeginChange();
             var sch = W.Schematic;
             switch (fault)
             {
@@ -1627,6 +1629,7 @@ namespace RobotWin.Studio.Pages
                     break;
             }
 
+            W.CommitChange();   // like an edit: the empty-sheet hint, the status bar and the inspector see the circuit
             Canvas.Refresh();
             Canvas.FitToContent();
         }

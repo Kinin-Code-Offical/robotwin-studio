@@ -793,10 +793,14 @@ namespace RobotWin.Studio.Pages
             if (o.Kind == WorldObjectKind.Body || o.Kind == WorldObjectKind.Model)
             {
                 var mat = new ComboBox { Margin = new Thickness(0, 0, 0, 6) };
-                foreach (var m in RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.Names) mat.Items.Add(new ComboBoxItem { Content = m, Tag = m, IsSelected = string.Equals(m, o.Material, StringComparison.OrdinalIgnoreCase) });   // [lang] the value in Tag: the shown name may be translated
+                // The entry that is simulated: "steel" (a URDF's, a script's) is ÇELİK, an unknown name PLA.
+                string simulated = RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.For(o.Material).Name;
+                foreach (var m in RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.Names)
+                    mat.Items.Add(new ComboBoxItem { Content = m, Tag = m, IsSelected = RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.For(m).Name == simulated });   // [lang] the value in Tag: the shown name may be translated
                 mat.SelectionChanged += (_, _) =>
                 {
-                    if (mat.SelectedItem is ComboBoxItem it && it.Tag is string m && m != o.Material) Edit("Malzeme değişti", () => o.Material = m);
+                    if (mat.SelectedItem is ComboBoxItem it && it.Tag is string m && RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.For(m).Name != RobotTwin.CoreSim.Analysis.Fem.StructuralMaterial.For(o.Material).Name)
+                        Edit("Malzeme değişti", () => o.Material = m);
                 };
                 Inspector.Children.Add(Labeled("Malzeme", mat));
                 Inspector.Children.Add(Note(MaterialCard(o.Material ?? "PLA")));   // [surface] Pages/WorldPage.Surface.cs
@@ -1225,6 +1229,7 @@ namespace RobotWin.Studio.Pages
         {
             var joints = world.Joints.Where(j => j.ObjectA == o.Id || j.ObjectB == o.Id).ToList();
             Inspector.Children.Add(Caption($"Mekanik bağlantılar ({joints.Count})"));
+            var couplings = new HashSet<WorldCoupling>();
             foreach (var j in joints)
             {
                 var other = world.Find(j.ObjectA == o.Id ? j.ObjectB : j.ObjectA);
@@ -1233,7 +1238,11 @@ namespace RobotWin.Studio.Pages
                 var grid = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
                 var joint = j;
                 var del = new Button { Style = (Style)FindResource("Btn.Icon"), Width = 26, Height = 26, ToolTip = "Bağlantıyı çöz", Content = new Theme.Icon { Data = (Geometry)FindResource("I.Delete"), Size = 13 } };
-                del.Click += (_, _) => Edit("Bağlantı çözüldü", () => world.Joints.Remove(joint));
+                del.Click += (_, _) => Edit("Bağlantı çözüldü", () =>
+                {
+                    world.Joints.Remove(joint);
+                    world.PruneCouplings();   // [couple] its gears go with it
+                });
                 DockPanel.SetDock(del, Dock.Right);
                 grid.Children.Add(del);
                 grid.Children.Add(new TextBlock
@@ -1245,6 +1254,7 @@ namespace RobotWin.Studio.Pages
                 Inspector.Children.Add(grid);
                 if (j.Kind == WorldJointKind.Fixed && string.IsNullOrEmpty(j.PortB)) FasteningRow(j);   // [fasten] Pages/WorldPage.Surface.cs
                 if (j.Driven && j.ObjectA == o.Id) DriveRow(j);   // [drive] an imported robot's axis
+                if (j.Kind != WorldJointKind.Fixed && j.ObjectA == o.Id) CouplingRows(world, j, couplings);   // [couple] Pages/WorldPage.Couplings.cs
             }
 
             Inspector.Children.Add(Action("Başka bir nesneye bağla (B)", () => SetTool(WorldTool.Joint)));
@@ -1348,6 +1358,7 @@ namespace RobotWin.Studio.Pages
 
             ReadyLive(o, lines);   // [objs] propeller thrust, roller load, light flux
             WingLive(o, lines);   // [linkage] deflection, lift, pushrod and servo load (Pages/WorldPage.Wings.cs)
+            CouplingLive(o, lines);   // [couple] gear, belt and screw loads (Pages/WorldPage.Couplings.cs)
             foreach (var pin in Scene.PinsOf(o.Id).Take(16))
             {
                 double v = _session.Voltage(new CableEnd { ObjectId = o.Id, Pin = pin.Pin });
@@ -1727,6 +1738,22 @@ namespace RobotWin.Studio.Pages
 
         /// <summary>--snapshot --page world --fault &lt;template id&gt; [--simulate s]: loads a world template and runs it.</summary>
         /// <summary>Snapshot of a saved world (already opened): <paramref name="select"/> selected, run for <paramref name="simulate"/> s.</summary>
+        /// <summary>Scrolls the inspector so the first of its rows that shows <paramref name="text"/> is at the top.</summary>
+        private void ScrollInspectorTo(string text)
+        {
+            Inspector.UpdateLayout();
+            static bool Shows(object node, string text) => node switch
+            {
+                TextBlock t => t.Text.Contains(text, StringComparison.Ordinal),
+                DependencyObject d => LogicalTreeHelper.GetChildren(d).Cast<object>().Any(c => Shows(c, text)),
+                _ => false
+            };
+            var row = Inspector.Children.OfType<FrameworkElement>().FirstOrDefault(e => Shows(e, text));
+            DependencyObject? up = Inspector;
+            while (up != null && up is not ScrollViewer) up = VisualTreeHelper.GetParent(up);
+            if (row != null && up is ScrollViewer sv) sv.ScrollToVerticalOffset(row.TransformToAncestor(Inspector).Transform(new Point(0, 0)).Y);
+        }
+
         public void PrepareSavedWorldSnapshot(string? select, string? simulate)
         {
             OnShown();
@@ -1740,6 +1767,9 @@ namespace RobotWin.Studio.Pages
                 UpdateRunButton();
                 OnSimUpdated();
             }
+
+            // ROBOTWIN_INSPECT=<text>: the inspector scrolled to the section that holds that text.
+            if (Environment.GetEnvironmentVariable("ROBOTWIN_INSPECT") is { Length: > 0 } inspect) ScrollInspectorTo(inspect);
 
             // [hmi] ROBOTWIN_DOCK=hmi: that bottom tab in view.
             if (Environment.GetEnvironmentVariable("ROBOTWIN_DOCK") == "hmi" && _dockHmi != null)

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Gears, belts and lead screws:** two joints of a world can be coupled by a gear pair, a belt, a rack and pinion, a belt-driven carriage or a lead screw (inspector: Add feature → Gear, belt, lead screw). It is a constraint in the physics solver, not a motor: the driven side's load comes back to the motor through it. The teeth's or thread's friction grows with the load (efficiency), and a lead screw's efficiency comes from its thread's angle: a T8×2 holds a vertical axis with the motor off, a T8×8 lets it down.
+
 - **The Uno's UART on its TX pin:** the ATmega328P's USART now drives PD1 bit by bit (idle high, start bit, data, stop bit, at the baud rate the sketch set), so the line carries the real waveform: a scope decodes it and another device's input sees it. Tested with a real compiled sketch: what it prints is read back off D1's voltage with no errors.
 
 - **Serial protocol decoder on the oscilloscope:** UART (baud, parity, framing and parity errors), I²C (START/repeated START/STOP, address and R/W, ACK/NACK, data) and SPI (modes 0–3, chip select) read off the probed wires at the record's logic threshold, drawn as a decode lane under the traces.
