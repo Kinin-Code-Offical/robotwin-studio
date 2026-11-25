@@ -272,7 +272,7 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>Shows one category's cards (and marks it in the list).</summary>
-        private void ShowCategory(string name)
+        internal void ShowCategory(string name)
         {
             _shown = name;
             foreach (var (category, card, _) in _index) card.Visibility = category == name ? Visibility.Visible : Visibility.Collapsed;

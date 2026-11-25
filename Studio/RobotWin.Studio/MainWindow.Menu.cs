@@ -124,6 +124,7 @@ namespace RobotWin.Studio
             m.Items.Add(Item("Farklı kaydet…", "Ctrl+Shift+S", () => SaveAs()));
             m.Items.Add(Item("Simülasyon kaydını kaydet (.rwsim)…", null, SaveRecording));
             m.Items.Add(new Separator());
+            m.Items.Add(Item("Projeyi denetle…", null, () => CheckProject(quiet: false)));   // [integrity] what this computer lacks for it
             m.Items.Add(Item("Otomatik yedekler klasörü", null, () => RevealInExplorer(BackupFolder, true)));
             m.Items.Add(Item("Dosya türlerini bu uygulamayla ilişkilendir", null, () =>
             {

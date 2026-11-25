@@ -55,7 +55,7 @@ namespace RobotWin.Studio.Pages
             parent.Items.Add(item);
         }
 
-        private async void InstallToolchain()
+        internal async void InstallToolchain()
         {
             if (Dialog.Show(OwnerWindow!, "ESP32 araç zinciri",
                     $"Espressif'in Arduino-ESP32 {ArduinoCompiler.Esp32CoreVersion} çekirdeği (xtensa derleyicisi, ESP-IDF kütüphaneleri, esptool) RobotWin'in kendi klasörüne indirilip kurulsun mu? İndirme yaklaşık 1,3 GB, kurulu hali 4 GB; Arduino IDE'nize dokunulmaz.",

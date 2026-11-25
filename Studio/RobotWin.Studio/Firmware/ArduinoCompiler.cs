@@ -417,6 +417,11 @@ namespace RobotWin.Studio.Firmware
             return msg;
         }
 
+        /// <summary>[integrity] Arduino libraries were installed outside the code page (the project check): headers are looked up again.</summary>
+        public static event Action? LibrariesChanged;
+
+        public static void RaiseLibrariesChanged() => LibrariesChanged?.Invoke();
+
         /// <summary>Runs arduino-cli with these arguments (library install / uninstall / update-index, run when the user asks).</summary>
         public static async Task<(bool Ok, string Log)> RunCliAsync(params string[] args)
         {

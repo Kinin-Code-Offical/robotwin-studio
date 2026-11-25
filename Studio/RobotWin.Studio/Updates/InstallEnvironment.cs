@@ -143,8 +143,16 @@ namespace RobotWin.Studio.Updates
         public static bool CanModify(InstallInfo info) =>
             info.Mode != InstallMode.Development && File.Exists(Path.Combine(info.AppDirectory, "Uninstall.exe")) && InstallProfile.Read(info.AppDirectory) != null;
 
-        /// <summary>[setup] Opens the setup's wizard on this copy (add or remove components); it closes the app when it applies them.</summary>
-        public static void StartModify(InstallInfo info) => Start(Path.Combine(info.AppDirectory, "Uninstall.exe"), "/MODIFY", false);
+        /// <summary>
+        /// [setup] Opens the setup's wizard on this copy (add or remove components); it closes the app when it applies them.
+        /// With <paramref name="add"/> ("arduino", "occt" …) the wizard comes with that component ticked beside the copy's.
+        /// </summary>
+        public static void StartModify(InstallInfo info, string? add = null)
+        {
+            string args = "/MODIFY";
+            if (add != null) args += " /COMPONENTS=" + string.Join(",", info.Components.Append(add).Distinct(StringComparer.OrdinalIgnoreCase));
+            Start(Path.Combine(info.AppDirectory, "Uninstall.exe"), args, false);
+        }
 
         private static void Start(string exe, string args, bool elevate)
         {

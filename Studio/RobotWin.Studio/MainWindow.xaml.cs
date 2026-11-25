@@ -204,6 +204,7 @@ namespace RobotWin.Studio
             Command("file.newProject", "Dosya", "Yeni devre projesi", "Ctrl+N", () => NewProject());
             Command("file.newWorld", "Dosya", "Yeni dünya", "Ctrl+Shift+N", () => NewWorld());
             Command("file.open", "Dosya", "Aç", "Ctrl+O", () => OnOpen(this, new RoutedEventArgs()));
+            Command("file.check", "Dosya", "Projeyi denetle", string.Empty, () => CheckProject(quiet: false));   // [integrity]
             Command("file.save", "Dosya", "Kaydet", "Ctrl+S", () => OnSave(this, new RoutedEventArgs()));
             Command("file.saveAs", "Dosya", "Farklı kaydet", "Ctrl+Shift+S", () => SaveAs());
             Command("tabs.close", "Sekmeler", "Sekmeyi kapat", "Ctrl+W", () => CloseTab(W.ActiveDocument));
@@ -834,6 +835,18 @@ namespace RobotWin.Studio
             {
                 RunGuideCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Length > 10 && int.TryParse(fault.Substring(10), out int steps) ? steps : int.MaxValue);
             }
+            if (fault == "check-demo")
+            {
+                LoadCheckDemo();   // [integrity] the project check's window on a project from another computer
+                CheckProject(quiet: false);
+            }
+
+            if (fault == "check-notice")
+            {
+                LoadCheckDemo();   // [integrity] the notice after opening it
+                CheckProject(quiet: true);
+            }
+
             if (fault == "montaj-dialog")
             {
                 // [assembly] The Montaj set-up window with a second project open beside this one.
@@ -1011,11 +1024,13 @@ namespace RobotWin.Studio
                     case WorldDocument.Extension:
                         W.OpenWorld(path);
                         Navigate("world");
+                        CheckProject(quiet: true);   // [integrity]
                         return;
 
                     default:
                         W.Open(path);
                         Navigate("schematic");
+                        CheckProject(quiet: true);   // [integrity]
                         return;
                 }
             }

@@ -15,7 +15,12 @@ Evet. Kurulum dosyasının "kurulum biçimi" sayfasında **Taşınabilir**'i ve 
 **Görünüm → Arayüz ölçeği** ile %75–%150 arasında ayarlayın.
 
 **Arayüz İngilizce olabilir mi?**
-Arayüz şu anda yalnızca Türkçedir. Belgeler Türkçe ve İngilizce eksiksiz ayrı ayrıdır.
+Evet: varsayılan dil İngilizcedir, Türkçe de arayüzün kendi dilidir. Dili kurulumun ilk sayfasında ya da **Ayarlar → Genel → Dil**'de seçin (uygulama yeniden açılınca her yerde geçerli olur). Başka bir dil için İngilizce paketi (`Lang/en.json`) örnek alıp kendi paketinizi `%APPDATA%\RobotWin\lang` klasörüne koyabilirsiniz. Belgeler Türkçe ve İngilizce eksiksiz ayrı ayrıdır.
+
+**Başka bir bilgisayardan gelen proje açılınca "bu bilgisayarda … eksik var" diyor.**
+Proje, bu bilgisayarda olmayan bir şeye ihtiyaç duyuyor: kodunu derleyecek Arduino derleyicisi (hafif kurulumda yoktur), ESP32 kodu için Visual Studio C++ araçları, kodun `#include` ettiği bir Arduino kütüphanesi ya da başka bir kütüphaneden gelen bir parçanın tanımı. **Göster** (ya da **Dosya → Projeyi denetle…**) her eksiği ve onu gideren adımı listeler: derleyiciyi kurulumun bileşeni olarak ekleme, kütüphaneyi tek tıkla kurma, parçayı Kütüphane sayfasından içe aktarma. Son derlemesiyle çalışabilen bir Uno kodu yalnız not olarak geçer.
+
+![Proje denetimi](../images/project-check.png)
 
 ## Kod ve derleme
 

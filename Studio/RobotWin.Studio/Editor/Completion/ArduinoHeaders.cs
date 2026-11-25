@@ -82,6 +82,9 @@ namespace RobotWin.Studio.Editor.Completion
         /// <summary>The AVR core of arduino-cli was found (the API comes from the real headers).</summary>
         public bool CoreFound { get; }
 
+        /// <summary>[integrity] The header ("Servo.h", "utility/twi.h") is in the core, the HAL or an installed library.</summary>
+        public bool Has(string header) => _files.ContainsKey(header.Replace('\\', '/'));
+
         public IReadOnlyList<LocalLibrary> Libraries { get; }
 
         /// <summary>Headers a sketch can include.</summary>

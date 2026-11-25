@@ -44,6 +44,7 @@ namespace RobotWin.Studio.Pages
             };
             Editor.SignatureProvider = (text, caret) => CompletionEngine.Signature(text, caret, Api(text, Headers()));
             BuildLibraryTab();
+            Firmware.ArduinoCompiler.LibrariesChanged += () => Dispatcher.BeginInvoke(new Action(LibrariesChanged));   // [integrity] installed from the project check
         }
 
         private ArduinoHeaders Headers()
@@ -55,22 +56,7 @@ namespace RobotWin.Studio.Pages
         private static IEnumerable<string> LibraryRoots() => ArduinoCompiler.LibraryRoots;
 
         /// <summary>The ESP32 simulation's headers, embedded in the simulator (what an ESP32 sketch is compiled against).</summary>
-        private static Dictionary<string, string> HalHeaders()
-        {
-            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var asm = typeof(RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler).Assembly;
-            foreach (string name in asm.GetManifestResourceNames())
-            {
-                string n = name.Replace('\\', '/');
-                if (!n.StartsWith("esp32hal/", StringComparison.Ordinal) || !n.EndsWith(".h", StringComparison.Ordinal)) continue;
-                using var s = asm.GetManifestResourceStream(name);
-                if (s == null) continue;
-                using var r = new StreamReader(s);
-                map[n.Substring("esp32hal/".Length)] = r.ReadToEnd();
-            }
-
-            return map;
-        }
+        private static Dictionary<string, string> HalHeaders() => Shell.ProjectChecking.Esp32HalHeaders();
 
         /// <summary>The API for this sketch's includes (cached until the includes or the libraries change).</summary>
         private ApiIndex Api(string text, ArduinoHeaders headers)

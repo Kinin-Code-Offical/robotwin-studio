@@ -53,7 +53,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [ ] Değişiklik etkisi önizlemesi (devre → PCB → montaj).
   - [ ] Kalıcı bileşen kimlikleri.
   - [ ] Proje sürümleri ve geri dönüş.
-  - [ ] Eksik kütüphane / model / derleyici denetimi.
+  - [x] Eksik kütüphane / model / derleyici denetimi: `ProjectCheck` bir projenin ya da dünyanın bu bilgisayarda eksik olanlarını bulur (tanımı olmayan parçalar, kartların kodunun istediği derleyici: Uno/Nano için Arduino derleyicisi, son derlemesi kodunsa yalnız not; ESP32 için MSVC ve donanım modunda araç zinciri; kodun `#include` ettiği kurulu olmayan kütüphaneler, dizinden adıyla). Açılışta eksik varsa bildirim, **Dosya → Projeyi denetle…** penceresinde her eksiğin yanında gideren adım (derleyiciyi kurulum bileşeni olarak ekle, kütüphaneyi kur, parçayı içe aktar). 3B modeller projeye gömülü olduğundan eksik model olamıyor.
   - [ ] Şema–PCB–montaj tutarsızlık raporu.
   - [ ] Tasarım alternatifleri.
 - [~] **Fizik doğrulama:**

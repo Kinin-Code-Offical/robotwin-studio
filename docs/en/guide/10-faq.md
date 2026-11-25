@@ -15,7 +15,12 @@ Yes. Choose **Portable** on the installer's "how to install" page and a folder o
 Set it between 75 % and 150 % with **View → Interface scale**.
 
 **Can the interface be in English?**
-The interface is Turkish only for now. The documentation is complete in both Turkish and English.
+Yes: English is the default language, and Turkish is the interface's own. Choose the language on the installer's first page or in **Settings → General → Language** (it applies everywhere once the app is opened again). For another language, take the English pack (`Lang/en.json`) as a model and put your own pack in `%APPDATA%\RobotWin\lang`. The documentation is complete in both Turkish and English.
+
+**A project from another computer says "… things are missing on this computer".**
+The project needs something this computer lacks: the Arduino compiler to build its code (a lite installation has none), the Visual Studio C++ tools for ESP32 code, an Arduino library its code `#include`s, or the definition of a part that came from another library. **Show** (or **File → Check the project…**) lists each missing thing with the step that mends it: adding the compiler as a component of the installer, installing the library with one click, importing the part on the Library page. Uno code that can run as last built is listed only as a note.
+
+![Project check](../../images/en/project-check.png)
 
 ## Code and compiling
 
