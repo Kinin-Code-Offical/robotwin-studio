@@ -104,6 +104,7 @@ ESP32 kartlarında da kurulu Arduino kütüphaneleri kullanılır:
 - Simülasyon katmanının kendi başlıkları (`Wire.h`, `Servo.h`, `WiFi.h` …) önceliklidir.
 - Kütüphane değişince ya da güncellenince çizim yeniden derlenir.
 - Adreslenebilir LED şeritleri (WS2812B / NeoPixel) iki modda da çalışır: `rgbLedWrite`, RMT işlevleri (`rmtInit`, `rmtWrite`) ve `Adafruit_NeoPixel` sınıfı. `Adafruit_NeoPixel.h`, RobotWin'in RMT üzerine yazılmış kendi sürümüdür; gerçek kart derlemesi de onu kullanır, kurulu Adafruit kütüphanesi varsa o tercih edilir. Kartın GPIO'suna DIN'i bağlı şeritteki LED'ler gönderilen renkleri alır ve renklerine göre akım çeker.
+- Döner enkoderler ESP32'nin darbe sayıcısıyla (PCNT) iki modda da sayılır: ESP-IDF'nin `driver/pulse_cnt.h`'i (birim, kanal, kenar ve seviye eylemleri, sınırlar, izleme noktaları). Enkoderli motorun C1/C2 çıkışlarını iki GPIO'ya bağlayın; ×4 çözümle sayım devredeki enkoderle kenarı kenarına aynıdır. `ESP_ERROR_CHECK` başarısız bir çağrıda yongadaki gibi hatayı yazar ve kartı yeniden başlatır.
 - ESP32'nin yazmaçlarına doğrudan erişen başka kütüphaneler simülasyon katmanında bulunmayabilir. O zaman hata hangi kütüphanenin derlenemediğini söyler.
 
 ![ESP32 çizimi kurulu bir kütüphaneyle derlendi](../images/code-esp32-libraries.png)

@@ -48,5 +48,38 @@ const char* esp_err_to_name(esp_err_t code);
 }
 #endif
 
-#define ESP_ERROR_CHECK(x) do { esp_err_t rc_ = (x); (void)rc_; } while (0)
+#ifndef ESP_ERR_NO_MEM
+#define ESP_ERR_NO_MEM 0x101
+#endif
+#ifndef ESP_ERR_INVALID_ARG
+#define ESP_ERR_INVALID_ARG 0x102
+#endif
+#ifndef ESP_ERR_INVALID_STATE
+#define ESP_ERR_INVALID_STATE 0x103
+#endif
+#ifndef ESP_ERR_INVALID_SIZE
+#define ESP_ERR_INVALID_SIZE 0x104
+#endif
+#ifndef ESP_ERR_NOT_FOUND
+#define ESP_ERR_NOT_FOUND 0x105
+#endif
+#ifndef ESP_ERR_NOT_SUPPORTED
+#define ESP_ERR_NOT_SUPPORTED 0x106
+#endif
+#ifndef ESP_ERR_TIMEOUT
+#define ESP_ERR_TIMEOUT 0x107
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* ESP_ERROR_CHECK's failure: the chip's report (code, file, line, function, expression), abort(), a PANIC restart. */
+void rw_esp_error_check_failed(esp_err_t rc, const char* file, int line, const char* function, const char* expression);
+void rw_esp_error_check_report(esp_err_t rc, const char* file, int line, const char* function, const char* expression);
+#ifdef __cplusplus
+}
+#endif
+
+#define ESP_ERROR_CHECK(x) do { esp_err_t rc_ = (x); if (rc_ != ESP_OK) rw_esp_error_check_failed(rc_, __FILE__, __LINE__, __FUNCTION__, #x); } while (0)
+#define ESP_ERROR_CHECK_WITHOUT_ABORT(x) ([&]() { esp_err_t rc_ = (x); if (rc_ != ESP_OK) rw_esp_error_check_report(rc_, __FILE__, __LINE__, __FUNCTION__, #x); return rc_; }())
 #endif

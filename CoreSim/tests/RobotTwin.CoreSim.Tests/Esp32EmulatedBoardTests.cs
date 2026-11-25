@@ -425,6 +425,73 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(int.Parse(last.Groups[3].Value), int.Parse(last.Groups[2].Value) / 100 - 1, int.Parse(last.Groups[2].Value) / 100 + 1);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_QUAD_ELF names the quadrature pulse counter sketch's real-chip ELF.</summary>
+        public sealed class QuadElfFactAttribute : FactAttribute
+        {
+            public QuadElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_QUAD_ELF"))) Skip = "RW_ESP32_QUAD_ELF verilmedi.";
+            }
+        }
+
+        [QuadElfFact]
+        public void EmulatedPcntDecodesTheEncoderMotorInTheCircuit()
+        {
+            // [encoder] The real firmware's pulse_cnt x4 decoding on the emulator's PCNT, fed by a JGA25 encoder motor's
+            // C1/C2 in the circuit: from the moment the counter starts, it counts what the encoder turns, edge for edge.
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_QUAD_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 emulated encoder" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            var motor = sch.AddPart(Lib, "motor-jga25-encoder", new GridPoint(40, 0));
+            var bat = sch.AddPart(Lib, "bat-4nimh", new GridPoint(70, 0));
+            Label(sch, board, "GND2", "GND");
+            Label(sch, board, "3V3", "VCC");
+            Label(sch, bat, "+", "VM");
+            Label(sch, bat, "-", "GND");
+            Label(sch, motor, "M1", "VM");
+            Label(sch, motor, "M2", "GND");
+            Label(sch, motor, "VCC", "VCC");
+            Label(sch, motor, "GND", "GND");
+            Label(sch, motor, "C1", "ENCA");
+            Label(sch, motor, "C2", "ENCB");
+            Label(sch, board, "IO4", "ENCA");
+            Label(sch, board, "IO5", "ENCB");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var serial = new StringBuilder();
+            esp.SerialOutput += s => serial.Append(s);
+            var encoder = compiled.Circuit.Devices.OfType<RobotTwin.CoreSim.Sandbox.Sensing.QuadratureEncoder>().Single();
+            long? atStart = null, atLastLine = null;
+            int lines = 0;
+            const double slice = 100e-6;
+            for (int i = 0; i < 9000; i++)
+            {
+                esp.Advance(slice, sim.Time);
+                sim.Step(slice);
+                string so = serial.ToString();
+                if (atStart == null && so.Contains("pcnt hazir")) atStart = encoder.Count;
+                int n = Regex.Matches(so, @"sayac=-?\d+ sinir=\d+\r?\n").Count;
+                if (n > lines)
+                {
+                    lines = n;
+                    atLastLine = encoder.Count;   // what the encoder had turned when the line was printed
+                }
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            Assert.NotNull(atStart);
+            var last = Regex.Matches(text, @"sayac=(-?\d+) sinir=(\d+)\r?\n").Cast<Match>().Last();
+            int counted = int.Parse(last.Groups[1].Value);
+            long turned = atLastLine!.Value - atStart!.Value;
+            _out.WriteLine($"encoder turned {turned} from the counter's start to the last line, counted {counted}");
+            Assert.True(Math.Abs(turned) > 400, "the motor turned");
+            Assert.InRange(Math.Abs(counted), Math.Abs(turned) - 4, Math.Abs(turned) + 4);
+        }
+
         /// <summary>A [Fact] skipped unless RW_ESP32_FLASH_ELF names the Preferences + LittleFS sketch's real-chip ELF.</summary>
         public sealed class FlashElfFactAttribute : FactAttribute
         {

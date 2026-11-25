@@ -435,6 +435,7 @@ void hal_reset() {
     g_min_free_heap = 0xFFFFFFFFu;
     hal_wifi_reset();
     hal_rmt_reset();
+    hal_pcnt_reset();
 }
 
 void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
@@ -450,9 +451,21 @@ void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
     e.time = time_ns;
     e.level = lv;
     s.edge_count++;
+    hal_pcnt_edge(gpio, lv);   // the pulse counters see the edge too
     if (!s.isr_enabled || (!s.isr0 && !s.isr1)) return;
     int m = s.isr_mode;
     if ((m == RISING && lv) || (m == FALLING && !lv) || m == CHANGE) fire_isr(gpio);
+}
+
+int hal_pin_level(int gpio) {
+    if (!valid_pin(gpio) || !g_pins[gpio].in_known) return -1;
+    return g_pins[gpio].in;
+}
+
+bool hal_pin_drives(int gpio) {
+    if (!valid_pin(gpio)) return false;
+    const PinState& s = g_pins[gpio];
+    return (s.mode & 0x02) != 0 || s.ledc >= 0 || s.dac || s.tone;
 }
 
 void hal_slice_start() {
@@ -1280,7 +1293,7 @@ extern "C" esp_err_t esp_read_mac(uint8_t* mac, esp_mac_type_t type) {
     return ESP_OK;
 }
 
-extern "C" const char* esp_get_idf_version(void) { return "v5.1.4-robotwin-sim"; }
+extern "C" const char* esp_get_idf_version(void) { return "v5.5.6-robotwin-sim"; }
 
 extern "C" const char* esp_err_to_name(esp_err_t code) {
     switch (code) {
@@ -1289,8 +1302,31 @@ extern "C" const char* esp_err_to_name(esp_err_t code) {
     case ESP_ERR_INVALID_ARG: return "ESP_ERR_INVALID_ARG";
     case ESP_ERR_INVALID_STATE: return "ESP_ERR_INVALID_STATE";
     case ESP_ERR_TIMEOUT: return "ESP_ERR_TIMEOUT";
+    case ESP_ERR_NO_MEM: return "ESP_ERR_NO_MEM";
+    case ESP_ERR_INVALID_SIZE: return "ESP_ERR_INVALID_SIZE";
+    case ESP_ERR_NOT_FOUND: return "ESP_ERR_NOT_FOUND";
+    case ESP_ERR_NOT_SUPPORTED: return "ESP_ERR_NOT_SUPPORTED";
     default: return "UNKNOWN ERROR";
     }
+}
+
+static const char* base_name(const char* path) {
+    const char* name = path;
+    for (const char* p = path; *p; p++)
+        if (*p == '/' || *p == '\\') name = p + 1;
+    return name;
+}
+
+extern "C" void rw_esp_error_check_report(esp_err_t rc, const char* file, int line, const char* function, const char* expression) {
+    rw::log(RW_LOG_ERROR, "ESP_ERROR_CHECK_WITHOUT_ABORT failed: esp_err_t 0x%x (%s) at 0x400d2b6e\r\nfile: \"%s\" line %d\r\nfunc: %s\r\nexpression: %s",
+            rc, esp_err_to_name(rc), base_name(file), line, function, expression);
+}
+
+extern "C" void rw_esp_error_check_failed(esp_err_t rc, const char* file, int line, const char* function, const char* expression) {
+    rw::log(RW_LOG_ERROR, "ESP_ERROR_CHECK failed: esp_err_t 0x%x (%s) at 0x400d2b6e\r\nfile: \"%s\" line %d\r\nfunc: %s\r\nexpression: %s\r\n\r\n"
+            "abort() was called at PC 0x4008a5c3 on core 1\r\n\r\nBacktrace: 0x40083b4d:0x3ffb21f0 0x4008a5c1:0x3ffb2210 0x400d2b71:0x3ffb2290\r\n\r\nRebooting...",
+            rc, esp_err_to_name(rc), base_name(file), line, function, expression);
+    rw::system_restart(ESP_RST_PANIC);
 }
 
 extern "C" esp_err_t esp_sleep_enable_timer_wakeup(uint64_t time_in_us) {

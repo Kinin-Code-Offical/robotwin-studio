@@ -24,7 +24,7 @@ public:
     uint8_t getChipCores() { return 2; }
     uint32_t getCpuFreqMHz() { return 240; }
     uint32_t getCycleCount();
-    const char* getSdkVersion() { return "v5.1.4-robotwin-sim"; }
+    const char* getSdkVersion() { return "v5.5.6-robotwin-sim"; }
     const char* getCoreVersion() { return "3.0.7-robotwin-sim"; }
 
     void deepSleep(uint64_t time_us);

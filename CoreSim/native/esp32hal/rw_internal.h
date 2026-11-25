@@ -85,7 +85,11 @@ void hal_slice_start();                                    /* start of every rw_
 int serial_rx_push(int port, const uint8_t* data, int length);
 void run_serial_events();                                  /* after each loop() */
 void hal_wifi_reset();
-void hal_rmt_reset();                                      /* chip reset: every RMT channel released (rw_rmt.cpp) */
+void hal_rmt_reset();
+void hal_pcnt_reset();                                     /* chip reset: every pulse counter unit released (rw_pcnt.cpp) */
+void hal_pcnt_edge(int gpio, int level);                   /* an input pin changed level (host thread, from hal_pin_changed) */
+int hal_pin_level(int gpio);                               /* an input pin's level as last seen, or -1 (rw_hal.cpp) */
+bool hal_pin_drives(int gpio);                             /* the sketch drives the pin (output, LEDC, DAC, tone) */                                      /* chip reset: every RMT channel released (rw_rmt.cpp) */
 
 /* ---- radio medium (rw_radio.cpp): RW_RADIO_UNSUPPORTED when the host has none ---- */
 int radio(int op, const void* in, int in_len, void* out, int out_cap);

@@ -104,6 +104,7 @@ ESP32 boards use installed Arduino libraries too:
 - The simulation layer's own headers (`Wire.h`, `Servo.h`, `WiFi.h` …) come first.
 - A changed or updated library rebuilds the sketch.
 - Addressable LED strips (WS2812B / NeoPixel) work in both modes: `rgbLedWrite`, the RMT functions (`rmtInit`, `rmtWrite`) and the `Adafruit_NeoPixel` class. `Adafruit_NeoPixel.h` is RobotWin's own, written on the RMT; the real-board build uses it too, and prefers an installed Adafruit library when there is one. The LEDs of a strip whose DIN is wired to the board's GPIO take the colours sent and draw current by their colours.
+- Rotary encoders are counted with the ESP32's pulse counter (PCNT) in both modes: ESP-IDF's `driver/pulse_cnt.h` (units, channels, edge and level actions, limits, watch points). Wire an encoder motor's C1/C2 outputs to two GPIOs; with ×4 decoding the count matches the encoder in the circuit edge for edge. `ESP_ERROR_CHECK` on a failed call prints the error and restarts the board, as on the chip.
 - Other libraries that reach into the ESP32's registers directly may not exist in the simulation layer. Then the error names the library that did not compile.
 
 ![An ESP32 sketch built with an installed library](../../images/en/code-esp32-libraries.png)
