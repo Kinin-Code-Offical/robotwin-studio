@@ -360,6 +360,38 @@ namespace RobotTwin.CoreSim.Tests
             Assert.DoesNotContain("kenar 11", text);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_TOUCH_ELF names the touchRead sketch's real-chip ELF.</summary>
+        public sealed class TouchElfFactAttribute : FactAttribute
+        {
+            public TouchElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_TOUCH_ELF"))) Skip = "RW_ESP32_TOUCH_ELF verilmedi.";
+            }
+        }
+
+        [TouchElfFact]
+        public void TouchReadFollowsAFingerThroughIdfsFilter()
+        {
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_TOUCH_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            int count = 75;
+            soc.TouchValue = gpio => gpio == 4 ? count : 75;
+            soc.Run(240_000L * 200);
+            Assert.Contains("dokunma 75", soc.Uart0.ToString());
+            int before = soc.Uart0.Length;
+            count = 12;   // a finger on T0: IDF's software IIR filter (run every 10 ms by an esp_timer) brings touchRead down to it
+            soc.Run(240_000L * 1500);
+            string after = soc.Uart0.ToString(before, soc.Uart0.Length - before);
+            _out.WriteLine(after);
+            var values = Regex.Matches(after, @"dokunma (\d+)").Cast<Match>().Select(m => int.Parse(m.Groups[1].Value)).ToList();
+            Assert.True(values.Count > 10);
+            Assert.True(values[0] > values[values.Count - 1]);   // it falls gradually, as on the chip
+            Assert.InRange(values[values.Count - 1], 12, 14);
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {
