@@ -28,6 +28,7 @@ namespace RobotWin.Studio.Models3D
                 case DrivePartKind.LeadNut: LeadNut(b, s, rgb); break;
                 case DrivePartKind.LinearBearing: LinearBearing(b, s); break;
                 case DrivePartKind.Collar: Collar(b, s, rgb); break;
+                case DrivePartKind.Rack: RackBar(b, s, rgb); break;
                 default: Coupler(b, s, rgb); break;
             }
         }
@@ -95,6 +96,41 @@ namespace RobotWin.Studio.Models3D
                 SetScrew(b, hub, face + hl / 2, 90);
             }
             else SetScrew(b, s.PitchDiameter * 500 - 1.25 * m, face / 2, 0, 1.2);
+        }
+
+        /// <summary>
+        /// A rack: a bar along X with straight-flanked teeth (20°) on top, tooth k centred πm·(k + ½) from the left end, its
+        /// pitch line one module under the top; the profile drawn in X–Z and pushed across the width (Y).
+        /// </summary>
+        private static void RackBar(PartBuilder b, DrivePartSpec s, uint rgb)
+        {
+            double m = s.Module * 1000, L = s.Length * 1000, W = s.Width * 1000, H = s.Height * 1000, p = Math.PI * m;
+            double tan = Math.Tan(20 * Math.PI / 180), root = H - 2.25 * m, hr = p / 4 + 1.25 * m * tan, ht = Math.Max(0.05, p / 4 - m * tan);
+            int n = (int)Math.Floor(L / p);
+            var outline = new List<Point> { new Point(-L / 2, 0), new Point(L / 2, 0), new Point(L / 2, root) };
+            for (int k = n - 1; k >= 0; k--)
+            {
+                double c = -L / 2 + (k + 0.5) * p;
+                if (c + hr > L / 2 || c - hr < -L / 2) continue;
+                outline.Add(new Point(c + hr, root));
+                outline.Add(new Point(c + ht, H));
+                outline.Add(new Point(c - ht, H));
+                outline.Add(new Point(c - hr, root));
+            }
+
+            outline.Add(new Point(-L / 2, root));
+            var mat = s.Material == "pom" ? Mat.Plastic(rgb, 0.25, 30) : Mat.Metal(rgb, 0.7, 35);
+            using (b.At(Mx.Rx(90))) b[mat].Extrude(outline, -W / 2, W / 2);
+            // Two counterbored M4 holes through the bar, a quarter from each end.
+            var hole = b[Mat.Plastic(0x101012u, 0.1)];
+            foreach (double x in new[] { -L / 4, L / 4 })
+            {
+                using (b.At(Mx.Rx(90) * Mx.T(x, 0, root / 2)))
+                {
+                    hole.CylinderZ(0, 0, W / 2 - 0.01, W / 2 + 0.02, 2.2, 16);
+                    hole.CylinderZ(0, 0, -W / 2 - 0.02, -W / 2 + 0.01, 2.2, 16);
+                }
+            }
         }
 
         // ================================================================== pulleys

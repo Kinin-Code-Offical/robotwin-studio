@@ -324,6 +324,7 @@ Place the parts as in a real machine. You do not draw the joints; **Build the me
 - Two gears with parallel axes and the same module whose pitch circles touch **mesh**: the centre distance must be m·(z₁+z₂)/2.
 - A nut on a lead screw **drives** the carriage on slides it is fixed to. A right-hand screw turned clockwise, seen from above, raises its nut.
 - Meshing gears start with a tooth in a space, not tooth on tooth: when they are assembled, the driven gear is turned by at most half a tooth pitch.
+- A pinion with its axis across a rack and its pitch circle on the rack's pitch line **meshes** with it (an m1 rack's pitch line is 1 mm under its top). If the rack slides on a rail, the pinion drives it. If the rack is fixed, the pinion rolls along it and carries the carriage its shaft turns in, as on a CNC gantry. Each turn of the pinion moves it by its circumference: 62.8 mm for a z20.
 
 **Belts:** select a pulley and press **Fit a belt → (the other pulley)** in the inspector. The axes must be parallel and the belt grooves in one plane. The belt's length comes from its two straight spans and the arcs it wraps. The inspector names the closed GT2 belt to buy and how far to move a pulley to tension it. A 20T and a 40T pulley 80 mm apart need a 220.5 mm belt; for a 232 mm belt, move a pulley 5.75 mm. The shafts are coupled at the ratio of the diameters, turning the same way. The scene draws the belt at real GT2 sizes: a 0.63 mm back, and teeth at a 2 mm pitch that sit in the first pulley's grooves and run with the belt as it turns.
 

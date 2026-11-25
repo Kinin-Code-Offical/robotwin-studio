@@ -32,6 +32,9 @@ namespace RobotTwin.CoreSim.Sandbox
                     coupling.Stiffness = hingeB && r > 0 ? k * r * r : k;   // at a pulley, N·m/rad
                 }
                 _couplings[c.Id] = coupling;
+                // The parts in it (a pinion and its rack, which neither joint moves when the rack is fixed) are clear of each other too.
+                if (c.PulleyA != null && c.PulleyB != null && _items.TryGetValue(c.PulleyA, out var pa) && _items.TryGetValue(c.PulleyB, out var pb))
+                    Scene.NoCollide.Add((pa.Body, pb.Body));
                 // The gear blanks overlap where their teeth mesh, a nut surrounds its screw: the coupling is their contact.
                 // Everything fixed to one side (the gear on its shaft, the nut on its carriage) is clear of the other.
                 foreach (var x in Rigid(a.ChildBody))

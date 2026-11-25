@@ -37,13 +37,17 @@ namespace RobotTwin.CoreSim.Sandbox
         Collar,
 
         /// <summary>Flexible shaft coupler (motor 5 mm to screw 8 mm).</summary>
-        Coupler
+        Coupler,
+
+        /// <summary>A gear rack: straight teeth of a module along a bar, driven by a pinion.</summary>
+        Rack
     }
 
     /// <summary>
     /// [drive] A gear, pulley, bearing, shaft, lead screw or one of their fittings, with its real dimensions (m), material
     /// and mass. Frame: the axis along local Z, the bottom face on z = 0, centred in X/Y; a housing (KP08) stands on its
-    /// base with the bore along local Y at <see cref="AxisHeight"/>.
+    /// base with the bore along local Y at <see cref="AxisHeight"/>; a rack lies along local X, its teeth up, its pitch line
+    /// one module under its top.
     /// </summary>
     public sealed class DrivePartSpec
     {
@@ -91,6 +95,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>A housing's height and the bore axis's height above its base (m).</summary>
         public double Height { get; init; }
 
+        /// <summary>A rack's face width (m), across it.</summary>
+        public double Width { get; init; }
+
         public double AxisHeight { get; init; }
 
         /// <summary>Datasheet mass (kg); 0 = from the volume and the material's density.</summary>
@@ -113,12 +120,20 @@ namespace RobotTwin.CoreSim.Sandbox
         public bool IsRod => Kind is DrivePartKind.Shaft or DrivePartKind.LeadScrew;
 
         /// <summary>Its axis in its own frame: along Z, a housing's along Y.</summary>
-        public Vec3 AxisLocal => Kind == DrivePartKind.BearingHousing ? Vec3.UnitY : Vec3.UnitZ;
+        public Vec3 AxisLocal => Kind switch { DrivePartKind.BearingHousing => Vec3.UnitY, DrivePartKind.Rack => Vec3.UnitX, _ => Vec3.UnitZ };
 
         /// <summary>Where its axis starts in its own frame and how far along it the part reaches (m).</summary>
-        public Vec3 AxisOrigin => Kind == DrivePartKind.BearingHousing ? new Vec3(0, -Length / 2, AxisHeight) : Vec3.Zero;
+        public Vec3 AxisOrigin => Kind switch
+        {
+            DrivePartKind.BearingHousing => new Vec3(0, -Length / 2, AxisHeight),
+            DrivePartKind.Rack => new Vec3(-Length / 2, 0, Height - Module),   // the pitch line, from the rack's left end
+            _ => Vec3.Zero
+        };
 
-        public double AxisSpan => Kind == DrivePartKind.Coupler || Kind == DrivePartKind.BearingHousing ? Length : Length + (HubLength > 0 ? HubLength : 0);
+        public double AxisSpan => Kind is DrivePartKind.Coupler or DrivePartKind.BearingHousing or DrivePartKind.Rack ? Length : Length + (HubLength > 0 ? HubLength : 0);
+
+        /// <summary>A rack's circular pitch (m): π × module, the distance from one tooth to the next.</summary>
+        public double CircularPitch => Math.PI * Module;
 
         /// <summary>Mass: the datasheet's, or the solid's volume × the material's density.</summary>
         public double MassKg => DatasheetMass > 0 ? DatasheetMass : Volume * MechatronicSystem.DensityOf(Material);
@@ -139,6 +154,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     DrivePartKind.LeadNut => Ring(Diameter, Bore, 0.0035) + Ring(0.0102, Bore, Length - 0.0035),
                     DrivePartKind.LinearBearing => Ring(Diameter, Bore, Length) * 0.7,
                     DrivePartKind.Coupler => Ring(Diameter, (Bore + Bore2) / 2, Length) * 0.8,
+                    DrivePartKind.Rack => Length * Width * (Height - 1.1 * Module),   // the bar under the teeth and half the teeth
                     DrivePartKind.BearingHousing => Diameter * Length * 0.005 + Ring(0.028, 0.022, Length),
                     _ => Ring(Diameter, Bore, Length)
                 };
@@ -159,6 +175,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     DrivePartKind.LeadScrew => $"Ø{Mm(Bore)} × {Mm(Length)} mm · hatve {Mm(Lead)} mm · adım {Mm(Pitch)} mm",
                     DrivePartKind.LeadNut => $"Ø{Mm(Diameter)} flanş · hatve {Mm(Lead)} mm · delik Ø{Mm(Bore)} mm",
                     DrivePartKind.Coupler => $"Ø{Mm(Diameter)} × {Mm(Length)} mm · delikler Ø{Mm(Bore)} / Ø{Mm(Bore2)} mm",
+                    DrivePartKind.Rack => $"modül {Mm(Module)} · {Mm(Length)} mm · {Mm(Width)} × {Mm(Height)} mm · bölüm çizgisi tabandan {Mm(Height - Module)} mm",
                     DrivePartKind.BearingHousing => $"taban {Mm(Diameter)} × {Mm(Length)} mm · eksen yüksekliği {Mm(AxisHeight)} mm · delik Ø{Mm(Bore)} mm",
                     _ => $"Ø{Mm(Bore)} × Ø{Mm(Diameter)} × {Mm(Length)} mm"
                 } + $" · {MassKg * 1000:0.#} g";
@@ -281,6 +298,16 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 Id = "coupler-5-8", Name = "Esnek kaplin 5 × 8", Description = "Helisel yarıklı alüminyum kaplin: motorun 5 mm milini 8 mm vidalı mile bağlar, küçük eksen kaçıklığını alır.",
                 Kind = DrivePartKind.Coupler, Bore = 0.005, Bore2 = 0.008, Diameter = 0.019, Length = 0.025, Material = "aluminium", Color = "#B9BEC4"
+            },
+            new DrivePartSpec
+            {
+                Id = "rack-m1-300", Name = "Kremayer m1 10 × 10 × 300 mm", Description = "Çelik dişli kremayer, 20° basınç açısı: m1 pinyonla döner hareketi doğrusala çevirir (CNC, sürgülü kapı, direksiyon).",
+                Kind = DrivePartKind.Rack, Module = 0.001, Length = 0.3, Width = 0.010, Height = 0.010, Diameter = 0.010, Material = "steel", Color = "#9DA2A9"
+            },
+            new DrivePartSpec
+            {
+                Id = "rack-m1-200-pom", Name = "Kremayer m1 POM 8 × 10 × 200 mm", Description = "Asetal (POM) kremayer: hafif, sessiz, m1 POM dişlilerle.",
+                Kind = DrivePartKind.Rack, Module = 0.001, Length = 0.2, Width = 0.008, Height = 0.010, Diameter = 0.010, Material = "pom", Color = "#ECE8DC"
             }
         };
 
@@ -303,6 +330,13 @@ namespace RobotTwin.CoreSim.Sandbox
                 Color = spec.Color,
                 Pose = pose
             };
+            if (spec.Kind == DrivePartKind.Rack)
+            {
+                o.SizeX = spec.Length;
+                o.SizeY = spec.Width;
+                o.SizeZ = spec.Height;
+            }
+
             if (Hollow(spec) is { } wall) o.Parameters["tube.wall"] = wall.ToString("R", CultureInfo.InvariantCulture);
             world.Objects.Add(o);
             return o;
@@ -310,7 +344,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>The wall of a ring-shaped part (m): its collision is a ring the shaft passes through; null for a solid.</summary>
         public static double? Hollow(DrivePartSpec s) =>
-            s.IsRod || s.Kind == DrivePartKind.BearingHousing || s.Bore <= 0 ? null : (s.Diameter - Math.Max(s.Bore, s.Bore2)) / 2;
+            s.IsRod || s.Kind is DrivePartKind.BearingHousing or DrivePartKind.Rack || s.Bore <= 0 ? null : (s.Diameter - Math.Max(s.Bore, s.Bore2)) / 2;
 
         private static string ShortName(DrivePartSpec s) => s.Kind switch
         {
@@ -323,6 +357,7 @@ namespace RobotTwin.CoreSim.Sandbox
             DrivePartKind.LeadNut => "Somun",
             DrivePartKind.LinearBearing => "LM8UU",
             DrivePartKind.Collar => "Bilezik",
+            DrivePartKind.Rack => "Kremayer",
             _ => "Kaplin"
         };
 
@@ -354,6 +389,8 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 return new WorldBodyGeometry { Min = new Vec3(-hx, -hy, 0), Max = new Vec3(hx, hy, s.Height), MassKg = s.MassKg, Shape = "hull", Hull = hull };
             }
+            if (s.Kind == DrivePartKind.Rack)
+                return new WorldBodyGeometry { Min = new Vec3(-s.Length / 2, -s.Width / 2, 0), Max = new Vec3(s.Length / 2, s.Width / 2, s.Height - 0.25 * s.Module), MassKg = s.MassKg, Shape = "box" };
             double r = s.Radius;
             return new WorldBodyGeometry { Min = new Vec3(-r, -r, 0), Max = new Vec3(r, r, s.AxisSpan), MassKg = s.MassKg, Shape = "cylinder-z" };
         }

@@ -19,10 +19,10 @@ namespace RobotTwin.CoreSim.Tests
 
         public DriveAssemblyTests(ITestOutputHelper output) => _out = output;
 
-        private static WorldObject Put(WorldDocument w, string id, double x, double y, double z, bool fixedToFrame = false)
+        private static WorldObject Put(WorldDocument w, string id, double x, double y, double z, bool frame = false)
         {
             var o = DriveParts.Add(w, id, new WorldPose { X = x, Y = y, Z = z });
-            o.IsStatic = fixedToFrame;
+            o.IsStatic = frame;
             return o;
         }
 
@@ -148,6 +148,57 @@ namespace RobotTwin.CoreSim.Tests
             var (none, why) = DriveAssembly.Belt(w, small, Put(w, "pulley-gt2-60-b8", 0.0, 0.08, 0.07));
             _out.WriteLine(why);
             Assert.Null(none);   // 10 mm out of the belt's plane (and on no shaft)
+        }
+
+        /// <summary>A z20 pinion on a shaft across a rack, its pitch circle on the rack's pitch line (rack on the floor of 50 mm).</summary>
+        private static (WorldDocument World, WorldObject Shaft, WorldObject Rack, WorldObject Pinion) RackRig(bool rackSlides)
+        {
+            var w = new WorldDocument();
+            var rack = Put(w, "rack-m1-300", 0, 0, 0.05, frame: !rackSlides);
+            double zc = 0.05 + 0.010 - 0.001 + 0.010;   // pitch line 9 mm up, plus the pinion's 10 mm pitch radius
+            var shaft = DriveParts.Add(w, "shaft-8-100", new WorldPose { Y = -0.05, Z = zc, Roll = -90 });
+            var pinion = DriveParts.Add(w, "gear-m1-z20-b8", new WorldPose { Y = -0.004, Z = zc, Roll = -90 });
+            var b1 = DriveParts.Add(w, "bearing-608zz", new WorldPose { Y = -0.03, Z = zc, Roll = -90 });
+            var b2 = DriveParts.Add(w, "bearing-608zz", new WorldPose { Y = 0.025, Z = zc, Roll = -90 });
+            if (rackSlides)
+            {
+                b1.IsStatic = b2.IsStatic = true;
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Slider, ObjectA = rack.Id, AnchorZ = 0.05, AxisX = 1, AxisZ = 0 });
+            }
+            else
+            {
+                // The pinion's bearings ride a carriage that slides along the fixed rack.
+                var cart = new WorldObject { Id = w.NextId("O"), Name = "Araba", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.04, SizeY = 0.008, SizeZ = 0.04, MassKg = 0.3, Pose = new WorldPose { Y = 0.04, Z = zc - 0.02 } };
+                w.Objects.Add(cart);
+                foreach (var b in new[] { b1, b2 })
+                    w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = b.Id, ObjectB = cart.Id, Fastening = "screws", AnchorX = b.Pose.X, AnchorY = b.Pose.Y, AnchorZ = b.Pose.Z });
+                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Slider, ObjectA = cart.Id, AnchorY = 0.04, AnchorZ = zc - 0.02, AxisX = 1, AxisZ = 0 });
+            }
+
+            return (w, shaft, rack, pinion);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void APinionDrivesARackOrRollsAlongIt(bool rackSlides)
+        {
+            var (w, shaft, rack, _) = RackRig(rackSlides);
+            var report = DriveAssembly.Assemble(w);
+            foreach (var line in report.Links.Concat(report.Problems)) _out.WriteLine(line);
+            Assert.Empty(report.Problems);
+            Assert.Equal(1, report.Couplings);
+            var motor = w.Joints.First(j => j.ObjectA == shaft.Id && j.Kind == WorldJointKind.Hinge);
+            motor.Drive = WorldJoint.DriveSpeedMode;
+            motor.DriveTarget = 180;   // half a turn a second: π·20 mm / 2 = 31.4 mm/s
+            motor.DriveForce = 1;
+            using var runner = new WorldRunner(WorldDocument.FromJson(w.ToJson()), new RunnerOptions { Firmware = false });
+            var moving = rackSlides ? rack : w.Objects.Single(o => o.Name == "Araba");
+            double x0 = runner.Physics!.Scene.Bodies.Single(b => b.Id == moving.Id).Position.X;
+            while (runner.Time < 1 - 1e-6) runner.Step(0.01);
+            double travel = runner.Physics.Scene.Bodies.Single(b => b.Id == moving.Id).Position.X - x0;
+            _out.WriteLine($"{(rackSlides ? "kremayer" : "araba")} 1 s'de {travel * 1000:0.00} mm gitti (kuram 31.42)");
+            Assert.InRange(Math.Abs(travel), 0.0305, 0.0322);
         }
 
         [Fact]

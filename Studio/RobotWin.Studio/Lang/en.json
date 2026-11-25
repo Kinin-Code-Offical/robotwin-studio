@@ -7514,7 +7514,12 @@
   "A+ (siyah)": "A+ (black)",
   "A− (yeşil)": "A− (green)",
   "B+ (kırmızı)": "B+ (red)",
-  "B− (mavi)": "B− (blue)"
+  "B− (mavi)": "B− (blue)",
+  "Kremayer m1 10 × 10 × 300 mm": "Gear rack m1 10 × 10 × 300 mm",
+  "Kremayer m1 POM 8 × 10 × 200 mm": "Gear rack m1 POM 8 × 10 × 200 mm",
+  "Çelik dişli kremayer, 20° basınç açısı: m1 pinyonla döner hareketi doğrusala çevirir (CNC, sürgülü kapı, direksiyon).": "Steel gear rack, 20° pressure angle: with an m1 pinion it turns rotation into a straight line (CNC, sliding gates, steering).",
+  "Asetal (POM) kremayer: hafif, sessiz, m1 POM dişlilerle.": "Acetal (POM) rack: light and quiet, for m1 POM gears.",
+  "Kremayer": "Rack"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10600,6 +10605,11 @@
   "{…} ile {…} birbirine çok yakın: araları en az {…} mm olmalı.": "{0} and {1} are too close: they must be at least {2} mm apart.",
   "{…} dönebileceği bir mile ya da rulmana takılı değil: önce mekanizmayı kurun.": "{0} is on no shaft or bearing it could turn on: build the mechanism first.",
   "{…} ile {…} zaten bağlı.": "{0} and {1} are already coupled.",
-  "{…}, {…} motor miline setuskurla sabit.": "{0} is fixed on the shaft of {1} with a set screw."
+  "{…}, {…} motor miline setuskurla sabit.": "{0} is fixed on the shaft of {1} with a set screw.",
+  "bölüm çizgisi tabandan {…} mm": "pitch line {0} mm up",
+  "{…}, {…} üzerinde yuvarlanır: turda {…} mm.": "{0} rolls along {1}: {2} mm a turn.",
+  "{…} {…} ile kavrıyor: turda {…} mm.": "{0} meshes with {1}: {2} mm a turn.",
+  "{…} {…} ile kavrıyor ama dönebileceği bir mile ya da rulmana takılı değil.": "{0} meshes with {1}, but is on no shaft or bearing it could turn on.",
+  "{…} {…} ile kavrıyor ama ne kremayer ne de pinyonu taşıyan araba bir kızakta kayıyor.": "{0} meshes with {1}, but neither the rack nor the carriage carrying the pinion slides on a rail."
  }
 }

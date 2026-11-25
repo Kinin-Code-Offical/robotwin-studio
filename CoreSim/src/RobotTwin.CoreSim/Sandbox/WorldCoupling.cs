@@ -58,7 +58,7 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public double BeltStiffness { get; set; }
 
-        /// <summary>[drive] The two pulleys a belt runs round (objects), so the scene can draw it; null for a belt between joints alone.</summary>
+        /// <summary>[drive] The two parts in it (objects): a belt's pulleys, so the scene can draw it; a pinion and its rack or two gears, kept clear of each other. Null for a coupling between joints alone.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public string? PulleyA { get; set; }
 

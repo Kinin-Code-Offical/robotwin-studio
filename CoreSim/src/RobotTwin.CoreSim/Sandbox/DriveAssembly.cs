@@ -161,6 +161,60 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
             }
 
+            // A pinion on a rack: its pitch circle on the rack's pitch line, its axis across the rack.
+            foreach (var rack in parts.Where(p => p.S.Kind == DrivePartKind.Rack))
+            {
+                var u = rack.Axis;
+                var up = rack.O.Pose.Orientation.Rotate(Vec3.UnitZ).Normalized();
+                var across = rack.O.Pose.Orientation.Rotate(Vec3.UnitY).Normalized();
+                foreach (var g in gears)
+                {
+                    if (Math.Abs(g.S.Module - rack.S.Module) > 1e-7 || Math.Abs(Math.Abs(g.Axis.Dot(across)) - 1) > AngleTolerance * AngleTolerance) continue;
+                    var rel = g.Point(g.S.Length / 2) - rack.Origin;
+                    double along = rel.Dot(u), height = rel.Dot(up), side = rel.Dot(across), r = g.S.PitchDiameter / 2;
+                    if (along < 0 || along > rack.S.Length || Math.Abs(height - r) > 0.3 * rack.S.Module || Math.Abs(side) > (rack.S.Width + g.S.Length) / 2 - 1e-4) continue;
+                    var jg = MovingJoint(world, g.O, g.Axis, WorldJointKind.Hinge);
+                    if (jg == null)
+                    {
+                        report.Problems.Add($"{g.O.Name} {rack.O.Name} ile kavrıyor ama dönebileceği bir mile ya da rulmana takılı değil.");
+                        continue;
+                    }
+
+                    // The rack slides and the pinion turns in place; or the rack is fixed and the pinion rolls along it,
+                    // carrying the carriage its shaft turns in.
+                    var jr = MovingJoint(world, rack.O, u, WorldJointKind.Slider);
+                    bool rolling = false;
+                    if (jr == null)
+                    {
+                        string? carrier = jg.Value.Child ? jg.Value.Joint.ObjectB : jg.Value.Joint.ObjectA;
+                        jr = carrier != null && world.Find(carrier) is { } c ? MovingJoint(world, c, u, WorldJointKind.Slider) : null;
+                        rolling = true;
+                    }
+
+                    if (jr == null)
+                    {
+                        report.Problems.Add($"{g.O.Name} {rack.O.Name} ile kavrıyor ama ne kremayer ne de pinyonu taşıyan araba bir kızakta kayıyor.");
+                        continue;
+                    }
+
+                    if (Coupled(world, jg.Value.Joint, jr.Value.Joint)) continue;
+                    // The rack's teeth go with the pinion's pitch circle where they touch: v = r·ω·(n × d)·u, d from the pinion
+                    // down to the rack; rolling on a fixed rack, the carriage goes the other way.
+                    var d = up * -1;
+                    double way = g.Axis.Cross(d).Dot(u) * (rolling ? -1 : 1);
+                    (world.Couplings ??= new List<WorldCoupling>()).Add(new WorldCoupling
+                    {
+                        Id = NextCoupling(world), Kind = WorldCoupling.Gear, JointA = jg.Value.Joint.Id, JointB = jr.Value.Joint.Id, SizeA = g.S.PitchDiameter * 1000,
+                        Reverse = Sense(jg.Value, g.Axis) * Sense(jr.Value, u) * Math.Sign(way) < 0, PulleyA = g.O.Id, PulleyB = rack.O.Id
+                    });
+                    MeshRack(g, rack, d, along);
+                    report.Couplings++;
+                    report.Links.Add(rolling
+                        ? $"{g.O.Name}, {rack.O.Name} üzerinde yuvarlanır: turda {Mm(Math.PI * g.S.PitchDiameter)} mm."
+                        : $"{g.O.Name} {rack.O.Name} ile kavrıyor: turda {Mm(Math.PI * g.S.PitchDiameter)} mm.");
+                }
+            }
+
             // A nut on a lead screw: the screw's turning moves whatever slides the nut.
             foreach (var (screw, nut) in nuts)
             {
@@ -265,6 +319,30 @@ namespace RobotTwin.CoreSim.Sandbox
             int loop = Gt2Loops.FirstOrDefault(l => l >= mm - 0.5);
             string buy = loop > 0 ? $"; kapalı GT2 kayış {loop} mm ({loop / 2} diş)" + (loop - mm > 1 ? $", gergi için {Mm((loop - mm) / 2000)} mm kaydırın" : string.Empty) : string.Empty;
             return (belt, $"{pulleyA.Name} → {pulleyB.Name}: GT2 kayış {Mm(length)} mm ({(mm / 2).ToString("0.#", CultureInfo.InvariantCulture)} diş){buy}.");
+        }
+
+        /// <summary>
+        /// Turns the pinion about its axis so that where it touches the rack its tooth sits in a space of the rack's (the
+        /// rack's teeth are centred at (k + ½)·πm from its left end, its spaces at k·πm).
+        /// </summary>
+        private static void MeshRack(Part g, Part rack, Vec3 d, double along)
+        {
+            var n = g.Axis;
+            var x = g.O.Pose.Orientation.Rotate(Vec3.UnitX);
+            x = (x - n * x.Dot(n)).Normalized();
+            int z = g.S.Teeth;
+            double pitchAngle = 2 * Math.PI / z, r = g.S.PitchDiameter / 2, p = rack.S.CircularPitch;
+            double tooth = Math.Atan2(n.Dot(d.Cross(x)), d.Dot(x));   // tooth 0 from the line down to the rack
+            double off = tooth - pitchAngle * Math.Round(tooth / pitchAngle);
+            double tu = n.Cross(d).Dot(rack.Axis);
+            double at = along + r * off * tu;
+            double error = at - p * Math.Round(at / p);   // from the nearest space
+            if (Math.Abs(tu) < 1e-6 || Math.Abs(error) < 1e-9) return;
+            double turn = -error / (r * tu);
+            var (roll, pitch, yaw) = (Quat.FromAxisAngle(n, turn) * g.O.Pose.Orientation).ToEuler();
+            g.O.Pose.Roll = roll * 180 / Math.PI;
+            g.O.Pose.Pitch = pitch * 180 / Math.PI;
+            g.O.Pose.Yaw = yaw * 180 / Math.PI;
         }
 
         private static string Mm(double m) => (m * 1000).ToString("0.##", CultureInfo.InvariantCulture);

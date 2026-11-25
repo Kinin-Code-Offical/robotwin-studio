@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Gear racks:** m1 steel and POM racks with straight-flanked 20° teeth. The assembler meshes a pinion whose pitch circle sits on the rack's pitch line: a sliding rack is driven by it, a fixed rack has the pinion roll along it carrying its carriage (a CNC gantry), each turn moving it by the pinion's circumference; the pinion is turned to start tooth in space.
+
 - **Stepper motors and the A4988 driver:** a two-phase NEMA 17 (17HS4401, 17HS08) on its real equations (winding R and L, back-EMF and torque following the rotor's electrical angle, detent torque) and an A4988 that counts STEP edges, microsteps to 1/16 and regulates the phase currents as far as VMOT allows, with thermal shutdown. In a world the motor's torque turns a physics rotor, so a coupler, gear or pulley on its D-shaft (found by the assembler) and the whole mechanism load it: a square wave on STEP lifts a T8×8 carriage 8 mm a turn, and started too fast without a ramp it stalls. 3D models of the motor (caps, stack, pilot, M3 holes, connector, turning shaft) and the carrier (PCB, headers, heat sink, trimmer).
 
 - **GT2 belts round two pulleys, and gears that start meshed:** a pulley's inspector fits a belt to another pulley in its plane: the belt's length from its spans and wraps, the closed belt to buy and how far to move a pulley to tension it, the shafts coupled at the ratio of the diameters. The scene draws the belt at GT2 sizes, its teeth in the first pulley's grooves and running with it. Meshing gears are turned by up to half a tooth pitch when assembled, so they start tooth in space rather than tooth on tooth.
