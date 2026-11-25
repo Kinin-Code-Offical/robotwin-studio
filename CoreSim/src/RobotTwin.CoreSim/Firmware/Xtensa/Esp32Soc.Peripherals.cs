@@ -119,6 +119,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (ReadFlashRegister(register, out value)) return true;
             if (ReadUartRegister(register, out value)) return true;
             if (ReadI2cRegister(register, out value)) return true;
+            if (ReadSpiRegister(register, out value)) return true;
             if (ReadTimerRegister(register, out value)) return true;
             if (ReadAdcRegister(register, out value)) return true;
             if (ReadLedcRegister(register, out value)) return true;
@@ -197,6 +198,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (WriteFlashRegister(register, value)) return true;
             if (WriteUartRegister(register, value)) return true;
             if (WriteI2cRegister(register, value)) return true;
+            if (WriteSpiRegister(register, value)) return true;
             if (WriteTimerRegister(register, value)) return true;
             if (WriteAdcRegister(register, value)) return true;
             if (WriteLedcRegister(register, value)) return true;

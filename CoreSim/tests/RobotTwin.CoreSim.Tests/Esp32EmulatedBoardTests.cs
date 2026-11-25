@@ -160,6 +160,76 @@ namespace RobotTwin.CoreSim.Tests
             for (int i = 0; i < 40; i++) Assert.Equal(i, device.Memory[0x20 + i]);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_SPI_ELF names the SPI sketch's real-chip ELF.</summary>
+        public sealed class SpiElfFactAttribute : FactAttribute
+        {
+            public SpiElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_SPI_ELF"))) Skip = "RW_ESP32_SPI_ELF verilmedi.";
+            }
+        }
+
+        /// <summary>An SPI device that answers every byte with its complement and counts its frames and bytes.</summary>
+        private sealed class ComplementDevice : RobotTwin.CoreSim.Firmware.ISpiDevice
+        {
+            public int Frames, DataFrames, Bytes;
+            public bool Selected;
+            private int _inFrame;
+
+            public void Select(bool selected)
+            {
+                Selected = selected;
+                if (selected)
+                {
+                    Frames++;
+                    _inFrame = 0;
+                }
+                else if (_inFrame > 0)
+                {
+                    DataFrames++;
+                }
+            }
+
+            public byte Transfer(byte mosi)
+            {
+                Bytes++;
+                _inFrame++;
+                return (byte)~mosi;
+            }
+        }
+
+        [SpiElfFact]
+        public void SpiReachesTheSelectedDevice()
+        {
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_SPI_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 emulated SPI" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            Label(sch, board, "GND2", "GND");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var device = new ComplementDevice();
+            esp.Spi.Slaves.Add(new RobotTwin.CoreSim.Firmware.SpiSlave("D1", device, 18, 19, 23, 5, () => true));
+            var serial = new StringBuilder();
+            esp.SerialOutput += s => serial.Append(s);
+            esp.Log += s => _out.WriteLine("günlük: " + s);
+            for (int i = 0; i < 8000 && !serial.ToString().Contains("spi bitti"); i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("spi EF DF CFBF FF D8 bos FF", text);
+            // pinMode(5, OUTPUT) drives the pin low until digitalWrite(5, HIGH): an empty select, as a real device sees it.
+            Assert.Equal(1, device.DataFrames);
+            Assert.Equal(44, device.Bytes);   // 1 + 1 + 2 + 40 while selected; the last byte reaches no one
+            Assert.False(device.Selected);
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {

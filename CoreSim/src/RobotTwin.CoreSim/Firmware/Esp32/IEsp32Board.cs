@@ -26,6 +26,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         I2cBus I2c1 { get; }
 
+        /// <summary>The SPI devices wired to the board's pins (SPI.transfer reaches them, a CS pin selects them).</summary>
+        SpiBus Spi { get; }
+
         /// <summary>Text printed on UART0 during the last slice.</summary>
         event Action<string>? SerialOutput;
 

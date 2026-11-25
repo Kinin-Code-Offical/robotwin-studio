@@ -356,7 +356,26 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             _registers.TryGetValue(register, out uint old);
             uint merged = (old & ~(mask << shift)) | ((value & mask) << shift);
             if (!WritePeripheral(register, merged)) Note(register, false, merged);
-            _registers[register] = merged;
+            _registers[register] = merged & ~SelfClearing(register);
+        }
+
+        /// <summary>
+        /// Bits the hardware clears by itself once it has acted on them, so they never read back (and a later
+        /// read-modify-write of the register does not start the action again): SPI2/3 CMD.USR, I2C0/1 CTR.TRANS_START.
+        /// </summary>
+        private static uint SelfClearing(uint register)
+        {
+            switch (register)
+            {
+                case 0x3FF64000:
+                case 0x3FF65000:
+                    return 1u << 18;
+                case 0x3FF53004:
+                case 0x3FF67004:
+                    return 1u << 5;
+                default:
+                    return 0;
+            }
         }
 
         private uint ReadRegister(uint register)

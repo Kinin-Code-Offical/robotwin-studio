@@ -147,6 +147,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             // The I²C controllers' SCL and SDA (I2C0 29/30, I2C1 95/96): released between transfers, so on their open-drain
             // pads the pull-ups hold the lines high; the transfers themselves run on the bus, not drawn on the pins.
             if (signal == 29 || signal == 30 || signal == 95 || signal == 96) return true;
+            // The SPI controllers' chip selects (HSPI 11/61/62, VSPI 68–70): high, unselected, between transfers.
+            if (signal == 11 || signal == 61 || signal == 62 || signal == 68 || signal == 69 || signal == 70) return true;
             return false;   // a signal nothing drives yet
         }
 
@@ -262,7 +264,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         private bool WriteGpioRegister(uint register, uint value)
         {
-            if (register >= IoMux && register < IoMux + 0x94) return true;   // kept in the register file as written
+            if (register >= IoMux && register < IoMux + 0x94)
+            {
+                _registers[register] = value;   // kept as written (the caller stores it too)
+                NotifyPadLevels();
+                return true;
+            }
+
             if (register < Gpio || register >= Gpio + 0x630) return false;
             uint offset = register - Gpio;
             ulong low = value, high = (ulong)(value & 0xFF) << 32;
@@ -294,6 +302,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             if (offset >= 0x44 && offset <= 0x58 || offset >= 0x88 && offset < 0x88 + 40 * 4) UpdateGpioInterrupt();
+            if (offset <= 0x34 || offset >= 0x88 && offset < 0x88 + 40 * 4 || offset >= 0x530) NotifyPadLevels();
             return true;
         }
 
@@ -321,6 +330,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                     {
                         _funcOut[gpio] = (c.Argument(1) & 0x1FF) | (c.Argument(2) != 0 ? 1u << 9 : 0) | (c.Argument(3) != 0 ? 1u << 11 : 0);
                         _gpioEnable |= 1UL << (int)gpio;
+                        NotifyPadLevels();
                     }
 
                     return Return(c, 0);
@@ -356,6 +366,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             {
                 uint at = IoMux + IoMuxOffset[gpio];
                 _registers[at] = change(Reg(at));
+                NotifyPadLevels();
             }
 
             return 0;

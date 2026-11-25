@@ -51,6 +51,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _supply = supplyVoltage;
             Options = options ?? new Esp32Options();
             _chip = circuit.Device<Esp32ChipLoad>(boardRefDes + ".CHIP");
+            Spi.Warning += m => Note("SPI: " + m);
             _runCurrent = !double.IsNaN(Options.RunCurrent) ? Options.RunCurrent : _chip?.Current ?? 0.08;
             for (int g = 0; g < _pads.Length; g++)
             {
@@ -81,6 +82,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         public I2cBus I2c { get; } = new I2cBus();
         public I2cBus I2c1 { get; } = new I2cBus();
+        public SpiBus Spi { get; } = new SpiBus();
 
         public event Action<string>? SerialOutput;
         public event Action<string>? Log;
@@ -184,6 +186,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             soc.PadVoltage = gpio => gpio >= 0 && gpio < _pads.Length && _pads[gpio].Pin is { } pin ? pin.Voltage : 0;
             soc.I2cBuses[0] = I2c;    // Wire
             soc.I2cBuses[1] = I2c1;   // Wire1
+            soc.Spi = Spi;
+            soc.PadLevelChanged += (gpio, level) => Spi.PinChanged(gpio, level);   // CS pins frame SPI devices
             if (Options.BootMessages)
                 Emit("ets Jun  8 2016 00:22:57\r\n\r\nrst:" + RomResetText(romResetReason) + ",boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n");
             _soc = soc;
@@ -207,6 +211,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         private void Shutdown()
         {
+            foreach (var slave in Spi.Slaves)
+                if (slave.Selected) Spi.PinChanged(slave.Cs, true);   // the pins let go: chip selects float high
             if (_soc != null) FlushUart();
             _soc = null;
             State = Esp32BoardState.Off;

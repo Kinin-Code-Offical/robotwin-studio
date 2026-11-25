@@ -542,8 +542,8 @@ namespace RobotWin.Studio.World
 
         /// <summary>
         /// [esp32hw] Starts a hardware-compatible ESP32 of the world on the Xtensa emulator with the sketch's real-chip build;
-        /// false (after saying why) when there is none yet, and the board runs as the fast mode. The radio, the camera and
-        /// SPI devices stay with the fast mode for now.
+        /// false (after saying why) when there is none yet, and the board runs as the fast mode. The radio and the camera
+        /// stay with the fast mode for now.
         /// </summary>
         private bool AttachEmulatedEsp32(WorldProgrammable prog, string where, string source)
         {
@@ -578,6 +578,7 @@ namespace RobotWin.Studio.World
                 Log.Add(new SimLogEntry(0, where, "Yazılım çalışıyor (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
                 Log.Add(new SimLogEntry(0, where, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
                 AttachI2c(board.I2c, prog);
+                AttachSpi(board, prog);
                 return true;
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
@@ -631,7 +632,7 @@ namespace RobotWin.Studio.World
         };
 
         /// <summary>SPI devices (MCP3008, BMP280 in SPI mode …) wired to an ESP32's GPIOs.</summary>
-        private void AttachSpi(Esp32CoSimulation esp, WorldProgrammable prog)
+        private void AttachSpi(IEsp32Board esp, WorldProgrammable prog)
         {
             var c = Circuit!.Compiled;
             var slaves = RobotTwin.CoreSim.Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => c.PinNode(prog.RefDes, "IO" + g), Reach,
