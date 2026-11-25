@@ -98,4 +98,4 @@ Related: `--overlap-report <file>` builds every world template and lists parts t
 
 ## Legacy test suites
 
-`tests/native` (C++ physics/sensor validation for `NativeEngine`), `tests/integration` (Node) and `tests/python` belong to the 1.x Unity-based design. They are not built by the solution or CI.
+`tests/native` (C++ physics/sensor validation for `NativeEngine`) and `tests/python` belong to the 1.x Unity-based design. They are not built by the solution or CI. (The Node/Jest UI tests of that design, `tests/integration`, drove the Unity app and were removed with it.)

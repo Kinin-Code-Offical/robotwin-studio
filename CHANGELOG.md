@@ -214,6 +214,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Concave bodies test only the pieces that can touch:** a glass or a tray is a set of convex pieces, and every piece of one body was tested against every piece of the other: two 25-piece bodies made 625 full tests a substep. Each piece now has a sphere about its own middle, and a pair is tested only when their spheres come within the contact margin; nothing farther apart can make a contact, so the contacts are the same. The glass world's bodies take 0.06 ms a step instead of 0.09 ms.
 - **Pieces that share an edge no longer each press at the same point:** two wall pieces of a bowl side by side touch the table at their common corner, each with a contact of its own, so a bowl standing on a table made 120 contacts for 72 points. The same point with the same normal is one constraint; the deeper contact is kept. The rigid bodies of the water glass, its water pressing on them, take 0.80–0.84 ms a step instead of 1.05–1.14 ms (worlds solve contacts 16 + 4 times a substep).
 
+### Removed
+
+- **The Unity era's Node UI tests (`tests/integration`):** they drove the 1.x Unity app through a bridge that left with it, so they could not run, and no build or CI used them. Their 47 npm packages with known vulnerabilities (axios, js-yaml, minimatch, form-data and others; 19 rated high by Dependabot) went with them. Nothing that ships used them.
+
 ## [1.6.1] - 2026-11-24
 
 ### Added

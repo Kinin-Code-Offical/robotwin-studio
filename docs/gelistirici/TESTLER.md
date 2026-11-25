@@ -98,4 +98,4 @@ PNG'leri gözle ya da bir görüntü karşılaştırma aracıyla karşılaştır
 
 ## Eski test takımları
 
-`tests/native` (`NativeEngine` için C++ fizik/sensör doğrulaması), `tests/integration` (Node) ve `tests/python` 1.x Unity tabanlı tasarıma aittir. Çözüm ya da CI tarafından derlenmezler.
+`tests/native` (`NativeEngine` için C++ fizik/sensör doğrulaması) ve `tests/python` 1.x Unity tabanlı tasarıma aittir. Çözüm ya da CI tarafından derlenmezler. (O tasarımın Node/Jest arayüz testleri, `tests/integration`, Unity uygulamasını sürüyordu ve onunla birlikte kaldırıldı.)
