@@ -69,6 +69,26 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>What the firmware wrote to UART0 (its boot log and Serial).</summary>
         public StringBuilder Uart0 { get; } = new StringBuilder();
 
+        /// <summary>UART0's bytes become text as UTF-8 (a sketch's "ç" is two bytes on the wire), a character split across writes kept until whole.</summary>
+        private readonly Decoder _uart0Text = Encoding.UTF8.GetDecoder();
+        private readonly char[] _uart0Chars = new char[4];
+
+        /// <summary>One byte out of UART0.</summary>
+        private void Uart0Out(byte value)
+        {
+            _uart0Bytes[0] = value;
+            int n = _uart0Text.GetChars(_uart0Bytes, 0, 1, _uart0Chars, 0);
+            Uart0.Append(_uart0Chars, 0, n);
+        }
+
+        private readonly byte[] _uart0Bytes = new byte[1];
+
+        /// <summary>Text the ROM's printf made from the firmware's bytes (one character per byte), out of UART0.</summary>
+        private void Uart0Out(string bytesAsChars)
+        {
+            foreach (char ch in bytesAsChars) Uart0Out((byte)ch);
+        }
+
         /// <summary>
         /// The reset the ROM reports for this start (its RESET_REASON: 1 power-on, 5 deep-sleep wake, 12 software CPU reset,
         /// 15 brown-out …); the board sets it before loading.

@@ -273,7 +273,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             foreach (var name in new[] { "esp_rom_uart_putc", "uart_tx_one_char", "ets_write_char_uart", "esp_rom_output_tx_one_char", "esp_rom_output_putc", "esp_rom_uart_tx_one_char" })
                 Rom(name, c =>
                 {
-                    Uart0.Append((char)(c.Argument(0) & 0xFF));
+                    Uart0Out((byte)c.Argument(0));
                     return Return(c, 0);
                 });
             Rom("ets_set_appcpu_boot_addr", c =>
@@ -393,7 +393,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 sb.Append(text.PadLeft(width, zero ? '0' : ' '));
             }
 
-            Uart0.Append(sb);
+            Uart0Out(sb.ToString());
             return (uint)sb.Length;
         }
     }

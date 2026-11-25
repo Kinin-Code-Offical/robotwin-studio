@@ -232,6 +232,28 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void UartTextIsUtf8AndReceivedBytesArriveAtTheBaudRate()
+        {
+            var soc = Chip();
+            foreach (byte b in System.Text.Encoding.UTF8.GetBytes("Araçlara yeşil"))
+                soc.Write32(0x60000000, b);                  // the FIFO through its AHB address, as uart_ll_write_txfifo
+            Assert.Equal("Araçlara yeşil", soc.Uart0.ToString());
+
+            soc.Write32(0x3FF40024, 0x0A006001);            // CONF1: RXFIFO_FULL at 1 byte
+            soc.Write32(0x3FF4000C, 1);                     // INT_ENA: RXFIFO_FULL
+            soc.Write32(0x3FF00104 + 34 * 4, 3);            // matrix: UART0 (34) → PRO CPU interrupt 3
+            soc.SendToUart0(new byte[] { (byte)'o', (byte)'k' });
+            Assert.Equal(0u, soc.Read32(0x3FF4001C) & 0xFF);   // still on the wire
+            soc.Run(240 * 200);                             // 200 µs: two bytes at 115200 baud take 174 µs
+            Assert.Equal(2u, soc.Read32(0x3FF4001C) & 0xFF);
+            Assert.Equal(1u << 3, soc.Pro.ExternalLevels);
+            Assert.Equal((uint)'o', soc.Read32(0x3FF40000));
+            Assert.Equal((uint)'k', soc.Read32(0x3FF40000));
+            Assert.Equal(0u, soc.Read32(0x3FF4001C) & 0xFF);
+            Assert.Equal(0u, soc.Pro.ExternalLevels);       // emptied: the condition is gone
+        }
+
+        [Fact]
         public void SarAdcConvertsThePadAsAnalogReadDoes()
         {
             var soc = Chip();

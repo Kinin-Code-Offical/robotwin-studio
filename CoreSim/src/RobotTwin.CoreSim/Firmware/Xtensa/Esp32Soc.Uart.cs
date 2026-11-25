@@ -128,7 +128,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             switch (register - Uart0Fifo)
             {
                 case 0x00:
-                    Uart0.Append((char)(value & 0xFF));
+                    Uart0Out((byte)value);
                     return true;
                 case 0x0C:
                     _uart0IntEnable = value;
