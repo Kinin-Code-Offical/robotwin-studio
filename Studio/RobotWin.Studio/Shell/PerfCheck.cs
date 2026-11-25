@@ -29,6 +29,7 @@ namespace RobotWin.Studio.Shell
             public double MsPerSecond = double.NaN;   // wall time per simulated second (ms)
             public double Score = double.NaN;         // the same over the calibration (dimensionless)
             public string? Error;
+            public string Parts = string.Empty;       // where the time went, for the report
         }
 
         public static int Run(string reportPath, string? baselinePath, bool update, double seconds, double tolerance, IReadOnlyCollection<string>? only)
@@ -48,17 +49,24 @@ namespace RobotWin.Studio.Shell
                 try
                 {
                     double best = double.PositiveInfinity;
-                    for (int rep = 0; rep < 2; rep++) best = Math.Min(best, Measure(template, seconds));
+                    for (int rep = 0; rep < 2; rep++)
+                    {
+                        var (ms, parts) = Measure(template, seconds);
+                        if (ms >= best) continue;
+                        best = ms;
+                        e.Parts = parts;
+                    }
+
                     e.MsPerSecond = best / seconds;
                     e.Score = e.MsPerSecond / calibration;
                 }
-                catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is IOException || ex is KeyNotFoundException || ex is NotSupportedException)
+                catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is IOException || ex is KeyNotFoundException || ex is NotSupportedException || ex is ApiException)
                 {
                     e.Error = ex.Message;
                 }
 
                 report.AppendLine(e.Error == null
-                    ? $"{e.Id,-16} {e.MsPerSecond.ToString("0.0", CultureInfo.InvariantCulture),9} ms/s   puan {e.Score.ToString("0.00", CultureInfo.InvariantCulture),7}"
+                    ? $"{e.Id,-16} {e.MsPerSecond.ToString("0.0", CultureInfo.InvariantCulture),9} ms/s   puan {e.Score.ToString("0.00", CultureInfo.InvariantCulture),7}   {e.Parts}"
                     : $"{e.Id,-16} HATA: {e.Error}");
                 Write(reportPath, report);
             }
@@ -102,16 +110,35 @@ namespace RobotWin.Studio.Shell
             return regressions > 0 ? 1 : 0;
         }
 
-        /// <summary>One run of a template: built and warmed up (firmware built, caches filled), then timed (ms).</summary>
-        private static double Measure(Examples.WorldTemplate template, double seconds)
+        /// <summary>
+        /// One run of a template: built and warmed up (firmware built, caches filled), then timed (ms), with where the time
+        /// went: the boards' code, the circuit (with its solver's substeps per simulated second), and the mechanics' parts as
+        /// the physics times them.
+        /// </summary>
+        private static (double Ms, string Parts) Measure(Examples.WorldTemplate template, double seconds)
         {
             var options = new RunnerOptions { Esp32Builder = Automation.StudioApiHost.BuildEsp32 };
             options.FirmwareSearchPath.Add(Path.Combine(AppContext.BaseDirectory, "Firmware"));
             using var runner = new WorldRunner(template.Build(), options);
             runner.Step(0.1);
+            var t = runner.Physics?.Times;
+            double[] Physics() => t == null ? new double[8] : new[] { t.Bodies, t.Cables, t.Liquids, t.Thermal, t.Drives, t.Air, t.Scripts, t.Sensors };
+            var before = Physics();
+            double fw0 = runner.FirmwareSeconds, ck0 = runner.CircuitSeconds;
+            long steps0 = runner.CircuitSubsteps;
             var watch = Stopwatch.StartNew();
             runner.Step(seconds);
-            return watch.Elapsed.TotalMilliseconds;
+            double ms = watch.Elapsed.TotalMilliseconds;
+            var after = Physics();
+            string[] names = { "gövdeler", "kablolar", "sıvılar", "ısı", "sürücüler", "hava", "betikler", "sensörler" };
+            var parts = new List<(string Name, double Ms)>
+            {
+                ("yazılım", (runner.FirmwareSeconds - fw0) * 1000),
+                ($"devre ({((runner.CircuitSubsteps - steps0) / seconds).ToString("0", CultureInfo.InvariantCulture)} adım/s)", (runner.CircuitSeconds - ck0) * 1000)
+            };
+            for (int i = 0; i < names.Length; i++) parts.Add((names[i], (after[i] - before[i]) * 1000));
+            return (ms, string.Join(" · ", parts.Where(p => p.Ms / ms >= 0.05).OrderByDescending(p => p.Ms)
+                .Select(p => p.Name + " %" + (p.Ms / ms * 100).ToString("0", CultureInfo.InvariantCulture))));
         }
 
         /// <summary>

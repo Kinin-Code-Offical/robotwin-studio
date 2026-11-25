@@ -204,6 +204,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Circuits with PWM and boards run faster:** the circuit solver no longer ends a time slice with a sliver of a step and climbs back from it in the next one, and after a discontinuity (a PWM edge, a switch) it restarts at a hundredth of the step it was going at instead of always at 0.1 µs. The line follower (two PWM motors, five line sensors, an Uno) needs 51 000 solver steps per simulated second instead of 64 000 and runs 18 % faster (867 → 715 ms of computing per simulated second); the ESP32 quadcopter 5 %. Found with the new performance check, whose report now says per world where the time goes (the boards' code, the circuit, the mechanics' parts).
+
 - **The board asks before the schematic takes laid-out work away:** a change in the schematic that would remove a part from the board, swap its footprint or delete tracks and vias on nets that are gone is no longer applied when you open the PCB page. The board stays as it is and the top of the page says what updating it would do (`1 part will be removed (R2)`), with **Update the board** to apply it; until then the **Update** button stands out and its tooltip lists every change. Changes that only add are still brought in by themselves.
 
 - **One installer for every kind of installation; the lite package is gone:**

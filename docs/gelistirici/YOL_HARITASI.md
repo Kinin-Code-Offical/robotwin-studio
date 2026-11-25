@@ -74,7 +74,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [ ] Geometri, ağ ve çözüm önbellekleri.
   - [ ] LOD.
   - [x] Uzun koşu bellek testleri: `LongRunTests` (fabrika hücresi bir dakika, yığın sabit) ve `--memory-log` ile canlı koşular. Araba dünyası 4 dakika Türkçe 15 MB'da düz; İngilizcede çeviri önbelleği büyüyordu, artık iki kuşakla sınırlı.
-  - [x] Otomatik performans gerileme ölçümü: `--perf-check` her dünya şablonunu başsız çalıştırıp simülasyon saniyesinin maliyetini `tools/perf/baseline.json` ile karşılaştırır (ısınma, sonra iki ölçümün iyisi; başka bilgisayarda sabit bir CPU işine göre puanla). Toleranstan yavaşı gerileme sayılır, çıkış kodu 1; CI her gönderimde çalıştırıp uyarı verir.
+  - [x] Otomatik performans gerileme ölçümü: `--perf-check` her dünya şablonunu başsız çalıştırıp simülasyon saniyesinin maliyetini `tools/perf/baseline.json` ile karşılaştırır (ısınma, sonra iki ölçümün iyisi; başka bilgisayarda sabit bir CPU işine göre puanla). Toleranstan yavaşı gerileme sayılır, çıkış kodu 1; CI her gönderimde çalıştırıp uyarı verir. Rapor her dünyada zamanın nereye gittiğini de yazar (kartların kodu, devre ve çözücüsünün adım sayısı, mekaniğin bölümleri); ilk bulgu: çizgi izleyende devre çözücüsü dilim sonlarında kıymık adımlar atıp her dilimde yeniden tırmanıyordu, düzeltildi (%18 hızlı).
 
 ### P1: öncelikli
 

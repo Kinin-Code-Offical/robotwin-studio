@@ -219,6 +219,17 @@ namespace RobotTwin.CoreSim.Automation
         public double LastStepWall { get; private set; }
         public double LastStepSim { get; private set; }
         public double TotalWall { get; private set; }
+
+        /// <summary>
+        /// [perf] Where the wall time of <see cref="Step"/> went, in seconds since loading: the boards' code (AVR and ESP32),
+        /// the circuit, the mechanics (with sensors); and the circuit solver's accepted substeps and Newton iterations.
+        /// </summary>
+        public double FirmwareSeconds { get; private set; }
+
+        public double CircuitSeconds { get; private set; }
+        public double MechanicsSeconds { get; private set; }
+        public long CircuitSubsteps { get; private set; }
+        public long NewtonIterations { get; private set; }
         public double TotalSim { get; private set; }
 
         /// <summary>Simulated seconds per wall-clock second of the last step call.</summary>
@@ -315,11 +326,20 @@ namespace RobotTwin.CoreSim.Automation
                 while (covered < seconds - 1e-15)
                 {
                     double dt = Math.Min(chunk, seconds - covered);
+                    long t0 = Stopwatch.GetTimestamp();
                     for (int i = 0; i < Avr.Count; i++) Avr[i].Advance(dt, sim.Time);
                     for (int i = 0; i < Esp.Count; i++) Esp[i].Advance(dt, sim.Time);
+                    long t1 = Stopwatch.GetTimestamp();
                     ApplyOverrides(sim);
                     sim.Step(dt);
+                    long t2 = Stopwatch.GetTimestamp();
                     AdvanceMechanics(dt);
+                    long t3 = Stopwatch.GetTimestamp();
+                    FirmwareSeconds += (t1 - t0) / (double)Stopwatch.Frequency;
+                    CircuitSeconds += (t2 - t1) / (double)Stopwatch.Frequency;
+                    MechanicsSeconds += (t3 - t2) / (double)Stopwatch.Frequency;
+                    CircuitSubsteps += sim.Statistics.Substeps;
+                    NewtonIterations += sim.Statistics.NewtonIterations;
                     covered += dt;
                     Sliced?.Invoke(dt);
                     DrainSolverEvents(sim);
