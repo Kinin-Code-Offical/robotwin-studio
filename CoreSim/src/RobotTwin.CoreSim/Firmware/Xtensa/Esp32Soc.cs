@@ -131,6 +131,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             BindRom();
             FillRomData(elf);
+            BindAppFunctions(elf);
             // As the second-stage bootloader leaves it when it calls the application's entry (call_start_cpu0, which
             // begins with ENTRY): windows on, user vector mode, CALLINC of a CALLX4, interrupts at level 0, and its
             // stack near the top of the ROM's reserved DRAM, the caller pointer below it pointing at itself.
@@ -220,6 +221,30 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             byte n = 0;
             for (; v != 0; v &= v - 1) n++;
             return n;
+        }
+
+        /// <summary>
+        /// The firmware's own functions the core serves rather than runs: libgcc's single-precision division (__divsf3) is
+        /// the FPU's divide-step sequence (DIV0.S, NEXP01.S, MADDN.S, MKDADJ.S, ADDEXP.S, DIVN.S …), whose instructions the
+        /// core does not model one by one; it gives the correctly rounded IEEE quotient, and so does this, in the ~30 cycles
+        /// the sequence takes.
+        /// </summary>
+        private void BindAppFunctions(ElfImage elf)
+        {
+            foreach (var symbol in elf.Symbols)
+            {
+                if (symbol.Name != "__divsf3" || symbol.Value < IramBase || symbol.Value >= IromEnd) continue;
+                foreach (var core in new[] { Pro, App })
+                {
+                    core.AddAppTrap(symbol.Value, c =>
+                    {
+                        float a = BitConverter.Int32BitsToSingle((int)c.Argument(0)), b = BitConverter.Int32BitsToSingle((int)c.Argument(1));
+                        c.ReturnFromCall((uint)BitConverter.SingleToInt32Bits(a / b));
+                        c.TrapCycles = 30;
+                        return true;
+                    });
+                }
+            }
         }
 
         /// <summary>newlib's class flags for one character in the C locale: _U 1, _L 2, _N 4, _S 8, _P 16, _C 32, _X 64, _B 128.</summary>

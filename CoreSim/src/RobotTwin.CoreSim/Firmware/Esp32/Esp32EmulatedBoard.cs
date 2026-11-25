@@ -182,6 +182,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             soc.Load(_elf);
             if (_flashImage != null) soc.LoadFlash(_flashImage);
             soc.PadVoltage = gpio => gpio >= 0 && gpio < _pads.Length && _pads[gpio].Pin is { } pin ? pin.Voltage : 0;
+            soc.I2cBuses[0] = I2c;    // Wire
+            soc.I2cBuses[1] = I2c1;   // Wire1
             if (Options.BootMessages)
                 Emit("ets Jun  8 2016 00:22:57\r\n\r\nrst:" + RomResetText(romResetReason) + ",boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n");
             _soc = soc;

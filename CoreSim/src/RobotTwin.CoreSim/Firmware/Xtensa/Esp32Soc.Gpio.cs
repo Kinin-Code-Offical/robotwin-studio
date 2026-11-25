@@ -144,6 +144,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 return true;
             }
 
+            // The I²C controllers' SCL and SDA (I2C0 29/30, I2C1 95/96): released between transfers, so on their open-drain
+            // pads the pull-ups hold the lines high; the transfers themselves run on the bus, not drawn on the pins.
+            if (signal == 29 || signal == 30 || signal == 95 || signal == 96) return true;
             return false;   // a signal nothing drives yet
         }
 

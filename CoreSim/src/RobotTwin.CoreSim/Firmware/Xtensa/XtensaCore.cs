@@ -296,6 +296,22 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         public uint TrapLow { get; set; }
 
+        private System.Collections.Generic.Dictionary<uint, Func<XtensaCore, bool>>? _appTraps;
+        private bool[]? _appTrapMask;
+
+        /// <summary>
+        /// [esp32emu] Serves a function of the firmware itself at its entry (like the ROM's), for the few whose instructions
+        /// the core does not run: the trap returns from the call with the result. A filter on the address keeps the check off
+        /// every other instruction's path.
+        /// </summary>
+        public void AddAppTrap(uint address, Func<XtensaCore, bool> serve)
+        {
+            _appTraps ??= new System.Collections.Generic.Dictionary<uint, Func<XtensaCore, bool>>();
+            _appTrapMask ??= new bool[65536];
+            _appTraps[address] = serve;
+            _appTrapMask[(address >> 1) & 0xFFFF] = true;
+        }
+
         /// <summary>The cycles the trap just served took (10 unless it says otherwise: a busy-wait spends its time here).</summary>
         public int TrapCycles { get; set; } = 10;
         public uint TrapHigh { get; set; }
@@ -322,6 +338,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (TakeInterrupt()) return 1;
             if (Waiting) return 1;
             if (Trap != null && Pc >= TrapLow && Pc < TrapHigh && Trap(this))
+            {
+                int spent = TrapCycles;
+                TrapCycles = 10;
+                return spent;
+            }
+
+            if (_appTrapMask != null && _appTrapMask[(Pc >> 1) & 0xFFFF] && _appTraps!.TryGetValue(Pc, out var serve) && serve(this))
             {
                 int spent = TrapCycles;
                 TrapCycles = 10;

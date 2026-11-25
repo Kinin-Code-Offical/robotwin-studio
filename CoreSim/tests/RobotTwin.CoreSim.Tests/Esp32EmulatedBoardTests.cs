@@ -79,6 +79,87 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Contains("MERHABA ROBOT", serial.ToString());
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_I2C_ELF names the I2C sketch's real-chip ELF (scan, register write/read, a long write).</summary>
+        public sealed class I2cElfFactAttribute : FactAttribute
+        {
+            public I2cElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_I2C_ELF"))) Skip = "RW_ESP32_I2C_ELF verilmedi.";
+            }
+        }
+
+        /// <summary>A register-file I²C module: the first byte written after a START sets the register pointer, the rest store; reads return from it.</summary>
+        private sealed class RegisterDevice : RobotTwin.CoreSim.Firmware.II2cDevice
+        {
+            public RegisterDevice(byte address) => Address = address;
+            public byte Address { get; }
+            public readonly byte[] Memory = new byte[256];
+            private byte _pointer;
+            private bool _first;
+            public int Writes;
+
+            public bool Start(bool read)
+            {
+                _first = !read;
+                return true;
+            }
+
+            public bool Write(byte value)
+            {
+                if (_first) _pointer = value;
+                else
+                {
+                    Memory[_pointer++] = value;
+                    Writes++;
+                }
+
+                _first = false;
+                return true;
+            }
+
+            public byte Read(bool ack) => Memory[_pointer++];
+
+            public void Stop()
+            {
+            }
+        }
+
+        [I2cElfFact]
+        public void WireTalksToTheModulesOnTheBus()
+        {
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_I2C_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 emulated I2C" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            Label(sch, board, "GND2", "GND");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var device = new RegisterDevice(0x48);
+            device.Memory[0x11] = 0x5A;
+            esp.I2c.Devices.Add(device);
+            var serial = new StringBuilder();
+            esp.SerialOutput += s => serial.Append(s);
+            esp.Log += s => _out.WriteLine("günlük: " + s);
+            for (int i = 0; i < 8000 && !serial.ToString().Contains("i2c bitti"); i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("cihaz 0x48", text);
+            Assert.DoesNotContain("cihaz 0x50", text);
+            Assert.Contains("yazma 0", text);
+            Assert.Contains("okunan AB CD", text);
+            Assert.Contains("uzun 0", text);
+            Assert.Contains("yok 2", text);   // NACK on the address: endTransmission's 2
+            Assert.Equal(0xAB, device.Memory[0x10]);
+            for (int i = 0; i < 40; i++) Assert.Equal(i, device.Memory[0x20 + i]);
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {

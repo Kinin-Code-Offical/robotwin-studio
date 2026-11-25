@@ -9,7 +9,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     /// (80 MHz on the PLL, the CPU clock otherwise). Each group (TIMG0 0x3FF5F000, TIMG1 0x3FF60000) has two
     /// general-purpose 64-bit timers (T0, T1) and the LAC timer esp_timer counts on (millis(), micros(), its
     /// alarms): a prescaled up/down counter with load, latch (UPDATE), and an alarm that raises the group's
-    /// interrupt (level sources 14–21, edge sources 50–57 through the matrix).
+    /// interrupt (level sources 14–21, edge sources 58–65 through the matrix).
     /// </summary>
     public sealed partial class Esp32Soc
     {
@@ -22,7 +22,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>Each core's cycle count when the current turn began (time inside a turn runs with the core that reads it).</summary>
         private ulong _proTurnStart, _appTurnStart;
 
-        private readonly TimerGroup[] _timerGroups = { new TimerGroup(14, 50), new TimerGroup(18, 54) };
+        // Level sources 14–17 / 18–21 (T0, T1, WDT, LACT); edge sources 58–61 / 62–65.
+        private readonly TimerGroup[] _timerGroups = { new TimerGroup(14, 58), new TimerGroup(18, 62) };
 
         /// <summary>The CPU clock the firmware set: SOC_CLK_SEL in RTC_CNTL_CLK_CONF, the PLL's CPUPERIOD_SEL, XTAL's divider.</summary>
         public double CpuHz
@@ -71,6 +72,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             for (int g = 0; g < 2; g++) ServiceTimerGroup(g);
             ServiceLedc();
             ServiceUart0();
+            ServiceI2c();
         }
 
         private bool ReadTimerRegister(uint register, out uint value)
