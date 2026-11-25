@@ -82,6 +82,7 @@ namespace RobotWin.Studio.Render
         private Pass[] _drawPass = Array.Empty<Pass>();
         private float[] _drawDepth = Array.Empty<float>();
         private Vector4[] _drawSphere = Array.Empty<Vector4>();
+        private bool[] _drawSeen = Array.Empty<bool>();   // [perf] in the view this frame (see Cull)
         private readonly List<int> _transparentOrder = new List<int>();
 
         /// <summary>Which pass draws a thing.</summary>
@@ -455,6 +456,7 @@ namespace RobotWin.Studio.Render
 
             // ---- every object's data, once for the frame
             int count = Prepare(items, camera.Position);
+            Cull(count, view, camera, aspect, height);
             _ctx.IASetInputLayout(_layout);
             _ctx.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             _ctx.IASetVertexBuffer(1, _instanceIds!, 4, 0);
@@ -502,13 +504,13 @@ namespace RobotWin.Studio.Render
             _ctx.OMSetDepthStencilState(_sceneWrite, 0);
             ResetFilter();
             for (int i = 0; i < count; i++)
-                if (_drawPass[i] == Pass.Opaque)
+                if (_drawPass[i] == Pass.Opaque && _drawSeen[i])
                     DrawShaded(items[i], i);
 
             // ---- transparent things, farthest first, over what is behind them
             _transparentOrder.Clear();
             for (int i = 0; i < count; i++)
-                if (_drawPass[i] == Pass.Transparent)
+                if (_drawPass[i] == Pass.Transparent && _drawSeen[i])
                     _transparentOrder.Add(i);
             _transparentOrder.Sort((x, y) => _drawDepth[y].CompareTo(_drawDepth[x]));
             _ctx.OMSetBlendState(_alpha);
@@ -518,7 +520,7 @@ namespace RobotWin.Studio.Render
             // ---- light of their own (a glow, a halo, the editor's handles): added to what is behind, as WPF does
             _ctx.OMSetBlendState(_additive);
             for (int i = 0; i < count; i++)
-                if (_drawPass[i] == Pass.Glow)
+                if (_drawPass[i] == Pass.Glow && _drawSeen[i])
                     DrawShaded(items[i], i);
 
             _ctx.ResolveSubresource(target.Shared, 0, target.Msaa, 0, Format.B8G8R8A8_UNorm);
@@ -572,6 +574,42 @@ namespace RobotWin.Studio.Render
             return n;
         }
 
+        /// <summary>
+        /// [perf] Which objects the view shows: one whose bounding sphere lies wholly outside the view's sides or behind
+        /// it is not drawn, nor one that would cover less than half a pixel across (a screw on the far side of a field).
+        /// The sun's shadow still has them all: what is out of view still casts shade into it.
+        /// </summary>
+        private void Cull(int count, Matrix4x4 view, Camera camera, float aspect, int heightPx)
+        {
+            float halfH = camera.Orthographic ? camera.Width / 2 : MathF.Tan(camera.HorizontalFov / 2);
+            float halfV = halfH / aspect;
+            // The side planes through the eye (perspective), as normals in view space (x right, y up, looking down −z).
+            float ch = 1 / MathF.Sqrt(1 + halfH * halfH), sh = halfH * ch, cv = 1 / MathF.Sqrt(1 + halfV * halfV), sv = halfV * cv;
+            // Half a pixel across, as an angle (perspective) or a length (orthographic).
+            float halfPixel = 0.5f * 2 * halfV / Math.Max(1, heightPx);
+            for (int i = 0; i < count; i++)
+            {
+                if (_drawPass[i] == Pass.None)
+                {
+                    _drawSeen[i] = false;
+                    continue;
+                }
+
+                var s = _drawSphere[i];
+                var c = Vector3.Transform(new Vector3(s.X, s.Y, s.Z), view);
+                float r = s.W, z = -c.Z;   // depth ahead of the eye
+                bool seen;
+                if (camera.Orthographic)
+                    seen = MathF.Abs(c.X) <= halfH + r && MathF.Abs(c.Y) <= halfV + r && 2 * r >= halfPixel;
+                else
+                    seen = z >= -r
+                           && c.X * ch - z * sh <= r && -c.X * ch - z * sh <= r
+                           && c.Y * cv - z * sv <= r && -c.Y * cv - z * sv <= r
+                           && (z <= r || 2 * r >= halfPixel * z);
+                _drawSeen[i] = seen;
+            }
+        }
+
         /// <summary>Room for <paramref name="n"/> objects in the GPU's table (it doubles as needed).</summary>
         private void EnsureObjects(int n)
         {
@@ -596,6 +634,7 @@ namespace RobotWin.Studio.Render
             Array.Resize(ref _drawPass, cap);
             Array.Resize(ref _drawDepth, cap);
             Array.Resize(ref _drawSphere, cap);
+            Array.Resize(ref _drawSeen, cap);
             _objectCapacity = cap;
         }
 
