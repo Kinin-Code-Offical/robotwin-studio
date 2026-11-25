@@ -276,6 +276,50 @@ namespace RobotTwin.CoreSim.Tests
             Assert.True(first >= 0 && text.IndexOf("bekci testi", first + 1, StringComparison.Ordinal) > first);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_SLEEP_ELF names the deep-sleep sketch's real-chip ELF.</summary>
+        public sealed class SleepElfFactAttribute : FactAttribute
+        {
+            public SleepElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_SLEEP_ELF"))) Skip = "RW_ESP32_SLEEP_ELF verilmedi.";
+            }
+        }
+
+        [SleepElfFact]
+        public void DeepSleepKeepsRtcMemoryAndWakesOnTheTimer()
+        {
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_SLEEP_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 emulated deep sleep" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            Label(sch, board, "GND2", "GND");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var serial = new StringBuilder();
+            esp.SerialOutput += s => serial.Append(s);
+            esp.Log += s => _out.WriteLine("günlük: " + s);
+            bool slept = false;
+            for (int i = 0; i < 20000 && !serial.ToString().Contains("uyku bitti"); i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+                slept |= esp.State == Esp32BoardState.DeepSleep;
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            _out.WriteLine($"bitiş {sim.Time:F3} s");
+            Assert.True(slept);
+            Assert.Contains("uyandi 1 neden 0", text);   // power-on: no wake cause
+            Assert.Contains("rst:0x5 (DEEPSLEEP_RESET)", text);
+            Assert.Contains("uyandi 2 neden 4", text);   // ESP_SLEEP_WAKEUP_TIMER, the counter kept in RTC memory
+            Assert.Contains("uyandi 3 neden 4", text);
+            Assert.Contains("uyku bitti", text);
+            Assert.InRange(sim.Time, 0.4, 0.9);          // two 200 ms sleeps and three starts
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {

@@ -234,6 +234,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             // start-up: reset reason (power on), the CPU clock, caches (the flash is mapped directly here), the console
             foreach (var name in new[] { "esp_rom_get_reset_reason", "rtc_get_reset_reason" }) Rom(name, c => Return(c, (uint)RomResetReason));
+            // Before deep sleep: the ROM's CRC of RTC fast memory, which only its own wake-stub check reads (not modelled)
+            Rom("set_rtc_memory_crc", c => Return(c, 0));
+
             // esp_restart's last step: the whole chip resets (the board starts it again)
             foreach (var name in new[] { "software_reset", "software_reset_cpu", "esp_rom_software_reset_system", "esp_rom_software_reset_cpu" })
             {

@@ -397,7 +397,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         public void Run(long cycles, int turn = 1000)
         {
             long done = 0;
-            while (done < cycles && Stopped == null && !Pro.AtBreak && !RestartRequested)
+            while (done < cycles && Stopped == null && !Pro.AtBreak && !RestartRequested && !DeepSleepRequested)
             {
                 // While either core is in, or about to take, a high-priority interrupt (level 4 and up), the cores take turns
                 // of a few cycles: such handlers hand over through flags (the interrupt watchdog's livelock handshake …) whose

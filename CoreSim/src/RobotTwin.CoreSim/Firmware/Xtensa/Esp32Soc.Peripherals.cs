@@ -215,6 +215,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (WriteUartRegister(register, value)) return true;
             if (WriteI2cRegister(register, value)) return true;
             if (WriteSpiRegister(register, value)) return true;
+            WriteSleepRegister(register, value);
             if (WriteTimerRegister(register, value)) return true;
             if (WriteAdcRegister(register, value)) return true;
             if (WriteLedcRegister(register, value)) return true;

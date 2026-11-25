@@ -105,6 +105,8 @@ namespace RobotTwin.CoreSim.Tests
                 foreach (var r in soc.RouteLog) report.AppendLine($"{r.Cpu} {r.Source,2} → {r.Interrupt,2}  pc 0x{r.Pc:X8}");
             }
 
+            if (soc.DeepSleepRequested)
+                report.AppendLine($"derin uyku: zamanlayıcı {soc.WakeAfterSeconds?.ToString() ?? "yok"} s · ext0 {soc.Ext0Wake} · WAKEUP_STATE 0x{soc.Read32(0x3FF48038):X8} SLP_TIMER0 0x{soc.Read32(0x3FF48004):X8} SLP_TIMER1 0x{soc.Read32(0x3FF48008):X8} RTC {soc.Read32(0x3FF48010)}");
             report.AppendLine("---- UART0 ----");
             report.AppendLine(soc.Uart0.ToString());
             report.AppendLine("---- son sıçramalar (eskiden yeniye) ----");

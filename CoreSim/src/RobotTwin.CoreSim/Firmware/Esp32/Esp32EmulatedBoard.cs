@@ -39,6 +39,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private bool _enHigh = true, _resetRequested, _everRan, _disposed;
         private double _minVddWhileOff = double.PositiveInfinity;
 
+        // Deep sleep: RTC memory kept for the wake, when the timer wakes the chip, the EXT0 pad and level.
+        private byte[]? _rtcKept;
+        private double _wakeAt = double.NaN;
+        private (int Gpio, bool Level) _ext0 = (-1, false);
+
         /// <param name="elf">The application ELF the hardware build made (its segments and its ROM symbols).</param>
         /// <param name="flashImage">The merged flash image (bootloader, partition table, application), when there is one.</param>
         public Esp32EmulatedBoard(byte[] elf, byte[]? flashImage, CompiledCircuit circuit, string boardRefDes, Func<double>? supplyVoltage = null,
@@ -141,7 +146,15 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             else if (_resetRequested)
             {
                 Halted = null;
+                _rtcKept = null;
                 Boot(now, 1);
+            }
+            else if (State == Esp32BoardState.DeepSleep)
+            {
+                // The RTC timer, or the EXT0 pad reaching its level (the pad keeps its own Schmitt-free reading here).
+                bool timer = !double.IsNaN(_wakeAt) && now >= _wakeAt;
+                bool ext0 = _ext0.Gpio >= 0 && _pads[_ext0.Gpio].Pin is { } wakePin && (wakePin.Voltage > 0.5 * _vdd) == _ext0.Level;
+                if (timer || ext0) Boot(now, 5, ext0 ? 1u : 8u);
             }
 
             _resetRequested = false;
@@ -171,6 +184,18 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
                     Boot(end, reason);
                 }
+                else if (_soc.DeepSleepRequested)
+                {
+                    // Into deep sleep: the RTC memory is kept, the rest powers down until the timer or EXT0 wakes it.
+                    _rtcKept = _soc.SaveRtcMemory();
+                    _wakeAt = _soc.WakeAfterSeconds is { } after ? end + after : double.NaN;
+                    _ext0 = _soc.Ext0Wake;
+                    Note(_soc.WakeAfterSeconds is { } s
+                        ? $"derin uyku: {(s * 1e6).ToString("F0", CultureInfo.InvariantCulture)} µs"
+                        : "derin uyku (zamanlayıcıyla uyanma yok)");
+                    Shutdown();
+                    State = Esp32BoardState.DeepSleep;
+                }
                 else if (_soc.Stopped != null || _soc.Pro.AtBreak)
                 {
                     Halted = _soc.Stopped ?? $"çekirdek durdu @0x{_soc.Pro.Pc:X8}";
@@ -185,12 +210,16 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         private static bool Stopped(Esp32Soc soc) => soc.Stopped != null || soc.Pro.AtBreak || soc.RestartRequested;
 
-        private void Boot(double time, int romResetReason)
+        private void Boot(double time, int romResetReason, uint wakeCause = 0)
         {
             Shutdown();
             var soc = new Esp32Soc { RomResetReason = romResetReason, PadSupply = _vdd };
             soc.Load(_elf);
             if (_flashImage != null) soc.LoadFlash(_flashImage);
+            if (romResetReason == 5 && _rtcKept != null) soc.WakeFromDeepSleep(_rtcKept, wakeCause);   // RTC memory survives
+            _rtcKept = null;
+            _wakeAt = double.NaN;
+            _ext0 = (-1, false);
             soc.PadVoltage = gpio => gpio >= 0 && gpio < _pads.Length && _pads[gpio].Pin is { } pin ? pin.Voltage : 0;
             soc.I2cBuses[0] = I2c;    // Wire
             soc.I2cBuses[1] = I2c1;   // Wire1
@@ -331,7 +360,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private void UpdateChipCurrent()
         {
             if (_chip == null) return;
-            _chip.Current = State == Esp32BoardState.Running ? _runCurrent : Options.ResetCurrent;
+            _chip.Current = State == Esp32BoardState.Running ? _runCurrent
+                : State == Esp32BoardState.DeepSleep ? Options.DeepSleepCurrent : Options.ResetCurrent;
         }
 
         private void Emit(string text)
