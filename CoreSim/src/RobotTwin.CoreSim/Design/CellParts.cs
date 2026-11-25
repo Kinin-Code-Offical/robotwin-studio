@@ -218,7 +218,10 @@ namespace RobotTwin.CoreSim.Design
                 "TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (istasyon adımları), FOR, WHILE, REPEAT. Her çevrim süresinde girişleri okur, " +
                 "programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.",
                 new ParameterDefinition("cycle", "Çevrim süresi", "10", "ms"),
-                new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }));
+                new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }),
+                new ParameterDefinition("modbus", "Modbus TCP sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),
+                new ParameterDefinition("modbus_port", "Modbus TCP portu", "5021", ""),
+                new ParameterDefinition("bind", "Dinlenen adres", "127.0.0.1", "", new[] { "127.0.0.1", "0.0.0.0" }));
             plc.Build = c => BuildIo(c, PlcInputs, PlcOutputs);
             AddPins(plc, PlcInputs, PlcOutputs);
             Preset(lib, "plc-st-8di8do", "PLC · 8 DI / 8 DO (Yapısal Metin)", PlcId, "Örnek programla gelir: lamba, flaşör, itici istasyonu");

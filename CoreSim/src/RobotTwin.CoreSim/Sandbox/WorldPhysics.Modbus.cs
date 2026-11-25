@@ -19,8 +19,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>A remote I/O module: its object, Modbus address (unit, port, listening address) and data table.</summary>
         public sealed class ModbusDevice
         {
-            internal ModbusDevice(WorldObject o, byte unit, int port, string bind)
+            internal ModbusDevice(WorldObject o, byte unit, int port, string bind, ModbusImage? image = null)
             {
+                Image = image ?? new ModbusImage(coils: 8, discreteInputs: 8, holdingRegisters: 8, inputRegisters: 8);
                 Object = o;
                 Unit = unit;
                 Port = port;
@@ -35,11 +36,16 @@ namespace RobotTwin.CoreSim.Sandbox
 
             public string Bind { get; }
 
-            public ModbusImage Image { get; } = new ModbusImage(coils: 8, discreteInputs: 8, holdingRegisters: 8, inputRegisters: 8);
+            public ModbusImage Image { get; }
 
             internal readonly DigitalPin?[] Inputs = new DigitalPin?[8];
             internal readonly DigitalPin?[] Outputs = new DigitalPin?[8];
             internal ushort LastOutputs;
+
+            /// <summary>[plc] A PLC serving its memory: holding registers are %MW0–%MW255, discrete inputs %IX, coils %QX.</summary>
+            public MachinePlc? Plc { get; internal set; }
+
+            internal readonly ushort[] LastMemory = new ushort[256];
             internal (MachineFaults.Fault Fault, double At, double Value)? Fault;   // [fault]
             internal bool FaultSaid;
         }
@@ -68,6 +74,12 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var image = d.Image;
             bool offline = FaultNow(d.Object, d.Fault, ref d.FaultSaid) == "network_down";
+            if (d.Plc != null)
+            {
+                lock (image.Gate) image.Offline = offline;
+                return;   // a PLC's table follows its scan (StepPlc), not pins
+            }
+
             lock (image.Gate)
             {
                 image.Offline = offline;

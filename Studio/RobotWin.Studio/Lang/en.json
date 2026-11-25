@@ -7250,7 +7250,9 @@
   "Arıza senaryosu kaldırıldı": "Fault scenario removed",
   "Başlama zamanı (s)": "Start time (s)",
   "Arıza zamanı değişti": "Fault time changed",
-  "Arıza büyüklüğü değişti": "Fault size changed"
+  "Arıza büyüklüğü değişti": "Fault size changed",
+  "Modbus TCP sunucusu": "Modbus TCP server",
+  "Modbus TCP portu": "Modbus TCP port"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10263,6 +10265,7 @@
   "STOP · program derlenmedi: {…}": "STOP · the program did not compile: {0}",
   "PLC · {…} DI / {…} DO (Yapısal Metin)": "PLC · {0} DI / {1} DO (Structured Text)",
   "Arıza: {…}": "Fault: {0}",
-  "Büyüklük ({…})": "Size ({0})"
+  "Büyüklük ({…})": "Size ({0})",
+  "Modbus     : {…}:{…} · {…} istek": "Modbus     : {0}:{1} · {2} requests"
  }
 }

@@ -23,6 +23,7 @@ namespace RobotTwin.CoreSim.Sandbox
         internal readonly DigitalPin?[] InputPins = new DigitalPin?[8];
         internal readonly DigitalPin?[] OutputPins = new DigitalPin?[8];
         internal double CycleMs, Pending;
+        public WorldPhysics.ModbusDevice? Modbus { get; internal set; }   // [modbus] when it serves its memory
         internal bool FaultReported;
 
         /// <summary>RUN (scanning) or STOP (no program, or a fault: the outputs are off).</summary>
@@ -62,7 +63,42 @@ namespace RobotTwin.CoreSim.Sandbox
                 plc.OutputPins[i] = pins.GetValueOrDefault(CellParts.PlcOutputs[i]);
             }
 
+            // [modbus] A PLC can serve its memory, inputs and outputs to a SCADA or HMI over Modbus TCP.
+            if (p.TryGetValue("modbus", out var serve) && serve.Trim() == "açık")
+            {
+                int port = (int)CellParts.Num(p, "modbus_port", 5021);
+                string bind = p.TryGetValue("bind", out var b) && !string.IsNullOrWhiteSpace(b) ? b.Trim() : "127.0.0.1";
+                var device = new ModbusDevice(o, 1, Math.Max(0, Math.Min(65535, port)), bind, new Industrial.ModbusImage(64, 64, 256, 0)) { Plc = plc };
+                device.Fault = MachineFaults.Of(o);
+                plc.Modbus = device;
+                _modbus.Add(device);
+            }
+
             _plcs.Add(plc);
+        }
+
+        /// <summary>[modbus] The PLC's Modbus table and its memory meet at the scan: a client's register writes go in before it, the results out after.</summary>
+        private static void SyncPlcModbus(MachinePlc plc, StProgram program, bool before)
+        {
+            var d = plc.Modbus;
+            if (d == null) return;
+            var image = d.Image;
+            lock (image.Gate)
+            {
+                if (before)
+                {
+                    for (int i = 0; i < 256; i++)
+                        if (image.HoldingRegisters[i] != d.LastMemory[i]) program.Memory[i] = unchecked((short)image.HoldingRegisters[i]);
+                    return;
+                }
+
+                for (int i = 0; i < 256; i++) image.HoldingRegisters[i] = d.LastMemory[i] = unchecked((ushort)program.Memory[i]);
+                for (int i = 0; i < 64; i++)
+                {
+                    image.DiscreteInputs[i] = program.Inputs[i];
+                    image.Coils[i] = program.Outputs[i];
+                }
+            }
         }
 
         private void StepPlc(MachinePlc plc, AnalogSimulator? sim, double dt)
@@ -74,8 +110,10 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 plc.Pending -= plc.CycleMs;
                 for (int i = 0; i < 8; i++) program.Inputs[i] = PinHigh(plc.InputPins[i], sim);
+                SyncPlcModbus(plc, program, true);
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 bool ok = program.Scan(plc.CycleMs);
+                SyncPlcModbus(plc, program, false);
                 plc.ScanMicros = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1e6 / System.Diagnostics.Stopwatch.Frequency;
                 if (!ok)
                 {
