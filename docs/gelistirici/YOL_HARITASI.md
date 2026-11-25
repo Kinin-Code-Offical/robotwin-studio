@@ -140,7 +140,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Sırada: çift bobinli valf, vakum üreteci, kompresör ve tank.
   - [x] istasyon durum makineleri: PLC'de `CASE` adımlarıyla (örnek program: itici istasyonu);
   - çevrim süresi ve darboğaz;
-  - arıza senaryoları;
+  - [x] arıza senaryoları: fotosel, sınır anahtarı, silindir ve Modbus modülünde zamanlı arızalar (`Sandbox/MachineFaults.cs`);
   - [~] PLC: Yapısal Metin (`Industrial/StProgram`, kendi derleyici ve yorumlayıcımız) dünyadaki PLC parçasında tarama döngüsüyle. Sırada: merdiven diyagramı (LD), PLC'nin %MW'sini Modbus'tan sunmak;
   - Modbus, OPC UA, HMI.
 - [~] **Dış biçimler:**

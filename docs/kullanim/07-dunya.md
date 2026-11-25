@@ -209,6 +209,10 @@ Desteklenenler: `VAR … END_VAR` (`AT %IX0.0`, `%QX0.0`, `%MW0` adresleriyle), 
 
 **Parçalar → Robot Hücresi → Pnömatik Silindir** çift etkili bir silindir ve üstündeki tek bobinli 5/2 valftir; mil parçanın +X yönünde çıkar. **SOL** bobini enerjilenince (bobin gerilimin %70'inde çeker, %40'ında bırakır) besleme ön hazneye, arka hazne egzoza bağlanır ve piston ileri gider; bobin bırakılınca geri döner. Her hazne kendi hava kütlesi ve sıcaklığıyla çözülür: valften akış ISO 6358'e göredir (kritik basınç oranının altında boğulmuş), dolan hava ısınır, genleşen soğur, duvar oda sıcaklığına çeker. Pistonu basınç × alan iter, contalar sürtünür; uçlarda strok biter. **Hız ayarı** egzozu kısar (çıkış kısmalı hız denetimi). **EXT** ve **RET** uç konumlardaki manyetik sensörlerin çıkışlarıdır. Bobin devrede gerçek bir yüktür: bir Modbus modülünün, kartın ya da sınır anahtarının devresinden sürülür. Mil kutuları iter; panelde konum, hız, iki haznenin basıncı, kuvvet ve harcanan hava (normal litre) görünür.
 
+### Arıza senaryoları
+
+Fotosel, sınır anahtarı, pnömatik silindir ve Modbus modülü, denetçide **Özellik ekle → Arıza senaryosu** ile belli bir anda bozulabilir: kirli lens (menzil düşer), takılı ya da ölü çıkış, yapışık kontak, kırık kol, conta kaçağı, takılı valf, düşük besleme, kopuk ağ. **Başlama zamanı** ve varsa **büyüklüğü** (kalan menzil, kaçak, basınç) ayarlanır; arıza başlayınca **Olaylar**'a yazılır. Böylece PLC programının arızaya tepkisi (sonsuza dek bekleyen bir adım, zaman aşımı alarmı) gerçek arızadan önce denenir.
+
 ### Modbus TCP uzak G/Ç
 
 **Parçalar → Robot Hücresi → Modbus TCP Uzak G/Ç** modülünün 8 sayısal girişi (DI1–DI8) ve 8 sayısal çıkışı (DO1–DO8) vardır; kablolarla ışık perdesine, konveyörün fotoseline, robotun girişlerine bağlanır. Dünya çalışırken modül bir Modbus TCP sunucusudur (öntanımlı `127.0.0.1:5020`, birim 1): aynı bilgisayardaki PLC, HMI ya da SCADA programı (Codesys, Node-RED, `pymodbus` …) gerçek bir modüle bağlanır gibi bağlanır. **Dinlenen adres** `0.0.0.0` yapılırsa ağdaki başka bilgisayarlar da bağlanabilir.

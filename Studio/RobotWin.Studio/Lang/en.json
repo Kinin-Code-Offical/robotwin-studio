@@ -7225,7 +7225,32 @@
   "PLC yeniden başlatıldı: RUN": "PLC restarted: RUN",
   "Dünya çalışırken PLC durumu burada görünür.": "The PLC's state shows here while the world runs.",
   "G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS.": "I/O: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 memory words. Types BOOL, INT, DINT, UINT, WORD, REAL, TIME; blocks TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS.",
-  "8 sayısal giriş (I0–I7 → %IX0.0–%IX0.7), 8 sayısal çıkış (Q0–Q7 ← %QX0.0–%QX0.7). Programı Yapısal Metin'dir (ST): BOOL, INT, REAL, TIME; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (istasyon adımları), FOR, WHILE, REPEAT. Her çevrim süresinde girişleri okur, programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.": "8 digital inputs (I0–I7 → %IX0.0–%IX0.7), 8 digital outputs (Q0–Q7 ← %QX0.0–%QX0.7). Its program is Structured Text (ST): BOOL, INT, REAL, TIME; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (station steps), FOR, WHILE, REPEAT. Every cycle time it reads the inputs, runs the program once and writes the outputs. A program that does not compile, or a fault while running (division by zero, a loop that does not end), puts the PLC in STOP with its outputs off."
+  "8 sayısal giriş (I0–I7 → %IX0.0–%IX0.7), 8 sayısal çıkış (Q0–Q7 ← %QX0.0–%QX0.7). Programı Yapısal Metin'dir (ST): BOOL, INT, REAL, TIME; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (istasyon adımları), FOR, WHILE, REPEAT. Her çevrim süresinde girişleri okur, programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.": "8 digital inputs (I0–I7 → %IX0.0–%IX0.7), 8 digital outputs (Q0–Q7 ← %QX0.0–%QX0.7). Its program is Structured Text (ST): BOOL, INT, REAL, TIME; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (station steps), FOR, WHILE, REPEAT. Every cycle time it reads the inputs, runs the program once and writes the outputs. A program that does not compile, or a fault while running (division by zero, a loop that does not end), puts the PLC in STOP with its outputs off.",
+  "Kirli lens": "Dirty lens",
+  "Lensteki toz ve yağ ışığı zayıflatır: difüz sensörün menzili düşer, ışın sensörü her zaman kesik görür.": "Dust and oil on the lens weaken the light: a diffuse sensor's range drops, a beam sensor always sees its beam cut.",
+  "Çıkış takılı (hep açık)": "Output stuck (always on)",
+  "Çıkış transistörü kısa devre: OUT cisim olsa da olmasa da yüksek.": "The output transistor has shorted: OUT is high whether an object is there or not.",
+  "Çıkış ölü (hep kapalı)": "Output dead (always off)",
+  "Çıkış transistörü yanmış: OUT hiç yükselmez.": "The output transistor has burnt out: OUT never goes high.",
+  "Kontak yapışık": "Welded contact",
+  "Aşırı akımla kaynayan kontak: C–NO kapalı kalır, C–NC açık kalır.": "A contact welded by overcurrent: C–NO stays closed, C–NC stays open.",
+  "Kol kırık": "Broken lever",
+  "Makaralı kol kırılmış: hiçbir cisim anahtarı basamaz.": "The roller lever is broken: nothing can press the switch.",
+  "Conta kaçağı": "Seal leak",
+  "Piston contası aşınmış: hava ön hazneden atmosfere kaçar; silindir yavaşlar, ileride basınç ve kuvvet düşer.": "The piston seal is worn: air leaks from the cap end to the atmosphere; the cylinder slows, and when out its pressure and force drop.",
+  "Valf takılı": "Valve stuck",
+  "Sürgü kirden takılmış: bobin enerjilense de bırakılsa da valf olduğu yerde kalır.": "Dirt has jammed the spool: whether the coil is energised or released, the valve stays where it is.",
+  "Düşük besleme": "Low supply",
+  "Kompresör ya da hat sorunu: besleme basıncı düşer, silindirin kuvveti azalır.": "A compressor or line problem: the supply pressure drops and the cylinder's force with it.",
+  "Ağ kopuk": "Network down",
+  "Kablo çıkmış ya da anahtar arızalı: modül Modbus isteklerine yanıt vermez; çıkışları son durumunda kalır.": "A cable is out or a switch has failed: the module does not answer Modbus requests; its outputs stay as they were.",
+  "Arıza senaryosu": "Fault scenario",
+  "Parçanın belli bir anda nasıl bozulacağını seçin: PLC programının arızaya tepkisi denenir.": "Choose how the part fails, and when: the PLC program's reaction to the fault can be tried.",
+  "Arıza senaryosu eklendi": "Fault scenario added",
+  "Arıza senaryosu kaldırıldı": "Fault scenario removed",
+  "Başlama zamanı (s)": "Start time (s)",
+  "Arıza zamanı değişti": "Fault time changed",
+  "Arıza büyüklüğü değişti": "Fault size changed"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10236,6 +10261,8 @@
   "PLC STOP: program derlenmedi: {…}": "PLC STOP: the program did not compile: {0}",
   "RUN · {…} tarama · çevrim {…} µs": "RUN · {0} scans · cycle {1} µs",
   "STOP · program derlenmedi: {…}": "STOP · the program did not compile: {0}",
-  "PLC · {…} DI / {…} DO (Yapısal Metin)": "PLC · {0} DI / {1} DO (Structured Text)"
+  "PLC · {…} DI / {…} DO (Yapısal Metin)": "PLC · {0} DI / {1} DO (Structured Text)",
+  "Arıza: {…}": "Fault: {0}",
+  "Büyüklük ({…})": "Size ({0})"
  }
 }

@@ -827,6 +827,7 @@ namespace RobotWin.Studio.Pages
             GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
             if (!IsSwitchPart(o)) LaunchSection(world, o);   // [launch] parachute
             SdkSection(world, o);   // [sdk] its own air settings, behaviours, live forces
+            FaultSection(o);   // [fault] the part's fault scenario, when it has one
             FeaturesSection(world, o);   // "Özellik ekle ▾"
             PortSection(world, o);
             CablesSection(world, o);

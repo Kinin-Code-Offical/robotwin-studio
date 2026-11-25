@@ -23,7 +23,9 @@ namespace RobotTwin.CoreSim.Sandbox
         internal Resistor? Coil;
         internal DigitalPin? ExtendedPin, RetractedPin;
         internal double Bore, RodDiameter, Stroke, Supply, Conductance, ExhaustShare, DeadVolume, SealFriction, CoilVolts;
-        internal double MassA, MassB, TempA, TempB, LastX = double.NaN;
+        internal double MassA, MassB, TempA, TempB, LastX = double.NaN, RatedSupply;
+        internal (MachineFaults.Fault Fault, double At, double Value)? Fault;   // [fault]
+        internal bool FaultSaid;
 
         /// <summary>The coil is energised (the valve has shifted: supply to the cap end).</summary>
         public bool Energised { get; internal set; }
@@ -83,6 +85,8 @@ namespace RobotTwin.CoreSim.Sandbox
                 ExhaustShare = Math.Max(0.02, Math.Min(1, CellParts.Num(p, "speed", 100) / 100)),
                 CoilVolts = Math.Max(1, CellParts.Num(p, "coil_v", 24))
             };
+            cy.RatedSupply = cy.Supply;
+            cy.Fault = MachineFaults.Of(o);
             cy.RodDiameter = Math.Min(cy.Bore * 0.8, Math.Max(0.003, CellParts.Num(p, "rod", 8) / 1000));
             cy.DeadVolume = cy.AreaA * 0.004 + 1.5e-6;   // 4 mm of end space and the port's tubing
             cy.SealFriction = 0.03 * (cy.Supply - Atmosphere) * cy.AreaA + 3;   // seals: a few % of the full force
@@ -136,9 +140,16 @@ namespace RobotTwin.CoreSim.Sandbox
         private void StepCylinder(MachineCylinder cy, AnalogSimulator? sim, double dt)
         {
             // The coil pulls the spool in above 70 % of its rated voltage (and drops out below 40 %).
+            string? fault = FaultNow(cy.Object, cy.Fault, ref cy.FaultSaid);
             double volts = cy.Coil != null && sim != null ? Math.Abs(sim.NodeVoltage(cy.Coil.A) - sim.NodeVoltage(cy.Coil.B)) : 0;
-            if (volts >= 0.7 * cy.CoilVolts) cy.Energised = true;
-            else if (volts <= 0.4 * cy.CoilVolts) cy.Energised = false;
+            if (fault != "valve_stuck")   // a stuck spool stays where it was, whatever the coil does
+            {
+                if (volts >= 0.7 * cy.CoilVolts) cy.Energised = true;
+                else if (volts <= 0.4 * cy.CoilVolts) cy.Energised = false;
+            }
+
+            cy.Supply = fault == "low_supply" ? Math.Min(cy.RatedSupply, Atmosphere + Math.Max(0, cy.Fault!.Value.Value) * 1e5) : cy.RatedSupply;
+            double leak = fault == "leak" ? Math.Max(0, cy.Fault!.Value.Value) * 1e-3 / 1e5 : 0;   // a worn seal: cap end to atmosphere
 
             // The piston's travel this step, from where it was to where the slider put it (the joint's own speed is the
             // solver's prediction before the end stops act, not how far it went).
@@ -172,6 +183,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     outA = IsoFlow(cy.Conductance * cy.ExhaustShare, pa, Atmosphere, cy.TempA);
                 }
 
+                outA += IsoFlow(leak, pa, Atmosphere, cy.TempA);
                 cy.AirUsed += (inA + inB) * h / NormalDensity * 1000;
                 // Energy of each chamber: enthalpy in and out, the piston's work, the wall's heat.
                 double dva = cy.AreaA * v, dvb = -cy.AreaB * v;

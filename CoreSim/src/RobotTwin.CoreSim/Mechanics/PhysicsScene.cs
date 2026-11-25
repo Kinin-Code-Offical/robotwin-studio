@@ -2233,6 +2233,26 @@ namespace RobotTwin.CoreSim.Mechanics
                         byForce ? $"bağlantı koptu ({value:F1} N)" : $"bağlantı koptu ({value:F2} N·m)", value, true));
                 }
             }
+
+            // The joints' speeds as the step ends. PrepareJoints reads them before the constraints act, so a slider pushed
+            // against its end stop (or a shaft against a limit) reported the speed it was being pushed at, not zero.
+            for (int ji = 0; ji < Joints.Count; ji++)
+            {
+                var j = Joints[ji];
+                if (!j.Enabled || j.Broken || j.Kind == JointKind.Fixed || JointAsleep(j)) continue;
+                var c = j.ChildBody;
+                var pb = j.ParentBody;
+                var axis = (pb?.Orientation ?? Quat.Identity).Rotate(j.AxisP);
+                if (j.Kind == JointKind.Slider)
+                {
+                    var at = c.Position + c.Orientation.Rotate(j.AnchorC);
+                    j.Speed = (c.PointVelocity(at) - (pb != null ? pb.PointVelocity(at) : Vec3.Zero)).Dot(axis);
+                }
+                else
+                {
+                    j.Speed = (c.AngularVelocity - (pb?.AngularVelocity ?? Vec3.Zero)).Dot(axis);
+                }
+            }
         }
 
         // ================================================================== queries

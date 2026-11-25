@@ -40,6 +40,8 @@ namespace RobotTwin.CoreSim.Sandbox
             internal readonly DigitalPin?[] Inputs = new DigitalPin?[8];
             internal readonly DigitalPin?[] Outputs = new DigitalPin?[8];
             internal ushort LastOutputs;
+            internal (MachineFaults.Fault Fault, double At, double Value)? Fault;   // [fault]
+            internal bool FaultSaid;
         }
 
         private readonly List<ModbusDevice> _modbus = new List<ModbusDevice>();
@@ -51,6 +53,7 @@ namespace RobotTwin.CoreSim.Sandbox
             int unit = (int)CellParts.Num(p, "unit", 1), port = (int)CellParts.Num(p, "port", 5020);
             string bind = p.TryGetValue("bind", out var b) && !string.IsNullOrWhiteSpace(b) ? b.Trim() : "127.0.0.1";
             var device = new ModbusDevice(o, (byte)Math.Max(0, Math.Min(255, unit)), Math.Max(0, Math.Min(65535, port)), bind);
+            device.Fault = MachineFaults.Of(o);
             var pins = IoPins(o);
             for (int i = 0; i < 8; i++)
             {
@@ -61,11 +64,13 @@ namespace RobotTwin.CoreSim.Sandbox
             _modbus.Add(device);
         }
 
-        private static void StepModbus(ModbusDevice d, AnalogSimulator? sim)
+        private void StepModbus(ModbusDevice d, AnalogSimulator? sim)
         {
             var image = d.Image;
+            bool offline = FaultNow(d.Object, d.Fault, ref d.FaultSaid) == "network_down";
             lock (image.Gate)
             {
+                image.Offline = offline;
                 // A write to holding register 0 since the last step sets the coils from its bits.
                 if (image.HoldingRegisters[0] != d.LastOutputs)
                 {

@@ -38,6 +38,9 @@ namespace RobotTwin.CoreSim.Industrial
         public long Requests { get; internal set; }
 
         public long Writes { get; internal set; }
+
+        /// <summary>[fault] The device is off the network: requests get no answer (the client times out).</summary>
+        public bool Offline { get; set; }
     }
 
     /// <summary>
@@ -112,7 +115,9 @@ namespace RobotTwin.CoreSim.Industrial
                     var pdu = new byte[length - 1];
                     if (!await Fill(stream, pdu).ConfigureAwait(false)) break;
                     byte unit = header[6];
-                    var reply = Answer(Image(unit), pdu);
+                    var image = Image(unit);
+                    if (image != null && image.Offline) continue;   // [fault] no answer from a device off the network
+                    var reply = Answer(image, pdu);
                     var frame = new byte[7 + reply.Length];
                     frame[0] = header[0];
                     frame[1] = header[1];

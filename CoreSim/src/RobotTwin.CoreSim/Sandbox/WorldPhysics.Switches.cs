@@ -19,6 +19,8 @@ namespace RobotTwin.CoreSim.Sandbox
         internal string Mode = CellParts.PhotoDiffuse;
         internal double Range, Response, Delay;
         internal bool OnWhenAbsent;
+        internal (MachineFaults.Fault Fault, double At, double Value)? Fault;   // [fault]
+        internal bool FaultSaid;
 
         /// <summary>An object is there (diffuse: one returns enough light; a beam: one cuts it).</summary>
         public bool Present { get; internal set; }
@@ -43,6 +45,8 @@ namespace RobotTwin.CoreSim.Sandbox
         internal readonly List<SceneBody> Own = new List<SceneBody>();
         internal Switch? No, Nc;
         internal double Reach, PreTravel;
+        internal (MachineFaults.Fault Fault, double At, double Value)? Fault;   // [fault]
+        internal bool FaultSaid;
 
         public bool Pressed { get; internal set; }
 
@@ -81,6 +85,7 @@ namespace RobotTwin.CoreSim.Sandbox
             };
             ph.Own.Add(it.Body);
             ph.Out = IoPins(o).GetValueOrDefault("OUT");
+            ph.Fault = MachineFaults.Of(o);
             _photos.Add(ph);
         }
 
@@ -92,6 +97,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 PreTravel = Math.Max(0.0002, CellParts.Num(p, "pretravel", 2) / 1000)
             };
             ls.Own.Add(it.Body);
+            ls.Fault = MachineFaults.Of(o);
             if (_circuit?.ComponentRef(o.Id) is { } r)
             {
                 foreach (var d in _circuit.Compiled.DevicesOf(r).OfType<Switch>())
@@ -104,6 +110,15 @@ namespace RobotTwin.CoreSim.Sandbox
             _limits.Add(ls);
         }
 
+        /// <summary>[fault] The fault a machine has now (its id), saying so once when it begins; null before its time or without one.</summary>
+        private string? FaultNow(WorldObject o, (MachineFaults.Fault Fault, double At, double Value)? fault, ref bool said)
+        {
+            if (fault is not { } f || Scene.Time < f.At) return null;
+            if (!said) MachineSay(o.Id, "Arıza: " + f.Fault.Name, true);
+            said = true;
+            return f.Fault.Id;
+        }
+
         private void StepPhoto(MachinePhoto ph, double dt)
         {
             var frame = FrameOf(ph.Object.Id);
@@ -113,16 +128,20 @@ namespace RobotTwin.CoreSim.Sandbox
             var dir = frame.ApplyVector(Vec3.UnitX);
             var own = ph.Own;
             bool hit = Scene.Raycast(from, dir, ph.Range, out var h, x => !own.Contains(x) && x.SensorVisible, ground: true);
+            string? fault = FaultNow(ph.Object, ph.Fault, ref ph.FaultSaid);
+            double clean = fault == "lens_dirty" ? Math.Max(0, Math.Min(100, ph.Fault!.Value.Value)) / 100 : 1;
             bool present;
             if (ph.Mode == CellParts.PhotoDiffuse)
             {
-                // The light a target returns falls as its reflectance over d²: rated range on a white card (90 %).
+                // The light a target returns falls as its reflectance over d²: rated range on a white card (90 %); a dirty
+                // lens passes less of it, so the range shrinks with it.
                 double reflectance = hit ? MechatronicSystem.Reflectance(h.Material ?? string.Empty) : 0;
-                present = hit && h.Distance <= ph.Range * Math.Sqrt(Math.Max(0, reflectance) / 0.9);
+                present = hit && h.Distance <= ph.Range * clean * Math.Sqrt(Math.Max(0, reflectance) / 0.9);
             }
             else
             {
-                present = hit;   // the beam to the reflector or the receiver is cut
+                // The beam to the reflector or the receiver is cut; through a dirty lens too little of it comes back.
+                present = hit || clean < 0.5;
             }
 
             ph.Distance = hit ? h.Distance : double.NaN;
@@ -141,7 +160,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 ph.Delay = 0;
             }
 
-            ph.Output = ph.Present != ph.OnWhenAbsent;
+            ph.Output = fault == "output_stuck_on" || (fault != "output_dead" && ph.Present != ph.OnWhenAbsent);
             Drive(ph.Out, ph.Output);
         }
 
@@ -159,13 +178,16 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (Scene.Raycast(from, dir, ls.Reach, out var h, x => !own.Contains(x) && x.Collides, ground: false)) nearest = Math.Min(nearest, h.Distance);
             }
 
+            string? fault = FaultNow(ls.Object, ls.Fault, ref ls.FaultSaid);
+            if (fault == "lever_broken") nearest = double.PositiveInfinity;   // nothing reaches a broken lever
             ls.Travel = double.IsInfinity(nearest) ? 0 : ls.Reach - nearest;
             // Changes over past the pre-travel; lets go half a millimetre before it (the snap action's differential travel).
             bool pressed = ls.Pressed ? ls.Travel > ls.PreTravel - 0.0005 : ls.Travel >= ls.PreTravel;
             if (pressed != ls.Pressed) MachineSay(ls.Object.Id, pressed ? "Sınır anahtarı basıldı" : "Sınır anahtarı bırakıldı", false);
             ls.Pressed = pressed;
-            if (ls.No != null) ls.No.Closed = pressed;
-            if (ls.Nc != null) ls.Nc.Closed = !pressed;
+            bool welded = fault == "contact_welded";
+            if (ls.No != null) ls.No.Closed = pressed || welded;
+            if (ls.Nc != null) ls.Nc.Closed = !pressed && !welded;
         }
     }
 }
