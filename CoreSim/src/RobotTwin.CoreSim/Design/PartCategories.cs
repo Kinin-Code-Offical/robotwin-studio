@@ -39,6 +39,7 @@ namespace RobotTwin.CoreSim.Design
             // Elektromekanik
             ["dc-motor"] = "Motor", ["motor-encoder"] = "Motor", ["servo"] = "Servo", ["buzzer"] = "Ses", ["lamp"] = "Aydınlatma", ["led-strip"] = "Aydınlatma",
             ["drv8833"] = "Motor sürücü", ["motor-driver"] = "Motor sürücü", ["esc"] = "Motor sürücü",
+            ["stepper"] = "Motor", ["a4988"] = "Motor sürücü",
             // Kartlar
             ["arduino-uno"] = "Arduino", ["arduino-nano"] = "Arduino", ["esp32-devkitc"] = "ESP32", ["esp32-devkit-v1"] = "ESP32", ["flight-controller"] = "Uçuş kontrolcüsü",
             // Kablosuz & USB

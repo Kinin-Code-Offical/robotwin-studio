@@ -7491,7 +7491,30 @@
   "Helisel yarıklı alüminyum kaplin: motorun 5 mm milini 8 mm vidalı mile bağlar, küçük eksen kaçıklığını alır.": "Aluminium coupler with a helical slot: joins a motor's 5 mm shaft to an 8 mm lead screw and takes up a little misalignment.",
   "Kayış takıldı": "Belt fitted",
   "Kayış yalnız iki kasnağın arasına takılır.": "A belt only goes round two pulleys.",
-  "İki kasnağa GT2 kayış takar: boyunu hesaplar, alınacak kapalı kayışı söyler, milleri çap oranında aynı yönde bağlar.": "Fits a GT2 belt round two pulleys: works out its length, names the closed belt to buy, and couples the shafts the same way at the ratio of the diameters."
+  "İki kasnağa GT2 kayış takar: boyunu hesaplar, alınacak kapalı kayışı söyler, milleri çap oranında aynı yönde bağlar.": "Fits a GT2 belt round two pulleys: works out its length, names the closed belt to buy, and couples the shafts the same way at the ratio of the diameters.",
+  "Step Motor (iki fazlı, bipolar)": "Stepper motor (two-phase, bipolar)",
+  "İki fazlı hibrit step motor: A ve B sargıları, 200 adım/tur (1,8°). Bir sürücüyle (A4988) adım adım döner; yükü ya da adım hızı akımın verebileceğini aşarsa adım kaçırır.": "Two-phase hybrid stepper: windings A and B, 200 steps a turn (1.8°). It turns step by step from a driver (A4988), and loses steps when its load or the step rate asks more than the current can give.",
+  "Anma akımı / faz": "Rated current / phase",
+  "Sargı direnci / faz": "Winding resistance / phase",
+  "Sargı endüktansı / faz": "Winding inductance / phase",
+  "Tutma torku (iki faz, anma akımı)": "Holding torque (two phases, rated current)",
+  "Takılma torku (akımsız)": "Detent torque (no current)",
+  "Rotor ataleti": "Rotor inertia",
+  "Adım / tur": "Steps / turn",
+  "Gövde boyu": "Body length",
+  "NEMA 17 Step Motor 17HS4401": "NEMA 17 stepper motor 17HS4401",
+  "NEMA 17 İnce Step Motor 17HS08-1004S": "NEMA 17 pancake stepper 17HS08-1004S",
+  "42 × 42 × 40 mm, 1,7 A, 0,40 N·m, 1,8°: 3B yazıcı ve CNC ekseni": "42 × 42 × 40 mm, 1.7 A, 0.40 N·m, 1.8°: a 3D printer or CNC axis",
+  "42 × 42 × 20 mm, 1,0 A, 0,13 N·m: ekstruder ve hafif eksenler": "42 × 42 × 20 mm, 1.0 A, 0.13 N·m: extruders and light axes",
+  "A4988 Step Motor Sürücü": "A4988 stepper driver",
+  "STEP'in her yükselen kenarında bir (mikro) adım, DIR yönü verir; MS1–MS3 tam adımdan 1/16'ya. EN LOW iken çalışır. VMOT 8–35 V, VDD 3–5,5 V; akım sınırı kartın Vref ayarıdır.": "One (micro)step on each rising edge of STEP, DIR sets the direction; MS1–MS3 from full step to 1/16. It runs while EN is LOW. VMOT 8–35 V, VDD 3–5.5 V; the current limit is the board's Vref setting.",
+  "Akım sınırı (Vref / 8·Rs)": "Current limit (Vref / 8·Rs)",
+  "Köprü direnci (üst + alt)": "Bridge resistance (high + low side)",
+  "1/16 mikro adım, 1 A (soğutucusuz), 8–35 V": "1/16 microstepping, 1 A (no heat sink), 8–35 V",
+  "A+ (siyah)": "A+ (black)",
+  "A− (yeşil)": "A− (green)",
+  "B+ (kırmızı)": "B+ (red)",
+  "B− (mavi)": "B− (blue)"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10576,6 +10599,7 @@
   "{…} ile {…} aynı düzlemde değil ({…} mm kaçık): kayış yürümez.": "{0} and {1} are not in one plane ({2} mm apart): the belt would not run.",
   "{…} ile {…} birbirine çok yakın: araları en az {…} mm olmalı.": "{0} and {1} are too close: they must be at least {2} mm apart.",
   "{…} dönebileceği bir mile ya da rulmana takılı değil: önce mekanizmayı kurun.": "{0} is on no shaft or bearing it could turn on: build the mechanism first.",
-  "{…} ile {…} zaten bağlı.": "{0} and {1} are already coupled."
+  "{…} ile {…} zaten bağlı.": "{0} and {1} are already coupled.",
+  "{…}, {…} motor miline setuskurla sabit.": "{0} is fixed on the shaft of {1} with a set screw."
  }
 }

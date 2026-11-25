@@ -159,6 +159,18 @@ namespace RobotTwin.CoreSim.Automation
                 };
             }
 
+            if (def?.Id == Design.MotionParts.StepperId)
+            {
+                // [stepper] NEMA 17 standing on its rear cap, its shaft up (World/MotionModels.cs): 42.3 mm square, ~7 g per mm of body.
+                var p = _library.ResolveParameters(def, o.PresetId != null ? _library.FindPreset(o.PresetId) : null, o.Parameters);
+                double body = p.TryGetValue("length", out var ls) && double.TryParse(ls, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double mm) && mm > 5 ? mm / 1000 : 0.040;
+                return new WorldBodyGeometry
+                {
+                    Min = new Vec3(-0.02115, -0.02115, 0), Max = new Vec3(0.02115, 0.02115, body + 0.002), MassKg = 7.0 * body,
+                    PortName = "shaft", PortPivot = new Vec3(0, 0, body + 0.024), PortAxis = Vec3.UnitZ
+                };
+            }
+
             if (part.Contains("servo") || def?.Id == "servo")
             {
                 bool big = model.Contains("MG996") || model.Contains("DS3218");

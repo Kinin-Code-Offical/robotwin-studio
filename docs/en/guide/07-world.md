@@ -329,6 +329,18 @@ Place the parts as in a real machine. You do not draw the joints; **Build the me
 
 Nothing is assumed: a gear on no shaft falls, a shaft in no bearing is not held, a bore that is too small does not go on, and in one too large the shaft is loose. The **Events** tab and the part's inspector say so. Bolt the bearings and pillow blocks to the frame or mark them **Fixed**; a fixed KP08 shows two M6 bolts in its base slots. The joints it builds appear in **Mechanical joints**, where you can edit them.
 
+**Stepper motor:** build a whole axis with the NEMA 17 (17HS4401 or the pancake 17HS08) and the A4988 driver from the **Parts** tab. Wire it up:
+- 12 V → VMOT, 5 V → VDD;
+- a board's pin or a square wave to STEP, the direction to DIR;
+- 1A/1B → the motor's A+/A−, 2A/2B → B+/B−.
+
+A coupler, gear or pulley that goes on the motor's Ø5 D-cut shaft is fixed to it, and a lead screw in the coupler's other end turns with the motor. The motor runs on its real equations:
+- each winding's resistance and inductance;
+- back-EMF and torque that follow the rotor's angle (1.8° a step);
+- the magnets' detent torque.
+
+The driver counts STEP edges, microsteps down to 1/16 with MS1–MS3, and drives the phase currents to the current limit as far as VMOT allows, so the torque falls as the speed rises. The motor's torque turns the rotor in the physics. The shaft's inertia and the screw's load and friction reach the motor itself: overloaded, or started too fast without a ramp, it loses steps as a real one does.
+
 The physics is not an animation. Gears and screws are joined by constraints in the solver, as engineering multibody programs do it. The motor's torque comes from the load, the efficiency, the backlash and the bearing friction. Solving each tooth touching the next with collisions would be slow and unstable, so gears meet in the meshing constraint rather than through their bodies. If you want to use your own 3D models, join them with hinges or slides using the **Join** tool, then pair them with **Add feature → Gear, belt, lead screw**. The physics works the same way.
 
 ### Arm kinematics: forward and inverse

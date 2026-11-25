@@ -329,6 +329,18 @@ Parçaları gerçek bir makinedeki gibi yerleştirin. Bağlantıları siz çizme
 
 Varsayım yapılmaz: mile takılı olmayan dişli düşer, rulmandan geçmeyen mil tutulmaz, dar delik takılmaz, bol delikte mil boşta kalır. Böyle durumlar **Olaylar** sekmesinde ve parçanın denetçisinde yazar. Rulmanları ve KP08'leri gövdeye bağlayın ya da **Sabit** işaretleyin; KP08 sabitse taban yuvalarında iki M6 cıvata görünür. Kurulan bağlantılar **Mekanik bağlantılar** bölümünde görünür ve düzenlenebilir.
 
+**Step motor:** **Parçalar** sekmesindeki NEMA 17 (17HS4401 ya da ince 17HS08) ve A4988 sürücüyle bir eksen baştan sona kurulur. Bağlantılar şunlardır:
+- 12 V → VMOT, 5 V → VDD;
+- STEP'e kartın pini ya da bir kare dalga, DIR'e yön;
+- 1A/1B → motorun A+/A−, 2A/2B → B+/B−.
+
+Motorun Ø5 D kesitli miline geçen kaplin, dişli ya da kasnak mile sabitlenir. Kaplinin öteki ucundaki vidalı mil motorla döner. Motor gerçek denklemleriyle çalışır:
+- iki sargının direnci ve endüktansı;
+- rotor açısına bağlı karşı-EMK ve tork (1,8° adım);
+- mıknatısların takılma torku.
+
+Sürücü STEP kenarlarını sayar, MS1–MS3 ile 1/16'ya kadar mikro adım atar ve faz akımlarını akım sınırına göre VMOT'un yettiği kadar sürer. Bu yüzden hız arttıkça tork düşer. Motorun torku fizikteki rotoru döndürür. Milin ataleti, vidanın yükü ve sürtünmesi motorun kendisine yansır: aşırı yük ya da rampasız hızlı başlangıçta motor gerçekteki gibi adım kaçırır.
+
 Fizik bir animasyon değildir. Dişliler ve vida kısıt çözücüyle bağlanır (sanayideki çok gövdeli dinamik programları da böyle yapar). Motorun torkunu yük, verim, boşluk ve rulman sürtünmesi belirler. Dişlerin birbirine tek tek değmesini çarpışmayla çözmek hem yavaş hem kararsız olurdu; dişliler bu yüzden kendi gövdelerinde değil, kavrama kısıtında buluşur. Kendi 3B modelinizi kullanmak isterseniz **Bağla** aracıyla menteşe ya da kızak kurun, sonra **Özellik ekle → Dişli, kayış, vidalı mil** ile eşleyin. Fizik aynı yoldan çalışır.
 
 ### Kol kinematiği: ileri ve ters kinematik

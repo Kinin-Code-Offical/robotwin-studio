@@ -15,12 +15,13 @@ namespace RobotTwin.CoreSim.Sandbox
             if (world.Couplings == null) return;
             foreach (var c in world.Couplings)
             {
-                var wa = world.Joints.FirstOrDefault(j => j.Id == c.JointA);
-                var wb = world.Joints.FirstOrDefault(j => j.Id == c.JointB);
-                if (wa == null || wb == null || ReferenceEquals(wa, wb) || c.Ratio(wa.Kind, wb.Kind) is not { } ratio) continue;
-                var a = Scene.Joints.FirstOrDefault(s => s.Id == wa.Id);
-                var b = Scene.Joints.FirstOrDefault(s => s.Id == wb.Id);
-                if (a == null || b == null) continue;
+                // A side is a world joint, or a motor's rotor (the scene joint "object:shaft" the motor turns).
+                var a = Scene.Joints.FirstOrDefault(s => s.Id == c.JointA);
+                var b = Scene.Joints.FirstOrDefault(s => s.Id == c.JointB);
+                if (a == null || b == null || ReferenceEquals(a, b)) continue;
+                var wa = world.Joints.FirstOrDefault(j => j.Id == c.JointA) ?? new WorldJoint { Id = a.Id, Kind = a.Kind == JointKind.Slider ? WorldJointKind.Slider : WorldJointKind.Hinge };
+                var wb = world.Joints.FirstOrDefault(j => j.Id == c.JointB) ?? new WorldJoint { Id = b.Id, Kind = b.Kind == JointKind.Slider ? WorldJointKind.Slider : WorldJointKind.Hinge };
+                if (c.Ratio(wa.Kind, wb.Kind) is not { } ratio) continue;
                 var coupling = Scene.AddCoupling(a, b, ratio, c.Id);
                 coupling.Efficiency = c.EfficiencyFor(wa.Kind, wb.Kind);
                 bool hingeB = wb.Kind == WorldJointKind.Hinge;

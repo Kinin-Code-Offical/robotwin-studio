@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Mechanics;
 
 namespace RobotTwin.CoreSim.Sandbox
@@ -28,6 +29,9 @@ namespace RobotTwin.CoreSim.Sandbox
             public Vec3 Origin, Axis;
             public double Span;
 
+            /// <summary>A stepper's shaft: it turns on the motor's own bearings, and what is fixed to it rides its rotor.</summary>
+            public bool Motor;
+
             public Vec3 Point(double t) => Origin + Axis * t;
         }
 
@@ -50,6 +54,17 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (DriveParts.Of(o) is not { } s) continue;
                 var (origin, axis, span) = DriveParts.AxisOf(o, s);
                 parts.Add(new Part { O = o, S = s, Origin = origin, Axis = axis, Span = span });
+            }
+
+            // Stepper shafts: the Ø5 D-shaft above the pilot boss, from the part's own sizes.
+            foreach (var o in world.Objects)
+            {
+                if (o.Kind != WorldObjectKind.Component || o.PartId != MotionParts.StepperId) continue;
+                double body = StepperLength(o);
+                parts.Add(new Part
+                {
+                    O = o, S = MotorShaft, Origin = o.Pose.ToWorld(new Vec3(0, 0, body + 0.002)), Axis = o.Pose.Orientation.Rotate(Vec3.UnitZ).Normalized(), Span = 0.022, Motor = true
+                });
             }
 
             var nuts = new List<(Part Screw, Part Nut)>();
@@ -76,9 +91,11 @@ namespace RobotTwin.CoreSim.Sandbox
                     switch (p.S.Kind)
                     {
                         case DrivePartKind.Gear or DrivePartKind.Pulley or DrivePartKind.Collar or DrivePartKind.Coupler:
-                            if (Link(world, report, p.O, rod.O, WorldJointKind.Fixed, rod, at, null, 0))
-                                report.Links.Add($"{p.O.Name}, {rod.O.Name} üzerinde setuskurla sabit.");
+                            if (Link(world, report, p.O, rod.O, WorldJointKind.Fixed, rod, at, null, 0, rod.Motor ? "shaft" : string.Empty))
+                                report.Links.Add(rod.Motor ? $"{p.O.Name}, {rod.O.Name} motor miline setuskurla sabit." : $"{p.O.Name}, {rod.O.Name} üzerinde setuskurla sabit.");
                             break;
+                        case var _ when rod.Motor:
+                            break;   // only hubs go on a motor's shaft
                         case DrivePartKind.Bearing or DrivePartKind.BearingHousing:
                             if (Link(world, report, rod.O, p.O, WorldJointKind.Hinge, rod, at, p.S.Bearing, p.S.Bore))
                                 report.Links.Add($"{rod.O.Name}, {p.O.Name} içinde döner ({Bearings.Find(p.S.Bearing)?.Name ?? "rulman"}).");
@@ -98,7 +115,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
             }
 
-            foreach (var rod in parts.Where(p => p.S.IsRod))
+            foreach (var rod in parts.Where(p => p.S.IsRod && !p.Motor))
             {
                 // Held: in bearings, sliding, bolted to the frame or to something that is not riding on it.
                 bool held = rod.O.IsStatic || MovingJoint(world, rod.O, rod.Axis, WorldJointKind.Hinge) != null || MovingJoint(world, rod.O, rod.Axis, WorldJointKind.Slider) != null ||
@@ -271,14 +288,26 @@ namespace RobotTwin.CoreSim.Sandbox
             return Overlap(0, rod.Span, Math.Min(t0, t1), Math.Max(t0, t1));
         }
 
-        private static bool Link(WorldDocument world, Report report, WorldObject child, WorldObject parent, WorldJointKind kind, Part rod, double at, string? bearing, double bore)
+        private static readonly DrivePartSpec MotorShaft = new DrivePartSpec { Id = "motor-shaft", Kind = DrivePartKind.Shaft, Bore = 0.005, Diameter = 0.005, Length = 0.022 };
+
+        /// <summary>A stepper's body length (m), from its part's parameters.</summary>
+        private static double StepperLength(WorldObject o)
+        {
+            var lib = PartLibrary.Default;
+            var def = lib.Find(o.PartId!);
+            if (def == null) return 0.040;
+            var p = lib.ResolveParameters(def, o.PresetId != null ? lib.FindPreset(o.PresetId) : null, o.Parameters);
+            return p.TryGetValue("length", out var text) && double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double mm) && mm > 5 ? mm / 1000 : 0.040;
+        }
+
+        private static bool Link(WorldDocument world, Report report, WorldObject child, WorldObject parent, WorldJointKind kind, Part rod, double at, string? bearing, double bore, string port = "")
         {
             if (world.Joints.Any(j => (j.ObjectA == child.Id && j.ObjectB == parent.Id) || (j.ObjectA == parent.Id && j.ObjectB == child.Id))) return false;
             var anchor = rod.Point(at);
             var axis = Canonical(rod.Axis);
             world.Joints.Add(new WorldJoint
             {
-                Id = world.NextId("J"), Kind = kind, ObjectA = child.Id, ObjectB = parent.Id,
+                Id = world.NextId("J"), Kind = kind, ObjectA = child.Id, ObjectB = parent.Id, PortB = port,
                 AnchorX = anchor.X, AnchorY = anchor.Y, AnchorZ = anchor.Z, AxisX = axis.X, AxisY = axis.Y, AxisZ = axis.Z,
                 Fastening = kind == WorldJointKind.Fixed ? "screws" : string.Empty,
                 Bearing = bearing, BearingBore = bore > 0 ? bore * 1000 : 0
@@ -298,16 +327,25 @@ namespace RobotTwin.CoreSim.Sandbox
             while (queue.Count > 0)
             {
                 string id = queue.Dequeue();
-                foreach (var j in world.Joints.Where(j => j.Kind == WorldJointKind.Fixed && (j.ObjectA == id || j.ObjectB == id)))
+                foreach (var j in world.Joints.Where(j => j.Kind == WorldJointKind.Fixed && string.IsNullOrEmpty(j.PortB) && (j.ObjectA == id || j.ObjectB == id)))
                 {
                     string? other = j.ObjectA == id ? j.ObjectB : j.ObjectA;
                     if (other != null && group.Add(other)) queue.Enqueue(other);
                 }
             }
 
-            var found = world.Joints.FirstOrDefault(j => j.Kind == kind && group.Contains(j.ObjectA) != (j.ObjectB != null && group.Contains(j.ObjectB)) &&
+            var found = world.Joints.FirstOrDefault(j => j.Kind == kind && string.IsNullOrEmpty(j.PortB) && group.Contains(j.ObjectA) != (j.ObjectB != null && group.Contains(j.ObjectB)) &&
                                                          Math.Abs(Math.Abs(AxisOf(j).Dot(axis)) - 1) < AngleTolerance);
-            return found == null ? null : (found, group.Contains(found.ObjectA));
+            if (found != null) return (found, group.Contains(found.ObjectA));
+            // Fixed to a stepper's shaft: it turns with the motor's rotor, the scene's joint "motor:shaft" about the motor's axis.
+            if (kind != WorldJointKind.Hinge) return null;
+            var mount = world.Joints.FirstOrDefault(j => j.Kind == WorldJointKind.Fixed && j.PortB == "shaft" && group.Contains(j.ObjectA) &&
+                                                         world.Find(j.ObjectB)?.PartId == MotionParts.StepperId);
+            if (mount == null) return null;
+            var motor = world.Find(mount.ObjectB)!;
+            var motorAxis = motor.Pose.Orientation.Rotate(Vec3.UnitZ).Normalized();
+            if (Math.Abs(Math.Abs(motorAxis.Dot(axis)) - 1) > AngleTolerance) return null;
+            return (new WorldJoint { Id = motor.Id + ":shaft", Kind = WorldJointKind.Hinge, ObjectA = mount.ObjectA, ObjectB = motor.Id, AxisX = motorAxis.X, AxisY = motorAxis.Y, AxisZ = motorAxis.Z }, true);
         }
 
         private static Vec3 AxisOf(WorldJoint j) => new Vec3(j.AxisX, j.AxisY, j.AxisZ).Normalized();

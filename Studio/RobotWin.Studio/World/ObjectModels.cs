@@ -124,7 +124,7 @@ namespace RobotWin.Studio.World
             var model = o.Kind switch
             {
                 WorldObjectKind.Board => DetailedBoard(o, world, library) ?? BuildBoard(o, world, library),
-                WorldObjectKind.Component => SenseModels.TryBuild(o, library) ?? CellModels.TryBuild(o, library) ?? DetailedComponent(o, library) ?? BuildComponent(o, library),   // [sense] World/SenseModels.cs, [arm] World/CellModels.cs
+                WorldObjectKind.Component => MotionModels.TryBuild(o, library) ?? SenseModels.TryBuild(o, library) ?? CellModels.TryBuild(o, library) ?? DetailedComponent(o, library) ?? BuildComponent(o, library),   // [stepper] World/MotionModels.cs   // [sense] World/SenseModels.cs, [arm] World/CellModels.cs
                 WorldObjectKind.Model => BuildMesh(o),
                 _ => BuildBody(o)
             };

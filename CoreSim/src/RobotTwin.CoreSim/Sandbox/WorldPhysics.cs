@@ -61,6 +61,7 @@ namespace RobotTwin.CoreSim.Sandbox
             public Servo? Servo;
             public ServoMotor? ServoMotor;
             public DcMotor? Motor;
+            public StepperMotor? Stepper;   // [stepper]
             public string? ServoRef;
             public UltrasonicSensor? Sonar;
             public Vec3 SonarOrigin;
@@ -256,6 +257,14 @@ namespace RobotTwin.CoreSim.Sandbox
                     else if (d is DcMotor m && it.RotorJoint != null)
                     {
                         it.Motor = m;
+                    }
+                    else if (d is StepperMotor st && it.RotorJoint != null)
+                    {
+                        // [stepper] The rotor is this body: the motor's torque turns it, its angle and speed go back to the
+                        // circuit, and it has the rotor's own inertia (54 g·cm² for a 17HS4401).
+                        it.Stepper = st;
+                        st.MechanicallyDriven = true;
+                        if (it.Rotor != null) it.Rotor.Inertia = new Vec3(Math.Max(it.Rotor.Inertia.X, st.Inertia / 2), Math.Max(it.Rotor.Inertia.Y, st.Inertia / 2), st.Inertia);
                     }
                 }
             }
@@ -615,6 +624,15 @@ namespace RobotTwin.CoreSim.Sandbox
                     it.RotorJoint.Damping = 0;
                     it.RotorJoint.MaxTorque = Math.Abs(it.Motor.MotorConstant * it.Motor.GearRatio) * Math.Max(3.0, 1.5 * Math.Abs(it.Motor.Current) + 1.0) + 1e-3;   // [esc] what the winding current can deliver (a brushless motor draws tens of amps)
                 }
+                else if (it.Stepper != null)
+                {
+                    // [stepper] The electromagnetic torque the windings' currents make at this angle, and the magnets' detent,
+                    // on the rotor body; the mechanism's inertia, friction and load act on it in the solver.
+                    var st = it.Stepper;
+                    it.RotorJoint.Drive = JointDrive.None;
+                    it.RotorJoint.MotorTorque = st.Torque + st.DetentAt(it.RotorJoint.Angle);
+                    it.RotorJoint.Friction = st.CoulombFriction;
+                }
                 else
                 {
                     it.RotorJoint.Drive = JointDrive.None;
@@ -637,6 +655,10 @@ namespace RobotTwin.CoreSim.Sandbox
                 {
                     // Torque the shaft needed = load on the gearbox output.
                     it.Motor.LoadTorque = it.RotorJoint.DriveTorque;
+                }
+                else if (it.Stepper != null)
+                {
+                    it.Stepper.Drive(it.RotorJoint.Angle, it.RotorJoint.Speed);   // [stepper] where the rotor body is now
                 }
             }
         }
