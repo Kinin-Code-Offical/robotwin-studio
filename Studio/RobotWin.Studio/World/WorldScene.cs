@@ -613,9 +613,29 @@ namespace RobotWin.Studio.World
         public static MeshGeometry3D Tube(IReadOnlyList<Point3D> pts, double radius, int sides = 8)
         {
             var mesh = new MeshGeometry3D();
-            for (int i = 0; i < pts.Count; i++)
+            FillTube(mesh, pts, radius, sides);
+            return mesh;
+        }
+
+        /// <summary>
+        /// [perf] Fills a mesh with a tube along a polyline: its points and normals built in collections of the right size and
+        /// frozen before they go in (one change for the mesh, not one per point); the triangles stay when their count does.
+        /// </summary>
+        public static void FillTube(MeshGeometry3D mesh, IReadOnlyList<Point3D> pts, double radius, int sides = 8)
+        {
+            int n = pts.Count;
+            var positions = new Point3DCollection(n * sides);
+            var normals = new Vector3DCollection(n * sides);
+            Span<double> cos = stackalloc double[sides], sin = stackalloc double[sides];
+            for (int s = 0; s < sides; s++)
             {
-                var dir = i + 1 < pts.Count ? pts[i + 1] - pts[i] : pts[i] - pts[i - 1];
+                cos[s] = Math.Cos(2 * Math.PI * s / sides);
+                sin[s] = Math.Sin(2 * Math.PI * s / sides);
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                var dir = i + 1 < n ? pts[i + 1] - pts[i] : pts[i] - pts[i - 1];
                 if (dir.Length < 1e-9) dir = new Vector3D(1, 0, 0);
                 dir.Normalize();
                 var up = Math.Abs(dir.Z) < 0.9 ? new Vector3D(0, 0, 1) : new Vector3D(1, 0, 0);
@@ -624,28 +644,35 @@ namespace RobotWin.Studio.World
                 var v = Vector3D.CrossProduct(dir, u);
                 for (int s = 0; s < sides; s++)
                 {
-                    double a = 2 * Math.PI * s / sides;
-                    var n = u * Math.Cos(a) + v * Math.Sin(a);
-                    mesh.Positions.Add(pts[i] + n * radius);
-                    mesh.Normals.Add(n);
+                    var normal = u * cos[s] + v * sin[s];
+                    positions.Add(pts[i] + normal * radius);
+                    normals.Add(normal);
                 }
             }
 
-            for (int i = 0; i + 1 < pts.Count; i++)
+            positions.Freeze();
+            normals.Freeze();
+            mesh.Positions = positions;
+            mesh.Normals = normals;
+            int triangles = Math.Max(0, n - 1) * sides * 6;
+            if (mesh.TriangleIndices.Count == triangles && mesh.TriangleIndices.IsFrozen) return;
+            var indices = new Int32Collection(triangles);
+            for (int i = 0; i + 1 < n; i++)
             {
                 for (int s = 0; s < sides; s++)
                 {
                     int a = i * sides + s, b = i * sides + (s + 1) % sides, c = a + sides, d = b + sides;
-                    mesh.TriangleIndices.Add(a);
-                    mesh.TriangleIndices.Add(c);
-                    mesh.TriangleIndices.Add(b);
-                    mesh.TriangleIndices.Add(b);
-                    mesh.TriangleIndices.Add(c);
-                    mesh.TriangleIndices.Add(d);
+                    indices.Add(a);
+                    indices.Add(c);
+                    indices.Add(b);
+                    indices.Add(b);
+                    indices.Add(c);
+                    indices.Add(d);
                 }
             }
 
-            return mesh;
+            indices.Freeze();
+            mesh.TriangleIndices = indices;
         }
 
         /// <summary>A hanging cable: quadratic curve sagging between the ends, never below the floor.</summary>
@@ -676,6 +703,7 @@ namespace RobotWin.Studio.World
 
             var g = new Model3DGroup();
             _cableModels.Clear();
+            _cableSeen.Clear();
             foreach (var c in World.Cables)
             {
                 var a = World.Find(c.A.ObjectId);
@@ -697,35 +725,122 @@ namespace RobotWin.Studio.World
                 var state = Session?.CableState(c);
                 if (state is { Burned: true }) color = Color.FromRgb(0x2A, 0x20, 0x1A);
                 if (CableColor?.Invoke(c) is Color replay) color = replay;   // [render] current colours in a replay
-                var mat = new MaterialGroup();
-                mat.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
-                mat.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x50, 255, 255, 255)), 30));
+                int heat = 0;
                 if (state is { Burned: false } s && s.Power > 0)
                 {
-                    // Glows as it heats toward its rating.
-                    double amp = WorldCable.Ampacity(c.Awg);
-                    double load = Math.Abs(s.Current) / amp;
-                    if (load > 0.8) mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb((byte)Math.Min(255, 120 * load), (byte)Math.Min(120, 30 * load), 0))));
+                    // Glows as it heats toward its rating (in steps of 5 % of it, so the look can be shared).
+                    double load = Math.Abs(s.Current) / WorldCable.Ampacity(c.Awg);
+                    if (load > 0.8) heat = (int)Math.Round(Math.Min(load, 3.0) * 20);
                 }
 
-                if (c.Id == SelectedCable)
-                {
-                    // Selected: thicker and lit in the accent colour.
-                    mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6))));
-                    r *= 1.8;
-                }
+                bool selected = c.Id == SelectedCable;
+                if (selected) r *= 1.8;   // selected: thicker and lit in the accent colour
 
                 // [phys] along the rope (drapes over parts, pulled-out plugs hang free)
-                var tube = new GeometryModel3D(Tube(RopePath(c, pa, pb, out pa, out pb, out _, out _), r, 8), mat);
-                _cableModels[tube] = c.Id;
-                g.Children.Add(tube);
-                // Plugs at the ends.
-                g.Children.Add(M.Model(M.Box(pa.X, pa.Y, pa.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
-                g.Children.Add(M.Model(M.Box(pb.X, pb.Y, pb.Z, 0.0026, 0.0026, 0.004), M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D))));
+                var path = RopePath(c, pa, pb, out pa, out pb, out _, out _);
+                var look = CableLookOf(c.Id);
+                look.Tube.Material = CableMaterial(color, heat, selected);
+                // [perf] The tube is built again only when the rope moved (or its thickness changed); the GPU keeps the rest.
+                if (r != look.Radius || !SamePath(look.Path, path))
+                {
+                    FillTube(look.Mesh, path, r, 8);
+                    look.Path = path;
+                    look.Radius = r;
+                }
+
+                // Plugs at the ends: one box moved where each plug is.
+                Place(look.PlugA, pa);
+                Place(look.PlugB, pb);
+                _cableModels[look.Tube] = c.Id;
+                g.Children.Add(look.Tube);
+                g.Children.Add(look.PlugModelA);
+                g.Children.Add(look.PlugModelB);
             }
 
+            if (_cableLooks.Count > _cableSeen.Count)
+                foreach (var gone in _cableLooks.Keys.Where(k => !_cableSeen.Contains(k)).ToList()) _cableLooks.Remove(gone);
             AppendUsbCables(g);   // [radio] PC → board USB cables
             _cables.Content = g;
+        }
+
+        // ================================================================ [perf] what a cable looks like, kept from frame to frame
+
+        /// <summary>A cable's tube and plugs: the same models every frame, the tube's mesh refilled only when the rope moved.</summary>
+        private sealed class CableLook
+        {
+            public readonly MeshGeometry3D Mesh = new MeshGeometry3D();
+            public readonly GeometryModel3D Tube;
+            public readonly TranslateTransform3D PlugA = new TranslateTransform3D(), PlugB = new TranslateTransform3D();
+            public readonly GeometryModel3D PlugModelA, PlugModelB;
+            public List<Point3D> Path = new List<Point3D>();
+            public double Radius = double.NaN;
+
+            public CableLook()
+            {
+                Tube = new GeometryModel3D { Geometry = Mesh };
+                PlugModelA = new GeometryModel3D(PlugMesh, PlugMaterial) { Transform = PlugA };
+                PlugModelB = new GeometryModel3D(PlugMesh, PlugMaterial) { Transform = PlugB };
+            }
+        }
+
+        private static readonly MeshGeometry3D PlugMesh = Frozen(M.Box(0, 0, 0, 0.0026, 0.0026, 0.004));
+        private static readonly Material PlugMaterial = Frozen(M.Matte(Color.FromRgb(0x1A, 0x1A, 0x1D)));
+        private readonly Dictionary<string, CableLook> _cableLooks = new Dictionary<string, CableLook>(StringComparer.Ordinal);
+        private readonly HashSet<string> _cableSeen = new HashSet<string>(StringComparer.Ordinal);
+        private readonly Dictionary<(Color Color, int Heat, bool Selected), Material> _cableMaterials = new Dictionary<(Color, int, bool), Material>();
+
+        private static T Frozen<T>(T f) where T : Freezable
+        {
+            f.Freeze();
+            return f;
+        }
+
+        private CableLook CableLookOf(string id)
+        {
+            _cableSeen.Add(id);
+            if (!_cableLooks.TryGetValue(id, out var look)) _cableLooks[id] = look = new CableLook();
+            return look;
+        }
+
+        private static void Place(TranslateTransform3D t, Point3D p)
+        {
+            t.OffsetX = p.X;   // the same value again changes nothing
+            t.OffsetY = p.Y;
+            t.OffsetZ = p.Z;
+        }
+
+        /// <summary>A cable's material, shared by every cable that looks the same (colour, how hot it glows, selected).</summary>
+        private Material CableMaterial(Color color, int heat, bool selected)
+        {
+            var key = (color, heat, selected);
+            if (_cableMaterials.TryGetValue(key, out var found)) return found;
+            if (_cableMaterials.Count > 512) _cableMaterials.Clear();   // a replay colours cables by their current: keep it bounded
+            var mat = new MaterialGroup();
+            mat.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
+            mat.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromArgb(0x50, 255, 255, 255)), 30));
+            if (heat > 0)
+            {
+                double load = heat / 20.0;
+                mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb((byte)Math.Min(255, 120 * load), (byte)Math.Min(120, 30 * load), 0))));
+            }
+
+            if (selected) mat.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6))));
+            mat.Freeze();
+            return _cableMaterials[key] = mat;
+        }
+
+        /// <summary>Whether a rope lies where it lay (every point within 20 µm: closer than anything on screen can show).</summary>
+        private static bool SamePath(List<Point3D> before, List<Point3D> now)
+        {
+            if (before.Count != now.Count) return false;
+            const double tolerance2 = 2e-5 * 2e-5;
+            for (int i = 0; i < now.Count; i++)
+            {
+                var d = now[i] - before[i];
+                if (d.LengthSquared > tolerance2) return false;
+            }
+
+            return true;
         }
 
         // ================================================================ kinematics (servo horns, motor shafts and what is fixed to them)
