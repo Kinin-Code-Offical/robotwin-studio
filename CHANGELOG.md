@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Time-step convergence, measured:** the rigid-body solver is now checked with its step halved from 4 ms to 0.25 ms:
+  - a thrown body's error halves exactly each time (first order, as semi-implicit Euler gives: 2.45 mm after a second at the app's 0.5 ms);
+  - a hinged pendulum's period converges at nearly second order (2·10⁻⁷ at 0.5 ms);
+  - a box dropped to rest settles at the same height at every step;
+  - the joints of a swinging five-link chain stay within 0.05 mm (0.54 mm at 4 ms).
+  The table is in the guide's Validation chapter.
+
+- **Earlier versions of a document, one click away:** **File → Earlier versions…** (and the command palette) lists the open project's or world's copies in the backup folder, the newest on top: its autosaves and how it was before each save, with when ("today 14:28", "yesterday 12:53") and their size. **Open as a copy** opens one in a tab of its own beside the document. **Restore** takes the file back to it after asking; the state it replaces is kept as an earlier version, so a restore can itself be undone the same way.
+
+- **The PCB says what the schematic's changes did to it.** The PCB page has always brought the board up to date with the schematic when it opened, silently: footprints of parts that were gone left with their placement, and tracks on nets that no longer existed were deleted.
+  - Now, when laid-out work goes (a part leaves the board, a footprint changes, tracks or vias are deleted), a notice says what changed. **Details** lists every change, down to each pad that moved to another net.
+  - A part that leaves the board keeps its place. When it comes back (the deletion undone in the schematic, say), it is put where it stood: same side and rotation, the footprint unchanged.
+  - The project check reports a project whose PCB is behind its schematic under *Consistency*, with what opening the PCB page will change. It is a warning when laid-out work would go and a note when parts would only be added.
+  - `BoardSync.Preview` works out the changes by synchronising a copy of the board, so the preview is exactly what synchronising does.
+
 - **Project check: what a project needs that this computer lacks.** Opening a project or world now checks it against this computer:
   - the definitions of its parts;
   - the compilers its boards' code needs: the Arduino compiler for an Uno or Nano (only a note when the project's last build is the code's, since it still runs), Visual Studio's C++ tools for an ESP32, and the ESP32 toolchain in the hardware-compatible mode;

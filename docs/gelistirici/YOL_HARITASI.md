@@ -50,17 +50,17 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 
 - [~] **Proje bütünlüğü:**
   - [x] Montaj projeyi izler.
-  - [ ] Değişiklik etkisi önizlemesi (devre → PCB → montaj).
+  - [~] Değişiklik etkisi önizlemesi (devre → PCB → montaj): `BoardSync.Preview` şemanın kartı nasıl değiştireceğini kartın bir kopyasında eşitleyerek bulur (eklenecek / kalkacak parçalar, değişen ayak izleri, başka hatta geçen pedler, silinecek iz ve via'lar). PCB sayfası kartı güncellerken yerleşim emeği gidiyorsa bunu bildirir (ayrıntılarıyla); şemadan silinip geri gelen parça kartta eski yerine konur. Montaj kendi eşitlemesinin raporunu zaten veriyor. Kalan: değişikliği uygulamadan önce sorma.
   - [ ] Kalıcı bileşen kimlikleri.
-  - [ ] Proje sürümleri ve geri dönüş.
+  - [x] Proje sürümleri ve geri dönüş: **Dosya → Önceki sürümler…** açık belgenin otomatik kayıtlarını ve her kaydetmeden önceki hâlini listeler; her biri kopya olarak açılır ya da dosyanın yerine geri yüklenir (şu anki hâli de saklanır, adım geri alınabilir).
   - [x] Eksik kütüphane / model / derleyici denetimi: `ProjectCheck` bir projenin ya da dünyanın bu bilgisayarda eksik olanlarını bulur (tanımı olmayan parçalar, kartların kodunun istediği derleyici: Uno/Nano için Arduino derleyicisi, son derlemesi kodunsa yalnız not; ESP32 için MSVC ve donanım modunda araç zinciri; kodun `#include` ettiği kurulu olmayan kütüphaneler, dizinden adıyla). Açılışta eksik varsa bildirim, **Dosya → Projeyi denetle…** penceresinde her eksiğin yanında gideren adım (derleyiciyi kurulum bileşeni olarak ekle, kütüphaneyi kur, parçayı içe aktar). 3B modeller projeye gömülü olduğundan eksik model olamıyor.
-  - [ ] Şema–PCB–montaj tutarsızlık raporu.
+  - [~] Şema–PCB–montaj tutarsızlık raporu: proje denetimi kartı şemanın gerisinde kalan projeyi "Tutarlılık" altında söyler (yerleşim emeği gidecekse uyarı, yalnız ekleme varsa not), PCB sayfasına götürür. Kalan: montajın şemayla farkı.
   - [ ] Tasarım alternatifleri.
 - [~] **Fizik doğrulama:**
   - [x] Referans testleri var.
   - [x] Enerji ve momentum korunumu: `ConservationTests` (çarpışmalarda doğrusal ve açısal momentum makine hassasiyetinde, Newton'un çarpışma yasası, Dzhanibekov devrilmesi, boşlukta mekanik enerji, sekmelerde enerji artışı yok).
-  - [ ] Zaman adımı yakınsaması.
-  - [ ] Temas ve eklem kararlılığı.
+  - [x] Zaman adımı yakınsaması: `TimeStepConvergenceTests` (atılan cisim tam birinci derece, sarkaç periyodu ikinci dereceye yakın, duran kutunun yüksekliği her adımda aynı, zincirin eklem ayrılması); tablo kullanım kılavuzunun Doğrulama bölümünde.
+  - [~] Temas ve eklem kararlılığı: duran kutu 4 ms'ye kadar aynı yükseklikte, sallanan beş halkalı zincirin eklemleri 0,5 ms'de 0,05 mm, 4 ms'de 0,54 mm içinde. Kalan: yığınlar, sürtünmeli eğimde uzun bekleme.
   - [ ] Elektrik–mekanik–termal enerji bilançosu.
   - [ ] Sayısal belirsizlik raporu.
   - [ ] Model geçerlilik aralığı.

@@ -35,6 +35,19 @@ Testleri kendiniz çalıştırmak için: `dotnet test RobotWinStudio.sln`. Her t
 | Havada düşen kürenin son hızı | 8,5568 m/s | 8,5567 m/s | −0,001 % | ±0,5 % |
 | Rüzgârın kutuya kuvveti | 0,31607 N | 0,31557 N | −0,16 % | ±2 % |
 
+### Zaman adımı yakınsaması
+
+Aynı hareket, çözücünün adımı her seferinde yarıya indirilerek yeniden çalıştırılınca doğru yanıta yaklaşmalı, uygulamanın kullandığı adımda (0,5 ms, `PhysicsScene.MaxSubstep`) da yeterince yakın olmalıdır. Sayılar `TimeStepConvergenceTests`'ten:
+
+| Ölçüm | 4 ms | 2 ms | 1 ms | 0,5 ms (uygulama) | 0,25 ms |
+| --- | --- | --- | --- | --- | --- |
+| Atılan cismin 1 s sonraki konum hatası | 19,6 mm | 9,8 mm | 4,9 mm | 2,45 mm | 1,23 mm |
+| Menteşeli sarkacın periyodu, bağıl hata | 3,0·10⁻⁵ | 7,4·10⁻⁶ | 1,8·10⁻⁶ | 2,2·10⁻⁷ | 1,6·10⁻⁷ |
+| Düşüp duran kutunun merkez yüksekliği (teori 30 mm) | 29,999 mm | 30,000 mm | 30,000 mm | 30,000 mm | 30,000 mm |
+| Sallanan beş halkalı zincirde en büyük eklem ayrılması, 10 s | 0,54 mm | — | — | 0,048 mm | — |
+
+Atılan cismin hatası her yarılamada tam yarıya iner: yarı örtük (simplektik) Euler birinci derecedir, hata da a·T·h/2 formülünün verdiği kadardır. Sarkaç periyodu ikinci dereceye yakın yakınsar; 0,25 ms'deki 1,6·10⁻⁷, karşılaştırılan analitik formülün kendi kesme hatasıdır (büyük genlik düzeltmesinin θ⁴ terimi). Kutu her adımda aynı yükseklikte durur: temas, adım büyüdükçe ne gömülür ne havada kalır. Küçük ve hızlı cisimlerde çözücü çarpışmayı kaçırmamak için adımı kendisi küçültür (sürekli çarpışma algılama); atılan cisim bu etkinin dışında kalsın diye 40 cm'liktir.
+
 ## 2. Gerilme analizi (FEM, ikinci derece T10 elemanlar)
 
 | Ölçüm | Teori | Simülasyon | Sapma | Kabul sınırı |

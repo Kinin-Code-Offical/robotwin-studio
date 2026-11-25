@@ -22,6 +22,11 @@ The project needs something this computer lacks: the Arduino compiler to build i
 
 ![Project check](../../images/en/project-check.png)
 
+**How do I go back to an earlier state of a file?**
+**File → Earlier versions…** lists the open document's copies in the backup folder, the newest on top: the autosaves taken every few minutes and how it was before each save. **Open as a copy** opens that version in a new tab beside it (to compare, or to take a piece from it); **Restore** takes the file back to that version, and since its current state is kept as an earlier version too, that step can be undone the same way. How many copies are kept and how large the folder may grow are in **Settings → Saving and backup**.
+
+![Earlier versions](../../images/en/versions.png)
+
 ## Code and compiling
 
 **It says "arduino-cli not found".**

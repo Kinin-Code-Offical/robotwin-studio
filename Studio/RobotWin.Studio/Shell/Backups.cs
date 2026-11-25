@@ -43,9 +43,9 @@ namespace RobotWin.Studio.Shell
         /// Before <paramref name="path"/> is written over: its current content is kept as "name-önceki-stamp" (when
         /// "Kaydederken önceki sürümü sakla" is on). Never throws: a backup that fails does not stop the save.
         /// </summary>
-        public static void KeepPrevious(string path)
+        public static void KeepPrevious(string path, bool always = false)
         {
-            if (!S.BackupOnSave || Unattended.Active) return;
+            if ((!S.BackupOnSave && !always) || Unattended.Active) return;
             try
             {
                 if (!File.Exists(path)) return;
@@ -101,6 +101,34 @@ namespace RobotWin.Studio.Shell
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
             }
+        }
+
+        /// <summary>
+        /// [versions] A document's copies: its autosaves and how it was before each save, newest first. <paramref name="name"/>
+        /// is the file's name without its extension (or an unsaved document's title).
+        /// </summary>
+        public static List<BackupVersion> VersionsOf(string name, string extension)
+        {
+            var list = new List<BackupVersion>();
+            try
+            {
+                var dir = new DirectoryInfo(Folder);
+                if (!dir.Exists) return list;
+                string want = SafeName(name);
+                foreach (var f in dir.GetFiles("*" + extension))
+                {
+                    var m = Stamped.Match(Path.GetFileNameWithoutExtension(f.Name));
+                    if (!m.Success || !string.Equals(m.Groups["name"].Value, want, StringComparison.OrdinalIgnoreCase)) continue;
+                    string stamp = m.Groups["stamp"].Value;
+                    bool parsed = DateTime.TryParseExact(stamp, stamp.Length == 13 ? "yyyyMMdd-HHmm" : "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var time);
+                    list.Add(new BackupVersion(f, m.Groups["kind"].Value.Length > 0, parsed ? time : f.LastWriteTime));
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+            }
+
+            return list.OrderByDescending(v => v.Time).ToList();
         }
 
         /// <summary>The newest copies (for the start page and the settings), newest first.</summary>
@@ -202,4 +230,7 @@ namespace RobotWin.Studio.Shell
             }
         }
     }
+
+    /// <summary>[versions] One copy of a document in the backup folder: how it was before a save, or an autosave.</summary>
+    internal sealed record BackupVersion(FileInfo File, bool BeforeSave, DateTime Time);
 }

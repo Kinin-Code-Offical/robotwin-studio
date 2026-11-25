@@ -603,6 +603,7 @@ namespace RobotWin.Studio.Pages
         {
             var board = Board;
             int before = board.Components.Count;
+            var changes = BoardSync.Preview(W.Schematic, W.Library, board);   // [integrity] what bringing it up to date does
             BoardDocument.Synchronize(W.Schematic, W.Library, board);
             var unplaced = board.Components.Where(c => c.X == 0 && c.Y == 0).ToList();
             if (unplaced.Count > 0 && unplaced.Count < board.Components.Count)
@@ -617,6 +618,19 @@ namespace RobotWin.Studio.Pages
             UpdatePanel();
             Dispatcher.BeginInvoke(new Action(Canvas.Fit), DispatcherPriority.Loaded);
             if (before != board.Components.Count) W.Status = $"PCB güncellendi: {board.Components.Count} bileşen";
+            if (changes.Destructive) ShowChanges(changes);
+        }
+
+        /// <summary>
+        /// [integrity] Laid-out work the schematic's changes took away (footprints removed or changed, tracks deleted): said
+        /// over the page, with every change one click away. A part that comes back is put where it stood.
+        /// </summary>
+        private void ShowChanges(BoardChanges changes)
+        {
+            W.Status = "PCB şemaya göre güncellendi.";
+            if (Window.GetWindow(this) is not MainWindow main) return;
+            main.ShowNotice("PCB şemaya göre güncellendi:\n" + changes.Summary(done: true), "Ayrıntılar",
+                () => Dialog.Show(main, "PCB şemaya göre güncellendi", string.Join("\n", changes.Lines(done: true)), "Tamam"));
         }
 
         /// <summary>Used by --snapshot: auto-routes the example and puts the editor in a representative state.</summary>

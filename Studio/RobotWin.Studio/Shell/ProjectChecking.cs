@@ -40,11 +40,31 @@ namespace RobotWin.Studio.Shell
             };
         }
 
-        /// <summary>Checks a project on another thread (it reads a copy, so editing can go on).</summary>
-        public static Task<List<ProjectIssue>> CheckAsync(ProjectPackage project, PartLibrary library)
+        /// <summary>
+        /// Checks a project on another thread (it reads a copy, so editing can go on); whether its PCB is behind the
+        /// schematic is worked out here, on a copy of the board.
+        /// </summary>
+        public static async Task<List<ProjectIssue>> CheckAsync(ProjectPackage project, PartLibrary library)
         {
             var copy = ProjectCheck.Snapshot(project);
-            return Task.Run(() => ProjectCheck.Check(copy, Environment(library)));
+            var behind = BoardBehind(project, library, "PCB");
+            var issues = await Task.Run(() => ProjectCheck.Check(copy, Environment(library)));
+            if (behind != null) issues.Add(behind);
+            return issues.OrderBy(i => i.Level).ToList();   // errors first (stable: each level as the check ordered it)
+        }
+
+        private static ProjectIssue? BoardBehind(ProjectPackage project, PartLibrary library, string subject)
+        {
+            var board = project.Schematic.Board;
+            if (board == null) return null;
+            try
+            {
+                return ProjectCheck.BoardBehind(RobotTwin.CoreSim.Pcb.BoardSync.Preview(project.Schematic, library, board), subject);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is KeyNotFoundException || ex is System.Text.Json.JsonException)
+            {
+                return null;
+            }
         }
 
         /// <summary>Checks a world, its boards and their designs on another thread.</summary>

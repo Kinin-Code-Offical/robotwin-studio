@@ -177,6 +177,13 @@ namespace RobotWin.Studio.Shell
                 case IssueFix.Library when issue.Argument != null:
                     return Action("Kur", $"arduino-cli ile '{issue.Argument}' kütüphanesini indirip kurar.", async () => await InstallLibrary(issue.Argument));
 
+                case IssueFix.OpenPcb:
+                    return Action("PCB sayfası", "PCB sayfasını açar: kart şemaya göre güncellenir ve neyin değiştiği gösterilir.", () =>
+                    {
+                        Close();
+                        _main.Navigate("pcb");
+                    });
+
                 case IssueFix.Part:
                     return Action("Kütüphane sayfası", "Parçanın .rwpart ya da .rwlib dosyasını Kütüphane sayfasından içe aktarın.", () =>
                     {

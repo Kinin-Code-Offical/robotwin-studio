@@ -472,6 +472,12 @@ namespace RobotTwin.CoreSim.Pcb
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
         public List<BoardDimension> Dimensions { get; set; } = new List<BoardDimension>();
 
+        /// <summary>
+        /// [integrity] Where parts the schematic dropped stood (the latest 64): one that comes back with the same footprint
+        /// is put there again, so deleting a part and undoing it does not lose its layout.
+        /// </summary>
+        public List<BoardComponent> Removed { get; set; } = new List<BoardComponent>();
+
         /// <summary>Nets that carry supply current and get wide tracks (they default to the Power class).</summary>
         public List<string> PowerNets { get; set; } = new List<string>();
 
@@ -721,6 +727,18 @@ namespace RobotTwin.CoreSim.Pcb
                 if (comp == null)
                 {
                     comp = new BoardComponent { RefDes = part.RefDes };
+                    // [integrity] back where it stood before the schematic dropped it
+                    var was = board.Removed.FindLast(r => string.Equals(r.RefDes, part.RefDes, StringComparison.OrdinalIgnoreCase) && string.Equals(r.FootprintId, fpId, StringComparison.OrdinalIgnoreCase));
+                    if (was != null)
+                    {
+                        comp.X = was.X;
+                        comp.Y = was.Y;
+                        comp.Rotation = was.Rotation;
+                        comp.Side = was.Side;
+                        comp.Locked = was.Locked;
+                        board.Removed.Remove(was);
+                    }
+
                     board.Components.Add(comp);
                 }
 
@@ -745,6 +763,13 @@ namespace RobotTwin.CoreSim.Pcb
                 keep.Add(part.RefDes);
             }
 
+            foreach (var gone in board.Components.Where(c => !keep.Contains(c.RefDes) && (c.X != 0 || c.Y != 0)))
+            {
+                board.Removed.RemoveAll(r => string.Equals(r.RefDes, gone.RefDes, StringComparison.OrdinalIgnoreCase));
+                board.Removed.Add(new BoardComponent { RefDes = gone.RefDes, FootprintId = gone.FootprintId, X = gone.X, Y = gone.Y, Rotation = gone.Rotation, Side = gone.Side, Locked = gone.Locked });
+            }
+
+            if (board.Removed.Count > 64) board.Removed.RemoveRange(0, board.Removed.Count - 64);
             board.Components.RemoveAll(c => !keep.Contains(c.RefDes));
             var liveNets = new HashSet<string>(board.NetNames(), StringComparer.OrdinalIgnoreCase);
             board.Tracks.RemoveAll(t => !liveNets.Contains(t.Net));

@@ -22,6 +22,11 @@ Proje, bu bilgisayarda olmayan bir şeye ihtiyaç duyuyor: kodunu derleyecek Ard
 
 ![Proje denetimi](../images/project-check.png)
 
+**Bir dosyanın önceki hâline nasıl dönerim?**
+**Dosya → Önceki sürümler…** açık belgenin yedek klasöründeki kopyalarını en yenisi üstte listeler: birkaç dakikada bir alınan otomatik kayıtlar ve her kaydetmeden önceki hâli. **Kopya olarak aç** o sürümü yanında yeni bir sekmede açar (karşılaştırmak ya da bir parçayı almak için), **Geri yükle** dosyayı o sürüme döndürür; şu anki hâli de önceki sürüm olarak saklandığından bu adım da aynı yoldan geri alınabilir. Kaç kopya tutulacağı ve klasörün boyutu **Ayarlar → Kaydetme ve yedekleme**'dedir.
+
+![Önceki sürümler](../images/versions.png)
+
 ## Kod ve derleme
 
 **"arduino-cli bulunamadı" diyor.**

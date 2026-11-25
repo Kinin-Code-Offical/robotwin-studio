@@ -37,7 +37,10 @@ namespace RobotTwin.CoreSim.Design
         Library,
 
         /// <summary>A part definition this computer lacks: its .rwpart / .rwlib imported on the Library page.</summary>
-        Part
+        Part,
+
+        /// <summary>The board is behind its schematic: the PCB page brings it up to date.</summary>
+        OpenPcb
     }
 
     /// <summary>[integrity] One thing a project or world needs that this computer lacks.</summary>
@@ -94,6 +97,24 @@ namespace RobotTwin.CoreSim.Design
         public const string CompilerArea = "Derleyici";
         public const string LibrariesArea = "Kütüphaneler";
         public const string CodeArea = "Kod";
+        public const string ConsistencyArea = "Tutarlılık";
+
+        /// <summary>
+        /// [integrity] A board behind its schematic (<see cref="Pcb.BoardSync.Preview"/>): what opening the PCB page will
+        /// change, a warning when laid-out work goes (footprints removed or changed, tracks deleted), else a note.
+        /// </summary>
+        public static ProjectIssue? BoardBehind(Pcb.BoardChanges changes, string subject)
+        {
+            if (changes.IsEmpty) return null;
+            return new ProjectIssue
+            {
+                Level = changes.Destructive ? IssueLevel.Warning : IssueLevel.Note,
+                Area = ConsistencyArea,
+                Subject = subject,
+                Fix = IssueFix.OpenPcb,
+                Text = "PCB şemanın gerisinde; PCB sayfası açılınca kart şemaya göre güncellenir:\n" + changes.Summary()
+            };
+        }
 
         /// <summary>The ESP32 target of a sketch (it runs on RobotWin's Arduino-ESP32 model, built natively).</summary>
         public const string Esp32Target = "esp32-hal";

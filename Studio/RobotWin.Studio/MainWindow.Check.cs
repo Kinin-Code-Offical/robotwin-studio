@@ -103,6 +103,15 @@ namespace RobotWin.Studio
                 BoardRefDes = "U2", Target = ProjectCheck.Esp32Target, FileName = "telemetri.ino",
                 Source = "#include <WiFi.h>\n#include <PubSubClient.h>\n\nvoid setup() { WiFi.begin(\"atolye\", \"sifre\"); }\nvoid loop() {}\n"
             });
+            // its PCB was laid out with a resistor the schematic has since lost
+            var r9 = p.Schematic.AddPart(W.Library, "res-1000", new GridPoint(120, 120));
+            p.Schematic.Labels.Add(new NetLabel { Name = "ECHO", Position = r9.Transform(-3, 0) });
+            p.Schematic.Labels.Add(new NetLabel { Name = "ECHO_PU", Position = r9.Transform(3, 0) });
+            var board = RobotTwin.CoreSim.Pcb.BoardDocument.Synchronize(p.Schematic, W.Library);
+            RobotTwin.CoreSim.Pcb.AutoPlacer.Place(board);
+            board.Tracks.Add(new RobotTwin.CoreSim.Pcb.Track { Net = "ECHO_PU", X1 = 10, Y1 = 10, X2 = 34, Y2 = 10 });
+            p.Schematic.Board = board;
+            p.Schematic.Parts.Remove(r9);
             W.LoadPackage(p, null);
         }
 

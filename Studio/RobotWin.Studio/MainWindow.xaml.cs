@@ -205,6 +205,7 @@ namespace RobotWin.Studio
             Command("file.newWorld", "Dosya", "Yeni dünya", "Ctrl+Shift+N", () => NewWorld());
             Command("file.open", "Dosya", "Aç", "Ctrl+O", () => OnOpen(this, new RoutedEventArgs()));
             Command("file.check", "Dosya", "Projeyi denetle", string.Empty, () => CheckProject(quiet: false));   // [integrity]
+            Command("file.versions", "Dosya", "Önceki sürümler", string.Empty, ShowVersions);   // [versions]
             Command("file.save", "Dosya", "Kaydet", "Ctrl+S", () => OnSave(this, new RoutedEventArgs()));
             Command("file.saveAs", "Dosya", "Farklı kaydet", "Ctrl+Shift+S", () => SaveAs());
             Command("tabs.close", "Sekmeler", "Sekmeyi kapat", "Ctrl+W", () => CloseTab(W.ActiveDocument));
@@ -397,7 +398,7 @@ namespace RobotWin.Studio
             foreach (var d in W.Documents.Where(d => d != keep && !d.IsPinned && d.OwnerWorld != keep && keep.OwnerWorld != d).ToList()) CloseTab(d);
         }
 
-        private static void RevealInExplorer(string path, bool folder)
+        internal static void RevealInExplorer(string path, bool folder)
         {
             try
             {
@@ -840,6 +841,8 @@ namespace RobotWin.Studio
                 LoadCheckDemo();   // [integrity] the project check's window on a project from another computer
                 CheckProject(quiet: false);
             }
+
+            if (fault == "versions-demo") LoadVersionsDemo();   // [versions]
 
             if (fault == "check-notice")
             {

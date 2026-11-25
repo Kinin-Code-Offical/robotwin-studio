@@ -35,6 +35,19 @@ To run the tests yourself: `dotnet test RobotWinStudio.sln`. Each test prints wh
 | Terminal velocity of a sphere falling in air | 8.5568 m/s | 8.5567 m/s | −0.001 % | ±0.5 % |
 | Wind force on a box | 0.31607 N | 0.31557 N | −0.16 % | ±2 % |
 
+### Time-step convergence
+
+The same motion, run again with the solver's step halved each time, must approach the exact answer, and be close enough at the step the app uses (0.5 ms, `PhysicsScene.MaxSubstep`). Figures from `TimeStepConvergenceTests`:
+
+| Measurement | 4 ms | 2 ms | 1 ms | 0.5 ms (the app) | 0.25 ms |
+| --- | --- | --- | --- | --- | --- |
+| Thrown body, position error after 1 s | 19.6 mm | 9.8 mm | 4.9 mm | 2.45 mm | 1.23 mm |
+| Hinged pendulum's period, relative error | 3.0·10⁻⁵ | 7.4·10⁻⁶ | 1.8·10⁻⁶ | 2.2·10⁻⁷ | 1.6·10⁻⁷ |
+| Box dropped to rest, height of its centre (theory 30 mm) | 29.999 mm | 30.000 mm | 30.000 mm | 30.000 mm | 30.000 mm |
+| Swinging chain of five links, largest joint separation in 10 s | 0.54 mm | — | — | 0.048 mm | — |
+
+The thrown body's error halves exactly with each halving: semi-implicit (symplectic) Euler is first order, and the error is what a·T·h/2 gives. The pendulum's period converges at nearly second order; the 1.6·10⁻⁷ at 0.25 ms is the truncation of the analytic formula it is compared with (the θ⁴ term of the large-amplitude correction). The box rests at the same height at every step: contacts neither sink nor float as the step grows. For small fast bodies the solver shortens the step by itself so as not to miss a collision (continuous collision detection); the thrown body is 40 cm across to stay out of that.
+
 ## 2. Stress analysis (FEM, quadratic T10 elements)
 
 | Measurement | Theory | Simulation | Deviation | Tolerance |
