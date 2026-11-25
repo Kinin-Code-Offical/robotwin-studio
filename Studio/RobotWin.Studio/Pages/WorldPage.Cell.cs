@@ -551,6 +551,10 @@ namespace RobotWin.Studio.Pages
                     sb.Append(lc == null ? "Dünya çalışırken perde durumu burada görünür." : lc.Blocked ? $"KESİLDİ · {lc.Beams.Count(b => b.Cut)} / {lc.Beams.Count} ışın · OSSD düşük" : $"Serbest · {lc.Beams.Count} ışın · OSSD yüksek");
                     break;
                 }
+
+                case CellParts.ModbusIoId:
+                    ModbusStatus(o, physics, sb);   // [modbus] Pages/WorldPage.Modbus.cs
+                    break;
             }
 
             _cellStatus.Text = Shell.Lang.T(sb.ToString().TrimEnd());   // [lang] line by line

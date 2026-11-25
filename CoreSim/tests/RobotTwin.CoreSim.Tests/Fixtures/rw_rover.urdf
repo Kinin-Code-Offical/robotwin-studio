@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<!-- [ros] A differential-drive rover written for these tests, laid out as ROS mobile robots are: base_footprint on the
+     ground, base_link above it, two driven wheels, a free swivel caster behind, and a ros2_control block naming the wheels
+     as velocity-commanded (so the caster's joints turn freely). -->
+<robot name="rw_rover">
+  <material name="body"><color rgba="0.2 0.4 0.8 1"/></material>
+  <material name="tyre"><color rgba="0.1 0.1 0.1 1"/></material>
+
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <visual><origin xyz="0 0 0.03"/><geometry><box size="0.30 0.20 0.04"/></geometry><material name="body"/></visual>
+    <collision><origin xyz="0 0 0.03"/><geometry><box size="0.30 0.20 0.04"/></geometry></collision>
+    <inertial><mass value="2.0"/><inertia ixx="0.01" iyy="0.02" izz="0.02" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/><child link="base_link"/><origin xyz="0 0 0.05"/>
+  </joint>
+
+  <link name="wheel_left_link">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.03"/></geometry><material name="tyre"/></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.03"/></geometry></collision>
+    <inertial><mass value="0.2"/><inertia ixx="0.0002" iyy="0.00025" izz="0.0002" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="wheel_left_joint" type="continuous">
+    <parent link="base_link"/><child link="wheel_left_link"/><origin xyz="0.03 0.12 0"/><axis xyz="0 1 0"/>
+    <limit effort="2" velocity="20"/>
+  </joint>
+
+  <link name="wheel_right_link">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.03"/></geometry><material name="tyre"/></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.03"/></geometry></collision>
+    <inertial><mass value="0.2"/><inertia ixx="0.0002" iyy="0.00025" izz="0.0002" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="wheel_right_joint" type="continuous">
+    <parent link="base_link"/><child link="wheel_right_link"/><origin xyz="0.03 -0.12 0"/><axis xyz="0 1 0"/>
+    <limit effort="2" velocity="20"/>
+  </joint>
+
+  <link name="caster_swivel_link">
+    <visual><origin xyz="0 0 0.018"/><geometry><box size="0.02 0.02 0.01"/></geometry></visual>
+    <inertial><mass value="0.03"/><inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="caster_swivel_joint" type="continuous">
+    <parent link="base_link"/><child link="caster_swivel_link"/><origin xyz="-0.11 0 -0.02"/><axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="caster_wheel_link">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.02" length="0.015"/></geometry><material name="tyre"/></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.02" length="0.015"/></geometry></collision>
+    <inertial><mass value="0.03"/><inertia ixx="0.000003" iyy="0.000006" izz="0.000003" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="caster_wheel_joint" type="continuous">
+    <parent link="caster_swivel_link"/><child link="caster_wheel_link"/><origin xyz="-0.015 0 -0.01"/><axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- A laser scanner on a post and an IMU inside the body, declared for the simulator as Gazebo reads them. -->
+  <link name="base_scan">
+    <visual><geometry><cylinder radius="0.03" length="0.04"/></geometry><material name="tyre"/></visual>
+    <collision><geometry><cylinder radius="0.03" length="0.04"/></geometry></collision>
+    <inertial><mass value="0.1"/><inertia ixx="0.00003" iyy="0.00003" izz="0.00005" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="scan_joint" type="fixed">
+    <parent link="base_link"/><child link="base_scan"/><origin xyz="0 0 0.07"/>
+  </joint>
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/><child link="imu_link"/><origin xyz="-0.03 0 0.01"/>
+  </joint>
+
+  <gazebo reference="base_scan">
+    <sensor type="ray" name="lds_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <update_rate>5</update_rate>
+      <ray>
+        <scan><horizontal><samples>360</samples><resolution>1</resolution><min_angle>0.0</min_angle><max_angle>6.28319</max_angle></horizontal></scan>
+        <range><min>0.12</min><max>3.5</max><resolution>0.015</resolution></range>
+        <noise><type>gaussian</type><mean>0.0</mean><stddev>0.01</stddev></noise>
+      </ray>
+      <plugin name="rover_laserscan" filename="libgazebo_ros_ray_sensor.so">
+        <ros><remapping>~/out:=scan</remapping></ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>base_scan</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+  <gazebo reference="imu_link">
+    <sensor type="imu" name="rover_imu">
+      <update_rate>100</update_rate>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0</mean><stddev>2e-4</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>2e-4</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>2e-4</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0</mean><stddev>1.7e-2</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>1.7e-2</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>1.7e-2</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+      <plugin name="rover_imu" filename="libgazebo_ros_imu_sensor.so">
+        <ros><remapping>~/out:=imu</remapping></ros>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <ros2_control name="rover" type="system">
+    <hardware><plugin>mock_components/GenericSystem</plugin></hardware>
+    <joint name="wheel_left_joint">
+      <command_interface name="velocity"/><state_interface name="position"/><state_interface name="velocity"/>
+    </joint>
+    <joint name="wheel_right_joint">
+      <command_interface name="velocity"/><state_interface name="position"/><state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+</robot>

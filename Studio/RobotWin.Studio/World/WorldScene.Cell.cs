@@ -70,6 +70,10 @@ namespace RobotWin.Studio.World
                         if (v.Lamp != null) v.Lamp.Color = lc == null ? LampOff : lc.Blocked ? Color.FromRgb(0xE5, 0x30, 0x30) : Color.FromRgb(0x3C, 0xD0, 0x64);
                         break;
                     }
+
+                    case CellParts.ModbusIoId:   // [modbus] lit while the world runs it
+                        if (v.Lamp != null) v.Lamp.Color = physics?.ModbusDevices.Any(d => d.Object.Id == it.Object.Id) == true ? Color.FromRgb(0x3C, 0xD0, 0x64) : LampOff;
+                        break;
                 }
             }
 

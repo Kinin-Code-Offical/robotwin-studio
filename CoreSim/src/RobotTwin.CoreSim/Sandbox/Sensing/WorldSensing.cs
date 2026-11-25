@@ -254,12 +254,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             var env = _world.Environment;
             if (env.Walls)
             {
-                double w = env.Width / 2, d = env.Depth / 2;
-                foreach (var (min, mx) in new[]
-                {
-                    (new Vec3(-w - 0.02, -d - 0.02, 0), new Vec3(w + 0.02, -d, 0.1)), (new Vec3(-w - 0.02, d, 0), new Vec3(w + 0.02, d + 0.02, 0.1)),
-                    (new Vec3(-w - 0.02, -d, 0), new Vec3(-w, d, 0.1)), (new Vec3(w, -d, 0), new Vec3(w + 0.02, d, 0.1))
-                })
+                foreach (var (min, mx) in RoomWalls(env))
                 {
                     double t = RayBox(origin, dir, min, mx);
                     if (t >= 0 && t < best && t <= max)
@@ -284,7 +279,19 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             return (best, refl);
         }
 
-        private static double RayBox(Vec3 o, Vec3 d, Vec3 min, Vec3 max)
+        /// <summary>The room's walls (when it has them): four boxes 2 cm thick and 10 cm high round its floor.</summary>
+        internal static (Vec3 Min, Vec3 Max)[] RoomWalls(WorldSpec env)
+        {
+            double w = env.Width / 2, d = env.Depth / 2;
+            return new[]
+            {
+                (new Vec3(-w - 0.02, -d - 0.02, 0), new Vec3(w + 0.02, -d, 0.1)), (new Vec3(-w - 0.02, d, 0), new Vec3(w + 0.02, d + 0.02, 0.1)),
+                (new Vec3(-w - 0.02, -d, 0), new Vec3(-w, d, 0.1)), (new Vec3(w, -d, 0), new Vec3(w + 0.02, d, 0.1))
+            };
+        }
+
+        /// <summary>Where a ray enters a box (its distance), or −1 when it misses.</summary>
+        internal static double RayBox(Vec3 o, Vec3 d, Vec3 min, Vec3 max)
         {
             double t0 = 0, t1 = double.PositiveInfinity;
             for (int a = 0; a < 3; a++)

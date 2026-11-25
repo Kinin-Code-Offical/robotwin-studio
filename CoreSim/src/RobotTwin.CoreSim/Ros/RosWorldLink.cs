@@ -12,9 +12,11 @@ namespace RobotTwin.CoreSim.Ros
     /// time, for nodes with <c>use_sim_time</c>), <c>/joint_states</c> (every hinge and slider by its URDF name: position in
     /// rad or m, velocity) and, the other way, <c>/joint_command</c> (a <c>sensor_msgs/JointState</c> whose positions, or
     /// velocities for a speed motor, become the joints' motor targets — the topic Isaac Sim's ROS bridge also uses).
+    /// A robot free on the ground adds <c>/odom</c>, <c>/tf</c> and <c>/cmd_vel</c> (RosWorldLink.Mobile.cs); the sensors its
+    /// description declares publish their scans and IMU readings (RosWorldLink.Sensors.cs).
     /// <see cref="Step"/> runs with the simulation; the network work is the client's own.
     /// </summary>
-    public sealed class RosWorldLink
+    public sealed partial class RosWorldLink
     {
         public const string ClockTopic = "/clock", JointStatesTopic = "/joint_states", JointCommandTopic = "/joint_command";
 
@@ -40,6 +42,9 @@ namespace RobotTwin.CoreSim.Ros
             ros.Advertise(ClockTopic, "rosgraph_msgs/msg/Clock");
             ros.Advertise(JointStatesTopic, "sensor_msgs/msg/JointState");
             ros.Subscribe(JointCommandTopic, "sensor_msgs/msg/JointState");
+            ros.Subscribe(JointTrajectoryTopic, "trajectory_msgs/msg/JointTrajectory");
+            FindBases(world);
+            FindSensors(world);
         }
 
         /// <summary>The joints ROS sees, by name.</summary>
@@ -54,7 +59,14 @@ namespace RobotTwin.CoreSim.Ros
         public void Step(double time)
         {
             while (_ros.TryReceive(out string topic, out var msg))
+            {
                 if (topic == JointCommandTopic) Command(msg);
+                else if (topic == JointTrajectoryTopic) FollowTrajectory(msg, time);
+                else Twist(topic, msg, time);
+            }
+
+            StepTrajectory(time);
+            DriveBases(time);
             if (!_ros.Connected) return;
             if (time - _lastClock >= _clockPeriod - 1e-9)
             {
@@ -66,7 +78,10 @@ namespace RobotTwin.CoreSim.Ros
             {
                 _lastState = time;
                 PublishJointStates(time);
+                PublishBases(time);
             }
+
+            StepSensors(time);
         }
 
         private void PublishJointStates(double time)
@@ -100,6 +115,7 @@ namespace RobotTwin.CoreSim.Ros
         private void Command(JsonNode msg)
         {
             if (msg["name"] is not JsonArray names) return;
+            _trajectory = null;   // a direct command takes over from a trajectory
             var positions = msg["position"] as JsonArray;
             var velocities = msg["velocity"] as JsonArray;
             for (int i = 0; i < names.Count; i++)
@@ -123,7 +139,14 @@ namespace RobotTwin.CoreSim.Ros
         private static JsonObject Stamp(double time)
         {
             long sec = (long)Math.Floor(time);
-            return new JsonObject { ["sec"] = sec, ["nanosec"] = (long)Math.Round((time - sec) * 1e9) };
+            long nanosec = (long)Math.Round((time - sec) * 1e9);
+            if (nanosec >= 1_000_000_000)
+            {
+                sec++;
+                nanosec -= 1_000_000_000;
+            }
+
+            return new JsonObject { ["sec"] = sec, ["nanosec"] = nanosec };
         }
     }
 }

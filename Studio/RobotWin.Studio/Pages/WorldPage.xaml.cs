@@ -1715,6 +1715,20 @@ namespace RobotWin.Studio.Pages
         // ================================================================ snapshot hook
 
         /// <summary>--snapshot --page world --fault &lt;template id&gt; [--simulate s]: loads a world template and runs it.</summary>
+        /// <summary>Snapshot of a saved world (already opened): <paramref name="select"/> selected, run for <paramref name="simulate"/> s.</summary>
+        public void PrepareSavedWorldSnapshot(string? select, string? simulate)
+        {
+            OnShown();
+            Scene.FrameAll();
+            if (select != null && World?.Objects.FirstOrDefault(o => o.Name == select) is { } chosen) Scene.Select(chosen.Id);
+            if (simulate == null || !double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs)) return;
+            Run();
+            _session.Pause();
+            for (int i = 0; i < Math.Max(1, (int)(secs / 0.01)); i++) _session.StepOnce(0.01);
+            UpdateRunButton();
+            OnSimUpdated();
+        }
+
         public void PrepareSnapshot(string? template, string? simulate)
         {
             template = SenseSnapshotTemplate(template);   // [sense] "id:studio:sensors…" view modes

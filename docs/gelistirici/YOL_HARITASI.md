@@ -148,9 +148,9 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [~] KiCad içe aktarma.
   - [x] STEP / IGES: Open CASCADE köprüsü (`CoreSim/native/occt`, `third_party/occt/win-x64`, `tools/scripts/build_occt.bat`): STEP, IGES ve BREP her 3B model seçiminde açılır (modelleyici, dünya, parça modeli, parça oluşturucu, yalnız STEP'i olan KiCad ayak izleri); montajlar yerleşim ve renkleriyle ağa çevrilir; modelleyici STEP katısı olarak dışa aktarır. OCCT 8.0.2 yalnız dosya köprüsü, üçüncü taraf kütüphanesiz derlendi (~42 MB).
   - [x] URDF / Xacro: `Formats/Urdf`, `Xacro`, `UrdfImport`; bağlantılar parça, eklemler sınırlarıyla menteşe/kızak ve URDF'nin effort/velocity değerlerinde motorlu (`WorldJoint.Drive`, denetçide **Motor hedefi**), `package://` arama, xacro'nun özellik/ifade/makro/include/koşul alt kümesi; dünyanın kol kinematiği paneli motorlu eksenleri çözer, önizler, motor hedefi yapar ve sürer (test kolunda uç fizikte hedefe 0,5 mm). Eksik: `load_yaml`, DAE ağları (görsel yerine çarpışma ağı gösterilir), mimic eklemleri ayrı sürülüyor.
-  - [~] ROS 2: rosbridge üzerinden (`Ros/`): `/clock`, `/joint_states` yayını, `/joint_command` ile eklem motorları. Sırada: `/tf`, `/odom` ve `/cmd_vel` (tekerlekli robot), sensör konuları (`/scan`, `/imu`, kamera), MoveIt için FollowJointTrajectory.
+  - [~] ROS 2: rosbridge üzerinden (`Ros/`): `/clock`, `/joint_states` yayını, `/joint_command` ile eklem motorları; gezgin robot için `/odom`, `/tf`, `/cmd_vel` (diferansiyel sürüş); URDF'nin Gazebo algılayıcılarından `/scan` ve `/imu`; `/joint_trajectory` ile zamanlı yörünge. Sırada: kamera (`sensor_msgs/Image`), dünyadaki devre algılayıcıları (LiDAR, MPU-6050) ROS'ta, MoveIt için FollowJointTrajectory eylemi (rosbridge eylem desteğiyle).
   - [~] Python API.
-  - [ ] Modbus.
+  - [x] Modbus TCP: uzak G/Ç modülü (8 DI / 8 DO, devrede gerçek pinler) dünya çalışırken sunucu (`Industrial/`), fonksiyon kodları 1–6, 15, 16, 23. Sırada: analog G/Ç, Modbus RTU (seri), istemci tarafı (dünyadaki PLC'nin başka cihaza bağlanması).
   - [ ] OPC UA.
   - [ ] FMI / FMU.
 

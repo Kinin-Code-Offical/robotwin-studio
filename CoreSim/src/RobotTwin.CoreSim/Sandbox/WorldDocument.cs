@@ -110,6 +110,15 @@ namespace RobotTwin.CoreSim.Sandbox
         /// </summary>
         public double[]? ModelOrigin { get; set; }
 
+        /// <summary>
+        /// [ros] The robot-description link this part is (a URDF link's name): ROS's frame for it (<c>/tf</c>, <c>/odom</c>),
+        /// whose origin is <see cref="ModelOrigin"/> in the object's frame. Null: not from a robot description.
+        /// </summary>
+        public string? Link { get; set; }
+
+        /// <summary>[ros] Sensors the robot description puts on this part (a laser scanner, an IMU), published on ROS.</summary>
+        public List<RobotSensor>? RobotSensors { get; set; }
+
         /// <summary>[assembly] The circuit part this object is ("project id/RefDes"): a Montaj follows that part.</summary>
         public string? ProjectRef { get; set; }
 

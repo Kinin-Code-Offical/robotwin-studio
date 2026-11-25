@@ -70,6 +70,9 @@ namespace RobotTwin.CoreSim.Sandbox
                     double h = CellParts.Num(p, "height", 0.4), s = CellParts.Num(p, "size", 0.4);
                     return Box(new Vec3(-s / 2, -s / 2, 0), new Vec3(s / 2, s / 2, h), mass);
                 }
+
+                case CellParts.ModbusIoId:   // [modbus] a DIN-rail module, 100 × 70 × 60 mm
+                    return Box(new Vec3(-0.05, -0.035, 0), new Vec3(0.05, 0.035, 0.06), mass);
             }
 
             return null;

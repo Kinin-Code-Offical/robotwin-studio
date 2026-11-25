@@ -172,9 +172,9 @@ Denklemler ve doğrulama: [Sıvılar](../fizik/07-sivilar.md).
 
 ### Robot tanımları (URDF ve xacro)
 
-ROS'ta yazılmış bir robotu (`.urdf` ya da `.xacro`) aynı düğmeyle ya da **Dosya → Aç** ile getirin; Aç onu kendi dünyasında açar. Gövdesi olan her bağlantı bir parça olur, sıfır duruşunda yerine konur; şekli görsel ağlarından (STL, OBJ, PLY, STEP), okunamazsa çarpışma ağlarından gelir, renkleri URDF'nin malzemelerinden. Gövdesi olmayan çerçeveler (`tool0` gibi) üst bağlantıya katılır. Döner ve sürekli eklemler menteşe, kayar eklemler kızak olur; sınırları gelir. Her hareketli eklemin bir **motoru** vardır: URDF'nin `effort` değeri tork sınırı, `velocity` değeri en yüksek hız olur. Döner ve kayar eklemler konum tutar (başta 0), sürekli eklemler hız alır (başta durur). Böylece kol yerçekimine karşı duruşunu korur. Parçayı seçip denetçinin **Mekanik bağlantılar** bölümündeki **Motor hedefi** alanını değiştirin; çalışırken eklem hemen o açıya döner.
+ROS'ta yazılmış bir robotu (`.urdf` ya da `.xacro`) aynı düğmeyle ya da **Dosya → Aç** ile getirin; Aç onu kendi dünyasında açar. Gövdesi olan her bağlantı bir parça olur, sıfır duruşunda yerine konur; şekli görsel ağlarından (STL, OBJ, PLY, STEP), okunamazsa çarpışma ağlarından gelir, renkleri URDF'nin malzemelerinden. Gövdesi olmayan çerçeveler (`tool0` gibi) üst bağlantıya katılır. Döner ve sürekli eklemler menteşe, kayar eklemler kızak olur; sınırları gelir. Her hareketli eklemin bir **motoru** vardır (URDF `<ros2_control>` ya da `<transmission>` ile motorlu eklemlerini sayıyorsa yalnız onların; ötekiler, örneğin sarhoş tekerleğin dönen ekseni, serbest döner. Sayılan eklemin `command_interface`'i `velocity` ise hız, `position` ise konum alır): URDF'nin `effort` değeri tork sınırı, `velocity` değeri en yüksek hız olur. Döner ve kayar eklemler konum tutar (başta 0), sürekli eklemler hız alır (başta durur). Böylece kol yerçekimine karşı duruşunu korur. Parçayı seçip denetçinin **Mekanik bağlantılar** bölümündeki **Motor hedefi** alanını değiştirin; çalışırken eklem hemen o açıya döner.
 
-Kök bağlantının gövdesi yoksa (ROS'taki `world`) ona sabit bağlanan parça tabana vidalanır. Yoksa kol sabit, tekerlekleri olan bir robot (adında *wheel* geçen sürekli eklemler) serbest durur. `package://paket/…` ağları URDF'nin klasöründen yukarı doğru paketin klasörü (adı ya da `package.xml`'deki adı) aranarak bulunur. xacro'da özellikler, `${…}` ifadeleri (aritmetik, karşılaştırma, `pi`, `radians()` ve öteki matematik işlevleri), varsayılan ve blok parametreli makrolar, `include`, `if`/`unless`, `insert_block`, `arg` ve `$(find …)` çalışır; YAML okuma (`load_yaml`) ve DAE (Collada) ağları henüz yoktur. Okunamayan her şey içe aktarmanın sonunda listelenir.
+Kök bağlantı ROS'taki `world` ise ona sabit bağlanan parça tabana vidalanır. Gövdesiz başka bir kök (gezgin robotlardaki `base_footprint`) robotun bir çerçevesidir; altındaki parça o çerçeveyi taşır. Yoksa kol sabit, tekerlekleri olan bir robot (adında *wheel* geçen sürekli eklemler) serbest durur. `package://paket/…` ağları URDF'nin klasöründen yukarı doğru paketin klasörü (adı ya da `package.xml`'deki adı) aranarak bulunur. xacro'da özellikler, `${…}` ifadeleri (aritmetik, karşılaştırma, `pi`, `radians()` ve öteki matematik işlevleri), varsayılan ve blok parametreli makrolar, `include`, `if`/`unless`, `insert_block`, `arg` ve `$(find …)` çalışır; YAML okuma (`load_yaml`) ve DAE (Collada) ağları henüz yoktur. Gazebo için yazılmış algılayıcılar (`<gazebo reference="bağlantı"><sensor type="ray">` ya da `gpu_lidar`, ve `type="imu"`) hızları, bağlantı üzerindeki konumları, tarama açıları, menzilleri, gürültüleri ve eklentilerinin konu adlarıyla (`~/out:=scan`, `<topicName>`, `<topic>`) parçaya eklenir ve ROS bağlantısında yayımlanır; kamera ve derinlik algılayıcıları henüz alınmaz. Okunamayan her şey içe aktarmanın sonunda listelenir.
 
 ### ROS 2 bağlantısı (rosbridge)
 
@@ -185,8 +185,27 @@ Dünya, ROS 2 tarafında çalışan `rosbridge_server`'a bağlanabilir (ROS 2'de
 | `/clock` | yayın | `rosgraph_msgs/msg/Clock` | Simülasyonun saati, 100 Hz (`use_sim_time` ile çalışan düğümler için). |
 | `/joint_states` | yayın | `sensor_msgs/msg/JointState` | Her menteşe ve kızağın konumu (rad / m) ve hızı, URDF'deki adıyla, 50 Hz. |
 | `/joint_command` | dinleme | `sensor_msgs/msg/JointState` | Adı geçen eklemlerin motor hedefi: konum (rad / m) ya da sürekli eklemlerde hız (rad/s). |
+| `/joint_trajectory` | dinleme | `trajectory_msgs/msg/JointTrajectory` | Konum motorlu eklemler noktalardan zamanında geçer (ros2_control'ün yörünge denetleyicisinin konusu gibi): iki nokta arası konum ve hızlardan kübik, hız yoksa doğrusal; son noktada durur. Motorlar kendi tork ve hız sınırlarıyla izler. Yeni yörünge ya da `/joint_command` çalışanın yerini alır. |
+| `/odom` | yayın | `nav_msgs/msg/Odometry` | Yerde serbest duran robotun kök çerçevesinin (`base_footprint`) başladığı yere göre konumu ve kendi çerçevesindeki hızı, 50 Hz. Simülasyonun gerçeğidir (tekerlek kayması içinde yok). |
+| `/tf` | yayın | `tf2_msgs/msg/TFMessage` | `odom` → kök çerçeve. Üstündeki bağlantıları `robot_state_publisher` URDF ve `/joint_states` ile yayımlar. |
+| `/cmd_vel` | dinleme | `geometry_msgs/msg/Twist` | İleri hız (`linear.x`, m/s) ve dönüş hızı (`angular.z`, rad/s); diferansiyel sürüş gibi sürüş tekerleklerinin hızına çevrilir. 0,5 s yeni komut gelmezse tekerlekler durur. |
+| `/scan` | yayın | `sensor_msgs/msg/LaserScan` | URDF'nin bildirdiği lazer tarayıcı: ışınları bu dünyaya kendi hızında atılır (kendi robotunu görmez), gürültüsü bildirildiği gibi; dönüşü olmayan ışın `range_max`'ın ötesindedir. |
+| `/imu` | yayın | `sensor_msgs/msg/Imu` | URDF'nin bildirdiği IMU: taşındığı parçanın hareketinden yön, açısal hız ve özgül kuvvet (duran robotta yukarı doğru 9,81 m/s²), bildirilen gürültüyle. |
 
-Bölümde gönderilen ve gelen mesaj sayısı, ROS'un gördüğü eklemler ve komutlardaki bilinmeyen adlar görünür. Bağlantı dünya durunca da açık kalır; bir sonraki çalıştırmada kendiliğinden kullanılır.
+Sürüş tekerlekleri, tabana takılı, hız motorlu ve ekseni robotun yanına bakan eklemlerdir; tekerlek izi ve yarıçapı robotun kendi şekillerinden ölçülür (ros2_control'ün diferansiyel sürüş denetleyicisine elle yazılan değerler). İkinci bir robotun konuları ve çerçeveleri `/robot2` altına gider. Bölümde gönderilen ve gelen mesaj sayısı, ROS'un gördüğü eklemler, gezginin tekerlekleri, izi ve yarıçapı, son `/cmd_vel` komutu ve komutlardaki bilinmeyen adlar görünür. Bağlantı dünya durunca da açık kalır; bir sonraki çalıştırmada kendiliğinden kullanılır.
+### Modbus TCP uzak G/Ç
+
+**Parçalar → Robot Hücresi → Modbus TCP Uzak G/Ç** modülünün 8 sayısal girişi (DI1–DI8) ve 8 sayısal çıkışı (DO1–DO8) vardır; kablolarla ışık perdesine, konveyörün fotoseline, robotun girişlerine bağlanır. Dünya çalışırken modül bir Modbus TCP sunucusudur (öntanımlı `127.0.0.1:5020`, birim 1): aynı bilgisayardaki PLC, HMI ya da SCADA programı (Codesys, Node-RED, `pymodbus` …) gerçek bir modüle bağlanır gibi bağlanır. **Dinlenen adres** `0.0.0.0` yapılırsa ağdaki başka bilgisayarlar da bağlanabilir.
+
+| Modbus | Adres | Anlamı |
+| --- | --- | --- |
+| Bobin (01, 05, 15) | 0–7 | DO1–DO8: yazılan değer çıkış pinini sürer |
+| Ayrık giriş (02) | 0–7 | DI1–DI8: pindeki gerilim G/Ç geriliminin yarısını aşarsa 1 |
+| Giriş yazmacı (04) | 0 | Girişlerin bit sözcüğü (DI1 = bit 0) |
+| Tutma yazmacı (03, 06, 16, 23) | 0 | Çıkışların bit sözcüğü; yazılırsa bobinler ondan alınır |
+
+Aynı portu paylaşan modüller birim kimlikleriyle ayrılır (ağ geçidi arkasındaki cihazlar gibi). Açılan portlar ve açılamayanlar **Olaylar** sekmesinde yazar.
+
 ## Kablolar
 
 - Her kablonun bir kesiti (AWG), uzunluğu ve rengi vardır. Varsayılan 24 AWG'dir; DC motor veya pil bağlarken 22 AWG.

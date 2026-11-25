@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -37,7 +38,7 @@ namespace RobotWin.Studio.Pages
                     string? error = await _session.ConnectRos(uri);
                     W.Status = error == null ? "ROS 2'ye bağlandı: " + _rosAddress : "ROS 2'ye bağlanılamadı: " + error;
                     BuildEnvironmentPalette();
-                }, "Çalışan dünya /clock ve /joint_states yayımlar, /joint_command ile gelen hedefleri eklem motorlarına verir"));
+                }, "Çalışan dünya /clock ve /joint_states yayımlar; /joint_command ve /joint_trajectory ile gelen hedefleri eklem motorlarına verir"));
                 if (ros?.Error is { } why) Palette.Children.Add(Note("Bağlantı koptu: " + why));
                 return;
             }
@@ -61,9 +62,28 @@ namespace RobotWin.Studio.Pages
             string traffic = $"{ros.Sent} mesaj gitti, {ros.Received} geldi";
             var link = _session.RosLink;
             string joints = link == null
-                ? "Dünya çalışınca /clock ve /joint_states yayımlanır, /joint_command dinlenir."
+                ? "Dünya çalışınca /clock ve /joint_states yayımlanır; /joint_command ve /joint_trajectory dinlenir."
                 : $"{link.JointNames.Count} eklem: {string.Join(", ", link.JointNames)}" + (link.UnknownNames.Count > 0 ? $" · bilinmeyen adlar: {string.Join(", ", link.UnknownNames)}" : string.Empty);
-            return state + " · " + traffic + "\n" + joints;
+            string bases = string.Empty;
+            if (link != null)
+            {
+                foreach (var b in link.Bases)
+                {
+                    bases += "\n" + $"Gezgin {b.Frame}: {b.OdomTopic}, /tf";
+                    if (!b.WheelNames.Any())
+                    {
+                        bases += " (sürüş tekerleği yok, /cmd_vel dinlenmiyor)";
+                        continue;
+                    }
+
+                    bases += $" · {b.CmdVelTopic}: {string.Join(", ", b.WheelNames)}" + $" (iz {b.WheelSeparation:0.000} m, yarıçap {b.WheelRadius:0.000} m)";
+                    if (b.Twists > 0) bases += $" · son komut {b.Speed:0.00} m/s, {b.TurnRate:0.00} rad/s";
+                }
+            }
+
+            if (link != null && link.SensorTopics.Any())
+                bases += "\n" + "Algılayıcılar: " + string.Join(" · ", link.SensorTopics.Select(t => $"{t.Topic} ({(t.Kind == "imu" ? "IMU" : "lazer tarayıcı")}, {t.Sent} mesaj)"));
+            return state + " · " + traffic + "\n" + joints + bases;
         }
     }
 }

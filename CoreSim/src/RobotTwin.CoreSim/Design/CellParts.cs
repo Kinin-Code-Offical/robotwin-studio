@@ -24,14 +24,19 @@ namespace RobotTwin.CoreSim.Design
         public const string PalletId = "pallet";
         public const string FenceId = "fence-panel";
         public const string PedestalId = "robot-pedestal";
+        public const string ModbusIoId = "modbus-io";
 
         /// <summary>Digital inputs and outputs of the arm controller, in pin order.</summary>
         public static readonly string[] ArmInputs = { "DI1", "DI2", "DI3", "DI4", "START", "STOP", "SAFE" };
         public static readonly string[] ArmOutputs = { "DO1", "DO2", "DO3", "DO4", "BUSY", "FAULT" };
 
+        /// <summary>[modbus] The remote I/O module's inputs and outputs, in coil / discrete input order.</summary>
+        public static readonly string[] ModbusInputs = { "DI1", "DI2", "DI3", "DI4", "DI5", "DI6", "DI7", "DI8" };
+        public static readonly string[] ModbusOutputs = { "DO1", "DO2", "DO3", "DO4", "DO5", "DO6", "DO7", "DO8" };
+
         public static bool IsCellPart(string? partId) =>
             partId == ArmId || partId == GripperId || partId == VacuumId || partId == ConveyorId || partId == CurtainId ||
-            partId == PalletId || partId == FenceId || partId == PedestalId;
+            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId;
 
         public static bool IsTool(string? partId) => partId == GripperId || partId == VacuumId;
 
@@ -102,6 +107,18 @@ namespace RobotTwin.CoreSim.Design
             curtain.Build = c => BuildIo(c, Array.Empty<string>(), new[] { "OSSD" });
             AddPins(curtain, Array.Empty<string>(), new[] { "OSSD" });
             Preset(lib, "light-curtain-900", "Güvenlik Işık Perdesi · 0.9 × 1.2 m", CurtainId, "12 ışın, OSSD çıkışı");
+
+            // ---------------------------------------------------------------- [modbus] remote I/O on Modbus TCP
+            var modbus = Part(lib, ModbusIoId, "Modbus TCP Uzak G/Ç Modülü", "IO",
+                "8 sayısal giriş, 8 sayısal çıkış; dünya çalışırken bir Modbus TCP sunucusudur, PLC, HMI ya da SCADA programı gerçek modül gibi bağlanır. " +
+                "Bobin 0–7 → DO1–DO8 (yazılır), ayrık giriş 0–7 ← DI1–DI8 (okunur); giriş yazmacı 0 girişlerin, tutma yazmacı 0 çıkışların bit sözcüğüdür.",
+                new ParameterDefinition("unit", "Birim kimliği", "1", ""),
+                new ParameterDefinition("port", "TCP portu", "5020", ""),
+                new ParameterDefinition("bind", "Dinlenen adres", "127.0.0.1", "", new[] { "127.0.0.1", "0.0.0.0" }),
+                new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }));
+            modbus.Build = c => BuildIo(c, ModbusInputs, ModbusOutputs);
+            AddPins(modbus, ModbusInputs, ModbusOutputs);
+            Preset(lib, "modbus-io-8di8do", "Modbus TCP Uzak G/Ç · 8 DI / 8 DO", ModbusIoId, "DIN raya takılır; PLC ve SCADA için port 5020");
 
             // ---------------------------------------------------------------- passive equipment
             var pallet = Part(lib, PalletId, "Euro palet", "PAL",   // not "Palet" (the editor's palette)
@@ -235,6 +252,7 @@ namespace RobotTwin.CoreSim.Design
             PalletId => 25 * Num(p, "size_x", 0.8) * Num(p, "size_y", 0.6) / 0.96,
             FenceId => 12 * Num(p, "width", 1.0),
             PedestalId => 60.0,
+            ModbusIoId => 0.2,
             _ => null
         };
     }

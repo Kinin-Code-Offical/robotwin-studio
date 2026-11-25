@@ -40,9 +40,15 @@ namespace RobotTwin.CoreSim.Formats
 
         public int MovingJoints => Joints.Count(j => j.Kind != WorldJointKind.Fixed);
 
+        /// <summary>The moving joints with a motor (all of them, unless the description names its actuators).</summary>
+        public int MotorisedJoints => Joints.Count(j => j.Kind != WorldJointKind.Fixed && j.Drive != null);
+
+        /// <summary>[ros] Sensors the description declares, put on their parts.</summary>
+        public int Sensors { get; internal set; }
+
         public string Summary =>
-            $"{Robot.Name}: {Objects.Count} parça, {MovingJoints} hareketli eklem (motorlu), taban {(FixedBase ? "sabit" : "serbest")}" +
-            (Notes.Count > 0 ? $", {Notes.Count} not" : string.Empty);
+            $"{Robot.Name}: {Objects.Count} parça · {MovingJoints} hareketli eklem ({MotorisedJoints} motorlu) · taban {(FixedBase ? "sabit" : "serbest")}" +
+            (Sensors > 0 ? $" · {Sensors} algılayıcı" : string.Empty) + (Notes.Count > 0 ? $" · {Notes.Count} not" : string.Empty);
     }
 
     /// <summary>
@@ -107,15 +113,18 @@ namespace RobotTwin.CoreSim.Formats
             foreach (var l in robot.Links.Where(l => !frame.ContainsKey(l.Name)))
                 result.Notes.Add($"'{l.Name}' bağlantısı kökten ulaşılamıyor (ayrı bir ağaç); alınmadı.");
 
-            // A root with nothing to see is the world itself (ROS's "world" link): what it holds with a fixed joint is the
-            // robot's base, bolted down. Otherwise an arm stands fixed, a robot on wheels of its own stays free.
-            bool worldRoot = !root.HasGeometry && byParent.TryGetValue(root.Name, out var fromRoot) && fromRoot.Any(j => j.Type == "fixed");
+            // ROS's "world" link as the root is the world itself: what it holds with a fixed joint is the robot's base, bolted
+            // down. Any other root with nothing to see is a frame on the robot (a mobile robot's base_footprint). Otherwise an
+            // arm stands fixed, a robot on wheels of its own stays free.
+            bool worldRoot = !root.HasGeometry && string.Equals(root.Name, "world", StringComparison.OrdinalIgnoreCase)
+                && byParent.TryGetValue(root.Name, out var fromRoot) && fromRoot.Any(j => j.Type == "fixed");
             bool fixedBase = options.FixedBase ?? (worldRoot || !robot.Joints.Any(j => j.Type == "continuous" && j.Child.IndexOf("wheel", StringComparison.OrdinalIgnoreCase) >= 0));
             result.FixedBase = fixedBase;
 
             // Which links become parts: those with shapes, a base with shapes, and every link a moving joint carries.
             var moved = new HashSet<string>(robot.Joints.Where(j => j.Moves).Select(j => j.Child), StringComparer.Ordinal);
             var objectOf = new Dictionary<string, WorldObject>(StringComparer.Ordinal);
+            var partFrame = new Dictionary<string, Transform3>(StringComparer.Ordinal);   // each part's own frame (its pose point)
             var meshCache = new Dictionary<string, MeshModel?>(StringComparer.OrdinalIgnoreCase);
             foreach (var link in robot.Links)
             {
@@ -128,7 +137,9 @@ namespace RobotTwin.CoreSim.Formats
                 {
                     // A frame a moving joint carries but with nothing to see (a wrist between two axes): a small ball.
                     o = world.AddBody("sphere", 0.01, 0.01, 0.01, Pose(t), options.Material);
+                    partFrame[link.Name] = t;
                     o.MassKg = link.Mass > 0 ? link.Mass : 0.01;
+                    o.ModelOrigin = new[] { 0.0, 0.0, 0.0 };
                 }
                 else
                 {
@@ -137,9 +148,13 @@ namespace RobotTwin.CoreSim.Formats
                     var b = mesh.Bounds;
                     var rest = new Vec3((b.Min.X + b.Max.X) / 2, (b.Min.Y + b.Max.Y) / 2, b.Min.Z);
                     o = world.AddModel(mesh, link.Name, Pose(new Transform3(t.Apply(rest), t.Q)), options.Material);
+                    partFrame[link.Name] = new Transform3(t.Apply(rest), t.Q);
                     if (link.Mass > 0) o.MassKg = link.Mass;
                     if (color != null) o.Color = color;
+                    o.ModelOrigin = new[] { -rest.X, -rest.Y, -rest.Z };   // [ros] the link's frame in the part's
                 }
+
+                o.Link = link.Name;
 
                 o.Name = string.Empty;   // the link's own name (AddModel shortened one with a dot in it), unique in the world
                 o.Name = world.UniqueName(link.Name);
@@ -169,8 +184,21 @@ namespace RobotTwin.CoreSim.Formats
                 string? parentLink = PartOf(j.Parent);
                 if (parentLink == null && j.Type == "fixed")
                 {
-                    // Held by the world itself (a "world" root): the robot's base.
-                    if (fixedBase) child.IsStatic = true;
+                    // Held by the root frame (a "world" link, a base_footprint): the robot's base.
+                    if (fixedBase)
+                    {
+                        child.IsStatic = true;
+                    }
+                    else if (j.Parent == root.Name && Transform3.AngleBetween(frame[root.Name].Q, frame[j.Child].Q) < 1e-6 && child.ModelOrigin is { Length: 3 } mo)
+                    {
+                        // [ros] ROS knows a mobile robot by its root (base_footprint, on the ground under base_link): the base
+                        // carries that frame for /odom and /tf, robot_state_publisher the rest.
+                        var tc = frame[j.Child];
+                        var up = tc.Q.InverseRotate(frame[root.Name].P - tc.P);
+                        child.ModelOrigin = new[] { mo[0] + up.X, mo[1] + up.Y, mo[2] + up.Z };
+                        child.Link = root.Name;
+                    }
+
                     continue;
                 }
 
@@ -192,6 +220,10 @@ namespace RobotTwin.CoreSim.Formats
                     AnchorX = jf.P.X, AnchorY = jf.P.Y, AnchorZ = jf.P.Z,
                     AxisX = axis.X, AxisY = axis.Y, AxisZ = axis.Z
                 };
+                // A description that names its actuators (ros2_control, transmissions) drives only those, the way they are
+                // commanded; the rest turn freely (a caster's swivel and wheel). One that names none drives every moving joint.
+                bool actuated = robot.Actuated.Count == 0 || robot.Actuated.ContainsKey(j.Name);
+                robot.Actuated.TryGetValue(j.Name, out string? mode);
                 switch (j.Type)
                 {
                     case "revolute":
@@ -203,7 +235,8 @@ namespace RobotTwin.CoreSim.Formats
                             w.Upper = j.Upper.Value * 180 / Math.PI;
                         }
 
-                        w.Drive = j.Type == "continuous" ? WorldJoint.DriveSpeedMode : WorldJoint.DrivePosition;
+                        if (!actuated) break;
+                        w.Drive = mode == "velocity" || (mode != "position" && j.Type == "continuous") ? WorldJoint.DriveSpeedMode : WorldJoint.DrivePosition;
                         w.DriveForce = j.Effort;
                         w.DriveSpeed = j.Velocity * 180 / Math.PI;
                         // A joint whose zero lies outside its limits starts at the nearest one.
@@ -217,10 +250,11 @@ namespace RobotTwin.CoreSim.Formats
                             w.Upper = j.Upper.Value;
                         }
 
-                        w.Drive = WorldJoint.DrivePosition;
+                        if (!actuated) break;
+                        w.Drive = mode == "velocity" ? WorldJoint.DriveSpeedMode : WorldJoint.DrivePosition;
                         w.DriveForce = j.Effort;
                         w.DriveSpeed = j.Velocity;
-                        if (w.Lower is { } plo && w.Upper is { } phi) w.DriveTarget = Math.Max(plo, Math.Min(phi, 0));
+                        if (w.Drive == WorldJoint.DrivePosition && w.Lower is { } plo && w.Upper is { } phi) w.DriveTarget = Math.Max(plo, Math.Min(phi, 0));
                         break;
                     default:
                         w.Kind = WorldJointKind.Fixed;
@@ -231,6 +265,28 @@ namespace RobotTwin.CoreSim.Formats
                 if (j.Mimic != null) result.Notes.Add($"'{j.Name}' '{j.Mimic}' eklemini izliyor (mimic); kendi motoruyla ayrı sürülür.");
                 world.Joints.Add(w);
                 result.Joints.Add(w);
+            }
+
+            // [ros] The description's sensors ride on the part that carries their link, where the link and their pose put them.
+            foreach (var sensor in robot.Sensors)
+            {
+                if (!frame.TryGetValue(sensor.Link, out var linkFrame) || PartOf(sensor.Link) is not { } carrier)
+                {
+                    result.Notes.Add($"'{sensor.Name}' algılayıcısının bağlantısı '{sensor.Link}' bir parçada değil; alınmadı.");
+                    continue;
+                }
+
+                var mount = partFrame[carrier].Inverse() * linkFrame * sensor.Pose.ToTransform();
+                var (roll, pitch, yaw) = mount.Q.ToEuler();
+                var part = objectOf[carrier];
+                (part.RobotSensors ??= new List<RobotSensor>()).Add(new RobotSensor
+                {
+                    Kind = sensor.Kind, Name = sensor.Name, Topic = sensor.Topic, Frame = sensor.Frame, Rate = sensor.Rate,
+                    Pose = new[] { mount.P.X, mount.P.Y, mount.P.Z, roll, pitch, yaw },
+                    Samples = sensor.Samples, MinAngle = sensor.MinAngle, MaxAngle = sensor.MaxAngle, MinRange = sensor.MinRange, MaxRange = sensor.MaxRange,
+                    Noise = sensor.Noise, AccelNoise = sensor.AccelNoise
+                });
+                result.Sensors++;
             }
 
             return result;

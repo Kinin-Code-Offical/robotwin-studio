@@ -168,6 +168,7 @@ namespace RobotWin.Studio.World
             };
             StartSense();   // [sense] World/WorldSession.Sense.cs
             AttachRos();   // [ros] a connection made before the run: its link to this physics
+            StartModbus();   // [modbus] World/WorldSession.Modbus.cs
             IndexHeat();
             Mark("sensörler");
             LastStartProfile = string.Join(" · ", steps) + " ms";
@@ -222,6 +223,7 @@ namespace RobotWin.Studio.World
             StopSense();   // [sense]
             StopSdk();   // [sdk]
             _rosLink = null;   // [ros] the connection stays for the next run
+            StopModbus();   // [modbus]
             if (Simulator != null) Simulator.SubstepAccepted = null;
             Simulator = null;
             Circuit = null;

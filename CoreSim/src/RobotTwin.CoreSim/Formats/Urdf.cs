@@ -113,6 +113,15 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>What the reader left out or could not read, for the import's report.</summary>
         public List<string> Notes { get; } = new List<string>();
 
+        /// <summary>
+        /// The joints the description gives an actuator (<c>&lt;ros2_control&gt;</c> or <c>&lt;transmission&gt;</c>) and how
+        /// it is commanded: "position", "velocity", "effort", or "" when it does not say. Empty: the description names none.
+        /// </summary>
+        public Dictionary<string, string> Actuated { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>[ros] The sensors its <c>&lt;gazebo&gt;</c> elements declare (laser scanners, IMUs).</summary>
+        public List<UrdfSensor> Sensors { get; } = new List<UrdfSensor>();
+
         public UrdfLink? Link(string name) => Links.FirstOrDefault(l => l.Name == name);
 
         /// <summary>The link no joint carries (the robot's base); with several, the first.</summary>
@@ -143,6 +152,7 @@ namespace RobotTwin.CoreSim.Formats
             foreach (var m in root.Elements().Where(e => e.Name.LocalName == "material"))
                 if ((string?)m.Attribute("name") is { } mn && Rgba(m) is { } c) materials[mn] = c;
 
+            var gazebo = new List<XElement>();
             foreach (var e in root.Elements())
             {
                 switch (e.Name.LocalName)
@@ -153,10 +163,14 @@ namespace RobotTwin.CoreSim.Formats
                     case "joint":
                         robot.Joints.Add(ParseJoint(e));
                         break;
-                    case "material":
-                    case "gazebo":
                     case "transmission":
                     case "ros2_control":
+                        ReadActuators(e, robot.Actuated);
+                        break;
+                    case "gazebo":
+                        gazebo.Add(e);
+                        break;
+                    case "material":
                         break;
                     default:
                         robot.Notes.Add($"<{e.Name.LocalName}> öğesi okunmadı.");
@@ -171,6 +185,8 @@ namespace RobotTwin.CoreSim.Formats
             }
 
             if (robot.Links.Count == 0) throw new InvalidDataException("URDF'de bağlantı (<link>) yok.");
+            string rootLink = robot.Root?.Name ?? robot.Links[0].Name;
+            foreach (var g in gazebo) robot.Sensors.AddRange(UrdfSensorReader.Read(g, rootLink, robot.Notes));
             return robot;
         }
 
@@ -228,6 +244,27 @@ namespace RobotTwin.CoreSim.Formats
             }
 
             return shape;
+        }
+
+        /// <summary>
+        /// The joints a <c>&lt;ros2_control&gt;</c> block commands (by their <c>command_interface</c>) or a
+        /// <c>&lt;transmission&gt;</c> drives (by its <c>hardwareInterface</c>, e.g. VelocityJointInterface).
+        /// </summary>
+        private static void ReadActuators(XElement block, Dictionary<string, string> actuated)
+        {
+            foreach (var joint in block.Elements().Where(x => x.Name.LocalName == "joint"))
+            {
+                string? name = (string?)joint.Attribute("name");
+                if (string.IsNullOrEmpty(name)) continue;
+                var says = joint.Elements().Where(x => x.Name.LocalName == "command_interface").Select(x => (string?)x.Attribute("name") ?? string.Empty)
+                    .Concat(joint.Elements().Where(x => x.Name.LocalName == "hardwareInterface").Select(x => x.Value))
+                    .Select(s => s.ToLowerInvariant());
+                // One way of commanding it is that way; several (position and velocity) leave it to the joint's type.
+                var kinds = new HashSet<string>(says.Select(s => s.Contains("velocity") ? "velocity" : s.Contains("position") ? "position" : s.Contains("effort") ? "effort" : string.Empty).Where(k => k.Length > 0));
+                string mode = kinds.Count == 1 ? kinds.First() : string.Empty;
+
+                if (!actuated.TryGetValue(name!, out var had) || had.Length == 0) actuated[name!] = mode;
+            }
         }
 
         private static UrdfJoint ParseJoint(XElement e)

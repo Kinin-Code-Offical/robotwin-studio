@@ -639,6 +639,45 @@ namespace RobotTwin.CoreSim.Sandbox
             return (it.Body.Position - q.Rotate(it.Centre), q);
         }
 
+        /// <summary>
+        /// [ros] An object's frame in motion (world): its pose, the velocity of its origin and the angular velocity (rad/s).
+        /// What odometry from ground truth reports.
+        /// </summary>
+        public (Vec3 Position, Quat Orientation, Vec3 Velocity, Vec3 AngularVelocity)? MotionOf(string objectId)
+        {
+            if (!_items.TryGetValue(objectId, out var it)) return null;
+            var q = it.Body.Orientation * it.ShapeTurn.Conjugate;
+            var p = it.Body.Position - q.Rotate(it.Centre);
+            return (p, q, it.Body.PointVelocity(p), it.Body.AngularVelocity);
+        }
+
+        /// <summary>
+        /// [ros] How far an object's solid reaches from an axis through its centre (a world direction): a wheel's rolling
+        /// radius (m), as a drive controller is told it. Null when the object has no solid.
+        /// </summary>
+        public double? RollingRadius(string objectId, Vec3 worldAxis)
+        {
+            if (!_items.TryGetValue(objectId, out var it) || it.Body.EffectiveShape is not { } s) return null;
+            var a = it.Body.Orientation.InverseRotate(worldAxis).Normalized();
+            if (s.Kind == ShapeKind.Sphere) return s.Radius;
+            if (s.Kind == ShapeKind.Cylinder && Math.Abs(a.Z) > 0.9) return s.Radius;
+            double reach = 0;
+            if (s.Kind == ShapeKind.Box)
+            {
+                var h = s.HalfExtents;
+                for (int i = 0; i < 8; i++)
+                {
+                    var c = new Vec3((i & 1) == 0 ? -h.X : h.X, (i & 2) == 0 ? -h.Y : h.Y, (i & 4) == 0 ? -h.Z : h.Z);
+                    reach = Math.Max(reach, (c - a * c.Dot(a)).Length);
+                }
+
+                return reach;
+            }
+
+            foreach (var v in s.Vertices) reach = Math.Max(reach, (v - a * v.Dot(a)).Length);
+            return reach > 0 ? reach : s.BoundingRadius;
+        }
+
         /// <summary>Angle of an object's servo horn / motor shaft relative to its body (rad).</summary>
         public double PortAngle(string objectId) =>
             _items.TryGetValue(objectId, out var it) && it.RotorJoint != null ? it.RotorJoint.Angle : 0;

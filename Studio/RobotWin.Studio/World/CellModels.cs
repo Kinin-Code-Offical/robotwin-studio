@@ -81,6 +81,9 @@ namespace RobotWin.Studio.World
                 case CellParts.FenceId:
                     visual = BuildFence(m, p);
                     break;
+                case CellParts.ModbusIoId:
+                    visual = BuildModbusIo(m);
+                    break;
                 default:
                     visual = BuildPedestal(m, p);
                     break;
@@ -597,6 +600,39 @@ namespace RobotWin.Studio.World
             for (double z = z0 + 50; z < z1 - 20; z += 50) k.Box(0x3A3D42, 0, 0, z, x1 - x0, 3, 3);
             m.Body.Children.Add(k.Build());
             return new CellVisual { PartId = CellParts.FenceId };
+        }
+
+        // ================================================================ [modbus] remote I/O module
+
+        /// <summary>
+        /// A DIN-rail I/O module, 100 × 70 × 60 mm: grey housing, a rail clip below, a row of eight input terminals on one
+        /// long side (DI1–DI8) and eight output terminals with GND on the other, an RJ45 socket and a status lamp on top.
+        /// </summary>
+        private static CellVisual BuildModbusIo(ObjectModel m)
+        {
+            const double L = 100, W = 70, H = 60, pitch = 10;
+            var k = new Kit();
+            k[Dark].Box(0, 0, 3.5, L - 10, 35, 7);   // rail clip
+            k[0xC9CCD1].RoundedBox(0, 0, 7, L, W - 16, H - 7, 3);   // housing
+            k[0x9EA3AA].Box(0, 0, H + 0.5, L - 12, W - 30, 1);   // front label
+            k.Box(Black, -L / 2 + 16, 0, H - 4, 16, 14, 9);   // RJ45
+            for (int i = 0; i < 9; i++)
+            {
+                double x = -L / 2 + 10 + i * pitch;
+                foreach (double side in new[] { -1.0, 1.0 })
+                {
+                    if (side < 0 && i == 8) continue;   // 8 inputs; the outputs' row ends with GND
+                    k.Box(0x3F8F4E, x, side * (W / 2 - 4), H - 14, 8.6, 8, 14);   // terminal block
+                    k.Metal(Steel).CylinderZ(x, side * (W / 2 - 4), H - 7, H - 5.8, 2.2, 10);   // screw
+                }
+            }
+
+            m.Body.Children.Add(k.Build());
+            var lamp = LampBrush();
+            m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box(14 * Mm, 0, (H + 1.5) * Mm, 5 * Mm, 5 * Mm, 2 * Mm)) } });
+            AddPins(m, CellParts.ModbusInputs, i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, -(W / 2) * Mm, (H - 14) * Mm));
+            AddPins(m, CellParts.ModbusOutputs.Append("GND"), i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, (W / 2) * Mm, (H - 14) * Mm));
+            return new CellVisual { PartId = CellParts.ModbusIoId, Lamp = lamp };
         }
 
         private static CellVisual BuildPedestal(ObjectModel m, IReadOnlyDictionary<string, string> p)
