@@ -63,11 +63,15 @@ A real ESP32 becomes part of the simulation: RobotWin connects its UART and chos
 - On the code page, in both modes, **Build for the board** (`.bin`) and **Upload to board** (port choice).
 - The status bar and event log say which engine runs; in Mode 2 the memory use (IRAM/DRAM/flash) is shown.
 
-## Status (stage 3 done)
+## Status (stage 3 done, stage 4 under way)
 
 The `esp32-dimmer` firmware built for the real chip by Arduino-ESP32 3.3.13 (unchanged: its `.elf` and merged `.bin`) boots on our own emulator: FreeRTOS on both cores, the IPC tasks, `setup()` prints "ESP32 dimmer hazir" over Serial, `loop()` reads the pot through the ADC, drives the LEDC at 5 kHz and prints `pot=1058  1000 mV  parlaklik= 25%` every 200 ms (1.0 V on IO34). What getting there turned up: FreeRTOS's dual-core `yield` rests on the cross-core interrupt (DPORT `FROM_CPU_INTR`); the UART FIFO is written through its AHB alias (`0x60000000` = `0x3FF40000`); esp_timer counts on the timer group's LAC counter and sets its divider from the APB clock at start-up (which is why the bootloader's 80 MHz matters); the LEDC driver waits for the hardware to clear `DUTY_START`; `analogReadMilliVolts` rests on the factory Vref in the eFuse.
 
 The ADC converts through Espressif's characterisation inverted (the line and the 11 dB curve IDF calibrates with): it gives the codes a real chip gives, and the calibrated voltage equals the pad's. Fast mode's HAL uses the ideal line (1.0 V → 1241); that difference between the modes goes into stage 6's report.
+
+### Stage 4: peripherals and the sessions
+
+A hardware-compatible board now runs on the emulator on the circuit page and in the world (`IEsp32Board`, `Esp32EmulatedBoard`): the real-chip build is cached by the source's hash and built in the background on the first run. Modelled at register level: the GPIO matrix and IO_MUX, LEDC, the SAR ADCs (Espressif's characterisation), the DAC, the timer groups and their watchdogs, UART0–2, I2C0/1, SPI2/3, the eFuse, deep sleep, the interrupt matrix and cross-core interrupts, one core stalling the other. Checked with real firmware: the dimmer (ADC, LEDC), an echo (UART both ways), I2C (scan, register write and read, NACK), SPI (byte, word, buffer), a hung sketch (the interrupt watchdog's panic and restart), deep sleep (timer wake, RTC memory), the DAC. Six of the seven ESP32 world templates run on the emulator; sketches that use the camera, Wi-Fi or Bluetooth run as the fast mode with the reason logged. Left: RMT (NeoPixel), MCPWM, PCNT, touch, light sleep; Wi-Fi/BLE in stage 5.
 
 ## Stages
 
