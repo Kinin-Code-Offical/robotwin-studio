@@ -209,6 +209,10 @@ Desteklenenler: `VAR … END_VAR` (`AT %IX0.0`, `%QX0.0`, `%MW0` adresleriyle), 
 
 **Çevrim süresi ve darboğaz:** PLC'nin **Adım değişkeni** (öntanımlı `Adim`, istasyonun `CASE` adımlarını tutan değişken) izlenir: panel şu anki adımı ve ne kadardır orada olduğunu, tamamlanan çevrimleri (ilk adıma her dönüş) ve ortalama çevrim süresini, en uzun süren adımı ve çevrimin yüzde kaçını aldığını gösterir. İstasyonu yavaşlatan adım (örneğin kısılmış bir silindir stroku) böyle bulunur.
 
+### HMI (operatör paneli)
+
+Alt paneldeki **HMI** sekmesi, PLC'lerin değişkenlerine bağlı bir operatör panelidir. **+ Gösterge** kartında türü (lamba, düğme, anahtar, sayı, ayar, çubuk), PLC'yi ve değişkeni (programdaki adıyla ya da `%MW3` gibi bir adresle) seçip **Ekle**'ye basın. Dünya çalışırken lambalar ve sayılar programın değerlerini gösterir; **düğme** basılı tutulduğu sürece değişkeni TRUE yapar (operatörün parmağı gibi), **anahtar** açıp kapatır, **ayar** yazılan değeri Enter ile programa verir. Girişe (`%IX`) bağlı değişkenler yazılamaz: onları pinleri belirler. Panel dünyayla birlikte kaydedilir.
+
 ### Pnömatik silindir
 
 **Parçalar → Robot Hücresi → Pnömatik Silindir** çift etkili bir silindir ve üstündeki tek bobinli 5/2 valftir; mil parçanın +X yönünde çıkar. **SOL** bobini enerjilenince (bobin gerilimin %70'inde çeker, %40'ında bırakır) besleme ön hazneye, arka hazne egzoza bağlanır ve piston ileri gider; bobin bırakılınca geri döner. Her hazne kendi hava kütlesi ve sıcaklığıyla çözülür: valften akış ISO 6358'e göredir (kritik basınç oranının altında boğulmuş), dolan hava ısınır, genleşen soğur, duvar oda sıcaklığına çeker. Pistonu basınç × alan iter, contalar sürtünür; uçlarda strok biter. **Hız ayarı** egzozu kısar (çıkış kısmalı hız denetimi). **EXT** ve **RET** uç konumlardaki manyetik sensörlerin çıkışlarıdır. Bobin devrede gerçek bir yüktür: bir Modbus modülünün, kartın ya da sınır anahtarının devresinden sürülür. Mil kutuları iter; panelde konum, hız, iki haznenin basıncı, kuvvet ve harcanan hava (normal litre) görünür.

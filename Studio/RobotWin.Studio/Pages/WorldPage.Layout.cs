@@ -27,11 +27,14 @@ namespace RobotWin.Studio.Pages
             _dock.Add(new DockItem("rf", "RF", RfPanel, DockPlace.Bottom) { CanBottom = true, Chip = DockRf, FramedMargin = framed });
             if (_dockSensors != null && _sensorsPanel != null)
                 _dock.Add(new DockItem("sensors", "Sensörler", _sensorsPanel, DockPlace.Bottom) { CanBottom = true, Chip = _dockSensors, FramedMargin = framed });
+            if (_dockHmi != null && _hmiPanel != null)
+                _dock.Add(new DockItem("hmi", "HMI", _hmiPanel, DockPlace.Bottom) { CanBottom = true, Chip = _dockHmi, FramedMargin = framed });
             _dock.Shown += key =>
             {
                 if (key == "cables") BuildCableTable();
                 else if (key == "rf") UpdateRfPanel();
                 else if (key == "sensors") UpdateSensorsPanel();
+                else if (key == "hmi") BuildHmiPanel();
             };
             _dock.Start();
         }

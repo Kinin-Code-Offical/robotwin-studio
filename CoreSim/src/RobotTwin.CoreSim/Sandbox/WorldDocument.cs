@@ -401,6 +401,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public List<WorldCable> Cables { get; set; } = new List<WorldCable>();
         public List<WorldJoint> Joints { get; set; } = new List<WorldJoint>();
 
+        /// <summary>[hmi] The operator panel's elements, bound to the PLCs' variables; null when the world has none.</summary>
+        public List<HmiWidget>? Hmi { get; set; }
+
         /// <summary>[objs] Workshop lighting 0 (dark room) … 1 (bright); the world's own lights matter more in the dark.</summary>
         public double RoomLight { get; set; } = 1.0;
         /// <summary>Atmosphere, wind, force fields, behaviours, scripts and plugins of the world (Sdk/WorldSdkSettings.cs).</summary>

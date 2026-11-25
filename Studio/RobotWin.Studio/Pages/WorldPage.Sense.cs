@@ -61,6 +61,7 @@ namespace RobotWin.Studio.Pages
             }));
             W.WorldChanged += (_, _) => _game?.RefreshSources();
             BuildSensorsDock();
+            BuildHmiDock();   // [hmi] Pages/WorldPage.Hmi.cs
             BuildViewHost();
             PreviewKeyDown += (_, e) =>
             {

@@ -142,7 +142,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] çevrim süresi ve darboğaz: PLC'nin adım değişkeninden adım süreleri, çevrimler, en uzun adım;
   - [x] arıza senaryoları: fotosel, sınır anahtarı, silindir ve Modbus modülünde zamanlı arızalar (`Sandbox/MachineFaults.cs`);
   - [x] PLC: Yapısal Metin (`Industrial/StProgram`, kendi derleyici ve yorumlayıcımız) ve merdiven diyagramı (`Industrial/LdProgram`, görsel düzenleyiciyle) dünyadaki PLC parçasında tarama döngüsüyle; %MW, %IX ve %QX Modbus TCP'den sunulur. Sırada: kullanıcı tanımlı fonksiyon blokları, diziler;
-  - Modbus, OPC UA, HMI.
+  - [~] Modbus (TCP: uzak G/Ç ve PLC sunucusu) ve HMI (alt panelde PLC değişkenlerine bağlı operatör paneli) var; OPC UA yok.
 - [~] **Dış biçimler:**
   - [x] KiCad dışa aktarma.
   - [~] KiCad içe aktarma.

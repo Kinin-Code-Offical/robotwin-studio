@@ -1093,7 +1093,7 @@
   "Açı aralığı": "Angle range",
   "Açı aralığı (°)": "Angle range (°)",
   "Açı yönünü değiştir": "Switch angle direction",
-  "Açık": "Light",
+  "Açık": "On",
   "Açık alan (n = 2.0)": "Open space (n = 2.0)",
   "Açık bir projeyi ya da bir proje dosyasını bu montaja ekler; montaj o projeyi izler": "Adds an open project or a project file to this assembly; the assembly follows that project",
   "Açık dünya yok": "No open world",
@@ -7289,7 +7289,24 @@
   "Basamağı siler": "Deletes the rung",
   "Bobin sütunu": "Coil column",
   "│ bağ": "│ link",
-  "Adım değişkeni": "Step variable"
+  "Adım değişkeni": "Step variable",
+  "HMI": "HMI",
+  "Operatör paneli: PLC değişkenlerine bağlı lambalar, düğmeler, anahtarlar, sayılar ve ayar değerleri": "Operator panel: lamps, buttons, switches, numbers and set points bound to PLC variables",
+  "Operatör paneli PLC değişkenlerine bağlanır: önce Parçalar → Robot Hücresi'nden bir PLC ekleyin.": "The operator panel binds to PLC variables: first add a PLC from Parts → Robot Cell.",
+  "Göstergeyi kaldır": "Remove the element",
+  "HMI göstergesi kaldırıldı": "HMI element removed",
+  "HMI göstergesi eklendi": "HMI element added",
+  "Bas": "Press",
+  "Değeri yazıp Enter'a basın": "Type the value and press Enter",
+  "+ Gösterge": "+ Element",
+  "Programdaki değişken ya da %MW3 gibi bir adres": "A variable of the program, or an address such as %MW3",
+  "Göstergenin adı (boşsa değişkenin adı)": "The element's name (the variable's if empty)",
+  "Bir PLC ve bir değişken seçin.": "Choose a PLC and a variable.",
+  "lamba": "lamp",
+  "düğme": "button",
+  "sayı": "number",
+  "ayar": "set point",
+  "çubuk": "bar"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10314,6 +10331,7 @@
   "{…}. basamak: karşılaştırma için '>= 50' gibi bir koşul yazın.": "Rung {0}: write a condition such as '>= 50' for the comparison.",
   "Adım       : {…} ({…} s)": "Step       : {0} ({1} s)",
   "Çevrim     : {…} · ort. {…} s · son {…} s": "Cycles     : {0} · avg {1} s · last {2} s",
-  "En uzun    : adım {…} · %{…} · ort. {…} s": "Longest    : step {0} · {1}% · avg {2} s"
+  "En uzun    : adım {…} · %{…} · ort. {…} s": "Longest    : step {0} · {1}% · avg {2} s",
+  "{…} yazılamaz (bir girişe bağlı ya da tanımlı değil).": "{0} cannot be written (it is bound to an input, or not declared)."
  }
 }

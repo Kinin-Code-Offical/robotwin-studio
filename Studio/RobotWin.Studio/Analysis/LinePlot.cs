@@ -43,6 +43,9 @@ namespace RobotWin.Studio.Analysis
 
         public void Refresh() => InvalidateVisual();
 
+        /// <summary>[ac] How an x tick is written (a Bode plot's x is log₁₀ f, its ticks read as 100 Hz, 1 kHz …); null: the number.</summary>
+        public Func<double, string>? XTickLabel { get; set; }
+
         /// <summary>Time cursor (vertical line), or null.</summary>
         public double? Cursor { get; set; }
 
@@ -138,7 +141,7 @@ namespace RobotWin.Studio.Analysis
             foreach (double v in Ticks(x0, x1, Math.Max(2, (int)(area.Width / 90))))
             {
                 dc.DrawLine(grid, new Point(X(v), area.Top), new Point(X(v), area.Bottom));
-                var ft = T(v.ToString("0.###", CultureInfo.InvariantCulture), text, 11.5);
+                var ft = T(XTickLabel?.Invoke(v) ?? v.ToString("0.###", CultureInfo.InvariantCulture), text, 11.5);
                 dc.DrawText(ft, new Point(X(v) - ft.Width / 2, area.Bottom + 4));
             }
 

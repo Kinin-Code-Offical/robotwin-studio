@@ -1741,6 +1741,14 @@ namespace RobotWin.Studio.Pages
                 OnSimUpdated();
             }
 
+            // [hmi] ROBOTWIN_DOCK=hmi: that bottom tab in view.
+            if (Environment.GetEnvironmentVariable("ROBOTWIN_DOCK") == "hmi" && _dockHmi != null)
+            {
+                RevealDock("hmi", _dockHmi);
+                BuildHmiPanel();
+                foreach (var refresh in _hmiRefresh) refresh();
+            }
+
             // [plc] ROBOTWIN_LADDER=1: the selected ladder PLC's editor, live, is the picture.
             if (Environment.GetEnvironmentVariable("ROBOTWIN_LADDER") == "1" && select != null && World?.Objects.FirstOrDefault(o => o.Name == select) is { } plc)
             {

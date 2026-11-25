@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **HMI operator panel:** a dock tab of lamps, push buttons, switches, numbers, set points and bars bound to the PLCs' variables; while the world runs they show and write the program's values (inputs stay the pins'); saved with the world.
+
 - **Station cycle time and bottleneck:** a PLC times its station's steps from its step variable (the CASE's): the current step, the cycles and their average, and the step that takes longest with its share of the cycle.
 
 - **Ladder diagrams (IEC 61131-3 LD) for the PLC:** a visual editor with grid rungs (contacts, edges, comparisons, TON/TOF/TP/CTU, coils, set/reset, parallel branches by vertical links), checked as it is drawn and lit live while the world runs; a ladder runs by turning into Structured Text on the same interpreter. Tested: the seal-in latch, timers, a counter, edges and a comparison.

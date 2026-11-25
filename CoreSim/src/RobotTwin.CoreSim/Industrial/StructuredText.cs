@@ -83,6 +83,19 @@ namespace RobotTwin.CoreSim.Industrial
             return _vars.TryGetValue(key, out var v) ? v.Value : double.NaN;
         }
 
+        /// <summary>
+        /// [hmi] Writes a variable from outside (an operator panel, a test), as an HMI writes a PLC's memory: it holds until the
+        /// program changes it. False for a name that is not there, a block, or an input (its pin sets it every scan).
+        /// </summary>
+        public bool Write(string name, double value)
+        {
+            if (!_vars.TryGetValue(name.Trim().ToUpperInvariant(), out var v) || v.Type == StType.Block || v.Area == 'I') return false;
+            v.Set(value);
+            if (v.Area == 'Q') Outputs[v.Address] = v.Value != 0;
+            else if (v.Area == 'M') Memory[v.Address] = (short)Wrap("INT", v.Value);
+            return true;
+        }
+
         /// <summary>Compiles <paramref name="source"/>: the program, or null with the errors.</summary>
         public static StProgram? Compile(string source, out List<StError> errors)
         {
