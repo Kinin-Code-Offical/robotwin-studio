@@ -144,6 +144,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             // The bootloader's clock: the CPU on the PLL at 80 MHz (SOC_CLK_SEL 1, CPUPERIOD_SEL 0), told to the ROM.
             _registers[RtcClkConf] = 1u << 27;
             _registers[CpuPerConf] = 0;
+            UpdateClocks();
             if (_ticksPerUsPro != 0) Write32(_ticksPerUsPro, 80);
             if (_ticksPerUsApp != 0) Write32(_ticksPerUsApp, 80);
         }
@@ -354,6 +355,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             uint merged = (old & ~(mask << shift)) | ((value & mask) << shift);
             if (!WritePeripheral(register, merged)) Note(register, false, merged);
             _registers[register] = merged & ~SelfClearing(register);
+            if (register == RtcClkConf || register == CpuPerConf || register == SysClkConf) UpdateClocks();
         }
 
         /// <summary>

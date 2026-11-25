@@ -26,28 +26,37 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private readonly TimerGroup[] _timerGroups = { new TimerGroup(14, 58), new TimerGroup(18, 62) };
 
         /// <summary>The CPU clock the firmware set: SOC_CLK_SEL in RTC_CNTL_CLK_CONF, the PLL's CPUPERIOD_SEL, XTAL's divider.</summary>
-        public double CpuHz
-        {
-            get
-            {
-                switch ((Reg(RtcClkConf) >> 27) & 3)
-                {
-                    case 1:
-                        // PLL: 80, 160 or 240 MHz
-                        uint period = Reg(CpuPerConf) & 3;
-                        return period == 0 ? 80e6 : period == 1 ? 160e6 : 240e6;
-                    case 2:
-                        return 8e6;   // the 8 MHz RC oscillator
-                    case 3:
-                        return 80e6;  // the audio PLL (IDF does not run the CPU from it)
-                    default:
-                        return 40e6 / ((Reg(SysClkConf) & 0x3FF) + 1);   // XTAL through APB_CTRL_PRE_DIV
-                }
-            }
-        }
+        public double CpuHz => _cpuHz;
 
         /// <summary>The APB clock: 80 MHz while the CPU runs from the PLL, the CPU clock otherwise.</summary>
-        public double ApbHz => ((Reg(RtcClkConf) >> 27) & 3) == 1 ? 80e6 : CpuHz;
+        public double ApbHz => _apbHz;
+
+        // Kept from the clock registers, worked out again only when one of them is written (time is read very often).
+        private double _cpuHz = 40e6, _apbHz = 40e6;
+
+        private void UpdateClocks()
+        {
+            uint source = (Reg(RtcClkConf) >> 27) & 3;
+            switch (source)
+            {
+                case 1:
+                    // PLL: 80, 160 or 240 MHz
+                    uint period = Reg(CpuPerConf) & 3;
+                    _cpuHz = period == 0 ? 80e6 : period == 1 ? 160e6 : 240e6;
+                    break;
+                case 2:
+                    _cpuHz = 8e6;   // the 8 MHz RC oscillator
+                    break;
+                case 3:
+                    _cpuHz = 80e6;  // the audio PLL (IDF does not run the CPU from it)
+                    break;
+                default:
+                    _cpuHz = 40e6 / ((Reg(SysClkConf) & 0x3FF) + 1);   // XTAL through APB_CTRL_PRE_DIV
+                    break;
+            }
+
+            _apbHz = source == 1 ? 80e6 : _cpuHz;
+        }
 
         /// <summary>Chip time in seconds, to the instruction of the core running now.</summary>
         public double Seconds => _seconds + CyclesInTurn() / CpuHz;
