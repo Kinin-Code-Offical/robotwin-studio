@@ -7050,7 +7050,26 @@
   "Otomatik kayıt": "Autosave",
   "Açılamadı": "Could not open",
   "Mod": "Mode",
-  "%50": "50%"
+  "%50": "50%",
+  "Şema değişti. Kartı güncellemek şunları yapacak:": "The schematic changed. Updating the board will make these changes:",
+  "Kartı güncelle": "Update the board",
+  "Kart şemanın gerisinde. Güncellemek:": "The board is behind the schematic. Updating it:",
+  "Kart şemanın gerisinde: güncellemek yerleşimden bir şeyler siler.": "The board is behind the schematic: updating it takes something out of the layout.",
+  "PCB şemanın gerisinde; güncellemek yerleşimden bir şeyler siler, PCB sayfası uygulamadan önce sorar:": "The PCB is behind the schematic; updating it takes something out of the layout, so the PCB page asks before applying it:",
+  "Montaj projenin gerisinde; montaj açılınca projeye göre güncellenir:": "The assembly is behind its project; opening it brings it up to date:",
+  "kart güncellenecek": "the board will be updated",
+  "1 parça eklendi": "1 part added",
+  "1 parça güncellendi": "1 part updated",
+  "1 parça kaldırıldı": "1 part removed",
+  "1 parça eklenecek": "1 part will be added",
+  "1 parça güncellenecek": "1 part will be updated",
+  "1 parça kaldırılacak": "1 part will be removed",
+  "Montajın izlediği proje açık değil ve dosyası bilinmiyor: montaj ondaki değişiklikleri alamaz. Projeyi açın.": "The project this assembly follows is not open and its file is unknown: the assembly cannot take its changes. Open the project.",
+  "Montaj ondaki değişiklikleri alamaz; dosyayı yerine koyun ya da projeyi açın.": "The assembly cannot take its changes; put the file back or open the project.",
+  "Montajı güncelle": "Update the assembly",
+  "Montajı projesine göre günceller: eklenen parçalar gelir, silinenler kalkar; yerleştirdikleriniz, bağlantılarınız ve kendi kablolarınız korunur.": "Brings the assembly up to date with its project: added parts come in, removed ones go; where you placed parts, how you joined them and your own cables are kept.",
+  "PCB sayfasını açar: yalnız ekleyen değişiklikler kendiliğinden gelir; yerleşimden bir şey götürecekse sayfa uygulamadan önce sorar.": "Opens the PCB page: changes that only add come in by themselves; if one would take something out of the layout, the page asks before applying it.",
+  "Şema, PCB ve montaj arasında 1 tutarsızlık var.": "1 thing is out of step between the schematic, the PCB and the assembly."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9938,6 +9957,15 @@
   "dün {…}": "yesterday {0}",
   "Önceki sürüm kopya olarak açıldı: {…}": "Earlier version opened as a copy: {0}",
   "{…}, {…} hâline döner. Şu anki hâli de önceki sürüm olarak saklanır: bu adım da aynı yoldan geri alınabilir.": "{0} goes back to how it was {1}. Its current state is kept as an earlier version too, so this step can be undone the same way.",
-  "{…}: {…} sürümü geri yüklendi (önceki hâli yedeklerde).": "{0}: the version of {1} was restored (the state before it is in the backups)."
+  "{…}: {…} sürümü geri yüklendi (önceki hâli yedeklerde).": "{0}: the version of {1} was restored (the state before it is in the backups).",
+  "{…} parça eklenecek": "{0} parts will be added",
+  "{…} parça güncellenecek": "{0} parts will be updated",
+  "{…} parça kaldırılacak": "{0} parts will be removed",
+  "Montajın izlediği proje dosyası bulunamadı: {…}": "The project file this assembly follows was not found: {0}",
+  "Şema, PCB ve montaj arasında {…} tutarsızlık var.": "{0} things are out of step between the schematic, the PCB and the assembly.",
+  "{…}: şema, PCB ve montaj arasında {…} tutarsızlık var.": "{0}: {1} things are out of step between the schematic, the PCB and the assembly.",
+  "{…}: şema, PCB ve montaj arasında 1 tutarsızlık var.": "{0}: 1 thing is out of step between the schematic, the PCB and the assembly.",
+  "{…} PCB'ye geçti, kartın üstüne konacak": "{0} moved to the PCB and will go on top of the board",
+  "{…} devrede yok, kaldırılacak": "{0} is no longer in the circuit and will be removed"
  }
 }

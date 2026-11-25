@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,7 +32,11 @@ namespace RobotWin.Studio
             if (doc.Kind == DocumentKind.World && doc.World is { } world)
             {
                 what = string.IsNullOrWhiteSpace(doc.BaseTitle) ? "Dünya" : doc.BaseTitle;
-                check = () => ProjectChecking.CheckAsync(world, W.Library);
+                check = async () =>
+                {
+                    var behind = MontajBehind(doc);   // [integrity] here, on the window's thread: it reads the open projects
+                    return ProjectChecking.With(await ProjectChecking.CheckAsync(world, W.Library), behind);
+                };
             }
             else
             {
@@ -39,7 +44,11 @@ namespace RobotWin.Studio
                 var design = W.DesignDocument;
                 var package = design.Package;
                 what = string.IsNullOrWhiteSpace(package.Schematic.Title) ? "Proje" : package.Schematic.Title;
-                check = () => ProjectChecking.CheckAsync(package, W.Library);
+                check = async () =>
+                {
+                    var behind = MontajBehind(design);
+                    return ProjectChecking.With(await ProjectChecking.CheckAsync(package, W.Library), behind);
+                };
             }
 
             if (!quiet)
@@ -58,9 +67,74 @@ namespace RobotWin.Studio
                 return;   // a quiet check that could not run says nothing; the menu's check shows why
             }
 
-            int missing = ProjectChecking.Blocking(issues);
-            if (missing == 0) return;
-            ShowNotice($"{what}: bu bilgisayarda {missing} eksik var ({Areas(issues)}).", "Göster", () => ShowCheckWindow(what, check, issues));
+            // [integrity] what this computer lacks, and apart from it what is out of step (a board or Montaj behind its project)
+            var lacks = issues.Where(i => i.Area != ProjectCheck.ConsistencyArea).ToList();
+            int missing = ProjectChecking.Blocking(lacks);
+            int behind = ProjectChecking.Blocking(issues.Where(i => i.Area == ProjectCheck.ConsistencyArea));
+            if (missing + behind == 0) return;
+            var lines = new List<string>();
+            if (missing > 0) lines.Add($"{what}: bu bilgisayarda {missing} eksik var ({Areas(lacks)}).");
+            if (behind > 0) lines.Add(missing > 0 ? OutOfStep(behind) : $"{what}: şema, PCB ve montaj arasında {behind} tutarsızlık var.");
+            ShowNotice(string.Join("\n", lines), "Göster", () => ShowCheckWindow(what, check, issues));   // a line each: translated one by one
+        }
+
+        /// <summary>[integrity] How many things are out of step between the schematic, the PCB and the Montaj.</summary>
+        internal static string OutOfStep(int count) => $"Şema, PCB ve montaj arasında {count} tutarsızlık var.";
+
+        /// <summary>
+        /// [integrity] A Montaj behind the projects it follows: what bringing it up to date would change, worked out on a
+        /// copy (a Montaj follows its projects when it is opened, so this is what changed since). For a project its own
+        /// Montaj (the open tab, else the one saved in the project); for a world the projects it is put together from.
+        /// </summary>
+        private List<ProjectIssue> MontajBehind(OpenDocument doc)
+        {
+            var issues = new List<ProjectIssue>();
+            RobotTwin.CoreSim.Sandbox.WorldDocument? world = null;
+            try
+            {
+                if (doc.Kind == DocumentKind.World) world = doc.World;
+                else if (W.MontajOf(doc) is { World: { } open }) world = open;
+                else if (doc.Package.Montaj is { } saved) world = RobotTwin.CoreSim.Sandbox.WorldDocument.FromBytes(saved);
+            }
+            catch (Exception ex) when (ex is System.IO.InvalidDataException || ex is System.IO.IOException || ex is System.Text.Json.JsonException)
+            {
+                return issues;   // a Montaj that cannot be read is rebuilt when opened
+            }
+
+            if (world == null || world.AssemblySources.Count == 0) return issues;
+            W.FlushActiveDesign();
+            var geometry = MontajGeometry();
+            foreach (var src in world.AssemblySources.ToList())
+            {
+                string subject = "Montaj · " + src.Title;
+                var (package, path) = SourcePackage(doc, src);
+                if (package == null)
+                {
+                    issues.Add(ProjectCheck.AssemblySourceMissing(subject, path));
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(package.Schematic.ProjectId)) continue;
+                try
+                {
+                    var report = RobotTwin.CoreSim.Sandbox.ProjectAssembly.Sync(world.Clone(), package, W.Library, path, geometry);
+                    if (ProjectCheck.AssemblyBehind(report, subject) is { } issue) issues.Add(issue);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException || ex is KeyNotFoundException || ex is ArgumentException)
+                {
+                    // the Montaj brings itself up to date when opened; the check says nothing it cannot work out
+                }
+            }
+
+            return issues;
+        }
+
+        /// <summary>[integrity] The project check's fix for a Montaj behind its projects: brings it up to date.</summary>
+        internal void UpdateMontajFromCheck()
+        {
+            var doc = W.ActiveDocument;
+            if (doc.Kind == DocumentKind.World) SyncMontaj(doc, quiet: false);
+            else OpenProjectAssembly(ask: false);   // opening a project's Montaj brings it up to date
         }
 
         private void ShowCheckWindow(string what, Func<Task<List<ProjectIssue>>> check, List<ProjectIssue>? issues)
@@ -112,6 +186,22 @@ namespace RobotWin.Studio
             board.Tracks.Add(new RobotTwin.CoreSim.Pcb.Track { Net = "ECHO_PU", X1 = 10, Y1 = 10, X2 = 34, Y2 = 10 });
             p.Schematic.Board = board;
             p.Schematic.Parts.Remove(r9);
+            W.LoadPackage(p, null);
+        }
+
+        /// <summary>
+        /// --snapshot --fault check-montaj: a project whose Montaj (saved in it) was put together before the circuit lost its
+        /// distance sensor and gained an LED, and whose PCB lost the sensor too.
+        /// </summary>
+        private void LoadMontajCheckDemo()
+        {
+            var sch = RobotTwin.CoreSim.Mechanics.VehicleTemplates.ObstacleAvoider(W.Library);
+            sch.Assembly = null;
+            var p = new RobotTwin.CoreSim.Formats.ProjectPackage { Schematic = sch };
+            var montaj = RobotTwin.CoreSim.Sandbox.ProjectAssembly.Build(p, W.Library, geometry: MontajGeometry());
+            p.Montaj = montaj.ToBytes();
+            sch.AddPart(W.Library, "led3-red", new GridPoint(60, 0));
+            sch.Parts.Remove(sch.Parts.First(x => x.PartId == "hc-sr04"));
             W.LoadPackage(p, null);
         }
 

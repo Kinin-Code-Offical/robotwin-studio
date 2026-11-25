@@ -108,10 +108,14 @@ namespace RobotWin.Studio.Shell
         private void Show(List<ProjectIssue> issues)
         {
             _list.Children.Clear();
-            int blocking = ProjectChecking.Blocking(issues);
-            _summary.Text = issues.Count == 0 ? $"{_what}: bu bilgisayarda eksik bir şey yok."
+            // [integrity] what this computer lacks, and on a line of its own what is out of step between schematic, PCB and Montaj
+            var lacks = issues.Where(i => i.Area != ProjectCheck.ConsistencyArea).ToList();
+            int blocking = ProjectChecking.Blocking(lacks);
+            int behind = issues.Count - lacks.Count;
+            string head = lacks.Count == 0 ? $"{_what}: bu bilgisayarda eksik bir şey yok."
                 : blocking == 0 ? $"{_what}: bu bilgisayarda çalışıyor; kodu değiştirip derlemek için gerekenler aşağıda."
                 : $"{_what}: bu bilgisayarda {blocking} eksik var. Her birinin yanında onu gideren adım duruyor.";
+            _summary.Text = behind == 0 ? head : head + "\n" + MainWindow.OutOfStep(behind);
             foreach (var issue in issues) _list.Children.Add(Row(issue));
         }
 
@@ -178,10 +182,17 @@ namespace RobotWin.Studio.Shell
                     return Action("Kur", $"arduino-cli ile '{issue.Argument}' kütüphanesini indirip kurar.", async () => await InstallLibrary(issue.Argument));
 
                 case IssueFix.OpenPcb:
-                    return Action("PCB sayfası", "PCB sayfasını açar: kart şemaya göre güncellenir ve neyin değiştiği gösterilir.", () =>
+                    return Action("PCB sayfası", "PCB sayfasını açar: yalnız ekleyen değişiklikler kendiliğinden gelir; yerleşimden bir şey götürecekse sayfa uygulamadan önce sorar.", () =>
                     {
                         Close();
                         _main.Navigate("pcb");
+                    });
+
+                case IssueFix.SyncMontaj:
+                    return Action("Montajı güncelle", "Montajı projesine göre günceller: eklenen parçalar gelir, silinenler kalkar; yerleştirdikleriniz, bağlantılarınız ve kendi kablolarınız korunur.", () =>
+                    {
+                        Close();
+                        _main.UpdateMontajFromCheck();
                     });
 
                 case IssueFix.Part:

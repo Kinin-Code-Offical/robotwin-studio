@@ -842,6 +842,12 @@ namespace RobotWin.Studio
                 CheckProject(quiet: false);
             }
 
+            if (fault == "check-montaj")
+            {
+                LoadMontajCheckDemo();   // [integrity] the check's window on a project its Montaj is behind
+                CheckProject(quiet: false);
+            }
+
             if (fault == "versions-demo") LoadVersionsDemo();   // [versions]
 
             if (fault == "check-notice")

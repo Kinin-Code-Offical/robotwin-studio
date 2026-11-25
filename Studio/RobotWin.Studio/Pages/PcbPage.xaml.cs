@@ -598,12 +598,33 @@ namespace RobotWin.Studio.Pages
             }
         }
 
-        /// <summary>Called when the page becomes visible: keep nets in sync with the schematic.</summary>
-        public void OnShown()
+        /// <summary>
+        /// Called when the page becomes visible: keep nets in sync with the schematic. [integrity] A change that would take
+        /// laid-out work away (footprints removed or swapped, tracks and vias deleted) waits for the user's go-ahead.
+        /// </summary>
+        public void OnShown() => BringUpToDate(false);
+
+        /// <summary>[integrity] The schematic's changes the board is waiting for, until the user updates it.</summary>
+        private BoardChanges? _pending;
+
+        private void BringUpToDate(bool confirmed)
         {
             var board = Board;
             int before = board.Components.Count;
             var changes = BoardSync.Preview(W.Schematic, W.Library, board);   // [integrity] what bringing it up to date does
+            if (changes.Destructive && !confirmed)
+            {
+                _pending = changes;
+                Canvas.Board = board;
+                Canvas.Violations = _violations;
+                UpdatePanel();
+                Dispatcher.BeginInvoke(new Action(Canvas.Fit), DispatcherPriority.Loaded);
+                AskToUpdate(changes);
+                return;
+            }
+
+            _pending = null;
+            MarkSyncButton();
             BoardDocument.Synchronize(W.Schematic, W.Library, board);
             var unplaced = board.Components.Where(c => c.X == 0 && c.Y == 0).ToList();
             if (unplaced.Count > 0 && unplaced.Count < board.Components.Count)
@@ -631,6 +652,33 @@ namespace RobotWin.Studio.Pages
             if (Window.GetWindow(this) is not MainWindow main) return;
             main.ShowNotice("PCB şemaya göre güncellendi:\n" + changes.Summary(done: true), "Ayrıntılar",
                 () => Dialog.Show(main, "PCB şemaya göre güncellendi", string.Join("\n", changes.Lines(done: true)), "Tamam"));
+        }
+
+        /// <summary>
+        /// [integrity] The board is left as it was, and the user is asked over the page: what updating it would take away,
+        /// one click to do it (the Update button stays marked until then, its tooltip listing every change).
+        /// </summary>
+        private void AskToUpdate(BoardChanges changes)
+        {
+            MarkSyncButton();
+            W.Status = "Kart şemanın gerisinde: güncellemek yerleşimden bir şeyler siler.";
+            if (Window.GetWindow(this) is not MainWindow main) return;
+            main.ShowNotice("Şema değişti. Kartı güncellemek şunları yapacak:\n" + changes.Summary(done: false), "Kartı güncelle",
+                () => OnSync(this, new RoutedEventArgs()));
+        }
+
+        /// <summary>The Update button stands out while the board waits for the schematic's changes.</summary>
+        private void MarkSyncButton()
+        {
+            if (_pending == null)
+            {
+                SyncButton.ClearValue(StyleProperty);
+                SyncButton.ToolTip = "Şematikteki değişiklikleri karta aktar (yerleşim korunur)";
+                return;
+            }
+
+            SyncButton.Style = (Style)FindResource("Btn.Primary");
+            SyncButton.ToolTip = "Kart şemanın gerisinde. Güncellemek:\n" + string.Join("\n", _pending.Lines(done: false));
         }
 
         /// <summary>Used by --snapshot: auto-routes the example and puts the editor in a representative state.</summary>
@@ -739,6 +787,17 @@ namespace RobotWin.Studio.Pages
                 case "multi":
                     Canvas.SetSelection(board.Components.Skip(1).Take(3).Cast<object>().Concat(board.Tracks.Take(4)));
                     break;
+                case "ask":
+                {
+                    // [integrity] A routed part deleted from the schematic: the board waits, and asks before losing it.
+                    var gone = board.Components.Where(c => c.RefDes.StartsWith("R", StringComparison.Ordinal))
+                        .OrderByDescending(c => board.Tracks.Count(t => c.PadNets.ContainsValue(t.Net))).FirstOrDefault();
+                    var part = gone == null ? null : W.Schematic.Parts.FirstOrDefault(p => p.RefDes == gone.RefDes);
+                    if (part == null) break;
+                    W.Schematic.Parts.Remove(part);
+                    OnShown();
+                    break;
+                }
             }
         }
 
@@ -766,7 +825,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnSync(object sender, RoutedEventArgs e)
         {
-            OnShown();
+            BringUpToDate(true);   // the user's go-ahead
             W.MarkBoardChanged("Şematik karta aktarıldı");
         }
 

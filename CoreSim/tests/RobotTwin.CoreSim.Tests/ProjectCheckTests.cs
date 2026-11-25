@@ -149,5 +149,40 @@ namespace RobotTwin.CoreSim.Tests
             var p = Uno("#include <Wire.h>\nvoid setup(){}\nvoid loop(){}\n");
             Assert.Empty(ProjectCheck.Check(p, Env()));
         }
+
+        [Fact]
+        public void AMontajBehindItsProjectIsWorkedOutOnACopyAndLeftAsItIs()
+        {
+            var lib = PartLibrary.Default;
+            var sch = Mechanics.VehicleTemplates.ObstacleAvoider(lib);
+            sch.Assembly = null;
+            var package = new ProjectPackage { Schematic = sch };
+            var w = ProjectAssembly.Build(package, lib);
+
+            // In step with its project: nothing to say.
+            Assert.Null(ProjectCheck.AssemblyBehind(ProjectAssembly.Sync(w.Clone(), package, lib), "Montaj"));
+
+            // The project moves on: a part added, one the Montaj placed removed.
+            sch.AddPart(lib, "led3-red", new GridPoint(60, 0));
+            sch.Parts.Remove(sch.Parts.Single(p => p.PartId == "hc-sr04"));
+            string before = w.ToJson();
+            var issue = ProjectCheck.AssemblyBehind(ProjectAssembly.Sync(w.Clone(), package, lib), "Montaj");
+            Assert.NotNull(issue);
+            Assert.Equal(IssueLevel.Warning, issue!.Level);   // a part placed in it goes
+            Assert.Equal(ProjectCheck.ConsistencyArea, issue.Area);
+            Assert.Equal(IssueFix.SyncMontaj, issue.Fix);
+            Assert.Contains("1 parça eklenecek", issue.Text);
+            Assert.Contains("1 parça kaldırılacak", issue.Text);
+            Assert.Contains("devrede yok, kaldırılacak", issue.Text);   // which one, said ahead
+            Assert.Equal(before, w.ToJson());   // the Montaj itself is as it was
+        }
+
+        [Fact]
+        public void AMontajWhoseProjectIsGoneSaysWhere()
+        {
+            var issue = ProjectCheck.AssemblySourceMissing("Montaj · Araç", @"D:\projeler\arac.rwproj");
+            Assert.Equal(IssueLevel.Warning, issue.Level);
+            Assert.Contains(@"D:\projeler\arac.rwproj", issue.Text);
+        }
     }
 }

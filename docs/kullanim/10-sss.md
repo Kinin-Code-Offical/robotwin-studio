@@ -22,6 +22,11 @@ Proje, bu bilgisayarda olmayan bir şeye ihtiyaç duyuyor: kodunu derleyecek Ard
 
 ![Proje denetimi](../images/project-check.png)
 
+**Proje denetimi "şema, PCB ve montaj arasında … tutarsızlık var" diyor.**
+Şema, kartı ya da montajı geride bırakmış. Kart yerleşimden bir şey götürecek bir değişikliği bekliyorsa PCB sayfası onu uygulamadan önce sorar (**PCB sayfası** düğmesi oraya götürür). Montaj açılınca projesine göre güncellenir; denetim neyin değişeceğini önceden söyler (eklenecek ve kaldırılacak parçalar, hangileri) ve **Montajı güncelle** bunu hemen yapar. Montajın izlediği proje dosyası taşınmış ya da silinmişse onu da söyler.
+
+![Montaj projesinin gerisinde](../images/project-check-montaj.png)
+
 **Bir dosyanın önceki hâline nasıl dönerim?**
 **Dosya → Önceki sürümler…** açık belgenin yedek klasöründeki kopyalarını en yenisi üstte listeler: birkaç dakikada bir alınan otomatik kayıtlar ve her kaydetmeden önceki hâli. **Kopya olarak aç** o sürümü yanında yeni bir sekmede açar (karşılaştırmak ya da bir parçayı almak için), **Geri yükle** dosyayı o sürüme döndürür; şu anki hâli de önceki sürüm olarak saklandığından bu adım da aynı yoldan geri alınabilir. Kaç kopya tutulacağı ve klasörün boyutu **Ayarlar → Kaydetme ve yedekleme**'dedir.
 

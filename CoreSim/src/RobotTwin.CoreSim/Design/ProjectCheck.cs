@@ -40,7 +40,10 @@ namespace RobotTwin.CoreSim.Design
         Part,
 
         /// <summary>The board is behind its schematic: the PCB page brings it up to date.</summary>
-        OpenPcb
+        OpenPcb,
+
+        /// <summary>A Montaj behind the projects it follows: bringing it up to date (opening a project's Montaj does).</summary>
+        SyncMontaj
     }
 
     /// <summary>[integrity] One thing a project or world needs that this computer lacks.</summary>
@@ -112,9 +115,39 @@ namespace RobotTwin.CoreSim.Design
                 Area = ConsistencyArea,
                 Subject = subject,
                 Fix = IssueFix.OpenPcb,
-                Text = "PCB şemanın gerisinde; PCB sayfası açılınca kart şemaya göre güncellenir:\n" + changes.Summary()
+                Text = (changes.Destructive
+                    ? "PCB şemanın gerisinde; güncellemek yerleşimden bir şeyler siler, PCB sayfası uygulamadan önce sorar:\n"
+                    : "PCB şemanın gerisinde; PCB sayfası açılınca kart şemaya göre güncellenir:\n") + changes.Summary()
             };
         }
+
+        /// <summary>
+        /// [integrity] A Montaj behind a project it follows (<see cref="ProjectAssembly.Sync"/> run on a copy): what opening
+        /// it will change. A warning when parts placed in it go (they left the project), else a note.
+        /// </summary>
+        public static ProjectIssue? AssemblyBehind(AssemblyReport report, string subject)
+        {
+            if (!report.Changed) return null;
+            return new ProjectIssue
+            {
+                Level = report.Removed > 0 ? IssueLevel.Warning : IssueLevel.Note,
+                Area = ConsistencyArea,
+                Subject = subject,
+                Fix = IssueFix.SyncMontaj,
+                Text = "Montaj projenin gerisinde; montaj açılınca projeye göre güncellenir:\n" + string.Join("\n", report.Lines(done: false))
+            };
+        }
+
+        /// <summary>[integrity] A Montaj whose project cannot be found: it can no longer follow it.</summary>
+        public static ProjectIssue AssemblySourceMissing(string subject, string? path) => new ProjectIssue
+        {
+            Level = IssueLevel.Warning,
+            Area = ConsistencyArea,
+            Subject = subject,
+            Text = string.IsNullOrEmpty(path)
+                ? "Montajın izlediği proje açık değil ve dosyası bilinmiyor: montaj ondaki değişiklikleri alamaz. Projeyi açın."
+                : "Montajın izlediği proje dosyası bulunamadı: " + path + "\nMontaj ondaki değişiklikleri alamaz; dosyayı yerine koyun ya da projeyi açın."
+        };
 
         /// <summary>The ESP32 target of a sketch (it runs on RobotWin's Arduino-ESP32 model, built natively).</summary>
         public const string Esp32Target = "esp32-hal";

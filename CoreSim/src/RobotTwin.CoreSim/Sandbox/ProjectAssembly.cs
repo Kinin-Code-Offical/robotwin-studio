@@ -24,7 +24,17 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public List<string> Notes { get; } = new List<string>();
 
+        /// <summary>
+        /// [integrity] The parts that left the Montaj: their reference, and whether they went onto the PCB (else they left
+        /// the circuit). Said in <see cref="Summary"/> and <see cref="Lines"/>, in the tense each needs.
+        /// </summary>
+        public List<(string RefDes, bool OnPcb)> Left { get; } = new List<(string RefDes, bool OnPcb)>();
+
         public bool Changed => Added + Updated + Removed + CablesAdded + CablesRemoved > 0 || BoardUpdated;
+
+        private IEnumerable<string> LeftLines(bool done) => Left.Select(l => l.OnPcb
+            ? (done ? l.RefDes + " artık PCB'de, kartın üstünde" : l.RefDes + " PCB'ye geçti, kartın üstüne konacak")
+            : (done ? l.RefDes + " devrede yok, kaldırıldı" : l.RefDes + " devrede yok, kaldırılacak"));
 
         public string Summary()
         {
@@ -35,7 +45,26 @@ namespace RobotTwin.CoreSim.Sandbox
             if (Removed > 0) parts.Add(Removed.ToString(CultureInfo.InvariantCulture) + " parça kaldırıldı");
             if (CablesAdded + CablesRemoved > 0) parts.Add($"kablolar: +{CablesAdded} −{CablesRemoved}");
             string s = parts.Count == 0 ? "değişiklik yok" : string.Join(", ", parts);
-            return Notes.Count == 0 ? s : s + " · " + string.Join(" · ", Notes);
+            var notes = LeftLines(true).Concat(Notes).ToList();
+            return notes.Count == 0 ? s : s + " · " + string.Join(" · ", notes);
+        }
+
+        /// <summary>
+        /// [integrity] What changes, a line each (so a language pack translates each on its own); <paramref name="done"/>
+        /// false: what bringing the Montaj up to date would do, for the project check.
+        /// </summary>
+        public List<string> Lines(bool done = true)
+        {
+            static string N(int n) => n.ToString(CultureInfo.InvariantCulture);
+            var lines = new List<string>();
+            if (Added > 0) lines.Add($"{N(Added)} parça {(done ? "eklendi" : "eklenecek")}");
+            if (Updated > 0) lines.Add($"{N(Updated)} parça {(done ? "güncellendi" : "güncellenecek")}");
+            if (BoardUpdated) lines.Add(done ? "kart güncellendi" : "kart güncellenecek");
+            if (Removed > 0) lines.Add($"{N(Removed)} parça {(done ? "kaldırıldı" : "kaldırılacak")}");
+            if (CablesAdded + CablesRemoved > 0) lines.Add($"kablolar: +{N(CablesAdded)} −{N(CablesRemoved)}");
+            lines.AddRange(LeftLines(done));
+            lines.AddRange(Notes);
+            return lines;
         }
     }
 
@@ -225,7 +254,7 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 Remove(w, kv.Value);
                 report.Removed++;
-                report.Notes.Add(sch.FindPart(kv.Key) != null ? kv.Key + " artık PCB'de, kartın üstünde" : kv.Key + " devrede yok, kaldırıldı");
+                report.Left.Add((kv.Key, sch.FindPart(kv.Key) != null));
             }
 
             // ---- cables follow the nets

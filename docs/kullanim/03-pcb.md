@@ -8,8 +8,10 @@
 
 1. Devreyi **Devre** sayfasında çizin.
 2. **PCB** sayfasına geçin. Şemadaki parçalar karta gelir; bağlanması gereken pinler ince çizgilerle (bağlantı çizgileri) gösterilir.
-3. Şemayı sonradan değiştirirseniz **Güncelle** düğmesine basın. Değişiklikler karta aktarılır, yerleşiminiz korunur.
+3. Şemayı sonradan değiştirirseniz PCB sayfasına döndüğünüzde kart kendiliğinden güncellenir, yerleşiminiz korunur. Değişiklik yerleşimden bir şey götürecekse (karttan kalkan ya da ayak izi değişen parça, artık olmayan hatlardaki iz ve via'lar) kart olduğu gibi kalır ve sayfanın üstünde ne olacağı söylenir: **Kartı güncelle** ile uygulanır. O zamana kadar **Güncelle** düğmesi vurgulu durur, üzerine gelince her değişikliği listeler. Karttan kalkan parçanın yeri hatırlanır; şemaya geri dönerse oraya konur.
 4. **Parça ekle** ile kütüphaneden doğrudan karta parça koyabilirsiniz; parça şemaya da eklenir.
+
+![Kart şemanın gerisinde: güncellemeden önce soruyor](../images/pcb-ask.png)
 
 ## Kart ayarları
 

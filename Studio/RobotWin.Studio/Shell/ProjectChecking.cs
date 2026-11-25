@@ -67,6 +67,10 @@ namespace RobotWin.Studio.Shell
             }
         }
 
+        /// <summary>The check's issues together with ones worked out elsewhere (a Montaj behind its projects), errors first.</summary>
+        public static List<ProjectIssue> With(List<ProjectIssue> issues, List<ProjectIssue> more) =>
+            more.Count == 0 ? issues : issues.Concat(more).OrderBy(i => i.Level).ToList();
+
         /// <summary>Checks a world, its boards and their designs on another thread.</summary>
         public static Task<List<ProjectIssue>> CheckAsync(WorldDocument world, PartLibrary library)
         {

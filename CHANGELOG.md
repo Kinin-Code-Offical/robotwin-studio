@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The project check compares the assembly with its project too:** it runs the assembly's update on a copy and says beforehand what opening it will change (`1 part will be added`, `U2 is no longer in the circuit and will be removed`), a warning when a part placed in it goes, with **Update the assembly** to do it at once; and it says when the project file an assembly follows is gone. What this computer lacks and what is out of step between the schematic, the PCB and the assembly are now counted apart in the notice and the window, which said "missing on this computer" for both.
+
 - **Where each model holds:** the mechanics, circuit, heat and radio chapters of the physics guide now end with a validity range: what the model is, what was measured and by which test, and what lies outside it (for the circuit: within 5.2 mV of an RC charge and 1.0 mA of an RL rise at the app's step, an LC tank keeping its amplitude to 0.9999 V over 100 cycles, its period error the trapezoidal rule's (ωh)²/12). The validation chapter has a new table for long waits and stacks.
 
 - **Oscilloscope math, measured in the right units:** besides A − B and A + B, the math channel now multiplies (a voltage times a current is the power, in W), integrates (a current's charge in C, a power's energy in J, from the screen's left edge) and differentiates (a slew rate in V/s). A and B are any two of the four channels, not only CH1 and CH2. Its scale fits the result as soon as the function or a source changes, and its label names it (`M CH1×CH2 2 W/div`). The automatic measurements work on it, so the mean of V × I is the average power.
@@ -189,6 +191,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A free tank of water now falls asleep with its water after 2.6 s. Asleep, it still carries the water's weight within 0.2%, and it wakes when pushed.
 
 ### Changed
+
+- **The board asks before the schematic takes laid-out work away:** a change in the schematic that would remove a part from the board, swap its footprint or delete tracks and vias on nets that are gone is no longer applied when you open the PCB page. The board stays as it is and the top of the page says what updating it would do (`1 part will be removed (R2)`), with **Update the board** to apply it; until then the **Update** button stands out and its tooltip lists every change. Changes that only add are still brought in by themselves.
 
 - **One installer for every kind of installation; the lite package is gone:**
   - Each release has one setup, `RobotWinStudio-Setup-<version>.exe`, about half a megabyte. It downloads the components you choose from the same GitHub release:

@@ -8,8 +8,10 @@ The **PCB** page (Ctrl+2) turns your circuit into a printed circuit board: you p
 
 1. Draw the circuit on the **Circuit** page.
 2. Go to the **PCB** page. The schematic's parts come onto the board; pins that must be connected are shown with thin lines (ratsnest).
-3. If you change the schematic later, press **Update**. The changes are carried over and your placement is kept.
+3. If you change the schematic later, the board is brought up to date when you come back to the PCB page, and your placement is kept. When the change would take something out of the layout (a part leaving the board or changing its footprint, tracks and vias on nets that are gone), the board is left as it is and the top of the page says what would happen: **Update the board** applies it. Until then the **Update** button stands out, and hovering it lists every change. A part that leaves the board has its place remembered; if it comes back to the schematic it goes there.
 4. **Add part** puts a part from the library straight onto the board; it is added to the schematic too.
+
+![The board behind the schematic: asked before updating](../../images/en/pcb-ask.png)
 
 ## Board settings
 

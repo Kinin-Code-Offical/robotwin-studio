@@ -22,6 +22,11 @@ The project needs something this computer lacks: the Arduino compiler to build i
 
 ![Project check](../../images/en/project-check.png)
 
+**The project check says "… things are out of step between the schematic, the PCB and the assembly".**
+The schematic has moved on from the board or the assembly. When the board waits for a change that would take something out of the layout, the PCB page asks before applying it (the **PCB page** button goes there). An assembly is brought up to date with its project when it is opened; the check says beforehand what will change (parts to be added and removed, which ones), and **Update the assembly** does it at once. It also says when the project file an assembly follows has been moved or deleted.
+
+![The assembly behind its project](../../images/en/project-check-montaj.png)
+
 **How do I go back to an earlier state of a file?**
 **File → Earlier versions…** lists the open document's copies in the backup folder, the newest on top: the autosaves taken every few minutes and how it was before each save. **Open as a copy** opens that version in a new tab beside it (to compare, or to take a piece from it); **Restore** takes the file back to that version, and since its current state is kept as an earlier version too, that step can be undone the same way. How many copies are kept and how large the folder may grow are in **Settings → Saving and backup**.
 
