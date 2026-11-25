@@ -172,7 +172,7 @@ namespace RobotWin.Studio.Firmware
             string? cli = FindCli();
             if (cli == null)
             {
-                progress("arduino-cli bulunamadı: uygulamayı yeniden kurun ya da Ayarlar → Derleyiciler'den bir arduino-cli seçin.");
+                progress("arduino-cli bulunamadı: Ayarlar → Güncellemeler → Bileşenleri değiştir ile Arduino derleyicisini ekleyin ya da Ayarlar → Derleyiciler'den bir arduino-cli seçin.");
                 return false;
             }
 
@@ -211,7 +211,7 @@ namespace RobotWin.Studio.Firmware
             if (cli == null || !Esp32ToolchainInstalled)
             {
                 result.Log = cli == null
-                    ? "arduino-cli bulunamadı: uygulamayı yeniden kurun ya da Ayarlar → Derleyiciler'den bir arduino-cli seçin."
+                    ? "arduino-cli bulunamadı: Ayarlar → Güncellemeler → Bileşenleri değiştir ile Arduino derleyicisini ekleyin ya da Ayarlar → Derleyiciler'den bir arduino-cli seçin."
                     : "ESP32 araç zinciri kurulu değil: Kod → Gerçek kart → ESP32 araç zincirini kur.";
                 result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, cli == null ? "Derleyici (arduino-cli) bulunamadı" : "ESP32 araç zinciri kurulu değil"));
                 return result;

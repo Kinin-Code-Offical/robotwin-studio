@@ -35,11 +35,15 @@ namespace RobotWin.Studio.Updates
         public static InstallInfo Detect()
         {
             string dir = AppDirectory;
-            bool selfContained = File.Exists(Path.Combine(dir, "coreclr.dll"));
+            // [setup] Its own .NET: the installer's dotnet\ folder, or the runtime beside the exe (an older full package).
+            bool selfContained = File.Exists(Path.Combine(dir, "coreclr.dll")) || Directory.Exists(Path.Combine(dir, "dotnet", "host", "fxr"));
+            var profile = InstallProfile.Read(dir);
             var info = new InstallInfo
             {
                 AppDirectory = dir,
                 SelfContained = selfContained,
+                Components = profile is { Components.Count: > 0 } ? profile.Components : InstallProfile.FromDisk(dir),
+                Kind = profile?.Type ?? string.Empty,
                 RuntimeAvailable = !selfContained || DesktopRuntime9Installed(),
                 Mode = UpdateLogic.DetectMode(dir, InstallLocation(Registry.CurrentUser), InstallLocation(LocalMachine()), File.Exists(Path.Combine(dir, "Uninstall.exe")))
             };
@@ -131,6 +135,16 @@ namespace RobotWin.Studio.Updates
 
         /// <summary>Opens the installer's wizard (development builds, or the user asked for it).</summary>
         public static void StartWizard(string installer) => Start(installer, string.Empty, false);
+
+        /// <summary>
+        /// [setup] This copy's components can be changed: the setup that installed it (Uninstall.exe, from 1.7 on: it
+        /// wrote install.json) is beside the exe.
+        /// </summary>
+        public static bool CanModify(InstallInfo info) =>
+            info.Mode != InstallMode.Development && File.Exists(Path.Combine(info.AppDirectory, "Uninstall.exe")) && InstallProfile.Read(info.AppDirectory) != null;
+
+        /// <summary>[setup] Opens the setup's wizard on this copy (add or remove components); it closes the app when it applies them.</summary>
+        public static void StartModify(InstallInfo info) => Start(Path.Combine(info.AppDirectory, "Uninstall.exe"), "/MODIFY", false);
 
         private static void Start(string exe, string args, bool elevate)
         {

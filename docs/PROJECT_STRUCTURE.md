@@ -8,7 +8,7 @@
 | `Studio/RobotWin.Studio/` | The desktop app (WPF, net9.0-windows) |
 | `CoreSim/` | Simulation core, native ESP32 HAL, tests |
 | `Installer/` | Native Win32 setup program (`setup.cpp`, `setup.rc`) |
-| `tools/build-installer.ps1` | Builds `RobotWinStudio-Setup-<version>.exe` and `-lite.exe` |
+| `tools/build-installer.ps1` | Builds the one setup `RobotWinStudio-Setup-<version>.exe` and the components it installs (`*.rwpack`) |
 | `tools/RobotWin.Headless/` | Cross-platform headless API server and batch runner |
 | `python/`, `ros2/` | Python client (Gymnasium env, learning tools), ROS 2 bridge |
 | `sdk/templates/` | Plugin template and samples |

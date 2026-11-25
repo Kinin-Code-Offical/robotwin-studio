@@ -60,10 +60,10 @@ python tools\scripts\doc_images.py $exe --lang en home modeler  # yalnız bunlar
 
 ## tools/build-installer.ps1
 
-Uygulamayı yayımlar, yerel kurulum koçanını MSVC ile derler ve her şeyi `builds\installer\RobotWinStudio-Setup-<sürüm>-lite.exe` (çerçeveye bağımlı) ya da `-SelfContained` ile tam `RobotWinStudio-Setup-<sürüm>.exe` içine paketler. Bkz. [Derleme ve sürüm](DERLEME.md).
+Uygulamayı yayımlar, bileşenleri dizer (uygulama, kendi .NET 9 çalışma zamanı, Arduino derleyicisi, Open CASCADE köprüsü), her birini yerel kurulum programıyla bir `.rwpack`'e paketler, tek kurulum programı `RobotWinStudio-Setup-<sürüm>.exe`'yi onların boyutları ve SHA-256 özetleriyle derler ve hepsini taşınabilir bir klasöre kurarak kanıtlar; çıktı `builds\installer\release` içindedir. `-NoArduino` Arduino derleyicisini atlar, `-Repo sahip/ad` kurulumun indireceği yeri belirler. Bkz. [Derleme ve sürüm](DERLEME.md).
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.1.0
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0
 ```
 
 ## Uygulamanın çağırdığı dış araçlar

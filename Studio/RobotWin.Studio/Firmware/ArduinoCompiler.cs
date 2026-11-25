@@ -287,7 +287,7 @@ namespace RobotWin.Studio.Firmware
             string? cli = FindCli();
             if (cli == null)
             {
-                result.Log = "arduino-cli bulunamadı. Uygulamayı yeniden kurun (derleyici kurulumla gelir) ya da Ayarlar → Derleyiciler'den kendi arduino-cli'nizi seçin.";
+                result.Log = "arduino-cli bulunamadı. Arduino derleyicisi bu kurulumda yok: Ayarlar → Güncellemeler → Bileşenleri değiştir ile ekleyin ya da Ayarlar → Derleyiciler'den kendi arduino-cli'nizi seçin.";
                 result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, "Derleyici (arduino-cli) bulunamadı"));
                 return result;
             }

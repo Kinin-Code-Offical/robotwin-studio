@@ -159,6 +159,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **One installer for every kind of installation; the lite package is gone:**
+  - Each release has one setup, `RobotWinStudio-Setup-<version>.exe`, about half a megabyte. It downloads the components you choose from the same GitHub release:
+    - the app;
+    - its own .NET 9 runtime;
+    - the Arduino compiler;
+    - STEP / IGES support.
+  - Each component is checked against the SHA-256 the setup was built with before anything installed changes. A broken download goes on where it stopped. The system's proxy is used.
+  - The first page asks for the language (the wizard's and the app's) and the kind of installation:
+    - **Full** (recommended): every component, everything works offline;
+    - **Lite**: the app alone on the PC's .NET 9 Desktop Runtime, with its own copy only when the PC has none;
+    - **Custom**: components ticked one by one, with their download sizes.
+  - The third page asks how to install: for this user, for all users (the setup restarts as administrator and shows its own progress) or **portable** (a folder only).
+  - One build of the app serves them all: the exe looks for .NET in its own `dotnet\` folder first, then on the PC.
+  - Offline installs: put the `.rwpack` files next to the setup, or use `/SOURCE=` with a folder or a mirror.
+  - Command line: `/TYPE=full|lite`, `/COMPONENTS=…`, `/LANG=…` and `/PASSIVE` (progress only) join the old switches.
+  - Components can be added or removed later with **Settings → Updates → Change components…** or Windows *Apps → Modify*. Only what is added is downloaded; what is taken away is removed with its folders.
+  - A newer setup updates an installation in place with the same kind and components (a full one gets every component of the new release). It removes the files the old one had and the new one does not, including the runtime that older full packages kept beside the exe.
+  - The in-app updater runs the setup with its progress window and shows the update's real size (the setup plus the components the copy has). It still knows the two installers of earlier releases.
+  - `install.json` beside the app records what was installed. A user who starts the app for the first time gets the language chosen in the setup.
+  - The release's portable zip is now made by the setup itself. The release workflow checks from the .NET host's trace that it runs on its own .NET.
+  - The hints for a missing Arduino compiler or STEP / IGES bridge now point to *Change components* instead of a reinstall.
+
 - **ESP32 sketches in the fast mode now keep the chip's timing; existing projects may notice:**
   - `setup()` starts about 0.29 s after power-on (the ROM and the bootloader), and `millis()` counts from the application's start.
   - `delay()` and `vTaskDelay()` end on the 1 ms FreeRTOS tick.

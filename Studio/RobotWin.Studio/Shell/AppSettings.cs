@@ -165,6 +165,11 @@ namespace RobotWin.Studio.Shell
             try
             {
                 if (File.Exists(StorePath)) return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(StorePath)) ?? new AppSettings();
+                // [setup] A user's first start: the language chosen in the installer (install.json beside the exe).
+                var first = new AppSettings();
+                string? chosen = Updates.InstallProfile.Current?.Language;
+                if (!string.IsNullOrWhiteSpace(chosen)) first.Language = chosen;
+                return first;
             }
             catch (IOException)
             {

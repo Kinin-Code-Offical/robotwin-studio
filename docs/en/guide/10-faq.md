@@ -3,13 +3,13 @@
 ## Installing and starting
 
 **The app does not start or asks for .NET.**
-The lite package (`-lite.exe`) needs the .NET 9 Desktop Runtime. Install the full package (`RobotWinStudio-Setup-<version>.exe`), which carries .NET, or run the setup again and accept its offer to install .NET, or install ".NET 9 Desktop Runtime (x64)" from Microsoft's site.
+A lite installation uses the PC's .NET 9 Desktop Runtime. Run the installer again and choose **Full** (or add the **.NET 9 runtime** component with **Custom**): the app then carries its own copy. Or install ".NET 9 Desktop Runtime (x64)" from Microsoft's site.
 
 **Windows warns about the setup file.**
 Make sure you downloaded it from the project's GitHub Releases page, then choose **More info → Run anyway**.
 
 **Can I run the app from a USB stick?**
-Yes. Run the setup from the command line with `/S /PORTABLE /D=E:\RobotWin`; only the files are unpacked, no shortcuts or registry entries are created.
+Yes. Choose **Portable** on the installer's "how to install" page and a folder on the stick (or run `RobotWinStudio-Setup-<version>.exe /S /PORTABLE /D=E:\RobotWin`); only the files are written, no shortcuts or registry entries are created. The release's `-win-x64-portable.zip` is the same folder, ready to unzip.
 
 **The interface is too small / too large.**
 Set it between 75 % and 150 % with **View → Interface scale**.

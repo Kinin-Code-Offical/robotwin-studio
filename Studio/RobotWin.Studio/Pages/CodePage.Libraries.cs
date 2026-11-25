@@ -143,7 +143,7 @@ namespace RobotWin.Studio.Pages
             if (headers.Esp32)
                 _libList.Children.Add(Note("ESP32: kurulu kütüphaneler çizimle birlikte simülasyon katmanına (HAL) derlenir. ESP32 yazmaçlarını doğrudan kullanan kütüphaneler derlenmeyebilir."));
             else if (!headers.CoreFound)
-                _libList.Children.Add(Note("Arduino AVR çekirdeği bulunamadı: derleyici kurulumla gelir; uygulamayı yeniden kurun ya da Ayarlar → Derleyiciler'den kendi arduino-cli'nizi seçin. Tamamlama o zamana kadar sınırlıdır."));
+                _libList.Children.Add(Note("Arduino AVR çekirdeği bulunamadı: Arduino derleyicisi kurulumun bir bileşenidir; Ayarlar → Güncellemeler → Bileşenleri değiştir ile ekleyin ya da Ayarlar → Derleyiciler'den kendi arduino-cli'nizi seçin. Tamamlama o zamana kadar sınırlıdır."));
 
             var installed = headers.Libraries.ToList();
             if (query.Length == 0)

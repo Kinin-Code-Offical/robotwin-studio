@@ -4,19 +4,21 @@ In this chapter you install RobotWin Studio, learn the parts of the screen and o
 
 ## Installing
 
-1. From the [GitHub Releases page](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) download one of the two packages:
-   - `RobotWinStudio-Setup-<version>.exe`: carries .NET, nothing else to install (recommended).
-   - `RobotWinStudio-Setup-<version>-lite.exe`: smaller, but needs the **.NET 9 Desktop Runtime**; the wizard offers to install it if it is missing.
-2. Run the file and follow the wizard.
-3. When it finishes, open **RobotWin Studio** from the Start menu.
+1. From the [GitHub Releases page](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) download the installer, `RobotWinStudio-Setup-<version>.exe`. It is small: it downloads the parts you choose from the same release and checks each one.
+2. Run it. On the first page choose the **language** (the installer's and the app's) and the **kind of installation**:
+   - **Full** (recommended): the app, its own .NET 9, the Arduino compiler and STEP / IGES support. Everything works offline right away.
+   - **Lite**: the app alone; it uses the .NET 9 Desktop Runtime of your PC (and brings its own copy if there is none). The compiler and STEP / IGES can be added later.
+   - **Custom**: tick the components yourself.
+3. Choose **how**: for this user (default, no administrator rights), for all users (asks for an administrator) or **portable** (a folder only, e.g. on a USB stick: no shortcuts, registry entries or file types).
+4. When it finishes, open **RobotWin Studio** from the Start menu.
 
-By default it installs for your user only and does not ask for administrator rights. To uninstall, use Windows **Settings → Apps**.
+To add or remove components later, use **Settings → Updates → Change components…** (or Windows **Settings → Apps → RobotWin Studio → Modify**). To uninstall, use Windows **Settings → Apps**. To install without the internet, put the release's `.rwpack` files next to the installer.
 
 ### To compile your own code
 
 | Board | Tool needed | How to install |
 | --- | --- | --- |
-| Arduino Uno / Nano | The Arduino compiler: `arduino-cli`, the AVR core and the library list | **Comes with the installer**; nothing else to install |
+| Arduino Uno / Nano | The Arduino compiler: `arduino-cli`, the AVR core and the library list | **A component of the installer** (in the full installation); in a lite one, add it with **Settings → Updates → Change components…** |
 | ESP32 | Visual Studio C++ tools (MSVC) | Visual Studio 2022 or Build Tools with the **"Desktop development with C++"** workload |
 
 To use an `arduino-cli` of your own, enter its path under **Settings → Compilers**. The app finds MSVC itself; if it cannot, enter its path there too.

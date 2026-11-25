@@ -3,13 +3,13 @@
 ## Kurulum ve açılış
 
 **Uygulama açılmıyor veya .NET istiyor.**
-Lite paket (`-lite.exe`) .NET 9 Masaüstü Çalışma Zamanı'na ihtiyaç duyar. .NET'i içinde taşıyan tam paketi (`RobotWinStudio-Setup-<sürüm>.exe`) kurun, ya da kurulum dosyasını yeniden çalıştırıp .NET kurma önerisini kabul edin, ya da Microsoft'un sitesinden ".NET 9 Desktop Runtime (x64)" kurun.
+Hafif kurulum bilgisayardaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır. Kurulum dosyasını yeniden çalıştırıp **Tam**'ı seçin (ya da **Özel** ile **.NET 9 çalışma zamanı** bileşenini ekleyin): uygulama o zaman kendi kopyasını taşır. Ya da Microsoft'un sitesinden ".NET 9 Desktop Runtime (x64)" kurun.
 
 **Windows kurulum dosyası için uyarı veriyor.**
 Dosyayı projenin GitHub Sürümler sayfasından indirdiğinizden emin olun, sonra **Ek bilgi → Yine de çalıştır** seçin.
 
 **Uygulamayı USB bellekten çalıştırabilir miyim?**
-Evet. Kurulum dosyasını komut satırından `/S /PORTABLE /D=E:\RobotWin` ile çalıştırın; yalnızca dosyalar açılır, kısayol ve kayıt defteri girdisi oluşturulmaz.
+Evet. Kurulum dosyasının "kurulum biçimi" sayfasında **Taşınabilir**'i ve bellekteki bir klasörü seçin (ya da `RobotWinStudio-Setup-<sürüm>.exe /S /PORTABLE /D=E:\RobotWin` çalıştırın); yalnızca dosyalar yazılır, kısayol ve kayıt defteri girdisi oluşturulmaz. Sürümdeki `-win-x64-portable.zip` aynı klasörün açılmaya hazır hâlidir.
 
 **Arayüz çok küçük / çok büyük.**
 **Görünüm → Arayüz ölçeği** ile %75–%150 arasında ayarlayın.

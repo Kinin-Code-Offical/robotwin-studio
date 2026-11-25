@@ -21,7 +21,7 @@ namespace RobotTwin.CoreSim.Libraries
         /// <summary>Why a STEP/IGES file cannot be read here: the Open CASCADE bridge (the app's occt folder) is missing.</summary>
         public const string StepMessage =
             "STEP/IGES dosyaları katı (B-rep) CAD modelidir; RobotWin onları Open CASCADE köprüsüyle okur, ancak köprü bu kurulumda yok (uygulama klasöründeki 'occt'). " +
-            "Uygulamayı yeniden kurun ya da modeli KiCad, FreeCAD veya üreticinin aracıyla STL / OBJ / WRL olarak dışa aktarıp ekleyin.";
+            "Ayarlar → Güncellemeler → Bileşenleri değiştir ile 'STEP / IGES desteği'ni ekleyin ya da modeli KiCad, FreeCAD veya üreticinin aracıyla STL / OBJ / WRL olarak dışa aktarıp ekleyin.";
 
         /// <summary>STEP/IGES/BREP files can be read on this installation (the Open CASCADE bridge loads).</summary>
         public static bool CanReadCad => Formats.OcctBridge.Available;

@@ -47,7 +47,7 @@ namespace RobotWin.Studio.Updates
             sp.Children.Add(new TextBlock { Text = $"Yeni sürüm: RobotWin Studio {r.DisplayVersion}", Foreground = R<Brush>("B.Text"), FontSize = 14, FontWeight = FontWeights.SemiBold });
             var asset = UpdateLogic.SelectAsset(r, um.Install.SelfContained, um.Install.RuntimeAvailable);
             string date = r.PublishedAt?.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) ?? string.Empty;
-            string detail = $"Şu anki sürüm {um.CurrentVersion}" + (date.Length > 0 ? " · " + date : string.Empty) + (asset != null ? " · " + UpdateLogic.FormatSize(asset.Size) : string.Empty) +
+            string detail = $"Şu anki sürüm {um.CurrentVersion}" + (date.Length > 0 ? " · " + date : string.Empty) + (asset != null ? " · " + UpdateLogic.FormatSize(UpdateLogic.DownloadSize(r, asset, um.Install)) : string.Empty) +
                             ". Projeleriniz ve ayarlarınız korunur.";
             sp.Children.Add(new TextBlock { Text = detail, Style = R<Style>("Text.Caption"), Foreground = R<Brush>("B.TextSecondary"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 12) });
             var buttons = new WrapPanel();

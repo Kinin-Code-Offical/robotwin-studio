@@ -175,7 +175,7 @@ namespace RobotWin.Studio.Pages
             {
                 string? cli = Firmware.ArduinoCompiler.FindCli();
                 c.Children.Add(Text("arduino-cli yolu", S.ArduinoCliPath, v => S.ArduinoCliPath = v,
-                    cli == null ? "Bulunamadı: derleyici kurulumla gelir; uygulamayı yeniden kurun ya da kendi arduino-cli.exe yolunuzu yazın."
+                    cli == null ? "Bulunamadı: Arduino derleyicisini Güncellemeler → Bileşenleri değiştir ile ekleyin ya da kendi arduino-cli.exe yolunuzu yazın."
                     : Firmware.ArduinoCompiler.IsBundled(cli) ? "Kurulumla gelen derleyici kullanılıyor (arduino-cli + AVR çekirdeği). Kendi arduino-cli'nizi kullanmak için yolunu yazın."
                     : "Bulundu: " + cli));
                 bool msvc = RobotTwin.CoreSim.Firmware.Esp32.Esp32SketchCompiler.IsToolchainAvailable;
@@ -194,7 +194,7 @@ namespace RobotWin.Studio.Pages
                     um.Refresh();
                 }));
                 string skipped = string.IsNullOrEmpty(S.SkippedUpdateVersion) ? string.Empty : $" · atlanan sürüm: {S.SkippedUpdateVersion}";
-                c.Children.Add(new TextBlock { Text = $"Yüklü sürüm {um.CurrentVersion} · {um.Install.ModeText}{skipped}", Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 0, 0, 10) });
+                c.Children.Add(new TextBlock { Text = $"Yüklü sürüm {um.CurrentVersion} · {um.Install.ModeText} · {um.Install.ContentText}{skipped}", Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 0, 0, 10), TextWrapping = TextWrapping.Wrap });
                 var row = new StackPanel { Orientation = Orientation.Horizontal };
                 var check = new Button { Content = "Güncellemeleri denetle" };
                 check.Click += (_, _) =>
@@ -206,6 +206,29 @@ namespace RobotWin.Studio.Pages
                 var older = new Button { Content = "Eski sürümler", Style = (Style)FindResource("Btn.Ghost"), Margin = new Thickness(8, 0, 0, 0) };
                 older.Click += (_, _) => (Window.GetWindow(this) as MainWindow)?.ShowHelp("versions");
                 row.Children.Add(older);
+                if (Updates.InstallEnvironment.CanModify(um.Install))
+                {
+                    // [setup] The installer's wizard on this copy: the Arduino compiler, STEP / IGES or its own .NET, added or removed.
+                    var modify = new Button
+                    {
+                        Content = "Bileşenleri değiştir…",
+                        Style = (Style)FindResource("Btn.Ghost"),
+                        Margin = new Thickness(8, 0, 0, 0),
+                        ToolTip = "Kurulum programını bu kopyada açar: Arduino derleyicisi, STEP / IGES desteği ya da uygulamanın kendi .NET kopyası eklenir veya kaldırılır. Değişiklik uygulanırken RobotWin Studio kapanır ve yeniden açılır."
+                    };
+                    modify.Click += (_, _) =>
+                    {
+                        try
+                        {
+                            Updates.InstallEnvironment.StartModify(um.Install);
+                        }
+                        catch (Updates.UpdateException ex)
+                        {
+                            Dialog.Show(Window.GetWindow(this), "Kurulum programı açılamadı", ex.Message, "Tamam");
+                        }
+                    };
+                    row.Children.Add(modify);
+                }
                 if (!string.IsNullOrEmpty(S.SkippedUpdateVersion))
                 {
                     var unskip = new Button { Content = "Atlanan sürümü yine öner", Style = (Style)FindResource("Btn.Ghost"), Margin = new Thickness(8, 0, 0, 0) };

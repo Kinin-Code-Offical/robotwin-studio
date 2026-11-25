@@ -2,8 +2,13 @@ name: Release
 
 # A pushed tag v* builds every release file, each on the system it is for, checks them and attaches them to the
 # GitHub release with a SHA256SUMS.txt:
-#   RobotWinStudio-Setup-<v>.exe               Windows x64 installer, .NET inside (full)
-#   RobotWinStudio-Setup-<v>-lite.exe          Windows x64 installer, needs the .NET 9 Desktop Runtime
+#   RobotWinStudio-Setup-<v>.exe               the Windows x64 installer, one for every kind of installation: full,
+#                                              lite or custom; for this user, all users or portable; the language is
+#                                              chosen in it. It downloads the components below from this release.
+#   RobotWinStudio-<v>-app.rwpack              its components: the app,
+#   RobotWinStudio-<v>-dotnet.rwpack             the app's own .NET 9 Desktop Runtime,
+#   RobotWinStudio-<v>-arduino.rwpack            the Arduino compiler (arduino-cli + AVR core),
+#   RobotWinStudio-<v>-occt.rwpack               STEP / IGES support (Open CASCADE)
 #   RobotWinStudio-<v>-win-x64-portable.zip    the full app as a folder: unzip and run, nothing installed
 #   RobotWin-Headless-<v>-win-x64.zip          headless simulator / automation server for Windows
 #   RobotWin-Headless-<v>-linux-x64.tar.gz     headless simulator / automation server for Linux
@@ -38,30 +43,37 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Installers and portable app
+      - name: Installer, its components and the portable app
         shell: pwsh
         run: |
           $version = "$env:TAG".TrimStart('v')
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version
+          # One setup and the components it downloads from this release; the script ends by installing them all from
+          # its folder into a portable copy and checking every file.
+          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version -Repo $env:GITHUB_REPOSITORY
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          powershell -ExecutionPolicy Bypass -File ./tools/build-installer.ps1 -Version $version -SelfContained
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-          # The self-contained publish folder the full installer packed is the portable app.
           New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item builds/installer/release/* out/
+          # The portable app is what the setup installs as a portable full copy (its components from the folder).
           $portable = "RobotWinStudio-$version-win-x64-portable"
-          Copy-Item builds/installer/publish -Destination "out/$portable" -Recurse
+          $p = Start-Process -FilePath "builds/installer/release/RobotWinStudio-Setup-$version.exe" -Wait -PassThru `
+              -ArgumentList "/S", "/PORTABLE", "/TYPE=full", "`"/SOURCE=$PWD\builds\installer\release`"", "`"/D=$PWD\out\$portable`""
+          if ($p.ExitCode -ne 0) { Get-Content "$env:TEMP\RobotWinStudio-Setup.log"; exit 1 }
           Compress-Archive -Path "out/$portable" -DestinationPath "out/$portable.zip"
           Remove-Item "out/$portable" -Recurse -Force
-          Copy-Item "builds/installer/RobotWinStudio-Setup-$version.exe", "builds/installer/RobotWinStudio-Setup-$version-lite.exe" out/
 
-      - name: Portable app starts (self-test)
+      - name: Portable app starts on its own .NET (self-test)
         shell: pwsh
         run: |
           Expand-Archive "out/RobotWinStudio-$env:VERSION-win-x64-portable.zip" -DestinationPath check
           $exe = Get-ChildItem check -Recurse -Filter RobotWinStudio.exe | Select-Object -First 1
+          # The host's trace says where .NET came from: the copy's dotnet\ folder, not the runner's.
+          $env:COREHOST_TRACE = "1"
+          $env:COREHOST_TRACEFILE = "$PWD\host-trace.txt"
           $p = Start-Process $exe.FullName -ArgumentList '--selftest' -Wait -PassThru
+          Remove-Item Env:COREHOST_TRACE, Env:COREHOST_TRACEFILE
           if ($p.ExitCode -ne 0) { throw "selftest failed with $($p.ExitCode)" }
+          if (-not (Select-String -Path host-trace.txt -Pattern "Using app-relative location" -Quiet)) { throw "the portable app did not start on its own .NET" }
 
       - name: Headless simulator (Windows)
         shell: pwsh

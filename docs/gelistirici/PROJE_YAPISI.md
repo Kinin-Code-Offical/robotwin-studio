@@ -8,7 +8,7 @@
 | `Studio/RobotWin.Studio/` | Masaüstü uygulaması (WPF, net9.0-windows) |
 | `CoreSim/` | Simülasyon çekirdeği, yerel ESP32 HAL'i, testler |
 | `Installer/` | Yerel Win32 kurulum programı (`setup.cpp`, `setup.rc`) |
-| `tools/build-installer.ps1` | `RobotWinStudio-Setup-<sürüm>.exe` ve `-lite.exe` paketlerini derler |
+| `tools/build-installer.ps1` | Tek kurulum programı `RobotWinStudio-Setup-<sürüm>.exe`'yi ve kurduğu bileşenleri (`*.rwpack`) derler |
 | `tools/RobotWin.Headless/` | Platformlar arası başsız API sunucusu ve toplu koşu aracı |
 | `python/`, `ros2/` | Python istemcisi (Gymnasium ortamı, öğrenme araçları), ROS 2 köprüsü |
 | `sdk/templates/` | Eklenti şablonu ve örnekler |

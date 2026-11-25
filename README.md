@@ -152,12 +152,12 @@ Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapma
 
 ## İndirme ve kurulum
 
-1. [Sürümler (Releases)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) sayfasından `RobotWinStudio-Setup-<sürüm>.exe` (.NET dahil, en kolayı) ya da daha küçük **lite** paketi `RobotWinStudio-Setup-<sürüm>-lite.exe` dosyasını indirin. Her sürümde şu dosyalar ayrı ayrı bulunur:
+1. [Sürümler (Releases)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) sayfasından tek kurulum dosyasını, `RobotWinStudio-Setup-<sürüm>.exe`'yi indirin (yarım megabayt kadar). Seçtiğiniz bileşenleri kurarken aynı sürümden kendisi indirir ve her birini SHA-256 ile doğrular. Her sürümde şu dosyalar bulunur:
 
    | Dosya | Ne için |
    | --- | --- |
-   | `RobotWinStudio-Setup-<sürüm>.exe` | Windows x64 kurulum, .NET içinde |
-   | `RobotWinStudio-Setup-<sürüm>-lite.exe` | Windows x64 kurulum, .NET 9 Masaüstü Çalışma Zamanı ister |
+   | `RobotWinStudio-Setup-<sürüm>.exe` | Windows x64 kurulum programı: tam, hafif ya da özel kurulum; bu kullanıcı, tüm kullanıcılar ya da taşınabilir; dil de burada seçilir |
+   | `RobotWinStudio-<sürüm>-app.rwpack`, `-dotnet.rwpack`, `-arduino.rwpack`, `-occt.rwpack` | Kurulumun indirdiği bileşenler: uygulama, kendi .NET 9'u, Arduino derleyicisi, STEP / IGES desteği. Kurulum dosyasının yanına konunca kurulum internetsiz yapılır |
    | `RobotWinStudio-<sürüm>-win-x64-portable.zip` | Kurulumsuz: açın ve `RobotWinStudio.exe`'yi çalıştırın |
    | `RobotWin-Headless-<sürüm>-win-x64.zip` | Ekransız simülatör ve otomasyon API'si (Windows) |
    | `RobotWin-Headless-<sürüm>-linux-x64.tar.gz` | Ekransız simülatör ve otomasyon API'si (Linux; içindeki `OKUBENI.txt`'ye bakın) |
@@ -165,20 +165,25 @@ Mekanik, FEM ve ısı teoriyle binde birler düzeyinde uyuşur; en büyük sapma
    | `SHA256SUMS.txt` | Her dosyanın SHA-256 özeti |
 
    Grafik arayüz Windows içindir; Linux'ta simülasyon çekirdeği ekransız çalışır (ESP32 kodu orada derlenemez).
-2. Çalıştırın ve sihirbazı izleyin.
-3. Kurulum varsayılan olarak yalnızca sizin kullanıcınız için `%LOCALAPPDATA%\Programs\RobotWin Studio` klasörüne yapılır; Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve dosya türü ilişkilendirmeleri eklenir. Kaldırmak için Windows *Uygulamalar* listesini veya kurulum klasöründeki `Uninstall.exe` dosyasını kullanın.
-
-Ana paket .NET'i içinde taşır, ek kurulum gerekmez. Lite paket daha küçüktür ama **.NET 9 Masaüstü Çalışma Zamanı** ister; yoksa kurulum sihirbazı kurmayı önerir. (1.0.0 sürümünde .NET dahil paketin adı `-tam.exe` idi.)
+2. Çalıştırın. Sihirbazın ilk sayfasında **dili** (sihirbazın ve uygulamanın dili) ve **kurulum türünü** seçin:
+   - **Tam** (önerilen): uygulama, kendi .NET 9'u, Arduino derleyicisi ve STEP / IGES desteği; her şey kurulur kurulmaz internetsiz çalışır.
+   - **Hafif**: yalnız uygulama; bilgisayardaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır (yoksa kendi kopyasını ekler). Derleyici ve STEP / IGES sonradan eklenebilir.
+   - **Özel**: bileşenleri tek tek seçin.
+3. Sonra **kurulum biçimini** seçin: bu kullanıcı için (varsayılan, `%LOCALAPPDATA%\Programs\RobotWin Studio`), tüm kullanıcılar için (`Program Files`, yönetici izni) ya da **taşınabilir** (yalnız bir klasör, USB bellek için; kısayol, kayıt defteri ve dosya türü yok). Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve dosya türü ilişkilendirmeleri eklenir.
+4. Bileşen eklemek ya da kaldırmak için: uygulamada **Ayarlar → Güncellemeler → Bileşenleri değiştir…** ya da Windows *Uygulamalar → RobotWin Studio → Değiştir*. Kaldırmak için *Uygulamalar* listesini ya da kurulum klasöründeki `Uninstall.exe`'yi kullanın.
 
 **Komut satırından kurulum seçenekleri:**
 
 | Komut | Etki |
 | --- | --- |
-| `RobotWinStudio-Setup-1.6.1.exe /S` | Sessiz kurulum (bu kullanıcı için) |
+| `RobotWinStudio-Setup-1.7.0.exe /S` | Sessiz kurulum (bu kullanıcı için, tam; var olan bir kurulumu aynı tür ve bileşenlerle günceller) |
+| `... /TYPE=lite`, `/TYPE=full`, `/COMPONENTS=app,arduino,occt` | Kurulum türü ya da tam olarak bu bileşenler |
+| `... /LANG=tr`, `/LANG=en` | Uygulamanın dili |
 | `... /S /ALLUSERS` | Tüm kullanıcılar için (`Program Files`, yönetici izni gerekir) |
 | `... /S /D=C:\Araclar\RobotWin` | Kurulum klasörünü seçer |
 | `... /S /PORTABLE /D=E:\RobotWin` | Taşınabilir: yalnızca dosyaları açar (USB bellek için; kısayol ve kayıt defteri yok) |
-| `... /NODESKTOP`, `/NOTYPES`, `/LAUNCH` | Masaüstü kısayolu yok, dosya türü ilişkilendirmesi yok, kurulumdan sonra başlat |
+| `... /SOURCE=D:\RobotWin-1.7.0` | Bileşenleri GitHub yerine bu klasörden (internetsiz) ya da bir adresten al |
+| `... /NODESKTOP`, `/NOTYPES`, `/LAUNCH`, `/PASSIVE` | Masaüstü kısayolu yok, dosya türü ilişkilendirmesi yok, kurulumdan sonra başlat, soru sormadan yalnız ilerlemeyi göster |
 
 **İsteğe bağlı derleyiciler** (yalnızca kendi kodunuzu derlemek için; hazır örnekler derlenmiş olarak gelir):
 
@@ -317,8 +322,8 @@ builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 Çıktılar `builds\<proje adı>\` altına gider (`Directory.Build.props`). Kurulum dosyası üretmek için Visual Studio C++ araçları gerekir:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.6.1
-# -> builds\installer\RobotWinStudio-Setup-1.6.1.exe
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0
+# -> builds\installer\release\RobotWinStudio-Setup-1.7.0.exe ve indirdiği bileşenler (*.rwpack)
 ```
 
 Ayrıntılar: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md), [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
@@ -447,9 +452,9 @@ All 54 measurements in eight areas, grid convergence and a before/after comparis
 
 ### Download and install
 
-1. Download `RobotWinStudio-Setup-<version>.exe` (carries .NET, nothing else to install) or the smaller **lite** package `RobotWinStudio-Setup-<version>-lite.exe` from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest). Each release also has, as separate files: `RobotWinStudio-<version>-win-x64-portable.zip` (no installation: unzip and run), `RobotWin-Headless-<version>-win-x64.zip` and `RobotWin-Headless-<version>-linux-x64.tar.gz` (the windowless simulator and automation API; the graphical app is Windows-only), the source as `RobotWinStudio-<version>-source.zip` / `.tar.gz`, and `SHA256SUMS.txt`.
-2. Run it. The lite package needs the **.NET 9 Desktop Runtime**; its wizard offers to install it if missing. (In 1.0.0 the package with .NET was named `-tam.exe`.)
-3. Default install is per user in `%LOCALAPPDATA%\Programs\RobotWin Studio`. Silent: `/S`; all users: `/S /ALLUSERS`; target folder: `/D=<dir>`; portable unpack: `/S /PORTABLE /D=<dir>`; also `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
+1. Download the one installer, `RobotWinStudio-Setup-<version>.exe` (about half a megabyte), from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest). It downloads the components you choose from the same release and checks each with SHA-256. Each release also has: the components themselves (`RobotWinStudio-<version>-app.rwpack`, `-dotnet.rwpack`, `-arduino.rwpack`, `-occt.rwpack`; put them next to the installer to install offline), `RobotWinStudio-<version>-win-x64-portable.zip` (no installation: unzip and run), `RobotWin-Headless-<version>-win-x64.zip` and `RobotWin-Headless-<version>-linux-x64.tar.gz` (the windowless simulator and automation API; the graphical app is Windows-only), the source as `RobotWinStudio-<version>-source.zip` / `.tar.gz`, and `SHA256SUMS.txt`.
+2. Run it. On the first page choose the **language** (the wizard's and the app's) and the **kind of installation**: **Full** (recommended: the app, its own .NET 9, the Arduino compiler and STEP / IGES support; everything works offline right away), **Lite** (the app alone on the PC's .NET 9 Desktop Runtime, adding its own copy only when there is none) or **Custom** (choose the components).
+3. Then choose **how**: for this user (default, `%LOCALAPPDATA%\Programs\RobotWin Studio`), for all users (`Program Files`, administrator) or **portable** (a folder only: no shortcuts, registry or file types). Components can be added or removed later with **Settings → Updates → Change components…** or Windows *Apps → Modify*. Command line: `/S` (silent; updates an existing installation with its kind and components), `/PASSIVE`, `/TYPE=full|lite`, `/COMPONENTS=app,arduino,occt`, `/LANG=en|tr`, `/ALLUSERS`, `/PORTABLE`, `/D=<dir>`, `/SOURCE=<folder or URL>`, `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
 
 Optional compilers for your own firmware (bundled examples ship precompiled): `winget install ArduinoSA.CLI` then `arduino-cli core install arduino:avr` for AVR; Visual Studio 2022 / Build Tools with the **Desktop development with C++** workload for ESP32. Paths can be overridden in **Settings → Compilers** (*Ayarlar → Derleyiciler*).
 
@@ -482,7 +487,7 @@ dotnet build RobotWinStudio.sln -c Debug
 builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
 ```
 
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.6.1` → `builds\installer\RobotWinStudio-Setup-1.6.1.exe`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (both installers, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app and the headless simulators start, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0` → `builds\installer\release\RobotWinStudio-Setup-1.7.0.exe` and the components it downloads (`*.rwpack`), proven by installing them all into a portable folder. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (the installer and its components, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app starts on its own .NET and that the headless simulators run, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
 
 ### Tests
 

@@ -14,6 +14,10 @@
     <Version>1.6.1</Version>
     <TieredPGO>true</TieredPGO>
     <ApplicationIcon>Branding/robotwin.ico</ApplicationIcon>
+    <!-- [setup] One build for every installation: the exe looks for .NET in its own dotnet\ folder first (the installer's
+         ".NET 9 runtime" component), then DOTNET_ROOT, then the PC's installed .NET 9 (a lite installation). -->
+    <AppHostDotNetSearch>AppRelative;EnvironmentVariable;Global</AppHostDotNetSearch>
+    <AppHostRelativeDotNet>dotnet</AppHostRelativeDotNet>
   </PropertyGroup>
 
   <ItemGroup>

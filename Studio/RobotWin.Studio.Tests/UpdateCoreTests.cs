@@ -228,6 +228,61 @@ public class UpdateSelectionTests
     public void FrameworkDependentFallsBackToTheFullInstaller() =>
         Assert.Equal("RobotWinStudio-Setup-2.0.5-tam.exe", UpdateLogic.SelectAsset(FullOnly, selfContained: false, runtimeAvailable: true)!.Name);
 
+    // [setup] From 1.7 on: one setup and the components it downloads.
+    private static readonly ReleaseInfo Components = Sized(Release("v1.7.0", assets: new[]
+    {
+        "RobotWinStudio-Setup-1.7.0.exe", "RobotWinStudio-1.7.0-app.rwpack", "RobotWinStudio-1.7.0-dotnet.rwpack",
+        "RobotWinStudio-1.7.0-arduino.rwpack", "RobotWinStudio-1.7.0-occt.rwpack", "RobotWin-Headless-1.7.0-win-x64.zip", "SHA256SUMS.txt"
+    }));
+
+    private static ReleaseInfo Sized(ReleaseInfo r)
+    {
+        foreach (var a in r.Assets)
+            a.Size = a.Name.EndsWith("-app.rwpack") ? 50 : a.Name.EndsWith("-dotnet.rwpack") ? 60 : a.Name.EndsWith("-arduino.rwpack") ? 80 : a.Name.EndsWith("-occt.rwpack") ? 15 : a.Name.EndsWith(".exe") ? 1 : 30;
+        return r;
+    }
+
+    [Fact]
+    public void EveryCopyGetsTheOneSetup()
+    {
+        Assert.True(Components.HasComponents);
+        Assert.False(Both.HasComponents);
+        foreach (bool own in new[] { true, false })
+            foreach (bool runtime in new[] { true, false })
+                Assert.Equal("RobotWinStudio-Setup-1.7.0.exe", UpdateLogic.SelectAsset(Components, own, runtime)!.Name);
+    }
+
+    [Fact]
+    public void ComponentIdsComeFromTheNames()
+    {
+        Assert.Equal(new[] { "app", "dotnet", "arduino", "occt" }, Components.Assets.Where(a => a.IsComponent).Select(a => a.ComponentId).ToArray());
+        Assert.Null(new ReleaseAsset { Name = "RobotWinStudio-Setup-1.7.0.exe" }.ComponentId);
+    }
+
+    [Fact]
+    public void AnUpdateDownloadsTheSetupAndWhatTheCopyHas()
+    {
+        var setup = UpdateLogic.SelectAsset(Components, false, true)!;
+        // a lite copy: the app; a custom one: what it has; a full one (or an older full package): every component
+        Assert.Equal(1 + 50, UpdateLogic.DownloadSize(Components, setup, new InstallInfo { Kind = "lite", Components = new[] { "app" } }));
+        Assert.Equal(1 + 50 + 15, UpdateLogic.DownloadSize(Components, setup, new InstallInfo { Kind = "custom", Components = new[] { "app", "occt" } }));
+        Assert.Equal(1 + 50 + 60 + 80 + 15, UpdateLogic.DownloadSize(Components, setup, new InstallInfo { Kind = "full", Components = new[] { "app", "dotnet" } }));
+        Assert.Equal(1 + 50 + 60 + 80 + 15, UpdateLogic.DownloadSize(Components, setup, new InstallInfo { SelfContained = true, Components = new[] { "app", "dotnet" } }));
+        // an older release: its installer alone
+        var legacy = UpdateLogic.SelectAsset(Both, false, true)!;
+        legacy.Size = 120;
+        Assert.Equal(120, UpdateLogic.DownloadSize(Both, legacy, new InstallInfo()));
+    }
+
+    [Fact]
+    public void TheCopysContentsInALine()
+    {
+        Assert.Equal("Tam kurulum · .NET dahil · Arduino derleyicisi · STEP / IGES",
+            new InstallInfo { Kind = "full", SelfContained = true, Components = new[] { "app", "dotnet", "arduino", "occt" } }.ContentText);
+        Assert.Equal("Hafif kurulum · .NET 9 Masaüstü Çalışma Zamanı ile", new InstallInfo { Kind = "lite", Components = new[] { "app" } }.ContentText);
+        Assert.Equal("Tam kurulum · .NET dahil · Arduino derleyicisi", new InstallInfo { SelfContained = true, Components = new[] { "app", "dotnet", "arduino" } }.ContentText);
+    }
+
     [Fact]
     public void NoInstallerNoAsset() =>
         Assert.Null(UpdateLogic.SelectAsset(Release("v2.2.0", assets: new[] { "source.zip" }), false, true));
@@ -273,13 +328,13 @@ public class InstallModeTests
     public void InstallerArgumentsKeepTheFolderAndChoices()
     {
         var info = new InstallInfo { Mode = InstallMode.PerUser, AppDirectory = Dir + "\\", DesktopShortcut = false, FileTypesRegistered = true };
-        Assert.Equal($"/S /NODESKTOP /LAUNCH \"/D={Dir}\"", UpdateLogic.InstallerArguments(info));
+        Assert.Equal($"/S /PASSIVE /NODESKTOP /LAUNCH \"/D={Dir}\"", UpdateLogic.InstallerArguments(info));
 
         info = new InstallInfo { Mode = InstallMode.AllUsers, AppDirectory = @"C:\Program Files\RobotWin Studio", FileTypesRegistered = false };
-        Assert.Equal("/S /ALLUSERS /NOTYPES /LAUNCH \"/D=C:\\Program Files\\RobotWin Studio\"", UpdateLogic.InstallerArguments(info));
+        Assert.Equal("/S /PASSIVE /ALLUSERS /NOTYPES /LAUNCH \"/D=C:\\Program Files\\RobotWin Studio\"", UpdateLogic.InstallerArguments(info));
 
         info = new InstallInfo { Mode = InstallMode.Portable, AppDirectory = @"E:\RobotWin", DesktopShortcut = false };
-        Assert.Equal(@"/S /PORTABLE /LAUNCH /D=E:\RobotWin", UpdateLogic.InstallerArguments(info));
+        Assert.Equal(@"/S /PASSIVE /PORTABLE /LAUNCH /D=E:\RobotWin", UpdateLogic.InstallerArguments(info));
     }
 
     [Fact]
@@ -383,5 +438,53 @@ public class WhatsNewTests
         var (none, empty) = WhatsNew.Headlines("9.9.9", Guide());
         Assert.Null(none);
         Assert.Empty(empty);
+    }
+}
+
+// [setup] install.json: what the one setup recorded about the installation it made.
+public class InstallProfileTests
+{
+    [Fact]
+    public void ReadsWhatTheSetupWrote()
+    {
+        var p = InstallProfile.Parse("{\n  \"product\": \"RobotWin Studio\",\n  \"version\": \"1.7.0\",\n  \"type\": \"custom\",\n  \"components\": [\"app\", \"OCCT\"],\n  \"language\": \"tr\",\n  \"where\": \"portable\",\n  \"source\": \"D:\\\\packs\",\n  \"installed\": \"2026-11-25T10:56:29Z\"\n}\n")!;
+        Assert.Equal("1.7.0", p.Version);
+        Assert.Equal("custom", p.Type);
+        Assert.Equal(new[] { "app", "occt" }, p.Components);
+        Assert.True(p.Has("occt"));
+        Assert.False(p.Has("arduino"));
+        Assert.Equal("tr", p.Language);
+        Assert.Equal("portable", p.Where);
+    }
+
+    [Fact]
+    public void ABrokenOrOddRecordIsNoRecord()
+    {
+        Assert.Null(InstallProfile.Parse("{ \"version\": "));
+        Assert.Null(InstallProfile.Parse("[1, 2]"));
+        var empty = InstallProfile.Parse("{}")!;
+        Assert.Empty(empty.Components);
+        Assert.Equal(string.Empty, empty.Language);
+    }
+
+    [Fact]
+    public void AnOlderSetupsCopyIsReadOffItsFolder()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "rw-profile-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(dir, "tools", "arduino"));
+            File.WriteAllText(Path.Combine(dir, "tools", "arduino", "arduino-cli.exe"), string.Empty);
+            Assert.Equal(new[] { "app", "arduino" }, InstallProfile.FromDisk(dir));
+            File.WriteAllText(Path.Combine(dir, "coreclr.dll"), string.Empty);   // the full package carried .NET beside the exe
+            Directory.CreateDirectory(Path.Combine(dir, "occt"));
+            File.WriteAllText(Path.Combine(dir, "occt", "RobotWin.Occt.dll"), string.Empty);
+            Assert.Equal(new[] { "app", "dotnet", "arduino", "occt" }, InstallProfile.FromDisk(dir));
+            Assert.Null(InstallProfile.Read(dir));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
     }
 }

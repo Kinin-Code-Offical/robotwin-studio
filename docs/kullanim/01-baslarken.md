@@ -4,19 +4,21 @@ Bu bölümde RobotWin Studio'yu kurar, ekranın bölümlerini tanır ve ilk proj
 
 ## Kurulum
 
-1. [GitHub Sürümler sayfasından](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) iki paketten birini indirin:
-   - `RobotWinStudio-Setup-<sürüm>.exe`: .NET içindedir, başka bir şey kurmanız gerekmez (önerilen).
-   - `RobotWinStudio-Setup-<sürüm>-lite.exe`: daha küçüktür ama **.NET 9 Masaüstü Çalışma Zamanı** ister; yoksa sihirbaz kurmayı önerir.
-2. Dosyayı çalıştırın ve sihirbazı izleyin.
-3. Kurulum bitince Başlat menüsünden **RobotWin Studio**'yu açın.
+1. [GitHub Sürümler sayfasından](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) kurulum dosyasını, `RobotWinStudio-Setup-<sürüm>.exe`'yi indirin. Küçüktür: seçtiğiniz parçaları aynı sürümden kendisi indirir ve her birini doğrular.
+2. Çalıştırın. İlk sayfada **dili** (kurulumun ve uygulamanın dili) ve **kurulum türünü** seçin:
+   - **Tam** (önerilen): uygulama, kendi .NET 9'u, Arduino derleyicisi ve STEP / IGES desteği. Kurulur kurulmaz her şey internetsiz çalışır.
+   - **Hafif**: yalnız uygulama; bilgisayarınızdaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır (yoksa kendi kopyasını getirir). Derleyici ve STEP / IGES sonradan eklenebilir.
+   - **Özel**: bileşenleri kendiniz işaretleyin.
+3. **Kurulum biçimini** seçin: bu kullanıcı için (varsayılan, yönetici izni istemez), tüm kullanıcılar için (yönetici ister) ya da **taşınabilir** (yalnız bir klasör, örneğin USB bellekte: kısayol, kayıt defteri girdisi ve dosya türü yok).
+4. Kurulum bitince Başlat menüsünden **RobotWin Studio**'yu açın.
 
-Kurulum varsayılan olarak yalnızca sizin kullanıcınız için yapılır ve yönetici izni istemez. Kaldırmak için Windows **Ayarlar → Uygulamalar** listesini kullanın.
+Bileşenleri sonradan eklemek ya da kaldırmak için **Ayarlar → Güncellemeler → Bileşenleri değiştir…**'i (ya da Windows **Ayarlar → Uygulamalar → RobotWin Studio → Değiştir**'i) kullanın. Kaldırmak için Windows **Ayarlar → Uygulamalar** listesini kullanın. İnternetsiz kurmak için sürümün `.rwpack` dosyalarını kurulum dosyasının yanına koyun.
 
 ### Kendi kodunuzu derlemek için
 
 | Kart | Gerekli araç | Kurulum |
 | --- | --- | --- |
-| Arduino Uno / Nano | Arduino derleyicisi: `arduino-cli`, AVR çekirdeği ve kütüphane listesi | **Kurulumla gelir**; ayrıca bir şey kurmanız gerekmez |
+| Arduino Uno / Nano | Arduino derleyicisi: `arduino-cli`, AVR çekirdeği ve kütüphane listesi | **Kurulumun bir bileşenidir** (tam kurulumda vardır); hafif kurulumda **Ayarlar → Güncellemeler → Bileşenleri değiştir…** ile ekleyin |
 | ESP32 | Visual Studio C++ araçları (MSVC) | Visual Studio 2022 veya Build Tools ile **"C++ ile masaüstü geliştirme"** iş yükü |
 
 Kendi `arduino-cli`'nizi kullanmak isterseniz yolunu **Ayarlar → Derleyiciler** bölümüne yazın. Uygulama MSVC'yi kendisi bulur; bulamazsa yolunu aynı bölüme girin.

@@ -8,7 +8,7 @@
 
 | Belirti | Çözüm |
 | --- | --- |
-| Uygulama açılmıyor ya da .NET istiyor | Microsoft'tan **.NET 9 Masaüstü Çalışma Zamanı**'nı (x64) kurun, ya da kurulumu yeniden çalıştırıp önerisini kabul edin, ya da .NET'i içinde taşıyan tam paketi `RobotWinStudio-Setup-<sürüm>.exe` kullanın (`-lite` taşımaz). |
+| Uygulama açılmıyor ya da .NET istiyor | Hafif kurulum bilgisayardaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır. Kurulumu yeniden çalıştırıp **Tam**'ı seçin (ya da **.NET 9 çalışma zamanı** bileşenini ekleyin): uygulama o zaman kendi kopyasını taşır. Ya da Microsoft'tan **.NET 9 Masaüstü Çalışma Zamanı**'nı (x64) kurun. Kurulumun günlüğü `%TEMP%\RobotWinStudio-Setup.log`'dur. |
 | Windows SmartScreen kurulum için uyarıyor | Dosyanın projenin GitHub Sürümler sayfasından geldiğini doğrulayın; sonra *Ek bilgi → Yine de çalıştır*. |
 | Bütün kullanıcılara kurulum başarısız | `/ALLUSERS`, `Program Files`'a yazar ve yönetici yetkisi ister; yoksa varsayılan kullanıcıya kurulumu kullanın. |
 | `.rwproj`/`.rwworld` dosyasına çift tıklayınca uygulama açılmıyor | Ayarlar → *Dosya türleri* → *Windows'ta bu uygulamayla aç* (ya da Dosya → *Dosya türlerini bu uygulamayla ilişkilendir*). |

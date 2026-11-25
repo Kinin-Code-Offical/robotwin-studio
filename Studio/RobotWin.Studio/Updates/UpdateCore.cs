@@ -120,6 +120,21 @@ namespace RobotWin.Studio.Updates
         public bool IsLite => Name.EndsWith("-lite.exe", StringComparison.OrdinalIgnoreCase);
 
         public bool IsInstaller => Name.StartsWith("RobotWinStudio-Setup-", StringComparison.OrdinalIgnoreCase) && Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>[setup] A component the one setup installs ("RobotWinStudio-1.7.0-dotnet.rwpack"; releases from 1.7 on).</summary>
+        public bool IsComponent => Name.StartsWith("RobotWinStudio-", StringComparison.OrdinalIgnoreCase) && Name.EndsWith(".rwpack", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>The component's id: what follows the version in its name ("app", "dotnet", "arduino", "occt").</summary>
+        public string? ComponentId
+        {
+            get
+            {
+                if (!IsComponent) return null;
+                string stem = Name.Substring(0, Name.Length - ".rwpack".Length);
+                int dash = stem.LastIndexOf('-');
+                return dash > 0 && dash < stem.Length - 1 ? stem.Substring(dash + 1).ToLowerInvariant() : null;
+            }
+        }
     }
 
     public sealed class ReleaseInfo
@@ -144,6 +159,9 @@ namespace RobotWin.Studio.Updates
         public string Body { get; set; } = string.Empty;
         public string HtmlUrl { get; set; } = string.Empty;
         public List<ReleaseAsset> Assets { get; set; } = new List<ReleaseAsset>();
+
+        /// <summary>[setup] The release has one setup for every kind of installation and the components it downloads.</summary>
+        public bool HasComponents => Assets.Any(a => a.IsComponent);
 
         /// <summary>"2.1.0" (or the tag when it is not a version).</summary>
         public string DisplayVersion => Version?.ToString() ?? Tag;
@@ -287,8 +305,28 @@ namespace RobotWin.Studio.Updates
         public InstallMode Mode { get; set; }
         public string AppDirectory { get; set; } = string.Empty;
 
-        /// <summary>coreclr.dll next to the exe: the self-contained ("-tam") build.</summary>
+        /// <summary>The copy carries its own .NET: the installer's dotnet\ folder, or coreclr.dll beside the exe (an older full package).</summary>
         public bool SelfContained { get; set; }
+
+        /// <summary>[setup] What is installed (install.json, or read off the folder): "app", "dotnet", "arduino", "occt".</summary>
+        public IReadOnlyList<string> Components { get; set; } = new[] { "app" };
+
+        /// <summary>[setup] The kind the setup recorded: "full", "lite", "custom" ("" for a copy an older setup made).</summary>
+        public string Kind { get; set; } = string.Empty;
+
+        /// <summary>What the copy has, in a line: "Tam kurulum · .NET dahil · Arduino derleyicisi · STEP / IGES".</summary>
+        public string ContentText
+        {
+            get
+            {
+                var parts = new List<string>();
+                parts.Add(Kind switch { "full" => "Tam kurulum", "lite" => "Hafif kurulum", "custom" => "Özel kurulum", _ => SelfContained ? "Tam kurulum" : "Hafif kurulum" });
+                parts.Add(SelfContained ? ".NET dahil" : ".NET 9 Masaüstü Çalışma Zamanı ile");
+                if (Components.Contains("arduino")) parts.Add("Arduino derleyicisi");
+                if (Components.Contains("occt")) parts.Add("STEP / IGES");
+                return string.Join(" · ", parts);
+            }
+        }
 
         /// <summary>.NET 9 Desktop Runtime installed on this PC.</summary>
         public bool RuntimeAvailable { get; set; }
@@ -330,6 +368,8 @@ namespace RobotWin.Studio.Updates
         /// </summary>
         public static ReleaseAsset? SelectAsset(ReleaseInfo release, bool selfContained, bool runtimeAvailable)
         {
+            // [setup] From 1.7 on there is one setup: it downloads what this copy has (its own .NET included) itself.
+            if (release.HasComponents) return release.Assets.FirstOrDefault(a => a.IsInstaller);
             release.ClassifyInstallers();   // whichever naming scheme the release uses
             var installers = release.Assets.Where(a => a.IsInstaller).ToList();
             var full = installers.FirstOrDefault(a => a.IsSelfContained);
@@ -355,10 +395,25 @@ namespace RobotWin.Studio.Updates
             return best;
         }
 
-        /// <summary>Command line for Installer/setup.cpp: silent install into the current folder, start the app afterwards.</summary>
+        /// <summary>
+        /// [setup] What updating this copy downloads: the setup and, from a release with components, the components the
+        /// copy has (a full one all of them).
+        /// </summary>
+        public static long DownloadSize(ReleaseInfo release, ReleaseAsset setup, InstallInfo info)
+        {
+            if (!release.HasComponents) return setup.Size;
+            bool all = info.Kind == "full" || (info.Kind.Length == 0 && info.SelfContained);
+            return setup.Size + release.Assets.Where(a => a.IsComponent && (all || info.Components.Contains(a.ComponentId ?? string.Empty))).Sum(a => a.Size);
+        }
+
+        /// <summary>
+        /// Command line for Installer/setup.cpp: an install into the current folder with the same components, showing
+        /// only its progress (/PASSIVE: the setup downloads them; an older setup reads /S alone), the app started
+        /// afterwards.
+        /// </summary>
         public static string InstallerArguments(InstallInfo info)
         {
-            var args = new List<string> { "/S" };
+            var args = new List<string> { "/S", "/PASSIVE" };
             if (info.Mode == InstallMode.Portable) args.Add("/PORTABLE");
             if (info.Mode == InstallMode.AllUsers) args.Add("/ALLUSERS");
             if (info.Mode != InstallMode.Portable)

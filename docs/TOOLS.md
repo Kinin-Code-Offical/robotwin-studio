@@ -60,10 +60,10 @@ The English guide uses `docs/images/en/` and falls back to the Turkish picture w
 
 ## tools/build-installer.ps1
 
-Publishes the app, compiles the native setup stub with MSVC and packs everything into `builds\installer\RobotWinStudio-Setup-<version>-lite.exe` (framework-dependent) or, with `-SelfContained`, the full `RobotWinStudio-Setup-<version>.exe`. See [BUILD_RELEASE.md](BUILD_RELEASE.md).
+Publishes the app, lays out the components (the app, its own .NET 9 runtime, the Arduino compiler, the Open CASCADE bridge), packs each into an `.rwpack` with the native setup, compiles the one setup `RobotWinStudio-Setup-<version>.exe` with their sizes and SHA-256, and proves it by installing them all into a portable folder; output in `builds\installer\release`. `-NoArduino` skips the Arduino compiler, `-Repo owner/name` sets where the setup downloads from. See [BUILD_RELEASE.md](BUILD_RELEASE.md).
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.1.0
+powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0
 ```
 
 ## External tools the app calls

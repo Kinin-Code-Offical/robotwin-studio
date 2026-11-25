@@ -496,7 +496,7 @@ namespace RobotWin.Studio.Pages
             string data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RobotWinStudio");
             return "## Bu kopya\n\n| | |\n| --- | --- |\n" +
                    $"| Sürüm | **{um.CurrentVersion}** |\n" +
-                   $"| Kurulum | {info.ModeText} · {(info.SelfContained ? "tam kurulum (.NET dahil)" : ".NET 9 Masaüstü Çalışma Zamanı ile")} |\n" +
+                   $"| Kurulum | {info.ModeText} · {info.ContentText} |\n" +
                    $"| Uygulama klasörü | `{info.AppDirectory}` |\n" +
                    $"| Ayarlar ve günlükler | `{data}` |\n" +
                    $"| .NET | {Environment.Version} · {(Environment.Is64BitProcess ? "64" : "32")} bit |\n" +
@@ -716,7 +716,7 @@ namespace RobotWin.Studio.Pages
             line.Children.Add(ver);
             var mode = new TextBlock
             {
-                Text = info.ModeText + "\n" + (info.SelfContained ? "Tam kurulum (.NET dahil)" : ".NET 9 Masaüstü Çalışma Zamanı ile"),
+                Text = info.ModeText + "\n" + info.ContentText,
                 Style = (Style)FindResource("Text.Caption"),
                 TextAlignment = TextAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center
@@ -846,7 +846,7 @@ namespace RobotWin.Studio.Pages
 
             var asset = UpdateLogic.SelectAsset(r, info.SelfContained, info.RuntimeAvailable);
             string date = r.PublishedAt?.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) ?? string.Empty;
-            string assetText = asset != null ? asset.Name + " · " + UpdateLogic.FormatSize(asset.Size) : "Bu kopya için kurulum dosyası yok";
+            string assetText = asset != null ? asset.Name + " · " + UpdateLogic.FormatSize(UpdateLogic.DownloadSize(r, asset, info)) : "Bu kopya için kurulum dosyası yok";
             sp.Children.Add(new TextBlock { Text = r.DisplayVersion + (date.Length > 0 ? " · " + date : string.Empty) + " · " + assetText, Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 4, 0, 10), TextWrapping = TextWrapping.Wrap });
 
             var actions = new WrapPanel();
