@@ -274,6 +274,17 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void EmulatorGapNamesWhatTheEmulatorLacks()
+        {
+            Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <Wire.h>\nvoid setup() {}"));
+            Assert.Equal("Wi-Fi", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFi.h>"));
+            Assert.Equal("Wi-Fi", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#  include <esp_now.h>"));
+            Assert.Equal("esp_camera", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include \"esp_camera.h\""));
+            Assert.Equal("Bluetooth", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <BLEDevice.h>"));
+            Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("// WiFi.h is not used here"));
+        }
+
+        [Fact]
         public void SarAdcConvertsThePadAsAnalogReadDoes()
         {
             var soc = Chip();

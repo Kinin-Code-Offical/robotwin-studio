@@ -9743,6 +9743,7 @@
   "Arduino-ESP32 {…} kuruluyor (derleyiciler, kütüphaneler, esptool) …": "Installing Arduino-ESP32 {0} (compilers, libraries, esptool) …",
   "Firmware yüklendi: {…} (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)": "Firmware loaded: {0} (real-chip firmware, RobotWin's Xtensa emulator)",
   "ESP32 emülatörü başlatılamadı: {…}": "The ESP32 emulator could not start: {0}",
-  "Emülatör durdu: {…}": "The emulator stopped: {0}"
+  "Emülatör durdu: {…}": "The emulator stopped: {0}",
+  "Donanım uyumlu mod: bu çizim {…} kullanıyor, Xtensa emülatöründe henüz yok; bu kart hızlı modda çalışıyor.": "Hardware-compatible mode: this sketch uses {0}, which the Xtensa emulator does not have yet; this board runs as the fast mode."
  }
 }

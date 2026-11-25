@@ -547,6 +547,12 @@ namespace RobotWin.Studio.World
         /// </summary>
         private bool AttachEmulatedEsp32(WorldProgrammable prog, string where, string source)
         {
+            if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) is { } gap)
+            {
+                Log.Add(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeGapNotice, gap), AnalogEventKind.Warning));
+                return false;
+            }
+
             var cached = Firmware.ArduinoCompiler.CachedEsp32Hardware(source);
             if (cached == null)
             {

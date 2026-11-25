@@ -84,6 +84,28 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>A hardware-compatible board whose real-chip build is not there yet: it is being built, this run is fast mode.</summary>
         public const string HardwareModeBuilding = "Donanım uyumlu mod: çizim gerçek yonga için derleniyor; bu çalıştırma hızlı modda, derleme bitince sonraki çalıştırma emülatörde.";
 
+        /// <summary>A hardware-compatible board whose sketch needs what the emulator lacks (<see cref="EmulatorGap"/>): fast mode, said plainly.</summary>
+        public const string HardwareModeGapNotice = "Donanım uyumlu mod: bu çizim {0} kullanıyor, Xtensa emülatöründe henüz yok; bu kart hızlı modda çalışıyor.";
+
+        /// <summary>
+        /// [esp32hw] What a sketch uses that the Xtensa emulator does not model yet: the camera (esp_camera), Wi-Fi (WiFi,
+        /// ESP-NOW, HTTP and web servers) or Bluetooth (BLE, Bluetooth Serial, Bluepad32); null when nothing. Such a board
+        /// runs in the fast mode, which has them.
+        /// </summary>
+        public static string? EmulatorGap(string source)
+        {
+            if (string.IsNullOrEmpty(source)) return null;
+            if (Includes(source, "esp_camera.h")) return "esp_camera";
+            foreach (var header in new[] { "WiFi.h", "WiFiClient.h", "WiFiUdp.h", "WiFiClientSecure.h", "esp_wifi.h", "esp_now.h", "HTTPClient.h", "WebServer.h", "ESPmDNS.h", "ArduinoOTA.h", "AsyncTCP.h" })
+                if (Includes(source, header)) return "Wi-Fi";
+            foreach (var header in new[] { "BLEDevice.h", "BluetoothSerial.h", "NimBLEDevice.h", "Bluepad32.h", "esp_bt.h", "BleGamepad.h" })
+                if (Includes(source, header)) return "Bluetooth";
+            return null;
+        }
+
+        private static bool Includes(string source, string header) =>
+            System.Text.RegularExpressions.Regex.IsMatch(source, @"#\s*include\s*[<""]" + System.Text.RegularExpressions.Regex.Escape(header) + "[>\"]");
+
         /// <summary>A hardware-compatible board without Espressif's toolchain: fast mode until it is installed.</summary>
         public const string HardwareModeNoToolchain = "Donanım uyumlu mod için ESP32 araç zinciri gerekiyor (Kod → Gerçek kart → araç zincirini kur); o zamana dek bu kart hızlı modda çalışıyor.";
 
