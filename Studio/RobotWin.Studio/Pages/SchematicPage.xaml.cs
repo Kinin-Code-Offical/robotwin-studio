@@ -79,7 +79,10 @@ namespace RobotWin.Studio.Pages
             {
                 UpdateChrome();
                 BuildInspector();
+                RefreshVariantBox();   // [variants]
             };
+            W.DocumentReplaced += (_, _) => RefreshVariantBox();
+            Loaded += (_, _) => RefreshVariantBox();
             W.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName is nameof(Workspace.CanUndo) or nameof(Workspace.CanRedo)) UpdateChrome();
@@ -717,6 +720,7 @@ namespace RobotWin.Studio.Pages
             }
 
             if (locked && editable.Count > 0) Inspector.Children.Add(Hint("Parametreleri değiştirmek için simülasyonu durdurun."));
+            BuildVariantSection(part, def, parameters, locked);
             BuildToleranceSection(part, def);
 
             Section("Konum");
@@ -815,6 +819,134 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>"Gerçek değer": what this particular part measures in the realistic/Monte Carlo board.</summary>
+        /// <summary>
+        /// [variants] While an alternative is active, what it does with this part: left off, or another value. Shown only
+        /// then; the parameters above are the design as drawn, shared by every alternative.
+        /// </summary>
+        private bool _fillingVariants;
+
+        /// <summary>[variants] The alternative chooser beside Simulate: there once the design has alternatives.</summary>
+        private void RefreshVariantBox()
+        {
+            var s = W.Schematic;
+            _fillingVariants = true;
+            try
+            {
+                VariantBox.Items.Clear();
+                VariantBox.Visibility = s.Variants.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                VariantBox.Items.Add(new ComboBoxItem { Content = "Çizildiği gibi", Tag = string.Empty });
+                foreach (var v in s.Variants) VariantBox.Items.Add(new ComboBoxItem { Content = v.Name, Tag = v.Name, ToolTip = v.Note });
+                VariantBox.Items.Add(new ComboBoxItem { Content = "Alternatifler…" });
+                var current = Variants.Find(s, s.ActiveVariant);
+                VariantBox.SelectedIndex = current == null ? 0 : s.Variants.IndexOf(current) + 1;
+            }
+            finally
+            {
+                _fillingVariants = false;
+            }
+        }
+
+        private void OnVariantPicked(object sender, SelectionChangedEventArgs e)
+        {
+            if (_fillingVariants || VariantBox.SelectedItem is not ComboBoxItem item) return;
+            if (item.Tag is not string name)
+            {
+                RefreshVariantBox();
+                ShowVariants();
+                return;
+            }
+
+            SelectVariant(name.Length == 0 ? null : name);
+        }
+
+        /// <summary>
+        /// [variants] Chooses the alternative that is simulated, listed and put together (null: the design as drawn); undoable.
+        /// A running simulation starts again with it.
+        /// </summary>
+        public void SelectVariant(string? name)
+        {
+            var s = W.Schematic;
+            if (string.Equals(s.ActiveVariant ?? string.Empty, name ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            {
+                RefreshVariantBox();
+                return;
+            }
+
+            bool running = W.Simulation.IsActive;
+            if (running) W.Simulation.Stop();
+            W.BeginChange();
+            s.ActiveVariant = name;
+            W.CommitChange(name == null ? "Tasarım: çizildiği gibi" : "Tasarım alternatifi: " + name);
+            RefreshVariantBox();
+            Canvas.InvalidateVisual();
+            BuildInspector();
+            if (running) W.Simulation.Start();
+        }
+
+        /// <summary>[variants] The window of the alternatives: made, named, copied, removed, chosen, compared.</summary>
+        public void ShowVariants()
+        {
+            if (Window.GetWindow(this) is not Window owner) return;
+            var window = new VariantsWindow(owner, SelectVariant);
+            if (App.IsSnapshot)
+            {
+                window.ShowActivated = false;
+                window.Show();
+                window.UpdateLayout();
+                App.SnapshotTarget = System.Windows.Media.VisualTreeHelper.GetChildrenCount(window) > 0 ? System.Windows.Media.VisualTreeHelper.GetChild(window, 0) as FrameworkElement : null;
+                return;
+            }
+
+            window.ShowDialog();
+            RefreshVariantBox();
+            Canvas.InvalidateVisual();
+            BuildInspector();
+        }
+
+        private void BuildVariantSection(SchematicPart part, PartDefinition def, IReadOnlyDictionary<string, string> drawn, bool locked)
+        {
+            var variant = Variants.Find(W.Schematic, W.Schematic.ActiveVariant);
+            if (variant == null || def.Symbol == SymbolKind.Ground || def.Symbol == SymbolKind.PowerRail) return;
+            Section("Alternatif: " + variant.Name);
+            var over = variant.For(part);
+            var off = new CheckBox { Content = "Bu alternatifte takılmaz", IsChecked = over?.NotFitted == true, IsEnabled = !locked, Margin = new Thickness(0, 0, 0, 8) };
+            off.Click += (_, _) => EditOverride(part, variant, o => o.NotFitted = off.IsChecked == true, off.IsChecked == true ? $"{part.RefDes}: {variant.Name} alternatifinde takılmaz" : $"{part.RefDes}: {variant.Name} alternatifinde takılır");
+            Inspector.Children.Add(off);
+            if (!string.IsNullOrEmpty(def.ValueKey) && over?.NotFitted != true)
+            {
+                var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
+                row.Children.Add(new TextBlock { Text = "Bu alternatifte değer", Style = (Style)FindResource("Text.Body"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+                string drawnValue = drawn.TryGetValue(def.ValueKey, out var dv) ? dv : string.Empty;
+                var box = new TextBox { Text = over != null && over.Parameters.TryGetValue(def.ValueKey, out var ov) ? ov : string.Empty, Tag = drawnValue, IsEnabled = !locked };
+                Grid.SetColumn(box, 1);
+                row.Children.Add(box);
+                Commit(box, value =>
+                {
+                    value = value.Trim();
+                    EditOverride(part, variant, o =>
+                    {
+                        if (value.Length == 0 || value == drawnValue) o.Parameters.Remove(def.ValueKey);
+                        else o.Parameters[def.ValueKey] = value;
+                    }, $"{part.RefDes}: {variant.Name} alternatifinde değer {(value.Length == 0 ? drawnValue : value)}");
+                });
+                Inspector.Children.Add(row);
+            }
+
+            Inspector.Children.Add(Hint("Boş bırakılan çizildiği gibidir. Yukarıdaki parametreler bütün alternatiflerindir."));
+        }
+
+        private void EditOverride(SchematicPart part, DesignVariant variant, Action<PartOverride> change, string status)
+        {
+            W.BeginChange();
+            change(variant.Edit(part));
+            variant.Tidy(W.Schematic);
+            W.CommitChange(status);
+            Canvas.InvalidateVisual();
+            BuildInspector();
+        }
+
         private void BuildToleranceSection(SchematicPart part, PartDefinition def)
         {
             var settings = W.Schematic.Tolerances;
@@ -1331,7 +1463,7 @@ namespace RobotWin.Studio.Pages
                 AmbientC = AppSettings.Current.AmbientTempC
             };
             if (options.MeasureFrom >= options.Duration) options.MeasureFrom = 0;
-            var schematic = Schematic.FromJson(W.Schematic.ToJson());
+            var schematic = Schematic.FromJson(Variants.Active(W.Schematic).ToJson());   // [variants] the active alternative, a copy for the other thread
             var lib = W.Library;
             _mcCancel?.Cancel();
             _mcCancel = new System.Threading.CancellationTokenSource();

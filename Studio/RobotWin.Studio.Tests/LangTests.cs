@@ -199,6 +199,11 @@ public class LangTests
     [InlineData("İtki    : 0.2 N · 8.4 g/s · çıkış 21 m/s", "Thrust  : 0.2 N · 8.4 g/s · exit 21 m/s")]
     [InlineData("12k nokta", "12k points")]
     [InlineData("Doluluk 40.0 %", "Duty 40.0 %")]
+    [InlineData("takılmaz: D1 · değer: R1", "not fitted: D1 · value: R1")]
+    [InlineData("Zaman adımı: ilk 2 s yarım adımla (250 µs) yeniden: konum en çok 0.123 mm farklı (BT1) — adımdan bağımsız sayılır",
+        "Time step: the first 2 s again at half the step (250 µs): positions differ by at most 0.123 mm (BT1) — independent of the step")]
+    [InlineData("R1: Hafif alternatifinde değer 1k", "R1: value 1k in the Hafif alternative")]
+    [InlineData("Alternatif silindi: Hafif (geri alınabilir)", "Alternative deleted: Hafif (can be undone)")]
     [InlineData("R1 → R7: adı değişecek, yeri ve izleri korunur", "R1 → R7: will be renamed, keeping its place and tracks")]
     [InlineData("1 parçanın adı değişecek, yeri korunur (R1 → R7)", "1 part will be renamed, keeping its place (R1 → R7)")]
     [InlineData("U2 devrede yok, kaldırılacak", "U2 is no longer in the circuit and will be removed")]

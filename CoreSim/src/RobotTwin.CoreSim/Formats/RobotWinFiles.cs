@@ -285,6 +285,14 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>True when the file was an old single-JSON project.</summary>
         public bool WasLegacy { get; private set; }
 
+        /// <summary>[variants] The same package with another schematic (its other contents shared).</summary>
+        public ProjectPackage WithSchematic(Schematic schematic)
+        {
+            var copy = (ProjectPackage)MemberwiseClone();
+            copy.Schematic = schematic;
+            return copy;
+        }
+
         public FirmwareSource? FirmwareFor(string refDes) =>
             Firmware.FirstOrDefault(f => string.Equals(f.BoardRefDes, refDes, StringComparison.OrdinalIgnoreCase));
 

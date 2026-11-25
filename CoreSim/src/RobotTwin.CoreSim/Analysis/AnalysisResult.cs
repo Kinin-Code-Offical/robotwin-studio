@@ -431,6 +431,9 @@ namespace RobotTwin.CoreSim.Analysis
         /// <summary>Number of tolerance runs behind <see cref="Bands"/>.</summary>
         public int BandRuns { get; set; }
 
+        /// <summary>[uncertainty] The time-step check (<see cref="AnalysisSettings.TimeStepCheck"/>), or null.</summary>
+        public StepCheck? StepCheck { get; set; }
+
         /// <summary>Flow around the whole assembly at keyframes of the recording (render mode).</summary>
         public List<CfdResult> AeroFrames { get; } = new List<CfdResult>();
 
@@ -465,6 +468,16 @@ namespace RobotTwin.CoreSim.Analysis
                     ["cancelled"] = Cancelled,
                     ["halt_reason"] = HaltReason,
                     ["settings"] = Settings.ToJson(),
+                    ["step_check"] = StepCheck == null ? null : new JsonObject
+                    {
+                        ["seconds"] = StepCheck.Seconds,
+                        ["step"] = StepCheck.Step,
+                        ["half_step"] = StepCheck.HalfStep,
+                        ["position_m"] = StepCheck.PositionM,
+                        ["position_object"] = StepCheck.PositionObject,
+                        ["worst_relative"] = StepCheck.WorstRelative,
+                        ["worst_channel"] = StepCheck.WorstChannel
+                    },
                     ["log"] = new JsonArray(Log.Select(l => (JsonNode)JsonValue.Create(l)!).ToArray())
                 };
                 Text(zip, "manifest.json", manifest.ToJsonString());
@@ -564,6 +577,19 @@ namespace RobotTwin.CoreSim.Analysis
                 Settings = manifest["settings"] is JsonObject so ? AnalysisSettings.FromJson(so) : new AnalysisSettings()
             };
             if (manifest["log"] is JsonArray log) r.Log.AddRange(log.Select(x => (string?)x ?? string.Empty));
+            if (manifest["step_check"] is JsonObject sc)
+            {
+                r.StepCheck = new StepCheck
+                {
+                    Seconds = (double?)sc["seconds"] ?? 0,
+                    Step = (double?)sc["step"] ?? 0,
+                    HalfStep = (double?)sc["half_step"] ?? 0,
+                    PositionM = (double?)sc["position_m"] ?? 0,
+                    PositionObject = (string?)sc["position_object"],
+                    WorstRelative = (double?)sc["worst_relative"] ?? 0,
+                    WorstChannel = (string?)sc["worst_channel"]
+                };
+            }
             var ch = zip.GetEntry("channels.bin");
             if (ch != null)
             {

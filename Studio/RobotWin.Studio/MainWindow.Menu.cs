@@ -225,6 +225,22 @@ namespace RobotWin.Studio
                 else W.Simulation.Start();
             }));
             m.Items.Add(Item("Devre simülasyonunu durdur", "Shift+F5", () => W.Simulation.Stop(), s != SimState.Stopped));
+            var variants = Sub("Tasarım alternatifi");   // [variants]
+            var sch = W.Schematic;
+            variants.Items.Add(Check("Çizildiği gibi", null, string.IsNullOrEmpty(sch.ActiveVariant), _ => _schematic.SelectVariant(null)));
+            foreach (var v in sch.Variants)
+            {
+                string name = v.Name;
+                variants.Items.Add(Check(name, null, string.Equals(sch.ActiveVariant, name, StringComparison.OrdinalIgnoreCase), _ => _schematic.SelectVariant(name)));
+            }
+
+            variants.Items.Add(new Separator());
+            variants.Items.Add(Item("Alternatifler…", null, () =>
+            {
+                Navigate("schematic");
+                _schematic.ShowVariants();
+            }));
+            m.Items.Add(variants);
             m.Items.Add(new Separator());
             bool world = W.ActiveWorld != null || W.Documents.Any(d => d.Kind == DocumentKind.World);
             var (ws, _) = _world.SimulationState;

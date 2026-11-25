@@ -11,6 +11,8 @@
     "pcb": ["--page", "pcb", "--example", "motor-driver", "--size", "1600x960"],
     "pcb-stackup": ["--page", "pcb", "--example", "obstacle-avoider", "--fault", "stackup:12", "--size", "1600x1000", "--wait", "3"],
     "pcb-ask": ["--page", "pcb", "--example", "motor-driver", "--fault", "ask", "--size", "1600x960", "--wait", "2"],
+    "variants": ["--page", "schematic", "--example", "motor-driver", "--fault", "variants", "--size", "1600x1000", "--wait", "2"],
+    "variants-window": ["--page", "schematic", "--example", "motor-driver", "--fault", "variants-window", "--size", "1600x1000", "--wait", "12"],
     "code-complete": ["--page", "code", "--example", "obstacle-avoider", "--fault", "complete", "--size", "1600x1000", "--wait", "15"],
     "code-explorer": ["--page", "code", "--example", "arduino-blink", "--fault", "explorer", "--size", "1600x1000", "--wait", "2"],
     "code-esp32-libraries": ["--page", "code", "--fault", "esp32-libs", "--size", "1600x1000", "--wait", "25"],

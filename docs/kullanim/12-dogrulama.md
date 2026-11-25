@@ -187,3 +187,6 @@ Bu tablolar çözücülerin doğruluğunu gösterir; sizin modelinizin gerçeğe
 - **FEM:** **Ağ yakınsaması denetimi** en kötü anı daha ince ağla yeniden çözer ve farkı yazar. **.inp dışa aktarma** aynı durumu CalculiX, ANSYS ya da Abaqus'ta çözmeniz için yazar.
 - **CFD:** 3B analizin notlarındaki ızgara belirsizliği (GCI) ve y+ değerine bakın.
 - **Parça yayılımı:** datasheet değeri tipik değerdir; klon servo ve motorlar akımda %30–40 sapabilir. Render'daki belirsizlik bandı bu aralığı çizer.
+- **Zaman adımı:** Render'daki **Zaman adımı denetimi** koşunun ilk 2 saniyesini fiziğin yarım adımıyla yeniden çalıştırır ve parçaların yolunun ve kaydedilen her büyüklüğün ne kadar değiştiğini yazar. Yarı örtük Euler birinci derece olduğundan bu fark, koşunun kendi adım hatasının ölçüsüdür: %2'nin altı adımdan bağımsız, %10'a kadar az duyarlı sayılır; %10'un üstündeyse daha yüksek doğrulukla render alın. Titreşen, çok az değişen ya da sayı olan kanallar (temas sayısı) karşılaştırılmaz: adımdan bağımsız olarak koşudan koşuya değişirler.
+
+Render bu ölçülerin hepsini kaydının başında **Sayısal belirsizlik** başlığı altında bir arada yazar: zaman adımı, gerilme ağları, akış ızgarası (GCI) ve parça toleransları.

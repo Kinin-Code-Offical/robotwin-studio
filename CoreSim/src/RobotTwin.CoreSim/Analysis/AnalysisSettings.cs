@@ -136,6 +136,9 @@ namespace RobotTwin.CoreSim.Analysis
         /// <summary>Re-solve each part's critical instant on a finer mesh and report how much the stress moved.</summary>
         public bool StressMeshCheck { get; set; }
 
+        /// <summary>[uncertainty] Repeat the run's start with half the physics step and say how much the result changes.</summary>
+        public bool TimeStepCheck { get; set; }
+
         /// <summary>Lattice cells across the body's frontal size.</summary>
         public int AeroResolution { get; set; } = 32;
 
@@ -272,7 +275,8 @@ namespace RobotTwin.CoreSim.Analysis
                 ["aero_passes"] = AeroPasses,
                 ["aero_smagorinsky"] = AeroSmagorinsky,
                 ["uncertainty_runs"] = UncertaintyRuns,
-                ["stress_mesh_check"] = StressMeshCheck
+                ["stress_mesh_check"] = StressMeshCheck,
+                ["time_step_check"] = TimeStepCheck
             };
         }
 
@@ -319,7 +323,8 @@ namespace RobotTwin.CoreSim.Analysis
                 AeroPasses = D("aero_passes", 30),
                 AeroSmagorinsky = D("aero_smagorinsky", 0.17),
                 UncertaintyRuns = I("uncertainty_runs", 0),
-                StressMeshCheck = B("stress_mesh_check", false)
+                StressMeshCheck = B("stress_mesh_check", false),
+                TimeStepCheck = B("time_step_check", false)
             };
             return s;
         }

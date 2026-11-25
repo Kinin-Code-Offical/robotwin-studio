@@ -875,6 +875,7 @@ namespace RobotTwin.CoreSim.Pcb
             string project = ProjectName(projectName, schematic);
             string rootUuid = Uuid("schematic:" + project);
             var parts = ExportParts(schematic, library, out var variants);
+            var dnp = Design.Variants.FittingOf(schematic, library)?.NotFitted ?? new HashSet<string>();   // [variants] the chosen alternative's parts not fitted
             var pinNets = PinNets(schematic.BuildNetlist(library));
 
             var stubs = new List<Stub>();
@@ -981,9 +982,9 @@ namespace RobotTwin.CoreSim.Pcb
                     part.Mirror ? new SNode("mirror", "y") : null,
                     new SNode("unit", "1"),
                     new SNode("exclude_from_sim", "no"),
-                    new SNode("in_bom", onBoard ? "yes" : "no"),
+                    new SNode("in_bom", onBoard && !dnp.Contains(part.RefDes) ? "yes" : "no"),
                     new SNode("on_board", onBoard ? "yes" : "no"),
-                    new SNode("dnp", "no"),
+                    new SNode("dnp", dnp.Contains(part.RefDes) ? "yes" : "no"),
                     new SNode("uuid", Q(SymbolUuid(part.RefDes))),
                     SchProperty("Reference", part.RefDes, cx, top, fieldAngle, false),
                     SchProperty("Value", p.Value, cx, bottom, fieldAngle, false),

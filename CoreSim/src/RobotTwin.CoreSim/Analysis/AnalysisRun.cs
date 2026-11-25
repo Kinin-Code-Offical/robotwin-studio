@@ -155,6 +155,7 @@ namespace RobotTwin.CoreSim.Analysis
             }
 
             if (s.UncertaintyRuns > 0 && !cancel.IsCancellationRequested) UncertaintyBands(world, s, geometry, result, cancel, progress);
+            if (s.TimeStepCheck && !cancel.IsCancellationRequested) TimeStepCheck(world, s, geometry, result, cancel, progress);   // [uncertainty]
             result.WallSeconds = watch.Elapsed.TotalSeconds;
             return result;
         }

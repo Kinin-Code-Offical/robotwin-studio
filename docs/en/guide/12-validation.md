@@ -187,3 +187,6 @@ These tables show how accurate the solvers are. How close your model is to reali
 - **FEM:** the *mesh convergence check* re-solves the worst instant on a finer mesh and reports the change. The *.inp export* writes the same case for CalculiX, ANSYS or Abaqus.
 - **CFD:** look at the grid uncertainty (GCI) and y+ in the notes of the 3D analysis.
 - **Part spread:** datasheet values are typical; clone servos and motors can differ by 30–40 % in current. The render's uncertainty band draws that range.
+- **Time step:** the render's *time-step check* runs the first 2 seconds again at half the physics step and reports how much the parts' paths and every recorded quantity change. Semi-implicit Euler is first order, so that difference measures the run's own step error: under 2 % the result counts as independent of the step, up to 10 % as slightly sensitive; above 10 %, render at a higher accuracy. Channels that jitter, barely move or count things (the number of contacts) are not compared: they change from run to run whatever the step.
+
+The render puts all of these together at the top of its log, under **Numerical uncertainty**: the time step, the stress meshes, the flow grid (GCI) and the part tolerances.

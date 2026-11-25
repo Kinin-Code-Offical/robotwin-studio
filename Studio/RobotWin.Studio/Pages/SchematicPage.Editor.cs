@@ -894,7 +894,7 @@ namespace RobotWin.Studio.Pages
 
         private void ExportBom()
         {
-            var bom = BomBuilder.Build(W.Schematic, W.Library);
+            var bom = BomBuilder.Build(Variants.Active(W.Schematic), W.Library);   // [variants] the active alternative's
             if (bom.Count == 0)
             {
                 ShowToast("Malzeme listesi boş: sayfada parça yok.");
@@ -985,6 +985,35 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "variants":
+                case "variants-window":
+                {
+                    // [variants] two alternatives of the example: a part left off, and another value; the first chosen
+                    var parts = sch.Parts.Where(p => W.Library.Find(p.PartId) is { } d && d.Symbol != SymbolKind.Ground && d.Symbol != SymbolKind.PowerRail && d.Symbol != SymbolKind.Board).ToList();
+                    var valued = parts.FirstOrDefault(p => p.RefDes.StartsWith("R", StringComparison.Ordinal) && W.Library.Find(p.PartId)!.ValueKey.Length > 0);
+                    var left = parts.LastOrDefault(p => !ReferenceEquals(p, valued) && W.Library.Find(p.PartId)!.Symbol != SymbolKind.Battery);
+                    sch.EnsurePartUids();
+                    var lean = new DesignVariant { Name = "Hafif", Note = "pil ömrü için" };
+                    if (left != null) lean.Edit(left).NotFitted = true;
+                    if (valued != null) lean.Edit(valued).Parameters[W.Library.Find(valued.PartId)!.ValueKey] = "1k";
+                    var strong = new DesignVariant { Name = "Güçlü" };
+                    if (valued != null) strong.Edit(valued).Parameters[W.Library.Find(valued.PartId)!.ValueKey] = "47";
+                    sch.Variants.Add(lean);
+                    sch.Variants.Add(strong);
+                    sch.ActiveVariant = lean.Name;
+                    RefreshVariantBox();
+                    if (left != null) Canvas.SelectItems(new object[] { left });
+                    BuildInspector();
+                    Canvas.InvalidateVisual();
+                    if (fault == "variants-window")
+                    {
+                        ShowVariants();
+                        if (Application.Current.Windows.OfType<VariantsWindow>().FirstOrDefault() is { } open) open.CompareForSnapshot();
+                    }
+
+                    break;
+                }
+
                 case "menu":
                 case "menu-wire":
                 case "menu-empty":

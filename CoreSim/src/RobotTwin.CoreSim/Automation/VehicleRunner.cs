@@ -48,7 +48,7 @@ namespace RobotTwin.CoreSim.Automation
         {
             try
             {
-                Compiled = CircuitCompiler.Compile(Schematic, Library);
+                Compiled = CircuitCompiler.Compile(Variants.Active(Schematic), Library);   // [variants]
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
             {

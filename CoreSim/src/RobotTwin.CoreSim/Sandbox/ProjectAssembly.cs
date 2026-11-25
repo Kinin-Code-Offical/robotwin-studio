@@ -121,6 +121,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public static WorldDocument Build(ProjectPackage package, PartLibrary library, string? sourcePath = null,
             AssemblyForm form = AssemblyForm.Auto, AssemblyGeometry? geometry = null)
         {
+            package.Schematic.EnsureProjectId();
+            var active = Variants.Active(package.Schematic);   // [variants] the active alternative is what is put together
+            if (!ReferenceEquals(active, package.Schematic)) package = package.WithSchematic(active);
             var sch = package.Schematic;
             string pid = sch.EnsureProjectId();
             sch.EnsurePartUids();   // [integrity] objects follow their parts by identity
@@ -136,6 +139,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public static AssemblyReport Add(WorldDocument w, ProjectPackage package, PartLibrary library, AssemblyForm form,
             string? sourcePath = null, AssemblyGeometry? geometry = null)
         {
+            package.Schematic.EnsureProjectId();
+            var active = Variants.Active(package.Schematic);   // [variants] the active alternative is what is put together
+            if (!ReferenceEquals(active, package.Schematic)) package = package.WithSchematic(active);
             var sch = package.Schematic;
             string pid = sch.EnsureProjectId();
             sch.EnsurePartUids();   // [integrity] objects follow their parts by identity
@@ -194,6 +200,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public static AssemblyReport Sync(WorldDocument w, ProjectPackage package, PartLibrary library, string? sourcePath = null,
             AssemblyGeometry? geometry = null)
         {
+            package.Schematic.EnsureProjectId();
+            var active = Variants.Active(package.Schematic);   // [variants] the active alternative is what is put together
+            if (!ReferenceEquals(active, package.Schematic)) package = package.WithSchematic(active);
             var sch = package.Schematic;
             string pid = sch.EnsureProjectId();
             sch.EnsurePartUids();   // [integrity] objects follow their parts by identity

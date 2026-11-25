@@ -180,6 +180,14 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>Component tolerance setting for simulation (null = nominal values).</summary>
         public ToleranceSettings? Tolerances { get; set; }
 
+        /// <summary>
+        /// [variants] Alternatives of this design (<see cref="DesignVariant"/>): parts left off, values changed, parts swapped.
+        /// </summary>
+        public List<DesignVariant> Variants { get; set; } = new List<DesignVariant>();
+
+        /// <summary>[variants] The alternative simulated and listed now, by name; null: the design as drawn.</summary>
+        public string? ActiveVariant { get; set; }
+
         public SchematicPart? FindPart(string refDes) =>
             Parts.FirstOrDefault(p => string.Equals(p.RefDes, refDes, StringComparison.OrdinalIgnoreCase));
 

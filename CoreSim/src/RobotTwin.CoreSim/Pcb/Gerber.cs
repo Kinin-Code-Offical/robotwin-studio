@@ -18,7 +18,9 @@ namespace RobotTwin.CoreSim.Pcb
     /// </summary>
     public static class GerberExporter
     {
-        public static Dictionary<string, string> Generate(BoardDocument board, string projectName = "robotwin")
+        /// <param name="fitting">[variants] The alternative being built: its parts not fitted leave the bill of materials and the
+        /// pick-and-place (their pads stay), its values replace the drawn ones there. Null: the design as drawn.</param>
+        public static Dictionary<string, string> Generate(BoardDocument board, string projectName = "robotwin", Design.Fitting? fitting = null)
         {
             ZoneFiller.RefillOutdated(board);
             string Name(string suffix) => projectName + "-" + suffix;
@@ -39,16 +41,16 @@ namespace RobotTwin.CoreSim.Pcb
             files[Name("B_Silkscreen.gbo")] = Silkscreen(board, CopperLayer.Bottom);
             files[Name("Edge_Cuts.gm1")] = Outline(board);
             foreach (var kv in Drills(board, projectName)) files[kv.Key] = kv.Value;
-            files[Name("BOM.csv")] = Bom(board);
-            files[Name("CPL.csv")] = PickAndPlace(board);
+            files[Name("BOM.csv")] = Bom(board, fitting);
+            files[Name("CPL.csv")] = PickAndPlace(board, fitting);
             return files;
         }
 
-        public static void WriteZip(BoardDocument board, string zipPath, string projectName = "robotwin")
+        public static void WriteZip(BoardDocument board, string zipPath, string projectName = "robotwin", Design.Fitting? fitting = null)
         {
             if (File.Exists(zipPath)) File.Delete(zipPath);
             using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
-            foreach (var kv in Generate(board, projectName))
+            foreach (var kv in Generate(board, projectName, fitting))
             {
                 var entry = zip.CreateEntry(kv.Key, CompressionLevel.Optimal);
                 using var writer = new StreamWriter(entry.Open(), new UTF8Encoding(false));
@@ -356,11 +358,18 @@ namespace RobotTwin.CoreSim.Pcb
 
         private static string Csv(string s) => "\"" + (s ?? string.Empty).Replace("\"", "\"\"") + "\"";
 
+        // [variants] the components the alternative fits, and the value it gives each
+        private static IEnumerable<BoardComponent> Fitted(BoardDocument board, Design.Fitting? fitting) =>
+            fitting == null ? board.Components : board.Components.Where(c => !fitting.NotFitted.Contains(c.RefDes));
+
+        private static string ValueOf(BoardComponent c, Design.Fitting? fitting) =>
+            fitting != null && fitting.Values.TryGetValue(c.RefDes, out var v) ? v : c.Value;
+
         /// <summary>Bill of materials (JLCPCB columns): one line per value + footprint, with designators and side.</summary>
-        public static string Bom(BoardDocument board)
+        public static string Bom(BoardDocument board, Design.Fitting? fitting = null)
         {
             var sb = new StringBuilder("Comment,Designator,Footprint,Quantity,Side\n");
-            foreach (var g in board.Components.GroupBy(c => (c.Value, c.FootprintId)).OrderBy(g => g.Key.FootprintId, StringComparer.Ordinal).ThenBy(g => g.Key.Value, StringComparer.Ordinal))
+            foreach (var g in Fitted(board, fitting).GroupBy(c => (Value: ValueOf(c, fitting), c.FootprintId)).OrderBy(g => g.Key.FootprintId, StringComparer.Ordinal).ThenBy(g => g.Key.Value, StringComparer.Ordinal))
             {
                 var refs = string.Join(" ", g.Select(c => c.RefDes).OrderBy(r => r, StringComparer.Ordinal));
                 var sides = g.Select(c => c.Side == CopperLayer.Top ? "Top" : "Bottom").Distinct().OrderByDescending(s => s);
@@ -372,17 +381,17 @@ namespace RobotTwin.CoreSim.Pcb
         }
 
         /// <summary>Pick-and-place (JLCPCB CPL): part centre in mm from the lower-left corner, side and rotation.</summary>
-        public static string PickAndPlace(BoardDocument board)
+        public static string PickAndPlace(BoardDocument board, Design.Fitting? fitting = null)
         {
             var sb = new StringBuilder("Designator,Val,Package,Mid X,Mid Y,Layer,Rotation\n");
-            foreach (var c in board.Components.OrderBy(c => c.RefDes, StringComparer.Ordinal))
+            foreach (var c in Fitted(board, fitting).OrderBy(c => c.RefDes, StringComparer.Ordinal))
             {
                 var fp = FootprintLibrary.Get(c.FootprintId);
                 if (fp == null) continue;
                 var box = c.Courtyard(fp);
                 int rot = ((c.Rotation % 360) + 360) % 360;
                 if (c.Side == CopperLayer.Bottom) rot = (360 - rot) % 360;
-                sb.Append(c.RefDes).Append(',').Append(Csv(c.Value)).Append(',').Append(Csv(c.FootprintId)).Append(',')
+                sb.Append(c.RefDes).Append(',').Append(Csv(ValueOf(c, fitting))).Append(',').Append(Csv(c.FootprintId)).Append(',')
                   .Append(((box.MinX + box.MaxX) / 2).ToString("0.###", CultureInfo.InvariantCulture)).Append("mm,")
                   .Append((board.Height - (box.MinY + box.MaxY) / 2).ToString("0.###", CultureInfo.InvariantCulture)).Append("mm,")
                   .Append(c.Side == CopperLayer.Top ? "Top" : "Bottom").Append(',')

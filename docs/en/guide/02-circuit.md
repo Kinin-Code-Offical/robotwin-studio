@@ -92,6 +92,22 @@ A circuit that would burn in real life burns here too: an LED without a resistor
 
 You can drive the pins of an Arduino or ESP32 that has no code by hand in the **Board pins** tab: input, pull-up, LOW, HIGH or PWM.
 
+## Design alternatives
+
+You can keep versions of the same circuit together: alternatives in which some parts are left off, or some values or parts are different. For example a cheaper version without the flyback diode, or one with 1 kΩ instead of 330 Ω for a longer battery life.
+
+1. In **Simulation → Design alternative → Alternatives…**, add one with **New alternative**, and write its name and what it is for.
+2. With the alternative chosen, select a part. In the **Alternative** section of its inspector, give its state in that alternative with **Not fitted in this alternative** or **Value in this alternative**. The parameters above belong to every alternative.
+3. A part that is not fitted shows faded and crossed out on the sheet; a part with another value shows that value highlighted.
+
+The chosen alternative is changed in the list beside **Simulate**. It is the one simulated, and the one that goes into the bill of materials (BOM), the manufacturing files (the BOM and pick-and-place file of the Gerber package) and the assembly. A part that is not fitted keeps its pads on the board; the board is one for every alternative.
+
+**Compare** simulates each alternative and the design as drawn for the same second and puts them side by side: the supply's mean and peak power, the charge drawn (mAh), the hottest part and the parts that failed. Only the circuit runs here, not the boards' code.
+
+![Design alternatives](../../images/en/variants-window.png)
+
+Alternatives follow parts by their identity, not their names: renaming a part keeps what it is in each alternative.
+
 ## Exporting
 
 From the circuit page you can export:

@@ -128,7 +128,7 @@ namespace RobotTwin.CoreSim.Sandbox
                     }
 
                     pkg = design.Package;
-                    sch = pkg.Schematic;
+                    sch = Variants.Active(pkg.Schematic);   // [variants] the board runs its design's active alternative
                 }
                 else if (o.Kind == WorldObjectKind.Component && o.PartId != null)
                 {

@@ -49,6 +49,7 @@ namespace RobotWin.Studio.Analysis
         private readonly TextBox _aeroDir = new TextBox { Width = 70, Text = "0" };
         private readonly TextBox _aeroElev = new TextBox { Width = 70, Text = "0" };
         private readonly CheckBox _thermal = new CheckBox { Content = "Isınma (kartlar, motorlar)", IsChecked = true };
+        private readonly CheckBox _stepCheck = new CheckBox { Content = "Zaman adımı denetimi", IsChecked = false, ToolTip = "Koşunun ilk 2 saniyesi fiziğin yarım adımıyla yeniden çalıştırılır; parçaların yolu ve kaydedilen her büyüklük ne kadar değişiyor, yazılır (adımın sonuca katkısı ölçülür, varsayılmaz)." };
         private readonly CheckBox _meshCheck = new CheckBox { Content = "Ağ yakınsaması denetimi", IsChecked = false, ToolTip = "Her parçanın en kötü anı 1,4 kat daha ince ağla yeniden çözülür ve gerilmenin ne kadar değiştiği yazılır (%10'dan fazlası: sonuç ağa duyarlı)." };
         private readonly CheckBox _bands = new CheckBox { Content = "Belirsizlik bandı (4 tolerans koşusu)", IsChecked = false, ToolTip = "Parça değerleri tolerans bantlarından (klonlar ±%35–40) çekilerek 4 kez daha çalıştırılır; grafiklerde gerçek parçaların düşebileceği aralık gölge olarak görünür. Render süresi ~5 katına çıkar." };
         private readonly Button _render = new Button { Content = "Render al", Padding = new Thickness(14, 6, 14, 6) };
@@ -156,7 +157,7 @@ namespace RobotWin.Studio.Analysis
             root.Children.Add(center);
             Content = root;
 
-            foreach (var cb in new[] { _aero, _tunnel, _thermal, _bands, _meshCheck, _forces, _air, _follow }) cb.Foreground = Res("B.Text");
+            foreach (var cb in new[] { _aero, _tunnel, _thermal, _bands, _meshCheck, _stepCheck, _forces, _air, _follow }) cb.Foreground = Res("B.Text");
             _timer.Tick += (_, _) => Tick();
             Closed += (_, _) =>
             {
@@ -236,6 +237,7 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(tunnel);
             left.Children.Add(new Border { Child = _thermal, Margin = new Thickness(0, 8, 0, 0) });
             left.Children.Add(new Border { Child = _meshCheck, Margin = new Thickness(0, 8, 0, 0) });
+            left.Children.Add(new Border { Child = _stepCheck, Margin = new Thickness(0, 8, 0, 0) });
             left.Children.Add(new Border { Child = _bands, Margin = new Thickness(0, 8, 0, 0) });
             _render.Style = (Style)Application.Current.FindResource("Btn.Primary");
             _render.Margin = new Thickness(0, 16, 0, 0);
@@ -292,6 +294,7 @@ namespace RobotWin.Studio.Analysis
                 ThermalFrames = Math.Max(10, (int)(duration * 10)),
                 UncertaintyRuns = _bands.IsChecked == true ? 4 : 0,
                 StressMeshCheck = _meshCheck.IsChecked == true,
+                TimeStepCheck = _stepCheck.IsChecked == true,
                 Inputs = Inputs
             };
         }
@@ -504,7 +507,8 @@ namespace RobotWin.Studio.Analysis
             if (r.AeroFrames.Count > 0) _air.IsChecked = true;   // the air was computed: show it
             _csv.IsEnabled = _save.IsEnabled = true;
             _status.Text = $"{r.SimulatedSeconds:0.###} s hesaplandı: {r.Channels.Count} kare × {r.Channels.Channels.Count} kanal, {r.Stress.Count} parçada {r.Stress.Sum(x => x.Frames.Count)} gerilme çözümü, {r.AeroFrames.Count} akış karesi; {r.WallSeconds:0.0} s sürdü."
-                + (r.HaltReason.Length > 0 ? " Durdu: " + r.HaltReason : string.Empty);
+                + (r.HaltReason.Length > 0 ? " Durdu: " + r.HaltReason : string.Empty)
+                + (r.StepCheck is { } sc ? "\n" + StepCheckLine(sc) : string.Empty);
             _stressMax = Math.Max(1e-9, r.Stress.SelectMany(x => x.Frames).Select(f => f.MaxVonMises).DefaultIfEmpty(0).Max());
             _forceMax = Math.Max(1e-9, r.Loads.Values.SelectMany(l => l).SelectMany(l => l.Loads).Select(l => l.Force.Length).DefaultIfEmpty(0).Max());
             _timeline.Maximum = Math.Max(1e-6, r.Channels.Duration);
@@ -522,6 +526,13 @@ namespace RobotWin.Studio.Analysis
             if (_heatPart.Items.Count > 0) _heatPart.SelectedIndex = 0;
             var log = new StringBuilder();
             log.AppendLine(r.Settings.ToString());
+            var uncertainty = Uncertainty(r);
+            if (uncertainty.Count > 0)
+            {
+                log.AppendLine("Sayısal belirsizlik:");
+                foreach (var line in uncertainty) log.AppendLine("  " + line);
+            }
+
             foreach (var l in r.Log) log.AppendLine(l);
             foreach (var st in r.Stress)
             {
@@ -616,6 +627,28 @@ namespace RobotWin.Studio.Analysis
                 + (Math.Abs(_benchLast.Gain - 1) > 0.15 ? $"  — gerçek parça modelden %{(_benchLast.Gain - 1) * 100:+0;-0} farklı; parça 'klon' mu, besleme gerilimi aynı mı?" : string.Empty);
             PlotSelected();
         }
+
+        /// <summary>
+        /// [uncertainty] How far the result rests on the solvers' discretisation, in one place: the time step (when checked), the
+        /// stress meshes, the flow grid and the parts' tolerances, each as measured in this run.
+        /// </summary>
+        private static List<string> Uncertainty(AnalysisResult r)
+        {
+            var lines = new List<string>();
+            if (r.StepCheck is { } sc) lines.Add(StepCheckLine(sc));
+            foreach (var st in r.Stress.Where(x => double.IsFinite(x.MeshChange)))
+                lines.Add($"Ağ ({st.Name}): daha ince ağda gerilme %{st.MeshChange * 100:0.#} değişiyor " + (st.MeshChange > 0.10 ? "(ağa duyarlı)" : "(ağdan bağımsız)"));
+            var grid = r.AeroFrames.Select(a => a.GridUncertainty).Where(double.IsFinite).DefaultIfEmpty(double.NaN).Max();
+            if (double.IsFinite(grid)) lines.Add($"Akış ızgarası (GCI): sürükleme ±%{grid * 100:0.#}");
+            if (r.BandRuns > 0) lines.Add($"Parça toleransları: {r.BandRuns} koşu, grafiklerde gölge");
+            return lines;
+        }
+
+        private static string StepCheckLine(StepCheck sc) =>
+            $"Zaman adımı: ilk {sc.Seconds:0.#} s yarım adımla ({SiValue.Format(sc.HalfStep, "s")}) yeniden: konum en çok {sc.PositionM * 1000:0.###} mm farklı"
+            + (sc.PositionObject != null ? $" ({sc.PositionObject})" : string.Empty)
+            + (sc.WorstChannel != null ? $", en çok değişen büyüklük %{sc.WorstRelative * 100:0.#} ({sc.WorstChannel})" : string.Empty)
+            + (sc.WorstRelative > 0.10 ? " — adıma duyarlı: daha yüksek doğrulukla render alın" : sc.WorstRelative > 0.02 ? " — adıma az duyarlı" : " — adımdan bağımsız sayılır");
 
         private void BuildPartList()
         {
@@ -1209,6 +1242,7 @@ namespace RobotWin.Studio.Analysis
             _aeroElev.Text = s.AeroElevationDeg.ToString("0.#", CultureInfo.InvariantCulture);
             _thermal.IsChecked = s.Thermal;
             _meshCheck.IsChecked = s.StressMeshCheck;
+            _stepCheck.IsChecked = s.TimeStepCheck;
             _bands.IsChecked = s.UncertaintyRuns > 0;
             foreach (var cb in _parts.Children.OfType<CheckBox>()) cb.IsChecked = s.StressObjects.Contains((string)cb.Tag);
             Show(r);

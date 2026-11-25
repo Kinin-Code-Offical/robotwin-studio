@@ -232,7 +232,7 @@ namespace RobotWin.Studio.Simulation
                 var settings = AppSettings.Current;
                 double ambient = _workspace.Schematic.Assembly is { Arena: "custom", World: { } world } ? world.AmbientC : settings.AmbientTempC;
                 AmbientC = ambient;
-                Compiled = CircuitCompiler.Compile(_workspace.Schematic, _workspace.Library, new CompileOptions
+                Compiled = CircuitCompiler.Compile(Variants.Active(_workspace.Schematic), _workspace.Library, new CompileOptions   // [variants] the active alternative
                 {
                     Tolerances = _workspace.Schematic.Tolerances,
                     ToleranceRun = 0,

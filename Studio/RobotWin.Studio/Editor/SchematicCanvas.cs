@@ -456,6 +456,7 @@ namespace RobotWin.Studio.Editor
             }
 
             // Parts
+            _variant = Variants.Find(Doc, Doc.ActiveVariant);   // [variants] parts as the active alternative has them
             foreach (var part in Doc.Parts) DrawPart(dc, part, false);
 
             // Net labels
@@ -532,11 +533,23 @@ namespace RobotWin.Studio.Editor
         private static Color Lerp(Color a, Color b, double t) => Color.FromRgb(
             (byte)(a.R + (b.R - a.R) * t), (byte)(a.G + (b.G - a.G) * t), (byte)(a.B + (b.B - a.B) * t));
 
+        /// <summary>[variants] The active alternative while the sheet is drawn (null: the design as drawn).</summary>
+        private DesignVariant? _variant;
+
         private void DrawPart(DrawingContext dc, SchematicPart part, bool ghost)
         {
             var def = Lib.Find(part.PartId);
             if (def == null) return;
             var parameters = Doc.ResolveParameters(Lib, part);
+            var over = ghost ? null : _variant?.For(part);   // [variants] its values, and whether it is fitted, in the active alternative
+            if (over != null && over.Parameters.Count > 0)
+            {
+                var merged = new Dictionary<string, string>(parameters, StringComparer.OrdinalIgnoreCase);
+                foreach (var kv in over.Parameters) merged[kv.Key] = kv.Value;
+                parameters = merged;
+            }
+
+            bool notFitted = over?.NotFitted == true;
             bool selected = _selection.Contains(part);
             bool hovered = ReferenceEquals(_hover, part);
             var visual = Simulating && !ghost ? VisualFor(part, def) : default;
@@ -575,6 +588,7 @@ namespace RobotWin.Studio.Editor
             }
 
             if (ghost) dc.PushOpacity(0.55);
+            if (notFitted) dc.PushOpacity(0.35);
             dc.PushTransform(new MatrixTransform(SymbolRenderer.PartMatrix(part, _scale, new Point(_offset.X, _offset.Y))));
             var ink = selected ? Accent : SymbolRenderer.SymbolColor;
             SymbolRenderer.Draw(dc, def, parameters, _scale, ink, visual);
@@ -591,7 +605,23 @@ namespace RobotWin.Studio.Editor
             }
 
             if (ghost) dc.Pop();
-            DrawPartLabels(dc, part, def, parameters, ghost);
+            if (notFitted)
+            {
+                // [variants] left off in this alternative: faded, crossed out, and said so under it
+                dc.Pop();
+                var nb = PartBounds(part);
+                var nr = new Rect(ToScreen(nb.Left, nb.Top), ToScreen(nb.Right, nb.Bottom));
+                var cross = MakePen(Color.FromArgb(0xC0, Accent.R, Accent.G, Accent.B), 1.5, false);
+                dc.DrawLine(cross, nr.TopLeft, nr.BottomRight);
+                dc.DrawLine(cross, nr.BottomLeft, nr.TopRight);
+                if (_scale >= 6)
+                {
+                    var dnp = Text(Shell.Lang.T("takılmaz"), Math.Max(9, Math.Min(12, _scale * 0.62)), Accent, true);
+                    dc.DrawText(dnp, new Point((nr.Left + nr.Right - dnp.Width) / 2, nr.Bottom + 2));
+                }
+            }
+
+            DrawPartLabels(dc, part, def, parameters, ghost, over != null && !notFitted);
         }
 
         private bool IsConnectionPointCached(GridPoint tip, SchematicPart owner)
@@ -613,7 +643,7 @@ namespace RobotWin.Studio.Editor
             return false;
         }
 
-        private void DrawPartLabels(DrawingContext dc, SchematicPart part, PartDefinition def, IReadOnlyDictionary<string, string> parameters, bool ghost)
+        private void DrawPartLabels(DrawingContext dc, SchematicPart part, PartDefinition def, IReadOnlyDictionary<string, string> parameters, bool ghost, bool changed = false)
         {
             if (def.Symbol == SymbolKind.Ground || _scale < 6) return;
             if (def.Symbol == SymbolKind.PowerRail)
@@ -630,7 +660,7 @@ namespace RobotWin.Studio.Editor
             var r = new Rect(ToScreen(b.Left, b.Top), ToScreen(b.Right, b.Bottom));
             double size = Math.Max(10, Math.Min(14, _scale * 0.78));
             var refText = Text(part.RefDes, size, ghost ? MutedText : LabelColor, false);
-            var valText = string.IsNullOrEmpty(value) ? null : Text(value, size * 0.92, MutedText);
+            var valText = string.IsNullOrEmpty(value) ? null : Text(value, size * 0.92, changed ? Accent : MutedText);   // [variants] changed in the active alternative
 
             if (def.Symbol == SymbolKind.Board)
             {

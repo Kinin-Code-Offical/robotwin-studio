@@ -902,7 +902,7 @@ namespace RobotWin.Studio.Pages
             var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                var compiled = CircuitCompiler.Compile(W.Schematic, W.Library);
+                var compiled = CircuitCompiler.Compile(Variants.Active(W.Schematic), W.Library);   // [variants]
                 var sim = new AnalogSimulator(compiled.Circuit) { MaxSubstepsPerCall = 50_000 };
                 sim.Initialize();
                 for (int i = 0; i < 25; i++) sim.Step(4e-3);
@@ -1034,7 +1034,7 @@ namespace RobotWin.Studio.Pages
             if (dlg.ShowDialog(Owner) != true) return;
             try
             {
-                GerberExporter.WriteZip(board, dlg.FileName, name.Replace(' ', '_'));
+                GerberExporter.WriteZip(board, dlg.FileName, name.Replace(' ', '_'), Variants.FittingOf(W.Schematic, W.Library));   // [variants] its BOM and pick-and-place
                 Canvas.Refresh();
                 W.Status = "Üretim dosyaları kaydedildi: " + Path.GetFileName(dlg.FileName);
             }
