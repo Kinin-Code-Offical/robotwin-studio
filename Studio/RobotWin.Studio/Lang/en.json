@@ -9762,6 +9762,7 @@
   "{…} bağlantı": "{0} connections",
   "{…} ERC hatası": "{0} ERC errors",
   "{…} bağlantı · {…} ERC hatası": "{0} connections · {1} ERC errors",
-  "{…} parça · {…} bağlantı · {…} ERC hatası": "{0} parts · {1} connections · {2} ERC errors"
+  "{…} parça · {…} bağlantı · {…} ERC hatası": "{0} parts · {1} connections · {2} ERC errors",
+  "TCP {…}:{…} reddedildi (dinleyen yok)": "TCP {0}:{1} refused (nobody listening)"
  }
 }

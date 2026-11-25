@@ -38,6 +38,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private readonly Dictionary<uint, uint> _registers = new Dictionary<uint, uint>();
         private readonly Dictionary<uint, Func<XtensaCore, bool>> _romFunctions = new Dictionary<uint, Func<XtensaCore, bool>>();
         private readonly Dictionary<uint, string> _romNames = new Dictionary<uint, string>();
+        private readonly Dictionary<string, uint> _romAddresses = new Dictionary<string, uint>();
 
         public Esp32Soc()
         {
@@ -131,6 +132,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             foreach (var symbol in elf.Symbols)
             {
                 if (symbol.Value >= RomBase && symbol.Value < RomEnd && !_romNames.ContainsKey(symbol.Value)) _romNames[symbol.Value] = symbol.Name;
+                if (symbol.Value >= RomBase && symbol.Value < RomEnd) _romAddresses[symbol.Name] = symbol.Value;
                 if (symbol.Name == "g_ticks_per_us_pro") _ticksPerUsPro = symbol.Value;
                 if (symbol.Name == "g_ticks_per_us_app") _ticksPerUsApp = symbol.Value;
             }
@@ -138,6 +140,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             BindRom();
             FillRomData(elf);
             BindAppFunctions(elf);
+            BindHostCalls(elf);
+            BindWifi(elf);
             // As the second-stage bootloader leaves it when it calls the application's entry (call_start_cpu0, which
             // begins with ENTRY): windows on, user vector mode, CALLINC of a CALLX4, interrupts at level 0, and its
             // stack near the top of the ROM's reserved DRAM, the caller pointer below it pointing at itself.
@@ -542,6 +546,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         private bool ServeRom(XtensaCore core)
         {
+            if (core.Pc == HostCallReturn && FinishHostCall(core)) return true;
             if (core == App && core.Pc == 0x40000400)
             {
                 // The ROM's APP_CPU start: it waits until the PRO_CPU set the boot address, then calls it as the
@@ -566,7 +571,6 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             return true;
         }
 
-        /// <summary>Serves the ROM function called <paramref name="name"/> (when the firmware links it) with <paramref name="body"/>.</summary>
         /// <summary>The ROM's flash description (esp_rom_spiflash_chip_t g_rom_flashchip, in the ROM's reserved DRAM).</summary>
         private const uint RomFlashChip = 0x3FFAE270;
 
@@ -580,11 +584,14 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             Write32(RomFlashChip + 20, statusMask);
         }
 
+        /// <summary>
+        /// Serves the ROM function called <paramref name="name"/> (when the firmware links it) with <paramref name="body"/>,
+        /// whichever of the ROM's names for that address the ELF lists first (intr_matrix_set is also
+        /// esp_rom_route_intr_matrix, uart_tx_one_char esp_rom_uart_tx_one_char …).
+        /// </summary>
         private void Rom(string name, Func<XtensaCore, bool> body)
         {
-            foreach (var pair in _romNames)
-                if (pair.Value == name)
-                    _romFunctions[pair.Key] = body;
+            if (_romAddresses.TryGetValue(name, out uint at)) _romFunctions[at] = body;
         }
     }
 }

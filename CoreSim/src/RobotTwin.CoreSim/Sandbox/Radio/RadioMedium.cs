@@ -427,6 +427,23 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
             lock (_gate) return e.SoftAp == null ? 0 : _nodes.OfType<Esp32RadioNode>().Count(s => s.StaNetwork == e.SoftAp && s.StaStatus == 3);
         }
 
+        /// <summary>The stations associated with a node's soft-AP: their MAC, address and signal at the AP.</summary>
+        public List<(byte[] Mac, uint Ip, int Rssi)> SoftApMembers(Esp32RadioNode e, double t)
+        {
+            lock (_gate)
+            {
+                var list = new List<(byte[], uint, int)>();
+                if (e.SoftAp == null) return list;
+                foreach (var s in _nodes.OfType<Esp32RadioNode>())
+                {
+                    if (s == e || s.StaNetwork != e.SoftAp || s.StaStatus != 3 || !s.IsOn()) continue;
+                    list.Add(((byte[])s.Mac.Clone(), s.StaIp, (int)Math.Round(Rssi(s, e, RadioTech.WiFi, t))));
+                }
+
+                return list;
+            }
+        }
+
         private WifiNetwork? NetworkOf(Esp32RadioNode e) => e.StaNetwork != null && e.StaStatus == 3 ? e.StaNetwork : e.SoftAp;
 
         private uint IpOn(Esp32RadioNode e, WifiNetwork net) => e.StaNetwork == net && e.StaStatus == 3 ? e.StaIp : e.SoftAp == net ? net.Gateway : 0;

@@ -96,8 +96,11 @@ namespace RobotTwin.CoreSim.Design
         {
             if (string.IsNullOrEmpty(source)) return null;
             if (Includes(source, "esp_camera.h")) return "esp_camera";
-            foreach (var header in new[] { "WiFi.h", "WiFiClient.h", "WiFiUdp.h", "WiFiClientSecure.h", "esp_wifi.h", "esp_now.h", "HTTPClient.h", "WebServer.h", "ESPmDNS.h", "ArduinoOTA.h", "AsyncTCP.h" })
-                if (Includes(source, header)) return "Wi-Fi";
+            // The station, the soft-AP, UDP and TCP (WiFi, WiFiUdp, WiFiClient/Server, WebServer, HTTPClient to an address) run
+            // on the emulator with the firmware's own lwIP; TLS (the crypto accelerators), ESP-NOW (vendor frames), mDNS, OTA
+            // and AsyncTCP not yet.
+            foreach (var header in new[] { "WiFiClientSecure.h", "esp_now.h", "ESPmDNS.h", "ArduinoOTA.h", "AsyncTCP.h", "NetworkClientSecure.h" })
+                if (Includes(source, header)) return "Wi-Fi (" + header.Replace(".h", string.Empty) + ")";
             foreach (var header in new[] { "BLEDevice.h", "BluetoothSerial.h", "NimBLEDevice.h", "Bluepad32.h", "esp_bt.h", "BleGamepad.h" })
                 if (Includes(source, header)) return "Bluetooth";
             return null;

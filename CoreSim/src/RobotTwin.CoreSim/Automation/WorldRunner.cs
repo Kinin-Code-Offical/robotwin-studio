@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using RobotTwin.CoreSim.Analog;
 using RobotTwin.CoreSim.Analog.Devices;
 using RobotTwin.CoreSim.Design;
+using RobotTwin.CoreSim.Firmware.Esp32;
 using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
 using RobotTwin.CoreSim.Sandbox.Radio;
@@ -158,6 +159,7 @@ namespace RobotTwin.CoreSim.Automation
             {
                 var board = Boards.FirstOrDefault(b => b.ObjectId == prog.ObjectId && b.RefDes == prog.RefDes);
                 if (board?.Esp != null && WorldRadio.NodeOf(Radio, prog, World) is { } node) Esp32RadioBridge.Attach(Radio, node, board.Esp);
+                else if (board?.Esp32 is Esp32EmulatedBoard emulated && WorldRadio.NodeOf(Radio, prog, World) is { } chipNode) MediumWifiNetwork.Attach(Radio, chipNode, emulated);
             }
         }
 

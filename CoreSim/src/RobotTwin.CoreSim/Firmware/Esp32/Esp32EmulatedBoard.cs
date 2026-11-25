@@ -85,6 +85,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>The emulated chip of the current run (null while the board is off): its registers, cores and peripherals.</summary>
         public Esp32Soc? Chip => _soc;
 
+        /// <summary>The world's Wi-Fi (the radio medium for this board's node); each boot's chip joins it with its own lwIP.</summary>
+        public IEsp32WifiNetwork? Wifi { get; set; }
+
+        /// <summary>The world time the chip's clock started from (its seconds plus this are the world's).</summary>
+        public double ChipTimeOrigin => _bootTime;
+
         /// <summary>Why the chip stopped for good in this run (an instruction or ROM function the emulator lacks …), or null.</summary>
         public string? Halted { get; private set; }
 
@@ -260,6 +266,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             // The ROM and the 2nd-stage bootloader (not emulated: the application is loaded straight away) take their time
             // before the application starts, so setup() comes when it does in the fast mode and on the chip.
             _bootTime = time + Math.Max(0.0, Options.BootDelay - Options.AppStartTime);
+            if (Wifi != null)
+            {
+                Wifi.Reset(0);
+                soc.WifiNetwork = Wifi;
+                soc.WifiLog += Note;
+            }
             State = Esp32BoardState.Running;
             BootCount++;
             _everRan = true;

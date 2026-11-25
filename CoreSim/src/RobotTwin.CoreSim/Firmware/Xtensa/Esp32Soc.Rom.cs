@@ -267,6 +267,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                          "Cache_Read_Enable", "Cache_Read_Disable", "Cache_Flush",
                          "Cache_Read_Init", "mmu_init", "cache_flash_mmu_set", "cache_sram_mmu_set", "esp_rom_uart_tx_wait_idle", "uart_tx_wait_idle",
                          "esp_rom_install_uart_printf", "ets_install_putc1", "ets_install_putc2", "ets_install_uart_printf", "esp_rom_uart_set_as_console",
+                         "uart_tx_switch", "esp_rom_output_set_as_console",
                          "ets_intr_lock", "ets_intr_unlock", "esp_rom_install_channel_putc", "uart_div_modify", "esp_rom_uart_set_clock_baudrate",
                          "Cache_Flush_rom", "esp_rom_Cache_Flush", "spi_flash_attach", "esp_rom_spiflash_attach", "esp_rom_spiflash_unlock",
                          "esp_rom_spiflash_config_clk", "esp_rom_spiflash_wait_idle", "esp_rom_spiflash_select_qio_pins",
@@ -309,17 +310,17 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             // The caches and the flash MMU: the flash is mapped straight into IROM/DROM here, so every cache and MMU
             // routine (whatever its ROM variant's name) succeeds without doing anything.
-            foreach (var pair in _romNames)
+            foreach (var pair in _romAddresses)
             {
-                if (_romFunctions.ContainsKey(pair.Key)) continue;
-                string n = pair.Value;
+                if (_romFunctions.ContainsKey(pair.Value)) continue;
+                string n = pair.Key;
                 // eFuse flash pins (0: the default SPI pins) and the ROM's own SPI flash helpers (the driver talks to SPI1 itself).
                 if (n.StartsWith("Cache_", StringComparison.Ordinal) || n.StartsWith("cache_", StringComparison.Ordinal) || n.StartsWith("mmu_", StringComparison.Ordinal)
                     || n.StartsWith("esp_rom_efuse_", StringComparison.Ordinal) || n.StartsWith("ets_efuse_", StringComparison.Ordinal)
                     || n.StartsWith("esp_rom_spiflash_", StringComparison.Ordinal) || n.StartsWith("SPI_", StringComparison.Ordinal) || n.StartsWith("spi_flash_", StringComparison.Ordinal)
                     || n.StartsWith("esp_rom_output_", StringComparison.Ordinal) || n.StartsWith("esp_rom_uart_", StringComparison.Ordinal)
                     || n.StartsWith("gpio_matrix_", StringComparison.Ordinal) || n.StartsWith("gpio_pad_", StringComparison.Ordinal) || n.StartsWith("esp_rom_gpio_", StringComparison.Ordinal))
-                    _romFunctions[pair.Key] = c => Return(c, 0);
+                    _romFunctions[pair.Value] = c => Return(c, 0);
             }
         }
 

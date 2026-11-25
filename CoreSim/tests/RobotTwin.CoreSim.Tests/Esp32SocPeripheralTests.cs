@@ -449,8 +449,10 @@ namespace RobotTwin.CoreSim.Tests
         public void EmulatorGapNamesWhatTheEmulatorLacks()
         {
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <Wire.h>\nvoid setup() {}"));
-            Assert.Equal("Wi-Fi", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFi.h>"));
-            Assert.Equal("Wi-Fi", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#  include <esp_now.h>"));
+            Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFi.h>\n#include <WiFiUdp.h>\nvoid setup() { WiFi.begin(\"a\", \"b\"); }"));
+            Assert.Equal("Wi-Fi (esp_now)", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#  include <esp_now.h>"));
+            Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFi.h>\nvoid setup() { WiFi.softAP(\"ap\"); }"));
+            Assert.Equal("Wi-Fi (WiFiClientSecure)", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFiClientSecure.h>"));
             Assert.Equal("esp_camera", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include \"esp_camera.h\""));
             Assert.Equal("Bluetooth", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <BLEDevice.h>"));
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("// WiFi.h is not used here"));

@@ -83,6 +83,10 @@ namespace RobotWin.Studio.World
             {
                 Esp32RadioBridge.Attach(Radio, node, esp);
             }
+            else if (cosim is Esp32EmulatedBoard emulated && Radio != null && World != null && WorldRadio.NodeOf(Radio, prog, World) is { } chipNode)
+            {
+                MediumWifiNetwork.Attach(Radio, chipNode, emulated);   // hardware-compatible mode: the firmware's own lwIP on the medium
+            }
         }
 
         /// <summary>Whether a board's UART reaches the serial monitor (USB cable plugged, or no cable in a legacy world).</summary>

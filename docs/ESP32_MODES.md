@@ -79,6 +79,6 @@ A hardware-compatible board now runs on the emulator on the circuit page and in 
 2. The Xtensa LX6 core and instruction tests.
 3. The chip: memory map, ELF loading, ROM, two cores, interrupt matrix, FreeRTOS tick → Blink and Serial.
 4. Peripherals → every template without radio.
-5. Wi-Fi/BLE trapping → the radio templates.
+5. Wi-Fi/BLE trapping → the radio templates. The Wi-Fi station and soft-AP are in: the firmware's own lwIP (DHCP, ARP, UDP, TCP) reaches the radio medium; the closed driver's API and frame boundary are served by the emulator. Sketches using BLE, ESP-NOW, TLS or mDNS still run in the fast mode.
 6. Mode difference report, speed (idle skip, decoded-block cache), docs. The report is in: `--esp32-compare report.md`; the six comparable templates agree in both modes (the differences it found are fixed: the RMT, boot time, `millis()`'s origin, tick-aligned `delay()`, servo ticks, the LEDC update wait). Speed: a fetch window per core and a short path for the data RAM; in the release build the hardware mode runs the templates at 1.2-8× real time (the fast mode at 1.7-15×).
 7. (P2) Hardware in the loop.

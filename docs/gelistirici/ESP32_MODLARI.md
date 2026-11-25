@@ -79,6 +79,6 @@ Donanım uyumlu kart artık devre sayfasında ve dünyada emülatörde çalış�
 2. Xtensa LX6 çekirdeği ve komut testleri.
 3. Yonga: bellek haritası, ELF yükleme, ROM, iki çekirdek, kesme matrisi, FreeRTOS tick → Blink ve Serial.
 4. Çevre birimleri → radyosuz bütün şablonlar.
-5. Wi-Fi/BLE yakalama → radyolu şablonlar.
+5. Wi-Fi/BLE yakalama → radyolu şablonlar. Wi-Fi istasyonu ve softAP hazır: yazılımın kendi lwIP'si (DHCP, ARP, UDP, TCP) radyo ortamına bağlanıyor; kapalı sürücünün API'si ve çerçeve sınırı emülatörde karşılanıyor. BLE, ESP-NOW, TLS ve mDNS kullanan çizimler şimdilik hızlı modda.
 6. Mod farkı raporu, performans (boşta atlama, çözülmüş blok önbelleği), belgeler. Rapor hazır: `--esp32-compare rapor.md`; altı karşılaştırılabilir şablon iki modda uyumlu (bulduğu farklar düzeltildi: RMT, önyükleme süresi, `millis()` başlangıcı, tik hizalı `delay()`, servo tikleri, LEDC güncelleme beklemesi). Hız: getirme penceresi ve veri RAM'i kısa yolu; sürüm derlemesinde donanım modu şablonları gerçek zamanın 1,2-8 katında koşuyor (hızlı mod 1,7-15 kat).
 7. (P2) Donanım içeren test.
