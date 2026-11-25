@@ -242,6 +242,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _wakeAt = double.NaN;
             _ext0 = (-1, false);
             soc.PadVoltage = gpio => gpio >= 0 && gpio < _pads.Length && _pads[gpio].Pin is { } pin ? pin.Voltage : 0;
+            soc.RmtFrame += (gpio, bytes) =>
+            {
+                // [neopixel] the frame reaches the strips whose DIN is on that pad (lit only while powered)
+                foreach (var (g, strip) in LedStrips)
+                    if (g == gpio && strip.Powered) strip.Strip.Show(bytes);
+            };
             soc.TouchValue = gpio => gpio >= 0 && gpio < _touch.Length ? _touch[gpio] : 75;
             soc.I2cBuses[0] = I2c;    // Wire
             soc.I2cBuses[1] = I2c1;   // Wire1

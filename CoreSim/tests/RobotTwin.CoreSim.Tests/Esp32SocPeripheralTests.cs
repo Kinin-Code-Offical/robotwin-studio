@@ -300,6 +300,38 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void RmtSendsWs2812BitsToThePad()
+        {
+            var soc = Chip();
+            int pad = -1;
+            byte[]? frame = null;
+            soc.RmtFrame += (gpio, bytes) =>
+            {
+                pad = gpio;
+                frame = bytes;
+            };
+            soc.Write32(0x3FF4906C, 2u << 12);              // IO_MUX GPIO5: function GPIO
+            soc.Write32(0x3FF44530 + 5 * 4, 87);            // FUNC_OUT_SEL: RMT_SIG_OUT0
+            soc.Write32(0x3FF56020, 2u | 1u << 24);         // CH0CONF0: DIV_CNT 2 (25 ns ticks), one block
+            soc.Write32(0x3FF56024, 1u << 17);              // CH0CONF1: APB clock
+            byte value = 0xA5;
+            for (int i = 0; i < 8; i++)
+            {
+                bool one = (value & (0x80 >> i)) != 0;
+                uint high = one ? 32u : 16u, low = one ? 18u : 34u;    // T1H 0.8 µs / T0H 0.4 µs
+                soc.Write32(0x3FF56800 + (uint)i * 4, high | 1u << 15 | low << 16);
+            }
+
+            soc.Write32(0x3FF56800 + 8 * 4, 0);             // end marker
+            soc.Write32(0x3FF560A8, 1);                     // TX_END interrupt enabled
+            soc.Write32(0x3FF56024, 1u << 17 | 1);          // TX_START
+            soc.Run(240 * 20);                              // 8 bits × 1.25 µs = 10 µs
+            Assert.Equal(5, pad);
+            Assert.Equal(new byte[] { 0xA5 }, frame);
+            Assert.NotEqual(0u, soc.Read32(0x3FF560A0) & 1); // TX_END
+        }
+
+        [Fact]
         public void EmulatorGapNamesWhatTheEmulatorLacks()
         {
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <Wire.h>\nvoid setup() {}"));
