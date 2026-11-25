@@ -698,6 +698,7 @@ namespace RobotWin.Studio.Simulation
                 _esp32.Add(cosim);
                 Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (ESP32 HAL modeli, 240 MHz)", AnalogEventKind.StateChange));
                 AttachI2c(cosim.I2c, part);
+                AttachLedStrips(cosim, part);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is EntryPointNotFoundException || ex is System.IO.IOException || ex is InvalidOperationException)
             {
@@ -745,6 +746,7 @@ namespace RobotWin.Studio.Simulation
                 Log.Add(new SimLogEntry(0, refDes, $"Firmware yüklendi: {fileName} (gerçek yonga yazılımı, RobotWin Xtensa emülatörü)", AnalogEventKind.StateChange));
                 Log.Add(new SimLogEntry(0, refDes, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeRunning, AnalogEventKind.StateChange));
                 AttachI2c(board.I2c, part);
+                AttachLedStrips(board, part);
                 return true;
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
@@ -824,6 +826,24 @@ namespace RobotWin.Studio.Simulation
         public II2cDevice? I2cDeviceOf(string refDes) => _i2c.TryGetValue(refDes, out var d) ? d : null;
 
         /// <summary>Puts every I²C module whose SDA/SCL share nets with the board's I²C pins on its bus.</summary>
+        /// <summary>[neopixel] The WS2812B strips whose DIN one of an ESP32's GPIOs drives: its frames reach them.</summary>
+        private void AttachLedStrips(RobotTwin.CoreSim.Firmware.Esp32.IEsp32Board esp, SchematicPart board)
+        {
+            if (Compiled == null) return;
+            var parts = _workspace.Schematic.Parts
+                .Select(p => (FullRef: p.RefDes, Def: _workspace.Library.Find(p.PartId)))
+                .Where(p => p.Def != null)
+                .Select(p => (p.FullRef, p.Def!));
+            var strips = LedStripWiring.Attach(parts, Compiled.PinNode, g => Compiled.PinNode(board.RefDes, "IO" + g),
+                n => new HashSet<int> { n },
+                r => Compiled.DevicesOf(r).OfType<RobotTwin.CoreSim.Firmware.Devices.Ws2812Load>().FirstOrDefault());
+            foreach (var (gpio, strip) in strips)
+            {
+                esp.AttachLedStrip(gpio, strip);
+                Log.Add(new SimLogEntry(0, strip.Id, $"LED şeridi {board.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
+            }
+        }
+
         private void AttachI2c(I2cBus bus, SchematicPart board)
         {
             if (Compiled == null) return;

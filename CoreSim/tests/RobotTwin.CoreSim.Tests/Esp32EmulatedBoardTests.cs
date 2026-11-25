@@ -392,6 +392,35 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(values[values.Count - 1], 12, 14);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_NEOPIXEL_ELF names the NeoPixel sketch's real-chip ELF.</summary>
+        public sealed class NeoPixelElfFactAttribute : FactAttribute
+        {
+            public NeoPixelElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_NEOPIXEL_ELF"))) Skip = "RW_ESP32_NEOPIXEL_ELF verilmedi.";
+            }
+        }
+
+        [NeoPixelElfFact]
+        public void RgbLedWriteAndRmtWriteReachTheStrips()
+        {
+            // rgbLedWrite(5, 10, 20, 30), then nine GRB bytes through rmtWrite on GPIO18 (IDF's RMT TX driver, 10 MHz ticks).
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_NEOPIXEL_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            var frames = new List<(int Gpio, byte[] Bytes)>();
+            soc.RmtFrame += (gpio, bytes) => frames.Add((gpio, bytes));
+            soc.Run(240_000L * 300);
+            string text = soc.Uart0.ToString();
+            _out.WriteLine(text);
+            foreach (var (g, b) in frames) _out.WriteLine($"IO{g}: {BitConverter.ToString(b)}");
+            Assert.Contains("serit yazildi", text);
+            Assert.Contains(frames, f => f.Gpio == 5 && f.Bytes.SequenceEqual(new byte[] { 20, 10, 30 }));
+            Assert.Contains(frames, f => f.Gpio == 18 && f.Bytes.SequenceEqual(new byte[] { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99 }));
+        }
+
         [Esp32SocBringUpTests.ElfFact]
         public void DimmerFirmwareReadsThePotAndDrivesTheLed()
         {

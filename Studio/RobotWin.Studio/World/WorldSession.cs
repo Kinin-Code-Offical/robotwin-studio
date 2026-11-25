@@ -650,6 +650,21 @@ namespace RobotWin.Studio.World
                 },
                 SensorContext(), m => Log.Add(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)));
             esp.Spi.Slaves.AddRange(slaves);
+            AttachLedStrips(esp, prog);
+        }
+
+        /// <summary>[neopixel] The WS2812B strips whose DIN an ESP32 GPIO drives (directly or across cables): its frames reach them.</summary>
+        private void AttachLedStrips(IEsp32Board esp, WorldProgrammable prog)
+        {
+            var c = Circuit!.Compiled;
+            var strips = RobotTwin.CoreSim.Firmware.LedStripWiring.Attach(AllParts().Select(p => (p.FullRef, p.Def)), c.PinNode,
+                g => c.PinNode(prog.RefDes, "IO" + g), Reach,
+                r => c.DevicesOf(r).OfType<RobotTwin.CoreSim.Firmware.Devices.Ws2812Load>().FirstOrDefault());
+            foreach (var (gpio, strip) in strips)
+            {
+                esp.AttachLedStrip(gpio, strip);
+                Log.Add(new SimLogEntry(0, strip.Id, $"LED şeridi {prog.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
+            }
         }
 
         private void AttachI2c(I2cBus bus, WorldProgrammable prog)
