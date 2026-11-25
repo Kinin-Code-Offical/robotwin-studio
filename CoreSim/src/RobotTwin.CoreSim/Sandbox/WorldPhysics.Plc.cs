@@ -31,6 +31,23 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>How long the last scans took on this computer (µs), for the cycle-time readout.</summary>
         public double ScanMicros { get; internal set; }
+
+        /// <summary>
+        /// [cycle] The station's steps, timed: the variable a CASE runs on (<c>step_var</c>, "Adim" by default), how long the
+        /// program has spent in each of its values, and its cycles (back to the first step). The longest step is the bottleneck.
+        /// </summary>
+        public string StepVariable { get; internal set; } = string.Empty;
+
+        public SortedDictionary<double, (double Seconds, int Visits)> Steps { get; } = new SortedDictionary<double, (double, int)>();
+
+        public List<double> Cycles { get; } = new List<double>();
+
+        public double CurrentStep { get; internal set; } = double.NaN;
+
+        /// <summary>Since when (simulated s) it is in the current step, and since when in the current cycle.</summary>
+        public double StepSince { get; internal set; }
+
+        internal double FirstStep = double.NaN, CycleSince = double.NaN;
     }
 
     /// <summary>
@@ -50,6 +67,7 @@ namespace RobotTwin.CoreSim.Sandbox
         private void BuildPlc(WorldObject o, Dictionary<string, string> p)
         {
             var plc = new MachinePlc(o) { CycleMs = Math.Max(1, Math.Min(1000, CellParts.Num(p, "cycle", 10))) };
+            plc.StepVariable = p.TryGetValue("step_var", out var sv) && !string.IsNullOrWhiteSpace(sv) ? sv.Trim() : "Adim";
             // A PLC placed without a program of its own runs the example it comes with; a ladder one runs its rungs.
             List<StError> errors;
             if (p.TryGetValue("language", out var language) && language.Trim() == CellParts.PlcLadder)
@@ -123,6 +141,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 bool ok = program.Scan(plc.CycleMs);
                 SyncPlcModbus(plc, program, false);
+                TimeSteps(plc, program, Scene.Time);
                 plc.ScanMicros = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1e6 / System.Diagnostics.Stopwatch.Frequency;
                 if (!ok)
                 {
@@ -134,6 +153,31 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             for (int i = 0; i < 8; i++) Drive(plc.OutputPins[i], program.Outputs[i]);
+        }
+
+        /// <summary>[cycle] After a scan: a change of the step variable closes the step it left (and a cycle on the first step).</summary>
+        private static void TimeSteps(MachinePlc plc, StProgram program, double now)
+        {
+            double step = program.Read(plc.StepVariable);
+            if (double.IsNaN(step)) return;
+            if (double.IsNaN(plc.CurrentStep))
+            {
+                plc.CurrentStep = plc.FirstStep = step;
+                plc.StepSince = plc.CycleSince = now;
+                return;
+            }
+
+            if (step == plc.CurrentStep) return;
+            plc.Steps.TryGetValue(plc.CurrentStep, out var s);
+            plc.Steps[plc.CurrentStep] = (s.Seconds + (now - plc.StepSince), s.Visits + 1);
+            if (step == plc.FirstStep)
+            {
+                plc.Cycles.Add(now - plc.CycleSince);
+                plc.CycleSince = now;
+            }
+
+            plc.CurrentStep = step;
+            plc.StepSince = now;
         }
 
         /// <summary>Loads a new program into a running PLC (a download): it restarts cold, or stays in STOP with the errors.</summary>

@@ -121,6 +121,22 @@ namespace RobotWin.Studio.Pages
             if (plc.Modbus is { } mb) sb.AppendLine($"Modbus     : {mb.Bind}:{mb.Port} · {mb.Image.Requests} istek");   // [modbus]
             sb.AppendLine("I0–I7      : " + string.Concat(Enumerable.Range(0, 8).Select(i => p.Inputs[i] ? '1' : '0')));
             sb.AppendLine("Q0–Q7      : " + string.Concat(Enumerable.Range(0, 8).Select(i => p.Outputs[i] ? '1' : '0')));
+            // [cycle] The station's steps: where it is, its cycles, the step it spends longest in.
+            if (!double.IsNaN(plc.CurrentStep))
+            {
+                double inStep = (physics!.Scene.Time - plc.StepSince);
+                sb.AppendLine($"Adım       : {plc.CurrentStep:0} ({inStep:0.00} s)");
+                if (plc.Cycles.Count > 0)
+                    sb.AppendLine($"Çevrim     : {plc.Cycles.Count} · ort. {plc.Cycles.Average():0.00} s · son {plc.Cycles[plc.Cycles.Count - 1]:0.00} s");
+                if (plc.Steps.Count > 0)
+                {
+                    double total = plc.Steps.Values.Sum(v => v.Seconds);
+                    var worst = plc.Steps.OrderByDescending(kv => kv.Value.Seconds).First();
+                    if (total > 0)
+                        sb.AppendLine($"En uzun    : adım {worst.Key:0} · %{100 * worst.Value.Seconds / total:0} · ort. {worst.Value.Seconds / System.Math.Max(1, worst.Value.Visits):0.00} s");
+                }
+            }
+
             foreach (var (name, _, value) in p.Watch.Where(w => !w.Name.StartsWith("%", System.StringComparison.Ordinal)).Take(16))
                 sb.AppendLine($"{name,-10} : {value}");
         }

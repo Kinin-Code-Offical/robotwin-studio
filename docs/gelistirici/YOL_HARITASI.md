@@ -139,7 +139,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] fotosel (difüz menzili yansıtmaya bağlı, reflektörlü / karşılıklı ışın, tepki süresi) ve makaralı sınır anahtarı (C–NO / C–NC, ön strok, histerezis);
   - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Sırada: çift bobinli valf, vakum üreteci, kompresör ve tank.
   - [x] istasyon durum makineleri: PLC'de `CASE` adımlarıyla (örnek program: itici istasyonu);
-  - çevrim süresi ve darboğaz;
+  - [x] çevrim süresi ve darboğaz: PLC'nin adım değişkeninden adım süreleri, çevrimler, en uzun adım;
   - [x] arıza senaryoları: fotosel, sınır anahtarı, silindir ve Modbus modülünde zamanlı arızalar (`Sandbox/MachineFaults.cs`);
   - [x] PLC: Yapısal Metin (`Industrial/StProgram`, kendi derleyici ve yorumlayıcımız) ve merdiven diyagramı (`Industrial/LdProgram`, görsel düzenleyiciyle) dünyadaki PLC parçasında tarama döngüsüyle; %MW, %IX ve %QX Modbus TCP'den sunulur. Sırada: kullanıcı tanımlı fonksiyon blokları, diziler;
   - Modbus, OPC UA, HMI.

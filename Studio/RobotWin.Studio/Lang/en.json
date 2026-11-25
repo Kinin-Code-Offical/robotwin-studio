@@ -7288,7 +7288,8 @@
   "Basamağı aşağı taşır": "Moves the rung down",
   "Basamağı siler": "Deletes the rung",
   "Bobin sütunu": "Coil column",
-  "│ bağ": "│ link"
+  "│ bağ": "│ link",
+  "Adım değişkeni": "Step variable"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10310,6 +10311,9 @@
   "{…}. basamak, {…}. satır {…}. sütun: {…} için bir değişken yazın.": "Rung {0}, row {1}, column {2}: write a variable for the {3}.",
   "{…}. basamak, {…}. satır: bobin için bir değişken yazın.": "Rung {0}, row {1}: write a variable for the coil.",
   "{…}. basamağın sonunda bobin yok.": "Rung {0} has no coil at its end.",
-  "{…}. basamak: karşılaştırma için '>= 50' gibi bir koşul yazın.": "Rung {0}: write a condition such as '>= 50' for the comparison."
+  "{…}. basamak: karşılaştırma için '>= 50' gibi bir koşul yazın.": "Rung {0}: write a condition such as '>= 50' for the comparison.",
+  "Adım       : {…} ({…} s)": "Step       : {0} ({1} s)",
+  "Çevrim     : {…} · ort. {…} s · son {…} s": "Cycles     : {0} · avg {1} s · last {2} s",
+  "En uzun    : adım {…} · %{…} · ort. {…} s": "Longest    : step {0} · {1}% · avg {2} s"
  }
 }

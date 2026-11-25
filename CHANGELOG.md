@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Station cycle time and bottleneck:** a PLC times its station's steps from its step variable (the CASE's): the current step, the cycles and their average, and the step that takes longest with its share of the cycle.
+
 - **Ladder diagrams (IEC 61131-3 LD) for the PLC:** a visual editor with grid rungs (contacts, edges, comparisons, TON/TOF/TP/CTU, coils, set/reset, parallel branches by vertical links), checked as it is drawn and lit live while the world runs; a ladder runs by turning into Structured Text on the same interpreter. Tested: the seal-in latch, timers, a counter, edges and a comparison.
 
 - **Fault scenarios for the cell's equipment:** a photoelectric sensor, limit switch, pneumatic cylinder or Modbus module can be given a fault that begins at a set time (dirty lens, stuck or dead output, welded contact, broken lever, seal leak, stuck valve, low supply, network down), played by the same physics, so a PLC program's reaction to it can be tried.

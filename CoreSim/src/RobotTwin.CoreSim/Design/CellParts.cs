@@ -222,6 +222,7 @@ namespace RobotTwin.CoreSim.Design
                 "programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.",
                 new ParameterDefinition("language", "Dil", PlcStructuredText, "", new[] { PlcStructuredText, PlcLadder }),
                 new ParameterDefinition("cycle", "Çevrim süresi", "10", "ms"),
+                new ParameterDefinition("step_var", "Adım değişkeni", "Adim", ""),
                 new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }),
                 new ParameterDefinition("modbus", "Modbus TCP sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),
                 new ParameterDefinition("modbus_port", "Modbus TCP portu", "5021", ""),
