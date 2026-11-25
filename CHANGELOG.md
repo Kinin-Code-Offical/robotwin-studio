@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PLC running Structured Text (IEC 61131-3):** our own compiler and interpreter (BOOL/INT/DINT/UINT/WORD/REAL/TIME, TON/TOF/TP, R_TRIG/F_TRIG, CTU/CTD/CTUD, SR/RS, IF/CASE/FOR/WHILE/REPEAT, direct addresses, PLC integer wrapping, faults to STOP) in a new robot-cell part scanning its 8 inputs and 8 outputs every cycle; an editor that checks as you type, download into a running PLC, restart, and live variables. Tested end to end: a Modbus output says a part is there, the PLC's example program drives a pneumatic cylinder out and back by its end sensors and counts the part.
+
+- **Pneumatic cylinder with a 5/2 solenoid valve:** a new robot-cell part whose two chambers are solved as masses of air (ISO 6358 valve flow, heating and cooling of the air, wall heat), pushing a piston rod body on a slider with seal friction; meter-out speed control, end sensors, and a coil that is a real load. Tested from a Modbus output: a Ø20 × 100 mm cylinder strokes in a few tenths of a second, fills to the supply pressure, pushes a wall with pressure × area, and a throttled exhaust slows it.
+
 - **Photoelectric sensor and limit switch:** new robot-cell parts. A diffuse sensor's reach shortens with the target's reflectance (returned light ∝ reflectance / d²), a retro-reflective or through-beam sensor is cut by anything in its beam, both after their response time; a roller-lever limit switch changes over C–NO / C–NC past its pre-travel with half a millimetre of hysteresis, as real contacts in the circuit.
 
 - **URDF mimic joints:** a `<mimic>` joint (a gripper's second finger) follows its master through a motor (multiplier × master + offset) instead of being driven separately; inverse kinematics and ROS commands leave it to its master. Tested: the mimicking finger stays within 0.5 mm of the commanded one.

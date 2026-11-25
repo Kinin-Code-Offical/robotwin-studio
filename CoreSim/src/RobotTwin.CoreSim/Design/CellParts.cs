@@ -27,6 +27,41 @@ namespace RobotTwin.CoreSim.Design
         public const string ModbusIoId = "modbus-io";
         public const string PhotoId = "photo-sensor";
         public const string LimitId = "limit-switch";
+        public const string CylinderId = "pneumatic-cylinder";
+        public const string PlcId = "plc";
+
+        /// <summary>[plc] The PLC's inputs and outputs, in %IX0.0… / %QX0.0… order.</summary>
+        public static readonly string[] PlcInputs = { "I0", "I1", "I2", "I3", "I4", "I5", "I6", "I7" };
+        public static readonly string[] PlcOutputs = { "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7" };
+
+        /// <summary>[plc] The program a new PLC starts with: a lamp, a flasher and a pusher station's steps.</summary>
+        public const string PlcExample =
+            "(* Örnek: I0'a basılıyken Q0 yanar, Q1 saniyede bir yanıp söner.\n" +
+            "   I1 parça var, I2 silindir ileride, I3 silindir geride: Q2 silindiri sürer. *)\n" +
+            "VAR\n" +
+            "    Dugme AT %IX0.0 : BOOL;\n" +
+            "    Parca AT %IX0.1 : BOOL;\n" +
+            "    Ileride AT %IX0.2 : BOOL;\n" +
+            "    Geride AT %IX0.3 : BOOL;\n" +
+            "    Lamba AT %QX0.0 : BOOL;\n" +
+            "    Flas AT %QX0.1 : BOOL;\n" +
+            "    Itici AT %QX0.2 : BOOL;\n" +
+            "    T1 : TON;\n" +
+            "    Adim : INT := 0;\n" +
+            "    Sayi AT %MW0 : INT;\n" +
+            "END_VAR\n" +
+            "\n" +
+            "Lamba := Dugme;\n" +
+            "T1(IN := NOT T1.Q, PT := T#500ms);\n" +
+            "IF T1.Q THEN Flas := NOT Flas; END_IF\n" +
+            "\n" +
+            "CASE Adim OF\n" +
+            "    0:  IF Parca AND Geride THEN Adim := 10; END_IF\n" +
+            "    10: Itici := TRUE;\n" +
+            "        IF Ileride THEN Adim := 20; END_IF\n" +
+            "    20: Itici := FALSE;\n" +
+            "        IF Geride THEN Sayi := Sayi + 1; Adim := 0; END_IF\n" +
+            "END_CASE\n";
 
         /// <summary>A photoelectric sensor's ways of seeing and its output's sense.</summary>
         public const string PhotoDiffuse = "difüz", PhotoRetro = "reflektörlü", PhotoThrough = "karşılıklı", PhotoOnPresent = "cisim varken", PhotoOnAbsent = "cisim yokken";
@@ -41,7 +76,7 @@ namespace RobotTwin.CoreSim.Design
 
         public static bool IsCellPart(string? partId) =>
             partId == ArmId || partId == GripperId || partId == VacuumId || partId == ConveyorId || partId == CurtainId ||
-            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId || partId == PhotoId || partId == LimitId;
+            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId || partId == PhotoId || partId == LimitId || partId == CylinderId || partId == PlcId;
 
         public static bool IsTool(string? partId) => partId == GripperId || partId == VacuumId;
 
@@ -155,6 +190,41 @@ namespace RobotTwin.CoreSim.Design
             limit.Pins.Add(new PinDefinition("NC", "3", 6, 2));
             limit.HalfHeight = 4;
             Preset(lib, "limit-switch-roller", "Sınır Anahtarı · makaralı kol", LimitId, "1 NO + 1 NC, 2 mm ön strok");
+
+            // ---------------------------------------------------------------- [pneu] pneumatic cylinder with its valve
+            var cylinder = Part(lib, CylinderId, "Pnömatik Silindir (5/2 valfli)", "CYL",
+                "Çift etkili silindir ve üstündeki tek bobinli 5/2 valf (mil +X yönünde çıkar): SOL bobini enerjilenince piston ileri, bırakılınca geri gider. " +
+                "İki hazne ayrı hava kütleleri olarak çözülür: valften ISO 6358 akışı, dolarken ısınan, genleşirken soğuyan hava; kuvvet basınç × alan, contalar sürtünür. " +
+                "EXT ve RET uç konumlardaki manyetik sensörlerin çıkışlarıdır. Hız ayarı egzozu kısar (çıkış kısmalı hız kontrolü). Bobin devrede gerçek bir yüktür.",
+                new ParameterDefinition("bore", "Piston çapı", "20", "mm", new[] { "12", "16", "20", "25", "32", "40", "50", "63" }),
+                new ParameterDefinition("stroke", "Strok", "100", "mm"),
+                new ParameterDefinition("rod", "Mil çapı", "8", "mm"),
+                new ParameterDefinition("supply", "Besleme basıncı", "6", "bar"),
+                new ParameterDefinition("flow", "Valf ve hortum akışı (C)", "0.4", "L/(s·bar)"),
+                new ParameterDefinition("speed", "Hız ayarı (egzoz kısma)", "100", "%"),
+                new ParameterDefinition("coil_v", "Bobin gerilimi", "24", "V", new[] { "12", "24" }),
+                new ParameterDefinition("coil_w", "Bobin gücü", "1", "W"),
+                new ParameterDefinition("io_v", "Sensör gerilimi", "24", "V", new[] { "5", "24" }));
+            cylinder.Build = c =>
+            {
+                BuildIo(c, Array.Empty<string>(), new[] { "EXT", "RET" });
+                double volts = c.Num("coil_v", 24), watts = Math.Max(0.1, c.Num("coil_w", 1));
+                c.Add(new Resistor(c.Sub("COIL"), c.Pin("SOL"), c.Pin("GND"), volts * volts / watts));
+            };
+            AddPins(cylinder, new[] { "SOL" }, new[] { "EXT", "RET" });
+            // ---------------------------------------------------------------- [plc] a PLC running Structured Text
+            var plc = Part(lib, PlcId, "PLC (Yapısal Metin, IEC 61131-3)", "PLC",
+                "8 sayısal giriş (I0–I7 → %IX0.0–%IX0.7), 8 sayısal çıkış (Q0–Q7 ← %QX0.0–%QX0.7). Programı Yapısal Metin'dir (ST): BOOL, INT, REAL, TIME; " +
+                "TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (istasyon adımları), FOR, WHILE, REPEAT. Her çevrim süresinde girişleri okur, " +
+                "programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.",
+                new ParameterDefinition("cycle", "Çevrim süresi", "10", "ms"),
+                new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }));
+            plc.Build = c => BuildIo(c, PlcInputs, PlcOutputs);
+            AddPins(plc, PlcInputs, PlcOutputs);
+            Preset(lib, "plc-st-8di8do", "PLC · 8 DI / 8 DO (Yapısal Metin)", PlcId, "Örnek programla gelir: lamba, flaşör, itici istasyonu");
+
+            Preset(lib, "cylinder-20x100", "Pnömatik Silindir · Ø20 × 100 mm", CylinderId, "Tek bobinli 5/2 valf, 6 bar, uç sensörleri");
+            Preset(lib, "cylinder-32x200", "Pnömatik Silindir · Ø32 × 200 mm", CylinderId, "Tek bobinli 5/2 valf, 6 bar, uç sensörleri", "bore=32;stroke=200;rod=12;flow=0.9");
 
             // ---------------------------------------------------------------- passive equipment
             var pallet = Part(lib, PalletId, "Euro palet", "PAL",   // not "Palet" (the editor's palette)
@@ -291,6 +361,8 @@ namespace RobotTwin.CoreSim.Design
             ModbusIoId => 0.2,
             PhotoId => 0.06,
             LimitId => 0.12,
+            PlcId => 0.35,
+            CylinderId => 0.25 + 2.5 * Num(p, "stroke", 100) / 1000 * Num(p, "bore", 20) / 20,
             _ => null
         };
     }

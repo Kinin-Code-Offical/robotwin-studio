@@ -137,11 +137,11 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - tohum ve ayarların saklanması.
 - [~] **Endüstriyel otomasyon:** konveyörlü hücre var. Eksikler:
   - [x] fotosel (difüz menzili yansıtmaya bağlı, reflektörlü / karşılıklı ışın, tepki süresi) ve makaralı sınır anahtarı (C–NO / C–NC, ön strok, histerezis);
-  - pnömatik;
-  - istasyon durum makineleri;
+  - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Sırada: çift bobinli valf, vakum üreteci, kompresör ve tank.
+  - [x] istasyon durum makineleri: PLC'de `CASE` adımlarıyla (örnek program: itici istasyonu);
   - çevrim süresi ve darboğaz;
   - arıza senaryoları;
-  - PLC (ST / LD);
+  - [~] PLC: Yapısal Metin (`Industrial/StProgram`, kendi derleyici ve yorumlayıcımız) dünyadaki PLC parçasında tarama döngüsüyle. Sırada: merdiven diyagramı (LD), PLC'nin %MW'sini Modbus'tan sunmak;
   - Modbus, OPC UA, HMI.
 - [~] **Dış biçimler:**
   - [x] KiCad dışa aktarma.

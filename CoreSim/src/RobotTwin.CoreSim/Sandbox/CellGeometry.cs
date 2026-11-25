@@ -79,6 +79,15 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 case CellParts.LimitId:   // the switch body, 30 × 30 × 60 mm, its roller lever reaching +X
                     return Box(new Vec3(-0.015, -0.015, 0), new Vec3(0.015, 0.015, 0.06), mass);
+
+                case CellParts.PlcId:   // [plc] a compact PLC on a DIN rail, 90 × 100 × 75 mm
+                    return Box(new Vec3(-0.045, -0.05, 0), new Vec3(0.045, 0.05, 0.075), mass);
+
+                case CellParts.CylinderId:   // [pneu] the barrel (a square profile), its rod coming out of the +X face
+                {
+                    double l = CellParts.Num(p, "stroke", 100) / 1000 + 0.06, s = CellParts.Num(p, "bore", 20) / 1000 + 0.012;
+                    return Box(new Vec3(-l / 2, -s / 2, 0), new Vec3(l / 2, s / 2, s), mass);
+                }
             }
 
             return null;

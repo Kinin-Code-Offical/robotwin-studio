@@ -102,6 +102,25 @@ namespace RobotWin.Studio.Pages
                 case CellParts.CurtainId:
                     CurtainPanel(o);
                     break;
+                case CellParts.ModbusIoId:
+                    Inspector.Children.Add(Caption("Modbus TCP"));
+                    StatusBlock();
+                    break;
+                case CellParts.PhotoId:
+                    Inspector.Children.Add(Caption("Fotoelektrik sensör"));
+                    StatusBlock();
+                    break;
+                case CellParts.LimitId:
+                    Inspector.Children.Add(Caption("Sınır anahtarı"));
+                    StatusBlock();
+                    break;
+                case CellParts.CylinderId:
+                    Inspector.Children.Add(Caption("Pnömatik silindir"));
+                    StatusBlock();
+                    break;
+                case CellParts.PlcId:
+                    PlcPanel(o);   // [plc] Pages/WorldPage.Plc.cs
+                    break;
                 default:
                     return;
             }
@@ -566,6 +585,28 @@ namespace RobotWin.Studio.Pages
                     {
                         sb.AppendLine($"Cisim      : {(ph.Present ? "VAR" : "yok")}" + (double.IsNaN(ph.Distance) ? string.Empty : $" · ışık {ph.Distance * 1000:0} mm'de"));
                         sb.Append($"OUT        : {(ph.Output ? "yüksek" : "düşük")}");
+                    }
+
+                    break;
+                }
+
+                case CellParts.PlcId:
+                    PlcStatus(o, physics, sb);
+                    break;
+                case CellParts.CylinderId:
+                {
+                    var cy = physics?.CylinderOf(o.Id);
+                    if (cy == null)
+                    {
+                        sb.Append("Dünya çalışırken silindir durumu burada görünür.");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"Bobin      : {(cy.Energised ? "ENERJİLİ" : "enerjisiz")}");
+                        sb.AppendLine($"Konum      : {cy.Position * 1000:0.0} mm · {cy.Speed:0.00} m/s" + (cy.Extended ? " · ileride" : cy.Retracted ? " · geride" : string.Empty));
+                        sb.AppendLine($"Basınç     : A {(cy.PressureA - 101325) / 1e5:0.00} bar · B {(cy.PressureB - 101325) / 1e5:0.00} bar");
+                        sb.AppendLine($"Kuvvet     : {cy.Force:0} N");
+                        sb.Append($"Hava       : {cy.AirUsed:0.00} NL");
                     }
 
                     break;

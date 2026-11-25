@@ -234,7 +234,10 @@ namespace RobotTwin.CoreSim.Tests
                 link.Step(runner.Time);
             }
 
-            for (int i = 0; i < 250 && server.Got.Count(x => (string?)x["op"] == "publish" && (string?)x["topic"] == "/scan") < 5; i++) await Task.Delay(20);
+            // Until everything the second sent has come (the network may lag far behind the simulation on a busy machine).
+            int Published(string topic) => server.Got.Count(x => (string?)x["op"] == "publish" && (string?)x["topic"] == topic);
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            while ((Published("/scan") < 5 || Published("/imu") < 95 || ros.Sent > server.Got.Count) && waited.Elapsed.TotalSeconds < 30) await Task.Delay(20);
             var ops = server.Got.ToList();
             Assert.Contains(ops, x => (string?)x["op"] == "advertise" && (string?)x["topic"] == "/scan" && (string?)x["type"] == "sensor_msgs/msg/LaserScan");
             var scans = ops.Where(x => (string?)x["op"] == "publish" && (string?)x["topic"] == "/scan").Select(x => x["msg"]!).ToList();

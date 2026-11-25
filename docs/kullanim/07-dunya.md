@@ -199,6 +199,16 @@ Sürüş tekerlekleri, tabana takılı, hız motorlu ve ekseni robotun yanına b
 
 **Sınır anahtarı**nın makaralı kolu +X yönüne uzanır. Bir cisim makarayı **ön strok**tan fazla bastırınca C–NO kapanır, C–NC açılır; yarım milimetre geri gelince bırakır. Kontaklar devrede gerçek anahtardır: bir PLC girişine, Modbus modülüne, röleye ya da doğrudan motorun devresine bağlanır.
 
+### PLC (Yapısal Metin)
+
+**Parçalar → Robot Hücresi → PLC** sekiz sayısal girişi (I0–I7 → `%IX0.0`–`%IX0.7`) ve sekiz çıkışı (Q0–Q7 ← `%QX0.0`–`%QX0.7`) olan, IEC 61131-3 Yapısal Metin (ST) çalıştıran bir PLC'dir. Her **çevrim süresinde** girişleri okur (G/Ç geriliminin yarısının üstü 1), programı bir kez çalıştırır ve çıkışları yazar. Denetçideki düzenleyicide program yazılırken denetlenir; hata satırıyla birlikte gösterilir. **Kaydet ve PLC'ye yükle** dünya çalışırken programı PLC'ye de yükler (soğuk başlar). Panelde RUN/STOP, tarama sayısı, giriş ve çıkış bitleri ve değişkenler canlı görünür; PLC'nin lambası RUN'da yeşil, STOP'ta kırmızıdır.
+
+Desteklenenler: `VAR … END_VAR` (`AT %IX0.0`, `%QX0.0`, `%MW0` adresleriyle), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF ve 2#1010 sayıları; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blokları; `IF … ELSIF … ELSE`, `CASE … OF` (istasyonun adımları), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL ve `INT_TO_REAL` gibi dönüşümler. Tamsayılar PLC'deki gibi taşar (INT 16 bit). Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır ve çıkışları düşürür; **Yeniden başlat** RUN'a döndürür. Yeni PLC; lamba, flaşör ve bir itici istasyonu (parça gelince silindiri ileri sür, ileride geri çek, geride say) içeren örnek programla gelir.
+
+### Pnömatik silindir
+
+**Parçalar → Robot Hücresi → Pnömatik Silindir** çift etkili bir silindir ve üstündeki tek bobinli 5/2 valftir; mil parçanın +X yönünde çıkar. **SOL** bobini enerjilenince (bobin gerilimin %70'inde çeker, %40'ında bırakır) besleme ön hazneye, arka hazne egzoza bağlanır ve piston ileri gider; bobin bırakılınca geri döner. Her hazne kendi hava kütlesi ve sıcaklığıyla çözülür: valften akış ISO 6358'e göredir (kritik basınç oranının altında boğulmuş), dolan hava ısınır, genleşen soğur, duvar oda sıcaklığına çeker. Pistonu basınç × alan iter, contalar sürtünür; uçlarda strok biter. **Hız ayarı** egzozu kısar (çıkış kısmalı hız denetimi). **EXT** ve **RET** uç konumlardaki manyetik sensörlerin çıkışlarıdır. Bobin devrede gerçek bir yüktür: bir Modbus modülünün, kartın ya da sınır anahtarının devresinden sürülür. Mil kutuları iter; panelde konum, hız, iki haznenin basıncı, kuvvet ve harcanan hava (normal litre) görünür.
+
 ### Modbus TCP uzak G/Ç
 
 **Parçalar → Robot Hücresi → Modbus TCP Uzak G/Ç** modülünün 8 sayısal girişi (DI1–DI8) ve 8 sayısal çıkışı (DO1–DO8) vardır; kablolarla ışık perdesine, konveyörün fotoseline, robotun girişlerine bağlanır. Dünya çalışırken modül bir Modbus TCP sunucusudur (öntanımlı `127.0.0.1:5020`, birim 1): aynı bilgisayardaki PLC, HMI ya da SCADA programı (Codesys, Node-RED, `pymodbus` …) gerçek bir modüle bağlanır gibi bağlanır. **Dinlenen adres** `0.0.0.0` yapılırsa ağdaki başka bilgisayarlar da bağlanabilir.

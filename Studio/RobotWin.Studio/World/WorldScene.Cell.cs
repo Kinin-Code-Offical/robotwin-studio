@@ -71,6 +71,21 @@ namespace RobotWin.Studio.World
                         break;
                     }
 
+                    case CellParts.PlcId:   // [plc] RUN green, STOP red
+                    {
+                        var plc = physics?.PlcOf(it.Object.Id);
+                        if (v.Lamp != null) v.Lamp.Color = plc == null ? LampOff : plc.Running ? Color.FromRgb(0x3C, 0xD0, 0x64) : Color.FromRgb(0xE5, 0x30, 0x30);
+                        break;
+                    }
+
+                    case CellParts.CylinderId:   // [pneu] the rod where the piston is; the coil lamp
+                    {
+                        var cy = physics?.CylinderOf(it.Object.Id);
+                        if (v.Rod != null) v.Rod.OffsetX = cy?.Position ?? 0;
+                        if (v.Lamp != null) v.Lamp.Color = cy?.Energised == true ? Color.FromRgb(0xF2, 0xA3, 0x3B) : LampOff;
+                        break;
+                    }
+
                     case CellParts.PhotoId:
                         if (v.Lamp != null) v.Lamp.Color = physics?.PhotoOf(it.Object.Id)?.Output == true ? Color.FromRgb(0xF2, 0xA3, 0x3B) : LampOff;
                         break;

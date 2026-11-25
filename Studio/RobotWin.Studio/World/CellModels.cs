@@ -24,6 +24,9 @@ namespace RobotWin.Studio.World
         public (TranslateTransform3D T, double Side)[] Fingers { get; init; } = Array.Empty<(TranslateTransform3D, double)>();
 
         public TranslateTransform3D? Cup { get; init; }
+
+        /// <summary>[pneu] A cylinder's piston rod: its travel along the part's X (metres).</summary>
+        public TranslateTransform3D? Rod { get; init; }
         public TranslateTransform3D? Belt { get; init; }
         public double BeltPitch { get; init; } = 0.1;
 
@@ -89,6 +92,12 @@ namespace RobotWin.Studio.World
                     break;
                 case CellParts.LimitId:
                     visual = BuildLimit(m);
+                    break;
+                case CellParts.CylinderId:
+                    visual = BuildCylinder(m, p);
+                    break;
+                case CellParts.PlcId:
+                    visual = BuildPlc(m);
                     break;
                 default:
                     visual = BuildPedestal(m, p);
@@ -670,6 +679,68 @@ namespace RobotWin.Studio.World
             m.Body.Children.Add(k.Build());
             AddPins(m, new[] { "C", "NO", "NC" }, i => new Point3D(-15.5 * Mm, (-8 + i * 8) * Mm, 10 * Mm));
             return new CellVisual { PartId = CellParts.LimitId };
+        }
+
+        // ================================================================ [plc] PLC
+
+        /// <summary>A compact PLC on a DIN rail, 90 × 100 × 75 mm: grey housing, input terminals along one side, outputs along the other, a RUN/STOP lamp.</summary>
+        private static CellVisual BuildPlc(ObjectModel m)
+        {
+            var k = new Kit();
+            k[Dark].Box(0, 0, 3.5, 80, 35, 7);   // rail clip
+            k[0xD5D8DD].RoundedBox(0, 0, 7, 90, 84, 68, 3);   // housing
+            k[0x9EA3AA].Box(0, 0, 75.5, 70, 50, 1);   // front plate
+            k.Box(Black, 30, 0, 70, 14, 16, 12);   // programming port
+            for (int i = 0; i < 9; i++)
+            {
+                double x = -40 + i * 10;
+                foreach (double side in new[] { -1.0, 1.0 })
+                {
+                    if (side < 0 && i == 8) continue;
+                    k.Box(0x3F8F4E, x, side * 46, 60, 8.6, 8, 14);   // terminals
+                    k.Metal(Steel).CylinderZ(x, side * 46, 67, 68.2, 2.2, 10);
+                }
+            }
+
+            m.Body.Children.Add(k.Build());
+            var lamp = LampBrush();
+            m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box(-30 * Mm, 15 * Mm, 76.6 * Mm, 6 * Mm, 6 * Mm, 1.6 * Mm)) } });
+            AddPins(m, CellParts.PlcInputs, i => new Point3D((-40 + i * 10) * Mm, -50 * Mm, 60 * Mm));
+            AddPins(m, CellParts.PlcOutputs.Append("GND"), i => new Point3D((-40 + i * 10) * Mm, 50 * Mm, 60 * Mm));
+            return new CellVisual { PartId = CellParts.PlcId, Lamp = lamp };
+        }
+
+        // ================================================================ [pneu] pneumatic cylinder
+
+        /// <summary>
+        /// A profile cylinder with its valve: aluminium barrel and end caps, a 5/2 valve block with its coil on top (the lamp
+        /// lights while it is energised), and the steel rod with its nut in a group of its own that slides out along +X.
+        /// </summary>
+        private static CellVisual BuildCylinder(ObjectModel m, IReadOnlyDictionary<string, string> p)
+        {
+            double stroke = CellParts.Num(p, "stroke", 100), bore = CellParts.Num(p, "bore", 20), rodD = CellParts.Num(p, "rod", 8);
+            double L = stroke + 60, S = bore + 12, front = L / 2;
+            var k = new Kit();
+            k.Metal(Alu).RoundedBox(0, 0, 0, L - 16, S, S, 2.5);   // barrel
+            foreach (double end in new[] { -1.0, 1.0 })
+                k[0x5A5E66].RoundedBox(end * (L / 2 - 4), 0, -0.5, 8, S + 1, S + 1, 1.5);   // end caps
+            k[Graphite].Box(-L / 4, 0, S + 7, Math.Min(46, L / 2), S * 0.8, 14);   // valve block
+            k[0x22416E].Box(-L / 4 - Math.Min(46, L / 2) / 2 - 9, 0, S + 9, 18, S * 0.75, 18);   // coil
+            k.CylY(0x2F7FA8, -L / 4 + 10, -S * 0.4, S * 0.4, S + 15, 2.5);   // fittings to the chambers
+            m.Body.Children.Add(k.Build());
+
+            var rk = new Kit();
+            double rodLength = stroke + 30;
+            rk.CylX(Steel, front + 20 - rodLength, front + 20, 0, S / 2, rodD / 2);
+            rk.CylX(Dark, front + 20, front + 26, 0, S / 2, rodD * 0.9, 6);   // rod-end nut
+            var rodGroup = rk.Build();
+            var slide = new TranslateTransform3D();
+            m.Body.Children.Add(new Model3DGroup { Children = { rodGroup }, Transform = slide });
+
+            var lamp = LampBrush();
+            m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box((-L / 4 - Math.Min(46, L / 2) / 2 - 9) * Mm, 0, (S + 18.8) * Mm, 6 * Mm, 6 * Mm, 1.6 * Mm)) } });
+            AddPins(m, new[] { "SOL", "EXT", "RET", "GND" }, i => new Point3D((-L / 2 + 10 + i * 8) * Mm, -(S / 2 + 0.5) * Mm, (S / 2) * Mm));
+            return new CellVisual { PartId = CellParts.CylinderId, Rod = slide, Lamp = lamp };
         }
 
         private static CellVisual BuildPedestal(ObjectModel m, IReadOnlyDictionary<string, string> p)
