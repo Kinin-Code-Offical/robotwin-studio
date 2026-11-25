@@ -425,6 +425,61 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(int.Parse(last.Groups[3].Value), int.Parse(last.Groups[2].Value) / 100 - 1, int.Parse(last.Groups[2].Value) / 100 + 1);
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_LSLEEP_ELF names the light sleep sketch's real-chip ELF.</summary>
+        public sealed class LightSleepElfFactAttribute : FactAttribute
+        {
+            public LightSleepElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_LSLEEP_ELF"))) Skip = "RW_ESP32_LSLEEP_ELF verilmedi.";
+            }
+        }
+
+        [LightSleepElfFact]
+        public void LightSleepHaltsTheChipUntilTheTimerOrAGpioWakesIt()
+        {
+            // esp_light_sleep_start with a 0.5 s timer and GPIO4's low level as wake sources: while GPIO4 is high the chip
+            // sleeps 0.5 s each time (millis() goes on by that, the cause is the timer); pulled low, it wakes at once (GPIO).
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_LSLEEP_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var soc = new RobotTwin.CoreSim.Firmware.Xtensa.Esp32Soc();
+            soc.Load(File.ReadAllBytes(elf));
+            if (File.Exists(merged)) soc.LoadFlash(File.ReadAllBytes(merged));
+            bool pressed = false;
+            soc.PadVoltage = gpio => gpio == 4 && !pressed ? 3.3 : 0;
+            int sleptTurns = 0;
+            void RunFor(double seconds)
+            {
+                double end = soc.Seconds + seconds;
+                while (soc.Seconds < end)
+                {
+                    soc.SamplePads();
+                    soc.Run((long)Math.Max(1, Math.Ceiling(Math.Min(1e-3, end - soc.Seconds) * soc.CpuHz)));
+                    if (soc.LightSleeping) sleptTurns++;
+                }
+            }
+
+            RunFor(1.6);
+            string timerPart = soc.Uart0.ToString();
+            pressed = true;
+            RunFor(0.05);
+            pressed = false;
+            RunFor(0.3);
+            string text = soc.Uart0.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("hafif uyku hazir", timerPart);
+            var timerWakes = Regex.Matches(timerPart, @"uyandi neden=(\d+) sure=(\d+)").Cast<Match>().ToList();
+            Assert.True(timerWakes.Count >= 2, "slept and woke on the timer");
+            foreach (var m in timerWakes)
+            {
+                Assert.Equal("4", m.Groups[1].Value);                       // ESP_SLEEP_WAKEUP_TIMER
+                Assert.InRange(int.Parse(m.Groups[2].Value), 495, 506);     // millis() went on by the sleep
+            }
+
+            Assert.Matches(@"uyandi neden=7 sure=\d+", text.Substring(timerPart.Length));   // ESP_SLEEP_WAKEUP_GPIO
+            Assert.True(soc.LightSleeps >= 3);
+            Assert.True(sleptTurns > 0);
+        }
+
         /// <summary>A [Fact] skipped unless RW_ESP32_QUAD_ELF names the quadrature pulse counter sketch's real-chip ELF.</summary>
         public sealed class QuadElfFactAttribute : FactAttribute
         {

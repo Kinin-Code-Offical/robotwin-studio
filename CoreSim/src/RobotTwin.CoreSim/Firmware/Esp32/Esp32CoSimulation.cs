@@ -38,6 +38,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public double ResetCurrent { get; set; } = 0.002;
         public double DeepSleepCurrent { get; set; } = 10e-6;
 
+        /// <summary>Chip current in light sleep (the datasheet's 0.8 mA: CPUs and APB clock halted, RAM kept).</summary>
+        public double LightSleepCurrent { get; set; } = 0.8e-3;
+
         /// <summary>Replay a single output edge or pulse inside a slice at its exact time (one-shot PWM) instead of at the slice boundary.</summary>
         public bool ExactOutputEdges { get; set; } = true;
     }
@@ -427,6 +430,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _pendingRestart = false;
             _pendingSleep = false;
             _pendingSleepUs = -1;
+            LightSleeping = false;
             _wakeAt = double.NaN;
             _wifiOn = false;
             _serialBegun = false;
@@ -752,13 +756,19 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             s.AppliedFrequency = double.NaN;
         }
 
+        /// <summary>The sketch is in light sleep (esp_light_sleep_start): the chip draws its sleep current.</summary>
+        public bool LightSleeping { get; private set; }
+
+        /// <summary>Light sleeps so far.</summary>
+        public int LightSleeps { get; private set; }
+
         private void UpdateChipCurrent()
         {
             if (_chip == null) return;
             switch (State)
             {
                 case Esp32BoardState.Running:
-                    _chip.Current = _runCurrent + (_wifiOn ? Options.WifiExtraCurrent : 0.0);
+                    _chip.Current = LightSleeping ? Options.LightSleepCurrent : _runCurrent + (_wifiOn ? Options.WifiExtraCurrent : 0.0);
                     break;
                 case Esp32BoardState.DeepSleep:
                     _chip.Current = Options.DeepSleepCurrent;
@@ -1062,6 +1072,10 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 case Esp32Abi.EventExt0Wakeup:
                     _ext0Gpio = (int)(arg & 0xFF);
                     _ext0Level = ((arg >> 8) & 1) != 0;
+                    break;
+                case Esp32Abi.EventLightSleep:
+                    LightSleeping = arg != 0;
+                    if (LightSleeping) LightSleeps++;
                     break;
             }
         }

@@ -20,6 +20,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public const int EventDeepSleep = 2;
         public const int EventWifi = 3;
         public const int EventExt0Wakeup = 4;
+        public const int EventLightSleep = 5;   // arg 1 asleep, 0 awake
 
         public const int LogError = 1;
         public const int LogWarn = 2;

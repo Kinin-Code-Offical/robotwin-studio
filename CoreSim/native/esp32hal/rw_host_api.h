@@ -31,6 +31,7 @@ extern "C" {
 #define RW_EVENT_DEEP_SLEEP     2  /* esp_deep_sleep_start(); arg = timer wake-up in us, or -1 */
 #define RW_EVENT_WIFI           3  /* arg = 1 radio on, 0 radio off */
 #define RW_EVENT_EXT0_WAKEUP    4  /* esp_sleep_enable_ext0_wakeup(); arg = gpio | (level << 8) */
+#define RW_EVENT_LIGHT_SLEEP    5  /* esp_light_sleep_start(); arg = 1 asleep, 0 awake (the chip draws its sleep current) */
 
 /* rw_host_api.log levels (ESP_LOG style) */
 #define RW_LOG_ERROR   1

@@ -69,6 +69,9 @@ uint64_t g_sleep_timer_us = 0;
 bool g_sleep_timer = false;
 int g_ext0_gpio = -1;
 int g_ext0_level = 0;
+uint8_t g_gpio_wake[40];                /* gpio_wakeup_enable: 4 low level, 5 high level, 0 none */
+bool g_gpio_wake_on = false;            /* esp_sleep_enable_gpio_wakeup */
+int g_light_wake_cause = 0;             /* the last light sleep's wake-up cause (0: none yet) */
 uint32_t g_min_free_heap = 0xFFFFFFFFu;
 
 inline bool valid_pin(int p) { return p >= 0 && p < 40 && p != 20 && p != 24 && !(p >= 28 && p <= 31); }
@@ -431,11 +434,15 @@ void hal_reset() {
     g_sleep_timer = false;
     g_sleep_timer_us = 0;
     g_ext0_gpio = -1;
+    memset(g_gpio_wake, 0, sizeof g_gpio_wake);
+    g_gpio_wake_on = false;
+    g_light_wake_cause = 0;
     g_wifi_on = false;
     g_min_free_heap = 0xFFFFFFFFu;
     hal_wifi_reset();
     hal_rmt_reset();
     hal_pcnt_reset();
+    hal_gpio_driver_reset();
 }
 
 void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
@@ -1345,6 +1352,29 @@ extern "C" esp_err_t esp_sleep_enable_ext0_wakeup(gpio_num_t gpio_num, int level
 extern "C" esp_err_t esp_sleep_disable_wakeup_source(esp_sleep_source_t source) {
     if (source == ESP_SLEEP_WAKEUP_TIMER || source == ESP_SLEEP_WAKEUP_ALL) g_sleep_timer = false;
     if (source == ESP_SLEEP_WAKEUP_EXT0 || source == ESP_SLEEP_WAKEUP_ALL) g_ext0_gpio = -1;
+    if (source == ESP_SLEEP_WAKEUP_GPIO || source == ESP_SLEEP_WAKEUP_ALL) g_gpio_wake_on = false;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t esp_sleep_enable_gpio_wakeup(void) {
+    g_gpio_wake_on = true;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t gpio_wakeup_enable(gpio_num_t gpio_num, gpio_int_type_t intr_type) {
+    if (!valid_pin(gpio_num)) return ESP_ERR_INVALID_ARG;
+    if (intr_type != GPIO_INTR_LOW_LEVEL && intr_type != GPIO_INTR_HIGH_LEVEL) {
+        core_log(RW_LOG_ERROR, "gpio.c", 620, "gpio_wakeup_enable", "GPIO wakeup only supports level mode, but edge mode set. gpio_num:%u", (unsigned)gpio_num);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    g_gpio_wake[gpio_num] = (uint8_t)intr_type;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t gpio_wakeup_disable(gpio_num_t gpio_num) {
+    if (!valid_pin(gpio_num)) return ESP_ERR_INVALID_ARG;
+    g_gpio_wake[gpio_num] = 0;
     return ESP_OK;
 }
 
@@ -1363,17 +1393,65 @@ extern "C" void esp_deep_sleep(uint64_t time_in_us) {
     esp_deep_sleep_start();
 }
 
+/* The light-sleep wake level a source sees now, or 0: EXT0's pad at its level, a GPIO at its wake level. */
+static int light_sleep_level_cause() {
+    if (g_ext0_gpio >= 0 && hal_pin_level(g_ext0_gpio) == g_ext0_level) return ESP_SLEEP_WAKEUP_EXT0;
+    if (g_gpio_wake_on)
+        for (int p = 0; p < 40; p++) {
+            if (!g_gpio_wake[p]) continue;
+            int level = hal_pin_level(p);
+            if (level < 0) continue;
+            if ((g_gpio_wake[p] == GPIO_INTR_LOW_LEVEL && level == 0) || (g_gpio_wake[p] == GPIO_INTR_HIGH_LEVEL && level == 1)) return ESP_SLEEP_WAKEUP_GPIO;
+        }
+    return 0;
+}
+
+/*
+ * Light sleep: the sketch's tasks stop and the chip draws its sleep current (the host is told) until the first enabled
+ * source fires: the timer, EXT0's pad at its level, or a GPIO at its wake level (pin levels as the circuit delivers them,
+ * slice by slice). millis() goes on by the time slept, and esp_sleep_get_wakeup_cause reports the source.
+ */
 extern "C" esp_err_t esp_light_sleep_start(void) {
-    if (!g_sleep_timer) {
-        log_once(0x500, RW_LOG_WARN, "W (%lu) sleep: light sleep without a timer wake-up source returns immediately in the simulation", now_ms());
+    charge(cost(kCostTime));
+    bool any = g_sleep_timer || g_ext0_gpio >= 0 || g_gpio_wake_on;
+    if (!any) {
+        log_once(0x500, RW_LOG_WARN, "W (%lu) sleep: light sleep without a wake-up source returns immediately in the simulation", now_ms());
         return ESP_OK;
     }
 
-    sleep_until(now_ns() + g_sleep_timer_us * 1000ull);
+    uint64_t deadline = g_sleep_timer ? now_ns() + g_sleep_timer_us * 1000ull : kForever;
+    if (has_api && api.system_event) {
+        ApiScope s;
+        api.system_event(api.user, RW_EVENT_LIGHT_SLEEP, 1);
+    }
+
+    // The pins' levels as the circuit has them after what the sketch just set (a pull-up it turned on reaches the pin at
+    // once on the chip; here the host delivers it with the next slice), then the wake sources.
+    wait_slice(deadline);
+    int cause = 0;
+    for (;;) {
+        cause = light_sleep_level_cause();
+        if (cause) break;
+        if (now_ns() >= deadline) {
+            cause = ESP_SLEEP_WAKEUP_TIMER;
+            break;
+        }
+
+        wait_slice(deadline);   // until the host's next slice brings fresh pin levels, or the timer
+    }
+
+    if (has_api && api.system_event) {
+        ApiScope s;
+        api.system_event(api.user, RW_EVENT_LIGHT_SLEEP, 0);
+    }
+
+    g_light_wake_cause = cause;
     return ESP_OK;
 }
 
-extern "C" esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(void) { return (esp_sleep_wakeup_cause_t)config.wakeup_cause; }
+extern "C" esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(void) {
+    return (esp_sleep_wakeup_cause_t)(g_light_wake_cause ? g_light_wake_cause : config.wakeup_cause);
+}
 
 /* ======================================================================= sketch logging */
 extern "C" void rw_sketch_log(int level, const char* format, ...) {

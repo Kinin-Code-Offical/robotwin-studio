@@ -112,6 +112,72 @@ void loop() {
         }
 
         [Esp32Fact]
+        public void LightSleepWakesOnTheTimerAndOnAButtonsLevel()
+        {
+            // The fast mode's light sleep: driver/gpio.h sets up IO4 with its pull-up and a low-level wake, the timer wakes
+            // the chip every 0.5 s (millis() goes on by it); the button (IO4 to ground) pressed at 1.6 s wakes it at once.
+            var w = new WorldDocument();
+            var esp = w.AddComponent(Lib, Esp32Parts.DevKitCId, new WorldPose());
+            var button = w.AddComponent(Lib, "tact-6mm", new WorldPose { X = 0.1 });
+            button.Parameters["close.at"] = "1.6";
+            button.Parameters["open.at"] = "1.65";
+            Wire(w, esp, "IO4", button, "A");
+            Wire(w, button, "B", esp, "GND1");
+            esp.Firmware = new FirmwareSource
+            {
+                FileName = "lsleep.ino",
+                Source = @"
+#include ""driver/gpio.h""
+void setup() {
+  Serial.begin(115200);
+  gpio_config_t io = {};
+  io.pin_bit_mask = 1ULL << 4;
+  io.mode = GPIO_MODE_INPUT;
+  io.pull_up_en = GPIO_PULLUP_ENABLE;
+  ESP_ERROR_CHECK(gpio_config(&io));
+  esp_sleep_enable_timer_wakeup(500000);
+  ESP_ERROR_CHECK(gpio_wakeup_enable(GPIO_NUM_4, GPIO_INTR_LOW_LEVEL));
+  esp_sleep_enable_gpio_wakeup();
+  Serial.println(""hafif uyku hazir"");
+}
+void loop() {
+  unsigned long before = millis();
+  esp_light_sleep_start();
+  unsigned long after = millis();
+  Serial.printf(""uyandi neden=%d sure=%lu t=%lu\n"", (int)esp_sleep_get_wakeup_cause(), after - before, after);
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+    while (gpio_get_level(GPIO_NUM_4) == 0) delay(10);
+  }
+}
+"
+            };
+            string dir = Path.Combine(Path.GetTempPath(), "robotwin-esp32-lsleep-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var options = new RunnerOptions
+            {
+                Esp32Builder = src =>
+                {
+                    var build = new Esp32SketchCompiler().Compile(src, dir);
+                    Assert.True(build.Success, string.Join("\n", build.Diagnostics) + "\n" + build.Log);
+                    return build.DllPath;
+                }
+            };
+            using var runner = new WorldRunner(w, options);
+            runner.Step(1.55);
+            var board = runner.Boards.Single(b => b.Esp != null).Esp!;
+            Assert.True(board.LightSleeping);                  // between wake-ups it sleeps, drawing its sleep current
+            runner.Step(0.45);
+            string text = string.Concat(runner.ReadSerial(null, false).Values);
+            _out.WriteLine(text);
+            var wakes = Regex.Matches(text, @"uyandi neden=(\d+) sure=(\d+) t=(\d+)").Cast<Match>().ToList();
+            var timer = wakes.Where(m => m.Groups[1].Value == "4").ToList();
+            Assert.True(timer.Count >= 2);
+            foreach (var m in timer) Assert.InRange(int.Parse(m.Groups[2].Value), 499, 501);
+            var gpio = wakes.Single(m => m.Groups[1].Value == "7");
+            Assert.InRange(int.Parse(gpio.Groups[3].Value), 1600, 1602);   // at the press, not at the next timer wake-up
+            Assert.True(board.LightSleeps >= 3);
+        }
+
+        [Esp32Fact]
         public void EspErrorCheckAbortsAndRestartsTheBoardAsTheChipDoes()
         {
             // ESP_ERROR_CHECK on a failing call (limits the wrong way round) prints the chip's report and the board

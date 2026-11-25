@@ -77,7 +77,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         {
             double cpu = CpuHz;
             _seconds += cycles / cpu;
-            _apbTicks += cycles * ApbHz / cpu;
+            if (!_lightSleep) _apbTicks += cycles * ApbHz / cpu;   // the APB clock stops in light sleep (the RTC time goes on)
             for (int g = 0; g < 2; g++) ServiceTimerGroup(g);
             ServiceLedc();
             ServiceUarts();
@@ -85,6 +85,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             ServiceSpi();
             ServiceRmt();
             ServicePcnt();
+            ServiceLightSleep();
         }
 
         private bool ReadTimerRegister(uint register, out uint value)

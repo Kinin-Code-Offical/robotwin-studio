@@ -1,4 +1,4 @@
-/* esp_sleep.h subset: deep sleep with timer / ext0 wake-up, light sleep as a timed pause. */
+/* esp_sleep.h subset: deep sleep with timer / ext0 wake-up; light sleep until the timer, EXT0 or a GPIO level wakes it. */
 #ifndef RW_ESP_SLEEP_H
 #define RW_ESP_SLEEP_H
 #include <stdint.h>
@@ -32,6 +32,19 @@ typedef enum {
 } esp_sleep_source_t;
 typedef esp_sleep_source_t esp_sleep_wakeup_cause_t;
 
+#ifndef RW_GPIO_INT_TYPE
+#define RW_GPIO_INT_TYPE
+typedef enum {
+    GPIO_INTR_DISABLE = 0,
+    GPIO_INTR_POSEDGE = 1,
+    GPIO_INTR_NEGEDGE = 2,
+    GPIO_INTR_ANYEDGE = 3,
+    GPIO_INTR_LOW_LEVEL = 4,
+    GPIO_INTR_HIGH_LEVEL = 5,
+    GPIO_INTR_MAX,
+} gpio_int_type_t;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,6 +54,10 @@ esp_err_t esp_sleep_disable_wakeup_source(esp_sleep_source_t source);
 void esp_deep_sleep_start(void);
 void esp_deep_sleep(uint64_t time_in_us);
 esp_err_t esp_light_sleep_start(void);
+esp_err_t esp_sleep_enable_gpio_wakeup(void);
+/* driver/gpio.h's light-sleep wake levels (GPIO_INTR_LOW_LEVEL / GPIO_INTR_HIGH_LEVEL only). */
+esp_err_t gpio_wakeup_enable(gpio_num_t gpio_num, gpio_int_type_t intr_type);
+esp_err_t gpio_wakeup_disable(gpio_num_t gpio_num);
 esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(void);
 #ifdef __cplusplus
 }

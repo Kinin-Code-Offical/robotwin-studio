@@ -3,6 +3,80 @@ using System;
 namespace RobotTwin.CoreSim.Firmware.Xtensa
 {
     /// <summary>
+    /// [esp32emu] Light sleep as IDF enters it (rtc_sleep_start): SLEEP_EN with the digital domain kept powered halts both
+    /// cores and the APB clock (the timer groups, the interrupt watchdog and LEDC stop; the RTC time goes on) until an
+    /// enabled source wakes the chip: the RTC timer, EXT0 (an RTC pad at its level) or a GPIO's light-sleep wake level
+    /// (GPIO_PINn's WAKEUP_ENABLE with a low or high level type). It then sets SLP_WAKEUP in RTC_CNTL_INT_RAW and the cause
+    /// in WAKEUP_STATE; the firmware, spinning on INT_RAW, carries on and IDF advances esp_timer by the time it slept.
+    /// </summary>
+    public sealed partial class Esp32Soc
+    {
+        private const uint RtcIntRaw = 0x3FF48040, RtcIntClr = 0x3FF48048;
+        private bool _lightSleep;
+        private double _lightSleepWakeAt;
+        private uint _lightSleepSources;
+
+        /// <summary>The chip is in light sleep: both cores and the APB clock halted until a wake source fires.</summary>
+        public bool LightSleeping => _lightSleep;
+
+        /// <summary>Light sleeps so far (for readouts and tests).</summary>
+        public int LightSleeps { get; private set; }
+
+        private void EnterLightSleep()
+        {
+            // WAKEUP_STATE: the sources enabled in bits 21:11 (0 EXT0, 2 GPIO, 3 the RTC timer).
+            _lightSleepSources = (Reg(RtcWakeupState) >> 11) & 0x7FF;
+            _lightSleepWakeAt = double.PositiveInfinity;
+            if ((_lightSleepSources & 8) != 0)
+            {
+                ulong alarm = (ulong)(Reg(RtcSlpTimer1) & 0xFFFF) << 32 | Reg(RtcSlpTimer0);
+                ulong now = (ulong)(Seconds * 150_000.0);
+                _lightSleepWakeAt = Seconds + (alarm > now ? (alarm - now) / 150_000.0 : 0);
+            }
+
+            _lightSleep = true;
+            LightSleeps++;
+            ServiceLightSleep();   // a wake level already there wakes it at once
+        }
+
+        /// <summary>Each turn while asleep: the first enabled source that fires wakes the chip.</summary>
+        private void ServiceLightSleep()
+        {
+            if (!_lightSleep) return;
+            uint cause = 0;
+            if ((_lightSleepSources & 8) != 0 && Seconds >= _lightSleepWakeAt) cause |= 8;
+            if ((_lightSleepSources & 1) != 0)
+            {
+                int pad = (int)(Reg(RtcIoExtWakeup0) >> 27);
+                int gpio = pad < RtcPadGpio.Length ? RtcPadGpio[pad] : -1;
+                bool level = (Reg(RtcExtWakeupConf) & (1u << 30)) != 0;
+                if (gpio >= 0 && ((_gpioInput >> gpio & 1) != 0) == level) cause |= 1;
+            }
+
+            if ((_lightSleepSources & 4) != 0)
+            {
+                for (int gpio = 0; gpio < 40; gpio++)
+                {
+                    uint pin = _gpioPin[gpio];
+                    if ((pin & (1u << 10)) == 0) continue;   // WAKEUP_ENABLE
+                    int type = (int)((pin >> 7) & 7);
+                    bool high = (_gpioInput >> gpio & 1) != 0;
+                    if ((type == 4 && !high) || (type == 5 && high)) cause |= 4;
+                }
+            }
+
+            if (cause == 0) return;
+            _lightSleep = false;
+            _registers[RtcIntRaw] = Reg(RtcIntRaw) | 1u;                              // SLP_WAKEUP
+            _registers[RtcWakeupState] = (Reg(RtcWakeupState) & ~0x7FFu) | cause;
+        }
+
+        /// <summary>CPU cycles until the RTC timer wakes the sleeping chip (the run loop's turn while asleep).</summary>
+        private long CyclesToWake() =>
+            double.IsPositiveInfinity(_lightSleepWakeAt) ? long.MaxValue : Math.Max(1, (long)Math.Ceiling((_lightSleepWakeAt - Seconds) * CpuHz));
+    }
+
+    /// <summary>
     /// [esp32emu] Deep sleep as IDF enters it: RTC_CNTL_STATE0's SLEEP_EN with the digital domain powered down
     /// (RTC_CNTL_DIG_PWC's DG_WRAP_PD_EN) stops the chip (<see cref="DeepSleepRequested"/>). What wakes it is read from the
     /// registers as the RTC controller reads them: the RTC timer (WAKEUP_ENA's timer bit, SLP_TIMER0/1's time in ticks of
@@ -27,14 +101,19 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>The pad EXT0 wakes it on and the level it waits for (gpio -1: EXT0 does not wake it).</summary>
         public (int Gpio, bool Level) Ext0Wake { get; private set; } = (-1, false);
 
-        /// <summary>SLEEP_EN: deep sleep when the digital domain powers down with it (light sleep is not modelled: it returns at once).</summary>
+        /// <summary>SLEEP_EN: deep sleep when the digital domain powers down with it, light sleep when it stays on.</summary>
         private bool WriteSleepRegister(uint register, uint value)
         {
+            if (register == RtcIntClr)
+            {
+                _registers[RtcIntRaw] = Reg(RtcIntRaw) & ~value;   // SLP_WAKEUP / SLP_REJECT handled
+                return false;
+            }
+
             if (register != RtcState0 || (value & (1u << 31)) == 0) return false;
             if ((Reg(RtcDigPwc) & (1u << 31)) == 0)
             {
-                // Light sleep: the chip wakes at once (SLP_WAKEUP in RTC_CNTL_INT_RAW), its time is not skipped.
-                _registers[0x3FF48040] = Reg(0x3FF48040) | 1u;
+                EnterLightSleep();
                 return false;
             }
 

@@ -388,7 +388,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private void UpdateChipCurrent()
         {
             if (_chip == null) return;
-            _chip.Current = State == Esp32BoardState.Running ? _runCurrent
+            _chip.Current = State == Esp32BoardState.Running ? (_soc != null && _soc.LightSleeping ? Options.LightSleepCurrent : _runCurrent)
                 : State == Esp32BoardState.DeepSleep ? Options.DeepSleepCurrent : Options.ResetCurrent;
         }
 

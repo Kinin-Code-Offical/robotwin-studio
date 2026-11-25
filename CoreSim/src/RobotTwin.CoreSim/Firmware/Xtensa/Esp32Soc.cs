@@ -407,15 +407,16 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 // While either core is in, or about to take, a high-priority interrupt (level 4 and up), the cores take turns
                 // of a few cycles: such handlers hand over through flags (the interrupt watchdog's livelock handshake …) whose
                 // windows are shorter than a normal turn, and on the chip both cores run truly at once.
-                int quantum = AppRunning && (HighPriority(Pro) || HighPriority(App)) ? 16 : turn;
+                // In light sleep neither core runs: time goes on to the wake-up in one turn (or to the end of the run).
+                long quantum = _lightSleep ? Math.Min(CyclesToWake(), int.MaxValue) : AppRunning && (HighPriority(Pro) || HighPriority(App)) ? 16 : turn;
                 int step = (int)Math.Min(quantum, cycles - done);
                 try
                 {
                     BeginTurn();
                     _running = Pro;
-                    if (!Stalled(0)) Pro.Run(step);
+                    if (!Stalled(0) && !_lightSleep) Pro.Run(step);
                     _running = App;
-                    if (AppRunning && !Stalled(1)) App.Run(step);
+                    if (AppRunning && !Stalled(1) && !_lightSleep) App.Run(step);
                     _running = null;
                     EndTurn(step);
                 }
