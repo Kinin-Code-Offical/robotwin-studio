@@ -100,6 +100,22 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         public void Reset() => _resetRequested = true;
 
+        private readonly int[] _touch = NewTouch();
+
+        private static int[] NewTouch()
+        {
+            var touch = new int[Esp32Gpio.Count];
+            for (int i = 0; i < touch.Length; i++) touch[i] = 75;
+            return touch;
+        }
+
+        /// <summary>What a touch pad's measurement gives (untouched ≈ 70–80, touched &lt; 20), as in the fast mode.</summary>
+        public void SetTouchValue(int gpio, int value)
+        {
+            if (gpio < 0 || gpio >= _touch.Length) throw new ArgumentOutOfRangeException(nameof(gpio));
+            _touch[gpio] = value;
+        }
+
         public void OnSubstep(double time)
         {
             // Inputs are sampled at each slice's start; the chip runs a whole slice at a time.
@@ -221,6 +237,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _wakeAt = double.NaN;
             _ext0 = (-1, false);
             soc.PadVoltage = gpio => gpio >= 0 && gpio < _pads.Length && _pads[gpio].Pin is { } pin ? pin.Voltage : 0;
+            soc.TouchValue = gpio => gpio >= 0 && gpio < _touch.Length ? _touch[gpio] : 75;
             soc.I2cBuses[0] = I2c;    // Wire
             soc.I2cBuses[1] = I2c1;   // Wire1
             soc.Spi = Spi;

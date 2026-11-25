@@ -44,6 +44,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>Queues text for a UART's receive line.</summary>
         void SendSerial(string text, int port = 0);
 
+        /// <summary>What touchRead() returns for a touch pad (untouched ≈ 70–80, touched &lt; 20).</summary>
+        void SetTouchValue(int gpio, int value);
+
         /// <summary>Presses EN: the firmware restarts at the next <see cref="Advance"/>.</summary>
         void Reset();
     }

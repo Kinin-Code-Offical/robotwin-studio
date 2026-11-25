@@ -290,6 +290,16 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void TouchPadsReadTheirCounts()
+        {
+            var soc = Chip();
+            soc.TouchValue = gpio => gpio == 4 ? 12 : gpio == 15 ? 70 : 75;
+            Assert.Equal(12u << 16 | 75u, soc.Read32(0x3FF48870));    // T0 (GPIO4) touched, T1 (GPIO0)
+            Assert.Equal(75u << 16 | 70u, soc.Read32(0x3FF48874));    // T2 (GPIO2), T3 (GPIO15)
+            Assert.NotEqual(0u, soc.Read32(0x3FF48884) & (1u << 10)); // MEAS_DONE
+        }
+
+        [Fact]
         public void EmulatorGapNamesWhatTheEmulatorLacks()
         {
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <Wire.h>\nvoid setup() {}"));
