@@ -28,6 +28,10 @@ RobotWin Studio'daki ölçü aletleri gerçek cihazlar gibi davranır: osiloskob
 
 Otomatik ölçümler: tepe, dip, tepeden tepeye, genlik, ortalama, RMS, periyot, frekans, görev oranı, yükselme ve düşme süresi.
 
+### Seri protokol çözücü
+
+Osiloskop panelinin **Çözücü** bölümü probladığınız kabloları UART, I²C ya da SPI olarak okur ve ekranın altına bir çözüm şeridi çizer (baytlar kutu, START/STOP ve ACK işaret, hatalar kırmızı). **UART**: A kanalı hat; **Baud** ve **Eşlik** (yok, çift, tek); başlangıç biti, veri bitleri (önce düşük bit), eşlik ve bitiş biti bitlerin ortasından okunur, bitiş biti düşükse çerçeve hatası, eşlik tutmazsa eşlik hatası. **I²C**: A SCL, B SDA; START (tekrarlı START dahil), 7 bitlik adres ve R/W, her bayttan sonra ACK/NACK, veri, STOP. **SPI**: A SCK, B veri (MOSI ya da MISO), isteğe bağlı CS (düşükken seçili); **Mod** 0–3 saatin boştaki seviyesini ve verinin okunduğu kenarı belirler. Mantık eşiği kaydın en düşük ve en yüksek seviyesinin ortasıdır; yavaş bir kenar, bir parazit ya da yanlış baud hızı gerçekteki gibi görünür.
+
 ## Multimetre
 
 **Multimetre** sekmesi 6000 sayımlı, true-RMS, otomatik kademeli bir el multimetresidir.

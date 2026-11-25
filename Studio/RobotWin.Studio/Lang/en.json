@@ -7323,7 +7323,16 @@
   "SPICE modeli yapıştır…": "Paste a SPICE model…",
   "Üreticinin .model kartını yapıştırın (örneğin .model 1N4148 D(IS=2.52n N=1.752 ...)): Is, N, Rs, BV, BF, VAF, Cje, VTO … parçanın değerleri olur": "Paste the manufacturer's .model card (for example .model 1N4148 D(IS=2.52n N=1.752 ...)): Is, N, Rs, BV, BF, VAF, Cje, VTO … become the part's values",
   "Üreticinin .model kartı (birden çok satır ve + devam satırları olabilir):": "The manufacturer's .model card (it may run over several lines with + continuations):",
-  "Bu parçaya uyan bir .model kartı bulunamadı (diyot için D, NPN/PNP transistör, NMOS/PMOS).": "No .model card fits this part (D for a diode, NPN/PNP transistor, NMOS/PMOS)."
+  "Bu parçaya uyan bir .model kartı bulunamadı (diyot için D, NPN/PNP transistör, NMOS/PMOS).": "No .model card fits this part (D for a diode, NPN/PNP transistor, NMOS/PMOS).",
+  "Çözücü": "Decoder",
+  "Protokol": "Protocol",
+  "Eşlik": "Parity",
+  "çift": "even",
+  "tek": "odd",
+  "Baud": "Baud",
+  "UART hızı (bit/s); Enter ile uygula": "UART rate (bit/s); Enter applies it",
+  "(çerçeve hatası)": "(framing error)",
+  "(eşlik hatası)": "(parity error)"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10357,6 +10366,9 @@
   "SPICE modeli — {…}": "SPICE model — {0}",
   "{…}: SPICE modeli {…}": "{0}: SPICE model {1}",
   "{…} artık {…}: {…} değer alındı": "{0} is now {1}: {2} values taken",
-  "{…} artık {…}: {…} değer alındı; modelimizde olmayanlar: {…}": "{0} is now {1}: {2} values taken; not in our model: {3}"
+  "{…} artık {…}: {…} değer alındı; modelimizde olmayanlar: {…}": "{0} is now {1}: {2} values taken; not in our model: {3}",
+  "{…} (çerçeve hatası)": "{0} (framing error)",
+  "{…} (eşlik hatası)": "{0} (parity error)",
+  "{…} bit (yarım)": "{0} bits (cut short)"
  }
 }

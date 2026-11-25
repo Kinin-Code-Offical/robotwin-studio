@@ -101,7 +101,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - Gerber'in ikinci bir görüntüleyiciyle karşılaştırılması.
 - [~] **Gömülü yazılım:** Uno/Nano AVR emülatörü ve hata ayıklayıcı var. Eksikler:
   - register ve zaman çizelgesi;
-  - protokol analizörleri ve hata enjeksiyonu;
+  - [~] protokol analizörleri: osiloskopta UART, I²C ve SPI çözücü (`Instruments/ProtocolDecoder.cs`). Sırada: AVR'nin USART'ının TX pinini bit bit sürmesi (bugün bayt düzeyinde), hata enjeksiyonu;
   - ESP32'nin iki çalışma modu (plan: [ESP32_MODLARI.md](ESP32_MODLARI.md)):
     - [x] 1. Çalışma modu ayarı (kart başına, dosyada) + araç zinciri yöneticisi (`arduino-cli` ile RobotWin'in klasörüne Arduino-ESP32 3.3.13) + donanım derlemesi (`.bin`, `.elf`) + karta yükleme (`esptool`) + birleşik imaj; `--esp32-build`, `--esp32-compat`.
     - [~] 2. Kendi Xtensa LX6 çekirdeğimiz ve komut testleri: `Firmware/Xtensa/` (pencereli kayıtlar ve taşma/boşalma, 16 bitlik komutlar, döngüler, çarpma/bölme, MIN/MAX/NSA/SEXT/CLAMPS, booleanlar, S32C1I, FPU, özel kayıtlar, 1–5. düzey kesmeler ve NMI, CCOMPARE, WAITI, istisna vektörleri); `XtensaCoreTests` gerçek `xtensa-esp32-elf-as` ile 10 test. Kalan: FPU'nun bölme/karekök yardımcı komutları (DIV0.S, DIVN.S, NEXP01.S …) ve MAC16.

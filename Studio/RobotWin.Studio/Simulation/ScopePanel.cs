@@ -184,6 +184,60 @@ namespace RobotWin.Studio.Simulation
             });
             _root.Children.Add(dispRow);
 
+            // [decode] UART, I²C and SPI read off the probed wires, as a scope's decode option does.
+            Section("Çözücü");
+            string[] protocols = { string.Empty, "UART", "I2C", "SPI" };
+            Chips("Protokol", new[] { "Kapalı", "UART", "I²C", "SPI" }, () => Math.Max(0, Array.IndexOf(protocols, Scope.DecodeProtocol)), i =>
+            {
+                Scope.DecodeProtocol = protocols[i];
+                Changed();
+            });
+            var decodeA = Chips("A", new[] { "1", "2", "3", "4" }, () => Scope.DecodeA, i =>
+            {
+                Scope.DecodeA = i;
+                Changed();
+            }, colored: true);
+            var decodeB = Chips("B", new[] { "1", "2", "3", "4" }, () => Scope.DecodeB, i =>
+            {
+                Scope.DecodeB = i;
+                Changed();
+            }, colored: true);
+            var decodeC = Chips("CS", new[] { "yok", "1", "2", "3", "4" }, () => Scope.DecodeC + 1, i =>
+            {
+                Scope.DecodeC = i - 1;
+                Changed();
+            });
+            var mode = Chips("Mod", new[] { "0", "1", "2", "3" }, () => Scope.DecodeSpiMode, i =>
+            {
+                Scope.DecodeSpiMode = i;
+                Changed();
+            });
+            var parityChips = Chips("Eşlik", new[] { "yok", "çift", "tek" }, () => Scope.DecodeParity == "even" ? 1 : Scope.DecodeParity == "odd" ? 2 : 0, i =>
+            {
+                Scope.DecodeParity = i == 1 ? "even" : i == 2 ? "odd" : "none";
+                Changed();
+            });
+            var baudRow = Row();
+            baudRow.Children.Add(new TextBlock { Text = "Baud", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            var baud = new TextBox { Width = 80, Text = "9600", ToolTip = "UART hızı (bit/s); Enter ile uygula" };
+            baud.KeyDown += (_, e) =>
+            {
+                if (e.Key != System.Windows.Input.Key.Enter) return;
+                if (double.TryParse(baud.Text.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double b) && b > 0) Scope.DecodeBaud = b;
+                Changed();
+            };
+            baudRow.Children.Add(baud);
+            _root.Children.Add(baudRow);
+            _refresh.Add(() =>
+            {
+                string p = Scope.DecodeProtocol;
+                decodeA.Visibility = p.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+                decodeB.Visibility = p is "I2C" or "SPI" ? Visibility.Visible : Visibility.Collapsed;
+                decodeC.Visibility = mode.Visibility = p == "SPI" ? Visibility.Visible : Visibility.Collapsed;
+                parityChips.Visibility = baudRow.Visibility = p == "UART" ? Visibility.Visible : Visibility.Collapsed;
+                if (!baud.IsKeyboardFocusWithin) baud.Text = Scope.DecodeBaud.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            });
+
             var bottom = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
             bottom.Children.Add(Btn("Tüm probları çıkar", () => Sim.ClearProbes(), ghost: true));
             var save = Btn("Kaydı kaydet (.rwsim)", () => (Window.GetWindow(this) as MainWindow)?.SaveRecording(), ghost: true);

@@ -165,6 +165,7 @@ namespace RobotWin.Studio.Simulation
             {
                 DrawMarkers(dc, plot, frame);
                 DrawCursors(dc, plot, frame);
+                if (frame != null) DrawDecode(dc, plot, frame);   // [decode]
             }
 
             DrawScaleRow(dc, plot);
@@ -432,6 +433,38 @@ namespace RobotWin.Studio.Simulation
             var pen = new Pen(SymbolRenderer.Brush(color), 1.4) { LineJoin = PenLineJoin.Round };
             pen.Freeze();
             dc.DrawGeometry(null, pen, g);
+        }
+
+        /// <summary>[decode] The serial decoder's lane along the bottom of the screen: bytes as boxes, START/STOP and ACK as marks, errors red.</summary>
+        private void DrawDecode(DrawingContext dc, Rect plot, ScopeFrame frame)
+        {
+            if (Scope.DecodeProtocol.Length == 0) return;
+            var fields = Scope.Decode(frame);
+            double laneH = 18, y = plot.Bottom - laneH - 3;
+            dc.DrawRectangle(SymbolRenderer.Brush(Color.FromArgb(0xC8, 0x0A, 0x0B, 0x0C)), null, new Rect(plot.Left, y - 2, plot.Width, laneH + 4));
+            double X(double t) => plot.Left + (t - frame.StartTime) / (10.0 * frame.SecondsPerDiv) * plot.Width;
+            var label = new FormattedText(Scope.DecodeProtocol, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, 10, SymbolRenderer.Brush(Muted), Dpi);
+            dc.DrawText(label, new Point(plot.Left + 3, y - label.Height - 1));
+            var dataColor = Color.FromRgb(0x4A, 0x8C, 0xFF);
+            foreach (var f in fields)
+            {
+                double x0 = X(f.Start), x1 = X(f.End);
+                if (x1 < plot.Left || x0 > plot.Right) continue;
+                var color = f.Error ? StopColor : f.Kind is "start" or "stop" ? RunColor : f.Kind == "address" ? TriggerColor : f.Kind == "ack" ? Muted : dataColor;
+                if (f.End - f.Start <= 0 || x1 - x0 < 3)
+                {
+                    // A mark: START, STOP, ACK.
+                    dc.DrawLine(Pen(color, 1.5), new Point(x0, y), new Point(x0, y + laneH));
+                    var mark = new FormattedText(f.Text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, 9.5, SymbolRenderer.Brush(color), Dpi);
+                    dc.DrawText(mark, new Point(x0 + 2, y + (laneH - mark.Height) / 2));
+                    continue;
+                }
+
+                var box = new Rect(Math.Max(plot.Left, x0), y, Math.Max(2, Math.Min(plot.Right, x1) - Math.Max(plot.Left, x0)), laneH);
+                dc.DrawRoundedRectangle(SymbolRenderer.Brush(Color.FromArgb(0x55, color.R, color.G, color.B)), Pen(color, 1), box, 3, 3);
+                var text = new FormattedText(f.Text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, 10, SymbolRenderer.Brush(Text), Dpi);
+                if (text.Width + 4 <= box.Width) dc.DrawText(text, new Point(box.Left + (box.Width - text.Width) / 2, y + (laneH - text.Height) / 2));
+            }
         }
 
         private void DrawXY(DrawingContext dc, Rect plot, ScopeFrame frame)

@@ -1576,6 +1576,25 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "decode":
+                {
+                    // [decode] A 4800 Hz square wave reads, at 9600 baud 8N1, as an endless run of 'U' (0x55).
+                    var gen = sch.AddPart(W.Library, "siggen-square", new GridPoint(-30, 22));
+                    gen.Parameters["frequency"] = "4800";
+                    var r = sch.AddPart(W.Library, "res-1000", new GridPoint(-14, 22));
+                    void At(SchematicPart part, int index, string net)
+                    {
+                        var pd = W.Library.Get(part.PartId).Pins[index];
+                        sch.Labels.Add(new NetLabel { Name = net, Position = part.Transform(pd.X, pd.Y) });
+                    }
+
+                    At(gen, 0, "TX");
+                    At(gen, 1, "GND");
+                    At(r, 0, "TX");
+                    At(r, 1, "GND");
+                    break;
+                }
+
                 case "ac":
                 {
                     // [ac] An RC low-pass driven by a sine generator, its frequency response computed in the tab.
@@ -1618,6 +1637,14 @@ namespace RobotWin.Studio.Pages
             var sim = W.Simulation;
             switch (fault)
             {
+                case "decode":
+                    sim.ClearProbes();
+                    sim.AddVoltageProbe("TX", 0);
+                    sim.Scope.DecodeProtocol = "UART";
+                    sim.Scope.DecodeA = 0;
+                    sim.Scope.DecodeBaud = 9600;
+                    ShowDock(0);
+                    break;
                 case "scope-power":
                     // [scope] the supply's voltage and the motor's current: their product is the power the motor branch draws
                     sim.ClearProbes();
@@ -1684,6 +1711,12 @@ namespace RobotWin.Studio.Pages
             var sim = W.Simulation;
             switch (fault)
             {
+                case "decode":
+                    sim.Scope.Autoset(sim.Time);
+                    sim.Scope.SecondsPerDiv = 5e-4;   // five UART frames across the screen
+                    _scopePanel.Refresh();
+                    for (int i = 0; i < 30; i++) sim.StepOnce(1e-3);
+                    break;
                 case "scope-power":
                     sim.Scope.Autoset(sim.Time);
                     sim.Scope.MathFunction = ScopeMathFunction.Multiply;

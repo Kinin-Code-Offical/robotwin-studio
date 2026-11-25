@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Serial protocol decoder on the oscilloscope:** UART (baud, parity, framing and parity errors), I²C (START/repeated START/STOP, address and R/W, ACK/NACK, data) and SPI (modes 0–3, chip select) read off the probed wires at the record's logic threshold, drawn as a decode lane under the traces.
+
 - **Manufacturers' SPICE models:** paste a `.model` card (continuations, comments, SPICE suffixes) on a diode, transistor or MOSFET and its numbers become the part's parameters in one undoable change; parameters our models do not use are listed. Validated with the 1N4148 card against Shockley's law.
 
 - **AC analysis (frequency response):** small-signal response about the operating point, as SPICE's .AC: every device stamps itself at two backward-Euler step lengths, which separates the circuit into G + C/h, and (G + jωC)x = b is solved per frequency. The circuit page's new tab draws the Bode plot with the low-frequency gain, the −3 dB corner and the peak. Validated on an RC corner, an RLC resonance and a common-emitter stage.

@@ -248,6 +248,66 @@ namespace RobotTwin.CoreSim.Instruments
         /// <summary>[scope] The next frame sets the math's scale so its trace fills about six divisions (after the function or a source changes).</summary>
         public bool MathAutoScale { get; set; }
 
+        /// <summary>
+        /// [decode] The serial decoder: "" (off), "UART", "I2C" or "SPI"; its channels (UART: A the line; I²C: A SCL, B SDA;
+        /// SPI: A SCK, B data, C chip select or −1), the UART's baud rate and parity, the SPI mode.
+        /// </summary>
+        public string DecodeProtocol { get; set; } = string.Empty;
+
+        public int DecodeA { get; set; }
+
+        public int DecodeB { get; set; } = 1;
+
+        public int DecodeC { get; set; } = -1;
+
+        public double DecodeBaud { get; set; } = 9600;
+
+        public string DecodeParity { get; set; } = "none";
+
+        public int DecodeSpiMode { get; set; }
+
+        /// <summary>[decode] The frame's serial traffic, decoded with the settings above (empty when off or a channel has no probe).</summary>
+        public List<DecodedField> Decode(ScopeFrame frame)
+        {
+            var none = new List<DecodedField>();
+            if (DecodeProtocol.Length == 0) return none;
+            double[]? Wire(int channel) => channel >= 0 && channel < Channels.Count ? frame.TraceOf(Channels[channel])?.Values : null;
+            // The logic threshold: half way between the wire's lowest and highest level in the frame.
+            double Threshold(double[] v)
+            {
+                double lo = double.PositiveInfinity, hi = double.NegativeInfinity;
+                foreach (double x in v)
+                {
+                    if (x < lo) lo = x;
+                    if (x > hi) hi = x;
+                }
+
+                return hi - lo < 0.2 ? double.PositiveInfinity : (lo + hi) / 2;
+            }
+
+            var a = Wire(DecodeA);
+            if (a == null) return none;
+            switch (DecodeProtocol)
+            {
+                case "UART":
+                    return ProtocolDecoder.Uart(a, frame.StartTime, frame.SampleInterval, DecodeBaud, Threshold(a), parity: DecodeParity);
+                case "I2C":
+                {
+                    var b = Wire(DecodeB);
+                    return b == null ? none : ProtocolDecoder.I2c(a, b, frame.StartTime, frame.SampleInterval, Threshold(a));
+                }
+
+                case "SPI":
+                {
+                    var b = Wire(DecodeB);
+                    return b == null ? none : ProtocolDecoder.Spi(a, b, Wire(DecodeC), frame.StartTime, frame.SampleInterval, Threshold(a), DecodeSpiMode);
+                }
+
+                default:
+                    return none;
+            }
+        }
+
         public ScopeFrame? Frame { get; private set; }
 
         public double SampleRate => Math.Min(MaxSampleRate, RecordLength / (HorizontalDivisions * SecondsPerDiv));
