@@ -667,7 +667,10 @@ namespace RobotTwin.CoreSim.Automation
                     double h = Physics?.Step ?? 1e-3;
                     double rotor = Math.Max(1e-12, m.Inertia * m.GearRatio * m.GearRatio);
                     if (double.IsNaN(cmd.Omega)) cmd.Omega = joint.Speed;
-                    double slope = Math.Abs(w0) > 1e-9 ? stall / w0 : Math.Abs(StallTorque(m, 1.0)) * m.MotorConstant * m.GearRatio;
+                    // The line's slope, stall torque over no-load speed: k²·G²·η/R, the same at any voltage and always
+                    // positive (|stall| / w0 turned it negative for a negative voltage: reversing a turning motor ran it
+                    // away instead of braking it).
+                    double slope = Math.Abs(StallTorque(m, 1.0)) * m.MotorConstant * m.GearRatio;
                     double drive = slope * (w0 - cmd.Omega);   // the torque–speed line, signed
                     double load = joint.Drive == JointDrive.Velocity ? joint.DriveTorque : 0;
                     // Implicit in the line's own slope: stable for any step however light the rotor.

@@ -587,6 +587,9 @@ namespace RobotWin.Studio.Pages
             };
             sb.AppendLine($"Durum  {state}");
             sb.AppendLine($"Döngü  {c.CycleCount}" + (c.PalletCount > 1 ? $" · palet {c.PalletIndex + 1}/{c.PalletCount}" : string.Empty) + $" · %{c.Override * 100:0} hız");
+            // [robot-control] the cycle time and how hard the drives work on the current move (slowed when a drive would exceed its peak torque)
+            if (c.LastCycleTime > 0) sb.AppendLine($"Çevrim {c.LastCycleTime.ToString("0.00", CultureInfo.CurrentCulture)} s");
+            if (c.LastTorque.Axis >= 0) sb.AppendLine($"Tork   %{c.LastTorque.Ratio * 100:0} ({model.Joints[c.LastTorque.Axis].Name})" + (c.LastTorque.Slowed > 1.001 ? $" · tork için %{(1 - 1 / c.LastTorque.Slowed) * 100:0} yavaşlatıldı" : string.Empty) + (c.PayloadKg > 0 ? $" · yük {c.PayloadKg.ToString("0.###", CultureInfo.CurrentCulture)} kg" : string.Empty));
             if (c.State == ArmState.Fault) sb.AppendLine("Arıza  " + c.FaultText);
             else if (c.CurrentInstruction is { } ins) sb.AppendLine($"Satır  {ins.Line}: {ins.Text}");
             AppendTcp(sb, c.TcpMeasured);

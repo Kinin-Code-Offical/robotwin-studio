@@ -107,7 +107,7 @@ namespace RobotWin.Studio.Pages
             };
         }
 
-        /// <summary>[pid] Snapshot option --pid "Motor": opens the tuner on that motor, runs the step test and the first rule, captures the window.</summary>
+        /// <summary>[pid] Snapshot option --pid "Motor" [--pid-position]: opens the tuner on that motor (its position loop with --pid-position), runs the step test and the first rule, captures the window.</summary>
         private void PidSnapshot()
         {
             var args = Environment.GetCommandLineArgs();
@@ -116,6 +116,7 @@ namespace RobotWin.Studio.Pages
             var w = OpenPidTuner(motor.Id);
             if (w == null) return;
             App.SnapshotTarget = w.Content as FrameworkElement;
+            if (args.Contains("--pid-position")) w.UsePositionLoop();   // [pid] the position loop (degrees from an encoder)
             _ = w.RunAllForSnapshot();   // the capture waits with --wait
         }
     }

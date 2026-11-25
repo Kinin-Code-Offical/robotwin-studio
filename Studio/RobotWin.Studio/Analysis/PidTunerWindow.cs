@@ -14,13 +14,15 @@ using RobotTwin.CoreSim.Sandbox;
 namespace RobotWin.Studio.Analysis
 {
     /// <summary>
-    /// [pid] PID tuning of a motor's speed loop, in three steps on a copy of the world:
+    /// [pid] PID tuning of a motor's speed loop, or of its position loop (a DC motor with an encoder: a DC servo), in three
+    /// steps on a copy of the world:
     /// <list type="number">
     /// <item>a PWM step identifies the loop as a first-order-plus-dead-time model (the motor, its gearbox and whatever it drives);</item>
     /// <item>the classic rules give gains, each with the model's predicted response;</item>
     /// <item>the chosen gains run in the full physics, so the real response is seen next to the predicted one, and the code is copied.</item>
     /// </list>
-    /// Units are the firmware's: PWM counts (0–255) in, output-shaft rpm out (CoreSim Robotics/PidTuning.cs, MotorBench.cs).
+    /// Units are the firmware's: PWM counts (0–255) in, output-shaft rpm (speed loop) or degrees (position loop) out
+    /// (CoreSim Robotics/PidTuning.cs, MotorBench.cs).
     /// </summary>
     public sealed class PidTunerWindow : Window
     {
@@ -33,6 +35,7 @@ namespace RobotWin.Studio.Analysis
         private readonly TextBox _period = new TextBox { Width = 70, Text = "10" };
         private readonly TextBox _closedLoop = new TextBox { Width = 70, Text = "" };
         private readonly TextBox _setpoint = new TextBox { Width = 70, Text = "" };
+        private readonly ComboBox _loop = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0, 0, 0, 8) };
         private readonly CheckBox _reverse = new CheckBox { Content = "İki yönlü sürücü (−255…255)", Margin = new Thickness(0, 4, 0, 8), ToolTip = "H köprüsü motoru geri de sürebiliyorsa: fren için negatif PWM kullanılır" };
         private readonly Button _runStep = new Button { Content = "Adım testini çalıştır", Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 4, 0, 8) };
         private readonly TextBlock _model = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
@@ -74,7 +77,11 @@ namespace RobotWin.Studio.Analysis
             DockPanel.SetDock(scroll, Dock.Left);
             root.Children.Add(scroll);
 
-            left.Children.Add(Note($"{name} motorunun hız döngüsü. Deneyler dünyanın bir kopyasında, yazılım olmadan ve tam fizikle yapılır: motorun yükü, taktığınız tekerlek ve sürdüğü araçtır. Birimler yazılımınızınkiler: komut PWM (0–255), hız çıkış milinin dev/dk'sı."));
+            left.Children.Add(Note($"{name} motorunun hız döngüsü ya da (enkoderle) konum döngüsü. Deneyler dünyanın bir kopyasında, yazılım olmadan ve tam fizikle yapılır: motorun yükü, taktığınız tekerlek ve sürdüğü araçtır. Birimler yazılımınızınkiler: komut PWM (0–255), ölçüm çıkış milinin dev/dk'sı ya da açısı (derece)."));
+            _loop.Items.Add(new ComboBoxItem { Content = "Hız döngüsü (dev/dk)" });
+            _loop.Items.Add(new ComboBoxItem { Content = "Konum döngüsü (derece, enkoderli motor)" });
+            _loop.SelectedIndex = 0;
+            left.Children.Add(_loop);
             left.Children.Add(Caption("1. Adım testi"));
             left.Children.Add(Row("Besleme (V)", _supply, "PWM 255'in motora verdiği gerilim: pil ya da sürücünün çıkışı"));
             left.Children.Add(Row("Test PWM'i", _stepPwm, "Duran motora birden verilen PWM; hız oturana kadar ölçülür"));
@@ -84,7 +91,7 @@ namespace RobotWin.Studio.Analysis
             left.Children.Add(Caption("2. Kural"));
             left.Children.Add(Row("Döngü periyodu (ms)", _period, "Yazılımınızda PID'in kaç milisaniyede bir çalıştığı; yarım periyot ölü zamana eklenir"));
             left.Children.Add(Row("Kapalı çevrim τc (ms)", _closedLoop, "SIMC ve IMC'nin ayar düğmesi: küçük = hızlı ama hassas, büyük = yavaş ama sağlam. Boş: kendiliğinden"));
-            left.Children.Add(Row("Ayar noktası (dev/dk)", _setpoint, "Denenecek hız; boş: test hızının %60'ı"));
+            left.Children.Add(Row("Ayar noktası", _setpoint, "Hız döngüsünde denenecek hız (dev/dk; boş: test hızının %60'ı), konum döngüsünde dönülecek açı (derece; boş: 90°)"));
             left.Children.Add(_reverse);
             left.Children.Add(_rules);
             var buttons = new StackPanel { Orientation = Orientation.Horizontal };
@@ -112,7 +119,14 @@ namespace RobotWin.Studio.Analysis
             _rules.SelectionChanged += (_, _) => ShowPrediction();
             _period.LostFocus += (_, _) => Retune();
             _closedLoop.LostFocus += (_, _) => Retune();
-            _setpoint.LostFocus += (_, _) => ShowPrediction();
+            _setpoint.LostFocus += (_, _) => Retune();
+            _loop.SelectionChanged += (_, _) =>
+            {
+                // A position loop must be able to drive back: the bidirectional driver is part of it.
+                _reverse.IsEnabled = !Position;
+                if (Position) _reverse.IsChecked = true;
+                Retune();
+            };
             _reverse.Click += (_, _) => ShowPrediction();
             _tryPhysics.Click += async (_, _) => await TryPhysics();
             _copy.Click += (_, _) => CopyCode();
@@ -140,10 +154,20 @@ namespace RobotWin.Studio.Analysis
             double.TryParse(b.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && !double.IsNaN(v) ? v : fallback;
 
         private double Period => Math.Max(0.001, Num(_period, 10) / 1000);
-        private double UMin => _reverse.IsChecked == true ? -255 : 0;
+        private double UMin => _reverse.IsChecked == true || Position ? -255 : 0;
         private const double UMax = 255;
 
-        private double Setpoint => _setpoint.Text.Trim().Length > 0 ? Num(_setpoint, 0) : 0.6 * (_step?[^1].Y ?? 0);
+        /// <summary>The position loop (degrees from an encoder) rather than the speed loop (rpm).</summary>
+        private bool Position => _loop.SelectedIndex == 1;
+
+        private string Unit => Position ? "°" : "dev/dk";
+
+        private double Setpoint => _setpoint.Text.Trim().Length > 0 ? Num(_setpoint, 0) : Position ? 90 : 0.6 * (_step?[^1].Y ?? 0);
+
+        /// <summary>The model's closed loop for these gains: the speed loop, or the position loop (the speed model integrated).</summary>
+        private LoopResponse Predict(PidGains g, double setpoint, double horizon) => Position
+            ? PidTuning.SimulatePosition(_plant, g, setpoint, horizon, Period, UMin, UMax)
+            : PidTuning.Simulate(_plant, g, setpoint, horizon, Period, UMin, UMax);
 
         private static string Ms(double s) => (s * 1000).ToString(s < 0.1 ? "0.#" : "0", CultureInfo.CurrentCulture) + " ms";
 
@@ -218,13 +242,13 @@ namespace RobotWin.Studio.Analysis
             double? tc = _closedLoop.Text.Trim().Length > 0 ? Num(_closedLoop, 0) / 1000 : null;
             // With hardly any dead time the default asks for a loop a third as slow as the motor (and a few periods).
             tc ??= Math.Max(_plant.DeadTime, Math.Max(0.3 * _plant.TimeConstant, 3 * Period));
-            _ruleList = PidTuning.Rules(_plant, tc);
+            _ruleList = Position ? PidTuning.PositionRules(_plant, tc.Value) : PidTuning.Rules(_plant, tc);
             int keep = Math.Max(0, _rules.SelectedIndex);
             _rules.Items.Clear();
             double sp = Setpoint;
             foreach (var r in _ruleList)
             {
-                var pred = PidTuning.Simulate(_plant, r.Gains, sp, Horizon(), Period, UMin, UMax);
+                var pred = Predict(r.Gains, sp, Horizon());
                 var item = new StackPanel { Margin = new Thickness(2, 3, 2, 3) };
                 item.Children.Add(new TextBlock { Text = r.Name, FontWeight = FontWeights.SemiBold });
                 item.Children.Add(new TextBlock { Text = $"Kp {G(r.Gains.Kp)} · Ki {G(r.Gains.Ki)} · Kd {G(r.Gains.Kd)}", FontFamily = (FontFamily)Application.Current.FindResource("F.Mono"), FontSize = 11.5 });
@@ -239,7 +263,9 @@ namespace RobotWin.Studio.Analysis
             ShowPrediction();
         }
 
-        private double Horizon() => Math.Max(0.3, Math.Min(5, 6 * (_plant.TimeConstant + _plant.DeadTime)));
+        private double Horizon() => Position
+            ? Math.Max(0.5, Math.Min(5, 20 * (_plant.TimeConstant + _plant.DeadTime)))
+            : Math.Max(0.3, Math.Min(5, 6 * (_plant.TimeConstant + _plant.DeadTime)));
 
         private PidRule? Chosen => (_rules.SelectedItem as ListBoxItem)?.Tag as PidRule;
 
@@ -262,15 +288,15 @@ namespace RobotWin.Studio.Analysis
             }
 
             double sp = Setpoint;
-            var pred = PidTuning.Simulate(_plant, rule.Gains, sp, Horizon(), Period, UMin, UMax);
+            var pred = Predict(rule.Gains, sp, Horizon());
             var xs = pred.Trace.Select(p => p.T).ToArray();
-            _loopPlot.Series.Add(new PlotSeries { Name = "Ayar noktası", Unit = "dev/dk", X = new[] { 0, xs[^1] }, Y = new[] { sp, sp }, Color = Color.FromRgb(0x8E, 0x8E, 0x97) });
-            _loopPlot.Series.Add(new PlotSeries { Name = "Model", Unit = "dev/dk", X = xs, Y = pred.Trace.Select(p => p.Y).ToArray(), Color = LinePlot.Palette[1] });
+            _loopPlot.Series.Add(new PlotSeries { Name = "Ayar noktası", Unit = Unit, X = new[] { 0, xs[^1] }, Y = new[] { sp, sp }, Color = Color.FromRgb(0x8E, 0x8E, 0x97) });
+            _loopPlot.Series.Add(new PlotSeries { Name = "Model", Unit = Unit, X = xs, Y = pred.Trace.Select(p => p.Y).ToArray(), Color = LinePlot.Palette[1] });
             _pwmPlot.Series.Add(new PlotSeries { Name = "PWM (model)", Unit = "", X = xs, Y = pred.Trace.Select(p => p.U).ToArray(), Color = LinePlot.Palette[1] });
             if (real != null)
             {
                 var rx = real.Trace.Select(p => p.T).ToArray();
-                _loopPlot.Series.Add(new PlotSeries { Name = "Fizik", Unit = "dev/dk", X = rx, Y = real.Trace.Select(p => p.Y).ToArray(), Color = LinePlot.Palette[0] });
+                _loopPlot.Series.Add(new PlotSeries { Name = "Fizik", Unit = Unit, X = rx, Y = real.Trace.Select(p => p.Y).ToArray(), Color = LinePlot.Palette[0] });
                 _pwmPlot.Series.Add(new PlotSeries { Name = "PWM (fizik)", Unit = "", X = rx, Y = real.Trace.Select(p => p.U).ToArray(), Color = LinePlot.Palette[0] });
             }
 
@@ -286,10 +312,13 @@ namespace RobotWin.Studio.Analysis
             double supply = Math.Max(0.5, Num(_supply, 6));
             var bench = new MotorBench(_world, _geometry, _motorId, supply);
             double sp = Setpoint, horizon = Horizon(), period = Period, umin = UMin;
+            bool position = Position;
             Busy(true, $"{rule.Name} gerçek fizikte deneniyor…");
             try
             {
-                _real = await Task.Run(() => bench.ClosedLoop(rule.Gains, sp, horizon, period, umin, UMax));
+                _real = await Task.Run(() => position
+                    ? bench.ClosedLoopPosition(rule.Gains, sp, horizon, period, umin, UMax)
+                    : bench.ClosedLoop(rule.Gains, sp, horizon, period, umin, UMax));
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is ApiException)
             {
@@ -297,9 +326,9 @@ namespace RobotWin.Studio.Analysis
                 return;
             }
 
-            var pred = PidTuning.Simulate(_plant, rule.Gains, sp, horizon, period, umin, UMax);
+            var pred = Predict(rule.Gains, sp, horizon);
             var sb = new StringBuilder();
-            sb.AppendLine($"{rule.Name}, {sp.ToString("0", CultureInfo.CurrentCulture)} dev/dk:");
+            sb.AppendLine($"{rule.Name}, {sp.ToString("0", CultureInfo.CurrentCulture)} {Unit}:");
             sb.AppendLine($"Model : yükselme {Ms(pred.RiseTime)}, aşma {Pct(pred.Overshoot)}, oturma {(double.IsNaN(pred.SettlingTime) ? "—" : Ms(pred.SettlingTime))}, kalıcı hata {Pct(Math.Abs(pred.SteadyError))}");
             sb.Append($"Fizik : yükselme {Ms(_real.RiseTime)}, aşma {Pct(_real.Overshoot)}, oturma {(double.IsNaN(_real.SettlingTime) ? "—" : Ms(_real.SettlingTime))}, kalıcı hata {Pct(Math.Abs(_real.SteadyError))}");
             if (_real.Saturated > 0.3) sb.Append($"\nPWM zamanın {Pct(_real.Saturated * 100)}'inde sınırda: bu hız için motor ya da besleme yetmiyor olabilir.");
@@ -314,14 +343,20 @@ namespace RobotWin.Studio.Analysis
             if (Chosen is not { } rule) return;
             try
             {
-                Clipboard.SetText(PidTuning.ArduinoCode(rule.Gains, Period, UMin, UMax, rule.Name));
-                _status.Text = "PID kodu panoya kopyalandı: y ölçtüğünüz dev/dk, dönen değer analogWrite'a giden PWM.";
+                Clipboard.SetText(PidTuning.ArduinoCode(rule.Gains, Period, UMin, UMax, rule.Name,
+                    Position ? "enkoderden okunan çıkış mili açısı (derece; tur aşınca da sayım sürer)" : "ölçtüğünüz çıkış mili hızı (dev/dk)"));
+                _status.Text = Position
+                    ? "PID kodu panoya kopyalandı: y enkoderden okunan açı (derece), dönen değer işaretiyle yön, büyüklüğüyle PWM."
+                    : "PID kodu panoya kopyalandı: y ölçtüğünüz dev/dk, dönen değer analogWrite'a giden PWM.";
             }
             catch (System.Runtime.InteropServices.ExternalException)
             {
                 _status.Text = "Pano şu an kullanılamıyor; yeniden deneyin.";
             }
         }
+
+        /// <summary>For a snapshot: tune the position loop instead of the speed loop.</summary>
+        public void UsePositionLoop() => _loop.SelectedIndex = 1;
 
         /// <summary>For a snapshot: runs the step test and the first rule in the physics, synchronously.</summary>
         public async Task RunAllForSnapshot()

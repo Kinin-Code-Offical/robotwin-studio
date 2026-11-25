@@ -115,6 +115,95 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         /// <summary>
+        /// A motor turning forward and given the reverse voltage brakes, stops and runs back at its no-load speed (the
+        /// bench's torque–speed line kept its slope positive at any voltage; with a negative one it ran away forward).
+        /// </summary>
+        [Fact]
+        public void ReversingATurningMotorBrakesItAndRunsItBack()
+        {
+            var lib = PartLibrary.Default;
+            var w = WorldExamples.CarDetailed(lib);
+            foreach (var o in w.Objects) o.Pose.Z += 0.05;
+            w.Objects.First(o => o.Shape == "plate").IsStatic = true;
+            var motor = w.Objects.First(o => o.PartId == "motor-tt" || (o.PresetId ?? string.Empty).Contains("tt"));
+            using var r = new WorldRunner(w.Clone(), new RunnerOptions { Firmware = false }, new ApproximateGeometry(w, lib));
+            double Rpm() => r.PortState(motor.Id)!.Value.Speed * 60 / (2 * Math.PI);
+            void Volts(double v) => r.SetActuator(motor.Id, new System.Text.Json.Nodes.JsonObject { ["mode"] = "voltage", ["value"] = v });
+            Volts(6);
+            r.Step(0.3);
+            double forward = Rpm();
+            Volts(-6);
+            double fastest = 0;
+            for (int k = 0; k < 150; k++)
+            {
+                r.Step(0.002);
+                fastest = Math.Max(fastest, Math.Abs(Rpm()));
+            }
+
+            double back = Rpm();
+            _out.WriteLine($"forward {forward:F1} rpm, after reversing {back:F1} rpm, fastest {fastest:F1} rpm");
+            Assert.InRange(forward, 100, 400);
+            Assert.InRange(back, -1.1 * forward, -0.9 * forward);
+            Assert.InRange(fastest, 0, 1.05 * forward);
+        }
+
+        /// <summary>
+        /// The position loop (a DC servo) on the model: SIMC's PD for an integrating process reaches the angle without
+        /// overshoot and without a lasting error; the PID gets there too.
+        /// </summary>
+        [Fact]
+        public void SimcPositionLoopsReachTheAngle()
+        {
+            var speed = new Fopdt(2.0, 0.05, 0.005);   // rpm per PWM
+            var rules = PidTuning.PositionRules(speed, Math.Max(speed.DeadTime, 0.3 * speed.TimeConstant));
+            Assert.Equal(3, rules.Count);
+            var pd = rules[0].Gains;
+            // SIMC for k′e^(−θs)/(s(τs+1)): Kc = 1/(k′(τc+θ)), Td = τ, no integral.
+            Assert.Equal(1 / (2.0 * 6 * (0.015 + 0.005)), pd.Kc, 6);
+            Assert.Equal(0.05, pd.Td, 9);
+            Assert.True(double.IsPositiveInfinity(pd.Ti));
+            foreach (var r in rules)
+            {
+                var res = PidTuning.SimulatePosition(speed, r.Gains, 90, 2.0, 0.005, -255, 255);
+                _out.WriteLine($"{r.Name} {r.Gains}: rise {res.RiseTime * 1000:F0} ms, overshoot {res.Overshoot:F1} %, settle {res.SettlingTime * 1000:F0} ms, error {res.SteadyError:F2} %");
+                Assert.InRange(Math.Abs(res.SteadyError), 0, 1.0);
+                Assert.False(double.IsNaN(res.SettlingTime));
+            }
+
+            Assert.InRange(PidTuning.SimulatePosition(speed, pd, 90, 2.0, 0.005, -255, 255).Overshoot, 0, 5);
+        }
+
+        /// <summary>
+        /// The car's left wheel as a DC servo on a test stand (the car lifted and held, as on a bench: on the ground a full
+        /// reverse throws the light car into a wheelie, and the wheel's angle to the body is not the wheel's turn): the
+        /// same step test gives the model, SIMC's position PD turns the wheel by 90° and by 400° (the encoder count goes on
+        /// past a turn) as the model said.
+        /// </summary>
+        [Fact]
+        public void APositionLoopTunedOnTheModelTurnsTheWheelInThePhysics()
+        {
+            var lib = PartLibrary.Default;
+            var w = WorldExamples.CarDetailed(lib);
+            foreach (var o in w.Objects) o.Pose.Z += 0.05;
+            w.Objects.First(o => o.Shape == "plate").IsStatic = true;
+            var geometry = new ApproximateGeometry(w, lib);
+            var motor = w.Objects.First(o => o.PartId == "motor-tt" || (o.PresetId ?? string.Empty).Contains("tt"));
+            var bench = new MotorBench(w, geometry, motor.Id, 6.0);
+            var model = PidTuning.Identify(bench.StepTest(200), 200)!.Value;
+            const double period = 0.01;
+            var plant = new Fopdt(model.Gain, model.TimeConstant, model.DeadTime + period / 2);
+            var pd = PidTuning.PositionRules(plant, Math.Max(plant.DeadTime, 0.3 * plant.TimeConstant))[0].Gains;
+            foreach (double target in new[] { 90.0, 400.0 })
+            {
+                var predicted = PidTuning.SimulatePosition(plant, pd, target, 1.5, period, -255, 255);
+                var real = bench.ClosedLoopPosition(pd, target, 1.5, period, -255, 255);
+                _out.WriteLine($"{target}°: PD {pd}: model rise {predicted.RiseTime:F3} s, overshoot {predicted.Overshoot:F1} %; physics rise {real.RiseTime:F3} s, overshoot {real.Overshoot:F1} %, error {real.SteadyError:F2} %, final {real.Trace[^1].Y:F1}°");
+                Assert.InRange(Math.Abs(real.Trace[^1].Y - target), 0, 0.05 * target);
+                Assert.InRange(real.Overshoot, 0, predicted.Overshoot + 15);
+            }
+        }
+
+        /// <summary>
         /// The car's left wheel on the bench: a PWM step identifies its speed loop (motor, gearbox, wheel and the car it
         /// pushes), SIMC gives a PI, and the PI run in the physics answers like the model said.
         /// </summary>

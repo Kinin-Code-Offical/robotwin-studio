@@ -34,6 +34,9 @@ namespace RobotTwin.CoreSim.Robotics
         /// <summary>Peak torque of the drive at the joint output (N·m), or force for a prismatic axis (N).</summary>
         public double MaxTorque { get; set; } = 100;
 
+        /// <summary>Jerk limit (rad/s³ or m/s³) for S-curve moves; 0: none. A trapezoid's acceleration steps have no finite jerk.</summary>
+        public double MaxJerk { get; set; }
+
         /// <summary>Coulomb friction of gearbox and bearings (N·m or N).</summary>
         public double Friction { get; set; }
 

@@ -30,6 +30,12 @@ namespace RobotTwin.CoreSim.Robotics
         /// <summary>Peak d²s/dt² (1/s²).</summary>
         public double PeakAccel => AccelTime <= 0 ? 0 : Shape == ProfileShape.SCurve ? 2 * PeakRate / AccelTime : PeakRate / AccelTime;
 
+        /// <summary>
+        /// Peak d³s/dt³ (1/s³): the S-curve's cosine ramp reaches 2π·rate/Ta²; the trapezoid's acceleration steps (no
+        /// finite jerk: infinity).
+        /// </summary>
+        public double PeakJerk => AccelTime <= 0 ? 0 : Shape == ProfileShape.SCurve ? 2 * Math.PI * PeakRate / (AccelTime * AccelTime) : double.PositiveInfinity;
+
         public static MotionProfile Zero { get; } = new MotionProfile { Duration = 0, AccelTime = 0, PeakRate = 0 };
 
         /// <summary>Fastest profile covering <paramref name="distance"/> with speed and (peak) acceleration limits.</summary>
@@ -113,6 +119,14 @@ namespace RobotTwin.CoreSim.Robotics
 
         /// <summary>"MoveJ" / "MoveL".</summary>
         public abstract string Kind { get; }
+
+        /// <summary>The same path in <paramref name="factor"/> times the time (≥ 1): speeds fall by the factor, accelerations by its square, jerk by its cube.</summary>
+        public ArmMotion Stretched(double factor)
+        {
+            var copy = (ArmMotion)MemberwiseClone();
+            copy.Profile = Profile.Stretched(factor);
+            return copy;
+        }
     }
 
     /// <summary>
@@ -157,6 +171,8 @@ namespace RobotTwin.CoreSim.Robotics
                     double v = d * Profile.PeakRate, a = d * Profile.PeakAccel;
                     factor = Math.Max(factor, v / (j.MaxSpeed * speedFraction));
                     factor = Math.Max(factor, Math.Sqrt(a / (j.MaxAccel * accelFraction)));
+                    // Jerk falls with the cube of the stretch.
+                    if (j.MaxJerk > 0 && Profile.Shape == ProfileShape.SCurve) factor = Math.Max(factor, Math.Cbrt(d * Profile.PeakJerk / j.MaxJerk));
                 }
 
                 if (factor <= 1 + 1e-9) break;
@@ -265,6 +281,7 @@ namespace RobotTwin.CoreSim.Robotics
                         var j = model.Joints[i];
                         factor = Math.Max(factor, Math.Abs(dqdu) * profile.PeakRate / j.MaxSpeed);
                         factor = Math.Max(factor, Math.Sqrt(Math.Abs(dqdu) * profile.PeakAccel / j.MaxAccel));
+                        if (j.MaxJerk > 0 && profile.Shape == ProfileShape.SCurve) factor = Math.Max(factor, Math.Cbrt(Math.Abs(dqdu) * profile.PeakJerk / j.MaxJerk));
                     }
                 }
 

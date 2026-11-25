@@ -6974,7 +6974,17 @@
   "STEP, IGES (*.step, *.stp, *.iges, *.igs)": "STEP, IGES (*.step, *.stp, *.iges, *.igs)",
   "STEP modeli Open CASCADE ile okundu.": "STEP model read with Open CASCADE.",
   "STEP/IGES dosyaları katı (B-rep) CAD modelidir; RobotWin onları Open CASCADE köprüsüyle okur, ancak köprü bu kurulumda yok (uygulama klasöründeki 'occt'). Uygulamayı yeniden kurun ya da modeli KiCad, FreeCAD veya üreticinin aracıyla STL / OBJ / WRL olarak dışa aktarıp ekleyin.": "STEP/IGES files are solid (B-rep) CAD models; RobotWin reads them through its Open CASCADE bridge, but the bridge is missing from this installation (the 'occt' folder beside the app). Reinstall the app, or export the model as STL / OBJ / WRL from KiCad, FreeCAD or the maker's tool and add that.",
-  "3D model içe aktar (STL, OBJ, PLY, STEP, IGES)…": "Import 3D model (STL, OBJ, PLY, STEP, IGES)…"
+  "3D model içe aktar (STL, OBJ, PLY, STEP, IGES)…": "Import 3D model (STL, OBJ, PLY, STEP, IGES)…",
+  "Hız döngüsü (dev/dk)": "Speed loop (rpm)",
+  "Konum döngüsü (derece, enkoderli motor)": "Position loop (degrees, motor with encoder)",
+  "Hız döngüsünde denenecek hız (dev/dk; boş: test hızının %60'ı), konum döngüsünde dönülecek açı (derece; boş: 90°)": "Speed loop: the speed to try (rpm; empty: 60 % of the test speed). Position loop: the angle to turn to (degrees; empty: 90°)",
+  "Konum döngüsü için ilk seçim: aşmasız ve hızlı; yük çekiyorsa (kol, yerçekimi) küçük bir kalıcı hata bırakır": "First choice for a position loop: fast without overshoot; a load that pulls (an arm, gravity) leaves a small lasting error",
+  "İntegral yükün çektiği hatayı da kapatır; biraz aşma yapar": "The integral also closes the error a pulling load leaves; it overshoots a little",
+  "τc üç katı: daha yavaş, sürtünme ve boşluğa karşı daha sağlam": "Three times τc: slower, more robust against friction and backlash",
+  "SIMC (PID), yumuşak": "SIMC (PID), smooth",
+  "enkoderden okunan çıkış mili açısı (derece; tur aşınca da sayım sürer)": "the output shaft's angle read from the encoder (degrees; the count goes on past a turn)",
+  "ölçtüğünüz çıkış mili hızı (dev/dk)": "the output shaft speed you measure (rpm)",
+  "PID kodu panoya kopyalandı: y enkoderden okunan açı (derece), dönen değer işaretiyle yön, büyüklüğüyle PWM.": "PID code copied to the clipboard: y is the angle read from the encoder (degrees); the result gives the direction by its sign and the PWM by its size."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9802,6 +9812,13 @@
   "{…}: {…} üçgen → {…} yüz, {…} × {…} × {…} mm (CAD, Open CASCADE ile ağa çevrildi)": "{0}: {1} triangles → {2} faces, {3} × {4} × {5} mm (CAD, meshed with Open CASCADE)",
   ".wrl yok; '{…}' Open CASCADE ile okundu.": "no .wrl; '{0}' read with Open CASCADE.",
   "yalnız STEP dosyası var: STEP/IGES dosyaları katı (B-rep) CAD modelidir; RobotWin onları Open CASCADE köprüsüyle okur, ancak köprü bu kurulumda yok (uygulama klasöründeki 'occt'). Uygulamayı yeniden kurun ya da modeli KiCad, FreeCAD veya üreticinin aracıyla STL / OBJ / WRL olarak dışa aktarıp ekleyin.": "only a STEP file: STEP/IGES files are solid (B-rep) CAD models; RobotWin reads them through its Open CASCADE bridge, but the bridge is missing from this installation (the 'occt' folder beside the app). Reinstall the app, or export the model as STL / OBJ / WRL from KiCad, FreeCAD or the maker's tool and add that.",
-  "'{…}' 3B model biçimi desteklenmiyor (STL, OBJ, PLY, WRL, STEP, IGES kullanın).": "The '{0}' 3D model format is not supported (use STL, OBJ, PLY, WRL, STEP, IGES)."
+  "'{…}' 3B model biçimi desteklenmiyor (STL, OBJ, PLY, WRL, STEP, IGES kullanın).": "The '{0}' 3D model format is not supported (use STL, OBJ, PLY, WRL, STEP, IGES).",
+  "{…} motorunun hız döngüsü ya da (enkoderle) konum döngüsü. Deneyler dünyanın bir kopyasında, yazılım olmadan ve tam fizikle yapılır: motorun yükü, taktığınız tekerlek ve sürdüğü araçtır. Birimler yazılımınızınkiler: komut PWM (0–255), ölçüm çıkış milinin dev/dk'sı ya da açısı (derece).": "The speed loop, or (with an encoder) the position loop, of the {0} motor. The trials run on a copy of the world, without firmware and with the full physics: the motor's load is the wheel you fitted and the vehicle it drives. Units are your firmware's: the command is PWM (0–255), the measurement the output shaft's rpm or angle (degrees).",
+  "// y: {…}": "// y: {0}",
+  "Çevrim {…} s": "Cycle time {0} s",
+  "Tork   %{…} ({…})": "Torque {0}% ({1})",
+  "tork için %{…} yavaşlatıldı": "slowed {0}% for torque",
+  "yük {…} kg": "payload {0} kg",
+  "Aşırı yük: {…} ekseni bu yolda {…} kg yükün ağırlığını bile taşıyamıyor (tepe torkun %{…}'i)": "Overload: axis {0} cannot carry even the weight of the {1} kg payload on this path ({2}% of its peak torque)"
  }
 }

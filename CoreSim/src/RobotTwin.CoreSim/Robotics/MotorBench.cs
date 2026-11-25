@@ -45,6 +45,8 @@ namespace RobotTwin.CoreSim.Robotics
 
         private double Speed(WorldRunner r) => (r.PortState(MotorId)?.Speed ?? 0) * Rpm;
 
+        private double RawAngle(WorldRunner r) => r.PortState(MotorId)?.Angle ?? 0;
+
         /// <summary>
         /// Open-loop step from standstill to <paramref name="pwm"/>, sampled every <paramref name="sample"/> s until the speed
         /// has settled (no more than 0.5 % change over the last fifth of the record) or <paramref name="maxSeconds"/>.
@@ -79,16 +81,37 @@ namespace RobotTwin.CoreSim.Robotics
         /// The closed loop in the physics: a PID (the same discrete form as <see cref="PidTuning.Simulate"/> and the copied
         /// code) reads the shaft speed every <paramref name="period"/> s and sets the PWM, for a step of the setpoint (rpm).
         /// </summary>
-        public LoopResponse ClosedLoop(PidGains g, double setpoint, double duration, double period, double uMin, double uMax)
+        public LoopResponse ClosedLoop(PidGains g, double setpoint, double duration, double period, double uMin, double uMax) =>
+            Run(g, setpoint, duration, period, uMin, uMax, false);
+
+        /// <summary>
+        /// The position loop in the physics (a DC servo): the PID reads the output shaft's angle in degrees, as an encoder
+        /// counted from where it stood (turns unwrapped), and sets the PWM, for a step of the setpoint (degrees).
+        /// </summary>
+        public LoopResponse ClosedLoopPosition(PidGains g, double setpointDegrees, double duration, double period, double uMin, double uMax) =>
+            Run(g, setpointDegrees, duration, period, uMin, uMax, true);
+
+        private LoopResponse Run(PidGains g, double setpoint, double duration, double period, double uMin, double uMax, bool position)
         {
             using var r = Start();
             var res = new LoopResponse();
             double integral = 0, dFilt = 0;
-            double y = Speed(r), lastY = y;
+            double last = RawAngle(r), turned = 0;
+            double Measure()
+            {
+                if (!position) return Speed(r);
+                double a = RawAngle(r), d = a - last;
+                d -= 2 * Math.PI * Math.Round(d / (2 * Math.PI));   // through ±π: the encoder counts on
+                last = a;
+                turned += d;
+                return turned * 180 / Math.PI;
+            }
+
+            double y = Measure(), lastY = y;
             for (int step = 0; step * period <= duration + 1e-12; step++)
             {
                 double t = step * period;
-                y = Speed(r);
+                y = Measure();
                 double e = setpoint - y;
                 if (g.Td > 0)
                 {

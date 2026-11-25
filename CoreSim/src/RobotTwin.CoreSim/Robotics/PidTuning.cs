@@ -222,12 +222,56 @@ namespace RobotTwin.CoreSim.Robotics
             return list;
         }
 
+        /// <summary>Degrees per second of the output shaft for one rpm: the position loop's integrator gain.</summary>
+        public const double DegreesPerSecondPerRpm = 6.0;
+
+        /// <summary>
+        /// [pid] Gains for a position loop (a DC motor with an encoder: a DC servo) by Skogestad's SIMC rules for an
+        /// integrating process with lag, G(s) = k′·e^(−θs) / (s·(τs + 1)), where the speed loop's model gives k′ (the speed
+        /// gain in degrees per second per command unit), τ and θ. PD: Kc = 1/(k′(τc + θ)), Td = τ: no integral, so a load
+        /// that pulls (gravity on an arm) leaves an offset; PID: the integral time 4(τc + θ) removes it (series form, given
+        /// here in the ideal form the code uses). <paramref name="closedLoopTime"/> τc as in <see cref="Rules"/>.
+        /// </summary>
+        public static List<PidRule> PositionRules(Fopdt speed, double closedLoopTime, double degreesPerSecondPerUnit = DegreesPerSecondPerRpm)
+        {
+            double k = speed.Gain * degreesPerSecondPerUnit, tau = speed.TimeConstant, th = speed.DeadTime;
+            PidGains Simc(double tc, bool integral)
+            {
+                double kc = 1 / (k * (tc + th));
+                if (!integral) return new PidGains(kc, double.PositiveInfinity, tau);
+                double ti = 4 * (tc + th), td = tau;
+                // Series (Kc, τI, τD) to the ideal form: Kc(1 + τD/τI), τI + τD, τI·τD/(τI + τD).
+                return new PidGains(kc * (1 + td / ti), ti + td, ti * td / (ti + td));
+            }
+
+            return new List<PidRule>
+            {
+                new PidRule("SIMC (PD)", "Konum döngüsü için ilk seçim: aşmasız ve hızlı; yük çekiyorsa (kol, yerçekimi) küçük bir kalıcı hata bırakır", Simc(closedLoopTime, false)),
+                new PidRule("SIMC (PID)", "İntegral yükün çektiği hatayı da kapatır; biraz aşma yapar", Simc(closedLoopTime, true)),
+                new PidRule("SIMC (PID), yumuşak", "τc üç katı: daha yavaş, sürtünme ve boşluğa karşı daha sağlam", Simc(3 * closedLoopTime, true)),
+            };
+        }
+
+        /// <summary>
+        /// The position loop on the model: the speed loop's model with its output integrated into degrees
+        /// (<see cref="PositionRules"/>), the same discrete PID as <see cref="Simulate"/>, for a step from 0 to
+        /// <paramref name="setpointDegrees"/>.
+        /// </summary>
+        public static LoopResponse SimulatePosition(Fopdt speed, PidGains g, double setpointDegrees, double duration, double period, double uMin, double uMax,
+            double degreesPerSecondPerUnit = DegreesPerSecondPerRpm) =>
+            Simulate(speed, g, setpointDegrees, duration, period, uMin, uMax, degreesPerSecondPerUnit);
+
         /// <summary>
         /// Closed loop of a PID on the model for a setpoint step from 0 to <paramref name="setpoint"/>: a discrete PID every
         /// <paramref name="period"/> (as firmware runs it), derivative on the measurement filtered (N = 10), output limited to
         /// [<paramref name="uMin"/>, <paramref name="uMax"/>] with the integral held while it pushes against a limit.
         /// </summary>
-        public static LoopResponse Simulate(Fopdt plant, PidGains g, double setpoint, double duration, double period, double uMin, double uMax)
+        public static LoopResponse Simulate(Fopdt plant, PidGains g, double setpoint, double duration, double period, double uMin, double uMax) =>
+            Simulate(plant, g, setpoint, duration, period, uMin, uMax, 0);
+
+        /// <param name="integrate">Above 0: the loop controls the integral of the model's output (its speed, times this, is
+        /// the position's rate: a position loop); 0: the model's output itself.</param>
+        private static LoopResponse Simulate(Fopdt plant, PidGains g, double setpoint, double duration, double period, double uMin, double uMax, double integrate)
         {
             var r = new LoopResponse();
             double h = Math.Min(period, Math.Max(1e-4, plant.TimeConstant / 50));
@@ -236,7 +280,7 @@ namespace RobotTwin.CoreSim.Robotics
             // The dead time as a delay line on the input, at the integration step.
             int delay = (int)Math.Round(plant.DeadTime / h);
             var line = new Queue<double>(Enumerable.Repeat(0.0, delay));
-            double y = 0, integral = 0, dFilt = 0, lastY = 0, u = 0;
+            double y = 0, v = 0, integral = 0, dFilt = 0, lastY = 0, u = 0;
             double nFilter = 10;
             for (int step = 0; step * period <= duration + 1e-12; step++)
             {
@@ -276,7 +320,15 @@ namespace RobotTwin.CoreSim.Robotics
                         uin = u;
                     }
 
-                    y += (plant.Gain * uin - y) * (1 - Math.Exp(-h / plant.TimeConstant));
+                    if (integrate > 0)
+                    {
+                        v += (plant.Gain * uin - v) * (1 - Math.Exp(-h / plant.TimeConstant));
+                        y += integrate * v * h;
+                    }
+                    else
+                    {
+                        y += (plant.Gain * uin - y) * (1 - Math.Exp(-h / plant.TimeConstant));
+                    }
                 }
             }
 
@@ -285,11 +337,12 @@ namespace RobotTwin.CoreSim.Robotics
         }
 
         /// <summary>The gains as Arduino code: a PID loop at <paramref name="period"/> with the same limits and anti-windup.</summary>
-        public static string ArduinoCode(PidGains g, double period, double uMin, double uMax, string rule)
+        public static string ArduinoCode(PidGains g, double period, double uMin, double uMax, string rule, string measured = "")
         {
             string F(double v) => double.IsInfinity(v) || double.IsNaN(v) ? "0" : v.ToString("G5", CultureInfo.InvariantCulture);
             var sb = new StringBuilder();
             sb.AppendLine($"// RobotWin Studio PID ayarı ({rule}): Kc={F(g.Kc)}, Ti={(double.IsPositiveInfinity(g.Ti) ? "∞" : F(g.Ti))} s, Td={F(g.Td)} s");
+            if (measured.Length > 0) sb.AppendLine("// y: " + measured);
             sb.AppendLine($"const float KP = {F(g.Kp)}f, KI = {F(g.Ki)}f, KD = {F(g.Kd)}f;");
             sb.AppendLine($"const float DT = {F(period)}f;              // s: loop() bu aralıkla çalışmalı");
             sb.AppendLine($"const float U_MIN = {F(uMin)}f, U_MAX = {F(uMax)}f;");

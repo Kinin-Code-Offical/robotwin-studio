@@ -315,6 +315,20 @@ Deneyler dünyanın bir kopyasında yapılır: yazılım çalışmaz, fizik tamd
    - PWM çoğu zaman sınırdaysa ya da fizikteki aşma modelden çok fazlaysa nedeni yazılır.
 4. **Kodu kopyala:** kazançlar, periyot ve sınırlarla birlikte Arduino'ya yapıştırılacak bir `pidStep(setpoint, y)` işlevi.
 
+**Konum döngüsü (enkoderli motor, DC servo):** pencerenin üstündeki seçimden **Konum döngüsü**'nü seçin. Adım testi aynıdır; model hızı verir, konum onun integralidir.
+
+- Kurallar SIMC'nin tümleyen süreç kurallarıdır:
+
+  | Kural | Ne zaman |
+  | --- | --- |
+  | SIMC (PD) | İlk seçim: aşmasız ve hızlı |
+  | SIMC (PID) | Yük çekiyorsa (kol, yerçekimi): kalıcı hatayı kapatır |
+  | SIMC (PID), yumuşak | Sürtünme ve boşluk varsa |
+
+- Ayar noktası derecedir (boş: 90°). Fizikte açı enkoder gibi sayılır, tur aşınca da sürer.
+- Konum döngüsü motoru iki yönde sürer: **İki yönlü sürücü** açık kalır.
+- Kopyalanan kodda `y`, enkoderden okunan açıdır. Dönen değerin işareti yönü, büyüklüğü PWM'i verir.
+
 ## Fizik ve ortam
 
 Her nesnenin denetçisinde **Fizik** bölümü:

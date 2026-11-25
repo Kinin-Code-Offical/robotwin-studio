@@ -88,6 +88,24 @@ namespace RobotTwin.CoreSim.Robotics
         public bool Loop { get; set; } = true;
         public int CycleCount { get; private set; }
 
+        /// <summary>[robot-control] The last full program cycle's time (s), from one start of the program to the next; 0 before one ends.</summary>
+        public double LastCycleTime { get; private set; }
+
+        private double _cycleStart = -1;
+
+        /// <summary>[robot-control] What the tool carries now (kg): its weight and inertia are in the drives' torques.</summary>
+        public double PayloadKg { get; set; }
+
+        /// <summary>
+        /// [robot-control] Each move is checked against the drives' peak torque (the links' and the payload's dynamics, the
+        /// weight, friction) and slowed until every axis stays within 95 % of it, as a dynamics-aware robot controller
+        /// plans; a pose whose weight alone is beyond a drive faults before the arm moves.
+        /// </summary>
+        public bool LimitByTorque { get; set; } = true;
+
+        /// <summary>[robot-control] The last move's torque check: the highest |τ|/peak over its axes (after any slowing), the axis, and how much it was slowed (1: not at all).</summary>
+        public (double Ratio, int Axis, double Slowed) LastTorque { get; private set; }
+
         /// <summary>Resume automatically when the safety circuit closes again (otherwise a restart is needed).</summary>
         public bool AutoResumeAfterSafety { get; set; }
 
@@ -188,6 +206,7 @@ namespace RobotTwin.CoreSim.Robotics
             }
 
             if (ProgramCounter >= Program.Instructions.Count) ProgramCounter = 0;
+            if (ProgramCounter == 0) _cycleStart = Time;   // a cycle is timed from the program's first line
             State = ArmState.Running;
             _stepOnce = false;
             StatusText = "Program çalışıyor";
@@ -335,6 +354,22 @@ namespace RobotTwin.CoreSim.Robotics
 
         private void Begin(ArmMotion m)
         {
+            if (LimitByTorque && m.Duration > 0)
+            {
+                double scale = ArmDynamics.TimeScaleForTorque(Model, m, PayloadKg, Tool);
+                if (double.IsPositiveInfinity(scale))
+                {
+                    var still = ArmDynamics.Check(Model, m.Stretched(50), PayloadKg, Tool);
+                    string axis = still.Axis >= 0 ? Model.Joints[still.Axis].Name : "?";
+                    Fail($"Aşırı yük: {axis} ekseni bu yolda {PayloadKg:0.###} kg yükün ağırlığını bile taşıyamıyor (tepe torkun %{still.Ratio * 100:0}'i)");
+                    return;
+                }
+
+                if (scale > 1) m = m.Stretched(scale);
+                var check = ArmDynamics.Check(Model, m, PayloadKg, Tool);
+                LastTorque = (check.Ratio, check.Axis, scale);
+            }
+
             _motion = m;
             _motionTime = 0;
         }
@@ -472,6 +507,8 @@ namespace RobotTwin.CoreSim.Robotics
                     {
                         ProgramCounter = 0;
                         CycleCount++;
+                        if (_cycleStart >= 0) LastCycleTime = Time - _cycleStart;
+                        _cycleStart = Time;
                         continue;
                     }
 

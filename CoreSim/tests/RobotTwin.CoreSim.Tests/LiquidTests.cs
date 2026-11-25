@@ -133,7 +133,11 @@ namespace RobotTwin.CoreSim.Tests
             scene.AddBody(tank);
             var water = new LiquidBody("w", LiquidKind.Water, s);
             water.Add(LiquidBody.Lattice(new Vec3(-L / 2, -L / 2, t), new Vec3(L / 2, L / 2, t + 0.05), s, _ => true));
+            LiquidBody.SettleTrace = (k, worst, mean) => _out.WriteLine($"  {k} steps: most {worst * 1000:F3} mm, mean {mean * 1000:F4} mm");
             water.Settle(scene);
+            LiquidBody.SettleTrace = null;
+            _out.WriteLine($"settled in {water.LastSettleSeconds:F3} s");
+            Assert.True(water.LastSettleSeconds < 0.39, "a still tank of water lies still before the 0.4 s limit (the rest is judged by where the particles went)");
             int asleepAt = -1;
             for (int i = 0; i < 4000 && asleepAt < 0; i++)
             {

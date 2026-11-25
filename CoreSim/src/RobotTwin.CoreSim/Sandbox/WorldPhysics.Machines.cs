@@ -694,6 +694,8 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             if (arm.Tool != null) arm.Tool.Command = c.ToolCommand;
+            // [robot-control] the part in the tool is the payload the controller plans its moves for
+            c.PayloadKg = arm.Tool is { Holding: true, HeldBody: { } held } ? held.Mass : 0;
             foreach (var (_, text, fault) in c.DrainMessages()) MachineSay(arm.ObjectId, text, fault);
         }
 

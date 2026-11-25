@@ -315,6 +315,20 @@ The experiments run on a copy of the world: no firmware runs, and the physics is
    - If the PWM sits at its limit most of the time, or the physics overshoots much more than the model, the reason is given.
 4. **Copy code**: a `pidStep(setpoint, y)` function for Arduino, with the gains, the period and the limits.
 
+**Position loop (a motor with an encoder, a DC servo):** choose **Position loop** at the top of the window. The step test is the same; the model gives the speed, and the position is its integral.
+
+- The rules are SIMC's rules for an integrating process:
+
+  | Rule | When to use it |
+  | --- | --- |
+  | SIMC (PD) | First choice: fast, no overshoot |
+  | SIMC (PID) | A load that pulls (an arm, gravity): closes the lasting error |
+  | SIMC (PID), smooth | Friction and backlash |
+
+- The setpoint is in degrees (empty: 90°). In the physics the angle is counted like an encoder, past a full turn too.
+- A position loop drives the motor both ways: **Bidirectional driver** stays on.
+- In the copied code `y` is the angle read from the encoder. The sign of the result gives the direction, its size the PWM.
+
 ## Physics and environment
 
 Every object's inspector has a **Physics** section:

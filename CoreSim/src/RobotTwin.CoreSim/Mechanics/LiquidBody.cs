@@ -175,6 +175,12 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Fastest particle at the start of the last <see cref="Step"/> (m/s).</summary>
         public double LastMaxSpeed { get; private set; }
 
+        /// <summary>[diagnostics] Called at each window of <see cref="Settle"/>: steps so far, the most any particle moved in the window and the mean (m).</summary>
+        public static Action<int, double, double>? SettleTrace { get; set; }
+
+        /// <summary>How long the last <see cref="Settle"/> ran the liquid before it lay still (seconds of its own time).</summary>
+        public double LastSettleSeconds { get; private set; }
+
         /// <summary>Fastest motion of a body around the liquid at the last <see cref="Step"/> (m/s).</summary>
         public double LastBodyMotion { get; private set; }
 
@@ -854,33 +860,70 @@ namespace RobotTwin.CoreSim.Mechanics
 
         /// <summary>
         /// Brings a freshly poured liquid to rest before the world starts, as if it had been poured a moment earlier: it is
-        /// stepped under gravity against its containers (held where they stand) with its motion damped each step, until no
-        /// particle moves faster than 2 mm/s (at most 0.4 s). It then starts still, at its real density, carrying its own
-        /// weight in hydrostatic balance.
+        /// stepped under gravity against its containers (held where they stand) with its motion damped each step, until over
+        /// the last 25 ms no particle went a quarter of the spacing and on average they went under 1 % of it (at most 0.4 s).
+        /// It then starts still, at its real density, carrying its own weight in hydrostatic balance.
         /// </summary>
+        /// <remarks>
+        /// The rest is judged by how far the particles went, as the running liquid's sleep is: at rest each step's gravity
+        /// kick (g·h) and the incompressibility projection that takes it back leave a step-to-step speed of ~25 mm/s that
+        /// never falls below a speed threshold, and a few particles at the free surface and in corners keep quivering by
+        /// up to a millimetre, while the body of the liquid stays where it is.
+        /// </remarks>
         public void Settle(PhysicsScene scene, double maxTime = 0.4)
         {
             if (Count == 0) return;
             // At the step it will run with: the resting state of a 0.1 ms liquid is not that of a 1 ms one.
             double h = Math.Min(1e-3, MaxStep);
             int maxSteps = (int)Math.Ceiling(maxTime / h), minSteps = (int)Math.Ceiling(0.03 / h);
+            int window = Math.Max(1, (int)Math.Ceiling(0.025 / h));
             double keep = Math.Pow(0.6, h / 1e-3);   // the same damping per millisecond at any step
+            int ids = 0;
+            for (int i = 0; i < Count; i++) ids = Math.Max(ids, _id[i] + 1);
+            var mark = new double[3 * ids];   // positions at the window's start, by lasting number
+            void Mark()
+            {
+                for (int i = 0; i < Count; i++)
+                {
+                    int j = 3 * _id[i], k = 3 * i;
+                    mark[j] = _x[k];
+                    mark[j + 1] = _x[k + 1];
+                    mark[j + 2] = _x[k + 2];
+                }
+            }
+
+            (double Worst, double Mean) Moved()
+            {
+                double most = 0, sum = 0;
+                for (int i = 0; i < Count; i++)
+                {
+                    int j = 3 * _id[i], k = 3 * i;
+                    double dx = _x[k] - mark[j], dy = _x[k + 1] - mark[j + 1], dz = _x[k + 2] - mark[j + 2];
+                    double d = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                    most = Math.Max(most, d);
+                    sum += d;
+                }
+
+                return (most, sum / Math.Max(1, Count));
+            }
+
             Gather(scene, h);
+            Mark();
+            int steps = 0;
             for (int k = 0; k < maxSteps; k++)
             {
                 for (int b = 0; b < _near.Count; b++) _start[b] = (_near[b].Position, _near[b].Orientation);
                 Substep(scene, h, h);
-                double vmax = 0;
-                int n = Count;
-                for (int i = 0; i < 3 * n; i++)
-                {
-                    vmax = Math.Max(vmax, Math.Abs(_v[i]));   // the motion the liquid itself made this step
-                    _v[i] *= keep;   // quasi-static: the pour's sloshing is gone by the time the world starts
-                }
-
-                if (k >= minSteps && vmax < 2e-3) break;
+                steps = k + 1;
+                for (int i = 0; i < 3 * Count; i++) _v[i] *= keep;   // quasi-static: the pour's sloshing is gone by the time the world starts
+                if ((k + 1) % window != 0) continue;
+                var (worst, mean) = Moved();
+                SettleTrace?.Invoke(k + 1, worst, mean);
+                if (k + 1 >= minSteps && worst < 0.25 * Spacing && mean < 0.01 * Spacing) break;
+                Mark();
             }
 
+            LastSettleSeconds = steps * h;
             Array.Clear(_v, 0, 3 * Count);
             _forces.Clear();
             _torques.Clear();
