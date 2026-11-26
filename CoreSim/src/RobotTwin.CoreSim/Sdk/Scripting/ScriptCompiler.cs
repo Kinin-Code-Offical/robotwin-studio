@@ -313,6 +313,12 @@ namespace RobotTwin.CoreSim.Sdk
             psi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
             psi.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
             psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+            // A build or test run that started this process leaves its own MSBuild and dotnet host in the environment; the
+            // scripts' build must find the SDK global.json picked, not that one (else its task hosts look in the wrong place).
+            foreach (string key in psi.Environment.Keys.Where(k => k.StartsWith("MSBuild", StringComparison.OrdinalIgnoreCase) && k != "MSBUILDDISABLENODEREUSE" ||
+                                                                   k.Equals("DOTNET_HOST_PATH", StringComparison.OrdinalIgnoreCase) ||
+                                                                   k.Equals("MSBUILD_EXE_PATH", StringComparison.OrdinalIgnoreCase)).ToList())
+                psi.Environment.Remove(key);
             var sb = new StringBuilder();
             try
             {
