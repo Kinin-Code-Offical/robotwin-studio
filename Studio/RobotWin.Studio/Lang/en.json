@@ -7614,7 +7614,23 @@
   "Eskiz değişti": "Sketch changed",
   "Eskizde kapalı döngü yok: profil değişmedi.": "The sketch has no closed loop: the profile did not change.",
   "Motor braketi": "Motor bracket",
-  "Yay": "Arc"
+  "Yay": "Arc",
+  "3B baskı": "3D printing",
+  "sorun var": "has problems",
+  "destekle basılır": "prints with support",
+  "baskıya hazır": "ready to print",
+  "Tabla": "Bed",
+  "sığar": "fits",
+  "Sarkma": "Overhang",
+  "Bu yüzü tablaya çevir": "Put this face on the bed",
+  "Baskı yönü": "Print orientation",
+  "Tabla teması": "Bed contact",
+  "Tahmin": "Estimate",
+  "Üst yüz": "the top face",
+  "+X yüzü": "the +X face",
+  "−X yüzü": "the −X face",
+  "+Y yüzü": "the +Y face",
+  "−Y yüzü": "the −Y face"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10710,6 +10726,16 @@
   "{0} serbestlik kaldı.": "{0} degrees of freedom left.",
   "{0} serbestlik": "{0} degrees of freedom",
   "ızgara {0} mm": "grid {0} mm",
-  "{0} çizgi, {1} daire, {2} yay; {3} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.": "{0} lines, {1} circles, {2} arcs; {3} constraints. Closed loops become the profile: the largest the outline, the ones inside it holes."
+  "{0} çizgi, {1} daire, {2} yay; {3} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.": "{0} lines, {1} circles, {2} arcs; {3} constraints. Closed loops become the profile: the largest the outline, the ones inside it holes.",
+  "sığmaz ({0} × {1} × {2} mm)": "does not fit ({0} × {1} × {2} mm)",
+  "açık: {0} kenar": "open: {0} edges",
+  "{0} mm²: destek gerekir ({1}°'den yatık)": "{0} mm²: needs support (flatter than {1}°)",
+  "{0} tablaya konursa sarkma {1} mm² olur.": "With {0} on the bed the overhang is {1} mm².",
+  "en ince {0} mm: {1} mm'den ince {2} mm²": "thinnest {0} mm: {2} mm² thinner than {1} mm",
+  "en ince {0} mm": "thinnest {0} mm",
+  "{0} sa {1} dk": "{0} h {1} min",
+  "{0} dk": "{0} min",
+  "{0} katman": "{0} layers",
+  "%{0} doluluk, {1} mm katman, {2} mm uç, {3} mm/s; destek ve dolaşma payıyla tahmini.": "{0}% infill, {1} mm layers, {2} mm nozzle, {3} mm/s; an estimate with support and travel allowed for."
  }
 }

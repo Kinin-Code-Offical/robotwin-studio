@@ -224,6 +224,11 @@ public class LangTests
     [InlineData("4 çizgi, 2 daire, 1 yay; 15 kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.", "4 lines, 2 circles, 1 arcs; 15 constraints. Closed loops become the profile: the largest the outline, the ones inside it holes.")]
     [InlineData("ızgara 5 mm", "grid 5 mm")]
     [InlineData("Yatay ölçü (P1–P6)", "Horizontal dimension (P1–P6)")]
+    [InlineData("1456 mm²: destek gerekir (45°'den yatık)", "1456 mm²: needs support (flatter than 45°)")]
+    [InlineData("Üst yüz tablaya konursa sarkma 0 mm² olur.", "With the top face on the bed the overhang is 0 mm².")]
+    [InlineData("10,1 g · 3,39 m · 38 dk · 143 katman", "10,1 g · 3,39 m · 38 min · 143 layers")]
+    [InlineData("en ince 0,6 mm: 0,9 mm'den ince 1800 mm²", "thinnest 0,6 mm: 1800 mm² thinner than 0,9 mm")]
+    [InlineData("sığmaz (300 × 20 × 20 mm)", "does not fit (300 × 20 × 20 mm)")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

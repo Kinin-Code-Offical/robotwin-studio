@@ -105,6 +105,15 @@ Selection: **Alt+click** (without dragging) selects the loop of the clicked edge
 
 Give each object a material (PLA, PETG, ABS, nylon, acrylic, plywood, MDF, FR4, aluminium, steel, carbon, rubber) and an infill ratio (for 3D printing). The mass is computed from the volume; it is used when you send the part to the world.
 
+### 3D print check
+
+A part in a printed material (PLA, PETG, ABS, nylon) has a **3D printing** section in its inspector. Pick your printer; the part is checked as it stands (Z up, its lowest point on the bed):
+- **Bed:** whether it fits the printer's build volume (turned sideways too).
+- **Mesh:** whether it is closed; an open mesh cannot be sliced.
+- **Overhang:** the area of downward faces flatter than 45° that are not on the bed; they need support. If one of the six ways down gives less overhang it says so, and **Put this face on the bed** turns the part that way.
+- **Wall:** the thinnest wall, measured from each face through the part to the other side. Places thinner than two lines (0.9 mm) are flagged.
+- **Bed contact** and the **estimate:** filament (g, m), time and layer count. The estimate counts the perimeters, the infill inside and the support under the overhangs at the printer's flow.
+
 ## View modes
 
 - **Solid** (Z), **Wireframe** (Shift+Z), **X-ray (transparent)** (Alt+Z), **Edges**.

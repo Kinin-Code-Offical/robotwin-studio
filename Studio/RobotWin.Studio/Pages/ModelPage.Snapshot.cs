@@ -245,6 +245,41 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "print":
+                case "print-turned":
+                {
+                    // [print] A cap on a stem, printed cap up: the cap's underside needs support; the cap down, none.
+                    var stem = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
+                    stem.Name = "Mantar tutucu";
+                    stem.Primitive!.Set("x", 12);
+                    stem.Primitive.Set("y", 12);
+                    stem.Primitive.Set("z", 24);
+                    stem.Transform.Position = new Vec3(0, 0, 12);
+                    var cap = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
+                    cap.Primitive!.Set("x", 40);
+                    cap.Primitive.Set("y", 40);
+                    cap.Primitive.Set("z", 5);
+                    cap.Transform.Position = new Vec3(0, 0, 26);
+                    ModelOps.Boolean(doc, stem, new[] { cap }.ToList(), BooleanOp.Union);
+                    stem.Material = "PLA";
+                    stem.Color = "#E87A2C";
+                    _ed.Load(doc, null);
+                    _ed.Select(stem.Id);
+                    if (demo == "print-turned") _ed.Do("Baskı yönü", () => TurnDown(stem, new Vec3(0, 0, 1)));   // as its button does
+                    _ed.Notify(ModelChange.All);
+                    // The inspector scrolled to the print checks.
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        foreach (var g in Props.Children.OfType<System.Windows.Controls.Grid>())
+                        {
+                            if (g.Children.OfType<System.Windows.Controls.TextBlock>().FirstOrDefault()?.Text != "3B baskı") continue;
+                            g.BringIntoView(new Rect(0, 0, 10, 900));
+                            break;
+                        }
+                    }), DispatcherPriority.Loaded);
+                    break;
+                }
+
                 default:
                 {
                     var chassis = RobotParts.Insert(doc, "chassis-2wd", 0, 0)[0];

@@ -297,6 +297,7 @@ namespace RobotWin.Studio.Pages
             MaterialSection(o);
             ShadingSection(o);
             StatsSection(o, objs);
+            PrintSection(o);
         }
 
         /// <summary>Boolean and slicing in plain sight (they were only in the right-click menu).</summary>
@@ -736,6 +737,74 @@ namespace RobotWin.Studio.Pages
             }
         }
 
+        /// <summary>The printer the print checks are for (this session).</summary>
+        private static string _printer = PrinterProfile.All[0].Id;
+
+        /// <summary>
+        /// [print] A printed part's checks for the chosen printer: the bed, the mesh, overhangs that need support (and a way
+        /// down with less), walls thinner than two lines, the footprint, and the filament and time it takes.
+        /// </summary>
+        private void PrintSection(ModelObject o)
+        {
+            var mat = ModelMaterials.Get(o.Material);
+            if (!mat.Printed) return;
+            var printer = PrinterProfile.Find(_printer);
+            var mesh = _ed.Doc.WorldMesh(o);
+            if (mesh.Faces.Count == 0) return;
+            var r = PrintCheck.Analyze(mesh, printer, o.Infill, mat.Density / 1000.0);
+            Section("3B baskı", !r.Printable ? "sorun var" : r.NeedsSupport ? "destekle basılır" : "baskıya hazır");
+            var combo = new ComboBox { Margin = new Thickness(0, 0, 0, 6) };
+            foreach (var pr in PrinterProfile.All) combo.Items.Add(new ComboBoxItem { Content = $"{pr.Name}  ·  {pr.BedX:0} × {pr.BedY:0} × {pr.BedZ:0} mm", Tag = pr.Id });
+            combo.SelectedItem = combo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == printer.Id);
+            combo.SelectionChanged += (_, _) =>
+            {
+                if (combo.SelectedItem is not ComboBoxItem it || (string)it.Tag == _printer) return;
+                _printer = (string)it.Tag;
+                Dispatcher.BeginInvoke(new Action(BuildProperties));
+            };
+            Props.Children.Add(combo);
+            var good = Res("B.Success");
+            var warn = Res("B.Warning");
+            Line("Tabla", r.FitsBed ? "sığar" : $"sığmaz ({r.Size.X:0} × {r.Size.Y:0} × {r.Size.Z:0} mm)", r.FitsBed ? good : warn);
+            Line("Ağ", r.Closed ? "kapalı" : $"açık: {r.OpenEdges} kenar", r.Closed ? good : warn);
+            Line("Sarkma", r.OverhangArea < 1 ? "yok" : $"{r.OverhangArea:0} mm²: destek gerekir ({printer.MaxOverhangDeg:0}°'den yatık)", r.OverhangArea < 1 ? good : warn);
+            if (r.BetterDown is { } down)
+            {
+                Caption($"{FaceName(down)} tablaya konursa sarkma {r.BetterOverhang:0} mm² olur.");
+                var turn = SmallButton("Bu yüzü tablaya çevir", () => _ed.Do("Baskı yönü", () => TurnDown(o, down)));
+                turn.HorizontalAlignment = HorizontalAlignment.Left;
+                Props.Children.Add(turn);
+            }
+
+            if (r.Closed && !double.IsInfinity(r.ThinnestWall))
+            {
+                bool thin = r.ThinArea >= 1;
+                Line("Duvar", thin ? $"en ince {r.ThinnestWall:0.##} mm: {printer.MinWall:0.##} mm'den ince {r.ThinArea:0} mm²" : $"en ince {r.ThinnestWall:0.##} mm", thin ? warn : good);
+            }
+
+            Line("Tabla teması", $"{r.BedContact:0} mm²");
+            int minutes = (int)Math.Round(r.Hours * 60);
+            string time = minutes >= 60 ? $"{minutes / 60} sa {minutes % 60} dk" : $"{minutes} dk";
+            Line("Tahmin", $"{r.FilamentG:0.#} g · {r.FilamentM:0.##} m · {time} · {r.Layers} katman", Res("B.Text"));
+            Caption($"%{o.Infill * 100:0} doluluk, {printer.Layer:0.##} mm katman, {printer.Nozzle:0.#} mm uç, {printer.Speed:0} mm/s; destek ve dolaşma payıyla tahmini.");
+        }
+
+        private static string FaceName(Vec3 down) =>
+            down.Z > 0.5 ? "Üst yüz" : down.X > 0.5 ? "+X yüzü" : down.X < -0.5 ? "−X yüzü" : down.Y > 0.5 ? "+Y yüzü" : "−Y yüzü";
+
+        /// <summary>Turns the part about its middle so the face looking along <paramref name="down"/> lies on the bed, its lowest point kept.</summary>
+        private void TurnDown(ModelObject o, Vec3 down)
+        {
+            var before = _ed.Doc.WorldMesh(o).Bounds;
+            var centre = (before.Min + before.Max) / 2;
+            var euler = down.Z > 0.5 ? new Vec3(180, 0, 0) : down.X > 0.5 ? new Vec3(0, 90, 0) : down.X < -0.5 ? new Vec3(0, -90, 0) : down.Y > 0.5 ? new Vec3(-90, 0, 0) : new Vec3(90, 0, 0);
+            var turn = Affine.Translate(centre) * Affine.Euler(euler) * Affine.Translate(centre * -1);
+            ModelOps.SetWorldMatrix(_ed.Doc, o, turn * _ed.Doc.WorldMatrix(o));
+            var after = _ed.Doc.WorldMesh(o).Bounds;
+            var world = _ed.Doc.WorldMatrix(o);
+            ModelOps.SetWorldMatrix(_ed.Doc, o, Affine.Translate(new Vec3(0, 0, before.Min.Z - after.Min.Z)) * world);
+        }
+
         private void StatsSection(ModelObject o, List<ModelObject> objs)
         {
             var s = ModelMeasure.Of(_ed.Doc, o);
@@ -747,7 +816,7 @@ namespace RobotWin.Studio.Pages
             Line("Kütle", $"{s.MassG:0.##} g" + (mat.Printed ? $"  ({mat.Name}, %{o.Infill * 100:0} doluluk)" : $"  ({mat.Name})"), Res("B.Text"));
             Line("Ağırlık merkezi", $"{s.CenterOfMass.X:0.#}, {s.CenterOfMass.Y:0.#}, {s.CenterOfMass.Z:0.#} mm");
             Line("Ağ", $"{s.Faces} yüz · {s.Triangles} üçgen");
-            Line("Durum", s.Closed ? "kapalı, baskıya uygun" : "açık ağ (delik/çakışma var)", s.Closed ? Res("B.Success") : Res("B.Warning"));
+            Line("Durum", s.Closed ? "kapalı (su geçirmez)" : "açık ağ (delik/çakışma var)", s.Closed ? Res("B.Success") : Res("B.Warning"));
             if (objs.Count > 1)
             {
                 var t = ModelMeasure.Total(_ed.Doc, objs);

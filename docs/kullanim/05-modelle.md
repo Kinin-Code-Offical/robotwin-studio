@@ -105,6 +105,15 @@ Seçim: **Alt+tık** (sürüklemeden) tıklanan kenarın halkasını seçer, yü
 
 Her nesneye bir malzeme (PLA, PETG, ABS, Naylon, Akrilik, Kontrplak, MDF, FR4, Alüminyum, Çelik, Karbon, Kauçuk) ve doluluk oranı (3D baskı için) verin. Kütle hacimden otomatik hesaplanır; dünyaya gönderdiğinizde bu kütle kullanılır.
 
+### 3B baskı denetimi
+
+Basılan bir malzemedeki (PLA, PETG, ABS, Naylon) parçanın denetçisinde **3B baskı** bölümü vardır. Yazıcınızı seçin; parça durduğu gibi (Z yukarı, en alt noktası tablada) denetlenir:
+- **Tabla:** yazıcının baskı hacmine sığıp sığmadığı (yan çevrilmiş hâli de denenir).
+- **Ağ:** kapalı olup olmadığı; açık ağ dilimlenemez.
+- **Sarkma:** 45°'den yatık, aşağı bakan ve tablada olmayan yüzlerin alanı; bunlar destek ister. Altı yönden biri daha az sarkma veriyorsa yazılır, **Bu yüzü tablaya çevir** parçayı o yöne döndürür.
+- **Duvar:** her yüzden parçanın içinden karşı yüze ölçülen en ince duvar. İki çizgiden (0,9 mm) ince yerler uyarılır.
+- **Tabla teması** ve **tahmin:** filament (g, m), süre ve katman sayısı. Tahmin; çevre duvarlarını, dolulukla iç kısmı ve sarkmaların altındaki desteği yazıcının akışıyla sayar.
+
 ## Görünüm modları
 
 - **Katı** (Z), **Tel** kafes (Shift+Z), **X-ray** (Alt+Z), **Kenarlar**.
