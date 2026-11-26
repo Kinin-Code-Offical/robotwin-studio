@@ -1173,6 +1173,53 @@ namespace RobotWin.Studio.Pages
             }
         }
 
+        /// <summary>
+        /// [kicad-in] Brings back a board worked on in KiCad: its placements (by reference designator), tracks, vias, zones and
+        /// holes, after listing what changed. Footprints and the schematic stay this project's.
+        /// </summary>
+        private void OnImportKiCadLayout(object sender, RoutedEventArgs e)
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title = RobotWin.Studio.Shell.Lang.T("KiCad kartından yerleşim ve yolları al"),
+                Filter = RobotWin.Studio.Shell.Lang.Filter("KiCad kartı (*.kicad_pcb)|*.kicad_pcb"),
+            };
+            if (dlg.ShowDialog(Owner) != true) return;
+            KiCadLayout layout;
+            try
+            {
+                layout = KiCadBoardImport.Read(File.ReadAllText(dlg.FileName));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                Dialog.Show(Owner!, "Okunamadı", ex.Message, "Tamam");
+                return;
+            }
+
+            var board = Board;
+            var changes = BoardDiff.Compare(board, layout);
+            if (changes.Count == 0 && layout.Warnings.Count == 0)
+            {
+                W.Status = "KiCad kartı bu kartla aynı: alınacak değişiklik yok.";
+                return;
+            }
+
+            var lines = changes.Take(40).Select(c => (c.Applies ? "• " : "– ") + RobotWin.Studio.Shell.Lang.T(c.Text)).ToList();
+            if (changes.Count > 40) lines.Add(RobotWin.Studio.Shell.Lang.T($"… ve {changes.Count - 40} değişiklik daha"));
+            lines.AddRange(layout.Warnings.Select(w => "! " + RobotWin.Studio.Shell.Lang.T(w)));
+            int applies = changes.Count(c => c.Applies);
+            if (applies == 0)
+            {
+                Dialog.Show(Owner!, "KiCad'deki değişiklikler", string.Join("\n", lines), "Tamam");
+                return;
+            }
+
+            int answer = Dialog.Show(Owner!, "KiCad'deki değişiklikler", string.Join("\n", lines), $"{applies} değişikliği al", "Vazgeç");
+            if (answer != 0) return;
+            Edit($"KiCad'den {applies} değişiklik alındı: {Path.GetFileName(dlg.FileName)}", () => BoardDiff.Apply(board, layout));
+            UpdatePanel();
+        }
+
         /// <summary>Whole project as a KiCad 8 project folder inside a zip (opens directly in KiCad).</summary>
         private void OnExportKiCad(object sender, RoutedEventArgs e)
         {

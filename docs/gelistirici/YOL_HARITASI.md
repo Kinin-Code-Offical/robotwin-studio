@@ -93,7 +93,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - ~~osiloskopta matematik kanalları~~ (yapıldı: A−B, A+B, A×B güç, ∫A yük/enerji, dA/dt; herhangi iki kanal, birimler ve ölçek kendiliğinden);
   - [x] model sınırlarını gösterme: `Design/ModelLimits.cs` (her modelin dışarıda bıraktığı ya da sadeleştirdiği), kütüphane sayfasında ve devre denetçisinde **Modelin sınırları**.
 - [~] **PCB ve üretim:** 32 katman, DRC, Gerber, BOM ve KiCad dışa aktarma var. Eksikler:
-  - KiCad içe aktarma ve fark;
+  - [x] KiCad içe aktarma ve fark: **KiCad'den al** (`Pcb/KiCadBoardImport.cs`) `.kicad_pcb`'nin yerleşimini (referansla), yollarını (yaylar kirişlerle), vialarını, dolgularını, deliklerini okur; `BoardDiff` neyin değiştiğini parça parça ve hat hat listeler, istenirse tek geri alınabilir adımda uygular; dışa aktarılıp geri okunan kart farksız;
   - [x] diferansiyel çift ve uzunluk eşleme: **Hatlar** sekmesinde çiftler (adlarından bulunur) ve uzunluk grupları; via gövdeleriyle yol uzunluğu, çift farkı ve yan yana gidiş, DRC uyarıları (`Pcb/NetLengths.cs`); çift olarak yol çizme yok;
   - [x] DFM ve DFT: DRC sekmesinde **Üretim ve test** anahtarı (`Pcb/Dfm.cs`): asit tuzağı, maske köprüsü, pedde via, kenara yakın SMD, fidüsyel, mezar taşı riski, serigrafi, delik çeşidi; test erişimi, kapsam ve prob aralığı;
   - tedarikçili BOM;
@@ -137,7 +137,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] tohum ve ayarların saklanması.
 - [~] **Endüstriyel otomasyon:** konveyörlü hücre var. Eksikler:
   - [x] fotosel (difüz menzili yansıtmaya bağlı, reflektörlü / karşılıklı ışın, tepki süresi) ve makaralı sınır anahtarı (C–NO / C–NC, ön strok, histerezis);
-  - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Çift bobinli (hafızalı) valf, kompresör ve tank da var (basınç anahtarı, basınçla düşen verim, silindirlerin tanktan çektiği hava, RUN/PS çıkışları). Sırada: vakum üreteci.
+  - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Çift bobinli (hafızalı) valf, kompresör ve tank da var (basınç anahtarı, basınçla düşen verim, silindirlerin tanktan çektiği hava, RUN/PS çıkışları). Vakum üreteci de var: vantuzun vakumu basınçlı havayla çalışan bir ejektörden (venturi) gelebiliyor; ulaşılan vakum besleme basıncını izliyor, havası kompresörün tankından çekiliyor.
   - [x] istasyon durum makineleri: PLC'de `CASE` adımlarıyla (örnek program: itici istasyonu);
   - [x] çevrim süresi ve darboğaz: PLC'nin adım değişkeninden adım süreleri, çevrimler, en uzun adım;
   - [x] arıza senaryoları: fotosel, sınır anahtarı, silindir ve Modbus modülünde zamanlı arızalar (`Sandbox/MachineFaults.cs`);

@@ -135,7 +135,8 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         /// <summary>Arm + tool, a static table and a box on it; returns the box after a pick-and-lift program.</summary>
-        private (double Lift, MachineArm Arm, string Log) PickAndLift(string toolPreset, double boxMass, Action<WorldObject>? tweakTool = null, double boxX = 0.05, double boxY = 0.04, double boxZ = 0.08)
+        private (double Lift, MachineArm Arm, string Log) PickAndLift(string toolPreset, double boxMass, Action<WorldObject>? tweakTool = null, double boxX = 0.05, double boxY = 0.04, double boxZ = 0.08,
+            Action<WorldDocument>? tweakWorld = null)
         {
             var w = new WorldDocument();
             var armObj = AddArm(w);
@@ -153,6 +154,7 @@ namespace RobotTwin.CoreSim.Tests
             armObj.Parameters["points"] = $"UST = C(600, 0, {(top + 0.15) * 1000:0.#}, 180, 0, 0)\nAL = C(600, 0, {grasp * 1000:0.#}, 180, 0, 0)";
             armObj.Parameters["program"] = "MOVEJ UST HIZ=80\nMOVEL AL HIZ=200\nKAVRA\nTUTUSBEKLE 1.5\nBEKLE 0.2\nMOVEL UST HIZ=400\nBEKLE 0.5";
             armObj.Parameters["loop"] = "false";
+            tweakWorld?.Invoke(w);
             var p = WorldPhysics.Build(w, Geometry, null);
             var arm = p.ArmOf(armObj.Id)!;
             double z0 = p.PoseOf(box.Id)!.Value.Position.Z;
@@ -199,6 +201,34 @@ namespace RobotTwin.CoreSim.Tests
             var (lift2, _, log) = PickAndLift("vacuum-cup-50", 20.0, null, 0.16, 0.12, 0.1);
             Assert.True(lift2 < 0.02, $"should drop, lifted {lift2 * 1000:0} mm");
             Assert.Contains("Vakum tutuşu kaçtı", log);
+        }
+
+        /// <summary>[pneu] An ejector's vacuum follows its air: on a full 6 bar line a Ø50 cup holds 5 kg; on a 1.5 bar one it cannot.</summary>
+        [Fact]
+        public void AnEjectorCupHoldsWhatItsAirSupplyAllows()
+        {
+            (double Lift, MachineArm Arm, string Log) Run(string tankBar) => PickAndLift("vacuum-cup-50-ejector", 5.0, tool => tool.Parameters["air"] = "KMP1", 0.16, 0.12, 0.1, w =>
+            {
+                var kmp = w.AddComponent(Lib, "compressor-24l", new WorldPose { X = -0.8, Y = 0.8 });
+                kmp.Name = "KMP1";
+                kmp.IsStatic = true;
+                kmp.Parameters["start"] = tankBar;
+                kmp.Parameters["on"] = "0.5";   // the switch stays out: what is in the tank is all there is
+                kmp.Parameters["off"] = "9";
+            });
+
+            var (full, arm, _) = Run("6");
+            var tool = arm.Tool!;
+            _out.WriteLine($"6 bar: vacuum {tool.Pressure:0} kPa of {tool.VacuumTarget:0} reachable, hold {tool.HoldForce:0} N, air {tool.AirUsed:0.00} NL (tank gave {tool.AirSource!.AirDrawn:0.00} NL)");
+            Assert.True(full > 0.12, $"lifted only {full * 1000:0} mm");
+            Assert.InRange(tool.VacuumTarget, 80, 86);
+            Assert.True(tool.AirUsed > 0.1);
+            Assert.Equal(tool.AirUsed, tool.AirSource.AirDrawn, 2);
+
+            var (starved, arm2, log) = Run("1.5");
+            _out.WriteLine($"1.5 bar: reachable {arm2.Tool!.VacuumTarget:0} kPa, hold {arm2.Tool.HoldForce:0} N");
+            Assert.InRange(arm2.Tool.VacuumTarget, 25, 32);   // 85 kPa × 1.5 / 4.5
+            Assert.True(starved < 0.02, $"a starved ejector should drop 5 kg, lifted {starved * 1000:0} mm");
         }
 
         [Fact]

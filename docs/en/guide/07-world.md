@@ -248,6 +248,12 @@ With **Valve** set to `double coil` (or with the *double solenoid* ready-made pa
 - **RUN** is high while the motor runs, **PS** while the tank is above the cut-in pressure: a PLC builds its "no air" alarm from it;
 - the panel shows the tank pressure, the motor's duty, how often it cut in, and the air pumped and drawn.
 
+With a vacuum cup's **Vacuum generator** set to `ejector` (or with the *with ejector* ready-made part) its vacuum comes from a venturi run on compressed air:
+
+- the vacuum it can reach rises with its supply pressure: it gets to its best (85 kPa by default) at about 4.5 bar and to a third of it at 1.5 bar;
+- while on, it draws its **air consumption** from the tank of the compressor named as its **Air source**;
+- a weak air line weakens the hold: a Ø50 mm cup lifts a 5 kg box at 6 bar and drops it at 1.5 bar.
+
 ### Fault scenarios
 
 A photoelectric sensor, limit switch, pneumatic cylinder or Modbus module can fail at a set time with **Add feature → Fault scenario** in the inspector: a dirty lens (the range drops), a stuck or dead output, a welded contact, a broken lever, a seal leak, a stuck valve, a low supply, a lost network. Set its **start time** and, where it has one, its **size** (the range left, the leak, the pressure); when it begins it is written to **Events**. A PLC program's reaction to the fault (a step that waits forever, a timeout alarm) can so be tried before it meets the real one.

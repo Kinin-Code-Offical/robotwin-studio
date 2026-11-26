@@ -18,7 +18,7 @@ namespace RobotTwin.CoreSim.Tests
 
         public GerberCheckTests(ITestOutputHelper output) => _out = output;
 
-        private static BoardDocument RoutedBoard()
+        internal static BoardDocument RoutedBoard()
         {
             var board = BoardDocument.Synchronize(DesignAndPcbTests.MotorDriverSchematic(), PartLibrary.Default);
             board.Width = 70;

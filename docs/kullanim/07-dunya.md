@@ -248,6 +248,12 @@ Alt paneldeki **HMI** sekmesi, PLC'lerin değişkenlerine bağlı bir operatör 
 - **RUN** motor çalışırken, **PS** tank basıncı çalışma basıncının üstündeyken yüksektir: bir PLC "hava yok" alarmını buradan kurar;
 - panelde tank basıncı, motorun çalışma oranı, kaç kez devreye girdiği, basılan ve çekilen hava görünür.
 
+Vakum vantuzunun **Vakum üreteci** `ejektör` yapılırsa (ya da *ejektörlü* hazır parçayla) vakumu basınçlı havayla çalışan bir venturi üretir:
+
+- ulaşabildiği vakum besleme basıncıyla yükselir: en yüksek vakumuna (öntanımlı 85 kPa) ~4,5 bar'da varır, 1,5 bar'da üçte birine iner;
+- açıkken **hava tüketimi** kadar havayı **Hava kaynağı**ndaki kompresörün tankından çeker;
+- hava hattı zayıflarsa tutma kuvveti düşer: Ø50 mm'lik vantuz 6 bar'da 5 kg'lık kutuyu kaldırır, 1,5 bar'da düşürür.
+
 ### Arıza senaryoları
 
 Fotosel, sınır anahtarı, pnömatik silindir ve Modbus modülü, denetçide **Özellik ekle → Arıza senaryosu** ile belli bir anda bozulabilir: kirli lens (menzil düşer), takılı ya da ölü çıkış, yapışık kontak, kırık kol, conta kaçağı, takılı valf, düşük besleme, kopuk ağ. **Başlama zamanı** ve varsa **büyüklüğü** (kalan menzil, kaçak, basınç) ayarlanır; arıza başlayınca **Olaylar**'a yazılır. Böylece PLC programının arızaya tepkisi (sonsuza dek bekleyen bir adım, zaman aşımı alarmı) gerçek arızadan önce denenir.

@@ -248,6 +248,8 @@ public class LangTests
     [InlineData("56,6 Hz · yüksek 1,03 ms", "56,6 Hz · high 1,03 ms")]
     [InlineData("97× · en uzun 5,9 µs", "97× · longest 5,9 µs")]
     [InlineData("14 kenar", "14 edges")]
+    [InlineData("R1 taşındı: (17.29, 25.36) → (22.29, 25.36) mm", "R1 moved: (17.29, 25.36) → (22.29, 25.36) mm")]
+    [InlineData("GND: 23 yol 54.6 mm, 0 via → 22 yol 49.9 mm, 0 via", "GND: 23 tracks 54.6 mm, 0 vias → 22 tracks 49.9 mm, 0 vias")]
     [InlineData("Besleme    : 6,00 bar · KMP1 tankından · çift bobinli valf", "Supply     : 6,00 bar · from KMP1's tank · double-solenoid valve")]
     [InlineData("Motor      : ÇALIŞIYOR · %78", "Motor      : RUNNING · 78%")]
     [InlineData("Yanıt      : 6 · CRC hatası 1 · bozuk karakter 0", "Answered   : 6 · CRC errors 1 · broken characters 0")]

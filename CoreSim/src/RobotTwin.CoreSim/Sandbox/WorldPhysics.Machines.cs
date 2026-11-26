@@ -115,6 +115,21 @@ namespace RobotTwin.CoreSim.Sandbox
         internal SceneJoint? CupJoint;
         internal SceneJoint? Grip;
         internal double Stroke, Force, Speed, Diameter, VacuumKpa, CupRadius;
+
+        /// <summary>[pneu] Its vacuum comes from an ejector on compressed air (else from a pump).</summary>
+        public bool Ejector { get; internal set; }
+
+        /// <summary>[pneu] The ejector's compressor (null: a supply that never runs out, at 6 bar).</summary>
+        public MachineCompressor? AirSource { get; internal set; }
+
+        internal string AirName = string.Empty;
+        internal double EjectorAir, EjectorMaxKpa;   // kg/s of air at 6 bar, best vacuum (kPa)
+
+        /// <summary>[pneu] The vacuum it can reach now (kPa): the pump's setting, or what the ejector makes of its supply.</summary>
+        public double VacuumTarget { get; internal set; }
+
+        /// <summary>[pneu] Compressed air the ejector has used (normal litres).</summary>
+        public double AirUsed { get; internal set; }
         internal int Cups = 1;
         internal double OpenGap;
         internal double StallTime;
@@ -344,8 +359,6 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
             }
 
-            LinkAir();   // [pneu] cylinders find the compressor they draw from
-
             // Tools last: they sit on the arms' flanges.
             foreach (var j in world.Joints)
             {
@@ -355,6 +368,8 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (arm == null || o == null || !CellParts.IsTool(o.PartId) || !_items.TryGetValue(o.Id, out var it)) continue;
                 BuildTool(o, it, arm, ParamsOf(o));
             }
+
+            LinkAir();   // [pneu] cylinders and ejectors find the compressor they draw from
 
         }
 
@@ -500,6 +515,11 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 tool.Diameter = Math.Max(0.01, CellParts.Num(p, "diameter", 50) / 1000);
                 tool.VacuumKpa = Math.Max(1, Math.Min(95, CellParts.Num(p, "vacuum", 65)));
+                tool.Ejector = p.TryGetValue("generator", out var gen) && gen.Trim() == CellParts.VacuumEjector;
+                tool.AirName = p.TryGetValue("air", out var air) ? air.Trim() : string.Empty;
+                tool.EjectorAir = Math.Max(0, CellParts.Num(p, "ejector_flow", 40)) / 60 / 1000 * 1.204;
+                tool.EjectorMaxKpa = Math.Max(1, Math.Min(95, CellParts.Num(p, "ejector_vacuum", 85)));
+                tool.VacuumTarget = tool.Ejector ? tool.EjectorMaxKpa : tool.VacuumKpa;
                 tool.Cups = (int)Math.Max(1, CellParts.Num(p, "cups", 1));
                 tool.CupRadius = tool.Diameter / 2;
                 var layout = ToolGeometry.CupLayout(tool.Cups, tool.Diameter);
@@ -764,11 +784,28 @@ namespace RobotTwin.CoreSim.Sandbox
             var cup = tool.Cup!;
             var axis = cup.Orientation.Rotate(Vec3.UnitZ);
             double area = Math.PI * tool.CupRadius * tool.CupRadius * tool.Cups;
+            double target = tool.VacuumKpa;
+            if (tool.Ejector)
+            {
+                // [pneu] a venturi: its vacuum rises with the supply up to its best near 4.5 bar; on, it blows air through
+                // (its rated flow at 6 bar, scaled by the absolute supply), out of the compressor's tank
+                double supply = tool.AirSource?.Pressure ?? 101325 + 6e5;
+                double gauge = Math.Max(0, supply - 101325) / 1e5;
+                target = tool.EjectorMaxKpa * Math.Min(1, gauge / 4.5);
+                if (tool.Command)
+                {
+                    double air = tool.EjectorAir * (supply / (101325 + 6e5));
+                    if (tool.AirSource != null) tool.AirSource.Drawn += air * dt;
+                    tool.AirUsed += air * dt / 1.204 * 1000;
+                }
+            }
+
+            tool.VacuumTarget = target;
             if (tool.Command)
             {
                 if (tool.Grip == null)
                 {
-                    tool.Pressure += (0.08 * tool.VacuumKpa - tool.Pressure) * Math.Min(1, dt / 0.05);   // open cup: only a weak flow vacuum
+                    tool.Pressure += (0.08 * target - tool.Pressure) * Math.Min(1, dt / 0.05);   // open cup: only a weak flow vacuum
                     if (TrySeal(tool, axis, out var part, out var at))
                     {
                         var j = Scene.AddJoint(JointKind.Fixed, cup, part!, at, axis, tool.ObjectId + ":VAC");
@@ -779,7 +816,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 else
                 {
                     tool.SealTime += dt;
-                    tool.Pressure += (tool.VacuumKpa - tool.Pressure) * Math.Min(1, dt / 0.06);
+                    tool.Pressure += (target - tool.Pressure) * Math.Min(1, dt / 0.06);
                 }
             }
             else
@@ -789,14 +826,14 @@ namespace RobotTwin.CoreSim.Sandbox
 
             // Effective holding force (≈ 80 % of the ideal ΔP·A: lip leakage, bellows stiffness).
             tool.HoldForce = 0.8 * tool.Pressure * 1000 * area;
-            tool.Holding = tool.Grip != null && tool.Pressure > 0.7 * tool.VacuumKpa;
+            tool.Holding = tool.Grip != null && tool.Pressure > 0.7 * Math.Max(1, target);
             if (tool.Grip == null)
             {
                 tool.Load = 0;
                 return;
             }
 
-            if (!tool.Command && tool.Pressure < 0.12 * tool.VacuumKpa)
+            if (!tool.Command && tool.Pressure < 0.12 * Math.Max(1, target))
             {
                 Release(tool);
                 return;

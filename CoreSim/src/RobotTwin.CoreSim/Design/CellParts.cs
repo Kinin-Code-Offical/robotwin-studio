@@ -36,6 +36,9 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[pneu] The cylinder's valve: one coil and a spring, or two coils and no spring (it stays where it was sent).</summary>
         public const string ValveSingle = "tek bobin", ValveDouble = "çift bobin";
 
+        /// <summary>[pneu] What makes a vacuum tool's vacuum: an electric pump, or an ejector (venturi) run on compressed air.</summary>
+        public const string VacuumPump = "pompa", VacuumEjector = "ejektör";
+
         /// <summary>[plc] The PLC's programming languages: its program is in "program" (ST) or "ladder" (LD, as JSON).</summary>
         public const string PlcStructuredText = "Yapısal Metin", PlcLadder = "Merdiven";
 
@@ -126,10 +129,16 @@ namespace RobotTwin.CoreSim.Design
                 new ParameterDefinition("pad", "Parmak yüzeyi", "kauçuk", "", new[] { "kauçuk", "alüminyum" }));
             Preset(lib, "gripper-2f-60", "Paralel Tutucu · 60 mm strok, 80 N", GripperId, "Kauçuk pedli iki parmak, kuvvet sınırlı");
             var vacuum = Part(lib, VacuumId, "Vakum Vantuz", "EOAT",
-                "Körüklü vakum vantuzu: düz bir yüzeye oturup sızdırmazlık sağlanınca tutar; tutma kuvveti = vakum × vantuz alanı. Eğik/kenar temasta tutmaz.",
+                "Körüklü vakum vantuzu: düz bir yüzeye oturup sızdırmazlık sağlanınca tutar; tutma kuvveti = vakum × vantuz alanı. Eğik/kenar temasta tutmaz. " +
+                "Vakumu bir pompa ya da basınçlı havayla çalışan bir ejektör (venturi) üretir: ejektörün vakumu besleme basıncıyla yükselir (tam vakum için ~4,5 bar) ve açıkken kompresörün tankından hava çeker.",
                 new ParameterDefinition("diameter", "Vantuz çapı", "50", "mm"),
                 new ParameterDefinition("vacuum", "Vakum seviyesi", "65", "kPa"),
-                new ParameterDefinition("cups", "Vantuz sayısı", "1", "", new[] { "1", "2", "4" }));
+                new ParameterDefinition("cups", "Vantuz sayısı", "1", "", new[] { "1", "2", "4" }),
+                new ParameterDefinition("generator", "Vakum üreteci", VacuumPump, "", new[] { VacuumPump, VacuumEjector }),
+                new ParameterDefinition("air", "Hava kaynağı (ejektör: kompresör adı)", ""),
+                new ParameterDefinition("ejector_flow", "Ejektörün hava tüketimi (6 bar)", "40", "NL/dk"),
+                new ParameterDefinition("ejector_vacuum", "Ejektörün en yüksek vakumu", "85", "kPa"));
+            Preset(lib, "vacuum-cup-50-ejector", "Vakum Vantuz · Ø50 mm, ejektörlü", VacuumId, "Basınçlı havayla venturi vakum, 85 kPa'ya kadar", "generator=" + VacuumEjector);
             Preset(lib, "vacuum-cup-50", "Vakum Vantuz · Ø50 mm, −65 kPa", VacuumId, "Tek vantuz, ~100 N tutma (yaklaşık)");
             Preset(lib, "vacuum-cup-4x40", "Vakum Tutucu · 4 × Ø40 mm", VacuumId, "Kutu/plaka taşımak için dört vantuzlu plaka", "diameter=40;cups=4");
 

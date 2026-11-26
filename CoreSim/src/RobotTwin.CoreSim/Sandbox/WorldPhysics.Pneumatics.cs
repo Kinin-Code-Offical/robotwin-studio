@@ -160,6 +160,14 @@ namespace RobotTwin.CoreSim.Sandbox
                             ?? _compressors.FirstOrDefault(c => string.Equals(c.Object.Id, cy.SourceName, StringComparison.OrdinalIgnoreCase));
                 if (cy.Source == null) MachineSay(cy.Object.Id, $"Hava kaynağı '{cy.SourceName}' adlı kompresör bulunamadı: sabit besleme kullanılıyor", true);
             }
+
+            foreach (var tool in _tools)
+            {
+                if (!tool.Ejector || tool.AirName.Length == 0) continue;
+                tool.AirSource = _compressors.FirstOrDefault(c => string.Equals(c.Object.Name, tool.AirName, StringComparison.OrdinalIgnoreCase))
+                                 ?? _compressors.FirstOrDefault(c => string.Equals(c.Object.Id, tool.AirName, StringComparison.OrdinalIgnoreCase));
+                if (tool.AirSource == null) MachineSay(tool.ObjectId, $"Hava kaynağı '{tool.AirName}' adlı kompresör bulunamadı: sabit besleme kullanılıyor", true);
+            }
         }
 
         private void StepCompressor(MachineCompressor c, double dt)

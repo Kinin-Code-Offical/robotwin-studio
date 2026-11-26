@@ -64,6 +64,9 @@
                     <Button x:Name="KiCadButton" Margin="6,0,0,0" Click="OnExportKiCad" ToolTip="KiCad 8 projesi: .kicad_pro (hat sınıfları), .kicad_sch, .kicad_pcb (tüm katmanlar, yığın, dolgular), netlist, kütüphaneler, SPICE ve Gerber">
                         <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="14"/><TextBlock Text="KiCad'e aktar" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
+                    <Button x:Name="KiCadInButton" Margin="6,0,0,0" Click="OnImportKiCadLayout" ToolTip="KiCad'de düzenlenen kartın yerleşimini ve yollarını geri al: önce neyin değiştiği listelenir (taşınan, döndürülen parçalar, hat hat yollar, dolgular, delikler), sonra istenirse uygulanır">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Import}" Size="14"/><TextBlock Text="KiCad'den al" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
                     <Button x:Name="OverflowButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnOverflow" ToolTip="Diğer işlemler" Visibility="Collapsed"><t:Icon Data="{StaticResource I.More}"/></Button>
                     <Popup x:Name="OverflowPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=OverflowButton}" AllowsTransparency="True">
                         <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="6" MinWidth="200">

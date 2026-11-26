@@ -135,6 +135,16 @@ As soon as the ZIP is saved it is read back from disk and checked. The reader is
 
 A wrong unit, a flipped axis, a wrong aperture size, an arc turning the wrong way or a lost object shows before the files go to the maker. The status bar gives the result ("9 Gerber and 2 drill files match the board"); if something differs, a window lists where.
 
+### Bringing it back from KiCad
+
+If you took the board to KiCad with **Export to KiCad** and placed or routed it there, choose its `.kicad_pcb` with **Import from KiCad**:
+
+- what changed is listed first: parts moved, turned or flipped to the other side (by reference), each net's track count, length and via count, the copper pours, the mounting holes, the board size;
+- **import the changes** carries them over to this board (one step to undo); the pours are filled again;
+- the footprints and the schematic are this project's: a part standing on another footprint in KiCad, or one that is only in KiCad, shows in the list but is not taken;
+- tracks come with their arcs (in chords of 10°); an angle that is not a quarter turn (45°) is rounded to the nearest one and the list says so;
+- a board drawn elsewhere on KiCad's page is shifted so its outline's corner comes to this board's origin.
+
 ## Footprints and modules
 
 - **Footprint:** the footprint editor. Draw SMD and THT pads, silkscreen, courtyard and fabrication layers and save to your user library.

@@ -135,6 +135,16 @@ ZIP kaydedilir kaydedilmez diskten geri okunup denetlenir. Okuyucu, dosyaları y
 
 Yanlış birim, ters çevrilmiş eksen, yanlış açıklık boyu, ters dönen yay ya da kaybolan bir nesne dosyalar üreticiye gitmeden görünür. Durum çubuğu sonucu yazar ("9 Gerber ve 2 delik dosyası kartla aynı"); bir fark varsa yerleriyle bir pencere açılır.
 
+### KiCad'den geri alma
+
+Kartı **KiCad'e aktar** ile KiCad'e götürüp orada yerleştirdiyseniz ya da yolladıysanız **KiCad'den al** ile `.kicad_pcb` dosyasını seçin:
+
+- önce neyin değiştiği listelenir: taşınan, döndürülen ya da öbür yüze alınan parçalar (referanslarıyla), hat hat yol sayısı, uzunluğu ve via sayısı, bakır dolgular, montaj delikleri, kart ölçüsü;
+- **değişiklikleri al** onları bu karta taşır (tek bir geri alınabilir adım); dolgular yeniden doldurulur;
+- ayak izleri ve şema bu projenindir: KiCad'de başka ayak iziyle duran bir parça ya da yalnız KiCad'de olan bir parça listede görünür ama alınmaz;
+- yollar yaylarıyla gelir (yaylar 10°'lik kirişlerle); çeyrek tur olmayan bir açı (45°) en yakın çeyrek tura yuvarlanır ve listede yazar;
+- KiCad'de başka bir yere çizilmiş bir kart, dış hattının köşesi bu kartın başlangıcına gelecek şekilde kaydırılır.
+
 ## Ayak izi ve modül
 
 - **Footprint:** ayak izi düzenleyicisi. SMD ve THT pedler, serigrafi, avlu ve üretim katmanı çizip kullanıcı kütüphanenize kaydedersiniz.

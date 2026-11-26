@@ -538,6 +538,8 @@ namespace RobotWin.Studio.Pages
                     {
                         sb.AppendLine($"Komut      : {(t.Command ? "VAKUM AÇIK" : "kapalı")}");
                         sb.AppendLine($"Vakum      : {Kpa(t.Pressure)} · tutma {t.HoldForce:0} N");
+                        if (t.Ejector)   // [pneu] what its air lets it reach, and what it has blown
+                            sb.AppendLine($"Ejektör    : en çok {t.VacuumTarget:0} kPa · {t.AirUsed:0.0} NL" + (t.AirSource != null ? $" · {t.AirSource.Object.Name} tankından" : string.Empty));
                         sb.AppendLine($"Durum      : {(t.Holding ? "parça tutuluyor" : t.HeldBody != null ? "sızdırmazlık var, basınç yükseliyor" : "boşta")}");
                         sb.Append($"Yük        : {t.Load:0} N · körük {t.CupTravel * 1000:0.0} mm");
                     }
