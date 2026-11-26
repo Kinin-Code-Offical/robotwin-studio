@@ -194,6 +194,10 @@ Dünya, ROS 2 tarafında çalışan `rosbridge_server`'a bağlanabilir (ROS 2'de
 | `/imu` | yayın | `sensor_msgs/msg/Imu` | URDF'nin bildirdiği IMU: taşındığı parçanın hareketinden yön, açısal hız ve özgül kuvvet (duran robotta yukarı doğru 9,81 m/s²), bildirilen gürültüyle. |
 
 Sürüş tekerlekleri, tabana takılı, hız motorlu ve ekseni robotun yanına bakan eklemlerdir; tekerlek izi ve yarıçapı robotun kendi şekillerinden ölçülür (ros2_control'ün diferansiyel sürüş denetleyicisine elle yazılan değerler). İkinci bir robotun konuları ve çerçeveleri `/robot2` altına gider. Bölümde gönderilen ve gelen mesaj sayısı, ROS'un gördüğü eklemler, gezginin tekerlekleri, izi ve yarıçapı, son `/cmd_vel` komutu ve komutlardaki bilinmeyen adlar görünür. Bağlantı dünya durunca da açık kalır; bir sonraki çalıştırmada kendiliğinden kullanılır.
+### Robot kolda yol denetimi
+
+**Parçalar → Robot Hücresi**ndeki kontrolörlü kol her hareketi başlamadan önce yolun tamamında dener: hareket, hiçbir eksen örnekler arasında 1°'den (kayar eksen 2 mm'den) fazla dönmeyecek sıklıkta örneklenir; her örnekte bağlantıların kutuları, flanştaki tutucu ve taşıdığı parça dünyadaki öteki katı cisimlere, zemine ve kolun iki eklem ötedeki kendi bağlantılarına karşı sınanır. Hareketin başında zaten süren temaslar (alınacak kutunun konveyöre değmesi gibi) sayılmaz. **Yolda çarpışma denetimi** ayarı *uyar* ise (öntanımlı) çarpışacak hareket **Olaylar**'a neyin neye, hareketin kaçıncı saniyesinde çarpacağıyla yazılır ve kol yine gider (fizik çarpışmayı gerçekten yaşatır); *durdur* ise kol hareket etmeden arızaya geçer; *kapalı* denetimi kaldırır. Engellerin o anki yerleri kullanılır: konveyörde ilerleyen bir kutunun ileride nerede olacağı hesaba katılmaz.
+
 ### Fotoelektrik sensör ve sınır anahtarı
 
 **Parçalar → Robot Hücresi** altında. **Fotoelektrik sensör**ün merceği parçanın +X yönüne bakar. *Difüz* kipte cisimden yansıyan ışığı görür: menzil beyaz kart (%90 yansıtma) içindir; yansıyan ışık uzaklığın karesiyle azaldığından koyu cisimde kısalır (kauçuk, %8: 300 mm'lik sensörde yaklaşık 90 mm). *Reflektörlü* ve *karşılıklı* kipte ışın menzil uzaklığındaki reflektöre ya da alıcıya gider, rengi ne olursa olsun araya giren her cisim keser. **Çıkış açık** ayarı OUT'un cisim varken mi yokken mi yüksek olacağını seçer; çıkış **tepki süresi** kadar gecikir. Dünya çalışırken ışın sahnede çizilir.
@@ -250,6 +254,10 @@ Aynı portu paylaşan modüller birim kimlikleriyle ayrılır (ağ geçidi arkas
 - Kablonun direnci gerçek bakır direncidir. Akım sınırı aşılırsa kablo ısınır ve yanar; **Kablolar ve ölçümler** sekmesinde **YANDI** yazar.
 - Kartlar, bir kablo bağlanana kadar elektriksel olarak birbirinden ayrıdır. İki kart arasında sinyal taşıyorsanız GND'yi de bağlayın.
 - Kabloyu kaldırmak için denetçide **Kabloyu sök**'e basın.
+
+### Besleme raporu
+
+Veri sayfasında besleme aralığı bilinen her modülün (GY-521, HC-SR04, GPS ve pusula modülleri, LiDAR, kamera, WS2812, servolar, TCRT5000, PIR, karakter LCD) besleme pini kendi GND'sine göre koşu boyunca izlenir. Gerilim bir kez aralığa girdikten sonra en alt sınırın altına düşerse (motorun kalkış akımı, zayıf pil, ince kablo, regülatör düşümü) **Olaylar**'a hemen bir besleme düşmesi (brown-out) yazılır; toparlandığında ne kadar sürdüğü ve en düşük değeri eklenir. Üst sınırın aşılması da yazılır. Dünya durunca **Besleme raporu** parçaların aralığa giriş sırasını, her birinin besleme düşmelerini ve hiç yeterli beslemeyi görmeyenleri listeler. Kartlar (Arduino, ESP32) kendi besleme düşmesi sıfırlamalarını ayrıca bildirir.
 
 ## Mekanik bağlantılar
 

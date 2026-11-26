@@ -1843,6 +1843,13 @@ namespace RobotWin.Studio.Pages
                 {
                     var sb = new System.Text.StringBuilder();
                     foreach (var e in _session.Log) sb.AppendLine(string.Format(CultureInfo.InvariantCulture, "[{0:0.000}] {1}: {2}", e.Time, e.Device, e.Message));
+                    if (_session.Supply is { } supply)   // [supply] the power report as it stands (the run is not stopped)
+                    {
+                        supply.Finish(_session.Time);
+                        sb.AppendLine("---- besleme ----");
+                        foreach (var line in supply.Report()) sb.AppendLine(line);
+                    }
+
                     sb.AppendLine("---- seri ----").Append(_session.SerialText);
                     sb.AppendLine("---- gövdeler (simülasyon sonunda) ----");
                     if (_session.Physics is { } ph)

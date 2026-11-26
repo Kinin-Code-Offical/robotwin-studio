@@ -109,6 +109,18 @@ namespace RobotTwin.CoreSim.Robotics
         /// <summary>Resume automatically when the safety circuit closes again (otherwise a restart is needed).</summary>
         public bool AutoResumeAfterSafety { get; set; }
 
+        /// <summary>
+        /// [pathcheck] Checks a planned move along its whole path before the arm starts it (the host knows what is around
+        /// the arm: Sandbox/WorldPhysics.ArmPath.cs); returns what it would hit, or null. The move goes ahead with a warning,
+        /// or with <see cref="StopOnPathCollision"/> the controller faults before moving, as a collision-aware planner does.
+        /// </summary>
+        public Func<ArmMotion, string?>? PathCheck { get; set; }
+
+        public bool StopOnPathCollision { get; set; }
+
+        /// <summary>[pathcheck] What the last checked move would hit ("" when its path was clear).</summary>
+        public string PathWarning { get; private set; } = string.Empty;
+
         public ArmProgram? Program { get; private set; }
         public int ProgramCounter { get; private set; }
         public ArmInstruction? CurrentInstruction => Program != null && ProgramCounter < Program.Instructions.Count ? Program.Instructions[ProgramCounter] : null;
@@ -368,6 +380,20 @@ namespace RobotTwin.CoreSim.Robotics
                 if (scale > 1) m = m.Stretched(scale);
                 var check = ArmDynamics.Check(Model, m, PayloadKg, Tool);
                 LastTorque = (check.Ratio, check.Axis, scale);
+            }
+
+            if (m.Duration > 0 && PathCheck?.Invoke(m) is { } hit)
+            {
+                PathWarning = hit;
+                if (StopOnPathCollision)
+                {
+                    Fail("Yolda çarpışma: " + hit);
+                    return;
+                }
+            }
+            else
+            {
+                PathWarning = string.Empty;
             }
 
             _motion = m;

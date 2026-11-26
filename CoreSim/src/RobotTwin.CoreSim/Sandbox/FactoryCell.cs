@@ -101,7 +101,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 "MOVEL ALMA HIZ=250",
                 "KAVRA",
                 "TUTUSBEKLE 1.0",
-                "MOVEL ALMA OFS=0,0,150 HIZ=900",
+                "MOVEL ALMA OFS=0,0,250 HIZ=900          ; tamponun üstü 80 mm: kutu dönerken ona sürtmesin",
                 "MOVEJ BIRAKMA PAL OFS=0,0,300 HIZ=90",
                 "MOVEL BIRAKMA PAL OFS=0,0,40 HIZ=900",
                 "MOVEL BIRAKMA PAL HIZ=150",

@@ -98,6 +98,7 @@ namespace RobotTwin.CoreSim.Design
                 new ParameterDefinition("profile", "Hız profili", "S-eğrisi", "", new[] { "S-eğrisi", "trapez" }),
                 new ParameterDefinition("override", "Hız ayarı", "100", "%"),
                 new ParameterDefinition("safety_restart", "Güvenlik sonrası", "elle", "", new[] { "elle", "otomatik" }),
+                new ParameterDefinition("pathcheck", "Yolda çarpışma denetimi", "uyar", "", new[] { "uyar", "durdur", "kapalı" }),
                 new ParameterDefinition("io_v", "G/Ç gerilimi", "5", "V", new[] { "5", "24" }));
             arm.Build = c => BuildIo(c, ArmInputs, ArmOutputs);
             AddPins(arm, ArmInputs, ArmOutputs);

@@ -194,6 +194,10 @@ A world can connect to `rosbridge_server` running on the ROS 2 side (in ROS 2: `
 | `/imu` | published | `sensor_msgs/msg/Imu` | An IMU the URDF declares: orientation, angular rate and specific force (9.81 m/s² upwards on a robot standing still) from the motion of the part it rides on, with its declared noise. |
 
 The drive wheels are the speed-driven joints on the base whose axis points across the robot; their track and radius are measured from the robot's own shapes (the values written by hand into ros2_control's diff drive controller). A second robot's topics and frames go under `/robot2`. The section shows the messages sent and received, the joints ROS sees, the rover's wheels, track and radius, the last `/cmd_vel` and unknown names in the commands. The connection stays open when the world stops and is used by the next run.
+### Path checking on the robot arm
+
+The arm with a controller in **Parts → Robot Cell** tries every move along its whole path before it starts: the move is sampled so that no joint turns more than 1° (a prismatic one 2 mm) between samples, and at each sample the link boxes, the tool on the flange and the part it carries are tested against every other solid in the world, the floor, and the arm's own links two joints away. Contacts that already exist when the move starts (the box it picks touching the conveyor) do not count. With **Collision check along the path** on *warn* (the default) a move that would collide goes to **Events** with what hits what and how many seconds into the move, and the arm goes ahead (the physics plays the collision out); on *stop* the arm faults before it moves; *off* turns the check off. Obstacles are taken where they are now: where a box riding the conveyor will be later is not predicted.
+
 ### Photoelectric sensor and limit switch
 
 Under **Parts → Robot Cell**. The **photoelectric sensor**'s lens faces the part's +X. In *diffuse* mode it sees the light an object returns: its range is for a white card (90 % reflectance), and as the returned light falls with the square of the distance it is shorter on a dark object (rubber, 8 %: about 90 mm on a 300 mm sensor). In *retro-reflective* and *through-beam* modes the beam goes to a reflector or receiver at the range, and anything that comes between cuts it, whatever its colour. **Output on** chooses whether OUT is high while an object is there or while none is; the output follows after the **response time**. While the world runs the beam is drawn in the scene.
@@ -250,6 +254,10 @@ Modules sharing a port are told apart by their unit ID (as devices behind a gate
 - A cable's resistance is real copper resistance. If its current limit is exceeded the cable heats and burns; the **Cables and measurements** tab says **BURNT**.
 - Boards are electrically separate until a cable connects them. If you carry a signal between two boards, connect GND too.
 - To remove a cable press **Disconnect cable** in the inspector.
+
+### Power report
+
+Every module whose supply range its datasheet gives (GY-521, HC-SR04, GPS and compass modules, LiDARs, the camera, WS2812, servos, TCRT5000, PIR, character LCDs) has its supply pin watched against its own GND through the run. Once the voltage has come into range, a drop below the minimum (a motor's starting current, a weak battery, a thin cable, a regulator's dropout) goes to **Events** at once as a brown-out, and its recovery with how long it lasted and how low it went. Going over the maximum is logged too. When the world stops, the **Power report** lists the order the parts came into range, each one's brown-outs and the ones that never had enough. Boards (Arduino, ESP32) report their own brown-out resets as before.
 
 ## Mechanical joints
 

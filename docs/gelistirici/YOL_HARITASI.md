@@ -89,7 +89,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] üretici SPICE modelleri: `.model` kartları (D, NPN/PNP, NMOS/PMOS'un VTO'su) parçaya (`Design/SpiceModels.cs`); `.SUBCKT` alt devreleri iç içe açılarak cihazlara çevrilir ve kullanıcı parçası olur (`Libraries/SpiceCircuitBuilder.cs`, `ExternalLibraryTests`);
   - [x] AC ve frekans cevabı: çalışma noktasında küçük işaret analizi (`AnalogSimulator.AcResponse`: cihazlar iki adım uzunluğunda damgalanıp G + jωC ayrıştırılır), devre sayfasında Bode çizimi;
   - [x] anahtarlamalı güç: `Analog/Devices/SwitchingRegulator.cs` (ortalamalı düşürücü/yükseltici: bobin akımı durum değişkeni, gerilim ve akım döngüsü, akım sınırı, düşüm, en çok görev oranı, diyot, kayıplardan giriş akımı, ısınma), `Design/PowerParts.cs` (LM2596, MP1584, XL4015, MT3608, XL6009 modülleri ve 3B modelleri);
-  - [~] besleme açılışı: regülatör modüllerinde UVLO, yumuşak başlama ve kondansatör şarj akımı var; devre genelinde açılış sırası ve besleme düşmesi (brown-out) raporu yok;
+  - [x] besleme açılışı: regülatör modüllerinde UVLO, yumuşak başlama ve kondansatör şarj akımı; dünyada besleme raporu (`Design/SupplyRatings.cs`, `Sandbox/SupplyMonitor.cs`): veri sayfası aralıklarına göre açılış sırası, anlık besleme düşmesi ve aşırı gerilim olayları, hiç yeterli beslemeyi görmeyenler;
   - ~~osiloskopta matematik kanalları~~ (yapıldı: A−B, A+B, A×B güç, ∫A yük/enerji, dA/dt; herhangi iki kanal, birimler ve ölçek kendiliğinden);
   - [x] model sınırlarını gösterme: `Design/ModelLimits.cs` (her modelin dışarıda bıraktığı ya da sadeleştirdiği), kütüphane sayfasında ve devre denetçisinde **Modelin sınırları**.
 - [~] **PCB ve üretim:** 32 katman, DRC, Gerber, BOM ve KiCad dışa aktarma var. Eksikler:
@@ -117,7 +117,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - derleyici sürümünün projeyle saklanması.
 - [~] **Robotik kontrol:** yukarıdaki kinematik maddesi, ayrıca:
   - [x] yörünge sınırları: her hareket eksenlerin tepe torkuna göre denetlenip (bağlantıların kütle ve eylemsizliği, yerçekimi, sürtünme, tutucudaki parça) gerekirse yavaşlatılıyor; S eğrisi hareketlerde eksen başına jerk sınırı (`Robotics/ArmDynamics.cs`);
-  - yol boyunca çarpışma;
+  - [x] yol boyunca çarpışma: her hareket başlamadan yolun tamamında (1° adımla) bağlantılar, tutucu ve taşınan parça dünyaya, zemine ve kolun kendisine karşı denetlenir; uyar / durdur / kapalı (`Sandbox/WorldPhysics.ArmPath.cs`);
   - [~] yük kapasitesi (pozlarda tutulabilen en ağır yük) var; sapma (esneme) yok;
   - [x] çevrim süresi hücre panelinde;
   - ROS 2 / MoveIt uyumu.

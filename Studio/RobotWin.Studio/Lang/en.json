@@ -7764,7 +7764,14 @@
   "eğim": "tilt",
   "yön": "heading",
   "Yalnız jiroskop": "Gyro alone",
-  "Tümleyen": "Complementary"
+  "Tümleyen": "Complementary",
+  "Besleme raporu:": "Power report:",
+  "besleme": "supply",
+  "Yolda çarpışma denetimi": "Collision check along the path",
+  "uyar": "warn",
+  "durdur": "stop",
+  "MOVEL ALMA OFS=0,0,250 HIZ=900          ; tamponun üstü 80 mm: kutu dönerken ona sürtmesin": "MOVEL ALMA OFS=0,0,250 HIZ=900          ; the end stop is 80 mm high: the box must swing clear of it",
+  "tamponun üstü 80 mm: kutu dönerken ona sürtmesin": "the end stop is 80 mm high: the box must swing clear of it"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10902,6 +10909,15 @@
   "{0} satır, {1} sensör: {2}": "{0} rows, {1} sensors: {2}",
   "Sensör kaydı yazıldı: {0} CSV, {1} satır": "Sensor log written: {0} CSV files, {1} rows",
   "Sensör kaydı yazılamadı: {0}": "Sensor log could not be written: {0}",
-  "çip {0} °C": "chip {0} °C"
+  "çip {0} °C": "chip {0} °C",
+  "{0}: {1} {2} V'a düştü, çalışma sınırının altında (en az {3} V)": "{0}: {1} fell to {2} V, below its operating limit (at least {3} V)",
+  "{0}: {1} toparlandı; {2} ms sınırın altında kaldı, en düşük {3} V": "{0}: {1} recovered; {2} ms below its limit, lowest {3} V",
+  "{0}: {1} {2} V, en çok {3} V olmalı": "{0}: {1} {2} V, should be at most {3} V",
+  "{0}. {1} ({2}): {3} ms'de çalışma aralığında, {4}–{5} V gördü": "{0}. {1} ({2}): within its operating range at {3} ms, saw {4}–{5} V",
+  "{0}: {1} kez besleme düşmesi, en uzunu {2} ms, en düşük {3} V (en az {4} V)": "{0}: {1} brown-outs, longest {2} ms, lowest {3} V (at least {4} V)",
+  "{0}: {1} {2} V'u gördü, en çok {3} V olmalı": "{0}: {1} saw {2} V, should be at most {3} V",
+  "{0}: {1} hiç {2} V'a çıkmadı (en çok {3} V): veri sayfasındaki çalışma aralığının altında": "{0}: {1} never reached {2} V (at most {3} V): below its datasheet operating range",
+  "Yolda çarpışma: {0} ↔ {1}, hareketin {2} s'sinde ({3} mm iç içe)": "Collision on the path: {0} ↔ {1}, {2} s into the move ({3} mm overlap)",
+  "Yol    {0} ↔ {1}, hareketin {2} s'sinde ({3} mm iç içe)": "Path   {0} ↔ {1}, {2} s into the move ({3} mm overlap)"
  }
 }

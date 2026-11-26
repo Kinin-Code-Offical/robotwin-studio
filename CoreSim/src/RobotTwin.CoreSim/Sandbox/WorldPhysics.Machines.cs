@@ -379,6 +379,22 @@ namespace RobotTwin.CoreSim.Sandbox
                 AutoResumeAfterSafety = p.TryGetValue("safety_restart", out var sr) && sr.StartsWith("oto", StringComparison.OrdinalIgnoreCase)
             };
             var arm = new MachineArm(o, model, controller) { BaseBody = it.Body, Start = q0, AutoStart = CellParts.Flag(p, "autostart", false) };
+            // [pathcheck] each move checked along its path before it starts (Sandbox/WorldPhysics.ArmPath.cs): a warning
+            // once per distinct hit, or with "durdur" a fault before the arm moves
+            string pathMode = p.TryGetValue("pathcheck", out var pm) ? pm : "uyar";
+            if (!pathMode.StartsWith("kap", StringComparison.OrdinalIgnoreCase) && !pathMode.StartsWith("off", StringComparison.OrdinalIgnoreCase))
+            {
+                controller.StopOnPathCollision = pathMode.StartsWith("dur", StringComparison.OrdinalIgnoreCase) || pathMode.StartsWith("stop", StringComparison.OrdinalIgnoreCase);
+                var warned = new HashSet<string>(StringComparer.Ordinal);
+                controller.PathCheck = motion =>
+                {
+                    if (CheckArmPath(arm, motion) is not { } hit) return null;
+                    string text = hit.ToString();
+                    if (!controller.StopOnPathCollision && warned.Add(hit.Moving + "|" + hit.Other)) MachineSay(o.Id, "Yolda çarpışma: " + text, true);
+                    return text;
+                };
+            }
+
             var basePose = FrameOf(o.Id);
             arm.BasePose = basePose;
             var T = ArmKinematics.LinkTransforms(model, q0);

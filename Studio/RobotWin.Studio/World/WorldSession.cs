@@ -167,6 +167,7 @@ namespace RobotWin.Studio.World
                 for (int i = 0; i < _esp.Count; i++) _esp[i].OnSubstep(t);
             };
             StartSense();   // [sense] World/WorldSession.Sense.cs
+            StartSupply();   // [supply] World/WorldSession.Supply.cs
             AttachRos();   // [ros] a connection made before the run: its link to this physics
             StartModbus();   // [modbus] World/WorldSession.Modbus.cs
             IndexHeat();
@@ -220,6 +221,7 @@ namespace RobotWin.Studio.World
             _esp.Clear();
             _avr.Clear();
             StopRadio();   // [radio]
+            StopSupply();   // [supply] the power report, while the circuit is still there
             StopSense();   // [sense]
             StopSdk();   // [sdk]
             _rosLink = null;   // [ros] the connection stays for the next run
@@ -462,6 +464,7 @@ namespace RobotWin.Studio.World
                         AdvanceRadio(Simulator.Time, dt);   // [radio] IR receiver outputs, radio housekeeping
                         t1 = Lap(ref _costRadio, t1);
                         Simulator.Step(dt);
+                        SampleSupply();   // [supply] brown-outs as they happen
                         t1 = Lap(ref _costCircuit, t1);
                         Physics?.Advance(dt, Simulator);   // its parts' costs: Physics.Times
                         StepRos();   // [ros] clock, joint states out; joint commands in

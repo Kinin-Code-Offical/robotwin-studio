@@ -659,6 +659,7 @@ namespace RobotWin.Studio.Pages
             if (c.LastTorque.Axis >= 0) sb.AppendLine($"Tork   %{c.LastTorque.Ratio * 100:0} ({model.Joints[c.LastTorque.Axis].Name})" + (c.LastTorque.Slowed > 1.001 ? $" · tork için %{(1 - 1 / c.LastTorque.Slowed) * 100:0} yavaşlatıldı" : string.Empty) + (c.PayloadKg > 0 ? $" · yük {c.PayloadKg.ToString("0.###", CultureInfo.CurrentCulture)} kg" : string.Empty));
             if (c.State == ArmState.Fault) sb.AppendLine("Arıza  " + c.FaultText);
             else if (c.CurrentInstruction is { } ins) sb.AppendLine($"Satır  {ins.Line}: {ins.Text}");
+            if (c.PathWarning.Length > 0 && c.State != ArmState.Fault) sb.AppendLine("Yol    " + c.PathWarning);   // [pathcheck] what this move would hit
             AppendTcp(sb, c.TcpMeasured);
             var q = arm.Measured;
             for (int i = 0; i < model.Dof; i++)

@@ -243,6 +243,11 @@ public class LangTests
     [InlineData("çip 28.0 °C", "chip 28.0 °C")]
     [InlineData("Duruş füzyonu karşılaştırması", "Compare attitude fusion")]
     [InlineData("Yalnız jiroskop", "Gyro alone")]
+    [InlineData("Yolda çarpışma: L2 ↔ O4:box1, hareketin 0.42 s'sinde (31 mm iç içe)", "Collision on the path: L2 ↔ O4:box1, 0.42 s into the move (31 mm overlap)")]
+    [InlineData("HC-SR04 Ultrasonik Sensör: VCC 4.20 V'a düştü, çalışma sınırının altında (en az 4.50 V)", "HC-SR04 Ultrasonic Sensor: VCC fell to 4.20 V, below its operating limit (at least 4.50 V)")]
+    [InlineData("1. GY-521 MPU-6050 Modülü (VCC): 1.00 ms'de çalışma aralığında, 3.20–3.20 V gördü", "1. GY-521 MPU-6050 Module (VCC): within its operating range at 1.00 ms, saw 3.20–3.20 V")]
+    [InlineData("HC-SR04 Ultrasonik Sensör: VCC hiç 4.50 V'a çıkmadı (en çok 3.209 V): veri sayfasındaki çalışma aralığının altında", "HC-SR04 Ultrasonic Sensor: VCC never reached 4.50 V (at most 3.209 V): below its datasheet operating range")]
+    [InlineData("SG90 Mikro Servo: V+ 9.59 V'u gördü, en çok 6.00 V olmalı", "SG90 Micro Servo: V+ saw 9.59 V, should be at most 6.00 V")]
     [InlineData("1240 satır, 3 sensör: C:\\Belgeler\\RobotWin\\Robot-20261126-101500", "1240 rows, 3 sensors: C:\\Belgeler\\RobotWin\\Robot-20261126-101500")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
