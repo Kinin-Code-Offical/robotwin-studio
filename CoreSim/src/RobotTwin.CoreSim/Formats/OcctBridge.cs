@@ -173,30 +173,38 @@ namespace RobotTwin.CoreSim.Formats
             if (!Available) throw new NotSupportedException(LoadError ?? "Open CASCADE bridge missing");
             if (!File.Exists(path)) throw new FileNotFoundException("File not found.", path);
             var error = new byte[512];
-            IntPtr handle = _read!(Path.GetFullPath(path), deflectionMm, angularDegrees * Math.PI / 180, out int vertexCount, out int triangleCount, out int colored, error, error.Length);
-            if (handle == IntPtr.Zero) throw new InvalidDataException(Text(error));
-            try
+            // Open CASCADE's STEP / IGES translators keep global state: one call at a time (a parallel import and export
+            // made a written box read back wrong).
+            lock (NativeGate)
             {
-                var xyz = new double[vertexCount * 3];
-                var tri = new int[triangleCount * 3];
-                var rgb = new byte[triangleCount * 3];
-                _mesh!(handle, xyz, tri, rgb);
-                var mesh = new MeshModel { Name = Path.GetFileNameWithoutExtension(path) };
-                for (int i = 0; i < vertexCount; i++) mesh.Vertices.Add(new Vec3(xyz[3 * i] * 0.001, xyz[3 * i + 1] * 0.001, xyz[3 * i + 2] * 0.001));
-                mesh.Indices.AddRange(tri);
-                if (colored != 0)
+                IntPtr handle = _read!(Path.GetFullPath(path), deflectionMm, angularDegrees * Math.PI / 180, out int vertexCount, out int triangleCount, out int colored, error, error.Length);
+                if (handle == IntPtr.Zero) throw new InvalidDataException(Text(error));
+                try
                 {
-                    mesh.TriangleColors = new List<MeshColor>(triangleCount);
-                    for (int t = 0; t < triangleCount; t++) mesh.TriangleColors.Add(new MeshColor(rgb[3 * t], rgb[3 * t + 1], rgb[3 * t + 2]));
-                }
+                    var xyz = new double[vertexCount * 3];
+                    var tri = new int[triangleCount * 3];
+                    var rgb = new byte[triangleCount * 3];
+                    _mesh!(handle, xyz, tri, rgb);
+                    var mesh = new MeshModel { Name = Path.GetFileNameWithoutExtension(path) };
+                    for (int i = 0; i < vertexCount; i++) mesh.Vertices.Add(new Vec3(xyz[3 * i] * 0.001, xyz[3 * i + 1] * 0.001, xyz[3 * i + 2] * 0.001));
+                    mesh.Indices.AddRange(tri);
+                    if (colored != 0)
+                    {
+                        mesh.TriangleColors = new List<MeshColor>(triangleCount);
+                        for (int t = 0; t < triangleCount; t++) mesh.TriangleColors.Add(new MeshColor(rgb[3 * t], rgb[3 * t + 1], rgb[3 * t + 2]));
+                    }
 
-                return mesh;
-            }
-            finally
-            {
-                _free!(handle);
+                    return mesh;
+                }
+                finally
+                {
+                    _free!(handle);
+                }
             }
         }
+
+        /// <summary>Serializes the calls into the native translators (their state is global).</summary>
+        private static readonly object NativeGate = new object();
 
         /// <summary>Writes a mesh (metres) as a STEP AP214 file in millimetres: its triangles sewn into a shell, a solid when it closes.</summary>
         public static void WriteStep(MeshModel mesh, string path)
@@ -212,8 +220,9 @@ namespace RobotTwin.CoreSim.Formats
             }
 
             var error = new byte[512];
-            if (_write!(Path.GetFullPath(path), xyz, mesh.Vertices.Count, mesh.Indices.ToArray(), mesh.TriangleCount, error, error.Length) != 0)
-                throw new IOException(Text(error));
+            int failed;
+            lock (NativeGate) failed = _write!(Path.GetFullPath(path), xyz, mesh.Vertices.Count, mesh.Indices.ToArray(), mesh.TriangleCount, error, error.Length);
+            if (failed != 0) throw new IOException(Text(error));
         }
     }
 }

@@ -46,6 +46,11 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(MenuEntry("Yeniden adlandır", "F2", () => StartRename(o.Id)));
                 menu.Items.Add(MenuEntry(WorldBuilding.IsActive(o) ? "Devre dışı bırak" : "Etkinleştir", "Alt+Shift+A", () => ToggleActive(o)));   // [active]
                 menu.Items.Add(MenuEntry("Çoğalt", "Ctrl+D", () => { Scene.Select(o.Id); Duplicate(); }));
+                menu.Items.Add(MenuEntry("Desenle çoğalt…", string.Empty, () =>   // [pattern] a row or a ring of copies
+                {
+                    if (!SelectionIds().Contains(o.Id)) Scene.Select(o.Id);
+                    ShowPatternDialog();
+                }));
                 menu.Items.Add(MenuEntry("Sil (takılı olanlarla)", "Del", () => { Scene.Select(o.Id); Delete(); }));
                 menu.Items.Add(MenuEntry("Yalnız bunu sil (takılı olanlar kalır)", null, () => DeleteOnly(o)));
                 menu.Items.Add(new Separator());

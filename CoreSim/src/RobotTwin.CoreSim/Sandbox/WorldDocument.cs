@@ -332,6 +332,10 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Force (N) above which the joint breaks; 0 = from the fastening (unbreakable when none is set).</summary>
         public double BreakForce { get; set; }
 
+        /// <summary>[break] Torque (N·m) above which the joint breaks (Unity's Break Torque: a bracket bent off, a shaft sheared); 0 = never by torque.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+        public double BreakTorque { get; set; }
+
         /// <summary>Coulomb friction of a hinge (N·m: a hub turning on an axle, a bushing) or slider (N); 0 = an ideal bearing.</summary>
         public double Friction { get; set; }
 
@@ -455,6 +459,12 @@ namespace RobotTwin.CoreSim.Sandbox
             Couplings.RemoveAll(c => Joints.All(j => j.Id != c.JointA) || Joints.All(j => j.Id != c.JointB));
             if (Couplings.Count == 0) Couplings = null;
         }
+
+        /// <summary>[layers] Unity's layer names by number (0 is "Varsayılan"); null while only the default exists (Sandbox/WorldLayers.cs).</summary>
+        public List<string>? LayerNames { get; set; }
+
+        /// <summary>[layers] The pairs of layers that pass through each other ("a,b"); null when every layer collides.</summary>
+        public List<string>? LayerIgnores { get; set; }
 
         /// <summary>[hmi] The operator panel's elements, bound to the PLCs' variables; null when the world has none.</summary>
         public List<HmiWidget>? Hmi { get; set; }

@@ -151,6 +151,10 @@ Herhangi bir gövdeye denetçide **Özellik ekle → Kurtarma paraşütü** ile 
 
 ![Katı yakıtlı roket rampada: karton gövde, kanatçıklar, pil ve fırlatma anahtarı](../images/world-rocket-pad.png)
 
+### Etiket ve katman
+
+Unity'deki gibi denetçide nesnenin adının altında **Etiket** ve **Katman** vardır. Etiket parçanın ne olduğunu betiklere ve aramalara söyleyen bir sözcüktür (engel, hedef); listeden seçilir ya da **Etiket ekle…** ile yazılır. Katman çarpışmalar için bir gruptur: **Katman ekle…** yeni bir katmana ad verir (31'e kadar), **Çarpışma matrisi…** Unity'nin katman çarpışma matrisini açar. Matriste işareti kaldırılan iki katmanın parçaları birbirinin içinden geçer; zemin, arazi ve kablolar her zaman çarpışır. Değişiklik seçili bütün nesnelere uygulanır ve çalıştırmada etkilidir.
+
 ### Sabit kuvvet
 
 Unity'deki Constant Force bileşenidir. Hareket edebilen bir parçaya **Bileşen ekle → Sabit kuvvet** ile ekleyin: **Kuvvet (N) X · Y · Z** her fizik adımında parçanın kütle merkezine etkir (F = m·a), **Tork (N·m) X · Y · Z** onu döndürür. Altlarındaki kutular değeri dünya eksenleri yerine parçanın kendi eksenlerinde verir; böylece bir roketin itkisi ya da bir pervanenin çekişi parça döndükçe onunla döner. Z yukarıdır. Yerçekimi, sürükleme, temaslar ve bağlantılar aynı fizikte işlemeye devam eder; sabitlenmiş bir parçaya eklenmez. Kartın kutusuyla kapatılabilir, ⋮ menüsüyle kopyalanıp başka parçaya yapıştırılabilir.
@@ -363,6 +367,10 @@ Bir nesne seçiliyken **Bağla** (B) aracıyla başka bir nesneye tıklayın:
 | **Kızakla bağla (doğrusal kayar)** | Bir doğru boyunca kayar |
 
 En çok iki eklemle birbirine bağlı parçalar birbiriyle çarpışmaz. Bir nesneyi sürüklediğinizde ona takılı her şey de gelir. Bağlantıyı kaldırmak için denetçide **Bağlantıyı çöz**.
+
+### Sınırlar ve kırılma
+
+Denetçide her bağlantının altında katlanmış bir **Kırılma** bölümü vardır (menteşe ve kızakta **Sınırlar ve kırılma**); Unity'deki eklem sınırları ve Break Force / Break Torque gibidir. **Hareket sınırlı** işaretlenince menteşe **Alt sınır** ile **Üst sınır** arasında döner (°), kızak o aralıkta kayar (mm). **Kırılma kuvveti** (N) ve **Kırılma torku** (N·m) aşılınca bağlantı kopar, olaylara yazılır ve parçalar serbest kalır; örneğin bir konsolun ucuna asılan yük köşebendi eğip koparır. 0 kopmaz demektir; vidalanmış ya da yapıştırılmış bir bağlantıda kuvvet verilmedikçe bağlantı türünün kendi dayanımı geçerlidir.
 
 ### Vidalama, yapıştırma, bant, kelepçe, lehim
 
@@ -742,6 +750,10 @@ Ayarlar kaydedilir; her dünya ve montaj onlarla açılır.
 **Boş nesneler** Unity'deki boş GameObject'tir: şekli, kütlesi ve devresi olmayan, adı olan bir yer. Sahne ağacında sağ tık → **Oluştur**: **Boş nesne** (Ctrl+Alt+N; Ctrl+Shift+N burada Yeni dünya), **Boş alt nesne** (Alt+Shift+N, seçilinin yerinde ve ona takılı; örneğin bir kolun uç noktası) ve **Boş üst nesne** (Ctrl+Shift+G, seçilenlerin ortasında, seçilenleri altına alır). Altındakiler düzenleyicide onunla taşınır ve döner; bir şeye takılı parça (servo kolu, mil) mekaniği bozulmasın diye yerinde kalır, ancak hepsi aynı parçaya sabitse grup o parçaya takılır. Çalıştırmada boş nesne yoktur: altındakiler onun takılı olduğu yere takılı sayılır, boş nesne boşta duruyorsa serbesttir; yani fizik değişmez. **Yalnız bunu sil** boş nesneyi kaldırıp altındakileri bırakır (gruptan çıkarma).
 
 **Sürükleyerek üst nesne değiştirme** Unity'deki Hiyerarşi gibidir: sahne ağacında bir satırı başka bir satırın üstüne sürükleyip bırakmak onu o nesneye, durduğu yerde sabitler (sabit bağlantı); bırakılabilecek satır sürüklerken vurgulanır. Ağacın boş yerine bırakmak sabit bağlantıyı kaldırır, parça serbest kalır. Servo koluna, mile ya da menteşeye takılı parçalar mekaniği bozulmasın diye sürüklenerek taşınmaz (onları Bağla aracıyla değiştirin); bir parça kendisine ya da kendi üstünde duran bir şeyin altına alınamaz. Her bırakma tek adımda geri alınır.
+
+**Desenle çoğaltma** SolidWorks ve Fusion'daki bileşen desenidir: sahne ağacında sağ tık ya da denetçinin altındaki **Desenle çoğalt…** seçili parçaların (takılı olanlarıyla) kopyalarını **Doğrusal** bir sırada (adet ve X · Y · Z adımı, mm) ya da **Dairesel** olarak bir eksen (X, Y, Z) ve merkez (mm) çevresinde dizer. Adete aslı dahildir; 360° tam tur kopyalara eşit paylaşılır, daha küçük bir açıda sonuncusu açının sonuna gelir. Merkez, parçanın takılı olduğu nesnenin yeridir (bir plakanın ortası). **Kopyaları aslının sabit olduğu yere tak** açıkken bir plakaya vidalı parçanın kopyaları da aynı bağlantıyla plakaya takılır. Tek adımda geri alınır, kopyalar seçili gelir.
+
+**Sahnede arama** Unity'deki Hiyerarşi araması gibidir: **Sahne** sekmesinin üstündeki kutuya yazılan, adında, parçasında, türünde ya da etiketinde geçen nesneleri düz bir liste olarak gösterir. `t:` ile başlayan arama yalnız etiketlere (`t:engel`), `l:` ile başlayan yalnız katmanlara bakar. Sekme değişince arama temizlenir.
 
 **Çoklu seçim** Unity'deki gibidir: Ctrl+tık (sahnede ya da ağaçta) nesneyi seçime ekler ya da çıkarır, ağaçta Shift+tık iki satır arasını seçer (Ctrl+Shift+tık mevcut seçime ekler), sahnede boş yerde Shift+sürükle bir dikdörtgen çizer ve ortası içinde kalan her görünen nesneyi seçer (Ctrl+Shift+sürükle seçime ekler; düz sürükleme kamerayı döndürmeye devam eder), Ctrl+A hepsini seçer. Son tıklanan **etkin** nesnedir: denetçi ve tutamaç onundur, denetçide kaç nesnenin daha seçili olduğu yazar. Tutamaçla taşıma ve döndürme seçili hepsine uygulanır (Merkez seçiliyken hepsi tek merkez çevresinde, Pivot'ta her biri kendi pivotu çevresinde döner; başka bir seçili parçaya takılı olan onunla gider, kilitli olan yerinde kalır); kopyala, kes, çoğalt ve sil de hepsini alır.
 

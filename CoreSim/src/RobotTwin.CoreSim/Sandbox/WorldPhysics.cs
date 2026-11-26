@@ -137,6 +137,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.Liquid = liquid ?? LiquidQuality.Live;
             p.BuildLiquids(world, geometry);   // [liquid] water, oil, honey … as particles (Sandbox/WorldPhysics.Liquids.cs)
             p.FilterAssemblyCollisions(); // only parts within two joints of each other skip collisions (WorldPhysics.Overlap.cs)
+            p.ApplyLayers(world);   // [layers] Unity's layer collision matrix (Sandbox/WorldLayers.cs)
             p.ScrewLids();   // [shell] lids seated on their shell's rim are screwed down (Sandbox/WorldPhysics.Shells.cs)
             p.Sdk = RobotTwin.CoreSim.Sdk.WorldSdkRuntime.Attach(world, p, circuit);   // [sdk] environment, force fields, behaviours
             p.BuildWings();   // [aero] lifting surfaces replace the generic drag the environment just gave every body (Sandbox/WorldPhysics.Wings.cs)
@@ -301,6 +302,22 @@ namespace RobotTwin.CoreSim.Sandbox
         }
 
         /// <summary>Parts joined into one assembly do not collide with each other (their shapes are approximate boxes).</summary>
+        /// <summary>[layers] Each part's bodies on its layer, and the world's matrix on the scene.</summary>
+        private void ApplyLayers(WorldDocument world)
+        {
+            if (world.LayerIgnores == null || world.LayerIgnores.Count == 0) return;   // everything meets everything
+            var masks = WorldLayers.Masks(world);
+            Array.Copy(masks, Scene.LayerMasks, masks.Length);
+            foreach (var it in _items.Values)
+            {
+                int layer = WorldLayers.LayerOf(it.Object);
+                if (layer == 0 || it.Body == null) continue;
+                it.Body.CollisionLayer = layer;
+                if (it.Rotor != null) it.Rotor.CollisionLayer = layer;
+                if (it.Walls != null) foreach (var w in it.Walls) w.CollisionLayer = layer;
+            }
+        }
+
         private void IgnoreSelfCollisions()
         {
             var bodies = Scene.Bodies.ToList();
@@ -363,8 +380,10 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
             }
 
+            if (j.BreakTorque > 0) joint.BreakTorque = j.BreakTorque;   // [break]
+
             // [weld] A fixed joint that cannot break is a rigid bond: both parts are solved as one rigid body.
-            joint.Weld = kind == JointKind.Fixed && double.IsPositiveInfinity(joint.BreakForce);
+            joint.Weld = kind == JointKind.Fixed && double.IsPositiveInfinity(joint.BreakForce) && double.IsPositiveInfinity(joint.BreakTorque);
             if (j.Driven && kind != JointKind.Fixed) AddDrive(j, joint, kind == JointKind.Hinge);
         }
 

@@ -425,6 +425,28 @@ namespace RobotWin.Studio.Pages
             if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
                 Scene.ToggleSelect(extra.Id);
             if (args.Contains("--empty-parent")) CreateEmptyParent();   // [empty] the selection under a new empty
+            if (args.Contains("--layers") && World is { } lw && World.Find(Scene.Selected) is { } lo)   // [layers] a tag, a second layer, the matrix open
+            {
+                WorldLayers.SetTag(lo, "engel");
+                int ghosts = WorldLayers.Add(lw, "Hayalet");
+                WorldLayers.SetLayer(lo, ghosts);
+                WorldLayers.Add(lw, "Sensörler");
+                WorldLayers.SetCollide(lw, 0, ghosts, false);
+                BuildInspector();
+                if (args.Contains("--layer-matrix")) ShowCollisionMatrix(lw);
+            }
+            if (args.Contains("--joint-limits") && World is { } jw && World.Find(Scene.Selected) is { } jo && jw.Joints.FirstOrDefault(j => j.ObjectA == jo.Id) is { } jj)   // [break] the fold open
+            {
+                jj.BreakTorque = 2.5;
+                if (jj.Kind != WorldJointKind.Fixed) (jj.Lower, jj.Upper) = (-45.0, 120.0);
+                BuildInspector();
+                InspectorPane.UpdateLayout();
+                InspectorPane.ScrollToBottom();
+            }
+
+            if (args.Contains("--pattern")) ShowPatternDialog();   // [pattern] the dialog open
+            int ts = Array.IndexOf(args, "--tree-search");   // [tree-search] --tree-search <query>: the scene tree filtered
+            if (ts >= 0 && ts + 1 < args.Length) SearchBox.Text = args[ts + 1];
             int rp = Array.IndexOf(args, "--reparent");   // [reparent] --reparent <part name>: the selection's row dropped on that part's row
             if (rp >= 0 && rp + 1 < args.Length && Scene.Selected is { } dragged && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[rp + 1], StringComparison.CurrentCultureIgnoreCase)) is { } under)
                 Reparent(dragged, under.Id);

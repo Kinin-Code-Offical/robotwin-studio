@@ -378,6 +378,16 @@ namespace RobotWin.Studio.Shell
             return sb.Append('$').ToString();
         }
 
+        /// <summary>
+        /// A Turkish word that means different things in different places ("Etiket": a schematic's net label, a world
+        /// object's tag): the pack's "word@place" first, else the word's own translation.
+        /// </summary>
+        public static string T(string text, string place)
+        {
+            if (Current == "tr" || string.IsNullOrEmpty(text)) return text;
+            return Exact.TryGetValue(text + "@" + place, out var hit) ? hit : T(text);
+        }
+
         /// <summary>A Turkish text in the language in use (itself when the pack has none).</summary>
         public static string T(string text)
         {

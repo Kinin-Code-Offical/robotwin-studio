@@ -209,7 +209,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Boşluk doğrulama | Boşluk doğrulama (en az boşluk, GJK ile kesin mesafe, iki uç arası çizgi) | var | |
 | Delik hizası | yok | yok | 2 |
 | Patlatılmış görünüm | Adımlar (yön, uzaklık, bağlı parçalar birlikte), otomatik (eksen / dışa doğru, zincir kat kat), kaydırıcı, oynat / topla | var | |
-| Bileşen çoğaltma | Çoğalt | kısmi | 2 |
+| Bileşen çoğaltma | Çoğalt; Desenle çoğalt: doğrusal (adım) ve dairesel (eksen, merkez, açı), kopyalar aslının sabit olduğu yere takılı | var | |
 | BOM | var | var | |
 
 ## Montaj ve Dünya (Unity sahne editörü)
@@ -253,6 +253,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Sürükleyerek üst nesne değiştirme | ağaçta satırı satıra bırak: sabit bağlantı; boş yere bırak: ayır; mekanik bağlantılar korunur | var | |
 | Sahnede referansları bul | kablolar, bağlantılar, ilişkiler | var | |
 | Varsayılan üst nesne | yok | yok | 3 |
+| Hiyerarşide arama (ad, tür; etiket, katman) | Sahne sekmesinde arama kutusu: düz liste, t: etiket, l: katman | var | |
 
 ### Denetçi (Inspector)
 
@@ -264,10 +265,10 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
 | Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
-| Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman | kısmi | 2 |
+| Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman; sınırlar, kırılma kuvveti ve torku (denetçide eklem başına); karakter ve yapılandırılabilir sonra | kısmi | 3 |
 | Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | yok | yok | 2 |
 | Sabit kuvvet | Sabit kuvvet bileşeni: kuvvet ve tork, dünya ya da kendi eksenlerinde; açılıp kapanır, kopyalanır | var | |
-| Etiket, katman (çarpışma katmanları), statik | yok | yok | 2 |
+| Etiket, katman (çarpışma katmanları), statik | adın altında Etiket ve Katman; katman ekle, çarpışma matrisi (fizikte maske); Sabit = statik | var | |
 
 ## Sıra
 

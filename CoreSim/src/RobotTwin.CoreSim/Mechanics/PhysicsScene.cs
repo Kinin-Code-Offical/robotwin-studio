@@ -90,6 +90,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
         public string Id { get; set; }
 
+        /// <summary>[layers] The collision layer (0 … 31); <see cref="PhysicsScene.LayerMasks"/> says which it meets.</summary>
+        public int CollisionLayer { get; set; }
+
         /// <summary>Centre of mass in the source model's frame (meshes); world = Position + R·(p − ModelOffset).</summary>
         public Vec3 ModelOffset { get; set; }
 
@@ -555,6 +558,11 @@ namespace RobotTwin.CoreSim.Mechanics
 
         /// <summary>Extra body pairs that never collide (parts of one assembly modelled with approximate shapes).</summary>
         public List<(SceneBody A, SceneBody B)> NoCollide { get; } = new List<(SceneBody A, SceneBody B)>();
+
+        /// <summary>[layers] Unity's layer collision matrix: bit b of layer a's mask is set when its bodies meet layer b's (all set by default).</summary>
+        public uint[] LayerMasks { get; } = Enumerable.Repeat(uint.MaxValue, 32).ToArray();
+
+        private bool LayersMeet(SceneBody a, SceneBody b) => ((LayerMasks[a.CollisionLayer & 31] >> (b.CollisionLayer & 31)) & 1u) != 0;
 
         public SceneBody AddBody(SceneBody body)
         {
@@ -1036,6 +1044,7 @@ namespace RobotTwin.CoreSim.Mechanics
                     var bb = Bodies[b];
                     if ((ba.IsStatic || Asleep(a)) && (bb.IsStatic || Asleep(b))) continue; // [phys]
                     if (!Overlap(a, b)) continue;
+                    if (!LayersMeet(ba, bb)) continue;   // [layers]
                     if (_noCollide.Count > 0 && _noCollide.Contains(PairKey(a, b))) continue;
                     if (SameWeldGroup(a, b)) continue;   // [weld] parts of one rigid body do not collide with each other
                     if (ba.IsStatic || (Asleep(a) && !bb.IsStatic)) CollidePair(b, a, h); // [phys]

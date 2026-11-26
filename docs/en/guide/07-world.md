@@ -151,6 +151,10 @@ Give any body a parachute with **Add feature → Recovery parachute** in its ins
 
 ![The solid rocket on its pad: kraft tube, fins, battery and launch switch](../../images/en/world-rocket-pad.png)
 
+### Tag and layer
+
+As in Unity, the inspector shows a **Tag** and a **Layer** under the object's name. A tag is a word that tells scripts and searches what the part is (obstacle, target); pick one from the list or type one with **Add tag…**. A layer is a group for collisions: **Add layer…** names a new layer (up to 31), **Collision matrix…** opens Unity's layer collision matrix. Two layers whose box is unticked there pass through each other; the floor, the terrain and cables always collide. A change applies to every selected object and takes effect in the run.
+
 ### Constant force
 
 Unity's Constant Force component. Add it to a part that can move with **Add component → Constant force**: **Force (N) X · Y · Z** acts on the part's centre of mass on every physics step (F = m·a), **Torque (N·m) X · Y · Z** turns it. The boxes under them give the value along the part's own axes instead of the world's, so a rocket's thrust or a propeller's pull turns with the part. Z is up. Gravity, drag, contacts and joints keep working in the same physics; a fixed part cannot take one. The card's box switches it off, and its ⋮ menu copies it to paste on another part.
@@ -363,6 +367,10 @@ With an object selected, click another object with the **Attach** (B) tool:
 | **Attach with slider (slides linearly)** | Slides along a line |
 
 Parts joined by at most two joints do not collide with each other. Dragging an object brings everything attached to it. Remove a joint with **Detach** in the inspector.
+
+### Limits and breaking
+
+In the inspector every joint has a folded **Break** section under it (**Limits and break** on a hinge or slider), like Unity's joint limits and Break Force / Break Torque. With **Limited travel** ticked a hinge turns between its **Lower limit** and **Upper limit** (°) and a slider slides within them (mm). Past the **Break force** (N) or the **Break torque** (N·m) the joint breaks, the event is logged and the parts come free; a load hung on the end of a cantilever bends its bracket off, for instance. 0 means it never breaks; on a screwed or glued joint the fastening's own strength stands while no force is given.
 
 ### Screwing, gluing, tape, zip ties, solder
 
@@ -743,6 +751,10 @@ The **Scene** tab shows everything in the world as a tree of what is attached to
 **Empty objects** are Unity's empty GameObject: a named place with no shape, mass or circuit. Right-click in the scene tree → **Create**: **Empty object** (Ctrl+Alt+N; Ctrl+Shift+N is New world here), **Empty child** (Alt+Shift+N, at the selection's place and mounted on it; an arm's tool point, for instance) and **Empty parent** (Ctrl+Shift+G, in the middle of the selection, with the selection under it). What is under an empty moves and turns with it in the editor; a part mounted on something (a servo horn, a shaft) stays where it is so the mechanics do not change, unless they are all fixed to the same part, in which case the group hangs on that part. A run has no empty objects: what is under one counts as mounted where the empty is mounted, or free when the empty stands free, so the physics is unchanged. **Delete only this** removes an empty and leaves what was under it (ungrouping).
 
 **Reparenting by dragging** works as in Unity's Hierarchy: dragging a row in the scene tree onto another row fixes it to that object where it stands (a fixed joint); the row it can go under lights up during the drag. Dropping it on empty room in the tree removes the fixed joint and the part stands free. Parts mounted on a servo horn, a shaft or a hinge are not moved by dragging so their mechanics stay (change those with the Connect tool); a part cannot go under itself or under something that rides on it. Each drop is one undo step.
+
+**Patterns** are SolidWorks' and Fusion's component patterns: **Pattern…** (right-click in the scene tree, or at the foot of the inspector) lays copies of the selected parts (with what is mounted on them) in a **Linear** row (count and X · Y · Z step, mm) or a **Circular** ring round an axis (X, Y, Z) and a centre (mm). The count includes the original; 360° is shared equally among the copies, a smaller angle puts the last one at its end. The centre starts at the object the part is mounted on (the middle of a plate). With **Fix the copies where the original is fixed** on, the copies of a part screwed to a plate are screwed to the plate the same way. One undo step; the copies come out selected.
+
+**Searching the scene** works like Unity's Hierarchy search: what is typed in the box above the **Scene** tab lists, flat, the objects with it in their name, part, kind or tag. A search starting with `t:` looks only at tags (`t:obstacle`), one starting with `l:` only at layers. Changing tabs clears the search.
 
 **Multiple selection** works as in Unity: Ctrl+click (in the view or the tree) adds an object to the selection or takes it out, Shift+click in the tree selects the rows between (Ctrl+Shift+click adds them), Shift+drag on empty space in the view draws a rectangle and selects every visible object whose middle falls inside it (Ctrl+Shift+drag adds them; a plain drag still turns the camera), Ctrl+A selects everything. The last one clicked is the **active** object: the inspector and the handle are its, and the inspector says how many more are selected. Moving and turning with the handle apply to all of them (with Center they turn about one centre, with Pivot each about its own pivot; a part mounted on another selected part goes with it, a locked one stays); copy, cut, duplicate and delete take them all.
 

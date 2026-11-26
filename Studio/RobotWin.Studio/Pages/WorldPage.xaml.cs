@@ -178,7 +178,11 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ palette
 
-        private void OnPaletteTab(object sender, RoutedEventArgs e) => BuildPalette();
+        private void OnPaletteTab(object sender, RoutedEventArgs e)
+        {
+            if (SearchBox.Text.Length > 0) SearchBox.Text = string.Empty;   // [tree-search] each tab starts unfiltered (this rebuilds)
+            else BuildPalette();
+        }
 
         private void OnSearch(object sender, TextChangedEventArgs e) => BuildPalette();
 
@@ -186,7 +190,9 @@ namespace RobotWin.Studio.Pages
         {
             Palette.Children.Clear();
             Palette.ContextMenu = null;   // [hierarchy] the scene tab sets its own
-            SearchRow.Visibility = TabParts.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            SearchRow.Visibility = TabParts.IsChecked == true || TabScene.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;   // [tree-search] the scene tab searches too
+            string hint = TabScene.IsChecked == true ? "Sahnede ara (ad, tür; t: etiket, l: katman)" : "Parça ara (servo, motor, pil, sensör…)";
+            SearchBox.Tag = Shell.Lang.T(hint);
             if (TerrainPalette()) return; // [terrain] Arazi tab
             if (TabScene.IsChecked == true) BuildScenePalette();
             else if (TabBoards.IsChecked == true) BuildBoardsPalette();
@@ -770,6 +776,7 @@ namespace RobotWin.Studio.Pages
             };
             Inspector.Children.Add(ActiveHeader(o, name));   // [active] Unity's checkbox before the name (Pages/WorldPage.Active.cs)
             Inspector.Children.Add(Note(KindText(o)));
+            Inspector.Children.Add(TagLayerRow(world, o));   // [layers] Unity's Tag and Layer (Pages/WorldPage.Layers.cs)
             MultiSelectNote();   // [multiselect]
             if (WorldPhysics.IsLiquid(o))
             {
@@ -864,6 +871,7 @@ namespace RobotWin.Studio.Pages
             EditorSection(world, o); // [terrain] hide / lock / group / prop size
             Inspector.Children.Add(Caption("İşlemler"));
             Inspector.Children.Add(Action("Çoğalt (Ctrl+D)", Duplicate));
+            Inspector.Children.Add(Action("Desenle çoğalt…", ShowPatternDialog));   // [pattern] Pages/WorldPage.Pattern.cs
             Inspector.Children.Add(Action("Sil (Del)", Delete));
         }
 
@@ -1297,6 +1305,7 @@ namespace RobotWin.Studio.Pages
                 if (j.Kind != WorldJointKind.Fixed && j.ObjectA == o.Id) CouplingRows(world, j, couplings);   // [couple] Pages/WorldPage.Couplings.cs
                 if (j.Sprung && j.ObjectA == o.Id) SpringRows(j);   // [spring] Pages/WorldPage.Couplings.cs
                 if (j.Bearing != null && j.ObjectA == o.Id) BearingRows(j);   // [bearing] Pages/WorldPage.Couplings.cs
+                if (j.ObjectA == o.Id && j.MimicOf == null) JointLimitRows(j);   // [break] limits, break force and torque (Pages/WorldPage.JointLimits.cs)
             }
 
             Inspector.Children.Add(Action("Başka bir nesneye bağla (B)", () => SetTool(WorldTool.Joint)));

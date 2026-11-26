@@ -43,6 +43,17 @@ namespace RobotWin.Studio.Pages
             }
 
             Palette.ContextMenu = SceneMenu(null);   // [hierarchy] paste, create
+            string query = SearchBox.Text.Trim();
+            if (query.Length > 0)
+            {
+                // [tree-search] Unity's Hierarchy search: the matches as a flat list ("t:" a tag, "l:" a layer)
+                var hits = world.Objects.Where(o => TreeMatches(world, o, query)).OrderBy(o => o.Name, StringComparer.CurrentCulture).ToList();
+                Palette.Children.Add(Caption(hits.Count == 0 ? "Eşleşen nesne yok" : $"{hits.Count} eşleşme", 6));
+                var none = Enumerable.Empty<WorldObject>().ToLookup(o => string.Empty);
+                foreach (var hit in hits) AddNode(hit, 0, none, parent);
+                return;
+            }
+
             var children = world.Objects.ToLookup(o => parent.TryGetValue(o.Id, out var p) ? p.Parent : string.Empty);
             Palette.Children.Add(Caption("Sahne", 6));
             foreach (var root in children[string.Empty].OrderBy(o => Rank(o.Kind)).ThenBy(o => o.Name, StringComparer.CurrentCulture))
@@ -88,6 +99,20 @@ namespace RobotWin.Studio.Pages
             Body,
             Model,
             Cable
+        }
+
+        /// <summary>[tree-search] Whether an object matches the scene search: its name, part, kind or tag; "t:" only tags, "l:" only layers.</summary>
+        private bool TreeMatches(WorldDocument world, WorldObject o, string query)
+        {
+            bool Has(string? text, string q) => text != null && Shell.Lang.Fold(text).Contains(Shell.Lang.Fold(q));
+            if (query.StartsWith("t:", StringComparison.OrdinalIgnoreCase)) return Has(WorldLayers.TagOf(o), query.Substring(2).Trim());
+            if (query.StartsWith("l:", StringComparison.OrdinalIgnoreCase))
+            {
+                string l = query.Substring(2).Trim();
+                return Has(WorldLayers.NameOf(world, WorldLayers.LayerOf(o)), l) || Has(Shell.Lang.T(WorldLayers.NameOf(world, WorldLayers.LayerOf(o))), l);
+            }
+
+            return Has(o.Name, query) || Has(o.PartId, query) || Has(WorldLayers.TagOf(o), query) || Has(KindText(o), query) || Has(Shell.Lang.T(KindText(o)), query);
         }
 
         private void AddNode(WorldObject o, int depth, ILookup<string, WorldObject> children, Dictionary<string, (string Parent, string Port)> parent)
