@@ -89,6 +89,9 @@ namespace RobotWin.Studio.World
                     case CellParts.PhotoId:
                         if (v.Lamp != null) v.Lamp.Color = physics?.PhotoOf(it.Object.Id)?.Output == true ? Color.FromRgb(0xF2, 0xA3, 0x3B) : LampOff;
                         break;
+                    case CellParts.CompressorId:   // [pneu] lit while the motor runs
+                        if (v.Lamp != null) v.Lamp.Color = physics?.CompressorOf(it.Object.Id)?.Running == true ? Color.FromRgb(0x3C, 0xD0, 0x64) : LampOff;
+                        break;
                     case CellParts.ModbusIoId:   // [modbus] lit while the world runs it
                         if (v.Lamp != null) v.Lamp.Color = physics?.ModbusDevices.Any(d => d.Object.Id == it.Object.Id) == true ? Color.FromRgb(0x3C, 0xD0, 0x64) : LampOff;
                         break;

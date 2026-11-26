@@ -33,6 +33,19 @@ namespace RobotWin.Studio.World
                     g.Children.Add(M.Model(M.Box(x, y, top + 0.0013, r * 1.6, r * 0.35, 0.0004), slot));
                 }
             }
+            else if (top > 0.05)
+            {
+                // A tall part (a compressor, a cylinder on its stand) is bolted down by an angle bracket at each end: a
+                // short upright against it and a foot on the floor with its bolt, not a jaw over its whole height.
+                double y = b.Y + b.SizeY / 2, w = Math.Min(0.04, b.SizeY * 0.5), up = Math.Min(0.03, top * 0.3);
+                foreach (var x in new[] { b.X - 0.002, b.X + b.SizeX + 0.002 })
+                {
+                    double outward = x < b.X ? -1 : 1;
+                    g.Children.Add(M.Model(M.Box(x, y, b.Z + up / 2, 0.003, w, up), steel));                          // upright
+                    g.Children.Add(M.Model(M.Box(x + outward * 0.0125, y, b.Z + 0.0015, 0.025, w, 0.003), steel));    // foot
+                    g.Children.Add(M.Model(M.Cylinder(0.0045, 0.003, 2, 6, x + outward * 0.015, y, b.Z + 0.003), steel));   // bolt head
+                }
+            }
             else
             {
                 // Small clamp jaws over both ends.

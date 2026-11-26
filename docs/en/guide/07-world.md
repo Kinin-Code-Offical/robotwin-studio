@@ -236,6 +236,18 @@ The **HMI** tab in the bottom panel is an operator panel bound to the PLCs' vari
 
 **Parts → Robot Cell → Pneumatic Cylinder** is a double-acting cylinder with a single-coil 5/2 valve on top; the rod comes out along the part's +X. When the **SOL** coil is energised (it pulls in at 70 % of the coil voltage and drops out at 40 %) the supply goes to the cap end, the rod end to exhaust, and the piston goes out; released, it comes back. Each chamber is solved with its own mass and temperature of air: the valve's flow follows ISO 6358 (choked below the critical pressure ratio), filling air heats, expanding air cools and the wall brings it back to room temperature. Pressure × area pushes the piston, the seals rub and the stroke ends at the stops. **Speed** throttles the exhaust (meter-out speed control). **EXT** and **RET** are the outputs of the magnetic sensors at the end positions. The coil is a real load in the circuit: drive it from a Modbus module, a board or a limit switch's contacts. The rod pushes boxes; the panel shows the position, speed, both chambers' pressures, the force and the air used (normal litres).
 
+With **Valve** set to `double coil` (or with the *double solenoid* ready-made part) the valve has no spring: **SOL** sends the piston out, **SOL2** back, with both released it stays where it was (a valve with memory), and with both energised it does not move. Choose it when the cylinder must stay where it is when the power goes.
+
+### Compressor and air tank
+
+**Parts → Robot Cell → Compressor** is a piston compressor, its tank and its pressure switch:
+
+- the motor starts when the tank falls to the **cut-in pressure** (6 bar by default) and stops at the **cut-out pressure** (8 bar); the pump delivers its **free air delivery**, a little less the harder the pressure it works against;
+- name the compressor (e.g. `KMP1`) as a cylinder's **Air source** and the cylinder takes its air from that tank. Its supply is the lower of its own **supply pressure** (the regulator) and the tank's;
+- the air the cylinders draw leaves the tank: if the compressor cannot keep up, the pressure falls and the cylinders slow down and weaken. A line stroking a Ø32 × 200 mm cylinder twice a second wants about 116 NL a minute, which a small 30 L/min compressor cannot keep up with;
+- **RUN** is high while the motor runs, **PS** while the tank is above the cut-in pressure: a PLC builds its "no air" alarm from it;
+- the panel shows the tank pressure, the motor's duty, how often it cut in, and the air pumped and drawn.
+
 ### Fault scenarios
 
 A photoelectric sensor, limit switch, pneumatic cylinder or Modbus module can fail at a set time with **Add feature → Fault scenario** in the inspector: a dirty lens (the range drops), a stuck or dead output, a welded contact, a broken lever, a seal leak, a stuck valve, a low supply, a lost network. Set its **start time** and, where it has one, its **size** (the range left, the leak, the pressure); when it begins it is written to **Events**. A PLC program's reaction to the fault (a step that waits forever, a timeout alarm) can so be tried before it meets the real one.

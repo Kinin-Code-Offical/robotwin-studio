@@ -137,7 +137,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] tohum ve ayarların saklanması.
 - [~] **Endüstriyel otomasyon:** konveyörlü hücre var. Eksikler:
   - [x] fotosel (difüz menzili yansıtmaya bağlı, reflektörlü / karşılıklı ışın, tepki süresi) ve makaralı sınır anahtarı (C–NO / C–NC, ön strok, histerezis);
-  - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Sırada: çift bobinli valf, vakum üreteci, kompresör ve tank.
+  - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Çift bobinli (hafızalı) valf, kompresör ve tank da var (basınç anahtarı, basınçla düşen verim, silindirlerin tanktan çektiği hava, RUN/PS çıkışları). Sırada: vakum üreteci.
   - [x] istasyon durum makineleri: PLC'de `CASE` adımlarıyla (örnek program: itici istasyonu);
   - [x] çevrim süresi ve darboğaz: PLC'nin adım değişkeninden adım süreleri, çevrimler, en uzun adım;
   - [x] arıza senaryoları: fotosel, sınır anahtarı, silindir ve Modbus modülünde zamanlı arızalar (`Sandbox/MachineFaults.cs`);

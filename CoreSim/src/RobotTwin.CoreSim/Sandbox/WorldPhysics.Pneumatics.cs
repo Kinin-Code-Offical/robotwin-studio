@@ -27,7 +27,21 @@ namespace RobotTwin.CoreSim.Sandbox
         internal (MachineFaults.Fault Fault, double At, double Value)? Fault;   // [fault]
         internal bool FaultSaid;
 
-        /// <summary>The coil is energised (the valve has shifted: supply to the cap end).</summary>
+        /// <summary>[pneu] The second coil of a double-solenoid valve (SOL2: back); null on a single-coil valve.</summary>
+        internal Resistor? Coil2;
+
+        /// <summary>[pneu] The valve has two coils and no spring: it stays where it was last sent.</summary>
+        public bool Bistable { get; internal set; }
+
+        /// <summary>[pneu] The compressor it draws from (null: a supply that never runs out).</summary>
+        public MachineCompressor? Source { get; internal set; }
+
+        internal string SourceName = string.Empty;
+
+        /// <summary>[pneu] The supply pressure it gets now, absolute (Pa): its regulator's, or less when the tank has run down.</summary>
+        public double SupplyPressure => Supply;
+
+        /// <summary>The valve sends the supply to the cap end (the piston goes out).</summary>
         public bool Energised { get; internal set; }
 
         /// <summary>Absolute pressures in the cap-end (A) and rod-end (B) chambers (Pa).</summary>
@@ -57,6 +71,44 @@ namespace RobotTwin.CoreSim.Sandbox
     }
 
     /// <summary>
+    /// [pneu] A compressor with its tank: the air in the tank is a mass of gas at room temperature (a steel tank's walls keep
+    /// it there), its pressure that mass's. The pressure switch starts the motor at the lower pressure and stops it at the
+    /// upper; running, the pump delivers its free air (its rating falls a little as the pressure it pumps against rises).
+    /// The cylinders that name it as their air take what they use from the tank.
+    /// </summary>
+    public sealed class MachineCompressor
+    {
+        internal MachineCompressor(WorldObject o) => Object = o;
+
+        public WorldObject Object { get; }
+
+        internal double Volume, OnPressure, OffPressure, Delivery, Mass;
+        internal double Drawn;   // kg the cylinders took since the last step
+        internal DigitalPin? RunPin, PressurePin;
+
+        /// <summary>Tank pressure, absolute (Pa).</summary>
+        public double Pressure { get; internal set; }
+
+        /// <summary>The motor runs (the pressure switch has cut in).</summary>
+        public bool Running { get; internal set; }
+
+        /// <summary>Seconds the motor has run, and seconds since the start (its duty).</summary>
+        public double RunSeconds { get; internal set; }
+
+        public double Seconds { get; internal set; }
+
+        /// <summary>Air pumped and air drawn since the start (normal litres).</summary>
+        public double AirPumped { get; internal set; }
+
+        public double AirDrawn { get; internal set; }
+
+        /// <summary>Times the pressure switch started the motor.</summary>
+        public int Starts { get; internal set; }
+
+        public double MotorWatts { get; internal set; }
+    }
+
+    /// <summary>
     /// [pneu] Pneumatic cylinders (Design/CellParts.cs): the air in each chamber is a gas of its own, its mass and temperature
     /// followed through every exchange (ISO 6358 flow through the valve: choked below the critical pressure ratio, elliptic
     /// above; filling heats it, expansion cools it, the wall brings it back to the room). The pressures push the piston
@@ -73,6 +125,77 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public MachineCylinder? CylinderOf(string objectId) => _cylinders.FirstOrDefault(c => c.Object.Id == objectId);
 
+        private readonly List<MachineCompressor> _compressors = new List<MachineCompressor>();
+
+        public IReadOnlyList<MachineCompressor> Compressors => _compressors;
+
+        public MachineCompressor? CompressorOf(string objectId) => _compressors.FirstOrDefault(c => c.Object.Id == objectId);
+
+        private void BuildCompressor(WorldObject o, Dictionary<string, string> p)
+        {
+            var c = new MachineCompressor(o)
+            {
+                Volume = Math.Max(0.5, CellParts.Num(p, "tank", 24)) / 1000,
+                OnPressure = Atmosphere + Math.Max(0, CellParts.Num(p, "on", 6)) * 1e5,
+                // free air delivery: normal litres a minute, as a mass flow
+                Delivery = Math.Max(0, CellParts.Num(p, "fad", 60)) / 60 / 1000 * NormalDensity,
+                MotorWatts = Math.Max(0, CellParts.Num(p, "motor_w", 750)),
+            };
+            c.OffPressure = Math.Max(c.OnPressure + 0.2e5, Atmosphere + Math.Max(0, CellParts.Num(p, "off", 8)) * 1e5);
+            c.Pressure = Atmosphere + Math.Max(0, CellParts.Num(p, "start", 8)) * 1e5;
+            c.Mass = c.Pressure * c.Volume / (AirR * RoomK);
+            var pins = IoPins(o);
+            c.RunPin = pins.GetValueOrDefault("RUN");
+            c.PressurePin = pins.GetValueOrDefault("PS");
+            _compressors.Add(c);
+        }
+
+        /// <summary>The cylinders that name a compressor as their air find it (by the object's name, or its id).</summary>
+        private void LinkAir()
+        {
+            foreach (var cy in _cylinders)
+            {
+                if (cy.SourceName.Length == 0) continue;
+                cy.Source = _compressors.FirstOrDefault(c => string.Equals(c.Object.Name, cy.SourceName, StringComparison.OrdinalIgnoreCase))
+                            ?? _compressors.FirstOrDefault(c => string.Equals(c.Object.Id, cy.SourceName, StringComparison.OrdinalIgnoreCase));
+                if (cy.Source == null) MachineSay(cy.Object.Id, $"Hava kaynağı '{cy.SourceName}' adlı kompresör bulunamadı: sabit besleme kullanılıyor", true);
+            }
+        }
+
+        private void StepCompressor(MachineCompressor c, double dt)
+        {
+            c.Seconds += dt;
+            c.Mass = Math.Max(Atmosphere * c.Volume / (AirR * RoomK), c.Mass - c.Drawn);
+            c.AirDrawn += c.Drawn / NormalDensity * 1000;
+            c.Drawn = 0;
+            c.Pressure = c.Mass * AirR * RoomK / c.Volume;
+            if (c.Running && c.Pressure >= c.OffPressure)
+            {
+                c.Running = false;
+                MachineSay(c.Object.Id, $"Kompresör durdu: tank {(c.Pressure - Atmosphere) / 1e5:0.0} bar", false);
+            }
+            else if (!c.Running && c.Pressure <= c.OnPressure)
+            {
+                c.Running = true;
+                c.Starts++;
+                MachineSay(c.Object.Id, $"Kompresör çalıştı: tank {(c.Pressure - Atmosphere) / 1e5:0.0} bar", false);
+            }
+
+            if (c.Running)
+            {
+                // a piston pump's delivery falls with the pressure it works against (volumetric efficiency)
+                double gauge = Math.Max(0, (c.Pressure - Atmosphere) / 1e5);
+                double flow = c.Delivery * Math.Max(0.3, 1 - 0.03 * gauge);
+                c.Mass += flow * dt;
+                c.AirPumped += flow * dt / NormalDensity * 1000;
+                c.RunSeconds += dt;
+                c.Pressure = c.Mass * AirR * RoomK / c.Volume;
+            }
+
+            Drive(c.RunPin, c.Running);
+            Drive(c.PressurePin, c.Pressure > c.OnPressure);
+        }
+
         private void BuildCylinder(WorldObject o, Item it, Dictionary<string, string> p)
         {
             var cy = new MachineCylinder(o)
@@ -86,6 +209,8 @@ namespace RobotTwin.CoreSim.Sandbox
                 CoilVolts = Math.Max(1, CellParts.Num(p, "coil_v", 24))
             };
             cy.RatedSupply = cy.Supply;
+            cy.Bistable = p.TryGetValue("valve", out var valve) && valve.Trim() == CellParts.ValveDouble;
+            cy.SourceName = p.TryGetValue("air", out var air) ? air.Trim() : string.Empty;
             cy.Fault = MachineFaults.Of(o);
             cy.RodDiameter = Math.Min(cy.Bore * 0.8, Math.Max(0.003, CellParts.Num(p, "rod", 8) / 1000));
             cy.DeadVolume = cy.AreaA * 0.004 + 1.5e-6;   // 4 mm of end space and the port's tubing
@@ -118,6 +243,7 @@ namespace RobotTwin.CoreSim.Sandbox
             if (_circuit?.ComponentRef(o.Id) is { } r)
             {
                 cy.Coil = _circuit.Compiled.DevicesOf(r).OfType<Resistor>().FirstOrDefault(d => d.Id.EndsWith(".COIL", StringComparison.OrdinalIgnoreCase));
+                if (cy.Bistable) cy.Coil2 = _circuit.Compiled.DevicesOf(r).OfType<Resistor>().FirstOrDefault(d => d.Id.EndsWith(".COIL2", StringComparison.OrdinalIgnoreCase));
                 var pins = IoPins(o);
                 cy.ExtendedPin = pins.GetValueOrDefault("EXT");
                 cy.RetractedPin = pins.GetValueOrDefault("RET");
@@ -144,11 +270,21 @@ namespace RobotTwin.CoreSim.Sandbox
             double volts = cy.Coil != null && sim != null ? Math.Abs(sim.NodeVoltage(cy.Coil.A) - sim.NodeVoltage(cy.Coil.B)) : 0;
             if (fault != "valve_stuck")   // a stuck spool stays where it was, whatever the coil does
             {
-                if (volts >= 0.7 * cy.CoilVolts) cy.Energised = true;
+                if (cy.Bistable)
+                {
+                    // two coils, no spring: a coil that pulls in sends the spool its way; with both or neither it stays put
+                    double back = cy.Coil2 != null && sim != null ? Math.Abs(sim.NodeVoltage(cy.Coil2.A) - sim.NodeVoltage(cy.Coil2.B)) : 0;
+                    bool out_ = volts >= 0.7 * cy.CoilVolts, in_ = back >= 0.7 * cy.CoilVolts;
+                    if (out_ && !in_) cy.Energised = true;
+                    else if (in_ && !out_) cy.Energised = false;
+                }
+                else if (volts >= 0.7 * cy.CoilVolts) cy.Energised = true;
                 else if (volts <= 0.4 * cy.CoilVolts) cy.Energised = false;
             }
 
-            cy.Supply = fault == "low_supply" ? Math.Min(cy.RatedSupply, Atmosphere + Math.Max(0, cy.Fault!.Value.Value) * 1e5) : cy.RatedSupply;
+            // [pneu] the supply: the compressor's tank through the cylinder's regulator, or a supply that never runs out
+            double rated = cy.Source != null ? Math.Min(cy.RatedSupply, cy.Source.Pressure) : cy.RatedSupply;
+            cy.Supply = fault == "low_supply" ? Math.Min(rated, Atmosphere + Math.Max(0, cy.Fault!.Value.Value) * 1e5) : rated;
             double leak = fault == "leak" ? Math.Max(0, cy.Fault!.Value.Value) * 1e-3 / 1e5 : 0;   // a worn seal: cap end to atmosphere
 
             // The piston's travel this step, from where it was to where the slider put it (the joint's own speed is the
@@ -185,6 +321,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 outA += IsoFlow(leak, pa, Atmosphere, cy.TempA);
                 cy.AirUsed += (inA + inB) * h / NormalDensity * 1000;
+                if (cy.Source != null) cy.Source.Drawn += (inA + inB) * h;   // [pneu] out of the tank
                 // Energy of each chamber: enthalpy in and out, the piston's work, the wall's heat.
                 double dva = cy.AreaA * v, dvb = -cy.AreaB * v;
                 double ua = cy.MassA * cv * cy.TempA + (inA * cp * RoomK - outA * cp * cy.TempA - pa * dva) * h;

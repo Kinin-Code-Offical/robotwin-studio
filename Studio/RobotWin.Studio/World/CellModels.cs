@@ -99,6 +99,9 @@ namespace RobotWin.Studio.World
                 case CellParts.PlcId:
                     visual = BuildPlc(m);
                     break;
+                case CellParts.CompressorId:
+                    visual = BuildCompressor(m, p);
+                    break;
                 default:
                     visual = BuildPedestal(m, p);
                     break;
@@ -759,8 +762,48 @@ namespace RobotWin.Studio.World
 
             var lamp = LampBrush();
             m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box((-L / 4 - Math.Min(46, L / 2) / 2 - 9) * Mm, 0, (S + 18.8) * Mm, 6 * Mm, 6 * Mm, 1.6 * Mm)) } });
-            AddPins(m, new[] { "SOL", "EXT", "RET", "GND" }, i => new Point3D((-L / 2 + 10 + i * 8) * Mm, -(S / 2 + 0.5) * Mm, (S / 2) * Mm));
+            AddPins(m, new[] { "SOL", "SOL2", "EXT", "RET", "GND" }, i => new Point3D((-L / 2 + 10 + i * 8) * Mm, -(S / 2 + 0.5) * Mm, (S / 2) * Mm));
             return new CellVisual { PartId = CellParts.CylinderId, Rod = slide, Lamp = lamp };
+        }
+
+        /// <summary>
+        /// [pneu] A compressor: a red horizontal tank on four feet, the pump and its motor on a plate on top, the pressure switch
+        /// with its gauge, the outlet's quick coupling, and the signal terminals (RUN, PS, GND) on the switch's box; the lamp
+        /// shows the motor running. Sized by the tank's volume.
+        /// </summary>
+        private static CellVisual BuildCompressor(ObjectModel m, IReadOnlyDictionary<string, string> p)
+        {
+            double s = Math.Pow(Math.Max(1, CellParts.Num(p, "tank", 24)) / 24, 1.0 / 3);
+            double L = 600 * s, R = 120 * s, axis = 40 * s + R;   // the tank's length, radius and axis height (mm)
+            var k = new Kit();
+            k.Metal(0xB22A26).Rod(new Point3D(-L / 2 + 20, 0, axis), new Point3D(L / 2 - 20, 0, axis), R, 40);   // tank
+            foreach (double end in new[] { -1.0, 1.0 })
+                k.Metal(0xB22A26).Rod(new Point3D(end * (L / 2 - 20), 0, axis), new Point3D(end * (L / 2 - 6), 0, axis), R * 0.82, 40);   // dished ends
+            foreach (var (x, y) in new[] { (-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0) })
+                k.Box(Dark, x * (L / 2 - 70 * s), y * R * 0.7, 20 * s, 30 * s, 20 * s, 40 * s);   // feet
+            double top = axis + R;
+            k.Metal(Steel).Box(-L * 0.1, 0, top + 4 * s, L * 0.55, R * 1.2, 8 * s);   // plate
+            k.Metal(0x2E3238).Rod(new Point3D(-L * 0.32, 0, top + 63 * s), new Point3D(-L * 0.08, 0, top + 63 * s), 55 * s, 32);   // motor
+            k.Metal(Alu).Box(L * 0.04, 0, top + 8 * s + 60 * s, 70 * s, 80 * s, 120 * s);   // pump cylinder
+            for (int f = 0; f < 6; f++) k.Metal(Alu).Box(L * 0.04, 0, top + 8 * s + 70 * s + f * 14 * s, 82 * s, 92 * s, 4 * s);   // cooling fins
+            k[0x22416E].Box(L * 0.3, 0, top + 30 * s, 70 * s, 60 * s, 60 * s);   // pressure switch
+            k.Metal(Steel).Rod(new Point3D(L * 0.3, -30 * s, top + 40 * s), new Point3D(L * 0.3, -42 * s, top + 40 * s), 22 * s);   // gauge
+            k.CylY(0xF2F2F2, L * 0.3, -42 * s, -43 * s, top + 40 * s, 19 * s);   // its dial
+            k.Metal(0xC9A227).Rod(new Point3D(L * 0.42, -R - 4 * s, axis), new Point3D(L * 0.42, -R - 12 * s, axis), 8 * s);   // outlet coupling
+            // the signal terminals in a junction box on the frame's side, where cables can reach them from outside
+            double face = 140 * s;   // the side of the compressor's collision box
+            k[0x22416E].Box(-L * 0.25, face - 9 * s, axis - 20 * s, 80 * s, 18 * s, 50 * s);
+            for (int i = 0; i < 3; i++)
+            {
+                k.Box(0x3F8F4E, -L * 0.25 - 20 * s + i * 20 * s, face - 1 * s, axis - 25 * s, 14 * s, 4 * s, 14 * s);
+                k.Metal(Steel).CylinderZ(-L * 0.25 - 20 * s + i * 20 * s, face, axis - 18 * s, axis - 17 * s, 3 * s, 10);
+            }
+
+            m.Body.Children.Add(k.Build());
+            var lamp = LampBrush();
+            m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box(L * 0.3 * Mm, 0, (top + 61 * s) * Mm, 8 * Mm, 8 * Mm, 2 * Mm)) } });
+            AddPins(m, new[] { "RUN", "PS", "GND" }, i => new Point3D((-L * 0.25 - 20 * s + i * 20 * s) * Mm, (face + 1 * s) * Mm, (axis - 25 * s) * Mm));
+            return new CellVisual { PartId = CellParts.CompressorId, Lamp = lamp };
         }
 
         private static CellVisual BuildPedestal(ObjectModel m, IReadOnlyDictionary<string, string> p)

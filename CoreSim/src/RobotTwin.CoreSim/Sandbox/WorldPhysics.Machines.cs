@@ -327,6 +327,9 @@ namespace RobotTwin.CoreSim.Sandbox
                     case CellParts.CylinderId:
                         BuildCylinder(o, it, p);   // [pneu] Sandbox/WorldPhysics.Pneumatics.cs
                         break;
+                    case CellParts.CompressorId:
+                        BuildCompressor(o, p);
+                        break;
                     case CellParts.PlcId:
                         BuildPlc(o, p);   // [plc] Sandbox/WorldPhysics.Plc.cs
                         break;
@@ -340,6 +343,8 @@ namespace RobotTwin.CoreSim.Sandbox
                         break;
                 }
             }
+
+            LinkAir();   // [pneu] cylinders find the compressor they draw from
 
             // Tools last: they sit on the arms' flanges.
             foreach (var j in world.Joints)
@@ -633,9 +638,10 @@ namespace RobotTwin.CoreSim.Sandbox
 
         private void StepMachines(AnalogSimulator? sim)
         {
-            if (_arms.Count == 0 && _conveyors.Count == 0 && _curtains.Count == 0 && _modbus.Count == 0 && _photos.Count == 0 && _limits.Count == 0 && _cylinders.Count == 0 && _plcs.Count == 0) return;
+            if (_arms.Count == 0 && _conveyors.Count == 0 && _curtains.Count == 0 && _modbus.Count == 0 && _photos.Count == 0 && _limits.Count == 0 && _cylinders.Count == 0 && _plcs.Count == 0 && _compressors.Count == 0) return;
             _machineTick++;
             foreach (var plc in _plcs) StepPlc(plc, sim, Step);
+            foreach (var c in _compressors) StepCompressor(c, Step);   // [pneu] the tank, before the cylinders draw from it
             foreach (var cy in _cylinders) StepCylinder(cy, sim, Step);
             foreach (var ph in _photos) StepPhoto(ph, Step);
             foreach (var ls in _limits) StepLimit(ls);

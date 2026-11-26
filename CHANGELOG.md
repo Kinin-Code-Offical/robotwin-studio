@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Compressor, air tank and double-solenoid valve:** a compressor part (tank, pressure switch with cut-in and cut-out, free air delivery falling with pressure, RUN and PS outputs) that cylinders draw their air from by naming it; the tank's air balance holds to the litre, a compressor that cannot keep up lets the pressure fall and the strokes slow. The cylinder's valve can be a double-solenoid one (SOL out, SOL2 back, stays where it was sent).
+- **Fixed large parts are bolted down by floor brackets** in the 3D view, instead of clamp jaws up their whole height (a fixed compressor showed two tall poles).
 - **The PLC as a Modbus client:** MB_READ and MB_WRITE blocks in Structured Text read and write the world's other Modbus devices by unit ID over the plant network (function codes 1–6, a 5 ms round trip, DONE / BUSY / ERROR / STATUS with the device's exception code, or 11 when nothing answers).
 - **Analog I/O on the Modbus module:** four 0–10 V inputs (AI1–AI4, input registers 1–4) and two 0–10 V outputs (AO1–AO2, holding registers 1–2), in millivolts through 12-bit converters; the inspector shows them.
 - **Modbus RTU on a wire:** the remote I/O module serves its table by Modbus RTU on a 5 V TTL serial header when its bus is set to RTU (baud rate and frame format chosen): frames end with 3.5 characters of silence, CRC-16 checked, other addresses and broadcasts handled as the specification says, answers sent bit by bit on TX. A real Uno sketch acting as master writes coils, reads the inputs back through a cable, goes unanswered on a broken CRC and another address, and broadcasts.

@@ -30,6 +30,12 @@ namespace RobotTwin.CoreSim.Design
         public const string CylinderId = "pneumatic-cylinder";
         public const string PlcId = "plc";
 
+        /// <summary>[pneu] A compressor with its air tank and pressure switch: the supply cylinders can draw from.</summary>
+        public const string CompressorId = "compressor";
+
+        /// <summary>[pneu] The cylinder's valve: one coil and a spring, or two coils and no spring (it stays where it was sent).</summary>
+        public const string ValveSingle = "tek bobin", ValveDouble = "çift bobin";
+
         /// <summary>[plc] The PLC's programming languages: its program is in "program" (ST) or "ladder" (LD, as JSON).</summary>
         public const string PlcStructuredText = "Yapısal Metin", PlcLadder = "Merdiven";
 
@@ -83,7 +89,8 @@ namespace RobotTwin.CoreSim.Design
 
         public static bool IsCellPart(string? partId) =>
             partId == ArmId || partId == GripperId || partId == VacuumId || partId == ConveyorId || partId == CurtainId ||
-            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId || partId == PhotoId || partId == LimitId || partId == CylinderId || partId == PlcId;
+            partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId || partId == PhotoId || partId == LimitId || partId == CylinderId || partId == PlcId ||
+            partId == CompressorId;
 
         public static bool IsTool(string? partId) => partId == GripperId || partId == VacuumId;
 
@@ -235,7 +242,8 @@ namespace RobotTwin.CoreSim.Design
             var cylinder = Part(lib, CylinderId, "Pnömatik Silindir (5/2 valfli)", "CYL",
                 "Çift etkili silindir ve üstündeki tek bobinli 5/2 valf (mil +X yönünde çıkar): SOL bobini enerjilenince piston ileri, bırakılınca geri gider. " +
                 "İki hazne ayrı hava kütleleri olarak çözülür: valften ISO 6358 akışı, dolarken ısınan, genleşirken soğuyan hava; kuvvet basınç × alan, contalar sürtünür. " +
-                "EXT ve RET uç konumlardaki manyetik sensörlerin çıkışlarıdır. Hız ayarı egzozu kısar (çıkış kısmalı hız kontrolü). Bobin devrede gerçek bir yüktür.",
+                "EXT ve RET uç konumlardaki manyetik sensörlerin çıkışlarıdır. Hız ayarı egzozu kısar (çıkış kısmalı hız kontrolü). Bobin devrede gerçek bir yüktür. " +
+                "Çift bobinli valfte SOL ileri, SOL2 geri gönderir; ikisi de bırakılınca valf son konumunda kalır. Hava kaynağına bir kompresörün adı yazılırsa besleme onun tankından gelir (regülatör en çok besleme basıncını verir).",
                 new ParameterDefinition("bore", "Piston çapı", "20", "mm", new[] { "12", "16", "20", "25", "32", "40", "50", "63" }),
                 new ParameterDefinition("stroke", "Strok", "100", "mm"),
                 new ParameterDefinition("rod", "Mil çapı", "8", "mm"),
@@ -244,14 +252,19 @@ namespace RobotTwin.CoreSim.Design
                 new ParameterDefinition("speed", "Hız ayarı (egzoz kısma)", "100", "%"),
                 new ParameterDefinition("coil_v", "Bobin gerilimi", "24", "V", new[] { "12", "24" }),
                 new ParameterDefinition("coil_w", "Bobin gücü", "1", "W"),
+                new ParameterDefinition("valve", "Valf", ValveSingle, "", new[] { ValveSingle, ValveDouble }),
+                new ParameterDefinition("air", "Hava kaynağı (kompresör adı; boş = sabit besleme)", ""),
                 new ParameterDefinition("io_v", "Sensör gerilimi", "24", "V", new[] { "5", "24" }));
             cylinder.Build = c =>
             {
                 BuildIo(c, Array.Empty<string>(), new[] { "EXT", "RET" });
                 double volts = c.Num("coil_v", 24), watts = Math.Max(0.1, c.Num("coil_w", 1));
                 c.Add(new Resistor(c.Sub("COIL"), c.Pin("SOL"), c.Pin("GND"), volts * volts / watts));
+                // [pneu] the second coil of a double-solenoid valve; on a single-coil valve the pin goes nowhere
+                bool two = c.Text("valve") == ValveDouble;
+                c.Add(new Resistor(c.Sub("COIL2"), c.Pin("SOL2"), c.Pin("GND"), two ? volts * volts / watts : 10e6));
             };
-            AddPins(cylinder, new[] { "SOL" }, new[] { "EXT", "RET" });
+            AddPins(cylinder, new[] { "SOL", "SOL2" }, new[] { "EXT", "RET" });
             // ---------------------------------------------------------------- [plc] a PLC running Structured Text
             var plc = Part(lib, PlcId, "PLC (Yapısal Metin, IEC 61131-3)", "PLC",
                 "8 sayısal giriş (I0–I7 → %IX0.0–%IX0.7), 8 sayısal çıkış (Q0–Q7 ← %QX0.0–%QX0.7). Programı Yapısal Metin'dir (ST): BOOL, INT, REAL, TIME; " +
@@ -270,6 +283,24 @@ namespace RobotTwin.CoreSim.Design
 
             Preset(lib, "cylinder-20x100", "Pnömatik Silindir · Ø20 × 100 mm", CylinderId, "Tek bobinli 5/2 valf, 6 bar, uç sensörleri");
             Preset(lib, "cylinder-32x200", "Pnömatik Silindir · Ø32 × 200 mm", CylinderId, "Tek bobinli 5/2 valf, 6 bar, uç sensörleri", "bore=32;stroke=200;rod=12;flow=0.9");
+            Preset(lib, "cylinder-20x100-bistable", "Pnömatik Silindir · Ø20 × 100 mm, çift bobinli", CylinderId, "Çift bobinli 5/2 valf (hafızalı), 6 bar, uç sensörleri", "valve=" + ValveDouble);
+
+            // ---------------------------------------------------------------- [pneu] compressor and air tank
+            var compressor = Part(lib, CompressorId, "Kompresör ve Hava Tankı", "KMP",
+                "Pistonlu kompresör, tankı ve basınç anahtarı: tank basıncı alt sınıra düşünce motor çalışır, üst sınırda durur. " +
+                "Hava kaynağı olarak bu kompresörün adını yazan silindirler tanktan çeker: çok hava çekilirse basınç düşer, silindirler yavaşlar ve zayıflar. " +
+                "RUN motor çalışırken, PS tank basıncı alt sınırın üstündeyken yüksektir. Tank havası oda sıcaklığında tutulur (izotermal).",
+                new ParameterDefinition("tank", "Tank hacmi", "24", "L", new[] { "6", "24", "50", "100" }),
+                new ParameterDefinition("fad", "Serbest hava verimi", "60", "L/dk"),
+                new ParameterDefinition("on", "Çalışma basıncı (alt)", "6", "bar"),
+                new ParameterDefinition("off", "Durma basıncı (üst)", "8", "bar"),
+                new ParameterDefinition("start", "Başlangıç basıncı", "8", "bar"),
+                new ParameterDefinition("motor_w", "Motor gücü", "750", "W"),
+                new ParameterDefinition("io_v", "Sinyal gerilimi", "24", "V", new[] { "5", "24" }));
+            compressor.Build = c => BuildIo(c, Array.Empty<string>(), new[] { "RUN", "PS" });
+            AddPins(compressor, Array.Empty<string>(), new[] { "RUN", "PS" });
+            Preset(lib, "compressor-24l", "Kompresör · 24 L tank, 60 L/dk", CompressorId, "6–8 bar basınç anahtarı, 750 W");
+            Preset(lib, "compressor-6l", "Kompresör · 6 L tank, 30 L/dk (sessiz)", CompressorId, "6–8 bar, küçük tank: sık devreye girer", "tank=6;fad=30;motor_w=250");
 
             // ---------------------------------------------------------------- passive equipment
             var pallet = Part(lib, PalletId, "Euro palet", "PAL",   // not "Palet" (the editor's palette)
@@ -408,6 +439,7 @@ namespace RobotTwin.CoreSim.Design
             LimitId => 0.12,
             PlcId => 0.35,
             CylinderId => 0.25 + 2.5 * Num(p, "stroke", 100) / 1000 * Num(p, "bore", 20) / 20,
+            CompressorId => 8 + 0.7 * Num(p, "tank", 24),   // pump, motor and a steel tank
             _ => null
         };
     }

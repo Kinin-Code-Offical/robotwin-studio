@@ -80,6 +80,13 @@ namespace RobotTwin.CoreSim.Sandbox
                 case CellParts.LimitId:   // the switch body, 30 × 30 × 60 mm, its roller lever reaching +X
                     return Box(new Vec3(-0.015, -0.015, 0), new Vec3(0.015, 0.015, 0.06), mass);
 
+                case CellParts.CompressorId:   // [pneu] a horizontal tank with the pump and motor on top, 600 × 280 × 600 mm
+                {
+                    double tank = CellParts.Num(p, "tank", 24);
+                    double s = Math.Pow(Math.Max(1, tank) / 24, 1.0 / 3);
+                    return Box(new Vec3(-0.3 * s, -0.14 * s, 0), new Vec3(0.3 * s, 0.14 * s, 0.6 * s), mass);
+                }
+
                 case CellParts.PlcId:   // [plc] a compact PLC on a DIN rail, 90 × 100 × 75 mm
                     return Box(new Vec3(-0.045, -0.05, 0), new Vec3(0.045, 0.05, 0.075), mass);
 

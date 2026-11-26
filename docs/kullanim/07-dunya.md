@@ -236,6 +236,18 @@ Alt paneldeki **HMI** sekmesi, PLC'lerin değişkenlerine bağlı bir operatör 
 
 **Parçalar → Robot Hücresi → Pnömatik Silindir** çift etkili bir silindir ve üstündeki tek bobinli 5/2 valftir; mil parçanın +X yönünde çıkar. **SOL** bobini enerjilenince (bobin gerilimin %70'inde çeker, %40'ında bırakır) besleme ön hazneye, arka hazne egzoza bağlanır ve piston ileri gider; bobin bırakılınca geri döner. Her hazne kendi hava kütlesi ve sıcaklığıyla çözülür: valften akış ISO 6358'e göredir (kritik basınç oranının altında boğulmuş), dolan hava ısınır, genleşen soğur, duvar oda sıcaklığına çeker. Pistonu basınç × alan iter, contalar sürtünür; uçlarda strok biter. **Hız ayarı** egzozu kısar (çıkış kısmalı hız denetimi). **EXT** ve **RET** uç konumlardaki manyetik sensörlerin çıkışlarıdır. Bobin devrede gerçek bir yüktür: bir Modbus modülünün, kartın ya da sınır anahtarının devresinden sürülür. Mil kutuları iter; panelde konum, hız, iki haznenin basıncı, kuvvet ve harcanan hava (normal litre) görünür.
 
+**Valf** `çift bobin` yapılırsa (ya da *çift bobinli* hazır parçayla) valf yaysızdır: **SOL** ileri, **SOL2** geri gönderir, ikisi de bırakılınca son konumunda kalır (hafızalı valf), ikisi birden enerjiliyse kımıldamaz. Elektrik kesilince silindir olduğu yerde kalsın isteniyorsa bu valf seçilir.
+
+### Kompresör ve hava tankı
+
+**Parçalar → Robot Hücresi → Kompresör** pistonlu bir kompresör, tankı ve basınç anahtarıdır:
+
+- tank basıncı **çalışma basıncına** (öntanımlı 6 bar) düşünce motor çalışır, **durma basıncında** (8 bar) durur; pompa **serbest hava verimi** kadar hava basar, karşısındaki basınç arttıkça biraz azalarak;
+- silindirin **Hava kaynağı**na kompresörün adı yazılırsa (ör. `KMP1`) silindir havasını o tanktan alır. Besleme, silindirin kendi **besleme basıncı** (regülatör) ile tank basıncından küçük olanıdır;
+- silindirlerin çektiği hava tanktan eksilir: kompresör yetişemezse basınç düşer, silindirler yavaşlar ve zayıflar. Ø32 × 200 mm'lik bir silindiri saniyede iki kez süren hat dakikada yaklaşık 116 NL ister; 30 L/dk'lık küçük bir kompresör buna yetişemez;
+- **RUN** motor çalışırken, **PS** tank basıncı çalışma basıncının üstündeyken yüksektir: bir PLC "hava yok" alarmını buradan kurar;
+- panelde tank basıncı, motorun çalışma oranı, kaç kez devreye girdiği, basılan ve çekilen hava görünür.
+
 ### Arıza senaryoları
 
 Fotosel, sınır anahtarı, pnömatik silindir ve Modbus modülü, denetçide **Özellik ekle → Arıza senaryosu** ile belli bir anda bozulabilir: kirli lens (menzil düşer), takılı ya da ölü çıkış, yapışık kontak, kırık kol, conta kaçağı, takılı valf, düşük besleme, kopuk ağ. **Başlama zamanı** ve varsa **büyüklüğü** (kalan menzil, kaçak, basınç) ayarlanır; arıza başlayınca **Olaylar**'a yazılır. Böylece PLC programının arızaya tepkisi (sonsuza dek bekleyen bir adım, zaman aşımı alarmı) gerçek arızadan önce denenir.

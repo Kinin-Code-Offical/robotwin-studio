@@ -118,6 +118,10 @@ namespace RobotWin.Studio.Pages
                     Inspector.Children.Add(Caption("Pnömatik silindir"));
                     StatusBlock();
                     break;
+                case CellParts.CompressorId:
+                    Inspector.Children.Add(Caption("Kompresör"));
+                    StatusBlock();
+                    break;
                 case CellParts.PlcId:
                     PlcPanel(o);   // [plc] Pages/WorldPage.Plc.cs
                     break;
@@ -593,6 +597,25 @@ namespace RobotWin.Studio.Pages
                 case CellParts.PlcId:
                     PlcStatus(o, physics, sb);
                     break;
+                case CellParts.CompressorId:
+                {
+                    var c = physics?.CompressorOf(o.Id);
+                    if (c == null)
+                    {
+                        sb.Append("Dünya çalışırken tank basıncı ve motor burada görünür.");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"Tank       : {(c.Pressure - 101325) / 1e5:0.00} bar");
+                        sb.AppendLine($"Motor      : " + (c.Running ? "ÇALIŞIYOR" : "duruyor") + $" · %{(c.Seconds > 0 ? c.RunSeconds / c.Seconds * 100 : 0):0}");
+                        sb.AppendLine($"Devreye    : {c.Starts} kez");
+                        sb.AppendLine($"Basılan    : {c.AirPumped:0.0} NL");
+                        sb.Append($"Çekilen    : {c.AirDrawn:0.0} NL");
+                    }
+
+                    break;
+                }
+
                 case CellParts.CylinderId:
                 {
                     var cy = physics?.CylinderOf(o.Id);
@@ -606,6 +629,7 @@ namespace RobotWin.Studio.Pages
                         sb.AppendLine($"Konum      : {cy.Position * 1000:0.0} mm · {cy.Speed:0.00} m/s" + (cy.Extended ? " · ileride" : cy.Retracted ? " · geride" : string.Empty));
                         sb.AppendLine($"Basınç     : A {(cy.PressureA - 101325) / 1e5:0.00} bar · B {(cy.PressureB - 101325) / 1e5:0.00} bar");
                         sb.AppendLine($"Kuvvet     : {cy.Force:0} N");
+                        sb.AppendLine($"Besleme    : {(cy.SupplyPressure - 101325) / 1e5:0.00} bar" + (cy.Source != null ? $" · {cy.Source.Object.Name} tankından" : string.Empty) + (cy.Bistable ? " · çift bobinli valf" : string.Empty));
                         sb.Append($"Hava       : {cy.AirUsed:0.00} NL");
                     }
 
