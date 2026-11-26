@@ -58,13 +58,14 @@ namespace RobotTwin.CoreSim.Firmware
         /// <summary>
         /// Builds the bus slaves for <paramref name="boardRef"/>'s MCU. <paramref name="gpioNode"/> gives
         /// the circuit node of a GPIO (−1 if the board has no such pin); <paramref name="reach"/> the nodes
-        /// joined to a node by wires.
+        /// joined to a node by wires; <paramref name="gpioName"/> the board's name of a GPIO for the log (IOn when not given).
         /// </summary>
         public static List<SpiSlave> Attach(
             IEnumerable<(string FullRef, PartDefinition Def, IReadOnlyDictionary<string, string> Parameters)> parts,
             Func<string, string, int> pinNode, Func<int, int> gpioNode, Func<int, HashSet<int>> reach,
-            Func<string, bool> powered, Context ctx, Action<string>? log = null)
+            Func<string, bool> powered, Context ctx, Action<string>? log = null, Func<int, string?>? gpioName = null)
         {
+            string Name(int g) => gpioName?.Invoke(g) ?? "IO" + g;
             // Node → GPIO over everything the MCU's pins reach.
             var gpioOf = new Dictionary<int, int>();
             for (int g = 0; g < 48; g++)
@@ -102,7 +103,7 @@ namespace RobotTwin.CoreSim.Firmware
                 }
 
                 list.Add(slave);
-                log?.Invoke($"{r}: SPI veri yoluna bağlandı (SCK IO{sck}, MOSI IO{mosi}, MISO {(miso >= 0 ? "IO" + miso : "bağlı değil")}, CS IO{cs})");
+                log?.Invoke($"{r}: SPI veri yoluna bağlandı (SCK {Name(sck)}, MOSI {Name(mosi)}, MISO {(miso >= 0 ? Name(miso) : "bağlı değil")}, CS {Name(cs)})");
             }
 
             return list;

@@ -58,6 +58,9 @@ namespace RobotTwin.CoreSim.Firmware
         /// <summary>The MCU's I²C bus (SDA = A4, SCL = A5); add device models to <see cref="I2cBus.Devices"/>.</summary>
         public I2cBus I2c => Mcu.I2c;
 
+        /// <summary>[spi] The MCU's SPI bus (SCK = D13, MISO = D12, MOSI = D11, chip selects by Arduino pin number).</summary>
+        public SpiBus Spi => Mcu.Spi;
+
         public bool InBrownOut { get; private set; }
 
         /// <summary>Text the firmware printed on Serial during the last slice.</summary>

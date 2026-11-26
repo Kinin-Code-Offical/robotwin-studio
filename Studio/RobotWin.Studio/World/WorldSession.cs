@@ -611,6 +611,7 @@ namespace RobotWin.Studio.World
                     TrackBoard(cosim, prog);   // [radio]
                     AddLog(new SimLogEntry(0, where, $"Yazılım çalışıyor: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, prog);
+                    AttachSpi(cosim.Spi, prog, n => n < Atmega328P.PinCount ? RobotTwin.CoreSim.Firmware.AvrRegisters.PinName(n) : null);   // [spi]
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is FormatException)
                 {
@@ -791,17 +792,23 @@ namespace RobotWin.Studio.World
         /// <summary>SPI devices (MCP3008, BMP280 in SPI mode …) wired to an ESP32's GPIOs.</summary>
         private void AttachSpi(IEsp32Board esp, WorldProgrammable prog)
         {
+            AttachSpi(esp.Spi, prog, g => "IO" + g);
+            AttachLedStrips(esp, prog);
+        }
+
+        /// <summary>SPI devices wired to a board's pins; <paramref name="gpioPin"/> names the board pin of a bus GPIO number (an Uno's D13/D12/D11 and its chip selects, an ESP32's IOn).</summary>
+        private void AttachSpi(RobotTwin.CoreSim.Firmware.SpiBus bus, WorldProgrammable prog, Func<int, string?> gpioPin)
+        {
             var c = Circuit!.Compiled;
-            var slaves = RobotTwin.CoreSim.Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => c.PinNode(prog.RefDes, "IO" + g), Reach,
+            var slaves = RobotTwin.CoreSim.Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => gpioPin(g) is { } pin ? c.PinNode(prog.RefDes, pin) : -1, Reach,
                 r =>
                 {
                     if (Simulator == null) return false;
                     double vcc = c.PinNode(r, "VDD") > 0 ? c.PinVoltage(Simulator, r, "VDD") - c.PinVoltage(Simulator, r, "DGND") : c.PinVoltage(Simulator, r, "VCC") - c.PinVoltage(Simulator, r, "GND");
                     return vcc > 2.5;
                 },
-                SensorContext(), m => AddLog(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)));
-            esp.Spi.Slaves.AddRange(slaves);
-            AttachLedStrips(esp, prog);
+                SensorContext(), m => AddLog(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)), gpioPin);
+            bus.Slaves.AddRange(slaves);
         }
 
         /// <summary>[neopixel] The WS2812B strips whose DIN an ESP32 GPIO drives (directly or across cables): its frames reach them.</summary>

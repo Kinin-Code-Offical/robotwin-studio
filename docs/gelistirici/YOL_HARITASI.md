@@ -113,7 +113,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
     - [ ] Hızlı modda ESP-NOW ve bellek bütçesi uyarıları.
     - [ ] Bluepad32 kullanan çizimler için Bluepad32'nin ESP32 çekirdeği (ayrı indirme, onay gerekir); tasarım içindeki kartların çizimleri de `--esp32-compat`'a.
   - RP2040 / STM32;
-  - kütüphane uyumluluk matrisi;
+  - [x] kütüphane uyumluluk matrisi: gerçek bir çizim (`Fixtures/arduino-compat.ino`) tone, SoftwareSerial, pulseIn, attachInterrupt, her PWM pininde analogWrite, micros/delay/delayMicroseconds, EEPROM, Wire, SPI, Serial ayrıştırma ve girişleri deniyor, sonuç pinlerden okunuyor (`ArduinoCompatTests`, kılavuzda tablo). Bulduğu: Uno'nun SPI'ı taslaktı (pinsiz, anında 0xFF); artık bit zamanlı, SPI aygıtları Uno'ya da bağlanıyor;
   - [x] derleyici sürümünün projeyle saklanması: her derleme kartın kodunda neyle derlendiğini saklar ("arduino-cli 1.6.0 · arduino:avr 1.8.8"); başka bir derleyici ya da çekirdekle derlenince günlük söyler (`Firmware/ArduinoCompiler.Toolchain.cs`).
 - [~] **Robotik kontrol:** yukarıdaki kinematik maddesi, ayrıca:
   - [x] yörünge sınırları: her hareket eksenlerin tepe torkuna göre denetlenip (bağlantıların kütle ve eylemsizliği, yerçekimi, sürtünme, tutucudaki parça) gerekirse yavaşlatılıyor; S eğrisi hareketlerde eksen başına jerk sınırı (`Robotics/ArmDynamics.cs`);

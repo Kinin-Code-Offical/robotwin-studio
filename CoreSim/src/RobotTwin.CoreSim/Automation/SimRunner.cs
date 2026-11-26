@@ -558,6 +558,19 @@ namespace RobotTwin.CoreSim.Automation
         /// <summary>Puts the SPI devices wired to an ESP32's GPIOs on its SPI master (same rules as the app).</summary>
         protected void AttachSpi(Firmware.Esp32.IEsp32Board esp, string boardRef)
         {
+            AttachSpi(esp.Spi, boardRef, g => "IO" + g);
+            AttachLedStrips(esp, boardRef);
+        }
+
+        /// <summary>[spi] An AVR board's pin by its Arduino number (D0–D13, A0–A5), for its SPI bus.</summary>
+        protected static string? AvrPin(int number) => number < Firmware.Atmega328P.PinCount ? Firmware.AvrRegisters.PinName(number) : null;
+
+        /// <summary>
+        /// Puts the SPI devices wired to a board's pins on its SPI master (same rules as the app); <paramref name="gpioPin"/>
+        /// names the board pin of a bus GPIO number (null: the board has none).
+        /// </summary>
+        protected void AttachSpi(Firmware.SpiBus bus, string boardRef, Func<int, string?> gpioPin)
+        {
             var c = Compiled!;
             var ctx = new Firmware.SpiWiring.Context
             {
@@ -566,16 +579,15 @@ namespace RobotTwin.CoreSim.Automation
                 AltitudeOf = AltitudeOf,
                 Seed = Seed * 7919 + 17
             };
-            var slaves = Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => c.PinNode(boardRef, "IO" + g), Reach,
+            var slaves = Firmware.SpiWiring.Attach(AllParts(), c.PinNode, g => gpioPin(g) is { } pin ? c.PinNode(boardRef, pin) : -1, Reach,
                 r =>
                 {
                     if (Simulator == null) return false;
                     double vcc = c.PinNode(r, "VDD") > 0 ? c.PinVoltage(Simulator, r, "VDD") - c.PinVoltage(Simulator, r, "DGND") : c.PinVoltage(Simulator, r, "VCC") - c.PinVoltage(Simulator, r, "GND");
                     return vcc > 2.5;
                 },
-                ctx, m => AddEvent(new RunnerEvent(0, boardRef, RunnerEventKind.Info, m)));
-            esp.Spi.Slaves.AddRange(slaves);
-            AttachLedStrips(esp, boardRef);
+                ctx, m => AddEvent(new RunnerEvent(0, boardRef, RunnerEventKind.Info, m)), gpioPin);
+            bus.Slaves.AddRange(slaves);
         }
 
         /// <summary>[neopixel] The WS2812B strips whose DIN one of an ESP32's GPIOs drives (same rules as the app).</summary>

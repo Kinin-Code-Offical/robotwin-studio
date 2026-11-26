@@ -31,7 +31,7 @@ namespace RobotTwin.CoreSim.Firmware
     /// Cycle-counted ATmega328P (Arduino Uno / Nano / Pro Mini): complete AVRe+
     /// instruction set, interrupts, GPIO with pin-change and external interrupts,
     /// Timer0/1/2 with all waveform modes, USART0, ADC, EEPROM, watchdog, a
-    /// timed TWI master on <see cref="I2c"/> and minimal SPI so libraries never hang.
+    /// timed TWI master on <see cref="I2c"/> and a bit-timed SPI master on <see cref="Spi"/>.
     /// </summary>
     public sealed partial class Atmega328P
     {

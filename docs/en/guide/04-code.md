@@ -139,10 +139,30 @@ Your code is compiled with the real `avr-gcc` (through `arduino-cli`). The resul
 - Timer0/1/2 and PWM (`analogWrite`)
 - Serial port (USART), ADC (`analogRead` reads the real voltage in the circuit), EEPROM, watchdog
 - I²C (TWI); the SSD1306 OLED, PCF8574 + HD44780 LCD and MPU-6050 modules really answer
+- SPI (master): `SPI.transfer` clocks the byte out bit by bit on D13 (SCK) and D11 (MOSI) at the rate and mode set, reading D12 (MISO); an MCP3008 or BMP280 with its CS on any pin answers in the circuit
 
 > Tip: if you have a `.hex` file compiled in the Arduino IDE, load it directly with **Load HEX…** in the **Board pins** tab on the **Circuit** page.
 
 The program and the circuit share one clock. The Uno runs to the cycle that belongs to the end of each time slice; an instruction that ran over into the next slice is taken off that slice. So `millis()` never drifts from the circuit's time: after one second the program is at exactly 16 000 000 cycles.
+
+### Arduino compatibility
+
+The Arduino functions and the libraries that come with the AVR core are tried with a real sketch (`CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/arduino-compat.ino`, built with `avr-gcc`). The sketch is sent a letter over the serial port and its inputs are driven at set moments; the result is read from what the sketch prints and from the chip's own pin record (what the timeline shows). The table is what those tests give (`ArduinoCompatTests`).
+
+| Function / library | What was tried | Result |
+| --- | --- | --- |
+| `tone(8, 1000)` | the frequency on D8, over 60 ms | 1000.1 Hz, 61 periods |
+| `SoftwareSerial` (9600) | sends "Merhaba" on D11, reads "Selam" given on D10 | "Merhaba" decoded from D11, "Selam" read |
+| `pulseIn(7, HIGH)` | a 1234 µs pulse on D7 | 1229 µs (the library works the time out from a loop count) |
+| `attachInterrupt(…, FALLING)` | 25 falling edges on D2 | 25 |
+| `analogWrite` | D3, D5, D6, D9, D10, D11 | D5 and D6 at 976.6 Hz, the others at 490.2 Hz; duty by the value |
+| `micros()`, `delay(10)` | how long the delay is | 10 012 µs |
+| `delayMicroseconds(250)` | a square wave on D12 with two delays | 509.7 µs period (with `digitalWrite`'s own time) |
+| `EEPROM.put` / `get` | a `float`, `long`, `char[8]` struct | read back as written |
+| `Wire` | scanning addresses 1–126 | 0 on an empty bus; 2 with an MPU-6050 and a BMP280 |
+| `SPI` | an MCP3008's CH0 (CS on D10, 1 MHz, mode 0) | 256 at 1.25 V; 24 clocks, 01 80 00 on MOSI; 676 from an Uno's 3.3 V in the circuit |
+| `Serial.parseInt`, `readStringUntil` | "123 abc" and a line end | 246 and " abc" |
+| `INPUT_PULLUP`, `analogRead(A0)` | 2.5 V on A0 | 512 |
 
 ## Debugging: breakpoints, steps, variables
 

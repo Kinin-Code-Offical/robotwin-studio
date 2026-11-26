@@ -139,10 +139,30 @@ Kodunuz gerçek `avr-gcc` ile (`arduino-cli` üzerinden) derlenir. Ortaya çıka
 - Timer0/1/2 ve PWM (`analogWrite`)
 - Seri port (USART), ADC (`analogRead` devredeki gerçek gerilimi okur), EEPROM, watchdog
 - I²C (TWI); SSD1306 OLED, PCF8574 + HD44780 LCD ve MPU-6050 modülleri gerçekten cevap verir
+- SPI (ana kip): `SPI.transfer` baytı ayarlanan hız ve kipte D13 (SCK) ve D11'den (MOSI) bit bit çıkarır, D12'den (MISO) okur; CS'i herhangi bir pine bağlı MCP3008 ve BMP280 devrede cevap verir
 
 > İpucu: Arduino IDE'de derlediğiniz bir `.hex` dosyanız varsa, **Devre** sayfasındaki **Kart pinleri** sekmesinde **HEX yükle…** ile doğrudan yükleyebilirsiniz.
 
 Program ile devre tek bir saatle ilerler. Uno, her zaman diliminin sonuna ait çevrime kadar çalışır; bir önceki dilimden taşan komut bir sonrakinden düşülür. Bu yüzden `millis()` ile devrenin zamanı arasında kayma birikmez: bir saniyenin sonunda program tam 16 000 000 çevrimdedir.
+
+### Arduino uyumluluğu
+
+Arduino işlevleri ve AVR çekirdeğiyle gelen kütüphaneler gerçek bir çizimle denenir (`CoreSim/tests/RobotTwin.CoreSim.Tests/Fixtures/arduino-compat.ino`, `avr-gcc` ile derlenmiş). Çizime seri porttan bir harf gönderilir, girişleri belli anlarda sürülür; sonuç çizimin yazdığından ve yonganın kendi pin kaydından (zaman çizelgesinin gördüğü) okunur. Tablo bu testlerin sonucudur (`ArduinoCompatTests`).
+
+| İşlev / kütüphane | Ne denendi | Sonuç |
+| --- | --- | --- |
+| `tone(8, 1000)` | D8'deki frekans, 60 ms boyunca | 1000,1 Hz, 61 periyot |
+| `SoftwareSerial` (9600) | D11'den "Merhaba" gönderir, D10'a verilen "Selam"ı okur | D11'den çözülen "Merhaba", okunan "Selam" |
+| `pulseIn(7, HIGH)` | D7'ye 1234 µs'lik darbe | 1229 µs (kütüphane süreyi döngü sayısından hesaplar) |
+| `attachInterrupt(…, FALLING)` | D2'ye 25 düşen kenar | 25 |
+| `analogWrite` | D3, D5, D6, D9, D10, D11 | D5 ve D6 976,6 Hz, diğerleri 490,2 Hz; görev oranı değere göre |
+| `micros()`, `delay(10)` | gecikmenin süresi | 10 012 µs |
+| `delayMicroseconds(250)` | D12'de iki gecikmeli kare dalga | 509,7 µs periyot (`digitalWrite`'ın süresi dahil) |
+| `EEPROM.put` / `get` | `float`, `long`, `char[8]` yapısı | aynen geri okunur |
+| `Wire` | 1–126 adres taraması | boş veriyolunda 0; MPU-6050 ve BMP280 ile 2 |
+| `SPI` | MCP3008'in CH0'ı (CS D10, 1 MHz, kip 0) | 1,25 V'ta 256; 24 saat darbesi, MOSI'de 01 80 00; devredeki Uno'nun 3,3 V'u 676 |
+| `Serial.parseInt`, `readStringUntil` | "123 abc" ve satır sonu | 246 ve " abc" |
+| `INPUT_PULLUP`, `analogRead(A0)` | A0'da 2,5 V | 512 |
 
 ## Hata ayıklama: kesme noktası, adım, değişkenler
 

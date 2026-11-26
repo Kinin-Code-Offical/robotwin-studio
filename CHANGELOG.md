@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **SPI on the Uno:** the ATmega328P's SPI master clocks each byte out at the rate and mode the sketch sets, edge by edge on D13 and D11 (seen on the debugger's timeline), samples D12 on the sampling edges, and sets SPIF after the eighth bit, with WCOL, mode fault and the datasheet's flag clearing. MCP3008s and BMP280s wired to an Uno's SPI pins now answer in the world and the headless runners, as they did on the ESP32.
+- **Fix:** an Uno's SPI answered 0xFF at once without moving a pin, so no SPI device could be read from an Arduino.
+- **Arduino compatibility matrix:** a real sketch tries `tone`, `SoftwareSerial`, `pulseIn`, `attachInterrupt`, `analogWrite` on every PWM pin, `micros`/`delay`/`delayMicroseconds`, `EEPROM`, `Wire`, `SPI`, `Serial` parsing and the inputs, checked from the chip's own pin record; the guide lists the results.
 - **Bill of materials with sourcing and costing:** the BOM opens in a window where each line gets its manufacturer, MPN (from the part's model when it has one), supplier, supplier part number, unit price and minimum order, kept with the project; the order and cost for a number of boards; a full CSV and JLCPCB/LCSC, Digi-Key and Mouser order files.
 - **Fix:** instruments (generators, meters, lab supplies, fault injectors) were listed in the BOM; they are simulation's tools and stay out of it now.
 - **Import from KiCad:** a board taken to KiCad comes back with the placement and routing done there: the PCB page reads the `.kicad_pcb` (placements by reference, tracks with their arcs, vias, zones, mounting holes, thickness, outline), lists what changed net by net and part by part, and carries it over in one undoable step. A board exported and read back shows no difference.

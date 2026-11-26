@@ -66,6 +66,7 @@ namespace RobotTwin.CoreSim.Firmware
             ResetUartRx();
             _d[UCSR0A] = 0x20;
             ResetTwi();
+            ResetSpi();
             _lastPinB = ReadPinRegister(DDRB, PORTB, 8);
             _lastPinC = ReadPinRegister(DDRC, PORTC, 16);
             _lastPinD = ReadPinRegister(DDRD, PORTD, 0);
@@ -133,6 +134,13 @@ namespace RobotTwin.CoreSim.Firmware
                 return new PinOutput(true, level, false, double.NaN, 0);
             }
 
+            if (SpiPinLevel(pin, driving) is bool spi)
+            {
+                // [spi] Master mode: SCK and MOSI carry the SPI's levels, MISO is an input (its pull-up still PORTB4).
+                if (pin == SpiMisoPin) return new PinOutput(false, level, level, double.NaN, 0);
+                return new PinOutput(true, spi, false, double.NaN, 0);
+            }
+
             double duty = double.NaN, freq = 0;
             if (driving) HardwarePwm(pin, out duty, out freq);
             return new PinOutput(driving, level, !driving && level, duty, freq);
@@ -164,6 +172,15 @@ namespace RobotTwin.CoreSim.Firmware
             }
 
             if (ddr == DDRC && TwiEnabled) value |= 0x30; // SDA/SCL owned by the TWI: idle bus reads high
+            if (ddr == DDRB && SpiMaster)
+            {
+                // [spi] SCK/MOSI carry the SPI's levels where DDRB makes them outputs; MISO reads the line whatever DDRB says.
+                for (int b = 3; b <= 5; b++)
+                {
+                    if (SpiPinLevel(8 + b, (d & (1 << b)) != 0) is not bool level) continue;
+                    value = level ? value | (1 << b) : value & ~(1 << b);
+                }
+            }
 
             return (byte)value;
         }
@@ -194,9 +211,10 @@ namespace RobotTwin.CoreSim.Firmware
                 case UDR0:
                     return ReadUdr0();
 
+                case SPSR:
+                    return ReadSpsr();
                 case SPDR:
-                    _d[SPSR] &= 0x7F;
-                    return _d[SPDR];
+                    return ReadSpdr();
                 default:
                     return _d[a];
             }
@@ -280,9 +298,14 @@ namespace RobotTwin.CoreSim.Firmware
                 case EECR:
                     EepromControl(v);
                     return;
+                case SPCR:
+                    WriteSpcr(v);
+                    return;
+                case SPSR:
+                    WriteSpsr(v);
+                    return;
                 case SPDR:
-                    _d[SPDR] = 0xFF; // no device on the bus answers
-                    _d[SPSR] |= 0x80;
+                    WriteSpdr(v);
                     return;
                 case TWCR:
                     TwiControl(v);
@@ -316,7 +339,8 @@ namespace RobotTwin.CoreSim.Firmware
             PortLog.Add(new PortSnapshot(Cycles, _d[DDRB], _d[PORTB], _d[DDRC], _d[PORTC], _d[DDRD], _d[PORTD]));
         }
 
-        private void DetectPinChanges()
+        /// <param name="at">The cycle the pins changed at, when a peripheral's edge falls inside an instruction (SPI's SCK).</param>
+        private void DetectPinChanges(ulong? at = null)
         {
             byte b = ReadPinRegister(DDRB, PORTB, 8), c = ReadPinRegister(DDRC, PORTC, 16), d = ReadPinRegister(DDRD, PORTD, 0);
             if (((b ^ _lastPinB) & _d[PCMSK0]) != 0) _d[PCIFR] |= 1;
@@ -333,7 +357,9 @@ namespace RobotTwin.CoreSim.Firmware
                 if (isc == 1 || (isc == 2 && was && !now) || (isc == 3 && !was && now)) _d[EIFR] |= (byte)(1 << n);
             }
 
-            if (Trace != null) TracePins(b, c, d);
+            if (Trace != null) TracePins(b, c, d, at ?? Cycles);
+            if (Spi.Slaves.Count > 0) SpiChipSelects(b, c, d);
+            if (((_lastPinB ^ b) & 0x04) != 0 && (b & 0x04) == 0) CheckSpiModeFault();   // [spi] SS pulled low
             _lastPinB = b;
             _lastPinC = c;
             _lastPinD = d;
@@ -355,13 +381,25 @@ namespace RobotTwin.CoreSim.Firmware
         private static bool PinLevel(byte b, byte c, byte d, int pin) =>
             pin < 8 ? (d & (1 << pin)) != 0 : pin < 14 ? (b & (1 << (pin - 8))) != 0 : (c & (1 << (pin - 14))) != 0;
 
-        private void TracePins(byte b, byte c, byte d)
+        private void TracePins(byte b, byte c, byte d, ulong at)
         {
             if (b == _lastPinB && c == _lastPinC && d == _lastPinD) return;
             for (int pin = 0; pin < PinCount; pin++)
             {
                 bool now = PinLevel(b, c, d, pin);
-                if (now != PinLevel(_lastPinB, _lastPinC, _lastPinD, pin)) Trace!.Add(new TraceEvent(Cycles, TraceKind.Pin, (byte)pin, now));
+                if (now != PinLevel(_lastPinB, _lastPinC, _lastPinD, pin)) Trace!.Add(new TraceEvent(at, TraceKind.Pin, (byte)pin, now));
+            }
+        }
+
+        /// <summary>[spi] Chip-select edges on any pin start and end the wired devices' frames.</summary>
+        private void SpiChipSelects(byte b, byte c, byte d)
+        {
+            if (b == _lastPinB && c == _lastPinC && d == _lastPinD) return;
+            foreach (var s in Spi.Slaves)
+            {
+                if (s.Cs < 0 || s.Cs >= PinCount) continue;
+                bool now = PinLevel(b, c, d, s.Cs);
+                if (now != PinLevel(_lastPinB, _lastPinC, _lastPinD, s.Cs)) Spi.PinChanged(s.Cs, now);
             }
         }
 
@@ -441,6 +479,7 @@ namespace RobotTwin.CoreSim.Firmware
             if (_txShift >= 0 || _txBuffer >= 0) AdvanceUartTx(cycles);
             if (_rxQueue.Count > 0) AdvanceUartRx(cycles);
             if (_twiAction != TwiAction.None) AdvanceTwi(cycles);
+            if (_spiEdge >= 0) AdvanceSpi();
             if (_adcCycles >= 0)
             {
                 _adcCycles -= cycles;

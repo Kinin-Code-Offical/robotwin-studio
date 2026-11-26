@@ -131,7 +131,9 @@ namespace RobotTwin.CoreSim.Automation
                 if (hex == null) continue;
                 string refDes = part.RefDes;
                 var cosim = AttachAvr(board, hex, () => Simulator == null ? 0 : Compiled!.PinVoltage(Simulator, refDes, "5V"));
-                if (cosim != null) AttachI2c(cosim.I2c, part.RefDes, 9.81);
+                if (cosim == null) continue;
+                AttachI2c(cosim.I2c, part.RefDes, 9.81);
+                AttachSpi(cosim.Spi, part.RefDes, AvrPin);
             }
         }
 
