@@ -175,6 +175,7 @@ namespace RobotWin.Studio
 
             Tabs.ItemsSource = W.Documents;
             W.PreviewProvider = RenderPreview;
+            Loaded += (_, _) => UpdateWorkspaceButton();   // [workspaces]
             W.WorldPreviewProvider = doc => W.ActiveWorld == doc.World ? _world.Scene.RenderPreview() : null;   // [home] drawn from the world, not the screen
             W.PropertyChanged += OnWorkspaceChanged;
             W.ActiveDocumentChanged += (_, _) => OnActiveDocumentChanged();
@@ -256,6 +257,7 @@ namespace RobotWin.Studio
         private IEnumerable<PaletteCommand> PaletteCommands()
         {
             const string go = "Git", file = "Dosya", view = "Görünüm", tab = "Sekmeler", sim = "Simülasyon";
+            foreach (var c in WorkspaceCommands()) yield return c;   // [workspaces]
             foreach (var kv in _pageNames)
             {
                 string page = kv.Key;

@@ -44,6 +44,9 @@ namespace RobotWin.Studio.Pages
         /// <summary>[palette] The part selected on the sheet, if any.</summary>
         public RobotTwin.CoreSim.Design.SchematicPart? SelectedPart => System.Linq.Enumerable.FirstOrDefault(System.Linq.Enumerable.OfType<RobotTwin.CoreSim.Design.SchematicPart>(Canvas.Selection));
 
+        /// <summary>[workspaces] The page's panels (a workspace saves and restores their layout).</summary>
+        public DockManager? Panels => _dock;
+
         /// <summary>[palette] Brings the oscilloscope tab forward.</summary>
         public void ShowScope() => ShowDock(0);
 

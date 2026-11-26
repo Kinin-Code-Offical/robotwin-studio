@@ -1038,6 +1038,12 @@ namespace RobotWin.Studio.Shell
         private void Save()
         {
             if (!Persist || !_started) return;
+            LayoutStore.Put(_layoutKey, Snapshot());
+        }
+
+        /// <summary>[workspaces] The layout as it is now: every panel's place, order and size, the columns, the bottom row.</summary>
+        public DockLayoutState Snapshot()
+        {
             CaptureSizes();
             var s = new DockLayoutState
             {
@@ -1054,13 +1060,42 @@ namespace RobotWin.Studio.Shell
                 };
             }
 
-            LayoutStore.Put(_layoutKey, s);
+            return s;
+        }
+
+        /// <summary>[workspaces] Takes a saved layout (a workspace's): panels back where it had them, its sizes and bottom tab.</summary>
+        public void Restore(DockLayoutState state)
+        {
+            foreach (var it in _items) CloseWindow(it);
+            _leftShown = _rightShown = _bottomShown = false;   // the saved sizes, not the ones on screen now
+            LoadState(state);
+            Apply();
+            Save();
+        }
+
+        /// <summary>[workspaces] The bottom row shown on one tab, or hidden (a built-in workspace asks only this).</summary>
+        public void ShowBottom(bool show, string? tab = null)
+        {
+            _bottomHidden = !show;
+            if (show && tab != null && Find(tab) is { Place: DockPlace.Bottom, Chip: { } chip })
+            {
+                _applying = true;
+                chip.IsChecked = true;
+                _applying = false;
+            }
+
+            Apply();
+            ScheduleSave();
         }
 
         private void Load()
         {
             var s = LayoutStore.Get(_layoutKey);
-            if (s == null) return;
+            if (s != null) LoadState(s);
+        }
+
+        private void LoadState(DockLayoutState s)
+        {
             if (s.LeftWidth >= 180) _leftWidth = s.LeftWidth;
             if (s.RightWidth >= 180) _rightWidth = s.RightWidth;
             if (s.BottomHeight >= 36) _bottomHeight = s.BottomHeight;

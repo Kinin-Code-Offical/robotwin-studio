@@ -286,6 +286,9 @@ namespace RobotWin.Studio
             m.Items.Add(Check("Her zaman üstte", null, Topmost, v => Topmost = v));
             m.Items.Add(Item("Sistem menüsü", "Alt+Boşluk", () => _behavior?.ShowSystemMenu(new Point(8, 36))));
             m.Items.Add(new Separator());
+            var workspaces = Sub("Çalışma alanı");   // [workspaces]
+            FillWorkspaceMenu(workspaces);
+            m.Items.Add(workspaces);
             m.Items.Add(Item("Bölünmüş görünüm aç / kapat", "Ctrl+\\", ToggleSplit));
             m.Items.Add(Item("Bu sayfayı ayrı pencereye al", null, () => Detach(_current)));
             m.Items.Add(new Separator());

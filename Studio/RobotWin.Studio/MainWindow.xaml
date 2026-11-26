@@ -138,6 +138,14 @@
                 </Grid>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button x:Name="WorkspaceButton" Style="{StaticResource Btn.Icon}" Width="Auto" Height="42" Padding="10,0" Margin="0,0,4,0" Click="OnWorkspaceMenu"
+                            ToolTip="Çalışma alanı: göreve hazır yerleşimler ve kaydettikleriniz">
+                        <StackPanel Orientation="Horizontal">
+                            <t:Icon Data="{StaticResource I.Panel}" Size="14"/>
+                            <TextBlock x:Name="WorkspaceLabel" Text="Çalışma alanı" Margin="7,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                            <t:Icon Data="{StaticResource I.ChevronDown}" Size="10"/>
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnPalette" ToolTip="Komut paleti: her şeyi ara ve çalıştır (Ctrl+K)">
                         <t:Icon Data="{StaticResource I.Search}" Size="15"/>
                     </Button>

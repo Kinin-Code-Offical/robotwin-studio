@@ -15,6 +15,9 @@ namespace RobotWin.Studio.Pages
     {
         private DockManager? _dock;
 
+        /// <summary>[workspaces] The page's panels (a workspace saves and restores their layout); null before the page is built.</summary>
+        public DockManager? Panels => _dock;
+
         private void InitLayout()
         {
             _dock = new DockManager("world", this, PageRoot, MainArea, 0, 4, DockTabs, DockHost, BottomArea, DockRow, DockLineRow, DockSplitter, DockLine);

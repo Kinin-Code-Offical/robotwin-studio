@@ -8018,7 +8018,30 @@
   "Güven ve çalıştır": "Trust and run",
   "Çalıştırma": "Don't run",
   "C# betiği: ": "C# script: ",
-  "Simülasyon başlamadı: dosyadaki kod onaylanmadı": "The simulation did not start: the file's code was not approved"
+  "Simülasyon başlamadı: dosyadaki kod onaylanmadı": "The simulation did not start: the file's code was not approved",
+  "Çalışma alanı": "Workspace",
+  "Çalışma alanı: göreve hazır yerleşimler ve kaydettikleriniz": "Workspace: layouts ready for a task, and the ones you saved",
+  "Devre tasarımı": "Circuit design",
+  "Dünya simülasyonu": "World simulation",
+  "Şema geniş, alt panel kapalı: parça yerleştirme ve kablolama": "A wide sheet, bottom panel closed: placing parts and wiring",
+  "Şema ve altta osiloskop: simülasyonu izleme": "The sheet with the oscilloscope below: watching the simulation",
+  "Kartların kodu, derleme ve hata ayıklama": "The boards' code, building and debugging",
+  "Kart yerleşimi, yönlendirme ve DRC": "Board layout, routing and DRC",
+  "Parça modelleme": "Part modelling",
+  "Sahne, palet ve denetçi: dünyayı kurma": "Scene, palette and inspector: building the world",
+  "Sahne ve altta kablolar ve ölçümler: çalışan dünyayı izleme": "The scene with cables and measurements below: watching the running world",
+  "Ekrandaki düzeni çalışma alanı olarak kaydet…": "Save the layout on screen as a workspace…",
+  "Bu çalışma alanını ekrandaki düzenle güncelle": "Update this workspace with the layout on screen",
+  "Varsayılan düzene dön": "Reset to the default layout",
+  "Çalışma alanını kaydet": "Save workspace",
+  "Ekrandaki düzen (açık sayfa, panellerin yeri ve boyutları) bu adla kaydedilir.": "The layout on screen (the open page, the panels' places and sizes) is saved under this name.",
+  "Çalışma alanını yeniden adlandır": "Rename workspace",
+  "Yeni ad:": "New name:",
+  "Çalışma alanını sil": "Delete workspace",
+  "Bu ad hazır bir çalışma alanının; başka bir ad seçin": "This name is a built-in workspace's; choose another",
+  "Bu ad kullanılıyor; başka bir ad seçin": "This name is taken; choose another",
+  "Paneller varsayılan yerlerine döndü": "The panels are back in their default places",
+  "Benim düzenim": "My layout"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11325,6 +11348,10 @@
   "OPC UA: '{…}' istemcisinin sertifikası güvenilir değil, bağlantı reddedildi; güvenmek için sertifikayı {…} klasöründen {…} klasörüne taşıyın": "OPC UA: the certificate of client '{0}' is not trusted, the connection was refused; to trust it, move the certificate from {1} to {2}",
   "OPC UA: '{…}' kullanıcısı reddedildi (adı ya da parolası yanlış)": "OPC UA: user '{0}' was refused (wrong name or password)",
   "{…} kart": "{0} boards",
-  "{…} gövde": "{0} bodies"
+  "{…} gövde": "{0} bodies",
+  "Çalışma alanı: {…}": "Workspace: {0}",
+  "Çalışma alanı kaydedildi: {…}": "Workspace saved: {0}",
+  "Çalışma alanı güncellendi: {…}": "Workspace updated: {0}",
+  "'{…}' çalışma alanı silinsin mi? Ekrandaki düzen olduğu gibi kalır.": "Delete the workspace '{0}'? The layout on screen stays as it is."
  }
 }

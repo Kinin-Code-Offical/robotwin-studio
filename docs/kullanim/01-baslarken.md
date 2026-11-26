@@ -70,6 +70,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 
 ### Pencere özellikleri
 
+- **Çalışma alanları:** başlık çubuğundaki **Çalışma alanı** seçicisi (ya da **Pencere → Çalışma alanı**) göreve hazır yerleşimleri açar: Devre tasarımı, Ölçüm (şema ve altta osiloskop), Kod, PCB, Mekanik, Dünya, Dünya simülasyonu (altta kablolar ve ölçümler). Panelleri istediğiniz gibi düzenleyip **Ekrandaki düzeni çalışma alanı olarak kaydet…** ile kendi çalışma alanınızı yapabilir, **Varsayılan düzene dön** ile panelleri ilk yerlerine alabilirsiniz.
 - **Komut paleti (Ctrl+K):** her komutu, sayfayı ve parçayı adını yazarak bulun. Ne istediğinizi cümle gibi de yazabilirsiniz, kelimelerin sırası ve ekleri önemli değil: "MOSFET ekle", "servo motorun akımını izle", "DRC çalıştır", "seçili parçayı PCB'de göster", "montaj ilişkilerini denetle". Açık sayfanın komutları önce gelir; yalnızca o anda yapılabilecek komutlar (bir parça seçiliyken "PCB'de göster" gibi) listelenir.
 - **Bölünmüş görünüm (Ctrl+\\):** iki sayfayı yan yana gösterir; örneğin devre ile PCB'yi birlikte görürsünüz.
 - **Ayrı pencereye al:** **Pencere → Bu sayfayı ayrı pencereye al** ile bir sayfayı ikinci bir pencereye (örneğin ikinci monitöre) taşıyın.

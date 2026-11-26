@@ -368,6 +368,8 @@ namespace RobotWin.Studio
                 Shell.Themes.Apply();
             }
             window.Navigate(page);
+            // [workspaces] --workspace name: that workspace applied for the picture (nothing of the user's is saved)
+            if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--workspace").Skip(1).FirstOrDefault() is { } workspace) window.ApplyWorkspace(workspace);
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
             int phase = 0;
             timer.Tick += (_, _) =>

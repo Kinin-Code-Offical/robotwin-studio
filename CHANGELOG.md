@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Workspaces:** task layouts as in Blender and Fusion, picked from the title bar, Window menu or command palette: Circuit design, Measuring, Code, PCB, Mechanics, World, World simulation; save the layout on screen as your own, update, rename or delete it; reset the panels to their defaults.
 - **Trust for code in files from elsewhere:** a project or world Windows marked as downloaded that carries code the PC runs directly (an FMU part, C# scripts) asks before its simulation starts, as VS Code's workspace trust does; trusting it unblocks the file.
 - **Recent work as cards on the start page:** each recent file shows the picture saved in it (the circuit sheet, or the world as its page showed it: worlds now save one too), its name, folder and time; a file without one shows its type icon.
 - **Updates roll back when the new version does not start:** the setup moves what it replaces into a hidden `.rollback` folder, runs the new app's `--startup-check` (runtime, assemblies, resources, catalogue, language packs), and restores the previous version as it was when the check fails or unpacking stops half way.
