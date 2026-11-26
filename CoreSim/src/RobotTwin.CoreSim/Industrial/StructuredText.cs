@@ -13,7 +13,10 @@ namespace RobotTwin.CoreSim.Industrial
         Int,
         Real,
         Time,
-        Block
+        Block,
+
+        /// <summary>[plc-struct] A structure: its fields are variables of their own ("P.X").</summary>
+        Struct
     }
 
     /// <summary>[plc] A compile error in a Structured Text program: where (line, 1-based) and why (in Turkish, as the editor shows it).</summary>
@@ -80,8 +83,8 @@ namespace RobotTwin.CoreSim.Industrial
 
         /// <summary>The variables by name (upper case), for watching: their type and value as text.</summary>
         public IEnumerable<(string Name, StType Type, string Value)> Watch =>
-            _vars.Values.Where(v => v.Type != StType.Block).SelectMany(v => v.Elements != null
-                ? v.Elements.Select((x, i) => (v.Name + "[" + (v.Lo + i).ToString(CultureInfo.InvariantCulture) + "]", v.Type, Format(v.Type, x)))
+            _vars.Values.Where(v => v.Type != StType.Block && v.Type != StType.Struct).SelectMany(v => v.Elements != null
+                ? v.Elements.Select((x, i) => (v.ElementName(i), v.Type, Format(v.Type, x)))
                 : new[] { (v.Name, v.Type, Format(v.Type, v.Value)) });
 
         /// <summary>
@@ -89,14 +92,15 @@ namespace RobotTwin.CoreSim.Industrial
         /// (INT, REAL …), whether it can be written (not an input), and its value now.
         /// </summary>
         public IEnumerable<(string Name, StType Type, string TypeName, bool Writable, double Value)> Tags =>
-            _vars.Values.Where(v => v.Type != StType.Block).SelectMany(v => v.Elements != null
-                ? v.Elements.Select((x, i) => (v.Name + "[" + (v.Lo + i).ToString(CultureInfo.InvariantCulture) + "]", v.Type, v.TypeName, true, x))
+            _vars.Values.Where(v => v.Type != StType.Block && v.Type != StType.Struct).SelectMany(v => v.Elements != null
+                ? v.Elements.Select((x, i) => (v.ElementName(i), v.Type, v.TypeName, true, x))
                 : new[] { (v.Name, v.Type, v.TypeName, v.Area != 'I', v.Value) });
 
         public double Read(string name)
         {
             string key = name.Trim().ToUpperInvariant();
-            if (Element(key) is var (array, index)) return array.Elements![index];   // an array's element: A[3]
+            if (Element(key) is var (array, index)) return array.Elements![index];   // an array's element: A[3], P.ARR[2], A[2].X
+            if (_vars.TryGetValue(key, out var exact) && exact.Type != StType.Block && exact.Type != StType.Struct && !exact.IsArray) return exact.Value;   // a field: P.X
             int dot = key.IndexOf('.');
             if (dot > 0 && !key.StartsWith("%", StringComparison.Ordinal))
                 return _vars.TryGetValue(key.Substring(0, dot), out var b) && b.Block != null ? b.Block[key.Substring(dot + 1)] : double.NaN;   // a block's member: T1.Q
@@ -106,10 +110,14 @@ namespace RobotTwin.CoreSim.Industrial
         /// <summary>[plc-pou] "A[3]": the array and the element's place in it, or null.</summary>
         private (Var Array, int Index)? Element(string key)
         {
-            int open = key.IndexOf('[');
-            if (open <= 0 || !key.EndsWith("]", StringComparison.Ordinal)) return null;
-            if (!_vars.TryGetValue(key.Substring(0, open), out var v) || v.Elements == null) return null;
-            if (!int.TryParse(key.Substring(open + 1, key.Length - open - 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out int i)) return null;
+            int open = key.IndexOf('['), close = key.IndexOf(']');
+            if (open <= 0 || close < open) return null;
+            string root = key.Substring(0, open), path = key.Substring(close + 1);
+            if (!int.TryParse(key.Substring(open + 1, close - open - 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out int i)) return null;
+            // A[3] and P.ARR[3] by their names; A[3].X through the field's array of an array of structures
+            var v = path.Length == 0 && _vars.TryGetValue(root, out var named) && named.DisplayRoot == null ? named
+                : _vars.Values.FirstOrDefault(x => x.DisplayRoot == root && x.DisplayPath == path);
+            if (v?.Elements == null) return null;
             return i >= v.Lo && i < v.Lo + v.Elements.Length ? (v, i - v.Lo) : null;
         }
 
@@ -232,8 +240,23 @@ namespace RobotTwin.CoreSim.Industrial
             public int Lo;   // [plc-pou] an array's first index
             public double[]? Elements, InitialElements;   // an array of values
             public Block[]? Blocks;   // an array of block instances
+            public StructDef? Struct;   // [plc-struct] a structure (its fields are variables of their own)
+            public int StructCount;   // an array of structures: how many (Lo its first index)
+            public List<Var>? Leaves;   // a structure's fields, nested ones opened up, in their order
+            public string? DisplayRoot, DisplayPath;   // a field of an array of structures: "A" and ".X", shown as A[3].X
 
             public bool IsArray => Elements != null || Blocks != null;
+
+            public string ElementName(int i) =>
+                (DisplayRoot ?? Name) + "[" + (Lo + i).ToString(CultureInfo.InvariantCulture) + "]" + (DisplayRoot != null ? DisplayPath : string.Empty);
+
+            /// <summary>An element of an array of structures from its index, or a run-time fault outside it.</summary>
+            public int StructSlot(double index, int line)
+            {
+                long i = (long)Math.Floor(index);
+                if (i < Lo || i >= Lo + StructCount) throw new StRunException($"{line}. satırda {Name}[{i}]: dizi {Lo}..{Lo + StructCount - 1} arası.");
+                return (int)(i - Lo);
+            }
 
             public int Length => Elements?.Length ?? Blocks?.Length ?? 0;
 
@@ -241,7 +264,8 @@ namespace RobotTwin.CoreSim.Industrial
             public int Slot(double index, int line)
             {
                 long i = (long)Math.Floor(index);
-                if (i < Lo || i >= Lo + Length) throw new StRunException($"{line}. satırda {Name}[{i}]: dizi {Lo}..{Lo + Length - 1} arası.");
+                if (i < Lo || i >= Lo + Length)
+                    throw new StRunException($"{line}. satırda {DisplayRoot ?? Name}[{i}]{(DisplayRoot != null ? DisplayPath : string.Empty)}: dizi {Lo}..{Lo + Length - 1} arası.");
                 return (int)(i - Lo);
             }
 
@@ -285,6 +309,50 @@ namespace RobotTwin.CoreSim.Industrial
 
             public void Set(double v) => Value = Coerce(Type, TypeName, v);
         }
+
+        /// <summary>[plc-struct] A structure type: its fields in their order.</summary>
+        private sealed class StructDef
+        {
+            public string Name = string.Empty;
+            public readonly List<FieldDef> Fields = new List<FieldDef>();
+        }
+
+        private sealed class FieldDef
+        {
+            public string Name = string.Empty;
+            public string TypeName = string.Empty;
+            public int Lo, Length;   // an array field
+            public Expr? Init;
+            public List<Expr>? Inits;
+            public int Line;
+        }
+
+        /// <summary>
+        /// [plc-struct] Copies a variable into another of the same shape: a value, a whole array, or a structure field by field;
+        /// a slot ≥ 0 is the element of an array of structures (or of an array) on that side.
+        /// </summary>
+        private static void CopyVar(Var s, int sSlot, Var d, int dSlot)
+        {
+            if (s.Leaves != null && d.Leaves != null)
+            {
+                for (int k = 0; k < s.Leaves.Count && k < d.Leaves.Count; k++) CopyVar(s.Leaves[k], sSlot, d.Leaves[k], dSlot);
+                return;
+            }
+
+            if (s.Elements != null && sSlot < 0 && d.Elements != null && dSlot < 0)
+            {
+                for (int i = 0; i < Math.Min(s.Elements.Length, d.Elements.Length); i++) d.Elements[i] = Coerce(d.Type, d.TypeName, s.Elements[i]);
+                return;
+            }
+
+            double v = sSlot >= 0 && s.Elements != null ? s.Elements[sSlot] : s.Value;
+            if (dSlot >= 0 && d.Elements != null) d.Elements[dSlot] = Coerce(d.Type, d.TypeName, v);
+            else d.Set(v);
+        }
+
+        /// <summary>The slot of an access: an element of an array of structures (or of an array), or −1 for the whole.</summary>
+        private static int SlotOf(Var v, Expr? at, StProgram p, int line) =>
+            at == null ? -1 : v.Type == StType.Struct ? v.StructSlot(at.Eval(p), line) : v.Slot(at.Eval(p), line);
 
         /// <summary>A value as a variable of this type keeps it: BOOL 0/1, integers truncated and wrapped, REAL and TIME as they are.</summary>
         private static double Coerce(StType type, string typeName, double v) => type switch
@@ -646,7 +714,7 @@ namespace RobotTwin.CoreSim.Industrial
         {
             private readonly Dictionary<string, Var> _vars;
             private readonly List<Stmt> _body;
-            private readonly List<string> _inputs, _outputs;
+            private readonly List<string> _inputs, _outputs, _inOuts;
 
             public UserBlock(Dictionary<string, Var> vars, List<string> order, List<Stmt> body)
             {
@@ -654,8 +722,15 @@ namespace RobotTwin.CoreSim.Industrial
                 _body = body;
                 _inputs = order.Where(n => vars[n].Section == 'I').ToList();
                 _outputs = order.Where(n => vars[n].Section == 'O').ToList();
+                _inOuts = order.Where(n => vars[n].Section == 'X').ToList();
                 Publish();
             }
+
+            /// <summary>[plc-struct] Its VAR_IN_OUT parameters.</summary>
+            public IReadOnlyCollection<string> InOuts => _inOuts;
+
+            /// <summary>[plc-struct] One of its own variables (a VAR_IN_OUT the caller's value is copied into).</summary>
+            public Var Inner(string name) => _vars[name];
 
             public override IReadOnlyCollection<string> Inputs => _inputs;
 
@@ -693,6 +768,9 @@ namespace RobotTwin.CoreSim.Industrial
             public string Name = string.Empty;
             public Var Result = null!;
             public readonly List<Var> Inputs = new List<Var>();
+
+            /// <summary>[plc-struct] VAR_INPUT and VAR_IN_OUT in their declared order: the positional arguments.</summary>
+            public readonly List<Var> Params = new List<Var>();
             public Dictionary<string, Var> Vars = new Dictionary<string, Var>(StringComparer.Ordinal);
             public List<Stmt> Body = new List<Stmt>();
         }
@@ -751,15 +829,19 @@ namespace RobotTwin.CoreSim.Industrial
         {
             public UserFunction Function = null!;
             public List<(Var Input, Expr Value)> Args = new List<(Var, Expr)>();
+            public List<(Var Inner, Var Outer, Expr? OuterAt)> InOuts = new List<(Var, Var, Expr?)>();   // [plc-struct]
 
             public override double Eval(StProgram p)
             {
                 var values = new double[Args.Count];
                 for (int i = 0; i < Args.Count; i++) values[i] = Args[i].Value.Eval(p);
+                var slots = InOuts.Select(x => SlotOf(x.Outer, x.OuterAt, p, Line)).ToList();
                 foreach (var v in Function.Vars.Values) v.Reset();
                 for (int i = 0; i < Args.Count; i++) Args[i].Input.Set(values[i]);
+                for (int k = 0; k < InOuts.Count; k++) CopyVar(InOuts[k].Outer, slots[k], InOuts[k].Inner, -1);
                 p.Spend();
                 p.Run(Function.Body);
+                for (int k = 0; k < InOuts.Count; k++) CopyVar(InOuts[k].Inner, -1, InOuts[k].Outer, slots[k]);
                 return Function.Result.Value;
             }
         }
@@ -919,18 +1001,46 @@ namespace RobotTwin.CoreSim.Industrial
             }
         }
 
+        /// <summary>[plc-struct] <c>P := Q;</c>, <c>A[i] := P;</c>: a structure copied field by field.</summary>
+        private sealed class StructAssign : Stmt
+        {
+            public Var Dst = null!, Src = null!;
+            public Expr? DstAt, SrcAt;
+
+            public override Flow Run(StProgram p)
+            {
+                int s = SlotOf(Src, SrcAt, p, Line), d = SlotOf(Dst, DstAt, p, Line);
+                CopyVar(Src, s, Dst, d);
+                return Flow.Next;
+            }
+        }
+
         private sealed class BlockCall : Stmt
         {
             public Var Instance = null!;
             public Expr? At;   // [plc-pou] the element, for a block in an array: T[i](…)
             public List<(string Name, Expr Value)> Inputs = new List<(string, Expr)>();
             public List<(string Name, Var Target)> Outputs = new List<(string, Var)>();
+            public List<(string Name, Var Outer, Expr? OuterAt)> InOuts = new List<(string, Var, Expr?)>();   // [plc-struct] VAR_IN_OUT
 
             public override Flow Run(StProgram p)
             {
                 var b = At != null ? Instance.Blocks![Instance.Slot(At.Eval(p), Line)] : Instance.Block!;
+                if (InOuts.Count > 0) return RunInOut(p, (UserBlock)b);
                 foreach (var (name, value) in Inputs) b[name] = value.Eval(p);
                 b.Call(p.Clock, p);
+                foreach (var (name, target) in Outputs) target.Set(b[name]);
+                return Flow.Next;
+            }
+
+            /// <summary>[plc-struct] A call with VAR_IN_OUT: the caller's variables copied in, the block run, then copied back.</summary>
+            private Flow RunInOut(StProgram p, UserBlock b)
+            {
+                var slots = InOuts.Select(x => SlotOf(x.Outer, x.OuterAt, p, Line)).ToList();
+                for (int k = 0; k < InOuts.Count; k++) CopyVar(InOuts[k].Outer, slots[k], b.Inner(InOuts[k].Name), -1);
+                foreach (var (name, value) in Inputs) b[name] = value.Eval(p);
+                b.Call(p.Clock, p);
+                for (int k = 0; k < InOuts.Count; k++) CopyVar(b.Inner(InOuts[k].Name), -1, InOuts[k].Outer, slots[k]);
                 foreach (var (name, target) in Outputs) target.Set(b[name]);
                 return Flow.Next;
             }
@@ -1234,21 +1344,279 @@ namespace RobotTwin.CoreSim.Industrial
             private readonly Dictionary<string, Var> _vars = new Dictionary<string, Var>(StringComparer.Ordinal);
             private readonly List<string> _order = new List<string>();   // [plc-pou] declaration order (a FUNCTION's positional arguments)
             private readonly Dictionary<string, Pou> _pous;
+            private readonly Dictionary<string, StructDef> _structs;
+            private readonly Dictionary<string, Dictionary<string, int>> _enums;
             private readonly int _depth;
             private readonly string? _inside;   // "FUNCTION_BLOCK" or "FUNCTION" while compiling one, null for the program
             private int _i;
 
-            public Parser(List<Token> tokens) : this(tokens, new Dictionary<string, Pou>(StringComparer.Ordinal), 0, null)
+            public Parser(List<Token> tokens)
+                : this(tokens, new Dictionary<string, Pou>(StringComparer.Ordinal), new Dictionary<string, StructDef>(StringComparer.Ordinal),
+                    new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal), 0, null)
             {
             }
 
-            private Parser(List<Token> tokens, Dictionary<string, Pou> pous, int depth, string? inside)
+            private Parser(List<Token> tokens, Dictionary<string, Pou> pous, Dictionary<string, StructDef> structs, Dictionary<string, Dictionary<string, int>> enums, int depth, string? inside)
             {
                 _t = tokens;
                 _pous = pous;
+                _structs = structs;
+                _enums = enums;
                 _depth = depth;
                 _inside = inside;
             }
+            /// <summary>
+            /// [plc-struct] Takes the TYPE … END_TYPE parts out of the source and reads them: structures
+            /// (<c>Point : STRUCT X, Y : REAL; END_STRUCT;</c>) and enumerations (<c>Mode : (Idle, Run := 10, Fault);</c>).
+            /// </summary>
+            private void ExtractTypes()
+            {
+                for (int i = 0; i < _t.Count; i++)
+                {
+                    if (!_t[i].Is("TYPE")) continue;
+                    int j = i + 1;
+                    while (j < _t.Count && _t[j].Kind != Tok.End && !_t[j].Is("END_TYPE")) j++;
+                    if (j >= _t.Count || !_t[j].Is("END_TYPE")) throw new StCompileException(_t[i].Line, "TYPE için END_TYPE eksik.");
+                    int last = j + 1 < _t.Count && _t[j + 1].Is(";") ? j + 1 : j;
+                    var tokens = _t.GetRange(i + 1, j - i - 1);
+                    tokens.Add(new Token(Tok.End, string.Empty, _t[j].Line));
+                    _t.RemoveRange(i, last - i + 1);
+                    i--;
+                    new Parser(tokens, _pous, _structs, _enums, _depth, null).TypeDeclarations();
+                }
+            }
+
+            private void TypeDeclarations()
+            {
+                while (Peek.Kind != Tok.End)
+                {
+                    var name = Ident("tür adı");
+                    if (Elementary.Contains(name.Text) || Block.Make(name.Text) != null || Functions.Contains(name.Text))
+                        throw new StCompileException(name.Line, $"'{name.Text}' standart bir adın; başka bir ad verin.");
+                    if (_structs.ContainsKey(name.Text) || _enums.ContainsKey(name.Text)) throw new StCompileException(name.Line, $"'{name.Text}' türü iki kez tanımlanmış.");
+                    Expect(":", "':'");
+                    if (Accept("STRUCT"))
+                    {
+                        var def = new StructDef { Name = name.Text };
+                        while (!Accept("END_STRUCT"))
+                        {
+                            if (Peek.Kind == Tok.End) throw new StCompileException(name.Line, $"{name.Text}: END_STRUCT eksik.");
+                            var fields = new List<Token> { Ident("alan adı") };
+                            while (Accept(",")) fields.Add(Ident("alan adı"));
+                            Expect(":", "':' (alanın türü)");
+                            int lo = 0, length = 0;
+                            if (Accept("ARRAY"))
+                            {
+                                Expect("[", "'['");
+                                lo = Bound();
+                                Expect("..", "'..'");
+                                int hi = Bound();
+                                Expect("]", "']'");
+                                Expect("OF", "OF");
+                                if (hi < lo || (long)hi - lo + 1 > 10000) throw new StCompileException(fields[0].Line, $"Dizinin sınırları geçersiz: [{lo}..{hi}].");
+                                length = hi - lo + 1;
+                            }
+
+                            var type = Ident("tür");
+                            Expr? init = null;
+                            List<Expr>? inits = null;
+                            if (Accept(":="))
+                            {
+                                if (length > 0)
+                                {
+                                    Expect("[", "'['");
+                                    inits = new List<Expr>();
+                                    do inits.Add(Expression());
+                                    while (Accept(","));
+                                    Expect("]", "']'");
+                                }
+                                else init = Expression();
+                            }
+
+                            Expect(";", "';'");
+                            foreach (var f in fields)
+                            {
+                                if (def.Fields.Any(x => x.Name == f.Text)) throw new StCompileException(f.Line, $"{name.Text}: '{f.Text}' alanı iki kez.");
+                                def.Fields.Add(new FieldDef { Name = f.Text, TypeName = type.Text, Lo = lo, Length = length, Init = init, Inits = inits, Line = f.Line });
+                            }
+                        }
+
+                        if (def.Fields.Count == 0) throw new StCompileException(name.Line, $"{name.Text} yapısının alanı yok.");
+                        _structs[name.Text] = def;
+                    }
+                    else if (Accept("("))
+                    {
+                        var values = new Dictionary<string, int>(StringComparer.Ordinal);
+                        int next = 0;
+                        do
+                        {
+                            var v = Ident("sayım değeri");
+                            if (Accept(":="))
+                            {
+                                bool negative = Accept("-");
+                                if (Peek.Kind != Tok.Number) throw new StCompileException(Peek.Line, "Sayım değeri bir tamsayı olmalı.");
+                                next = (int)Next().Value * (negative ? -1 : 1);
+                            }
+
+                            if (values.ContainsKey(v.Text)) throw new StCompileException(v.Line, $"{name.Text}: '{v.Text}' iki kez.");
+                            values[v.Text] = next++;
+                        }
+                        while (Accept(","));
+
+                        Expect(")", "')'");
+                        if (Accept(":=")) Ident("başlangıç değeri");
+                        _enums[name.Text] = values;
+                    }
+                    else throw new StCompileException(Peek.Line, $"{name.Text}: STRUCT ya da '(' (sayım) bekleniyordu.");
+
+                    Accept(";");
+                }
+            }
+
+            /// <summary>[plc-struct] An enumeration's value by its name ("Run") or as "Mode#Run" (the name already read); null when it is not one.</summary>
+            private int? EnumConstant(Token name)
+            {
+                if (_enums.TryGetValue(name.Text, out var typed) && Peek.Is("#"))
+                {
+                    Next();
+                    var v = Ident("sayım değeri");
+                    if (!typed.TryGetValue(v.Text, out int x)) throw new StCompileException(v.Line, $"{name.Text} sayımında '{v.Text}' yok ({string.Join(", ", typed.Keys)}).");
+                    return x;
+                }
+
+                foreach (var e in _enums.Values)
+                    if (e.TryGetValue(name.Text, out int x)) return x;
+                return null;
+            }
+
+            /// <summary>
+            /// [plc-struct] A structure variable opened up: a marker for the whole, and a variable per field ("P.X"); in an
+            /// array of structures each field is an array ("A.X", shown as A[3].X). An array inside an array of structures
+            /// (two dimensions) is not supported.
+            /// </summary>
+            private Var DeclareStruct(string name, StructDef def, char section, int lo, int count, string? root, string path, int line, int depth = 0)
+            {
+                if (depth > 8) throw new StCompileException(line, $"{def.Name}: yapılar 8 kattan derin iç içe (kendini mi içeriyor?).");
+                var marker = new Var { Name = name, Type = StType.Struct, TypeName = def.Name, Struct = def, Section = section, Lo = lo, StructCount = count, Leaves = new List<Var>() };
+                _vars[name] = marker;
+                foreach (var f in def.Fields)
+                {
+                    string full = name + "." + f.Name;
+                    if (_structs.TryGetValue(f.TypeName, out var inner))
+                    {
+                        Var child;
+                        if (f.Length > 0)
+                        {
+                            if (count > 0) throw new StCompileException(f.Line, $"{def.Name}.{f.Name}: dizi içinde dizi (iki boyut) henüz yok.");
+                            child = DeclareStruct(full, inner, section, f.Lo, f.Length, full, string.Empty, f.Line, depth + 1);
+                        }
+                        else child = DeclareStruct(full, inner, section, lo, count, root, path + "." + f.Name, f.Line, depth + 1);
+                        marker.Leaves.AddRange(child.Leaves!);
+                        continue;
+                    }
+
+                    var leaf = new Var { Name = full, Section = section };
+                    if (Elementary.Contains(f.TypeName))
+                    {
+                        leaf.TypeName = f.TypeName;
+                        leaf.Type = ElementaryType(f.TypeName);
+                    }
+                    else if (_enums.ContainsKey(f.TypeName))
+                    {
+                        leaf.TypeName = "DINT";
+                        leaf.Type = StType.Int;
+                    }
+                    else throw new StCompileException(f.Line, $"{def.Name}.{f.Name}: '{f.TypeName}' türü yok (yapı alanları BOOL, INT, REAL, TIME, sayım ya da başka bir yapı olabilir).");
+
+                    if (f.Length > 0)
+                    {
+                        if (count > 0) throw new StCompileException(f.Line, $"{def.Name}.{f.Name}: dizi içinde dizi (iki boyut) henüz yok.");
+                        leaf.Lo = f.Lo;
+                        leaf.Elements = new double[f.Length];
+                        if (f.Inits != null)
+                            for (int k = 0; k < Math.Min(f.Inits.Count, f.Length); k++) leaf.Elements[k] = Coerce(leaf.Type, leaf.TypeName, f.Inits[k].Eval(null!));
+                    }
+                    else if (count > 0)
+                    {
+                        leaf.Lo = lo;
+                        leaf.Elements = new double[count];
+                        leaf.DisplayRoot = root;
+                        leaf.DisplayPath = path + "." + f.Name;
+                        if (f.Init != null)
+                            for (int k = 0; k < count; k++) leaf.Elements[k] = Coerce(leaf.Type, leaf.TypeName, f.Init.Eval(null!));
+                    }
+                    else if (f.Init != null)
+                    {
+                        leaf.Set(f.Init.Eval(null!));
+                        leaf.Initial = leaf.Value;
+                    }
+
+                    if (leaf.Elements != null) leaf.InitialElements = (double[])leaf.Elements.Clone();
+                    _vars[full] = leaf;
+                    marker.Leaves.Add(leaf);
+                }
+
+                return marker;
+            }
+
+            /// <summary>
+            /// [plc-struct] What a name followed by fields and indices reaches: a value (P.X, A[i].X, P.ARR[j]), or a whole
+            /// structure (P, A[i]) with the element when it is one of an array of structures.
+            /// </summary>
+            private (Var Var, Expr? At) Access(Var root)
+            {
+                var cur = root;
+                Expr? at = null;
+                while (true)
+                {
+                    if (cur.Type == StType.Struct)
+                    {
+                        if (cur.StructCount > 0 && at == null)
+                        {
+                            if (Peek.Is(".")) throw new StCompileException(Peek.Line, $"{cur.Name} bir yapı dizisi: {cur.Name}[i].alan gibi.");
+                            if (!Accept("[")) return (cur, null);
+                            at = IndexExpression();
+                            Expect("]", "']'");
+                            continue;
+                        }
+
+                        if (!Accept(".")) return (cur, at);
+                        var f = Ident("alan adı");
+                        if (!_vars.TryGetValue(cur.Name + "." + f.Text, out var next))
+                            throw new StCompileException(f.Line, $"{cur.TypeName} yapısının '{f.Text}' alanı yok ({string.Join(", ", cur.Struct!.Fields.Select(x => x.Name))}).");
+                        cur = next;
+                        continue;
+                    }
+
+                    if (cur.Elements != null && cur.DisplayRoot == null && at == null)
+                    {
+                        Expect("[", $"'[' ({cur.Name} bir dizi: {cur.Name}[i] gibi)");
+                        at = IndexExpression();
+                        Expect("]", "']'");
+                    }
+
+                    return (cur, at);
+                }
+            }
+
+            /// <summary>[plc-struct] A variable given for a VAR_IN_OUT: the same type and shape as the parameter.</summary>
+            private (Var Outer, Expr? At) InOutArgument(Var param, string owner, int line)
+            {
+                var tok = Ident("değişken (VAR_IN_OUT bir değişken ister)");
+                var root = Lookup(tok);
+                var (outer, at) = root.Type == StType.Struct || root.Elements != null && param.Elements == null ? Access(root) : (root, null);
+                bool same = param.Type == StType.Struct
+                    ? outer.Type == StType.Struct && outer.TypeName == param.TypeName && (outer.StructCount == 0 || at != null)
+                    : outer.Type == param.Type && outer.Type != StType.Struct && outer.Type != StType.Block
+                      && (param.Elements == null ? outer.Elements == null || at != null : outer.Elements != null && at == null && outer.Elements.Length == param.Elements.Length);
+                if (!same) throw new StCompileException(line, $"{owner}.{param.Name} {Describe(param)} ister; {outer.Name} {Describe(outer)}.");
+                return (outer, at);
+            }
+
+            private static string Describe(Var v) =>
+                v.Type == StType.Struct ? (v.StructCount > 0 ? $"{v.TypeName} dizisi" : v.TypeName + " yapısı")
+                : v.Elements != null && v.DisplayRoot == null ? $"{v.Elements.Length} elemanlı {v.TypeName} dizisi" : v.TypeName;
+
 
             /// <summary>[plc-pou] A FUNCTION_BLOCK or FUNCTION of the source: its tokens, compiled when first used.</summary>
             private sealed class Pou
@@ -1299,7 +1667,7 @@ namespace RobotTwin.CoreSim.Industrial
             private UserBlock Instantiate(Pou fb, int line)
             {
                 if (_depth >= 16) throw new StCompileException(line, $"{fb.Name}: bloklar 16 kattan derin iç içe (bir blok kendini mi içeriyor?).");
-                var sub = new Parser(new List<Token>(fb.Tokens), _pous, _depth + 1, "FUNCTION_BLOCK");
+                var sub = new Parser(new List<Token>(fb.Tokens), _pous, _structs, _enums, _depth + 1, "FUNCTION_BLOCK");
                 sub.Expect("FUNCTION_BLOCK", "FUNCTION_BLOCK");
                 sub.Next();
                 while (sub.Peek.Is("VAR") || sub.Peek.Is("VAR_INPUT") || sub.Peek.Is("VAR_OUTPUT") || sub.Peek.Is("VAR_TEMP") || sub.Peek.Is("VAR_IN_OUT")) sub.Declarations();
@@ -1314,7 +1682,7 @@ namespace RobotTwin.CoreSim.Industrial
                 if (f.Function != null) return f.Function;
                 if (f.Compiling) throw new StCompileException(line, $"{f.Name} kendini çağırıyor: fonksiyonlar özyinelemeli olamaz.");
                 f.Compiling = true;
-                var sub = new Parser(new List<Token>(f.Tokens), _pous, _depth + 1, "FUNCTION");
+                var sub = new Parser(new List<Token>(f.Tokens), _pous, _structs, _enums, _depth + 1, "FUNCTION");
                 sub.Expect("FUNCTION", "FUNCTION");
                 var name = sub.Next();
                 sub.Expect(":", $"':' ({name.Text} fonksiyonunun dönüş türü)");
@@ -1325,6 +1693,7 @@ namespace RobotTwin.CoreSim.Industrial
                 while (sub.Peek.Is("VAR") || sub.Peek.Is("VAR_INPUT") || sub.Peek.Is("VAR_TEMP") || sub.Peek.Is("VAR_OUTPUT") || sub.Peek.Is("VAR_IN_OUT")) sub.Declarations();
                 var fn = new UserFunction { Name = name.Text, Result = result, Vars = sub._vars };
                 fn.Inputs.AddRange(sub._order.Select(n => sub._vars[n]).Where(v => v.Section == 'I'));
+                fn.Params.AddRange(sub._order.Select(n => sub._vars[n]).Where(v => v.Section is 'I' or 'X'));
                 fn.Body = sub.Statements("END_FUNCTION");   // a call of itself in here finds it still compiling
                 sub.Expect("END_FUNCTION", "END_FUNCTION");
                 f.Compiling = false;
@@ -1356,6 +1725,7 @@ namespace RobotTwin.CoreSim.Industrial
 
             public StProgram Program()
             {
+                ExtractTypes();
                 ExtractPous();
                 string name = "PLC";
                 bool wrapped = Accept("PROGRAM");
@@ -1365,7 +1735,7 @@ namespace RobotTwin.CoreSim.Industrial
                     name = Next().Text;
                 }
 
-                while (Peek.Is("VAR") || Peek.Is("VAR_GLOBAL") || Peek.Is("VAR_INPUT") || Peek.Is("VAR_OUTPUT") || Peek.Is("VAR_TEMP")) Declarations();
+                while (Peek.Is("VAR") || Peek.Is("VAR_GLOBAL") || Peek.Is("VAR_INPUT") || Peek.Is("VAR_OUTPUT") || Peek.Is("VAR_TEMP") || Peek.Is("VAR_IN_OUT")) Declarations();
                 var body = Statements(wrapped ? new[] { "END_PROGRAM" } : Array.Empty<string>());
                 if (wrapped) Expect("END_PROGRAM", "END_PROGRAM");
                 Accept(";");
@@ -1376,8 +1746,8 @@ namespace RobotTwin.CoreSim.Industrial
             private void Declarations()
             {
                 var head = Next();
-                if (head.Is("VAR_IN_OUT")) throw new StCompileException(head.Line, "VAR_IN_OUT henüz yok: değeri VAR_INPUT ile verip VAR_OUTPUT ile geri alın.");
-                char section = _inside == null ? '\0' : head.Is("VAR_INPUT") ? 'I' : head.Is("VAR_OUTPUT") ? 'O' : '\0';
+                if (head.Is("VAR_IN_OUT") && _inside == null) throw new StCompileException(head.Line, "VAR_IN_OUT yalnız FUNCTION_BLOCK ve FUNCTION içinde olur.");
+                char section = _inside == null ? '\0' : head.Is("VAR_INPUT") ? 'I' : head.Is("VAR_OUTPUT") ? 'O' : head.Is("VAR_IN_OUT") ? 'X' : '\0';
                 if (_inside == "FUNCTION" && head.Is("VAR_OUTPUT")) throw new StCompileException(head.Line, "Bir FUNCTION'ın çıkışı kendi adıdır; birden çok çıkış için FUNCTION_BLOCK kullanın.");
                 Accept("RETAIN");
                 Accept("CONSTANT");
@@ -1416,6 +1786,47 @@ namespace RobotTwin.CoreSim.Industrial
                     string type = typeTok.Text;
                     Expr? init = null;
                     List<Expr>? inits = null;
+                    if (_structs.TryGetValue(type, out var structDef))
+                    {
+                        // [plc-struct] P : Point := (X := 1.0, Y := 2.0);
+                        var fieldInits = new List<(Token Field, Expr Value)>();
+                        if (Accept(":="))
+                        {
+                            if (array) throw new StCompileException(typeTok.Line, "Yapı dizisine başlangıç değeri verilmez; alanın türdeki başlangıç değeri kullanılır.");
+                            Expect("(", "'(' (yapının başlangıç değerleri)");
+                            do
+                            {
+                                var f = Ident("alan adı");
+                                Expect(":=", "':='");
+                                fieldInits.Add((f, Expression()));
+                            }
+                            while (Accept(","));
+                            Expect(")", "')'");
+                        }
+
+                        Expect(";", "';'");
+                        if (at != null) throw new StCompileException(names[0].Line, "Bir yapıya AT ile adres bağlanmaz.");
+                        if (section is 'I' or 'O') throw new StCompileException(typeTok.Line, "Yapı giriş ya da çıkış olamaz; VAR_IN_OUT ile geçirin.");
+                        foreach (var n in names)
+                        {
+                            if (_vars.ContainsKey(n.Text)) throw new StCompileException(n.Line, $"'{n.Text}' iki kez tanımlanmış.");
+                            var marker = DeclareStruct(n.Text, structDef, section, lo, array ? length : 0, n.Text, string.Empty, n.Line);
+                            foreach (var (f, value) in fieldInits)
+                            {
+                                if (!_vars.TryGetValue(n.Text + "." + f.Text, out var leaf) || leaf.Type == StType.Struct || leaf.Elements != null)
+                                    throw new StCompileException(f.Line, $"{structDef.Name} yapısının '{f.Text}' değer alanı yok.");
+                                leaf.Set(value.Eval(null!));
+                                leaf.Initial = leaf.Value;
+                            }
+
+                            _order.Add(marker.Name);
+                        }
+
+                        continue;
+                    }
+
+                    bool enumType = _enums.ContainsKey(type);
+                    if (enumType) type = "DINT";   // [plc-struct] an enumeration is kept as its value
                     if (Accept(":="))
                     {
                         if (array)
@@ -1439,6 +1850,10 @@ namespace RobotTwin.CoreSim.Industrial
                         {
                             v.Type = ElementaryType(type);
                             if (array) v.Elements = new double[length];
+                        }
+                        else if ((Block.Make(type) != null || fb != null) && section == 'X')
+                        {
+                            throw new StCompileException(typeTok.Line, "Bir blok örneği VAR_IN_OUT olamaz.");
                         }
                         else if (Block.Make(type) != null || fb != null)
                         {
@@ -1599,6 +2014,29 @@ namespace RobotTwin.CoreSim.Industrial
                 else if (t.Kind == Tok.Ident) target = Lookup(Next());
                 else throw new StCompileException(t.Line, $"Bir komut bekleniyordu, '{Shown(t)}' bulundu.");
 
+                if (target.Type == StType.Struct)
+                {
+                    // [plc-struct] P.X := …;  A[i].X := …;  P := Q;  A[i] := P;
+                    var (dst, dstAt) = Access(target);
+                    Expect(":=", "':='");
+                    if (dst.Type == StType.Struct)
+                    {
+                        if (dst.StructCount > 0 && dstAt == null) throw new StCompileException(t.Line, $"{dst.Name} bir yapı dizisi: bütünü atanmaz, {dst.Name}[i] := … gibi.");
+                        var srcTok = Ident($"bir {dst.TypeName} yapısı");
+                        var srcRoot = Lookup(srcTok);
+                        var (src, srcAt) = srcRoot.Type == StType.Struct ? Access(srcRoot) : (srcRoot, null);
+                        if (src.Type != StType.Struct || src.TypeName != dst.TypeName || (src.StructCount > 0 && srcAt == null))
+                            throw new StCompileException(srcTok.Line, $"{dst.Name} bir {dst.TypeName} yapısı; {src.Name} {Describe(src)}.");
+                        Expect(";", "';'");
+                        return new StructAssign { Line = t.Line, Dst = dst, DstAt = dstAt, Src = src, SrcAt = srcAt };
+                    }
+
+                    var fe = Expression();
+                    Expect(";", "';' (komutun sonu)");
+                    Check(dst, fe);
+                    return dstAt != null ? new AssignElement { Line = t.Line, Target = dst, At = dstAt, Value = fe } : new Assign { Line = t.Line, Target = dst, Value = fe };
+                }
+
                 if (target.IsArray)
                 {
                     // [plc-pou] A[i] := x;  T[i](IN := …);  T[i].PT := …;
@@ -1679,6 +2117,14 @@ namespace RobotTwin.CoreSim.Industrial
                         var m = Ident("blok parametresi");
                         if (Accept(":="))
                         {
+                            if (block is UserBlock ub && ub.InOuts.Contains(m.Text))
+                            {
+                                // [plc-struct] VAR_IN_OUT: the caller's own variable, copied in and back
+                                var (outer, outerAt) = InOutArgument(ub.Inner(m.Text), instance.TypeName, m.Line);
+                                call.InOuts.Add((m.Text, outer, outerAt));
+                                continue;
+                            }
+
                             if (!block.Inputs.Contains(m.Text)) throw new StCompileException(m.Line, $"{instance.TypeName} bloğunun '{m.Text}' girişi yok ({string.Join(", ", block.Inputs)}).");
                             call.Inputs.Add((m.Text, Expression()));
                         }
@@ -1697,6 +2143,12 @@ namespace RobotTwin.CoreSim.Industrial
                     while (Accept(","));
 
                     Expect(")", "')'");
+                }
+
+                if (block is UserBlock withInOut)
+                {
+                    var missing = withInOut.InOuts.Where(n => call.InOuts.All(x => x.Name != n)).ToList();
+                    if (missing.Count > 0) throw new StCompileException(line, $"{instance.TypeName}: VAR_IN_OUT '{string.Join("', '", missing)}' her çağrıda verilmeli.");
                 }
 
                 Expect(";", "';'");
@@ -1761,6 +2213,15 @@ namespace RobotTwin.CoreSim.Industrial
             private bool LabelAhead()
             {
                 int j = _i;
+                if (_t[j].Kind == Tok.Ident)
+                {
+                    // [plc-struct] an enumeration's value: Run: or Mode#Run:
+                    bool known = _enums.Values.Any(e => e.ContainsKey(_t[j].Text)) || _enums.ContainsKey(_t[j].Text) && _t[j + 1].Is("#");
+                    if (!known) return false;
+                    j += _t[j + 1].Is("#") ? 3 : 1;
+                    return _t[j].Is(":") || _t[j].Is(",") || _t[j].Is("..");
+                }
+
                 if (_t[j].Is("-")) j++;
                 if (_t[j].Kind != Tok.Number) return false;
                 j++;
@@ -1769,6 +2230,12 @@ namespace RobotTwin.CoreSim.Industrial
 
             private double Label()
             {
+                if (Peek.Kind == Tok.Ident && !_vars.ContainsKey(Peek.Text))
+                {
+                    var name = Next();
+                    return EnumConstant(name) ?? throw new StCompileException(name.Line, $"Durum etiketi bir tamsayı ya da sayım değeri olmalı, '{name.Text}' bulundu.");
+                }
+
                 bool negative = Accept("-");
                 if (Peek.Kind != Tok.Number) throw new StCompileException(Peek.Line, $"Durum etiketi bir tamsayı olmalı, '{Shown(Peek)}' bulundu.");
                 double v = Next().Value;
@@ -1980,7 +2447,15 @@ namespace RobotTwin.CoreSim.Industrial
                         }
 
                         if (Peek.Is("(") && _pous.TryGetValue(t.Text, out var pou) && pou.Kind == "FUNCTION") return FunctionCallExpression(t, pou);
+                        if (!_vars.ContainsKey(t.Text) && EnumConstant(t) is int constant) return new Const { Line = t.Line, Value = constant, Type = StType.Int };
                         var v = Lookup(t);
+                        if (v.Type == StType.Struct)
+                        {
+                            var (field, fieldAt) = Access(v);
+                            if (field.Type == StType.Struct) throw new StCompileException(t.Line, $"{field.Name} bir yapı: bir değer değil, alanlarından birini kullanın ({field.Name}.{field.Struct!.Fields[0].Name} gibi).");
+                            return fieldAt != null ? new Index { Line = t.Line, Var = field, At = fieldAt, Type = field.Type } : new Ref { Line = t.Line, Var = field, Type = field.Type };
+                        }
+
                         if (v.IsArray)
                         {
                             Expect("[", $"'[' ({v.Name} bir dizi: {v.Name}[i] gibi)");
@@ -2032,16 +2507,25 @@ namespace RobotTwin.CoreSim.Industrial
                         {
                             var arg = Next();
                             Next();
-                            input = fn.Inputs.FirstOrDefault(x => x.Name == arg.Text)
-                                    ?? throw new StCompileException(arg.Line, $"{fn.Name} fonksiyonunun '{arg.Text}' girişi yok ({string.Join(", ", fn.Inputs.Select(x => x.Name))}).");
+                            input = fn.Params.FirstOrDefault(x => x.Name == arg.Text)
+                                    ?? throw new StCompileException(arg.Line, $"{fn.Name} fonksiyonunun '{arg.Text}' girişi yok ({string.Join(", ", fn.Params.Select(x => x.Name))}).");
                         }
                         else
                         {
-                            if (position >= fn.Inputs.Count) throw new StCompileException(Peek.Line, $"{fn.Name} {fn.Inputs.Count} giriş alır.");
-                            input = fn.Inputs[position];
+                            if (position >= fn.Params.Count) throw new StCompileException(Peek.Line, $"{fn.Name} {fn.Params.Count} giriş alır.");
+                            input = fn.Params[position];
                         }
 
-                        if (call.Args.Any(a => a.Input == input)) throw new StCompileException(name.Line, $"{fn.Name}: '{input.Name}' iki kez verilmiş.");
+                        if (call.Args.Any(a => a.Input == input) || call.InOuts.Any(a => a.Inner == input)) throw new StCompileException(name.Line, $"{fn.Name}: '{input.Name}' iki kez verilmiş.");
+                        if (input.Section == 'X')
+                        {
+                            // [plc-struct] VAR_IN_OUT: the caller's own variable, copied in and back
+                            var (outer, outerAt) = InOutArgument(input, fn.Name, name.Line);
+                            call.InOuts.Add((input, outer, outerAt));
+                            position++;
+                            continue;
+                        }
+
                         var value = Expression();
                         if (input.Type == StType.Bool && value.Type != StType.Bool && value is not Const)
                             throw new StCompileException(value.Line, $"{fn.Name}.{input.Name} BOOL: bir koşul verin.");
@@ -2055,6 +2539,8 @@ namespace RobotTwin.CoreSim.Industrial
                     Expect(")", "')'");
                 }
 
+                var absent = fn.Params.Where(x => x.Section == 'X' && call.InOuts.All(a => a.Inner != x)).ToList();
+                if (absent.Count > 0) throw new StCompileException(name.Line, $"{fn.Name}: VAR_IN_OUT '{string.Join("', '", absent.Select(x => x.Name))}' her çağrıda verilmeli.");
                 return call;
             }
 

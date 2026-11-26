@@ -232,6 +232,9 @@ IF Oku.DONE THEN Seviye := Oku.VALUE; END_IF
 - `FUNCTION` durum tutmaz (değişkenleri her çağrıda baştan başlar); sonucu kendi adına atanır. Adlı (`Olcek(Ham := x, Ust := 10.0)`) ya da `VAR_INPUT` sırasıyla (`Olcek(x, 0.0, 10.0)`) çağrılır; verilmeyen giriş başlangıç değerini alır. Kendini çağıramaz.
 - Diziler: `ARRAY[1..8] OF INT := [3, 1, 4]`, zamanlayıcı ve blok dizileri de (`Gecikme : ARRAY[0..3] OF TON;` → `Gecikme[i](IN := …);`, `Gecikme[i].Q`). Dizinin dışındaki bir indis PLC'yi STOP'a alır. Panelde ve HMI'da elemanlar `A[3]` adıyla görünür.
 - Blok ve fonksiyonların içinde doğrudan adres (`%IX0.0`) ya da `AT` kullanılmaz: girişler programda okunup bloğa verilir.
+- Türler `TYPE … END_TYPE` içinde tanımlanır. Yapılar: `Parca : STRUCT No : INT; Agirlik : REAL := 0.5; END_STRUCT;`. Alanları `P.No` ile okunup yazılır; yapılar iç içe olabilir, alan dizi olabilir (`P.Olcum[2]`), yapı dizisi olabilir (`Hat[i].No`). `P := Q;` ve `Hat[i] := P;` bütün yapıyı alan alan kopyalar; başlangıç değeri `P : Parca := (No := 1, Agirlik := 2.0);` ile verilir. Panelde ve HMI'da alanlar `P.No`, `Hat[2].No` adıyla görünür.
+- Sayımlar: `Durum : (Bekle, Calis := 10, Ariza);`. Değerleri adlarıyla (`Calis`) ya da `Durum#Calis` biçiminde kullanılır; `CASE` etiketi de olabilirler.
+- `VAR_IN_OUT` çağıranın kendi değişkenini bloğa ya da fonksiyona verir; bloğun yaptığı değişiklik çağırana geri yazılır. Yapılar ve diziler bloklara böyle geçirilir: `Tasi(Hedef := Hat[2]);`. Her çağrıda verilmesi gerekir.
 
 ```
 FUNCTION_BLOCK Sicrama

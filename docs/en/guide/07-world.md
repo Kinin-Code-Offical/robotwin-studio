@@ -232,6 +232,9 @@ IF Read.DONE THEN Level := Read.VALUE; END_IF
 - A `FUNCTION` keeps nothing (its variables start afresh at every call); its result is assigned to its own name. It is called with named arguments (`Scale(Raw := x, Hi := 10.0)`) or in the order of its `VAR_INPUT` (`Scale(x, 0.0, 10.0)`); an input not given takes its initial value. It cannot call itself.
 - Arrays: `ARRAY[1..8] OF INT := [3, 1, 4]`, arrays of timers and blocks too (`Delay : ARRAY[0..3] OF TON;` → `Delay[i](IN := …);`, `Delay[i].Q`). An index outside the array puts the PLC in STOP. In the panel and on an HMI the elements show as `A[3]`.
 - Inside blocks and functions there are no direct addresses (`%IX0.0`) or `AT`: the program reads the inputs and gives them to the block.
+- Types are defined in `TYPE … END_TYPE`. Structures: `Part : STRUCT Id : INT; Weight : REAL := 0.5; END_STRUCT;`. Their fields are read and written as `P.Id`; structures nest, a field can be an array (`P.Marks[2]`), and there are arrays of structures (`Line[i].Id`). `P := Q;` and `Line[i] := P;` copy a whole structure field by field; an initial value is given as `P : Part := (Id := 1, Weight := 2.0);`. In the panel and on an HMI the fields show as `P.Id`, `Line[2].Id`.
+- Enumerations: `State : (Idle, Run := 10, Fault);`. Their values are used by name (`Run`) or as `State#Run`, and can be `CASE` labels.
+- `VAR_IN_OUT` gives a block or a function the caller's own variable; what the block changes is written back to the caller. Structures and arrays are passed to blocks this way: `Move(Target := Line[2]);`. It must be given on every call.
 
 ```
 FUNCTION_BLOCK Debounce
