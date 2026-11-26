@@ -476,6 +476,35 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
+            int offAt = Array.IndexOf(args, "--component-off");   // [components] --component-off <key>: that component switched off
+            if (offAt >= 0 && offAt + 1 < args.Length && World?.Find(Scene.Selected) is { } carrier)
+            {
+                Edit("Bileşen kapatıldı", () => WorldComponents.SetOn(carrier, args[offAt + 1], false));
+                BuildInspector();
+                Inspector.UpdateLayout();
+                Inspector.Children.OfType<System.Windows.Controls.Border>()
+                    .FirstOrDefault(b => (b.Child as System.Windows.Controls.StackPanel)?.Children.OfType<System.Windows.Controls.DockPanel>().FirstOrDefault()?.Children.OfType<System.Windows.Controls.CheckBox>().Any(c => c.IsChecked == false) == true)
+                    ?.BringIntoView();
+            }
+
+            int cardMenuAt = Array.IndexOf(args, "--card-menu");   // [components] --card-menu <title>: that card's ⋮ open, as the picture
+            if (cardMenuAt >= 0 && cardMenuAt + 1 < args.Length)
+            {
+                Inspector.UpdateLayout();
+                var card = Inspector.Children.OfType<System.Windows.Controls.Border>().FirstOrDefault(b => b.Tag as string == args[cardMenuAt + 1]);
+                var dots = card != null ? Descendants(card).OfType<System.Windows.Controls.Button>().FirstOrDefault(b => b.ToolTip as string == Shell.Lang.T("Bileşen menüsü")) : null;
+                if (dots != null)
+                {
+                    card!.BringIntoView();
+                    dots.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                    if (_lastCardMenu != null)
+                    {
+                        _lastCardMenu.UpdateLayout();
+                        App.SnapshotTarget = _lastCardMenu;
+                    }
+                }
+            }
+
             if (args.Contains("--add-component"))
             {
                 // [components] the Add Component list, open, as the picture

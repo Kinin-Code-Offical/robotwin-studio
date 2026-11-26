@@ -8493,7 +8493,12 @@
   "Seçilinin altına boş nesne": "Empty object under the selection",
   "Seçileni boş bir üst nesnenin altına al": "Put the selection under an empty parent",
   "Bu bileşenin kılavuzdaki bölümü": "This component's section in the guide",
-  "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız, Ctrl: seçime ekle) · boşlukta sol: döndür, Shift+sürükle: dikdörtgenle seç · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten": "Left: select/move (Shift: height, Alt: no grid, Ctrl: add to selection) · on empty space left: orbit, Shift+drag: rectangle select · right: pan · wheel: zoom · double-click: focus/top view"
+  "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız, Ctrl: seçime ekle) · boşlukta sol: döndür, Shift+sürükle: dikdörtgenle seç · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten": "Left: select/move (Shift: height, Alt: no grid, Ctrl: add to selection) · on empty space left: orbit, Shift+drag: rectangle select · right: pan · wheel: zoom · double-click: focus/top view",
+  "Kapalı: çalıştırmada yok, ayarları saklanıyor. Başlıktaki kutuyla yeniden açın.": "Off: not in the run, its settings are kept. Switch it back on with the box in the header.",
+  "Bileşen açık / kapalı: kapalıyken çalıştırmada yok, ayarları saklanır": "Component on / off: when off it is not in the run and keeps its settings",
+  "Bileşeni kopyala": "Copy component",
+  "Değerleri yapıştır": "Paste values",
+  "Değerleri kopyala": "Copy values"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11928,6 +11933,12 @@
   "{…} nesne bunun altında: düzenleyicide onunla taşınır ve döner. Çalıştırmada boş nesne yoktur; altındakiler onun takılı olduğu yere takılı sayılır, boşta duruyorsa serbesttir.": "{0} objects under it: they move and turn with it in the editor. A run has no empty objects; what is under one counts as mounted where the empty is mounted, or free when it stands free.",
   "{…}: boş alt nesne oluşturuldu": "{0}: empty child created",
   "{…} nesne boş üst nesneye alındı": "{0} objects put under an empty parent",
-  "Boş nesne · {…} alt nesne": "Empty object · {0} children"
+  "Boş nesne · {…} alt nesne": "Empty object · {0} children",
+  "{…} bileşeni açıldı": "{0} switched on",
+  "{…} bileşeni kapatıldı": "{0} switched off",
+  "{…}: değerler yapıştırıldı": "{0}: values pasted",
+  "{…}: fizik değerleri yapıştırıldı": "{0}: physics values pasted",
+  "Yeni bileşen olarak yapıştır: {…}": "Paste as new component: {0}",
+  "{…} yapıştırıldı": "{0} pasted"
  }
 }

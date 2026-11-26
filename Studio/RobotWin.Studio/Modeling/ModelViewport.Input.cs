@@ -711,7 +711,9 @@ namespace RobotWin.Studio.Modeling
                     m.Angle += diff * 180 / Math.PI;
                     double sign = axis.Dot(Cam.Forward) >= 0 ? 1 : -1;
                     double deg = typed ?? m.Angle * sign;
-                    if (snap && typed == null) deg = Math.Round(deg / 5) * 5;
+                    // [grid] the rotate step of Grid and Snap, shared with Montaj and Dünya (15° unless set)
+                    double turnStep = RobotWin.Studio.Shell.AppSettings.Current.WorldRotateStep > 0 ? RobotWin.Studio.Shell.AppSettings.Current.WorldRotateStep : 15;
+                    if (snap && typed == null) deg = Math.Round(deg / turnStep) * turnStep;
                     t = Affine.Translate(m.Pivot) * Affine.Rotate(axis, deg) * Affine.Translate(-m.Pivot);
                     m.Header = $"Döndür ({(m.Axis >= 0 ? AxisName(m.Axis) + " ekseni" : "görüş ekseni")}): {typedText}{deg:0.##}°" + hint;
                     break;

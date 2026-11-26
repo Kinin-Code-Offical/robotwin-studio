@@ -70,8 +70,13 @@ namespace RobotWin.Studio.Pages
             _gasLive = null;
             if (o.Kind != WorldObjectKind.Body || o.Shape is not ("cylinder" or "box" or "sphere")) return;
             bool vessel = WorldPhysics.IsVessel(o);
-            if (!vessel) return;   // offered under "Özellik ekle" (Pages/WorldPage.Features.cs)
-            Inspector.Children.Add(FeatureHeader("Basınçlı kap (gaz fiziği)", "Basınçlı kap kaldırıldı", () => o.Parameters.Remove("vessel")));
+            if (!vessel)
+            {
+                OffCard(o, "vessel", "Basınçlı kap (gaz fiziği)", "Basınçlı kap kaldırıldı", () => o.Parameters.Remove("vessel"));   // [components] switched off
+                return;   // else offered under "Bileşen ekle" (Pages/WorldPage.Features.cs)
+            }
+
+            Inspector.Children.Add(FeatureHeader("Basınçlı kap (gaz fiziği)", "Basınçlı kap kaldırıldı", () => o.Parameters.Remove("vessel"), toggle: "vessel"));
 
             _gasLive = LiveGasText();
             Inspector.Children.Add(_gasLive);

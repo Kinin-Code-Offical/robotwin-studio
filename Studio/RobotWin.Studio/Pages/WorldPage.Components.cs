@@ -25,6 +25,7 @@ namespace RobotWin.Studio.Pages
         private static (double Roll, double Pitch, double Yaw)? _copiedRotation;
         private WorldObject? _inspected;
         private Popup? _lastPicker;
+        private ContextMenu? _lastCardMenu;
 
         private bool IsCaption(UIElement e) => e is TextBlock t && ReferenceEquals(t.Style, TryFindResource("Text.Overline"));
 
@@ -82,10 +83,27 @@ namespace RobotWin.Studio.Pages
             }
 
             head.Children.Add(chevron);
+            CheckBox? onBox = null;
+            if (removal?.Toggle is { } key && _inspected is { } carrier)
+            {
+                // Unity's component checkbox: off, the component is not in the run and keeps its settings
+                bool on = !WorldComponents.IsOff(carrier, key);
+                onBox = new CheckBox { IsChecked = on, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), Cursor = Cursors.Arrow,
+                    ToolTip = Shell.Lang.T("Bileşen açık / kapalı: kapalıyken çalıştırmada yok, ayarları saklanır") };
+                onBox.Click += (_, _) =>
+                {
+                    bool turnOn = onBox.IsChecked == true;
+                    Edit(Shell.Lang.T(turnOn ? $"{title} bileşeni açıldı" : $"{title} bileşeni kapatıldı"), () => WorldComponents.SetOn(carrier, key, turnOn));
+                    BuildInspector();
+                };
+                if (!on) name.Opacity = 0.6;
+                head.Children.Add(onBox);
+            }
+
             head.Children.Add(name);
             head.MouseLeftButtonUp += (_, e) =>
             {
-                if (e.OriginalSource is DependencyObject d && (IsInside(d, more) || IsInside(d, help) || (drop != null && IsInside(d, drop)))) return;
+                if (e.OriginalSource is DependencyObject d && (IsInside(d, more) || IsInside(d, help) || (drop != null && IsInside(d, drop)) || (onBox != null && IsInside(d, onBox)))) return;
                 bool fold = body.Visibility == Visibility.Visible;
                 body.Visibility = fold ? Visibility.Collapsed : Visibility.Visible;
                 chevron.Data = Geometry.Parse(fold ? "M9,6 L15,12 L9,18" : "M6,9 L12,15 L18,9");
@@ -97,6 +115,7 @@ namespace RobotWin.Studio.Pages
                 var menu = CardMenu(title, removal);
                 menu.PlacementTarget = more;
                 menu.IsOpen = true;
+                _lastCardMenu = menu;
             };
             var stack = new StackPanel();
             stack.Children.Add(head);
@@ -122,6 +141,8 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(MenuEntry("Bileşeni kaldır", null, () => RemoveComponent(removal)));
                 menu.Items.Add(new Separator());
             }
+
+            ComponentClipboardItems(menu, title, removal);   // [components] Unity's Copy Component / Paste Values / Paste As New
 
             var o = _inspected;
             var world = World;

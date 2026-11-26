@@ -51,7 +51,15 @@ namespace RobotWin.Studio.Pages
         {
             bool isShell = WorldPhysics.IsShell(o);
             string? lidOf = WorldPhysics.LidOf(o);
-            if (!isShell && lidOf == null) return;
+            if (!isShell && lidOf == null)
+            {
+                OffCard(o, "shell", "Kabuk (içi boş gövde)", "Kabuk kaldırıldı", () =>
+                {
+                    o.Parameters.Remove("shell");
+                    o.Parameters.Remove("wall");
+                });   // [components] switched off
+                return;
+            }
             var shell = isShell ? o : world.Find(lidOf!);
             if (shell == null) return;
             var lid = world.Objects.FirstOrDefault(x => string.Equals(WorldPhysics.LidOf(x), shell.Id, StringComparison.OrdinalIgnoreCase));
@@ -62,7 +70,7 @@ namespace RobotWin.Studio.Pages
                 {
                     o.Parameters.Remove("shell");
                     o.Parameters.Remove("wall");
-                })
+                }, toggle: "shell")
                 : Caption(isShell ? "Kabuk (içi boş gövde)" : "Kapak"));
             if (isShell)
             {

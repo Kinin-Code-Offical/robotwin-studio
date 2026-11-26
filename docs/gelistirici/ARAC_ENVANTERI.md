@@ -258,9 +258,9 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
-| Bileşen yığını: her bileşen kendi başlığında (aç / kapa, katla, yardım, ⋮ menüsü) | bileşen kartları: katla, ? (kılavuzun o bölümü, yoksa adıyla arama), Kaldır, ⋮ menüsü (bileşeni aç / kapa sonra) | kısmi | 2 |
+| Bileşen yığını: her bileşen kendi başlığında (aç / kapa, katla, yardım, ⋮ menüsü) | bileşen kartları: katla, aç / kapa kutusu (kabuk, kap, paraşüt, arıza; ayarlar saklanır), ? (kılavuzun o bölümü, yoksa adıyla arama), Kaldır, ⋮ menüsü | var | |
 | Bileşen ekle: aranabilir, kategorili liste | Bileşen ekle: arama, kategoriler, Enter, alt kısımda açıklama; eklenen bileşen kendi kartında açık gelir, görünüme kayar, vurgulanır; Kaldır ve ⋮ → Bileşeni kaldır (bileşenler: kabuk, kap, paraşüt, hava, arıza, eşleme, yay, rulman, davranış) | var | |
-| Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | yok | yok | 1 |
+| Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | kaldır, kopyala, değerleri yapıştır, yeni bileşen olarak yapıştır (kabuk, kap, paraşüt, arıza); Fizik'te sıfırla ve değerleri kopyala / yapıştır; Konum'da kopyala / yapıştır / sıfırla (yukarı / aşağı yok: kartların sırası sabit) | var | |
 | Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
 | Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
@@ -284,4 +284,4 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
 
-Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim ve boş nesneler de geldi; boş nesneler, bileşen kartının ? yardımı ve sahnede dikdörtgenle seçim de geldi; sırada bileşeni aç / kapa.
+Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim ve boş nesneler de geldi; boş nesneler, bileşen kartının ? yardımı ve sahnede dikdörtgenle seçim de geldi; bileşeni aç / kapa da geldi.

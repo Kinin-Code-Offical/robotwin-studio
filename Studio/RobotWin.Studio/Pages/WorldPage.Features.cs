@@ -18,16 +18,20 @@ namespace RobotWin.Studio.Pages
         /// <summary>[components] How a component comes off again (Unity's Remove Component).</summary>
         private sealed class ComponentRemoval
         {
-            public ComponentRemoval(string undo, Action remove, bool sdk)
+            public ComponentRemoval(string undo, Action remove, bool sdk, string? toggle = null)
             {
                 Undo = undo;
                 Remove = remove;
                 Sdk = sdk;
+                Toggle = toggle;
             }
 
             public string Undo { get; }
             public Action Remove { get; }
             public bool Sdk { get; }
+
+            /// <summary>[components] The parameter that switches it (WorldComponents), when it can be switched off.</summary>
+            public string? Toggle { get; }
         }
 
         /// <summary>[components] Marks a joint's own feature header (spring, bearing, coupling) by its source title.</summary>
@@ -41,18 +45,37 @@ namespace RobotWin.Studio.Pages
         /// [components] The title of a component the object has: the inspector makes it a card of its own (Pages/WorldPage.Components.cs)
         /// with "Bileşeni kaldır" in its header and ⋮ menu, as Unity's component headers.
         /// </summary>
-        private TextBlock FeatureHeader(string title, string undo, Action remove, bool sdk = false)
+        private TextBlock FeatureHeader(string title, string undo, Action remove, bool sdk = false, string? toggle = null)
         {
             var caption = Caption(title);
-            caption.Tag = new ComponentRemoval(undo, remove, sdk);
+            caption.Tag = new ComponentRemoval(undo, remove, sdk, toggle);
             return caption;
         }
 
         private void RemoveComponent(ComponentRemoval r)
         {
-            if (r.Sdk) SdkEdit(r.Undo, r.Remove);
-            else Edit(r.Undo, r.Remove);
+            var o = _inspected;
+            void Remove()
+            {
+                r.Remove();
+                if (r.Toggle != null && o != null) WorldComponents.ForgetOff(o, r.Toggle);   // its switched-off copy goes too
+            }
+
+            if (r.Sdk) SdkEdit(r.Undo, Remove);
+            else Edit(r.Undo, Remove);
             BuildInspector();
+        }
+
+        /// <summary>
+        /// [components] A switched-off component: its card with the box unticked and a note, and true; false when it is on
+        /// (or not carried). Its settings wait in the part for when it is switched on again.
+        /// </summary>
+        private bool OffCard(WorldObject o, string key, string title, string undo, Action remove)
+        {
+            if (!WorldComponents.IsOff(o, key)) return false;
+            Inspector.Children.Add(FeatureHeader(title, undo, remove, toggle: key));
+            Inspector.Children.Add(Note("Kapalı: çalıştırmada yok, ayarları saklanıyor. Başlıktaki kutuyla yeniden açın."));
+            return true;
         }
 
         /// <summary>A feature of one joint inside "Mekanik bağlantılar" (spring, bearing, coupling): its title with a "Kaldır" link.</summary>
@@ -99,15 +122,15 @@ namespace RobotWin.Studio.Pages
             }
 
             bool body = o.Kind == WorldObjectKind.Body;
-            if (body && o.Shape == "box" && !WorldPhysics.IsShell(o) && WorldPhysics.LidOf(o) == null && !WorldPhysics.IsVessel(o))
+            if (body && o.Shape == "box" && !WorldComponents.Has(o, "shell") && WorldPhysics.LidOf(o) == null && !WorldComponents.Has(o, "vessel"))
                 Item("Kabuk (içi boş gövde)", "Kutu 2 mm duvarlı, üstü açık bir kabuğa döner: içine kart, pil ve servo konur, duvarlar onlarla çarpışır, kablolar deliklerden geçer.", () =>
                 {
                     o.Parameters["shell"] = "true";
                     o.Parameters["wall"] = "0.002";
                 });
-            if (body && o.Shape is "cylinder" or "box" or "sphere" && !WorldPhysics.IsVessel(o) && !WorldPhysics.IsShell(o))
+            if (body && o.Shape is "cylinder" or "box" or "sphere" && !WorldComponents.Has(o, "vessel") && !WorldComponents.Has(o, "shell"))
                 Item("Basınçlı kap (gaz fiziği)", "İçinde gaz tutan kapalı kap: basınç, lüle, vana, su ya da katı yakıt; su roketi, katı yakıtlı motor.", () => o.Parameters["vessel"] = "true");
-            if (body && !WorldPhysics.IsWing(o) && !o.Parameters.ContainsKey("parachute"))
+            if (body && !WorldPhysics.IsWing(o) && !WorldComponents.Has(o, "parachute"))
                 Item("Kurtarma paraşütü", "Tepe noktasında (ya da belli bir zamanda) atılan paraşüt; 45 cm kanopiyle başlar.", () => o.Parameters["parachute"] = "0.45");
             if (world.Sdk.AeroOf(o.Id) == null)
                 Item("Hava (özel ayar)", "Sürüklemeyi kapatın, Cd ve referans alanı elle verin ya da kaldırma kuvveti (balon, köpük) ekleyin. Ayarlanmadıkça sürükleme gövdenin şeklinden hesaplanır.",

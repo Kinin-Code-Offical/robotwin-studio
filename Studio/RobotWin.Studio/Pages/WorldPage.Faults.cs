@@ -13,8 +13,13 @@ namespace RobotWin.Studio.Pages
     {
         private void FaultSection(WorldObject o)
         {
-            if (MachineFaults.Of(o) is not { } f) return;
-            Inspector.Children.Add(FeatureHeader("Arıza: " + f.Fault.Name, "Arıza senaryosu kaldırıldı", () => MachineFaults.Clear(o)));
+            if (MachineFaults.Of(o) is not { } f)
+            {
+                OffCard(o, MachineFaults.Key, "Arıza senaryosu", "Arıza senaryosu kaldırıldı", () => MachineFaults.Clear(o));   // [components] switched off
+                return;
+            }
+
+            Inspector.Children.Add(FeatureHeader("Arıza: " + f.Fault.Name, "Arıza senaryosu kaldırıldı", () => MachineFaults.Clear(o), toggle: MachineFaults.Key));
             Inspector.Children.Add(Note(f.Fault.Description));
             Inspector.Children.Add(NumberField("Başlama zamanı (s)", f.At, v =>
                 Edit("Arıza zamanı değişti", () => o.Parameters[MachineFaults.AtKey] = v.ToString(CultureInfo.InvariantCulture)), 0, 1e6, "0.##"));
@@ -26,7 +31,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>The fault scenarios a part can be given, as a submenu of "Özellik ekle ▾".</summary>
         private MenuItem? FaultMenu(WorldObject o)
         {
-            if (MachineFaults.Of(o) != null) return null;
+            if (WorldComponents.Has(o, MachineFaults.Key)) return null;   // [components] on or switched off
             var faults = MachineFaults.For(o.PartId).ToList();
             if (faults.Count == 0) return null;
             var menu = new MenuItem { Header = "Arıza senaryosu", ToolTip = "Parçanın belli bir anda nasıl bozulacağını seçin: PLC programının arızaya tepkisi denenir." };
