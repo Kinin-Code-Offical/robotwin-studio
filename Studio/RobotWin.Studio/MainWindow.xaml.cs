@@ -175,7 +175,7 @@ namespace RobotWin.Studio
 
             Tabs.ItemsSource = W.Documents;
             W.PreviewProvider = RenderPreview;
-            W.WorldPreviewProvider = doc => _current == "world" && W.ActiveWorld == doc.World ? RenderPreview(_world.Scene) : null;   // [home]
+            W.WorldPreviewProvider = doc => W.ActiveWorld == doc.World ? _world.Scene.RenderPreview() : null;   // [home] drawn from the world, not the screen
             W.PropertyChanged += OnWorkspaceChanged;
             W.ActiveDocumentChanged += (_, _) => OnActiveDocumentChanged();
             W.Simulation.PropertyChanged += (_, e) =>
@@ -1204,19 +1204,21 @@ namespace RobotWin.Studio
         }
 
         /// <summary>PNG preview of the schematic for the project file.</summary>
-        private byte[]? RenderPreview() => RenderPreview(_schematic.PreviewElement);
-
-        /// <summary>A picture of a page's view for the file (the start page's cards show it): 640 px wide, as it is on screen.</summary>
-        private static byte[]? RenderPreview(FrameworkElement? el)
+        /// <summary>
+        /// [home] The circuit as a picture for its file: the whole sheet drawn from the design (no grid, selection or zoom of
+        /// the moment) on a clear background, 640 × 400 at most; the start page's card puts its colour behind it.
+        /// </summary>
+        private byte[]? RenderPreview()
         {
-            if (el == null || !el.IsVisible || el.ActualWidth < 20 || el.ActualHeight < 20) return null;
-            int w = 640, h = (int)Math.Round(640 * el.ActualHeight / el.ActualWidth);
+            if (W.Schematic.Parts.Count == 0) return null;
+            // Drawn at about the card's own size, so the lines keep their width instead of thinning out when shrunk.
+            _schematic.Canvas.RenderSheet(out var full, 20, clearBackground: true);
+            if (full.Width < 1 || full.Height < 1) return null;
+            double ppu = 20 * Math.Min(1, Math.Min(320 / full.Width, 200 / full.Height));
+            var drawing = _schematic.Canvas.RenderSheet(out var size, ppu, clearBackground: true);
+            int w = Math.Max(1, (int)Math.Ceiling(size.Width)), h = Math.Max(1, (int)Math.Ceiling(size.Height));
             var dv = new DrawingVisual();
-            using (var dc = dv.RenderOpen())
-            {
-                dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x10)), null, new Rect(0, 0, w, h));
-                dc.DrawRectangle(new VisualBrush(el) { Stretch = Stretch.Uniform }, null, new Rect(0, 0, w, h));
-            }
+            using (var dc = dv.RenderOpen()) dc.DrawDrawing(drawing);
 
             var bmp = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
             bmp.Render(dv);

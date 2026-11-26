@@ -8010,7 +8010,8 @@
   "imza ve şifre": "signed and encrypted",
   "güvenilenler": "trusted only",
   "Son çalışmalar": "Recent work",
-  "dosya bulunamadı": "file not found"
+  "dosya bulunamadı": "file not found",
+  "kod": "code"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11315,6 +11316,8 @@
   "{…}: OPC UA sertifikası hazırlanamadı ({…}); sunucu güvenliksiz açılmadı.": "{0}: the OPC UA certificate could not be prepared ({1}); the server was not opened without security.",
   "{…}: OPC UA ağa güvenliksiz ve kullanıcısız açık; ağdaki herkes PLC'yi okuyup yazabilir. PLC'nin 'OPC UA güvenliği' ayarını 'imza ve şifre' yapın ve kullanıcı tanımlayın.": "{0}: OPC UA is open to the network without security or users; anyone on the network can read and write the PLC. Set the PLC's 'OPC UA security' to 'signed and encrypted' and add users.",
   "OPC UA: '{…}' istemcisinin sertifikası güvenilir değil, bağlantı reddedildi; güvenmek için sertifikayı {…} klasöründen {…} klasörüne taşıyın": "OPC UA: the certificate of client '{0}' is not trusted, the connection was refused; to trust it, move the certificate from {1} to {2}",
-  "OPC UA: '{…}' kullanıcısı reddedildi (adı ya da parolası yanlış)": "OPC UA: user '{0}' was refused (wrong name or password)"
+  "OPC UA: '{…}' kullanıcısı reddedildi (adı ya da parolası yanlış)": "OPC UA: user '{0}' was refused (wrong name or password)",
+  "{…} kart": "{0} boards",
+  "{…} gövde": "{0} bodies"
  }
 }

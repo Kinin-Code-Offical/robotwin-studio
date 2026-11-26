@@ -412,6 +412,9 @@ namespace RobotWin.Studio
                 enc.Frames.Add(BitmapFrame.Create(shot));
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 using (var fs = File.Create(path)) enc.Save(fs);
+                // [home] --save-as file: the open document saved as the app saves it (its preview drawn from the design or world)
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--save-as").Skip(1).FirstOrDefault() is { } saveAs)
+                    Workspace.Current.Save(Path.GetFullPath(saveAs));
                 // [theme] --contrast-report file: text that cannot be read on this page in this theme (every window and open
                 // popup), added to the file (one per line).
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--contrast-report").Skip(1).FirstOrDefault() is { } contrastPath)

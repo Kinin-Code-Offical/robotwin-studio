@@ -86,6 +86,7 @@ namespace RobotWin.Studio.Editor
         private string _floatingVerb = "Yapıştırıldı";
 
         private bool _exporting;
+        private bool _clearBackground;
         private bool _spaceDown, _spacePanned;
         private readonly Dictionary<SchematicPart, (Rect Ref, Rect? Value)> _labelRects = new Dictionary<SchematicPart, (Rect, Rect?)>();
         private List<(SchematicWire Wire, GridPoint End)>? _dangling;
@@ -968,8 +969,9 @@ namespace RobotWin.Studio.Editor
         // ================================================================ export
 
         /// <summary>Renders the whole sheet (no grid, hover or selection) for PNG/SVG/print export.</summary>
-        public DrawingGroup RenderSheet(out Size size, double pixelsPerUnit = 20)
+        public DrawingGroup RenderSheet(out Size size, double pixelsPerUnit = 20, bool clearBackground = false)
         {
+            _clearBackground = clearBackground;   // [home] a preview: only the drawing, the start page's card is behind it
             var bounds = SchematicEditing.Bounds(SchematicEditing.AllItems(Doc), Lib) ?? new GridRect(-10, -10, 10, 10);
             bounds = bounds.Inflate(4);
             var saved = (_scale, _offset, _hover, _hoverPin, _netHighlight, _ercMarkers);
@@ -991,6 +993,7 @@ namespace RobotWin.Studio.Editor
             finally
             {
                 _exporting = false;
+                _clearBackground = false;
                 (_scale, _offset, _hover, _hoverPin, _netHighlight, _ercMarkers) = saved;
                 foreach (var s in selection) _selection.Add(s);
                 _labelRects.Clear();

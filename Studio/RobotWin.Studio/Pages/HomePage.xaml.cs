@@ -144,12 +144,20 @@ namespace RobotWin.Studio.Pages
         private FrameworkElement RecentCard(string path)
         {
             const double width = 196, height = 122;
-            var picture = new Grid { Width = width, Height = height, Background = (Brush)FindResource("B.Raised"), ClipToBounds = true };
-            picture.Children.Add(new Image { Source = FileIcons.Render(Path.GetExtension(path).ToLowerInvariant(), 64), Width = 40, Height = 40, Opacity = 0.75 });
-            var image = new Image { Stretch = Stretch.UniformToFill, Width = width, Height = height };
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            string label = Kind(ext);
+            var picture = new Grid { Width = width, Height = height, ClipToBounds = true, Background = (Brush)FindResource("B.Raised") };   // flat, the theme's surface
+            var icon = new Image { Source = FileIcons.Render(ext, 64), Width = 44, Height = 44, Opacity = 0.9 };
+            picture.Children.Add(icon);
+            // a world fills the card (its floor and sky are part of it); a circuit's sheet sits on the colour
+            var image = ext == ".rwworld" ? new Image { Stretch = Stretch.UniformToFill } : new Image { Stretch = Stretch.Uniform, Margin = new Thickness(12, 24, 12, 22) };
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
             picture.Children.Add(image);
-            var frame = new Border { Child = picture, BorderBrush = (Brush)FindResource("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4) };
+            picture.Children.Add(Chip(label, HorizontalAlignment.Left, VerticalAlignment.Top));
+            var stats = Chip(string.Empty, HorizontalAlignment.Left, VerticalAlignment.Bottom);
+            stats.Visibility = Visibility.Collapsed;
+            picture.Children.Add(stats);
+            var frame = new Border { Child = picture, BorderBrush = (Brush)FindResource("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), ClipToBounds = true };
             var text = new StackPanel { Width = width, Margin = new Thickness(0, 8, 0, 0) };
             text.Children.Add(new TextBlock { Text = Path.GetFileNameWithoutExtension(path), Foreground = (Brush)FindResource("B.Text"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis });
             string when = File.Exists(path) ? File.GetLastWriteTime(path).ToString("dd.MM.yyyy HH:mm") : RobotWin.Studio.Shell.Lang.T("dosya bulunamadı");
@@ -169,20 +177,83 @@ namespace RobotWin.Studio.Pages
             card.Click += (_, _) => _shell.OpenFile(path);
             System.Threading.Tasks.Task.Run(() => ReadPreview(path)).ContinueWith(t =>
             {
-                if (t.Status == System.Threading.Tasks.TaskStatus.RanToCompletion && t.Result != null) image.Source = t.Result;
+                if (t.Status != System.Threading.Tasks.TaskStatus.RanToCompletion) return;
+                var (bitmap, summary) = t.Result;
+                if (bitmap != null)
+                {
+                    image.Source = bitmap;
+                    icon.Visibility = Visibility.Collapsed;
+                }
+
+                string facts = Holds(ext, summary);
+                if (facts.Length > 0 && stats.Child is TextBlock tb)
+                {
+                    tb.Text = facts;
+                    stats.Visibility = Visibility.Visible;
+                }
             }, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
             return card;
         }
 
-        /// <summary>The picture a RobotWin file carries (preview.png in its ZIP), decoded small and frozen; null when it has none.</summary>
-        private static BitmapSource? ReadPreview(string path)
+        /// <summary>[home] A file kind's label on its card.</summary>
+        private static string Kind(string ext) => ext switch
+        {
+            ".rwproj" or ".rwsch" => Lang.T("Devre"),
+            ".rwworld" => Lang.T("Dünya"),
+            ".rwmodel" => Lang.T("Parça"),
+            _ => ext.TrimStart('.').ToUpperInvariant()
+        };
+
+        /// <summary>[home] What the file holds, from its manifest: parts and code of a circuit, objects, boards and cables of a world.</summary>
+        private static string Holds(string ext, System.Collections.Generic.IReadOnlyDictionary<string, string>? s)
+        {
+            if (s == null) return string.Empty;
+            var items = new System.Collections.Generic.List<string>();
+            string? Get(string key) => s.TryGetValue(key, out var v) && v != "0" ? v : null;
+            if (ext == ".rwworld")
+            {
+                if (Get("objects") is { } o) items.Add(Lang.T($"{o} nesne"));
+                if (Get("boards") is { } b) items.Add(Lang.T($"{b} kart"));
+                if (Get("cables") is { } c) items.Add(Lang.T($"{c} kablo"));
+            }
+            else if (ext == ".rwmodel")
+            {
+                if (Get("objects") is { } o) items.Add(Lang.T($"{o} gövde"));
+            }
+            else
+            {
+                if (Get("parts") is { } p) items.Add(Lang.T($"{p} parça"));
+                if (Get("pcb") != null) items.Add("PCB");
+                if (Get("firmware") != null) items.Add(Lang.T("kod"));
+            }
+
+            return string.Join(" · ", items);
+        }
+
+        private Border Chip(string text, HorizontalAlignment h, VerticalAlignment v) => new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0xB0, 0x0B, 0x0B, 0x0D)),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(6, 1, 6, 2),
+            Margin = new Thickness(6),
+            HorizontalAlignment = h,
+            VerticalAlignment = v,
+            Child = new TextBlock { Text = text, Foreground = Brushes.White, FontSize = 10.5, FontWeight = FontWeights.SemiBold }
+        };
+
+        /// <summary>
+        /// The picture a RobotWin file carries (preview.png in its ZIP), decoded small and frozen, and its manifest's summary;
+        /// nulls when it has none.
+        /// </summary>
+        private static (BitmapSource? Picture, System.Collections.Generic.IReadOnlyDictionary<string, string>? Summary) ReadPreview(string path)
         {
             try
             {
-                if (!File.Exists(path)) return null;
+                if (!File.Exists(path)) return (null, null);
                 using var zip = System.IO.Compression.ZipFile.OpenRead(path);
+                var summary = ReadSummary(zip);
                 var entry = zip.GetEntry("preview.png");
-                if (entry == null || entry.Length > 8 * 1024 * 1024) return null;
+                if (entry == null || entry.Length > 8 * 1024 * 1024) return (null, summary);
                 var data = new MemoryStream();
                 using (var s = entry.Open()) s.CopyTo(data);
                 data.Position = 0;
@@ -193,13 +264,36 @@ namespace RobotWin.Studio.Pages
                 bmp.StreamSource = data;
                 bmp.EndInit();
                 bmp.Freeze();
-                return bmp;
+                return (bmp, summary);
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is UnauthorizedAccessException || ex is NotSupportedException ||
                                        ex is FileFormatException || ex is ArgumentException)
             {
-                return null;
+                return (null, null);
             }
+        }
+
+        private static System.Collections.Generic.IReadOnlyDictionary<string, string>? ReadSummary(System.IO.Compression.ZipArchive zip)
+        {
+            var entry = zip.GetEntry("manifest.json");
+            if (entry == null || entry.Length > 1024 * 1024) return null;
+            try
+            {
+                using var s = entry.Open();
+                using var doc = System.Text.Json.JsonDocument.Parse(s);
+                foreach (var p in doc.RootElement.EnumerateObject())
+                {
+                    if (!p.Name.Equals("summary", StringComparison.OrdinalIgnoreCase) || p.Value.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                    var d = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var kv in p.Value.EnumerateObject()) d[kv.Name] = kv.Value.ToString();
+                    return d;
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+            }
+
+            return null;
         }
 
         private void BuildBackups()

@@ -420,7 +420,7 @@ namespace RobotWin.Studio.Editor
 
         private void RenderScene(DrawingContext dc, Rect size)
         {
-            dc.DrawRectangle(SymbolRenderer.Brush(CanvasColor), null, size);
+            if (!(_exporting && _clearBackground)) dc.DrawRectangle(SymbolRenderer.Brush(CanvasColor), null, size);
             if (!_exporting) DrawGrid(dc, size);
 
             var netlist = Netlist;

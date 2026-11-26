@@ -318,6 +318,37 @@ namespace RobotWin.Studio.World
         }
 
         /// <summary>Moves the camera so every object is in view.</summary>
+        /// <summary>
+        /// [home] The world as a picture for its file: every object framed from a three-quarter view (front left, from above),
+        /// on a clear background (the start page puts its own sky behind it). The view on screen does not move.
+        /// </summary>
+        public byte[]? RenderPreview(int width = 640, int height = 400)
+        {
+            if (World == null || World.Objects.Count == 0 || _view.ActualWidth < 20 || _view.ActualHeight < 20) return null;
+            var keep = (_target, _distance, _yaw, _pitch);
+            double opacity = _view.Opacity;
+            try
+            {
+                _yaw = 0.95;
+                _pitch = 0.48;
+                FrameAll();
+                _distance *= 0.92;   // a little closer than the editor's framing: the picture is small
+                UpdateCamera();
+                _view.Opacity = 1;
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen()) dc.DrawRectangle(new VisualBrush(_view) { Stretch = Stretch.UniformToFill }, null, new Rect(0, 0, width, height));
+                var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+                bmp.Render(dv);
+                return Branding.Logo.EncodePng(bmp);
+            }
+            finally
+            {
+                (_target, _distance, _yaw, _pitch) = keep;
+                UpdateCamera();
+                _view.Opacity = opacity;
+            }
+        }
+
         public void FrameAll()
         {
             if (World == null || World.Objects.Count == 0)
