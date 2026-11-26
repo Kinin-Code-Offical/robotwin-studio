@@ -716,6 +716,17 @@ ESP32 seçiliyken **Örnek kodu yükle: kumandalı araba (Bluepad32)** hazır bi
 
 Wi-Fi, BLE ve Bluetooth sinyalleri uzaklıkla, engellerle ve gövdelerle zayıflar. Alttaki **RF** sekmesinde cihazlar, sinyal gücü (RSSI), kanal ve saniyedeki paket sayısı görünür. **Sönümleme**, **Dalgalar** ve **Bağlantı çizgileri** seçenekleri radyo görselleştirmesini açar / kapatır. IR kumanda yalnızca görüş hattında çalışır; tuşları denetçideki **IR kumanda tuşları (NEC)** bölümündedir. Matematiği: [Radyo](../fizik/06-radyo.md).
 
+## Izgara ve yakalama
+
+Araç çubuğundaki ızgara düğmesi Unity'deki **Grid and Snap** penceresini açar:
+
+- **Izgaraya yakala:** taşıma, döndürme ve boyut sürüklemeleri adımlara oturur. Kapalıyken her sürükleme serbesttir; açıkken Alt basılı tutmak o sürüklemeyi serbest bırakır.
+- **Izgarayı göster** ve **Saydamlık:** zemindeki çizgiler. İnce çizgiler taşıma adımında, kalın çizgiler her on adımda bir çizilir (çok küçük adımlarda çizgiler sıklaşmasın diye ikiye katlanır).
+- **Adımlar:** **Taşı** (seçili uzunluk biriminde; mm, cm, inç, mil yazılabilir), **Döndür** (derece; döndür tutamacı ve Ctrl+E bu kadar çevirir), **Boyut** (ölçek tutamacı; 0 ise taşıma adımı).
+- **Seçiliyi ızgaraya oturt** seçili parçayı, üstüne takılanlarla birlikte, X ve Y'de en yakın ızgara noktasına taşır. **Varsayılana dön** 5 mm, 15° ve görünen ızgaraya döner.
+
+Ayarlar kaydedilir; her dünya ve montaj onlarla açılır.
+
 ## Sahne ağacı
 
 **Sahne** sekmesi dünyadaki her şeyi neyin neye takılı olduğuna göre ağaç olarak gösterir (örneğin "servo koluna takılı", "mile takılı", "sabit"). Çalışırken 60 °C üstündeki sıcaklıkları ve **ARIZALI** nesneleri gösterir. Altında **Kablolar** listesi vardır. Sağ tık: **Odakla**, **Alt nesneleri gizle/göster**; çift tık nesneye odaklanır.

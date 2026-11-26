@@ -58,7 +58,7 @@ namespace RobotWin.Studio.Pages
             _session.CablePins = Scene.CablePinsOf;   // [phys] cables become ropes in the running world
             _session.CableSeed = Scene.CableSeedOf;   // [phys]
             Scene.MassOf = o => W.ActiveWorld is { } w ? EstimateMass(w, o) / 1000.0 : 0.01;
-            Scene.Grid = AppSettings.Current.WorldGridMm / 1000.0;
+            ApplyGridSettings();   // [grid] steps, snapping and the floor grid (Pages/WorldPage.GridSnap.cs)
             Scene.CableSelectionChanged += _ =>
             {
                 BuildInspector();
@@ -91,7 +91,7 @@ namespace RobotWin.Studio.Pages
             {
                 if (W.ActiveWorld != null && W.ActiveWorld == _shown && !_terrainQuiet) Refresh(); // [terrain] strokes do not rebuild the scene
             };
-            AppSettings.Changed += (_, _) => Scene.Grid = AppSettings.Current.WorldGridMm / 1000.0;
+            AppSettings.Changed += (_, _) => ApplyGridSettings();
             PreviewKeyDown += OnKeys;
             BuildPalette();
             UpdateRunButton();
@@ -1447,7 +1447,10 @@ namespace RobotWin.Studio.Pages
             if (tool == WorldTool.Joint && Scene.Selected == null) W.Status = "Önce takılacak nesneyi seçin, sonra takılacağı yeri tıklayın";
         }
 
-        private void OnRotate(object sender, RoutedEventArgs e) => Rotate(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -15 : 15);
+        private void OnRotate(object sender, RoutedEventArgs e) => Rotate(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -RotateStepNow : RotateStepNow);
+
+        /// <summary>[grid] The rotate step of the Grid and Snap window (15° when it is 0).</summary>
+        private double RotateStepNow => Scene.RotateStep > 0 ? Scene.RotateStep : 15;
 
         private void Rotate(double degrees)
         {
@@ -1529,7 +1532,7 @@ namespace RobotWin.Studio.Pages
                     Delete();
                     break;
                 case Key.E when ctrl:   // the 15° turn (R is Unity's scale handle now)
-                    Rotate(mods.HasFlag(ModifierKeys.Shift) ? -15 : 15);
+                    Rotate(mods.HasFlag(ModifierKeys.Shift) ? -RotateStepNow : RotateStepNow);
                     break;
                 case Key.W when !ctrl:   // [gizmo] Unity's handles
                     PickGizmo(GizmoMode.Move);

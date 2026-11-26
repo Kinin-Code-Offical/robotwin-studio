@@ -717,6 +717,17 @@ Point the **Computer (USB)** object at a board and press **Plug in USB**. While 
 
 Wi-Fi, BLE and Bluetooth signals weaken with distance, obstacles and bodies. The **RF** tab below lists devices, signal strength (RSSI), channel and packets per second. **Fading (log-normal, σ = 4 dB)**, **Waves** and **Link lines** switch the radio visualisation on and off. IR remotes work only in line of sight; their keys are in the inspector's **IR remote buttons (NEC)** section. The maths: [Radio](../physics/06-radio.md).
 
+## Grid and snap
+
+The grid button in the toolbar opens the counterpart of Unity's **Grid and Snap** window:
+
+- **Snap to grid**: move, rotate and size drags snap to the steps. Off, every drag is free; on, holding Alt frees that drag.
+- **Show grid** and **Opacity**: the lines on the floor. Thin lines are drawn at the move step, thick ones every ten steps (with very small steps the lines double so they do not crowd).
+- **Steps**: **Move** (in the chosen length unit; mm, cm, in, mil can be typed), **Rotate** (degrees; the rotate handle and Ctrl+E turn by it), **Size** (the scale handle; 0 uses the move step).
+- **Align selected to grid** moves the selected part, with what is mounted on it, to the nearest grid point in X and Y. **Reset to defaults** goes back to 5 mm, 15° and a shown grid.
+
+The settings are saved; every world and assembly opens with them.
+
 ## Scene tree
 
 The **Scene** tab shows everything in the world as a tree of what is attached to what (e.g. "mounted on servo horn", "mounted on shaft", "fixed"). While running it shows temperatures above 60 °C and **FAULTY** objects. The **Cables** list is below it. Right-click: **Focus**, **Hide child objects** / **Show child objects**; double-click focuses the object.

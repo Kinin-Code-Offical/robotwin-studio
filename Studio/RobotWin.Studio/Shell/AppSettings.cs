@@ -97,6 +97,21 @@ namespace RobotWin.Studio.Shell
         /// <summary>Snap grid of the world editor in millimetres.</summary>
         public double WorldGridMm { get; set; } = 5.0;
 
+        /// <summary>[grid] Unity's Grid Snapping: moves, turns and sizes snap (Alt frees one drag).</summary>
+        public bool WorldSnap { get; set; } = true;
+
+        /// <summary>[grid] Rotation snap of the world editor's handles and Ctrl+E, in degrees.</summary>
+        public double WorldRotateStep { get; set; } = 15.0;
+
+        /// <summary>[grid] Size snap of the scale handle in millimetres (0 = the move step).</summary>
+        public double WorldSizeStepMm { get; set; }
+
+        /// <summary>[grid] Whether the floor shows the grid's lines.</summary>
+        public bool WorldGridShown { get; set; } = true;
+
+        /// <summary>[grid] How strongly the grid's lines show, 0–1.</summary>
+        public double WorldGridOpacity { get; set; } = 1.0;
+
         /// <summary>Show the start page on launch (otherwise reopen the last file).</summary>
         public bool ShowHomeOnStart { get; set; } = true;
 

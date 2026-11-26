@@ -420,6 +420,17 @@ namespace RobotWin.Studio.Pages
                 PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
             }
 
+            if (args.Contains("--grid-snap"))
+            {
+                // [grid] the Grid and Snap panel, open, as the picture
+                OnGridSnap(GridSnapButton, new RoutedEventArgs());
+                if (_gridPopup?.Child is FrameworkElement panel)
+                {
+                    panel.UpdateLayout();
+                    App.SnapshotTarget = panel;
+                }
+            }
+
             if (args.Contains("--rigidbody"))
             {
                 _rigidbodyOpen = true;   // [rigidbody] the Fizik card's damping and constraints, open, as the picture

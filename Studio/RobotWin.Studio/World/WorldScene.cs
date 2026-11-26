@@ -546,7 +546,10 @@ namespace RobotWin.Studio.World
             };
             SyncTerrain(); // [terrain] sculpted terrain replaces the flat floor
             // [surface] the floor as its material looks (World/FloorLook.cs), else the editing grid
-            var tile = new ImageBrush(FloorLook.Tile(env?.FloorMaterial) ?? GridTile()) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) };
+            var look = FloorLook.Tile(env?.FloorMaterial);
+            var tile = look != null
+                ? new ImageBrush(look) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) }
+                : GridBrush();   // [grid] lines at the snap step (World/WorldScene.Grid.cs)
             RenderOptions.SetBitmapScalingMode(tile, BitmapScalingMode.HighQuality);
             if (!TerrainReplacesFloor) g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
             if (env != null)
@@ -570,35 +573,6 @@ namespace RobotWin.Studio.World
 
             AppendSense(g);   // [sense] track mat and tapes (World/WorldScene.Sense.cs)
             _environment.Content = g;
-        }
-
-        private static BitmapSource? _gridTile;
-
-        /// <summary>One metre of floor: 10 cm lines, faint 1 cm lines.</summary>
-        private static BitmapSource GridTile()
-        {
-            if (_gridTile != null) return _gridTile;
-            const int px = 1000;
-            var dv = new DrawingVisual();
-            using (var dc = dv.RenderOpen())
-            {
-                dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x15, 0x15, 0x18)), null, new Rect(0, 0, px, px));
-                var minor = new Pen(new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x20)), 1);
-                var major = new Pen(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x30)), 2);
-                for (int i = 0; i <= 100; i++)
-                {
-                    var pen = i % 10 == 0 ? major : minor;
-                    double x = i * px / 100.0;
-                    dc.DrawLine(pen, new Point(x, 0), new Point(x, px));
-                    dc.DrawLine(pen, new Point(0, x), new Point(px, x));
-                }
-            }
-
-            var bmp = new RenderTargetBitmap(px, px, 96, 96, PixelFormats.Pbgra32);
-            bmp.Render(dv);
-            bmp.Freeze();
-            _gridTile = bmp;
-            return bmp;
         }
 
         private void RebuildOverlay()
@@ -1268,7 +1242,7 @@ namespace RobotWin.Studio.World
             return o + d * t;
         }
 
-        private double Snap(double v) => Grid > 0 && !Keyboard.IsKeyDown(Key.LeftAlt) ? Math.Round(v / Grid) * Grid : v;
+        private double Snap(double v) => Grid > 0 && SnapOn && !Keyboard.IsKeyDown(Key.LeftAlt) ? Math.Round(v / Grid) * Grid : v;
 
         // ================================================================ interaction
 

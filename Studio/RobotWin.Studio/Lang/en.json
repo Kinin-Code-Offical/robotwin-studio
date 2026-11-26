@@ -8461,7 +8461,20 @@
   "Dönüşü dondur": "Freeze rotation",
   "Sönüm değişti": "Damping changed",
   "Kısıt değişti": "Constraint changed",
-  "Görsel": "Artwork"
+  "Görsel": "Artwork",
+  "Izgara ve yakalama": "Grid and snap",
+  "Izgaraya yakala": "Snap to grid",
+  "Taşıma, döndürme ve boyut sürüklemeleri adımlara oturur; Alt basılıyken o sürükleme serbesttir": "Move, rotate and size drags snap to the steps; with Alt held that drag is free",
+  "Izgarayı göster": "Show grid",
+  "Saydamlık": "Opacity",
+  "Boyut 0: taşıma adımı kullanılır. Ctrl+E seçiliyi döndürme adımı kadar çevirir.": "Size 0: the move step is used. Ctrl+E turns the selection by the rotate step.",
+  "Seçiliyi ızgaraya oturt": "Align selected to grid",
+  "Seçili parçayı (ve üstüne takılanları) X ve Y'de en yakın ızgara noktasına taşır": "Moves the selected part (and what is mounted on it) to the nearest grid point in X and Y",
+  "Varsayılana dön": "Reset to defaults",
+  "Izgara ve yakalama: yakalamayı aç / kapa, taşıma · döndürme · boyut adımları, ızgaranın görünüşü": "Grid and snap: snapping on / off, the move · rotate · size steps, how the grid looks",
+  "Döndürme adımı kadar çevir (15°; Izgara ve yakalama'dan değişir) (Ctrl+E, Ctrl+Shift+E ters)": "Turn by the rotate step (15°; set in Grid and snap) (Ctrl+E, Ctrl+Shift+E back)",
+  "Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · döndürme adımına oturur, Alt: serbest": "Rotate handle (E): X / Y / Z rings, the outer ring about the view axis, the inside free · snaps to the rotate step, Alt: free",
+  "Döndürme adımı kadar döndür (15°; Shift ile geri)": "Turn by the rotate step (15°; Shift turns back)"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11886,6 +11899,7 @@
   "{…}: zemine indi": "{0}: down to the floor",
   "{…}: fizik sıfırlandı": "{0}: physics reset",
   "Bu dünya ekseni boyunca hareket etmez ({…})": "Does not move along this world axis ({0})",
-  "Bu dünya ekseni çevresinde dönmez ({…})": "Does not turn about this world axis ({0})"
+  "Bu dünya ekseni çevresinde dönmez ({…})": "Does not turn about this world axis ({0})",
+  "{…}: ızgaraya oturtuldu": "{0}: aligned to the grid"
  }
 }

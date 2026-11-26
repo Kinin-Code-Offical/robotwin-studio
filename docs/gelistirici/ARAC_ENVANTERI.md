@@ -233,7 +233,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Dikdörtgen (T) | yok | yok | 3 |
 | Pivot / Center, Global / Local | Pivot / Merkez, Yerel / Dünya | var | |
 | Adımlı sürükleme (taşı 0,25 · döndür 15° · ölçek 1) | ızgara ve 15° varsayılan, Alt serbest | var | |
-| Izgara ve yakalama penceresi: ızgarayı göster, en yakın ızgara, ızgara düzlemi X/Y/Z, saydamlık, ızgara boyu, adım (bağlı X/Y/Z), ızgaranın konumu ve dönüşü, etkin nesneden kopyala, dünyaya sıfırla | ızgara boyu Ayarlar'da | kısmi | 1 |
+| Izgara ve yakalama penceresi: ızgarayı göster, en yakın ızgara, ızgara düzlemi X/Y/Z, saydamlık, ızgara boyu, adım (bağlı X/Y/Z), ızgaranın konumu ve dönüşü, etkin nesneden kopyala, dünyaya sıfırla | Izgara ve yakalama: yakala aç / kapa, ızgarayı göster, saydamlık, taşıma · döndürme · boyut adımları, seçiliyi ızgaraya oturt, varsayılana dön (ızgara düzlemi, eksen başına adım, ızgaranın konumu sonra) | kısmi | 3 |
 | Köşe yakalama (V): köşeden köşeye, köşeden yüzeye, pivotu köşeye | yok | yok | 2 |
 | Yüzeye yakalama (Ctrl+Shift) | arazide yüzeye | kısmi | 2 |
 | Bakışla döndürme (bir yüzeye çevir) | yok | yok | 3 |

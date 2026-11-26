@@ -58,7 +58,7 @@ namespace RobotWin.Studio.Shell
             void W(string id, string title, string keys) => Shortcuts.RegisterPage(World, "dunya." + id, "Dünya sayfası", title, keys);
             W("kablo", "Kablo aracı", "K");
             W("bagla", "Bağla aracı", "B");
-            W("dondur", "Döndür (15°; Shift ile geri)", "Ctrl+E");
+            W("dondur", "Döndürme adımı kadar döndür (15°; Shift ile geri)", "Ctrl+E");
             W("tutamac-tasi", "Taşı tutamacı", "W");   // [gizmo] Unity's keys
             W("tutamac-dondur", "Döndür tutamacı", "E");
             W("tutamac-olcekle", "Ölçekle tutamacı", "R");

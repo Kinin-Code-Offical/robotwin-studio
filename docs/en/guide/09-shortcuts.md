@@ -160,7 +160,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Ctrl+Shift+V | Paste mounted on the selected part |
 | F2 | Rename |
 | Ctrl+Alt+F | Move to view |
-| Ctrl+E / Ctrl+Shift+E | Rotate 15° / the other way |
+| Ctrl+E / Ctrl+Shift+E | Rotate by the rotate step (15°, set in Grid and snap) / the other way |
 | Ctrl+D | Duplicate |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |

@@ -55,7 +55,7 @@
                             <t:Icon Data="{StaticResource I.Move}" Size="16"/>
                         </ToggleButton>
                         <ToggleButton x:Name="GizmoRotate" Style="{StaticResource Toggle.Tool}" Tag="Rotate" Click="OnGizmo"
-                                      ToolTip="Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · 15° adım, Alt: serbest">
+                                      ToolTip="Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · döndürme adımına oturur, Alt: serbest">
                             <t:Icon Data="{StaticResource I.Rotate}" Size="16"/>
                         </ToggleButton>
                         <ToggleButton x:Name="GizmoScale" Style="{StaticResource Toggle.Tool}" Tag="Scale" Click="OnGizmo"
@@ -74,6 +74,11 @@
                                               ToolTip="Tutamacın eksenleri: parçanın kendi eksenleri (Yerel) ya da dünyanınki (Dünya)"/>
                             </StackPanel>
                         </Border>
+                        <!-- [grid] Unity's Grid and Snap: snapping, the steps, the floor grid -->
+                        <Button x:Name="GridSnapButton" Style="{StaticResource Btn.Icon}" Click="OnGridSnap" Margin="4,0,0,0"
+                                ToolTip="Izgara ve yakalama: yakalamayı aç / kapa, taşıma · döndürme · boyut adımları, ızgaranın görünüşü">
+                            <t:Icon Data="{StaticResource I.Grid}" Size="16"/>
+                        </Button>
                         <ToggleButton x:Name="ToolCable" Style="{StaticResource Toggle.Tool}" ToolTip="Kablo çek: iki pine tıklayın (K)" Click="OnTool" Tag="Cable" Margin="2,0">
                             <t:Icon Data="{StaticResource I.Cable}" Size="16"/>
                         </ToggleButton>
@@ -93,7 +98,7 @@
                             <t:Icon Data="{StaticResource I.Explode}" Size="16"/>
                         </Button>
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
-                        <Button Style="{StaticResource Btn.Icon}" ToolTip="15° döndür (Ctrl+E, Ctrl+Shift+E ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Döndürme adımı kadar çevir (15°; Izgara ve yakalama'dan değişir) (Ctrl+E, Ctrl+Shift+E ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Çoğalt (Ctrl+D)" Click="OnDuplicate"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Sil (Del)" Click="OnDelete"><t:Icon Data="{StaticResource I.Delete}" Size="16"/></Button>
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>

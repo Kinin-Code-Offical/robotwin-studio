@@ -160,7 +160,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
 | F2 | Yeniden adlandır |
 | Ctrl+Alt+F | Görünüme taşı |
-| Ctrl+E / Ctrl+Shift+E | 15° döndür / ters yönde |
+| Ctrl+E / Ctrl+Shift+E | Döndürme adımı kadar döndür (15°, Izgara ve yakalama'dan değişir) / ters yönde |
 | Ctrl+D | Çoğalt |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |

@@ -578,7 +578,7 @@ namespace RobotWin.Studio.World
                 _gizmoMoved = true;
             }
 
-            bool free = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
+            bool free = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) || !SnapOn;   // [grid] snapping off: every drag is free
             var start = new WorldObject { Pose = _gizmoPose };
             var (c0, ax, ay, az) = GizmoFrame(start);
             c0 = _gizmoPivot;
@@ -704,7 +704,13 @@ namespace RobotWin.Studio.World
             return axis.LengthSquared < 4 ? 0 : Vector.Multiply(p - _gizmoStart, axis) / axis.LengthSquared * L;
         }
 
-        private double SnapSize(double v, bool free) => Math.Max(0.001, free ? v : Snap(v) > 0 ? Snap(v) : v);
+        private double SnapSize(double v, bool free)
+        {
+            double step = SizeStep > 0 ? SizeStep : Grid;   // [grid] its own size step, else the move step
+            if (free || step <= 0) return Math.Max(0.001, v);
+            double s = Math.Round(v / step) * step;
+            return Math.Max(0.001, s > 0 ? s : v);
+        }
 
         /// <summary>Puts the assembly back as it was at the drag's start and turns it by the whole rotation so far.</summary>
         private void TurnAssembly(WorldObject o, Quat q)

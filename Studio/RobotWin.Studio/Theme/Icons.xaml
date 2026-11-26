@@ -92,5 +92,6 @@
     <Geometry x:Key="I.More">M4,12 A1.2,1.2 0 1 1 6.4,12 A1.2,1.2 0 1 1 4,12 M10.8,12 A1.2,1.2 0 1 1 13.2,12 A1.2,1.2 0 1 1 10.8,12 M17.6,12 A1.2,1.2 0 1 1 20,12 A1.2,1.2 0 1 1 17.6,12</Geometry>
     <Geometry x:Key="I.Panel">M4,5 H20 V19 H4 Z M14.5,5 V19</Geometry>
     <Geometry x:Key="I.Fill">M4,4 H20 V20 H4 Z M4,10 L10,4 M4,16 L16,4 M8,20 L20,8 M14,20 L20,14</Geometry>
+    <Geometry x:Key="I.Grid">M4,4 H20 V20 H4 Z M9.33,4 V20 M14.67,4 V20 M4,9.33 H20 M4,14.67 H20</Geometry>
     <Geometry x:Key="I.Stackup">M4,6 H20 M4,10 H20 M4,14 H20 M4,18 H20</Geometry>
 </ResourceDictionary>
