@@ -79,8 +79,8 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 ### P1: öncelikli
 
 - [~] **Parametrik 3B tasarım:** modelleyici, CSG ve montaja gönderme var. Eksikler:
-  - ölçülü eskiz ve kısıtlar;
-  - parametrik ölçüler;
+  - [x] ölçülü eskiz ve kısıtlar: `Modeling/SketchConstraints.cs` (çizgi, daire, yay; 20 ilişki ve ölçü; en küçük adımlı sönümlü Gauss–Newton, serbestlik sayımı, tekrarlayan ve çelişen kısıtların adı), `SketchEditorWindow`; kapalı döngüler profil olur;
+  - [~] parametrik ölçüler: eskizin ölçüleri denetçide değişir ve parça yeniden çözülür; adlı parametreler ve ölçüler arası formüller yok;
   - montaj ilişkileri;
   - [~] dişli, kayış, kremayer, vidalı mil: iki eklem arasında çözücü kısıtı (`PhysicsScene.AddCoupling`, dünyada `WorldCoupling`); yük iki yana geçer, verim yükle orantılı sürtünme, vida dişin açısından kendini kilitler. Eklem yayı ve sönümü de var (burulma / helezon yay, amortisör; motorla birlikte, örtük). Rulman ve yataklar yüke bağlı sürtünmeyle (bilyalı, iğneli, burç, doğrusal rulman, ray, kayar yatak). Dişli boşluğu (iki yanak, tek yönlü sınırlar) ve kayış esnekliği (yumuşak kısıt) de var. Gerçek ölçülü güç aktarım parçaları (involüt dişli, GT2 kasnak, rulmanlar, KP08, mil, T8 vida ve somun, LM8UU, bilezik, kaplin) ve parçaların yerinden mekanizmayı kuran `DriveAssembly` var. İki kasnak arası 3B GT2 kayış (boy, standart kapalı kayış, gergi payı) ve kavrayan dişlilerin diş fazı da var. Step motor (NEMA 17, iki faz, açıya bağlı karşı-EMK/tork, takılma torku) ve A4988 sürücü (STEP/DIR, 1/16 mikro adım, VMOT sınırlı akım düzenleme, ısıl kapanma) da var; torku fizikteki rotoru döndürür, motor milindeki kaplin/dişli/kasnak montajcıda. Kremayer (kayan ya da sabit, pinyon araba üstünde yuvarlanır) de var. DRV8825 (1/32, kendi 3,3 V mantığı) ve TMC2209 (1/8–1/64, 1/256 ara değerleme) sürücüleri ve Arduino Z ekseni örneği (`z-axis-stepper`: rampalı hız, kütüphanesiz, 40 mm) de var.
   - 3B baskı uygunluğu.

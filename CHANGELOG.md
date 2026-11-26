@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Dimensioned sketches:** a profile can be drawn as lines, circles and arcs held by relations (horizontal, vertical, parallel, perpendicular, equal, tangent, coincident, on a line or circle, midpoint, concentric, symmetric, fixed) and driving dimensions (length, distance, horizontal/vertical, diameter, radius, angle), all solved together as CAD sketchers do. A rough drawing settles onto its dimensions; the sketch says how many degrees of freedom are left or that it is fully constrained, names constraints that repeat others, and refuses one that contradicts them, naming those it fights. Its closed loops become the extrusion's outline and holes, and its dimensions can be changed from the inspector. A rectangle-and-round-holes profile turns into one with its dimensions.
+
 - **DRV8825 and TMC2209 stepper drivers, and an Arduino Z axis:** the DRV8825 microsteps to 1/32 on its own 3.3 V logic (no VDD; VMOT 8.2–45 V); the TMC2209 standalone picks 1/8–1/64 with MS1/MS2 and spreads each step to 1/256 over the interval between STEP edges (MicroPlyer). Each carrier is drawn in its maker's colour. The built-in `z-axis-stepper` sketch drives an A4988 from an Uno (D2 DIR, D3 STEP, D8 EN) with a trapezoidal speed ramp, no libraries, and lifts a T8 carriage 40 mm and back.
 
 - **Gear racks:** m1 steel and POM racks with straight-flanked 20° teeth. The assembler meshes a pinion whose pitch circle sits on the rack's pitch line: a sliding rack is driven by it, a fixed rack has the pinion roll along it carrying its carriage (a CNC gantry), each turn moving it by the pinion's circumference; the pinion is turned to start tooth in space.

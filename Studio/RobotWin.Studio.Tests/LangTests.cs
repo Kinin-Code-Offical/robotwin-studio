@@ -217,6 +217,13 @@ public class LangTests
     [InlineData("Dişli z20 ile Dişli z40 kavrıyor: 20:40, eksen mesafesi 30 mm.", "Dişli z20 and Dişli z40 mesh: 20:40, 30 mm between their axes.")]
     [InlineData("Mil Ø8, KP08 içinde döner (Bilyalı rulman (608)).", "Mil Ø8 turns in KP08 (Ball bearing (608)).")]
     [InlineData("Mekanizma kuruldu: 13 bağlantı, 2 dişli / vida bağı", "Mechanism built: 13 joints, 2 gear / screw couplings")]
+    [InlineData("Uzunluk (L1)", "Length (L1)")]
+    [InlineData("Çizgi geri alındı, kısıtlar çelişiyor: Uzunluk (L1) · Dikey (L2)", "Line undone, the constraints contradict each other: Length (L1) · Vertical (L2)")]
+    [InlineData("Başka kısıtları tekrarlıyor: Paralel (L1–L3)", "Repeats other constraints: Parallel (L1–L3)")]
+    [InlineData("3 serbestlik kaldı.", "3 degrees of freedom left.")]
+    [InlineData("4 çizgi, 2 daire, 1 yay; 15 kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.", "4 lines, 2 circles, 1 arcs; 15 constraints. Closed loops become the profile: the largest the outline, the ones inside it holes.")]
+    [InlineData("ızgara 5 mm", "grid 5 mm")]
+    [InlineData("Yatay ölçü (P1–P6)", "Horizontal dimension (P1–P6)")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

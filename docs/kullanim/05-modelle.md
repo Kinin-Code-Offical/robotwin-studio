@@ -30,6 +30,23 @@ Bir dosyada istediğiniz kadar parça olur:
 - **Döndürme:** bir profili eksen etrafında döndürerek gövde oluşturun.
 - **Robot parçaları:** 2WD şasi plakası, SG90 servo braketi, L braket, Tekerlek göbeği, Muhafaza kutusu + kapak. Bunların ölçüleri sonradan değiştirilebilir.
 
+### Ölçülü eskiz
+
+Bir profili ölçülü eskizle de çizebilirsiniz. Profili seçin, denetçide **Ölçülü eskize çevir…** düğmesine basın. Dikdörtgen dış şekil ve yuvarlak delikler ölçüleriyle gelir. Eskiz penceresinde:
+
+1. **Çizgi**, **Dikdörtgen**, **Daire** ve **Yay** ile kabaca çizin. Yakın bir noktaya tıklamak o noktayı paylaşır; neredeyse yatay ya da dikey çizilen çizgi öyle kalır.
+2. Seçip ilişki verin: yatay, dikey, paralel, dik, eşit, teğet, çakışık, orta nokta, eşmerkezli, simetrik, sabit.
+3. Ölçü verin: uzunluk, mesafe, yatay/dikey ölçü, çap, yarıçap, açı. Değeri kısıt listesinden değiştirin.
+
+Her değişiklik hemen çözülür ve çizim ölçülere oturur. Pencerenin sağında eskizin durumu yazar:
+- kaç serbestlik kaldığı;
+- **tam kısıtlı** olduğu (her nokta ve yarıçap belirli, çizgiler yeşil);
+- hangi kısıtın başkalarını tekrarladığı.
+
+Öteki kısıtlarla çelişen bir kısıt geri alınır ve çeliştiği kısıtlar adıyla yazılır. Kapalı çizgi ve yay döngüleri profil olur: en büyüğü dış şekil, içindekiler delik.
+
+Pencere kapandıktan sonra ölçüler denetçide de durur. Bir ölçüyü değiştirdiğinizde parça yeniden çözülür.
+
 ## Taşıma, döndürme, ölçekleme
 
 1. Nesneyi tıklayarak seçin (**A** hepsini seçer, **Alt+A** seçimi kaldırır).

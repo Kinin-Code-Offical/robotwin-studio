@@ -257,7 +257,19 @@ namespace RobotTwin.CoreSim.Modeling
         public SketchShape Outer { get; set; } = SketchShape.Rect(40, 20);
         public List<SketchShape> Holes { get; set; } = new List<SketchShape>();
 
-        public Sketch2D Clone() => new Sketch2D { Outer = Outer.Clone(), Holes = Holes.Select(h => h.Clone()).ToList() };
+        /// <summary>[sketch] The dimensioned sketch this profile comes from, if it is drawn as one (its loops make Outer and Holes).</summary>
+        public ConstrainedSketch? Constrained { get; set; }
+
+        public Sketch2D Clone() => new Sketch2D { Outer = Outer.Clone(), Holes = Holes.Select(h => h.Clone()).ToList(), Constrained = Constrained?.Clone() };
+
+        /// <summary>The dimensioned sketch's loops as this profile; false (and the profile as it was) when it has no closed loop.</summary>
+        public bool ApplyConstrained()
+        {
+            if (Constrained?.ToProfile() is not { } profile) return false;
+            Outer = profile.Outer;
+            Holes = profile.Holes;
+            return true;
+        }
     }
 
     /// <summary>A round hole through a plate (centre and diameter in mm).</summary>

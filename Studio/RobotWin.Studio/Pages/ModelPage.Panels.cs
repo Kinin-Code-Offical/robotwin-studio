@@ -425,6 +425,12 @@ namespace RobotWin.Studio.Pages
         {
             spec.Sketch ??= new Sketch2D();
             var sk = spec.Sketch;
+            if (sk.Constrained != null)
+            {
+                ConstrainedSection(sk);
+                return;
+            }
+
             Section("Profil (dış şekil)");
             ShapeEditor(sk.Outer, false);
             Section("Delikler", $"{sk.Holes.Count} adet");
@@ -448,6 +454,91 @@ namespace RobotWin.Studio.Pages
             row.Children.Add(SmallButton("+ Oluk", () => _ed.Do("Delik eklendi", () => sk.Holes.Add(SketchShape.Slot(14, 4)))));
             row.Children.Add(SmallButton("+ Altıgen", () => _ed.Do("Delik eklendi", () => sk.Holes.Add(SketchShape.Ngon(6, 3.2)))));
             Props.Children.Add(row);
+            var draw = SmallButton("Ölçülü eskize çevir…", () => OpenSketch(sk, ConstrainedSketch.From(sk)),
+                "Profili çizgi, daire ve yaylarla çizin; ilişki ve ölçü verin (dikdörtgen ve yuvarlak delikler ölçüleriyle gelir)");
+            draw.HorizontalAlignment = HorizontalAlignment.Left;
+            Props.Children.Add(draw);
+        }
+
+        /// <summary>[sketch] The profile drawn as a dimensioned sketch: its state, its dimensions to set here, and the editor.</summary>
+        private void ConstrainedSection(Sketch2D sk)
+        {
+            var c = sk.Constrained!;
+            var r = c.Clone().Solve();
+            string state = r.State switch
+            {
+                SketchState.FullyConstrained => "tam kısıtlı",
+                SketchState.Redundant => "fazla kısıt",
+                SketchState.Conflicting => "çelişkili",
+                _ => r.Freedom == 1 ? "1 serbestlik" : $"{r.Freedom} serbestlik"
+            };
+            Section("Ölçülü eskiz", state);
+            int lines = c.Entities.Count(e => e.Kind == SketchEntityKind.Line && !e.Construction);
+            int circles = c.Entities.Count(e => e.Kind == SketchEntityKind.Circle && !e.Construction);
+            int arcs = c.Entities.Count(e => e.Kind == SketchEntityKind.Arc && !e.Construction);
+            Caption($"{lines} çizgi, {circles} daire, {arcs} yay; {c.Constraints.Count} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.");
+            var dims = c.Dimensions.ToList();
+            if (dims.Count > 0)
+            {
+                Section("Ölçüler", $"{dims.Count} adet");
+                var host = new StackPanel();
+                Props.Children.Add(host);
+                foreach (var d in dims)
+                {
+                    string id = d.Id;
+                    bool angle = d.Kind == SketchConstraintKind.Angle;
+                    Num(host, DimensionLabel(d), d.Value, angle ? "°" : "mm", v => SetDimension(sk, id, v), "Ölçü", true, angle ? 1 : 0.5, 3);
+                }
+            }
+
+            var row = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+            row.Children.Add(SmallButton("Eskizi düzenle…", () => OpenSketch(sk, c)));
+            row.Children.Add(SmallButton("Ölçülü eskizi bırak", () => _ed.Do("Ölçülü eskiz bırakıldı", () => sk.Constrained = null),
+                "Profil şimdiki şekliyle serbest çokgen olarak kalır"));
+            Props.Children.Add(row);
+        }
+
+        private static string DimensionLabel(SketchConstraint d)
+        {
+            string kind = d.Kind switch
+            {
+                SketchConstraintKind.Length => "Uzunluk",
+                SketchConstraintKind.Distance => "Mesafe",
+                SketchConstraintKind.HorizontalDistance => "Yatay ölçü",
+                SketchConstraintKind.VerticalDistance => "Dikey ölçü",
+                SketchConstraintKind.Radius => "Yarıçap",
+                SketchConstraintKind.Diameter => "Çap",
+                _ => "Açı"
+            };
+            return kind + " (" + string.Join("–", new[] { d.A, d.B }.Where(x => !string.IsNullOrEmpty(x))) + ")";
+        }
+
+        /// <summary>A dimension set from the inspector: solved at once; one the others contradict is refused.</summary>
+        private void SetDimension(Sketch2D sk, string id, double value)
+        {
+            var trial = sk.Constrained!.Clone();
+            var k = trial.Constraints.FirstOrDefault(x => x.Id == id);
+            if (k == null) return;
+            k.Value = value;
+            if (trial.Solve().State == SketchState.Conflicting)
+            {
+                _ed.Status("Bu ölçü öteki kısıtlarla çelişiyor; değişmedi.");
+                return;
+            }
+
+            sk.Constrained = trial;
+            sk.ApplyConstrained();
+        }
+
+        private void OpenSketch(Sketch2D sk, ConstrainedSketch start)
+        {
+            var owner = Window.GetWindow(this);
+            var editor = new SketchEditorWindow(owner, start, result => _ed.Do("Eskiz değişti", () =>
+            {
+                sk.Constrained = result;
+                if (!sk.ApplyConstrained()) _ed.Status("Eskizde kapalı döngü yok: profil değişmedi.");
+            }));
+            editor.ShowDialog();
         }
 
         private void ShapeEditor(SketchShape s, bool hole)

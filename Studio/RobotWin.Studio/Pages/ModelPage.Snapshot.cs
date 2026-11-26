@@ -42,6 +42,70 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            if (demo is "sketch" or "sketch-editor" or "sketch-draw")
+            {
+                // [sketch] A motor bracket drawn as a dimensioned sketch: a 50 × 40 plate with a round end tangent to its
+                // sides, a bolt hole and a bearing seat round the end's centre, fully constrained; extruded 6 mm.
+                var bracket = new ModelDocument { Title = "Ölçülü eskiz" };
+                var plate = ModelOps.AddPrimitive(bracket, PrimitiveKind.Extrude);
+                plate.Name = "Motor braketi";
+                plate.Primitive!.Set("h", 6);
+                plate.Color = "#3B82C4";
+                plate.Primitive.Sketch = new Sketch2D { Constrained = ConstrainedSketch.Bracket() };
+                plate.Primitive.Sketch.Constrained.Solve();
+                plate.Primitive.Sketch.ApplyConstrained();
+                _ed.Load(bracket, null);
+                _ed.Select(plate.Id);
+                _vp.FrameAll();
+                if (demo is "sketch-editor" or "sketch-draw")
+                {
+                    var start = demo == "sketch-draw" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
+                    var editor = new SketchEditorWindow(Window.GetWindow(this), start, _ => { });
+                    editor.Show();
+                    if (demo == "sketch-draw")
+                    {
+                        // Drawn as a user would: a rough 60 × 30 rectangle, a circle in it, the bottom given 64 mm, the
+                        // circle 10 mm, its centre level with the rectangle's left corner (the log says how it came out).
+                        editor.UpdateLayout();
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("rect", -30, -15, null), ("rect", 31, 16, null),
+                            ("circle", 0.2, 0.4, null), ("circle", 6, 0.4, null),
+                            ("select", 0, -15, null), ("relate", 0, 0, "Uzunluk"), ("value", 0, 0, "64"),
+                            ("select", 6.2, 0.4, null), ("relate", 0, 0, "Çap"), ("value", 0, 0, "10"),
+                            ("select", 45, 40, null)
+                        });
+                        var r = editor.Result;
+                        string log = Environment.GetEnvironmentVariable("ROBOTWIN_SNAPSHOT_LOG") ?? "";
+                        if (log.Length > 0)
+                        {
+                            var sk = editor.Current;
+                            File.AppendAllText(log, $"sketch-draw: {r?.State} serbestlik {r?.Freedom}; " + string.Join(" ", sk.Points.Select(p => $"{p.Id}({p.X:0.###},{p.Y:0.###})")) +
+                                "; " + string.Join(" ", sk.Constraints.Select(c => $"{c.Id}:{c.Kind}:{c.A}:{c.B}:{c.Value:0.###}")) + Environment.NewLine);
+                        }
+                    }
+
+                    string? shot = Environment.GetCommandLineArgs().SkipWhile(a => a != "--snapshot").Skip(1).FirstOrDefault();
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (shot != null && editor.Content is FrameworkElement content && content.ActualWidth > 0)
+                        {
+                            var bmp = new RenderTargetBitmap((int)Math.Ceiling(content.ActualWidth + content.Margin.Left + content.Margin.Right),
+                                (int)Math.Ceiling(content.ActualHeight + content.Margin.Top + content.Margin.Bottom), 96, 96, PixelFormats.Pbgra32);
+                            bmp.Render(content);
+                            var png = new PngBitmapEncoder();
+                            png.Frames.Add(BitmapFrame.Create(bmp));
+                            using var file = File.Create(Path.ChangeExtension(shot, null) + "-sketch.png");
+                            png.Save(file);
+                        }
+
+                        editor.Close();
+                    }), DispatcherPriority.ApplicationIdle);
+                }
+
+                return;
+            }
+
             var doc = new ModelDocument { Title = "2WD robot gövdesi" };
             switch (demo)
             {

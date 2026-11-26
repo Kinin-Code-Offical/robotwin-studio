@@ -30,6 +30,23 @@ With **Add** or **Shift+A**:
 - **Revolve**: turn a profile around an axis into a solid.
 - **Robot parts**: 2WD chassis plate, SG90 servo bracket, L bracket, wheel hub, enclosure + lid. Their dimensions can be changed later.
 
+### Dimensioned sketch
+
+You can also draw a profile as a dimensioned sketch. Select the profile and press **Turn into a dimensioned sketch…** in the inspector. A rectangular outline and round holes come with their dimensions. In the sketch window:
+
+1. Draw roughly with **Line**, **Rectangle**, **Circle** and **Arc**. Clicking near a point shares it; a line drawn nearly level or upright stays so.
+2. Select and give relations: horizontal, vertical, parallel, perpendicular, equal, tangent, coincident, midpoint, concentric, symmetric, fixed.
+3. Give dimensions: length, distance, horizontal/vertical dimension, diameter, radius, angle. Change a value in the constraint list.
+
+Each change is solved at once and the drawing settles onto the dimensions. The right side of the window shows the sketch's state:
+- how many degrees of freedom are left;
+- that it is **fully constrained** (every point and radius set, the lines turn green);
+- which constraint repeats others.
+
+A constraint that contradicts the others is taken back, and the ones it fights are named. Closed loops of lines and arcs become the profile: the largest is the outline, the ones inside it holes.
+
+After the window closes, the dimensions stay in the inspector. Change one and the part is solved again.
+
 ## Move, rotate, scale
 
 1. Click an object to select it (**A** selects all, **Alt+A** clears the selection).
