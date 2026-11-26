@@ -70,7 +70,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.
 
 | Araç | Çağıran | Ne için |
 | --- | --- | --- |
-| `arduino-cli` | `Studio/Firmware/ArduinoCompiler.cs` | `arduino-cli compile --fqbn arduino:avr:uno` (ya da `arduino:avr:nano`) → `%LOCALAPPDATA%\RobotWinStudio\Build` içinde `sketch.ino.hex` |
+| `arduino-cli` | `Studio/RobotWin.Studio/Firmware/ArduinoCompiler.cs` | `arduino-cli compile --fqbn arduino:avr:uno` (ya da `arduino:avr:nano`) → `%LOCALAPPDATA%\RobotWinStudio\Build` içinde `sketch.ino.hex` |
 | MSVC `cl.exe`, `lib.exe` (`vcvars64.bat` üzerinden) | `CoreSim/.../Firmware/Esp32/Esp32SketchCompiler.cs` | ESP32 çizim DLL'leri ve `rw_esp32hal.lib` HAL kütüphanesi, `%LOCALAPPDATA%\RobotWin\esp32hal-cache` içinde önbellekte |
 | `dotnet build` | `CoreSim/.../Sdk` | Dünyalardaki C# betikleri (bkz. [Fizik betikleri](SDK.md)) |
 

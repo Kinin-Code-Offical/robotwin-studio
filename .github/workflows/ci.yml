@@ -45,6 +45,9 @@ jobs:
       - name: Dependency inventory (versions and licences, docs/DEPENDENCIES.md)
         run: python tools/scripts/dependency_inventory.py --check
 
+      - name: Documentation matches the code (paths, .NET version, menu paths)
+        run: python tools/scripts/doc_check.py --check
+
       - name: Build
         run: dotnet build RobotWinStudio.sln -c Release --no-restore
 

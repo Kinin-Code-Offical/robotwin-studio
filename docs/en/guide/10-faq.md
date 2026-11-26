@@ -89,7 +89,7 @@ Check that **Simulation → Simulation sounds** is on and **Settings → Volume*
 ## Files
 
 **I forgot to save; is my work gone?**
-The app backs up your work at intervals to `Documents\RobotWin\Yedekler`. Look at the **Automatic backups** list on the home page or **File → Automatic backups folder**. Change the interval under **Settings → Saving and backup**.
+The app backs up your work at intervals to `Documents\RobotWin\Yedekler`. Look at the **Automatic backups** list on the home page or **File → Automatic backups folder**. Change the interval under **Settings → Automatic backup**.
 
 **Double-clicking a file does not open the app.**
 Press **Settings → File types → Open with this app in Windows**.

@@ -73,7 +73,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.
 
 | Tool | Called by | For |
 | --- | --- | --- |
-| `arduino-cli` | `Studio/Firmware/ArduinoCompiler.cs` | `arduino-cli compile --fqbn arduino:avr:uno` (or `arduino:avr:nano`) → `sketch.ino.hex` in `%LOCALAPPDATA%\RobotWinStudio\Build` |
+| `arduino-cli` | `Studio/RobotWin.Studio/Firmware/ArduinoCompiler.cs` | `arduino-cli compile --fqbn arduino:avr:uno` (or `arduino:avr:nano`) → `sketch.ino.hex` in `%LOCALAPPDATA%\RobotWinStudio\Build` |
 | MSVC `cl.exe`, `lib.exe` (via `vcvars64.bat`) | `CoreSim/.../Firmware/Esp32/Esp32SketchCompiler.cs` | ESP32 sketch DLLs and the `rw_esp32hal.lib` HAL library, cached in `%LOCALAPPDATA%\RobotWin\esp32hal-cache` |
 
 ## Legacy tools

@@ -89,7 +89,7 @@ Kumandayı seçip **Kumandaları yeniden tara**'ya basın. Gerçek kumanda yoksa
 ## Dosyalar
 
 **Kaydetmeyi unuttum, işim gitti mi?**
-Uygulama işinizi belirli aralıklarla `Belgeler\RobotWin\Yedekler` klasörüne yedekler. **Başlangıç** sayfasındaki **Otomatik yedekler** listesine veya **Dosya → Otomatik yedekler klasörü**'ne bakın. Aralığı **Ayarlar → Dosyalar ve otomatik kayıt** bölümünden değiştirebilirsiniz.
+Uygulama işinizi belirli aralıklarla `Belgeler\RobotWin\Yedekler` klasörüne yedekler. **Başlangıç** sayfasındaki **Otomatik yedekler** listesine veya **Dosya → Otomatik yedekler klasörü**'ne bakın. Aralığı **Ayarlar → Otomatik yedek** bölümünden değiştirebilirsiniz.
 
 **Dosyaya çift tıklayınca uygulama açılmıyor.**
 **Ayarlar → Dosya türleri → Windows'ta bu uygulamayla aç** düğmesine basın.
