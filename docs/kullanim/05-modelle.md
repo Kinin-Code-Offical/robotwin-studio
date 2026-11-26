@@ -117,7 +117,7 @@ Seçim: **Alt+tık** (sürüklemeden) tıklanan kenarın halkasını seçer, yü
 
 ## Malzeme ve kütle
 
-Her nesneye bir malzeme (PLA, PETG, ABS, Naylon, Akrilik, Kontrplak, MDF, FR4, Alüminyum, Çelik, Karbon, Kauçuk) ve doluluk oranı (3D baskı için) verin. Kütle hacimden otomatik hesaplanır; dünyaya gönderdiğinizde bu kütle kullanılır.
+Her nesneye bir malzeme (PLA, PETG, ABS, Naylon, Akrilik, Kontrplak, MDF, FR4, Alüminyum, Çelik, Karbon, Kauçuk) ve doluluk oranı (3D baskı için) verin. Kütle hacimden otomatik hesaplanır; dünyaya gönderdiğinizde bu kütle kullanılır. Özellikler panelinin **Ölçüm** bölümü boyutları, hacmi, yüzey alanını, kütleyi, ağırlık merkezini ve asal atalet momentlerini gösterir. **Kütle özellikleri…** tam raporu açar (SolidWorks'teki gibi): ağırlık merkezinde atalet tensörü (g·mm², dünya eksenleri), asal eksenler ve momentler; birden çok nesne seçiliyse toplamları (paralel eksen teoremiyle). **Panoya kopyala** raporu metin olarak verir.
 
 ### 3B baskı denetimi
 

@@ -74,8 +74,8 @@ namespace RobotWin.Studio.Shell
             return result;
         }
 
-        /// <summary>Asks for one line of text (a file or folder name); null when cancelled.</summary>
-        public static string? Prompt(Window owner, string title, string message, string initial = "")
+        /// <summary>Asks for one line of text (a file or folder name); null when cancelled (or left empty, unless <paramref name="allowEmpty"/>).</summary>
+        public static string? Prompt(Window owner, string title, string message, string initial = "", bool allowEmpty = false)
         {
             string? result = null;
             var window = new Window
@@ -124,7 +124,7 @@ namespace RobotWin.Studio.Shell
                 box.Select(0, dot > 0 ? dot : box.Text.Length);
             };
             window.ShowDialog();
-            return string.IsNullOrWhiteSpace(result) ? null : result;
+            return allowEmpty || !string.IsNullOrWhiteSpace(result) ? result : null;   // allowEmpty: "" is an answer, null only a cancel
         }
     }
 }

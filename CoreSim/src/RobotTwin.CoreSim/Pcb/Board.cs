@@ -38,6 +38,9 @@ namespace RobotTwin.CoreSim.Pcb
 
         /// <summary>Silkscreen line width used for board texts and the legend.</summary>
         public double SilkWidth { get; set; } = 0.15;
+
+        /// <summary>[drc-policy] The user's severity per rule name (KiCad's Violation Severity); rules not here report as the checker says.</summary>
+        public Dictionary<string, DrcRuleSeverity> Severities { get; set; } = new Dictionary<string, DrcRuleSeverity>();
     }
 
     public sealed class BoardComponent
@@ -488,6 +491,9 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>[enclosure] The box the board is built into (Pcb/Enclosure.cs); null when none is given. The DRC holds the parts to it.</summary>
         public BoardEnclosure? Enclosure { get; set; }
         public List<BoardDimension> Dimensions { get; set; } = new List<BoardDimension>();
+
+        /// <summary>[drc-policy] DRC markers the user accepted (KiCad's exclusions); see <see cref="DrcPolicy"/>.</summary>
+        public List<DrcExclusion> DrcExclusions { get; set; } = new List<DrcExclusion>();
 
         /// <summary>
         /// [integrity] Where parts the schematic dropped stood (the latest 64): one that comes back with the same footprint

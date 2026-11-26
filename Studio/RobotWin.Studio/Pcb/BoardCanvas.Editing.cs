@@ -172,11 +172,31 @@ namespace RobotWin.Studio.Pcb
             SelectAt(x, y, p, (Keyboard.Modifiers & ModifierKeys.Shift) != 0);
         }
 
-        /// <summary>The item under a point, smallest first (vias, tracks, texts, holes, parts, zone edges, dimensions, outline).</summary>
-        private object? HitAny(double x, double y) =>
-            HitVia(x, y) as object ?? HitTrack(x, y) as object ?? HitText(x, y) as object ?? HitHole(x, y) as object ??
-            HitComponent(x, y) as object ?? HitZoneEdge(x, y) as object ?? HitDimension(x, y) as object ??
-            (HitOutlineEdge(x, y) ? TheOutline : null);
+        /// <summary>
+        /// The item under a point, smallest first (vias, tracks, texts, holes, parts, zone edges, dimensions, outline),
+        /// skipping the kinds the selection filter leaves out (a filtered via does not hide the track under it).
+        /// </summary>
+        private object? HitAny(double x, double y)
+        {
+            foreach (var hit in Hits(x, y))
+            {
+                if (SelectionFilter.Allows(hit)) return hit;
+            }
+
+            return null;
+        }
+
+        private IEnumerable<object> Hits(double x, double y)
+        {
+            if (HitVia(x, y) is { } via) yield return via;
+            if (HitTrack(x, y) is { } track) yield return track;
+            if (HitText(x, y) is { } text) yield return text;
+            if (HitHole(x, y) is { } hole) yield return hole;
+            if (HitComponent(x, y) is { } comp) yield return comp;
+            if (HitZoneEdge(x, y) is { } zone) yield return zone;
+            if (HitDimension(x, y) is { } dim) yield return dim;
+            if (HitOutlineEdge(x, y)) yield return TheOutline;
+        }
 
         private void SelectAt(double x, double y, Point screen, bool add)
         {
@@ -576,6 +596,7 @@ namespace RobotWin.Studio.Pcb
                 if (window ? z.Outline.All(q => In(q.X, q.Y)) : z.Outline.Any(q => In(q.X, q.Y))) found.Add(z);
             }
 
+            found.RemoveAll(o => !SelectionFilter.Allows(o));   // [select-filter]
             if (!_boxAdd) _sel.Clear();
             foreach (var f in found)
             {
@@ -599,6 +620,7 @@ namespace RobotWin.Studio.Pcb
             all.AddRange(board.MountingHoles);
             all.AddRange(board.Dimensions);
             all.AddRange(board.Zones.Where(z => !z.IsWholeBoard));
+            all.RemoveAll(o => !SelectionFilter.Allows(o));   // [select-filter]
             SetSelection(all);
             Say($"{all.Count} öğe seçildi");
         }

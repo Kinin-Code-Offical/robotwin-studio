@@ -730,6 +730,9 @@ namespace RobotWin.Studio.Pcb
             return double.IsInfinity(minX) ? (0, 0, 0, 0) : (minX, minY, maxX, maxY);
         }
 
+        /// <summary>[select-filter] Which kinds of items can be picked (KiCad's Selection Filter).</summary>
+        public PcbSelectionFilter SelectionFilter { get; } = new PcbSelectionFilter();
+
         /// <summary>Marker object selected when the board outline is picked.</summary>
         public sealed class OutlineSelection
         {

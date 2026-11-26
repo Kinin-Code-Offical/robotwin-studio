@@ -74,7 +74,14 @@ Dolgu, boşluk, ısıl bağlantı (thermal relief), öncelik ve ada temizleme ku
 - Güncel olmayan dolgular
 - Yol akım kapasitesi
 
-Hatalar listede görünür; birine tıklayınca kartta o yer gösterilir.
+Hatalar listede görünür; birine tıklayınca kartta o yer gösterilir. **F8** sonraki, **Shift+F8** önceki işarete gider (listenin üstündeki oklar da).
+
+Listenin üstündeki **Hatalar**, **Uyarılar** ve **İstisnalar** düğmeleri sayılarıyla birlikte o türü gösterir ya da gizler. Bir satıra sağ tıklayınca:
+
+- **İstisna olarak işaretle…**: bilerek kabul edilen bir işaret (örneğin kart kenarındaki bir test noktası) bir notla sayımdan çıkar. İstisna kartla kaydedilir; aynı kural aynı yerde aynı şeyi bulduğu sürece geçerlidir (sayılar biraz değişse de). İşaretin konusu 1 mm'den fazla kayarsa ya da başka parçalar arasında çıkarsa yeniden sayılır. **İstisnalar** düğmesi açıkken istisnalar gri olarak listelenir ve sağ tıkla geri alınır.
+- **Bu kuralın önemi**: kural **Hata**, **Uyarı** ya da **Denetleme** (hiç bildirilmez) olur.
+
+**Kural önemleri** bütün kuralları gruplarıyla (Elektriksel, Üretim, Mekanik, Sinyal bütünlüğü, Düzen ve bakım, Üretim ve test) ve son çalıştırmadaki işaret sayılarıyla listeler; her biri için önem seçilir, **Hepsini varsayılana döndür** ayarları siler. Önemler ve istisnalar kartla kaydedilir ve geri alınabilir. **Raporu kaydet…** son çalıştırmayı metin dosyası olarak yazar: tarih, kart, sayılar, hatalar, uyarılar, istisnalar (notlarıyla) ve denetlenmeyen kurallar.
 
 ### Üretim ve test (DFM/DFT)
 
@@ -164,6 +171,11 @@ Kartı **KiCad'e aktar** ile KiCad'e götürüp orada yerleştirdiyseniz ya da y
 | Ctrl+Shift+H | Ölçü çizgisi |
 | T | Serigrafi yazısı |
 | F1 veya ? | Tüm PCB kısayolları |
+| F8 / Shift+F8 | Sonraki / önceki DRC işareti |
+
+**Katmanlar** sekmesinin altındaki **Seçim süzgeci** tıklamanın, kutu seçiminin ve Ctrl+A'nın hangi türleri alacağını belirler: parçalar (ve aralarında kilitli olanlar), yollar, vialar, yazılar, montaj delikleri, dolgu alanları, ölçüler, kart kenarı. Kapalı bir tür çizilmeye ve denetlenmeye devam eder, yalnızca seçilemez; örneğin vialar kapalıyken bir via'nın altındaki yol doğrudan seçilir. **Hepsi** bütün türleri açar ya da kapatır.
+
+**Kart** sekmesindeki **İstatistikler…** kartın neyden yapıldığını gösterir: boyut ve alan, üst / alt yüzdeki, delikli ve SMD parçalar, ped türleri, vialar, hat ve yol sayısı, katman katman yol uzunluğu, dolgu alanları ve delik listesi (her çap, kaplamalı ya da değil, ped / via / montaj deliği ve sayısı). **Panoya kopyala** üretici teklifi için metin olarak verir. Komut paletinden de açılır ("kart istatistikleri").
 
 ---
 

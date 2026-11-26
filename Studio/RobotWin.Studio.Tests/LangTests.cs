@@ -193,6 +193,10 @@ public class LangTests
     /// <summary>Texts English runs of every world and circuit showed Turkish, with the built-in pack.</summary>
     [Theory]
     [InlineData("Prob: OUTPUT", "Probe: OUTPUT")]
+    [InlineData("Hatalar · 3", "Errors · 3")]
+    [InlineData("Q1.D ↔ VBAT: 0 mm (en az 0.2 mm) · Üst bakır", "Q1.D ↔ VBAT: 0 mm (min 0.2 mm) · Top copper")]
+    [InlineData("DRC kuralı 'Kısa devre': Uyarı", "DRC rule 'Short circuit': Warning")]
+    [InlineData("2 hata, 1 uyarı, 1 istisna", "2 errors, 1 warnings, 1 exclusions")]
     [InlineData("0 hata · 2 uyarı · 0 bilgi · t = 0 s", "0 errors · 2 warnings · 0 info · t = 0 s")]
     [InlineData("İç direnç (0 = varsayılan) (Ω)", "Internal resistance (0 = default) (Ω)")]
     [InlineData("Duvar 2", "Wall 2")]

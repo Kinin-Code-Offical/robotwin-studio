@@ -66,6 +66,7 @@ namespace RobotWin.Studio.Pages
             };
             _diagTimer.Start();
             BuildAcDock();   // [ac] Pages/SchematicPage.Ac.cs
+            BuildNetsDock();   // [net-navigator] Pages/SchematicPage.Nets.cs
             InitLayout();   // [dock] Pages/SchematicPage.Layout.cs
             SizeChanged += (_, _) => ApplyLayout();
             IsVisibleChanged += (_, _) =>

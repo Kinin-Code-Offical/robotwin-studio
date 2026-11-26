@@ -324,6 +324,16 @@ namespace RobotWin.Studio
                 Navigate("pcb");
                 Dispatcher.BeginInvoke(new Action(_pcb.RunDrc), System.Windows.Threading.DispatcherPriority.Loaded);
             }) { Context = "pcb", Keywords = "denetle kontrol kural hata run check design rule", Ready = () => W.Schematic.Board != null };
+            // [drc-policy] [board-stats] KiCad's Inspect menu
+            yield return new PaletteCommand("PCB", "Sonraki DRC işareti", () => _pcb.NextMarker(), "F8")
+            { Context = "pcb", Keywords = "next marker hata sorun git", Ready = () => _current == "pcb" };
+            yield return new PaletteCommand("PCB", "DRC raporunu kaydet", () => _pcb.SaveDrcReport())
+            { Context = "pcb", Keywords = "report rapor dışa aktar drc", Ready = () => _current == "pcb" };
+            yield return new PaletteCommand("PCB", "Kart istatistikleri", () =>
+            {
+                Navigate("pcb");
+                Dispatcher.BeginInvoke(new Action(_pcb.ShowStatistics), System.Windows.Threading.DispatcherPriority.Loaded);
+            }) { Context = "pcb", Keywords = "statistics delik drill sayı ped via alan uzunluk incele inspect", Ready = () => W.Schematic.Board != null };
             yield return new PaletteCommand("Dünya", "Montaj ilişkilerini denetle", () =>
             {
                 Navigate("world");

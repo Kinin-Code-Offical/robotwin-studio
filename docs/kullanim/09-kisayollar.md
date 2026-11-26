@@ -102,6 +102,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Home | Sığdır |
 | Ctrl+Shift+M | Ölç |
 | Ctrl+Shift+H | Ölçü çizgisi |
+| F8 / Shift+F8 | Sonraki / önceki DRC işareti |
 | F1 veya ? | Kısayol listesi |
 
 ## Kod

@@ -475,6 +475,33 @@ namespace RobotTwin.CoreSim.Tests
             Rel(MaterialDensity.Printed(MaterialDensity.Pla, 0.2) * 1e-6 * 1000, pla.MassG, 1e-9, "printed PLA");
         }
 
+        /// <summary>[mass-props] A 20 × 10 × 4 mm aluminium block: the box formulas m(b² + c²)/12, its axes the principal ones.</summary>
+        [Fact]
+        public void MassPropertiesOfABlockMatchTheFormulas()
+        {
+            var st = ModelMeasure.Of(PrimitiveBuilder.Box(20, 10, 4), "ALÜMİNYUM");
+            double m = st.MassG;
+            Rel(2.16, m, 1e-9, "0.8 cm³ of aluminium");
+            Rel(m * (10 * 10 + 4 * 4) / 12, st.InertiaGmm2.M00, 1e-6, "Lxx");
+            Rel(m * (20 * 20 + 4 * 4) / 12, st.InertiaGmm2.M11, 1e-6, "Lyy");
+            Rel(m * (20 * 20 + 10 * 10) / 12, st.InertiaGmm2.M22, 1e-6, "Lzz");
+            Assert.True(Math.Abs(st.InertiaGmm2.M01) < 1e-6 && Math.Abs(st.InertiaGmm2.M02) < 1e-6 && Math.Abs(st.InertiaGmm2.M12) < 1e-6, "no products of inertia");
+            var moments = new[] { st.PrincipalMomentsGmm2.X, st.PrincipalMomentsGmm2.Y, st.PrincipalMomentsGmm2.Z }.OrderBy(v => v).ToArray();
+            Rel(m * 116 / 12, moments[0], 1e-6, "P1");
+            Rel(m * 500 / 12, moments[2], 1e-6, "P3");
+            foreach (var axis in st.PrincipalAxes)
+            {
+                Rel(1, axis.Length, 1e-9, "unit axis");
+                double big = Math.Max(Math.Abs(axis.X), Math.Max(Math.Abs(axis.Y), Math.Abs(axis.Z)));
+                Rel(1, big, 1e-6, "along a box edge");
+            }
+
+            string report = st.Report("blok");
+            Assert.Contains("Kütle özellikleri: blok", report);
+            Assert.Contains("Kütle = 2.16 g", report);
+            Assert.Contains("Lzz = " + (m * 500 / 12).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), report);
+        }
+
         [Fact]
         public void RobotPartsAreWatertight()
         {

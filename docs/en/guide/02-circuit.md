@@ -9,7 +9,7 @@ The parts of the page:
 - **Left:** a searchable part list.
 - **Centre:** the schematic canvas and the toolbar above it (**Simulate** button, speed selector).
 - **Right:** the properties panel: the selected part, project info, part tolerance, shortcuts.
-- **Bottom:** measurement and info tabs: **Oscilloscope**, **Multimeter**, **Fault finding**, **Monte Carlo**, **Board pins**, **Serial monitor**, **Events**.
+- **Bottom:** measurement and info tabs: **Oscilloscope**, **Multimeter**, **Fault finding**, **Monte Carlo**, **Board pins**, **Serial monitor**, **Events**, **Nets**.
 
 ## A new circuit
 
@@ -74,7 +74,7 @@ Labels with the same name are connected; the name `GND` means ground. Right-clic
 | F1 or ? | All shortcuts |
 
 - **Annotate**: numbers part names (R1, R2, C1…) by row or column; the names on the PCB and in the assembly follow.
-- **Electrical rules check (ERC)**: finds unconnected pins, single-pin nets, output conflicts and unpowered power inputs.
+- **Electrical rules check (ERC)**: finds unconnected pins, single-pin nets, output conflicts and unpowered power inputs. Right-clicking a row offers **Mark as exclusion…** with a note (kept with the part and the net, so it holds when the part moves) or the rule's severity (error, warning, info, **Do not check**); both are saved with the schematic and can be undone. The **Exclusions** box lists the accepted ones too.
 - **PCB footprint**: choose the footprint the part uses on the PCB.
 
 ## Simulation
@@ -96,6 +96,10 @@ A circuit that would burn in real life burns here too: an LED without a resistor
 - In the **Fault finding** tab, **Why?** explains why the part burned.
 - After fixing the circuit, renew the parts with **Repair damaged parts**.
 - To switch damage off entirely, turn off **Simulation → Part damage (burning out, fuses)**.
+
+### Nets (net navigator)
+
+The **Nets** tab lists every net of the sheet with its pin count: ground first, then the named nets, last the ones named after a pin (dimmed). The search box filters by net name or by pin (`GND`, `R1`, `R1.2`). Picking a net highlights it on the sheet, takes the view there and highlights it on the PCB too; its pins are listed on the right with their part kinds, and picking a pin selects its part.
 
 ### Board pins
 

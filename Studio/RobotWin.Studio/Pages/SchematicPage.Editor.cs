@@ -29,6 +29,7 @@ namespace RobotWin.Studio.Pages
         private FrameworkElement? _picker, _inlineEditor, _findPanel, _ercPanel, _helpPanel, _snapshotMenu;
         private List<ErcViolation> _erc = new List<ErcViolation>();
         private bool _ercShowInfo;
+        private bool _ercShowExcluded;   // [erc-policy]
 
         private T Res<T>(string key) where T : class => (T)FindResource(key);
 
@@ -711,9 +712,11 @@ namespace RobotWin.Studio.Pages
         private void BuildErcPanel()
         {
             RemoveOverlay(ref _ercPanel, false);
-            int errors = _erc.Count(v => v.Severity == ErcSeverity.Error), warnings = _erc.Count(v => v.Severity == ErcSeverity.Warning), infos = _erc.Count(v => v.Severity == ErcSeverity.Info);
-            var shown = _erc.Where(v => _ercShowInfo || v.Severity != ErcSeverity.Info).ToList();
+            var result = ErcPolicy.Apply(W.Schematic, _erc);   // [erc-policy] the user's severities and exclusions
+            int errors = result.Errors, warnings = result.Warnings, infos = result.Infos;
+            var shown = result.Shown.Where(v => _ercShowInfo || v.Severity != ErcSeverity.Info).ToList();
             Canvas.ErcMarkers = shown;
+            var excluded = _ercShowExcluded ? result.Excluded : new List<(ErcViolation Violation, ErcExclusion Exclusion)>();
             var stack = new StackPanel();
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
             var close = new Button { Content = "✕", Style = Res<Style>("Btn.Ghost"), Padding = new Thickness(6, 0, 6, 0) };
@@ -725,33 +728,52 @@ namespace RobotWin.Studio.Pages
             summary.Inlines.Add(new System.Windows.Documents.Run($"{errors} hata") { Foreground = errors > 0 ? Res<Brush>("B.Danger") : Res<Brush>("B.TextSecondary") });
             summary.Inlines.Add(new System.Windows.Documents.Run($"  ·  {warnings} uyarı") { Foreground = warnings > 0 ? Res<Brush>("B.Warning") : Res<Brush>("B.TextSecondary") });
             summary.Inlines.Add(new System.Windows.Documents.Run($"  ·  {infos} bilgi") { Foreground = Res<Brush>("B.TextMuted") });
+            if (result.Excluded.Count > 0) summary.Inlines.Add(new System.Windows.Documents.Run($"  ·  {result.Excluded.Count} istisna") { Foreground = Res<Brush>("B.TextMuted") });
             stack.Children.Add(summary);
             var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
             var rerun = new Button { Content = "Yeniden çalıştır", Padding = new Thickness(10, 2, 10, 2) };
             var info = new CheckBox { Content = "Bilgileri göster", IsChecked = _ercShowInfo, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Foreground = Res<Brush>("B.TextSecondary") };
+            var showExcluded = new CheckBox { Content = "İstisnalar", IsChecked = _ercShowExcluded, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Foreground = Res<Brush>("B.TextSecondary"), ToolTip = "İstisna olarak işaretlenenleri de listele" };
             bar.Children.Add(rerun);
             bar.Children.Add(info);
+            bar.Children.Add(showExcluded);
             stack.Children.Add(bar);
-            if (shown.Count == 0)
+            int set = W.Schematic.ErcSeverities.Count;
+            if (set > 0)
+            {
+                var reset = new Button { Content = "Varsayılana döndür", Style = Res<Style>("Btn.Ghost"), Padding = new Thickness(6, 0, 6, 0), Margin = new Thickness(8, 0, 0, 0) };
+                reset.Click += (_, _) => ErcPolicyEdit("ERC kural önemleri varsayılana döndü", () => W.Schematic.ErcSeverities.Clear());
+                var line = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+                DockPanel.SetDock(reset, Dock.Right);
+                line.Children.Add(reset);
+                line.Children.Add(new TextBlock { Text = $"{set} kuralın önemi değiştirildi" + (result.Ignored.Count > 0 ? $" ({result.Ignored.Values.Sum()} işaret denetlenmedi)" : string.Empty), Style = Res<Style>("Text.Caption"), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+                stack.Children.Add(line);
+            }
+            if (shown.Count == 0 && excluded.Count == 0)
             {
                 stack.Children.Add(new TextBlock { Text = errors + warnings == 0 ? "✓ Sorun bulunamadı." : "Gösterilecek öğe yok.", Style = Res<Style>("Text.Body"), Foreground = Res<Brush>("B.Success") });
             }
 
             var list = new ListBox { MaxHeight = 360 };
-            foreach (var v in shown)
+            void AddRow(ErcViolation v, ErcExclusion? ex)
             {
                 var row = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
                 var dot = new System.Windows.Shapes.Ellipse
                 {
                     Width = 7, Height = 7, Margin = new Thickness(0, 5, 8, 0), VerticalAlignment = VerticalAlignment.Top,
-                    Fill = v.Severity == ErcSeverity.Error ? Res<Brush>("B.Danger") : v.Severity == ErcSeverity.Warning ? Res<Brush>("B.Warning") : Res<Brush>("B.TextMuted")
+                    Fill = ex != null ? Res<Brush>("B.TextMuted") : v.Severity == ErcSeverity.Error ? Res<Brush>("B.Danger") : v.Severity == ErcSeverity.Warning ? Res<Brush>("B.Warning") : Res<Brush>("B.TextMuted")
                 };
                 row.Children.Add(dot);
-                row.Children.Add(new TextBlock { Text = v.Message, TextWrapping = TextWrapping.Wrap, Foreground = Res<Brush>("B.Text"), FontSize = 12, MaxWidth = 300 });
-                list.Items.Add(new ListBoxItem { Content = row, Tag = v, ToolTip = v.SeverityText + " · " + v.Code });
+                string text = ex == null ? v.Message : Lang.T("İstisna") + " · " + Lang.T(v.Message) + (ex.Comment.Length > 0 ? " — " + ex.Comment : string.Empty);
+                row.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = Res<Brush>(ex == null ? "B.Text" : "B.TextSecondary"), FontSize = 12, MaxWidth = 300 });
+                var item = new ListBoxItem { Content = row, Tag = v, ToolTip = v.SeverityText + " · " + (ErcRuleCatalog.Find(v.Code)?.Name ?? v.Code) };
+                item.ContextMenu = ErcMenu(v, ex);
+                list.Items.Add(item);
             }
 
-            if (shown.Count > 0) stack.Children.Add(list);
+            foreach (var v in shown) AddRow(v, null);
+            foreach (var (v, ex) in excluded) AddRow(v, ex);
+            if (list.Items.Count > 0) stack.Children.Add(list);
             list.SelectionChanged += (_, _) =>
             {
                 if ((list.SelectedItem as ListBoxItem)?.Tag is not ErcViolation v) return;
@@ -766,6 +788,11 @@ namespace RobotWin.Studio.Pages
                 _ercShowInfo = info.IsChecked == true;
                 BuildErcPanel();
             };
+            showExcluded.Click += (_, _) =>
+            {
+                _ercShowExcluded = showExcluded.IsChecked == true;
+                BuildErcPanel();
+            };
             close.Click += (_, _) =>
             {
                 RemoveOverlay(ref _ercPanel);
@@ -776,6 +803,69 @@ namespace RobotWin.Studio.Pages
             _overlay.Children.Add(card);
             Place(card, _overlay.ActualWidth - 370, 12);
             W.Status = $"ERC: {errors} hata, {warnings} uyarı";
+        }
+
+        /// <summary>[erc-policy] A change to the schematic's ERC settings: undoable, saved, and the list follows.</summary>
+        private void ErcPolicyEdit(string message, Action change)
+        {
+            W.BeginChange();
+            change();
+            W.CommitChange(message);
+            BuildErcPanel();
+        }
+
+        /// <summary>[erc-policy] A marker's right-click menu: accept it (or take it back), the rule's severity.</summary>
+        private ContextMenu ErcMenu(ErcViolation v, ErcExclusion? ex)
+        {
+            var m = new ContextMenu();
+            var rule = ErcRuleCatalog.Find(v.Code);
+            string name = rule?.Name ?? v.Code;
+            if (ex != null)
+            {
+                var undo = new MenuItem { Header = "İstisnayı kaldır" };
+                undo.Click += (_, _) => ErcPolicyEdit($"ERC istisnası kaldırıldı: {name}", () => ErcPolicy.Include(W.Schematic, v));
+                m.Items.Add(undo);
+            }
+            else
+            {
+                var accept = new MenuItem { Header = "İstisna olarak işaretle…" };
+                accept.Click += (_, _) =>
+                {
+                    string? note = Dialog.Prompt(Window.GetWindow(this)!, "İstisna olarak işaretle", $"{v.Message}\n\nNeden kabul edildiği (isteğe bağlı):", string.Empty, allowEmpty: true);
+                    if (note == null) return;
+                    ErcPolicyEdit($"ERC istisnası: {name}", () => ErcPolicy.Exclude(W.Schematic, v, note));
+                    ShowToast("İşaret istisna olarak işaretlendi; 'İstisnalar' ile görünür");
+                };
+                m.Items.Add(accept);
+            }
+
+            var sev = new MenuItem { Header = $"'{name}' kuralının önemi" };
+            var current = ErcPolicy.SeverityOf(W.Schematic, v.Code);
+            foreach (var s in new[] { ErcRuleSeverity.Default, ErcRuleSeverity.Error, ErcRuleSeverity.Warning, ErcRuleSeverity.Info, ErcRuleSeverity.Ignore })
+            {
+                var choice = s;
+                string label = s switch
+                {
+                    ErcRuleSeverity.Error => "Hata",
+                    ErcRuleSeverity.Warning => "Uyarı",
+                    ErcRuleSeverity.Info => "Bilgi",
+                    ErcRuleSeverity.Ignore => "Denetleme",
+                    _ => rule?.Default switch
+                    {
+                        ErcSeverity.Error => "Varsayılan (hata)",
+                        ErcSeverity.Warning => "Varsayılan (uyarı)",
+                        ErcSeverity.Info => "Varsayılan (bilgi)",
+                        _ => "Varsayılan (duruma göre)"
+                    }
+                };
+                var it = new MenuItem { Header = label, IsCheckable = true, IsChecked = s == current };
+                it.Click += (_, _) => ErcPolicyEdit($"ERC kuralı '{name}': {label}", () => ErcPolicy.SetSeverity(W.Schematic, v.Code, choice));
+                sev.Items.Add(it);
+            }
+
+            m.Items.Add(sev);
+            if (rule != null) m.Items.Add(new MenuItem { Header = rule.Description, IsEnabled = false });
+            return m;
         }
 
         // ================================================================ annotation
@@ -1054,6 +1144,20 @@ namespace RobotWin.Studio.Pages
                     break;
                 case "erc":
                     RunErc(keepOpen: false);
+                    break;
+                case "erc-policy":   // [erc-policy] one marker accepted, one rule made an error, exclusions listed
+                    _erc = ElectricalRulesChecker.Check(W.Schematic, W.Library);
+                    var accepted = _erc.FirstOrDefault(v => v.Severity == ErcSeverity.Warning);
+                    if (accepted != null) ErcPolicy.Exclude(W.Schematic, accepted, "bilerek");
+                    if (_erc.FirstOrDefault(v => v.Severity == ErcSeverity.Warning && v.Code != accepted?.Code) is { } raised) ErcPolicy.SetSeverity(W.Schematic, raised.Code, ErcRuleSeverity.Error);
+                    _ercShowExcluded = true;
+                    _ercShowInfo = true;
+                    BuildErcPanel();
+                    break;
+                case "nets":   // [net-navigator] the nets tab with a net picked
+                    _dock?.Reveal("nets");
+                    RefreshNets();
+                    if (_netsList != null && _netsList.Items.Count > 1) _netsList.SelectedIndex = 1;
                     break;
                 case "find":
                     ShowFind(true);

@@ -9,7 +9,7 @@ Sayfanın bölümleri:
 - **Solda** aranabilir parça listesi.
 - **Ortada** şema tuvali ve üstte araç çubuğu (**Simüle et** düğmesi, hız seçimi).
 - **Sağda** özellikler paneli: seçili parça, proje bilgisi, parça toleransı, kısayollar.
-- **Altta** ölçü ve bilgi sekmeleri: **Osiloskop**, **Multimetre**, **Arıza tespiti**, **Monte Carlo**, **Kart pinleri**, **Seri monitör**, **Olaylar**.
+- **Altta** ölçü ve bilgi sekmeleri: **Osiloskop**, **Multimetre**, **Arıza tespiti**, **Monte Carlo**, **Kart pinleri**, **Seri monitör**, **Olaylar**, **Hatlar**.
 
 ## Yeni bir devre
 
@@ -74,7 +74,7 @@ Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir
 | F1 veya ? | Tüm kısayollar |
 
 - **Numaralandır:** parça adlarını (R1, R2, C1…) satıra veya sütuna göre sırayla verir; PCB ve montajdaki adlar da güncellenir.
-- **Elektriksel kural denetimi (ERC):** bağlanmamış pinleri, tek pinli hatları, çıkış çakışmalarını ve beslemesiz güç girişlerini bulur.
+- **Elektriksel kural denetimi (ERC):** bağlanmamış pinleri, tek pinli hatları, çıkış çakışmalarını ve beslemesiz güç girişlerini bulur. Bir satıra sağ tıklayınca işaret notuyla **İstisna olarak işaretle…** (parça ve hatla birlikte tutulur, parça taşınsa da geçerli) ya da kuralın önemi (hata, uyarı, bilgi, **Denetleme**) seçilir; ikisi de şemayla kaydedilir ve geri alınır. **İstisnalar** kutusu kabul edilenleri de listeler.
 - **PCB kılıfı:** parçanın PCB'de kullanacağı ayak izini seçin.
 
 ## Simülasyon
@@ -96,6 +96,10 @@ Gerçek hayatta yanacak bir devre burada da yanar: dirençsiz LED, aşırı akı
 - **Arıza tespiti** sekmesinde **Neden?** düğmesi parçanın neden yandığını açıklar.
 - Devreyi düzelttikten sonra **Hasarlı parçaları onar** ile parçaları yenileyin.
 - Hasarı tamamen kapatmak için **Simülasyon → Parça hasarı (yanma, sigorta)** seçeneğini kapatın.
+
+### Hatlar (ağ gezgini)
+
+**Hatlar** sekmesi şemadaki bütün hatları pin sayılarıyla listeler: önce toprak, sonra adlandırılmış hatlar, en sonda adı bir pinden türetilenler (soluk). Arama kutusu hat adıyla ya da pinle süzer (`GND`, `R1`, `R1.2`). Bir hat seçilince şemada vurgulanır, görünüm oraya gider ve PCB'de de vurgulanır; sağda pinleri parça türleriyle listelenir, bir pin seçilince parçası seçilir.
 
 ### Kart pinleri
 

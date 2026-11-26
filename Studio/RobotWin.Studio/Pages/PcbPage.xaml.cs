@@ -37,15 +37,20 @@ namespace RobotWin.Studio.Pages
 
         private sealed class DrcItem
         {
-            public DrcItem(DrcViolation v)
+            public DrcItem(DrcViolation v, DrcExclusion? exclusion = null)
             {
                 Violation = v;
-                Tag = v.Severity == DrcSeverity.Error ? PcbForms.B("B.Danger") : PcbForms.B("B.Warning");
+                Exclusion = exclusion;
+                Tag = exclusion != null ? PcbForms.B("B.TextMuted") : v.Severity == DrcSeverity.Error ? PcbForms.B("B.Danger") : PcbForms.B("B.Warning");
             }
 
             public DrcViolation Violation { get; }
-            public string Rule => Violation.Rule;
-            public string Message => Violation.Message;
+
+            /// <summary>[drc-policy] The exclusion that accepted this marker, when it is one.</summary>
+            public DrcExclusion? Exclusion { get; }
+
+            public string Rule => Exclusion == null ? Violation.Rule : Shell.Lang.T("İstisna") + " · " + Violation.Rule;
+            public string Message => Exclusion is { Comment.Length: > 0 } e ? Violation.Message + " — " + e.Comment : Violation.Message;
             public Brush Tag { get; }
         }
 
@@ -94,11 +99,15 @@ namespace RobotWin.Studio.Pages
                     HelpOverlay.Visibility = Visibility.Collapsed;
                     e.Handled = true;
                 }
+                else if (OnDrcKey(e))
+                {
+                    e.Handled = true;   // [drc-policy] F8 / Shift+F8: next / previous marker
+                }
             };
             _fillTimer.Tick += (_, _) => AutoFill();
             W.DocumentReplaced += (_, _) =>
             {
-                _violations.Clear();
+                ClearDrc();
                 if (IsVisible) OnShown();
             };
             W.DocumentChanged += (_, _) =>
@@ -106,8 +115,7 @@ namespace RobotWin.Studio.Pages
                 // Undo/redo replace the board object.
                 if (!ReferenceEquals(Canvas.Board, W.Schematic.Board) && W.Schematic.Board != null && Canvas.Board != null)
                 {
-                    _violations.Clear();
-                    Canvas.Violations = _violations;
+                    ClearDrc();
                     Canvas.Board = W.Schematic.Board;
                     UpdatePanel();
                 }
@@ -286,9 +294,7 @@ namespace RobotWin.Studio.Pages
         private void AfterEdit(string message)
         {
             W.CommitChange(message);
-            _violations.Clear();
-            Canvas.Violations = _violations;
-            Canvas.FocusedViolation = null;
+            ClearDrc();
             ScheduleFill();
             UpdatePanel();
         }
@@ -698,9 +704,8 @@ namespace RobotWin.Studio.Pages
 
             new AutoRouter(board).Route();
             if (board.Zones.Count > 0) ZoneFiller.FillAll(board);
-            _violations = DesignRuleChecker.Check(board);
-            Canvas.Violations = _violations;
             Canvas.Board = board;
+            SetDrc(DesignRuleChecker.Check(board));
             UpdatePanel();
             Canvas.Fit();
             switch (fault)
@@ -721,6 +726,35 @@ namespace RobotWin.Studio.Pages
                     RunDrcNow();
                     if (DrcList.Items.Count > 0) DrcList.SelectedIndex = 0;
                     ShowPanel(3);
+                    break;
+                case "drc-policy":   // [drc-policy] one marker accepted with a note, a warning rule made an error, exclusions listed
+                    board.Tracks.Add(new Track { Net = board.NetNames().First(), Layer = CopperLayer.Top, X1 = 2, Y1 = 2, X2 = board.Width / 2, Y2 = board.Height / 2, Width = 0.3 });
+                    RunDrcNow();
+                    if (_drc.Shown.FirstOrDefault(v => v.Severity == DrcSeverity.Error) is { } accepted) DrcPolicy.Exclude(board, accepted, "bilerek: kart kenarındaki test noktası");
+                    DrcPolicy.SetSeverity(board, "Boşta yol ucu", DrcRuleSeverity.Error);
+                    ShowExcluded.IsChecked = true;
+                    ApplyDrcPolicy();
+                    UpdatePanel();
+                    ShowPanel(3);
+                    break;
+                case "drc-rules":   // [drc-policy] the severity of every rule
+                    board.Tracks.Add(new Track { Net = board.NetNames().First(), Layer = CopperLayer.Top, X1 = 2, Y1 = 2, X2 = board.Width / 2, Y2 = board.Height / 2, Width = 0.3 });
+                    DrcPolicy.SetSeverity(board, "Serigrafi pedde", DrcRuleSeverity.Ignore);
+                    RunDrcNow();
+                    ShowPanel(3);
+                    DrcRulesToggle.IsChecked = true;
+                    OnDrcRules(this, new RoutedEventArgs());
+                    break;
+                case "stats":   // [board-stats] the statistics dialog over the routed board
+                    UpdatePanel();
+                    OnStatistics(this, new RoutedEventArgs());
+                    break;
+                case "select-filter":   // [select-filter] vias and dimensions left out, the layers tab showing the filter
+                    Canvas.SelectionFilter.Vias = false;
+                    Canvas.SelectionFilter.Locked = false;
+                    UpdatePanel();
+                    ShowPanel(1);
+                    if (LayersPanel.Parent is ScrollViewer lsv) Dispatcher.BeginInvoke(new Action(lsv.ScrollToEnd), System.Windows.Threading.DispatcherPriority.Loaded);
                     break;
                 case "dfm":   // [dfm] the board as it is, with the manufacturing and test check on
                     DfmCheck.IsChecked = true;
@@ -930,8 +964,7 @@ namespace RobotWin.Studio.Pages
 
             if (Board != board) return;   // another project's board is open now: the result belongs to none
             Edit("Otomatik rota", () => TakeCopper(board, copy, tracks: true));
-            _violations = violations;
-            Canvas.Violations = _violations;
+            SetDrc(violations);
             W.Status = result.Complete
                 ? $"Rota tamam: {result.Routed} bağlantı ({result.PlaneConnections} düzleme), {result.ViasAdded} via, {result.TotalLength:0} mm yol"
                 : $"{result.Failed.Count} bağlantı çizilemedi — kartı büyütün, parçaları açın veya katman ekleyin";
@@ -996,13 +1029,12 @@ namespace RobotWin.Studio.Pages
             // [dfm] with the switch on, what the fab and the assembly line would flag joins the list (as warnings)
             _dfm = DfmCheck.IsChecked == true ? DfmChecker.Check(Board) : null;
             if (_dfm != null) violations = violations.Concat(_dfm.Issues).ToList();
-            _violations = violations;
-            Canvas.Violations = _violations;
+            SetDrc(violations);   // [drc-policy] the user's severities and exclusions applied
             Canvas.FocusedViolation = null;
-            int errors = _violations.Count(v => v.Severity == DrcSeverity.Error);
-            W.Status = errors == 0
-                ? "DRC: hata yok" + (_violations.Count > 0 ? $", {_violations.Count} uyarı" : string.Empty) + (currents.Count > 0 ? " (simülasyon akımları ile kontrol edildi)" : string.Empty)
-                : $"DRC: {errors} hata, {_violations.Count - errors} uyarı";
+            int errors = _drc.Errors, warnings = _drc.Warnings;
+            W.Status = (errors == 0
+                ? "DRC: hata yok" + (warnings > 0 ? $", {warnings} uyarı" : string.Empty) + (currents.Count > 0 ? " (simülasyon akımları ile kontrol edildi)" : string.Empty)
+                : $"DRC: {errors} hata, {warnings} uyarı") + (_drc.Excluded.Count > 0 ? $" · {_drc.Excluded.Count} istisna" : string.Empty);
             UpdatePanel();
             ShowPanel(3);
             Canvas.InvalidateVisual();
@@ -1408,7 +1440,7 @@ namespace RobotWin.Studio.Pages
                     }),
                     ("Araçlar", new[]
                     {
-                        ("Z", "dolgu alanı çiz"), ("T", "serigrafi yazısı"), ("Ctrl+Shift+M", "ölç"), ("Ctrl+Shift+H", "ölçü çizgisi"), ("Sol çubuk", "kart kenarı, montaj deliği"),
+                        ("Z", "dolgu alanı çiz"), ("T", "serigrafi yazısı"), ("Ctrl+Shift+M", "ölç"), ("Ctrl+Shift+H", "ölçü çizgisi"), ("F8 / Shift+F8", "sonraki / önceki DRC işareti"), ("Sol çubuk", "kart kenarı, montaj deliği"),
                         ("Sağ tık", "bağlam menüsü (parça, yol, via, dolgu, boş alan)"), ("F1 / ?", "bu liste")
                     })
                 };
@@ -1485,7 +1517,7 @@ namespace RobotWin.Studio.Pages
 
             BoardPanel.Children.Add(Overline("Kart"));
             BoardPanel.Children.Add(Caption($"{board.LayerCount} bakır katman · {board.Stackup.Thickness:0.##} mm · dış bakır {BoardStackup.UmToOz(board.Rules.CopperThicknessUm):0.#} oz{(board.Stackup.AllowBlindBuriedVias ? " · kör/gömülü via" : string.Empty)}", 0));
-            BoardPanel.Children.Add(Buttons(Button("Kart ayarları…", OnBoardSetup)));
+            BoardPanel.Children.Add(Buttons(Button("Kart ayarları…", OnBoardSetup), Button("İstatistikler…", OnStatistics, tip: "Parçalar, pedler, vialar, delik listesi, yol uzunlukları ve alan (KiCad'in kart istatistikleri gibi)")));
             bool polygon = board.Outline.Count >= 3;
             if (!polygon)
             {
@@ -1757,6 +1789,7 @@ namespace RobotWin.Studio.Pages
                 LayersPanel.Children.Add(Buttons(Button($"'{Canvas.HighlightNet}' vurgusunu kaldır", (_, _) => Canvas.SetHighlight(null))));
             }
 
+            AddSelectionFilter();   // [select-filter]
             LayersPanel.Children.Add(Overline("Dolgu alanları"));
             foreach (var zone in ZoneFiller.FillOrder(board))
             {
@@ -2007,9 +2040,10 @@ namespace RobotWin.Studio.Pages
 
         private void UpdateDrcPanel(BoardDocument board)
         {
-            int errors = _violations.Count(v => v.Severity == DrcSeverity.Error);
-            DrcTab.Header = _violations.Count == 0 ? "DRC" : $"DRC · {_violations.Count}";
-            if (_violations.Count == 0)
+            int errors = _drc.Errors, warnings = _drc.Warnings;
+            DrcTab.Header = errors + warnings == 0 ? "DRC" : $"DRC · {errors + warnings}";
+            UpdateDrcFilters();   // [drc-policy]
+            if (errors + warnings == 0)
             {
                 bool routed = board.Tracks.Count > 0 && DesignRuleChecker.UnroutedNets(board).Count == 0;
                 DrcSummary.Text = routed ? "Son denetimden beri sorun bildirilmedi. Değişiklikten sonra yeniden çalıştırın." : "DRC'yi çalıştırın: aralıklar (hat sınıfı), halka, delik, kenar, serigrafi, bağlantı, dolgu ve akım.";
@@ -2017,14 +2051,15 @@ namespace RobotWin.Studio.Pages
             }
             else
             {
-                DrcSummary.Text = $"{errors} hata, {_violations.Count - errors} uyarı · bir satıra tıklayınca yerine gider";
+                DrcSummary.Text = $"{errors} hata, {warnings} uyarı · bir satıra tıklayınca yerine gider (F8 sonraki)";
                 DrcSummary.Foreground = errors > 0 ? B("B.Danger") : B("B.Warning");
             }
 
             if (_dfm is { Nets: > 0 } dfm)   // [dfm] how much of the board a test probe reaches
                 DrcSummary.Text += Shell.Lang.T($"\nTest kapsamı %{dfm.Coverage * 100:0} ({dfm.TestableNets}/{dfm.Nets} hat)");
 
-            DrcList.ItemsSource = _violations.OrderByDescending(v => v.Severity).ThenBy(v => v.Rule, StringComparer.Ordinal).Select(v => new DrcItem(v)).ToList();
+            DrcList.ItemsSource = DrcItems();
+            if (DrcRulesScroll.Visibility == Visibility.Visible) FillDrcRules();
             UpdateEnclosurePanel(board);   // [enclosure]
         }
     }

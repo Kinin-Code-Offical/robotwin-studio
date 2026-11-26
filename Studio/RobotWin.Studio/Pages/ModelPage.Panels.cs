@@ -825,6 +825,44 @@ namespace RobotWin.Studio.Pages
             ModelOps.SetWorldMatrix(_ed.Doc, o, Affine.Translate(new Vec3(0, 0, before.Min.Z - after.Min.Z)) * world);
         }
 
+        /// <summary>
+        /// [mass-props] SolidWorks' Mass Properties (studied in place) as a window: the full report of the object or the
+        /// selection, in a monospaced box to read and select, with a copy button.
+        /// </summary>
+        private void ShowMassProperties(ModelStats stats, string title)
+        {
+            string text = stats.Report(title, Shell.Lang.T);
+            var panel = new StackPanel { Width = 560 };
+            panel.Children.Add(new TextBlock { Text = Shell.Lang.T("Kütle özellikleri"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Shell.Lang.T("Malzemenin yoğunluğu ve doluluk oranıyla; ağırlık merkezi ve tensör dünya eksenlerinde."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
+            var box = new TextBox
+            {
+                Text = text, IsReadOnly = true, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, TextWrapping = TextWrapping.NoWrap,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 360, Padding = new Thickness(8)
+            };
+            panel.Children.Add(box);
+            var copy = new Button { Content = Shell.Lang.T("Panoya kopyala"), Margin = new Thickness(0, 10, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Style = (Style)FindResource("Btn") };
+            copy.Click += (_, _) =>
+            {
+                Clipboard.SetText(text);
+                _ed.Status(Shell.Lang.T("Kütle özellikleri panoya kopyalandı"));
+            };
+            panel.Children.Add(copy);
+            var dlg = RobotWin.Studio.Pcb.PcbForms.MakeDialog(Window.GetWindow(this), Shell.Lang.T("Kütle özellikleri"), 620, panel, out var ok, "Kapat", withCancel: false);
+            ok.Click += (_, _) => dlg.DialogResult = true;
+            ok.IsCancel = true;
+            if (Shell.Unattended.Active)
+            {
+                dlg.ShowActivated = false;
+                dlg.Show();
+                dlg.UpdateLayout();
+                App.SnapshotTarget = System.Windows.Media.VisualTreeHelper.GetChildrenCount(dlg) > 0 ? System.Windows.Media.VisualTreeHelper.GetChild(dlg, 0) as FrameworkElement : dlg.Content as FrameworkElement;
+                return;
+            }
+
+            dlg.ShowDialog();
+        }
+
         private void StatsSection(ModelObject o, List<ModelObject> objs)
         {
             var s = ModelMeasure.Of(_ed.Doc, o);
@@ -835,15 +873,22 @@ namespace RobotWin.Studio.Pages
             Line("Yüzey alanı", $"{s.AreaMm2 / 100:0.##} cm²");
             Line("Kütle", $"{s.MassG:0.##} g" + (mat.Printed ? $"  ({mat.Name}, %{o.Infill * 100:0} doluluk)" : $"  ({mat.Name})"), Res("B.Text"));
             Line("Ağırlık merkezi", $"{s.CenterOfMass.X:0.#}, {s.CenterOfMass.Y:0.#}, {s.CenterOfMass.Z:0.#} mm");
+            Line("Asal atalet", $"{s.PrincipalMomentsGmm2.X:0.#} · {s.PrincipalMomentsGmm2.Y:0.#} · {s.PrincipalMomentsGmm2.Z:0.#} g·mm²");   // [mass-props]
             Line("Ağ", $"{s.Faces} yüz · {s.Triangles} üçgen");
             Line("Durum", s.Closed ? "kapalı (su geçirmez)" : "açık ağ (delik/çakışma var)", s.Closed ? Res("B.Success") : Res("B.Warning"));
+            var report = objs.Count > 1 ? ModelMeasure.Total(_ed.Doc, objs) : s;
+            string title = objs.Count > 1 ? Shell.Lang.T($"{objs.Count} nesne") : o.Name;
+            var more = new Button { Content = "Kütle özellikleri…", Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0), ToolTip = "Ağırlık merkezi, atalet tensörü, asal eksenler ve momentler; panoya kopyalanır (SolidWorks'ün kütle özellikleri gibi)" };
+            more.Click += (_, _) => ShowMassProperties(report, title);
+            Props.Children.Add(more);
             if (objs.Count > 1)
             {
-                var t = ModelMeasure.Total(_ed.Doc, objs);
+                var t = report;
                 Section("Seçim toplamı", $"{objs.Count} nesne");
                 Line("Boyutlar", $"{t.Size.X:0.##} × {t.Size.Y:0.##} × {t.Size.Z:0.##} mm");
                 Line("Kütle", $"{t.MassG:0.##} g", Res("B.Text"));
                 Line("Hacim", $"{t.VolumeMm3 / 1000:0.###} cm³");
+                Line("Ağırlık merkezi", $"{t.CenterOfMass.X:0.#}, {t.CenterOfMass.Y:0.#}, {t.CenterOfMass.Z:0.#} mm");
             }
         }
 

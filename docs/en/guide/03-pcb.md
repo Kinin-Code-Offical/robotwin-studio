@@ -74,7 +74,14 @@ Filling follows the clearance, thermal relief, priority and island-removal rules
 - Out-of-date pours
 - Track current capacity
 
-Errors appear in a list; clicking one shows the spot on the board.
+Errors appear in a list; clicking one shows the spot on the board. **F8** goes to the next marker, **Shift+F8** to the previous one (so do the arrows above the list).
+
+The **Errors**, **Warnings** and **Exclusions** buttons above the list show or hide that kind, with their counts. Right-clicking a row offers:
+
+- **Mark as exclusion…**: a marker accepted on purpose (a test point at the board edge, say) leaves the counts with a note. The exclusion is saved with the board and holds as long as the same rule finds the same thing in the same place (even if the numbers change a little). If what it points at moves more than 1 mm, or it turns up between other items, it counts again. With **Exclusions** on, exclusions are listed in grey and a right-click takes them back.
+- **This rule's severity**: the rule becomes an **Error**, a **Warning** or **Do not check** (never reported).
+
+**Rule severities** lists every rule by group (Electrical, Manufacturing, Mechanical, Signal integrity, Housekeeping, Manufacturing and test) with its markers in the last run; each gets a severity, and **Reset all to default** clears the settings. Severities and exclusions are saved with the board and can be undone. **Save report…** writes the last run as a text file: date, board, counts, errors, warnings, exclusions (with their notes) and the rules not checked.
 
 ### Manufacture and test (DFM/DFT)
 
@@ -164,6 +171,11 @@ If you took the board to KiCad with **Export to KiCad** and placed or routed it 
 | Ctrl+Shift+H | Dimension line |
 | T | Silkscreen text |
 | F1 or ? | All PCB shortcuts |
+| F8 / Shift+F8 | Next / previous DRC marker |
+
+The **Selection filter** at the foot of the **Layers** tab decides which kinds a click, a box selection and Ctrl+A pick up: parts (and among them the locked ones), tracks, vias, texts, mounting holes, copper zones, dimensions, the board edge. A kind turned off is still drawn and checked, it just cannot be picked; with vias off, for example, the track under a via is picked directly. **All** turns every kind on or off.
+
+**Statistics…** on the **Board** tab shows what the board is made of: size and area, parts on the top / bottom side, through-hole and SMD, pad kinds, vias, net and track counts, track length layer by layer, copper zones and the drill list (each size, plated or not, pad / via / mounting hole and how many). **Copy to clipboard** gives it as text for a fab quote. The command palette opens it too ("board statistics").
 
 ---
 

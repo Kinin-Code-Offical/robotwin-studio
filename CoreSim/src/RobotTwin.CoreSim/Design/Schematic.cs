@@ -193,6 +193,12 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[bom] How many boards the costing is for.</summary>
         public int BomBoards { get; set; } = 1;
 
+        /// <summary>[erc-policy] The user's ERC severity per rule code; rules not here report as the checker says.</summary>
+        public Dictionary<string, ErcRuleSeverity> ErcSeverities { get; set; } = new Dictionary<string, ErcRuleSeverity>(StringComparer.Ordinal);
+
+        /// <summary>[erc-policy] ERC markers the user accepted (see <see cref="ErcPolicy"/>).</summary>
+        public List<ErcExclusion> ErcExclusions { get; set; } = new List<ErcExclusion>();
+
         /// <summary>[variants] The alternative simulated and listed now, by name; null: the design as drawn.</summary>
         public string? ActiveVariant { get; set; }
 

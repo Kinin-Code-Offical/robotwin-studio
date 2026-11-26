@@ -21,9 +21,9 @@ namespace RobotWin.Studio.Shell
         public static List<string> CodeIn(RobotTwin.CoreSim.Design.Schematic schematic)
         {
             var found = new List<string>();
-            foreach (string id in schematic.Parts.Select(p => p.PresetId).Where(id => id != null).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string id in schematic.Parts.Select(p => p.PresetId).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var part = Libraries.LibraryManager.FindUserPart(id!);
+                var part = Libraries.LibraryManager.FindUserPart(id);
                 if (part?.Definition?.Model.Kind == UserModelKind.Fmu) found.Add("FMU: " + part.Name);
             }
 

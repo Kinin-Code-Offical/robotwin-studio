@@ -117,7 +117,7 @@ Selection: **Alt+click** (without dragging) selects the loop of the clicked edge
 
 ## Material and mass
 
-Give each object a material (PLA, PETG, ABS, nylon, acrylic, plywood, MDF, FR4, aluminium, steel, carbon, rubber) and an infill ratio (for 3D printing). The mass is computed from the volume; it is used when you send the part to the world.
+Give each object a material (PLA, PETG, ABS, nylon, acrylic, plywood, MDF, FR4, aluminium, steel, carbon, rubber) and an infill ratio (for 3D printing). The mass is computed from the volume; it is used when you send the part to the world. The **Measurement** section of the properties panel shows the size, volume, surface area, mass, centre of mass and principal moments of inertia. **Mass properties…** opens the full report (as in SolidWorks): the inertia tensor at the centre of mass (g·mm², world axes), the principal axes and moments; with several objects selected, their total (by the parallel axis theorem). **Copy to clipboard** gives the report as text.
 
 ### 3D print check
 

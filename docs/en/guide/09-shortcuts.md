@@ -102,6 +102,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Home | Fit |
 | Ctrl+Shift+M | Measure |
 | Ctrl+Shift+H | Dimension line |
+| F8 / Shift+F8 | Next / previous DRC marker |
 | F1 or ? | Shortcut list |
 
 ## Code

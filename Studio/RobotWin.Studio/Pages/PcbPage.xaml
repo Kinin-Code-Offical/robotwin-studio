@@ -163,8 +163,30 @@
                                 </WrapPanel>
                                 <StackPanel x:Name="EnclosurePanel" Visibility="Collapsed" Margin="0,0,0,8"/>
                                 <TextBlock x:Name="DrcSummary" Style="{StaticResource Text.Body}" Margin="0,4,0,8"/>
+                                <WrapPanel x:Name="DrcFilters" Margin="0,0,0,4" Visibility="Collapsed">
+                                    <ToggleButton x:Name="ShowErrors" Style="{StaticResource Chip}" IsChecked="True" Click="OnDrcFilter" ToolTip="Hataları göster">Hatalar</ToggleButton>
+                                    <ToggleButton x:Name="ShowWarnings" Style="{StaticResource Chip}" IsChecked="True" Click="OnDrcFilter" ToolTip="Uyarıları göster">Uyarılar</ToggleButton>
+                                    <ToggleButton x:Name="ShowExcluded" Style="{StaticResource Chip}" IsChecked="False" Click="OnDrcFilter" ToolTip="İstisna olarak işaretlenenleri de listele">İstisnalar</ToggleButton>
+                                </WrapPanel>
+                                <WrapPanel Margin="0,0,0,8">
+                                    <Button Style="{StaticResource Btn.Icon}" Click="OnDrcPrevious" ToolTip="Önceki işaret (Shift+F8)">
+                                        <t:Icon Data="{StaticResource I.ChevronLeft}" Size="12"/>
+                                    </Button>
+                                    <Button Style="{StaticResource Btn.Icon}" Click="OnDrcNext" ToolTip="Sonraki işaret (F8)" Margin="0,0,8,0">
+                                        <t:Icon Data="{StaticResource I.Chevron}" Size="12"/>
+                                    </Button>
+                                    <ToggleButton x:Name="DrcRulesToggle" Style="{StaticResource Chip}" Click="OnDrcRules" VerticalAlignment="Center" ToolTip="Her kuralın önemi: hata, uyarı ya da denetlenmez (kartla kaydedilir)">Kural önemleri</ToggleButton>
+                                    <Button Style="{StaticResource Btn.Ghost}" Click="OnDrcReport" ToolTip="Son çalıştırmanın metin raporu: hatalar, uyarılar, istisnalar, denetlenmeyen kurallar">Raporu kaydet…</Button>
+                                </WrapPanel>
                             </StackPanel>
-                            <ListBox x:Name="DrcList" SelectionChanged="OnDrcPick" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <Grid>
+                            <ScrollViewer x:Name="DrcRulesScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                                <StackPanel x:Name="DrcRulesPanel" Margin="0,0,6,8"/>
+                            </ScrollViewer>
+                            <ListBox x:Name="DrcList" SelectionChanged="OnDrcPick" ContextMenuOpening="OnDrcMenu" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu/>
+                                </ListBox.ContextMenu>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,2">
@@ -181,6 +203,7 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                            </Grid>
                         </DockPanel>
                     </TabItem>
                 </TabControl>

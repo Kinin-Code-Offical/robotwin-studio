@@ -148,7 +148,7 @@ namespace RobotWin.Studio.Pcb
         }
 
         /// <summary>A themed modal window with a content panel and OK/Cancel buttons.</summary>
-        public static Window MakeDialog(Window? owner, string title, double width, UIElement content, out Button ok, string okText = "Tamam", string? extraText = null, Action? extra = null)
+        public static Window MakeDialog(Window? owner, string title, double width, UIElement content, out Button ok, string okText = "Tamam", string? extraText = null, Action? extra = null, bool withCancel = true)
         {
             var w = new Window
             {
@@ -174,7 +174,7 @@ namespace RobotWin.Studio.Pcb
 
             var cancel = new Button { Content = "Vazgeç", Margin = new Thickness(0, 0, 8, 0), IsCancel = true, Style = S("Btn") };
             ok = new Button { Content = okText, Style = S("Btn.Primary"), IsDefault = true, Padding = new Thickness(14, 5, 14, 5) };
-            buttons.Children.Add(cancel);
+            if (withCancel) buttons.Children.Add(cancel);   // an information window has only its close button
             buttons.Children.Add(ok);
             root.Children.Add(buttons);
             root.Children.Add(content);
