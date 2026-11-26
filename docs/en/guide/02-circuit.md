@@ -29,6 +29,13 @@ The category list above the search box has two levels. Main categories (e.g. **P
 
 ![The library: Measurement & Source → Power supply and the adjustable AC/DC supply's specifications](../../images/en/library-categories.png)
 
+**Switching regulator modules:** **Power → Regulator** has step-down modules (LM2596 3 A, MP1584 mini 3 A, XL4015 5 A) and step-up modules (MT3608, XL6009). Use them to take 5 V or 12 V from a battery or an adapter. A module's IN+ / IN− go to the input and its OUT+ / OUT− to the load; the output voltage is the board's trimmer (**Output voltage**). The model is the chip averaged over its switching period. The inductor current, the current limit and the output and input capacitors behave as they do on the bench:
+- **Efficiency:** the input draws the output power plus the switch, inductor, diode and switching losses. An LM2596 from 12 V to 5 V at 1 A, for example, gives about 85 %.
+- **Dropout:** a step-down's output stays below its input. The LM2596's switch drops about 1.1 V, so it cannot make 5 V from 5.5 V.
+- **Current limit:** past the limit the current stays at it and the output falls.
+- **Power-up:** below its UVLO voltage the module is off. When it turns on, the output rises over the soft-start time, and the capacitors' charging current shows too.
+- **Heating:** the losses heat the module, up to its thermal shutdown.
+
 ## Wiring
 
 1. Click a pin; the wire starts.

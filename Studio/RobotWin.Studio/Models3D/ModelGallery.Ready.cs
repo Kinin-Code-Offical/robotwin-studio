@@ -27,6 +27,12 @@ namespace RobotWin.Studio.Models3D
                 yield return new Item("8-drive", name, () => World.MotionModels.CarrierInstance(part), false);   // [stepper] the driver carriers
             }
 
+            foreach (var model in new[] { "LM2596", "MP1584EN", "XL4015", "MT3608", "XL6009" })
+            {
+                string m = model;
+                yield return new Item("8-power", m, () => World.PowerModels.Instance(m), false);   // [smps] regulator modules
+            }
+
             yield return new Item(L, "RGB LED 5 mm", () => Part("led-rgb", "led-rgb-5mm"));
             yield return new Item(L, "RGB LED lit", () =>
             {

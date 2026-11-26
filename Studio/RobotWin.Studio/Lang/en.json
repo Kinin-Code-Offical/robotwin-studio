@@ -7673,7 +7673,31 @@
   "Adlı değerler (genislik = 60, delik_x = genislik / 2 - 10). Bir ölçüye \"=genislik\" yazınca ona bağlanır ve parametreyle değişir.": "Named values (genislik = 60, delik_x = genislik / 2 - 10). Type \"=genislik\" into a dimension to bind it: it then changes with the parameter.",
   "Parametrik plaka": "Parametric plate",
   "eskiz bu değerlerle çelişiyor, eski hâlinde kaldı": "the sketch contradicts these values; it stayed as it was",
-  "döngü": "loop"
+  "döngü": "loop",
+  "2–24 V giriş, 28 V'a kadar ayarlı çıkış; 4 A anahtar sınırı, 1,2 MHz": "2–24 V in, adjustable output up to 28 V; 4 A switch limit, 1.2 MHz",
+  "5–32 V giriş, 35 V'a kadar ayarlı çıkış; 4 A anahtar sınırı, 400 kHz": "5–32 V in, adjustable output up to 35 V; 4 A switch limit, 400 kHz",
+  "4,5–28 V giriş, 0,8–20 V ayarlı çıkış, 3 A; 1 MHz, 22 × 17 mm": "4.5–28 V in, 0.8–20 V adjustable out, 3 A; 1 MHz, 22 × 17 mm",
+  "4,5–40 V giriş, 1,25–37 V ayarlı çıkış, 3 A; 150 kHz, iki 220 µF kondansatör": "4.5–40 V in, 1.25–37 V adjustable out, 3 A; 150 kHz, two 220 µF capacitors",
+  "8–36 V giriş, 1,25–32 V ayarlı çıkış, 5 A; 180 kHz": "8–36 V in, 1.25–32 V adjustable out, 5 A; 180 kHz",
+  "Anahtar akım sınırı": "Switch current limit",
+  "Anahtar doyma düşümü": "Switch saturation drop",
+  "Anahtarlama frekansı": "Switching frequency",
+  "Anahtarlamalı düşürücü: girişi daha düşük, ayarlı bir çıkışa indirir; doğrusal regülatörden çok daha az ısınır. Çıkış girişten en az düşüm kadar aşağıda kalır, akım sınırını aşan yükte çıkış düşer.": "Switching step-down: brings its input down to a lower, adjustable output, much cooler than a linear regulator. The output stays at least its dropout below the input; a load past the current limit pulls the output down.",
+  "Anahtarlamalı yükseltici: girişi daha yüksek, ayarlı bir çıkışa çıkarır (örneğin tek Li-ion hücreden 5 V). Çalışmazken giriş diyottan çıkışa geçer.": "Switching step-up: lifts its input to a higher, adjustable output (5 V from a single Li-ion cell, say). When it is not switching, the input passes to the output through its diode.",
+  "Açılma gerilimi (UVLO)": "Turn-on voltage (UVLO)",
+  "Diyot düşümü": "Diode drop",
+  "Düşürücü Regülatör Modülü (buck)": "Step-Down Regulator Module (buck)",
+  "Yükseltici Regülatör Modülü (boost)": "Step-Up Regulator Module (boost)",
+  "En yüksek giriş": "Highest input",
+  "Giriş kondansatörü": "Input capacitor",
+  "Çıkış kondansatörü": "Output capacitor",
+  "LM2596 Düşürücü Modül (3 A)": "LM2596 Step-Down Module (3 A)",
+  "MP1584 Mini Düşürücü Modül (3 A)": "MP1584 Mini Step-Down Module (3 A)",
+  "MT3608 Yükseltici Modül (2 A)": "MT3608 Step-Up Module (2 A)",
+  "XL4015 Düşürücü Modül (5 A)": "XL4015 Step-Down Module (5 A)",
+  "XL6009 Yükseltici Modül (4 A)": "XL6009 Step-Up Module (4 A)",
+  "Yumuşak başlama": "Soft start",
+  "Çıkış gerilimi (trimpot)": "Output voltage (trimmer)"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10804,6 +10828,8 @@
   "{0}: formül kaldırıldı": "{0}: formula removed",
   "'{0}' ad olamaz: harfle başlar; harf, rakam ve _ içerir": "'{0}' cannot be a name: it starts with a letter and has letters, digits and _",
   "'{0}' kullanılıyor: ona bağlı formüller artık '{1}' adını bulamaz": "'{0}' is in use: the formulas bound to it will not find '{1}'",
-  "'{0}' kullanılıyordu: ona bağlı formüller çözülemeyecek": "'{0}' was in use: the formulas bound to it will not work out"
+  "'{0}' kullanılıyordu: ona bağlı formüller çözülemeyecek": "'{0}' was in use: the formulas bound to it will not work out",
+  "giriş aşırı gerilimi {0} V (en çok {1} V): anahtar kısa devre oldu": "input overvoltage {0} V (at most {1} V): the switch shorted",
+  "ısıl kapanma: {0} °C ({1} W kayıp)": "thermal shutdown: {0} °C ({1} W lost)"
  }
 }

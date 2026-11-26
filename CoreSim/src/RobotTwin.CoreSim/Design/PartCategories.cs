@@ -23,7 +23,7 @@ namespace RobotTwin.CoreSim.Design
             ["diode"] = "Diyot", ["schottky"] = "Diyot", ["zener"] = "Diyot", ["led"] = "LED", ["led-rgb"] = "LED", ["led-power"] = "LED",
             ["npn"] = "BJT transistör", ["pnp"] = "BJT transistör", ["darlington"] = "BJT transistör", ["nmos"] = "MOSFET", ["pmos"] = "MOSFET",
             // Güç
-            ["regulator"] = "Regülatör", ["battery"] = "Pil & akü", ["ground"] = "Toprak & besleme etiketi", ["power-rail"] = "Toprak & besleme etiketi",
+            ["regulator"] = "Regülatör", ["buck-module"] = "Regülatör", ["boost-module"] = "Regülatör", ["battery"] = "Pil & akü", ["ground"] = "Toprak & besleme etiketi", ["power-rail"] = "Toprak & besleme etiketi",
             // Ölçüm & kaynak
             ["dc-source"] = "Güç kaynağı", ["bench-psu"] = "Güç kaynağı", ["acdc-psu"] = "Güç kaynağı", ["current-source"] = "Güç kaynağı",
             ["signal-generator"] = "Sinyal jeneratörü", ["multimeter"] = "Ölçü aleti", ["ammeter"] = "Ölçü aleti", ["voltmeter"] = "Ölçü aleti",

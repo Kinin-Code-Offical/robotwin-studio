@@ -29,6 +29,13 @@ Arama kutusunun üstündeki kategori listesi iki seviyelidir. Ana kategorilerin 
 
 ![Kütüphane: Ölçüm & Kaynak → Güç kaynağı alt kategorisi ve ayarlanabilir AC/DC kaynağın özellikleri](../images/library-categories.png)
 
+**Anahtarlamalı regülatör modülleri:** **Güç → Regülatör** altında düşürücüler (LM2596 3 A, MP1584 mini 3 A, XL4015 5 A) ve yükselticiler (MT3608, XL6009) vardır. Pilden ya da adaptörden 5 V ya da 12 V almak için kullanılır. Modülün IN+ / IN− uçları girişe, OUT+ / OUT− uçları yüke bağlanır; çıkış gerilimi kartın trimpotudur (**Çıkış gerilimi**). Model, çipin anahtarlama periyodu üzerinden ortalanmış hâlidir. Bobin akımı, akım sınırı, çıkış ve giriş kondansatörleri gerçektekiyle aynı biçimde çalışır:
+- **Verim:** giriş, çıkış gücünü ve anahtar, bobin, diyot ve anahtarlama kayıplarını çeker. Örneğin LM2596 12 V'tan 5 V'a 1 A'de yaklaşık %85 verir.
+- **Düşüm:** düşürücünün çıkışı girişin altında kalır. LM2596'nın anahtarı yaklaşık 1,1 V düşürür, bu yüzden 5,5 V'tan 5 V alınamaz.
+- **Akım sınırı:** sınırı aşan yükte akım sınırda kalır, çıkış düşer.
+- **Açılış:** giriş UVLO geriliminin altındayken modül kapalıdır. Açılınca çıkış yumuşak başlama süresinde yükselir; kondansatörlerin şarj akımı da görünür.
+- **Isınma:** kayıplar modülü ısıtır ve ısıl kapanmaya kadar götürebilir.
+
 ## Kablolama
 
 1. Bir pine tıklayın; kablo başlar.

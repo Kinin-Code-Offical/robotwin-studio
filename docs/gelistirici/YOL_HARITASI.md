@@ -86,10 +86,10 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] 3B baskı uygunluğu: `Modeling/PrintCheck.cs` (tabla, kapalı ağ, 45° sarkma, altı yönden en az sarkmalı yön ve çevirme, ışınla en ince duvar, tabla teması, filament/süre tahmini; altı yazıcı profili), Parça denetçisinde **3B baskı**.
   - (STEP içe/dışa aktarma yapıldı: Open CASCADE köprüsü, aşağıda Dış biçimler.)
 - [~] **Devre simülasyonu:** çözücü, ERC, Monte Carlo ve hasar var. Eksikler:
-  - [~] üretici SPICE modelleri: `.model` kartları (D, NPN/PNP, NMOS/PMOS'un VTO'su) parçaya (`Design/SpiceModels.cs`); `.SUBCKT` alt devreleri henüz yok;
+  - [x] üretici SPICE modelleri: `.model` kartları (D, NPN/PNP, NMOS/PMOS'un VTO'su) parçaya (`Design/SpiceModels.cs`); `.SUBCKT` alt devreleri iç içe açılarak cihazlara çevrilir ve kullanıcı parçası olur (`Libraries/SpiceCircuitBuilder.cs`, `ExternalLibraryTests`);
   - [x] AC ve frekans cevabı: çalışma noktasında küçük işaret analizi (`AnalogSimulator.AcResponse`: cihazlar iki adım uzunluğunda damgalanıp G + jωC ayrıştırılır), devre sayfasında Bode çizimi;
-  - anahtarlamalı güç;
-  - besleme açılışı;
+  - [x] anahtarlamalı güç: `Analog/Devices/SwitchingRegulator.cs` (ortalamalı düşürücü/yükseltici: bobin akımı durum değişkeni, gerilim ve akım döngüsü, akım sınırı, düşüm, en çok görev oranı, diyot, kayıplardan giriş akımı, ısınma), `Design/PowerParts.cs` (LM2596, MP1584, XL4015, MT3608, XL6009 modülleri ve 3B modelleri);
+  - [~] besleme açılışı: regülatör modüllerinde UVLO, yumuşak başlama ve kondansatör şarj akımı var; devre genelinde açılış sırası ve kahverengi düşüş (brown-out) raporu yok;
   - ~~osiloskopta matematik kanalları~~ (yapıldı: A−B, A+B, A×B güç, ∫A yük/enerji, dA/dt; herhangi iki kanal, birimler ve ölçek kendiliğinden);
   - model sınırlarını gösterme.
 - [~] **PCB ve üretim:** 32 katman, DRC, Gerber, BOM ve KiCad dışa aktarma var. Eksikler:
