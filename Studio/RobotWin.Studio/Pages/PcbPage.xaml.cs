@@ -780,6 +780,17 @@ namespace RobotWin.Studio.Pages
                     Canvas.Refresh();
                     Canvas.SetTool(PcbTool.Rectangle);
                     break;
+                case "float-tools":   // [floatbar] the tool strip in its own window, laid across; the picture is that window over the page
+                {
+                    var origin = PointToScreen(new Point(300, 200));
+                    if (_toolStripFloat?.TearOffAt(origin, across: true) is { } fw)
+                    {
+                        fw.UpdateLayout();
+                        W.Status = $"Araç şeridi ayrı pencerede: {fw.ActualWidth:0}×{fw.ActualHeight:0}, sütun {ContentGrid.ColumnDefinitions[0].Width.Value:0} px";
+                    }
+
+                    break;
+                }
                 case "dock-min":   // [dock-min] the properties panel minimized to its strip
                     _dock?.Minimize(DockPlace.Right, true);
                     break;

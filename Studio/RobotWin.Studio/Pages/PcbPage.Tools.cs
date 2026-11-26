@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using RobotTwin.CoreSim.Pcb;
 using RobotWin.Studio.Pcb;
+using RobotWin.Studio.Shell;
 using RobotWin.Studio.Theme;
 using static RobotWin.Studio.Pcb.PcbForms;
 
@@ -17,8 +18,16 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class PcbPage
     {
+        private FloatingStrip? _toolStripFloat;
+
         private void InitToolGroups()
         {
+            // [floatbar] the tool strip tears off into its own window; its column gives the board the room meanwhile
+            _toolStripFloat = new FloatingStrip("pcb.tools", ToolStripHost, ToolStrip, docked =>
+            {
+                ContentGrid.ColumnDefinitions[0].Width = new GridLength(docked ? 44 : 0);
+                ToolStripHost.Visibility = docked ? Visibility.Visible : Visibility.Collapsed;
+            });
             Canvas.KeepoutDrawn += OnKeepoutDrawn;   // [keepout]
             ToolFlyout.Attach(ToolDraw, new[]
             {

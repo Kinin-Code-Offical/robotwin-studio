@@ -76,6 +76,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 - **Ayrı pencereye al:** **Pencere → Bu sayfayı ayrı pencereye al** ile bir sayfayı ikinci bir pencereye (örneğin ikinci monitöre) taşıyın.
 - **Odak modu:** **Görünüm → Odak modu** gezinme çubuğunu gizler.
 - **Panelleri taşımak, küçültmek, ayırmak:** Dünya, Devre ve PCB sayfalarındaki yan paneller (palet, parça kütüphanesi, özellikler, denetçi) ve alt sekmeler başlıklarından sürüklenerek ayrı pencereye alınır; pencereyi kenara bırakınca sola, sağa ya da alt bölmeye yerleşir. Başlıktaki **Küçült** düğmesi o tarafı kenarda adların yazdığı ince bir şeride indirir (Visual Studio'daki gibi), şeride tıklayınca geri açılır. **Ctrl+Space** tam görünüm: bütün paneller çekilir, çizim alanı bütün pencereyi alır; yeniden basınca paneller olduğu gibi döner. Düzen saklanır. Bkz. [Dünya → Panelleri yerleştirme](07-dunya.md#panelleri-yerleştirme).
+- **Yüzen araç çubukları:** PCB'nin sol araç şeridi ve Devre'nin çizim araçları, başlarındaki noktalı tutamaktan sürüklenince küçük bir pencereye çıkar (SolidWorks'teki gibi); pencere istenen yere, ikinci ekrana da taşınır, sağ tıkla yatay ya da dikey çevrilir. Tutamağa çift tıklamak ya da **Yerine koy** şeridi geri yerleştirir; dışarıdayken çizim alanı genişler. Yeri saklanır.
 - **Tam ekran (F11):** **Esc** veya **F11** ile çıkılır.
 - **Arayüz ölçeği:** **Görünüm → Arayüz ölçeği** (%75–%150).
 

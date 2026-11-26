@@ -8297,7 +8297,11 @@
   "değiyor": "touching",
   "bağlı": "joined",
   "Çakışma algıla": "Detect interference",
-  "Çakışma algılama: aynı yeri kaplayan parçalar ve ortak hacimleri (SolidWorks'teki gibi)": "Interference detection: parts taking up the same space and their common volume (as in SolidWorks)"
+  "Çakışma algılama: aynı yeri kaplayan parçalar ve ortak hacimleri (SolidWorks'teki gibi)": "Interference detection: parts taking up the same space and their common volume (as in SolidWorks)",
+  "Tutamaktan sürükleyerek ayrı pencereye alın; çift tık yerine koyar. Sağ tık: seçenekler": "Drag the grip to take it into a window of its own; a double click puts it back. Right-click: options",
+  "Yerine koy": "Put back",
+  "Yatay çevir": "Lay across",
+  "Dikey çevir": "Stand upright"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

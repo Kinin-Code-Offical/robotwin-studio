@@ -99,8 +99,8 @@
                 <ColumnDefinition Width="320"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Tool strip -->
-            <Border Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,1,0">
+            <!-- Tool strip (its grip tears it off into a window of its own: Shell/FloatingStrip.cs) -->
+            <Border x:Name="ToolStripHost" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,1,0">
                 <StackPanel x:Name="ToolStrip" Margin="0,8,0,0" HorizontalAlignment="Center">
                     <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Select" Click="OnTool" ToolTip="Seç (Esc): tıkla, Shift+tıkla, kutu seçimi · sağ tık menüsü · F1 kısayollar"><t:Icon Data="{StaticResource I.Pointer}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolRoute" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Route" Click="OnTool" ToolTip="Yol: etkileşimli yol (X), uzunluk ayarı (menderes)"/>

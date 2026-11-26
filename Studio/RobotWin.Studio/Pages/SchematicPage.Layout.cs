@@ -14,6 +14,8 @@ namespace RobotWin.Studio.Pages
     {
         private DockManager? _dock;
 
+        private FloatingStrip? _drawToolsFloat;
+
         /// <summary>The bottom tabs in their original order (the code picks them by this index).</summary>
         private static readonly string[] DockKeys = { "scope", "meter", "diag", "mc", "pins", "serial", "log", "ac", "nets" };
 
@@ -51,6 +53,8 @@ namespace RobotWin.Studio.Pages
                 else if (key == "nets") RefreshNets();
             };
             _dock.Start();
+            // [floatbar] the drawing tools tear off into their own window (a palette beside the sheet, as SolidWorks' floating toolbars)
+            _drawToolsFloat = new FloatingStrip("schematic.tools", DrawToolsHost, DrawTools, docked => DrawToolsHost.Visibility = docked ? Visibility.Visible : Visibility.Collapsed);
         }
 
         /// <summary>Brings a bottom tab into view wherever the user put it (index into <see cref="DockKeys"/>).</summary>
