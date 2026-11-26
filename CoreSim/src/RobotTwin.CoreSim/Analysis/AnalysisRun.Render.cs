@@ -257,19 +257,31 @@ namespace RobotTwin.CoreSim.Analysis
             int res = Math.Max(10, Math.Min(40, s.AeroResolution));
             double re = speed * d / AirViscosity;
             var thickness = parts.Select(p => Math.Min(p.Size.X, Math.Min(p.Size.Y, p.Size.Z))).ToList();
-            double share = gridStudy ? 0.8 : 1;
+            double share = gridStudy ? 0.7 : 1;
             var flow = SolveAssembly(solids, thickness, dir, gy, gz, lo, hi, d, res, re, s, cancel, p => progress?.Invoke(p * share));
             if (flow == null) return null;
             double gci = double.NaN;
+            Numerics.ConvergenceStudy? study = null;
             if (gridStudy)
             {
-                var coarse = SolveAssembly(solids, thickness, dir, gy, gz, lo, hi, d, Math.Max(8, (int)Math.Round(res / 1.5)), re, s, cancel,
-                    p => progress?.Invoke(share + p * (1 - share)));
+                // [convergence] two coarser grids (1.5× and 2.25× the cell): a three-grid study of Cd when the coarsest still
+                // resolves the body, else Roache's two-grid index (safety factor 3, the lattice-Boltzmann method's order 2)
+                int midRes = Math.Max(8, (int)Math.Round(res / 1.5)), lowRes = (int)Math.Round(res / 2.25);
+                var coarse = SolveAssembly(solids, thickness, dir, gy, gz, lo, hi, d, midRes, re, s, cancel,
+                    p => progress?.Invoke(share + p * (1 - share) * 0.6));
+                var coarsest = coarse != null && lowRes >= 8 && lowRes < midRes
+                    ? SolveAssembly(solids, thickness, dir, gy, gz, lo, hi, d, lowRes, re, s, cancel, p => progress?.Invoke(share + (1 - share) * (0.6 + 0.4 * p)))
+                    : null;
                 if (coarse != null && Math.Abs(flow.Cd) > 1e-9)
                 {
-                    // Roache's grid convergence index from two grids: safety factor 3, formal order 2.
-                    double ratio = coarse.Dx / flow.Dx;
-                    if (ratio > 1.05) gci = 3 * Math.Abs((coarse.Cd - flow.Cd) / flow.Cd) / (ratio * ratio - 1);
+                    if (coarsest != null && coarsest.Dx > coarse.Dx * 1.05 && coarse.Dx > flow.Dx * 1.05)
+                    {
+                        study = Numerics.GridConvergence.ThreeGrids(flow.Dx, flow.Cd, coarse.Dx, coarse.Cd, coarsest.Dx, coarsest.Cd);
+                        gci = study.Kind is Numerics.ConvergenceKind.Monotonic or Numerics.ConvergenceKind.Oscillatory or Numerics.ConvergenceKind.Converged
+                            ? study.GciFine
+                            : Numerics.GridConvergence.TwoGrids(flow.Dx, flow.Cd, coarse.Dx, coarse.Cd);
+                    }
+                    else gci = Numerics.GridConvergence.TwoGrids(flow.Dx, flow.Cd, coarse.Dx, coarse.Cd);
                 }
             }
 
@@ -334,7 +346,11 @@ namespace RobotTwin.CoreSim.Analysis
                 ? $"Sınır tabaka ≈ {delta * 1000:0.##} mm, hücre {dx * 1000:0.#} mm (y+ ≈ {yPlus:0}): sınır tabaka çözülmüyor; yüzey sürtünmesi eksik, keskin kenarlı küt cisimlerin basınç sürüklemesi geçerlidir."
                 : $"Sınır tabaka ≈ {delta * 1000:0.##} mm, en az iki hücre (y+ ≈ {yPlus:0}).");
             result.Notes.Add(flow.Converged ? "Kuvvet oturdu (son pencereler %1 içinde)." : "Kuvvet salınımlı (girdap kopması ya da süre yetmedi): son pencerelerin ortalaması.");
-            if (!double.IsNaN(gci)) result.Notes.Add($"Izgara belirsizliği (GCI, iki ızgara): Cd ±%{gci * 100:0.#}.");
+            if (study is { Kind: Numerics.ConvergenceKind.Monotonic } st)
+                result.Notes.Add($"Izgara yakınsaması (üç ızgara): Cd {st.F3:0.###} → {st.F2:0.###} → {st.F1:0.###}, gözlenen mertebe {st.Order:0.0}, ızgaradan bağımsız Cd ≈ {st.Extrapolated:0.###}, belirsizlik (GCI) ±%{gci * 100:0.#}.");
+            else if (study is { Kind: Numerics.ConvergenceKind.Divergent } sd)
+                result.Notes.Add($"Izgara yakınsaması (üç ızgara): Cd {sd.F3:0.###} → {sd.F2:0.###} → {sd.F1:0.###}, fark ızgara inceldikçe büyüyor: henüz yakınsama bölgesinde değil (çözünürlüğü artırın); iki ızgaradan GCI ±%{gci * 100:0.#}.");
+            else if (!double.IsNaN(gci)) result.Notes.Add($"Izgara belirsizliği (GCI{(study != null ? ", üç ızgara" : ", iki ızgara")}): Cd ±%{gci * 100:0.#}.");
             if (thickness.Any(t => t < 2 * dx)) result.Notes.Add("Hücreden ince yüzeyler bir hücre kalınlığında temsil edildi (kanat kuvvetleri kanat modelinden gelir).");
             Streamlines(lbm, result, (lo.Y + hi.Y) / 2 - origin.Y, (lo.Z + hi.Z) / 2 - origin.Z, d, u, speed);
             return result;

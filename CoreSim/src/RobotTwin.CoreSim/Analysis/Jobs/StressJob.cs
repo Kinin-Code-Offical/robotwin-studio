@@ -198,9 +198,10 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
         }
 
         /// <summary>
-        /// Solves the critical instant again on a ~1.4× finer mesh and reports how much the
-        /// representative peak stress moved. Point contacts are singular (their peak grows without
-        /// bound under refinement in every FEM code), so the check uses the 98th percentile.
+        /// [convergence] Solves the critical instant again on two coarser meshes (1.4× and 1.96× the element size) and runs a
+        /// three-grid study of the representative peak stress (<see cref="Numerics.GridConvergence"/>): its observed order,
+        /// the grid-independent value it tends to and the fine mesh's convergence index. Point contacts are singular (their
+        /// peak grows without bound under refinement in every FEM code), so the study uses the 98th percentile.
         /// </summary>
         private static void MeshConvergence(PartGeometry part, StructuralMaterial mat, AnalysisSettings s, StressResult result, FemLoadCase lc, bool relief,
             double coarse, CancellationToken cancel)
@@ -213,22 +214,51 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
 
             try
             {
-                var fine = TetMesh.FromSolid(part.Solid, result.ElementSize / 1.4, 2);
-                if (fine.Elements.Count == 0) return;
-                var model = new ElasticModel(fine, mat) { Tolerance = s.Accuracy == AccuracyPreset.Reference ? 1e-8 : 1e-7 };
-                if (part.IsStatic)
+                (double H, double P98, double Peak)? SolveAt(double h)
                 {
-                    double minZ = fine.Nodes.Min(n => (part.Position + part.Orientation.Rotate(n)).Z);
-                    model.FixNodes(n => (part.Position + part.Orientation.Rotate(n)).Z < minZ + 0.5 * fine.ElementSize);
+                    var mesh = TetMesh.FromSolid(part.Solid, h, 2);
+                    if (mesh.Elements.Count == 0) return null;
+                    var model = new ElasticModel(mesh, mat) { Tolerance = s.Accuracy == AccuracyPreset.Reference ? 1e-8 : 1e-7 };
+                    if (part.IsStatic)
+                    {
+                        double minZ = mesh.Nodes.Min(n => (part.Position + part.Orientation.Rotate(n)).Z);
+                        model.FixNodes(n => (part.Position + part.Orientation.Rotate(n)).Z < minZ + 0.5 * mesh.ElementSize);
+                    }
+
+                    model.Assemble(cancel);
+                    var sol = model.Solve(lc, cancel);
+                    return (mesh.ElementSize, P98(sol.VonMises.Select(v => (float)v).ToArray()), sol.MaxVonMises);
                 }
 
-                model.Assemble(cancel);
-                var sol = model.Solve(lc, cancel);
-                double fineP98 = P98(sol.VonMises.Select(v => (float)v).ToArray());
-                result.MeshChange = Math.Abs(fineP98 - coarse) / coarse;
-                result.Notes.Add($"Ağ yakınsaması (kritik an): eleman {result.ElementSize * 1000:0.##} → {fine.ElementSize * 1000:0.##} mm, temsilî tepe gerilme (%98'lik) {Design.SiValue.Format(coarse, "Pa")} → {Design.SiValue.Format(fineP98, "Pa")}, fark %{result.MeshChange * 100:0.#}"
-                    + (result.MeshChange > 0.10 ? " — ağa duyarlı, daha küçük eleman boyu seçin." : " — ağdan bağımsız sayılır.")
-                    + $" Tekil (nokta yük) tepe: {Design.SiValue.Format(sol.MaxVonMises, "Pa")}; nokta yüklerin altında gerilme her FEM kodunda ağ inceldikçe büyür.");
+                // the user's mesh is the finest; two coarser ones cost a fraction of it
+                var medium = SolveAt(result.ElementSize * 1.4);
+                var coarser = medium != null ? SolveAt(result.ElementSize * 1.96) : null;
+                if (medium is not { } m2) return;
+                result.MeshChange = Math.Abs(coarse - m2.P98) / coarse;
+                string Mpa(double v) => Design.SiValue.Format(v, "Pa");
+                if (coarser is { } m3 && m3.H > m2.H * 1.05 && m2.H > result.ElementSize * 1.05)
+                {
+                    var study = Numerics.GridConvergence.ThreeGrids(result.ElementSize, coarse, m2.H, m2.P98, m3.H, m3.P98);
+                    result.MeshGci = study.GciFine;
+                    result.MeshExtrapolated = study.Extrapolated;
+                    result.Notes.Add($"Ağ yakınsaması (kritik an, %98'lik temsilî tepe gerilme): eleman {result.ElementSize * 1000:0.##} mm'de {Mpa(coarse)}, {m2.H * 1000:0.##} mm'de {Mpa(m2.P98)}, {m3.H * 1000:0.##} mm'de {Mpa(m3.P98)}.");
+                    result.Notes.Add(study.Kind switch
+                    {
+                        Numerics.ConvergenceKind.Monotonic => $"Tekdüze yakınsıyor (gözlenen mertebe {study.Order:0.0}); ağdan bağımsız değer ≈ {Mpa(study.Extrapolated)}, ağ belirsizliği (GCI) %{study.GciFine * 100:0.#}.",
+                        Numerics.ConvergenceKind.Oscillatory => $"Salınarak yakınsıyor; belirsizlik bandı %{study.GciFine * 100:0.#}.",
+                        Numerics.ConvergenceKind.Converged => "Üç ağda aynı: ağdan bağımsız.",
+                        _ => "Ağ inceldikçe fark büyüyor: henüz yakınsama bölgesinde değil (ya da gerilme tekil); daha küçük eleman boyu seçin."
+                    });
+                    if (study.Kind is Numerics.ConvergenceKind.Monotonic or Numerics.ConvergenceKind.Oscillatory && study.GciFine > 0.10)
+                        result.Notes.Add("Ağa duyarlı: daha küçük eleman boyu seçin.");
+                }
+                else
+                {
+                    result.Notes.Add($"Ağ yakınsaması (kritik an, %98'lik temsilî tepe gerilme): eleman {result.ElementSize * 1000:0.##} mm'de {Mpa(coarse)}, {m2.H * 1000:0.##} mm'de {Mpa(m2.P98)}, fark %{result.MeshChange * 100:0.#}.");
+                    result.Notes.Add(result.MeshChange > 0.10 ? "Ağa duyarlı: daha küçük eleman boyu seçin." : "Ağdan bağımsız sayılır.");
+                }
+
+                result.Notes.Add("Nokta yüklerin altındaki tekil tepe her FEM kodunda ağ inceldikçe büyür; bu yüzden %98'lik değer izlenir.");
             }
             catch (OperationCanceledException)
             {

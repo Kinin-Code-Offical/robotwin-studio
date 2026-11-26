@@ -130,6 +130,11 @@ namespace RobotTwin.CoreSim.Analysis
         /// <summary>Mesh convergence of the representative peak (98th percentile σ) at the critical instant: relative change on a finer mesh, NaN if not checked.</summary>
         public double MeshChange { get; set; } = double.NaN;
 
+        /// <summary>[convergence] The three-grid study: the fine mesh's convergence index and the grid-independent value (Pa), NaN if not run.</summary>
+        public double MeshGci { get; set; } = double.NaN;
+
+        public double MeshExtrapolated { get; set; } = double.NaN;
+
         /// <summary>Beam: direction of the section height (thinnest side) in the body frame.</summary>
         public Vec3 BeamUp { get; set; } = Vec3.UnitZ;
 

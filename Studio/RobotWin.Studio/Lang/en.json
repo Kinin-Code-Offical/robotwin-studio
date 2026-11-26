@@ -7982,7 +7982,14 @@
   "Kartların kodunu da çalıştır": "Run the boards' code too",
   "Uno / Nano'ların derlenmiş kodu ve ESP32'lerin çizimi her alternatifte çalışır (ESP32 çizimleri önce derlenir)": "The Unos' / Nanos' compiled code and the ESP32s' sketches run in each alternative (ESP32 sketches are built first)",
   "Karşılaştırma (aynı 1 s, kartların kodu da çalıştı)": "Comparison (the same 1 s, the boards' code ran too)",
-  "Kart çıktısı": "Board output"
+  "Kart çıktısı": "Board output",
+  "Üç ağda aynı: ağdan bağımsız.": "The same on three meshes: mesh-independent.",
+  "Ağ inceldikçe fark büyüyor: henüz yakınsama bölgesinde değil (ya da gerilme tekil); daha küçük eleman boyu seçin.": "The difference grows as the mesh refines: not yet in the asymptotic range (or the stress is singular); choose a smaller element size.",
+  "Ağa duyarlı: daha küçük eleman boyu seçin.": "Mesh-sensitive: choose a smaller element size.",
+  "Ağdan bağımsız sayılır.": "Counts as mesh-independent.",
+  "Nokta yüklerin altındaki tekil tepe her FEM kodunda ağ inceldikçe büyür; bu yüzden %98'lik değer izlenir.": "The singular peak under point loads grows with mesh refinement in every FEM code; so the 98th-percentile value is followed.",
+  ", üç ızgara": ", three grids",
+  ", iki ızgara": ", two grids"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11252,6 +11259,13 @@
   "bellek: çizim {…} KB tutuyor; bu, gerçek bir ESP32'deki boş yığının (~{…} KB) yüzde {…} kadarı, kart üzerinde az yer kaldı": "memory: the sketch holds {0} KB, {2} % of a real ESP32's free heap (~{1} KB); little room is left on the board",
   "{…}: veri {…} V, {…} V'luk şerit bunu okuyamaz (VIH {…} V); seviye dönüştürücü (74AHCT125) kullanın": "{0}: data at {1} V, a {2} V strip cannot read it (VIH {3} V); use a level shifter (74AHCT125)",
   "{…}: veri {…} V, {…} V'luk şeridin VIH sınırının ({…} V) altında: çoğu şeritte çalışır ama güvencesi yok; seviye dönüştürücü (74AHCT125) ya da ilk LED'i bir diyotla ~4,3 V'tan besleme": "{0}: data at {1} V is below a {2} V strip's VIH ({3} V): it works on most strips but is not guaranteed; use a level shifter (74AHCT125) or feed the first LED from ~4.3 V through a diode",
-  "LED şeridi {…} {…} hattına bağlandı ({…} LED)": "LED strip connected to {0} {1} ({2} LEDs)"
+  "LED şeridi {…} {…} hattına bağlandı ({…} LED)": "LED strip connected to {0} {1} ({2} LEDs)",
+  "Ağ yakınsaması (kritik an, %98'lik temsilî tepe gerilme): eleman {…} mm'de {…}, {…} mm'de {…}, {…} mm'de {…}.": "Mesh convergence (critical moment, 98th-percentile representative peak stress): {1} with {0} mm elements, {3} with {2} mm, {5} with {4} mm.",
+  "Ağ yakınsaması (kritik an, %98'lik temsilî tepe gerilme): eleman {…} mm'de {…}, {…} mm'de {…}, fark %{…}.": "Mesh convergence (critical moment, 98th-percentile representative peak stress): {1} with {0} mm elements, {3} with {2} mm, a difference of {4}%.",
+  "Tekdüze yakınsıyor (gözlenen mertebe {…}); ağdan bağımsız değer ≈ {…}, ağ belirsizliği (GCI) %{…}.": "Converges monotonically (observed order {0}); mesh-independent value ≈ {1}, mesh uncertainty (GCI) {2}%.",
+  "Salınarak yakınsıyor; belirsizlik bandı %{…}.": "Converges with oscillation; uncertainty band {0}%.",
+  "Izgara yakınsaması (üç ızgara): Cd {…} → {…} → {…}, gözlenen mertebe {…}, ızgaradan bağımsız Cd ≈ {…}, belirsizlik (GCI) ±%{…}.": "Grid convergence (three grids): Cd {0} → {1} → {2}, observed order {3}, grid-independent Cd ≈ {4}, uncertainty (GCI) ±{5}%.",
+  "Izgara yakınsaması (üç ızgara): Cd {…} → {…} → {…}, fark ızgara inceldikçe büyüyor: henüz yakınsama bölgesinde değil (çözünürlüğü artırın); iki ızgaradan GCI ±%{…}.": "Grid convergence (three grids): Cd {0} → {1} → {2}; the difference grows as the grid refines: not yet in the asymptotic range (raise the resolution); two-grid GCI ±{3}%.",
+  "Izgara belirsizliği (GCI{…}): Cd ±%{…}.": "Grid uncertainty (GCI{0}): Cd ±{1}%."
  }
 }

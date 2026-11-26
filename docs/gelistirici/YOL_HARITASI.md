@@ -158,7 +158,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 
 - [ ] Hidrolik, esnek yapılar ve yorulma.
 - [x] Gelişmiş motor ve rulman ısı modelleri: motorun iki düğümlü (sargı, gövde) modeli ve mıknatıs sıcaklık katsayısı (`MotorThermalTests`); rulman sürtünmesinin ısısı dünyanın ısı ağında, eklemin iki parçasına (`BearingHeatTests`).
-- [ ] FEM ağ ve CFD ızgara yakınsaması.
+- [x] FEM ağ ve CFD ızgara yakınsaması: üç ağlı Richardson ekstrapolasyonu (`Analysis/Numerics/GridConvergence.cs`: gözlenen mertebe, ağdan bağımsız değer, Roache'un üç ağlı GCI'ı, tekdüze/salınımlı/ıraksak ayrımı); gerilme analizi kullanıcının ağını iki kaba ağla, rüzgâr tüneli Cd'yi üç ızgarayla denetliyor. Ankastre kirişte ekstrapole uç sehim Timoshenko'dan %0,7 içinde (`GridConvergenceTests`).
 - [ ] Yeni MCU aileleri.
 - [x] İngilizce arayüz ve dil paketleri (varsayılan dil İngilizce).
 
