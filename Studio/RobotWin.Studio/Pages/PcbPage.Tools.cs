@@ -25,6 +25,11 @@ namespace RobotWin.Studio.Pages
                 new ToolChoice(nameof(PcbTool.Arc), "Yay", "I.DrawArc"),
                 new ToolChoice(nameof(PcbTool.Polygon), "Çokgen", "I.DrawPolygon")
             });
+            ToolFlyout.Attach(ToolRoute, new[]
+            {
+                new ToolChoice(nameof(PcbTool.Route), "Yol", "I.Wire", "X"),
+                new ToolChoice(nameof(PcbTool.Tune), "Uzunluk ayarı (menderes)", "I.Meander")
+            });
             ToolFlyout.Attach(ToolHole, new[]
             {
                 new ToolChoice(nameof(PcbTool.Hole), "Montaj deliği", "I.Hole"),
@@ -32,10 +37,58 @@ namespace RobotWin.Studio.Pages
             });
         }
 
+        /// <summary>[tuning] The length tuner's options: target (the pair's or group's, or a length), amplitude, spacing, corners.</summary>
+        private void TuneOptions()
+        {
+            var t = Canvas.Tuning;
+            var auto = new CheckBox { Content = "Hedef: çift / grup", IsChecked = Canvas.TuneTarget == null, VerticalAlignment = VerticalAlignment.Center, ToolTip = "Hedef uzunluk fark çiftinin öteki yarısından ya da uzunluk grubunun en uzun hattından gelir" };
+            var target = Number(Canvas.TuneTarget ?? 50, v => Canvas.TuneTarget = v, 0.1, 10000);
+            target.Width = 60;
+            target.IsEnabled = Canvas.TuneTarget != null;
+            target.ToolTip = "Elle hedef uzunluk (mm)";
+            auto.Click += (_, _) =>
+            {
+                Canvas.TuneTarget = auto.IsChecked == true ? null : 50;
+                UpdateToolOptions();
+            };
+            var amp = Number(t.Amplitude, v => t.Amplitude = v, 0.1, 20);
+            amp.Width = 50;
+            amp.ToolTip = "Kıvrımların yoldan uzaklığı (mm); parça kısaysa en çoka kadar büyür";
+            var max = Number(t.MaxAmplitude, v => t.MaxAmplitude = v, 0.1, 50);
+            max.Width = 50;
+            max.ToolTip = "En çok genlik (mm)";
+            var gap = Number(t.Spacing, v => t.Spacing = v, 0, 20, true);
+            gap.Width = 50;
+            gap.ToolTip = "Kıvrım bacakları arası (mm); 0: hat sınıfının aralığından";
+            var corner = Combo(new[] { MeanderCorner.Chamfered, MeanderCorner.Square }, t.Corner, c => t.Corner = c, c => Shell.Lang.T(c == MeanderCorner.Chamfered ? "45° köşe" : "Dik köşe"));
+            corner.Width = 100;
+            ToolOptionsRow.Children.Add(auto);
+            ToolOptionsRow.Children.Add(Label("Elle"));
+            ToolOptionsRow.Children.Add(target);
+            ToolOptionsRow.Children.Add(Label("Genlik"));
+            ToolOptionsRow.Children.Add(amp);
+            ToolOptionsRow.Children.Add(Label("En çok", 6));
+            ToolOptionsRow.Children.Add(max);
+            ToolOptionsRow.Children.Add(Label("Aralık"));
+            ToolOptionsRow.Children.Add(gap);
+            ToolOptionsRow.Children.Add(Label("Köşe"));
+            ToolOptionsRow.Children.Add(corner);
+            ToolOptions.Visibility = Visibility.Visible;
+        }
+
+        private static TextBlock Label(string text, double left = 12) =>
+            new TextBlock { Text = text, Style = S("Text.Caption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(left, 0, 6, 0) };
+
         /// <summary>The options of the tool in use, over the board's top left corner; hidden for tools without any.</summary>
         private void UpdateToolOptions()
         {
             ToolOptionsRow.Children.Clear();
+            if (Canvas.Tool == PcbTool.Tune)
+            {
+                TuneOptions();
+                return;
+            }
+
             if (!BoardCanvas.IsGraphicTool(Canvas.Tool))
             {
                 ToolOptions.Visibility = Visibility.Collapsed;
@@ -62,9 +115,6 @@ namespace RobotWin.Studio.Pages
             }
 
             ToolOptions.Visibility = Visibility.Visible;
-
-            static TextBlock Label(string text, double left = 12) =>
-                new TextBlock { Text = text, Style = S("Text.Caption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(left, 0, 6, 0) };
         }
     }
 }

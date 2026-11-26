@@ -738,6 +738,26 @@ namespace RobotWin.Studio.Pages
                     DrcRulesToggle.IsChecked = true;
                     OnDrcRules(this, new RoutedEventArgs());
                     break;
+                case "tune":   // [tuning] two nets made a pair; the shorter one meandered to the other's length by the tuner
+                {
+                    // a signal pair in the free strip under the parts: D- runs 3 mm further (a jog), D+ is tuned to it
+                    double y0 = board.Height - 7;
+                    board.Tracks.Add(new Track { Net = "D+", Layer = CopperLayer.Top, X1 = 22, Y1 = y0, X2 = 42, Y2 = y0, Width = 0.2 });
+                    board.Tracks.Add(new Track { Net = "D-", Layer = CopperLayer.Top, X1 = 22, Y1 = y0 + 3, X2 = 40, Y2 = y0 + 3, Width = 0.2 });
+                    board.Tracks.Add(new Track { Net = "D-", Layer = CopperLayer.Top, X1 = 40, Y1 = y0 + 3, X2 = 42, Y2 = y0 + 5, Width = 0.2 });
+                    board.Tracks.Add(new Track { Net = "D-", Layer = CopperLayer.Top, X1 = 42, Y1 = y0 + 5, X2 = 42, Y2 = y0 + 5.5, Width = 0.2 });
+                    board.DiffPairs.Add(new DiffPair { Positive = "D+", Negative = "D-", MaxSkew = 0.5 });
+                    var dp = board.Tracks.First(t => t.Net == "D+");
+                    var tuned = LengthTuning.Tune(board, dp);
+                    if (tuned.Ok && tuned.Replacement != null) LengthTuning.Apply(board, dp, tuned);
+                    W.Status = tuned.Message;
+
+                    Canvas.Refresh();
+                    Canvas.SetTool(PcbTool.Tune);
+                    UpdatePanel();
+                    ShowPanel(2);
+                    break;
+                }
                 case "draw":   // [graphics] a logo frame, a filled mark, an arc and a polygon drawn; the rectangle tool with its options
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Rectangle, Points = { new PcbPoint(3, 3), new PcbPoint(18, 9) }, Width = 0.2 });
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Circle, Points = { new PcbPoint(10.5, 6), new PcbPoint(12, 6) }, Filled = true });
@@ -1960,7 +1980,7 @@ namespace RobotWin.Studio.Pages
                 body.Children.Add(head);
                 var r = NetLengths.Analyze(board, pair, lengths);
                 string state = r.PositiveLength > 0 && r.NegativeLength > 0
-                    ? Shell.Lang.T($"{F1(r.PositiveLength)} / {F1(r.NegativeLength)} mm · fark {F1(r.Skew)} mm · %{r.Coupled * 100:0} yan yana")
+                    ? Shell.Lang.T($"{F1(r.PositiveLength)} / {F1(r.NegativeLength)} mm · fark {F1(r.Skew)} mm ({Math.Abs(LengthTuning.Delay(board, pair.Positive) - LengthTuning.Delay(board, pair.Negative)):0.#} ps) · %{r.Coupled * 100:0} yan yana")
                     : Shell.Lang.T("Henüz yollanmadı.");
                 body.Children.Add(new TextBlock
                 {

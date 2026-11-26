@@ -29,7 +29,10 @@ namespace RobotWin.Studio.Pcb
         Circle,
         Arc,
         Polygon,
-        Via
+        Via,
+
+        /// <summary>[tuning] KiCad's length tuner: meanders on the clicked segment up to its pair's or group's length.</summary>
+        Tune
     }
 
     /// <summary>
@@ -282,6 +285,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Arc => "Yay: merkeze, başlangıca ve bitişe tıklayın (saat yönünün tersine) · Esc: iptal",
             PcbTool.Polygon => "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal",
             PcbTool.Via => "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık",
+            PcbTool.Tune => "Uzunluk ayarı: kısa kalan hattın uzun, düz bir parçasına tıklayın; kıvrımlar hattı çiftinin ya da grubunun uzunluğuna getirir · Esc: çık",
             PcbTool.Dimension => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın",
             PcbTool.Outline => "Kart kenarı: köşelere tıklayın · çift tık veya Enter: kapat (köşe yarıçapı panelden) · Esc: iptal",
             PcbTool.Hole => "Montaj deliği: yerleştirmek için tıklayın",

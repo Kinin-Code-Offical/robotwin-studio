@@ -189,6 +189,37 @@ namespace RobotWin.Studio.Pcb
             foreach (var p in g.Points) dc.DrawRectangle(SymbolRenderer.Brush(Accent), null, new Rect(S(p.X, p.Y) - new Vector(3, 3), new Size(6, 6)));
         }
 
+        // ---------------------------------------------------------------- [tuning] length tuner
+
+        /// <summary>How the length tuner draws its meanders (the tool options bar sets them).</summary>
+        public MeanderSettings Tuning { get; } = new MeanderSettings();
+
+        /// <summary>A length the tuner aims at instead of the pair's or group's (mm); null: the pair or group decides.</summary>
+        public double? TuneTarget { get; set; }
+
+        private void TuneClick(double x, double y)
+        {
+            var board = Board;
+            if (board == null) return;
+            if (HitTrack(x, y) is not { } seg)
+            {
+                Say("Uzunluk ayarı: bir yol parçasına tıklayın");
+                return;
+            }
+
+            var result = LengthTuning.Tune(board, seg, TuneTarget, Tuning);
+            if (!result.Ok || result.Replacement == null)
+            {
+                Say(result.Message);
+                return;
+            }
+
+            BeforeEdit?.Invoke(this, EventArgs.Empty);
+            LengthTuning.Apply(board, seg, result);
+            double ps = LengthTuning.Delay(board, result.Net);
+            Edited(result.Message + $" · gecikme {ps:0} ps");
+        }
+
         // ---------------------------------------------------------------- via tool
 
         /// <summary>A via where clicked, on the net of the track, pad or zone under it (none: it stays unconnected until routed).</summary>

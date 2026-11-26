@@ -157,6 +157,9 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Via:
                     ViaClick(x, y);
                     return;
+                case PcbTool.Tune:   // [tuning]
+                    TuneClick(x, y);
+                    return;
                 case PcbTool.Hole:
                     BeforeEdit?.Invoke(this, EventArgs.Empty);
                     Board.MountingHoles.Add(new MountingHole { X = Snap(x), Y = Snap(y), Drill = HoleDrill, PadDiameter = HolePad });

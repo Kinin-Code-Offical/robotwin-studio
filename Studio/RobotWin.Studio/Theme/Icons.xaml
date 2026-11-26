@@ -60,6 +60,7 @@
     <Geometry x:Key="I.DrawCircle">M12,4 A8,8 0 1 1 11.99,4 Z</Geometry>
     <Geometry x:Key="I.DrawArc">M7,18 A7,7 0 1 1 17,18</Geometry>
     <Geometry x:Key="I.DrawPolygon">M12,4 L20,10 L17,20 H7 L4,10 Z</Geometry>
+    <Geometry x:Key="I.Meander">M3,16 H6 V8 H10 V16 H14 V8 H18 V16 H21</Geometry>
     <Geometry x:Key="I.Via">M12,5 A7,7 0 1 1 11.99,5 Z M12,9.5 A2.5,2.5 0 1 1 11.99,9.5 Z</Geometry>
     <Geometry x:Key="I.Joint">M4,7 A3,3 0 1 1 10,7 A3,3 0 1 1 4,7 Z M14,17 A3,3 0 1 1 20,17 A3,3 0 1 1 14,17 Z M9.1,9.1 L14.9,14.9</Geometry>
     <Geometry x:Key="I.Split">M4,5 H20 V19 H4 Z M12,5 V19</Geometry>
