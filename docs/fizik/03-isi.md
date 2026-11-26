@@ -49,6 +49,8 @@ Mıknatısların akısı da sıcaklıkla düşer: ferrit mıknatıs °C başına
 
 Dünyanın dışında (Devre sayfası, araç montajı) motorun kendi iki düğümlü modeli çalışır. Sargı hafiftir: ısı sığasının %10'u, ısıl direncin %25'i sargıdan gövdeye. Gövde ağırdır ve sürtünme ile dişli kaybını da alıp havaya verir. Kilitlenen motorda sargı birkaç saniyede ısınır, gövde dakikalar içinde. Kalıcı durumda sargı tek düğümlü modelin bulduğu sıcaklıktadır. Dünyada bu işi yukarıdaki ısı ağı yapar; mıknatıslar orada gövde (kutu) düğümünün sıcaklığını izler.
 
+Rulmanlar da ısınır. Bir eklemin rulman sürtünmesi (yük × μ × çap/2) ile hızının çarpımı ısıdır; yarısı eklemin bağladığı her iki parçaya gider (`WorldPhysics.BearingHeat`). Çelik bir disk 20 tur/s'de plastik burçta 2,28 W ısı üretir, bilyalı rulmanda bunun yüzde biri (`BearingHeatTests`). Hızlı dönen bir PLA menteşe pimi böylece çevresindeki plastiği ısıtır; plastik camsı geçişine yaklaşınca her ısınan parça gibi yumuşar.
+
 ## Pil
 
 Pilin ısısı iç direnç ve polarizasyon kaybıdır: $`P = I^2R + \lvert I\,V_p \rvert`$. Lityum hücreler 130 °C'yi aşınca termal kaçağa girer (devrede açık devre olur, olay yazılır).

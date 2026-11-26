@@ -157,7 +157,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 ### P2: sonraki aşama
 
 - [ ] Hidrolik, esnek yapılar ve yorulma.
-- [~] Gelişmiş motor ve rulman ısı modelleri. Motor: iki düğümlü (sargı, gövde) model ve mıknatıs sıcaklık katsayısı var (`MotorThermalTests`). Sırada: rulmanlar.
+- [x] Gelişmiş motor ve rulman ısı modelleri: motorun iki düğümlü (sargı, gövde) modeli ve mıknatıs sıcaklık katsayısı (`MotorThermalTests`); rulman sürtünmesinin ısısı dünyanın ısı ağında, eklemin iki parçasına (`BearingHeatTests`).
 - [ ] FEM ağ ve CFD ızgara yakınsaması.
 - [ ] Yeni MCU aileleri.
 - [x] İngilizce arayüz ve dil paketleri (varsayılan dil İngilizce).

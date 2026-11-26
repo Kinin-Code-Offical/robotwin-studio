@@ -49,6 +49,8 @@ The magnets' flux drops with temperature too: ferrite magnets by −0.2 % per °
 
 Outside the world (the Circuit page, a vehicle assembly) the motor runs its own two-node model. The winding is light: 10 % of the heat capacity, and 25 % of the thermal resistance lies from winding to housing. The housing is heavy and also takes the friction and gear losses, passing all the heat to the air. In a stalled motor the winding heats within seconds, the housing within minutes. In steady state the winding sits where the one-node model put it. In the world the thermal network above does this, and the magnets follow its housing (can) node.
 
+Bearings heat too. A joint's bearing friction (load × μ × bore/2) times its speed is heat, half of it going into each of the two parts the joint holds (`WorldPhysics.BearingHeat`). A steel disc at 20 rev/s makes 2.28 W of heat in a plastic bushing, and a hundredth of that in a ball bearing (`BearingHeatTests`). A fast-turning pin in a PLA hinge thus warms the plastic around it, which softens near its glass transition as any warm part does.
+
 ## Battery
 
 A battery heats by its internal resistance and polarization loss: $`P = I^2R + \lvert I\,V_p \rvert`$. Lithium cells above 130 °C go into thermal runaway (they turn into an open circuit and an event is written).
