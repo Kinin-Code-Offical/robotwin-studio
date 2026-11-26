@@ -41,7 +41,7 @@ Kart kenarını sol araç çubuğundaki **kart kenarı** aracıyla çokgen olara
 
 | Tuş | İşlev |
 | --- | --- |
-| V | Via koy ve katman değiştir |
+| V | Via koy ve katman çiftinin öbür katmanına geç (çift Katmanlar sekmesinde; varsayılan üst ↔ alt, 4 ve 6 katmanda iç katmanlar da seçilebilir) |
 | PgUp / PgDn | Via ile üst / alt katmana geç |
 | / | Açı yönü (önce çapraz / önce düz) |
 | Boşluk | 45° / 90° mod |

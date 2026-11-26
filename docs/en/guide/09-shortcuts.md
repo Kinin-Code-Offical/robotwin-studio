@@ -81,7 +81,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Shortcut | Function |
 | --- | --- |
 | X | Track tool |
-| V | Place a via and change layer (while routing); top / bottom layer (otherwise) |
+| V | Place a via and go to the other layer of the layer pair (while routing); make the pair's other layer active (otherwise); the pair is set in the Katmanlar tab, top ↔ bottom by default |
 | PgUp / PgDn | Active layer (while routing: change layer through a via) |
 | / | Angle direction |
 | Space | 45° / 90° mode |

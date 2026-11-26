@@ -39,7 +39,7 @@ Draw the board edge as a polygon with the **Board edge** tool on the left toolba
 
 | Key | Function |
 | --- | --- |
-| V | Place a via and change layer |
+| V | Place a via and go to the other layer of the layer pair (set in the Katmanlar tab; top ↔ bottom by default, inner layers too on 4 and 6 layers) |
 | PgUp / PgDn | Go to the top / bottom layer through a via |
 | / | Angle direction (diagonal first / straight first) |
 | Space | 45° / 90° mode |

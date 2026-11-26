@@ -112,6 +112,10 @@ namespace RobotWin.Studio.Shell
         public double PcbPadOpacity { get; set; } = 1;
         public double PcbZoneOpacity { get; set; } = 1;
 
+        /// <summary>[layer-pair] The PCB editor's layer pair for V (copper layer names, e.g. "Top", "Bottom", "In1").</summary>
+        public string PcbLayerPairA { get; set; } = "Top";
+        public string PcbLayerPairB { get; set; } = "Bottom";
+
         /// <summary>[grid] Whether the PCB editor draws its grid.</summary>
         public bool PcbGridShown { get; set; } = true;
 

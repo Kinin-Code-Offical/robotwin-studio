@@ -47,7 +47,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Yol genişliği seçimi | yol seçenek çubuğu, W | var | |
 | Via boyutu seçimi | yol / via seçenek çubuğu | var | |
 | Etkin katman | katman listesi | var | |
-| Katman çifti (via ile geçilen) | yok | yok | 2 |
+| Katman çifti (via ile geçilen) | Katmanlar sekmesinde iki liste; V yol çizerken via koyup çiftin öbürüne, çizmezken etkin katmanı çiftin öbürüne geçirir (saklanır; kartta olmayan çift üst ↔ alt) | var | |
 | Izgara, yakınlık | ızgara panelde, yakınlık yok | kısmi | 2 |
 | Kilitleri geçersiz kıl | yok | yok | 3 |
 

@@ -1319,7 +1319,7 @@ namespace RobotWin.Studio.Pcb
                     CycleTrackWidth(shift ? -1 : 1);
                     return;
                 case Key.V:
-                    ActiveLayer = PcbLayers.IsOuter(_activeLayer) ? PcbLayers.Opposite(_activeLayer) : CopperLayer.Top;
+                    ActiveLayer = PairedWith(_activeLayer);   // [layer-pair] KiCad's V
                     Say("Etkin katman: " + PcbLayers.DisplayName(_activeLayer));
                     return;
                 case Key.E:
@@ -1575,7 +1575,7 @@ namespace RobotWin.Studio.Pcb
             if (_tool == PcbTool.Route && _routePts.Count > 0)
             {
                 Add(Item("Yolu bitir", "Enter", () => RouteKey(Key.Enter, false)));
-                Add(Item("Via ekle, katman değiştir", "V", () => RouteKey(Key.V, false)));
+                Add(Item("Via ekle, katman çiftinin öbürüne geç", "V", () => RouteKey(Key.V, false)));
                 Add(Sub("Katmana geç (via ile)", board.CopperLayers().Where(l => l != _routeLayer).Select(l => Item(PcbLayers.DisplayName(l), null, () => RouteToLayer(l)))));
                 Add(Item("Açı yönünü değiştir", "/", TogglePosture));
                 Add(Item(_only90 ? "45° moda geç" : "90° moda geç", "Boşluk", () => RouteKey(Key.Space, false)));

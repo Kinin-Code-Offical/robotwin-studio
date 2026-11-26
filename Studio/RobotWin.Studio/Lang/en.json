@@ -8539,7 +8539,10 @@
   "Bütün ağ renklerini kaldır": "Remove all net colours",
   "Ağ renkleri kaldırıldı": "Net colours removed",
   "Izgarayı göster / gizle (yakalama değişmez)": "Show / hide the grid (snapping stays the same)",
-  "Via'lar": "Vias"
+  "Via'lar": "Vias",
+  "Katman çifti (V)": "Layer pair (V)",
+  "Yol çizerken V via koyup çiftin öbür katmanına geçer; çizmiyorken etkin katmanı değiştirir.": "While routing, V places a via and goes to the pair's other layer; otherwise it changes the active layer.",
+  "Via ekle, katman çiftinin öbürüne geç": "Add a via, go to the pair's other layer"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

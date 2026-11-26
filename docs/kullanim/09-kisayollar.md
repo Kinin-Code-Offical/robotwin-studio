@@ -81,7 +81,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Kısayol | İşlev |
 | --- | --- |
 | X | Yol aracı |
-| V | Via koy ve katman değiştir (yol çizerken); üst / alt katman (yol çizmezken) |
+| V | Via koy ve katman çiftinin öbür katmanına geç (yol çizerken); etkin katmanı çiftin öbürüne al (yol çizmezken); çift Katmanlar sekmesinde seçilir, varsayılan üst ↔ alt |
 | PgUp / PgDn | Etkin katman (yol çizerken via ile katman değiştir) |
 | / | Açı yönü |
 | Boşluk | 45° / 90° mod |

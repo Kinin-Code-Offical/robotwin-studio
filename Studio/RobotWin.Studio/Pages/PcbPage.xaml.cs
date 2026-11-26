@@ -58,6 +58,8 @@ namespace RobotWin.Studio.Pages
         {
             InitializeComponent();
             Canvas.ShowGrid = AppSettings.Current.PcbGridShown;   // [grid]
+            if (Enum.TryParse<CopperLayer>(AppSettings.Current.PcbLayerPairA, out var pairA)) Canvas.PairA = pairA;   // [layer-pair]
+            if (Enum.TryParse<CopperLayer>(AppSettings.Current.PcbLayerPairB, out var pairB)) Canvas.PairB = pairB;
             Canvas.TrackOpacity = AppSettings.Current.PcbTrackOpacity;   // [opacity]
             Canvas.ViaOpacity = AppSettings.Current.PcbViaOpacity;
             Canvas.PadOpacity = AppSettings.Current.PcbPadOpacity;
@@ -1938,6 +1940,7 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(Switch("Ped numaraları ve hatları", Canvas.ShowPadNames, v => { Canvas.ShowPadNames = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Yüksek kontrast (diğer katmanlar soluk)", Canvas.HighContrast, v => { Canvas.HighContrast = v; Canvas.InvalidateVisual(); }));
             OpacityRows();   // [opacity] KiCad's Objects tab (Pages/PcbPage.Opacity.cs)
+            LayerPairRow();   // [layer-pair] KiCad's layer pair for V (Pages/PcbPage.Opacity.cs)
             if (Canvas.HighlightNet != null)
             {
                 LayersPanel.Children.Add(Buttons(Button($"'{Canvas.HighlightNet}' vurgusunu kaldır", (_, _) => Canvas.SetHighlight(null))));

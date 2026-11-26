@@ -1155,8 +1155,7 @@ namespace RobotWin.Studio.Pcb
                 {
                     UpdateRoutePreview();
                     if (_previewReached) CommitPreview();
-                    var target = _activeLayer != _routeLayer ? _activeLayer
-                        : PcbLayers.IsOuter(_routeLayer) ? PcbLayers.Opposite(_routeLayer) : CopperLayer.Bottom;
+                    var target = _activeLayer != _routeLayer ? _activeLayer : PairedWith(_routeLayer);   // [layer-pair]
                     AddVia(target);
                     return true;
                 }
