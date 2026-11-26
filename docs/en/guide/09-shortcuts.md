@@ -164,6 +164,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Alt+Shift+A | Activate / deactivate the selection |
 | Ctrl+D | Duplicate |
 | Ctrl+click / Shift+click | Add to or take out of the selection / select a range in the tree |
+| Shift+drag (on empty space) | Rectangle select (Ctrl+Shift: add to the selection) |
 | Ctrl+A | Select all |
 | Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Empty object / empty child of the selection / put the selection under an empty parent |
 | Del | Delete |

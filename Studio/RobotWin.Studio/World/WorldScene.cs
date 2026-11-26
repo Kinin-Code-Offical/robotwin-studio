@@ -1411,6 +1411,7 @@ namespace RobotWin.Studio.World
                         return;
                     }
 
+                    if (MarqueeDown(p)) return;   // [multiselect] Shift+drag: a rectangle (World/WorldScene.Marquee.cs)
                     Select(null);
                     SelectCable(null);
                     break;
@@ -1462,6 +1463,7 @@ namespace RobotWin.Studio.World
                 return;
             }
 
+            if (MarqueeMove(p)) return;   // [multiselect]
             if (_orbit == null)
             {
                 if (Tool == WorldTool.Cable) ShowPinTip(p);
@@ -1490,6 +1492,7 @@ namespace RobotWin.Studio.World
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
+            if (MarqueeUp(e.GetPosition(this))) return;   // [multiselect]
             if (EditorMouseUp(e)) return; // [terrain]
             if (_drag != null && _dragMoved && World?.Find(_drag) is { } o)
             {
@@ -1548,7 +1551,7 @@ namespace RobotWin.Studio.World
                     : $"Kablo: {_pendingPin.Pin} seçildi, ikinci pini tıklayın · Esc: iptal",
                 WorldTool.Joint => "Bağla: seçili nesnenin takılacağı nesneyi tıklayın (servo kolu, motor mili, gövde) · Esc: iptal",
                 WorldTool.Mate => "Hizala: iki parçanın yüzünü ya da eksenini (milin, tekerin yuvarlak yanı) tıklayın, sonra ilişkiyi seçin · Esc: iptal",
-                _ => "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız) · boşlukta sol: döndür · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten"
+                _ => "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız, Ctrl: seçime ekle) · boşlukta sol: döndür, Shift+sürükle: dikdörtgenle seç · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten"
             };
         }
     }

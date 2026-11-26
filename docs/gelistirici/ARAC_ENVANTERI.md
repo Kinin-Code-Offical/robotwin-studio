@@ -245,7 +245,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | --- | --- | --- | --- |
 | Kes, kopyala, yapıştır; alt nesne olarak yapıştır (yerel ya da dünya dönüşümünü koruyarak) | Kes / kopyala / yapıştır (takılı olanlar, bağlantılar, kablolar, ilişkiler); seçilinin üstüne takılı yapıştır | var | |
 | Yeniden adlandır, çoğalt, sil | F2 satırda; çoğalt ve sil takılı olanlarla, "yalnız bunu sil" | var | |
-| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, Ctrl+A; tutamaç, kopyala, kes, çoğalt, sil hepsine (tersine çevir, alt nesneleri seç, sahnede dikdörtgenle seçim sonra) | kısmi | 2 |
+| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, sahnede Shift+sürükle dikdörtgen, Ctrl+A; tutamaç, kopyala, kes, çoğalt, sil hepsine (tersine çevir, alt nesneleri seç sonra) | kısmi | 3 |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | Boş nesne (Ctrl+Alt+N), boş alt (Alt+Shift+N), boş üst (Ctrl+Shift+G); düzenleyicide grup, çalıştırmada yok (altındakiler onun takılı olduğu yere geçer) | var | |
 | Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ gövde şekilleri ve palet sekmeleri | kısmi | 2 |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
@@ -284,4 +284,4 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
 
-Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim ve boş nesneler de geldi; sırada bileşen kartının aç / kapa ve yardımı, sahnede dikdörtgenle seçim.
+Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim ve boş nesneler de geldi; boş nesneler, bileşen kartının ? yardımı ve sahnede dikdörtgenle seçim de geldi; sırada bileşeni aç / kapa.

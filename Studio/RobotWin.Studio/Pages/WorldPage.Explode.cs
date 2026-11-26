@@ -425,6 +425,13 @@ namespace RobotWin.Studio.Pages
             if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
                 Scene.ToggleSelect(extra.Id);
             if (args.Contains("--empty-parent")) CreateEmptyParent();   // [empty] the selection under a new empty
+            int mq = Array.IndexOf(args, "--marquee");   // [multiselect] --marquee x0,y0,x1,y1 (fractions of the view)
+            if (mq >= 0 && mq + 1 < args.Length)
+            {
+                var f = args[mq + 1].Split(',').Select(v => double.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+                Scene.UpdateLayout();
+                Scene.MarqueeFraction(f[0], f[1], f[2], f[3]);
+            }
 
             if (args.Contains("--grid-snap"))
             {

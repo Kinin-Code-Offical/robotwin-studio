@@ -4847,7 +4847,6 @@
   "Sol şeridi genişlet / daralt": "Expand / collapse the left rail",
   "Sol şeritteki sayfalara geçiş.": "Switching between the pages on the left rail.",
   "Sol: breadboard görünümü (düz resim) · Sağ: PCB görünümünden çıkarılan kılıf": "Left: breadboard view (flat image) · Right: footprint extracted from the PCB view",
-  "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız) · boşlukta sol: döndür · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten": "Left: select/move (Shift: height, Alt: no grid) · left on empty space: orbit · right: pan · wheel: zoom · double-click: focus/top view",
   "Sol: şematik sembol (bacak uçlarında pad numaraları) · Sağ: ": "Left: schematic symbol (pad numbers at the pin ends) · Right: ",
   "Sola": "To the left",
   "Sola hız (m/s)": "Leftward speed (m/s)",
@@ -8493,7 +8492,8 @@
   "Boş nesne oluştur": "Create empty object",
   "Seçilinin altına boş nesne": "Empty object under the selection",
   "Seçileni boş bir üst nesnenin altına al": "Put the selection under an empty parent",
-  "Bu bileşenin kılavuzdaki bölümü": "This component's section in the guide"
+  "Bu bileşenin kılavuzdaki bölümü": "This component's section in the guide",
+  "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız, Ctrl: seçime ekle) · boşlukta sol: döndür, Shift+sürükle: dikdörtgenle seç · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten": "Left: select/move (Shift: height, Alt: no grid, Ctrl: add to selection) · on empty space left: orbit, Shift+drag: rectangle select · right: pan · wheel: zoom · double-click: focus/top view"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
