@@ -85,6 +85,20 @@ RobotWin do not use Open CASCADE.
 The `occt` folder also carries the Microsoft Visual C++ runtime DLLs the bridge needs (msvcp140, msvcp140_2,
 vcruntime140, vcruntime140_1), redistributed app-locally under the Visual Studio redistribution terms.
 
+## .NET runtime (bundled with the installers)
+
+The installer's `dotnet` component and the portable app carry, unmodified, Microsoft's .NET 10 runtime
+(Microsoft.NETCore.App, Microsoft.WindowsDesktop.App and hostfxr) in the app's `dotnet\` folder, with its own
+`LICENSE.txt` (MIT) and `ThirdPartyNotices.txt`. Source: https://github.com/dotnet/runtime, https://github.com/dotnet/wpf,
+https://github.com/dotnet/winforms.
+
+## NuGet packages
+
+Every package the app, the simulation core and the headless server use, with its version and licence, is listed in
+`docs/DEPENDENCIES.md`, generated from what the projects resolve; CI fails when it is out of date or a licence is not
+on the allowed list. The shipped ones are under MIT (Vortice, SharpGen.Runtime, System.Text.Json and its dependencies
+for the netstandard build).
+
 ## Other components
 
 Add additional third-party notices here as dependencies are introduced.
