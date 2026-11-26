@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Model-exchange FMUs:** an FMI 2.0 FMU with only the model-exchange interface runs in the circuit too, its states solved by our own adaptive Dormand–Prince 5(4) integrator (tolerances scaled by the states' nominal values) with time events, state events located by bisection and step events, as FMI 2.0 describes.
 
+- **The pulse counter's glitch filter (ESP32 fast mode):** `pcnt_unit_set_glitch_filter` works as the hardware's: a new level counts only once it has held for the filter's width (whole APB cycles, up to 12.8 µs), so shorter pulses are not counted.
+- **A WS2812B strip checks its data level:** an ESP32's 3.3 V data into a 5 V strip is below the datasheet's VIH = 0.7·VDD; the strip still lights (as most do) and the log says so once with the usual cures; data below half the strip's supply is not read. A chained strip gets its data at the previous strip's supply.
+
 ### Fixed
 
 - **FMU blocks exchanged at every circuit step:** the FMU was stepped to each step the circuit took and asked for a restart every time, which held the circuit at its smallest steps (a million integrator steps for 0.1 s of a model-exchange FMU). The circuit and the FMU now meet only at the communication points (102 steps).

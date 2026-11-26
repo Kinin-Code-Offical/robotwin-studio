@@ -5,8 +5,9 @@
  * count returns to zero at the unit's limits (the driver adds the limit when accum_count is set); watch points at the
  * limits, zero and up to two thresholds call on_reach from the interrupt, as on the chip. The edges are the pin changes
  * the simulator delivers (rw_pin_changed), so counting follows the circuit's own signals; the channel pins get their
- * pull-ups, as the driver sets them. The glitch filter is accepted but not applied (the pin changes are already the
- * settled levels the circuit solves).
+ * pull-ups, as the driver sets them. [pcnt-filter] The glitch filter (pcnt_unit_set_glitch_filter, up to 1023 APB
+ * cycles) works as the hardware's: a signal input's new level counts only once it has held for the filter's width, so
+ * a pulse shorter than it is not counted at all; the count follows the edge by that width.
  */
 #include "Arduino.h"
 #include "driver/pulse_cnt.h"
@@ -25,6 +26,10 @@ struct pcnt_chan_t {
     pcnt_channel_edge_action_t neg;
     pcnt_channel_level_action_t high;
     pcnt_channel_level_action_t low;
+    int stable;              // [pcnt-filter] the signal's level the counter has taken
+    bool pending;            // a new level waiting to outlast the filter
+    int pending_level;
+    uint64_t pending_at;
 };
 
 struct pcnt_unit_t {
@@ -43,6 +48,7 @@ struct pcnt_unit_t {
     void* ctx;
     bool chan_used[2];
     pcnt_chan_t chans[2];
+    uint64_t glitch_ns;      // [pcnt-filter] 0: off
 };
 
 namespace {
@@ -135,26 +141,59 @@ void hal_pcnt_reset() {
     g_head = g_tail = 0;
 }
 
-void hal_pcnt_edge(int gpio, int level) {
+/* One edge of a channel's signal input, taken by the counter. */
+static void count_edge(pcnt_unit_t& u, pcnt_chan_t& ch, int level) {
+    ch.stable = level;
+    bool rising = (level != 0) != ch.invert_edge;
+    pcnt_channel_edge_action_t act = rising ? ch.pos : ch.neg;
+    int delta = act == PCNT_CHANNEL_EDGE_ACTION_INCREASE ? 1 : act == PCNT_CHANNEL_EDGE_ACTION_DECREASE ? -1 : 0;
+    if (delta == 0) return;
+    bool control = ch.virt_level;
+    if (ch.level_gpio >= 0) {
+        int lv = hal_pin_level(ch.level_gpio);
+        control = (lv != 0) != ch.invert_level;   // not seen yet: its pull-up holds it high
+    }
+
+    pcnt_channel_level_action_t steer = control ? ch.high : ch.low;
+    if (steer == PCNT_CHANNEL_LEVEL_ACTION_HOLD) return;
+    if (steer == PCNT_CHANNEL_LEVEL_ACTION_INVERSE) delta = -delta;
+    step(u, delta);
+}
+
+void hal_pcnt_settle(uint64_t now_ns) {
+    for (auto& u : g_units) {
+        if (!u.used || !u.running || u.glitch_ns == 0) continue;
+        for (int c = 0; c < 2; c++) {
+            pcnt_chan_t& ch = u.chans[c];
+            if (!u.chan_used[c] || !ch.pending || now_ns < ch.pending_at + u.glitch_ns) continue;
+            ch.pending = false;
+            count_edge(u, ch, ch.pending_level);
+        }
+    }
+}
+
+void hal_pcnt_edge(int gpio, int level, uint64_t time_ns) {
+    hal_pcnt_settle(time_ns);   // what held long enough before this edge counts first
     for (auto& u : g_units) {
         if (!u.used || !u.running) continue;
         for (int c = 0; c < 2; c++) {
             if (!u.chan_used[c] || u.chans[c].edge_gpio != gpio) continue;
-            const pcnt_chan_t& ch = u.chans[c];
-            bool rising = (level != 0) != ch.invert_edge;
-            pcnt_channel_edge_action_t act = rising ? ch.pos : ch.neg;
-            int delta = act == PCNT_CHANNEL_EDGE_ACTION_INCREASE ? 1 : act == PCNT_CHANNEL_EDGE_ACTION_DECREASE ? -1 : 0;
-            if (delta == 0) continue;
-            bool control = ch.virt_level;
-            if (ch.level_gpio >= 0) {
-                int lv = hal_pin_level(ch.level_gpio);
-                control = (lv != 0) != ch.invert_level;   // not seen yet: its pull-up holds it high
+            pcnt_chan_t& ch = u.chans[c];
+            if (u.glitch_ns > 0) {
+                // [pcnt-filter] a level that has not yet held for the filter's width is a glitch when it changes back
+                if (ch.pending) {
+                    ch.pending = false;
+                    if (level == ch.stable) continue;
+                }
+
+                if (level == ch.stable) continue;
+                ch.pending = true;
+                ch.pending_level = level;
+                ch.pending_at = time_ns;
+                continue;
             }
 
-            pcnt_channel_level_action_t steer = control ? ch.high : ch.low;
-            if (steer == PCNT_CHANNEL_LEVEL_ACTION_HOLD) continue;
-            if (steer == PCNT_CHANNEL_LEVEL_ACTION_INVERSE) delta = -delta;
-            step(u, delta);
+            count_edge(u, ch, level);
         }
     }
 }
@@ -217,6 +256,8 @@ extern "C" esp_err_t pcnt_unit_set_glitch_filter(pcnt_unit_handle_t unit, const 
         return ESP_ERR_INVALID_ARG;
     }
 
+    // [pcnt-filter] the hardware's threshold is whole APB cycles (12.5 ns): the width the driver sets rounds down to them
+    unit->glitch_ns = config ? (uint64_t)(config->max_glitch_ns / 12.5) * 125ull / 10ull : 0;
     return ESP_OK;
 }
 
@@ -274,6 +315,7 @@ extern "C" esp_err_t pcnt_unit_clear_count(pcnt_unit_handle_t unit) {
 extern "C" esp_err_t pcnt_unit_get_count(pcnt_unit_handle_t unit, int* value) {
     charge(cost(300.0));
     if (!unit || !unit->used || !value) return ESP_ERR_INVALID_ARG;
+    hal_pcnt_settle(rw::now_ns());   // [pcnt-filter] edges that have held by now
     *value = unit->accumulated + unit->hw;
     return ESP_OK;
 }
@@ -358,6 +400,9 @@ extern "C" esp_err_t pcnt_new_channel(pcnt_unit_handle_t unit, const pcnt_chan_c
         ch.virt_level = config->flags.virt_level_io_level != 0;
         unit->chan_used[c] = true;
         input_pin(ch.edge_gpio);
+        int start = ch.edge_gpio >= 0 ? hal_pin_level(ch.edge_gpio) : 1;
+        ch.stable = start < 0 ? 1 : start;   // [pcnt-filter] the level it starts from (unseen: its pull-up)
+        ch.pending = false;
         input_pin(ch.level_gpio);
         *ret_chan = &ch;
         return ESP_OK;

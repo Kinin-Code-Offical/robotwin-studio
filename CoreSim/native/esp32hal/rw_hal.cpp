@@ -460,7 +460,7 @@ void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
     e.time = time_ns;
     e.level = lv;
     s.edge_count++;
-    hal_pcnt_edge(gpio, lv);   // the pulse counters see the edge too
+    hal_pcnt_edge(gpio, lv, time_ns);   // the pulse counters see the edge too
     if (!s.isr_enabled || (!s.isr0 && !s.isr1)) return;
     int m = s.isr_mode;
     if ((m == RISING && lv) || (m == FALLING && !lv) || m == CHANGE) fire_isr(gpio);

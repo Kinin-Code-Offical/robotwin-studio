@@ -863,6 +863,7 @@ RW_EXPORT int rw_run_until(uint64_t time_ns) {
     Lock l;
     if (time_ns <= g_limit) return RW_STATUS_OK;
     uint64_t slice_start = g_limit;
+    rw::hal_pcnt_settle(slice_start);   // [pcnt-filter] edges that have outlasted the glitch filter by now
     g_limit = time_ns;
     if (g_now < slice_start) g_now = slice_start;  // the CPU idled until the start of this slice
     hal_slice_start();

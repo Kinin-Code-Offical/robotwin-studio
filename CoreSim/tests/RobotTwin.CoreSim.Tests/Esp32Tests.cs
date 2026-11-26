@@ -166,6 +166,45 @@ void loop() {
 }
 ";
 
+        /// <summary>[pcnt-filter] Two pulse counters on one pin: one filters glitches up to 10 µs, the other up to 1 µs.</summary>
+        public const string PcntFilter = @"
+#include ""driver/pulse_cnt.h""
+pcnt_unit_handle_t wide = NULL, narrow = NULL;
+static pcnt_unit_handle_t Unit(uint32_t glitchNs) {
+  pcnt_unit_handle_t u = NULL;
+  pcnt_unit_config_t cfg = {};
+  cfg.low_limit = -30000;
+  cfg.high_limit = 30000;
+  ESP_ERROR_CHECK(pcnt_new_unit(&cfg, &u));
+  pcnt_glitch_filter_config_t f = {};
+  f.max_glitch_ns = glitchNs;
+  ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(u, &f));
+  pcnt_chan_config_t ch = {};
+  ch.edge_gpio_num = 4;
+  ch.level_gpio_num = -1;
+  pcnt_channel_handle_t c;
+  ESP_ERROR_CHECK(pcnt_new_channel(u, &ch, &c));
+  pcnt_channel_set_edge_action(c, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_HOLD);
+  ESP_ERROR_CHECK(pcnt_unit_enable(u));
+  ESP_ERROR_CHECK(pcnt_unit_clear_count(u));
+  ESP_ERROR_CHECK(pcnt_unit_start(u));
+  return u;
+}
+void setup() {
+  Serial.begin(115200);
+  wide = Unit(10000);
+  narrow = Unit(1000);
+  Serial.printf(""too wide %d\n"", (int)pcnt_unit_set_glitch_filter(wide, NULL));   // not in the init state any more
+}
+void loop() {
+  int a = 0, b = 0;
+  pcnt_unit_get_count(wide, &a);
+  pcnt_unit_get_count(narrow, &b);
+  Serial.printf(""wide=%d narrow=%d\n"", a, b);
+  delay(2);
+}
+";
+
         /// <summary>[mem-budget] A sketch that takes more heap than a real ESP32 has: a task's 16 KB stack, then 50 KB chunks.</summary>
         public const string Memory = @"
 static void worker(void *arg) { for (;;) vTaskDelay(100); }
@@ -264,7 +303,8 @@ void loop() {
                 ["hung"] = Hung,
                 ["ultrasonic"] = Ultrasonic,
                 ["rtos"] = Rtos,
-                ["memory"] = Memory
+                ["memory"] = Memory,
+                ["pcnt-filter"] = PcntFilter
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -607,6 +647,31 @@ void loop() {
             Assert.InRange(tAt10, 500, 520);   // 10 × 50 ms after setup; millis() counts from the application's start, as on the chip
             Assert.InRange(fastAt10, 48, 53);
             Assert.True(rig.CoSim.WifiOn);
+        }
+
+        /// <summary>[pcnt-filter] 5 µs pulses at 20 kHz: the counter filtering up to 10 µs counts none, the one filtering up to 1 µs counts each.</summary>
+        [Esp32Fact]
+        public void ThePulseCountersGlitchFilterDropsShortPulses()
+        {
+            var (sch, board) = NewBoard();
+            var gen = sch.AddPart(Lib, "signal-generator", new GridPoint(-40, 0));
+            gen.Parameters["frequency"] = "20000";
+            gen.Parameters["duty"] = "0.1";   // 5 µs high in each 50 µs
+            gen.Parameters["amplitude"] = "3.3";
+            gen.Parameters["rs"] = "0";
+            Label(sch, gen, "+", "SIG");
+            Label(sch, gen, "-", "GND");
+            Label(sch, board, "IO4", "SIG");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("pcnt-filter"), new Esp32Options { BootDelay = 0.002 });
+            rig.Run(0.010, 1e-6);   // fine slices: the board sees each edge within a microsecond
+            string serial = rig.Serial.ToString();
+            var last = serial.Split('\n').Last(l => l.StartsWith("wide=", StringComparison.Ordinal)).Trim();
+            _out.WriteLine(serial.Length > 600 ? serial.Substring(serial.Length - 600) : serial);
+            int wide = int.Parse(last.Split(' ')[0].Substring(5)), narrow = int.Parse(last.Split(' ')[1].Substring(7));
+            Assert.Contains("too wide 259", serial);   // ESP_ERR_INVALID_STATE: the filter is set before enabling
+            Assert.Equal(0, wide);
+            Assert.InRange(narrow, 100, 200);   // one a pulse: 20 a millisecond over the ~7 ms the counters ran
         }
 
         /// <summary>[mem-budget] The fast mode runs on the PC's memory; the log says when a real ESP32 would have run out.</summary>

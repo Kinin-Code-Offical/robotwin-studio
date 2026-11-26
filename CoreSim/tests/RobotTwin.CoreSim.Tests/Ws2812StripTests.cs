@@ -74,6 +74,31 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(((byte)8, (byte)7, (byte)9), d2.Strip.Colors[0]);
         }
 
+        /// <summary>[neopixel-vih] An ESP32's 3.3 V data into a 5 V strip: out of the datasheet's VIH (said once) but read; 1.8 V is not.</summary>
+        [Fact]
+        public void TheDataLevelIsHeldAgainstTheStripsInputHigh()
+        {
+            var a = new Ws2812Load("D1", 1, 0, 2, 2) { SupplyVoltage = 5.0 };
+            var b = new Ws2812Load("D2", 3, 0, 4, 1) { SupplyVoltage = 5.0 };
+            a.Next = b;
+            a.Receive(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 3.3);
+            Assert.Equal(((byte)2, (byte)1, (byte)3), a.Strip.Colors[0]);   // read: 3.3 V is above half of 5 V
+            Assert.True(a.DataOutOfSpec);   // but below VIH = 3.5 V
+            Assert.Contains("VIH", a.TakeWarning());
+            Assert.Null(a.TakeWarning());   // said once
+            Assert.False(b.DataOutOfSpec);   // the next strip gets its data again from D1's 5 V
+            Assert.Equal(((byte)8, (byte)7, (byte)9), b.Strip.Colors[0]);
+
+            a.Receive(new byte[] { 0, 0, 0 }, 1.8);   // a 1.8 V output: the strip does not see it
+            Assert.Equal(((byte)2, (byte)1, (byte)3), a.Strip.Colors[0]);
+            Assert.Contains("okuyamaz", a.TakeWarning());
+
+            var fine = new Ws2812Load("D3", 1, 0, 2, 1) { SupplyVoltage = 3.7 };   // a strip on a Li-ion cell: 3.3 V ≥ 0.7·3.7
+            fine.Receive(new byte[] { 9, 9, 9 }, 3.3);
+            Assert.False(fine.DataOutOfSpec);
+            Assert.Null(fine.TakeWarning());
+        }
+
         [Fact]
         public void CurrentFollowsTheColours()
         {
