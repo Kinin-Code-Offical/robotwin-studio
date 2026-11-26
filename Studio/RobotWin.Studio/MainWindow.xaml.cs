@@ -32,7 +32,8 @@ namespace RobotWin.Studio
         public const string OpenFilter =
             "RobotWin dosyaları (*.rwproj, *.rwworld, *.rwsim, *.rwpart, *.rwlib)|*.rwproj;*.rwworld;*.rwsim;*.rwpart;*.rwlib|" +
             "RobotWin projesi (*.rwproj)|*.rwproj|RobotWin dünyası (*.rwworld)|*.rwworld|Simülasyon kaydı (*.rwsim)|*.rwsim|Parça (*.rwpart)|*.rwpart|" +
-            "Parça kütüphanesi (*.rwlib)|*.rwlib|Robot tanımı (*.urdf, *.xacro)|*.urdf;*.xacro|Tüm dosyalar (*.*)|*.*";
+            "Parça kütüphanesi (*.rwlib)|*.rwlib|Robot tanımı (*.urdf, *.xacro)|*.urdf;*.xacro|" +
+            "KiCad şeması (*.kicad_sch)|*.kicad_sch|Tüm dosyalar (*.*)|*.*";
 
         private readonly HomePage _home;
         private readonly WorldPage _world;
@@ -1056,6 +1057,10 @@ namespace RobotWin.Studio
                         CheckProject(quiet: true);   // [integrity]
                         return;
 
+                    case ".kicad_sch":
+                        ImportKiCadSchematic(path);   // [kicad-sch]
+                        return;
+
                     case ".urdf":
                     case ".xacro":
                         // [urdf] A robot description opens in a new world of its own.
@@ -1074,6 +1079,32 @@ namespace RobotWin.Studio
             {
                 Dialog.Show(this, "Dosya açılamadı", ex.Message, "Tamam");
             }
+        }
+
+        /// <summary>
+        /// [kicad-sch] Opens a KiCad schematic (its sub-sheets from the same folder) as a new, unsaved circuit: its symbols on
+        /// the simulation models, its nets as KiCad has them. What was left out or only drawn is said.
+        /// </summary>
+        private void ImportKiCadSchematic(string path)
+        {
+            string dir = Path.GetDirectoryName(Path.GetFullPath(path))!;
+            string project = Path.ChangeExtension(path, ".kicad_pro");   // its bus aliases, when the project has some
+            var result = KiCadSchematicImport.Import(File.ReadAllText(path), W.Library, f =>
+            {
+                string p = Path.Combine(dir, f);
+                return File.Exists(p) ? File.ReadAllText(p) : null;
+            }, File.Exists(project) ? File.ReadAllText(project) : null);
+            if (result.Design.Root.Title.Length == 0) result.Schematic.Title = Path.GetFileNameWithoutExtension(path);
+            W.Load(result.Schematic, null);
+            Navigate("schematic");
+            W.Status = string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotWin.Studio.Shell.Lang.T("KiCad şeması açıldı: {0} parça modele eşlendi, {1} genel parça, {2} alınmadı"),
+                result.Mapped, result.Generic, result.Skipped);
+            var issues = result.Report.Where(l => l.StartsWith("uyarı", StringComparison.Ordinal) || l.Contains("alınmadı", StringComparison.Ordinal)).ToList();
+            if (issues.Count == 0) return;
+            string more = issues.Count > 12 ? "\n" + string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotWin.Studio.Shell.Lang.T("… ve {0} satır daha"), issues.Count - 12) : string.Empty;
+            Dialog.Show(this, "KiCad şeması içe aktarıldı",
+                string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotWin.Studio.Shell.Lang.T("{0} parça modele eşlendi, {1} genel parça (bacakları netleri taşır, elektriksel modeli yok), {2} parça alınmadı."),
+                    result.Mapped, result.Generic, result.Skipped) + "\n\n" + string.Join("\n", issues.Take(12)) + more, "Tamam");
         }
 
         /// <summary>Saves the current run (probes, log, serial, trajectory, project) as a .rwsim recording.</summary>

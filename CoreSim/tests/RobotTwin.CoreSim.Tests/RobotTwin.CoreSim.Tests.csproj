@@ -61,4 +61,11 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- [kicad-sch] a schematic drawn from KiCad's own symbols (CC-BY-SA 4.0, with the libraries' design exception) -->
+    <None Update="Fixtures\kicad\*.kicad_sch">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

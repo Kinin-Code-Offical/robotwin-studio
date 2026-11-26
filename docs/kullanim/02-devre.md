@@ -117,6 +117,20 @@ Seçili alternatif **Simüle et**'in yanındaki listeden değiştirilir. Simüle
 
 Alternatifler parçaları adlarıyla değil kimlikleriyle izler: bir parçanın adını değiştirmek onun alternatiflerdeki halini korur.
 
+## KiCad şemasını açma
+
+**Dosya → Aç…** (Ctrl+O) bir KiCad şemasını (`.kicad_sch`, KiCad 6–10) yeni bir devre olarak açar; alt sayfalar aynı klasörden okunur.
+
+- Bağlantılar KiCad'in kurallarıyla çözülür: tel uçları ve telin üstündeki etiketler bağlanır, bağlantı noktası olmayan kesişme bağlanmaz; aynı adlı etiketler sayfası içinde, global etiketler ve güç sembolleri bütün tasarımda, gizli güç pinleri adlarıyla birleşir; sayfa pini alt sayfadaki aynı adlı hiyerarşik etiketle birleşir (sayfa birden çok kez kullanılmışsa her kopyasında ayrı).
+- Veri yolları (bus) da: vektörler (`D[0..7]`, üyeler sıralarıyla eşleşir), gruplar (`I2C{SDA SCL}`, üyeler adlarıyla), takma adlar (`{USB}`; şemada ya da projede tanımlı); bir veri yolu sayfa pinleri üzerinden alt sayfalara geçer.
+- Netler KiCad'in kendi netlistesiyle aynıdır: KiCad'le gelen bütün örnek tasarımlarda (73 sayfalık olanlar dahil) `kicad-cli`'nin çıkardığı netlisteyle karşılaştırılarak denenir.
+- Her sembol, kütüphane içe aktarmadaki kurallarla bir simülasyon modeline eşlenir; değeri (10k, 100nF, 5V…) ve kılıfı kendi alanlarından gelir. Pil sembolünün gerilimi gerçek bir kimyanın hücre sayısına çevrilir (9 V = 6 alkalin hücre); hiçbiri tutmazsa düzenleyicili bir Li-ion paket olur (5 V: iki hücre ve düzenleyici).
+- Birimleri ayrı çizilmiş semboller (çift op-amp'ın iki yarısı) her birim için ayrı parça olur: U1A, U1B.
+- Parçalar KiCad'deki yerlerinde ve yönlerinde durur; sembollerimiz daha büyük olduğu için çizim oranında açılır, sığmayan parça sağa ya da aşağı kayar. Pinler netlerine kısa bir tel ve net etiketiyle bağlanır; GND'ye toprak, diğer güç netlerine besleme sembolü konur. Bağlantısız bırakılmış pinler işaretleriyle gelir.
+- Modeli olmayan ve bacak sayısına uyan genel parçası da olmayan semboller alınmaz; KiCad'de "takılmaz" (DNP) işaretli olanlar benzetime girmez. Açılışta hangilerinin alınmadığı söylenir.
+
+![KiCad şemasından açılan devre](../images/kicad-schematic-import.png)
+
 ## Dışa aktarma
 
 Devre sayfasından şunları dışa aktarabilirsiniz:

@@ -1908,6 +1908,25 @@ namespace RobotTwin.CoreSim.Formats
                 case "dc-source":
                     Numeric("voltage");
                     break;
+                case "battery":
+                {
+                    // [kicad-sch] "9V", "3.7V", "12 V", "3V7": the cells of a real chemistry that make it, or a cell pack
+                    // with a regulated output when none does (a 5 V "battery" is a power bank).
+                    var m = Regex.Match(value, @"(\d+)V(\d+)|(\d+(?:[.,]\d+)?)\s*V\b", RegexOptions.IgnoreCase);
+                    if (preset != null || !m.Success) break;
+                    double volts = m.Groups[1].Success
+                        ? double.Parse(m.Groups[1].Value + "." + m.Groups[2].Value, CultureInfo.InvariantCulture)
+                        : double.Parse(m.Groups[3].Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+                    var (chemistry, cells, regulated) = BatteryFor(volts);
+                    parameters["chemistry"] = chemistry.ToString();
+                    parameters["cells"] = cells.ToString(CultureInfo.InvariantCulture);
+                    if (regulated) parameters["regulated"] = volts.ToString("R", CultureInfo.InvariantCulture);
+                    log.Add(regulated
+                        ? $"{volts:0.##} V hiçbir hücre sayısıyla tutmuyor: {cells} hücreli {chemistry} paket, çıkışı {volts:0.##} V'a düzenlenmiş (Value alanından)."
+                        : $"{volts:0.##} V = {cells} × {chemistry} hücre (Value alanından).");
+                    break;
+                }
+
                 case "led":
                 {
                     var color = LedColors.FirstOrDefault(c => c.Words.Any(x => words.Tokens.Contains(x) || x.Contains('-') && words.Text.Contains(x)));
@@ -1973,6 +1992,26 @@ namespace RobotTwin.CoreSim.Formats
             }
 
             return parameters;
+        }
+
+        /// <summary>The chemistry and cell count whose nominal voltage is <paramref name="volts"/> (within 2 %), most common first; else a Li-ion pack regulated down to it.</summary>
+        private static (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry Chemistry, int Cells, bool Regulated) BatteryFor(double volts)
+        {
+            var order = new (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry Chemistry, int MaxCells)[]
+            {
+                (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.Alkaline, 8), (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.LithiumIon, 6),
+                (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.LithiumCoin, 1), (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.LeadAcid, 12),
+                (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.NiMH, 10), (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.LiFePO4, 8),
+            };
+            foreach (var (chemistry, max) in order)
+            {
+                double cell = RobotTwin.CoreSim.Analog.Devices.Battery.NominalCellVoltage(chemistry);
+                int n = (int)Math.Round(volts / cell);
+                if (n >= 1 && n <= max && Math.Abs(n * cell - volts) <= 0.02 * volts) return (chemistry, n, false);
+            }
+
+            // The pack's regulator only steps down: enough cells to stay above the output until they are nearly empty (3.4 V each).
+            return (RobotTwin.CoreSim.Analog.Devices.BatteryChemistry.LithiumIon, Math.Max(1, (int)Math.Ceiling((volts + 0.3) / 3.4)), true);
         }
 
         private static bool TryParseValue(string value, out string text)

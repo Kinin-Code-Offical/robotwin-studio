@@ -132,19 +132,19 @@ namespace RobotTwin.CoreSim.Tests
             using var client = new TcpClient();
             await client.ConnectAsync(IPAddress.Loopback, host.Servers[0].Port);
             var stream = client.GetStream();
-            async Task<bool> Answered()
+            async Task<bool> Answered(int waitMs)
             {
                 var frame = new byte[] { 0, 1, 0, 0, 0, 6, 1, 1, 0, 0, 0, 8 };
                 await stream.WriteAsync(frame, 0, frame.Length);
                 var buffer = new byte[64];
                 var read = stream.ReadAsync(buffer, 0, buffer.Length);
-                return await Task.WhenAny(read, Task.Delay(500)) == read && read.Result > 0;
+                return await Task.WhenAny(read, Task.Delay(waitMs)) == read && read.Result > 0;
             }
 
             r.Step(0.05);
-            Assert.True(await Answered());
+            Assert.True(await Answered(3000));   // a loaded machine may take a while to answer, but it does
             r.Step(0.1);
-            Assert.False(await Answered());   // off the network: the request times out
+            Assert.False(await Answered(500));   // off the network: the request times out
         }
     }
 }

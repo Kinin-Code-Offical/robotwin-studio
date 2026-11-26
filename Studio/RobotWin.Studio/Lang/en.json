@@ -7962,7 +7962,11 @@
   "Digi-Key…": "Digi-Key…",
   "Mouser…": "Mouser…",
   "Malzeme listesi güncellendi": "Bill of materials updated",
-  "Tedarikçi adı: LCSC (JLCPCB), Digi-Key ve Mouser için sipariş dosyası da çıkar": "The supplier's name: LCSC (JLCPCB), Digi-Key and Mouser also get an order file"
+  "Tedarikçi adı: LCSC (JLCPCB), Digi-Key ve Mouser için sipariş dosyası da çıkar": "The supplier's name: LCSC (JLCPCB), Digi-Key and Mouser also get an order file",
+  "KiCad şeması (*.kicad_sch)|*.kicad_sch|Tüm dosyalar (*.*)|*.*": "KiCad schematic (*.kicad_sch)|*.kicad_sch|All files (*.*)|*.*",
+  "Parça kütüphanesi (*.rwlib)|*.rwlib|Robot tanımı (*.urdf, *.xacro)|*.urdf;*.xacro|": "Part library (*.rwlib)|*.rwlib|Robot description (*.urdf, *.xacro)|*.urdf;*.xacro|",
+  "KiCad şeması (*.kicad_sch)": "KiCad schematic (*.kicad_sch)",
+  "KiCad şeması içe aktarıldı": "KiCad schematic imported"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11220,6 +11224,9 @@
   "KiCad'den {0} değişiklik alındı: {1}": "Imported {0} changes from KiCad: {1}",
   "{0} kart: toplam {1} · kart başına {2}": "{0} boards: total {1} · {2} a board",
   " · {0} satırın fiyatı yok": " · {0} lines without a price",
-  "Kartlar {0} adet istiyor; tedarikçinin en azı {1}": "The boards need {0}; the supplier sells at least {1}"
+  "Kartlar {0} adet istiyor; tedarikçinin en azı {1}": "The boards need {0}; the supplier sells at least {1}",
+  "KiCad şeması açıldı: {0} parça modele eşlendi, {1} genel parça, {2} alınmadı": "KiCad schematic opened: {0} parts on their models, {1} generic, {2} left out",
+  "… ve {0} satır daha": "… and {0} more lines",
+  "{0} parça modele eşlendi, {1} genel parça (bacakları netleri taşır, elektriksel modeli yok), {2} parça alınmadı.": "{0} parts on their models, {1} generic parts (their pins carry the nets, no electrical model), {2} parts left out."
  }
 }

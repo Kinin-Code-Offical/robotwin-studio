@@ -117,6 +117,20 @@ The chosen alternative is changed in the list beside **Simulate**. It is the one
 
 Alternatives follow parts by their identity, not their names: renaming a part keeps what it is in each alternative.
 
+## Opening a KiCad schematic
+
+**File → Open…** (Ctrl+O) opens a KiCad schematic (`.kicad_sch`, KiCad 6–10) as a new circuit; its sub-sheets are read from the same folder.
+
+- The connections are worked out by KiCad's rules: wire ends and labels on a wire join it, a crossing without a junction does not; labels of a name join within their sheet, global labels and power symbols across the design, hidden power pins by their name; a sheet pin joins the sub-sheet's hierarchical label of its name (on each copy when the sheet is used more than once).
+- Buses too: vectors (`D[0..7]`, members matched by their place), groups (`I2C{SDA SCL}`, members by name), aliases (`{USB}`, defined in the schematic or the project); a bus passes into sub-sheets through sheet pins.
+- The nets are KiCad's own netlist: this is tried against what `kicad-cli` exports for every example design that ships with KiCad (73-sheet ones included).
+- Each symbol is mapped onto a simulation model by the same rules as importing a library; its value (10k, 100nF, 5V…) and footprint come from its own fields. A battery's voltage becomes the cell count of a real chemistry (9 V = 6 alkaline cells); when none fits it is a Li-ion pack with a regulator (5 V: two cells and a regulator).
+- A symbol whose units are drawn apart (the two halves of a dual op-amp) becomes a part per unit: U1A, U1B.
+- The parts keep KiCad's places and orientations; our symbols are larger, so the drawing is spread in proportion, and a part that does not fit moves right or down. Each pin joins its net by a short wire and a net label; GND gets a ground symbol, the other power nets a supply symbol. Pins left open come with their markers.
+- Symbols with no model and no generic part of their pin count are left out; those marked "do not populate" (DNP) in KiCad are not simulated. Which ones is said when it opens.
+
+![A circuit opened from a KiCad schematic](../../images/en/kicad-schematic-import.png)
+
 ## Exporting
 
 From the circuit page you can export:

@@ -533,9 +533,9 @@ namespace RobotTwin.CoreSim.Analysis.Fem
                 alpha = new Vec3(inv[0] * rhs.X + inv[1] * rhs.Y + inv[2] * rhs.Z, inv[3] * rhs.X + inv[4] * rhs.Y + inv[5] * rhs.Z, inv[6] * rhs.X + inv[7] * rhs.Y + inv[8] * rhs.Z);
             reliefAccel = a0;
             // d'Alembert body force −ρ(a0 + α×r + ω×(ω×r)), r = x − c.
-            for (int n = 0; n < _nodeMass.Length; n++)
+            for (int n = 0; n < _nodeMass!.Length; n++)   // Assemble() above has made both
             {
-                var s = _nodeMoment[n];
+                var s = _nodeMoment![n];
                 var fn = a0 * _nodeMass[n] + alpha.Cross(s) + w.Cross(w.Cross(s));
                 f[3 * n] -= fn.X;
                 f[3 * n + 1] -= fn.Y;
