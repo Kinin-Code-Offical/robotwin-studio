@@ -690,7 +690,11 @@ namespace RobotWin.Studio.World
             }
 
             if (_gizmoDrag is GizmoPart.X or GizmoPart.Y && SurfaceSnap && World!.Terrain != null && Math.Abs(_gizmoPose.Z - GroundZAt(_gizmoPose.X, _gizmoPose.Y)) < 1e-3) nz = GroundZAt(nx, ny);
-            if (_gizmoDrag == GizmoPart.Screen && SurfaceSnapHeld && SurfaceUnder(p, o) is { } onto)   // [surface-snap] Unity's Ctrl+Shift
+            if (_gizmoDrag == GizmoPart.Screen && VertexSnap(o, p, ref nx, ref ny, ref nz))   // [vertex-snap] Unity's V
+            {
+                // placed by its corner: no grid, no surface
+            }
+            else if (_gizmoDrag == GizmoPart.Screen && SurfaceSnapHeld && SurfaceUnder(p, o) is { } onto)   // [surface-snap] Unity's Ctrl+Shift
             {
                 nx = onto.X;
                 ny = onto.Y;
@@ -800,6 +804,7 @@ namespace RobotWin.Studio.World
             _gizmoAngle = 0;
             _gizmoParts = null;
             _gizmoJoints = null;
+            _vertexOffset = null;   // [vertex-snap]
             var movedOthers = _gizmoOthers;
             _gizmoOthers = new List<WorldObject>();
             ReleaseMouseCapture();

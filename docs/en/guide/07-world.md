@@ -875,6 +875,7 @@ The handles on the selected part work as in Unity; pick them with the four toolb
 - **Rotate (E):** the red, green and blue rings turn about X, Y and Z (the half of a ring facing the camera shows); the outer white ring turns about the view axis and the inside of the rings turns freely. While dragging, the angle turned shows as a yellow slice and its value under the view.
 - **Scale (R):** the cubes at the ends of the axes size along that axis, the middle cube along all three (bodies and terrain objects; ready-made parts take their size from their model).
 - **All in one (Y):** the three together.
+- **Vertex snapping (V):** hold V while dragging a part freely or by the move handle's middle: the part's corner nearest the cursor is held, and when the cursor comes near another part's corner the two corners meet exactly (a part's corners are those of its shape's box in its own axes), so boxes, boards and parts line up edge to edge.
 - **Surface snapping (Ctrl+Shift):** hold Ctrl+Shift while dragging a part freely or by the move handle's middle: the part's base lands on the surface under the cursor (another part's, the terrain's or the floor's), leaving the part itself and what is mounted on it out.
 - **Pivot / Centre:** the handles sit on the part's pivot or in the middle of its shape. **Local / World:** their axes are the part's own or the world's (scale is always local).
 

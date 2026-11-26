@@ -874,6 +874,7 @@ Seçili parçanın üstündeki tutamaçlar Unity'dekiler gibidir; araç çubuğu
 - **Döndür (E):** kırmızı, yeşil, mavi halkalar X, Y, Z çevresinde döndürür (halkanın kameraya bakan yarısı görünür); dış beyaz halka bakış ekseni çevresinde, halkaların içi serbest döndürür. Sürüklerken dönülen açı sarı bir dilimle gösterilir, değer görünümün altında yazar.
 - **Ölçekle (R):** eksen uçlarındaki küpler o eksende, ortadaki küp üç eksende birden boyutlandırır (gövdeler ve arazi nesneleri; hazır parçaların boyu modelinden gelir).
 - **Hepsi bir arada (Y):** üçü birlikte.
+- **Köşe yakalama (V):** parçayı serbestçe ya da taşı tutamacının ortasından sürüklerken V basılı tutun: parçanın imlece en yakın köşesi tutulur ve imleç başka bir parçanın köşesine yaklaşınca iki köşe tam üst üste gelir (köşeler parçanın kendi eksenlerindeki şekil kutusunun köşeleridir); kutular, kartlar ve parçalar kenar kenara dizilir.
 - **Yüzeye oturtma (Ctrl+Shift):** parçayı serbestçe sürüklerken ya da taşı tutamacının ortasından sürüklerken Ctrl+Shift basılı tutun: parçanın tabanı imlecin altındaki yüzeye (başka bir parçanın, arazinin ya da zeminin) oturur; parçanın kendisi ve üstüne takılanlar hesaba katılmaz.
 - **Pivot / Merkez:** tutamaç parçanın pivotunda ya da şeklinin ortasında durur. **Yerel / Dünya:** eksenleri parçanınkiler ya da dünyanınkiler (ölçek her zaman yereldir).
 

@@ -8498,7 +8498,6 @@
   "Bileşeni kopyala": "Copy component",
   "Değerleri yapıştır": "Paste values",
   "Değerleri kopyala": "Copy values",
-  "Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız · ortasından Ctrl+Shift ile sürükle: yüzeye oturt": "Move handle (W): axis arrows, plane squares, the middle in the screen plane · Alt: no grid · drag the middle with Ctrl+Shift: onto the surface",
   "Damla": "Teardrop",
   "Damla (teardrop)": "Teardrops",
   "İnce hattın ped ya da via'ya girdiği yerde bakır pedden hatta doğru genişler: delik kayarsa, aşındırma yerse ya da kart esnerse bağlantı kopmaz. Başka ağlara kural aralığından yakın düşecek damla daraltılır ya da konmaz.": "Where a narrow track meets a pad or a via, copper widens from the pad to the track: a wandering drill, an over-etch or a flexing board does not cut the joint. A teardrop that would come closer to another net than the rules allow is narrowed or left out.",
@@ -8552,7 +8551,10 @@
   "Çizgi · köşelere tıklayın · çift tık, Enter ya da Esc: bitir": "Line · click the corners · double click, Enter or Esc: finish",
   "Dikdörtgen · iki köşeye tıklayın": "Rectangle · click two corners",
   "Daire · merkeze, sonra çemberin bir noktasına tıklayın": "Circle · click the centre, then a point on it",
-  "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın": "Arc · click the start, a point on the arc, then the end"
+  "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın": "Arc · click the start, a point on the arc, then the end",
+  "Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız · ortasından Ctrl+Shift ile sürükle: yüzeye oturt · V ile: köşeden köşeye": "Move handle (W): axis arrows, plane squares, the middle in the screen plane · Alt: no grid · drag the middle with Ctrl+Shift: onto the surface · with V: corner to corner",
+  "Köşe yakalama: tutulan köşe öbür parçanın köşesine oturdu": "Vertex snap: the held corner meets the other part's corner",
+  "Köşe yakalama (V): imleci başka bir parçanın köşesine götürün": "Vertex snap (V): bring the cursor to another part's corner"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -12001,6 +12003,7 @@
   "{…} rengi değişti": "{0}: colour changed",
   "{…} rengi kaldırıldı": "{0}: colour removed",
   "{…} hattı vurgulanıyor (aynı hatta ya da boşa tıklayınca kalkar)": "{0} highlighted (click the same net or empty space to clear)",
-  "{…} çizim (çizgi, dikdörtgen, daire, yay) alındı": "{0} drawings (lines, rectangles, circles, arcs) taken in"
+  "{…} çizim (çizgi, dikdörtgen, daire, yay) alındı": "{0} drawings (lines, rectangles, circles, arcs) taken in",
+  "{…}: köşesi {…} köşesine oturdu": "{0}: its corner meets {1}'s corner"
  }
 }

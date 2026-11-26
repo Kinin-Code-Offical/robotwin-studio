@@ -1438,7 +1438,12 @@ namespace RobotWin.Studio.World
                 }
 
                 double nx = o.Pose.X, ny = o.Pose.Y, nz = o.Pose.Z;
-                if (SurfaceSnapHeld && SurfaceUnder(p, o) is { } onto)
+                bool onCorner = VertexSnap(o, p, ref nx, ref ny, ref nz);   // [vertex-snap] V: corner onto corner (World/WorldScene.VertexSnap.cs)
+                if (onCorner)
+                {
+                    // placed by its corner: no grid, no surface
+                }
+                else if (SurfaceSnapHeld && SurfaceUnder(p, o) is { } onto)
                 {
                     // [surface-snap] Ctrl+Shift: the part's base onto the surface under the cursor (World/WorldScene.SurfaceSnap.cs)
                     nx = onto.X;
@@ -1456,7 +1461,7 @@ namespace RobotWin.Studio.World
                     ny = Snap(q.Y + _dragOffset.Y);
                 }
 
-                SnapDrag(o, p, ref nx, ref ny, ref nz); // [terrain] follow the terrain surface
+                if (!onCorner) SnapDrag(o, p, ref nx, ref ny, ref nz); // [terrain] follow the terrain surface
                 MoveGroupMates(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z); // [terrain] groups move together
                 // Whatever is mounted on the object (arms on a servo horn, a wheel on a shaft …) comes along.
                 World.MoveAssembly(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
@@ -1501,6 +1506,7 @@ namespace RobotWin.Studio.World
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
             if (MarqueeUp(e.GetPosition(this))) return;   // [multiselect]
+            _vertexOffset = null;   // [vertex-snap] the next drag takes its own corner
             if (EditorMouseUp(e)) return; // [terrain]
             if (_drag != null && _dragMoved && World?.Find(_drag) is { } o)
             {

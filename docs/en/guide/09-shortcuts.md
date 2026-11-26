@@ -166,6 +166,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Ctrl+click / Shift+click | Add to or take out of the selection / select a range in the tree |
 | Shift+drag (on empty space) | Rectangle select (Ctrl+Shift: add to the selection) |
 | Ctrl+Shift (while dragging a part) | Snap onto the surface |
+| V (while dragging a part) | Snap corner to corner |
 | Ctrl+A | Select all |
 | Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Empty object / empty child of the selection / put the selection under an empty parent |
 | Del | Delete |
