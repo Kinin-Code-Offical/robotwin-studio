@@ -42,7 +42,7 @@ namespace RobotTwin.CoreSim.Tests
             int vcc = c.Node("vcc"), trig = c.Node("trig"), echo = c.Node("echo");
             c.Add(new VoltageSource("V1", vcc, 0, 5.0));
             var pulse = c.Add(new VoltageSource("VT", trig, 0, 0.0));
-            var sonar = c.Add(new UltrasonicSensor("U1", vcc, trig, echo, 0) { Distance = distance, AirTemperatureC = airC });
+            var sonar = c.Add(new UltrasonicSensor("U1", vcc, trig, echo, 0) { Distance = distance, AirTemperatureC = airC, RangeNoise = 0 });
             var sim = new AnalogSimulator(c);
             sim.Initialize(InitialState.OperatingPoint);
             sim.Step(1e-4);

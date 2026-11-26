@@ -201,6 +201,46 @@ namespace RobotTwin.CoreSim.Robotics
             return hi;
         }
 
+        /// <summary>[deflection] A joint's stiffness, its own or estimated from its rating (see <see cref="ArmJointSpec.Stiffness"/>).</summary>
+        public static double StiffnessOf(ArmModel m, int joint)
+        {
+            var j = m.Joints[joint];
+            if (j.Stiffness > 0) return j.Stiffness;
+            double perNm = m.ServoDriven ? 6 : 350;
+            return Math.Max(1e-6, j.MaxTorque * perNm * (j.IsPrismatic ? 1000 : 1));
+        }
+
+        /// <summary>
+        /// [deflection] How far the tool centre point sags at pose <paramref name="q"/> as the drives wind up under the
+        /// weight they hold (Δq = K⁻¹·τ, Δx = J·Δq, linear in the small angles): under the arm's own weight with the payload
+        /// (m), and under the payload alone (the change a pick makes, what teaching under no load does not see).
+        /// </summary>
+        public static (Vec3 Total, Vec3 FromPayload) Deflection(ArmModel m, IReadOnlyList<double> q, double payloadKg = 0, Transform3? tool = null)
+        {
+            var zero = new double[m.Dof];
+            var loaded = Torques(m, q, zero, zero, payloadKg, tool);
+            var empty = Torques(m, q, zero, zero, 0, tool);
+            var tcp = ArmKinematics.Forward(m, q, tool ?? Transform3.Identity).P;
+            var jac = ArmKinematics.Jacobian(m, q, tcp);
+            Vec3 Sag(double[] tau)
+            {
+                double x = 0, y = 0, z = 0;
+                for (int i = 0; i < m.Dof; i++)
+                {
+                    // The drive holds τ by winding back Δq = −τ/k against it: the load wins that much.
+                    double dq = -tau[i] / StiffnessOf(m, i);
+                    x += jac[0, i] * dq;
+                    y += jac[1, i] * dq;
+                    z += jac[2, i] * dq;
+                }
+
+                return new Vec3(x, y, z);
+            }
+
+            var total = Sag(loaded);
+            return (total, total - Sag(empty));
+        }
+
         /// <summary>
         /// The heaviest payload (kg) the arm can hold at every one of <paramref name="poses"/> within its drives' peak
         /// torque (held still: the weight only), found by bisection up to <paramref name="upTo"/>.

@@ -537,6 +537,7 @@ void loop() {
             var compiled = CircuitCompiler.Compile(sch, Lib);
             var hc = compiled.Device<UltrasonicSensor>("U2")!;
             hc.Distance = 0.5;
+            hc.RangeNoise = 0;   // [sensorspec] pulseIn's own precision is what this measures, not the sensor's jitter
 
             using var rig = new Rig(compiled, _fx.Dll("ultrasonic"));
             rig.Sim.SubstepAccepted = rig.CoSim.OnSubstep;   // exact edge times for pulseIn()

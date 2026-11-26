@@ -11008,6 +11008,8 @@
   "Grup adı: {0}": "Group name: {0}",
   "'{0}' hatları": "'{0}' nets",
   "'{0}' toleransı {1} mm": "'{0}' tolerance {1} mm",
-  "'{0}' grubu eklendi": "'{0}' group added"
+  "'{0}' grubu eklendi": "'{0}' group added",
+  "Sapma  {0} mm · yükten {1} mm": "Sag    {0} mm · from the load {1} mm",
+  "Sapma  {0} mm": "Sag    {0} mm"
  }
 }

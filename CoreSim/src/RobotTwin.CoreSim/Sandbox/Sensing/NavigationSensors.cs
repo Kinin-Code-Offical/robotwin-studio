@@ -176,6 +176,12 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         /// <summary>Velocity accuracy (m/s, 1σ).</summary>
         public double VelocityAccuracy { get; set; } = 0.1;
 
+        /// <summary>
+        /// [sensorspec] Navigation latency (s): the solution reported at an output describes where the antenna was this
+        /// long before (u-blox 6/8: under 100 ms at 1–5 Hz). A fusion filter that takes the fix as "now" lags a moving robot.
+        /// </summary>
+        public double Latency { get; set; } = 0.08;
+
         public int Baud { get; set; } = 9600;
         public double SupplyCurrent { get; set; } = 0.045;
 
@@ -262,8 +268,30 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         /// <summary>[sensorfault] The sky is blocked (a tunnel, a building): no fix until it clears.</summary>
         public bool Blocked { get; set; }
 
+        private readonly Queue<(double T, Vec3 P, Vec3 V)> _history = new Queue<(double T, Vec3 P, Vec3 V)>();
+
+        /// <summary>Where the antenna was at <paramref name="time"/> (interpolated from the last two seconds of updates).</summary>
+        private (Vec3 P, Vec3 V) StateAt(double time, Vec3 position, Vec3 velocity)
+        {
+            (double T, Vec3 P, Vec3 V)? before = null;
+            foreach (var s in _history)
+            {
+                if (s.T <= time) before = s;
+                else
+                {
+                    if (before is not { } b) return (s.P, s.V);
+                    double f = (time - b.T) / Math.Max(1e-12, s.T - b.T);
+                    return (b.P + (s.P - b.P) * f, b.V + (s.V - b.V) * f);
+                }
+            }
+
+            return before is { } last ? (last.P, last.V) : (position, velocity);
+        }
+
         public GpsFix? Update(double time, Vec3 position, Vec3 velocity, bool powered)
         {
+            _history.Enqueue((time, position, velocity));
+            while (_history.Count > 2 && _history.Peek().T < time - 2.0) _history.Dequeue();
             if (!powered)
             {
                 _powerOn = double.NaN;
@@ -297,12 +325,15 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             int sats = Environment.Sky switch { "indoor" => _rng.Next(0, 4), "urban" => _rng.Next(5, 9), _ => _rng.Next(8, 13) };
             if (!valid) sats = Blocked ? _rng.Next(0, 3) : Math.Min(sats, (int)((time - _powerOn) / Math.Max(1, TimeToFirstFix) * 4));
             double hdop = Math.Round((sats > 3 ? 4.5 / Math.Sqrt(sats) : 99) * (Environment.Sky == "urban" ? 1.6 : 1), 2);
-            double ve = velocity.X + Gauss() * Spec.VelocityAccuracy, vn = velocity.Y + Gauss() * Spec.VelocityAccuracy;
+            // [sensorspec] the solution is the antenna's state one navigation latency ago, stamped with that epoch
+            double epoch = time - Math.Max(0, Spec.Latency);
+            var (pos, vel) = StateAt(epoch, position, velocity);
+            double ve = vel.X + Gauss() * Spec.VelocityAccuracy, vn = vel.Y + Gauss() * Spec.VelocityAccuracy;
             double ee = _errE + Gauss() * 0.1 * sigma, en = _errN + Gauss() * 0.1 * sigma;
-            var (lat, lon, alt) = ToGeodetic(Environment, position.X + ee, position.Y + en, position.Z + _errU);
+            var (lat, lon, alt) = ToGeodetic(Environment, pos.X + ee, pos.Y + en, pos.Z + _errU);
             var fix = new GpsFix
             {
-                Time = time, Valid = valid, Latitude = lat, Longitude = lon, Altitude = alt, Satellites = sats, Hdop = hdop,
+                Time = epoch, Valid = valid, Latitude = lat, Longitude = lon, Altitude = alt, Satellites = sats, Hdop = hdop,
                 SpeedMps = Math.Sqrt(ve * ve + vn * vn), CourseDeg = (Math.Atan2(ve, vn) * 180 / Math.PI + 360) % 360,
                 ErrorEast = ee, ErrorNorth = en
             };

@@ -571,6 +571,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             public Hmc5883l Device = null!;
             public Vec3 HardIron;
             public double Next;
+            public Random Rng = new Random(5883);
         }
 
         private static readonly double[] HmcRates = { 0.75, 1.5, 3, 7.5, 15, 30, 75, 75 };
@@ -585,6 +586,8 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             // µT → Gauss; [temp] the HMC5883L's uncompensated sensitivity falls 0.3 % per °C (its sheet's tempco)
             double gain = 1 - 0.003 * (TemperatureOf(c.Object) - 25);
             var body = (q.InverseRotate(new Vec3(fx, fy, fz) * 0.01) + c.HardIron) * gain;
+            // [sensorspec] the HMC5883L's noise floor: 2 mG per axis
+            body = new Vec3(body.X + 0.002 * Gauss(c.Rng), body.Y + 0.002 * Gauss(c.Rng), body.Z + 0.002 * Gauss(c.Rng));
             var fault = FaultOf(c.Object, time);
             if (fault?.Id == "compass_magnet") body = new Vec3(body.X + fault.Value.Value * 0.01, body.Y, body.Z);
             if (fault?.Id == "compass_offline") c.Device.Powered = false;

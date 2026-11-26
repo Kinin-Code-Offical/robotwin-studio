@@ -43,6 +43,13 @@ namespace RobotTwin.CoreSim.Robotics
         /// <summary>Position error that trips a following-error fault (rad or m).</summary>
         public double TrackTolerance { get; set; } = 0.05;
 
+        /// <summary>
+        /// [deflection] Torsional stiffness of the drive at its output (N·m/rad; N/m for a prismatic axis): how far it
+        /// winds up under load. 0 = estimated from <see cref="MaxTorque"/>: strain-wave and RV reducers hold about 350 N·m/rad
+        /// per N·m of rating, a hobby servo's position loop about 6.
+        /// </summary>
+        public double Stiffness { get; set; }
+
         public bool IsPrismatic => Type == ArmJointType.Prismatic;
 
         /// <summary>Display value: degrees for revolute joints, millimetres for prismatic ones.</summary>

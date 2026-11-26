@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Arm deflection:** each robot axis has a torsional stiffness (its own, or estimated from its rating: about 350 N·m/rad per N·m for an industrial reducer, 6 for a hobby servo), and the cell panel shows how far the tool sags under the weight it holds, and how much of that the payload adds, at the arm's current pose.
+
+- **Sensor sheets completed:** an HC-SR04 measurement jitters by 1.5 mm (σ), a compass has its 2 mG noise floor, and a GPS solution describes where the antenna was 80 ms before its output (stamped with that epoch), so a fusion filter that takes it as "now" lags a moving robot as on the bench. The world guide's sensor table gives each one's range, resolution, latency and noise.
+
 - **Differential pairs and length matching:** the Nets tab holds differential pairs (found from their names: D+/D−, _P/_N, H/L) with their gap and largest length difference, and length-matched groups with a tolerance; each shows its routed lengths (tracks plus the via barrels they pass through), its difference and, for a pair, how much of it runs side by side at its gap. The DRC warns about a pair over its skew, a poorly coupled pair, and a group spread wider than its tolerance.
 
 - **PCB manufacture and test checks (DFM/DFT):** with a switch in the DRC tab, the check adds what a fab and an assembly line look at: acid traps where tracks meet sharper than 90° (joins on pads and vias, filled by their copper, and overlapping tracks are not counted), solder-mask slivers under 0.1 mm, open vias in SMD pads, SMD pads within 2 mm of the edge, fine-pitch parts with no fiducials, two-pad parts with lopsided copper (tombstoning), silkscreen too small to print, too many drill sizes; and the nets a test probe can reach, with the test coverage and probes too close together.

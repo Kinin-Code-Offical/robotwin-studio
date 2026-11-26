@@ -240,6 +240,14 @@ namespace RobotTwin.CoreSim.Analog.Devices
         /// <summary>[air] Temperature of the air the pulse crosses (°C, set by the world).</summary>
         public double AirTemperatureC { get; set; } = 20.0;
 
+        /// <summary>
+        /// [sensorspec] Spread (1σ, m) of the distance the echo times: its receiver's threshold catches the returning burst a
+        /// cycle early or late and the target's surface is not one plane — the "3 mm" an HC-SR04 sheet quotes.
+        /// </summary>
+        public double RangeNoise { get; set; } = 0.0015;
+
+        private Random? _jitter;
+
         /// <summary>Distance to the nearest reflector in metres (set by the world).</summary>
         public double Distance { get; set; } = 4.5;
 
@@ -274,6 +282,13 @@ namespace RobotTwin.CoreSim.Analog.Devices
             if (!trig && _trigHigh && _trigRise >= 0 && t - _trigRise >= 9e-6 && _echoStart < 0 && !_echoHigh)
             {
                 double d = Distance;
+                if (RangeNoise > 0 && d >= MinRange && d <= MaxRange)
+                {
+                    _jitter ??= new Random(StableSeed(Id));
+                    double u1 = 1.0 - _jitter.NextDouble(), u2 = _jitter.NextDouble();
+                    d += RangeNoise * Math.Sqrt(-2 * Math.Log(u1)) * Math.Cos(2 * Math.PI * u2);
+                }
+
                 double width = d >= MinRange && d <= MaxRange ? 2.0 * d / RobotTwin.CoreSim.Sdk.Atmosphere.SpeedOfSound(AirTemperatureC) : 0.038;
                 _echoStart = t + 450e-6;
                 _echoEnd = _echoStart + width;
@@ -292,6 +307,17 @@ namespace RobotTwin.CoreSim.Analog.Devices
                 _echoHigh = false;
                 _echoStart = _echoEnd = -1;
                 PendingDiscontinuity = true;
+            }
+        }
+
+        /// <summary>A seed from the part's name, the same every run (a run repeats exactly).</summary>
+        private static int StableSeed(string id)
+        {
+            unchecked
+            {
+                int h = 17;
+                foreach (char c in id) h = h * 31 + c;
+                return h;
             }
         }
 

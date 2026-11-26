@@ -657,6 +657,9 @@ namespace RobotWin.Studio.Pages
             // [robot-control] the cycle time and how hard the drives work on the current move (slowed when a drive would exceed its peak torque)
             if (c.LastCycleTime > 0) sb.AppendLine($"Çevrim {c.LastCycleTime.ToString("0.00", CultureInfo.CurrentCulture)} s");
             if (c.LastTorque.Axis >= 0) sb.AppendLine($"Tork   %{c.LastTorque.Ratio * 100:0} ({model.Joints[c.LastTorque.Axis].Name})" + (c.LastTorque.Slowed > 1.001 ? $" · tork için %{(1 - 1 / c.LastTorque.Slowed) * 100:0} yavaşlatıldı" : string.Empty) + (c.PayloadKg > 0 ? $" · yük {c.PayloadKg.ToString("0.###", CultureInfo.CurrentCulture)} kg" : string.Empty));
+            // [deflection] how far the tool sags as the drives wind up under the weight, and how much of it the load adds
+            var (sag, fromLoad) = ArmDynamics.Deflection(model, arm.Measured, c.PayloadKg, c.Tool);
+            sb.AppendLine(string.Format(Inv, "Sapma  {0:0.000} mm", sag.Length * 1000) + (c.PayloadKg > 0 ? string.Format(Inv, " · yükten {0:0.000} mm", fromLoad.Length * 1000) : string.Empty));
             if (c.State == ArmState.Fault) sb.AppendLine("Arıza  " + c.FaultText);
             else if (c.CurrentInstruction is { } ins) sb.AppendLine($"Satır  {ins.Line}: {ins.Text}");
             if (c.PathWarning.Length > 0 && c.State != ArmState.Fault) sb.AppendLine("Yol    " + c.PathWarning);   // [pathcheck] what this move would hit

@@ -198,6 +198,8 @@ Sürüş tekerlekleri, tabana takılı, hız motorlu ve ekseni robotun yanına b
 
 **Parçalar → Robot Hücresi**ndeki kontrolörlü kol her hareketi başlamadan önce yolun tamamında dener: hareket, hiçbir eksen örnekler arasında 1°'den (kayar eksen 2 mm'den) fazla dönmeyecek sıklıkta örneklenir; her örnekte bağlantıların kutuları, flanştaki tutucu ve taşıdığı parça dünyadaki öteki katı cisimlere, zemine ve kolun iki eklem ötedeki kendi bağlantılarına karşı sınanır. Hareketin başında zaten süren temaslar (alınacak kutunun konveyöre değmesi gibi) sayılmaz. **Yolda çarpışma denetimi** ayarı *uyar* ise (öntanımlı) çarpışacak hareket **Olaylar**'a neyin neye, hareketin kaçıncı saniyesinde çarpacağıyla yazılır ve kol yine gider (fizik çarpışmayı gerçekten yaşatır); *durdur* ise kol hareket etmeden arızaya geçer; *kapalı* denetimi kaldırır. Engellerin o anki yerleri kullanılır: konveyörde ilerleyen bir kutunun ileride nerede olacağı hesaba katılmaz.
 
+Hücre panelindeki **Sapma** satırı, kolun ucunun tuttuğu ağırlık altında ne kadar indiğini verir: her eksenin redüktörü yük altında burulur (endüstriyel redüktörde anma torkunun N·m'si başına ~350 N·m/rad, hobi servosunun konum döngüsünde ~6), eklemlerin bu küçük açıları Jacobian ile uca taşınır. **yükten** kısmı, alınan parçanın eklediğidir: yüksüz öğretilen bir nokta, kutu alındığında bu kadar aşağıda kalır. 6 eksenli endüstriyel kol uzanmışken 5 kg ile birkaç onda bir milimetre, servo kol 150 g ile milimetreler.
+
 ### Fotoelektrik sensör ve sınır anahtarı
 
 **Parçalar → Robot Hücresi** altında. **Fotoelektrik sensör**ün merceği parçanın +X yönüne bakar. *Difüz* kipte cisimden yansıyan ışığı görür: menzil beyaz kart (%90 yansıtma) içindir; yansıyan ışık uzaklığın karesiyle azaldığından koyu cisimde kısalır (kauçuk, %8: 300 mm'lik sensörde yaklaşık 90 mm). *Reflektörlü* ve *karşılıklı* kipte ışın menzil uzaklığındaki reflektöre ya da alıcıya gider, rengi ne olursa olsun araya giren her cisim keser. **Çıkış açık** ayarı OUT'un cisim varken mi yokken mi yüksek olacağını seçer; çıkış **tepki süresi** kadar gecikir. Dünya çalışırken ışın sahnede çizilir.
@@ -536,12 +538,12 @@ Sensörler hazır değer üretmez. Gerçek veri sayfası özellikleriyle dünyay
 
 | Sensör | Ne ölçer | Nasıl hesaplanır | Hata ve sınırlar |
 | --- | --- | --- | --- |
-| **HC-SR04 ultrasonik** | Engele uzaklık | Fizik sahnesine ışın atılır; ilk çarpan cisim, sensörün kendi montajı sayılmaz | Yankı süresi ses hızından; menzil ve açı veri sayfasından |
+| **HC-SR04 ultrasonik** | Engele uzaklık | Fizik sahnesine ışın atılır; ilk çarpan cisim, sensörün kendi montajı sayılmaz | Yankı süresi havanın sıcaklığındaki ses hızından; 2 cm–4 m, menzil dışında 38 ms; ölçüm başına σ 1,5 mm titreşim; 450 µs gecikme |
 | **Çizgi sensörü** (TCRT5000, QRE1113, TCRT/QTR dizileri) | Zemindeki çizgi | Kızılötesi LED ve fototransistör: zeminin dağınık yansıtması, parlak bantta ayna yansıması, güneş ve lamba ışığı. Fototransistör devrede gerçek akım kaynağıdır, doyuma girer | Yükseklikle sinyal değişir (TCRT5000'de tepe 2,5 mm, 0,2–15 mm). Mat siyah bant ≈ %6 yansıtır |
 | **LiDAR** (A1 sınıfı, LD06 sınıfı) | 360° mesafe taraması | Her örnekte sahneye ışın atılır; tarama hızı ve örnek sayısı veri sayfasından | A1: 8000 örnek/s, 5,5 Hz, 0,15–12 m, ≈ %1. LD06: 4500 örnek/s, 10 Hz, 0,02–12 m, ±45 mm. Koyu yüzey daha kısa menzil verir |
 | **IMU** (MPU-6050, GY-521) | İvme ve açısal hız | Gövdenin fizikteki gerçek hareketinden özgül kuvvet ve dönme hızı alınır | Açılışta sapma, yavaş sapma kayması, beyaz gürültü (400 µg/√Hz, 0,005 °/s/√Hz), sayısal alçak geçiren süzgeç |
-| **GPS** (NEO-6M, NEO-M8N) | Konum, hız | Ortamın coğrafi konumundan; NMEA çıkışı | CEP 2,5 m (M8N: 2,0 m), gökyüzü görüşüne göre büyür; soğuk başlatma 27 s, sıcak 1 s; en çok 5 Hz (M8N: 10 Hz) |
-| **Pusula** | Manyetik yön | Ortamın manyetik alanı ve gövdenin yönü | Sapma ve gürültü |
+| **GPS** (NEO-6M, NEO-M8N) | Konum, hız | Ortamın coğrafi konumundan; NMEA çıkışı | CEP 2,5 m (M8N: 2,0 m), gökyüzü görüşüne göre büyür; soğuk başlatma 27 s, sıcak 1 s; en çok 5 Hz (M8N: 10 Hz); çözüm 80 ms öncesini anlatır (o çağla damgalı) |
+| **Pusula** | Manyetik yön | Ortamın manyetik alanı ve gövdenin yönü | Sert demir sapması; eksen başına 2 mG gürültü tabanı; kazanca göre 0,73–4,35 mG/LSB çözünürlük ve ±0,88–8,1 G aralık; duyarlılık °C başına −%0,3 |
 | **Barometre** (BMP280, MS5611) | Basınç, yükseklik | Standart atmosfer (ISA), sensörün yüksekliğinde | MS5611: 10 cm çözünürlük, dönüşüm süreleri ve PROM doğrulaması |
 | **İvmeölçer ±200 g** (ADXL375) | Kalkış ve çarpma ivmesi | Gövdenin gerçek ivmesi ve motor titreşimi | 49 mg/LSB, 13 bit, veri sayfası gürültüsü |
 | **Derinlik** (MS5837) | Su basıncı, derinlik | p = p_atm + ρ·g·h | Sıvının yoğunluğu okumayı belirler |
