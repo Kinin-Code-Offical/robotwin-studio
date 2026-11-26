@@ -37,6 +37,8 @@ namespace RobotTwin.CoreSim.Industrial
     /// Variables of BOOL, INT/DINT/UINT/WORD, REAL/LREAL and TIME, the standard function blocks (TON, TOF, TP, R_TRIG,
     /// F_TRIG, CTU, CTD, CTUD, SR, RS), IF/ELSIF/ELSE, CASE (a station's state machine), FOR, WHILE, REPEAT, EXIT, and
     /// directly addressed inputs and outputs (<c>%IX0.0</c>, <c>%QX0.3</c>, <c>%MW2</c>) or names bound to them with AT.
+    /// [plc-pou] Arrays (<c>ARRAY[1..8] OF INT</c>, of timers and blocks too), the program's own FUNCTION_BLOCKs (each
+    /// instance keeps its own variables between scans) and FUNCTIONs (no state; named or positional arguments).
     /// Integer types wrap as the PLC's do (INT is 16-bit signed); division by zero and a loop that does not end are run-time
     /// faults, as a real PLC stops on them.
     /// </summary>
@@ -78,15 +80,28 @@ namespace RobotTwin.CoreSim.Industrial
 
         /// <summary>The variables by name (upper case), for watching: their type and value as text.</summary>
         public IEnumerable<(string Name, StType Type, string Value)> Watch =>
-            _vars.Values.Where(v => v.Type != StType.Block).Select(v => (v.Name, v.Type, Format(v.Type, v.Value)));
+            _vars.Values.Where(v => v.Type != StType.Block).SelectMany(v => v.Elements != null
+                ? v.Elements.Select((x, i) => (v.Name + "[" + (v.Lo + i).ToString(CultureInfo.InvariantCulture) + "]", v.Type, Format(v.Type, x)))
+                : new[] { (v.Name, v.Type, Format(v.Type, v.Value)) });
 
         public double Read(string name)
         {
             string key = name.Trim().ToUpperInvariant();
+            if (Element(key) is var (array, index)) return array.Elements![index];   // an array's element: A[3]
             int dot = key.IndexOf('.');
             if (dot > 0 && !key.StartsWith("%", StringComparison.Ordinal))
                 return _vars.TryGetValue(key.Substring(0, dot), out var b) && b.Block != null ? b.Block[key.Substring(dot + 1)] : double.NaN;   // a block's member: T1.Q
-            return _vars.TryGetValue(key, out var v) ? v.Value : double.NaN;
+            return _vars.TryGetValue(key, out var v) && !v.IsArray ? v.Value : double.NaN;
+        }
+
+        /// <summary>[plc-pou] "A[3]": the array and the element's place in it, or null.</summary>
+        private (Var Array, int Index)? Element(string key)
+        {
+            int open = key.IndexOf('[');
+            if (open <= 0 || !key.EndsWith("]", StringComparison.Ordinal)) return null;
+            if (!_vars.TryGetValue(key.Substring(0, open), out var v) || v.Elements == null) return null;
+            if (!int.TryParse(key.Substring(open + 1, key.Length - open - 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out int i)) return null;
+            return i >= v.Lo && i < v.Lo + v.Elements.Length ? (v, i - v.Lo) : null;
         }
 
         /// <summary>
@@ -95,7 +110,13 @@ namespace RobotTwin.CoreSim.Industrial
         /// </summary>
         public bool Write(string name, double value)
         {
-            if (!_vars.TryGetValue(name.Trim().ToUpperInvariant(), out var v) || v.Type == StType.Block || v.Area == 'I') return false;
+            if (Element(name.Trim().ToUpperInvariant()) is var (array, index))
+            {
+                array.Elements![index] = Coerce(array.Type, array.TypeName, value);
+                return true;
+            }
+
+            if (!_vars.TryGetValue(name.Trim().ToUpperInvariant(), out var v) || v.Type == StType.Block || v.IsArray || v.Area == 'I') return false;
             v.Set(value);
             if (v.Area == 'Q') Outputs[v.Address] = v.Value != 0;
             else if (v.Area == 'M') Memory[v.Address] = (short)Wrap("INT", v.Value);
@@ -198,6 +219,22 @@ namespace RobotTwin.CoreSim.Industrial
             public char Area;   // 'I', 'Q', 'M' or '\0'
             public int Address;   // bit index for I/Q, word index for M
             public Block? Block;
+            public char Section;   // [plc-pou] 'I' VAR_INPUT, 'O' VAR_OUTPUT, '\0' the others
+            public int Lo;   // [plc-pou] an array's first index
+            public double[]? Elements, InitialElements;   // an array of values
+            public Block[]? Blocks;   // an array of block instances
+
+            public bool IsArray => Elements != null || Blocks != null;
+
+            public int Length => Elements?.Length ?? Blocks?.Length ?? 0;
+
+            /// <summary>An element's place from its index, or a run-time fault when the index is outside the array (as a PLC stops).</summary>
+            public int Slot(double index, int line)
+            {
+                long i = (long)Math.Floor(index);
+                if (i < Lo || i >= Lo + Length) throw new StRunException($"{line}. satırda {Name}[{i}]: dizi {Lo}..{Lo + Length - 1} arası.");
+                return (int)(i - Lo);
+            }
 
             public void Load(StProgram p)
             {
@@ -232,18 +269,21 @@ namespace RobotTwin.CoreSim.Industrial
             {
                 Value = Initial;
                 Block?.Reset();
+                if (Elements != null && InitialElements != null) Array.Copy(InitialElements, Elements, Elements.Length);
+                if (Blocks != null)
+                    foreach (var b in Blocks) b.Reset();
             }
 
-            public void Set(double v)
-            {
-                Value = Type switch
-                {
-                    StType.Bool => v != 0 ? 1 : 0,
-                    StType.Int => Wrap(TypeName, Math.Truncate(v)),
-                    _ => v
-                };
-            }
+            public void Set(double v) => Value = Coerce(Type, TypeName, v);
         }
+
+        /// <summary>A value as a variable of this type keeps it: BOOL 0/1, integers truncated and wrapped, REAL and TIME as they are.</summary>
+        private static double Coerce(StType type, string typeName, double v) => type switch
+        {
+            StType.Bool => v != 0 ? 1 : 0,
+            StType.Int => Wrap(typeName, Math.Truncate(v)),
+            _ => v
+        };
 
         internal static double Wrap(string type, double v)
         {
@@ -282,6 +322,9 @@ namespace RobotTwin.CoreSim.Industrial
             public virtual void Call(double clock, StProgram program) => Call(clock);
 
             public virtual void Reset() => Members.Clear();
+
+            /// <summary>[plc-pou] A member's declared type (the program's own blocks), or null for the standard ones.</summary>
+            public virtual StType? TypeOf(string member) => null;
 
             public static Block? Make(string type) => type switch
             {
@@ -585,6 +628,66 @@ namespace RobotTwin.CoreSim.Industrial
 
         // ================================================================ tree
 
+        /// <summary>
+        /// [plc-pou] An instance of the program's own FUNCTION_BLOCK: its variables (inputs, outputs, locals, blocks of its
+        /// own) live in the instance and keep their values between calls; a call takes the inputs given, runs the body,
+        /// and leaves the outputs to read (<c>inst.Q</c>) or to pass on (<c>Q =&gt; x</c>).
+        /// </summary>
+        private sealed class UserBlock : Block
+        {
+            private readonly Dictionary<string, Var> _vars;
+            private readonly List<Stmt> _body;
+            private readonly List<string> _inputs, _outputs;
+
+            public UserBlock(Dictionary<string, Var> vars, List<string> order, List<Stmt> body)
+            {
+                _vars = vars;
+                _body = body;
+                _inputs = order.Where(n => vars[n].Section == 'I').ToList();
+                _outputs = order.Where(n => vars[n].Section == 'O').ToList();
+                Publish();
+            }
+
+            public override IReadOnlyCollection<string> Inputs => _inputs;
+
+            public override IReadOnlyCollection<string> Outputs => _outputs;
+
+            public override StType? TypeOf(string member) => _vars.TryGetValue(member, out var v) && v.Section != '\0' && !v.IsArray ? v.Type : null;
+
+            public override void Call(double clock) => throw new StRunException("Blok programsız çağrıldı.");
+
+            public override void Call(double clock, StProgram program)
+            {
+                foreach (string name in _inputs)
+                    if (Members.TryGetValue(name, out double v)) _vars[name].Set(v);
+                program.Run(_body);   // RETURN (or EXIT outside a loop) ends the call
+                Publish();
+            }
+
+            public override void Reset()
+            {
+                Members.Clear();
+                foreach (var v in _vars.Values) v.Reset();
+                Publish();
+            }
+
+            private void Publish()
+            {
+                foreach (string name in _inputs) Members[name] = _vars[name].Value;
+                foreach (string name in _outputs) Members[name] = _vars[name].Value;
+            }
+        }
+
+        /// <summary>[plc-pou] One of the program's own FUNCTIONs: compiled once, its variables fresh at every call.</summary>
+        private sealed class UserFunction
+        {
+            public string Name = string.Empty;
+            public Var Result = null!;
+            public readonly List<Var> Inputs = new List<Var>();
+            public Dictionary<string, Var> Vars = new Dictionary<string, Var>(StringComparer.Ordinal);
+            public List<Stmt> Body = new List<Stmt>();
+        }
+
         private abstract class Expr
         {
             public int Line;
@@ -613,6 +716,43 @@ namespace RobotTwin.CoreSim.Industrial
             public string Name = string.Empty;
 
             public override double Eval(StProgram p) => Var.Block![Name];
+        }
+
+        /// <summary>[plc-pou] An array's element: <c>A[i]</c>.</summary>
+        private sealed class Index : Expr
+        {
+            public Var Var = null!;
+            public Expr At = null!;
+
+            public override double Eval(StProgram p) => Var.Elements![Var.Slot(At.Eval(p), Line)];
+        }
+
+        /// <summary>[plc-pou] A member of a block in an array: <c>T[i].Q</c>.</summary>
+        private sealed class IndexedMember : Expr
+        {
+            public Var Var = null!;
+            public Expr At = null!;
+            public string Name = string.Empty;
+
+            public override double Eval(StProgram p) => Var.Blocks![Var.Slot(At.Eval(p), Line)][Name];
+        }
+
+        /// <summary>[plc-pou] A call of one of the program's FUNCTIONs: the arguments first, then fresh variables, then the body.</summary>
+        private sealed class FunctionCall : Expr
+        {
+            public UserFunction Function = null!;
+            public List<(Var Input, Expr Value)> Args = new List<(Var, Expr)>();
+
+            public override double Eval(StProgram p)
+            {
+                var values = new double[Args.Count];
+                for (int i = 0; i < Args.Count; i++) values[i] = Args[i].Value.Eval(p);
+                foreach (var v in Function.Vars.Values) v.Reset();
+                for (int i = 0; i < Args.Count; i++) Args[i].Input.Set(values[i]);
+                p.Spend();
+                p.Run(Function.Body);
+                return Function.Result.Value;
+            }
         }
 
         private sealed class Unary : Expr
@@ -752,15 +892,34 @@ namespace RobotTwin.CoreSim.Industrial
             }
         }
 
+        /// <summary>[plc-pou] <c>A[i] := x;</c> or, for an array of blocks, <c>T[i].IN := x;</c>.</summary>
+        private sealed class AssignElement : Stmt
+        {
+            public Var Target = null!;
+            public Expr At = null!;
+            public string? Member;
+            public Expr Value = null!;
+
+            public override Flow Run(StProgram p)
+            {
+                int slot = Target.Slot(At.Eval(p), Line);
+                double v = Value.Eval(p);
+                if (Member != null) Target.Blocks![slot][Member] = v;
+                else Target.Elements![slot] = Coerce(Target.Type, Target.TypeName, v);
+                return Flow.Next;
+            }
+        }
+
         private sealed class BlockCall : Stmt
         {
             public Var Instance = null!;
+            public Expr? At;   // [plc-pou] the element, for a block in an array: T[i](…)
             public List<(string Name, Expr Value)> Inputs = new List<(string, Expr)>();
             public List<(string Name, Var Target)> Outputs = new List<(string, Var)>();
 
             public override Flow Run(StProgram p)
             {
-                var b = Instance.Block!;
+                var b = At != null ? Instance.Blocks![Instance.Slot(At.Eval(p), Line)] : Instance.Block!;
                 foreach (var (name, value) in Inputs) b[name] = value.Eval(p);
                 b.Call(p.Clock, p);
                 foreach (var (name, target) in Outputs) target.Set(b[name]);
@@ -1064,9 +1223,108 @@ namespace RobotTwin.CoreSim.Industrial
 
             private readonly List<Token> _t;
             private readonly Dictionary<string, Var> _vars = new Dictionary<string, Var>(StringComparer.Ordinal);
+            private readonly List<string> _order = new List<string>();   // [plc-pou] declaration order (a FUNCTION's positional arguments)
+            private readonly Dictionary<string, Pou> _pous;
+            private readonly int _depth;
+            private readonly string? _inside;   // "FUNCTION_BLOCK" or "FUNCTION" while compiling one, null for the program
             private int _i;
 
-            public Parser(List<Token> tokens) => _t = tokens;
+            public Parser(List<Token> tokens) : this(tokens, new Dictionary<string, Pou>(StringComparer.Ordinal), 0, null)
+            {
+            }
+
+            private Parser(List<Token> tokens, Dictionary<string, Pou> pous, int depth, string? inside)
+            {
+                _t = tokens;
+                _pous = pous;
+                _depth = depth;
+                _inside = inside;
+            }
+
+            /// <summary>[plc-pou] A FUNCTION_BLOCK or FUNCTION of the source: its tokens, compiled when first used.</summary>
+            private sealed class Pou
+            {
+                public string Kind = string.Empty;
+                public string Name = string.Empty;
+                public int Line;
+                public List<Token> Tokens = new List<Token>();
+                public UserFunction? Function;
+                public bool Compiling;
+            }
+
+            /// <summary>
+            /// [plc-pou] Takes the FUNCTION_BLOCK … END_FUNCTION_BLOCK and FUNCTION … END_FUNCTION parts out of the source (in
+            /// any order, before or after the program), so that what is left is the program and each can be used by name.
+            /// </summary>
+            private void ExtractPous()
+            {
+                for (int i = 0; i < _t.Count; i++)
+                {
+                    string? kind = _t[i].Is("FUNCTION_BLOCK") ? "FUNCTION_BLOCK" : _t[i].Is("FUNCTION") ? "FUNCTION" : null;
+                    if (kind == null) continue;
+                    string end = "END_" + kind;
+                    int j = i + 1;
+                    while (j < _t.Count && _t[j].Kind != Tok.End && !_t[j].Is(end))
+                    {
+                        if (_t[j].Is("FUNCTION_BLOCK") || _t[j].Is("FUNCTION") || _t[j].Is("PROGRAM"))
+                            throw new StCompileException(_t[j].Line, $"{kind} {end} ile kapanmadan {_t[j].Text} başlıyor.");
+                        j++;
+                    }
+
+                    if (j >= _t.Count || !_t[j].Is(end)) throw new StCompileException(_t[i].Line, $"{kind} için {end} eksik.");
+                    if (i + 1 >= j || _t[i + 1].Kind != Tok.Ident) throw new StCompileException(_t[i].Line, $"{kind}'dan sonra bir ad bekleniyordu.");
+                    var name = _t[i + 1];
+                    if (Elementary.Contains(name.Text) || Block.Make(name.Text) != null || Functions.Contains(name.Text))
+                        throw new StCompileException(name.Line, $"'{name.Text}' standart bir adın; başka bir ad verin.");
+                    if (_pous.ContainsKey(name.Text)) throw new StCompileException(name.Line, $"'{name.Text}' iki kez tanımlanmış.");
+                    int last = j + 1 < _t.Count && _t[j + 1].Is(";") ? j + 1 : j;
+                    var tokens = _t.GetRange(i, last - i + 1);
+                    tokens.Add(new Token(Tok.End, string.Empty, _t[last].Line));
+                    _pous[name.Text] = new Pou { Kind = kind, Name = name.Text, Line = _t[i].Line, Tokens = tokens };
+                    _t.RemoveRange(i, last - i + 1);
+                    i--;
+                }
+            }
+
+            /// <summary>[plc-pou] A new instance of a FUNCTION_BLOCK: its declarations and body compiled for this instance's own variables.</summary>
+            private UserBlock Instantiate(Pou fb, int line)
+            {
+                if (_depth >= 16) throw new StCompileException(line, $"{fb.Name}: bloklar 16 kattan derin iç içe (bir blok kendini mi içeriyor?).");
+                var sub = new Parser(new List<Token>(fb.Tokens), _pous, _depth + 1, "FUNCTION_BLOCK");
+                sub.Expect("FUNCTION_BLOCK", "FUNCTION_BLOCK");
+                sub.Next();
+                while (sub.Peek.Is("VAR") || sub.Peek.Is("VAR_INPUT") || sub.Peek.Is("VAR_OUTPUT") || sub.Peek.Is("VAR_TEMP") || sub.Peek.Is("VAR_IN_OUT")) sub.Declarations();
+                var body = sub.Statements("END_FUNCTION_BLOCK");
+                sub.Expect("END_FUNCTION_BLOCK", "END_FUNCTION_BLOCK");
+                return new UserBlock(sub._vars, sub._order, body);
+            }
+
+            /// <summary>[plc-pou] A FUNCTION, compiled once (it keeps nothing between calls); calling itself, even through another, is an error as in IEC 61131-3.</summary>
+            private UserFunction CompileFunction(Pou f, int line)
+            {
+                if (f.Function != null) return f.Function;
+                if (f.Compiling) throw new StCompileException(line, $"{f.Name} kendini çağırıyor: fonksiyonlar özyinelemeli olamaz.");
+                f.Compiling = true;
+                var sub = new Parser(new List<Token>(f.Tokens), _pous, _depth + 1, "FUNCTION");
+                sub.Expect("FUNCTION", "FUNCTION");
+                var name = sub.Next();
+                sub.Expect(":", $"':' ({name.Text} fonksiyonunun dönüş türü)");
+                var typeTok = sub.Ident("dönüş türü");
+                if (!Elementary.Contains(typeTok.Text)) throw new StCompileException(typeTok.Line, $"{name.Text}: dönüş türü BOOL, INT, REAL ya da TIME gibi bir tür olmalı.");
+                var result = new Var { Name = name.Text, TypeName = typeTok.Text, Type = ElementaryType(typeTok.Text) };
+                sub._vars[result.Name] = result;
+                while (sub.Peek.Is("VAR") || sub.Peek.Is("VAR_INPUT") || sub.Peek.Is("VAR_TEMP") || sub.Peek.Is("VAR_OUTPUT") || sub.Peek.Is("VAR_IN_OUT")) sub.Declarations();
+                var fn = new UserFunction { Name = name.Text, Result = result, Vars = sub._vars };
+                fn.Inputs.AddRange(sub._order.Select(n => sub._vars[n]).Where(v => v.Section == 'I'));
+                fn.Body = sub.Statements("END_FUNCTION");   // a call of itself in here finds it still compiling
+                sub.Expect("END_FUNCTION", "END_FUNCTION");
+                f.Compiling = false;
+                f.Function = fn;
+                return fn;
+            }
+
+            private static StType ElementaryType(string type) =>
+                type == "BOOL" ? StType.Bool : type is "REAL" or "LREAL" ? StType.Real : type == "TIME" ? StType.Time : StType.Int;
 
             private Token Peek => _t[_i];
 
@@ -1089,6 +1347,7 @@ namespace RobotTwin.CoreSim.Industrial
 
             public StProgram Program()
             {
+                ExtractPous();
                 string name = "PLC";
                 bool wrapped = Accept("PROGRAM");
                 if (wrapped)
@@ -1097,7 +1356,7 @@ namespace RobotTwin.CoreSim.Industrial
                     name = Next().Text;
                 }
 
-                while (Peek.Is("VAR") || Peek.Is("VAR_GLOBAL") || Peek.Is("VAR_INPUT") || Peek.Is("VAR_OUTPUT")) Declarations();
+                while (Peek.Is("VAR") || Peek.Is("VAR_GLOBAL") || Peek.Is("VAR_INPUT") || Peek.Is("VAR_OUTPUT") || Peek.Is("VAR_TEMP")) Declarations();
                 var body = Statements(wrapped ? new[] { "END_PROGRAM" } : Array.Empty<string>());
                 if (wrapped) Expect("END_PROGRAM", "END_PROGRAM");
                 Accept(";");
@@ -1107,7 +1366,10 @@ namespace RobotTwin.CoreSim.Industrial
 
             private void Declarations()
             {
-                Next();
+                var head = Next();
+                if (head.Is("VAR_IN_OUT")) throw new StCompileException(head.Line, "VAR_IN_OUT henüz yok: değeri VAR_INPUT ile verip VAR_OUTPUT ile geri alın.");
+                char section = _inside == null ? '\0' : head.Is("VAR_INPUT") ? 'I' : head.Is("VAR_OUTPUT") ? 'O' : '\0';
+                if (_inside == "FUNCTION" && head.Is("VAR_OUTPUT")) throw new StCompileException(head.Line, "Bir FUNCTION'ın çıkışı kendi adıdır; birden çok çıkış için FUNCTION_BLOCK kullanın.");
                 Accept("RETAIN");
                 Accept("CONSTANT");
                 while (!Accept("END_VAR"))
@@ -1122,28 +1384,70 @@ namespace RobotTwin.CoreSim.Industrial
                         at = Next().Text;
                     }
 
+                    if (at != null && _inside != null) throw new StCompileException(names[0].Line, $"{_inside} içinde AT ile adres bağlanmaz; adresi programda bağlayıp girişle geçirin.");
                     Expect(":", "':' (tür)");
+                    // [plc-pou] ARRAY[lo..hi] OF type
+                    int lo = 0, length = 0;
+                    bool array = Accept("ARRAY");
+                    if (array)
+                    {
+                        Expect("[", "'[' (dizinin sınırları)");
+                        lo = Bound();
+                        Expect("..", "'..'");
+                        int hi = Bound();
+                        Expect("]", "']'");
+                        Expect("OF", "OF");
+                        if (hi < lo) throw new StCompileException(names[0].Line, $"Dizinin sınırları ters: [{lo}..{hi}].");
+                        if ((long)hi - lo + 1 > 10000) throw new StCompileException(names[0].Line, "Bir dizi en çok 10000 eleman olabilir.");
+                        length = hi - lo + 1;
+                        if (at != null) throw new StCompileException(names[0].Line, "Bir diziye AT ile adres bağlanmaz.");
+                    }
+
                     var typeTok = Ident("tür");
                     string type = typeTok.Text;
                     Expr? init = null;
-                    if (Accept(":=")) init = Expression();
+                    List<Expr>? inits = null;
+                    if (Accept(":="))
+                    {
+                        if (array)
+                        {
+                            Expect("[", "'[' (dizinin başlangıç değerleri)");
+                            inits = new List<Expr>();
+                            do inits.Add(Expression());
+                            while (Accept(","));
+                            Expect("]", "']'");
+                        }
+                        else init = Expression();
+                    }
+
                     Expect(";", "';'");
                     foreach (var n in names)
                     {
                         if (_vars.ContainsKey(n.Text)) throw new StCompileException(n.Line, $"'{n.Text}' iki kez tanımlanmış.");
-                        var v = new Var { Name = n.Text, TypeName = type };
+                        var v = new Var { Name = n.Text, TypeName = type, Section = section, Lo = lo };
+                        Pou? fb = _pous.TryGetValue(type, out var pou) && pou.Kind == "FUNCTION_BLOCK" ? pou : null;
                         if (Elementary.Contains(type))
                         {
-                            v.Type = type == "BOOL" ? StType.Bool : type is "REAL" or "LREAL" ? StType.Real : type == "TIME" ? StType.Time : StType.Int;
+                            v.Type = ElementaryType(type);
+                            if (array) v.Elements = new double[length];
                         }
-                        else if (Block.Make(type) is { } b)
+                        else if (Block.Make(type) != null || fb != null)
                         {
+                            if (_inside == "FUNCTION") throw new StCompileException(typeTok.Line, "Fonksiyonlar durum tutmaz: blok örneklerini FUNCTION_BLOCK içinde kullanın.");
+                            if (section != '\0') throw new StCompileException(typeTok.Line, "Bir blok örneği giriş ya da çıkış olamaz; VAR içinde tanımlayın.");
                             v.Type = StType.Block;
-                            v.Block = b;
+                            Block Make() => fb != null ? Instantiate(fb, typeTok.Line) : Block.Make(type)!;
+                            if (array)
+                            {
+                                v.Blocks = new Block[length];
+                                for (int k = 0; k < length; k++) v.Blocks[k] = Make();
+                            }
+                            else v.Block = Make();
                         }
                         else
                         {
-                            throw new StCompileException(typeTok.Line, $"'{type}' türü yok (BOOL, INT, REAL, TIME, TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS, MB_READ, MB_WRITE).");
+                            string own = _pous.Count == 0 ? string.Empty : ", " + string.Join(", ", _pous.Values.Where(x => x.Kind == "FUNCTION_BLOCK").Select(x => x.Name));
+                            throw new StCompileException(typeTok.Line, $"'{type}' türü yok (BOOL, INT, REAL, TIME, TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS, MB_READ, MB_WRITE{own}).");
                         }
 
                         if (at != null) Bind(v, at, n.Line);
@@ -1154,9 +1458,31 @@ namespace RobotTwin.CoreSim.Industrial
                             v.Initial = v.Value;
                         }
 
+                        if (v.Elements != null)
+                        {
+                            if (inits != null)
+                            {
+                                if (inits.Count > length) throw new StCompileException(n.Line, $"{n.Text} {length} elemanlı; {inits.Count} başlangıç değeri verilmiş.");
+                                for (int k = 0; k < inits.Count; k++) v.Elements[k] = Coerce(v.Type, type, inits[k].Eval(null!));
+                            }
+
+                            v.InitialElements = (double[])v.Elements.Clone();
+                        }
+                        else if (inits != null) throw new StCompileException(n.Line, "Blok dizisine başlangıç değeri verilmez.");
+
                         _vars[v.Name] = v;
+                        _order.Add(v.Name);
                     }
                 }
+            }
+
+            /// <summary>An array bound: a (signed) integer.</summary>
+            private int Bound()
+            {
+                bool negative = Accept("-");
+                if (Peek.Kind != Tok.Number || Peek.Text.Contains('.')) throw new StCompileException(Peek.Line, $"Dizi sınırı bir tamsayı olmalı, '{Shown(Peek)}' bulundu.");
+                int v = (int)Next().Value;
+                return negative ? -v : v;
             }
 
             private static void Bind(Var v, string address, int line)
@@ -1200,6 +1526,7 @@ namespace RobotTwin.CoreSim.Industrial
             /// <summary>A direct address used in the code: a hidden variable bound to it.</summary>
             private Var Direct(Token a)
             {
+                if (_inside != null) throw new StCompileException(a.Line, $"{_inside} içinde doğrudan adres ({a.Text}) kullanılmaz; programda okuyup girişle geçirin.");
                 if (_vars.TryGetValue(a.Text, out var v)) return v;
                 var (area, _) = Address(a.Text, a.Line);
                 v = new Var { Name = a.Text, Type = area == 'M' ? StType.Int : StType.Bool, TypeName = area == 'M' ? "INT" : "BOOL" };
@@ -1263,6 +1590,37 @@ namespace RobotTwin.CoreSim.Industrial
                 else if (t.Kind == Tok.Ident) target = Lookup(Next());
                 else throw new StCompileException(t.Line, $"Bir komut bekleniyordu, '{Shown(t)}' bulundu.");
 
+                if (target.IsArray)
+                {
+                    // [plc-pou] A[i] := x;  T[i](IN := …);  T[i].PT := …;
+                    Expect("[", $"'[' ({target.Name} bir dizi: {target.Name}[i] gibi)");
+                    var at = IndexExpression();
+                    Expect("]", "']'");
+                    if (target.Blocks != null)
+                    {
+                        var sample = target.Blocks[0];
+                        if (Accept("."))
+                        {
+                            var m = Ident("blok girişi");
+                            if (!sample.Inputs.Contains(m.Text)) throw new StCompileException(m.Line, $"{target.TypeName} bloğunun '{m.Text}' girişi yok ({string.Join(", ", sample.Inputs)}).");
+                            Expect(":=", "':='");
+                            var value = Expression();
+                            Expect(";", "';'");
+                            return new AssignElement { Line = t.Line, Target = target, At = at, Member = m.Text, Value = value };
+                        }
+
+                        var call = (BlockCall)BlockCallStatement(target, t.Line, sample);
+                        call.At = at;
+                        return call;
+                    }
+
+                    Expect(":=", "':='");
+                    var ev = Expression();
+                    Expect(";", "';' (komutun sonu)");
+                    Check(target, ev);
+                    return new AssignElement { Line = t.Line, Target = target, At = at, Value = ev };
+                }
+
                 if (target.Type == StType.Block)
                 {
                     if (Accept("."))
@@ -1293,9 +1651,17 @@ namespace RobotTwin.CoreSim.Industrial
                     throw new StCompileException(e.Line, $"{target.Name} {target.TypeName}: BOOL atanamaz (BOOL_TO_INT kullanın).");
             }
 
-            private Stmt BlockCallStatement(Var instance, int line)
+            private Expr IndexExpression()
+            {
+                var e = Expression();
+                if (e.Type is StType.Bool or StType.Real) throw new StCompileException(e.Line, "Dizi indisi bir tamsayı olmalı.");
+                return e;
+            }
+
+            private Stmt BlockCallStatement(Var instance, int line, Block? sample = null)
             {
                 var call = new BlockCall { Line = line, Instance = instance };
+                var block = sample ?? instance.Block!;
                 Expect("(", "'(' (blok çağrısı)");
                 if (!Accept(")"))
                 {
@@ -1304,12 +1670,12 @@ namespace RobotTwin.CoreSim.Industrial
                         var m = Ident("blok parametresi");
                         if (Accept(":="))
                         {
-                            if (!instance.Block!.Inputs.Contains(m.Text)) throw new StCompileException(m.Line, $"{instance.TypeName} bloğunun '{m.Text}' girişi yok ({string.Join(", ", instance.Block.Inputs)}).");
+                            if (!block.Inputs.Contains(m.Text)) throw new StCompileException(m.Line, $"{instance.TypeName} bloğunun '{m.Text}' girişi yok ({string.Join(", ", block.Inputs)}).");
                             call.Inputs.Add((m.Text, Expression()));
                         }
                         else if (Accept("=>"))
                         {
-                            if (!instance.Block!.Outputs.Contains(m.Text)) throw new StCompileException(m.Line, $"{instance.TypeName} bloğunun '{m.Text}' çıkışı yok ({string.Join(", ", instance.Block.Outputs)}).");
+                            if (!block.Outputs.Contains(m.Text)) throw new StCompileException(m.Line, $"{instance.TypeName} bloğunun '{m.Text}' çıkışı yok ({string.Join(", ", block.Outputs)}).");
                             var tok = Peek;
                             var target = tok.Kind == Tok.Address ? Direct(Next()) : Lookup(Ident("değişken"));
                             call.Outputs.Add((m.Text, target));
@@ -1604,16 +1970,29 @@ namespace RobotTwin.CoreSim.Industrial
                             return call;
                         }
 
+                        if (Peek.Is("(") && _pous.TryGetValue(t.Text, out var pou) && pou.Kind == "FUNCTION") return FunctionCallExpression(t, pou);
                         var v = Lookup(t);
+                        if (v.IsArray)
+                        {
+                            Expect("[", $"'[' ({v.Name} bir dizi: {v.Name}[i] gibi)");
+                            var at = IndexExpression();
+                            Expect("]", "']'");
+                            if (v.Blocks == null) return new Index { Line = t.Line, Var = v, At = at, Type = v.Type };
+                            Expect(".", $"'.' ({v.Name}[i] bir blok: {v.Name}[i].Q gibi)");
+                            var bm = Ident("blok çıkışı");
+                            var sample = v.Blocks[0];
+                            if (!sample.Outputs.Contains(bm.Text) && !sample.Inputs.Contains(bm.Text))
+                                throw new StCompileException(bm.Line, $"{v.TypeName} bloğunun '{bm.Text}' üyesi yok ({string.Join(", ", sample.Outputs)}).");
+                            return new IndexedMember { Line = t.Line, Var = v, At = at, Name = bm.Text, Type = MemberType(sample, bm.Text) };
+                        }
+
                         if (v.Type == StType.Block)
                         {
                             Expect(".", $"'.' ({v.Name} bir blok: {v.Name}.Q gibi)");
                             var m = Ident("blok çıkışı");
                             if (!v.Block!.Outputs.Contains(m.Text) && !v.Block.Inputs.Contains(m.Text))
                                 throw new StCompileException(m.Line, $"{v.TypeName} bloğunun '{m.Text}' üyesi yok ({string.Join(", ", v.Block.Outputs)}).");
-                            var type = m.Text is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
-                                : m.Text is "ET" or "PT" ? StType.Time : StType.Int;
-                            return new Member { Line = t.Line, Var = v, Name = m.Text, Type = type };
+                            return new Member { Line = t.Line, Var = v, Name = m.Text, Type = MemberType(v.Block, m.Text) };
                         }
 
                         return new Ref { Line = t.Line, Var = v, Type = v.Type };
@@ -1622,6 +2001,52 @@ namespace RobotTwin.CoreSim.Industrial
                     default:
                         throw new StCompileException(t.Line, $"Bir değer bekleniyordu, '{Shown(t)}' bulundu.");
                 }
+            }
+
+            private static StType MemberType(Block b, string member) =>
+                b.TypeOf(member) ?? (member is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
+                    : member is "ET" or "PT" ? StType.Time : StType.Int);
+
+            /// <summary>[plc-pou] Scale(raw := x, hi := 10.0) or Scale(x, 0.0, 10.0): named arguments, or positional in the order of VAR_INPUT.</summary>
+            private Expr FunctionCallExpression(Token name, Pou pou)
+            {
+                var fn = CompileFunction(pou, name.Line);
+                var call = new FunctionCall { Line = name.Line, Function = fn, Type = fn.Result.Type };
+                Expect("(", "'('");
+                if (!Accept(")"))
+                {
+                    int position = 0;
+                    do
+                    {
+                        Var input;
+                        if (Peek.Kind == Tok.Ident && _t[_i + 1].Is(":="))
+                        {
+                            var arg = Next();
+                            Next();
+                            input = fn.Inputs.FirstOrDefault(x => x.Name == arg.Text)
+                                    ?? throw new StCompileException(arg.Line, $"{fn.Name} fonksiyonunun '{arg.Text}' girişi yok ({string.Join(", ", fn.Inputs.Select(x => x.Name))}).");
+                        }
+                        else
+                        {
+                            if (position >= fn.Inputs.Count) throw new StCompileException(Peek.Line, $"{fn.Name} {fn.Inputs.Count} giriş alır.");
+                            input = fn.Inputs[position];
+                        }
+
+                        if (call.Args.Any(a => a.Input == input)) throw new StCompileException(name.Line, $"{fn.Name}: '{input.Name}' iki kez verilmiş.");
+                        var value = Expression();
+                        if (input.Type == StType.Bool && value.Type != StType.Bool && value is not Const)
+                            throw new StCompileException(value.Line, $"{fn.Name}.{input.Name} BOOL: bir koşul verin.");
+                        if (input.Type != StType.Bool && value.Type == StType.Bool)
+                            throw new StCompileException(value.Line, $"{fn.Name}.{input.Name} {input.TypeName}: BOOL verilemez.");
+                        call.Args.Add((input, value));
+                        position++;
+                    }
+                    while (Accept(","));
+
+                    Expect(")", "')'");
+                }
+
+                return call;
             }
 
             private static StType CallType(string name, List<Expr> args)

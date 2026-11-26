@@ -224,6 +224,24 @@ Read(REQ := TRUE, UNIT := 2, FC := 3, ADDR := 1);
 IF Read.DONE THEN Level := Read.VALUE; END_IF
 ```
 
+**Your own blocks, functions and arrays.** A program can define its own `FUNCTION_BLOCK`s and `FUNCTION`s (before or after the program):
+
+- A `FUNCTION_BLOCK`'s `VAR_INPUT`, `VAR_OUTPUT` and `VAR` variables are separate in each instance and kept between scans; it can use blocks such as TON and other blocks of your own. An instance is called like the standard blocks: `D1(IN := Button, Q => Lamp);`, its output `D1.Q`.
+- A `FUNCTION` keeps nothing (its variables start afresh at every call); its result is assigned to its own name. It is called with named arguments (`Scale(Raw := x, Hi := 10.0)`) or in the order of its `VAR_INPUT` (`Scale(x, 0.0, 10.0)`); an input not given takes its initial value. It cannot call itself.
+- Arrays: `ARRAY[1..8] OF INT := [3, 1, 4]`, arrays of timers and blocks too (`Delay : ARRAY[0..3] OF TON;` → `Delay[i](IN := …);`, `Delay[i].Q`). An index outside the array puts the PLC in STOP. In the panel and on an HMI the elements show as `A[3]`.
+- Inside blocks and functions there are no direct addresses (`%IX0.0`) or `AT`: the program reads the inputs and gives them to the block.
+
+```
+FUNCTION_BLOCK Debounce
+VAR_INPUT IN : BOOL; PT : TIME := T#30ms; END_VAR
+VAR_OUTPUT Q : BOOL; END_VAR
+VAR OnDelay, OffDelay : TON; END_VAR
+OnDelay(IN := IN, PT := PT);
+OffDelay(IN := NOT IN, PT := PT);
+IF OnDelay.Q THEN Q := TRUE; ELSIF OffDelay.Q THEN Q := FALSE; END_IF
+END_FUNCTION_BLOCK
+```
+
 With **Language** set to *Ladder* the program is a ladder diagram (LD): **Open the ladder editor** shows the variables on the left (`VAR … END_VAR`) and the rungs in the middle. Each rung has seven columns of contacts and blocks and the coil column on the right; from the toolbar put on the selected cell a normally open or closed contact, a rising or falling edge, a comparison, TON, TOF, TP, CTU, a wire, a coil, a negated coil, a set or a reset coil; **│ link** draws a vertical link from the cell's right side to the row below (a parallel branch: this is how a seal-in latch is built). The selected cell's variable, parameter (`T#2s`, `5`, `>= 50`) and a counter's reset are in the boxes below. The program is checked as it is drawn; **Generated Structured Text** shows what the rungs turn into. While the world runs, the contacts that pass power and the coils that are TRUE light green.
 
 **Cycle time and bottleneck:** the PLC's **Step variable** (by default `Adim`, the variable a station's `CASE` steps run on) is watched: the panel shows the current step and how long it has been there, the finished cycles (each return to the first step) and the average cycle time, the step that takes longest and its share of the cycle. The step that slows the station (a throttled cylinder stroke, say) is found this way.

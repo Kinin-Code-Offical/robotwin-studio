@@ -224,6 +224,24 @@ Oku(REQ := TRUE, UNIT := 2, FC := 3, ADDR := 1);
 IF Oku.DONE THEN Seviye := Oku.VALUE; END_IF
 ```
 
+**Kendi blokları, fonksiyonlar ve diziler.** Program kendi `FUNCTION_BLOCK`'larını ve `FUNCTION`'larını tanımlayabilir (programdan önce ya da sonra):
+
+- `FUNCTION_BLOCK`'un `VAR_INPUT`, `VAR_OUTPUT` ve `VAR` değişkenleri her örnekte ayrıdır ve taramalar arasında korunur; içinde TON gibi blokları ve başka kendi bloklarını kullanabilir. Örnek, standart bloklar gibi çağrılır: `D1(IN := Dugme, Q => Lamba);`, çıkışı `D1.Q`.
+- `FUNCTION` durum tutmaz (değişkenleri her çağrıda baştan başlar); sonucu kendi adına atanır. Adlı (`Olcek(Ham := x, Ust := 10.0)`) ya da `VAR_INPUT` sırasıyla (`Olcek(x, 0.0, 10.0)`) çağrılır; verilmeyen giriş başlangıç değerini alır. Kendini çağıramaz.
+- Diziler: `ARRAY[1..8] OF INT := [3, 1, 4]`, zamanlayıcı ve blok dizileri de (`Gecikme : ARRAY[0..3] OF TON;` → `Gecikme[i](IN := …);`, `Gecikme[i].Q`). Dizinin dışındaki bir indis PLC'yi STOP'a alır. Panelde ve HMI'da elemanlar `A[3]` adıyla görünür.
+- Blok ve fonksiyonların içinde doğrudan adres (`%IX0.0`) ya da `AT` kullanılmaz: girişler programda okunup bloğa verilir.
+
+```
+FUNCTION_BLOCK Sicrama
+VAR_INPUT IN : BOOL; PT : TIME := T#30ms; END_VAR
+VAR_OUTPUT Q : BOOL; END_VAR
+VAR Acik, Kapali : TON; END_VAR
+Acik(IN := IN, PT := PT);
+Kapali(IN := NOT IN, PT := PT);
+IF Acik.Q THEN Q := TRUE; ELSIF Kapali.Q THEN Q := FALSE; END_IF
+END_FUNCTION_BLOCK
+```
+
 **Dil** *Merdiven* seçilirse program merdiven diyagramıdır (LD): **Merdiven düzenleyiciyi aç** solda değişkenleri (`VAR … END_VAR`), ortada basamakları gösterir. Her basamak yedi sütun kontak ve bloktan, sağda bobin sütunundan oluşur; araç çubuğundan seçili hücreye normalde açık / kapalı kontak, yükselen / düşen kenar, karşılaştırma, TON, TOF, TP, CTU, tel, bobin, ters bobin, set ve reset bobini konur, **│ bağ** hücrenin sağından alt satıra dikey bağ çizer (paralel kol; tutma devresi böyle kurulur). Seçili hücrenin değişkeni, parametresi (`T#2s`, `5`, `>= 50`) ve sayıcının sıfırlama girişi alttaki kutulardadır. Program çizilirken denetlenir; **Oluşan Yapısal Metin** basamakların neye çevrildiğini gösterir. Dünya çalışırken güç geçiren kontaklar ve TRUE bobinler yeşil yanar.
 
 **Çevrim süresi ve darboğaz:** PLC'nin **Adım değişkeni** (öntanımlı `Adim`, istasyonun `CASE` adımlarını tutan değişken) izlenir: panel şu anki adımı ve ne kadardır orada olduğunu, tamamlanan çevrimleri (ilk adıma her dönüş) ve ortalama çevrim süresini, en uzun süren adımı ve çevrimin yüzde kaçını aldığını gösterir. İstasyonu yavaşlatan adım (örneğin kısılmış bir silindir stroku) böyle bulunur.
