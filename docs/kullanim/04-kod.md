@@ -153,7 +153,12 @@ Arduino Uno ve Nano kodunu satır satır izleyebilirsiniz. Kart bir kesme noktas
 3. Kart o satıra gelince durur:
    - satırda sarı bir ok ve bant belirir;
    - üstteki çubukta yer, fonksiyon ve simüle edilmiş zaman yazar;
-   - **Değişkenler** sekmesi kodunuzdaki global ve `static` değişkenleri o anki değerleriyle gösterir.
+   - **Değişkenler** sekmesi kodunuzdaki global ve `static` değişkenleri o anki değerleriyle gösterir;
+   - **Yazmaçlar** sekmesi ATmega328P'nin kendisini gösterir:
+     - solda çekirdek: PC, SP, SREG'in bayrakları (`I-----Z-`), X/Y/Z işaretçileri, R0–R31, çevrim sayısı;
+     - sağda çevre birimlerinin yazmaçları adlarıyla, gruplarına göre (portlar, zamanlayıcılar, kesmeler, ADC, USART, SPI, TWI, EEPROM): değer, ikili hali, adres ve açık olan bitlerin adları (`UCSR0A`'da `RXC0 UDRE0` gibi). 16 bitlik çiftlerin (TCNT1, OCR1A, UBRR0, ADC, SP) değeri tek sayı olarak yazılır;
+     - son bakıştan beri değişen değerler turuncudur: bir adımın donanıma ne yaptığı bir bakışta görünür;
+     - bakmak donanımı etkilemez: gerçek okuma UDR0'daki baytı alır, TCNT1'in yüksek baytını kilitler, SPIF'i siler; buradaki okuma hiçbirini yapmaz.
 4. Buradan devam edin:
 
 | Düğme | Kısayol | Ne yapar |

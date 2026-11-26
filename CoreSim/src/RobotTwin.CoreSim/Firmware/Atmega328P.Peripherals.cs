@@ -200,6 +200,33 @@ namespace RobotTwin.CoreSim.Firmware
             }
         }
 
+        /// <summary>
+        /// [registers] A data-space byte as the program would read it, without the read's side effects: SREG from the
+        /// flags, PINx from the pins, TCNTx from the counters (TCNT1 both bytes at once, not through the TEMP latch), UDR0
+        /// without taking the byte off the receiver, SPDR without clearing SPIF. What a debugger shows;
+        /// <see cref="ReadData"/> gives the raw memory behind it.
+        /// </summary>
+        public byte Peek(int address)
+        {
+            if (address < 0x20 || address >= 0x100) return ReadData(address);
+            switch (address)
+            {
+                case PINB: return ReadPinRegister(DDRB, PORTB, 8);
+                case PINC: return ReadPinRegister(DDRC, PORTC, 16);
+                case PIND: return ReadPinRegister(DDRD, PORTD, 0);
+                case SREG: return Sreg;
+                case TCNT0: return (byte)_t0Count;
+                case TCNT2: return (byte)_t2Count;
+                case TCNT1L: return (byte)_t1Count;
+                case TCNT1H: return (byte)(_t1Count >> 8);
+                case UDR0: return _rxData;
+                default: return _d[address];
+            }
+        }
+
+        /// <summary>[registers] The status register's flags (I T H S V N Z C, bit 7 first).</summary>
+        public byte StatusRegister => Sreg;
+
         private void WriteIo(int a, byte v)
         {
             switch (a)

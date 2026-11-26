@@ -153,7 +153,12 @@ You can follow Arduino Uno and Nano code line by line. When the board reaches a 
 3. When the board reaches the line it stops:
    - a yellow arrow and band mark the line;
    - the bar above names the place, the function and the simulated time;
-   - the **Variables** tab shows your code's global and `static` variables with their values at that moment.
+   - the **Variables** tab shows your code's global and `static` variables with their values at that moment;
+   - the **Registers** tab shows the ATmega328P itself:
+     - on the left, the core: PC, SP, SREG's flags (`I-----Z-`), the X/Y/Z pointers, R0–R31 and the cycle count;
+     - on the right, the peripherals' registers by name, grouped (ports, timers, interrupts, ADC, USART, SPI, TWI, EEPROM): value, binary, address and the names of the bits that are set (`RXC0 UDRE0` in `UCSR0A`, say). A 16-bit pair (TCNT1, OCR1A, UBRR0, ADC, SP) is also given as one number;
+     - values that changed since the last look are orange, so you see at a glance what a step did to the hardware;
+     - looking does not touch the hardware: a real read takes the byte out of UDR0, latches TCNT1's high byte and clears SPIF; this one does none of that.
 4. Go on from there:
 
 | Button | Shortcut | What it does |

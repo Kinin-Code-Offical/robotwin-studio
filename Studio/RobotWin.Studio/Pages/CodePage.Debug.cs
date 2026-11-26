@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using RobotTwin.CoreSim.Firmware.Debug;
+using RobotTwin.CoreSim.Firmware;
 using RobotWin.Studio.Firmware;
 
 namespace RobotWin.Studio.Pages
@@ -29,7 +30,7 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class CodePage
     {
-        private readonly Dictionary<string, string> _lastValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly LookBack<string> _variablesSeen = new LookBack<string>();
         private DispatcherTimer? _debugTimer;
         private bool _debugWired;
 
@@ -50,7 +51,9 @@ namespace RobotWin.Studio.Pages
             _debugTimer.Tick += (_, _) =>
             {
                 // live values while the program runs (only while the tab is in view)
-                if (IsVisible && BottomTabs.SelectedItem == VariablesTab && DebugKey is { } key && FirmwareDebugger.ProgramFor(key) is { IsHalted: false }) ShowVariables();
+                if (!IsVisible || DebugKey is not { } key || FirmwareDebugger.ProgramFor(key) is not { IsHalted: false }) return;
+                if (BottomTabs.SelectedItem == VariablesTab) ShowVariables();
+                else if (BottomTabs.SelectedItem == RegistersTab) ShowRegisters();
             };
             _debugTimer.Start();
         }
@@ -90,7 +93,7 @@ namespace RobotWin.Studio.Pages
                     Editor.RevealLine(place.Line);
                 }
 
-                BottomTabs.SelectedItem = VariablesTab;
+                if (BottomTabs.SelectedItem != RegistersTab) BottomTabs.SelectedItem = VariablesTab;
                 UpdateDebug();
                 string why = p.Debugger.Reason == DebugStopReason.Step ? "adım" : "kesme noktası";
                 W.Status = $"{p.Where} durdu ({why}): {StopText(p)} — devre ve dünya da bu anda duruyor.";
@@ -128,6 +131,7 @@ namespace RobotWin.Studio.Pages
             {
                 DebugBar.Visibility = Visibility.Collapsed;
                 ShowVariables();
+                ShowRegisters();
                 return;
             }
 
@@ -146,6 +150,7 @@ namespace RobotWin.Studio.Pages
             else DebugState.Text = $"Çalışıyor · {marks}";
             if (p != null && lines && FirmwareFor(key) is { IsBuildCurrent: false }) DebugState.Text += " · kod son yüklemeden sonra değişti: satırlar kayabilir";
             ShowVariables();
+            ShowRegisters();
         }
 
         private RobotTwin.CoreSim.Formats.FirmwareSource? FirmwareFor(string key) => _targets.FirstOrDefault(t => t.Key == key)?.Firmware;
@@ -171,12 +176,11 @@ namespace RobotWin.Studio.Pages
             var normal = (Brush)FindResource("B.Text");
             var changed = (Brush)FindResource("B.Warning");
             var rows = new List<DebugVariableRow>();
+            _variablesSeen.At(p.Key, p.Cosim.Mcu.Cycles);
             foreach (var v in p.Info.Variables)
             {
                 string value = FirmwareDebugInfo.Format(v, p.Cosim.Mcu.ReadData);
-                string id = p.Key + "|" + v.DisplayName;
-                bool differs = _lastValues.TryGetValue(id, out var before) && before != value;
-                _lastValues[id] = value;
+                bool differs = _variablesSeen.Changed(v.DisplayName, value);
                 rows.Add(new DebugVariableRow
                 {
                     Name = v.DisplayName,

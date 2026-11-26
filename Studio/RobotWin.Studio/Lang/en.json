@@ -7821,7 +7821,19 @@
   "Yol uzunlukları": "Track lengths",
   "Fark çifti uzunluğu": "Pair length",
   "Fark çifti eşleşmesi": "Pair coupling",
-  "Uzunluk eşleme": "Length matching"
+  "Uzunluk eşleme": "Length matching",
+  "Yazmaçlar": "Registers",
+  "Yazmaç": "Register",
+  "İkili": "Binary",
+  "Açık bitler": "Bits set",
+  "Çekirdek": "Core",
+  "Zamanlayıcı 0": "Timer 0",
+  "Zamanlayıcı 1": "Timer 1",
+  "Zamanlayıcı 2": "Timer 2",
+  "Kesmeler": "Interrupts",
+  "Kart çalışırken ATmega328P'nin yazmaçları burada görünür; bir kesme noktasında durduğunda o anki değerleriyle.": "While the board runs, the ATmega328P's registers show here; when it stops at a breakpoint, with their values at that instant.",
+  "Değerler kartın durduğu andan; turuncu: son bakıştan beri değişen. Bakmak donanımı etkilemez (UDR0'daki bayt alınmaz, sayaç kilitlenmez).": "Values from the instant the board stopped; orange: changed since the last look. Looking does not touch the hardware (the byte in UDR0 is not taken, no counter is latched).",
+  "Değerler çalışırken okunuyor; turuncu: son bakıştan beri değişen. Bakmak donanımı etkilemez (UDR0'daki bayt alınmaz, sayaç kilitlenmez).": "Values read while it runs; orange: changed since the last look. Looking does not touch the hardware (the byte in UDR0 is not taken, no counter is latched)."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11010,6 +11022,7 @@
   "'{0}' toleransı {1} mm": "'{0}' tolerance {1} mm",
   "'{0}' grubu eklendi": "'{0}' group added",
   "Sapma  {0} mm · yükten {1} mm": "Sag    {0} mm · from the load {1} mm",
-  "Sapma  {0} mm": "Sag    {0} mm"
+  "Sapma  {0} mm": "Sag    {0} mm",
+  "{0} çevrim · t = {1} s": "{0} cycles · t = {1} s"
  }
 }

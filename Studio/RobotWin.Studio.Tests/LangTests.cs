@@ -244,6 +244,7 @@ public class LangTests
     [InlineData("Duruş füzyonu karşılaştırması", "Compare attitude fusion")]
     [InlineData("Yalnız jiroskop", "Gyro alone")]
     [InlineData("12 / 30 koşu", "12 / 30 runs")]
+    [InlineData("1.234.567 çevrim · t = 0,012345 s", "1.234.567 cycles · t = 0,012345 s")]
     [InlineData("Sapma  0.620 mm · yükten 0.451 mm", "Sag    0.620 mm · from the load 0.451 mm")]
     [InlineData("DFM · Asit tuzağı", "DFM · Acid trap")]
     [InlineData("D+ / D-: 33 / 30 mm, fark 3 mm (en çok 1.25 mm); kısa olanı menderesle uzatın", "D+ / D-: 33 / 30 mm, difference 3 mm (at most 1.25 mm); lengthen the shorter one with a meander")]

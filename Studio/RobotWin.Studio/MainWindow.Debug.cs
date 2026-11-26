@@ -104,8 +104,9 @@ namespace RobotWin.Studio
         /// --snapshot --fault debug-e2e: the servo arm's code is built and loaded through the real app, a breakpoint goes on
         /// "angle += step;", the world runs until the Uno reaches it, then a step and a continue. Checks that the world stopped
         /// at the program's instant, the line, the variables, the step's line and the next stop's values; leaves it stopped.
+        /// The Yazmaçlar tab is checked at the stops too; with --fault debug-registers it is the tab left in front.
         /// </summary>
-        internal async void RunDebugCheck(string logPath)
+        internal async void RunDebugCheck(string logPath, bool registers = false)
         {
             var log = new StringBuilder();
             int failures = 0;
@@ -178,6 +179,9 @@ namespace RobotWin.Studio
                     Check(a1 == "0" && s1 == "2", $"değişkenler ilk durakta: angle = {a1}, step = {s1}");
                     Check(_current == "code" || _second == "code", "Kod sayfası önde");
                     Check(_code.ExecutionLineShown == addLine, "düzenleyici durduğu satırı gösteriyor");
+                    var (core, regs, _) = _code.RegistersShown();
+                    Check(core.StartsWith("PC 0x", StringComparison.Ordinal) && core.Contains("SREG 0x", StringComparison.Ordinal) && regs > 60, $"Yazmaçlar: {core} · {regs} G/Ç yazmacı");
+                    Check(p.Cosim.Mcu.Peek(0x5F) == p.Cosim.Mcu.StatusRegister && (p.Cosim.Mcu.StatusRegister & 0x80) != 0, "SREG'in I bayrağı açık (Arduino çekirdeği kesmeleri açtı)");
 
                     double before = p.Time();
                     Check(FirmwareDebugger.Step(p, DebugStepKind.Over), "Adım (F10)");
@@ -185,6 +189,9 @@ namespace RobotWin.Studio
                     Check(q != null && q.Debugger.Place is { } ql && ql.Line == testLine, $"adım bir sonraki satırda durdu: {q?.Debugger.Place}");
                     Check(q != null && FirmwareDebugInfo.Format(angle, q.Cosim.Mcu.ReadData) == "2", "angle += step çalıştı: angle = 2");
                     Check(q != null && q.Time() > before && q.Time() - before < 1e-3, $"adım {((q?.Time() ?? before) - before) * 1e6:F1} µs sürdü");
+                    var (_, _, changed) = _code.RegistersShown();
+                    var (_, _, again) = _code.RegistersShown();
+                    Check(changed > 0 && again == changed, $"adımın değiştirdiği yazmaçlar renkli: {changed} (ikinci bakışta da {again})");
 
                     if (q != null)
                     {
@@ -203,6 +210,7 @@ namespace RobotWin.Studio
                 log.AppendLine("FAIL beklenmeyen hata: " + ex);
             }
 
+            if (registers) _code.ShowRegistersTab();
             log.AppendLine(failures == 0 ? "TÜMÜ GEÇTİ" : failures + " HATA");
             File.WriteAllText(logPath, log.ToString());
         }

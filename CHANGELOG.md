@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Registers tab in the debugger:** the ATmega328P's core (PC, SP, SREG flags, X/Y/Z, R0–R31, cycles) and its 75 peripheral registers by name and group, with the set bits named and 16-bit pairs combined; what changed since the last look is orange. Reading for display has none of a real read's side effects.
+
 - **Arm deflection:** each robot axis has a torsional stiffness (its own, or estimated from its rating: about 350 N·m/rad per N·m for an industrial reducer, 6 for a hobby servo), and the cell panel shows how far the tool sags under the weight it holds, and how much of that the payload adds, at the arm's current pose.
 
 - **Sensor sheets completed:** an HC-SR04 measurement jitters by 1.5 mm (σ), a compass has its 2 mG noise floor, and a GPS solution describes where the antenna was 80 ms before its output (stamped with that epoch), so a fusion filter that takes it as "now" lags a moving robot as on the bench. The world guide's sensor table gives each one's range, resolution, latency and noise.

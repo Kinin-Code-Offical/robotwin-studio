@@ -185,6 +185,65 @@
                     </ScrollViewer>
                 </DockPanel>
             </TabItem>
+            <TabItem x:Name="RegistersTab" Header="Yazmaçlar">
+                <DockPanel Margin="10,6,10,6">
+                    <TextBlock x:Name="RegistersNote" DockPanel.Dock="Bottom" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <ScrollViewer DockPanel.Dock="Left" Width="400" Margin="0,0,24,0" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock x:Name="CoreLine" FontFamily="{StaticResource F.Mono}" FontSize="12.5"/>
+                            <TextBlock x:Name="CycleLine" Style="{StaticResource Text.Caption}" Margin="0,2,0,8"/>
+                            <ItemsControl x:Name="GeneralRegisters">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="4"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Value}" Foreground="{Binding ValueBrush}" ToolTip="{Binding Tip}" FontFamily="{StaticResource F.Mono}" FontSize="12" Margin="0,1"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Yazmaç" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="1" Text="Değer" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="2" Text="İkili" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="3" Text="Adres" Style="{StaticResource Text.Caption}"/>
+                        <TextBlock Grid.Column="4" Text="Açık bitler" Style="{StaticResource Text.Caption}"/>
+                    </Grid>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="RegistersList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="{Binding Spacing}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}" Foreground="{Binding NameBrush}" FontWeight="{Binding Weight}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" ToolTip="{Binding Tip}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="{Binding ValueBrush}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" ToolTip="{Binding Tip}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Binary}" Foreground="{Binding ValueBrush}" FontFamily="{StaticResource F.Mono}" FontSize="12.5"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Address}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{DynamicResource B.TextSecondary}"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding Flags}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{DynamicResource B.TextSecondary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Flags}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </TabItem>
         </TabControl>
 
         <Border Grid.Row="4" Background="{DynamicResource B.Canvas}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
