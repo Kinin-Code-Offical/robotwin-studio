@@ -939,6 +939,9 @@ namespace RobotWin.Studio.Pages
             Canvas.InvalidateVisual();
         }
 
+        /// <summary>[palette] Runs the design rule check as its button does.</summary>
+        public void RunDrc() => OnDrc(this, new RoutedEventArgs());
+
         private async void OnDrc(object sender, RoutedEventArgs e)
         {
             if (_working) return;

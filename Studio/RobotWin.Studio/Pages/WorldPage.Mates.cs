@@ -160,6 +160,25 @@ namespace RobotWin.Studio.Pages
             if (r != null) W.Status = MateName(kind) + ": " + Describe(world, r, b.Object);
         }
 
+        /// <summary>
+        /// [palette] Checks every mate of the world on a copy (nothing moves): placed, how much freedom is left, or which mates
+        /// repeat or contradict each other; said in the status bar.
+        /// </summary>
+        public void CheckMates()
+        {
+            if (World == null) return;
+            int count = World.Mates?.Count ?? 0;
+            if (count == 0)
+            {
+                W.Status = "Montaj ilişkisi yok (Hizala aracı, H)";
+                return;
+            }
+
+            var copy = WorldDocument.FromJson(World.ToJson());
+            var r = WorldMates.Solve(copy, explain: true);
+            W.Status = $"Montaj ilişkileri ({count}): " + Describe(copy, r);
+        }
+
         /// <summary>After a drag: the mated parts follow the dragged one (and a fully placed one goes back). True when anything moved.</summary>
         private bool ResolveMates()
         {

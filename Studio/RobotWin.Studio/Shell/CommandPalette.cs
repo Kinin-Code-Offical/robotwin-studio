@@ -9,25 +9,6 @@ using System.Windows.Media;
 
 namespace RobotWin.Studio.Shell
 {
-    /// <summary>One entry of the command palette.</summary>
-    public sealed class PaletteCommand
-    {
-        public PaletteCommand(string group, string title, Action run, string? shortcut = null, string? detail = null)
-        {
-            Group = group;
-            Title = title;
-            Run = run;
-            Shortcut = shortcut ?? string.Empty;
-            Detail = detail ?? string.Empty;
-        }
-
-        public string Group { get; }
-        public string Title { get; }
-        public string Shortcut { get; }
-        public string Detail { get; }
-        public Action Run { get; }
-    }
-
     /// <summary>
     /// Ctrl+K / Ctrl+Shift+P: type to find any command, page, open tab, file, template or part,
     /// arrow keys to choose, Enter to run, Esc to close.
@@ -39,6 +20,7 @@ namespace RobotWin.Studio.Shell
         private readonly ScrollViewer _scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 440 };
         private readonly TextBlock _empty = new TextBlock { Text = "Eşleşen komut yok", Margin = new Thickness(14, 10, 14, 12), Visibility = Visibility.Collapsed };
         private Func<IEnumerable<PaletteCommand>> _source = () => Array.Empty<PaletteCommand>();
+        private string? _context;
         private List<PaletteCommand> _all = new List<PaletteCommand>();
         private List<PaletteCommand> _shown = new List<PaletteCommand>();
         private int _index;
@@ -86,10 +68,11 @@ namespace RobotWin.Studio.Shell
 
         public bool IsOpen => Visibility == Visibility.Visible;
 
-        public void Open(Func<IEnumerable<PaletteCommand>> source, string initial = "")
+        public void Open(Func<IEnumerable<PaletteCommand>> source, string initial = "", string? context = null)
         {
             _source = source;
-            _all = source().ToList();
+            _context = context;
+            _all = source().Where(c => c.Ready == null || SafeReady(c)).ToList();
             _returnFocus = Keyboard.FocusedElement;
             Visibility = Visibility.Visible;
             _query.Text = initial;
@@ -104,28 +87,16 @@ namespace RobotWin.Studio.Shell
             if (_returnFocus is UIElement e && e.IsVisible) e.Focus();
         }
 
-        private static string Fold(string s) => s.ToLower(new CultureInfo("tr-TR"))
-            .Replace('ı', 'i').Replace('ş', 's').Replace('ğ', 'g').Replace('ü', 'u').Replace('ö', 'o').Replace('ç', 'c');
-
-        /// <summary>Subsequence match score: consecutive and word-start hits rank higher; -1 = no match.</summary>
-        private static int Score(string text, string query)
+        private static bool SafeReady(PaletteCommand c)
         {
-            if (query.Length == 0) return 0;
-            string t = Fold(text), q = Fold(query);
-            int direct = t.IndexOf(q, StringComparison.Ordinal);
-            if (direct >= 0) return 1000 - direct * 3 - t.Length / 4 + (direct == 0 || t[direct - 1] == ' ' ? 200 : 0);
-            int score = 0, ti = 0, run = 0;
-            foreach (char c in q)
+            try
             {
-                if (c == ' ') continue;
-                int found = t.IndexOf(c, ti);
-                if (found < 0) return -1;
-                run = found == ti ? run + 1 : 0;
-                score += 10 + run * 8 + (found == 0 || t[found - 1] == ' ' ? 15 : 0);
-                ti = found + 1;
+                return c.Ready!();
             }
-
-            return score - t.Length / 4;
+            catch (Exception ex) when (ex is InvalidOperationException || ex is NullReferenceException)
+            {
+                return false;
+            }
         }
 
         private void Filter()
@@ -134,12 +105,19 @@ namespace RobotWin.Studio.Shell
             IEnumerable<PaletteCommand> hits;
             if (q.Length == 0)
             {
-                // Without a query: everything except the long part list.
-                hits = _all.Where(c => c.Group != "Parça ekle").Take(60);
+                // Without a query: the page in front's commands first, then the rest; not the long lists (parts, probes).
+                hits = _all.Where(c => !c.OnlyWhenAsked).OrderByDescending(c => _context != null && c.Context == _context).Take(60);
             }
             else
             {
-                hits = _all.Select(c => (c, s: Math.Max(Math.Max(Score(c.Title, q), Score(RobotWin.Studio.Shell.Lang.T(c.Title), q)), Math.Max(Score(c.Group + " " + c.Title, q), Score(RobotWin.Studio.Shell.Lang.T(c.Group) + " " + RobotWin.Studio.Shell.Lang.T(c.Title), q)) - 40)))
+                // [palette] word by word first ("MOSFET ekle"); the old run-together match for a query typed as one piece
+                hits = _all.Select(c =>
+                    {
+                        int words = PaletteMatch.WordScore(c, q, _context);
+                        int run = Math.Max(Math.Max(PaletteMatch.Score(c.Title, q), PaletteMatch.Score(RobotWin.Studio.Shell.Lang.T(c.Title), q)), Math.Max(PaletteMatch.Score(c.Group + " " + c.Title, q), PaletteMatch.Score(RobotWin.Studio.Shell.Lang.T(c.Group) + " " + RobotWin.Studio.Shell.Lang.T(c.Title), q)) - 40);
+                        if (run >= 0 && _context != null && c.Context == _context) run += 60;
+                        return (c, s: Math.Max(words >= 0 ? words + 300 : -1, run));
+                    })
                     .Where(x => x.s >= 0).OrderByDescending(x => x.s).Take(60).Select(x => x.c);
             }
 

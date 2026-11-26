@@ -249,7 +249,7 @@ namespace RobotWin.Studio
         public void OpenPalette()
         {
             if (_palette.IsOpen) _palette.Close();
-            else _palette.Open(PaletteCommands);
+            else _palette.Open(PaletteCommands, context: _current);
         }
 
         private IEnumerable<PaletteCommand> PaletteCommands()
@@ -307,7 +307,38 @@ namespace RobotWin.Studio
                 {
                     Navigate("schematic");
                     _schematic.RunEditorCommand(c);
-                }, keys);
+                }, keys) { Context = "schematic", Keywords = c == RobotWin.Studio.Editor.SchematicCommand.Erc ? "çalıştır denetle kontrol hata run check" : string.Empty };
+            }
+
+            // [palette] what the user means more than where a menu keeps it: cross-probing, checks, measuring
+            yield return new PaletteCommand("Devre şeması", "Seçili parçayı PCB'de göster", () =>
+            {
+                if (_schematic.SelectedPart is { } part) ShowPartInPcb(part.RefDes);
+            }, null, _schematic.SelectedPart?.RefDes)
+            { Context = "schematic", Keywords = "bul çapraz cross probe show find", Ready = () => _current == "schematic" && _schematic.SelectedPart != null && W.Schematic.Board != null };
+            yield return new PaletteCommand("PCB", "DRC çalıştır (tasarım kuralı denetimi)", () =>
+            {
+                Navigate("pcb");
+                Dispatcher.BeginInvoke(new Action(_pcb.RunDrc), System.Windows.Threading.DispatcherPriority.Loaded);
+            }) { Context = "pcb", Keywords = "denetle kontrol kural hata run check design rule", Ready = () => W.Schematic.Board != null };
+            yield return new PaletteCommand("Dünya", "Montaj ilişkilerini denetle", () =>
+            {
+                Navigate("world");
+                _world.CheckMates();
+            }) { Context = "world", Keywords = "kontrol çelişki serbestlik mate check constraints", Ready = () => W.ActiveWorld?.Mates?.Count > 0 };
+            foreach (var p in W.Schematic.Parts)
+            {
+                var def = W.Library.Find(p.PartId);
+                if (def == null || def.Symbol is RobotTwin.CoreSim.Design.SymbolKind.Ground or RobotTwin.CoreSim.Design.SymbolKind.PowerRail) continue;
+                string refDes = p.RefDes;
+                yield return new PaletteCommand("Ölç", $"{refDes} akımını izle", () =>
+                {
+                    Navigate("schematic");
+                    W.Simulation.AddCurrentProbe(refDes);
+                    _schematic.ShowScope();
+                    if (W.Simulation.State == SimState.Stopped) W.Status = $"{refDes} akımı osiloskopta; simülasyonu başlatın (F5)";
+                }, null, def.Name)
+                { Context = "schematic", OnlyWhenAsked = true, Keywords = "ölç osiloskop akım prob watch current probe monitor " + def.Name + " " + def.Category };
             }
             foreach (var t in Examples.WorldTemplates.All)
             {
@@ -334,7 +365,12 @@ namespace RobotWin.Studio
             foreach (var preset in W.Library.Presets)
             {
                 var id = preset.Id;
-                yield return new PaletteCommand("Parça ekle", preset.Name, () => PlacePart(id), null, preset.Category);
+                yield return new PaletteCommand("Parça ekle", preset.Name, () => PlacePart(id), null, preset.Category)
+                {
+                    Context = "schematic",
+                    OnlyWhenAsked = true,
+                    Keywords = "ekle yerleştir koy add place " + preset.Category
+                };
             }
         }
 

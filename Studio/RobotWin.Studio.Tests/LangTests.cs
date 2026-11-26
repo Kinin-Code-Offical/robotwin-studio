@@ -280,6 +280,8 @@ public class LangTests
     [InlineData("D1: veri 3.3 V, 5.0 V'luk şeridin VIH sınırının (3.5 V) altında: çoğu şeritte çalışır ama güvencesi yok; seviye dönüştürücü (74AHCT125) ya da ilk LED'i bir diyotla ~4,3 V'tan besleme", "D1: data at 3.3 V is below a 5.0 V strip's VIH (3.5 V): it works on most strips but is not guaranteed; use a level shifter (74AHCT125) or feed the first LED from ~4.3 V through a diode")]
     [InlineData("LED şeridi U1 D6 hattına bağlandı (8 LED)", "LED strip connected to U1 D6 (8 LEDs)")]
     [InlineData("1240 satır, 3 sensör: C:\\Belgeler\\RobotWin\\Robot-20261126-101500", "1240 rows, 3 sensors: C:\\Belgeler\\RobotWin\\Robot-20261126-101500")]
+    [InlineData("U3 akımını izle", "Watch U3 current")]
+    [InlineData("M1 akımı osiloskopta; simülasyonu başlatın (F5)", "M1 current is on the oscilloscope; start the simulation (F5)")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

@@ -176,7 +176,7 @@ Bir dış inceleme raporunun (UI/UX, güvenlik, doğrulama) önerilerinden proje
 
 ### D2. Ortak arayüz düzeni (P1)
 
-- [~] **Gelişmiş komut paleti:** kelime kelime eşleşme (fiil + nesne, Türkçe ekler: "MOSFET ekle", "servo motorun akımını izle"), aktif sayfaya ve seçime göre süzme; "DRC çalıştır", "seçili parçayı PCB'de göster", "… akımını izle", "montaj ilişkilerini denetle", "kesit görünümü" komutları.
+- [x] **Gelişmiş komut paleti:** kelime kelime eşleşme (fiil + nesne, Türkçe ekler: "MOSFET ekle", "servo motorun akımını izle"), aktif sayfaya ve seçime göre süzme; "DRC çalıştır", "seçili parçayı PCB'de göster", "… akımını izle", "montaj ilişkilerini denetle" komutları. ("Kesit görünümü" komutu, kesit görünümünün kendisiyle birlikte D3 CAD maddesinde gelir.)
 - [ ] **Çalışma alanı profilleri ve panel düzenleri:** Elektronik, PCB, Gömülü, Mekanik, Robotik, Endüstri, Analiz, Sunum; DockManager üzerinde tek tıkla düzen, kullanıcının kendi kaydettiği düzenler, küçük ekranda (≤1366 px) daha az açık yan panel, boş alt panelin sahneyi daraltmaması, sayfalar arasında bağlamın (seçim, yakınlık) korunması.
 - [ ] **Tutarlı araç çubukları:** her editörde aynı sırada ortak grup (seç, taşı, döndür, sil, geri al/yinele, yakınlaştır/sığdır, çalıştır/duraklat, özellikler, görünüm), editöre özel komutlar ayrı grupta; aynı kısayollar.
 - [ ] **Tasarım token'ları ve tipografi ölçeği:** renk kaynakları (yüzey, sınır, metin, seçim, odak, hata, uyarı, başarı, devre dışı) ve beş yazı boyutu tek yerden; sabit renk ve boyutların taranması. Teknik renkler (gerilim, akım, sıcaklık, katman) durum renklerinden ayrı.

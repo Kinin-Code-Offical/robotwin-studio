@@ -70,7 +70,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 
 ### Window features
 
-- **Command palette (Ctrl+K):** find any command, page or part by typing its name.
+- **Command palette (Ctrl+K):** find any command, page or part by typing its name. You can also type what you want like a sentence, in any word order: "add MOSFET", "watch U3 current", "run design rule check", "show the selected part on the PCB", "check the assembly mates" (the Turkish interface also takes Turkish case endings: "servo motorun akımını izle"). The open page's commands come first, and only the commands that can run right now (such as "show on the PCB" while a part is selected) are listed.
 - **Split view (Ctrl+\\):** shows two pages side by side, e.g. the circuit and the PCB together.
 - **Detach:** **Window → Move this page to a separate window** moves a page to a second window (e.g. a second monitor).
 - **Focus mode:** **View → Focus mode** hides the navigation rail.

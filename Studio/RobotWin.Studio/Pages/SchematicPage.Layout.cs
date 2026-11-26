@@ -41,6 +41,12 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>Brings a bottom tab into view wherever the user put it (index into <see cref="DockKeys"/>).</summary>
+        /// <summary>[palette] The part selected on the sheet, if any.</summary>
+        public RobotTwin.CoreSim.Design.SchematicPart? SelectedPart => System.Linq.Enumerable.FirstOrDefault(System.Linq.Enumerable.OfType<RobotTwin.CoreSim.Design.SchematicPart>(Canvas.Selection));
+
+        /// <summary>[palette] Brings the oscilloscope tab forward.</summary>
+        public void ShowScope() => ShowDock(0);
+
         private void ShowDock(int index)
         {
             if (_dock != null) _dock.Reveal(DockKeys[index]);

@@ -70,7 +70,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 
 ### Pencere özellikleri
 
-- **Komut paleti (Ctrl+K):** her komutu, sayfayı ve parçayı adını yazarak bulun.
+- **Komut paleti (Ctrl+K):** her komutu, sayfayı ve parçayı adını yazarak bulun. Ne istediğinizi cümle gibi de yazabilirsiniz, kelimelerin sırası ve ekleri önemli değil: "MOSFET ekle", "servo motorun akımını izle", "DRC çalıştır", "seçili parçayı PCB'de göster", "montaj ilişkilerini denetle". Açık sayfanın komutları önce gelir; yalnızca o anda yapılabilecek komutlar (bir parça seçiliyken "PCB'de göster" gibi) listelenir.
 - **Bölünmüş görünüm (Ctrl+\\):** iki sayfayı yan yana gösterir; örneğin devre ile PCB'yi birlikte görürsünüz.
 - **Ayrı pencereye al:** **Pencere → Bu sayfayı ayrı pencereye al** ile bir sayfayı ikinci bir pencereye (örneğin ikinci monitöre) taşıyın.
 - **Odak modu:** **Görünüm → Odak modu** gezinme çubuğunu gizler.

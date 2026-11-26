@@ -7989,7 +7989,11 @@
   "Ağdan bağımsız sayılır.": "Counts as mesh-independent.",
   "Nokta yüklerin altındaki tekil tepe her FEM kodunda ağ inceldikçe büyür; bu yüzden %98'lik değer izlenir.": "The singular peak under point loads grows with mesh refinement in every FEM code; so the 98th-percentile value is followed.",
   ", üç ızgara": ", three grids",
-  ", iki ızgara": ", two grids"
+  ", iki ızgara": ", two grids",
+  "DRC çalıştır (tasarım kuralı denetimi)": "Run DRC (design rule check)",
+  "Montaj ilişkilerini denetle": "Check the assembly mates",
+  "Seçili parçayı PCB'de göster": "Show the selected part on the PCB",
+  "Montaj ilişkisi yok (Hizala aracı, H)": "No assembly mates (Align tool, H)"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11266,6 +11270,12 @@
   "Salınarak yakınsıyor; belirsizlik bandı %{…}.": "Converges with oscillation; uncertainty band {0}%.",
   "Izgara yakınsaması (üç ızgara): Cd {…} → {…} → {…}, gözlenen mertebe {…}, ızgaradan bağımsız Cd ≈ {…}, belirsizlik (GCI) ±%{…}.": "Grid convergence (three grids): Cd {0} → {1} → {2}, observed order {3}, grid-independent Cd ≈ {4}, uncertainty (GCI) ±{5}%.",
   "Izgara yakınsaması (üç ızgara): Cd {…} → {…} → {…}, fark ızgara inceldikçe büyüyor: henüz yakınsama bölgesinde değil (çözünürlüğü artırın); iki ızgaradan GCI ±%{…}.": "Grid convergence (three grids): Cd {0} → {1} → {2}; the difference grows as the grid refines: not yet in the asymptotic range (raise the resolution); two-grid GCI ±{3}%.",
-  "Izgara belirsizliği (GCI{…}): Cd ±%{…}.": "Grid uncertainty (GCI{0}): Cd ±{1}%."
+  "Izgara belirsizliği (GCI{…}): Cd ±%{…}.": "Grid uncertainty (GCI{0}): Cd ±{1}%.",
+  "{refDes} akımını izle": "Watch {0} current",
+  "{…} akımını izle": "Watch {0} current",
+  "{refDes} akımı osiloskopta; simülasyonu başlatın (F5)": "{0} current is on the oscilloscope; start the simulation (F5)",
+  "{…} akımı osiloskopta; simülasyonu başlatın (F5)": "{0} current is on the oscilloscope; start the simulation (F5)",
+  "Montaj ilişkileri ({count}): {…}": "Assembly mates ({0}): {1}",
+  "Montaj ilişkileri ({…}): {…}": "Assembly mates ({0}): {1}"
  }
 }
