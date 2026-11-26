@@ -51,7 +51,7 @@
                         </ToggleButton>
                         <!-- [gizmo] Unity's transform handles: W move, E rotate, R scale, Y all; their place and axes -->
                         <ToggleButton x:Name="GizmoMove" Style="{StaticResource Toggle.Tool}" Tag="Move" Click="OnGizmo" Margin="2,0,0,0"
-                                      ToolTip="Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız">
+                                      ToolTip="Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız · ortasından Ctrl+Shift ile sürükle: yüzeye oturt">
                             <t:Icon Data="{StaticResource I.Move}" Size="16"/>
                         </ToggleButton>
                         <ToggleButton x:Name="GizmoRotate" Style="{StaticResource Toggle.Tool}" Tag="Rotate" Click="OnGizmo"

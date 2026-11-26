@@ -1437,7 +1437,14 @@ namespace RobotWin.Studio.World
                 }
 
                 double nx = o.Pose.X, ny = o.Pose.Y, nz = o.Pose.Z;
-                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                if (SurfaceSnapHeld && SurfaceUnder(p, o) is { } onto)
+                {
+                    // [surface-snap] Ctrl+Shift: the part's base onto the surface under the cursor (World/WorldScene.SurfaceSnap.cs)
+                    nx = onto.X;
+                    ny = onto.Y;
+                    nz = onto.Z;
+                }
+                else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
                 {
                     double dz = -(p.Y - _dragStartScreen.Y) * _distance * 0.0016;
                     nz = Math.Max(0, Snap(_dragStartZ + dz));

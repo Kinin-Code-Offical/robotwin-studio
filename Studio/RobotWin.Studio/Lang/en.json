@@ -8399,7 +8399,6 @@
   "Düzlemin yeri: yazıp Enter (mm, cm, in, mil yazılabilir) · ↑/↓ 0,1 mm (Shift: 1 mm)": "Where the plane is: type and press Enter (mm, cm, in, mil can be typed) · ↑/↓ 0.1 mm (Shift: 1 mm)",
   "Zamana git (s): yazıp Enter": "Go to a time (s): type and press Enter",
   "Görev oranı (%): yazıp Enter": "Duty cycle (%): type and press Enter",
-  "Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız": "Move handle (W): axis arrows, plane squares, the middle in the screen plane · Alt: off the grid",
   "Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · 15° adım, Alt: serbest": "Rotate handle (E): X / Y / Z rings, the outer ring about the view axis, the inside free · 15° steps, Alt: free",
   "Ölçekle tutamacı (R): eksen küpleri, ortası üç eksen birden (gövdeler ve arazi nesneleri)": "Scale handle (R): axis cubes, the middle on all three axes (bodies and terrain objects)",
   "Hepsi bir arada (Y): taşı, döndür ve ölçekle tutamaçları birlikte": "All in one (Y): the move, rotate and scale handles together",
@@ -8498,7 +8497,8 @@
   "Bileşen açık / kapalı: kapalıyken çalıştırmada yok, ayarları saklanır": "Component on / off: when off it is not in the run and keeps its settings",
   "Bileşeni kopyala": "Copy component",
   "Değerleri yapıştır": "Paste values",
-  "Değerleri kopyala": "Copy values"
+  "Değerleri kopyala": "Copy values",
+  "Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız · ortasından Ctrl+Shift ile sürükle: yüzeye oturt": "Move handle (W): axis arrows, plane squares, the middle in the screen plane · Alt: no grid · drag the middle with Ctrl+Shift: onto the surface"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11939,6 +11939,7 @@
   "{…}: değerler yapıştırıldı": "{0}: values pasted",
   "{…}: fizik değerleri yapıştırıldı": "{0}: physics values pasted",
   "Yeni bileşen olarak yapıştır: {…}": "Paste as new component: {0}",
-  "{…} yapıştırıldı": "{0} pasted"
+  "{…} yapıştırıldı": "{0} pasted",
+  "{…} yüzeye oturtuldu": "{0} placed on the surface"
  }
 }

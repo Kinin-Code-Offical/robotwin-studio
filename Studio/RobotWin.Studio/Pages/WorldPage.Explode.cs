@@ -425,6 +425,13 @@ namespace RobotWin.Studio.Pages
             if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
                 Scene.ToggleSelect(extra.Id);
             if (args.Contains("--empty-parent")) CreateEmptyParent();   // [empty] the selection under a new empty
+            int ss = Array.IndexOf(args, "--surface-snap");   // [surface-snap] --surface-snap <part name>: the selection onto its top
+            if (ss >= 0 && ss + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[ss + 1], StringComparison.CurrentCultureIgnoreCase)) is { } onto)
+            {
+                Scene.FrameAll();   // both in view, as a user would have them
+                Scene.UpdateLayout();
+                Scene.SnapSelectedOnto(onto.Id);
+            }
             int mq = Array.IndexOf(args, "--marquee");   // [multiselect] --marquee x0,y0,x1,y1 (fractions of the view)
             if (mq >= 0 && mq + 1 < args.Length)
             {

@@ -165,6 +165,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Ctrl+D | Çoğalt |
 | Ctrl+tık / Shift+tık | Seçime ekle ya da çıkar / ağaçta aralık seç |
 | Shift+sürükle (boş yerde) | Dikdörtgenle seç (Ctrl+Shift: seçime ekle) |
+| Ctrl+Shift (parçayı sürüklerken) | Yüzeye oturt |
 | Ctrl+A | Hepsini seç |
 | Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Boş nesne / seçilinin altına boş nesne / seçileni boş üst nesnenin altına al |
 | Del | Sil |

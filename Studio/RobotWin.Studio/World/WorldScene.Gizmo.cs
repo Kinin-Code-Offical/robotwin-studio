@@ -690,6 +690,12 @@ namespace RobotWin.Studio.World
             }
 
             if (_gizmoDrag is GizmoPart.X or GizmoPart.Y && SurfaceSnap && World!.Terrain != null && Math.Abs(_gizmoPose.Z - GroundZAt(_gizmoPose.X, _gizmoPose.Y)) < 1e-3) nz = GroundZAt(nx, ny);
+            if (_gizmoDrag == GizmoPart.Screen && SurfaceSnapHeld && SurfaceUnder(p, o) is { } onto)   // [surface-snap] Unity's Ctrl+Shift
+            {
+                nx = onto.X;
+                ny = onto.Y;
+                nz = onto.Z;
+            }
             MoveGroupMates(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
             foreach (var other in _gizmoOthers) World!.MoveAssembly(other, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);   // [multiselect]
             World!.MoveAssembly(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
