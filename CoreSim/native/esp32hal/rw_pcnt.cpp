@@ -27,6 +27,7 @@ struct pcnt_chan_t {
     pcnt_channel_level_action_t high;
     pcnt_channel_level_action_t low;
     int stable;              // [pcnt-filter] the signal's level the counter has taken
+    uint64_t pwm_counted;    // [pcnt-pwm] up to when the pin's own PWM edges are counted
     bool pending;            // a new level waiting to outlast the filter
     int pending_level;
     uint64_t pending_at;
@@ -134,10 +135,17 @@ void input_pin(int gpio) {
 
 }  // namespace
 
+struct PwmOut {
+    double freq = 0, duty = -1;
+    uint64_t since = 0;
+};
+static PwmOut g_pwm[40];
+
 namespace rw {
 
 void hal_pcnt_reset() {
     memset(g_units, 0, sizeof g_units);
+    for (auto& p : g_pwm) p = PwmOut{};
     g_head = g_tail = 0;
 }
 
@@ -160,9 +168,50 @@ static void count_edge(pcnt_unit_t& u, pcnt_chan_t& ch, int level) {
     step(u, delta);
 }
 
+/* [pcnt-pwm] A PWM the chip drives on a pin itself (LEDC, MCPWM): its edges never come back from the circuit as an
+   input's do, so a counter on that pin counts them from the PWM's own timing, as the GPIO matrix feeds the chip's
+   output to the PCNT on the hardware: rising edges at k/f, falling ones at (k + duty)/f from when it started. */
+
+
+static long long edges_between(double a, double b, double f, double shift) {
+    return (long long)std::floor(b * f - shift) - (long long)std::floor(a * f - shift);
+}
+
+static void count_pwm(pcnt_unit_t& u, pcnt_chan_t& ch, uint64_t now_ns) {
+    if (ch.edge_gpio < 0 || ch.edge_gpio >= 40) return;
+    const PwmOut& p = g_pwm[ch.edge_gpio];
+    uint64_t from = ch.pwm_counted > p.since ? ch.pwm_counted : p.since;
+    ch.pwm_counted = now_ns;
+    if (!u.running || p.freq <= 0 || p.duty <= 0 || p.duty >= 1 || now_ns <= from) return;
+    double width = (p.duty < 1 - p.duty ? p.duty : 1 - p.duty) / p.freq * 1e9;
+    if (u.glitch_ns > 0 && width < (double)u.glitch_ns) return;   // narrower than the filter: never counted
+    double a = (from - p.since) * 1e-9, b = (now_ns - p.since) * 1e-9;
+    long long rises = edges_between(a, b, p.freq, 0), falls = edges_between(a, b, p.freq, p.duty);
+    if (rises > 10000000 || falls > 10000000) rises = falls = 10000000;   // a runaway: the count saturates its loop, not the host
+    for (long long i = 0; i < rises || i < falls; i++) {
+        if (i < rises) count_edge(u, ch, 1);
+        if (i < falls) count_edge(u, ch, 0);
+    }
+}
+
+void hal_pcnt_pwm(int gpio, double frequency, double duty, uint64_t now_ns) {
+    if (gpio < 0 || gpio >= 40) return;
+    PwmOut& p = g_pwm[gpio];
+    if (p.freq == frequency && p.duty == duty) return;
+    for (auto& u : g_units)   // the old PWM's edges up to now first
+        for (int c = 0; c < 2; c++)
+            if (u.used && u.chan_used[c] && u.chans[c].edge_gpio == gpio) count_pwm(u, u.chans[c], now_ns);
+    p.freq = frequency;
+    p.duty = duty;
+    p.since = now_ns;
+}
+
 void hal_pcnt_settle(uint64_t now_ns) {
     for (auto& u : g_units) {
-        if (!u.used || !u.running || u.glitch_ns == 0) continue;
+        if (!u.used) continue;
+        for (int c = 0; c < 2; c++)
+            if (u.chan_used[c]) count_pwm(u, u.chans[c], now_ns);   // [pcnt-pwm]
+        if (!u.running || u.glitch_ns == 0) continue;
         for (int c = 0; c < 2; c++) {
             pcnt_chan_t& ch = u.chans[c];
             if (!u.chan_used[c] || !ch.pending || now_ns < ch.pending_at + u.glitch_ns) continue;
@@ -291,6 +340,7 @@ extern "C" esp_err_t pcnt_unit_start(pcnt_unit_handle_t unit) {
     }
 
     unit->running = true;
+    for (auto& ch : unit->chans) ch.pwm_counted = rw::now_ns();   // [pcnt-pwm] its own PWM counts from now
     return ESP_OK;
 }
 

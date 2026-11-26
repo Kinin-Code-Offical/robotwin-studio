@@ -94,7 +94,8 @@ void hal_gpio_driver_reset();
 void hal_mcpwm_reset();                                    /* chip reset: every MCPWM timer and operator released (rw_mcpwm.cpp) */
 void hal_pwm_out(int gpio, double frequency, double duty);  /* a PWM on a pin through the host (duty < 0: released) */                               /* chip reset: driver/gpio.h's pin configurations (rw_gpio_driver.cpp) */                                     /* chip reset: every pulse counter unit released (rw_pcnt.cpp) */
 void hal_pcnt_edge(int gpio, int level, uint64_t time_ns);
-void hal_pcnt_settle(uint64_t now_ns);                       /* [pcnt-filter] edges that outlasted the glitch filter count */                   /* an input pin changed level (host thread, from hal_pin_changed) */
+void hal_pcnt_settle(uint64_t now_ns);
+void hal_pcnt_pwm(int gpio, double frequency, double duty, uint64_t now_ns);   /* [pcnt-pwm] a pin's own PWM (LEDC, MCPWM) changed */                       /* [pcnt-filter] edges that outlasted the glitch filter count */                   /* an input pin changed level (host thread, from hal_pin_changed) */
 int hal_pin_level(int gpio);                               /* an input pin's level as last seen, or -1 (rw_hal.cpp) */
 bool hal_pin_drives(int gpio);                             /* the sketch drives the pin (output, LEDC, DAC, tone) */                                      /* chip reset: every RMT channel released (rw_rmt.cpp) */
 

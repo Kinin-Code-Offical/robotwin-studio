@@ -166,6 +166,39 @@ void loop() {
 }
 ";
 
+        /// <summary>[pcnt-pwm] A pulse counter on the pin the chip's own LEDC drives: it counts the PWM's rising edges.</summary>
+        public const string PcntLedc = @"
+#include ""driver/pulse_cnt.h""
+pcnt_unit_handle_t unit = NULL;
+void setup() {
+  Serial.begin(115200);
+  ledcAttach(18, 1000, 8);
+  ledcWrite(18, 64);   // 1 kHz, 25 %
+  pcnt_unit_config_t cfg = {};
+  cfg.low_limit = -30000;
+  cfg.high_limit = 30000;
+  ESP_ERROR_CHECK(pcnt_new_unit(&cfg, &unit));
+  pcnt_chan_config_t ch = {};
+  ch.edge_gpio_num = 18;
+  ch.level_gpio_num = -1;
+  pcnt_channel_handle_t c;
+  ESP_ERROR_CHECK(pcnt_new_channel(unit, &ch, &c));
+  pcnt_channel_set_edge_action(c, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_HOLD);
+  ESP_ERROR_CHECK(pcnt_unit_enable(unit));
+  ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
+  ESP_ERROR_CHECK(pcnt_unit_start(unit));
+  delay(200);
+  int a = 0;
+  pcnt_unit_get_count(unit, &a);
+  ledcChangeFrequency(18, 4000, 8);   // faster for the next 100 ms
+  delay(100);
+  int b = 0;
+  pcnt_unit_get_count(unit, &b);
+  Serial.printf(""pwm a=%d b=%d\n"", a, b);
+}
+void loop() { delay(100); }
+";
+
         /// <summary>[pcnt-filter] Two pulse counters on one pin: one filters glitches up to 10 µs, the other up to 1 µs.</summary>
         public const string PcntFilter = @"
 #include ""driver/pulse_cnt.h""
@@ -304,7 +337,8 @@ void loop() {
                 ["ultrasonic"] = Ultrasonic,
                 ["rtos"] = Rtos,
                 ["memory"] = Memory,
-                ["pcnt-filter"] = PcntFilter
+                ["pcnt-filter"] = PcntFilter,
+                ["pcnt-ledc"] = PcntLedc
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -647,6 +681,22 @@ void loop() {
             Assert.InRange(tAt10, 500, 520);   // 10 × 50 ms after setup; millis() counts from the application's start, as on the chip
             Assert.InRange(fastAt10, 48, 53);
             Assert.True(rig.CoSim.WifiOn);
+        }
+
+        /// <summary>[pcnt-pwm] The chip counts its own LEDC PWM with its pulse counter (as the GPIO matrix feeds it on the hardware).</summary>
+        [Esp32Fact]
+        public void ThePulseCounterCountsTheChipsOwnPwm()
+        {
+            var (sch, _) = NewBoard();
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("pcnt-ledc"));
+            rig.Run(0.5, 1e-3);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            var line = serial.Split('\n').Single(l => l.StartsWith("pwm ", StringComparison.Ordinal)).Trim().Split(' ');
+            int a = int.Parse(line[1].Substring(2)), b = int.Parse(line[2].Substring(2));
+            Assert.InRange(a, 199, 201);   // 1 kHz for 200 ms
+            Assert.InRange(b - a, 398, 402);   // then 4 kHz for 100 ms
         }
 
         /// <summary>[pcnt-filter] 5 µs pulses at 20 kHz: the counter filtering up to 10 µs counts none, the one filtering up to 1 µs counts each.</summary>

@@ -139,6 +139,7 @@ int host_read(int pin) {
 }
 
 void host_pwm(int pin, double freq, double duty) {
+    hal_pcnt_pwm(pin, freq, duty, now_ns());   // [pcnt-pwm] a pulse counter on this pin counts the chip's own PWM
     if (!has_api || !api.pwm_write) return;
     ApiScope s;
     api.pwm_write(api.user, pin, freq, duty);
