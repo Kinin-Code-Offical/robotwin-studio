@@ -536,6 +536,33 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public double MaxWindingTempC { get; set; } = 130.0;
 
+        /// <summary>
+        /// [motor-thermal] The housing with its magnets and bearings: the second node of the motor's thermal model. The
+        /// winding (<see cref="Thermal"/>, light: it heats in seconds at a stall) gives its copper loss to the housing through
+        /// <see cref="WindingResistanceShare"/> of the motor's thermal resistance; the housing (heavy: minutes) takes the
+        /// brushes', bearings' and gear train's friction too and gives it all to the air through the rest. In steady state
+        /// the winding sits as hot as the one-node model put it.
+        /// </summary>
+        public double CaseTemperatureC { get; private set; } = 25.0;
+
+        /// <summary>[motor-thermal] The winding-to-housing part of <see cref="ThermalState.ThermalResistance"/> (the rest: housing to air).</summary>
+        public double WindingResistanceShare { get; set; } = 0.25;
+
+        /// <summary>[motor-thermal] The winding's part of <see cref="ThermalState.ThermalCapacitance"/> (the rest: the housing).</summary>
+        public double WindingCapacitanceShare { get; set; } = 0.1;
+
+        /// <summary>
+        /// [motor-thermal] The magnets' temperature coefficient (1/K): a hot motor's flux, so its back-EMF and torque
+        /// constant, drops (ferrite −0.2 %/K, the small DC motors' default; NdFeB −0.12 %/K). It spins faster unloaded and
+        /// gives less torque per amp.
+        /// </summary>
+        public double MagnetTempCo { get; set; } = -0.002;
+
+        /// <summary>[motor-thermal] The torque / back-EMF constant at the magnets' present temperature (V·s/rad = N·m/A).</summary>
+        public double HotConstant => MotorConstant * Math.Max(0.5, 1.0 + MagnetTempCo * (CaseTemperatureC - 25.0));
+
+        private double _k = double.NaN;   // the constant this step solves with
+
         /// <summary>Shaft locked by the mechanism (jam, blocked wheel): the motor stalls.</summary>
         public bool Jammed
         {
@@ -563,7 +590,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
         /// <summary>Output shaft angle in radians.</summary>
         public double OutputAngle { get; private set; }
 
-        public double OutputTorque => MotorConstant * Current * GearRatio * GearEfficiency;
+        public double OutputTorque => HotConstant * Current * GearRatio * GearEfficiency;
 
         public override int BranchCount => 2;
 
@@ -588,6 +615,8 @@ namespace RobotTwin.CoreSim.Analog.Devices
             _iPrev = _vPrev = _wPrev = _wDotPrev = 0.0;
             OutputAngle = 0.0;
             Thermal.Reset(25.0);
+            CaseTemperatureC = 25.0;
+            _caseReady = false;
         }
 
         /// <summary>A replacement part: cold, undamaged.</summary>
@@ -595,10 +624,53 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             base.Repair();
             Thermal.Reset(25.0);
+            CaseTemperatureC = 25.0;
+            _caseReady = false;
+        }
+
+        private bool _caseReady, _caseDriven;
+
+        /// <summary>[motor-thermal] The housing's temperature from a world's thermal network (its can node): the magnets follow it.</summary>
+        public void DriveCaseTemperature(double temperatureC)
+        {
+            CaseTemperatureC = temperatureC;
+            _caseDriven = true;
+        }
+
+        /// <summary>
+        /// [motor-thermal] One step of the two-node network, implicit (stable at any step): the winding takes the copper
+        /// loss, the housing the friction losses; winding → housing → air.
+        /// </summary>
+        private void AdvanceThermal(double copper, double friction, double dt, double ambientC)
+        {
+            if (Thermal.Driven)
+            {
+                if (!_caseDriven) CaseTemperatureC = Thermal.TemperatureC;   // a world's thermal network holds the motor
+                return;
+            }
+
+            if (!_caseReady || !Thermal.Initialized)
+            {
+                if (!Thermal.Initialized) Thermal.Reset(ambientC);
+                CaseTemperatureC = Thermal.TemperatureC;
+                _caseReady = true;
+            }
+
+            double r = Thermal.ThermalResistance, c = Thermal.ThermalCapacitance;
+            if (dt <= 0.0 || r <= 0.0) return;
+            double rwc = Math.Max(1e-6, WindingResistanceShare * r), rca = Math.Max(1e-6, r - rwc);
+            double cw = Math.Max(1e-9, WindingCapacitanceShare * c), cc = Math.Max(1e-9, c - cw);
+            double tw = Thermal.TemperatureC, tc = CaseTemperatureC;
+            double a11 = cw / dt + 1 / rwc, a12 = -1 / rwc, b1 = cw / dt * tw + copper;
+            double a21 = -1 / rwc, a22 = cc / dt + 1 / rwc + 1 / rca, b2 = cc / dt * tc + friction + ambientC / rca;
+            double det = a11 * a22 - a12 * a21;
+            Thermal.Set((b1 * a22 - a12 * b2) / det);
+            CaseTemperatureC = (a11 * b2 - a21 * b1) / det;
         }
 
         public override void BeginStep(StepInfo step)
         {
+            _k = HotConstant;   // [motor-thermal] the magnets as warm as the housing is now
             double load = LoadTorque / (GearRatio * Math.Max(GearEfficiency, 0.05));
             _friction = CoulombFriction * Math.Tanh(_wPrev / 0.5) + load;
 
@@ -641,7 +713,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
                 ctx.AddRowNode(ki, A, 1.0);
                 ctx.AddRowNode(ki, B, -1.0);
                 ctx.AddMatrix(ki, ki, -(HotResistance + _req));
-                ctx.AddMatrix(ki, kw, -MotorConstant);
+                ctx.AddMatrix(ki, kw, -K);
                 ctx.AddRhs(ki, _veq);
             }
 
@@ -654,7 +726,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
             // (J alpha + b) w - Kt i = J history - friction
             ctx.AddMatrix(kw, kw, TotalInertia * _alpha + ViscousFriction + (ctx.IsDc ? 1e-9 : 0.0));
-            ctx.AddMatrix(kw, ki, -MotorConstant);
+            ctx.AddMatrix(kw, ki, -K);
             ctx.AddRhs(kw, _wHist - _friction);
         }
 
@@ -663,9 +735,9 @@ namespace RobotTwin.CoreSim.Analog.Devices
             double i = ctx.Unknown(BranchBase);
             double w = ctx.Unknown(BranchBase + 1);
             double v = ctx.V(A, B);
-            double vL = v - HotResistance * i - MotorConstant * w;
+            double vL = v - HotResistance * i - K * w;
             double wDot = TotalInertia > 0.0
-                ? (MotorConstant * i - ViscousFriction * w - _friction) / TotalInertia
+                ? (K * i - ViscousFriction * w - _friction) / TotalInertia
                 : 0.0;
 
             if (!ctx.IsDc) OutputAngle += 0.5 * (w + _wPrev) * ctx.Dt / GearRatio;
@@ -680,7 +752,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
             // Only the motor's own friction is heat here; the load torque is shaft power delivered to the load.
             FrictionLoss = Math.Abs(CoulombFriction * Math.Tanh(w / 0.5) * w) + ViscousFriction * w * w;
             GearLoss = Math.Abs(LoadTorque * w / GearRatio) * (1 / Math.Max(GearEfficiency, 0.05) - 1);
-            Thermal.Advance(i * i * HotResistance, ctx.Dt, ctx.AmbientTempC);
+            AdvanceThermal(i * i * HotResistance, FrictionLoss + GearLoss, ctx.Dt, ctx.AmbientTempC);   // [motor-thermal]
             if (ctx.EnableDamage && !IsFailed && Thermal.TemperatureC > MaxWindingTempC)
             {
                 Fail(FailureMode.Open, $"sargı {Thermal.TemperatureC:F0} °C'de yandı ({Math.Abs(i):F2} A, motor zorlanıyor/kilitli olabilir)", ctx);
@@ -695,7 +767,11 @@ namespace RobotTwin.CoreSim.Analog.Devices
             sink.Write(Id, "ANGLE", OutputAngle);
             sink.Write(Id, "TORQUE", OutputTorque);
             sink.Write(Id, "T", Thermal.TemperatureC);
+            sink.Write(Id, "TCASE", CaseTemperatureC);   // [motor-thermal]
         }
+
+        /// <summary>The constant this step solves with (the magnets' temperature at its start).</summary>
+        private double K => double.IsNaN(_k) ? HotConstant : _k;
     }
 
     /// <summary>Electromechanical relay: inductive coil, pull-in/drop-out hysteresis, operate delay, COM/NO/NC contacts.</summary>

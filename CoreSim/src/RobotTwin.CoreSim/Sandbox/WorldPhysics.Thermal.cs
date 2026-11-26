@@ -184,6 +184,7 @@ namespace RobotTwin.CoreSim.Sandbox
             _thermalNodes.Add(mt.Winding);
             motor.Thermal.Driven = true;
             motor.Thermal.Set(mt.Winding.T);
+            motor.DriveCaseTemperature(mt.Can.T);   // [motor-thermal] the magnets sit in the can
             _motorThermal.Add(mt);
         }
 
@@ -339,7 +340,11 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
             }
 
-            foreach (var mt in _motorThermal) mt.Motor.Thermal.Set(mt.Winding.T);   // the copper resistance follows the winding
+            foreach (var mt in _motorThermal)
+            {
+                mt.Motor.Thermal.Set(mt.Winding.T);   // the copper resistance follows the winding
+                mt.Motor.DriveCaseTemperature(mt.Can.T);   // [motor-thermal] the magnets' flux the can
+            }
             foreach (var (b, n) in _batteryThermal) b.Thermal.Set(n.T);
             foreach (var n in _thermalNodes)
                 if (!n.Inner) Respond(n);

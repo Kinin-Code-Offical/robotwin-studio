@@ -45,6 +45,10 @@ flowchart LR
 
 Sargının sıcaklığı bakırın direncini değiştirir (°C başına +%0,393); ısınan motor aynı gerilimde daha az akım çeker ve daha az tork verir. Sarı TT motorun vidaları plastik dişli kutusuna girdiği için ısı şaseye çok az ulaşır; bu yüzden şase değil sargı ısınır.
 
+Mıknatısların akısı da sıcaklıkla düşer: ferrit mıknatıs °C başına −%0,2, NdFeB −%0,12. Isınan motorun karşı-EMK ve tork sabiti küçülür; boşta daha hızlı döner, amper başına daha az tork verir. Gövdesi 25 °C'den 92 °C'ye ısınan ferritli bir motor boşta %13,6 daha hızlı döner (`MotorThermalTests`).
+
+Dünyanın dışında (Devre sayfası, araç montajı) motorun kendi iki düğümlü modeli çalışır. Sargı hafiftir: ısı sığasının %10'u, ısıl direncin %25'i sargıdan gövdeye. Gövde ağırdır ve sürtünme ile dişli kaybını da alıp havaya verir. Kilitlenen motorda sargı birkaç saniyede ısınır, gövde dakikalar içinde. Kalıcı durumda sargı tek düğümlü modelin bulduğu sıcaklıktadır. Dünyada bu işi yukarıdaki ısı ağı yapar; mıknatıslar orada gövde (kutu) düğümünün sıcaklığını izler.
+
 ## Pil
 
 Pilin ısısı iç direnç ve polarizasyon kaybıdır: $`P = I^2R + \lvert I\,V_p \rvert`$. Lityum hücreler 130 °C'yi aşınca termal kaçağa girer (devrede açık devre olur, olay yazılır).

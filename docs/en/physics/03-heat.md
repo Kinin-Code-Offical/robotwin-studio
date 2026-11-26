@@ -45,6 +45,10 @@ flowchart LR
 
 The winding temperature changes copper's resistance (+0.393 % per °C): a warm motor draws less current at the same voltage and gives less torque. A yellow TT motor's screws go into its plastic gearbox, so little heat reaches the chassis: the winding heats, not the chassis.
 
+The magnets' flux drops with temperature too: ferrite magnets by −0.2 % per °C, NdFeB by −0.12 %. A warm motor's back-EMF and torque constant shrink; it spins faster unloaded and gives less torque per amp. A ferrite motor whose housing has warmed from 25 °C to 92 °C spins 13.6 % faster unloaded (`MotorThermalTests`).
+
+Outside the world (the Circuit page, a vehicle assembly) the motor runs its own two-node model. The winding is light: 10 % of the heat capacity, and 25 % of the thermal resistance lies from winding to housing. The housing is heavy and also takes the friction and gear losses, passing all the heat to the air. In a stalled motor the winding heats within seconds, the housing within minutes. In steady state the winding sits where the one-node model put it. In the world the thermal network above does this, and the magnets follow its housing (can) node.
+
 ## Battery
 
 A battery heats by its internal resistance and polarization loss: $`P = I^2R + \lvert I\,V_p \rvert`$. Lithium cells above 130 °C go into thermal runaway (they turn into an open circuit and an event is written).
