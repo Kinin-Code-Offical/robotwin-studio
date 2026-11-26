@@ -275,6 +275,8 @@ public class LangTests
     [InlineData("1. GY-521 MPU-6050 Modülü (VCC): 1.00 ms'de çalışma aralığında, 3.20–3.20 V gördü", "1. GY-521 MPU-6050 Module (VCC): within its operating range at 1.00 ms, saw 3.20–3.20 V")]
     [InlineData("HC-SR04 Ultrasonik Sensör: VCC hiç 4.50 V'a çıkmadı (en çok 3.209 V): veri sayfasındaki çalışma aralığının altında", "HC-SR04 Ultrasonic Sensor: VCC never reached 4.50 V (at most 3.209 V): below its datasheet operating range")]
     [InlineData("SG90 Mikro Servo: V+ 9.59 V'u gördü, en çok 6.00 V olmalı", "SG90 Micro Servo: V+ saw 9.59 V, should be at most 6.00 V")]
+    [InlineData("bellek: çizim 300 KB tutuyor (yığın 260 KB, görev yığınları 40 KB); gerçek bir ESP32'de yaklaşık 289 KB boş yığın var, orada bellek biterdi (malloc NULL döner, new çöker)", "memory: the sketch holds 300 KB (heap 260 KB, task stacks 40 KB); a real ESP32 has about 289 KB of free heap, so it would run out there (malloc returns NULL, new crashes)")]
+    [InlineData("bellek: çizim 250 KB tutuyor; bu, gerçek bir ESP32'deki boş yığının (~289 KB) yüzde 86 kadarı, kart üzerinde az yer kaldı", "memory: the sketch holds 250 KB, 86 % of a real ESP32's free heap (~289 KB); little room is left on the board")]
     [InlineData("1240 satır, 3 sensör: C:\\Belgeler\\RobotWin\\Robot-20261126-101500", "1240 rows, 3 sensors: C:\\Belgeler\\RobotWin\\Robot-20261126-101500")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {

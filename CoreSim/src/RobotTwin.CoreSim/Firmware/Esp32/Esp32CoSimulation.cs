@@ -278,6 +278,44 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>Set when the sketch reported a hung task (watchdog); cleared on the next boot.</summary>
         public int WatchdogResets { get; private set; }
 
+        /// <summary>
+        /// [mem-budget] The heap an ESP32 running the Arduino core has free when setup() begins (bytes): the fast mode runs
+        /// on the PC's memory, so this is what the sketch is measured against.
+        /// </summary>
+        public const long HeapBudget = 296_000;
+
+        /// <summary>[mem-budget] The most the sketch has held (heap + its tasks' stacks, bytes) since it started; −1 when unknown.</summary>
+        public long PeakMemory { get; private set; } = -1;
+
+        /// <summary>[mem-budget] 0 no warning yet, 1 warned that memory runs low (85 %), 2 that a real board would have run out.</summary>
+        public int MemoryWarning { get; private set; }
+
+        private double _memoryChecked = double.NegativeInfinity;
+
+        /// <summary>
+        /// [mem-budget] A real ESP32 has ~296 KB of heap for the sketch, the PC gigabytes: what the sketch holds (its
+        /// allocations and its tasks' stacks, which the chip takes from the heap) is checked a few times a second, and the
+        /// log says once when it nears the chip's heap and once when the chip would have run out of it.
+        /// </summary>
+        private void CheckMemory(double now)
+        {
+            if (now - _memoryChecked < 0.2 || _module == null) return;
+            _memoryChecked = now;
+            if (_module.Memory() is not var (heap, stacks)) return;
+            long used = heap + stacks;
+            if (used > PeakMemory) PeakMemory = used;
+            if (used > HeapBudget && MemoryWarning < 2)
+            {
+                MemoryWarning = 2;
+                Note($"bellek: çizim {used / 1024} KB tutuyor (yığın {heap / 1024} KB, görev yığınları {stacks / 1024} KB); gerçek bir ESP32'de yaklaşık {HeapBudget / 1024} KB boş yığın var, orada bellek biterdi (malloc NULL döner, new çöker)");
+            }
+            else if (used > HeapBudget * 85 / 100 && MemoryWarning < 1)
+            {
+                MemoryWarning = 1;
+                Note($"bellek: çizim {used / 1024} KB tutuyor; bu, gerçek bir ESP32'deki boş yığının (~{HeapBudget / 1024} KB) yüzde {used * 100 / HeapBudget} kadarı, kart üzerinde az yer kaldı");
+            }
+        }
+
         public bool WifiOn => _wifiOn;
 
         /// <summary>I²C bus driven by Wire (SDA 21 / SCL 22 by default).</summary>
@@ -397,6 +435,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 DeliverSerial(now, end);
 
                 int status = _module.RunUntil(Ns(end));
+                CheckMemory(end);
                 if (status == Esp32Abi.StatusWatchdog || status == Esp32Abi.StatusCrashed)
                 {
                     string msg = _module.StatusMessage();

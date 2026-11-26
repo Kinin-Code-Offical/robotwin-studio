@@ -7977,7 +7977,8 @@
   "İletişim adımı": "Communication step",
   "OPC UA sunucusu": "OPC UA server",
   "OPC UA portu": "OPC UA port",
-  "OPC UA dinleniyor": "OPC UA listening"
+  "OPC UA dinleniyor": "OPC UA listening",
+  "1.7.0: İngilizce arayüz, ESP32 emülatörü, mekanizmalar, PLC ve endüstri": "1.7.0: English interface, ESP32 emulator, mechanisms, PLC and industry"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11242,6 +11243,8 @@
   "{0} FMU parça olarak eklendi": "{0} FMU added as parts",
   "FMU açıldı: {0}; girişleri ve çıkışları pinlerinde, REF'i toprağa bağlayın": "FMU opened: {0}; its inputs and outputs are its pins, join REF to ground",
   "OPC UA     : {0} · {1} değişken": "OPC UA     : {0} · {1} variables",
-  "OPC UA dinleniyor: {0}": "OPC UA listening: {0}"
+  "OPC UA dinleniyor: {0}": "OPC UA listening: {0}",
+  "bellek: çizim {…} KB tutuyor (yığın {…} KB, görev yığınları {…} KB); gerçek bir ESP32'de yaklaşık {…} KB boş yığın var, orada bellek biterdi (malloc NULL döner, new çöker)": "memory: the sketch holds {0} KB (heap {1} KB, task stacks {2} KB); a real ESP32 has about {3} KB of free heap, so it would run out there (malloc returns NULL, new crashes)",
+  "bellek: çizim {…} KB tutuyor; bu, gerçek bir ESP32'deki boş yığının (~{…} KB) yüzde {…} kadarı, kart üzerinde az yer kaldı": "memory: the sketch holds {0} KB, {2} % of a real ESP32's free heap (~{1} KB); little room is left on the board"
  }
 }

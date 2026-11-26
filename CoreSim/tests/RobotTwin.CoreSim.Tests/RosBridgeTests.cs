@@ -139,6 +139,130 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(LastClock(), runner.Time - 0.011, runner.Time + 1e-9);   // the clock is the world's
         }
 
+        /// <summary>[ros-action] MoveIt's FollowJointTrajectory through rosbridge: a goal runs and succeeds, a wrong one is aborted, a cancel holds.</summary>
+        [Fact]
+        public async Task FollowJointTrajectoryGoalsRunAsTheControllerRunsThem()
+        {
+            using var server = new FakeRosbridge();
+            var world = new WorldDocument();
+            UrdfImport.Import(Path.Combine(AppContext.BaseDirectory, "Fixtures", "rw_arm4.urdf.xacro"), world);
+            using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
+            using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            var link = new RosWorldLink(ros, world, runner.Physics!);
+            const string action = RosWorldLink.DefaultTrajectoryAction;
+
+            JsonObject Goal(string id, string joint, double position, double seconds, double tolerance, double slack = 1.0) => new JsonObject
+            {
+                ["op"] = "send_action_goal", ["id"] = id, ["action"] = action, ["action_type"] = RosWorldLink.FollowJointTrajectoryType, ["feedback"] = true,
+                ["args"] = new JsonObject
+                {
+                    ["trajectory"] = new JsonObject
+                    {
+                        ["joint_names"] = new JsonArray(joint),
+                        ["points"] = new JsonArray(new JsonObject
+                        {
+                            ["positions"] = new JsonArray(position),
+                            ["time_from_start"] = new JsonObject { ["sec"] = (int)seconds, ["nanosec"] = (int)((seconds - (int)seconds) * 1e9) }
+                        })
+                    },
+                    ["goal_tolerance"] = new JsonArray(new JsonObject { ["name"] = joint, ["position"] = tolerance, ["velocity"] = 0.0, ["acceleration"] = 0.0 }),
+                    ["goal_time_tolerance"] = new JsonObject { ["sec"] = (int)slack, ["nanosec"] = (int)((slack - (int)slack) * 1e9) }
+                }
+            };
+
+            async Task RunUntil(Func<bool> done, double maxSeconds)
+            {
+                double until = runner.Time + maxSeconds;
+                var wall = System.Diagnostics.Stopwatch.StartNew();
+                while (!done() && runner.Time < until && wall.Elapsed.TotalSeconds < 30)
+                {
+                    runner.Step(0.01);
+                    link.Step(runner.Time);
+                    await Task.Delay(0);
+                }
+            }
+
+            // 1. The elbow to 0.5 rad in 1 s, within 0.05 rad: it gets there and the goal succeeds.
+            await server.Send(Goal("action_goal:" + action + ":1", "j3_elbow", 0.5, 1.0, 0.05));
+            await RunUntil(() => link.GoalResults.Count >= 1, 4);
+            Assert.Equal(("action_goal:" + action + ":1", 4, RosWorldLink.Successful), link.GoalResults[0]);
+
+            // 2. A joint the world does not have: aborted with INVALID_JOINTS at once.
+            await server.Send(Goal("action_goal:" + action + ":2", "no_such_joint", 0.1, 1.0, 0.05));
+            await RunUntil(() => link.GoalResults.Count >= 2, 1);
+            Assert.Equal((6, RosWorldLink.InvalidJoints), (link.GoalResults[1].Status, link.GoalResults[1].ErrorCode));
+
+            // 3. A slow move cancelled half way: canceled, and the elbow stays about where it was.
+            await server.Send(Goal("action_goal:" + action + ":3", "j3_elbow", -0.5, 3.0, 0.05));
+            await RunUntil(() => link.Goals >= 3, 1);
+            await RunUntil(() => false, 1.0);
+            await server.Send(new JsonObject { ["op"] = "cancel_action_goal", ["id"] = "action_goal:" + action + ":3", ["action"] = action });
+            await RunUntil(() => link.GoalResults.Count >= 3, 1);
+            Assert.Equal((5, RosWorldLink.Successful), (link.GoalResults[2].Status, link.GoalResults[2].ErrorCode));
+
+            // 4. A target the elbow cannot reach within 0.05 s of the trajectory's end: aborted with GOAL_TOLERANCE_VIOLATED.
+            await server.Send(Goal("action_goal:" + action + ":4", "j3_elbow", 1.2, 0.05, 0.001, 0.05));
+            await RunUntil(() => link.GoalResults.Count >= 4, 3);
+            Assert.Equal((6, RosWorldLink.GoalToleranceViolated), (link.GoalResults[3].Status, link.GoalResults[3].ErrorCode));
+
+            for (int i = 0; i < 250 && server.Got.Count(o => (string?)o["op"] == "action_result") < 4; i++) await Task.Delay(20);
+            var ops = server.Got.ToList();
+            Assert.Contains(ops, o => (string?)o["op"] == "advertise_action" && (string?)o["action"] == action && (string?)o["type"] == "control_msgs/action/FollowJointTrajectory");
+            var feedback = ops.Where(o => (string?)o["op"] == "action_feedback" && ((string?)o["id"])!.EndsWith(":1")).ToList();
+            Assert.InRange(feedback.Count, 8, 14);   // ten a second for about a second
+            Assert.Equal("j3_elbow", (string?)feedback[0]["values"]!["joint_names"]![0]);
+            var first = ops.First(o => (string?)o["op"] == "action_result");
+            Assert.Equal((4L, true, 0L), ((long)first["status"]!, (bool)first["result"]!, (long)first["values"]!["error_code"]!));
+        }
+
+        /// <summary>[ros-sense] The world's own sensor parts on ROS: a LiDAR's sweep, an IMU, a camera's frame, a GPS fix, a compass.</summary>
+        [Fact]
+        public async Task TheWorldsSensorPartsPublishWhatTheyMeasured()
+        {
+            using var server = new FakeRosbridge();
+            var world = new WorldDocument();
+            using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
+            using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            var link = new RosWorldLink(ros, world, runner.Physics!);
+            var sensors = new RobotTwin.CoreSim.Sandbox.Sensing.WorldSensors();
+            link.AttachSensors(sensors);
+
+            // A 2D LiDAR: 4 samples clockwise from the front (0°, 90°, 180°, 270°), the one at 270° with no return.
+            sensors.Publish(new RobotTwin.CoreSim.Sandbox.Sensing.LidarReading
+            {
+                ObjectId = "o1", Name = "Ön LiDAR", Time = 0.1,
+                Scan = new RobotTwin.CoreSim.Sandbox.Sensing.LidarScan { ScanRate = 10, AnglesDeg = new[] { 0f, 90f, 180f, 270f }, Ranges = new[] { 1.0f, 2.0f, 3.0f, float.NaN } }
+            });
+            sensors.Publish(new RobotTwin.CoreSim.Sandbox.Sensing.ImuReading { ObjectId = "o2", Name = "MPU-6050", Time = 0.1, Accel = new RobotTwin.CoreSim.Mechanics.Vec3(0, 0, 9.8), Gyro = new RobotTwin.CoreSim.Mechanics.Vec3(0, 0, 0.5) });
+            sensors.Publish(new RobotTwin.CoreSim.Sandbox.Sensing.CameraReading { ObjectId = "o3", Name = "Cam", Time = 0.1, Width = 2, Height = 1, FrameIndex = 1, Bgra = new byte[] { 1, 2, 3, 255, 4, 5, 6, 255 } });
+            sensors.Publish(new RobotTwin.CoreSim.Sandbox.Sensing.GpsReading { ObjectId = "o4", Name = "GPS", Time = 0.1, Fix = new RobotTwin.CoreSim.Sandbox.Sensing.GpsFix { Valid = true, Latitude = 41.0, Longitude = 29.0, Altitude = 50, Hdop = 1 } });
+            sensors.Publish(new RobotTwin.CoreSim.Sandbox.Sensing.CompassReading { ObjectId = "o5", Name = "Pusula", Time = 0.1, Field = new RobotTwin.CoreSim.Mechanics.Vec3(0.2, 0, -0.4) });
+            sensors.Publish(new RobotTwin.CoreSim.Sandbox.Sensing.ImuReading { ObjectId = "o6", Name = "Off", Time = 0.1, Powered = false });
+            link.Step(0.1);
+            link.Step(0.11);   // nothing new: nothing sent again
+
+            JsonNode Msg(string topic) => server.Got.Single(o => (string?)o["op"] == "publish" && (string?)o["topic"] == topic)["msg"]!;
+            for (int i = 0; i < 250 && server.Got.Count(o => (string?)o["op"] == "publish" && ((string?)o["topic"])!.StartsWith("/robotwin/")) < 5; i++) await Task.Delay(20);
+            var ops = server.Got.ToList();
+            Assert.Contains(ops, o => (string?)o["op"] == "advertise" && (string?)o["topic"] == "/robotwin/on_lidar/scan" && (string?)o["type"] == "sensor_msgs/msg/LaserScan");
+            var scan = Msg("/robotwin/on_lidar/scan");
+            Assert.Equal("on_lidar", (string?)scan["header"]!["frame_id"]);
+            var ranges = ((JsonArray)scan["ranges"]!).Select(r => (double)r!).ToArray();
+            Assert.Equal(4, ranges.Length);
+            // counter-clockwise from −π: behind (180°) 3 m, right (90° clockwise = −π/2) 2 m, front 1 m, left: no return
+            Assert.Equal(new[] { 3.0, 2.0, 1.0 }, ranges.Take(3));
+            Assert.True(ranges[3] > (double)scan["range_max"]!);
+            Assert.Equal(0.5, (double)Msg("/robotwin/mpu_6050/imu")["angular_velocity"]!["z"]!);
+            var image = Msg("/robotwin/cam/image_raw");
+            Assert.Equal(("bgra8", 8L), ((string?)image["encoding"], (long)image["step"]!));
+            Assert.Equal(new byte[] { 1, 2, 3, 255, 4, 5, 6, 255 }, Convert.FromBase64String((string)image["data"]!));
+            Assert.Equal(41.0, (double)Msg("/robotwin/gps/fix")["latitude"]!);
+            Assert.Equal(-4e-5, (double)Msg("/robotwin/pusula/magnetic_field")["magnetic_field"]!["z"]!, 9);
+            Assert.DoesNotContain(ops, o => ((string?)o["topic"])?.Contains("/off/") == true);
+        }
+
         /// <summary>A trajectory on /joint_trajectory: the arm passes its points at their times and holds the last.</summary>
         [Fact]
         public async Task AnArmFollowsAJointTrajectoryInTime()

@@ -76,6 +76,7 @@ void* heap_alloc(size_t n);
 void* heap_realloc(void* p, size_t n);
 void heap_free(void* p);
 size_t heap_in_use();
+size_t task_stack_bytes();
 
 /* ---- implemented by the HAL files, called by the runtime ---- */
 void hal_reset();

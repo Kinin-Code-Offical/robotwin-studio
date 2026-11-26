@@ -29,7 +29,7 @@ namespace RobotTwin.CoreSim.Ros
         private double[] _lastPositions;
         private double _lastPositionsTime = double.NaN;
 
-        public RosWorldLink(RosBridgeClient ros, WorldDocument world, WorldPhysics physics, double jointStateHz = 50, double clockHz = 100)
+        public RosWorldLink(RosBridgeClient ros, WorldDocument world, WorldPhysics physics, double jointStateHz = 50, double clockHz = 100, string trajectoryAction = DefaultTrajectoryAction)
         {
             _ros = ros;
             _physics = physics;
@@ -43,6 +43,7 @@ namespace RobotTwin.CoreSim.Ros
             ros.Advertise(JointStatesTopic, "sensor_msgs/msg/JointState");
             ros.Subscribe(JointCommandTopic, "sensor_msgs/msg/JointState");
             ros.Subscribe(JointTrajectoryTopic, "trajectory_msgs/msg/JointTrajectory");
+            AdvertiseTrajectoryAction(trajectoryAction);   // [ros-action] MoveIt's FollowJointTrajectory
             FindBases(world);
             FindSensors(world);
         }
@@ -60,12 +61,14 @@ namespace RobotTwin.CoreSim.Ros
         {
             while (_ros.TryReceive(out string topic, out var msg))
             {
-                if (topic == JointCommandTopic) Command(msg);
+                if (topic.StartsWith("@", StringComparison.Ordinal)) ActionOp(topic, msg, time);
+                else if (topic == JointCommandTopic) Command(msg);
                 else if (topic == JointTrajectoryTopic) FollowTrajectory(msg, time);
                 else Twist(topic, msg, time);
             }
 
             StepTrajectory(time);
+            StepGoal(time);
             DriveBases(time);
             if (!_ros.Connected) return;
             if (time - _lastClock >= _clockPeriod - 1e-9)
@@ -82,6 +85,7 @@ namespace RobotTwin.CoreSim.Ros
             }
 
             StepSensors(time);
+            StepWorldSensors();
         }
 
         private void PublishJointStates(double time)

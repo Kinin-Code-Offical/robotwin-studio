@@ -166,6 +166,29 @@ void loop() {
 }
 ";
 
+        /// <summary>[mem-budget] A sketch that takes more heap than a real ESP32 has: a task's 16 KB stack, then 50 KB chunks.</summary>
+        public const string Memory = @"
+static void worker(void *arg) { for (;;) vTaskDelay(100); }
+
+void setup() {
+  Serial.begin(115200);
+  Serial.printf(""boot %u\n"", (unsigned)ESP.getFreeHeap());
+  xTaskCreate(worker, ""worker"", 16384, NULL, 1, NULL);
+  Serial.printf(""task %u\n"", (unsigned)ESP.getFreeHeap());
+}
+
+void loop() {
+  static int n = 0;
+  if (n < 6) {
+    char *p = (char *)malloc(50000);
+    memset(p, 1, 50000);
+    n++;
+    Serial.printf(""chunk %d %u\n"", n, (unsigned)ESP.getFreeHeap());
+  }
+  delay(50);
+}
+";
+
         public const string Rtos = @"
 #include <WiFi.h>
 
@@ -240,7 +263,8 @@ void loop() {
                 ["error"] = BadSketchPath,
                 ["hung"] = Hung,
                 ["ultrasonic"] = Ultrasonic,
-                ["rtos"] = Rtos
+                ["rtos"] = Rtos,
+                ["memory"] = Memory
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -583,6 +607,28 @@ void loop() {
             Assert.InRange(tAt10, 500, 520);   // 10 × 50 ms after setup; millis() counts from the application's start, as on the chip
             Assert.InRange(fastAt10, 48, 53);
             Assert.True(rig.CoSim.WifiOn);
+        }
+
+        /// <summary>[mem-budget] The fast mode runs on the PC's memory; the log says when a real ESP32 would have run out.</summary>
+        [Esp32Fact]
+        public void TheFastModeWarnsWhenARealBoardWouldRunOutOfMemory()
+        {
+            var (sch, _) = NewBoard();
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("memory"));
+            var log = new List<string>();
+            rig.CoSim.Log += log.Add;
+            rig.Run(0.8, 1e-3);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            _out.WriteLine(string.Join("\n", log));
+            uint Free(string tag) => uint.Parse(serial.Split('\n').First(l => l.StartsWith(tag + " ", StringComparison.Ordinal)).Trim().Split(' ').Last());
+            Assert.InRange(Free("boot") - Free("task"), 16384u, 16384u + 512);   // the task's stack came out of the heap
+            Assert.Equal(0u, Free("chunk 6"));   // nothing left, as getFreeHeap would say on the chip
+            Assert.Equal(2, rig.CoSim.MemoryWarning);
+            Assert.True(rig.CoSim.PeakMemory > Esp32CoSimulation.HeapBudget);
+            Assert.True(log.Count(l => l.Contains("yüzde")) <= 1);   // nearing the budget: said once at most (it may be passed between two checks)
+            Assert.Single(log, l => l.Contains("bellek biterdi"));
         }
 
         [Esp32Fact]

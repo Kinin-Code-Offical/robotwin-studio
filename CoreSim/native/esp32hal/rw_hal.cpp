@@ -1247,7 +1247,7 @@ static const uint32_t kHeapFreeAtBoot = 296000u;
 uint32_t EspClass::getHeapSize() { return kHeapSize; }
 
 uint32_t EspClass::getFreeHeap() {
-    size_t used = heap_in_use();
+    size_t used = heap_in_use() + task_stack_bytes();   // a task's stack comes out of the heap, as on the chip
     uint32_t free_heap = used >= kHeapFreeAtBoot ? 0u : kHeapFreeAtBoot - (uint32_t)used;
     if (free_heap < g_min_free_heap) g_min_free_heap = free_heap;
     return free_heap;

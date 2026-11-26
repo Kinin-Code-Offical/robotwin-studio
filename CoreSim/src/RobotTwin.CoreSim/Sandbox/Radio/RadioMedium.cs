@@ -29,7 +29,7 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
     /// reconnection, supervision timeout when out of range).
     /// All randomness is a hash of (seed, link, time): runs are reproducible.
     /// </summary>
-    public sealed class RadioMedium
+    public sealed partial class RadioMedium
     {
         public const double SupervisionTimeout = 2.0;
         public const double WifiLossTimeout = 3.0;

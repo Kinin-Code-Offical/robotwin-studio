@@ -125,6 +125,65 @@ void loop() {
 }
 ";
 
+        /// <summary>[espnow] A board that broadcasts a counter by ESP-NOW, answers what it hears, and counts the sends' outcomes.</summary>
+        public const string EspNow = @"
+#include <WiFi.h>
+#include <esp_now.h>
+
+uint8_t bcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+volatile int rx = 0, ok = 0, fail = 0;
+char last[64];
+int lastRssi = 0;
+
+void onRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+  rx++;
+  lastRssi = info->rx_ctrl->rssi;
+  int n = len < 63 ? len : 63;
+  memcpy(last, data, n);
+  last[n] = 0;
+}
+
+void onSent(const uint8_t *mac, esp_now_send_status_t status) {
+  if (status == ESP_NOW_SEND_SUCCESS) ok++; else fail++;
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.printf(""init before wifi %d\n"", (int)esp_now_init());
+  WiFi.mode(WIFI_STA);
+  Serial.printf(""init %d\n"", (int)esp_now_init());
+  esp_now_register_recv_cb(onRecv);
+  esp_now_register_send_cb(onSent);
+  uint8_t ghost[6] = {0x02, 0x11, 0x22, 0x33, 0x44, 0x55};
+  Serial.printf(""unknown peer %d\n"", (int)esp_now_send(ghost, (const uint8_t *)""x"", 1));
+  esp_now_peer_info_t peer = {};
+  memcpy(peer.peer_addr, bcast, 6);
+  esp_now_add_peer(&peer);
+  memcpy(peer.peer_addr, ghost, 6);
+  esp_now_add_peer(&peer);
+}
+
+int seq = 0;
+unsigned long lastSend = 0;
+void loop() {
+  if (millis() - lastSend >= 100) {
+    lastSend = millis();
+    char msg[32];
+    snprintf(msg, sizeof msg, ""%s %d"", WiFi.macAddress().c_str(), seq++);
+    esp_now_send(bcast, (const uint8_t *)msg, strlen(msg) + 1);
+    if (seq == 5) {
+      uint8_t ghost[6] = {0x02, 0x11, 0x22, 0x33, 0x44, 0x55};
+      esp_now_send(ghost, (const uint8_t *)""?"", 2);   // nobody has this address: no ACK
+    }
+  }
+  if (seq == 20) {
+    Serial.printf(""rx %d ok %d fail %d rssi %d last %s\n"", rx, ok, fail, lastRssi, last);
+    seq++;
+  }
+  delay(5);
+}
+";
+
         public Esp32RadioFixture()
         {
             Available = Esp32SketchCompiler.IsToolchainAvailable;
@@ -137,7 +196,8 @@ void loop() {
                 ["ble-server"] = BleServer,
                 ["ble-scanner"] = BleScanner,
                 ["udp"] = UdpPing,
-                ["car"] = GamepadCar
+                ["car"] = GamepadCar,
+                ["espnow"] = EspNow
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -376,6 +436,37 @@ void loop() {
             Run(2.6);
             Assert.Equal(Esp32BoardState.Off, cosim.State);
             Assert.False(padNode.Connected);
+        }
+
+        /// <summary>[espnow] Two boards near each other hear each other's ESP-NOW broadcasts; a third 2 km away hears nothing (1 Mbps reaches a few hundred metres in the open).</summary>
+        [Esp32Fact]
+        public void EspNowBroadcastsReachTheBoardsInRange()
+        {
+            var m = new RadioMedium();
+            using var a = new Board(m, "a", new Vec3(0, 0, 0.05), _fx.Dll("espnow"));
+            using var b = new Board(m, "b", new Vec3(3, 0, 0.05), _fx.Dll("espnow"));
+            using var far = new Board(m, "far", new Vec3(2000, 0, 0.05), _fx.Dll("espnow"));
+            Run(m, 2.6, 1e-3, a, b, far);
+            string sa = a.Serial.ToString(), sb = b.Serial.ToString(), sf = far.Serial.ToString();
+            _out.WriteLine(sa);
+            _out.WriteLine(sb);
+            _out.WriteLine(sf);
+            Assert.Contains("init before wifi 12394", sa);   // ESP_ERR_ESPNOW_INTERNAL: Wi-Fi not started
+            Assert.Contains("init 0", sa);
+            Assert.Contains("unknown peer 12393", sa);   // ESP_ERR_ESPNOW_NOT_FOUND: not a registered peer
+            string Line(string text) => text.Split('\n').Single(l => l.StartsWith("rx ", StringComparison.Ordinal)).Trim();
+            var la = Line(sa).Split(' ');
+            var lb = Line(sb).Split(' ');
+            var lf = Line(sf).Split(' ');
+            Assert.InRange(int.Parse(la[1]), 15, 21);   // b's broadcasts, a few may fade out
+            Assert.InRange(int.Parse(lb[1]), 15, 21);
+            Assert.Equal("0", lf[1]);   // out of reach
+            Assert.Equal("1", la[5]);   // the send to the address nobody has: no ACK after its retries
+            Assert.True(int.Parse(la[3]) >= 18, "broadcasts always report success");
+            Assert.Equal(b.Node.MacText.ToUpperInvariant(), la[9].ToUpperInvariant());   // what a heard came from b
+            int rssi = int.Parse(la[7]);
+            double expected = m.MeanRssi(b.Node, a.Node, RadioTech.WiFi);
+            Assert.InRange(rssi, expected - 14, expected + 14);
         }
 
         [Esp32Fact]

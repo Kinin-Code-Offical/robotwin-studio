@@ -254,6 +254,11 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
         public bool Scanning;
         public double ScanUntil;
 
+        // ---- [espnow] ESP-NOW
+        public bool EspNowOn;
+        public readonly Queue<EspNowFrame> EspNowInbox = new Queue<EspNowFrame>();
+        public readonly Queue<EspNowSent> EspNowSentQueue = new Queue<EspNowSent>();
+
         // ---- Bluepad32
         public bool PadEnabled;
         public bool PadAllowNew = true;
@@ -262,6 +267,9 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
         internal void ResetRadio()
         {
             WifiMode = 0;
+            EspNowOn = false;
+            EspNowInbox.Clear();
+            EspNowSentQueue.Clear();
             StaSsid = null;
             StaPassword = string.Empty;
             StaBeganAt = double.NaN;

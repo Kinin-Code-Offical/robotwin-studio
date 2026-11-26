@@ -54,6 +54,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public const int PadForget = 0x43;
         public const int PadDisconnect = 0x44;    // in: i32 index
 
+        // [espnow] ESP-NOW on the Wi-Fi radio.
+        public const int EspNowInit = 0x50;       // in: i32 on   ret: 0, or −2 while Wi-Fi is off
+        public const int EspNowSend = 0x51;       // in: u8 mac[6], payload (≤ 250)   ret: 0, or −2 when not initialised
+        public const int EspNowPoll = 0x52;       // out: u8 kind (1 received, 2 sent), u8 status (0 ok, 1 fail), i8 rssi, u8 0, u8 mac[6], u16 len, payload   ret: 1 / 0
+
         // SPI master (handled by the board itself, not the radio medium).
         public const int SpiBegin = 0x60;         // in: i32 bus, i32 sck, i32 miso, i32 mosi, i32 ss   ret: 0
         public const int SpiTransfer = 0x61;      // in: i32 bus, u32 hz, u8 mode, u8 lsb_first, u16 n, n bytes   out: n bytes   ret: n

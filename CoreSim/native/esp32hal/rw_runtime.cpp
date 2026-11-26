@@ -59,6 +59,7 @@ struct Task {
     uint64_t wake = 0;
     const void* wait_obj = nullptr;
     int prio = 1;
+    uint32_t stack = 0;   // bytes of stack the sketch asked for: on the chip they come from the heap
     uint64_t seq = 0;
     uint64_t slice_start = 0;
     void (*fn)(void*) = nullptr;
@@ -597,10 +598,11 @@ void set_interrupts_enabled(bool enabled) {
     update_sys_due();
 }
 
-void* create_task(void (*fn)(void*), const char* name, uint32_t, void* arg, int priority) {
+void* create_task(void (*fn)(void*), const char* name, uint32_t stack, void* arg, int priority) {
     Lock l;
     Task* t = new_task(fn, name, priority, false);
     t->arg = arg;
+    t->stack = stack;
     t->wake = g_now;
     if (g_running && !g_running->is_sys && priority > g_running->prio) g_preempt_hint = true;
     return t;
@@ -693,7 +695,7 @@ void seed_random(uint64_t seed) { g_rng = seed ? seed : 0x9E3779B97F4A7C15ull; }
 
 void* heap_alloc(size_t n) {
     HANDLE h = heap();
-    if (!h) return malloc(n ? n : 1);
+    if (!h) return (malloc)(n ? n : 1);
     void* p = HeapAlloc(h, 0, n ? n : 1);
     if (p) InterlockedAdd64(&g_heap_bytes, (LONG64)HeapSize(h, 0, p));
     return p;
@@ -717,7 +719,73 @@ void heap_free(void* p) {
 
 size_t heap_in_use() { return (size_t)(g_heap_bytes > 0 ? g_heap_bytes : 0); }
 
+/* The stacks of the sketch's own running tasks: xTaskCreate takes them from the heap on the chip. */
+size_t task_stack_bytes() {
+    Lock l;   // a critical section: taking it again is fine
+    size_t n = 0;
+    for (const Task* t : g_tasks)
+        if (!t->finished && !t->is_sys) n += t->stack;
+    return n;
+}
+
 }  // namespace rw
+
+/* ======================================================================= C allocation -> the chip's heap
+   [mem-budget] The sketch's malloc, calloc, realloc and free (Arduino.h names them so) come from the same private
+   heap as new, so what it holds is counted against the chip's heap. Each block carries a tag before it: a pointer
+   that did not come from here (strdup and other CRT functions allocate with the CRT) goes back to the CRT. */
+namespace {
+const uint64_t kBlockTag = 0x52574D454D424C4Bull;   // "RWMEMBLK"
+struct BlockHead {
+    uint64_t tag;
+    uint64_t size;
+};
+
+inline BlockHead* head_of(void* p) { return reinterpret_cast<BlockHead*>(static_cast<char*>(p) - sizeof(BlockHead)); }
+
+inline bool ours(void* p) { return p && head_of(p)->tag == kBlockTag; }
+}  // namespace
+
+extern "C" void* rw_malloc(size_t n) {
+    auto* h = static_cast<BlockHead*>(rw::heap_alloc(n + sizeof(BlockHead)));
+    if (!h) return nullptr;
+    h->tag = kBlockTag;
+    h->size = n;
+    return h + 1;
+}
+
+extern "C" void* rw_calloc(size_t count, size_t size) {
+    if (size && count > (size_t)-1 / size) return nullptr;
+    void* p = rw_malloc(count * size);
+    if (p) memset(p, 0, count * size);
+    return p;
+}
+
+extern "C" void rw_free(void* p) {
+    if (!p) return;
+    if (!ours(p)) {
+        (free)(p);
+        return;
+    }
+
+    BlockHead* h = head_of(p);
+    h->tag = 0;
+    rw::heap_free(h);
+}
+
+extern "C" void* rw_realloc(void* p, size_t n) {
+    if (!p) return rw_malloc(n);
+    if (!ours(p)) return (realloc)(p, n);
+    if (n == 0) {
+        rw_free(p);
+        return nullptr;
+    }
+
+    auto* h = static_cast<BlockHead*>(rw::heap_realloc(head_of(p), n + sizeof(BlockHead)));
+    if (!h) return nullptr;
+    h->size = n;
+    return h + 1;
+}
 
 /* ======================================================================= C++ allocation -> private heap
    A watchdog-killed thread may die while holding a heap lock; keeping the sketch's
@@ -892,6 +960,12 @@ RW_EXPORT int rw_status_message(char* buffer, int capacity) {
     if (!buffer || capacity <= 0) return (int)strlen(g_status_msg);
     strncpy_s(buffer, (size_t)capacity, g_status_msg, _TRUNCATE);
     return (int)strlen(buffer);
+}
+
+/* [mem-budget] What the sketch holds of the chip's memory: heap allocations and its tasks' stacks (bytes). */
+RW_EXPORT void rw_memory(uint64_t* heap, uint64_t* stacks) {
+    if (heap) *heap = (uint64_t)rw::heap_in_use();
+    if (stacks) *stacks = (uint64_t)rw::task_stack_bytes();
 }
 
 RW_EXPORT int rw_task_count(void) {

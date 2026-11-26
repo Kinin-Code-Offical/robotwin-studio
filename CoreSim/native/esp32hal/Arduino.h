@@ -253,4 +253,29 @@ uint8_t shiftIn(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder);
 
 #endif /* __cplusplus */
 
+/* [mem-budget] The sketch's C allocations come from the simulated chip's heap (counted against its ~296 KB), as new
+   does. Function-like names only, so declarations such as "using ::malloc;" are left alone. */
+#ifndef RW_NO_MALLOC_REDIRECT
+#ifdef __cplusplus
+extern "C" {
+#endif
+void* rw_malloc(size_t n);
+void* rw_calloc(size_t count, size_t size);
+void* rw_realloc(void* p, size_t n);
+void rw_free(void* p);
+#ifdef __cplusplus
+}
+namespace std {   /* std::malloc(n) reads std::rw_malloc(n) after the names below */
+using ::rw_malloc;
+using ::rw_calloc;
+using ::rw_realloc;
+using ::rw_free;
+}
+#endif
+#define malloc(n) rw_malloc(n)
+#define calloc(c, s) rw_calloc(c, s)
+#define realloc(p, n) rw_realloc(p, n)
+#define free(p) rw_free(p)
+#endif
+
 #endif /* RW_ARDUINO_H */

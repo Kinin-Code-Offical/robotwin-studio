@@ -90,6 +90,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int SerialRxFn(int port, byte[] data, int length);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate ulong NowFn();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int StatusMessageFn(byte[] buffer, int capacity);
+
+        /// <summary>[mem-budget] rw_memory: the sketch's heap and its tasks' stacks (bytes); absent in builds before it.</summary>
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void MemoryFn(out ulong heap, out ulong stacks);
     }
 
     /// <summary>
@@ -149,6 +152,8 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             SerialRx = Get<Esp32Abi.SerialRxFn>("rw_serial_rx");
             Now = Get<Esp32Abi.NowFn>("rw_now_ns");
             StatusMessageRaw = Get<Esp32Abi.StatusMessageFn>("rw_status_message");
+            IntPtr memory = Kernel32.GetProcAddress(_handle, "rw_memory");
+            MemoryRaw = memory == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer<Esp32Abi.MemoryFn>(memory);
             int abi = AbiVersion();
             if (abi != Esp32Abi.Version)
             {
@@ -166,6 +171,16 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public Esp32Abi.SerialRxFn SerialRx { get; }
         public Esp32Abi.NowFn Now { get; }
         private Esp32Abi.StatusMessageFn StatusMessageRaw { get; }
+
+        private Esp32Abi.MemoryFn? MemoryRaw { get; }
+
+        /// <summary>[mem-budget] The sketch's heap allocations and its tasks' stacks (bytes), or null for a build without it.</summary>
+        public (long Heap, long Stacks)? Memory()
+        {
+            if (MemoryRaw == null) return null;
+            MemoryRaw(out ulong heap, out ulong stacks);
+            return ((long)heap, (long)stacks);
+        }
 
         public string StatusMessage()
         {

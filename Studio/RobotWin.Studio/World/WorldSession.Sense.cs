@@ -68,6 +68,7 @@ namespace RobotWin.Studio.World
             Sensing.GpsSerial += RouteGps;
             int n = Sensing.Cameras.Count;
             if (n > 0) AddLog(new SimLogEntry(0, "kamera", $"{n} kamera: dünya kendi çözünürlük ve kare hızlarıyla çiziliyor", AnalogEventKind.StateChange));
+            _rosLink?.AttachSensors(Sensing?.Sensors);   // [ros-sense]
             SensingStarted?.Invoke(Sensing);
         }
 

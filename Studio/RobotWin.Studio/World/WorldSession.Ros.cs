@@ -57,6 +57,7 @@ namespace RobotWin.Studio.World
         private void AttachRos()
         {
             _rosLink = _ros != null && _ros.Connected && Physics != null && World != null ? new RosWorldLink(_ros, World, Physics) : null;
+            _rosLink?.AttachSensors(Sensing?.Sensors);   // [ros-sense] the world's LiDARs, IMUs, cameras … (again when sensing starts)
         }
 
         /// <summary>After each step of the run (simulation thread or the frames, gate held).</summary>

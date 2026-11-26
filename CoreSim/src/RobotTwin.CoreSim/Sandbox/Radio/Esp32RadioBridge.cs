@@ -93,6 +93,41 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
                     return 4;
 
                 // ---------------------------------------------------- sockets
+                case Esp32RadioOp.EspNowInit:
+                    return m.EspNowInit(e, n >= 4 && P.I32(i, 0) != 0) ? 0 : -2;
+                case Esp32RadioOp.EspNowSend:
+                    if (n < 6) return -1;
+                    return m.EspNowSend(e, Slice(i, 0, 6), Slice(i, 6, Math.Min(n - 6, RadioMedium.EspNowMaxData)), t) ? 0 : -2;
+                case Esp32RadioOp.EspNowPoll:
+                {
+                    if (cap < 12) return 0;
+                    if (m.EspNowReceive(e, t) is { } f)
+                    {
+                        int len = Math.Min(f.Data.Length, cap - 12);
+                        o[0] = 1;
+                        o[1] = 0;
+                        o[2] = unchecked((byte)(sbyte)Math.Max(-128, Math.Min(0, Math.Round(f.Rssi))));
+                        o[3] = 0;
+                        Array.Copy(f.Source, 0, o, 4, 6);
+                        P.Put16(o, 10, len);
+                        Array.Copy(f.Data, 0, o, 12, len);
+                        return 1;
+                    }
+
+                    if (m.EspNowSendDone(e, t) is { } s)
+                    {
+                        o[0] = 2;
+                        o[1] = (byte)(s.Delivered ? 0 : 1);
+                        o[2] = 0;
+                        o[3] = 0;
+                        Array.Copy(s.Destination, 0, o, 4, 6);
+                        P.Put16(o, 10, 0);
+                        return 1;
+                    }
+
+                    return 0;
+                }
+
                 case Esp32RadioOp.UdpBind:
                     m.UdpBind(e, P.U16(i, 0), P.U16(i, 2) != 0);
                     return 0;

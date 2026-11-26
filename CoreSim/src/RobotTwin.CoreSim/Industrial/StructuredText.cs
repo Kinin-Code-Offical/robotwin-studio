@@ -544,6 +544,8 @@ namespace RobotTwin.CoreSim.Industrial
                 "RS" => new Bistable(false),
                 "MB_READ" => new ModbusClient(false),
                 "MB_WRITE" => new ModbusClient(true),
+                "UA_READ" => new UaClientBlock(false),
+                "UA_WRITE" => new UaClientBlock(true),
                 _ => null
             };
         }
@@ -638,6 +640,152 @@ namespace RobotTwin.CoreSim.Industrial
                 _last = false;
                 _due = double.NaN;
                 _reply = null;
+            }
+        }
+
+        /// <summary>
+        /// [opcua-client] UA_READ and UA_WRITE: the PLC as an OPC UA client. A rising edge of REQ reads (or writes) the variable
+        /// NODE ("ns=1;s=Line.Speed", "ns=2;i=1001") on the server at URL ("opc.tcp://host:4840"): UA_READ gives VALUE (a
+        /// number or BOOL as 0/1) and TEXT (a String's text, any value's as text); UA_WRITE writes VALUE, or TEXT to a String
+        /// node, converted to the node's own type. BUSY while the request is on the network (beside the scan: the scan never
+        /// waits), then DONE for one scan, or ERROR with STATUS: the OPC UA status code's upper word (0x8034 = 32820 the node
+        /// is not there, 0x803B not writable, 0x8074 wrong type, 0x8005 = 32773 no connection). The connection stays open
+        /// between requests and is made again after a failure.
+        /// </summary>
+        private sealed class UaClientBlock : Block
+        {
+            public const double NoConnection = 0x8005;
+            private static readonly string[] ReadIn = { "REQ", "URL", "NODE" }, WriteIn = { "REQ", "URL", "NODE", "VALUE", "TEXT" };
+            private static readonly string[] ReadOut = { "DONE", "BUSY", "ERROR", "STATUS", "VALUE", "TEXT" }, WriteOut = { "DONE", "BUSY", "ERROR", "STATUS" };
+            private readonly bool _write;
+            private bool _last;
+            private System.Threading.Tasks.Task<(uint Status, double Value, string Text)>? _pending;
+            private OpcUa.UaClient? _client;
+            private readonly Dictionary<string, OpcUa.UaType> _types = new Dictionary<string, OpcUa.UaType>(StringComparer.Ordinal);
+
+            public UaClientBlock(bool write) => _write = write;
+
+            public override IReadOnlyCollection<string> Inputs => _write ? WriteIn : ReadIn;
+
+            public override IReadOnlyCollection<string> Outputs => _write ? WriteOut : ReadOut;
+
+            public override void Call(double clock)
+            {
+                this["DONE"] = 0;
+                bool req = this["REQ"] != 0;
+                if (req && !_last && _pending == null)
+                {
+                    string url = Text("URL").Trim(), node = Text("NODE");
+                    double value = this["VALUE"];
+                    string text = Text("TEXT");
+                    _pending = System.Threading.Tasks.Task.Run(() => Request(url, node, value, text));
+                    this["BUSY"] = 1;
+                    this["ERROR"] = 0;
+                    this["STATUS"] = 0;
+                }
+
+                _last = req;
+                if (_pending == null || !_pending.IsCompleted) return;
+                var (status, v, t) = _pending.Result;
+                _pending = null;
+                this["BUSY"] = 0;
+                if (status != 0)
+                {
+                    this["ERROR"] = 1;
+                    this["STATUS"] = status >> 16;
+                    return;
+                }
+
+                this["DONE"] = 1;
+                if (_write) return;
+                this["VALUE"] = v;
+                Texts["TEXT"] = t;
+            }
+
+            /// <summary>On a worker thread: one read or write, connecting first when there is no open connection to URL.</summary>
+            private (uint, double, string) Request(string url, string node, double value, string text)
+            {
+                if (!OpcUa.UaClient.TryParseNodeId(node, out var id)) return (0x80330000, 0, string.Empty);   // BadNodeIdInvalid
+                try
+                {
+                    if (_client == null || _client.Url != url || !_client.Connected)
+                    {
+                        _client?.Dispose();
+                        _client = null;
+                        _client = OpcUa.UaClient.Connect(url);
+                    }
+
+                    if (!_write)
+                    {
+                        var d = _client.Read(id);
+                        if (!d.HasValue || (d.Status & 0x80000000) != 0) return (d.Status == 0 ? 0x80000000 : d.Status, 0, string.Empty);
+                        _types[node] = d.Value.Type;
+                        return (0, Number(d.Value), Shown(d.Value));
+                    }
+
+                    if (!_types.TryGetValue(node, out var type))
+                    {
+                        var d = _client.Read(id);   // the node's own type, once
+                        if (!d.HasValue || (d.Status & 0x80000000) != 0) return (d.Status == 0 ? 0x80000000 : d.Status, 0, string.Empty);
+                        _types[node] = type = d.Value.Type;
+                    }
+
+                    return (_client.Write(id, Typed(type, value, text)), 0, string.Empty);
+                }
+                catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or FormatException or AggregateException or ObjectDisposedException or InvalidOperationException)
+                {
+                    _client?.Dispose();
+                    _client = null;
+                    return (0x80050000, 0, string.Empty);   // BadCommunicationError
+                }
+            }
+
+            private static double Number(OpcUa.Variant v) => v.Value switch
+            {
+                bool b => b ? 1 : 0,
+                string s => double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) ? d : 0,
+                IConvertible c => c.ToDouble(CultureInfo.InvariantCulture),
+                _ => 0
+            };
+
+            private static string Shown(OpcUa.Variant v) => v.Value switch
+            {
+                null => string.Empty,
+                string s => s,
+                bool b => b ? "TRUE" : "FALSE",
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                _ => v.Value.ToString() ?? string.Empty
+            };
+
+            /// <summary>The value given, in the node's type (a number wrapped as that type does, TEXT for a String).</summary>
+            private static OpcUa.Variant Typed(OpcUa.UaType type, double v, string text)
+            {
+                long n = (long)Math.Round(v);
+                return type switch
+                {
+                    OpcUa.UaType.Boolean => new OpcUa.Variant(type, v != 0),
+                    OpcUa.UaType.SByte => new OpcUa.Variant(type, unchecked((sbyte)n)),
+                    OpcUa.UaType.Byte => new OpcUa.Variant(type, unchecked((byte)n)),
+                    OpcUa.UaType.Int16 => new OpcUa.Variant(type, unchecked((short)n)),
+                    OpcUa.UaType.UInt16 => new OpcUa.Variant(type, unchecked((ushort)n)),
+                    OpcUa.UaType.Int32 => new OpcUa.Variant(type, unchecked((int)n)),
+                    OpcUa.UaType.UInt32 => new OpcUa.Variant(type, unchecked((uint)n)),
+                    OpcUa.UaType.Int64 => new OpcUa.Variant(type, n),
+                    OpcUa.UaType.UInt64 => new OpcUa.Variant(type, unchecked((ulong)n)),
+                    OpcUa.UaType.Float => new OpcUa.Variant(type, (float)v),
+                    OpcUa.UaType.String => new OpcUa.Variant(type, text),
+                    _ => new OpcUa.Variant(OpcUa.UaType.Double, v)
+                };
+            }
+
+            public override void Reset()
+            {
+                base.Reset();
+                _last = false;
+                _pending = null;
+                _types.Clear();
+                _client?.Dispose();
+                _client = null;
             }
         }
 
@@ -2451,7 +2599,7 @@ namespace RobotTwin.CoreSim.Industrial
                         else
                         {
                             string own = _pous.Count == 0 ? string.Empty : ", " + string.Join(", ", _pous.Values.Where(x => x.Kind == "FUNCTION_BLOCK").Select(x => x.Name));
-                            throw new StCompileException(typeTok.Line, $"'{type}' türü yok (BOOL, INT, REAL, TIME, STRING, TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS, MB_READ, MB_WRITE{own}).");
+                            throw new StCompileException(typeTok.Line, $"'{type}' türü yok (BOOL, INT, REAL, TIME, STRING, TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS, MB_READ, MB_WRITE, UA_READ, UA_WRITE{own}).");
                         }
 
                         if (at != null) Bind(v, at, n.Line);
@@ -3092,7 +3240,7 @@ namespace RobotTwin.CoreSim.Industrial
             }
 
             private static StType MemberType(Block b, string member) =>
-                b.TypeOf(member) ?? (member is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
+                b.TypeOf(member) ?? (member is "URL" or "NODE" or "TEXT" ? StType.String : member is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
                     : member is "ET" or "PT" ? StType.Time : StType.Int);
 
             /// <summary>[plc-pou] Scale(raw := x, hi := 10.0) or Scale(x, 0.0, 10.0): named arguments, or positional in the order of VAR_INPUT.</summary>

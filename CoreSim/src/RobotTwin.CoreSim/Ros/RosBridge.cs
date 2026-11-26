@@ -66,6 +66,19 @@ namespace RobotTwin.CoreSim.Ros
 
         public void Publish(string topic, JsonObject message) => Queue(new JsonObject { ["op"] = "publish", ["topic"] = topic, ["msg"] = message });
 
+        /// <summary>
+        /// [ros-action] Offers an action server through rosbridge: its goals come back from <see cref="TryReceive"/> with the
+        /// topic "@send_action_goal" (the whole op: id, action, args) and their cancels with "@cancel_action_goal".
+        /// </summary>
+        public void AdvertiseAction(string action, string type) => Queue(new JsonObject { ["op"] = "advertise_action", ["action"] = action, ["type"] = type });
+
+        public void ActionFeedback(string id, string action, JsonObject values) =>
+            Queue(new JsonObject { ["op"] = "action_feedback", ["id"] = id, ["action"] = action, ["values"] = values });
+
+        /// <summary>[ros-action] A goal's end: <paramref name="status"/> 4 succeeded, 5 canceled, 6 aborted (action_msgs/GoalStatus).</summary>
+        public void ActionResult(string id, string action, JsonObject values, int status) =>
+            Queue(new JsonObject { ["op"] = "action_result", ["id"] = id, ["action"] = action, ["values"] = values, ["status"] = status, ["result"] = true });
+
         public void Subscribe(string topic, string type, int throttleMs = 0)
         {
             var op = new JsonObject { ["op"] = "subscribe", ["topic"] = topic, ["type"] = type };
@@ -156,6 +169,13 @@ namespace RobotTwin.CoreSim.Ros
             }
             catch (System.Text.Json.JsonException)
             {
+                return;
+            }
+
+            if (op is JsonObject a && (string?)a["op"] is "send_action_goal" or "cancel_action_goal")
+            {
+                _inbox.Enqueue(("@" + (string?)a["op"], a));   // [ros-action] a goal or a cancel for an action this side serves
+                Interlocked.Increment(ref _received);
                 return;
             }
 

@@ -122,6 +122,9 @@ typedef struct rw_host_api {
 #define RW_RADIO_PAD_OUTPUT      0x42  /* in: i32 index, i32 what (1 color, 2 player LEDs, 4 rumble), u8 r, g, b, leds, weak, strong, u16 pad, u32 duration_ms */
 #define RW_RADIO_PAD_FORGET      0x43
 #define RW_RADIO_PAD_DISCONNECT  0x44  /* in: i32 index */
+#define RW_RADIO_ESPNOW_INIT     0x50  /* in: i32 on; ret: 0, -2 while Wi-Fi is off */
+#define RW_RADIO_ESPNOW_SEND     0x51  /* in: u8 mac[6], payload (<= 250); ret: 0, -2 not initialised */
+#define RW_RADIO_ESPNOW_POLL     0x52  /* out: u8 kind (1 rx, 2 sent), u8 status, i8 rssi, u8 0, u8 mac[6], u16 len, payload; ret: 1 / 0 */
 
 #pragma pack(push, 1)
 typedef struct rw_wifi_net {
