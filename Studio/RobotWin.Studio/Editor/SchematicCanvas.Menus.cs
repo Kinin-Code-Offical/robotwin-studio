@@ -168,6 +168,7 @@ namespace RobotWin.Studio.Editor
                         Item("Etiket", "L", () => AddLabelAt(WireSnap(at), false));
                         Item("Global etiket", "Ctrl+L", () => AddLabelAt(WireSnap(at), true));
                         Item("NC işareti", "Q", () => Tool = EditorTool.NoConnect);
+                        Item("Bağlantı noktası", "J", () => ToggleJunctionAt(at));   // [junction]
                         Sep();
                         Item("Tümünü seç", "Ctrl+A", SelectAll);
                         Item("Sığdır", "F / Home", FitToContent);

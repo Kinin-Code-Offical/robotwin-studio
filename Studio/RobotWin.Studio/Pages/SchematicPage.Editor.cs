@@ -1176,6 +1176,23 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "junction":   // [junction] two crossings beside the circuit: the left one joined by a junction, the right one only crossing
+                {
+                    var jb = SchematicEditing.Bounds(SchematicEditing.AllItems(W.Schematic), W.Library);
+                    double jx = Math.Ceiling(jb?.MaxX ?? 20) + 4, jy = Math.Floor(jb?.MinY ?? 0) + 2;
+                    foreach (double dx in new[] { 0.0, 10 })
+                    {
+                        W.Schematic.Wires.Add(new SchematicWire { Points = { new GridPoint(jx + dx, jy + 4), new GridPoint(jx + dx + 8, jy + 4) } });
+                        W.Schematic.Wires.Add(new SchematicWire { Points = { new GridPoint(jx + dx + 4, jy), new GridPoint(jx + dx + 4, jy + 8) } });
+                    }
+
+                    Canvas.Tool = EditorTool.Junction;
+                    Canvas.ToggleJunctionAt(new GridPoint(jx + 4, jy + 4));
+                    Canvas.FitToContent();
+                    Canvas.InvalidateVisual();
+                    break;
+                }
+
                 case "dock-min":   // [dock-min] the library minimized to its strip
                     _dock?.Minimize(DockPlace.Left, true);
                     break;

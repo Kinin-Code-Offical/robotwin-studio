@@ -34,6 +34,9 @@ namespace RobotWin.Studio.Editor
         /// <summary>[highlight] KiCad's Highlight Net tool: a click lights up the net under it (and on the board); the same net or nothing clears it.</summary>
         Highlight,
 
+        /// <summary>[junction] KiCad's Add Junction (J): wires crossing at the click join; on a junction placed by hand, they part again.</summary>
+        Junction,
+
         /// <summary>[shapes] KiCad's schematic graphics: a polyline, a rectangle, a circle, an arc (Editor/SchematicCanvas.Shapes.cs).</summary>
         Line,
         Rectangle,

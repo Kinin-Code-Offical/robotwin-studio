@@ -170,6 +170,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.Text => "Metin · yazının sol üst köşesine tıklayın",
                 EditorTool.GlobalLabel => "Global etiket · tıklayın",
                 EditorTool.NoConnect => "NC işareti · pin uçlarına tıklayın",
+                EditorTool.Junction => "Bağlantı noktası · tellerin kesiştiği yere tıklayın: birleşirler · elle konmuş noktaya tıklayınca ayrılırlar",
                 EditorTool.Highlight => "Hattı vurgula · pine, tele ya da etikete tıklayın · aynı hatta ya da boşa tıklayınca kalkar",
                 EditorTool.Line => "Çizgi · köşelere tıklayın · çift tık, Enter ya da Esc: bitir",
                 EditorTool.Rectangle => "Dikdörtgen · iki köşeye tıklayın",
@@ -755,6 +756,31 @@ namespace RobotWin.Studio.Editor
                 Doc.NoConnects.Add(new NoConnectFlag { Position = at });
                 W.CommitChange(pin != null ? $"{pin.Value.Part.RefDes}.{pin.Value.Pin.Name}: bağlantı yok (NC)" : "NC işareti eklendi");
             }
+        }
+
+        /// <summary>[junction] KiCad's Add Junction at a grid point; on a junction placed by hand, it comes away.</summary>
+        public void ToggleJunctionAt(GridPoint g)
+        {
+            if (!GuardEditing()) return;
+            var at = Snap(g);
+            if (SchematicEditing.HasRemovableJunction(Doc, at))
+            {
+                W.BeginChange();
+                SchematicEditing.RemoveJunction(Doc, at);
+                W.CommitChange("Bağlantı noktası kaldırıldı: teller yalnız kesişiyor");
+                return;
+            }
+
+            int through = SchematicEditing.WiresThrough(Doc, at).Count;
+            if (through < 2)
+            {
+                W.Status = through == 0 ? "Burada tel yok" : "Burada kesişen ikinci bir tel yok";
+                return;
+            }
+
+            W.BeginChange();
+            SchematicEditing.PlaceJunction(Doc, at);
+            W.CommitChange($"Bağlantı noktası: {through} tel birleşti");
         }
 
         public void BreakWireAt(SchematicWire wire, GridPoint at)

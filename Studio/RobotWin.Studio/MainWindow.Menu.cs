@@ -123,6 +123,11 @@ namespace RobotWin.Studio
             m.Items.Add(Item("_Kaydet", "Ctrl+S", () => OnSave(this, new RoutedEventArgs())));
             m.Items.Add(Item("Farklı kaydet…", "Ctrl+Shift+S", () => SaveAs()));
             m.Items.Add(Item("Simülasyon kaydını kaydet (.rwsim)…", null, SaveRecording));
+            m.Items.Add(Item("Kartı çizdir (SVG / PDF)…", null, () =>   // [plot] KiCad's File ▸ Plot
+            {
+                Navigate("pcb");
+                Dispatcher.BeginInvoke(new Action(_pcb.ShowPlotDialog), System.Windows.Threading.DispatcherPriority.Loaded);
+            }, W.Schematic.Board != null));
             m.Items.Add(new Separator());
             m.Items.Add(Item("Projeyi denetle…", null, () => CheckProject(quiet: false)));   // [integrity] what this computer lacks for it
             m.Items.Add(Item("Önceki sürümler…", null, ShowVersions));   // [versions] autosaves and the versions before each save

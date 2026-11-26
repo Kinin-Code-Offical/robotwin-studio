@@ -384,6 +384,70 @@ namespace RobotTwin.CoreSim.Design
         private static bool Between(GridPoint a, GridPoint b, GridPoint c) =>
             (b.X - a.X) * (c.X - b.X) + (b.Y - a.Y) * (c.Y - b.Y) >= -1e-9;
 
+        // ================================================================ [junction] KiCad's Add Junction
+
+        /// <summary>The wires that pass through a point: at a corner or an end of theirs, or across one of their segments.</summary>
+        public static List<SchematicWire> WiresThrough(Schematic s, GridPoint at) =>
+            s.Wires.Where(w => w.Points.Contains(at) || Crossing(w, at) >= 0).ToList();
+
+        /// <summary>The segment of <paramref name="w"/> that <paramref name="at"/> lies inside of (not at its ends), or -1.</summary>
+        private static int Crossing(SchematicWire w, GridPoint at)
+        {
+            for (int i = 0; i + 1 < w.Points.Count; i++)
+            {
+                GridPoint a = w.Points[i], b = w.Points[i + 1];
+                if (a.Equals(at) || b.Equals(at)) continue;
+                if (DistanceToSegment(at, a, b, out _) <= GridPoint.Tolerance) return i;
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Places a junction: every wire that crosses the point gets a corner there, so wires that only crossed now join
+        /// (two wires crossing without one do not, as in KiCad). Nothing changes, and false comes back, when fewer than
+        /// two wires pass through the point.
+        /// </summary>
+        public static bool PlaceJunction(Schematic s, GridPoint at)
+        {
+            var through = WiresThrough(s, at);
+            if (through.Count < 2) return false;
+            foreach (var w in through)
+            {
+                int seg = Crossing(w, at);
+                if (seg >= 0) w.Points.Insert(seg + 1, at);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Takes a junction away: where wires only run straight through the point, the corner there goes, so they
+        /// cross again without joining. A wire that ends or turns there keeps it (a T stays joined, as in KiCad).
+        /// Returns how many wires let go.
+        /// </summary>
+        public static int RemoveJunction(Schematic s, GridPoint at)
+        {
+            int freed = 0;
+            foreach (var w in s.Wires)
+            {
+                for (int i = 1; i + 1 < w.Points.Count; i++)
+                {
+                    if (!w.Points[i].Equals(at) || !Collinear(w.Points[i - 1], at, w.Points[i + 1]) || !Between(w.Points[i - 1], at, w.Points[i + 1])) continue;
+                    w.Points.RemoveAt(i);
+                    freed++;
+                    break;
+                }
+            }
+
+            return freed;
+        }
+
+        /// <summary>Whether a junction placed by hand is at the point: two or more wires run straight through a corner there.</summary>
+        public static bool HasRemovableJunction(Schematic s, GridPoint at) =>
+            s.Wires.Count(w => Enumerable.Range(1, Math.Max(0, w.Points.Count - 2))
+                                       .Any(i => w.Points[i].Equals(at) && Collinear(w.Points[i - 1], at, w.Points[i + 1]) && Between(w.Points[i - 1], at, w.Points[i + 1]))) >= 2;
+
         public static double DistanceToSegment(GridPoint p, GridPoint a, GridPoint b, out GridPoint closest)
         {
             double dx = b.X - a.X, dy = b.Y - a.Y, len2 = dx * dx + dy * dy;

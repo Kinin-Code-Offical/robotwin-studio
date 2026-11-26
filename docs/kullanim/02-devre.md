@@ -54,9 +54,10 @@ Yardımcı tuşlar:
 | Backspace | Son köşeyi geri al |
 | L / Ctrl+L | Hat etiketi / global etiket |
 | Q | Bağlantı yok (NC) işareti |
+| J | Bağlantı noktası: imlecin altında kesişen teller birleşir; elle konmuş noktada yeniden basınca ayrılır |
 | T | Metin: sayfaya not, başlık ya da açıklama (çerçeveli olunca metin kutusu); çift tıkla düzenlenir |
 
-Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir. Kabloya sağ tıklayınca **Böl**, **segment sil** ve **etiket** seçenekleri çıkar.
+Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir. KiCad'deki gibi, birbirinin üstünden geçen iki kablo bağlı sayılmaz; bir kablonun ucu ya da köşesi öbürünün üstüne düşerse (T) bağlanır ve orada nokta çizilir. Kesişen iki kabloyu birleştirmek için araç çubuğundaki bağlantı noktası aracıyla (J) kesişime tıklayın; nokta çizilir ve iki kablo aynı hat olur. Elle konmuş noktaya yeniden tıklamak onu kaldırır. Kabloya sağ tıklayınca **Böl**, **segment sil** ve **etiket** seçenekleri çıkar.
 
 ## Düzenleme
 

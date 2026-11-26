@@ -116,6 +116,15 @@ namespace RobotWin.Studio.Shell
         public string PcbLayerPairA { get; set; } = "Top";
         public string PcbLayerPairB { get; set; } = "Bottom";
 
+        /// <summary>[plot] The PCB Plot window's last choices: layers (KiCad names), format (pdf, svg, svg1), the options.</summary>
+        public string PcbPlotLayers { get; set; } = string.Empty;
+        public string PcbPlotFormat { get; set; } = "pdf";
+        public bool PcbPlotColor { get; set; } = true;
+        public bool PcbPlotMirror { get; set; }
+        public bool PcbPlotHoles { get; set; } = true;
+        public bool PcbPlotEdge { get; set; } = true;
+        public bool PcbPlotLabel { get; set; } = true;
+
         /// <summary>[zone-look] Whether the PCB editor draws pours by their outline only.</summary>
         public bool PcbZoneOutlines { get; set; }
 

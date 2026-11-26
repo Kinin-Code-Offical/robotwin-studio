@@ -54,9 +54,10 @@ Helper keys:
 | Backspace | Undo the last corner |
 | L / Ctrl+L | Net label / global label |
 | Q | No-connect (NC) marker |
+| J | Junction: wires crossing under the pointer join; pressed again on a junction placed by hand, they part |
 | T | Text: a note, title or description on the sheet (a text box when framed); double-click to edit |
 
-Labels with the same name are connected; the name `GND` means ground. Right-clicking a wire offers **Split wire**, **Delete this segment** and **Add label**.
+Labels with the same name are connected; the name `GND` means ground. As in KiCad, two wires that cross are not connected; where the end or a corner of one lands on the other (a T) they join and a dot is drawn. To join two crossing wires, click the crossing with the junction tool in the toolbar (J); a dot is drawn and both wires become one net. Clicking a junction placed by hand again takes it away. Right-clicking a wire offers **Split wire**, **Delete this segment** and **Add label**.
 
 ## Editing
 

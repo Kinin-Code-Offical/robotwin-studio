@@ -248,6 +248,7 @@ namespace RobotWin.Studio.Pages
                 "NoConnect" => EditorTool.NoConnect,
                 "Text" => EditorTool.Text,   // [notes]
                 "Highlight" => EditorTool.Highlight,   // [highlight]
+                "Junction" => EditorTool.Junction,   // [junction]
                 _ => EditorTool.Select
             };
             Canvas.Tool = tool;
@@ -262,6 +263,7 @@ namespace RobotWin.Studio.Pages
             ToolNoConnect.IsChecked = Canvas.Tool == EditorTool.NoConnect;
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
+            ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
             ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;   // [shapes]
         }
 

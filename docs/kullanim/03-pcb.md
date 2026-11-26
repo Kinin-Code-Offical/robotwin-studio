@@ -155,6 +155,10 @@ Bir konnektör duvardan dışarı çıkacaksa (USB soketi, DC jakı) **Duvardaki
 
 Gerber ZIP'ini doğrudan kart üreticisine yükleyebilirsiniz.
 
+### Çizdir (SVG / PDF)
+
+**Dosya → Kartı çizdir (SVG / PDF)…** (ya da komut paletinde **Çizdir (SVG / PDF)**) KiCad'in Çizdir penceresidir. Her katman Gerber'e yazılan çiziminin aynısıyla, 1:1 ölçekte çizilir: dolgular, damlalar, yollar, pedler, via'lar, maske açıklıkları, pasta, serigrafi ve kenar. Biçim: **PDF: her katman bir sayfa**, **SVG: her katman ayrı dosya** (adın sonuna katmanınki eklenir, örneğin `kart-F_Cu.svg`) ya da **SVG: hepsi tek dosyada** (katmanlar kartta durdukları sırayla, her biri kendi grubunda). Katmanlar tek tek ya da **Hepsi**, **Bakır**, **Üst taraf**, **Alt taraf** düğmeleriyle seçilir. Seçenekler: renkli ya da hepsi siyah (toner transferi, film), aynalı, delikler gerçek çapında açık, kart kenarı her katmanda ve altta kartın ve katmanın adı. Seçimler hatırlanır.
+
 ZIP kaydedilir kaydedilmez diskten geri okunup denetlenir. Okuyucu, dosyaları yazan koddan bağımsız olarak Gerber ve Excellon belirtimlerine göre yazılmıştır:
 
 - her katman 20 µm'lik (büyük kartlarda biraz daha iri) piksellerle çizilir;

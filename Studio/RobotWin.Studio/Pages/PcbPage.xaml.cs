@@ -798,6 +798,22 @@ namespace RobotWin.Studio.Pages
                     ShowFootprintTable();
                     break;
 
+                case "plot":   // [plot] the Plot window; --plot-out <folder> also writes what it plots, to look at
+                    ShowPlotDialog();
+                    int po = Array.IndexOf(Environment.GetCommandLineArgs(), "--plot-out");
+                    if (po >= 0 && po + 1 < Environment.GetCommandLineArgs().Length)
+                    {
+                        string dir = Environment.GetCommandLineArgs()[po + 1];
+                        var all = BoardPlot.Layers(Board);
+                        var two = all.Where(l => l.Id is "F.Cu" or "B.Cu" or "F.Silkscreen" or "Edge.Cuts").ToList();
+                        File.WriteAllText(Path.Combine(dir, "plot-F_Cu.svg"), BoardPlot.Svg(Board, all[0], new PlotOptions { Title = "Motor" }));
+                        File.WriteAllText(Path.Combine(dir, "plot-mirror-bw.svg"), BoardPlot.Svg(Board, all[0], new PlotOptions { Title = "Motor", Mirror = true, Color = false }));
+                        File.WriteAllText(Path.Combine(dir, "plot-all.svg"), BoardPlot.Svg(Board, two, new PlotOptions { Title = "Motor" }));
+                        File.WriteAllBytes(Path.Combine(dir, "plot.pdf"), BoardPlot.Pdf(Board, two, new PlotOptions { Title = "Motor sürücü" }));
+                    }
+
+                    break;
+
                 case "teardrops-panel":   // [teardrop] the settings panel, open, as the picture
                     OnTeardrops(TeardropButton, new RoutedEventArgs());
                     if (_teardropPanel?.Child is FrameworkElement panel)

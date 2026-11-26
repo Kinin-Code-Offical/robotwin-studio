@@ -16,6 +16,28 @@ namespace RobotTwin.CoreSim.Pcb
     /// via span; bill of materials and pick-and-place. Packed as a zip board houses accept.
     /// Outdated zone fills are refilled first.
     /// </summary>
+    /// <summary>
+    /// [plot] What draws a board layer: the Gerber writer, and the SVG and PDF plotters (Pcb/BoardPlot.cs), as KiCad's
+    /// PLOTTER, so a printed or drawn layer is exactly what goes to the fab. Board frame: mm, Y down.
+    /// </summary>
+    internal interface IPlotter
+    {
+        /// <summary>A stroke with round ends.</summary>
+        void Line(double x1, double y1, double x2, double y2, double width);
+
+        /// <summary>A ring (a stroked circle).</summary>
+        void Circle(double cx, double cy, double r, double width);
+
+        /// <summary>A stroked arc; <paramref name="angleIncreasing"/> is the direction in the Y-down board frame.</summary>
+        void Arc(double x1, double y1, double x2, double y2, double cx, double cy, bool angleIncreasing, double width);
+
+        /// <summary>A pad shape, filled, grown by <paramref name="expand"/> all round.</summary>
+        void Flash(PadShape shape, double x, double y, double w, double h, double expand = 0);
+
+        /// <summary>A filled polygon.</summary>
+        void Region(IReadOnlyList<PcbPoint> points);
+    }
+
     public static class GerberExporter
     {
         /// <param name="fitting">[variants] The alternative being built: its parts not fitted leave the bill of materials and the
@@ -60,7 +82,7 @@ namespace RobotTwin.CoreSim.Pcb
 
         // ------------------------------------------------------------- Gerber writer
 
-        private sealed class GerberWriter
+        private sealed class GerberWriter : IPlotter
         {
             private readonly StringBuilder _sb = new StringBuilder();
             private readonly Dictionary<string, int> _apertures = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -168,7 +190,7 @@ namespace RobotTwin.CoreSim.Pcb
         }
 
         /// <summary>Pad copper: flashed apertures; round-rect pads as exact regions.</summary>
-        private static void PadCopper(GerberWriter g, PlacedPad p, double expand = 0)
+        private static void PadCopper(IPlotter g, PlacedPad p, double expand = 0)
         {
             if (p.Pad.Shape == PadShape.RoundRect)
             {
@@ -186,8 +208,14 @@ namespace RobotTwin.CoreSim.Pcb
                 : layer == CopperLayer.Bottom ? "Copper,L" + count.ToString(CultureInfo.InvariantCulture) + ",Bot"
                 : "Copper,L" + index.ToString(CultureInfo.InvariantCulture) + ",Inr";
             var g = new GerberWriter(board.Height, function);
-            int layers = board.LayerCount;
+            PlotCopper(g, board, layer);
+            return g.ToString();
+        }
 
+        /// <summary>[plot] One copper layer's artwork into any plotter (Gerber, SVG, PDF draw the same thing).</summary>
+        internal static void PlotCopper(IPlotter g, BoardDocument board, CopperLayer layer)
+        {
+            int layers = board.LayerCount;
             foreach (var zone in board.Zones.Where(z => z.Layer == layer && z.IsFilled))
             {
                 foreach (var region in zone.FilledRegions) g.Region(Polygon.Fracture(region));
@@ -198,7 +226,6 @@ namespace RobotTwin.CoreSim.Pcb
             foreach (var p in board.Pads().Where(p => p.OnLayer(layer))) PadCopper(g, p);
             foreach (var v in board.Vias.Where(v => v.Spans(layer, layers))) g.Flash(PadShape.Circle, v.X, v.Y, v.Diameter, v.Diameter);
             foreach (var h in board.MountingHoles.Where(h => h.Plated)) g.Flash(PadShape.Circle, h.X, h.Y, h.PadDiameter, h.PadDiameter);
-            return g.ToString();
         }
 
         /// <summary>Solder mask openings grow this much all round past the copper they open (mm).</summary>
@@ -229,27 +256,44 @@ namespace RobotTwin.CoreSim.Pcb
         private static string Mask(BoardDocument board, CopperLayer side)
         {
             var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Soldermask,Top" : "Soldermask,Bot", "Negative");
+            PlotMask(g, board, side);
+            return g.ToString();
+        }
+
+        /// <summary>[plot] The mask openings on one side (drawn where the mask is not).</summary>
+        internal static void PlotMask(IPlotter g, BoardDocument board, CopperLayer side)
+        {
             foreach (var o in MaskOpenings(board, side))
             {
                 if (o.Pad is { } p && p.Pad.Shape == PadShape.RoundRect && !(p.Pad.IsThroughHole && p.Pad.NonPlated)) PadCopper(g, p, MaskExpansion);
                 else g.Flash(o.Shape, o.X, o.Y, o.W, o.H, MaskExpansion);
             }
-
-            return g.ToString();
         }
 
         private static string Paste(BoardDocument board, CopperLayer side)
         {
             var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Paste,Top" : "Paste,Bot");
-            foreach (var p in board.Pads().Where(p => !p.Pad.IsThroughHole && p.SmdLayer == side)) PadCopper(g, p);
+            PlotPaste(g, board, side);
             return g.ToString();
+        }
+
+        /// <summary>[plot] The stencil's apertures on one side.</summary>
+        internal static void PlotPaste(IPlotter g, BoardDocument board, CopperLayer side)
+        {
+            foreach (var p in board.Pads().Where(p => !p.Pad.IsThroughHole && p.SmdLayer == side)) PadCopper(g, p);
         }
 
         private static string Silkscreen(BoardDocument board, CopperLayer side)
         {
             var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Legend,Top" : "Legend,Bot");
-            foreach (var (s, width) in SilkStrokes(board, side)) g.Line(s.X1, s.Y1, s.X2, s.Y2, width);
+            PlotSilk(g, board, side);
             return g.ToString();
+        }
+
+        /// <summary>[plot] The legend on one side.</summary>
+        internal static void PlotSilk(IPlotter g, BoardDocument board, CopperLayer side)
+        {
+            foreach (var (s, width) in SilkStrokes(board, side)) g.Line(s.X1, s.Y1, s.X2, s.Y2, width);
         }
 
         /// <summary>
@@ -292,13 +336,18 @@ namespace RobotTwin.CoreSim.Pcb
         private static string Outline(BoardDocument board)
         {
             var g = new GerberWriter(board.Height, "Profile,NP");
+            PlotOutline(g, board);
+            return g.ToString();
+        }
+
+        /// <summary>[plot] The board's edge (lines and arcs).</summary>
+        internal static void PlotOutline(IPlotter g, BoardDocument board, double width = 0.1)
+        {
             foreach (var e in board.OutlineElements())
             {
-                if (e.IsArc) g.Arc(e.X1, e.Y1, e.X2, e.Y2, e.CX, e.CY, e.CounterClockwise, 0.1);
-                else g.Line(e.X1, e.Y1, e.X2, e.Y2, 0.1);
+                if (e.IsArc) g.Arc(e.X1, e.Y1, e.X2, e.Y2, e.CX, e.CY, e.CounterClockwise, width);
+                else g.Line(e.X1, e.Y1, e.X2, e.Y2, width);
             }
-
-            return g.ToString();
         }
 
         /// <summary>Excellon files: PTH (through), NPTH (if any), and one per blind/buried span.</summary>

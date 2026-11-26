@@ -24,7 +24,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Yeni, aç, kaydet | Dosya menüsü ve başlık çubuğu | var | |
 | Kart ayarları (katman yığını, kurallar) | Kart ayarları… | var | |
-| Yazdır, çizdir (PDF/SVG) | yalnız Gerber, KiCad | kısmi | 2 |
+| Yazdır, çizdir (PDF/SVG) | Çizdir: Gerber ile aynı çizici; PDF (sayfa/katman), SVG (katman başına ya da tek dosya), renkli/siyah, aynalı, delikler, kenar, etiket | var | |
 | Geri al, yinele | Ctrl+Z / Ctrl+Y, araç çubuğunda | var | |
 | Bul (parça, hat, yazı) | Bul (Ctrl+F), görünüm çubuğunda | var | |
 | Yakınlaştır, uzaklaştır, sığdır, nesnelere sığdır, seçime sığdır | görünüm çubuğu (kartın sağ üstü) | var | |
@@ -120,7 +120,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kablo | var | var | |
 | Bus, bus girişi | yok | yok | 3 |
 | NC işareti | var | var | |
-| Bağlantı noktası (junction) aracı | otomatik | kısmi | 2 |
+| Bağlantı noktası (junction) aracı | J aracı: kesişen telleri birleştirir, yeniden tıklayınca ayırır; T bağlantıları kendiliğinden | var | |
 | Etiket: yerel, global | var | var | |
 | Etiket: hiyerarşik, yönerge | yok | yok | 3 |
 | Kural alanı | yok | yok | 3 |

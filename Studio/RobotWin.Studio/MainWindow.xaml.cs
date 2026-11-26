@@ -337,6 +337,11 @@ namespace RobotWin.Studio
                 Navigate("pcb");
                 Dispatcher.BeginInvoke(new Action(_pcb.ShowFootprintTable), System.Windows.Threading.DispatcherPriority.Loaded);
             }) { Context = "pcb", Keywords = "footprint assign cvpcb ayak izi ped tablo parça", Ready = () => W.Schematic.Board != null };
+            yield return new PaletteCommand("PCB", "Çizdir (SVG / PDF)", () =>   // [plot] KiCad's Plot
+            {
+                Navigate("pcb");
+                Dispatcher.BeginInvoke(new Action(_pcb.ShowPlotDialog), System.Windows.Threading.DispatcherPriority.Loaded);
+            }) { Context = "pcb", Keywords = "plot print yazdır pdf svg katman çizim toner film çıktı", Ready = () => W.Schematic.Board != null };
             yield return new PaletteCommand("PCB", "Aralık çözümlemesi", () => _pcb.ShowClearanceResolution())   // [clearance-res] KiCad's Inspect
             { Context = "pcb", Keywords = "clearance resolution kural aralık boşluk sınıf iki öğe incele inspect", Ready = () => _current == "pcb" };
             yield return new PaletteCommand("PCB", "Kart istatistikleri", () =>

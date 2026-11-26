@@ -120,6 +120,9 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Highlight:   // [highlight] the net under the click, or off again
                     ToggleHighlightUnderCursor();
                     return;
+                case EditorTool.Junction:   // [junction]
+                    ToggleJunctionAt(_mouseGrid);
+                    return;
                 case EditorTool.Line:   // [shapes]
                 case EditorTool.Rectangle:
                 case EditorTool.Circle:
@@ -477,7 +480,7 @@ namespace RobotWin.Studio.Editor
             if (Simulating)
             {
                 // Editing keys are ignored while simulating (the instruments use the canvas).
-                bool editKey = key is Key.Delete or Key.Back or Key.R or Key.X or Key.Y or Key.M or Key.G or Key.W or Key.L or Key.P or Key.Q or Key.A or Key.C or Key.V or Key.E or Key.D
+                bool editKey = key is Key.Delete or Key.Back or Key.R or Key.X or Key.Y or Key.M or Key.G or Key.W or Key.L or Key.P or Key.Q or Key.J or Key.A or Key.C or Key.V or Key.E or Key.D
                     or Key.Left or Key.Right or Key.Up or Key.Down || (ctrl && key is Key.Z or Key.Y or Key.X or Key.V or Key.D);
                 if (editKey) W.Status = "Düzenlemek için önce simülasyonu durdurun (Shift+F5).";
                 return editKey;
@@ -573,6 +576,10 @@ namespace RobotWin.Studio.Editor
                 case Key.Q when !ctrl:
                     if (IsMouseOver && HitPin(_mouseGrid) != null) ToggleNoConnectAt(_mouseGrid);
                     else Tool = EditorTool.NoConnect;
+                    return true;
+                case Key.J when !ctrl:   // [junction] KiCad: a junction where the pointer is
+                    if (IsMouseOver) ToggleJunctionAt(_mouseGrid);
+                    else Tool = EditorTool.Junction;
                     return true;
 
                 // ---------------------------------------------------- nudge
