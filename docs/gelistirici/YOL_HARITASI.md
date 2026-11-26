@@ -98,10 +98,10 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] DFM ve DFT: DRC sekmesinde **Üretim ve test** anahtarı (`Pcb/Dfm.cs`): asit tuzağı, maske köprüsü, pedde via, kenara yakın SMD, fidüsyel, mezar taşı riski, serigrafi, delik çeşidi; test erişimi, kapsam ve prob aralığı;
   - tedarikçili BOM;
   - kutu ile çakışma;
-  - Gerber'in ikinci bir görüntüleyiciyle karşılaştırılması.
+  - [x] Gerber'in ikinci bir görüntüleyiciyle karşılaştırılması: kendi bağımsız RS-274X / Excellon okuyucumuz (`Pcb/GerberReader.cs`) dışa aktarılan ZIP'i diskten okuyup her katmanı kartın kendi geometrisinden çizilen resmiyle piksel piksel karşılaştırıyor, delikleri tek tek eşliyor (`Pcb/GerberCheck.cs`); dışa aktarmadan hemen sonra çalışıyor.
 - [~] **Gömülü yazılım:** Uno/Nano AVR emülatörü ve hata ayıklayıcı var. Eksikler:
   - [x] register ve zaman çizelgesi: hata ayıklayıcıda **Yazmaçlar** sekmesi (`AvrRegisters`, yan etkisiz okuma `Atmega328P.Peek`) ve **Zaman çizelgesi** sekmesi (`McuTrace`: pin kenarları ve kesme giriş/RETI'leri çevrim damgasıyla, halka bellekte; `TimelineView`);
-  - [~] protokol analizörleri: osiloskopta UART, I²C ve SPI çözücü (`Instruments/ProtocolDecoder.cs`). AVR'nin USART'ı TX pinini (D1) bit bit sürüyor. Sırada: RX pininden elektriksel alma, hata enjeksiyonu;
+  - [x] protokol analizörleri: osiloskopta UART, I²C ve SPI çözücü (`Instruments/ProtocolDecoder.cs`). AVR'nin USART'ı TX pinini (D1) bit bit sürüyor, RX pininden (D0) yongadaki gibi alıyor (`Atmega328P.UartRx.cs`: çoğunluk oylaması, FE0/UPE0/DOR0, iki karakterlik tampon; çerçeve biçimi UCSR0C'den). Hata enjeksiyonu: Hat Arıza Enjektörü ve Gevşek Temas parçaları (`FaultSwitch`, tohumlu Poisson arızaları); pin sürücüsü artık ısıyla (I²t) yanıyor;
   - ESP32'nin iki çalışma modu (plan: [ESP32_MODLARI.md](ESP32_MODLARI.md)):
     - [x] 1. Çalışma modu ayarı (kart başına, dosyada) + araç zinciri yöneticisi (`arduino-cli` ile RobotWin'in klasörüne Arduino-ESP32 3.3.13) + donanım derlemesi (`.bin`, `.elf`) + karta yükleme (`esptool`) + birleşik imaj; `--esp32-build`, `--esp32-compat`.
     - [~] 2. Kendi Xtensa LX6 çekirdeğimiz ve komut testleri: `Firmware/Xtensa/` (pencereli kayıtlar ve taşma/boşalma, 16 bitlik komutlar, döngüler, çarpma/bölme, MIN/MAX/NSA/SEXT/CLAMPS, booleanlar, S32C1I, FPU, özel kayıtlar, 1–5. düzey kesmeler ve NMI, CCOMPARE, WAITI, istisna vektörleri); `XtensaCoreTests` gerçek `xtensa-esp32-elf-as` ile 10 test. Kalan: FPU'nun bölme/karekök yardımcı komutları (DIV0.S, DIVN.S, NEXP01.S …) ve MAC16.

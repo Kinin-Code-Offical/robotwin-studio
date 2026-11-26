@@ -1144,7 +1144,21 @@ namespace RobotWin.Studio.Pages
             {
                 GerberExporter.WriteZip(board, dlg.FileName, name.Replace(' ', '_'), Variants.FittingOf(W.Schematic, W.Library));   // [variants] its BOM and pick-and-place
                 Canvas.Refresh();
-                W.Status = "Üretim dosyaları kaydedildi: " + Path.GetFileName(dlg.FileName);
+
+                // [gerber-check] What was written, read back by an independent reader and laid over the board.
+                GerberCheckReport report;
+                var cursor = System.Windows.Input.Mouse.OverrideCursor;
+                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                try { report = GerberCheck.Check(board, GerberCheck.ReadZip(dlg.FileName)); }
+                finally { System.Windows.Input.Mouse.OverrideCursor = cursor; }
+                W.Status = "Üretim dosyaları kaydedildi: " + Path.GetFileName(dlg.FileName) + " · " + report.Summary();
+                if (!report.Ok)
+                {
+                    var lines = report.Layers.Where(l => !l.Ok)
+                        .SelectMany(l => l.Differences.Take(5).Select(d => l.File + ": " + d).Concat(l.Warnings.Take(3).Select(w => l.File + ": " + w)))
+                        .Concat(report.Drills.Where(d => !d.Ok).SelectMany(d => d.Problems.Take(5).Select(p => d.File + ": " + p)));
+                    Dialog.Show(Owner!, "Üretim dosyaları kartla uyuşmuyor", string.Join("\n", lines), "Tamam");
+                }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {

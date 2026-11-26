@@ -41,6 +41,7 @@ namespace RobotTwin.CoreSim.Design
             BusParts.Register(lib);        // SPI / I²C parts: MCP3008 ADC, BMP280 barometer (Design/BusParts.cs)
             CellParts.Register(lib);   // [arm] robot cell parts (Design/CellParts.cs)
             AvionicsParts.Register(lib);   // [aero] barometers, high-g IMU, depth sensor, e-match, 2212 motor (Design/AvionicsParts.cs)
+            FaultParts.Register(lib);      // [faults] line fault injector and loose contact (Design/FaultParts.cs)
             RegisterConnectors(lib);
             RegisterBoards(lib);
         }

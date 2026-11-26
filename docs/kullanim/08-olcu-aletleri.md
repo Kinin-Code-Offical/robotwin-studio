@@ -30,7 +30,37 @@ Otomatik ölçümler: tepe, dip, tepeden tepeye, genlik, ortalama, RMS, periyot,
 
 ### Seri protokol çözücü
 
-Osiloskop panelinin **Çözücü** bölümü probladığınız kabloları UART, I²C ya da SPI olarak okur ve ekranın altına bir çözüm şeridi çizer (baytlar kutu, START/STOP ve ACK işaret, hatalar kırmızı). **UART**: A kanalı hat; **Baud** ve **Eşlik** (yok, çift, tek); başlangıç biti, veri bitleri (önce düşük bit), eşlik ve bitiş biti bitlerin ortasından okunur, bitiş biti düşükse çerçeve hatası, eşlik tutmazsa eşlik hatası. **I²C**: A SCL, B SDA; START (tekrarlı START dahil), 7 bitlik adres ve R/W, her bayttan sonra ACK/NACK, veri, STOP. **SPI**: A SCK, B veri (MOSI ya da MISO), isteğe bağlı CS (düşükken seçili); **Mod** 0–3 saatin boştaki seviyesini ve verinin okunduğu kenarı belirler. Mantık eşiği kaydın en düşük ve en yüksek seviyesinin ortasıdır; yavaş bir kenar, bir parazit ya da yanlış baud hızı gerçekteki gibi görünür. Arduino Uno'nun `Serial`'ı TX pinini (D1) bit bit sürer: D1'e prob bağlayıp UART çözücüyü açınca çizimin yazdıkları hattın geriliminden okunur.
+Osiloskop panelinin **Çözücü** bölümü probladığınız kabloları UART, I²C ya da SPI olarak okur ve ekranın altına bir çözüm şeridi çizer (baytlar kutu, START/STOP ve ACK işaret, hatalar kırmızı). **UART**: A kanalı hat; **Baud** ve **Eşlik** (yok, çift, tek); başlangıç biti, veri bitleri (önce düşük bit), eşlik ve bitiş biti bitlerin ortasından okunur, bitiş biti düşükse çerçeve hatası, eşlik tutmazsa eşlik hatası. **I²C**: A SCL, B SDA; START (tekrarlı START dahil), 7 bitlik adres ve R/W, her bayttan sonra ACK/NACK, veri, STOP. **SPI**: A SCK, B veri (MOSI ya da MISO), isteğe bağlı CS (düşükken seçili); **Mod** 0–3 saatin boştaki seviyesini ve verinin okunduğu kenarı belirler. Mantık eşiği kaydın en düşük ve en yüksek seviyesinin ortasıdır; yavaş bir kenar, bir parazit ya da yanlış baud hızı gerçekteki gibi görünür. Arduino Uno'nun `Serial`'ı TX pinini (D1) bit bit sürer: D1'e prob bağlayıp UART çözücüyü açınca çizimin yazdıkları hattın geriliminden okunur. Alıcısı da RX pininden (D0) okur: bir kartın TX'ini ötekinin RX'ine bağlayın, ikinci kart birincinin yazdıklarını kablodan alır (aşağıda).
+
+### Seri hattan alma
+
+Uno'nun USART alıcısı D0'daki gerilimi, devrenin adımları arasında eşiği geçtiği anlarıyla izler ve yongadaki gibi çözer:
+
+- düşen kenar başlangıç bitidir; ortasında hâlâ düşükse kabul edilir, değilse parazit sayılıp bırakılır;
+- her bit, ortasının çevresindeki üç örneğin çoğunluğuyla okunur (`U2X` ile 1/8, değilse 1/16 bit arayla): örneklerden yalnız birine denk gelen kısa bir parazit atılır;
+- karakter boyu (5–8 bit), eşlik (yok, çift, tek) ve bitiş biti sayısı `UCSR0B`/`UCSR0C`'den gelir; `Serial.begin(9600, SERIAL_8E1)` gibi ayarlar hem göndermede hem almada geçerlidir;
+- bitiş biti düşükse **FE0** (çerçeve hatası), eşlik tutmazsa **UPE0**;
+- alınan karakter iki karakterlik tampona girer, üçüncüsü kaydırma yazmacında bekler; program okumadan dördüncünün başlangıç biti gelirse bekleyen kaybolur ve sonraki karakter **DOR0** (taşma) ile okunur.
+
+Seri monitörden yazılanlar aynı tampona bir çerçeve süresi arayla girer ve hiç kaybolmaz.
+
+### Hat arızası enjeksiyonu
+
+**Ölçüm & Kaynak › Arıza enjeksiyonu** altındaki iki parça, yazılımın arızalı bir hatla ne yaptığını denemek içindir:
+
+| Parça | Bağlantı | Arıza türü |
+| --- | --- | --- |
+| **Hat Arıza Enjektörü** | HAT arızalanacak hatta, GND (ve yüksek arızalarda VCC) beslemeye | `glitch-low` / `glitch-high`: rastgele anlarda kısa parazit darbeleri (hattı GND'ye ya da VCC'ye çeker); `stuck-low` / `stuck-high`: bir andan sonra hat o seviyede takılı |
+| **Gevşek Temas** | teli A ile B arasından geçirir | `intermittent`: rastgele kısa kopukluklar (gevşek konnektör, çatlak lehim); `open`: bir andan sonra tamamen kopuk |
+
+Ayarlar: ortalama sıklık (darbeler rastgele, ortalama bu sıklıkta gelir), darbe ya da kopukluk süresi, başlangıç, süre (0 = sürekli) ve tohum (aynı tohum her çalıştırmada aynı arızaları verir). Enjektörün kısa devresi 1 Ω'dur.
+
+Arıza devreye fiziksel olarak girer, sonucu devre belirler:
+
+- 9600 baud'da 2 µs'lik darbeler alıcının çoğunluk oylamasında elenir, mesaj sağlam ulaşır;
+- 60 µs'lik darbeler bitleri çevirir; boştaki hatta sahte karakterler doğar (`FF`, `FB`);
+- bir başlangıç bitinin hemen önüne düşen kısa bir darbe, çerçeveyi yarım bit erken başlatabilir: gerçek yongada da böyledir;
+- sürücüsüyle çekişen bir kısa devre pini ısıtır: pin, I²t'yi taşıyamayacağı kadar uzun süren bir aşırı akımda yanar (sürekli kısa devrede birkaç milisaniye), mikrosaniyelik darbelerde yanmaz.
 
 ## Multimetre
 

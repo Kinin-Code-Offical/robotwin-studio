@@ -30,7 +30,37 @@ Automatic measurements: maximum, minimum, peak-to-peak, amplitude, mean, RMS, pe
 
 ### Serial protocol decoder
 
-The oscilloscope panel's **Decoder** section reads the probed wires as UART, I²C or SPI and draws a decode lane along the bottom of the screen (bytes as boxes, START/STOP and ACK as marks, errors red). **UART**: channel A is the line; **Baud** and **Parity** (none, even, odd); the start bit, the data bits (least significant first), the parity and the stop bit are read at the middle of each bit, a low stop bit is a framing error and a parity that does not hold a parity error. **I²C**: A is SCL, B SDA; START (repeated START too), the 7-bit address and R/W, ACK/NACK after every byte, the data, STOP. **SPI**: A is SCK, B the data (MOSI or MISO), an optional CS (selected while low); **Mode** 0–3 sets the clock's idle level and the edge the data is read on. The logic threshold is half way between the record's lowest and highest level; a slow edge, a glitch or a wrong baud rate shows as it would. The Arduino Uno's `Serial` drives its TX pin (D1) bit by bit: probe D1 and turn on the UART decoder to read what the sketch prints off the line's voltage.
+The oscilloscope panel's **Decoder** section reads the probed wires as UART, I²C or SPI and draws a decode lane along the bottom of the screen (bytes as boxes, START/STOP and ACK as marks, errors red). **UART**: channel A is the line; **Baud** and **Parity** (none, even, odd); the start bit, the data bits (least significant first), the parity and the stop bit are read at the middle of each bit, a low stop bit is a framing error and a parity that does not hold a parity error. **I²C**: A is SCL, B SDA; START (repeated START too), the 7-bit address and R/W, ACK/NACK after every byte, the data, STOP. **SPI**: A is SCK, B the data (MOSI or MISO), an optional CS (selected while low); **Mode** 0–3 sets the clock's idle level and the edge the data is read on. The logic threshold is half way between the record's lowest and highest level; a slow edge, a glitch or a wrong baud rate shows as it would. The Arduino Uno's `Serial` drives its TX pin (D1) bit by bit: probe D1 and turn on the UART decoder to read what the sketch prints off the line's voltage. Its receiver reads the RX pin (D0) too: wire one board's TX to another's RX and the second receives what the first prints, off the wire (below).
+
+### Receiving on a serial line
+
+The Uno's USART receiver follows D0's voltage, with the moments it crossed the threshold between the circuit's steps, and decodes it as the chip does:
+
+- a falling edge is a start bit; it is accepted if the line is still low at its middle, otherwise it is taken for a glitch and dropped;
+- each bit is the majority of three samples around its middle (1/8 bit apart with `U2X`, 1/16 without): a short glitch that hits one sample is rejected;
+- the character size (5–8 bits), the parity (none, even, odd) and the number of stop bits come from `UCSR0B`/`UCSR0C`; a setting such as `Serial.begin(9600, SERIAL_8E1)` holds for sending and receiving alike;
+- a low stop bit sets **FE0** (frame error), a parity that does not hold **UPE0**;
+- a received character goes into the two-character buffer, a third waits in the shift register; if a fourth's start bit comes before the program reads, the waiting one is lost and the next character read carries **DOR0** (overrun).
+
+Text typed into the serial monitor enters the same buffer one frame time apart and is never lost.
+
+### Line fault injection
+
+The two parts under **Measurement & Source › Fault injection** are for trying what the firmware does with a faulty line:
+
+| Part | Wiring | Fault type |
+| --- | --- | --- |
+| **Line Fault Injector** | HAT to the line to fault, GND (and for high faults VCC) to the supply | `glitch-low` / `glitch-high`: short interference pulses at random moments (pulling the line to GND or to VCC); `stuck-low` / `stuck-high`: the line stuck at that level from a moment on |
+| **Loose Contact** | carries the wire from A to B | `intermittent`: short breaks at random moments (a loose connector, a cracked joint); `open`: fully open from a moment on |
+
+Settings: average rate (the pulses come at random, this often on average), pulse or break length, start, duration (0 = for good) and seed (the same seed gives the same faults every run). The injector's short is 1 Ω.
+
+The fault enters the circuit physically, and the circuit decides what comes of it:
+
+- at 9600 baud, 2 µs pulses are voted out by the receiver and the message arrives whole;
+- 60 µs pulses flip bits, and on an idle line they make up characters (`FF`, `FB`);
+- a short pulse just before a start bit can start the frame half a bit early: the real chip does the same;
+- a short fighting a driver heats the pin: it burns when an overload lasts longer than its I²t allows (a few milliseconds of dead short), not from microsecond pulses.
 
 ## Multimeter
 

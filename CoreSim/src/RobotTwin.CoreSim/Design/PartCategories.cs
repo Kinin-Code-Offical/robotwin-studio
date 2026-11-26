@@ -26,7 +26,7 @@ namespace RobotTwin.CoreSim.Design
             ["regulator"] = "Regülatör", ["buck-module"] = "Regülatör", ["boost-module"] = "Regülatör", ["battery"] = "Pil & akü", ["ground"] = "Toprak & besleme etiketi", ["power-rail"] = "Toprak & besleme etiketi",
             // Ölçüm & kaynak
             ["dc-source"] = "Güç kaynağı", ["bench-psu"] = "Güç kaynağı", ["acdc-psu"] = "Güç kaynağı", ["current-source"] = "Güç kaynağı",
-            ["signal-generator"] = "Sinyal jeneratörü", ["multimeter"] = "Ölçü aleti", ["ammeter"] = "Ölçü aleti", ["voltmeter"] = "Ölçü aleti",
+            ["signal-generator"] = "Sinyal jeneratörü", ["line-fault"] = "Arıza enjeksiyonu", ["loose-contact"] = "Arıza enjeksiyonu", ["multimeter"] = "Ölçü aleti", ["ammeter"] = "Ölçü aleti", ["voltmeter"] = "Ölçü aleti",
             // Anahtar & röle
             ["button"] = "Buton", ["switch"] = "Anahtar", ["relay"] = "Röle",
             // Analog / lojik

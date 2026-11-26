@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fabrication files checked against the board:** the Gerber ZIP is read back from disk by an independent RS-274X and Excellon reader (`Pcb/GerberReader.cs`), each layer painted at 20 µm and laid over the same layer painted from the board's geometry; differences are reported with where they are and their area, drill files hole for hole with plating and diameter. Wrong units, a flipped axis, a wrong aperture, an arc turning the wrong way or a missing object are caught before the files go to the maker.
+
+- **Serial reception from the wire:** the Uno's USART receiver reads D0 as the circuit drives it, timed between the circuit's steps: start-bit check, three-sample majority per bit, 5–8 data bits, parity and stop bits from UCSR0B/C, frame (FE0), parity (UPE0) and overrun (DOR0) errors through a two-character buffer and the shift register. One board's TX wired to another's RX now carries what it prints. The transmitter sends the configured frame too (parity bit, two stop bits, 5–8 data bits); it always sent 8N1 before.
+
+- **Line fault injection:** a Line Fault Injector (interference pulses to GND or VCC at random, or a line stuck at a level) and a Loose Contact (a wire that breaks now and then, or for good), seeded so a run repeats. They are switches in the circuit, so what a fault does depends on the driver and the receiver.
+
+- **Pin drivers die of heat, not of a moment's current:** an Arduino pin burns when the power its driver dissipates, smoothed over 10 ms, reaches what 2.5 × its rated current would give: a dead short in a few milliseconds, never from a microsecond spike. Its over-current warning is given once per overload, not on every step.
+
 - **Timeline tab in the debugger:** a logic analyzer inside the ATmega328P (`McuTrace`) records every pin's level changes and every interrupt's entry and RETI by cycle from the program's first instruction; the tab draws them as traces and handler bars, measures each pin's last period and high time and each interrupt's count and longest run, zooms with the wheel and scrolls back by dragging.
 
 - **Registers tab in the debugger:** the ATmega328P's core (PC, SP, SREG flags, X/Y/Z, R0–R31, cycles) and its 75 peripheral registers by name and group, with the set bits named and 16-bit pairs combined; what changed since the last look is orange. Reading for display has none of a real read's side effects.

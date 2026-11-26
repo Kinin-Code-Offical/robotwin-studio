@@ -200,7 +200,8 @@ namespace RobotTwin.CoreSim.Pcb
             return g.ToString();
         }
 
-        private const double MaskExpansion = 0.05;
+        /// <summary>Solder mask openings grow this much all round past the copper they open (mm).</summary>
+        public const double MaskExpansion = 0.05;
 
         /// <summary>Mask openings on one side: pads with copper there, non-plated holes and mounting holes (vias are tented).</summary>
         public static IEnumerable<(PlacedPad? Pad, double X, double Y, double W, double H, PadShape Shape)> MaskOpenings(BoardDocument board, CopperLayer side)
@@ -246,12 +247,22 @@ namespace RobotTwin.CoreSim.Pcb
         private static string Silkscreen(BoardDocument board, CopperLayer side)
         {
             var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Legend,Top" : "Legend,Bot");
+            foreach (var (s, width) in SilkStrokes(board, side)) g.Line(s.X1, s.Y1, s.X2, s.Y2, width);
+            return g.ToString();
+        }
+
+        /// <summary>
+        /// The legend on one side as pen strokes (board frame) with their widths: footprints' outlines, reference designators
+        /// and texts, clipped where the mask opens (silk never prints on exposed copper).
+        /// </summary>
+        public static List<(Segment2 Stroke, double Width)> SilkStrokes(BoardDocument board, CopperLayer side)
+        {
+            var strokes = new List<(Segment2, double)>();
             double w = board.Rules.SilkWidth;
-            // Silk never prints on exposed copper: strokes are clipped at the mask openings.
             var keepOut = MaskOpenings(board, side).Select(o => (o.X, o.Y, o.W / 2 + MaskExpansion + w / 2, o.H / 2 + MaskExpansion + w / 2)).ToList();
             void Emit(Segment2 s, double width)
             {
-                foreach (var piece in Silk.Clip(s, keepOut)) g.Line(piece.X1, piece.Y1, piece.X2, piece.Y2, width);
+                foreach (var piece in Silk.Clip(s, keepOut)) strokes.Add((piece, width));
             }
 
             foreach (var comp in board.Components.Where(c => c.Side == side))
@@ -268,7 +279,7 @@ namespace RobotTwin.CoreSim.Pcb
                 foreach (var s in Silk.TextStrokes(t)) Emit(s, t.Thickness);
             }
 
-            return g.ToString();
+            return strokes;
         }
 
         private static string Outline(BoardDocument board)

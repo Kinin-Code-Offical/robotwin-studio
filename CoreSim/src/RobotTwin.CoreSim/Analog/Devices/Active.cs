@@ -848,6 +848,22 @@ namespace RobotTwin.CoreSim.Analog.Devices
         /// <summary>Logic level as the input buffer reads it (Schmitt trigger, 0.3/0.6 Vcc).</summary>
         public bool DigitalValue => _level;
 
+        /// <summary>
+        /// [uart-rx] When on, every change of <see cref="DigitalValue"/> is kept with the time the voltage crossed the
+        /// threshold (interpolated inside the step), for a receiver that must know the line between its looks.
+        /// </summary>
+        public bool RecordEdges { get; set; }
+
+        private readonly List<(double Time, bool Level)> _edges = new List<(double, bool)>();
+
+        /// <summary>[uart-rx] The level changes since the last call, oldest first.</summary>
+        public List<(double Time, bool Level)> TakeEdges()
+        {
+            var taken = new List<(double, bool)>(_edges);
+            _edges.Clear();
+            return taken;
+        }
+
         private double _pwmFrequency;
         private double _pwmDuty;
         private double _pwmStart;
@@ -972,6 +988,8 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             double v = ctx.V(Pin, Ground);
             double vcc = ctx.V(Supply, Ground);
+            double before = Voltage;
+            bool was = _level;
             Voltage = v;
             Current = EffectiveMode switch
             {
@@ -983,18 +1001,44 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
             if (_level && v < 0.3 * vcc) _level = false;
             else if (!_level && v > 0.6 * vcc) _level = true;
+            if (RecordEdges && _level != was && !ctx.IsDc)
+            {
+                // where inside the step the voltage crossed the threshold that flipped it
+                double threshold = _level ? 0.6 * vcc : 0.3 * vcc, t = ctx.Time;
+                if (ctx.Dt > 0 && Math.Abs(v - before) > 1e-12) t = ctx.Time - ctx.Dt * Math.Max(0, Math.Min(1, (v - threshold) / (v - before)));
+                _edges.Add((t, _level));
+                if (_edges.Count > 8192) _edges.RemoveRange(0, _edges.Count - 8192);
+            }
 
             if (ctx.IsDc || !ctx.EnableDamage || IsFailed) return;
-            if (Math.Abs(Current) > AbsoluteMaxCurrent * 2.5)
+
+            // [damage] The driver dies of heat, not of a moment's current: the power it dissipates, smoothed over the
+            // silicon's thermal time, against what its rating allows. A dead short or an LED without a resistor burns it in
+            // milliseconds; a microsecond spike (interference, a fault injector's glitch) leaves it whole.
+            double r = EffectiveMode == PinMode.InputPullup ? PullupResistance : DriveResistance;
+            double power = Current * Current * r, rated = AbsoluteMaxCurrent * AbsoluteMaxCurrent * DriveResistance;
+            _heat += (power - _heat) * (1 - Math.Exp(-Math.Max(0, ctx.Dt) / ThermalTime));
+            if (_heat > rated * 6.25)   // as hot as 2.5 × the rated current held
             {
                 Fail(FailureMode.Open, $"pin sürücüsü {Current * 1000.0:F0} mA ile yandı (mutlak sınır {AbsoluteMaxCurrent * 1000.0:F0} mA)", ctx);
             }
-            else if (Math.Abs(Current) > AbsoluteMaxCurrent)
+            else if (_heat > rated && !_overRated)
             {
+                _overRated = true;
                 ctx.Events.Add(new AnalogEvent(ctx.Time, Id, AnalogEventKind.Warning,
-                    $"pin akımı {Current * 1000.0:F0} mA, sınırı ({AbsoluteMaxCurrent * 1000.0:F0} mA) aşıyor"));
+                    $"pin akımı {Math.Sqrt(_heat / r) * 1000.0:F0} mA, sınırı ({AbsoluteMaxCurrent * 1000.0:F0} mA) aşıyor"));
+            }
+            else if (_heat < rated * 0.8)
+            {
+                _overRated = false;
             }
         }
+
+        private double _heat;        // the driver's dissipation smoothed over ThermalTime, W
+        private bool _overRated;     // warned for this stretch above the rating
+
+        /// <summary>[damage] Thermal time of the pin driver's silicon: how long an overload has to last to heat it.</summary>
+        public double ThermalTime { get; set; } = 10e-3;
 
         public override void Report(ISignalSink sink)
         {

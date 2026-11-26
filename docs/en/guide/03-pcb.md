@@ -109,6 +109,15 @@ In the **Nets** tab, **Differential pairs** holds two nets that must run togethe
 
 Upload the Gerber ZIP straight to a board maker.
 
+As soon as the ZIP is saved it is read back from disk and checked. The reader is written from the Gerber and Excellon specifications, independently of the code that writes the files:
+
+- each layer is drawn in 20 µm pixels (a little coarser on large boards);
+- the same layer is drawn again straight from the board's geometry: tracks, pads by their shapes, vias, copper pours, mask openings, paste, silkscreen and the board edge;
+- the two are laid over each other, and every difference thicker than a pixel is reported with where it is and its area ("missing (4.00, 4.00) mm, 27.9 mm²");
+- the drill files are matched hole for hole: plated or not, diameter, and the layers of blind and buried vias.
+
+A wrong unit, a flipped axis, a wrong aperture size, an arc turning the wrong way or a lost object shows before the files go to the maker. The status bar gives the result ("9 Gerber and 2 drill files match the board"); if something differs, a window lists where.
+
 ## Footprints and modules
 
 - **Footprint:** the footprint editor. Draw SMD and THT pads, silkscreen, courtyard and fabrication layers and save to your user library.

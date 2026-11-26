@@ -40,7 +40,6 @@ namespace RobotTwin.CoreSim.Firmware
         private readonly StringBuilder _txOut = new StringBuilder();
         private int _txBuffer = -1, _txShift = -1;
         private double _txCycles, _rxCycles;
-        private byte _rxData;
 
         // ADC
         private double _adcCycles = -1;
@@ -64,6 +63,7 @@ namespace RobotTwin.CoreSim.Firmware
             _eepromBusy = 0;
             _wdtCounter = 0;
             _rxQueue.Clear();
+            ResetUartRx();
             _d[UCSR0A] = 0x20;
             ResetTwi();
             _lastPinB = ReadPinRegister(DDRB, PORTB, 8);
@@ -117,6 +117,12 @@ namespace RobotTwin.CoreSim.Firmware
                 // Open-drain SDA/SCL: released (idle), pulled up only by the PORTC pull-up.
                 level = level && !driving;
                 driving = false;
+            }
+
+            if (pin == 0 && UartRxEnabled)
+            {
+                // [uart-rx] The receiver overrides PD0: an input whatever DDRD says, PORTD0 still its pull-up.
+                return new PinOutput(false, level, level, double.NaN, 0);
             }
 
             if (pin == 1 && UartTxEnabled)
@@ -186,11 +192,7 @@ namespace RobotTwin.CoreSim.Firmware
                     _t1Temp = _d[a + 1];
                     return _d[a];
                 case UDR0:
-                {
-                    byte v = _rxData;
-                    _d[UCSR0A] &= unchecked((byte)~0x80);
-                    return v;
-                }
+                    return ReadUdr0();
 
                 case SPDR:
                     _d[SPSR] &= 0x7F;
@@ -219,7 +221,7 @@ namespace RobotTwin.CoreSim.Firmware
                 case TCNT2: return (byte)_t2Count;
                 case TCNT1L: return (byte)_t1Count;
                 case TCNT1H: return (byte)(_t1Count >> 8);
-                case UDR0: return _rxData;
+                case UDR0: return PeekUdr0();
                 default: return _d[address];
             }
         }
@@ -256,7 +258,10 @@ namespace RobotTwin.CoreSim.Firmware
                     _d[a + 1] = (byte)_t1Temp;
                     return;
                 case UCSR0A:
-                    _d[a] = (byte)((_d[a] & 0xA0) | (v & 0x03) | ((_d[a] & 0x40) != 0 && (v & 0x40) == 0 ? 0x40 : 0));
+                    _d[a] = (byte)((_d[a] & 0xBC) | (v & 0x03) | ((_d[a] & 0x40) != 0 && (v & 0x40) == 0 ? 0x40 : 0));
+                    return;
+                case UCSR0B:
+                    WriteUcsr0b(v);
                     return;
                 case UDR0:
                     UartWrite(v);
@@ -637,19 +642,16 @@ namespace RobotTwin.CoreSim.Firmware
 
         // ================================================================ USART0
 
-        private double UartFrameCycles()
-        {
-            int ubrr = (_d[UBRR0L] | ((_d[UBRR0H] & 0x0F) << 8)) + 1;
-            int divisor = (_d[UCSR0A] & 0x02) != 0 ? 8 : 16;
-            return divisor * ubrr * 10.0;
-        }
+        /// <summary>[uart] One frame's length in cycles: start, data, parity and stop bits as UCSR0B/C set them.</summary>
+        private double UartFrameCycles() => UartBitCycles * UartFrameBits;
 
         /// <summary>Baud rate the firmware configured (0 when the transmitter is off).</summary>
-        public double BaudRate => (_d[UCSR0B] & 0x08) == 0 ? 0 : ClockHz * 10.0 / UartFrameCycles();
+        public double BaudRate => (_d[UCSR0B] & 0x08) == 0 ? 0 : ClockHz / UartBitCycles;
 
         /// <summary>
         /// [uart] The frames the transmitter has started, by the cycle their start bit began: the TX pin (PD1) carries them bit by
-        /// bit (idle high, start bit low, eight data bits least significant first, stop bit high), as the USART drives it.
+        /// bit (idle high, start bit low, the data bits least significant first, the parity bit if any, stop bits high), as
+        /// the USART drives it.
         /// The co-simulation reads them off and prunes the finished ones.
         /// </summary>
         public List<(ulong Cycle, byte Value)> TxFrames { get; } = new List<(ulong, byte)>();
@@ -657,20 +659,29 @@ namespace RobotTwin.CoreSim.Firmware
         /// <summary>[uart] The transmitter is on: it owns PD1, whatever DDRD says.</summary>
         public bool UartTxEnabled => (_d[UCSR0B] & 0x08) != 0;
 
-        /// <summary>[uart] One bit's length in CPU cycles.</summary>
-        public double UartBitCycles => UartFrameCycles() / 10.0;
+        /// <summary>[uart] One bit's length in CPU cycles (UBRR0 + 1 times 16, or 8 with U2X0).</summary>
+        public double UartBitCycles => ((_d[UCSR0A] & 0x02) != 0 ? 8 : 16) * ((_d[UBRR0L] | ((_d[UBRR0H] & 0x0F) << 8)) + 1.0);
 
         /// <summary>[uart] The TX line's level at <paramref name="cycle"/>: the bit of the frame being sent then, or idle high.</summary>
         public bool UartTxLevel(ulong cycle)
         {
             double bit = UartBitCycles;
+            int chars = UartCharacterBits, parity = UartParity;
             for (int i = TxFrames.Count - 1; i >= 0; i--)
             {
                 var (start, value) = TxFrames[i];
                 if (cycle < start) continue;
                 int k = (int)((cycle - start) / bit);
-                if (k >= 10) return true;
-                return k == 0 ? false : k == 9 || (value >> (k - 1) & 1) != 0;
+                if (k == 0) return false;                                      // start bit
+                if (k <= chars) return (value >> (k - 1) & 1) != 0;            // data, least significant first
+                if (parity >= 2 && k == chars + 1)
+                {
+                    int ones = 0;
+                    for (int b = 0; b < Math.Min(8, chars); b++) ones += (value >> b) & 1;
+                    return parity == 2 ? ones % 2 != 0 : ones % 2 == 0;        // even: makes the ones even; odd: odd
+                }
+
+                return true;                                                   // stop bits, then idle
             }
 
             return true;
@@ -721,14 +732,13 @@ namespace RobotTwin.CoreSim.Firmware
             if ((_d[UCSR0B] & 0x10) == 0) return;
             _rxCycles -= cycles;
             if (_rxCycles > 0) return;
-            if ((_d[UCSR0A] & 0x80) != 0)
+            if (_rxFifo.Count >= 2)
             {
                 _rxCycles = 0;
-                return; // previous byte not read yet
+                return; // the buffer is full: the monitor's text waits (it is never lost)
             }
 
-            _rxData = _rxQueue.Dequeue();
-            _d[UCSR0A] |= 0x80;
+            StoreRx(_rxQueue.Dequeue(), 0);
             _rxCycles = UartFrameCycles();
         }
 

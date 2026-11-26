@@ -109,6 +109,15 @@ Bunlar hata değil uyarıdır: kurala uymayan kart üretilebilir, ama daha pahal
 
 Gerber ZIP'ini doğrudan kart üreticisine yükleyebilirsiniz.
 
+ZIP kaydedilir kaydedilmez diskten geri okunup denetlenir. Okuyucu, dosyaları yazan koddan bağımsız olarak Gerber ve Excellon belirtimlerine göre yazılmıştır:
+
+- her katman 20 µm'lik (büyük kartlarda biraz daha iri) piksellerle çizilir;
+- aynı katman kartın kendi geometrisinden ayrıca çizilir: yollar, pedler biçimleriyle, vialar, bakır dökümler, maske açıklıkları, pasta, serigrafi ve kart kenarı;
+- ikisi üst üste konur; bir pikselden kalın her fark nerede olduğu ve alanıyla bildirilir ("eksik (4.00, 4.00) mm, 27.9 mm²");
+- delik dosyaları delik delik eşlenir: kaplamalı / kaplamasız ayrımı, çap ve kör/gömülü via katmanları dahil.
+
+Yanlış birim, ters çevrilmiş eksen, yanlış açıklık boyu, ters dönen yay ya da kaybolan bir nesne dosyalar üreticiye gitmeden görünür. Durum çubuğu sonucu yazar ("9 Gerber ve 2 delik dosyası kartla aynı"); bir fark varsa yerleriyle bir pencere açılır.
+
 ## Ayak izi ve modül
 
 - **Footprint:** ayak izi düzenleyicisi. SMD ve THT pedler, serigrafi, avlu ve üretim katmanı çizip kullanıcı kütüphanenize kaydedersiniz.

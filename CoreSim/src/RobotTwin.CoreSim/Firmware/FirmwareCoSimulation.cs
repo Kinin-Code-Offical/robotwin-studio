@@ -99,6 +99,8 @@ namespace RobotTwin.CoreSim.Firmware
                 if (i >= 14) Mcu.SetAnalogInput(i - 14, pin.Voltage);
             }
 
+            FeedUartRx(now);
+
             ulong startCycle = Mcu.Cycles;
             Mcu.PortLog.Clear();
             Mcu.RecordPortWrites = true;
@@ -146,6 +148,35 @@ namespace RobotTwin.CoreSim.Firmware
             string text = Mcu.ReadSerial();
             if (text.Length > 0) SerialOutput?.Invoke(text);
             return Mcu.Halted ? Math.Max(0, Math.Min(dt, ProgramTime - now)) : dt;
+        }
+
+        /// <summary>
+        /// [uart-rx] While the USART receiver is on, D0's level changes in the circuit, timed inside each step, go to it:
+        /// whatever drives the wire (another board's TX, a module, a fault) is received as the chip would, frame errors and
+        /// all. The line is known up to the circuit's time, one slice behind the core.
+        /// </summary>
+        private void FeedUartRx(double now)
+        {
+            if (_pins.Length == 0 || _pins[0] is not { } rx) return;
+            bool on = Mcu.UartRxEnabled;
+            if (!on)
+            {
+                if (rx.RecordEdges)
+                {
+                    rx.RecordEdges = false;
+                    rx.TakeEdges();
+                }
+
+                return;
+            }
+
+            bool first = !rx.RecordEdges;
+            rx.RecordEdges = true;
+            ulong Cycle(double t) => (ulong)Math.Max(0, (long)_epochCycles + (long)Math.Round((t - _epochTime) * Mcu.ClockHz));
+            var edges = rx.TakeEdges();
+            var timed = new List<(ulong, bool)>(edges.Count);
+            foreach (var (t, level) in edges) timed.Add((Cycle(t), level));
+            Mcu.FeedUartRxLine(timed, Cycle(now), first ? rx.DigitalValue : (bool?)null);
         }
 
         /// <summary>

@@ -145,7 +145,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(sch.BuildNetlist(Lib).Nets.Count, copy.BuildNetlist(Lib).Nets.Count);
         }
 
-        private static Schematic MotorDriverSchematic()
+        internal static Schematic MotorDriverSchematic()
         {
             // 12 V battery -> MOSFET low-side switch for a motor with flyback diode, gate from a header, 5 V regulator, LED.
             var sch = new Schematic { Title = "Motor sürücü" };

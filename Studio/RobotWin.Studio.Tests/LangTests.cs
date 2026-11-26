@@ -248,6 +248,8 @@ public class LangTests
     [InlineData("56,6 Hz · yüksek 1,03 ms", "56,6 Hz · high 1,03 ms")]
     [InlineData("97× · en uzun 5,9 µs", "97× · longest 5,9 µs")]
     [InlineData("14 kenar", "14 edges")]
+    [InlineData("9 Gerber ve 2 delik dosyası kartla aynı (bağımsız okuyucuyla, 20 µm çözünürlükte)", "9 Gerber and 2 drill files match the board (read by an independent reader, at 20 µm)")]
+    [InlineData("delik eksik: Ø0.8 mm (12.5, 30.1)", "hole missing: Ø0.8 mm (12.5, 30.1)")]
     [InlineData("PWM 490 Hz · %50 (şimdi)", "PWM 490 Hz · 50% (now)")]
     [InlineData("Pencere 20,0 ms · sağ kenar t = 0,035647 s · tekerlek yakınlaştırır, sürükleme geri kaydırır, çift tık şimdiye döner", "Window 20,0 ms · right edge t = 0,035647 s · the wheel zooms, dragging scrolls back, a double click returns to now")]
     [InlineData("Sapma  0.620 mm · yükten 0.451 mm", "Sag    0.620 mm · from the load 0.451 mm")]
