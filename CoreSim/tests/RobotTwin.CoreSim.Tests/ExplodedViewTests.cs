@@ -74,6 +74,21 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void APartBesideTheBaseComesAwayAcrossNotIntoTheFloor()
+        {
+            // a plywood base and a board on the floor next to it (the servo-arm example's Arduino)
+            var w = new WorldDocument();
+            var plate = Box(w, "Taban", 0, 0.009, 0.1);
+            plate.SizeZ = 0.018;
+            var board = Box(w, "Arduino", -0.09, 0.005);
+            board.SizeZ = 0.01;
+            var geo = new ApproximateGeometry(w, RobotTwin.CoreSim.Design.PartLibrary.Default);
+            var off = ExplodedView.Offsets(w, ExplodedView.Auto(w, geo, ExplodeLayout.Axis, Vec3.UnitZ, 0.03), 1, geo);
+            Assert.Equal(0, off[board.Id].Z, 9);          // not pushed under the floor
+            Assert.Equal(-0.03, off[board.Id].X, 9);      // away from the base, across
+        }
+
+        [Fact]
         public void AJoinedChainOpensUpLevelByLevelDeepestFirst()
         {
             var w = new WorldDocument();

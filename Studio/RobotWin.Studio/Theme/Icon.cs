@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -60,7 +61,26 @@ namespace RobotWin.Studio.Theme
             set => SetValue(ForegroundProperty, value);
         }
 
+        public Icon()
+        {
+            // [align] drawn again once the row is laid out, and whenever its label changes size, so it follows the label
+            Loaded += (_, _) =>
+            {
+                Dispatcher.BeginInvoke(new System.Action(InvalidateVisual), System.Windows.Threading.DispatcherPriority.Loaded);
+                if (TextOptics.TextBeside(this) is { } label && !ReferenceEquals(label, _label))
+                {
+                    _label = label;
+                    label.SizeChanged += (_, _) => InvalidateVisual();
+                }
+            };
+        }
+
+        private System.Windows.Controls.TextBlock? _label;
+
         protected override Size MeasureOverride(Size availableSize) => new Size(Size, Size);
+
+        /// <summary>[align] Where the drawing's middle is, down from the element's top (the alignment audit measures this).</summary>
+        public double DrawnCentreY { get; private set; }
 
         protected override void OnRender(DrawingContext dc)
         {
@@ -74,8 +94,16 @@ namespace RobotWin.Studio.Theme
                 EndLineCap = PenLineCap.Round,
                 LineJoin = PenLineJoin.Round
             };
+            // [align] the icon in the middle of the room it is given (a row taller than the icon stretches it; drawn from the
+            // top it sat above its label), then on the cap-height middle of the label beside it (TextOptics)
+            double dx = Math.Max(0, (RenderSize.Width - Size) / 2), dy = Math.Max(0, (RenderSize.Height - Size) / 2);
+            dy = Math.Round(dy * 2) / 2;
+            dy += TextOptics.CapShift(this, dy + Size / 2);
+            DrawnCentreY = dy + Size / 2;
+            dc.PushTransform(new TranslateTransform(Math.Round(dx * 2) / 2, dy));
             dc.PushTransform(new ScaleTransform(scale, scale));
             dc.DrawGeometry(Filled ? Foreground : null, pen, data);
+            dc.Pop();
             dc.Pop();
         }
     }

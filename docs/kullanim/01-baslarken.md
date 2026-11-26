@@ -78,6 +78,9 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 - **Panelleri taşımak, küçültmek, ayırmak:** Dünya, Devre ve PCB sayfalarındaki yan paneller (palet, parça kütüphanesi, özellikler, denetçi) ve alt sekmeler başlıklarından sürüklenerek ayrı pencereye alınır; pencereyi kenara bırakınca sola, sağa ya da alt bölmeye yerleşir. Başlıktaki **Küçült** düğmesi o tarafı kenarda adların yazdığı ince bir şeride indirir (Visual Studio'daki gibi), şeride tıklayınca geri açılır. **Ctrl+Space** tam görünüm: bütün paneller çekilir, çizim alanı bütün pencereyi alır; yeniden basınca paneller olduğu gibi döner. Düzen saklanır. Bkz. [Dünya → Panelleri yerleştirme](07-dunya.md#panelleri-yerleştirme).
 - **Yüzen araç çubukları:** PCB'nin sol araç şeridi ve Devre'nin çizim araçları, başlarındaki noktalı tutamaktan sürüklenince küçük bir pencereye çıkar (SolidWorks'teki gibi); pencere istenen yere, ikinci ekrana da taşınır, sağ tıkla yatay ya da dikey çevrilir. Tutamağa çift tıklamak ya da **Yerine koy** şeridi geri yerleştirir; dışarıdayken çizim alanı genişler. Yeri saklanır.
 - **Sorunlar:** durum çubuğunun solundaki sayaçlar bütün projenin hatalarını ve uyarılarını sayar: devrenin ERC'si, PCB'nin son DRC'si ve son derlemenin hataları (VS Code'daki Sorunlar paneli gibi). Bir alanın denetimi son değişiklikten eskiyse yanında bir bilgi işareti çıkar. Sayaçlara tıklamak (ya da komut paletinde "Sorunlar") listeyi alan alan açar; bir satır o yere gider (parça seçilir, DRC işareti ya da kod satırı gösterilir), eski kalmış alan **Denetle** ile yeniden denetlenir.
+- **Sol şerit:** başlık çubuğunun en solundaki şerit düğmesi, **Ctrl+Shift+B**, **Görünüm → Sol şerit** ya da şeridin altındaki **Gizle** onu kapatır ve açar; seçim saklanır. Sayfalara şerit kapalıyken de **Ctrl+1…7** ve komut paletiyle gidilir.
+- **Alt bölmeyi katlamak:** alt bölmenin sağındaki ⌄ onu yalnız sekmelerinin kaldığı ince bir şeride indirir; bir sekmeye tıklamak ya da ⌃ geri açar. Dünya sayfası ilk açılışta alt bölmesi katlı başlar; seri çıktı gibi bir şey gelince kendi açılır.
+- **Kaydırıcılar:** her kaydırıcının yanındaki değer kutusuna değer yazılabilir (Enter uygular, ↑/↓ adım atar, Shift büyük adım).
 - **Tam ekran (F11):** **Esc** veya **F11** ile çıkılır.
 - **Arayüz ölçeği:** **Görünüm → Arayüz ölçeği** (%75–%150).
 
@@ -110,7 +113,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 
 | Kategori | Neler var |
 | --- | --- |
-| Genel | Dil, açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi |
+| Genel | Dil, açılışta başlangıç sayfası, ilk robot rehberi, proje klasörü, son dosyalar, uzunluk birimi (mm, cm, inç, mil: uzunluk kutuları bu birimde gösterir; "1 in", "25.4 mm", "2 cm" gibi birimli yazılan değeri her birimde okur) |
 | Görünüm ve tema | Tema galerisi (9 koyu, 7 açık tema ve özel tema), vurgu rengi, arayüz ölçeği, performans göstergesi, efektler ve ses, 3B kalite, 3B çizici (kendi GPU çizicimiz ya da WPF) |
 | Kaydetme ve yedekleme | Otomatik yedek sıklığı, kaydederken önceki sürümü saklama, çökme sonrası kurtarma, yedek klasörü, belge başına kopya sayısı, klasörün boyut sınırı |
 | Klavye kısayolları | Pencerenin ve bütün sayfaların kısayollarını değiştirme, çakışma uyarısı, tek tek ya da toplu sıfırlama |

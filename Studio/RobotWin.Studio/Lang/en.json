@@ -8383,7 +8383,23 @@
   "Kabuk düzenleme modunda çalışır: Tab, sonra açılacak yüzleri seçin (3: yüz)": "Shell works in edit mode: Tab, then select the faces to open (3: face)",
   "Kabuk: açılacak yüz seçilmedi; gövde içi boş kapalı kabuk olur": "Shell: no face selected to open; the body becomes a closed hollow shell",
   "Yuvarla (radyüs)": "Round (fillet)",
-  "SolidWorks'teki radyüs: seçili kenarlar iki yüze teğet bir yayla yuvarlanır; fareyle ya da mm yazarak yarıçapı, tekerlekle parça sayısını ayarlayın": "SolidWorks' fillet: the selected edges are rounded by an arc tangent to both faces; set the radius with the mouse or by typing mm, the number of segments with the wheel"
+  "SolidWorks'teki radyüs: seçili kenarlar iki yüze teğet bir yayla yuvarlanır; fareyle ya da mm yazarak yarıçapı, tekerlekle parça sayısını ayarlayın": "SolidWorks' fillet: the selected edges are rounded by an arc tangent to both faces; set the radius with the mouse or by typing mm, the number of segments with the wheel",
+  "Değeri yazıp Enter'a basın · ↑/↓ adım (Shift: büyük adım)": "Type a value and press Enter · ↑/↓ step (Shift: large step)",
+  "Sol şeridi göster / gizle (Ctrl+Shift+B)": "Show / hide the left rail (Ctrl+Shift+B)",
+  "Sol şeridi göster / gizle": "Show / hide the left rail",
+  "Sol şerit": "Left rail",
+  "Sol şerit gizlendi: başlık çubuğundaki şerit düğmesi ya da Ctrl+Shift+B geri getirir": "Left rail hidden: the rail button in the title bar or Ctrl+Shift+B brings it back",
+  "Sol şerit gösteriliyor": "Left rail shown",
+  "Sol şeridi gizle (Ctrl+Shift+B): başlık çubuğundaki şerit düğmesi geri getirir": "Hide the left rail (Ctrl+Shift+B): the rail button in the title bar brings it back",
+  "Alt bölmeyi aç": "Open the bottom pane",
+  "Alt bölmeyi katla: yalnız sekmeleri kalır": "Fold the bottom pane: only its tabs stay",
+  "Uzunluk birimi": "Length unit",
+  "Milimetre (mm)": "Millimetre (mm)",
+  "Santimetre (cm)": "Centimetre (cm)",
+  "İnç (in)": "Inch (in)",
+  "Düzlemin yeri: yazıp Enter (mm, cm, in, mil yazılabilir) · ↑/↓ 0,1 mm (Shift: 1 mm)": "Where the plane is: type and press Enter (mm, cm, in, mil can be typed) · ↑/↓ 0.1 mm (Shift: 1 mm)",
+  "Zamana git (s): yazıp Enter": "Go to a time (s): type and press Enter",
+  "Görev oranı (%): yazıp Enter": "Duty cycle (%): type and press Enter"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11786,6 +11802,7 @@
   "Kabuk ({…} yüz açık): {…}{…} mm duvar   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal": "Shell ({0} faces open): {1}{2} mm wall   ·   drag the mouse right · type a number · Enter confirm · Esc cancel",
   "Yuvarla ({…} kenar, {…} parça): {…}{…} mm   ·   fareyi sağa sürükleyin · sayı yazın · tekerlek veya +/−: parça sayısı (1: pah) · Enter onay · Esc iptal": "Round ({0} edges, {1} segments): {2}{3} mm   ·   drag the mouse right · type a number · wheel or +/−: segments (1: chamfer) · Enter confirm · Esc cancel",
   "Pah kır ({…} kenar): {…}{…} mm   ·   fareyi sağa sürükleyin · sayı yazın · tekerlek veya +: yuvarlat · Enter onay · Esc iptal": "Chamfer ({0} edges): {1}{2} mm   ·   drag the mouse right · type a number · wheel or +: round · Enter confirm · Esc cancel",
-  "Kenar yuvarlatıldı ({…} parça)": "Edges rounded ({0} segments)"
+  "Kenar yuvarlatıldı ({…} parça)": "Edges rounded ({0} segments)",
+  "Kesit: {…} = {…} (yalnız görüntü)": "Section: {0} = {1} (display only)"
  }
 }

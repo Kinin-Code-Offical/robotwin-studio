@@ -222,8 +222,7 @@ namespace RobotWin.Studio.Pages
             // ---- play
             panel.Children.Add(Heading("Görünüm"));
             var amount = new Slider { Minimum = 0, Maximum = 1, Value = _explodeAmount, SmallChange = 0.02, LargeChange = 0.1 };
-            var amountText = new TextBlock { Width = 44, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
-            amountText.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+            var amountText = RobotWin.Studio.Theme.SliderInput.Create(amount, "0", " %", v => v * 100, x => x / 100);   // [slider-input]
             var amountRow = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
             DockPanel.SetDock(amountText, Dock.Right);
             amountRow.Children.Add(amountText);
@@ -273,7 +272,6 @@ namespace RobotWin.Studio.Pages
             void SetAmount(double v, bool cables = true)
             {
                 _explodeAmount = Math.Max(0, Math.Min(1, v));
-                amountText.Text = (_explodeAmount * 100).ToString("0", CultureInfo.CurrentCulture) + " %";
                 ApplyExplode(cables);
             }
 

@@ -73,6 +73,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Navigation rail shows stage names and live status (Ctrl+B).</summary>
         public bool NavExpanded { get; set; }
 
+        /// <summary>[rail] The left design-to-real rail is hidden (the title bar's sidebar button and Ctrl+Shift+B bring it back).</summary>
+        public bool NavHidden { get; set; }
+
         /// <summary>[guide] The first-robot guide was offered on a first start (it is offered once).</summary>
         public bool FirstRunGuideOffered { get; set; }
 

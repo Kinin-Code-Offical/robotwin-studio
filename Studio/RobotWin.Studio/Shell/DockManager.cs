@@ -250,6 +250,14 @@ namespace RobotWin.Studio.Shell
                     Shown?.Invoke(item.Key);
                     ScheduleSave();
                 };
+                chip.Click += (_, _) =>
+                {
+                    // [fold] a tab of a folded bottom opens it on that tab
+                    if (!_started || !_bottomHidden || item.Place != DockPlace.Bottom) return;
+                    chip.IsChecked = true;
+                    BottomHidden = false;
+                    Shown?.Invoke(item.Key);
+                };
                 Draggable(chip, item, 12);
                 chip.MouseRightButtonUp += (_, e) =>
                 {
@@ -267,6 +275,7 @@ namespace RobotWin.Studio.Shell
         public void Start()
         {
             if (Persist) Load();
+            else if (StartFolded) _bottomHidden = true;
             _started = true;
             Apply();
             OnOwnerVisible();
@@ -598,7 +607,9 @@ namespace RobotWin.Studio.Shell
             bool left = !_collapsed && _items.Any(i => i.Place == DockPlace.Left);
             bool right = !_collapsed && _items.Any(i => i.Place == DockPlace.Right);
             bool leftMin = left && _leftMin, rightMin = right && _rightMin;
-            bool bottom = !_collapsed && !_bottomHidden && _items.Any(i => i.Place == DockPlace.Bottom);
+            bool anyBottom = !_collapsed && _items.Any(i => i.Place == DockPlace.Bottom);
+            bool bottom = anyBottom && !_bottomHidden;
+            bool folded = anyBottom && _bottomHidden;   // [fold] only its tab strip: a tab opens it again
             Column(_leftCol, left, leftMin ? StripWidth : _leftWidth, leftMin ? StripWidth : 180);
             Column(_leftCol + 1, left, 1, 0);
             Column(_rightCol, right, rightMin ? StripWidth : _rightWidth, rightMin ? StripWidth : 180);
@@ -610,9 +621,15 @@ namespace RobotWin.Studio.Shell
             _leftStrip.Visibility = leftMin ? Visibility.Visible : Visibility.Collapsed;
             _rightStrip.Visibility = rightMin ? Visibility.Visible : Visibility.Collapsed;
             _bottomRow.MinHeight = bottom ? 36 : 0;
-            _bottomRow.Height = new GridLength(bottom ? _bottomHeight : 0);
-            _bottomLineRow.Height = new GridLength(bottom ? 1 : 0);
-            _bottomArea.Visibility = bottom ? Visibility.Visible : Visibility.Collapsed;
+            _bottomRow.Height = new GridLength(bottom ? _bottomHeight : folded ? FoldedHeight : 0);
+            _bottomLineRow.Height = new GridLength(bottom || folded ? 1 : 0);
+            _bottomArea.Visibility = bottom || folded ? Visibility.Visible : Visibility.Collapsed;
+            _tabHost.Visibility = bottom ? Visibility.Visible : Visibility.Collapsed;
+            if (_foldIcon != null)
+            {
+                _foldIcon.Data = (Geometry)_owner.FindResource(folded ? "I.ChevronUp" : "I.ChevronDown");
+                if (_foldIcon.Parent is Button fb) fb.ToolTip = folded ? "Alt bölmeyi aç" : "Alt bölmeyi katla: yalnız sekmeleri kalır";
+            }
             foreach (var e in _bottomExtras) e.Visibility = bottom ? Visibility.Visible : Visibility.Collapsed;
             _leftShown = left && !leftMin;   // a strip's width is not the side's width to remember
             _rightShown = right && !rightMin;
@@ -701,8 +718,9 @@ namespace RobotWin.Studio.Shell
             {
                 if (Picked() is { } it) Hide(it);
             };
-            var fold = IconButton("I.ChevronDown", 12, "Alt bölmeyi gizle (Görünüm → panel düzeni → Alt bölmeyi göster)");
-            fold.Click += (_, _) => BottomHidden = true;
+            var fold = IconButton("I.ChevronDown", 12, "Alt bölmeyi katla: yalnız sekmeleri kalır");
+            _foldIcon = fold.Content as Theme.Icon;
+            fold.Click += (_, _) => BottomHidden = !_bottomHidden;
             foreach (var b in new[] { pop, more, close, fold }) buttons.Children.Add(b);
             row.Children.Add(buttons);
             row.Children.Add(_tabStrip);
@@ -1181,7 +1199,16 @@ namespace RobotWin.Studio.Shell
         {
             var s = LayoutStore.Get(_layoutKey);
             if (s != null) LoadState(s);
+            else if (StartFolded) _bottomHidden = true;   // [fold] the page's first look: the bottom as its tabs only
         }
+
+        /// <summary>[fold] With no saved layout the bottom pane starts folded to its tabs (a page whose bottom is empty at first).</summary>
+        public bool StartFolded { get; set; }
+
+        /// <summary>[fold] A folded bottom pane's height: its tab strip.</summary>
+        private const double FoldedHeight = 34;
+
+        private Theme.Icon? _foldIcon;
 
         private void LoadState(DockLayoutState s)
         {

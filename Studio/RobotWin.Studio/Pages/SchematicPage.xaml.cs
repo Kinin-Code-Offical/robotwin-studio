@@ -559,17 +559,23 @@ namespace RobotWin.Studio.Pages
                 modes.Children.Add(b);
             }
 
-            var slider = new Slider { Minimum = 0, Maximum = 255, Value = 128, Margin = new Thickness(0, 2, 0, 0), Visibility = Visibility.Collapsed };
-            ModeButton("IN", () => { slider.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.Input); }, true);
-            ModeButton("IN↑", () => { slider.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.InputPullup); }, false);
-            ModeButton("LOW", () => { slider.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.OutputLow); }, false);
-            ModeButton("HIGH", () => { slider.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.OutputHigh); }, false);
-            ModeButton("PWM", () => { slider.Visibility = Visibility.Visible; W.Simulation.SetBoardPwm(board, pin, slider.Value / 255.0); }, false);
+            var slider = new Slider { Minimum = 0, Maximum = 255, Value = 128, SmallChange = 1, LargeChange = 16, VerticalAlignment = VerticalAlignment.Center };
+            var pwmRow = new DockPanel { Margin = new Thickness(0, 2, 0, 0), Visibility = Visibility.Collapsed };
+            var duty = RobotWin.Studio.Theme.SliderInput.Create(slider, "0.#", " %", v => v / 2.55, x => x * 2.55, width: 64);   // [slider-input] the duty typed
+            duty.ToolTip = "Görev oranı (%): yazıp Enter";
+            DockPanel.SetDock(duty, Dock.Right);
+            pwmRow.Children.Add(duty);
+            pwmRow.Children.Add(slider);
+            ModeButton("IN", () => { pwmRow.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.Input); }, true);
+            ModeButton("IN↑", () => { pwmRow.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.InputPullup); }, false);
+            ModeButton("LOW", () => { pwmRow.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.OutputLow); }, false);
+            ModeButton("HIGH", () => { pwmRow.Visibility = Visibility.Collapsed; W.Simulation.SetBoardPin(board, pin, PinMode.OutputHigh); }, false);
+            ModeButton("PWM", () => { pwmRow.Visibility = Visibility.Visible; W.Simulation.SetBoardPwm(board, pin, slider.Value / 255.0); }, false);
             slider.ValueChanged += (_, _) => W.Simulation.SetBoardPwm(board, pin, slider.Value / 255.0);
             if (manual)
             {
                 stack.Children.Add(modes);
-                stack.Children.Add(slider);
+                stack.Children.Add(pwmRow);
             }
             card.Child = stack;
             _pinRows[board + "." + pin] = (volts, level);

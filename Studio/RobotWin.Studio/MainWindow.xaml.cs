@@ -678,6 +678,9 @@ namespace RobotWin.Studio
             Command("page.world", "Sayfalar", "Dünya", "Ctrl+6", () => NavigateStage("world"));
             Command("page.library", "Sayfalar", "Kütüphane", "Ctrl+7", () => Navigate("library"));
             Command("view.rail", "Görünüm", "Sol şeridi genişlet / daralt", "Ctrl+B", () => Rail.IsExpanded = !Rail.IsExpanded);
+            Command("view.railHide", "Görünüm", "Sol şeridi göster / gizle", "Ctrl+Shift+B", () => SetRailHidden(!AppSettings.Current.NavHidden));   // [rail]
+            Rail.HideRequested += (_, _) => SetRailHidden(true);
+            SetRailHidden(AppSettings.Current.NavHidden, save: false);
             _railTimer.Tick += (_, _) =>
             {
                 string key = RailKey(_current);   // another world tab may have become active
@@ -1568,12 +1571,31 @@ namespace RobotWin.Studio
 
         private void OnFocusMode(object sender, RoutedEventArgs e) => SetFocusMode(!_focusMode);
 
+        private void OnRailButton(object sender, RoutedEventArgs e) => SetRailHidden(RailButton.IsChecked != true);
+
+        /// <summary>[rail] Hides or shows the left rail (kept between sessions); the pages stay a click away in the title bar's button, Ctrl+1…7 and the palette.</summary>
+        public void SetRailHidden(bool hidden, bool save = true)
+        {
+            if (save && !_snapshotRail)
+            {
+                AppSettings.Current.NavHidden = hidden;
+                AppSettings.Current.Save();
+            }
+
+            bool shown = !hidden && !_focusMode;
+            NavColumn.Width = shown ? GridLength.Auto : new GridLength(0);
+            NavBar.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            RailButton.IsChecked = !hidden;
+            if (save) W.Status = hidden ? "Sol şerit gizlendi: başlık çubuğundaki şerit düğmesi ya da Ctrl+Shift+B geri getirir" : "Sol şerit gösteriliyor";
+        }
+
         /// <summary>Hides the navigation rail and status bar to give the editor the whole window.</summary>
         public void SetFocusMode(bool on)
         {
             _focusMode = on;
-            NavColumn.Width = on ? new GridLength(0) : GridLength.Auto;
-            NavBar.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+            bool rail = !on && !AppSettings.Current.NavHidden;
+            NavColumn.Width = rail ? GridLength.Auto : new GridLength(0);
+            NavBar.Visibility = rail ? Visibility.Visible : Visibility.Collapsed;
             StatusRow.Height = new GridLength(on ? 0 : 26);
             StatusBar.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
             if (on) W.Status = "Odak modu: gezinme çubuğu gizlendi (tekrar tıklayın veya F11 ile tam ekran)";

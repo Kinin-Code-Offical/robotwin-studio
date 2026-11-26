@@ -39,6 +39,7 @@ namespace RobotWin.Studio.Pages
                 else if (key == "sensors") UpdateSensorsPanel();
                 else if (key == "hmi") BuildHmiPanel();
             };
+            _dock.StartFolded = true;   // [fold] events, serial, cables … open when picked or when something arrives
             _dock.Start();
         }
 

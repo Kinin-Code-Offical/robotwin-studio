@@ -60,9 +60,12 @@ namespace RobotWin.Studio.Shell
             if (ib == null || tb == null) return;
             bool beside = tb.Value.Left >= ib.Value.Right - 1 || tb.Value.Right <= ib.Value.Left + 1;
             if (!beside) return;
-            double off = Math.Abs(Mid(ib.Value) - Mid(tb.Value));
-            if (off > Tolerance)
-                found.Add(new Finding("ikon-yazı", Name(b), off, $"ikon merkezi {Mid(ib.Value):0.0}, yazı merkezi {Mid(tb.Value):0.0} (düğme {b.ActualHeight:0} px)"));
+            // the drawn icon against the label's cap-height middle (what the eye lines up), not the two boxes
+            double iconMid = ib.Value.Top + (icon.DrawnCentreY > 0 ? icon.DrawnCentreY : ib.Value.Height / 2);
+            double textMid = tb.Value.Top + Theme.TextOptics.CapCentre(text);
+            double off = Math.Abs(iconMid - textMid);
+            if (off > 0.75)
+                found.Add(new Finding("ikon-yazı", Name(b), off, $"ikon merkezi {iconMid:0.0}, yazının büyük harf ortası {textMid:0.0} (düğme {b.ActualHeight:0} px)"));
             // the button's own content off its centre (padding on one side only)
             var all = Rect.Union(ib.Value, tb.Value);
             double offCentre = Math.Abs(Mid(all) - b.ActualHeight / 2);

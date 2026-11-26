@@ -14,6 +14,7 @@ namespace RobotWin.Studio.Pages
     public partial class ModelPage
     {
         private bool _sectionSync;
+        private bool _sectionInput;
 
         private void OnSection(object sender, RoutedEventArgs e)
         {
@@ -24,6 +25,13 @@ namespace RobotWin.Studio.Pages
         /// <summary>Turns the section on along an axis, at a place (mm; null: the middle of the model).</summary>
         private void ShowSection(SectionAxis axis, double? at)
         {
+            if (!_sectionInput)
+            {
+                // [slider-input] the plane's place typed to the 0.01 mm beside the slider
+                RobotWin.Studio.Theme.SliderInput.AttachLength(SectionSlider, SectionValue);
+                _sectionInput = true;
+            }
+
             var (lo, hi) = SectionView.Range(_ed.Doc, axis);
             double pad = Math.Max(0.5, (hi - lo) * 0.02);
             _sectionSync = true;
@@ -54,9 +62,8 @@ namespace RobotWin.Studio.Pages
         private void UpdateSection()
         {
             if (_vp.Section == null) return;
-            SectionValue.Text = _vp.Section.Offset.ToString("0.#", CultureInfo.CurrentCulture) + " mm";
             _vp.Rebuild();
-            _ed.Status(Lang.T($"Kesit: {_vp.Section.Axis} = {_vp.Section.Offset:0.#} mm (yalnız görüntü)"));
+            _ed.Status(Lang.T($"Kesit: {_vp.Section.Axis} = {LengthUnits.Format(_vp.Section.Offset)} (yalnız görüntü)"));
         }
 
         private void CloseSection()

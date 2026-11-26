@@ -112,7 +112,8 @@ namespace RobotWin.Studio.Pages
             });
             Card("Birimler", "Editörlerde uzunluklar.", c =>
             {
-                c.Children.Add(Choice("Uzunluk birimi (PCB)", new[] { ("Milimetre", "mm"), ("Mil (1/1000 inç)", "mil") }, S.Units, v => S.Units = v));
+                // [units] what the length boxes show and take (Parça, Montaj, Dünya; a typed "in" or "mm" works in any)
+                c.Children.Add(Choice("Uzunluk birimi", LengthUnits.All, S.Units, v => S.Units = v));
             });
 
             Category("Görünüm ve tema", "Tema, vurgu rengi, arayüz boyutu, efektler ve 3B kalite.");

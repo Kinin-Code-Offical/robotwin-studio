@@ -119,6 +119,7 @@ namespace RobotWin.Studio.Shell
             tools.Children.Add(Tool("settings", "Ayarlar", "I.Settings", "Uygulama ayarları"));
             tools.Children.Add(Tool("help", "Yardım", "I.Help", "Kullanım kılavuzu, haberler ve güncellemeler (F1)"));
             tools.Children.Add(ExpandToggle());
+            tools.Children.Add(HideToggle());   // [rail]
             SetRow(tools, 2);
             Children.Add(tools);
 
@@ -361,6 +362,24 @@ namespace RobotWin.Studio.Shell
             return host;
         }
 
+        /// <summary>[rail] Asks the window to hide the rail.</summary>
+        public event EventHandler? HideRequested;
+
+        private TextBlock? _hideLabel;
+
+        private FrameworkElement HideToggle()
+        {
+            var host = new Grid { Height = 32, Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = "Sol şeridi gizle (Ctrl+Shift+B): başlık çubuğundaki şerit düğmesi geri getirir", Margin = new Thickness(8, 0, 8, 0) };
+            var icon = new Icon { Size = 14, Data = Geometry.Parse("M11,6 L5,12 L11,18 M19,6 L13,12 L19,18"), Foreground = Res<Brush>("B.TextMuted"), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(Cx - 8 - 7, 0, 0, 0) };
+            host.Children.Add(icon);
+            _hideLabel = new TextBlock { Text = "Gizle", FontSize = 12, Foreground = Res<Brush>("B.TextMuted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(Cx + Pad / 2 + 6, 0, 0, 0) };
+            host.Children.Add(_hideLabel);
+            host.MouseEnter += (_, _) => host.Background = Res<Brush>("B.Hover");
+            host.MouseLeave += (_, _) => host.Background = Brushes.Transparent;
+            host.MouseLeftButtonUp += (_, _) => HideRequested?.Invoke(this, EventArgs.Empty);
+            return host;
+        }
+
         private void ApplyMode()
         {
             foreach (var (caption, title, about) in _groups)
@@ -379,6 +398,7 @@ namespace RobotWin.Studio.Shell
 
             foreach (var (_, label, _) in _tools) label.Visibility = _expanded ? Visibility.Visible : Visibility.Collapsed;
             if (_toggleLabel != null) _toggleLabel.Visibility = _expanded ? Visibility.Visible : Visibility.Collapsed;
+            if (_hideLabel != null) _hideLabel.Visibility = _expanded ? Visibility.Visible : Visibility.Collapsed;
             if (_toggleIcon != null) _toggleIcon.Data = Geometry.Parse(_expanded ? "M15,5 L8,12 L15,19" : "M9,5 L16,12 L9,19");
             _trace.InvalidateVisual();
         }

@@ -144,7 +144,14 @@ namespace RobotWin.Studio.Pages
                         Scene.RefreshPose(o.Id);
                     };
                     sp.Children.Add(label);
-                    sp.Children.Add(slider);
+                    var distRow = new DockPanel();
+                    var distBox = RobotWin.Studio.Theme.SliderInput.Create(slider, "0.00", " m", v => Math.Pow(10, v), x => Math.Log10(Math.Max(1e-6, x)), width: 76);   // [slider-input]
+                    distBox.IsEnabled = running;
+                    DockPanel.SetDock(distBox, Dock.Right);
+                    distRow.Children.Add(distBox);
+                    slider.VerticalAlignment = VerticalAlignment.Center;
+                    distRow.Children.Add(slider);
+                    sp.Children.Add(distRow);
                     if (!running) sp.Children.Add(Note("Kaydırıcı simülasyon çalışırken etkin."));
                     Inspector.Children.Add(sp);
                 }

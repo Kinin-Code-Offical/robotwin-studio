@@ -78,6 +78,9 @@ The guide stays in the bottom right corner as a small card. At each step it says
 - **Moving, minimizing and tearing off panels:** on the world, circuit and PCB pages the side panels (palette, part library, properties, inspector) and the bottom tabs tear off into their own window when dragged by their header; drop the window on an edge to dock it left, right or in the bottom panel. The **Minimize** button in a header folds that side into a thin strip with the panels' names at the edge (as in Visual Studio); a click on the strip opens it again. **Ctrl+Space** is full view: every panel steps aside and the canvas takes the whole window; pressing it again brings the panels back as they were. The layout is kept. See [World → Arranging the panels](07-world.md#arranging-the-panels).
 - **Floating toolbars:** the PCB's left tool strip and the circuit's drawing tools come out into a small window of their own when dragged by the dotted grip at their start (as in SolidWorks); move the window anywhere, a second screen too, and turn it across or down with a right click. A double click on the grip, or **Put back**, docks the strip again; while it floats the canvas gets its room. Where it was is kept.
 - **Problems:** the counters at the left of the status bar count the whole project's errors and warnings: the circuit's ERC, the PCB's last DRC and the last build's errors (like VS Code's Problems panel). When an area's check is older than its last change, an info mark shows beside them. A click on the counters (or "Problems" in the command palette) opens the list by area; a row goes to its place (the part selected, the DRC marker or the code line shown), and an out-of-date area is checked again with **Check**.
+- **Left rail:** the rail button at the far left of the title bar, **Ctrl+Shift+B**, **View → Left rail** or **Hide** at the bottom of the rail closes and opens it; the choice is kept. With the rail closed, pages are still reached with **Ctrl+1…7** and the command palette.
+- **Folding the bottom pane:** ⌄ at the right of the bottom pane folds it to a thin strip of its tabs; a click on a tab or ⌃ opens it again. The World page starts with its bottom pane folded; it opens by itself when something such as serial output arrives.
+- **Sliders:** the value box beside every slider takes a typed value (Enter applies, ↑/↓ steps, Shift a large step).
 - **Full screen (F11):** leave with **Esc** or **F11**.
 - **Interface scale:** **View → Interface scale**, 75–150 %.
 
@@ -110,7 +113,7 @@ The **Settings** (Ctrl+,) page is split into categories. Pick one in the list on
 
 | Category | What it holds |
 | --- | --- |
-| General | Language, home page at startup, the first-robot guide, project folder, recent files, length unit |
+| General | Language, home page at startup, the first-robot guide, project folder, recent files, length unit (mm, cm, inch, mil: length boxes show this unit and read a value typed with any unit, such as "1 in", "25.4 mm", "2 cm") |
 | Appearance and theme | Theme gallery (9 dark, 7 light themes and a custom one), accent colour, interface scale, performance overlay, effects and sound, 3D quality, 3D renderer (our own GPU renderer or WPF) |
 | Saving and backup | Autosave interval, keeping the previous version on save, crash recovery, backup folder, copies kept per document, the folder's size limit |
 | Keyboard shortcuts | Change the window's and every page's shortcuts, clash warnings, reset one or all |

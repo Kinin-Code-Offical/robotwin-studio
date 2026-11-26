@@ -119,8 +119,8 @@
                     <RadioButton x:Name="SectionX" Style="{StaticResource Chip}" Content="X" GroupName="section" IsChecked="True" Tag="X" Click="OnSectionAxis" ToolTip="YZ düzlemiyle kes (X boyunca)"/>
                     <RadioButton x:Name="SectionY" Style="{StaticResource Chip}" Content="Y" GroupName="section" Tag="Y" Click="OnSectionAxis" ToolTip="XZ düzlemiyle kes (Y boyunca)"/>
                     <RadioButton x:Name="SectionZ" Style="{StaticResource Chip}" Content="Z" GroupName="section" Tag="Z" Click="OnSectionAxis" ToolTip="XY düzlemiyle kes (Z boyunca)"/>
-                    <Slider x:Name="SectionSlider" Width="220" Margin="10,0,8,0" VerticalAlignment="Center" ValueChanged="OnSectionMoved" ToolTip="Düzlemin yeri"/>
-                    <TextBlock x:Name="SectionValue" Width="64" VerticalAlignment="Center" TextAlignment="Right" Foreground="{DynamicResource B.TextSecondary}"/>
+                    <Slider x:Name="SectionSlider" Width="220" Margin="10,0,8,0" VerticalAlignment="Center" ValueChanged="OnSectionMoved" ToolTip="Düzlemin yeri" SmallChange="0.1" LargeChange="1"/>
+                    <TextBox x:Name="SectionValue" Width="80" VerticalAlignment="Center" TextAlignment="Right" ToolTip="Düzlemin yeri: yazıp Enter (mm, cm, in, mil yazılabilir) · ↑/↓ 0,1 mm (Shift: 1 mm)"/>
                     <ToggleButton x:Name="SectionFlip" Style="{StaticResource Chip}" Content="Ters" Margin="8,0,0,0" Click="OnSectionFlip" ToolTip="Öbür yarıyı göster"/>
                     <Button Style="{StaticResource Btn.Icon}" Width="26" Height="26" Margin="4,0,0,0" Click="OnSectionClose" ToolTip="Kesiti kapat"><t:Icon Data="{StaticResource I.Close}" Size="12"/></Button>
                 </StackPanel>

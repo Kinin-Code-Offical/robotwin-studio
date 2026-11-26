@@ -235,7 +235,17 @@ namespace RobotWin.Studio.Pages
                 if (LiveArm(o.Id) == null) Edit("Hız ayarı değişti", () => o.Parameters["override"] = speed.Value.ToString("0", Inv));
             };
             Inspector.Children.Add(speedText);
-            Inspector.Children.Add(speed);
+            var speedRow = new DockPanel { Margin = new Thickness(0, 0, 0, 2) };
+            var speedBox = RobotWin.Studio.Theme.SliderInput.Create(speed, "0", " %", committed: () =>   // [slider-input]
+            {
+                if (LiveArm(o.Id) == null) Edit("Hız ayarı değişti", () => o.Parameters["override"] = speed.Value.ToString("0", Inv));
+            }, width: 64);
+            DockPanel.SetDock(speedBox, Dock.Right);
+            speedRow.Children.Add(speedBox);
+            speed.Margin = new Thickness(0);
+            speed.VerticalAlignment = VerticalAlignment.Center;
+            speedRow.Children.Add(speed);
+            Inspector.Children.Add(speedRow);
 
             // ---- jog
             Inspector.Children.Add(Caption("Elle hareket (jog)"));

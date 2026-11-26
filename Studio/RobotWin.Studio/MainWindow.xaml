@@ -27,7 +27,12 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+                    <!-- [rail] the left rail on and off, right over it: it is not needed all the time -->
+                    <ToggleButton x:Name="RailButton" Style="{StaticResource Btn.Icon}" Width="32" Height="32" Margin="0,0,6,0" Click="OnRailButton"
+                                  WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Sol şeridi göster / gizle (Ctrl+Shift+B)">
+                        <t:Icon Data="{StaticResource I.Sidebar}" Size="16"/>
+                    </ToggleButton>
                     <StackPanel Orientation="Horizontal" Background="Transparent" Cursor="Hand" ToolTip="Başlangıç (Ctrl+0)"
                                 WindowChrome.IsHitTestVisibleInChrome="True" MouseLeftButtonUp="OnLogoClick">
                         <Image x:Name="LogoImage" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -236,7 +241,7 @@
                         <t:Icon x:Name="ProblemsStale" Data="{StaticResource I.Info}" Size="12" Foreground="{DynamicResource B.TextMuted}" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="Collapsed"/>
                     </StackPanel>
                 </Button>
-                <Ellipse x:Name="SimDot" DockPanel.Dock="Left" Width="7" Height="7" Fill="{DynamicResource B.TextMuted}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <Ellipse x:Name="SimDot" DockPanel.Dock="Left" Width="7" Height="7" t:TextOptics.AlignToText="True" Fill="{DynamicResource B.TextMuted}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                 <TextBlock x:Name="StatusText" Style="{StaticResource Text.Caption}" Foreground="{DynamicResource B.TextSecondary}" VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
             </DockPanel>

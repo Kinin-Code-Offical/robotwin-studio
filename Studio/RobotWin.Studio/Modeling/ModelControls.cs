@@ -49,6 +49,13 @@ namespace RobotWin.Studio.Modeling
             Children.Add(_label);
             Children.Add(_box);
             Show();
+            if (IsLength)
+            {
+                // [units] shown in the chosen unit, and again when it changes
+                EventHandler follow = (_, _) => Show();
+                Loaded += (_, _) => RobotWin.Studio.Shell.LengthUnits.Changed += follow;
+                Unloaded += (_, _) => RobotWin.Studio.Shell.LengthUnits.Changed -= follow;
+            }
             _box.KeyDown += (_, e) =>
             {
                 if (e.Key == Key.Enter)
@@ -117,6 +124,9 @@ namespace RobotWin.Studio.Modeling
         }
 
         public string Unit { get; }
+
+        /// <summary>[units] A length (its values in millimetres): shown in the chosen unit, typed in any.</summary>
+        private bool IsLength => Unit == "mm";
         public double Step { get; set; }
         public int Decimals { get; set; }
         public double Min { get; set; } = double.NegativeInfinity;
@@ -164,7 +174,9 @@ namespace RobotWin.Studio.Modeling
             else Scrubbed?.Invoke(v);
         }
 
-        private void Show() => _box.Text = Format(_value) + (Unit.Length > 0 ? " " + Unit : string.Empty);
+        private void Show() => _box.Text = IsLength && !Integer
+            ? RobotWin.Studio.Shell.LengthUnits.Format(_value, Decimals, CultureInfo.InvariantCulture)
+            : Format(_value) + (Unit.Length > 0 ? " " + Unit : string.Empty);
 
         private string Format(double v) => Integer ? v.ToString("0", CultureInfo.InvariantCulture) : v.ToString("0." + new string('#', Math.Max(1, Decimals)), CultureInfo.InvariantCulture);
 
@@ -175,6 +187,19 @@ namespace RobotWin.Studio.Modeling
             {
                 string formula = raw.Substring(1).Trim();
                 if (formula.Length > 0 && formula != _formula) FormulaCommitted(formula);
+                else Show();
+                return;
+            }
+
+            if (IsLength && !Integer)
+            {
+                // [units] "25.4 mm", "1 in", "2*3 cm" or a bare number in the chosen unit
+                if (RobotWin.Studio.Shell.LengthUnits.TryParse(raw, out double mm, s => (TryEval(s, out double x), x)))
+                {
+                    if (_formula != null && FormulaCommitted != null) FormulaCommitted(null);
+                    if (Math.Abs(mm - _value) > 1e-12) SetValue(mm, true);
+                    else Show();
+                }
                 else Show();
                 return;
             }

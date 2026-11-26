@@ -359,6 +359,7 @@ namespace RobotWin.Studio
                 RobotTwin.CoreSim.Design.Esp32Parts.RunModeOverride = espMode == "hardware" ? RobotTwin.CoreSim.Design.Esp32Parts.HardwareMode : RobotTwin.CoreSim.Design.Esp32Parts.FastMode;
 
             if (Environment.GetCommandLineArgs().Contains("--nav-expanded")) window.ExpandRailForSnapshot();
+            if (Environment.GetCommandLineArgs().Contains("--rail-hidden")) window.SetRailHidden(true, save: false);   // [rail]
             if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--theme").Skip(1).FirstOrDefault() is { } themeArg)
             {
                 // [theme] --theme pembe:gul — this run only (nothing is saved): every page in that theme and accent.

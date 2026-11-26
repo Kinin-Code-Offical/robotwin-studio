@@ -109,10 +109,10 @@ namespace RobotWin.Studio.Pages
             var g = new Grid { Margin = new Thickness(0, 0, 0, 6), ToolTip = help };
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(80) });
             g.ColumnDefinitions.Add(new ColumnDefinition());
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
             g.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("B.TextSecondary") });
             var slider = new Slider { Minimum = min, Maximum = max, Value = value, SmallChange = 1, LargeChange = 10, IsMoveToPointEnabled = true, VerticalAlignment = VerticalAlignment.Center };
-            var shown = new TextBlock { Text = value.ToString("0"), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Foreground = (Brush)FindResource("B.TextMuted") };
+            var shown = new TextBox { Width = 56, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, TextAlignment = TextAlignment.Right };
             Grid.SetColumn(slider, 1);
             Grid.SetColumn(shown, 2);
             g.Children.Add(slider);
@@ -121,7 +121,6 @@ namespace RobotWin.Studio.Pages
             {
                 if (_building) return;
                 set(Math.Round(e.NewValue));
-                shown.Text = Math.Round(e.NewValue).ToString("0");
                 S.Theme = "ozel";
                 Themes.Apply();   // the window follows the drag; the page is rebuilt when it ends
                 if (_customTile?.Parent is Panel p)
@@ -138,6 +137,11 @@ namespace RobotWin.Studio.Pages
                 ApplyTheme();
             };
             slider.KeyUp += (_, _) => S.Save();
+            RobotWin.Studio.Theme.SliderInput.Attach(slider, shown, "0", committed: () =>   // [slider-input] a typed value is saved like a drag let go
+            {
+                S.Save();
+                ApplyTheme();
+            });
             return g;
         }
 

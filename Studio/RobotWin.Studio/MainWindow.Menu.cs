@@ -208,6 +208,7 @@ namespace RobotWin.Studio
             _schematic.FillLayoutMenu(circuitPanels);
             m.Items.Add(circuitPanels);
             m.Items.Add(new Separator());
+            m.Items.Add(Check("Sol şerit", "Ctrl+Shift+B", !AppSettings.Current.NavHidden, v => SetRailHidden(!v)));   // [rail]
             m.Items.Add(Check("Odak modu", null, _focusMode, v => SetFocusMode(v)));
             m.Items.Add(Check("Tam ekran", "F11", _fullScreen, _ => ToggleFullScreen()));
         }

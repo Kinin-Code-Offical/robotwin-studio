@@ -142,7 +142,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
                 else
                 {
-                    d = (centre[o.Id] - from).Dot(dir) >= -1e-9 ? dir : -dir;
+                    d = Away(o, p, geometry, dir, gap);
                 }
 
                 steps.Add(new ExplodeStep { Name = o.Name, Objects = { o.Id }, DirX = d.X, DirY = d.Y, DirZ = d.Z, Distance = gap });
@@ -164,22 +164,61 @@ namespace RobotTwin.CoreSim.Sandbox
                 return steps;
             }
 
-            var baseOn = centre[baseId].Dot(dir);
-            // above the base outward along the axis, below it the other way; each a gap farther than the one before it
-            foreach (int side in new[] { 1, -1 })
+            var basePart = world.Find(baseId)!;
+            // over the base: up the axis in order, each a gap farther; under it: down; beside it (on the same floor, as a
+            // board next to a chassis): outward across, never down into the floor
+            var groups = free.Where(o => o.Id != baseId)
+                .Select(o => (o, d: Away(o, basePart, geometry, dir, gap), at: Math.Abs((centre[o.Id] - centre[baseId]).Dot(dir))))
+                .GroupBy(x => (Math.Round(x.d.X, 3), Math.Round(x.d.Y, 3), Math.Round(x.d.Z, 3)));
+            foreach (var g in groups)
             {
-                var row = free.Where(o => o.Id != baseId)
-                    .Select(o => (o, at: centre[o.Id].Dot(dir) - baseOn))
-                    .Where(x => side > 0 ? x.at >= 0 : x.at < 0)
-                    .OrderBy(x => Math.Abs(x.at)).ToList();
+                bool along = Math.Abs(g.First().d.Dot(dir)) > 0.5;
+                var row = g.OrderBy(x => along ? x.at : (centre[x.o.Id] - centre[baseId]).Length).ToList();
                 for (int i = row.Count - 1; i >= 0; i--)   // the outermost first
                 {
-                    var d = dir * side;
-                    steps.Add(new ExplodeStep { Name = row[i].o.Name, Objects = { row[i].o.Id }, DirX = d.X, DirY = d.Y, DirZ = d.Z, Distance = gap * (i + 1) });
+                    var d = row[i].d;
+                    steps.Add(new ExplodeStep { Name = row[i].o.Name, Objects = { row[i].o.Id }, DirX = d.X, DirY = d.Y, DirZ = d.Z, Distance = along ? gap * (i + 1) : gap });
                 }
             }
 
             return steps;
+        }
+
+        /// <summary>
+        /// Which way a part comes away from the one it sits on or beside: along the axis when it is wholly over or under it
+        /// (under only while that keeps it above the floor), otherwise across, away from its middle.
+        /// </summary>
+        private static Vec3 Away(WorldObject part, WorldObject from, IWorldGeometry geometry, Vec3 dir, double gap)
+        {
+            var (plo, phi) = Extent(part, geometry, dir);
+            var (flo, fhi) = Extent(from, geometry, dir);
+            double tol = Math.Max(1e-4, 0.15 * Math.Min(phi - plo, fhi - flo));
+            if (plo >= fhi - tol) return dir;   // over it
+            // the floor (z = 0) stops a part standing on it from going down; one already under it is in a world without one
+            bool onFloor = dir.Z > 0.9 && plo >= -1e-6;
+            if (phi <= flo + tol && (!onFloor || plo - gap >= -1e-9)) return -dir;   // under it, with room above the floor
+            // beside it: across the axis, away from the other's middle
+            var c = CentreOf(part, geometry) - CentreOf(from, geometry);
+            var across = c - dir * c.Dot(dir);
+            if (across.LengthSquared < 1e-12) across = dir.AnyPerpendicular();
+            return across.Normalized();
+        }
+
+        /// <summary>A part's reach along a direction: the lowest and highest of its box's corners in the world.</summary>
+        private static (double Lo, double Hi) Extent(WorldObject o, IWorldGeometry geometry, Vec3 dir)
+        {
+            var g = geometry.GeometryOf(o);
+            double lo = double.MaxValue, hi = double.MinValue;
+            foreach (double x in new[] { g.Min.X, g.Max.X })
+            foreach (double y in new[] { g.Min.Y, g.Max.Y })
+            foreach (double z in new[] { g.Min.Z, g.Max.Z })
+            {
+                double d = o.Pose.ToWorld(new Vec3(x, y, z)).Dot(dir);
+                lo = Math.Min(lo, d);
+                hi = Math.Max(hi, d);
+            }
+
+            return (lo, hi);
         }
 
         /// <summary>Each part's parent through its joint (the part it is joined onto).</summary>

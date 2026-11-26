@@ -391,6 +391,10 @@ namespace RobotWin.Studio.Analysis
             {
                 if (!_seeking) Seek(e.NewValue);
             };
+            var at = RobotWin.Studio.Theme.SliderInput.Create(_timeline, "0.000", " s", width: 86);   // [slider-input] jump to a typed time
+            at.ToolTip = "Zamana git (s): yazıp Enter";
+            DockPanel.SetDock(at, Dock.Right);
+            bar.Children.Add(at);
             bar.Children.Add(_timeline);
             PreviewKeyDown += (_, e) =>
             {
