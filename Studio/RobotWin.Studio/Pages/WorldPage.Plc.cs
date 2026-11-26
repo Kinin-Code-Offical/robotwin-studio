@@ -119,6 +119,7 @@ namespace RobotWin.Studio.Pages
 
             sb.AppendLine(p.Fault == null ? $"RUN · {p.Scans} tarama · çevrim {plc.ScanMicros:0.0} µs" : "STOP · " + p.Fault);
             if (plc.Modbus is { } mb) sb.AppendLine($"Modbus     : {mb.Bind}:{mb.Port} · {mb.Image.Requests} istek");   // [modbus]
+            if (plc.OpcUa is { } ua) sb.AppendLine($"OPC UA     : opc.tcp://{ua.Bind}:{ua.Port} · {ua.Tags.Count} değişken");   // [opcua]
             sb.AppendLine("I0–I7      : " + string.Concat(Enumerable.Range(0, 8).Select(i => p.Inputs[i] ? '1' : '0')));
             sb.AppendLine("Q0–Q7      : " + string.Concat(Enumerable.Range(0, 8).Select(i => p.Outputs[i] ? '1' : '0')));
             // [cycle] The station's steps: where it is, its cycles, the step it spends longest in.

@@ -224,6 +224,8 @@ Oku(REQ := TRUE, UNIT := 2, FC := 3, ADDR := 1);
 IF Oku.DONE THEN Seviye := Oku.VALUE; END_IF
 ```
 
+**OPC UA sunucusu.** PLC'nin **OPC UA sunucusu** açılırsa (öntanımlı port 4840) dünya çalışırken bir OPC UA sunucusu olur: UaExpert, bir SCADA ya da HMI `opc.tcp://127.0.0.1:4840` adresine bağlanır (güvenlik: None, anonim kullanıcı). **Objects** altında PLC'nin adıyla bir nesne, içinde programın her değişkeni (`ns=1;s=<PLC>.<DEĞİŞKEN>`, dizilerin elemanları `A[3]`) ve RUN durumu vardır. Türler IEC türünden gelir: BOOL → Boolean, INT → Int16, DINT → Int32, UINT/WORD → UInt16, REAL → Float, LREAL ve TIME (ms) → Double. Girişler (%IX) yalnız okunur; diğerlerine yazılan değeri program bir sonraki taramada görür. Gezinme (Browse), okuma, yazma ve abonelik (değer değişince bildirim, değişmezse canlı tutma) desteklenir. Aynı port ve adresteki PLC'ler aynı sunucuda ayrı nesnelerdir.
+
 **Kendi blokları, fonksiyonlar ve diziler.** Program kendi `FUNCTION_BLOCK`'larını ve `FUNCTION`'larını tanımlayabilir (programdan önce ya da sonra):
 
 - `FUNCTION_BLOCK`'un `VAR_INPUT`, `VAR_OUTPUT` ve `VAR` değişkenleri her örnekte ayrıdır ve taramalar arasında korunur; içinde TON gibi blokları ve başka kendi bloklarını kullanabilir. Örnek, standart bloklar gibi çağrılır: `D1(IN := Dugme, Q => Lamba);`, çıkışı `D1.Q`.

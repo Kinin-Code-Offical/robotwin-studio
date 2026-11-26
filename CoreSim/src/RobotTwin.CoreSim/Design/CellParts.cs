@@ -285,6 +285,8 @@ namespace RobotTwin.CoreSim.Design
                 new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }),
                 new ParameterDefinition("modbus", "Modbus TCP sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),
                 new ParameterDefinition("modbus_port", "Modbus TCP portu", "5021", ""),
+                new ParameterDefinition("opcua", "OPC UA sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),
+                new ParameterDefinition("opcua_port", "OPC UA portu", "4840", ""),
                 new ParameterDefinition("bind", "Dinlenen adres", "127.0.0.1", "", new[] { "127.0.0.1", "0.0.0.0" }));
             plc.Build = c => BuildIo(c, PlcInputs, PlcOutputs);
             AddPins(plc, PlcInputs, PlcOutputs);

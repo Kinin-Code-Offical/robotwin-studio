@@ -84,6 +84,15 @@ namespace RobotTwin.CoreSim.Industrial
                 ? v.Elements.Select((x, i) => (v.Name + "[" + (v.Lo + i).ToString(CultureInfo.InvariantCulture) + "]", v.Type, Format(v.Type, x)))
                 : new[] { (v.Name, v.Type, Format(v.Type, v.Value)) });
 
+        /// <summary>
+        /// [opcua] Every variable an OPC UA client sees: its name (an array's elements one by one, "A[3]"), type, declared type
+        /// (INT, REAL …), whether it can be written (not an input), and its value now.
+        /// </summary>
+        public IEnumerable<(string Name, StType Type, string TypeName, bool Writable, double Value)> Tags =>
+            _vars.Values.Where(v => v.Type != StType.Block).SelectMany(v => v.Elements != null
+                ? v.Elements.Select((x, i) => (v.Name + "[" + (v.Lo + i).ToString(CultureInfo.InvariantCulture) + "]", v.Type, v.TypeName, true, x))
+                : new[] { (v.Name, v.Type, v.TypeName, v.Area != 'I', v.Value) });
+
         public double Read(string name)
         {
             string key = name.Trim().ToUpperInvariant();

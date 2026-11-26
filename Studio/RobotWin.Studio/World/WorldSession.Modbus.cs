@@ -12,13 +12,24 @@ namespace RobotWin.Studio.World
     public sealed partial class WorldSession
     {
         private ModbusHost? _modbus;
+        private RobotTwin.CoreSim.Industrial.OpcUa.OpcUaHost? _opcua;
 
         /// <summary>The open Modbus servers of this run, when it has modules.</summary>
         public ModbusHost? Modbus => _modbus;
 
+        /// <summary>[opcua] The open OPC UA servers of this run, when a PLC serves its variables.</summary>
+        public RobotTwin.CoreSim.Industrial.OpcUa.OpcUaHost? OpcUa => _opcua;
+
         private void StartModbus()
         {
             StopModbus();
+            if (Physics != null && Physics.OpcUaImages.Count > 0)
+            {
+                _opcua = new RobotTwin.CoreSim.Industrial.OpcUa.OpcUaHost(Physics.OpcUaImages);
+                foreach (string where in _opcua.Listening) AddLog(new SimLogEntry(0, "OPC UA", "OPC UA dinleniyor: " + where, AnalogEventKind.StateChange));
+                foreach (string problem in _opcua.Problems) AddLog(new SimLogEntry(0, "OPC UA", problem, AnalogEventKind.Warning));
+            }
+
             if (Physics == null || Physics.ModbusDevices.Count == 0) return;
             _modbus = new ModbusHost(Physics.ModbusDevices);
             foreach (string where in _modbus.Listening) AddLog(new SimLogEntry(0, "Modbus", "Modbus TCP dinleniyor: " + where, AnalogEventKind.StateChange));
@@ -27,6 +38,8 @@ namespace RobotWin.Studio.World
 
         private void StopModbus()
         {
+            _opcua?.Dispose();
+            _opcua = null;
             _modbus?.Dispose();
             _modbus = null;
         }

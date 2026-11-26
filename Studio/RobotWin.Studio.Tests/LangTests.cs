@@ -248,6 +248,7 @@ public class LangTests
     [InlineData("56,6 Hz · yüksek 1,03 ms", "56,6 Hz · high 1,03 ms")]
     [InlineData("97× · en uzun 5,9 µs", "97× · longest 5,9 µs")]
     [InlineData("14 kenar", "14 edges")]
+    [InlineData("OPC UA     : opc.tcp://127.0.0.1:4840 · 12 değişken", "OPC UA     : opc.tcp://127.0.0.1:4840 · 12 variables")]
     [InlineData("10 kart: toplam 17,70 USD · kart başına 1,77 USD", "10 boards: total 17,70 USD · 1,77 USD a board")]
     [InlineData("R1 taşındı: (17.29, 25.36) → (22.29, 25.36) mm", "R1 moved: (17.29, 25.36) → (22.29, 25.36) mm")]
     [InlineData("GND: 23 yol 54.6 mm, 0 via → 22 yol 49.9 mm, 0 via", "GND: 23 tracks 54.6 mm, 0 vias → 22 tracks 49.9 mm, 0 vias")]

@@ -24,6 +24,9 @@ namespace RobotTwin.CoreSim.Sandbox
         internal readonly DigitalPin?[] OutputPins = new DigitalPin?[8];
         internal double CycleMs, Pending;
         public WorldPhysics.ModbusDevice? Modbus { get; internal set; }   // [modbus] when it serves its memory
+
+        /// <summary>[opcua] Its variables as an OPC UA server shows them, when it serves them.</summary>
+        public Industrial.OpcUa.UaTagImage? OpcUa { get; internal set; }
         internal bool FaultReported;
 
         /// <summary>RUN (scanning) or STOP (no program, or a fault: the outputs are off).</summary>
@@ -64,6 +67,9 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public MachinePlc? PlcOf(string objectId) => _plcs.FirstOrDefault(p => p.Object.Id == objectId);
 
+        /// <summary>[opcua] The PLCs that serve their variables over OPC UA (Industrial/OpcUa/OpcUaHost opens their servers).</summary>
+        public IReadOnlyList<Industrial.OpcUa.UaTagImage> OpcUaImages => _plcs.Where(p => p.OpcUa != null).Select(p => p.OpcUa!).ToList();
+
         private void BuildPlc(WorldObject o, Dictionary<string, string> p)
         {
             var plc = new MachinePlc(o) { CycleMs = Math.Max(1, Math.Min(1000, CellParts.Num(p, "cycle", 10))) };
@@ -101,8 +107,22 @@ namespace RobotTwin.CoreSim.Sandbox
                 _modbus.Add(device);
             }
 
+            // [opcua] … and its variables over OPC UA, browsable by name.
+            if (p.TryGetValue("opcua", out var ua) && ua.Trim() == "açık")
+            {
+                int port = (int)CellParts.Num(p, "opcua_port", 4840);
+                string bind = p.TryGetValue("bind", out var b) && !string.IsNullOrWhiteSpace(b) ? b.Trim() : "127.0.0.1";
+                string name = string.IsNullOrWhiteSpace(o.Name) ? o.Id : o.Name.Trim();
+                plc.OpcUa = new Industrial.OpcUa.UaTagImage(name, bind, Math.Max(0, Math.Min(65535, port)));
+                if (plc.Program != null) PublishOpcUa(plc, plc.Program);
+            }
+
             _plcs.Add(plc);
         }
+
+        /// <summary>[opcua] After a scan the server sees the program's variables; a client's writes go in before the next.</summary>
+        private static void PublishOpcUa(MachinePlc plc, StProgram program) =>
+            plc.OpcUa?.Publish(program.Tags.Select(t => new Industrial.OpcUa.UaTagImage.Tag(t.Name, t.Type, t.TypeName, t.Writable, t.Value)), plc.Running);
 
         /// <summary>[modbus] The PLC's Modbus table and its memory meet at the scan: a client's register writes go in before it, the results out after.</summary>
         private static void SyncPlcModbus(MachinePlc plc, StProgram program, bool before)
@@ -140,9 +160,12 @@ namespace RobotTwin.CoreSim.Sandbox
                 // [mbclient] its MB_READ / MB_WRITE blocks reach the world's other Modbus devices by unit id
                 program.ModbusNetwork ??= unit => _modbus.FirstOrDefault(d => d.Unit == unit && d.Plc != plc)?.Image;
                 SyncPlcModbus(plc, program, true);
+                if (plc.OpcUa != null)
+                    foreach (var (name, value) in plc.OpcUa.TakeWrites()) program.Write(name, value);
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 bool ok = program.Scan(plc.CycleMs);
                 SyncPlcModbus(plc, program, false);
+                PublishOpcUa(plc, program);
                 TimeSteps(plc, program, Scene.Time);
                 plc.ScanMicros = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1e6 / System.Diagnostics.Stopwatch.Frequency;
                 if (!ok)
@@ -197,6 +220,8 @@ namespace RobotTwin.CoreSim.Sandbox
             plc.Program = program;
             plc.FaultReported = false;
             plc.Pending = 0;
+            plc.OpcUa?.TakeWrites();   // [opcua] writes meant for the old program are not given to the new one
+            PublishOpcUa(plc, program);
             MachineSay(objectId, "PLC programı yüklendi: RUN", false);
             return errors;
         }

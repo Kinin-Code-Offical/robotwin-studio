@@ -224,6 +224,8 @@ Read(REQ := TRUE, UNIT := 2, FC := 3, ADDR := 1);
 IF Read.DONE THEN Level := Read.VALUE; END_IF
 ```
 
+**OPC UA server.** With the PLC's **OPC UA server** on (port 4840 by default) a running world is an OPC UA server: UaExpert, a SCADA or an HMI connects to `opc.tcp://127.0.0.1:4840` (security None, anonymous user). Under **Objects** there is an object named after the PLC, holding each program variable (`ns=1;s=<PLC>.<VARIABLE>`, array elements as `A[3]`) and its RUN state. The types come from the IEC types: BOOL → Boolean, INT → Int16, DINT → Int32, UINT/WORD → UInt16, REAL → Float, LREAL and TIME (ms) → Double. Inputs (%IX) are read-only; a value written to the others is seen by the program at its next scan. Browse, Read, Write and subscriptions (a notification when a value changes, a keep-alive when nothing does) are supported. PLCs on the same port and address are separate objects on the same server.
+
 **Your own blocks, functions and arrays.** A program can define its own `FUNCTION_BLOCK`s and `FUNCTION`s (before or after the program):
 
 - A `FUNCTION_BLOCK`'s `VAR_INPUT`, `VAR_OUTPUT` and `VAR` variables are separate in each instance and kept between scans; it can use blocks such as TON and other blocks of your own. An instance is called like the standard blocks: `D1(IN := Button, Q => Lamp);`, its output `D1.Q`.
