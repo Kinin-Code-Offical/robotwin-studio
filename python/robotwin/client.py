@@ -322,13 +322,13 @@ def find_server() -> List[str]:
     """Command that starts a headless server.
 
     Order: $ROBOTWIN_SERVER (an .exe, a native binary or a .dll run with ``dotnet``), the repository's
-    build output (builds/RobotWin.Headless/{Release,Debug}/net9.0), then ``RobotWin.Headless`` on PATH.
+    build output (builds/RobotWin.Headless/{Release,Debug}/net10.0), then ``RobotWin.Headless`` on PATH.
     """
     env = os.environ.get("ROBOTWIN_SERVER")
     candidates: List[Path] = [Path(env)] if env else []
     root = _repo_root() / "builds" / "RobotWin.Headless"
     for config in ("Release", "Debug"):
-        base = root / config / "net9.0"
+        base = root / config / "net10.0"
         candidates += [base / "RobotWin.Headless.exe", base / "RobotWin.Headless", base / "RobotWin.Headless.dll"]
     for c in candidates:
         if c.is_file():

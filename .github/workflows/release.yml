@@ -6,7 +6,7 @@ name: Release
 #                                              lite or custom; for this user, all users or portable; the language is
 #                                              chosen in it. It downloads the components below from this release.
 #   RobotWinStudio-<v>-app.rwpack              its components: the app,
-#   RobotWinStudio-<v>-dotnet.rwpack             the app's own .NET 9 Desktop Runtime,
+#   RobotWinStudio-<v>-dotnet.rwpack             the app's own .NET 10 Desktop Runtime,
 #   RobotWinStudio-<v>-arduino.rwpack            the Arduino compiler (arduino-cli + AVR core),
 #   RobotWinStudio-<v>-occt.rwpack               STEP / IGES support (Open CASCADE)
 #   RobotWinStudio-<v>-win-x64-portable.zip    the full app as a folder: unzip and run, nothing installed
@@ -41,7 +41,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Installer, its components and the portable app
         shell: pwsh
@@ -103,7 +103,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Headless simulator (Linux)
         run: |

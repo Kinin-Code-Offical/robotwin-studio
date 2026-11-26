@@ -44,7 +44,7 @@ namespace RobotWin.Studio.Updates
                 SelfContained = selfContained,
                 Components = profile is { Components.Count: > 0 } ? profile.Components : InstallProfile.FromDisk(dir),
                 Kind = profile?.Type ?? string.Empty,
-                RuntimeAvailable = !selfContained || DesktopRuntime9Installed(),
+                RuntimeAvailable = !selfContained || DesktopRuntimeInstalled(),
                 Mode = UpdateLogic.DetectMode(dir, InstallLocation(Registry.CurrentUser), InstallLocation(LocalMachine()), File.Exists(Path.Combine(dir, "Uninstall.exe")))
             };
             bool allUsers = info.Mode == InstallMode.AllUsers;
@@ -89,15 +89,17 @@ namespace RobotWin.Studio.Updates
             }
         }
 
-        public static bool DesktopRuntime9Installed()
+        /// <summary>The PC has the .NET Desktop Runtime this app runs on (its major version: 10).</summary>
+        public static bool DesktopRuntimeInstalled()
         {
+            string major = Environment.Version.Major + ".";
             foreach (var root in new[] { Environment.GetEnvironmentVariable("DOTNET_ROOT"), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet") })
             {
                 if (string.IsNullOrEmpty(root)) continue;
                 try
                 {
                     string shared = Path.Combine(root, "shared", "Microsoft.WindowsDesktop.App");
-                    if (Directory.Exists(shared) && Directory.EnumerateDirectories(shared).Any(d => Path.GetFileName(d).StartsWith("9.", StringComparison.Ordinal))) return true;
+                    if (Directory.Exists(shared) && Directory.EnumerateDirectories(shared).Any(d => Path.GetFileName(d).StartsWith(major, StringComparison.Ordinal))) return true;
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {

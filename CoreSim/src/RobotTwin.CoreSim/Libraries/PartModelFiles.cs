@@ -111,7 +111,7 @@ namespace RobotTwin.CoreSim.Libraries
             }
 
             string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            foreach (var ver in new[] { "9.0", "8.0", "7.0", "6.0" })
+            foreach (var ver in new[] { "10.0", "9.0", "8.0", "7.0", "6.0" })
             {
                 string dir = Path.Combine(pf, "KiCad", ver, "share", "kicad", "3dmodels");
                 if (Directory.Exists(dir)) yield return dir;

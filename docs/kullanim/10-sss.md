@@ -3,7 +3,7 @@
 ## Kurulum ve açılış
 
 **Uygulama açılmıyor veya .NET istiyor.**
-Hafif kurulum bilgisayardaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır. Kurulum dosyasını yeniden çalıştırıp **Tam**'ı seçin (ya da **Özel** ile **.NET 9 çalışma zamanı** bileşenini ekleyin): uygulama o zaman kendi kopyasını taşır. Ya da Microsoft'un sitesinden ".NET 9 Desktop Runtime (x64)" kurun.
+Hafif kurulum bilgisayardaki .NET 10 Masaüstü Çalışma Zamanı'nı kullanır. Kurulum dosyasını yeniden çalıştırıp **Tam**'ı seçin (ya da **Özel** ile **.NET 10 çalışma zamanı** bileşenini ekleyin): uygulama o zaman kendi kopyasını taşır. Ya da Microsoft'un sitesinden ".NET 10 Desktop Runtime (x64)" kurun.
 
 **Windows kurulum dosyası için uyarı veriyor.**
 Dosyayı projenin GitHub Sürümler sayfasından indirdiğinizden emin olun, sonra **Ek bilgi → Yine de çalıştır** seçin.

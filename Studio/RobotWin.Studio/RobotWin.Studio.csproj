@@ -2,11 +2,11 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>14</LangVersion>
     <AssemblyName>RobotWinStudio</AssemblyName>
     <RootNamespace>RobotWin.Studio</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -15,7 +15,7 @@
     <TieredPGO>true</TieredPGO>
     <ApplicationIcon>Branding/robotwin.ico</ApplicationIcon>
     <!-- [setup] One build for every installation: the exe looks for .NET in its own dotnet\ folder first (the installer's
-         ".NET 9 runtime" component), then DOTNET_ROOT, then the PC's installed .NET 9 (a lite installation). -->
+         ".NET 10 runtime" component), then DOTNET_ROOT, then the PC's installed .NET 10 (a lite installation). -->
     <AppHostDotNetSearch>AppRelative;EnvironmentVariable;Global</AppHostDotNetSearch>
     <AppHostRelativeDotNet>dotnet</AppHostRelativeDotNet>
   </PropertyGroup>

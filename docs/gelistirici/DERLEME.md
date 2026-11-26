@@ -5,7 +5,7 @@ RobotWin Studio **tek bir kurulum programıyla** dağıtılır: `RobotWinStudio-
 ```mermaid
 flowchart LR
     A["Studio uygulaması"] -- "dotnet publish (çerçeveye bağımlı)" --> C["builds\installer\components"]
-    N[".NET 9 çalışma zamanı"] --> C
+    N[".NET 10 çalışma zamanı"] --> C
     R["Arduino derleyicisi"] --> C
     O["Open CASCADE köprüsü"] --> C
     C -- "setup.exe --pack (LZMS)" --> K["*.rwpack"]
@@ -17,7 +17,7 @@ flowchart LR
 | Bileşen | Dosya | Kurulduğu yer |
 | --- | --- | --- |
 | RobotWin Studio (her zaman) | `RobotWinStudio-<sürüm>-app.rwpack` | uygulama, çerçeveye bağımlı |
-| .NET 9 çalışma zamanı | `RobotWinStudio-<sürüm>-dotnet.rwpack` | uygulamanın yanındaki `dotnet\`: Microsoft.NETCore.App ve Microsoft.WindowsDesktop.App çalışma zamanları ve konakları |
+| .NET 10 çalışma zamanı | `RobotWinStudio-<sürüm>-dotnet.rwpack` | uygulamanın yanındaki `dotnet\`: Microsoft.NETCore.App ve Microsoft.WindowsDesktop.App çalışma zamanları ve konakları |
 | Arduino derleyicisi | `RobotWinStudio-<sürüm>-arduino.rwpack` | `tools\arduino`: arduino-cli, AVR çekirdeği ve kütüphane listesi |
 | STEP / IGES desteği | `RobotWinStudio-<sürüm>-occt.rwpack` | `occt\`: Open CASCADE köprüsü ve lisansı |
 
@@ -25,7 +25,7 @@ Uygulamanın tek derlemesi her kurulum türüne yeter: exe'si .NET'i önce kendi
 
 ## Kurulum programını yerelde derlemek
 
-Gerekenler: .NET 9 SDK (Windows SDK'sının içindeki .NET 9 Masaüstü Çalışma Zamanı'yla) ve C++ iş yüklü Visual Studio 2022 / Build Tools (betik onu `vswhere` ile bulur).
+Gerekenler: .NET 10 SDK (Windows SDK'sının içindeki .NET 10 Masaüstü Çalışma Zamanı'yla) ve C++ iş yüklü Visual Studio 2022 / Build Tools (betik onu `vswhere` ile bulur).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0
@@ -36,7 +36,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.
 Çıktı `builds\installer\release\` içindedir: kurulum programı ve `.rwpack` dosyaları. Betiğin yaptıkları:
 
 1. Uygulamayı `win-x64` için çerçeveye bağımlı, ReadyToRun olarak `dotnet publish` eder (`-p:Version=<sürüm>`).
-2. Her bileşenin klasörünü `builds\installer\components\<id>` içinde dizer: `occt\` olmadan uygulama; LGPL lisansıyla Open CASCADE köprüsü; bu makinenin .NET 9 çalışma zamanı (host\fxr ve aynı sürümden iki paylaşılan çatı, Microsoft'un lisans notlarıyla); bir kez `builds\installer\arduino-ready` içine indirilip bir blink çizimi derlenerek denenen Arduino derleyicisi.
+2. Her bileşenin klasörünü `builds\installer\components\<id>` içinde dizer: `occt\` olmadan uygulama; LGPL lisansıyla Open CASCADE köprüsü; bu makinenin .NET 10 çalışma zamanı (host\fxr ve aynı sürümden iki paylaşılan çatı, Microsoft'un lisans notlarıyla); bir kez `builds\installer\arduino-ready` içine indirilip bir blink çizimi derlenerek denenen Arduino derleyicisi.
 3. `Installer\setup.cpp`'yi MSVC ile derler (`cl /std:c++20 /O2 /MT`) ve her bileşeni onunla paketler (`setup.exe --pack <klasör> <dosya.rwpack>`: her dosya Windows Sıkıştırma API'sinin LZMS'iyle sıkıştırılır, işe yaramazsa olduğu gibi kalır). Bileşenlerin boyutlarını ve SHA-256 özetlerini `components.h`'ye yazar ve kurulum programını onlarla yeniden derler: bir kurulum programı yalnız kendi sürümünün dosyalarını kurar.
 4. Sonucu kanıtlar: kurulum programı her bileşeni sürüm klasöründen taşınabilir bir klasöre kurar (`/S /PORTABLE /TYPE=full /SOURCE=<sürüm klasörü>`) ve her dosya boyutuyla gelmelidir. `-NoCheck` bunu atlar.
 
@@ -46,7 +46,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.
 
 `Installer/setup.cpp`, çalışma zamanı bağımlılığı olmayan yerel bir Win32 programıdır. Sihirbazın üç sorusu vardır:
 
-1. **Dil ve kurulum türü.** Dil hem sihirbazın hem uygulamanın dilidir (bu kullanıcının uygulama dilinden başlar). **Tam** her bileşeni kurar (her şey hemen internetsiz çalışır), **Hafif** yalnız uygulamayı bilgisayardaki .NET 9 Masaüstü Çalışma Zamanı'yla kurar (kendi .NET kopyasını yalnız bilgisayarda yoksa ekler), **Özel** sonraki sayfada işaretlenen bileşenleri.
+1. **Dil ve kurulum türü.** Dil hem sihirbazın hem uygulamanın dilidir (bu kullanıcının uygulama dilinden başlar). **Tam** her bileşeni kurar (her şey hemen internetsiz çalışır), **Hafif** yalnız uygulamayı bilgisayardaki .NET 10 Masaüstü Çalışma Zamanı'yla kurar (kendi .NET kopyasını yalnız bilgisayarda yoksa ekler), **Özel** sonraki sayfada işaretlenen bileşenleri.
 2. **Bileşenler** (yalnız Özel'de), her biri indirme boyutuyla.
 3. **Nereye ve nasıl:** bu kullanıcı için, tüm kullanıcılar için (kurulum programı kendini yönetici olarak yeniden başlatır ve kendi ilerlemesini gösterir) ya da **taşınabilir** (yalnız bir klasör: kısayol, kayıt defteri girdisi ve dosya türü yok); klasör; masaüstü kısayolu, dosya türleri, sonra başlat. Kaynak satırı dosyaların nereden geleceğini söyler.
 
@@ -64,7 +64,7 @@ Windows *Uygulamalar* listesine kaydedilmiş bir kurulum yeniden bulunur: yeni b
 | --- | --- |
 | `RobotWinStudio-Setup-1.7.0.exe` | sihirbaz |
 | `... /S` | sessiz; `/PASSIVE`: soru yok, yalnız ilerleme penceresi (uygulama içi güncelleyici bunu kullanır) |
-| `/TYPE=full`, `/TYPE=lite`, `/COMPONENTS=app,arduino,occt` | tür ya da tam olarak bu bileşenler (`app` her zaman, bilgisayarda .NET 9 yoksa `dotnet` de kurulur) |
+| `/TYPE=full`, `/TYPE=lite`, `/COMPONENTS=app,arduino,occt` | tür ya da tam olarak bu bileşenler (`app` her zaman, bilgisayarda .NET 10 yoksa `dotnet` de kurulur) |
 | `/LANG=en`, `/LANG=tr` | uygulamanın dili |
 | `/D=<klasör>`, `/ALLUSERS`, `/PORTABLE` | nereye |
 | `/NODESKTOP`, `/NOTYPES`, `/LAUNCH` | masaüstü kısayolu yok, dosya türü yok, sonra uygulamayı başlat |

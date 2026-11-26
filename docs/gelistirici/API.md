@@ -56,13 +56,13 @@ flowchart LR
 
 | Komut | Ne yapar |
 | --- | --- |
-| `RobotWin.Headless --api 5555` | Platformlar arası başsız sunucu (.NET 9, Windows/Linux/macOS). |
+| `RobotWin.Headless --api 5555` | Platformlar arası başsız sunucu (.NET 10, Windows/Linux/macOS). |
 | `RobotWin.Headless --api 0 --example car --parent-pid 1234` | Boş bir port seçer, örneği yükler; `ROBOTWIN_API_READY port=<n>` satırını yazar; üst süreçle birlikte kapanır. |
 | `RobotWin.Headless --run 5 --world robot.rwworld [--dt 0.01] [--seed 3]` | Toplu koşu: JSON raporu standart çıktıya yazar (çözücü durduysa çıkış kodu 4). |
 | `RobotWinStudio.exe --api 5555 [--world f.rwworld]` | Uygulamanın kendisi, pencere açmadan: dünya gövdeleri uygulamanın 3B modellerinden gelir (arayüzle birebir aynı fizik), ESP32 çizimleri uygulamanın MSVC ayarlarıyla derlenir. |
 | `RobotWinStudio.exe --bake-geometry f.rwworld [--out g.json]` | Uygulamanın gövde geometrisini dünyanın yanına yazar (`f.rwworld.geometry.json`); başsız araç onu kendiliğinden kullanır. |
 
-Ortak seçenekler: `--seed N`, `--no-firmware`, `--firmware-dir KLASÖR` (`builtin:` hex dosyaları için), `--host ADRES --allow-remote` (geri döngü dışı), `--token T`. Aracı derlemek: `dotnet build tools/RobotWin.Headless -c Release` (çıktı `builds/RobotWin.Headless/Release/net9.0/`).
+Ortak seçenekler: `--seed N`, `--no-firmware`, `--firmware-dir KLASÖR` (`builtin:` hex dosyaları için), `--host ADRES --allow-remote` (geri döngü dışı), `--token T`. Aracı derlemek: `dotnet build tools/RobotWin.Headless -c Release` (çıktı `builds/RobotWin.Headless/Release/net10.0/`).
 
 Sunucu varsayılan olarak yalnızca `127.0.0.1` üzerinde dinler. Başka bir makineden erişim için `--host 0.0.0.0 --allow-remote --token GIZLI` kullanın; istemci ilk çağrıda `hello {"token": "GIZLI"}` göndermelidir.
 

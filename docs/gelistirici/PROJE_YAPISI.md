@@ -3,9 +3,9 @@
 | Yol | İçindekiler |
 | --- | --- |
 | `RobotWinStudio.sln` | Uygulama + çekirdek + testler (CI'ın derlediği çözüm) |
-| `global.json` | .NET SDK sabitlemesi (9.0.112, latestFeature) |
+| `global.json` | .NET SDK sabitlemesi (10.0.100, latestMajor; C# 14) |
 | `Directory.Build.props` | bin/obj çıktısını `builds/<Proje>/` altına gönderir |
-| `Studio/RobotWin.Studio/` | Masaüstü uygulaması (WPF, net9.0-windows) |
+| `Studio/RobotWin.Studio/` | Masaüstü uygulaması (WPF, net10.0-windows) |
 | `CoreSim/` | Simülasyon çekirdeği, yerel ESP32 HAL'i, testler |
 | `Installer/` | Yerel Win32 kurulum programı (`setup.cpp`, `setup.rc`) |
 | `tools/build-installer.ps1` | Tek kurulum programı `RobotWinStudio-Setup-<sürüm>.exe`'yi ve kurduğu bileşenleri (`*.rwpack`) derler |

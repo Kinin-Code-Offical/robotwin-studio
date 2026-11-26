@@ -8,7 +8,7 @@
 
 | Belirti | Çözüm |
 | --- | --- |
-| Uygulama açılmıyor ya da .NET istiyor | Hafif kurulum bilgisayardaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır. Kurulumu yeniden çalıştırıp **Tam**'ı seçin (ya da **.NET 9 çalışma zamanı** bileşenini ekleyin): uygulama o zaman kendi kopyasını taşır. Ya da Microsoft'tan **.NET 9 Masaüstü Çalışma Zamanı**'nı (x64) kurun. Kurulumun günlüğü `%TEMP%\RobotWinStudio-Setup.log`'dur. |
+| Uygulama açılmıyor ya da .NET istiyor | Hafif kurulum bilgisayardaki .NET 10 Masaüstü Çalışma Zamanı'nı kullanır. Kurulumu yeniden çalıştırıp **Tam**'ı seçin (ya da **.NET 10 çalışma zamanı** bileşenini ekleyin): uygulama o zaman kendi kopyasını taşır. Ya da Microsoft'tan **.NET 10 Masaüstü Çalışma Zamanı**'nı (x64) kurun. Kurulumun günlüğü `%TEMP%\RobotWinStudio-Setup.log`'dur. |
 | Windows SmartScreen kurulum için uyarıyor | Dosyanın projenin GitHub Sürümler sayfasından geldiğini doğrulayın; sonra *Ek bilgi → Yine de çalıştır*. |
 | Bütün kullanıcılara kurulum başarısız | `/ALLUSERS`, `Program Files`'a yazar ve yönetici yetkisi ister; yoksa varsayılan kullanıcıya kurulumu kullanın. |
 | `.rwproj`/`.rwworld` dosyasına çift tıklayınca uygulama açılmıyor | Ayarlar → *Dosya türleri* → *Windows'ta bu uygulamayla aç* (ya da Dosya → *Dosya türlerini bu uygulamayla ilişkilendir*). |
@@ -45,7 +45,7 @@
 
 | Belirti | Çözüm |
 | --- | --- |
-| `A compatible .NET SDK was not found` | `global.json`'da sabitlendiği gibi .NET 9 SDK'yı (9.0.112 ya da daha yeni bir 9.0 özellik bandı) kurun. |
+| `A compatible .NET SDK was not found` | .NET 10 SDK'yı kurun (10.0.100 ya da daha yenisi; `global.json` daha yeni bir ana sürümü de kabul eder). |
 | `RobotWinStudio.exe` kullanımda olduğu için derleme başarısız | Yeniden derlemeden önce çalışan uygulamayı (ve `--snapshot`/`--selftest` süreçlerini) kapatın. |
 | `builds\` içinde çok sayıda `RobotWin.Studio_*_wpftmp` klasörü | WPF geçici projeleri; `builds\` klasörüyle birlikte güvenle silinebilir. |
 | `build-installer.ps1`: "Visual Studio C++ araçları bulunamadı" | C++ iş yükünü kurun; betik onu `vswhere` ile bulur. |

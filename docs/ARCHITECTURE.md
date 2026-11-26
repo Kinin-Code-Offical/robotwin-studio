@@ -1,6 +1,6 @@
 # Architecture
 
-RobotWin Studio is a single Windows desktop process: a C# .NET 9 WPF application (`Studio/RobotWin.Studio`) on top of a C# simulation core (`CoreSim/src/RobotTwin.CoreSim`). There is no separate engine process, no IPC and no game engine. The only native code that runs inside the app is the user's own ESP32 sketch, compiled with MSVC into a DLL (see [Firmware co-simulation](#firmware-co-simulation)).
+RobotWin Studio is a single Windows desktop process: a C# .NET 10 WPF application (`Studio/RobotWin.Studio`) on top of a C# simulation core (`CoreSim/src/RobotTwin.CoreSim`). There is no separate engine process, no IPC and no game engine. The only native code that runs inside the app is the user's own ESP32 sketch, compiled with MSVC into a DLL (see [Firmware co-simulation](#firmware-co-simulation)).
 
 > The 1.x design (Unity front end + C++ `NativeEngine`/`FirmwareEngine` over named pipes) is described in [archive/](archive/README.md). Those engines are still in the repository but are not used by the app.
 
@@ -8,14 +8,14 @@ RobotWin Studio is a single Windows desktop process: a C# .NET 9 WPF application
 
 ```mermaid
 flowchart TB
-    subgraph Studio["Studio/RobotWin.Studio — WPF, net9.0-windows, Turkish UI"]
+    subgraph Studio["Studio/RobotWin.Studio — WPF, net10.0-windows, Turkish UI"]
         direction LR
         SH["MainWindow + Shell<br/>menus, tabs, split view, command palette"]
         PG["Pages<br/>Home, Schematic, PCB, Code, Model, Assembly, World, Library, Settings"]
         VW["Views<br/>Editor, Pcb, Modeling, Assembly3D, World, Models3D"]
         IO["Firmware (arduino-cli), Audio, Input (XInput, Sony HID)"]
     end
-    subgraph Core["CoreSim/src/RobotTwin.CoreSim — net9.0 + netstandard2.1, no UI"]
+    subgraph Core["CoreSim/src/RobotTwin.CoreSim — net10.0 + netstandard2.1, no UI"]
         direction LR
         DS["Design<br/>schematic, part library, CircuitCompiler"]
         AN["Analog<br/>MNA solver, device models"]

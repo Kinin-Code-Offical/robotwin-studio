@@ -3,7 +3,7 @@
 ## Installing and starting
 
 **The app does not start or asks for .NET.**
-A lite installation uses the PC's .NET 9 Desktop Runtime. Run the installer again and choose **Full** (or add the **.NET 9 runtime** component with **Custom**): the app then carries its own copy. Or install ".NET 9 Desktop Runtime (x64)" from Microsoft's site.
+A lite installation uses the PC's .NET 10 Desktop Runtime. Run the installer again and choose **Full** (or add the **.NET 10 runtime** component with **Custom**): the app then carries its own copy. Or install ".NET 10 Desktop Runtime (x64)" from Microsoft's site.
 
 **Windows warns about the setup file.**
 Make sure you downloaded it from the project's GitHub Releases page, then choose **More info → Run anyway**.

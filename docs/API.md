@@ -61,7 +61,7 @@ flowchart LR
 
 | Command | What it does |
 |---|---|
-| `RobotWin.Headless --api 5555` | Cross-platform headless server (.NET 9, Windows/Linux/macOS). |
+| `RobotWin.Headless --api 5555` | Cross-platform headless server (.NET 10, Windows/Linux/macOS). |
 | `RobotWin.Headless --api 0 --example car --parent-pid 1234` | Free port, preloaded example; prints `ROBOTWIN_API_READY port=<n>`; exits with its parent. |
 | `RobotWin.Headless --run 5 --world robot.rwworld [--dt 0.01] [--seed 3]` | Batch run, JSON report on stdout (exit code 4 if the solver halted). |
 | `RobotWinStudio.exe --api 5555 [--world f.rwworld]` | The app itself, windowless: world bodies come from the app's 3D models (identical physics to the UI), ESP32 sketches are compiled with the app's MSVC settings. |
@@ -69,7 +69,7 @@ flowchart LR
 
 Common options: `--seed N`, `--no-firmware`, `--firmware-dir DIR` (for `builtin:` hex files),
 `--host ADDR --allow-remote` (non-loopback), `--token T`. Build the tool with
-`dotnet build tools/RobotWin.Headless -c Release` (output in `builds/RobotWin.Headless/Release/net9.0/`).
+`dotnet build tools/RobotWin.Headless -c Release` (output in `builds/RobotWin.Headless/Release/net10.0/`).
 
 ## Wire protocol
 

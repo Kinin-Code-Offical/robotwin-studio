@@ -4,7 +4,7 @@
        The sources are linked, not referenced, so these tests run without WPF and prove the
        logic has no UI dependency. -->
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>

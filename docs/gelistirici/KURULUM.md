@@ -7,7 +7,7 @@ RobotWin Studio'yu kaynaktan derlemek, çalıştırmak ve sınamak için bir Win
 | Araç | Ne için | Notlar |
 | --- | --- | --- |
 | Windows 10 ya da 11, x64 | her şey | Uygulama WPF'dir ve yalnız Windows'ta çalışır. |
-| [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) | uygulamayı ve testleri derlemek | `global.json` 9.0.112'yi `rollForward: latestFeature` ile sabitler. |
+| [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) | uygulamayı ve testleri derlemek | `global.json` 10.0.100 ister; `rollForward: latestMajor` ile daha yeni bir SDK da olur (projeler C# 14'e sabit). |
 | Git | depoyu klonlamak | |
 | Visual Studio 2022 ya da Build Tools, **C++ ile masaüstü geliştirme** iş yükü | ESP32 çizimleri, kurulum paketini derlemek | `cl.exe`, `lib.exe`, `rc.exe` ve `vcvars64.bat`'ı sağlar. Uygulamanın kendisini derlemek ya da çalıştırmak için gerekmez. |
 | `arduino-cli` + `arduino:avr` çekirdeği | kendi Arduino Uno/Nano çizimlerinizi derlemek | Hazır örnekler önceden derlenmiş HEX dosyaları olarak gelir. |
@@ -28,12 +28,12 @@ winget install Microsoft.VisualStudio.2022.BuildTools --override "--add Microsof
 git clone https://github.com/Kinin-Code-Offical/robotwin-studio.git
 cd robotwin-studio
 dotnet build RobotWinStudio.sln -c Debug
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe
 ```
 
-`Directory.Build.props` bütün `bin/` ve `obj/` çıktısını `builds\<ProjeAdı>\` altına yönlendirir; depo ağacı temiz kalır. İyileştirilmiş derleme için `-c Release` kullanın (`builds\RobotWin.Studio\Release\net9.0-windows\`).
+`Directory.Build.props` bütün `bin/` ve `obj/` çıktısını `builds\<ProjeAdı>\` altına yönlendirir; depo ağacı temiz kalır. İyileştirilmiş derleme için `-c Release` kullanın (`builds\RobotWin.Studio\Release\net10.0-windows\`).
 
-Visual Studio 2022 (.NET 9 için 17.12 ya da sonrası) ya da C# Dev Kit'li VS Code `RobotWinStudio.sln`'yi doğrudan açar; başlangıç projesi olarak **RobotWin.Studio**'yu seçin.
+Visual Studio 2026 (.NET 10 için gerekir) ya da C# Dev Kit'li VS Code `RobotWinStudio.sln`'yi doğrudan açar; başlangıç projesi olarak **RobotWin.Studio**'yu seçin.
 
 ## Uygulama derleyicileri nasıl bulur
 
@@ -44,7 +44,7 @@ Visual Studio 2022 (.NET 9 için 17.12 ya da sonrası) ya da C# Dev Kit'li VS Co
 
 ```powershell
 dotnet test RobotWinStudio.sln
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
 Get-Content selftest.txt -Tail 1   # SELFTEST PASS
 ```
 

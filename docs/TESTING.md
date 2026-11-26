@@ -39,7 +39,7 @@ ESP32 tests compile real sketches with MSVC. On a machine without the Visual Stu
 ## Render test
 
 ```powershell
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --render-test render-test.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --render-test render-test.txt
 Get-Content render-test.txt
 ```
 
@@ -49,7 +49,7 @@ First the scene mirror (`Render/SceneMirror.cs`) is checked: a layered body mate
 
 ```powershell
 dotnet build RobotWinStudio.sln -c Debug
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
 Get-Content selftest.txt
 ```
 
@@ -65,7 +65,7 @@ Each example prints one line (`parts`, `nets`, `warn`, `sim=OK`, `routed=x/y`, `
 `--snapshot` renders a page off screen to PNG without user interaction, then exits. It is how the screenshots in `docs/images/` are made and how UI changes are verified.
 
 ```powershell
-$exe = "builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe"
+$exe = "builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe"
 & $exe --snapshot out\home.png --page home
 & $exe --snapshot out\schematic.png --page schematic --example arduino-displays --simulate 1.5
 & $exe --snapshot out\pcb.png --page pcb --example motor-driver

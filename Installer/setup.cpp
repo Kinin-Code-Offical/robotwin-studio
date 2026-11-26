@@ -7,8 +7,8 @@
 // download goes on where it stopped.
 //
 // Kinds (the first page, or /TYPE=):
-//   full     the app, its own .NET 9 runtime, the Arduino compiler and STEP / IGES support: everything works offline
-//   lite     the app alone, on the PC's .NET 9 Desktop Runtime (its own copy only when the PC has none)
+//   full     the app, its own .NET 10 runtime, the Arduino compiler and STEP / IGES support: everything works offline
+//   lite     the app alone, on the PC's .NET 10 Desktop Runtime (its own copy only when the PC has none)
 //   custom   any set of components (/COMPONENTS=app,dotnet,arduino,occt)
 // Where: this user (default), all users (/ALLUSERS, elevated) or portable (/PORTABLE: a folder only, no shortcuts,
 // no registry, no file types). The language chosen on the first page is the app's language too.
@@ -129,9 +129,9 @@ static const PartText PartTexts[] =
     { L"app", L"RobotWin Studio", L"RobotWin Studio",
       L"Uygulama: devre, PCB, kod, 3B model, montaj ve dünya; örnekler ve kılavuz. Her kurulumda var.",
       L"The application: circuit, PCB, code, 3D model, assembly and world; examples and the guide. Always installed." },
-    { L"dotnet", L".NET 9 çalışma zamanı", L".NET 9 runtime",
-      L"Uygulamanın kendi .NET 9 kopyası, kendi klasöründe. Bilgisayarda .NET 9 Masaüstü Çalışma Zamanı yoksa gerekir.",
-      L"The app's own copy of .NET 9, in its folder. Needed when the PC has no .NET 9 Desktop Runtime." },
+    { L"dotnet", L".NET 10 çalışma zamanı", L".NET 10 runtime",
+      L"Uygulamanın kendi .NET 10 kopyası, kendi klasöründe. Bilgisayarda .NET 10 Masaüstü Çalışma Zamanı yoksa gerekir.",
+      L"The app's own copy of .NET 10, in its folder. Needed when the PC has no .NET 10 Desktop Runtime." },
     { L"arduino", L"Arduino derleyicisi", L"Arduino compiler",
       L"arduino-cli ve AVR çekirdeği: Uno ve Nano kodu internetsiz derlenir. Yoksa kendi arduino-cli'niz kullanılır.",
       L"arduino-cli with the AVR core: Uno and Nano code builds offline. Without it, your own arduino-cli is used." },
@@ -469,7 +469,7 @@ struct Options
     std::wstring source;                 // folder or URL; "" = this release on GitHub
 };
 
-static bool g_hasDotnet9 = false;
+static bool g_hasDotnet = false;
 
 static int PartCount()
 {
@@ -493,7 +493,7 @@ static std::set<std::wstring> SetOf(Kind k, const std::set<std::wstring>& custom
         for (const ComponentInfo* c = Components; c->id; c++) s.insert(c->id);
     else if (k == Kind::Custom) s = custom;
     s.insert(L"app");
-    if (!g_hasDotnet9) s.insert(L"dotnet");
+    if (!g_hasDotnet) s.insert(L"dotnet");
     std::set<std::wstring> r;
     for (auto& id : s)
         if (Part(id)) r.insert(id);
@@ -573,14 +573,14 @@ static std::wstring DotNetRegistered()
     return r;
 }
 
-static bool DotNetDesktop9Present()
+static bool DotNetDesktopPresent()
 {
     for (const std::wstring& root : { KnownFolder(FOLDERID_ProgramFiles) + L"\\dotnet", DotNetRegistered() })
     {
         if (root.empty()) continue;
         std::error_code ec;
         for (auto& e : fs::directory_iterator(fs::path(root) / L"shared" / L"Microsoft.WindowsDesktop.App", ec))
-            if (e.path().filename().wstring().rfind(L"9.", 0) == 0) return true;
+            if (e.path().filename().wstring().rfind(L"10.", 0) == 0) return true;   // the app runs on .NET 10
     }
 
     return false;
@@ -1707,11 +1707,11 @@ static void UpdateDynamic()
     for (int i = 0; Components[i].id; i++)
     {
         std::wstring id = Components[i].id;
-        bool forced = id == L"app" || (id == L"dotnet" && !g_hasDotnet9);
+        bool forced = id == L"app" || (id == L"dotnet" && !g_hasDotnet);
         CheckDlgButton(g_wnd, IdPart + i, set.count(id) ? BST_CHECKED : BST_UNCHECKED);
         EnableWindow(ItemOf(IdPart + i), !forced);
         SetText(IdPart + i, PartName(id));
-        SetText(IdPartDesc + i, PartDesc(id) + (id == L"dotnet" && !g_hasDotnet9 ? Tx(L" Bu bilgisayarda yok: gerekli.", L" This PC has none: needed.") : L""));
+        SetText(IdPartDesc + i, PartDesc(id) + (id == L"dotnet" && !g_hasDotnet ? Tx(L" Bu bilgisayarda yok: gerekli.", L" This PC has none: needed.") : L""));
         SetText(IdPartSize + i, SizeText((double)Components[i].size));
     }
 
@@ -1806,11 +1806,11 @@ static void CreateControls(HWND h)
     Add(h, T, L"STATIC", nullptr, nullptr, SS_NOPREFIX | SS_ENDELLIPSIS, 36, 136, 568, 20, IdExisting);
     Add(h, T, L"STATIC", L"Kurulum türü", L"Type of installation", 0, 36, 170, 568, 22, 0, g_bold);
     Add(h, T, L"BUTTON", nullptr, nullptr, BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 36, 198, 568, 22, IdFull);
-    Add(h, T, L"STATIC", L"Uygulama, kendi .NET 9'u, Arduino derleyicisi ve STEP / IGES desteği. Kurulur kurulmaz her şey internetsiz çalışır.",
-        L"The app, its own .NET 9, the Arduino compiler and STEP / IGES support. Everything works offline right away.", 0, 58, 221, 546, 42, IdFullDesc);
+    Add(h, T, L"STATIC", L"Uygulama, kendi .NET 10'u, Arduino derleyicisi ve STEP / IGES desteği. Kurulur kurulmaz her şey internetsiz çalışır.",
+        L"The app, its own .NET 10, the Arduino compiler and STEP / IGES support. Everything works offline right away.", 0, 58, 221, 546, 42, IdFullDesc);
     Add(h, T, L"BUTTON", nullptr, nullptr, BS_AUTORADIOBUTTON, 36, 268, 568, 22, IdLite);
-    Add(h, T, L"STATIC", L"Yalnız uygulama; bilgisayardaki .NET 9'u kullanır (yoksa kendi kopyasını ekler). Derleyici ve STEP / IGES sonradan eklenebilir.",
-        L"The app alone; it uses the PC's .NET 9 (adds its own copy if there is none). The compiler and STEP / IGES can be added later.", 0, 58, 291, 546, 42, IdLiteDesc);
+    Add(h, T, L"STATIC", L"Yalnız uygulama; bilgisayardaki .NET 10'u kullanır (yoksa kendi kopyasını ekler). Derleyici ve STEP / IGES sonradan eklenebilir.",
+        L"The app alone; it uses the PC's .NET 10 (adds its own copy if there is none). The compiler and STEP / IGES can be added later.", 0, 58, 291, 546, 42, IdLiteDesc);
     Add(h, T, L"BUTTON", nullptr, nullptr, BS_AUTORADIOBUTTON, 36, 338, 568, 22, IdCustom);
     Add(h, T, L"STATIC", L"Bileşenleri tek tek seçin (sonraki sayfa). Kurulumdan sonra Uygulamalar'da 'Değiştir' ile eklenip kaldırılabilir.",
         L"Choose the components one by one (next page). Later, Apps & features → Modify adds or removes them.", 0, 58, 361, 546, 42, IdCustomDesc);
@@ -2261,7 +2261,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show)
         Trace(L"RobotWin Studio Setup " + std::wstring(AppVersion) + L": " + GetCommandLineW());
     }
 
-    g_hasDotnet9 = DotNetDesktop9Present();
+    g_hasDotnet = DotNetDesktopPresent();
     o.passive = HasArg(L"/PASSIVE") || (silent && HasArg(L"/LAUNCH"));   // someone waits for the app (the updater): show the downloads
     o.silent = silent && !o.passive;
     o.keep = HasArg(L"/KEEP");

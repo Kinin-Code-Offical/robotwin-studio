@@ -6,8 +6,8 @@ Bu bölümde RobotWin Studio'yu kurar, ekranın bölümlerini tanır ve ilk proj
 
 1. [GitHub Sürümler sayfasından](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) kurulum dosyasını, `RobotWinStudio-Setup-<sürüm>.exe`'yi indirin. Küçüktür: seçtiğiniz parçaları aynı sürümden kendisi indirir ve her birini doğrular.
 2. Çalıştırın. İlk sayfada **dili** (kurulumun ve uygulamanın dili) ve **kurulum türünü** seçin:
-   - **Tam** (önerilen): uygulama, kendi .NET 9'u, Arduino derleyicisi ve STEP / IGES desteği. Kurulur kurulmaz her şey internetsiz çalışır.
-   - **Hafif**: yalnız uygulama; bilgisayarınızdaki .NET 9 Masaüstü Çalışma Zamanı'nı kullanır (yoksa kendi kopyasını getirir). Derleyici ve STEP / IGES sonradan eklenebilir.
+   - **Tam** (önerilen): uygulama, kendi .NET 10'u, Arduino derleyicisi ve STEP / IGES desteği. Kurulur kurulmaz her şey internetsiz çalışır.
+   - **Hafif**: yalnız uygulama; bilgisayarınızdaki .NET 10 Masaüstü Çalışma Zamanı'nı kullanır (yoksa kendi kopyasını getirir). Derleyici ve STEP / IGES sonradan eklenebilir.
    - **Özel**: bileşenleri kendiniz işaretleyin.
 3. **Kurulum biçimini** seçin: bu kullanıcı için (varsayılan, yönetici izni istemez), tüm kullanıcılar için (yönetici ister) ya da **taşınabilir** (yalnız bir klasör, örneğin USB bellekte: kısayol, kayıt defteri girdisi ve dosya türü yok).
 4. Kurulum bitince Başlat menüsünden **RobotWin Studio**'yu açın.

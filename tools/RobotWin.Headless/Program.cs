@@ -13,7 +13,7 @@ namespace RobotWin.Headless
 {
     /// <summary>
     /// RobotWin Studio without a window: runs worlds / vehicles from the command line and serves the
-    /// automation API (docs/API.md). Works on Windows, Linux and macOS (.NET 9).
+    /// automation API (docs/API.md). Works on Windows, Linux and macOS (.NET 10).
     /// </summary>
     public static class Program
     {

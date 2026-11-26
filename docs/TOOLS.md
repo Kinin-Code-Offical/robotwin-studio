@@ -9,7 +9,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 | Build (debug) | `dotnet build RobotWinStudio.sln -c Debug` |
 | Build (release) | `dotnet build RobotWinStudio.sln -c Release` |
 | Unit tests | `dotnet test RobotWinStudio.sln` |
-| Run the app | `builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe` |
+| Run the app | `builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe` |
 | Clean | `dotnet clean RobotWinStudio.sln` (or delete `builds\`) |
 | Vulnerable packages | `dotnet list RobotWinStudio.sln package --vulnerable` |
 
@@ -53,7 +53,7 @@ Everyday development needs only the .NET CLI, the app's own command-line modes a
 Every picture in the guide is listed in `docs/images/shots.json` with the arguments that make it (and a crop where it is cut from the window). `tools/scripts/doc_images.py` renders them:
 
 ```powershell
-$exe = "builds\RobotWin.Studio\Release\net9.0-windows\RobotWinStudio.exe"
+$exe = "builds\RobotWin.Studio\Release\net10.0-windows\RobotWinStudio.exe"
 python tools\scripts\doc_images.py $exe                         # Turkish: docs\images\
 python tools\scripts\doc_images.py $exe --lang en               # English: docs\images\en\
 python tools\scripts\doc_images.py $exe --lang en home modeler  # only these
@@ -63,7 +63,7 @@ The English guide uses `docs/images/en/` and falls back to the Turkish picture w
 
 ## tools/build-installer.ps1
 
-Publishes the app, lays out the components (the app, its own .NET 9 runtime, the Arduino compiler, the Open CASCADE bridge), packs each into an `.rwpack` with the native setup, compiles the one setup `RobotWinStudio-Setup-<version>.exe` with their sizes and SHA-256, and proves it by installing them all into a portable folder; output in `builds\installer\release`. `-NoArduino` skips the Arduino compiler, `-Repo owner/name` sets where the setup downloads from. See [BUILD_RELEASE.md](BUILD_RELEASE.md).
+Publishes the app, lays out the components (the app, its own .NET 10 runtime, the Arduino compiler, the Open CASCADE bridge), packs each into an `.rwpack` with the native setup, compiles the one setup `RobotWinStudio-Setup-<version>.exe` with their sizes and SHA-256, and proves it by installing them all into a portable folder; output in `builds\installer\release`. `-NoArduino` skips the Arduino compiler, `-Repo owner/name` sets where the setup downloads from. See [BUILD_RELEASE.md](BUILD_RELEASE.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0

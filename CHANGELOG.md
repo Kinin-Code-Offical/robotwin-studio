@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **.NET 10 (LTS):** the app, the simulation core, the headless server, the tests and the plugin template run on .NET 10, as .NET 9 left support on 10 November 2026. The setup's own runtime component is .NET 10, a lite installation needs the .NET 10 Desktop Runtime (the setup adds the app's own copy when the PC has none, also when updating), and C# scripts build with a .NET 10 SDK (or a newer one when the .NET 10 reference pack is installed).
+
 ### Added
 
 - **A command palette that understands sentences:** Ctrl+K matches word by word in any order and past Turkish case endings ("MOSFET ekle", "servo motorun akımını izle", "add MOSFET"), puts the open page's commands first and lists only what can run now; new commands: run the DRC, show the selected part on the PCB, watch any part's current on the oscilloscope, check the assembly mates.

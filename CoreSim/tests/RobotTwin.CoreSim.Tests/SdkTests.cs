@@ -695,7 +695,7 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(2, def.Pins.Count);
         }
 
-        // ================================================================ scripts (needs a .NET 9 SDK; skipped otherwise)
+        // ================================================================ scripts (needs a .NET 10 SDK; skipped otherwise)
 
         [Fact]
         [Trait("Category", "Slow")]

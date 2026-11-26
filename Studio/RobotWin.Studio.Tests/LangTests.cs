@@ -282,6 +282,10 @@ public class LangTests
     [InlineData("1240 satır, 3 sensör: C:\\Belgeler\\RobotWin\\Robot-20261126-101500", "1240 rows, 3 sensors: C:\\Belgeler\\RobotWin\\Robot-20261126-101500")]
     [InlineData("U3 akımını izle", "Watch U3 current")]
     [InlineData("M1 akımı osiloskopta; simülasyonu başlatın (F5)", "M1 current is on the oscilloscope; start the simulation (F5)")]
+    [InlineData("Kurulu SDK'lar: 11.0.100. Betikler bu uygulamanın çalışma zamanına (.NET 10) göre derlenmeli; bunun için bir .NET 10.x SDK gerekir (indirme yapılmaz).", "Installed SDKs: 11.0.100. Scripts must be compiled against this app's runtime (.NET 10), which needs a .NET 10.x SDK (nothing is downloaded).")]
+    [InlineData("Hafif kurulum · .NET 10 Masaüstü Çalışma Zamanı ile", "Lite installation · with the .NET 10 Desktop Runtime")]
+    [InlineData("(simülatör: çizimin süreci beklenmedik biçimde kapandı: yığın taştı (0xC00000FD))", "(simulator: the sketch's process ended unexpectedly: stack overflow (0xC00000FD))")]
+    [InlineData("çizim kendi sürecinde çalışıyor (korumalı alan kurulamadı: korumalı alanda (AppContainer) süreç başlatılamadı (Win32 hata kodu 5))", "the sketch runs in its own process (the sandbox could not be set up: the process could not start in the sandbox (AppContainer) (Win32 error 5))")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

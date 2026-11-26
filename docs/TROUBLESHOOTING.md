@@ -8,7 +8,7 @@ Where to look first: the status bar at the bottom of the window, the **Olaylar**
 
 | Symptom | Fix |
 | --- | --- |
-| The app does not start, or asks for .NET | A lite installation uses the PC's .NET 9 Desktop Runtime. Run the setup again and choose **Full** (or add the **.NET 9 runtime** component): the app then carries its own copy. Or install the **.NET 9 Desktop Runtime** (x64) from Microsoft. The setup's log is `%TEMP%\RobotWinStudio-Setup.log`. |
+| The app does not start, or asks for .NET | A lite installation uses the PC's .NET 10 Desktop Runtime. Run the setup again and choose **Full** (or add the **.NET 10 runtime** component): the app then carries its own copy. Or install the **.NET 10 Desktop Runtime** (x64) from Microsoft. The setup's log is `%TEMP%\RobotWinStudio-Setup.log`. |
 | Windows SmartScreen warns about the setup | Check that the file came from the project's GitHub Releases page; then *More info → Run anyway*. |
 | All-users install fails | `/ALLUSERS` writes to `Program Files` and needs administrator rights; use the default per-user install otherwise. |
 | Double-clicking a `.rwproj`/`.rwworld` file does not open the app | Settings → *Dosya türleri* → *Windows'ta bu uygulamayla aç* (or File → *Dosya türlerini bu uygulamayla ilişkilendir*). |
@@ -45,7 +45,7 @@ Where to look first: the status bar at the bottom of the window, the **Olaylar**
 
 | Symptom | Fix |
 | --- | --- |
-| `A compatible .NET SDK was not found` | Install the .NET 9 SDK (9.0.112 or a later 9.0 feature band), as pinned in `global.json`. |
+| `A compatible .NET SDK was not found` | Install the .NET 10 SDK (10.0.100 or later; `global.json` also accepts a newer major version). |
 | Build fails because `RobotWinStudio.exe` is in use | Close the running app (and any `--snapshot`/`--selftest` process) before rebuilding. |
 | Many `RobotWin.Studio_*_wpftmp` folders in `builds\` | WPF temporary projects; safe to delete with the whole `builds\` folder. |
 | `build-installer.ps1`: "Visual Studio C++ araçları bulunamadı" | Install the C++ workload; the script finds it with `vswhere`. |

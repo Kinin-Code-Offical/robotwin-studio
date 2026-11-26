@@ -85,7 +85,7 @@ namespace RobotWin.Studio.Updates
         public static string NameOf(string id) => id switch
         {
             "app" => "RobotWin Studio",
-            "dotnet" => ".NET 9 çalışma zamanı",
+            "dotnet" => ".NET 10 çalışma zamanı",
             "arduino" => "Arduino derleyicisi",
             "occt" => "STEP / IGES desteği",
             _ => id

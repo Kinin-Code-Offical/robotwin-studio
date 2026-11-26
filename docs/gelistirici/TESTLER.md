@@ -40,7 +40,7 @@ ESP32 testleri gerçek çizimleri MSVC ile derler. Visual Studio C++ araçları 
 
 ```powershell
 dotnet build RobotWinStudio.sln -c Debug
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
 Get-Content selftest.txt
 ```
 
@@ -54,7 +54,7 @@ Her örnek bir satır yazar (`parts`, `nets`, `warn`, `sim=OK`, `routed=x/y`, `v
 ## Çizim testi
 
 ```powershell
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --render-test render-test.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --render-test render-test.txt
 Get-Content render-test.txt
 ```
 
@@ -65,7 +65,7 @@ Get-Content render-test.txt
 `--snapshot` bir sayfayı ekran dışında, kullanıcı etkileşimi olmadan PNG'ye çizer ve kapanır. `docs/images/` içindeki ekran görüntüleri böyle yapılır, arayüz değişiklikleri böyle denetlenir.
 
 ```powershell
-$exe = "builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe"
+$exe = "builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe"
 & $exe --snapshot out\home.png --page home
 & $exe --snapshot out\schematic.png --page schematic --example arduino-displays --simulate 1.5
 & $exe --snapshot out\pcb.png --page pcb --example motor-driver

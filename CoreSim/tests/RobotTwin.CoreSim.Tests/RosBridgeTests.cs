@@ -183,26 +183,41 @@ namespace RobotTwin.CoreSim.Tests
                 }
             }
 
+            // A message on its way: taken without moving the world (under load the network can be slower than the stepping).
+            async Task Deliver(Func<bool> arrived)
+            {
+                var wall = System.Diagnostics.Stopwatch.StartNew();
+                while (!arrived() && wall.Elapsed.TotalSeconds < 10)
+                {
+                    link.Step(runner.Time);
+                    await Task.Delay(5);
+                }
+            }
+
             // 1. The elbow to 0.5 rad in 1 s, within 0.05 rad: it gets there and the goal succeeds.
             await server.Send(Goal("action_goal:" + action + ":1", "j3_elbow", 0.5, 1.0, 0.05));
+            await Deliver(() => link.Goals >= 1);
             await RunUntil(() => link.GoalResults.Count >= 1, 4);
             Assert.Equal(("action_goal:" + action + ":1", 4, RosWorldLink.Successful), link.GoalResults[0]);
 
             // 2. A joint the world does not have: aborted with INVALID_JOINTS at once.
             await server.Send(Goal("action_goal:" + action + ":2", "no_such_joint", 0.1, 1.0, 0.05));
+            await Deliver(() => link.GoalResults.Count >= 2);
             await RunUntil(() => link.GoalResults.Count >= 2, 1);
             Assert.Equal((6, RosWorldLink.InvalidJoints), (link.GoalResults[1].Status, link.GoalResults[1].ErrorCode));
 
             // 3. A slow move cancelled half way: canceled, and the elbow stays about where it was.
             await server.Send(Goal("action_goal:" + action + ":3", "j3_elbow", -0.5, 3.0, 0.05));
-            await RunUntil(() => link.Goals >= 3, 1);
+            await Deliver(() => link.Goals >= 3);
             await RunUntil(() => false, 1.0);
             await server.Send(new JsonObject { ["op"] = "cancel_action_goal", ["id"] = "action_goal:" + action + ":3", ["action"] = action });
+            await Deliver(() => link.GoalResults.Count >= 3);
             await RunUntil(() => link.GoalResults.Count >= 3, 1);
             Assert.Equal((5, RosWorldLink.Successful), (link.GoalResults[2].Status, link.GoalResults[2].ErrorCode));
 
             // 4. A target the elbow cannot reach within 0.05 s of the trajectory's end: aborted with GOAL_TOLERANCE_VIOLATED.
             await server.Send(Goal("action_goal:" + action + ":4", "j3_elbow", 1.2, 0.05, 0.001, 0.05));
+            await Deliver(() => link.Goals >= 4);
             await RunUntil(() => link.GoalResults.Count >= 4, 3);
             Assert.Equal((6, RosWorldLink.GoalToleranceViolated), (link.GoalResults[3].Status, link.GoalResults[3].ErrorCode));
 

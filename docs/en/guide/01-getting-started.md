@@ -6,8 +6,8 @@ In this chapter you install RobotWin Studio, learn the parts of the screen and o
 
 1. From the [GitHub Releases page](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest) download the installer, `RobotWinStudio-Setup-<version>.exe`. It is small: it downloads the parts you choose from the same release and checks each one.
 2. Run it. On the first page choose the **language** (the installer's and the app's) and the **kind of installation**:
-   - **Full** (recommended): the app, its own .NET 9, the Arduino compiler and STEP / IGES support. Everything works offline right away.
-   - **Lite**: the app alone; it uses the .NET 9 Desktop Runtime of your PC (and brings its own copy if there is none). The compiler and STEP / IGES can be added later.
+   - **Full** (recommended): the app, its own .NET 10, the Arduino compiler and STEP / IGES support. Everything works offline right away.
+   - **Lite**: the app alone; it uses the .NET 10 Desktop Runtime of your PC (and brings its own copy if there is none). The compiler and STEP / IGES can be added later.
    - **Custom**: tick the components yourself.
 3. Choose **how**: for this user (default, no administrator rights), for all users (asks for an administrator) or **portable** (a folder only, e.g. on a USB stick: no shortcuts, registry entries or file types).
 4. When it finishes, open **RobotWin Studio** from the Start menu.

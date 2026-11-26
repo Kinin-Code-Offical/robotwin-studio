@@ -9,7 +9,7 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 | Derleme (hata ayıklama) | `dotnet build RobotWinStudio.sln -c Debug` |
 | Derleme (sürüm) | `dotnet build RobotWinStudio.sln -c Release` |
 | Birim testleri | `dotnet test RobotWinStudio.sln` |
-| Uygulamayı çalıştırma | `builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe` |
+| Uygulamayı çalıştırma | `builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe` |
 | Temizleme | `dotnet clean RobotWinStudio.sln` (ya da `builds\`'i silin) |
 | Güvenlik açığı olan paketler | `dotnet list RobotWinStudio.sln package --vulnerable` |
 
@@ -50,7 +50,7 @@ Günlük geliştirme için yalnız .NET CLI, uygulamanın kendi komut satırı k
 Kılavuzdaki her görüntü, onu üreten argümanlarla (pencereden kesiliyorsa kırpma kutusuyla) `docs/images/shots.json` içinde kayıtlıdır. `tools/scripts/doc_images.py` hepsini üretir:
 
 ```powershell
-$exe = "builds\RobotWin.Studio\Release\net9.0-windows\RobotWinStudio.exe"
+$exe = "builds\RobotWin.Studio\Release\net10.0-windows\RobotWinStudio.exe"
 python tools\scripts\doc_images.py $exe                         # Türkçe: docs\images\
 python tools\scripts\doc_images.py $exe --lang en               # İngilizce: docs\images\en\
 python tools\scripts\doc_images.py $exe --lang en home modeler  # yalnız bunlar
@@ -60,7 +60,7 @@ python tools\scripts\doc_images.py $exe --lang en home modeler  # yalnız bunlar
 
 ## tools/build-installer.ps1
 
-Uygulamayı yayımlar, bileşenleri dizer (uygulama, kendi .NET 9 çalışma zamanı, Arduino derleyicisi, Open CASCADE köprüsü), her birini yerel kurulum programıyla bir `.rwpack`'e paketler, tek kurulum programı `RobotWinStudio-Setup-<sürüm>.exe`'yi onların boyutları ve SHA-256 özetleriyle derler ve hepsini taşınabilir bir klasöre kurarak kanıtlar; çıktı `builds\installer\release` içindedir. `-NoArduino` Arduino derleyicisini atlar, `-Repo sahip/ad` kurulumun indireceği yeri belirler. Bkz. [Derleme ve sürüm](DERLEME.md).
+Uygulamayı yayımlar, bileşenleri dizer (uygulama, kendi .NET 10 çalışma zamanı, Arduino derleyicisi, Open CASCADE köprüsü), her birini yerel kurulum programıyla bir `.rwpack`'e paketler, tek kurulum programı `RobotWinStudio-Setup-<sürüm>.exe`'yi onların boyutları ve SHA-256 özetleriyle derler ve hepsini taşınabilir bir klasöre kurarak kanıtlar; çıktı `builds\installer\release` içindedir. `-NoArduino` Arduino derleyicisini atlar, `-Repo sahip/ad` kurulumun indireceği yeri belirler. Bkz. [Derleme ve sürüm](DERLEME.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0

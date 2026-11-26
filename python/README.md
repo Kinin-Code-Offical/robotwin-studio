@@ -18,7 +18,7 @@ pip install -e python                                 # ya da: PYTHONPATH=python
 ```
 
 İstemci sunucuyu şu sırayla arar: `ROBOTWIN_SERVER` ortam değişkeni (exe, yerel ikili ya da `dotnet` ile
-çalışan `.dll`), depodaki `builds/RobotWin.Headless/{Release,Debug}/net9.0/`, sonra `PATH`.
+çalışan `.dll`), depodaki `builds/RobotWin.Headless/{Release,Debug}/net10.0/`, sonra `PATH`.
 Uygulamanın birebir 3B geometrisini kullanmak için `ROBOTWIN_SERVER=…\RobotWinStudio.exe` verin (Windows).
 
 ### İlk adımlar
@@ -108,7 +108,7 @@ pip install -e python            # or PYTHONPATH=python
 ```
 
 Server lookup: `$ROBOTWIN_SERVER` (an .exe, a native binary, or a .dll run through `dotnet`), the repo's
-`builds/RobotWin.Headless/{Release,Debug}/net9.0/`, then `PATH`. Point `ROBOTWIN_SERVER` at
+`builds/RobotWin.Headless/{Release,Debug}/net10.0/`, then `PATH`. Point `ROBOTWIN_SERVER` at
 `RobotWinStudio.exe` (Windows) to use the app's exact 3D geometry.
 
 ### Client API (`robotwin.RobotWinClient`)

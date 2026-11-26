@@ -5,7 +5,7 @@ Bir dünyanın fiziğine kendi kodunuzu üç düzeyde ekleyebilirsiniz. Hepsi ay
 | Düzey | Nerede | Gerekenler | Ne için |
 | --- | --- | --- | --- |
 | **İfade** | Nesne → *Özellik ekle → Davranış* → *İfade*, ya da Ortam → *İfade alanı* | Hiçbir şey | Hızlı kuvvet yasaları: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
-| **C# betiği** | Dünya → *Betikler* sekmesi → *Yeni C# betiği* | .NET 9 SDK (uygulama hiçbir şey indirmez) | Durumlu davranışlar, sensörler, denetleyiciler; dünya dosyasının içinde saklanır |
+| **C# betiği** | Dünya → *Betikler* sekmesi → *Yeni C# betiği* | .NET 10 SDK (uygulama hiçbir şey indirmez) | Durumlu davranışlar, sensörler, denetleyiciler; dünya dosyasının içinde saklanır |
 | **Eklenti DLL'i** | `%APPDATA%\RobotWinStudio\Plugins\<ad>\` ya da dünya dosyasının yanındaki `Plugins\` | Herhangi bir derleyici (şablon: `sdk/templates/RobotWinPlugin`) | Kütüphaneler, özel devre elemanları, paylaşılan modeller |
 
 ## Kodunuz ne zaman çalışır
@@ -65,7 +65,7 @@ Yerel değişkenler (`k = 20`) her adımda yeniden hesaplanır ve *Ad.değişken
 
 ### Nasıl yazılır ve yüklenir
 
-1. **.NET 9 SDK**'yı kurun (uygulama indirmez). Yoksa Betikler sekmesi nedenini yazar; ifadeler ve eklentiler yine çalışır.
+1. **.NET 10 SDK**'yı kurun (uygulama indirmez). Yoksa Betikler sekmesi nedenini yazar; ifadeler ve eklentiler yine çalışır.
 2. Dünya sayfası → **Betikler** sekmesi → **Yeni C# betiği**. Düzenleyicide bir şablon açılır.
 3. `WorldBehavior`'dan türeyen bir sınıf yazın (aşağıda). Kaydedin: betik dünya dosyasının içinde saklanır.
 4. Betik dünya başlarken (ya da *Derle* ile) derlenir. Hatalar dosya, satır ve sütunla görünür.

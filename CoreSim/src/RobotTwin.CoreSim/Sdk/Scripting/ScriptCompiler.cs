@@ -52,8 +52,8 @@ namespace RobotTwin.CoreSim.Sdk
     }
 
     /// <summary>
-    /// Compiles C# behaviour scripts without bundling a compiler: when the user has the .NET 9
-    /// SDK installed, the scripts are written into a small project in a temp folder that
+    /// Compiles C# behaviour scripts without bundling a compiler: when the user has a .NET SDK
+    /// for this app's runtime (.NET 10) installed, the scripts are written into a small project in a temp folder that
     /// references this RobotTwin.CoreSim.dll, built with <c>dotnet build</c> (no NuGet packages,
     /// restore pointed at an empty local source so nothing is downloaded) and the resulting DLL
     /// is loaded like a plugin. Builds are cached by a hash of the sources and the SDK assembly.
@@ -67,7 +67,10 @@ namespace RobotTwin.CoreSim.Sdk
         public static string WorkRoot { get; set; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RobotWinStudio", "Scripts");
 
-        /// <summary>Finds dotnet and a .NET 9 SDK (cached; pass refresh to look again after installing).</summary>
+        /// <summary>The .NET major version the scripts must target: the one this process runs on (10 for the app).</summary>
+        public static int RuntimeMajor => Environment.Version.Major >= 5 ? Environment.Version.Major : 10;
+
+        /// <summary>Finds dotnet and an SDK for this runtime (cached; pass refresh to look again after installing).</summary>
         public static CompilerInfo Detect(bool refresh = false)
         {
             lock (Gate)
@@ -78,7 +81,7 @@ namespace RobotTwin.CoreSim.Sdk
                 info.DotnetPath = dotnet;
                 if (dotnet == null)
                 {
-                    info.Explanation = "C# betikleri için .NET SDK bulunamadı. Betik derlemek isterseniz Microsoft'un sitesinden .NET 9 SDK'yı kurun " +
+                    info.Explanation = $"C# betikleri için .NET SDK bulunamadı. Betik derlemek isterseniz Microsoft'un sitesinden .NET {RuntimeMajor} SDK'yı kurun " +
                                        "(uygulama kendisi bir şey indirmez). İfade dili ve hazır eklenti DLL'leri SDK olmadan da çalışır.";
                     return _info = info;
                 }
@@ -95,22 +98,40 @@ namespace RobotTwin.CoreSim.Sdk
                 }
 
                 info.InstalledSdks = sdks;
-                // Scripts run on this process' runtime (.NET 9) and reference a net9.0 CoreSim: they must target net9.0.
-                // A 9.x SDK carries the matching reference pack; newer SDKs would try to download it.
-                string? nine = sdks.Where(s => s.StartsWith("9.", StringComparison.Ordinal) && !s.Contains('-'))
-                    .OrderByDescending(s => Version.TryParse(s, out var v) ? v : new Version(0, 0)).FirstOrDefault();
-                if (nine == null)
+                // Scripts run on this process' runtime (.NET 10) and reference its CoreSim: they must target net10.0. An SDK of
+                // that version carries the matching reference pack; a newer SDK builds for it too when the reference pack is
+                // installed beside dotnet (packs\Microsoft.NETCore.App.Ref\10.x), otherwise it would try to download it.
+                int major = RuntimeMajor;
+                bool refPack = HasReferencePack(dotnet, major);
+                string? sdk = sdks.Where(s => !s.Contains('-') && Version.TryParse(s, out var v) && (v.Major == major || (v.Major > major && refPack)))
+                    .OrderByDescending(s => Version.Parse(s).Major == major)
+                    .ThenByDescending(s => Version.Parse(s)).FirstOrDefault();
+                if (sdk == null)
                 {
                     info.Explanation = sdks.Count == 0
-                        ? "dotnet bulundu ama kurulu bir .NET SDK yok (yalnızca çalışma zamanı var). C# betikleri için .NET 9 SDK gerekir."
-                        : $"Kurulu SDK'lar: {string.Join(", ", sdks)}. Betikler bu uygulamanın çalışma zamanına (.NET 9) göre derlenmeli; bunun için bir .NET 9.x SDK gerekir (indirme yapılmaz).";
+                        ? $"dotnet bulundu ama kurulu bir .NET SDK yok (yalnızca çalışma zamanı var). C# betikleri için .NET {major} SDK gerekir."
+                        : $"Kurulu SDK'lar: {string.Join(", ", sdks)}. Betikler bu uygulamanın çalışma zamanına (.NET {major}) göre derlenmeli; bunun için bir .NET {major}.x SDK gerekir (indirme yapılmaz).";
                     return _info = info;
                 }
 
-                info.SdkVersion = nine;
+                info.SdkVersion = sdk;
                 info.Available = true;
-                info.Explanation = $".NET SDK {nine} ile C# betikleri derlenebilir.";
+                info.Explanation = $".NET SDK {sdk} ile C# betikleri derlenebilir.";
                 return _info = info;
+            }
+        }
+
+        /// <summary>Is the runtime's reference pack installed beside dotnet (so a newer SDK can target it offline)?</summary>
+        private static bool HasReferencePack(string dotnet, int major)
+        {
+            try
+            {
+                string packs = Path.Combine(Path.GetDirectoryName(dotnet) ?? string.Empty, "packs", "Microsoft.NETCore.App.Ref");
+                return Directory.Exists(packs) && Directory.EnumerateDirectories(packs).Any(d => Path.GetFileName(d).StartsWith(major + ".", StringComparison.Ordinal));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return false;
             }
         }
 
@@ -219,7 +240,7 @@ namespace RobotTwin.CoreSim.Sdk
         private static string Project(string name, string coreSim) =>
             "<Project Sdk=\"Microsoft.NET.Sdk\">\n" +
             "  <PropertyGroup>\n" +
-            "    <TargetFramework>net9.0</TargetFramework>\n" +
+            "    <TargetFramework>net" + RuntimeMajor + ".0</TargetFramework>\n" +
             "    <AssemblyName>" + name + "</AssemblyName>\n" +
             "    <RootNamespace>" + name + "</RootNamespace>\n" +
             "    <Nullable>enable</Nullable>\n" +

@@ -3,9 +3,9 @@
 | Path | Contents |
 | --- | --- |
 | `RobotWinStudio.sln` | App + core + tests (the solution CI builds) |
-| `global.json` | .NET SDK pin (9.0.112, latestFeature) |
+| `global.json` | .NET SDK pin (10.0.100, latestMajor; C# 14) |
 | `Directory.Build.props` | Sends bin/obj output to `builds/<Project>/` |
-| `Studio/RobotWin.Studio/` | The desktop app (WPF, net9.0-windows) |
+| `Studio/RobotWin.Studio/` | The desktop app (WPF, net10.0-windows) |
 | `CoreSim/` | Simulation core, native ESP32 HAL, tests |
 | `Installer/` | Native Win32 setup program (`setup.cpp`, `setup.rc`) |
 | `tools/build-installer.ps1` | Builds the one setup `RobotWinStudio-Setup-<version>.exe` and the components it installs (`*.rwpack`) |

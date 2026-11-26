@@ -11,14 +11,14 @@ Thank you for your interest in RobotWin Studio. Bug reports, feature ideas, docu
 
 ## Development setup
 
-Requirements: Windows 10/11 x64, .NET 9 SDK (pinned in `global.json`), Git. Optional: `arduino-cli` with the `arduino:avr` core (Arduino builds) and Visual Studio 2022 / Build Tools with the C++ workload (ESP32 builds, installer). Details: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md).
+Requirements: Windows 10/11 x64, .NET 10 SDK (pinned in `global.json`), Git. Optional: `arduino-cli` with the `arduino:avr` core (Arduino builds) and Visual Studio 2022 / Build Tools with the C++ workload (ESP32 builds, installer). Details: [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md).
 
 ```powershell
 git clone https://github.com/<your-account>/robotwin-studio.git
 cd robotwin-studio
 dotnet build RobotWinStudio.sln -c Debug
 dotnet test RobotWinStudio.sln
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
 ```
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) before larger changes.

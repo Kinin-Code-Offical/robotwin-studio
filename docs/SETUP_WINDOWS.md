@@ -7,7 +7,7 @@ How to set up a Windows machine to build, run and test RobotWin Studio from sour
 | Tool | Needed for | Notes |
 | --- | --- | --- |
 | Windows 10 or 11, x64 | everything | The app is WPF and Windows-only. |
-| [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) | building the app and tests | `global.json` pins 9.0.112 with `rollForward: latestFeature`. |
+| [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) | building the app and tests | `global.json` asks for 10.0.100; with `rollForward: latestMajor` a newer SDK works too (the projects pin C# 14). |
 | Git | cloning | |
 | Visual Studio 2022 or Build Tools, **Desktop development with C++** workload | ESP32 sketches, building the installer | Provides `cl.exe`, `lib.exe`, `rc.exe` and `vcvars64.bat`. Not needed to build or run the app itself. |
 | `arduino-cli` + `arduino:avr` core | compiling your own Arduino Uno/Nano sketches | Bundled examples ship as prebuilt HEX files. |
@@ -28,12 +28,12 @@ winget install Microsoft.VisualStudio.2022.BuildTools --override "--add Microsof
 git clone https://github.com/Kinin-Code-Offical/robotwin-studio.git
 cd robotwin-studio
 dotnet build RobotWinStudio.sln -c Debug
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe
 ```
 
-`Directory.Build.props` redirects all `bin/` and `obj/` output to `builds\<ProjectName>\`, so the repository tree stays clean. Use `-c Release` for an optimised build (`builds\RobotWin.Studio\Release\net9.0-windows\`).
+`Directory.Build.props` redirects all `bin/` and `obj/` output to `builds\<ProjectName>\`, so the repository tree stays clean. Use `-c Release` for an optimised build (`builds\RobotWin.Studio\Release\net10.0-windows\`).
 
-Visual Studio 2022 (17.12 or later, for .NET 9) or VS Code with the C# Dev Kit can open `RobotWinStudio.sln` directly; set **RobotWin.Studio** as the startup project.
+Visual Studio 2026 (needed for .NET 10) or VS Code with the C# Dev Kit can open `RobotWinStudio.sln` directly; set **RobotWin.Studio** as the startup project.
 
 ## How the app finds the compilers
 
@@ -44,7 +44,7 @@ Visual Studio 2022 (17.12 or later, for .NET 9) or VS Code with the C# Dev Kit c
 
 ```powershell
 dotnet test RobotWinStudio.sln
-builds\RobotWin.Studio\Debug\net9.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe --selftest --selftest-out selftest.txt
 Get-Content selftest.txt -Tail 1   # SELFTEST PASS
 ```
 

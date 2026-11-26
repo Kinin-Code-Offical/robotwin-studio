@@ -5,7 +5,7 @@ RobotWin Studio ships as **one setup program**, `RobotWinStudio-Setup-<version>.
 | Component | File | Installed as |
 | --- | --- | --- |
 | RobotWin Studio (always) | `RobotWinStudio-<version>-app.rwpack` | the app, framework-dependent |
-| .NET 9 runtime | `RobotWinStudio-<version>-dotnet.rwpack` | `dotnet\` beside the app: the Microsoft.NETCore.App and Microsoft.WindowsDesktop.App runtimes and their host |
+| .NET 10 runtime | `RobotWinStudio-<version>-dotnet.rwpack` | `dotnet\` beside the app: the Microsoft.NETCore.App and Microsoft.WindowsDesktop.App runtimes and their host |
 | Arduino compiler | `RobotWinStudio-<version>-arduino.rwpack` | `tools\arduino`: arduino-cli, the AVR core and the library list |
 | STEP / IGES support | `RobotWinStudio-<version>-occt.rwpack` | `occt\`: the Open CASCADE bridge and its licence |
 
@@ -13,7 +13,7 @@ One build of the app serves every kind of installation: its exe looks for .NET i
 
 ## Build the installer locally
 
-Requirements: .NET 9 SDK (with the .NET 9 Desktop Runtime, which the Windows SDK has) and Visual Studio 2022 / Build Tools with the C++ workload (the script locates it with `vswhere`).
+Requirements: .NET 10 SDK (with the .NET 10 Desktop Runtime, which the Windows SDK has) and Visual Studio 2022 / Build Tools with the C++ workload (the script locates it with `vswhere`).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0
@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.
 Output in `builds\installer\release\`: the setup and the `.rwpack` files. What the script does:
 
 1. `dotnet publish` of the app for `win-x64`, framework-dependent, ReadyToRun, `-p:Version=<version>`.
-2. Lays out each component's folder in `builds\installer\components\<id>`: the app without `occt\`; the Open CASCADE bridge with its LGPL licence; this machine's .NET 9 runtime (host\fxr and the two shared frameworks of one version, with Microsoft's licence notes); the Arduino compiler, downloaded once into `builds\installer\arduino-ready` and proven by compiling a blink sketch.
+2. Lays out each component's folder in `builds\installer\components\<id>`: the app without `occt\`; the Open CASCADE bridge with its LGPL licence; this machine's .NET 10 runtime (host\fxr and the two shared frameworks of one version, with Microsoft's licence notes); the Arduino compiler, downloaded once into `builds\installer\arduino-ready` and proven by compiling a blink sketch.
 3. Compiles `Installer\setup.cpp` with MSVC (`cl /std:c++20 /O2 /MT`) and packs every component with it (`setup.exe --pack <folder> <file.rwpack>`: each file compressed with the Windows Compression API's LZMS, kept as is when that does not help). It writes the components' sizes and SHA-256 into `components.h` and compiles the setup again with them: a setup only installs its own release's files.
 4. Proves the result: the setup installs every component from the release folder into a portable folder (`/S /PORTABLE /TYPE=full /SOURCE=<release>`), and every file must arrive with its size. `-NoCheck` skips it.
 
@@ -34,7 +34,7 @@ Output in `builds\installer\release\`: the setup and the `.rwpack` files. What t
 
 `Installer/setup.cpp` is a native Win32 program with no runtime dependencies. Its wizard has three questions:
 
-1. **Language and kind of installation.** The language is the wizard's and the app's (it starts at this user's app language). **Full** installs every component (everything works offline at once), **Lite** the app alone on the PC's .NET 9 Desktop Runtime (its own copy of .NET only when the PC has none), **Custom** the components ticked on the next page.
+1. **Language and kind of installation.** The language is the wizard's and the app's (it starts at this user's app language). **Full** installs every component (everything works offline at once), **Lite** the app alone on the PC's .NET 10 Desktop Runtime (its own copy of .NET only when the PC has none), **Custom** the components ticked on the next page.
 2. **Components** (Custom only), each with its download size.
 3. **Where and how:** for this user, for all users (the setup restarts itself as administrator and shows its own progress) or **portable** (a folder only: no shortcuts, registry entries or file types); the folder; desktop shortcut, file types, start afterwards. The source line says where the files come from.
 
@@ -52,7 +52,7 @@ An installation recorded in *Apps* (Windows) is found again: a newer setup updat
 | --- | --- |
 | `RobotWinStudio-Setup-1.7.0.exe` | wizard |
 | `... /S` | silent; `/PASSIVE`: no questions, progress window only (the in-app updater uses it) |
-| `/TYPE=full`, `/TYPE=lite`, `/COMPONENTS=app,arduino,occt` | the kind, or exactly these components (`app` is always installed, `dotnet` too when the PC has no .NET 9) |
+| `/TYPE=full`, `/TYPE=lite`, `/COMPONENTS=app,arduino,occt` | the kind, or exactly these components (`app` is always installed, `dotnet` too when the PC has no .NET 10) |
 | `/LANG=en`, `/LANG=tr` | the app's language |
 | `/D=<folder>`, `/ALLUSERS`, `/PORTABLE` | where |
 | `/NODESKTOP`, `/NOTYPES`, `/LAUNCH` | no desktop shortcut, no file types, start the app afterwards |

@@ -116,7 +116,7 @@ namespace RobotWin.Studio.Updates
         /// </summary>
         public bool IsSelfContained { get; set; }
 
-        /// <summary>The small installer that needs the .NET 9 Desktop Runtime (1.1 and later).</summary>
+        /// <summary>The small installer that needs the .NET Desktop Runtime (1.1 and later).</summary>
         public bool IsLite => Name.EndsWith("-lite.exe", StringComparison.OrdinalIgnoreCase);
 
         public bool IsInstaller => Name.StartsWith("RobotWinStudio-Setup-", StringComparison.OrdinalIgnoreCase) && Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
@@ -321,14 +321,14 @@ namespace RobotWin.Studio.Updates
             {
                 var parts = new List<string>();
                 parts.Add(Kind switch { "full" => "Tam kurulum", "lite" => "Hafif kurulum", "custom" => "Özel kurulum", _ => SelfContained ? "Tam kurulum" : "Hafif kurulum" });
-                parts.Add(SelfContained ? ".NET dahil" : ".NET 9 Masaüstü Çalışma Zamanı ile");
+                parts.Add(SelfContained ? ".NET dahil" : ".NET 10 Masaüstü Çalışma Zamanı ile");
                 if (Components.Contains("arduino")) parts.Add("Arduino derleyicisi");
                 if (Components.Contains("occt")) parts.Add("STEP / IGES");
                 return string.Join(" · ", parts);
             }
         }
 
-        /// <summary>.NET 9 Desktop Runtime installed on this PC.</summary>
+        /// <summary>The .NET Desktop Runtime the app runs on (10) is installed on this PC.</summary>
         public bool RuntimeAvailable { get; set; }
 
         public bool DesktopShortcut { get; set; } = true;

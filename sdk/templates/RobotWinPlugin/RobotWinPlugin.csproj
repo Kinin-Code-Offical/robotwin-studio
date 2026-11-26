@@ -14,10 +14,10 @@
              dotnet build -p:RobotWinDir="C:\Program Files\RobotWin Studio\"
   -->
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>14</LangVersion>
     <AssemblyName>RobotWinPlugin.Samples</AssemblyName>
     <RootNamespace>RobotWinPlugin.Samples</RootNamespace>
     <Deterministic>true</Deterministic>
@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(RobotWinDir)' == '' And Exists('$(RepoCoreSim)')">
-    <ProjectReference Include="$(RepoCoreSim)" Private="false" SetTargetFramework="TargetFramework=net9.0" />
+    <ProjectReference Include="$(RepoCoreSim)" Private="false" SetTargetFramework="TargetFramework=net10.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RobotWinDir)' != '' Or !Exists('$(RepoCoreSim)')">

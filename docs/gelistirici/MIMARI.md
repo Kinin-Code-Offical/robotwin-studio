@@ -1,6 +1,6 @@
 # Mimari
 
-RobotWin Studio tek bir Windows masaüstü sürecidir: C# simülasyon çekirdeğinin (`CoreSim/src/RobotTwin.CoreSim`) üstünde bir C# .NET 9 WPF uygulaması (`Studio/RobotWin.Studio`). Ayrı bir motor süreci, süreçler arası iletişim ya da oyun motoru yoktur. Uygulamanın içinde çalışan tek yerel kod, kullanıcının MSVC ile DLL'e derlenen kendi ESP32 çizimidir (aşağıdaki Yazılım eş simülasyonu bölümüne bakın).
+RobotWin Studio tek bir Windows masaüstü sürecidir: C# simülasyon çekirdeğinin (`CoreSim/src/RobotTwin.CoreSim`) üstünde bir C# .NET 10 WPF uygulaması (`Studio/RobotWin.Studio`). Ayrı bir motor süreci, süreçler arası iletişim ya da oyun motoru yoktur. Uygulamanın içinde çalışan tek yerel kod, kullanıcının MSVC ile DLL'e derlenen kendi ESP32 çizimidir (aşağıdaki Yazılım eş simülasyonu bölümüne bakın).
 
 > 1.x tasarımı (Unity ön yüzü + adlandırılmış borular üzerinden C++ `NativeEngine`/`FirmwareEngine`) [archive/](https://github.com/Kinin-Code-Offical/robotwin-studio/tree/main/docs/archive) içinde anlatılır. O motorlar depoda durur ama uygulama onları kullanmaz.
 
@@ -8,14 +8,14 @@ RobotWin Studio tek bir Windows masaüstü sürecidir: C# simülasyon çekirdeğ
 
 ```mermaid
 flowchart TB
-    subgraph Studio["Studio/RobotWin.Studio — WPF, net9.0-windows, Türkçe arayüz"]
+    subgraph Studio["Studio/RobotWin.Studio — WPF, net10.0-windows, Türkçe arayüz"]
         direction LR
         SH["MainWindow + Shell<br/>menüler, sekmeler, bölünmüş görünüm, komut paleti"]
         PG["Sayfalar<br/>Ana sayfa, Devre, PCB, Kod, Modelle, Montaj, Dünya, Kütüphane, Ayarlar"]
         VW["Görünümler<br/>Editor, Pcb, Modeling, Assembly3D, World, Models3D"]
         IO["Firmware (arduino-cli), Audio, Input (XInput, Sony HID)"]
     end
-    subgraph Core["CoreSim/src/RobotTwin.CoreSim — net9.0 + netstandard2.1, arayüzsüz"]
+    subgraph Core["CoreSim/src/RobotTwin.CoreSim — net10.0 + netstandard2.1, arayüzsüz"]
         direction LR
         DS["Design<br/>şema, parça kütüphanesi, CircuitCompiler"]
         AN["Analog<br/>MNA çözücü, eleman modelleri"]

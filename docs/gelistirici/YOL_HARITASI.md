@@ -168,7 +168,7 @@ Bir dış inceleme raporunun (UI/UX, güvenlik, doğrulama) önerilerinden proje
 
 ### D1. Temel ve güvenlik (P0)
 
-- [ ] **.NET 10 LTS'ye geçiş:** .NET 9'un desteği 10 Kasım 2026'da bitti. Bütün projeler (CoreSim net10.0 + netstandard2.1, Studio, testler, Headless, SDK şablonu), kurulum (.NET bileşeni), Vortice, OCCT köprüsü, ESP32/Arduino derleme araçları ve CI birlikte; tam test, kontrast ve kurulum denetimi.
+- [x] **.NET 10 LTS'ye geçiş:** .NET 9'un desteği 10 Kasım 2026'da bitti. Bütün projeler net10.0'da (CoreSim ayrıca netstandard2.1), C# 14'e sabit (yerelde daha yeni bir SDK da aynı dili derler); kurulumun .NET bileşeni ve çalışma zamanı denetimi, güncelleyici, betik derleyicisi (aynı ana sürümün SDK'sı ya da başvuru paketi kurulu daha yenisi), CI ve SDK şablonu .NET 10'da; tam test, kontrast ve kurulum denetimi.
 - [ ] **ESP32 hızlı modunun yalıtılması:** derlenen çizim DLL'i bugün uygulamanın kendi sürecinde çalışıyor; güvenilmeyen bir proje dosyası kod çalıştırabilir. Ayrı süreç (kısıtlı belirteç, iş nesnesiyle CPU/bellek sınırı, zaman aşımı), yalnız simülasyon verisi taşıyan IPC; başkasından gelen projede kod çalıştırmadan önce açık onay. Aynı ilke eklentiler ve FMU ikilileri için.
 - [~] **OPC UA güvenliği:** Basic256Sha256 (imza ve şifreleme), sertifika üretimi ve güveni, kullanıcı/şifre, erişim yetkileri; güvenli varsayılanlar (dinleme yalnız yerel ağ arayüzünde, anonim kapalı). Sunucu ve PLC istemcisi var, güvenlik yok.
 - [ ] **Kurulum güvenliği:** bileşen SHA-256 denetimi var. Eklenecek: bağımlılıkların sürüm ve lisans dökümü (CI'da), güncellemeden sonra güvenli geri dönüş. Kod imzalama bir sertifika gerektirir: kullanıcının kararı.

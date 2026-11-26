@@ -28,7 +28,7 @@ tr:
   dl_full: Windows için indir
   dl_full_note: .NET dahil, ek kurulum gerekmez
   dl_lite: Lite paket
-  dl_lite_note: Daha küçük; .NET 9 Masaüstü Çalışma Zamanı gerekir (kurulum sorar)
+  dl_lite_note: Daha küçük; .NET 10 Masaüstü Çalışma Zamanı gerekir (kurulum sorar)
   dl_loading: Son sürüm aranıyor…
   dl_error: Son sürüm alınamadı; sürümler sayfasından indirin.
   requirements: Windows 10/11, 64 bit
@@ -70,7 +70,7 @@ en:
   dl_full: Download for Windows
   dl_full_note: .NET included, nothing else to install
   dl_lite: Lite package
-  dl_lite_note: Smaller; needs the .NET 9 Desktop Runtime (the setup offers it)
+  dl_lite_note: Smaller; needs the .NET 10 Desktop Runtime (the setup offers it)
   dl_loading: Looking up the latest release…
   dl_error: Could not reach the latest release; download it from the releases page.
   requirements: Windows 10/11, 64-bit

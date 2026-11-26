@@ -5,7 +5,7 @@ Your own physics can be added to a world at three levels. All of them run inside
 | Level | Where | You need | Good for |
 | --- | --- | --- | --- |
 | **Expression** | Object → *Özellik ekle → Davranış* → *İfade*, or Environment → *İfade alanı* | Nothing | Quick force laws: `F.x = -k*(x - x0) - c*vx`, `wind.x = 3*sin(t)` |
-| **C# script** | World → *Betikler* tab → *Yeni C# betiği* | .NET 9 SDK (the app downloads nothing) | Behaviours with state, sensors, controllers; saved inside the world file |
+| **C# script** | World → *Betikler* tab → *Yeni C# betiği* | .NET 10 SDK (the app downloads nothing) | Behaviours with state, sensors, controllers; saved inside the world file |
 | **Plugin DLL** | `%APPDATA%\RobotWinStudio\Plugins\<name>\` or `Plugins\` beside the world file | Any compiler (template: `sdk/templates/RobotWinPlugin`) | Libraries, custom circuit parts, shared models |
 
 ## When your code runs
@@ -65,7 +65,7 @@ Local variables (`k = 20`) are recomputed every step and published as *Name.vari
 
 ### How to write and load one
 
-1. Install the **.NET 9 SDK** (the app does not download it). Without it the Scripts tab says why; expressions and plugins still work.
+1. Install the **.NET 10 SDK** (the app does not download it). Without it the Scripts tab says why; expressions and plugins still work.
 2. World page → **Betikler** (scripts) tab → **Yeni C# betiği** (new C# script). A template opens in the editor.
 3. Write a class derived from `WorldBehavior` (below). Save: the script is stored inside the world file.
 4. The script compiles when the world starts (or with *Derle*). Errors appear with file, line and column.

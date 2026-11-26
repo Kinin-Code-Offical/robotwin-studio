@@ -28,7 +28,7 @@ namespace RobotWin.Studio.Updates
             if (asset == null)
             {
                 string why = info.SelfContained && !info.RuntimeAvailable
-                    ? "Bu sürümün yalnızca .NET 9 gerektiren kurulumu var ve bu bilgisayarda .NET 9 Masaüstü Çalışma Zamanı yok."
+                    ? "Bu sürümün yalnızca .NET 10 gerektiren kurulumu var ve bu bilgisayarda .NET 10 Masaüstü Çalışma Zamanı yok."
                     : "Bu sürümde kurulum dosyası bulunmuyor.";
                 if (Dialog.Show(owner, "Kurulamıyor", why + " Sürüm sayfasını açabilirsiniz.", "Sürüm sayfasını aç", "Kapat") == 0) OpenUrl(release.HtmlUrl);
                 return;

@@ -4,14 +4,14 @@
 #                                             them: full, lite or custom; for this user, all users or portable
 #   RobotWinStudio-<version>-app.rwpack       the app (framework-dependent: it finds .NET in its dotnet\ folder first,
 #                                             then the PC's)
-#   RobotWinStudio-<version>-dotnet.rwpack    the .NET 9 Desktop Runtime, laid out for the app's dotnet\ folder
+#   RobotWinStudio-<version>-dotnet.rwpack    the .NET 10 Desktop Runtime, laid out for the app's dotnet\ folder
 #   RobotWinStudio-<version>-arduino.rwpack   arduino-cli + the AVR core + the library list (tools\arduino)
 #   RobotWinStudio-<version>-occt.rwpack      the Open CASCADE bridge for STEP / IGES (occt\)
 # Steps:
 #   1. publishes the app (win-x64, framework-dependent, ReadyToRun)
 #   2. lays out each component's folder (builds\installer\components\<id>); the Arduino compiler is downloaded once
 #      from arduino.cc into builds\installer\arduino-ready and proven by compiling a sketch (-NoArduino leaves it out,
-#      for quick local builds); the runtime is this machine's .NET 9 (the SDK's own)
+#      for quick local builds); the runtime is this machine's .NET 10 (the SDK's own)
 #   3. compiles the native setup (Installer/setup.cpp) with MSVC, packs every component with it (LZMS, Windows
 #      Compression API), writes their sizes and SHA-256 into components.h and compiles the setup again with them
 #   4. proves the result: the setup installs every component from the release folder into a portable folder, and each
@@ -56,18 +56,19 @@ if (Test-Path $occtIn) {
     Copy-Item (Join-Path $root "third_party\occt\LICENSE_LGPL_21.txt"), (Join-Path $root "third_party\occt\OCCT_LGPL_EXCEPTION.txt") (Join-Path $occt "occt")
 }
 
-# dotnet: this machine's .NET 9 Desktop Runtime (host\fxr and the two shared frameworks of one version) laid out as a
+# dotnet: this machine's .NET 10 Desktop Runtime (host\fxr and the two shared frameworks of one version) laid out as a
 # .NET installation; RobotWinStudio.exe looks for it in its dotnet\ folder before the PC's (AppHostDotNetSearch).
 $dotnetRoot = if ($env:DOTNET_ROOT -and (Test-Path (Join-Path $env:DOTNET_ROOT "shared"))) { $env:DOTNET_ROOT } else { Split-Path -Parent (Get-Command dotnet).Source }
-function Get-Versions($dir) { @(Get-ChildItem $dir -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^9\.0\.\d+$' } | ForEach-Object { $_.Name }) }
+function Get-Versions($dir, $pattern = '^10\.0\.\d+$') { @(Get-ChildItem $dir -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $pattern } | ForEach-Object { $_.Name }) }
 $desktop = Get-Versions (Join-Path $dotnetRoot "shared\Microsoft.WindowsDesktop.App")
 $runtime = @(Get-Versions (Join-Path $dotnetRoot "shared\Microsoft.NETCore.App") | Where-Object { $desktop -contains $_ } | Sort-Object { [version]$_ } -Descending)
-if ($runtime.Count -eq 0) { throw ".NET 9 Masaüstü Çalışma Zamanı bulunamadı: $dotnetRoot" }
+if ($runtime.Count -eq 0) { throw ".NET 10 Masaüstü Çalışma Zamanı bulunamadı: $dotnetRoot" }
 $rt = $runtime[0]
 $fxr = Join-Path $dotnetRoot "host\fxr\$rt"
 if (-not (Test-Path $fxr)) {
-    $f = @(Get-Versions (Join-Path $dotnetRoot "host\fxr") | Sort-Object { [version]$_ } -Descending)
-    if ($f.Count -eq 0) { throw "hostfxr 9.0 bulunamadı: $dotnetRoot" }
+    # hostfxr starts any older runtime: without the runtime's own, the newest 10.0 or later one
+    $f = @(Get-Versions (Join-Path $dotnetRoot "host\fxr") '^\d+\.\d+\.\d+$' | Where-Object { ([version]$_).Major -ge 10 } | Sort-Object { [version]$_ } -Descending)
+    if ($f.Count -eq 0) { throw "hostfxr 10.0 ya da sonrası bulunamadı: $dotnetRoot" }
     $fxr = Join-Path $dotnetRoot "host\fxr\$($f[0])"
 }
 $dn = Join-Path $parts "dotnet\dotnet"

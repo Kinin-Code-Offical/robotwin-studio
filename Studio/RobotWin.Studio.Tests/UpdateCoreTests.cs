@@ -279,7 +279,7 @@ public class UpdateSelectionTests
     {
         Assert.Equal("Tam kurulum · .NET dahil · Arduino derleyicisi · STEP / IGES",
             new InstallInfo { Kind = "full", SelfContained = true, Components = new[] { "app", "dotnet", "arduino", "occt" } }.ContentText);
-        Assert.Equal("Hafif kurulum · .NET 9 Masaüstü Çalışma Zamanı ile", new InstallInfo { Kind = "lite", Components = new[] { "app" } }.ContentText);
+        Assert.Equal("Hafif kurulum · .NET 10 Masaüstü Çalışma Zamanı ile", new InstallInfo { Kind = "lite", Components = new[] { "app" } }.ContentText);
         Assert.Equal("Tam kurulum · .NET dahil · Arduino derleyicisi", new InstallInfo { SelfContained = true, Components = new[] { "app", "dotnet", "arduino" } }.ContentText);
     }
 
