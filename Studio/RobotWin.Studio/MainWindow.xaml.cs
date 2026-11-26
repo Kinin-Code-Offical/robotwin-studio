@@ -332,6 +332,11 @@ namespace RobotWin.Studio
             { Context = "pcb", Keywords = "next marker hata sorun git", Ready = () => _current == "pcb" };
             yield return new PaletteCommand("PCB", "DRC raporunu kaydet", () => _pcb.SaveDrcReport())
             { Context = "pcb", Keywords = "report rapor dışa aktar drc", Ready = () => _current == "pcb" };
+            yield return new PaletteCommand("PCB", "Ayak izi atama", () =>   // [fp-assign] KiCad's Assign Footprints
+            {
+                Navigate("pcb");
+                Dispatcher.BeginInvoke(new Action(_pcb.ShowFootprintTable), System.Windows.Threading.DispatcherPriority.Loaded);
+            }) { Context = "pcb", Keywords = "footprint assign cvpcb ayak izi ped tablo parça", Ready = () => W.Schematic.Board != null };
             yield return new PaletteCommand("PCB", "Aralık çözümlemesi", () => _pcb.ShowClearanceResolution())   // [clearance-res] KiCad's Inspect
             { Context = "pcb", Keywords = "clearance resolution kural aralık boşluk sınıf iki öğe incele inspect", Ready = () => _current == "pcb" };
             yield return new PaletteCommand("PCB", "Kart istatistikleri", () =>

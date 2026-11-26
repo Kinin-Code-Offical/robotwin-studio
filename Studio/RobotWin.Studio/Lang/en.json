@@ -8554,7 +8554,17 @@
   "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın": "Arc · click the start, a point on the arc, then the end",
   "Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız · ortasından Ctrl+Shift ile sürükle: yüzeye oturt · V ile: köşeden köşeye": "Move handle (W): axis arrows, plane squares, the middle in the screen plane · Alt: no grid · drag the middle with Ctrl+Shift: onto the surface · with V: corner to corner",
   "Köşe yakalama: tutulan köşe öbür parçanın köşesine oturdu": "Vertex snap: the held corner meets the other part's corner",
-  "Köşe yakalama (V): imleci başka bir parçanın köşesine götürün": "Vertex snap (V): bring the cursor to another part's corner"
+  "Köşe yakalama (V): imleci başka bir parçanın köşesine götürün": "Vertex snap (V): bring the cursor to another part's corner",
+  "Yakınlaştır (+, tekerlek)": "Zoom in (+, wheel)",
+  "Uzaklaştır (−, tekerlek)": "Zoom out (−, wheel)",
+  "Dolguları yalnız kenarıyla göster": "Show pours by their outline only",
+  "Ayak izi atama": "Assign footprints",
+  "Her parçanın ayak izi ve parçanın her pininin orada pedi olup olmadığı. Değiştir başka bir ayak izi seçtirir.": "Each part's footprint, and whether every pin of the part has its pad there. Change picks another footprint.",
+  "Ayak izi": "Footprint",
+  "kütüphanede yok": "not in the library",
+  "pedi olmayan pin": "pins without a pad",
+  "Değiştir…": "Change…",
+  "Kartta parça yok": "No parts on the board"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -12004,6 +12014,7 @@
   "{…} rengi kaldırıldı": "{0}: colour removed",
   "{…} hattı vurgulanıyor (aynı hatta ya da boşa tıklayınca kalkar)": "{0} highlighted (click the same net or empty space to clear)",
   "{…} çizim (çizgi, dikdörtgen, daire, yay) alındı": "{0} drawings (lines, rectangles, circles, arcs) taken in",
-  "{…}: köşesi {…} köşesine oturdu": "{0}: its corner meets {1}'s corner"
+  "{…}: köşesi {…} köşesine oturdu": "{0}: its corner meets {1}'s corner",
+  "{…}; eğiklik {…} mm (en çok {…} mm), kıvrımlar eşinden uzak yanda": "{0}; skew {1} mm (at most {2} mm), bumps on the side away from the partner"
  }
 }

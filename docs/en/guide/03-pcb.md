@@ -138,7 +138,7 @@ If a connector comes out through a wall (a USB socket, a DC jack), add an openin
 
 In the **Nets** tab, **Differential pairs** holds two nets that must run together (USB D+/D−, CAN H/L). **Find by name** pairs the nets whose names end in `+`/`-`, `_P`/`_N` or `H`/`L`. Beside each pair are its two routed lengths, their difference and how much of the route runs side by side at the pair's gap; **Gap** and **Largest difference** (about 2.5 mm for USB 2.0 full speed, 1.25 mm for high speed) are set there. **Length groups** hold nets that must arrive together (a parallel bus, a clock and its data) within a tolerance. A net's length is its tracks plus the barrels of the vias it changes layer through (the board's thickness between the two layers). The DRC warns about a pair longer than its limit on one side, a pair less than 60 % of whose route runs side by side, and a group spread wider than its tolerance. **Track lengths** lists every net's length. Each pair's length difference is also given in time (ps): on an outer layer a track travels with the effective εr worked out from the stackup's dielectric and the track width (Hammerstad–Jensen microstrip), inside the board with εr.
 
-**Length tuning (meanders):** in the routing tool's group (press and hold the track button). Click a long straight segment of the short net; it gets 45° meanders up to the length of its pair's other half or of its length group's longest net. The meanders keep the net class's clearance to other copper and to the board edge; when they do not fit, it says why (which track or pad is too close). The options bar sets the target (pair / group or a length in mm), the amplitude, the maximum amplitude, the spacing of the legs and the corners. It can be undone.
+**Length tuning (meanders):** in the routing tool's group (press and hold the track button). Click a long straight segment of the short net; it gets 45° meanders up to the length of its pair's other half or of its length group's longest net. The meanders keep the net class's clearance to other copper and to the board edge; when they do not fit, it says why (which track or pad is too close). The options bar sets the target (pair / group or a length in mm), the amplitude, the maximum amplitude, the spacing of the legs and the corners. It can be undone. On one half of a differential pair it works as KiCad's skew tuning: the bumps are small (from 1.5 times the track width) and go on the side away from the partner, so the two tracks stay side by side; the skew left over is reported against the pair's allowance.
 
 **Differential pair route:** in the routing tool's group (press and hold the track button). Click a pad of a pair (D+/D−, `_P`/`_N`, CAN H/L): both of its pads are taken. Each click adds a leg to the pair's centreline (straight, then 45°); the two tracks run on either side of it at the pair's **Gap**, mitred at the corners, and leave their pads at 45° to join the pair. Both lengths and their difference show beside the cursor. A click on the pair's pads at the other end puts the tracks down; **Enter** or a double click finishes where it is, **Backspace** takes the last leg back, **Esc** drops it. A pair too close to another net's copper, or whose ends are in opposite order (the tracks would cross), is drawn red and not placed. A pair found from its names joins the board's pairs when it is placed, and the DRC holds it to its gap and skew. At corners the inner track is the shorter: when the skew is over the limit, the length tuner evens it out. The options bar sets the width and the layer.
 
@@ -177,6 +177,7 @@ If you took the board to KiCad with **Export to KiCad** and placed or routed it 
 ## Footprints and modules
 
 - **Footprint:** the footprint editor. Draw SMD and THT pads, silkscreen, courtyard and fabrication layers and save to your user library.
+- **Assign footprints** (command palette, Ctrl+K; as in KiCad): every part on the board with its value, kind and footprint in one table; when a pin of the part has no pad in its footprint the row turns red and names the pins left without one. **Change…** picks another footprint.
 - **Make module**: saves this board to the library as one part. It is added to other circuits as a single part, and its inside is still fully simulated.
 
 ## View
@@ -185,7 +186,7 @@ If you took the board to KiCad with **Export to KiCad** and placed or routed it 
 
 The grid button in the toolbox at the canvas's top right shows or hides the grid (snapping stays the same; the choice is remembered).
 
-The **Opacity** sliders in the **Katmanlar** tab (like KiCad's Objects tab) fade tracks (with their teardrops), vias, pads and pours separately; values can be typed and are remembered. Only the view changes.
+The **Opacity** sliders in the **Katmanlar** tab (like KiCad's Objects tab) fade tracks (with their teardrops), vias, pads and pours separately; values can be typed and are remembered. **Dolguları yalnız kenarıyla göster** draws pours by their outlines only, as KiCad can, so the tracks under them show. Only the view changes.
 
 | Key | Function |
 | --- | --- |

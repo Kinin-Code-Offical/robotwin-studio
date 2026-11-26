@@ -58,6 +58,7 @@ namespace RobotWin.Studio.Pages
         {
             InitializeComponent();
             Canvas.ShowGrid = AppSettings.Current.PcbGridShown;   // [grid]
+            Canvas.ZoneOutlines = AppSettings.Current.PcbZoneOutlines;   // [zone-look]
             if (Enum.TryParse<CopperLayer>(AppSettings.Current.PcbLayerPairA, out var pairA)) Canvas.PairA = pairA;   // [layer-pair]
             if (Enum.TryParse<CopperLayer>(AppSettings.Current.PcbLayerPairB, out var pairB)) Canvas.PairB = pairB;
             Canvas.TrackOpacity = AppSettings.Current.PcbTrackOpacity;   // [opacity]
@@ -703,6 +704,7 @@ namespace RobotWin.Studio.Pages
             {
                 case "zones":
                 case "4layer":
+                case "zone-outlines":   // [zone-look]
                     board.Stackup.CopperLayers = 4;
                     board.Zones.Add(new Zone { Net = "GND", Layer = CopperLayer.In1, Name = "GND düzlemi" });
                     board.Zones.Add(new Zone { Net = "GND", Layer = CopperLayer.Bottom });
@@ -783,6 +785,17 @@ namespace RobotWin.Studio.Pages
                     UpdateLayersPanel();
                     ShowPanel(1);
                     if (LayersPanel.Parent is ScrollViewer osv) Dispatcher.BeginInvoke(new Action(osv.ScrollToEnd), System.Windows.Threading.DispatcherPriority.Loaded);
+                    break;
+
+                case "zone-outlines":   // [zone-look] the 4-layer board's pours drawn by their edges
+                    ZoneFiller.FillAll(board);
+                    Canvas.ActiveLayer = CopperLayer.Bottom;
+                    Canvas.ZoneOutlines = true;
+                    Canvas.Refresh();
+                    break;
+
+                case "footprints":   // [fp-assign] the Assign Footprints table
+                    ShowFootprintTable();
                     break;
 
                 case "teardrops-panel":   // [teardrop] the settings panel, open, as the picture
@@ -1936,6 +1949,13 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(Switch("Serigrafi", Canvas.ShowSilk, v => { Canvas.ShowSilk = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Ratsnest", Canvas.ShowRatsnest, v => { Canvas.ShowRatsnest = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Dolgular", Canvas.ShowZones, v => { Canvas.ShowZones = v; Canvas.InvalidateVisual(); }));
+            LayersPanel.Children.Add(Switch("Dolguları yalnız kenarıyla göster", Canvas.ZoneOutlines, v =>   // [zone-look] KiCad's zone display
+            {
+                Canvas.ZoneOutlines = v;
+                AppSettings.Current.PcbZoneOutlines = v;
+                AppSettings.Current.Save();
+                Canvas.InvalidateVisual();
+            }));
             LayersPanel.Children.Add(Switch("Çizimler ve ölçüler", Canvas.ShowDrawings, v => { Canvas.ShowDrawings = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Ped numaraları ve hatları", Canvas.ShowPadNames, v => { Canvas.ShowPadNames = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Yüksek kontrast (diğer katmanlar soluk)", Canvas.HighContrast, v => { Canvas.HighContrast = v; Canvas.InvalidateVisual(); }));

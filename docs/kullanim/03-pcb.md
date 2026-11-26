@@ -138,7 +138,7 @@ Bir konnektör duvardan dışarı çıkacaksa (USB soketi, DC jakı) **Duvardaki
 
 **Hatlar** sekmesinde **Fark çiftleri** bölümü birlikte gitmesi gereken iki hattı tutar (USB D+/D−, CAN H/L). **Adlarından bul**, adı `+`/`-`, `_P`/`_N` ya da `H`/`L` ile biten hatları çift yapar. Her çiftin yanında yollanmış iki uzunluk, farkları ve yolun ne kadarının çiftin aralığında yan yana gittiği görünür; **Aralık** ve **En çok fark** (USB 2.0 tam hızda ~2,5 mm, yüksek hızda ~1,25 mm) ayarlanır. **Uzunluk grupları** aynı anda varması gereken hatları (paralel veri yolu, saat ve verisi) bir toleransla tutar. Bir hattın uzunluğu yollarıyla geçtiği viaların gövdesidir (kartın kalınlığının iki katman arasındaki payı). DRC, farkı sınırı aşan çifti, yolunun %60'ından azı yan yana giden çifti ve yayılımı toleransı aşan grubu uyarır. **Yol uzunlukları** her hattın uzunluğunu listeler. Her çiftin yanında uzunluk farkı zaman olarak da yazar (ps): dış katmanda yol, katman yığınındaki dielektrik ve yol genişliğinden hesaplanan etkin εr ile (Hammerstad–Jensen mikroşerit), iç katmanda εr ile ilerler.
 
-**Uzunluk ayarı (menderes):** yol aracının grubundadır (yol düğmesini basılı tutun). Kısa kalan hattın uzun, düz bir parçasına tıklayın; parça 45° köşeli kıvrımlarla, çiftinin öteki yarısının ya da uzunluk grubunun en uzun hattının uzunluğuna getirilir. Kıvrımlar hat sınıfının aralığını başka bakıra ve kart kenarına karşı korur; sığmazsa nedenini söyler (hangi yola ya da pede yakın). Seçenek çubuğundan hedef (çift / grup ya da elle mm), genlik, en çok genlik, bacak aralığı ve köşe tipi seçilir. Geri alınabilir.
+**Uzunluk ayarı (menderes):** yol aracının grubundadır (yol düğmesini basılı tutun). Kısa kalan hattın uzun, düz bir parçasına tıklayın; parça 45° köşeli kıvrımlarla, çiftinin öteki yarısının ya da uzunluk grubunun en uzun hattının uzunluğuna getirilir. Kıvrımlar hat sınıfının aralığını başka bakıra ve kart kenarına karşı korur; sığmazsa nedenini söyler (hangi yola ya da pede yakın). Seçenek çubuğundan hedef (çift / grup ya da elle mm), genlik, en çok genlik, bacak aralığı ve köşe tipi seçilir. Geri alınabilir. Bir fark çiftinin yarısında KiCad'in eğiklik ayarı gibi çalışır: kıvrımlar küçük genlikle (yol genişliğinin 1,5 katından) ve eşinden uzak yana atılır, böylece iki yol yan yana kalır; sonuçta kalan eğiklik çiftin izin verdiğiyle birlikte yazılır.
 
 **Fark çifti yolu:** yol aracının grubundadır (yol düğmesini basılı tutun). Bir çiftin (D+/D−, `_P`/`_N`, CAN H/L) pedine tıklayın: iki pedi birden alır. Her tıklama çiftin orta hattına bir bacak ekler (önce düz, sonra 45°); iki yol bu hattın iki yanından çiftin **Aralık**'ıyla, köşelerde gönyeli olarak birlikte gider, pedlerinden 45° ile çıkıp çifte katılır. İmlecin yanında iki uzunluk ve farkları görünür. Karşı uçtaki çift pedlerine tıklayınca yollar yerine konur; **Enter** ya da çift tık olduğu yerde bitirir, **Geri** son bacağı alır, **Esc** bırakır. Başka bir ağın bakırına fazla yaklaşan ya da uçları ters sırada olan (yollar kesişir) çift kırmızı çizilir ve konmaz. Adından bulunan çift, yol konunca kartın çiftlerine eklenir; DRC onu aralığına ve farkına göre denetler. Köşelerde iç yol kısa kalır: fark sınırı aşarsa uzunluk ayarı eşitler. Seçenek çubuğundan genişlik ve katman seçilir.
 
@@ -177,6 +177,7 @@ Kartı **KiCad'e aktar** ile KiCad'e götürüp orada yerleştirdiyseniz ya da y
 ## Ayak izi ve modül
 
 - **Footprint:** ayak izi düzenleyicisi. SMD ve THT pedler, serigrafi, avlu ve üretim katmanı çizip kullanıcı kütüphanenize kaydedersiniz.
+- **Ayak izi atama** (komut paleti, Ctrl+K; KiCad'deki gibi): karttaki her parçanın değeri, türü ve ayak izi tek tabloda; parçanın her pininin ayak izinde pedi yoksa satır kırmızı olur ve hangi pinlerin pedsiz kaldığını yazar. **Değiştir…** başka bir ayak izi seçtirir.
 - **Modül yap:** bu kartı kütüphaneye tek bir parça olarak kaydeder. Başka devrelere tek parça gibi eklenir, içi yine tam simüle edilir.
 
 ## Görünüm
@@ -185,7 +186,7 @@ Kartı **KiCad'e aktar** ile KiCad'e götürüp orada yerleştirdiyseniz ya da y
 
 Tuvalin sağ üstündeki araç kutusundaki ızgara düğmesi ızgarayı gösterir ya da gizler (yakalama değişmez; seçim saklanır).
 
-**Katmanlar** sekmesindeki **Saydamlık** kaydırıcıları (KiCad'in Nesneler sekmesi gibi) yolları (damlalarıyla), via'ları, pedleri ve dolguları ayrı ayrı soluklaştırır; değer yazılabilir ve saklanır. Yalnız görünüş değişir.
+**Katmanlar** sekmesindeki **Saydamlık** kaydırıcıları (KiCad'in Nesneler sekmesi gibi) yolları (damlalarıyla), via'ları, pedleri ve dolguları ayrı ayrı soluklaştırır; değer yazılabilir ve saklanır. **Dolguları yalnız kenarıyla göster** dökümleri KiCad'deki gibi yalnız sınır çizgileriyle çizer, altlarındaki yollar görünür. Yalnız görünüş değişir.
 
 | Tuş | İşlev |
 | --- | --- |

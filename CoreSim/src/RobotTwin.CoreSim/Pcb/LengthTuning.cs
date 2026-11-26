@@ -117,7 +117,12 @@ namespace RobotTwin.CoreSim.Pcb
         /// </summary>
         public static TuneResult Tune(BoardDocument board, Track segment, double? target = null, MeanderSettings? settings = null)
         {
-            settings ??= new MeanderSettings();
+            // [skew] KiCad's skew tuning: one half of a differential pair gets small bumps on the side away from its
+            // partner, so the pair stays coupled (the plain tuner's 1 mm meanders would pull the two apart)
+            var pair = board.DiffPairs.FirstOrDefault(p => string.Equals(p.Positive, segment.Net, StringComparison.OrdinalIgnoreCase) || string.Equals(p.Negative, segment.Net, StringComparison.OrdinalIgnoreCase));
+            settings ??= pair != null
+                ? new MeanderSettings { Amplitude = Math.Max(0.2, 1.5 * segment.Width), MaxAmplitude = Math.Max(1.0, 3 * segment.Width) }
+                : new MeanderSettings();
             var lengths = NetLengths.Measure(board);
             var r = new TuneResult { Net = segment.Net, Before = lengths.TryGetValue(segment.Net, out double b) ? b : segment.Length };
             var goal = target.HasValue ? (target.Value, "elle verilen") : TargetFor(board, segment.Net, lengths);
@@ -150,9 +155,9 @@ namespace RobotTwin.CoreSim.Pcb
             // bumps: each one advances 2 × spacing along the line and adds 2 × amplitude (less what the chamfers cut)
             int room = (int)Math.Floor((len - spacing) / (2 * spacing));
             string? lastWhy = null;
-            foreach (double side in new[] { 1.0, -1.0 })
+            foreach (double side in Sides(board, segment, pair))
             {
-                for (double amp = settings.Amplitude; amp <= settings.MaxAmplitude + 1e-9; amp += 0.25)
+                for (double amp = settings.Amplitude; amp <= settings.MaxAmplitude + 1e-9; amp += pair != null ? 0.1 : 0.25)
                 {
                     int n = (int)Math.Ceiling(extra / (2 * amp * Gain(settings.Corner, amp, spacing)));
                     if (n < 1) n = 1;
@@ -165,6 +170,14 @@ namespace RobotTwin.CoreSim.Pcb
                     r.Replacement = tracks;
                     r.After = r.Before - len + tracks.Sum(t => t.Length);
                     r.Message = $"{segment.Net}: {r.Before:0.##} → {r.After:0.##} mm ({goal.Value.Item2}); {n} kıvrım, genlik {amp:0.##} mm";
+                    if (pair != null)
+                    {
+                        // [skew] what is left between the two halves, against the pair's allowance
+                        string partner = string.Equals(pair.Positive, segment.Net, StringComparison.OrdinalIgnoreCase) ? pair.Negative : pair.Positive;
+                        double skew = Math.Abs(r.After - (lengths.TryGetValue(partner, out double pl) ? pl : r.After));
+                        r.Message += $"; eğiklik {skew:0.###} mm (en çok {pair.MaxSkew:0.##} mm), kıvrımlar eşinden uzak yanda";
+                    }
+
                     return r;
                 }
             }
@@ -173,6 +186,33 @@ namespace RobotTwin.CoreSim.Pcb
                 ? $"Kıvrımlar sığmıyor: {lastWhy}. Başka bir parçayı deneyin ya da genliği küçültün"
                 : $"Bu parçaya {extra:0.##} mm sığmıyor (en çok genlik {settings.MaxAmplitude:0.##} mm): daha uzun bir parça seçin ya da en çok genliği artırın";
             return r;
+        }
+
+        /// <summary>
+        /// [skew] The sides to try bumps on: for half of a differential pair, first the side away from the partner's nearest
+        /// copper (so the two stay side by side); otherwise left, then right.
+        /// </summary>
+        private static double[] Sides(BoardDocument board, Track segment, DiffPair? pair)
+        {
+            if (pair == null) return new[] { 1.0, -1.0 };
+            string partner = string.Equals(pair.Positive, segment.Net, StringComparison.OrdinalIgnoreCase) ? pair.Negative : pair.Positive;
+            double mx = (segment.X1 + segment.X2) / 2, my = (segment.Y1 + segment.Y2) / 2;
+            var near = board.Tracks.Where(t => t.Layer == segment.Layer && string.Equals(t.Net, partner, StringComparison.OrdinalIgnoreCase))
+                .Select(t => (T: t, D: Near(t, mx, my)))
+                .OrderBy(x => x.D.Dist).FirstOrDefault();
+            if (near.T == null) return new[] { 1.0, -1.0 };
+            double dx = segment.X2 - segment.X1, dy = segment.Y2 - segment.Y1;
+            double cross = dx * (near.D.Y - my) - dy * (near.D.X - mx);   // > 0: the partner is on the left of the segment
+            double away = cross > 0 ? -1.0 : 1.0;
+            return new[] { away, -away };
+        }
+
+        private static (double X, double Y, double Dist) Near(Track t, double px, double py)
+        {
+            double vx = t.X2 - t.X1, vy = t.Y2 - t.Y1, l2 = vx * vx + vy * vy;
+            double u = l2 < 1e-12 ? 0 : Math.Max(0, Math.Min(1, ((px - t.X1) * vx + (py - t.Y1) * vy) / l2));
+            double x = t.X1 + u * vx, y = t.Y1 + u * vy;
+            return (x, y, Math.Sqrt((x - px) * (x - px) + (y - py) * (y - py)));
         }
 
         /// <summary>The share of 2 × amplitude a bump really adds once its two top corners are cut at 45°.</summary>

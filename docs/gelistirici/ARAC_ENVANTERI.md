@@ -61,7 +61,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Tam ekran imleç | yok | yok | 3 |
 | 45° kısıtı | Boşluk tuşu | kısmi | 2 |
 | Ratsnest göster, eğri ratsnest | göster var, eğri yok | kısmi | 3 |
-| Dolgu görünüşü (dolu / kenar) | aç/kapa var | kısmi | 2 |
+| Dolgu görünüşü (dolu / kenar) | Katmanlar: dolgular aç/kapa ve yalnız kenarıyla göster (saklanır) | var | |
 | Yüksek kontrast | var | var | |
 | Hat vurgula | ` tuşu ve sol şeritte Hattı vurgula aracı (tıklanan öğenin hattı; aynısı ya da boşluk kaldırır) | var | |
 
@@ -75,7 +75,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Yol | Yol (X) | var | |
 | Fark çifti yolu | Fark çifti yolu (ortak orta hat, gönyeli köşe, 45° ped çıkışı, uzunluk ve fark, ters uç ve yakın bakır uyarısı) | var | |
 | Uzunluk ayarı (tek hat) | menderes aracı | var | |
-| Fark çifti eğiklik ayarı | yok | yok | 2 |
+| Fark çifti eğiklik ayarı | uzunluk ayarı çiftin yarısında: küçük kıvrımlar, eşinden uzak yanda, kalan eğiklik izinle birlikte | var | |
 | Via | Via aracı | var | |
 | Bakır alan | Dolgu alanı | var | |
 | Yasak bölge (kural alanı) | Alanlar grubunda (DRC, dolgu, iki yönlendirici, KiCad) | var | |
@@ -105,7 +105,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Sayfa ayarları, yazdır, çizdir | PNG/SVG, yazdır | var | |
 | Bul / bul ve değiştir | var | var | |
-| Yakınlaştırma düğmeleri | tekerlek, sığdır | kısmi | 2 |
+| Yakınlaştırma düğmeleri | araç çubuğunda yakınlaştır, uzaklaştır, sığdır; tekerlek ve tuşlar | var | |
 | Hiyerarşide geri / yukarı / ileri | hiyerarşi yok | yok | 3 |
 | Döndür, aynala | var | var | |
 | Grupla | yok | yok | 3 |
@@ -113,7 +113,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Numaralandır | var | var | |
 | ERC (önem, istisna) | var | var | |
 | Simülatör | yerleşik | var | |
-| Ayak izi ata, alan tablosu, BOM | BOM penceresi; ayak izi parçada | kısmi | 2 |
+| Ayak izi ata, alan tablosu, BOM | Ayak izi atama tablosu (palet; pedsiz pin uyarısı, satırdan değiştir), BOM penceresi; alan tablosu sonra | kısmi | 3 |
 | Seç | var | var | |
 | Hat vurgula aracı | ` tuşu ve araç çubuğunda Hattı vurgula aracı (pin, tel, etiket; kartta da vurgular) | var | |
 | Sembol, güç sembolü | var | var | |
@@ -247,7 +247,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Yeniden adlandır, çoğalt, sil | F2 satırda; çoğalt ve sil takılı olanlarla, "yalnız bunu sil" | var | |
 | Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, sahnede Shift+sürükle dikdörtgen, Ctrl+A; tutamaç, kopyala, kes, çoğalt, sil hepsine (tersine çevir, alt nesneleri seç sonra) | kısmi | 3 |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | Boş nesne (Ctrl+Alt+N), boş alt (Alt+Shift+N), boş üst (Ctrl+Shift+G); düzenleyicide grup, çalıştırmada yok (altındakiler onun takılı olduğu yere geçer) | var | |
-| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ gövde şekilleri ve palet sekmeleri | kısmi | 2 |
+| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ boş nesneler, gövde şekilleri, Parça ▸ kategoriler (kütüphanenin her hazır parçası: sensör, kamera, motor …) ve palet sekmeleri; ışık ve ses türü sonra | kısmi | 3 |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
 | Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı, Odakla | kısmi | 3 |
 | Sürükleyerek üst nesne değiştirme | Bağla aracı | kısmi | 2 |

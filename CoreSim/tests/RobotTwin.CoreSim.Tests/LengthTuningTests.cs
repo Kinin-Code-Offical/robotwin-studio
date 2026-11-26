@@ -20,6 +20,27 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void ACoupledPairsSkewIsTunedWithSmallBumpsAwayFromThePartner()
+        {
+            // [skew] D+ and D− run 0.4 mm apart (0.2 mm gap); D− is 0.8 mm longer by a short jog at its end
+            var b = new BoardDocument { Width = 80, Height = 40 };
+            b.Tracks.Add(new Track { Net = "D+", Layer = CopperLayer.Top, X1 = 10, Y1 = 15, X2 = 40, Y2 = 15, Width = 0.2 });
+            b.Tracks.Add(new Track { Net = "D-", Layer = CopperLayer.Top, X1 = 10, Y1 = 15.4, X2 = 40, Y2 = 15.4, Width = 0.2 });
+            b.Tracks.Add(new Track { Net = "D-", Layer = CopperLayer.Top, X1 = 40, Y1 = 15.4, X2 = 40, Y2 = 16.2, Width = 0.2 });
+            b.DiffPairs.Add(new DiffPair { Positive = "D+", Negative = "D-", Gap = 0.2, MaxSkew = 0.1 });
+            var seg = b.Tracks[0];
+            var r = LengthTuning.Tune(b, seg);
+            Assert.True(r.Ok, r.Message);
+            Assert.Equal(30.8, r.After, 1);
+            Assert.Contains("eğiklik", r.Message);
+            Assert.All(r.Replacement!, t =>
+            {
+                Assert.True(t.Y1 <= 15 + 1e-9 && t.Y2 <= 15 + 1e-9, "a bump went towards the partner");   // the side away from D−
+                Assert.True(t.Y1 >= 15 - 1.0 - 1e-9 && t.Y2 >= 15 - 1.0 - 1e-9, "bumps are small for a pair");
+            });
+        }
+
+        [Fact]
         public void MeandersBringTheShortHalfOfAPairToTheLongOne()
         {
             var b = Pair();

@@ -272,6 +272,10 @@ namespace RobotWin.Studio.Pages
         private void OnRedo(object sender, RoutedEventArgs e) => W.Redo();
         private void OnFit(object sender, RoutedEventArgs e) => Canvas.FitToContent();
 
+        private void OnZoomIn(object sender, RoutedEventArgs e) => Canvas.ZoomBy(1.25);   // [zoom] about the middle of the view
+
+        private void OnZoomOut(object sender, RoutedEventArgs e) => Canvas.ZoomBy(0.8);
+
         private void UpdateChrome()
         {
             UndoButton.IsEnabled = W.CanUndo;

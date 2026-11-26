@@ -98,6 +98,9 @@
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="300" TextTrimming="CharacterEllipsis"/>
+                    <!-- [zoom] KiCad's view toolbar: zoom in, out and fit -->
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Yakınlaştır (+, tekerlek)" Click="OnZoomIn"><t:Icon Data="{StaticResource I.ZoomIn}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Uzaklaştır (−, tekerlek)" Click="OnZoomOut"><t:Icon Data="{StaticResource I.ZoomOut}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Sığdır  (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
                     <ToggleButton x:Name="InspectorToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Özellikler panelini göster / gizle" Click="OnToggleInspector" IsChecked="True" Margin="6,0,0,0">
                         <t:Icon Data="{StaticResource I.Layers}" Size="16"/>

@@ -174,6 +174,9 @@ namespace RobotWin.Studio.Pcb
         public bool ShowRatsnest { get; set; } = true;
         public bool ShowZones { get; set; } = true;
 
+        /// <summary>[zone-look] KiCad's zone display: pours drawn by their outline only (the copper under them shows).</summary>
+        public bool ZoneOutlines { get; set; }
+
         /// <summary>[opacity] KiCad's Objects tab: how opaque tracks (with their teardrops), vias, pads and pours are drawn, 0–1.</summary>
         public double TrackOpacity { get; set; } = 1;
         public double ViaOpacity { get; set; } = 1;
@@ -564,7 +567,12 @@ namespace RobotWin.Studio.Pcb
                 foreach (var z in board.Zones.Where(z => z.Layer == layer))
                 {
                     double f = Fade(z.Net, layer);
-                    if (z.IsFilled) dc.DrawGeometry(SymbolRenderer.Brush(A(CopperColor(board, layer, z.Net), (active ? 0.42 : 0.3) * f * ZoneOpacity)), null, ZoneGeometry(z));
+                    if (z.IsFilled)
+                    {
+                        var zc = CopperColor(board, layer, z.Net);
+                        if (ZoneOutlines) dc.DrawGeometry(null, P(A(zc, (active ? 0.95 : 0.7) * f * ZoneOpacity), 1.2, false), ZoneGeometry(z));   // [zone-look] the fill's edge only
+                        else dc.DrawGeometry(SymbolRenderer.Brush(A(zc, (active ? 0.42 : 0.3) * f * ZoneOpacity)), null, ZoneGeometry(z));
+                    }
                     if (!z.IsWholeBoard)
                     {
                         var pen = new Pen(SymbolRenderer.Brush(A(color, 0.8 * f)), 1) { DashStyle = DashStyles.Dash };

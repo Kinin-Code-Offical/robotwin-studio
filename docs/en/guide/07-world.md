@@ -865,7 +865,7 @@ Objects can only be moved while the simulation is stopped. You can also type pos
 
 ### The scene tree's menu
 
-A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **Paste**, **Paste mounted on this**, **Rename** (F2, the name turns into a box in the row), **Duplicate**, **Delete**, **Delete only this**, **Focus**, **Move to view**, **Find references in the scene** and **Create ▸** (body shapes, board, part, mechanical, environment). Copying, duplicating and deleting take everything mounted on the part, with the joints, cables and mates among them; a copied arm pastes whole into another world too. A right click on empty room opens paste and create.
+A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **Paste**, **Paste mounted on this**, **Rename** (F2, the name turns into a box in the row), **Duplicate**, **Delete**, **Delete only this**, **Focus**, **Move to view**, **Find references in the scene** and **Create ▸** (empty objects, body shapes, every ready part of the library by its category under **Part ▸**, and the board, part, mechanical and environment tabs). Copying, duplicating and deleting take everything mounted on the part, with the joints, cables and mates among them; a copied arm pastes whole into another world too. A right click on empty room opens paste and create.
 
 ### Move, rotate and scale handles
 

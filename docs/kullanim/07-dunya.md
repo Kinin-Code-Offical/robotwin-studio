@@ -864,7 +864,7 @@ Nesneler yalnızca simülasyon dururken taşınabilir. Konumu ve açıyı denet�
 
 ### Sahne ağacının menüsü
 
-**Sahne** sekmesindeki bir satıra sağ tıklayınca (Unity'deki gibi): **Kes**, **Kopyala**, **Yapıştır**, **Bunun üstüne takılı olarak yapıştır**, **Yeniden adlandır** (F2, ad satırda kutuya döner), **Çoğalt**, **Sil**, **Yalnız bunu sil**, **Odakla**, **Görünüme taşı**, **Sahnede referansları bul** ve **Oluştur ▸** (gövde şekilleri, kart, parça, mekanik, ortam). Kopyalama, çoğaltma ve silme parçaya takılı olan her şeyi, aralarındaki bağlantıları, kabloları ve ilişkileri birlikte alır; kopyalanan bir kol başka bir dünyaya da bütün olarak yapıştırılır. Boş yere sağ tık yapıştırma ve oluşturmayı açar.
+**Sahne** sekmesindeki bir satıra sağ tıklayınca (Unity'deki gibi): **Kes**, **Kopyala**, **Yapıştır**, **Bunun üstüne takılı olarak yapıştır**, **Yeniden adlandır** (F2, ad satırda kutuya döner), **Çoğalt**, **Sil**, **Yalnız bunu sil**, **Odakla**, **Görünüme taşı**, **Sahnede referansları bul** ve **Oluştur ▸** (boş nesneler, gövde şekilleri, kütüphanenin her hazır parçası kategorisine göre **Parça ▸** altında, ayrıca kart, parça, mekanik ve ortam sekmeleri). Kopyalama, çoğaltma ve silme parçaya takılı olan her şeyi, aralarındaki bağlantıları, kabloları ve ilişkileri birlikte alır; kopyalanan bir kol başka bir dünyaya da bütün olarak yapıştırılır. Boş yere sağ tık yapıştırma ve oluşturmayı açar.
 
 ### Taşı, döndür, ölçekle tutamaçları
 

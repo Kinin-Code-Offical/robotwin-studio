@@ -116,6 +116,9 @@ namespace RobotWin.Studio.Shell
         public string PcbLayerPairA { get; set; } = "Top";
         public string PcbLayerPairB { get; set; } = "Bottom";
 
+        /// <summary>[zone-look] Whether the PCB editor draws pours by their outline only.</summary>
+        public bool PcbZoneOutlines { get; set; }
+
         /// <summary>[grid] Whether the PCB editor draws its grid.</summary>
         public bool PcbGridShown { get; set; } = true;
 

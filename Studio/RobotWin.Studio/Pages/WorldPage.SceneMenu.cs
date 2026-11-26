@@ -74,6 +74,31 @@ namespace RobotWin.Studio.Pages
             body.Items.Add(MenuEntry("Silindir", null, () => AddBody("cylinder", 0.04, 0.04, 0.06)));
             body.Items.Add(MenuEntry("Küre", null, () => AddBody("sphere", 0.04, 0.04, 0.04)));
             create.Items.Add(body);
+
+            // [create] Unity's Create ▸ by kind: every ready part of the library under its category, filled when opened
+            // (each tree row has its own menu, so the few hundred items are not built for every row)
+            var parts = new MenuItem { Header = "Parça" };
+            parts.Items.Add(new MenuItem { Header = "…", IsEnabled = false });
+            parts.SubmenuOpened += (_, e) =>
+            {
+                if (e.OriginalSource != parts || parts.Tag is true) return;
+                parts.Tag = true;
+                parts.Items.Clear();
+                foreach (var group in Lib.Presets.GroupBy(x => x.Category).OrderBy(g => g.Key, StringComparer.CurrentCulture))
+                {
+                    var category = new MenuItem { Header = group.Key };
+                    foreach (var preset in group.OrderBy(x => x.Name, StringComparer.CurrentCulture))
+                    {
+                        string id = preset.Id;
+                        var item = MenuEntry(preset.Name, null, () => AddComponent(id));
+                        item.ToolTip = preset.Description;
+                        category.Items.Add(item);
+                    }
+
+                    parts.Items.Add(category);
+                }
+            };
+            create.Items.Add(parts);
             void Tab(string header, System.Windows.Controls.Primitives.ToggleButton tab)
             {
                 create.Items.Add(MenuEntry(header, null, () =>
