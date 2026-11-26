@@ -132,7 +132,10 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Gravitational acceleration (m/s²): 9.81 Earth, 1.62 Moon, 3.71 Mars.</summary>
         public double Gravity { get; set; } = 9.81;
 
-        /// <summary>Air density (kg/m³); null = 1.225 (sea level). Mars ≈ 0.02, Moon 0. Scales drag and propeller thrust.</summary>
+        /// <summary>
+        /// Air density (kg/m³); null = sea-level air at <see cref="AmbientC"/> (1.184 at 25 °C, 1.225 at 15 °C, 1.293 at
+        /// 0 °C). Mars ≈ 0.02, Moon 0. Scales drag and propeller thrust.
+        /// </summary>
         public double? AirDensity { get; set; }
 
         /// <summary>Mean wind (m/s) and gust amplitude (m/s).</summary>
@@ -180,7 +183,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 StartY = StartY,
                 StartYaw = StartYaw * Math.PI / 180,
                 FloorMaterial = string.IsNullOrWhiteSpace(FloorMaterial) ? null : Materials.Canonical(FloorMaterial),
-                AirDensity = Math.Max(0, AirDensity ?? 1.225),
+                AirDensity = Math.Max(0, AirDensity ?? Sdk.Atmosphere.Density(AmbientC, Sdk.Atmosphere.SeaLevelPressure)),   // [air] as the world runtime's air
                 Wind = new Vec3(WindX, WindY, WindZ),
                 Gust = Math.Max(0, Gust)
             };

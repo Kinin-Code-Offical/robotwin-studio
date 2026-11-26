@@ -558,6 +558,8 @@ ESP32 sketches use the camera through the real `esp_camera` interface: `esp_came
 
 With **Record sensor data (CSV, labelled)** switched on, every reading of every sensor through the run goes into a table. Beside what the sensor measured stands the true value the simulation knows (an IMU's real acceleration and rotation rate, a GPS position's real error, the real reflectance of the floor under a line sensor). The last column is the label: the fault scenario active on the sensor at that moment, or `normal`. When the world stops the tables are written to **Documents\RobotWin\Sensor logs\&lt;world&gt;-&lt;time&gt;**, one CSV per sensor and a README; **Open folder** opens it. Labelled data for sensor fusion and fault detection comes from the same run.
 
+**Temperature reaches the sensors.** The ambient temperature (Environment → Ambient temperature) sets the air's density and its speed of sound: an HC-SR04's echo comes back at 331 m/s at 0 °C and 355 m/s at 40 °C, so a sketch dividing by 58 µs/cm reads 1 m as 104 cm in the cold and 97 cm in the heat. An IMU's zero points and sensitivities move with its chip's temperature, each chip by its own coefficients. The chip warms about 3 °C above what it is mounted on over a few minutes, so a gyro calibrated at power-on drifts in the first minutes and again when the motor driver beside it heats the board. The MPU-6050's TEMP_OUT register and the Sensors card show the chip's temperature, and the CSV log has a `chip_temp_c` column. A compass loses 0.3 % of its sensitivity per °C, and a line sensor's phototransistor follows its own temperature.
+
 ![Ultrasonic sensor and an obstacle](../../images/en/world-sonar.png)
 
 ## Controllers, radio and USB

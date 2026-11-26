@@ -104,6 +104,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
 
         public Vec3 TrueGyro { get; set; }
         public Quat Orientation { get; set; } = Quat.Identity;
+
+        /// <summary>[temp] The chip's temperature (°C), what it reports in TEMP_OUT and what moves its zero points.</summary>
+        public double TemperatureC { get; set; } = double.NaN;
     }
 
     public sealed class GpsReading : SensorReading

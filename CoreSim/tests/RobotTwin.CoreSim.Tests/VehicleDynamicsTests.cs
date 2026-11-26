@@ -452,7 +452,8 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Null(legacyArena.Terrain);
             Assert.Single(legacyArena.Obstacles);
             Assert.Equal(0.7, legacyArena.Friction);
-            Assert.Equal(1.225, legacyArena.AirDensity);
+            // [air] Its air is the air of its temperature (25 °C unless set), as in every world: 1.184, not a fixed 1.225.
+            Assert.Equal(RobotTwin.CoreSim.Sdk.Atmosphere.Density(25, RobotTwin.CoreSim.Sdk.Atmosphere.SeaLevelPressure), legacyArena.AirDensity, 9);
         }
     }
 }

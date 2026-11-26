@@ -183,6 +183,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         // ================================================================ poses
 
         /// <summary>Current pose of an object (physics when it runs, otherwise as placed).</summary>
+        /// <summary>[temp] An object's temperature (°C): its own thermal node when the physics has one, else the air.</summary>
+        private double TemperatureOf(WorldObject o) => _physics?.TemperatureOf(o.Id) ?? _world.Environment.AmbientC;
+
         public (Vec3 Position, Quat Orientation) PoseOf(WorldObject o)
         {
             if (_physics?.PoseOf(o.Id) is { } p) return p;
@@ -380,7 +383,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
                 if (!double.IsInfinity(d)) obstacle = (d, refl);
             }
 
-            double temp = _world.Environment.AmbientC;
+            double temp = TemperatureOf(u.Object);   // [temp] the module's own, heated by what is near it
             var fault = FaultOf(u.Object, time);
             if (fault?.Id == "line_led_dead") drive = 0;
             double clean = fault?.Id == "line_dirty" ? Math.Max(0, Math.Min(100, fault.Value.Value)) / 100 : 1;
@@ -530,7 +533,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             u.Clock = 0;
             var (_, q) = PoseOf(u.Object);
             var (v, w) = MotionOf(u.Object);
-            u.Model.Update(step, q, v, w, _world.Environment.Gravity, addNoise: false);
+            u.Model.Update(step, q, v, w, _world.Environment.Gravity, addNoise: false, mountC: TemperatureOf(u.Object));
             var a = u.Model.Accel;
             var g = u.Model.Gyro;
             var fault = FaultOf(u.Object, time);
@@ -548,13 +551,14 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             u.Device.GyroX = g.X;
             u.Device.GyroY = g.Y;
             u.Device.GyroZ = g.Z;
-            u.Device.TemperatureC = _world.Environment.AmbientC + 5;
+            u.Device.TemperatureC = u.Model.TemperatureC;   // [temp] TEMP_OUT reads the chip as it warms
             if (time - u.LastPublish >= 0.01)
             {
                 u.LastPublish = time;
                 Sensors.Publish(new ImuReading
                 {
-                    ObjectId = u.Object.Id, Name = u.Object.Name, Time = time, Accel = a, Gyro = g, TrueAccel = u.Model.TrueAccel, TrueGyro = u.Model.TrueGyro, Orientation = q
+                    ObjectId = u.Object.Id, Name = u.Object.Name, Time = time, Accel = a, Gyro = g, TrueAccel = u.Model.TrueAccel, TrueGyro = u.Model.TrueGyro, Orientation = q,
+                    TemperatureC = u.Model.TemperatureC
                 });
             }
         }
@@ -578,7 +582,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             c.Next = time + 1.0 / rate;
             var (_, q) = PoseOf(c.Object);
             var (fx, fy, fz) = _world.Environment.Sensing?.MagneticField() ?? new SensingEnvironment().MagneticField();
-            var body = q.InverseRotate(new Vec3(fx, fy, fz) * 0.01) + c.HardIron;   // µT → Gauss
+            // µT → Gauss; [temp] the HMC5883L's uncompensated sensitivity falls 0.3 % per °C (its sheet's tempco)
+            double gain = 1 - 0.003 * (TemperatureOf(c.Object) - 25);
+            var body = (q.InverseRotate(new Vec3(fx, fy, fz) * 0.01) + c.HardIron) * gain;
             var fault = FaultOf(c.Object, time);
             if (fault?.Id == "compass_magnet") body = new Vec3(body.X + fault.Value.Value * 0.01, body.Y, body.Z);
             if (fault?.Id == "compass_offline") c.Device.Powered = false;

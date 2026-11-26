@@ -211,16 +211,18 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
     /// <summary>
     /// HC-SR04 ultrasonic ranger: a ≥10 µs pulse on TRIG starts a measurement;
-    /// about 450 µs later ECHO goes high for 2·d / 343 m/s (38 ms when nothing echoes).
-    /// The distance comes from the world simulation.
+    /// about 450 µs later ECHO goes high for 2·d / c (38 ms when nothing echoes), c the speed of sound in the air at
+    /// <see cref="AirTemperatureC"/>: 331 m/s at 0 °C, 343 at 20 °C, 355 at 40 °C, so a sketch that divides by 58 µs/cm
+    /// reads 3 % short on a cold morning and long on a hot day, as the real sensor does.
+    /// The distance and the air's temperature come from the world simulation.
     /// </summary>
     public sealed class UltrasonicSensor : AnalogDevice
     {
-        private const double SpeedOfSound = 343.0;
         private bool _trigHigh;
         private double _trigRise = -1;
         private double _echoStart = -1, _echoEnd = -1;
         private bool _echoHigh;
+        private double _lastAccept;
 
         public UltrasonicSensor(string id, int vcc, int trig, int echo, int ground) : base(id)
         {
@@ -235,6 +237,9 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public int Echo { get; }
         public int Ground { get; }
 
+        /// <summary>[air] Temperature of the air the pulse crosses (°C, set by the world).</summary>
+        public double AirTemperatureC { get; set; } = 20.0;
+
         /// <summary>Distance to the nearest reflector in metres (set by the world).</summary>
         public double Distance { get; set; } = 4.5;
 
@@ -247,6 +252,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
         {
             _trigHigh = _echoHigh = false;
             _trigRise = _echoStart = _echoEnd = -1;
+            _lastAccept = 0;
         }
 
         public override void Stamp(StampContext ctx)
@@ -262,17 +268,20 @@ namespace RobotTwin.CoreSim.Analog.Devices
             double t = ctx.Time;
             bool powered = ctx.V(Vcc, Ground) > 4.0;
             bool trig = powered && ctx.V(Trig, Ground) > 2.0;
-            if (trig && !_trigHigh) _trigRise = t;
+            // The pulse rose somewhere since the last accepted point: its width runs from there, so a 10 µs TRIG counts
+            // whatever steps the solver took through it (from the first high point, a short first low step lost the edge).
+            if (trig && !_trigHigh) _trigRise = _lastAccept;
             if (!trig && _trigHigh && _trigRise >= 0 && t - _trigRise >= 9e-6 && _echoStart < 0 && !_echoHigh)
             {
                 double d = Distance;
-                double width = d >= MinRange && d <= MaxRange ? 2.0 * d / SpeedOfSound : 0.038;
+                double width = d >= MinRange && d <= MaxRange ? 2.0 * d / RobotTwin.CoreSim.Sdk.Atmosphere.SpeedOfSound(AirTemperatureC) : 0.038;
                 _echoStart = t + 450e-6;
                 _echoEnd = _echoStart + width;
                 LastPulseWidth = width;
             }
 
             _trigHigh = trig;
+            _lastAccept = t;
             if (!_echoHigh && _echoStart >= 0 && t >= _echoStart - 1e-12)
             {
                 _echoHigh = true;

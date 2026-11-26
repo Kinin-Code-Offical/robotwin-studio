@@ -577,6 +577,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
 
                 it.Sonar.Distance = Math.Min(it.SonarRange, max);
+                it.Sonar.AirTemperatureC = Sdk?.TemperatureC ?? _ambient;   // [air] the world's air
             }
         }
 

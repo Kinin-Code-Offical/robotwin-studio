@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Temperature in the air and the sensors:** the world's ambient temperature sets its air's density, speed of sound and viscosity everywhere (the world runtime already did; the arena, the wings' Mach and Reynolds numbers and the ultrasonic sensors now follow it): an HC-SR04 echoes at 331 m/s at 0 °C and 355 m/s at 40 °C. An IMU's zero-rate and zero-g offsets and sensitivities move with its chip's temperature, each chip by its own coefficients drawn from the MPU-6050 sheet's spread; the chip warms 3 °C over its mount by its own heat in about a minute, so a gyro drifts after power-on and when a nearby driver heats the board. TEMP_OUT, the Sensors card and the CSV log (`chip_temp_c`) show it. A compass's sensitivity falls 0.3 %/°C; a line sensor follows its own temperature, not the air's.
+
 - **Sensor data log:** the world's Sensors tab can record every reading of a run, one CSV per sensor: what the sensor measured beside the true value the simulation knows (an IMU's real specific force and rate, a GPS fix's real error, a line sensor's real floor reflectance) and a label column with the fault scenario active at that moment or `normal`. When the world stops the tables and a README are written to Documents\RobotWin\Sensor logs, labelled data for sensor fusion and fault detection.
 
 - **Sensor failure scenarios:** a robot's sensors fail from a set time with Add feature → Fault scenario, as cell equipment already could: an IMU's gyro drift, vibration noise, frozen reading or silence on I²C (no ACK); a magnet near the compass or its silence; a GPS losing its sky (its NMEA goes on with no valid position) or pulled east by multipath; a LiDAR's dirty window or stalled motor; a line sensor's dirty lens or burnt-out IR LED. The firmware's reaction to bad readings can be tried before the real thing.
@@ -211,6 +213,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **Sensor cards in English:** the Sensors tab's readouts (IMU, GPS, compass, encoder, LiDAR, camera, line sensor) stayed in Turkish: the pack had their templates, but the numbers went in before the text met the pack. The templates are now translated first; a LiDAR's "dönüş %" reads "returns", not "rotation".
+
+- **HC-SR04 trigger:** the sensor timed its TRIG pulse from the first solver point that saw it high, so when the solver happened to take a short first step after the pulse fell, a full 10 µs pulse measured shorter than 9 µs and no echo came; the pulse now counts from the last point before it rose.
 
 - **Circuits with no ground:** a battery driving a motor on its own, or the side of a part that nothing references (an encoder motor's windings with its encoder unpowered), had its level held only by the solver's tiny leak to ground; that level wandered by millivolts from one solve to the next and the error control cut the time step down to 10 ps chasing it, so a stalled drive froze the run. The solver now finds every part of the circuit with no path to ground and references it once, at the node named like its ground (GND, then −); one connection carries no current, so only that level changes, now 0 V.
 

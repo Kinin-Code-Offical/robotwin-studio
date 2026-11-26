@@ -210,46 +210,47 @@ namespace RobotWin.Studio.Pages
                             _bitmap.WritePixels(new Int32Rect(0, 0, cam.Width, cam.Height), cam.Bgra, cam.Width * 4, 0);
                         }
 
-                        _text.Text = string.Format(c, "{0} · {1}×{2} {3}\nkare hızı {4:0.#} / {5:0.#} fps (üretilen / sensör)\npozlama {6:0.###} ms · kazanç {7:0.0}× · ışık {8:0} lx\nkare {9} · {10:0.#} kB/kare",
+                        _text.Text = string.Format(c, Shell.Lang.T("{0} · {1}×{2} {3}\nkare hızı {4:0.#} / {5:0.#} fps (üretilen / sensör)\npozlama {6:0.###} ms · kazanç {7:0.0}× · ışık {8:0} lx\nkare {9} · {10:0.#} kB/kare"),
                             cam.Model, cam.Width, cam.Height, cam.Format, cam.AchievedFps, cam.TargetFps, cam.ExposureMs, cam.Gain, sensing.Environment.AmbientLux, cam.FrameIndex, cam.FrameBytes / 1024.0);
                         break;
                     case LidarReading lidar:
                         _image.Source = Polar(lidar);
                         _image.Width = 150;
                         int n = lidar.Scan.Ranges.Length, valid = lidar.Scan.Valid;
-                        _text.Text = string.Format(c, "{0}\n{1:0.#} Hz · {2} ölçüm/tur · {3} kanal\ndönüş %{4:0} · en yakın {5}",
+                        _text.Text = string.Format(c, Shell.Lang.T("{0}\n{1:0.#} Hz · {2} ölçüm/tur · {3} kanal\ndönüş %{4:0} · en yakın {5}"),
                             lidar.Model, lidar.Scan.ScanRate, n / Math.Max(1, lidar.Channels), lidar.Channels, n == 0 ? 0 : 100.0 * valid / n,
                             valid == 0 ? "—" : lidar.Scan.Ranges.Where(x => !float.IsNaN(x)).Min().ToString("0.000 m", c));
                         break;
                     case LineSensorReading line:
                         Channels(line);
                         var sb = new System.Text.StringBuilder();
-                        sb.Append(line.Model).Append(" · yükseklik ").Append(line.Channels.Length > 0 && !double.IsInfinity(line.Channels[0].Distance) ? (line.Channels[0].Distance * 1000).ToString("0.0", c) + " mm" : "—");
+                        sb.Append(line.Model).Append(Shell.Lang.T(" · yükseklik ")).Append(line.Channels.Length > 0 && !double.IsInfinity(line.Channels[0].Distance) ? (line.Channels[0].Distance * 1000).ToString("0.0", c) + " mm" : "—");
                         foreach (var (ch, i) in line.Channels.Select((x, i) => (x, i)))
                         {
-                            sb.Append('\n').Append(string.Format(c, "{0}: R {1:0.00} sinyal {2:0.00} ({3:0.00}+{4:0.00}+{5:0.00}) {6:0.00} V{7}",
-                                i + 1, ch.Reflectance, ch.Signal, ch.Diffuse, ch.Specular, ch.Ambient, ch.Voltage, ch.DigitalLow == null ? string.Empty : ch.DigitalLow == true ? " BEYAZ" : " SİYAH"));
+                            sb.Append('\n').Append(string.Format(c, Shell.Lang.T("{0}: R {1:0.00} sinyal {2:0.00} ({3:0.00}+{4:0.00}+{5:0.00}) {6:0.00} V{7}"),
+                                i + 1, ch.Reflectance, ch.Signal, ch.Diffuse, ch.Specular, ch.Ambient, ch.Voltage, ch.DigitalLow == null ? string.Empty : ch.DigitalLow == true ? Shell.Lang.T(" BEYAZ") : Shell.Lang.T(" SİYAH")));
                         }
 
-                        sb.Append("\n(sinyal = yayınık + parlama + ortam IR)");
+                        sb.Append(Shell.Lang.T("\n(sinyal = yayınık + parlama + ortam IR)"));
                         _text.Text = sb.ToString();
                         break;
                     case ImuReading imu:
-                        _text.Text = string.Format(c, "ivme  {0,7:0.00} {1,7:0.00} {2,7:0.00} m/s²\njiro  {3,7:0.000} {4,7:0.000} {5,7:0.000} rad/s\ngerçek ivme z {6:0.00} · jiro z {7:0.000}",
+                        _text.Text = string.Format(c, Shell.Lang.T("ivme  {0,7:0.00} {1,7:0.00} {2,7:0.00} m/s²\njiro  {3,7:0.000} {4,7:0.000} {5,7:0.000} rad/s\ngerçek ivme z {6:0.00} · jiro z {7:0.000}"),
                             imu.Accel.X, imu.Accel.Y, imu.Accel.Z, imu.Gyro.X, imu.Gyro.Y, imu.Gyro.Z, imu.TrueAccel.Z, imu.TrueGyro.Z);
+                        if (!double.IsNaN(imu.TemperatureC)) _text.Text += string.Format(c, Shell.Lang.T("\nçip {0:0.0} °C"), imu.TemperatureC);   // [temp] what moves its zero points
                         break;
                     case GpsReading gps:
                         var f = gps.Fix;
                         _text.Text = f.Valid
-                            ? string.Format(c, "{0:0.000000}° {1:0.000000}°\nirtifa {2:0.0} m · {3} uydu · HDOP {4:0.0}\nhız {5:0.00} m/s · hata {6:0.00} m",
+                            ? string.Format(c, Shell.Lang.T("{0:0.000000}° {1:0.000000}°\nirtifa {2:0.0} m · {3} uydu · HDOP {4:0.0}\nhız {5:0.00} m/s · hata {6:0.00} m"),
                                 f.Latitude, f.Longitude, f.Altitude, f.Satellites, f.Hdop, f.SpeedMps, Math.Sqrt(f.ErrorEast * f.ErrorEast + f.ErrorNorth * f.ErrorNorth))
-                            : string.Format(c, "Konum yok (uydu aranıyor) · {0} uydu\nNMEA: $GPRMC ... V", f.Satellites);
+                            : string.Format(c, Shell.Lang.T("Konum yok (uydu aranıyor) · {0} uydu\nNMEA: $GPRMC ... V"), f.Satellites);
                         break;
                     case CompassReading mag:
-                        _text.Text = string.Format(c, "yön {0:0.0}° (manyetik)\nalan {1:0.000} {2:0.000} {3:0.000} G", mag.HeadingDeg, mag.Field.X, mag.Field.Y, mag.Field.Z);
+                        _text.Text = string.Format(c, Shell.Lang.T("yön {0:0.0}° (manyetik)\nalan {1:0.000} {2:0.000} {3:0.000} G"), mag.HeadingDeg, mag.Field.X, mag.Field.Y, mag.Field.Z);
                         break;
                     case EncoderReading enc:
-                        _text.Text = string.Format(c, "sayım {0} · {1:0} sayım/tur\nçıkış {2:0.0} rpm · A={3} B={4}", enc.Count, enc.CountsPerRevolution, enc.OutputRpm, enc.A ? 1 : 0, enc.B ? 1 : 0);
+                        _text.Text = string.Format(c, Shell.Lang.T("sayım {0} · {1:0} sayım/tur\nçıkış {2:0.0} rpm · A={3} B={4}"), enc.Count, enc.CountsPerRevolution, enc.OutputRpm, enc.A ? 1 : 0, enc.B ? 1 : 0);
                         break;
                 }
             }

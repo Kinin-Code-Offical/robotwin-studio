@@ -236,7 +236,9 @@ namespace RobotTwin.CoreSim.Sandbox
                 foreach (var (c, sign) in w.Controls)
                     c.Deflection = Math.Max(-c.MaxDeflection, Math.Min(c.MaxDeflection, sign * delta * Math.PI / 180));
                 var v = body.Velocity + body.AngularVelocity.Cross(p - body.Position) - Scene.WindAt(p);
-                var state = new AeroState(q.InverseRotate(v), q.InverseRotate(body.AngularVelocity), rho, 343, 1.81e-5);
+                // [air] the speed of sound and viscosity of the world's air at its temperature (Mach and Reynolds numbers)
+                double airC = Sdk?.TemperatureC ?? _ambient;
+                var state = new AeroState(q.InverseRotate(v), q.InverseRotate(body.AngularVelocity), rho, RobotTwin.CoreSim.Sdk.Atmosphere.SpeedOfSound(airC), RobotTwin.CoreSim.Sdk.Atmosphere.Viscosity(airC));
                 var loads = w.Surface.Evaluate(state);
                 w.Last = loads;
                 body.AddForceAtPoint(q.Rotate(loads.Force), p);

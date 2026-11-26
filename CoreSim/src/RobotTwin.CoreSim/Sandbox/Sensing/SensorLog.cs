@@ -68,9 +68,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             switch (r)
             {
                 case ImuReading i:
-                    header = "time_s,ax,ay,az,gx,gy,gz,true_ax,true_ay,true_az,true_gx,true_gy,true_gz,label";
+                    header = "time_s,ax,ay,az,gx,gy,gz,true_ax,true_ay,true_az,true_gx,true_gy,true_gz,chip_temp_c,label";
                     row = string.Join(",", t, N(i.Accel.X), N(i.Accel.Y), N(i.Accel.Z), N(i.Gyro.X), N(i.Gyro.Y), N(i.Gyro.Z),
-                        N(i.TrueAccel.X), N(i.TrueAccel.Y), N(i.TrueAccel.Z), N(i.TrueGyro.X), N(i.TrueGyro.Y), N(i.TrueGyro.Z), label);
+                        N(i.TrueAccel.X), N(i.TrueAccel.Y), N(i.TrueAccel.Z), N(i.TrueGyro.X), N(i.TrueGyro.Y), N(i.TrueGyro.Z), N(i.TemperatureC), label);
                     break;
                 case GpsReading g:
                     var f = g.Fix;

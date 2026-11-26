@@ -6351,7 +6351,7 @@
   "zip açıldığında 256 MB'tan büyük.": "the zip is larger than 256 MB when extracted.",
   "{0:0.#} ml · {1:0.#} g · yoğunluk {2:0} kg/m³ · viskozite {3:0.###} mPa·s · yüzey gerilimi {4:0.#} mN/m (20 °C)": "{0:0.#} ml · {1:0.#} g · density {2:0} kg/m³ · viscosity {3:0.###} mPa·s · surface tension {4:0.#} mN/m (20 °C)",
   "{0:0.000000}° {1:0.000000}°\nirtifa {2:0.0} m · {3} uydu · HDOP {4:0.0}\nhız {5:0.00} m/s · hata {6:0.00} m": "{0:0.000000}° {1:0.000000}°\naltitude {2:0.0} m · {3} satellites · HDOP {4:0.0}\nspeed {5:0.00} m/s · error {6:0.00} m",
-  "{0}\n{1:0.#} Hz · {2} ölçüm/tur · {3} kanal\ndönüş %{4:0} · en yakın {5}": "{0}\n{1:0.#} Hz · {2} samples/rev · {3} channels\nrotation {4:0}% · nearest {5}",
+  "{0}\n{1:0.#} Hz · {2} ölçüm/tur · {3} kanal\ndönüş %{4:0} · en yakın {5}": "{0}\n{1:0.#} Hz · {2} samples/rev · {3} channels\nreturns {4:0}% · nearest {5}",
   "{0} {1}.{2} – {3}.{4}: gerilim {5:0.00} / {6:0.00} N, en alçak z {7:0.0000}, en yüksek z {8:0.0000}": "{0} {1}.{2} – {3}.{4}: tension {5:0.00} / {6:0.00} N, lowest z {7:0.0000}, highest z {8:0.0000}",
   "{0} · {1}×{2} {3}\nkare hızı {4:0.#} / {5:0.#} fps (üretilen / sensör)\npozlama {6:0.###} ms · kazanç {7:0.0}× · ışık {8:0} lx\nkare {9} · {10:0.#} kB/kare": "{0} · {1}×{2} {3}\nframe rate {4:0.#} / {5:0.#} fps (produced / sensor)\nexposure {6:0.###} ms · gain {7:0.0}× · light {8:0} lx\nframe {9} · {10:0.#} kB/frame",
   "{0} · {1}×{2} {3} · {4:0.#}/{5:0.#} fps · pozlama {6:0.###} ms · kazanç {7:0.0}× · kare {8}": "{0} · {1}×{2} {3} · {4:0.#}/{5:0.#} fps · exposure {6:0.###} ms · gain {7:0.0}× · frame {8}",
@@ -7755,7 +7755,8 @@
   "Dünyayı çalıştırınca kayıt başlar.": "Recording starts when the world runs.",
   "Sensör kayıtları": "Sensor logs",
   "Duvar yüksekliği (m)": "Wall height (m)",
-  "Duvar yüksekliği değişti": "Wall height changed"
+  "Duvar yüksekliği değişti": "Wall height changed",
+  "\nçip {0:0.0} °C": "\nchip {0:0.0} °C"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9617,7 +9618,7 @@
   "{world.Objects.Count} nesne · {world.Cables.Count} kablo · {world.Joints.Count} mekanik bağlantı. ": "{0} objects · {1} cables · {2} mechanical joints. ",
   "{world.Objects.Count} nesne · {world.Designs.Count} kart tasarımı · {world.Cables.Count} kablo · {world.Joints.Count} mekanik bağlantı": "{0} objects · {1} board designs · {2} cables · {3} mechanical joints",
   "{{…}.#} ml · {{…}.#} g · yoğunluk {{…}} kg/m³ · viskozite {{…}.###} mPa·s · yüzey gerilimi {{…}.#} mN/m ({…} °C)": "{{{0}.#}} ml · {{{1}.#}} g · density {{{2}}} kg/m³ · viscosity {{{3}.###}} mPa·s · surface tension {{{4}.#}} mN/m ({5} °C)",
-  "{{…}}\n{{…}.#} Hz · {{…}} ölçüm/tur · {{…}} kanal\ndönüş %{{…}} · en yakın {{…}}": "{{{0}}}\n{{{1}.#}} Hz · {{{2}}} samples/rev · {{{3}}} channels\nrotation {{{4}}}% · nearest {{{5}}}",
+  "{{…}}\n{{…}.#} Hz · {{…}} ölçüm/tur · {{…}} kanal\ndönüş %{{…}} · en yakın {{…}}": "{{{0}}}\n{{{1}.#}} Hz · {{{2}}} samples/rev · {{{3}}} channels\nreturns {{{4}}}% · nearest {{{5}}}",
   "{{…}} {{…}}.{{…}} – {{…}}.{{…}}: gerilim {{…}} / {{…}} N, en alçak z {{…}}, en yüksek z {{…}}": "{{{0}}} {{{1}}}.{{{2}}} – {{{3}}}.{{{4}}}: tension {{{5}}} / {{{6}}} N, lowest z {{{7}}}, highest z {{{8}}}",
   "{{…}} · {{…}}×{{…}} {{…}}\nkare hızı {{…}.#} / {{…}.#} fps (üretilen / sensör)\npozlama {{…}.###} ms · kazanç {{…}}× · ışık {{…}} lx\nkare {{…}} · {{…}.#} kB/kare": "{{{0}}} · {{{1}}}×{{{2}}} {{{3}}}\nframe rate {{{4}.#}} / {{{5}.#}} fps (produced / sensor)\nexposure {{{6}.###}} ms · gain {{{7}}}× · light {{{8}}} lx\nframe {{{9}}} · {{{10}.#}} kB/frame",
   "{{…}} · {{…}}×{{…}} {{…}} · {{…}.#}/{{…}.#} fps · pozlama {{…}.###} ms · kazanç {{…}}× · kare {{…}}": "{{{0}}} · {{{1}}}×{{{2}}} {{{3}}} · {{{4}.#}}/{{{5}.#}} fps · exposure {{{6}.###}} ms · gain {{{7}}}× · frame {{{8}}}",
@@ -10892,6 +10893,7 @@
   "Modelin sınırları ({0})": "The model's limits ({0})",
   "{0} satır, {1} sensör: {2}": "{0} rows, {1} sensors: {2}",
   "Sensör kaydı yazıldı: {0} CSV, {1} satır": "Sensor log written: {0} CSV files, {1} rows",
-  "Sensör kaydı yazılamadı: {0}": "Sensor log could not be written: {0}"
+  "Sensör kaydı yazılamadı: {0}": "Sensor log could not be written: {0}",
+  "çip {0} °C": "chip {0} °C"
  }
 }

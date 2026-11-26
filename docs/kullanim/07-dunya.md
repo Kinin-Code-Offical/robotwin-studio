@@ -558,6 +558,8 @@ ESP32 taslakları kamerayı gerçek `esp_camera` arayüzüyle kullanır: `esp_ca
 
 **Sensör verisini kaydet (CSV, etiketli)** anahtarı açıkken çalışma boyunca her sensörün her ölçümü bir tabloya yazılır. Sensörün ölçtüğünün yanında simülasyonun bildiği gerçek değer durur (IMU'nun gerçek ivmesi ve dönüş hızı, GPS konumunun gerçek hatası, çizgi sensörünün altındaki zeminin gerçek yansıtması). Son sütun etikettir: o anda sensörde etkin arıza senaryosu ya da `normal`. Dünya durunca tablolar **Belgeler\RobotWin\Sensör kayıtları\&lt;dünya&gt;-&lt;zaman&gt;** klasörüne sensör başına bir CSV ve bir README olarak yazılır; **Klasörü aç** onu açar. Füzyon ve arıza tespiti denemeleri için etiketli veri böyle aynı koşudan çıkar.
 
+**Sıcaklık sensörleri de etkiler.** Ortam sıcaklığı (Ortam → Ortam sıcaklığı) havanın yoğunluğunu ve ses hızını belirler: HC-SR04'ün yankısı 0 °C'de 331, 40 °C'de 355 m/s ile döner; 58 µs/cm ile bölen bir taslak 1 m'yi soğukta 104, sıcakta 97 cm okur. IMU'nun sıfır noktaları ve duyarlılığı çipin sıcaklığıyla kayar; her çipin katsayısı kendinedir. Çip, takıldığı yerin sıcaklığından kendi ısısıyla birkaç dakikada yaklaşık 3 °C ısınır: açılışta yapılan jiroskop kalibrasyonu ilk dakikalarda ve yanındaki motor sürücü kartı ısıttığında kayar. MPU-6050'nin TEMP_OUT yazmacı ve Sensörler kartı çipin sıcaklığını gösterir; CSV kaydında `chip_temp_c` sütunu vardır. Pusulanın duyarlılığı °C başına %0,3 düşer, çizgi sensörünün fototransistörü de kendi sıcaklığını izler.
+
 ![Ultrasonik sensör ve engel](../images/world-sonar.png)
 
 ## Kumandalar, radyo ve USB

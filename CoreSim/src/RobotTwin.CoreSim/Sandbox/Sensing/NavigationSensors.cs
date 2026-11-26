@@ -30,17 +30,43 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         /// <summary>Measurement bandwidth (digital low-pass, Hz).</summary>
         public double Bandwidth { get; set; } = 260;
 
+        /// <summary>
+        /// [temp] Spread (1σ, each axis of each chip) of the zero-rate and zero-g change per °C: gyroscope (°/s/°C) and
+        /// accelerometer (mg/°C). The MPU-6050 sheet bounds them at ±20 °/s over −40…85 °C and ±35 mg (X, Y) / ±60 mg (Z)
+        /// over 0…70 °C; a typical chip has a fraction of that.
+        /// </summary>
+        public double GyroBiasTempco { get; set; } = 0.04;
+
+        public double AccelBiasTempco { get; set; } = 0.3;
+
+        /// <summary>[temp] Spread (1σ) of the sensitivity change (%/°C): accelerometer ±0.02, gyroscope ±2 % over its range.</summary>
+        public double AccelScaleTempco { get; set; } = 0.01;
+
+        public double GyroScaleTempco { get; set; } = 0.008;
+
+        /// <summary>
+        /// [temp] How much warmer than what it is mounted on the chip runs once warm (°C), and how fast it gets there (s):
+        /// 13 mW in the chip and the module's regulator — a GY-521 reads 2–4 °C over the air after a minute or two.
+        /// </summary>
+        public double SelfHeating { get; set; } = 3.0;
+
+        public double WarmUpTime { get; set; } = 60.0;
+
         /// <summary>InvenSense MPU-6050: 400 µg/√Hz, 0.005 °/s/√Hz, ±50 mg / ±20 °/s offsets (typ. much smaller after reset).</summary>
         public static ImuSpec Mpu6050 => new ImuSpec();
     }
 
     /// <summary>
     /// IMU truth-to-measurement model: specific force and angular rate of the body from the physics,
-    /// plus a turn-on bias, a slow bias random walk and white noise of the datasheet density.
+    /// plus a turn-on bias, a slow bias random walk and white noise of the datasheet density. [temp] The zero points
+    /// and sensitivities move with the chip's temperature, each chip by its own coefficients; the chip warms from what
+    /// it is mounted on by its own dissipation, so a gyro drifts for the first minutes after power-on and again when
+    /// the motor driver beside it heats the board — the drift a calibration at power-on does not remove.
     /// </summary>
     public sealed class ImuModel
     {
         private readonly Random _rng;
+        private readonly Vec3 _gyroTempco, _accelTempco, _gyroScaleTempco, _accelScaleTempco;
         private Vec3 _accelBias, _gyroBias;
         private Vec3 _lastVelocity;
         private bool _started;
@@ -52,7 +78,25 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             _rng = new Random(seed);
             _accelBias = RandomVec(spec.AccelBiasMg * 1e-3 * 9.80665);
             _gyroBias = RandomVec(spec.GyroBiasDps * Math.PI / 180);
+            // [temp] this chip's own coefficients, from a stream of their own (the noise that follows stays as it was)
+            var chip = new Random(seed ^ 0x7E3C0);
+            Vec3 Draw(double sigma) => new Vec3(Gauss(chip) * sigma, Gauss(chip) * sigma, Gauss(chip) * sigma);
+            _gyroTempco = Draw(spec.GyroBiasTempco * Math.PI / 180);
+            _accelTempco = Draw(spec.AccelBiasTempco * 1e-3 * 9.80665);
+            _gyroScaleTempco = Draw(spec.GyroScaleTempco * 0.01);
+            _accelScaleTempco = Draw(spec.AccelScaleTempco * 0.01);
         }
+
+        /// <summary>[temp] The chip's temperature (°C; NaN before the first update), what its TEMP_OUT register reads.</summary>
+        public double TemperatureC { get; private set; } = double.NaN;
+
+        /// <summary>[temp] Zero-rate and zero-g offsets at the chip's present temperature (turn-on bias, walk and drift).</summary>
+        public Vec3 GyroOffset => _gyroBias + _gyroTempco * TempRise;
+
+        public Vec3 AccelOffset => _accelBias + _accelTempco * TempRise;
+
+        /// <summary>Degrees above the 25 °C the turn-on figures are given at.</summary>
+        private double TempRise => double.IsNaN(TemperatureC) ? 0 : TemperatureC - 25.0;
 
         public ImuSpec Spec { get; }
 
@@ -77,9 +121,13 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         /// <param name="velocity">World velocity of the body (m/s).</param>
         /// <param name="angularVelocity">World angular velocity (rad/s).</param>
         /// <param name="gravity">Gravitational acceleration (m/s², positive).</param>
-        public void Update(double dt, Quat orientation, Vec3 velocity, Vec3 angularVelocity, double gravity, bool addNoise = true)
+        /// <param name="mountC">[temp] Temperature of what the chip is mounted on (°C): the board, the air around it.</param>
+        public void Update(double dt, Quat orientation, Vec3 velocity, Vec3 angularVelocity, double gravity, bool addNoise = true, double mountC = 25.0)
         {
             if (dt <= 0) return;
+            // [temp] the chip starts at its mount's temperature and settles its self-heating above it
+            if (double.IsNaN(TemperatureC)) TemperatureC = mountC;
+            TemperatureC += (mountC + Spec.SelfHeating - TemperatureC) * (1 - Math.Exp(-dt / Math.Max(1e-3, Spec.WarmUpTime)));
             var a = _started ? (velocity - _lastVelocity) / dt : Vec3.Zero;
             _started = true;
             _lastVelocity = velocity;
@@ -93,15 +141,21 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             double sq = Math.Sqrt(dt);
             _accelBias += RandomVec(Spec.AccelBiasWalk * 1e-3 * 9.80665 * sq);
             _gyroBias += RandomVec(Spec.GyroBiasWalk * Math.PI / 180 * sq);
-            Accel = TrueAccel + _accelBias + (addNoise ? RandomVec(AccelSigma) : Vec3.Zero);
-            Gyro = TrueGyro + _gyroBias + (addNoise ? RandomVec(GyroSigma) : Vec3.Zero);
+            double dT = TempRise;
+            Accel = Scaled(TrueAccel, _accelScaleTempco * dT) + AccelOffset + (addNoise ? RandomVec(AccelSigma) : Vec3.Zero);
+            Gyro = Scaled(TrueGyro, _gyroScaleTempco * dT) + GyroOffset + (addNoise ? RandomVec(GyroSigma) : Vec3.Zero);
         }
+
+        /// <summary>Each axis times (1 + its sensitivity change).</summary>
+        private static Vec3 Scaled(Vec3 v, Vec3 change) => new Vec3(v.X * (1 + change.X), v.Y * (1 + change.Y), v.Z * (1 + change.Z));
 
         private Vec3 RandomVec(double sigma) => new Vec3(Gauss() * sigma, Gauss() * sigma, Gauss() * sigma);
 
-        private double Gauss()
+        private double Gauss() => Gauss(_rng);
+
+        private static double Gauss(Random rng)
         {
-            double u1 = 1.0 - _rng.NextDouble(), u2 = _rng.NextDouble();
+            double u1 = 1.0 - rng.NextDouble(), u2 = rng.NextDouble();
             return Math.Sqrt(-2 * Math.Log(u1)) * Math.Cos(2 * Math.PI * u2);
         }
     }

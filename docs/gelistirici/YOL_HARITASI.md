@@ -123,7 +123,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - ROS 2 / MoveIt uyumu.
 - [~] **Sensörler:** modeller var. Eksikler:
   - her sensörde menzil, çözünürlük, gecikme ve gürültü modeli;
-  - sıcaklık ve kayma;
+  - [x] sıcaklık ve kayma: hava yoğunluğu, ses hızı ve viskozite ortam sıcaklığından (HC-SR04 yankısı, kanatlar); IMU'da çipe özgü sıfır ve duyarlılık sıcaklık katsayıları, kendi ısısıyla ısınma (açılış kayması), TEMP_OUT; pusula duyarlılığı %0,3/°C; çizgi sensörü kendi sıcaklığı (`Sandbox/Sensing/NavigationSensors.cs`);
   - [x] arıza senaryoları: IMU (kayma, titreşim, donma, I²C sessizliği), pusula (mıknatıs, sessizlik), GPS (uydu kaybı, yansıma), LiDAR (kirli pencere, takılı motor), çizgi sensörleri (kirli lens, ölü LED); `MachineFaults` ile aynı **Özellik ekle → Arıza senaryosu**;
   - füzyon deneyleri;
   - [x] veri dışa aktarma ve etiketleme: **Sensörler** sekmesinde sensör başına CSV; ölçülenin yanında gerçek değer, etiket sütununda o anki arıza senaryosu (`Sandbox/Sensing/SensorLog.cs`).
