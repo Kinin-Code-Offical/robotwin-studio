@@ -8542,7 +8542,11 @@
   "Via'lar": "Vias",
   "Katman çifti (V)": "Layer pair (V)",
   "Yol çizerken V via koyup çiftin öbür katmanına geçer; çizmiyorken etkin katmanı değiştirir.": "While routing, V places a via and goes to the pair's other layer; otherwise it changes the active layer.",
-  "Via ekle, katman çiftinin öbürüne geç": "Add a via, go to the pair's other layer"
+  "Via ekle, katman çiftinin öbürüne geç": "Add a via, go to the pair's other layer",
+  "Hattı vurgula: tıklanan öğenin hattı öne çıkar, öbürleri soluklaşır; aynı hatta ya da boşa tıklayınca kalkar (` imleçtekini vurgular)": "Highlight net: the clicked item's net stands out, the others fade; clicking the same net or empty space clears it (` highlights the one under the cursor)",
+  "Hattı vurgula: bir yola, pede, via'ya ya da dolguya tıklayın · aynı hatta ya da boşa tıklayınca kalkar · Esc: çık": "Highlight net: click a track, pad, via or pour · the same net or empty space clears it · Esc: leave",
+  "Hattı vurgula: tıklanan pinin, telin ya da etiketin hattı şemada ve kartta öne çıkar; aynı hatta ya da boşa tıklayınca kalkar (` imleçtekini vurgular)": "Highlight net: the clicked pin's, wire's or label's net stands out on the schematic and the board; the same net or empty space clears it (` highlights the one under the cursor)",
+  "Hattı vurgula · pine, tele ya da etikete tıklayın · aynı hatta ya da boşa tıklayınca kalkar": "Highlight net · click a pin, wire or label · the same net or empty space clears it"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11989,6 +11993,7 @@
   "{…} sınıfı ({…}) {…} mm ≥ {…} sınıfı ({…}) {…} mm": "{0} class ({1}) {2} mm ≥ {3} class ({4}) {5} mm",
   "{…} sınıfı ({…}) {…} mm > {…} sınıfı ({…}) {…} mm": "{0} class ({1}) {2} mm > {3} class ({4}) {5} mm",
   "{…} rengi değişti": "{0}: colour changed",
-  "{…} rengi kaldırıldı": "{0}: colour removed"
+  "{…} rengi kaldırıldı": "{0}: colour removed",
+  "{…} hattı vurgulanıyor (aynı hatta ya da boşa tıklayınca kalkar)": "{0} highlighted (click the same net or empty space to clear)"
  }
 }

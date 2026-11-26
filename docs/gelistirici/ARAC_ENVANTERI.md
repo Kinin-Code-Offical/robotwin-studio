@@ -63,7 +63,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Ratsnest göster, eğri ratsnest | göster var, eğri yok | kısmi | 3 |
 | Dolgu görünüşü (dolu / kenar) | aç/kapa var | kısmi | 2 |
 | Yüksek kontrast | var | var | |
-| Hat vurgula | ` tuşu | kısmi (araç yok) | 2 |
+| Hat vurgula | ` tuşu ve sol şeritte Hattı vurgula aracı (tıklanan öğenin hattı; aynısı ya da boşluk kaldırır) | var | |
 
 ### Sağ çubuk (çizim araçları)
 
@@ -115,7 +115,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Simülatör | yerleşik | var | |
 | Ayak izi ata, alan tablosu, BOM | BOM penceresi; ayak izi parçada | kısmi | 2 |
 | Seç | var | var | |
-| Hat vurgula aracı | ` tuşu | kısmi | 2 |
+| Hat vurgula aracı | ` tuşu ve araç çubuğunda Hattı vurgula aracı (pin, tel, etiket; kartta da vurgular) | var | |
 | Sembol, güç sembolü | var | var | |
 | Kablo | var | var | |
 | Bus, bus girişi | yok | yok | 3 |

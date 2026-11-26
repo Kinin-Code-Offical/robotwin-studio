@@ -170,6 +170,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.Text => "Metin · yazının sol üst köşesine tıklayın",
                 EditorTool.GlobalLabel => "Global etiket · tıklayın",
                 EditorTool.NoConnect => "NC işareti · pin uçlarına tıklayın",
+                EditorTool.Highlight => "Hattı vurgula · pine, tele ya da etikete tıklayın · aynı hatta ya da boşa tıklayınca kalkar",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",
                 _ => string.Empty
             };

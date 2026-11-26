@@ -38,7 +38,10 @@ namespace RobotWin.Studio.Pcb
         Keepout,
 
         /// <summary>[diffroute] KiCad's differential pair router: both nets of a pair laid together (Pcb/BoardCanvas.DiffPair.cs).</summary>
-        DiffPair
+        DiffPair,
+
+        /// <summary>[highlight] KiCad's Highlight Net tool: a click lights up the net under it; the same net or empty space clears it.</summary>
+        Highlight
     }
 
     /// <summary>
@@ -320,6 +323,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Dimension => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın",
             PcbTool.Outline => "Kart kenarı: köşelere tıklayın · çift tık veya Enter: kapat (köşe yarıçapı panelden) · Esc: iptal",
             PcbTool.Hole => "Montaj deliği: yerleştirmek için tıklayın",
+            PcbTool.Highlight => "Hattı vurgula: bir yola, pede, via'ya ya da dolguya tıklayın · aynı hatta ya da boşa tıklayınca kalkar · Esc: çık",
             _ => "Sağ tık: menü · Sürükle: kutu seçimi · M: taşı · G: yollarla sürükle · D: yol sürükle · R: döndür · F: çevir · Del: sil · U: tüm yol · W: genişlik · `: hat vurgula · B: doldur · X: yol · Ctrl+Z: geri al · F1 / ?: kısayollar"
         };
 

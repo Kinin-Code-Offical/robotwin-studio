@@ -222,6 +222,7 @@ namespace RobotWin.Studio.Pages
                 "Label" => EditorTool.Label,
                 "NoConnect" => EditorTool.NoConnect,
                 "Text" => EditorTool.Text,   // [notes]
+                "Highlight" => EditorTool.Highlight,   // [highlight]
                 _ => EditorTool.Select
             };
             Canvas.Tool = tool;
@@ -235,6 +236,7 @@ namespace RobotWin.Studio.Pages
             ToolLabel.IsChecked = Canvas.Tool == EditorTool.Label || Canvas.Tool == EditorTool.GlobalLabel;
             ToolNoConnect.IsChecked = Canvas.Tool == EditorTool.NoConnect;
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
+            ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
         }
 
         private void OnRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();

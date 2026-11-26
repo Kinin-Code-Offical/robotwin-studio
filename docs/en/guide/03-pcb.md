@@ -194,7 +194,7 @@ The **Opacity** sliders in the **Katmanlar** tab (like KiCad's Objects tab) fade
 | Drag with the middle or right button | Pan |
 | PgUp / PgDn | Active layer |
 | H | Show only the active layer / show all |
-| The key left of 1 | Highlight the net under the cursor |
+| The key left of 1 | Highlight the net under the cursor (the eye-shaped **Highlight net** tool in the left strip highlights the clicked one; clicking the same net or empty space clears it) |
 | Ctrl+Shift+M | Measure |
 | Ctrl+Shift+H | Dimension line |
 | T | Silkscreen text |

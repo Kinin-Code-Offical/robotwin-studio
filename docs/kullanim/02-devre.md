@@ -100,6 +100,8 @@ Gerçek hayatta yanacak bir devre burada da yanar: dirençsiz LED, aşırı akı
 
 ### Hatlar (ağ gezgini)
 
+Araç çubuğundaki göz biçimli **Hattı vurgula** aracıyla bir pine, tele ya da etikete tıklamak o hattı şemada ve kartta öne çıkarır; aynı hatta ya da boşa tıklamak kaldırır (1 tuşunun solundaki tuş imleçtekini vurgular).
+
 **Hatlar** sekmesi şemadaki bütün hatları pin sayılarıyla listeler: önce toprak, sonra adlandırılmış hatlar, en sonda adı bir pinden türetilenler (soluk). Arama kutusu hat adıyla ya da pinle süzer (`GND`, `R1`, `R1.2`). Bir hat seçilince şemada vurgulanır, görünüm oraya gider ve PCB'de de vurgulanır; sağda pinleri parça türleriyle listelenir, bir pin seçilince parçası seçilir.
 
 ### Kart pinleri

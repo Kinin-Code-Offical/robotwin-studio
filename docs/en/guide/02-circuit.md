@@ -100,6 +100,8 @@ A circuit that would burn in real life burns here too: an LED without a resistor
 
 ### Nets (net navigator)
 
+With the eye-shaped **Highlight net** tool in the toolbar, clicking a pin, wire or label makes that net stand out on the schematic and the board; clicking the same net or empty space clears it (the key left of 1 highlights the one under the cursor).
+
 The **Nets** tab lists every net of the sheet with its pin count: ground first, then the named nets, last the ones named after a pin (dimmed). The search box filters by net name or by pin (`GND`, `R1`, `R1.2`). Picking a net highlights it on the sheet, takes the view there and highlights it on the PCB too; its pins are listed on the right with their part kinds, and picking a pin selects its part.
 
 ### Board pins

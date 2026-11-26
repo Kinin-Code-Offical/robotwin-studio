@@ -117,6 +117,9 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.NoConnect:
                     ToggleNoConnectAt(_mouseGrid);
                     return;
+                case EditorTool.Highlight:   // [highlight] the net under the click, or off again
+                    ToggleHighlightUnderCursor();
+                    return;
                 case EditorTool.Text:   // [notes]
                     RequestCommand(SchematicCommand.EditNote, Snap(_mouseGrid));
                     Tool = EditorTool.Select;

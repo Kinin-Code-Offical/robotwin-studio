@@ -29,7 +29,10 @@ namespace RobotWin.Studio.Editor
         NoConnect,
 
         /// <summary>[notes] Text on the sheet (KiCad T).</summary>
-        Text
+        Text,
+
+        /// <summary>[highlight] KiCad's Highlight Net tool: a click lights up the net under it (and on the board); the same net or nothing clears it.</summary>
+        Highlight
     }
 
     /// <summary>

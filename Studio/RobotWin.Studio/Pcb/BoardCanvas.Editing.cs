@@ -146,6 +146,15 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Measure:
                     MeasureClick(x, y);
                     return;
+                case PcbTool.Highlight:
+                {
+                    // [highlight] the net under the click, or off again (the same net, or nothing there)
+                    string? net = NetAt(x, y);
+                    SetHighlight(net != null && !string.Equals(net, HighlightNet, StringComparison.OrdinalIgnoreCase) ? net : null);
+                    Say(HighlightNet == null ? "Vurgulama kapatıldı" : $"{HighlightNet} hattı vurgulanıyor (aynı hatta ya da boşa tıklayınca kalkar)");
+                    return;
+                }
+
                 case PcbTool.Dimension:
                     DimensionClick(x, y);
                     return;

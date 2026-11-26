@@ -194,7 +194,7 @@ Tuvalin sağ üstündeki araç kutusundaki ızgara düğmesi ızgarayı gösteri
 | Orta tuş veya sağ tuşla sürükle | Kaydır |
 | PgUp / PgDn | Etkin katman |
 | H | Yalnızca etkin katmanı göster / hepsini göster |
-| 1 tuşunun solundaki tuş | İmleçteki hattı vurgula |
+| 1 tuşunun solundaki tuş | İmleçteki hattı vurgula (sol şeritteki göz biçimli **Hattı vurgula** aracı tıklananı vurgular; aynı hatta ya da boşa tıklamak kaldırır) |
 | Ctrl+Shift+M | Ölç |
 | Ctrl+Shift+H | Ölçü çizgisi |
 | T | Serigrafi yazısı |
