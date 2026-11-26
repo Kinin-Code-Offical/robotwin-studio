@@ -680,7 +680,9 @@ namespace RobotTwin.CoreSim.Industrial
                     string url = Text("URL").Trim(), node = Text("NODE");
                     double value = this["VALUE"];
                     string text = Text("TEXT"), user = Text("USER"), password = Text("PASSWORD"), security = Text("SECURITY").Trim().ToUpperInvariant();
-                    _pending = System.Threading.Tasks.Task.Run(() => Request(url, node, value, text, user, password, security));
+                    // its own thread, not the pool's: a busy pool must not hold the PLC's request back
+                    _pending = System.Threading.Tasks.Task.Factory.StartNew(() => Request(url, node, value, text, user, password, security), System.Threading.CancellationToken.None,
+                        System.Threading.Tasks.TaskCreationOptions.LongRunning, System.Threading.Tasks.TaskScheduler.Default);
                     this["BUSY"] = 1;
                     this["ERROR"] = 0;
                     this["STATUS"] = 0;

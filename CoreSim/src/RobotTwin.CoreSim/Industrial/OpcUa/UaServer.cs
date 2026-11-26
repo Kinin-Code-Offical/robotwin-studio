@@ -118,38 +118,33 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             _listener.Start();
             _running = true;
             _publisher.Start();
-            _listener.BeginAcceptTcpClient(Accepted, null);
+            // Its own thread, not the thread pool's: a busy pool (a test run, a heavy world) must not keep a client waiting.
+            new Thread(AcceptLoop) { IsBackground = true, Name = "OPC UA accept" }.Start();
         }
 
-        private void Accepted(IAsyncResult ar)
+        private void AcceptLoop()
         {
-            TcpClient client;
-            try
+            while (_running)
             {
-                client = _listener.EndAcceptTcpClient(ar);
-            }
-            catch (Exception ex) when (ex is ObjectDisposedException || ex is SocketException || ex is InvalidOperationException)
-            {
-                return;
-            }
+                TcpClient client;
+                try
+                {
+                    client = _listener.AcceptTcpClient();
+                }
+                catch (Exception ex) when (ex is ObjectDisposedException || ex is SocketException || ex is InvalidOperationException)
+                {
+                    return;   // stopped (a program loaded, the world closed): nothing more to accept
+                }
 
-            if (!_running)
-            {
-                client.Close();
-                return;
-            }
+                if (!_running)
+                {
+                    client.Close();
+                    return;
+                }
 
-            var c = new Connection(this, client);
-            lock (_gate) _connections.Add(c);
-            new Thread(c.Run) { IsBackground = true, Name = "OPC UA client" }.Start();
-            if (!_running) return;
-            try
-            {
-                _listener.BeginAcceptTcpClient(Accepted, null);
-            }
-            catch (Exception ex) when (ex is ObjectDisposedException || ex is InvalidOperationException || ex is SocketException)
-            {
-                // stopped between the check and the call (a program loaded, the world closed): nothing more to accept
+                var c = new Connection(this, client);
+                lock (_gate) _connections.Add(c);
+                new Thread(c.Run) { IsBackground = true, Name = "OPC UA client" }.Start();
             }
         }
 
