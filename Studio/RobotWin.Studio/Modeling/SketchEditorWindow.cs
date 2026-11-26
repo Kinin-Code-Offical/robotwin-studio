@@ -31,6 +31,9 @@ namespace RobotWin.Studio.Modeling
 
         private const double SnapPx = 9;
 
+        /// <summary>[sketch-fillet] The last fillet radius or chamfer setback (mm).</summary>
+        private static double _cornerSize = 3;
+
         private ConstrainedSketch _sk;
         private readonly Action<ConstrainedSketch> _apply;
         private readonly Canvas _canvas = new Canvas { ClipToBounds = true };
@@ -406,8 +409,9 @@ namespace RobotWin.Studio.Modeling
                     case "select": Use(Tool.Select); break;
                     case "add": Use(Tool.Select); break;
                     case "end": EndTool(); break;
+                    case "construction": _construction.IsChecked = _construction.IsChecked != true; continue;   // [sketch-mirror] the toggle
                     case "relate":
-                        foreach (var b in _relations.Children.OfType<WrapPanel>().SelectMany(w => w.Children.OfType<Button>()))
+                        foreach (var b in _relations.Children.OfType<Panel>().SelectMany(w => w.Children.OfType<Button>()))   // [sketch-fillet] the corner row too
                         {
                             if (b.Content as string != name) continue;
                             b.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
@@ -761,6 +765,29 @@ namespace RobotWin.Studio.Modeling
             if (pts.Count >= 1 && ents.Count == 0)
                 Rel("Sabitle", "Nokta yerinde kalır", () => pts.ForEach(p => _sk.Constrain(SketchConstraintKind.Fix, p.Id)));
 
+            // [sketch-mirror] SolidWorks' Mirror Entities: the one chosen construction line is the axis
+            var axes = lines.Where(l => l.Construction).ToList();
+            if (axes.Count == 1 && ents.Count >= 2 && pts.Count == 0)
+            {
+                var axisLine = axes[0];
+                var mirror = new Button { Content = "Aynala", ToolTip = "Seçilenleri seçili yardımcı çizgiye göre aynalar; kopyalar simetri ilişkisiyle aslını izler", Style = R<Style>("Btn.Ghost"), Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(8, 4, 8, 4) };
+                mirror.Click += (_, _) =>
+                {
+                    string? why = null;
+                    Change("Aynala", () =>
+                    {
+                        why = SketchMirror.Mirror(_sk, ents.Select(e => e.Id).ToList(), axisLine.Id);
+                        if (why == null) _selection.Clear();
+                    });
+                    if (why != null)
+                    {
+                        _message = why;
+                        ShowState();
+                    }
+                };
+                wrap.Children.Add(mirror);
+            }
+
             // Dimensions: the selection's present size, which the user then sets.
             if (lines.Count == 1 && pts.Count == 0 && rounds.Count == 0)
                 Rel("Uzunluk", "Çizginin boyu", () => _sk.Constrain(SketchConstraintKind.Length, lines[0].Id, value: Round(LengthOf(lines[0]))));
@@ -790,6 +817,42 @@ namespace RobotWin.Studio.Modeling
                 });
             }
             else _relations.Children.Add(wrap);
+
+            // [sketch-fillet] a corner of two lines: SolidWorks' Sketch Fillet and Sketch Chamfer, its size typed in mm
+            if (pts.Count == 1 && ents.Count == 0
+                && _sk.Entities.Count(e => e.Kind == SketchEntityKind.Line && !e.Construction && (e.Start == pts[0].Id || e.End == pts[0].Id)) == 2)
+            {
+                var corner = pts[0];
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 8) };
+                var size = new TextBox { Text = _cornerSize.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), Width = 56, HorizontalContentAlignment = HorizontalAlignment.Right, VerticalContentAlignment = VerticalAlignment.Center, ToolTip = "Yarıçap ya da pah boyu (mm)" };
+                row.Children.Add(size);
+                row.Children.Add(new TextBlock { Text = "mm", Margin = new Thickness(4, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center, Style = R<Style>("Text.Caption") });
+                void CornerButton(string name, string tip, Func<ConstrainedSketch, string, double, string?> cut)
+                {
+                    var b = new Button { Content = name, ToolTip = tip, Style = R<Style>("Btn.Ghost"), Margin = new Thickness(0, 0, 6, 0), Padding = new Thickness(8, 4, 8, 4) };
+                    b.Click += (_, _) =>
+                    {
+                        if (!double.TryParse(size.Text.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v) || v <= 0) return;
+                        _cornerSize = v;
+                        string? why = null;
+                        Change(name, () =>
+                        {
+                            why = cut(_sk, corner.Id, v);
+                            if (why == null) _selection.Clear();
+                        });
+                        if (why != null)
+                        {
+                            _message = why;
+                            ShowState();
+                        }
+                    };
+                    row.Children.Add(b);
+                }
+
+                CornerButton("Köşe radyüsü", "Köşeyi iki çizgiye teğet bir yayla yuvarlatır; köşe çizgilerin uzantısında sanal sivri olarak kalır, ölçüleri korunur", SketchCorners.Fillet);
+                CornerButton("Pah", "Köşeyi düz bir kenarla keser (iki çizgide de aynı geri çekme)", SketchCorners.Chamfer);
+                _relations.Children.Add(row);
+            }
 
             if (_selection.Count > 0)
             {

@@ -37,6 +37,8 @@ You can also draw a profile as a dimensioned sketch. Select the profile and pres
 1. Draw roughly with **Line**, **Rectangle**, **Circle** and **Arc**. Clicking near a point shares it; a line drawn nearly level or upright stays so.
 2. Select and give relations: horizontal, vertical, parallel, perpendicular, equal, tangent, coincident, midpoint, concentric, symmetric, fixed.
 3. Give dimensions: length, distance, horizontal/vertical dimension, diameter, radius, angle. Change a value in the constraint list.
+4. Select the point where two lines meet and **Corner fillet** and **Chamfer** appear beside an mm box (SolidWorks' sketch fillet and sketch chamfer). The lines are cut back and joined by an arc tangent to both (its radius comes as a dimension) or by a straight edge. The corner stays as a virtual sharp on the lines' extensions, and the lines' length dimensions keep measuring to it. With **Construction geometry** on, what is drawn makes no edge of the profile; it only guides.
+5. **Mirror**: select one construction line (the axis) together with the lines, circles and arcs to mirror. The copies land on the other side of the axis; each copied point is held symmetric to its original, so the copy follows any later change. Points on the axis are shared, not copied; copied circles stay equal to their originals.
 
 Each change is solved at once and the drawing settles onto the dimensions. The right side of the window shows the sketch's state:
 - how many degrees of freedom are left;
@@ -137,7 +139,7 @@ A part in a printed material (PLA, PETG, ABS, nylon) has a **3D printing** secti
 
 - **Solid** (Z), **Wireframe** (Shift+Z), **X-ray (transparent)** (Alt+Z), **Edges**.
 - **Measure** tool: click two points to see the distance (snaps to vertices).
-- **Section** (SolidWorks' section view): every object is cut by a plane across X, Y or Z, the half facing the camera is taken away and the cut is filled in its own colour, so walls, holes and ribs show. The bar over the view picks the axis, the slider moves the plane through the model, **Flip** shows the other half. Display only: the objects do not change; the object in edit mode is not cut.
+- **Section** (SolidWorks' section view): every object is cut by a plane across X, Y or Z, the half facing the camera is taken away and the cut is filled in its own colour, so walls, holes and ribs show. The bar over the view picks the axis, the slider moves the plane through the model, **Flip** shows the other half. Display only: the objects do not change; the object in edit mode is not cut. **Properties…** on the bar is SolidWorks' section properties: the area of the cut at the plane, its perimeter, centroid, second moments and product about axes through the centroid, principal moments and the principal axis' angle, polar moment, radii of gyration and section moduli (mm, mm², mm³, mm⁴). It takes the selected objects, or the visible ones when nothing is selected, and copies to the clipboard. Use it to see how well a beam or a profile resists bending.
 
 ## Saving and exporting
 

@@ -91,7 +91,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            if (demo is "sketch" or "sketch-editor" or "sketch-draw")
+            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror")
             {
                 // [sketch] A motor bracket drawn as a dimensioned sketch: a 50 × 40 plate with a round end tangent to its
                 // sides, a bolt hole and a bearing seat round the end's centre, fully constrained; extruded 6 mm.
@@ -106,11 +106,43 @@ namespace RobotWin.Studio.Pages
                 _ed.Load(bracket, null);
                 _ed.Select(plate.Id);
                 _vp.FrameAll();
-                if (demo is "sketch-editor" or "sketch-draw")
+                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror")
                 {
-                    var start = demo == "sketch-draw" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
+                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
                     var editor = new SketchEditorWindow(Window.GetWindow(this), start, _ => { });
                     editor.Show();
+                    if (demo == "sketch-mirror")
+                    {
+                        // [sketch-mirror] a construction axis, half a roof and a window beside it, mirrored across
+                        editor.UpdateLayout();
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("construction", 0, 0, null), ("line", 0, -20, null), ("line", 0, 30, null), ("end", 0, 0, null), ("construction", 0, 0, null),
+                            ("line", 0, 20, null), ("line", 25, 0, null), ("line", 25, -15, null), ("end", 0, 0, null),
+                            ("circle", 10, 0, null), ("circle", 13, 0, null),
+                            ("select", 12.5, 10, null), ("add", 25, -7.5, null), ("add", 13, 0, null), ("add", 0, 5, null), ("relate", 0, 0, "Aynala")
+                        });
+                        editor.UpdateLayout();
+                        App.SnapshotTarget = editor.Content as FrameworkElement;
+                        return;
+                    }
+
+                    if (demo == "sketch-fillet")
+                    {
+                        // [sketch-fillet] a 60 × 30 rectangle: its top right corner rounded and its bottom right chamfered (3 mm), the last corner left picked
+                        editor.UpdateLayout();
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("rect", -30, -15, null), ("rect", 30, 15, null),
+                            ("select", 30, 15, null), ("relate", 0, 0, "Köşe radyüsü"),
+                            ("select", 30, -15, null), ("relate", 0, 0, "Pah"),
+                            ("select", -30, 15, null)
+                        });
+                        editor.UpdateLayout();
+                        App.SnapshotTarget = editor.Content as FrameworkElement;   // the editor itself is the picture
+                        return;
+                    }
+
                     if (demo == "sketch-draw")
                     {
                         // Drawn as a user would: a rough 60 × 30 rectangle, a circle in it, the bottom given 64 mm, the
@@ -250,6 +282,7 @@ namespace RobotWin.Studio.Pages
 
                 case "boolean":
                 case "section":   // [section] the plate and its bearing boss cut through the middle
+                case "section-props":   // [section-props] and the cut's properties
                 {
                     var plate = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
                     plate.Name = "Motor plakası";
@@ -292,7 +325,8 @@ namespace RobotWin.Studio.Pages
                     _ed.WireOverlay = true;
                     _ed.Notify(ModelChange.All);
                     _ed.Status($"Fark: 'Motor plakası' (6 araç) · {plate.LocalMesh().Faces.Count} yüz · kapalı (su geçirmez)");
-                    if (demo == "section") ShowSection(SectionAxis.Y, 0);
+                    if (demo is "section" or "section-props") ShowSection(SectionAxis.Y, 0);
+                    if (demo == "section-props") OnSectionProps(this, new RoutedEventArgs());
                     break;
                 }
 

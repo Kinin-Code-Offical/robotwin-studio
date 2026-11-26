@@ -142,12 +142,12 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Çizgi, dikdörtgen, daire, yay | eskiz düzenleyici | var | |
 | Çokgen, kanal (slot), elips, spline | denetlenecek | kısmi | 2 |
-| Eskiz radyüsü, eskiz pahı | yok | yok | 2 |
+| Eskiz radyüsü, eskiz pahı | köşe noktası seçilince Köşe radyüsü ve Pah (teğet yay / düz kenar, sanal sivri, uzunluk ölçüleri korunur) | var | |
 | Ofset | var | var | |
 | Budama (trim), uzatma | budama var | kısmi | 2 |
-| Eskizde aynala, doğrusal / dairesel çoğaltma | yok | yok | 2 |
+| Eskizde aynala, doğrusal / dairesel çoğaltma | Aynala (yardımcı çizgi ekseni, simetri ilişkileri, eksendeki noktalar paylaşılır); eskizde çoğaltma sonra | kısmi | 3 |
 | Akıllı ölçü, ilişkiler (çakışık, teğet, eş merkezli, yatay, dikey) | kısıtlar var | var | |
-| Yapı (construction) geometrisi | yok | yok | 2 |
+| Yapı (construction) geometrisi | Yardımcı geometri anahtarı: kesik çizilir, profile girmez | var | |
 
 ### Unsurlar
 
@@ -175,7 +175,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Ölç | Ölç | var | |
 | Kütle özellikleri | Kütle özellikleri… | var | |
-| Kesit özellikleri | yok | yok | 2 |
+| Kesit özellikleri | Kesit çubuğunda Özellikler…: alan, çevre, ağırlık merkezi, atalet momentleri, asal eksenler, J, atalet yarıçapları, kesit modülleri | var | |
 | Kesit görünümü | Kesit (X/Y/Z, kaydırıcı, ters, kesit yüzü kendi renginde) | var | |
 | Geometri denetimi (kapalı ağ) | Durum: kapalı / açık ağ | var | |
 | Draft, eğrilik, simetri analizi | yok | yok | 3 |

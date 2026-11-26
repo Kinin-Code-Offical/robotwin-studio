@@ -37,6 +37,8 @@ Bir profili ölçülü eskizle de çizebilirsiniz. Profili seçin, denetçide **
 1. **Çizgi**, **Dikdörtgen**, **Daire** ve **Yay** ile kabaca çizin. Yakın bir noktaya tıklamak o noktayı paylaşır; neredeyse yatay ya da dikey çizilen çizgi öyle kalır.
 2. Seçip ilişki verin: yatay, dikey, paralel, dik, eşit, teğet, çakışık, orta nokta, eşmerkezli, simetrik, sabit.
 3. Ölçü verin: uzunluk, mesafe, yatay/dikey ölçü, çap, yarıçap, açı. Değeri kısıt listesinden değiştirin.
+4. İki çizginin birleştiği köşe noktasını seçince mm kutusunun yanında **Köşe radyüsü** ve **Pah** çıkar (SolidWorks'teki eskiz radyüsü ve eskiz pahı). Çizgiler geri kesilir; radyüs iki çizgiye teğet bir yayla (yarıçapı ölçü olarak gelir), pah düz bir kenarla birleştirir. Köşe, çizgilerin uzantısında sanal sivri olarak kalır; çizgilerin uzunluk ölçüleri ona kadar ölçmeye devam eder. **Yardımcı geometri** açıkken çizilenler profile girmez, yalnız yol gösterir.
+5. **Aynala**: tek bir yardımcı çizgiyi (eksen) ve aynalanacak çizgi, daire ve yayları birlikte seçin. Kopyalar eksenin öbür yanına gelir; her kopya noktası aslına simetri ilişkisiyle bağlıdır, yani aslı değişince kopya da izler. Eksen üstündeki noktalar kopyalanmaz, paylaşılır; kopyalanan daireler aslıyla eşit kalır.
 
 Her değişiklik hemen çözülür ve çizim ölçülere oturur. Pencerenin sağında eskizin durumu yazar:
 - kaç serbestlik kaldığı;
@@ -137,7 +139,7 @@ Basılan bir malzemedeki (PLA, PETG, ABS, Naylon) parçanın denetçisinde **3B 
 
 - **Katı** (Z), **Tel** kafes (Shift+Z), **X-ray** (Alt+Z), **Kenarlar**.
 - **Ölç** aracı: iki noktaya tıklayın, mesafeyi gösterir (köşelere yapışır).
-- **Kesit** (SolidWorks'teki kesit görünümü): bütün nesneler X, Y ya da Z boyunca bir düzlemle kesilir, kameraya bakan yarı kaldırılır ve kesit yüzü kendi renginde dolu gösterilir; duvarlar, delikler ve kaburgalar görünür. Görünümün üstündeki çubukta eksen seçilir, kaydırıcı düzlemi modelin içinden geçirir, **Ters** öbür yarıyı gösterir. Yalnız görüntüdür: nesneler değişmez; düzenleme modundaki nesne kesilmez.
+- **Kesit** (SolidWorks'teki kesit görünümü): bütün nesneler X, Y ya da Z boyunca bir düzlemle kesilir, kameraya bakan yarı kaldırılır ve kesit yüzü kendi renginde dolu gösterilir; duvarlar, delikler ve kaburgalar görünür. Görünümün üstündeki çubukta eksen seçilir, kaydırıcı düzlemi modelin içinden geçirir, **Ters** öbür yarıyı gösterir. Yalnız görüntüdür: nesneler değişmez; düzenleme modundaki nesne kesilmez. Çubuktaki **Özellikler…** SolidWorks'teki kesit özellikleridir: düzlemdeki kesitin alanı, çevresi, ağırlık merkezi, ağırlık merkezinden geçen eksenlere göre atalet momentleri ve çarpımı, asal momentler ve asal eksenin açısı, kutupsal moment, atalet yarıçapları ve kesit modülleri (mm, mm², mm³, mm⁴). Seçili nesnelerin, seçim yoksa görünenlerin kesiti alınır; sonuç panoya kopyalanabilir. Bir kirişin ya da profilin eğilmeye ne kadar dayanacağını görmek için kullanılır.
 
 ## Kaydetme ve dışa aktarma
 

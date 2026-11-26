@@ -122,6 +122,7 @@
                     <Slider x:Name="SectionSlider" Width="220" Margin="10,0,8,0" VerticalAlignment="Center" ValueChanged="OnSectionMoved" ToolTip="Düzlemin yeri" SmallChange="0.1" LargeChange="1"/>
                     <TextBox x:Name="SectionValue" Width="80" VerticalAlignment="Center" TextAlignment="Right" ToolTip="Düzlemin yeri: yazıp Enter (mm, cm, in, mil yazılabilir) · ↑/↓ 0,1 mm (Shift: 1 mm)"/>
                     <ToggleButton x:Name="SectionFlip" Style="{StaticResource Chip}" Content="Ters" Margin="8,0,0,0" Click="OnSectionFlip" ToolTip="Öbür yarıyı göster"/>
+                    <Button Style="{StaticResource Btn.Ghost}" Content="Özellikler…" Margin="6,0,0,0" Padding="8,2" Click="OnSectionProps" ToolTip="Kesit özellikleri: alan, çevre, ağırlık merkezi, atalet ve kutupsal momentler, asal eksenler, kesit modülleri (seçili nesnelerin; seçim yoksa görünenlerin)"/>
                     <Button Style="{StaticResource Btn.Icon}" Width="26" Height="26" Margin="4,0,0,0" Click="OnSectionClose" ToolTip="Kesiti kapat"><t:Icon Data="{StaticResource I.Close}" Size="12"/></Button>
                 </StackPanel>
             </Border>
