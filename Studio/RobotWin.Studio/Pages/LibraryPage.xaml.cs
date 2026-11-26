@@ -118,6 +118,14 @@ namespace RobotWin.Studio.Pages
             if (def.Pins.Count > 0) Row("Bacaklar", string.Join(", ", def.Pins.Select(pin => pin.Name)));
             Row("Simülasyon modeli", def.Name + " (" + def.Id + ")");
             Detail.Children.Add(grid);
+            // [limits] What the model leaves out, so a result is read for what it is.
+            var limits = RobotTwin.CoreSim.Design.ModelLimits.Of(def.Id);
+            if (limits.Count > 0)
+            {
+                Detail.Children.Add(new TextBlock { Text = "Modelin sınırları", Style = (Style)FindResource("Text.Overline"), Margin = new Thickness(0, 0, 0, 6) });
+                for (int i = 0; i < limits.Count; i++)
+                    Detail.Children.Add(Bullet(limits[i], i == limits.Count - 1 ? 14 : 4));
+            }
         }
 
         /// <summary>The E12 resistor series goes to the end so the catalog opens on varied parts.</summary>
@@ -132,6 +140,17 @@ namespace RobotWin.Studio.Pages
             if (!m.Success) return value + " " + unit;
             string prefix = m.Groups[2].Value == "u" ? "µ" : m.Groups[2].Value;
             return m.Groups[1].Value + " " + prefix + unit;
+        }
+
+        /// <summary>[limits] A note with its bullet apart (so the note translates as written).</summary>
+        internal static FrameworkElement Bullet(string text, double bottom)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 0, 0, bottom) };
+            var dot = new TextBlock { Text = "•", Style = (Style)Application.Current.FindResource("Text.Caption"), Margin = new Thickness(0, 0, 6, 0) };
+            DockPanel.SetDock(dot, Dock.Left);
+            row.Children.Add(dot);
+            row.Children.Add(new TextBlock { Text = text, Style = (Style)Application.Current.FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap });
+            return row;
         }
 
         internal static bool IsSeriesResistor(PartPreset p) => p.PartId == "resistor" && !p.Id.Contains("0805") && !p.Id.Contains("W");

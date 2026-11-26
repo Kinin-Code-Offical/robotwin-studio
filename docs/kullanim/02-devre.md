@@ -36,6 +36,8 @@ Arama kutusunun üstündeki kategori listesi iki seviyelidir. Ana kategorilerin 
 - **Açılış:** giriş UVLO geriliminin altındayken modül kapalıdır. Açılınca çıkış yumuşak başlama süresinde yükselir; kondansatörlerin şarj akımı da görünür.
 - **Isınma:** kayıplar modülü ısıtır ve ısıl kapanmaya kadar götürebilir.
 
+**Modelin sınırları:** her modelin bir sınırı vardır. Kütüphanedeki parça sayfasında ve devredeki parçanın denetçisinde **Modelin sınırları** başlığı, o modelin neyi dışarıda bıraktığını ya da sadeleştirdiğini yazar. Örneğin regülatör modülünde anahtarlama dalgalanması yoktur, düğmede kontak sıçraması yoktur, MOSFET seviye 1 modeldir. Bir sonucu okurken buna bakın.
+
 ## Kablolama
 
 1. Bir pine tıklayın; kablo başlar.

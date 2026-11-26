@@ -36,6 +36,8 @@ The category list above the search box has two levels. Main categories (e.g. **P
 - **Power-up:** below its UVLO voltage the module is off. When it turns on, the output rises over the soft-start time, and the capacitors' charging current shows too.
 - **Heating:** the losses heat the module, up to its thermal shutdown.
 
+**The model's limits:** every model has limits. A part's page in the library and its inspector in the circuit have a **The model's limits** heading saying what that model leaves out or simplifies. For example, the regulator modules have no switching ripple, the buttons have no contact bounce, and the MOSFET is a level 1 model. Keep it in mind when reading a result.
+
 ## Wiring
 
 1. Click a pin; the wire starts.

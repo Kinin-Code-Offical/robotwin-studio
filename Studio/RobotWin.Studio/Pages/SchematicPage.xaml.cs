@@ -671,6 +671,15 @@ namespace RobotWin.Studio.Pages
             header.Children.Add(titles);
             Inspector.Children.Add(header);
             if (preset != null) Inspector.Children.Add(Hint(preset.Description));
+            // [limits] What the model leaves out, folded away until asked for.
+            var limits = RobotTwin.CoreSim.Design.ModelLimits.Of(def.Id);
+            if (limits.Count > 0)
+            {
+                var notes = new StackPanel();
+                foreach (string note in limits)
+                    notes.Children.Add(RobotWin.Studio.Pages.LibraryPage.Bullet(note, 2));
+                Inspector.Children.Add(new Expander { Header = $"Modelin sınırları ({limits.Count})", Content = notes, Margin = new Thickness(0, 6, 0, 0) });
+            }
 
             Section("Tanımlayıcı");
             var refBox = new TextBox { Text = part.RefDes };

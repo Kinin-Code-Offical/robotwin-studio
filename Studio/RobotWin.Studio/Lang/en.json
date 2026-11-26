@@ -7697,7 +7697,36 @@
   "XL4015 Düşürücü Modül (5 A)": "XL4015 Step-Down Module (5 A)",
   "XL6009 Yükseltici Modül (4 A)": "XL6009 Step-Up Module (4 A)",
   "Yumuşak başlama": "Soft start",
-  "Çıkış gerilimi (trimpot)": "Output voltage (trimmer)"
+  "Çıkış gerilimi (trimpot)": "Output voltage (trimmer)",
+  "Modelin sınırları": "The model's limits",
+  "Ters toparlanma süresi ve yüksek frekansta paket endüktansı yok.": "No reverse recovery time and no package inductance at high frequency.",
+  "Isıl gürültü ile bacakların endüktansı ve kapasitesi yok.": "No thermal noise, and no lead inductance or capacitance.",
+  "Silecek temas gürültüsü ve aşınma yok.": "No wiper contact noise or wear.",
+  "Seramikte gerilimle kapasite düşmesi (DC bias) ve dielektrik soğurma yok.": "No loss of capacitance with voltage in ceramics (DC bias) and no dielectric absorption.",
+  "Yaşlanma ve sıcaklıkla ESR değişimi yok.": "No ageing and no change of ESR with temperature.",
+  "Doyma yalnızca bir sınır denetimidir: endüktans akımla azalmaz; çekirdek kaybı ve histerezis yok.": "Saturation is only a limit check: the inductance does not fall with current; no core loss or hysteresis.",
+  "Işık çıkışı akımla doğrusal sayılır; ısınmayla parlaklık düşmesi yok.": "Light output is taken as linear in current; no loss of brightness as it heats.",
+  "Ebers–Moll tabanlı: yüksek akımda beta düşmesi ve taban direnci yok.": "Ebers–Moll based: no fall of beta at high current and no base resistance.",
+  "Seviye 1 (Shichman–Hodges): kısa kanal etkileri, eşik altı iletim ve eşiğin sıcaklıkla kayması yok.": "Level 1 (Shichman–Hodges): no short-channel effects, no subthreshold conduction and no drift of the threshold with temperature.",
+  "Makro model: giriş kutuplama akımı, gürültü ve ikinci kutup yok.": "Macro model: no input bias current, no noise and no second pole.",
+  "Doğrusal regülatörün geçici tepkisi ve besleme bastırması (PSRR) frekansla değişmez.": "The linear regulator's transient response and supply rejection (PSRR) do not change with frequency.",
+  "Anahtarlama periyodu üzerinden ortalamalı model: çıkış dalgalanması (ripple) ve EMI yok.": "Averaged over the switching period: no output ripple and no EMI.",
+  "Döngü çipin kendi kompanzasyonu değil, genel bir PI; kesintili iletim (DCM) yalnızca akımın sıfırda durmasıyla gösterilir.": "The loop is a general PI, not the chip's own compensation; discontinuous conduction (DCM) shows only as the current stopping at zero.",
+  "Yaşlanma, sıcaklığın kapasiteye etkisi ve gevşeme (polarizasyon) zaman sabitleri yok.": "No ageing, no effect of temperature on capacity and no relaxation (polarisation) time constants.",
+  "Fırça ve komütasyon dalgalanması, mıknatısın ısınması ve sargının doyması yok.": "No brush and commutation ripple, no heating of the magnets and no saturation of the winding.",
+  "İç denetleyici ve dişli boşluğu sadeleştirilmiş; potansiyometre gürültüsü yok.": "The internal controller and gear backlash are simplified; no potentiometer noise.",
+  "Mıknatısın sıcaklıkla zayıflaması ve sargıların doyması yok; rezonans yalnızca mekanikten gelir.": "No weakening of the magnets with temperature and no winding saturation; resonance comes only from the mechanics.",
+  "Kıyıcı (chopper) PWM'i ortalamalı: faz akımının dalgalanması ve azalma kiplerinin (yavaş/karışık) ayrıntısı yok.": "The chopper PWM is averaged: no phase-current ripple and no detail of the decay modes (slow/mixed).",
+  "Kıyıcı (chopper) PWM'i ortalamalı: faz akımının dalgalanması ve azalma kiplerinin ayrıntısı yok.": "The chopper PWM is averaged: no phase-current ripple and no detail of the decay modes.",
+  "Yalnızca bağımsız kip: UART ayarları, StallGuard, CoolStep ve StealthChop'un sessizliği yok.": "Standalone mode only: no UART settings, StallGuard, CoolStep or StealthChop's silence.",
+  "Kontak sıçraması (bounce) yok: basış temiz bir geçiştir.": "No contact bounce: a press is a clean transition.",
+  "Kontak sıçraması (bounce) yok: geçiş temizdir.": "No contact bounce: the transition is clean.",
+  "Kontak sıçraması (bounce) ve kontak aşınması yok.": "No contact bounce and no contact wear.",
+  "Filamanın ısınması tek bir zaman sabitiyle; ışık rengi sıcaklıkla değişmez.": "The filament heats with a single time constant; the light's colour does not change with temperature.",
+  "Ölçüm tek bir ışınla yapılır: ses konisinin genişliği ve yüzeyin açısına göre yankı kaybı sadeleştirilmiş.": "It measures along a single ray: the width of the sound cone and the echo lost to a surface's angle are simplified.",
+  "ATmega328P komut düzeyinde çalışır; bazı çevre birimlerinin analog ayrıntıları (ADC örnekleme kapasitesi, saat sapması) sadeleştirilmiş.": "The ATmega328P runs instruction by instruction; some peripherals' analog details (the ADC's sampling capacitor, clock drift) are simplified.",
+  "Hızlı kipte Arduino API'si modellenir; donanım kipinde çekirdek öykünülür. Wi-Fi ve BLE radyosu iki kipte de bir modeldir.": "In fast mode the Arduino API is modelled; in hardware mode the core is emulated. The Wi-Fi and BLE radio is a model in both.",
+  "I²t ısınma modeli: üreticinin erime eğrisinin biçimi ve ark süresi yok.": "I²t heating model: not the maker's exact melting curve, and no arcing time."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10830,6 +10859,7 @@
   "'{0}' kullanılıyor: ona bağlı formüller artık '{1}' adını bulamaz": "'{0}' is in use: the formulas bound to it will not find '{1}'",
   "'{0}' kullanılıyordu: ona bağlı formüller çözülemeyecek": "'{0}' was in use: the formulas bound to it will not work out",
   "giriş aşırı gerilimi {0} V (en çok {1} V): anahtar kısa devre oldu": "input overvoltage {0} V (at most {1} V): the switch shorted",
-  "ısıl kapanma: {0} °C ({1} W kayıp)": "thermal shutdown: {0} °C ({1} W lost)"
+  "ısıl kapanma: {0} °C ({1} W kayıp)": "thermal shutdown: {0} °C ({1} W lost)",
+  "Modelin sınırları ({0})": "The model's limits ({0})"
  }
 }

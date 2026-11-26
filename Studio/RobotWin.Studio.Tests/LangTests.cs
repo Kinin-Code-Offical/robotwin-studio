@@ -237,6 +237,8 @@ public class LangTests
     [InlineData("Formül kurulmadı: 'genislik' tanımlı değil", "Formula not set: 'genislik' is not defined")]
     [InlineData("Parametre: a: döngü: a → b → a", "Parameter: a: loop: a → b → a")]
     [InlineData("Uzunluk (L1): formül kaldırıldı", "Length (L1): formula removed")]
+    [InlineData("Modelin sınırları (2)", "The model's limits (2)")]
+    [InlineData("ısıl kapanma: 151 °C (2.4 W kayıp)", "thermal shutdown: 151 °C (2.4 W lost)")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

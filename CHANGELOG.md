@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The model's limits:** a part's library page and its circuit inspector say what its simulation model leaves out or simplifies (no switching ripple in the averaged regulators, no contact bounce, a level 1 MOSFET, the averaged chopper of the stepper drivers …), for more than thirty models, so a result is read for what the model is.
+
 - **Switching regulator modules:** LM2596, MP1584 and XL4015 step-down and MT3608 and XL6009 step-up modules, each with its 3D board. The model is the converter averaged over its switching period: the inductor current is a state that a voltage loop and an inner current loop drive, held by the switch's current limit, a buck's dropout or a boost's maximum duty, and kept from reversing by the diode. Below the under-voltage lockout it is off; turning on, its output rises over the soft-start while its capacitors charge. The input draws the output power plus the switch, inductor, diode and switching losses (an LM2596 from 12 V to 5 V at 1 A: about 85 %), which heat it up to its thermal shutdown.
 
 - **Parameters and formulas in models:** a model's named values (genislik = 80, yukseklik = genislik / 2) are worked out in the order they need each other, with loops, unknown and twice-defined names reported. A part's dimension or a sketch's dimension typed as "=formula" is bound to them, marked ƒ, and follows every change; the sketches are solved again. Formulas take + − * / % ^, brackets, a decimal comma, pi and functions in degrees (sin, cos, atan2, sqrt, min, max, round, hypot …), on our own parser, which also replaces the number fields' old arithmetic.
