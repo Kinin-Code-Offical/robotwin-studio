@@ -437,6 +437,19 @@ namespace RobotWin.Studio.Pages
                 _vp.SimulateModal(new Point(c.X + 120, c.Y + 10));
             }
 
+            if (demo == "gizmo-turn" && (_ed.SelectedRoots().FirstOrDefault() ?? _ed.Doc.Objects.FirstOrDefault()) is { } turned)
+            {
+                _ed.Select(turned.Id);
+                // [gizmo] the Z ring dragged by 60°: the front halves, the swept sector and the angle, as in Montaj and Dünya
+                _ed.Tool = ModelTool.Rotate;
+                var pivot = _ed.Doc.WorldMatrix(turned).Translation;
+                var c = _vp.Cam.ProjectPoint(pivot);
+                var from = new Point(c.X + 78, c.Y);
+                _vp.StartModal(ModalKind.Rotate, from, true, 2);
+                double a = Math.Atan2(from.Y - c.Y, from.X - c.X) - Math.PI / 3;
+                _vp.SimulateModal(new Point(c.X + 78 * Math.Cos(a), c.Y + 78 * Math.Sin(a)));
+            }
+
             if (demo is "assembly" or "assembly-again" && (_main ?? Window.GetWindow(this) as MainWindow) is { } mw)
             {
                 // [assembly] Every part of the model goes to the project's Montaj as a body of its own; sent again, they update.

@@ -60,6 +60,9 @@ namespace RobotWin.Studio.Modeling
             public double LocalPerWorld = 1;
             public double LastScreenAngle;
             public double Angle;
+
+            /// <summary>[gizmo] The turn shown and applied so far (typed or snapped), for the overlay's sector.</summary>
+            public double Shown;
             public bool Individual;
             public string Header = string.Empty;
 
@@ -714,6 +717,7 @@ namespace RobotWin.Studio.Modeling
                     // [grid] the rotate step of Grid and Snap, shared with Montaj and Dünya (15° unless set)
                     double turnStep = RobotWin.Studio.Shell.AppSettings.Current.WorldRotateStep > 0 ? RobotWin.Studio.Shell.AppSettings.Current.WorldRotateStep : 15;
                     if (snap && typed == null) deg = Math.Round(deg / turnStep) * turnStep;
+                    m.Shown = deg;
                     t = Affine.Translate(m.Pivot) * Affine.Rotate(axis, deg) * Affine.Translate(-m.Pivot);
                     m.Header = $"Döndür ({(m.Axis >= 0 ? AxisName(m.Axis) + " ekseni" : "görüş ekseni")}): {typedText}{deg:0.##}°" + hint;
                     break;

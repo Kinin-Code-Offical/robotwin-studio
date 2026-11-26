@@ -828,7 +828,12 @@ namespace RobotWin.Studio.Modeling
         internal Rect? BoxRect => _boxStart is { } s && _boxNow is { } n ? new Rect(s, n) : (Rect?)null;
 
         internal string? ModalHeader => _modal?.Header;
-        internal bool GizmoVisible => _modal == null && (_ed.Tool == ModelTool.Move || _ed.Tool == ModelTool.Rotate || _ed.Tool == ModelTool.Scale) && Pivot() != null;
+        // [gizmo] as in Montaj and Dünya (and Unity): the handle stays while it is dragged
+        internal bool GizmoVisible => (_modal == null || _modal.FromGizmo) && (_ed.Tool == ModelTool.Move || _ed.Tool == ModelTool.Rotate || _ed.Tool == ModelTool.Scale) && Pivot() != null;
+
+        /// <summary>[gizmo] While a ring is dragged: its axis, the turn so far (°), where the drag began and the fixed pivot.</summary>
+        internal (int Axis, double Degrees, Point Start, Vec3 Pivot)? RingDrag =>
+            _modal is { Kind: ModalKind.Rotate, FromGizmo: true } m ? (m.Axis, m.Shown, m.Start, m.Pivot) : null;
         internal int HotAxis { get; private set; } = -1;
         internal (Vec3 A, Vec3 B)? MeasureSegment => _measureA is { } a ? (a, _measureB ?? a) : ((Vec3, Vec3)?)null;
         internal bool Navigating => _nav != Nav.None;

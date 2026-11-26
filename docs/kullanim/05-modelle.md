@@ -68,7 +68,7 @@ Fonksiyon değerlerini `;` ile ayırın (`max(a; b)`), ya da virgülden sonra bo
 3. İsterseniz **X**, **Y** veya **Z** ile bir eksene kilitleyin ve bir sayı yazın (örneğin `G` `X` `20` → X yönünde 20 mm).
 4. **Enter** onaylar, **Esc** iptal eder.
 
-Ekrandaki taşıma / döndürme / ölçekleme tutamaçlarını da sürükleyebilirsiniz. **Yapış** açıkken ızgaraya yapışır; **Ctrl** basılıyken yapışma geçici olarak kapanır. Döndürme, Montaj ve Dünya'daki **Izgara ve yakalama** penceresinin döndürme adımına oturur (varsayılan 15°): üç sayfa aynı adımı kullanır.
+Ekrandaki taşıma / döndürme / ölçekleme tutamaçlarını da sürükleyebilirsiniz. **Yapış** açıkken ızgaraya yapışır; **Ctrl** basılıyken yapışma geçici olarak kapanır. Döndürme, Montaj ve Dünya'daki **Izgara ve yakalama** penceresinin döndürme adımına oturur (varsayılan 15°): üç sayfa aynı adımı kullanır. Tutamaçlar da aynı davranır: döndür halkalarının kameraya bakan yarısı çizilir ve tutulur, tutamaç sürüklerken yerinde kalır, dönülen açı halkanın düzleminde bir dilim ve yanında sayı olarak görünür.
 
 ## Boolean (CSG) işlemleri
 

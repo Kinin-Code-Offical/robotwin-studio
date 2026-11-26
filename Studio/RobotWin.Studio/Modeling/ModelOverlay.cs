@@ -206,27 +206,48 @@ namespace RobotWin.Studio.Modeling
 
         private void DrawGizmo(DrawingContext dc)
         {
-            var pivot = _vp.Pivot();
+            var drag = _vp.RingDrag;
+            var pivot = drag?.Pivot ?? _vp.Pivot();   // a turn keeps its pivot while the selection turns
             if (pivot == null) return;
             var tool = _vp.Editor.Tool;
             var (c, ends) = GizmoAxes(pivot.Value);
             if (double.IsNaN(c.X) || ends.Any(e => double.IsNaN(e.X))) return;
-            int hot = _vp.HotAxis;
+            int hot = drag is { } dragging ? (dragging.Axis >= 0 ? dragging.Axis : 3) : _vp.HotAxis;
             if (tool == ModelTool.Rotate)
             {
                 dc.DrawEllipse(null, new Pen(new SolidColorBrush(hot == 3 ? Colors.White : Color.FromRgb(0x9A, 0x9A, 0xA4)), hot == 3 ? 2.2 : 1.4), c, GizmoLen + 10, GizmoLen + 10);
+                if (drag is { Axis: >= 0 } d) DrawSector(dc, pivot.Value, d.Axis, d.Degrees, d.Start);
                 for (int i = 0; i < 3; i++)
                 {
+                    // [gizmo] as Unity: the half of each ring facing the camera (the back half would cross the front)
                     var pts = Ring(pivot.Value, i, GizmoLen * 0.85);
+                    var front = FrontHalf(pivot.Value, i, pts.Count);
                     var geo = new StreamGeometry();
                     using (var g = geo.Open())
                     {
-                        g.BeginFigure(pts[0], false, false);
-                        g.PolyLineTo(pts.Skip(1).ToList(), true, true);
+                        bool open = false;
+                        for (int k = 0; k + 1 < pts.Count; k++)
+                        {
+                            if (!front[k])
+                            {
+                                open = false;
+                                continue;
+                            }
+
+                            if (!open) g.BeginFigure(pts[k], false, false);
+                            g.LineTo(pts[k + 1], true, true);
+                            open = true;
+                        }
                     }
 
                     var col = hot == i ? Hot(AxisColor(i)) : AxisColor(i);
                     dc.DrawGeometry(null, new Pen(new SolidColorBrush(col), hot == i ? 3.2 : 2.2), geo);
+                }
+
+                if (drag is { } dd)
+                {
+                    var label = new FormattedText($"{dd.Degrees:0.#}°", System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, Brushes.White, 1.0);
+                    dc.DrawText(label, new Point(c.X + GizmoLen + 16, c.Y - label.Height / 2));
                 }
 
                 return;
@@ -278,6 +299,61 @@ namespace RobotWin.Studio.Modeling
                 new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE6)), 1.6), c, 9, 9);
         }
 
+        /// <summary>[gizmo] Which segments of a ring (as <see cref="Ring"/> samples it) face the camera.</summary>
+        private bool[] FrontHalf(Vec3 pivot, int axis, int count)
+        {
+            var a = Ax(axis);
+            var u = Ax((axis + 1) % 3);
+            var v = a.Cross(u);
+            var toCamera = Cam.Position - pivot;
+            var front = new bool[count];
+            for (int k = 0; k + 1 < count; k++)
+            {
+                double t = 2 * Math.PI * (k + 0.5) / 64;
+                front[k] = (u * Math.Cos(t) + v * Math.Sin(t)).Dot(toCamera) >= -1e-9;
+            }
+
+            return front;
+        }
+
+        /// <summary>[gizmo] The turn so far as a flat pie on the ring's plane, from where the drag began.</summary>
+        private void DrawSector(DrawingContext dc, Vec3 pivot, int axis, double degrees, Point start)
+        {
+            if (Math.Abs(degrees) < 0.05) return;
+            var pts = Ring(pivot, axis, GizmoLen * 0.85);
+            int k0 = 0;
+            double best = double.MaxValue;
+            for (int k = 0; k < pts.Count - 1; k++)
+            {
+                double dd = (pts[k] - start).LengthSquared;
+                if (dd < best)
+                {
+                    best = dd;
+                    k0 = k;
+                }
+            }
+
+            double px = Cam.PixelSize(pivot);
+            var a = Ax(axis);
+            var u = Ax((axis + 1) % 3);
+            var v = a.Cross(u);
+            double t0 = 2 * Math.PI * k0 / 64, sweep = degrees * Math.PI / 180;
+            int steps = Math.Max(2, (int)Math.Ceiling(Math.Abs(degrees) / 4));
+            var geo = new StreamGeometry();
+            using (var g = geo.Open())
+            {
+                g.BeginFigure(Cam.ProjectPoint(pivot), true, true);
+                for (int s = 0; s <= steps; s++)
+                {
+                    double t = t0 + sweep * s / steps;
+                    g.LineTo(Cam.ProjectPoint(pivot + (u * Math.Cos(t) + v * Math.Sin(t)) * (px * GizmoLen * 0.85)), true, true);
+                }
+            }
+
+            var col = AxisColor(axis);
+            dc.DrawGeometry(new SolidColorBrush(Color.FromArgb(0x40, col.R, col.G, col.B)), new Pen(new SolidColorBrush(Color.FromArgb(0x90, col.R, col.G, col.B)), 1), geo);
+        }
+
         private static Point? PlaneHandle(Point c, Point[] ends, int a, int b)
         {
             var da = ends[a] - c;
@@ -301,8 +377,10 @@ namespace RobotWin.Studio.Modeling
                 for (int i = 0; i < 3; i++)
                 {
                     var pts = Ring(pivot.Value, i, GizmoLen * 0.85);
+                    var front = FrontHalf(pivot.Value, i, pts.Count);   // [gizmo] only the half that is drawn
                     for (int k = 0; k + 1 < pts.Count; k++)
                     {
+                        if (!front[k]) continue;
                         double d = ModelViewport.SegmentDistance(p, pts[k], pts[k + 1], out _);
                         if (d < bestD)
                         {

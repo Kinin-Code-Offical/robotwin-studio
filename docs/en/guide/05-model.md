@@ -68,7 +68,7 @@ Separate function arguments with `;` (`max(a; b)`), or with a comma followed by 
 3. Optionally lock to an axis with **X**, **Y** or **Z** and type a number (e.g. `G` `X` `20` → 20 mm along X).
 4. **Enter** confirms, **Esc** cancels.
 
-You can also drag the on-screen move / rotate / scale handles. With **Snap** on it snaps to the grid; holding **Ctrl** turns snapping off for the moment. Rotation snaps to the rotate step of the **Grid and snap** window of Assembly and World (15° by default): the three pages share one step.
+You can also drag the on-screen move / rotate / scale handles. With **Snap** on it snaps to the grid; holding **Ctrl** turns snapping off for the moment. Rotation snaps to the rotate step of the **Grid and snap** window of Assembly and World (15° by default): the three pages share one step. The handles behave alike too: only the camera-facing half of each rotate ring is drawn and picked, the handle stays while it is dragged, and the turn so far shows as a sector on the ring's plane with its angle beside it.
 
 ## Boolean (CSG) operations
 
