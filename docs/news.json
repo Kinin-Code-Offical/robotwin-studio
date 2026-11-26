@@ -2,6 +2,18 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-v1-7-0",
+      "date": "2026-11-26",
+      "title": "1.7.0: İngilizce arayüz, ESP32 emülatörü, mekanizmalar, PLC ve endüstri",
+      "body": "Bu büyük sürümde:\n\n- **Dil ve görünüm:** İngilizce arayüz, Türkçe bir tıkla; 16 tema, kategorili ve aranabilir ayarlar.\n- **Hız:** kendi GPU çizicimiz, ayrı iş parçacığında simülasyon, daha hızlı açılış.\n- **ESP32:** kendi Xtensa çekirdeğimizle gerçek firmware (UART, I²C, SPI, PCNT, MCPWM, Wi-Fi…).\n- **Mekanizmalar:** dişli, kayış, rulman, vidalı mil, step motor ve sürücüleri.\n- **Endüstri:** Yapısal Metin ve merdiven diyagramlı PLC, HMI, Modbus, OPC UA, pnömatik.\n- **Köprüler:** KiCad şemaları, FMU modelleri, URDF ve ROS 2, STEP/IGES.\n\nAyrıntılar **Yardım → 11. Yenilikler** sayfasında.",
+      "link": "https://kinin-code-offical.github.io/robotwin-studio/kullanim/11-yenilikler",
+      "en": {
+        "title": "1.7.0: English interface, ESP32 emulator, mechanisms, PLC and industry",
+        "body": "In this big release:\n\n- **Language and look:** an English interface, Turkish one click away; 16 themes, settings in categories with search.\n- **Speed:** our own GPU renderer, simulations on their own thread, a faster start.\n- **ESP32:** real firmware on our own Xtensa core (UART, I²C, SPI, PCNT, MCPWM, Wi-Fi…).\n- **Mechanisms:** gears, belts, bearings, lead screws, steppers and their drivers.\n- **Industry:** a PLC with Structured Text and ladder diagrams, an HMI, Modbus, OPC UA, pneumatics.\n- **Bridges:** KiCad schematics, FMU models, URDF and ROS 2, STEP/IGES.\n\nDetails on the **Help → 11. What's new** page.",
+        "link": "https://kinin-code-offical.github.io/robotwin-studio/en/guide/11-whats-new"
+      }
+    },
+    {
       "id": "2026-11-v1-6-1",
       "date": "2026-11-24",
       "title": "1.6.1: sekmelerde kaydırma, sabitleme ve dosya adları",

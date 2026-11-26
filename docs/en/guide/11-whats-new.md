@@ -2,6 +2,28 @@
 
 What each release brought, changed and fixed. After an update, the first start shows this release's news on the start page; this page is always under **Help → 11. What's new**. Every technical detail: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.7.0 — 26 November 2026
+
+**A big release: an English interface, our own GPU renderer, the ESP32 emulator, mechanisms, the PLC and industrial cells, KiCad and FMU bridges.**
+
+### New
+
+- **Language and look:** the app starts in English, Turkish is one click away (Settings → General → Language), and more languages come as packs. A gallery of 16 themes and your own, accent colours, readable text in every theme. Settings in categories with search, changeable shortcuts, settings export and import. Backups per document and earlier versions one click away.
+- **Speed:** every 3D view is drawn by our own GPU renderer (sun shadows in three cascades); simulations run on their own thread; the splash comes at once and the first window opens in 712 ms instead of 1174 ms. The performance overlay says which solver holds a world back.
+- **ESP32, two run modes:** the fast mode (the sketch compiled on the PC) and the hardware-compatible mode, where **our own Xtensa LX6 core** runs real ESP32 firmware on both cores: UART, I²C, SPI, RMT (WS2812), PCNT (encoders), MCPWM, DAC, touch, deep and light sleep, watchdogs, Wi-Fi station and soft-AP with the firmware's own lwIP. The two modes were compared template by template. The fast mode has ESP-NOW, and warns when a sketch holds more memory than a real ESP32's heap. Building and uploading for real boards too.
+- **Arduino Uno:** Registers and Timeline (logic analyzer) tabs in the debugger; the UART's TX and RX pins bit by bit; a bit-timed SPI master (an MCP3008, say); an Arduino compatibility matrix.
+- **NeoPixel (WS2812B) strips** in circuit and world, with real firmware.
+- **Mechanisms:** gears, pulleys, GT2 belts, bearings whose friction follows the load, shafts, lead screws, racks, backlash and belt stretch, springs and dampers in joints. Stepper motors with A4988, DRV8825 and TMC2209 drivers; an Arduino Z-axis example.
+- **Robotics:** kinematics of the arms and wheeled robots you build, speed and position PID tuners, arm path and load checks. URDF and xacro import; a ROS 2 bridge (rosbridge: clock, joint states and commands, mobile robots; the world's LiDARs, IMUs, cameras, GPS and compasses publish to ROS too; the FollowJointTrajectory action for MoveIt).
+- **Industrial cells:** a PLC running Structured Text (IEC 61131-3) with its own function blocks and functions, arrays (of more dimensions too), structures, enumerations, VAR_IN_OUT and STRING. A ladder diagram editor, an HMI operator panel, station cycle time and bottleneck. Modbus TCP and RTU (server, client, remote I/O) and an **OPC UA server and client** (UA_READ, UA_WRITE). Pneumatic cylinders, 5/2 and double-solenoid valves, compressor, air tank, vacuum ejector; photoelectric sensor, limit switch; equipment fault scenarios.
+- **Circuit:** AC analysis (Bode), manufacturers' SPICE models, UART/I²C/SPI decoding and math channels on the oscilloscope, switching regulator modules, batteries from a value, line fault injection, pins damaged by heat, **FMU models** (FMI 2.0 co-simulation), **opening KiCad schematics** (connections identical to kicad-cli's).
+- **PCB:** manufacture and test checks (DFM/DFT), differential pairs and length matching, an enclosure check, a Gerber cross-check, a layout imported back from KiCad, what the schematic's changes did to the board, a bill of materials with sourcing and costing.
+- **Part and Montaj:** dimensioned sketches, parameters and formulas, assembly mates, a 3D print check, STEP and IGES (Open CASCADE).
+- **Measuring and validating:** sensor logs and failure scenarios, temperature's effect on sensors, attitude fusion experiments, experiments with confidence intervals and Python, conservation and time-step convergence checks, each model's limits shown with its part.
+- **Project check:** what a project needs that this computer lacks; parts keep their identity when renamed; design alternatives.
+
+Every detail and fix: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
+
 ## 1.6.1 — 24 November 2026
 
 **The tabs at the top: scrolling, pinning, a full list and file names.**

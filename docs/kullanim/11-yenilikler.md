@@ -2,6 +2,28 @@
 
 Her sürümde neyin geldiği, neyin değiştiği ve neyin düzeltildiği. Uygulama güncellendikten sonraki ilk açılışta başlangıç sayfası bu sürümün yeniliklerini gösterir; bu sayfaya her zaman **Yardım → 11. Yenilikler** ile ulaşabilirsiniz. Tüm teknik ayrıntılar (İngilizce): [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
 
+## 1.7.0 — 26 Kasım 2026
+
+**Büyük sürüm: İngilizce arayüz, kendi GPU çizicimiz, ESP32 emülatörü, mekanizmalar, PLC ve endüstri hücreleri, KiCad ve FMU köprüleri.**
+
+### Yenilikler
+
+- **Dil ve görünüm:** uygulama artık İngilizce açılır, Türkçe bir tıkla (Ayarlar → Genel → Dil); başka diller dil paketiyle eklenir. 16 temalı galeri ve kendi temanız, vurgu rengi, her temada okunur yazılar. Ayarlar kategorilerde ve aranabilir; kısayollar değiştirilebilir; ayarlar dışa/içe aktarılır. Belge başına yedekler ve tek tıkla eski sürümlere dönüş.
+- **Hız:** her 3B görünüm kendi GPU çizicimizle çizilir (güneş gölgeleri üç kademede); simülasyonlar kendi iş parçacığında çalışır; açılış ekranı ilk anda gelir, ilk pencere 1174 ms'den 712 ms'ye indi. Performans katmanı hangi çözücünün dünyayı yavaşlattığını gösterir.
+- **ESP32, iki çalışma modu:** hızlı mod (bilgisayarda derlenmiş çizim) ve donanım uyumlu mod: **kendi Xtensa LX6 çekirdeğimiz** gerçek ESP32 firmware'ini iki çekirdekle çalıştırır. UART, I²C, SPI, RMT (WS2812), PCNT (enkoder), MCPWM, DAC, dokunmatik, derin ve hafif uyku, bekçi köpekleri, Wi-Fi istasyon ve erişim noktası (firmware'in kendi lwIP'iyle). İki mod şablon şablon karşılaştırıldı. Hızlı modda ESP-NOW var; çizim gerçek bir ESP32'nin yığınını aşacak kadar bellek tutunca hızlı mod uyarır. Gerçek karta derleyip yükleme de var.
+- **Arduino Uno:** hata ayıklayıcıda Yazmaçlar ve Zaman çizelgesi (mantık analizörü) sekmeleri; UART TX/RX pinleri bit bit; bit zamanlı SPI ana birimi (MCP3008 gibi); Arduino uyumluluk tablosu.
+- **NeoPixel (WS2812B) şeritler** devrede ve dünyada, gerçek firmware ile.
+- **Mekanizmalar:** dişliler, kasnaklar, GT2 kayışlar, rulmanlar (yüke göre sürtünme), miller, vidalı miller, kremayer, boşluk ve kayış esnemesi, eklemde yay ve sönümleyici. Step motorlar ve A4988, DRV8825, TMC2209 sürücüleri; Arduino Z ekseni örneği.
+- **Robotik:** kurduğunuz kolların ve tekerlekli robotların kinematiği, hız ve konum PID ayarlayıcısı, kol yol ve yük denetimi. URDF ve xacro içe aktarma; ROS 2 köprüsü (rosbridge: saat, eklem durumları ve komutları, mobil robotlar; dünyadaki LiDAR, IMU, kamera, GPS ve pusula da ROS'a yayımlanır; MoveIt için FollowJointTrajectory eylemi).
+- **Endüstri hücreleri:** Yapısal Metin (IEC 61131-3) ile çalışan PLC: kendi fonksiyon blokları ve fonksiyonları, diziler (çok boyutlu da), yapılar, sayımlar, VAR_IN_OUT, metin (STRING). Merdiven diyagramı düzenleyicisi, HMI operatör paneli, istasyon çevrim süresi ve darboğaz. Modbus TCP ve RTU (sunucu, istemci, uzak G/Ç), **OPC UA sunucusu ve istemcisi** (UA_READ, UA_WRITE). Pnömatik silindir, 5/2 ve çift bobinli valf, kompresör, hava tankı, vakum ejektörü; fotoelektrik sensör, limit anahtarı; ekipman arıza senaryoları.
+- **Devre:** AC analizi (Bode), üreticilerin SPICE modelleri, osiloskopta UART/I²C/SPI çözücü ve matematik kanalları, anahtarlamalı regülatör modülleri, değerden pil, hat arızası enjeksiyonu, pinlerin ısıl hasarı, **FMU modelleri** (FMI 2.0 eş simülasyon), **KiCad şemalarını açma** (bağlantılar kicad-cli ile birebir).
+- **PCB:** üretilebilirlik ve test denetimleri (DFM/DFT), diferansiyel çiftler ve uzunluk eşleme, muhafaza denetimi, Gerber çapraz denetimi, KiCad'den yerleşimi geri alma, şema değişikliklerinin rapordaki etkisi, kaynak ve maliyetli malzeme listesi.
+- **Parça ve Montaj:** ölçülendirilmiş eskizler, parametreler ve formüller, montaj eşlemeleri, 3B baskı denetimi, STEP ve IGES (Open CASCADE).
+- **Ölçüm ve doğrulama:** sensör kayıtları ve arıza senaryoları, sıcaklığın sensörlere etkisi, duruş füzyonu deneyleri, güven aralıklı deneyler ve Python, korunum ve zaman adımı yakınsama denetimleri, her modelin sınırları parçasıyla birlikte.
+- **Proje denetimi:** bir projenin bu bilgisayarda eksik olanları; parçalar yeniden adlandırılınca kimliklerini korur; tasarım alternatifleri.
+
+Ayrıntılar ve düzeltmelerin tamamı: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robotwin-studio/blob/main/CHANGELOG.md).
+
 ## 1.6.1 — 24 Kasım 2026
 
 **Üstteki sekmeler: kaydırma, sabitleme, tam liste ve dosya adları.**

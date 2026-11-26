@@ -13,6 +13,8 @@
 
 > **Belgeler:** Adım adım, ekran görüntülü kullanım kılavuzu ve geliştirici belgeleri **[belge sitesinde](https://kinin-code-offical.github.io/robotwin-studio/)** (kaynakları: [docs/kullanim](docs/kullanim/README.md)). Uygulama içinde: *Yardım → Çevrimiçi belgeler*.
 
+> **1.7.0'da yeni (büyük sürüm):** İngilizce arayüz ve dil paketleri, 16 tema; kendi GPU çizicimiz; ESP32 için kendi Xtensa çekirdeğimizle gerçek firmware çalıştıran donanım uyumlu mod; dişli, kayış, rulman, vidalı mil, step motor ve sürücüleri; Yapısal Metin ve merdiven diyagramlı PLC, HMI, Modbus TCP/RTU, OPC UA, pnömatik; URDF/xacro ve ROS 2; AC analizi, SPICE modelleri, FMU modelleri, KiCad şemalarını açma; PCB'de DFM/DFT, diferansiyel çiftler, maliyetli malzeme listesi; ölçülendirilmiş eskizler, STEP/IGES. Ayrıntılar: [11. Yenilikler](docs/kullanim/11-yenilikler.md).
+>
 > **1.6.1'de yeni:** sekmeler kaydırılır, sabitlenir ve listelenir; sekme dosyanın kendi adını gösterir.
 >
 > **1.6.0'da yeni:** Arduino kodunda kesme noktası, adım ve değişkenler. Kart bir satırda durunca devre ve dünya da aynı anda durur.
@@ -54,7 +56,7 @@ Uygulamanın sol tarafındaki **"Tasarımdan gerçeğe hattı"** bir projenin a�
 | **Montaj** | Ctrl+5 | Robotun kendisi: bir ya da birden çok projenin kartı ve parçaları (PCB'li ya da PCB'siz) ile Parça'da modellenen gövdeler bir arada, bağlantılarıyla. Projeyle birlikte kaydedilir, açılınca devre, PCB ve kod değişikliklerini alır; araç projeleri şasesi ve tekerlekleriyle kurulur. |
 | **Dünya** | Ctrl+6 | Kartları, parçaları, gövdeleri ve modelleri gerçek fizikli bir dünyaya koyun; kablolayın, mekanik olarak bağlayın, çalıştırın. |
 
-Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl+,) sayfaları vardır. Arayüz Türkçedir.
+Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl+,) sayfaları vardır. Arayüz İngilizce açılır; Türkçe ve başka diller Ayarlar → Genel → Dil ile seçilir.
 
 ## Ekran görüntüleri
 
@@ -267,6 +269,23 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 
   ![Render: her parçada gerilme, kuvvetler ve montaj etrafında hava akışı](docs/images/world-render.png)
 
+### Endüstri hücreleri
+
+- **PLC:** Yapısal Metin (IEC 61131-3): kendi fonksiyon blokları ve fonksiyonları, diziler (çok boyutlu da), yapılar, sayımlar, VAR_IN_OUT, metin (STRING). Merdiven diyagramı düzenleyicisi; istasyonun çevrim süresi ve darboğazı.
+- **Haberleşme:** Modbus TCP ve RTU (sunucu, istemci, uzak G/Ç modülü), OPC UA sunucusu; HMI operatör paneli PLC değişkenlerine bağlanır.
+- **Saha:** pnömatik silindir, 5/2 ve çift bobinli valf, kompresör ve hava tankı, vakum ejektörü, fotoelektrik sensör, limit anahtarı; ekipman arıza senaryoları.
+
+### Mekanizmalar ve robotik
+
+- Dişliler, kasnaklar, GT2 kayışlar, rulmanlar, miller, vidalı miller ve kremayerler gerçek parça olarak; boşluk, kayış esnemesi, eklemde yay ve sönümleyici. Step motorlar ve A4988, DRV8825, TMC2209 sürücüleri.
+- Kol ve tekerlekli robot kinematiği, PID ayarlayıcılar; URDF ve xacro içe aktarma, ROS 2 köprüsü (rosbridge).
+
+### Köprüler
+
+- **KiCad:** şemayı açıp simüle etme (bağlantılar kicad-cli ile birebir), KiCad 8 projesi dışa aktarma, yerleşimi geri alma.
+- **FMU (FMI 2.0):** başka araçların modelleri devrede bir blok olarak çalışır.
+- **STEP ve IGES** (Open CASCADE), STL/OBJ/PLY.
+
 ### Pencere ve gezinme
 
 - Belge sekmeleri (sürükleyerek sıralama), **bölünmüş görünüm** (Ctrl+\\), sayfayı **ayrı pencereye alma**, **odak modu**, **tam ekran** (F11), **komut paleti** (Ctrl+K) ile her şeyi arama.
@@ -375,14 +394,13 @@ Ayrıntılar: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md), mimari: [d
 
 ## Yol haritası (geliştiriliyor)
 
-Aşağıdakiler üzerinde çalışılıyor; **henüz ana dala alınmadı** ve yayımlanmış sürümlerde yoktur:
+Sıradaki işler (ayrıntılı liste: [docs/gelistirici/YOL_HARITASI.md](docs/gelistirici/YOL_HARITASI.md)):
 
-- **Akışkanlar:** su altı, kaldırma kuvveti, sıvı akışı (gaz basıncı, lüle akışı ve su roketi artık var).
-- **Tek saat ve birlikte hata ayıklama:** firmware kesme noktasında MCU, devre ve fizik birlikte durur; karışık sinyal bölümleme.
-- **Mekanik ve endüstriyel parçalar:** vida/geçme, kırılma, dişli/kayış/yay/sönümleyici, profiller, lineer raylar, step motor ve sürücüler, pnömatik, paletli araçlar, yumuşak gövdeler.
-- **Daha fazla MCU:** Mega, ATtiny, RP2040, STM32, ESP8266, ESP32-C3/S3; SPI/CAN/ESP-NOW/LoRa sürüleri; PLC (ladder/ST, Modbus).
-- **Köprüler:** STEP/URDF/KiCad proje içe aktarma, `custom_parts` klasörü.
-- **Dil:** İngilizce varsayılan arayüz, Türkçe ve eklenebilir dil paketleri.
+- **Gömülü:** ESP32 donanım modunda BLE ve ESP-NOW, TLS, mDNS; Xtensa FPU bölme/karekök ve MAC16; RP2040 ve STM32.
+- **Endüstri:** OPC UA güvenliği (Basic256Sha256, kullanıcı/şifre); FMI Model Exchange ve FMI 3.0, devreyi FMU olarak dışa aktarma.
+- **Robotik:** MoveIt ile uçtan uca deneme (gerçek ROS 2 kurulumuyla, indirme onayı gerekir).
+- **Performans:** çizimin arayüz iş parçacığından ayrılması, uzaktaki ağır modeller için sadeleştirilmiş ağlar, sıvı çözücünün maliyeti.
+- **Fizik (P2):** hidrolik, esnek yapılar ve yorulma, motor ve rulman ısıl modelleri, FEM/CFD ağ yakınsaması.
 
 ## Katkı, güvenlik, belgeler
 
@@ -398,10 +416,12 @@ MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 ## English
 
-**RobotWin Studio** is a Windows desktop app for building robot and electronics projects end to end: draw the circuit, lay out the PCB, write the firmware, model the chassis, then drop everything into an open world with real physics, wire it up and run it all together. Arduino (ATmega328P) firmware runs as real compiled HEX on an emulated MCU, ESP32 sketches run in co-simulation with the circuit, and motors, servos, sensors, cables and parts genuinely affect each other. The user interface is in Turkish.
+**RobotWin Studio** is a Windows desktop app for building robot and electronics projects end to end: draw the circuit, lay out the PCB, write the firmware, model the chassis, then drop everything into an open world with real physics, wire it up and run it all together. Arduino (ATmega328P) firmware runs as real compiled HEX on an emulated MCU, ESP32 sketches run in co-simulation with the circuit, and motors, servos, sensors, cables and parts genuinely affect each other. The interface starts in English; Turkish and other language packs are chosen in Settings → General → Language.
 
 Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
 
+> **New in 1.7.0 (a big release):** an English interface with language packs and 16 themes; our own GPU renderer; a hardware-compatible ESP32 mode running real firmware on our own Xtensa core; gears, belts, bearings, lead screws, steppers and their drivers; a PLC with Structured Text and ladder diagrams, an HMI, Modbus TCP/RTU, OPC UA and pneumatics; URDF/xacro and ROS 2; AC analysis, SPICE models, FMU models and opening KiCad schematics; DFM/DFT, differential pairs and a costed BOM on the PCB; dimensioned sketches, STEP/IGES. Details: [11. What's new](docs/en/guide/11-whats-new.md).
+>
 > **New in 1.6.1:** tabs scroll, pin and list; a tab shows its file's own name.
 >
 > **New in 1.6.0:** breakpoints, steps and variables in Arduino code. When the board stops on a line, the circuit and the world stop at that instant too.
@@ -509,14 +529,13 @@ Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -
 
 ### Roadmap (in progress)
 
-Being worked on, **not merged yet** and not in any release:
+Next (the full list: [docs/gelistirici/YOL_HARITASI.md](docs/gelistirici/YOL_HARITASI.md), in Turkish):
 
-- Fluids: underwater, buoyancy, liquid flow (gas pressure, nozzle flow and water rockets are already in).
-- One clock and co-debugging: a firmware breakpoint freezes MCU, circuit and physics together; mixed-signal partitioning.
-- Mechanical and industrial parts: fasteners and fits, breakage, gears/belts/springs/dampers, extrusions, linear rails, steppers and drivers, pneumatics, tracked vehicles, soft bodies.
-- More MCUs (Mega, ATtiny, RP2040, STM32, ESP8266, ESP32-C3/S3), SPI/CAN/ESP-NOW/LoRa swarms, PLC (ladder/ST, Modbus).
-- Bridges: STEP/URDF/KiCad project import, a `custom_parts` folder.
-- English as the default UI language, Turkish and add-on language packs.
+- Embedded: BLE and ESP-NOW in the ESP32's hardware mode, TLS, mDNS; Xtensa FPU divide/sqrt and MAC16; RP2040 and STM32.
+- Industrial: OPC UA security (Basic256Sha256, user and password); FMI Model Exchange and FMI 3.0, the circuit exported as an FMU.
+- Robotics: an end-to-end run with MoveIt (a real ROS 2 install, which needs a download approval).
+- Performance: drawing off the UI thread, simplified meshes for distant heavy models, the liquid solver's cost.
+- Physics (P2): hydraulics, flexible structures and fatigue, motor and bearing thermal models, FEM/CFD mesh convergence.
 
 ### License
 

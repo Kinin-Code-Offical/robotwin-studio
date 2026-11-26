@@ -11,7 +11,7 @@
     <RootNamespace>RobotWin.Studio</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Product>RobotWin Studio</Product>
-    <Version>1.6.1</Version>
+    <Version>1.7.0</Version>
     <TieredPGO>true</TieredPGO>
     <ApplicationIcon>Branding/robotwin.ico</ApplicationIcon>
     <!-- [setup] One build for every installation: the exe looks for .NET in its own dotnet\ folder first (the installer's
