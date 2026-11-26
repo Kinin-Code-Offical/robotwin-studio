@@ -69,6 +69,11 @@ namespace RobotTwin.CoreSim.Sandbox
         private readonly List<(Battery Battery, ThermalNode Node)> _batteryThermal = new List<(Battery, ThermalNode)>();
         private readonly Dictionary<SceneJoint, double> _baseBreak = new Dictionary<SceneJoint, double>();
         private double _thermalPending;
+        private readonly Dictionary<SceneBody, ThermalNode> _thermalByBody = new Dictionary<SceneBody, ThermalNode>();
+        private readonly Dictionary<string, double> _bearingHeat = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>[bearing-heat] The heat a joint's bearing makes now (W): its friction times its speed; 0 for none.</summary>
+        public double BearingHeat(string jointId) => _bearingHeat.TryGetValue(jointId, out double w) ? w : 0;
         private double _ambient = 25;
 
         /// <summary>Thermal network time step (s): heat moves slowly; 20 Hz is plenty and cheap.</summary>
@@ -80,6 +85,8 @@ namespace RobotTwin.CoreSim.Sandbox
         private void BuildThermal(WorldDocument world)
         {
             _thermal.Clear();
+            _thermalByBody.Clear();
+            _bearingHeat.Clear();
             _thermalNodes.Clear();
             _thermalLinks.Clear();
             _motorThermal.Clear();
@@ -103,6 +110,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 }
 
                 _thermal[o.Id] = node;
+                if (!_thermalByBody.ContainsKey(it.Body)) _thermalByBody[it.Body] = node;   // [bearing-heat]
                 _thermalNodes.Add(node);
                 if (node.Devices.OfType<DcMotor>().FirstOrDefault() is { } motor) SplitMotor(o, node, motor, mass);
                 if (node.Devices.OfType<Battery>().FirstOrDefault() is { } battery)
@@ -299,6 +307,24 @@ namespace RobotTwin.CoreSim.Sandbox
 
                 foreach (var (b, n) in _batteryThermal)
                     n.Power += Math.Abs(b.Current) * (Math.Abs(b.Current) * b.SeriesResistance + Math.Abs(b.PolarizationVoltage));
+            }
+
+            // [bearing-heat] a bearing's friction turns into heat where it sits: half in each part it joins (a pin in a
+            // printed hinge warms the PLA around it, which softens near its glass transition as any warm part does)
+            _bearingHeat.Clear();
+            foreach (var sj in Scene.Joints)
+            {
+                double w = sj.BearingFriction * Math.Abs(sj.Speed);
+                if (!(w > 0) || !double.IsFinite(w)) continue;
+                _bearingHeat[sj.Id] = w;
+                var na = _thermalByBody.TryGetValue(sj.A, out var a) ? a : null;
+                var nb = sj.B != null && _thermalByBody.TryGetValue(sj.B, out var b) ? b : null;
+                if (na != null && nb != null)
+                {
+                    na.Power += w / 2;
+                    nb.Power += w / 2;
+                }
+                else if ((na ?? nb) is { } only) only.Power += w;
             }
 
             if (_vessels.Count > 0)
