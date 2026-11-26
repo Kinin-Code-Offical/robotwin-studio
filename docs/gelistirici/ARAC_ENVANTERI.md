@@ -266,7 +266,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
 | Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman | kısmi | 2 |
 | Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | yok | yok | 2 |
-| Sabit kuvvet | yok | yok | 2 |
+| Sabit kuvvet | Sabit kuvvet bileşeni: kuvvet ve tork, dünya ya da kendi eksenlerinde; açılıp kapanır, kopyalanır | var | |
 | Etiket, katman (çarpışma katmanları), statik | yok | yok | 2 |
 
 ## Sıra

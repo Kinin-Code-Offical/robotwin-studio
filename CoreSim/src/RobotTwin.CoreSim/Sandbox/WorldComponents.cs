@@ -6,7 +6,7 @@ namespace RobotTwin.CoreSim.Sandbox
 {
     /// <summary>
     /// [components] Unity's component checkbox for the components a part carries as one parameter that turns it on
-    /// (a shell, a pressure vessel, a parachute, a fault scenario). Switched off, the key is kept as "key.off" with
+    /// (a shell, a pressure vessel, a parachute, a fault scenario, a constant force). Switched off, the key is kept as "key.off" with
     /// its value, so the physics, the circuit and every other reader simply do not see it, while its settings stay
     /// for when it is switched back on; an undo restores either state like any other edit.
     /// </summary>
@@ -15,7 +15,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string OffSuffix = ".off";
 
         /// <summary>The keys of the components that can be switched off.</summary>
-        public static readonly string[] Switchable = { "shell", "vessel", "parachute", MachineFaults.Key };
+        public static readonly string[] Switchable = { "shell", "vessel", "parachute", MachineFaults.Key, WorldPhysics.ConstantForceKey };
 
         public static bool IsOff(WorldObject o, string key) => o.Parameters.ContainsKey(key + OffSuffix);
 
@@ -48,6 +48,7 @@ namespace RobotTwin.CoreSim.Sandbox
             },
             "parachute" => new[] { "parachute", "parachute.deploy", "parachute.cd" },
             MachineFaults.Key => new[] { MachineFaults.Key, MachineFaults.AtKey, MachineFaults.ValueKey },
+            WorldPhysics.ConstantForceKey => new[] { WorldPhysics.ConstantForceKey, WorldPhysics.ConstantForceLocalKey, WorldPhysics.ConstantTorqueKey, WorldPhysics.ConstantTorqueLocalKey },
             _ => new[] { key }
         };
 
@@ -69,6 +70,7 @@ namespace RobotTwin.CoreSim.Sandbox
             "parachute" => o.Kind == WorldObjectKind.Body && !WorldPhysics.IsWing(o),
             MachineFaults.Key => (values.TryGetValue(MachineFaults.Key, out var id) || values.TryGetValue(MachineFaults.Key + OffSuffix, out id))
                                  && MachineFaults.For(o.PartId).Any(f => f.Id == id),
+            WorldPhysics.ConstantForceKey => o.Kind != WorldObjectKind.Empty && !o.IsStatic,
             _ => false
         };
 

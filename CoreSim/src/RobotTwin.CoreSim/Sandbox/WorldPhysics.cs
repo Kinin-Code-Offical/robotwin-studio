@@ -145,6 +145,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.BuildThermal(world);   // [thermal] part temperatures, softening, melting (Sandbox/WorldPhysics.Thermal.cs)
             p.BuildGas(world);   // [gas] pressure vessels, propellant grains, nozzles, water (Sandbox/WorldPhysics.Gas.cs)
             p.BuildChutes();   // [launch] recovery parachutes (Sandbox/WorldPhysics.Launch.cs)
+            p.BuildConstantForces();   // [cforce] Unity's Constant Force (Sandbox/WorldPhysics.ConstantForce.cs)
             return p;
         }
 
@@ -519,6 +520,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 StepWings(Step);   // [aero] wings, tails, fins (Sandbox/WorldPhysics.Wings.cs)
                 StepGas(Step, sim);   // [gas] vessels: burn, flow, thrust (Sandbox/WorldPhysics.Gas.cs)
                 StepChutes();   // [launch] recovery parachutes
+                StepConstantForces();   // [cforce] constant pushes and twists
                 t1 = Lap(ref Times.Air, t1);
                 Scene.Step(Step);
                 t1 = Lap(ref Times.Bodies, t1);

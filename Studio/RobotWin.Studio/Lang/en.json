@@ -8564,7 +8564,20 @@
   "kütüphanede yok": "not in the library",
   "pedi olmayan pin": "pins without a pad",
   "Değiştir…": "Change…",
-  "Kartta parça yok": "No parts on the board"
+  "Kartta parça yok": "No parts on the board",
+  "Sabit kuvvet eklendi": "Constant force added",
+  "Sabit kuvvet kaldırıldı": "Constant force removed",
+  "Kuvvet (N) X · Y · Z": "Force (N) X · Y · Z",
+  "Tork (N·m) X · Y · Z": "Torque (N·m) X · Y · Z",
+  "Kuvvet değişti": "Force changed",
+  "Tork değişti": "Torque changed",
+  "Kuvvet parçanın kendi eksenlerinde": "Force along the part's own axes",
+  "Tork parçanın kendi eksenlerinde": "Torque along the part's own axes",
+  "İşaretliyse kuvvet parçanın eksenlerindedir ve parça dönünce onunla döner (Unity'deki Relative Force).": "When ticked the force is along the part's axes and turns with the part (Unity's Relative Force).",
+  "İşaretliyse tork parçanın eksenlerindedir (Unity'deki Relative Torque).": "When ticked the torque is along the part's axes (Unity's Relative Torque).",
+  "Her fizik adımında kütle merkezine etkir: F = m·a ile hızlanır, yerçekimi ve sürükleme de işler. Z yukarıdır; kendi eksenlerinde bir roketin itkisi gibi burnuyla döner.": "Acts on the centre of mass on every physics step: it speeds up by F = m·a, with gravity and drag still at work. Z is up; along its own axes it turns with the nose, like a rocket's thrust.",
+  "Unity'deki Constant Force: her adımda etkiyen bir kuvvet (N) ve tork (N·m), dünya ya da parçanın kendi eksenlerinde; itici, rüzgâr itişi, sürekli dönen bir mil.": "Unity's Constant Force: a force (N) and a torque (N·m) acting on every step, along the world's or the part's own axes; a thruster, a push of wind, a shaft that keeps turning.",
+  "Bu nesneye bileşen ekleyin: kabuk, basınçlı kap, paraşüt, sabit kuvvet, hava ayarı, arıza, eşleme, yay, rulman, davranış. Aramak için yazın.": "Add a component to this object: shell, pressure vessel, parachute, constant force, air settings, fault, coupling, spring, bearing, behaviour. Type to search."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

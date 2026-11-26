@@ -132,6 +132,9 @@ namespace RobotWin.Studio.Pages
                 Item("Basınçlı kap (gaz fiziği)", "İçinde gaz tutan kapalı kap: basınç, lüle, vana, su ya da katı yakıt; su roketi, katı yakıtlı motor.", () => o.Parameters["vessel"] = "true");
             if (body && !WorldPhysics.IsWing(o) && !WorldComponents.Has(o, "parachute"))
                 Item("Kurtarma paraşütü", "Tepe noktasında (ya da belli bir zamanda) atılan paraşüt; 45 cm kanopiyle başlar.", () => o.Parameters["parachute"] = "0.45");
+            if (o.Kind != WorldObjectKind.Empty && !o.IsStatic && !WorldComponents.Has(o, WorldPhysics.ConstantForceKey))   // [cforce]
+                Item("Sabit kuvvet", "Unity'deki Constant Force: her adımda etkiyen bir kuvvet (N) ve tork (N·m), dünya ya da parçanın kendi eksenlerinde; itici, rüzgâr itişi, sürekli dönen bir mil.",
+                    () => o.Parameters[WorldPhysics.ConstantForceKey] = "0,0,0");
             if (world.Sdk.AeroOf(o.Id) == null)
                 Item("Hava (özel ayar)", "Sürüklemeyi kapatın, Cd ve referans alanı elle verin ya da kaldırma kuvveti (balon, köpük) ekleyin. Ayarlanmadıkça sürükleme gövdenin şeklinden hesaplanır.",
                     () => world.Sdk.AeroFor(o.Id), sdk: true);
@@ -148,7 +151,7 @@ namespace RobotWin.Studio.Pages
             menu.Items.Add(behaviours);
 
             // [components] Unity's Add Component: a searchable list by category over the same features
-            var add = Action("Bileşen ekle", () => { }, "Bu nesneye bileşen ekleyin: kabuk, basınçlı kap, paraşüt, hava ayarı, arıza, eşleme, yay, rulman, davranış. Aramak için yazın.");
+            var add = Action("Bileşen ekle", () => { }, "Bu nesneye bileşen ekleyin: kabuk, basınçlı kap, paraşüt, sabit kuvvet, hava ayarı, arıza, eşleme, yay, rulman, davranış. Aramak için yazın.");
             add.HorizontalAlignment = HorizontalAlignment.Stretch;
             add.HorizontalContentAlignment = HorizontalAlignment.Center;
             add.Margin = new Thickness(0, 10, 0, 6);

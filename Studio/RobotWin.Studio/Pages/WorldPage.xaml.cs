@@ -851,6 +851,7 @@ namespace RobotWin.Studio.Pages
             RadioSection(world, o);   // [radio] controller pairing, USB plug, IR keys, ESP32 radio
             GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
             if (!IsSwitchPart(o)) LaunchSection(world, o);   // [launch] parachute
+            ConstantForceSection(o);   // [cforce] Unity's Constant Force (Pages/WorldPage.ConstantForce.cs)
             SdkSection(world, o);   // [sdk] its own air settings, behaviours, live forces
             FaultSection(o);   // [fault] the part's fault scenario, when it has one
             FeaturesSection(world, o);   // "Özellik ekle ▾"
@@ -1004,17 +1005,25 @@ namespace RobotWin.Studio.Pages
             return grid;
         }
 
-        private FrameworkElement Vector3Row(string label, double a, double b, double c, Action<double, double, double> set)
+        private FrameworkElement Vector3Row(string label, double a, double b, double c, Action<double, double, double> set, string format = "0.##")
         {
             var sp = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
             sp.Children.Add(new TextBlock { Text = label, Foreground = (Brush)FindResource("B.TextSecondary"), Margin = new Thickness(0, 0, 0, 3) });
             var grid = new UniformGrid { Columns = 3 };
-            var boxes = new[] { a, b, c }.Select(v => new TextBox { Text = v.ToString("0.##", CultureInfo.InvariantCulture), Margin = new Thickness(0, 0, 4, 0), HorizontalContentAlignment = HorizontalAlignment.Right }).ToArray();
+            var exact = new[] { a, b, c };
+            var boxes = exact.Select(v => new TextBox { Text = v.ToString(format, CultureInfo.InvariantCulture), Margin = new Thickness(0, 0, 4, 0), HorizontalContentAlignment = HorizontalAlignment.Right }).ToArray();
+            var shown = boxes.Select(x => x.Text).ToArray();
             void Apply()
             {
                 var vals = new double[3];
                 for (int i = 0; i < 3; i++)
                 {
+                    if (boxes[i].Text == shown[i])
+                    {
+                        vals[i] = exact[i];   // an untouched box keeps the exact value, not the rounded one it shows
+                        continue;
+                    }
+
                     if (!double.TryParse(boxes[i].Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out vals[i])) return;
                 }
 

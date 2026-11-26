@@ -151,6 +151,10 @@ Give any body a parachute with **Add feature → Recovery parachute** in its ins
 
 ![The solid rocket on its pad: kraft tube, fins, battery and launch switch](../../images/en/world-rocket-pad.png)
 
+### Constant force
+
+Unity's Constant Force component. Add it to a part that can move with **Add component → Constant force**: **Force (N) X · Y · Z** acts on the part's centre of mass on every physics step (F = m·a), **Torque (N·m) X · Y · Z** turns it. The boxes under them give the value along the part's own axes instead of the world's, so a rocket's thrust or a propeller's pull turns with the part. Z is up. Gravity, drag, contacts and joints keep working in the same physics; a fixed part cannot take one. The card's box switches it off, and its ⋮ menu copies it to paste on another part.
+
 ![0.1 s after ignition: 24 bar, 1275 °C, 100 N of thrust; the whole grain surface is burning](../../images/en/world-rocket-ignite.png)
 
 ![Descending under the 45 cm parachute thrown at apogee](../../images/en/world-rocket-chute.png)

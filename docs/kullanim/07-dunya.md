@@ -151,6 +151,10 @@ Herhangi bir gövdeye denetçide **Özellik ekle → Kurtarma paraşütü** ile 
 
 ![Katı yakıtlı roket rampada: karton gövde, kanatçıklar, pil ve fırlatma anahtarı](../images/world-rocket-pad.png)
 
+### Sabit kuvvet
+
+Unity'deki Constant Force bileşenidir. Hareket edebilen bir parçaya **Bileşen ekle → Sabit kuvvet** ile ekleyin: **Kuvvet (N) X · Y · Z** her fizik adımında parçanın kütle merkezine etkir (F = m·a), **Tork (N·m) X · Y · Z** onu döndürür. Altlarındaki kutular değeri dünya eksenleri yerine parçanın kendi eksenlerinde verir; böylece bir roketin itkisi ya da bir pervanenin çekişi parça döndükçe onunla döner. Z yukarıdır. Yerçekimi, sürükleme, temaslar ve bağlantılar aynı fizikte işlemeye devam eder; sabitlenmiş bir parçaya eklenmez. Kartın kutusuyla kapatılabilir, ⋮ menüsüyle kopyalanıp başka parçaya yapıştırılabilir.
+
 ![Ateşlemeden 0,1 s sonra: 24 bar, 1275 °C, 100 N itki; yakıt yüzeyinin tamamı yanıyor](../images/world-rocket-ignite.png)
 
 ![Tepe noktasında açılan 45 cm paraşütle iniş](../images/world-rocket-chute.png)
