@@ -146,6 +146,19 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Measure:
                     MeasureClick(x, y);
                     return;
+                case PcbTool.Erase:   // [eraser] what is under the click goes, as Del would take it
+                {
+                    var hit = HitAny(x, y);
+                    if (hit == null || hit is OutlineSelection)
+                    {
+                        Say("Silici: burada silinecek bir şey yok");
+                        return;
+                    }
+
+                    Select(hit);
+                    DeleteSelection();
+                    return;
+                }
                 case PcbTool.Highlight:
                 {
                     // [highlight] the net under the click, or off again (the same net, or nothing there)
@@ -333,6 +346,7 @@ namespace RobotWin.Studio.Pcb
             _cursor = (x, y);
             if (_tool is PcbTool.Measure or PcbTool.Dimension or PcbTool.Zone or PcbTool.Outline or PcbTool.Keepout || IsGraphicTool(_tool)) Magnet(x, y);   // [magnet] the diamond follows
             else _magnetMark = null;
+            if (FullCrosshair) InvalidateVisual();   // [crosshair] the lines follow the pointer
             CursorMoved?.Invoke(this, EventArgs.Empty);
 
             if (_moving)

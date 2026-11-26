@@ -135,6 +135,13 @@ namespace RobotWin.Studio.Shell
         public bool WorldShowGizmo { get; set; } = true;
         public bool WorldShowSensorOverlays { get; set; } = true;
 
+        /// <summary>[crosshair] The PCB view's full-window crosshair; [polar] the cursor read as distance and angle from the origin.</summary>
+        public bool PcbFullCrosshair { get; set; }
+        public bool PcbPolarCursor { get; set; }
+
+        /// <summary>[rats-curve] The PCB ratsnest drawn as curves.</summary>
+        public bool PcbCurvedRatsnest { get; set; }
+
         /// <summary>[angle45] KiCad's H / V / 45° constraint for drawn lines, zones and the edge.</summary>
         public bool PcbConstrain45 { get; set; }
 

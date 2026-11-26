@@ -72,7 +72,13 @@ namespace RobotTwin.CoreSim.Sandbox
         Distance,
 
         /// <summary>The angle between two faces' normals or two axes (<see cref="WorldMate.Value"/> degrees).</summary>
-        Angle
+        Angle,
+
+        /// <summary>[mate-limit] SolidWorks' limit distance: a point or face between <see cref="WorldMate.Value"/> and <see cref="WorldMate.Value2"/> from a face (m).</summary>
+        LimitDistance,
+
+        /// <summary>[mate-limit] SolidWorks' limit angle: two faces or axes between <see cref="WorldMate.Value"/> and <see cref="WorldMate.Value2"/> degrees apart.</summary>
+        LimitAngle
     }
 
     public sealed class WorldMate
@@ -85,7 +91,11 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>Offset (metres) for Mate, Flush and Distance; degrees for Angle.</summary>
         public double Value { get; set; }
 
-        public WorldMate Clone() => new WorldMate { Id = Id, Kind = Kind, A = A.Clone(), B = B.Clone(), Value = Value };
+        /// <summary>[mate-limit] A limit's other end (m or degrees); <see cref="Value"/> is the first.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+        public double Value2 { get; set; }
+
+        public WorldMate Clone() => new WorldMate { Id = Id, Kind = Kind, A = A.Clone(), B = B.Clone(), Value = Value, Value2 = Value2 };
     }
 
     public enum MateState
@@ -144,13 +154,13 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             MateKind.Mate or MateKind.Flush => a == MateFeatureKind.Plane && b == MateFeatureKind.Plane,
             MateKind.Concentric => a == MateFeatureKind.Axis && b == MateFeatureKind.Axis,
-            MateKind.Parallel or MateKind.Perpendicular or MateKind.Angle => a != MateFeatureKind.Point && b != MateFeatureKind.Point,
-            MateKind.Distance => a == MateFeatureKind.Plane,
+            MateKind.Parallel or MateKind.Perpendicular or MateKind.Angle or MateKind.LimitAngle => a != MateFeatureKind.Point && b != MateFeatureKind.Point,
+            MateKind.Distance or MateKind.LimitDistance => a == MateFeatureKind.Plane,
             _ => false
         };
 
         /// <summary>Adds a mate between two features and solves; one that contradicts the others is taken back.</summary>
-        public static (WorldMate Mate, MateResult Result) Add(WorldDocument w, MateKind kind, MateFeature a, MateFeature b, double value = 0)
+        public static (WorldMate Mate, MateResult Result) Add(WorldDocument w, MateKind kind, MateFeature a, MateFeature b, double value = 0, double value2 = 0)
         {
             w.Mates ??= new List<WorldMate>();
             var used = new HashSet<string>(w.Mates.Select(m => m.Id), StringComparer.Ordinal);
@@ -161,7 +171,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (!used.Contains(id)) break;
             }
 
-            var mate = new WorldMate { Id = id, Kind = kind, A = a, B = b, Value = value };
+            var mate = new WorldMate { Id = id, Kind = kind, A = a, B = b, Value = value, Value2 = value2 };
             w.Mates.Add(mate);
             var r = Solve(w);
             if (r.State == MateState.Conflicting)
@@ -230,8 +240,9 @@ namespace RobotTwin.CoreSim.Sandbox
             int n = 6 * movable.Count;
             var start = new double[n];
             var owners = new List<int>();
+            var active = new HashSet<int>();   // [mate-limit] the limits standing at one of their ends: those hold like an equation
             double[] F(double[] x) => Residuals(mates, groups, x, rank: false, null);
-            double[] G(double[] x) => Residuals(mates, groups, x, rank: true, null);
+            double[] G(double[] x) => Residuals(mates, groups, x, rank: true, null, active);
             var (sol, r, it) = LeastSquares.MinNorm(F, start, 1e-10);
             result.Iterations = it;
             result.Residual = r.Length == 0 ? 0 : LeastSquares.Max(r);
@@ -251,8 +262,14 @@ namespace RobotTwin.CoreSim.Sandbox
                 return result;
             }
 
-            // The freedom left and the mates that add nothing, from the rank of the equations at the answer.
-            var rows = Residuals(mates, groups, sol, rank: true, owners);
+            // The freedom left and the mates that add nothing, from the rank of the equations at the answer. A limit inside
+            // its range holds nothing and gives no row (nor is it a repeat); at an end it holds like an equation there.
+            for (int k = 0; k < mates.Count; k++)
+            {
+                if (Limit(mates[k], groups, sol) is { } l && Math.Min(Math.Abs(l.Value - l.Lo), Math.Abs(l.Value - l.Hi)) <= 1e-7) active.Add(k);
+            }
+
+            var rows = Residuals(mates, groups, sol, rank: true, owners, active);
             var j = rows.Length == 0 ? new double[0, n] : LeastSquares.Jacobian(G, sol, rows.Length);
             var dependent = LeastSquares.DependentRows(j, out int rank);
             result.Freedom = n - rank;
@@ -519,7 +536,18 @@ namespace RobotTwin.CoreSim.Sandbox
         /// The equations of the mates, each zero when it holds. Solving, a face against a face is n_A + n_B = 0 (one
         /// answer); for the rank it is the two independent rows of it, so the freedom count stays honest.
         /// </summary>
-        private static double[] Residuals(List<WorldMate> mates, Dictionary<string, Group> groups, double[] x, bool rank, List<int>? owners)
+        /// <summary>[mate-limit] A limit mate's present value and its range (cosines for an angle, so the larger angle is the lower end); null for other mates.</summary>
+        private static (double Value, double Lo, double Hi)? Limit(WorldMate m, Dictionary<string, Group> groups, double[] x)
+        {
+            if (m.Kind is not (MateKind.LimitDistance or MateKind.LimitAngle)) return null;
+            var (pa, da) = Place(m.A, groups, x);
+            var (pb, db) = Place(m.B, groups, x);
+            if (m.Kind == MateKind.LimitDistance) return ((pb - pa).Dot(da), Math.Min(m.Value, m.Value2), Math.Max(m.Value, m.Value2));
+            double c1 = Math.Cos(m.Value * Math.PI / 180), c2 = Math.Cos(m.Value2 * Math.PI / 180);
+            return (da.Dot(db), Math.Min(c1, c2), Math.Max(c1, c2));
+        }
+
+        private static double[] Residuals(List<WorldMate> mates, Dictionary<string, Group> groups, double[] x, bool rank, List<int>? owners, HashSet<int>? active = null)
         {
             var rows = new List<double>();
             owners?.Clear();
@@ -572,6 +600,14 @@ namespace RobotTwin.CoreSim.Sandbox
                     case MateKind.Angle:
                         rows.Add(da.Dot(db) - Math.Cos(m.Value * Math.PI / 180));
                         break;
+                    case MateKind.LimitDistance:
+                    case MateKind.LimitAngle:
+                    {
+                        var (value, lo, hi) = Limit(m, groups, x)!.Value;
+                        if (!rank) rows.Add(value < lo ? value - lo : value > hi ? value - hi : 0);   // zero anywhere inside
+                        else if (active != null && active.Contains(k)) rows.Add(value - (Math.Abs(value - lo) <= Math.Abs(value - hi) ? lo : hi));
+                        break;
+                    }
                 }
 
                 if (owners != null)

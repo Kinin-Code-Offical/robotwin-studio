@@ -31,6 +31,12 @@ namespace RobotTwin.CoreSim.Mechanics
 
         public double Ratio { get; set; }
 
+        /// <summary>
+        /// [cam] A coupling that is no fixed ratio: B's place as a function of A's (a cam's lift over its shaft's angle) and
+        /// its slope there. Each step the constraint is laid along it: the ratio is the slope, the target the lift.
+        /// </summary>
+        public Func<double, (double Value, double Slope)>? Profile { get; set; }
+
         /// <summary>Share of the power the mesh passes on (0.05 … 1; 1 = lossless).</summary>
         public double Efficiency
         {
@@ -158,6 +164,13 @@ namespace RobotTwin.CoreSim.Mechanics
                 c.StepImpulse = 0;
                 if (!c.A.Enabled || c.A.Broken || !c.B.Enabled || c.B.Broken) continue;
                 if (JointAsleep(c.A) && JointAsleep(c.B)) continue;
+                if (c.Profile != null)
+                {
+                    var (lift, slope) = c.Profile(c.A.Angle);   // [cam] linearised where the shaft is now
+                    c.Ratio = slope;
+                    c.Offset = slope * c.A.Angle - lift;
+                }
+
                 var row = new CouplingRow { Coupling = c };
                 AddJointSpeed(ref row, c.A, c.Ratio);
                 AddJointSpeed(ref row, c.B, -1);

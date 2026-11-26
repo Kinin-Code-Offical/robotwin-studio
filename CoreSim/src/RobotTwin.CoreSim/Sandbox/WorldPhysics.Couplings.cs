@@ -24,6 +24,17 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (c.Ratio(wa.Kind, wb.Kind) is not { } ratio) continue;
                 var coupling = Scene.AddCoupling(a, b, ratio, c.Id);
                 coupling.Efficiency = c.EfficiencyFor(wa.Kind, wb.Kind);
+                if (c.Kind == WorldCoupling.Cam)
+                {
+                    // [cam] the follower stands where it was put at the shaft's present angle: lift is measured from there
+                    var cam = c;
+                    double rest = b.Angle - cam.CamLift(a.Angle).Value;
+                    coupling.Profile = th =>
+                    {
+                        var (v, s) = cam.CamLift(th);
+                        return (v + rest, s);
+                    };
+                }
                 bool hingeB = wb.Kind == WorldJointKind.Hinge;
                 coupling.Backlash = Math.Max(0, hingeB ? c.Backlash * Math.PI / 180 : c.Backlash / 1000);
                 if (c.Kind == WorldCoupling.Belt && c.BeltStiffness > 0)

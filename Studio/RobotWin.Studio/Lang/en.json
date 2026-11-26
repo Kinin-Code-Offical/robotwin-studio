@@ -8744,7 +8744,25 @@
   "Yalnız bakır": "Copper only",
   "Yalnız etkin katman": "Active layer only",
   "Ön ayar": "Preset",
-  "Görünüm ön ayarı: hangi katmanların gösterileceği tek seçimde": "View preset: which layers show, in one choice"
+  "Görünüm ön ayarı: hangi katmanların gösterileceği tek seçimde": "View preset: which layers show, in one choice",
+  "Kam ve itici": "Cam and follower",
+  "Kalkış (mm)": "Lift (mm)",
+  "Tepe sayısı (tur başına)": "Lobes (a turn)",
+  "İtici, mil döndükçe L/2·(1 − cos nθ) kadar kalkar: eksantrikte tek tepe. Kanallı kam gibi iki yönde de sürer; itici kızağın üstündedir.": "The follower rises L/2·(1 − cos nθ) as the shaft turns: an eccentric has one lobe. Like a grooved cam it drives both ways; the follower sits on the slider.",
+  "Dişli, kayış, vidalı mil, kam": "Gear, belt, lead screw, cam",
+  "Bu parçanın eklemini başka bir eklemle dişli, kayış, vidalı mil ya da kamla bağlayın: biri döndükçe öteki oranınca (kamda profilince) döner ya da kayar, yük iki yana da geçer.": "Join this part's joint to another with a gear, belt, lead screw or cam: as one turns the other turns or slides by the ratio (a cam by its profile), and the load goes both ways.",
+  "Mesafe sınırı": "Limit distance",
+  "Açı sınırı": "Limit angle",
+  "En az (mm)": "Least (mm)",
+  "En çok (mm)": "Most (mm)",
+  "En az (°)": "Least (°)",
+  "En çok (°)": "Most (°)",
+  "Ratsnest eğri çizilsin": "Draw the ratsnest curved",
+  "Tam ekran artı imleç": "Full-window crosshair",
+  "İmleç kutupsal (uzaklık ve açı)": "Cursor in polar (distance and angle)",
+  "Silici: tıklanan öğeyi siler (yol, via, parça, yazı, çizim …)": "Eraser: deletes the item clicked (track, via, part, text, drawing …)",
+  "Silici: tıklanan öğe silinir (seçim süzgecinin izin verdikleri) · Ctrl+Z geri alır · Esc: çık": "Eraser: the clicked item is deleted (as the selection filter allows) · Ctrl+Z undoes · Esc: leave",
+  "Silici: burada silinecek bir şey yok": "Eraser: nothing to delete here"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -12216,6 +12234,13 @@
   "İçinde: {…}": "Inside: {0}",
   "{…} girdi": "{0} came in",
   "{…} çıktı": "{0} went out",
-  "Görünüm: {…}": "View: {0}"
+  "Görünüm: {…}": "View: {0}",
+  "Kam ve itici → {…}": "Cam and follower → {0}",
+  "Kalkış {…} mm": "Lift {0} mm",
+  "tur başına {…} tepe": "{0} lobes a turn",
+  "Mesafe sınırı: şimdiki {…} mm ± 10 mm": "Limit distance: now {0} mm ± 10 mm",
+  "Açı sınırı: şimdiki {…}° ± 15°": "Limit angle: now {0}° ± 15°",
+  "r {…} mm  θ {…}°": "r {0} mm  θ {1}°",
+  "r {…} mil  θ {…}°": "r {0} mil  θ {1}°"
  }
 }

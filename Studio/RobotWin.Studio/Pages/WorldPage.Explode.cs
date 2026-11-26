@@ -446,6 +446,22 @@ namespace RobotWin.Studio.Pages
 
             if (args.Contains("--pattern")) ShowPatternDialog();   // [pattern] the dialog open
             if (args.Contains("--overlays")) ShowOverlayMenu(OverlayButton);   // [overlays] the menu open
+            if (args.Contains("--cam") && World is { } cw)   // [cam] a camshaft and its follower, coupled, the shaft picked
+            {
+                var shaft = new WorldObject { Id = cw.NextId("O"), Name = "Kam mili", Kind = WorldObjectKind.Body, Shape = "cylinder", SizeX = 0.03, SizeY = 0.03, SizeZ = 0.01, Pose = new WorldPose { X = 0.3, Z = 0.1 } };
+                cw.Objects.Add(shaft);
+                var follower = new WorldObject { Id = cw.NextId("O"), Name = "İtici", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.01, SizeY = 0.01, SizeZ = 0.05, MassKg = 0.1, Pose = new WorldPose { X = 0.3, Y = 0.04, Z = 0.12 } };
+                cw.Objects.Add(follower);
+                var hj = new WorldJoint { Id = cw.NextId("J"), Kind = WorldJointKind.Hinge, ObjectA = shaft.Id, AnchorX = 0.3, AnchorZ = 0.1, AxisY = 1, AxisZ = 0 };
+                cw.Joints.Add(hj);
+                var sj = new WorldJoint { Id = cw.NextId("J"), Kind = WorldJointKind.Slider, ObjectA = follower.Id, AnchorX = 0.3, AnchorY = 0.04, AnchorZ = 0.12, AxisZ = 1 };
+                cw.Joints.Add(sj);
+                (cw.Couplings ??= new List<WorldCoupling>()).Add(new WorldCoupling { Id = "couple1", Kind = WorldCoupling.Cam, JointA = hj.Id, JointB = sj.Id, SizeA = 10, SizeB = 1 });
+                Scene.Select(shaft.Id);
+                BuildInspector();
+                InspectorPane.UpdateLayout();
+                InspectorPane.ScrollToBottom();
+            }
             if (args.Contains("--trigger") && World?.Find(Scene.Selected) is { } tz)   // [trigger] the selection made a zone
             {
                 tz.Parameters[WorldPhysics.TriggerKey] = "1";

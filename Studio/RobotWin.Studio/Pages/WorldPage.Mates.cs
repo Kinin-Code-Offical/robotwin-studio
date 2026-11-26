@@ -102,6 +102,8 @@ namespace RobotWin.Studio.Pages
             MateKind.Parallel => "Paralel",
             MateKind.Perpendicular => "Dik",
             MateKind.Distance => "Mesafe",
+            MateKind.LimitDistance => "Mesafe sınırı",
+            MateKind.LimitAngle => "Açı sınırı",
             _ => "Açı"
         };
 
@@ -118,11 +120,11 @@ namespace RobotWin.Studio.Pages
             var (pa, da) = Where(world, a);
             var (pb, db) = Where(world, b);
             double distance = (pb - pa).Dot(da), angle = Math.Acos(Math.Max(-1, Math.Min(1, da.Dot(db)))) * 180 / Math.PI;
-            void Item(MateKind kind, string text, double value = 0)
+            void Item(MateKind kind, string text, double value = 0, double value2 = 0)
             {
                 if (!WorldMates.Fits(kind, a.Kind, b.Kind)) return;
                 var mi = new MenuItem { Header = text };
-                mi.Click += (_, _) => AddMate(world, kind, a, b, value);
+                mi.Click += (_, _) => AddMate(world, kind, a, b, value, value2);
                 menu.Items.Add(mi);
             }
 
@@ -133,6 +135,9 @@ namespace RobotWin.Studio.Pages
             Item(MateKind.Perpendicular, "Dik");
             Item(MateKind.Distance, $"Mesafe: şimdiki {distance * 1000:0.##} mm", Math.Round(distance, 6));
             Item(MateKind.Angle, $"Açı: şimdiki {angle:0.#}°", Math.Round(angle, 2));
+            // [mate-limit] SolidWorks' advanced mates: a range around where it is now, both ends then set in the inspector
+            Item(MateKind.LimitDistance, $"Mesafe sınırı: şimdiki {distance * 1000:0.##} mm ± 10 mm", Math.Round(distance - 0.01, 6), Math.Round(distance + 0.01, 6));
+            Item(MateKind.LimitAngle, $"Açı sınırı: şimdiki {angle:0.#}° ± 15°", Math.Round(Math.Max(0, angle - 15), 2), Math.Round(Math.Min(180, angle + 15), 2));
             if (menu.Items.Count == 0)
             {
                 W.Status = "Bu ikisi arasında kurulabilecek ilişki yok (bir yüz ya da eksen seçin)";
@@ -142,11 +147,11 @@ namespace RobotWin.Studio.Pages
             menu.IsOpen = true;
         }
 
-        private void AddMate(WorldDocument world, MateKind kind, MateFeature a, MateFeature b, double value)
+        private void AddMate(WorldDocument world, MateKind kind, MateFeature a, MateFeature b, double value, double value2 = 0)
         {
             // Tried on a copy first: a contradicting mate leaves no step in the undo history.
             var trial = WorldDocument.FromJson(world.ToJson());
-            var (_, tried) = WorldMates.Add(trial, kind, a.Clone(), b.Clone(), value);
+            var (_, tried) = WorldMates.Add(trial, kind, a.Clone(), b.Clone(), value, value2);
             if (tried.State == MateState.Conflicting)
             {
                 _mateResult = tried;
@@ -155,7 +160,7 @@ namespace RobotWin.Studio.Pages
             }
 
             MateResult? r = null;
-            Edit(MateName(kind), () => r = WorldMates.Add(world, kind, a, b, value).Result);
+            Edit(MateName(kind), () => r = WorldMates.Add(world, kind, a, b, value, value2).Result);
             _mateResult = r;
             if (r != null) W.Status = MateName(kind) + ": " + Describe(world, r, b.Object);
         }
@@ -235,6 +240,16 @@ namespace RobotWin.Studio.Pages
                     Inspector.Children.Add(NumberField("Aralık (mm)", mate.Value * 1000, v => SetMateValue(world, mate, v / 1000), -1e5, 1e5, "0.###"));
                 else if (mate.Kind == MateKind.Angle)
                     Inspector.Children.Add(NumberField("Açı (°)", mate.Value, v => SetMateValue(world, mate, v), 0, 180, "0.##"));
+                else if (mate.Kind == MateKind.LimitDistance)   // [mate-limit] both ends
+                {
+                    Inspector.Children.Add(NumberField("En az (mm)", mate.Value * 1000, v => SetMateValue(world, mate, v / 1000), -1e5, 1e5, "0.###"));
+                    Inspector.Children.Add(NumberField("En çok (mm)", mate.Value2 * 1000, v => SetMateValue(world, mate, v / 1000, second: true), -1e5, 1e5, "0.###"));
+                }
+                else if (mate.Kind == MateKind.LimitAngle)
+                {
+                    Inspector.Children.Add(NumberField("En az (°)", mate.Value, v => SetMateValue(world, mate, v), 0, 180, "0.##"));
+                    Inspector.Children.Add(NumberField("En çok (°)", mate.Value2, v => SetMateValue(world, mate, v, second: true), 0, 180, "0.##"));
+                }
             }
 
             if (_mateResult != null) Inspector.Children.Add(Note(Describe(world, _mateResult, o.Id)));
@@ -309,11 +324,12 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>A mate's offset or angle set: the parts follow; a value the other mates contradict is refused.</summary>
-        private void SetMateValue(WorldDocument world, WorldMate mate, double value)
+        private void SetMateValue(WorldDocument world, WorldMate mate, double value, bool second = false)
         {
             var trial = WorldDocument.FromJson(world.ToJson());
             var copy = trial.Mates!.First(m => m.Id == mate.Id);
-            copy.Value = value;
+            if (second) copy.Value2 = value;   // [mate-limit] a limit's other end
+            else copy.Value = value;
             var tried = WorldMates.Solve(trial);
             if (tried.State == MateState.Conflicting)
             {
@@ -324,7 +340,8 @@ namespace RobotWin.Studio.Pages
 
             Edit(MateName(mate.Kind) + " değişti", () =>
             {
-                mate.Value = value;
+                if (second) mate.Value2 = value;
+                else mate.Value = value;
                 _mateResult = WorldMates.Solve(world);
             });
         }

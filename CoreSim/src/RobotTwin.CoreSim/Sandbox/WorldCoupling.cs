@@ -14,6 +14,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string Belt = "belt";
         public const string Screw = "screw";
 
+        /// <summary>[cam] A cam on a shaft (A, a hinge) lifting a follower (B, a slider): <see cref="SizeA"/> its lift (mm), <see cref="SizeB"/> its lobes.</summary>
+        public const string Cam = "cam";
+
         /// <summary>Friction of a bronze or plastic nut on a steel screw, lubricated.</summary>
         public const double NutFriction = 0.15;
 
@@ -70,7 +73,19 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>Whether this kind can join joints of these kinds: gears and belts two hinges or a hinge and a slider, a screw only the latter.</summary>
         public static bool Fits(string kind, WorldJointKind a, WorldJointKind b) =>
-            Linear(a, b) || (a == WorldJointKind.Hinge && b == WorldJointKind.Hinge && kind != Screw);
+            kind == Cam ? a == WorldJointKind.Hinge && b == WorldJointKind.Slider
+                        : Linear(a, b) || (a == WorldJointKind.Hinge && b == WorldJointKind.Hinge && kind != Screw);
+
+        /// <summary>
+        /// [cam] The follower's lift (m) and its slope (m/rad) at a shaft angle (rad): a harmonic cam, L/2·(1 − cos nθ), up
+        /// and down once a lobe; an eccentric is one lobe. <see cref="Reverse"/> lifts the other way along the slider.
+        /// </summary>
+        public (double Value, double Slope) CamLift(double angle)
+        {
+            double l = SizeA / 1000, n = Math.Max(1, Math.Round(SizeB));
+            double v = l / 2 * (1 - Math.Cos(n * angle)), s = l / 2 * n * Math.Sin(n * angle);
+            return Reverse ? (-v, -s) : (v, s);
+        }
 
         /// <summary>
         /// B's speed over A's (rad/s or m/s each): the teeth or diameters of two shafts (a gear turns the other way), the
@@ -79,6 +94,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public double? Ratio(WorldJointKind a, WorldJointKind b)
         {
             if (!Fits(Kind, a, b) || SizeA <= 0) return null;
+            if (Kind == Cam) return CamLift(0).Slope;   // the profile takes over each step
             double r;
             if (Linear(a, b))
             {
@@ -103,6 +119,7 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             if (Efficiency > 0) return Math.Min(1, Efficiency);
             if (Kind == Screw) return ScrewEfficiency(SizeA, SizeB > 0 ? SizeB : 8);
+            if (Kind == Cam) return 0.95;   // a roller follower
             if (Kind == Gear) return Linear(a, b) ? 0.95 : 0.98;
             return 0.97;
         }
@@ -124,6 +141,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public string Title(WorldJointKind a, WorldJointKind b) => Kind switch
         {
             Screw => "Vidalı mil",
+            Cam => "Kam ve itici",
             Belt => Linear(a, b) ? "Kayışlı taşıyıcı" : "Kayış",
             _ => Linear(a, b) ? "Kremayer ve pinyon" : "Dişli çifti"
         };

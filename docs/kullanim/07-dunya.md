@@ -400,7 +400,7 @@ Kapak (kutu kapağı) ayrıca **vidalı** işaretlenebilir; kenara oturduğunda 
 
 ### Dişli, kayış ve vidalı mil
 
-Menteşeyle ya da kızakla bağlı bir parçayı seçip **Özellik ekle ▾ → Dişli, kayış, vidalı mil** ile dünyadaki başka bir eklemi seçin, sonra türünü:
+Menteşeyle ya da kızakla bağlı bir parçayı seçip **Özellik ekle ▾ → Dişli, kayış, vidalı mil, kam** ile dünyadaki başka bir eklemi seçin, sonra türünü:
 
 | Tür | Eklemler | Ne olur |
 | --- | --- | --- |
@@ -409,6 +409,7 @@ Menteşeyle ya da kızakla bağlı bir parçayı seçip **Özellik ekle ▾ → 
 | **Kremayer ve pinyon** | menteşe + kızak | Pinyonun her turu çevresi kadar kaydırır. |
 | **Kayışlı taşıyıcı** | menteşe + kızak | 3B yazıcının X/Y ekseni gibi: kasnağın her turu çevresi kadar. |
 | **Vidalı mil** | menteşe + kızak | Milin her turu somunu hatvesi kadar ilerletir. |
+| **Kam ve itici** | menteşe + kızak | Mil döndükçe itici kamın profilince kalkar: **Kalkış** (mm) ve **Tepe sayısı** (eksantrik tek tepe), kalkış L/2·(1 − cos nθ). İticinin ağırlığı ve yükü mile tork olarak geri gelir. |
 
 Bağ bir motor değil, bir kısıttır: iki eklem birlikte hareket eder ve sürülen taraftaki yük sürücüye geri yansır. Taşıyıcıyı kaldıran vidanın motoru ağırlığı tork olarak hisseder. Ölçüler parçadan gelir: silindirin çapı dişlinin diş sayısıdır (modül 1), kasnağın ya da vida milinin çapıdır. Silindir değilse 20 ve 40 diş, GT2 kasnağı ya da T8×8 vida alınır. **Ters yön**, çapraz kayışı, araya giren bir ara dişliyi ya da sol vidayı anlatır.
 
@@ -477,12 +478,13 @@ Akım sınırını sürücünün **Akım sınırı** değeriyle ayarlayın; bu, 
 - **Aynı hizada:** iki yüz aynı yöne bakar ve aynı düzlemde durur.
 - **Eş eksenli:** mil deliğinde.
 - **Paralel**, **dik**, **mesafe** ve **açı**.
+- **Mesafe sınırı** ve **açı sınırı** (SolidWorks'teki gelişmiş ilişkiler): parça bir aralıkta serbesttir; aralığın dışındaysa yakın ucuna getirilir. Şimdiki değerin çevresinde (±10 mm, ±15°) gelir, iki ucu denetçide **En az** ve **En çok** ile değiştirilir. Aralığın içindeyken serbestlik sayısını azaltmaz ve tekrar sayılmaz.
 
 Sabit parça yerinde kalır, öteki parça olabildiğince az hareketle yerine oturur. Vidalı ya da gruplu parçalar onunla birlikte gider. Parçanın denetçisinde **Montaj ilişkileri** bölümü vardır. Burada aralıkları ve açıları değiştirebilir, ilişkiyi kaldırabilirsiniz; parçanın kaç serbestliği kaldığı da yazar. Örneğin deliğindeki milin iki serbestliği kalır (kayar ve döner), omzu da yatağa dayanırsa bire iner.
 
 İlişkiler parçayı yerleştirir; çalışırken parçayı tutan eklemdir. Bir ya da hiç serbestlik kaldığında **İlişkilerden eklem kur** düğmesi o eklemi kurar: dönmek kaldıysa ekseninde menteşe, kaymak kaldıysa kızak, hiçbiri kalmadıysa sabit bağlantı. Öteki ilişkilerle çelişen bir ilişki eklenmez ve çeliştiği ilişkiler adıyla yazılır. Bir parçayı sürüklediğinizde ona bağlı parçalar da ilişkileriyle birlikte gelir.
 
-Fizik bir animasyon değildir. Dişliler ve vida kısıt çözücüyle bağlanır (sanayideki çok gövdeli dinamik programları da böyle yapar). Motorun torkunu yük, verim, boşluk ve rulman sürtünmesi belirler. Dişlerin birbirine tek tek değmesini çarpışmayla çözmek hem yavaş hem kararsız olurdu; dişliler bu yüzden kendi gövdelerinde değil, kavrama kısıtında buluşur. Kendi 3B modelinizi kullanmak isterseniz **Bağla** aracıyla menteşe ya da kızak kurun, sonra **Özellik ekle → Dişli, kayış, vidalı mil** ile eşleyin. Fizik aynı yoldan çalışır.
+Fizik bir animasyon değildir. Dişliler ve vida kısıt çözücüyle bağlanır (sanayideki çok gövdeli dinamik programları da böyle yapar). Motorun torkunu yük, verim, boşluk ve rulman sürtünmesi belirler. Dişlerin birbirine tek tek değmesini çarpışmayla çözmek hem yavaş hem kararsız olurdu; dişliler bu yüzden kendi gövdelerinde değil, kavrama kısıtında buluşur. Kendi 3B modelinizi kullanmak isterseniz **Bağla** aracıyla menteşe ya da kızak kurun, sonra **Özellik ekle → Dişli, kayış, vidalı mil, kam** ile eşleyin. Fizik aynı yoldan çalışır.
 
 ### Kol kinematiği: ileri ve ters kinematik
 

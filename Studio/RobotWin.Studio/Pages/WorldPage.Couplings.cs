@@ -54,6 +54,12 @@ namespace RobotWin.Studio.Pages
                     Size("Hatve (mm/tur)", true, 0.1, 100, "0.##");
                     Size("Mil çapı (mm)", false, 1, 200, "0.#");
                 }
+                else if (c.Kind == WorldCoupling.Cam)   // [cam] a harmonic lift, a lobe each rise and fall
+                {
+                    Size("Kalkış (mm)", true, 0.1, 500, "0.##");
+                    Size("Tepe sayısı (tur başına)", false, 1, 12, "0");
+                    Inspector.Children.Add(Note("İtici, mil döndükçe L/2·(1 − cos nθ) kadar kalkar: eksantrikte tek tepe. Kanallı kam gibi iki yönde de sürer; itici kızağın üstündedir."));
+                }
                 else if (linear) Size(c.Kind == WorldCoupling.Gear ? "Pinyon çapı (mm)" : "Kasnak çapı (mm)", true, 1, 1000, "0.##");
                 else if (c.Kind == WorldCoupling.Gear)
                 {
@@ -95,6 +101,8 @@ namespace RobotWin.Studio.Pages
         private static string CouplingSummary(WorldCoupling c, WorldJoint a, WorldJoint b, double eta)
         {
             string loss = "verim %" + (eta * 100).ToString("0", CultureInfo.InvariantCulture);
+            if (c.Kind == WorldCoupling.Cam)   // [cam] its lift, not a ratio
+                return "Kalkış " + c.SizeA.ToString("0.##", CultureInfo.InvariantCulture) + " mm · tur başına " + Math.Max(1, Math.Round(c.SizeB)).ToString("0", CultureInfo.InvariantCulture) + " tepe · " + loss;
             if (!WorldCoupling.Linear(a.Kind, b.Kind))
             {
                 double r = c.Ratio(a.Kind, b.Kind) ?? 0;
@@ -114,17 +122,18 @@ namespace RobotWin.Studio.Pages
             if (own.Count == 0) return null;
             var menu = new MenuItem
             {
-                Header = "Dişli, kayış, vidalı mil",
-                ToolTip = "Bu parçanın eklemini başka bir eklemle dişli, kayış ya da vidalı milla bağlayın: biri döndükçe öteki oranınca döner ya da kayar, yük iki yana da geçer."
+                Header = "Dişli, kayış, vidalı mil, kam",
+                ToolTip = "Bu parçanın eklemini başka bir eklemle dişli, kayış, vidalı mil ya da kamla bağlayın: biri döndükçe öteki oranınca (kamda profilince) döner ya da kayar, yük iki yana da geçer."
             };
             foreach (var mine in own)
             {
                 foreach (var other in world.Joints.Where(x => x.Kind != WorldJointKind.Fixed && x.ObjectA != o.Id && !Coupled(world, mine, x)).Take(24))
                 {
                     var partner = new MenuItem { Header = (own.Count > 1 ? JointName(world, mine) + " → " : string.Empty) + JointName(world, other) };
-                    foreach (var kind in new[] { WorldCoupling.Gear, WorldCoupling.Belt, WorldCoupling.Screw })
+                    foreach (var kind in new[] { WorldCoupling.Gear, WorldCoupling.Belt, WorldCoupling.Screw, WorldCoupling.Cam })
                     {
-                        if (!WorldCoupling.Fits(kind, mine.Kind, other.Kind)) continue;
+                        // a cam's shaft drives its follower, whichever of the two was picked
+                        if (!WorldCoupling.Fits(kind, mine.Kind, other.Kind) && !(kind == WorldCoupling.Cam && WorldCoupling.Fits(kind, other.Kind, mine.Kind))) continue;
                         var c = NewCoupling(world, kind, mine, other);
                         string title = c.Title(mine.Kind, other.Kind);
                         var item = new MenuItem { Header = title };
@@ -160,6 +169,11 @@ namespace RobotWin.Studio.Pages
             {
                 coupling.SizeA = 8;
                 coupling.SizeB = Diameter(a) ?? 8;
+            }
+            else if (kind == WorldCoupling.Cam)
+            {
+                coupling.SizeA = 10;   // [cam] 10 mm lift, an eccentric
+                coupling.SizeB = 1;
             }
             else if (linear) coupling.SizeA = Diameter(a) ?? (kind == WorldCoupling.Gear ? 20 : 12.73);
             else

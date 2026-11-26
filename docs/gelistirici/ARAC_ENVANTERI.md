@@ -56,11 +56,11 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
 | Izgara aç/kapa | tuvalin üstündeki araç kutusunda ızgara düğmesi (ayarlarda saklanır, yakalama değişmez) | var | |
-| Kutupsal koordinat | yok | yok | 3 |
+| Kutupsal koordinat | Katmanlar: imleç kutupsal (r, θ başlangıçtan) | var | |
 | mm / mil | panelde | var | |
-| Tam ekran imleç | yok | yok | 3 |
+| Tam ekran imleç | Katmanlar: tam ekran artı imleç (saklanır) | var | |
 | 45° kısıtı | yol çizerken Boşluk (köşe yönü); görünüm çubuğunda 45° anahtarı: çizgiler, çokgenler, dolgu ve kenar köşeleri yatay / dikey / 45° (saklanır) | var | |
-| Ratsnest göster, eğri ratsnest | göster var, eğri yok | kısmi | 3 |
+| Ratsnest göster, eğri ratsnest | göster ve eğri çiz (Katmanlar, saklanır) | var | |
 | Dolgu görünüşü (dolu / kenar) | Katmanlar: dolgular aç/kapa ve yalnız kenarıyla göster (saklanır) | var | |
 | Yüksek kontrast | var | var | |
 | Hat vurgula | ` tuşu ve sol şeritte Hattı vurgula aracı (tıklanan öğenin hattı; aynısı ya da boşluk kaldırır) | var | |
@@ -85,7 +85,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Yazı kutusu, tablo | yok | yok | 3 |
 | Ölçü (hizalı) | Ölçü çizgisi | var | |
 | Ölçü (dik, yarıçap, kılavuz, merkez) | Ölçü aracında Tür: hizalı, dik (yatay/dikey), yarıçap, kılavuz (not), merkez işareti; yazı geçersiz kılma | var | |
-| Silici (tıklananı sil) | Del | kısmi | 3 |
+| Silici (tıklananı sil) | Del; sol şeritte Silici aracı (her tıklama altındakini siler) | var | |
 | Izgara orijini, delik orijini | yok | yok | 3 |
 
 ### Paneller
@@ -203,8 +203,8 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Bileşen ekle, taşı, döndür | var | var | |
 | Standart ilişkiler (çakışık, paralel, dik, teğet, eş merkezli, mesafe, açı) | Hizala | var | |
-| Gelişmiş ilişkiler (sınır, genişlik, simetrik) | denetlenecek | kısmi | 2 |
-| Mekanik ilişkiler (dişli, kam, kremayer) | denetlenecek | kısmi | 2 |
+| Gelişmiş ilişkiler (sınır, genişlik, simetrik) | mesafe sınırı, açı sınırı (aralıkta serbest, uçta tutar); genişlik ve simetrik sonra | kısmi | 3 |
+| Mekanik ilişkiler (dişli, kam, kremayer) | eşleme: dişli, kayış, kremayer-pinyon, kayışlı taşıyıcı, vidalı mil, kam ve itici (harmonik, tepe sayısı); boşluk, verim, kayış esnemesi | var | |
 | Çakışma algılama | Çakışma algılama (hacim, değenler, bağlı parçalar, yalnız seçili) | var | |
 | Boşluk doğrulama | Boşluk doğrulama (en az boşluk, GJK ile kesin mesafe, iki uç arası çizgi) | var | |
 | Delik hizası | yok | yok | 2 |

@@ -41,7 +41,10 @@ namespace RobotWin.Studio.Pcb
         DiffPair,
 
         /// <summary>[highlight] KiCad's Highlight Net tool: a click lights up the net under it; the same net or empty space clears it.</summary>
-        Highlight
+        Highlight,
+
+        /// <summary>[eraser] Altium's and Eagle's delete tool: each click deletes what is under it (as the selection filter allows).</summary>
+        Erase
     }
 
     /// <summary>
@@ -323,6 +326,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Keepout => "Yasak bölge: köşelere tıklayın · çift tık veya Enter: kapat · seçenek çubuğundan katman ve neyin yasak olduğu · Esc: iptal",
             PcbTool.DiffPair => "Fark çifti: bir çiftin (D+/D−, CAN H/L, _P/_N …) pedine tıklayın · tıklayarak ilerleyin, iki yol çiftin aralığıyla birlikte gider · karşı uçtaki çift pedine tıklayınca biter · Enter: burada bitir · Geri: son parça · Esc: iptal",
             PcbTool.Tune => "Uzunluk ayarı: kısa kalan hattın uzun, düz bir parçasına tıklayın; kıvrımlar hattı çiftinin ya da grubunun uzunluğuna getirir · Esc: çık",
+            PcbTool.Erase => "Silici: tıklanan öğe silinir (seçim süzgecinin izin verdikleri) · Ctrl+Z geri alır · Esc: çık",
             PcbTool.Dimension => DimKind switch
             {
                 DimensionKind.Orthogonal => "Dik ölçü: iki noktaya tıklayın, sonra üstüne/altına (yatay) ya da yanına (dikey) çekip tıklayın",
@@ -482,6 +486,14 @@ namespace RobotWin.Studio.Pcb
             DrawMeasure(dc);
             DrawDimensionPreview(dc);
             DrawMagnetMark(dc);   // [magnet]
+            if (FullCrosshair && IsMouseOver)
+            {
+                // [crosshair] KiCad's full-window crosshair: two thin lines through the pointer, edge to edge
+                var c = S(_cursor.X, _cursor.Y);
+                var pen = P(A(Accent, (byte)0x90), 1, false);
+                dc.DrawLine(pen, new Point(0, c.Y), new Point(ActualWidth, c.Y));
+                dc.DrawLine(pen, new Point(c.X, 0), new Point(c.X, ActualHeight));
+            }
         }
 
         private StreamGeometry Poly(IReadOnlyList<PcbPoint> pts)
@@ -740,9 +752,39 @@ namespace RobotWin.Studio.Pcb
             foreach (var (net, a, b) in board.Ratsnest())
             {
                 if (HighlightNet != null && !string.Equals(net, HighlightNet, StringComparison.OrdinalIgnoreCase)) continue;
-                dc.DrawLine(pen, S(a.X, a.Y), S(b.X, b.Y));
+                if (!CurvedRatsnest)
+                {
+                    dc.DrawLine(pen, S(a.X, a.Y), S(b.X, b.Y));
+                    continue;
+                }
+
+                // [rats-curve] KiCad's curved ratsnest: a gentle bow (a tenth of its length) so lines on one row stay apart
+                var p0 = S(a.X, a.Y);
+                var p1 = S(b.X, b.Y);
+                var mid = new Point((p0.X + p1.X) / 2 - (p1.Y - p0.Y) * 0.1, (p0.Y + p1.Y) / 2 + (p1.X - p0.X) * 0.1);
+                var g = new StreamGeometry();
+                using (var ctx = g.Open())
+                {
+                    ctx.BeginFigure(p0, false, false);
+                    ctx.QuadraticBezierTo(mid, p1, true, false);
+                }
+
+                g.Freeze();
+                dc.DrawGeometry(null, pen, g);
             }
         }
+
+        /// <summary>[crosshair] A crosshair across the whole board view through the pointer (KiCad's full-window cursor).</summary>
+        public bool FullCrosshair { get; set; }
+
+        protected override void OnMouseLeave(System.Windows.Input.MouseEventArgs e)
+        {
+            base.OnMouseLeave(e);
+            if (FullCrosshair) InvalidateVisual();   // [crosshair] gone with the pointer
+        }
+
+        /// <summary>[rats-curve] Draws the ratsnest as gentle curves (KiCad's option): overlapping straight lines on one row are told apart.</summary>
+        public bool CurvedRatsnest { get; set; }
 
         private void DrawSelection(DrawingContext dc, BoardDocument board)
         {

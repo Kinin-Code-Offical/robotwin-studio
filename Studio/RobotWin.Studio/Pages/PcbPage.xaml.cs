@@ -70,6 +70,8 @@ namespace RobotWin.Studio.Pages
             Canvas.ZoneOpacity = AppSettings.Current.PcbZoneOpacity;
             GridToggle.IsChecked = Canvas.ShowGrid;
             Canvas.Constrain45 = AppSettings.Current.PcbConstrain45;   // [angle45]
+            Canvas.CurvedRatsnest = AppSettings.Current.PcbCurvedRatsnest;   // [rats-curve]
+            Canvas.FullCrosshair = AppSettings.Current.PcbFullCrosshair;   // [crosshair]
             Angle45Toggle.IsChecked = Canvas.Constrain45;
             InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
@@ -815,6 +817,13 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "rats-curve":   // [rats-curve] the board unrouted, its ratsnest drawn as curves
+                    board.Tracks.Clear();
+                    board.Vias.Clear();
+                    Canvas.CurvedRatsnest = true;
+                    Canvas.Refresh();
+                    break;
+
                 case "angle45":   // [angle45] a line drawn with the H / V / 45° constraint: the pointer at 39°, the line at 45°
                     Canvas.Constrain45 = true;
                     Angle45Toggle.IsChecked = true;
@@ -1370,6 +1379,15 @@ namespace RobotWin.Studio.Pages
             var (x, y) = Canvas.CursorPosition;
             string unit = Canvas.UseMil ? "mil" : "mm";
             double k = Canvas.UseMil ? 1 / 0.0254 : 1;
+            if (AppSettings.Current.PcbPolarCursor)
+            {
+                // [polar] KiCad's polar coordinates: how far and at what angle from the board's origin (the angle counter-clockwise, Y up)
+                double r = Math.Sqrt(x * x + y * y), angle = Math.Atan2(-y, x) * 180 / Math.PI;
+                CursorText.Text = string.Format(CultureInfo.InvariantCulture, "r {0:0.00} {1}  θ {2:0.0}° · ızgara {3} · {4}",
+                    r * k, unit, angle, Canvas.Length(Canvas.GridSize), PcbLayers.DisplayName(Canvas.ActiveLayer));
+                return;
+            }
+
             CursorText.Text = string.Format(CultureInfo.InvariantCulture, "x {0:0.00}  y {1:0.00} {2} · ızgara {3} · {4}",
                 x * k, y * k, unit, Canvas.Length(Canvas.GridSize), PcbLayers.DisplayName(Canvas.ActiveLayer));
         }
@@ -2063,6 +2081,26 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(Overline("Görünüm"));
             LayersPanel.Children.Add(Switch("Serigrafi", Canvas.ShowSilk, v => { Canvas.ShowSilk = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Ratsnest", Canvas.ShowRatsnest, v => { Canvas.ShowRatsnest = v; Canvas.InvalidateVisual(); }));
+            LayersPanel.Children.Add(Switch("Tam ekran artı imleç", Canvas.FullCrosshair, v =>   // [crosshair]
+            {
+                Canvas.FullCrosshair = v;
+                AppSettings.Current.PcbFullCrosshair = v;
+                AppSettings.Current.Save();
+                Canvas.InvalidateVisual();
+            }));
+            LayersPanel.Children.Add(Switch("İmleç kutupsal (uzaklık ve açı)", AppSettings.Current.PcbPolarCursor, v =>   // [polar]
+            {
+                AppSettings.Current.PcbPolarCursor = v;
+                AppSettings.Current.Save();
+                UpdateCursorText();
+            }));
+            LayersPanel.Children.Add(Switch("Ratsnest eğri çizilsin", Canvas.CurvedRatsnest, v =>   // [rats-curve] KiCad's curved ratsnest
+            {
+                Canvas.CurvedRatsnest = v;
+                AppSettings.Current.PcbCurvedRatsnest = v;
+                AppSettings.Current.Save();
+                Canvas.InvalidateVisual();
+            }));
             LayersPanel.Children.Add(Switch("Dolgular", Canvas.ShowZones, v => { Canvas.ShowZones = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Dolguları yalnız kenarıyla göster", Canvas.ZoneOutlines, v =>   // [zone-look] KiCad's zone display
             {
