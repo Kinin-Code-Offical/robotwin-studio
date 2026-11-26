@@ -87,6 +87,7 @@ namespace RobotWin.Studio.Pages
             Tab("Parça… (Parçalar sekmesi)", TabParts);
             Tab("Mekanik… (Mekanik sekmesi)", TabMech);
             Tab("Ortam… (Ortam sekmesi)", TabEnv);
+            EmptyMenuItems(create);   // [empty] Unity's Create Empty / Child / Parent on top (Pages/WorldPage.Empty.cs)
             return create;
         }
 

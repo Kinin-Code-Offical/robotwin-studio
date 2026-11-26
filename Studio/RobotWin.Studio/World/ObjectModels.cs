@@ -126,6 +126,7 @@ namespace RobotWin.Studio.World
                 WorldObjectKind.Board => DetailedBoard(o, world, library) ?? BuildBoard(o, world, library),
                 WorldObjectKind.Component => MotionModels.TryBuild(o, library) ?? PowerModels.TryBuild(o, library) ?? SenseModels.TryBuild(o, library) ?? CellModels.TryBuild(o, library) ?? DetailedComponent(o, library) ?? BuildComponent(o, library),   // [stepper] World/MotionModels.cs   // [sense] World/SenseModels.cs, [arm] World/CellModels.cs
                 WorldObjectKind.Model => BuildMesh(o),
+                WorldObjectKind.Empty => BuildEmpty(),   // [empty]
                 _ => BuildBody(o)
             };
             if (model.Bounds.IsEmpty) model.Bounds = model.Body.Bounds;
@@ -237,6 +238,18 @@ namespace RobotWin.Studio.World
         }
 
         // ================================================================ mechanical bodies
+
+        /// <summary>[empty] Unity draws an empty as its handle only; here a small X / Y / Z cross, so it can be seen and picked.</summary>
+        private static ObjectModel BuildEmpty()
+        {
+            var m = new ObjectModel();
+            Box(m.Body, 0, 0, 0, 3, 3, 3, Color.FromRgb(0xC8, 0xC8, 0xD0), 0);
+            Box(m.Body, 12, 0, 0, 22, 1.2, 1.2, Color.FromRgb(0xE5, 0x48, 0x4D), 0);
+            Box(m.Body, 0, 12, 0, 1.2, 22, 1.2, Color.FromRgb(0x46, 0xA7, 0x58), 0);
+            Box(m.Body, 0, 0, 12, 1.2, 1.2, 22, Color.FromRgb(0x3E, 0x7B, 0xFA), 0);
+            m.Bounds = new Rect3D(-0.004, -0.004, -0.004, 0.027, 0.027, 0.027);
+            return m;
+        }
 
         private static ObjectModel BuildBody(WorldObject o)
         {

@@ -165,6 +165,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Ctrl+D | Duplicate |
 | Ctrl+click / Shift+click | Add to or take out of the selection / select a range in the tree |
 | Ctrl+A | Select all |
+| Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Empty object / empty child of the selection / put the selection under an empty parent |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
 | T | Camera follows the selected object |

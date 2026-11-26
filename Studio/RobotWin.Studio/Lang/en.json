@@ -8482,7 +8482,18 @@
   "Bu bileşeni nesneden kaldırır (Ctrl+Z ile geri alınır)": "Removes this component from the object (Ctrl+Z undoes it)",
   "Bileşeni kaldır": "Remove component",
   "Bir bileşenin üzerine gelin: ne eklediği burada yazar. Eklenince kendi kartı açılır.": "Point at a component: what it adds is described here. Once added, its own card opens.",
-  "Kabuk kaldırıldı": "Shell removed"
+  "Kabuk kaldırıldı": "Shell removed",
+  "Boş nesne": "Empty object",
+  "Boş nesne oluşturuldu": "Empty object created",
+  "Seçili parçaların hepsi bir şeye takılı: boş üst nesne mekaniği değiştirmesin diye oluşturulmadı": "Every selected part is mounted on something: no empty parent was made, so the mechanics stay as they are",
+  "Şekli, kütlesi ve devresi yok. Bir yer ya da grup olarak kullanın: sahne ağacında parçaları onun altına alın (sağ tık → Oluştur → Boş üst nesne) ya da alt nesne ekleyin.": "No shape, mass or circuit. Use it as a place or a group: put parts under it from the scene tree (right-click → Create → Empty parent) or add child objects.",
+  "Boş alt nesne oluştur (Alt+Shift+N)": "Create empty child (Alt+Shift+N)",
+  "Boş alt nesne": "Empty child",
+  "Boş üst nesne (seçileni altına al)": "Empty parent (put the selection under it)",
+  "Boş nesne oluştur": "Create empty object",
+  "Seçilinin altına boş nesne": "Empty object under the selection",
+  "Seçileni boş bir üst nesnenin altına al": "Put the selection under an empty parent",
+  "Bu bileşenin kılavuzdaki bölümü": "This component's section in the guide"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11913,6 +11924,10 @@
   "{…} devre dışı bırakıldı": "{0} deactivated",
   "+{…} nesne daha seçili (Ctrl+tık ile ekleyin ya da çıkarın): tutamaçla taşıma ve döndürme, kopyala, kes, çoğalt ve sil hepsine uygulanır; ayarlar etkin olanınkidir.": "+{0} more objects selected (Ctrl+click adds or removes): moving and turning with the handle, copy, cut, duplicate and delete apply to all of them; the settings are the active one's.",
   "{…} nesne çoğaltıldı": "{0} objects duplicated",
-  "{…} nesne kesildi": "{0} objects cut"
+  "{…} nesne kesildi": "{0} objects cut",
+  "{…} nesne bunun altında: düzenleyicide onunla taşınır ve döner. Çalıştırmada boş nesne yoktur; altındakiler onun takılı olduğu yere takılı sayılır, boşta duruyorsa serbesttir.": "{0} objects under it: they move and turn with it in the editor. A run has no empty objects; what is under one counts as mounted where the empty is mounted, or free when it stands free.",
+  "{…}: boş alt nesne oluşturuldu": "{0}: empty child created",
+  "{…} nesne boş üst nesneye alındı": "{0} objects put under an empty parent",
+  "Boş nesne · {…} alt nesne": "Empty object · {0} children"
  }
 }

@@ -424,6 +424,7 @@ namespace RobotWin.Studio.Pages
             int also = Array.IndexOf(args, "--select-also");   // [multiselect] another object Ctrl+clicked into the selection
             if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
                 Scene.ToggleSelect(extra.Id);
+            if (args.Contains("--empty-parent")) CreateEmptyParent();   // [empty] the selection under a new empty
 
             if (args.Contains("--grid-snap"))
             {

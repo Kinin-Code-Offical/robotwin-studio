@@ -63,6 +63,12 @@ namespace RobotWin.Studio.Pages
             var head = new DockPanel { Background = Brushes.Transparent, Cursor = Cursors.Hand, Margin = new Thickness(0, 6, 0, 0), MinHeight = 26 };
             DockPanel.SetDock(more, Dock.Right);
             head.Children.Add(more);
+            // Unity's ? on a component: the guide at this component's section (Pages/WorldPage.CardHelp.cs)
+            var help = new Button { Width = 22, Height = 22, Cursor = Cursors.Arrow, ToolTip = Shell.Lang.T("Bu bileşenin kılavuzdaki bölümü"), Content = new Theme.Icon { Data = (Geometry)FindResource("I.Help"), Size = 12 } };
+            help.SetResourceReference(StyleProperty, "Btn.Icon");
+            help.Click += (_, _) => OpenCardHelp(title);
+            DockPanel.SetDock(help, Dock.Right);
+            head.Children.Add(help);
             Button? drop = null;
             if (removal != null)
             {
@@ -79,7 +85,7 @@ namespace RobotWin.Studio.Pages
             head.Children.Add(name);
             head.MouseLeftButtonUp += (_, e) =>
             {
-                if (e.OriginalSource is DependencyObject d && (IsInside(d, more) || (drop != null && IsInside(d, drop)))) return;
+                if (e.OriginalSource is DependencyObject d && (IsInside(d, more) || IsInside(d, help) || (drop != null && IsInside(d, drop)))) return;
                 bool fold = body.Visibility == Visibility.Visible;
                 body.Visibility = fold ? Visibility.Collapsed : Visibility.Visible;
                 chevron.Data = Geometry.Parse(fold ? "M9,6 L15,12 L9,18" : "M6,9 L12,15 L18,9");

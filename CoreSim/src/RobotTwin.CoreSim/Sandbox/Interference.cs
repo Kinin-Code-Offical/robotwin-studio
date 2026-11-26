@@ -113,6 +113,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var solids = new List<Solid>();
             foreach (var o in world.Objects)
             {
+                if (o.Kind == WorldObjectKind.Empty) continue;   // [empty] nothing to collide
                 var g = geometry.GeometryOf(o);
                 var local = g.Hull is { Count: >= 4 } hull ? hull : BoxCorners(g.Min, g.Max);
                 if (local.Count < 4) continue;

@@ -795,6 +795,16 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Vector3Row("Dönme (°) X · Y · Z", o.Pose.Roll, o.Pose.Pitch, o.Pose.Yaw, (r, p, yw) =>
                 Edit("Yön değişti", () => TurnTo(world, o, r, p, yw))));   // [gizmo] what is mounted on it turns too
 
+            if (o.Kind == WorldObjectKind.Empty)
+            {
+                EmptySection(world, o);   // [empty] a place and a parent: nothing physical (Pages/WorldPage.Empty.cs)
+                EditorSection(world, o);
+                Inspector.Children.Add(Caption("İşlemler"));
+                Inspector.Children.Add(Action("Çoğalt (Ctrl+D)", Duplicate));
+                Inspector.Children.Add(Action("Sil (Del)", Delete));
+                return;
+            }
+
             Inspector.Children.Add(Caption("Fizik"));
             var st = new CheckBox { Content = "Sabit (zemine/masaya sabitlenmiş)", IsChecked = o.IsStatic, Style = (Style)FindResource("Switch"), Margin = new Thickness(0, 0, 0, 6) };
             st.Click += (_, _) => Edit("Sabitlik değişti", () => o.IsStatic = st.IsChecked == true);
@@ -975,6 +985,8 @@ namespace RobotWin.Studio.Pages
                     return "Parça · " + (preset?.Name ?? def?.Name ?? o.PartId) + (def != null ? " · " + def.Category : string.Empty);
                 case WorldObjectKind.Model:
                     return "3D model · " + (o.MeshName ?? "?") + " · " + o.Material;
+                case WorldObjectKind.Empty:
+                    return "Boş nesne · " + (World?.MountedOn(o.Id).Count ?? 0) + " alt nesne";   // [empty]
                 default:
                     return ReadyKind(o) ?? DriveKind(o) ?? "Mekanik · " + o.Shape + " · " + o.Material;   // [objs] [drive]
             }
@@ -1544,6 +1556,15 @@ namespace RobotWin.Studio.Pages
             {
                 case Key.Delete:
                     Delete();
+                    break;
+                case Key.N when mods == (ModifierKeys.Control | ModifierKeys.Alt):   // [empty] Unity's Create Empty (Ctrl+Shift+N is New world here)
+                    CreateEmpty();
+                    break;
+                case Key.N when mods == (ModifierKeys.Alt | ModifierKeys.Shift):   // [empty] Create Empty Child
+                    CreateEmptyChild();
+                    break;
+                case Key.G when mods == (ModifierKeys.Control | ModifierKeys.Shift):   // [empty] Create Empty Parent
+                    CreateEmptyParent();
                     break;
                 case Key.A when mods == ModifierKeys.Control:   // [multiselect] Unity's Select All
                     SelectAllObjects();

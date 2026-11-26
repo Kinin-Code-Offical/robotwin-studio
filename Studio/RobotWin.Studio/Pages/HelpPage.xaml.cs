@@ -96,6 +96,26 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            if (section.StartsWith("search:", StringComparison.Ordinal))
+            {
+                // [components] a card's ? without its own section: the guide searched for its name, the first hit open
+                SearchBox.Text = section.Substring(7);
+                _searchDelay.Stop();
+                BuildNav();
+                var hit = Nav.Children.OfType<Button>().FirstOrDefault(b => b.Tag is (HelpTopic, string));
+                if (hit?.Tag is (HelpTopic found, string _)) Open(found, null);
+                return;
+            }
+
+            // [components] "page.md#Heading": the page at that heading
+            string? anchor = null;
+            int hash = section.IndexOf('#');
+            if (hash > 0)
+            {
+                anchor = MarkdownParser.Slug(section.Substring(hash + 1));
+                section = section.Substring(0, hash);
+            }
+
             switch (section)
             {
                 case "shortcuts":
@@ -119,7 +139,7 @@ namespace RobotWin.Studio.Pages
             // [lang] the guides of each language number their pages alike ("02-devre.md" is "02-circuit.md" in English)
             if (page == null && section.Length > 3 && char.IsDigit(section[0]) && char.IsDigit(section[1]) && section[2] == '-')
                 page = _library.AllGuidePages.FirstOrDefault(t => Path.GetFileName(t.FilePath ?? string.Empty).StartsWith(section.Substring(0, 3), StringComparison.Ordinal));
-            Open(page ??_library.Guide.FirstOrDefault(t => t.Kind == HelpTopicKind.Guide) ?? MissingTopic(), null);
+            Open(page ??_library.Guide.FirstOrDefault(t => t.Kind == HelpTopicKind.Guide) ?? MissingTopic(), page != null ? anchor : null);
         }
 
         /// <summary>--snapshot --page help --fault news|updates|about|shortcuts|search:&lt;text&gt;|&lt;file.md&gt;</summary>

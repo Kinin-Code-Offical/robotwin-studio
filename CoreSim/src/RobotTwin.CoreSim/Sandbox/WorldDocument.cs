@@ -25,7 +25,14 @@ namespace RobotTwin.CoreSim.Sandbox
         Body,
 
         /// <summary>An imported 3D model (STL/OBJ/PLY) used as a mechanical part.</summary>
-        Model
+        Model,
+
+        /// <summary>
+        /// [empty] Unity's empty GameObject: a named place and a parent to group parts under, with no shape, mass or
+        /// circuit. A run does not see it (<see cref="WorldDocument.ForRun"/>): what is mounted on it rides on whatever
+        /// it is mounted on, or stands free when it stands free.
+        /// </summary>
+        Empty
     }
 
     /// <summary>Position (metres, Z up) and orientation (degrees, roll-pitch-yaw about X, Y, Z).</summary>
@@ -290,6 +297,9 @@ namespace RobotTwin.CoreSim.Sandbox
 
     public sealed class WorldJoint
     {
+        /// <summary>A copy with the same values (a run's re-targeted joint keeps the editor's untouched).</summary>
+        public WorldJoint Clone() => (WorldJoint)MemberwiseClone();
+
         public string Id { get; set; } = string.Empty;
 
         /// <summary>[ros] The joint's own name (an imported robot's URDF joint name, what ROS calls it); null: its id.</summary>
@@ -476,6 +486,14 @@ namespace RobotTwin.CoreSim.Sandbox
         {
             var off = Objects.Where(o => !WorldBuilding.IsActive(o)).Select(o => o.Id).ToList();
             if (off.Count == 0) return this;
+            var run = RunCopy();
+            WorldFragment.RemoveFrom(run, off);
+            return run;
+        }
+
+        /// <summary>A copy whose lists are its own (the objects are the same instances); never exploded.</summary>
+        private WorldDocument RunCopy()
+        {
             var run = (WorldDocument)MemberwiseClone();
             run.Objects = new List<WorldObject>(Objects);
             run.Cables = new List<WorldCable>(Cables);
@@ -484,7 +502,60 @@ namespace RobotTwin.CoreSim.Sandbox
             run.Mates = Mates == null ? null : new List<WorldMate>(Mates);
             run.Designs = new List<WorldDesign>(Designs);
             run.Explode = null;   // a run is never exploded (and the steps' lists stay the editor's)
-            WorldFragment.RemoveFrom(run, off);
+            return run;
+        }
+
+        /// <summary>
+        /// [active] [empty] The world a run builds from (physics, circuit, sensors alike): without switched-off objects
+        /// (<see cref="WithoutInactive"/>) and without empty objects, whose children are mounted on what the empty is
+        /// mounted on (through any chain of empties; the ground when it is fixed to the ground), or stand free when the
+        /// empty stands free. A joint that moves (a hinge onto an empty) keeps its kind, anchor and axis.
+        /// </summary>
+        public WorldDocument ForRun()
+        {
+            var run = WithoutInactive();
+            var empties = new HashSet<string>(run.Objects.Where(o => o.Kind == WorldObjectKind.Empty).Select(o => o.Id), StringComparer.OrdinalIgnoreCase);
+            if (empties.Count == 0) return run;
+            if (ReferenceEquals(run, this)) run = RunCopy();
+
+            // what an empty hangs on: (true, id or null for the ground) or (false, _) when it stands free
+            (bool Held, string? On) Carrier(string empty)
+            {
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                string? at = empty;
+                while (at != null && empties.Contains(at) && seen.Add(at))
+                {
+                    var up = run.Joints.FirstOrDefault(j => string.Equals(j.ObjectA, at, StringComparison.OrdinalIgnoreCase));
+                    if (up == null) return (false, null);
+                    if (up.ObjectB == null) return (true, null);
+                    at = up.ObjectB;
+                }
+
+                return at != null && !empties.Contains(at) ? (true, at) : (false, null);
+            }
+
+            var joints = new List<WorldJoint>();
+            foreach (var j in run.Joints)
+            {
+                if (empties.Contains(j.ObjectA)) continue;   // an empty's own mounting goes with it
+                if (j.ObjectB != null && empties.Contains(j.ObjectB))
+                {
+                    var (held, on) = Carrier(j.ObjectB);
+                    if (!held) continue;   // the empty stands free: so does what hangs on it
+                    var moved = j.Clone();
+                    moved.ObjectB = on;
+                    joints.Add(moved);
+                    continue;
+                }
+
+                joints.Add(j);
+            }
+
+            run.Joints = joints;
+            run.Objects.RemoveAll(o => empties.Contains(o.Id));
+            run.Cables.RemoveAll(c => empties.Contains(c.A.ObjectId) || empties.Contains(c.B.ObjectId));
+            run.PruneCouplings();
+            WorldMates.Prune(run);
             return run;
         }
 

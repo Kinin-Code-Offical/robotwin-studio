@@ -97,7 +97,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public static WorldCircuit Compile(WorldDocument world, PartLibrary library, Func<WorldCable, double>? cableLength = null,
             ToleranceSettings? tolerances = null, int toleranceRun = 0)
         {
-            world = world.WithoutInactive();   // [active] a switched-off object is not in the run
+            world = world.ForRun();   // [active] [empty] a switched-off object is not in the run
             if (world == null) throw new ArgumentNullException(nameof(world));
             if (library == null) throw new ArgumentNullException(nameof(library));
 

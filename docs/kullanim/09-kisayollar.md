@@ -165,6 +165,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Ctrl+D | Çoğalt |
 | Ctrl+tık / Shift+tık | Seçime ekle ya da çıkar / ağaçta aralık seç |
 | Ctrl+A | Hepsini seç |
+| Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Boş nesne / seçilinin altına boş nesne / seçileni boş üst nesnenin altına al |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |
 | T | Kamera seçili nesneyi takip etsin |

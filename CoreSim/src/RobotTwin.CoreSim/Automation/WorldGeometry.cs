@@ -33,6 +33,8 @@ namespace RobotTwin.CoreSim.Automation
             if (DriveParts.Geometry(o) is { } drive) return drive;   // [drive] gears, bearings, shafts, screws
             switch (o.Kind)
             {
+                case WorldObjectKind.Empty:   // [empty] a point: no volume, (almost) no mass
+                    return new WorldBodyGeometry { Min = Vec3.Zero, Max = Vec3.Zero, Shape = "box", MassKg = 1e-6 };
                 case WorldObjectKind.Body:
                     return BodyGeometry(o);
                 case WorldObjectKind.Model when o.Mesh != null:
