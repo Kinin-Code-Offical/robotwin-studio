@@ -76,6 +76,26 @@ Dolgu, boşluk, ısıl bağlantı (thermal relief), öncelik ve ada temizleme ku
 
 Hatalar listede görünür; birine tıklayınca kartta o yer gösterilir.
 
+### Üretim ve test (DFM/DFT)
+
+**Üretim ve test (DFM/DFT)** anahtarı açıkken DRC, üreticinin ve dizgi hattının bakacağı şeyleri de uyarı olarak ekler:
+
+- **Asit tuzağı:** 90°'den dar açıyla birleşen yollar (pedde ya da viada değil; aşındırma sıvısı köşede kalır).
+- **Maske köprüsü:** iki ped arasında 0,1 mm'den dar lehim maskesi seti (açıklıklar birleşir, lehim köprü kurabilir).
+- **Pedde via:** SMD pedin içindeki açık via (lehimi emer; dolgulu ve kapatılmış via gerekir).
+- **Kenara yakın SMD:** kart kenarına 2 mm'den yakın SMD ped (dizgi hattı kenardan tutar; panel kenar payı gerekir).
+- **Fidüsyel yok:** 0,65 mm ve daha ince adımlı bir parça varken ikiden az fidüsyel.
+- **Mezar taşı riski:** iki pedli SMD parçanın bir pedi çok daha geniş bakıra bağlıysa (fırında iki uç aynı anda erimez).
+- **Okunmaz serigrafi:** 0,8 mm'den alçak ya da 0,15 mm'den ince yazı.
+- **Delik çeşidi:** sekizden çok farklı delik çapı (her biri bir takım değişimi).
+- **Test erişimi yok / prob aralığı:** iki ya da daha çok pedi olan her hat için test probunun değebileceği bir yer (delikli ped, test noktası parçası ya da alt yüzde en az 0,8 mm ped) aranır; olmayanlar listelenir, iki prob 1,27 mm'den yakınsa uyarı çıkar. Özet satırı **test kapsamını** verir.
+
+Bunlar hata değil uyarıdır: kurala uymayan kart üretilebilir, ama daha pahalıya ya da daha düşük verimle.
+
+### Fark çiftleri ve uzunluk eşleme
+
+**Hatlar** sekmesinde **Fark çiftleri** bölümü birlikte gitmesi gereken iki hattı tutar (USB D+/D−, CAN H/L). **Adlarından bul**, adı `+`/`-`, `_P`/`_N` ya da `H`/`L` ile biten hatları çift yapar. Her çiftin yanında yollanmış iki uzunluk, farkları ve yolun ne kadarının çiftin aralığında yan yana gittiği görünür; **Aralık** ve **En çok fark** (USB 2.0 tam hızda ~2,5 mm, yüksek hızda ~1,25 mm) ayarlanır. **Uzunluk grupları** aynı anda varması gereken hatları (paralel veri yolu, saat ve verisi) bir toleransla tutar. Bir hattın uzunluğu yollarıyla geçtiği viaların gövdesidir (kartın kalınlığının iki katman arasındaki payı). DRC, farkı sınırı aşan çifti, yolunun %60'ından azı yan yana giden çifti ve yayılımı toleransı aşan grubu uyarır. **Yol uzunlukları** her hattın uzunluğunu listeler.
+
 ## 3D görünüm
 
 **3D** düğmesi kartı parçalarıyla birlikte 3 boyutlu gösterir. Simülasyon çalışırken LED'ler yanar, ısınan parçalar kızarır.

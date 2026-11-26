@@ -76,6 +76,26 @@ Filling follows the clearance, thermal relief, priority and island-removal rules
 
 Errors appear in a list; clicking one shows the spot on the board.
 
+### Manufacture and test (DFM/DFT)
+
+With **Manufacture and test (DFM/DFT)** switched on, the DRC also adds, as warnings, what the fab and the assembly line look at:
+
+- **Acid trap:** tracks meeting at an angle sharper than 90° (not on a pad or a via; the etchant stays in the corner).
+- **Mask sliver:** a solder-mask dam narrower than 0.1 mm between two pads (the openings merge, the solder can bridge).
+- **Via in pad:** an open via inside an SMD pad (it wicks the solder away; it needs filling and capping).
+- **SMD near the edge:** an SMD pad closer than 2 mm to the board edge (the assembly line holds the edge; add a panel rail).
+- **No fiducials:** a part with a 0.65 mm or finer pitch and fewer than two fiducials.
+- **Tombstoning risk:** one pad of a two-pad SMD part tied to far wider copper than the other (the two ends do not melt together).
+- **Illegible silkscreen:** text lower than 0.8 mm or thinner than 0.15 mm.
+- **Drill sizes:** more than eight different drill diameters (each one is a tool change).
+- **No test access / probe pitch:** every net with two or more pads needs a place a test probe can touch (a through-hole pad, a test point part or a bottom pad of at least 0.8 mm); the ones without are listed, and two probes closer than 1.27 mm are flagged. The summary line gives the **test coverage**.
+
+These are warnings, not errors: a board that breaks them can be made, at a higher cost or a lower yield.
+
+### Differential pairs and length matching
+
+In the **Nets** tab, **Differential pairs** holds two nets that must run together (USB D+/D−, CAN H/L). **Find by name** pairs the nets whose names end in `+`/`-`, `_P`/`_N` or `H`/`L`. Beside each pair are its two routed lengths, their difference and how much of the route runs side by side at the pair's gap; **Gap** and **Largest difference** (about 2.5 mm for USB 2.0 full speed, 1.25 mm for high speed) are set there. **Length groups** hold nets that must arrive together (a parallel bus, a clock and its data) within a tolerance. A net's length is its tracks plus the barrels of the vias it changes layer through (the board's thickness between the two layers). The DRC warns about a pair longer than its limit on one side, a pair less than 60 % of whose route runs side by side, and a group spread wider than its tolerance. **Track lengths** lists every net's length.
+
 ## 3D view
 
 **3D** shows the board with its parts in 3D. While simulating, LEDs light up and hot parts glow.

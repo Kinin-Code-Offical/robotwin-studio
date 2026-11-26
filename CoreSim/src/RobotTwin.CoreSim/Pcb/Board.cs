@@ -479,6 +479,11 @@ namespace RobotTwin.CoreSim.Pcb
         public List<Zone> Zones { get; set; } = new List<Zone>();
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
+
+        /// <summary>[pairs] Differential pairs and length-matched groups the DRC holds the routing to (Pcb/NetLengths.cs).</summary>
+        public List<DiffPair> DiffPairs { get; set; } = new List<DiffPair>();
+
+        public List<LengthGroup> LengthGroups { get; set; } = new List<LengthGroup>();
         public List<BoardDimension> Dimensions { get; set; } = new List<BoardDimension>();
 
         /// <summary>

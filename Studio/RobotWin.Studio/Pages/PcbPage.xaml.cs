@@ -28,6 +28,7 @@ namespace RobotWin.Studio.Pages
     {
         private static Workspace W => Workspace.Current;
         private List<DrcViolation> _violations = new List<DrcViolation>();
+        private DfmReport? _dfm;   // [dfm] the last manufacturability and test check, when its switch was on
         private readonly DispatcherTimer _fillTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
         private bool _autoFill = true;
         private bool _narrow;
@@ -721,6 +722,25 @@ namespace RobotWin.Studio.Pages
                     if (DrcList.Items.Count > 0) DrcList.SelectedIndex = 0;
                     ShowPanel(3);
                     break;
+                case "dfm":   // [dfm] the board as it is, with the manufacturing and test check on
+                    DfmCheck.IsChecked = true;
+                    RunDrcNow();
+                    ShowPanel(3);
+                    break;
+                case "pairs":   // [pairs] two of its nets as a pair, three as a group; the Nets tab scrolled to them
+                {
+                    var nets = NetLengths.Measure(board).OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
+                    if (nets.Count >= 3)
+                    {
+                        board.DiffPairs.Add(new DiffPair { Positive = nets[0], Negative = nets[1], Gap = 0.3, MaxSkew = 2 });
+                        board.LengthGroups.Add(new LengthGroup { Name = "Veri", Nets = nets.Take(3).ToList(), Tolerance = 5 });
+                    }
+
+                    UpdatePanel();
+                    ShowPanel(2);
+                    if (ClassesPanel.Parent is ScrollViewer sv) Dispatcher.BeginInvoke(new Action(sv.ScrollToEnd), System.Windows.Threading.DispatcherPriority.Loaded);
+                    break;
+                }
                 case "classes":
                     if (board.NetClasses.All(c => c.Name != "Sinyal-HV")) board.NetClasses.Add(new NetClass { Name = "Sinyal-HV", Clearance = 0.5, TrackWidth = 0.5, ViaDiameter = 1.0, ViaDrill = 0.5 });
                     UpdatePanel();
@@ -963,6 +983,9 @@ namespace RobotWin.Studio.Pages
 
         private void ShowDrc(List<DrcViolation> violations, Dictionary<string, double> currents)
         {
+            // [dfm] with the switch on, what the fab and the assembly line would flag joins the list (as warnings)
+            _dfm = DfmCheck.IsChecked == true ? DfmChecker.Check(Board) : null;
+            if (_dfm != null) violations = violations.Concat(_dfm.Issues).ToList();
             _violations = violations;
             Canvas.Violations = _violations;
             Canvas.FocusedViolation = null;
@@ -1797,6 +1820,103 @@ namespace RobotWin.Studio.Pages
                 row.Children.Add(combo);
                 ClassesPanel.Children.Add(row);
             }
+
+            PairsSection(board);   // [pairs]
+        }
+
+        /// <summary>
+        /// [pairs] Differential pairs and length-matched groups (CoreSim Pcb/NetLengths.cs): each pair's routed lengths, their
+        /// difference, how much runs side by side at its gap; each group's spread; the DRC holds the routing to them.
+        /// </summary>
+        private void PairsSection(BoardDocument board)
+        {
+            var lengths = NetLengths.Measure(board);
+            static string F1(double v) => v.ToString("0.0", CultureInfo.InvariantCulture);   // lengths to a tenth of a millimetre
+            string L(string net) => lengths.TryGetValue(net, out var l) ? F1(l) : "—";
+            ClassesPanel.Children.Add(Overline("Fark çiftleri"));
+            ClassesPanel.Children.Add(Caption("Birlikte, aynı aralıkla ve aynı uzunlukta gitmesi gereken iki hat (USB D+/D−, CAN H/L). DRC uzunluk farkını ve yan yana gidişi denetler.", 0));
+            foreach (var p in board.DiffPairs.ToList())
+            {
+                var pair = p;
+                var card = new Border { BorderBrush = B("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 8, 10, 6), Margin = new Thickness(0, 8, 0, 0) };
+                var body = new StackPanel();
+                var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+                var del = new Button { Content = "Sil", Style = S("Btn.Ghost"), Padding = new Thickness(8, 1, 8, 1), MinHeight = 22 };
+                del.Click += (_, _) => Edit($"{pair} çifti kaldırıldı", () => board.DiffPairs.Remove(pair));
+                DockPanel.SetDock(del, Dock.Right);
+                head.Children.Add(del);
+                head.Children.Add(new TextBlock { Text = pair.ToString(), Style = S("Text.Subtitle") });
+                body.Children.Add(head);
+                var r = NetLengths.Analyze(board, pair, lengths);
+                string state = r.PositiveLength > 0 && r.NegativeLength > 0
+                    ? Shell.Lang.T($"{F1(r.PositiveLength)} / {F1(r.NegativeLength)} mm · fark {F1(r.Skew)} mm · %{r.Coupled * 100:0} yan yana")
+                    : Shell.Lang.T("Henüz yollanmadı.");
+                body.Children.Add(new TextBlock
+                {
+                    Text = state, Style = S("Text.Caption"), Margin = new Thickness(0, 0, 0, 6), TextWrapping = TextWrapping.Wrap,
+                    Foreground = r.Skew > pair.MaxSkew || (r.PositiveLength > 0 && r.Coupled < 0.6) ? B("B.Warning") : B("B.TextSecondary")
+                });
+                body.Children.Add(Row("Aralık (mm)", Number(pair.Gap, v => Edit($"{pair} aralığı {Fmt(v)} mm", () => pair.Gap = v), 0.05, 5), 80));
+                body.Children.Add(Row("En çok fark (mm)", Number(pair.MaxSkew, v => Edit($"{pair} en çok farkı {Fmt(v)} mm", () => pair.MaxSkew = v), 0.01, 100), 80));
+                card.Child = body;
+                ClassesPanel.Children.Add(card);
+            }
+
+            ClassesPanel.Children.Add(Buttons(Button("Adlarından bul", (_, _) =>
+            {
+                var found = NetLengths.Detect(board).Where(d => !board.DiffPairs.Any(e => string.Equals(e.Positive, d.Positive, StringComparison.OrdinalIgnoreCase))).ToList();
+                if (found.Count == 0)
+                {
+                    W.Status = "Adından çift olduğu anlaşılan hat yok (D+/D−, _P/_N, H/L).";
+                    return;
+                }
+
+                Edit($"{found.Count} fark çifti eklendi", () => board.DiffPairs.AddRange(found));
+            })));
+
+            ClassesPanel.Children.Add(Overline("Uzunluk grupları"));
+            ClassesPanel.Children.Add(Caption("Aynı anda varması gereken hatlar (paralel veri yolu, saat ve verisi): en uzunla en kısa arasındaki fark toleransı aşarsa DRC uyarır.", 0));
+            foreach (var g in board.LengthGroups.ToList())
+            {
+                var group = g;
+                var card = new Border { BorderBrush = B("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 8, 10, 6), Margin = new Thickness(0, 8, 0, 0) };
+                var body = new StackPanel();
+                var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+                var del = new Button { Content = "Sil", Style = S("Btn.Ghost"), Padding = new Thickness(8, 1, 8, 1), MinHeight = 22 };
+                del.Click += (_, _) => Edit($"'{group.Name}' grubu kaldırıldı", () => board.LengthGroups.Remove(group));
+                DockPanel.SetDock(del, Dock.Right);
+                head.Children.Add(del);
+                head.Children.Add(Text(group.Name, v => Edit($"Grup adı: {v.Trim()}", () => group.Name = v.Trim())));
+                body.Children.Add(head);
+                var measured = group.Nets.Where(n => lengths.ContainsKey(n)).Select(n => lengths[n]).ToList();
+                double spread = measured.Count >= 2 ? measured.Max() - measured.Min() : 0;
+                body.Children.Add(new TextBlock
+                {
+                    Text = string.Join(" · ", group.Nets.Select(n => $"{n} {L(n)}")) + (measured.Count >= 2 ? Shell.Lang.T($" · fark {F1(spread)} mm") : string.Empty),
+                    Style = S("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
+                    Foreground = spread > group.Tolerance ? B("B.Warning") : B("B.TextSecondary")
+                });
+                body.Children.Add(Row("Hatlar", Text(string.Join(", ", group.Nets), v => Edit($"'{group.Name}' hatları", () =>
+                {
+                    group.Nets = v.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
+                })), 220));
+                body.Children.Add(Row("Tolerans (mm)", Number(group.Tolerance, v => Edit($"'{group.Name}' toleransı {Fmt(v)} mm", () => group.Tolerance = v), 0.01, 1000), 80));
+                card.Child = body;
+                ClassesPanel.Children.Add(card);
+            }
+
+            ClassesPanel.Children.Add(Buttons(Button("+ Grup ekle", (_, _) =>
+            {
+                string name = "Grup" + (board.LengthGroups.Count + 1).ToString(CultureInfo.InvariantCulture);
+                Edit($"'{name}' grubu eklendi", () => board.LengthGroups.Add(new LengthGroup { Name = name }));
+            })));
+
+            if (lengths.Count > 0)
+            {
+                ClassesPanel.Children.Add(Overline("Yol uzunlukları"));
+                foreach (var (net, len) in lengths.OrderByDescending(kv => kv.Value).Select(kv => (kv.Key, kv.Value)))
+                    ClassesPanel.Children.Add(new TextBlock { Text = $"{net}  {F1(len)} mm", Style = S("Text.Caption"), Margin = new Thickness(0, 0, 0, 2) });
+            }
         }
 
         private UIElement ViaEditor(BoardDocument board, NetClass c)
@@ -1829,6 +1949,9 @@ namespace RobotWin.Studio.Pages
                 DrcSummary.Text = $"{errors} hata, {_violations.Count - errors} uyarı · bir satıra tıklayınca yerine gider";
                 DrcSummary.Foreground = errors > 0 ? B("B.Danger") : B("B.Warning");
             }
+
+            if (_dfm is { Nets: > 0 } dfm)   // [dfm] how much of the board a test probe reaches
+                DrcSummary.Text += Shell.Lang.T($"\nTest kapsamı %{dfm.Coverage * 100:0} ({dfm.TestableNets}/{dfm.Nets} hat)");
 
             DrcList.ItemsSource = _violations.OrderByDescending(v => v.Severity).ThenBy(v => v.Rule, StringComparer.Ordinal).Select(v => new DrcItem(v)).ToList();
         }

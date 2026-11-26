@@ -426,6 +426,8 @@ namespace RobotTwin.CoreSim.Pcb
                 }
             }
 
+            // ---------------------------------------------------------- [pairs] the board's differential pairs and length groups
+            v.AddRange(NetLengths.Check(board));
             return v;
         }
 

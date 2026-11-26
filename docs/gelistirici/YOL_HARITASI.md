@@ -94,8 +94,8 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] model sınırlarını gösterme: `Design/ModelLimits.cs` (her modelin dışarıda bıraktığı ya da sadeleştirdiği), kütüphane sayfasında ve devre denetçisinde **Modelin sınırları**.
 - [~] **PCB ve üretim:** 32 katman, DRC, Gerber, BOM ve KiCad dışa aktarma var. Eksikler:
   - KiCad içe aktarma ve fark;
-  - diferansiyel çift ve uzunluk eşleme;
-  - DFM ve DFT;
+  - [x] diferansiyel çift ve uzunluk eşleme: **Hatlar** sekmesinde çiftler (adlarından bulunur) ve uzunluk grupları; via gövdeleriyle yol uzunluğu, çift farkı ve yan yana gidiş, DRC uyarıları (`Pcb/NetLengths.cs`); çift olarak yol çizme yok;
+  - [x] DFM ve DFT: DRC sekmesinde **Üretim ve test** anahtarı (`Pcb/Dfm.cs`): asit tuzağı, maske köprüsü, pedde via, kenara yakın SMD, fidüsyel, mezar taşı riski, serigrafi, delik çeşidi; test erişimi, kapsam ve prob aralığı;
   - tedarikçili BOM;
   - kutu ile çakışma;
   - Gerber'in ikinci bir görüntüleyiciyle karşılaştırılması.
