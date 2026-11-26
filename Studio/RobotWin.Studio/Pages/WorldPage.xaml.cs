@@ -770,6 +770,7 @@ namespace RobotWin.Studio.Pages
             };
             Inspector.Children.Add(ActiveHeader(o, name));   // [active] Unity's checkbox before the name (Pages/WorldPage.Active.cs)
             Inspector.Children.Add(Note(KindText(o)));
+            MultiSelectNote();   // [multiselect]
             if (WorldPhysics.IsLiquid(o))
             {
                 LiquidSection(world, o);   // [liquid] Pages/WorldPage.Liquids.cs
@@ -1467,11 +1468,12 @@ namespace RobotWin.Studio.Pages
             var world = World;
             var o = world?.Find(Scene.Selected);
             if (world == null || o == null) return;
-            // [hierarchy] with what is mounted on it, the joints, cables and mates among them
-            var fragment = WorldFragment.Take(world, new[] { o.Id });
-            WorldObject? copy = null;
-            Edit($"{o.Name} çoğaltıldı", () => copy = fragment.PasteInto(world, new RobotTwin.CoreSim.Mechanics.Vec3(0.05, 0, 0)).FirstOrDefault());
-            if (copy != null) Scene.Select(copy.Id);
+            // [hierarchy] with what is mounted on it, the joints, cables and mates among them; [multiselect] the whole selection
+            var ids = SelectionIds();
+            var fragment = WorldFragment.Take(world, ids);
+            List<WorldObject> copies = new List<WorldObject>();
+            Edit(ids.Count > 1 ? $"{ids.Count} nesne çoğaltıldı" : $"{o.Name} çoğaltıldı", () => copies = fragment.PasteInto(world, new RobotTwin.CoreSim.Mechanics.Vec3(0.05, 0, 0)).ToList());
+            if (copies.Count > 0) Scene.SelectMany(copies.Select(c => c.Id).ToList());
         }
 
         private void OnDelete(object sender, RoutedEventArgs e) => Delete();
@@ -1480,7 +1482,19 @@ namespace RobotWin.Studio.Pages
         {
             var world = World;
             var o = world?.Find(Scene.Selected);
-            if (world == null || o == null || DeleteBlocked(o)) return; // [terrain] locked
+            if (world == null || o == null) return;
+            var ids = SelectionIds();
+            if (ids.Count > 1)
+            {
+                // [multiselect] every selected one that may go (a locked one stays), with what is mounted on it
+                var gone = ids.Where(id => world.Find(id) is { } x && !DeleteBlocked(x)).ToList();
+                if (gone.Count == 0) return;
+                Edit($"{gone.Count} nesne silindi", () => WorldFragment.RemoveFrom(world, gone));
+                Scene.Select(null);
+                return;
+            }
+
+            if (DeleteBlocked(o)) return; // [terrain] locked
             int mounted = world.MountedOn(o.Id).Count;
             // [hierarchy] as Unity: what is mounted on it goes with it (the menu also deletes it alone)
             Edit(mounted > 0 ? $"{o.Name} ve takılı {mounted} parça silindi" : $"{o.Name} silindi", () => WorldFragment.RemoveFrom(world, new[] { o.Id }));
@@ -1530,6 +1544,9 @@ namespace RobotWin.Studio.Pages
             {
                 case Key.Delete:
                     Delete();
+                    break;
+                case Key.A when mods == ModifierKeys.Control:   // [multiselect] Unity's Select All
+                    SelectAllObjects();
                     break;
                 case Key.A when mods == (ModifierKeys.Alt | ModifierKeys.Shift):   // [active] Unity's Toggle Active State
                     ToggleActive(World?.Find(Scene.Selected));

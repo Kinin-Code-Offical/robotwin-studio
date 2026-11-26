@@ -267,6 +267,7 @@ namespace RobotWin.Studio.World
 
             double placing = Lap() - models;
             if (Selected != null && !_items.ContainsKey(Selected)) Select(null);
+            _alsoSelected.RemoveAll(x => !_items.ContainsKey(x));   // [multiselect] what was deleted leaves the selection
             UpdateKinematics();
             _cableLayoutStale = true;   // [phys] parts changed: lay the cables out again
             Lap();
@@ -303,7 +304,24 @@ namespace RobotWin.Studio.World
             CableSelectionChanged?.Invoke(cableId);
         }
 
+        /// <summary>Selects one object (or none): the others selected with Ctrl+click are let go (World/WorldScene.Selection.cs).</summary>
         public void Select(string? id)
+        {
+            if (_alsoSelected.Count > 0)
+            {
+                _alsoSelected.Clear();
+                if (string.Equals(Selected, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    RebuildOverlay();
+                    SelectionChanged?.Invoke(id);
+                    return;
+                }
+            }
+
+            SelectCore(id);
+        }
+
+        private void SelectCore(string? id)
         {
             if (id != null && SelectedCable != null)
             {
@@ -580,13 +598,15 @@ namespace RobotWin.Studio.World
             foreach (var v in _anchorVisuals.Keys.ToList()) _view.Children.Remove(v);
             _anchorVisuals.Clear();
             var g = new Model3DGroup();
-            if (World != null && Selected != null && _items.TryGetValue(Selected, out var sel))
+            foreach (var selectedId in World != null ? SelectedAll : Array.Empty<string>())   // [multiselect] every selected object's box
             {
+                if (!_items.TryGetValue(selectedId, out var sel)) continue;
+                bool active = string.Equals(selectedId, Selected, StringComparison.OrdinalIgnoreCase);
                 var b = sel.Model.Bounds;
                 if (!b.IsEmpty)
                 {
-                    var accent = new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(0xFF, 0x6E, 0x9B, 0xFF)));
-                    double e = 0.0012;
+                    var accent = new EmissiveMaterial(new SolidColorBrush(active ? Color.FromArgb(0xFF, 0x6E, 0x9B, 0xFF) : Color.FromArgb(0xFF, 0xA9, 0xC3, 0xFF)));
+                    double e = active ? 0.0012 : 0.0008;
                     var box = new Model3DGroup();
                     foreach (var (a, c) in BoxEdges(b)) box.Children.Add(new GeometryModel3D(Edge(a, c, e), accent));
                     box.Transform = new MatrixTransform3D(ExplodedMatrix(sel.Object.Id, sel.Current));   // [explode] the box goes where the part is shown
@@ -1363,6 +1383,12 @@ namespace RobotWin.Studio.World
                 default:
                     if (id != null && World?.Find(id) is { } o)
                     {
+                        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+                        {
+                            ToggleSelect(id);   // [multiselect] Unity's Ctrl+click
+                            return;
+                        }
+
                         Select(id);
                         if (!ReadOnly && (Session == null || Session.State == Simulation.SimState.Stopped) && !EditorLocked(o)) // [terrain] locked objects stay
                         {

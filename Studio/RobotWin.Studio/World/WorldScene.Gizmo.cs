@@ -528,7 +528,9 @@ namespace RobotWin.Studio.World
             _gizmoHit0 = PlaneHit(p, c, _gizmoAxis);
             _gizmoFrom = (_gizmoHit0 ?? c + ax) - c;
             // what a turn must put back each step: the parts' poses and their joints' anchors and axes
-            _gizmoParts = new[] { o }.Concat(World!.MountedOn(o.Id)).Select(x => (x, x.Pose.Clone())).ToList();
+            _gizmoOthers = OtherSelectedRoots(o);   // [multiselect] the rest of the selection moves and turns with it
+            _gizmoParts = new[] { o }.Concat(World!.MountedOn(o.Id)).Concat(_gizmoOthers.SelectMany(x => new[] { x }.Concat(World.MountedOn(x.Id))))
+                .Distinct().Select(x => (x, x.Pose.Clone())).ToList();
             var ids = new HashSet<string>(_gizmoParts.Select(x => x.Part.Id), StringComparer.OrdinalIgnoreCase);
             _gizmoJoints = World.Joints.Where(j => ids.Contains(j.ObjectA)).Select(j => (j, j.AnchorX, j.AnchorY, j.AnchorZ, j.AxisX, j.AxisY, j.AxisZ)).ToList();
             CaptureMouse();
@@ -689,6 +691,7 @@ namespace RobotWin.Studio.World
 
             if (_gizmoDrag is GizmoPart.X or GizmoPart.Y && SurfaceSnap && World!.Terrain != null && Math.Abs(_gizmoPose.Z - GroundZAt(_gizmoPose.X, _gizmoPose.Y)) < 1e-3) nz = GroundZAt(nx, ny);
             MoveGroupMates(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
+            foreach (var other in _gizmoOthers) World!.MoveAssembly(other, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);   // [multiselect]
             World!.MoveAssembly(o, nx - o.Pose.X, ny - o.Pose.Y, nz - o.Pose.Z);
             Readout($"{o.Name}: ({nx * 1000:0.#}, {ny * 1000:0.#}, {nz * 1000:0.#}) mm · Δ {(nx - _gizmoPose.X) * 1000:0.#}, {(ny - _gizmoPose.Y) * 1000:0.#}, {(nz - _gizmoPose.Z) * 1000:0.#}");
             RefreshPlaced(o);
@@ -737,7 +740,34 @@ namespace RobotWin.Studio.World
             }
 
             World!.RotateAssembly(o, q, W3((Vector3D)_gizmoPivot));
+            // [multiselect] Unity: about the one centre (Merkez), or each about its own pivot (Pivot)
+            foreach (var other in _gizmoOthers) World.RotateAssembly(other, q, GizmoCenter ? W3((Vector3D)_gizmoPivot) : other.Pose.Position);
             RefreshPlaced(o);
+        }
+
+        private List<WorldObject> _gizmoOthers = new List<WorldObject>();
+
+        /// <summary>
+        /// The other selected objects that move by themselves: not the active one, not locked, and not riding on another
+        /// selected object (that one carries them).
+        /// </summary>
+        private List<WorldObject> OtherSelectedRoots(WorldObject active)
+        {
+            var world = World;
+            if (world == null) return new List<WorldObject>();
+            var picked = SelectedAll.Select(id => world.Find(id)).Where(x => x != null).Cast<WorldObject>().ToList();
+            var ids = new HashSet<string>(picked.Select(x => x.Id), StringComparer.OrdinalIgnoreCase);
+            bool Rides(WorldObject x)
+            {
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { x.Id };
+                for (string? parent = world.Joints.FirstOrDefault(j => string.Equals(j.ObjectA, x.Id, StringComparison.OrdinalIgnoreCase))?.ObjectB;
+                     parent != null && seen.Add(parent);
+                     parent = world.Joints.FirstOrDefault(j => string.Equals(j.ObjectA, parent, StringComparison.OrdinalIgnoreCase))?.ObjectB)
+                    if (ids.Contains(parent)) return true;
+                return false;
+            }
+
+            return picked.Where(x => !ReferenceEquals(x, active) && !EditorLocked(x) && !Rides(x)).ToList();
         }
 
         private void Readout(string text)
@@ -748,7 +778,7 @@ namespace RobotWin.Studio.World
 
         private void RefreshPlaced(WorldObject o)
         {
-            foreach (var moved in new[] { o }.Concat(World!.MountedOn(o.Id)))
+            foreach (var moved in new[] { o }.Concat(World!.MountedOn(o.Id)).Concat(_gizmoOthers.SelectMany(x => new[] { x }.Concat(World.MountedOn(x.Id)))))
                 if (_items.TryGetValue(moved.Id, out var mi))
                     mi.Placed = PoseMatrix(moved.Pose);
             UpdateKinematics();
@@ -764,6 +794,8 @@ namespace RobotWin.Studio.World
             _gizmoAngle = 0;
             _gizmoParts = null;
             _gizmoJoints = null;
+            var movedOthers = _gizmoOthers;
+            _gizmoOthers = new List<WorldObject>();
             ReleaseMouseCapture();
             if (_gizmoMoved && World?.Find(Selected) is { } o)
             {
@@ -773,6 +805,7 @@ namespace RobotWin.Studio.World
                     GizmoPart.ScaleX or GizmoPart.ScaleY or GizmoPart.ScaleZ or GizmoPart.ScaleAll => $"{o.Name} ölçeklendi",
                     _ => $"{o.Name} taşındı ({o.Pose.X * 1000:F0}, {o.Pose.Y * 1000:F0}, {o.Pose.Z * 1000:F0} mm)"
                 };
+                if (movedOthers.Count > 0) what += $" · +{movedOthers.Count} nesne";   // [multiselect]
                 EditCommitted?.Invoke(what);
             }
 

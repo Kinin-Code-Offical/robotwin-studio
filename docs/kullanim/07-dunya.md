@@ -735,6 +735,8 @@ Ayarlar kaydedilir; her dünya ve montaj onlarla açılır.
 
 **Sahne** sekmesi dünyadaki her şeyi neyin neye takılı olduğuna göre ağaç olarak gösterir (örneğin "servo koluna takılı", "mile takılı", "sabit"). Çalışırken 60 °C üstündeki sıcaklıkları ve **ARIZALI** nesneleri gösterir. Altında **Kablolar** listesi vardır. Sağ tık: **Odakla**, **Alt nesneleri gizle/göster**; çift tık nesneye odaklanır.
 
+**Çoklu seçim** Unity'deki gibidir: Ctrl+tık (sahnede ya da ağaçta) nesneyi seçime ekler ya da çıkarır, ağaçta Shift+tık iki satır arasını seçer (Ctrl+Shift+tık mevcut seçime ekler), Ctrl+A hepsini seçer. Son tıklanan **etkin** nesnedir: denetçi ve tutamaç onundur, denetçide kaç nesnenin daha seçili olduğu yazar. Tutamaçla taşıma ve döndürme seçili hepsine uygulanır (Merkez seçiliyken hepsi tek merkez çevresinde, Pivot'ta her biri kendi pivotu çevresinde döner; başka bir seçili parçaya takılı olan onunla gider, kilitli olan yerinde kalır); kopyala, kes, çoğalt ve sil de hepsini alır.
+
 ## Çalıştırma
 
 | Düğme / tuş | İşlev |

@@ -21,6 +21,7 @@ namespace RobotWin.Studio.Pages
 
         private void BuildScenePalette()
         {
+            _treeOrder.Clear();   // [multiselect] the rows' order, for a Shift+click range
             var world = World;
             if (world == null) return;
             Palette.Children.Add(Note($"{world.Objects.Count} nesne · {world.Cables.Count} kablo · {world.Joints.Count} mekanik bağlantı. " +
@@ -115,8 +116,9 @@ namespace RobotWin.Studio.Pages
                 else if (!double.IsNaN(t) && t > 60) sub = $"{t:0} °C · " + sub;
             }
 
+            _treeOrder.Add(o.Id);
             Palette.Children.Add(TreeRow(depth, kind, o.Name, sub, kids.Count > 0, open, o.Id,
-                () => Scene.Select(o.Id),
+                () => ClickTreeRow(o.Id),   // [multiselect] Ctrl+click, Shift+click (Pages/WorldPage.MultiSelect.cs)
                 kids.Count == 0 ? null : () =>
                 {
                     if (!_collapsed.Remove(o.Id)) _collapsed.Add(o.Id);
@@ -128,7 +130,7 @@ namespace RobotWin.Studio.Pages
 
         private FrameworkElement TreeRow(int depth, Kind kind, string title, string subtitle, bool hasKids, bool open, string? id, Action click, Action? toggle)
         {
-            bool selected = id != null && Scene.Selected == id;
+            bool selected = id != null && Scene.IsSelected(id);   // [multiselect]
             var row = new Grid { Cursor = Cursors.Hand, Background = selected ? (Brush)FindResource("B.AccentSoft") : Brushes.Transparent, Margin = new Thickness(0, 0, 4, 1) };
             if (id != null && World is { } tw && tw.Find(id) is { } to && !WorldBuilding.ActiveInHierarchy(tw, to)) row.Opacity = 0.5;   // [active] Unity greys inactive rows
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8 + depth * 16) });
@@ -208,7 +210,10 @@ namespace RobotWin.Studio.Pages
                 }
 
                 row.ContextMenu = menu;
-                row.MouseRightButtonDown += (_, _) => Scene.Select(id);
+                row.MouseRightButtonDown += (_, _) =>
+                {
+                    if (!Scene.IsSelected(id)) Scene.Select(id);   // [multiselect] a right click on the selection keeps it
+                };
             }
 
             return row;

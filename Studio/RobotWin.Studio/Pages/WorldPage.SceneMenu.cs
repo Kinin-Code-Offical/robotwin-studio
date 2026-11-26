@@ -95,17 +95,19 @@ namespace RobotWin.Studio.Pages
         private void CopySelection()
         {
             var world = World;
-            if (world == null || Scene.Selected is not { } id) return;
-            _clipboard = WorldFragment.Take(world, new[] { id });
+            if (world == null || Scene.Selected == null) return;
+            _clipboard = WorldFragment.Take(world, SelectionIds());   // [multiselect] the whole selection
             W.Status = Shell.Lang.T($"Kopyalandı: {string.Join(", ", _clipboard.Objects.Select(o => o.Name))}");
         }
 
         private void CutSelection()
         {
             var world = World;
-            if (world == null || world.Find(Scene.Selected) is not { } o || DeleteBlocked(o)) return;
-            var fragment = WorldFragment.Take(world, new[] { o.Id });
-            Edit(Shell.Lang.T($"{o.Name} kesildi"), () => WorldFragment.RemoveFrom(world, new[] { o.Id }));
+            if (world == null || world.Find(Scene.Selected) is not { } o) return;
+            var ids = SelectionIds().Where(id => world.Find(id) is { } x && !DeleteBlocked(x)).ToList();   // [multiselect]
+            if (ids.Count == 0) return;
+            var fragment = WorldFragment.Take(world, ids);
+            Edit(Shell.Lang.T(ids.Count > 1 ? $"{ids.Count} nesne kesildi" : $"{o.Name} kesildi"), () => WorldFragment.RemoveFrom(world, ids));
             _clipboard = fragment;
             Scene.Select(null);
         }

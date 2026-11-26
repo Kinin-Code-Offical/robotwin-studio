@@ -421,6 +421,9 @@ namespace RobotWin.Studio.Pages
             }
 
             if (args.Contains("--switch-off")) ToggleActive(World?.Find(Scene.Selected));   // [active] the selection switched off
+            int also = Array.IndexOf(args, "--select-also");   // [multiselect] another object Ctrl+clicked into the selection
+            if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
+                Scene.ToggleSelect(extra.Id);
 
             if (args.Contains("--grid-snap"))
             {

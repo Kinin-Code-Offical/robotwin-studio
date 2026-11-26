@@ -11910,6 +11910,9 @@
   "Bu dünya ekseni çevresinde dönmez ({…})": "Does not turn about this world axis ({0})",
   "{…}: ızgaraya oturtuldu": "{0}: aligned to the grid",
   "{…} etkinleştirildi": "{0} activated",
-  "{…} devre dışı bırakıldı": "{0} deactivated"
+  "{…} devre dışı bırakıldı": "{0} deactivated",
+  "+{…} nesne daha seçili (Ctrl+tık ile ekleyin ya da çıkarın): tutamaçla taşıma ve döndürme, kopyala, kes, çoğalt ve sil hepsine uygulanır; ayarlar etkin olanınkidir.": "+{0} more objects selected (Ctrl+click adds or removes): moving and turning with the handle, copy, cut, duplicate and delete apply to all of them; the settings are the active one's.",
+  "{…} nesne çoğaltıldı": "{0} objects duplicated",
+  "{…} nesne kesildi": "{0} objects cut"
  }
 }

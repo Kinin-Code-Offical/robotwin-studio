@@ -163,6 +163,8 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Ctrl+E / Ctrl+Shift+E | Rotate by the rotate step (15°, set in Grid and snap) / the other way |
 | Alt+Shift+A | Activate / deactivate the selection |
 | Ctrl+D | Duplicate |
+| Ctrl+click / Shift+click | Add to or take out of the selection / select a range in the tree |
+| Ctrl+A | Select all |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
 | T | Camera follows the selected object |

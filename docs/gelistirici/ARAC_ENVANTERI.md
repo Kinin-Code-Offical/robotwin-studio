@@ -245,7 +245,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | --- | --- | --- | --- |
 | Kes, kopyala, yapıştır; alt nesne olarak yapıştır (yerel ya da dünya dönüşümünü koruyarak) | Kes / kopyala / yapıştır (takılı olanlar, bağlantılar, kablolar, ilişkiler); seçilinin üstüne takılı yapıştır | var | |
 | Yeniden adlandır, çoğalt, sil | F2 satırda; çoğalt ve sil takılı olanlarla, "yalnız bunu sil" | var | |
-| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | yok | yok | 1 |
+| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, Ctrl+A; tutamaç, kopyala, kes, çoğalt, sil hepsine (tersine çevir, alt nesneleri seç, sahnede dikdörtgenle seçim sonra) | kısmi | 2 |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | yok | yok | 1 |
 | Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ gövde şekilleri ve palet sekmeleri | kısmi | 2 |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
@@ -284,4 +284,4 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
 
-Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; sırada çoklu seçim, boş nesne ve grup, bileşen kartının aç / kapa ve yardımı.
+Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim de geldi; sırada boş nesne ve grup, bileşen kartının aç / kapa ve yardımı, sahnede dikdörtgenle seçim.

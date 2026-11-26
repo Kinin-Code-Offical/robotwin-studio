@@ -736,6 +736,8 @@ The settings are saved; every world and assembly opens with them.
 
 The **Scene** tab shows everything in the world as a tree of what is attached to what (e.g. "mounted on servo horn", "mounted on shaft", "fixed"). While running it shows temperatures above 60 °C and **FAULTY** objects. The **Cables** list is below it. Right-click: **Focus**, **Hide child objects** / **Show child objects**; double-click focuses the object.
 
+**Multiple selection** works as in Unity: Ctrl+click (in the view or the tree) adds an object to the selection or takes it out, Shift+click in the tree selects the rows between (Ctrl+Shift+click adds them), Ctrl+A selects everything. The last one clicked is the **active** object: the inspector and the handle are its, and the inspector says how many more are selected. Moving and turning with the handle apply to all of them (with Center they turn about one centre, with Pivot each about its own pivot; a part mounted on another selected part goes with it, a locked one stays); copy, cut, duplicate and delete take them all.
+
 ## Running
 
 | Button / key | Function |

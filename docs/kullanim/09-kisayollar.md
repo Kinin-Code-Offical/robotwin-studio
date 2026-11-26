@@ -163,6 +163,8 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Ctrl+E / Ctrl+Shift+E | Döndürme adımı kadar döndür (15°, Izgara ve yakalama'dan değişir) / ters yönde |
 | Alt+Shift+A | Seçiliyi etkinleştir / devre dışı bırak |
 | Ctrl+D | Çoğalt |
+| Ctrl+tık / Shift+tık | Seçime ekle ya da çıkar / ağaçta aralık seç |
+| Ctrl+A | Hepsini seç |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |
 | T | Kamera seçili nesneyi takip etsin |
