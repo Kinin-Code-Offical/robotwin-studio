@@ -187,7 +187,7 @@ Got := Total(Store);
             Assert.Contains("her çağrıda verilmeli", Error(Types + "FUNCTION_BLOCK B VAR_IN_OUT P : Point; END_VAR END_FUNCTION_BLOCK VAR X : B; END_VAR X();"));
             Assert.Contains("POINT yapısı ister", Error(Types + "FUNCTION_BLOCK B VAR_IN_OUT P : Point; END_VAR END_FUNCTION_BLOCK VAR X : B; N : INT; END_VAR X(P := N);"));
             Assert.Contains("VAR_IN_OUT ile geçirin", Error(Types + "FUNCTION_BLOCK B VAR_INPUT P : Point; END_VAR END_FUNCTION_BLOCK VAR X : B; END_VAR"));
-            Assert.Contains("iki boyut", Error("TYPE T : STRUCT A : ARRAY[1..2] OF INT; END_STRUCT; END_TYPE VAR L : ARRAY[1..3] OF T; END_VAR"));
+            Assert.Contains("dizi alanı olamaz", Error("TYPE T : STRUCT A : ARRAY[1..2] OF INT; END_STRUCT; END_TYPE VAR L : ARRAY[1..3] OF T; END_VAR"));
             var p = Compile(Types + "VAR L : ARRAY[1..2] OF Point; I : INT := 3; END_VAR L[I].X := 1.0;");
             Assert.False(p.Scan(10));
             Assert.Contains("L[3]", p.Fault);

@@ -13,13 +13,14 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
     {
         public readonly struct Tag
         {
-            public Tag(string name, StType type, string typeName, bool writable, double value)
+            public Tag(string name, StType type, string typeName, bool writable, double value, string? text = null)
             {
                 Name = name;
                 Type = type;
                 TypeName = typeName;
                 Writable = writable;
                 Value = value;
+                Text = text;
             }
 
             public string Name { get; }
@@ -27,11 +28,14 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             public string TypeName { get; }
             public bool Writable { get; }
             public double Value { get; }
+
+            /// <summary>[plc-string] A STRING's text (null for the others).</summary>
+            public string? Text { get; }
         }
 
         private readonly object _gate = new object();
         private readonly Dictionary<string, Tag> _tags = new Dictionary<string, Tag>(StringComparer.Ordinal);
-        private readonly List<(string Name, double Value)> _pending = new List<(string, double)>();
+        private readonly List<(string Name, double Value, string? Text)> _pending = new List<(string, double, string?)>();
         private DateTime _stamp = DateTime.UtcNow;
 
         public UaTagImage(string name, string bind, int port)
@@ -94,15 +98,27 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         {
             lock (_gate)
             {
-                if (!_tags.TryGetValue(name, out var t) || !t.Writable) return false;
-                _pending.Add((name, value));
+                if (!_tags.TryGetValue(name, out var t) || !t.Writable || t.Type == StType.String) return false;
+                _pending.Add((name, value, null));
                 _tags[name] = new Tag(t.Name, t.Type, t.TypeName, t.Writable, value);   // read back at once, as the PLC will have it
                 return true;
             }
         }
 
-        /// <summary>Before a scan: the writes that came in since the last one, oldest first.</summary>
-        public List<(string Name, double Value)> TakeWrites()
+        /// <summary>[plc-string] A client's write of a STRING: kept for the next scan.</summary>
+        public bool WriteText(string name, string text)
+        {
+            lock (_gate)
+            {
+                if (!_tags.TryGetValue(name, out var t) || !t.Writable || t.Type != StType.String) return false;
+                _pending.Add((name, 0, text));
+                _tags[name] = new Tag(t.Name, t.Type, t.TypeName, t.Writable, 0, text);
+                return true;
+            }
+        }
+
+        /// <summary>Before a scan: the writes that came in since the last one, oldest first (a STRING's with its Text).</summary>
+        public List<(string Name, double Value, string? Text)> TakeWrites()
         {
             lock (_gate)
             {

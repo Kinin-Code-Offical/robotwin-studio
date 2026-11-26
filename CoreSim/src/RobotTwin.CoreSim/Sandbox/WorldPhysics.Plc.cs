@@ -122,7 +122,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>[opcua] After a scan the server sees the program's variables; a client's writes go in before the next.</summary>
         private static void PublishOpcUa(MachinePlc plc, StProgram program) =>
-            plc.OpcUa?.Publish(program.Tags.Select(t => new Industrial.OpcUa.UaTagImage.Tag(t.Name, t.Type, t.TypeName, t.Writable, t.Value)), plc.Running);
+            plc.OpcUa?.Publish(program.Tags.Select(t => new Industrial.OpcUa.UaTagImage.Tag(t.Name, t.Type, t.TypeName, t.Writable, t.Value, t.Text)), plc.Running);
 
         /// <summary>[modbus] The PLC's Modbus table and its memory meet at the scan: a client's register writes go in before it, the results out after.</summary>
         private static void SyncPlcModbus(MachinePlc plc, StProgram program, bool before)
@@ -161,7 +161,11 @@ namespace RobotTwin.CoreSim.Sandbox
                 program.ModbusNetwork ??= unit => _modbus.FirstOrDefault(d => d.Unit == unit && d.Plc != plc)?.Image;
                 SyncPlcModbus(plc, program, true);
                 if (plc.OpcUa != null)
-                    foreach (var (name, value) in plc.OpcUa.TakeWrites()) program.Write(name, value);
+                    foreach (var (name, value, text) in plc.OpcUa.TakeWrites())
+                    {
+                        if (text != null) program.WriteText(name, text);
+                        else program.Write(name, value);
+                    }
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 bool ok = program.Scan(plc.CycleMs);
                 SyncPlcModbus(plc, program, false);

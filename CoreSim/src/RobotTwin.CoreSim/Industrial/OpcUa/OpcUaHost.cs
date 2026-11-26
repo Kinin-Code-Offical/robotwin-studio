@@ -92,7 +92,7 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                     var (type, dataType) = Map(tag.TypeName, tag.Type);
                     space.AddVariable(new NodeId(1, image.Name + "." + name), name, plcId, dataType,
                         () => image.TryGet(name, out var t, out var stamp)
-                            ? new DataValue { Value = Value(type, t.Value), SourceTimestamp = stamp, Status = image.Running ? 0u : 0x408F0000u }   // UncertainNoCommunication… in STOP: last value
+                            ? new DataValue { Value = type == UaType.String ? new Variant(UaType.String, t.Text ?? string.Empty) : Value(type, t.Value), SourceTimestamp = stamp, Status = image.Running ? 0u : 0x408F0000u }   // UncertainNoCommunication… in STOP: last value
                             : new DataValue { HasValue = false, Status = 0x80340000 },
                         tag.Writable ? v => Write(image, name, type, v) : (Func<Variant, uint>?)null);
                 }
@@ -113,10 +113,12 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             "ULINT" or "LWORD" => (UaType.UInt64, 9),
             "REAL" => (UaType.Float, 10),
             "LREAL" or "TIME" => (UaType.Double, 11),   // TIME as milliseconds
+            "STRING" or "WSTRING" => (UaType.String, 12),   // [plc-string]
             _ => type switch
             {
                 StType.Bool => (UaType.Boolean, 1),
                 StType.Int => (UaType.Int16, 4),
+                StType.String => (UaType.String, 12),
                 _ => (UaType.Double, 11)
             }
         };
@@ -139,6 +141,8 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         /// <summary>A client's write: a BOOL takes a Boolean, a number any numeric type (the PLC wraps it as its type does).</summary>
         private static uint Write(UaTagImage image, string name, UaType type, Variant v)
         {
+            if (type == UaType.String)
+                return v.Value is string text ? image.WriteText(name, text) ? 0u : 0x803B0000 : 0x80740000;   // [plc-string]
             double value;
             switch (v.Value)
             {
