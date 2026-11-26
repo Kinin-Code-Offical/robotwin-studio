@@ -241,6 +241,8 @@ IF Read.DONE THEN Level := Read.VALUE; END_IF
 
 With the listening address `0.0.0.0` and neither security nor users, the event log warns: anyone on the network can read and write the PLC.
 
+**Code in a file from elsewhere.** If a project or world downloaded from the internet (marked so by Windows) carries code that would run directly on the PC (an FMU part, C# scripts), you are asked whether you trust its source before the simulation starts. **Trust and run** removes the file's mark and it is not asked again. ESP32 code runs in a sandbox and Arduino code in the emulator, so they are not asked about.
+
 **Your own blocks, functions and arrays.** A program can define its own `FUNCTION_BLOCK`s and `FUNCTION`s (before or after the program):
 
 - A `FUNCTION_BLOCK`'s `VAR_INPUT`, `VAR_OUTPUT` and `VAR` variables are separate in each instance and kept between scans; it can use blocks such as TON and other blocks of your own. An instance is called like the standard blocks: `D1(IN := Button, Q => Lamp);`, its output `D1.Q`.

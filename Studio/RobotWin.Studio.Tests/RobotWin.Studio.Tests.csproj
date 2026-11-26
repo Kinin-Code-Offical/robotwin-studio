@@ -28,6 +28,7 @@
     <Compile Include="..\RobotWin.Studio\Shell\Lang.Core.cs" Link="Linked\Lang.Core.cs" />
     <Compile Include="..\RobotWin.Studio\Shell\SolverCosts.cs" Link="Linked\SolverCosts.cs" />
     <Compile Include="..\RobotWin.Studio\Shell\PaletteMatch.cs" Link="Linked\PaletteMatch.cs" />
+    <Compile Include="..\RobotWin.Studio\Shell\ZoneMark.cs" Link="Linked\ZoneMark.cs" />
     <Compile Include="..\RobotWin.Studio\Firmware\ToolchainInfo.cs" Link="Linked\ToolchainInfo.cs" />
     <EmbeddedResource Include="..\RobotWin.Studio\Lang\*.json" LogicalName="RobotWin.Studio.Lang.%(Filename)%(Extension)" />
   </ItemGroup>

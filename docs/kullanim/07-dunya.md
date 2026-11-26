@@ -241,6 +241,8 @@ IF Oku.DONE THEN Seviye := Oku.VALUE; END_IF
 
 Dinlenen adres `0.0.0.0` iken güvenlik ve kullanıcı yoksa olay günlüğü uyarır: ağdaki herkes PLC'yi okuyup yazabilir.
 
+**Başka yerden gelen dosyadaki kod.** İnternetten indirilmiş (Windows'un işaretlediği) bir proje ya da dünya bilgisayarda doğrudan çalışacak kod taşıyorsa (FMU parçası, C# betiği), simülasyon başlamadan önce kaynağına güvenip güvenmediğiniz sorulur. **Güven ve çalıştır** dosyanın işaretini kaldırır, bir daha sorulmaz. ESP32 kodu korumalı alanda, Arduino kodu emülatörde çalıştığı için onlar sorulmaz.
+
 **Kendi blokları, fonksiyonlar ve diziler.** Program kendi `FUNCTION_BLOCK`'larını ve `FUNCTION`'larını tanımlayabilir (programdan önce ya da sonra):
 
 - `FUNCTION_BLOCK`'un `VAR_INPUT`, `VAR_OUTPUT` ve `VAR` değişkenleri her örnekte ayrıdır ve taramalar arasında korunur; içinde TON gibi blokları ve başka kendi bloklarını kullanabilir. Örnek, standart bloklar gibi çağrılır: `D1(IN := Dugme, Q => Lamba);`, çıkışı `D1.Q`.

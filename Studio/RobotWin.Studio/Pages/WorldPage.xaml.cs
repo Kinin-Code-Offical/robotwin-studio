@@ -1635,6 +1635,13 @@ namespace RobotWin.Studio.Pages
                     W.FlushActiveDesign();
                     Scene.ClearEffects();
                     AssembleDriveOnStart(world);   // [drive] parts placed as in a machine are joined as one
+                    // [trust] C# scripts of a world that came from elsewhere run only once the user trusts it
+                    if (!Shell.CodeTrust.Confirm(Window.GetWindow(this), W.ActiveDocument.FilePath, Shell.CodeTrust.CodeIn(world)))
+                    {
+                        W.Status = "Simülasyon başlamadı: dosyadaki kod onaylanmadı";
+                        return;
+                    }
+
                     if (!_session.Start(world, Scene.CableLength, Scene.GeometryOf, out var message))
                     {
                         W.Status = message;

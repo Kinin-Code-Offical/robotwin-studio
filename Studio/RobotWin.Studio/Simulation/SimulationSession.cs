@@ -224,6 +224,13 @@ namespace RobotWin.Studio.Simulation
 
         public bool Start()
         {
+            // [trust] an FMU from a file that came from elsewhere runs only once the user trusts it (asked before the gate)
+            if (!Shell.CodeTrust.Confirm(null, _workspace.FilePath, Shell.CodeTrust.CodeIn(_workspace.Schematic)))
+            {
+                _workspace.Status = "Simülasyon başlamadı: dosyadaki kod onaylanmadı";
+                return false;
+            }
+
             using var gate = SimThread.Hold();
             Stop();
             Log.Clear();

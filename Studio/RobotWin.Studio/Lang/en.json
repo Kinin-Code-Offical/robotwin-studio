@@ -8011,7 +8011,14 @@
   "güvenilenler": "trusted only",
   "Son çalışmalar": "Recent work",
   "dosya bulunamadı": "file not found",
-  "kod": "code"
+  "kod": "code",
+  "Bu dosya internetten ya da başka bir bilgisayardan geldi ve bilgisayarınızda doğrudan çalışacak kod içeriyor:": "This file came from the internet or another computer and contains code that would run directly on your PC:",
+  "Bu kod dosyalarınıza ve ağa uygulamanın kendisi kadar erişebilir. ESP32 kodu korumalı alanda, Arduino kodu emülatörde çalışır; onlar için onay gerekmez. Kaynağına güveniyorsanız çalıştırın.": "This code can reach your files and the network as far as the app itself can. ESP32 code runs in a sandbox and Arduino code in the emulator; they need no approval. Run it if you trust its source.",
+  "Bu dosyanın kaynağına güveniyor musunuz?": "Do you trust the source of this file?",
+  "Güven ve çalıştır": "Trust and run",
+  "Çalıştırma": "Don't run",
+  "C# betiği: ": "C# script: ",
+  "Simülasyon başlamadı: dosyadaki kod onaylanmadı": "The simulation did not start: the file's code was not approved"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
