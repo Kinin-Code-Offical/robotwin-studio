@@ -483,6 +483,9 @@ namespace RobotTwin.CoreSim.Pcb
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
 
+        /// <summary>[keepout] Rule areas: where tracks, vias, pours or parts are not allowed (Pcb/RuleArea.cs).</summary>
+        public List<RuleArea> RuleAreas { get; set; } = new List<RuleArea>();
+
         /// <summary>[graphics] Lines, rectangles, circles, arcs and polygons drawn on the graphic layers (Pcb/BoardGraphic.cs).</summary>
         public List<BoardGraphic> Graphics { get; set; } = new List<BoardGraphic>();
 

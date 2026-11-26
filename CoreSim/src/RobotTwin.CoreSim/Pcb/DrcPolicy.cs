@@ -71,6 +71,7 @@ namespace RobotTwin.CoreSim.Pcb
             new DrcRuleInfo("Delik-delik aralığı", Manufacturing, DrcSeverity.Error, "İki deliğin kenarları birbirine yakın"),
             new DrcRuleInfo("Kart kenarı", Manufacturing, DrcSeverity.Error, "Bakır kart kenarına yakın"),
             new DrcRuleInfo("Kör/gömülü via", Manufacturing, DrcSeverity.Error, "Kart ayarları kör/gömülü via'ya izin vermiyor"),
+            new DrcRuleInfo("Yasak bölge", Electrical, DrcSeverity.Error, "Yasak bölgenin içinde yol, via, dolgu ya da parça"),
             new DrcRuleInfo("Gövde çakışması", Mechanical, DrcSeverity.Warning, "Parça gövdeleri (courtyard) üst üste ya da montaj deliğinde"),
             new DrcRuleInfo("Kutu", Mechanical, null, "Kart ve parçalar kutunun duvarına, tabanına, kapağına giriyor ya da çok yakın"),
             new DrcRuleInfo("Uzunluk eşleme", SignalIntegrity, DrcSeverity.Warning, "Uzunluk grubundaki hatlar toleranstan farklı"),

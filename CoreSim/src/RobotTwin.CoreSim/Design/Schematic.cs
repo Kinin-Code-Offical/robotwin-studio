@@ -100,6 +100,33 @@ namespace RobotTwin.CoreSim.Design
         public GridPoint Position { get; set; }
     }
 
+    /// <summary>
+    /// [notes] Text on the sheet that is not a net: a title, a note to whoever builds it, a block's description
+    /// (KiCad's text and text box). Its top left corner sits at <see cref="Position"/>; it may run over several lines.
+    /// </summary>
+    public sealed class SchematicNote
+    {
+        public string Text { get; set; } = string.Empty;
+        public GridPoint Position { get; set; }
+
+        /// <summary>Letter height in grid units (1 = the size of part names).</summary>
+        public double Size { get; set; } = 1.0;
+
+        /// <summary>A frame around it (KiCad's text box).</summary>
+        public bool Boxed { get; set; }
+
+        public bool Bold { get; set; }
+
+        /// <summary>The area it takes, in grid units (as the sheet's font sets it: about 0.6 of the height per letter).</summary>
+        public GridRect Bounds()
+        {
+            var lines = (Text.Length == 0 ? " " : Text).Replace("\r", string.Empty).Split('\n');
+            double w = Math.Max(1, lines.Max(l => l.Length)) * 0.6 * Size + (Boxed ? 1 : 0);
+            double h = lines.Length * 1.3 * Size + (Boxed ? 1 : 0);
+            return new GridRect(Position.X, Position.Y, Position.X + w, Position.Y + h);
+        }
+    }
+
     public sealed class NetConnection
     {
         public NetConnection(string refDes, string pin)
@@ -170,6 +197,9 @@ namespace RobotTwin.CoreSim.Design
 
         /// <summary>No-connect flags on pins that are intentionally unconnected (silences ERC).</summary>
         public List<NoConnectFlag> NoConnects { get; set; } = new List<NoConnectFlag>();
+
+        /// <summary>[notes] Texts and text boxes on the sheet (no electrical meaning).</summary>
+        public List<SchematicNote> Notes { get; set; } = new List<SchematicNote>();
 
         /// <summary>Optional PCB layout saved alongside the schematic.</summary>
         public Pcb.BoardDocument? Board { get; set; }

@@ -54,6 +54,7 @@ Yardımcı tuşlar:
 | Backspace | Son köşeyi geri al |
 | L / Ctrl+L | Hat etiketi / global etiket |
 | Q | Bağlantı yok (NC) işareti |
+| T | Metin: sayfaya not, başlık ya da açıklama (çerçeveli olunca metin kutusu); çift tıkla düzenlenir |
 
 Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir. Kabloya sağ tıklayınca **Böl**, **segment sil** ve **etiket** seçenekleri çıkar.
 

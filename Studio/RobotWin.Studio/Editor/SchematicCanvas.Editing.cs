@@ -36,7 +36,10 @@ namespace RobotWin.Studio.Editor
         ExportNetlist,
         ExportSpice,
         ExportImage,
-        Print
+        Print,
+
+        /// <summary>[notes] A new text where the text tool was clicked (target: the grid point), or an existing one edited (target: the note).</summary>
+        EditNote
     }
 
     public sealed class SchematicCommandEventArgs : EventArgs
@@ -164,6 +167,7 @@ namespace RobotWin.Studio.Editor
             {
                 EditorTool.Wire => "Kablo · " + WireModeText + " · / köşe yönü · Shift+Boşluk mod",
                 EditorTool.Label => "Etiket · tıklayın",
+                EditorTool.Text => "Metin · yazının sol üst köşesine tıklayın",
                 EditorTool.GlobalLabel => "Global etiket · tıklayın",
                 EditorTool.NoConnect => "NC işareti · pin uçlarına tıklayın",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",

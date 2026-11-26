@@ -118,6 +118,7 @@ namespace RobotTwin.CoreSim.Design
                     return r;
                 case NetLabel l: return GridRect.FromPoint(l.Position);
                 case NoConnectFlag nc: return GridRect.FromPoint(nc.Position);
+                case SchematicNote n: return n.Bounds();   // [notes]
                 default: return null;
             }
         }
@@ -137,7 +138,7 @@ namespace RobotTwin.CoreSim.Design
 
         /// <summary>Everything on the sheet, in drawing order.</summary>
         public static IEnumerable<object> AllItems(Schematic doc) =>
-            doc.Parts.Cast<object>().Concat(doc.Wires).Concat(doc.Labels).Concat(doc.NoConnects);
+            doc.Parts.Cast<object>().Concat(doc.Wires).Concat(doc.Labels).Concat(doc.NoConnects).Concat(doc.Notes);
 
         /// <summary>
         /// Box selection. Window mode (dragged left to right) takes items lying completely inside;
@@ -163,6 +164,12 @@ namespace RobotTwin.CoreSim.Design
 
             foreach (var label in doc.Labels) if (rect.Contains(label.Position)) result.Add(label);
             foreach (var nc in doc.NoConnects) if (rect.Contains(nc.Position)) result.Add(nc);
+            foreach (var n in doc.Notes)   // [notes]
+            {
+                var b = n.Bounds();
+                if (crossing ? rect.Intersects(b) : rect.Contains(b)) result.Add(n);
+            }
+
             return result;
         }
 
@@ -179,6 +186,7 @@ namespace RobotTwin.CoreSim.Design
                     case SchematicPart p: return p.Position;
                     case NetLabel l: return l.Position;
                     case NoConnectFlag nc: return nc.Position;
+                    case SchematicNote n: return n.Position;
                 }
             }
 
@@ -263,6 +271,7 @@ namespace RobotTwin.CoreSim.Design
                         break;
                     case NetLabel l: l.Position += delta; break;
                     case NoConnectFlag nc: nc.Position += delta; break;
+                    case SchematicNote n: n.Position += delta; break;   // [notes]
                 }
             }
         }
@@ -279,6 +288,7 @@ namespace RobotTwin.CoreSim.Design
                     SchematicWire w => doc.Wires.Remove(w),
                     NetLabel l => doc.Labels.Remove(l),
                     NoConnectFlag nc => doc.NoConnects.Remove(nc),
+                    SchematicNote note => doc.Notes.Remove(note),
                     _ => false
                 };
                 if (removed) n++;
@@ -519,6 +529,7 @@ namespace RobotTwin.CoreSim.Design
         private readonly Dictionary<SchematicPart, GridPoint> _parts = new Dictionary<SchematicPart, GridPoint>();
         private readonly Dictionary<NetLabel, GridPoint> _labels = new Dictionary<NetLabel, GridPoint>();
         private readonly Dictionary<NoConnectFlag, GridPoint> _flags = new Dictionary<NoConnectFlag, GridPoint>();
+        private readonly Dictionary<SchematicNote, GridPoint> _notes = new Dictionary<SchematicNote, GridPoint>();
         private readonly Dictionary<SchematicWire, List<GridPoint>> _wires = new Dictionary<SchematicWire, List<GridPoint>>();
         private readonly List<WireStretch> _stretch = new List<WireStretch>();
         private readonly HashSet<GridPoint> _fixedPoints;
@@ -564,7 +575,7 @@ namespace RobotTwin.CoreSim.Design
         }
 
         /// <summary>Everything that moves rigidly (selection plus attached labels and fully attached wires).</summary>
-        public IEnumerable<object> RigidItems => _parts.Keys.Cast<object>().Concat(_wires.Keys).Concat(_labels.Keys).Concat(_flags.Keys);
+        public IEnumerable<object> RigidItems => _parts.Keys.Cast<object>().Concat(_wires.Keys).Concat(_labels.Keys).Concat(_flags.Keys).Concat(_notes.Keys);
 
         public IEnumerable<SchematicWire> StretchedWires => _stretch.Select(s => s.Wire);
 
@@ -575,6 +586,7 @@ namespace RobotTwin.CoreSim.Design
                 case SchematicPart p: _parts[p] = p.Position; break;
                 case NetLabel l: _labels[l] = l.Position; break;
                 case NoConnectFlag nc: _flags[nc] = nc.Position; break;
+                case SchematicNote n: _notes[n] = n.Position; break;   // [notes]
                 case SchematicWire w: _wires[w] = new List<GridPoint>(w.Points); break;
             }
         }
@@ -584,6 +596,7 @@ namespace RobotTwin.CoreSim.Design
             foreach (var kv in _parts) kv.Key.Position = kv.Value + delta;
             foreach (var kv in _labels) kv.Key.Position = kv.Value + delta;
             foreach (var kv in _flags) kv.Key.Position = kv.Value + delta;
+            foreach (var kv in _notes) kv.Key.Position = kv.Value + delta;
             foreach (var kv in _wires) kv.Key.Points = kv.Value.Select(p => p + delta).ToList();
             foreach (var s in _stretch) s.Apply(delta, _fixedPoints);
         }

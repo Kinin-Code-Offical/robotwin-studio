@@ -88,6 +88,16 @@ Parça sayfasında **Montaja gönder** her parçayı ayrı bir gövde olarak gö
 
 Birden çok robotu ya da özel bir test alanını [Dünya](07-dunya.md) sayfasındaki ayrı dünyalarda kurarsınız.
 
+## Çakışma algılama
+
+Araç çubuğunda **Hizala**'nın yanındaki **Çakışma algılama** düğmesi (komut paletinde "çakışma algıla"), SolidWorks'teki gibi aynı yeri kaplayan parça çiftlerini ortak hacimleriyle (mm³) listeler. Parçalar kendi 3B modellerinin dış şekilleriyle, bulundukları yerde karşılaştırılır. Seçenekler:
+
+- **Değen yüzeyleri de çakışma say:** yalnızca değen parçalar da listelenir.
+- **Eklemle bağlı parçaları da denetle:** servo koluyla servo, tekerle motor gibi bilerek iç içe olanlar da sayılır (öntanımlı olarak atlanır).
+- **Yalnız seçili parça:** seçili parçanın başkalarıyla çakışmaları.
+
+Bir satır seçilince ilk parça seçilir, durum çubuğu çakışmanın hacmini ve ortasını söyler. Pencere açıkken sahnede çalışılabilir; **Hesapla** yeniden denetler.
+
 ## Kayıt ve arıza deneyleri
 
 Montaj bir dünya olduğu için dünyanın bütün araçları burada da çalışır:

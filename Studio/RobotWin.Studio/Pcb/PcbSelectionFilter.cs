@@ -50,6 +50,7 @@ namespace RobotWin.Studio.Pcb
             BoardText => Texts,
             MountingHole => Holes,
             Zone => Zones,
+            RuleArea => Zones,   // [keepout] picked with the copper areas
             BoardDimension => Dimensions,
             BoardGraphic => Graphics,
             BoardCanvas.OutlineSelection => Outline,

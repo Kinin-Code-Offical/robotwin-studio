@@ -65,6 +65,8 @@
     <Geometry x:Key="I.ZoomOut">M10.5,4 A6.5,6.5 0 1 1 10.49,4 Z M15.5,15.5 L20,20 M7.5,10.5 H13.5</Geometry>
     <Geometry x:Key="I.Lock">M7,10.5 H17 V19.5 H7 Z M9,10.5 V7.5 A3,3 0 0 1 15,7.5 V10.5</Geometry>
     <Geometry x:Key="I.FlipSide">M4,8 H20 M17,5 L20,8 L17,11 M20,16 H4 M7,13 L4,16 L7,19</Geometry>
+    <Geometry x:Key="I.Keepout">M5,5 H19 V19 H5 Z M5,12 L12,5 M5,19 L19,5 M12,19 L19,12</Geometry>
+    <Geometry x:Key="I.Interference">M4,4 H14 V14 H4 Z M10,10 H20 V20 H10 Z M10,12 L12,10 M10,14 L14,10</Geometry>
     <Geometry x:Key="I.Meander">M3,16 H6 V8 H10 V16 H14 V8 H18 V16 H21</Geometry>
     <Geometry x:Key="I.Via">M12,5 A7,7 0 1 1 11.99,5 Z M12,9.5 A2.5,2.5 0 1 1 11.99,9.5 Z</Geometry>
     <Geometry x:Key="I.Joint">M4,7 A3,3 0 1 1 10,7 A3,3 0 1 1 4,7 Z M14,17 A3,3 0 1 1 20,17 A3,3 0 1 1 14,17 Z M9.1,9.1 L14.9,14.9</Geometry>

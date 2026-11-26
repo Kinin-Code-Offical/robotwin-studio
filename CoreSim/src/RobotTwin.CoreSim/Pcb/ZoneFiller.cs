@@ -87,6 +87,10 @@ namespace RobotTwin.CoreSim.Pcb
                 allowed = PolyBool.Intersection(allowed, new[] { Polygon.CounterClockwise(zone.Outline) });
             }
 
+            // [keepout] rule areas that forbid pours on this layer are cut out
+            var keepouts = board.RuleAreas.Where(a => a.NoPour && a.OnLayer(layer) && a.Outline.Count >= 3).Select(a => (IReadOnlyList<PcbPoint>)Polygon.CounterClockwise(a.Outline)).ToList();
+            if (keepouts.Count > 0 && allowed.Count > 0) allowed = PolyBool.Difference(allowed, keepouts);
+
             if (allowed.Count == 0) return allowed;
             var core = r > 0 ? PolyOffset.Offset(allowed, -r, Tolerance) : allowed;
 
@@ -266,6 +270,16 @@ namespace RobotTwin.CoreSim.Pcb
             {
                 N(p.X);
                 N(p.Y);
+            }
+
+            foreach (var a in board.RuleAreas.Where(a => a.NoPour && a.OnLayer(zone.Layer)))   // [keepout] a rule area changed: the fill is old
+            {
+                S("keepout");
+                foreach (var p in a.Outline)
+                {
+                    N(p.X);
+                    N(p.Y);
+                }
             }
 
             S("board");

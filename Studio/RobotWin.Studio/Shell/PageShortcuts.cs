@@ -22,6 +22,7 @@ namespace RobotWin.Studio.Shell
             S("kablo", "Kablo çiz", "W");
             S("etiket", "Hat etiketi", "L");
             S("nc", "Bağlantısız (NC) işareti", "Q");
+            S("metin", "Metin ekle", "T");   // [notes]
             S("tasi", "Taşı", "M");
             S("surukle", "Kablolarıyla sürükle", "G");
             S("dondur", "Döndür", "R");

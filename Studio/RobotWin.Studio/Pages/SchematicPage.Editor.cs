@@ -105,6 +105,7 @@ namespace RobotWin.Studio.Pages
                 case SchematicCommand.Datasheet: if (part != null) OpenDatasheet(part); break;
                 case SchematicCommand.ShowInPcb: if (part != null) (Window.GetWindow(this) as MainWindow)?.ShowPartInPcb(part.RefDes); break;
                 case SchematicCommand.Find: ShowFind(false); break;
+                case SchematicCommand.EditNote: EditNote(target); break;   // [notes]
                 case SchematicCommand.Replace: ShowFind(true); break;
                 case SchematicCommand.Help: ToggleHelp(); break;
                 case SchematicCommand.Erc: RunErc(keepOpen: false); break;
@@ -1152,6 +1153,15 @@ namespace RobotWin.Studio.Pages
                     _ercShowInfo = true;
                     BuildErcPanel();
                     break;
+                case "notes":   // [notes] a title and a framed note on the sheet
+                {
+                    var nb = SchematicEditing.Bounds(SchematicEditing.AllItems(W.Schematic), W.Library);
+                    double nx = nb?.MinX ?? 0, ny = (nb?.MinY ?? 0) - 6;
+                    W.Schematic.Notes.Add(new SchematicNote { Text = "Motor sürücü", Position = new GridPoint(nx, ny), Size = 2, Bold = true });
+                    W.Schematic.Notes.Add(new SchematicNote { Text = "Q1 soğutucusuz en çok 2 A\nBT1: 3S LiPo, 11,1 V", Position = new GridPoint((nb?.MaxX ?? 20) + 3, (nb?.MinY ?? 0)), Boxed = true });
+                    Canvas.InvalidateVisual();
+                    break;
+                }
                 case "dock-min":   // [dock-min] the library minimized to its strip
                     _dock?.Minimize(DockPlace.Left, true);
                     break;

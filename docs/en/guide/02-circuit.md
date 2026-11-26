@@ -54,6 +54,7 @@ Helper keys:
 | Backspace | Undo the last corner |
 | L / Ctrl+L | Net label / global label |
 | Q | No-connect (NC) marker |
+| T | Text: a note, title or description on the sheet (a text box when framed); double-click to edit |
 
 Labels with the same name are connected; the name `GND` means ground. Right-clicking a wire offers **Split wire**, **Delete this segment** and **Add label**.
 

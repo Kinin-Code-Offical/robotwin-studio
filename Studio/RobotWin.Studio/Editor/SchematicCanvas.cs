@@ -26,7 +26,10 @@ namespace RobotWin.Studio.Editor
         GlobalLabel,
 
         /// <summary>No-connect flag on a pin (KiCad Q).</summary>
-        NoConnect
+        NoConnect,
+
+        /// <summary>[notes] Text on the sheet (KiCad T).</summary>
+        Text
     }
 
     /// <summary>
@@ -246,6 +249,7 @@ namespace RobotWin.Studio.Editor
             _selection.RemoveWhere(o => o is SchematicPart p && !Doc.Parts.Contains(p) ||
                                         o is SchematicWire w && !Doc.Wires.Contains(w) ||
                                         o is NetLabel l && !Doc.Labels.Contains(l) ||
+                                        o is SchematicNote sn && !Doc.Notes.Contains(sn) ||
                                         o is NoConnectFlag nc && !Doc.NoConnects.Contains(nc));
             InvalidateVisual();
         }
@@ -336,6 +340,7 @@ namespace RobotWin.Studio.Editor
         private object? HitObject(GridPoint g)
         {
             double tol = Math.Max(0.35, 6 / _scale);
+            if (HitNote(ToScreen(g)) is { } note) return note;   // [notes]
             foreach (var nc in Doc.NoConnects)
             {
                 if (Math.Abs(nc.Position.X - g.X) <= tol && Math.Abs(nc.Position.Y - g.Y) <= tol) return nc;
@@ -467,6 +472,7 @@ namespace RobotWin.Studio.Editor
             for (int i = 0; i < Doc.Labels.Count; i++) DrawLabel(dc, Doc.Labels[i], i < netlist.LabelNets.Count ? netlist.LabelNets[i] : null);
 
             DrawNoConnects(dc);
+            DrawNotes(dc);   // [notes]
             DrawEditorOverlay(dc);
 
             if (_exporting) return;

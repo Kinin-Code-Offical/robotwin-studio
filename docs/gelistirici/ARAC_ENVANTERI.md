@@ -78,7 +78,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Fark çifti eğiklik ayarı | yok | yok | 2 |
 | Via | Via aracı | var | |
 | Bakır alan | Dolgu alanı | var | |
-| Yasak bölge (kural alanı) | yok | yok | 1 |
+| Yasak bölge (kural alanı) | Alanlar grubunda (DRC, dolgu, iki yönlendirici, KiCad) | var | |
 | Çizgi, yay, dikdörtgen, daire, çokgen | Çizim grubu | var | |
 | Bezier, resim | yok | yok | 3 |
 | Yazı | Yazı | var | |
@@ -125,7 +125,8 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Etiket: hiyerarşik, yönerge | yok | yok | 3 |
 | Kural alanı | yok | yok | 3 |
 | Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
-| Metin, metin kutusu, tablo | yok | yok | 1 |
+| Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
+| Tablo | yok | yok | 3 |
 | Dikdörtgen, daire, yay, çizgi, Bezier, resim | yok | yok | 2 |
 | Silici | Del | kısmi | 3 |
 | Izgara, birim, imleç, gizli pinler | ızgara var | kısmi | 3 |
@@ -204,7 +205,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Standart ilişkiler (çakışık, paralel, dik, teğet, eş merkezli, mesafe, açı) | Hizala | var | |
 | Gelişmiş ilişkiler (sınır, genişlik, simetrik) | denetlenecek | kısmi | 2 |
 | Mekanik ilişkiler (dişli, kam, kremayer) | denetlenecek | kısmi | 2 |
-| Çakışma algılama | yok | yok | 1 |
+| Çakışma algılama | Çakışma algılama (hacim, değenler, bağlı parçalar, yalnız seçili) | var | |
 | Boşluk doğrulama | yok | yok | 1 |
 | Delik hizası | yok | yok | 2 |
 | Patlatılmış görünüm | yok | yok | 1 |

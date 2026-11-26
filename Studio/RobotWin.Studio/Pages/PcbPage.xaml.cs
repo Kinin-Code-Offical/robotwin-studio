@@ -744,6 +744,14 @@ namespace RobotWin.Studio.Pages
                     DrcRulesToggle.IsChecked = true;
                     OnDrcRules(this, new RoutedEventArgs());
                     break;
+                case "keepout":   // [keepout] an antenna's keepout in the free corner, a track run through it, DRC
+                    board.RuleAreas.Add(new RuleArea { Name = "Anten", Outline = { new PcbPoint(board.Width - 14, board.Height - 11), new PcbPoint(board.Width - 3, board.Height - 11), new PcbPoint(board.Width - 3, board.Height - 3), new PcbPoint(board.Width - 14, board.Height - 3) } });
+                    board.Tracks.Add(new Track { Net = board.NetNames().First(), Layer = CopperLayer.Top, X1 = board.Width - 20, Y1 = board.Height - 6, X2 = board.Width - 8, Y2 = board.Height - 6, Width = 0.3 });
+                    Canvas.Refresh();
+                    Canvas.SetTool(PcbTool.Keepout);
+                    RunDrcNow();
+                    ShowPanel(3);
+                    break;
                 case "tune":   // [tuning] two nets made a pair; the shorter one meandered to the other's length by the tuner
                 {
                     // a signal pair in the free strip under the parts: D- runs 3 mm further (a jog), D+ is tuned to it

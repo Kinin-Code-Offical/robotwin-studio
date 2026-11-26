@@ -31,15 +31,18 @@ namespace RobotTwin.CoreSim.Design
         public List<NetLabel> Labels { get; set; } = new List<NetLabel>();
         public List<NoConnectFlag> NoConnects { get; set; } = new List<NoConnectFlag>();
 
-        [JsonIgnore]
-        public bool IsEmpty => Parts.Count == 0 && Wires.Count == 0 && Labels.Count == 0 && NoConnects.Count == 0;
+        /// <summary>[notes] Texts and text boxes.</summary>
+        public List<SchematicNote> Notes { get; set; } = new List<SchematicNote>();
 
         [JsonIgnore]
-        public int Count => Parts.Count + Wires.Count + Labels.Count + NoConnects.Count;
+        public bool IsEmpty => Parts.Count == 0 && Wires.Count == 0 && Labels.Count == 0 && NoConnects.Count == 0 && Notes.Count == 0;
+
+        [JsonIgnore]
+        public int Count => Parts.Count + Wires.Count + Labels.Count + NoConnects.Count + Notes.Count;
 
         /// <summary>Every object of the fragment.</summary>
         [JsonIgnore]
-        public IEnumerable<object> Items => Parts.Cast<object>().Concat(Wires).Concat(Labels).Concat(NoConnects);
+        public IEnumerable<object> Items => Parts.Cast<object>().Concat(Wires).Concat(Labels).Concat(NoConnects).Concat(Notes);
 
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
@@ -62,6 +65,7 @@ namespace RobotTwin.CoreSim.Design
                     case SchematicWire w when w.Points.Count >= 2: f.Wires.Add(new SchematicWire { Points = new List<GridPoint>(w.Points) }); break;
                     case NetLabel l: f.Labels.Add(new NetLabel { Name = l.Name, Position = l.Position, Global = l.Global }); break;
                     case NoConnectFlag nc: f.NoConnects.Add(new NoConnectFlag { Position = nc.Position }); break;
+                    case SchematicNote n: f.Notes.Add(new SchematicNote { Text = n.Text, Position = n.Position, Size = n.Size, Boxed = n.Boxed, Bold = n.Bold }); break;
                 }
             }
 
@@ -97,6 +101,7 @@ namespace RobotTwin.CoreSim.Design
                 f.Wires ??= new List<SchematicWire>();
                 f.Labels ??= new List<NetLabel>();
                 f.NoConnects ??= new List<NoConnectFlag>();
+                f.Notes ??= new List<SchematicNote>();
                 foreach (var p in f.Parts)
                 {
                     p.Parameters = new Dictionary<string, string>(p.Parameters ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase);
@@ -163,6 +168,12 @@ namespace RobotTwin.CoreSim.Design
             {
                 doc.NoConnects.Add(nc);
                 result.Items.Add(nc);
+            }
+
+            foreach (var n in copy.Notes)   // [notes]
+            {
+                doc.Notes.Add(n);
+                result.Items.Add(n);
             }
 
             result.Items.InsertRange(0, result.Parts);

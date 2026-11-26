@@ -18,6 +18,43 @@ namespace RobotWin.Studio.Pcb
     {
         private readonly List<PcbPoint> _gfx = new List<PcbPoint>();
         private readonly List<(BoardGraphic G, List<PcbPoint> P)> _moveGraphics = new List<(BoardGraphic, List<PcbPoint>)>();
+        private readonly List<(RuleArea A, List<PcbPoint> P)> _moveAreas = new List<(RuleArea, List<PcbPoint>)>();
+
+        /// <summary>[keepout] Raised when a rule area's polygon is closed.</summary>
+        public event EventHandler<List<PcbPoint>>? KeepoutDrawn;
+
+        /// <summary>[keepout] Rule areas: a hatched outline in the danger colour, on the layers they hold (all when none is hidden).</summary>
+        private void DrawRuleAreas(DrawingContext dc, BoardDocument board)
+        {
+            foreach (var a in board.RuleAreas)
+            {
+                if (a.Outline.Count < 3 || a.Layers.Count > 0 && a.Layers.All(l => HiddenLayers.Contains(l))) continue;
+                var color = A(Danger, a.OnLayer(_activeLayer) ? (byte)0xC0 : (byte)0x60);
+                var geo = Poly(a.Outline);
+                var pen = new Pen(SymbolRenderer.Brush(color), 1.4) { DashStyle = DashStyles.Dash };
+                pen.Freeze();
+                dc.DrawGeometry(null, pen, geo);
+                // 45° hatching clipped to the area
+                var b = geo.Bounds;
+                dc.PushClip(geo);
+                var hatch = P(A(Danger, (byte)0x45), 1, false);
+                for (double k = b.Left - b.Height; k < b.Right; k += 10) dc.DrawLine(hatch, new Point(k, b.Bottom), new Point(k + b.Height, b.Top));
+                dc.Pop();
+            }
+        }
+
+        private RuleArea? HitRuleArea(double x, double y)
+        {
+            if (Board == null) return null;
+            double tol = 5 / _scale;
+            foreach (var a in Board.RuleAreas)
+            {
+                if (a.Outline.Count < 3) continue;
+                if (a.Edges().Any(e => RobotTwin.CoreSim.Pcb.Geometry.PointSegmentDistance(x, y, e.A.X, e.A.Y, e.B.X, e.B.Y) <= tol)) return a;
+            }
+
+            return null;
+        }
 
         /// <summary>The layer the drawing tools draw on (the tool options bar sets it).</summary>
         public GraphicLayer GraphicDrawLayer { get; set; } = GraphicLayer.SilkTop;

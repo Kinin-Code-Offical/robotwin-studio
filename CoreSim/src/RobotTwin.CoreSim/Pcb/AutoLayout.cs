@@ -429,6 +429,16 @@ namespace RobotTwin.CoreSim.Pcb
                 for (int l = 0; l < L; l++) MarkSegment(l, h.X, h.Y, h.X, h.Y, r, net, c);
             }
 
+            // [keepout] rule areas: their sides block every layer they hold on
+            foreach (var a in _board.RuleAreas.Where(a => a.NoTracks && a.Outline.Count >= 3))
+            {
+                for (int l = 0; l < L; l++)
+                {
+                    if (!a.OnLayer(_layers[l])) continue;
+                    foreach (var (p, q) in a.Edges()) MarkSegment(l, p.X, p.Y, q.X, q.Y, 0, Blocked, 0.05);
+                }
+            }
+
             foreach (var t in _board.Tracks) MarkTrack(t);
             foreach (var v in _board.Vias) MarkVia(v);
         }

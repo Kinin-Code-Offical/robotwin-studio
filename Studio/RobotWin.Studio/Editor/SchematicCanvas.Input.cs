@@ -117,6 +117,10 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.NoConnect:
                     ToggleNoConnectAt(_mouseGrid);
                     return;
+                case EditorTool.Text:   // [notes]
+                    RequestCommand(SchematicCommand.EditNote, Snap(_mouseGrid));
+                    Tool = EditorTool.Select;
+                    return;
             }
 
             if (_wirePoints != null)
@@ -142,6 +146,9 @@ namespace RobotWin.Studio.Editor
                         return;
                     case NetLabel dl:
                         RequestCommand(SchematicCommand.EditValue, dl);
+                        return;
+                    case SchematicNote dn:   // [notes]
+                        RequestCommand(SchematicCommand.EditNote, dn);
                         return;
                     case SchematicWire:
                         if (NetUnderCursor() is { } net) SelectConnection(net);
@@ -540,6 +547,9 @@ namespace RobotWin.Studio.Editor
                     return true;
                 case Key.L when !ctrl:
                     Tool = EditorTool.Label;
+                    return true;
+                case Key.T when !ctrl:   // [notes] KiCad's text tool
+                    Tool = EditorTool.Text;
                     return true;
                 case Key.Q when !ctrl:
                     if (IsMouseOver && HitPin(_mouseGrid) != null) ToggleNoConnectAt(_mouseGrid);

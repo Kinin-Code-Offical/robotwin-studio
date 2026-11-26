@@ -49,6 +49,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | W / Shift+W | Kablo aracı / imleçten kablo başlat |
 | L / Ctrl+L | Hat etiketi / global etiket |
 | Q | Bağlantı yok (NC) işareti |
+| T | Metin |
 | / | Kablo köşe yönü |
 | Shift+Boşluk | Kablo modu: 90° → 45° → serbest |
 | Backspace | Son köşeyi geri al |

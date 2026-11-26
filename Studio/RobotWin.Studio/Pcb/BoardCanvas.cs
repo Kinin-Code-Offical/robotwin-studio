@@ -32,7 +32,10 @@ namespace RobotWin.Studio.Pcb
         Via,
 
         /// <summary>[tuning] KiCad's length tuner: meanders on the clicked segment up to its pair's or group's length.</summary>
-        Tune
+        Tune,
+
+        /// <summary>[keepout] A rule area: drawn as a polygon like a zone.</summary>
+        Keepout
     }
 
     /// <summary>
@@ -285,6 +288,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Arc => "Yay: merkeze, başlangıca ve bitişe tıklayın (saat yönünün tersine) · Esc: iptal",
             PcbTool.Polygon => "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal",
             PcbTool.Via => "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık",
+            PcbTool.Keepout => "Yasak bölge: köşelere tıklayın · çift tık veya Enter: kapat · seçenek çubuğundan katman ve neyin yasak olduğu · Esc: iptal",
             PcbTool.Tune => "Uzunluk ayarı: kısa kalan hattın uzun, düz bir parçasına tıklayın; kıvrımlar hattı çiftinin ya da grubunun uzunluğuna getirir · Esc: çık",
             PcbTool.Dimension => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın",
             PcbTool.Outline => "Kart kenarı: köşelere tıklayın · çift tık veya Enter: kapat (köşe yarıçapı panelden) · Esc: iptal",
@@ -407,6 +411,7 @@ namespace RobotWin.Studio.Pcb
             if (ShowSilk) DrawSilk(dc, board);
             if (ShowDrawings) DrawDrawings(dc, board);
             DrawGraphics(dc, board);   // [graphics] each by its layer's switch
+            DrawRuleAreas(dc, board);   // [keepout]
             if (ShowRatsnest) DrawRatsnest(dc, board);
             DrawSelection(dc, board);
             DrawGraphicPreview(dc);   // [graphics]
@@ -721,6 +726,10 @@ namespace RobotWin.Studio.Pcb
                     break;
                 case BoardGraphic g:   // [graphics]
                     DrawSelectedGraphic(dc, g);
+                    break;
+                case RuleArea a:   // [keepout]
+                    foreach (var p in a.Outline) dc.DrawRectangle(SymbolRenderer.Brush(Accent), null, new Rect(S(p.X, p.Y) - new Vector(3, 3), new Size(6, 6)));
+                    dc.DrawGeometry(null, P(Accent, 2), Poly(a.Outline));
                     break;
                 case BoardText t:
                 {
@@ -1318,14 +1327,15 @@ namespace RobotWin.Studio.Pcb
             }
 
             if (_tool == PcbTool.Zone) ZoneDrawn?.Invoke(this, pts);
+            else if (_tool == PcbTool.Keepout) KeepoutDrawn?.Invoke(this, pts);   // [keepout]
             else OutlineDrawn?.Invoke(this, pts);
             InvalidateVisual();
         }
 
         private void DrawPolygonPreview(DrawingContext dc)
         {
-            if (_tool != PcbTool.Zone && _tool != PcbTool.Outline || _polyPts.Count == 0) return;
-            var color = _tool == PcbTool.Zone ? LayerColor(_activeLayer) : SubstrateEdge;
+            if (_tool != PcbTool.Zone && _tool != PcbTool.Outline && _tool != PcbTool.Keepout || _polyPts.Count == 0) return;
+            var color = _tool == PcbTool.Zone ? LayerColor(_activeLayer) : _tool == PcbTool.Keepout ? Danger : SubstrateEdge;
             var pen = P(color, 1.6);
             var cur = new PcbPoint(Snap(_cursor.X), Snap(_cursor.Y));
             var pts = _polyPts.Concat(new[] { cur }).ToList();

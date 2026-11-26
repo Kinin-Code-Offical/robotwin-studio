@@ -19,6 +19,7 @@ namespace RobotWin.Studio.Pages
     {
         private void InitToolGroups()
         {
+            Canvas.KeepoutDrawn += OnKeepoutDrawn;   // [keepout]
             ToolFlyout.Attach(ToolDraw, new[]
             {
                 new ToolChoice(nameof(PcbTool.Line), "Çizgi", "I.DrawLine"),
@@ -31,6 +32,11 @@ namespace RobotWin.Studio.Pages
             {
                 new ToolChoice(nameof(PcbTool.Route), "Yol", "I.Wire", "X"),
                 new ToolChoice(nameof(PcbTool.Tune), "Uzunluk ayarı (menderes)", "I.Meander")
+            });
+            ToolFlyout.Attach(ToolZone, new[]
+            {
+                new ToolChoice(nameof(PcbTool.Zone), "Bakır dolgu alanı", "I.Zone", "Z"),
+                new ToolChoice(nameof(PcbTool.Keepout), "Yasak bölge", "I.Keepout")
             });
             ToolFlyout.Attach(ToolHole, new[]
             {
@@ -117,6 +123,45 @@ namespace RobotWin.Studio.Pages
             ToolOptions.Visibility = Visibility.Visible;
         }
 
+        /// <summary>[keepout] What a new rule area forbids and on which layers (the active one or all).</summary>
+        private readonly RuleArea _keepoutTemplate = new RuleArea();
+        private bool _keepoutAllLayers;
+
+        private void KeepoutOptions()
+        {
+            var t = _keepoutTemplate;
+            CheckBox Box(string label, bool on, Action<bool> set)
+            {
+                var cb = new CheckBox { Content = label, IsChecked = on, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) };
+                cb.Click += (_, _) => set(cb.IsChecked == true);
+                return cb;
+            }
+
+            ToolOptionsRow.Children.Add(Label("Yasak", 0));
+            ToolOptionsRow.Children.Add(Box("Yol", t.NoTracks, v => t.NoTracks = v));
+            ToolOptionsRow.Children.Add(Box("Via", t.NoVias, v => t.NoVias = v));
+            ToolOptionsRow.Children.Add(Box("Dolgu", t.NoPour, v => t.NoPour = v));
+            ToolOptionsRow.Children.Add(Box("Parça", t.NoParts, v => t.NoParts = v));
+            ToolOptionsRow.Children.Add(Label("Katman", 6));
+            var layers = Combo(new[] { false, true }, _keepoutAllLayers, v => _keepoutAllLayers = v, v => Shell.Lang.T(v ? "Bütün katmanlar" : "Etkin katman"));
+            layers.Width = 140;
+            ToolOptionsRow.Children.Add(layers);
+            ToolOptions.Visibility = Visibility.Visible;
+        }
+
+        private void OnKeepoutDrawn(object? sender, List<PcbPoint> pts)
+        {
+            var t = _keepoutTemplate;
+            var area = new RuleArea { Outline = pts, NoTracks = t.NoTracks, NoVias = t.NoVias, NoPour = t.NoPour, NoParts = t.NoParts };
+            if (!_keepoutAllLayers) area.Layers.Add(Canvas.ActiveLayer);
+            var board = Board;
+            Edit($"Yasak bölge eklendi ({area.Describe()} · {(_keepoutAllLayers ? Shell.Lang.T("bütün katmanlar") : PcbLayers.DisplayName(Canvas.ActiveLayer))})", () =>
+            {
+                board.RuleAreas.Add(area);
+                if (t.NoPour && board.Zones.Count > 0) ZoneFiller.FillAll(board);
+            });
+        }
+
         private static TextBlock Label(string text, double left = 12) =>
             new TextBlock { Text = text, Style = S("Text.Caption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(left, 0, 6, 0) };
 
@@ -127,6 +172,12 @@ namespace RobotWin.Studio.Pages
             if (Canvas.Tool == PcbTool.Tune)
             {
                 TuneOptions();
+                return;
+            }
+
+            if (Canvas.Tool == PcbTool.Keepout)
+            {
+                KeepoutOptions();
                 return;
             }
 

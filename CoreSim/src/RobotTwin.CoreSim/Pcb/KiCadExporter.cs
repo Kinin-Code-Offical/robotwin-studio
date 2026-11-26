@@ -169,6 +169,26 @@ namespace RobotTwin.CoreSim.Pcb
                 root.Add(node);
             }
 
+            // [keepout] rule areas as KiCad keepout zones on their layers
+            for (int i = 0; i < board.RuleAreas.Count; i++)
+            {
+                var a = board.RuleAreas[i];
+                if (a.Outline.Count < 3) continue;
+                string Allowed(bool no) => no ? "not_allowed" : "allowed";
+                var layers = a.Layers.Count == 0 ? new SNode("layers", Q("*.Cu")) : new SNode("layers", a.Layers.Select(l => (object)Q(CopperName(l))).ToArray());
+                root.Add(new SNode("zone",
+                    new SNode("net", I(0)), new SNode("net_name", Q(string.Empty)), layers,
+                    Uid("keepout:" + i.ToString(CultureInfo.InvariantCulture)),
+                    string.IsNullOrEmpty(a.Name) ? null : new SNode("name", Q(a.Name)),
+                    new SNode("hatch", "full", "0.5"),
+                    new SNode("connect_pads", new SNode("clearance", N(0))),
+                    new SNode("min_thickness", N(0.25)),
+                    new SNode("keepout", new SNode("tracks", Allowed(a.NoTracks)), new SNode("vias", Allowed(a.NoVias)), new SNode("pads", "allowed"),
+                        new SNode("copperpour", Allowed(a.NoPour)), new SNode("footprints", Allowed(a.NoParts))),
+                    new SNode("fill", new SNode("thermal_gap", N(0.5)), new SNode("thermal_bridge_width", N(0.5))),
+                    new SNode("polygon", new SNode("pts", a.Outline.Select(p => XY("xy", p.X, p.Y))))));
+            }
+
             return Render(root);
         }
 

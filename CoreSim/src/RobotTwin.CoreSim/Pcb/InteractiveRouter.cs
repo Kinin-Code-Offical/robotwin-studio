@@ -110,6 +110,12 @@ namespace RobotTwin.CoreSim.Pcb
                 });
             }
 
+            // [keepout] a rule area forbidding tracks on this layer: its sides are walls
+            foreach (var a in _board.RuleAreas.Where(a => a.NoTracks && a.OnLayer(layer) && a.Outline.Count >= 3))
+            {
+                foreach (var (p, q) in a.Edges()) Add(new Obstacle { X1 = p.X, Y1 = p.Y, X2 = q.X, Y2 = q.Y, Half = 0, Clearance = 0.05 });
+            }
+
             // Board edge.
             for (int i = 0; i < _outline.Count; i++)
             {

@@ -88,6 +88,16 @@ On the Part page, **Send to assembly** sends each part as a body of its own:
 
 Several robots or a custom test area go in separate worlds on the [World](07-world.md) page.
 
+## Interference detection
+
+The **Interference detection** button beside **Align** on the toolbar (in the command palette: "detect interference") lists, as SolidWorks does, the pairs of parts taking up the same space with their common volume (mm³). Parts are compared by the outer shapes of their 3D models where they stand. Options:
+
+- **Count touching faces as interference:** parts that only touch are listed too.
+- **Check parts joined by a joint too:** parts overlapping on purpose, as a servo horn and its servo or a wheel and its motor, count too (skipped by default).
+- **Only the selected part:** the selected part's interferences with the others.
+
+Picking a row selects its first part, and the status bar gives the overlap's volume and middle. The scene stays usable while the window is open; **Calculate** checks again.
+
 ## Recording and fault experiments
 
 The Assembly is a world, so all world tools work here too:

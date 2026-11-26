@@ -335,6 +335,11 @@ namespace RobotWin.Studio
                 Navigate("pcb");
                 Dispatcher.BeginInvoke(new Action(_pcb.ShowStatistics), System.Windows.Threading.DispatcherPriority.Loaded);
             }) { Context = "pcb", Keywords = "statistics delik drill sayı ped via alan uzunluk incele inspect", Ready = () => W.Schematic.Board != null };
+            yield return new PaletteCommand("Dünya", "Çakışma algıla", () =>   // [interference] SolidWorks' Interference Detection
+            {
+                Navigate("world");
+                _world.CheckInterference();
+            }) { Context = "world", Keywords = "interference çakışma iç içe girme hacim montaj collision overlap", Ready = () => W.ActiveWorld?.Objects.Count > 1 };
             yield return new PaletteCommand("Dünya", "Montaj ilişkilerini denetle", () =>
             {
                 Navigate("world");

@@ -176,5 +176,61 @@ namespace RobotWin.Studio.Pages
 
             return null;
         }
+
+        // ================================================================ [notes] texts on the sheet
+
+        /// <summary>A new text at a grid point, or an existing one edited: its words (several lines), size, frame and weight.</summary>
+        private void EditNote(object? target)
+        {
+            var note = target as SchematicNote;
+            var at = target is GridPoint g ? g : note?.Position ?? new GridPoint(0, 0);
+            var panel = new StackPanel { Width = 420 };
+            panel.Children.Add(new TextBlock { Text = Lang.T(note == null ? "Metin ekle" : "Metni düzenle"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 8) });
+            var box = new TextBox { Text = note?.Text ?? string.Empty, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 90, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            panel.Children.Add(box);
+            var row = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
+            var size = new ComboBox { Width = 90, Margin = new Thickness(0, 0, 12, 0), ToolTip = Lang.T("Yazı boyu") };
+            foreach (var s in new[] { 0.7, 1.0, 1.5, 2.0, 3.0 }) size.Items.Add(new ComboBoxItem { Content = s.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "×", Tag = s });
+            size.SelectedIndex = Math.Max(0, new[] { 0.7, 1.0, 1.5, 2.0, 3.0 }.ToList().FindIndex(s => Math.Abs(s - (note?.Size ?? 1.0)) < 1e-6));
+            var boxed = new CheckBox { Content = Lang.T("Çerçeveli (metin kutusu)"), IsChecked = note?.Boxed ?? false, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+            var bold = new CheckBox { Content = Lang.T("Kalın"), IsChecked = note?.Bold ?? false, VerticalAlignment = VerticalAlignment.Center };
+            row.Children.Add(size);
+            row.Children.Add(boxed);
+            row.Children.Add(bold);
+            panel.Children.Add(row);
+            var dlg = RobotWin.Studio.Pcb.PcbForms.MakeDialog(Window.GetWindow(this), Lang.T("Metin"), 480, panel, out var ok);
+            ok.Click += (_, _) => dlg.DialogResult = true;
+            dlg.Loaded += (_, _) => box.Focus();
+            if (dlg.ShowDialog() != true) return;
+            string text = box.Text.TrimEnd();
+            double sz = (size.SelectedItem as ComboBoxItem)?.Tag is double d ? d : 1.0;
+            W.BeginChange();
+            if (note == null)
+            {
+                if (text.Length == 0)
+                {
+                    W.CancelChange();
+                    return;
+                }
+
+                W.Schematic.Notes.Add(new SchematicNote { Text = text, Position = at, Size = sz, Boxed = boxed.IsChecked == true, Bold = bold.IsChecked == true });
+                W.CommitChange("Metin eklendi");
+            }
+            else if (text.Length == 0)
+            {
+                W.Schematic.Notes.Remove(note);
+                W.CommitChange("Metin silindi");
+            }
+            else
+            {
+                note.Text = text;
+                note.Size = sz;
+                note.Boxed = boxed.IsChecked == true;
+                note.Bold = bold.IsChecked == true;
+                W.CommitChange("Metin düzenlendi");
+            }
+
+            Canvas.InvalidateVisual();
+        }
     }
 }

@@ -104,7 +104,7 @@
                 <StackPanel x:Name="ToolStrip" Margin="0,8,0,0" HorizontalAlignment="Center">
                     <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Select" Click="OnTool" ToolTip="Seç (Esc): tıkla, Shift+tıkla, kutu seçimi · sağ tık menüsü · F1 kısayollar"><t:Icon Data="{StaticResource I.Pointer}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolRoute" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Route" Click="OnTool" ToolTip="Yol: etkileşimli yol (X), uzunluk ayarı (menderes)"/>
-                    <ToggleButton x:Name="ToolZone" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Zone" Click="OnTool" ToolTip="Dolgu alanı çiz (Z)"><t:Icon Data="{StaticResource I.Zone}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolZone" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Zone" Click="OnTool" ToolTip="Alanlar: bakır dolgu alanı (Z), yasak bölge"/>
                     <ToggleButton x:Name="ToolMeasure" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Measure" Click="OnTool" ToolTip="Ölç (Ctrl+Shift+M): mesafe ve açı"><t:Icon Data="{StaticResource I.Measure}" Size="16"/></ToggleButton>
                     <Border Height="1" Background="{DynamicResource B.Border}" Margin="6,4,6,8"/>
                     <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Text" Click="OnTool" ToolTip="Serigrafi yazısı (T)"><t:Icon Data="{StaticResource I.Text}" Size="16"/></ToggleButton>
