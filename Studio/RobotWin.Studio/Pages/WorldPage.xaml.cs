@@ -364,6 +364,7 @@ namespace RobotWin.Studio.Pages
             var walls = new CheckBox { Content = "Çevre duvarları", IsChecked = env.Walls, Style = (Style)FindResource("Switch"), Margin = new Thickness(0, 6, 0, 8) };
             walls.Click += (_, _) => Edit("Duvarlar değişti", () => env.Walls = walls.IsChecked == true);
             Palette.Children.Add(walls);
+            if (env.Walls) Palette.Children.Add(NumberField("Duvar yüksekliği (m)", env.WallHeight, v => Edit("Duvar yüksekliği değişti", () => env.WallHeight = v), 0.01, 5));
             Palette.Children.Add(Action("Engel ekle (200 × 200 × 150 mm)", () => Edit("Engel eklendi", () =>
             {
                 var p = Scene.DropPoint();
@@ -1824,6 +1825,7 @@ namespace RobotWin.Studio.Pages
             if (simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
             {
                 PlaneSnapshotSetup();   // [ps5plane]
+                SensorLogSnapshotBegin();   // [sensorlog] "…:csv"
                 VehicleSnapshotBegin();   // [mobile] --vehicle <name>: the chassis selected from the start, odometry on
                 Run();
                 _session.Pause();
@@ -1923,6 +1925,7 @@ namespace RobotWin.Studio.Pages
             PidSnapshot();   // [pid] --pid <motor>
             ShellSnapshot();   // [shell] --select-shell, --xray, --exploded (Pages/WorldPage.Shells.cs)
             SenseSnapshotFinish();   // [sense]
+            SensorLogSnapshotFinish();   // [sensorlog]
             SdkSnapshot();   // [sdk]
             AnalysisSnapshot();   // [analysis] Pages/WorldPage.Analysis.cs
             FinishTerrainSnapshot(simulate != null); // [terrain]

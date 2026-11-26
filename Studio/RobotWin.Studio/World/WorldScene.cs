@@ -516,13 +516,15 @@ namespace RobotWin.Studio.World
             if (!TerrainReplacesFloor) g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
             if (env != null)
             {
-                var wall = M.Matte(Color.FromRgb(0x2A, 0x2A, 0x30), 0.05);
+                var wall = M.Matte(Color.FromRgb(0x4C, 0x4E, 0x55), 0.05);   // painted grey: a room's wall stands out from the dark backdrop
                 if (env.Walls)
                 {
-                    g.Children.Add(M.Model(M.Box(0, -d / 2 - 0.01, 0.05, w, 0.02, 0.1), wall));
-                    g.Children.Add(M.Model(M.Box(0, d / 2 + 0.01, 0.05, w, 0.02, 0.1), wall));
-                    g.Children.Add(M.Model(M.Box(-w / 2 - 0.01, 0, 0.05, 0.02, d, 0.1), wall));
-                    g.Children.Add(M.Model(M.Box(w / 2 + 0.01, 0, 0.05, 0.02, d, 0.1), wall));
+                    // As high as the walls the robot collides with and the sensors see (WorldSpec.WallHeight).
+                    double wh = Math.Max(0.01, env.WallHeight);
+                    g.Children.Add(M.Model(M.Box(0, -d / 2 - 0.01, wh / 2, w, 0.02, wh), wall));
+                    g.Children.Add(M.Model(M.Box(0, d / 2 + 0.01, wh / 2, w, 0.02, wh), wall));
+                    g.Children.Add(M.Model(M.Box(-w / 2 - 0.01, 0, wh / 2, 0.02, d, wh), wall));
+                    g.Children.Add(M.Model(M.Box(w / 2 + 0.01, 0, wh / 2, 0.02, d, wh), wall));
                 }
 
                 foreach (var ob in env.Obstacles)

@@ -556,6 +556,8 @@ Kamera (OV7670, OV2640 / ESP32-CAM, 720p USB, Pi kamera v2 / IMX219), sahneyi ke
 
 ESP32 taslakları kamerayı gerçek `esp_camera` arayüzüyle kullanır: `esp_camera_init`, `esp_camera_fb_get`, `sensor->set_framesize`. Kamera kart tarafından beslenmiyorsa başlatma hata döndürür. **Sensörler** sekmesi her sensörün son ölçümünü ve kameranın son karesini gösterir.
 
+**Sensör verisini kaydet (CSV, etiketli)** anahtarı açıkken çalışma boyunca her sensörün her ölçümü bir tabloya yazılır. Sensörün ölçtüğünün yanında simülasyonun bildiği gerçek değer durur (IMU'nun gerçek ivmesi ve dönüş hızı, GPS konumunun gerçek hatası, çizgi sensörünün altındaki zeminin gerçek yansıtması). Son sütun etikettir: o anda sensörde etkin arıza senaryosu ya da `normal`. Dünya durunca tablolar **Belgeler\RobotWin\Sensör kayıtları\&lt;dünya&gt;-&lt;zaman&gt;** klasörüne sensör başına bir CSV ve bir README olarak yazılır; **Klasörü aç** onu açar. Füzyon ve arıza tespiti denemeleri için etiketli veri böyle aynı koşudan çıkar.
+
 ![Ultrasonik sensör ve engel](../images/world-sonar.png)
 
 ## Kumandalar, radyo ve USB

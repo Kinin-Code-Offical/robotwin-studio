@@ -146,7 +146,7 @@ namespace RobotWin.Studio.Examples
         public static WorldDocument SensorRover()
         {
             var w = new WorldDocument { Title = "Sensör gezgini", Description = "Kamera, LiDAR, GPS, IMU, pusula ve enkoderler aynı anda." };
-            w.Environment = new WorldSpec { Name = "Oda", Width = 3.0, Depth = 2.4, Walls = true, Friction = 0.9, Track = "none" };
+            w.Environment = new WorldSpec { Name = "Oda", Width = 3.0, Depth = 2.4, Walls = true, WallHeight = 0.4, Friction = 0.9, Track = "none" };
             w.Environment.Sensing = new SensingEnvironment { AmbientLux = 300, FloorReflectance = 0.45, FloorGloss = 0.04, Sky = "open" };
             w.Environment.Obstacles.Add(new WorldObstacle { X = 0.9, Y = 0.55, SizeX = 0.3, SizeY = 0.3, Height = 0.25 });
             w.Environment.Obstacles.Add(new WorldObstacle { X = -0.8, Y = -0.6, SizeX = 0.5, SizeY = 0.2, Height = 0.18 });
@@ -155,7 +155,8 @@ namespace RobotWin.Studio.Examples
             // JGA25 encoder motors: Ø25 mm, shaft 12.5 mm above the motor base → 65 mm wheels touch the floor.
             const double r = 0.0325, shaftZ = 0.0125, motorH = 0.025;
             double motorZ = r - shaftZ, plateZ = motorZ + motorH;
-            var plate = w.AddBody("plate", 0.24, 0.16, 0.004, new WorldPose { X = 0, Y = -0.35, Z = plateZ }, "ALÜMİNYUM");
+            // 150 mm wide: the wheels on the shafts start 4.5 mm past its edges (at 160 mm they rubbed it and the drive bound).
+            var plate = w.AddBody("plate", 0.24, 0.15, 0.004, new WorldPose { X = 0, Y = -0.35, Z = plateZ }, "ALÜMİNYUM");
             plate.Name = "Gezgin şasesi";
             var ml = w.AddComponent(Lib, "motor-jga25-encoder", new WorldPose { X = -0.05, Y = -0.35 + 0.07, Z = motorZ });
             ml.Name = "Sol enkoderli motor";

@@ -93,6 +93,10 @@ namespace RobotTwin.CoreSim.Analog
         private double[] _xPrev2 = Array.Empty<double>();
         private double[] _scratch = Array.Empty<double>();
         private bool _floatingReported;
+
+        // [islands] One reference per part of the circuit that has no path to ground (Newton, FindIslandTies).
+        private bool _islandsStale = true;
+        private readonly List<(int Node, double G)> _ties = new List<(int Node, double G)>();
         private int _nodeCount;
         private int _size;
         private bool _hasNonlinear;
@@ -192,6 +196,7 @@ namespace RobotTwin.CoreSim.Analog
             _events.Clear();
             _signals.Clear();
             _floatingReported = false;
+            _islandsStale = true;
 
             foreach (var device in _devices) device.Reset();
             _initialized = true;
@@ -233,6 +238,7 @@ namespace RobotTwin.CoreSim.Analog
         /// <summary>Tells the simulator that something outside changed abruptly (used by hosts that edit devices directly).</summary>
         public void NotifyDiscontinuity()
         {
+            _islandsStale = true;   // [islands] a switch may have joined or cut off a part of the circuit
             _forceBackwardEuler = true;
             _stepsSinceDiscontinuity = 0;
             _hNext = Math.Min(_hNext, RestartAfterDiscontinuity());
@@ -360,6 +366,7 @@ namespace RobotTwin.CoreSim.Analog
 
                 if (discontinuity)
                 {
+                    _islandsStale = true;   // [islands]
                     _forceBackwardEuler = true;
                     _stepsSinceDiscontinuity = 0;
                     _hNext = RestartAfterDiscontinuity();
@@ -410,6 +417,7 @@ namespace RobotTwin.CoreSim.Analog
 
         private bool SolveOperatingPointOnce()
         {
+            _islandsStale = true;   // [islands] devices may have changed state since the last pass
             bool ok = SolveDc(Options.Gmin, 1.0);
 
             if (!ok)
@@ -532,6 +540,44 @@ namespace RobotTwin.CoreSim.Analog
             _stamp.AmbientTempC = Options.AmbientTempC;
         }
 
+        /// <summary>
+        /// [islands] A part of the circuit with no path to ground (a battery and a motor on their own, the side of an
+        /// encoder motor or a relay that nothing references) has no potential of its own: with only gmin holding it, its
+        /// common level rode on round-off, a millivolt from one solve to the next, and the error control cut the step to
+        /// nothing chasing it (a stalled battery-motor drive stuck at 1e-11 s). Each such part gets one reference, at the
+        /// node a designer would call its ground ("GND…", then "-"), as strong as its own conductances. One connection to a
+        /// part that has no other carries no current, so nothing in it changes but its level, which is now 0 V there.
+        /// </summary>
+        private void FindIslandTies()
+        {
+            _ties.Clear();
+            foreach (var (nodes, scale) in _mna.FloatingIslands(_nodeCount))
+            {
+                int best = nodes[0], bestScore = -1;
+                foreach (int k in nodes)
+                {
+                    int score = ReferenceScore(_circuit.NodeNames[k + 1]);
+                    if (score > bestScore)
+                    {
+                        best = k;
+                        bestScore = score;
+                    }
+                }
+
+                _ties.Add((best, Math.Max(scale, 1e-3)));
+            }
+        }
+
+        /// <summary>How much a node's name says it is a reference: "…GND" 4, "…-" / "V-" 3, a cathode, emitter or source 1.</summary>
+        private static int ReferenceScore(string name)
+        {
+            int dot = name.LastIndexOf('.');
+            string pin = dot >= 0 ? name.Substring(dot + 1) : name;
+            if (pin.StartsWith("GND", StringComparison.OrdinalIgnoreCase) || pin.EndsWith("GND", StringComparison.OrdinalIgnoreCase)) return 4;
+            if (pin == "-" || pin == "V-" || pin.Equals("VSS", StringComparison.OrdinalIgnoreCase)) return 3;
+            return pin == "K" || pin == "E" || pin == "S" ? 1 : 0;
+        }
+
         /// <summary>Newton-Raphson on the iterate held in <c>_xNew</c>.</summary>
         private bool Newton(int maxIterations, out int iterations)
         {
@@ -543,6 +589,13 @@ namespace RobotTwin.CoreSim.Analog
                 _stamp.X = _xNew;
                 _stamp.LimitingApplied = false;
                 foreach (var device in _devices) device.Stamp(_stamp);
+                if (_islandsStale)
+                {
+                    FindIslandTies();
+                    _islandsStale = false;
+                }
+
+                foreach (var (node, g) in _ties) _mna.Add(node, node, g);
                 _mna.AddDiagonal(_nodeCount, _stamp.Gmin);
                 if (_shunt > 0.0 && _shuntAnchor != null)
                 {

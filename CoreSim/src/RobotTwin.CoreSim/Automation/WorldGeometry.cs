@@ -159,6 +159,25 @@ namespace RobotTwin.CoreSim.Automation
                 };
             }
 
+            if (def?.Id == SensingParts.EncoderMotorId)
+            {
+                // [encoder] The gearmotor lying along -Y with its output shaft out of the gearbox along +Y, as the app draws it
+                // (World/SenseModels.cs): a JGA25-370 (Ø25 mm, 58 mm with its encoder board, ~95 g) or an N20 (12 × 10 mm,
+                // 26 mm, ~12 g). Without the shaft port a wheel on it was welded to the motor body and never turned headless.
+                bool jga = model.Contains("JGA") || model.Contains("25");
+                return jga
+                    ? new WorldBodyGeometry
+                    {
+                        Min = new Vec3(-0.0125, -0.058, 0), Max = new Vec3(0.0125, 0, 0.025), MassKg = 0.095, Shape = "cylinder-y",
+                        PortName = "shaft", PortPivot = new Vec3(0, 0.0095, 0.0125), PortAxis = Vec3.UnitY
+                    }
+                    : new WorldBodyGeometry
+                    {
+                        Min = new Vec3(-0.006, -0.0256, 0), Max = new Vec3(0.006, 0, 0.010), MassKg = 0.012,
+                        PortName = "shaft", PortPivot = new Vec3(0, 0.010, 0.005), PortAxis = Vec3.UnitY
+                    };
+            }
+
             if (def?.Id == Design.MotionParts.StepperId)
             {
                 // [stepper] NEMA 17 standing on its rear cap, its shaft up (World/MotionModels.cs): 42.3 mm square, ~7 g per mm of body.

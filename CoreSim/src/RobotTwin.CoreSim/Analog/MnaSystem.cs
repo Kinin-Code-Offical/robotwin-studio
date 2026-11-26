@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace RobotTwin.CoreSim.Analog
 {
@@ -147,6 +148,75 @@ namespace RobotTwin.CoreSim.Analog
         }
 
         public double GetRhs(int row) => _b[row];
+
+        /// <summary>
+        /// [islands] The groups of node unknowns that the stamped matrix joins to one another but not to ground: no
+        /// conductance, capacitor or source from any of them to the reference. The test is structural, not by size: any
+        /// entry joins two unknowns, and any conductance left over to ground grounds a group, however small it is now (a
+        /// junction at 0 V conducts next to nothing at the first iteration, and a lot at the last). A branch equation that
+        /// holds a node against ground (V(a) = E) grounds its group too. Each floating group comes with its largest node
+        /// diagonal, the scale of a reference that conditions it well. Call it after the devices have stamped, before gmin.
+        /// </summary>
+        internal List<(List<int> Nodes, double Scale)> FloatingIslands(int nodeCount)
+        {
+            int n = _size;
+            var result = new List<(List<int> Nodes, double Scale)>();
+            if (nodeCount <= 0) return result;
+            var parent = new int[n];
+            for (int i = 0; i < n; i++) parent[i] = i;
+
+            int Find(int x)
+            {
+                while (parent[x] != x)
+                {
+                    parent[x] = parent[parent[x]];
+                    x = parent[x];
+                }
+
+                return x;
+            }
+
+            var rowSum = new double[n];
+            var rowMax = new double[n];
+            for (int e = 0; e < _nnz; e++)
+            {
+                double v = _vals[e];
+                if (v == 0.0 || double.IsNaN(v)) continue;
+                int r = _rows[e], c = _cols[e];
+                if (c < nodeCount)
+                {
+                    rowSum[r] += v;
+                    rowMax[r] = Math.Max(rowMax[r], Math.Abs(v));
+                }
+
+                if (r == c) continue;
+                int a = Find(r), b = Find(c);
+                if (a != b) parent[a] = b;
+            }
+
+            var grounded = new HashSet<int>();
+            for (int r = 0; r < n; r++)
+            {
+                if (rowMax[r] <= 0.0) continue;
+                // Above the round-off of a row whose conductances cancel (g - g summed in another order).
+                if (Math.Abs(rowSum[r]) > 1e-13 * rowMax[r]) grounded.Add(Find(r));
+            }
+
+            var groups = new Dictionary<int, (List<int> Nodes, double Scale)>();
+            for (int r = 0; r < nodeCount; r++)
+            {
+                int root = Find(r);
+                if (grounded.Contains(root)) continue;
+                if (!groups.TryGetValue(root, out var g)) g = (new List<int>(), 0.0);
+                g.Nodes.Add(r);
+                int d = _diagSlot[r];
+                double diag = d >= 0 ? Math.Abs(_vals[d]) : 0.0;
+                groups[root] = (g.Nodes, Math.Max(g.Scale, diag));
+            }
+
+            result.AddRange(groups.Values);
+            return result;
+        }
 
         private int NewSlot(int row, int col)
         {

@@ -126,7 +126,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - sıcaklık ve kayma;
   - [x] arıza senaryoları: IMU (kayma, titreşim, donma, I²C sessizliği), pusula (mıknatıs, sessizlik), GPS (uydu kaybı, yansıma), LiDAR (kirli pencere, takılı motor), çizgi sensörleri (kirli lens, ölü LED); `MachineFaults` ile aynı **Özellik ekle → Arıza senaryosu**;
   - füzyon deneyleri;
-  - veri dışa aktarma ve etiketleme.
+  - [x] veri dışa aktarma ve etiketleme: **Sensörler** sekmesinde sensör başına CSV; ölçülenin yanında gerçek değer, etiket sütununda o anki arıza senaryosu (`Sandbox/Sensing/SensorLog.cs`).
 - [ ] **Akademik deney araçları:**
   - deney oluşturucu;
   - parametre taraması;

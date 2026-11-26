@@ -96,6 +96,44 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void TheSensorLogLabelsEachRowWithTheFaultActiveThen()
+        {
+            var (w, part, sensing, sim) = Rig("gy-521", 0.01);
+            var chip = new Mpu6050();
+            sensing.BindMpu6050(part.Id, chip);
+            Give(part, "imu_vibration", 0.1, 4);
+            var log = new SensorLog(w);
+            log.Attach(sensing.Sensors);
+            Run(sensing, sim, 0.2, 1e-3);
+            log.Detach();
+            string csv = log.Csv(part.Id)!;
+            var lines = csv.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            _out.WriteLine(lines[0]);
+            _out.WriteLine(lines[1]);
+            _out.WriteLine(lines[^1]);
+            Assert.StartsWith("time_s,ax,ay,az,gx,gy,gz,true_ax", lines[0]);
+            Assert.EndsWith(",normal", lines[1]);
+            Assert.EndsWith(",imu_vibration", lines[^1]);
+            Assert.InRange(lines.Length - 1, 18, 22);   // 100 Hz for 0.2 s
+            // The vibration shows in what it measured, not in the truth beside it.
+            var late = lines.Skip(lines.Length / 2 + 2).Select(l => l.Split(',')).ToList();
+            double spread(int col) => late.Select(c => double.Parse(c[col], System.Globalization.CultureInfo.InvariantCulture)).Max() -
+                                      late.Select(c => double.Parse(c[col], System.Globalization.CultureInfo.InvariantCulture)).Min();
+            Assert.True(spread(3) > 5 * Math.Max(1e-6, spread(9)));
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rw-sensorlog-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var files = log.Save(dir);
+                Assert.Contains(files, f => f.EndsWith("README.txt", StringComparison.Ordinal));
+                Assert.Contains(files, f => f.EndsWith(".csv", StringComparison.Ordinal));
+            }
+            finally
+            {
+                System.IO.Directory.Delete(dir, true);
+            }
+        }
+
+        [Fact]
         public void TheGpsLosesItsSkyAndMultipathPullsItsPositionAway()
         {
             var env = new SensingEnvironment();

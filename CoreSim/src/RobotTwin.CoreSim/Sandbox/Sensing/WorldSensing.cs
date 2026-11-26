@@ -283,14 +283,17 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             return (best, refl);
         }
 
-        /// <summary>The room's walls (when it has them): four boxes 2 cm thick and 10 cm high round its floor.</summary>
+        /// <summary>
+        /// The room's walls (when it has them): four boxes 2 cm thick round its floor, as high as
+        /// <see cref="WorldSpec.WallHeight"/> — the walls the robot collides with (World3D), so a beam over them goes on.
+        /// </summary>
         internal static (Vec3 Min, Vec3 Max)[] RoomWalls(WorldSpec env)
         {
-            double w = env.Width / 2, d = env.Depth / 2;
+            double w = env.Width / 2, d = env.Depth / 2, h = Math.Max(0.01, env.WallHeight);
             return new[]
             {
-                (new Vec3(-w - 0.02, -d - 0.02, 0), new Vec3(w + 0.02, -d, 0.1)), (new Vec3(-w - 0.02, d, 0), new Vec3(w + 0.02, d + 0.02, 0.1)),
-                (new Vec3(-w - 0.02, -d, 0), new Vec3(-w, d, 0.1)), (new Vec3(w, -d, 0), new Vec3(w + 0.02, d, 0.1))
+                (new Vec3(-w - 0.02, -d - 0.02, 0), new Vec3(w + 0.02, -d, h)), (new Vec3(-w - 0.02, d, 0), new Vec3(w + 0.02, d + 0.02, h)),
+                (new Vec3(-w - 0.02, -d, 0), new Vec3(-w, d, h)), (new Vec3(w, -d, 0), new Vec3(w + 0.02, d, h))
             };
         }
 

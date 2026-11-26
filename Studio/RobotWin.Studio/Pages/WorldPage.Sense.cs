@@ -86,7 +86,13 @@ namespace RobotWin.Studio.Pages
             };
             tabs.Children.Add(_dockSensors);
             _sensorCards = new WrapPanel { Orientation = Orientation.Horizontal };
-            _sensorsPanel = new ScrollViewer { Visibility = Visibility.Collapsed, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _sensorCards };
+            // [sensorlog] the data log's switch above the cards (Pages/WorldPage.SensorLog.cs)
+            var sensorsBody = new DockPanel();
+            var logBar = SensorLogBar();
+            DockPanel.SetDock(logBar, Dock.Top);
+            sensorsBody.Children.Add(logBar);
+            sensorsBody.Children.Add(_sensorCards);
+            _sensorsPanel = new ScrollViewer { Visibility = Visibility.Collapsed, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = sensorsBody };
             host.Children.Add(_sensorsPanel);
             _dockSensors.Checked += (_, _) =>
             {

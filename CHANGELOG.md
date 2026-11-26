@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Sensor data log:** the world's Sensors tab can record every reading of a run, one CSV per sensor: what the sensor measured beside the true value the simulation knows (an IMU's real specific force and rate, a GPS fix's real error, a line sensor's real floor reflectance) and a label column with the fault scenario active at that moment or `normal`. When the world stops the tables and a README are written to Documents\RobotWin\Sensor logs, labelled data for sensor fusion and fault detection.
+
 - **Sensor failure scenarios:** a robot's sensors fail from a set time with Add feature → Fault scenario, as cell equipment already could: an IMU's gyro drift, vibration noise, frozen reading or silence on I²C (no ACK); a magnet near the compass or its silence; a GPS losing its sky (its NMEA goes on with no valid position) or pulled east by multipath; a LiDAR's dirty window or stalled motor; a line sensor's dirty lens or burnt-out IR LED. The firmware's reaction to bad readings can be tried before the real thing.
 
 - **The model's limits:** a part's library page and its circuit inspector say what its simulation model leaves out or simplifies (no switching ripple in the averaged regulators, no contact bounce, a level 1 MOSFET, the averaged chopper of the stepper drivers …), for more than thirty models, so a result is read for what the model is.
@@ -209,6 +211,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **Circuits with no ground:** a battery driving a motor on its own, or the side of a part that nothing references (an encoder motor's windings with its encoder unpowered), had its level held only by the solver's tiny leak to ground; that level wandered by millivolts from one solve to the next and the error control cut the time step down to 10 ps chasing it, so a stalled drive froze the run. The solver now finds every part of the circuit with no path to ground and references it once, at the node named like its ground (GND, then −); one connection carries no current, so only that level changes, now 0 V.
+
+- **Encoder motors in headless runs:** the JGA25 and N20 encoder gearmotors had no output shaft outside the app, so a wheel on one was welded to the motor body and never turned in automation, tests or the command line; they now have the app's shaft and their real mass (95 g and 12 g instead of 10 g), in the app too.
+
+- **Sensor rover:** its 160 mm plate reached half a millimetre past its wheels' inner faces, so the wheels rubbed its edges and the drive bound within half a second; the plate is 150 mm, and the rover drives.
+
+- **Room walls:** the sensors and the 3D view took the room's perimeter walls as 10 cm high while the robot collided with walls of the world's own wall height (8 cm): a LiDAR or sonar saw walls the body could drive over and the other way round. All three now use the one height, set in the environment panel (**Wall height**) when the walls are on; the sensor rover's room has 40 cm walls, which its LiDAR on its mast sees.
 
 - **Time steps that shrank to nothing:** a step accepted at the solver's minimum because its error could not be met there halved on each later step, down to 10⁻²¹ s, where the inductors' companion models are round-off: a current of hundreds of amps appeared for a step and burned the stepper's 12 V wires after 0.4 s. Steps now stay at the minimum or above. The cause in that circuit was the stepper driver's bridge outputs: only their difference was set, and the pair floated by hundreds of volts; they now sit around half of VMOT as a real bridge's legs do, and the run takes a few dozen steps a millisecond instead of tens of thousands. A driver switched off (EN high, sleep, thermal shutdown) no longer stops its winding currents in one step, which put kilovolts across the windings: the current runs on through the bridge's body diodes back into VMOT and falls to zero in about 0.2 ms.
 

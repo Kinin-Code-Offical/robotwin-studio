@@ -7748,7 +7748,14 @@
   "Yansıma (çok yollu)": "Multipath",
   "Çip takılmış: yazmaçlar son değerde kalır, I²C yanıt verse de ölçüm değişmez.": "The chip has hung: its registers keep their last values; it answers on I²C but the reading does not change.",
   "Ölçüm donmuş": "Reading frozen",
-  "Kirli pencere": "Dirty window"
+  "Kirli pencere": "Dirty window",
+  "Sensör verisini kaydet (CSV, etiketli)": "Record sensor data (CSV, labelled)",
+  "Çalışma boyunca her sensörün ölçümü, simülasyonun bildiği gerçek değer ve o andaki arıza senaryosu (etiket) bir CSV tablosuna yazılır": "Through the run each sensor's reading, the true value the simulation knows and the fault scenario active at that moment (the label) go into a CSV table",
+  "Kaydediliyor; dünya durunca CSV'ler yazılır.": "Recording; the CSV files are written when the world stops.",
+  "Dünyayı çalıştırınca kayıt başlar.": "Recording starts when the world runs.",
+  "Sensör kayıtları": "Sensor logs",
+  "Duvar yüksekliği (m)": "Wall height (m)",
+  "Duvar yüksekliği değişti": "Wall height changed"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10882,6 +10889,9 @@
   "'{0}' kullanılıyordu: ona bağlı formüller çözülemeyecek": "'{0}' was in use: the formulas bound to it will not work out",
   "giriş aşırı gerilimi {0} V (en çok {1} V): anahtar kısa devre oldu": "input overvoltage {0} V (at most {1} V): the switch shorted",
   "ısıl kapanma: {0} °C ({1} W kayıp)": "thermal shutdown: {0} °C ({1} W lost)",
-  "Modelin sınırları ({0})": "The model's limits ({0})"
+  "Modelin sınırları ({0})": "The model's limits ({0})",
+  "{0} satır, {1} sensör: {2}": "{0} rows, {1} sensors: {2}",
+  "Sensör kaydı yazıldı: {0} CSV, {1} satır": "Sensor log written: {0} CSV files, {1} rows",
+  "Sensör kaydı yazılamadı: {0}": "Sensor log could not be written: {0}"
  }
 }

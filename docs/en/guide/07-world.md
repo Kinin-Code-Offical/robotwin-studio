@@ -556,6 +556,8 @@ A camera (OV7670, OV2640 / ESP32-CAM, 720p USB, Pi camera v2 / IMX219) really im
 
 ESP32 sketches use the camera through the real `esp_camera` interface: `esp_camera_init`, `esp_camera_fb_get`, `sensor->set_framesize`. If the camera is not powered by the board, initialisation returns an error. The **Sensors** tab shows each sensor's latest reading and the camera's latest frame.
 
+With **Record sensor data (CSV, labelled)** switched on, every reading of every sensor through the run goes into a table. Beside what the sensor measured stands the true value the simulation knows (an IMU's real acceleration and rotation rate, a GPS position's real error, the real reflectance of the floor under a line sensor). The last column is the label: the fault scenario active on the sensor at that moment, or `normal`. When the world stops the tables are written to **Documents\RobotWin\Sensor logs\&lt;world&gt;-&lt;time&gt;**, one CSV per sensor and a README; **Open folder** opens it. Labelled data for sensor fusion and fault detection comes from the same run.
+
 ![Ultrasonic sensor and an obstacle](../../images/en/world-sonar.png)
 
 ## Controllers, radio and USB

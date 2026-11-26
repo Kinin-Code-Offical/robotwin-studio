@@ -361,7 +361,9 @@ namespace RobotTwin.CoreSim.Tests
 
             var sparse = Run(false);
             var dense = Run(true);
-            Assert.Contains(sparse.Events, e => e.Kind == AnalogEventKind.Warning && e.DeviceId == "solver");
+            // [islands] The resistor going nowhere is its own island and gets its reference before the solve: no singular
+            // matrix to recover from, and the two solvers still agree.
+            Assert.DoesNotContain(sparse.Events, e => e.Kind == AnalogEventKind.Warning && e.DeviceId == "solver");
             Assert.Equal(dense.Events.Select(e => e.ToString()), sparse.Events.Select(e => e.ToString()));
             foreach (var node in new[] { "vcc", "x", "y" })
             {
