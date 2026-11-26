@@ -7966,7 +7966,15 @@
   "KiCad şeması (*.kicad_sch)|*.kicad_sch|Tüm dosyalar (*.*)|*.*": "KiCad schematic (*.kicad_sch)|*.kicad_sch|All files (*.*)|*.*",
   "Parça kütüphanesi (*.rwlib)|*.rwlib|Robot tanımı (*.urdf, *.xacro)|*.urdf;*.xacro|": "Part library (*.rwlib)|*.rwlib|Robot description (*.urdf, *.xacro)|*.urdf;*.xacro|",
   "KiCad şeması (*.kicad_sch)": "KiCad schematic (*.kicad_sch)",
-  "KiCad şeması içe aktarıldı": "KiCad schematic imported"
+  "KiCad şeması içe aktarıldı": "KiCad schematic imported",
+  "KiCad şeması (*.kicad_sch)|*.kicad_sch|FMU (*.fmu)|*.fmu|Tüm dosyalar (*.*)|*.*": "KiCad schematic (*.kicad_sch)|*.kicad_sch|FMU (*.fmu)|*.fmu|All files (*.*)|*.*",
+  "FMU (*.fmu)": "FMU (*.fmu)",
+  "FMU (*.fmu)|*.fmu": "FMU (*.fmu)|*.fmu",
+  "FMU (FMI 2.0, .fmu)…": "FMU (FMI 2.0, .fmu)…",
+  "Modelica, Simulink, 20-sim … modelleri: ortak benzetim (Co-Simulation) FMU'su, girişleri ve çıkışları pin olan bir parça olur": "Modelica, Simulink, 20-sim … models: a co-simulation FMU becomes a part with its inputs and outputs as pins",
+  "FMU içe aktarılamadı": "Couldn't import the FMU",
+  "FMU açılamadı": "Couldn't open the FMU",
+  "İletişim adımı": "Communication step"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11227,6 +11235,8 @@
   "Kartlar {0} adet istiyor; tedarikçinin en azı {1}": "The boards need {0}; the supplier sells at least {1}",
   "KiCad şeması açıldı: {0} parça modele eşlendi, {1} genel parça, {2} alınmadı": "KiCad schematic opened: {0} parts on their models, {1} generic, {2} left out",
   "… ve {0} satır daha": "… and {0} more lines",
-  "{0} parça modele eşlendi, {1} genel parça (bacakları netleri taşır, elektriksel modeli yok), {2} parça alınmadı.": "{0} parts on their models, {1} generic parts (their pins carry the nets, no electrical model), {2} parts left out."
+  "{0} parça modele eşlendi, {1} genel parça (bacakları netleri taşır, elektriksel modeli yok), {2} parça alınmadı.": "{0} parts on their models, {1} generic parts (their pins carry the nets, no electrical model), {2} parts left out.",
+  "{0} FMU parça olarak eklendi": "{0} FMU added as parts",
+  "FMU açıldı: {0}; girişleri ve çıkışları pinlerinde, REF'i toprağa bağlayın": "FMU opened: {0}; its inputs and outputs are its pins, join REF to ground"
  }
 }

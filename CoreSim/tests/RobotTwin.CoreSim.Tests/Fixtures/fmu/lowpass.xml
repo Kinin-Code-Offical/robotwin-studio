@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription fmiVersion="2.0" modelName="lowpass" guid="{8c4e810f-3df3-4a00-8276-176fa3c9f000}"
+                     description="First-order lag y' = (k u - y) / tau" generationTool="RobotWin tests" variableNamingConvention="flat">
+  <CoSimulation modelIdentifier="lowpass" canHandleVariableCommunicationStepSize="true"/>
+  <DefaultExperiment startTime="0" stopTime="1" stepSize="0.001"/>
+  <ModelVariables>
+    <ScalarVariable name="u" valueReference="0" causality="input" variability="continuous"><Real start="0" unit="V"/></ScalarVariable>
+    <ScalarVariable name="y" valueReference="1" causality="output" variability="continuous" initial="exact"><Real start="0" unit="V"/></ScalarVariable>
+    <ScalarVariable name="k" valueReference="2" causality="parameter" variability="fixed"><Real start="1"/></ScalarVariable>
+    <ScalarVariable name="tau" valueReference="3" causality="parameter" variability="fixed"><Real start="0.01" unit="s"/></ScalarVariable>
+    <ScalarVariable name="steps" valueReference="4" causality="output" variability="discrete" initial="exact"><Integer start="0"/></ScalarVariable>
+    <ScalarVariable name="saturated" valueReference="5" causality="output" variability="discrete" initial="exact"><Boolean start="false"/></ScalarVariable>
+    <ScalarVariable name="limit" valueReference="6" causality="parameter" variability="fixed"><Real start="4.5"/></ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="2"/>
+      <Unknown index="5"/>
+      <Unknown index="6"/>
+    </Outputs>
+  </ModelStructure>
+</fmiModelDescription>

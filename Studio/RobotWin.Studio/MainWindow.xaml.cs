@@ -33,7 +33,7 @@ namespace RobotWin.Studio
             "RobotWin dosyaları (*.rwproj, *.rwworld, *.rwsim, *.rwpart, *.rwlib)|*.rwproj;*.rwworld;*.rwsim;*.rwpart;*.rwlib|" +
             "RobotWin projesi (*.rwproj)|*.rwproj|RobotWin dünyası (*.rwworld)|*.rwworld|Simülasyon kaydı (*.rwsim)|*.rwsim|Parça (*.rwpart)|*.rwpart|" +
             "Parça kütüphanesi (*.rwlib)|*.rwlib|Robot tanımı (*.urdf, *.xacro)|*.urdf;*.xacro|" +
-            "KiCad şeması (*.kicad_sch)|*.kicad_sch|Tüm dosyalar (*.*)|*.*";
+            "KiCad şeması (*.kicad_sch)|*.kicad_sch|FMU (*.fmu)|*.fmu|Tüm dosyalar (*.*)|*.*";
 
         private readonly HomePage _home;
         private readonly WorldPage _world;
@@ -1061,6 +1061,10 @@ namespace RobotWin.Studio
                         ImportKiCadSchematic(path);   // [kicad-sch]
                         return;
 
+                    case ".fmu":
+                        OpenFmu(path);   // [fmi]
+                        return;
+
                     case ".urdf":
                     case ".xacro":
                         // [urdf] A robot description opens in a new world of its own.
@@ -1105,6 +1109,32 @@ namespace RobotWin.Studio
             Dialog.Show(this, "KiCad şeması içe aktarıldı",
                 string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotWin.Studio.Shell.Lang.T("{0} parça modele eşlendi, {1} genel parça (bacakları netleri taşır, elektriksel modeli yok), {2} parça alınmadı."),
                     result.Mapped, result.Generic, result.Skipped) + "\n\n" + string.Join("\n", issues.Take(12)) + more, "Tamam");
+        }
+
+        /// <summary>
+        /// [fmi] Opens an FMU as a new, unsaved circuit with the FMU's block placed on it: the FMU is a part the project
+        /// carries (not added to the library), its inputs and outputs are pins, REF is the reference to join to ground.
+        /// </summary>
+        private void OpenFmu(string path)
+        {
+            RobotTwin.CoreSim.Formats.CustomPart part;
+            try
+            {
+                part = RobotTwin.CoreSim.Fmi.FmuImport.ToCustomPart(File.ReadAllBytes(path));
+            }
+            catch (Exception ex) when (ex is NotSupportedException || ex is InvalidDataException || ex is FormatException)
+            {
+                Dialog.Show(this, "FMU açılamadı", Path.GetFileName(path) + ": " + ex.Message, "Tamam");
+                return;
+            }
+
+            part.Register(W.Library);
+            var package = new RobotTwin.CoreSim.Formats.ProjectPackage { Schematic = new RobotTwin.CoreSim.Design.Schematic { Title = part.Name } };
+            package.Parts.Add(part);
+            package.Schematic.AddPart(W.Library, part.Id, new RobotTwin.CoreSim.Design.GridPoint(0, 0));
+            W.LoadPackage(package, null);
+            Navigate("schematic");
+            W.Status = string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotWin.Studio.Shell.Lang.T("FMU açıldı: {0}; girişleri ve çıkışları pinlerinde, REF'i toprağa bağlayın"), part.Name);
         }
 
         /// <summary>Saves the current run (probes, log, serial, trajectory, project) as a .rwsim recording.</summary>

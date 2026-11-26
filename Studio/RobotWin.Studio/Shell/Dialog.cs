@@ -63,6 +63,13 @@ namespace RobotWin.Studio.Shell
                 if (e.ButtonState == MouseButtonState.Pressed) window.DragMove();
             };
             window.Content = card;
+            if (Unattended.Active)
+            {
+                // A snapshot or a benchmark has no one to answer: the message shows (it is in the picture) and nothing waits.
+                window.Show();
+                return -1;
+            }
+
             window.ShowDialog();
             return result;
         }

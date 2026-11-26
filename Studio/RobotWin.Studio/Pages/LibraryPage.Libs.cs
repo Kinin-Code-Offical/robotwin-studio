@@ -37,6 +37,8 @@ namespace RobotWin.Studio.Pages
             Item("SPICE model dosyaları (.lib, .mod, .cir, .sub)…", () => PickFiles("SPICE (*.lib, *.mod, *.cir, *.sub, *.sp, *.spi)|*.lib;*.mod;*.cir;*.sub;*.sp;*.spi;*.inc|Tüm dosyalar (*.*)|*.*", paths => ShowImport(new SpiceAdapter(SpiceImportSession.Open(paths)))),
                 ".model kartları ve .subckt alt devreleri");
             Item("Fritzing parçaları (.fzpz)…", () => PickFiles("Fritzing parçası (*.fzpz, *.fzp)|*.fzpz;*.fzp", paths => ShowImport(new FritzingAdapter(paths))));
+            Item("FMU (FMI 2.0, .fmu)…", () => PickFiles("FMU (*.fmu)|*.fmu", ImportFmus),
+                "Modelica, Simulink, 20-sim … modelleri: ortak benzetim (Co-Simulation) FMU'su, girişleri ve çıkışları pin olan bir parça olur");
             menu.Items.Add(new Separator());
             Item("Arduino kütüphanesi (.zip)…", () => PickFiles("Arduino kütüphanesi (*.zip)|*.zip", paths => ShowImport(new ArduinoAdapter(paths))), "library.properties içeren .zip; Kod sayfasının derleyicisi bulur");
             Item("Arduino kütüphanesi (klasör)…", () => PickFolders("Arduino kütüphane klasörü", paths => ShowImport(new ArduinoAdapter(paths))));
@@ -44,6 +46,29 @@ namespace RobotWin.Studio.Pages
             Item("Toplu içe aktar (klasör tara)…", BatchImport, "Bir klasördeki bütün KiCad, SPICE, Fritzing ve Arduino kütüphanelerini önizlemesiz, varsayılan eşlemeyle içe aktar ve rapor göster");
             Item("RobotWin parça / kütüphane (.rwpart, .rwlib)…", () => OnImport(this, new RoutedEventArgs()));
             menu.IsOpen = true;
+        }
+
+        /// <summary>[fmi] Each FMU becomes a part of the user library (the FMU file inside it); the first is shown.</summary>
+        private void ImportFmus(IReadOnlyList<string> paths)
+        {
+            string? first = null;
+            foreach (var path in paths)
+            {
+                try
+                {
+                    var part = RobotTwin.CoreSim.Fmi.FmuImport.ToCustomPart(System.IO.File.ReadAllBytes(path));
+                    Libraries.LibraryManager.SaveUserPart(Lib, part);
+                    first ??= part.Id;
+                }
+                catch (Exception ex) when (ex is NotSupportedException || ex is System.IO.InvalidDataException || ex is FormatException || ex is System.IO.IOException || ex is UnauthorizedAccessException)
+                {
+                    Dialog.Show(Owner, "FMU içe aktarılamadı", System.IO.Path.GetFileName(path) + ": " + ex.Message, "Tamam");
+                }
+            }
+
+            if (first == null) return;
+            Workspace.Current.Status = string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotWin.Studio.Shell.Lang.T("{0} FMU parça olarak eklendi"), paths.Count);
+            Refresh(first);
         }
 
         private void PickFiles(string filter, Action<IReadOnlyList<string>> run)

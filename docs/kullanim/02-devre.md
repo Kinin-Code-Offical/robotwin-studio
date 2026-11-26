@@ -131,6 +131,17 @@ Alternatifler parçaları adlarıyla değil kimlikleriyle izler: bir parçanın 
 
 ![KiCad şemasından açılan devre](../images/kicad-schematic-import.png)
 
+## FMU modelleri (FMI 2.0)
+
+Modelica, Simulink, 20-sim, OpenModelica gibi araçlardan dışa aktarılan bir **FMU** (`.fmu`, FMI 2.0 ortak benzetim) devrede bir blok olarak çalışır.
+
+- **Dosya → Aç…** bir `.fmu`'yu bloğu yerleşmiş yeni bir devre olarak açar; **Kütüphane** sayfasındaki **Dış kütüphane ▾ → FMU (FMI 2.0, .fmu)…** onu kütüphanenize parça olarak ekler. FMU dosyası parçanın içindedir: projeyle birlikte taşınır.
+- Bloğun her **girişi** solda, her **çıkışı** sağda bir pindir; **REF** gerilimlerin ölçüldüğü ve sürüldüğü referanstır (çoğunlukla GND'ye bağlanır). Giriş, pinin REF'e göre gerilimini okur; çıkış, değerini 1 Ω'luk iç dirençle pine sürer.
+- FMU'nun parametreleri parçanın parametreleridir (başlangıç değerleriyle); **İletişim adımı**, devre ile FMU'nun buluştuğu aralıktır (öntanımlı FMU'nun kendi adımı, yoksa 1 ms). Her adımda girişler verilir, FMU kendi çözücüsüyle ilerler, çıkışlar bir sonraki adıma kadar tutulur.
+- Yalnız 64 bit Windows ikilisi (`binaries/win64`) olan ortak benzetim FMU'ları çalışır; yalnız model değişimi (Model Exchange) olanlar söylenerek reddedilir.
+
+![FMU bloğu](../images/fmu-block.png)
+
 ## Dışa aktarma
 
 Devre sayfasından şunları dışa aktarabilirsiniz:

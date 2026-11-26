@@ -68,4 +68,11 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- [fmi] a first-order lag FMU written for these tests: its C source (compiled with MSVC at test time) and description -->
+    <None Update="Fixtures\fmu\*.c;Fixtures\fmu\*.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

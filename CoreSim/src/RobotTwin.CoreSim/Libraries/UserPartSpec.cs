@@ -89,7 +89,10 @@ namespace RobotTwin.CoreSim.Libraries
         Subcircuit,
 
         /// <summary>An ideal behavioural element (source, load, regulator).</summary>
-        Behavioral
+        Behavioral,
+
+        /// <summary>[fmi] An FMI 2.0 co-simulation FMU, carried in the part, co-simulated with the circuit.</summary>
+        Fmu
     }
 
     public enum BehavioralKind
@@ -121,6 +124,14 @@ namespace RobotTwin.CoreSim.Libraries
 
         public BehavioralKind Behavior { get; set; } = BehavioralKind.VoltageSource;
 
+        /// <summary>[fmi] The FMU file itself (base64), for <see cref="UserModelKind.Fmu"/>: the part carries it wherever it goes.</summary>
+        public string FmuData { get; set; } = string.Empty;
+
+        private Fmi.FmuArchive? _fmu;
+
+        /// <summary>[fmi] The FMU unpacked (once).</summary>
+        public Fmi.FmuArchive Fmu() => _fmu ??= Fmi.FmuArchive.Open(Convert.FromBase64String(FmuData));
+
         private SpiceLibrary? _spice;
 
         /// <summary>The parsed <see cref="SpiceText"/> (cached).</summary>
@@ -137,6 +148,8 @@ namespace RobotTwin.CoreSim.Libraries
                     return Spice().Subcircuits.TryGetValue(SubcircuitName, out var s) ? s.Pins : new List<string>();
                 case UserModelKind.Behavioral:
                     return UserPartSpec.BehavioralRoles(Behavior);
+                case UserModelKind.Fmu:
+                    return Fmi.FmuImport.Ports(Fmu().Description);
                 default:
                     return Array.Empty<string>();
             }
@@ -147,6 +160,7 @@ namespace RobotTwin.CoreSim.Libraries
             var m = (UserModel)MemberwiseClone();
             m.PinMap = new Dictionary<string, string>(PinMap, StringComparer.OrdinalIgnoreCase);
             m._spice = null;
+            m._fmu = null;
             return m;
         }
     }
@@ -338,6 +352,9 @@ namespace RobotTwin.CoreSim.Libraries
             int maxR = right.Count == 0 ? 0 : right.Max(p => p.Name.Length);
             double half = Math.Max(3, Math.Ceiling((maxL + maxR) * 0.48 / 2 + 1.4));
             half = Math.Max(half, Math.Min(10, Math.Ceiling(label.Length * 0.42 / 2 + 1.3)));
+            // A pin on the middle row shares it with the body's label: room for both, side by side.
+            int middle = Math.Max(left.Count % 2 == 1 ? left[left.Count / 2].Name.Length : 0, right.Count % 2 == 1 ? right[right.Count / 2].Name.Length : 0);
+            if (middle > 0 && label.Length > 0) half = Math.Max(half, Math.Min(14, Math.Ceiling(label.Length * 0.42 / 2 + middle * 0.48 + 1.6)));
             int rows = Math.Max(1, Math.Max(left.Count, right.Count));
             for (int i = 0; i < left.Count; i++) def.Pins.Add(new PinDefinition(left[i].Name, left[i].Pad, -(half + 1), (i - (left.Count - 1) / 2.0) * 2));
             for (int i = 0; i < right.Count; i++) def.Pins.Add(new PinDefinition(right[i].Name, right[i].Pad, half + 1, (i - (right.Count - 1) / 2.0) * 2));
@@ -423,6 +440,9 @@ namespace RobotTwin.CoreSim.Libraries
 
                 case UserModelKind.Behavioral:
                     return ctx => BuildBehavioral(ctx, model.Behavior, pin => PinOrOpen(ctx, pin));
+
+                case UserModelKind.Fmu:
+                    return ctx => Fmi.FmuImport.Build(ctx, model.Fmu(), pin => PinOrOpen(ctx, pin));
 
                 default:
                     return null;

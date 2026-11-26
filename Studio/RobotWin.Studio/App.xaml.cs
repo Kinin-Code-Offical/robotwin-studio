@@ -325,8 +325,9 @@ namespace RobotWin.Studio
                 if (ex != null) Workspace.Current.Load(ex.Build(), null);
             }
 
-            // A file named on the command line (a project, a KiCad schematic …) opens first, as it would without --snapshot.
-            if (Environment.GetCommandLineArgs().Skip(1).FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal) && File.Exists(a)) is { } fileArg)
+            // A file named first on the command line (a project, a KiCad schematic, an FMU …) opens first, as it would without
+            // --snapshot. Only the first argument: the options' own values (--snapshot's picture) are files too.
+            if (Environment.GetCommandLineArgs().Skip(1).FirstOrDefault() is { } fileArg && !fileArg.StartsWith("--", StringComparison.Ordinal) && File.Exists(fileArg))
                 window.OpenFile(fileArg);
 
             // [esp32hw] --esp32-mode hardware|fast: every ESP32 of this run (circuit and world) in that mode, nothing saved, to

@@ -152,7 +152,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [~] Python API.
   - [x] Modbus TCP: uzak G/Ç modülü (8 DI / 8 DO, devrede gerçek pinler) dünya çalışırken sunucu (`Industrial/`), fonksiyon kodları 1–6, 15, 16, 23. Modbus RTU (seri) da var: modülün 5 V TTL seri başlığında köle (`Industrial/ModbusRtu.cs`: 3,5 karakter sessizlikle çerçeve, CRC-16, yayın, bit bit yanıt), gerçek bir Uno çizimi usta olarak kabloyla konuşuyor. Analog G/Ç de var (4 × 0–10 V giriş, 2 × 0–10 V çıkış, 12 bit, milivolt yazmaçları). İstemci tarafı da var: PLC'nin Yapısal Metin'inde MB_READ / MB_WRITE blokları dünyadaki diğer Modbus cihazlarını birim kimliğiyle okuyup yazıyor (tesis ağı, 5 ms gidiş-dönüş, istisna kodları, 200 ms zaman aşımı).
   - [ ] OPC UA.
-  - [ ] FMI / FMU.
+  - [~] FMI / FMU: FMI 2.0 ortak benzetim FMU'ları içe aktarılıyor (`Fmi/`: modelDescription, win64 ikilisi kendi çağrı geri dönüşlerimizle, devrede `FmuBlock` iletişim adımında; kütüphanede ve Dosya → Aç ile parça, FMU parçanın içinde). Sırada: model değişimi (ME) FMU'ları kendi tümleyicimizle, FMI 3.0, devrenin FMU olarak dışa aktarılması.
 
 ### P2: sonraki aşama
 
