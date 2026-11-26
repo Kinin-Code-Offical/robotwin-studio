@@ -63,6 +63,10 @@ Drag a drawn track with **G**; its connected ends follow.
 
 Filling follows the clearance, thermal relief, priority and island-removal rules.
 
+## Teardrops
+
+The **Teardrop** button in the toolbar switches on KiCad's and Altium's teardrops: where a narrow track meets a pad or a via, copper widens from the pad to the track, so a drill that wanders, an etch that eats in or a board that flexes does not cut the joint. The panel sets them on pads and on vias separately, curved (KiCad's default) or straight sides, length and width as a share of the pad's size (50 % and 100 % by default) and their limits (mm). A teardrop lies along the track itself, so it lines up with a track that enters the pad off its centre and never sticks out of the pad's sides. One that would come closer to another net than the rules allow is narrowed first, left out if that is not enough, so it never breaks the DRC. Teardrops are not stored; they are worked out from the tracks every time: on screen, in the Gerber copper layers (as regions) and in other nets' pours (which keep their clearance from them), always as the tracks are now. A change refills the pours. The file handed to KiCad does not carry them; KiCad makes its own from its teardrop settings.
+
 ## Drawing tools and the via
 
 Buttons in the left tool strip with a small triangle in their corner are tool groups: press and hold or right-click to list the group's tools by name; the one picked becomes the button's face.
@@ -92,6 +96,10 @@ The **Errors**, **Warnings** and **Exclusions** buttons above the list show or h
 - **This rule's severity**: the rule becomes an **Error**, a **Warning** or **Do not check** (never reported).
 
 **Rule severities** lists every rule by group (Electrical, Manufacturing, Mechanical, Signal integrity, Housekeeping, Manufacturing and test) with its markers in the last run; each gets a severity, and **Reset all to default** clears the settings. Severities and exclusions are saved with the board and can be undone. **Save report…** writes the last run as a text file: date, board, counts, errors, warnings, exclusions (with their notes) and the rules not checked.
+
+### Clearance resolution
+
+KiCad's clearance resolution from its Inspect menu: select two items with Ctrl+click (a track, a via, a part or a pour) and open **Clearance resolution** from the command palette (Ctrl+K). The window gives both items' nets and net classes, the clearance that holds between them and the class it comes from (the larger of the two; a pour's own clearance when that is larger), and the real copper gap on every copper layer they share; a layer below the rule shows in red as **VIOLATION**. For a part, its pad of another net nearest the other item counts.
 
 ### Manufacture and test (DFM/DFT)
 

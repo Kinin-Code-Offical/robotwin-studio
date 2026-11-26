@@ -77,7 +77,8 @@ namespace RobotWin.Studio.World
             AddGizmoLayer();   // [gizmo] the handles, drawn over the view (World/WorldScene.Gizmo.cs)
             _hint.Foreground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x97));   // TextMuted: 5.9:1 on the canvas
             _hint.FontSize = 12;
-            _hint.Margin = new Thickness(14, 0, 0, 10);
+            _hint.Margin = new Thickness(14, 0, 14, 10);
+            _hint.TextWrapping = TextWrapping.Wrap;   // a long hint goes onto a second line rather than being cut off
             _hint.VerticalAlignment = VerticalAlignment.Bottom;
             _hint.HorizontalAlignment = HorizontalAlignment.Left;
             _hint.IsHitTestVisible = false;

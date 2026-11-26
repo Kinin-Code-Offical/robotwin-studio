@@ -720,6 +720,49 @@ namespace RobotWin.Studio.Pages
                     UpdatePanel();
                     ShowPanel(1);
                     break;
+                case "teardrops":   // [teardrop] the routed board with teardrops, zoomed onto the busiest via
+                {
+                    board.Teardrops.Enabled = true;
+                    if (board.Zones.Count > 0) ZoneFiller.FillAll(board);
+                    var drops = Teardrops.Of(board);
+                    var at = drops.Count > 0 ? RobotTwin.CoreSim.Pcb.Polygon.Bounds(drops[drops.Count / 2].Outline) : (0, 0, board.Width, board.Height);
+                    Canvas.ZoomTo((at.MinX + at.MaxX) / 2, (at.MinY + at.MaxY) / 2);
+                    Canvas.ZoomBy(2.5);
+                    Canvas.Refresh();
+                    W.Status = $"Damla: {drops.Count} bağlantıda";
+                    break;
+                }
+
+                case "clearance-res":   // [clearance-res] the two closest tracks of different nets, resolved
+                {
+                    (Track A, Track B, double D)? closest = null;
+                    foreach (var ta in board.Tracks)
+                    foreach (var tb in board.Tracks)
+                    {
+                        if (ReferenceEquals(ta, tb) || ta.Layer != tb.Layer || ta.Net == tb.Net) continue;
+                        var rep = ClearanceResolution.Between(board, ta, tb);
+                        if (rep?.Layers.Count > 0 && (closest == null || rep.Layers[0].Actual < closest.Value.D)) closest = (ta, tb, rep.Layers[0].Actual);
+                    }
+
+                    if (closest is { } pair)
+                    {
+                        Canvas.SetSelection(new object[] { pair.A, pair.B });
+                        ShowClearanceResolution();
+                    }
+
+                    break;
+                }
+
+                case "teardrops-panel":   // [teardrop] the settings panel, open, as the picture
+                    OnTeardrops(TeardropButton, new RoutedEventArgs());
+                    if (_teardropPanel?.Child is FrameworkElement panel)
+                    {
+                        panel.UpdateLayout();
+                        App.SnapshotTarget = panel;
+                    }
+
+                    break;
+
                 case "drc":
                 case "problems":   // [problems] a DRC marker for the Problems window
                     board.Tracks.Add(new Track { Net = board.NetNames().First(), Layer = CopperLayer.Top, X1 = 2, Y1 = 2, X2 = board.Width / 2, Y2 = board.Height / 2, Width = 0.3 });

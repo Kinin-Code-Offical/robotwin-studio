@@ -63,6 +63,10 @@ Kart kenarını sol araç çubuğundaki **kart kenarı** aracıyla çokgen olara
 
 Dolgu, boşluk, ısıl bağlantı (thermal relief), öncelik ve ada temizleme kurallarına göre yapılır.
 
+## Damla (teardrop)
+
+Araç çubuğundaki **Damla** düğmesi KiCad ve Altium'daki damlaları açar: ince bir hattın ped ya da via'ya girdiği yerde bakır pedden hatta doğru genişler, böylece delik kayarsa, aşındırma yerse ya da kart esnerse bağlantı kopmaz. Paneldeki ayarlar: pedlerde ve via'larda ayrı ayrı, eğri (KiCad'in varsayılanı) ya da düz kenar, uzunluk ve genişlik pedin boyutunun yüzdesi olarak (varsayılan %50 ve %100) ve en fazla uzunluk / genişlik (mm). Damla hattın kendi çizgisi boyunca durur; hat pedin ortasından girmese de onunla hizalıdır ve pedin kenarından taşmaz. Başka bir ağa kural aralığından yakın düşecek damla önce daraltılır, olmuyorsa hiç konmaz; bu yüzden DRC'yi bozmaz. Damlalar saklanmaz, hatlardan her an yeniden çıkar: çizimde, Gerber bakır katmanlarında (bölge olarak) ve başka ağların dökümlerinde (çevrelerinde aralık bırakılır) hep güncel haliyle bulunur. Ayar değişince dökümler yeniden doldurulur. KiCad'e verilen dosyaya damlalar yazılmaz; KiCad'de kendi damla ayarıyla yeniden üretilir.
+
 ## Çizim araçları ve via
 
 Sol araç şeridinde köşesinde küçük üçgen olan düğmeler araç gruplarıdır: basılı tutunca ya da sağ tıklayınca gruptaki araçlar adlarıyla açılır, seçilen araç düğmenin yüzü olur.
@@ -92,6 +96,10 @@ Listenin üstündeki **Hatalar**, **Uyarılar** ve **İstisnalar** düğmeleri s
 - **Bu kuralın önemi**: kural **Hata**, **Uyarı** ya da **Denetleme** (hiç bildirilmez) olur.
 
 **Kural önemleri** bütün kuralları gruplarıyla (Elektriksel, Üretim, Mekanik, Sinyal bütünlüğü, Düzen ve bakım, Üretim ve test) ve son çalıştırmadaki işaret sayılarıyla listeler; her biri için önem seçilir, **Hepsini varsayılana döndür** ayarları siler. Önemler ve istisnalar kartla kaydedilir ve geri alınabilir. **Raporu kaydet…** son çalıştırmayı metin dosyası olarak yazar: tarih, kart, sayılar, hatalar, uyarılar, istisnalar (notlarıyla) ve denetlenmeyen kurallar.
+
+### Aralık çözümlemesi
+
+KiCad'deki İncele menüsünün aralık çözümlemesi: Ctrl+tık ile iki öğe seçin (hat, via, parça ya da dolgu) ve komut paletinden (Ctrl+K) **Aralık çözümlemesi**ni açın. Pencere iki öğenin ağını ve ağ sınıfını, aralarında geçerli olan aralığı ve bunun hangi sınıftan geldiğini (iki sınıftan büyüğü; dolgunun kendi aralığı daha büyükse o) ve paylaştıkları her bakır katmanında bakırlarının gerçek uzaklığını yazar; kuralın altındaki katman **KURAL DIŞI** diye kırmızı görünür. Bir parça seçildiğinde öteki öğeye en yakın, başka ağdaki pedi hesaba katılır.
 
 ### Üretim ve test (DFM/DFT)
 

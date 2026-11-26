@@ -165,6 +165,15 @@ namespace RobotTwin.CoreSim.Pcb
                 Add(g => Shapes.Circle(hh.X, hh.Y, radius + g, Tolerance), c);
             }
 
+            // [teardrop] another net's teardrops are copper like its tracks: the pour keeps its clearance from them
+            foreach (var td in Teardrops.Of(board))
+            {
+                if (td.Layer != layer || Same(td.Net, zone.Net)) continue;
+                double c = ClearanceTo(board, zone, td.Net);
+                foreach (var reg in PolyOffset.OffsetContours(new[] { td.Outline }, c + r, Tolerance)) obstacles.AddRange(reg.Contours());
+                foreach (var reg in PolyOffset.OffsetContours(new[] { td.Outline }, c, Tolerance)) spokeObstacles.AddRange(reg.Contours());
+            }
+
             foreach (var z in Higher(board, zone))
             {
                 if (Same(z.Net, zone.Net) || !z.IsFilled || z.FilledRegions.Count == 0) continue;

@@ -323,6 +323,18 @@ namespace RobotWin.Studio.Models3D
                     g.DrawLine(pen, new Point(tr.X1 * ppmm, tr.Y1 * ppmm), new Point(tr.X2 * ppmm, tr.Y2 * ppmm));
                 }
 
+                foreach (var td in Teardrops.Of(board).Where(x => x.Layer == CopperLayer.Bottom))   // [teardrop] the same copper as the Gerber
+                {
+                    var geo = new StreamGeometry();
+                    using (var c = geo.Open())
+                    {
+                        c.BeginFigure(new Point(td.Outline[0].X * ppmm, td.Outline[0].Y * ppmm), true, true);
+                        c.PolyLineTo(td.Outline.Skip(1).Select(q => new Point(q.X * ppmm, q.Y * ppmm)).ToList(), true, false);
+                    }
+
+                    g.DrawGeometry(copper, null, geo);
+                }
+
                 var pad = new SolidColorBrush(Color.FromRgb(0xD8, 0xB2, 0x6A));
                 foreach (var p in board.Pads())
                 {

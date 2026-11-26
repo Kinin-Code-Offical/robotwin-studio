@@ -483,6 +483,9 @@ namespace RobotTwin.CoreSim.Pcb
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
 
+        /// <summary>[teardrop] Whether and how tracks flare into pads and vias (Pcb/Teardrops.cs); off unless switched on.</summary>
+        public TeardropSettings Teardrops { get; set; } = new TeardropSettings();
+
         /// <summary>[keepout] Rule areas: where tracks, vias, pours or parts are not allowed (Pcb/RuleArea.cs).</summary>
         public List<RuleArea> RuleAreas { get; set; } = new List<RuleArea>();
 

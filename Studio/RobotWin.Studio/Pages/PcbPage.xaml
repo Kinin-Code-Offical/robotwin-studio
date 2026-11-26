@@ -50,6 +50,10 @@
                     <Button x:Name="FillButton" Click="OnFillZones" Margin="6,0,0,0" ToolTip="Tüm dolgu alanlarını yeniden doldur">
                         <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Fill}" Size="16"/><TextBlock Text="Doldur" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
+                    <!-- [teardrop] KiCad's teardrops: tracks flaring into pads and vias (Pages/PcbPage.Teardrops.cs) -->
+                    <Button x:Name="TeardropButton" Click="OnTeardrops" Margin="6,0,0,0" ToolTip="Damla: ince hattın ped ya da via'ya girdiği yerde bakırı genişletir (aç / kapa ve ayarlar)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Via}" Size="16"/><TextBlock Text="Damla" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    </Button>
                     <ToggleButton x:Name="View3DToggle" Style="{StaticResource Chip}" Content="3D" Margin="8,0,0,0" Click="OnToggle3D" ToolTip="Kartı ve parçaları 3D gösterir; simülasyon sırasında LED'ler yanar, ısınan parçalar kızarır"/>
                 </StackPanel>
                 <StackPanel x:Name="ToolbarRight" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

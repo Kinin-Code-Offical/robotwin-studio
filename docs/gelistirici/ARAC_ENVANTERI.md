@@ -36,9 +36,9 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | DRC | DRC (önem, istisna, gezinme, rapor) | var | |
 | Kart istatistikleri | İstatistikler… | var | |
 | Ölç | Ölç (Ctrl+Shift+M) | var | |
-| Aralık / kısıt çözümlemesi (iki öğe arası hangi kural) | yok | yok | 2 |
+| Aralık / kısıt çözümlemesi (iki öğe arası hangi kural) | Aralık çözümlemesi (palet): iki öğe (hat, via, parça, dolgu), ağlar ve sınıflar, gereken aralık ve kaynağı, her ortak katmanda gerçek aralık | var | |
 | Ayak izini kütüphaneyle karşılaştır | yok | yok | 3 |
-| Damla (teardrop) | yok | yok | 2 |
+| Damla (teardrop) | Damla: ped ve via, eğri / düz, uzunluk ve genişlik oranı ve sınırları; hattın çizgisinde, ovalin ucunda çember; başka ağa aralığı bozacaksa daraltılır ya da konmaz; çizim, Gerber, döküm aralığı (KiCad dışa aktarımına yazılmaz) | var | |
 
 ### Yardımcı çubuk (etkin aracın seçenekleri)
 

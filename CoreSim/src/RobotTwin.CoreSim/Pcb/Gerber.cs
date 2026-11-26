@@ -193,6 +193,7 @@ namespace RobotTwin.CoreSim.Pcb
                 foreach (var region in zone.FilledRegions) g.Region(Polygon.Fracture(region));
             }
 
+            foreach (var td in Teardrops.Of(board).Where(td => td.Layer == layer)) g.Region(td.Outline);   // [teardrop]
             foreach (var t in board.Tracks.Where(t => t.Layer == layer)) g.Line(t.X1, t.Y1, t.X2, t.Y2, t.Width);
             foreach (var p in board.Pads().Where(p => p.OnLayer(layer))) PadCopper(g, p);
             foreach (var v in board.Vias.Where(v => v.Spans(layer, layers))) g.Flash(PadShape.Circle, v.X, v.Y, v.Diameter, v.Diameter);

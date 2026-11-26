@@ -534,6 +534,12 @@ namespace RobotWin.Studio.Pcb
                 }
             }
 
+            foreach (var td in TeardropsNow(board).Where(d => d.Layer == layer))   // [teardrop] copper like the track's (Pcb/BoardCanvas.Teardrops.cs)
+            {
+                double f = Fade(td.Net, layer);
+                dc.DrawGeometry(SymbolRenderer.Brush(A(color, (active ? 0.92 : 0.8) * f)), null, Poly(td.Outline));
+            }
+
             foreach (var t in board.Tracks.Where(t => t.Layer == layer))
             {
                 double f = Fade(t.Net, layer);
