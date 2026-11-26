@@ -351,6 +351,16 @@ Set the current limit with the driver's **Current limit** value; it stands for t
 
 **A Z axis with an Arduino:** the `z-axis-stepper` firmware in the **Stepper Z axis with Arduino** template (built in, no libraries) drives an A4988 from an Uno: D2 → DIR, D3 → STEP, D8 → EN. It lifts the carriage 40 mm on a T8 lead screw and lowers it again, raising and lowering the speed at a steady acceleration (the ramp AccelStepper makes). A motor started at full speed without a ramp stalls; ramped, it follows.
 
+**Assembly mates:** place parts by their faces and axes relative to each other. Pick the **Align** tool on the toolbar (H) and click a face or axis on two parts; clicking the round side of a shaft, wheel or gear picks its axis. The menu that opens offers the relations that fit:
+- **Face to face:** two faces against each other.
+- **Flush:** two faces the same way, in one plane.
+- **Concentric:** a shaft in its hole.
+- **Parallel**, **perpendicular**, **distance** and **angle**.
+
+A fixed part stays put and the other settles into place with as little motion as it can. Parts screwed or grouped to it go along. The part's inspector has an **Assembly mates** section. There you can change offsets and angles or remove a mate, and it says how many degrees of freedom the part has left. A shaft in its hole, for example, keeps two (it slides and turns), and one once its shoulder rests on the bearing.
+
+Mates place a part; while running, a joint holds it. When one degree of freedom or none is left, **Build the joint from the mates** makes that joint: a hinge on the axis if turning is left, a slider if sliding is, a fixed joint if nothing is. A mate that contradicts the others is not added, and the ones it fights are named. When you drag a part, the parts mated to it come along.
+
 The physics is not an animation. Gears and screws are joined by constraints in the solver, as engineering multibody programs do it. The motor's torque comes from the load, the efficiency, the backlash and the bearing friction. Solving each tooth touching the next with collisions would be slow and unstable, so gears meet in the meshing constraint rather than through their bodies. If you want to use your own 3D models, join them with hinges or slides using the **Join** tool, then pair them with **Add feature → Gear, belt, lead screw**. The physics works the same way.
 
 ### Arm kinematics: forward and inverse

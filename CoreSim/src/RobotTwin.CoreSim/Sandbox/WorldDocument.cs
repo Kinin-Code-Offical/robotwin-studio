@@ -432,6 +432,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>[couple] Gears, belts and lead screws between joints (Sandbox/WorldCoupling.cs); null when the world has none.</summary>
         public List<WorldCoupling>? Couplings { get; set; }
 
+        /// <summary>[mate] Assembly mates between the objects' faces and axes (Sandbox/WorldMates.cs); null when the world has none.</summary>
+        public List<WorldMate>? Mates { get; set; }
+
         /// <summary>[couple] Drops the couplings whose joints are gone; an empty list becomes null again.</summary>
         public void PruneCouplings()
         {
@@ -639,6 +642,7 @@ namespace RobotTwin.CoreSim.Sandbox
             Cables.RemoveAll(c => c.A.ObjectId == o.Id || c.B.ObjectId == o.Id);
             Joints.RemoveAll(j => j.ObjectA == o.Id || j.ObjectB == o.Id);
             PruneCouplings();
+            WorldMates.Prune(this);
             if (o.DesignId != null && Objects.All(x => x.DesignId != o.DesignId)) Designs.RemoveAll(d => d.Id == o.DesignId);
         }
 

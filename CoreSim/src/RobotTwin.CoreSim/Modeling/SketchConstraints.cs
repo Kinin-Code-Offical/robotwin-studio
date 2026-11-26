@@ -707,24 +707,6 @@ namespace RobotTwin.CoreSim.Modeling
             return eq.Rows.ToArray();
         }
 
-        private double[,] Jacobian(Layout l, Equations eq, double[] x, double[] r0, IReadOnlyList<SketchConstraint> constraints)
-        {
-            int m = r0.Length, n = x.Length;
-            var j = new double[m, n];
-            for (int c = 0; c < n; c++)
-            {
-                double h = 1e-6 * Math.Max(1.0, Math.Abs(x[c])), keep = x[c];
-                x[c] = keep + h;
-                var rp = Residuals(l, eq, x, constraints, null);
-                x[c] = keep - h;
-                var rm = Residuals(l, eq, x, constraints, null);
-                x[c] = keep;
-                for (int r = 0; r < m; r++) j[r, c] = (rp[r] - rm[r]) / (2 * h);
-            }
-
-            return j;
-        }
-
         /// <summary>
         /// Moves the points and radii as little as it can until every constraint holds, and says how well that went: the
         /// freedom left, the constraints that repeat others, or the ones that cannot all hold.
@@ -777,81 +759,18 @@ namespace RobotTwin.CoreSim.Modeling
         {
             var l = Lay();
             var eq = new Equations(l);
-            var x = Read(l);
-            var start = (double[])x.Clone();
+            var start = Read(l);
             var result = new SketchSolveResult();
             var owners = new List<int>();
-            double[] r = Residuals(l, eq, x, constraints, owners);
-            double cost = Sum(r);
-            double lambda = 1e-6;
-            int n = x.Length;
-            int it = 0;
-            for (; it < 200 && Max(r) > Tolerance; it++)
-            {
-                var j = Jacobian(l, eq, x, r, constraints);
-                int m = r.Length;
-                // The smallest step that meets the linearised constraints: δ = −Jᵀ·(J·Jᵀ + λ·D)⁻¹·r. Whatever no
-                // constraint holds stays where it was drawn; λ grows when a step does not pay (a damped Gauss–Newton in
-                // its dual form) and keeps repeated constraints, whose rows make J·Jᵀ singular, solvable.
-                var a = new double[m, m];
-                double scale = 0;
-                for (int p = 0; p < m; p++)
-                {
-                    for (int q = p; q < m; q++)
-                    {
-                        double sum = 0;
-                        for (int k = 0; k < n; k++) sum += j[p, k] * j[q, k];
-                        a[p, q] = a[q, p] = sum;
-                    }
-
-                    scale = Math.Max(scale, a[p, p]);
-                }
-
-                bool improved = false;
-                for (int tries = 0; tries < 16; tries++)
-                {
-                    var damped = (double[,])a.Clone();
-                    for (int p = 0; p < m; p++) damped[p, p] += lambda * (a[p, p] + 1e-9 * scale) + 1e-14 * scale;
-                    var y = SolveLinear(damped, (double[])r.Clone());
-                    if (y == null)
-                    {
-                        lambda = Math.Max(1e-9, lambda * 10);
-                        continue;
-                    }
-
-                    var trial = new double[n];
-                    for (int c = 0; c < n; c++)
-                    {
-                        double d = 0;
-                        for (int k = 0; k < m; k++) d += j[k, c] * y[k];
-                        trial[c] = x[c] - d;
-                    }
-
-                    var rt = Residuals(l, eq, trial, constraints, null);
-                    double ct = Sum(rt);
-                    if (ct < cost)
-                    {
-                        x = trial;
-                        r = rt;
-                        cost = ct;
-                        lambda = Math.Max(1e-12, lambda * 0.1);
-                        improved = true;
-                        break;
-                    }
-
-                    lambda = Math.Max(1e-9, lambda * 10);
-                }
-
-                if (!improved) break;
-            }
-
+            double[] F(double[] v) => Residuals(l, eq, v, constraints, null);
+            var (x, r, it) = LeastSquares.MinNorm(F, start, Tolerance);
             result.Iterations = it;
-            result.Residual = r.Length == 0 ? 0 : Max(r);
+            result.Residual = r.Length == 0 ? 0 : LeastSquares.Max(r);
             // Rank of the equations at the answer: the freedom left, and the rows that add nothing new.
-            var jf = r.Length == 0 ? new double[0, n] : Jacobian(l, eq, x, r, constraints);
+            var jf = r.Length == 0 ? new double[0, x.Length] : LeastSquares.Jacobian(F, x, r.Length);
             Residuals(l, eq, x, constraints, owners);
-            var dependent = DependentRows(jf, out int rank);
-            result.Freedom = n - rank;
+            var dependent = LeastSquares.DependentRows(jf, out int rank);
+            result.Freedom = x.Length - rank;
             if (result.Residual > 1e-5)
             {
                 result.State = SketchState.Conflicting;
@@ -869,100 +788,6 @@ namespace RobotTwin.CoreSim.Modeling
             else result.State = result.Freedom == 0 ? SketchState.FullyConstrained : SketchState.UnderConstrained;
 
             return result;
-        }
-
-        private static double Sum(double[] r)
-        {
-            double s = 0;
-            foreach (double v in r) s += v * v;
-            return s;
-        }
-
-        private static double Max(double[] r)
-        {
-            double s = 0;
-            foreach (double v in r) s = Math.Max(s, Math.Abs(v));
-            return s;
-        }
-
-        /// <summary>Gaussian elimination with partial pivoting; null when singular.</summary>
-        private static double[]? SolveLinear(double[,] a, double[] b)
-        {
-            int n = b.Length;
-            for (int c = 0; c < n; c++)
-            {
-                int piv = c;
-                for (int r = c + 1; r < n; r++)
-                    if (Math.Abs(a[r, c]) > Math.Abs(a[piv, c])) piv = r;
-                if (Math.Abs(a[piv, c]) < 1e-300) return null;
-                if (piv != c)
-                {
-                    for (int k = 0; k < n; k++) (a[c, k], a[piv, k]) = (a[piv, k], a[c, k]);
-                    (b[c], b[piv]) = (b[piv], b[c]);
-                }
-
-                for (int r = c + 1; r < n; r++)
-                {
-                    double f = a[r, c] / a[c, c];
-                    if (f == 0) continue;
-                    for (int k = c; k < n; k++) a[r, k] -= f * a[c, k];
-                    b[r] -= f * b[c];
-                }
-            }
-
-            var x = new double[n];
-            for (int r = n - 1; r >= 0; r--)
-            {
-                double s = b[r];
-                for (int k = r + 1; k < n; k++) s -= a[r, k] * x[k];
-                x[r] = s / a[r, r];
-            }
-
-            return x;
-        }
-
-        /// <summary>The rows of J (in order) that are combinations of earlier ones, by Gram–Schmidt; and J's rank.</summary>
-        private static List<int> DependentRows(double[,] j, out int rank)
-        {
-            int m = j.GetLength(0), n = j.GetLength(1);
-            var basis = new List<double[]>();
-            var dependent = new List<int>();
-            for (int r = 0; r < m; r++)
-            {
-                var v = new double[n];
-                double norm0 = 0;
-                for (int c = 0; c < n; c++)
-                {
-                    v[c] = j[r, c];
-                    norm0 += v[c] * v[c];
-                }
-
-                norm0 = Math.Sqrt(norm0);
-                for (int pass = 0; pass < 2; pass++)
-                {
-                    foreach (var b in basis)
-                    {
-                        double d = 0;
-                        for (int c = 0; c < n; c++) d += v[c] * b[c];
-                        for (int c = 0; c < n; c++) v[c] -= d * b[c];
-                    }
-                }
-
-                double norm = 0;
-                for (int c = 0; c < n; c++) norm += v[c] * v[c];
-                norm = Math.Sqrt(norm);
-                if (norm0 < 1e-12 || norm < 1e-7 * Math.Max(1.0, norm0))
-                {
-                    dependent.Add(r);
-                    continue;
-                }
-
-                for (int c = 0; c < n; c++) v[c] /= norm;
-                basis.Add(v);
-            }
-
-            rank = basis.Count;
-            return dependent;
         }
 
         // ---- profile ----------------------------------------------------------------------------------------------

@@ -70,9 +70,10 @@ namespace RobotWin.Studio.Pages
                 if (TabScene.IsChecked == true) BuildPalette();
             };
             Scene.BeginEdit += () => W.BeginWorldChange();
-            Scene.EditCommitted += msg => Commit(msg, rebuild: false);
+            Scene.EditCommitted += msg => Commit(msg, rebuild: ResolveMates());   // [mate] a dragged part takes its mated parts along
             Scene.CableRequested += AddCable;
             Scene.JointTargetPicked += OnJointTarget;
+            Scene.MateFacePicked += OnMateFace;   // [mate] Pages/WorldPage.Mates.cs
             LogList.ItemsSource = _session.Log;
             _session.Updated += (_, _) => OnSimUpdated();
             Shell.Themes.Changed += () => ShowMode(World);   // [theme] the badge's ink follows the theme
@@ -838,6 +839,7 @@ namespace RobotWin.Studio.Pages
             PortSection(world, o);
             CablesSection(world, o);
             JointsSection(world, o);
+            MatesSection(world, o);   // [mate] Pages/WorldPage.Mates.cs
             LiveSection(o);
 
             EditorSection(world, o); // [terrain] hide / lock / group / prop size
@@ -1416,7 +1418,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnTool(object sender, RoutedEventArgs e)
         {
-            var tool = (string)((FrameworkElement)sender).Tag switch { "Cable" => WorldTool.Cable, "Joint" => WorldTool.Joint, _ => WorldTool.Select };
+            var tool = (string)((FrameworkElement)sender).Tag switch { "Cable" => WorldTool.Cable, "Joint" => WorldTool.Joint, "Mate" => WorldTool.Mate, _ => WorldTool.Select };
             SetTool(tool);
         }
 
@@ -1426,6 +1428,8 @@ namespace RobotWin.Studio.Pages
             ToolSelect.IsChecked = tool == WorldTool.Select;
             ToolCable.IsChecked = tool == WorldTool.Cable;
             ToolJoint.IsChecked = tool == WorldTool.Joint;
+            ToolMate.IsChecked = tool == WorldTool.Mate;
+            if (tool != WorldTool.Mate) _mateFirst = null;   // [mate] a half-made pair is dropped
             if (tool == WorldTool.Joint && Scene.Selected == null) W.Status = "Önce takılacak nesneyi seçin, sonra takılacağı yeri tıklayın";
         }
 
@@ -1534,6 +1538,9 @@ namespace RobotWin.Studio.Pages
                     break;
                 case Key.B:
                     SetTool(WorldTool.Joint);
+                    break;
+                case Key.H when !ctrl:
+                    SetTool(WorldTool.Mate);
                     break;
                 case Key.Escape:
                     Scene.CancelTool();
@@ -1802,6 +1809,12 @@ namespace RobotWin.Studio.Pages
 
         public void PrepareSnapshot(string? template, string? simulate)
         {
+            if (template == "mate")
+            {
+                MateSnapshot();   // [mate] Pages/WorldPage.Mates.cs
+                return;
+            }
+
             template = SenseSnapshotTemplate(template);   // [sense] "id:studio:sensors…" view modes
             template = ParseTerrainSnapshot(template); // [terrain] "+arazi", "+boya", "+yakın"
             var t = WorldTemplates.Find(template ?? "servo-arm") ?? WorldTemplates.All[1];

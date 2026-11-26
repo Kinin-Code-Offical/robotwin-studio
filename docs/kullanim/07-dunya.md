@@ -351,6 +351,16 @@ Akım sınırını sürücünün **Akım sınırı** değeriyle ayarlayın; bu, 
 
 **Arduino ile Z ekseni:** **Arduino ile step motorlu Z ekseni** şablonundaki `z-axis-stepper` yazılımı (yerleşik, kütüphanesiz) bir Uno'dan A4988'i sürer: D2 → DIR, D3 → STEP, D8 → EN. Taşıyıcıyı T8 vidalı milde 40 mm kaldırır ve indirir. Hızı sabit ivmeyle artırıp azaltır (AccelStepper'ın yaptığı rampa). Rampasız tam hızla başlayan motor durur, rampayla başlayan izler.
 
+**Montaj ilişkileri:** parçaları yüzlerinden ve eksenlerinden birbirine göre yerleştirin. Araç çubuğundaki **Hizala** aracını (H) seçin, iki parçada birer yüz ya da eksen tıklayın; milin, tekerin ya da dişlinin yuvarlak yanına tıklamak ekseni seçer. Açılan menüde uygun ilişkiler çıkar:
+- **Yüz yüze:** iki yüz birbirine dayanır.
+- **Aynı hizada:** iki yüz aynı yöne bakar ve aynı düzlemde durur.
+- **Eş eksenli:** mil deliğinde.
+- **Paralel**, **dik**, **mesafe** ve **açı**.
+
+Sabit parça yerinde kalır, öteki parça olabildiğince az hareketle yerine oturur. Vidalı ya da gruplu parçalar onunla birlikte gider. Parçanın denetçisinde **Montaj ilişkileri** bölümü vardır. Burada aralıkları ve açıları değiştirebilir, ilişkiyi kaldırabilirsiniz; parçanın kaç serbestliği kaldığı da yazar. Örneğin deliğindeki milin iki serbestliği kalır (kayar ve döner), omzu da yatağa dayanırsa bire iner.
+
+İlişkiler parçayı yerleştirir; çalışırken parçayı tutan eklemdir. Bir ya da hiç serbestlik kaldığında **İlişkilerden eklem kur** düğmesi o eklemi kurar: dönmek kaldıysa ekseninde menteşe, kaymak kaldıysa kızak, hiçbiri kalmadıysa sabit bağlantı. Öteki ilişkilerle çelişen bir ilişki eklenmez ve çeliştiği ilişkiler adıyla yazılır. Bir parçayı sürüklediğinizde ona bağlı parçalar da ilişkileriyle birlikte gelir.
+
 Fizik bir animasyon değildir. Dişliler ve vida kısıt çözücüyle bağlanır (sanayideki çok gövdeli dinamik programları da böyle yapar). Motorun torkunu yük, verim, boşluk ve rulman sürtünmesi belirler. Dişlerin birbirine tek tek değmesini çarpışmayla çözmek hem yavaş hem kararsız olurdu; dişliler bu yüzden kendi gövdelerinde değil, kavrama kısıtında buluşur. Kendi 3B modelinizi kullanmak isterseniz **Bağla** aracıyla menteşe ya da kızak kurun, sonra **Özellik ekle → Dişli, kayış, vidalı mil** ile eşleyin. Fizik aynı yoldan çalışır.
 
 ### Kol kinematiği: ileri ve ters kinematik

@@ -18,7 +18,10 @@ namespace RobotWin.Studio.World
     {
         Select,
         Cable,
-        Joint
+        Joint,
+
+        /// <summary>[mate] Hizala: two faces or axes, then a relation between them.</summary>
+        Mate
     }
 
     /// <summary>3D editor and live view of a <see cref="WorldDocument"/>.</summary>
@@ -1335,6 +1338,14 @@ namespace RobotWin.Studio.World
                     }
 
                     break;
+                case WorldTool.Mate:
+                    if (SurfaceAt(p) is { } surface)
+                    {
+                        MateFacePicked?.Invoke(surface.Id, surface.Point, surface.Normal);
+                        return;
+                    }
+
+                    break;
                 default:
                     if (id != null && World?.Find(id) is { } o)
                     {
@@ -1496,6 +1507,7 @@ namespace RobotWin.Studio.World
                     ? "Kablo: ilk pini seçin (sarı noktalar) · Esc: iptal"
                     : $"Kablo: {_pendingPin.Pin} seçildi, ikinci pini tıklayın · Esc: iptal",
                 WorldTool.Joint => "Bağla: seçili nesnenin takılacağı nesneyi tıklayın (servo kolu, motor mili, gövde) · Esc: iptal",
+                WorldTool.Mate => "Hizala: iki parçanın yüzünü ya da eksenini (milin, tekerin yuvarlak yanı) tıklayın, sonra ilişkiyi seçin · Esc: iptal",
                 _ => "Sol: seç/taşı (Shift: yükseklik, Alt: ızgarasız) · boşlukta sol: döndür · sağ: kaydır · teker: yakınlaştır · çift tık: odakla/üstten"
             };
         }

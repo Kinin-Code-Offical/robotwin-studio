@@ -229,6 +229,11 @@ public class LangTests
     [InlineData("10,1 g · 3,39 m · 38 dk · 143 katman", "10,1 g · 3,39 m · 38 min · 143 layers")]
     [InlineData("en ince 0,6 mm: 0,9 mm'den ince 1800 mm²", "thinnest 0,6 mm: 1800 mm² thinner than 0,9 mm")]
     [InlineData("sığmaz (300 × 20 × 20 mm)", "does not fit (300 × 20 × 20 mm)")]
+    [InlineData("Eş eksenli: 2 serbestlik kaldı", "Concentric: 2 degrees of freedom left")]
+    [InlineData("Montaj ilişkileri (2)", "Assembly mates (2)")]
+    [InlineData("İlişkilerden eklem kur (menteşe)", "Build the joint from the mates (hinge)")]
+    [InlineData("Mesafe: şimdiki 12,5 mm", "Distance: now 12,5 mm")]
+    [InlineData("Yüz yüze eklenmedi: öteki ilişkilerle çelişiyor", "Face to face was not added: contradicts the other mates")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

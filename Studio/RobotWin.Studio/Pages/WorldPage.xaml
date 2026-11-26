@@ -49,6 +49,9 @@
                         <ToggleButton x:Name="ToolJoint" Style="{StaticResource Toggle.Tool}" ToolTip="Bağla: seçili nesneyi başka bir nesneye / servo koluna / motor miline tak (B)" Click="OnTool" Tag="Joint">
                             <t:Icon Data="{StaticResource I.Joint}" Size="16"/>
                         </ToggleButton>
+                        <ToggleButton x:Name="ToolMate" Style="{StaticResource Toggle.Tool}" ToolTip="Hizala: iki parçayı yüzlerinden ya da eksenlerinden ilişkilendir (yüz yüze, aynı hizada, eş eksenli…) (H)" Click="OnTool" Tag="Mate" Margin="2,0,0,0">
+                            <t:Icon Data="{StaticResource I.Assembly}" Size="16"/>
+                        </ToggleButton>
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="15° döndür (R, Shift+R ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Çoğalt (Ctrl+D)" Click="OnDuplicate"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
