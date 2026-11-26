@@ -602,7 +602,7 @@ namespace RobotWin.Studio.World
             }
         }
 
-        private static bool EditorHidden(WorldObject o) => WorldBuilding.IsHidden(o);
+        private bool EditorHidden(WorldObject o) => WorldBuilding.IsHidden(o) || (World != null && !WorldBuilding.ActiveInHierarchy(World, o));   // [active] off: out of the view
 
         private static bool EditorLocked(WorldObject o) => WorldBuilding.IsLocked(o);
     }

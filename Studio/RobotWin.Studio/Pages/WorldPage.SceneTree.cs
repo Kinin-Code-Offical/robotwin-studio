@@ -130,6 +130,7 @@ namespace RobotWin.Studio.Pages
         {
             bool selected = id != null && Scene.Selected == id;
             var row = new Grid { Cursor = Cursors.Hand, Background = selected ? (Brush)FindResource("B.AccentSoft") : Brushes.Transparent, Margin = new Thickness(0, 0, 4, 1) };
+            if (id != null && World is { } tw && tw.Find(id) is { } to && !WorldBuilding.ActiveInHierarchy(tw, to)) row.Opacity = 0.5;   // [active] Unity greys inactive rows
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8 + depth * 16) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });

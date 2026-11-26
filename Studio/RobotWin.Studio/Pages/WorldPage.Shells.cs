@@ -57,7 +57,13 @@ namespace RobotWin.Studio.Pages
             var lid = world.Objects.FirstOrDefault(x => string.Equals(WorldPhysics.LidOf(x), shell.Id, StringComparison.OrdinalIgnoreCase));
 
             FitCheck(world, shell);   // first: whether it all fits is what matters most
-            Inspector.Children.Add(Caption(isShell ? "Kabuk (içi boş gövde)" : "Kapak"));
+            Inspector.Children.Add(isShell && lid == null
+                ? FeatureHeader("Kabuk (içi boş gövde)", "Kabuk kaldırıldı", () =>
+                {
+                    o.Parameters.Remove("shell");
+                    o.Parameters.Remove("wall");
+                })
+                : Caption(isShell ? "Kabuk (içi boş gövde)" : "Kapak"));
             if (isShell)
             {
                 var wall = new TextBox { Text = (WorldPhysics.WallOf(o) * 1000).ToString("0.0#", CultureInfo.CurrentCulture) };

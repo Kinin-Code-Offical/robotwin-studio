@@ -107,6 +107,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
         public static WorldPhysics Build(WorldDocument world, Func<WorldObject, WorldBodyGeometry> geometry, WorldCircuit? circuit, LiquidQuality? liquid = null)
         {
+            world = world.WithoutInactive();   // [active] a switched-off object is not in the run
             var p = new WorldPhysics(circuit);
             var env = world.Environment;
             p.Scene.Gravity = new Vec3(0, 0, -env.Gravity);

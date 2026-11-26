@@ -18,6 +18,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string LockedKey = "locked";
         public const string GroupKey = "group";
 
+        /// <summary>[active] Unity's inactive GameObject: off in the run and out of the view, kept in the file.</summary>
+        public const string InactiveKey = "inactive";
+
         /// <summary>Ground height at (x, y): the terrain, or the floor z = 0.</summary>
         public static double GroundZ(WorldDocument w, double x, double y) => w.Terrain?.Height(x, y) ?? 0.0;
 
@@ -106,6 +109,28 @@ namespace RobotTwin.CoreSim.Sandbox
         public static bool IsHidden(WorldObject o) => Flag(o, HiddenKey);
         public static void SetHidden(WorldObject o, bool hidden) => SetFlag(o, HiddenKey, hidden);
         public static bool IsLocked(WorldObject o) => Flag(o, LockedKey);
+
+        /// <summary>[active] Unity's activeSelf: the object's own switch.</summary>
+        public static bool IsActive(WorldObject o) => !Flag(o, InactiveKey);
+
+        public static void SetActive(WorldObject o, bool active) => SetFlag(o, InactiveKey, !active);
+
+        /// <summary>
+        /// [active] Unity's activeInHierarchy: the object and everything it is mounted on (a joint's ObjectA rides on its
+        /// ObjectB) are active; a part on a switched-off base is off with it.
+        /// </summary>
+        public static bool ActiveInHierarchy(WorldDocument world, WorldObject o)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (WorldObject? cur = o; cur != null && seen.Add(cur.Id);)
+            {
+                if (!IsActive(cur)) return false;
+                string? parent = world.Joints.FirstOrDefault(j => string.Equals(j.ObjectA, cur.Id, StringComparison.OrdinalIgnoreCase))?.ObjectB;
+                cur = world.Find(parent);
+            }
+
+            return true;
+        }
         public static void SetLocked(WorldObject o, bool locked) => SetFlag(o, LockedKey, locked);
 
         public static string? GroupOf(WorldObject o) => o.Parameters.TryGetValue(GroupKey, out var g) && !string.IsNullOrWhiteSpace(g) ? g : null;

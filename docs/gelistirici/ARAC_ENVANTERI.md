@@ -248,7 +248,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | yok | yok | 1 |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | yok | yok | 1 |
 | Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ gövde şekilleri ve palet sekmeleri | kısmi | 2 |
-| Etkin / devre dışı (Alt+Shift+A) | yok | yok | 1 |
+| Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
 | Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı, Odakla | kısmi | 3 |
 | Sürükleyerek üst nesne değiştirme | Bağla aracı | kısmi | 2 |
 | Sahnede referansları bul | kablolar, bağlantılar, ilişkiler | var | |
@@ -259,7 +259,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
 | Bileşen yığını: her bileşen kendi başlığında (aç / kapa, katla, yardım, ⋮ menüsü) | bileşen kartları: katla, ⋮ menüsü (aç / kapa ve yardım sonra) | kısmi | 2 |
-| Bileşen ekle: aranabilir, kategorili liste | Bileşen ekle: arama, kategoriler, Enter (bileşenler: kabuk, kap, paraşüt, hava, arıza, eşleme, yay, rulman, davranış) | var | |
+| Bileşen ekle: aranabilir, kategorili liste | Bileşen ekle: arama, kategoriler, Enter, alt kısımda açıklama; eklenen bileşen kendi kartında açık gelir, görünüme kayar, vurgulanır; Kaldır ve ⋮ → Bileşeni kaldır (bileşenler: kabuk, kap, paraşüt, hava, arıza, eşleme, yay, rulman, davranış) | var | |
 | Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | yok | yok | 1 |
 | Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
 | Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
@@ -284,4 +284,4 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
 
-Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'ler sırada: ızgara ve yakalama penceresi; sahne ağacının sağ tık menüsü, çoklu seçim, boş nesne ve grup, etkin / devre dışı; bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin bütün alanları.
+Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; sırada çoklu seçim, boş nesne ve grup, bileşen kartının aç / kapa ve yardımı.

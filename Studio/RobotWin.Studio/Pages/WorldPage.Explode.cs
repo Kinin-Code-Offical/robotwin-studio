@@ -420,6 +420,8 @@ namespace RobotWin.Studio.Pages
                 PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
             }
 
+            if (args.Contains("--switch-off")) ToggleActive(World?.Find(Scene.Selected));   // [active] the selection switched off
+
             if (args.Contains("--grid-snap"))
             {
                 // [grid] the Grid and Snap panel, open, as the picture
@@ -440,6 +442,27 @@ namespace RobotWin.Studio.Pages
                 while (card != null && System.Windows.Media.VisualTreeHelper.GetParent(card) != Inspector)
                     card = System.Windows.Media.VisualTreeHelper.GetParent(card);
                 if (card is FrameworkElement fe) fe.BringIntoView();
+            }
+
+            int take = Array.IndexOf(args, "--add-component-take");
+            if (take >= 0 && take + 1 < args.Length)
+            {
+                // [components] a component taken from the Add Component list: its card opens and comes into view
+                BuildInspector();
+                Inspector.UpdateLayout();
+                if (FindButton(Inspector, "Bileşen ekle") is { } adder)
+                {
+                    adder.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                    if (_lastPicker?.Child is UIElement list)
+                    {
+                        foreach (var b in Descendants(list).OfType<System.Windows.Controls.Button>())
+                            if (b.Content is System.Windows.Controls.DockPanel d && d.Children.OfType<System.Windows.Controls.TextBlock>().Any(t => t.Text == args[take + 1]))
+                            {
+                                b.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                                break;
+                            }
+                    }
+                }
             }
 
             if (args.Contains("--add-component"))

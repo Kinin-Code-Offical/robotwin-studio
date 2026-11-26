@@ -44,6 +44,7 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(MenuEntry("Bunun üstüne takılı olarak yapıştır", "Ctrl+Shift+V", () => { Scene.Select(o.Id); PasteClipboard(true); }, _clipboard != null));
                 menu.Items.Add(new Separator());
                 menu.Items.Add(MenuEntry("Yeniden adlandır", "F2", () => StartRename(o.Id)));
+                menu.Items.Add(MenuEntry(WorldBuilding.IsActive(o) ? "Devre dışı bırak" : "Etkinleştir", "Alt+Shift+A", () => ToggleActive(o)));   // [active]
                 menu.Items.Add(MenuEntry("Çoğalt", "Ctrl+D", () => { Scene.Select(o.Id); Duplicate(); }));
                 menu.Items.Add(MenuEntry("Sil (takılı olanlarla)", "Del", () => { Scene.Select(o.Id); Delete(); }));
                 menu.Items.Add(MenuEntry("Yalnız bunu sil (takılı olanlar kalır)", null, () => DeleteOnly(o)));

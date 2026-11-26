@@ -96,6 +96,7 @@ namespace RobotWin.Studio.World
             _serial.Clear();
             SerialTotal = 0;
             _failedObjects.Clear();
+            world = world.WithoutInactive();   // [active] switched-off objects (and what rides on them) are not in the run
             World = world;
             try
             {

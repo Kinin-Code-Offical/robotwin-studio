@@ -37,7 +37,7 @@ namespace RobotWin.Studio.Pages
                 bool driving = c.JointA == j.Id;
                 var other = driving ? b : a;
                 var coupling = c;
-                Inspector.Children.Add(FeatureHeader(c.Title(a.Kind, b.Kind) + " → " + (world.Find(other.ObjectA)?.Name ?? other.RosName), "Dişli bağı kaldırıldı", () =>
+                Inspector.Children.Add(SubFeatureHeader(c.Title(a.Kind, b.Kind) + " → " + (world.Find(other.ObjectA)?.Name ?? other.RosName), "Dişli bağı kaldırıldı", () =>
                 {
                     world.Couplings?.Remove(coupling);
                     if (world.Couplings?.Count == 0) world.Couplings = null;
@@ -189,7 +189,7 @@ namespace RobotWin.Studio.Pages
             bool hinge = j.Kind == WorldJointKind.Hinge;
             double perDegree = 1000 * Math.PI / 180;   // N·m/rad → N·mm/°
             var joint = j;
-            Inspector.Children.Add(FeatureHeader(hinge ? "Burulma yayı" : "Helezon yay", "Yay kaldırıldı", () =>
+            Inspector.Children.Add(SubFeatureHeader(hinge ? "Burulma yayı" : "Helezon yay", "Yay kaldırıldı", () =>
             {
                 joint.SpringStiffness = 0;
                 joint.SpringRest = 0;
@@ -209,7 +209,7 @@ namespace RobotWin.Studio.Pages
         {
             if (Bearings.Find(j.Bearing) is not { } spec) return;
             var joint = j;
-            Inspector.Children.Add(FeatureHeader("Yatak", "Yatak kaldırıldı", () =>
+            Inspector.Children.Add(SubFeatureHeader("Yatak", "Yatak kaldırıldı", () =>
             {
                 joint.Bearing = null;
                 joint.BearingBore = 0;

@@ -467,6 +467,27 @@ namespace RobotTwin.CoreSim.Sandbox
         [JsonIgnore]
         public TerrainMap? Terrain { get; set; } // [terrain]
 
+        /// <summary>
+        /// [active] The world as a run sees it: switched-off objects (Unity's inactive GameObjects) and what is mounted
+        /// on them are not there, nor their cables, joints, mates and couplings. The objects are the same instances, so
+        /// what the run writes on them shows in the editor. The world itself when nothing is switched off.
+        /// </summary>
+        public WorldDocument WithoutInactive()
+        {
+            var off = Objects.Where(o => !WorldBuilding.IsActive(o)).Select(o => o.Id).ToList();
+            if (off.Count == 0) return this;
+            var run = (WorldDocument)MemberwiseClone();
+            run.Objects = new List<WorldObject>(Objects);
+            run.Cables = new List<WorldCable>(Cables);
+            run.Joints = new List<WorldJoint>(Joints);
+            run.Couplings = Couplings == null ? null : new List<WorldCoupling>(Couplings);
+            run.Mates = Mates == null ? null : new List<WorldMate>(Mates);
+            run.Designs = new List<WorldDesign>(Designs);
+            run.Explode = null;   // a run is never exploded (and the steps' lists stay the editor's)
+            WorldFragment.RemoveFrom(run, off);
+            return run;
+        }
+
         public WorldObject? Find(string? id) =>
             id == null ? null : Objects.FirstOrDefault(o => string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase));
 

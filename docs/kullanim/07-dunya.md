@@ -8,7 +8,7 @@
 
 Sağdaki **Denetçi** seçili nesnenin yalnızca gerçekten kullandığı bölümleri gösterir: önce ad, konum ve yön, fizik (sabitlik, malzeme, kütle), boyut ve görünüş; sonra nesnenin türüne özgü bölümler (kart, bileşen, kanat bağlantısı, kabuk, anahtar, kumanda). Bir gövdeye eklenebilen ek fizikler (**Kabuk**, **Basınçlı kap**, **Kurtarma paraşütü**, **Hava (özel ayar)**, **Davranış**) yalnızca açıksa görünür ve başlıklarında **Kaldır** vardır; diğerleri **Özellikler → Özellik ekle ▾** menüsündedir.
 
-Denetçi Unity'deki gibi bileşen kartlarından oluşur: **Konum ve yön**, **Fizik**, nesnenin türüne göre kinematik, araç, kabuk gibi bölümler. Kartın başlığına tıklamak onu katlar (uygulama açık kaldıkça hatırlanır). Başlıktaki ⋮ menüsü: **Konum ve yön** kartında konumu / dönüşü kopyala ve başka bir parçaya yapıştır, dönüşü sıfırla, zemine indir; **Fizik** kartında sıfırla; her kartta hepsini katla / aç. **Bileşen ekle** aranabilir bir liste açar: yazdıkça süzülür, kategoriler kendi listesini açar, Enter ilkini ekler.
+Denetçi Unity'deki gibi bileşen kartlarından oluşur: **Konum ve yön**, **Fizik**, nesnenin türüne göre kinematik, araç, kabuk gibi bölümler. Kartın başlığına tıklamak onu katlar (uygulama açık kaldıkça hatırlanır). Başlıktaki ⋮ menüsü: **Konum ve yön** kartında konumu / dönüşü kopyala ve başka bir parçaya yapıştır, dönüşü sıfırla, zemine indir; **Fizik** kartında sıfırla; her kartta hepsini katla / aç. **Bileşen ekle** aranabilir bir liste açar: yazdıkça süzülür, kategoriler kendi listesini açar, Enter ilkini ekler; üzerine gelinen bileşenin ne eklediği listenin altında yazar. Eklenen bileşen kendi kartında açık gelir, görünüm ona kayar ve kart bir an vurgulanır: ayarları (kabukta duvar ve kablo delikleri, paraşütte kanopi çapı ve açılma zamanı, kapta gaz ve lüle…) hemen oradadır. Bir eklemin yayı, yatağı ya da dişli bağı **Mekanik bağlantılar** kartında o eklemin altında açılır. Bileşen, kartın başlığındaki **Kaldır** ya da ⋮ → **Bileşeni kaldır** ile çıkar.
 
 ## Bir dünya açmak
 
@@ -715,6 +715,10 @@ ESP32 seçiliyken **Örnek kodu yükle: kumandalı araba (Bluepad32)** hazır bi
 ### Radyo ortamı
 
 Wi-Fi, BLE ve Bluetooth sinyalleri uzaklıkla, engellerle ve gövdelerle zayıflar. Alttaki **RF** sekmesinde cihazlar, sinyal gücü (RSSI), kanal ve saniyedeki paket sayısı görünür. **Sönümleme**, **Dalgalar** ve **Bağlantı çizgileri** seçenekleri radyo görselleştirmesini açar / kapatır. IR kumanda yalnızca görüş hattında çalışır; tuşları denetçideki **IR kumanda tuşları (NEC)** bölümündedir. Matematiği: [Radyo](../fizik/06-radyo.md).
+
+## Etkin ve devre dışı nesneler
+
+Denetçide nesnenin adının solundaki kutu Unity'deki **etkin** anahtarıdır (Alt+Shift+A, sahne ağacının sağ tık menüsünde **Devre dışı bırak / Etkinleştir**). Kapalı bir nesne ve üstüne takılı her şey sahneden çıkar, kabloları çizilmez ve çalıştırmada hiç yokmuş gibi davranılır: fizik gövdesi kurulmaz, devreye girmez, sensörleri okumaz. Dosyada kalır; sahne ağacında soluk görünür ve oradan seçilip yeniden açılabilir. Çalışırken değiştirilemez; durdurup değiştirin. **Gizle** ise yalnız görüntüden kaldırır, nesne simülasyonda kalır.
 
 ## Izgara ve yakalama
 

@@ -8474,7 +8474,15 @@
   "Izgara ve yakalama: yakalamayı aç / kapa, taşıma · döndürme · boyut adımları, ızgaranın görünüşü": "Grid and snap: snapping on / off, the move · rotate · size steps, how the grid looks",
   "Döndürme adımı kadar çevir (15°; Izgara ve yakalama'dan değişir) (Ctrl+E, Ctrl+Shift+E ters)": "Turn by the rotate step (15°; set in Grid and snap) (Ctrl+E, Ctrl+Shift+E back)",
   "Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · döndürme adımına oturur, Alt: serbest": "Rotate handle (E): X / Y / Z rings, the outer ring about the view axis, the inside free · snaps to the rotate step, Alt: free",
-  "Döndürme adımı kadar döndür (15°; Shift ile geri)": "Turn by the rotate step (15°; Shift turns back)"
+  "Döndürme adımı kadar döndür (15°; Shift ile geri)": "Turn by the rotate step (15°; Shift turns back)",
+  "Etkin (Alt+Shift+A): kapalıyken nesne ve üstüne takılanlar sahnede görünmez ve çalıştırmada yok sayılır (fizik, devre, sensörler); dosyada kalır": "Active (Alt+Shift+A): when off, the object and what is mounted on it leave the view and the run (physics, circuit, sensors); the file keeps them",
+  "Devre dışı bırak": "Deactivate",
+  "Etkinleştir": "Activate",
+  "Seçiliyi etkinleştir / devre dışı bırak": "Activate / deactivate the selection",
+  "Bu bileşeni nesneden kaldırır (Ctrl+Z ile geri alınır)": "Removes this component from the object (Ctrl+Z undoes it)",
+  "Bileşeni kaldır": "Remove component",
+  "Bir bileşenin üzerine gelin: ne eklediği burada yazar. Eklenince kendi kartı açılır.": "Point at a component: what it adds is described here. Once added, its own card opens.",
+  "Kabuk kaldırıldı": "Shell removed"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11900,6 +11908,8 @@
   "{…}: fizik sıfırlandı": "{0}: physics reset",
   "Bu dünya ekseni boyunca hareket etmez ({…})": "Does not move along this world axis ({0})",
   "Bu dünya ekseni çevresinde dönmez ({…})": "Does not turn about this world axis ({0})",
-  "{…}: ızgaraya oturtuldu": "{0}: aligned to the grid"
+  "{…}: ızgaraya oturtuldu": "{0}: aligned to the grid",
+  "{…} etkinleştirildi": "{0} activated",
+  "{…} devre dışı bırakıldı": "{0} deactivated"
  }
 }

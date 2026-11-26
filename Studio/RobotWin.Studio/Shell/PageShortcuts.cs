@@ -59,6 +59,7 @@ namespace RobotWin.Studio.Shell
             W("kablo", "Kablo aracı", "K");
             W("bagla", "Bağla aracı", "B");
             W("dondur", "Döndürme adımı kadar döndür (15°; Shift ile geri)", "Ctrl+E");
+            W("etkin", "Seçiliyi etkinleştir / devre dışı bırak", "Alt+Shift+A");
             W("tutamac-tasi", "Taşı tutamacı", "W");   // [gizmo] Unity's keys
             W("tutamac-dondur", "Döndür tutamacı", "E");
             W("tutamac-olcekle", "Ölçekle tutamacı", "R");

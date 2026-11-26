@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
 
@@ -40,7 +41,7 @@ namespace RobotWin.Studio.Pages
             {
                 if (IsCaption(k))
                 {
-                    var (card, b) = Card(((TextBlock)k).Text);
+                    var (card, b) = Card(((TextBlock)k).Text, ((TextBlock)k).Tag as ComponentRemoval);
                     Inspector.Children.Add(card);
                     body = b;
                     continue;
@@ -50,7 +51,7 @@ namespace RobotWin.Studio.Pages
             }
         }
 
-        private (Border Card, StackPanel Body) Card(string title)
+        private (Border Card, StackPanel Body) Card(string title, ComponentRemoval? removal = null)
         {
             bool folded = FoldedCards.Contains(title);
             var body = new StackPanel { Margin = new Thickness(0, 4, 0, 8), Visibility = folded ? Visibility.Collapsed : Visibility.Visible };
@@ -62,11 +63,23 @@ namespace RobotWin.Studio.Pages
             var head = new DockPanel { Background = Brushes.Transparent, Cursor = Cursors.Hand, Margin = new Thickness(0, 6, 0, 0), MinHeight = 26 };
             DockPanel.SetDock(more, Dock.Right);
             head.Children.Add(more);
+            Button? drop = null;
+            if (removal != null)
+            {
+                // Unity's Remove Component, one click away on the card itself
+                drop = new Button { Content = Shell.Lang.T("Kaldır"), Padding = new Thickness(8, 0, 8, 0), MinHeight = 0, Height = 22, FontSize = 12, Cursor = Cursors.Arrow, VerticalAlignment = VerticalAlignment.Center,
+                    ToolTip = Shell.Lang.T("Bu bileşeni nesneden kaldırır (Ctrl+Z ile geri alınır)") };
+                drop.SetResourceReference(StyleProperty, "Btn.Ghost");
+                drop.Click += (_, _) => RemoveComponent(removal);
+                DockPanel.SetDock(drop, Dock.Right);
+                head.Children.Add(drop);
+            }
+
             head.Children.Add(chevron);
             head.Children.Add(name);
             head.MouseLeftButtonUp += (_, e) =>
             {
-                if (e.OriginalSource is DependencyObject d && IsInside(d, more)) return;
+                if (e.OriginalSource is DependencyObject d && (IsInside(d, more) || (drop != null && IsInside(d, drop)))) return;
                 bool fold = body.Visibility == Visibility.Visible;
                 body.Visibility = fold ? Visibility.Collapsed : Visibility.Visible;
                 chevron.Data = Geometry.Parse(fold ? "M9,6 L15,12 L9,18" : "M6,9 L12,15 L18,9");
@@ -75,14 +88,14 @@ namespace RobotWin.Studio.Pages
             };
             more.Click += (_, _) =>
             {
-                var menu = CardMenu(title);
+                var menu = CardMenu(title, removal);
                 menu.PlacementTarget = more;
                 menu.IsOpen = true;
             };
             var stack = new StackPanel();
             stack.Children.Add(head);
             stack.Children.Add(body);
-            var card = new Border { BorderThickness = new Thickness(0, 1, 0, 0), Child = stack, Margin = new Thickness(-4, 4, -4, 0), Padding = new Thickness(4, 0, 4, 0) };
+            var card = new Border { BorderThickness = new Thickness(0, 1, 0, 0), Child = stack, Margin = new Thickness(-4, 4, -4, 0), Padding = new Thickness(4, 0, 4, 0), Tag = title };   // the source title: the shown one may be translated
             card.SetResourceReference(Border.BorderBrushProperty, "B.Border");
             return (card, body);
         }
@@ -95,9 +108,15 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>A card's ⋮: what this component can do (the transform's copy and paste, a reset), then folding.</summary>
-        private ContextMenu CardMenu(string title)
+        private ContextMenu CardMenu(string title, ComponentRemoval? removal = null)
         {
             var menu = new ContextMenu();
+            if (removal != null)
+            {
+                menu.Items.Add(MenuEntry("Bileşeni kaldır", null, () => RemoveComponent(removal)));
+                menu.Items.Add(new Separator());
+            }
+
             var o = _inspected;
             var world = World;
             if (o != null && world != null && title == "Konum ve yön")
@@ -136,14 +155,90 @@ namespace RobotWin.Studio.Pages
 
         private void FoldAll(bool fold)
         {
-            foreach (var t in Inspector.Children.OfType<Border>().Select(b => b.Child).OfType<StackPanel>()
-                         .Select(s => s.Children.OfType<DockPanel>().FirstOrDefault()?.Children.OfType<TextBlock>().FirstOrDefault()?.Text).Where(t => t != null))
+            foreach (var t in Inspector.Children.OfType<Border>().Select(b => b.Tag as string).Where(t => t != null))
             {
                 if (fold) FoldedCards.Add(t!);
                 else FoldedCards.Remove(t!);
             }
 
             BuildInspector();
+        }
+
+        // ================================================================ the added component, shown
+
+        /// <summary>Every card's title and every joint feature's ("sub:" title) in the inspector now.</summary>
+        private HashSet<string> FeatureTitles()
+        {
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var card in Inspector.Children.OfType<Border>())
+            {
+                if (card.Tag is string t) set.Add(t);
+                foreach (var sub in Descendants(card).OfType<DockPanel>()) if (sub.Tag is SubFeature f) set.Add("sub:" + f.Title);
+            }
+
+            return set;
+        }
+
+        /// <summary>The first component that was not there before: a new card, or a new feature on a joint inside its card.</summary>
+        private (FrameworkElement? Element, string? Card) NewComponent(HashSet<string> before)
+        {
+            foreach (var card in Inspector.Children.OfType<Border>())
+            {
+                if (card.Tag is not string t) continue;
+                if (!before.Contains(t)) return (card, t);
+                foreach (var sub in Descendants(card).OfType<DockPanel>())
+                    if (sub.Tag is SubFeature f && !before.Contains("sub:" + f.Title))
+                        return (sub, t);
+            }
+
+            return (null, null);
+        }
+
+        private static IEnumerable<UIElement> Descendants(UIElement e)
+        {
+            IEnumerable<UIElement> kids = e switch
+            {
+                Panel p => p.Children.Cast<UIElement>(),
+                Decorator d when d.Child != null => new[] { d.Child },
+                ContentControl c when c.Content is UIElement u => new[] { u },
+                _ => Array.Empty<UIElement>()
+            };
+            foreach (var k in kids)
+            {
+                yield return k;
+                foreach (var g in Descendants(k)) yield return g;
+            }
+        }
+
+        /// <summary>Opens the new component's card (unfolded), scrolls it into view and marks it for a moment.</summary>
+        private void RevealNewComponent(HashSet<string> before)
+        {
+            var (element, card) = NewComponent(before);
+            if (element == null) return;
+            if (card != null && FoldedCards.Remove(card))
+            {
+                BuildInspector();
+                (element, _) = NewComponent(before);
+                if (element == null) return;
+            }
+
+            var target = element;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                target.BringIntoView(new Rect(0, 0, target.ActualWidth, Math.Min(Math.Max(target.ActualHeight, 40), 360)));
+                Brush? was = target is Border b ? b.Background : (target as Panel)?.Background;
+                var mark = (Brush)FindResource("B.AccentSoft");
+                if (target is Border bb) bb.Background = mark;
+                else if (target is Panel pp) pp.Background = mark;
+                var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1400) };
+                timer.Tick += (_, _) =>
+                {
+                    timer.Stop();
+                    if (target is Border b2) b2.Background = was;
+                    else if (target is Panel p2) p2.Background = was;
+                };
+                timer.Start();
+            }), DispatcherPriority.Loaded);
         }
 
         /// <summary>Turns a part (with what is mounted on it) to an orientation, about its pivot.</summary>
@@ -163,11 +258,13 @@ namespace RobotWin.Studio.Pages
         private void ShowComponentPicker(FrameworkElement anchor, ContextMenu features)
         {
             var leaves = new List<(string Category, MenuItem Item)>();
+            var categoryTips = new Dictionary<string, string>(StringComparer.Ordinal);
             void Collect(ItemCollection items, string category)
             {
                 foreach (var it in items.OfType<MenuItem>())
                 {
                     string head = it.Header?.ToString() ?? string.Empty;
+                    if (it.Items.Count > 0 && it.ToolTip is string catTip) categoryTips[head] = catTip;
                     if (it.Items.Count > 0) Collect(it.Items, head);
                     else if (it.IsEnabled) leaves.Add((category, it));
                 }
@@ -179,17 +276,26 @@ namespace RobotWin.Studio.Pages
             var title = new TextBlock { FontWeight = FontWeights.SemiBold, Margin = new Thickness(8, 2, 8, 4), HorizontalAlignment = HorizontalAlignment.Center };
             var list = new StackPanel();
             var scroll = new ScrollViewer { Content = list, MaxHeight = 320, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-            var root = new StackPanel { Width = 300 };
+            // Unity 6's Add Component describes the item under the pointer: what it adds and does
+            var info = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(10, 6, 10, 0), MinHeight = 34 };
+            info.SetResourceReference(StyleProperty, "Text.Caption");
+            var rule = new Border { Height = 1, Margin = new Thickness(0, 6, 0, 0) };
+            rule.SetResourceReference(Border.BackgroundProperty, "B.Border");
+            var root = new StackPanel { Width = 320 };
             root.Children.Add(search);
             root.Children.Add(title);
             root.Children.Add(scroll);
+            root.Children.Add(rule);
+            root.Children.Add(info);
+            string idle = Shell.Lang.T("Bir bileşenin üzerine gelin: ne eklediği burada yazar. Eklenince kendi kartı açılır.");
+            info.Text = idle;
             var frame = new Border { Child = root, BorderThickness = new Thickness(1), Padding = new Thickness(0, 0, 0, 6) };
             frame.SetResourceReference(Border.BackgroundProperty, "B.Overlay");
             frame.SetResourceReference(Border.BorderBrushProperty, "B.BorderStrong");
             popup.Child = frame;
             string? category = null;
 
-            Button Row(string text, bool chevron, Action click)
+            Button Row(string text, bool chevron, Action click, string? tip = null)
             {
                 var row = new DockPanel();
                 if (chevron)
@@ -203,13 +309,16 @@ namespace RobotWin.Studio.Pages
                 var b = new Button { Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(4, 0, 4, 0) };
                 b.SetResourceReference(StyleProperty, "Btn.Ghost");
                 b.Click += (_, _) => click();
+                b.MouseEnter += (_, _) => info.Text = tip != null ? Shell.Lang.T(tip) : idle;
                 return b;
             }
 
             void Take(MenuItem it)
             {
                 popup.IsOpen = false;
+                var before = FeatureTitles();
                 it.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                RevealNewComponent(before);   // Unity: the added component's card, open, in view
             }
 
             void Fill()
@@ -221,7 +330,7 @@ namespace RobotWin.Studio.Pages
                     title.Text = Shell.Lang.T("Arama");
                     foreach (var (cat, it) in leaves.Where(l => (l.Item.Header?.ToString() ?? string.Empty).IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0
                                                                  || l.Category.IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0))
-                        list.Children.Add(Row((cat.Length > 0 ? cat + " › " : string.Empty) + it.Header, false, () => Take(it)));
+                        list.Children.Add(Row((cat.Length > 0 ? cat + " › " : string.Empty) + it.Header, false, () => Take(it), it.ToolTip as string));
                     if (list.Children.Count == 0) list.Children.Add(new TextBlock { Text = Shell.Lang.T("Eşleşen bileşen yok"), Margin = new Thickness(10, 4, 10, 4) });
                     return;
                 }
@@ -234,7 +343,7 @@ namespace RobotWin.Studio.Pages
                         category = null;
                         Fill();
                     }));
-                    foreach (var (_, it) in leaves.Where(l => l.Category == category)) list.Children.Add(Row(it.Header?.ToString() ?? string.Empty, false, () => Take(it)));
+                    foreach (var (_, it) in leaves.Where(l => l.Category == category)) list.Children.Add(Row(it.Header?.ToString() ?? string.Empty, false, () => Take(it), it.ToolTip as string));
                     return;
                 }
 
@@ -246,10 +355,10 @@ namespace RobotWin.Studio.Pages
                     {
                         category = c;
                         Fill();
-                    }));
+                    }, categoryTips.TryGetValue(c, out var ct) ? ct : null));
                 }
 
-                foreach (var (_, it) in leaves.Where(l => l.Category.Length == 0)) list.Children.Add(Row(it.Header?.ToString() ?? string.Empty, false, () => Take(it)));
+                foreach (var (_, it) in leaves.Where(l => l.Category.Length == 0)) list.Children.Add(Row(it.Header?.ToString() ?? string.Empty, false, () => Take(it), it.ToolTip as string));
             }
 
             search.TextChanged += (_, _) => Fill();

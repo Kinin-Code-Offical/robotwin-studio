@@ -763,12 +763,12 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var name = new TextBox { Text = o.Name, FontSize = 15, Margin = new Thickness(0, 0, 0, 2) };
+            var name = new TextBox { Text = o.Name, FontSize = 15 };
             name.LostFocus += (_, _) =>
             {
                 if (name.Text.Trim().Length > 0 && name.Text != o.Name) Edit("Ad değişti", () => o.Name = name.Text.Trim());
             };
-            Inspector.Children.Add(name);
+            Inspector.Children.Add(ActiveHeader(o, name));   // [active] Unity's checkbox before the name (Pages/WorldPage.Active.cs)
             Inspector.Children.Add(Note(KindText(o)));
             if (WorldPhysics.IsLiquid(o))
             {
@@ -1530,6 +1530,9 @@ namespace RobotWin.Studio.Pages
             {
                 case Key.Delete:
                     Delete();
+                    break;
+                case Key.A when mods == (ModifierKeys.Alt | ModifierKeys.Shift):   // [active] Unity's Toggle Active State
+                    ToggleActive(World?.Find(Scene.Selected));
                     break;
                 case Key.E when ctrl:   // the 15° turn (R is Unity's scale handle now)
                     Rotate(mods.HasFlag(ModifierKeys.Shift) ? -RotateStepNow : RotateStepNow);

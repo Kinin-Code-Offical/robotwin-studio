@@ -161,6 +161,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | F2 | Yeniden adlandır |
 | Ctrl+Alt+F | Görünüme taşı |
 | Ctrl+E / Ctrl+Shift+E | Döndürme adımı kadar döndür (15°, Izgara ve yakalama'dan değişir) / ters yönde |
+| Alt+Shift+A | Seçiliyi etkinleştir / devre dışı bırak |
 | Ctrl+D | Çoğalt |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |

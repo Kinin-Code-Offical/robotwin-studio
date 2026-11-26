@@ -727,6 +727,7 @@ namespace RobotWin.Studio.World
                 var a = World.Find(c.A.ObjectId);
                 var b = World.Find(c.B.ObjectId);
                 if (a == null || b == null) continue;
+                if (!WorldBuilding.ActiveInHierarchy(World, a) || !WorldBuilding.ActiveInHierarchy(World, b)) continue;   // [active] not in the run, not drawn
                 var pa = WorldAnchor(a, c.A.Pin);
                 var pb = WorldAnchor(b, c.B.Pin);
                 double r = Math.Max(0.0006, Math.Sqrt(WorldCable.CrossSection(c.Awg) / Math.PI) + 0.0003);

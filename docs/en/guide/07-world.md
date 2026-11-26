@@ -8,7 +8,7 @@ The **World** page (Ctrl+6) is where everything comes together. Put the boards y
 
 The **Inspector** on the right shows only the sections the selected object really uses: first its name, position and orientation, physics (fixed, material, mass), size and look, then the sections of its kind (board, component, wing linkage, shell, switch, controller). The extra physics a body can be given (**Shell**, **Pressure vessel**, **Recovery parachute**, **Air (custom setting)**, **Behaviour**) appear only when they are on, with **Remove** in their header; the others are under **Properties → Add feature ▾**.
 
-The inspector is made of component cards as in Unity: **Position and orientation**, **Physics**, and sections by the object's kind (kinematics, vehicle, shell …). A click on a card's header folds it (remembered while the app runs). The ⋮ menu in the header: on **Position and orientation**, copy the position / rotation and paste it onto another part, reset the rotation, drop to the floor; on **Physics**, reset; on every card, fold / unfold all. **Add component** opens a searchable list: it filters as you type, categories open their own list, Enter adds the first.
+The inspector is made of component cards as in Unity: **Position and orientation**, **Physics**, and sections by the object's kind (kinematics, vehicle, shell …). A click on a card's header folds it (remembered while the app runs). The ⋮ menu in the header: on **Position and orientation**, copy the position / rotation and paste it onto another part, reset the rotation, drop to the floor; on **Physics**, reset; on every card, fold / unfold all. **Add component** opens a searchable list: it filters as you type, categories open their own list, Enter adds the first; what the component under the pointer adds is described under the list. An added component arrives in its own card, open, the view scrolls to it and the card is marked for a moment: its settings (a shell's wall and cable holes, a parachute's canopy and opening time, a vessel's gas and nozzle …) are right there. A joint's spring, bearing or gear link opens under that joint in the **Mechanical joints** card. A component comes off with **Remove** in its card's header or ⋮ → **Remove component**.
 
 ## Opening a world
 
@@ -716,6 +716,10 @@ Point the **Computer (USB)** object at a board and press **Plug in USB**. While 
 ### Radio environment
 
 Wi-Fi, BLE and Bluetooth signals weaken with distance, obstacles and bodies. The **RF** tab below lists devices, signal strength (RSSI), channel and packets per second. **Fading (log-normal, σ = 4 dB)**, **Waves** and **Link lines** switch the radio visualisation on and off. IR remotes work only in line of sight; their keys are in the inspector's **IR remote buttons (NEC)** section. The maths: [Radio](../physics/06-radio.md).
+
+## Active and inactive objects
+
+The box left of the object's name in the inspector is Unity's **active** switch (Alt+Shift+A, or **Deactivate / Activate** in the scene tree's right-click menu). An inactive object and everything mounted on it leave the scene, their cables are not drawn and the run behaves as if they were not there: no physics body, not in the circuit, no sensor readings. The file keeps them; the scene tree shows them faded, and they can be selected there and switched back on. It cannot be changed while running; stop first. **Hide** only takes an object out of the view; it stays in the simulation.
 
 ## Grid and snap
 

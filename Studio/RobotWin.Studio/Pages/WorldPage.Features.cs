@@ -15,10 +15,50 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class WorldPage
     {
-        /// <summary>Section title of a feature the object has, with a "Kaldır" link that takes it away.</summary>
-        private FrameworkElement FeatureHeader(string title, string undo, Action remove, bool sdk = false)
+        /// <summary>[components] How a component comes off again (Unity's Remove Component).</summary>
+        private sealed class ComponentRemoval
         {
-            var row = new DockPanel { Margin = new Thickness(0, 12, 0, 6), LastChildFill = true };
+            public ComponentRemoval(string undo, Action remove, bool sdk)
+            {
+                Undo = undo;
+                Remove = remove;
+                Sdk = sdk;
+            }
+
+            public string Undo { get; }
+            public Action Remove { get; }
+            public bool Sdk { get; }
+        }
+
+        /// <summary>[components] Marks a joint's own feature header (spring, bearing, coupling) by its source title.</summary>
+        private sealed class SubFeature
+        {
+            public SubFeature(string title) => Title = title;
+            public string Title { get; }
+        }
+
+        /// <summary>
+        /// [components] The title of a component the object has: the inspector makes it a card of its own (Pages/WorldPage.Components.cs)
+        /// with "Bileşeni kaldır" in its header and ⋮ menu, as Unity's component headers.
+        /// </summary>
+        private TextBlock FeatureHeader(string title, string undo, Action remove, bool sdk = false)
+        {
+            var caption = Caption(title);
+            caption.Tag = new ComponentRemoval(undo, remove, sdk);
+            return caption;
+        }
+
+        private void RemoveComponent(ComponentRemoval r)
+        {
+            if (r.Sdk) SdkEdit(r.Undo, r.Remove);
+            else Edit(r.Undo, r.Remove);
+            BuildInspector();
+        }
+
+        /// <summary>A feature of one joint inside "Mekanik bağlantılar" (spring, bearing, coupling): its title with a "Kaldır" link.</summary>
+        private FrameworkElement SubFeatureHeader(string title, string undo, Action remove, bool sdk = false)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 12, 0, 6), LastChildFill = true, Tag = new SubFeature(title), Background = Brushes.Transparent };
             var drop = new Button
             {
                 Content = "Kaldır",
