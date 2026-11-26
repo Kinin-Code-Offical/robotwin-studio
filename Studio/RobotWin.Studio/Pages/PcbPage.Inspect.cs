@@ -151,6 +151,15 @@ namespace RobotWin.Studio.Pages
 
         private void OnHeadsZoomOut(object sender, RoutedEventArgs e) => Canvas.ZoomBy(0.8);
 
+        /// <summary>[grid] KiCad's Show Grid: the grid drawn or not, remembered in the settings.</summary>
+        private void OnHeadsGrid(object sender, RoutedEventArgs e)
+        {
+            bool on = GridToggle.IsChecked == true;
+            Canvas.ShowGrid = on;
+            AppSettings.Current.PcbGridShown = on;
+            AppSettings.Current.Save();
+        }
+
         private void OnHeadsRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
 
         private void OnHeadsFlip(object sender, RoutedEventArgs e) => Canvas.FlipSelection();

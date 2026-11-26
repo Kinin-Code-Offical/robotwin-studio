@@ -106,6 +106,15 @@ namespace RobotWin.Studio.Shell
         /// <summary>[grid] Size snap of the scale handle in millimetres (0 = the move step).</summary>
         public double WorldSizeStepMm { get; set; }
 
+        /// <summary>[opacity] How opaque the PCB editor draws tracks, vias, pads and pours (0–1).</summary>
+        public double PcbTrackOpacity { get; set; } = 1;
+        public double PcbViaOpacity { get; set; } = 1;
+        public double PcbPadOpacity { get; set; } = 1;
+        public double PcbZoneOpacity { get; set; } = 1;
+
+        /// <summary>[grid] Whether the PCB editor draws its grid.</summary>
+        public bool PcbGridShown { get; set; } = true;
+
         /// <summary>[grid] Whether the floor shows the grid's lines.</summary>
         public bool WorldGridShown { get; set; } = true;
 

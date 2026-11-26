@@ -483,6 +483,16 @@ namespace RobotTwin.CoreSim.Pcb
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
 
+        /// <summary>
+        /// [net-colors] KiCad's net colours: a net given a colour ("#RRGGBB") shows its copper (tracks, teardrops, pours, vias)
+        /// in it instead of its layer's colour, so a supply or a bus can be followed across the board. View only: nothing made
+        /// from the board changes.
+        /// </summary>
+        public Dictionary<string, string> NetColors { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>The colour a net is shown in, or null for its layer's.</summary>
+        public string? NetColorOf(string? net) => !string.IsNullOrEmpty(net) && NetColors != null && NetColors.TryGetValue(net!, out var c) && !string.IsNullOrEmpty(c) ? c : null;
+
         /// <summary>[teardrop] Whether and how tracks flare into pads and vias (Pcb/Teardrops.cs); off unless switched on.</summary>
         public TeardropSettings Teardrops { get; set; } = new TeardropSettings();
 

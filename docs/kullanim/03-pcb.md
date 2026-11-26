@@ -181,6 +181,12 @@ Kartı **KiCad'e aktar** ile KiCad'e götürüp orada yerleştirdiyseniz ya da y
 
 ## Görünüm
 
+**Ağ renkleri** (KiCad'deki gibi): **Hatlar** sekmesinin **Hat atamaları** listesinde her ağın yanındaki kutucuğa tıklayıp bir renk seçin; o ağın bakırı (hatlar, damlalar, dökümler, via halkası) her katmanda bu renkte görünür, böylece bir besleme ya da bir yol kart boyunca izlenir. **Renk yok** katmanın rengine döndürür; **Bütün ağ renklerini kaldır** hepsini siler. Renkler kartla kaydedilir ve yalnız görünüştür: Gerber, delik ve KiCad dosyaları değişmez.
+
+Tuvalin sağ üstündeki araç kutusundaki ızgara düğmesi ızgarayı gösterir ya da gizler (yakalama değişmez; seçim saklanır).
+
+**Katmanlar** sekmesindeki **Saydamlık** kaydırıcıları (KiCad'in Nesneler sekmesi gibi) yolları (damlalarıyla), via'ları, pedleri ve dolguları ayrı ayrı soluklaştırır; değer yazılabilir ve saklanır. Yalnız görünüş değişir.
+
 | Tuş | İşlev |
 | --- | --- |
 | Home veya F | Sığdır |

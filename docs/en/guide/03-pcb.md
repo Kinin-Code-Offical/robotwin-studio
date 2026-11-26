@@ -181,6 +181,12 @@ If you took the board to KiCad with **Export to KiCad** and placed or routed it 
 
 ## View
 
+**Net colours** (as in KiCad): in the **Hatlar** tab's net list, click the swatch beside a net and pick a colour; that net's copper (tracks, teardrops, pours, via rings) shows in it on every layer, so a supply or a signal can be followed across the board. **No colour** goes back to the layer's colour; **Remove all net colours** clears them. Colours are saved with the board and only change the view: Gerber, drill and KiCad files stay the same.
+
+The grid button in the toolbox at the canvas's top right shows or hides the grid (snapping stays the same; the choice is remembered).
+
+The **Opacity** sliders in the **Katmanlar** tab (like KiCad's Objects tab) fade tracks (with their teardrops), vias, pads and pours separately; values can be typed and are remembered. Only the view changes.
+
 | Key | Function |
 | --- | --- |
 | Home or F | Fit |

@@ -55,7 +55,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
-| Izgara aç/kapa | yok | yok | 2 |
+| Izgara aç/kapa | tuvalin üstündeki araç kutusunda ızgara düğmesi (ayarlarda saklanır, yakalama değişmez) | var | |
 | Kutupsal koordinat | yok | yok | 3 |
 | mm / mil | panelde | var | |
 | Tam ekran imleç | yok | yok | 3 |
@@ -93,8 +93,8 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
 | Görünüm: katmanlar | Katmanlar | var | |
-| Görünüm: nesneler (görünürlük, saydamlık) | görünürlük var, saydamlık yok | kısmi | 2 |
-| Görünüm: ağlar (renk, sınıf) | Hatlar sekmesi, renk yok | kısmi | 2 |
+| Görünüm: nesneler (görünürlük, saydamlık) | görünürlük anahtarları; yol, via, ped, dolgu saydamlığı (kaydırıcı + yazılır, saklanır) | var | |
+| Görünüm: ağlar (renk, sınıf) | Hatlar sekmesi: sınıf, vurgula ve ağ rengi (12 düz renk; bakır her katmanda o renkte, kartla kaydedilir, üretim dosyalarını değiştirmez) | var | |
 | Görünüm ön ayarları, görüş alanları | yok | yok | 3 |
 | Seçim süzgeci | var | var | |
 | Özellikler paneli | var (taşınır, küçülür, ayrılır) | var | |

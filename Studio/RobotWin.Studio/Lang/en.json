@@ -8530,7 +8530,16 @@
   "aynı ağ": "same net",
   "uygun": "within the rule",
   "KURAL DIŞI": "VIOLATION",
-  "Aynı ağ: aralık kuralı yok": "Same net: no clearance rule"
+  "Aynı ağ: aralık kuralı yok": "Same net: no clearance rule",
+  "Kahverengi": "Brown",
+  "Gri": "Grey",
+  "Ağın rengi: bakırı bu renkte görünür (değiştirmek için tıklayın)": "The net's colour: its copper shows in it (click to change)",
+  "Ağa renk ver: bakırı her katmanda bu renkte görünür": "Give the net a colour: its copper shows in it on every layer",
+  "Renk yok (katmanın rengi)": "No colour (the layer's)",
+  "Bütün ağ renklerini kaldır": "Remove all net colours",
+  "Ağ renkleri kaldırıldı": "Net colours removed",
+  "Izgarayı göster / gizle (yakalama değişmez)": "Show / hide the grid (snapping stays the same)",
+  "Via'lar": "Vias"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11975,6 +11984,8 @@
   "{…} yüzeye oturtuldu": "{0} placed on the surface",
   "Damla: {…} bağlantıda": "Teardrops: at {0} joints",
   "{…} sınıfı ({…}) {…} mm ≥ {…} sınıfı ({…}) {…} mm": "{0} class ({1}) {2} mm ≥ {3} class ({4}) {5} mm",
-  "{…} sınıfı ({…}) {…} mm > {…} sınıfı ({…}) {…} mm": "{0} class ({1}) {2} mm > {3} class ({4}) {5} mm"
+  "{…} sınıfı ({…}) {…} mm > {…} sınıfı ({…}) {…} mm": "{0} class ({1}) {2} mm > {3} class ({4}) {5} mm",
+  "{…} rengi değişti": "{0}: colour changed",
+  "{…} rengi kaldırıldı": "{0}: colour removed"
  }
 }

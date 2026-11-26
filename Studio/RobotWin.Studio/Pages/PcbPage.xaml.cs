@@ -57,6 +57,12 @@ namespace RobotWin.Studio.Pages
         public PcbPage()
         {
             InitializeComponent();
+            Canvas.ShowGrid = AppSettings.Current.PcbGridShown;   // [grid]
+            Canvas.TrackOpacity = AppSettings.Current.PcbTrackOpacity;   // [opacity]
+            Canvas.ViaOpacity = AppSettings.Current.PcbViaOpacity;
+            Canvas.PadOpacity = AppSettings.Current.PcbPadOpacity;
+            Canvas.ZoneOpacity = AppSettings.Current.PcbZoneOpacity;
+            GridToggle.IsChecked = Canvas.ShowGrid;
             InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
             Canvas.BeforeEdit += (_, _) => W.BeginChange();
@@ -752,6 +758,30 @@ namespace RobotWin.Studio.Pages
 
                     break;
                 }
+
+                case "net-colors":   // [net-colors] the supply red, ground green, one signal blue; the Hatlar tab open
+                {
+                    foreach (var net in board.NetNames())
+                    {
+                        if (net.Contains("GND", StringComparison.OrdinalIgnoreCase)) board.NetColors[net] = "#46A758";
+                        else if (net.StartsWith("V", StringComparison.OrdinalIgnoreCase) || net.Contains("5V") || net.Contains("12V")) board.NetColors[net] = "#E5484D";
+                    }
+
+                    var signal = board.NetNames().FirstOrDefault(n => !board.NetColors.ContainsKey(n));
+                    if (signal != null) board.NetColors[signal] = "#3E7BFA";
+                    Canvas.Refresh();
+                    UpdatePanel();
+                    ShowPanel(2);
+                    break;
+                }
+
+                case "opacity":   // [opacity] tracks at half, the Katmanlar tab scrolled to its sliders
+                    Canvas.TrackOpacity = 0.5;
+                    Canvas.ZoneOpacity = 0.6;
+                    UpdateLayersPanel();
+                    ShowPanel(1);
+                    if (LayersPanel.Parent is ScrollViewer osv) Dispatcher.BeginInvoke(new Action(osv.ScrollToEnd), System.Windows.Threading.DispatcherPriority.Loaded);
+                    break;
 
                 case "teardrops-panel":   // [teardrop] the settings panel, open, as the picture
                     OnTeardrops(TeardropButton, new RoutedEventArgs());
@@ -1907,6 +1937,7 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(Switch("Çizimler ve ölçüler", Canvas.ShowDrawings, v => { Canvas.ShowDrawings = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Ped numaraları ve hatları", Canvas.ShowPadNames, v => { Canvas.ShowPadNames = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Yüksek kontrast (diğer katmanlar soluk)", Canvas.HighContrast, v => { Canvas.HighContrast = v; Canvas.InvalidateVisual(); }));
+            OpacityRows();   // [opacity] KiCad's Objects tab (Pages/PcbPage.Opacity.cs)
             if (Canvas.HighlightNet != null)
             {
                 LayersPanel.Children.Add(Buttons(Button($"'{Canvas.HighlightNet}' vurgusunu kaldır", (_, _) => Canvas.SetHighlight(null))));
@@ -2036,14 +2067,18 @@ namespace RobotWin.Studio.Pages
                 var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };
                 row.ColumnDefinitions.Add(new ColumnDefinition());
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(26) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(26) });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
                 row.Children.Add(new TextBlock { Text = n, Style = S("Text.Body"), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
+                var swatch = NetColorSwatch(board, n);   // [net-colors] KiCad's net colour (Pages/PcbPage.NetColors.cs)
+                Grid.SetColumn(swatch, 2);
+                row.Children.Add(swatch);
                 var hl = new Button { Style = S("Btn.Icon"), Width = 24, Height = 24, MinHeight = 24, Padding = new Thickness(0), ToolTip = "Hattı vurgula", Content = new RobotWin.Studio.Theme.Icon { Data = Res<Geometry>("I.Eye"), Size = 13 } };
                 hl.Click += (_, _) => Canvas.SetHighlight(string.Equals(Canvas.HighlightNet, n, StringComparison.OrdinalIgnoreCase) ? null : n);
                 Grid.SetColumn(hl, 1);
                 row.Children.Add(hl);
                 var combo = Combo(names, board.ClassNameFor(n), v => Edit($"{n} → {v} sınıfı", () => board.AssignClass(n, v)));
-                Grid.SetColumn(combo, 2);
+                Grid.SetColumn(combo, 3);
                 row.Children.Add(combo);
                 ClassesPanel.Children.Add(row);
             }

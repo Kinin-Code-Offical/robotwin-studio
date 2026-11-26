@@ -70,6 +70,23 @@ namespace RobotWin.Studio.Pcb
         };
 
         /// <summary>Display colour of a copper layer.</summary>
+        /// <summary>[net-colors] A net's own colour (Board.NetColors), or null.</summary>
+        private static Color? NetColor(BoardDocument board, string? net)
+        {
+            if (board.NetColorOf(net) is not { } hex) return null;
+            try
+            {
+                return (Color)ColorConverter.ConvertFromString(hex);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>[net-colors] The colour a net's copper is drawn in on a layer: its own when it has one, else the layer's.</summary>
+        private static Color CopperColor(BoardDocument board, CopperLayer layer, string? net) => NetColor(board, net) ?? LayerColor(layer);
+
         public static Color LayerColor(CopperLayer layer) => layer switch
         {
             CopperLayer.Top => Color.FromRgb(0xB0, 0x82, 0x6A),
@@ -153,6 +170,12 @@ namespace RobotWin.Studio.Pcb
         public bool ShowSilk { get; set; } = true;
         public bool ShowRatsnest { get; set; } = true;
         public bool ShowZones { get; set; } = true;
+
+        /// <summary>[opacity] KiCad's Objects tab: how opaque tracks (with their teardrops), vias, pads and pours are drawn, 0–1.</summary>
+        public double TrackOpacity { get; set; } = 1;
+        public double ViaOpacity { get; set; } = 1;
+        public double PadOpacity { get; set; } = 1;
+        public double ZoneOpacity { get; set; } = 1;
         public bool ShowDrawings { get; set; } = true;
         public bool ShowPadNames { get; set; } = true;
 
@@ -394,7 +417,7 @@ namespace RobotWin.Studio.Pcb
             // Substrate in the real outline.
             var outline = board.OutlinePolygon(0.02);
             dc.DrawGeometry(SymbolRenderer.Brush(Substrate), P(SubstrateEdge, 1), Poly(outline));
-            DrawGrid(dc, board);
+            if (ShowGrid) DrawGrid(dc, board);   // [grid] KiCad's View → Show Grid
 
             // Copper layers: bottom of the stack first, the active layer last.
             var stack = board.CopperLayers().Reverse().Where(Visible).ToList();
@@ -462,6 +485,19 @@ namespace RobotWin.Studio.Pcb
             return g;
         }
 
+        /// <summary>[grid] Whether the editing grid is drawn (snapping is unchanged either way).</summary>
+        public bool ShowGrid
+        {
+            get => _showGrid;
+            set
+            {
+                _showGrid = value;
+                InvalidateVisual();
+            }
+        }
+
+        private bool _showGrid = true;
+
         private void DrawGrid(DrawingContext dc, BoardDocument board)
         {
             double g = GridSize;
@@ -524,7 +560,7 @@ namespace RobotWin.Studio.Pcb
                 foreach (var z in board.Zones.Where(z => z.Layer == layer))
                 {
                     double f = Fade(z.Net, layer);
-                    if (z.IsFilled) dc.DrawGeometry(SymbolRenderer.Brush(A(color, (active ? 0.42 : 0.3) * f)), null, ZoneGeometry(z));
+                    if (z.IsFilled) dc.DrawGeometry(SymbolRenderer.Brush(A(CopperColor(board, layer, z.Net), (active ? 0.42 : 0.3) * f * ZoneOpacity)), null, ZoneGeometry(z));
                     if (!z.IsWholeBoard)
                     {
                         var pen = new Pen(SymbolRenderer.Brush(A(color, 0.8 * f)), 1) { DashStyle = DashStyles.Dash };
@@ -537,13 +573,13 @@ namespace RobotWin.Studio.Pcb
             foreach (var td in TeardropsNow(board).Where(d => d.Layer == layer))   // [teardrop] copper like the track's (Pcb/BoardCanvas.Teardrops.cs)
             {
                 double f = Fade(td.Net, layer);
-                dc.DrawGeometry(SymbolRenderer.Brush(A(color, (active ? 0.92 : 0.8) * f)), null, Poly(td.Outline));
+                dc.DrawGeometry(SymbolRenderer.Brush(A(CopperColor(board, layer, td.Net), (active ? 0.92 : 0.8) * f * TrackOpacity)), null, Poly(td.Outline));
             }
 
             foreach (var t in board.Tracks.Where(t => t.Layer == layer))
             {
                 double f = Fade(t.Net, layer);
-                dc.DrawLine(P(A(color, (active ? 0.92 : 0.8) * f), Math.Max(1, t.Width * _scale)), S(t.X1, t.Y1), S(t.X2, t.Y2));
+                dc.DrawLine(P(A(CopperColor(board, layer, t.Net), (active ? 0.92 : 0.8) * f * TrackOpacity), Math.Max(1, t.Width * _scale)), S(t.X1, t.Y1), S(t.X2, t.Y2));
             }
 
             foreach (var pad in pads.Where(p => !p.Pad.IsThroughHole && p.SmdLayer == layer))
@@ -559,7 +595,7 @@ namespace RobotWin.Studio.Pcb
         {
             var c = S(pad.X, pad.Y);
             double w = pad.Width * _scale, h = pad.Height * _scale;
-            var brush = SymbolRenderer.Brush(A(color, fade));
+            var brush = SymbolRenderer.Brush(A(color, fade * PadOpacity));   // [opacity]
             if (!(pad.Pad.IsThroughHole && pad.Pad.NonPlated))
             {
                 switch (pad.Pad.Shape)
@@ -586,8 +622,9 @@ namespace RobotWin.Studio.Pcb
         private void DrawVia(DrawingContext dc, BoardDocument board, Via via)
         {
             var c = S(via.X, via.Y);
-            double f = Fade(via.Net, null);
-            dc.DrawEllipse(SymbolRenderer.Brush(A(PadGold, f)), null, c, via.Diameter / 2 * _scale, via.Diameter / 2 * _scale);
+            double f = Fade(via.Net, null) * ViaOpacity;   // [opacity]
+            var ring = NetColor(board, via.Net) is { } own ? Blend(own, PadGold, 0.25) : PadGold;   // [net-colors]
+            dc.DrawEllipse(SymbolRenderer.Brush(A(ring, f)), null, c, via.Diameter / 2 * _scale, via.Diameter / 2 * _scale);
             if (!via.IsThrough(board.LayerCount))
             {
                 // Blind/buried: a ring in the colours of the two end layers.
