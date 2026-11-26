@@ -91,8 +91,12 @@ namespace RobotTwin.CoreSim.Firmware.Devices
 
         // ================================================================ II2cDevice
 
+        /// <summary>[sensorfault] The chip does not answer its address (a loose wire, a dead chip).</summary>
+        public bool Offline { get; set; }
+
         public bool Start(bool read)
         {
+            if (Offline) return false;
             _expectPointer = !read;
             if (read) Sample();
             return true;

@@ -167,6 +167,10 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             }
         }
 
+        /// <summary>[sensorfault] The fault an object's sensor has at this time (its id and size), or null.</summary>
+        private static (string Id, double Value)? FaultOf(WorldObject o, double time) =>
+            MachineFaults.Of(o) is { } f && time >= f.At ? (f.Fault.Id, f.Value) : ((string, double)?)null;
+
         private double Supply(string refDes, string plus, string minus)
         {
             if (_sim == null) return 5.0;
@@ -374,6 +378,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             }
 
             double temp = _world.Environment.AmbientC;
+            var fault = FaultOf(u.Object, time);
+            if (fault?.Id == "line_led_dead") drive = 0;
+            double clean = fault?.Id == "line_dirty" ? Math.Max(0, Math.Min(100, fault.Value.Value)) / 100 : 1;
             var readings = new LineChannelReading[u.Channels.Count];
             double sq = Math.Sqrt(dt);
             for (int i = 0; i < u.Channels.Count; i++)
@@ -387,7 +394,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
                 u.Drift[i] += -u.Drift[i] * dt / 30.0 + 0.002 * sq * Gauss(u.Rng);
                 double noise = u.Spec.Noise * Gauss(u.Rng);
                 double tempFactor = 1 + u.Spec.TempCoefficient * (temp - 25);
-                double iph = vcc < 2.0 ? 0 : u.Spec.PeakCurrent * drive * r.Signal * u.Gain[i] * tempFactor * (1 + u.Drift[i] + noise) + u.Spec.DarkCurrent;
+                double iph = vcc < 2.0 ? 0 : u.Spec.PeakCurrent * drive * r.Signal * clean * u.Gain[i] * tempFactor * (1 + u.Drift[i] + noise) + u.Spec.DarkCurrent;
                 if (i < u.Photo.Count) u.Photo[i].Photocurrent = Math.Max(0, iph);
 
                 readings[i] = new LineChannelReading
@@ -442,7 +449,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         {
             double vcc = Supply(u.RefDes, "VCC", "GND");
             double motor = Pin(u.RefDes, "MOTOCTL") - Pin(u.RefDes, "GND");
-            bool on = vcc >= u.Scanner.Spec.SupplyVoltage * 0.85 && (double.IsNaN(motor) || motor > 1.5 || _sim == null);
+            var fault = FaultOf(u.Object, time);
+            bool on = vcc >= u.Scanner.Spec.SupplyVoltage * 0.85 && (double.IsNaN(motor) || motor > 1.5 || _sim == null) && fault?.Id != "lidar_stalled";
+            double reach = fault?.Id == "lidar_dirty" ? Math.Max(0.01, Math.Min(1, fault.Value.Value / 100)) : 1;
             if (u.Scanner.Running != on)
             {
                 u.Scanner.Running = on;
@@ -454,7 +463,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             var origin = pos + q.Rotate(u.Centre);
             var before = u.Scanner.Latest;
             string id = u.Object.Id;
-            u.Scanner.Advance(time, dt, origin, q, (o, d, max) => Cast(id, o, d, max));
+            u.Scanner.Advance(time, dt, origin, q, (o, d, max) => Cast(id, o, d, max * reach));
             if (u.Scanner.Latest != null && !ReferenceEquals(before, u.Scanner.Latest))
             {
                 Sensors.Publish(new LidarReading
@@ -490,6 +499,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             bool powered = Supply(g.RefDes, "VCC", "GND") >= 2.7;
             var (pos, _) = PoseOf(g.Object);
             var (vel, _) = MotionOf(g.Object);
+            var fault = FaultOf(g.Object, time);
+            g.Receiver.Blocked = fault?.Id == "gps_no_fix";
+            if (fault?.Id == "gps_multipath") pos = new Vec3(pos.X + fault.Value.Value, pos.Y, pos.Z);
             var fix = g.Receiver.Update(time, pos, vel, powered);
             if (fix == null) return;
             Sensors.Publish(new GpsReading { ObjectId = g.Object.Id, Name = g.Object.Name, Time = time, Fix = fix });
@@ -504,6 +516,7 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             public Mpu6050 Device = null!;
             public ImuModel Model = null!;
             public double Clock, LastPublish = -1;
+            public Random Rng = new Random(6050);
         }
 
         private void SampleImu(ImuUnit u, double time, double dt)
@@ -517,6 +530,15 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             u.Model.Update(step, q, v, w, _world.Environment.Gravity, addNoise: false);
             var a = u.Model.Accel;
             var g = u.Model.Gyro;
+            var fault = FaultOf(u.Object, time);
+            u.Device.Offline = fault?.Id == "imu_offline";
+            if (fault?.Id == "imu_frozen") return;   // the registers keep their last values
+            if (fault?.Id == "imu_gyro_drift") g = new Vec3(g.X, g.Y, g.Z + fault.Value.Value * Math.PI / 180);
+            if (fault?.Id == "imu_vibration")
+            {
+                double s = fault.Value.Value;
+                a = new Vec3(a.X + s * Gauss(u.Rng), a.Y + s * Gauss(u.Rng), a.Z + s * Gauss(u.Rng));
+            }
             u.Device.AccelX = a.X;
             u.Device.AccelY = a.Y;
             u.Device.AccelZ = a.Z;
@@ -554,6 +576,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             var (_, q) = PoseOf(c.Object);
             var (fx, fy, fz) = _world.Environment.Sensing?.MagneticField() ?? new SensingEnvironment().MagneticField();
             var body = q.InverseRotate(new Vec3(fx, fy, fz) * 0.01) + c.HardIron;   // µT → Gauss
+            var fault = FaultOf(c.Object, time);
+            if (fault?.Id == "compass_magnet") body = new Vec3(body.X + fault.Value.Value * 0.01, body.Y, body.Z);
+            if (fault?.Id == "compass_offline") c.Device.Powered = false;
             c.Device.FieldX = body.X;
             c.Device.FieldY = body.Y;
             c.Device.FieldZ = body.Z;

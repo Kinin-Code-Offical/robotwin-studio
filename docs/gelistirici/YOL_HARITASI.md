@@ -124,7 +124,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [~] **Sensörler:** modeller var. Eksikler:
   - her sensörde menzil, çözünürlük, gecikme ve gürültü modeli;
   - sıcaklık ve kayma;
-  - arıza senaryoları;
+  - [x] arıza senaryoları: IMU (kayma, titreşim, donma, I²C sessizliği), pusula (mıknatıs, sessizlik), GPS (uydu kaybı, yansıma), LiDAR (kirli pencere, takılı motor), çizgi sensörleri (kirli lens, ölü LED); `MachineFaults` ile aynı **Özellik ekle → Arıza senaryosu**;
   - füzyon deneyleri;
   - veri dışa aktarma ve etiketleme.
 - [ ] **Akademik deney araçları:**

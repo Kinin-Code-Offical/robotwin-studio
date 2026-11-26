@@ -205,6 +205,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         }
 
         /// <summary>Advances to <paramref name="time"/> with the antenna's true position and velocity; returns a new fix at each epoch.</summary>
+        /// <summary>[sensorfault] The sky is blocked (a tunnel, a building): no fix until it clears.</summary>
+        public bool Blocked { get; set; }
+
         public GpsFix? Update(double time, Vec3 position, Vec3 velocity, bool powered)
         {
             if (!powered)
@@ -236,9 +239,9 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
             _errN = _errN * phi + q * Gauss();
             _errU = _errU * phi + 1.8 * q * Gauss();
 
-            bool valid = time - _powerOn >= TimeToFirstFix;
+            bool valid = time - _powerOn >= TimeToFirstFix && !Blocked;
             int sats = Environment.Sky switch { "indoor" => _rng.Next(0, 4), "urban" => _rng.Next(5, 9), _ => _rng.Next(8, 13) };
-            if (!valid) sats = Math.Min(sats, (int)((time - _powerOn) / Math.Max(1, TimeToFirstFix) * 4));
+            if (!valid) sats = Blocked ? _rng.Next(0, 3) : Math.Min(sats, (int)((time - _powerOn) / Math.Max(1, TimeToFirstFix) * 4));
             double hdop = Math.Round((sats > 3 ? 4.5 / Math.Sqrt(sats) : 99) * (Environment.Sky == "urban" ? 1.6 : 1), 2);
             double ve = velocity.X + Gauss() * Spec.VelocityAccuracy, vn = velocity.Y + Gauss() * Spec.VelocityAccuracy;
             double ee = _errE + Gauss() * 0.1 * sigma, en = _errN + Gauss() * 0.1 * sigma;

@@ -222,6 +222,15 @@ Alt paneldeki **HMI** sekmesi, PLC'lerin değişkenlerine bağlı bir operatör 
 
 Fotosel, sınır anahtarı, pnömatik silindir ve Modbus modülü, denetçide **Özellik ekle → Arıza senaryosu** ile belli bir anda bozulabilir: kirli lens (menzil düşer), takılı ya da ölü çıkış, yapışık kontak, kırık kol, conta kaçağı, takılı valf, düşük besleme, kopuk ağ. **Başlama zamanı** ve varsa **büyüklüğü** (kalan menzil, kaçak, basınç) ayarlanır; arıza başlayınca **Olaylar**'a yazılır. Böylece PLC programının arızaya tepkisi (sonsuza dek bekleyen bir adım, zaman aşımı alarmı) gerçek arızadan önce denenir.
 
+Robotun sensörleri de aynı yoldan bozulabilir:
+- **IMU (MPU-6050):** jiroskop kayması (°/s), titreşim gürültüsü (m/s²), donmuş ölçüm, I²C'den yanıt gelmemesi.
+- **Pusula (HMC5883L):** yakında mıknatıs (µT), I²C'den yanıt gelmemesi.
+- **GPS:** uydu kaybı (NMEA sürer, konum geçersizdir), yansıma (doğuya sapma, m).
+- **LiDAR:** kirli pencere (menzil kısalır), takılmış motor.
+- **Çizgi sensörleri:** kirli lens (sinyal düşer), TCRT5000'de yanmış IR LED.
+
+Böylece yazılımın bozuk ölçüme tepkisi denenir: yönü tümleyen hesabın kayması, bir sensör susunca zaman aşımı, sensör füzyonunun hatalı girdiyi ayıklaması.
+
 ### Modbus TCP uzak G/Ç
 
 **Parçalar → Robot Hücresi → Modbus TCP Uzak G/Ç** modülünün 8 sayısal girişi (DI1–DI8) ve 8 sayısal çıkışı (DO1–DO8) vardır; kablolarla ışık perdesine, konveyörün fotoseline, robotun girişlerine bağlanır. Dünya çalışırken modül bir Modbus TCP sunucusudur (öntanımlı `127.0.0.1:5020`, birim 1): aynı bilgisayardaki PLC, HMI ya da SCADA programı (Codesys, Node-RED, `pymodbus` …) gerçek bir modüle bağlanır gibi bağlanır. **Dinlenen adres** `0.0.0.0` yapılırsa ağdaki başka bilgisayarlar da bağlanabilir.

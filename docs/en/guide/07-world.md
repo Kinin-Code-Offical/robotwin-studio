@@ -222,6 +222,15 @@ The **HMI** tab in the bottom panel is an operator panel bound to the PLCs' vari
 
 A photoelectric sensor, limit switch, pneumatic cylinder or Modbus module can fail at a set time with **Add feature → Fault scenario** in the inspector: a dirty lens (the range drops), a stuck or dead output, a welded contact, a broken lever, a seal leak, a stuck valve, a low supply, a lost network. Set its **start time** and, where it has one, its **size** (the range left, the leak, the pressure); when it begins it is written to **Events**. A PLC program's reaction to the fault (a step that waits forever, a timeout alarm) can so be tried before it meets the real one.
 
+A robot's sensors can fail the same way:
+- **IMU (MPU-6050):** gyro drift (°/s), vibration noise (m/s²), a frozen reading, no answer on I²C.
+- **Compass (HMC5883L):** a magnet nearby (µT), no answer on I²C.
+- **GPS:** sky lost (the NMEA goes on with no valid position), multipath (a shift east, m).
+- **LiDAR:** a dirty window (the range shortens), a stalled motor.
+- **Line sensors:** a dirty lens (the signal drops), a burnt-out IR LED on the TCRT5000.
+
+The firmware's reaction to bad readings can so be tried: a heading integrator drifting, a timeout when a sensor goes silent, sensor fusion rejecting the bad input.
+
 ### Modbus TCP remote I/O
 
 The **Parts → Robot Cell → Modbus TCP Remote I/O** module has 8 digital inputs (DI1–DI8) and 8 digital outputs (DO1–DO8), wired with cables to a light curtain, a conveyor's photo-eye or a robot's inputs. While the world runs the module is a Modbus TCP server (by default `127.0.0.1:5020`, unit 1): a PLC, HMI or SCADA program on the same computer (Codesys, Node-RED, `pymodbus` …) connects as to a real module. Set **Listening address** to `0.0.0.0` to let other computers on the network connect.
